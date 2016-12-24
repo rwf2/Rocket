@@ -355,7 +355,7 @@ impl<S, E, F> Outcome<S, E, F> {
     #[inline(always)]
     fn formatting(&self) -> (Color, &'static str) {
         match *self {
-            Success(..) => (Green, "Succcess"),
+            Success(..) => (Green, "Success"),
             Failure(..) => (Red, "Failure"),
             Forward(..) => (Yellow, "Forward"),
         }
