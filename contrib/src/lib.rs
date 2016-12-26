@@ -48,3 +48,6 @@ pub use json::JSON;
 
 #[cfg(feature = "templates")]
 pub use templates::Template;
+
+#[cfg(feature = "handlebars_templates")]
+pub use templates::register_handlebars_helper;
