@@ -1,4 +1,5 @@
 # Rocket [![Build Status](https://travis-ci.org/SergioBenitez/Rocket.svg?branch=master)](https://travis-ci.org/SergioBenitez/Rocket)
+> https://rocket.rs/
 
 Rocket is web framework for Rust (nightly) with a focus on ease-of-use,
 expressability, and speed. Here's an example of a complete Rocket application:
