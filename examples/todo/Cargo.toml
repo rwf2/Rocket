@@ -11,7 +11,7 @@ lazy_static = "*"
 serde = "0.8"
 serde_json = "0.8"
 serde_derive = "0.8"
-diesel = "0.9"
+diesel = { version = "0.9", features = ["sqlite"] }
 diesel_codegen = { version = "0.9", features = ["sqlite"] }
 
 [dependencies.rocket_contrib]

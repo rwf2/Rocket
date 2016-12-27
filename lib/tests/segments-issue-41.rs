@@ -3,26 +3,26 @@
 
 extern crate rocket;
 
-use std::path::PathBuf;
+use rocket::http::uri::Segments;
 
 #[get("/test/<path..>")]
-fn test(path: PathBuf) -> String {
-    format!("{:?}", path)
+fn test(path: Segments) -> String {
+    path.collect::<Vec<_>>().join("/")
 }
 
 #[get("/two/<path..>")]
-fn two(path: PathBuf) -> String {
-    format!("{:?}", path)
+fn two(path: Segments) -> String {
+    path.collect::<Vec<_>>().join("/")
 }
 
 #[get("/one/two/<path..>")]
-fn one_two(path: PathBuf) -> String {
-    format!("{:?}", path)
+fn one_two(path: Segments) -> String {
+    path.collect::<Vec<_>>().join("/")
 }
 
 #[get("/<path..>", rank = 2)]
-fn none(path: PathBuf) -> String {
-    format!("{:?}", path)
+fn none(path: Segments) -> String {
+    path.collect::<Vec<_>>().join("/")
 }
 
 use rocket::testing::MockRequest;
@@ -40,6 +40,6 @@ fn segments_works() {
 
         let mut response = req.dispatch_with(&rocket);
         let body_str = response.body().and_then(|b| b.into_string());
-        assert_eq!(body_str, Some(format!("{:?}", path)));
+        assert_eq!(body_str, Some(path.into()));
     }
 }

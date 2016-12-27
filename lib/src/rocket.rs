@@ -75,7 +75,7 @@ impl Rocket {
     #[inline]
     fn issue_response(&self, mut response: Response, hyp_res: hyper::FreshResponse) {
         // Add the 'rocket' server header, and write out the response.
-        // TODO: If removing Hyper, write out `Data` header too.
+        // TODO: If removing Hyper, write out `Date` header too.
         response.set_header(header::Server("rocket".to_string()));
 
         match self.write_response(response, hyp_res) {
@@ -134,7 +134,8 @@ impl Rocket {
     }
 
     /// Preprocess the request for Rocket-specific things. At this time, we're
-    /// only checking for _method in forms.
+    /// only checking for _method in forms. Keep this in-sync with derive_form
+    /// when preprocessing form fields.
     fn preprocess_request(&self, req: &mut Request, data: &Data) {
         // Check if this is a form and if the form contains the special _method
         // field which we use to reinterpret the request's method.
@@ -176,7 +177,7 @@ impl Rocket {
                 // convince it to give us another mutable reference.
                 // FIXME: Pay the cost to copy Request into UnsafeCell? Pay the
                 // cost to use RefCell? Move the call to `issue_response` here
-                // to move Request and move directly into a RefCell?
+                // to move Request and move directly into an UnsafeCell?
                 let request: &'r mut Request = unsafe {
                     &mut *(request as *const Request as *mut Request)
                 };

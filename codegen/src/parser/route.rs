@@ -272,15 +272,15 @@ fn parse_format(ecx: &ExtCtxt, kv: &KVSpanned<LitKind>) -> ContentType {
             if !ct.is_known() {
                 let msg = format!("'{}' is not a known content-type", s);
                 ecx.span_warn(kv.value.span, &msg);
-            } else {
-                return ct;
             }
+
+            return ct;
         } else {
-            ecx.span_err(kv.value.span, "malformed content type");
+            ecx.span_err(kv.value.span, "malformed content-type");
         }
     }
 
-    ecx.struct_span_err(kv.span, r#"`format` must be a "content/type"`"#)
+    ecx.struct_span_err(kv.span, r#"`format` must be a "content/type""#)
         .help(r#"format, if specified, must be a key-value pair where
               the key is `format` and the value is a string representing the
               content-type accepted. e.g: format = "application/json""#)

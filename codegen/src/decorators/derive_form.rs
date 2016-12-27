@@ -191,6 +191,11 @@ fn from_form_substructure(cx: &mut ExtCtxt, trait_span: Span, substr: &Substruct
         for (k, v) in ::rocket::request::FormItems($arg) {
             match k {
                 $arms
+                field if field == "_method" => {
+                    /* This is a Rocket-specific field. If the user hasn't asked
+                     * for it, just let it go by without error. This should stay
+                     * in sync with Rocket::preprocess. */
+                }
                 _ => {
                     println!("    => {}={} has no matching field in struct.",
                              k, v);

@@ -38,9 +38,14 @@ use error::Error;
 /// ```
 ///
 /// When deriving `FromForm`, every field in the structure must implement
-/// [FromFormValue](trait.FromFormValue.html). If you implement `FormForm`
-/// yourself, use the [FormItems](struct.FormItems.html) iterator to iterate
-/// through the form key/value pairs.
+/// [FromFormValue](trait.FromFormValue.html).
+///
+/// # Implementing
+///
+/// If you implement `FormForm` yourself, use the
+/// [FormItems](struct.FormItems.html) iterator to iterate through the form
+/// key/value pairs. Be aware that form fields that are typically hidden from
+/// your application, such as `_method`, will be present while iterating.
 pub trait FromForm<'f>: Sized {
     /// The associated error to be returned when parsing fails.
     type Error;

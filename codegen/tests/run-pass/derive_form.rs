@@ -47,6 +47,12 @@ struct DefaultInput<'r> {
     arg: Option<&'r str>,
 }
 
+#[derive(Debug, PartialEq, FromForm)]
+struct ManualMethod<'r> {
+    _method: Option<&'r str>,
+    done: bool
+}
+
 fn main() {
     // Same number of arguments: simple case.
     let task = TodoTask::from_form_string("description=Hello&completed=on");
@@ -58,6 +64,13 @@ fn main() {
     // Argument in string but not in form.
     let task = TodoTask::from_form_string("other=a&description=Hello&completed=on");
     assert!(task.is_err());
+
+    // Ensure _method isn't required.
+    let task = TodoTask::from_form_string("_method=patch&description=Hello&completed=off");
+    assert_eq!(task, Ok(TodoTask {
+        description: "Hello".to_string(),
+        completed: false
+    }));
 
     let form_string = &[
         "password=testing", "checkbox=off", "checkbox=on", "number=10",
@@ -78,5 +91,19 @@ fn main() {
     let default = DefaultInput::from_form_string("");
     assert_eq!(default, Ok(DefaultInput {
         arg: None
+    }));
+
+    // Ensure _method can be captured if desired.
+    let manual = ManualMethod::from_form_string("_method=put&done=true");
+    assert_eq!(manual, Ok(ManualMethod {
+        _method: Some("put"),
+        done: true
+    }));
+
+    // And ignored when not present.
+    let manual = ManualMethod::from_form_string("done=true");
+    assert_eq!(manual, Ok(ManualMethod {
+        _method: None,
+        done: true
     }));
 }
