@@ -7,3 +7,6 @@ workspace = "../../"
 [dependencies]
 rocket = { path = "../../lib" }
 rocket_codegen = { path = "../../codegen" }
+
+[dev-dependencies]
+rocket = { path = "../../lib", features = ["testing"] }
