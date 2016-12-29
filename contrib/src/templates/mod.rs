@@ -191,13 +191,12 @@ fn split_path(path: &Path) -> (PathBuf, String, Option<String>) {
     let rel_path = path.strip_prefix(&*TEMPLATE_DIR).unwrap().to_path_buf();
     let path_no_ext = remove_extension(&rel_path);
     let data_type = path_no_ext.extension();
-    let name = remove_extension(&path_no_ext).to_string_lossy().into_owned();
+    let mut name = remove_extension(&path_no_ext).to_string_lossy().into_owned();
 
     // Ensure template name consistency on Windows systems
-    let name = match cfg!(windows) {
-        true => name.replace("\\", "/"),
-        false => name,
-    };
+    if cfg!(windows) {
+        name = name.replace("\\", "/");
+    }
 
     (rel_path, name, data_type.map(|d| d.to_string_lossy().into_owned()))
 }
