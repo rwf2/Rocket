@@ -3,6 +3,8 @@
 
 extern crate rocket;
 
+#[cfg(test)] mod tests;
+
 #[derive(FromForm)]
 struct Person<'r> {
     name: &'r str,
