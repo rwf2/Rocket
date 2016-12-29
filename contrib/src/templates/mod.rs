@@ -191,25 +191,17 @@ fn split_path(path: &Path) -> (PathBuf, String, Option<String>) {
     let rel_path = path.strip_prefix(&*TEMPLATE_DIR).unwrap().to_path_buf();
     let path_no_ext = remove_extension(&rel_path);
     let data_type = path_no_ext.extension();
-    let name = remove_extension(&path_no_ext);
+    let name = remove_extension(&path_no_ext).to_string_lossy().into_owned();
 
-    (rel_path,
-     to_template_name(name.to_string_lossy().into_owned()),
-     data_type.map(|d| d.to_string_lossy().into_owned()))
+    // Ensure template name consistency on Windows systems
+    let name = match cfg!(windows) {
+        true => name.replace("\\", "/"),
+        false => name,
+    };
+
+    (rel_path, name, data_type.map(|d| d.to_string_lossy().into_owned()))
 }
 
-/// Converts a Windows path, like "foo\bar\file" to "foo/bar/file".
-/// Used to standardize template path names for different operating systems.
-#[cfg(windows)]
-fn to_template_name(name: String) -> String {
-    name.replace("\\", "/")
-}
-
-/// Returns `name` unchanged, on non-Windows systems.
-#[cfg(not(windows))]
-fn to_template_name(name: String) -> String {
-    name
-}
 
 /// Returns a HashMap of `TemplateInfo`'s for all of the templates in
 /// `TEMPLATE_DIR`. Templates are all files that match one of the extensions for
@@ -227,12 +219,16 @@ fn discover_templates() -> HashMap<String, TemplateInfo> {
         glob_path.set_extension(ext);
         for path in glob(glob_path.to_str().unwrap()).unwrap().filter_map(Result::ok) {
             let (rel_path, name, data_type) = split_path(&path);
-            templates.insert(name, TemplateInfo {
-				full_path: path.to_path_buf(),
-				path: rel_path,
-				extension: path.extension().unwrap().to_string_lossy().into_owned(),
-				data_type: data_type
-			});
+            templates.insert(name,
+                             TemplateInfo {
+                                 full_path: path.to_path_buf(),
+                                 path: rel_path,
+                                 extension: path.extension()
+                                     .unwrap()
+                                     .to_string_lossy()
+                                     .into_owned(),
+                                 data_type: data_type,
+                             });
         }
     }
 
