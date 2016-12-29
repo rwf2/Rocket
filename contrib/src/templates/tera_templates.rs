@@ -8,11 +8,10 @@ use super::{TemplateInfo, TEMPLATE_DIR};
 lazy_static! {
     static ref TERA: Result<tera::Tera, String> = {
         let path: PathBuf = [&*TEMPLATE_DIR, "**", "*.tera"].iter().collect();
-        let escape_ext = [".html.tera", ".htm.tera", ".xml.tera",
-                          ".html", ".htm", ".xml"];
+        let ext = [".html.tera", ".htm.tera", ".xml.tera", ".html", ".htm", ".xml"];
         tera::Tera::new(path.to_str().unwrap())
             .map(|mut tera| {
-                tera.autoescape_on(escape_ext.to_vec());
+                tera.autoescape_on(ext.to_vec());
                 tera
             })
             .map_err(|e| format!("{:?}", e))
