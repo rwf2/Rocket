@@ -185,6 +185,32 @@ fn remove_extension<P: AsRef<Path>>(path: P) -> PathBuf {
     }
 }
 
+/// Splits a path into a relative path from TEMPLATE_DIR, a name that
+/// may be used to identify the template, and the template's data type.
+fn split_path(path: &Path) -> (PathBuf, String, Option<String>) {
+    let rel_path = path.strip_prefix(&*TEMPLATE_DIR).unwrap().to_path_buf();
+    let path_no_ext = remove_extension(&rel_path);
+    let data_type = path_no_ext.extension();
+    let name = remove_extension(&path_no_ext);
+
+    (rel_path,
+     to_template_name(name.to_string_lossy().into_owned()),
+     data_type.map(|d| d.to_string_lossy().into_owned()))
+}
+
+/// Converts a Windows path, like "foo\bar\file" to "foo/bar/file".
+/// Used to standardize template path names for different operating systems.
+#[cfg(windows)]
+fn to_template_name(name: String) -> String {
+    name.replace("\\", "/")
+}
+
+/// Returns `name` unchanged, on non-Windows systems.
+#[cfg(not(windows))]
+fn to_template_name(name: String) -> String {
+    name
+}
+
 /// Returns a HashMap of `TemplateInfo`'s for all of the templates in
 /// `TEMPLATE_DIR`. Templates are all files that match one of the extensions for
 /// engine's in `engine_set`.
@@ -200,19 +226,67 @@ fn discover_templates() -> HashMap<String, TemplateInfo> {
         let mut glob_path: PathBuf = [&*TEMPLATE_DIR, "**", "*"].iter().collect();
         glob_path.set_extension(ext);
         for path in glob(glob_path.to_str().unwrap()).unwrap().filter_map(Result::ok) {
-            let rel_path = path.strip_prefix(&*TEMPLATE_DIR).unwrap().to_path_buf();
-            let path_no_ext = remove_extension(&rel_path);
-            let data_type = path_no_ext.extension();
-            let name = remove_extension(&path_no_ext);
-            templates.insert(name.to_string_lossy().into_owned(), TemplateInfo {
-                full_path: path.to_path_buf(),
-                path: rel_path,
-                extension: path.extension().unwrap().to_string_lossy().into_owned(),
-                data_type: data_type.map(|d| d.to_string_lossy().into_owned())
-            });
+            let (rel_path, name, data_type) = split_path(&path);
+            templates.insert(name, TemplateInfo {
+				full_path: path.to_path_buf(),
+				path: rel_path,
+				extension: path.extension().unwrap().to_string_lossy().into_owned(),
+				data_type: data_type
+			});
         }
     }
 
     templates
 }
 
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// Combines a `relative_path` and the `TEMPLATE_DIR` path into a full path.
+    fn template_path(relative_path: &str) -> PathBuf {
+        let mut path = PathBuf::from(&*TEMPLATE_DIR);
+        path.push(relative_path);
+        path
+    }
+
+    /// Returns the template system name, given a relative path to a file.
+    fn relative_path_to_name(relative_path: &str) -> String {
+        let path = template_path(relative_path);
+        let (_, name, _) = split_path(&path);
+        name
+    }
+
+    #[test]
+    fn template_path_index_html() {
+        let path = template_path("index.html.hbs");
+        let (rel_path, name, data_type) = split_path(&path);
+
+        assert_eq!(rel_path.to_string_lossy(), "index.html.hbs");
+        assert_eq!(name, "index");
+        assert_eq!(data_type, Some("html".to_owned()));
+    }
+
+    #[test]
+    fn template_path_subdir_index_html() {
+        let path = template_path("subdir/index.html.hbs");
+        let (rel_path, name, data_type) = split_path(&path);
+
+        assert_eq!(rel_path.to_string_lossy(), "subdir/index.html.hbs");
+        assert_eq!(name, "subdir/index");
+        assert_eq!(data_type, Some("html".to_owned()));
+    }
+
+    #[test]
+    fn template_path_doc_examples() {
+        assert_eq!(relative_path_to_name("index.html.hbs"), "index");
+        assert_eq!(relative_path_to_name("index.tera"), "index");
+        assert_eq!(relative_path_to_name("index.hbs"), "index");
+        assert_eq!(relative_path_to_name("dir/index.hbs"), "dir/index");
+        assert_eq!(relative_path_to_name("dir/index.html.tera"), "dir/index");
+        assert_eq!(relative_path_to_name("index.template.html.hbs"),
+                   "index.template");
+        assert_eq!(relative_path_to_name("subdir/index.template.html.hbs"),
+                   "subdir/index.template");
+    }
+}
