@@ -3,6 +3,9 @@
 
 extern crate rocket;
 
+#[cfg(test)]
+mod tests;
+
 #[get("/users/<name>")]
 fn user(name: &str) -> Option<&'static str> {
     if name == "Sergio" {
