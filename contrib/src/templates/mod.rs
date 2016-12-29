@@ -218,16 +218,12 @@ fn discover_templates() -> HashMap<String, TemplateInfo> {
         glob_path.set_extension(ext);
         for path in glob(glob_path.to_str().unwrap()).unwrap().filter_map(Result::ok) {
             let (rel_path, name, data_type) = split_path(&path);
-            templates.insert(name,
-                             TemplateInfo {
-                                 full_path: path.to_path_buf(),
-                                 path: rel_path,
-                                 extension: path.extension()
-                                     .unwrap()
-                                     .to_string_lossy()
-                                     .into_owned(),
-                                 data_type: data_type,
-                             });
+            templates.insert(name, TemplateInfo {
+                full_path: path.to_path_buf(),
+                path: rel_path,
+                extension: path.extension().unwrap().to_string_lossy().into_owned(),
+                data_type: data_type,
+            });
         }
     }
 
