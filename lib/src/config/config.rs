@@ -55,7 +55,7 @@ impl Config {
                     session_key: RwLock::new(None),
                     extras: HashMap::new(),
                     env: env,
-                    disable_emojis: true,
+                    disable_emojis: false,
                     filepath: filepath.to_string(),
                 }
             }
@@ -67,7 +67,7 @@ impl Config {
                     session_key: RwLock::new(None),
                     extras: HashMap::new(),
                     env: env,
-                    disable_emojis: true,
+                    disable_emojis: false,
                     filepath: filepath.to_string(),
                 }
             }
@@ -79,7 +79,7 @@ impl Config {
                     session_key: RwLock::new(None),
                     extras: HashMap::new(),
                     env: env,
-                    disable_emojis: true,
+                    disable_emojis: false,
                     filepath: filepath.to_string(),
                 }
             }
