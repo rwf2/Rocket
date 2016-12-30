@@ -305,10 +305,10 @@ impl Rocket {
     /// # }
     /// ```
     pub fn custom(config: &Config) -> Rocket {
-        let mut wrench = "🔧";
-        if config.disable_emojis {
-            wrench = "=>";
-        }
+        let wrench = match config.disable_emojis {
+            true => "=>",
+            _ => "🔧"
+        };
         info!("{}  Configured for {}.", White.paint(wrench), config.env);
         info_!("listening: {}:{}",
                White.paint(&config.address),
@@ -388,10 +388,10 @@ impl Rocket {
     /// # }
     /// ```
     pub fn mount(mut self, base: &str, routes: Vec<Route>) -> Self {
-        let mut satellite = "🛰";
-        if self.disable_emojis {
-            satellite = "=>";
-        }
+        let satellite = match self.disable_emojis {
+            true => "=>",
+            _ => "🛰"
+        };
         info!("{}  {} '{}':", White.paint(satellite), Magenta.paint("Mounting"), base);
 
         if base.contains('<') {
@@ -441,10 +441,10 @@ impl Rocket {
     /// }
     /// ```
     pub fn catch(mut self, catchers: Vec<Catcher>) -> Self {
-        let mut bug = "👾";
-        if self.disable_emojis {
-            bug = "=>";
-        }
+        let bug = match self.disable_emojis {
+            true => "=>",
+            _ => "👾"
+        };
         info!("{}  {}:", White.paint(bug), Magenta.paint("Catchers"));
         for c in catchers {
             if self.catchers.get(&c.code).map_or(false, |e| !e.is_default()) {
@@ -489,10 +489,10 @@ impl Rocket {
             }
         };
 
-        let mut rocket = "🚀";
-        if self.disable_emojis {
-            rocket = "=>";
-        }
+        let rocket = match self.disable_emojis {
+            true => "=>",
+            _ => "🚀"
+        };
         info!("{}  {} {}{}...",
               White.paint(rocket),
               White.paint("Rocket has launched from"),
