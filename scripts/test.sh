@@ -8,21 +8,27 @@ source $SCRIPT_DIR/config.sh
 # Add Cargo to PATH.
 export PATH=${HOME}/.cargo/bin:${PATH}
 
+# Only build and test files whose path matches $FILTER_PARAM
+FILTER_PARAM=$1
+
 # Builds and tests the Cargo project at $1
 function build_and_test() {
   local dir=$1
-  if [ -z "${dir}" ] || ! [ -d "${dir}" ]; then
-    echo "Tried to build and test inside '${dir}', but it is an invalid path."
-    exit 1
+
+  if [ -z $FILTER_PARAM ] || [[ $dir == *"${FILTER_PARAM}"* ]]; then
+    if [ -z "${dir}" ] || ! [ -d "${dir}" ]; then
+      echo "Tried to build and test inside '${dir}', but it is an invalid path."
+      exit 1
+    fi
+
+    pushd ${dir}
+    echo ":: Building '${PWD}'..."
+    RUST_BACKTRACE=1 cargo build --all-features
+
+    echo ":: Running unit tests in '${PWD}'..."
+    RUST_BACKTRACE=1 cargo test --all-features $FILTER_PARAMS
+    popd
   fi
-
-  pushd ${dir}
-  echo ":: Building '${PWD}'..."
-  RUST_BACKTRACE=1 cargo build --all-features
-
-  echo ":: Running unit tests in '${PWD}'..."
-  RUST_BACKTRACE=1 cargo test --all-features
-  popd
 }
 
 # Checks that the versions for Cargo projects $@ all match
