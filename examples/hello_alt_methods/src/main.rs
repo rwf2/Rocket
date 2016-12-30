@@ -7,6 +7,8 @@ use std::io;
 
 use rocket::response::NamedFile;
 
+#[cfg(test)] mod tests;
+
 #[get("/")]
 fn index() -> io::Result<NamedFile> {
     NamedFile::open("static/index.html")
