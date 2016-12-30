@@ -3,7 +3,11 @@
 
 extern crate rocket;
 extern crate serde_json;
-#[macro_use] extern crate serde_derive;
+#[macro_use]
+extern crate serde_derive;
+
+#[cfg(test)]
+mod tests;
 
 use rocket::{Request, Error};
 use rocket::http::ContentType;
@@ -34,14 +38,15 @@ fn not_found(_: Error, request: &Request) -> String {
         format!("<p>This server only supports JSON requests, not '{}'.</p>",
                 request.content_type())
     } else {
-        format!("<p>Sorry, '{}' is not a valid path!</p>
-                    <p>Try visiting /hello/&lt;name&gt;/&lt;age&gt; instead.</p>",
-                    request.uri())
+        format!("<p>Sorry, '{}' is an invalid path! Try \
+                 /hello/&lt;name&gt;/&lt;age&gt; instead.</p>",
+                request.uri())
     }
 }
 
 fn main() {
     rocket::ignite()
-        .mount("/hello", routes![hello]).catch(errors![not_found])
+        .mount("/hello", routes![hello])
+        .catch(errors![not_found])
         .launch();
 }
