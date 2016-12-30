@@ -4,7 +4,7 @@
 [development]
 address = "localhost"
 port = 8000
-disable_emojis = true
+disable_emojis = false
 log = "normal"
 hi = "Hello!"
 is_extra = true
