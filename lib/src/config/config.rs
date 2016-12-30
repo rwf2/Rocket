@@ -20,6 +20,8 @@ pub struct Config {
     pub log_level: LoggingLevel,
     /// The environment that this configuration corresponds to.
     pub env: Environment,
+    /// Is rocket allowed to print emojis?
+    pub disable_emojis: bool,
     session_key: RwLock<Option<String>>,
     extras: HashMap<String, Value>,
     filepath: String,
@@ -53,6 +55,7 @@ impl Config {
                     session_key: RwLock::new(None),
                     extras: HashMap::new(),
                     env: env,
+                    disable_emojis: true,
                     filepath: filepath.to_string(),
                 }
             }
@@ -64,6 +67,7 @@ impl Config {
                     session_key: RwLock::new(None),
                     extras: HashMap::new(),
                     env: env,
+                    disable_emojis: true,
                     filepath: filepath.to_string(),
                 }
             }
@@ -75,6 +79,7 @@ impl Config {
                     session_key: RwLock::new(None),
                     extras: HashMap::new(),
                     env: env,
+                    disable_emojis: true,
                     filepath: filepath.to_string(),
                 }
             }
@@ -134,6 +139,8 @@ impl Config {
                 Err(_) => return Err(self.bad_type(name, val,
                                 "log level ('normal', 'critical', 'debug')"))
             };
+        } else if name == "disable_emojis" {
+            self.disable_emojis = parse!(self, name, val, as_bool, "an boolean")?;
         } else {
             self.extras.insert(name.into(), val.clone());
         }
