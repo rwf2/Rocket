@@ -77,6 +77,10 @@ This will build and test the `core`, `codegen`, and `contrib` libraries as well
 as all of the examples. This is the script that gets run by Travis CI. To test a
 crate individually, run `cargo test --all-features`.
 
+You can also test only certain files by passing a parameter to the testing script.
+For example, `.scripts/test.sh hello_world` will run tests only in files that have
+`hello_world` in their full path.
+
 ### Core
 
 Testing for the core library is done inline in the corresponding module. For
