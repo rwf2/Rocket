@@ -26,7 +26,7 @@ function build_and_test() {
     RUST_BACKTRACE=1 cargo build --all-features
 
     echo ":: Running unit tests in '${PWD}'..."
-    RUST_BACKTRACE=1 cargo test --all-features $FILTER_PARAMS
+    RUST_BACKTRACE=1 cargo test --all-features
     popd
   fi
 }
@@ -81,18 +81,20 @@ for file in ${EXAMPLES_DIR}/*; do
   if [ -d "${file}" ]; then
     bootstrap_script="${file}/bootstrap.sh"
     if [ -x "${bootstrap_script}" ]; then
-      echo ":: Bootstrapping ${file}..."
+      if [ -z $FILTER_PARAM ] || [[ $bootstrap_script == *"${FILTER_PARAM}"* ]]; then
+        echo ":: Bootstrapping ${file}..."
 
-      # We're just going to leave this commented out for next time...
-      # if [ "$(basename $file)" = "todo" ]; then
-      #   echo ":: Skipping todo example due to broken Diesel..."
-      #   continue
-      # fi
+        # We're just going to leave this commented out for next time...
+        # if [ "$(basename $file)" = "todo" ]; then
+        #   echo ":: Skipping todo example due to broken Diesel..."
+        #   continue
+        # fi
 
-      if ! ${bootstrap_script}; then
-        echo ":: Running bootstrap script (${bootstrap_script}) failed!"
-        echo ":: Skipping ${file}."
-        continue
+        if ! ${bootstrap_script}; then
+          echo ":: Running bootstrap script (${bootstrap_script}) failed!"
+          echo ":: Skipping ${file}."
+          continue
+        fi
       fi
     fi
 
