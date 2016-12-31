@@ -13,7 +13,7 @@ fn test_login(username: &str, password: &str, age: isize, status: Status,
     let mut response = req.dispatch_with(&rocket);
     let body_str = response.body().and_then(|body| body.into_string());
 
-    println!("Checking: {:?}/{:?}", username, password);
+    println!("Checking: {:?}/{:?}/{:?}/{:?}", username, password, age, body_str);
     assert_eq!(response.status(), status);
 
     if let Some(string) = body {
@@ -35,6 +35,11 @@ fn test_bad_login() {
     test_login("Sergio", "jk", -100, OK, Some("'-100' is not a valid integer."));
     test_login("Sergio", "ok", 30, OK, Some("Wrong password!"));
     test_login("Mike", "password", 30, OK, Some("Unrecognized user, 'Mike'."));
+    // request parameters are url-encoded (normally by browser)
+    test_login("print_passsword", "password", 100, OK, Some("password"));
+    test_login("print_passsword", "1+1", 100, OK, Some("1 1"));
+    test_login("print_passsword", "1%2B1", 100, OK, Some("1+1"));
+    test_login("print_passsword", "%3Fa%3D1%26b%3D2", 100, OK, Some("?a=1&b=2"));
 }
 
 #[test]
