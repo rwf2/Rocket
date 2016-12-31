@@ -4,6 +4,7 @@
 extern crate rocket;
 
 use rocket::request::Form;
+use rocket::http::Status;
 
 #[derive(FromForm)]
 struct FormData {
@@ -34,7 +35,7 @@ fn method_eval() {
 }
 
 #[test]
-fn method_eval_with_Get_should_fail() {
+fn get_passes_through() {
     let rocket = rocket::ignite().mount("/", routes![bug]);
 
     let mut req = MockRequest::new(Get, "/")
@@ -42,6 +43,5 @@ fn method_eval_with_Get_should_fail() {
         .body("_method=patch&form_data=Form+data");
 
     let mut response = req.dispatch_with(&rocket);
-    let body_str = response.body().and_then(|b| b.into_string());
-    assert_ne!(body_str, Some("OK".to_string()));
+    assert_eq!(response.status(), Status::NotFound);
 }
