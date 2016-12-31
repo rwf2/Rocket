@@ -148,6 +148,7 @@ impl Rocket {
 
             let mut form_items = FormItems(form);
             if let Some(("_method", value)) = form_items.next() {
+                if req.method() != Method::Post { return; }
                 if let Ok(method) = value.parse() {
                     req.set_method(method);
                 }
