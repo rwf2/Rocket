@@ -12,8 +12,8 @@ fn hello_world_alt_methods() {
 
 fn test(
     method: Method,
-    expected_status: Status,
-    expected_body_starts_with: Option<&str>
+    status: Status,
+    body_prefix: Option<&str>
 ) {
     let rocket = rocket::ignite()
         .mount("/", routes![super::index, super::put]);
@@ -21,8 +21,8 @@ fn test(
     let mut req = MockRequest::new(method, "/");
     let mut response = req.dispatch_with(&rocket);
 
-    assert_eq!(response.status(), expected_status);
-    expected_body_starts_with.map(|expected_body_string| {
+    assert_eq!(response.status(), status);
+    body_prefix.map(|expected_body_string| {
         let body_str = response.body().and_then(|body| body.into_string()).unwrap();
         let body_starts_correctly = body_str.starts_with(expected_body_string);
         assert!(body_starts_correctly);
