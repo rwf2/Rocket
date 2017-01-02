@@ -245,8 +245,8 @@ impl<'r> Request<'r> {
             .unwrap_or(ContentType::Any)
     }
 
-    /// Retrieves and parses into `T` the `n`th dynamic parameter from the
-    /// request. Returns `Error::NoKey` if `n` is greater than the number of
+    /// Retrieves and parses into `T` the 0-indexed `n`th dynamic parameter from
+    /// the request. Returns `Error::NoKey` if `n` is greater than the number of
     /// params. Returns `Error::BadParse` if the parameter type `T` can't be
     /// parsed from the parameter.
     ///
@@ -290,49 +290,58 @@ impl<'r> Request<'r> {
         }
 
         let (i, j) = params[n];
-        let uri_str = self.uri.as_str();
-        if j > uri_str.len() {
+        let path = self.uri.path();
+        if j > path.len() {
             error!("Couldn't retrieve parameter: internal count incorrect.");
             return None;
         }
 
-        Some(&uri_str[i..j])
+        Some(&path[i..j])
     }
 
     /// Retrieves and parses into `T` all of the path segments in the request
-    /// URI beginning and including the 0-indexed `i`. `T` must implement
-    /// [FromSegments](/rocket/request/trait.FromSegments.html), which is used
-    /// to parse the segments.
+    /// URI beginning at the 0-indexed `n`th dynamic parameter. `T` must
+    /// implement [FromSegments](/rocket/request/trait.FromSegments.html), which
+    /// is used to parse the segments.
+    ///
+    /// This method exists only to be used by manual routing. To retrieve
+    /// segments from a request, use Rocket's code generation facilities.
     ///
     /// # Error
     ///
-    /// If there are less than `i` segments, returns an `Err` of `NoKey`. If
+    /// If there are less than `n` segments, returns an `Err` of `NoKey`. If
     /// parsing the segments failed, returns an `Err` of `BadParse`.
     ///
     /// # Example
     ///
-    /// If the request URI is `"/hello/there/i/am/here"`, then
+    /// If the request URI is `"/hello/there/i/am/here"`, and the matched route
+    /// path for this request is `"/hello/<name>/i/<segs..>"`, then
     /// `request.get_segments::<T>(1)` will attempt to parse the segments
-    /// `"there/i/am/here"` as type `T`.
-    pub fn get_segments<'a, T: FromSegments<'a>>(&'a self, i: usize)
+    /// `"am/here"` as type `T`.
+    pub fn get_segments<'a, T: FromSegments<'a>>(&'a self, n: usize)
             -> Result<T, Error> {
-        let segments = self.get_raw_segments(i).ok_or(Error::NoKey)?;
+        let segments = self.get_raw_segments(n).ok_or(Error::NoKey)?;
         T::from_segments(segments).map_err(|_| Error::BadParse)
     }
 
-    /// Get the segments beginning at the `i`th, if they exists.
+    /// Get the segments beginning at the `n`th dynamic parameter, if they
+    /// exist.
     #[doc(hidden)]
-    pub fn get_raw_segments(&self, i: usize) -> Option<Segments> {
-        if i >= self.uri.segment_count() {
-            debug!("{} is >= segment count {}", i, self.uri().segment_count());
-            None
-        } else {
-            // TODO: Really want to do self.uri.segments().skip(i).into_inner(),
-            // but the std lib doesn't implement `into_inner` for Skip.
-            let mut segments = self.uri.segments();
-            for _ in segments.by_ref().take(i) { /* do nothing */ }
-            Some(segments)
+    pub fn get_raw_segments(&self, n: usize) -> Option<Segments> {
+        let params = self.params.borrow();
+        if n >= params.len() {
+            debug!("{} is >= param (segments) count {}", n, params.len());
+            return None;
         }
+
+        let (i, j) = params[n];
+        let path = self.uri.path();
+        if j > path.len() {
+            error!("Couldn't retrieve segments: internal count incorrect.");
+            return None;
+        }
+
+        Some(Segments(&path[i..j]))
     }
 
     /// Convert from Hyper types into a Rocket Request.

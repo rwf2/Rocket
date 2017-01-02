@@ -134,8 +134,8 @@ impl RouteParams {
 fn is_valid_method(method: Method) -> bool {
     use rocket::http::Method::*;
     match method {
-        Get | Put | Post | Delete | Patch => true,
-        _ => false
+        Get | Put | Post | Delete | Head | Patch | Options => true,
+        Trace | Connect => false
     }
 }
 

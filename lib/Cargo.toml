@@ -1,6 +1,6 @@
 [package]
 name = "rocket"
-version = "0.1.2"
+version = "0.1.3"
 authors = ["Sergio Benitez <sb@sergio.bz>"]
 description = """
 Web framework for nightly with a focus on ease-of-use, expressability, and
@@ -26,7 +26,7 @@ default-features = false
 
 [dev-dependencies]
 lazy_static = "0.2"
-rocket_codegen = { version = "0.1.2", path = "../codegen" }
+rocket_codegen = { version = "0.1.3", path = "../codegen" }
 
 [features]
 testing = []

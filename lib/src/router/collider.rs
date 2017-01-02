@@ -201,7 +201,7 @@ mod tests {
 
     fn ct_route(m: Method, s: &str, ct: &str) -> Route {
         let mut route_a = Route::new(m, s, dummy_handler);
-        route_a.content_type = ContentType::from_str(ct).expect("Whoops!");
+        route_a.format = ContentType::from_str(ct).expect("Whoops!");
         route_a
     }
 

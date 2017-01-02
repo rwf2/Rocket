@@ -133,6 +133,10 @@ mod test {
         assert!(unranked_route_collisions(&["/<a>/b", "/a/<a..>"]));
         assert!(unranked_route_collisions(&["/a/<b>", "/a/<a..>"]));
         assert!(unranked_route_collisions(&["/a/b/<c>", "/a/<a..>"]));
+        assert!(unranked_route_collisions(&["<a..>", "/a/<a..>"]));
+        assert!(unranked_route_collisions(&["/a/<a..>", "/a/<a..>"]));
+        assert!(unranked_route_collisions(&["/a/b/<a..>", "/a/<a..>"]));
+        assert!(unranked_route_collisions(&["/a/b/c/d", "/a/<a..>"]));
     }
 
     #[test]
@@ -140,10 +144,12 @@ mod test {
         assert!(!unranked_route_collisions(&["/<a>", "/a/<a..>"]));
         assert!(!unranked_route_collisions(&["/a/b", "/a/b/c"]));
         assert!(!unranked_route_collisions(&["/a/b/c/d", "/a/b/c/<d>/e"]));
+        assert!(!unranked_route_collisions(&["/a/d/<b..>", "/a/b/c"]));
+        assert!(!unranked_route_collisions(&["/a/d/<b..>", "/a/d"]));
     }
 
     #[test]
-    fn test_none_collisions_when_ranked() {
+    fn test_no_collision_when_ranked() {
         assert!(!default_rank_route_collisions(&["/<a>", "/hello"]));
         assert!(!default_rank_route_collisions(&["/hello/bob", "/hello/<b>"]));
         assert!(!default_rank_route_collisions(&["/a/b/c/d", "/<a>/<b>/c/d"]));
@@ -261,6 +267,17 @@ mod test {
         assert!(!ranked_collisions(&[(0, "a/<b>"), (2, "a/<b>")]));
         assert!(!ranked_collisions(&[(5, "a/<b>"), (2, "a/<b>")]));
         assert!(!ranked_collisions(&[(1, "a/<b>"), (1, "b/<b>")]));
+        assert!(!ranked_collisions(&[(1, "a/<b..>"), (2, "a/<b..>")]));
+        assert!(!ranked_collisions(&[(0, "a/<b..>"), (2, "a/<b..>")]));
+        assert!(!ranked_collisions(&[(5, "a/<b..>"), (2, "a/<b..>")]));
+        assert!(!ranked_collisions(&[(1, "<a..>"), (2, "<a..>")]));
+    }
+
+    #[test]
+    fn test_ranked_collisions() {
+        assert!(ranked_collisions(&[(2, "a/<b..>"), (2, "a/<b..>")]));
+        assert!(ranked_collisions(&[(2, "a/c/<b..>"), (2, "a/<b..>")]));
+        assert!(ranked_collisions(&[(2, "<b..>"), (2, "a/<b..>")]));
     }
 
     macro_rules! assert_ranked_routing {

@@ -93,6 +93,7 @@
 #![feature(quote, concat_idents, plugin_registrar, rustc_private, unicode)]
 #![feature(custom_attribute)]
 #![allow(unused_attributes)]
+#![allow(deprecated)]
 
 #[macro_use] extern crate syntax;
 #[macro_use] extern crate log;
@@ -127,6 +128,14 @@ macro_rules! register_decorators {
     )
 }
 
+macro_rules! register_derives {
+    ($registry:expr, $($name:expr => $func:ident),+) => (
+        $($registry.register_custom_derive(Symbol::intern($name),
+                SyntaxExtension::MultiDecorator(Box::new(decorators::$func)));
+         )+
+    )
+}
+
 /// Compiler hook for Rust to register plugins.
 #[plugin_registrar]
 pub fn plugin_registrar(reg: &mut Registry) {
@@ -138,9 +147,11 @@ pub fn plugin_registrar(reg: &mut Registry) {
     reg.register_macro("routes", macros::routes);
     reg.register_macro("errors", macros::errors);
 
-    register_decorators!(reg,
-        "derive_FromForm" => from_form_derive,
+    register_derives!(reg,
+        "derive_FromForm" => from_form_derive
+    );
 
+    register_decorators!(reg,
         "error" => error_decorator,
         "route" => route_decorator,
         "get" => get_decorator,
@@ -149,5 +160,7 @@ pub fn plugin_registrar(reg: &mut Registry) {
         "delete" => delete_decorator,
         "head" => head_decorator,
         "patch" => patch_decorator
+        // TODO: Allow this once Diesel incompatibility is fixed. Fix docs too.
+        // "options" => options_decorator
     );
 }
