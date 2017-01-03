@@ -249,7 +249,7 @@ impl<'f, T: FromForm<'f>> FromData for Form<'f, T> where T::Error: Debug {
                 Ok(form) => Success(form),
                 Err((form_string, e)) => {
                     error_!("Failed to parse value from form: {:?}", e);
-                    Failure((Status::BadRequest, Some(form_string)))
+                    Failure((Status::UnprocessableEntity, Some(form_string)))
                 }
             }
         }

@@ -219,6 +219,8 @@ pub mod defaults {
                 teapot.", handle_418,
             421, "Misdirected Request", "The server cannot produce a response for this
                 request.", handle_421,
+            422, "Unprocessable Entity", "The server cannot process this request body.",
+                handle_422,
             426, "Upgrade Required", "Switching to the protocol in the Upgrade header
                 field is required.", handle_426,
             428, "Precondition Required", "The server requires the request to be
