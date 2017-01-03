@@ -15,3 +15,6 @@ serde_json = "*"
 path = "../../contrib"
 default-features = false
 features = ["handlebars_templates"]
+
+[dev-dependencies]
+rocket = { path = "../../lib", features = ["testing"] }
