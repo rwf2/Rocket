@@ -35,7 +35,7 @@ impl Function {
     }
 
     pub fn find_input<'a>(&'a self, name: &Name) -> Option<&'a Arg> {
-        self.decl().inputs.iter().filter(|arg| arg.named(name)).next()
+        self.decl().inputs.iter().find(|arg| arg.named(name))
     }
 }
 

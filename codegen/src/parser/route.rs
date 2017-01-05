@@ -75,7 +75,7 @@ impl RouteParams {
         let mut seen_keys = HashSet::new();
         let (mut rank, mut data, mut format) = Default::default();
         for param in &attr_params[1..] {
-            let kv_opt = kv_from_nested(&param);
+            let kv_opt = kv_from_nested(param);
             if kv_opt.is_none() {
                 ecx.span_err(param.span(), "expected key = value");
                 continue;
@@ -183,7 +183,7 @@ fn parse_method(ecx: &ExtCtxt, meta_item: &NestedMetaItem) -> Spanned<Method> {
         .help("valid methods are: GET, PUT, POST, DELETE, PATCH")
         .emit();
 
-    return dummy_spanned(Method::Get);
+    dummy_spanned(Method::Get)
 }
 
 fn parse_path(ecx: &ExtCtxt, meta_item: &NestedMetaItem) -> (Spanned<String>, Option<Spanned<Ident>>) {
@@ -230,9 +230,8 @@ fn parse_data(ecx: &ExtCtxt, kv: &KVSpanned<LitKind>) -> Ident {
     let mut ident = Ident::from_str("unknown");
     if let LitKind::Str(ref s, _) = *kv.value() {
         ident = Ident::from_str(&s.as_str());
-        match param_string_to_ident(ecx, span(&s.as_str(), kv.value.span)) {
-            Some(ident) => return ident,
-            _ => { /* fall through if not an ident */ }
+        if let Some(ident) = param_string_to_ident(ecx, span(&s.as_str(), kv.value.span)) {
+            return ident;
         }
     }
 

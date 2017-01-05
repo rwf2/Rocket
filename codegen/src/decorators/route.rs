@@ -58,7 +58,7 @@ impl RouteGenerateExt for RouteParams {
         if param.is_none() {
             return None;
         } else if arg.is_none() {
-            self.missing_declared_err(ecx, &param.unwrap());
+            self.missing_declared_err(ecx, param.unwrap());
             return None;
         }
 
@@ -80,7 +80,7 @@ impl RouteGenerateExt for RouteParams {
         if param.is_none() {
             return None;
         } else if arg.is_none() {
-            self.missing_declared_err(ecx, &param.unwrap());
+            self.missing_declared_err(ecx, param.unwrap());
             return None;
         }
 
@@ -120,7 +120,7 @@ impl RouteGenerateExt for RouteParams {
         // Generate a statement for every declared paramter in the path.
         let mut declared_set = HashSet::new();
         for (i, param) in self.path_params(ecx).enumerate() {
-            declared_set.insert(param.ident().name.clone());
+            declared_set.insert(param.ident().name);
             let ty = match self.annotated_fn.find_input(&param.ident().name) {
                 Some(arg) => strip_ty_lifetimes(arg.ty.clone()),
                 None => {

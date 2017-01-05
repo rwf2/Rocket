@@ -32,8 +32,8 @@ impl ErrorGenerateExt for ErrorParams {
         // (Imperfectly) inspect the types to figure which params to pass in.
         let args = input_args.iter().map(|arg| &arg.ty).filter_map(|ty| {
             match ty.node {
-                TyKind::Rptr(..) => Some(req.clone()),
-                TyKind::Path(..) => Some(err.clone()),
+                TyKind::Rptr(..) => Some(req),
+                TyKind::Path(..) => Some(err),
                 _ => {
                     ecx.struct_span_err(ty.span, "unexpected error handler argument")
                         .help(arg_help).emit();

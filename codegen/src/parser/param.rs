@@ -46,7 +46,7 @@ impl<'s, 'a, 'c> Iterator for ParamIter<'s, 'a, 'c> {
     fn next(&mut self) -> Option<Param> {
         let err = |ecx: &ExtCtxt, sp: Span, msg: &str| {
             ecx.span_err(sp,  msg);
-            return None;
+            None
         };
 
         // Find the start and end indexes for the next parameter, if any.
@@ -65,9 +65,10 @@ impl<'s, 'a, 'c> Iterator for ParamIter<'s, 'a, 'c> {
 
         // Calculate the parameter's ident.
         let full_param = &self.string[(start + 1)..end];
-        let (is_many, param) = match full_param.ends_with("..") {
-            true => (true, &full_param[..(full_param.len() - 2)]),
-            false => (false, full_param)
+        let (is_many, param) = if full_param.ends_with("..") {
+            (true, &full_param[..(full_param.len() - 2)])
+        } else {
+            (false, full_param)
         };
 
         let mut param_span = self.span;
@@ -83,7 +84,7 @@ impl<'s, 'a, 'c> Iterator for ParamIter<'s, 'a, 'c> {
             err(self.ctxt, param_span, "parameter names cannot be empty")
         } else if !is_valid_ident(param) {
             err(self.ctxt, param_span, "parameter names must be valid identifiers")
-        } else if param.starts_with("_") {
+        } else if param.starts_with('_') {
             err(self.ctxt, param_span, "parameters cannot be ignored")
         } else if is_many && !self.string.is_empty() {
             let sp = self.span.shorten_to(self.string.len());
@@ -93,9 +94,10 @@ impl<'s, 'a, 'c> Iterator for ParamIter<'s, 'a, 'c> {
             None
         } else {
             let spanned_ident = span(Ident::from_str(param), param_span);
-            match is_many {
-                true => Some(Param::Many(spanned_ident)),
-                false => Some(Param::Single(spanned_ident))
+            if is_many {
+                Some(Param::Many(spanned_ident))
+            } else {
+                Some(Param::Single(spanned_ident))
             }
         }
 
