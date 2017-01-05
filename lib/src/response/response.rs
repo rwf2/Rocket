@@ -1023,7 +1023,7 @@ impl<'r> Response<'r> {
         }
 
         for (name, values) in other.headers.into_iter_raw() {
-            self.headers.replace_all(name, values);
+            self.headers.replace_all(name.into_cow(), values);
         }
     }
 
@@ -1072,7 +1072,7 @@ impl<'r> Response<'r> {
         }
 
         for (name, mut values) in other.headers.into_iter_raw() {
-            self.headers.add_all(name, &mut values);
+            self.headers.add_all(name.into_cow(), &mut values);
         }
     }
 }

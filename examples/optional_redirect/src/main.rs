@@ -2,6 +2,9 @@
 #![plugin(rocket_codegen)]
 extern crate rocket;
 
+#[cfg(test)]
+mod tests;
+
 use rocket::response::Redirect;
 
 #[get("/")]
@@ -13,7 +16,7 @@ fn root() -> Redirect {
 fn user(name: &str) -> Result<&'static str, Redirect> {
     match name {
         "Sergio" => Ok("Hello, Sergio!"),
-        _ => Err(Redirect::to("/users/login"))
+        _ => Err(Redirect::to("/users/login")),
     }
 }
 

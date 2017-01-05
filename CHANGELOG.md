@@ -1,3 +1,56 @@
+# Version 0.1.4 (Jan 4, 2017)
+
+## Core
+
+  * Header names are treated as case-preserving.
+
+## Codegen
+
+  * Minimum supported nightly is `2017-01-03`.
+
+# Version 0.1.3 (Dec 31, 2016)
+
+## Core
+
+  * Typo in `Outcome` formatting fixed (Succcess -> Success).
+  * Added `ContentType::CSV`.
+  * Dynamic segments parameters are properly resolved, even when mounted.
+  * Request methods are only overridden via `_method` field on POST.
+  * Form value `String`s are properly decoded.
+
+## Codegen
+
+  * The `_method` field is now properly ignored in `FromForm` derivation.
+  * Unknown Content-Types in `format` no longer result in an error.
+  * Deriving `FromForm` no longer results in a deprecation warning.
+  * Codegen will refuse to build with incompatible rustc, presenting error
+    message and suggestion.
+  * Added `head` as a valid decorator for `HEAD` requests.
+  * Added `route(OPTIONS)` as a valid decorator for `OPTIONS` requests.
+
+## Contrib
+
+  * Templates with the `.tera` extension are properly autoescaped.
+  * Nested template names are properly resolved on Windows.
+  * Template implements `Display`.
+  * Tera dependency updated to version 0.6.
+
+## Docs
+
+  * Todo example requirements clarified in its `README`.
+
+## Testing
+
+  * Tests added for `config`, `optional_result`, `optional_redirect`, and
+    `query_params` examples.
+  * Testing script checks for and disallows tab characters.
+
+## Infrastructure
+
+  * New script (`bump_version.sh`) automates version bumps.
+  * Config script emits error when readlink/readpath support is bad.
+  * Travis badge points to public builds.
+
 # Version 0.1.2 (Dec 24, 2016)
 
 ## Codegen

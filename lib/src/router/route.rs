@@ -23,7 +23,7 @@ pub struct Route {
     /// The rank of this route. Lower ranks have higher priorities.
     pub rank: isize,
     /// The Content-Type this route matches against.
-    pub content_type: ContentType,
+    pub format: ContentType,
 }
 
 fn default_rank(path: &str) -> isize {
@@ -45,7 +45,7 @@ impl Route {
             handler: handler,
             rank: default_rank(path.as_ref()),
             path: URI::from(path.as_ref().to_string()),
-            content_type: ContentType::Any,
+            format: ContentType::Any,
         }
     }
 
@@ -58,7 +58,7 @@ impl Route {
             path: URI::from(path.as_ref().to_string()),
             handler: handler,
             rank: rank,
-            content_type: ContentType::Any,
+            format: ContentType::Any,
         }
     }
 
@@ -77,14 +77,15 @@ impl Route {
     pub fn get_param_indexes(&self, uri: &URI) -> Vec<(usize, usize)> {
         let route_segs = self.path.segments();
         let uri_segs = uri.segments();
-        let start_addr = uri.as_str().as_ptr() as usize;
+        let start_addr = uri.path().as_ptr() as usize;
 
         let mut result = Vec::with_capacity(self.path.segment_count());
         for (route_seg, uri_seg) in route_segs.zip(uri_segs) {
+            let i = (uri_seg.as_ptr() as usize) - start_addr;
             if route_seg.ends_with("..>") {
+                result.push((i, uri.path().len()));
                 break;
             } else if route_seg.ends_with('>') {
-                let i = (uri_seg.as_ptr() as usize) - start_addr;
                 let j = i + uri_seg.len();
                 result.push((i, j));
             }
@@ -101,7 +102,7 @@ impl Clone for Route {
             handler: self.handler,
             rank: self.rank,
             path: self.path.clone(),
-            content_type: self.content_type.clone(),
+            format: self.format.clone(),
         }
     }
 }
@@ -114,8 +115,8 @@ impl fmt::Display for Route {
             write!(f, " [{}]", White.paint(&self.rank))?;
         }
 
-        if !self.content_type.is_any() {
-            write!(f, " {}", Yellow.paint(&self.content_type))
+        if !self.format.is_any() {
+            write!(f, " {}", Yellow.paint(&self.format))
         } else {
             Ok(())
         }
@@ -132,7 +133,7 @@ impl fmt::Debug for Route {
 impl<'a> From<&'a StaticRouteInfo> for Route {
     fn from(info: &'a StaticRouteInfo) -> Route {
         let mut route = Route::new(info.method, info.path, info.handler);
-        route.content_type = info.format.clone().unwrap_or(ContentType::Any);
+        route.format = info.format.clone().unwrap_or(ContentType::Any);
         if let Some(rank) = info.rank {
             route.rank = rank;
         }
@@ -145,7 +146,7 @@ impl Collider for Route {
     fn collides_with(&self, b: &Route) -> bool {
         self.method == b.method
             && self.rank == b.rank
-            && self.content_type.collides_with(&b.content_type)
+            && self.format.collides_with(&b.format)
             && self.path.collides_with(&b.path)
     }
 }
@@ -154,6 +155,8 @@ impl<'r> Collider<Request<'r>> for Route {
     fn collides_with(&self, req: &Request<'r>) -> bool {
         self.method == req.method()
             && req.uri().collides_with(&self.path)
-            && req.content_type().collides_with(&self.content_type)
+            // FIXME: On payload requests, check Content-Type. On non-payload
+            // requests, check Accept.
+            && req.content_type().collides_with(&self.format)
     }
 }

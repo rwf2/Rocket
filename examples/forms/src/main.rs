@@ -12,7 +12,7 @@ use rocket::response::Redirect;
 #[derive(FromForm)]
 struct UserLogin<'r> {
     username: &'r str,
-    password: &'r str,
+    password: String,
     age: Result<usize, &'r str>,
 }
 
@@ -27,7 +27,7 @@ fn login<'a>(user_form: Form<'a, UserLogin<'a>>) -> Result<Redirect, String> {
     };
 
     if user.username == "Sergio" {
-        match user.password {
+        match user.password.as_str() {
             "password" => Ok(Redirect::to("/user/Sergio")),
             _ => Err("Wrong password!".to_string())
         }

@@ -48,7 +48,7 @@ impl ErrorParams {
 }
 
 fn parse_code(ecx: &ExtCtxt, meta_item: &NestedMetaItem) -> Spanned<u16> {
-    let code_from_u64 = |n: Spanned<u64>| {
+    let code_from_u128 = |n: Spanned<u128>| {
         if n.node < 400 || n.node > 599 {
             ecx.span_err(n.span, "code must be >= 400 and <= 599.");
             span(0, n.span)
@@ -65,12 +65,12 @@ fn parse_code(ecx: &ExtCtxt, meta_item: &NestedMetaItem) -> Spanned<u16> {
         if name != &"code" {
             ecx.span_err(sp, "the first key, if any, must be 'code'");
         } else if let LitKind::Int(n, _) = lit.node {
-            return code_from_u64(span(n, lit.span))
+            return code_from_u128(span(n, lit.span))
         } else {
             ecx.span_err(lit.span, "`code` value must be an integer")
         }
     } else if let Some(n) = meta_item.int_lit() {
-        return code_from_u64(span(n, sp))
+        return code_from_u128(span(n, sp))
     } else {
         ecx.struct_span_err(sp, r#"expected `code = int` or an integer literal"#)
             .help(r#"you can specify the code directly as an integer,

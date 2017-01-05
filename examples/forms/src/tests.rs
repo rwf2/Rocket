@@ -13,7 +13,7 @@ fn test_login(username: &str, password: &str, age: isize, status: Status,
     let mut response = req.dispatch_with(&rocket);
     let body_str = response.body().and_then(|body| body.into_string());
 
-    println!("Checking: {:?}/{:?}", username, password);
+    println!("Checking: {:?}/{:?}/{:?}/{:?}", username, password, age, body_str);
     assert_eq!(response.status(), status);
 
     if let Some(string) = body {

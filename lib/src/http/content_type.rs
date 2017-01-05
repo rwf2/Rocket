@@ -4,6 +4,7 @@ use std::fmt;
 
 use http::Header;
 use http::hyper::mime::Mime;
+use http::ascii::{uncased_eq, UncasedAscii};
 use router::Collider;
 
 /// Representation of HTTP Content-Types.
@@ -39,16 +40,16 @@ use router::Collider;
 #[derive(Debug, Clone, PartialEq, Hash)]
 pub struct ContentType {
     /// The "type" component of the Content-Type.
-    pub ttype: Cow<'static, str>,
+    pub ttype: UncasedAscii<'static>,
     /// The "subtype" component of the Content-Type.
-    pub subtype: Cow<'static, str>,
+    pub subtype: UncasedAscii<'static>,
     /// Semicolon-seperated parameters associated with the Content-Type.
-    pub params: Option<Cow<'static, str>>
+    pub params: Option<UncasedAscii<'static>>
 }
 
 macro_rules! ctr_params {
     () => (None);
-    ($param:expr) => (Some(Cow::Borrowed($param)));
+    ($param:expr) => (Some(UncasedAscii { string: Cow::Borrowed($param) }));
 }
 
 macro_rules! ctrs {
@@ -65,8 +66,8 @@ macro_rules! ctrs {
             #[doc="</i>"]
             #[allow(non_upper_case_globals)]
             pub const $name: ContentType = ContentType {
-                ttype: Cow::Borrowed($top),
-                subtype: Cow::Borrowed($sub),
+                ttype: UncasedAscii { string: Cow::Borrowed($top) },
+                subtype: UncasedAscii { string: Cow::Borrowed($sub) },
                 params: ctr_params!($($param)*)
             };
          )+
@@ -74,12 +75,8 @@ macro_rules! ctrs {
             /// Returns `true` if this ContentType is known to Rocket, that is,
             /// there is an associated constant for `self`.
             pub fn is_known(&self) -> bool {
-                match (&*self.ttype, &*self.subtype) {
-                    $(
-                        ($top, $sub) => true,
-                     )+
-                     _ => false
-                }
+                $(if self.$check_name() { return true })+
+                false
             }
 
         $(
@@ -146,24 +143,26 @@ impl ContentType {
     /// ```
     pub fn from_extension(ext: &str) -> ContentType {
         match ext {
-            "txt" => ContentType::Plain,
-            "html" | "htm" => ContentType::HTML,
-            "xml" => ContentType::XML,
-            "csv" => ContentType::CSV,
-            "js" => ContentType::JavaScript,
-            "css" => ContentType::CSS,
-            "json" => ContentType::JSON,
-            "png" => ContentType::PNG,
-            "gif" => ContentType::GIF,
-            "bmp" => ContentType::BMP,
-            "jpeg" | "jpg" => ContentType::JPEG,
-            "pdf" => ContentType::PDF,
+            x if uncased_eq(x, "txt") => ContentType::Plain,
+            x if uncased_eq(x, "html") => ContentType::HTML,
+            x if uncased_eq(x, "htm") => ContentType::HTML,
+            x if uncased_eq(x, "xml") => ContentType::XML,
+            x if uncased_eq(x, "csv") => ContentType::CSV,
+            x if uncased_eq(x, "js") => ContentType::JavaScript,
+            x if uncased_eq(x, "css") => ContentType::CSS,
+            x if uncased_eq(x, "json") => ContentType::JSON,
+            x if uncased_eq(x, "png") => ContentType::PNG,
+            x if uncased_eq(x, "gif") => ContentType::GIF,
+            x if uncased_eq(x, "bmp") => ContentType::BMP,
+            x if uncased_eq(x, "jpeg") => ContentType::JPEG,
+            x if uncased_eq(x, "jpg") => ContentType::JPEG,
+            x if uncased_eq(x, "pdf") => ContentType::PDF,
             _ => ContentType::Any
         }
     }
 
     /// Creates a new `ContentType` with type `ttype` and subtype `subtype`.
-    /// This should be _only_ to construct uncommon Content-Types or custom
+    /// This should _only_ be used to construct uncommon Content-Types or custom
     /// Content-Types. Use an associated constant for common Content-Types.
     ///
     /// # Example
@@ -180,11 +179,7 @@ impl ContentType {
     pub fn new<T, S>(ttype: T, subtype: S) -> ContentType
         where T: Into<Cow<'static, str>>, S: Into<Cow<'static, str>>
     {
-        ContentType {
-            ttype: ttype.into(),
-            subtype: subtype.into(),
-            params: None
-        }
+        ContentType::with_params::<T, S, T>(ttype, subtype, None)
     }
 
     /// Creates a new `ContentType` with type `ttype`, subtype `subtype`, and
@@ -210,10 +205,51 @@ impl ContentType {
               P: Into<Cow<'static, str>>
     {
         ContentType {
-            ttype: ttype.into(),
-            subtype: subtype.into(),
-            params: params.map(|p| p.into())
+            ttype: UncasedAscii::from(ttype),
+            subtype: UncasedAscii::from(subtype),
+            params: params.map(|p| UncasedAscii::from(p))
         }
+    }
+
+    /// Returns an iterator over the (key, value) pairs of the Content-Type's
+    /// parameter list. The iterator will be empty if the Content-Type has no
+    /// parameters.
+    ///
+    /// # Example
+    ///
+    /// The `ContentType::Plain` type has one parameter: `charset=utf-8`:
+    ///
+    /// ```rust
+    /// use rocket::http::ContentType;
+    ///
+    /// let plain = ContentType::Plain;
+    /// let plain_params: Vec<_> = plain.params().collect();
+    /// assert_eq!(plain_params, vec![("charset", "utf-8")]);
+    /// ```
+    ///
+    /// The `ContentType::PNG` type has no parameters:
+    ///
+    /// ```rust
+    /// use rocket::http::ContentType;
+    ///
+    /// let png = ContentType::PNG;
+    /// assert_eq!(png.params().count(), 0);
+    /// ```
+    #[inline(always)]
+    pub fn params<'a>(&'a self) -> impl Iterator<Item=(&'a str, &'a str)> + 'a {
+        let params = match self.params {
+            Some(ref params) => params.as_str(),
+            None => ""
+        };
+
+        params.split(";")
+            .filter_map(|param| {
+                let mut kv = param.split("=");
+                match (kv.next(), kv.next()) {
+                    (Some(key), Some(val)) => Some((key.trim(), val.trim())),
+                    _ => None
+                }
+            })
     }
 }
 
@@ -250,29 +286,17 @@ impl From<Mime> for ContentType {
     }
 }
 
-fn is_valid_first_char(c: char) -> bool {
-    match c {
-        'a'...'z' | 'A'...'Z' | '0'...'9' | '*' => true,
-        _ => false,
-    }
-}
-
 fn is_valid_char(c: char) -> bool {
-    is_valid_first_char(c) || match c {
-        '!' | '#' | '$' | '&' | '-' | '^' | '.' | '+' | '_' => true,
-        _ => false,
+    match c {
+        '0'...'9' | 'A'...'Z' | '^'...'~' | '#'...'\''
+            | '!' | '*' | '+' | '-' | '.'  => true,
+        _ => false
     }
 }
 
 fn is_valid_token(string: &str) -> bool {
-    if string.len() < 1 {
-        return false;
-    }
-
-    string.chars().take(1).all(is_valid_first_char)
-        && string.chars().skip(1).all(is_valid_char)
+    string.len() >= 1 && string.chars().all(is_valid_char)
 }
-
 
 impl FromStr for ContentType {
     type Err = &'static str;
@@ -288,6 +312,7 @@ impl FromStr for ContentType {
     /// use rocket::http::ContentType;
     ///
     /// let json = ContentType::from_str("application/json").unwrap();
+    /// assert!(json.is_known());
     /// assert_eq!(json, ContentType::JSON);
     /// ```
     ///
@@ -355,7 +380,7 @@ impl FromStr for ContentType {
             trimmed_params.push(param);
         }
 
-        let (ttype, subtype) = (top_s.to_lowercase(), sub_s.to_lowercase());
+        let (ttype, subtype) = (top_s.to_string(), sub_s.to_string());
         let params = params.map(|_| trimmed_params.join(";"));
         Ok(ContentType::with_params(ttype, subtype, params))
     }
@@ -394,8 +419,8 @@ impl Into<Header<'static>> for ContentType {
 
 impl Collider for ContentType {
     fn collides_with(&self, other: &ContentType) -> bool {
-        (self.ttype == "*" || other.ttype == "*" || self.ttype == other.ttype) &&
-        (self.subtype == "*" || other.subtype == "*" || self.subtype == other.subtype)
+        let collide = |a, b| a == "*" || b == "*" || a == b;
+        collide(&self.ttype, &other.ttype) && collide(&self.subtype, &other.subtype)
     }
 }
 
@@ -460,6 +485,9 @@ mod test {
             ContentType::with_params("*", "*", Some("charset=utf-8;else=1")));
         assert_parse!("*/*;    charset=\"utf-8\";   else=1",
             ContentType::with_params("*", "*", Some("charset=\"utf-8\";else=1")));
+        assert_parse!("multipart/form-data; boundary=----WebKitFormBoundarypRshfItmvaC3aEuq",
+            ContentType::with_params("multipart", "form-data",
+                                     Some("boundary=----WebKitFormBoundarypRshfItmvaC3aEuq")));
     }
 
     #[test]

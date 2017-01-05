@@ -15,6 +15,7 @@ use self::glob::glob;
 
 use std::path::{Path, PathBuf};
 use std::collections::HashMap;
+use std::fmt;
 
 use rocket::config;
 use rocket::response::{self, Content, Responder};
@@ -73,19 +74,6 @@ use rocket::http::{ContentType, Status};
 /// features = ["handlebars_templates", "tera_templates"]
 /// ```
 ///
-/// # Examples
-///
-/// To render a template named "index" with a `HashMap` as the context:
-///
-/// ```rust
-/// use rocket_contrib::Template;
-/// use std::collections::HashMap;
-///
-/// let context: HashMap<&str, &str> = HashMap::new();
-/// // ... add key/value pairs to `context` ...
-/// let _template = Template::render("index", &context);
-/// ```
-///
 /// The Template type implements Rocket's `Responder` trait, so it can be
 /// returned from a request handler directly:
 ///
@@ -96,6 +84,7 @@ use rocket::http::{ContentType, Status};
 ///     Template::render("index", &context)
 /// }
 /// ```
+// Fields are: (optionally rendered template, template extension)
 #[derive(Debug)]
 pub struct Template(Option<String>, Option<String>);
 
@@ -131,9 +120,21 @@ lazy_static! {
 
 impl Template {
     /// Render the template named `name` with the context `context`. The
-    /// template is not actually rendered until the response is needed by
-    /// Rocket. As such, the `Template` type should be used only as a
-    /// `Responder`.
+    /// `context` can be of any type that implements `Serialize`. This is
+    /// typically a `HashMap` or a custom `struct`.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use std::collections::HashMap;
+    /// use rocket_contrib::Template;
+    ///
+    /// // Create a `context`. Here, just an empty `HashMap`.
+    /// let mut context = HashMap::new();
+    ///
+    /// # context.insert("test", "test");
+    /// let template = Template::render("index", &context);
+    /// ```
     pub fn render<S, T>(name: S, context: &T) -> Template
         where S: AsRef<str>, T: Serialize
     {
@@ -157,6 +158,9 @@ impl Template {
     }
 }
 
+/// Returns a response with the Content-Type derived from the template's
+/// extension and a fixed-size body containing the rendered template. If
+/// rendering fails, an `Err` of `Status::InternalServerError` is returned.
 impl Responder<'static> for Template {
     fn respond(self) -> response::Result<'static> {
         let content_type = match self.1 {
@@ -167,6 +171,16 @@ impl Responder<'static> for Template {
         match self.0 {
             Some(render) => Content(content_type, render).respond(),
             None => Err(Status::InternalServerError)
+        }
+    }
+}
+
+/// Renders `self`. If the template cannot be rendered, nothing is written.
+impl fmt::Display for Template {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self.0 {
+            Some(ref render) => render.fmt(f),
+            None => Ok(())
         }
     }
 }

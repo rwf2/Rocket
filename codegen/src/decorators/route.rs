@@ -15,7 +15,6 @@ use syntax::parse::token;
 use syntax::ptr::P;
 
 use rocket::http::{Method, ContentType};
-use rocket::http::uri::URI;
 
 fn method_to_path(ecx: &ExtCtxt, method: Method) -> Path {
     quote_enum!(ecx, method => ::rocket::http::Method {
@@ -25,10 +24,14 @@ fn method_to_path(ecx: &ExtCtxt, method: Method) -> Path {
 
 fn content_type_to_expr(ecx: &ExtCtxt, ct: Option<ContentType>) -> Option<P<Expr>> {
     ct.map(|ct| {
-        let (ttype, subtype) = (ct.ttype, ct.subtype);
+        let (top, sub) = (ct.ttype.as_str(), ct.subtype.as_str());
         quote_expr!(ecx, ::rocket::http::ContentType {
-            ttype: ::std::borrow::Cow::Borrowed($ttype),
-            subtype: ::std::borrow::Cow::Borrowed($subtype),
+            ttype: ::rocket::http::ascii::UncasedAscii {
+                string: ::std::borrow::Cow::Borrowed($top)
+            },
+            subtype: ::rocket::http::ascii::UncasedAscii {
+                string: ::std::borrow::Cow::Borrowed($sub)
+            },
             params: None
         })
     })
@@ -137,18 +140,10 @@ impl RouteGenerateExt for RouteParams {
                     Some(s) => <$ty as ::rocket::request::FromParam>::from_param(s),
                     None => return ::rocket::Outcome::Forward(_data)
                 }),
-                Param::Many(_) => {
-                    // Determine the index the dynamic segments parameter begins.
-                    let d = URI::new(self.path.node.as_str()).segments().enumerate()
-                        .filter(|&(_, s)| s.starts_with("<"))
-                        .map((&|(d, _)| d))
-                        .next().expect("segment when segment is iterated");
-
-                    quote_expr!(ecx, match _req.get_raw_segments($d) {
-                        Some(s) => <$ty as ::rocket::request::FromSegments>::from_segments(s),
-                        None => return ::rocket::Outcome::forward(_data)
-                    })
-                },
+                Param::Many(_) => quote_expr!(ecx, match _req.get_raw_segments($i) {
+                    Some(s) => <$ty as ::rocket::request::FromSegments>::from_segments(s),
+                    None => return ::rocket::Outcome::Forward(_data)
+                }),
             };
 
             let original_ident = param.ident();
@@ -290,5 +285,8 @@ method_decorator!(get_decorator, Get);
 method_decorator!(put_decorator, Put);
 method_decorator!(post_decorator, Post);
 method_decorator!(delete_decorator, Delete);
-method_decorator!(patch_decorator, Patch);
 method_decorator!(head_decorator, Head);
+method_decorator!(patch_decorator, Patch);
+
+// TODO: Allow this once Diesel incompatibility is fixed.
+// method_decorator!(options_decorator, Options);

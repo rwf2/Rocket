@@ -6,6 +6,7 @@ extern crate rocket;
 #[get("")]
 fn get() -> &'static str { "hi" }
 
-fn main() {
-    let _ = routes![get];
-}
+#[get("/")]
+fn get_empty() {  }
+
+fn main() { }

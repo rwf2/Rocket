@@ -1,8 +1,11 @@
 use std::fmt;
 use std::str::FromStr;
 
+
 use error::Error;
 use http::hyper;
+use http::ascii::uncased_eq;
+
 use self::Method::*;
 
 // TODO: Support non-standard methods, here and in codegen.
@@ -51,30 +54,10 @@ impl Method {
             Get | Head | Connect | Trace | Options => false,
         }
     }
-}
 
-impl FromStr for Method {
-    type Err = Error;
-
-    fn from_str(s: &str) -> Result<Method, Error> {
-        match s {
-            "GET" | "get" => Ok(Get),
-            "PUT" | "put" => Ok(Put),
-            "POST" | "post" => Ok(Post),
-            "DELETE" | "delete" => Ok(Delete),
-            "OPTIONS" | "options" => Ok(Options),
-            "HEAD" | "head" => Ok(Head),
-            "TRACE" | "trace" => Ok(Trace),
-            "CONNECT" | "connect" => Ok(Connect),
-            "PATCH" | "patch" => Ok(Patch),
-            _ => Err(Error::BadMethod),
-        }
-    }
-}
-
-impl fmt::Display for Method {
-    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
-        fmt.write_str(match *self {
+    #[inline(always)]
+    pub fn as_str(&self) -> &'static str {
+        match *self {
             Get => "GET",
             Put => "PUT",
             Post => "POST",
@@ -84,6 +67,33 @@ impl fmt::Display for Method {
             Trace => "TRACE",
             Connect => "CONNECT",
             Patch => "PATCH",
-        })
+        }
+    }
+}
+
+impl FromStr for Method {
+    type Err = Error;
+
+    // According to the RFC, method names are case-sensitive. But some old
+    // clients don't follow this, so we just do a case-insensitive match here.
+    fn from_str(s: &str) -> Result<Method, Error> {
+        match s {
+            x if uncased_eq(x, Get.as_str()) => Ok(Get),
+            x if uncased_eq(x, Put.as_str()) => Ok(Put),
+            x if uncased_eq(x, Post.as_str()) => Ok(Post),
+            x if uncased_eq(x, Delete.as_str()) => Ok(Delete),
+            x if uncased_eq(x, Options.as_str()) => Ok(Options),
+            x if uncased_eq(x, Head.as_str()) => Ok(Head),
+            x if uncased_eq(x, Trace.as_str()) => Ok(Trace),
+            x if uncased_eq(x, Connect.as_str()) => Ok(Connect),
+            x if uncased_eq(x, Patch.as_str()) => Ok(Patch),
+            _ => Err(Error::BadMethod),
+        }
+    }
+}
+
+impl fmt::Display for Method {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        self.as_str().fmt(f)
     }
 }

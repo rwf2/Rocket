@@ -1,6 +1,6 @@
 [package]
 name = "rocket_codegen"
-version = "0.1.2"
+version = "0.1.4"
 authors = ["Sergio Benitez <sb@sergio.bz>"]
 description = "Code generation for the Rocket web framework."
 documentation = "https://api.rocket.rs/rocket_codegen/"
@@ -9,13 +9,17 @@ repository = "https://github.com/SergioBenitez/Rocket"
 readme = "../README.md"
 keywords = ["rocket", "web", "framework", "code", "generation"]
 license = "MIT/Apache-2.0"
+build = "build.rs"
 
 [lib]
 plugin = true
 
 [dependencies]
-rocket = { version = "0.1.2", path = "../lib/" }
+rocket = { version = "0.1.4", path = "../lib/" }
 log = "^0.3"
 
 [dev-dependencies]
 compiletest_rs = "^0.2"
+
+[build-dependencies]
+ansi_term = "^0.9"

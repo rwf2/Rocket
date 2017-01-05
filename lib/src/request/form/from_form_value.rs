@@ -73,21 +73,10 @@ impl<'v> FromFormValue<'v> for String {
 
     // This actually parses the value according to the standard.
     fn from_form_value(v: &'v str) -> Result<Self, Self::Error> {
-        let result = URI::percent_decode(v.as_bytes());
-        match result {
+        let replaced = v.replace("+", " ");
+        match URI::percent_decode(replaced.as_bytes()) {
             Err(_) => Err(v),
-            Ok(mut string) => Ok({
-                // Entirely safe because we're changing the single-byte '+'.
-                unsafe {
-                    for c in string.to_mut().as_mut_vec() {
-                        if *c == b'+' {
-                            *c = b' ';
-                        }
-                    }
-                }
-
-                string.into_owned()
-            })
+            Ok(string) => Ok(string.into_owned())
         }
     }
 }

@@ -32,9 +32,9 @@ impl<'a> URI<'a> {
         let qmark = uri.find('?');
         let hmark = uri.find('#');
 
-        let (start, end) = (0, uri.len());
+        let end = uri.len();
         let (path, query, fragment) = match (qmark, hmark) {
-            (Some(i), Some(j)) => ((start, i), Some((i+1, j)), Some((j+1, end))),
+            (Some(i), Some(j)) => ((0, i), Some((i+1, j)), Some((j+1, end))),
             (Some(i), None) => ((0, i), Some((i+1, end)), None),
             (None, Some(j)) => ((0, j), None, Some((j+1, end))),
             (None, None) => ((0, end), None, None),
@@ -340,7 +340,7 @@ impl<'a, 'b> Collider<URI<'b>> for URI<'a> {
 /// }
 /// ```
 #[derive(Clone, Debug)]
-pub struct Segments<'a>(&'a str);
+pub struct Segments<'a>(pub &'a str);
 
 impl<'a> Iterator for Segments<'a> {
     type Item = &'a str;
