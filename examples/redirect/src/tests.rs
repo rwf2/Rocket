@@ -19,7 +19,7 @@ fn test_root() {
         assert!(response.body().is_none());
         assert_eq!(response.status(), Status::SeeOther);
         for h in response.headers() {
-            match h.name.as_ref() {
+            match h.name.as_str() {
                 "Location" => assert_eq!(h.value, "/login"),
                 "Content-Length" => assert_eq!(h.value.parse::<i32>().unwrap(), 0),
                 _ => { /* let these through */ }
