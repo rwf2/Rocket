@@ -26,6 +26,7 @@ use http::uri::URI;
 pub struct Rocket {
     address: String,
     port: usize,
+    disable_emojis: bool,
     router: Router,
     default_catchers: HashMap<u16, Catcher>,
     catchers: HashMap<u16, Catcher>,
@@ -306,7 +307,11 @@ impl Rocket {
     /// # }
     /// ```
     pub fn custom(config: &Config) -> Rocket {
-        info!("🔧  Configured for {}.", config.env);
+        let wrench = match config.disable_emojis {
+            true => "=>",
+            _ => "🔧"
+        };
+        info!("{}  Configured for {}.", White.paint(wrench), config.env);
         info_!("listening: {}:{}",
                White.paint(&config.address),
                White.paint(&config.port));
@@ -326,6 +331,7 @@ impl Rocket {
         Rocket {
             address: config.address.clone(),
             port: config.port,
+            disable_emojis: config.disable_emojis,
             router: Router::new(),
             default_catchers: catcher::defaults::get(),
             catchers: catcher::defaults::get(),
@@ -384,7 +390,11 @@ impl Rocket {
     /// # }
     /// ```
     pub fn mount(mut self, base: &str, routes: Vec<Route>) -> Self {
-        info!("🛰  {} '{}':", Magenta.paint("Mounting"), base);
+        let satellite = match self.disable_emojis {
+            true => "=>",
+            _ => "🛰"
+        };
+        info!("{}  {} '{}':", White.paint(satellite), Magenta.paint("Mounting"), base);
 
         if base.contains('<') {
             error_!("Bad mount point: '{}'.", base);
@@ -433,7 +443,11 @@ impl Rocket {
     /// }
     /// ```
     pub fn catch(mut self, catchers: Vec<Catcher>) -> Self {
-        info!("👾  {}:", Magenta.paint("Catchers"));
+        let bug = match self.disable_emojis {
+            true => "=>",
+            _ => "👾"
+        };
+        info!("{}  {}:", White.paint(bug), Magenta.paint("Catchers"));
         for c in catchers {
             if self.catchers.get(&c.code).map_or(false, |e| !e.is_default()) {
                 let msg = "(warning: duplicate catcher!)";
@@ -477,7 +491,12 @@ impl Rocket {
             }
         };
 
-        info!("🚀  {} {}{}...",
+        let rocket = match self.disable_emojis {
+            true => "=>",
+            _ => "🚀"
+        };
+        info!("{}  {} {}{}...",
+              White.paint(rocket),
               White.paint("Rocket has launched from"),
               White.bold().paint("http://"),
               White.bold().paint(&full_addr));
