@@ -567,6 +567,13 @@ mod test {
                       "#.to_string(), TEST_CONFIG_FILENAME), {
                           default_config(Staging).port(6000)
                       });
+
+        check_config!(RocketConfig::parse(r#"
+                          [stage]
+                          port = 65535
+                      "#.to_string(), TEST_CONFIG_FILENAME), {
+                          default_config(Staging).port(65535)
+                      });
     }
 
     #[test]
@@ -588,6 +595,11 @@ mod test {
         assert!(RocketConfig::parse(r#"
             [staging]
             port = -1
+        "#.to_string(), TEST_CONFIG_FILENAME).is_err());
+
+        assert!(RocketConfig::parse(r#"
+            [staging]
+            port = 65536
         "#.to_string(), TEST_CONFIG_FILENAME).is_err());
     }
 
