@@ -25,7 +25,7 @@ use http::uri::URI;
 /// application.
 pub struct Rocket {
     address: String,
-    port: usize,
+    port: u16,
     router: Router,
     default_catchers: HashMap<u16, Catcher>,
     catchers: HashMap<u16, Catcher>,

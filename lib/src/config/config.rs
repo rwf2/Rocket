@@ -15,7 +15,7 @@ pub struct Config {
     /// The address to serve on.
     pub address: String,
     /// The port to serve on.
-    pub port: usize,
+    pub port: u16,
     /// How much information to log.
     pub log_level: LoggingLevel,
     /// The environment that this configuration corresponds to.
@@ -119,7 +119,11 @@ impl Config {
                 return Err(self.bad_type(name, val, "an unsigned integer"));
             }
 
-            self.port = port as usize;
+            if port > (u16::max_value() as i64) {
+                return Err(self.bad_type(name, val, "too large"))
+            }
+
+            self.port = port as u16;
         } else if name == "session_key" {
             let key = parse!(self, name, val, as_str, "a string")?;
             if key.len() != 32 {
@@ -231,7 +235,7 @@ impl Config {
 
     /// Sets the `port` in `self` to `var` and returns the structure.
     #[inline(always)]
-    pub fn port(mut self, var: usize) -> Self {
+    pub fn port(mut self, var: u16) -> Self {
         self.port = var;
         self
     }
@@ -284,4 +288,3 @@ impl PartialEq for Config {
             && self.filepath == other.filepath
     }
 }
-
