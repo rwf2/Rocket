@@ -99,7 +99,7 @@ impl Config {
     /// returned:
     ///
     ///   * **address**: String
-    ///   * **port**: Integer
+    ///   * **port**: Integer (16-bit unsigned)
     ///   * **session_key**: String (192-bit base64)
     ///   * **log**: String
     ///
