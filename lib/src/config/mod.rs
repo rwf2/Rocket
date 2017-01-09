@@ -33,7 +33,7 @@
 //!   * **address**: _[string]_ an IP address or host the application will
 //!     listen on
 //!     * examples: `"localhost"`, `"0.0.0.0"`, `"1.2.3.4"`
-//!   * **port**: _[u16]_ a port number to listen on
+//!   * **port**: _[integer]_ a port number to listen on
 //!     * examples: `"8000"`, `"80"`, `"4242"`
 //!   * **log**: _[string]_ how much information to log; one of `"normal"`,
 //!     `"debug"`, or `"critical"`

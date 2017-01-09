@@ -99,7 +99,7 @@ impl Config {
     /// returned:
     ///
     ///   * **address**: String
-    ///   * **port**: Unsigned 16bit Integer
+    ///   * **port**: Integer
     ///   * **session_key**: String (192-bit base64)
     ///   * **log**: String
     ///
@@ -120,7 +120,7 @@ impl Config {
             }
 
             if port > (u16::max_value() as i64) {
-                return Err(self.bad_type(name, val, "an integer larger than 65535"))
+                return Err(self.bad_type(name, val, "a 16-bit unsigned integer"))
             }
 
             self.port = port as u16;
