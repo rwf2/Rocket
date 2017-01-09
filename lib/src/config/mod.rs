@@ -601,6 +601,11 @@ mod test {
             [staging]
             port = 65536
         "#.to_string(), TEST_CONFIG_FILENAME).is_err());
+
+        assert!(RocketConfig::parse(r#"
+            [staging]
+            port = 105836
+        "#.to_string(), TEST_CONFIG_FILENAME).is_err());
     }
 
     #[test]
