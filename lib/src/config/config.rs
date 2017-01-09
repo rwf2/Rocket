@@ -120,7 +120,7 @@ impl Config {
             }
 
             if port > (u16::max_value() as i64) {
-                return Err(self.bad_type(name, val, "too large"))
+                return Err(self.bad_type(name, val, "an integer larger than 65535"))
             }
 
             self.port = port as u16;
