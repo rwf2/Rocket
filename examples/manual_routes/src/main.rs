@@ -1,5 +1,8 @@
 extern crate rocket;
 
+#[cfg(test)]
+mod tests;
+
 use std::io;
 use std::fs::File;
 
@@ -7,6 +10,7 @@ use rocket::{Request, Route, Data, Catcher, Error};
 use rocket::http::Status;
 use rocket::request::FromParam;
 use rocket::response::{self, Responder};
+use rocket::response::status::Custom;
 use rocket::handler::Outcome;
 use rocket::http::Method::*;
 
@@ -23,7 +27,10 @@ fn name<'a>(req: &'a Request, _: Data) -> Outcome<'a> {
 }
 
 fn echo_url(req: &Request, _: Data) -> Outcome<'static> {
-    let param = req.uri().as_str().split_at(6).1;
+    let param = req.uri()
+        .as_str()
+        .split_at(6)
+        .1;
     Outcome::of(String::from_param(param).unwrap())
 }
 
@@ -52,10 +59,10 @@ fn get_upload(_: &Request, _: Data) -> Outcome<'static> {
 }
 
 fn not_found_handler<'r>(_: Error, req: &'r Request) -> response::Result<'r> {
-    format!("Couldn't find: {}", req.uri()).respond()
+    Custom(Status::NotFound, format!("Couldn't find: {}", req.uri())).respond()
 }
 
-fn main() {
+fn rocket() -> rocket::Rocket {
     let always_forward = Route::ranked(1, Get, "/", forward);
     let hello = Route::ranked(2, Get, "/", hi);
 
@@ -72,5 +79,8 @@ fn main() {
         .mount("/hello", vec![name.clone()])
         .mount("/hi", vec![name])
         .catch(vec![not_found_catcher])
-        .launch();
+}
+
+fn main() {
+    rocket().launch();
 }

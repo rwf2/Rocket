@@ -5,3 +5,6 @@ workspace = "../../"
 
 [dependencies]
 rocket = { path = "../../lib" }
+
+[dev-dependencies]
+rocket = { path = "../../lib", features = ["testing"] }
