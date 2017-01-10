@@ -1,9 +1,13 @@
 #![feature(plugin, custom_derive, custom_attribute)]
 #![plugin(rocket_codegen)]
 
-#[macro_use] extern crate lazy_static;
+#[macro_use]
+extern crate lazy_static;
 extern crate rocket_contrib;
 extern crate rocket;
+
+#[cfg(test)]
+mod tests;
 
 use std::collections::HashMap;
 
@@ -14,7 +18,7 @@ use rocket_contrib::Template;
 
 #[derive(FromForm)]
 struct Message {
-    message: String
+    message: String,
 }
 
 #[post("/submit", data = "<message>")]
