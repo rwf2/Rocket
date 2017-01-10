@@ -24,6 +24,9 @@ lazy_static_macro = ["lazy_static"]
 rocket = { version = "0.1.4", path = "../lib/" }
 log = "^0.3"
 
+# FromParam type dependencies.
+uuid = { version = "^0.3", optional = true }
+
 # JSON and templating dependencies.
 serde = { version = "^0.8", optional = true }
 serde_json = { version = "^0.8", optional = true }

@@ -43,8 +43,14 @@ mod json;
 #[cfg(feature = "templates")]
 mod templates;
 
+#[cfg(feature = "uuid")]
+mod uuid;
+
 #[cfg(feature = "json")]
 pub use json::JSON;
 
 #[cfg(feature = "templates")]
 pub use templates::Template;
+
+#[cfg(feature = "uuid")]
+pub use uuid::UUID;
