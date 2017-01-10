@@ -44,7 +44,7 @@ impl Redirect {
 
     /// Construct a "permanent" (308) redirect response. This redirect must only
     /// be used for permanent redirects as it is cached by clients. This
-    /// response instructs the client to reissue requests tot he current URL to
+    /// response instructs the client to reissue requests for the current URL to
     /// a different URL, now and in the future, maintaining the contents of the
     /// request identically. This means that, for example, a `POST` request will
     /// be resent, contents included, to the requested URL.
