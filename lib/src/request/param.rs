@@ -5,6 +5,9 @@ use std::fmt::Debug;
 
 use http::uri::{URI, Segments};
 
+#[cfg(any(test, feature = "uuid"))]
+use uuid::{self, Uuid};
+
 /// Trait to convert a dynamic path segment string to a concrete value.
 ///
 /// This trait is used by Rocket's code generation facilities to parse dynamic
@@ -210,6 +213,14 @@ impl<'a> FromParam<'a> for String {
     }
 }
 
+#[cfg(any(test, feature = "uuid"))]
+impl<'a> FromParam<'a> for Uuid {
+    type Error = uuid::ParseError;
+    fn from_param(p: &'a str) -> Result<Uuid, Self::Error> {
+        p.parse()
+    }
+}
+
 macro_rules! impl_with_fromstr {
     ($($T:ident),+) => ($(
         impl<'a> FromParam<'a> for $T {
@@ -319,5 +330,28 @@ impl<'a, T: FromSegments<'a>> FromSegments<'a> for Option<T> {
             Ok(val) => Some(val),
             Err(_) => None
         })
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use uuid::{self, Uuid};
+    use super::FromParam;
+
+    #[test]
+    fn test_from_param_uuid() {
+        let uuid_str = "c1aa1e3b-9614-4895-9ebd-705255fa5bc2";
+        let uuid_result = Uuid::from_param(uuid_str);
+        assert!(uuid_result.is_ok());
+        let uuid = uuid_result.unwrap();
+        assert!(uuid_str.to_string() == uuid.to_string())
+    }
+
+    #[test]
+    fn test_from_param_invalid_uuid() {
+        let uuid_str = "c1aa1e3b-9614-4895-9ebd-705255fa5bc2p";
+        let uuid_result = Uuid::from_param(uuid_str);
+        assert!(!uuid_result.is_ok());
+        assert!(uuid_result == Err(uuid::ParseError::InvalidLength(37)));
     }
 }
