@@ -18,8 +18,8 @@ macro_rules! run_test {
 #[test]
 fn test_root() {
     // Check that the redirect works.
-    for method in vec![Get, Head].into_iter() {
-        let mut req = MockRequest::new(method, "/");
+    for method in &[Get, Head] {
+        let mut req = MockRequest::new(*method, "/");
         run_test!(req, |mut response: Response| {
             assert_eq!(response.status(), Status::SeeOther);
             
@@ -32,8 +32,8 @@ fn test_root() {
     }
     
     // Check that other request methods are not accepted (and instead caught).
-    for method in vec![Post, Put, Delete, Options, Trace, Connect, Patch].into_iter() {
-        let mut req = MockRequest::new(method, "/");
+    for method in &[Post, Put, Delete, Options, Trace, Connect, Patch] {
+        let mut req = MockRequest::new(*method, "/");
         run_test!(req, |mut response: Response| {
             assert_eq!(response.status(), Status::NotFound);
             
