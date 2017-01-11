@@ -20,6 +20,10 @@ url = "^1"
 toml = "^0.2"
 # cookie = "^0.3"
 
+[dependencies.clippy]
+version = ">=0.0.106"
+optional = true
+
 [dependencies.hyper]
 version = "^0.9"
 default-features = false

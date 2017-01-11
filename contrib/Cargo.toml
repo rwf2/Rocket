@@ -33,3 +33,7 @@ handlebars = { version = "^0.23", optional = true, features = ["serde_type"] }
 glob = { version = "^0.2", optional = true }
 lazy_static = { version = "^0.2", optional = true }
 tera = { version = "^0.6", optional = true }
+
+[dependencies.clippy]
+version = ">=0.0.106"
+optional = true

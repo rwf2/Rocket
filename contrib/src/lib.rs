@@ -29,6 +29,10 @@
 //! This crate is expected to grow with time, bringing in outside crates to be
 //! officially supported by Rocket.
 
+#![cfg_attr(feature="clippy", feature(plugin))]
+#![cfg_attr(feature="clippy", plugin(clippy))]
+#![cfg_attr(feature="clippy", allow(needless_lifetimes))]
+
 #[macro_use] extern crate log;
 #[macro_use] extern crate rocket;
 
