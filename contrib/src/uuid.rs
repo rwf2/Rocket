@@ -1,15 +1,38 @@
 extern crate uuid as uuid_ext;
 
+use std::fmt;
 use std::str::FromStr;
 use std::ops::{Deref, DerefMut};
 use rocket::request::FromParam;
 
+
+/// The UUID type, which implements `FromParam`. This type allows you to accept
+/// values from the [Uuid](https://github.com/rust-lang-nursery/uuid) crate in 
+/// your request handlers.
+///
+/// Make sure to enable the `uuid` feature in your Cargo.toml to use this type.
+/// 
+/// ```rust,ignore
+/// #[get("/users/<id>")]
+/// fn user(id: UUID) -> String {
+///   format!("We found: {}", id)
+/// }
+/// ```
+
+#[derive(Debug)]
 pub struct UUID(uuid_ext::Uuid);
 
 impl UUID {
+  /// Consumes the UUID wrapper returning the underlying Uuid type.
     pub fn unwrap(self) -> uuid_ext::Uuid {
         self.0
     }
+}
+
+impl fmt::Display for UUID {
+  fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    self.0.fmt(f)
+  }
 }
 
 impl<'a> FromParam<'a> for UUID {
@@ -62,6 +85,15 @@ mod test {
         assert!(uuid_result.is_ok());
         let uuid = uuid_result.unwrap();
         assert!(uuid_str.to_string() == uuid.to_string())
+    }
+
+    #[test]
+    fn test_display() {
+      let uuid_str = "c1aa1e3b-9614-4895-9ebd-705255fa5bc2";
+      let uuid_result = UUID::from_param(uuid_str);
+      assert!(uuid_result.is_ok());
+      let uuid = uuid_result.unwrap();
+      assert!(uuid_str.to_string() == format!("{}", uuid));
     }
 
     #[test]

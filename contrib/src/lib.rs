@@ -4,13 +4,15 @@
 //! These libraries are always kept in-sync with the core Rocket library. They
 //! provide common, but not fundamental, abstractions to be used by Rocket
 //! applications. In particular, contributor libraries typically export types
-//! that implement the `FromRequest` trait, `Responder` trait, or both.
+//! implementing a combination of the `FromRequest`, `FromParam`, and 
+//! `Responder` traits.
 //!
 //! Each module in this library is held behind a feature flag, with the most
 //! common modules exposed by default. The present feature list is below, with
 //! an asterisk next to the features that are enabled by default:
 //!
 //! * [json*](struct.JSON.html)
+//! * [uuid](struct.UUID.html)
 //! * [handlebars_templates](struct.Template.html)
 //! * [tera_templates](struct.Template.html)
 //!
@@ -43,7 +45,7 @@ mod json;
 #[cfg(feature = "templates")]
 mod templates;
 
-#[cfg(feature = "uuid")]
+#[cfg(any(test, feature = "uuid"))]
 mod uuid;
 
 #[cfg(feature = "json")]
@@ -52,5 +54,5 @@ pub use json::JSON;
 #[cfg(feature = "templates")]
 pub use templates::Template;
 
-#[cfg(feature = "uuid")]
+#[cfg(any(test, feature = "uuid"))]
 pub use uuid::UUID;
