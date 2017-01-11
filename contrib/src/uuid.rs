@@ -13,9 +13,17 @@ use rocket::request::FromParam;
 /// Make sure to enable the `uuid` feature in your Cargo.toml to use this type.
 /// 
 /// ```rust,ignore
+/// // A function expecting the Uuid type from the uuid crate.
+/// fn expects_uuid(v: uuid::Uuid) {
+///     ...
+/// }
+///
 /// #[get("/users/<id>")]
 /// fn user(id: UUID) -> String {
-///   format!("We found: {}", id)
+///     // Use Deref to access the underlying Uuid type.
+///     expects_uuid(*id);
+///
+///     format!("We found: {}", id)
 /// }
 /// ```
 
@@ -23,16 +31,16 @@ use rocket::request::FromParam;
 pub struct UUID(uuid_ext::Uuid);
 
 impl UUID {
-  /// Consumes the UUID wrapper returning the underlying Uuid type.
+    /// Consumes the UUID wrapper returning the underlying Uuid type.
     pub fn unwrap(self) -> uuid_ext::Uuid {
         self.0
     }
 }
 
 impl fmt::Display for UUID {
-  fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-    self.0.fmt(f)
-  }
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+       self.0.fmt(f)
+    }
 }
 
 impl<'a> FromParam<'a> for UUID {
@@ -89,11 +97,11 @@ mod test {
 
     #[test]
     fn test_display() {
-      let uuid_str = "c1aa1e3b-9614-4895-9ebd-705255fa5bc2";
-      let uuid_result = UUID::from_param(uuid_str);
-      assert!(uuid_result.is_ok());
-      let uuid = uuid_result.unwrap();
-      assert!(uuid_str.to_string() == format!("{}", uuid));
+        let uuid_str = "c1aa1e3b-9614-4895-9ebd-705255fa5bc2";
+        let uuid_result = UUID::from_param(uuid_str);
+        assert!(uuid_result.is_ok());
+        let uuid = uuid_result.unwrap();
+        assert!(uuid_str.to_string() == format!("{}", uuid));
     }
 
     #[test]
