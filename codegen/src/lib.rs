@@ -95,6 +95,9 @@
 #![feature(i128_type)]
 #![allow(unused_attributes)]
 #![allow(deprecated)]
+#![cfg_attr(feature="clippy", feature(plugin))]
+#![cfg_attr(feature="clippy", plugin(clippy))]
+#![cfg_attr(feature="clippy", allow(needless_lifetimes))]
 
 #[macro_use] extern crate syntax;
 #[macro_use] extern crate log;

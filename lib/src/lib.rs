@@ -4,6 +4,9 @@
 #![feature(associated_consts)]
 #![feature(const_fn)]
 #![feature(type_ascription)]
+#![cfg_attr(feature="clippy", feature(plugin))]
+#![cfg_attr(feature="clippy", plugin(clippy))]
+#![cfg_attr(feature="clippy", allow(needless_lifetimes))]
 
 //! # Rocket - Core API Documentation
 //!
