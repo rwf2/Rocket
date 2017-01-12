@@ -41,7 +41,6 @@ impl UUID {
     /// # use rocket_contrib::UUID;
     /// # use std::str::FromStr;
     /// # use uuid::Uuid;
-    ///
     /// let uuid_str = "c1aa1e3b-9614-4895-9ebd-705255fa5bc2";
     /// let real_uuid = Uuid::from_str(uuid_str).unwrap();
     /// let my_inner_uuid = UUID::from_str(uuid_str).unwrap().into_inner();
