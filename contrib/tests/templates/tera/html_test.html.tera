@@ -1,0 +1,5 @@
+{% extends "tera/base" %}
+{% block title %}{{ title }}{% endblock title %}
+{% block content %}
+{{ content }}
+{% endblock content %}

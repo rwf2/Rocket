@@ -1,3 +1,5 @@
+#![feature(drop_types_in_const)]
+
 //! This crate contains officially sanctioned contributor libraries that provide
 //! functionality commonly used by Rocket applications.
 //!

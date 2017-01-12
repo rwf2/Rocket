@@ -1,4 +1,10 @@
-# Rocket [![Build Status](https://travis-ci.org/SergioBenitez/Rocket.svg?branch=master)](https://travis-ci.org/SergioBenitez/Rocket) [![Rocket Homepage](https://img.shields.io/badge/web-rocket.rs-red.svg?style=flat&label=https&colorB=d33847)](https://rocket.rs) [![Current Crates.io Version](https://img.shields.io/crates/v/rocket.svg)](https://crates.io/crates/rocket)
+# Rocket
+
+[![Build Status](https://travis-ci.org/SergioBenitez/Rocket.svg?branch=master)](https://travis-ci.org/SergioBenitez/Rocket)
+[![Rocket Homepage](https://img.shields.io/badge/web-rocket.rs-red.svg?style=flat&label=https&colorB=d33847)](https://rocket.rs)
+[![Current Crates.io Version](https://img.shields.io/crates/v/rocket.svg)](https://crates.io/crates/rocket)
+[![Chat on Matrix](https://img.shields.io/badge/style-matrix-blue.svg?style=flat&label=chat)](https://riot.im/app/#/room/#mozilla_#rocket:matrix.org)
+[![IRC: #rocket on irc.mozilla.org](https://img.shields.io/badge/style-%23rocket-blue.svg?style=flat&label=mozilla)](https://kiwiirc.com/client/irc.mozilla.org/#rocket)
 
 Rocket is web framework for Rust (nightly) with a focus on ease-of-use,
 expressability, and speed. Here's an example of a complete Rocket application:
@@ -40,12 +46,16 @@ Rocket is extensively documented:
 [Guide]: https://rocket.rs/guide
 [API Documentation]: https://api.rocket.rs/rocket
 
-The official community support channel is via the [Mozilla IRC
-Server](https://wiki.mozilla.org/IRC) at `irc.mozilla.org` in channel `#rocket`.
-If you're not familiar with IRC, see Mozilla's [Getting Started with
+The official community support channels are the `#rocket` IRC channel on the
+[Mozilla IRC Server](https://wiki.mozilla.org/IRC) at `irc.mozilla.org` and the
+bridged [Rocket room on
+Matrix](https://riot.im/app/#/room/#mozilla_#rocket:matrix.org). If you're not
+familiar with IRC, we recommend chatting through [Matrix via
+Riot](https://riot.im/app/#/room/#mozilla_#rocket:matrix.org) or via the [Kiwi
+web IRC client](https://kiwiirc.com/client/irc.mozilla.org/#rocket). You can
+learn more about IRC via Mozilla's [Getting Started with
 IRC](https://developer.mozilla.org/en-US/docs/Mozilla/QA/Getting_Started_with_IRC)
-guide. You can find general Rust support in `#rust` or `#rust-beginners` on the
-same network.
+guide.
 
 ## Building
 
@@ -137,8 +147,9 @@ Apache License, Version 2.0, without any additional terms or conditions.
 Rocket is designed to be performant. At this time, its performance is
 [bottlenecked by the Hyper HTTP
 library](https://github.com/SergioBenitez/Rocket/issues/17). Even so, Rocket
-currently performs _better_ than the latest version of Hyper on a simple "Hello,
-world!" benchmark:
+currently performs _significantly better_ than the latest version of
+asynchronous Hyper on a simple "Hello, world!" benchmark. Rocket also performs
+_significantly better_ than the Iron web framework:
 
 **Machine Specs:**
 
@@ -147,32 +158,45 @@ world!" benchmark:
   * **Processor:** Intel Xeon X5675 @ 3.07GHz
   * **Operating System:** Mac OS X v10.11.6
 
-**Hyper v0.10.0-a.0** (46 LOC) results (best of 3, +/- 2000 req/s, +/- 10us latency):
+**Rocket v0.2-rc** (8 LOC) results (best of 3, +/- 2000 req/s, +/- 5us latency):
 
     Running 10s test @ http://localhost:80
-      2 threads and 10 connections
+      1 threads and 18 connections
       Thread Stats   Avg      Stdev     Max   +/- Stdev
-        Latency   175.12us   40.38us 429.00us   70.79%
-        Req/Sec    28.00k     2.41k   36.79k    72.28%
-      562692 requests in 10.10s, 81.57MB read
-    Requests/sec:  55715.98
-    Transfer/sec:      8.08MB
+        Latency   153.01us   42.25us 449.00us   75.54%
+        Req/Sec    75.58k    11.75k   90.22k    54.46%
+      758044 requests in 10.10s, 105.55MB read
+    Requests/sec:  75051.28
+    Transfer/sec:     10.45MB
 
-**Rocket v0.1.0** (8 LOC) results (best of 3, +/- 1000 req/s, +/- 5us latency):
+**Hyper v0.10.0-a.0 (1/12/2016)** (46 LOC) results (best of 3, +/- 5000 req/s, +/- 30us latency):
 
     Running 10s test @ http://localhost:80
-      2 threads and 10 connections
+      1 threads and 18 connections
       Thread Stats   Avg      Stdev     Max   +/- Stdev
-        Latency   161.33us   37.40us   2.08ms   75.89%
-        Req/Sec    30.10k     1.13k   33.28k    72.77%
-      604782 requests in 10.10s, 84.21MB read
-    Requests/sec:  59883.30
-    Transfer/sec:      8.34MB
+        Latency   287.81us   77.09us 606.00us   70.47%
+        Req/Sec    59.94k     6.01k   79.72k    71.00%
+      596231 requests in 10.00s, 83.02MB read
+    Requests/sec:  59621.32
+    Transfer/sec:      8.30MB
+
+**Iron v0.5.0** (11 LOC) results (best of 3, +/- 3000 req/s, +/- 500us latency):
+
+    Running 10s test @ http://localhost:80
+      1 threads and 18 connections
+      Thread Stats   Avg      Stdev     Max   +/- Stdev
+        Latency   512.36us    5.57ms 149.99ms   99.60%
+        Req/Sec    58.25k    11.61k   70.47k    46.00%
+      579227 requests in 10.00s, 80.65MB read
+    Requests/sec:  57920.73
+    Transfer/sec:      8.06MB
 
 **Summary:**
 
-  * Rocket throughput higher by 7.5% (higher is better).
-  * Rocket latency lower by 7.8% (lower is better).
+  * Rocket throughput higher by 25.9% (higher is better) compared to Hyper.
+  * Rocket throughput higher by 29.6% (higher is better) compared to Iron.
+  * Rocket latency lower by 46.8% (lower is better) compared to Hyper.
+  * Rocket latency lower by 70.1% (lower is better) compared to Iron.
 
 ### Future Improvements
 

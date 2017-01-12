@@ -4,6 +4,7 @@
 [development]
 address = "localhost"
 port = 8000
+workers = 1
 log = "normal"
 hi = "Hello!"
 is_extra = true
@@ -12,12 +13,14 @@ is_extra = true
 address = "0.0.0.0"
 port = 80
 log = "normal"
+workers = 8
 # don't use this key! generate your own and keep it private!
 session_key = "VheMwXIBygSmOlZAhuWl2B+zgvTN3WW5"
 
 [production]
 address = "0.0.0.0"
 port = 80
+workers = 12
 log = "critical"
 # don't use this key! generate your own and keep it private!
 session_key = "adL5fFIPmZBrlyHk2YT4NLV3YCk2gFXz"

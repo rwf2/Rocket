@@ -18,8 +18,9 @@ pub fn test_config(environment: Environment) {
         Environment::Development => {
             assert_eq!(config.address, "localhost".to_string());
             assert_eq!(config.port, 8000);
+            assert_eq!(config.workers, 1);
             assert_eq!(config.log_level, LoggingLevel::Normal);
-            assert_eq!(config.env, config::Environment::Development);
+            assert_eq!(config.environment, config::Environment::Development);
             assert_eq!(config.extras().count(), 2);
             assert_eq!(config.get_str("hi"), Ok("Hello!"));
             assert_eq!(config.get_bool("is_extra"), Ok(true));
@@ -27,15 +28,17 @@ pub fn test_config(environment: Environment) {
         Environment::Staging => {
             assert_eq!(config.address, "0.0.0.0".to_string());
             assert_eq!(config.port, 80);
+            assert_eq!(config.workers, 8);
             assert_eq!(config.log_level, LoggingLevel::Normal);
-            assert_eq!(config.env, config::Environment::Staging);
+            assert_eq!(config.environment, config::Environment::Staging);
             assert_eq!(config.extras().count(), 0);
         }
         Environment::Production => {
             assert_eq!(config.address, "0.0.0.0".to_string());
             assert_eq!(config.port, 80);
+            assert_eq!(config.workers, 12);
             assert_eq!(config.log_level, LoggingLevel::Critical);
-            assert_eq!(config.env, config::Environment::Production);
+            assert_eq!(config.environment, config::Environment::Production);
             assert_eq!(config.extras().count(), 0);
         }
     }

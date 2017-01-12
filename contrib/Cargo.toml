@@ -32,7 +32,8 @@ serde = { version = "^0.8", optional = true }
 serde_json = { version = "^0.8", optional = true }
 
 # Templating dependencies only.
-handlebars = { version = "^0.23", optional = true, features = ["serde_type"] }
+handlebars = { version = "^0.24", optional = true, features = ["serde_type"] }
 glob = { version = "^0.2", optional = true }
 lazy_static = { version = "^0.2", optional = true }
-tera = { version = "^0.6", optional = true }
+# tera = { version = "^0.6", optional = true }
+tera = { git = "https://github.com/SergioBenitez/tera", optional = true }

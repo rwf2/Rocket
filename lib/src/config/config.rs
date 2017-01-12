@@ -1,81 +1,121 @@
 use std::collections::HashMap;
 use std::net::ToSocketAddrs;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::sync::RwLock;
+use std::convert::AsRef;
 use std::fmt;
+use std::env;
 
 use config::Environment::*;
-use config::{self, Environment, ConfigError};
+use config::{self, Value, ConfigBuilder, Environment, ConfigError};
 
+use num_cpus;
 use logger::LoggingLevel;
-use toml::Value;
 
 /// The core configuration structure.
 pub struct Config {
+    /// The environment that this configuration corresponds to.
+    pub environment: Environment,
     /// The address to serve on.
     pub address: String,
     /// The port to serve on.
     pub port: u16,
+    /// The number of workers to run concurrently.
+    pub workers: u16,
     /// How much information to log.
     pub log_level: LoggingLevel,
-    /// The environment that this configuration corresponds to.
-    pub env: Environment,
+    /// Extra parameters that aren't part of Rocket's core config.
+    pub extras: HashMap<String, Value>,
+    /// The path to the configuration file this config belongs to.
+    pub config_path: PathBuf,
+    /// The session key.
     session_key: RwLock<Option<String>>,
-    extras: HashMap<String, Value>,
-    filepath: String,
 }
 
 macro_rules! parse {
     ($conf:expr, $name:expr, $val:expr, $method:ident, $expect: expr) => (
         $val.$method().ok_or_else(|| {
-            $conf.bad_type($name, $val, $expect)
+            $conf.bad_type($name, $val.type_str(), $expect)
         })
     );
 }
 
 impl Config {
+    /// Creates a new configuration using the default parameters for the
+    /// environment `env`. The root configuration directory is set to the
+    /// current working directory.
+    ///
+    /// # Errors
+    ///
+    /// If the current directory cannot be retrieved, a `BadCWD` error is
+    /// returned.
+    pub fn build(env: Environment) -> ConfigBuilder {
+        ConfigBuilder::new(env)
+    }
+
+    /// Creates a new configuration using the default parameters for the
+    /// environment `env`. The root configuration directory is set to the
+    /// current working directory.
+    ///
+    /// # Errors
+    ///
+    /// If the current directory cannot be retrieved, a `BadCWD` error is
+    /// returned.
+    pub fn new(env: Environment) -> config::Result<Config> {
+        let cwd = env::current_dir().map_err(|_| ConfigError::BadCWD)?;
+        Config::default_for(env, cwd.as_path().join("Rocket.custom.toml"))
+    }
+
     /// Returns the default configuration for the environment `env` given that
-    /// the configuration was stored at `filepath`. If `filepath` is not an
-    /// absolute path, an `Err` of `ConfigError::BadFilePath` is returned.
-    pub fn default_for(env: Environment, filepath: &str) -> config::Result<Config> {
-        let file_path = Path::new(filepath);
-        if file_path.parent().is_none() {
-            return Err(ConfigError::BadFilePath(filepath.to_string(),
+    /// the configuration was stored at `config_path`. If `config_path` is not
+    /// an absolute path, an `Err` of `ConfigError::BadFilePath` is returned.
+    pub fn default_for<P>(env: Environment, config_path: P) -> config::Result<Config>
+        where P: AsRef<Path>
+    {
+        let config_path = config_path.as_ref().to_path_buf();
+        if config_path.parent().is_none() {
+            return Err(ConfigError::BadFilePath(config_path,
                 "Configuration files must be rooted in a directory."));
         }
+
+        // Note: This may truncate if num_cpus::get() > u16::max. That's okay.
+        let default_workers = ::std::cmp::max(num_cpus::get(), 2) as u16;
 
         Ok(match env {
             Development => {
                 Config {
+                    environment: Development,
                     address: "localhost".to_string(),
                     port: 8000,
+                    workers: default_workers,
                     log_level: LoggingLevel::Normal,
                     session_key: RwLock::new(None),
                     extras: HashMap::new(),
-                    env: env,
-                    filepath: filepath.to_string(),
+                    config_path: config_path,
                 }
             }
             Staging => {
                 Config {
+                    environment: Staging,
                     address: "0.0.0.0".to_string(),
                     port: 80,
+                    workers: default_workers,
                     log_level: LoggingLevel::Normal,
                     session_key: RwLock::new(None),
                     extras: HashMap::new(),
-                    env: env,
-                    filepath: filepath.to_string(),
+                    config_path: config_path,
                 }
             }
             Production => {
                 Config {
+                    environment: Production,
                     address: "0.0.0.0".to_string(),
                     port: 80,
+                    workers: default_workers,
                     log_level: LoggingLevel::Critical,
                     session_key: RwLock::new(None),
                     extras: HashMap::new(),
-                    env: env,
-                    filepath: filepath.to_string(),
+                    config_path: config_path,
                 }
             }
         })
@@ -84,9 +124,10 @@ impl Config {
     /// Constructs a `BadType` error given the entry `name`, the invalid `val`
     /// at that entry, and the `expect`ed type name.
     #[inline(always)]
-    fn bad_type(&self, name: &str, val: &Value, expect: &'static str) -> ConfigError {
-        let id = format!("{}.{}", self.env, name);
-        ConfigError::BadType(id, expect, val.type_str(), self.filepath.clone())
+    fn bad_type(&self, name: &str, actual: &'static str, expect: &'static str)
+        -> ConfigError {
+        let id = format!("{}.{}", self.environment, name);
+        ConfigError::BadType(id, expect, actual, self.config_path.clone())
     }
 
     /// Sets the configuration `val` for the `name` entry. If the `name` is one
@@ -100,49 +141,81 @@ impl Config {
     ///
     ///   * **address**: String
     ///   * **port**: Integer (16-bit unsigned)
-    ///   * **session_key**: String (192-bit base64)
+    ///   * **workers**: Integer (16-bit unsigned)
     ///   * **log**: String
+    ///   * **session_key**: String (192-bit base64)
     ///
     pub fn set(&mut self, name: &str, val: &Value) -> config::Result<()> {
         if name == "address" {
             let address_str = parse!(self, name, val, as_str, "a string")?;
-            if address_str.contains(':') {
-                return Err(self.bad_type(name, val, "an IP address with no port"));
-            } else if format!("{}:{}", address_str, 80).to_socket_addrs().is_err() {
-                return Err(self.bad_type(name, val, "a valid IP address"));
-            }
-
-            self.address = address_str.to_string();
+            self.set_address(address_str)?;
         } else if name == "port" {
             let port = parse!(self, name, val, as_integer, "an integer")?;
-            if port < 0 {
-                return Err(self.bad_type(name, val, "an unsigned integer"));
+            if port < 0 || port > (u16::max_value() as i64) {
+                return Err(self.bad_type(name, val.type_str(), "a 16-bit unsigned integer"))
             }
 
-            if port > (u16::max_value() as i64) {
-                return Err(self.bad_type(name, val, "a 16-bit unsigned integer"))
+            self.set_port(port as u16);
+        } else if name == "workers" {
+            let workers = parse!(self, name, val, as_integer, "an integer")?;
+            if workers < 0 || workers > (u16::max_value() as i64) {
+                return Err(self.bad_type(name, val.type_str(), "a 16-bit unsigned integer"));
             }
 
-            self.port = port as u16;
+            self.set_workers(workers as u16);
         } else if name == "session_key" {
             let key = parse!(self, name, val, as_str, "a string")?;
-            if key.len() != 32 {
-                return Err(self.bad_type(name, val, "a 192-bit base64 string"));
-            }
-
-            self.session_key = RwLock::new(Some(key.to_string()));
+            self.set_session_key(key)?;
         } else if name == "log" {
             let level_str = parse!(self, name, val, as_str, "a string")?;
-            self.log_level = match level_str.parse() {
-                Ok(level) => level,
-                Err(_) => return Err(self.bad_type(name, val,
-                                "log level ('normal', 'critical', 'debug')"))
-            };
+            let expect = "log level ('normal', 'critical', 'debug')";
+            match level_str.parse() {
+                Ok(level) => self.set_log_level(level),
+                Err(_) => return Err(self.bad_type(name, val.type_str(), expect))
+            }
         } else {
             self.extras.insert(name.into(), val.clone());
         }
 
         Ok(())
+    }
+
+    pub fn set_address<A: Into<String>>(&mut self, address: A) -> config::Result<()> {
+        let address = address.into();
+        if address.contains(':') {
+            return Err(self.bad_type("address", "string", "a hostname or IP with no port"));
+        } else if format!("{}:{}", address, 80).to_socket_addrs().is_err() {
+            return Err(self.bad_type("address", "string", "a valid hostname or IP"));
+        }
+
+        self.address = address.into();
+        Ok(())
+    }
+
+    pub fn set_port(&mut self, port: u16) {
+        self.port = port;
+    }
+
+    pub fn set_workers(&mut self, workers: u16) {
+        self.workers = workers;
+    }
+
+    pub fn set_session_key<K: Into<String>>(&mut self, key: K) -> config::Result<()> {
+        let key = key.into();
+        if key.len() != 32 {
+            return Err(self.bad_type("session_key", "string", "a 192-bit base64 string"));
+        }
+
+        self.session_key = RwLock::new(Some(key));
+        Ok(())
+    }
+
+    pub fn set_log_level(&mut self, log_level: LoggingLevel) {
+        self.log_level = log_level;
+    }
+
+    pub fn set_extras(&mut self, extras: HashMap<String, Value>) {
+        self.extras = extras;
     }
 
     /// Moves the session key string out of the `self` Config, if there is one.
@@ -155,13 +228,14 @@ impl Config {
     /// use rocket::config::{Config, Environment, Value};
     ///
     /// // Create a new config with a session key.
-    /// let key = "adL5fFIPmZBrlyHk2YT4NLV3YCk2gFXz".to_string();
-    /// let config = Config::default_for(Environment::Staging, "/custom").unwrap()
-    ///     .session_key(key.clone());
+    /// let key = "adL5fFIPmZBrlyHk2YT4NLV3YCk2gFXz";
+    /// let config = Config::build(Environment::Staging)
+    ///     .session_key(key)
+    ///     .unwrap();
     ///
     /// // Get the key for the first time.
     /// let session_key = config.take_session_key();
-    /// assert_eq!(session_key, Some(key.clone()));
+    /// assert_eq!(session_key, Some(key.to_string()));
     ///
     /// // Try to get the key again.
     /// let session_key_again = config.take_session_key();
@@ -220,71 +294,34 @@ impl Config {
     /// For instance, if the configuration file is at `/tmp/Rocket.toml`, the
     /// path `/tmp` is returned.
     pub fn root(&self) -> &Path {
-        match Path::new(self.filepath.as_str()).parent() {
+        match self.config_path.parent() {
             Some(parent) => parent,
-            None => panic!("root(): filepath {} has no parent", self.filepath)
+            None => panic!("root(): path {:?} has no parent", self.config_path)
         }
-    }
-
-    /// Sets the `address` in `self` to `var` and returns the structure.
-    #[inline(always)]
-    pub fn address(mut self, var: String) -> Self {
-        self.address = var;
-        self
-    }
-
-    /// Sets the `port` in `self` to `var` and returns the structure.
-    #[inline(always)]
-    pub fn port(mut self, var: u16) -> Self {
-        self.port = var;
-        self
-    }
-
-    /// Sets the `log_level` in `self` to `var` and returns the structure.
-    #[inline(always)]
-    pub fn log_level(mut self, var: LoggingLevel) -> Self {
-        self.log_level = var;
-        self
-    }
-
-    /// Sets the `session_key` in `self` to `var` and returns the structure.
-    #[inline(always)]
-    pub fn session_key(mut self, var: String) -> Self {
-        self.session_key = RwLock::new(Some(var));
-        self
-    }
-
-    /// Sets the `env` in `self` to `var` and returns the structure.
-    #[inline(always)]
-    pub fn env(mut self, var: Environment) -> Self {
-        self.env = var;
-        self
-    }
-
-    /// Adds an extra configuration parameter with `name` and `value` to `self`
-    /// and returns the structure.
-    #[inline(always)]
-    pub fn extra(mut self, name: &str, value: &Value) -> Self {
-        self.extras.insert(name.into(), value.clone());
-        self
     }
 }
 
 impl fmt::Debug for Config {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "Config[{}] {{ address: {}, port: {}, log_level: {:?} }}",
-               self.env, self.address, self.port, self.log_level)
+        write!(f, "Config[{}] {{ address: {}, port: {}, workers: {}, log: {:?}",
+               self.environment, self.address, self.port, self.workers, self.log_level)?;
+
+        for (key, value) in self.extras() {
+            write!(f, ", {}: {}", key, value)?;
+        }
+
+        write!(f, " }}")
     }
 }
 
+/// Doesn't consider the session key or config path.
 impl PartialEq for Config {
     fn eq(&self, other: &Config) -> bool {
-        &*self.session_key.read().unwrap() == &*other.session_key.read().unwrap()
-            && self.address == other.address
+        self.address == other.address
             && self.port == other.port
+            && self.workers == other.workers
             && self.log_level == other.log_level
-            && self.env == other.env
+            && self.environment == other.environment
             && self.extras == other.extras
-            && self.filepath == other.filepath
     }
 }

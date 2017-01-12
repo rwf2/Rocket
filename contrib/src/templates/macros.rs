@@ -2,19 +2,21 @@
 /// engines from the set of template engined passed in.
 macro_rules! engine_set {
     ($($feature:expr => $engine:ident),+,) => ({
-        use std::collections::HashSet;
-        let mut set = HashSet::new();
+        type RegisterFn = for<'a, 'b> unsafe fn(&'a [(&'b str, &TemplateInfo)]) -> bool;
+
+        let mut set = Vec::new();
         $(
             #[cfg(feature = $feature)]
-            fn $engine(set: &mut HashSet<String>) {
-                set.insert($engine::EXT.to_string());
+            fn $engine(set: &mut Vec<(&'static str, RegisterFn)>) {
+                set.push(($engine::EXT, $engine::register));
             }
 
             #[cfg(not(feature = $feature))]
-            fn $engine(_: &mut HashSet<String>) {  }
+            fn $engine(_: &mut Vec<(&'static str, RegisterFn)>) { }
 
             $engine(&mut set);
         )+
+
         set
     });
 }
@@ -25,25 +27,27 @@ macro_rules! engine_set {
 /// extension, and if so, calls the engine's `render` method. All of this only
 /// happens for engine's that have been enabled as features by the user.
 macro_rules! render_set {
-    ($name:expr, $info:expr, $ctxt:expr, $($feature:expr => $engine:ident),+,) => ({$(
-        #[cfg(feature = $feature)]
-        fn $engine<T: Serialize>(name: &str, info: &TemplateInfo, c: &T)
-                -> Option<Template> {
-            if info.extension == $engine::EXT {
-                let rendered = $engine::render(name, info, c);
-                return Some(Template(rendered, info.data_type.clone()));
+    ($name:expr, $info:expr, $ctxt:expr, $($feature:expr => $engine:ident),+,) => ({
+        $(
+            #[cfg(feature = $feature)]
+            fn $engine<T: Serialize>(name: &str, info: &TemplateInfo, c: &T)
+            -> Option<Template> {
+                if info.extension == $engine::EXT {
+                    let rendered = $engine::render(name, info, c);
+                    return Some(Template(rendered, info.data_type.clone()));
+                }
+
+                None
             }
 
-            None
-        }
+            #[cfg(not(feature = $feature))]
+            fn $engine<T: Serialize>(_: &str, _: &TemplateInfo, _: &T)
+            -> Option<Template> { None }
 
-        #[cfg(not(feature = $feature))]
-        fn $engine<T: Serialize>(_: &str, _: &TemplateInfo, _: &T)
-                -> Option<Template> { None }
-
-        if let Some(template) = $engine($name, &$info, $ctxt) {
-            return template
-        }
-    )+});
+            if let Some(template) = $engine($name, &$info, $ctxt) {
+                return template
+            }
+         )+
+    });
 }
 

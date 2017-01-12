@@ -1,3 +1,5 @@
+use std::path::PathBuf;
+
 use super::Environment;
 
 use term_painter::Color::White;
@@ -28,7 +30,7 @@ pub enum ConfigError {
     /// The path at which the configuration file was found was invalid.
     ///
     /// Parameters: (path, reason)
-    BadFilePath(String, &'static str),
+    BadFilePath(PathBuf, &'static str),
     /// An environment specified in `ROCKET_ENV` is invalid.
     ///
     /// Parameters: (environment_name)
@@ -36,15 +38,15 @@ pub enum ConfigError {
     /// An environment specified as a table `[environment]` is invalid.
     ///
     /// Parameters: (environment_name, filename)
-    BadEntry(String, String),
-    /// A key was specified with a value of the wrong type.
+    BadEntry(String, PathBuf),
+    /// A config key was specified with a value of the wrong type.
     ///
     /// Parameters: (entry_name, expected_type, actual_type, filename)
-    BadType(String, &'static str, &'static str, String),
+    BadType(String, &'static str, &'static str, PathBuf),
     /// There was a TOML parsing error.
     ///
     /// Parameters: (toml_source_string, filename, error_list)
-    ParseError(String, String, Vec<ParsingError>),
+    ParseError(String, PathBuf, Vec<ParsingError>),
 }
 
 impl ConfigError {
@@ -58,13 +60,13 @@ impl ConfigError {
             NotFound => error!("config file was not found"),
             IOError => error!("failed reading the config file: IO error"),
             BadFilePath(ref path, reason) => {
-                error!("configuration file path '{}' is invalid", path);
+                error!("configuration file path '{:?}' is invalid", path);
                 info_!("{}", reason);
             }
             BadEntry(ref name, ref filename) => {
                 let valid_entries = format!("{}, and global", valid_envs);
                 error!("[{}] is not a known configuration environment", name);
-                info_!("in {}", White.paint(filename));
+                info_!("in {:?}", White.paint(filename));
                 info_!("valid environments are: {}", White.paint(valid_entries));
             }
             BadEnv(ref name) => {
@@ -73,7 +75,7 @@ impl ConfigError {
             }
             BadType(ref name, expected, actual, ref filename) => {
                 error!("'{}' key could not be parsed", name);
-                info_!("in {}", White.paint(filename));
+                info_!("in {:?}", White.paint(filename));
                 info_!("expected value to be {}, but found {}",
                        White.paint(expected), White.paint(actual));
             }
@@ -84,7 +86,7 @@ impl ConfigError {
                     let error_source = &source[lo..hi];
 
                     error!("config file could not be parsed as TOML");
-                    info_!("at {}:{}:{}", White.paint(filename), line + 1, col + 1);
+                    info_!("at {:?}:{}:{}", White.paint(filename), line + 1, col + 1);
                     trace_!("'{}' - {}", error_source, White.paint(&error.desc));
                 }
             }

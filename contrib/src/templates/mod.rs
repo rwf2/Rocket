@@ -17,7 +17,7 @@ use std::path::{Path, PathBuf};
 use std::collections::HashMap;
 use std::fmt;
 
-use rocket::config;
+use rocket::config::{self, ConfigError};
 use rocket::response::{self, Content, Responder};
 use rocket::http::{ContentType, Status};
 
@@ -104,17 +104,25 @@ const DEFAULT_TEMPLATE_DIR: &'static str = "templates";
 
 lazy_static! {
     static ref TEMPLATES: HashMap<String, TemplateInfo> = discover_templates();
-    static ref TEMPLATE_DIR: String = {
-        config::active().map(|config| {
-            let dir = config.get_str("template_dir").map_err(|e| {
+    static ref TEMPLATE_DIR: PathBuf = {
+        let default_dir_path = config::active().ok_or(ConfigError::NotFound)
+            .map(|config| config.root().join(DEFAULT_TEMPLATE_DIR))
+            .map_err(|_| {
+                warn_!("No configuration is active!");
+                warn_!("Using default template directory: {:?}", DEFAULT_TEMPLATE_DIR);
+            })
+            .unwrap_or(PathBuf::from(DEFAULT_TEMPLATE_DIR));
+
+        config::active().ok_or(ConfigError::NotFound)
+            .and_then(|config| config.get_str("template_dir"))
+            .map(|user_dir| PathBuf::from(user_dir))
+            .map_err(|e| {
                 if !e.is_not_found() {
                     e.pretty_print();
-                    warn_!("Using default directory '{}'", DEFAULT_TEMPLATE_DIR);
+                    warn_!("Using default directory '{:?}'", default_dir_path);
                 }
-            }).unwrap_or(DEFAULT_TEMPLATE_DIR);
-
-            config.root().join(dir).to_string_lossy().into_owned()
-        }).unwrap_or(DEFAULT_TEMPLATE_DIR.to_string())
+            })
+            .unwrap_or(default_dir_path)
     };
 }
 
@@ -144,11 +152,13 @@ impl Template {
             let names: Vec<_> = TEMPLATES.keys().map(|s| s.as_str()).collect();
             error_!("Template '{}' does not exist.", name);
             info_!("Known templates: {}", names.join(","));
-            info_!("Searched in '{}'.", *TEMPLATE_DIR);
+            info_!("Searched in '{:?}'.", *TEMPLATE_DIR);
             return Template(None, None);
         }
 
-        // Keep this set in-sync with the `engine_set` invocation.
+        // Keep this set in-sync with the `engine_set` invocation. The macro
+        // `return`s a `Template` if the extenion in `template` matches an
+        // engine in the set. Otherwise, control will fall through.
         render_set!(name, template.unwrap(), context,
             "tera_templates" => tera_templates,
             "handlebars_templates" => handlebars_templates,
@@ -219,6 +229,8 @@ fn split_path(path: &Path) -> (PathBuf, String, Option<String>) {
 /// Returns a HashMap of `TemplateInfo`'s for all of the templates in
 /// `TEMPLATE_DIR`. Templates are all files that match one of the extensions for
 /// engine's in `engine_set`.
+///
+/// **WARNING:** This function should be called ONCE from a SINGLE THREAD.
 fn discover_templates() -> HashMap<String, TemplateInfo> {
     // Keep this set in-sync with the `render_set` invocation.
     let engines = engine_set![
@@ -227,19 +239,30 @@ fn discover_templates() -> HashMap<String, TemplateInfo> {
     ];
 
     let mut templates = HashMap::new();
-    for ext in engines {
-        let mut glob_path: PathBuf = [&*TEMPLATE_DIR, "**", "*"].iter().collect();
+    for &(ext, _) in &engines {
+        let mut glob_path: PathBuf = TEMPLATE_DIR.join("**").join("*");
         glob_path.set_extension(ext);
         for path in glob(glob_path.to_str().unwrap()).unwrap().filter_map(Result::ok) {
             let (rel_path, name, data_type) = split_path(&path);
-            templates.insert(name, TemplateInfo {
+            let info = TemplateInfo {
                 full_path: path.to_path_buf(),
                 path: rel_path,
-                extension: path.extension().unwrap().to_string_lossy().into_owned(),
+                extension: ext.to_string(),
                 data_type: data_type,
-            });
+            };
+
+            templates.insert(name, info);
         }
     }
+
+    for &(ext, register_fn) in &engines {
+        let named_templates = templates.iter()
+            .filter(|&(_, i)| i.extension == ext)
+            .map(|(k, i)| (k.as_str(), i))
+            .collect::<Vec<_>>();
+
+        unsafe { register_fn(&*named_templates); }
+    };
 
     templates
 }

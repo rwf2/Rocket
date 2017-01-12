@@ -95,6 +95,7 @@ extern crate term_painter;
 extern crate hyper;
 extern crate url;
 extern crate toml;
+extern crate num_cpus;
 
 #[cfg(test)] #[macro_use] extern crate lazy_static;
 
@@ -135,6 +136,6 @@ pub fn ignite() -> Rocket {
 
 /// Alias to [Rocket::custom()](/rocket/struct.Rocket.html#method.custom).
 /// Creates a new instance of `Rocket` with a custom configuration.
-pub fn custom(config: &config::Config) -> Rocket {
-    Rocket::custom(config)
+pub fn custom(config: config::Config, log: bool) -> Rocket {
+    Rocket::custom(config, log)
 }
