@@ -2,7 +2,7 @@ extern crate uuid as uuid_ext;
 
 use std::fmt;
 use std::str::FromStr;
-use std::ops::{Deref, DerefMut};
+use std::ops::Deref;
 use rocket::request::FromParam;
 
 /// The UUID type, which implements `FromParam`. This type allows you to accept
@@ -21,15 +21,12 @@ use rocket::request::FromParam;
 /// features = ["uuid"]
 /// ```
 ///
-/// The UUID type implements the Deref trait allowing you to access the
-/// underlying Uuid type.
+/// With the `FromParam` trait, UUID allows you to use it directly as a target
+/// of a dynamic parameter.
 ///
 /// ```rust,ignore
 /// #[get("/users/<id>")]
 /// fn user(id: UUID) -> String {
-///     // Use Deref to access the underlying Uuid type.
-///     expects_uuid(*id);
-///
 ///     format!("We found: {}", id)
 /// }
 /// ```
@@ -41,20 +38,23 @@ impl UUID {
     ///
     /// # Example
     /// ```rust,ignore
-    /// # extern crate uuid;
     /// # use rocket_contrib::UUID;
     /// # use std::str::FromStr;
+    /// # use uuid::Uuid;
     ///
     /// let uuid_str = "c1aa1e3b-9614-4895-9ebd-705255fa5bc2";
+    /// let real_uuid = Uuid::from_str(uuid_str).unwrap();
     /// let my_inner_uuid = UUID::from_str(uuid_str).unwrap().into_inner();
-    /// assert_eq!(uuid::Uuid::from_str(uuid_str), my_inner_uuid)
+    /// assert_eq!(real_uuid, my_inner_uuid);
     /// ```
+    #[inline(always)]
     pub fn into_inner(self) -> uuid_ext::Uuid {
         self.0
     }
 }
 
 impl fmt::Display for UUID {
+    #[inline]
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         self.0.fmt(f)
     }
@@ -84,9 +84,9 @@ impl Deref for UUID {
     }
 }
 
-impl DerefMut for UUID {
-    fn deref_mut<'a>(&'a mut self) -> &'a mut uuid_ext::Uuid {
-        &mut self.0
+impl PartialEq<uuid_ext::Uuid> for UUID {
+    fn eq(&self, other: &uuid_ext::Uuid) -> bool {
+        self.0.eq(other)
     }
 }
 
@@ -95,10 +95,10 @@ mod test {
     use super::uuid_ext;
     use super::FromParam;
     use super::UUID;
+    use super::FromStr;
 
     #[test]
     fn test_from_str() {
-        use std::str::FromStr;
         let uuid_str = "c1aa1e3b-9614-4895-9ebd-705255fa5bc2";
         let uuid_wrapper = UUID::from_str(uuid_str).unwrap();
         assert_eq!(uuid_str, uuid_wrapper.to_string())
@@ -118,6 +118,14 @@ mod test {
         let real_uuid: uuid_ext::Uuid = uuid_str.parse().unwrap();
         let inner_uuid: uuid_ext::Uuid = uuid_wrapper.into_inner();
         assert_eq!(real_uuid, inner_uuid)
+    }
+
+    #[test]
+    fn test_partial_eq() {
+        let uuid_str = "c1aa1e3b-9614-4895-9ebd-705255fa5bc2";
+        let uuid_wrapper = UUID::from_param(uuid_str).unwrap();
+        let real_uuid: uuid_ext::Uuid = uuid_str.parse().unwrap();
+        assert_eq!(uuid_wrapper, real_uuid)
     }
 
     #[test]
