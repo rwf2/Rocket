@@ -5,19 +5,26 @@ use std::str::FromStr;
 use std::ops::{Deref, DerefMut};
 use rocket::request::FromParam;
 
-
 /// The UUID type, which implements `FromParam`. This type allows you to accept
-/// values from the [Uuid](https://github.com/rust-lang-nursery/uuid) crate in 
-/// your request handlers.
+/// values from the [Uuid](https://github.com/rust-lang-nursery/uuid) crate as
+/// a dynamic parameter in your request handlers.
 ///
-/// Make sure to enable the `uuid` feature in your Cargo.toml to use this type.
-/// 
+/// # Usage
+///
+/// To use, add the `uuid` feature to the `rocket_contrib` dependencies section
+/// of your `Cargo.toml`:
+///
+/// ```toml,ignore
+/// [dependencies.rocket_contrib]
+/// version = "*"
+/// default-features = false
+/// features = ["uuid"]
+/// ```
+///
+/// The UUID type implements the Deref trait allowing you to access the
+/// underlying Uuid type.
+///
 /// ```rust,ignore
-/// // A function expecting the Uuid type from the uuid crate.
-/// fn expects_uuid(v: uuid::Uuid) {
-///     ...
-/// }
-///
 /// #[get("/users/<id>")]
 /// fn user(id: UUID) -> String {
 ///     // Use Deref to access the underlying Uuid type.
@@ -26,25 +33,36 @@ use rocket::request::FromParam;
 ///     format!("We found: {}", id)
 /// }
 /// ```
-
-#[derive(Debug)]
+#[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Debug)]
 pub struct UUID(uuid_ext::Uuid);
 
 impl UUID {
     /// Consumes the UUID wrapper returning the underlying Uuid type.
-    pub fn unwrap(self) -> uuid_ext::Uuid {
+    ///
+    /// # Example
+    /// ```rust,ignore
+    /// # extern crate uuid;
+    /// # use rocket_contrib::UUID;
+    /// # use std::str::FromStr;
+    ///
+    /// let uuid_str = "c1aa1e3b-9614-4895-9ebd-705255fa5bc2";
+    /// let my_inner_uuid = UUID::from_str(uuid_str).unwrap().into_inner();
+    /// assert_eq!(uuid::Uuid::from_str(uuid_str), my_inner_uuid)
+    /// ```
+    pub fn into_inner(self) -> uuid_ext::Uuid {
         self.0
     }
 }
 
 impl fmt::Display for UUID {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-       self.0.fmt(f)
+        self.0.fmt(f)
     }
 }
 
 impl<'a> FromParam<'a> for UUID {
     type Error = uuid_ext::ParseError;
+
     fn from_param(p: &'a str) -> Result<UUID, Self::Error> {
         p.parse()
     }
@@ -52,6 +70,7 @@ impl<'a> FromParam<'a> for UUID {
 
 impl FromStr for UUID {
     type Err = uuid_ext::ParseError;
+
     fn from_str(s: &str) -> Result<UUID, Self::Err> {
         Ok(UUID(try!(s.parse())))
     }
@@ -79,29 +98,26 @@ mod test {
 
     #[test]
     fn test_from_str() {
+        use std::str::FromStr;
         let uuid_str = "c1aa1e3b-9614-4895-9ebd-705255fa5bc2";
-        let uuid_result = uuid_str.parse();
-        assert!(uuid_result.is_ok());
-        let uuid:UUID = uuid_result.unwrap();
-        assert!(uuid_str.to_string() == uuid.to_string())
+        let uuid_wrapper = UUID::from_str(uuid_str).unwrap();
+        assert_eq!(uuid_str, uuid_wrapper.to_string())
     }
 
     #[test]
     fn test_from_param() {
         let uuid_str = "c1aa1e3b-9614-4895-9ebd-705255fa5bc2";
-        let uuid_result = UUID::from_param(uuid_str);
-        assert!(uuid_result.is_ok());
-        let uuid = uuid_result.unwrap();
-        assert!(uuid_str.to_string() == uuid.to_string())
+        let uuid_wrapper = UUID::from_param(uuid_str).unwrap();
+        assert_eq!(uuid_str, uuid_wrapper.to_string())
     }
 
     #[test]
-    fn test_display() {
+    fn test_into_inner() {
         let uuid_str = "c1aa1e3b-9614-4895-9ebd-705255fa5bc2";
-        let uuid_result = UUID::from_param(uuid_str);
-        assert!(uuid_result.is_ok());
-        let uuid = uuid_result.unwrap();
-        assert!(uuid_str.to_string() == format!("{}", uuid));
+        let uuid_wrapper = UUID::from_param(uuid_str).unwrap();
+        let real_uuid: uuid_ext::Uuid = uuid_str.parse().unwrap();
+        let inner_uuid: uuid_ext::Uuid = uuid_wrapper.into_inner();
+        assert_eq!(real_uuid, inner_uuid)
     }
 
     #[test]
