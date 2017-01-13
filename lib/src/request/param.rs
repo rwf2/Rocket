@@ -290,11 +290,13 @@ impl<'a> FromSegments<'a> for PathBuf {
     fn from_segments(segments: Segments<'a>) -> Result<PathBuf, Utf8Error> {
         let mut buf = PathBuf::new();
         for segment in segments {
-            let decoded = URI::percent_decode(segment.as_bytes())?;
-            if decoded == ".." {
-                buf.pop();
-            } else if !(decoded.starts_with('.') || decoded.starts_with('*')) {
-                buf.push(&*decoded)
+            let decoded_seg = URI::percent_decode(segment.as_bytes())?;
+            for decoded in Segments(&decoded_seg) {
+                if decoded == ".." {
+                    buf.pop();
+                } else if !(decoded.starts_with('.') || decoded.starts_with('*')) {
+                    buf.push(&*decoded)
+                }
             }
         }
 
