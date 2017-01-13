@@ -8,6 +8,9 @@ mod tera_templates;
 #[cfg(feature = "handlebars_templates")]
 mod handlebars_templates;
 
+#[cfg(feature = "handlebars_templates")]
+pub use self::handlebars_templates::register_handlebars_helper;
+
 #[macro_use] mod macros;
 
 use self::serde::Serialize;
