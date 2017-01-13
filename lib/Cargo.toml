@@ -20,6 +20,7 @@ url = "^1"
 toml = "^0.2"
 num_cpus = "1"
 # cookie = "^0.3"
+uuid = { version="^0.3", optional=true }
 
 [dependencies.hyper]
 version = "^0.9"
@@ -28,6 +29,7 @@ default-features = false
 [dev-dependencies]
 lazy_static = "0.2"
 rocket_codegen = { version = "0.1.4", path = "../codegen" }
+uuid = { version="^0.3" }
 
 [features]
 testing = []

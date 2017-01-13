@@ -97,6 +97,9 @@ extern crate url;
 extern crate toml;
 extern crate num_cpus;
 
+#[cfg(any(test, feature = "uuid"))]
+extern crate uuid;
+
 #[cfg(test)] #[macro_use] extern crate lazy_static;
 
 #[doc(hidden)] #[macro_use] pub mod logger;
