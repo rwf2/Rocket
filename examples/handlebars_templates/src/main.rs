@@ -6,7 +6,9 @@ extern crate rocket;
 extern crate serde_json;
 #[macro_use] extern crate serde_derive;
 
-use rocket::{Request};
+#[cfg(test)] mod tests;
+
+use rocket::Request;
 use rocket::response::Redirect;
 use rocket_contrib::Template;
 
