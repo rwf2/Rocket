@@ -11,7 +11,8 @@ use rocket::response::{self, Responder, content};
 use rocket::http::Status;
 
 use self::serde::{Serialize, Deserialize};
-use self::serde_json::error::Error as SerdeError;
+
+pub use self::serde_json::error::Error as SerdeError;
 
 /// The JSON type, which implements `FromData` and `Responder`. This type allows
 /// you to trivially consume and respond with JSON in your Rocket application.

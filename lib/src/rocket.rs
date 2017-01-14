@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 use std::str::from_utf8_unchecked;
 use std::cmp::min;
+use std::net::SocketAddr;
 use std::io::{self, Write};
 
 use term_painter::Color::*;
@@ -41,11 +42,11 @@ impl hyper::Handler for Rocket {
                       hyp_req: hyper::Request<'h, 'k>,
                       res: hyper::FreshResponse<'h>) {
         // Get all of the information from Hyper.
-        let (_, h_method, h_headers, h_uri, _, h_body) = hyp_req.deconstruct();
+        let (h_addr, h_method, h_headers, h_uri, _, h_body) = hyp_req.deconstruct();
 
         // Convert the Hyper request into a Rocket request.
-        let mut request = match Request::from_hyp(h_method, h_headers, h_uri) {
-            Ok(request) => request,
+        let mut req = match Request::from_hyp(h_method, h_headers, h_uri, h_addr) {
+            Ok(req) => req,
             Err(e) => {
                 error!("Bad incoming request: {}", e);
                 let dummy = Request::new(Method::Get, URI::new("<unknown>"));
@@ -59,13 +60,13 @@ impl hyper::Handler for Rocket {
             Ok(data) => data,
             Err(reason) => {
                 error_!("Bad data in request: {}", reason);
-                let r = self.handle_error(Status::InternalServerError, &request);
+                let r = self.handle_error(Status::InternalServerError, &req);
                 return self.issue_response(r, res);
             }
         };
 
         // Dispatch the request to get a response, then write that response out.
-        let response = self.dispatch(&mut request, data);
+        let response = self.dispatch(&mut req, data);
         self.issue_response(response, res)
     }
 }
@@ -132,15 +133,33 @@ impl Rocket {
         }
     }
 
-    /// Preprocess the request for Rocket-specific things. At this time, we're
-    /// only checking for _method in forms. Keep this in-sync with derive_form
-    /// when preprocessing form fields.
+    /// Preprocess the request for Rocket things. Currently, this means:
+    ///
+    ///   * Rewriting the method in the request if _method form field exists.
+    ///   * Rewriting the remote IP if the 'X-Real-IP' header is set.
+    ///
+    /// Keep this in-sync with derive_form when preprocessing form fields.
     fn preprocess_request(&self, req: &mut Request, data: &Data) {
+        // Rewrite the remote IP address. The request must already have an
+        // address associated with it to do this since we need to know the port.
+        if let Some(current) = req.remote() {
+            let ip = req.headers()
+                .get_one("X-Real-IP")
+                .and_then(|ip_str| ip_str.parse().map_err(|_| {
+                    warn_!("The 'X-Real-IP' header is malformed: {}", ip_str)
+                }).ok());
+
+            if let Some(ip) = ip {
+                req.set_remote(SocketAddr::new(ip, current.port()));
+            }
+        }
+
         // Check if this is a form and if the form contains the special _method
         // field which we use to reinterpret the request's method.
         let data_len = data.peek().len();
         let (min_len, max_len) = ("_method=get".len(), "_method=delete".len());
-        if req.method() == Method::Post && req.content_type().is_form() && data_len >= min_len {
+        let is_form = req.content_type().is_form();
+        if is_form && req.method() == Method::Post && data_len >= min_len {
             let form = unsafe {
                 from_utf8_unchecked(&data.peek()[..min(data_len, max_len)])
             };
@@ -157,6 +176,8 @@ impl Rocket {
     #[doc(hidden)]
     #[inline(always)]
     pub fn dispatch<'r>(&self, request: &'r mut Request, data: Data) -> Response<'r> {
+        info!("{}:", request);
+
         // Do a bit of preprocessing before routing.
         self.preprocess_request(request, &data);
 
@@ -207,7 +228,6 @@ impl Rocket {
     pub fn route<'r>(&self, request: &'r Request, mut data: Data)
             -> handler::Outcome<'r> {
         // Go through the list of matching routes until we fail or succeed.
-        info!("{}:", request);
         let matches = self.router.route(request);
         for route in matches {
             // Retrieve and set the requests parameters.

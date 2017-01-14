@@ -4,7 +4,7 @@
 extern crate rocket;
 
 use std::path::PathBuf;
-use std::str::Utf8Error;
+use rocket::http::uri::SegmentError;
 
 #[post("/<a>/<b..>")]
 fn get(a: String, b: PathBuf) -> String {
@@ -12,7 +12,7 @@ fn get(a: String, b: PathBuf) -> String {
 }
 
 #[post("/<a>/<b..>")]
-fn get2(a: String, b: Result<PathBuf, Utf8Error>) -> String {
+fn get2(a: String, b: Result<PathBuf, SegmentError>) -> String {
     format!("{}/{}", a, b.unwrap().to_string_lossy())
 }
 

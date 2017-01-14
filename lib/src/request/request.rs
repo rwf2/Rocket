@@ -1,4 +1,5 @@
 use std::cell::RefCell;
+use std::net::SocketAddr;
 use std::fmt;
 
 use term_painter::Color::*;
@@ -24,6 +25,7 @@ pub struct Request<'r> {
     method: Method,
     uri: URI<'r>,
     headers: HeaderMap<'r>,
+    remote: Option<SocketAddr>,
     params: RefCell<Vec<(usize, usize)>>,
     cookies: Cookies,
 }
@@ -46,6 +48,7 @@ impl<'r> Request<'r> {
             method: method,
             uri: uri.into(),
             headers: HeaderMap::new(),
+            remote: None,
             params: RefCell::new(Vec::new()),
             cookies: Cookies::new(&[]),
         }
@@ -123,6 +126,49 @@ impl<'r> Request<'r> {
         self.params = RefCell::new(Vec::new());
     }
 
+    /// Returns the address of the remote connection that initiated this
+    /// request if the address is known. If the address is not known, `None` is
+    /// returned.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use rocket::Request;
+    /// use rocket::http::Method;
+    ///
+    /// let request = Request::new(Method::Get, "/uri");
+    /// assert!(request.remote().is_none());
+    /// ```
+    #[inline(always)]
+    pub fn remote(&self) -> Option<SocketAddr> {
+        self.remote
+    }
+
+    /// Sets the remote address of `self` to `address`.
+    ///
+    /// # Example
+    ///
+    /// Set the remote address to be 127.0.0.1:8000:
+    ///
+    /// ```rust
+    /// use rocket::Request;
+    /// use rocket::http::Method;
+    /// use std::net::{SocketAddr, IpAddr, Ipv4Addr};
+    ///
+    /// let mut request = Request::new(Method::Get, "/uri");
+    ///
+    /// let (ip, port) = (IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)), 8000);
+    /// let localhost = SocketAddr::new(ip, port);
+    /// request.set_remote(localhost);
+    ///
+    /// assert_eq!(request.remote(), Some(localhost));
+    /// ```
+    #[doc(hidden)]
+    #[inline(always)]
+    pub fn set_remote(&mut self, address: SocketAddr) {
+        self.remote = Some(address);
+    }
+
     /// Returns a `HeaderMap` of all of the headers in `self`.
     ///
     /// # Example
@@ -185,8 +231,8 @@ impl<'r> Request<'r> {
 
     /// Returns a borrow to the cookies in `self`.
     ///
-    /// Note that `Cookie` implements internal mutability, so this method allows
-    /// you to get _and_ set cookies in `self`.
+    /// Note that `Cookies` implements internal mutability, so this method
+    /// allows you to get _and_ set cookies in `self`.
     ///
     /// # Example
     ///
@@ -274,6 +320,7 @@ impl<'r> Request<'r> {
     /// Set `self`'s parameters given that the route used to reach this request
     /// was `route`. This should only be used internally by `Rocket` as improper
     /// use may result in out of bounds indexing.
+    /// TODO: Figure out the mount path from here.
     #[doc(hidden)]
     #[inline(always)]
     pub fn set_params(&self, route: &Route) {
@@ -348,8 +395,9 @@ impl<'r> Request<'r> {
     #[doc(hidden)]
     pub fn from_hyp(h_method: hyper::Method,
                     h_headers: hyper::header::Headers,
-                    h_uri: hyper::RequestUri)
-                    -> Result<Request<'static>, String> {
+                    h_uri: hyper::RequestUri,
+                    h_addr: SocketAddr,
+                    ) -> Result<Request<'static>, String> {
         // Get a copy of the URI for later use.
         let uri = match h_uri {
             hyper::RequestUri::AbsolutePath(s) => s,
@@ -375,6 +423,9 @@ impl<'r> Request<'r> {
             let header = Header::new(hyp.name().to_string(), hyp.value_string());
             request.add_header(header);
         }
+
+        // Set the remote address.
+        request.set_remote(h_addr);
 
         Ok(request)
     }

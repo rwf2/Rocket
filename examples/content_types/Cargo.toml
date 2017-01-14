@@ -10,3 +10,6 @@ rocket_codegen = { path = "../../codegen" }
 serde = "0.8"
 serde_json = "0.8"
 serde_derive = "0.8"
+
+[dev-dependencies]
+rocket = { path = "../../lib", features = ["testing"] }

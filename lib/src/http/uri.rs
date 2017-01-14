@@ -373,6 +373,20 @@ impl<'a> Iterator for Segments<'a> {
     // }
 }
 
+/// Errors which can occur when attempting to interpret a segment string as a
+/// valid path segment.
+#[derive(Debug, PartialEq, Eq, Clone)]
+pub enum SegmentError {
+    /// The segment contained invalid UTF8 characters when percent decoded.
+    Utf8(Utf8Error),
+    /// The segment started with the wrapped invalid character.
+    BadStart(char),
+    /// The segment contained the wrapped invalid character.
+    BadChar(char),
+    /// The segment ended with the wrapped invalid character.
+    BadEnd(char),
+}
+
 #[cfg(test)]
 mod tests {
     use super::URI;

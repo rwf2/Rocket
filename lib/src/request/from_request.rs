@@ -1,4 +1,5 @@
 use std::fmt::Debug;
+use std::net::SocketAddr;
 
 use outcome::{self, IntoOutcome};
 use request::Request;
@@ -64,6 +65,65 @@ impl<S, E> IntoOutcome<S, (Status, E), ()> for Result<S, E> {
 ///   If the `Outcome` is `Forward`, the request will be forwarded to the next
 ///   matching request. Note that users can request an `Option<S>` to catch
 ///   `Forward`s.
+///
+/// # Provided Implementations
+///
+/// Rocket implements `FromRequest` for several built-in types. Their behavior
+/// is documented here.
+///
+///   * **URI**
+///
+///     Extracts the [URI](/rocket/http/uri/struct.URI.html) from the incoming
+///     request.
+///
+///     _This implementation always returns successfully._
+///
+///   * **Method**
+///
+///     Extracts the [Method](/rocket/http/enum.Method.html) from the incoming
+///     request.
+///
+///     _This implementation always returns successfully._
+///
+///   * **&Cookies**
+///
+///     Returns a borrow to the [Cookies](/rocket/http/type.Cookies.html) in the
+///     incoming request. Note that `Cookies` implements internal mutability, so
+///     a handle to `&Cookies` allows you to get _and_ set cookies in the
+///     request.
+///
+///     _This implementation always returns successfully._
+///
+///   * **ContentType**
+///
+///     Extracts the [ContentType](/rocket/http/struct.ContentType.html) from
+///     the incoming request. If the request didn't specify a Content-Type, a
+///     Content-Type of `*/*` (`Any`) is returned.
+///
+///     _This implementation always returns successfully._
+///
+///   * **SocketAddr**
+///
+///     Extracts the remote address of the incoming request as a `SocketAddr`.
+///     If the remote address is not known, the request is forwarded.
+///
+///     _This implementation always returns successfully._
+///
+///   * **Option&lt;T>** _where_ **T: FromRequest**
+///
+///     The type `T` is derived from the incoming request using `T`'s
+///     `FromRequest` implementation. If the derivation is a `Success`, the
+///     dervived value is returned in `Some`. Otherwise, a `None` is returned.
+///
+///     _This implementation always returns successfully._
+///
+///   * **Result&lt;T, T::Error>** _where_ **T: FromRequest**
+///
+///     The type `T` is derived from the incoming request using `T`'s
+///     `FromRequest` implementation. If derivation is a `Success`, the value is
+///     returned in `Ok`. If the derivation is a `Failure`, the error value is
+///     returned in `Err`. If the derivation is a `Forward`, the request is
+///     forwarded.
 ///
 /// # Example
 ///
@@ -158,6 +218,17 @@ impl<'a, 'r> FromRequest<'a, 'r> for ContentType {
 
     fn from_request(request: &'a Request<'r>) -> Outcome<Self, Self::Error> {
         Success(request.content_type())
+    }
+}
+
+impl<'a, 'r> FromRequest<'a, 'r> for SocketAddr {
+    type Error = ();
+
+    fn from_request(request: &'a Request<'r>) -> Outcome<Self, Self::Error> {
+        match request.remote() {
+            Some(addr) => Success(addr),
+            None => Forward(())
+        }
     }
 }
 
