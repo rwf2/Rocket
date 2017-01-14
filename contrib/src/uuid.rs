@@ -5,6 +5,8 @@ use std::str::FromStr;
 use std::ops::Deref;
 use rocket::request::FromParam;
 
+pub use self::uuid_ext::ParseError as UuidParseError;
+
 /// The UUID type, which implements `FromParam`. This type allows you to accept
 /// values from the [Uuid](https://github.com/rust-lang-nursery/uuid) crate as
 /// a dynamic parameter in your request handlers.
@@ -60,7 +62,7 @@ impl fmt::Display for UUID {
 }
 
 impl<'a> FromParam<'a> for UUID {
-    type Error = uuid_ext::ParseError;
+    type Error = UuidParseError;
 
     fn from_param(p: &'a str) -> Result<UUID, Self::Error> {
         p.parse()
@@ -68,7 +70,7 @@ impl<'a> FromParam<'a> for UUID {
 }
 
 impl FromStr for UUID {
-    type Err = uuid_ext::ParseError;
+    type Err = UuidParseError;
 
     fn from_str(s: &str) -> Result<UUID, Self::Err> {
         Ok(UUID(try!(s.parse())))
@@ -92,8 +94,8 @@ impl PartialEq<uuid_ext::Uuid> for UUID {
 #[cfg(test)]
 mod test {
     use super::uuid_ext;
+    use super::{UUID, UuidParseError};
     use super::FromParam;
-    use super::UUID;
     use super::FromStr;
 
     #[test]
@@ -133,7 +135,7 @@ mod test {
         let uuid_result = UUID::from_param(uuid_str);
         assert!(!uuid_result.is_ok());
         match uuid_result {
-            Err(e) => assert_eq!(e, uuid_ext::ParseError::InvalidLength(37)),
+            Err(e) => assert_eq!(e, UuidParseError::InvalidLength(37)),
             _ => unreachable!(),
         }
     }

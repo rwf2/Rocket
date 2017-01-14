@@ -60,4 +60,4 @@ pub use json::SerdeError;
 pub use templates::Template;
 
 #[cfg(feature = "uuid")]
-pub use uuid::UUID;
+pub use uuid::{UUID, UuidParseError};
