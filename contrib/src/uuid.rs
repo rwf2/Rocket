@@ -16,7 +16,7 @@ pub use self::uuid_ext::ParseError as UuidParseError;
 /// To use, add the `uuid` feature to the `rocket_contrib` dependencies section
 /// of your `Cargo.toml`:
 ///
-/// ```toml,ignore
+/// ```toml
 /// [dependencies.rocket_contrib]
 /// version = "*"
 /// default-features = false
@@ -39,14 +39,18 @@ impl UUID {
     /// Consumes the UUID wrapper returning the underlying Uuid type.
     ///
     /// # Example
-    /// ```rust,ignore
+    /// ```rust
+    /// # extern crate rocket_contrib;
+    /// # extern crate uuid;
     /// # use rocket_contrib::UUID;
     /// # use std::str::FromStr;
     /// # use uuid::Uuid;
+    /// # fn main() {
     /// let uuid_str = "c1aa1e3b-9614-4895-9ebd-705255fa5bc2";
     /// let real_uuid = Uuid::from_str(uuid_str).unwrap();
     /// let my_inner_uuid = UUID::from_str(uuid_str).unwrap().into_inner();
     /// assert_eq!(real_uuid, my_inner_uuid);
+    /// # }
     /// ```
     #[inline(always)]
     pub fn into_inner(self) -> uuid_ext::Uuid {
@@ -64,6 +68,8 @@ impl fmt::Display for UUID {
 impl<'a> FromParam<'a> for UUID {
     type Error = UuidParseError;
 
+    /// A value is successfully parsed if the `str` is a properly formatted 
+    /// UUID, otherwise `UuidParseError` is returned.
     fn from_param(p: &'a str) -> Result<UUID, Self::Error> {
         p.parse()
     }
