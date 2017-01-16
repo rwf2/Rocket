@@ -28,4 +28,5 @@ members = [
   "examples/hello_alt_methods",
   "examples/raw_upload",
   "examples/pastebin",
+  "examples/uuid",
 ]
