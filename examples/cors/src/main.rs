@@ -17,6 +17,6 @@ fn hello() -> CORS<String> {
 
 fn main() {
     rocket::ignite()
-        .mount("/", routes![cors_preflight, hello])
+        .mount("/", routes![hello])
         .launch();
 }

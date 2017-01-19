@@ -9,8 +9,9 @@ rocket = { path = "../../lib" }
 rocket_codegen = { path = "../../codegen" }
 
 [dependencies.rocket_contrib]
-default-features = true
+default-features = false
 path = "../../contrib"
+features = ["cors"]
 
 [dev-dependencies]
 rocket = { path = "../../lib", features = ["testing"] }
