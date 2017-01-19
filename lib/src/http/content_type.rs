@@ -113,6 +113,7 @@ impl ContentType {
         "GIF", GIF, is_gif => "image", "gif",
         "BMP", BMP, is_bmp => "image", "bmp",
         "JPEG", JPEG, is_jpeg => "image", "jpeg",
+        "SVG", SVG, is_svg => "image", "svg+xml",
         "PDF", PDF, is_pdf => "application", "pdf"
     }
 
@@ -156,6 +157,7 @@ impl ContentType {
             x if uncased_eq(x, "bmp") => ContentType::BMP,
             x if uncased_eq(x, "jpeg") => ContentType::JPEG,
             x if uncased_eq(x, "jpg") => ContentType::JPEG,
+            x if uncased_eq(x, "svg") => ContentType::SVG,
             x if uncased_eq(x, "pdf") => ContentType::PDF,
             _ => ContentType::Any
         }
@@ -469,6 +471,7 @@ mod test {
         assert_parse!("TEXT/html;charset=utf-8", ContentType::HTML);
         assert_parse!("*/*", ContentType::Any);
         assert_parse!("application/*", ContentType::new("application", "*"));
+        assert_parse!("image/svg+xml", ContentType::SVG);
     }
 
     #[test]
