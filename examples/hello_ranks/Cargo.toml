@@ -1,7 +1,6 @@
 [package]
 name = "hello_ranks"
 version = "0.0.1"
-authors = ["Sergio Benitez <sb@sergio.bz>"]
 workspace = "../../"
 
 [dependencies]

@@ -1,7 +1,6 @@
 [package]
 name = "forms"
 version = "0.0.1"
-authors = ["Sergio Benitez <sb@sergio.bz>"]
 workspace = "../../"
 
 [dependencies]
