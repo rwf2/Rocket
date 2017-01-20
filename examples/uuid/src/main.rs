@@ -9,7 +9,7 @@ extern crate rocket_contrib;
 
 use std::collections::HashMap;
 use uuid::Uuid;
-use rocket_contrib::UUID;
+use rocket_contrib::{UUID, UuidParseError};
 
 #[cfg(test)]
 mod tests;
@@ -30,17 +30,35 @@ lazy_static! {
     };
 }
 
-#[get("/<id>")]
-fn show(id: UUID) -> Result<String, &'static str> {
+#[get("/people/<id>")]
+fn people(id: UUID) -> Result<String, String> {
     // Because UUID implements the Deref trait, we can use Rusts Deref coercion
     // to convert Rockets UUID type to the uuid::Uuid type.
-    let person = PEOPLE.get(&id).ok_or("Person not found")?;
+    let person = PEOPLE.get(&id)
+        .ok_or(format!("Person not found for UUID: {}", id))?;
 
     Ok(format!("We found: {}", person))
 }
 
+
+#[get("/people_opt/<id>")]
+fn people_opt(id: Result<UUID, UuidParseError>) -> Result<String, String> {
+    // If the Uuid can't be parsed, lets go ahead and return the error message 
+    // provided by UuidParseError
+    let id = try!(id.map_err(|err| err.to_string()));
+
+    let person = PEOPLE.get(&id)
+        .ok_or(format!("Person not found for UUID: {}", id))?;
+
+    Ok(format!("We found: {}", person))
+}
+
+fn routes() -> Vec<rocket::Route> {
+    routes![people, people_opt]
+}
+
 fn main() {
     rocket::ignite()
-        .mount("/", routes![show])
+        .mount("/", routes())
         .launch();
 }
