@@ -1,7 +1,6 @@
 [package]
 name = "uuid"
 version = "0.1.0"
-authors = ["Lori Holden <email@loriholden.com>"]
 workspace = "../../"
 
 [dependencies]
