@@ -3,6 +3,7 @@ extern crate uuid as uuid_ext;
 use std::fmt;
 use std::str::FromStr;
 use std::ops::Deref;
+use std::cmp::Ordering;
 
 use rocket::request::FromParam;
 
@@ -97,6 +98,13 @@ impl PartialEq<uuid_ext::Uuid> for UUID {
     #[inline(always)]
     fn eq(&self, other: &uuid_ext::Uuid) -> bool {
         self.0.eq(other)
+    }
+}
+
+impl PartialOrd<uuid_ext::Uuid> for UUID {
+    #[inline(always)]
+    fn partial_cmp(&self, other: &uuid_ext::Uuid) -> Option<Ordering> {
+        Some(self.0.cmp(other))
     }
 }
 

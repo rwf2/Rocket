@@ -34,10 +34,9 @@ lazy_static! {
 fn people(id: UUID) -> Result<String, String> {
     // Because UUID implements the Deref trait, we use Deref coercion to 
     // convert rocket_contrib::UUID to uuid::Uuid.
-    let person = PEOPLE.get(&id)
-        .ok_or(format!("Person not found for UUID: {}", id))?;
-
-    Ok(format!("We found: {}", person))
+    Ok(PEOPLE.get(&id)
+        .map(|person| format!("We found: {}", person))
+        .ok_or(format!("Person not found for UUID: {}", id))?)
 }
 
 fn main() {
