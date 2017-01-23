@@ -18,13 +18,11 @@ build = "build.rs"
 term-painter = "^0.2"
 log = "^0.3"
 url = "^1"
-toml = "^0.2"
+hyper = { version = "^0.9.14", default-features = false }
+toml = { version = "^0.2", default-features = false }
 num_cpus = "1"
+state = "^0.2"
 # cookie = "^0.3"
-
-[dependencies.hyper]
-version = "^0.9"
-default-features = false
 
 [dev-dependencies]
 lazy_static = "0.2"

@@ -5,6 +5,8 @@ use std::fmt;
 use term_painter::Color::*;
 use term_painter::ToStyle;
 
+use state::Container;
+
 use error::Error;
 use super::{FromParam, FromSegments};
 
@@ -28,6 +30,7 @@ pub struct Request<'r> {
     remote: Option<SocketAddr>,
     params: RefCell<Vec<(usize, usize)>>,
     cookies: Cookies,
+    state: Option<&'r Container>,
 }
 
 impl<'r> Request<'r> {
@@ -51,6 +54,7 @@ impl<'r> Request<'r> {
             remote: None,
             params: RefCell::new(Vec::new()),
             cookies: Cookies::new(&[]),
+            state: None
         }
     }
 
@@ -391,13 +395,25 @@ impl<'r> Request<'r> {
         Some(Segments(&path[i..j]))
     }
 
+    /// Get the managed state container, if it exists. For internal use only!
+    #[doc(hidden)]
+    pub fn get_state(&self) -> Option<&'r Container> {
+        self.state
+    }
+
+    /// Set the state. For internal use only!
+    #[doc(hidden)]
+    pub fn set_state(&mut self, state: &'r Container) {
+        self.state = Some(state);
+    }
+
     /// Convert from Hyper types into a Rocket Request.
     #[doc(hidden)]
     pub fn from_hyp(h_method: hyper::Method,
                     h_headers: hyper::header::Headers,
                     h_uri: hyper::RequestUri,
                     h_addr: SocketAddr,
-                    ) -> Result<Request<'static>, String> {
+                    ) -> Result<Request<'r>, String> {
         // Get a copy of the URI for later use.
         let uri = match h_uri {
             hyper::RequestUri::AbsolutePath(s) => s,

@@ -7,6 +7,8 @@ use std::io::{self, Write};
 use term_painter::Color::*;
 use term_painter::ToStyle;
 
+use state::Container;
+
 use {logger, handler};
 use ext::ReadExt;
 use config::{self, Config};
@@ -29,6 +31,7 @@ pub struct Rocket {
     router: Router,
     default_catchers: HashMap<u16, Catcher>,
     catchers: HashMap<u16, Catcher>,
+    state: Container
 }
 
 #[doc(hidden)]
@@ -175,8 +178,12 @@ impl Rocket {
 
     #[doc(hidden)]
     #[inline(always)]
-    pub fn dispatch<'r>(&self, request: &'r mut Request, data: Data) -> Response<'r> {
+    pub fn dispatch<'s, 'r>(&'s self, request: &'r mut Request<'s>, data: Data)
+            -> Response<'r> {
         info!("{}:", request);
+
+        // Inform the request about the state.
+        request.set_state(&self.state);
 
         // Do a bit of preprocessing before routing.
         self.preprocess_request(request, &data);
@@ -353,6 +360,7 @@ impl Rocket {
             router: Router::new(),
             default_catchers: catcher::defaults::get(),
             catchers: catcher::defaults::get(),
+            state: Container::new()
         }
     }
 
@@ -467,6 +475,50 @@ impl Rocket {
             }
 
             self.catchers.insert(c.code, c);
+        }
+
+        self
+    }
+
+    /// Add `state` to the state managed by this instance of Rocket.
+    ///
+    /// Managed state can be retrieved by any request handler via the
+    /// [State](/rocket/struct.State.html) request guard. In particular, if a
+    /// value of type `T` is managed by Rocket, adding `State<T>` to the list of
+    /// arguments in a request handler instructs Rocket to retrieve the managed
+    /// value.
+    ///
+    /// # Panics
+    ///
+    /// Panics if state of type `T` is already being managed.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// # #![feature(plugin)]
+    /// # #![plugin(rocket_codegen)]
+    /// # extern crate rocket;
+    /// use rocket::State;
+    ///
+    /// struct MyValue(usize);
+    ///
+    /// #[get("/")]
+    /// fn index(state: State<MyValue>) -> String {
+    ///     format!("The stateful value is: {}", state.0)
+    /// }
+    ///
+    /// fn main() {
+    /// # if false { // We don't actually want to launch the server in an example.
+    ///     rocket::ignite()
+    ///         .manage(MyValue(10))
+    /// #       .launch()
+    /// # }
+    /// }
+    /// ```
+    pub fn manage<T: Send + Sync + 'static>(self, state: T) -> Self {
+        if !self.state.set::<T>(state) {
+            error!("State for this type is already being managed!");
+            panic!("Aborting due to duplicately managed state.");
         }
 
         self

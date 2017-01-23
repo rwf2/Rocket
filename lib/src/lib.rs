@@ -96,6 +96,7 @@ extern crate hyper;
 extern crate url;
 extern crate toml;
 extern crate num_cpus;
+extern crate state;
 
 #[cfg(test)] #[macro_use] extern crate lazy_static;
 
@@ -123,7 +124,7 @@ mod ext;
 #[doc(inline)] pub use outcome::Outcome;
 #[doc(inline)] pub use data::Data;
 pub use router::Route;
-pub use request::Request;
+pub use request::{Request, State};
 pub use error::Error;
 pub use catcher::Catcher;
 pub use rocket::Rocket;

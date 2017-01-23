@@ -11,7 +11,8 @@ macro_rules! run_test {
             .mount("/", routes![super::index, super::get])
             .catch(errors![super::not_found]);
 
-        $test_fn($req.dispatch_with(&rocket));
+        let mut req = $req;
+        $test_fn(req.dispatch_with(&rocket));
     })
 }
 
@@ -19,7 +20,7 @@ macro_rules! run_test {
 fn test_root() {
     // Check that the redirect works.
     for method in &[Get, Head] {
-        let mut req = MockRequest::new(*method, "/");
+        let req = MockRequest::new(*method, "/");
         run_test!(req, |mut response: Response| {
             assert_eq!(response.status(), Status::SeeOther);
             assert!(response.body().is_none());
@@ -31,7 +32,7 @@ fn test_root() {
 
     // Check that other request methods are not accepted (and instead caught).
     for method in &[Post, Put, Delete, Options, Trace, Connect, Patch] {
-        let mut req = MockRequest::new(*method, "/");
+        let req = MockRequest::new(*method, "/");
         run_test!(req, |mut response: Response| {
             assert_eq!(response.status(), Status::NotFound);
 
@@ -48,7 +49,7 @@ fn test_root() {
 #[test]
 fn test_name() {
     // Check that the /hello/<name> route works.
-    let mut req = MockRequest::new(Get, "/hello/Jack");
+    let req = MockRequest::new(Get, "/hello/Jack");
     run_test!(req, |mut response: Response| {
         assert_eq!(response.status(), Status::Ok);
 
@@ -66,7 +67,7 @@ fn test_name() {
 #[test]
 fn test_404() {
     // Check that the error catcher works.
-    let mut req = MockRequest::new(Get, "/hello/");
+    let req = MockRequest::new(Get, "/hello/");
     run_test!(req, |mut response: Response| {
         assert_eq!(response.status(), Status::NotFound);
 

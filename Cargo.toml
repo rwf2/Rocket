@@ -29,4 +29,5 @@ members = [
   "examples/raw_upload",
   "examples/pastebin",
   "examples/uuid",
+  "examples/state",
 ]

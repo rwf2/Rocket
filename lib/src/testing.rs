@@ -111,12 +111,12 @@ use http::{Method, Header, Cookie};
 use std::net::SocketAddr;
 
 /// A type for mocking requests for testing Rocket applications.
-pub struct MockRequest {
-    request: Request<'static>,
+pub struct MockRequest<'r> {
+    request: Request<'r>,
     data: Data
 }
 
-impl MockRequest {
+impl<'r> MockRequest<'r> {
     /// Constructs a new mocked request with the given `method` and `uri`.
     #[inline]
     pub fn new<S: AsRef<str>>(method: Method, uri: S) -> Self {
@@ -259,7 +259,7 @@ impl MockRequest {
     /// assert_eq!(body_str, Some("Hello, world!".to_string()));
     /// # }
     /// ```
-    pub fn dispatch_with<'r>(&'r mut self, rocket: &Rocket) -> Response<'r> {
+    pub fn dispatch_with<'s>(&'s mut self, rocket: &'r Rocket) -> Response<'s> {
         let data = ::std::mem::replace(&mut self.data, Data::new(vec![]));
         rocket.dispatch(&mut self.request, data)
     }

@@ -40,13 +40,15 @@ mod test {
     use rocket::http::Header;
 
     fn test_header_count<'h>(headers: Vec<Header<'static>>) {
+        let rocket = rocket::ignite()
+            .mount("/", routes![super::header_count]);
+
         let num_headers = headers.len();
         let mut req = MockRequest::new(Get, "/");
         for header in headers {
             req = req.header(header);
         }
 
-        let rocket = rocket::ignite().mount("/", routes![super::header_count]);
         let mut response = req.dispatch_with(&rocket);
 
         let expect = format!("Your request contained {} headers!", num_headers);
