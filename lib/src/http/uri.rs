@@ -394,11 +394,11 @@ mod tests {
     fn seg_count(path: &str, expected: usize) -> bool {
         let actual = URI::new(path).segment_count();
         if actual != expected {
-            trace_!("Count mismatch: expected {}, got {}.", expected, actual);
-            trace_!("{}", if actual != expected { "lifetime" } else { "buf" });
-            trace_!("Segments (for {}):", path);
+            trace!("Count mismatch: expected {}, got {}.", expected, actual);
+            trace!("{}", if actual != expected { "lifetime" } else { "buf" });
+            trace!("Segments (for {}):", path);
             for (i, segment) in URI::new(path).segments().enumerate() {
-                trace_!("{}: {}", i, segment);
+                trace!("{}: {}", i, segment);
             }
         }
 

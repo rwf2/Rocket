@@ -4,6 +4,7 @@
 #![feature(associated_consts)]
 #![feature(const_fn)]
 #![feature(type_ascription)]
+#![feature(macro_reexport)]
 
 //! # Rocket - Core API Documentation
 //!
@@ -90,7 +91,21 @@
 //! [testing module](testing) documentation.
 //!
 
-#[macro_use] extern crate log;
+// #[macro_use] extern crate log;
+
+
+// TODO: Should we re-export logger macros?
+#[macro_use(slog_o, slog_log, slog_trace, slog_info, slog_warn, slog_debug, slog_crit, slog_error)]
+#[macro_reexport(slog_o, slog_log, slog_trace, slog_info, slog_warn, slog_debug, slog_crit, slog_error)]
+extern crate slog;
+
+extern crate slog_term;
+
+// TODO: Should we re-export logger macros?
+#[macro_reexport(trace, info, warn, debug, crit, error)]
+#[macro_use]
+extern crate slog_scope;
+
 extern crate term_painter;
 extern crate hyper;
 extern crate url;

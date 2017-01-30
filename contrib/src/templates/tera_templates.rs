@@ -13,7 +13,7 @@ pub const EXT: &'static str = "tera";
 // hold here and in `render`.
 pub unsafe fn register(templates: &[(&str, &TemplateInfo)]) -> bool {
     if TERA.is_some() {
-        error_!("Internal error: reregistering Tera!");
+        error!("Internal error: reregistering Tera!");
         return false;
     }
 
@@ -29,7 +29,7 @@ pub unsafe fn register(templates: &[(&str, &TemplateInfo)]) -> bool {
     // Finally try to tell Tera about all of the templates.
     let mut success = true;
     if let Err(e) = tera.add_template_files(tera_templates) {
-        error_!("Failed to initialize Tera templates: {:?}", e);
+        error!("Failed to initialize Tera templates: {:?}", e);
         success = false;
     }
 
@@ -43,20 +43,20 @@ pub fn render<T>(name: &str, _: &TemplateInfo, context: &T) -> Option<String>
     let tera = match unsafe { TERA.as_ref() } {
         Some(tera) => tera,
         None => {
-            error_!("Internal error: `render` called before Tera init.");
+            error!("Internal error: `render` called before Tera init.");
             return None;
         }
     };
 
     if tera.get_template(name).is_err() {
-        error_!("Tera template '{}' does not exist.", name);
+        error!("Tera template '{}' does not exist.", name);
         return None;
     };
 
     match tera.value_render(name, context) {
         Ok(string) => Some(string),
         Err(e) => {
-            error_!("Error rendering Tera template '{}': {}", name, e);
+            error!("Error rendering Tera template '{}': {}", name, e);
             None
         }
     }

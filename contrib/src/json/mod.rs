@@ -79,7 +79,7 @@ impl<T: Deserialize> FromData for JSON<T> {
 
     fn from_data(request: &Request, data: Data) -> data::Outcome<Self, SerdeError> {
         if !request.content_type().is_json() {
-            error_!("Content-Type is not JSON.");
+            error!("Content-Type is not JSON.");
             return Outcome::Forward(data);
         }
 
@@ -87,7 +87,7 @@ impl<T: Deserialize> FromData for JSON<T> {
         match serde_json::from_reader(reader).map(|val| JSON(val)) {
             Ok(value) => Outcome::Success(value),
             Err(e) => {
-                error_!("Couldn't parse JSON body: {:?}", e);
+                error!("Couldn't parse JSON body: {:?}", e);
                 Outcome::Failure((Status::BadRequest, e))
             }
         }
@@ -102,7 +102,7 @@ impl<T: Serialize> Responder<'static> for JSON<T> {
         serde_json::to_string(&self.0).map(|string| {
             content::JSON(string).respond().unwrap()
         }).map_err(|e| {
-            error_!("JSON failed to serialize: {:?}", e);
+            error!("JSON failed to serialize: {:?}", e);
             Status::InternalServerError
         })
     }

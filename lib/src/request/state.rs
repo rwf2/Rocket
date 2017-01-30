@@ -28,13 +28,13 @@ impl<'a, 'r, T: Send + Sync + 'static> FromRequest<'a, 'r> for State<'r, T> {
             match state.try_get::<T>() {
                 Some(state) => Outcome::Success(State(state)),
                 None => {
-                    error_!("Attempted to retrieve unmanaged state!");
+                    error!("Attempted to retrieve unmanaged state!");
                     Outcome::Failure((Status::InternalServerError, ()))
                 }
             }
         } else {
-            error_!("Internal Rocket error: managed state is unset!");
-            error_!("Please report this error in the Rocket GitHub issue tracker.");
+            error!("Internal Rocket error: managed state is unset!");
+            error!("Please report this error in the Rocket GitHub issue tracker.");
             Outcome::Failure((Status::InternalServerError, ()))
         }
     }

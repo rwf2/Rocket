@@ -34,7 +34,7 @@ impl Router {
     // FIXME: Figure out a way to get more than one route, i.e., to correctly
     // handle ranking.
     pub fn route<'b>(&'b self, req: &Request) -> Vec<&'b Route> {
-        trace_!("Trying to route: {}", req);
+        trace!("Trying to route: {}", req);
         // let num_segments = req.uri.segment_count();
         // self.routes.get(&(req.method, num_segments)).map_or(vec![], |routes| {
         self.routes.get(&req.method()).map_or(vec![], |routes| {
@@ -44,7 +44,7 @@ impl Router {
 
             // FIXME: Presort vector to avoid a sort on each route.
             matches.sort_by(|a, b| a.rank.cmp(&b.rank));
-            trace_!("All matches: {:?}", matches);
+            trace!("All matches: {:?}", matches);
             matches
         })
     }

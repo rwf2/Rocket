@@ -13,7 +13,7 @@ pub const EXT: &'static str = "hbs";
 // hold here and in `render`.
 pub unsafe fn register(templates: &[(&str, &TemplateInfo)]) -> bool {
     if HANDLEBARS.is_some() {
-        error_!("Internal error: reregistering handlebars!");
+        error!("Internal error: reregistering handlebars!");
         return false;
     }
 
@@ -22,7 +22,7 @@ pub unsafe fn register(templates: &[(&str, &TemplateInfo)]) -> bool {
     for &(name, info) in templates {
         let path = &info.full_path;
         if let Err(e) = hb.register_template_file(name, path) {
-            error_!("Handlebars template '{}' failed registry: {:?}", name, e);
+            error!("Handlebars template '{}' failed registry: {:?}", name, e);
             success = false;
         }
     }
@@ -37,20 +37,20 @@ pub fn render<T>(name: &str, _info: &TemplateInfo, context: &T) -> Option<String
     let hb = match unsafe { HANDLEBARS.as_ref() } {
         Some(hb) => hb,
         None => {
-            error_!("Internal error: `render` called before handlebars init.");
+            error!("Internal error: `render` called before handlebars init.");
             return None;
         }
     };
 
     if hb.get_template(name).is_none() {
-        error_!("Handlebars template '{}' does not exist.", name);
+        error!("Handlebars template '{}' does not exist.", name);
         return None;
     }
 
     match hb.render(name, context) {
         Ok(string) => Some(string),
         Err(e) => {
-            error_!("Error rendering Handlebars template '{}': {}", name, e);
+            error!("Error rendering Handlebars template '{}': {}", name, e);
             None
         }
     }

@@ -235,20 +235,20 @@ impl<'f, T: FromForm<'f>> FromData for Form<'f, T> where T::Error: Debug {
 
     fn from_data(request: &Request, data: Data) -> data::Outcome<Self, Self::Error> {
         if !request.content_type().is_form() {
-            warn_!("Form data does not have form content type.");
+            warn!("Form data does not have form content type.");
             return Forward(data);
         }
 
         let mut form_string = String::with_capacity(4096);
         let mut stream = data.open().take(32768);
         if let Err(e) = stream.read_to_string(&mut form_string) {
-            error_!("IO Error: {:?}", e);
+            error!("IO Error: {:?}", e);
             Failure((Status::InternalServerError, None))
         } else {
             match Form::new(form_string) {
                 Ok(form) => Success(form),
                 Err((form_string, e)) => {
-                    error_!("Failed to parse value from form: {:?}", e);
+                    error!("Failed to parse value from form: {:?}", e);
                     Failure((Status::BadRequest, Some(form_string)))
                 }
             }

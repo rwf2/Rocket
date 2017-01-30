@@ -65,22 +65,22 @@ impl ConfigError {
             IOError => error!("failed reading the config file: IO error"),
             BadFilePath(ref path, reason) => {
                 error!("configuration file path '{:?}' is invalid", path);
-                info_!("{}", reason);
+                info!("{}", reason);
             }
             BadEntry(ref name, ref filename) => {
                 let valid_entries = format!("{}, and global", valid_envs);
                 error!("[{}] is not a known configuration environment", name);
-                info_!("in {:?}", White.paint(filename));
-                info_!("valid environments are: {}", White.paint(valid_entries));
+                info!("in {:?}", White.paint(filename));
+                info!("valid environments are: {}", White.paint(valid_entries));
             }
             BadEnv(ref name) => {
                 error!("'{}' is not a valid ROCKET_ENV value", name);
-                info_!("valid environments are: {}", White.paint(valid_envs));
+                info!("valid environments are: {}", White.paint(valid_envs));
             }
             BadType(ref name, expected, actual, ref filename) => {
                 error!("'{}' key could not be parsed", name);
-                info_!("in {:?}", White.paint(filename));
-                info_!("expected value to be {}, but found {}",
+                info!("in {:?}", White.paint(filename));
+                info!("expected value to be {}, but found {}",
                        White.paint(expected), White.paint(actual));
             }
             ParseError(ref source, ref filename, ref errors) => {
@@ -90,14 +90,14 @@ impl ConfigError {
                     let error_source = &source[lo..hi];
 
                     error!("config file could not be parsed as TOML");
-                    info_!("at {:?}:{}:{}", White.paint(filename), line + 1, col + 1);
-                    trace_!("'{}' - {}", error_source, White.paint(&error.desc));
+                    info!("at {:?}:{}:{}", White.paint(filename), line + 1, col + 1);
+                    trace!("'{}' - {}", error_source, White.paint(&error.desc));
                 }
             }
             BadEnvVal(ref key, ref value, ref expected) => {
                 error!("environment variable '{}={}' could not be parsed",
                        White.paint(key), White.paint(value));
-                info_!("value for {:?} must be {}",
+                info!("value for {:?} must be {}",
                        White.paint(key), White.paint(expected))
             }
         }

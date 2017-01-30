@@ -63,7 +63,7 @@ impl<T: io::Read> Body<T> {
         };
 
         if let Err(e) = body.read_to_string(&mut string) {
-            error_!("Error reading body: {:?}", e);
+            error!("Error reading body: {:?}", e);
             return None;
         }
 
