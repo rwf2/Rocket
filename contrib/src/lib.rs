@@ -40,6 +40,9 @@
 #[cfg(feature = "lazy_static_macro")]
 extern crate lazy_static;
 
+#[cfg(feature = "cors")]
+mod cors;
+
 #[cfg_attr(feature = "json", macro_use)]
 #[cfg(feature = "json")]
 #[doc(hidden)]
@@ -50,6 +53,9 @@ mod templates;
 
 #[cfg(feature = "uuid")]
 mod uuid;
+
+#[cfg(feature = "cors")]
+pub use cors::{PreflightCORS, CORS};
 
 #[cfg(feature = "json")]
 pub use json::JSON;

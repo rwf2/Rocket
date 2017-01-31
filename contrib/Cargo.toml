@@ -12,6 +12,7 @@ license = "MIT/Apache-2.0"
 
 [features]
 default = ["json"]
+cors = []
 json = ["serde", "serde_json"]
 tera_templates = ["tera", "templates"]
 handlebars_templates = ["handlebars", "templates"]

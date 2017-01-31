@@ -1,0 +1,17 @@
+[package]
+name = "cors"
+version = "0.0.1"
+authors = ["Artem Biryukov <impowski@protonmail.ch>"]
+workspace = "../../"
+
+[dependencies]
+rocket = { path = "../../lib" }
+rocket_codegen = { path = "../../codegen" }
+
+[dependencies.rocket_contrib]
+default-features = false
+path = "../../contrib"
+features = ["cors"]
+
+[dev-dependencies]
+rocket = { path = "../../lib", features = ["testing"] }

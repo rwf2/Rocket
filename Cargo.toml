@@ -4,6 +4,7 @@ members = [
   "codegen/",
   "contrib/",
   "examples/cookies",
+  "examples/cors",
   "examples/errors",
   "examples/extended_validation",
   "examples/forms",
