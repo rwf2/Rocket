@@ -3,7 +3,6 @@ extern crate serde_json;
 
 use std::ops::{Deref, DerefMut};
 use std::io::Read;
-use std::collections::HashMap;
 
 use rocket::outcome::Outcome;
 use rocket::request::Request;
@@ -54,7 +53,7 @@ pub use self::serde_json::to_value;
 /// ```
 ///
 #[derive(Debug)]
-pub struct JSON<T = HashMap<&'static str, Value>>(pub T);
+pub struct JSON<T = Value>(pub T);
 
 impl<T> JSON<T> {
     /// Consumes the JSON wrapper and returns the wrapped item.
