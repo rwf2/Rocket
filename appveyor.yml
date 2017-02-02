@@ -1,19 +1,15 @@
 environment:
   matrix:
-    - TARGET: i686-pc-windows-gnu
-      CHANNEL: nightly
-    - TARGET: i686-pc-windows-msvc
-      CHANNEL: nightly
-    - TARGET: x86_64-pc-windows-gnu
-      CHANNEL: nightly
-    - TARGET: x86_64-pc-windows-msvc
-      CHANNEL: nightly
+    - TARGET: nightly-x86_64-pc-windows-msvc
+    - TARGET: nightly-i686-pc-windows-msvc
+    - TARGET: nightly-x86_64-pc-windows-gnu
+    - TARGET: nightly-i686-pc-windows-gnu
 
 # Install Rust and Cargo
 install:
-  - curl -sSf -o rustup-init.exe https://win.rustup.rs
-  - rustup-init.exe --default-host %TARGET% --default-toolchain %CHANNEL% -y
-  - set PATH=%PATH%;C:\Users\appveyor\.cargo\bin
+  - ps: Start-FileDownload "https://static.rust-lang.org/dist/rust-${env:TARGET}.exe" -FileName "rust-install.exe"
+  - ps: .\rust-install.exe /VERYSILENT /NORESTART /DIR="C:\rust" | Out-Null
+  - ps: $env:PATH="$env:PATH;C:\rust\bin;C:\Users\appveyor\.cargo\bin"
   - rustc -Vv
   - cargo -V
 
