@@ -40,6 +40,6 @@ fn test_bad_login() {
 #[test]
 fn test_bad_form() {
     // Mess with the form formatting.
-    test_login("Sergio&other=blah&", "password", 0, Status::UnprocessableEntity, None);
-    test_login("&&&===&", "password", 0, Status::UnprocessableEntity, None);
+    test_login("Sergio&other=blah&", "password", 0, Status::BadRequest, None);
+    test_login("&&&===&", "password", 0, Status::BadRequest, None);
 }
