@@ -61,9 +61,24 @@ guide.
 
 ### Nightly
 
-Rocket requires a nightly version of Rust as it makes heavy use of syntax
-extensions. This means that the first two unwieldly lines in the introductory
+Rocket requires a nightly version of Rust as it makes heavy use of syntax extensions.
+
+This means that the first two unwieldly lines in the introductory
 example above are required.
+
+Following there is a list from the
+[currently used features](https://github.com/SergioBenitez/Rocket/issues/19#issuecomment-269052006):
+
+```
+#![feature(plugin)]
+#![feature(custom_derive)]
+#![feature(custom_attribute)]
+#![feature(specialization)]
+#![feature(conservative_impl_trait)]
+#![feature(drop_types_in_const)]
+#![feature(associated_consts)]
+#![feature(const_fn)]
+```
 
 ### Core, Codegen, and Contrib
 
