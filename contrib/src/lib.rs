@@ -47,6 +47,9 @@ extern crate serde;
 #[cfg_attr(feature = "json", macro_reexport(json_internal))]
 extern crate serde_json;
 
+#[cfg(feature = "database")]
+mod database;
+
 #[cfg(feature = "json")]
 #[cfg_attr(feature = "json", macro_use)]
 #[doc(hidden)]
@@ -66,3 +69,6 @@ mod uuid;
 
 #[cfg(feature = "uuid")]
 pub use uuid::{UUID, UuidParseError};
+
+#[cfg(feature = "database")]
+pub use database::diesel::PostgresDatabase;
