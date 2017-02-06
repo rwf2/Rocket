@@ -1,0 +1,16 @@
+[package]
+name = "database"
+version = "0.1.0"
+authors = ["Artem Biryukov <impowski@protonmail.ch>"]
+
+[dependencies]
+rocket = { path = "../../lib" }
+rocket_codegen = { path = "../../codegen" }
+
+[dependencies.rocket_contrib]
+path = "../../contrib"
+default-features = false
+features = ["database", "postgres_db"]
+
+[dev-dependencies]
+rocket = { path = "../../lib", features = ["testing"] }
