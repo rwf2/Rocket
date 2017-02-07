@@ -24,6 +24,8 @@ use http::{Method, Status, Header};
 use http::hyper::{self, header};
 use http::uri::URI;
 
+use slog_scope;
+
 /// The main `Rocket` type: used to mount routes and catchers and launch the
 /// application.
 pub struct Rocket {
@@ -58,19 +60,25 @@ impl hyper::Handler for Rocket {
             }
         };
 
-        // Retrieve the data from the hyper body.
-        let data = match Data::from_hyp(h_body) {
-            Ok(data) => data,
-            Err(reason) => {
-                error!("Bad data in request: {}", reason);
-                let r = self.handle_error(Status::InternalServerError, &req);
-                return self.issue_response(r, res);
-            }
-        };
+        // Make child logger for this request
+        slog_scope::scope(slog_scope::logger().new(slog_o!(
+            "Request" => format!("{}", req),
+            "IP" => format!("{}", req.remote().map(|addr| format!("{}", addr)).unwrap_or("None".into())),
+        )), move || {
+            // Retrieve the data from the hyper body.
+            let data = match Data::from_hyp(h_body) {
+                Ok(data) => data,
+                Err(reason) => {
+                    error!("Bad data in request: {}", reason);
+                    let r = self.handle_error(Status::InternalServerError, &req);
+                    return self.issue_response(r, res);
+                }
+            };
 
-        // Dispatch the request to get a response, then write that response out.
-        let response = self.dispatch(&mut req, data);
-        self.issue_response(response, res)
+            // Dispatch the request to get a response, then write that response out.
+            let response = self.dispatch(&mut req, data);
+            self.issue_response(response, res)
+        })
     }
 }
 
@@ -80,9 +88,11 @@ impl Rocket {
         // Add the 'rocket' server header, and write out the response.
         // TODO: If removing Hyper, write out `Date` header too.
         response.set_header(Header::new("Server", "rocket"));
+        
+        let response_status = response.status();
 
         match self.write_response(response, hyp_res) {
-            Ok(_) => info!("{}", Green.paint("Response succeeded.")),
+            Ok(_) => info!(""; "Response" => format!("{}", response_status)),
             Err(e) => error!("Failed to write response: {:?}.", e)
         }
     }
@@ -179,8 +189,6 @@ impl Rocket {
     #[inline]
     pub(crate) fn dispatch<'s, 'r>(&'s self, request: &'r mut Request<'s>, data: Data)
             -> Response<'r> {
-        info!("{}:", request);
-
         // Inform the request about the state.
         request.set_state(&self.state);
 
@@ -336,21 +344,24 @@ impl Rocket {
             logger::init(config.log_level);
         }
 
-        info!("🔧  Configured for {}.", config.environment);
-        info!("address: {}", White.paint(&config.address));
-        info!("port: {}", White.paint(&config.port));
-        info!("log: {}", White.paint(config.log_level));
-        info!("workers: {}", White.paint(config.workers));
+        let clog = slog_scope::logger().new(slog_o!(
+            "🔧  Configure" => format!("{}", config.environment),
+        ));
+
+        slog_info!(clog, "address: {}", White.paint(&config.address));
+        slog_info!(clog, "port: {}", White.paint(&config.port));
+        slog_info!(clog, "log: {}", White.paint(config.log_level));
+        slog_info!(clog, "workers: {}", White.paint(config.workers));
 
         let session_key = config.take_session_key();
         if session_key.is_some() {
-            info!("session key: {}", White.paint("present"));
+            slog_info!(clog, "session key: {}", White.paint("present"));
             warn!("Signing and encryption of cookies is currently disabled.");
             warn!("See https://github.com/SergioBenitez/Rocket/issues/20 for info.");
         }
 
         for (name, value) in config.extras() {
-            info!("{} {}: {}", Yellow.paint("[extra]"), name, White.paint(value));
+            slog_info!(clog, "{} {}: {}", Yellow.paint("[extra]"), name, White.paint(value));
         }
 
         Rocket {
@@ -414,11 +425,13 @@ impl Rocket {
     /// # }
     /// ```
     pub fn mount(mut self, base: &str, routes: Vec<Route>) -> Self {
-        info!("🛰  {} '{}':", Magenta.paint("Mounting"), base);
+        let clog = slog_scope::logger().new(slog_o!(
+            "🛰  Mount" => base.to_string(),
+        ));
 
         if base.contains('<') {
-            error!("Bad mount point: '{}'.", base);
-            error!("Mount points must be static paths!");
+            slog_error!(clog, "Bad mount point: '{}'.", base);
+            slog_error!(clog, "Mount points must be static paths!");
             panic!("Bad mount point.")
         }
 
@@ -426,7 +439,7 @@ impl Rocket {
             let path = format!("{}/{}", base, route.path);
             route.set_path(path);
 
-            info!("{}", route);
+            slog_info!(clog, "{}", route);
             self.router.add(route);
         }
 

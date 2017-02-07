@@ -3,15 +3,9 @@
 use std::str::FromStr;
 use std::fmt;
 
-// use log::{self, Log, LogLevel, LogRecord, LogMetadata};
 use slog_term;
 use slog::{self, DrainExt};
 use slog_scope;
-
-use term_painter::Color::*;
-use term_painter::ToStyle;
-
-struct RocketLogger(LoggingLevel);
 
 /// Defines the different levels for log messages.
 #[derive(PartialEq, Eq, Debug, Clone, Copy)]
@@ -25,14 +19,14 @@ pub enum LoggingLevel {
 }
 
 impl LoggingLevel {
-    // #[inline(always)]
-    // fn max_log_level(&self) -> LogLevel {
-    //     match *self {
-    //         LoggingLevel::Critical => LogLevel::Warn,
-    //         LoggingLevel::Normal => LogLevel::Info,
-    //         LoggingLevel::Debug => LogLevel::Trace,
-    //     }
-    // }
+    #[inline(always)]
+    fn max_log_level(&self) -> slog::Level {
+        match *self {
+            LoggingLevel::Critical => slog::Level::Warning,
+            LoggingLevel::Normal => slog::Level::Info,
+            LoggingLevel::Debug => slog::Level::Trace,
+        }
+    }
 }
 
 impl FromStr for LoggingLevel {
@@ -64,9 +58,9 @@ impl fmt::Display for LoggingLevel {
 #[doc(hidden)]
 pub fn init(level: LoggingLevel) {
     // TODO: Configure drain in a far more complex fashion
-    let drain = slog_term::streamer().stderr().full().build().fuse();
-    let root_log = slog::Logger::root(drain, slog_o!());
+    let drain = slog_term::streamer().stderr().compact().build();
+    let drain = slog::LevelFilter::new(drain, level.max_log_level()).fuse();
 
     // Set _global_ scope of log/info/etc. macros
-    slog_scope::set_global_logger(root_log);
+    slog_scope::set_global_logger(slog::Logger::root(drain, slog_o!()));
 }
