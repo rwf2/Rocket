@@ -10,7 +10,7 @@ use config::Environment::*;
 use config::{self, Value, ConfigBuilder, Environment, ConfigError};
 
 use num_cpus;
-use logger::LoggingLevel;
+use logger::{self, LoggingLevel, Logger};
 
 /// Structure for Rocket application configuration.
 ///
@@ -37,8 +37,8 @@ pub struct Config {
     pub port: u16,
     /// The number of workers to run concurrently.
     pub workers: u16,
-    /// How much information to log.
-    pub log_level: LoggingLevel,
+    /// Logger to use to log information.
+    pub log: Logger,
     /// Extra parameters that aren't part of Rocket's core config.
     pub extras: HashMap<String, Value>,
     /// The path to the configuration file this config belongs to.
@@ -133,7 +133,7 @@ impl Config {
                     address: "localhost".to_string(),
                     port: 8000,
                     workers: default_workers,
-                    log_level: LoggingLevel::Normal,
+                    log: logger::default_for(LoggingLevel::Normal),
                     session_key: RwLock::new(None),
                     extras: HashMap::new(),
                     config_path: config_path,
@@ -145,7 +145,7 @@ impl Config {
                     address: "0.0.0.0".to_string(),
                     port: 80,
                     workers: default_workers,
-                    log_level: LoggingLevel::Normal,
+                    log: logger::default_for(LoggingLevel::Normal),
                     session_key: RwLock::new(None),
                     extras: HashMap::new(),
                     config_path: config_path,
@@ -157,7 +157,7 @@ impl Config {
                     address: "0.0.0.0".to_string(),
                     port: 80,
                     workers: default_workers,
-                    log_level: LoggingLevel::Critical,
+                    log: logger::default_for(LoggingLevel::Critical),
                     session_key: RwLock::new(None),
                     extras: HashMap::new(),
                     config_path: config_path,
@@ -221,7 +221,7 @@ impl Config {
             let level_str = parse!(self, name, val, as_str, "a string")?;
             let expect = "log level ('normal', 'critical', 'debug')";
             match level_str.parse() {
-                Ok(level) => self.set_log_level(level),
+                Ok(level) => self.set_log(logger::default_for(level)),
                 Err(_) => return Err(self.bad_type(name, val.type_str(), expect))
             }
         } else {
@@ -353,23 +353,28 @@ impl Config {
         Ok(())
     }
 
-    /// Sets the logging level for `self` to `log_level`.
+    /// Sets the logger for `self`.
     ///
     /// # Example
     ///
     /// ```rust
-    /// use rocket::LoggingLevel;
     /// use rocket::config::{Config, Environment};
+    /// use slog_term;
+    /// use slog::{self, DrainExt};
     ///
     /// # use rocket::config::ConfigError;
     /// # fn config_test() -> Result<(), ConfigError> {
     /// let mut config = Config::new(Environment::Staging)?;
-    /// config.set_log_level(LoggingLevel::Critical);
+    ///
+    /// let drain = slog_term::streamer().stderr().compact().build();
+    /// let logger = slog::Logger::root(drain, slog_o!());
+    ///
+    /// config.set_log(logger);
     /// # Ok(())
     /// # }
     /// ```
-    pub fn set_log_level(&mut self, log_level: LoggingLevel) {
-        self.log_level = log_level;
+    pub fn set_log(&mut self, log: Logger) {
+        self.log = log;
     }
 
     /// Sets the extras for `self` to be the key/value pairs in `extras`.
@@ -576,8 +581,8 @@ impl Config {
 
 impl fmt::Debug for Config {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "Config[{}] {{ address: {}, port: {}, workers: {}, log: {:?}",
-               self.environment, self.address, self.port, self.workers, self.log_level)?;
+        write!(f, "Config[{}] {{ address: {}, port: {}, workers: {}",
+               self.environment, self.address, self.port, self.workers)?;
 
         for (key, value) in self.extras() {
             write!(f, ", {}: {}", key, value)?;
@@ -587,13 +592,12 @@ impl fmt::Debug for Config {
     }
 }
 
-/// Doesn't consider the session key or config path.
+/// Doesn't consider the session key, config path, or logger.
 impl PartialEq for Config {
     fn eq(&self, other: &Config) -> bool {
         self.address == other.address
             && self.port == other.port
             && self.workers == other.workers
-            && self.log_level == other.log_level
             && self.environment == other.environment
             && self.extras == other.extras
     }

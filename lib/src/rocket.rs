@@ -341,7 +341,7 @@ impl Rocket {
 
     fn configured(config: &'static Config, log: bool) -> Rocket {
         if log {
-            logger::init(config.log_level);
+            logger::init(&config.log);
         }
 
         let clog = slog_scope::logger().new(slog_o!(
@@ -350,7 +350,6 @@ impl Rocket {
 
         slog_info!(clog, "address: {}", White.paint(&config.address));
         slog_info!(clog, "port: {}", White.paint(&config.port));
-        slog_info!(clog, "log: {}", White.paint(config.log_level));
         slog_info!(clog, "workers: {}", White.paint(config.workers));
 
         let session_key = config.take_session_key();

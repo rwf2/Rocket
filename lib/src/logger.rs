@@ -7,6 +7,15 @@ use slog_term;
 use slog::{self, DrainExt};
 use slog_scope;
 
+pub use slog::Logger;
+
+pub fn default_for(level: LoggingLevel) -> slog::Logger {
+    let drain = slog_term::streamer().stderr().compact().build();
+    let drain = slog::LevelFilter::new(drain, level.max_log_level()).fuse();
+
+    slog::Logger::root(drain, slog_o!())
+}
+
 /// Defines the different levels for log messages.
 #[derive(PartialEq, Eq, Debug, Clone, Copy)]
 pub enum LoggingLevel {
@@ -56,11 +65,6 @@ impl fmt::Display for LoggingLevel {
 }
 
 #[doc(hidden)]
-pub fn init(level: LoggingLevel) {
-    // TODO: Configure drain in a far more complex fashion
-    let drain = slog_term::streamer().stderr().compact().build();
-    let drain = slog::LevelFilter::new(drain, level.max_log_level()).fuse();
-
-    // Set _global_ scope of log/info/etc. macros
-    slog_scope::set_global_logger(slog::Logger::root(drain, slog_o!()));
+pub fn init(log: &Logger) {
+    slog_scope::set_global_logger(log.clone());
 }

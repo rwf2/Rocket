@@ -3,7 +3,7 @@ use std::path::{Path, PathBuf};
 
 use config::{Result, Config, Value, Environment};
 use config::toml_ext::IntoValue;
-use logger::LoggingLevel;
+use logger::Logger;
 
 /// Structure following the builder pattern for building `Config` structures.
 #[derive(Clone)]
@@ -16,8 +16,8 @@ pub struct ConfigBuilder {
     pub port: u16,
     /// The number of workers to run in parallel.
     pub workers: u16,
-    /// How much information to log.
-    pub log_level: LoggingLevel,
+    /// Logger to use to log information.
+    pub log: Logger,
     /// The session key.
     pub session_key: Option<String>,
     /// Any extra parameters that aren't part of Rocket's config.
@@ -61,7 +61,7 @@ impl ConfigBuilder {
             address: config.address,
             port: config.port,
             workers: config.workers,
-            log_level: config.log_level,
+            log: config.log,
             session_key: None,
             extras: config.extras,
             root: root_dir,
@@ -124,23 +124,25 @@ impl ConfigBuilder {
         self
     }
 
-    /// Sets the `log_level` in the configuration being built.
+    /// Sets the `log` in the configuration being built.
     ///
     /// # Example
     ///
     /// ```rust
-    /// use rocket::LoggingLevel;
     /// use rocket::config::{Config, Environment};
+    /// use slog_term;
+    /// use slog::{self, DrainExt};
+    ///
+    /// let drain = slog_term::streamer().stderr().compact().build();
+    /// let logger = slog::Logger::root(drain, slog_o!());
     ///
     /// let config = Config::build(Environment::Staging)
-    ///     .log_level(LoggingLevel::Critical)
+    ///     .log(logger)
     ///     .unwrap();
-    ///
-    /// assert_eq!(config.log_level, LoggingLevel::Critical);
     /// ```
     #[inline]
-    pub fn log_level(mut self, log_level: LoggingLevel) -> Self {
-        self.log_level = log_level;
+    pub fn log(mut self, log: Logger) -> Self {
+        self.log = log;
         self
     }
 
@@ -258,7 +260,7 @@ impl ConfigBuilder {
         config.set_address(self.address)?;
         config.set_port(self.port);
         config.set_workers(self.workers);
-        config.set_log_level(self.log_level);
+        config.set_log(self.log);
         config.set_extras(self.extras);
         config.set_root(self.root);
 

@@ -447,7 +447,7 @@ pub(crate) fn custom_init(config: Config) -> (&'static Config, bool) {
 
 unsafe fn private_init() {
     let bail = |e: ConfigError| -> ! {
-        logger::init(LoggingLevel::Debug);
+        logger::init(&logger::default_for(LoggingLevel::Debug));
         e.pretty_print();
         process::exit(1)
     };
