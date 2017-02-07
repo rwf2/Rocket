@@ -17,7 +17,7 @@ pub struct ConfigBuilder {
     /// The number of workers to run in parallel.
     pub workers: u16,
     /// Logger to use to log information.
-    pub log: Logger,
+    pub log: Option<Logger>,
     /// The session key.
     pub session_key: Option<String>,
     /// Any extra parameters that aren't part of Rocket's config.
@@ -141,8 +141,8 @@ impl ConfigBuilder {
     ///     .unwrap();
     /// ```
     #[inline]
-    pub fn log(mut self, log: Logger) -> Self {
-        self.log = log;
+    pub fn log<T>(mut self, log: T) -> Self where T: Into<Option<Logger>> {
+        self.log = log.into();
         self
     }
 
@@ -260,9 +260,9 @@ impl ConfigBuilder {
         config.set_address(self.address)?;
         config.set_port(self.port);
         config.set_workers(self.workers);
-        config.set_log(self.log);
         config.set_extras(self.extras);
         config.set_root(self.root);
+        config.set_log(self.log);
 
         if let Some(key) = self.session_key {
             config.set_session_key(key)?;

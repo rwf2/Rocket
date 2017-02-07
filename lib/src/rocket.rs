@@ -334,14 +334,16 @@ impl Rocket {
     /// # Ok(())
     /// # }
     /// ```
-    pub fn custom(config: Config, log: bool) -> Rocket {
+    pub fn custom(config: Config) -> Rocket {
         let (config, initted) = config::custom_init(config);
-        Rocket::configured(config, log && initted)
+        Rocket::configured(config, initted)
     }
 
-    fn configured(config: &'static Config, log: bool) -> Rocket {
-        if log {
-            logger::init(&config.log);
+    fn configured(config: &'static Config, initial: bool) -> Rocket {
+        if let Some(ref log) = config.log {
+            if initial {
+                logger::init(&log);
+            }
         }
 
         let clog = slog_scope::logger().new(slog_o!(

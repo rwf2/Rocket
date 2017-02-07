@@ -38,7 +38,7 @@ pub struct Config {
     /// The number of workers to run concurrently.
     pub workers: u16,
     /// Logger to use to log information.
-    pub log: Logger,
+    pub log: Option<Logger>,
     /// Extra parameters that aren't part of Rocket's core config.
     pub extras: HashMap<String, Value>,
     /// The path to the configuration file this config belongs to.
@@ -133,7 +133,7 @@ impl Config {
                     address: "localhost".to_string(),
                     port: 8000,
                     workers: default_workers,
-                    log: logger::default_for(LoggingLevel::Normal),
+                    log: Some(logger::default_for(LoggingLevel::Normal)),
                     session_key: RwLock::new(None),
                     extras: HashMap::new(),
                     config_path: config_path,
@@ -145,7 +145,7 @@ impl Config {
                     address: "0.0.0.0".to_string(),
                     port: 80,
                     workers: default_workers,
-                    log: logger::default_for(LoggingLevel::Normal),
+                    log: Some(logger::default_for(LoggingLevel::Normal)),
                     session_key: RwLock::new(None),
                     extras: HashMap::new(),
                     config_path: config_path,
@@ -157,7 +157,7 @@ impl Config {
                     address: "0.0.0.0".to_string(),
                     port: 80,
                     workers: default_workers,
-                    log: logger::default_for(LoggingLevel::Critical),
+                    log: Some(logger::default_for(LoggingLevel::Critical)),
                     session_key: RwLock::new(None),
                     extras: HashMap::new(),
                     config_path: config_path,
@@ -373,8 +373,8 @@ impl Config {
     /// # Ok(())
     /// # }
     /// ```
-    pub fn set_log(&mut self, log: Logger) {
-        self.log = log;
+    pub fn set_log<T>(&mut self, log: T) where T: Into<Option<Logger>> {
+        self.log = log.into();
     }
 
     /// Sets the extras for `self` to be the key/value pairs in `extras`.
