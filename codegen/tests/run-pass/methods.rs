@@ -21,8 +21,7 @@ extern crate rocket;
 #[patch("/")] fn patch() {  }
 #[route(PATCH, "/")] fn patch_r() {  }
 
-// TODO: Allow this once Diesel incompatibility is fixed.
-// #[options("/")] fn options() {  }
+#[options("/")] fn options() {  }
 #[route(OPTIONS, "/")] fn options_r() {  }
 
 fn main() { }

@@ -5,7 +5,6 @@ use std::fmt;
 use http::Header;
 use http::hyper::mime::Mime;
 use http::ascii::{uncased_eq, UncasedAscii};
-use router::Collider;
 
 /// Representation of HTTP Content-Types.
 ///
@@ -23,6 +22,7 @@ use router::Collider;
 /// ```rust
 /// use rocket::http::ContentType;
 ///
+/// # #[allow(unused_variables)]
 /// let html = ContentType::HTML;
 /// ```
 ///
@@ -35,6 +35,7 @@ use router::Collider;
 /// use rocket::http::ContentType;
 /// use rocket::response::Response;
 ///
+/// # #[allow(unused_variables)]
 /// let response = Response::build().header(ContentType::HTML).finalize();
 /// ```
 #[derive(Debug, Clone, PartialEq, Hash)]
@@ -416,13 +417,6 @@ impl Into<Header<'static>> for ContentType {
     #[inline]
     fn into(self) -> Header<'static> {
         Header::new("Content-Type", self.to_string())
-    }
-}
-
-impl Collider for ContentType {
-    fn collides_with(&self, other: &ContentType) -> bool {
-        let collide = |a, b| a == "*" || b == "*" || a == b;
-        collide(&self.ttype, &other.ttype) && collide(&self.subtype, &other.subtype)
     }
 }
 

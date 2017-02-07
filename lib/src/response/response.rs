@@ -129,6 +129,7 @@ impl<T> fmt::Debug for Body<T> {
 /// use rocket::response::Response;
 /// use rocket::http::{Status, ContentType};
 ///
+/// # #[allow(unused_variables)]
 /// let response = Response::build()
 ///     .status(Status::ImATeapot)
 ///     .header(ContentType::Plain)
@@ -152,6 +153,7 @@ impl<'r> ResponseBuilder<'r> {
     /// ```rust
     /// use rocket::response::{ResponseBuilder, Response};
     ///
+    /// # #[allow(unused_variables)]
     /// let builder = ResponseBuilder::new(Response::new());
     /// ```
     #[inline(always)]
@@ -169,6 +171,7 @@ impl<'r> ResponseBuilder<'r> {
     /// use rocket::Response;
     /// use rocket::http::Status;
     ///
+    /// # #[allow(unused_variables)]
     /// let response = Response::build()
     ///     .status(Status::NotFound)
     ///     .finalize();
@@ -187,6 +190,7 @@ impl<'r> ResponseBuilder<'r> {
     /// ```rust
     /// use rocket::Response;
     ///
+    /// # #[allow(unused_variables)]
     /// let response = Response::build()
     ///     .raw_status(699, "Alien Encounter")
     ///     .finalize();
@@ -269,7 +273,6 @@ impl<'r> ResponseBuilder<'r> {
     ///
     /// ```rust
     /// use rocket::Response;
-    /// use rocket::http::ContentType;
     ///
     /// let response = Response::build()
     ///     .raw_header("X-Custom", "first")
@@ -323,7 +326,9 @@ impl<'r> ResponseBuilder<'r> {
     /// use std::fs::File;
     /// # use std::io;
     ///
+    /// # #[allow(dead_code)]
     /// # fn test() -> io::Result<()> {
+    /// # #[allow(unused_variables)]
     /// let response = Response::build()
     ///     .sized_body(File::open("body.txt")?)
     ///     .finalize();
@@ -347,7 +352,9 @@ impl<'r> ResponseBuilder<'r> {
     /// use std::fs::File;
     /// # use std::io;
     ///
+    /// # #[allow(dead_code)]
     /// # fn test() -> io::Result<()> {
+    /// # #[allow(unused_variables)]
     /// let response = Response::build()
     ///     .streamed_body(File::open("body.txt")?)
     ///     .finalize();
@@ -372,7 +379,9 @@ impl<'r> ResponseBuilder<'r> {
     /// use std::fs::File;
     /// # use std::io;
     ///
+    /// # #[allow(dead_code)]
     /// # fn test() -> io::Result<()> {
+    /// # #[allow(unused_variables)]
     /// let response = Response::build()
     ///     .chunked_body(File::open("body.txt")?, 8096)
     ///     .finalize();
@@ -481,6 +490,7 @@ impl<'r> ResponseBuilder<'r> {
     /// ```rust
     /// use rocket::Response;
     ///
+    /// # #[allow(unused_variables)]
     /// let response = Response::build()
     ///     // build the response
     ///     .finalize();
@@ -551,6 +561,7 @@ impl<'r> Response<'r> {
     /// ```rust
     /// use rocket::Response;
     ///
+    /// # #[allow(unused_variables)]
     /// let builder = Response::build();
     /// ```
     #[inline(always)]
@@ -563,6 +574,7 @@ impl<'r> Response<'r> {
     /// # Example
     ///
     /// ```rust
+    /// # #![allow(unused_variables)]
     /// use rocket::Response;
     ///
     /// let other = Response::new();
@@ -791,7 +803,6 @@ impl<'r> Response<'r> {
     ///
     /// ```rust
     /// use rocket::Response;
-    /// use rocket::http::Header;
     ///
     /// let mut response = Response::new();
     ///
@@ -865,9 +876,8 @@ impl<'r> Response<'r> {
 
     // Makes the `Read`er in the body empty but leaves the size of the body if
     // it exists. Only meant to be used to handle HEAD requests automatically.
-    #[doc(hidden)]
     #[inline(always)]
-    pub fn strip_body(&mut self) {
+    pub(crate) fn strip_body(&mut self) {
         if let Some(body) = self.take_body() {
             self.body = match body {
                 Body::Sized(_, n) => Some(Body::Sized(Box::new(io::empty()), n)),

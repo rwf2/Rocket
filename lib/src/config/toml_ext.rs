@@ -20,7 +20,9 @@ pub fn parse_simple_toml_value(string: &str) -> Value {
     Value::String(string.to_string())
 }
 
+/// Conversion trait from standard types into TOML `Value`s.
 pub trait IntoValue {
+    /// Converts `self` into a TOML `Value`.
     fn into_value(self) -> Value;
 }
 

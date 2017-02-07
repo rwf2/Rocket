@@ -1,11 +1,12 @@
-use super::rocket;
 use rocket::testing::MockRequest;
 use rocket::http::Method::*;
 use rocket::http::{ContentType, Status};
 
+use super::rocket;
+
 fn test_login(username: &str, password: &str, age: isize, status: Status,
               body: Option<&'static str>) {
-    let rocket = rocket::ignite().mount("/", routes![super::user_page, super::login]);
+    let rocket = rocket();
     let mut req = MockRequest::new(Post, "/login")
         .header(ContentType::Form)
         .body(&format!("username={}&password={}&age={}", username, password, age));
@@ -37,9 +38,25 @@ fn test_bad_login() {
     test_login("Mike", "password", 30, OK, Some("Unrecognized user, 'Mike'."));
 }
 
+fn check_bad_form(form_str: &str, status: Status) {
+    let rocket = rocket();
+    let mut req = MockRequest::new(Post, "/login")
+        .header(ContentType::Form)
+        .body(form_str);
+
+    let response = req.dispatch_with(&rocket);
+    assert_eq!(response.status(), status);
+}
+
 #[test]
 fn test_bad_form() {
-    // Mess with the form formatting.
-    test_login("Sergio&other=blah&", "password", 0, Status::BadRequest, None);
-    test_login("&&&===&", "password", 0, Status::BadRequest, None);
+    check_bad_form("&", Status::BadRequest);
+    check_bad_form("=", Status::BadRequest);
+    check_bad_form("&&&===&", Status::BadRequest);
+
+    check_bad_form("username=Sergio", Status::UnprocessableEntity);
+    check_bad_form("username=Sergio&", Status::UnprocessableEntity);
+    check_bad_form("username=Sergio&pass=something", Status::UnprocessableEntity);
+    check_bad_form("user=Sergio&password=something", Status::UnprocessableEntity);
+    check_bad_form("password=something", Status::UnprocessableEntity);
 }

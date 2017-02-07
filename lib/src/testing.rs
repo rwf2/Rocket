@@ -137,34 +137,16 @@ impl<'r> MockRequest<'r> {
     /// use rocket::testing::MockRequest;
     /// use rocket::http::ContentType;
     ///
+    /// # #[allow(unused_variables)]
     /// let req = MockRequest::new(Get, "/").header(ContentType::JSON);
     /// ```
     #[inline]
-    pub fn header<'h, H: Into<Header<'static>>>(mut self, header: H) -> Self {
+    pub fn header<H: Into<Header<'static>>>(mut self, header: H) -> Self {
         self.request.add_header(header.into());
         self
     }
 
-    /// Set the remote address of this request.
-    ///
-    /// # Examples
-    ///
-    /// Set the remote address to "8.8.8.8:80":
-    ///
-    /// ```rust
-    /// use rocket::http::Method::*;
-    /// use rocket::testing::MockRequest;
-    ///
-    /// let address = "8.8.8.8:80".parse().unwrap();
-    /// let req = MockRequest::new(Get, "/").remote(address);
-    /// ```
-    #[inline]
-    pub fn remote(mut self, address: SocketAddr) -> Self {
-        self.request.set_remote(address);
-        self
-    }
-
-    /// Adds a header to this request. Does not consume `self`.
+    /// Adds a header to this request without consuming `self`.
     ///
     /// # Examples
     ///
@@ -179,8 +161,28 @@ impl<'r> MockRequest<'r> {
     /// req.add_header(ContentType::JSON);
     /// ```
     #[inline]
-    pub fn add_header<'h, H: Into<Header<'static>>>(&mut self, header: H) {
+    pub fn add_header<H: Into<Header<'static>>>(&mut self, header: H) {
         self.request.add_header(header.into());
+    }
+
+    /// Set the remote address of this request.
+    ///
+    /// # Examples
+    ///
+    /// Set the remote address to "8.8.8.8:80":
+    ///
+    /// ```rust
+    /// use rocket::http::Method::*;
+    /// use rocket::testing::MockRequest;
+    ///
+    /// let address = "8.8.8.8:80".parse().unwrap();
+    /// # #[allow(unused_variables)]
+    /// let req = MockRequest::new(Get, "/").remote(address);
+    /// ```
+    #[inline]
+    pub fn remote(mut self, address: SocketAddr) -> Self {
+        self.request.set_remote(address);
+        self
     }
 
     /// Add a cookie to this request.
@@ -194,6 +196,7 @@ impl<'r> MockRequest<'r> {
     /// use rocket::testing::MockRequest;
     /// use rocket::http::Cookie;
     ///
+    /// # #[allow(unused_variables)]
     /// let req = MockRequest::new(Get, "/")
     ///     .cookie(Cookie::new("username", "sb"))
     ///     .cookie(Cookie::new("user_id", format!("{}", 12)));
@@ -215,6 +218,7 @@ impl<'r> MockRequest<'r> {
     /// use rocket::testing::MockRequest;
     /// use rocket::http::ContentType;
     ///
+    /// # #[allow(unused_variables)]
     /// let req = MockRequest::new(Post, "/")
     ///     .header(ContentType::JSON)
     ///     .body(r#"{ "key": "value", "array": [1, 2, 3], }"#);

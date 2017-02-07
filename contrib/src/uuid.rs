@@ -4,13 +4,12 @@ use std::fmt;
 use std::str::FromStr;
 use std::ops::Deref;
 
-use rocket::request::FromParam;
+use rocket::request::{FromParam, FromFormValue};
 
 pub use self::uuid_ext::ParseError as UuidParseError;
 
-/// The UUID type, which implements `FromParam`. This type allows you to accept
-/// values from the [Uuid](https://github.com/rust-lang-nursery/uuid) crate as a
-/// dynamic parameter in your request handlers.
+/// Implements `FromParam` and `FormFormValue` for accepting UUID values from
+/// the [uuid](https://github.com/rust-lang-nursery/uuid) crate.
 ///
 /// # Usage
 ///
@@ -32,6 +31,19 @@ pub use self::uuid_ext::ParseError as UuidParseError;
 ///     format!("We found: {}", id)
 /// }
 /// ```
+///
+/// You can also use the `UUID` as a form value, including in query strings:
+///
+/// ```rust,ignore
+/// #[derive(FromForm)]
+/// struct UserQuery {
+///     id: UUID
+/// }
+///
+/// #[post("/user?<user_query>")]
+/// fn user(user_query: UserQuery) -> String {
+///     format!("User ID: {}", user_query.id)
+/// }
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Debug)]
 pub struct UUID(uuid_ext::Uuid);
 
@@ -68,11 +80,21 @@ impl fmt::Display for UUID {
 impl<'a> FromParam<'a> for UUID {
     type Error = UuidParseError;
 
-    /// A value is successfully parsed if the `str` is a properly formatted
-    /// UUID. Otherwise, a `UuidParseError` is returned.
+    /// A value is successfully parsed if `param` is a properly formatted UUID.
+    /// Otherwise, a `UuidParseError` is returned.
     #[inline(always)]
-    fn from_param(p: &'a str) -> Result<UUID, Self::Error> {
-        p.parse()
+    fn from_param(param: &'a str) -> Result<UUID, Self::Error> {
+        param.parse()
+    }
+}
+
+impl<'v> FromFormValue<'v> for UUID {
+    type Error = &'v str;
+
+    /// A value is successfully parsed if `form_value` is a properly formatted
+    /// UUID. Otherwise, the raw form value is returned.
+    fn from_form_value(form_value: &'v str) -> Result<UUID, &'v str> {
+        form_value.parse().map_err(|_| form_value)
     }
 }
 

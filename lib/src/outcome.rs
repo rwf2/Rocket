@@ -124,7 +124,7 @@ impl<S, E, F> Outcome<S, E, F> {
     /// let x: Outcome<i32, &str, usize> = Success(10);
     /// assert_eq!(x.unwrap(), 10);
     /// ```
-    #[inline(always)]
+    #[inline]
     pub fn unwrap(self) -> S {
         match self {
             Success(val) => val,
@@ -147,7 +147,7 @@ impl<S, E, F> Outcome<S, E, F> {
     /// let x: Outcome<i32, &str, usize> = Success(10);
     /// assert_eq!(x.expect("success value"), 10);
     /// ```
-    #[inline(always)]
+    #[inline]
     pub fn expect(self, message: &str) -> S {
         match self {
             Success(val) => val,
@@ -172,7 +172,7 @@ impl<S, E, F> Outcome<S, E, F> {
     /// let x: Outcome<i32, &str, usize> = Forward(25);
     /// assert_eq!(x.is_success(), false);
     /// ```
-    #[inline(always)]
+    #[inline]
     pub fn is_success(&self) -> bool {
         match *self {
             Success(_) => true,
@@ -197,7 +197,7 @@ impl<S, E, F> Outcome<S, E, F> {
     /// let x: Outcome<i32, &str, usize> = Forward(25);
     /// assert_eq!(x.is_failure(), false);
     /// ```
-    #[inline(always)]
+    #[inline]
     pub fn is_failure(&self) -> bool {
         match *self {
             Failure(_) => true,
@@ -222,7 +222,7 @@ impl<S, E, F> Outcome<S, E, F> {
     /// let x: Outcome<i32, &str, usize> = Forward(25);
     /// assert_eq!(x.is_forward(), true);
     /// ```
-    #[inline(always)]
+    #[inline]
     pub fn is_forward(&self) -> bool {
         match *self {
             Forward(_) => true,
@@ -248,7 +248,7 @@ impl<S, E, F> Outcome<S, E, F> {
     /// let x: Outcome<i32, &str, usize> = Forward(25);
     /// assert_eq!(x.succeeded(), None);
     /// ```
-    #[inline(always)]
+    #[inline]
     pub fn succeeded(self) -> Option<S> {
         match self {
             Success(val) => Some(val),
@@ -274,7 +274,7 @@ impl<S, E, F> Outcome<S, E, F> {
     /// let x: Outcome<i32, &str, usize> = Forward(25);
     /// assert_eq!(x.failed(), None);
     /// ```
-    #[inline(always)]
+    #[inline]
     pub fn failed(self) -> Option<E> {
         match self {
             Failure(val) => Some(val),
@@ -300,7 +300,7 @@ impl<S, E, F> Outcome<S, E, F> {
     /// let x: Outcome<i32, &str, usize> = Forward(25);
     /// assert_eq!(x.forwarded(), Some(25));
     /// ```
-    #[inline(always)]
+    #[inline]
     pub fn forwarded(self) -> Option<F> {
         match self {
             Forward(val) => Some(val),
@@ -320,7 +320,7 @@ impl<S, E, F> Outcome<S, E, F> {
     /// let x: Outcome<i32, &str, usize> = Failure("Hi! I'm an error.");
     /// assert_eq!(x.as_ref(), Failure(&"Hi! I'm an error."));
     /// ```
-    #[inline(always)]
+    #[inline]
     pub fn as_ref(&self) -> Outcome<&S, &E, &F> {
         match *self {
             Success(ref val) => Success(val),
@@ -342,7 +342,7 @@ impl<S, E, F> Outcome<S, E, F> {
     ///
     /// assert_eq!(x.unwrap(), 20);
     /// ```
-    #[inline(always)]
+    #[inline]
     pub fn as_mut(&mut self) -> Outcome<&mut S, &mut E, &mut F> {
         match *self {
             Success(ref mut val) => Success(val),
@@ -351,8 +351,7 @@ impl<S, E, F> Outcome<S, E, F> {
         }
     }
 
-    #[doc(hidden)]
-    #[inline(always)]
+    #[inline]
     fn formatting(&self) -> (Color, &'static str) {
         match *self {
             Success(..) => (Green, "Success"),

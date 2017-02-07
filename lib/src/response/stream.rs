@@ -24,6 +24,7 @@ impl<T: Read> Stream<T> {
     /// use std::io;
     /// use rocket::response::Stream;
     ///
+    /// # #[allow(unused_variables)]
     /// let response = Stream::from(io::stdin());
     /// ```
     pub fn from(reader: T) -> Stream<T> {
@@ -42,6 +43,7 @@ impl<T: Read> Stream<T> {
     /// use std::io;
     /// use rocket::response::Stream;
     ///
+    /// # #[allow(unused_variables)]
     /// let response = Stream::chunked(io::stdin(), 10);
     /// ```
     pub fn chunked(reader: T, chunk_size: u64) -> Stream<T> {

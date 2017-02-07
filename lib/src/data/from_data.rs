@@ -59,6 +59,7 @@ impl<'a, S, E> IntoOutcome<S, (Status, E), Data> for Result<S, E> {
 /// Say that you have a custom type, `Person`:
 ///
 /// ```rust
+/// # #[allow(dead_code)]
 /// struct Person {
 ///     name: String,
 ///     age: u16
@@ -80,6 +81,8 @@ impl<'a, S, E> IntoOutcome<S, (Status, E), Data> for Result<S, E> {
 /// A `FromData` implementation allowing this looks like:
 ///
 /// ```rust
+/// # #![allow(unused_attributes)]
+/// # #![allow(unused_variables)]
 /// # #![feature(plugin)]
 /// # #![plugin(rocket_codegen)]
 /// # extern crate rocket;
@@ -99,7 +102,7 @@ impl<'a, S, E> IntoOutcome<S, (Status, E), Data> for Result<S, E> {
 ///     fn from_data(req: &Request, data: Data) -> data::Outcome<Self, String> {
 ///         // Ensure the content type is correct before opening the data.
 ///         let person_ct = ContentType::new("application", "x-person");
-///         if req.content_type() != person_ct {
+///         if req.content_type() != Some(person_ct) {
 ///             return Outcome::Forward(data);
 ///         }
 ///
@@ -118,7 +121,7 @@ impl<'a, S, E> IntoOutcome<S, (Status, E), Data> for Result<S, E> {
 ///         // Parse the age.
 ///         let age: u16 = match age.parse() {
 ///             Ok(age) => age,
-///             Err(e) => return Failure((Status::BadRequest, "Bad age.".into()))
+///             Err(_) => return Failure((Status::BadRequest, "Bad age.".into()))
 ///         };
 ///
 ///         // Return successfully.

@@ -1,3 +1,154 @@
+# Version 0.2.0 (Feb 06, 2017)
+
+Detailed release notes for v0.2 can also be found on
+[rocket.rs](https://rocket.rs/news/2017-02-06-version-0.2/).
+
+## New Features
+
+This release includes the following new features:
+
+  * Introduced managed state.
+  * Added lints that warn on unmanaged state and unmounted routes.
+  * Added the ability to set configuration parameters via environment variables.
+  * `Config` structures can be built via `ConfigBuilder`, which follows the
+    builder pattern.
+  * Logging can be enabled or disabled on custom configuration via a second
+    parameter to the `Rocket::custom` method.
+  * `name` and `value` methods were added to `Header` to retrieve the name and
+    value of a header.
+  * A new configuration parameter, `workers`, can be used to set the number of
+    threads Rocket uses.
+  * The address of the remote connection is available via `Request.remote()`.
+    Request preprocessing overrides remote IP with value from the `X-Real-IP`
+    header, if present.
+  * During testing, the remote address can be set via `MockRequest.remote()`.
+  * The `SocketAddr` request guard retrieves the remote address.
+  * A `UUID` type has been added to `contrib`.
+  * `rocket` and `rocket_codegen` will refuse to build with an incompatible
+    nightly version and emit nice error messages.
+  * Major performance and usability improvements were upstreamed to the `cookie`
+    crate, including the addition of a `CookieBuilder`.
+  * When a checkbox isn't present in a form, `bool` types in a `FromForm`
+    structure will parse as `false`.
+  * The `FormItems` iterator can be queried for a complete parse via `completed`
+    and `exhausted`.
+  * Routes for `OPTIONS` requests can be declared via the `options` decorator.
+  * Strings can be percent-encoded via `URI::percent_encode()`.
+
+## Breaking Changes
+
+This release includes several breaking changes. These changes are listed below
+along with a short note about how to handle the breaking change in existing
+applications.
+
+  * **`Rocket::custom` takes two parameters, the first being `Config` by
+    value.**
+
+    A call in v0.1 of the form `Rocket::custom(&config)` is now
+    `Rocket::custom(config, false)`.
+
+  * **Tera templates are named without their extension.**
+
+    A templated named `name.html.tera` is now simply `name`.
+
+  * **`JSON` `unwrap` method has been renamed to `into_inner`.**
+
+    A call to `.unwrap()` should be changed to `.into_inner()`.
+
+  * **The `map!` macro was removed in favor of the `json!` macro.**
+
+    A call of the form `map!{ "a" => b }` can be written as: `json!({ "a": b
+    })`.
+
+  * **The `hyper::SetCookie` header is no longer exported.**
+
+    Use the `Cookie` type as an `Into<Header>` type directly.
+
+  * **The `Content-Type` for `String` is now `text/plain`.**
+
+    Use `content::HTML<String>` for HTML-based `String` responses.
+
+  * **`Request.content_type()` returns an `Option<ContentType>`.**
+
+    Use `.unwrap_or(ContentType::Any)` to get the old behavior.
+
+  * **The `ContentType` request guard forwards when the request has no
+    `Content-Type` header.**
+
+    Use an `Option<ContentType>` and `.unwrap_or(ContentType::Any)` for the old
+    behavior.
+
+  * **A `Rocket` instance must be declared _before_ a `MockRequest`.**
+
+    Change the order of the `rocket::ignite()` and `MockRequest::new()` calls.
+
+  * **A route with `format` specified only matches requests with the same
+    format.**
+
+    Previously, a route with a `format` would match requests without a format
+    specified. There is no workaround to this change; simply specify formats
+    when required.
+
+  * **`FormItems` can no longer be constructed directly.**
+
+    Instead of constructing as `FormItems(string)`, construct as
+    `FormItems::from(string)`.
+
+  * **`from_from_string(&str)` in `FromForm` removed in favor of
+    `from_form_items(&mut FormItems)`.**
+
+    Most implementation should be using `FormItems` internally; simply use the
+    passed in `FormItems`. In other cases, the form string can be retrieved via
+    the `inner_str` method of `FormItems`.
+
+  * **`Config::{set, default_for}` are deprecated.**
+
+    Use the `set_{param}` methods instead of `set`, and `new` or `build` in
+    place of `default_for`.
+
+  * **Route paths must be absolute.**
+
+    Prepend a `/` to convert a relative path into an absolute one.
+
+  * **Route paths cannot contain empty segments.**
+
+    Remove any empty segments, including trailing ones, from a route path.
+
+## Bug Fixes
+
+A couple of bugs were fixed in this release:
+
+  * Handlebars partials were not properly registered
+    ([#122](https://github.com/SergioBenitez/Rocket/issues/122)).
+  * `Rocket::custom` did not set the custom configuration as the `active`
+    configuration.
+  * Route path segments containing more than one dynamic parameter were
+    allowed.
+
+## General Improvements
+
+In addition to new features, Rocket saw the following smaller improvements:
+
+  * Rocket no longer overwrites a catcher's response status.
+  * The `port` `Config` type is now a proper `u16`.
+  * Clippy issues injected by codegen are resolved.
+  * Handlebars was updated to `0.25`.
+  * The `PartialEq` implementation of `Config` doesn't consider the path or
+    session key.
+  * Hyper dependency updated to `0.10`.
+  * The `Error` type for `JSON as FromData` has been exposed as `SerdeError`.
+  * SVG was added as a known Content-Type.
+  * Serde was updated to `0.9`.
+  * Form parse failure now results in a **422** error code.
+  * Tera has been updated to `0.7`.
+  * `pub(crate)` is used throughout to enforce visibility rules.
+  * Query parameters in routes (`/path?<param>`) are now logged.
+  * Routes with and without query parameters no longer _collide_.
+
+## Infrastructure
+
+  * Testing was parallelized, resulting in 3x faster Travis builds.
+
 # Version 0.1.6 (Jan 26, 2017)
 
 ## Infrastructure

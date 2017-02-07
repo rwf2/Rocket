@@ -3,13 +3,13 @@
 
 extern crate rocket;
 
-use rocket::request::FromForm;
+use rocket::request::{FromForm, FormItems};
 
 #[derive(PartialEq, Debug, FromForm)]
 struct Form {  }
 
 fn main() {
     // Same number of arguments: simple case.
-    let task = Form::from_form_string("");
+    let task = Form::from_form_items(&mut FormItems::from(""));
     assert_eq!(task, Ok(Form { }));
 }

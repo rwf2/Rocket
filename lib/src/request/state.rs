@@ -4,7 +4,52 @@ use request::{self, FromRequest, Request};
 use outcome::Outcome;
 use http::Status;
 
-// TODO: Doc.
+/// Request guard to retrieve managed state.
+///
+/// This type can be used as a request guard to retrieve the state Rocket is
+/// managing for some type `T`. This allows for the sharing of state across any
+/// number of handlers. A value for the given type must previously have been
+/// registered to be managed by Rocket via the
+/// [manage](/rocket/struct.Rocket.html#method.manage) method. The type being
+/// managed must be thread safe and sendable across thread boundaries. In other
+/// words, it must implement `Send + Sync + 'static`.
+///
+/// # Example
+///
+/// Imagine you have some configuration struct of the type `MyConfig` that you'd
+/// like to initialize at start-up and later access it in several handlers. The
+/// following example does just this:
+///
+/// ```rust
+/// # #![feature(plugin)]
+/// # #![plugin(rocket_codegen)]
+/// # extern crate rocket;
+/// use rocket::State;
+///
+/// // In a real application, this would likely be more complex.
+/// struct MyConfig(String);
+///
+/// #[get("/")]
+/// fn index(state: State<MyConfig>) -> String {
+///     format!("The config value is: {}", state.0)
+/// }
+///
+/// #[get("/raw")]
+/// fn raw_config_value<'r>(state: State<'r, MyConfig>) -> &'r str {
+///     // use `inner()` to get a lifetime longer than `deref` gives us
+///     state.inner().0.as_str()
+/// }
+///
+/// fn main() {
+///     let config = MyConfig("user input".to_string());
+/// # if false { // We don't actually want to launch the server in an example.
+///     rocket::ignite()
+///         .mount("/", routes![index, raw_config_value])
+///         .manage(config)
+///         .launch()
+/// # }
+/// }
+/// ```
 #[derive(Debug, PartialEq, Eq)]
 pub struct State<'r, T: Send + Sync + 'static>(&'r T);
 

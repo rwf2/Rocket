@@ -8,23 +8,6 @@ source $SCRIPT_DIR/config.sh
 # Add Cargo to PATH.
 export PATH=${HOME}/.cargo/bin:${PATH}
 
-# Builds and tests the Cargo project at $1
-function build_and_test() {
-  local dir=$1
-  if [ -z "${dir}" ] || ! [ -d "${dir}" ]; then
-    echo "Tried to build and test inside '${dir}', but it is an invalid path."
-    exit 1
-  fi
-
-  pushd ${dir}
-  echo ":: Building '${PWD}'..."
-  RUST_BACKTRACE=1 cargo build --all-features
-
-  echo ":: Running unit tests in '${PWD}'..."
-  RUST_BACKTRACE=1 cargo test --all-features
-  popd
-}
-
 # Checks that the versions for Cargo projects $@ all match
 function check_versions_match() {
   local last_version=""
@@ -56,6 +39,26 @@ function ensure_tab_free() {
   fi
 }
 
+function bootstrap_examples() {
+  for file in ${EXAMPLES_DIR}/*; do
+    if [ -d "${file}" ]; then
+      bootstrap_script="${file}/bootstrap.sh"
+      if [ -x "${bootstrap_script}" ]; then
+        echo "    Bootstrapping ${file}..."
+
+        env_vars=$(${bootstrap_script})
+        bootstrap_result=$?
+        if [ $bootstrap_result -ne 0 ]; then
+          echo "    Running bootstrap script (${bootstrap_script}) failed!"
+          exit 1
+        else
+          eval $env_vars
+        fi
+      fi
+    fi
+  done
+}
+
 echo ":: Ensuring all crate versions match..."
 check_versions_match "${LIB_DIR}" "${CODEGEN_DIR}" "${CONTRIB_DIR}"
 
@@ -65,35 +68,8 @@ ensure_tab_free
 echo ":: Updating dependencies..."
 cargo update
 
-echo ":: Cleaning cached crates..."
-cargo clean -p rocket
-cargo clean -p rocket_codegen
-cargo clean -p rocket_contrib
+echo ":: Boostrapping examples..."
+bootstrap_examples
 
 echo ":: Building and testing libraries..."
-build_and_test "${LIB_DIR}"
-build_and_test "${CODEGEN_DIR}"
-build_and_test "${CONTRIB_DIR}"
-
-for file in ${EXAMPLES_DIR}/*; do
-  if [ -d "${file}" ]; then
-    bootstrap_script="${file}/bootstrap.sh"
-    if [ -x "${bootstrap_script}" ]; then
-      echo ":: Bootstrapping ${file}..."
-
-      # We're just going to leave this commented out for next time...
-      # if [ "$(basename $file)" = "todo" ]; then
-      #   echo ":: Skipping todo example due to broken Diesel..."
-      #   continue
-      # fi
-
-      if ! ${bootstrap_script}; then
-        echo ":: Running bootstrap script (${bootstrap_script}) failed!"
-        echo ":: Skipping ${file}."
-        continue
-      fi
-    fi
-
-    build_and_test "${file}"
-  fi
-done
+cargo test --all-features --all

@@ -1,10 +1,10 @@
 mod collider;
 mod route;
 
-pub use self::collider::Collider;
-pub use self::route::Route;
-
 use std::collections::hash_map::HashMap;
+
+use self::collider::Collider;
+pub use self::route::Route;
 
 use request::Request;
 use http::Method;
@@ -206,7 +206,6 @@ mod test {
         assert!(route(&router, Get, "/a/b/").is_some());
         assert!(route(&router, Get, "/i/a").is_some());
         assert!(route(&router, Get, "/a/b/c/d/e/f").is_some());
-
     }
 
     #[test]

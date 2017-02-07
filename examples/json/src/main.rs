@@ -16,9 +16,6 @@ use std::sync::Mutex;
 // The type to represent the ID of a message.
 type ID = usize;
 
-// The type of a `map!` invocation.
-type SimpleMap = HashMap<&'static str, Value>;
-
 // We're going to store all of the messages here. No need for a DB.
 lazy_static! {
     static ref MAP: Mutex<HashMap<ID, String>> = Mutex::new(HashMap::new());
@@ -32,25 +29,25 @@ struct Message {
 
 // TODO: This example can be improved by using `route` with muliple HTTP verbs.
 #[post("/<id>", format = "application/json", data = "<message>")]
-fn new(id: ID, message: JSON<Message>) -> JSON<SimpleMap> {
+fn new(id: ID, message: JSON<Message>) -> JSON<Value> {
     let mut hashmap = MAP.lock().expect("map lock.");
     if hashmap.contains_key(&id) {
-        JSON(map!{
-            "status" => "error",
-            "reason" => "ID exists. Try put."
-        })
+        JSON(json!({
+            "status": "error",
+            "reason": "ID exists. Try put."
+        }))
     } else {
         hashmap.insert(id, message.0.contents);
-        JSON(map!{ "status" => "ok" })
+        JSON(json!({ "status": "ok" }))
     }
 }
 
 #[put("/<id>", format = "application/json", data = "<message>")]
-fn update(id: ID, message: JSON<Message>) -> Option<JSON<SimpleMap>> {
+fn update(id: ID, message: JSON<Message>) -> Option<JSON<Value>> {
     let mut hashmap = MAP.lock().unwrap();
     if hashmap.contains_key(&id) {
         hashmap.insert(id, message.0.contents);
-        Some(JSON(map!{ "status" => "ok" }))
+        Some(JSON(json!({ "status": "ok" })))
     } else {
         None
     }
@@ -68,11 +65,11 @@ fn get(id: ID) -> Option<JSON<Message>> {
 }
 
 #[error(404)]
-fn not_found() -> JSON<SimpleMap> {
-    JSON(map! {
-        "status" => "error",
-        "reason" => "Resource was not found."
-    })
+fn not_found() -> JSON<Value> {
+    JSON(json!({
+        "status": "error",
+        "reason": "Resource was not found."
+    }))
 }
 
 fn main() {

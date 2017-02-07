@@ -101,6 +101,7 @@ impl<'r, R: Responder<'r>> Flash<R> {
     /// ```rust
     /// use rocket::response::{Redirect, Flash};
     ///
+    /// # #[allow(unused_variables)]
     /// let msg = Flash::new(Redirect::to("/"), "suggestion", "Try this out!");
     /// ```
     pub fn new<N: AsRef<str>, M: AsRef<str>>(res: R, name: N, msg: M) -> Flash<R> {
@@ -122,6 +123,7 @@ impl<'r, R: Responder<'r>> Flash<R> {
     /// ```rust
     /// use rocket::response::{Redirect, Flash};
     ///
+    /// # #[allow(unused_variables)]
     /// let msg = Flash::success(Redirect::to("/"), "It worked!");
     /// ```
     pub fn success<S: AsRef<str>>(responder: R, msg: S) -> Flash<R> {
@@ -139,6 +141,7 @@ impl<'r, R: Responder<'r>> Flash<R> {
     /// ```rust
     /// use rocket::response::{Redirect, Flash};
     ///
+    /// # #[allow(unused_variables)]
     /// let msg = Flash::warning(Redirect::to("/"), "Watch out!");
     /// ```
     pub fn warning<S: AsRef<str>>(responder: R, msg: S) -> Flash<R> {
@@ -156,6 +159,7 @@ impl<'r, R: Responder<'r>> Flash<R> {
     /// ```rust
     /// use rocket::response::{Redirect, Flash};
     ///
+    /// # #[allow(unused_variables)]
     /// let msg = Flash::error(Redirect::to("/"), "Whoops!");
     /// ```
     pub fn error<S: AsRef<str>>(responder: R, msg: S) -> Flash<R> {

@@ -1,6 +1,6 @@
 [package]
 name = "rocket_contrib"
-version = "0.1.6"
+version = "0.2.0"
 authors = ["Sergio Benitez <sb@sergio.bz>"]
 description = "Community contributed libraries for the Rocket web framework."
 documentation = "https://api.rocket.rs/rocket_contrib/"
@@ -21,19 +21,18 @@ templates = ["serde", "serde_json", "lazy_static_macro", "glob"]
 lazy_static_macro = ["lazy_static"]
 
 [dependencies]
-rocket = { version = "0.1.6", path = "../lib/" }
+rocket = { version = "0.2.0", path = "../lib/" }
 log = "^0.3"
 
 # UUID dependencies.
-uuid = { version = "^0.3", optional = true }
+uuid = { version = "^0.4", optional = true }
 
 # JSON and templating dependencies.
-serde = { version = "^0.8", optional = true }
-serde_json = { version = "^0.8", optional = true }
+serde = { version = "^0.9", optional = true }
+serde_json = { version = "^0.9.3", optional = true }
 
 # Templating dependencies only.
-handlebars = { version = "^0.24", optional = true, features = ["serde_type"] }
+handlebars = { version = "^0.25", optional = true, features = ["serde_type"] }
 glob = { version = "^0.2", optional = true }
 lazy_static = { version = "^0.2", optional = true }
-# tera = { version = "^0.6", optional = true }
-tera = { git = "https://github.com/SergioBenitez/tera", optional = true }
+tera = { version = "^0.7", optional = true }

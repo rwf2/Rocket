@@ -1,10 +1,9 @@
 [package]
 name = "rocket"
-version = "0.1.6"
+version = "0.2.0"
 authors = ["Sergio Benitez <sb@sergio.bz>"]
 description = """
-Web framework for nightly with a focus on ease-of-use, expressability, and
-speed.
+Web framework for nightly with a focus on ease-of-use, expressibility, and speed.
 """
 documentation = "https://api.rocket.rs/rocket/"
 homepage = "https://rocket.rs"
@@ -13,11 +12,12 @@ readme = "../README.md"
 keywords = ["rocket", "web", "framework", "server"]
 license = "MIT/Apache-2.0"
 build = "build.rs"
+categories = ["web-programming::http-server"]
 
 [dependencies]
 term-painter = "^0.2"
 url = "^1"
-hyper = { version = "0.10", default-features = false }
+hyper = { version = "0.10.4", default-features = false }
 toml = { version = "^0.2", default-features = false }
 num_cpus = "1"
 state = "^0.2"
@@ -25,6 +25,7 @@ time = "^0.1"
 slog = "1.2"
 slog-term = "1.4.0"
 slog-scope = "0.2.2"
+memchr = "1"
 
 [dependencies.cookie]
 version = "^0.6"
@@ -33,7 +34,7 @@ features = ["percent-encode"]
 
 [dev-dependencies]
 lazy_static = "0.2"
-rocket_codegen = { version = "0.1.6", path = "../codegen" }
+rocket_codegen = { version = "0.2.0", path = "../codegen" }
 
 [build-dependencies]
 ansi_term = "^0.9"

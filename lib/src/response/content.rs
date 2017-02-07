@@ -18,6 +18,7 @@
 //! ```rust
 //! use rocket::response::content;
 //!
+//! # #[allow(unused_variables)]
 //! let response = content::HTML("<h1>Hello, world!</h1>");
 //! ```
 
@@ -36,6 +37,7 @@ use http::{Status, ContentType};
 /// use rocket::response::content::Content;
 /// use rocket::http::ContentType;
 ///
+/// # #[allow(unused_variables)]
 /// let response = Content(ContentType::PDF, "Hi.");
 /// ```
 #[derive(Debug, Clone, PartialEq)]

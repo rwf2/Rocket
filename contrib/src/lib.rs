@@ -1,4 +1,4 @@
-#![feature(drop_types_in_const)]
+#![feature(drop_types_in_const, macro_reexport)]
 
 //! This crate contains officially sanctioned contributor libraries that provide
 //! functionality commonly used by Rocket applications.
@@ -40,27 +40,29 @@
 #[cfg(feature = "lazy_static_macro")]
 extern crate lazy_static;
 
-#[cfg_attr(feature = "json", macro_use)]
+#[cfg(feature = "serde")]
+extern crate serde;
+
 #[cfg(feature = "json")]
+#[cfg_attr(feature = "json", macro_reexport(json_internal))]
+extern crate serde_json;
+
+#[cfg(feature = "json")]
+#[cfg_attr(feature = "json", macro_use)]
 #[doc(hidden)]
 pub mod json;
+
+#[cfg(feature = "json")]
+pub use json::{JSON, SerdeError, Value};
 
 #[cfg(feature = "templates")]
 mod templates;
 
-#[cfg(feature = "uuid")]
-mod uuid;
-
-#[cfg(feature = "json")]
-pub use json::JSON;
-#[cfg(feature = "json")]
-pub use json::Value;
-
-#[cfg(feature = "json")]
-pub use json::SerdeError;
-
 #[cfg(feature = "templates")]
 pub use templates::Template;
+
+#[cfg(feature = "uuid")]
+mod uuid;
 
 #[cfg(feature = "uuid")]
 pub use uuid::{UUID, UuidParseError};

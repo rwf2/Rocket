@@ -3,8 +3,9 @@
 
 extern crate rocket;
 
-#[cfg(test)]
-mod tests;
+#[cfg(test)] mod tests;
+
+use rocket::response::content;
 
 #[get("/hello/<name>/<age>")]
 fn hello(name: &str, age: i8) -> String {
@@ -12,10 +13,10 @@ fn hello(name: &str, age: i8) -> String {
 }
 
 #[error(404)]
-fn not_found(req: &rocket::Request) -> String {
-    format!("<p>Sorry, but '{}' is not a valid path!</p>
+fn not_found(req: &rocket::Request) -> content::HTML<String> {
+    content::HTML(format!("<p>Sorry, but '{}' is not a valid path!</p>
             <p>Try visiting /hello/&lt;name&gt;/&lt;age&gt; instead.</p>",
-            req.uri())
+            req.uri()))
 }
 
 fn main() {

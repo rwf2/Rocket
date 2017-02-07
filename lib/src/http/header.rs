@@ -167,7 +167,7 @@ impl<'h> HeaderMap<'h> {
     /// # Example
     ///
     /// ```rust
-    /// use rocket::http::{HeaderMap, ContentType};
+    /// use rocket::http::HeaderMap;
     ///
     /// let map = HeaderMap::new();
     /// assert!(map.is_empty());
@@ -183,7 +183,7 @@ impl<'h> HeaderMap<'h> {
     /// # Example
     ///
     /// ```rust
-    /// use rocket::http::{HeaderMap, ContentType};
+    /// use rocket::http::HeaderMap;
     ///
     /// let mut map = HeaderMap::new();
     /// map.add_raw("X-Custom", "value_1");
@@ -212,7 +212,7 @@ impl<'h> HeaderMap<'h> {
     /// Retrieve the first value when one exists:
     ///
     /// ```rust
-    /// use rocket::http::{HeaderMap, ContentType};
+    /// use rocket::http::HeaderMap;
     ///
     /// let mut map = HeaderMap::new();
     /// map.add_raw("X-Custom", "value_1");
@@ -220,19 +220,19 @@ impl<'h> HeaderMap<'h> {
     ///
     /// assert_eq!(map.len(), 2);
     ///
-    /// let mut first_value = map.get_one("X-Custom");
+    /// let first_value = map.get_one("X-Custom");
     /// assert_eq!(first_value, Some("value_1"));
     /// ```
     ///
     /// Attempt to retrieve a value that doesn't exist:
     ///
     /// ```rust
-    /// use rocket::http::{HeaderMap, ContentType};
+    /// use rocket::http::HeaderMap;
     ///
     /// let mut map = HeaderMap::new();
     /// map.add_raw("X-Custom", "value_1");
     ///
-    /// let mut first_value = map.get_one("X-Other");
+    /// let first_value = map.get_one("X-Other");
     /// assert_eq!(first_value, None);
     /// ```
     #[inline]
@@ -502,9 +502,8 @@ impl<'h> HeaderMap<'h> {
     /// Consumes `self` and returns an iterator over all of the headers stored
     /// in the map in the way they are stored. This is a low-level machinism and
     /// should likely not be used.
-    #[doc(hidden)]
-    #[inline(always)]
-    pub fn into_iter_raw(self)
+    #[inline]
+    pub(crate) fn into_iter_raw(self)
             -> impl Iterator<Item=(UncasedAscii<'h>, Vec<Cow<'h, str>>)> {
         self.headers.into_iter()
     }

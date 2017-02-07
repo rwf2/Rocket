@@ -142,7 +142,7 @@ impl Template {
     ///
     /// # context.insert("test", "test");
     /// let template = Template::render("index", &context);
-    /// ```
+    /// # assert_eq!(template.to_string(), "");
     pub fn render<S, T>(name: S, context: &T) -> Template
         where S: AsRef<str>, T: Serialize
     {

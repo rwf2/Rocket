@@ -20,7 +20,7 @@ use http::hyper;
 ///
 /// This should be used sparingly in Rocket applications. In particular, it
 /// should likely only be used when writing
-/// [FromRequest](/rocket/request/struct.Request.html) implementations. It
+/// [FromRequest](/rocket/request/trait.FromRequest.html) implementations. It
 /// contains all of the information for a given web request except for the body
 /// data. This includes the HTTP method, URI, cookies, headers, and more.
 pub struct Request<'r> {
@@ -44,6 +44,7 @@ impl<'r> Request<'r> {
     /// use rocket::Request;
     /// use rocket::http::Method;
     ///
+    /// # #[allow(unused_variables)]
     /// let request = Request::new(Method::Get, "/uri");
     /// ```
     pub fn new<U: Into<URI<'r>>>(method: Method, uri: U) -> Request<'r> {
@@ -101,7 +102,7 @@ impl<'r> Request<'r> {
     /// use rocket::Request;
     /// use rocket::http::Method;
     ///
-    /// let mut request = Request::new(Method::Get, "/uri");
+    /// let request = Request::new(Method::Get, "/uri");
     /// assert_eq!(request.uri().as_str(), "/uri");
     /// ```
     #[inline(always)]
@@ -179,9 +180,9 @@ impl<'r> Request<'r> {
     ///
     /// ```rust
     /// use rocket::Request;
-    /// use rocket::http::{Method, ContentType};
+    /// use rocket::http::Method;
     ///
-    /// let mut request = Request::new(Method::Get, "/uri");
+    /// let request = Request::new(Method::Get, "/uri");
     /// let header_map = request.headers();
     /// assert!(header_map.is_empty());
     /// ```
@@ -201,13 +202,13 @@ impl<'r> Request<'r> {
     /// let mut request = Request::new(Method::Get, "/uri");
     /// assert!(request.headers().is_empty());
     ///
-    /// request.add_header(ContentType::HTML.into());
+    /// request.add_header(ContentType::HTML);
     /// assert!(request.headers().contains("Content-Type"));
     /// assert_eq!(request.headers().len(), 1);
     /// ```
     #[inline(always)]
-    pub fn add_header(&mut self, header: Header<'r>) {
-        self.headers.add(header);
+    pub fn add_header<H: Into<Header<'r>>>(&mut self, header: H) {
+        self.headers.add(header.into());
     }
 
     /// Replaces the value of the header with `header.name` with `header.value`.
@@ -222,15 +223,15 @@ impl<'r> Request<'r> {
     /// let mut request = Request::new(Method::Get, "/uri");
     /// assert!(request.headers().is_empty());
     ///
-    /// request.add_header(ContentType::HTML.into());
-    /// assert_eq!(request.content_type(), ContentType::HTML);
+    /// request.add_header(ContentType::HTML);
+    /// assert_eq!(request.content_type(), Some(ContentType::HTML));
     ///
-    /// request.replace_header(ContentType::JSON.into());
-    /// assert_eq!(request.content_type(), ContentType::JSON);
+    /// request.replace_header(ContentType::JSON);
+    /// assert_eq!(request.content_type(), Some(ContentType::JSON));
     /// ```
     #[inline(always)]
-    pub fn replace_header(&mut self, header: Header<'r>) {
-        self.headers.replace(header);
+    pub fn replace_header<H: Into<Header<'r>>>(&mut self, header: H) {
+        self.headers.replace(header.into());
     }
 
     /// Returns a borrow to the cookies in `self`.
@@ -244,9 +245,9 @@ impl<'r> Request<'r> {
     ///
     /// ```rust
     /// use rocket::Request;
-    /// use rocket::http::{Cookie, Method, ContentType};
+    /// use rocket::http::{Cookie, Method};
     ///
-    /// let mut request = Request::new(Method::Get, "/uri");
+    /// let request = Request::new(Method::Get, "/uri");
     /// request.cookies().add(Cookie::new("key", "val"));
     /// request.cookies().add(Cookie::new("ans", format!("life: {}", 38 + 4)));
     /// ```
@@ -256,14 +257,13 @@ impl<'r> Request<'r> {
     }
 
     /// Replace all of the cookies in `self` with `cookies`.
-    #[doc(hidden)]
-    #[inline(always)]
-    pub fn set_cookies(&mut self, cookies: Cookies) {
+    #[inline]
+    pub(crate) fn set_cookies(&mut self, cookies: Cookies) {
         self.cookies = cookies;
     }
 
-    /// Returns the Content-Type header of `self`. If the header is not present,
-    /// returns `ContentType::Any`.
+    /// Returns `Some` of the Content-Type header of `self`. If the header is
+    /// not present, returns `None`.
     ///
     /// # Example
     ///
@@ -272,16 +272,15 @@ impl<'r> Request<'r> {
     /// use rocket::http::{Method, ContentType};
     ///
     /// let mut request = Request::new(Method::Get, "/uri");
-    /// assert_eq!(request.content_type(), ContentType::Any);
+    /// assert_eq!(request.content_type(), None);
     ///
-    /// request.replace_header(ContentType::JSON.into());
-    /// assert_eq!(request.content_type(), ContentType::JSON);
+    /// request.replace_header(ContentType::JSON);
+    /// assert_eq!(request.content_type(), Some(ContentType::JSON));
     /// ```
     #[inline(always)]
-    pub fn content_type(&self) -> ContentType {
+    pub fn content_type(&self) -> Option<ContentType> {
         self.headers().get_one("Content-Type")
             .and_then(|value| value.parse().ok())
-            .unwrap_or(ContentType::Any)
     }
 
     /// Retrieves and parses into `T` the 0-indexed `n`th dynamic parameter from
@@ -301,6 +300,7 @@ impl<'r> Request<'r> {
     /// use rocket::{Request, Data};
     /// use rocket::handler::Outcome;
     ///
+    /// # #[allow(dead_code)]
     /// fn name<'a>(req: &'a Request, _: Data) -> Outcome<'a> {
     ///     Outcome::of(req.get_param(0).unwrap_or("unnamed"))
     /// }
@@ -314,13 +314,13 @@ impl<'r> Request<'r> {
     /// was `route`. This should only be used internally by `Rocket` as improper
     /// use may result in out of bounds indexing.
     /// TODO: Figure out the mount path from here.
-    #[doc(hidden)]
-    #[inline(always)]
-    pub fn set_params(&self, route: &Route) {
+    #[inline]
+    pub(crate) fn set_params(&self, route: &Route) {
         *self.params.borrow_mut() = route.get_param_indexes(self.uri());
     }
 
-    /// Get the `n`th path parameter as a string, if it exists.
+    /// Get the `n`th path parameter as a string, if it exists. This is used by
+    /// codegen.
     #[doc(hidden)]
     pub fn get_param_str(&self, n: usize) -> Option<&str> {
         let params = self.params.borrow();
@@ -365,7 +365,7 @@ impl<'r> Request<'r> {
     }
 
     /// Get the segments beginning at the `n`th dynamic parameter, if they
-    /// exist.
+    /// exist. Used by codegen.
     #[doc(hidden)]
     pub fn get_raw_segments(&self, n: usize) -> Option<Segments> {
         let params = self.params.borrow();
@@ -385,24 +385,23 @@ impl<'r> Request<'r> {
     }
 
     /// Get the managed state container, if it exists. For internal use only!
-    #[doc(hidden)]
-    pub fn get_state(&self) -> Option<&'r Container> {
+    #[inline]
+    pub(crate) fn get_state(&self) -> Option<&'r Container> {
         self.state
     }
 
     /// Set the state. For internal use only!
-    #[doc(hidden)]
-    pub fn set_state(&mut self, state: &'r Container) {
+    #[inline]
+    pub(crate) fn set_state(&mut self, state: &'r Container) {
         self.state = Some(state);
     }
 
     /// Convert from Hyper types into a Rocket Request.
-    #[doc(hidden)]
-    pub fn from_hyp(h_method: hyper::Method,
-                    h_headers: hyper::header::Headers,
-                    h_uri: hyper::RequestUri,
-                    h_addr: SocketAddr,
-                    ) -> Result<Request<'r>, String> {
+    pub(crate) fn from_hyp(h_method: hyper::Method,
+                           h_headers: hyper::header::Headers,
+                           h_uri: hyper::RequestUri,
+                           h_addr: SocketAddr,
+                           ) -> Result<Request<'r>, String> {
         // Get a copy of the URI for later use.
         let uri = match h_uri {
             hyper::RequestUri::AbsolutePath(s) => s,
@@ -458,8 +457,10 @@ impl<'r> fmt::Display for Request<'r> {
     /// infrastructure.
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "{} {}", Green.paint(&self.method), Blue.paint(&self.uri))?;
-        if self.method.supports_payload() && !self.content_type().is_any() {
-            write!(f, " {}", Yellow.paint(self.content_type()))?;
+        if let Some(content_type) = self.content_type() {
+            if self.method.supports_payload() {
+                write!(f, " {}", Yellow.paint(content_type))?;
+            }
         }
 
         Ok(())

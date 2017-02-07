@@ -28,7 +28,7 @@ fn echo_url(req: &Request, _: Data) -> Outcome<'static> {
 }
 
 fn upload<'r>(req: &'r Request, data: Data) -> Outcome<'r> {
-    if !req.content_type().is_plain() {
+    if !req.content_type().map_or(false, |ct| ct.is_plain()) {
         println!("    => Content-Type of upload must be text/plain. Ignoring.");
         return Outcome::failure(Status::BadRequest);
     }

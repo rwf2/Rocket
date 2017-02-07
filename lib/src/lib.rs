@@ -5,6 +5,7 @@
 #![feature(const_fn)]
 #![feature(type_ascription)]
 #![feature(macro_reexport)]
+#![feature(pub_restricted)]
 
 //! # Rocket - Core API Documentation
 //!
@@ -18,8 +19,8 @@
 //! started](https://rocket.rs/guide/getting-started) chapters of the guide.
 //!
 //! You may also be interested in looking at the [contrib API
-//! documentation](../rocket_contrib), which contains JSON and templating
-//! support.
+//! documentation](/rocket_contrib), which contains JSON and templating
+//! support, among other features.
 //!
 //! ## Libraries
 //!
@@ -29,14 +30,14 @@
 //!   2. [Codegen](/rocket_codegen) - Core code generation plugin. Should always
 //!      be used alongsize `rocket`, though it's not necessary.
 //!   3. [Contrib](/rocket_contrib) - Provides useful functionality for many
-//!      Rocket application. Completely optional.
+//!      Rocket applications. Completely optional.
 //!
 //! ## Usage
 //!
 //! The sanctioned way to use Rocket is via the code generation plugin. This
-//! makes Rocket easier to use and allows a somewhat stable API as Rocket
-//! matures. To use Rocket with the code generation plugin in your Cargo-based
-//! project, add the following to `Cargo.toml`:
+//! makes Rocket easier and safer to use and allows a somewhat stable API as
+//! Rocket matures. To use Rocket with the code generation plugin in your
+//! Cargo-based project, add the following to `Cargo.toml`:
 //!
 //! ```rust,ignore
 //! [dependencies]
@@ -51,6 +52,7 @@
 //!
 //! ```rust
 //! #![feature(plugin)]
+//! # #![allow(unused_attributes)]
 //! #![plugin(rocket_codegen)]
 //!
 //! extern crate rocket;
@@ -79,16 +81,17 @@
 //!
 //! ## Configuration
 //!
-//! Rocket and Rocket libraries are configured via the `Rocket.toml` file. For
-//! more information on how to configure Rocket, see the [configuration
-//! section](https://rocket.rs/guide/getting-started/#configuration) of the
-//! guide as well as the [config](config) module documentation.
+//! Rocket and Rocket libraries are configured via the `Rocket.toml` file and/or
+//! `ROCKET_{PARAM}` environment variables. For more information on how to
+//! configure Rocket, see the [configuration
+//! section](https://rocket.rs/guide/overview/#configuration) of the guide as
+//! well as the [config](/rocket/config) module documentation.
 //!
 //! ## Testing
 //!
 //! Rocket includes a small testing library that can be used to test your Rocket
-//! application. For information on how to test your Rocket applications, the
-//! [testing module](testing) documentation.
+//! application. For information on how to test your Rocket applications, see
+//! the [testing module](/rocket/testing) documentation.
 //!
 
 // #[macro_use] extern crate log;
@@ -114,6 +117,7 @@ extern crate num_cpus;
 extern crate state;
 extern crate cookie;
 extern crate time;
+extern crate memchr;
 
 #[cfg(test)] #[macro_use] extern crate lazy_static;
 
