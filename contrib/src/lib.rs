@@ -33,7 +33,6 @@
 //! This crate is expected to grow with time, bringing in outside crates to be
 //! officially supported by Rocket.
 
-#[macro_use] extern crate log;
 #[macro_use] extern crate rocket;
 
 #[cfg_attr(feature = "lazy_static_macro", macro_use)]

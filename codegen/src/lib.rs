@@ -116,7 +116,6 @@
 #![allow(unused_attributes)]
 #![allow(deprecated)]
 
-#[macro_use] extern crate log;
 #[macro_use] extern crate rustc;
 extern crate syntax;
 extern crate syntax_ext;
