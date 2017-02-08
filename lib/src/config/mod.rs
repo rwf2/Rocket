@@ -957,13 +957,12 @@ mod test {
         let _env_lock = ENV_LOCK.lock().unwrap();
 
         let pairs = [
-            ("log", "critical"), ("LOG", "debug"), ("PORT", "8110"),
+            ("PORT", "8110"),
             ("address", "1.2.3.4"), ("EXTRA_EXTRA", "true"), ("workers", "3")
         ];
 
         let check_value = |key: &str, val: &str, config: &Config| {
             match key {
-                "log" => assert_eq!(config.log_level, val.parse().unwrap()),
                 "port" => assert_eq!(config.port, val.parse().unwrap()),
                 "address" => assert_eq!(config.address, val),
                 "extra_extra" => assert_eq!(config.get_bool(key).unwrap(), true),
