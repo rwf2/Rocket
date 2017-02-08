@@ -10,7 +10,7 @@ fn init() {
     let tests_dir = cwd.join("tests");
 
     let config = Config::build(Development).root(tests_dir).unwrap();
-    rocket::custom(config, true);
+    rocket::custom(config);
 }
 
 // FIXME: Do something about overlapping configs.
