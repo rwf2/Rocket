@@ -104,6 +104,7 @@ impl ContentType {
         "HTML", HTML, is_html => "text", "html" ; "charset=utf-8",
         "Plain", Plain, is_plain => "text", "plain" ; "charset=utf-8",
         "JSON", JSON, is_json => "application", "json",
+        "MsgPack", MsgPack, is_msgpack => "application", "msgpack",
         "form", Form, is_form => "application", "x-www-form-urlencoded",
         "JavaScript", JavaScript, is_javascript => "application", "javascript",
         "CSS", CSS, is_css => "text", "css" ; "charset=utf-8",

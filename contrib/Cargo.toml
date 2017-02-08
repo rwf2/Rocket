@@ -13,6 +13,7 @@ license = "MIT/Apache-2.0"
 [features]
 default = ["json"]
 json = ["serde", "serde_json"]
+msgpack = ["serde", "rmp-serde"]
 tera_templates = ["tera", "templates"]
 handlebars_templates = ["handlebars", "templates"]
 
@@ -27,9 +28,10 @@ log = "^0.3"
 # UUID dependencies.
 uuid = { version = "^0.4", optional = true }
 
-# JSON and templating dependencies.
+# Serialization and templating dependencies.
 serde = { version = "^0.9", optional = true }
 serde_json = { version = "^0.9.3", optional = true }
+rmp-serde = { version = "^0.12", optional = true }
 
 # Templating dependencies only.
 handlebars = { version = "^0.25", optional = true, features = ["serde_type"] }
