@@ -101,8 +101,8 @@ extern crate slog;
 
 extern crate slog_term;
 
-#[macro_reexport(trace, info, warn, debug, crit, error)]
 #[macro_use]
+#[macro_reexport(trace, info, warn, debug, crit, error)]
 extern crate slog_scope;
 
 extern crate term_painter;

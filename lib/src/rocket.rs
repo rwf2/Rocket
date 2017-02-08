@@ -330,7 +330,7 @@ impl Rocket {
     ///     .finalize()?;
     ///
     /// # #[allow(unused_variables)]
-    /// let app = rocket::custom(config, false);
+    /// let app = rocket::custom(config);
     /// # Ok(())
     /// # }
     /// ```

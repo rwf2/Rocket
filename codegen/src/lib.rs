@@ -121,7 +121,7 @@ extern crate syntax;
 extern crate syntax_ext;
 extern crate syntax_pos;
 extern crate rustc_plugin;
-extern crate rocket;
+#[macro_use] extern crate rocket;
 
 #[macro_use] mod utils;
 mod parser;

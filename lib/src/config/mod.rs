@@ -492,7 +492,7 @@ mod test {
     use super::Environment::*;
     use super::Result;
 
-    use ::logger::LoggingLevel;
+    use ::logger::{self, LoggingLevel};
 
     const TEST_CONFIG_FILENAME: &'static str = "/tmp/testing/Rocket.toml";
 
@@ -597,7 +597,7 @@ mod test {
             .address("1.2.3.4")
             .port(7810)
             .workers(21)
-            .log_level(LoggingLevel::Critical)
+            .log(logger::default_for(LoggingLevel::Critical))
             .session_key("01234567890123456789012345678901")
             .extra("template_dir", "mine")
             .extra("json", true)
@@ -798,35 +798,6 @@ mod test {
             [staging]
             workers = 105836
         "#.to_string(), TEST_CONFIG_FILENAME).is_err());
-    }
-
-    #[test]
-    fn test_good_log_levels() {
-        // Take the lock so changing the environment doesn't cause races.
-        let _env_lock = ENV_LOCK.lock().unwrap();
-        env::set_var(CONFIG_ENV, "stage");
-
-        check_config!(RocketConfig::parse(r#"
-                          [stage]
-                          log = "normal"
-                      "#.to_string(), TEST_CONFIG_FILENAME), {
-                          default_config(Staging).log_level(LoggingLevel::Normal)
-                      });
-
-
-        check_config!(RocketConfig::parse(r#"
-                          [stage]
-                          log = "debug"
-                      "#.to_string(), TEST_CONFIG_FILENAME), {
-                          default_config(Staging).log_level(LoggingLevel::Debug)
-                      });
-
-        check_config!(RocketConfig::parse(r#"
-                          [stage]
-                          log = "critical"
-                      "#.to_string(), TEST_CONFIG_FILENAME), {
-                          default_config(Staging).log_level(LoggingLevel::Critical)
-                      });
     }
 
     #[test]
