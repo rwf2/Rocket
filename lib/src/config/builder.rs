@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 
-use config::{Result, Config, Value, Environment};
+use config::{Result, Config, Value, Environment, DatabaseType};
 use config::toml_ext::IntoValue;
 use logger::LoggingLevel;
 
@@ -12,6 +12,8 @@ pub struct ConfigBuilder {
     pub environment: Environment,
     /// The address to serve on.
     pub address: String,
+    /// The database type.
+    pub database: Option<DatabaseType>,
     /// The port to serve on.
     pub port: u16,
     /// The number of workers to run in parallel.
@@ -59,6 +61,7 @@ impl ConfigBuilder {
         ConfigBuilder {
             environment: config.environment,
             address: config.address,
+            database: None,
             port: config.port,
             workers: config.workers,
             log_level: config.log_level,
@@ -83,6 +86,21 @@ impl ConfigBuilder {
     /// ```
     pub fn address<A: Into<String>>(mut self, address: A) -> Self {
         self.address = address.into();
+        self
+    }
+
+    /// Sets the `database` in the configuration being built.
+    /// # Example
+    /// ```rust
+    /// use rocket::config::{Config, Environment};
+    /// let config = Config::build(Environment::Staging)
+    ///     .database("postgres")
+    ///     .unwrap();
+    ///
+    /// assert_eq!(config.database, "postgres");
+    /// ```
+    pub fn database(mut self, database: DatabaseType) -> Self {
+        self.database = Some(database);
         self
     }
 
@@ -261,6 +279,11 @@ impl ConfigBuilder {
         config.set_log_level(self.log_level);
         config.set_extras(self.extras);
         config.set_root(self.root);
+
+        // TODO (imp): Error handling
+        if let Some(db) = self.database {
+            config.set_database(db);
+        }
 
         if let Some(key) = self.session_key {
             config.set_session_key(key)?;

@@ -6,8 +6,9 @@ use std::convert::AsRef;
 use std::fmt;
 use std::env;
 
+use config::DatabaseType::*;
 use config::Environment::*;
-use config::{self, Value, ConfigBuilder, Environment, ConfigError};
+use config::{self, Value, ConfigBuilder, DatabaseType, Environment, ConfigError};
 
 use num_cpus;
 use logger::LoggingLevel;
@@ -33,6 +34,8 @@ pub struct Config {
     pub environment: Environment,
     /// The address to serve on.
     pub address: String,
+    /// The database type.
+    pub database: Option<DatabaseType>,
     /// The port to serve on.
     pub port: u16,
     /// The number of workers to run concurrently.
@@ -131,6 +134,7 @@ impl Config {
                 Config {
                     environment: Development,
                     address: "localhost".to_string(),
+                    database: None,
                     port: 8000,
                     workers: default_workers,
                     log_level: LoggingLevel::Normal,
@@ -143,6 +147,7 @@ impl Config {
                 Config {
                     environment: Staging,
                     address: "0.0.0.0".to_string(),
+                    database: None,
                     port: 80,
                     workers: default_workers,
                     log_level: LoggingLevel::Normal,
@@ -155,6 +160,7 @@ impl Config {
                 Config {
                     environment: Production,
                     address: "0.0.0.0".to_string(),
+                    database: None,
                     port: 80,
                     workers: default_workers,
                     log_level: LoggingLevel::Critical,
@@ -200,6 +206,15 @@ impl Config {
         if name == "address" {
             let address_str = parse!(self, name, val, as_str, "a string")?;
             self.set_address(address_str)?;
+        } else if name == "database" {
+            let database_str = parse!(self, name, val, as_str, "a string")?;
+            match database_str.to_string().parse() {
+                Ok(db) => self.set_database(db),
+                Err(_) => {
+                    let id = format!("{}.{}", self.environment, name);
+                    return Err(ConfigError::BadDatabase(id, self.config_path.clone()))
+                }
+            }
         } else if name == "port" {
             let port = parse!(self, name, val, as_integer, "an integer")?;
             if port < 0 || port > (u16::max_value() as i64) {
@@ -281,6 +296,25 @@ impl Config {
 
         self.address = address;
         Ok(())
+    }
+
+    /// Sets the `database` of `self` to `database`.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use rocket::config::{Config, Environment};
+    ///
+    /// # use rocket::config::ConfigError;
+    /// # fn config_test() -> Result<(), ConfigError> {
+    /// let mut config = Config::new(Environment::Staging)?;
+    /// config.set_database("mysql");
+    /// # Ok(())
+    /// # }
+    /// ```
+    // TODO (imp): Error handling
+    pub fn set_database(&mut self, database: DatabaseType) {
+        self.database = Some(database);
     }
 
     /// Sets the `port` of `self` to `port`.

@@ -1,19 +1,16 @@
 extern crate postgres;
 extern crate r2d2_postgres;
 
-use rocket::outcome::Outcome;
-use rocket::request::{Request, FromRequest};
-use rocket::state::Storage;
+use rocket::request::{Request, FromRequest, Outcome};
+use rocket::outcome::Outcome::*;
 
-pub struct PostgresDatabase;
+use super::r2d2::GetTimeout;
 
-impl PostgresDatabase {
+pub struct Connection;
 
-}
-
-impl<'a, 'r> FromRequest<'a, 'r> for PostgresDatabase {
+impl<'a, 'r> FromRequest<'a, 'r> for Connection {
     type Error = GetTimeout;
     fn from_request(_: &'a Request<'r>) -> Outcome<Self, Self::Error> {
-        
+        Success(Connection)
     }
 }

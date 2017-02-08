@@ -143,6 +143,7 @@
 //!
 //! Libraries should always use a default if a parameter is not defined.
 
+mod database;
 mod error;
 mod environment;
 mod config;
@@ -161,6 +162,7 @@ use toml;
 
 pub use toml::{Array, Table, Value};
 pub use self::error::{ConfigError, ParsingError};
+pub use self::database::DatabaseType;
 pub use self::environment::Environment;
 pub use self::config::Config;
 pub use self::builder::ConfigBuilder;
@@ -456,7 +458,7 @@ unsafe fn private_init() {
     let config = RocketConfig::read().unwrap_or_else(|e| {
         match e {
             ParseError(..) | BadEntry(..) | BadEnv(..) | BadType(..)
-                | BadFilePath(..) | BadEnvVal(..) => bail(e),
+                | BadDatabase(..) | BadFilePath(..) | BadEnvVal(..) => bail(e),
             IOError | BadCWD => warn!("Failed reading Rocket.toml. Using defaults."),
             NotFound => { /* try using the default below */ }
         }
@@ -584,6 +586,7 @@ mod test {
 
         let config_str = r#"
             address = "1.2.3.4"
+            database = "postgres"
             port = 7810
             workers = 21
             log = "critical"
@@ -595,6 +598,7 @@ mod test {
 
         let mut expected = default_config(Development)
             .address("1.2.3.4")
+            .database("postgres")
             .port(7810)
             .workers(21)
             .log_level(LoggingLevel::Critical)
@@ -691,6 +695,51 @@ mod test {
         assert!(RocketConfig::parse(r#"
             [staging]
             address = "1.2.3.4:100"
+        "#.to_string(), TEST_CONFIG_FILENAME).is_err());
+    }
+
+    #[test]
+    fn test_good_database_values() {
+        // Take the lock so changing the environment doesn't cause races.
+        let _env_lock = ENV_LOCK.lock().unwrap();
+        env::set_var(CONFIG_ENV, "dev");
+        
+        check_config!(RocketConfig::parse(r#"
+                          [dev]
+                          database = "postgres"
+                      "#.to_string(), TEST_CONFIG_FILENAME), {
+                          default_config(Development).database("postgres")
+                      });
+
+        check_config!(RocketConfig::parse(r#"
+                          [dev]
+                          database = "mysql"
+                      "#.to_string(), TEST_CONFIG_FILENAME), {
+                          default_config(Development).database("mysql")
+                      });
+
+        check_config!(RocketConfig::parse(r#"
+                          [dev]
+                          database = "diesel"
+                      "#.to_string(), TEST_CONFIG_FILENAME), {
+                          default_config(Development).database("diesel")
+                      });
+    }
+
+    #[test]
+    fn test_bad_database_values() {
+        // Take the lock so changing the environment doesn't cause races.
+        let _env_lock = ENV_LOCK.lock().unwrap();
+        env::remove_var(CONFIG_ENV);
+
+        assert!(RocketConfig::parse(r#"
+            [dev]
+            database = 0000
+        "#.to_string(), TEST_CONFIG_FILENAME).is_err());
+
+        assert!(RocketConfig::parse(r#"
+            [dev]
+            database = true
         "#.to_string(), TEST_CONFIG_FILENAME).is_err());
     }
 

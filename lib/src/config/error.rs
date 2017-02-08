@@ -42,6 +42,10 @@ pub enum ConfigError {
     ///
     /// Parameters: (environment_name, filename)
     BadEntry(String, PathBuf),
+    /// A config key for `database` is invalid.
+    ///
+    /// Parameters: (database_type, filename)
+    BadDatabase(String, PathBuf),
     /// A config key was specified with a value of the wrong type.
     ///
     /// Parameters: (entry_name, expected_type, actual_type, filename)
@@ -73,6 +77,12 @@ impl ConfigError {
                 error!("[{}] is not a known configuration environment", name);
                 info_!("in {:?}", White.paint(filename));
                 info_!("valid environments are: {}", White.paint(valid_entries));
+            }
+            BadDatabase(ref name, ref filename) => {
+                let valid_entries = format!("{}", DatabaseType::valid());
+                error!("'{}' is not a known database type", name);
+                info_!("in {:?}", White.paint(filename));
+                info_!("valid databases are: {}", White.paint(valid_entries));
             }
             BadEnv(ref name) => {
                 error!("'{}' is not a valid ROCKET_ENV value", name);

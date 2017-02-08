@@ -339,6 +339,13 @@ impl Rocket {
 
         info!("🔧  Configured for {}.", config.environment);
         info_!("address: {}", White.paint(&config.address));
+
+        if let Some(database) = config.database {
+            info_!("database: {}", White.paint(database));
+            warn_!("This is experimental feature, you might face some problems.");
+            warn_!("Report here https://github.com/SergioBenitez/Rocket/pull/176");
+        }
+
         info_!("port: {}", White.paint(&config.port));
         info_!("log: {}", White.paint(config.log_level));
         info_!("workers: {}", White.paint(config.workers));

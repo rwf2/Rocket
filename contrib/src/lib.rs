@@ -70,5 +70,11 @@ mod uuid;
 #[cfg(feature = "uuid")]
 pub use uuid::{UUID, UuidParseError};
 
-#[cfg(feature = "database")]
-pub use database::diesel::PostgresDatabase;
+#[cfg(feature = "diesel_pg")]
+pub use database::diesel::postgres;
+
+#[cfg(feature = "diesel_sqlite")]
+pub use database::diesel::sqlite;
+
+#[cfg(feature = "postgres_db")]
+pub use database::postgres;

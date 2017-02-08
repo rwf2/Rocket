@@ -1,5 +1,5 @@
 #[cfg(feature = "diesel_pg")]
-mod postgres;
+pub mod postgres;
 
-#[cfg(feature = "diesel_pg")]
-pub use self::postgres::PostgresDatabase;
+#[cfg(feautre = "diesel_sqlite")]
+pub mod sqlite;
