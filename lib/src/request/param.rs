@@ -4,6 +4,7 @@ use std::path::PathBuf;
 use std::fmt::Debug;
 
 use http::uri::{URI, Segments, SegmentError};
+use uuid::Uuid;
 
 /// Trait to convert a dynamic path segment string to a concrete value.
 ///
@@ -212,6 +213,13 @@ impl<'a> FromParam<'a> for String {
     type Error = &'a str;
     fn from_param(p: &'a str) -> Result<String, Self::Error> {
         URI::percent_decode(p.as_bytes()).map_err(|_| p).map(|s| s.into_owned())
+    }
+}
+
+impl<'a> FromParam<'a> for Uuid {
+    type Error = &'a str;
+    fn from_param(p: &'a str) -> Result<Uuid, Self::Error> {
+        Uuid::parse_str(p).map_err(|_| p)
     }
 }
 

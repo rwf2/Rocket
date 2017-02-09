@@ -24,6 +24,7 @@ num_cpus = "1"
 state = "^0.2"
 time = "^0.1"
 memchr = "1"
+uuid = {version = "^0.4", optional = true}
 
 [dependencies.cookie]
 version = "^0.6"
