@@ -13,13 +13,13 @@ use serde::{Serialize, Deserialize};
 
 pub use self::rmp_serde::decode::Error as MsgPackError;
 
-/// The MsgPack type: implements `FromData` and `Responder`, allowing you to easily
-/// consume and respond with MsgPack.
+/// The `MsgPack` type: implements `FromData` and `Responder`, allowing you to easily
+/// consume and respond with MessagePack.
 ///
-/// If you're receiving MsgPack data, simple add a `data` parameter to your route
-/// arguments and ensure the type o the parameter is a `MsgPack<T>`, where `T` is
-/// some type you'd like to parse from MsgPack. `T` must implement `Deserialize`
-/// from [Serde](https://github.com/3Hren/msgpack-rust). The data is parsed from the
+/// If you're receiving MessagePack data, simply add a `data` parameter to your route
+/// arguments and ensure the type of the parameter is a `MsgPack<T>`, where `T` is
+/// some type you'd like to parse from MessagePack. `T` must implement `Deserialize`
+/// from [Serde](https://github.com/serde-rs/serde). The data is parsed from the
 /// HTTP request body.
 ///
 /// ```rust,ignore
@@ -33,8 +33,8 @@ pub use self::rmp_serde::decode::Error as MsgPackError;
 /// doesn't specify "application/msgpack" as its first `Content-Type:` header
 /// parameter will not be routed to this handler.
 ///
-/// If you're responding with MsgPack data, return a `MsgPack<T>` type, where `T`
-/// implements `Serialize` from [Serde](https://github.com/3Hren/msgpack-rust). The
+/// If you're responding with MessagePack data, return a `MsgPack<T>` type, where `T`
+/// implements `Serialize` from [Serde](https://github.com/serde-rs/serde). The
 /// content type of the response is set to `application/msgpack` automatically.
 ///
 /// ```rust,ignore
@@ -50,7 +50,7 @@ pub use self::rmp_serde::decode::Error as MsgPackError;
 pub struct MsgPack<T>(pub T);
 
 impl<T> MsgPack<T> {
-    /// Consumes the MsgPack wrapper and returns the wrapped item.
+    /// Consumes the `MsgPack` wrapper and returns the wrapped item.
     ///
     /// # Example
     /// ```rust
@@ -69,7 +69,7 @@ impl<T: Deserialize> FromData for MsgPack<T> {
 
     fn from_data(request: &Request, data: Data) -> data::Outcome<Self, Self::Error> {
         if !request.content_type().map_or(false, |ct| ct.is_msgpack()) {
-            error_!("Content-Type is not MsgPack.");
+            error_!("Content-Type is not MessagePack.");
             return Outcome::Forward(data);
         }
 
@@ -82,15 +82,15 @@ impl<T: Deserialize> FromData for MsgPack<T> {
         match rmp_serde::from_slice(&buf).map(|val| MsgPack(val)) {
             Ok(value) => Outcome::Success(value),
             Err(e) => {
-                error_!("Couldn't parse MsgPack body: {:?}", e);
+                error_!("Couldn't parse MessagePack body: {:?}", e);
                 Outcome::Failure((Status::BadRequest, e))
             }
         }
     }
 }
 
-// Serializes the wrapped value into MsgPack. Returns a response with Content-Type
-// MsgPack and a fixed-size body with the serialization. If serialization fails, an
+// Serializes the wrapped value into MessagePack. Returns a response with Content-Type
+// MessagePack and a fixed-size body with the serialization. If serialization fails, an
 // `Err` of `Status::InternalServerError` is returned.
 impl<T: Serialize> Responder<'static> for MsgPack<T> {
     fn respond(self) -> response::Result<'static> {

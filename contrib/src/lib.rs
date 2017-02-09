@@ -14,7 +14,7 @@
 //! an asterisk next to the features that are enabled by default:
 //!
 //! * [json*](struct.JSON.html)
-//! * [msgpack*](struct.MsgPack.html)
+//! * [msgpack](struct.MsgPack.html)
 //! * [handlebars_templates](struct.Template.html)
 //! * [tera_templates](struct.Template.html)
 //! * [uuid](struct.UUID.html)
