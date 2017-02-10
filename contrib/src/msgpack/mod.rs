@@ -1,12 +1,12 @@
 extern crate rmp_serde;
 
 use std::ops::{Deref, DerefMut};
-use std::io::Read;
+use std::io::{Cursor, Read};
 
 use rocket::outcome::Outcome;
 use rocket::request::Request;
 use rocket::data::{self, Data, FromData};
-use rocket::response::{self, Responder, content};
+use rocket::response::{self, Responder, Response};
 use rocket::http::Status;
 
 use serde::{Serialize, Deserialize};
@@ -14,7 +14,7 @@ use serde::{Serialize, Deserialize};
 pub use self::rmp_serde::decode::Error as MsgPackError;
 
 /// The `MsgPack` type: implements `FromData` and `Responder`, allowing you to easily
-/// consume and respond with MessagePack.
+/// consume and respond with MessagePack data.
 ///
 /// If you're receiving MessagePack data, simply add a `data` parameter to your route
 /// arguments and ensure the type of the parameter is a `MsgPack<T>`, where `T` is
@@ -31,7 +31,9 @@ pub use self::rmp_serde::decode::Error as MsgPackError;
 /// You don't _need_ to use `format = "application/msgpack"`, but it _may_ be what
 /// you want. Using `format = application/msgpack` means that any request that
 /// doesn't specify "application/msgpack" as its first `Content-Type:` header
-/// parameter will not be routed to this handler.
+/// parameter will not be routed to this handler. By default, Rocket will accept a
+/// Content Type of any of the following for MessagePack data:
+/// `application/msgpack`, `application/x-msgpack`, or `bin/msgpack`.
 ///
 /// If you're responding with MessagePack data, return a `MsgPack<T>` type, where `T`
 /// implements `Serialize` from [Serde](https://github.com/serde-rs/serde). The
@@ -64,17 +66,25 @@ impl<T> MsgPack<T> {
     }
 }
 
+/// Maximum size of MessagePack data is 1MB.
+/// TODO: Determine this size from some configuration parameter.
+const MAX_SIZE: u64 = 1048576;
+
 impl<T: Deserialize> FromData for MsgPack<T> {
     type Error = MsgPackError;
 
     fn from_data(request: &Request, data: Data) -> data::Outcome<Self, Self::Error> {
-        if !request.content_type().map_or(false, |ct| ct.is_msgpack()) {
+        // Accepted content types are:
+        // `application/msgpack`, `application/x-msgpack`, and `bin/msgpack`
+        if !request.content_type().map_or(false, |ct|
+            (ct.ttype == "application" && (ct.subtype == "msgpack" || ct.subtype == "x-msgpack")) ||
+            (ct.ttype == "bin" && ct.subtype == "msgpack")) {
             error_!("Content-Type is not MessagePack.");
             return Outcome::Forward(data);
         }
 
         let mut buf = Vec::new();
-        if let Err(e) = data.open().read_to_end(&mut buf) {
+        if let Err(e) = data.open().take(MAX_SIZE).read_to_end(&mut buf) {
             let e = MsgPackError::InvalidDataRead(e);
             error_!("Couldn't read request data: {:?}", e);
             return Outcome::Failure((Status::BadRequest, e));
@@ -95,7 +105,10 @@ impl<T: Deserialize> FromData for MsgPack<T> {
 impl<T: Serialize> Responder<'static> for MsgPack<T> {
     fn respond(self) -> response::Result<'static> {
         rmp_serde::to_vec(&self.0).map(|buf| {
-            content::MsgPack(buf).respond().unwrap()
+            Response::build()
+                .sized_body(Cursor::new(buf))
+                .ok::<Status>()
+                .unwrap()
         }).map_err(|e| {
             error_!("MsgPack failed to serialize: {:?}", e);
             Status::InternalServerError

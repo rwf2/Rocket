@@ -201,16 +201,6 @@ impl Responder<'static> for String {
     }
 }
 
-/// Returns a response with a fixed-size body
-/// containing the byte vec `self`. Always returns `Ok`.
-impl Responder<'static> for Vec<u8> {
-    fn respond(self) -> Result<Response<'static>, Status> {
-        Response::build()
-            .sized_body(Cursor::new(self))
-            .ok()
-    }
-}
-
 /// Aliases Stream<File>: `Stream::from(self)`.
 impl Responder<'static> for File {
     fn respond(self) -> Result<Response<'static>, Status> {
