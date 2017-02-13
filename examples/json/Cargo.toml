@@ -9,7 +9,6 @@ rocket_codegen = { path = "../../codegen" }
 serde = "0.9"
 serde_json = "0.9"
 serde_derive = "0.9"
-lazy_static = "*"
 
 [dependencies.rocket_contrib]
 path = "../../contrib"
