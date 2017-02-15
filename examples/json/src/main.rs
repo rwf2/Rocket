@@ -70,10 +70,13 @@ fn not_found() -> JSON<Value> {
     }))
 }
 
-fn main() {
+fn rocket() -> rocket::Rocket {
     rocket::ignite()
         .mount("/message", routes![new, update, get])
         .catch(errors![not_found])
         .manage(Mutex::new(HashMap::<ID, String>::new()))
-        .launch();
+}
+
+fn main() {
+    rocket().launch();
 }

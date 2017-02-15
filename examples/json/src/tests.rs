@@ -4,9 +4,6 @@ use rocket::http::Method::*;
 use rocket::http::{Status, ContentType};
 use rocket::Response;
 
-use std::collections::HashMap;
-use std::sync::Mutex;
-
 macro_rules! run_test {
     ($req:expr, $test_fn:expr, $rocket:expr) => ({
         let mut req = $req;
@@ -16,10 +13,7 @@ macro_rules! run_test {
 
 #[test]
 fn bad_get_put() {
-    let rocket = rocket::ignite()
-        .mount("/message", routes![super::new, super::update, super::get])
-        .manage(Mutex::new(HashMap::<super::ID, String>::new()))
-        .catch(errors![super::not_found]);
+    let rocket = rocket();
 
     // Try to get a message with an ID that doesn't exist.
     let req = MockRequest::new(Get, "/message/99").header(ContentType::JSON);
@@ -57,10 +51,7 @@ fn bad_get_put() {
 
 #[test]
 fn post_get_put_get() {
-    let rocket = rocket::ignite()
-        .mount("/message", routes![super::new, super::update, super::get])
-        .manage(Mutex::new(HashMap::<super::ID, String>::new()))
-        .catch(errors![super::not_found]);
+    let rocket = rocket();
     // Check that a message with ID 1 doesn't exist.
     let req = MockRequest::new(Get, "/message/1").header(ContentType::JSON);
     run_test!(req, |response: Response| {
