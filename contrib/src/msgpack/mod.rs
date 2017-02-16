@@ -28,6 +28,7 @@ pub use self::rmp_serde::decode::Error as MsgPackError;
 ///     ...
 /// }
 /// ```
+///
 /// You don't _need_ to use `format = "application/msgpack"`, but it _may_ be what
 /// you want. Using `format = application/msgpack` means that any request that
 /// doesn't specify "application/msgpack" as its first `Content-Type:` header
@@ -47,7 +48,6 @@ pub use self::rmp_serde::decode::Error as MsgPackError;
 ///     MsgPack(user_from_id)
 /// }
 /// ```
-///
 #[derive(Debug)]
 pub struct MsgPack<T>(pub T);
 
@@ -75,10 +75,10 @@ impl<T: Deserialize> FromData for MsgPack<T> {
 
     fn from_data(request: &Request, data: Data) -> data::Outcome<Self, Self::Error> {
         // Accepted content types are:
-        // `application/msgpack`, `application/x-msgpack`, and `bin/msgpack`
+        // `application/msgpack`, `application/x-msgpack`, `bin/msgpack`, and `bin/x-msgpack`
         if !request.content_type().map_or(false, |ct|
-            (ct.ttype == "application" && (ct.subtype == "msgpack" || ct.subtype == "x-msgpack")) ||
-            (ct.ttype == "bin" && ct.subtype == "msgpack")) {
+            (ct.ttype == "application" || ct.ttype == "bin") &&
+            (ct.subtype == "msgpack" || ct.subtype == "x-msgpack")) {
             error_!("Content-Type is not MessagePack.");
             return Outcome::Forward(data);
         }
@@ -89,6 +89,7 @@ impl<T: Deserialize> FromData for MsgPack<T> {
             error_!("Couldn't read request data: {:?}", e);
             return Outcome::Failure((Status::BadRequest, e));
         };
+
         match rmp_serde::from_slice(&buf).map(|val| MsgPack(val)) {
             Ok(value) => Outcome::Success(value),
             Err(e) => {
