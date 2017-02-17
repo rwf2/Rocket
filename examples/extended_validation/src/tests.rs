@@ -4,25 +4,20 @@ use rocket::http::{ContentType, Status};
 
 use super::rocket;
 
-fn test_login(username: &str,
-              password: &str,
-              age: &str,
-              status: Status,
-              body: Option<&'static str>) {
+fn test_login<T>(user: &str, pass: &str, age: &str, status: Status, body: T)
+    where T: Into<Option<&'static str>>
+{
     let rocket = rocket();
-    let query = &format!("username={}&password={}&age={}", username, password, age);
+    let query = &format!("username={}&password={}&age={}", user, pass, age);
 
     let mut req = MockRequest::new(Post, "/login")
         .header(ContentType::Form)
         .body(&query);
 
     let mut response = req.dispatch_with(&rocket);
-    let body_str = response.body().and_then(|body| body.into_string());
-
-    println!("Checking: {:?}/{:?}/{:?}/{:?}", username, password, age, body_str);
     assert_eq!(response.status(), status);
-
-    if let Some(string) = body {
+    let body_str = response.body().and_then(|body| body.into_string());
+    if let Some(string) = body.into() {
         assert!(body_str.map_or(true, |s| s.contains(string)));
     }
 }
@@ -36,33 +31,21 @@ fn test_good_login() {
 
 #[test]
 fn test_invalid_user() {
-    test_login("-1", "password", "30", OK, Some("Unrecognized user"));
-    test_login("Mike", "password", "30", OK, Some("Unrecognized user"));
+    test_login("-1", "password", "30", OK, "Unrecognized user");
+    test_login("Mike", "password", "30", OK, "Unrecognized user");
 }
 
 #[test]
 fn test_invalid_password() {
-    test_login("Sergio", "password1", "30", OK, Some("Wrong password!"));
-    test_login("Sergio", "ok", "30", OK, Some("Password is invalid: Too short!"));
+    test_login("Sergio", "password1", "30", OK, "Wrong password!");
+    test_login("Sergio", "ok", "30", OK, "Password is invalid: Too short!");
 }
 
 #[test]
 fn test_invalid_age() {
-    test_login("Sergio",
-               "password",
-               "20",
-               OK,
-               Some("Age is invalid: Must be at least 21."));
-    test_login("Sergio",
-               "password",
-               "-100",
-               OK,
-               Some("Age is invalid: Must be at least 21."));
-    test_login("Sergio",
-               "password",
-               "hello",
-               OK,
-               Some("Age is invalid: Age value is not a number"));
+    test_login("Sergio", "password", "20", OK, "Must be at least 21.");
+    test_login("Sergio", "password", "-100", OK, "Must be at least 21.");
+    test_login("Sergio", "password", "hi", OK, "Age value is not a number");
 }
 
 fn check_bad_form(form_str: &str, status: Status) {
