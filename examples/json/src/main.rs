@@ -25,7 +25,7 @@ struct Message {
     contents: String
 }
 
-// TODO: This example can be improved by using `route` with muliple HTTP verbs.
+// TODO: This example can be improved by using `route` with multiple HTTP verbs.
 #[post("/<id>", format = "application/json", data = "<message>")]
 fn new(id: ID, message: JSON<Message>, map: State<MessageMap>) -> JSON<Value> {
     let mut hashmap = map.lock().expect("map lock.");
