@@ -7,7 +7,7 @@ use rocket::outcome::Outcome;
 use rocket::request::Request;
 use rocket::data::{self, Data, FromData};
 use rocket::response::{self, Responder, Response};
-use rocket::http::Status;
+use rocket::http::{ContentType, Status};
 
 use serde::{Serialize, Deserialize};
 
@@ -70,15 +70,18 @@ impl<T> MsgPack<T> {
 /// TODO: Determine this size from some configuration parameter.
 const MAX_SIZE: u64 = 1048576;
 
+/// Accepted content types are:
+/// `application/msgpack`, `application/x-msgpack`, `bin/msgpack`, and `bin/x-msgpack`
+fn is_msgpack_content_type(ct: &ContentType) -> bool {
+    (ct.ttype == "application" || ct.ttype == "bin")
+        && (ct.subtype == "msgpack" || ct.subtype == "x-msgpack")
+}
+
 impl<T: Deserialize> FromData for MsgPack<T> {
     type Error = MsgPackError;
 
     fn from_data(request: &Request, data: Data) -> data::Outcome<Self, Self::Error> {
-        // Accepted content types are:
-        // `application/msgpack`, `application/x-msgpack`, `bin/msgpack`, and `bin/x-msgpack`
-        if !request.content_type().map_or(false, |ct|
-            (ct.ttype == "application" || ct.ttype == "bin") &&
-            (ct.subtype == "msgpack" || ct.subtype == "x-msgpack")) {
+        if !request.content_type().map_or(false, |ct| is_msgpack_content_type(&ct)) {
             error_!("Content-Type is not MessagePack.");
             return Outcome::Forward(data);
         }
@@ -100,19 +103,18 @@ impl<T: Deserialize> FromData for MsgPack<T> {
     }
 }
 
-// Serializes the wrapped value into MessagePack. Returns a response with Content-Type
-// MessagePack and a fixed-size body with the serialization. If serialization fails, an
-// `Err` of `Status::InternalServerError` is returned.
+/// Serializes the wrapped value into MessagePack. Returns a response with Content-Type
+/// MessagePack and a fixed-size body with the serialization. If serialization fails, an
+/// `Err` of `Status::InternalServerError` is returned.
 impl<T: Serialize> Responder<'static> for MsgPack<T> {
     fn respond(self) -> response::Result<'static> {
-        rmp_serde::to_vec(&self.0).map(|buf| {
-            Response::build()
-                .sized_body(Cursor::new(buf))
-                .ok::<Status>()
-                .unwrap()
-        }).map_err(|e| {
+        rmp_serde::to_vec(&self.0).map_err(|e| {
             error_!("MsgPack failed to serialize: {:?}", e);
             Status::InternalServerError
+        }).and_then(|buf| {
+            Response::build()
+                .sized_body(Cursor::new(buf))
+                .ok()
         })
     }
 }

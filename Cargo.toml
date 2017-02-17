@@ -22,6 +22,7 @@ members = [
   "examples/from_request",
   "examples/stream",
   "examples/json",
+  "examples/msgpack",
   "examples/handlebars_templates",
   "examples/form_kitchen_sink",
   "examples/config",
