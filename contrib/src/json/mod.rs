@@ -129,20 +129,23 @@ impl<T> DerefMut for JSON<T> {
 /// ```
 ///
 /// The return type of a macro invocation is
-/// [Value](/rocket_contrib/enum.Value.html). A value created with this macro
+/// [Value](/rocket_contrib/enum.Value.html), and is the default type parameter 
+/// of the JSON type. A value created with this macro
 /// can be returned from a handler as follows:
 ///
 /// ```rust,ignore
-/// use rocket_contrib::{JSON, Value};
+/// use rocket_contrib::JSON;
 ///
 /// #[get("/json")]
-/// fn get_json() -> JSON<Value> {
+/// fn get_json() -> JSON {
 ///     JSON(json!({
 ///         "key": "value",
 ///         "array": [1, 2, 3, 4]
 ///     }))
 /// }
 /// ```
+/// 
+/// 
 ///
 /// # Examples
 ///
