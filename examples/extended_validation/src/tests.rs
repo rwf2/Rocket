@@ -58,14 +58,29 @@ fn check_bad_form(form_str: &str, status: Status) {
 }
 
 #[test]
-fn test_bad_form() {
+fn test_bad_form_abnromal_inputs() {
     check_bad_form("&", Status::BadRequest);
     check_bad_form("=", Status::BadRequest);
     check_bad_form("&&&===&", Status::BadRequest);
+}
 
-    check_bad_form("username=Sergio", Status::UnprocessableEntity);
-    check_bad_form("username=Sergio&", Status::UnprocessableEntity);
-    check_bad_form("username=Sergio&pass=something", Status::UnprocessableEntity);
-    check_bad_form("user=Sergio&password=something", Status::UnprocessableEntity);
-    check_bad_form("password=something", Status::UnprocessableEntity);
+#[test]
+fn test_bad_form_missing_fields() {
+    let bad_inputs: [&str; 6] = [
+        "username=Sergio",
+        "password=pass",
+        "age=30",
+        "username=Sergio&password=pass",
+        "username=Sergio&age=30",
+        "password=pass&age=30"
+    ];
+
+    for bad_input in bad_inputs.into_iter() {
+        check_bad_form(bad_input, Status::UnprocessableEntity);
+    }
+}
+
+#[test]
+fn test_bad_form_additional_fields() {
+    check_bad_form("username=Sergio&password=pass&age=30&addition=1", Status::UnprocessableEntity);
 }
