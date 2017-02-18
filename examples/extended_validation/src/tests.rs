@@ -16,9 +16,8 @@ fn test_login<T>(user: &str, pass: &str, age: &str, status: Status, body: T)
 
     let mut response = req.dispatch_with(&rocket);
     assert_eq!(response.status(), status);
-    let body_str = response.body().and_then(|body| body.into_string());
     if let Some(string) = body.into() {
-        assert!(body_str.map_or(true, |s| s.contains(string)));
+        assert!(response.body().and_then(|body| body.into_string()).map_or(false, |s| s.contains(string)));
     }
 }
 
