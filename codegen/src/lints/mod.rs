@@ -9,11 +9,9 @@ use std::collections::HashMap;
 
 use rustc::lint::{Level, LateContext, LintContext, LintPass, LateLintPass, LintArray};
 use rustc::hir::{Item, Expr, Crate, Decl, FnDecl, Body, QPath, PatKind};
-use rustc::hir::def::Def;
 use rustc::hir::def_id::DefId;
 use rustc::ty::Ty;
 use rustc::hir::intravisit::{FnKind};
-use rustc::hir::Ty_::*;
 use rustc::hir::Decl_::*;
 use rustc::hir::Expr_::*;
 
@@ -256,10 +254,10 @@ impl<'a, 'tcx> LateLintPass<'a, 'tcx> for RocketLint {
             return;
         }
 
-        // Collect all of the `State` types into `tys`.
-        let mut tys: Vec<Ty<'static>> = vec![];
+        // Collect all of the `State` types and spans into `tys` and `spans`.
+        let mut ty_and_spans: Vec<(Ty<'static>, Span)> = vec![];
         if let Some(sig) = cx.tables.liberated_fn_sigs.get(&fn_id) {
-            for input_ty in sig.inputs() {
+            for (i, input_ty) in sig.inputs().iter().enumerate() {
                 let def_id = match input_ty.ty_to_def_id() {
                     Some(id) => id,
                     None => continue
@@ -267,32 +265,24 @@ impl<'a, 'tcx> LateLintPass<'a, 'tcx> for RocketLint {
 
                 if match_def_path(cx.tcx, def_id, STATE_TYPE) {
                     if let Some(inner_type) = input_ty.walk_shallow().next() {
-                        tys.push(unsafe { transmute(inner_type) });
+                        if decl.inputs.len() <= i {
+                            println!("internal lint error: \
+                                     signature and declaration length mismatch: \
+                                     {:?}, {:?}", sig.inputs(), decl.inputs);
+                            println!("this is likely a bug. please report this.");
+                            continue;
+                        }
+
+                        let ty = unsafe { transmute(inner_type) };
+                        let span = decl.inputs[i].span;
+                        ty_and_spans.push((ty, span));
                     }
                 }
             }
-        }
-
-        // Collect all of the spans for the `State` parameters.
-        let mut spans = vec![];
-        for input in decl.inputs.iter() {
-            let id = input.id;
-            if let TyPath(ref qpath) = input.node {
-                if let Def::Struct(defid) = cx.tables.qpath_def(qpath, id) {
-                    if match_def_path(cx.tcx, defid, STATE_TYPE) {
-                        spans.push(input.span);
-                    }
-                }
-            }
-        }
-
-        // Sanity check: we should have as many spans as types.
-        if tys.len() != spans.len() {
-            panic!("Lint error: unequal ty/span ({}/{})", tys.len(), spans.len());
         }
 
         // Insert the information we've collected.
-        for (ty, span) in tys.into_iter().zip(spans.into_iter()) {
+        for (ty, span) in ty_and_spans {
             self.requested.push((fn_name, fn_sp, def_id.clone(), ty, span));
         }
     }

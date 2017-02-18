@@ -17,8 +17,8 @@ pub use serde_json::error::Error as SerdeError;
 /// The JSON type: implements `FromData` and `Responder`, allowing you to easily
 /// consume and respond with JSON.
 ///
-/// If you're receiving JSON data, simple add a `data` parameter to your route
-/// arguments and ensure the type o the parameter is a `JSON<T>`, where `T` is
+/// If you're receiving JSON data, simply add a `data` parameter to your route
+/// arguments and ensure the type of the parameter is a `JSON<T>`, where `T` is
 /// some type you'd like to parse from JSON. `T` must implement `Deserialize`
 /// from [Serde](https://github.com/serde-rs/json). The data is parsed from the
 /// HTTP request body.
@@ -31,8 +31,8 @@ pub use serde_json::error::Error as SerdeError;
 /// ```
 /// You don't _need_ to use `format = "application/json"`, but it _may_ be what
 /// you want. Using `format = application/json` means that any request that
-/// doesn't specify "application/json" as its first `Content-Type:` header
-/// parameter will not be routed to this handler.
+/// doesn't specify "application/json" as its `Content-Type` header value will
+/// not be routed to the handler.
 ///
 /// If you're responding with JSON data, return a `JSON<T>` type, where `T`
 /// implements `Serialize` from [Serde](https://github.com/serde-rs/json). The
@@ -89,9 +89,9 @@ impl<T: Deserialize> FromData for JSON<T> {
     }
 }
 
-// Serializes the wrapped value into JSON. Returns a response with Content-Type
-// JSON and a fixed-size body with the serialization. If serialization fails, an
-// `Err` of `Status::InternalServerError` is returned.
+/// Serializes the wrapped value into JSON. Returns a response with Content-Type
+/// JSON and a fixed-size body with the serialized value. If serialization
+/// fails, an `Err` of `Status::InternalServerError` is returned.
 impl<T: Serialize> Responder<'static> for JSON<T> {
     fn respond(self) -> response::Result<'static> {
         serde_json::to_string(&self.0).map(|string| {

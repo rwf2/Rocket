@@ -1,5 +1,5 @@
 use std::collections::HashMap;
-use std::net::ToSocketAddrs;
+use std::net::{IpAddr, lookup_host};
 use std::path::{Path, PathBuf};
 use std::sync::RwLock;
 use std::convert::AsRef;
@@ -268,19 +268,18 @@ impl Config {
     /// # fn config_test() -> Result<(), ConfigError> {
     /// let mut config = Config::new(Environment::Staging)?;
     /// assert!(config.set_address("localhost").is_ok());
+    /// assert!(config.set_address("::").is_ok());
     /// assert!(config.set_address("?").is_err());
     /// # Ok(())
     /// # }
     /// ```
     pub fn set_address<A: Into<String>>(&mut self, address: A) -> config::Result<()> {
         let address = address.into();
-        if address.contains(':') {
-            return Err(self.bad_type("address", "string", "a hostname or IP with no port"));
-        } else if format!("{}:{}", address, 80).to_socket_addrs().is_err() {
+        if address.parse::<IpAddr>().is_err() && lookup_host(&address).is_err() {
             return Err(self.bad_type("address", "string", "a valid hostname or IP"));
         }
 
-        self.address = address.into();
+        self.address = address;
         Ok(())
     }
 

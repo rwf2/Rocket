@@ -6,6 +6,7 @@
 #![feature(type_ascription)]
 #![feature(macro_reexport)]
 #![feature(pub_restricted)]
+#![feature(lookup_host)]
 
 //! # Rocket - Core API Documentation
 //!

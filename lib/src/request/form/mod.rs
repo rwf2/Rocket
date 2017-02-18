@@ -76,6 +76,7 @@ use outcome::Outcome::*;
 /// struct UserInput<'f> {
 ///     value: &'f str
 /// }
+/// # fn main() {  }
 /// ```
 ///
 /// This corresponds to a form with a single field named `value` that should be
@@ -115,6 +116,7 @@ use outcome::Outcome::*;
 /// struct OwnedUserInput {
 ///     value: String
 /// }
+/// # fn main() {  }
 /// ```
 ///
 /// The handler is written similarly:

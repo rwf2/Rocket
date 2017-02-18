@@ -18,6 +18,7 @@ use request::FormItems;
 ///     description: String,
 ///     completed: bool
 /// }
+/// # fn main() {  }
 /// ```
 ///
 /// The type can then be parsed from incoming form data via the `data`

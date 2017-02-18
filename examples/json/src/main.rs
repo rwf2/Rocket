@@ -3,13 +3,13 @@
 
 extern crate rocket;
 extern crate serde_json;
-#[macro_use] extern crate lazy_static;
 #[macro_use] extern crate rocket_contrib;
 #[macro_use] extern crate serde_derive;
 
 #[cfg(test)] mod tests;
 
 use rocket_contrib::{JSON, Value};
+use rocket::State;
 use std::collections::HashMap;
 use std::sync::Mutex;
 
@@ -17,9 +17,7 @@ use std::sync::Mutex;
 type ID = usize;
 
 // We're going to store all of the messages here. No need for a DB.
-lazy_static! {
-    static ref MAP: Mutex<HashMap<ID, String>> = Mutex::new(HashMap::new());
-}
+type MessageMap = Mutex<HashMap<ID, String>>;
 
 #[derive(Serialize, Deserialize)]
 struct Message {
@@ -27,10 +25,10 @@ struct Message {
     contents: String
 }
 
-// TODO: This example can be improved by using `route` with muliple HTTP verbs.
+// TODO: This example can be improved by using `route` with multiple HTTP verbs.
 #[post("/<id>", format = "application/json", data = "<message>")]
-fn new(id: ID, message: JSON<Message>) -> JSON<Value> {
-    let mut hashmap = MAP.lock().expect("map lock.");
+fn new(id: ID, message: JSON<Message>, map: State<MessageMap>) -> JSON<Value> {
+    let mut hashmap = map.lock().expect("map lock.");
     if hashmap.contains_key(&id) {
         JSON(json!({
             "status": "error",
@@ -43,8 +41,8 @@ fn new(id: ID, message: JSON<Message>) -> JSON<Value> {
 }
 
 #[put("/<id>", format = "application/json", data = "<message>")]
-fn update(id: ID, message: JSON<Message>) -> Option<JSON<Value>> {
-    let mut hashmap = MAP.lock().unwrap();
+fn update(id: ID, message: JSON<Message>, map: State<MessageMap>) -> Option<JSON<Value>> {
+    let mut hashmap = map.lock().unwrap();
     if hashmap.contains_key(&id) {
         hashmap.insert(id, message.0.contents);
         Some(JSON(json!({ "status": "ok" })))
@@ -54,8 +52,8 @@ fn update(id: ID, message: JSON<Message>) -> Option<JSON<Value>> {
 }
 
 #[get("/<id>", format = "application/json")]
-fn get(id: ID) -> Option<JSON<Message>> {
-    let hashmap = MAP.lock().unwrap();
+fn get(id: ID, map: State<MessageMap>) -> Option<JSON<Message>> {
+    let hashmap = map.lock().unwrap();
     hashmap.get(&id).map(|contents| {
         JSON(Message {
             id: Some(id),
@@ -72,9 +70,13 @@ fn not_found() -> JSON<Value> {
     }))
 }
 
-fn main() {
+fn rocket() -> rocket::Rocket {
     rocket::ignite()
         .mount("/message", routes![new, update, get])
         .catch(errors![not_found])
-        .launch();
+        .manage(Mutex::new(HashMap::<ID, String>::new()))
+}
+
+fn main() {
+    rocket().launch();
 }

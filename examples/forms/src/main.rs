@@ -42,7 +42,7 @@ fn user_page(username: &str) -> String {
     format!("This is {}'s page.", username)
 }
 
-pub fn rocket() -> rocket::Rocket {
+fn rocket() -> rocket::Rocket {
     rocket::ignite()
         .mount("/", routes![files::index, files::files, user_page, login])
 }

@@ -1,6 +1,6 @@
 use std::convert::AsRef;
 
-use time::Duration;
+use time::{self, Duration};
 
 use outcome::IntoOutcome;
 use response::{Response, Responder};
@@ -221,11 +221,19 @@ impl<'a, 'r> FromRequest<'a, 'r> for Flash<()> {
     fn from_request(request: &'a Request<'r>) -> request::Outcome<Self, Self::Error> {
         trace!("Flash: attemping to retrieve message.");
         let r = request.cookies().find(FLASH_COOKIE_NAME).ok_or(()).and_then(|cookie| {
-            // Clear the flash message.
             trace!("Flash: retrieving message: {:?}", cookie);
-            request.cookies().remove(FLASH_COOKIE_NAME);
 
-            // Parse the flash.
+            // Create the "deletion" cookie. We'll use it to clear the cookie.
+            let delete_cookie = Cookie::build(FLASH_COOKIE_NAME, "")
+                .max_age(Duration::seconds(0))
+                .expires(time::now() - Duration::days(365))
+                .path("/")
+                .finish();
+
+            // Add the deletion to the cookie jar, replacing the existing cookie.
+            request.cookies().add(delete_cookie);
+
+            // Parse the flash message.
             let content = cookie.value();
             let (len_str, rest) = match content.find(|c: char| !c.is_digit(10)) {
                 Some(i) => (&content[..i], &content[i..]),
