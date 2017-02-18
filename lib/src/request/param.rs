@@ -24,6 +24,7 @@ use http::uri::{URI, Segments, SegmentError};
 /// # extern crate rocket;
 /// #[get("/<id>")]
 /// fn hello(id: usize) -> String {
+/// # let _id = id;
 /// # /*
 ///     ...
 /// # */
@@ -127,6 +128,7 @@ use http::uri::{URI, Segments, SegmentError};
 /// `key` and the number after the colon is stored in `value`:
 ///
 /// ```rust
+/// # #[allow(dead_code)]
 /// struct MyParam<'r> {
 ///     key: &'r str,
 ///     value: usize
@@ -137,6 +139,7 @@ use http::uri::{URI, Segments, SegmentError};
 ///
 /// ```rust
 /// use rocket::request::FromParam;
+/// # #[allow(dead_code)]
 /// # struct MyParam<'r> { key: &'r str, value: usize }
 ///
 /// impl<'r> FromParam<'r> for MyParam<'r> {
@@ -170,6 +173,7 @@ use http::uri::{URI, Segments, SegmentError};
 /// # #![plugin(rocket_codegen)]
 /// # extern crate rocket;
 /// # use rocket::request::FromParam;
+/// # #[allow(dead_code)]
 /// # struct MyParam<'r> { key: &'r str, value: usize }
 /// # impl<'r> FromParam<'r> for MyParam<'r> {
 /// #     type Error = &'r str;
@@ -180,6 +184,7 @@ use http::uri::{URI, Segments, SegmentError};
 /// #
 /// #[get("/<key_val>")]
 /// fn hello(key_val: MyParam) -> String {
+/// # let _kv = key_val;
 /// # /*
 ///     ...
 /// # */

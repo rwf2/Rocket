@@ -21,7 +21,7 @@ pub enum Environment {
 
 impl Environment {
     /// Retrieves the "active" environment as determined by the `ROCKET_ENV`
-    /// environment variable. Returns `Development` if `ROCKET_ENV` is not set.
+    /// environment variable. If `ROCKET_ENV` is not set, returns `Development`.
     ///
     /// # Errors
     ///
@@ -33,13 +33,13 @@ impl Environment {
     }
 
     /// Returns a string with a comma-seperated list of valid environments.
-    pub fn valid() -> &'static str {
+    pub(crate) fn valid() -> &'static str {
         "development, staging, production"
     }
 
     /// Returns a list of all of the possible environments.
-    #[inline(always)]
-    pub fn all() -> [Environment; 3] {
+    #[inline]
+    pub(crate) fn all() -> [Environment; 3] {
         [Development, Staging, Production]
     }
 }

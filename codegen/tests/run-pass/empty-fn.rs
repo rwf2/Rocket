@@ -3,7 +3,7 @@
 
 extern crate rocket;
 
-#[get("")]
+#[get("/")]
 fn get() -> &'static str { "hi" }
 
 #[get("/")]

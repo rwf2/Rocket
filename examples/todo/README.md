@@ -7,17 +7,31 @@ a result, you'll need to have `sqlite3` and its headers installed:
   * **Debian/Ubuntu:** `apt-get install libsqlite3-dev`
   * **Arch:** `pacman -S sqlite`
 
-**Before running this example, you'll also need to ensure there's a database
-file with the correct tables present.** On a Unix machine or with bash
-installed, you can simply run the `boostrap.sh` script. The script installs the
-`diesel_cli` tools if they're not already installed and runs the migrations.
+## Running
 
-## Manually Running Migrations
+**Before running, building, or testing this example, you'll need to ensure the
+following:**
 
-You can also run the migrations manually with the following commands:
+  1. A SQLite database file with the proper schema is present.
 
-```
-cargo install diesel_cli                     # install diesel CLI tools
-DATABASE_URL=db/db.sql diesel migration run  # create db/db.sql
-```
+    On a Unix machine or with bash installed, you can simply run the
+    `boostrap.sh` script to create the database. The script installs the
+    `diesel_cli` tools if they're not already installed and runs the migrations.
+    The script will output a `DATABASE_URL` variable.
 
+    You can also run the migrations manually with the following commands:
+
+    ```
+    cargo install diesel_cli                      # install diesel CLI tools
+    DATABASE_URL=db/db.sql diesel migration run   # create db/db.sql
+    ```
+
+  2. A `DATABASE_URL` environment variable is set that points to the SQLite
+     database file.
+
+     Use the `DATABASE_URL` variable emitted from the `bootstrap.sh` script, or
+     enter it manually, as follows:
+
+     * `DATABASE_URL=db/db.sql cargo build`
+     * `DATABASE_URL=db/db.sql cargo test`
+     * `DATABASE_URL=db/db.sql cargo run`

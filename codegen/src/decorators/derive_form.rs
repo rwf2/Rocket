@@ -79,13 +79,18 @@ pub fn from_form_derive(ecx: &mut ExtCtxt, span: Span, meta_item: &MetaItem,
         generics: trait_generics,
         methods: vec![
             MethodDef {
-                name: "from_form_string",
+                name: "from_form_items",
                 generics: ty::LifetimeBounds::empty(),
                 explicit_self: None,
                 args: vec![
                     ty::Ptr(
-                        Box::new(ty::Literal(ty::Path::new_local("str"))),
-                        ty::Borrowed(lifetime_var, Mutability::Immutable)
+                        Box::new(ty::Literal(ty::Path {
+                            path: vec!["rocket", "request", "FormItems"],
+                            lifetime: lifetime_var,
+                            params: vec![],
+                            global: true
+                        })),
+                        ty::Borrowed(None, Mutability::Mutable)
                     )
                 ],
                 ret_ty: ty::Ty::Literal(
@@ -188,7 +193,7 @@ fn from_form_substructure(cx: &mut ExtCtxt, trait_span: Span, substr: &Substruct
     // The actual match statement. Iterate through all of the fields in the form
     // and use the $arms generated above.
     stmts.push(quote_stmt!(cx,
-        for (k, v) in ::rocket::request::FormItems($arg) {
+        for (k, v) in $arg {
             match k {
                 $arms
                 field if field == "_method" => {

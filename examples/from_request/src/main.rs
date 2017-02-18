@@ -43,26 +43,21 @@ mod test {
         let rocket = rocket::ignite()
             .mount("/", routes![super::header_count]);
 
-        let num_headers = headers.len();
         let mut req = MockRequest::new(Get, "/");
-        for header in headers {
+        for header in headers.iter().cloned() {
             req = req.header(header);
         }
 
         let mut response = req.dispatch_with(&rocket);
-
-        let expect = format!("Your request contained {} headers!", num_headers);
+        let expect = format!("Your request contained {} headers!", headers.len());
         assert_eq!(response.body().and_then(|b| b.into_string()), Some(expect));
     }
 
     #[test]
     fn test_n_headers() {
         for i in 0..50 {
-            let mut headers = vec![];
-            for j in 0..i {
-                let string = format!("{}", j);
-                headers.push(Header::new(string.clone(), string));
-            }
+            let headers = (0..i).map(|n| Header::new(n.to_string(), n.to_string()))
+                .collect();
 
             test_header_count(headers);
         }

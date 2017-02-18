@@ -2,24 +2,24 @@ use syntax::ast::Ident;
 use syntax::ext::base::ExtCtxt;
 use syntax::codemap::{Span, Spanned, BytePos};
 
-use utils::{span, SpanExt, is_valid_ident};
+use utils::span;
 
 #[derive(Debug)]
 pub enum Param {
     Single(Spanned<Ident>),
-    Many(Spanned<Ident>)
+    Many(Spanned<Ident>),
 }
 
 impl Param {
     pub fn inner(&self) -> &Spanned<Ident> {
         match *self {
-            Param::Single(ref ident) | Param::Many(ref ident) => ident
+            Param::Single(ref ident) | Param::Many(ref ident) => ident,
         }
     }
 
     pub fn ident(&self) -> &Ident {
         match *self {
-            Param::Single(ref ident) | Param::Many(ref ident) => &ident.node
+            Param::Single(ref ident) | Param::Many(ref ident) => &ident.node,
         }
     }
 }
@@ -32,11 +32,7 @@ pub struct ParamIter<'s, 'a, 'c: 'a> {
 
 impl<'s, 'a, 'c: 'a> ParamIter<'s, 'a, 'c> {
     pub fn new(c: &'a ExtCtxt<'c>, s: &'s str, p: Span) -> ParamIter<'s, 'a, 'c> {
-        ParamIter {
-            ctxt: c,
-            span: p,
-            string: s,
-        }
+        ParamIter { ctxt: c, span: p, string: s }
     }
 }
 
@@ -45,7 +41,7 @@ impl<'s, 'a, 'c> Iterator for ParamIter<'s, 'a, 'c> {
 
     fn next(&mut self) -> Option<Param> {
         let err = |ecx: &ExtCtxt, sp: Span, msg: &str| {
-            ecx.span_err(sp,  msg);
+            ecx.span_err(sp, msg);
             None
         };
 
@@ -53,14 +49,14 @@ impl<'s, 'a, 'c> Iterator for ParamIter<'s, 'a, 'c> {
         let (start, end) = match self.string.find('<') {
             Some(i) => match self.string.find('>') {
                 Some(j) => (i, j),
-                None => return err(self.ctxt, self.span, "malformed parameter list")
+                None => return err(self.ctxt, self.span, "malformed parameters")
             },
             _ => return None,
         };
 
         // Ensure we found a valid parameter.
         if end <= start {
-            return err(self.ctxt, self.span, "malformed parameter list");
+            return err(self.ctxt, self.span, "malformed parameters");
         }
 
         // Calculate the parameter's ident.
@@ -79,27 +75,11 @@ impl<'s, 'a, 'c> Iterator for ParamIter<'s, 'a, 'c> {
         self.string = &self.string[(end + 1)..];
         self.span.lo = self.span.lo + BytePos((end + 1) as u32);
 
-        // Check for nonemptiness, that the characters are correct, and return.
-        if param.is_empty() {
-            err(self.ctxt, param_span, "parameter names cannot be empty")
-        } else if !is_valid_ident(param) {
-            err(self.ctxt, param_span, "parameter names must be valid identifiers")
-        } else if param.starts_with('_') {
-            err(self.ctxt, param_span, "parameters cannot be ignored")
-        } else if is_many && !self.string.is_empty() {
-            let sp = self.span.shorten_to(self.string.len());
-            self.ctxt.struct_span_err(sp, "text after a trailing '..' param")
-                     .span_note(param_span, "trailing param is here")
-                     .emit();
-            None
+        let spanned_ident = span(Ident::from_str(param), param_span);
+        if is_many {
+            Some(Param::Many(spanned_ident))
         } else {
-            let spanned_ident = span(Ident::from_str(param), param_span);
-            if is_many {
-                Some(Param::Many(spanned_ident))
-            } else {
-                Some(Param::Single(spanned_ident))
-            }
+            Some(Param::Single(spanned_ident))
         }
-
     }
 }

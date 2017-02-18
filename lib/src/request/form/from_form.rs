@@ -1,8 +1,7 @@
-use error::Error;
+use request::FormItems;
 
-/// Trait to create an instance of some type from an HTTP form. The
-/// [Form](struct.Form.html) type requires that its generic parameter implements
-/// this trait.
+/// Trait to create an instance of some type from an HTTP form.
+/// [Form](struct.Form.html) requires its generic type to implement this trait.
 ///
 /// This trait can be automatically derived via the
 /// [rocket_codegen](/rocket_codegen) plugin:
@@ -10,6 +9,7 @@ use error::Error;
 /// ```rust
 /// #![feature(plugin, custom_derive)]
 /// #![plugin(rocket_codegen)]
+/// # #![allow(deprecated, dead_code, unused_attributes)]
 ///
 /// extern crate rocket;
 ///
@@ -18,6 +18,7 @@ use error::Error;
 ///     description: String,
 ///     completed: bool
 /// }
+/// # fn main() {  }
 /// ```
 ///
 /// The type can then be parsed from incoming form data via the `data`
@@ -25,6 +26,7 @@ use error::Error;
 ///
 /// ```rust
 /// # #![feature(plugin, custom_derive)]
+/// # #![allow(deprecated, dead_code, unused_attributes)]
 /// # #![plugin(rocket_codegen)]
 /// # extern crate rocket;
 /// # use rocket::request::Form;
@@ -42,25 +44,25 @@ use error::Error;
 ///
 /// # Implementing
 ///
-/// If you implement `FormForm` yourself, use the
-/// [FormItems](struct.FormItems.html) iterator to iterate through the form
-/// key/value pairs. Be aware that form fields that are typically hidden from
-/// your application, such as `_method`, will be present while iterating.
+/// An implementation of `FromForm` uses the [FormItems](struct.FormItems.html)
+/// iterator to iterate through the raw form key/value pairs. Be aware that form
+/// fields that are typically hidden from your application, such as `_method`,
+/// will be present while iterating.
 pub trait FromForm<'f>: Sized {
     /// The associated error to be returned when parsing fails.
     type Error;
 
-    /// Parses an instance of `Self` from a raw HTTP form string
-    /// (`application/x-www-form-urlencoded data`) or returns an `Error` if one
-    /// cannot be parsed.
-    fn from_form_string(form_string: &'f str) -> Result<Self, Self::Error>;
+    /// Parses an instance of `Self` from the form items or returns an `Error`
+    /// if one cannot be parsed.
+    fn from_form_items(form_items: &mut FormItems<'f>) -> Result<Self, Self::Error>;
 }
 
 /// This implementation should only be used during debugging!
 impl<'f> FromForm<'f> for &'f str {
-    type Error = Error;
-    fn from_form_string(s: &'f str) -> Result<Self, Error> {
-        Ok(s)
+    type Error = ();
+
+    fn from_form_items(items: &mut FormItems<'f>) -> Result<Self, Self::Error> {
+        items.mark_complete();
+        Ok(items.inner_str())
     }
 }
-

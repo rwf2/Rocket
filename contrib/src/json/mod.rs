@@ -1,6 +1,3 @@
-extern crate serde;
-extern crate serde_json;
-
 use std::ops::{Deref, DerefMut};
 use std::io::Read;
 
@@ -10,20 +7,18 @@ use rocket::data::{self, Data, FromData};
 use rocket::response::{self, Responder, content};
 use rocket::http::Status;
 
-use self::serde::{Serialize, Deserialize};
+use serde::{Serialize, Deserialize};
 
-pub use self::serde_json::error::Error as SerdeError;
+use serde_json;
 
-pub use self::serde_json::value::Value;
+pub use serde_json::Value;
+pub use serde_json::error::Error as SerdeError;
 
-#[doc(hidden)]
-pub use self::serde_json::to_value;
-
-/// The JSON type, which implements `FromData` and `Responder`. This type allows
-/// you to trivially consume and respond with JSON in your Rocket application.
+/// The JSON type: implements `FromData` and `Responder`, allowing you to easily
+/// consume and respond with JSON.
 ///
-/// If you're receiving JSON data, simple add a `data` parameter to your route
-/// arguments and ensure the type o the parameter is a `JSON<T>`, where `T` is
+/// If you're receiving JSON data, simply add a `data` parameter to your route
+/// arguments and ensure the type of the parameter is a `JSON<T>`, where `T` is
 /// some type you'd like to parse from JSON. `T` must implement `Deserialize`
 /// from [Serde](https://github.com/serde-rs/json). The data is parsed from the
 /// HTTP request body.
@@ -36,8 +31,8 @@ pub use self::serde_json::to_value;
 /// ```
 /// You don't _need_ to use `format = "application/json"`, but it _may_ be what
 /// you want. Using `format = application/json` means that any request that
-/// doesn't specify "application/json" as its first `Content-Type:` header
-/// parameter will not be routed to this handler.
+/// doesn't specify "application/json" as its `Content-Type` header value will
+/// not be routed to the handler.
 ///
 /// If you're responding with JSON data, return a `JSON<T>` type, where `T`
 /// implements `Serialize` from [Serde](https://github.com/serde-rs/json). The
@@ -78,7 +73,7 @@ impl<T: Deserialize> FromData for JSON<T> {
     type Error = SerdeError;
 
     fn from_data(request: &Request, data: Data) -> data::Outcome<Self, SerdeError> {
-        if !request.content_type().is_json() {
+        if !request.content_type().map_or(false, |ct| ct.is_json()) {
             error_!("Content-Type is not JSON.");
             return Outcome::Forward(data);
         }
@@ -94,9 +89,9 @@ impl<T: Deserialize> FromData for JSON<T> {
     }
 }
 
-// Serializes the wrapped value into JSON. Returns a response with Content-Type
-// JSON and a fixed-size body with the serialization. If serialization fails, an
-// `Err` of `Status::InternalServerError` is returned.
+/// Serializes the wrapped value into JSON. Returns a response with Content-Type
+/// JSON and a fixed-size body with the serialized value. If serialization
+/// fails, an `Err` of `Status::InternalServerError` is returned.
 impl<T: Serialize> Responder<'static> for JSON<T> {
     fn respond(self) -> response::Result<'static> {
         serde_json::to_string(&self.0).map(|string| {
@@ -122,42 +117,104 @@ impl<T> DerefMut for JSON<T> {
     }
 }
 
-/// A nice little macro to create JSON serializable HashMaps, convenient for
-/// returning ad-hoc JSON messages.
+/// A macro to create ad-hoc JSON serializable values using JSON syntax.
 ///
-/// Keys can be any type that implements `Serialize`. All keys must have the
-/// same type, which is usually an `&'static str`. Values can be any type that
-/// implements `Serialize` as well, but each value is allowed to be a different
-/// type.
+/// # Usage
+///
+/// To import the macro, add the `#[macro_use]` attribute to the `extern crate
+/// rocket_contrib` invocation:
+///
+/// ```rust,ignore
+/// #[macro_use] extern crate rocket_contrib;
+/// ```
+///
+/// The return type of a macro invocation is
+/// [Value](/rocket_contrib/enum.Value.html). A value created with this macro
+/// can be returned from a handler as follows:
+///
+/// ```rust,ignore
+/// use rocket_contrib::{JSON, Value};
+///
+/// #[get("/json")]
+/// fn get_json() -> JSON<Value> {
+///     JSON(json!({
+///         "key": "value",
+///         "array": [1, 2, 3, 4]
+///     }))
+/// }
+/// ```
 ///
 /// # Examples
 ///
-/// ```
+/// Create a simple JSON object with two keys: `"username"` and `"id"`:
+///
+/// ```rust
+/// # #![allow(unused_variables)]
 /// # #[macro_use] extern crate rocket_contrib;
 /// # fn main() {
-/// let map = map! {
-///     "message" => "Done!",
-///     "success" => true,
-///     "count" => 3,
-/// };
+/// let value = json!({
+///     "username": "mjordan",
+///     "id": 23
+/// });
+/// # }
+/// ```
 ///
-/// assert_eq!(map.len(), 3);
-/// assert_eq!(map.get("message").and_then(|v| v.as_str()), Some("Done!"));
-/// assert_eq!(map.get("success").and_then(|v| v.as_bool()), Some(true));
-/// assert_eq!(map.get("count").and_then(|v| v.as_u64()), Some(3));
+/// Create a more complex object with a nested object and array:
+///
+/// ```rust
+/// # #![allow(unused_variables)]
+/// # #[macro_use] extern crate rocket_contrib;
+/// # fn main() {
+/// let value = json!({
+///     "code": 200,
+///     "success": true,
+///     "payload": {
+///         "features": ["serde", "json"],
+///         "ids": [12, 121],
+///     },
+/// });
+/// # }
+/// ```
+///
+/// Variables or expressions can be interpolated into the JSON literal. Any type
+/// interpolated into an array element or object value must implement Serde's
+/// `Serialize` trait, while any type interpolated into a object key must
+/// implement `Into<String>`.
+///
+/// ```rust
+/// # #![allow(unused_variables)]
+/// # #[macro_use] extern crate rocket_contrib;
+/// # fn main() {
+/// let code = 200;
+/// let features = vec!["serde", "json"];
+///
+/// let value = json!({
+///    "code": code,
+///    "success": code == 200,
+///    "payload": {
+///        features[0]: features[1]
+///    }
+/// });
+/// # }
+/// ```
+///
+/// Trailing commas are allowed inside both arrays and objects.
+///
+/// ```rust
+/// # #![allow(unused_variables)]
+/// # #[macro_use] extern crate rocket_contrib;
+/// # fn main() {
+/// let value = json!([
+///     "notice",
+///     "the",
+///     "trailing",
+///     "comma -->",
+/// ]);
 /// # }
 /// ```
 #[macro_export]
-macro_rules! map {
-    ($($key:expr => $value:expr),+) => ({
-        use ::std::collections::HashMap;
-        use $crate::json::{Value, to_value};
-        let mut map: HashMap<_, Value> = HashMap::new();
-        $(map.insert($key, to_value($value));)+
-        map
-    });
-
-    ($($key:expr => $value:expr),+,) => {
-        map!($($key => $value),+)
+macro_rules! json {
+    ($($json:tt)+) => {
+        json_internal!($($json)+)
     };
 }

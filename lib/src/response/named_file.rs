@@ -25,6 +25,7 @@ impl NamedFile {
     /// ```rust
     /// use rocket::response::NamedFile;
     ///
+    /// # #[allow(unused_variables)]
     /// let file = NamedFile::open("foo.txt");
     /// ```
     pub fn open<P: AsRef<Path>>(path: P) -> io::Result<NamedFile> {
@@ -58,6 +59,7 @@ impl NamedFile {
     /// # use std::io;
     /// use rocket::response::NamedFile;
     ///
+    /// # #[allow(dead_code)]
     /// # fn demo_path() -> io::Result<()> {
     /// let file = NamedFile::open("foo.txt")?;
     /// assert_eq!(file.path().as_os_str(), "foo.txt");

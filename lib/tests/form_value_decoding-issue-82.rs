@@ -25,7 +25,6 @@ mod tests {
 
     fn check_decoding(raw: &str, decoded: &str) {
         let rocket = rocket::ignite().mount("/", routes![bug]);
-
         let mut req = MockRequest::new(Post, "/")
             .header(ContentType::Form)
             .body(format!("form_data={}", raw));

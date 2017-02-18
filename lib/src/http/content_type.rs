@@ -5,13 +5,12 @@ use std::fmt;
 use http::Header;
 use http::hyper::mime::Mime;
 use http::ascii::{uncased_eq, UncasedAscii};
-use router::Collider;
 
 /// Representation of HTTP Content-Types.
 ///
 /// # Usage
 ///
-/// ContentTypes should rarely be created directly. Instead, an associated
+/// `ContentTypes` should rarely be created directly. Instead, an associated
 /// constant should be used; one is declared for most commonly used content
 /// types.
 ///
@@ -23,6 +22,7 @@ use router::Collider;
 /// ```rust
 /// use rocket::http::ContentType;
 ///
+/// # #[allow(unused_variables)]
 /// let html = ContentType::HTML;
 /// ```
 ///
@@ -35,6 +35,7 @@ use router::Collider;
 /// use rocket::http::ContentType;
 /// use rocket::response::Response;
 ///
+/// # #[allow(unused_variables)]
 /// let response = Response::build().header(ContentType::HTML).finalize();
 /// ```
 #[derive(Debug, Clone, PartialEq, Hash)]
@@ -113,8 +114,13 @@ impl ContentType {
         "GIF", GIF, is_gif => "image", "gif",
         "BMP", BMP, is_bmp => "image", "bmp",
         "JPEG", JPEG, is_jpeg => "image", "jpeg",
+        "WEBP", WEBP, is_webp => "image", "webp",
         "SVG", SVG, is_svg => "image", "svg+xml",
-        "PDF", PDF, is_pdf => "application", "pdf"
+        "PDF", PDF, is_pdf => "application", "pdf",
+        "TTF", TTF, is_ttf => "application", "font-sfnt",
+        "OTF", OTF, is_otf => "application", "font-sfnt",
+        "WOFF", WOFF, is_woff => "application", "font-woff",
+        "WOFF2", WOFF2, is_woff2 => "font", "woff2"
     }
 
     /// Returns the Content-Type associated with the extension `ext`. Not all
@@ -157,8 +163,13 @@ impl ContentType {
             x if uncased_eq(x, "bmp") => ContentType::BMP,
             x if uncased_eq(x, "jpeg") => ContentType::JPEG,
             x if uncased_eq(x, "jpg") => ContentType::JPEG,
+            x if uncased_eq(x, "webp") => ContentType::WEBP,
             x if uncased_eq(x, "svg") => ContentType::SVG,
             x if uncased_eq(x, "pdf") => ContentType::PDF,
+            x if uncased_eq(x, "ttf") => ContentType::TTF,
+            x if uncased_eq(x, "otf") => ContentType::OTF,
+            x if uncased_eq(x, "woff") => ContentType::WOFF,
+            x if uncased_eq(x, "woff2") => ContentType::WOFF2,
             _ => ContentType::Any
         }
     }
@@ -209,7 +220,7 @@ impl ContentType {
         ContentType {
             ttype: UncasedAscii::from(ttype),
             subtype: UncasedAscii::from(subtype),
-            params: params.map(|p| UncasedAscii::from(p))
+            params: params.map(UncasedAscii::from)
         }
     }
 
@@ -244,9 +255,9 @@ impl ContentType {
             None => ""
         };
 
-        params.split(";")
+        params.split(';')
             .filter_map(|param| {
-                let mut kv = param.split("=");
+                let mut kv = param.split('=');
                 match (kv.next(), kv.next()) {
                     (Some(key), Some(val)) => Some((key.trim(), val.trim())),
                     _ => None
@@ -416,13 +427,6 @@ impl Into<Header<'static>> for ContentType {
     #[inline]
     fn into(self) -> Header<'static> {
         Header::new("Content-Type", self.to_string())
-    }
-}
-
-impl Collider for ContentType {
-    fn collides_with(&self, other: &ContentType) -> bool {
-        let collide = |a, b| a == "*" || b == "*" || a == b;
-        collide(&self.ttype, &other.ttype) && collide(&self.subtype, &other.subtype)
     }
 }
 

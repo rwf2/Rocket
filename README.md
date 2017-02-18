@@ -7,7 +7,7 @@
 [![IRC: #rocket on irc.mozilla.org](https://img.shields.io/badge/style-%23rocket-blue.svg?style=flat&label=mozilla)](https://kiwiirc.com/client/irc.mozilla.org/#rocket)
 
 Rocket is web framework for Rust (nightly) with a focus on ease-of-use,
-expressability, and speed. Here's an example of a complete Rocket application:
+expressibility, and speed. Here's an example of a complete Rocket application:
 
 ```rust
 #![feature(plugin)]

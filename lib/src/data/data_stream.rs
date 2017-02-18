@@ -19,8 +19,7 @@ pub struct DataStream {
 }
 
 impl DataStream {
-    #[doc(hidden)]
-    pub fn new(stream: InnerStream, network: HttpStream) -> DataStream {
+    pub(crate) fn new(stream: InnerStream, network: HttpStream) -> DataStream {
         DataStream { stream: stream, network: network, }
     }
 }

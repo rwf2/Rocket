@@ -4,6 +4,8 @@
 extern crate rocket;
 
 mod files;
+#[cfg(test)]
+mod tests;
 
 use rocket::response::Redirect;
 use rocket::request::{Form, FromFormValue};
@@ -77,8 +79,11 @@ fn user_page(username: &str) -> String {
     format!("This is {}'s page.", username)
 }
 
-fn main() {
+fn rocket() -> rocket::Rocket {
     rocket::ignite()
         .mount("/", routes![files::index, files::files, user_page, login])
-        .launch();
+}
+
+fn main() {
+    rocket().launch()
 }

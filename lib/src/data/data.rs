@@ -82,8 +82,7 @@ impl Data {
         DataStream::new(stream, network)
     }
 
-    #[doc(hidden)]
-    pub fn from_hyp(mut h_body: BodyReader) -> Result<Data, &'static str> {
+    pub(crate) fn from_hyp(mut h_body: BodyReader) -> Result<Data, &'static str> {
         // FIXME: This is asolutely terrible, thanks to Hyper.
 
         // Retrieve the underlying HTTPStream from Hyper.
@@ -151,8 +150,7 @@ impl Data {
     // Creates a new data object with an internal buffer `buf`, where the cursor
     // in the buffer is at `pos` and the buffer has `cap` valid bytes. The
     // remainder of the data bytes can be read from `stream`.
-    #[doc(hidden)]
-    pub fn new(mut buf: Vec<u8>,
+    pub(crate) fn new(mut buf: Vec<u8>,
                pos: usize,
                mut cap: usize,
                mut stream: StreamReader)

@@ -9,10 +9,8 @@ fn run_mode(mode: &'static str) {
     config.mode = cfg_mode;
     config.src_base = PathBuf::from(format!("tests/{}", mode));
     let flags = [
-        "-L ../target/debug/",
-        "-L ../target/debug/deps/",
-        "-L target/debug/",
-        "-L target/debug/deps/"
+        "-L crate=../target/debug/",
+        "-L dependency=../target/debug/deps/",
     ].join(" ");
 
     config.target_rustcflags = Some(flags);

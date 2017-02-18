@@ -19,13 +19,13 @@ const HOST: &'static str = "http://localhost:8000";
 const ID_LENGTH: usize = 3;
 
 #[post("/", data = "<paste>")]
-fn upload(paste: Data) -> io::Result<content::Plain<String>> {
+fn upload(paste: Data) -> io::Result<String> {
     let id = PasteID::new(ID_LENGTH);
     let filename = format!("upload/{id}", id = id);
     let url = format!("{host}/{id}\n", host = HOST, id = id);
 
     paste.stream_to_file(Path::new(&filename))?;
-    Ok(content::Plain(url))
+    Ok(url)
 }
 
 #[get("/<id>")]

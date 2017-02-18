@@ -1,0 +1,12 @@
+[package]
+name = "raw_sqlite"
+version = "0.0.1"
+workspace = "../../"
+
+[dependencies]
+rocket = { path = "../../lib" }
+rocket_codegen = { path = "../../codegen" }
+rusqlite = "0.9"
+
+[dev-dependencies]
+rocket = { path = "../../lib", features = ["testing"] }

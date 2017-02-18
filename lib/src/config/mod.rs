@@ -1,8 +1,9 @@
 //! Application configuration and configuration parameter retrieval.
 //!
-//! This module implements configuration handling for Rocket. It implements
-//! the parsing and interpretation of the `Rocket.toml` config file. It also
-//! allows libraries to access values that have been configured by the user.
+//! This module implements configuration handling for Rocket. It implements the
+//! parsing and interpretation of the `Rocket.toml` config file and
+//! `ROCKET_{PARAM}` environment variables. It also allows libraries to access
+//! values that have been configured by the user.
 //!
 //! ## Application Configuration
 //!
@@ -49,12 +50,12 @@
 //! each environment. The file is optional. If it is not present, the default
 //! configuration parameters are used.
 //!
-//! The file must be a series of tables, at most one for each environment and a
-//! "global" table, where each table contains key-value pairs corresponding to
-//! configuration parameters for that environment. If a configuration parameter
-//! is missing, the default value is used. The following is a complete
-//! `Rocket.toml` file, where every standard configuration parameter is
-//! specified with the default value:
+//! The file must be a series of TOML tables, at most one for each environment
+//! and an optional "global" table, where each table contains key-value pairs
+//! corresponding to configuration parameters for that environment. If a
+//! configuration parameter is missing, the default value is used. The following
+//! is a complete `Rocket.toml` file, where every standard configuration
+//! parameter is specified with the default value:
 //!
 //! ```toml
 //! [development]
@@ -101,12 +102,13 @@
 //! address = "0.0.0.0"
 //! ```
 //!
-//! ## Environment Variables
+//! ### Environment Variables
 //!
 //! All configuration parameters, including extras, can be overridden through
-//! environment variables. To override the configuration parameter `param`, use
-//! an environment variable named `ROCKET_PARAM`. For instance, to override the
-//! "port" configuration parameter, you can run your application with:
+//! environment variables. To override the configuration parameter `{param}`,
+//! use an environment variable named `ROCKET_{PARAM}`. For instance, to
+//! override the "port" configuration parameter, you can run your application
+//! with:
 //!
 //! ```sh
 //! ROCKET_PORT=3721 ./your_application
@@ -128,17 +130,15 @@
 //! value isn't present or isn't a string, a default value is used.
 //!
 //! ```rust
-//! use rocket::config;
+//! use std::path::PathBuf;
+//! use rocket::config::{self, ConfigError};
 //!
 //! const DEFAULT_TEMPLATE_DIR: &'static str = "templates";
 //!
-//! let template_dir = config::active().map(|config| {
-//!     let dir = config.get_str("template_dir")
-//!         .map_err(|e| if !e.is_not_found() { e.pretty_print(); })
-//!         .unwrap_or(DEFAULT_TEMPLATE_DIR);
-//!
-//!     config.root().join(dir).to_string_lossy().into_owned()
-//! }).unwrap_or(DEFAULT_TEMPLATE_DIR.to_string());
+//! # #[allow(unused_variables)]
+//! let template_dir = config::active().ok_or(ConfigError::NotFound)
+//!     .map(|config| config.root().join(DEFAULT_TEMPLATE_DIR))
+//!     .unwrap_or_else(|_| PathBuf::from(DEFAULT_TEMPLATE_DIR));
 //! ```
 //!
 //! Libraries should always use a default if a parameter is not defined.
@@ -207,9 +207,9 @@ impl RocketConfig {
         // None of these unwraps should fail since the filename is coming from
         // an existing connfig.
         let mut configs = HashMap::new();
-        configs.insert(Development, Config::default_for(Development, &f).unwrap());
-        configs.insert(Staging, Config::default_for(Staging, &f).unwrap());
-        configs.insert(Production, Config::default_for(Production, &f).unwrap());
+        configs.insert(Development, Config::default(Development, &f).unwrap());
+        configs.insert(Staging, Config::default(Staging, &f).unwrap());
+        configs.insert(Production, Config::default(Production, &f).unwrap());
         configs.insert(active_env, config);
 
         RocketConfig {
@@ -239,9 +239,9 @@ impl RocketConfig {
     /// active environment (via the CONFIG_ENV variable) as active.
     pub fn active_default<P: AsRef<Path>>(filename: P) -> Result<RocketConfig> {
         let mut defaults = HashMap::new();
-        defaults.insert(Development, Config::default_for(Development, &filename)?);
-        defaults.insert(Staging, Config::default_for(Staging, &filename)?);
-        defaults.insert(Production, Config::default_for(Production, &filename)?);
+        defaults.insert(Development, Config::default(Development, &filename)?);
+        defaults.insert(Staging, Config::default(Staging, &filename)?);
+        defaults.insert(Production, Config::default(Production, &filename)?);
 
         let mut config = RocketConfig {
             active_env: Environment::active()?,
@@ -289,7 +289,7 @@ impl RocketConfig {
     /// overriden by those in `kvs`.
     fn set_from_table(&mut self, env: Environment, kvs: &Table) -> Result<()> {
         for (key, value) in kvs {
-            self.get_mut(env).set(key, value)?;
+            self.get_mut(env).set_raw(key, value)?;
         }
 
         Ok(())
@@ -328,7 +328,7 @@ impl RocketConfig {
             let key = env_key[ENV_VAR_PREFIX.len()..].to_lowercase();
             let val = parse_simple_toml_value(&env_val);
             for env in &Environment::all() {
-                match self.get_mut(*env).set(&key, &val) {
+                match self.get_mut(*env).set_raw(&key, &val) {
                     Err(ConfigError::BadType(_, exp, _, _)) => {
                         return Err(ConfigError::BadEnvVal(env_key, env_val, exp))
                     }
@@ -420,8 +420,7 @@ impl RocketConfig {
 /// # Panics
 ///
 /// If there is a problem, prints a nice error message and bails.
-#[doc(hidden)]
-pub fn init() -> (&'static Config, bool) {
+pub(crate) fn init() -> (&'static Config, bool) {
     let mut this_init = false;
     unsafe {
         INIT.call_once(|| {
@@ -433,8 +432,7 @@ pub fn init() -> (&'static Config, bool) {
     }
 }
 
-#[doc(hidden)]
-pub fn custom_init(config: Config) -> (&'static Config, bool) {
+pub(crate) fn custom_init(config: Config) -> (&'static Config, bool) {
     let mut this_init = false;
 
     unsafe {
@@ -641,10 +639,24 @@ mod test {
                       });
 
         check_config!(RocketConfig::parse(r#"
-                          [dev]
+                          [development]
                           address = "127.0.0.1"
                       "#.to_string(), TEST_CONFIG_FILENAME), {
                           default_config(Development).address("127.0.0.1")
+                      });
+
+        check_config!(RocketConfig::parse(r#"
+                          [development]
+                          address = "::"
+                      "#.to_string(), TEST_CONFIG_FILENAME), {
+                          default_config(Development).address("::")
+                      });
+
+        check_config!(RocketConfig::parse(r#"
+                          [dev]
+                          address = "2001:db8::370:7334"
+                      "#.to_string(), TEST_CONFIG_FILENAME), {
+                          default_config(Development).address("2001:db8::370:7334")
                       });
 
         check_config!(RocketConfig::parse(r#"
@@ -932,9 +944,9 @@ mod test {
 
             check_config!(RocketConfig::parse(format!(r#"
                               [{}]
-                              address = "7.6.5.4"
+                              address = "::1"
                           "#, GLOBAL_ENV_NAME), TEST_CONFIG_FILENAME), {
-                              default_config(*env).address("7.6.5.4")
+                              default_config(*env).address("::1")
                           });
 
             check_config!(RocketConfig::parse(format!(r#"

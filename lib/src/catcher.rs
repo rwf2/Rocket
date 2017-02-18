@@ -76,6 +76,7 @@ impl Catcher {
     /// # Examples
     ///
     /// ```rust
+    /// # #![allow(unused_variables)]
     /// use rocket::{Catcher, Request, Error};
     /// use rocket::response::{Result, Responder};
     ///
@@ -95,9 +96,9 @@ impl Catcher {
         Catcher { code: code, handler: handler, is_default: false }
     }
 
-    #[doc(hidden)]
     #[inline(always)]
-    pub fn handle<'r>(&self, err: Error, req: &'r Request) -> response::Result<'r> {
+    pub(crate) fn handle<'r>(&self, err: Error, req: &'r Request)
+            -> response::Result<'r> {
         (self.handler)(err, req)
     }
 
@@ -106,9 +107,8 @@ impl Catcher {
         Catcher { code: code, handler: handler, is_default: true, }
     }
 
-    #[doc(hidden)]
     #[inline(always)]
-    pub fn is_default(&self) -> bool {
+    pub(crate) fn is_default(&self) -> bool {
         self.is_default
     }
 }
@@ -219,6 +219,8 @@ pub mod defaults {
                 teapot.", handle_418,
             421, "Misdirected Request", "The server cannot produce a response for this
                 request.", handle_421,
+            422, "Unprocessable Entity", "The request was well-formed but was unable to
+                be followed due to semantic errors.", handle_422,
             426, "Upgrade Required", "Switching to the protocol in the Upgrade header
                 field is required.", handle_426,
             428, "Precondition Required", "The server requires the request to be

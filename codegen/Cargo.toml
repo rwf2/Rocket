@@ -1,6 +1,6 @@
 [package]
 name = "rocket_codegen"
-version = "0.1.6"
+version = "0.2.0"
 authors = ["Sergio Benitez <sb@sergio.bz>"]
 description = "Code generation for the Rocket web framework."
 documentation = "https://api.rocket.rs/rocket_codegen/"
@@ -15,7 +15,7 @@ build = "build.rs"
 plugin = true
 
 [dependencies]
-rocket = { version = "0.1.6", path = "../lib/" }
+rocket = { version = "0.2.0", path = "../lib/" }
 log = "^0.3"
 
 [dev-dependencies]

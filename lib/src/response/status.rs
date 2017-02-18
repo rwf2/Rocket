@@ -26,6 +26,7 @@ use http::Status;
 ///
 /// let url = "http://myservice.com/resource.json".to_string();
 /// let content = "{ 'resource': 'Hello, world!' }";
+/// # #[allow(unused_variables)]
 /// let response = status::Created(url, Some(content));
 /// ```
 #[derive(Debug, Clone, PartialEq)]
@@ -81,6 +82,7 @@ impl<'r, R: Responder<'r> + Hash> Responder<'r> for Created<R> {
 /// ```rust
 /// use rocket::response::status;
 ///
+/// # #[allow(unused_variables)]
 /// let response = status::Accepted::<()>(None);
 /// ```
 ///
@@ -89,6 +91,7 @@ impl<'r, R: Responder<'r> + Hash> Responder<'r> for Created<R> {
 /// ```rust
 /// use rocket::response::status;
 ///
+/// # #[allow(unused_variables)]
 /// let response = status::Accepted(Some("processing"));
 /// ```
 #[derive(Debug, Clone, PartialEq)]
@@ -114,6 +117,7 @@ impl<'r, R: Responder<'r>> Responder<'r> for Accepted<R> {
 /// ```rust
 /// use rocket::response::status;
 ///
+/// # #[allow(unused_variables)]
 /// let response = status::NoContent;
 /// ```
 // TODO: This would benefit from Header support.
@@ -136,6 +140,7 @@ impl<'r> Responder<'r> for NoContent {
 /// ```rust
 /// use rocket::response::status;
 ///
+/// # #[allow(unused_variables)]
 /// let response = status::Reset;
 /// ```
 #[derive(Debug, Copy, Clone, PartialEq)]
@@ -157,6 +162,7 @@ impl<'r> Responder<'r> for Reset {
 /// use rocket::response::status;
 /// use rocket::http::Status;
 ///
+/// # #[allow(unused_variables)]
 /// let response = status::Custom(Status::ImATeapot, "Hi!");
 /// ```
 #[derive(Debug, Clone, PartialEq)]

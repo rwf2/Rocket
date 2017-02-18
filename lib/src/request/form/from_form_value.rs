@@ -38,6 +38,7 @@ use http::uri::URI;
 /// following structure:
 ///
 /// ```rust
+/// # #[allow(dead_code)]
 /// struct Person<'r> {
 ///     name: String,
 ///     age: Result<u16, &'r str>
@@ -64,8 +65,8 @@ use http::uri::URI;
 ///
 ///     A value is validated successfully as `true` if the the form value is
 ///     `"true"` or `"on"`, and as a `false` value if the form value is
-///     `"false"`, or `"off"`. Otherwise, the raw form value is returned in the
-///     `Err` value.
+///     `"false"`, `"off"`, or not present. In any other case, the raw form
+///     value is returned in the `Err` value.
 ///
 ///   * **str**
 ///
@@ -106,7 +107,6 @@ use http::uri::URI;
 ///
 /// ```rust
 /// use rocket::request::FromFormValue;
-/// use rocket::Error;
 ///
 /// struct AdultAge(usize);
 ///
@@ -184,6 +184,10 @@ impl<'v> FromFormValue<'v> for bool {
             "off" | "false" => Ok(false),
             _ => Err(v),
         }
+    }
+
+    fn default() -> Option<bool> {
+        Some(false)
     }
 }
 

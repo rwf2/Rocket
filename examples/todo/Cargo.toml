@@ -6,12 +6,13 @@ workspace = "../../"
 [dependencies]
 rocket = { path = "../../lib" }
 rocket_codegen = { path = "../../codegen" }
-lazy_static = "*"
-serde = "0.8"
-serde_json = "0.8"
-serde_derive = "0.8"
-diesel = { version = "0.9", features = ["sqlite"] }
-diesel_codegen = { version = "0.9", features = ["sqlite"] }
+serde = "0.9"
+serde_json = "0.9"
+serde_derive = "0.9"
+r2d2 = "0.7"
+diesel = { version = "0.10", features = ["sqlite"] }
+diesel_codegen = { version = "0.10", features = ["sqlite"] }
+r2d2-diesel = { version = "0.10", features = ["sqlite"] }
 
 [dependencies.rocket_contrib]
 path = "../../contrib"

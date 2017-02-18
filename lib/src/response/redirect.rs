@@ -19,6 +19,7 @@ impl Redirect {
     /// ```rust
     /// use rocket::response::Redirect;
     ///
+    /// # #[allow(unused_variables)]
     /// let redirect = Redirect::to("/other_url");
     /// ```
     pub fn to(uri: &str) -> Redirect {
@@ -36,6 +37,7 @@ impl Redirect {
     /// ```rust
     /// use rocket::response::Redirect;
     ///
+    /// # #[allow(unused_variables)]
     /// let redirect = Redirect::temporary("/other_url");
     /// ```
     pub fn temporary(uri: &str) -> Redirect {
@@ -54,6 +56,7 @@ impl Redirect {
     /// ```rust
     /// use rocket::response::Redirect;
     ///
+    /// # #[allow(unused_variables)]
     /// let redirect = Redirect::permanent("/other_url");
     /// ```
     pub fn permanent(uri: &str) -> Redirect {
@@ -72,6 +75,7 @@ impl Redirect {
     /// ```rust
     /// use rocket::response::Redirect;
     ///
+    /// # #[allow(unused_variables)]
     /// let redirect = Redirect::found("/other_url");
     /// ```
     pub fn found(uri: &str) -> Redirect {
@@ -88,6 +92,7 @@ impl Redirect {
     /// ```rust
     /// use rocket::response::Redirect;
     ///
+    /// # #[allow(unused_variables)]
     /// let redirect = Redirect::moved("/other_url");
     /// ```
     pub fn moved(uri: &str) -> Redirect {

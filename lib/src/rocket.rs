@@ -161,13 +161,13 @@ impl Rocket {
         // field which we use to reinterpret the request's method.
         let data_len = data.peek().len();
         let (min_len, max_len) = ("_method=get".len(), "_method=delete".len());
-        let is_form = req.content_type().is_form();
+        let is_form = req.content_type().map_or(false, |ct| ct.is_form());
         if is_form && req.method() == Method::Post && data_len >= min_len {
             let form = unsafe {
                 from_utf8_unchecked(&data.peek()[..min(data_len, max_len)])
             };
 
-            let mut form_items = FormItems(form);
+            let mut form_items = FormItems::from(form);
             if let Some(("_method", value)) = form_items.next() {
                 if let Ok(method) = value.parse() {
                     req.set_method(method);
@@ -176,9 +176,8 @@ impl Rocket {
         }
     }
 
-    #[doc(hidden)]
-    #[inline(always)]
-    pub fn dispatch<'s, 'r>(&'s self, request: &'r mut Request<'s>, data: Data)
+    #[inline]
+    pub(crate) fn dispatch<'s, 'r>(&'s self, request: &'r mut Request<'s>, data: Data)
             -> Response<'r> {
         info!("{}:", request);
 
@@ -229,9 +228,8 @@ impl Rocket {
     /// until one of the handlers returns success or failure, or there are no
     /// additional routes to try (forward). The corresponding outcome for each
     /// condition is returned.
-    #[doc(hidden)]
-    #[inline(always)]
-    pub fn route<'r>(&self, request: &'r Request, mut data: Data)
+    #[inline]
+    pub(crate) fn route<'r>(&self, request: &'r Request, mut data: Data)
             -> handler::Outcome<'r> {
         // Go through the list of matching routes until we fail or succeed.
         let matches = self.router.route(request);
@@ -258,8 +256,7 @@ impl Rocket {
     }
 
     // TODO: DOC.
-    #[doc(hidden)]
-    pub fn handle_error<'r>(&self, status: Status, req: &'r Request) -> Response<'r> {
+    fn handle_error<'r>(&self, status: Status, req: &'r Request) -> Response<'r> {
         warn_!("Responding with {} catcher.", Red.paint(&status));
 
         // Try to get the active catcher but fallback to user's 500 catcher.
@@ -317,12 +314,14 @@ impl Rocket {
     /// use rocket::config::{Config, Environment};
     /// # use rocket::config::ConfigError;
     ///
+    /// # #[allow(dead_code)]
     /// # fn try_config() -> Result<(), ConfigError> {
     /// let config = Config::build(Environment::Staging)
     ///     .address("1.2.3.4")
     ///     .port(9234)
     ///     .finalize()?;
     ///
+    /// # #[allow(unused_variables)]
     /// let app = rocket::custom(config, false);
     /// # Ok(())
     /// # }
@@ -481,6 +480,9 @@ impl Rocket {
 
     /// Add `state` to the state managed by this instance of Rocket.
     ///
+    /// This method can be called any number of times as long as each call
+    /// refers to a different `T`.
+    ///
     /// Managed state can be retrieved by any request handler via the
     /// [State](/rocket/struct.State.html) request guard. In particular, if a
     /// value of type `T` is managed by Rocket, adding `State<T>` to the list of
@@ -509,8 +511,9 @@ impl Rocket {
     /// fn main() {
     /// # if false { // We don't actually want to launch the server in an example.
     ///     rocket::ignite()
+    ///         .mount("/", routes![index])
     ///         .manage(MyValue(10))
-    /// #       .launch()
+    ///         .launch()
     /// # }
     /// }
     /// ```

@@ -30,4 +30,5 @@ members = [
   "examples/pastebin",
   "examples/state",
   "examples/uuid",
+  # "examples/raw_sqlite",
 ]

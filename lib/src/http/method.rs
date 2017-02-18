@@ -25,8 +25,7 @@ pub enum Method {
 }
 
 impl Method {
-    #[doc(hidden)]
-    pub fn from_hyp(method: &hyper::Method) -> Option<Method> {
+    pub(crate) fn from_hyp(method: &hyper::Method) -> Option<Method> {
         match *method {
             hyper::Method::Get => Some(Get),
             hyper::Method::Put => Some(Put),
@@ -41,13 +40,17 @@ impl Method {
         }
     }
 
-    #[doc(hidden)]
-    #[inline(always)]
-    pub fn to_hyp(&self) -> hyper::Method {
-        self.to_string().as_str().parse().unwrap()
-    }
-
-    /// Whether an HTTP request with the given method supports a payload.
+    /// Returns `true` ff an HTTP request with the method represented by `self`
+    /// supports a payload.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use rocket::http::Method;
+    ///
+    /// assert_eq!(Method::Get.supports_payload(), false);
+    /// assert_eq!(Method::Post.supports_payload(), true);
+    /// ```
     pub fn supports_payload(&self) -> bool {
         match *self {
             Put | Post | Delete | Patch => true,
@@ -55,7 +58,16 @@ impl Method {
         }
     }
 
-    #[inline(always)]
+    /// Returns the string representation of `self`.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use rocket::http::Method;
+    ///
+    /// assert_eq!(Method::Get.as_str(), "GET");
+    /// ```
+    #[inline]
     pub fn as_str(&self) -> &'static str {
         match *self {
             Get => "GET",

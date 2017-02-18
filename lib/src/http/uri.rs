@@ -8,8 +8,6 @@ use std::str::Utf8Error;
 
 use url;
 
-use router::Collider;
-
 /// Index (start, end) into a string, to prevent borrowing.
 type Index = (usize, usize);
 
@@ -241,6 +239,23 @@ impl<'a> URI<'a> {
         decoder.decode_utf8_lossy()
     }
 
+    /// Returns a URL-encoded version of the string. Any characters outside of
+    /// visible ASCII-range are encoded as well as ' ', '"', '#', '<', '>', '`',
+    /// '?', '{', '}', '%', and '/'.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use rocket::http::uri::URI;
+    ///
+    /// let encoded = URI::percent_encode("hello?a=<b>hi</b>");
+    /// assert_eq!(encoded, "hello%3Fa=%3Cb%3Ehi%3C%2Fb%3E");
+    /// ```
+    pub fn percent_encode(string: &str) -> Cow<str> {
+        let set = url::percent_encoding::PATH_SEGMENT_ENCODE_SET;
+        url::percent_encoding::utf8_percent_encode(string, set).into()
+    }
+
     /// Returns the inner string of this URI.
     ///
     /// The returned string is in raw form. It contains empty segments. If you'd
@@ -277,12 +292,12 @@ impl From<String> for URI<'static> {
 impl<'a> fmt::Display for URI<'a> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         // If this is the root path, then there are "zero" segments.
-        if self.as_str().starts_with('/') && self.segment_count() == 0 {
-            return write!(f, "/");
-        }
-
-        for segment in self.segments() {
-            write!(f, "/{}", segment)?;
+        if self.segment_count() == 0 {
+            write!(f, "/")?;
+        } else {
+            for segment in self.segments() {
+                write!(f, "/{}", segment)?;
+            }
         }
 
         if let Some(query_str) = self.query() {
@@ -299,33 +314,12 @@ impl<'a> fmt::Display for URI<'a> {
 
 unsafe impl<'a> Sync for URI<'a> { /* It's safe! */ }
 
-impl<'a, 'b> Collider<URI<'b>> for URI<'a> {
-    fn collides_with(&self, other: &URI<'b>) -> bool {
-        for (seg_a, seg_b) in self.segments().zip(other.segments()) {
-            if seg_a.ends_with("..>") || seg_b.ends_with("..>") {
-                return true;
-            }
-
-            if !seg_a.collides_with(seg_b) {
-                return false;
-            }
-        }
-
-        if self.segment_count() != other.segment_count() {
-            return false;
-        }
-
-        true
-    }
-}
-
 /// Iterator over the segments of an absolute URI path. Skips empty segments.
 ///
 /// ### Examples
 ///
 /// ```rust
 /// use rocket::http::uri::URI;
-/// use rocket::http::uri::Segments;
 ///
 /// let uri = URI::new("/a/////b/c////////d");
 /// let segments = uri.segments();

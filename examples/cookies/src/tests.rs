@@ -7,7 +7,7 @@ use rocket_contrib::Template;
 
 #[test]
 fn test_submit() {
-    let rocket = rocket::ignite().mount("/", routes![super::submit]);
+    let rocket = rocket::ignite().mount("/", routes![super::index, super::submit]);
     let mut request = MockRequest::new(Method::Post, "/submit")
         .header(ContentType::Form)
         .body("message=Hello from Rocket!");
@@ -21,7 +21,7 @@ fn test_submit() {
 }
 
 fn test_body(optional_cookie: Option<Cookie<'static>>, expected_body: String) {
-    let rocket = rocket::ignite().mount("/", routes![super::index]);
+    let rocket = rocket::ignite().mount("/", routes![super::index, super::submit]);
     let mut request = MockRequest::new(Method::Get, "/");
 
     // Attach a cookie if one is given.

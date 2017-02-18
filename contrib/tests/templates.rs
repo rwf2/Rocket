@@ -8,9 +8,8 @@ use rocket::config::Environment::*;
 fn init() {
     let cwd = env::current_dir().expect("current working directory");
     let tests_dir = cwd.join("tests");
-    let config_dir = tests_dir.join("Rocket.toml");
 
-    let config = Config::default_for(Development, &config_dir).unwrap();
+    let config = Config::build(Development).root(tests_dir).unwrap();
     rocket::custom(config, true);
 }
 

@@ -1,6 +1,6 @@
 use std::convert::AsRef;
 
-use time::Duration;
+use time::{self, Duration};
 
 use outcome::IntoOutcome;
 use response::{Response, Responder};
@@ -101,6 +101,7 @@ impl<'r, R: Responder<'r>> Flash<R> {
     /// ```rust
     /// use rocket::response::{Redirect, Flash};
     ///
+    /// # #[allow(unused_variables)]
     /// let msg = Flash::new(Redirect::to("/"), "suggestion", "Try this out!");
     /// ```
     pub fn new<N: AsRef<str>, M: AsRef<str>>(res: R, name: N, msg: M) -> Flash<R> {
@@ -122,6 +123,7 @@ impl<'r, R: Responder<'r>> Flash<R> {
     /// ```rust
     /// use rocket::response::{Redirect, Flash};
     ///
+    /// # #[allow(unused_variables)]
     /// let msg = Flash::success(Redirect::to("/"), "It worked!");
     /// ```
     pub fn success<S: AsRef<str>>(responder: R, msg: S) -> Flash<R> {
@@ -139,6 +141,7 @@ impl<'r, R: Responder<'r>> Flash<R> {
     /// ```rust
     /// use rocket::response::{Redirect, Flash};
     ///
+    /// # #[allow(unused_variables)]
     /// let msg = Flash::warning(Redirect::to("/"), "Watch out!");
     /// ```
     pub fn warning<S: AsRef<str>>(responder: R, msg: S) -> Flash<R> {
@@ -156,6 +159,7 @@ impl<'r, R: Responder<'r>> Flash<R> {
     /// ```rust
     /// use rocket::response::{Redirect, Flash};
     ///
+    /// # #[allow(unused_variables)]
     /// let msg = Flash::error(Redirect::to("/"), "Whoops!");
     /// ```
     pub fn error<S: AsRef<str>>(responder: R, msg: S) -> Flash<R> {
@@ -217,11 +221,19 @@ impl<'a, 'r> FromRequest<'a, 'r> for Flash<()> {
     fn from_request(request: &'a Request<'r>) -> request::Outcome<Self, Self::Error> {
         trace_!("Flash: attemping to retrieve message.");
         let r = request.cookies().find(FLASH_COOKIE_NAME).ok_or(()).and_then(|cookie| {
-            // Clear the flash message.
             trace_!("Flash: retrieving message: {:?}", cookie);
-            request.cookies().remove(FLASH_COOKIE_NAME);
 
-            // Parse the flash.
+            // Create the "deletion" cookie. We'll use it to clear the cookie.
+            let delete_cookie = Cookie::build(FLASH_COOKIE_NAME, "")
+                .max_age(Duration::seconds(0))
+                .expires(time::now() - Duration::days(365))
+                .path("/")
+                .finish();
+
+            // Add the deletion to the cookie jar, replacing the existing cookie.
+            request.cookies().add(delete_cookie);
+
+            // Parse the flash message.
             let content = cookie.value();
             let (len_str, rest) = match content.find(|c: char| !c.is_digit(10)) {
                 Some(i) => (&content[..i], &content[i..]),

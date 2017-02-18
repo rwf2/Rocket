@@ -3,7 +3,7 @@
 
 extern crate rocket;
 
-use rocket::request::{FromForm, FromFormValue};
+use rocket::request::{FromForm, FromFormValue, FormItems};
 
 #[derive(Debug, PartialEq, FromForm)]
 struct TodoTask {
@@ -53,21 +53,42 @@ struct ManualMethod<'r> {
     done: bool
 }
 
+#[derive(Debug, PartialEq, FromForm)]
+struct UnpresentCheckbox {
+    checkbox: bool
+}
+
+#[derive(Debug, PartialEq, FromForm)]
+struct UnpresentCheckboxTwo<'r> {
+    checkbox: bool,
+    something: &'r str
+}
+
+fn parse<'f, T: FromForm<'f>>(string: &'f str) -> Option<T> {
+    let mut items = FormItems::from(string);
+    let result = T::from_form_items(items.by_ref());
+    if !items.exhausted() {
+        panic!("Invalid form input.");
+    }
+
+    result.ok()
+}
+
 fn main() {
     // Same number of arguments: simple case.
-    let task = TodoTask::from_form_string("description=Hello&completed=on");
-    assert_eq!(task, Ok(TodoTask {
+    let task: Option<TodoTask> = parse("description=Hello&completed=on");
+    assert_eq!(task, Some(TodoTask {
         description: "Hello".to_string(),
         completed: true
     }));
 
     // Argument in string but not in form.
-    let task = TodoTask::from_form_string("other=a&description=Hello&completed=on");
-    assert!(task.is_err());
+    let task: Option<TodoTask> = parse("other=a&description=Hello&completed=on");
+    assert!(task.is_none());
 
     // Ensure _method isn't required.
-    let task = TodoTask::from_form_string("_method=patch&description=Hello&completed=off");
-    assert_eq!(task, Ok(TodoTask {
+    let task: Option<TodoTask> = parse("_method=patch&description=Hello&completed=off");
+    assert_eq!(task, Some(TodoTask {
         description: "Hello".to_string(),
         completed: false
     }));
@@ -77,8 +98,8 @@ fn main() {
         "checkbox=off", "textarea=", "select=a", "radio=c",
     ].join("&");
 
-    let input = FormInput::from_form_string(&form_string);
-    assert_eq!(input, Ok(FormInput {
+    let input: Option<FormInput> = parse(&form_string);
+    assert_eq!(input, Some(FormInput {
         checkbox: false,
         number: 10,
         radio: FormOption::C,
@@ -88,22 +109,35 @@ fn main() {
     }));
 
     // Argument not in string with default in form.
-    let default = DefaultInput::from_form_string("");
-    assert_eq!(default, Ok(DefaultInput {
+    let default: Option<DefaultInput> = parse("");
+    assert_eq!(default, Some(DefaultInput {
         arg: None
     }));
 
     // Ensure _method can be captured if desired.
-    let manual = ManualMethod::from_form_string("_method=put&done=true");
-    assert_eq!(manual, Ok(ManualMethod {
+    let manual: Option<ManualMethod> = parse("_method=put&done=true");
+    assert_eq!(manual, Some(ManualMethod {
         _method: Some("put"),
         done: true
     }));
 
     // And ignored when not present.
-    let manual = ManualMethod::from_form_string("done=true");
-    assert_eq!(manual, Ok(ManualMethod {
+    let manual: Option<ManualMethod> = parse("done=true");
+    assert_eq!(manual, Some(ManualMethod {
         _method: None,
         done: true
+    }));
+
+    // Check that a `bool` value that isn't in the form is marked as `false`.
+    let manual: Option<UnpresentCheckbox> = parse("");
+    assert_eq!(manual, Some(UnpresentCheckbox {
+        checkbox: false
+    }));
+
+    // Check that a `bool` value that isn't in the form is marked as `false`.
+    let manual: Option<UnpresentCheckboxTwo> = parse("something=hello");
+    assert_eq!(manual, Some(UnpresentCheckboxTwo {
+        checkbox: false,
+        something: "hello"
     }));
 }
