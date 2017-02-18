@@ -8,7 +8,7 @@ fn test_login<T>(user: &str, pass: &str, age: &str, status: Status, body: T)
     where T: Into<Option<&'static str>>
 {
     let rocket = rocket();
-    let query = &format!("username={}&password={}&age={}", user, pass, age);
+    let query = format!("username={}&password={}&age={}", user, pass, age);
 
     let mut req = MockRequest::new(Post, "/login")
         .header(ContentType::Form)
@@ -21,8 +21,6 @@ fn test_login<T>(user: &str, pass: &str, age: &str, status: Status, body: T)
     }
 }
 
-const OK: Status = self::Status::Ok;
-
 #[test]
 fn test_good_login() {
     test_login("Sergio", "password", "30", Status::SeeOther, None);
@@ -30,21 +28,21 @@ fn test_good_login() {
 
 #[test]
 fn test_invalid_user() {
-    test_login("-1", "password", "30", OK, "Unrecognized user");
-    test_login("Mike", "password", "30", OK, "Unrecognized user");
+    test_login("-1", "password", "30", Status::Ok, "Unrecognized user");
+    test_login("Mike", "password", "30", Status::Ok, "Unrecognized user");
 }
 
 #[test]
 fn test_invalid_password() {
-    test_login("Sergio", "password1", "30", OK, "Wrong password!");
-    test_login("Sergio", "ok", "30", OK, "Password is invalid: Too short!");
+    test_login("Sergio", "password1", "30", Status::Ok, "Wrong password!");
+    test_login("Sergio", "ok", "30", Status::Ok, "Password is invalid: Too short!");
 }
 
 #[test]
 fn test_invalid_age() {
-    test_login("Sergio", "password", "20", OK, "Must be at least 21.");
-    test_login("Sergio", "password", "-100", OK, "Must be at least 21.");
-    test_login("Sergio", "password", "hi", OK, "Age value is not a number");
+    test_login("Sergio", "password", "20", Status::Ok, "Must be at least 21.");
+    test_login("Sergio", "password", "-100", Status::Ok, "Must be at least 21.");
+    test_login("Sergio", "password", "hi", Status::Ok, "Age value is not a number");
 }
 
 fn check_bad_form(form_str: &str, status: Status) {
