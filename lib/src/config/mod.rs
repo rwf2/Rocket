@@ -162,12 +162,13 @@ use toml;
 
 pub use toml::{Array, Table, Value};
 pub use self::error::{ConfigError, ParsingError};
-pub use self::database::DatabaseType;
+pub use self::database::{ConnectionConfig, ConnectionType};
 pub use self::environment::Environment;
 pub use self::config::Config;
 pub use self::builder::ConfigBuilder;
 pub use self::toml_ext::IntoValue;
 
+use self::ConnectionType::*;
 use self::Environment::*;
 use self::environment::CONFIG_ENV;
 use self::toml_ext::parse_simple_toml_value;
@@ -457,8 +458,9 @@ unsafe fn private_init() {
     use self::ConfigError::*;
     let config = RocketConfig::read().unwrap_or_else(|e| {
         match e {
-            ParseError(..) | BadEntry(..) | BadEnv(..) | BadType(..)
-                | BadDatabase(..) | BadFilePath(..) | BadEnvVal(..) => bail(e),
+            ParseError(..) | BadEntry(..) | BadEnv(..) | BadType(..) |
+            BadConnectionType(..) | BadDatabaseName(..) | BadFilePath(..)
+                | BadEnvVal(..) => bail(e),
             IOError | BadCWD => warn!("Failed reading Rocket.toml. Using defaults."),
             NotFound => { /* try using the default below */ }
         }
@@ -491,6 +493,7 @@ mod test {
     use super::{RocketConfig, Config, ConfigError, ConfigBuilder};
     use super::{Environment, GLOBAL_ENV_NAME};
     use super::environment::CONFIG_ENV;
+    use super::ConnectionType::*;
     use super::Environment::*;
     use super::Result;
 
@@ -598,7 +601,7 @@ mod test {
 
         let mut expected = default_config(Development)
             .address("1.2.3.4")
-            .database("postgres")
+            .database(Postgres)
             .port(7810)
             .workers(21)
             .log_level(LoggingLevel::Critical)
@@ -636,7 +639,7 @@ mod test {
         env::set_var(CONFIG_ENV, "dev");
 
         check_config!(RocketConfig::parse(r#"
-                          [development]
+                          [dev]
                           address = "localhost"
                       "#.to_string(), TEST_CONFIG_FILENAME), {
                           default_config(Development).address("localhost")
@@ -708,21 +711,21 @@ mod test {
                           [dev]
                           database = "postgres"
                       "#.to_string(), TEST_CONFIG_FILENAME), {
-                          default_config(Development).database("postgres")
+                          default_config(Development).database(Postgres)
                       });
 
         check_config!(RocketConfig::parse(r#"
                           [dev]
                           database = "mysql"
                       "#.to_string(), TEST_CONFIG_FILENAME), {
-                          default_config(Development).database("mysql")
+                          default_config(Development).database(Mysql)
                       });
 
         check_config!(RocketConfig::parse(r#"
                           [dev]
                           database = "diesel"
                       "#.to_string(), TEST_CONFIG_FILENAME), {
-                          default_config(Development).database("diesel")
+                          default_config(Development).database(Diesel)
                       });
     }
 
@@ -1002,7 +1005,7 @@ mod test {
                               [{}]
                               database = "mysql"
                           "#, GLOBAL_ENV_NAME), TEST_CONFIG_FILENAME), {
-                              default_config(*env).extra("database", "mysql")
+                              default_config(*env).database(Mysql)
                           });
 
             check_config!(RocketConfig::parse(format!(r#"

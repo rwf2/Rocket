@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 
-use config::{Result, Config, Value, Environment, DatabaseType};
+use config::{Result, Config, Value, Environment, ConnectionConfig};
 use config::toml_ext::IntoValue;
 use logger::LoggingLevel;
 
@@ -12,8 +12,6 @@ pub struct ConfigBuilder {
     pub environment: Environment,
     /// The address to serve on.
     pub address: String,
-    /// The database type.
-    pub database: Option<DatabaseType>,
     /// The port to serve on.
     pub port: u16,
     /// The number of workers to run in parallel.
@@ -22,6 +20,8 @@ pub struct ConfigBuilder {
     pub log_level: LoggingLevel,
     /// The session key.
     pub session_key: Option<String>,
+    /// The databases config
+    pub databases: HashMap<String, ConnectionConfig>,
     /// Any extra parameters that aren't part of Rocket's config.
     pub extras: HashMap<String, Value>,
     /// The root directory of this config.
@@ -61,11 +61,11 @@ impl ConfigBuilder {
         ConfigBuilder {
             environment: config.environment,
             address: config.address,
-            database: None,
             port: config.port,
             workers: config.workers,
             log_level: config.log_level,
             session_key: None,
+            databases: config.databases,
             extras: config.extras,
             root: root_dir,
         }
@@ -86,21 +86,6 @@ impl ConfigBuilder {
     /// ```
     pub fn address<A: Into<String>>(mut self, address: A) -> Self {
         self.address = address.into();
-        self
-    }
-
-    /// Sets the `database` in the configuration being built.
-    /// # Example
-    /// ```rust
-    /// use rocket::config::{Config, Environment};
-    /// let config = Config::build(Environment::Staging)
-    ///     .database("postgres")
-    ///     .unwrap();
-    ///
-    /// assert_eq!(config.database, "postgres");
-    /// ```
-    pub fn database(mut self, database: DatabaseType) -> Self {
-        self.database = Some(database);
         self
     }
 
@@ -220,6 +205,28 @@ impl ConfigBuilder {
         self
     }
 
+    /// Adds a databases connection configuration parameter wiht `name` and `config`
+    /// to the configuration being built.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use rocket::config::{Config, Environment, ConnectionConfig, ConnectionType};
+    ///
+    /// let config = Config::build(Environment::Staging)
+    ///     .databases("my_db", ConnectionConfig {
+    ///         name: "my_db".into(),
+    ///         connection_type: ConnectionType::Postgres,
+    ///         url: "postgres://postgres@localhost/tests"
+    ///     }).unwrap();
+    ///
+    /// assert!(config.databases("my_db").is_some());
+    /// ```
+    pub fn databases(mut self, name: &str, config: ConnectionConfig) -> Self {
+        self.databases.insert(name.into(), config);
+        self
+    }
+
     /// Adds an extra configuration parameter with `name` and `value` to the
     /// configuration being built. The value can be any type that implements
     /// [IntoValue](/rocket/config/trait.IntoValue.html) including `&str`,
@@ -277,13 +284,9 @@ impl ConfigBuilder {
         config.set_port(self.port);
         config.set_workers(self.workers);
         config.set_log_level(self.log_level);
+        config.set_databases(self.databases);
         config.set_extras(self.extras);
         config.set_root(self.root);
-
-        // TODO (imp): Error handling
-        if let Some(db) = self.database {
-            config.set_database(db);
-        }
 
         if let Some(key) = self.session_key {
             config.set_session_key(key)?;

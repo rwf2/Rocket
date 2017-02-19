@@ -6,9 +6,8 @@ use std::convert::AsRef;
 use std::fmt;
 use std::env;
 
-use config::DatabaseType::*;
 use config::Environment::*;
-use config::{self, Value, ConfigBuilder, DatabaseType, Environment, ConfigError};
+use config::{self, Value, ConfigBuilder, Environment, ConfigError, ConnectionType, ConnectionConfig};
 
 use num_cpus;
 use logger::LoggingLevel;
@@ -34,14 +33,14 @@ pub struct Config {
     pub environment: Environment,
     /// The address to serve on.
     pub address: String,
-    /// The database type.
-    pub database: Option<DatabaseType>,
     /// The port to serve on.
     pub port: u16,
     /// The number of workers to run concurrently.
     pub workers: u16,
     /// How much information to log.
     pub log_level: LoggingLevel,
+    /// The databases config
+    pub databases: HashMap<String, ConnectionConfig>,
     /// Extra parameters that aren't part of Rocket's core config.
     pub extras: HashMap<String, Value>,
     /// The path to the configuration file this config belongs to.
@@ -134,11 +133,11 @@ impl Config {
                 Config {
                     environment: Development,
                     address: "localhost".to_string(),
-                    database: None,
                     port: 8000,
                     workers: default_workers,
                     log_level: LoggingLevel::Normal,
                     session_key: RwLock::new(None),
+                    databases: HashMap::new(),
                     extras: HashMap::new(),
                     config_path: config_path,
                 }
@@ -147,11 +146,11 @@ impl Config {
                 Config {
                     environment: Staging,
                     address: "0.0.0.0".to_string(),
-                    database: None,
                     port: 80,
                     workers: default_workers,
                     log_level: LoggingLevel::Normal,
                     session_key: RwLock::new(None),
+                    databases: HashMap::new(),
                     extras: HashMap::new(),
                     config_path: config_path,
                 }
@@ -160,11 +159,11 @@ impl Config {
                 Config {
                     environment: Production,
                     address: "0.0.0.0".to_string(),
-                    database: None,
                     port: 80,
                     workers: default_workers,
                     log_level: LoggingLevel::Critical,
                     session_key: RwLock::new(None),
+                    databases: HashMap::new(),
                     extras: HashMap::new(),
                     config_path: config_path,
                 }
@@ -206,15 +205,6 @@ impl Config {
         if name == "address" {
             let address_str = parse!(self, name, val, as_str, "a string")?;
             self.set_address(address_str)?;
-        } else if name == "database" {
-            let database_str = parse!(self, name, val, as_str, "a string")?;
-            match database_str.to_string().parse() {
-                Ok(db) => self.set_database(db),
-                Err(_) => {
-                    let id = format!("{}.{}", self.environment, name);
-                    return Err(ConfigError::BadDatabase(id, self.config_path.clone()))
-                }
-            }
         } else if name == "port" {
             let port = parse!(self, name, val, as_integer, "an integer")?;
             if port < 0 || port > (u16::max_value() as i64) {
@@ -238,6 +228,37 @@ impl Config {
             match level_str.parse() {
                 Ok(level) => self.set_log_level(level),
                 Err(_) => return Err(self.bad_type(name, val.type_str(), expect))
+            }
+        } else if name == "database" {
+            let table_slice = parse!(self, name, val, as_slice, "a slice")?;
+            for table in table_slice {
+                let config = parse!(self, name, table, as_table, "a table")?;
+                let conn_name = parse!(self, name, config["name"], as_str, "a string")?;
+                let conn_type = parse!(self, name, config["connection_type"], as_str, "a string")?;
+
+                if config.get("url").is_none() {
+                    return Err(self.bad_type(name, "None", "a URL string"));
+                }
+
+                let conn_url = parse!(self, name, config["url"], as_str, "a string")?;
+
+                let conn_type = match conn_type.to_string().parse() {
+                    Ok(conn) => conn,
+                    Err(_) => {
+                        let id = format!("{}.{}", self.environment, name);
+                        return Err(ConfigError::BadConnectionType(id, self.config_path.clone()))
+                    }
+                };
+
+                if self.databases.contains_key(conn_name) {
+                    return Err(ConfigError::BadDatabaseName(conn_name.into(), self.config_path.clone()));
+                }
+
+                self.databases.insert(conn_name.into(), ConnectionConfig {
+                    name: conn_name.into(),
+                    connection_type: conn_type,
+                    url: conn_url.into()
+                });
             }
         } else {
             self.extras.insert(name.into(), val.clone());
@@ -296,25 +317,6 @@ impl Config {
 
         self.address = address;
         Ok(())
-    }
-
-    /// Sets the `database` of `self` to `database`.
-    ///
-    /// # Example
-    ///
-    /// ```rust
-    /// use rocket::config::{Config, Environment};
-    ///
-    /// # use rocket::config::ConfigError;
-    /// # fn config_test() -> Result<(), ConfigError> {
-    /// let mut config = Config::new(Environment::Staging)?;
-    /// config.set_database("mysql");
-    /// # Ok(())
-    /// # }
-    /// ```
-    // TODO (imp): Error handling
-    pub fn set_database(&mut self, database: DatabaseType) {
-        self.database = Some(database);
     }
 
     /// Sets the `port` of `self` to `port`.
@@ -388,7 +390,7 @@ impl Config {
 
     /// Sets the logging level for `self` to `log_level`.
     ///
-    /// # Example
+    /// # Examplep
     ///
     /// ```rust
     /// use rocket::LoggingLevel;
@@ -404,6 +406,33 @@ impl Config {
     pub fn set_log_level(&mut self, log_level: LoggingLevel) {
         self.log_level = log_level;
     }
+
+    /// Sets the databases connections configuration for `self`.
+    ///
+    /// # Example
+    /// ```rust
+    /// use std::collection::HashMap;
+    /// use rocket::config::{Config, Environment, ConnectionConfig, ConnectionType};
+    /// # use rocket::config::ConfigError;
+    /// # fn config_test() -> Result<(), ConfigError> {
+    /// let mut config = Config::new(Environment::Staging)?;
+    ///
+    /// // Create the `databases` map.
+    /// let mut databases = HashMap::new();
+    /// databases.insert("my_db".to_string(), ConnectionConfig {
+    ///     name: "my_db".into(),
+    ///     connection_type: ConnectionType::Postgres,
+    ///     url: "postgres://postgres@localhost/tests".into()
+    /// });
+    ///
+    /// config.set_databases(databases);
+    /// # Ok(())
+    /// # }
+    /// ```
+    pub fn set_databases(&mut self, databases: HashMap<String, ConnectionConfig>) {
+        self.databases = databases;
+    }
+
 
     /// Sets the extras for `self` to be the key/value pairs in `extras`.
     /// encoded string.
@@ -457,6 +486,36 @@ impl Config {
     /// ```
     pub fn extras<'a>(&'a self) -> impl Iterator<Item=(&'a str, &'a Value)> {
         self.extras.iter().map(|(k, v)| (k.as_str(), v))
+    }
+
+    /// Returns a database connection config from `databases` named by
+    /// `name`.
+    ///
+    /// # Example
+    /// ```rust
+    /// use std::collections::HashMap;
+    /// use rocket::config::{Config, Environment, ConnectionConfig, ConnectionType};
+    ///
+    /// # use rocket::config::ConfigError;
+    /// # fn config_test() -> Result<(), ConfigError> {
+    /// let mut config = Config::new(Environment::Staging)?;
+    /// assert!(config.get_database_config("my_db").is_none());
+    ///
+    /// // Add a database connection config to the config.
+    /// let mut databases = HashMap::new();
+    /// databases.insert("my_db".to_string(), ConnectionConfig {
+    ///     name: "my_db",
+    ///     connection_type: ConnectionType::Postgres,
+    ///     url: "postgres://postgres@localhost/tests"
+    /// });
+    /// config.set_databases(databases);
+    ///
+    /// assert!(config.get_database_config("my_db").is_some());
+    /// # Ok(())
+    /// # }
+    /// ```
+    pub fn get_database_config<'a>(&'a self, name: &'a str) -> config::Result<&'a ConnectionConfig> {
+        self.databases.get(name).ok_or_else(|| ConfigError::NotFound)
     }
 
     /// Moves the session key string out of the `self` Config, if there is one.
@@ -628,6 +687,7 @@ impl PartialEq for Config {
             && self.workers == other.workers
             && self.log_level == other.log_level
             && self.environment == other.environment
+            && self.databases == other.databases
             && self.extras == other.extras
     }
 }

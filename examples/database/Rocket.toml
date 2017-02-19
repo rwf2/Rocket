@@ -1,2 +1,6 @@
 [development]
-database = "postgres"
+workers = 12
+  [[development.database]]
+  name = "my_db"
+  connection_type = "postgres"
+  url = "postgres://postgres@localhost/tests"

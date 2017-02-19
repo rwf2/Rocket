@@ -2,7 +2,7 @@ use std::path::PathBuf;
 use std::error::Error;
 use std::fmt;
 
-use super::Environment;
+use super::{Environment, ConnectionType};
 use self::ConfigError::*;
 
 use term_painter::Color::White;
@@ -42,10 +42,14 @@ pub enum ConfigError {
     ///
     /// Parameters: (environment_name, filename)
     BadEntry(String, PathBuf),
-    /// A config key for `database` is invalid.
+    /// A `connection_type` for `[database]` is invalid.
     ///
-    /// Parameters: (database_type, filename)
-    BadDatabase(String, PathBuf),
+    /// Parameters: (connection_type, filename)
+    BadConnectionType(String, PathBuf),
+    /// A `name` for `[database]` already exists.
+    ///
+    /// Parameters: (name, filename)
+    BadDatabaseName(String, PathBuf),
     /// A config key was specified with a value of the wrong type.
     ///
     /// Parameters: (entry_name, expected_type, actual_type, filename)
@@ -78,11 +82,15 @@ impl ConfigError {
                 info_!("in {:?}", White.paint(filename));
                 info_!("valid environments are: {}", White.paint(valid_entries));
             }
-            BadDatabase(ref name, ref filename) => {
-                let valid_entries = format!("{}", DatabaseType::valid());
-                error!("'{}' is not a known database type", name);
+            BadConnectionType(ref name, ref filename) => {
+                let valid_entries = format!("{}", ConnectionType::valid());
+                error!("'{}' is not a known connection type", name);
                 info_!("in {:?}", White.paint(filename));
-                info_!("valid databases are: {}", White.paint(valid_entries));
+                info_!("valid connection are: {}", White.paint(valid_entries));
+            }
+            BadDatabaseName(ref name, ref filename) => {
+                error!("'{}' database name already exist", name);
+                info_!("in {:?}", White.paint(filename));
             }
             BadEnv(ref name) => {
                 error!("'{}' is not a valid ROCKET_ENV value", name);
@@ -136,6 +144,12 @@ impl fmt::Display for ConfigError {
             BadEntry(ref e, _) => {
                 write!(f, "{:?} is not a valid `[environment]` entry", e)
             }
+            BadConnectionType(ref n, _) => {
+                write!(f, "{:?} is not a valid connection connection", n)
+            }
+            BadDatabaseName(ref n, _) => {
+                write!(f, "{:?} such database name already exists", n)
+            }
             BadType(ref n, e, a, _) => {
                 write!(f, "type mismatch for '{}'. expected {}, found {}", n, e, a)
             }
@@ -157,6 +171,8 @@ impl Error for ConfigError {
             BadEnv(..) => "the environment specified in `ROCKET_ENV` is invalid",
             ParseError(..) => "the config file contains invalid TOML",
             BadType(..) => "a key was specified with a value of the wrong type",
+            BadConnectionType(..) => "a database connection type is invalid",
+            BadDatabaseName(..) => "a database name already exists",
             BadEnvVal(..) => "an environment variable could not be parsed",
         }
     }
