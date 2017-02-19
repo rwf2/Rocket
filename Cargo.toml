@@ -29,6 +29,7 @@ members = [
   "examples/raw_upload",
   "examples/pastebin",
   "examples/state",
+  "examples/state_nontrivial",
   "examples/uuid",
   # "examples/raw_sqlite",
 ]

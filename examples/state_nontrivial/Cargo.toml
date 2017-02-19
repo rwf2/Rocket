@@ -1,0 +1,13 @@
+[package]
+name = "state_nontrivial"
+version = "0.1.0"
+authors = ["Stephan Buys <stephan.buys@panoptix.co.za>"]
+
+[dependencies]
+crossbeam = "*"
+rocket = { path = "../../lib" }
+rocket_codegen = { path = "../../codegen" }
+
+[dev-dependencies]
+rocket = { path = "../../lib", features = ["testing"] }
+
