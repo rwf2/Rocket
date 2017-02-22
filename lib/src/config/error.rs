@@ -2,23 +2,22 @@ use std::path::PathBuf;
 use std::error::Error;
 use std::fmt;
 
+use toml::de::Error as TomlParseError;
+
 use super::Environment;
 use self::ConfigError::*;
 
 use term_painter::Color::White;
 use term_painter::ToStyle;
 
-/// The type of a configuration parsing error.
-#[derive(Debug, PartialEq, Clone)]
-pub struct ParsingError {
-    /// Start and end byte indices into the source code where parsing failed.
-    pub byte_range: (usize, usize),
-    /// The (line, column) in the source code where parsing failure began.
-    pub start: (usize, usize),
-    /// The (line, column) in the source code where parsing failure ended.
-    pub end: (usize, usize),
-    /// A description of the parsing error that occured.
-    pub desc: String,
+// Workaround for `PartialEq`
+#[derive(Debug, Clone)]
+pub struct ParsingError(TomlParseError);
+
+impl PartialEq for ParsingError {
+    fn eq(&self, _other: &ParsingError) -> bool {
+        true
+    }
 }
 
 /// The type of a configuration error.
@@ -48,8 +47,8 @@ pub enum ConfigError {
     BadType(String, &'static str, &'static str, PathBuf),
     /// There was a TOML parsing error.
     ///
-    /// Parameters: (toml_source_string, filename, error_list)
-    ParseError(String, PathBuf, Vec<ParsingError>),
+    /// Parameters: (toml_parse_error)
+    ParseError(ParsingError),
     /// There was a TOML parsing error in a config environment variable.
     ///
     /// Parameters: (env_key, env_value, expected type)
@@ -84,16 +83,10 @@ impl ConfigError {
                 info_!("expected value to be {}, but found {}",
                        White.paint(expected), White.paint(actual));
             }
-            ParseError(ref source, ref filename, ref errors) => {
-                for error in errors {
-                    let (lo, hi) = error.byte_range;
-                    let (line, col) = error.start;
-                    let error_source = &source[lo..hi];
-
-                    error!("config file could not be parsed as TOML");
-                    info_!("at {:?}:{}:{}", White.paint(filename), line + 1, col + 1);
-                    trace_!("'{}' - {}", error_source, White.paint(&error.desc));
-                }
+            ParseError(ref error) => {
+                error!("config file could not be parsed as TOML");
+                info_!("{}", error.0);
+                trace_!("{}", White.paint(&error.0.description()));
             }
             BadEnvVal(ref key, ref value, ref expected) => {
                 error!("environment variable '{}={}' could not be parsed",
@@ -149,5 +142,11 @@ impl Error for ConfigError {
             BadType(..) => "a key was specified with a value of the wrong type",
             BadEnvVal(..) => "an environment variable could not be parsed",
         }
+    }
+}
+
+impl From<TomlParseError> for ConfigError {
+    fn from(error: TomlParseError) -> Self {
+        ParseError(ParsingError(error))
     }
 }

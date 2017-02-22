@@ -149,6 +149,7 @@ mod error;
 mod environment;
 mod config;
 mod builder;
+mod toml;
 mod toml_ext;
 
 use std::sync::{Once, ONCE_INIT};
@@ -159,10 +160,8 @@ use std::path::{Path, PathBuf};
 use std::process;
 use std::env;
 
-use toml;
-
-pub use toml::{Array, Table, Value};
-pub use self::error::{ConfigError, ParsingError};
+pub use toml::value::{Array, Table, Value};
+pub use self::error::ConfigError;
 pub use self::environment::Environment;
 pub use self::config::Config;
 pub use self::builder::ConfigBuilder;
@@ -350,19 +349,7 @@ impl RocketConfig {
         let path = filename.as_ref().to_path_buf();
 
         // Parse the source as TOML, if possible.
-        let mut parser = toml::Parser::new(&src);
-        let toml = parser.parse().ok_or_else(|| {
-            let source = src.clone();
-            let errors = parser.errors.iter()
-                .map(|error| ParsingError {
-                    byte_range: (error.lo, error.hi),
-                    start: parser.to_linecol(error.lo),
-                    end: parser.to_linecol(error.hi),
-                    desc: error.desc.clone(),
-                });
-
-            ConfigError::ParseError(source, path.clone(), errors.collect())
-        })?;
+        let toml = toml::parse(&src)?;
 
         // Create a config with the defaults; set the env to the active one.
         let mut config = RocketConfig::active_default(filename)?;
@@ -371,26 +358,28 @@ impl RocketConfig {
         let mut global = None;
 
         // Parse the values from the TOML file.
-        for (entry, value) in toml {
-            // Each environment must be a table.
-            let kv_pairs = match value.as_table() {
-                Some(table) => table,
-                None => return Err(ConfigError::BadType(
-                    entry, "a table", value.type_str(), path.clone()
-                ))
-            };
+        if let Some(toml_table) = toml.as_table() {
+            for (entry, value) in toml_table {
+                // Each environment must be a table.
+                let kv_pairs = match value.as_table() {
+                    Some(table) => table,
+                    None => return Err(ConfigError::BadType(
+                        entry.clone(), "a table", value.type_str(), path.clone()
+                    ))
+                };
 
-            // Store the global table for later use and move on.
-            if entry.as_str() == GLOBAL_ENV_NAME {
-                global = Some(kv_pairs.clone());
-                continue;
-            }
+                // Store the global table for later use and move on.
+                if entry.as_str() == GLOBAL_ENV_NAME {
+                    global = Some(kv_pairs.clone());
+                    continue;
+                }
 
-            // This is not the global table. Parse the environment name from the
-            // table entry name and then set all of the key/values.
-            match entry.as_str().parse() {
-                Ok(env) => config.set_from_table(env, kv_pairs)?,
-                Err(_) => Err(ConfigError::BadEntry(entry.clone(), path.clone()))?
+                // This is not the global table. Parse the environment name from the
+                // table entry name and then set all of the key/values.
+                match entry.as_str().parse() {
+                    Ok(env) => config.set_from_table(env, kv_pairs)?,
+                    Err(_) => Err(ConfigError::BadEntry(entry.clone(), path.clone()))?
+                }
             }
         }
 
@@ -573,8 +562,7 @@ mod test {
             let toml_table = format!("[{}]\n", env);
             let e_str = env.to_string();
             let err = ConfigError::BadEntry(e_str, TEST_CONFIG_FILENAME.into());
-            assert!(RocketConfig::parse(toml_table, TEST_CONFIG_FILENAME)
-                    .err().map_or(false, |e| e == err));
+            assert!(RocketConfig::parse(toml_table, TEST_CONFIG_FILENAME).err().map_or(false, |e| e == err));
         }
     }
 
