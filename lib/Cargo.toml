@@ -16,13 +16,15 @@ categories = ["web-programming::http-server"]
 
 [dependencies]
 term-painter = "^0.2"
-log = "^0.3"
 url = "^1"
 hyper = { version = "0.10.4", default-features = false }
 toml = { version = "^0.2", default-features = false }
 num_cpus = "1"
 state = "^0.2"
 time = "^0.1"
+slog = "1.2"
+slog-term = "1.4.0"
+slog-scope = "0.2.2"
 memchr = "1"
 
 [dependencies.cookie]

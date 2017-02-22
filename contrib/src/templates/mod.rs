@@ -108,8 +108,8 @@ lazy_static! {
         let default_dir_path = config::active().ok_or(ConfigError::NotFound)
             .map(|config| config.root().join(DEFAULT_TEMPLATE_DIR))
             .map_err(|_| {
-                warn_!("No configuration is active!");
-                warn_!("Using default template directory: {:?}", DEFAULT_TEMPLATE_DIR);
+                warn!("No configuration is active!");
+                warn!("Using default template directory: {:?}", DEFAULT_TEMPLATE_DIR);
             })
             .unwrap_or(PathBuf::from(DEFAULT_TEMPLATE_DIR));
 
@@ -119,7 +119,7 @@ lazy_static! {
             .map_err(|e| {
                 if !e.is_not_found() {
                     e.pretty_print();
-                    warn_!("Using default directory '{:?}'", default_dir_path);
+                    warn!("Using default directory '{:?}'", default_dir_path);
                 }
             })
             .unwrap_or(default_dir_path)
@@ -150,9 +150,9 @@ impl Template {
         let template = TEMPLATES.get(name);
         if template.is_none() {
             let names: Vec<_> = TEMPLATES.keys().map(|s| s.as_str()).collect();
-            error_!("Template '{}' does not exist.", name);
-            info_!("Known templates: {}", names.join(","));
-            info_!("Searched in '{:?}'.", *TEMPLATE_DIR);
+            error!("Template '{}' does not exist.", name);
+            info!("Known templates: {}", names.join(","));
+            info!("Searched in '{:?}'.", *TEMPLATE_DIR);
             return Template(None, None);
         }
 
@@ -245,10 +245,10 @@ fn discover_templates() -> HashMap<String, TemplateInfo> {
         for path in glob(glob_path.to_str().unwrap()).unwrap().filter_map(Result::ok) {
             let (rel_path, name, data_type) = split_path(&path);
             if let Some(info) = templates.get(&*name) {
-                warn_!("Template name '{}' does not have a unique path.", name);
-                info_!("Existing path: {:?}", info.full_path);
-                info_!("Additional path: {:?}", path);
-                warn_!("Using existing path for template '{}'.", name);
+                warn!("Template name '{}' does not have a unique path.", name);
+                info!("Existing path: {:?}", info.full_path);
+                info!("Additional path: {:?}", path);
+                warn!("Using existing path for template '{}'.", name);
                 continue;
             }
 

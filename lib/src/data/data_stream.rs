@@ -47,9 +47,9 @@ pub fn kill_stream<S: Read, N: NetworkStream>(stream: &mut S, network: &mut N) {
     let mut buf = [0];
     if let Ok(n) = stream.read(&mut buf) {
         if n > 0 {
-            warn_!("Data left unread. Force closing network stream.");
+            warn!("Data left unread. Force closing network stream.");
             if let Err(e) = network.close(Shutdown::Both) {
-                error_!("Failed to close network stream: {:?}", e);
+                error!("Failed to close network stream: {:?}", e);
             }
         }
     }

@@ -16,7 +16,6 @@ plugin = true
 
 [dependencies]
 rocket = { version = "0.2.0", path = "../lib/" }
-log = "^0.3"
 
 [dev-dependencies]
 compiletest_rs = "^0.2"

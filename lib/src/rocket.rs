@@ -24,6 +24,8 @@ use http::{Method, Status, Header};
 use http::hyper::{self, header};
 use http::uri::URI;
 
+use slog_scope;
+
 /// The main `Rocket` type: used to mount routes and catchers and launch the
 /// application.
 pub struct Rocket {
@@ -58,19 +60,25 @@ impl hyper::Handler for Rocket {
             }
         };
 
-        // Retrieve the data from the hyper body.
-        let data = match Data::from_hyp(h_body) {
-            Ok(data) => data,
-            Err(reason) => {
-                error_!("Bad data in request: {}", reason);
-                let r = self.handle_error(Status::InternalServerError, &req);
-                return self.issue_response(r, res);
-            }
-        };
+        // Make child logger for this request
+        slog_scope::scope(slog_scope::logger().new(slog_o!(
+            "Request" => format!("{}", req),
+            "IP" => format!("{}", req.remote().map(|addr| format!("{}", addr)).unwrap_or("None".into())),
+        )), move || {
+            // Retrieve the data from the hyper body.
+            let data = match Data::from_hyp(h_body) {
+                Ok(data) => data,
+                Err(reason) => {
+                    error!("Bad data in request: {}", reason);
+                    let r = self.handle_error(Status::InternalServerError, &req);
+                    return self.issue_response(r, res);
+                }
+            };
 
-        // Dispatch the request to get a response, then write that response out.
-        let response = self.dispatch(&mut req, data);
-        self.issue_response(response, res)
+            // Dispatch the request to get a response, then write that response out.
+            let response = self.dispatch(&mut req, data);
+            self.issue_response(response, res)
+        })
     }
 }
 
@@ -80,10 +88,12 @@ impl Rocket {
         // Add the 'rocket' server header, and write out the response.
         // TODO: If removing Hyper, write out `Date` header too.
         response.set_header(Header::new("Server", "rocket"));
+        
+        let response_status = response.status();
 
         match self.write_response(response, hyp_res) {
-            Ok(_) => info_!("{}", Green.paint("Response succeeded.")),
-            Err(e) => error_!("Failed to write response: {:?}.", e)
+            Ok(_) => info!(""; "Response" => format!("{}", response_status)),
+            Err(e) => error!("Failed to write response: {:?}.", e)
         }
     }
 
@@ -150,7 +160,7 @@ impl Rocket {
             let ip = req.headers()
                 .get_one("X-Real-IP")
                 .and_then(|ip_str| ip_str.parse().map_err(|_| {
-                    warn_!("The 'X-Real-IP' header is malformed: {}", ip_str)
+                    warn!("The 'X-Real-IP' header is malformed: {}", ip_str)
                 }).ok());
 
             if let Some(ip) = ip {
@@ -180,8 +190,6 @@ impl Rocket {
     #[inline]
     pub(crate) fn dispatch<'s, 'r>(&'s self, request: &'r mut Request<'s>, data: Data)
             -> Response<'r> {
-        info!("{}:", request);
-
         // Inform the request about the state.
         request.set_state(&self.state);
 
@@ -211,7 +219,7 @@ impl Rocket {
                 };
 
                 if request.method() == Method::Head {
-                    info_!("Autohandling {} request.", White.paint("HEAD"));
+                    info!("Autohandling {} request.", White.paint("HEAD"));
                     request.set_method(Method::Get);
                     let mut response = self.dispatch(request, data);
                     response.strip_body();
@@ -236,7 +244,7 @@ impl Rocket {
         let matches = self.router.route(request);
         for route in matches {
             // Retrieve and set the requests parameters.
-            info_!("Matched: {}", route);
+            info!("Matched: {}", route);
             // FIXME: Users should not be able to use this.
             request.set_params(route);
 
@@ -245,32 +253,32 @@ impl Rocket {
 
             // Check if the request processing completed or if the request needs
             // to be forwarded. If it does, continue the loop to try again.
-            info_!("{} {}", White.paint("Outcome:"), outcome);
+            info!("{} {}", White.paint("Outcome:"), outcome);
             match outcome {
                 o@Outcome::Success(_) | o @Outcome::Failure(_) => return o,
                 Outcome::Forward(unused_data) => data = unused_data,
             };
         }
 
-        error_!("No matching routes for {}.", request);
+        error!("No matching routes for {}.", request);
         Outcome::Forward(data)
     }
 
     // TODO: DOC.
     fn handle_error<'r>(&self, status: Status, req: &'r Request) -> Response<'r> {
-        warn_!("Responding with {} catcher.", Red.paint(&status));
+        warn!("Responding with {} catcher.", Red.paint(&status));
 
         // Try to get the active catcher but fallback to user's 500 catcher.
         let catcher = self.catchers.get(&status.code).unwrap_or_else(|| {
-            error_!("No catcher found for {}. Using 500 catcher.", status);
+            error!("No catcher found for {}. Using 500 catcher.", status);
             self.catchers.get(&500).expect("500 catcher.")
         });
 
         // Dispatch to the user's catcher. If it fails, use the default 500.
         let error = Error::NoRoute;
         catcher.handle(error, req).unwrap_or_else(|err_status| {
-            error_!("Catcher failed with status: {}!", err_status);
-            warn_!("Using default 500 error catcher.");
+            error!("Catcher failed with status: {}!", err_status);
+            warn!("Using default 500 error catcher.");
             let default = self.default_catchers.get(&500).expect("Default 500");
             default.handle(error, req).expect("Default 500 response.")
         })
@@ -323,35 +331,39 @@ impl Rocket {
     ///     .finalize()?;
     ///
     /// # #[allow(unused_variables)]
-    /// let app = rocket::custom(config, false);
+    /// let app = rocket::custom(config);
     /// # Ok(())
     /// # }
     /// ```
-    pub fn custom(config: Config, log: bool) -> Rocket {
+    pub fn custom(config: Config) -> Rocket {
         let (config, initted) = config::custom_init(config);
-        Rocket::configured(config, log && initted)
+        Rocket::configured(config, initted)
     }
 
-    fn configured(config: &'static Config, log: bool) -> Rocket {
-        if log {
-            logger::init(config.log_level);
+    fn configured(config: &'static Config, initial: bool) -> Rocket {
+        if let Some(ref log) = config.log {
+            if initial {
+                logger::init(&log);
+            }
         }
 
-        info!("🔧  Configured for {}.", config.environment);
-        info_!("address: {}", White.paint(&config.address));
-        info_!("port: {}", White.paint(&config.port));
-        info_!("log: {}", White.paint(config.log_level));
-        info_!("workers: {}", White.paint(config.workers));
+        let clog = slog_scope::logger().new(slog_o!(
+            "🔧  Configure" => format!("{}", config.environment),
+        ));
+
+        slog_info!(clog, "address: {}", White.paint(&config.address));
+        slog_info!(clog, "port: {}", White.paint(&config.port));
+        slog_info!(clog, "workers: {}", White.paint(config.workers));
 
         let session_key = config.take_session_key();
         if session_key.is_some() {
-            info_!("session key: {}", White.paint("present"));
-            warn_!("Signing and encryption of cookies is currently disabled.");
-            warn_!("See https://github.com/SergioBenitez/Rocket/issues/20 for info.");
+            slog_info!(clog, "session key: {}", White.paint("present"));
+            warn!("Signing and encryption of cookies is currently disabled.");
+            warn!("See https://github.com/SergioBenitez/Rocket/issues/20 for info.");
         }
 
         for (name, value) in config.extras() {
-            info_!("{} {}: {}", Yellow.paint("[extra]"), name, White.paint(value));
+            slog_info!(clog, "{} {}: {}", Yellow.paint("[extra]"), name, White.paint(value));
         }
 
         Rocket {
@@ -415,11 +427,13 @@ impl Rocket {
     /// # }
     /// ```
     pub fn mount(mut self, base: &str, routes: Vec<Route>) -> Self {
-        info!("🛰  {} '{}':", Magenta.paint("Mounting"), base);
+        let clog = slog_scope::logger().new(slog_o!(
+            "🛰  Mount" => base.to_string(),
+        ));
 
         if base.contains('<') {
-            error_!("Bad mount point: '{}'.", base);
-            error_!("Mount points must be static paths!");
+            slog_error!(clog, "Bad mount point: '{}'.", base);
+            slog_error!(clog, "Mount points must be static paths!");
             panic!("Bad mount point.")
         }
 
@@ -427,7 +441,7 @@ impl Rocket {
             let path = format!("{}/{}", base, route.path);
             route.set_path(path);
 
-            info_!("{}", route);
+            slog_info!(clog, "{}", route);
             self.router.add(route);
         }
 
@@ -468,9 +482,9 @@ impl Rocket {
         for c in catchers {
             if self.catchers.get(&c.code).map_or(false, |e| !e.is_default()) {
                 let msg = "(warning: duplicate catcher!)";
-                info_!("{} {}", c, Yellow.paint(msg));
+                info!("{} {}", c, Yellow.paint(msg));
             } else {
-                info_!("{}", c);
+                info!("{}", c);
             }
 
             self.catchers.insert(c.code, c);

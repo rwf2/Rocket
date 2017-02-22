@@ -4,6 +4,7 @@
 #![feature(associated_consts)]
 #![feature(const_fn)]
 #![feature(type_ascription)]
+#![feature(macro_reexport)]
 #![feature(pub_restricted)]
 #![feature(lookup_host)]
 
@@ -94,7 +95,17 @@
 //! the [testing module](/rocket/testing) documentation.
 //!
 
-#[macro_use] extern crate log;
+#[allow(unused_imports)]
+#[macro_use(o, slog_o, slog_log, slog_trace, slog_info, slog_warn, slog_debug, slog_crit, slog_error)]
+#[macro_reexport(slog_o, slog_log, slog_trace, slog_info, slog_warn, slog_debug, slog_crit, slog_error)]
+extern crate slog;
+
+extern crate slog_term;
+
+#[macro_use]
+#[macro_reexport(trace, info, warn, debug, crit, error)]
+extern crate slog_scope;
+
 extern crate term_painter;
 extern crate hyper;
 extern crate url;
@@ -144,6 +155,6 @@ pub fn ignite() -> Rocket {
 
 /// Alias to [Rocket::custom()](/rocket/struct.Rocket.html#method.custom).
 /// Creates a new instance of `Rocket` with a custom configuration.
-pub fn custom(config: config::Config, log: bool) -> Rocket {
-    Rocket::custom(config, log)
+pub fn custom(config: config::Config) -> Rocket {
+    Rocket::custom(config)
 }

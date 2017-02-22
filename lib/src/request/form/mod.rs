@@ -268,24 +268,24 @@ impl<'f, T: FromForm<'f>> FromData for Form<'f, T> where T::Error: Debug {
 
     fn from_data(request: &Request, data: Data) -> data::Outcome<Self, Self::Error> {
         if !request.content_type().map_or(false, |ct| ct.is_form()) {
-            warn_!("Form data does not have form content type.");
+            warn!("Form data does not have form content type.");
             return Forward(data);
         }
 
         let mut form_string = String::with_capacity(4096);
         let mut stream = data.open().take(32768); // TODO: Make this configurable?
         if let Err(e) = stream.read_to_string(&mut form_string) {
-            error_!("IO Error: {:?}", e);
+            error!("IO Error: {:?}", e);
             Failure((Status::InternalServerError, None))
         } else {
             match Form::new(form_string) {
                 FormResult::Ok(form) => Success(form),
                 FormResult::Invalid(form_string) => {
-                    error_!("The request's form string was malformed.");
+                    error!("The request's form string was malformed.");
                     Failure((Status::BadRequest, Some(form_string)))
                 }
                 FormResult::Err(form_string, e) => {
-                    error_!("Failed to parse value from form: {:?}", e);
+                    error!("Failed to parse value from form: {:?}", e);
                     Failure((Status::UnprocessableEntity, Some(form_string)))
                 }
             }

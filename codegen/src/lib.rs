@@ -116,13 +116,12 @@
 #![allow(unused_attributes)]
 #![allow(deprecated)]
 
-#[macro_use] extern crate log;
 #[macro_use] extern crate rustc;
 extern crate syntax;
 extern crate syntax_ext;
 extern crate syntax_pos;
 extern crate rustc_plugin;
-extern crate rocket;
+#[macro_use] extern crate rocket;
 
 #[macro_use] mod utils;
 mod parser;
@@ -175,7 +174,7 @@ macro_rules! register_lints {
 pub fn plugin_registrar(reg: &mut Registry) {
     // Enable logging early if the DEBUG_ENV_VAR is set.
     if env::var(DEBUG_ENV_VAR).is_ok() {
-        ::rocket::logger::init(::rocket::LoggingLevel::Debug);
+        ::rocket::logger::init(&::rocket::logger::default_for(::rocket::LoggingLevel::Debug));
     }
 
     reg.register_macro("routes", macros::routes);

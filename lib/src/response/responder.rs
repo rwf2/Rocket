@@ -220,7 +220,7 @@ impl Responder<'static> for () {
 impl<'r, R: Responder<'r>> Responder<'r> for Option<R> {
     fn respond(self) -> Result<Response<'r>, Status> {
         self.map_or_else(|| {
-            warn_!("Response was `None`.");
+            warn!("Response was `None`.");
             Err(Status::NotFound)
         }, |r| r.respond())
     }
@@ -232,7 +232,7 @@ impl<'r, R: Responder<'r>> Responder<'r> for Option<R> {
 impl<'r, R: Responder<'r>, E: fmt::Debug> Responder<'r> for Result<R, E> {
     default fn respond(self) -> Result<Response<'r>, Status> {
         self.map(|r| r.respond()).unwrap_or_else(|e| {
-            error_!("Response was `Err`: {:?}.", e);
+            error!("Response was `Err`: {:?}.", e);
             Err(Status::InternalServerError)
         })
     }

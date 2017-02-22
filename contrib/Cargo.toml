@@ -22,7 +22,6 @@ lazy_static_macro = ["lazy_static"]
 
 [dependencies]
 rocket = { version = "0.2.0", path = "../lib/" }
-log = "^0.3"
 
 # UUID dependencies.
 uuid = { version = "^0.4", optional = true }

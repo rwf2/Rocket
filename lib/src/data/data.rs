@@ -158,7 +158,7 @@ impl Data {
         // Make sure the buffer is large enough for the bytes we want to peek.
         const PEEK_BYTES: usize = 4096;
         if buf.len() < PEEK_BYTES {
-            trace_!("Resizing peek buffer from {} to {}.", buf.len(), PEEK_BYTES);
+            trace!("Resizing peek buffer from {} to {}.", buf.len(), PEEK_BYTES);
             buf.resize(PEEK_BYTES, 0);
         }
 
@@ -168,17 +168,17 @@ impl Data {
         trace!("Init buffer cap: {}", cap);
         let eof = match stream.read_max(&mut buf[cap..]) {
             Ok(n) => {
-                trace_!("Filled peek buf with {} bytes.", n);
+                trace!("Filled peek buf with {} bytes.", n);
                 cap += n;
                 cap < buf.len()
             }
             Err(e) => {
-                error_!("Failed to read into peek buffer: {:?}.", e);
+                error!("Failed to read into peek buffer: {:?}.", e);
                 false
             },
         };
 
-        trace_!("Peek buffer size: {}, remaining: {}", buf.len(), buf.len() - cap);
+        trace!("Peek buffer size: {}, remaining: {}", buf.len(), buf.len() - cap);
         Data {
             buffer: buf,
             stream: stream,
