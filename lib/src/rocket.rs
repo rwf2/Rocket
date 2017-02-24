@@ -31,7 +31,7 @@ pub struct Rocket {
     router: Router,
     default_catchers: HashMap<u16, Catcher>,
     catchers: HashMap<u16, Catcher>,
-    state: Container
+    state: Container,
 }
 
 #[doc(hidden)]
@@ -542,26 +542,34 @@ impl Rocket {
     /// rocket::ignite().launch()
     /// # }
     /// ```
-    pub fn launch(self) {
+    pub fn launch<F>(self, on_success: F) 
+        where F: Fn(SocketAddr)
+    {
         if self.router.has_collisions() {
             warn!("Route collisions detected!");
         }
 
-        let full_addr = format!("{}:{}", self.config.address, self.config.port);
-        let server = match hyper::Server::http(full_addr.as_str()) {
-            Ok(hyper_server) => hyper_server,
+        let config_addr = format!("{}:{}", self.config.address, self.config.port);
+        use hyper::net::HttpListener;
+        let mut lis = match HttpListener::new(config_addr) {
+            Ok(l)  => l,
             Err(e) => {
                 error!("Failed to start server.");
-                panic!("{}", e);
+                panic!("{}", e)
             }
         };
+        use hyper::net::NetworkListener;
+        let result_addr = lis.local_addr().unwrap();
+        let server = hyper::Server::new(lis);
 
         info!("🚀  {} {}{}...",
               White.paint("Rocket has launched from"),
               White.bold().paint("http://"),
-              White.bold().paint(&full_addr));
+              White.bold().paint(result_addr));
 
+        on_success(result_addr);
         let threads = self.config.workers as usize;
         server.handle_threads(self, threads).unwrap();
     }
 }
+

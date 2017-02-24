@@ -7,6 +7,7 @@ members = [
   "examples/errors",
   "examples/extended_validation",
   "examples/forms",
+  "examples/hello_auto_port",
   "examples/hello_person",
   "examples/query_params",
   "examples/hello_world",
