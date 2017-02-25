@@ -11,5 +11,5 @@ fn hello() -> &'static str {
 }
 
 fn main() {
-    rocket::ignite().mount("/", routes![hello]).launch(|addr| { println!("{}", addr) });
+    rocket::ignite().mount("/", routes![hello]).launch();
 }

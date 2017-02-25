@@ -24,11 +24,12 @@ fn try_config() -> Result<(), ConfigError> {
         .log_level(LoggingLevel::Debug)
         .finalize()?;
     let logging = true;
-    let on_success = |addr| {
+    let callback = Box::new(|addr| {
             println!("Resulting address: {}", addr);
-    };
+    });
     rocket::custom(config, logging)
         .mount("/", routes![index])
-        .launch(on_success);
+        .on_success(callback)
+        .launch();
     Ok(())
 }

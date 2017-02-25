@@ -24,6 +24,8 @@ use http::{Method, Status, Header};
 use http::hyper::{self, header};
 use http::uri::URI;
 
+type SuccessCallback = Box<FnMut(SocketAddr) + Send + Sync>;
+
 /// The main `Rocket` type: used to mount routes and catchers and launch the
 /// application.
 pub struct Rocket {
@@ -32,6 +34,7 @@ pub struct Rocket {
     default_catchers: HashMap<u16, Catcher>,
     catchers: HashMap<u16, Catcher>,
     state: Container,
+    on_success: Option<SuccessCallback>
 }
 
 #[doc(hidden)]
@@ -359,7 +362,8 @@ impl Rocket {
             router: Router::new(),
             default_catchers: catcher::defaults::get(),
             catchers: catcher::defaults::get(),
-            state: Container::new()
+            state: Container::new(),
+            on_success: None
         }
     }
 
@@ -527,6 +531,11 @@ impl Rocket {
         self
     }
 
+    pub fn on_success(mut self, f:SuccessCallback) -> Self {
+        self.on_success = Some(f);
+        self
+    }
+
     /// Starts the application server and begins listening for and dispatching
     /// requests to mounted routes and catchers.
     ///
@@ -542,8 +551,7 @@ impl Rocket {
     /// rocket::ignite().launch()
     /// # }
     /// ```
-    pub fn launch<F>(self, on_success: F) 
-        where F: Fn(SocketAddr)
+    pub fn launch(mut self) 
     {
         if self.router.has_collisions() {
             warn!("Route collisions detected!");
@@ -555,11 +563,11 @@ impl Rocket {
             Ok(l)  => l,
             Err(e) => {
                 error!("Failed to start server.");
-                panic!("{}", e)
+                panic!("{}", e)                        // TODO: Return error (?)
             }
         };
         use hyper::net::NetworkListener;
-        let result_addr = lis.local_addr().unwrap();
+        let result_addr = lis.local_addr().unwrap();   // TODO: Return error (?)
         let server = hyper::Server::new(lis);
 
         info!("🚀  {} {}{}...",
@@ -567,9 +575,12 @@ impl Rocket {
               White.bold().paint("http://"),
               White.bold().paint(result_addr));
 
-        on_success(result_addr);
+        if let Some(f) = self.on_success.take().as_mut() {
+            f(result_addr);
+        }
+
         let threads = self.config.workers as usize;
-        server.handle_threads(self, threads).unwrap();
+        server.handle_threads(self, threads).unwrap(); // TODO: Return error (?)
     }
 }
 
