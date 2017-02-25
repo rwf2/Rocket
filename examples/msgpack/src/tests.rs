@@ -8,8 +8,8 @@ use rocket::Response;
 use std::collections::HashMap;
 
 #[derive(Deserialize)]
-#[allow(dead_code)]
 struct Message {
+    #[allow(dead_code)]
     id: Option<usize>,
     contents: String
 }
@@ -21,6 +21,20 @@ macro_rules! run_test {
     })
 }
 
+fn build_hello_body() -> Vec<u8> {
+    rmp_serde::to_vec(&[("contents", "Hello, world!")]
+        .iter()
+        .cloned()
+        .collect::<HashMap<&'static str, &'static str>>()).unwrap()
+}
+
+fn build_goodbye_body() -> Vec<u8> {
+    rmp_serde::to_vec(&[("contents", "Bye bye, world!")]
+        .iter()
+        .cloned()
+        .collect::<HashMap<&'static str, &'static str>>()).unwrap()
+}
+
 #[test]
 fn bad_get_put() {
     let rocket = rocket();
@@ -30,7 +44,9 @@ fn bad_get_put() {
     run_test!(&rocket, req, |mut response: Response| {
         assert_eq!(response.status(), Status::NotFound);
 
-        let body = rmp_serde::from_slice::<HashMap<String, String>>(&response.body().unwrap().into_bytes().unwrap()).unwrap();
+        let body = rmp_serde::from_slice::<HashMap<String, String>>(
+            &response.body().unwrap().into_bytes().unwrap()
+        ).unwrap();
         assert!(body.values().any(|v| v == "error"));
         assert!(body.values().any(|v| v == "Resource was not found."));
     });
@@ -39,7 +55,9 @@ fn bad_get_put() {
     let req = MockRequest::new(Get, "/message/hi").header(ContentType::MsgPack);
     run_test!(&rocket, req, |mut response: Response| {
         assert_eq!(response.status(), Status::NotFound);
-        let body = rmp_serde::from_slice::<HashMap<String, String>>(&response.body().unwrap().into_bytes().unwrap()).unwrap();
+        let body = rmp_serde::from_slice::<HashMap<String, String>>(
+            &response.body().unwrap().into_bytes().unwrap()
+        ).unwrap();
         assert!(body.values().any(|v| v == "error"));
     });
 
@@ -52,7 +70,7 @@ fn bad_get_put() {
     // Try to put a message for an ID that doesn't exist.
     let req = MockRequest::new(Put, "/message/80")
         .header(ContentType::MsgPack)
-        .body_binary(rmp_serde::to_vec(&[("contents", "Bye bye, world!")].iter().cloned().collect::<HashMap<&'static str, &'static str>>()).unwrap());
+        .body(build_goodbye_body());
 
     run_test!(&rocket, req, |response: Response| {
         assert_eq!(response.status(), Status::NotFound);
@@ -71,34 +89,38 @@ fn post_get_put_get() {
     // Add a new message with ID 1.
     let req = MockRequest::new(Post, "/message/1")
         .header(ContentType::MsgPack)
-        .body_binary(rmp_serde::to_vec(&[("contents", "Hello, world!")].iter().cloned().collect::<HashMap<&'static str, &'static str>>()).unwrap());
+        .body(build_hello_body());
 
     run_test!(&rocket, req, |response: Response| {
         assert_eq!(response.status(), Status::Ok);
     });
 
     // Check that the message exists with the correct contents.
-    let req = MockRequest::new(Get, "/message/1") .header(ContentType::MsgPack);
+    let req = MockRequest::new(Get, "/message/1").header(ContentType::MsgPack);
     run_test!(&rocket, req, |mut response: Response| {
         assert_eq!(response.status(), Status::Ok);
-        let body = rmp_serde::from_slice::<Message>(&response.body().unwrap().into_bytes().unwrap()).unwrap();
+        let body = rmp_serde::from_slice::<Message>(
+            &response.body().unwrap().into_bytes().unwrap()
+        ).unwrap();
         assert!(body.contents == "Hello, world!");
     });
 
     // Change the message contents.
     let req = MockRequest::new(Put, "/message/1")
         .header(ContentType::MsgPack)
-        .body_binary(rmp_serde::to_vec(&[("contents", "Bye bye, world!")].iter().cloned().collect::<HashMap<&'static str, &'static str>>()).unwrap());
+        .body(build_goodbye_body());
 
     run_test!(&rocket, req, |response: Response| {
         assert_eq!(response.status(), Status::Ok);
     });
 
     // Check that the message exists with the updated contents.
-    let req = MockRequest::new(Get, "/message/1") .header(ContentType::MsgPack);
+    let req = MockRequest::new(Get, "/message/1").header(ContentType::MsgPack);
     run_test!(&rocket, req, |mut response: Response| {
         assert_eq!(response.status(), Status::Ok);
-        let body = rmp_serde::from_slice::<Message>(&response.body().unwrap().into_bytes().unwrap()).unwrap();
+        let body = rmp_serde::from_slice::<Message>(
+            &response.body().unwrap().into_bytes().unwrap()
+        ).unwrap();
         assert!(body.contents != "Hello, world!");
         assert!(body.contents == "Bye bye, world!");
     });

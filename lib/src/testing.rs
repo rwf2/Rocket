@@ -224,29 +224,7 @@ impl<'r> MockRequest<'r> {
     ///     .body(r#"{ "key": "value", "array": [1, 2, 3], }"#);
     /// ```
     #[inline]
-    pub fn body<S: AsRef<str>>(mut self, body: S) -> Self {
-        self.data = Data::new(body.as_ref().as_bytes().into());
-        self
-    }
-
-    /// Set the body (data) of the request to a chunk of binary data.
-    ///
-    /// # Examples
-    ///
-    /// Set the body to be MessagePack data; also sets the Content-Type.
-    ///
-    /// ```rust
-    /// use rocket::http::Method::*;
-    /// use rocket::testing::MockRequest;
-    /// use rocket::http::ContentType;
-    ///
-    /// # #[allow(unused_variables)]
-    /// let req = MockRequest::new(Post, "/")
-    ///     .header(ContentType::MsgPack)
-    ///     .body_binary(&[0x92, 0x2a, 0xaa, 0x74, 0x68, 0x65, 0x20, 0x41, 0x6e, 0x73, 0x77, 0x65, 0x72]);
-    /// ```
-    #[inline]
-    pub fn body_binary<S: AsRef<[u8]>>(mut self, body: S) -> Self {
+    pub fn body<S: AsRef<[u8]>>(mut self, body: S) -> Self {
         self.data = Data::new(body.as_ref().into());
         self
     }
