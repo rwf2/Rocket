@@ -6,7 +6,7 @@ use rocket::http::Method::*;
 use rocket::http::{Status, ContentType};
 use rocket::Response;
 
-#[derive(Deserialize)]
+#[derive(Serialize, Deserialize)]
 struct Message {
     id: usize,
     contents: String
@@ -30,5 +30,19 @@ fn msgpack_get() {
         ).unwrap();
         assert_eq!(body.id, 1);
         assert_eq!(body.contents, "Hello, world!");
+    });
+}
+
+#[test]
+fn msgpack_post() {
+    let rocket = rocket();
+    let req = MockRequest::new(Post, "/message")
+        .header(ContentType::MsgPack)
+        .body(rmp_serde::to_vec(&Message {
+            id: 2,
+            contents: "Goodbye, world!".to_string(),
+        }).unwrap());
+    run_test!(&rocket, req, |response: Response| {
+        assert_eq!(response.status(), Status::Ok);
     });
 }

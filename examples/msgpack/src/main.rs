@@ -23,9 +23,15 @@ fn get(id: usize) -> MsgPack<Message> {
     })
 }
 
+#[post("/", data = "<data>", format = "application/msgpack")]
+fn create(data: MsgPack<Message>) -> Result<(), ()> {
+    println!("Got message: {}", data.contents);
+    Ok(())
+}
+
 fn rocket() -> rocket::Rocket {
     rocket::ignite()
-        .mount("/message", routes![get])
+        .mount("/message", routes![get, create])
 }
 
 fn main() {
