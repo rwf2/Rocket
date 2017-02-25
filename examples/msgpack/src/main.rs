@@ -24,9 +24,8 @@ fn get(id: usize) -> MsgPack<Message> {
 }
 
 #[post("/", data = "<data>", format = "application/msgpack")]
-fn create(data: MsgPack<Message>) -> Result<(), ()> {
-    println!("Got message: {}", data.contents);
-    Ok(())
+fn create(data: MsgPack<Message>) -> Result<String, ()> {
+    Ok(data.contents.clone())
 }
 
 fn rocket() -> rocket::Rocket {

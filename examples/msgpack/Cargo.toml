@@ -6,7 +6,6 @@ workspace = "../../"
 [dependencies]
 rocket = { path = "../../lib" }
 rocket_codegen = { path = "../../codegen" }
-rmp-serde = "0.12"
 serde = "0.9"
 serde_derive = "0.9"
 
