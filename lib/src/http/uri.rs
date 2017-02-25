@@ -314,6 +314,20 @@ impl<'a> fmt::Display for URI<'a> {
 
 unsafe impl<'a> Sync for URI<'a> { /* It's safe! */ }
 
+pub trait UrlDecoder<'a> {
+    fn url_decode(&'a self) -> Result<String, &'a str>;
+}
+
+impl<'a> UrlDecoder<'a> for &'a str {
+    fn url_decode(&'a self) -> Result<String, &'a str> {
+        let replaced = self.replace("+", " ");
+        match URI::percent_decode(replaced.as_bytes()) {
+            Err(_) => Err(self),
+            Ok(string) => Ok(string.into_owned())
+        }
+    }
+}
+
 /// Iterator over the segments of an absolute URI path. Skips empty segments.
 ///
 /// ### Examples

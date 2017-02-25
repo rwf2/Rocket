@@ -3,7 +3,7 @@ use std::net::{IpAddr, Ipv4Addr, Ipv6Addr, SocketAddrV4, SocketAddrV6, SocketAdd
 use std::path::PathBuf;
 use std::fmt::Debug;
 
-use http::uri::{URI, Segments, SegmentError};
+use http::uri::{URI, Segments, SegmentError, UrlDecoder};
 
 /// Trait to convert a dynamic path segment string to a concrete value.
 ///
@@ -211,7 +211,10 @@ impl<'a> FromParam<'a> for &'a str {
 impl<'a> FromParam<'a> for String {
     type Error = &'a str;
     fn from_param(p: &'a str) -> Result<String, Self::Error> {
-        URI::percent_decode(p.as_bytes()).map_err(|_| p).map(|s| s.into_owned())
+        match p.url_decode() {
+            Err(_) => Err(p),
+            Ok(string) => Ok(string)
+        }
     }
 }
 
