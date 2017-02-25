@@ -4,19 +4,8 @@ use std::io::Read;
 use rocket::testing::MockRequest;
 use rocket::http::Method::*;
 use rocket::http::Status;
-use rocket::response::Body;
 
 use super::rocket;
-
-fn body_to_bytes(body: Body<&mut Read>) -> Option<Vec<u8>> {
-    match body {
-        Body::Sized(b, _) | Body::Chunked(b, _) => {
-            let mut data: Vec<u8> = vec![];
-            b.read_to_end(&mut data).expect("Read from response failed");
-            Some(data)
-        }
-    }
-}
 
 fn test_query_file<T> (path: &str, file: T, status: Status)
     where T: Into<Option<&'static str>>
@@ -27,7 +16,7 @@ fn test_query_file<T> (path: &str, file: T, status: Status)
     let mut response = req.dispatch_with(&rocket);
     assert_eq!(response.status(), status);
 
-    let body_data = response.body().and_then(|body| body_to_bytes(body));
+    let body_data = response.body().and_then(|body| body.into_bytes());
     if let Some(filename) = file.into() {
         let expected_data = read_file_content(filename);
         assert!(body_data.map_or(false, |s| s == expected_data));
