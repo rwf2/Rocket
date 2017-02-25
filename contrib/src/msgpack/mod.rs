@@ -34,7 +34,7 @@ pub use self::rmp_serde::decode::Error as MsgPackError;
 /// doesn't specify "application/msgpack" as its first `Content-Type:` header
 /// parameter will not be routed to this handler. By default, Rocket will accept a
 /// Content Type of any of the following for MessagePack data:
-/// `application/msgpack`, `application/x-msgpack`, or `bin/msgpack`.
+/// `application/msgpack`, `application/x-msgpack`, `bin/msgpack`, or `bin/x-msgpack`.
 ///
 /// If you're responding with MessagePack data, return a `MsgPack<T>` type, where `T`
 /// implements `Serialize` from [Serde](https://github.com/serde-rs/serde). The
