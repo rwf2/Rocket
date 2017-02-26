@@ -1,43 +1,71 @@
 mod collider;
 mod route;
 
-use std::collections::hash_map::HashMap;
-
 use self::collider::Collider;
 pub use self::route::Route;
 
 use request::Request;
 use http::Method;
 
-// type Selector = (Method, usize);
-type Selector = Method;
-
 #[derive(Default)]
 pub struct Router {
-    routes: HashMap<Selector, Vec<Route>>, // using 'selector' for now
+    get_routes: Vec<Route>,
+    put_routes: Vec<Route>,
+    post_routes: Vec<Route>,
+    delete_routes: Vec<Route>,
+    options_routes: Vec<Route>,
+    head_routes: Vec<Route>,
+    trace_routes: Vec<Route>,
+    connect_routes: Vec<Route>,
+    patch_routes: Vec<Route>
 }
 
 impl Router {
     pub fn new() -> Router {
-        Router { routes: HashMap::new() }
+        Default::default()
     }
 
+
     pub fn add(&mut self, route: Route) {
-        let selector = route.method;
-        let entries = self.routes.entry(selector).or_insert_with(|| vec![]);
-        // TODO: We really just want an insertion at the correct spot here,
-        // instead of pushing to the end and _then_ sorting.
-        entries.push(route);
-        entries.sort_by(|a, b| a.rank.cmp(&b.rank));
+        use self::Method::*;
+
+        let routes = match route.method {
+            Get => &mut self.get_routes,
+            Put => &mut self.put_routes,
+            Post => &mut self.post_routes,
+            Delete => &mut self.delete_routes,
+            Options => &mut self.options_routes,
+            Head => &mut self.head_routes,
+            Trace => &mut self.trace_routes,
+            Connect => &mut self.connect_routes,
+            Patch => &mut self.patch_routes
+        };
+
+        match routes.iter().position(|r| r.rank > route.rank) {
+            Some(insert_position) => routes.insert(insert_position, route),
+            None => routes.push(route)
+        };
     }
 
     pub fn route<'b>(&'b self, req: &Request) -> Vec<&'b Route> {
+        use self::Method::*;
+
+        let routes = match req.method() {
+            Get => &self.get_routes,
+            Put => &self.put_routes,
+            Post => &self.post_routes,
+            Delete => &self.delete_routes,
+            Options => &self.options_routes,
+            Head => &self.head_routes,
+            Trace => &self.trace_routes,
+            Connect => &self.connect_routes,
+            Patch => &self.patch_routes
+        };
+
         // Note that routes are presorted by rank on each `add`.
-        let matches = self.routes.get(&req.method()).map_or(vec![], |routes| {
-            routes.iter()
-                .filter(|r| r.collides_with(req))
-                .collect()
-        });
+        let matches = routes.iter()
+            .filter(|r| r.collides_with(req))
+            .collect();
 
         trace_!("Routing the request: {}", req);
         trace_!("All matches: {:?}", matches);
@@ -46,7 +74,19 @@ impl Router {
 
     pub fn has_collisions(&self) -> bool {
         let mut result = false;
-        for routes in self.routes.values() {
+        let all_routes = &[
+            &self.get_routes, 
+            &self.put_routes,
+            &self.post_routes,
+            &self.delete_routes,
+            &self.options_routes,
+            &self.head_routes,
+            &self.trace_routes,
+            &self.connect_routes,
+            &self.patch_routes
+        ];
+
+        for routes in all_routes {
             for (i, a_route) in routes.iter().enumerate() {
                 for b_route in routes.iter().skip(i + 1) {
                     if a_route.collides_with(b_route) {
