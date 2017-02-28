@@ -104,6 +104,7 @@ extern crate state;
 extern crate cookie;
 extern crate time;
 extern crate memchr;
+extern crate uuid;
 
 #[cfg(test)] #[macro_use] extern crate lazy_static;
 
