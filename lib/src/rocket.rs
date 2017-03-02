@@ -79,7 +79,7 @@ impl Rocket {
     fn issue_response(&self, mut response: Response, hyp_res: hyper::FreshResponse) {
         // Add the 'rocket' server header, and write out the response.
         // TODO: If removing Hyper, write out `Date` header too.
-        response.set_header(Header::new("Server", "rocket"));
+        response.set_header(Header::new("Server", "Rocket"));
 
         match self.write_response(response, hyp_res) {
             Ok(_) => info_!("{}", Green.paint("Response succeeded.")),
