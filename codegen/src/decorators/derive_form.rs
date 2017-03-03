@@ -13,7 +13,7 @@ use syntax_ext::deriving::generic::MethodDef;
 use syntax_ext::deriving::generic::{StaticStruct, Substructure, TraitDef, ty};
 use syntax_ext::deriving::generic::combine_substructure as c_s;
 
-use utils::strip_ty_lifetimes;
+use utils::*;
 
 static ONLY_STRUCTS_ERR: &'static str = "`FromForm` can only be derived for \
     structures with named fields.";
@@ -37,15 +37,15 @@ fn get_struct_lifetime(ecx: &mut ExtCtxt, item: &Annotatable, span: Span)
                         Some(lifetime_name)
                     }
                     _ => {
-                        ecx.span_err(item.span, "cannot have more than one \
+                        span_err(ecx, item.span, "cannot have more than one \
                             lifetime parameter when deriving `FromForm`.");
                         None
                     }
                 }
             },
-            _ => ecx.span_fatal(span, ONLY_STRUCTS_ERR)
+            _ => span_fatal(ecx, span, ONLY_STRUCTS_ERR)
         },
-        _ => ecx.span_fatal(span, ONLY_STRUCTS_ERR)
+        _ => span_fatal(ecx, span, ONLY_STRUCTS_ERR)
     }
 }
 

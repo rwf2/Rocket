@@ -10,6 +10,8 @@ pub use self::parser_ext::ParserExt;
 pub use self::ident_ext::IdentExt;
 pub use self::span_ext::SpanExt;
 
+use rustc_errors::DiagnosticBuilder;
+
 use std::convert::AsRef;
 
 use syntax;
@@ -41,6 +43,22 @@ pub fn sep_by_tok<T>(ecx: &ExtCtxt, things: &[T], token: Token) -> Vec<TokenTree
     }
 
     output
+}
+
+pub fn struct_span_err<'cx>(cx: &'cx ExtCtxt, sp: Span, error: &str) -> DiagnosticBuilder<'cx> {
+    cx.struct_span_err(sp, &format!("😭  {}", error))
+}
+
+pub fn struct_span_fatal<'cx>(cx: &'cx ExtCtxt, sp: Span, error: &str) -> DiagnosticBuilder<'cx> {
+    cx.struct_span_err(sp, &format!("💀  {}", error))
+}
+
+pub fn span_err(cx: &ExtCtxt, sp: Span, error: &str) {
+    cx.span_err(sp, &format!("😭  {}", error))
+}
+
+pub fn span_fatal(cx: &ExtCtxt, sp: Span, error: &str) -> ! {
+    cx.span_fatal(sp, &format!("💀  {}", error))
 }
 
 pub fn option_as_expr<T: ToTokens>(ecx: &ExtCtxt, opt: &Option<T>) -> P<Expr> {

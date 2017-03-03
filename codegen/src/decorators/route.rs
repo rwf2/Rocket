@@ -52,8 +52,8 @@ impl RouteGenerateExt for RouteParams {
     fn missing_declared_err<T: Display>(&self, ecx: &ExtCtxt, arg: &Spanned<T>) {
         let fn_span = self.annotated_fn.span();
         let msg = format!("'{}' is declared as an argument...", arg.node);
-        ecx.span_err(arg.span, &msg);
-        ecx.span_err(fn_span, "...but isn't in the function signature.");
+        span_err(ecx, arg.span, &msg);
+        span_err(ecx, fn_span, "...but isn't in the function signature.");
     }
 
     fn gen_form(&self,
@@ -181,7 +181,7 @@ impl RouteGenerateExt for RouteParams {
                         !a.named(&p.node.name)
                     })
             } else {
-                ecx.span_err(a.pat.span, "route argument names must be identifiers");
+                span_err(ecx, a.pat.span, "route argument names must be identifiers");
                 false
             }
         };
