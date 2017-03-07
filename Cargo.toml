@@ -3,6 +3,7 @@ members = [
   "lib/",
   "codegen/",
   "contrib/",
+  "examples/database",
   "examples/cookies",
   "examples/errors",
   "examples/extended_validation",

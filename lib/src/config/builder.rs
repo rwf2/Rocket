@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 
-use config::{Result, Config, Value, Environment};
+use config::{Result, Config, Value, Environment, ConnectionConfig};
 use config::toml_ext::IntoValue;
 use logger::LoggingLevel;
 
@@ -20,6 +20,8 @@ pub struct ConfigBuilder {
     pub log_level: LoggingLevel,
     /// The session key.
     pub session_key: Option<String>,
+    /// The databases config
+    pub databases: HashMap<String, ConnectionConfig>,
     /// Any extra parameters that aren't part of Rocket's config.
     pub extras: HashMap<String, Value>,
     /// The root directory of this config.
@@ -63,6 +65,7 @@ impl ConfigBuilder {
             workers: config.workers,
             log_level: config.log_level,
             session_key: None,
+            databases: config.databases,
             extras: config.extras,
             root: root_dir,
         }
@@ -202,6 +205,28 @@ impl ConfigBuilder {
         self
     }
 
+    /// Adds a databases connection configuration parameter wiht `name` and `config`
+    /// to the configuration being built.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use rocket::config::{Config, Environment, ConnectionConfig, ConnectionType};
+    ///
+    /// let config = Config::build(Environment::Staging)
+    ///     .databases("my_db", ConnectionConfig {
+    ///         name: "my_db".into(),
+    ///         connection_type: ConnectionType::Postgres,
+    ///         url: "postgres://postgres@localhost/tests"
+    ///     }).unwrap();
+    ///
+    /// assert!(config.databases("my_db").is_some());
+    /// ```
+    pub fn databases(mut self, name: &str, config: ConnectionConfig) -> Self {
+        self.databases.insert(name.into(), config);
+        self
+    }
+
     /// Adds an extra configuration parameter with `name` and `value` to the
     /// configuration being built. The value can be any type that implements
     /// [IntoValue](/rocket/config/trait.IntoValue.html) including `&str`,
@@ -259,6 +284,7 @@ impl ConfigBuilder {
         config.set_port(self.port);
         config.set_workers(self.workers);
         config.set_log_level(self.log_level);
+        config.set_databases(self.databases);
         config.set_extras(self.extras);
         config.set_root(self.root);
 

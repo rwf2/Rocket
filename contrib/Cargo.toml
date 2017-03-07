@@ -15,6 +15,11 @@ default = ["json"]
 json = ["serde", "serde_json"]
 tera_templates = ["tera", "templates"]
 handlebars_templates = ["handlebars", "templates"]
+database = ["state", "r2d2"]
+diesel_db= ["database", "diesel", "r2d2-diesel"]
+postgres_db = ["database", "postgres", "r2d2_postgres"]
+redis_db = ["database", "redis", "r2d2_redis"]
+mysql_db = ["database", "mysql", "r2d2_mysql"]
 
 # Internal use only.
 templates = ["serde", "serde_json", "lazy_static_macro", "glob"]
@@ -23,6 +28,26 @@ lazy_static_macro = ["lazy_static"]
 [dependencies]
 rocket = { version = "0.2.2", path = "../lib/" }
 log = "^0.3"
+
+# Database dependencies
+state = { version = "^0.2", optional = true }
+r2d2 = { version = "^0.7.1", optional = true }
+
+# Diesel dependencies
+diesel = { version = "^0.10", optional = true }
+r2d2-diesel = { version = "^0.10", optional = true }
+
+# Postgres dependencies
+postgres = { version = "^0.13.6", optional = true }
+r2d2_postgres = { version = "^0.11.1", optional = true }
+
+# Redis dependencies
+redis = { version = "^0.8", optional = true }
+r2d2_redis = { version = "^0.5.1", optional = true}
+
+# MySQL dependencies
+mysql = { version = "^9.0.1", optional = true }
+r2d2_mysql = { version = "^8.0", optional = true }
 
 # UUID dependencies.
 uuid = { version = "^0.4", optional = true }

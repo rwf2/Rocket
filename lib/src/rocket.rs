@@ -339,6 +339,7 @@ impl Rocket {
 
         info!("🔧  Configured for {}.", config.environment);
         info_!("address: {}", White.paint(&config.address));
+
         info_!("port: {}", White.paint(&config.port));
         info_!("log: {}", White.paint(config.log_level));
         info_!("workers: {}", White.paint(config.workers));

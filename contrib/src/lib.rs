@@ -1,4 +1,4 @@
-#![feature(drop_types_in_const, macro_reexport)]
+#![feature(drop_types_in_const, macro_reexport, const_fn)]
 
 //! This crate contains officially sanctioned contributor libraries that provide
 //! functionality commonly used by Rocket applications.
@@ -33,8 +33,10 @@
 //! This crate is expected to grow with time, bringing in outside crates to be
 //! officially supported by Rocket.
 
-#[macro_use] extern crate log;
-#[macro_use] extern crate rocket;
+#[macro_use]
+extern crate log;
+#[macro_use]
+extern crate rocket;
 
 #[cfg_attr(feature = "lazy_static_macro", macro_use)]
 #[cfg(feature = "lazy_static_macro")]
@@ -46,6 +48,9 @@ extern crate serde;
 #[cfg(feature = "json")]
 #[cfg_attr(feature = "json", macro_reexport(json_internal))]
 extern crate serde_json;
+
+#[cfg(feature = "database")]
+pub mod database;
 
 #[cfg(feature = "json")]
 #[cfg_attr(feature = "json", macro_use)]
