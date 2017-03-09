@@ -564,11 +564,11 @@ impl Config {
     ///     .extra("numbers", vec![1, 2, 3])
     ///     .unwrap();
     ///
-    /// assert!(config.get_slice("numbers").is_ok());
+    /// assert!(config.get_array("numbers").is_ok());
     /// ```
-    pub fn get_slice(&self, name: &str) -> config::Result<&[Value]> {
+    pub fn get_array(&self, name: &str) -> config::Result<&config::Array> {
         let value = self.extras.get(name).ok_or_else(|| ConfigError::NotFound)?;
-        parse!(self, name, value, as_slice, "a slice")
+        parse!(self, name, value, as_array, "an array")
     }
 
     /// Attempts to retrieve the extra named `name` as a table.
