@@ -79,9 +79,11 @@ impl Catcher {
     /// # #![allow(unused_variables)]
     /// use rocket::{Catcher, Request, Error};
     /// use rocket::response::{Result, Responder};
+    /// use rocket::response::status::Custom;
+    /// use rocket::http::Status;
     ///
     /// fn handle_404<'r>(_: Error, req: &'r Request) -> Result<'r> {
-    ///    format!("Couldn't find: {}", req.uri()).respond()
+    ///     Custom(Status::NotFound, format!("Couldn't find: {}", req.uri())).respond()
     /// }
     ///
     /// fn handle_500<'r>(_: Error, _: &'r Request) -> Result<'r> {
