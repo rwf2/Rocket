@@ -1,6 +1,7 @@
 use std::cell::RefCell;
 use std::net::SocketAddr;
 use std::fmt;
+use std::str;
 
 use term_painter::Color::*;
 use term_painter::ToStyle;
@@ -480,8 +481,14 @@ impl<'r> Request<'r> {
 
         // Set the rest of the headers.
         for hyp in h_headers.iter() {
-            let header = Header::new(hyp.name().to_string(), hyp.value_string());
-            request.add_header(header);
+            if let Some(header_values) = h_headers.get_raw(hyp.name()) {
+                for value in header_values {
+                    let value_str = str::from_utf8(value)
+                        .map_err(|_| format!("Bad Header: {:?}", hyp))?;
+                    let header = Header::new(hyp.name().to_string(), value_str.to_string());
+                    request.add_header(header);
+                }
+            }
         }
 
         // Set the remote address.
