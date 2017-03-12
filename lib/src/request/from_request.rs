@@ -129,8 +129,8 @@ impl<S, E> IntoOutcome<S, (Status, E), ()> for Result<S, E> {
 /// requests be sent along with a valid API key in a header field. You want to
 /// ensure that the handlers corresponding to these requests don't get called
 /// unless there is an API key in the request and the key is valid. The
-/// following example implements this using an `APIKey` type and a `FromRequest`
-/// implementation for that type. The `APIKey` type is then used in the
+/// following example implements this using an `ApiKey` type and a `FromRequest`
+/// implementation for that type. The `ApiKey` type is then used in the
 /// `senstive` handler.
 ///
 /// ```rust
@@ -142,17 +142,17 @@ impl<S, E> IntoOutcome<S, (Status, E), ()> for Result<S, E> {
 /// use rocket::http::Status;
 /// use rocket::request::{self, Request, FromRequest};
 ///
-/// struct APIKey(String);
+/// struct ApiKey(String);
 ///
 /// /// Returns true if `key` is a valid API key string.
 /// fn is_valid(key: &str) -> bool {
 ///     key == "valid_api_key"
 /// }
 ///
-/// impl<'a, 'r> FromRequest<'a, 'r> for APIKey {
+/// impl<'a, 'r> FromRequest<'a, 'r> for ApiKey {
 ///     type Error = ();
 ///
-///     fn from_request(request: &'a Request<'r>) -> request::Outcome<APIKey, ()> {
+///     fn from_request(request: &'a Request<'r>) -> request::Outcome<ApiKey, ()> {
 ///         let keys: Vec<_> = request.headers().get("x-api-key").collect();
 ///         if keys.len() != 1 {
 ///             return Outcome::Failure((Status::BadRequest, ()));
@@ -163,12 +163,12 @@ impl<S, E> IntoOutcome<S, (Status, E), ()> for Result<S, E> {
 ///             return Outcome::Forward(());
 ///         }
 ///
-///         return Outcome::Success(APIKey(key.to_string()));
+///         return Outcome::Success(ApiKey(key.to_string()));
 ///     }
 /// }
 ///
 /// #[get("/sensitive")]
-/// fn sensitive(key: APIKey) -> &'static str {
+/// fn sensitive(key: ApiKey) -> &'static str {
 /// #   let _key = key;
 ///     "Sensitive data."
 /// }
