@@ -16,7 +16,7 @@ fn bad_get_put() {
     let rocket = rocket();
 
     // Try to get a message with an ID that doesn't exist.
-    let req = MockRequest::new(Get, "/message/99").header(ContentType::JSON);
+    let req = MockRequest::new(Get, "/message/99").header(ContentType::Json);
     run_test!(&rocket, req, |mut response: Response| {
         assert_eq!(response.status(), Status::NotFound);
 
@@ -26,7 +26,7 @@ fn bad_get_put() {
     });
 
     // Try to get a message with an invalid ID.
-    let req = MockRequest::new(Get, "/message/hi").header(ContentType::JSON);
+    let req = MockRequest::new(Get, "/message/hi").header(ContentType::Json);
     run_test!(&rocket, req, |mut response: Response| {
         assert_eq!(response.status(), Status::NotFound);
         let body = response.body().unwrap().into_string().unwrap();
@@ -34,14 +34,14 @@ fn bad_get_put() {
     });
 
     // Try to put a message without a proper body.
-    let req = MockRequest::new(Put, "/message/80").header(ContentType::JSON);
+    let req = MockRequest::new(Put, "/message/80").header(ContentType::Json);
     run_test!(&rocket, req, |response: Response| {
         assert_eq!(response.status(), Status::BadRequest);
     });
 
     // Try to put a message for an ID that doesn't exist.
     let req = MockRequest::new(Put, "/message/80")
-        .header(ContentType::JSON)
+        .header(ContentType::Json)
         .body(r#"{ "contents": "Bye bye, world!" }"#);
 
     run_test!(&rocket, req, |response: Response| {
@@ -53,14 +53,14 @@ fn bad_get_put() {
 fn post_get_put_get() {
     let rocket = rocket();
     // Check that a message with ID 1 doesn't exist.
-    let req = MockRequest::new(Get, "/message/1").header(ContentType::JSON);
+    let req = MockRequest::new(Get, "/message/1").header(ContentType::Json);
     run_test!(&rocket, req, |response: Response| {
         assert_eq!(response.status(), Status::NotFound);
     });
 
     // Add a new message with ID 1.
     let req = MockRequest::new(Post, "/message/1")
-        .header(ContentType::JSON)
+        .header(ContentType::Json)
         .body(r#"{ "contents": "Hello, world!" }"#);
 
     run_test!(&rocket, req, |response: Response| {
@@ -68,7 +68,7 @@ fn post_get_put_get() {
     });
 
     // Check that the message exists with the correct contents.
-    let req = MockRequest::new(Get, "/message/1") .header(ContentType::JSON);
+    let req = MockRequest::new(Get, "/message/1") .header(ContentType::Json);
     run_test!(&rocket, req, |mut response: Response| {
         assert_eq!(response.status(), Status::Ok);
         let body = response.body().unwrap().into_string().unwrap();
@@ -77,7 +77,7 @@ fn post_get_put_get() {
 
     // Change the message contents.
     let req = MockRequest::new(Put, "/message/1")
-        .header(ContentType::JSON)
+        .header(ContentType::Json)
         .body(r#"{ "contents": "Bye bye, world!" }"#);
 
     run_test!(&rocket, req, |response: Response| {
@@ -85,7 +85,7 @@ fn post_get_put_get() {
     });
 
     // Check that the message exists with the updated contents.
-    let req = MockRequest::new(Get, "/message/1") .header(ContentType::JSON);
+    let req = MockRequest::new(Get, "/message/1") .header(ContentType::Json);
     run_test!(&rocket, req, |mut response: Response| {
         assert_eq!(response.status(), Status::Ok);
         let body = response.body().unwrap().into_string().unwrap();

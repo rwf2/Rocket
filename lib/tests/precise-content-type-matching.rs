@@ -59,14 +59,14 @@ mod tests {
 
     #[test]
     fn exact_match_or_forward() {
-        check_dispatch!("/first", Some(ContentType::JSON), Some("specified"));
+        check_dispatch!("/first", Some(ContentType::Json), Some("specified"));
         check_dispatch!("/first", None, Some("unspecified"));
         check_dispatch!("/first", Some(ContentType::HTML), Some("unspecified"));
     }
 
     #[test]
     fn exact_match_or_none() {
-        check_dispatch!("/second", Some(ContentType::JSON), Some("specified_json"));
+        check_dispatch!("/second", Some(ContentType::Json), Some("specified_json"));
         check_dispatch!("/second", Some(ContentType::HTML), Some("specified_html"));
         check_dispatch!("/second", Some(ContentType::CSV), None);
         check_dispatch!("/second", None, None);

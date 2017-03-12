@@ -17,7 +17,7 @@
 //!
 //! The [contrib crate](/rocket_contrib) contains several useful `Responder`s
 //! including [Template](/rocket_contrib/struct.Template.html) and
-//! [JSON](/rocket_contrib/struct.JSON.html).
+//! [Json](/rocket_contrib/struct.Json.html).
 
 mod responder;
 mod redirect;

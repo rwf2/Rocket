@@ -22,7 +22,7 @@ fn test_hello() {
         age: 80,
     };
     let body = serde_json::to_string(&person).unwrap();
-    test("/hello/Michael/80", ContentType::JSON, Status::Ok, body);
+    test("/hello/Michael/80", ContentType::Json, Status::Ok, body);
 }
 
 #[test]
@@ -36,5 +36,5 @@ fn test_hello_invalid_content_type() {
 fn test_404() {
     let body = "<p>Sorry, '/unknown' is an invalid path! Try \
                 /hello/&lt;name&gt;/&lt;age&gt; instead.</p>";
-    test("/unknown", ContentType::JSON, Status::NotFound, body.to_string());
+    test("/unknown", ContentType::Json, Status::NotFound, body.to_string());
 }

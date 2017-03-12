@@ -8,7 +8,7 @@ extern crate serde_json;
 
 #[cfg(test)] mod tests;
 
-use rocket_contrib::{JSON, Value};
+use rocket_contrib::{Json, Value};
 use rocket::State;
 use std::collections::HashMap;
 use std::sync::Mutex;
@@ -27,35 +27,35 @@ struct Message {
 
 // TODO: This example can be improved by using `route` with multiple HTTP verbs.
 #[post("/<id>", format = "application/json", data = "<message>")]
-fn new(id: ID, message: JSON<Message>, map: State<MessageMap>) -> JSON<Value> {
+fn new(id: ID, message: Json<Message>, map: State<MessageMap>) -> Json<Value> {
     let mut hashmap = map.lock().expect("map lock.");
     if hashmap.contains_key(&id) {
-        JSON(json!({
+        Json(json!({
             "status": "error",
             "reason": "ID exists. Try put."
         }))
     } else {
         hashmap.insert(id, message.0.contents);
-        JSON(json!({ "status": "ok" }))
+        Json(json!({ "status": "ok" }))
     }
 }
 
 #[put("/<id>", format = "application/json", data = "<message>")]
-fn update(id: ID, message: JSON<Message>, map: State<MessageMap>) -> Option<JSON<Value>> {
+fn update(id: ID, message: Json<Message>, map: State<MessageMap>) -> Option<Json<Value>> {
     let mut hashmap = map.lock().unwrap();
     if hashmap.contains_key(&id) {
         hashmap.insert(id, message.0.contents);
-        Some(JSON(json!({ "status": "ok" })))
+        Some(Json(json!({ "status": "ok" })))
     } else {
         None
     }
 }
 
 #[get("/<id>", format = "application/json")]
-fn get(id: ID, map: State<MessageMap>) -> Option<JSON<Message>> {
+fn get(id: ID, map: State<MessageMap>) -> Option<Json<Message>> {
     let hashmap = map.lock().unwrap();
     hashmap.get(&id).map(|contents| {
-        JSON(Message {
+        Json(Message {
             id: Some(id),
             contents: contents.clone()
         })
@@ -63,8 +63,8 @@ fn get(id: ID, map: State<MessageMap>) -> Option<JSON<Message>> {
 }
 
 #[error(404)]
-fn not_found() -> JSON<Value> {
-    JSON(json!({
+fn not_found() -> Json<Value> {
+    Json(json!({
         "status": "error",
         "reason": "Resource was not found."
     }))

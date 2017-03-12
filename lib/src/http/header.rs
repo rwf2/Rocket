@@ -257,7 +257,7 @@ impl<'h> HeaderMap<'h> {
     /// use rocket::http::{HeaderMap, ContentType};
     ///
     /// let mut map = HeaderMap::new();
-    /// map.replace(ContentType::JSON);
+    /// map.replace(ContentType::Json);
     ///
     /// assert!(map.get_one("Content-Type").is_some());
     /// ```
@@ -269,7 +269,7 @@ impl<'h> HeaderMap<'h> {
     ///
     /// let mut map = HeaderMap::new();
     ///
-    /// map.replace(ContentType::JSON);
+    /// map.replace(ContentType::Json);
     /// assert_eq!(map.get_one("Content-Type"), Some("application/json"));
     ///
     /// map.replace(ContentType::GIF);

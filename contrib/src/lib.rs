@@ -13,7 +13,7 @@
 //! common modules exposed by default. The present feature list is below, with
 //! an asterisk next to the features that are enabled by default:
 //!
-//! * [json*](struct.JSON.html)
+//! * [json*](struct.Json.html)
 //! * [msgpack](struct.MsgPack.html)
 //! * [handlebars_templates](struct.Template.html)
 //! * [tera_templates](struct.Template.html)
@@ -54,7 +54,7 @@ extern crate serde_json;
 pub mod json;
 
 #[cfg(feature = "json")]
-pub use json::{JSON, SerdeError, Value};
+pub use json::{Json, SerdeError, Value};
 
 #[cfg(feature = "msgpack")]
 #[doc(hidden)]

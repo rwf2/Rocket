@@ -138,7 +138,7 @@ impl<'r> MockRequest<'r> {
     /// use rocket::http::ContentType;
     ///
     /// # #[allow(unused_variables)]
-    /// let req = MockRequest::new(Get, "/").header(ContentType::JSON);
+    /// let req = MockRequest::new(Get, "/").header(ContentType::Json);
     /// ```
     #[inline]
     pub fn header<H: Into<Header<'static>>>(mut self, header: H) -> Self {
@@ -158,7 +158,7 @@ impl<'r> MockRequest<'r> {
     /// use rocket::http::ContentType;
     ///
     /// let mut req = MockRequest::new(Get, "/");
-    /// req.add_header(ContentType::JSON);
+    /// req.add_header(ContentType::Json);
     /// ```
     #[inline]
     pub fn add_header<H: Into<Header<'static>>>(&mut self, header: H) {
@@ -211,7 +211,7 @@ impl<'r> MockRequest<'r> {
     ///
     /// # Examples
     ///
-    /// Set the body to be a JSON structure; also sets the Content-Type.
+    /// Set the body to be a Json structure; also sets the Content-Type.
     ///
     /// ```rust
     /// use rocket::http::Method::*;
@@ -220,7 +220,7 @@ impl<'r> MockRequest<'r> {
     ///
     /// # #[allow(unused_variables)]
     /// let req = MockRequest::new(Post, "/")
-    ///     .header(ContentType::JSON)
+    ///     .header(ContentType::Json)
     ///     .body(r#"{ "key": "value", "array": [1, 2, 3], }"#);
     /// ```
     #[inline]

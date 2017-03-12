@@ -239,7 +239,7 @@ impl<'r> ResponseBuilder<'r> {
     /// use rocket::http::ContentType;
     ///
     /// let response = Response::build()
-    ///     .header(ContentType::JSON)
+    ///     .header(ContentType::Json)
     ///     .header(ContentType::HTML)
     ///     .finalize();
     ///
@@ -724,8 +724,8 @@ impl<'r> Response<'r> {
     /// assert_eq!(response.headers().next(), Some(ContentType::HTML.into()));
     /// assert_eq!(response.headers().count(), 1);
     ///
-    /// response.set_header(ContentType::JSON);
-    /// assert_eq!(response.headers().next(), Some(ContentType::JSON.into()));
+    /// response.set_header(ContentType::Json);
+    /// assert_eq!(response.headers().next(), Some(ContentType::Json.into()));
     /// assert_eq!(response.headers().count(), 1);
     /// ```
     #[inline(always)]

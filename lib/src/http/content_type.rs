@@ -103,7 +103,7 @@ impl ContentType {
         "any", Any, is_any => "*", "*",
         "HTML", HTML, is_html => "text", "html" ; "charset=utf-8",
         "Plain", Plain, is_plain => "text", "plain" ; "charset=utf-8",
-        "JSON", JSON, is_json => "application", "json",
+        "JSON", Json, is_json => "application", "json",
         "MsgPack", MsgPack, is_msgpack => "application", "msgpack",
         "form", Form, is_form => "application", "x-www-form-urlencoded",
         "JavaScript", JavaScript, is_javascript => "application", "javascript",
@@ -158,7 +158,7 @@ impl ContentType {
             x if uncased_eq(x, "csv") => ContentType::CSV,
             x if uncased_eq(x, "js") => ContentType::JavaScript,
             x if uncased_eq(x, "css") => ContentType::CSS,
-            x if uncased_eq(x, "json") => ContentType::JSON,
+            x if uncased_eq(x, "json") => ContentType::Json,
             x if uncased_eq(x, "png") => ContentType::PNG,
             x if uncased_eq(x, "gif") => ContentType::GIF,
             x if uncased_eq(x, "bmp") => ContentType::BMP,
@@ -327,7 +327,7 @@ impl FromStr for ContentType {
     ///
     /// let json = ContentType::from_str("application/json").unwrap();
     /// assert!(json.is_known());
-    /// assert_eq!(json, ContentType::JSON);
+    /// assert_eq!(json, ContentType::Json);
     /// ```
     ///
     /// Parsing a content-type extension:
@@ -408,7 +408,7 @@ impl fmt::Display for ContentType {
     /// ```rust
     /// use rocket::http::ContentType;
     ///
-    /// let ct = format!("{}", ContentType::JSON);
+    /// let ct = format!("{}", ContentType::Json);
     /// assert_eq!(ct, "application/json");
     /// ```
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
@@ -468,7 +468,7 @@ mod test {
 
     #[test]
     fn test_simple() {
-        assert_parse!("application/json", ContentType::JSON);
+        assert_parse!("application/json", ContentType::Json);
         assert_parse!("*/json", ContentType::new("*", "json"));
         assert_parse!("text/html;charset=utf-8", ContentType::HTML);
         assert_parse!("text/html ; charset=utf-8", ContentType::HTML);

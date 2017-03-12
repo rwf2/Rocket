@@ -16,8 +16,8 @@ fn index() -> &'static str {
 }
 
 #[head("/other")]
-fn other() -> content::JSON<()> {
-    content::JSON(())
+fn other() -> content::Json<()> {
+    content::Json(())
 }
 
 #[cfg(feature = "testing")]
@@ -71,6 +71,6 @@ mod tests {
         assert_eq!(response.status(), Status::Ok);
 
         let content_type: Vec<_> = response.header_values("Content-Type").collect();
-        assert_eq!(content_type, vec![ContentType::JSON.to_string()]);
+        assert_eq!(content_type, vec![ContentType::Json.to_string()]);
     }
 }

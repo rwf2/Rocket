@@ -19,16 +19,16 @@ struct Person {
 }
 
 // This shows how to manually serialize some JSON, but in a real application,
-// we'd use the JSON contrib type.
+// we'd use the Json contrib type.
 #[get("/<name>/<age>", format = "application/json")]
-fn hello(content_type: ContentType, name: String, age: i8) -> content::JSON<String> {
+fn hello(content_type: ContentType, name: String, age: i8) -> content::Json<String> {
     let person = Person {
         name: name,
         age: age,
     };
 
     println!("ContentType: {}", content_type);
-    content::JSON(serde_json::to_string(&person).unwrap())
+    content::Json(serde_json::to_string(&person).unwrap())
 }
 
 #[error(404)]

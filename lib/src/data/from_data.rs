@@ -66,7 +66,7 @@ impl<'a, S, E> IntoOutcome<S, (Status, E), Data> for Result<S, E> {
 /// }
 /// ```
 ///
-/// `Person` has a custom serialization format, so the built-in `JSON` type
+/// `Person` has a custom serialization format, so the built-in `Json` type
 /// doesn't suffice. The format is `<name>:<age>` with `Content-Type:
 /// application/x-person`. You'd like to use `Person` as a `FromData` type so
 /// that you can retrieve it directly from a client's request body:

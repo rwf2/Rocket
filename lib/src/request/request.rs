@@ -229,8 +229,8 @@ impl<'r> Request<'r> {
     /// request.add_header(ContentType::HTML);
     /// assert_eq!(request.content_type(), Some(ContentType::HTML));
     ///
-    /// request.replace_header(ContentType::JSON);
-    /// assert_eq!(request.content_type(), Some(ContentType::JSON));
+    /// request.replace_header(ContentType::Json);
+    /// assert_eq!(request.content_type(), Some(ContentType::Json));
     /// ```
     #[inline(always)]
     pub fn replace_header<H: Into<Header<'r>>>(&mut self, header: H) {
@@ -306,8 +306,8 @@ impl<'r> Request<'r> {
     /// let mut request = Request::new(Method::Get, "/uri");
     /// assert_eq!(request.content_type(), None);
     ///
-    /// request.replace_header(ContentType::JSON);
-    /// assert_eq!(request.content_type(), Some(ContentType::JSON));
+    /// request.replace_header(ContentType::Json);
+    /// assert_eq!(request.content_type(), Some(ContentType::Json));
     /// ```
     #[inline(always)]
     pub fn content_type(&self) -> Option<ContentType> {
