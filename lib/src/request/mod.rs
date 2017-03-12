@@ -44,7 +44,11 @@ mod tests {
             h_headers.set_raw(key.clone(), raw_bytes);
         }
 
-        let req = Request::from_hyp(h_method, h_headers, h_uri, h_addr).unwrap();
+        let req = match Request::from_hyp(h_method, h_headers, h_uri, h_addr) {
+            Ok(req) => req,
+            Err(e) => panic!("Building Request failed: {:?}", e),
+        };
+
         let r_headers = req.headers();
 
         for (key, values) in &test_headers {
