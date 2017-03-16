@@ -1,8 +1,13 @@
 ## Errors
 Responders need not always generate a response. Instead, they can return an
 Err with a given status code. When this happens, Rocket forwards the request
-to the error catcher for the given status code. If none exists, which can
-only happen when using custom status codes, Rocket uses the 500 error catcher.
+to the [error catcher](error_catcher.md) for the given status code. Just like a
+request handler, an error catcher will return a response by returning any type 
+that has the `Responder` trait implemented. A common example would be to render
+a page displaying **400 Bad Request** to a user who sent a request with a 
+malformed json body. If no error_catcher is configured to handle an specific 
+http error code, which can only happen when using custom status codes, Rocket
+uses's the 500 error catcher.
 
 ### Result
 `Result` is one of the most commonly used responders. Returning a `Result` means

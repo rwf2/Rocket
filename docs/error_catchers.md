@@ -1,7 +1,11 @@
 # Error Catchers
 
-When Rocket wants to return an error page to the client, Rocket invokes the
-catcher for that error. A catcher is like a route, except it only handles
+When Rocket wants to return an error response type to the client,
+either because the request failed to pass any of the [request guards]
+(requests_request_guard.md) on the the handler's or because the matched 
+handler returned an `Err`, Rocket does this via error catchers.
+
+A catcher is like a route, except it only handles
 errors. Catchers are declared via the error attribute, which takes a single
 integer corresponding to the HTTP status code to catch. For instance, to
 declare a catcher for 404 errors, you’d write:
