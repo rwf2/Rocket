@@ -40,7 +40,7 @@ impl Method {
         }
     }
 
-    /// Returns `true` ff an HTTP request with the method represented by `self`
+    /// Returns `true` if an HTTP request with the method represented by `self`
     /// supports a payload.
     ///
     /// # Example
