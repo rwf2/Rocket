@@ -25,7 +25,7 @@ impl ErrorGenerateExt for ErrorParams {
         let input_args = &self.annotated_fn.decl().inputs;
         if input_args.len() > 2 {
             let sp = self.annotated_fn.span();
-            ecx.struct_span_err(sp, "error handlers can have at most 2 arguments")
+            struct_span_err(ecx, sp, "error handlers can have at most 2 arguments")
                 .help(arg_help).emit()
         }
 
@@ -35,7 +35,7 @@ impl ErrorGenerateExt for ErrorParams {
                 TyKind::Rptr(..) => Some(req),
                 TyKind::Path(..) => Some(err),
                 _ => {
-                    ecx.struct_span_err(ty.span, "unexpected error handler argument")
+                    struct_span_err(ecx, ty.span, "unexpected error handler argument")
                         .help(arg_help).emit();
                     None
                 }

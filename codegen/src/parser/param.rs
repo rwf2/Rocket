@@ -2,7 +2,7 @@ use syntax::ast::Ident;
 use syntax::ext::base::ExtCtxt;
 use syntax::codemap::{Span, Spanned, BytePos};
 
-use utils::span;
+use utils::*;
 
 #[derive(Debug)]
 pub enum Param {
@@ -41,7 +41,7 @@ impl<'s, 'a, 'c> Iterator for ParamIter<'s, 'a, 'c> {
 
     fn next(&mut self) -> Option<Param> {
         let err = |ecx: &ExtCtxt, sp: Span, msg: &str| {
-            ecx.span_err(sp, msg);
+            span_err(ecx, sp, msg);
             None
         };
 

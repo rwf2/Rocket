@@ -5,7 +5,7 @@ use syntax::ast::*;
 use syntax::ext::base::{ExtCtxt, Annotatable};
 use syntax::codemap::{Span, Spanned, dummy_spanned};
 
-use utils::{span, MetaItemExt, SpanExt, is_valid_ident};
+use utils::*;
 use super::{Function, ParamIter};
 use super::keyvalue::KVSpanned;
 use super::uri::validate_uri;
@@ -40,19 +40,19 @@ impl RouteParams {
                 annotated: &Annotatable)
                 -> RouteParams {
         let function = Function::from(annotated).unwrap_or_else(|item_sp| {
-            ecx.span_err(sp, "this attribute can only be used on functions...");
-            ecx.span_fatal(item_sp, "...but was applied to the item above.");
+            span_err(ecx, sp, "this attribute can only be used on functions...");
+            span_fatal(ecx, item_sp, "...but was applied to the item above.");
         });
 
         let meta_items = meta_item.meta_item_list().unwrap_or_else(|| {
-            ecx.struct_span_err(sp, "incorrect use of attribute")
+            struct_span_err(ecx, sp, "incorrect use of attribute")
                 .help("attributes in Rocket must have the form: #[name(...)]")
                 .emit();
-            ecx.span_fatal(sp, "malformed attribute");
+            span_fatal(ecx, sp, "malformed attribute");
         });
 
         if meta_items.len() < 1 {
-            ecx.span_fatal(sp, "attribute requires at least 1 parameter");
+            span_fatal(ecx, sp, "attribute requires at least 1 parameter");
         }
 
         // Figure out the method. If it is known (i.e, because we're parsing a
@@ -64,10 +64,10 @@ impl RouteParams {
         };
 
         if attr_params.len() < 1 {
-            ecx.struct_span_err(sp, "attribute requires at least a path")
+            struct_span_err(ecx, sp, "attribute requires at least a path")
                 .help(r#"example: #[get("/my/path")] or #[get(path = "/hi")]"#)
                 .emit();
-            ecx.span_fatal(sp, "malformed attribute");
+            span_fatal(ecx, sp, "malformed attribute");
         }
 
         // Parse the required path and optional query parameters.
@@ -79,7 +79,7 @@ impl RouteParams {
         for param in &attr_params[1..] {
             let kv_opt = kv_from_nested(param);
             if kv_opt.is_none() {
-                ecx.span_err(param.span(), "expected key = value");
+                span_err(ecx, param.span(), "expected key = value");
                 continue;
             }
 
@@ -90,7 +90,7 @@ impl RouteParams {
                 "format" => format = parse_opt(ecx, &kv, parse_format),
                 _ => {
                     let msg = format!("'{}' is not a known parameter", kv.key());
-                    ecx.span_err(kv.span, &msg);
+                    span_err(ecx, kv.span, &msg);
                     continue;
                 }
             }
@@ -108,7 +108,7 @@ impl RouteParams {
         // Sanity check: `data` should only be used with payload methods.
         if let Some(ref data_param) = data {
             if !method.node.supports_payload() {
-                ecx.struct_span_err(data_param.span, "`data` route parameters \
+                struct_span_err(ecx, data_param.span, "`data` route parameters \
                         can only be used with payload supporting methods")
                     .note(&format!("'{}' does not support payloads", method.node))
                     .emit();
@@ -160,9 +160,9 @@ pub fn param_to_ident(ecx: &ExtCtxt, s: Spanned<&str>) -> Option<Spanned<Ident>>
             return Some(span(Ident::from_str(param), s.span.trim(1)));
         }
 
-        ecx.span_err(s.span, "parameter name must be alphanumeric");
+        span_err(ecx, s.span, "parameter name must be alphanumeric");
     } else {
-        ecx.span_err(s.span, "parameters must start with '<' and end with '>'");
+        span_err(ecx, s.span, "parameters must start with '<' and end with '>'");
     }
 
     None
@@ -176,12 +176,12 @@ fn parse_method(ecx: &ExtCtxt, meta_item: &NestedMetaItem) -> Spanned<Method> {
             }
         } else {
             let msg = format!("'{}' is not a valid HTTP method.", word.name());
-            ecx.span_err(word.span(), &msg);
+            span_err(ecx, word.span(), &msg);
         }
     }
 
     // Fallthrough. Return default method.
-    ecx.struct_span_err(meta_item.span, "expected a valid HTTP method")
+    struct_span_err(ecx, meta_item.span, "expected a valid HTTP method")
         .help("valid methods are: GET, PUT, POST, DELETE, PATCH")
         .emit();
 
@@ -194,16 +194,16 @@ fn parse_path(ecx: &ExtCtxt,
     let sp = meta_item.span();
     if let Some((name, lit)) = meta_item.name_value() {
         if name != &"path" {
-            ecx.span_err(sp, "the first key, if any, must be 'path'");
+            span_err(ecx, sp, "the first key, if any, must be 'path'");
         } else if let LitKind::Str(ref s, _) = lit.node {
             return validate_uri(ecx, &s.as_str(), lit.span);
         } else {
-            ecx.span_err(lit.span, "`path` value must be a string")
+            span_err(ecx, lit.span, "`path` value must be a string")
         }
     } else if let Some(s) = meta_item.str_lit() {
         return validate_uri(ecx, &s.as_str(), sp);
     } else {
-        ecx.struct_span_err(sp, r#"expected `path = string` or a path string"#)
+        struct_span_err(ecx, sp, r#"expected `path = string` or a path string"#)
             .help(r#"you can specify the path directly as a string, \
                   e.g: "/hello/world", or as a key-value pair, \
                   e.g: path = "/hello/world" "#)
@@ -229,7 +229,7 @@ fn parse_data(ecx: &ExtCtxt, kv: &KVSpanned<LitKind>) -> Ident {
     }
 
     let err_string = r#"`data` value must be a parameter, e.g: "<name>"`"#;
-    ecx.struct_span_fatal(kv.span, err_string)
+    struct_span_fatal(ecx, kv.span, err_string)
         .help(r#"data, if specified, must be a key-value pair where
               the key is `data` and the value is a string with a single
               parameter inside '<' '>'. e.g: data = "<user_form>""#)
@@ -245,10 +245,10 @@ fn parse_rank(ecx: &ExtCtxt, kv: &KVSpanned<LitKind>) -> isize {
             return n as isize;
         } else {
             let msg = format!("rank must be less than or equal to {}", max);
-            ecx.span_err(kv.value.span, msg.as_str());
+            span_err(ecx, kv.value.span, msg.as_str());
         }
     } else {
-        ecx.struct_span_err(kv.span, r#"`rank` value must be an int"#)
+        struct_span_err(ecx, kv.span, r#"`rank` value must be an int"#)
             .help(r#"the rank, if specified, must be a key-value pair where
                   the key is `rank` and the value is an integer.
                   e.g: rank = 1, or e.g: rank = 10"#)
@@ -268,11 +268,11 @@ fn parse_format(ecx: &ExtCtxt, kv: &KVSpanned<LitKind>) -> ContentType {
 
             return ct;
         } else {
-            ecx.span_err(kv.value.span, "malformed content-type");
+            span_err(ecx, kv.value.span, "malformed content-type");
         }
     }
 
-    ecx.struct_span_err(kv.span, r#"`format` must be a "content/type""#)
+    struct_span_err(ecx, kv.span, r#"`format` must be a "content/type""#)
         .help(r#"format, if specified, must be a key-value pair where
               the key is `format` and the value is a string representing the
               content-type accepted. e.g: format = "application/json""#)

@@ -121,6 +121,7 @@
 extern crate syntax;
 extern crate syntax_ext;
 extern crate syntax_pos;
+extern crate rustc_errors;
 extern crate rustc_plugin;
 extern crate rocket;
 

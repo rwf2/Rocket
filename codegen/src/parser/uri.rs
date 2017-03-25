@@ -4,7 +4,7 @@ use syntax::ext::base::ExtCtxt;
 
 use rocket::http::uri::URI;
 use super::route::param_to_ident;
-use utils::{span, SpanExt, is_valid_ident};
+use utils::*;
 
 // We somewhat arbitrarily enforce absolute paths. This is mostly because we
 // want the initial "/" to represent the mount point. Empty segments are
@@ -14,11 +14,11 @@ use utils::{span, SpanExt, is_valid_ident};
 fn valid_path(ecx: &ExtCtxt, uri: &URI, sp: Span) -> bool {
     let cleaned = uri.to_string();
     if !uri.as_str().starts_with('/') {
-        ecx.struct_span_err(sp, "route paths must be absolute")
+        struct_span_err(ecx, sp, "route paths must be absolute")
             .note(&format!("expected {:?}, found {:?}", cleaned, uri.as_str()))
             .emit()
     } else if cleaned != uri.as_str() {
-        ecx.struct_span_err(sp, "paths cannot contain empty segments")
+        struct_span_err(ecx, sp, "paths cannot contain empty segments")
             .note(&format!("expected {:?}, found {:?}", cleaned, uri.as_str()))
             .emit()
     } else {
@@ -39,7 +39,7 @@ fn valid_segments(ecx: &ExtCtxt, uri: &URI, sp: Span) -> bool {
         // If we're iterating after a '..' param, that's a hard error.
         if let Some(span) = segments_span {
             let rem_sp = sp.trim_left(index).trim_right(1);
-            ecx.struct_span_err(rem_sp, "text after a trailing '..' param")
+            struct_span_err(ecx, rem_sp, "text after a trailing '..' param")
                 .help("a segments param must be the final text in a path")
                 .span_note(span, "trailing param is here")
                 .emit();
@@ -55,13 +55,13 @@ fn valid_segments(ecx: &ExtCtxt, uri: &URI, sp: Span) -> bool {
             }
 
             if param.is_empty() {
-                ecx.span_err(span, "parameters cannot be empty");
+                span_err(ecx, span, "parameters cannot be empty");
             } else if !is_valid_ident(param) {
-                ecx.struct_span_err(span, "parameter names must be valid identifiers")
+                struct_span_err(ecx, span, "parameter names must be valid identifiers")
                     .note(&format!("{:?} is not a valid identifier", param))
                     .emit();
             } else if param.starts_with('_') {
-                ecx.struct_span_err(span, "parameters cannot be ignored")
+                struct_span_err(ecx, span, "parameters cannot be ignored")
                     .note(&format!("{:?} is being ignored", param))
                     .emit();
             } else {
@@ -71,11 +71,11 @@ fn valid_segments(ecx: &ExtCtxt, uri: &URI, sp: Span) -> bool {
             validated = false;
         } else if segment.starts_with("<") {
             if segment[1..].contains("<") || segment.contains(">") {
-                ecx.struct_span_err(span, "malformed parameter")
+                struct_span_err(ecx, span, "malformed parameter")
                     .help("parameters must be of the form '<param>'")
                     .emit();
             } else {
-                ecx.struct_span_err(span, "parameter is missing a closing bracket")
+                struct_span_err(ecx, span, "parameter is missing a closing bracket")
                     .help(&format!("perhaps you meant '{}>'?", segment))
                     .emit();
             }
@@ -83,11 +83,11 @@ fn valid_segments(ecx: &ExtCtxt, uri: &URI, sp: Span) -> bool {
             validated = false;
         } else if URI::percent_encode(segment) != segment {
             if segment.contains("<") || segment.contains(">") {
-                ecx.struct_span_err(span, "malformed parameter")
+                struct_span_err(ecx, span, "malformed parameter")
                     .help("parameters must be of the form '<param>'")
                     .emit();
             } else {
-                ecx.span_err(span, "segment contains invalid characters");
+                span_err(ecx, span, "segment contains invalid characters");
             }
 
             validated = false;
