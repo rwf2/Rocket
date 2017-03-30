@@ -557,7 +557,7 @@ impl Rocket {
             Err(e) => return LaunchError::from(e)
         };
 
-        info!("🚀  {} {}{}...",
+        info!("🚀  {} {}{} ...",
               White.paint("Rocket has launched from"),
               White.bold().paint("http://"),
               White.bold().paint(&full_addr));
