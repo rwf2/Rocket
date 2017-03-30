@@ -18,8 +18,8 @@ pub struct ConfigBuilder {
     pub workers: u16,
     /// How much information to log.
     pub log_level: LoggingLevel,
-    /// The session key.
-    pub session_key: Option<String>,
+    /// The secret key.
+    pub secret_key: Option<String>,
     /// Any extra parameters that aren't part of Rocket's config.
     pub extras: HashMap<String, Value>,
     /// The root directory of this config.
@@ -62,7 +62,7 @@ impl ConfigBuilder {
             port: config.port,
             workers: config.workers,
             log_level: config.log_level,
-            session_key: None,
+            secret_key: None,
             extras: config.extras,
             root: root_dir,
         }
@@ -144,7 +144,7 @@ impl ConfigBuilder {
         self
     }
 
-    /// Sets the `session_key` in the configuration being built.
+    /// Sets the `secret_key` in the configuration being built.
     ///
     /// # Example
     ///
@@ -154,11 +154,11 @@ impl ConfigBuilder {
     ///
     /// let key = "8Xui8SN4mI+7egV/9dlfYYLGQJeEx4+DwmSQLwDVXJg=";
     /// let mut config = Config::build(Environment::Staging)
-    ///     .session_key(key)
+    ///     .secret_key(key)
     ///     .unwrap();
     /// ```
-    pub fn session_key<K: Into<String>>(mut self, key: K) -> Self {
-        self.session_key = Some(key.into());
+    pub fn secret_key<K: Into<String>>(mut self, key: K) -> Self {
+        self.secret_key = Some(key.into());
         self
     }
 
@@ -229,7 +229,7 @@ impl ConfigBuilder {
     /// # Errors
     ///
     /// If the current working directory cannot be retrieved, returns a `BadCWD`
-    /// error. If the address or session key fail to parse, returns a `BadType`
+    /// error. If the address or secret key fail to parse, returns a `BadType`
     /// error.
     ///
     /// # Example
@@ -260,8 +260,8 @@ impl ConfigBuilder {
         config.set_extras(self.extras);
         config.set_root(self.root);
 
-        if let Some(key) = self.session_key {
-            config.set_session_key(key)?;
+        if let Some(key) = self.secret_key {
+            config.set_secret_key(key)?;
         }
 
         Ok(config)
@@ -272,7 +272,7 @@ impl ConfigBuilder {
     /// # Panics
     ///
     /// Panics if the current working directory cannot be retrieved or if the
-    /// supplied address or session key fail to parse.
+    /// supplied address or secret key fail to parse.
     ///
     /// # Example
     ///
