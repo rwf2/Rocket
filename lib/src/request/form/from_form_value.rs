@@ -2,7 +2,7 @@ use std::net::{IpAddr, Ipv4Addr, Ipv6Addr, SocketAddrV4, SocketAddrV6, SocketAdd
 use std::str::FromStr;
 
 use error::Error;
-use http::uri::URI;
+use http::uri::UrlDecoder;
 
 /// Trait to create instance of some type from a form value; expected from field
 /// types in structs deriving `FromForm`.
@@ -166,10 +166,9 @@ impl<'v> FromFormValue<'v> for String {
 
     // This actually parses the value according to the standard.
     fn from_form_value(v: &'v str) -> Result<Self, Self::Error> {
-        let replaced = v.replace("+", " ");
-        match URI::percent_decode(replaced.as_bytes()) {
+        match v.url_decode() {
             Err(_) => Err(v),
-            Ok(string) => Ok(string.into_owned())
+            Ok(string) => Ok(string)
         }
     }
 }
