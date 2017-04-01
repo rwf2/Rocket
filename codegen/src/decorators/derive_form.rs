@@ -49,8 +49,37 @@ fn get_struct_lifetime(ecx: &mut ExtCtxt, item: &Annotatable, span: Span)
     }
 }
 
-// TODO: Use proper logging to emit the error messages.
+trait IgnoreExtraFieldStrategy {
+    fn shall_ignore() -> bool;
+}
+
+struct IgnoreExtraField;
+impl IgnoreExtraFieldStrategy for IgnoreExtraField {
+    fn shall_ignore() -> bool {
+        true
+    }
+}
+
+struct ProhibitExtraField;
+impl IgnoreExtraFieldStrategy for ProhibitExtraField {
+    fn shall_ignore() -> bool {
+        false
+    }
+}
+
 pub fn from_form_derive(ecx: &mut ExtCtxt, span: Span, meta_item: &MetaItem,
+          annotated: &Annotatable, push: &mut FnMut(Annotatable)) {
+    from_form_derive_imp::<ProhibitExtraField>(ecx, span, meta_item, annotated, push)
+}
+
+pub fn from_form_ignorable_derive(ecx: &mut ExtCtxt, span: Span, meta_item: &MetaItem,
+          annotated: &Annotatable, push: &mut FnMut(Annotatable)) {
+    from_form_derive_imp::<IgnoreExtraField>(ecx, span, meta_item, annotated, push)
+}
+
+// TODO: Use proper logging to emit the error messages.
+fn from_form_derive_imp<S: IgnoreExtraFieldStrategy>
+    (ecx: &mut ExtCtxt, span: Span, meta_item: &MetaItem,
           annotated: &Annotatable, push: &mut FnMut(Annotatable)) {
     let struct_lifetime = get_struct_lifetime(ecx, annotated, span);
     let (lifetime_var, trait_generics) = match struct_lifetime {
@@ -110,7 +139,7 @@ pub fn from_form_derive(ecx: &mut ExtCtxt, span: Span, meta_item: &MetaItem,
                 ),
                 attributes: vec![],
                 is_unsafe: false,
-                combine_substructure: c_s(Box::new(from_form_substructure)),
+                combine_substructure: c_s(Box::new(from_form_substructure::<S>)),
                 unify_fieldless_variants: false,
             }
         ],
@@ -122,7 +151,8 @@ pub fn from_form_derive(ecx: &mut ExtCtxt, span: Span, meta_item: &MetaItem,
     trait_def.expand(ecx, meta_item, annotated, push);
 }
 
-fn from_form_substructure(cx: &mut ExtCtxt, trait_span: Span, substr: &Substructure) -> P<Expr> {
+fn from_form_substructure<S: IgnoreExtraFieldStrategy>
+    (cx: &mut ExtCtxt, trait_span: Span, substr: &Substructure) -> P<Expr> {
     // Check that we specified the methods to the argument correctly.
     const EXPECTED_ARGS: usize = 1;
     let arg = if substr.nonself_args.len() == EXPECTED_ARGS {
@@ -197,6 +227,9 @@ fn from_form_substructure(cx: &mut ExtCtxt, trait_span: Span, substr: &Substruct
 
     // The actual match statement. Iterate through all of the fields in the form
     // and use the $arms generated above.
+
+    let shall_ignore = S::shall_ignore();
+
     stmts.push(quote_stmt!(cx,
         for (k, v) in $arg {
             match k.as_str() {
@@ -207,9 +240,11 @@ fn from_form_substructure(cx: &mut ExtCtxt, trait_span: Span, substr: &Substruct
                      * in sync with Rocket::preprocess. */
                 }
                 _ => {
-                    println!("    => {}={} has no matching field in struct.",
-                             k, v);
-                    $return_err_stmt
+                    if !$shall_ignore {
+                        println!("    => {}={} has no matching field in struct.",
+                                k, v);
+                        $return_err_stmt
+                    }
                 }
            };
        }
