@@ -12,6 +12,12 @@ struct TodoTask {
     completed: bool
 }
 
+#[derive(Debug, PartialEq, FromFormIgnorable)]
+struct TodoTaskIgnorable {
+    description: String,
+    completed: bool
+}
+
 // TODO: Make deriving `FromForm` for this enum possible.
 #[derive(Debug, PartialEq)]
 enum FormOption {
@@ -90,6 +96,27 @@ fn main() {
     // Ensure _method isn't required.
     let task: Option<TodoTask> = parse("_method=patch&description=Hello&completed=off");
     assert_eq!(task, Some(TodoTask {
+        description: "Hello".to_string(),
+        completed: false
+    }));
+
+    // Same number of arguments: simple case.
+    let task: Option<TodoTaskIgnorable> = parse("description=Hello&completed=on");
+    assert_eq!(task, Some(TodoTaskIgnorable {
+        description: "Hello".to_string(),
+        completed: true
+    }));
+
+    // Argument in string but not in form.
+    let task: Option<TodoTaskIgnorable> = parse("other=a&description=Hello&completed=on");
+    assert_eq!(task, Some(TodoTaskIgnorable {
+        description: "Hello".to_string(),
+        completed: true
+    }));
+
+    // Ensure _method isn't required.
+    let task: Option<TodoTaskIgnorable> = parse("_method=patch&description=Hello&completed=off");
+    assert_eq!(task, Some(TodoTaskIgnorable {
         description: "Hello".to_string(),
         completed: false
     }));

@@ -182,7 +182,8 @@ pub fn plugin_registrar(reg: &mut Registry) {
     reg.register_macro("errors", macros::errors);
 
     register_derives!(reg,
-        "derive_FromForm" => from_form_derive
+        "derive_FromForm" => from_form_derive,
+        "derive_FromFormIgnorable" => from_form_ignorable_derive
     );
 
     register_decorators!(reg,
