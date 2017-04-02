@@ -9,7 +9,7 @@ fn hello() -> &'static str {
 }
 
 fn main() {
-    rocket::ignite().mount("/", routes![hello]).launch()
+    rocket::ignite().mount("/", routes![hello]).launch();
 }
 
 #[cfg(test)]

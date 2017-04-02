@@ -6,10 +6,10 @@ use term_painter::Color::*;
 
 use codegen::StaticRouteInfo;
 use handler::Handler;
-use http::{Method, ContentType};
+use http::{Method, MediaType};
 use http::uri::URI;
 
-/// A route: a method, its handler, path, rank, and format/content type.
+/// A route: a method, its handler, path, rank, and format/media type.
 pub struct Route {
     /// The method this route matches against.
     pub method: Method,
@@ -19,14 +19,20 @@ pub struct Route {
     pub path: URI<'static>,
     /// The rank of this route. Lower ranks have higher priorities.
     pub rank: isize,
-    /// The Content-Type this route matches against.
-    pub format: Option<ContentType>,
+    /// The media type this route matches against.
+    pub format: Option<MediaType>,
 }
 
-fn default_rank(path: &str) -> isize {
-    // The rank for a given path is 0 if it is a static route (it doesn't
-    // contain any dynamic <segmants>) or 1 if it is dynamic.
-    path.contains('<') as isize
+#[inline(always)]
+fn default_rank(uri: &URI) -> isize {
+    // static path, query = -4; static path, no query = -3
+    // dynamic path, query = -2; dynamic path, no query = -1
+    match (!uri.path().contains('<'),  uri.query().is_some()) {
+        (true, true) => -4,
+        (true, false) => -3,
+        (false, true) => -2,
+        (false, false) => -1,
+    }
 }
 
 impl Route {
@@ -37,11 +43,12 @@ impl Route {
     pub fn new<S>(m: Method, path: S, handler: Handler) -> Route
         where S: AsRef<str>
     {
+        let uri = URI::from(path.as_ref().to_string());
         Route {
             method: m,
             handler: handler,
-            rank: default_rank(path.as_ref()),
-            path: URI::from(path.as_ref().to_string()),
+            rank: default_rank(&uri),
+            path: uri,
             format: None,
         }
     }

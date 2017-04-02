@@ -15,8 +15,8 @@ use rocket_contrib::UUID;
 mod tests;
 
 lazy_static! {
-    // A small people lookup table for the sake of this example. In a real 
-    // application this could be a database lookup. Notice that we use the 
+    // A small people lookup table for the sake of this example. In a real
+    // application this could be a database lookup. Notice that we use the
     // uuid::Uuid type here and not the rocket_contrib::UUID type.
     static ref PEOPLE: HashMap<Uuid, &'static str> = {
         let mut m = HashMap::new();
@@ -32,8 +32,8 @@ lazy_static! {
 
 #[get("/people/<id>")]
 fn people(id: UUID) -> Result<String, String> {
-    // Because UUID implements the Deref trait, we use Deref coercion to 
-    // convert rocket_contrib::UUID to uuid::Uuid.
+    // Because UUID implements the Deref trait, we use Deref coercion to convert
+    // rocket_contrib::UUID to uuid::Uuid.
     Ok(PEOPLE.get(&id)
         .map(|person| format!("We found: {}", person))
         .ok_or(format!("Person not found for UUID: {}", id))?)

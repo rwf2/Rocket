@@ -1,17 +1,20 @@
 use memchr::memchr2;
 
+use http::RawStr;
+
 /// Iterator over the key/value pairs of a given HTTP form string.
 ///
 /// **Note:** The returned key/value pairs are _not_ URL decoded. To URL decode
-/// the raw strings, use `String::from_form_value`:
+/// the raw strings, use the
+/// [`url_decode`](/rocket/http/struct.RawStr.html#method.url_decode) method:
 ///
 /// ```rust
 /// use rocket::request::{FormItems, FromFormValue};
 ///
 /// let form_string = "greeting=Hello%2C+Mark%21&username=jake%2Fother";
 /// for (key, value) in FormItems::from(form_string) {
-///     let decoded_value = String::from_form_value(value);
-///     match key {
+///     let decoded_value = value.url_decode();
+///     match key.as_str() {
 ///         "greeting" => assert_eq!(decoded_value, Ok("Hello, Mark!".into())),
 ///         "username" => assert_eq!(decoded_value, Ok("jake/other".into())),
 ///         _ => unreachable!()
@@ -26,7 +29,7 @@ use memchr::memchr2;
 /// for completion via the [completed](#method.completed) method, which returns
 /// `true` if the iterator parsed the entire string that was passed to it. The
 /// iterator can also attempt to parse any remaining contents via
-/// [exhausted](#method.exhausted); this method returns `true` if exhaustion
+/// [exhaust](#method.exhaust); this method returns `true` if exhaustion
 /// succeeded.
 ///
 /// This iterator guarantees that all valid form strings are parsed to
@@ -57,13 +60,20 @@ use memchr::memchr2;
 ///
 /// let form_string = "greeting=hello&username=jake";
 /// let mut items = FormItems::from(form_string);
-/// assert_eq!(items.next(), Some(("greeting", "hello")));
-/// assert_eq!(items.next(), Some(("username", "jake")));
+///
+/// let next = items.next().unwrap();
+/// assert_eq!(next.0, "greeting");
+/// assert_eq!(next.1, "hello");
+///
+/// let next = items.next().unwrap();
+/// assert_eq!(next.0, "username");
+/// assert_eq!(next.1, "jake");
+///
 /// assert_eq!(items.next(), None);
 /// assert!(items.completed());
 /// ```
 pub struct FormItems<'f> {
-    string: &'f str,
+    string: &'f RawStr,
     next_index: usize
 }
 
@@ -117,7 +127,7 @@ impl<'f> FormItems<'f> {
     ///
     /// assert!(items.next().is_some());
     /// assert_eq!(items.completed(), false);
-    /// assert_eq!(items.exhausted(), true);
+    /// assert_eq!(items.exhaust(), true);
     /// assert_eq!(items.completed(), true);
     /// ```
     ///
@@ -130,10 +140,11 @@ impl<'f> FormItems<'f> {
     ///
     /// assert!(items.next().is_some());
     /// assert_eq!(items.completed(), false);
-    /// assert_eq!(items.exhausted(), false);
+    /// assert_eq!(items.exhaust(), false);
     /// assert_eq!(items.completed(), false);
     /// ```
-    pub fn exhausted(&mut self) -> bool {
+    #[inline]
+    pub fn exhaust(&mut self) -> bool {
         while let Some(_) = self.next() {  }
         self.completed()
     }
@@ -167,15 +178,16 @@ impl<'f> FormItems<'f> {
     /// assert_eq!(items.inner_str(), form_string);
     /// ```
     #[inline]
-    pub fn inner_str(&self) -> &'f str {
+    pub fn inner_str(&self) -> &'f RawStr {
         self.string
     }
 }
 
-impl<'f> From<&'f str> for FormItems<'f> {
+impl<'f> From<&'f RawStr> for FormItems<'f> {
     /// Returns an iterator over the key/value pairs in the
     /// `x-www-form-urlencoded` form `string`.
-    fn from(string: &'f str) -> FormItems<'f> {
+    #[inline(always)]
+    fn from(string: &'f RawStr) -> FormItems<'f> {
         FormItems {
             string: string,
             next_index: 0
@@ -183,8 +195,20 @@ impl<'f> From<&'f str> for FormItems<'f> {
     }
 }
 
+impl<'f> From<&'f str> for FormItems<'f> {
+    /// Returns an iterator over the key/value pairs in the
+    /// `x-www-form-urlencoded` form `string`.
+    #[inline(always)]
+    fn from(string: &'f str) -> FormItems<'f> {
+        FormItems {
+            string: string.into(),
+            next_index: 0
+        }
+    }
+}
+
 impl<'f> Iterator for FormItems<'f> {
-    type Item = (&'f str, &'f str);
+    type Item = (&'f RawStr, &'f RawStr);
 
     fn next(&mut self) -> Option<Self::Item> {
         let s = &self.string[self.next_index..];
@@ -204,7 +228,7 @@ impl<'f> Iterator for FormItems<'f> {
         };
 
         self.next_index += key.len() + 1 + consumed;
-        Some((key, value))
+        Some((key.into(), value.into()))
     }
 }
 
@@ -224,18 +248,19 @@ mod test {
                     let (expected_key, actual_key) = (expected[i].0, results[i].0);
                     let (expected_val, actual_val) = (expected[i].1, results[i].1);
 
-                    assert!(expected_key == actual_key,
+                    assert!(actual_key == expected_key,
                             "key [{}] mismatch: expected {}, got {}",
                             i, expected_key, actual_key);
 
-                    assert!(expected_val == actual_val,
+                    assert!(actual_val == expected_val,
                             "val [{}] mismatch: expected {}, got {}",
                             i, expected_val, actual_val);
                 }
             } else {
-                assert!(!items.exhausted());
+                assert!(!items.exhaust());
             }
         });
+
         (@bad $string:expr) => (check_form!(@opt $string, None : Option<&[(&str, &str)]>));
         ($string:expr, $expected:expr) => (check_form!(@opt $string, Some($expected)));
     }

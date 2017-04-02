@@ -3,6 +3,9 @@
 
 extern crate rocket;
 
+#[cfg(test)]
+mod tests;
+
 use std::io;
 use std::path::{Path, PathBuf};
 
@@ -18,6 +21,10 @@ fn files(file: PathBuf) -> Option<NamedFile> {
     NamedFile::open(Path::new("static/").join(file)).ok()
 }
 
+fn rocket() -> rocket::Rocket {
+    rocket::ignite().mount("/", routes![index, files])
+}
+
 fn main() {
-    rocket::ignite().mount("/", routes![index, files]).launch();
+    rocket().launch();
 }

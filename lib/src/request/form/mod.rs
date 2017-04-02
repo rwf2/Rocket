@@ -72,9 +72,10 @@ use outcome::Outcome::*;
 /// # #![allow(deprecated, dead_code, unused_attributes)]
 /// # #![plugin(rocket_codegen)]
 /// # extern crate rocket;
+/// # use rocket::http::RawStr;
 /// #[derive(FromForm)]
 /// struct UserInput<'f> {
-///     value: &'f str
+///     value: &'f RawStr
 /// }
 /// # fn main() {  }
 /// ```
@@ -88,9 +89,10 @@ use outcome::Outcome::*;
 /// # #![plugin(rocket_codegen)]
 /// # extern crate rocket;
 /// # use rocket::request::Form;
+/// # use rocket::http::RawStr;
 /// # #[derive(FromForm)]
 /// # struct UserInput<'f> {
-/// #     value: &'f str
+/// #     value: &'f RawStr
 /// # }
 /// #[post("/submit", data = "<user_input>")]
 /// fn submit_task<'r>(user_input: Form<'r, UserInput<'r>>) -> String {
@@ -221,7 +223,7 @@ impl<'f, T: FromForm<'f> + 'f> Form<'f, T> {
 
         let mut items = FormItems::from(long_lived_string);
         let result = T::from_form_items(items.by_ref());
-        if !items.exhausted() {
+        if !items.exhaust() {
             return FormResult::Invalid(form_string);
         }
 

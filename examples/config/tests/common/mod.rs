@@ -42,9 +42,6 @@ pub fn test_config(environment: Environment) {
             assert_eq!(config.extras().count(), 0);
         }
     }
-
-    // Rocket `take`s the key, so this should always be `None`.
-    assert_eq!(config.take_session_key(), None);
 }
 
 pub fn test_hello() {

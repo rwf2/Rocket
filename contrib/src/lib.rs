@@ -14,6 +14,7 @@
 //! an asterisk next to the features that are enabled by default:
 //!
 //! * [json*](struct.JSON.html)
+//! * [msgpack](struct.MsgPack.html)
 //! * [handlebars_templates](struct.Template.html)
 //! * [tera_templates](struct.Template.html)
 //! * [uuid](struct.UUID.html)
@@ -54,6 +55,13 @@ pub mod json;
 
 #[cfg(feature = "json")]
 pub use json::{JSON, SerdeError, Value};
+
+#[cfg(feature = "msgpack")]
+#[doc(hidden)]
+pub mod msgpack;
+
+#[cfg(feature = "msgpack")]
+pub use msgpack::{MsgPack, MsgPackError};
 
 #[cfg(feature = "templates")]
 mod templates;

@@ -29,7 +29,7 @@ fn header_count(header_count: HeaderCount) -> String {
 }
 
 fn main() {
-    rocket::ignite().mount("/", routes![header_count]).launch()
+    rocket::ignite().mount("/", routes![header_count]).launch();
 }
 
 #[cfg(test)]

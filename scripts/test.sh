@@ -28,12 +28,22 @@ function check_versions_match() {
   done
 }
 
-# Ensures there are not tabs in any file in the directories $@.
+# Ensures there are no tabs in any file.
 function ensure_tab_free() {
   local tab=$(printf '\t')
   local matches=$(grep -I -R "${tab}" $ROOT_DIR | egrep -v '/target|/.git|LICENSE')
   if ! [ -z "${matches}" ]; then
     echo "Tab characters were found in the following:"
+    echo "${matches}"
+    exit 1
+  fi
+}
+
+# Ensures there are no files with trailing whitespace.
+function ensure_trailing_whitespace_free() {
+  local matches=$(egrep -I -R " +$" $ROOT_DIR | egrep -v "/target|/.git")
+  if ! [ -z "${matches}" ]; then
+    echo "Trailing whitespace was found in the following:"
     echo "${matches}"
     exit 1
   fi
@@ -64,6 +74,9 @@ check_versions_match "${LIB_DIR}" "${CODEGEN_DIR}" "${CONTRIB_DIR}"
 
 echo ":: Checking for tabs..."
 ensure_tab_free
+
+echo ":: Checking for trailing whitespace..."
+ensure_trailing_whitespace_free
 
 echo ":: Updating dependencies..."
 cargo update

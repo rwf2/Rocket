@@ -3,9 +3,10 @@
 
 extern crate rocket;
 
+use std::io;
 use rocket::request::{Form, FromFormValue};
 use rocket::response::NamedFile;
-use std::io;
+use rocket::http::RawStr;
 
 // TODO: Make deriving `FromForm` for this enum possible.
 #[derive(Debug)]
@@ -14,10 +15,10 @@ enum FormOption {
 }
 
 impl<'v> FromFormValue<'v> for FormOption {
-    type Error = &'v str;
+    type Error = &'v RawStr;
 
-    fn from_form_value(v: &'v str) -> Result<Self, Self::Error> {
-        let variant = match v {
+    fn from_form_value(v: &'v RawStr) -> Result<Self, Self::Error> {
+        let variant = match v.as_str() {
             "a" => FormOption::A,
             "b" => FormOption::B,
             "c" => FormOption::C,

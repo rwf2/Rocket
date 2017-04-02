@@ -55,7 +55,7 @@ use term_painter::Color::*;
 ///
 /// fn main() {
 /// # if false { // We don't actually want to launch the server in an example.
-///     rocket::ignite().catch(errors![internal_error, not_found]).launch()
+///     rocket::ignite().catch(errors![internal_error, not_found]).launch();
 /// # }
 /// }
 /// ```
@@ -79,9 +79,11 @@ impl Catcher {
     /// # #![allow(unused_variables)]
     /// use rocket::{Catcher, Request, Error};
     /// use rocket::response::{Result, Responder};
+    /// use rocket::response::status::Custom;
+    /// use rocket::http::Status;
     ///
     /// fn handle_404<'r>(_: Error, req: &'r Request) -> Result<'r> {
-    ///    format!("Couldn't find: {}", req.uri()).respond()
+    ///     Custom(Status::NotFound, format!("Couldn't find: {}", req.uri())).respond()
     /// }
     ///
     /// fn handle_500<'r>(_: Error, _: &'r Request) -> Result<'r> {

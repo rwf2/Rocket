@@ -216,7 +216,7 @@ impl<'a> URI<'a> {
     /// let decoded_path = URI::percent_decode(uri.path().as_bytes()).expect("decoded");
     /// assert_eq!(decoded_path, "/Hello, world!");
     /// ```
-    pub fn percent_decode(string: &[u8]) -> Result<Cow<str>, Utf8Error>  {
+    pub fn percent_decode(string: &[u8]) -> Result<Cow<str>, Utf8Error> {
         let decoder = url::percent_encoding::percent_decode(string);
         decoder.decode_utf8()
     }

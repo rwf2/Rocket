@@ -82,6 +82,7 @@ macro_rules! ctrs {
 ctrs! {
     JSON: "JSON", "application/json",
     XML: "XML", "text/xml",
+    MsgPack: "MessagePack", "application/msgpack",
     HTML: "HTML", "text/html",
     Plain: "plain text", "text/plain",
     CSS: "CSS", "text/css",

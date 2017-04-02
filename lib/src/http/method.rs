@@ -1,10 +1,9 @@
 use std::fmt;
 use std::str::FromStr;
 
-
 use error::Error;
 use http::hyper;
-use http::ascii::uncased_eq;
+use http::uncased::uncased_eq;
 
 use self::Method::*;
 
@@ -40,7 +39,7 @@ impl Method {
         }
     }
 
-    /// Returns `true` ff an HTTP request with the method represented by `self`
+    /// Returns `true` if an HTTP request with the method represented by `self`
     /// supports a payload.
     ///
     /// # Example

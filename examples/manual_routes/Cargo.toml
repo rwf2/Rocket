@@ -1,7 +1,10 @@
 [package]
 name = "manual_routes"
-version = "0.0.1"
+version = "0.0.0"
 workspace = "../../"
 
 [dependencies]
 rocket = { path = "../../lib" }
+
+[dev-dependencies]
+rocket = { path = "../../lib", features = ["testing"] }

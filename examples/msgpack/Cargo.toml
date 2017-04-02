@@ -1,0 +1,18 @@
+[package]
+name = "msgpack"
+version = "0.0.0"
+workspace = "../../"
+
+[dependencies]
+rocket = { path = "../../lib" }
+rocket_codegen = { path = "../../codegen" }
+serde = "0.9"
+serde_derive = "0.9"
+
+[dependencies.rocket_contrib]
+path = "../../contrib"
+default-features = false
+features = ["msgpack"]
+
+[dev-dependencies]
+rocket = { path = "../../lib", features = ["testing"] }

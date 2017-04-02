@@ -1,6 +1,6 @@
 [package]
 name = "rocket"
-version = "0.2.0"
+version = "0.2.4"
 authors = ["Sergio Benitez <sb@sergio.bz>"]
 description = """
 Web framework for nightly with a focus on ease-of-use, expressibility, and speed.
@@ -14,29 +14,32 @@ license = "MIT/Apache-2.0"
 build = "build.rs"
 categories = ["web-programming::http-server"]
 
+[features]
+testing = []
+
 [dependencies]
-term-painter = "^0.2"
-log = "^0.3"
-url = "^1"
+term-painter = "0.2"
+log = "0.3"
+url = "1"
 hyper = { version = "0.10.4", default-features = false }
-toml = { version = "^0.2", default-features = false }
+toml = { version = "0.2", default-features = false }
 num_cpus = "1"
-state = "^0.2"
-time = "^0.1"
+state = "0.2"
+time = "0.1"
 memchr = "1"
+base64 = "0.4"
+smallvec = { git = "https://github.com/SergioBenitez/rust-smallvec" }
+pear = "0.0.8"
+pear_codegen = "0.0.8"
 
 [dependencies.cookie]
-version = "^0.6"
-default-features = false
-features = ["percent-encode"]
+version = "0.7.2"
+features = ["percent-encode", "secure"]
 
 [dev-dependencies]
 lazy_static = "0.2"
-rocket_codegen = { version = "0.2.0", path = "../codegen" }
+rocket_codegen = { version = "0.2.4", path = "../codegen" }
 
 [build-dependencies]
-ansi_term = "^0.9"
+ansi_term = "0.9"
 version_check = "^0.1"
-
-[features]
-testing = []

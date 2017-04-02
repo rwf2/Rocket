@@ -3,11 +3,12 @@
 
 extern crate rocket;
 
-#[cfg(test)]
-mod tests;
+#[cfg(test)] mod tests;
+
+use rocket::http::RawStr;
 
 #[get("/users/<name>")]
-fn user(name: &str) -> Option<&'static str> {
+fn user(name: &RawStr) -> Option<&'static str> {
     if name == "Sergio" {
         Some("Hello, Sergio!")
     } else {

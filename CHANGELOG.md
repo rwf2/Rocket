@@ -1,3 +1,69 @@
+# Version 0.2.4 (Mar 30, 2017)
+
+## Codegen
+
+  * Codegen was updated for `2017-03-30` nightly.
+  * Minimum required `rustc` is `1.18.0-nightly (2017-03-30)`.
+
+# Version 0.2.3 (Mar 22, 2017)
+
+## Fixes
+
+  * Multiple header values for the same header name are now properly preserved
+    (#223).
+
+## Core
+
+  * The `get_slice` and `get_table` methods were added to `Config`.
+  * The `pub_restricted` feature has been stabilized!
+
+## Codegen
+
+  * Lints were updated for `2017-03-20` nightly.
+  * Minimum required `rustc` is `1.17.0-nightly (2017-03-22)`.
+
+## Infrastructure
+
+  * The test script now denies trailing whitespace.
+
+# Version 0.2.2 (Feb 26, 2017)
+
+## Codegen
+
+  * Lints were updated for `2017-02-25`  and `2017-02-26` nightlies.
+  * Minimum required `rustc` is `1.17.0-nightly (2017-02-26)`.
+
+# Version 0.2.1 (Feb 24, 2017)
+
+## Core Fixes
+
+  * `Flash` cookie deletion functions as expected regardless of the path.
+  * `config` properly accepts IPv6 addresses.
+  * Multiple `Set-Cookie` headers are properly set.
+
+## Core Improvements
+
+  * `Display` and `Error` were implemented for `ConfigError`.
+  * `webp`, `ttf`, `otf`, `woff`, and `woff2` were added as known content types.
+  * Routes are presorted for faster routing.
+  * `into_bytes` and `into_inner` methods were added to `Body`.
+
+## Codegen
+
+  * Fixed `unmanaged_state` lint so that it works with prefilled type aliases.
+
+## Contrib
+
+  * Better errors are emitted on Tera template parse errors.
+
+## Documentation
+
+  * Fixed typos in `manage` and `JSON` docs.
+
+## Infrastructure
+
+  * Updated doctests for latest Cargo nightly.
+
 # Version 0.2.0 (Feb 06, 2017)
 
 Detailed release notes for v0.2 can also be found on

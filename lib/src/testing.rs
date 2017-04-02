@@ -224,8 +224,8 @@ impl<'r> MockRequest<'r> {
     ///     .body(r#"{ "key": "value", "array": [1, 2, 3], }"#);
     /// ```
     #[inline]
-    pub fn body<S: AsRef<str>>(mut self, body: S) -> Self {
-        self.data = Data::new(body.as_ref().as_bytes().into());
+    pub fn body<S: AsRef<[u8]>>(mut self, body: S) -> Self {
+        self.data = Data::new(body.as_ref().into());
         self
     }
 

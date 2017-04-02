@@ -36,6 +36,13 @@ impl<T> Body<T> {
         }
     }
 
+    /// Consumes `self` and returns the inner body.
+    pub fn into_inner(self) -> T {
+        match self {
+            Body::Sized(b, _) | Body::Chunked(b, _) => b
+        }
+    }
+
     /// Returns `true` if `self` is a `Body::Sized`.
     pub fn is_sized(&self) -> bool {
         match *self {
@@ -54,20 +61,33 @@ impl<T> Body<T> {
 }
 
 impl<T: io::Read> Body<T> {
-    /// Attepts to read `self` into a `String` and returns it. If reading or
-    /// conversion fails, returns `None`.
-    pub fn into_string(self) -> Option<String> {
-        let (mut body, mut string) = match self {
-            Body::Sized(b, size) => (b, String::with_capacity(size as usize)),
-            Body::Chunked(b, _) => (b, String::new())
+    /// Attepts to read `self` into a `Vec` and returns it. If reading fails,
+    /// returns `None`.
+    pub fn into_bytes(self) -> Option<Vec<u8>> {
+        let (mut body, mut vec) = match self {
+            Body::Sized(b, size) => (b, Vec::with_capacity(size as usize)),
+            Body::Chunked(b, _) => (b, Vec::new())
         };
 
-        if let Err(e) = body.read_to_string(&mut string) {
+        if let Err(e) = body.read_to_end(&mut vec) {
             error_!("Error reading body: {:?}", e);
             return None;
         }
 
-        Some(string)
+        Some(vec)
+    }
+
+    /// Attepts to read `self` into a `String` and returns it. If reading or
+    /// conversion fails, returns `None`.
+    pub fn into_string(self) -> Option<String> {
+        self.into_bytes()
+            .and_then(|bytes| match String::from_utf8(bytes) {
+                Ok(string) => Some(string),
+                Err(e) => {
+                    error_!("Body is invalid UTF-8: {}", e);
+                    None
+                }
+            })
     }
 }
 
@@ -1037,10 +1057,10 @@ impl<'r> Response<'r> {
         }
     }
 
-    // Sets `self`'s status and body to that of `other` if they are not already
-    // set in `self`. Any headers present in both `other` and `self` are
-    // adjoined.
-    //
+    /// Sets `self`'s status and body to that of `other` if they are not already
+    /// set in `self`. Any headers present in both `other` and `self` are
+    /// adjoined.
+    ///
     /// # Example
     ///
     /// ```rust

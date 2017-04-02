@@ -9,7 +9,7 @@ use utils::{span, MetaItemExt, SpanExt, is_valid_ident};
 use super::{Function, ParamIter};
 use super::keyvalue::KVSpanned;
 use super::uri::validate_uri;
-use rocket::http::{Method, ContentType};
+use rocket::http::{Method, MediaType};
 use rocket::http::uri::URI;
 
 /// This structure represents the parsed `route` attribute.
@@ -25,7 +25,7 @@ pub struct RouteParams {
     pub uri: Spanned<URI<'static>>,
     pub data_param: Option<KVSpanned<Ident>>,
     pub query_param: Option<Spanned<Ident>>,
-    pub format: Option<KVSpanned<ContentType>>,
+    pub format: Option<KVSpanned<MediaType>>,
     pub rank: Option<KVSpanned<isize>>,
 }
 
@@ -258,25 +258,25 @@ fn parse_rank(ecx: &ExtCtxt, kv: &KVSpanned<LitKind>) -> isize {
     -1
 }
 
-fn parse_format(ecx: &ExtCtxt, kv: &KVSpanned<LitKind>) -> ContentType {
+fn parse_format(ecx: &ExtCtxt, kv: &KVSpanned<LitKind>) -> MediaType {
     if let LitKind::Str(ref s, _) = *kv.value() {
-        if let Ok(ct) = ContentType::from_str(&s.as_str()) {
+        if let Ok(ct) = MediaType::from_str(&s.as_str()) {
             if !ct.is_known() {
-                let msg = format!("'{}' is not a known content-type", s);
+                let msg = format!("'{}' is not a known media type", s);
                 ecx.span_warn(kv.value.span, &msg);
             }
 
             return ct;
         } else {
-            ecx.span_err(kv.value.span, "malformed content-type");
+            ecx.span_err(kv.value.span, "malformed media type");
         }
     }
 
-    ecx.struct_span_err(kv.span, r#"`format` must be a "content/type""#)
+    ecx.struct_span_err(kv.span, r#"`format` must be a "media/type""#)
         .help(r#"format, if specified, must be a key-value pair where
               the key is `format` and the value is a string representing the
-              content-type accepted. e.g: format = "application/json""#)
+              media type accepted. e.g: format = "application/json""#)
         .emit();
 
-    ContentType::Any
+    MediaType::Any
 }

@@ -6,5 +6,5 @@ extern crate config;
 
 // This example's illustration is the Rocket.toml file.
 fn main() {
-    rocket::ignite().mount("/hello", routes![config::hello]).launch()
+    rocket::ignite().mount("/hello", routes![config::hello]).launch();
 }

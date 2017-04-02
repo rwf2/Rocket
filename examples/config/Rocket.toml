@@ -15,7 +15,7 @@ port = 80
 log = "normal"
 workers = 8
 # don't use this key! generate your own and keep it private!
-session_key = "VheMwXIBygSmOlZAhuWl2B+zgvTN3WW5"
+session_key = "8Xui8SN4mI+7egV/9dlfYYLGQJeEx4+DwmSQLwDVXJg="
 
 [production]
 address = "0.0.0.0"
@@ -23,4 +23,4 @@ port = 80
 workers = 12
 log = "critical"
 # don't use this key! generate your own and keep it private!
-session_key = "adL5fFIPmZBrlyHk2YT4NLV3YCk2gFXz"
+session_key = "hPRYyVRiMyxpw5sBB1XeCMN1kFsDCqKvBi2QJxBVHQk="

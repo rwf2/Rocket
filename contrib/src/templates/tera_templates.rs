@@ -53,7 +53,7 @@ pub fn render<T>(name: &str, _: &TemplateInfo, context: &T) -> Option<String>
         return None;
     };
 
-    match tera.value_render(name, context) {
+    match tera.render(name, context) {
         Ok(string) => Some(string),
         Err(e) => {
             error_!("Error rendering Tera template '{}'.", name);

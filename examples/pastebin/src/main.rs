@@ -53,5 +53,5 @@ fn index() -> &'static str {
 }
 
 fn main() {
-    rocket::ignite().mount("/", routes![index, upload, retrieve]).launch()
+    rocket::ignite().mount("/", routes![index, upload, retrieve]).launch();
 }

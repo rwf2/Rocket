@@ -1,8 +1,11 @@
 [package]
 name = "static_files"
-version = "0.0.1"
+version = "0.0.0"
 workspace = "../../"
 
 [dependencies]
 rocket = { path = "../../lib" }
 rocket_codegen = { path = "../../codegen" }
+
+[dev-dependencies]
+rocket = { path = "../../lib", features = ["testing"] }

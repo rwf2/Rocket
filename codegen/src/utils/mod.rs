@@ -17,7 +17,7 @@ use syntax::parse::token::Token;
 use syntax::tokenstream::TokenTree;
 use syntax::ast::{Item, Expr};
 use syntax::ext::base::{Annotatable, ExtCtxt};
-use syntax::codemap::{spanned, Span, Spanned, DUMMY_SP};
+use syntax::codemap::{Span, Spanned, DUMMY_SP};
 use syntax::ext::quote::rt::ToTokens;
 use syntax::print::pprust::item_to_string;
 use syntax::ptr::P;
@@ -26,7 +26,7 @@ use syntax::ast::{Attribute, Lifetime, LifetimeDef, Ty};
 use syntax::attr::HasAttrs;
 
 pub fn span<T>(t: T, span: Span) -> Spanned<T> {
-    spanned(span.lo, span.hi, t)
+    Spanned { node: t, span: span }
 }
 
 pub fn sep_by_tok<T>(ecx: &ExtCtxt, things: &[T], token: Token) -> Vec<TokenTree>

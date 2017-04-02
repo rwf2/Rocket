@@ -229,7 +229,7 @@ impl<'a, 'tcx> LateLintPass<'a, 'tcx> for RocketLint {
         let attr_value = kind.attrs().iter().filter_map(|attr| {
             match attr.check_name(ROUTE_ATTR) {
                 false => None,
-                true => attr.value.meta_item_list().and_then(|list| list[0].name())
+                true => attr.meta_item_list().and_then(|list| list[0].name())
             }
         }).next();
 

@@ -18,9 +18,9 @@ use response::{Body, Response};
 use router::{Router, Route};
 use catcher::{self, Catcher};
 use outcome::Outcome;
-use error::Error;
+use error::{Error, LaunchError};
 
-use http::{Method, Status, Header};
+use http::{Method, Status, Header, Session};
 use http::hyper::{self, header};
 use http::uri::URI;
 
@@ -79,7 +79,7 @@ impl Rocket {
     fn issue_response(&self, mut response: Response, hyp_res: hyper::FreshResponse) {
         // Add the 'rocket' server header, and write out the response.
         // TODO: If removing Hyper, write out `Date` header too.
-        response.set_header(Header::new("Server", "rocket"));
+        response.set_header(Header::new("Server", "Rocket"));
 
         match self.write_response(response, hyp_res) {
             Ok(_) => info_!("{}", Green.paint("Response succeeded.")),
@@ -93,9 +93,10 @@ impl Rocket {
         *hyp_res.status_mut() = hyper::StatusCode::from_u16(response.status().code);
 
         for header in response.headers() {
+            // FIXME: Using hyper here requires two allocations.
             let name = header.name.into_string();
-            let value = vec![header.value.into_owned().into()];
-            hyp_res.headers_mut().set_raw(name, value);
+            let value = Vec::from(header.value.as_bytes());
+            hyp_res.headers_mut().append_raw(name, value);
         }
 
         if response.body().is_none() {
@@ -167,10 +168,11 @@ impl Rocket {
                 from_utf8_unchecked(&data.peek()[..min(data_len, max_len)])
             };
 
-            let mut form_items = FormItems::from(form);
-            if let Some(("_method", value)) = form_items.next() {
-                if let Ok(method) = value.parse() {
-                    req.set_method(method);
+            if let Some((key, value)) = FormItems::from(form).next() {
+                if key == "_method" {
+                    if let Ok(method) = value.parse() {
+                        req.set_method(method);
+                    }
                 }
             }
         }
@@ -181,8 +183,8 @@ impl Rocket {
             -> Response<'r> {
         info!("{}:", request);
 
-        // Inform the request about the state.
-        request.set_state(&self.state);
+        // Inform the request about all of the precomputed state.
+        request.set_preset_state(&self.config.session_key(), &self.state);
 
         // Do a bit of preprocessing before routing.
         self.preprocess_request(request, &data);
@@ -190,9 +192,14 @@ impl Rocket {
         // Route the request to get a response.
         match self.route(request, data) {
             Outcome::Success(mut response) => {
-                // A user's route responded!
+                // A user's route responded! Set the regular cookies.
                 for cookie in request.cookies().delta() {
                     response.adjoin_header(cookie);
+                }
+
+                // And now the session cookies.
+                for cookie in request.session().delta() {
+                    response.adjoin_header(Session::header_for(cookie));
                 }
 
                 response
@@ -341,13 +348,7 @@ impl Rocket {
         info_!("port: {}", White.paint(&config.port));
         info_!("log: {}", White.paint(config.log_level));
         info_!("workers: {}", White.paint(config.workers));
-
-        let session_key = config.take_session_key();
-        if session_key.is_some() {
-            info_!("session key: {}", White.paint("present"));
-            warn_!("Signing and encryption of cookies is currently disabled.");
-            warn_!("See https://github.com/SergioBenitez/Rocket/issues/20 for info.");
-        }
+        info_!("session key: {}", White.paint(config.session_key.kind()));
 
         for (name, value) in config.extras() {
             info_!("{} {}: {}", Yellow.paint("[extra]"), name, White.paint(value));
@@ -390,7 +391,7 @@ impl Rocket {
     /// fn main() {
     /// # if false { // We don't actually want to launch the server in an example.
     ///     rocket::ignite().mount("/hello", routes![hi])
-    /// #       .launch()
+    /// #       .launch();
     /// # }
     /// }
     /// ```
@@ -410,7 +411,7 @@ impl Rocket {
     ///
     /// # if false { // We don't actually want to launch the server in an example.
     /// rocket::ignite().mount("/hello", vec![Route::new(Get, "/world", hi)])
-    /// #     .launch()
+    /// #     .launch();
     /// # }
     /// ```
     pub fn mount(mut self, base: &str, routes: Vec<Route>) -> Self {
@@ -458,7 +459,7 @@ impl Rocket {
     /// fn main() {
     /// # if false { // We don't actually want to launch the server in an example.
     ///     rocket::ignite().catch(errors![internal_error, not_found])
-    /// #       .launch()
+    /// #       .launch();
     /// # }
     /// }
     /// ```
@@ -513,7 +514,7 @@ impl Rocket {
     ///     rocket::ignite()
     ///         .mount("/", routes![index])
     ///         .manage(MyValue(10))
-    ///         .launch()
+    ///         .launch();
     /// # }
     /// }
     /// ```
@@ -527,21 +528,26 @@ impl Rocket {
     }
 
     /// Starts the application server and begins listening for and dispatching
-    /// requests to mounted routes and catchers.
+    /// requests to mounted routes and catchers. Unless there is an error, this
+    /// function does not return and blocks until program termination.
     ///
-    /// # Panics
+    /// # Error
     ///
-    /// If the server could not be started, this method prints the reason and
-    /// then exits the process.
+    /// If there is a problem starting the application, a
+    /// [LaunchError](/rocket/struct.LaunchError.html) is returned. Note
+    /// that a value of type `LaunchError` panics if dropped without first being
+    /// inspected. See the [LaunchError
+    /// documentation](/rocket/struct.LaunchError.html) for more
+    /// information.
     ///
     /// # Examples
     ///
     /// ```rust
     /// # if false {
-    /// rocket::ignite().launch()
+    /// rocket::ignite().launch();
     /// # }
     /// ```
-    pub fn launch(self) {
+    pub fn launch(self) -> LaunchError {
         if self.router.has_collisions() {
             warn!("Route collisions detected!");
         }
@@ -549,18 +555,19 @@ impl Rocket {
         let full_addr = format!("{}:{}", self.config.address, self.config.port);
         let server = match hyper::Server::http(full_addr.as_str()) {
             Ok(hyper_server) => hyper_server,
-            Err(e) => {
-                error!("Failed to start server.");
-                panic!("{}", e);
-            }
+            Err(e) => return LaunchError::from(e)
         };
 
-        info!("🚀  {} {}{}...",
+        info!("🚀  {} {}{}",
               White.paint("Rocket has launched from"),
               White.bold().paint("http://"),
               White.bold().paint(&full_addr));
 
         let threads = self.config.workers as usize;
-        server.handle_threads(self, threads).unwrap();
+        if let Err(e) = server.handle_threads(self, threads) {
+            return LaunchError::from(e);
+        }
+
+        unreachable!("the call to `handle_threads` should block on success")
     }
 }

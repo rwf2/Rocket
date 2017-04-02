@@ -68,7 +68,11 @@ pub fn from_form_derive(ecx: &mut ExtCtxt, span: Span, meta_item: &MetaItem,
         is_unsafe: false,
         supports_unions: false,
         span: span,
-        attributes: Vec::new(),
+        // We add this attribute because some `FromFormValue` implementations
+        // can't fail. This is indicated via the `!` type. Rust checks if a
+        // match is made with something of that type, and since we always emit
+        // an `Err` match, we'll get this lint warning.
+        attributes: vec![quote_attr!(ecx, #[allow(unreachable_code)])],
         path: ty::Path {
             path: vec!["rocket", "request", "FromForm"],
             lifetime: lifetime_var,
@@ -178,7 +182,8 @@ fn from_form_substructure(cx: &mut ExtCtxt, trait_span: Span, substr: &Substruct
         let id_str = ident_string.as_str();
         arms.push(quote_tokens!(cx,
             $id_str => {
-                $ident = match ::rocket::request::FromFormValue::from_form_value(v) {
+                let r = ::rocket::http::RawStr::from_str(v);
+                $ident = match ::rocket::request::FromFormValue::from_form_value(r) {
                     Ok(v) => Some(v),
                     Err(e) => {
                         println!("    => Error parsing form val '{}': {:?}",
@@ -194,9 +199,9 @@ fn from_form_substructure(cx: &mut ExtCtxt, trait_span: Span, substr: &Substruct
     // and use the $arms generated above.
     stmts.push(quote_stmt!(cx,
         for (k, v) in $arg {
-            match k {
+            match k.as_str() {
                 $arms
-                field if field == "_method" => {
+                "_method" => {
                     /* This is a Rocket-specific field. If the user hasn't asked
                      * for it, just let it go by without error. This should stay
                      * in sync with Rocket::preprocess. */
@@ -214,19 +219,13 @@ fn from_form_substructure(cx: &mut ExtCtxt, trait_span: Span, substr: &Substruct
     // that each parameter actually is Some() or has a default value.
     let mut failure_conditions = vec![];
 
-    // Start with `false` in case there are no fields.
-    failure_conditions.push(quote_tokens!(cx, false));
-
     for &(ref ident, ref ty) in (&fields_and_types).iter() {
-        // Pushing an "||" (or) between every condition.
-        failure_conditions.push(quote_tokens!(cx, ||));
-
         failure_conditions.push(quote_tokens!(cx,
             if $ident.is_none() &&
                 <$ty as ::rocket::request::FromFormValue>::default().is_none() {
                 println!("    => '{}' did not parse.", stringify!($ident));
-                true
-            } else { false }
+                $return_err_stmt;
+            }
         ));
     }
 
@@ -245,9 +244,7 @@ fn from_form_substructure(cx: &mut ExtCtxt, trait_span: Span, substr: &Substruct
     // the structure.
     let self_ident = substr.type_ident;
     let final_block = quote_block!(cx, {
-        if $failure_conditions {
-            $return_err_stmt;
-        }
+        $failure_conditions
 
         Ok($self_ident { $result_fields })
     });

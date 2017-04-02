@@ -245,6 +245,14 @@ mod test {
         assert_ranked_routes!(&["/<a>/b", "/hi/c"], "/hi/c", "/hi/c");
         assert_ranked_routes!(&["/<a>/<b>", "/hi/a"], "/hi/c", "/<a>/<b>");
         assert_ranked_routes!(&["/hi/a", "/hi/<c>"], "/hi/c", "/hi/<c>");
+        assert_ranked_routes!(&["/a", "/a?<b>"], "/a?b=c", "/a?<b>");
+        assert_ranked_routes!(&["/a", "/a?<b>"], "/a", "/a");
+        assert_ranked_routes!(&["/a", "/<a>", "/a?<b>", "/<a>?<b>"], "/a", "/a");
+        assert_ranked_routes!(&["/a", "/<a>", "/a?<b>", "/<a>?<b>"], "/b", "/<a>");
+        assert_ranked_routes!(&["/a", "/<a>", "/a?<b>", "/<a>?<b>"],
+                              "/b?v=1", "/<a>?<b>");
+        assert_ranked_routes!(&["/a", "/<a>", "/a?<b>", "/<a>?<b>"],
+                              "/a?b=c", "/a?<b>");
     }
 
     fn ranked_collisions(routes: &[(isize, &'static str)]) -> bool {
@@ -338,6 +346,45 @@ mod test {
             to: "/a/b/c/d/e/f",
             with: [(1, "/a/<b..>"), (2, "/a/b/<c..>")],
             expect: (1, "/a/<b..>"), (2, "/a/b/<c..>")
+        );
+    }
+
+    macro_rules! assert_default_ranked_routing {
+        (to: $to:expr, with: $routes:expr, expect: $($want:expr),+) => ({
+            let router = router_with_routes(&$routes);
+            let routed_to = matches(&router, Get, $to);
+            let expected = &[$($want),+];
+            assert!(routed_to.len() == expected.len());
+            for (got, expected) in routed_to.iter().zip(expected.iter()) {
+                assert_eq!(got.path.as_str() as &str, expected as &str);
+            }
+        })
+    }
+
+    #[test]
+    fn test_default_ranked_routing() {
+        assert_default_ranked_routing!(
+            to: "a/b?v=1",
+            with: ["a/<b>", "a/b"],
+            expect: "a/b", "a/<b>"
+        );
+
+        assert_default_ranked_routing!(
+            to: "a/b?v=1",
+            with: ["a/<b>", "a/b", "a/b?<v>"],
+            expect: "a/b?<v>", "a/b", "a/<b>"
+        );
+
+        assert_default_ranked_routing!(
+            to: "a/b?v=1",
+            with: ["a/<b>", "a/b", "a/b?<v>", "a/<b>?<v>"],
+            expect: "a/b?<v>", "a/b", "a/<b>?<v>", "a/<b>"
+        );
+
+        assert_default_ranked_routing!(
+            to: "a/b",
+            with: ["a/<b>", "a/b", "a/b?<v>", "a/<b>?<v>"],
+            expect: "a/b", "a/<b>"
         );
     }
 

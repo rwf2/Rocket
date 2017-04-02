@@ -40,9 +40,9 @@
 //!     * examples: `12`, `1`, `4`
 //!   * **log**: _[string]_ how much information to log; one of `"normal"`,
 //!     `"debug"`, or `"critical"`
-//!   * **session_key**: _[string]_ a 192-bit base64 encoded string (32
+//!   * **session_key**: _[string]_ a 256-bit base64 encoded string (44
 //!     characters) to use as the session key
-//!     * example: `"VheMwXIBygSmOlZAhuWl2B+zgvTN3WW5"`
+//!     * example: `"8Xui8SN4mI+7egV/9dlfYYLGQJeEx4+DwmSQLwDVXJg="`
 //!
 //! ### Rocket.toml
 //!
@@ -63,27 +63,29 @@
 //! port = 8000
 //! workers = max(number_of_cpus, 2)
 //! log = "normal"
+//! session_key = [randomly generated at launch]
 //!
 //! [staging]
 //! address = "0.0.0.0"
 //! port = 80
 //! workers = max(number_of_cpus, 2)
 //! log = "normal"
-//! # don't use this key! generate your own and keep it private!
-//! session_key = "VheMwXIBygSmOlZAhuWl2B+zgvTN3WW5"
+//! session_key = [randomly generated at launch]
 //!
 //! [production]
 //! address = "0.0.0.0"
 //! port = 80
 //! workers = max(number_of_cpus, 2)
 //! log = "critical"
-//! # don't use this key! generate your own and keep it private!
-//! session_key = "adL5fFIPmZBrlyHk2YT4NLV3YCk2gFXz"
+//! session_key = [randomly generated at launch]
 //! ```
 //!
-//! The `workers` parameter is computed by Rocket automatically; the value above
-//! is not valid TOML syntax. When manually specifying the number of workers,
-//! the value should be an integer: `workers = 10`.
+//! The `workers` and `session_key` default parameters are computed by Rocket
+//! automatically; the values above are not valid TOML syntax. When manually
+//! specifying the number of workers, the value should be an integer: `workers =
+//! 10`. When manually specifying the session key, the value should a 256-bit
+//! base64 encoded string. Such a string can be generated with the `openssl`
+//! command line tool: `openssl rand -base64 32`.
 //!
 //! The "global" pseudo-environment can be used to set and/or override
 //! configuration parameters globally. A parameter defined in a `[global]` table
@@ -170,7 +172,7 @@ use self::Environment::*;
 use self::environment::CONFIG_ENV;
 use self::toml_ext::parse_simple_toml_value;
 use logger::{self, LoggingLevel};
-use http::ascii::uncased_eq;
+use http::uncased::uncased_eq;
 
 static INIT: Once = ONCE_INIT;
 static mut CONFIG: Option<RocketConfig> = None;
@@ -496,6 +498,7 @@ mod test {
 
     const TEST_CONFIG_FILENAME: &'static str = "/tmp/testing/Rocket.toml";
 
+    // TODO: It's a shame we have to depend on lazy_static just for this.
     lazy_static! {
         static ref ENV_LOCK: Mutex<usize> = Mutex::new(0);
     }
@@ -587,7 +590,7 @@ mod test {
             port = 7810
             workers = 21
             log = "critical"
-            session_key = "01234567890123456789012345678901"
+            session_key = "8Xui8SN4mI+7egV/9dlfYYLGQJeEx4+DwmSQLwDVXJg="
             template_dir = "mine"
             json = true
             pi = 3.14
@@ -598,7 +601,7 @@ mod test {
             .port(7810)
             .workers(21)
             .log_level(LoggingLevel::Critical)
-            .session_key("01234567890123456789012345678901")
+            .session_key("8Xui8SN4mI+7egV/9dlfYYLGQJeEx4+DwmSQLwDVXJg=")
             .extra("template_dir", "mine")
             .extra("json", true)
             .extra("pi", 3.14);
@@ -873,19 +876,19 @@ mod test {
 
         check_config!(RocketConfig::parse(r#"
                           [stage]
-                          session_key = "VheMwXIBygSmOlZAhuWl2B+zgvTN3WW5"
+                          session_key = "TpUiXK2d/v5DFxJnWL12suJKPExKR8h9zd/o+E7SU+0="
                       "#.to_string(), TEST_CONFIG_FILENAME), {
                           default_config(Staging).session_key(
-                              "VheMwXIBygSmOlZAhuWl2B+zgvTN3WW5"
+                              "TpUiXK2d/v5DFxJnWL12suJKPExKR8h9zd/o+E7SU+0="
                           )
                       });
 
         check_config!(RocketConfig::parse(r#"
                           [stage]
-                          session_key = "adL5fFIPmZBrlyHk2YT4NLV3YCk2gFXz"
+                          session_key = "jTyprDberFUiUFsJ3vcb1XKsYHWNBRvWAnXTlbTgGFU="
                       "#.to_string(), TEST_CONFIG_FILENAME), {
                           default_config(Staging).session_key(
-                              "adL5fFIPmZBrlyHk2YT4NLV3YCk2gFXz"
+                              "jTyprDberFUiUFsJ3vcb1XKsYHWNBRvWAnXTlbTgGFU="
                           )
                       });
     }

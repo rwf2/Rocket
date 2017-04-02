@@ -4,6 +4,7 @@
 extern crate rocket;
 
 use rocket::request::{FromForm, FromFormValue, FormItems};
+use rocket::http::RawStr;
 
 #[derive(Debug, PartialEq, FromForm)]
 struct TodoTask {
@@ -20,8 +21,8 @@ enum FormOption {
 impl<'v> FromFormValue<'v> for FormOption {
     type Error = &'v str;
 
-    fn from_form_value(v: &'v str) -> Result<Self, Self::Error> {
-        let variant = match v {
+    fn from_form_value(v: &'v RawStr) -> Result<Self, Self::Error> {
+        let variant = match v.as_str() {
             "a" => FormOption::A,
             "b" => FormOption::B,
             "c" => FormOption::C,
@@ -37,19 +38,19 @@ struct FormInput<'r> {
     checkbox: bool,
     number: usize,
     radio: FormOption,
-    password: &'r str,
+    password: &'r RawStr,
     textarea: String,
     select: FormOption,
 }
 
 #[derive(Debug, PartialEq, FromForm)]
 struct DefaultInput<'r> {
-    arg: Option<&'r str>,
+    arg: Option<&'r RawStr>,
 }
 
 #[derive(Debug, PartialEq, FromForm)]
 struct ManualMethod<'r> {
-    _method: Option<&'r str>,
+    _method: Option<&'r RawStr>,
     done: bool
 }
 
@@ -61,13 +62,13 @@ struct UnpresentCheckbox {
 #[derive(Debug, PartialEq, FromForm)]
 struct UnpresentCheckboxTwo<'r> {
     checkbox: bool,
-    something: &'r str
+    something: &'r RawStr
 }
 
 fn parse<'f, T: FromForm<'f>>(string: &'f str) -> Option<T> {
     let mut items = FormItems::from(string);
     let result = T::from_form_items(items.by_ref());
-    if !items.exhausted() {
+    if !items.exhaust() {
         panic!("Invalid form input.");
     }
 
@@ -103,7 +104,7 @@ fn main() {
         checkbox: false,
         number: 10,
         radio: FormOption::C,
-        password: "testing",
+        password: "testing".into(),
         textarea: "".to_string(),
         select: FormOption::A,
     }));
@@ -117,7 +118,7 @@ fn main() {
     // Ensure _method can be captured if desired.
     let manual: Option<ManualMethod> = parse("_method=put&done=true");
     assert_eq!(manual, Some(ManualMethod {
-        _method: Some("put"),
+        _method: Some("put".into()),
         done: true
     }));
 
@@ -138,6 +139,6 @@ fn main() {
     let manual: Option<UnpresentCheckboxTwo> = parse("something=hello");
     assert_eq!(manual, Some(UnpresentCheckboxTwo {
         checkbox: false,
-        something: "hello"
+        something: "hello".into()
     }));
 }

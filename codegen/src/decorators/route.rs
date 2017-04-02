@@ -14,7 +14,7 @@ use syntax::ext::build::AstBuilder;
 use syntax::parse::token;
 use syntax::ptr::P;
 
-use rocket::http::{Method, ContentType};
+use rocket::http::{Method, MediaType};
 
 fn method_to_path(ecx: &ExtCtxt, method: Method) -> Path {
     quote_enum!(ecx, method => ::rocket::http::Method {
@@ -22,17 +22,18 @@ fn method_to_path(ecx: &ExtCtxt, method: Method) -> Path {
     })
 }
 
-fn content_type_to_expr(ecx: &ExtCtxt, ct: Option<ContentType>) -> Option<P<Expr>> {
+fn media_type_to_expr(ecx: &ExtCtxt, ct: Option<MediaType>) -> Option<P<Expr>> {
     ct.map(|ct| {
-        let (top, sub) = (ct.ttype.as_str(), ct.subtype.as_str());
-        quote_expr!(ecx, ::rocket::http::ContentType {
-            ttype: ::rocket::http::ascii::UncasedAscii {
-                string: ::std::borrow::Cow::Borrowed($top)
-            },
-            subtype: ::rocket::http::ascii::UncasedAscii {
-                string: ::std::borrow::Cow::Borrowed($sub)
-            },
-            params: None
+        let (top, sub) = (ct.top().as_str(), ct.sub().as_str());
+        quote_expr!(ecx, ::rocket::http::MediaType {
+            source: None,
+            top: ::rocket::http::IndexedStr::Concrete(
+                ::std::borrow::Cow::Borrowed($top)
+            ),
+            sub: ::rocket::http::IndexedStr::Concrete(
+                ::std::borrow::Cow::Borrowed($sub)
+            ),
+            params: ::rocket::http::MediaParams::Static(&[])
         })
     })
 }
@@ -80,7 +81,7 @@ impl RouteGenerateExt for RouteParams {
                     Err(_) => return ::rocket::Outcome::Forward(_data)
                 };
 
-                if !items.exhausted() {
+                if !items.exhaust() {
                     println!("    => The query string {:?} is malformed.", $form_string);
                     return ::rocket::Outcome::Failure(::rocket::http::Status::BadRequest);
                 }
@@ -221,10 +222,10 @@ impl RouteGenerateExt for RouteParams {
         let path = &self.uri.node.as_str();
         let method = method_to_path(ecx, self.method.node);
         let format = self.format.as_ref().map(|kv| kv.value().clone());
-        let content_type = option_as_expr(ecx, &content_type_to_expr(ecx, format));
+        let media_type = option_as_expr(ecx, &media_type_to_expr(ecx, format));
         let rank = option_as_expr(ecx, &self.rank);
 
-        (path, method, content_type, rank)
+        (path, method, media_type, rank)
     }
 }
 
@@ -264,7 +265,7 @@ fn generic_route_decorator(known_method: Option<Spanned<Method>>,
     // Generate and emit the static route info that uses the just generated
     // function as its handler. A proper Rocket route will be created from this.
     let struct_name = user_fn_name.prepend(ROUTE_STRUCT_PREFIX);
-    let (path, method, content_type, rank) = route.explode(ecx);
+    let (path, method, media_type, rank) = route.explode(ecx);
     let static_route_info_item =  quote_item!(ecx,
         #[allow(non_upper_case_globals)]
         pub static $struct_name: ::rocket::StaticRouteInfo =
@@ -272,7 +273,7 @@ fn generic_route_decorator(known_method: Option<Spanned<Method>>,
                 method: $method,
                 path: $path,
                 handler: $route_fn_name,
-                format: $content_type,
+                format: $media_type,
                 rank: $rank,
             };
     ).expect("static route info");

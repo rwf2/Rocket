@@ -37,14 +37,14 @@ fn test_invalid_user() {
 #[test]
 fn test_invalid_password() {
     test_login("Sergio", "password1", "30", Status::Ok, "Wrong password!");
-    test_login("Sergio", "ok", "30", Status::Ok, "Password is invalid: Too short!");
+    test_login("Sergio", "ok", "30", Status::Ok, "Password is invalid: too short!");
 }
 
 #[test]
 fn test_invalid_age() {
-    test_login("Sergio", "password", "20", Status::Ok, "Must be at least 21.");
-    test_login("Sergio", "password", "-100", Status::Ok, "Must be at least 21.");
-    test_login("Sergio", "password", "hi", Status::Ok, "Age value is not a number");
+    test_login("Sergio", "password", "20", Status::Ok, "must be at least 21.");
+    test_login("Sergio", "password", "-100", Status::Ok, "must be at least 21.");
+    test_login("Sergio", "password", "hi", Status::Ok, "value is not a number");
 }
 
 fn check_bad_form(form_str: &str, status: Status) {

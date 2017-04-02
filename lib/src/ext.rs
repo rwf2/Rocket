@@ -17,4 +17,3 @@ pub trait ReadExt: io::Read {
 }
 
 impl<T: io::Read> ReadExt for T {  }
-

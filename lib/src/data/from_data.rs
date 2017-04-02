@@ -1,3 +1,5 @@
+use std::io::{self, Read};
+
 use outcome::{self, IntoOutcome};
 use outcome::Outcome::*;
 use http::Status;
@@ -115,13 +117,13 @@ impl<'a, S, E> IntoOutcome<S, (Status, E), Data> for Result<S, E> {
 ///         // Split the string into two pieces at ':'.
 ///         let (name, age) = match string.find(':') {
 ///             Some(i) => (&string[..i], &string[(i + 1)..]),
-///             None => return Failure((Status::BadRequest, "Missing ':'.".into()))
+///             None => return Failure((Status::UnprocessableEntity, "':'".into()))
 ///         };
 ///
 ///         // Parse the age.
 ///         let age: u16 = match age.parse() {
 ///             Ok(age) => age,
-///             Err(_) => return Failure((Status::BadRequest, "Bad age.".into()))
+///             Err(_) => return Failure((Status::UnprocessableEntity, "Age".into()))
 ///         };
 ///
 ///         // Return successfully.
@@ -177,6 +179,33 @@ impl<T: FromData> FromData for Option<T> {
         match T::from_data(request, data) {
             Success(val) => Success(Some(val)),
             Failure(_) | Forward(_) => Success(None),
+        }
+    }
+}
+
+impl FromData for String {
+    type Error = io::Error;
+
+    // FIXME: Doc.
+    fn from_data(_: &Request, data: Data) -> Outcome<Self, Self::Error> {
+        let mut string = String::new();
+        match data.open().read_to_string(&mut string) {
+            Ok(_) => Success(string),
+            Err(e) => Failure((Status::BadRequest, e))
+        }
+    }
+}
+
+// FIXME Implement this.
+impl FromData for Vec<u8> {
+    type Error = io::Error;
+
+    // FIXME: Doc.
+    fn from_data(_: &Request, data: Data) -> Outcome<Self, Self::Error> {
+        let mut bytes = Vec::new();
+        match data.open().read_to_end(&mut bytes) {
+            Ok(_) => Success(bytes),
+            Err(e) => Failure((Status::BadRequest, e))
         }
     }
 }

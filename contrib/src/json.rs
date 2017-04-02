@@ -29,6 +29,7 @@ pub use serde_json::error::Error as SerdeError;
 ///     ...
 /// }
 /// ```
+///
 /// You don't _need_ to use `format = "application/json"`, but it _may_ be what
 /// you want. Using `format = application/json` means that any request that
 /// doesn't specify "application/json" as its `Content-Type` header value will
@@ -46,9 +47,8 @@ pub use serde_json::error::Error as SerdeError;
 ///     JSON(user_from_id)
 /// }
 /// ```
-///
 #[derive(Debug)]
-pub struct JSON<T>(pub T);
+pub struct JSON<T = Value>(pub T);
 
 impl<T> JSON<T> {
     /// Consumes the JSON wrapper and returns the wrapped item.
@@ -129,14 +129,16 @@ impl<T> DerefMut for JSON<T> {
 /// ```
 ///
 /// The return type of a macro invocation is
-/// [Value](/rocket_contrib/enum.Value.html). A value created with this macro
-/// can be returned from a handler as follows:
+/// [Value](/rocket_contrib/enum.Value.html). This is the default value for the
+/// type parameter of [JSON](/rocket_contrib/struct.JSON.html) and as such, you
+/// can return `JSON` without specifying the type. A value created with this
+/// macro can be returned from a handler as follows:
 ///
 /// ```rust,ignore
-/// use rocket_contrib::{JSON, Value};
+/// use rocket_contrib::JSON;
 ///
 /// #[get("/json")]
-/// fn get_json() -> JSON<Value> {
+/// fn get_json() -> JSON {
 ///     JSON(json!({
 ///         "key": "value",
 ///         "array": [1, 2, 3, 4]

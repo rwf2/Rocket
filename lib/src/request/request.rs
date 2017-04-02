@@ -1,6 +1,7 @@
 use std::cell::RefCell;
 use std::net::SocketAddr;
 use std::fmt;
+use std::str;
 
 use term_painter::Color::*;
 use term_painter::ToStyle;
@@ -12,9 +13,22 @@ use super::{FromParam, FromSegments};
 
 use router::Route;
 use http::uri::{URI, Segments};
-use http::{Method, ContentType, Header, HeaderMap, Cookie, Cookies};
-
+use http::{Method, Header, HeaderMap, Cookies, Session, CookieJar, Key};
+use http::{RawStr, ContentType, Accept, MediaType};
+use http::parse::media_type;
 use http::hyper;
+
+struct PresetState<'r> {
+    key: &'r Key,
+    managed_state: &'r Container,
+}
+
+struct RequestState<'r> {
+    preset: Option<PresetState<'r>>,
+    params: RefCell<Vec<(usize, usize)>>,
+    cookies: RefCell<CookieJar>,
+    session: RefCell<CookieJar>,
+}
 
 /// The type of an incoming web request.
 ///
@@ -28,9 +42,7 @@ pub struct Request<'r> {
     uri: URI<'r>,
     headers: HeaderMap<'r>,
     remote: Option<SocketAddr>,
-    params: RefCell<Vec<(usize, usize)>>,
-    cookies: Cookies,
-    state: Option<&'r Container>,
+    extra: RequestState<'r>
 }
 
 impl<'r> Request<'r> {
@@ -47,15 +59,19 @@ impl<'r> Request<'r> {
     /// # #[allow(unused_variables)]
     /// let request = Request::new(Method::Get, "/uri");
     /// ```
+    #[inline(always)]
     pub fn new<U: Into<URI<'r>>>(method: Method, uri: U) -> Request<'r> {
         Request {
             method: method,
             uri: uri.into(),
             headers: HeaderMap::new(),
             remote: None,
-            params: RefCell::new(Vec::new()),
-            cookies: Cookies::new(&[]),
-            state: None
+            extra: RequestState {
+                preset: None,
+                params: RefCell::new(Vec::new()),
+                cookies: RefCell::new(CookieJar::new()),
+                session: RefCell::new(CookieJar::new()),
+            }
         }
     }
 
@@ -128,7 +144,7 @@ impl<'r> Request<'r> {
     #[inline(always)]
     pub fn set_uri<'u: 'r, U: Into<URI<'u>>>(&mut self, uri: U) {
         self.uri = uri.into();
-        self.params = RefCell::new(Vec::new());
+        *self.extra.params.borrow_mut() = Vec::new();
     }
 
     /// Returns the address of the remote connection that initiated this
@@ -168,7 +184,6 @@ impl<'r> Request<'r> {
     ///
     /// assert_eq!(request.remote(), Some(localhost));
     /// ```
-    #[doc(hidden)]
     #[inline(always)]
     pub fn set_remote(&mut self, address: SocketAddr) {
         self.remote = Some(address);
@@ -251,15 +266,44 @@ impl<'r> Request<'r> {
     /// request.cookies().add(Cookie::new("key", "val"));
     /// request.cookies().add(Cookie::new("ans", format!("life: {}", 38 + 4)));
     /// ```
-    #[inline(always)]
-    pub fn cookies(&self) -> &Cookies {
-        &self.cookies
+    #[inline]
+    pub fn cookies(&self) -> Cookies {
+        match self.extra.cookies.try_borrow_mut() {
+            Ok(jar) => Cookies::new(jar),
+            Err(_) => {
+                error_!("Multiple `Cookies` instances are active at once.");
+                info_!("An instance of `Cookies` must be dropped before another \
+                       can be retrieved.");
+                warn_!("The retrieved `Cookies` instance will be empty.");
+                Cookies::empty()
+            }
+        }
     }
 
-    /// Replace all of the cookies in `self` with `cookies`.
     #[inline]
-    pub(crate) fn set_cookies(&mut self, cookies: Cookies) {
-        self.cookies = cookies;
+    pub fn session(&self) -> Session {
+        match self.extra.session.try_borrow_mut() {
+            Ok(jar) => Session::new(jar, self.preset().key),
+            Err(_) => {
+                error_!("Multiple `Session` instances are active at once.");
+                info_!("An instance of `Session` must be dropped before another \
+                       can be retrieved.");
+                warn_!("The retrieved `Session` instance will be empty.");
+                Session::empty(self.preset().key)
+            }
+        }
+    }
+
+    /// Replace all of the cookies in `self` with those in `jar`.
+    #[inline]
+    pub(crate) fn set_cookies(&mut self, jar: CookieJar) {
+        self.extra.cookies = RefCell::new(jar);
+    }
+
+    /// Replace all of the session cookie in `self` with those in `jar`.
+    #[inline]
+    pub(crate) fn set_session(&mut self, jar: CookieJar) {
+        self.extra.session = RefCell::new(jar);
     }
 
     /// Returns `Some` of the Content-Type header of `self`. If the header is
@@ -279,8 +323,33 @@ impl<'r> Request<'r> {
     /// ```
     #[inline(always)]
     pub fn content_type(&self) -> Option<ContentType> {
-        self.headers().get_one("Content-Type")
-            .and_then(|value| value.parse().ok())
+        // FIXME: Don't reparse each time! Use RC? Smarter than that?
+        // Use state::Storage!
+        self.headers().get_one("Content-Type").and_then(|value| value.parse().ok())
+    }
+
+    #[inline(always)]
+    pub fn accept(&self) -> Option<Accept> {
+        self.headers().get_one("Accept").and_then(|v| v.parse().ok())
+    }
+
+    #[inline(always)]
+    pub fn accept_first(&self) -> Option<MediaType> {
+        self.headers().get_one("Accept").and_then(|mut v| media_type(&mut v).ok())
+    }
+
+    #[inline(always)]
+    pub fn format(&self) -> Option<MediaType> {
+        if self.method.supports_payload() {
+            self.content_type().map(|ct| ct.into_media_type())
+        } else {
+            // FIXME: Should we be using `accept_first` or `preferred`? Or
+            // should we be checking neither and instead pass things through
+            // where the client accepts the thing at all?
+            self.accept()
+                .map(|accept| accept.preferred().media_type().clone())
+                .or(Some(MediaType::Any))
+        }
     }
 
     /// Retrieves and parses into `T` the 0-indexed `n`th dynamic parameter from
@@ -293,7 +362,7 @@ impl<'r> Request<'r> {
     ///
     /// # Example
     ///
-    /// Retrieve parameter `0`, which is expected to be an `&str`, in a manual
+    /// Retrieve parameter `0`, which is expected to be a `String`, in a manual
     /// route:
     ///
     /// ```rust
@@ -302,7 +371,7 @@ impl<'r> Request<'r> {
     ///
     /// # #[allow(dead_code)]
     /// fn name<'a>(req: &'a Request, _: Data) -> Outcome<'a> {
-    ///     Outcome::of(req.get_param(0).unwrap_or("unnamed"))
+    ///     Outcome::of(req.get_param::<String>(0).unwrap_or("unnamed".into()))
     /// }
     /// ```
     pub fn get_param<'a, T: FromParam<'a>>(&'a self, n: usize) -> Result<T, Error> {
@@ -316,14 +385,14 @@ impl<'r> Request<'r> {
     /// TODO: Figure out the mount path from here.
     #[inline]
     pub(crate) fn set_params(&self, route: &Route) {
-        *self.params.borrow_mut() = route.get_param_indexes(self.uri());
+        *self.extra.params.borrow_mut() = route.get_param_indexes(self.uri());
     }
 
     /// Get the `n`th path parameter as a string, if it exists. This is used by
     /// codegen.
     #[doc(hidden)]
-    pub fn get_param_str(&self, n: usize) -> Option<&str> {
-        let params = self.params.borrow();
+    pub fn get_param_str(&self, n: usize) -> Option<&RawStr> {
+        let params = self.extra.params.borrow();
         if n >= params.len() {
             debug!("{} is >= param count {}", n, params.len());
             return None;
@@ -336,7 +405,7 @@ impl<'r> Request<'r> {
             return None;
         }
 
-        Some(&path[i..j])
+        Some(path[i..j].into())
     }
 
     /// Retrieves and parses into `T` all of the path segments in the request
@@ -368,7 +437,7 @@ impl<'r> Request<'r> {
     /// exist. Used by codegen.
     #[doc(hidden)]
     pub fn get_raw_segments(&self, n: usize) -> Option<Segments> {
-        let params = self.params.borrow();
+        let params = self.extra.params.borrow();
         if n >= params.len() {
             debug!("{} is >= param (segments) count {}", n, params.len());
             return None;
@@ -385,15 +454,26 @@ impl<'r> Request<'r> {
     }
 
     /// Get the managed state container, if it exists. For internal use only!
-    #[inline]
-    pub(crate) fn get_state(&self) -> Option<&'r Container> {
-        self.state
+    #[inline(always)]
+    pub fn get_state<T: Send + Sync + 'static>(&self) -> Option<&'r T> {
+        self.preset().managed_state.try_get()
     }
 
-    /// Set the state. For internal use only!
-    #[inline]
-    pub(crate) fn set_state(&mut self, state: &'r Container) {
-        self.state = Some(state);
+    #[inline(always)]
+    fn preset(&self) -> &PresetState<'r> {
+        match self.extra.preset {
+            Some(ref state) => state,
+            None => {
+                error_!("Internal Rocket error: preset state is unset!");
+                panic!("Please report this error to the GitHub issue tracker.");
+            }
+        }
+    }
+
+    /// Set the precomputed state. For internal use only!
+    #[inline(always)]
+    pub(crate) fn set_preset_state(&mut self, key: &'r Key, state: &'r Container) {
+        self.extra.preset = Some(PresetState { key, managed_state: state });
     }
 
     /// Convert from Hyper types into a Rocket Request.
@@ -416,37 +496,42 @@ impl<'r> Request<'r> {
 
         // Construct the request object.
         let mut request = Request::new(method, uri);
+        request.set_remote(h_addr);
 
-        // Set the request cookies, if they exist. TODO: Use session key.
+        // Set the request cookies, if they exist.
         if let Some(cookie_headers) = h_headers.get_raw("Cookie") {
-            let mut cookies = Cookies::new(&[]);
+            let mut cookie_jar = CookieJar::new();
+            let mut session_jar = CookieJar::new();
             for header in cookie_headers {
                 let raw_str = match ::std::str::from_utf8(header) {
                     Ok(string) => string,
                     Err(_) => continue
                 };
 
-                for cookie_str in raw_str.split(";") {
-                    let cookie = match Cookie::parse_encoded(cookie_str.to_string()) {
-                        Ok(cookie) => cookie,
-                        Err(_) => continue
-                    };
-
-                    cookies.add_original(cookie);
+                for cookie_str in raw_str.split(";").map(|s| s.trim()) {
+                    if let Some(cookie) = Session::parse_cookie(cookie_str) {
+                        session_jar.add_original(cookie);
+                    } else if let Some(cookie) = Cookies::parse_cookie(cookie_str) {
+                        cookie_jar.add_original(cookie);
+                    }
                 }
             }
 
-            request.set_cookies(cookies);
+            request.set_cookies(cookie_jar);
+            request.set_session(session_jar);
         }
 
         // Set the rest of the headers.
         for hyp in h_headers.iter() {
-            let header = Header::new(hyp.name().to_string(), hyp.value_string());
-            request.add_header(header);
+            if let Some(header_values) = h_headers.get_raw(hyp.name()) {
+                for value in header_values {
+                    // This is not totally correct since values needn't be UTF8.
+                    let value_str = String::from_utf8_lossy(value).into_owned();
+                    let header = Header::new(hyp.name().to_string(), value_str);
+                    request.add_header(header);
+                }
+            }
         }
-
-        // Set the remote address.
-        request.set_remote(h_addr);
 
         Ok(request)
     }

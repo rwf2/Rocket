@@ -4,7 +4,7 @@
 extern crate ansi_term;
 extern crate version_check;
 
-use ansi_term::Colour::{Red, Yellow, Blue, White};
+use ansi_term::Color::{Red, Yellow, Blue, White};
 use version_check::{is_nightly, is_min_version};
 
 // Specifies the minimum nightly version needed to compile Rocket.

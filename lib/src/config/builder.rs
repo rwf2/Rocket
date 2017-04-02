@@ -152,12 +152,10 @@ impl ConfigBuilder {
     /// use rocket::LoggingLevel;
     /// use rocket::config::{Config, Environment};
     ///
-    /// let key = "VheMwXIBygSmOlZAhuWl2B+zgvTN3WW5";
+    /// let key = "8Xui8SN4mI+7egV/9dlfYYLGQJeEx4+DwmSQLwDVXJg=";
     /// let mut config = Config::build(Environment::Staging)
     ///     .session_key(key)
     ///     .unwrap();
-    ///
-    /// assert_eq!(config.take_session_key(), Some(key.to_string()));
     /// ```
     pub fn session_key<K: Into<String>>(mut self, key: K) -> Self {
         self.session_key = Some(key.into());

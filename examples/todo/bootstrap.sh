@@ -6,7 +6,7 @@ DATABASE_URL=${SCRIPT_PATH}/db/db.sql
 pushd $SCRIPT_PATH > /dev/null
   # install the diesel CLI tools if they're not installed
   if ! command -v diesel >/dev/null 2>&1; then
-    cargo install diesel_cli > /dev/null
+    cargo install diesel_cli --no-default-features --features=sqlite > /dev/null
   fi
 
   # create db/db.sql

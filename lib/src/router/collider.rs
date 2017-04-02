@@ -1,7 +1,7 @@
 use super::Route;
 
 use http::uri::URI;
-use http::ContentType;
+use http::MediaType;
 use request::Request;
 
 /// The Collider trait is used to determine if two items that can be routed on
@@ -50,12 +50,9 @@ impl<'a> Collider<str> for &'a str {
     }
 }
 
+// This _only_ checks the `path` component of the URI.
 impl<'a, 'b> Collider<URI<'b>> for URI<'a> {
     fn collides_with(&self, other: &URI<'b>) -> bool {
-        if self.query().is_some() != other.query().is_some() {
-            return false;
-        }
-
         for (seg_a, seg_b) in self.segments().zip(other.segments()) {
             if seg_a.ends_with("..>") || seg_b.ends_with("..>") {
                 return true;
@@ -74,24 +71,29 @@ impl<'a, 'b> Collider<URI<'b>> for URI<'a> {
     }
 }
 
-impl Collider for ContentType  {
-    fn collides_with(&self, other: &ContentType) -> bool {
+impl Collider for MediaType  {
+    fn collides_with(&self, other: &MediaType) -> bool {
         let collide = |a, b| a == "*" || b == "*" || a == b;
-        collide(&self.ttype, &other.ttype) && collide(&self.subtype, &other.subtype)
+        collide(self.top(), other.top()) && collide(self.sub(), other.sub())
     }
 }
 
 // This implementation is used at initialization to check if two user routes
 // collide before launching. Format collisions works like this:
-//   * If route a specifies format, it only gets requests for that format.
-//   * If a route doesn't specify format, it gets requests for any format.
+//   * If route specifies format, it only gets requests for that format.
+//   * If route doesn't specify format, it gets requests for any format.
+// Query collisions work like this:
+//   * If route specifies qeury, it only gets request that have queries.
+//   * If route doesn't specify qeury, requests with and without queries match.
+// As a result, as long as everything else collides, whether a route has a query
+// or not is irrelevant: it will collide.
 impl Collider for Route {
     fn collides_with(&self, b: &Route) -> bool {
         self.method == b.method
             && self.rank == b.rank
             && self.path.collides_with(&b.path)
             && match (self.format.as_ref(), b.format.as_ref()) {
-                (Some(ct_a), Some(ct_b)) => ct_a.collides_with(ct_b),
+                (Some(mt_a), Some(mt_b)) => mt_a.collides_with(mt_b),
                 (Some(_), None) => true,
                 (None, Some(_)) => true,
                 (None, None) => true
@@ -101,18 +103,23 @@ impl Collider for Route {
 
 // This implementation is used at runtime to check if a given request is
 // intended for this Route. Format collisions works like this:
-//   * If route a specifies format, it only gets requests for that format.
-//   * If a route doesn't specify format, it gets requests for any format.
+//   * If route specifies format, it only gets requests for that format.
+//   * If route doesn't specify format, it gets requests for any format.
+// Query collisions work like this:
+//   * If route specifies a query, it only gets request that have queries.
+//   * If route doesn't specify query, requests with & without queries collide.
 impl<'r> Collider<Request<'r>> for Route {
     fn collides_with(&self, req: &Request<'r>) -> bool {
         self.method == req.method()
-            && req.uri().collides_with(&self.path)
-            // FIXME: On payload requests, check Content-Type, else Accept.
-            && match (req.content_type().as_ref(), self.format.as_ref()) {
-                (Some(ct_a), Some(ct_b)) => ct_a.collides_with(ct_b),
-                (Some(_), None) => true,
-                (None, Some(_)) => false,
-                (None, None) => true
+            && self.path.collides_with(req.uri())
+            && self.path.query().map_or(true, |_| req.uri().query().is_some())
+            // FIXME: Avoid calling `format` is `self.format` == None.
+            && match self.format.as_ref() {
+                Some(mt_a) => match req.format().as_ref() {
+                    Some(mt_b) => mt_a.collides_with(mt_b),
+                    None => false
+                },
+                None => true
             }
     }
 }
@@ -126,7 +133,7 @@ mod tests {
     use data::Data;
     use handler::Outcome;
     use router::route::Route;
-    use http::{Method, ContentType};
+    use http::{Method, MediaType, ContentType, Accept};
     use http::uri::URI;
     use http::Method::*;
 
@@ -198,7 +205,6 @@ mod tests {
         assert!(unranked_collide("/<a..>", "///a///"));
     }
 
-
     #[test]
     fn query_collisions() {
         assert!(unranked_collide("/?<a>", "/?<a>"));
@@ -207,6 +213,11 @@ mod tests {
         assert!(unranked_collide("/<r>?<a>", "/<r>?<a>"));
         assert!(unranked_collide("/a/b/c?<a>", "/a/b/c?<a>"));
         assert!(unranked_collide("/<a>/b/c?<d>", "/a/b/<c>?<d>"));
+        assert!(unranked_collide("/?<a>", "/"));
+        assert!(unranked_collide("/a?<a>", "/a"));
+        assert!(unranked_collide("/a?<a>", "/a"));
+        assert!(unranked_collide("/a/b?<a>", "/a/b"));
+        assert!(unranked_collide("/a/b", "/a/b?<c>"));
     }
 
     #[test]
@@ -231,12 +242,11 @@ mod tests {
 
     #[test]
     fn query_non_collisions() {
-        assert!(!unranked_collide("/?<a>", "/"));
+        assert!(!unranked_collide("/a?<b>", "/b"));
+        assert!(!unranked_collide("/a/b", "/a?<b>"));
+        assert!(!unranked_collide("/a/b/c?<d>", "/a/b/c/d"));
+        assert!(!unranked_collide("/a/hello", "/a/?<hello>"));
         assert!(!unranked_collide("/?<a>", "/hi"));
-        assert!(!unranked_collide("/?<a>", "/a"));
-        assert!(!unranked_collide("/a?<a>", "/a"));
-        assert!(!unranked_collide("/a/b?<a>", "/a/b"));
-        assert!(!unranked_collide("/a/b", "/a/b/?<c>"));
     }
 
     #[test]
@@ -292,41 +302,41 @@ mod tests {
         assert!(!s_s_collide("/a/hi/<a..>", "/a/hi/"));
     }
 
-    fn ct_ct_collide(ct1: &str, ct2: &str) -> bool {
-        let ct_a = ContentType::from_str(ct1).expect(ct1);
-        let ct_b = ContentType::from_str(ct2).expect(ct2);
-        ct_a.collides_with(&ct_b)
+    fn mt_mt_collide(mt1: &str, mt2: &str) -> bool {
+        let mt_a = MediaType::from_str(mt1).expect(mt1);
+        let mt_b = MediaType::from_str(mt2).expect(mt2);
+        mt_a.collides_with(&mt_b)
     }
 
     #[test]
     fn test_content_type_colliions() {
-        assert!(ct_ct_collide("application/json", "application/json"));
-        assert!(ct_ct_collide("*/json", "application/json"));
-        assert!(ct_ct_collide("*/*", "application/json"));
-        assert!(ct_ct_collide("application/*", "application/json"));
-        assert!(ct_ct_collide("application/*", "*/json"));
-        assert!(ct_ct_collide("something/random", "something/random"));
+        assert!(mt_mt_collide("application/json", "application/json"));
+        assert!(mt_mt_collide("*/json", "application/json"));
+        assert!(mt_mt_collide("*/*", "application/json"));
+        assert!(mt_mt_collide("application/*", "application/json"));
+        assert!(mt_mt_collide("application/*", "*/json"));
+        assert!(mt_mt_collide("something/random", "something/random"));
 
-        assert!(!ct_ct_collide("text/*", "application/*"));
-        assert!(!ct_ct_collide("*/text", "*/json"));
-        assert!(!ct_ct_collide("*/text", "application/test"));
-        assert!(!ct_ct_collide("something/random", "something_else/random"));
-        assert!(!ct_ct_collide("something/random", "*/else"));
-        assert!(!ct_ct_collide("*/random", "*/else"));
-        assert!(!ct_ct_collide("something/*", "random/else"));
+        assert!(!mt_mt_collide("text/*", "application/*"));
+        assert!(!mt_mt_collide("*/text", "*/json"));
+        assert!(!mt_mt_collide("*/text", "application/test"));
+        assert!(!mt_mt_collide("something/random", "something_else/random"));
+        assert!(!mt_mt_collide("something/random", "*/else"));
+        assert!(!mt_mt_collide("*/random", "*/else"));
+        assert!(!mt_mt_collide("something/*", "random/else"));
     }
 
-    fn r_ct_ct_collide<S1, S2>(m1: Method, ct1: S1, m2: Method, ct2: S2) -> bool
+    fn r_mt_mt_collide<S1, S2>(m1: Method, mt1: S1, m2: Method, mt2: S2) -> bool
         where S1: Into<Option<&'static str>>, S2: Into<Option<&'static str>>
     {
         let mut route_a = Route::new(m1, "/", dummy_handler);
-        if let Some(ct_str) = ct1.into() {
-            route_a.format = Some(ct_str.parse::<ContentType>().unwrap());
+        if let Some(mt_str) = mt1.into() {
+            route_a.format = Some(mt_str.parse::<MediaType>().unwrap());
         }
 
         let mut route_b = Route::new(m2, "/", dummy_handler);
-        if let Some(ct_str) = ct2.into() {
-            route_b.format = Some(ct_str.parse::<ContentType>().unwrap());
+        if let Some(mt_str) = mt2.into() {
+            route_b.format = Some(mt_str.parse::<MediaType>().unwrap());
         }
 
         route_a.collides_with(&route_b)
@@ -334,60 +344,107 @@ mod tests {
 
     #[test]
     fn test_route_content_type_colliions() {
-        assert!(r_ct_ct_collide(Get, "application/json", Get, "application/json"));
-        assert!(r_ct_ct_collide(Get, "*/json", Get, "application/json"));
-        assert!(r_ct_ct_collide(Get, "*/json", Get, "application/*"));
-        assert!(r_ct_ct_collide(Get, "text/html", Get, "text/*"));
-        assert!(r_ct_ct_collide(Get, "any/thing", Get, "*/*"));
+        assert!(r_mt_mt_collide(Get, "application/json", Get, "application/json"));
+        assert!(r_mt_mt_collide(Get, "*/json", Get, "application/json"));
+        assert!(r_mt_mt_collide(Get, "*/json", Get, "application/*"));
+        assert!(r_mt_mt_collide(Get, "text/html", Get, "text/*"));
+        assert!(r_mt_mt_collide(Get, "any/thing", Get, "*/*"));
 
-        assert!(r_ct_ct_collide(Get, None, Get, "text/*"));
-        assert!(r_ct_ct_collide(Get, None, Get, "text/html"));
-        assert!(r_ct_ct_collide(Get, None, Get, "*/*"));
-        assert!(r_ct_ct_collide(Get, "text/html", Get, None));
-        assert!(r_ct_ct_collide(Get, "*/*", Get, None));
-        assert!(r_ct_ct_collide(Get, "application/json", Get, None));
+        assert!(r_mt_mt_collide(Get, None, Get, "text/*"));
+        assert!(r_mt_mt_collide(Get, None, Get, "text/html"));
+        assert!(r_mt_mt_collide(Get, None, Get, "*/*"));
+        assert!(r_mt_mt_collide(Get, "text/html", Get, None));
+        assert!(r_mt_mt_collide(Get, "*/*", Get, None));
+        assert!(r_mt_mt_collide(Get, "application/json", Get, None));
 
-        assert!(!r_ct_ct_collide(Get, "text/html", Get, "application/*"));
-        assert!(!r_ct_ct_collide(Get, "application/html", Get, "text/*"));
-        assert!(!r_ct_ct_collide(Get, "*/json", Get, "text/html"));
-        assert!(!r_ct_ct_collide(Get, "text/html", Get, "text/css"));
+        assert!(!r_mt_mt_collide(Get, "text/html", Get, "application/*"));
+        assert!(!r_mt_mt_collide(Get, "application/html", Get, "text/*"));
+        assert!(!r_mt_mt_collide(Get, "*/json", Get, "text/html"));
+        assert!(!r_mt_mt_collide(Get, "text/html", Get, "text/css"));
     }
 
-    fn req_route_collide<S1, S2>(m1: Method, ct1: S1, m2: Method, ct2: S2) -> bool
+    fn req_route_mt_collide<S1, S2>(m: Method, mt1: S1, mt2: S2) -> bool
         where S1: Into<Option<&'static str>>, S2: Into<Option<&'static str>>
     {
-        let mut req = Request::new(m1, "/");
-        if let Some(ct_str) = ct1.into() {
-            req.replace_header(ct_str.parse::<ContentType>().unwrap());
+        let mut req = Request::new(m, "/");
+        if let Some(mt_str) = mt1.into() {
+            if m.supports_payload() {
+                req.replace_header(mt_str.parse::<ContentType>().unwrap());
+            } else {
+                req.replace_header(mt_str.parse::<Accept>().unwrap());
+            }
         }
 
-        let mut route = Route::new(m2, "/", dummy_handler);
-        if let Some(ct_str) = ct2.into() {
-            route.format = Some(ct_str.parse::<ContentType>().unwrap());
+        let mut route = Route::new(m, "/", dummy_handler);
+        if let Some(mt_str) = mt2.into() {
+            route.format = Some(mt_str.parse::<MediaType>().unwrap());
         }
 
         route.collides_with(&req)
     }
 
     #[test]
-    fn test_req_route_ct_collisions() {
-        assert!(req_route_collide(Get, "application/json", Get, "application/json"));
-        assert!(req_route_collide(Get, "application/json", Get, "application/*"));
-        assert!(req_route_collide(Get, "application/json", Get, "*/json"));
-        assert!(req_route_collide(Get, "text/html", Get, "text/html"));
-        assert!(req_route_collide(Get, "text/html", Get, "*/*"));
+    fn test_req_route_mt_collisions() {
+        assert!(req_route_mt_collide(Post, "application/json", "application/json"));
+        assert!(req_route_mt_collide(Post, "application/json", "application/*"));
+        assert!(req_route_mt_collide(Post, "application/json", "*/json"));
+        assert!(req_route_mt_collide(Post, "text/html", "*/*"));
 
-        assert!(req_route_collide(Get, "text/html", Get, None));
-        assert!(req_route_collide(Get, None, Get, None));
-        assert!(req_route_collide(Get, "application/json", Get, None));
-        assert!(req_route_collide(Get, "x-custom/anything", Get, None));
+        assert!(req_route_mt_collide(Get, "application/json", "application/json"));
+        assert!(req_route_mt_collide(Get, "text/html", "text/html"));
+        assert!(req_route_mt_collide(Get, "text/html", "*/*"));
+        assert!(req_route_mt_collide(Get, None, "text/html"));
+        assert!(req_route_mt_collide(Get, None, "*/*"));
+        assert!(req_route_mt_collide(Get, None, "application/json"));
 
-        assert!(!req_route_collide(Get, "application/json", Get, "text/html"));
-        assert!(!req_route_collide(Get, "application/json", Get, "text/*"));
-        assert!(!req_route_collide(Get, "application/json", Get, "*/xml"));
+        assert!(req_route_mt_collide(Post, "text/html", None));
+        assert!(req_route_mt_collide(Post, "application/json", None));
+        assert!(req_route_mt_collide(Post, "x-custom/anything", None));
+        assert!(req_route_mt_collide(Post, None, None));
 
-        assert!(!req_route_collide(Get, None, Get, "text/html"));
-        assert!(!req_route_collide(Get, None, Get, "*/*"));
-        assert!(!req_route_collide(Get, None, Get, "application/json"));
+        assert!(req_route_mt_collide(Get, "text/html", None));
+        assert!(req_route_mt_collide(Get, "application/json", None));
+        assert!(req_route_mt_collide(Get, "x-custom/anything", None));
+        assert!(req_route_mt_collide(Get, None, None));
+
+        assert!(req_route_mt_collide(Get, "text/html, text/plain", "text/html"));
+        assert!(req_route_mt_collide(Get, "text/html; q=0.5, text/xml", "text/xml"));
+
+        assert!(!req_route_mt_collide(Post, "application/json", "text/html"));
+        assert!(!req_route_mt_collide(Post, "application/json", "text/*"));
+        assert!(!req_route_mt_collide(Post, "application/json", "*/xml"));
+        assert!(!req_route_mt_collide(Get, "application/json", "text/html"));
+        assert!(!req_route_mt_collide(Get, "application/json", "text/*"));
+        assert!(!req_route_mt_collide(Get, "application/json", "*/xml"));
+
+        assert!(!req_route_mt_collide(Post, None, "text/html"));
+        assert!(!req_route_mt_collide(Post, None, "*/*"));
+        assert!(!req_route_mt_collide(Post, None, "application/json"));
+    }
+
+    fn req_route_path_collide(a: &'static str, b: &'static str) -> bool {
+        let req = Request::new(Get, a.to_string());
+        let route = Route::ranked(0, Get, b.to_string(), dummy_handler);
+        route.collides_with(&req)
+    }
+
+    #[test]
+    fn test_req_route_query_collisions() {
+        assert!(req_route_path_collide("/a/b?a=b", "/a/b?<c>"));
+        assert!(req_route_path_collide("/a/b?a=b", "/<a>/b?<c>"));
+        assert!(req_route_path_collide("/a/b?a=b", "/<a>/<b>?<c>"));
+        assert!(req_route_path_collide("/a/b?a=b", "/a/<b>?<c>"));
+        assert!(req_route_path_collide("/?b=c", "/?<b>"));
+
+        assert!(req_route_path_collide("/a/b?a=b", "/a/b"));
+        assert!(req_route_path_collide("/a/b", "/a/b"));
+        assert!(req_route_path_collide("/a/b/c/d?", "/a/b/c/d"));
+        assert!(req_route_path_collide("/a/b/c/d?v=1&v=2", "/a/b/c/d"));
+
+        assert!(!req_route_path_collide("/a/b", "/a/b?<c>"));
+        assert!(!req_route_path_collide("/a/b/c", "/a/b?<c>"));
+        assert!(!req_route_path_collide("/a?b=c", "/a/b?<c>"));
+        assert!(!req_route_path_collide("/?b=c", "/a/b?<c>"));
+        assert!(!req_route_path_collide("/?b=c", "/a?<c>"));
     }
 }

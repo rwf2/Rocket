@@ -9,33 +9,37 @@ extern crate serde_derive;
 #[cfg(test)] mod tests;
 
 use rocket::Request;
-use rocket::http::ContentType;
 use rocket::response::content;
 
 #[derive(Debug, Serialize, Deserialize)]
 struct Person {
     name: String,
-    age: i8,
+    age: u8,
 }
 
-// This shows how to manually serialize some JSON, but in a real application,
-// we'd use the JSON contrib type.
+// In a `GET` request and all other non-payload supporting request types, the
+// preferred media type in the Accept header is matched against the `format` in
+// the route attribute.
 #[get("/<name>/<age>", format = "application/json")]
-fn hello(content_type: ContentType, name: String, age: i8) -> content::JSON<String> {
-    let person = Person {
-        name: name,
-        age: age,
-    };
+fn get_hello(name: String, age: u8) -> content::JSON<String> {
+    // In a real application, we'd use the JSON contrib type.
+    let person = Person { name: name, age: age, };
+    content::JSON(serde_json::to_string(&person).unwrap())
+}
 
-    println!("ContentType: {}", content_type);
+// In a `POST` request and all other payload supporting request types, the
+// content type is matched against the `format` in the route attribute.
+#[post("/<age>", format = "text/plain", data = "<name>")]
+fn post_hello(age: u8, name: String) -> content::JSON<String> {
+    let person = Person { name: name, age: age, };
     content::JSON(serde_json::to_string(&person).unwrap())
 }
 
 #[error(404)]
 fn not_found(request: &Request) -> content::HTML<String> {
-    let html = match request.content_type() {
-        Some(ref ct) if !ct.is_json() => {
-            format!("<p>This server only supports JSON requests, not '{}'.</p>", ct)
+    let html = match request.format() {
+        Some(ref mt) if !mt.is_json() && !mt.is_plain() => {
+            format!("<p>'{}' requests are not supported.</p>", mt)
         }
         _ => format!("<p>Sorry, '{}' is an invalid path! Try \
                  /hello/&lt;name&gt;/&lt;age&gt; instead.</p>",
@@ -47,7 +51,7 @@ fn not_found(request: &Request) -> content::HTML<String> {
 
 fn main() {
     rocket::ignite()
-        .mount("/hello", routes![hello])
+        .mount("/hello", routes![get_hello, post_hello])
         .catch(errors![not_found])
         .launch();
 }
