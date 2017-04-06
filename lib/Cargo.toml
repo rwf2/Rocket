@@ -22,8 +22,10 @@ term-painter = "0.2"
 log = "0.3"
 url = "1"
 hyper = { version = "0.10.4", default-features = false }
-toml = { version = "0.2", default-features = false }
+toml = "^0.3"
 num_cpus = "1"
+serde = "^0.9.7"
+serde_derive = "^0.9.7"
 state = "0.2"
 time = "0.1"
 memchr = "1"

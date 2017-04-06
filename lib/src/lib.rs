@@ -104,6 +104,7 @@ extern crate hyper;
 extern crate url;
 extern crate toml;
 extern crate num_cpus;
+extern crate serde;
 extern crate state;
 extern crate cookie;
 extern crate time;
