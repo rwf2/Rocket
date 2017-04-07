@@ -1,7 +1,7 @@
 [package]
-name = "state_nontrivial"
-version = "0.1.0"
-authors = ["Stephan Buys <stephan.buys@panoptix.co.za>"]
+name = "managed_queue"
+version = "0.0.1"
+workspace = "../.."
 
 [dependencies]
 crossbeam = "*"
@@ -10,4 +10,3 @@ rocket_codegen = { path = "../../codegen" }
 
 [dev-dependencies]
 rocket = { path = "../../lib", features = ["testing"] }
-
