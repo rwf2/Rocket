@@ -2,5 +2,5 @@ language: rust
 sudo: required # so we get a VM with higher specs
 cache: cargo
 rust:
-  - nightly
+  - nightly-2017-04-11
 script: ./scripts/test.sh
