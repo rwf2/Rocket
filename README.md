@@ -65,7 +65,9 @@ Rocket requires a nightly version of Rust as it makes heavy use of syntax
 extensions. This means that the first two unwieldly lines in the introductory
 example above are required.
 
-Rocket checks minimum rustc version required. It is specified in `codegen/build.rs`.
+Rocket checks minimum rustc version required. It is specified in `codegen/build.rs`. For example
+
+`const MIN_DATE: &'static str = "2017-03-30";`
 
 To get rustc from 2017-03-30, you need to install at least nightly-2017-03-31.
 
