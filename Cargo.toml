@@ -33,6 +33,7 @@ members = [
   "examples/raw_upload",
   "examples/pastebin",
   "examples/state",
+  "examples/managed_queue",
   "examples/uuid",
   "examples/session",
   "examples/raw_sqlite",

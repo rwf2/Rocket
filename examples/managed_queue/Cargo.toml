@@ -1,0 +1,12 @@
+[package]
+name = "managed_queue"
+version = "0.0.1"
+workspace = "../.."
+
+[dependencies]
+crossbeam = "*"
+rocket = { path = "../../lib" }
+rocket_codegen = { path = "../../codegen" }
+
+[dev-dependencies]
+rocket = { path = "../../lib", features = ["testing"] }
