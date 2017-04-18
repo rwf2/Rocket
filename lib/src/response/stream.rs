@@ -1,5 +1,6 @@
 use std::io::Read;
 use std::fmt::{self, Debug};
+use std::convert::From;
 
 use response::{Response, Responder, DEFAULT_CHUNK_SIZE};
 use http::Status;
@@ -54,6 +55,12 @@ impl<T: Read> Stream<T> {
 impl<T: Read + Debug> Debug for Stream<T> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "Stream({:?})", self.0)
+    }
+}
+
+impl<T: Read> From<T> for Stream<T> {
+    fn from(reader: T) -> Self {
+        Stream::from(reader)
     }
 }
 
