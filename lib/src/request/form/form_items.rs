@@ -212,23 +212,43 @@ impl<'f> Iterator for FormItems<'f> {
 
     fn next(&mut self) -> Option<Self::Item> {
         let s = &self.string[self.next_index..];
-        let (key, rest) = match memchr2(b'=', b'&', s.as_bytes()) {
-            Some(i) if s.as_bytes()[i] == b'=' => (&s[..i], &s[(i + 1)..]),
-            Some(_) => return None,
-            None => return None,
-        };
+        match memchr2(b'=', b'&', s.as_bytes()) {
+            Some(i) if s.as_bytes()[i] == b'=' => {
+                let (key, rest) = (&s[..i], &s[(i + 1)..]);
 
-        if key.is_empty() {
-            return None;
+                if key.is_empty() {
+                    return None;
+                }
+
+                let (value, consumed) = match rest.find('&') {
+                    Some(index) => (&rest[..index], index + 1),
+                    None => (rest, rest.len()),
+                };
+
+                self.next_index += key.len() + 1 + consumed;
+                Some((key.into(), value.into()))
+            }
+            Some(i) => {
+                let (value, consumed) = (&s[..i], i + 1);
+
+                if value.is_empty() {
+                    return None;
+                }
+
+                self.next_index += consumed;
+                Some(("".into(), value.into()))
+            }
+            None => {
+                let (value, consumed) = (&s[..], s.as_bytes().len());
+
+                if value.is_empty() {
+                    return None;
+                }
+
+                self.next_index += consumed;
+                Some(("".into(), value.into()))
+            }
         }
-
-        let (value, consumed) = match rest.find('&') {
-            Some(index) => (&rest[..index], index + 1),
-            None => (rest, rest.len()),
-        };
-
-        self.next_index += key.len() + 1 + consumed;
-        Some((key.into(), value.into()))
     }
 }
 
@@ -283,9 +303,13 @@ mod test {
         check_form!("user=&", &[("user", "")]);
         check_form!("a=b&a=", &[("a", "b"), ("a", "")]);
 
-        check_form!(@bad "user=&password");
+        check_form!("user=&password", &[("user", ""), ("", "password")]);
+        check_form!("a=b&a", &[("a", "b"), ("", "a")]);
+
+        check_form!("a&b&c", &[("", "a"), ("", "b"), ("", "c")]);
+        check_form!("abc", &[("", "abc")]);
+
         check_form!(@bad "user=x&&");
-        check_form!(@bad "a=b&a");
         check_form!(@bad "=");
         check_form!(@bad "&");
         check_form!(@bad "=&");
