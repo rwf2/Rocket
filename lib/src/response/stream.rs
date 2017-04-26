@@ -13,24 +13,6 @@ use http::Status;
 pub struct Stream<T: Read>(T, u64);
 
 impl<T: Read> Stream<T> {
-    /// Create a new stream from the given `reader`.
-    ///
-    /// # Example
-    ///
-    /// Stream a response from whatever is in `stdin`. Note: you probably
-    /// shouldn't do this.
-    ///
-    /// ```rust
-    /// use std::io;
-    /// use rocket::response::Stream;
-    ///
-    /// # #[allow(unused_variables)]
-    /// let response = Stream::from(io::stdin());
-    /// ```
-    pub fn from(reader: T) -> Stream<T> {
-        Stream(reader, DEFAULT_CHUNK_SIZE)
-    }
-
     /// Create a new stream from the given `reader` and sets the chunk size for
     /// each streamed chunk to `chunk_size` bytes.
     ///
@@ -54,6 +36,26 @@ impl<T: Read> Stream<T> {
 impl<T: Read + Debug> Debug for Stream<T> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "Stream({:?})", self.0)
+    }
+}
+
+/// Create a new stream from the given `reader`.
+///
+/// # Example
+///
+/// Stream a response from whatever is in `stdin`. Note: you probably
+/// shouldn't do this.
+///
+/// ```rust
+/// use std::io;
+/// use rocket::response::Stream;
+///
+/// # #[allow(unused_variables)]
+/// let response = Stream::from(io::stdin());
+/// ```
+impl<T: Read> From<T> for Stream<T> {
+    fn from(reader: T) -> Self {
+        Stream(reader, DEFAULT_CHUNK_SIZE)
     }
 }
 

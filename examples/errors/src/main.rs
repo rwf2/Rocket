@@ -8,7 +8,7 @@ extern crate rocket;
 use rocket::response::content;
 
 #[get("/hello/<name>/<age>")]
-fn hello(name: &str, age: i8) -> String {
+fn hello(name: String, age: i8) -> String {
     format!("Hello, {} year old named {}!", age, name)
 }
 
@@ -21,6 +21,7 @@ fn not_found(req: &rocket::Request) -> content::HTML<String> {
 
 fn main() {
     let e = rocket::ignite()
+        // .mount("/", routes![hello, hello]) // uncoment this to get an error
         .mount("/", routes![hello])
         .catch(errors![not_found])
         .launch();

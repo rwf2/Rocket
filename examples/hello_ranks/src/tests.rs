@@ -5,10 +5,8 @@ use rocket::http::Method::*;
 fn test(uri: &str, expected: String) {
     let rocket = rocket::ignite().mount("/", routes![super::hello, super::hi]);
     let mut req = MockRequest::new(Get, uri);
-
     let mut response = req.dispatch_with(&rocket);
-    let body_str = response.body().and_then(|body| body.into_string());
-    assert_eq!(body_str, Some(expected));
+    assert_eq!(response.body_string(), Some(expected));
 }
 
 #[test]

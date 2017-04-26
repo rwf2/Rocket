@@ -12,8 +12,7 @@ fn register_hit(rocket: &Rocket) {
 fn get_count(rocket: &Rocket) -> usize {
     let mut req = MockRequest::new(Get, "/count");
     let mut response = req.dispatch_with(&rocket);
-    let body_string = response.body().and_then(|b| b.into_string()).unwrap();
-    body_string.parse().unwrap()
+    response.body_string().and_then(|s| s.parse().ok()).unwrap()
 }
 
 #[test]

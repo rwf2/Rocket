@@ -1,8 +1,7 @@
 use std::net::{IpAddr, Ipv4Addr, Ipv6Addr, SocketAddrV4, SocketAddrV6, SocketAddr};
 use std::str::FromStr;
 
-use error::Error;
-use http::uri::URI;
+use http::RawStr;
 
 /// Trait to create instance of some type from a form value; expected from field
 /// types in structs deriving `FromForm`.
@@ -38,15 +37,16 @@ use http::uri::URI;
 /// following structure:
 ///
 /// ```rust
+/// # use rocket::http::RawStr;
 /// # #[allow(dead_code)]
 /// struct Person<'r> {
 ///     name: String,
-///     age: Result<u16, &'r str>
+///     age: Result<u16, &'r RawStr>
 /// }
 /// ```
 ///
-/// The `Err` value in this case is `&str` since `u16::from_form_value` returns
-/// a `Result<u16, &str>`.
+/// The `Err` value in this case is `&RawStr` since `u16::from_form_value`
+/// returns a `Result<u16, &RawStr>`.
 ///
 /// # Provided Implementations
 ///
@@ -67,7 +67,7 @@ use http::uri::URI;
 ///     `"false"`, `"off"`, or not present. In any other case, the raw form
 ///     value is returned in the `Err` value.
 ///
-///   * **str**
+///   * **&RawStr**
 ///
 ///     _This implementation always returns successfully._
 ///
@@ -106,14 +106,15 @@ use http::uri::URI;
 ///
 /// ```rust
 /// use rocket::request::FromFormValue;
+/// use rocket::http::RawStr;
 ///
 /// struct AdultAge(usize);
 ///
 /// impl<'v> FromFormValue<'v> for AdultAge {
-///     type Error = &'v str;
+///     type Error = &'v RawStr;
 ///
-///     fn from_form_value(form_value: &'v str) -> Result<AdultAge, &'v str> {
-///         match usize::from_form_value(form_value) {
+///     fn from_form_value(form_value: &'v RawStr) -> Result<AdultAge, &'v RawStr> {
+///         match form_value.parse::<usize>() {
 ///             Ok(age) if age >= 21 => Ok(AdultAge(age)),
 ///             _ => Err(form_value),
 ///         }
@@ -141,50 +142,50 @@ pub trait FromFormValue<'v>: Sized {
 
     /// Parses an instance of `Self` from an HTTP form field value or returns an
     /// `Error` if one cannot be parsed.
-    fn from_form_value(form_value: &'v str) -> Result<Self, Self::Error>;
+    fn from_form_value(form_value: &'v RawStr) -> Result<Self, Self::Error>;
 
     /// Returns a default value to be used when the form field does not exist.
     /// If this returns `None`, then the field is required. Otherwise, this
     /// should return `Some(default_value)`. The default implementation simply
     /// returns `None`.
+    #[inline(always)]
     fn default() -> Option<Self> {
         None
     }
 }
 
-impl<'v> FromFormValue<'v> for &'v str {
-    type Error = Error;
+impl<'v> FromFormValue<'v> for &'v RawStr {
+    type Error = !;
 
     // This just gives the raw string.
-    fn from_form_value(v: &'v str) -> Result<Self, Self::Error> {
+    #[inline(always)]
+    fn from_form_value(v: &'v RawStr) -> Result<Self, Self::Error> {
         Ok(v)
     }
 }
 
 impl<'v> FromFormValue<'v> for String {
-    type Error = &'v str;
+    type Error = &'v RawStr;
 
     // This actually parses the value according to the standard.
-    fn from_form_value(v: &'v str) -> Result<Self, Self::Error> {
-        let replaced = v.replace("+", " ");
-        match URI::percent_decode(replaced.as_bytes()) {
-            Err(_) => Err(v),
-            Ok(string) => Ok(string.into_owned())
-        }
+    #[inline(always)]
+    fn from_form_value(v: &'v RawStr) -> Result<Self, Self::Error> {
+        v.url_decode().map_err(|_| v)
     }
 }
 
 impl<'v> FromFormValue<'v> for bool {
-    type Error = &'v str;
+    type Error = &'v RawStr;
 
-    fn from_form_value(v: &'v str) -> Result<Self, Self::Error> {
-        match v {
+    fn from_form_value(v: &'v RawStr) -> Result<Self, Self::Error> {
+        match v.as_str() {
             "on" | "true" => Ok(true),
             "off" | "false" => Ok(false),
             _ => Err(v),
         }
     }
 
+    #[inline(always)]
     fn default() -> Option<bool> {
         Some(false)
     }
@@ -193,9 +194,11 @@ impl<'v> FromFormValue<'v> for bool {
 macro_rules! impl_with_fromstr {
     ($($T:ident),+) => ($(
         impl<'v> FromFormValue<'v> for $T {
-            type Error = &'v str;
-            fn from_form_value(v: &'v str) -> Result<Self, Self::Error> {
-                $T::from_str(v).map_err(|_| v)
+            type Error = &'v RawStr;
+
+            #[inline(always)]
+            fn from_form_value(v: &'v RawStr) -> Result<Self, Self::Error> {
+                $T::from_str(v.as_str()).map_err(|_| v)
             }
         }
     )+)
@@ -205,29 +208,31 @@ impl_with_fromstr!(f32, f64, isize, i8, i16, i32, i64, usize, u8, u16, u32, u64,
     IpAddr, Ipv4Addr, Ipv6Addr, SocketAddrV4, SocketAddrV6, SocketAddr);
 
 impl<'v, T: FromFormValue<'v>> FromFormValue<'v> for Option<T> {
-    type Error = Error;
+    type Error = !;
 
-    fn from_form_value(v: &'v str) -> Result<Self, Self::Error> {
+    #[inline(always)]
+    fn from_form_value(v: &'v RawStr) -> Result<Self, Self::Error> {
         match T::from_form_value(v) {
             Ok(v) => Ok(Some(v)),
             Err(_) => Ok(None),
         }
     }
 
+    #[inline(always)]
     fn default() -> Option<Option<T>> {
         Some(None)
     }
 }
 
-// TODO: Add more useful implementations (range, regex, etc.).
+// // TODO: Add more useful implementations (range, regex, etc.).
 impl<'v, T: FromFormValue<'v>> FromFormValue<'v> for Result<T, T::Error> {
-    type Error = Error;
+    type Error = !;
 
-    fn from_form_value(v: &'v str) -> Result<Self, Self::Error> {
+    #[inline(always)]
+    fn from_form_value(v: &'v RawStr) -> Result<Self, Self::Error> {
         match T::from_form_value(v) {
             ok@Ok(_) => Ok(ok),
             e@Err(_) => Ok(e),
         }
     }
 }
-

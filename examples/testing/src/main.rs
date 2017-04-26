@@ -25,8 +25,6 @@ mod test {
         let mut req = MockRequest::new(Get, "/");
         let mut response = req.dispatch_with(&rocket);
         assert_eq!(response.status(), Status::Ok);
-
-        let body_string = response.body().and_then(|b| b.into_string());
-        assert_eq!(body_string, Some("Hello, world!".to_string()));
+        assert_eq!(response.body_string(), Some("Hello, world!".into()));
     }
 }

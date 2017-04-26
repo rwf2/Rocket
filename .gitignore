@@ -22,3 +22,6 @@ scripts/upload-docs.sh
 
 # Backup files.
 *.bak
+
+# Uploads in pastebin example.
+examples/pastebin/upload/*

@@ -1,0 +1,231 @@
+###############################################################################
+# Panels: displayed in a tabbed arrangement.
+###############################################################################
+
+[[panels]]
+name = "Routing"
+checked = true
+content = '''
+Rocket's main task is to route incoming requests to the appropriate request
+handler using your application's declared routes. Routes are declared using
+Rocket's _route_ attributes. The attribute describes the requests that match the
+route. The attribute is placed on top of a function that is the request handler
+for that route.
+
+As an example, consider the simple route below:
+
+```rust
+#[get("/")]
+fn index() -> &'static str {
+   "Hello, world!"
+}
+```
+
+This route, named `index`, will match against incoming HTTP `GET` requests to
+the `/` path, the index. The request handler returns a string. Rocket will use
+the string as the body of a fully formed HTTP response.
+'''
+
+[[panels]]
+name = "Dynamic Params"
+content = '''
+Rocket allows you to interpret segments of a request path dynamically. To
+illustrate, let's use the following route:
+
+```rust
+#[get("/hello/<name>/<age>")]
+fn hello(name: &str, age: u8) -> String {
+    format!("Hello, {} year old named {}!", age, name)
+}
+```
+
+The `hello` route above matches two dynamic path segments declared inside
+brackets in the path: `<name>` and `<age>`. _Dynamic_ means that the segment can
+be _any_ value the end-user desires.
+
+Each dynamic parameter (`name` and `age`) must have a type, here `&str` and
+`u8`, respectively. Rocket will attempt to parse the string in the parameter's
+position in the path into that type. The route will only be called if parsing
+succeeds. To parse the string, Rocket uses the
+[FromParam](https://api.rocket.rs/rocket/request/trait.FromParam.html) trait,
+which you can implement for your own types!
+'''
+
+[[panels]]
+name = "Handling Data"
+content = '''
+Request body data is handled in a special way in Rocket: via the
+[FromData](https://api.rocket.rs/rocket/data/trait.FromData.html) trait. Any
+type that implements `FromData` can be derived from incoming body data. To tell
+Rocket that you're expecting request body data, the `data` route argument is
+used with the name of the parameter in the request handler:
+
+```rust
+#[post("/login", data = "<user_form>")]
+fn login(user_form: Form<UserLogin>) -> String {
+   // Use `user_form`, return a String.
+}
+```
+
+The `login` route above says that it expects `data` of type `Form<UserLogin>` in
+the `user_form` parameter. The
+[Form](https://api.rocket.rs/rocket/request/struct.Form.html) type is a built-in
+Rocket type that knows how to parse web forms into structures. Rocket will
+automatically attempt to parse the request body into the `Form` and call the
+`login` handler if parsing succeeds. Other built-in `FromData` types include
+[Data](https://api.rocket.rs/rocket/struct.Data.html),
+[JSON](https://api.rocket.rs/rocket_contrib/struct.JSON.html), and
+[Flash](https://api.rocket.rs/rocket/response/struct.Flash.html)
+'''
+
+[[panels]]
+name = "Request Guards"
+content = '''
+In addition to dynamic path and data parameters, request handlers can also
+contain a third type of parameter: _request guards_. Request guards aren't
+declared in the route attribute, and any number of them can appear in the
+request handler signature.
+
+Request guards _protect_ the handler from running unless some set of conditions
+are met by the incoming request metadata. For instance, if you are writing an
+API that requires sensitive calls to be accompanied by an API key in the request
+header, Rocket can protect those calls via a custom `APIKey` request guard:
+
+```rust
+#[get("/sensitive")]
+fn sensitive(key: APIKey) -> &'static str { ... }
+```
+
+`APIKey` protects the `sensitive` handler from running incorrectly. In order for
+Rocket to call the `sensitive` handler, the `APIKey` type needs to be derived
+through a
+[FromRequest](https://api.rocket.rs/rocket/request/trait.FromRequest.html)
+implementation, which in this case, validates the API key header. Request guards
+are a powerful and unique Rocket concept; they centralize application policy and
+invariants through types.
+'''
+
+[[panels]]
+name = "Responders"
+content = '''
+The return type of a request handler can by any type that implements
+[Responder](https://api.rocket.rs/rocket/response/trait.Responder.html):
+
+```rust
+#[get("/")]
+fn route() -> T { ... }
+```
+
+Above, T must implement `Responder`. Rocket implements `Responder` for many of
+the standard library types including `&str`, `String`, `File`, `Option`, and
+`Result`. Rocket also implements custom responders such as
+[Redirect](https://api.rocket.rs/rocket/response/struct.Redirect.html),
+[Flash](https://api.rocket.rs/rocket/response/struct.Flash.html), and
+[Template](https://api.rocket.rs/rocket_contrib/struct.Template.html).
+
+The task of a `Reponder` is to generate a
+[Response](https://api.rocket.rs/rocket/response/struct.Response.html), if
+possible. `Responder`s can fail with a status code. When they do, Rocket calls
+the corresponding `error` route, which can be declared as follows:
+
+```rust
+#[error(404)]
+fn not_found() -> T { ... }
+```
+'''
+
+[[panels]]
+name = "Launching"
+content = '''
+Launching a Rocket application is the funnest part! For Rocket to begin
+dispatching requests to routes, the routes need to be _mounted_. After mounting,
+the application needs to be _launched_. These two steps, usually done in `main`,
+look like:
+
+```rust
+rocket::ignite()
+   .mount("/base", routes![index, another])
+   .launch()
+```
+
+The `mount` call takes a base path and a set of routes via the `routes!` macro.
+The base path (`/base` above) is prepended to the path of every route in the
+list. This effectively namespaces the routes, allowing for easier composition.
+
+The `launch` call starts the server. In development, Rocket prints useful
+information to the console to let you know everything is okay.
+
+```sh
+🚀  Rocket has launched from http://localhost:8000...
+```
+'''
+
+###############################################################################
+# Steps to "How Rocket Works"
+###############################################################################
+
+[[steps]]
+name = "Validation"
+color = "blue"
+content = '''
+First, Rocket validates a matching request by ensuring that all of the types in
+a given handler can be derived from the incoming request. If the types cannot be
+derived, the request is forwarded to the next matching route until a route’s
+types validate or there are no more routes to try. If all routes fail, a
+customizable **404** error is returned.
+
+```rust
+#[post("/user", data = "<new_user>")]
+fn new_user(admin: AdminUser, new_user: Form<User>) -> T {
+   ...
+}
+```
+
+For the `new_user` handler above to be called, the following conditions must
+hold:
+
+* The request method must be `POST`.
+* The request path must be `/user`.
+* The request must contain `data` in its body.
+* The request metadata must authenticate an `AdminUser`.
+* The request body must be a form that parses into a `User` struct.
+'''
+
+[[steps]]
+name = "Processing"
+color = "purple"
+content = '''
+Next, the request is processed by an arbitrary handler. This is where most of
+the business logic in an application resides, and the part of your applications
+you’ll likely spend the most time writing. In Rocket, handlers are simply
+functions - that’s it! The only caveat is that the function’s return type must
+implement the `Responder` trait. The `new_user` function above is an example of
+a handler.
+'''
+
+[[steps]]
+name = "Response"
+color = "red"
+content = '''
+Finally, Rocket responds to the client by transforming the return value of the
+handler into an HTTP response. The HTTP response generated from the returned
+value depends on the type’s specific `Responder` trait implementation.
+
+```rust
+fn route() -> T { ... }
+```
+
+If the function above is used as a handler, for instance, then the type `T` must
+implement `Responder`. Rocket provides many useful responder types out of the
+box. They include:
+
+ * `JSON<T>`: Serializes the structure T into JSON and returns it to
+   the client.
+ * `Template`: Renders a template file and returns it to the client.
+ * `Redirect`: Returns a properly formatted HTTP redirect.
+ * `NamedFile`: Streams a given file to the client with the
+   Content-Type taken from the file’s extension.
+ * `Stream`: Streams data to the client from an arbitrary `Read` value.
+ * Many Primitive Types: `String`, `&str`, `File`, `Option`, `Result`, and
+   others all implement the `Responder` trait.
+'''

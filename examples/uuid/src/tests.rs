@@ -9,7 +9,7 @@ fn test(uri: &str, expected: &str) {
     let mut req = MockRequest::new(Get, uri);
     let mut res = req.dispatch_with(&rocket);
 
-    assert_eq!(res.body().and_then(|b| b.into_string()), Some(expected.into()));
+    assert_eq!(res.body_string(), Some(expected.into()));
 }
 
 fn test_404(uri: &str) {

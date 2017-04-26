@@ -1,0 +1,11 @@
+# The certificate/private key pair used here was generated via openssl:
+#
+#     openssl req -x509 -newkey rsa:4096 -nodes -sha256 -days 3650 \
+#         -keyout key.pem -out cert.pem
+#
+# The certificate is self-signed. As such, you will need to trust it directly
+# for your browser to refer to the connection as secure. You should NEVER use
+# this certificate/key pair. It is here for DEMONSTRATION PURPOSES ONLY.
+[global.tls]
+certs = "private/cert.pem"
+key = "private/key.pem"

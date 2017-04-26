@@ -16,7 +16,6 @@ fn bug(form_data: Form<FormData>) -> &'static str {
     "OK"
 }
 
-#[cfg(feature = "testing")]
 mod tests {
     use super::*;
     use rocket::testing::MockRequest;
@@ -32,8 +31,7 @@ mod tests {
             .body("_method=patch&form_data=Form+data");
 
         let mut response = req.dispatch_with(&rocket);
-        let body_str = response.body().and_then(|b| b.into_string());
-        assert_eq!(body_str, Some("OK".to_string()));
+        assert_eq!(response.body_string(), Some("OK".into()));
     }
 
     #[test]

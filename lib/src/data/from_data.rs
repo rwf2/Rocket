@@ -1,4 +1,4 @@
-use std::io::Read;
+use std::io::{self, Read};
 
 use outcome::{self, IntoOutcome};
 use outcome::Outcome::*;
@@ -10,11 +10,13 @@ use data::Data;
 pub type Outcome<S, E> = outcome::Outcome<S, (Status, E), Data>;
 
 impl<'a, S, E> IntoOutcome<S, (Status, E), Data> for Result<S, E> {
+    type Input = Status;
+
     #[inline]
-    fn into_outcome(self) -> Outcome<S, E> {
+    fn into_outcome(self, status: Status) -> Outcome<S, E> {
         match self {
             Ok(val) => Success(val),
-            Err(err) => Failure((Status::InternalServerError, err))
+            Err(err) => Failure((status, err))
         }
     }
 }
@@ -104,7 +106,7 @@ impl<'a, S, E> IntoOutcome<S, (Status, E), Data> for Result<S, E> {
 ///     fn from_data(req: &Request, data: Data) -> data::Outcome<Self, String> {
 ///         // Ensure the content type is correct before opening the data.
 ///         let person_ct = ContentType::new("application", "x-person");
-///         if req.content_type() != Some(person_ct) {
+///         if req.content_type() != Some(&person_ct) {
 ///             return Outcome::Forward(data);
 ///         }
 ///
@@ -184,14 +186,28 @@ impl<T: FromData> FromData for Option<T> {
 }
 
 impl FromData for String {
-    type Error = ();
+    type Error = io::Error;
 
     // FIXME: Doc.
     fn from_data(_: &Request, data: Data) -> Outcome<Self, Self::Error> {
         let mut string = String::new();
         match data.open().read_to_string(&mut string) {
             Ok(_) => Success(string),
-            Err(_) => Failure((Status::UnprocessableEntity, ()))
+            Err(e) => Failure((Status::BadRequest, e))
+        }
+    }
+}
+
+// FIXME Implement this.
+impl FromData for Vec<u8> {
+    type Error = io::Error;
+
+    // FIXME: Doc.
+    fn from_data(_: &Request, data: Data) -> Outcome<Self, Self::Error> {
+        let mut bytes = Vec::new();
+        match data.open().read_to_end(&mut bytes) {
+            Ok(_) => Success(bytes),
+            Err(e) => Failure((Status::BadRequest, e))
         }
     }
 }

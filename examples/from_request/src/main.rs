@@ -50,7 +50,7 @@ mod test {
 
         let mut response = req.dispatch_with(&rocket);
         let expect = format!("Your request contained {} headers!", headers.len());
-        assert_eq!(response.body().and_then(|b| b.into_string()), Some(expect));
+        assert_eq!(response.body_string(), Some(expect));
     }
 
     #[test]

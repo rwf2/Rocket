@@ -6,8 +6,8 @@ extern crate rocket;
 #[cfg(test)] mod tests;
 
 #[derive(FromForm)]
-struct Person<'r> {
-    name: &'r str,
+struct Person {
+    name: String,
     age: Option<u8>
 }
 

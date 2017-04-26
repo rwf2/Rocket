@@ -5,6 +5,7 @@ extern crate rocket;
 extern crate rand;
 
 mod paste_id;
+#[cfg(test)] mod tests;
 
 use std::io;
 use std::fs::File;
@@ -52,6 +53,10 @@ fn index() -> &'static str {
     "
 }
 
+fn rocket() -> rocket::Rocket {
+    rocket::ignite().mount("/", routes![index, upload, retrieve])
+}
+
 fn main() {
-    rocket::ignite().mount("/", routes![index, upload, retrieve]).launch();
+    rocket().launch();
 }

@@ -5,34 +5,12 @@ use std::convert::AsRef;
 use std::fmt;
 use std::env;
 
-use config::Environment::*;
-use config::{self, Value, ConfigBuilder, Environment, ConfigError};
-
+use super::custom_values::*;
 use {num_cpus, base64};
+use config::Environment::*;
+use config::{Result, Table, Value, ConfigBuilder, Environment, ConfigError};
 use logger::LoggingLevel;
 use http::Key;
-
-pub enum SecretKey {
-    Generated(Key),
-    Provided(Key)
-}
-
-impl SecretKey {
-    #[inline]
-    pub fn kind(&self) -> &'static str {
-        match *self {
-            SecretKey::Generated(_) => "generated",
-            SecretKey::Provided(_) => "provided",
-        }
-    }
-
-    #[inline]
-    fn inner(&self) -> &Key {
-        match *self {
-            SecretKey::Generated(ref key) | SecretKey::Provided(ref key) => key
-        }
-    }
-}
 
 /// Structure for Rocket application configuration.
 ///
@@ -50,6 +28,7 @@ impl SecretKey {
 ///     .workers(12)
 ///     .unwrap();
 /// ```
+#[derive(Clone)]
 pub struct Config {
     /// The environment that this configuration corresponds to.
     pub environment: Environment,
@@ -61,20 +40,29 @@ pub struct Config {
     pub workers: u16,
     /// How much information to log.
     pub log_level: LoggingLevel,
+    /// The secret key.
+    pub(crate) secret_key: SecretKey,
+    /// TLS configuration.
+    pub(crate) tls: Option<TlsConfig>,
+    /// Streaming read size limits.
+    pub limits: Limits,
     /// Extra parameters that aren't part of Rocket's core config.
     pub extras: HashMap<String, Value>,
     /// The path to the configuration file this config belongs to.
     pub config_path: PathBuf,
-    /// The secret key.
-    pub(crate) secret_key: SecretKey,
 }
 
-macro_rules! parse {
-    ($conf:expr, $name:expr, $val:expr, $method:ident, $expect: expr) => (
-        $val.$method().ok_or_else(|| {
-            $conf.bad_type($name, $val.type_str(), $expect)
-        })
-    );
+macro_rules! config_from_raw {
+    ($config:expr, $name:expr, $value:expr,
+        $($key:ident => ($type:ident, $set:ident, $map:expr)),+ | _ => $rest:expr) => (
+        match $name {
+            $(stringify!($key) => {
+                concat_idents!(value_as_, $type)($config, $name, $value)
+                    .and_then(|parsed| $map($config.$set(parsed)))
+            })+
+            _ => $rest
+        }
+    )
 }
 
 impl Config {
@@ -119,7 +107,7 @@ impl Config {
     /// let mut my_config = Config::new(Environment::Production).expect("cwd");
     /// my_config.set_port(1001);
     /// ```
-    pub fn new(env: Environment) -> config::Result<Config> {
+    pub fn new(env: Environment) -> Result<Config> {
         let cwd = env::current_dir().map_err(|_| ConfigError::BadCWD)?;
         Config::default(env, cwd.as_path().join("Rocket.custom.toml"))
     }
@@ -131,7 +119,7 @@ impl Config {
     /// # Panics
     ///
     /// Panics if randomness cannot be retrieved from the OS.
-    pub(crate) fn default<P>(env: Environment, path: P) -> config::Result<Config>
+    pub(crate) fn default<P>(env: Environment, path: P) -> Result<Config>
         where P: AsRef<Path>
     {
         let config_path = path.as_ref().to_path_buf();
@@ -155,6 +143,8 @@ impl Config {
                     workers: default_workers,
                     log_level: LoggingLevel::Normal,
                     secret_key: key,
+                    tls: None,
+                    limits: Limits::default(),
                     extras: HashMap::new(),
                     config_path: config_path,
                 }
@@ -167,6 +157,8 @@ impl Config {
                     workers: default_workers,
                     log_level: LoggingLevel::Normal,
                     secret_key: key,
+                    tls: None,
+                    limits: Limits::default(),
                     extras: HashMap::new(),
                     config_path: config_path,
                 }
@@ -179,6 +171,8 @@ impl Config {
                     workers: default_workers,
                     log_level: LoggingLevel::Critical,
                     secret_key: key,
+                    tls: None,
+                    limits: Limits::default(),
                     extras: HashMap::new(),
                     config_path: config_path,
                 }
@@ -189,8 +183,10 @@ impl Config {
     /// Constructs a `BadType` error given the entry `name`, the invalid `val`
     /// at that entry, and the `expect`ed type name.
     #[inline(always)]
-    fn bad_type(&self, name: &str, actual: &'static str, expect: &'static str)
-        -> ConfigError {
+    pub(crate) fn bad_type(&self,
+                           name: &str,
+                           actual: &'static str,
+                           expect: &'static str) -> ConfigError {
         let id = format!("{}.{}", self.environment, name);
         ConfigError::BadType(id, expect, actual, self.config_path.clone())
     }
@@ -209,39 +205,22 @@ impl Config {
     ///   * **workers**: Integer (16-bit unsigned)
     ///   * **log**: String
     ///   * **secret_key**: String (192-bit base64)
-    pub(crate) fn set_raw(&mut self, name: &str, val: &Value) -> config::Result<()> {
-        if name == "address" {
-            let address_str = parse!(self, name, val, as_str, "a string")?;
-            self.set_address(address_str)?;
-        } else if name == "port" {
-            let port = parse!(self, name, val, as_integer, "an integer")?;
-            if port < 0 || port > (u16::max_value() as i64) {
-                return Err(self.bad_type(name, val.type_str(), "a 16-bit unsigned integer"))
+    ///   * **tls**: Table (`certs` (path as String), `key` (path as String))
+    pub(crate) fn set_raw(&mut self, name: &str, val: &Value) -> Result<()> {
+        let (id, ok) = (|val| val, |_| Ok(()));
+        config_from_raw!(self, name, val,
+            address => (str, set_address, id),
+            port => (u16, set_port, ok),
+            workers => (u16, set_workers, ok),
+            secret_key => (str, set_secret_key, id),
+            log => (log_level, set_log_level, ok),
+            tls => (tls_config, set_raw_tls, id),
+            limits => (limits, set_limits, ok)
+            | _ => {
+                self.extras.insert(name.into(), val.clone());
+                Ok(())
             }
-
-            self.set_port(port as u16);
-        } else if name == "workers" {
-            let workers = parse!(self, name, val, as_integer, "an integer")?;
-            if workers < 0 || workers > (u16::max_value() as i64) {
-                return Err(self.bad_type(name, val.type_str(), "a 16-bit unsigned integer"));
-            }
-
-            self.set_workers(workers as u16);
-        } else if name == "secret_key" {
-            let key = parse!(self, name, val, as_str, "a string")?;
-            self.set_secret_key(key)?;
-        } else if name == "log" {
-            let level_str = parse!(self, name, val, as_str, "a string")?;
-            let expect = "log level ('normal', 'critical', 'debug')";
-            match level_str.parse() {
-                Ok(level) => self.set_log_level(level),
-                Err(_) => return Err(self.bad_type(name, val.type_str(), expect))
-            }
-        } else {
-            self.extras.insert(name.into(), val.clone());
-        }
-
-        Ok(())
+        )
     }
 
     /// Sets the root directory of this configuration to `root`.
@@ -286,7 +265,7 @@ impl Config {
     /// # Ok(())
     /// # }
     /// ```
-    pub fn set_address<A: Into<String>>(&mut self, address: A) -> config::Result<()> {
+    pub fn set_address<A: Into<String>>(&mut self, address: A) -> Result<()> {
         let address = address.into();
         if address.parse::<IpAddr>().is_err() && lookup_host(&address).is_err() {
             return Err(self.bad_type("address", "string", "a valid hostname or IP"));
@@ -310,6 +289,7 @@ impl Config {
     /// # Ok(())
     /// # }
     /// ```
+    #[inline]
     pub fn set_port(&mut self, port: u16) {
         self.port = port;
     }
@@ -328,6 +308,7 @@ impl Config {
     /// # Ok(())
     /// # }
     /// ```
+    #[inline]
     pub fn set_workers(&mut self, workers: u16) {
         self.workers = workers;
     }
@@ -354,7 +335,7 @@ impl Config {
     /// # Ok(())
     /// # }
     /// ```
-    pub fn set_secret_key<K: Into<String>>(&mut self, key: K) -> config::Result<()> {
+    pub fn set_secret_key<K: Into<String>>(&mut self, key: K) -> Result<()> {
         let key = key.into();
         let error = self.bad_type("secret_key", "string",
                                   "a 256-bit base64 encoded string");
@@ -387,8 +368,46 @@ impl Config {
     /// # Ok(())
     /// # }
     /// ```
+    #[inline]
     pub fn set_log_level(&mut self, log_level: LoggingLevel) {
         self.log_level = log_level;
+    }
+
+    /// Sets limits.
+    #[inline]
+    pub fn set_limits(&mut self, limits: Limits) {
+        self.limits = limits;
+    }
+
+    #[cfg(feature = "tls")]
+    pub fn set_tls(&mut self, certs_path: &str, key_path: &str) -> Result<()> {
+        use hyper_rustls::util as tls;
+
+        let err = "nonexistent or invalid file";
+        let certs = tls::load_certs(certs_path)
+            .map_err(|_| self.bad_type("tls", err, "a readable certificates file"))?;
+        let key = tls::load_private_key(key_path)
+            .map_err(|_| self.bad_type("tls", err, "a readable private key file"))?;
+
+        self.tls = Some(TlsConfig { certs, key });
+        Ok(())
+    }
+
+    #[cfg(not(feature = "tls"))]
+    pub fn set_tls(&mut self, _: &str, _: &str) -> Result<()> {
+        self.tls = Some(TlsConfig);
+        Ok(())
+    }
+
+    #[cfg(not(test))]
+    #[inline(always)]
+    fn set_raw_tls(&mut self, paths: (&str, &str)) -> Result<()> {
+        self.set_tls(paths.0, paths.1)
+    }
+
+    #[cfg(test)]
+    fn set_raw_tls(&mut self, _: (&str, &str)) -> Result<()> {
+        Ok(())
     }
 
     /// Sets the extras for `self` to be the key/value pairs in `extras`.
@@ -413,6 +432,7 @@ impl Config {
     /// # Ok(())
     /// # }
     /// ```
+    #[inline]
     pub fn set_extras(&mut self, extras: HashMap<String, Value>) {
         self.extras = extras;
     }
@@ -441,6 +461,7 @@ impl Config {
     /// # Ok(())
     /// # }
     /// ```
+    #[inline]
     pub fn extras<'a>(&'a self) -> impl Iterator<Item=(&'a str, &'a Value)> {
         self.extras.iter().map(|(k, v)| (k.as_str(), v))
     }
@@ -470,9 +491,9 @@ impl Config {
     ///
     /// assert_eq!(config.get_str("my_extra"), Ok("extra_value"));
     /// ```
-    pub fn get_str<'a>(&'a self, name: &str) -> config::Result<&'a str> {
-        let value = self.extras.get(name).ok_or_else(|| ConfigError::NotFound)?;
-        parse!(self, name, value, as_str, "a string")
+    pub fn get_str<'a>(&'a self, name: &str) -> Result<&'a str> {
+        let val = self.extras.get(name).ok_or_else(|| ConfigError::NotFound)?;
+        val.as_str().ok_or_else(|| self.bad_type(name, val.type_str(), "a string"))
     }
 
     /// Attempts to retrieve the extra named `name` as an integer.
@@ -494,9 +515,9 @@ impl Config {
     ///
     /// assert_eq!(config.get_int("my_extra"), Ok(1025));
     /// ```
-    pub fn get_int(&self, name: &str) -> config::Result<i64> {
-        let value = self.extras.get(name).ok_or_else(|| ConfigError::NotFound)?;
-        parse!(self, name, value, as_integer, "an integer")
+    pub fn get_int(&self, name: &str) -> Result<i64> {
+        let val = self.extras.get(name).ok_or_else(|| ConfigError::NotFound)?;
+        val.as_integer().ok_or_else(|| self.bad_type(name, val.type_str(), "an integer"))
     }
 
     /// Attempts to retrieve the extra named `name` as a boolean.
@@ -518,9 +539,9 @@ impl Config {
     ///
     /// assert_eq!(config.get_bool("my_extra"), Ok(true));
     /// ```
-    pub fn get_bool(&self, name: &str) -> config::Result<bool> {
-        let value = self.extras.get(name).ok_or_else(|| ConfigError::NotFound)?;
-        parse!(self, name, value, as_bool, "a boolean")
+    pub fn get_bool(&self, name: &str) -> Result<bool> {
+        let val = self.extras.get(name).ok_or_else(|| ConfigError::NotFound)?;
+        val.as_bool().ok_or_else(|| self.bad_type(name, val.type_str(), "a boolean"))
     }
 
     /// Attempts to retrieve the extra named `name` as a float.
@@ -542,9 +563,9 @@ impl Config {
     ///
     /// assert_eq!(config.get_float("pi"), Ok(3.14159));
     /// ```
-    pub fn get_float(&self, name: &str) -> config::Result<f64> {
-        let value = self.extras.get(name).ok_or_else(|| ConfigError::NotFound)?;
-        parse!(self, name, value, as_float, "a float")
+    pub fn get_float(&self, name: &str) -> Result<f64> {
+        let val = self.extras.get(name).ok_or_else(|| ConfigError::NotFound)?;
+        val.as_float().ok_or_else(|| self.bad_type(name, val.type_str(), "a float"))
     }
 
     /// Attempts to retrieve the extra named `name` as a slice of an array.
@@ -566,9 +587,9 @@ impl Config {
     ///
     /// assert!(config.get_slice("numbers").is_ok());
     /// ```
-    pub fn get_slice(&self, name: &str) -> config::Result<&[Value]> {
-        let value = self.extras.get(name).ok_or_else(|| ConfigError::NotFound)?;
-        parse!(self, name, value, as_slice, "a slice")
+    pub fn get_slice(&self, name: &str) -> Result<&[Value]> {
+        let val = self.extras.get(name).ok_or_else(|| ConfigError::NotFound)?;
+        val.as_slice().ok_or_else(|| self.bad_type(name, val.type_str(), "a slice"))
     }
 
     /// Attempts to retrieve the extra named `name` as a table.
@@ -594,9 +615,9 @@ impl Config {
     ///
     /// assert!(config.get_table("my_table").is_ok());
     /// ```
-    pub fn get_table(&self, name: &str) -> config::Result<&config::Table> {
-        let value = self.extras.get(name).ok_or_else(|| ConfigError::NotFound)?;
-        parse!(self, name, value, as_table, "a table")
+    pub fn get_table(&self, name: &str) -> Result<&Table> {
+        let val = self.extras.get(name).ok_or_else(|| ConfigError::NotFound)?;
+        val.as_table().ok_or_else(|| self.bad_type(name, val.type_str(), "a table"))
     }
 
     /// Returns the path at which the configuration file for `self` is stored.

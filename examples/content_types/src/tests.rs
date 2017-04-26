@@ -14,7 +14,7 @@ fn test<H>(method: Method, uri: &str, header: H, status: Status, body: String)
     let mut response = request.dispatch_with(&rocket);
 
     assert_eq!(response.status(), status);
-    assert_eq!(response.body().and_then(|b| b.into_string()), Some(body));
+    assert_eq!(response.body_string(), Some(body));
 }
 
 #[test]

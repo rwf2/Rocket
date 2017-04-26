@@ -12,10 +12,13 @@ use http::uri::URI;
 pub type Outcome<S, E> = outcome::Outcome<S, (Status, E), ()>;
 
 impl<S, E> IntoOutcome<S, (Status, E), ()> for Result<S, E> {
-    fn into_outcome(self) -> Outcome<S, E> {
+    type Input = Status;
+
+    #[inline]
+    fn into_outcome(self, status: Status) -> Outcome<S, E> {
         match self {
             Ok(val) => Success(val),
-            Err(val) => Failure((Status::BadRequest, val))
+            Err(err) => Failure((status, err))
         }
     }
 }
@@ -220,7 +223,7 @@ impl<'a, 'r> FromRequest<'a, 'r> for Session<'a> {
     }
 }
 
-impl<'a, 'r> FromRequest<'a, 'r> for Accept {
+impl<'a, 'r> FromRequest<'a, 'r> for &'a Accept {
     type Error = ();
 
     fn from_request(request: &'a Request<'r>) -> Outcome<Self, Self::Error> {
@@ -231,7 +234,7 @@ impl<'a, 'r> FromRequest<'a, 'r> for Accept {
     }
 }
 
-impl<'a, 'r> FromRequest<'a, 'r> for ContentType {
+impl<'a, 'r> FromRequest<'a, 'r> for &'a ContentType {
     type Error = ();
 
     fn from_request(request: &'a Request<'r>) -> Outcome<Self, Self::Error> {

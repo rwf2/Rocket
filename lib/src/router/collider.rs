@@ -11,7 +11,8 @@ pub trait Collider<T: ?Sized = Self> {
     fn collides_with(&self, other: &T) -> bool;
 }
 
-pub fn index_match_until(break_c: char,
+#[inline(always)]
+fn index_match_until(break_c: char,
                          a: &str,
                          b: &str,
                          dir: bool)
@@ -39,11 +40,13 @@ pub fn index_match_until(break_c: char,
     Some((i, j))
 }
 
+#[inline(always)]
 fn do_match_until(break_c: char, a: &str, b: &str, dir: bool) -> bool {
     index_match_until(break_c, a, b, dir).is_some()
 }
 
 impl<'a> Collider<str> for &'a str {
+    #[inline(always)]
     fn collides_with(&self, other: &str) -> bool {
         let (a, b) = (self, other);
         do_match_until('<', a, b, true) && do_match_until('>', a, b, false)
@@ -72,6 +75,7 @@ impl<'a, 'b> Collider<URI<'b>> for URI<'a> {
 }
 
 impl Collider for MediaType  {
+    #[inline(always)]
     fn collides_with(&self, other: &MediaType) -> bool {
         let collide = |a, b| a == "*" || b == "*" || a == b;
         collide(self.top(), other.top()) && collide(self.sub(), other.sub())
@@ -113,10 +117,9 @@ impl<'r> Collider<Request<'r>> for Route {
         self.method == req.method()
             && self.path.collides_with(req.uri())
             && self.path.query().map_or(true, |_| req.uri().query().is_some())
-            // FIXME: Avoid calling `format` is `self.format` == None.
-            && match self.format.as_ref() {
-                Some(mt_a) => match req.format().as_ref() {
-                    Some(mt_b) => mt_a.collides_with(mt_b),
+            && match self.format {
+                Some(ref mt_a) => match req.format() {
+                    Some(ref mt_b) => mt_a.collides_with(mt_b),
                     None => false
                 },
                 None => true

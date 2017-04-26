@@ -10,7 +10,7 @@ fn test(uri: &str, status: Status, body: String) {
     let mut response = req.dispatch_with(&rocket);
 
     assert_eq!(response.status(), status);
-    assert_eq!(response.body().and_then(|b| b.into_string()), Some(body));
+    assert_eq!(response.body_string(), Some(body));
 }
 
 #[test]

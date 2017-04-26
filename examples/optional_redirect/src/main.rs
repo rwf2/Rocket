@@ -6,6 +6,7 @@ extern crate rocket;
 mod tests;
 
 use rocket::response::Redirect;
+use rocket::http::RawStr;
 
 #[get("/")]
 fn root() -> Redirect {
@@ -13,8 +14,8 @@ fn root() -> Redirect {
 }
 
 #[get("/users/<name>")]
-fn user(name: &str) -> Result<&'static str, Redirect> {
-    match name {
+fn user(name: &RawStr) -> Result<&'static str, Redirect> {
+    match name.as_str() {
         "Sergio" => Ok("Hello, Sergio!"),
         _ => Err(Redirect::to("/users/login")),
     }

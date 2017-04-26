@@ -1,10 +1,9 @@
 use std::fmt;
 use std::str::FromStr;
 
-
 use error::Error;
 use http::hyper;
-use http::ascii::uncased_eq;
+use http::uncased::uncased_eq;
 
 use self::Method::*;
 

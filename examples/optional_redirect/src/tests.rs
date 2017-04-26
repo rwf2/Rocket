@@ -9,8 +9,7 @@ fn test_200(uri: &str, expected_body: &str) {
     let mut response = request.dispatch_with(&rocket);
 
     assert_eq!(response.status(), Status::Ok);
-    assert_eq!(response.body().and_then(|b| b.into_string()),
-               Some(expected_body.to_string()));
+    assert_eq!(response.body_string(), Some(expected_body.to_string()));
 }
 
 fn test_303(uri: &str, expected_location: &str) {
@@ -18,7 +17,7 @@ fn test_303(uri: &str, expected_location: &str) {
         .mount("/", routes![super::root, super::user, super::login]);
     let mut request = MockRequest::new(Method::Get, uri);
     let response = request.dispatch_with(&rocket);
-    let location_headers: Vec<_> = response.header_values("Location").collect();
+    let location_headers: Vec<_> = response.headers().get("Location").collect();
 
     assert_eq!(response.status(), Status::SeeOther);
     assert_eq!(location_headers, vec![expected_location]);

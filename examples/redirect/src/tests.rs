@@ -18,7 +18,7 @@ fn test_root() {
     run_test!("/", |mut response: Response| {
         assert!(response.body().is_none());
         assert_eq!(response.status(), Status::SeeOther);
-        for h in response.headers() {
+        for h in response.headers().iter() {
             match h.name.as_str() {
                 "Location" => assert_eq!(h.value, "/login"),
                 "Content-Length" => assert_eq!(h.value.parse::<i32>().unwrap(), 0),
@@ -31,8 +31,8 @@ fn test_root() {
 #[test]
 fn test_login() {
     run_test!("/login", |mut response: Response| {
-        let body_string = response.body().and_then(|body| body.into_string());
-        assert_eq!(body_string, Some("Hi! Please log in before continuing.".to_string()));
+        assert_eq!(response.body_string(),
+            Some("Hi! Please log in before continuing.".to_string()));
         assert_eq!(response.status(), Status::Ok);
     });
 }

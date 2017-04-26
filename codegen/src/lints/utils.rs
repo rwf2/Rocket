@@ -160,7 +160,8 @@ impl DefExt for Def {
                 | Def::AssociatedTy(id) | Def::TyParam(id) | Def::Struct(id)
                 | Def::StructCtor(id, ..) | Def::Union(id) | Def::Trait(id)
                 | Def::Method(id) | Def::Const(id) | Def::AssociatedConst(id)
-                | Def::Local(id) | Def::Upvar(id, ..) | Def::Macro(id, ..) => Some(id),
+                | Def::Local(id) | Def::Upvar(id, ..) | Def::Macro(id, ..)
+                | Def::GlobalAsm(id) => Some(id),
             Def::Label(..) | Def::PrimTy(..) | Def::SelfTy(..) | Def::Err => None,
         }
     }

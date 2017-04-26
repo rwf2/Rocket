@@ -30,7 +30,6 @@ fn dual(user: String, path: Segments) -> String {
     user + "/is/" + &path.collect::<Vec<_>>().join("/")
 }
 
-#[cfg(feature = "testing")]
 mod tests {
     use super::*;
     use rocket::testing::MockRequest;
@@ -52,8 +51,7 @@ mod tests {
             let mut req = MockRequest::new(Get, format!("{}/{}", prefix, path));
 
             let mut response = req.dispatch_with(&rocket);
-            let body_str = response.body().and_then(|b| b.into_string());
-            assert_eq!(body_str, Some(path.into()));
+            assert_eq!(response.body_string(), Some(path.into()));
         }
     }
 }

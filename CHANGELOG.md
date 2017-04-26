@@ -1,3 +1,26 @@
+# Version 0.2.6 (Apr 17, 2017)
+
+## Codegen
+
+  * Allow `k` and `v` to be used as fields in `FromForm` structures by avoiding
+    identifier collisions ([#265]).
+
+[#265]: https://github.com/SergioBenitez/Rocket/issues/265
+
+# Version 0.2.5 (Apr 16, 2017)
+
+## Codegen
+
+  * Lints were updated for `2017-04-15` nightly.
+  * Minimum required `rustc` is `1.18.0-nightly (2017-04-15)`.
+
+# Version 0.2.4 (Mar 30, 2017)
+
+## Codegen
+
+  * Codegen was updated for `2017-03-30` nightly.
+  * Minimum required `rustc` is `1.18.0-nightly (2017-03-30)`.
+
 # Version 0.2.3 (Mar 22, 2017)
 
 ## Fixes

@@ -23,7 +23,6 @@ fn specified_html() -> &'static str {
     "specified_html"
 }
 
-#[cfg(feature = "testing")]
 mod tests {
     use super::*;
 
@@ -48,7 +47,7 @@ mod tests {
             }
 
             let mut response = req.dispatch_with(&rocket);
-            let body_str = response.body().and_then(|b| b.into_string());
+            let body_str = response.body_string();
             let body: Option<&'static str> = $body;
             match body {
                 Some(string) => assert_eq!(body_str, Some(string.to_string())),

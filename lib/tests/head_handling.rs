@@ -20,7 +20,6 @@ fn other() -> content::JSON<()> {
     content::JSON(())
 }
 
-#[cfg(feature = "testing")]
 mod tests {
     use super::*;
 
@@ -54,7 +53,7 @@ mod tests {
         }
 
 
-        let content_type: Vec<_> = response.header_values("Content-Type").collect();
+        let content_type: Vec<_> = response.headers().get("Content-Type").collect();
         assert_eq!(content_type, vec![ContentType::Plain.to_string()]);
 
         let mut req = MockRequest::new(Head, "/empty");
@@ -70,7 +69,7 @@ mod tests {
 
         assert_eq!(response.status(), Status::Ok);
 
-        let content_type: Vec<_> = response.header_values("Content-Type").collect();
+        let content_type: Vec<_> = response.headers().get("Content-Type").collect();
         assert_eq!(content_type, vec![ContentType::JSON.to_string()]);
     }
 }

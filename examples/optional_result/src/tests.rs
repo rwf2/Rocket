@@ -9,8 +9,7 @@ fn test_200() {
     let mut response = request.dispatch_with(&rocket);
 
     assert_eq!(response.status(), Status::Ok);
-    assert_eq!(response.body().and_then(|b| b.into_string()),
-               Some("Hello, Sergio!".to_string()));
+    assert_eq!(response.body_string(), Some("Hello, Sergio!".into()));
 }
 
 #[test]

@@ -1,3 +1,6 @@
+[profile.dev]
+codegen-units = 4
+
 [workspace]
 members = [
   "lib/",
@@ -30,7 +33,10 @@ members = [
   "examples/raw_upload",
   "examples/pastebin",
   "examples/state",
+  "examples/managed_queue",
   "examples/uuid",
   "examples/session",
   "examples/raw_sqlite",
+  "examples/hello_tls",
+  "examples/fairings",
 ]

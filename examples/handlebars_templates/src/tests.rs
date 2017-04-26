@@ -25,7 +25,7 @@ fn test_root() {
             assert_eq!(response.status(), Status::SeeOther);
             assert!(response.body().is_none());
 
-            let location_headers: Vec<_> = response.header_values("Location").collect();
+            let location_headers: Vec<_> = response.headers().get("Location").collect();
             assert_eq!(location_headers, vec!["/hello/Unknown"]);
         });
     }
@@ -34,14 +34,12 @@ fn test_root() {
     for method in &[Post, Put, Delete, Options, Trace, Connect, Patch] {
         let req = MockRequest::new(*method, "/");
         run_test!(req, |mut response: Response| {
-            assert_eq!(response.status(), Status::NotFound);
-
             let mut map = ::std::collections::HashMap::new();
             map.insert("path", "/");
-            let expected = Template::render("error/404", &map).to_string();
+            let expected_body = Template::render("error/404", &map).to_string();
 
-            let body_string = response.body().and_then(|body| body.into_string());
-            assert_eq!(body_string, Some(expected));
+            assert_eq!(response.status(), Status::NotFound);
+            assert_eq!(response.body_string(), Some(expected_body));
         });
     }
 }
@@ -59,8 +57,7 @@ fn test_name() {
         };
 
         let expected = Template::render("index", &context).to_string();
-        let body_string = response.body().and_then(|body| body.into_string());
-        assert_eq!(body_string, Some(expected));
+        assert_eq!(response.body_string(), Some(expected));
     });
 }
 
@@ -74,8 +71,6 @@ fn test_404() {
         let mut map = ::std::collections::HashMap::new();
         map.insert("path", "/hello/");
         let expected = Template::render("error/404", &map).to_string();
-
-        let body_string = response.body().and_then(|body| body.into_string());
-        assert_eq!(body_string, Some(expected));
+        assert_eq!(response.body_string(), Some(expected));
     });
 }

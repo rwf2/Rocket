@@ -6,6 +6,8 @@
 #![feature(type_ascription)]
 #![feature(lookup_host)]
 #![feature(plugin)]
+#![feature(never_type)]
+#![feature(concat_idents)]
 
 #![plugin(pear_codegen)]
 
@@ -98,6 +100,8 @@
 
 #[macro_use] extern crate log;
 #[macro_use] extern crate pear;
+#[cfg(feature = "tls")] extern crate rustls;
+#[cfg(feature = "tls")] extern crate hyper_rustls;
 extern crate term_painter;
 extern crate hyper;
 extern crate url;
@@ -113,7 +117,7 @@ extern crate smallvec;
 #[cfg(test)] #[macro_use] extern crate lazy_static;
 
 #[doc(hidden)] #[macro_use] pub mod logger;
-#[cfg(any(test, feature = "testing"))] pub mod testing;
+pub mod testing;
 pub mod http;
 pub mod request;
 pub mod response;
@@ -122,6 +126,7 @@ pub mod config;
 pub mod data;
 pub mod handler;
 pub mod error;
+pub mod fairing;
 
 mod router;
 mod rocket;
@@ -135,6 +140,7 @@ mod ext;
 #[doc(hidden)] pub use codegen::{StaticRouteInfo, StaticCatchInfo};
 #[doc(inline)] pub use outcome::Outcome;
 #[doc(inline)] pub use data::Data;
+#[doc(inline)] pub use fairing::Fairing;
 pub use router::Route;
 pub use request::{Request, State};
 pub use error::{Error, LaunchError};

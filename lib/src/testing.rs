@@ -1,33 +1,5 @@
 //! A tiny module for testing Rocket applications.
 //!
-//! # Enabling
-//!
-//! The `testing` module is only available when Rocket is compiled with the
-//! `testing` feature flag. The suggested way to enable the `testing` module is
-//! through Cargo's `[dev-dependencies]` feature which allows features (and
-//! other dependencies) to be enabled exclusively when testing/benchmarking your
-//! application.
-//!
-//! To compile Rocket with the `testing` feature for testing/benchmarking, add
-//! the following to your `Cargo.toml`:
-//!
-//! ```toml
-//! [dev-dependencies]
-//! rocket = { version = "*", features = ["testing"] }
-//! ```
-//!
-//! Then, in your testing module, `use` the testing types. This typically looks
-//! as follows:
-//!
-//! ```rust,ignore
-//! #[cfg(test)]
-//! mod test {
-//!   use super::rocket;
-//!   use rocket::testing::MockRequest;
-//!   use rocket::http::Method::*;
-//! }
-//! ```
-//!
 //! # Usage
 //!
 //! The testing methadology is simple:
@@ -51,9 +23,10 @@
 //! builds a request for submitting a login form with three fields:
 //!
 //! ```rust
-//! # use rocket::http::Method::*;
-//! # use rocket::testing::MockRequest;
-//! # use rocket::http::ContentType;
+//! use rocket::http::Method::*;
+//! use rocket::http::ContentType;
+//! use rocket::testing::MockRequest;
+//!
 //! let (username, password, age) = ("user", "password", 32);
 //! MockRequest::new(Post, "/login")
 //!     .header(ContentType::Form)
@@ -96,11 +69,8 @@
 //!         let mut req = MockRequest::new(Get, "/");
 //!         let mut response = req.dispatch_with(&rocket);
 //!
-//!         // Write the body out as a string.
-//!         let body_str = response.body().and_then(|b| b.into_string());
-//!
-//!         // Check that the body contains what we expect.
-//!         assert_eq!(body_str, Some("Hello, world!".to_string()));
+//!         // Check that the body contains the string we expect.
+//!         assert_eq!(response.body_string(), Some("Hello, world!".into()));
 //!     }
 //! }
 //! ```
@@ -122,7 +92,7 @@ impl<'r> MockRequest<'r> {
     pub fn new<S: AsRef<str>>(method: Method, uri: S) -> Self {
         MockRequest {
             request: Request::new(method, uri.as_ref().to_string()),
-            data: Data::new(vec![])
+            data: Data::local(vec![])
         }
     }
 
@@ -225,7 +195,7 @@ impl<'r> MockRequest<'r> {
     /// ```
     #[inline]
     pub fn body<S: AsRef<[u8]>>(mut self, body: S) -> Self {
-        self.data = Data::new(body.as_ref().into());
+        self.data = Data::local(body.as_ref().into());
         self
     }
 
@@ -260,12 +230,11 @@ impl<'r> MockRequest<'r> {
     /// let mut req = MockRequest::new(Get, "/");
     /// let mut response = req.dispatch_with(&rocket);
     ///
-    /// let body_str = response.body().and_then(|b| b.into_string());
-    /// assert_eq!(body_str, Some("Hello, world!".to_string()));
+    /// assert_eq!(response.body_string(), Some("Hello, world!".into()));
     /// # }
     /// ```
     pub fn dispatch_with<'s>(&'s mut self, rocket: &'r Rocket) -> Response<'s> {
-        let data = ::std::mem::replace(&mut self.data, Data::new(vec![]));
+        let data = ::std::mem::replace(&mut self.data, Data::local(vec![]));
         rocket.dispatch(&mut self.request, data)
     }
 }

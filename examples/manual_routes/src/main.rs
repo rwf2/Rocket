@@ -7,8 +7,7 @@ use std::io;
 use std::fs::File;
 
 use rocket::{Request, Route, Data, Catcher, Error};
-use rocket::http::Status;
-use rocket::request::FromParam;
+use rocket::http::{Status, RawStr};
 use rocket::response::{self, Responder};
 use rocket::response::status::Custom;
 use rocket::handler::Outcome;
@@ -23,7 +22,8 @@ fn hi(_req: &Request, _: Data) -> Outcome<'static> {
 }
 
 fn name<'a>(req: &'a Request, _: Data) -> Outcome<'a> {
-    Outcome::of(req.get_param(0).unwrap_or("unnamed"))
+    let param = req.get_param::<&'a RawStr>(0);
+    Outcome::of(param.map(|r| r.as_str()).unwrap_or("unnamed"))
 }
 
 fn echo_url(req: &Request, _: Data) -> Outcome<'static> {
@@ -31,7 +31,8 @@ fn echo_url(req: &Request, _: Data) -> Outcome<'static> {
         .as_str()
         .split_at(6)
         .1;
-    Outcome::of(String::from_param(param).unwrap())
+
+    Outcome::of(RawStr::from_str(param).url_decode())
 }
 
 fn upload<'r>(req: &'r Request, data: Data) -> Outcome<'r> {

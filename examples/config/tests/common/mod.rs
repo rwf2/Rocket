@@ -49,6 +49,5 @@ pub fn test_hello() {
     let mut request = MockRequest::new(Method::Get, "/hello");
     let mut response = request.dispatch_with(&rocket);
 
-    assert_eq!(response.body().and_then(|b| b.into_string()),
-               Some("Hello, world!".to_string()));
+    assert_eq!(response.body_string(), Some("Hello, world!".into()));
 }

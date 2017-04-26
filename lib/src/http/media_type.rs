@@ -3,8 +3,8 @@ use std::str::FromStr;
 use std::fmt;
 use std::hash::{Hash, Hasher};
 
-use http::IntoCollection;
-use http::ascii::{uncased_eq, UncasedAsciiRef};
+use ext::IntoCollection;
+use http::uncased::{uncased_eq, UncasedStr};
 use http::parse::{IndexedStr, parse_media_type};
 
 use smallvec::SmallVec;
@@ -193,7 +193,7 @@ impl MediaType {
     known_extensions!(from_extension);
 
     /// Returns the top-level type for this media type. The return type,
-    /// `UncasedAsciiRef`, has caseless equality comparison and hashing.
+    /// `UncasedStr`, has caseless equality comparison and hashing.
     ///
     /// # Example
     ///
@@ -206,12 +206,12 @@ impl MediaType {
     /// assert_eq!(plain.top(), "Text");
     /// ```
     #[inline]
-    pub fn top(&self) -> &UncasedAsciiRef {
+    pub fn top(&self) -> &UncasedStr {
         self.top.to_str(self.source.as_ref()).into()
     }
 
     /// Returns the subtype for this media type. The return type,
-    /// `UncasedAsciiRef`, has caseless equality comparison and hashing.
+    /// `UncasedStr`, has caseless equality comparison and hashing.
     ///
     /// # Example
     ///
@@ -224,7 +224,7 @@ impl MediaType {
     /// assert_eq!(plain.sub(), "pLaIn");
     /// ```
     #[inline]
-    pub fn sub(&self) -> &UncasedAsciiRef {
+    pub fn sub(&self) -> &UncasedStr {
         self.sub.to_str(self.source.as_ref()).into()
     }
 

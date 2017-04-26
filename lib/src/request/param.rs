@@ -4,6 +4,7 @@ use std::path::PathBuf;
 use std::fmt::Debug;
 
 use http::uri::{URI, Segments, SegmentError};
+use http::RawStr;
 
 /// Trait to convert a dynamic path segment string to a concrete value.
 ///
@@ -51,15 +52,16 @@ use http::uri::{URI, Segments, SegmentError};
 ///
 /// For instance, imagine you've asked for an `<id>` as a `usize`. To determine
 /// when the `<id>` was not a valid `usize` and retrieve the string that failed
-/// to parse, you can use a `Result<usize, &str>` type for the `<id>` parameter
-/// as follows:
+/// to parse, you can use a `Result<usize, &RawStr>` type for the `<id>`
+/// parameter as follows:
 ///
 /// ```rust
 /// # #![feature(plugin)]
 /// # #![plugin(rocket_codegen)]
 /// # extern crate rocket;
+/// # use rocket::http::RawStr;
 /// #[get("/<id>")]
-/// fn hello(id: Result<usize, &str>) -> String {
+/// fn hello(id: Result<usize, &RawStr>) -> String {
 ///     match id {
 ///         Ok(id_num) => format!("usize: {}", id_num),
 ///         Err(string) => format!("Not a usize: {}", string)
@@ -80,7 +82,7 @@ use http::uri::{URI, Segments, SegmentError};
 ///     type returns successfully. Otherwise, the raw path segment is returned
 ///     in the `Err` value.
 ///
-///   * **str**
+///   * **&RawStr**
 ///
 ///     _This implementation always returns successfully._
 ///
@@ -107,14 +109,6 @@ use http::uri::{URI, Segments, SegmentError};
 ///     The path segment is parsed by `T`'s `FromParam` implementation. The
 ///     returned `Result` value is returned.
 ///
-/// # `str` vs. `String`
-///
-/// Paths are URL encoded. As a result, the `str` `FromParam` implementation
-/// returns the raw, URL encoded version of the path segment string. On the
-/// other hand, `String` decodes the path parameter, but requires an allocation
-/// to do so. This tradeoff is similiar to that of form values, and you should
-/// use whichever makes sense for your application.
-///
 /// # Example
 ///
 /// Say you want to parse a segment of the form:
@@ -138,13 +132,14 @@ use http::uri::{URI, Segments, SegmentError};
 ///
 /// ```rust
 /// use rocket::request::FromParam;
+/// use rocket::http::RawStr;
 /// # #[allow(dead_code)]
 /// # struct MyParam<'r> { key: &'r str, value: usize }
 ///
 /// impl<'r> FromParam<'r> for MyParam<'r> {
-///     type Error = &'r str;
+///     type Error = &'r RawStr;
 ///
-///     fn from_param(param: &'r str) -> Result<MyParam<'r>, &'r str> {
+///     fn from_param(param: &'r RawStr) -> Result<Self, Self::Error> {
 ///         let (key, val_str) = match param.find(':') {
 ///             Some(i) if i > 0 => (&param[..i], &param[(i + 1)..]),
 ///             _ => return Err(param)
@@ -172,11 +167,12 @@ use http::uri::{URI, Segments, SegmentError};
 /// # #![plugin(rocket_codegen)]
 /// # extern crate rocket;
 /// # use rocket::request::FromParam;
+/// # use rocket::http::RawStr;
 /// # #[allow(dead_code)]
 /// # struct MyParam<'r> { key: &'r str, value: usize }
 /// # impl<'r> FromParam<'r> for MyParam<'r> {
-/// #     type Error = &'r str;
-/// #     fn from_param(param: &'r str) -> Result<MyParam<'r>, &'r str> {
+/// #     type Error = &'r RawStr;
+/// #     fn from_param(param: &'r RawStr) -> Result<Self, Self::Error> {
 /// #         Err(param)
 /// #     }
 /// # }
@@ -197,29 +193,35 @@ pub trait FromParam<'a>: Sized {
 
     /// Parses an instance of `Self` from a dynamic path parameter string or
     /// returns an `Error` if one cannot be parsed.
-    fn from_param(param: &'a str) -> Result<Self, Self::Error>;
+    fn from_param(param: &'a RawStr) -> Result<Self, Self::Error>;
 }
 
-impl<'a> FromParam<'a> for &'a str {
+impl<'a> FromParam<'a> for &'a RawStr {
     type Error = ();
-    fn from_param(param: &'a str) -> Result<&'a str, Self::Error> {
+
+    #[inline(always)]
+    fn from_param(param: &'a RawStr) -> Result<&'a RawStr, Self::Error> {
         Ok(param)
     }
 }
 
 impl<'a> FromParam<'a> for String {
-    type Error = &'a str;
-    fn from_param(p: &'a str) -> Result<String, Self::Error> {
-        URI::percent_decode(p.as_bytes()).map_err(|_| p).map(|s| s.into_owned())
+    type Error = &'a RawStr;
+
+    #[inline(always)]
+    fn from_param(param: &'a RawStr) -> Result<String, Self::Error> {
+        param.percent_decode().map(|cow| cow.into_owned()).map_err(|_| param)
     }
 }
 
 macro_rules! impl_with_fromstr {
     ($($T:ident),+) => ($(
         impl<'a> FromParam<'a> for $T {
-            type Error = &'a str;
-            fn from_param(param: &'a str) -> Result<Self, Self::Error> {
-                $T::from_str(param).map_err(|_| param)
+            type Error = &'a RawStr;
+
+            #[inline(always)]
+            fn from_param(param: &'a RawStr) -> Result<Self, Self::Error> {
+                $T::from_str(param.as_str()).map_err(|_| param)
             }
         }
     )+)
@@ -230,22 +232,26 @@ impl_with_fromstr!(f32, f64, isize, i8, i16, i32, i64, usize, u8, u16, u32, u64,
        SocketAddr);
 
 impl<'a, T: FromParam<'a>> FromParam<'a> for Result<T, T::Error> {
-    type Error = ();
-    fn from_param(p: &'a str) -> Result<Self, Self::Error> {
-        Ok(match T::from_param(p) {
-            Ok(val) => Ok(val),
-            Err(e) => Err(e),
-        })
+    type Error = !;
+
+    #[inline]
+    fn from_param(param: &'a RawStr) -> Result<Self, Self::Error> {
+        match T::from_param(param) {
+            Ok(val) => Ok(Ok(val)),
+            Err(e) => Ok(Err(e)),
+        }
     }
 }
 
 impl<'a, T: FromParam<'a>> FromParam<'a> for Option<T> {
-    type Error = ();
-    fn from_param(p: &'a str) -> Result<Self, Self::Error> {
-        Ok(match T::from_param(p) {
-            Ok(val) => Some(val),
-            Err(_) => None
-        })
+    type Error = !;
+
+    #[inline]
+    fn from_param(param: &'a RawStr) -> Result<Self, Self::Error> {
+        match T::from_param(param) {
+            Ok(val) => Ok(Some(val)),
+            Err(_) => Ok(None)
+        }
     }
 }
 
@@ -277,9 +283,10 @@ pub trait FromSegments<'a>: Sized {
 }
 
 impl<'a> FromSegments<'a> for Segments<'a> {
-    type Error = ();
+    type Error = !;
 
-    fn from_segments(segments: Segments<'a>) -> Result<Segments<'a>, ()> {
+    #[inline(always)]
+    fn from_segments(segments: Segments<'a>) -> Result<Segments<'a>, Self::Error> {
         Ok(segments)
     }
 }
@@ -291,7 +298,7 @@ impl<'a> FromSegments<'a> for Segments<'a> {
 /// For security purposes, if a segment meets any of the following conditions,
 /// an `Err` is returned indicating the condition met:
 ///
-///   * Decoded segment starts with any of: `.`, `*`
+///   * Decoded segment starts with any of: `.` (except `..`), `*`
 ///   * Decoded segment ends with any of: `:`, `>`, `<`
 ///   * Decoded segment contains any of: `/`
 ///   * On Windows, decoded segment contains any of: '\'
@@ -335,21 +342,25 @@ impl<'a> FromSegments<'a> for PathBuf {
 }
 
 impl<'a, T: FromSegments<'a>> FromSegments<'a> for Result<T, T::Error> {
-    type Error = ();
-    fn from_segments(segments: Segments<'a>) -> Result<Result<T, T::Error>, ()> {
-        Ok(match T::from_segments(segments) {
-            Ok(val) => Ok(val),
-            Err(e) => Err(e),
-        })
+    type Error = !;
+
+    #[inline]
+    fn from_segments(segments: Segments<'a>) -> Result<Result<T, T::Error>, !> {
+        match T::from_segments(segments) {
+            Ok(val) => Ok(Ok(val)),
+            Err(e) => Ok(Err(e)),
+        }
     }
 }
 
 impl<'a, T: FromSegments<'a>> FromSegments<'a> for Option<T> {
-    type Error = ();
-    fn from_segments(segments: Segments<'a>) -> Result<Option<T>, ()> {
-        Ok(match T::from_segments(segments) {
-            Ok(val) => Some(val),
-            Err(_) => None
-        })
+    type Error = !;
+
+    #[inline]
+    fn from_segments(segments: Segments<'a>) -> Result<Option<T>, !> {
+        match T::from_segments(segments) {
+            Ok(val) => Ok(Some(val)),
+            Err(_) => Ok(None)
+        }
     }
 }

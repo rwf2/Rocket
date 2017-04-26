@@ -38,7 +38,7 @@
 //! fails with some error and no processing can or should continue as a result.
 //! The meaning of a failure depends on the context.
 //!
-//! It Rocket, a `Failure` generally means that a request is taken out of normal
+//! In Rocket, a `Failure` generally means that a request is taken out of normal
 //! processing. The request is then given to the catcher corresponding to some
 //! status code. users can catch failures by requesting a type of `Result<S, E>`
 //! or `Option<S>` in request handlers. For example, if a user's handler looks
@@ -105,7 +105,9 @@ pub enum Outcome<S, E, F> {
 
 /// Conversion trait from some type into an Outcome type.
 pub trait IntoOutcome<S, E, F> {
-    fn into_outcome(self) -> Outcome<S, E, F>;
+    type Input: Sized;
+
+    fn into_outcome(self, input: Self::Input) -> Outcome<S, E, F>;
 }
 
 impl<S, E, F> Outcome<S, E, F> {
@@ -326,6 +328,72 @@ impl<S, E, F> Outcome<S, E, F> {
             Success(ref val) => Success(val),
             Failure(ref val) => Failure(val),
             Forward(ref val) => Forward(val),
+        }
+    }
+
+    /// Maps an `Outcome<S, E, F>` to an `Outcome<T, E, F>` by applying the
+    /// function `f` to the value of type `S` in `self` if `self` is an
+    /// `Outcome::Success`.
+    ///
+    /// ```rust
+    /// # use rocket::outcome::Outcome;
+    /// # use rocket::outcome::Outcome::*;
+    /// #
+    /// let x: Outcome<i32, &str, usize> = Success(10);
+    ///
+    /// let mapped = x.map(|v| if v == 10 { "10" } else { "not 10" });
+    /// assert_eq!(mapped, Success("10"));
+    /// ```
+    #[inline]
+    pub fn map<T, M: FnOnce(S) -> T>(self, f: M) -> Outcome<T, E, F> {
+        match self {
+            Success(val) => Success(f(val)),
+            Failure(val) => Failure(val),
+            Forward(val) => Forward(val),
+        }
+    }
+
+    /// Maps an `Outcome<S, E, F>` to an `Outcome<S, T, F>` by applying the
+    /// function `f` to the value of type `E` in `self` if `self` is an
+    /// `Outcome::Failure`.
+    ///
+    /// ```rust
+    /// # use rocket::outcome::Outcome;
+    /// # use rocket::outcome::Outcome::*;
+    /// #
+    /// let x: Outcome<i32, &str, usize> = Failure("hi");
+    ///
+    /// let mapped = x.map_failure(|v| if v == "hi" { 10 } else { 0 });
+    /// assert_eq!(mapped, Failure(10));
+    /// ```
+    #[inline]
+    pub fn map_failure<T, M: FnOnce(E) -> T>(self, f: M) -> Outcome<S, T, F> {
+        match self {
+            Success(val) => Success(val),
+            Failure(val) => Failure(f(val)),
+            Forward(val) => Forward(val),
+        }
+    }
+
+    /// Maps an `Outcome<S, E, F>` to an `Outcome<S, E, T>` by applying the
+    /// function `f` to the value of type `F` in `self` if `self` is an
+    /// `Outcome::Forward`.
+    ///
+    /// ```rust
+    /// # use rocket::outcome::Outcome;
+    /// # use rocket::outcome::Outcome::*;
+    /// #
+    /// let x: Outcome<i32, &str, usize> = Forward(5);
+    ///
+    /// let mapped = x.map_forward(|v| if v == 5 { "a" } else { "b" });
+    /// assert_eq!(mapped, Forward("a"));
+    /// ```
+    #[inline]
+    pub fn map_forward<T, M: FnOnce(F) -> T>(self, f: M) -> Outcome<S, E, T> {
+        match self {
+            Success(val) => Success(val),
+            Failure(val) => Failure(val),
+            Forward(val) => Forward(f(val)),
         }
     }
 

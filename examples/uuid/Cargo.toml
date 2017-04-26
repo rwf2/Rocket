@@ -13,6 +13,3 @@ lazy_static = "^0.2"
 default-features = false
 path = "../../contrib"
 features = ["uuid"]
-
-[dev-dependencies]
-rocket = { path = "../../lib", features = ["testing"] }

@@ -15,7 +15,6 @@ fn bug(form_data: Form<FormData>) -> String {
     form_data.into_inner().form_data
 }
 
-#[cfg(feature = "testing")]
 mod tests {
     use super::*;
     use rocket::testing::MockRequest;
@@ -30,9 +29,8 @@ mod tests {
             .body(format!("form_data={}", raw));
 
         let mut response = req.dispatch_with(&rocket);
-        let body_string = response.body().and_then(|b| b.into_string());
         assert_eq!(response.status(), Status::Ok);
-        assert_eq!(Some(decoded.to_string()), body_string);
+        assert_eq!(Some(decoded.to_string()), response.body_string());
     }
 
     #[test]

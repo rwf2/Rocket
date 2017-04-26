@@ -3,22 +3,24 @@ use std::str::from_utf8_unchecked;
 use std::cmp::min;
 use std::net::SocketAddr;
 use std::io::{self, Write};
+use std::mem;
 
 use term_painter::Color::*;
 use term_painter::ToStyle;
-
 use state::Container;
 
+#[cfg(feature = "tls")] use hyper_rustls::TlsServer;
 use {logger, handler};
-use ext::ReadExt;
-use config::{self, Config};
+use ext::{ReadExt, IntoCollection};
+use config::{self, Config, LoggedValue};
 use request::{Request, FormItems};
 use data::Data;
 use response::{Body, Response};
 use router::{Router, Route};
 use catcher::{self, Catcher};
 use outcome::Outcome;
-use error::{Error, LaunchError};
+use error::{Error, LaunchError, LaunchErrorKind};
+use fairing::{Fairing, Fairings};
 
 use http::{Method, Status, Header, Session};
 use http::hyper::{self, header};
@@ -31,7 +33,8 @@ pub struct Rocket {
     router: Router,
     default_catchers: HashMap<u16, Catcher>,
     catchers: HashMap<u16, Catcher>,
-    state: Container
+    state: Container,
+    fairings: Fairings
 }
 
 #[doc(hidden)]
@@ -69,30 +72,57 @@ impl hyper::Handler for Rocket {
         };
 
         // Dispatch the request to get a response, then write that response out.
+        // let req = UnsafeCell::new(req);
         let response = self.dispatch(&mut req, data);
         self.issue_response(response, res)
     }
 }
 
+// This macro is a terrible hack to get around Hyper's Server<L> type. What we
+// want is to use almost exactly the same launch code when we're serving over
+// HTTPS as over HTTP. But Hyper forces two different types, so we can't use the
+// same code, at least not trivially. These macros get around that by passing in
+// the same code as a continuation in `$continue`. This wouldn't work as a
+// regular function taking in a closure because the types of the inputs to the
+// closure would be different depending on whether TLS was enabled or not.
+#[cfg(not(feature = "tls"))]
+macro_rules! serve {
+    ($rocket:expr, $addr:expr, |$server:ident, $proto:ident| $continue:expr) => ({
+        let ($proto, $server) = ("http://", hyper::Server::http($addr));
+        $continue
+    })
+}
+
+#[cfg(feature = "tls")]
+macro_rules! serve {
+    ($rocket:expr, $addr:expr, |$server:ident, $proto:ident| $continue:expr) => ({
+        if let Some(ref tls) = $rocket.config.tls {
+            let tls = TlsServer::new(tls.certs.clone(), tls.key.clone());
+            let ($proto, $server) = ("https://", hyper::Server::https($addr, tls));
+            $continue
+        } else {
+            let ($proto, $server) = ("http://", hyper::Server::http($addr));
+            $continue
+        }
+    })
+}
+
 impl Rocket {
     #[inline]
-    fn issue_response(&self, mut response: Response, hyp_res: hyper::FreshResponse) {
-        // Add the 'rocket' server header, and write out the response.
-        // TODO: If removing Hyper, write out `Date` header too.
-        response.set_header(Header::new("Server", "Rocket"));
-
+    fn issue_response(&self, response: Response, hyp_res: hyper::FreshResponse) {
         match self.write_response(response, hyp_res) {
             Ok(_) => info_!("{}", Green.paint("Response succeeded.")),
             Err(e) => error_!("Failed to write response: {:?}.", e)
         }
     }
 
+    #[inline]
     fn write_response(&self, mut response: Response,
                       mut hyp_res: hyper::FreshResponse) -> io::Result<()>
     {
         *hyp_res.status_mut() = hyper::StatusCode::from_u16(response.status().code);
 
-        for header in response.headers() {
+        for header in response.headers().iter() {
             // FIXME: Using hyper here requires two allocations.
             let name = header.name.into_string();
             let value = Vec::from(header.value.as_bytes());
@@ -164,32 +194,38 @@ impl Rocket {
         let (min_len, max_len) = ("_method=get".len(), "_method=delete".len());
         let is_form = req.content_type().map_or(false, |ct| ct.is_form());
         if is_form && req.method() == Method::Post && data_len >= min_len {
+            // We're only using this for comparison and throwing it away
+            // afterwards, so it doesn't matter if we have invalid UTF8.
             let form = unsafe {
                 from_utf8_unchecked(&data.peek()[..min(data_len, max_len)])
             };
 
-            let mut form_items = FormItems::from(form);
-            if let Some(("_method", value)) = form_items.next() {
-                if let Ok(method) = value.parse() {
-                    req.set_method(method);
+            if let Some((key, value)) = FormItems::from(form).next() {
+                if key == "_method" {
+                    if let Ok(method) = value.parse() {
+                        req.set_method(method);
+                    }
                 }
             }
         }
     }
 
+    // TODO: Explain this `UnsafeCell` business at a macro level.
     #[inline]
-    pub(crate) fn dispatch<'s, 'r>(&'s self, request: &'r mut Request<'s>, data: Data)
-            -> Response<'r> {
+    pub(crate) fn dispatch<'s, 'r>(&'s self,
+                                   request: &'r mut Request<'s>,
+                                   data: Data) -> Response<'r> {
         info!("{}:", request);
 
         // Inform the request about all of the precomputed state.
         request.set_preset_state(&self.config.secret_key(), &self.state);
 
-        // Do a bit of preprocessing before routing.
+        // Do a bit of preprocessing before routing; run the attached fairings.
         self.preprocess_request(request, &data);
+        self.fairings.handle_request(request, &data);
 
         // Route the request to get a response.
-        match self.route(request, data) {
+        let mut response = match self.route(request, data) {
             Outcome::Success(mut response) => {
                 // A user's route responded! Set the regular cookies.
                 for cookie in request.cookies().delta() {
@@ -204,17 +240,16 @@ impl Rocket {
                 response
             }
             Outcome::Forward(data) => {
-                // There was no matching route.
                 // Rust thinks `request` is still borrowed here, but it's
                 // obviously not (data has nothing to do with it), so we
                 // convince it to give us another mutable reference.
-                // FIXME: Pay the cost to copy Request into UnsafeCell? Pay the
-                // cost to use RefCell? Move the call to `issue_response` here
-                // to move Request and move directly into an UnsafeCell?
-                let request: &'r mut Request = unsafe {
-                    &mut *(request as *const Request as *mut Request)
+                // TODO: Use something that is well defined, like UnsafeCell.
+                // But that causes variance issues...so wait for NLL.
+                let request: &'r mut Request<'s> = unsafe {
+                    (&mut *(request as *const _ as *mut _))
                 };
 
+                // There was no matching route.
                 if request.method() == Method::Head {
                     info_!("Autohandling {} request.", White.paint("HEAD"));
                     request.set_method(Method::Get);
@@ -226,7 +261,14 @@ impl Rocket {
                 }
             }
             Outcome::Failure(status) => self.handle_error(status, request),
-        }
+        };
+
+        // Add the 'rocket' server header to the response and run fairings.
+        // TODO: If removing Hyper, write out `Date` header too.
+        response.set_header(Header::new("Server", "Rocket"));
+        self.fairings.handle_response(request, &mut response);
+
+        response
     }
 
     /// Tries to find a `Responder` for a given `request`. It does this by
@@ -261,7 +303,11 @@ impl Rocket {
         Outcome::Forward(data)
     }
 
-    // TODO: DOC.
+    // Finds the error catcher for the status `status` and executes it fo the
+    // given request `req`. If a user has registere a catcher for `status`, the
+    // catcher is called. If the catcher fails to return a good response, the
+    // 500 catcher is executed. if there is no registered catcher for `status`,
+    // the default catcher is used.
     fn handle_error<'r>(&self, status: Status, req: &'r Request) -> Response<'r> {
         warn_!("Responding with {} catcher.", Red.paint(&status));
 
@@ -348,9 +394,23 @@ impl Rocket {
         info_!("log: {}", White.paint(config.log_level));
         info_!("workers: {}", White.paint(config.workers));
         info_!("secret key: {}", White.paint(config.secret_key.kind()));
+        info_!("limits: {}", White.paint(&config.limits));
+
+        let tls_configured = config.tls.is_some();
+        if tls_configured && cfg!(feature = "tls") {
+            info_!("tls: {}", White.paint("enabled"));
+        } else {
+            if tls_configured {
+                error_!("tls: {}", White.paint("disabled"));
+                error_!("tls is configured, but the tls feature is disabled");
+            } else {
+                info_!("tls: {}", White.paint("disabled"));
+            }
+        }
 
         for (name, value) in config.extras() {
-            info_!("{} {}: {}", Yellow.paint("[extra]"), name, White.paint(value));
+            info_!("{} {}: {}",
+                   Yellow.paint("[extra]"), name, White.paint(LoggedValue(value)));
         }
 
         Rocket {
@@ -358,7 +418,8 @@ impl Rocket {
             router: Router::new(),
             default_catchers: catcher::defaults::get(),
             catchers: catcher::defaults::get(),
-            state: Container::new()
+            state: Container::new(),
+            fairings: Fairings::new()
         }
     }
 
@@ -526,6 +587,40 @@ impl Rocket {
         self
     }
 
+    /// Attaches zero or more fairings to this instance of Rocket.
+    ///
+    /// The `fairings` parameter to this function is generic: it may be either
+    /// a `Vec<Fairing>`, `&[Fairing]`, or simply `Fairing`. In all cases, all
+    /// supplied fairings are attached.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// # #![feature(plugin)]
+    /// # #![plugin(rocket_codegen)]
+    /// # extern crate rocket;
+    /// use rocket::{Rocket, Fairing};
+    ///
+    /// fn launch_fairing(rocket: Rocket) -> Result<Rocket, Rocket> {
+    ///     println!("Rocket is about to launch! You just see...");
+    ///     Ok(rocket)
+    /// }
+    ///
+    /// fn main() {
+    /// # if false { // We don't actually want to launch the server in an example.
+    ///     rocket::ignite()
+    ///         .attach(Fairing::Launch(Box::new(launch_fairing)))
+    ///         .launch();
+    /// # }
+    /// }
+    /// ```
+    #[inline]
+    pub fn attach<C: IntoCollection<Fairing>>(mut self, fairings: C) -> Self {
+        let fairings = fairings.into_collection::<[Fairing; 1]>().into_vec();
+        self.fairings.attach_all(fairings);
+        self
+    }
+
     /// Starts the application server and begins listening for and dispatching
     /// requests to mounted routes and catchers. Unless there is an error, this
     /// function does not return and blocks until program termination.
@@ -546,27 +641,59 @@ impl Rocket {
     /// rocket::ignite().launch();
     /// # }
     /// ```
-    pub fn launch(self) -> LaunchError {
+    pub fn launch(mut self) -> LaunchError {
         if self.router.has_collisions() {
-            warn!("Route collisions detected!");
+            return LaunchError::from(LaunchErrorKind::Collision);
         }
+
+        self.fairings.pretty_print_counts();
 
         let full_addr = format!("{}:{}", self.config.address, self.config.port);
-        let server = match hyper::Server::http(full_addr.as_str()) {
-            Ok(hyper_server) => hyper_server,
-            Err(e) => return LaunchError::from(e)
-        };
+        serve!(self, &full_addr, |server, proto| {
+            let mut server = match server {
+                Ok(server) => server,
+                Err(e) => return LaunchError::from(e)
+            };
 
-        info!("🚀  {} {}{}",
-              White.paint("Rocket has launched from"),
-              White.bold().paint("http://"),
-              White.bold().paint(&full_addr));
+            // Determine the port we actually binded to.
+            let (addr, port) = match server.local_addr() {
+                Ok(server_addr) => (&self.config.address, server_addr.port()),
+                Err(e) => return LaunchError::from(e)
+            };
 
-        let threads = self.config.workers as usize;
-        if let Err(e) = server.handle_threads(self, threads) {
-            return LaunchError::from(e);
-        }
+            // Run all of the launch fairings.
+            let mut fairings = mem::replace(&mut self.fairings, Fairings::new());
+            self = match fairings.handle_launch(self) {
+                Some(rocket) => rocket,
+                None => return LaunchError::from(LaunchErrorKind::FailedFairing)
+            };
 
-        unreachable!("the call to `handle_threads` should block on success")
+            // Make sure we keep the request/response fairings!
+            self.fairings = fairings;
+
+            launch_info!("🚀  {} {}{}",
+                  White.paint("Rocket has launched from"),
+                  White.bold().paint(proto),
+                  White.bold().paint(&format!("{}:{}", addr, port)));
+
+            let threads = self.config.workers as usize;
+            if let Err(e) = server.handle_threads(self, threads) {
+                return LaunchError::from(e);
+            }
+
+            unreachable!("the call to `handle_threads` should block on success")
+        })
+    }
+
+    /// Retrieves all of the mounted routes.
+    #[inline(always)]
+    pub fn routes<'a>(&'a self) -> impl Iterator<Item=&'a Route> + 'a {
+        self.router.routes()
+    }
+
+    /// Retrieve the configuration.
+    #[inline(always)]
+    pub fn config(&self) -> &Config {
+        self.config
     }
 }

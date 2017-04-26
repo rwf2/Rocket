@@ -18,7 +18,6 @@ fn second() -> &'static str {
     "no query"
 }
 
-#[cfg(feature = "testing")]
 mod tests {
     use super::*;
 
@@ -29,13 +28,11 @@ mod tests {
     fn assert_no_collision(rocket: &Rocket) {
         let mut req = MockRequest::new(Get, "/?field=query");
         let mut response = req.dispatch_with(&rocket);
-        let body_str = response.body().and_then(|b| b.into_string());
-        assert_eq!(body_str, Some("query".to_string()));
+        assert_eq!(response.body_string(), Some("query".into()));
 
         let mut req = MockRequest::new(Get, "/");
         let mut response = req.dispatch_with(&rocket);
-        let body_str = response.body().and_then(|b| b.into_string());
-        assert_eq!(body_str, Some("no query".to_string()));
+        assert_eq!(response.body_string(), Some("no query".into()));
     }
 
     #[test]

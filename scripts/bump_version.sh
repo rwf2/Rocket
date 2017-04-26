@@ -11,4 +11,5 @@ if [ -z ${1} ] || [ -z ${2} ]; then
 fi
 
 find . -name "*.toml" | xargs sed -i.bak "s/${1}/${2}/g"
+find site/ -name "*.md" | xargs sed -i.bak "s/${1}/${2}/g"
 find . -name "*.bak" | xargs rm

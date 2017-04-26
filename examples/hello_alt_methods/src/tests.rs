@@ -12,7 +12,7 @@ fn test(method: Method, status: Status, body_prefix: Option<&str>) {
 
     assert_eq!(response.status(), status);
     if let Some(expected_body_string) = body_prefix {
-        let body_str = response.body().and_then(|body| body.into_string()).unwrap();
+        let body_str = response.body_string().unwrap();
         assert!(body_str.starts_with(expected_body_string));
     }
 }

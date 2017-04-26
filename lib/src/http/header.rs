@@ -2,13 +2,13 @@ use std::collections::HashMap;
 use std::borrow::{Borrow, Cow};
 use std::fmt;
 
-use http::ascii::{UncasedAscii, UncasedAsciiRef};
+use http::uncased::{Uncased, UncasedStr};
 
 /// Simple representation of an HTTP header.
 #[derive(Debug, Clone, Hash, PartialEq, Eq)]
 pub struct Header<'h> {
     /// The name of the header.
-    pub name: UncasedAscii<'h>,
+    pub name: Uncased<'h>,
     /// The value of the header.
     pub value: Cow<'h, str>,
 }
@@ -46,7 +46,7 @@ impl<'h> Header<'h> {
         where N: Into<Cow<'a, str>>, V: Into<Cow<'b, str>>
     {
         Header {
-            name: UncasedAscii::new(name),
+            name: Uncased::new(name),
             value: value.into()
         }
     }
@@ -109,7 +109,7 @@ impl<'h> fmt::Display for Header<'h> {
 /// A collection of headers, mapping a header name to its many ordered values.
 #[derive(Clone, Debug, PartialEq, Default)]
 pub struct HeaderMap<'h> {
-    headers: HashMap<UncasedAscii<'h>, Vec<Cow<'h, str>>>
+    headers: HashMap<Uncased<'h>, Vec<Cow<'h, str>>>
 }
 
 impl<'h> HeaderMap<'h> {
@@ -134,7 +134,7 @@ impl<'h> HeaderMap<'h> {
     /// ```
     #[inline]
     pub fn contains(&self, name: &str) -> bool {
-        self.headers.get(name.into() : &UncasedAsciiRef).is_some()
+        self.headers.get(name.into() : &UncasedStr).is_some()
     }
 
     /// Returns the number of _values_ stored in the map.
@@ -199,7 +199,7 @@ impl<'h> HeaderMap<'h> {
     #[inline]
     pub fn get<'a>(&'a self, name: &str) -> impl Iterator<Item=&'a str> {
         self.headers
-            .get(name.into() : &UncasedAsciiRef)
+            .get(name.into() : &UncasedStr)
             .into_iter()
             .flat_map(|values| values.iter().map(|val| val.borrow()))
     }
@@ -237,7 +237,7 @@ impl<'h> HeaderMap<'h> {
     /// ```
     #[inline]
     pub fn get_one<'a>(&'a self, name: &str) -> Option<&'a str> {
-        self.headers.get(name.into() : &UncasedAsciiRef)
+        self.headers.get(name.into() : &UncasedStr)
             .and_then(|values| {
                 if values.len() >= 1 { Some(values[0].borrow()) }
                 else { None }
@@ -329,7 +329,7 @@ impl<'h> HeaderMap<'h> {
     pub fn replace_all<'n, 'v: 'h, H>(&mut self, name: H, values: Vec<Cow<'v, str>>)
         where 'n: 'h, H: Into<Cow<'n, str>>
     {
-        self.headers.insert(UncasedAscii::new(name), values);
+        self.headers.insert(Uncased::new(name), values);
     }
 
     /// Adds `header` into the map. If a header with `header.name` was
@@ -404,7 +404,7 @@ impl<'h> HeaderMap<'h> {
     pub fn add_all<'n, H>(&mut self, name: H, values: &mut Vec<Cow<'h, str>>)
         where 'n:'h, H: Into<Cow<'n, str>>
     {
-        self.headers.entry(UncasedAscii::new(name))
+        self.headers.entry(Uncased::new(name))
             .or_insert(vec![])
             .append(values)
     }
@@ -427,7 +427,7 @@ impl<'h> HeaderMap<'h> {
     /// assert_eq!(map.len(), 1);
     #[inline(always)]
     pub fn remove(&mut self, name: &str) {
-        self.headers.remove(name.into() : &UncasedAsciiRef);
+        self.headers.remove(name.into() : &UncasedStr);
     }
 
     /// Removes all of the headers stored in this map and returns a vector
@@ -504,7 +504,7 @@ impl<'h> HeaderMap<'h> {
     /// should likely not be used.
     #[inline]
     pub(crate) fn into_iter_raw(self)
-            -> impl Iterator<Item=(UncasedAscii<'h>, Vec<Cow<'h, str>>)> {
+            -> impl Iterator<Item=(Uncased<'h>, Vec<Cow<'h, str>>)> {
         self.headers.into_iter()
     }
 }

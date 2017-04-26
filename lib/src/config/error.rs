@@ -52,8 +52,12 @@ pub enum ConfigError {
     ParseError(String, PathBuf, Vec<ParsingError>),
     /// There was a TOML parsing error in a config environment variable.
     ///
-    /// Parameters: (env_key, env_value, expected type)
-    BadEnvVal(String, String, &'static str),
+    /// Parameters: (env_key, env_value, error)
+    BadEnvVal(String, String, String),
+    /// The entry (key) is unknown.
+    ///
+    /// Parameters: (key)
+    UnknownKey(String),
 }
 
 impl ConfigError {
@@ -95,11 +99,14 @@ impl ConfigError {
                     trace_!("'{}' - {}", error_source, White.paint(&error.desc));
                 }
             }
-            BadEnvVal(ref key, ref value, ref expected) => {
+            BadEnvVal(ref key, ref value, ref error) => {
                 error!("environment variable '{}={}' could not be parsed",
                        White.paint(key), White.paint(value));
-                info_!("value for {:?} must be {}",
-                       White.paint(key), White.paint(expected))
+                info_!("{}", White.paint(error));
+            }
+            UnknownKey(ref key) => {
+                error!("the configuration key '{}' is unknown and disallowed in \
+                       this position", White.paint(key));
             }
         }
     }
@@ -123,6 +130,7 @@ impl fmt::Display for ConfigError {
             BadFilePath(ref p, _) => write!(f, "{:?} is not a valid config path", p),
             BadEnv(ref e) => write!(f, "{:?} is not a valid `ROCKET_ENV` value", e),
             ParseError(..) => write!(f, "the config file contains invalid TOML"),
+            UnknownKey(ref k) => write!(f, "'{}' is an unknown key", k),
             BadEntry(ref e, _) => {
                 write!(f, "{:?} is not a valid `[environment]` entry", e)
             }
@@ -148,6 +156,7 @@ impl Error for ConfigError {
             ParseError(..) => "the config file contains invalid TOML",
             BadType(..) => "a key was specified with a value of the wrong type",
             BadEnvVal(..) => "an environment variable could not be parsed",
+            UnknownKey(..) => "an unknown key was used in a disallowed position",
         }
     }
 }

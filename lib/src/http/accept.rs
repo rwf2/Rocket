@@ -4,7 +4,8 @@ use std::fmt;
 
 use smallvec::SmallVec;
 
-use http::{Header, IntoCollection, MediaType};
+use ext::IntoCollection;
+use http::{Header, MediaType};
 use http::parse::parse_accept;
 
 #[derive(Debug, Clone, PartialEq)]

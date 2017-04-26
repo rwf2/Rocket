@@ -8,12 +8,13 @@ mod files;
 
 use rocket::request::Form;
 use rocket::response::Redirect;
+use rocket::http::RawStr;
 
 #[derive(FromForm)]
 struct UserLogin<'r> {
-    username: &'r str,
+    username: &'r RawStr,
     password: String,
-    age: Result<usize, &'r str>,
+    age: Result<usize, &'r RawStr>,
 }
 
 #[post("/login", data = "<user_form>")]
@@ -36,9 +37,8 @@ fn login<'a>(user_form: Form<'a, UserLogin<'a>>) -> Result<Redirect, String> {
     }
 }
 
-
 #[get("/user/<username>")]
-fn user_page(username: &str) -> String {
+fn user_page(username: String) -> String {
     format!("This is {}'s page.", username)
 }
 

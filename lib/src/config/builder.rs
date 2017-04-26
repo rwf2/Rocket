@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 
-use config::{Result, Config, Value, Environment};
+use config::{Result, Config, Value, Environment, Limits};
 use config::toml_ext::IntoValue;
 use logger::LoggingLevel;
 
@@ -20,6 +20,10 @@ pub struct ConfigBuilder {
     pub log_level: LoggingLevel,
     /// The secret key.
     pub secret_key: Option<String>,
+    /// TLS configuration (path to certificates file, path to private key file).
+    pub tls: Option<(String, String)>,
+    /// Size limits.
+    pub limits: Limits,
     /// Any extra parameters that aren't part of Rocket's config.
     pub extras: HashMap<String, Value>,
     /// The root directory of this config.
@@ -63,6 +67,8 @@ impl ConfigBuilder {
             workers: config.workers,
             log_level: config.log_level,
             secret_key: None,
+            tls: None,
+            limits: config.limits,
             extras: config.extras,
             root: root_dir,
         }
@@ -159,6 +165,42 @@ impl ConfigBuilder {
     /// ```
     pub fn secret_key<K: Into<String>>(mut self, key: K) -> Self {
         self.secret_key = Some(key.into());
+        self
+    }
+
+    /// Sets the `limits` in the configuration being built.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use rocket::config::{Config, Environment, Limits};
+    ///
+    /// let mut config = Config::build(Environment::Staging)
+    ///     .limits(Limits::default().add("json", 5 * (1 << 20)))
+    ///     .unwrap();
+    /// ```
+    pub fn limits(mut self, limits: Limits) -> Self {
+        self.limits = limits;
+        self
+    }
+
+    /// Sets the `tls_config` in the configuration being built.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use rocket::config::{Config, Environment};
+    ///
+    /// let mut config = Config::build(Environment::Staging)
+    ///     .tls("/path/to/certs.pem", "/path/to/key.pem")
+    /// # ; /*
+    ///     .unwrap();
+    /// # */
+    /// ```
+    pub fn tls<C, K>(mut self, certs_path: C, key_path: K) -> Self
+        where C: Into<String>, K: Into<String>
+    {
+        self.tls = Some((certs_path.into(), key_path.into()));
         self
     }
 
@@ -259,6 +301,11 @@ impl ConfigBuilder {
         config.set_log_level(self.log_level);
         config.set_extras(self.extras);
         config.set_root(self.root);
+        config.set_limits(self.limits);
+
+        if let Some((certs_path, key_path)) = self.tls {
+            config.set_tls(&certs_path, &key_path)?;
+        }
 
         if let Some(key) = self.secret_key {
             config.set_secret_key(key)?;

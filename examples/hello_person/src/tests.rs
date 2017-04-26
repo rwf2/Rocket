@@ -7,8 +7,7 @@ fn test(uri: &str, expected: String) {
     let rocket = rocket::ignite().mount("/", routes![super::hello, super::hi]);
     let mut req = MockRequest::new(Get, uri);
     let mut response = req.dispatch_with(&rocket);
-
-    assert_eq!(response.body().and_then(|b| b.into_string()), Some(expected));
+    assert_eq!(response.body_string(), Some(expected));
 }
 
 fn test_404(uri: &str) {

@@ -5,6 +5,7 @@ use std::str::FromStr;
 use std::ops::Deref;
 
 use rocket::request::{FromParam, FromFormValue};
+use rocket::http::RawStr;
 
 pub use self::uuid_ext::ParseError as UuidParseError;
 
@@ -83,17 +84,18 @@ impl<'a> FromParam<'a> for UUID {
     /// A value is successfully parsed if `param` is a properly formatted UUID.
     /// Otherwise, a `UuidParseError` is returned.
     #[inline(always)]
-    fn from_param(param: &'a str) -> Result<UUID, Self::Error> {
+    fn from_param(param: &'a RawStr) -> Result<UUID, Self::Error> {
         param.parse()
     }
 }
 
 impl<'v> FromFormValue<'v> for UUID {
-    type Error = &'v str;
+    type Error = &'v RawStr;
 
     /// A value is successfully parsed if `form_value` is a properly formatted
     /// UUID. Otherwise, the raw form value is returned.
-    fn from_form_value(form_value: &'v str) -> Result<UUID, &'v str> {
+    #[inline(always)]
+    fn from_form_value(form_value: &'v RawStr) -> Result<UUID, &'v RawStr> {
         form_value.parse().map_err(|_| form_value)
     }
 }
@@ -139,14 +141,14 @@ mod test {
     #[test]
     fn test_from_param() {
         let uuid_str = "c1aa1e3b-9614-4895-9ebd-705255fa5bc2";
-        let uuid_wrapper = UUID::from_param(uuid_str).unwrap();
+        let uuid_wrapper = UUID::from_param(uuid_str.into()).unwrap();
         assert_eq!(uuid_str, uuid_wrapper.to_string())
     }
 
     #[test]
     fn test_into_inner() {
         let uuid_str = "c1aa1e3b-9614-4895-9ebd-705255fa5bc2";
-        let uuid_wrapper = UUID::from_param(uuid_str).unwrap();
+        let uuid_wrapper = UUID::from_param(uuid_str.into()).unwrap();
         let real_uuid: uuid_ext::Uuid = uuid_str.parse().unwrap();
         let inner_uuid: uuid_ext::Uuid = uuid_wrapper.into_inner();
         assert_eq!(real_uuid, inner_uuid)
@@ -155,7 +157,7 @@ mod test {
     #[test]
     fn test_partial_eq() {
         let uuid_str = "c1aa1e3b-9614-4895-9ebd-705255fa5bc2";
-        let uuid_wrapper = UUID::from_param(uuid_str).unwrap();
+        let uuid_wrapper = UUID::from_param(uuid_str.into()).unwrap();
         let real_uuid: uuid_ext::Uuid = uuid_str.parse().unwrap();
         assert_eq!(uuid_wrapper, real_uuid)
     }
@@ -163,7 +165,7 @@ mod test {
     #[test]
     fn test_from_param_invalid() {
         let uuid_str = "c1aa1e3b-9614-4895-9ebd-705255fa5bc2p";
-        let uuid_result = UUID::from_param(uuid_str);
+        let uuid_result = UUID::from_param(uuid_str.into());
         assert_eq!(uuid_result, Err(UuidParseError::InvalidLength(37)));
     }
 }

@@ -1,8 +1,6 @@
 use syntax::codemap::{Span, BytePos};
 
 pub trait SpanExt {
-    fn shorten_to(self, to_length: usize) -> Span;
-
     /// Trim the span on the left and right by `length`.
     fn trim(self, length: u32) -> Span;
 
@@ -11,6 +9,12 @@ pub trait SpanExt {
 
     /// Trim the span on the right by `length`.
     fn trim_right(self, length: usize) -> Span;
+
+    // Trim from the right so that the span is `length` in size.
+    fn shorten_to(self, to_length: usize) -> Span;
+
+    // Trim from the left so that the span is `length` in size.
+    fn shorten_upto(self, length: usize) -> Span;
 }
 
 impl SpanExt for Span {
@@ -26,6 +30,11 @@ impl SpanExt for Span {
 
     fn shorten_to(mut self, to_length: usize) -> Span {
         self.hi = self.lo + BytePos(to_length as u32);
+        self
+    }
+
+    fn shorten_upto(mut self, length: usize) -> Span {
+        self.lo = self.hi - BytePos(length as u32);
         self
     }
 

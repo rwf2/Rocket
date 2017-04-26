@@ -51,13 +51,18 @@ impl Router {
                 for b_route in routes.iter().skip(i + 1) {
                     if a_route.collides_with(b_route) {
                         result = true;
-                        warn!("{} and {} collide!", a_route, b_route);
+                        error!("{} and {} collide!", a_route, b_route);
                     }
                 }
             }
         }
 
         result
+    }
+
+    #[inline]
+    pub fn routes<'a>(&'a self) -> impl Iterator<Item=&'a Route> + 'a {
+        self.routes.values().flat_map(|v| v.iter())
     }
 }
 
@@ -287,7 +292,7 @@ mod test {
             assert!(routed_to.len() == expected.len());
             for (got, expected) in routed_to.iter().zip(expected.iter()) {
                 assert_eq!(got.rank, expected.0);
-                assert_eq!(got.path.as_str() as &str, expected.1);
+                assert_eq!(got.path.as_str(), expected.1);
             }
         })
     }
@@ -356,7 +361,7 @@ mod test {
             let expected = &[$($want),+];
             assert!(routed_to.len() == expected.len());
             for (got, expected) in routed_to.iter().zip(expected.iter()) {
-                assert_eq!(got.path.as_str() as &str, expected as &str);
+                assert_eq!(got.path.as_str(), expected as &str);
             }
         })
     }

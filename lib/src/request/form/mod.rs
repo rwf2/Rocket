@@ -28,6 +28,7 @@ use std::marker::PhantomData;
 use std::fmt::{self, Debug};
 use std::io::Read;
 
+use config;
 use http::Status;
 use request::Request;
 use data::{self, Data, FromData};
@@ -72,9 +73,10 @@ use outcome::Outcome::*;
 /// # #![allow(deprecated, dead_code, unused_attributes)]
 /// # #![plugin(rocket_codegen)]
 /// # extern crate rocket;
+/// # use rocket::http::RawStr;
 /// #[derive(FromForm)]
 /// struct UserInput<'f> {
-///     value: &'f str
+///     value: &'f RawStr
 /// }
 /// # fn main() {  }
 /// ```
@@ -88,9 +90,10 @@ use outcome::Outcome::*;
 /// # #![plugin(rocket_codegen)]
 /// # extern crate rocket;
 /// # use rocket::request::Form;
+/// # use rocket::http::RawStr;
 /// # #[derive(FromForm)]
 /// # struct UserInput<'f> {
-/// #     value: &'f str
+/// #     value: &'f RawStr
 /// # }
 /// #[post("/submit", data = "<user_input>")]
 /// fn submit_task<'r>(user_input: Form<'r, UserInput<'r>>) -> String {
@@ -145,16 +148,30 @@ use outcome::Outcome::*;
 ///
 /// ## Performance and Correctness Considerations
 ///
-/// Whether you should use a `str` or `String` in your `FromForm` type depends
-/// on your use case. The primary question to answer is: _Can the input contain
-/// characters that must be URL encoded?_ Note that this includes commmon
-/// characters such as spaces. If so, then you must use `String`, whose
+/// Whether you should use a `&RawStr` or `String` in your `FromForm` type
+/// depends on your use case. The primary question to answer is: _Can the input
+/// contain characters that must be URL encoded?_ Note that this includes
+/// commmon characters such as spaces. If so, then you must use `String`, whose
 /// `FromFormValue` implementation deserializes the URL encoded string for you.
 /// Because the `str` references will refer directly to the underlying form
 /// data, they will be raw and URL encoded.
 ///
-/// If your string values will not contain URL encoded characters, using `str`
-/// will result in fewer allocation and is thus spreferred.
+/// If your string values will not contain URL encoded characters, using
+/// `RawStr` will result in fewer allocation and is thus preferred.
+///
+/// ## Incoming Data Limits
+///
+/// The default size limit for incoming form data is 32KiB. Setting a limit
+/// protects your application from denial of service (DOS) attacks and from
+/// resource exhaustion through high memory consumption. The limit can be
+/// increased by setting the `limits.forms` configuration parameter. For
+/// instance, to increase the forms limit to 512KiB for all environments, you
+/// may add the following to your `Rocket.toml`:
+///
+/// ```toml
+/// [global.limits]
+/// forms = 524288
+/// ```
 pub struct Form<'f, T: FromForm<'f> + 'f> {
     object: T,
     form_string: String,
@@ -179,17 +196,20 @@ impl<T, E> FormResult<T, E> {
 
 impl<'f, T: FromForm<'f> + 'f> Form<'f, T> {
     /// Immutably borrow the parsed type.
+    #[inline(always)]
     pub fn get(&'f self) -> &'f T {
         &self.object
     }
 
     /// Mutably borrow the parsed type.
+    #[inline(always)]
     pub fn get_mut(&'f mut self) -> &'f mut T {
         &mut self.object
     }
 
     /// Returns the raw form string that was used to parse the encapsulated
     /// object.
+    #[inline(always)]
     pub fn raw_form_string(&self) -> &str {
         &self.form_string
     }
@@ -221,7 +241,7 @@ impl<'f, T: FromForm<'f> + 'f> Form<'f, T> {
 
         let mut items = FormItems::from(long_lived_string);
         let result = T::from_form_items(items.by_ref());
-        if !items.exhausted() {
+        if !items.exhaust() {
             return FormResult::Invalid(form_string);
         }
 
@@ -238,6 +258,7 @@ impl<'f, T: FromForm<'f> + 'f> Form<'f, T> {
 
 impl<'f, T: FromForm<'f> + 'static> Form<'f, T> {
     /// Consume this object and move out the parsed object.
+    #[inline(always)]
     pub fn into_inner(self) -> T {
         self.object
     }
@@ -248,6 +269,9 @@ impl<'f, T: FromForm<'f> + Debug + 'f> Debug for Form<'f, T> {
         write!(f, "{:?} from form string: {:?}", self.object, self.form_string)
     }
 }
+
+/// Default limit for forms is 32KiB.
+const LIMIT: u64 = 32 * (1 << 10);
 
 /// Parses a `Form` from incoming form data.
 ///
@@ -273,7 +297,8 @@ impl<'f, T: FromForm<'f>> FromData for Form<'f, T> where T::Error: Debug {
         }
 
         let mut form_string = String::with_capacity(4096);
-        let mut stream = data.open().take(32768); // TODO: Make this configurable?
+        let limit = config::active().map(|c| c.limits.forms).unwrap_or(LIMIT);
+        let mut stream = data.open().take(limit);
         if let Err(e) = stream.read_to_string(&mut form_string) {
             error_!("IO Error: {:?}", e);
             Failure((Status::InternalServerError, None))

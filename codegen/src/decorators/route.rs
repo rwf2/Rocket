@@ -81,7 +81,7 @@ impl RouteGenerateExt for RouteParams {
                     Err(_) => return ::rocket::Outcome::Forward(_data)
                 };
 
-                if !items.exhausted() {
+                if !items.exhaust() {
                     println!("    => The query string {:?} is malformed.", $form_string);
                     return ::rocket::Outcome::Failure(::rocket::http::Status::BadRequest);
                 }
@@ -234,9 +234,8 @@ fn generic_route_decorator(known_method: Option<Spanned<Method>>,
                            ecx: &mut ExtCtxt,
                            sp: Span,
                            meta_item: &MetaItem,
-                           annotated: Annotatable)
-    -> Vec<Annotatable>
-{
+                           annotated: Annotatable
+                           ) -> Vec<Annotatable> {
     let mut output = Vec::new();
 
     // Parse the route and generate the code to create the form and param vars.
@@ -252,14 +251,17 @@ fn generic_route_decorator(known_method: Option<Spanned<Method>>,
     let user_fn_name = route.annotated_fn.ident();
     let route_fn_name = user_fn_name.prepend(ROUTE_FN_PREFIX);
     emit_item(&mut output, quote_item!(ecx,
-         fn $route_fn_name<'_b>(_req: &'_b ::rocket::Request,  _data: ::rocket::Data)
+        // Allow the `unreachable_code` lint for those FromParam impls that have
+        // an `Error` associated type of !.
+        #[allow(unreachable_code)]
+        fn $route_fn_name<'_b>(_req: &'_b ::rocket::Request,  _data: ::rocket::Data)
                 -> ::rocket::handler::Outcome<'_b> {
              $param_statements
              $query_statement
              $data_statement
              let responder = $user_fn_name($fn_arguments);
-             ::rocket::handler::Outcome::of(responder)
-         }
+            ::rocket::handler::Outcome::of(responder)
+        }
     ).unwrap());
 
     // Generate and emit the static route info that uses the just generated
@@ -267,6 +269,7 @@ fn generic_route_decorator(known_method: Option<Spanned<Method>>,
     let struct_name = user_fn_name.prepend(ROUTE_STRUCT_PREFIX);
     let (path, method, media_type, rank) = route.explode(ecx);
     let static_route_info_item =  quote_item!(ecx,
+        /// Rocket code generated static route information structure.
         #[allow(non_upper_case_globals)]
         pub static $struct_name: ::rocket::StaticRouteInfo =
             ::rocket::StaticRouteInfo {

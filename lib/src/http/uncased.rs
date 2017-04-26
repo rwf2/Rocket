@@ -15,64 +15,65 @@ use std::fmt;
 /// created from an `&str` as follows:
 ///
 /// ```rust,ignore
-/// use rocket::http::ascii::UncasedAsciiRef;
+/// use rocket::http::ascii::UncasedStr;
 ///
-/// let ascii_ref: &UncasedAsciiRef = "Hello, world!".into();
+/// let ascii_ref: &UncasedStr = "Hello, world!".into();
 /// ```
 #[derive(Debug)]
-pub struct UncasedAsciiRef(str);
+pub struct UncasedStr(str);
 
-impl UncasedAsciiRef {
+impl UncasedStr {
+    #[inline(always)]
     pub fn as_str(&self) -> &str {
         &self.0
     }
 }
 
-impl PartialEq for UncasedAsciiRef {
+impl PartialEq for UncasedStr {
     #[inline(always)]
-    fn eq(&self, other: &UncasedAsciiRef) -> bool {
+    fn eq(&self, other: &UncasedStr) -> bool {
         self.0.eq_ignore_ascii_case(&other.0)
     }
 }
 
-impl PartialEq<str> for UncasedAsciiRef {
+impl PartialEq<str> for UncasedStr {
     #[inline(always)]
     fn eq(&self, other: &str) -> bool {
         self.0.eq_ignore_ascii_case(other)
     }
 }
 
-impl PartialEq<UncasedAsciiRef> for str {
+impl PartialEq<UncasedStr> for str {
     #[inline(always)]
-    fn eq(&self, other: &UncasedAsciiRef) -> bool {
+    fn eq(&self, other: &UncasedStr) -> bool {
         other.0.eq_ignore_ascii_case(self)
     }
 }
 
-impl<'a> PartialEq<&'a str> for UncasedAsciiRef {
+impl<'a> PartialEq<&'a str> for UncasedStr {
     #[inline(always)]
     fn eq(&self, other: & &'a str) -> bool {
         self.0.eq_ignore_ascii_case(other)
     }
 }
 
-impl<'a> PartialEq<UncasedAsciiRef> for &'a str {
+impl<'a> PartialEq<UncasedStr> for &'a str {
     #[inline(always)]
-    fn eq(&self, other: &UncasedAsciiRef) -> bool {
+    fn eq(&self, other: &UncasedStr) -> bool {
         other.0.eq_ignore_ascii_case(self)
     }
 }
 
-impl<'a> From<&'a str> for &'a UncasedAsciiRef {
+impl<'a> From<&'a str> for &'a UncasedStr {
     #[inline(always)]
-    fn from(string: &'a str) -> &'a UncasedAsciiRef {
+    fn from(string: &'a str) -> &'a UncasedStr {
         unsafe { ::std::mem::transmute(string) }
     }
 }
 
-impl Eq for UncasedAsciiRef {  }
+impl Eq for UncasedStr {  }
 
-impl Hash for UncasedAsciiRef {
+impl Hash for UncasedStr {
     #[inline(always)]
     fn hash<H: Hasher>(&self, hasher: &mut H) {
         for byte in self.0.bytes() {
@@ -81,14 +82,14 @@ impl Hash for UncasedAsciiRef {
     }
 }
 
-impl PartialOrd for UncasedAsciiRef {
+impl PartialOrd for UncasedStr {
     #[inline(always)]
-    fn partial_cmp(&self, other: &UncasedAsciiRef) -> Option<Ordering> {
+    fn partial_cmp(&self, other: &UncasedStr) -> Option<Ordering> {
         Some(self.cmp(other))
     }
 }
 
-impl Ord for UncasedAsciiRef {
+impl Ord for UncasedStr {
     fn cmp(&self, other: &Self) -> Ordering {
         let self_chars = self.0.chars().map(|c| c.to_ascii_lowercase());
         let other_chars = other.0.chars().map(|c| c.to_ascii_lowercase());
@@ -96,7 +97,7 @@ impl Ord for UncasedAsciiRef {
     }
 }
 
-impl fmt::Display for UncasedAsciiRef {
+impl fmt::Display for UncasedStr {
     #[inline(always)]
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         self.0.fmt(f)
@@ -105,23 +106,23 @@ impl fmt::Display for UncasedAsciiRef {
 
 /// An uncased (case-preserving) ASCII string.
 #[derive(Clone, Debug)]
-pub struct UncasedAscii<'s> {
+pub struct Uncased<'s> {
     pub string: Cow<'s, str>
 }
 
-impl<'s> UncasedAscii<'s> {
+impl<'s> Uncased<'s> {
     /// Creates a new UncaseAscii string.
     ///
     /// # Example
     ///
     /// ```rust,ignore
-    /// use rocket::http::ascii::UncasedAscii;
+    /// use rocket::http::ascii::Uncased;
     ///
     /// let uncased_ascii = UncasedAScii::new("Content-Type");
     /// ```
     #[inline(always)]
-    pub fn new<S: Into<Cow<'s, str>>>(string: S) -> UncasedAscii<'s> {
-        UncasedAscii { string: string.into() }
+    pub fn new<S: Into<Cow<'s, str>>>(string: S) -> Uncased<'s> {
+        Uncased { string: string.into() }
     }
 
     /// Converts `self` into an owned `String`, allocating if necessary,
@@ -144,115 +145,115 @@ impl<'s> UncasedAscii<'s> {
     }
 }
 
-impl<'a> Deref for UncasedAscii<'a> {
-    type Target = UncasedAsciiRef;
+impl<'a> Deref for Uncased<'a> {
+    type Target = UncasedStr;
 
     #[inline(always)]
-    fn deref(&self) -> &UncasedAsciiRef {
+    fn deref(&self) -> &UncasedStr {
         self.as_str().into()
     }
 }
 
-impl<'a> AsRef<UncasedAsciiRef> for UncasedAscii<'a>{
+impl<'a> AsRef<UncasedStr> for Uncased<'a>{
     #[inline(always)]
-    fn as_ref(&self) -> &UncasedAsciiRef {
+    fn as_ref(&self) -> &UncasedStr {
         self.as_str().into()
     }
 }
 
-impl<'a> Borrow<UncasedAsciiRef> for UncasedAscii<'a> {
+impl<'a> Borrow<UncasedStr> for Uncased<'a> {
     #[inline(always)]
-    fn borrow(&self) -> &UncasedAsciiRef {
+    fn borrow(&self) -> &UncasedStr {
         self.as_str().into()
     }
 }
 
-impl<'s, 'c: 's> From<&'c str> for UncasedAscii<'s> {
+impl<'s, 'c: 's> From<&'c str> for Uncased<'s> {
     #[inline(always)]
     fn from(string: &'c str) -> Self {
-        UncasedAscii::new(string)
+        Uncased::new(string)
     }
 }
 
-impl From<String> for UncasedAscii<'static> {
+impl From<String> for Uncased<'static> {
     #[inline(always)]
     fn from(string: String) -> Self {
-        UncasedAscii::new(string)
+        Uncased::new(string)
     }
 }
 
-impl<'s, 'c: 's> From<Cow<'c, str>> for UncasedAscii<'s> {
+impl<'s, 'c: 's> From<Cow<'c, str>> for Uncased<'s> {
     #[inline(always)]
     fn from(string: Cow<'c, str>) -> Self {
-        UncasedAscii::new(string)
+        Uncased::new(string)
     }
 }
 
-impl<'s, 'c: 's, T: Into<Cow<'c, str>>> From<T> for UncasedAscii<'s> {
+impl<'s, 'c: 's, T: Into<Cow<'c, str>>> From<T> for Uncased<'s> {
     #[inline(always)]
     default fn from(string: T) -> Self {
-        UncasedAscii::new(string)
+        Uncased::new(string)
     }
 }
 
-impl<'a, 'b> PartialOrd<UncasedAscii<'b>> for UncasedAscii<'a> {
+impl<'a, 'b> PartialOrd<Uncased<'b>> for Uncased<'a> {
     #[inline(always)]
-    fn partial_cmp(&self, other: &UncasedAscii<'b>) -> Option<Ordering> {
+    fn partial_cmp(&self, other: &Uncased<'b>) -> Option<Ordering> {
         self.as_ref().partial_cmp(other.as_ref())
     }
 }
 
-impl<'a> Ord for UncasedAscii<'a> {
+impl<'a> Ord for Uncased<'a> {
     fn cmp(&self, other: &Self) -> Ordering {
         self.as_ref().cmp(other.as_ref())
     }
 }
 
-impl<'s> fmt::Display for UncasedAscii<'s> {
+impl<'s> fmt::Display for Uncased<'s> {
     #[inline(always)]
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         self.string.fmt(f)
     }
 }
 
-impl<'a, 'b> PartialEq<UncasedAscii<'b>> for UncasedAscii<'a> {
+impl<'a, 'b> PartialEq<Uncased<'b>> for Uncased<'a> {
     #[inline(always)]
-    fn eq(&self, other: &UncasedAscii<'b>) -> bool {
+    fn eq(&self, other: &Uncased<'b>) -> bool {
         self.as_ref().eq(other.as_ref())
     }
 }
 
-impl<'a> PartialEq<str> for UncasedAscii<'a> {
+impl<'a> PartialEq<str> for Uncased<'a> {
     #[inline(always)]
     fn eq(&self, other: &str) -> bool {
         self.as_ref().eq(other)
     }
 }
 
-impl<'b> PartialEq<UncasedAscii<'b>> for str {
+impl<'b> PartialEq<Uncased<'b>> for str {
     #[inline(always)]
-    fn eq(&self, other: &UncasedAscii<'b>) -> bool {
+    fn eq(&self, other: &Uncased<'b>) -> bool {
         other.as_ref().eq(self)
     }
 }
 
-impl<'a, 'b> PartialEq<&'b str> for UncasedAscii<'a> {
+impl<'a, 'b> PartialEq<&'b str> for Uncased<'a> {
     #[inline(always)]
     fn eq(&self, other: & &'b str) -> bool {
         self.as_ref().eq(other)
     }
 }
 
-impl<'a, 'b> PartialEq<UncasedAscii<'b>> for &'a str {
+impl<'a, 'b> PartialEq<Uncased<'b>> for &'a str {
     #[inline(always)]
-    fn eq(&self, other: &UncasedAscii<'b>) -> bool {
+    fn eq(&self, other: &Uncased<'b>) -> bool {
         other.as_ref().eq(self)
     }
 }
 
-impl<'s> Eq for UncasedAscii<'s> {  }
+impl<'s> Eq for Uncased<'s> {  }
 
-impl<'s> Hash for UncasedAscii<'s> {
+impl<'s> Hash for Uncased<'s> {
     #[inline(always)]
     fn hash<H: Hasher>(&self, hasher: &mut H) {
         self.as_ref().hash(hasher)
@@ -264,14 +265,14 @@ impl<'s> Hash for UncasedAscii<'s> {
 /// does it in a much faster way.
 #[inline(always)]
 pub fn uncased_eq<S1: AsRef<str>, S2: AsRef<str>>(s1: S1, s2: S2) -> bool {
-    let ascii_ref_1: &UncasedAsciiRef = s1.as_ref().into();
-    let ascii_ref_2: &UncasedAsciiRef = s2.as_ref().into();
+    let ascii_ref_1: &UncasedStr = s1.as_ref().into();
+    let ascii_ref_2: &UncasedStr = s2.as_ref().into();
     ascii_ref_1 == ascii_ref_2
 }
 
 #[cfg(test)]
 mod tests {
-    use super::UncasedAscii;
+    use super::Uncased;
     use std::hash::{Hash, Hasher};
     use std::collections::hash_map::DefaultHasher;
 
@@ -289,8 +290,8 @@ mod tests {
             for i in 0..strings.len() {
                 for j in i..strings.len() {
                     let (str_a, str_b) = (strings[i], strings[j]);
-                    let ascii_a = UncasedAscii::from(str_a);
-                    let ascii_b = UncasedAscii::from(str_b);
+                    let ascii_a = Uncased::from(str_a);
+                    let ascii_b = Uncased::from(str_b);
                     assert_eq!(ascii_a, ascii_b);
                     assert_eq!(hash(&ascii_a), hash(&ascii_b));
                     assert_eq!(ascii_a, str_a);
@@ -312,20 +313,20 @@ mod tests {
 
     #[test]
     fn test_case_cmp() {
-        assert!(UncasedAscii::from("foobar") == UncasedAscii::from("FOOBAR"));
-        assert!(UncasedAscii::from("a") == UncasedAscii::from("A"));
+        assert!(Uncased::from("foobar") == Uncased::from("FOOBAR"));
+        assert!(Uncased::from("a") == Uncased::from("A"));
 
-        assert!(UncasedAscii::from("a") < UncasedAscii::from("B"));
-        assert!(UncasedAscii::from("A") < UncasedAscii::from("B"));
-        assert!(UncasedAscii::from("A") < UncasedAscii::from("b"));
+        assert!(Uncased::from("a") < Uncased::from("B"));
+        assert!(Uncased::from("A") < Uncased::from("B"));
+        assert!(Uncased::from("A") < Uncased::from("b"));
 
-        assert!(UncasedAscii::from("aa") > UncasedAscii::from("a"));
-        assert!(UncasedAscii::from("aa") > UncasedAscii::from("A"));
-        assert!(UncasedAscii::from("AA") > UncasedAscii::from("a"));
-        assert!(UncasedAscii::from("AA") > UncasedAscii::from("a"));
-        assert!(UncasedAscii::from("Aa") > UncasedAscii::from("a"));
-        assert!(UncasedAscii::from("Aa") > UncasedAscii::from("A"));
-        assert!(UncasedAscii::from("aA") > UncasedAscii::from("a"));
-        assert!(UncasedAscii::from("aA") > UncasedAscii::from("A"));
+        assert!(Uncased::from("aa") > Uncased::from("a"));
+        assert!(Uncased::from("aa") > Uncased::from("A"));
+        assert!(Uncased::from("AA") > Uncased::from("a"));
+        assert!(Uncased::from("AA") > Uncased::from("a"));
+        assert!(Uncased::from("Aa") > Uncased::from("a"));
+        assert!(Uncased::from("Aa") > Uncased::from("A"));
+        assert!(Uncased::from("aA") > Uncased::from("a"));
+        assert!(Uncased::from("aA") > Uncased::from("A"));
     }
 }

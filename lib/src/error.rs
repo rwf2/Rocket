@@ -23,11 +23,16 @@ pub enum Error {
 /// The kind of launch error that occured.
 ///
 /// In almost every instance, a launch error occurs because of an I/O error;
-/// this represented by the `Io` variant. The `Unknown` variant captures all
+/// this is represented by the `Io` variant. A launch error may also occur
+/// because of ill-defined routes that lead to collisions or because a launch
+/// fairing encounted an error; these are represented by the `Collision` and
+/// `FailedFairing` variants, respectively. The `Unknown` variant captures all
 /// other kinds of launch errors.
 #[derive(Debug)]
 pub enum LaunchErrorKind {
     Io(io::Error),
+    Collision,
+    FailedFairing,
     Unknown(Box<::std::error::Error + Send + Sync>)
 }
 
@@ -110,7 +115,15 @@ impl LaunchError {
     }
 }
 
+impl From<LaunchErrorKind> for LaunchError {
+    #[inline]
+    fn from(kind: LaunchErrorKind) -> LaunchError {
+        LaunchError::new(kind)
+    }
+}
+
 impl From<hyper::Error> for LaunchError {
+    #[inline]
     fn from(error: hyper::Error) -> LaunchError {
         match error {
             hyper::Error::Io(e) => LaunchError::new(LaunchErrorKind::Io(e)),
@@ -119,16 +132,27 @@ impl From<hyper::Error> for LaunchError {
     }
 }
 
+impl From<io::Error> for LaunchError {
+    #[inline]
+    fn from(error: io::Error) -> LaunchError {
+        LaunchError::new(LaunchErrorKind::Io(error))
+    }
+}
+
 impl fmt::Display for LaunchErrorKind {
+    #[inline]
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match *self {
             LaunchErrorKind::Io(ref e) => write!(f, "I/O error: {}", e),
+            LaunchErrorKind::Collision => write!(f, "route collisions detected"),
+            LaunchErrorKind::FailedFairing => write!(f, "a launch fairing failed"),
             LaunchErrorKind::Unknown(ref e) => write!(f, "unknown error: {}", e)
         }
     }
 }
 
 impl fmt::Debug for LaunchError {
+    #[inline]
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         self.mark_handled();
         write!(f, "{:?}", self.kind())
@@ -136,6 +160,7 @@ impl fmt::Debug for LaunchError {
 }
 
 impl fmt::Display for LaunchError {
+    #[inline]
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         self.mark_handled();
         write!(f, "{}", self.kind())
@@ -143,10 +168,13 @@ impl fmt::Display for LaunchError {
 }
 
 impl ::std::error::Error for LaunchError {
+    #[inline]
     fn description(&self) -> &str {
         self.mark_handled();
         match *self.kind() {
             LaunchErrorKind::Io(_) => "an I/O error occured during launch",
+            LaunchErrorKind::Collision => "route collisions were detected",
+            LaunchErrorKind::FailedFairing => "a launch fairing reported an error",
             LaunchErrorKind::Unknown(_) => "an unknown error occured during launch"
         }
     }
@@ -162,6 +190,14 @@ impl Drop for LaunchError {
             LaunchErrorKind::Io(ref e) => {
                 error!("Rocket failed to launch due to an I/O error.");
                 panic!("{}", e);
+            }
+            LaunchErrorKind::Collision => {
+                error!("Rocket failed to launch due to routing collisions.");
+                panic!("route collisions detected");
+            }
+            LaunchErrorKind::FailedFairing => {
+                error!("Rocket failed to launch due to a failing launch fairing.");
+                panic!("launch fairing failure");
             }
             LaunchErrorKind::Unknown(ref e) => {
                 error!("Rocket failed to launch due to an unknown error.");

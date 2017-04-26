@@ -3,7 +3,8 @@ use std::ops::Deref;
 use std::str::FromStr;
 use std::fmt;
 
-use http::{IntoCollection, Header, MediaType};
+use ext::IntoCollection;
+use http::{Header, MediaType};
 use http::hyper::mime::Mime;
 
 /// Representation of HTTP Content-Types.

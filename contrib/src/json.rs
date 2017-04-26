@@ -1,13 +1,15 @@
 use std::ops::{Deref, DerefMut};
 use std::io::Read;
 
-use rocket::outcome::Outcome;
+use rocket::config;
+use rocket::outcome::{Outcome, IntoOutcome};
 use rocket::request::Request;
 use rocket::data::{self, Data, FromData};
 use rocket::response::{self, Responder, content};
 use rocket::http::Status;
 
-use serde::{Serialize, Deserialize};
+use serde::Serialize;
+use serde::de::DeserializeOwned;
 
 use serde_json;
 
@@ -17,11 +19,13 @@ pub use serde_json::error::Error as SerdeError;
 /// The JSON type: implements `FromData` and `Responder`, allowing you to easily
 /// consume and respond with JSON.
 ///
+/// ## Receiving JSON
+///
 /// If you're receiving JSON data, simply add a `data` parameter to your route
 /// arguments and ensure the type of the parameter is a `JSON<T>`, where `T` is
-/// some type you'd like to parse from JSON. `T` must implement `Deserialize`
-/// from [Serde](https://github.com/serde-rs/json). The data is parsed from the
-/// HTTP request body.
+/// some type you'd like to parse from JSON. `T` must implement `Deserialize` or
+/// `DeserializeOwned` from [Serde](https://github.com/serde-rs/json). The data
+/// is parsed from the HTTP request body.
 ///
 /// ```rust,ignore
 /// #[post("/users/", format = "application/json", data = "<user>")]
@@ -35,6 +39,8 @@ pub use serde_json::error::Error as SerdeError;
 /// doesn't specify "application/json" as its `Content-Type` header value will
 /// not be routed to the handler.
 ///
+/// ## Sending JSON
+///
 /// If you're responding with JSON data, return a `JSON<T>` type, where `T`
 /// implements `Serialize` from [Serde](https://github.com/serde-rs/json). The
 /// content type of the response is set to `application/json` automatically.
@@ -46,6 +52,20 @@ pub use serde_json::error::Error as SerdeError;
 ///     ...
 ///     JSON(user_from_id)
 /// }
+/// ```
+///
+/// ## Incoming Data Limits
+///
+/// The default size limit for incoming JSON data is 1MiB. Setting a limit
+/// protects your application from denial of service (DOS) attacks and from
+/// resource exhaustion through high memory consumption. The limit can be
+/// increased by setting the `limits.json` configuration parameter. For
+/// instance, to increase the JSON limit to 5MiB for all environments, you may
+/// add the following to your `Rocket.toml`:
+///
+/// ```toml
+/// [global.limits]
+/// json = 5242880
 /// ```
 #[derive(Debug)]
 pub struct JSON<T = Value>(pub T);
@@ -65,11 +85,10 @@ impl<T> JSON<T> {
     }
 }
 
-/// Maximum size of JSON is 1MB.
-/// TODO: Determine this size from some configuration parameter.
-const MAX_SIZE: u64 = 1048576;
+/// Default limit for JSON is 1MB.
+const LIMIT: u64 = 1 << 20;
 
-impl<T: Deserialize> FromData for JSON<T> {
+impl<T: DeserializeOwned> FromData for JSON<T> {
     type Error = SerdeError;
 
     fn from_data(request: &Request, data: Data) -> data::Outcome<Self, SerdeError> {
@@ -78,14 +97,14 @@ impl<T: Deserialize> FromData for JSON<T> {
             return Outcome::Forward(data);
         }
 
-        let reader = data.open().take(MAX_SIZE);
-        match serde_json::from_reader(reader).map(|val| JSON(val)) {
-            Ok(value) => Outcome::Success(value),
-            Err(e) => {
-                error_!("Couldn't parse JSON body: {:?}", e);
-                Outcome::Failure((Status::BadRequest, e))
-            }
-        }
+        let size_limit = config::active()
+            .and_then(|c| c.limits.get("json"))
+            .unwrap_or(LIMIT);
+
+        serde_json::from_reader(data.open().take(size_limit))
+            .map(|val| JSON(val))
+            .map_err(|e| { error_!("Couldn't parse JSON body: {:?}", e); e })
+            .into_outcome(Status::BadRequest)
     }
 }
 

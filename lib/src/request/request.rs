@@ -6,7 +6,7 @@ use std::str;
 use term_painter::Color::*;
 use term_painter::ToStyle;
 
-use state::Container;
+use state::{Container, Storage};
 
 use error::Error;
 use super::{FromParam, FromSegments};
@@ -14,8 +14,7 @@ use super::{FromParam, FromSegments};
 use router::Route;
 use http::uri::{URI, Segments};
 use http::{Method, Header, HeaderMap, Cookies, Session, CookieJar, Key};
-use http::{ContentType, Accept, MediaType};
-use http::parse::media_type;
+use http::{RawStr, ContentType, Accept, MediaType};
 use http::hyper;
 
 struct PresetState<'r> {
@@ -28,6 +27,8 @@ struct RequestState<'r> {
     params: RefCell<Vec<(usize, usize)>>,
     cookies: RefCell<CookieJar>,
     session: RefCell<CookieJar>,
+    accept: Storage<Option<Accept>>,
+    content_type: Storage<Option<ContentType>>,
 }
 
 /// The type of an incoming web request.
@@ -71,6 +72,8 @@ impl<'r> Request<'r> {
                 params: RefCell::new(Vec::new()),
                 cookies: RefCell::new(CookieJar::new()),
                 session: RefCell::new(CookieJar::new()),
+                accept: Storage::new(),
+                content_type: Storage::new(),
             }
         }
     }
@@ -189,7 +192,8 @@ impl<'r> Request<'r> {
         self.remote = Some(address);
     }
 
-    /// Returns a `HeaderMap` of all of the headers in `self`.
+    /// Returns a [HeaderMap](/rocket/http/struct.HeaderMap.html) of all of the
+    /// headers in `self`.
     ///
     /// # Example
     ///
@@ -238,11 +242,11 @@ impl<'r> Request<'r> {
     /// let mut request = Request::new(Method::Get, "/uri");
     /// assert!(request.headers().is_empty());
     ///
-    /// request.add_header(ContentType::HTML);
-    /// assert_eq!(request.content_type(), Some(ContentType::HTML));
+    /// request.add_header(ContentType::Any);
+    /// assert_eq!(request.headers().get_one("Content-Type"), Some("*/*"));
     ///
-    /// request.replace_header(ContentType::JSON);
-    /// assert_eq!(request.content_type(), Some(ContentType::JSON));
+    /// request.replace_header(ContentType::PNG);
+    /// assert_eq!(request.headers().get_one("Content-Type"), Some("image/png"));
     /// ```
     #[inline(always)]
     pub fn replace_header<H: Into<Header<'r>>>(&mut self, header: H) {
@@ -306,8 +310,10 @@ impl<'r> Request<'r> {
         self.extra.session = RefCell::new(jar);
     }
 
-    /// Returns `Some` of the Content-Type header of `self`. If the header is
-    /// not present, returns `None`.
+    /// Returns the Content-Type header of `self`. If the header is not present,
+    /// returns `None`. The Content-Type header is cached after the first call
+    /// to this function. As a result, subsequent calls will always return the
+    /// same value.
     ///
     /// # Example
     ///
@@ -317,38 +323,47 @@ impl<'r> Request<'r> {
     ///
     /// let mut request = Request::new(Method::Get, "/uri");
     /// assert_eq!(request.content_type(), None);
+    /// ```
     ///
-    /// request.replace_header(ContentType::JSON);
-    /// assert_eq!(request.content_type(), Some(ContentType::JSON));
+    /// ```rust
+    /// use rocket::Request;
+    /// use rocket::http::{Method, ContentType};
+    ///
+    /// let mut request = Request::new(Method::Get, "/uri");
+    /// request.add_header(ContentType::JSON);
+    /// assert_eq!(request.content_type(), Some(&ContentType::JSON));
     /// ```
     #[inline(always)]
-    pub fn content_type(&self) -> Option<ContentType> {
-        // FIXME: Don't reparse each time! Use RC? Smarter than that?
-        // Use state::Storage!
-        self.headers().get_one("Content-Type").and_then(|value| value.parse().ok())
+    pub fn content_type(&self) -> Option<&ContentType> {
+        self.extra.content_type.get_or_set(|| {
+            self.headers().get_one("Content-Type").and_then(|v| v.parse().ok())
+        }).as_ref()
     }
 
     #[inline(always)]
-    pub fn accept(&self) -> Option<Accept> {
-        self.headers().get_one("Accept").and_then(|v| v.parse().ok())
+    pub fn accept(&self) -> Option<&Accept> {
+        self.extra.accept.get_or_set(|| {
+            self.headers().get_one("Accept").and_then(|v| v.parse().ok())
+        }).as_ref()
     }
 
     #[inline(always)]
-    pub fn accept_first(&self) -> Option<MediaType> {
-        self.headers().get_one("Accept").and_then(|mut v| media_type(&mut v).ok())
+    pub fn accept_first(&self) -> Option<&MediaType> {
+        self.accept().and_then(|accept| accept.first()).map(|wmt| wmt.media_type())
     }
 
     #[inline(always)]
-    pub fn format(&self) -> Option<MediaType> {
+    pub fn format(&self) -> Option<&MediaType> {
+        static ANY: MediaType = MediaType::Any;
         if self.method.supports_payload() {
-            self.content_type().map(|ct| ct.into_media_type())
+            self.content_type().map(|ct| ct.media_type())
         } else {
             // FIXME: Should we be using `accept_first` or `preferred`? Or
             // should we be checking neither and instead pass things through
             // where the client accepts the thing at all?
             self.accept()
-                .map(|accept| accept.preferred().media_type().clone())
-                .or(Some(MediaType::Any))
+                .map(|accept| accept.preferred().media_type())
+                .or(Some(&ANY))
         }
     }
 
@@ -362,7 +377,7 @@ impl<'r> Request<'r> {
     ///
     /// # Example
     ///
-    /// Retrieve parameter `0`, which is expected to be an `&str`, in a manual
+    /// Retrieve parameter `0`, which is expected to be a `String`, in a manual
     /// route:
     ///
     /// ```rust
@@ -371,7 +386,7 @@ impl<'r> Request<'r> {
     ///
     /// # #[allow(dead_code)]
     /// fn name<'a>(req: &'a Request, _: Data) -> Outcome<'a> {
-    ///     Outcome::of(req.get_param(0).unwrap_or("unnamed"))
+    ///     Outcome::of(req.get_param::<String>(0).unwrap_or("unnamed".into()))
     /// }
     /// ```
     pub fn get_param<'a, T: FromParam<'a>>(&'a self, n: usize) -> Result<T, Error> {
@@ -391,7 +406,7 @@ impl<'r> Request<'r> {
     /// Get the `n`th path parameter as a string, if it exists. This is used by
     /// codegen.
     #[doc(hidden)]
-    pub fn get_param_str(&self, n: usize) -> Option<&str> {
+    pub fn get_param_str(&self, n: usize) -> Option<&RawStr> {
         let params = self.extra.params.borrow();
         if n >= params.len() {
             debug!("{} is >= param count {}", n, params.len());
@@ -405,7 +420,7 @@ impl<'r> Request<'r> {
             return None;
         }
 
-        Some(&path[i..j])
+        Some(path[i..j].into())
     }
 
     /// Retrieves and parses into `T` all of the path segments in the request

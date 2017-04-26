@@ -12,8 +12,8 @@ fn test_submit() {
         .header(ContentType::Form)
         .body("message=Hello from Rocket!");
     let response = request.dispatch_with(&rocket);
-    let cookie_headers: Vec<_> = response.header_values("Set-Cookie").collect();
-    let location_headers: Vec<_> = response.header_values("Location").collect();
+    let cookie_headers: Vec<_> = response.headers().get("Set-Cookie").collect();
+    let location_headers: Vec<_> = response.headers().get("Location").collect();
 
     assert_eq!(response.status(), Status::SeeOther);
     assert_eq!(cookie_headers, vec!["message=Hello%20from%20Rocket!".to_string()]);
@@ -31,7 +31,7 @@ fn test_body(optional_cookie: Option<Cookie<'static>>, expected_body: String) {
 
     let mut response = request.dispatch_with(&rocket);
     assert_eq!(response.status(), Status::Ok);
-    assert_eq!(response.body().and_then(|b| b.into_string()), Some(expected_body));
+    assert_eq!(response.body_string(), Some(expected_body));
 }
 
 #[test]

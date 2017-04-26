@@ -173,11 +173,9 @@ pub trait Responder<'r> {
 /// use rocket::http::ContentType;
 ///
 /// let mut response = "Hello".respond().unwrap();
+/// assert_eq!(response.body_string(), Some("Hello".into()));
 ///
-/// let body_string = response.body().and_then(|b| b.into_string());
-/// assert_eq!(body_string, Some("Hello".to_string()));
-///
-/// let content_type: Vec<_> = response.header_values("Content-Type").collect();
+/// let content_type: Vec<_> = response.headers().get("Content-Type").collect();
 /// assert_eq!(content_type.len(), 1);
 /// assert_eq!(content_type[0], ContentType::Plain.to_string());
 /// ```
@@ -190,7 +188,7 @@ impl<'r> Responder<'r> for &'r str {
     }
 }
 
-/// Returns a response with Content-Type `text/html` and a fixed-size body
+/// Returns a response with Content-Type `text/plain` and a fixed-size body
 /// containing the string `self`. Always returns `Ok`.
 impl Responder<'static> for String {
     fn respond(self) -> Result<Response<'static>, Status> {
