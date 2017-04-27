@@ -16,7 +16,7 @@ impl SecretKey {
     #[inline(always)]
     pub fn kind(&self) -> &'static str {
         match *self {
-            secretKey::Generated(_) => "generated",
+            SecretKey::Generated(_) => "generated",
             SecretKey::Provided(_) => "provided",
         }
     }
