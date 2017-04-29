@@ -155,7 +155,7 @@ fn get_page(path: PathBuf) -> T { ... }
 The path after `/page/` will be available in the `path` parameter. The
 `FromSegments` implementation for `PathBuf` ensures that `path` cannot lead to
 [path traversal attacks](https://www.owasp.org/index.php/Path_Traversal). With
-this, a safe and secure static file server can implemented in 4 lines:
+this, a safe and secure static file server can be implemented in 4 lines:
 
 ```rust
 #[get("/<file..>")]
