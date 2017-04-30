@@ -54,7 +54,7 @@ current `HitCount` in a `count` route as follows:
 
 ```rust
 #[get("/count")]
-fn count(count: State<HitCount>) -> String {
+fn count(hit_count: State<HitCount>) -> String {
     let current_count = hit_count.0.load(Ordering::Relaxed);
     format!("Number of visits: {}", current_count)
 }
@@ -64,7 +64,7 @@ You can retrieve more than one `State` type in a single route as well:
 
 ```rust
 #[get("/state")]
-fn state(count: State<HitCount>, config: State<Config>) -> T { ... }
+fn state(hit_count: State<HitCount>, config: State<Config>) -> T { ... }
 ```
 
 It can also be useful to retrieve managed state from a `FromRequest`
@@ -99,7 +99,7 @@ type from previous examples:
 
 ```rust
 #[get("/count")]
-fn count(count: State<HitCount>) -> String {
+fn count(hit_count: State<HitCount>) -> String {
     let current_count = hit_count.0.load(Ordering::Relaxed);
     format!("Number of visits: {}", current_count)
 }
@@ -119,7 +119,7 @@ this application, Rocket emits the following warning:
 warning: HitCount is not currently being managed by Rocket
  --> src/main.rs:2:17
   |
-2 | fn count(count: State<HitCount>) -> String {
+2 | fn count(hit_count: State<HitCount>) -> String {
   |                 ^^^^^^^^^^^^^^^
   |
   = note: this State request guard will always fail
