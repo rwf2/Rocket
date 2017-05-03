@@ -255,7 +255,7 @@ Fields of forms can be easily validated via implementations of the
 `FromFormValue` trait. For example, if you'd like to verify that some user is
 over some age in a form, then you might define a new `AdultAge` type, use it as
 a field in a form structure, and implement `FromFormValue` so that it only
-validates integers over that age. If a form is a submitted with a bad age,
+validates integers over that age. If a form is submitted with a bad age,
 Rocket won't call a handler requiring a valid form for that structure. You can
 use `Option` or `Result` types for fields to catch parse failures.
 
