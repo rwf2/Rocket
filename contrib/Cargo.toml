@@ -26,7 +26,7 @@ rocket = { version = "0.2.6", path = "../lib/" }
 log = "^0.3"
 
 # UUID dependencies.
-uuid = { version = "^0.4", optional = true }
+uuid = { version = "^0.5", optional = true }
 
 # Serialization and templating dependencies.
 serde = { version = "1.0", optional = true }
