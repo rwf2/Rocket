@@ -40,8 +40,8 @@ pub struct Config {
     pub workers: u16,
     /// How much information to log.
     pub log_level: LoggingLevel,
-    /// The session key.
-    pub(crate) session_key: SessionKey,
+    /// The secret key.
+    pub(crate) secret_key: SecretKey,
     /// TLS configuration.
     pub(crate) tls: Option<TlsConfig>,
     /// Streaming read size limits.
@@ -131,8 +131,8 @@ impl Config {
         // Note: This may truncate if num_cpus::get() > u16::max. That's okay.
         let default_workers = ::std::cmp::max(num_cpus::get(), 2) as u16;
 
-        // Use a generated session key by default.
-        let key = SessionKey::Generated(Key::generate());
+        // Use a generated secret key by default.
+        let key = SecretKey::Generated(Key::generate());
 
         Ok(match env {
             Development => {
@@ -142,7 +142,7 @@ impl Config {
                     port: 8000,
                     workers: default_workers,
                     log_level: LoggingLevel::Normal,
-                    session_key: key,
+                    secret_key: key,
                     tls: None,
                     limits: Limits::default(),
                     extras: HashMap::new(),
@@ -156,7 +156,7 @@ impl Config {
                     port: 80,
                     workers: default_workers,
                     log_level: LoggingLevel::Normal,
-                    session_key: key,
+                    secret_key: key,
                     tls: None,
                     limits: Limits::default(),
                     extras: HashMap::new(),
@@ -170,7 +170,7 @@ impl Config {
                     port: 80,
                     workers: default_workers,
                     log_level: LoggingLevel::Critical,
-                    session_key: key,
+                    secret_key: key,
                     tls: None,
                     limits: Limits::default(),
                     extras: HashMap::new(),
@@ -192,7 +192,7 @@ impl Config {
     }
 
     /// Sets the configuration `val` for the `name` entry. If the `name` is one
-    /// of "address", "port", "session_key", "log", or "workers" (the "default"
+    /// of "address", "port", "secret_key", "log", or "workers" (the "default"
     /// values), the appropriate value in the `self` Config structure is set.
     /// Otherwise, the value is stored as an `extra`.
     ///
@@ -204,7 +204,7 @@ impl Config {
     ///   * **port**: Integer (16-bit unsigned)
     ///   * **workers**: Integer (16-bit unsigned)
     ///   * **log**: String
-    ///   * **session_key**: String (192-bit base64)
+    ///   * **secret_key**: String (192-bit base64)
     ///   * **tls**: Table (`certs` (path as String), `key` (path as String))
     pub(crate) fn set_raw(&mut self, name: &str, val: &Value) -> Result<()> {
         let (id, ok) = (|val| val, |_| Ok(()));
@@ -212,7 +212,7 @@ impl Config {
             address => (str, set_address, id),
             port => (u16, set_port, ok),
             workers => (u16, set_workers, ok),
-            session_key => (str, set_session_key, id),
+            secret_key => (str, set_secret_key, id),
             log => (log_level, set_log_level, ok),
             tls => (tls_config, set_raw_tls, id),
             limits => (limits, set_limits, ok)
@@ -313,7 +313,7 @@ impl Config {
         self.workers = workers;
     }
 
-    /// Sets the `session_key` in `self` to `key` which must be a 192-bit base64
+    /// Sets the `secret_key` in `self` to `key` which must be a 192-bit base64
     /// encoded string.
     ///
     /// # Errors
@@ -330,14 +330,14 @@ impl Config {
     /// # fn config_test() -> Result<(), ConfigError> {
     /// let mut config = Config::new(Environment::Staging)?;
     /// let key = "8Xui8SN4mI+7egV/9dlfYYLGQJeEx4+DwmSQLwDVXJg=";
-    /// assert!(config.set_session_key(key).is_ok());
-    /// assert!(config.set_session_key("hello? anyone there?").is_err());
+    /// assert!(config.set_secret_key(key).is_ok());
+    /// assert!(config.set_secret_key("hello? anyone there?").is_err());
     /// # Ok(())
     /// # }
     /// ```
-    pub fn set_session_key<K: Into<String>>(&mut self, key: K) -> Result<()> {
+    pub fn set_secret_key<K: Into<String>>(&mut self, key: K) -> Result<()> {
         let key = key.into();
-        let error = self.bad_type("session_key", "string",
+        let error = self.bad_type("secret_key", "string",
                                   "a 256-bit base64 encoded string");
 
         if key.len() != 44 {
@@ -349,7 +349,7 @@ impl Config {
             Err(_) => return Err(error)
         };
 
-        self.session_key = SessionKey::Provided(Key::from_master(&bytes));
+        self.secret_key = SecretKey::Provided(Key::from_master(&bytes));
         Ok(())
     }
 
@@ -478,10 +478,10 @@ impl Config {
         self.extras.iter().map(|(k, v)| (k.as_str(), v))
     }
 
-    /// Retrieves the session key from `self`.
+    /// Retrieves the secret key from `self`.
     #[inline]
-    pub(crate) fn session_key(&self) -> &Key {
-        self.session_key.inner()
+    pub(crate) fn secret_key(&self) -> &Key {
+        self.secret_key.inner()
     }
 
     /// Attempts to retrieve the extra named `name` as a string.
@@ -668,7 +668,7 @@ impl fmt::Debug for Config {
     }
 }
 
-/// Doesn't consider the session key or config path.
+/// Doesn't consider the secret key or config path.
 impl PartialEq for Config {
     fn eq(&self, other: &Config) -> bool {
         self.address == other.address

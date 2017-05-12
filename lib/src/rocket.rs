@@ -218,7 +218,7 @@ impl Rocket {
         info!("{}:", request);
 
         // Inform the request about all of the precomputed state.
-        request.set_preset_state(&self.config.session_key(), &self.state);
+        request.set_preset_state(&self.config.secret_key(), &self.state);
 
         // Do a bit of preprocessing before routing; run the attached fairings.
         self.preprocess_request(request, &data);
@@ -393,7 +393,7 @@ impl Rocket {
         info_!("port: {}", White.paint(&config.port));
         info_!("log: {}", White.paint(config.log_level));
         info_!("workers: {}", White.paint(config.workers));
-        info_!("session key: {}", White.paint(config.session_key.kind()));
+        info_!("secret key: {}", White.paint(config.secret_key.kind()));
         info_!("limits: {}", White.paint(&config.limits));
 
         let tls_configured = config.tls.is_some();

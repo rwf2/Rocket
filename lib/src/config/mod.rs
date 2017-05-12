@@ -40,8 +40,8 @@
 //!     * examples: `12`, `1`, `4`
 //!   * **log**: _[string]_ how much information to log; one of `"normal"`,
 //!     `"debug"`, or `"critical"`
-//!   * **session_key**: _[string]_ a 256-bit base64 encoded string (44
-//!     characters) to use as the session key
+//!   * **secret_key**: _[string]_ a 256-bit base64 encoded string (44
+//!     characters) to use as the secret key
 //!     * example: `"8Xui8SN4mI+7egV/9dlfYYLGQJeEx4+DwmSQLwDVXJg="`
 //!   * **tls**: _[table]_ a table with two keys: 1) `certs`: _[string]_ a path
 //!     to a certificate chain in PEM format, and 2) `key`: _[string]_ a path to a
@@ -71,7 +71,7 @@
 //! port = 8000
 //! workers = max(number_of_cpus, 2)
 //! log = "normal"
-//! session_key = [randomly generated at launch]
+//! secret_key = [randomly generated at launch]
 //! limits = { forms = 32768 }
 //!
 //! [staging]
@@ -79,7 +79,7 @@
 //! port = 80
 //! workers = max(number_of_cpus, 2)
 //! log = "normal"
-//! session_key = [randomly generated at launch]
+//! secret_key = [randomly generated at launch]
 //! limits = { forms = 32768 }
 //!
 //! [production]
@@ -87,14 +87,14 @@
 //! port = 80
 //! workers = max(number_of_cpus, 2)
 //! log = "critical"
-//! session_key = [randomly generated at launch]
+//! secret_key = [randomly generated at launch]
 //! limits = { forms = 32768 }
 //! ```
 //!
-//! The `workers` and `session_key` default parameters are computed by Rocket
+//! The `workers` and `secret_key` default parameters are computed by Rocket
 //! automatically; the values above are not valid TOML syntax. When manually
 //! specifying the number of workers, the value should be an integer: `workers =
-//! 10`. When manually specifying the session key, the value should a 256-bit
+//! 10`. When manually specifying the secret key, the value should a 256-bit
 //! base64 encoded string. Such a string can be generated with the `openssl`
 //! command line tool: `openssl rand -base64 32`.
 //!
@@ -634,7 +634,7 @@ mod test {
             port = 7810
             workers = 21
             log = "critical"
-            session_key = "8Xui8SN4mI+7egV/9dlfYYLGQJeEx4+DwmSQLwDVXJg="
+            secret_key = "8Xui8SN4mI+7egV/9dlfYYLGQJeEx4+DwmSQLwDVXJg="
             template_dir = "mine"
             json = true
             pi = 3.14
@@ -645,7 +645,7 @@ mod test {
             .port(7810)
             .workers(21)
             .log_level(LoggingLevel::Critical)
-            .session_key("8Xui8SN4mI+7egV/9dlfYYLGQJeEx4+DwmSQLwDVXJg=")
+            .secret_key("8Xui8SN4mI+7egV/9dlfYYLGQJeEx4+DwmSQLwDVXJg=")
             .extra("template_dir", "mine")
             .extra("json", true)
             .extra("pi", 3.14);
@@ -971,49 +971,49 @@ mod test {
     }
 
     #[test]
-    fn test_good_session_key() {
+    fn test_good_secret_key() {
         // Take the lock so changing the environment doesn't cause races.
         let _env_lock = ENV_LOCK.lock().unwrap();
         env::set_var(CONFIG_ENV, "stage");
 
         check_config!(RocketConfig::parse(r#"
                           [stage]
-                          session_key = "TpUiXK2d/v5DFxJnWL12suJKPExKR8h9zd/o+E7SU+0="
+                          secret_key = "TpUiXK2d/v5DFxJnWL12suJKPExKR8h9zd/o+E7SU+0="
                       "#.to_string(), TEST_CONFIG_FILENAME), {
-                          default_config(Staging).session_key(
+                          default_config(Staging).secret_key(
                               "TpUiXK2d/v5DFxJnWL12suJKPExKR8h9zd/o+E7SU+0="
                           )
                       });
 
         check_config!(RocketConfig::parse(r#"
                           [stage]
-                          session_key = "jTyprDberFUiUFsJ3vcb1XKsYHWNBRvWAnXTlbTgGFU="
+                          secret_key = "jTyprDberFUiUFsJ3vcb1XKsYHWNBRvWAnXTlbTgGFU="
                       "#.to_string(), TEST_CONFIG_FILENAME), {
-                          default_config(Staging).session_key(
+                          default_config(Staging).secret_key(
                               "jTyprDberFUiUFsJ3vcb1XKsYHWNBRvWAnXTlbTgGFU="
                           )
                       });
     }
 
     #[test]
-    fn test_bad_session_key() {
+    fn test_bad_secret_key() {
         // Take the lock so changing the environment doesn't cause races.
         let _env_lock = ENV_LOCK.lock().unwrap();
         env::remove_var(CONFIG_ENV);
 
         assert!(RocketConfig::parse(r#"
             [dev]
-            session_key = true
+            secret_key = true
         "#.to_string(), TEST_CONFIG_FILENAME).is_err());
 
         assert!(RocketConfig::parse(r#"
             [dev]
-            session_key = 1283724897238945234897
+            secret_key = 1283724897238945234897
         "#.to_string(), TEST_CONFIG_FILENAME).is_err());
 
         assert!(RocketConfig::parse(r#"
             [dev]
-            session_key = "abcv"
+            secret_key = "abcv"
         "#.to_string(), TEST_CONFIG_FILENAME).is_err());
     }
 
@@ -1034,7 +1034,7 @@ mod test {
 
         assert!(RocketConfig::parse(r#"
             [dev]
-            session_key = "abcv" = other
+            secret_key = "abcv" = other
         "#.to_string(), TEST_CONFIG_FILENAME).is_err());
     }
 

@@ -7,24 +7,24 @@ use config::{Result, Config, Value, ConfigError};
 use http::Key;
 
 #[derive(Clone)]
-pub enum SessionKey {
+pub enum SecretKey {
     Generated(Key),
     Provided(Key)
 }
 
-impl SessionKey {
+impl SecretKey {
     #[inline(always)]
     pub fn kind(&self) -> &'static str {
         match *self {
-            SessionKey::Generated(_) => "generated",
-            SessionKey::Provided(_) => "provided",
+            SecretKey::Generated(_) => "generated",
+            SecretKey::Provided(_) => "provided",
         }
     }
 
     #[inline(always)]
     pub(crate) fn inner(&self) -> &Key {
         match *self {
-            SessionKey::Generated(ref key) | SessionKey::Provided(ref key) => key
+            SecretKey::Generated(ref key) | SecretKey::Provided(ref key) => key
         }
     }
 }

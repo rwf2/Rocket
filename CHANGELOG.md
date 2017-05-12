@@ -216,7 +216,7 @@ In addition to new features, Rocket saw the following smaller improvements:
   * Clippy issues injected by codegen are resolved.
   * Handlebars was updated to `0.25`.
   * The `PartialEq` implementation of `Config` doesn't consider the path or
-    session key.
+    secret key.
   * Hyper dependency updated to `0.10`.
   * The `Error` type for `JSON as FromData` has been exposed as `SerdeError`.
   * SVG was added as a known Content-Type.
