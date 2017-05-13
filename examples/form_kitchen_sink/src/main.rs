@@ -8,10 +8,15 @@ use rocket::request::{Form, FromFormValue};
 use rocket::response::NamedFile;
 use rocket::http::RawStr;
 
+#[cfg(test)]
+mod tests;
+
 // TODO: Make deriving `FromForm` for this enum possible.
 #[derive(Debug)]
 enum FormOption {
-    A, B, C
+    A,
+    B,
+    C,
 }
 
 impl<'v> FromFormValue<'v> for FormOption {
@@ -22,7 +27,7 @@ impl<'v> FromFormValue<'v> for FormOption {
             "a" => FormOption::A,
             "b" => FormOption::B,
             "c" => FormOption::C,
-            _ => return Err(v)
+            _ => return Err(v),
         };
 
         Ok(variant)
@@ -56,7 +61,9 @@ fn index() -> io::Result<NamedFile> {
 }
 
 fn main() {
-    rocket::ignite()
-        .mount("/", routes![index, sink])
-        .launch();
+    get_rocket().launch();
+}
+
+fn get_rocket() -> rocket::Rocket {
+    rocket::ignite().mount("/", routes![index, sink])
 }
