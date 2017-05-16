@@ -1,4 +1,4 @@
-{% extends "base.html.tera" %}
+{% extends "base" %}
  
 {% block content %}
 
