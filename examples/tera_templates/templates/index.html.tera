@@ -2,7 +2,7 @@
 
 {% block content %}
 
-    <h1>Hi {{name}}</h1>
+    <h1>Hi {{name}}.</h1>
     <h3>Here are your items:</h3>
     <ul>
         {% for s in items %}
