@@ -1,0 +1,16 @@
+[package]
+name = "tera_templates"
+version = "0.0.0"
+workspace = "../../"
+
+[dependencies]
+rocket = { path = "../../lib" }
+rocket_codegen = { path = "../../codegen" }
+serde = "1.0"
+serde_derive = "1.0"
+serde_json = "1.0"
+
+[dependencies.rocket_contrib]
+path = "../../contrib"
+default-features = false
+features = ["tera_templates"]
