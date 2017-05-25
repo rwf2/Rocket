@@ -19,6 +19,8 @@ enum FormOption {
     C,
 }
 
+const INVALID_UTF8_ERROR_MESSAGE : &str = "Form input was invalid UTF8.";
+
 impl<'v> FromFormValue<'v> for FormOption {
     type Error = &'v RawStr;
 
@@ -51,7 +53,7 @@ fn sink(sink: Result<Form<FormInput>, Option<String>>) -> String {
     match sink {
         Ok(form) => format!("{:?}", form.get()),
         Err(Some(f)) => format!("Invalid form input: {}", f),
-        Err(None) => format!("Form input was invalid UTF8."),
+        Err(None) => INVALID_UTF8_ERROR_MESSAGE.to_string(),
     }
 }
 
