@@ -66,3 +66,16 @@ fn test_invalid_form() {
 
     assert_eq!(response, format!("Invalid form input: {}", input));
 }
+
+#[test]
+fn test_non_utf8_input() {
+    let rocket = rocket();
+    let mut request = MockRequest::new(Post, "/")
+        .header(ContentType::Form)
+        .body([0x99]);
+
+    let mut response = request.dispatch_with(&rocket);
+    
+
+    assert_eq!(response.body_string().unwrap(), "Form input was invalid UTF8.".to_string());
+}
