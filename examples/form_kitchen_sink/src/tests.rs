@@ -2,25 +2,26 @@ use rocket::testing::MockRequest;
 use rocket::http::Method::*;
 use rocket::http::ContentType;
 
-use super::get_rocket;
+use super::rocket;
 use super::FormInput;
 use super::FormOption;
 
 use std::fmt;
 
 impl fmt::Display for FormOption {
-    fn fmt(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let formatted_input = match *self {
             FormOption::A => "a",
             FormOption::B => "b",
             FormOption::C => "c",
         };
-        write!(formatter, "{}", formatted_input)
+
+        write!(f, "{}", formatted_input)
     }
 }
 
-fn test_post_form(request_form: FormInput) -> String {
-    let rocket = get_rocket();
+fn test_post_form(request_form: &FormInput) -> String {
+    let rocket = rocket();
     let mut request = MockRequest::new(Post, "/")
         .header(ContentType::Form)
         .body(&format!("checkbox={}&number={}&password={}&type={}&textarea={}&select={}",
@@ -32,14 +33,12 @@ fn test_post_form(request_form: FormInput) -> String {
             request_form.select));
 
     let mut response = request.dispatch_with(&rocket);
-    let body_string = response.body_string().unwrap();
-
-    body_string
+    response.body_string().unwrap()
 }
 
 #[test]
 fn test_good_form() {
-    let request = FormInput {
+    let form_input = FormInput {
         checkbox: true,
         number: 1,
         radio: FormOption::A,
@@ -48,8 +47,7 @@ fn test_good_form() {
         select: FormOption::B,
     };
 
-    let response = test_post_form(request);
+    let response = test_post_form(&form_input);
 
-    assert_eq!(response,
-               r#"FormInput { checkbox: true, number: 1, radio: A, password: "password", text_area: "text_area", select: B }"#);
+    assert_eq!(response, format!("{:?}", form_input));
 }

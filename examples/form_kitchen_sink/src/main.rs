@@ -60,10 +60,10 @@ fn index() -> io::Result<NamedFile> {
     NamedFile::open("static/index.html")
 }
 
-fn main() {
-    get_rocket().launch();
+fn rocket() -> rocket::Rocket {
+    rocket::ignite().mount("/", routes![index, sink])
 }
 
-fn get_rocket() -> rocket::Rocket {
-    rocket::ignite().mount("/", routes![index, sink])
+fn main() {
+    rocket().launch();
 }
