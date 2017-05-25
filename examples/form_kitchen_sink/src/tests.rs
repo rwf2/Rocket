@@ -5,6 +5,7 @@ use rocket::http::ContentType;
 use super::rocket;
 use super::FormInput;
 use super::FormOption;
+use super::INVALID_UTF8_ERROR_MESSAGE;
 
 use std::fmt;
 
@@ -20,7 +21,7 @@ impl fmt::Display for FormOption {
     }
 }
 
-fn test_post(request_body: &String) -> String {
+fn test_post<S: AsRef<[u8]>>(request_body: S) -> String {
     let rocket = rocket();
     let mut request = MockRequest::new(Post, "/")
         .header(ContentType::Form)
@@ -39,7 +40,7 @@ fn test_post_form(request_form: &FormInput) -> String {
                                request_form.text_area,
                                request_form.select);
 
-    test_post(&request_body)
+    test_post(request_body)
 }
 
 #[test]
@@ -60,22 +61,18 @@ fn test_good_form() {
 
 #[test]
 fn test_invalid_form() {
-    let input = "wrong form input".to_string();
+    let input = "wrong form input";
 
-    let response = test_post(&input);
+    let response = test_post(input);
 
     assert_eq!(response, format!("Invalid form input: {}", input));
 }
 
 #[test]
 fn test_non_utf8_input() {
-    let rocket = rocket();
-    let mut request = MockRequest::new(Post, "/")
-        .header(ContentType::Form)
-        .body([0x99]);
+    let input = [0x99];
 
-    let mut response = request.dispatch_with(&rocket);
-    
+    let response = test_post(&input);
 
-    assert_eq!(response.body_string().unwrap(), "Form input was invalid UTF8.".to_string());
+    assert_eq!(response, INVALID_UTF8_ERROR_MESSAGE.to_string());
 }
