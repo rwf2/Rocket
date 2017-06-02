@@ -8,11 +8,18 @@ use rocket::request::{Form, FromFormValue};
 use rocket::response::NamedFile;
 use rocket::http::RawStr;
 
+#[cfg(test)]
+mod tests;
+
 // TODO: Make deriving `FromForm` for this enum possible.
 #[derive(Debug)]
 enum FormOption {
-    A, B, C
+    A,
+    B,
+    C,
 }
+
+const INVALID_UTF8_ERROR_MESSAGE : &str = "Form input was invalid UTF8.";
 
 impl<'v> FromFormValue<'v> for FormOption {
     type Error = &'v RawStr;
@@ -22,7 +29,7 @@ impl<'v> FromFormValue<'v> for FormOption {
             "a" => FormOption::A,
             "b" => FormOption::B,
             "c" => FormOption::C,
-            _ => return Err(v)
+            _ => return Err(v),
         };
 
         Ok(variant)
@@ -46,7 +53,7 @@ fn sink(sink: Result<Form<FormInput>, Option<String>>) -> String {
     match sink {
         Ok(form) => format!("{:?}", form.get()),
         Err(Some(f)) => format!("Invalid form input: {}", f),
-        Err(None) => format!("Form input was invalid UTF8."),
+        Err(None) => INVALID_UTF8_ERROR_MESSAGE.to_string(),
     }
 }
 
@@ -55,8 +62,10 @@ fn index() -> io::Result<NamedFile> {
     NamedFile::open("static/index.html")
 }
 
+fn rocket() -> rocket::Rocket {
+    rocket::ignite().mount("/", routes![index, sink])
+}
+
 fn main() {
-    rocket::ignite()
-        .mount("/", routes![index, sink])
-        .launch();
+    rocket().launch();
 }
