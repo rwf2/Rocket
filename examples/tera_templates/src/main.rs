@@ -27,7 +27,7 @@ fn index() -> Redirect {
 fn get(name: String) -> Template {
     let context = TemplateContext {
         name: name,
-        items: vec!["One", "Two", "Three"].iter().map(|s| s.to_string()).collect()
+        items: vec!["One".to_owned(), "Two".to_owned(), "Three".to_owned()]
     };
 
     Template::render("index", &context)
