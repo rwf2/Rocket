@@ -31,7 +31,7 @@ requests under certain conditions. If a `POST` request contains a body of
 field has the name `_method` and a valid HTTP method as its value, that field's
 value is used as the method for the incoming request. This allows Rocket
 applications to submit non-`POST` forms. The [todo
-example](https://github.com/SergioBenitez/Rocket/tree/v0.2.8/examples/todo/static/index.html.tera#L47)
+example](https://github.com/SergioBenitez/Rocket/tree/v0.3.0/examples/todo/static/index.html.tera#L47)
 makes use of this feature to submit `PUT` and `DELETE` requests from a web form.
 
 ## Format
@@ -57,7 +57,7 @@ not just the world, we could declare a route and handler like so:
 
 ```rust
 #[get("/hello/<name>")]
-fn hello(name: &str) -> String {
+fn hello(name: String) -> String {
     format!("Hello, {}!", name)
 }
 ```
@@ -76,12 +76,25 @@ illustrate varied usage:
 
 ```rust
 #[get("/hello/<name>/<age>/<cool>")]
-fn hello(name: &str, age: u8, cool: bool) -> String {
+fn hello(name: String, age: u8, cool: bool) -> String {
     if cool {
       format!("You're a cool {} year old, {}!", age, name)
     } else {
       format!("{}, we need to talk about your coolness.", name)
     }
+}
+```
+
+## Raw Strings
+
+Rocket provides the `RawStr` type for handling raw strings. When used as a path
+segment, it is passed directly with no modification. This is used instead of
+the `&str` type.
+
+```rust
+#[get("/hello/<name>")]
+fn hello(name: &RawStr) -> String {
+  format!("Hello, {}!", name)
 }
 ```
 
@@ -107,7 +120,7 @@ fn user(id: usize) -> T { ... }
 fn user_int(id: isize) -> T { ... }
 
 #[get("/user/<id>", rank = 3)]
-fn user_str(id: &str) -> T { ... }
+fn user_str(id: &RawStr) -> T { ... }
 ```
 
 Notice the `rank` parameters in `user_int` and `user_str`. If we run this
@@ -125,7 +138,7 @@ be routed as follows:
      route always matches. The `user_str` handler is called.
 
 Forwards can be _caught_ by using a `Result` or `Option` type. For example, if
-the type of `id` in the `user` function was `Result<usize, &str>`, then `user`
+the type of `id` in the `user` function was `Result<usize, &RawStr>`, then `user`
 would never forward. An `Ok` variant would indicate that `<id>` was a valid
 `usize`, while an `Err` would indicate that `<id>` was not a `usize`. The
 `Err`'s value would contain the string that failed to parse as a `usize`.
@@ -185,7 +198,7 @@ fn index(cookies: &Cookies, content: ContentType) -> String { ... }
 ```
 
 The [cookies example on
-GitHub](https://github.com/SergioBenitez/Rocket/tree/v0.2.8/examples/cookies)
+GitHub](https://github.com/SergioBenitez/Rocket/tree/v0.3.0/examples/cookies)
 illustrates how to use the `Cookies` type to get and set cookies.
 
 You can implement `FromRequest` for your own types. For instance, to protect a
@@ -259,9 +272,9 @@ validates integers over that age. If a form is submitted with a bad age,
 Rocket won't call a handler requiring a valid form for that structure. You can
 use `Option` or `Result` types for fields to catch parse failures.
 
-The [forms](https://github.com/SergioBenitez/Rocket/tree/v0.2.8/examples/forms)
+The [forms](https://github.com/SergioBenitez/Rocket/tree/v0.3.0/examples/forms)
 and [forms kitchen
-sink](https://github.com/SergioBenitez/Rocket/tree/v0.2.8/examples/form_kitchen_sink)
+sink](https://github.com/SergioBenitez/Rocket/tree/v0.3.0/examples/form_kitchen_sink)
 examples on GitHub provide further illustrations.
 
 ### JSON
@@ -282,7 +295,7 @@ fn new(task: JSON<Task>) -> String { ... }
 
 The only condition is that the generic type to `JSON` implements the
 `Deserialize` trait. See the [JSON example on
-GitHub](https://github.com/SergioBenitez/Rocket/tree/v0.2.8/examples/json) for a
+GitHub](https://github.com/SergioBenitez/Rocket/tree/v0.3.0/examples/json) for a
 complete example.
 
 ### Streaming
@@ -305,7 +318,7 @@ The route above accepts any `POST` request to the `/upload` path with
 text response if the upload succeeds. If the upload fails, an error response is
 returned. The handler above is complete. It really is that simple! See the
 [GitHub example
-code](https://github.com/SergioBenitez/Rocket/tree/v0.2.8/examples/raw_upload)
+code](https://github.com/SergioBenitez/Rocket/tree/v0.3.0/examples/raw_upload)
 for the full crate.
 
 ## Query Strings
@@ -341,7 +354,7 @@ the request is forwarded to the next matching route. To catch parse failures,
 you can use `Option` or `Result` as the type of the field to catch errors for.
 
 See [the GitHub
-example](https://github.com/SergioBenitez/Rocket/tree/v0.2.8/examples/query_params)
+example](https://github.com/SergioBenitez/Rocket/tree/v0.3.0/examples/query_params)
 for a complete illustration.
 
 ## Error Catchers
@@ -378,7 +391,7 @@ types [Request](https://api.rocket.rs/rocket/struct.Request.html) and/or
 [Error](https://api.rocket.rs/rocket/enum.Error.html). At present, the `Error`
 type is not particularly useful, and so it is often omitted. The
 [error catcher
-example](https://github.com/SergioBenitez/Rocket/tree/v0.2.8/examples/errors) on
+example](https://github.com/SergioBenitez/Rocket/tree/v0.3.3/examples/errors) on
 GitHub illustrates their use in full.
 
 Rocket has a default catcher for all of the standard HTTP error codes including

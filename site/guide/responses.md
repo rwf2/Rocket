@@ -127,12 +127,14 @@ serialization in a fixed-sized body. If serialization fails, the request is
 forwarded to the **500** error catcher.
 
 For a complete example, see the [JSON example on
-GitHub](https://github.com/SergioBenitez/Rocket/tree/v0.2.8/examples/json).
+GitHub](https://github.com/SergioBenitez/Rocket/tree/v0.3.0/examples/json).
 
 ## Templates
 
 Rocket has built-in support for templating. To respond with a rendered template,
-simply return a
+ensure that you are using
+[`Template::fairing()`](https://api.rocket.rs/rocket_contrib/struct.Template.html#method.fairing)
+and then simply return a
 [Template](https://api.rocket.rs/rocket_contrib/struct.Template.html) type.
 
 ```rust
@@ -140,6 +142,13 @@ simply return a
 fn index() -> Template {
   let context = /* object-like value */;
   Template::render("index", &context)
+}
+
+fn main() {
+  rocket::ignite()
+    .mount("/", routes![index])
+    .attach(Template::fairing())
+    .launch();
 }
 ```
 
@@ -156,7 +165,7 @@ The context can be any type that implements `Serialize` and serializes to an
 [Template](https://api.rocket.rs/rocket_contrib/struct.Template.html) API
 documentation contains more information about templates, while the [Handlebars
 Templates example on
-GitHub](https://github.com/SergioBenitez/Rocket/tree/v0.2.8/examples/handlebars_templates)
+GitHub](https://github.com/SergioBenitez/Rocket/tree/v0.3.0/examples/handlebars_templates)
 is a fully composed application that makes use of Handlebars templates.
 
 ## Streaming

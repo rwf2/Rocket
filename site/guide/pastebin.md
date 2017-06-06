@@ -211,6 +211,7 @@ use std::io;
 use std::path::Path;
 
 use rocket::Data;
+use rocket::http::RawStr;
 ```
 
 The [Data](https://api.rocket.rs/rocket/data/struct.Data.html) structure is key
@@ -297,7 +298,7 @@ paste doesn't exist.
 use std::fs::File;
 
 #[get("/<id>")]
-fn retrieve(id: &str) -> Option<File> {
+fn retrieve(id: &RawStr) -> Option<File> {
     let filename = format!("upload/{id}", id = id);
     File::open(&filename).ok()
 }
@@ -326,7 +327,7 @@ using it. We do this by implementing `FromParam` for `PasteID` in
 use rocket::request::FromParam;
 
 /// Returns `true` if `id` is a valid paste ID and `false` otherwise.
-fn valid_id(id: &str) -> bool {
+fn valid_id(id: &RawStr) -> bool {
     id.chars().all(|c| {
         (c >= 'a' && c <= 'z')
             || (c >= 'A' && c <= 'Z')
@@ -402,4 +403,4 @@ through some of them to get a better feel for Rocket. Here are some ideas:
 
 You can find the full source code for the completed pastebin tutorial in the
 [Rocket Github
-Repo](https://github.com/SergioBenitez/Rocket/tree/v0.2.8/examples/pastebin).
+Repo](https://github.com/SergioBenitez/Rocket/tree/v0.3.0/examples/pastebin).
