@@ -6,7 +6,7 @@ use request::Request;
 use outcome::{self, IntoOutcome};
 use outcome::Outcome::*;
 
-use http::{Status, ContentType, Accept, Method, Cookies, Session};
+use http::{Status, ContentType, Accept, Method, Cookies};
 use http::uri::URI;
 
 /// Type alias for the `Outcome` of a `FromRequest` conversion.
@@ -100,10 +100,10 @@ impl<S, E> IntoOutcome<S, (Status, E), ()> for Result<S, E> {
 ///
 ///   * **Cookies**
 ///
-///     Returns a borrow to the [Cookies](/rocket/http/type.Cookies.html) in the
-///     incoming request. Note that `Cookies` implements internal mutability, so
-///     a handle to `Cookies` allows you to get _and_ set cookies in the
-///     request.
+///     Returns a borrow to the [Cookies](/rocket/http/enum.Cookies.html) in
+///     the incoming request. Note that `Cookies` implements internal
+///     mutability, so a handle to `Cookies` allows you to get _and_ set cookies
+///     in the request.
 ///
 ///     _This implementation always returns successfully._
 ///
@@ -233,14 +233,6 @@ impl<'a, 'r> FromRequest<'a, 'r> for Cookies<'a> {
 
     fn from_request(request: &'a Request<'r>) -> Outcome<Self, Self::Error> {
         Success(request.cookies())
-    }
-}
-
-impl<'a, 'r> FromRequest<'a, 'r> for Session<'a> {
-    type Error = ();
-
-    fn from_request(request: &'a Request<'r>) -> Outcome<Self, Self::Error> {
-        Success(request.session())
     }
 }
 

@@ -18,31 +18,28 @@ fn bug(form_data: Form<FormData>) -> &'static str {
 
 mod tests {
     use super::*;
-    use rocket::testing::MockRequest;
-    use rocket::http::Method::*;
+    use rocket::local::Client;
     use rocket::http::{Status, ContentType};
 
     #[test]
     fn method_eval() {
-        let rocket = rocket::ignite().mount("/", routes![bug]);
-
-        let mut req = MockRequest::new(Post, "/")
+        let client = Client::new(rocket::ignite().mount("/", routes![bug])).unwrap();
+        let mut response = client.post("/")
             .header(ContentType::Form)
-            .body("_method=patch&form_data=Form+data");
+            .body("_method=patch&form_data=Form+data")
+            .dispatch();
 
-        let mut response = req.dispatch_with(&rocket);
         assert_eq!(response.body_string(), Some("OK".into()));
     }
 
     #[test]
     fn get_passes_through() {
-        let rocket = rocket::ignite().mount("/", routes![bug]);
-
-        let mut req = MockRequest::new(Get, "/")
+        let client = Client::new(rocket::ignite().mount("/", routes![bug])).unwrap();
+        let response = client.get("/")
             .header(ContentType::Form)
-            .body("_method=patch&form_data=Form+data");
+            .body("_method=patch&form_data=Form+data")
+            .dispatch();
 
-        let response = req.dispatch_with(&rocket);
         assert_eq!(response.status(), Status::NotFound);
     }
 }

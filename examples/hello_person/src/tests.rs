@@ -1,20 +1,19 @@
 use super::rocket;
-use rocket::testing::MockRequest;
-use rocket::http::Method::*;
+use rocket::local::Client;
 use rocket::http::Status;
 
+fn client() -> Client {
+    Client::new(rocket::ignite().mount("/", routes![super::hello, super::hi])).unwrap()
+}
+
 fn test(uri: &str, expected: String) {
-    let rocket = rocket::ignite().mount("/", routes![super::hello, super::hi]);
-    let mut req = MockRequest::new(Get, uri);
-    let mut response = req.dispatch_with(&rocket);
-    assert_eq!(response.body_string(), Some(expected));
+    let client = client();
+    assert_eq!(client.get(uri).dispatch().body_string(), Some(expected));
 }
 
 fn test_404(uri: &str) {
-    let rocket = rocket::ignite().mount("/", routes![super::hello, super::hi]);
-    let mut req = MockRequest::new(Get, uri);
-    let response = req.dispatch_with(&rocket);
-    assert_eq!(response.status(), Status::NotFound);
+    let client = client();
+    assert_eq!(client.get(uri).dispatch().status(), Status::NotFound);
 }
 
 #[test]

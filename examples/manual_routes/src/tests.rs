@@ -1,13 +1,10 @@
 use super::*;
-use rocket::testing::MockRequest;
+use rocket::local::Client;
 use rocket::http::{ContentType, Status};
-use rocket::http::Method::*;
 
 fn test(uri: &str, content_type: ContentType, status: Status, body: String) {
-    let rocket = rocket();
-    let mut request = MockRequest::new(Get, uri).header(content_type);
-    let mut response = request.dispatch_with(&rocket);
-
+    let client = Client::new(rocket()).unwrap();;
+    let mut response = client.get(uri).header(content_type).dispatch();
     assert_eq!(response.status(), status);
     assert_eq!(response.body_string(), Some(body));
 }
@@ -34,21 +31,21 @@ fn test_echo() {
 
 #[test]
 fn test_upload() {
-    let rocket = rocket();
+    let client = Client::new(rocket()).unwrap();;
     let expected_body = "Lorem ipsum dolor sit amet, consectetur adipiscing elit, \
                          sed do eiusmod tempor incididunt ut labore et dolore \
                          magna aliqua".to_string();
 
     // Upload the body.
-    let mut request = MockRequest::new(Post, "/upload")
+    let response = client.post("/upload")
         .header(ContentType::Plain)
-        .body(&expected_body);
-    let response = request.dispatch_with(&rocket);
+        .body(&expected_body)
+        .dispatch();
+
     assert_eq!(response.status(), Status::Ok);
 
     // Ensure we get back the same body.
-    let mut request = MockRequest::new(Get, "/upload");
-    let mut response = request.dispatch_with(&rocket);
+    let mut response = client.get("/upload").dispatch();
     assert_eq!(response.status(), Status::Ok);
     assert_eq!(response.body_string(), Some(expected_body));
 }

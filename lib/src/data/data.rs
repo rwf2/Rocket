@@ -66,8 +66,7 @@ impl Data {
     /// the data in a request.
     pub fn open(mut self) -> DataStream {
         let buffer = ::std::mem::replace(&mut self.buffer, vec![]);
-        let empty_stream = Cursor::new(vec![])
-            .chain(NetStream::Local(Cursor::new(vec![])));
+        let empty_stream = Cursor::new(vec![]).chain(NetStream::Empty);
 
         // FIXME: Insert a `BufReader` in front of the `NetStream` with capacity
         // 4096. We need the new `Chain` methods to get the inner reader to
@@ -205,9 +204,9 @@ impl Data {
     }
 
     /// This creates a `data` object from a local data source `data`.
+    #[inline]
     pub(crate) fn local(data: Vec<u8>) -> Data {
-        let empty_stream = Cursor::new(vec![])
-            .chain(NetStream::Local(Cursor::new(vec![])));
+        let empty_stream = Cursor::new(vec![]).chain(NetStream::Empty);
 
         Data {
             buffer: data,

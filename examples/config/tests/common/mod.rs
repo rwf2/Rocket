@@ -1,9 +1,9 @@
 use rocket::{self, State};
 use rocket::fairing::AdHoc;
 use rocket::config::{self, Config, Environment};
-use rocket::http::{Method, Status};
+use rocket::http::Status;
 use rocket::LoggingLevel;
-use rocket::testing::MockRequest;
+use rocket::local::Client;
 
 struct LocalConfig(Config);
 
@@ -55,8 +55,6 @@ pub fn test_config(environment: Environment) {
     // environment in `ignite()`. We'll read this back in the handler to config.
     ::std::env::set_var("ROCKET_ENV", environment.to_string());
 
-    // FIXME: launch fairings aren't run during tests since...the Rocket isn't
-    // being launch
     let rocket = rocket::ignite()
         .attach(AdHoc::on_attach(|rocket| {
             println!("Attaching local config.");
@@ -65,7 +63,7 @@ pub fn test_config(environment: Environment) {
         }))
         .mount("/", routes![check_config]);
 
-    let mut request = MockRequest::new(Method::Get, "/check_config");
-    let response = request.dispatch_with(&rocket);
+    let client = Client::new(rocket).unwrap();
+    let response = client.get("/check_config").dispatch();
     assert_eq!(response.status(), Status::Ok);
 }

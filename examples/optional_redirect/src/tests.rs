@@ -1,24 +1,25 @@
 use super::rocket;
-use rocket::testing::MockRequest;
-use rocket::http::{Method, Status};
+use rocket::local::Client;
+use rocket::http::Status;
 
-fn test_200(uri: &str, expected_body: &str) {
+fn client() -> Client {
     let rocket = rocket::ignite()
         .mount("/", routes![super::root, super::user, super::login]);
-    let mut request = MockRequest::new(Method::Get, uri);
-    let mut response = request.dispatch_with(&rocket);
+    Client::new(rocket).unwrap()
 
+}
+
+fn test_200(uri: &str, expected_body: &str) {
+    let client = client();
+    let mut response = client.get(uri).dispatch();
     assert_eq!(response.status(), Status::Ok);
     assert_eq!(response.body_string(), Some(expected_body.to_string()));
 }
 
 fn test_303(uri: &str, expected_location: &str) {
-    let rocket = rocket::ignite()
-        .mount("/", routes![super::root, super::user, super::login]);
-    let mut request = MockRequest::new(Method::Get, uri);
-    let response = request.dispatch_with(&rocket);
+    let client = client();
+    let response = client.get(uri).dispatch();
     let location_headers: Vec<_> = response.headers().get("Location").collect();
-
     assert_eq!(response.status(), Status::SeeOther);
     assert_eq!(location_headers, vec![expected_location]);
 }

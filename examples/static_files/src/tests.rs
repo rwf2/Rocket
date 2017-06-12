@@ -1,8 +1,7 @@
 use std::fs::File;
 use std::io::Read;
 
-use rocket::testing::MockRequest;
-use rocket::http::Method::*;
+use rocket::local::Client;
 use rocket::http::Status;
 
 use super::rocket;
@@ -10,10 +9,8 @@ use super::rocket;
 fn test_query_file<T> (path: &str, file: T, status: Status)
     where T: Into<Option<&'static str>>
 {
-    let rocket = rocket();
-    let mut req = MockRequest::new(Get, &path);
-
-    let mut response = req.dispatch_with(&rocket);
+    let client = Client::new(rocket()).unwrap();
+    let mut response = client.get(path).dispatch();
     assert_eq!(response.status(), status);
 
     let body_data = response.body().and_then(|body| body.into_bytes());

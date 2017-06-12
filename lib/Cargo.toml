@@ -18,21 +18,21 @@ categories = ["web-programming::http-server"]
 tls = ["rustls", "hyper-rustls"]
 
 [dependencies]
-yansi = "0.2"
+yansi = "0.3"
 log = "0.3"
 url = "1"
-toml = { version = "0.2", default-features = false }
+toml = "0.4"
 num_cpus = "1"
-state = "0.2.1"
+state = "0.2.2"
 time = "0.1"
 memchr = "1"
-base64 = "0.5.2"
+base64 = "0.6"
 smallvec = "0.4"
 pear = "0.0.8"
 pear_codegen = "0.0.8"
 rustls = { version = "0.8.0", optional = true }
 cookie = { version = "0.8.1", features = ["percent-encode", "secure"] }
-hyper = { version = "0.10.9", default-features = false }
+hyper = { version = "0.10.11", default-features = false }
 ordermap = "0.2"
 
 [dependencies.hyper-rustls]
@@ -47,5 +47,5 @@ lazy_static = "0.2"
 rocket_codegen = { version = "0.2.8", path = "../codegen" }
 
 [build-dependencies]
-yansi = "0.2"
+yansi = "0.3"
 version_check = "0.1.2"

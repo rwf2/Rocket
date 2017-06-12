@@ -1,8 +1,8 @@
 [package]
-name = "hello_ranks"
+name = "tls"
 version = "0.0.0"
 workspace = "../../"
 
 [dependencies]
-rocket = { path = "../../lib" }
+rocket = { path = "../../lib", features = ["tls"] }
 rocket_codegen = { path = "../../codegen" }

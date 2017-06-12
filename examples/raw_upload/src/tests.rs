@@ -1,30 +1,30 @@
-use rocket::testing::MockRequest;
+use rocket::local::Client;
 use rocket::http::{Status, ContentType};
-use rocket::http::Method::*;
 
 use std::io::Read;
-use std::fs::File;
+use std::fs::{self, File};
+
+const UPLOAD_CONTENTS: &str = "Hey! I'm going to be uploaded. :D Yay!";
 
 #[test]
 fn test_index() {
-    let rocket = super::rocket();
-    let mut req = MockRequest::new(Get, "/");
-    let mut res = req.dispatch_with(&rocket);
-
+    let client = Client::new(super::rocket()).unwrap();
+    let mut res = client.get("/").dispatch();
     assert_eq!(res.body_string(), Some(super::index().to_string()));
 }
 
 #[test]
 fn test_raw_upload() {
-    const UPLOAD_CONTENTS: &str = "Hey! I'm going to be uploaded. :D Yay!";
-
-    let rocket = super::rocket();
-    let mut req = MockRequest::new(Post, "/upload")
-        .header(ContentType::Plain)
-        .body(UPLOAD_CONTENTS);
+    // Delete the upload file before we begin.
+    let _ = fs::remove_file("/tmp/upload.txt");
 
     // Do the upload. Make sure we get the expected results.
-    let mut res = req.dispatch_with(&rocket);
+    let client = Client::new(super::rocket()).unwrap();
+    let mut res = client.post("/upload")
+        .header(ContentType::Plain)
+        .body(UPLOAD_CONTENTS)
+        .dispatch();
+
     assert_eq!(res.status(), Status::Ok);
     assert_eq!(res.body_string(), Some(UPLOAD_CONTENTS.len().to_string()));
 

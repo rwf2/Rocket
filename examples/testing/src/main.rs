@@ -8,22 +8,24 @@ fn hello() -> &'static str {
     "Hello, world!"
 }
 
+fn rocket() -> rocket::Rocket {
+    rocket::ignite().mount("/", routes![hello])
+}
+
 fn main() {
-    rocket::ignite().mount("/", routes![hello]).launch();
+    rocket().launch();
 }
 
 #[cfg(test)]
 mod test {
     use super::rocket;
-    use rocket::testing::MockRequest;
+    use rocket::local::Client;
     use rocket::http::Status;
-    use rocket::http::Method::*;
 
     #[test]
     fn test_hello() {
-        let rocket = rocket::ignite().mount("/", routes![super::hello]);
-        let mut req = MockRequest::new(Get, "/");
-        let mut response = req.dispatch_with(&rocket);
+        let client = Client::new(rocket()).unwrap();
+        let mut response = client.get("/").dispatch();
         assert_eq!(response.status(), Status::Ok);
         assert_eq!(response.body_string(), Some("Hello, world!".into()));
     }

@@ -21,19 +21,19 @@ use outcome::Outcome;
 use error::{Error, LaunchError, LaunchErrorKind};
 use fairing::{Fairing, Fairings};
 
-use http::{Method, Status, Header, Session};
+use http::{Method, Status, Header};
 use http::hyper::{self, header};
 use http::uri::URI;
 
 /// The main `Rocket` type: used to mount routes and catchers and launch the
 /// application.
 pub struct Rocket {
-    config: Config,
+    pub(crate) config: Config,
     router: Router,
     default_catchers: HashMap<u16, Catcher>,
     catchers: HashMap<u16, Catcher>,
-    state: Container,
-    fairings: Fairings
+    pub(crate) state: Container,
+    fairings: Fairings,
 }
 
 #[doc(hidden)]
@@ -50,11 +50,12 @@ impl hyper::Handler for Rocket {
         let (h_addr, h_method, h_headers, h_uri, _, h_body) = hyp_req.deconstruct();
 
         // Convert the Hyper request into a Rocket request.
-        let mut req = match Request::from_hyp(h_method, h_headers, h_uri, h_addr) {
+        let req_res = Request::from_hyp(self, h_method, h_headers, h_uri, h_addr);
+        let mut req = match req_res {
             Ok(req) => req,
             Err(e) => {
                 error!("Bad incoming request: {}", e);
-                let dummy = Request::new(Method::Get, URI::new("<unknown>"));
+                let dummy = Request::new(self, Method::Get, URI::new("<unknown>"));
                 let r = self.handle_error(Status::InternalServerError, &dummy);
                 return self.issue_response(r, res);
             }
@@ -209,15 +210,11 @@ impl Rocket {
         }
     }
 
-    // TODO: Explain this `UnsafeCell` business at a macro level.
     #[inline]
     pub(crate) fn dispatch<'s, 'r>(&'s self,
                                    request: &'r mut Request<'s>,
                                    data: Data) -> Response<'r> {
         info!("{}:", request);
-
-        // Inform the request about all of the precomputed state.
-        request.set_preset(&self.config, &self.state);
 
         // Do a bit of preprocessing before routing; run the attached fairings.
         self.preprocess_request(request, &data);
@@ -226,14 +223,9 @@ impl Rocket {
         // Route the request to get a response.
         let mut response = match self.route(request, data) {
             Outcome::Success(mut response) => {
-                // A user's route responded! Set the regular cookies.
+                // A user's route responded! Set the cookies.
                 for cookie in request.cookies().delta() {
                     response.adjoin_header(cookie);
-                }
-
-                // And now the session cookies.
-                for cookie in request.session().delta() {
-                    response.adjoin_header(Session::header_for(cookie));
                 }
 
                 response
@@ -399,19 +391,21 @@ impl Rocket {
         info_!("port: {}", Paint::white(&config.port));
         info_!("log: {}", Paint::white(config.log_level));
         info_!("workers: {}", Paint::white(config.workers));
-        info_!("secret key: {}", Paint::white(config.secret_key.kind()));
+        info_!("secret key: {}", Paint::white(&config.secret_key));
         info_!("limits: {}", Paint::white(&config.limits));
 
         let tls_configured = config.tls.is_some();
         if tls_configured && cfg!(feature = "tls") {
             info_!("tls: {}", Paint::white("enabled"));
+        } else if tls_configured {
+            error_!("tls: {}", Paint::white("disabled"));
+            error_!("tls is configured, but the tls feature is disabled");
         } else {
-            if tls_configured {
-                error_!("tls: {}", Paint::white("disabled"));
-                error_!("tls is configured, but the tls feature is disabled");
-            } else {
-                info_!("tls: {}", Paint::white("disabled"));
-            }
+            info_!("tls: {}", Paint::white("disabled"));
+        }
+
+        if config.secret_key.is_generated() && config.environment.is_prod() {
+            warn!("environment is 'production', but no `secret_key` is configured");
         }
 
         for (name, value) in config.extras() {

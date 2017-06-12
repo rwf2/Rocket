@@ -1,12 +1,9 @@
 use super::rocket;
-use rocket::testing::MockRequest;
-use rocket::http::Method::*;
+use rocket::local::Client;
 
 #[test]
 fn hello() {
-    let rocket = rocket();
-    let mut req = MockRequest::new(Get, "/");
-    let mut response = req.dispatch_with(&rocket);
-
+    let client = Client::new(rocket()).unwrap();
+    let mut response = client.get("/").dispatch();
     assert_eq!(response.body_string(), Some("Rocketeer".into()));
 }

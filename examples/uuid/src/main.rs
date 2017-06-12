@@ -39,8 +39,11 @@ fn people(id: UUID) -> Result<String, String> {
         .ok_or(format!("Person not found for UUID: {}", id))?)
 }
 
-fn main() {
+fn rocket() -> rocket::Rocket {
     rocket::ignite()
         .mount("/", routes![people])
-        .launch();
+}
+
+fn main() {
+    rocket().launch();
 }

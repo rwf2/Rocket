@@ -12,8 +12,7 @@ fn get_ip(remote: SocketAddr) -> String {
 
 mod remote_rewrite_tests {
     use super::*;
-    use rocket::testing::MockRequest;
-    use rocket::http::Method::*;
+    use rocket::local::Client;
     use rocket::http::{Header, Status};
 
     use std::net::SocketAddr;
@@ -21,21 +20,19 @@ mod remote_rewrite_tests {
     const KNOWN_IP: &'static str = "127.0.0.1:8000";
 
     fn check_ip(header: Option<Header<'static>>, ip: Option<String>) {
-        let address: SocketAddr = KNOWN_IP.parse().unwrap();
-        let port = address.port();
+        let addr: SocketAddr = KNOWN_IP.parse().unwrap();
 
-        let rocket = rocket::ignite().mount("/", routes![get_ip]);
-        let mut req = MockRequest::new(Get, "/").remote(address);
-        if let Some(header) = header {
-            req.add_header(header);
-        }
+        let c = Client::new(rocket::ignite().mount("/", routes![get_ip])).unwrap();
+        let mut response = match header {
+            Some(header) => c.get("/").header(header).remote(addr).dispatch(),
+            None => c.get("/").remote(addr).dispatch()
+        };
 
-        let mut response = req.dispatch_with(&rocket);
         assert_eq!(response.status(), Status::Ok);
-        let body_str = response.body_string();
+        let body = response.body_string();
         match ip {
-            Some(ip) => assert_eq!(body_str, Some(format!("{}:{}", ip, port))),
-            None => assert_eq!(body_str, Some(KNOWN_IP.into()))
+            Some(ip) => assert_eq!(body, Some(format!("{}:{}", ip, addr.port()))),
+            None => assert_eq!(body, Some(KNOWN_IP.into()))
         }
     }
 

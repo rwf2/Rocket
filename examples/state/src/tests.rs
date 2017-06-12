@@ -1,32 +1,28 @@
-use rocket::Rocket;
-use rocket::testing::MockRequest;
-use rocket::http::Method::*;
+use rocket::local::Client;
 use rocket::http::Status;
 
-fn register_hit(rocket: &Rocket) {
-    let mut req = MockRequest::new(Get, "/");
-    let response = req.dispatch_with(&rocket);
+fn register_hit(client: &Client) {
+    let response = client.get("/").dispatch();;
     assert_eq!(response.status(), Status::Ok);
 }
 
-fn get_count(rocket: &Rocket) -> usize {
-    let mut req = MockRequest::new(Get, "/count");
-    let mut response = req.dispatch_with(&rocket);
+fn get_count(client: &Client) -> usize {
+    let mut response = client.get("/count").dispatch();
     response.body_string().and_then(|s| s.parse().ok()).unwrap()
 }
 
 #[test]
 fn test_count() {
-    let rocket = super::rocket();
+    let client = Client::new(super::rocket()).unwrap();
 
     // Count should start at 0.
-    assert_eq!(get_count(&rocket), 0);
+    assert_eq!(get_count(&client), 0);
 
-    for _ in 0..99 { register_hit(&rocket); }
-    assert_eq!(get_count(&rocket), 99);
+    for _ in 0..99 { register_hit(&client); }
+    assert_eq!(get_count(&client), 99);
 
-    register_hit(&rocket);
-    assert_eq!(get_count(&rocket), 100);
+    register_hit(&client);
+    assert_eq!(get_count(&client), 100);
 }
 
 // Cargo runs each test in parallel on different threads. We use all of these

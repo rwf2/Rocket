@@ -176,7 +176,7 @@ impl ConfigBuilder {
     /// use rocket::config::{Config, Environment, Limits};
     ///
     /// let mut config = Config::build(Environment::Staging)
-    ///     .limits(Limits::default().add("json", 5 * (1 << 20)))
+    ///     .limits(Limits::new().limit("json", 5 * (1 << 20)))
     ///     .unwrap();
     /// ```
     pub fn limits(mut self, limits: Limits) -> Self {
@@ -319,7 +319,7 @@ impl ConfigBuilder {
     /// # Panics
     ///
     /// Panics if the current working directory cannot be retrieved or if the
-    /// supplied address or secret key fail to parse.
+    /// supplied address, secret key, or TLS configuration fail to parse.
     ///
     /// # Example
     ///
@@ -335,5 +335,30 @@ impl ConfigBuilder {
     #[inline(always)]
     pub fn unwrap(self) -> Config {
         self.finalize().expect("ConfigBuilder::unwrap() failed")
+    }
+
+    ///
+    /// Returns the `Config` structure that was being built by this builder.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the current working directory cannot be retrieved or if the
+    /// supplied address, secret key, or TLS configuration fail to parse. If a
+    /// panic occurs, the error message `msg` is printed.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use rocket::config::{Config, Environment};
+    ///
+    /// let config = Config::build(Environment::Staging)
+    ///     .address("127.0.0.1")
+    ///     .expect("the configuration is bad!");
+    ///
+    /// assert_eq!(config.address.as_str(), "127.0.0.1");
+    /// ```
+    #[inline(always)]
+    pub fn expect(self, msg: &str) -> Config {
+        self.finalize().expect(msg)
     }
 }

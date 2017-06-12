@@ -22,5 +22,5 @@ log = "0.3"
 compiletest_rs = "0.2"
 
 [build-dependencies]
-yansi = "0.2"
+yansi = "0.3"
 version_check = "0.1.2"

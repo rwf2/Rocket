@@ -1,16 +1,14 @@
 use super::rocket;
-use rocket::testing::MockRequest;
-use rocket::http::Method::*;
+use rocket::local::{Client, LocalResponse as Response};
 use rocket::http::Status;
-use rocket::Response;
 
 macro_rules! run_test {
     ($query:expr, $test_fn:expr) => ({
         let rocket = rocket::ignite()
             .mount("/", routes![super::hello]);
 
-        let mut request = MockRequest::new(Get, format!("/hello{}", $query));
-        $test_fn(request.dispatch_with(&rocket));
+        let client = Client::new(rocket).unwrap();
+        $test_fn(client.get(format!("/hello{}", $query)).dispatch());
     })
 }
 

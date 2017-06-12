@@ -1,18 +1,13 @@
-use super::rocket;
-
-use rocket::testing::MockRequest;
+use rocket::local::Client;
 use rocket::http::Status;
-use rocket::http::Method::*;
 
 #[test]
 fn test_push_pop() {
-    let rocket = rocket();
+    let client = Client::new(super::rocket()).unwrap();
 
-    let mut req = MockRequest::new(Put, "/push?description=test1");
-    let response = req.dispatch_with(&rocket);
+    let response = client.put("/push?description=test1").dispatch();
     assert_eq!(response.status(), Status::Ok);
 
-    let mut req = MockRequest::new(Get, "/pop");
-    let mut response = req.dispatch_with(&rocket);
+    let mut response = client.get("/pop").dispatch();
     assert_eq!(response.body_string(), Some("test1".to_string()));
 }

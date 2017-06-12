@@ -1,8 +1,0 @@
-[package]
-name = "from_request"
-version = "0.0.0"
-workspace = "../../"
-
-[dependencies]
-rocket = { path = "../../lib" }
-rocket_codegen = { path = "../../codegen" }

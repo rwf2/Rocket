@@ -1,5 +1,5 @@
 [package]
-name = "forms"
+name = "ranking"
 version = "0.0.0"
 workspace = "../../"
 

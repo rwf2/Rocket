@@ -11,7 +11,6 @@ pub mod uri;
 #[macro_use]
 mod known_media_types;
 mod cookies;
-mod session;
 mod method;
 mod media_type;
 mod content_type;
@@ -36,5 +35,5 @@ pub use self::header::{Header, HeaderMap};
 pub use self::raw_str::RawStr;
 
 pub use self::media_type::MediaType;
-pub use self::cookies::*;
-pub use self::session::*;
+pub use self::cookies::{Cookie, Cookies};
+pub(crate) use self::cookies::{Key, CookieJar};

@@ -47,8 +47,8 @@ pub enum ConfigError {
     BadType(String, &'static str, &'static str, PathBuf),
     /// There was a TOML parsing error.
     ///
-    /// Parameters: (toml_source_string, filename, error_list)
-    ParseError(String, PathBuf, Vec<ParsingError>),
+    /// Parameters: (toml_source_string, filename, error_description, line/col)
+    ParseError(String, PathBuf, String, Option<(usize, usize)>),
     /// There was a TOML parsing error in a config environment variable.
     ///
     /// Parameters: (env_key, env_value, error)
@@ -87,15 +87,14 @@ impl ConfigError {
                 info_!("expected value to be {}, but found {}",
                        White.paint(expected), White.paint(actual));
             }
-            ParseError(ref source, ref filename, ref errors) => {
-                for error in errors {
-                    let (lo, hi) = error.byte_range;
-                    let (line, col) = error.start;
-                    let error_source = &source[lo..hi];
-
-                    error!("config file could not be parsed as TOML");
-                    info_!("at {:?}:{}:{}", White.paint(filename), line + 1, col + 1);
-                    trace_!("'{}' - {}", error_source, White.paint(&error.desc));
+            ParseError(_, ref filename, ref desc, line_col) => {
+                error!("config file failed to parse due to invalid TOML");
+                info_!("{}", desc);
+                if let Some((line, col)) = line_col {
+                    info_!("at {:?}:{}:{}", White.paint(filename),
+                           White.paint(line + 1), White.paint(col + 1));
+                } else {
+                    info_!("in {:?}", White.paint(filename));
                 }
             }
             BadEnvVal(ref key, ref value, ref error) => {

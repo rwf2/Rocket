@@ -2,7 +2,7 @@ use super::rocket;
 use super::serde_json;
 use super::Person;
 use rocket::http::{Accept, ContentType, Header, MediaType, Method, Status};
-use rocket::testing::MockRequest;
+use rocket::local::Client;
 
 fn test<H>(method: Method, uri: &str, header: H, status: Status, body: String)
     where H: Into<Header<'static>>
@@ -10,9 +10,9 @@ fn test<H>(method: Method, uri: &str, header: H, status: Status, body: String)
     let rocket = rocket::ignite()
         .mount("/hello", routes![super::get_hello, super::post_hello])
         .catch(errors![super::not_found]);
-    let mut request = MockRequest::new(method, uri).header(header);
-    let mut response = request.dispatch_with(&rocket);
 
+    let client = Client::new(rocket).unwrap();
+    let mut response = client.req(method, uri).header(header).dispatch();
     assert_eq!(response.status(), status);
     assert_eq!(response.body_string(), Some(body));
 }

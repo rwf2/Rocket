@@ -13,8 +13,7 @@ fn post() -> &'static str { "post" }
 
 fn rocket() -> rocket::Rocket {
     let config = Config::new(Environment::Production).unwrap();
-    rocket::custom(config, false)
-        .mount("/", routes![get, post])
+    rocket::custom(config, false).mount("/", routes![get, post])
 }
 
 mod benches {
@@ -22,35 +21,34 @@ mod benches {
 
     use super::rocket;
     use self::test::Bencher;
-    use rocket::testing::MockRequest;
-    use rocket::http::Method::*;
+    use rocket::local::Client;
     use rocket::http::{Accept, ContentType};
 
     #[bench]
     fn accept_format(b: &mut Bencher) {
-        let rocket = rocket();
-        let mut request = MockRequest::new(Get, "/").header(Accept::JSON);
-        b.iter(|| { request.dispatch_with(&rocket); });
+        let client = Client::new(rocket()).unwrap();
+        let mut request = client.get("/").header(Accept::JSON);
+        b.iter(|| { request.mut_dispatch(); });
     }
 
     #[bench]
     fn wrong_accept_format(b: &mut Bencher) {
-        let rocket = rocket();
-        let mut request = MockRequest::new(Get, "/").header(Accept::HTML);
-        b.iter(|| { request.dispatch_with(&rocket); });
+        let client = Client::new(rocket()).unwrap();
+        let mut request = client.get("/").header(Accept::HTML);
+        b.iter(|| { request.mut_dispatch(); });
     }
 
     #[bench]
     fn content_type_format(b: &mut Bencher) {
-        let rocket = rocket();
-        let mut request = MockRequest::new(Post, "/").header(ContentType::JSON);
-        b.iter(|| { request.dispatch_with(&rocket); });
+        let client = Client::new(rocket()).unwrap();
+        let mut request = client.post("/").header(ContentType::JSON);
+        b.iter(|| { request.mut_dispatch(); });
     }
 
     #[bench]
     fn wrong_content_type_format(b: &mut Bencher) {
-        let rocket = rocket();
-        let mut request = MockRequest::new(Post, "/").header(ContentType::Plain);
-        b.iter(|| { request.dispatch_with(&rocket); });
+        let client = Client::new(rocket()).unwrap();
+        let mut request = client.post("/").header(ContentType::Plain);
+        b.iter(|| { request.mut_dispatch(); });
     }
 }

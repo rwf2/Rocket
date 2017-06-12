@@ -6,4 +6,4 @@ workspace = "../../"
 [dependencies]
 rocket = { path = "../../lib" }
 rocket_codegen = { path = "../../codegen" }
-rusqlite = "0.10"
+rusqlite = "0.12"

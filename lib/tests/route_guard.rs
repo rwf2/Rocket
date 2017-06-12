@@ -13,14 +13,10 @@ fn files(route: &Route, path: PathBuf) -> String {
 
 mod route_guard_tests {
     use super::*;
+    use rocket::local::Client;
 
-    use rocket::Rocket;
-    use rocket::testing::MockRequest;
-    use rocket::http::Method::*;
-
-    fn assert_path(rocket: &Rocket, path: &str) {
-        let mut req = MockRequest::new(Get, path);
-        let mut res = req.dispatch_with(&rocket);
+    fn assert_path(client: &Client, path: &str) {
+        let mut res = client.get(path).dispatch();
         assert_eq!(res.body_string(), Some(path.into()));
     }
 
@@ -30,9 +26,10 @@ mod route_guard_tests {
             .mount("/first", routes![files])
             .mount("/second", routes![files]);
 
-        assert_path(&rocket, "/first/some/path");
-        assert_path(&rocket, "/second/some/path");
-        assert_path(&rocket, "/first/second/b/c");
-        assert_path(&rocket, "/second/a/b/c");
+        let client = Client::new(rocket).unwrap();
+        assert_path(&client, "/first/some/path");
+        assert_path(&client, "/second/some/path");
+        assert_path(&client, "/first/second/b/c");
+        assert_path(&client, "/second/a/b/c");
     }
 }

@@ -9,7 +9,7 @@ use std::collections::HashMap;
 use rocket::Outcome;
 use rocket::request::{self, Form, FlashMessage, FromRequest, Request};
 use rocket::response::{Redirect, Flash};
-use rocket::http::{Cookie, Session};
+use rocket::http::{Cookie, Cookies};
 use rocket_contrib::Template;
 
 #[derive(FromForm)]
@@ -25,8 +25,8 @@ impl<'a, 'r> FromRequest<'a, 'r> for User {
     type Error = ();
 
     fn from_request(request: &'a Request<'r>) -> request::Outcome<User, ()> {
-        let user = request.session()
-            .get("user_id")
+        let user = request.cookies()
+            .get_private("user_id")
             .and_then(|cookie| cookie.value().parse().ok())
             .map(|id| User(id));
 
@@ -38,9 +38,9 @@ impl<'a, 'r> FromRequest<'a, 'r> for User {
 }
 
 #[post("/login", data = "<login>")]
-fn login(mut session: Session, login: Form<Login>) -> Flash<Redirect> {
+fn login(mut cookies: Cookies, login: Form<Login>) -> Flash<Redirect> {
     if login.get().username == "Sergio" && login.get().password == "password" {
-        session.set(Cookie::new("user_id", 1.to_string()));
+        cookies.add_private(Cookie::new("user_id", 1.to_string()));
         Flash::success(Redirect::to("/"), "Successfully logged in.")
     } else {
         Flash::error(Redirect::to("/login"), "Invalid username/password.")
@@ -48,8 +48,8 @@ fn login(mut session: Session, login: Form<Login>) -> Flash<Redirect> {
 }
 
 #[post("/logout")]
-fn logout(mut session: Session) -> Flash<Redirect> {
-    session.remove(Cookie::named("user_id"));
+fn logout(mut cookies: Cookies) -> Flash<Redirect> {
+    cookies.remove_private(Cookie::named("user_id"));
     Flash::success(Redirect::to("/login"), "Successfully logged out.")
 }
 
@@ -82,6 +82,7 @@ fn index() -> Redirect {
 
 fn main() {
     rocket::ignite()
+        .attach(Template::fairing())
         .mount("/", routes![index, user_index, login, logout, login_user, login_page])
         .launch();
 }

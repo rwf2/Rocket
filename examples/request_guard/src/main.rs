@@ -28,27 +28,27 @@ fn header_count(header_count: HeaderCount) -> String {
     format!("Your request contained {} headers!", header_count)
 }
 
+fn rocket() -> rocket::Rocket {
+    rocket::ignite().mount("/", routes![header_count])
+}
+
 fn main() {
-    rocket::ignite().mount("/", routes![header_count]).launch();
+    rocket().launch();
 }
 
 #[cfg(test)]
 mod test {
-    use super::rocket;
-    use rocket::testing::MockRequest;
-    use rocket::http::Method::*;
+    use rocket::local::Client;
     use rocket::http::Header;
 
     fn test_header_count<'h>(headers: Vec<Header<'static>>) {
-        let rocket = rocket::ignite()
-            .mount("/", routes![super::header_count]);
-
-        let mut req = MockRequest::new(Get, "/");
+        let client = Client::new(super::rocket()).unwrap();
+        let mut req = client.get("/");
         for header in headers.iter().cloned() {
-            req = req.header(header);
+            req.add_header(header);
         }
 
-        let mut response = req.dispatch_with(&rocket);
+        let mut response = req.dispatch();
         let expect = format!("Your request contained {} headers!", headers.len());
         assert_eq!(response.body_string(), Some(expect));
     }
@@ -56,7 +56,8 @@ mod test {
     #[test]
     fn test_n_headers() {
         for i in 0..50 {
-            let headers = (0..i).map(|n| Header::new(n.to_string(), n.to_string()))
+            let headers = (0..i)
+                .map(|n| Header::new(n.to_string(), n.to_string()))
                 .collect();
 
             test_header_count(headers);

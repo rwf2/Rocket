@@ -17,18 +17,17 @@ fn bug(form_data: Form<FormData>) -> String {
 
 mod tests {
     use super::*;
-    use rocket::testing::MockRequest;
-    use rocket::http::Method::*;
+    use rocket::local::Client;
     use rocket::http::ContentType;
     use rocket::http::Status;
 
     fn check_decoding(raw: &str, decoded: &str) {
-        let rocket = rocket::ignite().mount("/", routes![bug]);
-        let mut req = MockRequest::new(Post, "/")
+        let client = Client::new(rocket::ignite().mount("/", routes![bug])).unwrap();
+        let mut response = client.post("/")
             .header(ContentType::Form)
-            .body(format!("form_data={}", raw));
+            .body(format!("form_data={}", raw))
+            .dispatch();
 
-        let mut response = req.dispatch_with(&rocket);
         assert_eq!(response.status(), Status::Ok);
         assert_eq!(Some(decoded.to_string()), response.body_string());
     }

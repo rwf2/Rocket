@@ -105,7 +105,7 @@ example, the tests for routing can be found at the bottom of the
 Code generation tests can be found in `codegen/tests`. We use the
 [compiletest](https://crates.io/crates/compiletest_rs) library, which was
 extracted from `rustc`, for testing. See the [compiler test
-documentation](https://github.com/rust-lang/rust/blob/master/COMPILER_TESTS.md)
+documentation](https://github.com/rust-lang/rust/blob/master/src/test/COMPILER_TESTS.md)
 for information on how to write compiler tests.
 
 ## Documentation

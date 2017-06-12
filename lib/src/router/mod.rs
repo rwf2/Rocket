@@ -70,6 +70,8 @@ impl Router {
 mod test {
     use super::{Router, Route};
 
+    use rocket::Rocket;
+    use config::Config;
     use http::Method;
     use http::Method::*;
     use http::uri::URI;
@@ -159,7 +161,8 @@ mod test {
     }
 
     fn route<'a>(router: &'a Router, method: Method, uri: &str) -> Option<&'a Route> {
-        let request = Request::new(method, URI::new(uri));
+        let rocket = Rocket::custom(Config::development().unwrap(), true);
+        let request = Request::new(&rocket, method, URI::new(uri));
         let matches = router.route(&request);
         if matches.len() > 0 {
             Some(matches[0])
@@ -169,7 +172,8 @@ mod test {
     }
 
     fn matches<'a>(router: &'a Router, method: Method, uri: &str) -> Vec<&'a Route> {
-        let request = Request::new(method, URI::new(uri));
+        let rocket = Rocket::custom(Config::development().unwrap(), true);
+        let request = Request::new(&rocket, method, URI::new(uri));
         router.route(&request)
     }
 

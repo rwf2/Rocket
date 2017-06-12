@@ -3,7 +3,7 @@
 //! This module implements configuration handling for Rocket. It implements the
 //! parsing and interpretation of the `Rocket.toml` config file and
 //! `ROCKET_{PARAM}` environment variables. It also allows libraries to access
-//! values that have been configured by the user.
+//! user-configured values.
 //!
 //! ## Application Configuration
 //!
@@ -43,13 +43,15 @@
 //!   * **secret_key**: _[string]_ a 256-bit base64 encoded string (44
 //!     characters) to use as the secret key
 //!     * example: `"8Xui8SN4mI+7egV/9dlfYYLGQJeEx4+DwmSQLwDVXJg="`
-//!   * **tls**: _[table]_ a table with two keys: 1) `certs`: _[string]_ a path
-//!     to a certificate chain in PEM format, and 2) `key`: _[string]_ a path to a
-//!     private key file in PEM format for the certificate in `certs`
+//!   * **tls**: _[table]_ a table with two keys:
+//!     1. `certs`: _[string]_ a path to a certificate chain in PEM format
+//!     2. `key`: _[string]_ a path to a private key file in PEM format for the
+//!        certificate in `certs`
+//!
 //!     * example: `{ certs = "/path/to/certs.pem", key = "/path/to/key.pem" }`
-//!   * **limits**: _[table]_ a table where the key _[string]_ corresponds to a
-//!     data type and the value _[u64]_ corresponds to the maximum size in bytes
-//!     Rocket should accept for that type.
+//!   * **limits**: _[table]_ a table where each key (_[string]_) corresponds to
+//!   a data type and the value (_[u64]_) corresponds to the maximum size in
+//!   bytes Rocket should accept for that type.
 //!     * example: `{ forms = 65536 }` (maximum form size to 64KiB)
 //!
 //! ### Rocket.toml
@@ -58,7 +60,7 @@
 //! each environment. The file is optional. If it is not present, the default
 //! configuration parameters are used.
 //!
-//! The file must be a series of TOML tables, at most one for each environment
+//! The file must be a series of TOML tables, at most one for each environment,
 //! and an optional "global" table, where each table contains key-value pairs
 //! corresponding to configuration parameters for that environment. If a
 //! configuration parameter is missing, the default value is used. The following
@@ -69,7 +71,7 @@
 //! [development]
 //! address = "localhost"
 //! port = 8000
-//! workers = max(number_of_cpus, 2)
+//! workers = [number_of_cpus * 2]
 //! log = "normal"
 //! secret_key = [randomly generated at launch]
 //! limits = { forms = 32768 }
@@ -77,7 +79,7 @@
 //! [staging]
 //! address = "0.0.0.0"
 //! port = 80
-//! workers = max(number_of_cpus, 2)
+//! workers = [number_of_cpus * 2]
 //! log = "normal"
 //! secret_key = [randomly generated at launch]
 //! limits = { forms = 32768 }
@@ -85,7 +87,7 @@
 //! [production]
 //! address = "0.0.0.0"
 //! port = 80
-//! workers = max(number_of_cpus, 2)
+//! workers = [number_of_cpus * 2]
 //! log = "critical"
 //! secret_key = [randomly generated at launch]
 //! limits = { forms = 32768 }
@@ -115,6 +117,19 @@
 //! address = "0.0.0.0"
 //! ```
 //!
+//! ### TLS Configuration
+//!
+//! TLS can be enabled by specifying the `tls.key` and `tls.certs` parameters.
+//! Rocket must be compiled with the `tls` feature enabled for the parameters to
+//! take effect. The recommended way to specify the parameters is via the
+//! `global` environment:
+//!
+//! ```toml
+//! [global.tls]
+//! certs = "/path/to/certs.pem"
+//! key = "/path/to/key.pem"
+//! ```
+//!
 //! ### Environment Variables
 //!
 //! All configuration parameters, including extras, can be overridden through
@@ -140,19 +155,6 @@
 //! ROCKET_BOOL=true
 //! ROCKET_ARRAY=[1,"b",3.14]
 //! ROCKET_DICT={key="abc",val=123}
-//! ```
-//!
-//! ### TLS Configuration
-//!
-//! TLS can be enabled by specifying the `tls.key` and `tls.certs` parameters.
-//! Rocket must be compiled with the `tls` feature enabled for the parameters to
-//! take effect. The recommended way to specify the parameters is via the
-//! `global` environment:
-//!
-//! ```toml
-//! [global.tls]
-//! certs = "/path/to/certs.pem"
-//! key = "/path/to/key.pem"
 //! ```
 //!
 //! ## Retrieving Configuration Parameters
@@ -203,7 +205,7 @@ use std::env;
 use toml;
 
 pub use self::custom_values::Limits;
-pub use toml::{Array, Table, Value};
+pub use toml::value::{Array, Table, Value, Datetime};
 pub use self::error::{ConfigError, ParsingError};
 pub use self::environment::Environment;
 pub use self::config::Config;
@@ -391,23 +393,18 @@ impl RocketConfig {
     /// Parses the configuration from the Rocket.toml file. Also overrides any
     /// values there with values from the environment.
     fn parse<P: AsRef<Path>>(src: String, filename: P) -> Result<RocketConfig> {
-        // Get a PathBuf version of the filename.
-        let path = filename.as_ref().to_path_buf();
+        use self::ConfigError::ParseError;
 
         // Parse the source as TOML, if possible.
-        let mut parser = toml::Parser::new(&src);
-        let toml = parser.parse().ok_or_else(|| {
-            let source = src.clone();
-            let errors = parser.errors.iter()
-                .map(|error| ParsingError {
-                    byte_range: (error.lo, error.hi),
-                    start: parser.to_linecol(error.lo),
-                    end: parser.to_linecol(error.hi),
-                    desc: error.desc.clone(),
-                });
-
-            ConfigError::ParseError(source, path.clone(), errors.collect())
-        })?;
+        let path = filename.as_ref().to_path_buf();
+        let table = match src.parse::<toml::Value>() {
+            Ok(toml::Value::Table(table)) => table,
+            Ok(value) => {
+                let err = format!("expected a table, found {}", value.type_str());
+                return Err(ConfigError::ParseError(src, path, err, Some((1, 1))));
+            }
+            Err(e) => return Err(ParseError(src, path, e.to_string(), e.line_col()))
+        };
 
         // Create a config with the defaults; set the env to the active one.
         let mut config = RocketConfig::active_default(filename)?;
@@ -416,7 +413,7 @@ impl RocketConfig {
         let mut global = None;
 
         // Parse the values from the TOML file.
-        for (entry, value) in toml {
+        for (entry, value) in table {
             // Each environment must be a table.
             let kv_pairs = match value.as_table() {
                 Some(table) => table,

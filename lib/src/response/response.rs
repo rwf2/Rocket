@@ -903,7 +903,29 @@ impl<'r> Response<'r> {
     /// ```
     #[inline(always)]
     pub fn body_string(&mut self) -> Option<String> {
-        self.take_body().and_then(|b| b.into_string())
+        self.take_body().and_then(Body::into_string)
+    }
+
+    /// Consumes `self's` body and reads it into a `Vec` of `u8` bytes. If
+    /// `self` doesn't have a body or reading fails returns `None`. Note that
+    /// `self`'s `body` is consumed after a call to this method.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use std::io::Cursor;
+    /// use rocket::Response;
+    ///
+    /// let mut response = Response::new();
+    /// assert!(response.body().is_none());
+    ///
+    /// response.set_sized_body(Cursor::new("hi!"));
+    /// assert_eq!(response.body_bytes(), Some(vec![0x68, 0x69, 0x21]));
+    /// assert!(response.body().is_none());
+    /// ```
+    #[inline(always)]
+    pub fn body_bytes(&mut self) -> Option<Vec<u8>> {
+        self.take_body().and_then(Body::into_bytes)
     }
 
     /// Moves the body of `self` out and returns it, if there is one, leaving no

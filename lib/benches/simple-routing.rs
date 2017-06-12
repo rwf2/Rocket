@@ -49,82 +49,82 @@ mod benches {
 
     use super::{hello_world_rocket, rocket};
     use self::test::Bencher;
-    use rocket::testing::MockRequest;
+    use rocket::local::Client;
     use rocket::http::Method::*;
 
     #[bench]
     fn bench_hello_world(b: &mut Bencher) {
-        let rocket = hello_world_rocket();
-        let mut request = MockRequest::new(Get, "/");
+        let client = Client::new(hello_world_rocket()).unwrap();
+        let mut request = client.get("/");
 
         b.iter(|| {
-            request.dispatch_with(&rocket);
+            request.mut_dispatch();
         });
     }
 
     #[bench]
     fn bench_single_get_index(b: &mut Bencher) {
-        let rocket = rocket();
-        let mut request = MockRequest::new(Get, "/");
+        let client = Client::new(rocket()).unwrap();
+        let mut request = client.get("/");
 
         b.iter(|| {
-            request.dispatch_with(&rocket);
+            request.mut_dispatch();
         });
     }
 
     #[bench]
     fn bench_get_put_post_index(b: &mut Bencher) {
-        let rocket = rocket();
+        let client = Client::new(rocket()).unwrap();
 
         // Hold all of the requests we're going to make during the benchmark.
         let mut requests = vec![];
-        requests.push(MockRequest::new(Get, "/"));
-        requests.push(MockRequest::new(Put, "/"));
-        requests.push(MockRequest::new(Post, "/"));
+        requests.push(client.get("/"));
+        requests.push(client.put("/"));
+        requests.push(client.post("/"));
 
         b.iter(|| {
             for request in requests.iter_mut() {
-                request.dispatch_with(&rocket);
+                request.mut_dispatch();
             }
         });
     }
 
     #[bench]
     fn bench_dynamic(b: &mut Bencher) {
-        let rocket = rocket();
+        let client = Client::new(rocket()).unwrap();
 
         // Hold all of the requests we're going to make during the benchmark.
         let mut requests = vec![];
-        requests.push(MockRequest::new(Get, "/abc"));
-        requests.push(MockRequest::new(Get, "/abcdefg"));
-        requests.push(MockRequest::new(Get, "/123"));
+        requests.push(client.get("/abc"));
+        requests.push(client.get("/abcdefg"));
+        requests.push(client.get("/123"));
 
         b.iter(|| {
             for request in requests.iter_mut() {
-                request.dispatch_with(&rocket);
+                request.mut_dispatch();
             }
         });
     }
 
     #[bench]
     fn bench_simple_routing(b: &mut Bencher) {
-        let rocket = rocket();
+        let client = Client::new(rocket()).unwrap();
 
         // Hold all of the requests we're going to make during the benchmark.
         let mut requests = vec![];
-        for route in rocket.routes() {
-            let request = MockRequest::new(route.method, route.path.path());
+        for route in client.rocket().routes() {
+            let request = client.req(route.method, route.path.path());
             requests.push(request);
         }
 
         // A few more for the dynamic route.
-        requests.push(MockRequest::new(Get, "/abc"));
-        requests.push(MockRequest::new(Get, "/abcdefg"));
-        requests.push(MockRequest::new(Get, "/123"));
+        requests.push(client.get("/abc"));
+        requests.push(client.get("/abcdefg"));
+        requests.push(client.get("/123"));
 
         b.iter(|| {
             for request in requests.iter_mut() {
-                request.dispatch_with(&rocket);
+                request.mut_dispatch();
             }
         });
     }

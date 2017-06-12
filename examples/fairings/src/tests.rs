@@ -1,46 +1,38 @@
 use super::rocket;
-use rocket::testing::MockRequest;
-use rocket::http::Method::*;
+use rocket::local::Client;
 
 #[test]
 fn rewrite_get_put() {
-    let rocket = rocket();
-    let mut req = MockRequest::new(Get, "/");
-    let mut response = req.dispatch_with(&rocket);
+    let client = Client::new(rocket()).unwrap();
+    let mut response = client.get("/").dispatch();
     assert_eq!(response.body_string(), Some("Hello, fairings!".into()));
 }
 
 #[test]
 fn counts() {
-    let rocket = rocket();
+    let client = Client::new(rocket()).unwrap();
 
     // Issue 1 GET request.
-    let mut req = MockRequest::new(Get, "/");
-    req.dispatch_with(&rocket);
+    client.get("/").dispatch();
 
     // Check the GET count, taking into account _this_ GET request.
-    let mut req = MockRequest::new(Get, "/counts");
-    let mut response = req.dispatch_with(&rocket);
+    let mut response = client.get("/counts").dispatch();
     assert_eq!(response.body_string(), Some("Get: 2\nPost: 0".into()));
 
     // Issue 1 more GET request and a POST.
-    let mut req = MockRequest::new(Get, "/");
-    req.dispatch_with(&rocket);
-    let mut req = MockRequest::new(Post, "/");
-    req.dispatch_with(&rocket);
+    client.get("/").dispatch();
+    client.post("/").dispatch();
 
     // Check the counts.
-    let mut req = MockRequest::new(Get, "/counts");
-    let mut response = req.dispatch_with(&rocket);
+    let mut response = client.get("/counts").dispatch();
     assert_eq!(response.body_string(), Some("Get: 4\nPost: 1".into()));
 }
 
 #[test]
 fn token() {
-    let rocket = rocket();
+    let client = Client::new(rocket()).unwrap();
 
     // Ensure the token is '123', which is what we have in `Rocket.toml`.
-    let mut req = MockRequest::new(Get, "/token");
-    let mut res = req.dispatch_with(&rocket);
+    let mut res = client.get("/token").dispatch();
     assert_eq!(res.body_string(), Some("123".into()));
 }

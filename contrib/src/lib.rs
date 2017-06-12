@@ -3,6 +3,9 @@
 #![cfg_attr(feature = "templates", feature(associated_consts))]
 #![cfg_attr(feature = "templates", feature(struct_field_attributes))]
 
+// TODO: Version URLs.
+#![doc(html_root_url = "https://api.rocket.rs/rocket_contrib/")]
+
 //! This crate contains officially sanctioned contributor libraries that provide
 //! functionality commonly used by Rocket applications.
 //!

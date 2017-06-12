@@ -35,36 +35,35 @@ mod benches {
 
     use super::rocket;
     use self::test::Bencher;
-    use rocket::testing::MockRequest;
-    use rocket::http::Method::*;
+    use rocket::local::Client;
     use rocket::http::{Accept, ContentType};
 
     #[bench]
     fn accept_format(b: &mut Bencher) {
-        let rocket = rocket();
+        let client = Client::new(rocket()).unwrap();
         let mut requests = vec![];
-        requests.push(MockRequest::new(Get, "/").header(Accept::JSON));
-        requests.push(MockRequest::new(Get, "/").header(Accept::HTML));
-        requests.push(MockRequest::new(Get, "/").header(Accept::Plain));
+        requests.push(client.get("/").header(Accept::JSON));
+        requests.push(client.get("/").header(Accept::HTML));
+        requests.push(client.get("/").header(Accept::Plain));
 
         b.iter(|| {
             for request in requests.iter_mut() {
-                request.dispatch_with(&rocket);
+                request.mut_dispatch();
             }
         });
     }
 
     #[bench]
     fn content_type_format(b: &mut Bencher) {
-        let rocket = rocket();
+        let client = Client::new(rocket()).unwrap();
         let mut requests = vec![];
-        requests.push(MockRequest::new(Post, "/").header(ContentType::JSON));
-        requests.push(MockRequest::new(Post, "/").header(ContentType::HTML));
-        requests.push(MockRequest::new(Post, "/").header(ContentType::Plain));
+        requests.push(client.post("/").header(ContentType::JSON));
+        requests.push(client.post("/").header(ContentType::HTML));
+        requests.push(client.post("/").header(ContentType::Plain));
 
         b.iter(|| {
             for request in requests.iter_mut() {
-                request.dispatch_with(&rocket);
+                request.mut_dispatch();
             }
         });
     }

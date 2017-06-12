@@ -33,19 +33,19 @@ impl<'v> FromFormValue<'v> for FormOption {
 }
 
 #[derive(Debug, FromForm)]
-struct FormInput {
+struct FormInput<'r> {
     checkbox: bool,
     number: usize,
     #[form(field = "type")]
     radio: FormOption,
-    password: String,
+    password: &'r RawStr,
     #[form(field = "textarea")]
     text_area: String,
     select: FormOption,
 }
 
 #[post("/", data = "<sink>")]
-fn sink(sink: Result<Form<FormInput>, Option<String>>) -> String {
+fn sink<'r>(sink: Result<Form<'r, FormInput<'r>>, Option<String>>) -> String {
     match sink {
         Ok(form) => format!("{:?}", form.get()),
         Err(Some(f)) => format!("Invalid form input: {}", f),

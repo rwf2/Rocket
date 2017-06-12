@@ -14,17 +14,26 @@ pub enum SecretKey {
 
 impl SecretKey {
     #[inline]
-    pub fn kind(&self) -> &'static str {
+    pub(crate) fn inner(&self) -> &Key {
         match *self {
-            SecretKey::Generated(_) => "generated",
-            SecretKey::Provided(_) => "provided",
+            SecretKey::Generated(ref key) | SecretKey::Provided(ref key) => key
         }
     }
 
     #[inline]
-    pub(crate) fn inner(&self) -> &Key {
+    pub(crate) fn is_generated(&self) -> bool {
         match *self {
-            SecretKey::Generated(ref key) | SecretKey::Provided(ref key) => key
+            SecretKey::Generated(_) => true,
+            _ => false
+        }
+    }
+}
+
+impl fmt::Display for SecretKey {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match *self {
+            SecretKey::Generated(_) => write!(f, "generated"),
+            SecretKey::Provided(_) => write!(f, "provided"),
         }
     }
 }
@@ -40,10 +49,36 @@ pub struct TlsConfig {
 #[derive(Clone)]
 pub struct TlsConfig;
 
-// Size limit configuration. We cache those used by Rocket internally but don't
-// share that fact in the API.
+/// Mapping from data type to size limits.
+///
+/// A `Limits` structure contains a mapping from a given data type ("forms",
+/// "json", and so on) to the maximum size in bytes that should be accepted by a
+/// Rocket application for that data type. For instance, if the limit for
+/// "forms" is set to `256`, only 256 bytes from an incoming form request will
+/// be read.
+///
+/// # Defaults
+///
+/// As documented in the [config module](/rocket/config/), the default limits
+/// are as follows:
+///
+///   * **forms**: 32KiB
+///
+/// # Usage
+///
+/// A `Limits` structure is created following the builder pattern:
+///
+/// ```rust
+/// use rocket::config::Limits;
+///
+/// // Set a limit of 64KiB for forms and 3MiB for JSON.
+/// let limits = Limits::new()
+///     .limit("forms", 64 * 1024)
+///     .limit("json", 3 * 1024 * 1024);
+/// ```
 #[derive(Debug, Clone)]
 pub struct Limits {
+    // We cache this internally but don't share that fact in the API.
     pub(crate) forms: u64,
     extra: Vec<(String, u64)>
 }
@@ -56,16 +91,75 @@ impl Default for Limits {
 }
 
 impl Limits {
-    pub fn add<S: Into<String>>(mut self, name: S, limit: u64) -> Self {
+    /// Construct a new `Limits` structure with the default limits set.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use rocket::config::Limits;
+    ///
+    /// let limits = Limits::new();
+    /// assert_eq!(limits.get("forms"), Some(32 * 1024));
+    /// ```
+    #[inline]
+    pub fn new() -> Self {
+        Limits::default()
+    }
+
+    /// Adds or replaces a limit in `self`, consuming `self` anf returning a new
+    /// `Limits` structure with the added or replaced limit.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use rocket::config::Limits;
+    ///
+    /// let limits = Limits::new()
+    ///     .limit("json", 1 * 1024 * 1024);
+    ///
+    /// assert_eq!(limits.get("forms"), Some(32 * 1024));
+    /// assert_eq!(limits.get("json"), Some(1 * 1024 * 1024));
+    ///
+    /// let new_limits = limits.limit("json", 64 * 1024 * 1024);
+    /// assert_eq!(new_limits.get("json"), Some(64 * 1024 * 1024));
+    /// ```
+    pub fn limit<S: Into<String>>(mut self, name: S, limit: u64) -> Self {
         let name = name.into();
         match name.as_str() {
             "forms" => self.forms = limit,
-            _ => self.extra.push((name, limit))
+            _ => {
+                let mut found = false;
+                for tuple in self.extra.iter_mut() {
+                    if tuple.0 == name {
+                        tuple.1 = limit;
+                        found = true;
+                        break;
+                    }
+                }
+
+                if !found {
+                    self.extra.push((name, limit))
+                }
+            }
         }
 
         self
     }
 
+    /// Retrieve the set limit, if any, for the data type with name `name`.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use rocket::config::Limits;
+    ///
+    /// let limits = Limits::new()
+    ///     .limit("json", 64 * 1024 * 1024);
+    ///
+    /// assert_eq!(limits.get("forms"), Some(32 * 1024));
+    /// assert_eq!(limits.get("json"), Some(64 * 1024 * 1024));
+    /// assert!(limits.get("msgpack").is_none());
+    /// ```
     pub fn get(&self, name: &str) -> Option<u64> {
         if name == "forms" {
             return Some(self.forms);
@@ -162,7 +256,7 @@ pub fn limits(conf: &Config, name: &str, value: &Value) -> Result<Limits> {
     let mut limits = Limits::default();
     for (key, val) in table {
         let val = u64(conf, &format!("limits.{}", key), val)?;
-        limits = limits.add(key.as_str(), val);
+        limits = limits.limit(key.as_str(), val);
     }
 
     Ok(limits)

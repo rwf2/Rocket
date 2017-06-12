@@ -18,13 +18,12 @@ fn index(form: Form<Simple>) -> String {
 mod limits_tests {
     use rocket;
     use rocket::config::{Environment, Config, Limits};
-    use rocket::testing::MockRequest;
-    use rocket::http::Method::*;
+    use rocket::local::Client;
     use rocket::http::{Status, ContentType};
 
     fn rocket_with_forms_limit(limit: u64) -> rocket::Rocket {
         let config = Config::build(Environment::Development)
-            .limits(Limits::default().add("forms", limit))
+            .limits(Limits::default().limit("forms", limit))
             .unwrap();
 
         rocket::custom(config, true).mount("/", routes![super::index])
@@ -32,45 +31,45 @@ mod limits_tests {
 
     #[test]
     fn large_enough() {
-        let rocket = rocket_with_forms_limit(128);
-        let mut req = MockRequest::new(Post, "/")
+        let client = Client::new(rocket_with_forms_limit(128)).unwrap();
+        let mut response = client.post("/")
             .body("value=Hello+world")
-            .header(ContentType::Form);
+            .header(ContentType::Form)
+            .dispatch();
 
-        let mut response = req.dispatch_with(&rocket);
         assert_eq!(response.body_string(), Some("Hello world".into()));
     }
 
     #[test]
     fn just_large_enough() {
-        let rocket = rocket_with_forms_limit(17);
-        let mut req = MockRequest::new(Post, "/")
+        let client = Client::new(rocket_with_forms_limit(17)).unwrap();
+        let mut response = client.post("/")
             .body("value=Hello+world")
-            .header(ContentType::Form);
+            .header(ContentType::Form)
+            .dispatch();
 
-        let mut response = req.dispatch_with(&rocket);
         assert_eq!(response.body_string(), Some("Hello world".into()));
     }
 
     #[test]
     fn much_too_small() {
-        let rocket = rocket_with_forms_limit(4);
-        let mut req = MockRequest::new(Post, "/")
+        let client = Client::new(rocket_with_forms_limit(4)).unwrap();
+        let response = client.post("/")
             .body("value=Hello+world")
-            .header(ContentType::Form);
+            .header(ContentType::Form)
+            .dispatch();
 
-        let response = req.dispatch_with(&rocket);
         assert_eq!(response.status(), Status::BadRequest);
     }
 
     #[test]
     fn contracted() {
-        let rocket = rocket_with_forms_limit(10);
-        let mut req = MockRequest::new(Post, "/")
+        let client = Client::new(rocket_with_forms_limit(10)).unwrap();
+        let mut response = client.post("/")
             .body("value=Hello+world")
-            .header(ContentType::Form);
+            .header(ContentType::Form)
+            .dispatch();
 
-        let mut response = req.dispatch_with(&rocket);
         assert_eq!(response.body_string(), Some("Hell".into()));
     }
 }

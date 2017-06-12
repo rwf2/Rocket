@@ -1,14 +1,14 @@
 use super::rocket;
-use rocket::testing::MockRequest;
-use rocket::http::{Method, Status};
+use rocket::local::Client;
+use rocket::http::Status;
 
 fn test(uri: &str, status: Status, body: String) {
     let rocket = rocket::ignite()
         .mount("/", routes![super::hello])
         .catch(errors![super::not_found]);
-    let mut req = MockRequest::new(Method::Get, uri);
-    let mut response = req.dispatch_with(&rocket);
 
+    let client = Client::new(rocket).unwrap();
+    let mut response = client.get(uri).dispatch();
     assert_eq!(response.status(), status);
     assert_eq!(response.body_string(), Some(body));
 }

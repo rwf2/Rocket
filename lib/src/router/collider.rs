@@ -131,6 +131,8 @@ mod tests {
     use std::str::FromStr;
 
     use super::Collider;
+    use rocket::Rocket;
+    use config::Config;
     use request::Request;
     use data::Data;
     use handler::Outcome;
@@ -368,7 +370,8 @@ mod tests {
     fn req_route_mt_collide<S1, S2>(m: Method, mt1: S1, mt2: S2) -> bool
         where S1: Into<Option<&'static str>>, S2: Into<Option<&'static str>>
     {
-        let mut req = Request::new(m, "/");
+        let rocket = Rocket::custom(Config::development().unwrap(), true);
+        let mut req = Request::new(&rocket, m, "/");
         if let Some(mt_str) = mt1.into() {
             if m.supports_payload() {
                 req.replace_header(mt_str.parse::<ContentType>().unwrap());
@@ -425,7 +428,8 @@ mod tests {
     }
 
     fn req_route_path_collide(a: &'static str, b: &'static str) -> bool {
-        let req = Request::new(Get, a.to_string());
+        let rocket = Rocket::custom(Config::development().unwrap(), true);
+        let req = Request::new(&rocket, Get, a.to_string());
         let route = Route::ranked(0, Get, b.to_string(), dummy_handler);
         route.collides_with(&req)
     }

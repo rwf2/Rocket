@@ -4,32 +4,26 @@ use std::fmt;
 use std::str;
 
 use yansi::Paint;
-
 use state::{Container, Storage};
 
-use error::Error;
 use super::{FromParam, FromSegments, FromRequest, Outcome};
 
+use rocket::Rocket;
 use router::Route;
 use config::{Config, Limits};
 use http::uri::{URI, Segments};
-use http::{Method, Header, HeaderMap, Cookies, Session, CookieJar};
+use error::Error;
+use http::{Method, Header, HeaderMap, Cookies, CookieJar};
 use http::{RawStr, ContentType, Accept, MediaType};
 use http::hyper;
 
-struct PresetState<'r> {
-    // The running Rocket instances configuration.
-    config: &'r Config,
-    // The managed state of the running Rocket instance.
-    state: &'r Container,
-}
-
+#[derive(Clone)]
 struct RequestState<'r> {
-    preset: Option<PresetState<'r>>,
+    config: &'r Config,
+    state: &'r Container,
     params: RefCell<Vec<(usize, usize)>>,
     route: Cell<Option<&'r Route>>,
     cookies: RefCell<CookieJar>,
-    session: RefCell<CookieJar>,
     accept: Storage<Option<Accept>>,
     content_type: Storage<Option<ContentType>>,
 }
@@ -41,6 +35,7 @@ struct RequestState<'r> {
 /// [FromRequest](/rocket/request/trait.FromRequest.html) implementations. It
 /// contains all of the information for a given web request except for the body
 /// data. This includes the HTTP method, URI, cookies, headers, and more.
+#[derive(Clone)]
 pub struct Request<'r> {
     method: Method,
     uri: URI<'r>,
@@ -53,33 +48,32 @@ impl<'r> Request<'r> {
     /// Create a new `Request` with the given `method` and `uri`. The `uri`
     /// parameter can be of any type that implements `Into<URI>` including
     /// `&str` and `String`; it must be a valid absolute URI.
-    ///
-    /// # Example
-    ///
-    /// ```rust
-    /// use rocket::Request;
-    /// use rocket::http::Method;
-    ///
-    /// # #[allow(unused_variables)]
-    /// let request = Request::new(Method::Get, "/uri");
-    /// ```
     #[inline(always)]
-    pub fn new<'s: 'r, U: Into<URI<'s>>>(method: Method, uri: U) -> Request<'r> {
+    pub(crate) fn new<'s: 'r, U: Into<URI<'s>>>(rocket: &'r Rocket,
+                                                method: Method,
+                                                uri: U) -> Request<'r> {
         Request {
             method: method,
             uri: uri.into(),
             headers: HeaderMap::new(),
             remote: None,
             state: RequestState {
-                preset: None,
+                config: &rocket.config,
+                state: &rocket.state,
                 route: Cell::new(None),
                 params: RefCell::new(Vec::new()),
                 cookies: RefCell::new(CookieJar::new()),
-                session: RefCell::new(CookieJar::new()),
                 accept: Storage::new(),
                 content_type: Storage::new(),
             }
         }
+    }
+
+    #[doc(hidden)]
+    pub fn example<F: Fn(&mut Request)>(method: Method, uri: &str, f: F) {
+        let rocket = Rocket::custom(Config::development().unwrap(), true);
+        let mut request = Request::new(&rocket, method, uri);
+        f(&mut request);
     }
 
     /// Retrieve the method from `self`.
@@ -87,11 +81,12 @@ impl<'r> Request<'r> {
     /// # Example
     ///
     /// ```rust
-    /// use rocket::Request;
+    /// # use rocket::Request;
     /// use rocket::http::Method;
     ///
-    /// let request = Request::new(Method::Get, "/uri");
+    /// # Request::example(Method::Get, "/uri", |request| {
     /// assert_eq!(request.method(), Method::Get);
+    /// # });
     /// ```
     #[inline(always)]
     pub fn method(&self) -> Method {
@@ -103,14 +98,15 @@ impl<'r> Request<'r> {
     /// # Example
     ///
     /// ```rust
-    /// use rocket::Request;
+    /// # use rocket::Request;
     /// use rocket::http::Method;
     ///
-    /// let mut request = Request::new(Method::Get, "/uri");
+    /// # Request::example(Method::Get, "/uri", |request| {
     /// assert_eq!(request.method(), Method::Get);
     ///
     /// request.set_method(Method::Post);
     /// assert_eq!(request.method(), Method::Post);
+    /// # });
     /// ```
     #[inline(always)]
     pub fn set_method(&mut self, method: Method) {
@@ -122,11 +118,11 @@ impl<'r> Request<'r> {
     /// # Example
     ///
     /// ```rust
-    /// use rocket::Request;
-    /// use rocket::http::Method;
-    ///
-    /// let request = Request::new(Method::Get, "/uri");
+    /// # use rocket::Request;
+    /// # use rocket::http::Method;
+    /// # Request::example(Method::Get, "/uri", |request| {
     /// assert_eq!(request.uri().as_str(), "/uri");
+    /// # });
     /// ```
     #[inline(always)]
     pub fn uri(&self) -> &URI {
@@ -140,13 +136,12 @@ impl<'r> Request<'r> {
     /// # Example
     ///
     /// ```rust
-    /// use rocket::Request;
-    /// use rocket::http::Method;
-    ///
-    /// let mut request = Request::new(Method::Get, "/uri");
-    ///
+    /// # use rocket::Request;
+    /// # use rocket::http::Method;
+    /// # Request::example(Method::Get, "/uri", |mut request| {
     /// request.set_uri("/hello/Sergio?type=greeting");
     /// assert_eq!(request.uri().as_str(), "/hello/Sergio?type=greeting");
+    /// # });
     /// ```
     #[inline(always)]
     pub fn set_uri<'u: 'r, U: Into<URI<'u>>>(&mut self, uri: U) {
@@ -161,11 +156,11 @@ impl<'r> Request<'r> {
     /// # Example
     ///
     /// ```rust
-    /// use rocket::Request;
-    /// use rocket::http::Method;
-    ///
-    /// let request = Request::new(Method::Get, "/uri");
+    /// # use rocket::Request;
+    /// # use rocket::http::Method;
+    /// # Request::example(Method::Get, "/uri", |request| {
     /// assert!(request.remote().is_none());
+    /// # });
     /// ```
     #[inline(always)]
     pub fn remote(&self) -> Option<SocketAddr> {
@@ -179,17 +174,17 @@ impl<'r> Request<'r> {
     /// Set the remote address to be 127.0.0.1:8000:
     ///
     /// ```rust
-    /// use rocket::Request;
-    /// use rocket::http::Method;
+    /// # use rocket::Request;
+    /// # use rocket::http::Method;
     /// use std::net::{SocketAddr, IpAddr, Ipv4Addr};
     ///
-    /// let mut request = Request::new(Method::Get, "/uri");
-    ///
+    /// # Request::example(Method::Get, "/uri", |mut request| {
     /// let (ip, port) = (IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)), 8000);
     /// let localhost = SocketAddr::new(ip, port);
     /// request.set_remote(localhost);
     ///
     /// assert_eq!(request.remote(), Some(localhost));
+    /// # });
     /// ```
     #[inline(always)]
     pub fn set_remote(&mut self, address: SocketAddr) {
@@ -202,12 +197,12 @@ impl<'r> Request<'r> {
     /// # Example
     ///
     /// ```rust
-    /// use rocket::Request;
-    /// use rocket::http::Method;
-    ///
-    /// let request = Request::new(Method::Get, "/uri");
+    /// # use rocket::Request;
+    /// # use rocket::http::Method;
+    /// # Request::example(Method::Get, "/uri", |request| {
     /// let header_map = request.headers();
     /// assert!(header_map.is_empty());
+    /// # });
     /// ```
     #[inline(always)]
     pub fn headers(&self) -> &HeaderMap<'r> {
@@ -219,18 +214,20 @@ impl<'r> Request<'r> {
     /// # Example
     ///
     /// ```rust
-    /// use rocket::Request;
-    /// use rocket::http::{Method, ContentType};
+    /// # use rocket::Request;
+    /// # use rocket::http::Method;
+    /// use rocket::http::ContentType;
     ///
-    /// let mut request = Request::new(Method::Get, "/uri");
+    /// # Request::example(Method::Get, "/uri", |mut request| {
     /// assert!(request.headers().is_empty());
     ///
     /// request.add_header(ContentType::HTML);
     /// assert!(request.headers().contains("Content-Type"));
     /// assert_eq!(request.headers().len(), 1);
+    /// # });
     /// ```
     #[inline(always)]
-    pub fn add_header<H: Into<Header<'r>>>(&mut self, header: H) {
+    pub fn add_header<'h: 'r, H: Into<Header<'h>>>(&mut self, header: H) {
         self.headers.add(header.into());
     }
 
@@ -240,10 +237,11 @@ impl<'r> Request<'r> {
     /// # Example
     ///
     /// ```rust
-    /// use rocket::Request;
-    /// use rocket::http::{Method, ContentType};
+    /// # use rocket::Request;
+    /// # use rocket::http::Method;
+    /// use rocket::http::ContentType;
     ///
-    /// let mut request = Request::new(Method::Get, "/uri");
+    /// # Request::example(Method::Get, "/uri", |mut request| {
     /// assert!(request.headers().is_empty());
     ///
     /// request.add_header(ContentType::Any);
@@ -251,13 +249,14 @@ impl<'r> Request<'r> {
     ///
     /// request.replace_header(ContentType::PNG);
     /// assert_eq!(request.headers().get_one("Content-Type"), Some("image/png"));
+    /// # });
     /// ```
     #[inline(always)]
-    pub fn replace_header<H: Into<Header<'r>>>(&mut self, header: H) {
+    pub fn replace_header<'h: 'r, H: Into<Header<'h>>>(&mut self, header: H) {
         self.headers.replace(header.into());
     }
 
-    /// Returns a borrow to the cookies in `self`.
+    /// Returns a wrapped borrow to the cookies in `self`.
     ///
     /// Note that `Cookies` implements internal mutability, so this method
     /// allows you to get _and_ set cookies in `self`.
@@ -267,38 +266,24 @@ impl<'r> Request<'r> {
     /// Add a new cookie to a request's cookies:
     ///
     /// ```rust
-    /// use rocket::Request;
-    /// use rocket::http::{Cookie, Method};
+    /// # use rocket::Request;
+    /// # use rocket::http::Method;
+    /// use rocket::http::Cookie;
     ///
-    /// let request = Request::new(Method::Get, "/uri");
+    /// # Request::example(Method::Get, "/uri", |mut request| {
     /// request.cookies().add(Cookie::new("key", "val"));
     /// request.cookies().add(Cookie::new("ans", format!("life: {}", 38 + 4)));
+    /// # });
     /// ```
-    #[inline]
     pub fn cookies(&self) -> Cookies {
         match self.state.cookies.try_borrow_mut() {
-            Ok(jar) => Cookies::new(jar),
+            Ok(jar) => Cookies::new(jar, self.state.config.secret_key()),
             Err(_) => {
                 error_!("Multiple `Cookies` instances are active at once.");
                 info_!("An instance of `Cookies` must be dropped before another \
                        can be retrieved.");
                 warn_!("The retrieved `Cookies` instance will be empty.");
                 Cookies::empty()
-            }
-        }
-    }
-
-    #[inline]
-    pub fn session(&self) -> Session {
-        let key = self.preset().config.secret_key();
-        match self.state.session.try_borrow_mut() {
-            Ok(jar) => Session::new(jar, key),
-            Err(_) => {
-                error_!("Multiple `Session` instances are active at once.");
-                info_!("An instance of `Session` must be dropped before another \
-                       can be retrieved.");
-                warn_!("The retrieved `Session` instance will be empty.");
-                Session::empty(key)
             }
         }
     }
@@ -311,20 +296,22 @@ impl<'r> Request<'r> {
     /// # Example
     ///
     /// ```rust
-    /// use rocket::Request;
-    /// use rocket::http::{Method, ContentType};
-    ///
-    /// let mut request = Request::new(Method::Get, "/uri");
+    /// # use rocket::Request;
+    /// # use rocket::http::Method;
+    /// # Request::example(Method::Get, "/uri", |mut request| {
     /// assert_eq!(request.content_type(), None);
+    /// # });
     /// ```
     ///
     /// ```rust
-    /// use rocket::Request;
-    /// use rocket::http::{Method, ContentType};
+    /// # use rocket::Request;
+    /// # use rocket::http::Method;
+    /// use rocket::http::ContentType;
     ///
-    /// let mut request = Request::new(Method::Get, "/uri");
+    /// # Request::example(Method::Get, "/uri", |mut request| {
     /// request.add_header(ContentType::JSON);
     /// assert_eq!(request.content_type(), Some(&ContentType::JSON));
+    /// # });
     /// ```
     #[inline(always)]
     pub fn content_type(&self) -> Option<&ContentType> {
@@ -361,7 +348,7 @@ impl<'r> Request<'r> {
 
     /// Get the limits.
     pub fn limits(&self) -> &'r Limits {
-        &self.preset().config.limits
+        &self.state.config.limits
     }
 
     /// Get the current route, if any.
@@ -463,17 +450,6 @@ impl<'r> Request<'r> {
         Some(Segments(&path[i..j]))
     }
 
-    #[inline(always)]
-    fn preset(&self) -> &PresetState<'r> {
-        match self.state.preset {
-            Some(ref state) => state,
-            None => {
-                error_!("Internal Rocket error: preset state is unset!");
-                panic!("Please report this error to the GitHub issue tracker.");
-            }
-        }
-    }
-
     /// Set `self`'s parameters given that the route used to reach this request
     /// was `route`. This should only be used internally by `Rocket` as improper
     /// use may result in out of bounds indexing.
@@ -490,12 +466,6 @@ impl<'r> Request<'r> {
         self.state.cookies = RefCell::new(jar);
     }
 
-    /// Replace all of the session cookie in `self` with those in `jar`.
-    #[inline]
-    pub(crate) fn set_session(&mut self, jar: CookieJar) {
-        self.state.session = RefCell::new(jar);
-    }
-
     /// Try to derive some guarded value from `self`.
     #[inline(always)]
     pub fn guard<'a, T: FromRequest<'a, 'r>>(&'a self) -> Outcome<T, T::Error> {
@@ -505,17 +475,12 @@ impl<'r> Request<'r> {
     /// Get the managed state T, if it exists. For internal use only!
     #[inline(always)]
     pub(crate) fn get_state<T: Send + Sync + 'static>(&self) -> Option<&'r T> {
-        self.preset().state.try_get()
-    }
-
-    /// Set the precomputed state. For internal use only!
-    #[inline(always)]
-    pub(crate) fn set_preset(&mut self, config: &'r Config, state: &'r Container) {
-        self.state.preset = Some(PresetState { config, state });
+        self.state.state.try_get()
     }
 
     /// Convert from Hyper types into a Rocket Request.
-    pub(crate) fn from_hyp(h_method: hyper::Method,
+    pub(crate) fn from_hyp(rocket: &'r Rocket,
+                           h_method: hyper::Method,
                            h_headers: hyper::header::Headers,
                            h_uri: hyper::RequestUri,
                            h_addr: SocketAddr,
@@ -533,13 +498,12 @@ impl<'r> Request<'r> {
         };
 
         // Construct the request object.
-        let mut request = Request::new(method, uri);
+        let mut request = Request::new(rocket, method, uri);
         request.set_remote(h_addr);
 
         // Set the request cookies, if they exist.
         if let Some(cookie_headers) = h_headers.get_raw("Cookie") {
             let mut cookie_jar = CookieJar::new();
-            let mut session_jar = CookieJar::new();
             for header in cookie_headers {
                 let raw_str = match ::std::str::from_utf8(header) {
                     Ok(string) => string,
@@ -547,16 +511,13 @@ impl<'r> Request<'r> {
                 };
 
                 for cookie_str in raw_str.split(";").map(|s| s.trim()) {
-                    if let Some(cookie) = Session::parse_cookie(cookie_str) {
-                        session_jar.add_original(cookie);
-                    } else if let Some(cookie) = Cookies::parse_cookie(cookie_str) {
+                    if let Some(cookie) = Cookies::parse_cookie(cookie_str) {
                         cookie_jar.add_original(cookie);
                     }
                 }
             }
 
             request.set_cookies(cookie_jar);
-            request.set_session(session_jar);
         }
 
         // Set the rest of the headers.
@@ -572,6 +533,17 @@ impl<'r> Request<'r> {
         }
 
         Ok(request)
+    }
+}
+
+impl<'r> fmt::Debug for Request<'r> {
+    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
+        fmt.debug_struct("Request")
+            .field("method", &self.method)
+            .field("uri", &self.uri)
+            .field("headers", &self.headers())
+            .field("remote", &self.remote())
+            .finish()
     }
 }
 

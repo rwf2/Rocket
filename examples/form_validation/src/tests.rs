@@ -1,24 +1,20 @@
-use rocket::testing::MockRequest;
-use rocket::http::Method::*;
-use rocket::http::{ContentType, Status};
-
 use super::rocket;
+use rocket::local::Client;
+use rocket::http::{ContentType, Status};
 
 fn test_login<T>(user: &str, pass: &str, age: &str, status: Status, body: T)
     where T: Into<Option<&'static str>>
 {
-    let rocket = rocket();
+    let client = Client::new(rocket()).unwrap();
     let query = format!("username={}&password={}&age={}", user, pass, age);
-
-    let mut req = MockRequest::new(Post, "/login")
+    let mut response = client.post("/login")
         .header(ContentType::Form)
-        .body(&query);
+        .body(&query)
+        .dispatch();
 
-    let mut response = req.dispatch_with(&rocket);
     assert_eq!(response.status(), status);
-
-    let body_str = response.body_string();
     if let Some(expected_str) = body.into() {
+        let body_str = response.body_string();
         assert!(body_str.map_or(false, |s| s.contains(expected_str)));
     }
 }
@@ -48,12 +44,12 @@ fn test_invalid_age() {
 }
 
 fn check_bad_form(form_str: &str, status: Status) {
-    let rocket = rocket();
-    let mut req = MockRequest::new(Post, "/login")
+    let client = Client::new(rocket()).unwrap();
+    let response = client.post("/login")
         .header(ContentType::Form)
-        .body(form_str);
+        .body(form_str)
+        .dispatch();
 
-    let response = req.dispatch_with(&rocket);
     assert_eq!(response.status(), status);
 }
 
@@ -82,5 +78,6 @@ fn test_bad_form_missing_fields() {
 
 #[test]
 fn test_bad_form_additional_fields() {
-    check_bad_form("username=Sergio&password=pass&age=30&addition=1", Status::UnprocessableEntity);
+    check_bad_form("username=Sergio&password=pass&age=30&addition=1",
+                   Status::UnprocessableEntity);
 }

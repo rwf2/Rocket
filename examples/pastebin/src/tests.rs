@@ -1,8 +1,6 @@
 use super::{rocket, index};
-use rocket::testing::MockRequest;
-use rocket::http::Method::*;
+use rocket::local::Client;
 use rocket::http::{Status, ContentType};
-use rocket::Rocket;
 
 fn extract_id(from: &str) -> Option<String> {
     from.rfind('/').map(|i| &from[(i + 1)..]).map(|s| s.trim_right().to_string())
@@ -10,56 +8,52 @@ fn extract_id(from: &str) -> Option<String> {
 
 #[test]
 fn check_index() {
-    let rocket = rocket();
+    let client = Client::new(rocket()).unwrap();
 
     // Ensure the index returns what we expect.
-    let mut req = MockRequest::new(Get, "/");
-    let mut response = req.dispatch_with(&rocket);
+    let mut response = client.get("/").dispatch();
     assert_eq!(response.status(), Status::Ok);
     assert_eq!(response.content_type(), Some(ContentType::Plain));
     assert_eq!(response.body_string(), Some(index().into()))
 }
 
-fn upload_paste(rocket: &Rocket, body: &str) -> String {
-    let mut req = MockRequest::new(Post, "/").body(body);
-    let mut response = req.dispatch_with(rocket);
+fn upload_paste(client: &Client, body: &str) -> String {
+    let mut response = client.post("/").body(body).dispatch();
     assert_eq!(response.status(), Status::Ok);
     assert_eq!(response.content_type(), Some(ContentType::Plain));
     extract_id(&response.body_string().unwrap()).unwrap()
 }
 
-
-fn download_paste(rocket: &Rocket, id: &str) -> String {
-    let mut req = MockRequest::new(Get, format!("/{}", id));
-    let mut response = req.dispatch_with(rocket);
+fn download_paste(client: &Client, id: &str) -> String {
+    let mut response = client.get(format!("/{}", id)).dispatch();
     assert_eq!(response.status(), Status::Ok);
     response.body_string().unwrap()
 }
 
 #[test]
 fn pasting() {
-    let rocket = rocket();
+    let client = Client::new(rocket()).unwrap();
 
     // Do a trivial upload, just to make sure it works.
     let body_1 = "Hello, world!";
-    let id_1 = upload_paste(&rocket, body_1);
-    assert_eq!(download_paste(&rocket, &id_1), body_1);
+    let id_1 = upload_paste(&client, body_1);
+    assert_eq!(download_paste(&client, &id_1), body_1);
 
     // Make sure we can keep getting that paste.
-    assert_eq!(download_paste(&rocket, &id_1), body_1);
-    assert_eq!(download_paste(&rocket, &id_1), body_1);
-    assert_eq!(download_paste(&rocket, &id_1), body_1);
+    assert_eq!(download_paste(&client, &id_1), body_1);
+    assert_eq!(download_paste(&client, &id_1), body_1);
+    assert_eq!(download_paste(&client, &id_1), body_1);
 
     // Upload some unicode.
     let body_2 = "こんにちは";
-    let id_2 = upload_paste(&rocket, body_2);
-    assert_eq!(download_paste(&rocket, &id_2), body_2);
+    let id_2 = upload_paste(&client, body_2);
+    assert_eq!(download_paste(&client, &id_2), body_2);
 
     // Make sure we can get both pastes.
-    assert_eq!(download_paste(&rocket, &id_1), body_1);
-    assert_eq!(download_paste(&rocket, &id_2), body_2);
-    assert_eq!(download_paste(&rocket, &id_1), body_1);
-    assert_eq!(download_paste(&rocket, &id_2), body_2);
+    assert_eq!(download_paste(&client, &id_1), body_1);
+    assert_eq!(download_paste(&client, &id_2), body_2);
+    assert_eq!(download_paste(&client, &id_1), body_1);
+    assert_eq!(download_paste(&client, &id_2), body_2);
 
     // Now a longer upload.
     let body_3 = "Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed
@@ -69,8 +63,8 @@ fn pasting() {
         in voluptate velit esse cillum dolore eu fugiat nulla pariatur.
         Excepteur sint occaecat cupidatat non proident, sunt in culpa qui
         officia deserunt mollit anim id est laborum.";
-    let id_3 = upload_paste(&rocket, body_3);
-    assert_eq!(download_paste(&rocket, &id_3), body_3);
-    assert_eq!(download_paste(&rocket, &id_1), body_1);
-    assert_eq!(download_paste(&rocket, &id_2), body_2);
+    let id_3 = upload_paste(&client, body_3);
+    assert_eq!(download_paste(&client, &id_3), body_3);
+    assert_eq!(download_paste(&client, &id_1), body_1);
+    assert_eq!(download_paste(&client, &id_2), body_2);
 }

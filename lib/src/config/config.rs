@@ -8,7 +8,8 @@ use std::env;
 use super::custom_values::*;
 use {num_cpus, base64};
 use config::Environment::*;
-use config::{Result, Table, Value, ConfigBuilder, Environment, ConfigError};
+use config::{Result, ConfigBuilder, Environment, ConfigError};
+use config::{Table, Value, Array, Datetime};
 use logger::LoggingLevel;
 use http::Key;
 
@@ -112,6 +113,69 @@ impl Config {
         Config::default(env, cwd.as_path().join("Rocket.custom.toml"))
     }
 
+    /// Returns a builder for `Config` structure where the default parameters
+    /// are set to those of the development environment. The root configuration
+    /// directory is set to the current working directory.
+    ///
+    /// # Errors
+    ///
+    /// If the current directory cannot be retrieved, a `BadCWD` error is
+    /// returned.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use rocket::config::{Config, Environment};
+    ///
+    /// let mut my_config = Config::development().unwrap();
+    /// my_config.set_port(1001);
+    /// ```
+    pub fn development() -> Result<Config> {
+        Config::new(Environment::Development)
+    }
+
+    /// Creates a new configuration using the default parameters from the
+    /// staging environment. The root configuration directory is set to the
+    /// current working directory.
+    ///
+    /// # Errors
+    ///
+    /// If the current directory cannot be retrieved, a `BadCWD` error is
+    /// returned.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use rocket::config::{Config, Environment};
+    ///
+    /// let mut my_config = Config::staging().expect("cwd");
+    /// my_config.set_port(1001);
+    /// ```
+    pub fn staging() -> Result<Config> {
+        Config::new(Environment::Staging)
+    }
+
+    /// Creates a new configuration using the default parameters from the
+    /// production environment. The root configuration directory is set to the
+    /// current working directory.
+    ///
+    /// # Errors
+    ///
+    /// If the current directory cannot be retrieved, a `BadCWD` error is
+    /// returned.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use rocket::config::{Config, Environment};
+    ///
+    /// let mut my_config = Config::production().expect("cwd");
+    /// my_config.set_port(1001);
+    /// ```
+    pub fn production() -> Result<Config> {
+        Config::new(Environment::Production)
+    }
+
     /// Returns the default configuration for the environment `env` given that
     /// the configuration was stored at `config_path`. If `config_path` is not
     /// an absolute path, an `Err` of `ConfigError::BadFilePath` is returned.
@@ -128,8 +192,8 @@ impl Config {
                 "Configuration files must be rooted in a directory."));
         }
 
-        // Note: This may truncate if num_cpus::get() > u16::max. That's okay.
-        let default_workers = ::std::cmp::max(num_cpus::get(), 2) as u16;
+        // Note: This may truncate if num_cpus::get() / 2 > u16::max. That's okay.
+        let default_workers = (num_cpus::get() * 2) as u16;
 
         // Use a generated secret key by default.
         let key = SecretKey::Generated(Key::generate());
@@ -599,9 +663,9 @@ impl Config {
     ///
     /// assert!(config.get_slice("numbers").is_ok());
     /// ```
-    pub fn get_slice(&self, name: &str) -> Result<&[Value]> {
+    pub fn get_slice(&self, name: &str) -> Result<&Array> {
         let val = self.extras.get(name).ok_or_else(|| ConfigError::NotFound)?;
-        val.as_slice().ok_or_else(|| self.bad_type(name, val.type_str(), "a slice"))
+        val.as_array().ok_or_else(|| self.bad_type(name, val.type_str(), "an array"))
     }
 
     /// Attempts to retrieve the extra named `name` as a table.
@@ -632,6 +696,32 @@ impl Config {
         val.as_table().ok_or_else(|| self.bad_type(name, val.type_str(), "a table"))
     }
 
+    /// Attempts to retrieve the extra named `name` as a datetime value.
+    ///
+    /// # Errors
+    ///
+    /// If an extra with `name` doesn't exist, returns an `Err` of `NotFound`.
+    /// If an extra with `name` _does_ exist but is not a datetime, returns a
+    /// `BadType` error.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use rocket::config::{Config, Environment, Value, Datetime};
+    ///
+    /// let date = "1979-05-27T00:32:00-07:00".parse::<Datetime>().unwrap();
+    ///
+    /// let config = Config::build(Environment::Staging)
+    ///     .extra("my_date", Value::Datetime(date.clone()))
+    ///     .unwrap();
+    ///
+    /// assert_eq!(config.get_datetime("my_date"), Ok(&date));
+    /// ```
+    pub fn get_datetime(&self, name: &str) -> Result<&Datetime> {
+        let v = self.extras.get(name).ok_or_else(|| ConfigError::NotFound)?;
+        v.as_datetime().ok_or_else(|| self.bad_type(name, v.type_str(), "a datetime"))
+    }
+
     /// Returns the path at which the configuration file for `self` is stored.
     /// For instance, if the configuration file is at `/tmp/Rocket.toml`, the
     /// path `/tmp` is returned.
@@ -658,7 +748,8 @@ impl Config {
 impl fmt::Debug for Config {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "Config[{}] {{ address: {}, port: {}, workers: {}, log: {:?}",
-               self.environment, self.address, self.port, self.workers, self.log_level)?;
+               self.environment, self.address, self.port, self.workers,
+               self.log_level)?;
 
         for (key, value) in self.extras() {
             write!(f, ", {}: {}", key, value)?;
