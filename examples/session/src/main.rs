@@ -4,6 +4,9 @@
 extern crate rocket_contrib;
 extern crate rocket;
 
+#[cfg(test)]
+mod tests;
+
 use std::collections::HashMap;
 
 use rocket::Outcome;
