@@ -116,6 +116,8 @@ extern crate memchr;
 extern crate base64;
 extern crate smallvec;
 extern crate ordermap;
+extern crate serde;
+#[macro_use] extern crate serde_derive;
 
 #[cfg(test)] #[macro_use] extern crate lazy_static;
 

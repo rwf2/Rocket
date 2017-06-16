@@ -76,7 +76,7 @@ pub struct TlsConfig;
 ///     .limit("forms", 64 * 1024)
 ///     .limit("json", 3 * 1024 * 1024);
 /// ```
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Deserialize)]
 pub struct Limits {
     // We cache this internally but don't share that fact in the API.
     pub(crate) forms: u64,
