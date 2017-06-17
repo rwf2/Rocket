@@ -113,7 +113,7 @@ mod benches {
         // Hold all of the requests we're going to make during the benchmark.
         let mut requests = vec![];
         for route in client.rocket().routes() {
-            let request = client.req(route.method, route.path.path());
+            let request = client.req(route.method, route.uri.path());
             requests.push(request);
         }
 
