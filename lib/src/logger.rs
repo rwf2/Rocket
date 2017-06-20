@@ -9,7 +9,7 @@ use yansi::Color::*;
 struct RocketLogger(LoggingLevel);
 
 /// Defines the different levels for log messages.
-#[derive(PartialEq, Eq, Debug, Clone, Copy)]
+#[derive(PartialEq, Eq, Debug, Clone, Copy, Deserialize)]
 pub enum LoggingLevel {
     /// Only shows errors and warning.
     Critical,

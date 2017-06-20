@@ -805,3 +805,124 @@ impl PartialEq for Config {
             && self.extras == other.extras
     }
 }
+
+impl<'de> ::serde::de::Deserialize<'de> for Config {
+    fn deserialize<D>(deserializer: D) -> ::std::result::Result<Self, D::Error>
+        where D: ::serde::de::Deserializer<'de>
+    {
+        struct ConfigVisitor;
+
+        #[derive(Deserialize)]
+        struct TlsRawConfig {
+            certs: String,
+            key: String,
+        }
+
+        impl<'de> ::serde::de::Visitor<'de> for ConfigVisitor {
+            type Value = Config;
+
+            fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+                formatter.write_str("struct Config")
+            }
+
+            fn visit_map<V>(self, mut map: V) -> ::std::result::Result<Config, V::Error>
+                where V: ::serde::de::MapAccess<'de>
+            {
+                let mut environment: Option<Environment> = None;
+                let mut address: Option<String> = None;
+                let mut port: Option<u16> = None;
+                let mut workers: Option<u16> = None;
+                let mut log_level: Option<LoggingLevel> = None;
+                let mut secret_key: Option<String> = None;
+                let mut tls: Option<TlsRawConfig> = None;
+                let mut limits: Option<Limits> = None;
+                let mut extras = HashMap::<String, Value>::new();
+
+                while let Some(key) = map.next_key::<String>()?.as_ref() {
+                    let key: &str = &*key;
+                    match key {
+                        "environment" => {
+                            let env_str: String = map.next_value()?;
+                            environment = Some(env_str.parse().map_err(|_| {
+                                ::serde::de::Error::invalid_value(::serde::de::Unexpected::Str(&env_str), &self)
+                            })?);
+                        },
+
+                        "address" => {
+                            address = map.next_value()?;
+                        },
+
+                        "port" => {
+                            port = map.next_value()?;
+                        },
+
+                        "workers" => {
+                            workers = map.next_value()?;
+                        }
+
+                        "log_level" => {
+                            log_level = map.next_value()?;
+                        }
+
+                        "secret_key" => {
+                            secret_key = map.next_value()?;
+                        }
+
+                        "tls" => {
+                            tls = map.next_value()?;
+                        }
+
+                        "limits" => {
+                            limits = map.next_value()?;
+                        }
+
+                        _ => {
+                            extras.insert(key.into(), map.next_value()?);
+                        }
+                    }
+                }
+
+                // FIXME: Remove unwrap
+                let mut config = Config::new(
+                    environment.unwrap_or_else(|| Environment::active().unwrap())).unwrap();
+
+                config.set_extras(extras);
+
+                if let Some(address) = address {
+                    // FIXME: Remove unwrap
+                    config.set_address(address).unwrap();
+                }
+
+                if let Some(port) = port {
+                    config.set_port(port);
+                }
+
+                if let Some(workers) = workers {
+                    config.set_workers(workers);
+                }
+
+                if let Some(log_level) = log_level {
+                    config.set_log_level(log_level);
+                }
+
+                if let Some(secret_key) = secret_key {
+                    // FIXME: Remove unwrap
+                    config.set_secret_key(secret_key).unwrap();
+                }
+
+                if let Some(tls) = tls {
+                    // FIXME: Remove unwrap
+                    config.set_tls(&tls.certs, &tls.key).unwrap();
+                }
+
+                if let Some(limits) = limits {
+                    config.set_limits(limits);
+                }
+
+                Ok(config)
+            }
+        }
+
+        deserializer.deserialize_map(ConfigVisitor)
+    }
+}
