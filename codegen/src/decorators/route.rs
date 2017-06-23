@@ -269,6 +269,7 @@ fn generic_route_decorator(known_method: Option<Spanned<Method>>,
     // function as its handler. A proper Rocket route will be created from this.
     let struct_name = user_fn_name.prepend(ROUTE_STRUCT_PREFIX);
     let (path, method, media_type, rank) = route.explode(ecx);
+    let handler_name = user_fn_name.to_string();
     let static_route_info_item =  quote_item!(ecx,
         /// Rocket code generated static route information structure.
         #[allow(non_upper_case_globals)]
@@ -277,6 +278,7 @@ fn generic_route_decorator(known_method: Option<Spanned<Method>>,
                 method: $method,
                 path: $path,
                 handler: $route_fn_name,
+                handler_name: $handler_name,
                 format: $media_type,
                 rank: $rank,
             };

@@ -6,6 +6,7 @@ pub struct StaticRouteInfo {
     pub path: &'static str,
     pub format: Option<MediaType>,
     pub handler: Handler,
+    pub handler_name: &'static str,
     pub rank: Option<isize>,
 }
 
