@@ -172,10 +172,10 @@ we expected.
 
 A version of this example's complete crate, ready to `cargo run`, can be found
 on
-[GitHub](https://github.com/SergioBenitez/Rocket/tree/v0.2.8/examples/hello_world).
+[GitHub](https://github.com/SergioBenitez/Rocket/tree/v0.3.0/examples/hello_world).
 You can find dozens of other complete examples, spanning all of Rocket's
 features, in the [GitHub examples
-directory](https://github.com/SergioBenitez/Rocket/tree/v0.2.8/examples/).
+directory](https://github.com/SergioBenitez/Rocket/tree/v0.3.0/examples/).
 
 ## Configuration
 

@@ -403,4 +403,4 @@ through some of them to get a better feel for Rocket. Here are some ideas:
 
 You can find the full source code for the completed pastebin tutorial in the
 [Rocket Github
-Repo](https://github.com/SergioBenitez/Rocket/tree/v0.2.8/examples/pastebin).
+Repo](https://github.com/SergioBenitez/Rocket/tree/v0.3.0/examples/pastebin).

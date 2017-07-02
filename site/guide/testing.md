@@ -107,7 +107,7 @@ assert_eq!(body_str, Some("Hello, world!".to_string()));
 
 That's it! Run the tests with `cargo test`. The complete application, with
 testing, can be found in the [GitHub testing
-example](https://github.com/SergioBenitez/Rocket/tree/v0.2.8/examples/testing).
+example](https://github.com/SergioBenitez/Rocket/tree/v0.3.0/examples/testing).
 
 ## Codegen Debug
 
