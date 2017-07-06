@@ -70,6 +70,12 @@ struct FieldNamedV<'r> {
     v: &'r RawStr,
 }
 
+#[derive(Debug, PartialEq, FromForm)]
+struct FieldNamedVDotV<'r> {
+    #[form(field = "v.v")]
+    v_dot_v: &'r RawStr,
+}
+
 fn parse<'f, T: FromForm<'f>>(string: &'f str, strict: bool) -> Option<T> {
     let mut items = FormItems::from(string);
     let result = T::from_form(items.by_ref(), strict);
@@ -176,6 +182,9 @@ fn main() {
 
     let manual: Option<FieldNamedV> = lenient("c=abcddef&v=abc&a=123");
     assert_eq!(manual, Some(FieldNamedV { v: "abc".into() }));
+
+    let manual: Option<FieldNamedVDotV> = lenient("v.v=123");
+    assert_eq!(manual, Some(FieldNamedVDotV { v_dot_v: "123".into() }));
 
     // Check default values (bool) with lenient parsing.
     let manual: Option<UnpresentCheckboxTwo> = lenient("something=hello");
