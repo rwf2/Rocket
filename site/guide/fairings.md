@@ -6,14 +6,14 @@ about incoming requests and outgoing responses.
 
 ## Overview
 
-A _fairing_ is a special name for a type that implements the [`Fairing`] trait.
-Fairings receive callbacks from Rocket when certain events, like that of an
-incoming request, occur. Rocket passes information about the event to the
+_Fairing_ is a name we give to types that implements the [`Fairing`] trait.
+Fairings hook into the request cycle of Rocket, receiving callbacks for events
+such as incoming requests. Rocket passes information about the event to the
 fairing, and the fairing can do what it wants with the information. This
 includes rewriting data when applicable, recording information about the event
 or data, or doing nothing at all.
 
-Fairings are a lot like middleware in other frameworks with a few key
+Fairings are a lot like the middleware in other frameworks but with a few key
 distinctions:
 
   * Fairings **cannot** terminate or respond to an incoming request directly.
@@ -22,19 +22,17 @@ distinctions:
   * Fairings _can_ inspect and modify the application's configuration.
 
 If you are familiar with middleware from other frameworks, you may find yourself
-reaching for fairings instinctively. Before doing so, consider whether Rocket
-provides a better solution to your problem: While middleware may be the best
-solution to a problem in another framework, it is often a suboptimal solution in
-Rocket. Rocket provides richer mechanisms such as [request guards] and [data
-guards] that can be used to solve problems in a cleaner, more composable, and
-more robust manner.
+reaching for fairings instinctively. Rocket provides a rich set of mechanisms
+such as [request guards] and [data guards] that can be used to solve problems
+in a cleaner, composable, and robust manner. Before considering fairings,
+consider whether Rocket provides a better solution to your problem.
 
 As a general rule of thumb, only _globally applicable_ actions should be
-effected through fairings. You should _not_ use a fairing to implement
-authentication or authorization (preferring to use a [request guard] instead)
-_unless_ the authentication or authorization applies to the entire application.
-On the other hand, you _should_ use a fairing to record timing and/or usage
-statistics or global security policies.
+effected through fairings. There are better mechanisms (such as [request guard])
+for implementing things like authentication or authorization _unless_ the
+authentication or authorization applies to the entire application. On the other
+hand, fairings are great for tasks such as recording the timing and/or usage
+statistics, or implementing global security policies.
 
 [`Fairing`]: https://api.rocket.rs/rocket/fairing/trait.Fairing.html
 [request guard]: /guide/requests/#request-guards
