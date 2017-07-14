@@ -193,8 +193,8 @@ impl<'r> Responder<'r> for &'r str {
 
 /// Returns a response with Content-Type `text/plain` and a fixed-size body
 /// containing the string `self`. Always returns `Ok`.
-impl Responder<'static> for String {
-    fn respond_to(self, _: &Request) -> Result<Response<'static>, Status> {
+impl<'r> Responder<'r> for String {
+    fn respond_to(self, _: &Request) -> Result<Response<'r>, Status> {
         Response::build()
             .header(ContentType::Plain)
             .sized_body(Cursor::new(self))
@@ -203,15 +203,15 @@ impl Responder<'static> for String {
 }
 
 /// Returns a response with a sized body for the file. Always returns `Ok`.
-impl Responder<'static> for File {
-    fn respond_to(self, _: &Request) -> Result<Response<'static>, Status> {
+impl<'r> Responder<'r> for File {
+    fn respond_to(self, _: &Request) -> Result<Response<'r>, Status> {
         Response::build().streamed_body(self).ok()
     }
 }
 
 /// Returns an empty, default `Response`. Always returns `Ok`.
-impl Responder<'static> for () {
-    fn respond_to(self, _: &Request) -> Result<Response<'static>, Status> {
+impl<'r> Responder<'r> for () {
+    fn respond_to(self, _: &Request) -> Result<Response<'r>, Status> {
         Ok(Response::new())
     }
 }
