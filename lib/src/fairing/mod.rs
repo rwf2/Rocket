@@ -283,7 +283,7 @@ pub trait Fairing: Send + Sync + 'static {
     ///     fn info(&self) -> Info {
     ///         Info {
     ///             name: "My Custom Fairing",
-    ///             kind: Kind::Attach | Kind::Launch | Kind::Response
+    ///             kind: Kind::Launch | Kind::Response
     ///         }
     ///     }
     /// }
