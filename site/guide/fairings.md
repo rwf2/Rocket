@@ -192,7 +192,7 @@ documentation](https://api.rocket.rs/rocket/fairing/trait.Fairing.html#example).
 
 For simple occasions, implementing the `Fairing` trait can be cumbersome. This
 is why Rocket provides the [`AdHoc`] type, which creates a fairing from a simple
-function or clusure. Using the `AdHoc` type is easy: simply call the
+function or closure. Using the `AdHoc` type is easy: simply call the
 `on_attach`, `on_launch`, `on_request`, or `on_response` constructors on `AdHoc`
 to create an `AdHoc` structure from a function or closure.
 
