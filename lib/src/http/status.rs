@@ -61,7 +61,7 @@ impl StatusClass {
 /// let ok = Status::Ok;
 /// ```
 ///
-/// A status of `400 Not Found` can be insantiated via the `NotFound` constant:
+/// A status of `404 Not Found` can be insantiated via the `NotFound` constant:
 ///
 /// ```rust
 /// use rocket::http::Status;
