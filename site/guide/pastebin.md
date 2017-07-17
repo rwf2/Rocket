@@ -57,7 +57,7 @@ And finally, create a skeleton Rocket application to work off of in
 extern crate rocket;
 
 fn main() {
-    rocket::ignite().launch()
+    rocket::ignite().launch();
 }
 ```
 
