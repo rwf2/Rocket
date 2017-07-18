@@ -52,7 +52,7 @@ impl StatusClass {
 ///
 /// ## Example
 ///
-/// A status of `200 OK` can be insantiated via the `Ok` constant:
+/// A status of `200 OK` can be instantiated via the `Ok` constant:
 ///
 /// ```rust
 /// use rocket::http::Status;
@@ -61,7 +61,7 @@ impl StatusClass {
 /// let ok = Status::Ok;
 /// ```
 ///
-/// A status of `404 Not Found` can be insantiated via the `NotFound` constant:
+/// A status of `404 Not Found` can be instantiated via the `NotFound` constant:
 ///
 /// ```rust
 /// use rocket::http::Status;
