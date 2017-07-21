@@ -166,6 +166,7 @@ impl Template {
         })
     }
 
+    /// Returns the path to the template root directory
     pub fn root(config: &Config) -> PathBuf {
         let mut template_root = config.root().join(DEFAULT_TEMPLATE_DIR);
         match config.get_str("template_dir") {
