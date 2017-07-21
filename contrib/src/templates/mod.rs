@@ -8,7 +8,6 @@ mod engine;
 mod context;
 
 use self::engine::{Engine, Engines};
-use self::context::Context;
 use self::serde::Serialize;
 use self::serde_json::{Value, to_value};
 use self::glob::glob;
@@ -16,11 +15,13 @@ use self::glob::glob;
 use std::borrow::Cow;
 use std::path::{Path, PathBuf};
 
-use rocket::State;
+use rocket::{Config, State};
 use rocket::request::Request;
 use rocket::fairing::{Fairing, AdHoc};
 use rocket::response::{self, Content, Responder};
 use rocket::http::{ContentType, Status};
+
+pub use self::context::Context;
 
 const DEFAULT_TEMPLATE_DIR: &'static str = "templates";
 
@@ -158,21 +159,24 @@ impl Template {
     /// ```
     pub fn fairing() -> impl Fairing {
         AdHoc::on_attach(|rocket| {
-            let mut template_root = rocket.config().root().join(DEFAULT_TEMPLATE_DIR);
-            match rocket.config().get_str("template_dir") {
-                Ok(dir) => template_root = rocket.config().root().join(dir),
-                Err(ref e) if !e.is_not_found() => {
-                    e.pretty_print();
-                    warn_!("Using default directory '{:?}'", template_root);
-                }
-                Err(_) => {  }
-            };
-
-            match Context::initialize(template_root) {
+            match Context::initialize(Self::root(rocket.config())) {
                 Some(ctxt) => Ok(rocket.manage(ctxt)),
                 None => Err(rocket)
             }
         })
+    }
+
+    pub fn root(config: &Config) -> PathBuf {
+        let mut template_root = config.root().join(DEFAULT_TEMPLATE_DIR);
+        match config.get_str("template_dir") {
+            Ok(dir) => template_root = config.root().join(dir),
+            Err(ref e) if !e.is_not_found() => {
+                e.pretty_print();
+                warn_!("Using default directory '{:?}'", template_root);
+            }
+            Err(_) => {  }
+        };
+        template_root
     }
 
     /// Render the template named `name` with the context `context`. The

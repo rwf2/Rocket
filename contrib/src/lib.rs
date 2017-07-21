@@ -67,7 +67,7 @@ pub use msgpack::{MsgPack, MsgPackError};
 mod templates;
 
 #[cfg(feature = "templates")]
-pub use templates::Template;
+pub use templates::{Template, Context as TemplateContext};
 
 #[cfg(feature = "uuid")]
 mod uuid;
