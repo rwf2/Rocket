@@ -3,7 +3,16 @@ extern crate serde_json;
 extern crate glob;
 
 #[cfg(feature = "tera_templates")] mod tera_templates;
+
+#[cfg(feature = "tera_templates")] 
+pub use self::tera_templates::{tera, Tera};
+
 #[cfg(feature = "handlebars_templates")] mod handlebars_templates;
+
+#[cfg(feature = "handlebars_templates")]
+pub use self::handlebars_templates::{handlebars, Handlebars};
+
+
 mod engine;
 mod context;
 
@@ -22,6 +31,8 @@ use rocket::response::{self, Content, Responder};
 use rocket::http::{ContentType, Status};
 
 pub use self::context::Context;
+
+
 
 const DEFAULT_TEMPLATE_DIR: &'static str = "templates";
 

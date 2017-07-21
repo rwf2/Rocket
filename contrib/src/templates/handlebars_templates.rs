@@ -1,4 +1,4 @@
-extern crate handlebars;
+pub extern crate handlebars;
 
 use super::serde::Serialize;
 use super::{Engine, TemplateInfo};
