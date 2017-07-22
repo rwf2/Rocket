@@ -1,4 +1,4 @@
-//! Contains types that set the status code and correspoding headers of a
+//! Contains types that set the status code and corresponding headers of a
 //! response.
 //!
 //! These types are designed to make it easier to respond correctly with a given
