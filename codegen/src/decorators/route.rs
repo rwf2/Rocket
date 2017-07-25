@@ -77,6 +77,7 @@ impl RouteGenerateExt for RouteParams {
             let $name: $ty = {
                 let mut items = ::rocket::request::FormItems::from($form_string);
                 let form = ::rocket::request::FromForm::from_form(items.by_ref(), true);
+                #[allow(unreachable_patterns)]
                 let obj = match form {
                     Ok(v) => v,
                     Err(_) => return ::rocket::Outcome::Forward(__data)
@@ -162,6 +163,7 @@ impl RouteGenerateExt for RouteParams {
 
             let original_ident = param.ident();
             fn_param_statements.push(quote_stmt!(ecx,
+                #[allow(unreachable_patterns)]
                 let $ident: $ty = match $expr {
                     Ok(v) => v,
                     Err(e) => {
