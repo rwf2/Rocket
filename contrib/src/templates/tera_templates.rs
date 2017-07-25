@@ -41,8 +41,8 @@ impl Engine for Tera {
             Ok(string) => Some(string),
             Err(e) => {
                 error_!("Error rendering Tera template '{}'.", name);
-                for error in e.iter().skip(1) {
-                    error_!("{}.", error);
+                for error in e.iter() {
+                    error_!("{}", error);
                 }
 
                 None
