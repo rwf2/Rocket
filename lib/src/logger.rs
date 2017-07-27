@@ -143,6 +143,8 @@ impl Log for RocketLogger {
 pub fn try_init(level: LoggingLevel, verbose: bool) {
     if !::isatty::stdout_isatty() {
         Paint::disable();
+    } else if cfg!(windows) {
+        Paint::enable_windows_ascii();
     }
 
     let result = log::set_logger(|max_log_level| {

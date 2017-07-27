@@ -72,7 +72,6 @@ impl hyper::Handler for Rocket {
         };
 
         // Dispatch the request to get a response, then write that response out.
-        // let req = UnsafeCell::new(req);
         let response = self.dispatch(&mut req, data);
         self.issue_response(response, res)
     }

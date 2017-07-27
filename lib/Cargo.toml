@@ -18,7 +18,7 @@ categories = ["web-programming::http-server"]
 tls = ["rustls", "hyper-sync-rustls"]
 
 [dependencies]
-yansi = { version = "0.3", features = ["nightly"] }
+yansi = { version = "0.3.1", features = ["nightly"] }
 log = "0.3"
 url = "1"
 toml = "0.4.2"
