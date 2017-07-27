@@ -4,7 +4,7 @@ extern crate glob;
 
 #[cfg(feature = "tera_templates")] mod tera_templates;
 
-#[cfg(feature = "tera_templates")] 
+#[cfg(feature = "tera_templates")]
 pub use self::tera_templates::{tera, Tera};
 
 #[cfg(feature = "handlebars_templates")] mod handlebars_templates;
