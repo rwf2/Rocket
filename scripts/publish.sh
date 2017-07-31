@@ -7,12 +7,12 @@ set -e
 
 # Brings in: ROOT_DIR, EXAMPLES_DIR, LIB_DIR, CODEGEN_DIR, CONTRIB_DIR, DOC_DIR
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
-source "$SCRIPT_DIR/config.sh"
+source "${SCRIPT_DIR}/config.sh"
 
-#if ! [ -z "$(git status --porcelain)" ]; then
-#  echo "There are uncommited changes! Aborting."
-#  exit 1
-#fi
+if ! [ -z "$(git status --porcelain)" ]; then
+  echo "There are uncommited changes! Aborting."
+  exit 1
+fi
 
 # Ensure everything passes before trying to publish.
 echo ":::: Running test suite..."
