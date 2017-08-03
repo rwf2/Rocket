@@ -22,6 +22,7 @@ impl Engine for Tera {
         // Finally try to tell Tera about all of the templates.
         if let Err(e) = tera.add_template_files(tera_templates) {
             error!("Failed to initialize Tera templating.");
+            info_!("Description: {}", e.description());
             for error in e.iter() {
                 info_!("{}", error);
             }
