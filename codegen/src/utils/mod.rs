@@ -112,14 +112,14 @@ pub fn strip_ty_lifetimes(ty: P<Ty>) -> P<Ty> {
 
 // Lifted from Rust's lexer, except this takes a `char`, not an `Option<char>`.
 fn ident_start(c: char) -> bool {
-    (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || c == '_' ||
+    (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || c == '_' || c == '.' ||
     (c > '\x7f' && c.is_xid_start())
 }
 
 // Lifted from Rust's lexer, except this takes a `char`, not an `Option<char>`.
 fn ident_continue(c: char) -> bool {
     (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9') ||
-    c == '_' || (c > '\x7f' && c.is_xid_continue())
+    c == '_' || c == '.' || (c > '\x7f' && c.is_xid_continue())
 }
 
 pub fn is_valid_ident<S: AsRef<str>>(s: S) -> bool {
