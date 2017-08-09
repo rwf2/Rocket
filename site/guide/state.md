@@ -242,7 +242,7 @@ single connection from the managed connection pool. We create a new type,
 `DbConn`, that wraps an `r2d2` pooled connection. We then implement
 `FromRequest` for `DbConn` so that we can use it as a request guard. Finally, we
 implement `Deref` with a target of `SqliteConnection` so that we can
-transparently use an `&DbConn` as an `&SqliteConnection`.
+transparently use an `&*DbConn` as an `&SqliteConnection`.
 
 ```rust
 use std::ops::Deref;
@@ -289,7 +289,7 @@ array of some `Task` structures that are fetched from a database:
 #[get("/tasks")]
 fn get_tasks(conn: DbConn) -> QueryResult<Json<Vec<Task>>> {
     all_tasks.order(tasks::id.desc())
-        .load::<Task>(&conn)
+        .load::<Task>(&*conn)
         .map(|tasks| Json(tasks))
 }
 ```
