@@ -22,8 +22,11 @@ following:**
     You can also run the migrations manually with the following commands:
 
     ```
-    cargo install diesel_cli                      # install diesel CLI tools
-    DATABASE_URL=db/db.sql diesel migration run   # create db/db.sql
+    # install diesel CLI tools
+    cargo install diesel_cli --no-default-features --features sqlite
+
+    # create db/db.sql
+    DATABASE_URL=db/db.sql diesel migration run   
     ```
 
   2. A `DATABASE_URL` environment variable is set that points to the SQLite
