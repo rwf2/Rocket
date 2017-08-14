@@ -2,7 +2,6 @@ use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 
 use config::{Result, Config, Value, Environment, Limits, LoggingLevel};
-use config::toml_ext::IntoValue;
 
 /// Structure following the builder pattern for building `Config` structures.
 #[derive(Clone)]
@@ -245,9 +244,9 @@ impl ConfigBuilder {
 
     /// Adds an extra configuration parameter with `name` and `value` to the
     /// configuration being built. The value can be any type that implements
-    /// [IntoValue](/rocket/config/trait.IntoValue.html) including `&str`,
-    /// `String`, `Vec<V: IntoValue>`, `HashMap<S: Into<String>, V: IntoValue>`,
-    /// and all integer and float types.
+    /// `Into<Value>` including `&str`, `String`, `Vec<V: Into<Value>>`,
+    /// `HashMap<S: Into<String>, V: Into<Value>>`, and most integer and float
+    /// types.
     ///
     /// # Example
     ///
@@ -262,8 +261,8 @@ impl ConfigBuilder {
     /// assert_eq!(config.get_float("pi"), Ok(3.14));
     /// assert_eq!(config.get_str("custom_dir"), Ok("/a/b/c"));
     /// ```
-    pub fn extra<V: IntoValue>(mut self, name: &str, value: V) -> Self {
-        self.extras.insert(name.into(), value.into_value());
+    pub fn extra<V: Into<Value>>(mut self, name: &str, value: V) -> Self {
+        self.extras.insert(name.into(), value.into());
         self
     }
 

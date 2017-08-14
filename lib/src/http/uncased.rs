@@ -55,6 +55,25 @@ impl UncasedStr {
     pub fn as_str(&self) -> &str {
         &self.0
     }
+
+    /// Converts a `Box<UncasedStr>` into an `Uncased` without copying or allocating.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use rocket::http::uncased::Uncased;
+    ///
+    /// let uncased = Uncased::new("Hello!");
+    /// let boxed = uncased.clone().into_boxed_uncased();
+    /// assert_eq!(boxed.into_uncased(), uncased);
+    /// ```
+    #[inline(always)]
+    pub fn into_uncased(self: Box<UncasedStr>) -> Uncased<'static> {
+        unsafe {
+            let raw_str = Box::into_raw(self) as *mut str;
+            Uncased::from(Box::from_raw(raw_str).into_string())
+        }
+    }
 }
 
 impl PartialEq for UncasedStr {
@@ -170,6 +189,24 @@ impl<'s> Uncased<'s> {
     #[inline(always)]
     pub fn into_string(self) -> String {
         self.string.into_owned()
+    }
+
+    /// Converts `self` into a `Box<UncasedStr>`.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use rocket::http::uncased::Uncased;
+    ///
+    /// let boxed = Uncased::new("Content-Type").into_boxed_uncased();
+    /// assert_eq!(&*boxed, "content-type");
+    /// ```
+    #[inline(always)]
+    pub fn into_boxed_uncased(self) -> Box<UncasedStr> {
+        unsafe {
+            let raw_str = Box::into_raw(self.string.into_owned().into_boxed_str());
+            Box::from_raw(raw_str as *mut UncasedStr)
+        }
     }
 
     /// Returns the inner `Cow`.

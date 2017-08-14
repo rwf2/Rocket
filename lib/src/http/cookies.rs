@@ -132,6 +132,13 @@ impl<'a> Cookies<'a> {
         Cookie::parse_encoded(cookie_str).map(|c| c.into_owned()).ok()
     }
 
+    /// Adds an original `cookie` to this collection.
+    pub(crate) fn add_original(&mut self, cookie: Cookie<'static>) {
+        if let Cookies::Jarred(ref mut jar, _) = *self {
+            jar.add_original(cookie)
+        }
+    }
+
     /// Returns a reference to the `Cookie` inside this container with the name
     /// `name`. If no such cookie exists, returns `None`.
     ///

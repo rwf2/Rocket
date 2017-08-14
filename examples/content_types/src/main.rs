@@ -21,22 +21,22 @@ struct Person {
 // preferred media type in the Accept header is matched against the `format` in
 // the route attribute.
 #[get("/<name>/<age>", format = "application/json")]
-fn get_hello(name: String, age: u8) -> content::JSON<String> {
+fn get_hello(name: String, age: u8) -> content::Json<String> {
     // In a real application, we'd use the JSON contrib type.
     let person = Person { name: name, age: age, };
-    content::JSON(serde_json::to_string(&person).unwrap())
+    content::Json(serde_json::to_string(&person).unwrap())
 }
 
 // In a `POST` request and all other payload supporting request types, the
 // content type is matched against the `format` in the route attribute.
 #[post("/<age>", format = "text/plain", data = "<name>")]
-fn post_hello(age: u8, name: String) -> content::JSON<String> {
+fn post_hello(age: u8, name: String) -> content::Json<String> {
     let person = Person { name: name, age: age, };
-    content::JSON(serde_json::to_string(&person).unwrap())
+    content::Json(serde_json::to_string(&person).unwrap())
 }
 
 #[error(404)]
-fn not_found(request: &Request) -> content::HTML<String> {
+fn not_found(request: &Request) -> content::Html<String> {
     let html = match request.format() {
         Some(ref mt) if !mt.is_json() && !mt.is_plain() => {
             format!("<p>'{}' requests are not supported.</p>", mt)
@@ -46,7 +46,7 @@ fn not_found(request: &Request) -> content::HTML<String> {
                  request.uri())
     };
 
-    content::HTML(html)
+    content::Html(html)
 }
 
 fn main() {

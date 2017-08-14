@@ -210,7 +210,6 @@ pub use self::error::ConfigError;
 pub use self::environment::Environment;
 pub use self::config::Config;
 pub use self::builder::ConfigBuilder;
-pub use self::toml_ext::IntoValue;
 pub use logger::LoggingLevel;
 pub(crate) use self::toml_ext::LoggedValue;
 

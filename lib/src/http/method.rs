@@ -50,6 +50,7 @@ impl Method {
     /// assert_eq!(Method::Get.supports_payload(), false);
     /// assert_eq!(Method::Post.supports_payload(), true);
     /// ```
+    #[inline]
     pub fn supports_payload(&self) -> bool {
         match *self {
             Put | Post | Delete | Patch => true,

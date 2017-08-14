@@ -4,6 +4,8 @@
 extern crate rocket_contrib;
 extern crate rocket;
 
+#[cfg(test)] mod tests;
+
 use std::collections::HashMap;
 
 use rocket::outcome::IntoOutcome;
@@ -76,9 +78,12 @@ fn index() -> Redirect {
     Redirect::to("/login")
 }
 
-fn main() {
+fn rocket() -> rocket::Rocket {
     rocket::ignite()
         .attach(Template::fairing())
         .mount("/", routes![index, user_index, login, logout, login_user, login_page])
-        .launch();
+}
+
+fn main() {
+    rocket().launch();
 }

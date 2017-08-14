@@ -12,9 +12,9 @@ struct User<'a> {
     nickname: String,
 }
 
-#[post("/<name>?<query>", format = "application/json", data = "<user>", rank = 2)]
+#[post("/<name>?<_query>", format = "application/json", data = "<user>", rank = 2)]
 fn get<'r>(name: &RawStr,
-           query: User<'r>,
+           _query: User<'r>,
            user: Form<'r, User<'r>>,
            cookies: Cookies)
            -> &'static str {

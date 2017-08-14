@@ -1,7 +1,5 @@
 use std::fmt;
-use std::collections::{HashMap, BTreeMap};
-use std::hash::Hash;
-use std::str::FromStr;
+use std::collections::BTreeMap;
 
 use config::Value;
 
@@ -10,11 +8,11 @@ pub fn parse_simple_toml_value(string: &str) -> Result<Value, &'static str>  {
         return Err("value is empty")
     }
 
-    let value = if let Ok(int) = i64::from_str(string) {
+    let value = if let Ok(int) = string.parse::<i64>() {
         Value::Integer(int)
-    } else if let Ok(float) = f64::from_str(string) {
+    } else if let Ok(float) = string.parse::<f64>() {
         Value::Float(float)
-    } else if let Ok(boolean) = bool::from_str(string) {
+    } else if let Ok(boolean) = string.parse::<bool>() {
         Value::Boolean(boolean)
     } else if string.starts_with('{') {
         if !string.ends_with('}') {
@@ -64,76 +62,6 @@ pub fn parse_simple_toml_value(string: &str) -> Result<Value, &'static str>  {
     Ok(value)
 }
 
-/// Conversion trait from standard types into TOML `Value`s.
-pub trait IntoValue {
-    /// Converts `self` into a TOML `Value`.
-    fn into_value(self) -> Value;
-}
-
-impl<'a> IntoValue for &'a str {
-    #[inline(always)]
-    fn into_value(self) -> Value {
-        Value::String(self.to_string())
-    }
-}
-
-impl IntoValue for Value {
-    #[inline(always)]
-    fn into_value(self) -> Value {
-        self
-    }
-}
-
-impl<V: IntoValue> IntoValue for Vec<V> {
-    #[inline(always)]
-    fn into_value(self) -> Value {
-        Value::Array(self.into_iter().map(|v| v.into_value()).collect())
-    }
-}
-
-impl<S: Into<String>, V: IntoValue> IntoValue for BTreeMap<S, V> {
-    fn into_value(self) -> Value {
-        let table = self.into_iter()
-            .map(|(s, v)| (s.into(), v.into_value()))
-            .collect();
-
-        Value::Table(table)
-    }
-}
-
-impl<S: Into<String> + Hash + Eq, V: IntoValue> IntoValue for HashMap<S, V> {
-    fn into_value(self) -> Value {
-        let table = self.into_iter()
-            .map(|(s, v)| (s.into(), v.into_value()))
-            .collect();
-
-        Value::Table(table)
-    }
-}
-
-macro_rules! impl_into_value {
-    ($variant:ident : $t:ty) => ( impl_into_value!($variant: $t,); );
-
-    ($variant:ident : $t:ty, $($extra:tt)*) => (
-        impl IntoValue for $t {
-            fn into_value(self) -> Value {
-                Value::$variant(self $($extra)*)
-            }
-        }
-    )
-}
-
-impl_into_value!(String: String);
-impl_into_value!(Integer: i64);
-impl_into_value!(Integer: isize, as i64);
-impl_into_value!(Integer: i32, as i64);
-impl_into_value!(Integer: i8, as i64);
-impl_into_value!(Integer: u8, as i64);
-impl_into_value!(Integer: u32, as i64);
-impl_into_value!(Boolean: bool);
-impl_into_value!(Float: f64);
-impl_into_value!(Float: f32, as f64);
-
 /// A simple wrapper over a `Value` reference with a custom implementation of
 /// `Display`. This is used to log config values at initialization.
 pub(crate) struct LoggedValue<'a>(pub &'a Value);
@@ -163,7 +91,6 @@ impl<'a> fmt::Display for LoggedValue<'a> {
 mod test {
     use std::collections::BTreeMap;
     use super::parse_simple_toml_value;
-    use super::IntoValue;
     use super::Value::*;
 
     macro_rules! assert_parse {
@@ -186,22 +113,21 @@ mod test {
         assert_parse!("\"hi\"", String("hi".into()));
 
         assert_parse!("[]", Array(Vec::new()));
-        assert_parse!("[1]", vec![1].into_value());
-        assert_parse!("[1, 2, 3]", vec![1, 2, 3].into_value());
-        assert_parse!("[1.32, 2]",
-                      vec![1.32.into_value(), 2.into_value()].into_value());
+        assert_parse!("[1]", vec![1].into());
+        assert_parse!("[1, 2, 3]", vec![1, 2, 3].into());
+        assert_parse!("[1.32, 2]", Array(vec![1.32.into(), 2.into()]));
 
         assert_parse!("{}", Table(BTreeMap::new()));
         assert_parse!("{a=b}", Table({
             let mut map = BTreeMap::new();
-            map.insert("a".into(), "b".into_value());
+            map.insert("a".into(), "b".into());
             map
         }));
         assert_parse!("{v=1, on=true,pi=3.14}", Table({
             let mut map = BTreeMap::new();
-            map.insert("v".into(), 1.into_value());
-            map.insert("on".into(), true.into_value());
-            map.insert("pi".into(), 3.14.into_value());
+            map.insert("v".into(), 1.into());
+            map.insert("on".into(), true.into());
+            map.insert("pi".into(), 3.14.into());
             map
         }));
     }

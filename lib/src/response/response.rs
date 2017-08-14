@@ -158,7 +158,6 @@ impl<T> fmt::Debug for Body<T> {
 ///     .sized_body(Cursor::new("Brewing the best coffee!"))
 ///     .finalize();
 /// ```
-///
 pub struct ResponseBuilder<'r> {
     response: Response<'r>
 }
@@ -561,7 +560,7 @@ impl<'r> ResponseBuilder<'r> {
     }
 }
 
-/// An response, as returned by `Responder`s.
+/// A response, as returned by `Responder`s.
 #[derive(Default)]
 pub struct Response<'r> {
     status: Option<Status>,
@@ -627,7 +626,7 @@ impl<'r> Response<'r> {
         ResponseBuilder::new(other)
     }
 
-    /// Returns the status of the `self`.
+    /// Returns the status of `self`.
     ///
     /// # Example
     ///
@@ -700,8 +699,8 @@ impl<'r> Response<'r> {
         self.status = Some(Status::new(code, reason));
     }
 
-    /// Returns a [HeaderMap](/rocket/http/struct.HeaderMap.html) of all of the
-    /// headers in `self`.
+    /// Returns a [`HeaderMap`](/rocket/http/struct.HeaderMap.html) of all of
+    /// the headers in `self`.
     ///
     /// # Example
     ///
@@ -726,8 +725,8 @@ impl<'r> Response<'r> {
     /// Sets the header `header` in `self`. Any existing headers with the name
     /// `header.name` will be lost, and only `header` will remain. The type of
     /// `header` can be any type that implements `Into<Header>`. This includes
-    /// `Header` itself, [ContentType](/rocket/http/struct.ContentType.html) and
-    /// [hyper::header types](/rocket/http/hyper/header/index.html).
+    /// `Header` itself, [`ContentType`](/rocket/http/struct.ContentType.html)
+    /// and [`hyper::header` types](/rocket/http/hyper/header/index.html).
     ///
     /// # Example
     ///
@@ -782,8 +781,8 @@ impl<'r> Response<'r> {
     /// name `header.name`, another header with the same name and value
     /// `header.value` is added. The type of `header` can be any type that
     /// implements `Into<Header>`. This includes `Header` itself,
-    /// [ContentType](/rocket/http/struct.ContentType.html) and [hyper::header
-    /// types](/rocket/http/hyper/header/index.html).
+    /// [`ContentType`](/rocket/http/struct.ContentType.html) and
+    /// [`hyper::header` types](/rocket/http/hyper/header/index.html).
     ///
     /// # Example
     ///
@@ -809,8 +808,8 @@ impl<'r> Response<'r> {
     /// `self` already contains headers with the name `name`, another header
     /// with the same `name` and `value` is added. The type of `header` can be
     /// any type that implements `Into<Header>`. This includes `Header` itself,
-    /// [ContentType](/rocket/http/struct.ContentType.html) and [hyper::header
-    /// types](/rocket/http/hyper/header/index.html).
+    /// [`ContentType`](/rocket/http/struct.ContentType.html) and
+    /// [`hyper::header` types](/rocket/http/hyper/header/index.html).
     ///
     /// # Example
     ///

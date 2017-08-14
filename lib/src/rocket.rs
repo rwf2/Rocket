@@ -8,7 +8,7 @@ use std::mem;
 use yansi::Paint;
 use state::Container;
 
-#[cfg(feature = "tls")] use hyper_rustls::TlsServer;
+#[cfg(feature = "tls")] use hyper_sync_rustls::TlsServer;
 use {logger, handler};
 use ext::ReadExt;
 use config::{self, Config, LoggedValue};
@@ -72,7 +72,6 @@ impl hyper::Handler for Rocket {
         };
 
         // Dispatch the request to get a response, then write that response out.
-        // let req = UnsafeCell::new(req);
         let response = self.dispatch(&mut req, data);
         self.issue_response(response, res)
     }
@@ -139,7 +138,7 @@ impl Rocket {
                 hyp_res.headers_mut().set(header::ContentLength(0));
                 hyp_res.start()?.end()
             }
-            Some(Body::Sized(mut body, size)) => {
+            Some(Body::Sized(body, size)) => {
                 hyp_res.headers_mut().set(header::ContentLength(size));
                 let mut stream = hyp_res.start()?;
                 io::copy(body, &mut stream)?;
@@ -638,12 +637,12 @@ impl Rocket {
     ///
     /// # Error
     ///
-    /// If there is a problem starting the application, a
-    /// [LaunchError](/rocket/struct.LaunchError.html) is returned. Note
-    /// that a value of type `LaunchError` panics if dropped without first being
-    /// inspected. See the [LaunchError
-    /// documentation](/rocket/struct.LaunchError.html) for more
-    /// information.
+    /// If there is a problem starting the application, a [`LaunchError`] is
+    /// returned. Note that a value of type `LaunchError` panics if dropped
+    /// without first being inspected. See the [`LaunchError`] documentation for
+    /// more information.
+    ///
+    /// [`LaunchError`]: /rocket/error/struct.LaunchError.html
     ///
     /// # Example
     ///

@@ -3,7 +3,7 @@ use fairing::{Fairing, Kind, Info};
 
 /// A ad-hoc fairing that can be created from a function or closure.
 ///
-/// This enum can be used to create a fairing from a simple function or clusure
+/// This enum can be used to create a fairing from a simple function or closure
 /// without creating a new structure or implementing `Fairing` directly.
 ///
 /// # Usage

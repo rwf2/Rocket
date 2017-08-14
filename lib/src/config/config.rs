@@ -490,8 +490,8 @@ impl Config {
     /// ```
     #[cfg(feature = "tls")]
     pub fn set_tls(&mut self, certs_path: &str, key_path: &str) -> Result<()> {
-        use hyper_rustls::util as tls;
-        use hyper_rustls::util::Error::Io;
+        use hyper_sync_rustls::util as tls;
+        use hyper_sync_rustls::util::Error::Io;
         let pem_err = "malformed PEM file";
 
         // Load the certificates.
@@ -537,7 +537,7 @@ impl Config {
     ///
     /// ```rust
     /// use std::collections::HashMap;
-    /// use rocket::config::{Config, Environment, IntoValue};
+    /// use rocket::config::{Config, Environment};
     ///
     /// # use rocket::config::ConfigError;
     /// # fn config_test() -> Result<(), ConfigError> {
@@ -545,8 +545,8 @@ impl Config {
     ///
     /// // Create the `extras` map.
     /// let mut extras = HashMap::new();
-    /// extras.insert("another_port".to_string(), 1044.into_value());
-    /// extras.insert("templates".to_string(), "my_dir".into_value());
+    /// extras.insert("another_port".to_string(), 1044.into());
+    /// extras.insert("templates".to_string(), "my_dir".into());
     ///
     /// config.set_extras(extras);
     /// # Ok(())
@@ -564,7 +564,7 @@ impl Config {
     ///
     /// ```rust
     /// use std::collections::HashMap;
-    /// use rocket::config::{Config, Environment, IntoValue};
+    /// use rocket::config::{Config, Environment};
     ///
     /// # use rocket::config::ConfigError;
     /// # fn config_test() -> Result<(), ConfigError> {
@@ -573,8 +573,8 @@ impl Config {
     ///
     /// // Add a couple of extras to the config.
     /// let mut extras = HashMap::new();
-    /// extras.insert("another_port".to_string(), 1044.into_value());
-    /// extras.insert("templates".to_string(), "my_dir".into_value());
+    /// extras.insert("another_port".to_string(), 1044.into());
+    /// extras.insert("templates".to_string(), "my_dir".into());
     /// config.set_extras(extras);
     ///
     /// assert_eq!(config.extras().count(), 2);

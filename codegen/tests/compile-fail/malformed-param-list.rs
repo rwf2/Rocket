@@ -13,7 +13,7 @@ fn get2(id: usize) -> &'static str { "hi" }
 #[get("/<!>")] //~ ERROR identifiers
 fn get3() -> &'static str { "hi" }
 
-#[get("/<_>")] //~ ERROR ignored
+#[get("/<_>")] //~ ERROR named
 fn get4() -> &'static str { "hi" }
 
 #[get("/<1>")] //~ ERROR identifiers

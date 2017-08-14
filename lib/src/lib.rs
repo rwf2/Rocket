@@ -1,12 +1,10 @@
 #![feature(specialization)]
 #![feature(conservative_impl_trait)]
 #![feature(drop_types_in_const)]
-#![feature(associated_consts)]
 #![feature(const_fn)]
 #![feature(lookup_host)]
 #![feature(plugin)]
 #![feature(never_type)]
-#![feature(more_io_inner_methods)]
 #![feature(try_trait)]
 
 #![plugin(pear_codegen)]
@@ -104,7 +102,7 @@
 #[macro_use] extern crate log;
 #[macro_use] extern crate pear;
 #[cfg(feature = "tls")] extern crate rustls;
-#[cfg(feature = "tls")] extern crate hyper_rustls;
+#[cfg(feature = "tls")] extern crate hyper_sync_rustls;
 extern crate yansi;
 extern crate hyper;
 extern crate url;

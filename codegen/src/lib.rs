@@ -39,9 +39,9 @@
 //!
 //! INTEGER := isize, as defined by Rust
 //! STRING := UTF-8 string literal, as defined by Rust
-//! IDENT := Valid identifier, as defined by Rust
+//! IDENT := valid identifier, as defined by Rust
 //!
-//! URI_SEG := Valid HTTP URI Segment
+//! URI_SEG := valid HTTP URI Segment
 //! DYNAMIC_PARAM := '<' IDENT '..'? '>' (string literal)
 //! </pre>
 //!
@@ -69,6 +69,47 @@
 //! This crate implements the following custom derives:
 //!
 //!   * **FromForm**
+//!
+//! ### `FromForm`
+//!
+//! The [`FromForm`] derive can be applied to structures with named fields:
+//!
+//!     #[derive(FromForm)]
+//!     struct MyStruct {
+//!         field: usize,
+//!         other: String
+//!     }
+//!
+//! Each field's type is required to implement [`FromFormValue`]. The derive
+//! accepts one field attribute: `form`, with the following syntax:
+//!
+//! <pre>
+//! form := 'field' '=' '"' IDENT '"'
+//!
+//! IDENT := valid identifier, as defined by Rust
+//! </pre>
+//!
+//! When applied, the attribute looks as follows:
+//!
+//!     #[derive(FromForm)]
+//!     struct MyStruct {
+//!         field: usize,
+//!         #[form(field = "renamed_field")]
+//!         other: String
+//!     }
+//!
+//! The derive generates an implementation for the [`FromForm`] trait. The
+//! implementation parses a form whose field names match the field names of the
+//! structure on which the derive was applied. Each field's value is parsed with
+//! the [`FromFormValue`] implementation of the field's type. The `FromForm`
+//! implementation succeeds only when all of the field parses succeed.
+//!
+//! The `form` field attribute can be used to direct that a different incoming
+//! field name is expected. In this case, the attribute's field name is used
+//! instead of the structure's field name when parsing a form.
+//!
+//! [`FromForm`]: /rocket/request/trait.FromForm.html
+//! [`FromFormValue`]: /rocket/request/trait.FromFormValue.html
 //!
 //! ## Procedural Macros
 //!

@@ -64,6 +64,16 @@ impl Data {
     /// including that in the `peek` buffer. The method consumes the `Data`
     /// instance. This ensures that a `Data` type _always_ represents _all_ of
     /// the data in a request.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use rocket::Data;
+    ///
+    /// fn handler(data: Data) {
+    ///     let stream = data.open();
+    /// }
+    /// ```
     pub fn open(mut self) -> DataStream {
         let buffer = ::std::mem::replace(&mut self.buffer, vec![]);
         let empty_stream = Cursor::new(vec![]).chain(NetStream::Empty);
@@ -130,10 +140,20 @@ impl Data {
 
     /// Retrieve the `peek` buffer.
     ///
-    /// The peek buffer contains at most 4096 bytes of the body of the request.
+    /// The peek buffer contains at most 512 bytes of the body of the request.
     /// The actual size of the returned buffer varies by web request. The
-    /// [peek_complete](#method.peek_complete) can be used to determine if this
-    /// buffer contains _all_ of the data in the body of the request.
+    /// [`peek_complete`](#method.peek_complete) can be used to determine if
+    /// this buffer contains _all_ of the data in the body of the request.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use rocket::Data;
+    ///
+    /// fn handler(data: Data) {
+    ///     let peek = data.peek();
+    /// }
+    /// ```
     #[inline(always)]
     pub fn peek(&self) -> &[u8] {
         if self.buffer.len() > PEEK_BYTES {
@@ -146,6 +166,18 @@ impl Data {
     /// Returns true if the `peek` buffer contains all of the data in the body
     /// of the request. Returns `false` if it does not or if it is not known if
     /// it does.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use rocket::Data;
+    ///
+    /// fn handler(data: Data) {
+    ///     if data.peek_complete() {
+    ///         println!("All of the data: {:?}", data.peek());
+    ///     }
+    /// }
+    /// ```
     #[inline(always)]
     pub fn peek_complete(&self) -> bool {
         self.is_complete
@@ -154,6 +186,19 @@ impl Data {
     /// A helper method to write the body of the request to any `Write` type.
     ///
     /// This method is identical to `io::copy(&mut data.open(), writer)`.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use std::io;
+    /// use rocket::Data;
+    ///
+    /// fn handler(mut data: Data) -> io::Result<String> {
+    ///     // write all of the data to stdout
+    ///     data.stream_to(&mut io::stdout())
+    ///         .map(|n| format!("Wrote {} bytes.", n))
+    /// }
+    /// ```
     #[inline(always)]
     pub fn stream_to<W: Write>(self, writer: &mut W) -> io::Result<u64> {
         io::copy(&mut self.open(), writer)
@@ -164,6 +209,18 @@ impl Data {
     ///
     /// This method is identical to
     /// `io::copy(&mut self.open(), &mut File::create(path)?)`.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use std::io;
+    /// use rocket::Data;
+    ///
+    /// fn handler(mut data: Data) -> io::Result<String> {
+    ///     data.stream_to_file("/static/file")
+    ///         .map(|n| format!("Wrote {} bytes to /static/file", n))
+    /// }
+    /// ```
     #[inline(always)]
     pub fn stream_to_file<P: AsRef<Path>>(self, path: P) -> io::Result<u64> {
         io::copy(&mut self.open(), &mut File::create(path)?)

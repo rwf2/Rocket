@@ -38,6 +38,5 @@ Rocket's design is centered around three core philosophies:
     Rocket has official support and libraries for each of these, they are
     completely optional and swappable.
 
-These three ideas dictate Rocket's interface, and you will find the ideas
+These three ideas dictate Rocket's interface, and you will find all of them
 embedded in Rocket's core features.
-

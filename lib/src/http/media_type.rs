@@ -58,7 +58,7 @@ impl Source {
 ///
 /// ## Example
 ///
-/// A media type of `application/json` can be insantiated via the `JSON`
+/// A media type of `application/json` can be instantiated via the `JSON`
 /// constant:
 ///
 /// ```rust

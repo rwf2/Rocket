@@ -21,14 +21,14 @@ pub use serde_json::error::Error as SerdeError;
 /// ## Receiving JSON
 ///
 /// If you're receiving JSON data, simply add a `data` parameter to your route
-/// arguments and ensure the type of the parameter is a `JSON<T>`, where `T` is
+/// arguments and ensure the type of the parameter is a `Json<T>`, where `T` is
 /// some type you'd like to parse from JSON. `T` must implement `Deserialize` or
 /// `DeserializeOwned` from [Serde](https://github.com/serde-rs/json). The data
 /// is parsed from the HTTP request body.
 ///
 /// ```rust,ignore
 /// #[post("/users/", format = "application/json", data = "<user>")]
-/// fn new_user(user: JSON<User>) {
+/// fn new_user(user: Json<User>) {
 ///     ...
 /// }
 /// ```
@@ -40,16 +40,16 @@ pub use serde_json::error::Error as SerdeError;
 ///
 /// ## Sending JSON
 ///
-/// If you're responding with JSON data, return a `JSON<T>` type, where `T`
+/// If you're responding with JSON data, return a `Json<T>` type, where `T`
 /// implements `Serialize` from [Serde](https://github.com/serde-rs/json). The
 /// content type of the response is set to `application/json` automatically.
 ///
 /// ```rust,ignore
 /// #[get("/users/<id>")]
-/// fn user(id: usize) -> JSON<User> {
+/// fn user(id: usize) -> Json<User> {
 ///     let user_from_id = User::from(id);
 ///     ...
-///     JSON(user_from_id)
+///     Json(user_from_id)
 /// }
 /// ```
 ///
@@ -67,16 +67,16 @@ pub use serde_json::error::Error as SerdeError;
 /// json = 5242880
 /// ```
 #[derive(Debug)]
-pub struct JSON<T = Value>(pub T);
+pub struct Json<T = Value>(pub T);
 
-impl<T> JSON<T> {
+impl<T> Json<T> {
     /// Consumes the JSON wrapper and returns the wrapped item.
     ///
     /// # Example
     /// ```rust
-    /// # use rocket_contrib::JSON;
+    /// # use rocket_contrib::Json;
     /// let string = "Hello".to_string();
-    /// let my_json = JSON(string);
+    /// let my_json = Json(string);
     /// assert_eq!(my_json.into_inner(), "Hello".to_string());
     /// ```
     #[inline(always)]
@@ -88,7 +88,7 @@ impl<T> JSON<T> {
 /// Default limit for JSON is 1MB.
 const LIMIT: u64 = 1 << 20;
 
-impl<T: DeserializeOwned> FromData for JSON<T> {
+impl<T: DeserializeOwned> FromData for Json<T> {
     type Error = SerdeError;
 
     fn from_data(request: &Request, data: Data) -> data::Outcome<Self, SerdeError> {
@@ -99,7 +99,7 @@ impl<T: DeserializeOwned> FromData for JSON<T> {
 
         let size_limit = request.limits().get("json").unwrap_or(LIMIT);
         serde_json::from_reader(data.open().take(size_limit))
-            .map(|val| JSON(val))
+            .map(|val| Json(val))
             .map_err(|e| { error_!("Couldn't parse JSON body: {:?}", e); e })
             .into_outcome(Status::BadRequest)
     }
@@ -108,10 +108,10 @@ impl<T: DeserializeOwned> FromData for JSON<T> {
 /// Serializes the wrapped value into JSON. Returns a response with Content-Type
 /// JSON and a fixed-size body with the serialized value. If serialization
 /// fails, an `Err` of `Status::InternalServerError` is returned.
-impl<T: Serialize> Responder<'static> for JSON<T> {
+impl<T: Serialize> Responder<'static> for Json<T> {
     fn respond_to(self, req: &Request) -> response::Result<'static> {
         serde_json::to_string(&self.0).map(|string| {
-            content::JSON(string).respond_to(req).unwrap()
+            content::Json(string).respond_to(req).unwrap()
         }).map_err(|e| {
             error_!("JSON failed to serialize: {:?}", e);
             Status::InternalServerError
@@ -119,7 +119,7 @@ impl<T: Serialize> Responder<'static> for JSON<T> {
     }
 }
 
-impl<T> Deref for JSON<T> {
+impl<T> Deref for Json<T> {
     type Target = T;
 
     #[inline(always)]
@@ -128,7 +128,7 @@ impl<T> Deref for JSON<T> {
     }
 }
 
-impl<T> DerefMut for JSON<T> {
+impl<T> DerefMut for Json<T> {
     #[inline(always)]
     fn deref_mut<'a>(&'a mut self) -> &'a mut T {
         &mut self.0
@@ -147,17 +147,18 @@ impl<T> DerefMut for JSON<T> {
 /// ```
 ///
 /// The return type of a macro invocation is
-/// [Value](/rocket_contrib/enum.Value.html). This is the default value for the
-/// type parameter of [JSON](/rocket_contrib/struct.JSON.html) and as such, you
-/// can return `JSON` without specifying the type. A value created with this
-/// macro can be returned from a handler as follows:
+/// [`Value`](/rocket_contrib/enum.Value.html). This is the default type for the
+/// type parameter of [`Json`](/rocket_contrib/struct.Json.html) and as such,
+/// you can return `Json` without specifying the type using a `json!` value for
+/// `Json`. A value created with this macro can be returned from a handler as
+/// follows:
 ///
 /// ```rust,ignore
-/// use rocket_contrib::JSON;
+/// use rocket_contrib::Json;
 ///
 /// #[get("/json")]
-/// fn get_json() -> JSON {
-///     JSON(json!({
+/// fn get_json() -> Json {
+///     Json(json!({
 ///         "key": "value",
 ///         "array": [1, 2, 3, 4]
 ///     }))

@@ -16,8 +16,8 @@ fn index() -> &'static str {
 }
 
 #[head("/other")]
-fn other() -> content::JSON<()> {
-    content::JSON(())
+fn other() -> content::Json<()> {
+    content::Json(())
 }
 
 mod tests {

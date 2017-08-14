@@ -84,7 +84,7 @@ pub struct Limits {
 
 impl Default for Limits {
     fn default() -> Limits {
-        /// Default limit for forms is 32KiB.
+        // Default limit for forms is 32KiB.
         Limits { forms: 32 * 1024, extra: Vec::new() }
     }
 }
@@ -105,7 +105,7 @@ impl Limits {
         Limits::default()
     }
 
-    /// Adds or replaces a limit in `self`, consuming `self` anf returning a new
+    /// Adds or replaces a limit in `self`, consuming `self` and returning a new
     /// `Limits` structure with the added or replaced limit.
     ///
     /// # Example

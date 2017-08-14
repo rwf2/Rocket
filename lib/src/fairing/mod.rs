@@ -76,7 +76,7 @@ pub use self::info_kind::{Info, Kind};
 ///
 /// Fairings are a large hammer that can easily be abused and misused. If you
 /// are considering writing a `Fairing` implementation, first consider if it is
-/// apprioriate to do so. While middleware is often the best solution to some
+/// appropriate to do so. While middleware is often the best solution to some
 /// problems in other frameworks, it is often a suboptimal solution in Rocket.
 /// This is because Rocket provides richer mechanisms such as [request guards]
 /// and [data guards] that can be used to accomplish the same objective in a
@@ -85,7 +85,7 @@ pub use self::info_kind::{Info, Kind};
 /// As a general rule of thumb, only _globally applicable actions_ should be
 /// implemented via fairings. For instance, you should _not_ use a fairing to
 /// implement authentication or authorization (preferring to use a [request
-/// guard] instead) _unless_ the authenitcation or authorization applies to the
+/// guard] instead) _unless_ the authentication or authorization applies to the
 /// entire application. On the other hand, you _should_ use a fairing to record
 /// timing and/or usage statistics or to implement global security policies.
 ///
@@ -114,7 +114,7 @@ pub use self::info_kind::{Info, Kind};
 ///
 ///     An attach callback can arbitrarily modify the `Rocket` instance being
 ///     constructed. It returns `Ok` if it would like launching to proceed
-///     nominally and `Err` otherwise. If a launch callback returns `Err`,
+///     nominally and `Err` otherwise. If an attach callback returns `Err`,
 ///     launch will be aborted. All attach callbacks are executed on `launch`,
 ///     even if one or more signal a failure.
 ///
@@ -163,8 +163,8 @@ pub use self::info_kind::{Info, Kind};
 /// ## Fairing `Info`
 ///
 /// Every `Fairing` must implement the [`info`] method, which returns an
-/// [`Info`](http://localhost:8000/rocket/fairing/struct.Info.html) structure.
-/// This structure is used by Rocket to:
+/// [`Info`](/rocket/fairing/struct.Info.html) structure. This structure is used
+/// by Rocket to:
 ///
 ///   1. Assign a name to the `Fairing`.
 ///
@@ -188,9 +188,9 @@ pub use self::info_kind::{Info, Kind};
 ///
 /// A `Fairing` must be `Send + Sync + 'static`. This means that the fairing
 /// must be sendable across thread boundaries (`Send`), thread-safe (`Sync`),
-/// and have no non-`'static` reference (`'static`). Note that these bounds _do
-/// not_ prohibit a `Fairing` from holding state: the state need simply be
-/// thread-safe and statically available or heap allocated.
+/// and have only `'static` references, if any (`'static`). Note that these
+/// bounds _do not_ prohibit a `Fairing` from holding state: the state need
+/// simply be thread-safe and statically available or heap allocated.
 ///
 /// ## Example
 ///
@@ -283,7 +283,7 @@ pub trait Fairing: Send + Sync + 'static {
     ///     fn info(&self) -> Info {
     ///         Info {
     ///             name: "My Custom Fairing",
-    ///             kind: Kind::Attach | Kind::Launch | Kind::Response
+    ///             kind: Kind::Launch | Kind::Response
     ///         }
     ///     }
     /// }
@@ -341,4 +341,31 @@ pub trait Fairing: Send + Sync + 'static {
     /// The default implementation of this method does nothing.
     #[allow(unused_variables)]
     fn on_response(&self, request: &Request, response: &mut Response) {}
+}
+
+impl<T: Fairing> Fairing for ::std::sync::Arc<T> {
+    #[inline]
+    fn info(&self) -> Info {
+        (self as &T).info()
+    }
+
+    #[inline]
+    fn on_attach(&self, rocket: Rocket) -> Result<Rocket, Rocket> {
+        (self as &T).on_attach(rocket)
+    }
+
+    #[inline]
+    fn on_launch(&self, rocket: &Rocket) {
+        (self as &T).on_launch(rocket)
+    }
+
+    #[inline]
+    fn on_request(&self, request: &mut Request, data: &Data) {
+        (self as &T).on_request(request, data)
+    }
+
+    #[inline]
+    fn on_response(&self, request: &Request, response: &mut Response) {
+        (self as &T).on_response(request, response)
+    }
 }

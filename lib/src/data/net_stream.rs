@@ -2,7 +2,7 @@ use std::io;
 use std::net::{SocketAddr, Shutdown};
 use std::time::Duration;
 
-#[cfg(feature = "tls")] use hyper_rustls::{WrappedStream, ServerSession};
+#[cfg(feature = "tls")] use hyper_sync_rustls::{WrappedStream, ServerSession};
 use http::hyper::net::{HttpStream, NetworkStream};
 
 use self::NetStream::*;

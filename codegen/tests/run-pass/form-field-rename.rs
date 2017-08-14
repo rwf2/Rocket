@@ -17,6 +17,8 @@ struct Form {
     field_type: isize,
     #[form(field = "DOUBLE")]
     double: String,
+    #[form(field = "a.b")]
+    dot: isize,
 }
 
 fn parse<'f, T: FromForm<'f>>(string: &'f str, strict: bool) -> Option<T> {
@@ -36,7 +38,7 @@ fn parse_strict<'f, T: FromForm<'f>>(string: &'f str) -> Option<T> {
 fn main() {
     let form_string = &[
         "single=100", "camelCase=helloThere", "TitleCase=HiHi", "type=-2",
-        "DOUBLE=bing_bong"
+        "DOUBLE=bing_bong", "a.b=123",
     ].join("&");
 
     let form: Option<Form> = parse_strict(&form_string);
@@ -45,12 +47,13 @@ fn main() {
         camel_case: "helloThere".into(),
         title_case: "HiHi".into(),
         field_type: -2,
-        double: "bing_bong".into()
+        double: "bing_bong".into(),
+        dot: 123,
     }));
 
     let form_string = &[
         "single=100", "camel_case=helloThere", "TitleCase=HiHi", "type=-2",
-        "DOUBLE=bing_bong"
+        "DOUBLE=bing_bong", "dot=123",
     ].join("&");
 
     let form: Option<Form> = parse_strict(&form_string);

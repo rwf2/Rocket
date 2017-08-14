@@ -122,6 +122,18 @@ pub fn from_form_derive(ecx: &mut ExtCtxt, span: Span, meta_item: &MetaItem,
     trait_def.expand(ecx, meta_item, annotated, push);
 }
 
+fn is_valid_field_name(name: &str) -> bool {
+    // The HTML5 spec (4.10.18.1) says 'isindex' is not allowed.
+    if name == "isindex" || name.is_empty() {
+        return false
+    }
+
+    // We allow all visible ASCII characters except '&', '=', and '?' since we
+    // use those as control characters for parsing.
+    name.chars()
+        .all(|c| (c >= ' ' && c <= '~') && c != '&' && c != '=' && c != '?')
+}
+
 pub fn extract_field_ident_name(ecx: &ExtCtxt, struct_field: &StructField)
         -> (Ident, String, Span) {
     let ident = match struct_field.ident {
@@ -168,8 +180,10 @@ pub fn extract_field_ident_name(ecx: &ExtCtxt, struct_field: &StructField)
 
     let name = inner_item.value_str().unwrap().as_str().to_string();
     let sp = inner_item.span.shorten_upto(name.len() + 2);
-    if !is_valid_ident(&name) {
-        ecx.span_err(sp, "invalid form field identifier");
+    if !is_valid_field_name(&name) {
+        ecx.struct_span_err(sp, "invalid form field name")
+            .help("field names must be visible ASCII without '&', '=', or '?'")
+            .emit();
     }
 
     (ident, name, sp)

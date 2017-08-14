@@ -10,4 +10,7 @@ fn get1() -> &'static str { "hi" } //~ ERROR isn't in the function
 #[post("/a", data = "<test>")] //~ ERROR 'test' is declared
 fn post() -> &'static str { "hi" } //~ ERROR isn't in the function
 
+#[get("/<_r>")] //~ ERROR '_r' is declared
+fn get2(r: usize) -> &'static str { "hi" } //~ ERROR isn't in the function
+
 fn main() {  }

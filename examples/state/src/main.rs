@@ -13,11 +13,11 @@ use rocket::response::content;
 struct HitCount(AtomicUsize);
 
 #[get("/")]
-fn index(hit_count: State<HitCount>) -> content::HTML<String> {
+fn index(hit_count: State<HitCount>) -> content::Html<String> {
     hit_count.0.fetch_add(1, Ordering::Relaxed);
     let msg = "Your visit has been recorded!";
     let count = format!("Visits: {}", count(hit_count));
-    content::HTML(format!("{}<br /><br />{}", msg, count))
+    content::Html(format!("{}<br /><br />{}", msg, count))
 }
 
 #[get("/count")]

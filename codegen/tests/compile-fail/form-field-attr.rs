@@ -84,7 +84,7 @@ struct MyForm10 {
 
 #[derive(FromForm)]
 struct MyForm11 {
-    #[form(field = "hello world")]
+    #[form(field = "hello&world")]
     //~^ ERROR: invalid form field
     first: String,
 }
@@ -92,6 +92,20 @@ struct MyForm11 {
 #[derive(FromForm)]
 struct MyForm12 {
     #[form(field = "!@#$%^&*()_")]
+    //~^ ERROR: invalid form field
+    first: String,
+}
+
+#[derive(FromForm)]
+struct MyForm13 {
+    #[form(field = "?")]
+    //~^ ERROR: invalid form field
+    first: String,
+}
+
+#[derive(FromForm)]
+struct MyForm14 {
+    #[form(field = "")]
     //~^ ERROR: invalid form field
     first: String,
 }

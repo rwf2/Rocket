@@ -10,47 +10,49 @@ pre-processing and post-processing.
 
 Rocket's main task is to listen for incoming web requests, dispatch the request
 to the application code, and return a response to the client. We call the
-process that goes from request to response: the _lifecycle_. We summarize the
-lifecycle as the sequence of steps:
+process that goes from request to response the "lifecycle". We summarize the
+lifecycle as the following sequence of steps:
 
   1. **Routing**
 
-    Rocket parses an incoming HTTP request into native structures that your code
-    operates on indirectly. Rocket determines which request handler to invoke by
-    matching against route attributes declared by your application.
+     Rocket parses an incoming HTTP request into native structures that your
+     code operates on indirectly. Rocket determines which request handler to
+     invoke by matching against route attributes declared in your application.
 
   2. **Validation**
 
-    Rocket validates the incoming request against types and request guards
-    present in the matched route. If validation fails, Rocket _forwards_ the
-    request to the next matching route or calls an _error handler_.
+     Rocket validates the incoming request against types and guards present in
+     the matched route. If validation fails, Rocket _forwards_ the request to
+     the next matching route or calls an _error handler_.
 
   3. **Processing**
 
-    The request handler associated with the route is invoked with validated
-    arguments. This is the main business logic of the application. Processing
-    completes by returning a `Response`.
+     The request handler associated with the route is invoked with validated
+     arguments. This is the main business logic of an application. Processing
+     completes by returning a `Response`.
 
   4. **Response**
 
-    The returned `Response` is processed. Rocket generates the appropriate HTTP
-    response and sends it to the client. This completes the lifecycle. Rocket
-    continues listening for requests, restarting the lifecycle for each incoming
-    request.
+     The returned `Response` is processed. Rocket generates the appropriate HTTP
+     response and sends it to the client. This completes the lifecycle. Rocket
+     continues listening for requests, restarting the lifecycle for each
+     incoming request.
 
 The remainder of this section details the _routing_ phase as well as additional
 components needed for Rocket to begin dispatching requests to request handlers.
-The sections following describe the request and response phases.
+The sections following describe the request and response phases as well as other
+components of Rocket.
 
 ## Routing
 
-Rocket applications are centered around routes and handlers.
-
-A _handler_ is simply a function that takes an arbitrary number of arguments and
-returns any arbitrary type. A _route_ is a combination of:
+Rocket applications are centered around routes and handlers. A _route_ is a
+combination of:
 
   * A set of parameters to match an incoming request against.
   * A handler to process the request and return a response.
+
+A _handler_ is simply a function that takes an arbitrary number of arguments and
+returns any arbitrary type.
 
 The parameters to match against include static paths, dynamic paths, path
 segments, forms, query strings, request format specifiers, and body data. Rocket
@@ -76,23 +78,25 @@ constructing routes.
 
 Before Rocket can dispatch requests to a route, the route needs to be _mounted_.
 Mounting a route is like namespacing it. Routes are mounted via the `mount`
-method on a `Rocket` instance. Rocket instances can be created with the
-`ignite()` static method.
+method on a `Rocket` instance. A `Rocket` instance is typically created with the
+`rocket::ignite()` static method.
 
-The `mount` method takes **1)** a path to namespace a list of routes under, and
-**2)** a list of route handlers through the `routes!` macro. The `routes!` macro
-ties Rocket's code generation to your application.
+The `mount` method takes:
 
-For instance, to mount the `world` route we declared above, we would use the
-following code:
+   1. A path to namespace a list of routes under,
+   2. A list of route handlers through the `routes!` macro, tying Rocket's code
+      generation to your application.
+
+For instance, to mount the `world` route we declared above, we can write the
+following:
 
 ```rust
-rocket::ignite().mount("/hello", routes![world])
+rocket::ignite().mount("/hello", routes![world]);
 ```
 
-Altogether, this creates a new `Rocket` instance via the `ignite` function and
-mounts the `world` route to the `"/hello"` path. As a result, `GET` requests to
-the `"/hello/world"` path will be directed to the `world` function.
+This creates a new `Rocket` instance via the `ignite` function and mounts the
+`world` route to the `"/hello"` path. As a result, `GET` requests to the
+`"/hello/world"` path will be directed to the `world` function.
 
 ### Namespacing
 
@@ -111,7 +115,7 @@ use other::world;
 
 fn main() {
   // error[E0425]: cannot find value `static_rocket_route_info_for_world` in this scope
-  rocket::ignite().mount("/hello", routes![world])
+  rocket::ignite().mount("/hello", routes![world]);
 }
 ```
 
@@ -120,7 +124,7 @@ into the name of a structure generated by Rocket's code generation. The solution
 is to name the route by a module path instead:
 
 ```rust
-rocket::ignite().mount("/hello", routes![other::world])
+rocket::ignite().mount("/hello", routes![other::world]);
 ```
 
 ## Launching
@@ -161,10 +165,13 @@ Running the application, the console shows:
     => address: localhost
     => port: 8000
     => log: normal
-    => workers: {logical cores}
-🛰  Mounting '/world':
+    => workers: [logical cores * 2]
+    => secret key: generated
+    => limits: forms = 32KiB
+    => tls: disabled
+🛰  Mounting '/hello':
     => GET /hello/world
-🚀  Rocket has launched from http://localhost:8000...
+🚀  Rocket has launched from http://localhost:8000
 ```
 
 If we visit `localhost:8000/hello/world`, we see `Hello, world!`, exactly as
@@ -172,146 +179,7 @@ we expected.
 
 A version of this example's complete crate, ready to `cargo run`, can be found
 on
-[GitHub](https://github.com/SergioBenitez/Rocket/tree/v0.2.8/examples/hello_world).
+[GitHub](https://github.com/SergioBenitez/Rocket/tree/v0.4.0-dev/examples/hello_world).
 You can find dozens of other complete examples, spanning all of Rocket's
 features, in the [GitHub examples
-directory](https://github.com/SergioBenitez/Rocket/tree/v0.2.8/examples/).
-
-## Configuration
-
-At any point in time, a Rocket application is operating in a given
-_configuration environment_. There are three such environments:
-
-   * `development` (short: `dev`)
-   * `staging` (short: `stage`)
-   * `production` (short: `prod`)
-
-Without any action, Rocket applications run in the `development` environment.
-The environment can be changed via the `ROCKET_ENV` environment variable. For
-example, to launch the `Hello, world!` application in the `staging` environment,
-we can run:
-
-```sh
-ROCKET_ENV=stage cargo run
-```
-
-You'll likely need `sudo` for the command to succeed since `staging` defaults to
-listening on port `80`. Note that you can use the short or long form of the
-environment name to specify the environment, `stage` _or_ `staging` here. Rocket
-tells us the environment we have chosen and its configuration when it launches:
-
-```sh
-$ sudo ROCKET_ENV=staging cargo run
-
-🔧  Configured for staging.
-    => address: 0.0.0.0
-    => port: 80
-    => log: normal
-    => workers: {logical cores}
-🛰  Mounting '/':
-    => GET /
-🚀  Rocket has launched from http://0.0.0.0:80...
-```
-
-Configuration settings can be changed in one of two ways: via the `Rocket.toml`
-configuration file, or via environment variables.
-
-### Configuration File
-
-A `Rocket.toml` file can be used to specify the configuration parameters for
-each environment. The file is optional. If it is not present, the default
-configuration parameters are used.
-
-The file must be a series of TOML tables, at most one for each environment and
-an optional "global" table, where each table contains key-value pairs
-corresponding to configuration parameters for that environment. If a
-configuration parameter is missing, the default value is used. The following is
-a complete `Rocket.toml` file, where every standard configuration parameter is
-specified with the default value:
-
-```toml
-[development]
-address = "localhost"
-port = 8000
-workers = max(number_of_cpus, 2)
-log = "normal"
-
-[staging]
-address = "0.0.0.0"
-port = 80
-workers = max(number_of_cpus, 2)
-log = "normal"
-
-[production]
-address = "0.0.0.0"
-port = 80
-workers = max(number_of_cpus, 2)
-log = "critical"
-```
-
-The `workers` parameter is computed by Rocket automatically; the value above is
-not valid TOML syntax.
-
-The "global" pseudo-environment can be used to set and/or override configuration
-parameters globally. A parameter defined in a `[global]` table sets, or
-overrides if already present, that parameter in every environment. For example,
-given the following `Rocket.toml` file, the value of `address` will be
-`"1.2.3.4"` in every environment:
-
-```toml
-[global]
-address = "1.2.3.4"
-
-[development]
-address = "localhost"
-
-[production]
-address = "0.0.0.0"
-```
-
-### Extras
-
-In addition to overriding default configuration parameters, a configuration file
-can also define values for any number of _extra_ configuration parameters. While
-these parameters aren't used by Rocket directly, other libraries, or your own
-application, can use them as they wish. As an example, the
-[Template](https://api.rocket.rs/rocket_contrib/struct.Template.html) type
-accepts a value for the `template_dir` configuration parameter. The parameter
-can be set in `Rocket.toml` as follows:
-
-```toml
-[development]
-template_dir = "dev_templates/"
-
-[production]
-template_dir = "prod_templates/"
-```
-
-This sets the `template_dir` extra configuration parameter to `"dev_templates/"`
-when operating in the `development` environment and `"prod_templates/"` when
-operating in the `production` environment. Rocket will prepend the `[extra]` tag
-to extra configuration parameters when launching:
-
-```sh
-🔧  Configured for development.
-    => ...
-    => [extra] template_dir: "dev_templates/"
-```
-
-### Environment Variables
-
-All configuration parameters, including extras, can be overridden through
-environment variables. To override the configuration parameter `{param}`, use an
-environment variable named `ROCKET_{PARAM}`. For instance, to override the
-"port" configuration parameter, you can run your application with:
-
-```sh
-ROCKET_PORT=3721 cargo run
-
-🔧  Configured for staging.
-    => ...
-    => port: 3721
-```
-
-Environment variables take precedence over all other configuration methods: if a
-variable is set, it will be used as that parameter's value.
+directory](https://github.com/SergioBenitez/Rocket/tree/v0.4.0-dev/examples/).

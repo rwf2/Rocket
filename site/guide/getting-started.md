@@ -6,10 +6,10 @@ and then run the application.
 
 ## Installing Rust
 
-Rocket makes abundant use of Rust's syntax extensions. Because syntax extensions
-don't yet have a stable compiler API, we'll need to use a nightly version of
-Rust. If you already have a working installation of the latest Rust nightly,
-feel free to skip to the next section.
+Rocket makes abundant use of Rust's syntax extensions and other advanced,
+unstable features. Because of this, we'll need to use a nightly version of Rust.
+If you already have a working installation of the latest Rust nightly, feel free
+to skip to the next section.
 
 To install a nightly version of Rust, we recommend using `rustup`. Install
 `rustup` by following the instructions on [its website](https://rustup.rs/).
@@ -28,9 +28,9 @@ Rocket project by running the following command in the directory:
 rustup override set nightly
 ```
 
-## Nightly Version
+### Minimum Nightly
 
-Rocket requires the _latest_ version of Rust nightly to function. If your Rocket
+Rocket always requires the _latest_ version of Rust nightly. If your Rocket
 application suddently stops building, ensure you're using the latest version of
 Rust nightly and Rocket by updating your toolchain and dependencies with:
 
@@ -53,12 +53,12 @@ project by ensuring your `Cargo.toml` contains the following:
 
 ```
 [dependencies]
-rocket = "0.2.8"
-rocket_codegen = "0.2.8"
+rocket = "0.4.0-dev"
+rocket_codegen = "0.4.0-dev"
 ```
 
 Modify `src/main.rs` so that it contains the code for the Rocket `Hello, world!`
-program, which we reproduce below:
+program, reproduced below:
 
 ```rust
 #![feature(plugin)]
@@ -78,18 +78,21 @@ fn main() {
 
 We won't explain exactly what the program does now; we leave that for the rest
 of the guide. In short, it creates an `index` route, _mounts_ the route at the
-`/` path, and launches the application. Run the program with `cargo run`. You
-should see the following:
+`/` path, and launches the application. Compile and run the program with `cargo
+run`. You should see the following:
 
 ```sh
 🔧  Configured for development.
     => address: localhost
     => port: 8000
     => log: normal
-    => workers: {logical cores}
+    => workers: [core count * 2]
+    => secret key: generated
+    => limits: forms = 32KiB
+    => tls: disabled
 🛰  Mounting '/':
     => GET /
-🚀  Rocket has launched from http://localhost:8000...
+🚀  Rocket has launched from http://localhost:8000
 ```
 
 Visit `http://localhost:8000` to see your first Rocket application in action!

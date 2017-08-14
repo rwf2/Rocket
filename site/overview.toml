@@ -73,9 +73,9 @@ the `user_form` parameter. The
 Rocket type that knows how to parse web forms into structures. Rocket will
 automatically attempt to parse the request body into the `Form` and call the
 `login` handler if parsing succeeds. Other built-in `FromData` types include
-[Data](https://api.rocket.rs/rocket/struct.Data.html),
-[JSON](https://api.rocket.rs/rocket_contrib/struct.JSON.html), and
-[Flash](https://api.rocket.rs/rocket/response/struct.Flash.html)
+[`Data`](https://api.rocket.rs/rocket/struct.Data.html),
+[`Json`](https://api.rocket.rs/rocket_contrib/struct.Json.html), and
+[`Flash`](https://api.rocket.rs/rocket/response/struct.Flash.html)
 '''
 
 [[panels]]
@@ -89,15 +89,15 @@ request handler signature.
 Request guards _protect_ the handler from running unless some set of conditions
 are met by the incoming request metadata. For instance, if you are writing an
 API that requires sensitive calls to be accompanied by an API key in the request
-header, Rocket can protect those calls via a custom `APIKey` request guard:
+header, Rocket can protect those calls via a custom `ApiKey` request guard:
 
 ```rust
 #[get("/sensitive")]
-fn sensitive(key: APIKey) -> &'static str { ... }
+fn sensitive(key: ApiKey) -> &'static str { ... }
 ```
 
-`APIKey` protects the `sensitive` handler from running incorrectly. In order for
-Rocket to call the `sensitive` handler, the `APIKey` type needs to be derived
+`ApiKey` protects the `sensitive` handler from running incorrectly. In order for
+Rocket to call the `sensitive` handler, the `ApiKey` type needs to be derived
 through a
 [FromRequest](https://api.rocket.rs/rocket/request/trait.FromRequest.html)
 implementation, which in this case, validates the API key header. Request guards
@@ -219,7 +219,7 @@ If the function above is used as a handler, for instance, then the type `T` must
 implement `Responder`. Rocket provides many useful responder types out of the
 box. They include:
 
- * `JSON<T>`: Serializes the structure T into JSON and returns it to
+ * `Json<T>`: Serializes the structure T into JSON and returns it to
    the client.
  * `Template`: Renders a template file and returns it to the client.
  * `Redirect`: Returns a properly formatted HTTP redirect.

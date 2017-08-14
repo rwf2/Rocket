@@ -158,7 +158,7 @@ macro_rules! default_errors {
         $(
             fn $fn_name<'r>(_: Error, req: &'r Request) -> response::Result<'r> {
                 status::Custom(Status::from_code($code).unwrap(),
-                    content::HTML(error_page_template!($code, $name, $description))
+                    content::Html(error_page_template!($code, $name, $description))
                 ).respond_to(req)
             }
 

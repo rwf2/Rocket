@@ -69,8 +69,8 @@ pub fn rocket_method_call<'e>(method: &str,
                               cx: &LateContext,
                               expr: &'e Expr)
                               -> (Option<(Option<&'e Expr>, &'e [Expr])>) {
-    if let ExprMethodCall(ref name, _, ref exprs) = expr.node {
-        if &*name.node.as_str() == method && is_impl_method(cx, expr, ROCKET_TYPE) {
+    if let ExprMethodCall(ref seg, _, ref exprs) = expr.node {
+        if seg.name.as_str() == method && is_impl_method(cx, expr, ROCKET_TYPE) {
             let receiver = find_initial_receiver(cx, &exprs[0]);
             return Some((receiver, &exprs[1..]));
         }

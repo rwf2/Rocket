@@ -1,6 +1,6 @@
 [package]
 name = "rocket"
-version = "0.3.0-dev"
+version = "0.4.0-dev"
 authors = ["Sergio Benitez <sb@sergio.bz>"]
 description = """
 Web framework for nightly with a focus on ease-of-use, expressibility, and speed.
@@ -15,38 +15,35 @@ build = "build.rs"
 categories = ["web-programming::http-server"]
 
 [features]
-tls = ["rustls", "hyper-rustls"]
+tls = ["rustls", "hyper-sync-rustls"]
 
 [dependencies]
-yansi = { version = "0.3", features = ["nightly"] }
+yansi = { version = "0.3.3", features = ["nightly"] }
 log = "0.3"
 url = "1"
-toml = "0.4"
+toml = "0.4.2"
 num_cpus = "1"
 state = "0.3.1"
 time = "0.1"
 memchr = "1"
 base64 = "0.6"
 smallvec = "0.4"
-pear = "0.0.8"
-pear_codegen = "0.0.8"
+pear = "0.0.10"
+pear_codegen = "0.0.10"
 rustls = { version = "0.9.0", optional = true }
 cookie = { version = "0.9.1", features = ["percent-encode", "secure"] }
 hyper = { version = "0.10.11", default-features = false }
+hyper-sync-rustls = { version = "0.1", features = ["server"], optional = true }
 ordermap = "0.2"
 isatty = "0.1"
 
-[dependencies.hyper-rustls]
-git = "https://github.com/SergioBenitez/hyper-rustls"
-rev = "ef1e8c"
-default-features = false
-features = ["server"]
-optional = true
-
 [dev-dependencies]
 lazy_static = "0.2"
-rocket_codegen = { version = "0.3.0-dev", path = "../codegen" }
+rocket_codegen = { version = "0.4.0-dev", path = "../codegen" }
 
 [build-dependencies]
 yansi = "0.3"
-version_check = "0.1.2"
+version_check = "0.1.3"
+
+[package.metadata.docs.rs]
+all-features = true

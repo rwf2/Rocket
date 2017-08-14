@@ -27,21 +27,26 @@ use http::Status;
 /// use rocket::State;
 ///
 /// // In a real application, this would likely be more complex.
-/// struct MyConfig(String);
+/// struct MyConfig {
+///     user_val: String
+/// }
 ///
 /// #[get("/")]
 /// fn index(state: State<MyConfig>) -> String {
-///     format!("The config value is: {}", state.0)
+///     format!("The config value is: {}", state.user_val)
 /// }
 ///
 /// #[get("/raw")]
 /// fn raw_config_value<'r>(state: State<'r, MyConfig>) -> &'r str {
 ///     // use `inner()` to get a lifetime longer than `deref` gives us
-///     state.inner().0.as_str()
+///     state.inner().user_val.as_str()
 /// }
 ///
 /// fn main() {
-///     let config = MyConfig("user input".to_string());
+///     let config = MyConfig {
+///         user_val: "user input".to_string()
+///     };
+///
 /// # if false { // We don't actually want to launch the server in an example.
 ///     rocket::ignite()
 ///         .mount("/", routes![index, raw_config_value])
@@ -50,15 +55,62 @@ use http::Status;
 /// # }
 /// }
 /// ```
-#[derive(Debug, PartialEq, Eq)]
+///
+/// # Within Request Guards
+///
+/// Because `State` is itself a request guard, managed state can be retrieved
+/// from another request guard's implementation. In the following code example,
+/// `Item` retrieves the `MyConfig` managed state in its `FromRequest`
+/// implementation using the [`Request::guard()`] method.
+///
+/// [`Request::guard()`]: /rocket/struct.Request.html#method.guard
+///
+/// ```rust
+/// use rocket::State;
+/// use rocket::request::{self, Request, FromRequest};
+///
+/// # struct MyConfig{ user_val: String };
+/// struct Item(String);
+///
+/// impl<'a, 'r> FromRequest<'a, 'r> for Item {
+///     type Error = ();
+///
+///     fn from_request(request: &'a Request<'r>) -> request::Outcome<Item, ()> {
+///         request.guard::<State<MyConfig>>()
+///             .map(|my_config| Item(my_config.user_val.clone()))
+///     }
+/// }
+/// ```
+#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct State<'r, T: Send + Sync + 'static>(&'r T);
 
 impl<'r, T: Send + Sync + 'static> State<'r, T> {
-    /// Retrieve a borrow to the underyling value.
+    /// Retrieve a borrow to the underyling value with a lifetime of `'r`.
     ///
     /// Using this method is typically unnecessary as `State` implements `Deref`
     /// with a `Target` of `T`. This means Rocket will automatically coerce a
-    /// `State<T>` to an `&T` when the types call for it.
+    /// `State<T>` to an `&T` as required. This method should only be used when
+    /// a longer lifetime is required.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use rocket::State;
+    ///
+    /// struct MyConfig {
+    ///     user_val: String
+    /// }
+    ///
+    /// // Use `inner()` to get a lifetime of `'r`
+    /// fn handler1<'r>(config: State<'r, MyConfig>) -> &'r str {
+    ///     &config.inner().user_val
+    /// }
+    ///
+    /// // Use the `Deref` implementation which coerces implicitly
+    /// fn handler2(config: State<MyConfig>) -> String {
+    ///     config.user_val.clone()
+    /// }
+    /// ```
     #[inline(always)]
     pub fn inner(&self) -> &'r T {
         self.0

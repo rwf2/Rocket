@@ -1,25 +1,29 @@
 //! Borrowed and owned string types for absolute URIs.
 
-use std::cell::Cell;
 use std::convert::From;
 use std::fmt;
 use std::borrow::Cow;
 use std::str::Utf8Error;
+use std::sync::atomic::{AtomicIsize, Ordering};
 
 use url;
 
 /// Index (start, end) into a string, to prevent borrowing.
 type Index = (usize, usize);
 
+/// Representation of an empty segment count.
+const EMPTY: isize = -1;
+
 // TODO: Reconsider deriving PartialEq and Eq to make "//a/b" == "/a/b".
 /// Borrowed string type for absolute URIs.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug)]
 pub struct URI<'a> {
     uri: Cow<'a, str>,
     path: Index,
     query: Option<Index>,
     fragment: Option<Index>,
-    segment_count: Cell<Option<usize>>,
+    // The cached segment count. `EMPTY` is used to represent no segment count.
+    segment_count: AtomicIsize,
 }
 
 impl<'a> URI<'a> {
@@ -43,7 +47,7 @@ impl<'a> URI<'a> {
             path: path,
             query: query,
             fragment: fragment,
-            segment_count: Cell::new(None),
+            segment_count: AtomicIsize::new(EMPTY),
         }
     }
 
@@ -74,11 +78,17 @@ impl<'a> URI<'a> {
     /// ```
     #[inline(always)]
     pub fn segment_count(&self) -> usize {
-        self.segment_count.get().unwrap_or_else(|| {
-            let count = self.segments().count();
-            self.segment_count.set(Some(count));
-            count
-        })
+        let count = self.segment_count.load(Ordering::Relaxed);
+        if count == EMPTY {
+            let real_count = self.segments().count();
+            if real_count <= isize::max_value() as usize {
+                self.segment_count.store(real_count as isize, Ordering::Relaxed);
+            }
+
+            real_count
+        } else {
+            count as usize
+        }
     }
 
     /// Returns an iterator over the segments of the path in this URI. Skips
@@ -275,6 +285,30 @@ impl<'a> URI<'a> {
     }
 }
 
+impl<'a> Clone for URI<'a> {
+    #[inline(always)]
+    fn clone(&self) -> URI<'a> {
+        URI {
+            uri: self.uri.clone(),
+            path: self.path,
+            query: self.query,
+            fragment: self.fragment,
+            segment_count: AtomicIsize::new(EMPTY),
+        }
+    }
+}
+
+impl<'a, 'b> PartialEq<URI<'b>> for URI<'a> {
+    #[inline]
+    fn eq(&self, other: &URI<'b>) -> bool {
+        self.path() == other.path() &&
+            self.query() == other.query() &&
+            self.fragment() == other.fragment()
+    }
+}
+
+impl<'a> Eq for URI<'a> {}
+
 impl<'a> From<&'a str> for URI<'a> {
     #[inline(always)]
     fn from(uri: &'a str) -> URI<'a> {
@@ -311,8 +345,6 @@ impl<'a> fmt::Display for URI<'a> {
         Ok(())
     }
 }
-
-unsafe impl<'a> Sync for URI<'a> { /* It's safe! */ }
 
 /// Iterator over the segments of an absolute URI path. Skips empty segments.
 ///
@@ -403,6 +435,12 @@ mod tests {
         let uri = URI::new(path);
         let actual: Vec<&str> = uri.segments().collect();
         actual == expected
+    }
+
+    #[test]
+    fn send_and_sync() {
+        fn assert<T: Send + Sync>() {};
+        assert::<URI>();
     }
 
     #[test]

@@ -17,7 +17,7 @@ use http::hyper::mime::Mime;
 ///
 /// ## Example
 ///
-/// A Content-Type of `text/html; charset=utf-8` can be insantiated via the
+/// A Content-Type of `text/html; charset=utf-8` can be instantiated via the
 /// `HTML` constant:
 ///
 /// ```rust

@@ -43,8 +43,8 @@ Then add the usual Rocket dependencies to the `Cargo.toml` file:
 
 ```toml
 [dependencies]
-rocket = "0.2.8"
-rocket_codegen = "0.2.8"
+rocket = "0.4.0-dev"
+rocket_codegen = "0.4.0-dev"
 ```
 
 And finally, create a skeleton Rocket application to work off of in
@@ -57,7 +57,7 @@ And finally, create a skeleton Rocket application to work off of in
 extern crate rocket;
 
 fn main() {
-    rocket::ignite().launch()
+    rocket::ignite().launch();
 }
 ```
 
@@ -108,7 +108,7 @@ to them. To mount the `index` route, modify the main function so that it reads:
 
 ```rust
 fn main() {
-    rocket::ignite().mount("/", routes![index]).launch()
+    rocket::ignite().mount("/", routes![index]).launch();
 }
 ```
 
@@ -145,8 +145,8 @@ pub struct PasteID<'a>(Cow<'a, str>);
 impl<'a> PasteID<'a> {
     /// Generate a _probably_ unique ID with `size` characters. For readability,
     /// the characters used are from the sets [0-9], [A-Z], [a-z]. The
-    /// probability of a collision depends on the value of `size`. In
-    /// particular, the probability of a collision is 1/62^(size).
+    /// probability of a collision depends on the value of `size` and the number
+    /// of IDs generated thus far.
     pub fn new(size: usize) -> PasteID<'static> {
         let mut id = String::with_capacity(size);
         let mut rng = rand::thread_rng();
@@ -197,7 +197,7 @@ okay and expected. We'll be using the new code soon.
 Believe it or not, the hard part is done! (_whew!_).
 
 To process the upload, we'll need a place to store the uploaded files. To
-simplify things, we'll store the uploads in a directory named `uploads/`. Create
+simplify things, we'll store the uploads in a directory named `upload/`. Create
 an `upload` directory next to the `src` directory:
 
 ```sh
@@ -211,6 +211,7 @@ use std::io;
 use std::path::Path;
 
 use rocket::Data;
+use rocket::http::RawStr;
 ```
 
 The [Data](https://api.rocket.rs/rocket/data/struct.Data.html) structure is key
@@ -255,7 +256,7 @@ Make sure that the route is mounted at the root path:
 
 ```rust
 fn main() {
-    rocket::ignite().mount("/", routes![index, upload]).launch()
+    rocket::ignite().mount("/", routes![index, upload]).launch();
 }
 ```
 
@@ -295,15 +296,18 @@ paste doesn't exist.
 
 ```rust
 use std::fs::File;
+use rocket::http::RawStr;
 
 #[get("/<id>")]
-fn retrieve(id: &str) -> Option<File> {
+fn retrieve(id: &RawStr) -> Option<File> {
     let filename = format!("upload/{id}", id = id);
     File::open(&filename).ok()
 }
 ```
 
-Unfortunately, there's a problem with this code. Can you spot the issue?
+Unfortunately, there's a problem with this code. Can you spot the issue? The
+[`RawStr`](https://api.rocket.rs/rocket/http/struct.RawStr.html) type should tip
+you off!
 
 The issue is that the _user_ controls the value of `id`, and as a result, can
 coerce the service into opening files inside `upload/` that aren't meant to be
@@ -337,9 +341,9 @@ fn valid_id(id: &str) -> bool {
 /// Returns an instance of `PasteID` if the path segment is a valid ID.
 /// Otherwise returns the invalid ID as the `Err` value.
 impl<'a> FromParam<'a> for PasteID<'a> {
-    type Error = &'a str;
+    type Error = &'a RawStr;
 
-    fn from_param(param: &'a str) -> Result<PasteID<'a>, &'a str> {
+    fn from_param(param: &'a RawStr) -> Result<PasteID<'a>, &'a RawStr> {
         match valid_id(param) {
             true => Ok(PasteID(Cow::Borrowed(param))),
             false => Err(param)
@@ -360,7 +364,7 @@ fn retrieve(id: PasteID) -> Option<File> {
 }
 ```
 
-Note that our `valid_id` function is simple and could be improved by, for
+Note that our `valid_id` function is simplistic and could be improved by, for
 example, checking that the length of the `id` is within some known bound or
 potentially blacklisting sensitive files as needed.
 
@@ -395,11 +399,10 @@ through some of them to get a better feel for Rocket. Here are some ideas:
   * Add a new route, `GET /<id>/<lang>` that syntax highlights the paste with ID
     `<id>` for language `<lang>`. If `<lang>` is not a known language, do no
     highlighting. Possibly validate `<lang>` with `FromParam`.
-  * Use the [testing module](https://api.rocket.rs/rocket/testing/) to write
+  * Use the [`local` module](https://api.rocket.rs/rocket/local/) to write
     unit tests for your pastebin.
   * Dispatch a thread before `launch`ing Rocket in `main` that periodically
     cleans up idling old pastes in `upload/`.
 
-You can find the full source code for the completed pastebin tutorial in the
-[Rocket Github
-Repo](https://github.com/SergioBenitez/Rocket/tree/v0.2.8/examples/pastebin).
+You can find the full source code for the [completed pastebin tutorial on
+GitHub](https://github.com/SergioBenitez/Rocket/tree/v0.4.0-dev/examples/pastebin).

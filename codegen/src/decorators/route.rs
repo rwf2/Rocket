@@ -74,9 +74,11 @@ impl RouteGenerateExt for RouteParams {
         let name = arg.ident().expect("form param identifier").prepend(PARAM_PREFIX);
         let ty = strip_ty_lifetimes(arg.ty.clone());
         Some(quote_stmt!(ecx,
+            #[allow(non_snake_case)]
             let $name: $ty = {
                 let mut items = ::rocket::request::FormItems::from($form_string);
                 let form = ::rocket::request::FromForm::from_form(items.by_ref(), true);
+                #[allow(unreachable_patterns)]
                 let obj = match form {
                     Ok(v) => v,
                     Err(_) => return ::rocket::Outcome::Forward(__data)
@@ -106,6 +108,7 @@ impl RouteGenerateExt for RouteParams {
         let name = arg.ident().expect("form param identifier").prepend(PARAM_PREFIX);
         let ty = strip_ty_lifetimes(arg.ty.clone());
         Some(quote_stmt!(ecx,
+            #[allow(non_snake_case, unreachable_patterns)]
             let $name: $ty =
                 match ::rocket::data::FromData::from_data(__req, __data) {
                     ::rocket::Outcome::Success(d) => d,
@@ -162,6 +165,7 @@ impl RouteGenerateExt for RouteParams {
 
             let original_ident = param.ident();
             fn_param_statements.push(quote_stmt!(ecx,
+                #[allow(non_snake_case, unreachable_patterns)]
                 let $ident: $ty = match $expr {
                     Ok(v) => v,
                     Err(e) => {
@@ -194,7 +198,7 @@ impl RouteGenerateExt for RouteParams {
             let ident = arg.ident().unwrap().prepend(PARAM_PREFIX);
             let ty = strip_ty_lifetimes(arg.ty.clone());
             fn_param_statements.push(quote_stmt!(ecx,
-                #[allow(non_snake_case)]
+                #[allow(non_snake_case, unreachable_patterns)]
                 let $ident: $ty = match
                         ::rocket::request::FromRequest::from_request(__req) {
                     ::rocket::Outcome::Success(v) => v,

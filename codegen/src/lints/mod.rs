@@ -7,7 +7,7 @@ use ::{ROUTE_ATTR, ROUTE_INFO_ATTR};
 use std::mem::transmute;
 use std::collections::HashMap;
 
-use rustc::lint::{Level, LateContext, LintContext, LintPass, LateLintPass, LintArray};
+use rustc::lint::{Level, LateContext, LintPass, LateLintPass, LintArray};
 use rustc::hir::{Item, Expr, Crate, Decl, FnDecl, Body, QPath, PatKind};
 use rustc::hir::def_id::DefId;
 use rustc::ty::Ty;
@@ -37,13 +37,15 @@ struct InstanceInfo {
 enum Receiver {
     Instance(DefId, Span),
     Call(NodeId, Span),
+    Relative(Span),
 }
 
 impl Receiver {
     /// Returns the span associated with the receiver.
     pub fn span(&self) -> Span {
+        use self::Receiver::*;
         match *self {
-            Receiver::Instance(_, sp) | Receiver::Call(_, sp) => sp
+            Instance(_, sp) | Call(_, sp) | Relative(sp) => sp
         }
     }
 }
@@ -142,9 +144,9 @@ impl<'a, 'tcx> LateLintPass<'a, 'tcx> for RocketLint {
     // the receiver in the type table we've constructed. If it's there, we use
     // it, if not, we use the call as the receiver.
     fn check_expr(&mut self, cx: &LateContext<'a, 'tcx>, expr: &'tcx Expr) {
-        /// Fetches the top-level `Receiver` instance given that a method call
-        /// was made to the receiver `rexpr`. Top-level here means "the
-        /// original". We search the `instance_vars` table to retrieve it.
+        // Fetches the top-level `Receiver` instance given that a method call
+        // was made to the receiver `rexpr`. Top-level here means "the
+        // original". We search the `instance_vars` table to retrieve it.
         let instance_for = |lint: &mut RocketLint, rexpr: &Expr| -> Option<Receiver> {
             match rexpr.node {
                 ExprPath(QPath::Resolved(_, ref p)) => {
@@ -152,8 +154,11 @@ impl<'a, 'tcx> LateLintPass<'a, 'tcx> for RocketLint {
                         .and_then(|id| lint.instance_vars.get(&id))
                         .map(|recvr| recvr.clone())
                 }
+                ExprPath(QPath::TypeRelative(_, _)) => {
+                    Some(Receiver::Relative(rexpr.span))
+                }
                 ExprCall(ref c, ..) => Some(Receiver::Call(c.id, rexpr.span)),
-                _ => unreachable!()
+                _ => panic!("Unexpected node: {:?}", rexpr.node)
             }
         };
 
@@ -244,13 +249,13 @@ impl<'a, 'tcx> LateLintPass<'a, 'tcx> for RocketLint {
 
         // Add this to the list of declared routes to check for mounting later
         // unless unmounted routes were explicitly allowed for this function.
-        if cx.current_level(UNMOUNTED_ROUTE) != Level::Allow {
+        if cx.tcx.lint_level_at_node(UNMOUNTED_ROUTE, fn_id).0 != Level::Allow {
             self.declared.push((fn_name, fn_sp, def_id.clone()));
         }
 
         // If unmanaged state was explicitly allowed for this function, don't
         // record any additional information. Just return now.
-        if cx.current_level(UNMANAGED_STATE) == Level::Allow {
+        if cx.tcx.lint_level_at_node(UNMANAGED_STATE, fn_id).0 == Level::Allow {
             return;
         }
 

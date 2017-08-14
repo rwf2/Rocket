@@ -67,4 +67,19 @@ fn main() {
         .manage(MyType)
         .manage(100i32)
         .manage(100u32);
+
+    let config = rocket::Config::development().unwrap();
+
+    // Ensure unresolved paths are handled properly by lint.
+    rocket::Rocket::custom(config, false)
+        .mount("/", routes![managed, unmanaged, external::unmanaged])
+        .mount("/", routes![managed_two, ignored, mounted_only_once])
+        .mount("/", routes![external::managed, external::unmanaged_unmounted])
+        .mount("/", routes![unmounted_doesnt_error, managed_two])
+        .manage(MyType)
+        .manage(MySecondType)
+        .manage(100i32)
+        .manage(100u32)
+        .manage(1u8)
+        .manage(1i8);
 }

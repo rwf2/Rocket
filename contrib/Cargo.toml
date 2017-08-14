@@ -1,6 +1,6 @@
 [package]
 name = "rocket_contrib"
-version = "0.3.0-dev"
+version = "0.4.0-dev"
 authors = ["Sergio Benitez <sb@sergio.bz>"]
 description = "Community contributed libraries for the Rocket web framework."
 documentation = "https://api.rocket.rs/rocket_contrib/"
@@ -21,7 +21,7 @@ handlebars_templates = ["handlebars", "templates"]
 templates = ["serde", "serde_json", "glob"]
 
 [dependencies]
-rocket = { version = "0.3.0-dev", path = "../lib/" }
+rocket = { version = "0.4.0-dev", path = "../lib/" }
 log = "^0.3"
 
 # UUID dependencies.
@@ -36,3 +36,6 @@ rmp-serde = { version = "^0.13", optional = true }
 handlebars = { version = "^0.27", optional = true }
 glob = { version = "^0.2", optional = true }
 tera = { version = "^0.10", optional = true }
+
+[package.metadata.docs.rs]
+all-features = true

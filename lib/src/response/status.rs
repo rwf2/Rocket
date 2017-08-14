@@ -1,4 +1,4 @@
-//! Contains types that set the status code and correspoding headers of a
+//! Contains types that set the status code and corresponding headers of a
 //! response.
 //!
 //! These types are designed to make it easier to respond correctly with a given
@@ -152,6 +152,30 @@ pub struct Reset;
 impl Responder<'static> for Reset {
     fn respond_to(self, _: &Request) -> Result<Response<'static>, Status> {
         Response::build().status(Status::ResetContent).ok()
+    }
+}
+
+/// Sets the status of the response to 404 (Not Found).
+///
+/// The remainder of the response is delegated to the wrapped `Responder`.
+///
+/// # Example
+///
+/// ```rust
+/// use rocket::response::status;
+///
+/// # #[allow(unused_variables)]
+/// let response = status::NotFound("Sorry, I couldn't find it!");
+/// ```
+#[derive(Debug, Clone, PartialEq)]
+pub struct NotFound<R>(pub R);
+
+/// Sets the status code of the response to 404 Not Found.
+impl<'r, R: Responder<'r>> Responder<'r> for NotFound<R> {
+    fn respond_to(self, req: &Request) -> Result<Response<'r>, Status> {
+        Response::build_from(self.0.respond_to(req)?)
+            .status(Status::NotFound)
+            .ok()
     }
 }
 
