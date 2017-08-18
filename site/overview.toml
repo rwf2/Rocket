@@ -123,7 +123,7 @@ the standard library types including `&str`, `String`, `File`, `Option`, and
 [Flash](https://api.rocket.rs/rocket/response/struct.Flash.html), and
 [Template](https://api.rocket.rs/rocket_contrib/struct.Template.html).
 
-The task of a `Reponder` is to generate a
+The task of a `Responder` is to generate a
 [Response](https://api.rocket.rs/rocket/response/struct.Response.html), if
 possible. `Responder`s can fail with a status code. When they do, Rocket calls
 the corresponding `error` route, which can be declared as follows:
