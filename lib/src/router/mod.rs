@@ -25,10 +25,8 @@ impl Router {
     pub fn add(&mut self, route: Route) {
         let selector = route.method;
         let entries = self.routes.entry(selector).or_insert_with(|| vec![]);
-        // TODO: We really just want an insertion at the correct spot here,
-        // instead of pushing to the end and _then_ sorting.
-        entries.push(route);
-        entries.sort_by(|a, b| a.rank.cmp(&b.rank));
+        let insert_index = entries.binary_search_by_key(&route.rank, |r| r.rank).unwrap_or_else(|x| x);
+        entries.insert(insert_index, route);
     }
 
     pub fn route<'b>(&'b self, req: &Request) -> Vec<&'b Route> {
