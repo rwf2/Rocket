@@ -50,16 +50,17 @@ impl hyper::Handler for Rocket {
         let (h_addr, h_method, h_headers, h_uri, _, h_body) = hyp_req.deconstruct();
 
         // Convert the Hyper request into a Rocket request.
-        let req_res = Request::from_hyp(self, h_method, h_headers, h_uri, h_addr);
-        let mut req = match req_res {
-            Ok(req) => req,
-            Err(e) => {
-                error!("Bad incoming request: {}", e);
-                let dummy = Request::new(self, Method::Get, URI::new("<unknown>"));
-                let r = self.handle_error(Status::InternalServerError, &dummy);
-                return self.issue_response(r, res);
-            }
-        };
+        let mut req =
+            match Request::from_hyp(self, h_method, h_headers, h_uri, h_addr) {
+                Ok(req) => req,
+                Err(e) => {
+                    error!("Bad incoming request: {}", e);
+                    let dummy =
+                        Request::new(self, Method::Get, URI::new("<unknown>"));
+                    let r = self.handle_error(Status::InternalServerError, &dummy);
+                    return self.issue_response(r, res);
+                }
+            };
 
         // Retrieve the data from the hyper body.
         let data = match Data::from_hyp(h_body) {
