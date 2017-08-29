@@ -108,7 +108,7 @@ invariants through types.
 [[panels]]
 name = "Responders"
 content = '''
-The return type of a request handler can by any type that implements
+The return type of a request handler can be any type that implements
 [Responder](https://api.rocket.rs/rocket/response/trait.Responder.html):
 
 ```rust
