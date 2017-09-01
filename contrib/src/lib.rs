@@ -64,7 +64,7 @@ pub mod msgpack;
 pub use msgpack::{MsgPack, MsgPackError};
 
 #[cfg(feature = "templates")]
-mod templates;
+pub mod templates;
 
 #[cfg(feature = "templates")]
 pub use templates::Template;

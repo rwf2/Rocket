@@ -1,4 +1,4 @@
-extern crate tera;
+pub extern crate tera;
 
 use super::serde::Serialize;
 use super::{Engine, TemplateInfo};
