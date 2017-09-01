@@ -12,3 +12,9 @@ impl Responder<'static> for Failure {
         Err(self.0)
     }
 }
+
+impl From<Status> for Failure {
+    fn from(status: Status) -> Self {
+        Failure(status)
+    }
+}
