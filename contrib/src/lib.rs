@@ -1,4 +1,8 @@
 #![feature(drop_types_in_const, macro_reexport)]
+#![cfg_attr(feature = "templates", feature(conservative_impl_trait))]
+
+// TODO: Version URLs.
+#![doc(html_root_url = "https://api.rocket.rs/rocket_contrib/")]
 
 //! This crate contains officially sanctioned contributor libraries that provide
 //! functionality commonly used by Rocket applications.
@@ -13,7 +17,8 @@
 //! common modules exposed by default. The present feature list is below, with
 //! an asterisk next to the features that are enabled by default:
 //!
-//! * [json*](struct.JSON.html)
+//! * [json*](struct.Json.html)
+//! * [msgpack](struct.MsgPack.html)
 //! * [handlebars_templates](struct.Template.html)
 //! * [tera_templates](struct.Template.html)
 //! * [uuid](struct.UUID.html)
@@ -36,10 +41,6 @@
 #[macro_use] extern crate log;
 #[macro_use] extern crate rocket;
 
-#[cfg_attr(feature = "lazy_static_macro", macro_use)]
-#[cfg(feature = "lazy_static_macro")]
-extern crate lazy_static;
-
 #[cfg(feature = "serde")]
 extern crate serde;
 
@@ -53,7 +54,14 @@ extern crate serde_json;
 pub mod json;
 
 #[cfg(feature = "json")]
-pub use json::{JSON, SerdeError, Value};
+pub use json::{Json, SerdeError, JsonValue};
+
+#[cfg(feature = "msgpack")]
+#[doc(hidden)]
+pub mod msgpack;
+
+#[cfg(feature = "msgpack")]
+pub use msgpack::{MsgPack, MsgPackError};
 
 #[cfg(feature = "templates")]
 mod templates;

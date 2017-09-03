@@ -1,64 +1,55 @@
-use std::io::{self, BufRead, Read, Cursor, BufReader, Chain, Take};
+use std::io::{self, Read, Cursor, Chain};
 use std::net::Shutdown;
 
-use http::hyper::net::{HttpStream, NetworkStream};
+use super::data::BodyReader;
+use http::hyper::net::NetworkStream;
 use http::hyper::h1::HttpReader;
 
-pub type StreamReader = HttpReader<HttpStream>;
-pub type InnerStream = Chain<Take<Cursor<Vec<u8>>>, BufReader<StreamReader>>;
+//                          |-- peek buf --|
+pub type InnerStream = Chain<Cursor<Vec<u8>>, BodyReader>;
 
 /// Raw data stream of a request body.
 ///
 /// This stream can only be obtained by calling
 /// [Data::open](/rocket/data/struct.Data.html#method.open). The stream contains
 /// all of the data in the body of the request. It exposes no methods directly.
-/// Instead, it must be used as an opaque `Read` or `BufRead` structure.
-pub struct DataStream {
-    stream: InnerStream,
-    network: HttpStream,
-}
+/// Instead, it must be used as an opaque `Read` structure.
+pub struct DataStream(pub(crate) InnerStream);
 
-impl DataStream {
-    pub(crate) fn new(stream: InnerStream, network: HttpStream) -> DataStream {
-        DataStream { stream: stream, network: network, }
-    }
-}
-
+// TODO: Have a `BufRead` impl for `DataStream`. At the moment, this isn't
+// possible since Hyper's `HttpReader` doesn't implement `BufRead`.
 impl Read for DataStream {
+    #[inline(always)]
     fn read(&mut self, buf: &mut [u8]) -> io::Result<usize> {
-        self.stream.read(buf)
+        trace_!("DataStream::read()");
+        self.0.read(buf)
     }
 }
 
-impl BufRead for DataStream {
-    fn fill_buf(&mut self) -> io::Result<&[u8]> {
-        self.stream.fill_buf()
-    }
+pub fn kill_stream(stream: &mut BodyReader) {
+    // Only do the expensive reading if we're not sure we're done.
+    use self::HttpReader::*;
+    match *stream {
+        SizedReader(_, n) | ChunkedReader(_, Some(n)) if n > 0 => { /* continue */ },
+        _ => return
+    };
 
-    fn consume(&mut self, amt: usize) {
-        self.stream.consume(amt)
-    }
-}
-
-pub fn kill_stream<S: Read, N: NetworkStream>(stream: &mut S, network: &mut N) {
-    io::copy(&mut stream.take(1024), &mut io::sink()).expect("sink");
-
-    // If there are any more bytes, kill it.
-    let mut buf = [0];
-    if let Ok(n) = stream.read(&mut buf) {
-        if n > 0 {
+    // Take <= 1k from the stream. If there might be more data, force close.
+    const FLUSH_LEN: u64 = 1024;
+    match io::copy(&mut stream.take(FLUSH_LEN), &mut io::sink()) {
+        Ok(FLUSH_LEN) | Err(_) => {
             warn_!("Data left unread. Force closing network stream.");
+            let (_, network) = stream.get_mut().get_mut();
             if let Err(e) = network.close(Shutdown::Both) {
                 error_!("Failed to close network stream: {:?}", e);
             }
         }
+        Ok(n) => debug!("flushed {} unread bytes", n)
     }
 }
 
 impl Drop for DataStream {
-    // Be a bad citizen and close the TCP stream if there's unread data.
     fn drop(&mut self) {
-        kill_stream(&mut self.stream, &mut self.network);
+        kill_stream(&mut self.0.get_mut().1);
     }
 }
-

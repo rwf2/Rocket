@@ -1,10 +1,9 @@
 use std::fmt;
 use std::str::FromStr;
 
-
 use error::Error;
 use http::hyper;
-use http::ascii::uncased_eq;
+use http::uncased::uncased_eq;
 
 use self::Method::*;
 
@@ -40,7 +39,7 @@ impl Method {
         }
     }
 
-    /// Returns `true` ff an HTTP request with the method represented by `self`
+    /// Returns `true` if an HTTP request with the method represented by `self`
     /// supports a payload.
     ///
     /// # Example
@@ -51,6 +50,7 @@ impl Method {
     /// assert_eq!(Method::Get.supports_payload(), false);
     /// assert_eq!(Method::Post.supports_payload(), true);
     /// ```
+    #[inline]
     pub fn supports_payload(&self) -> bool {
         match *self {
             Put | Post | Delete | Patch => true,
@@ -105,6 +105,7 @@ impl FromStr for Method {
 }
 
 impl fmt::Display for Method {
+    #[inline(always)]
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         self.as_str().fmt(f)
     }

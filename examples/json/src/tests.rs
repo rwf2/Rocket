@@ -1,96 +1,72 @@
 use rocket;
-use rocket::testing::MockRequest;
-use rocket::http::Method::*;
+use rocket::local::Client;
 use rocket::http::{Status, ContentType};
-use rocket::Response;
-
-macro_rules! run_test {
-    ($req:expr, $test_fn:expr) => ({
-        let rocket = rocket::ignite()
-            .mount("/message", routes![super::new, super::update, super::get])
-            .catch(errors![super::not_found]);
-
-        let mut req = $req;
-        $test_fn(req.dispatch_with(&rocket));
-    })
-}
 
 #[test]
 fn bad_get_put() {
-    // Try to get a message with an ID that doesn't exist.
-    let req = MockRequest::new(Get, "/message/99").header(ContentType::JSON);
-    run_test!(req, |mut response: Response| {
-        assert_eq!(response.status(), Status::NotFound);
+    let client = Client::new(rocket()).unwrap();
 
-        let body = response.body().unwrap().into_string().unwrap();
-        assert!(body.contains("error"));
-        assert!(body.contains("Resource was not found."));
-    });
+    // Try to get a message with an ID that doesn't exist.
+    let mut res = client.get("/message/99").header(ContentType::JSON).dispatch();
+    assert_eq!(res.status(), Status::NotFound);
+
+    let body = res.body_string().unwrap();
+    assert!(body.contains("error"));
+    assert!(body.contains("Resource was not found."));
 
     // Try to get a message with an invalid ID.
-    let req = MockRequest::new(Get, "/message/hi").header(ContentType::JSON);
-    run_test!(req, |mut response: Response| {
-        assert_eq!(response.status(), Status::NotFound);
-        let body = response.body().unwrap().into_string().unwrap();
-        assert!(body.contains("error"));
-    });
+    let mut res = client.get("/message/hi").header(ContentType::JSON).dispatch();
+    let body = res.body_string().unwrap();
+    assert_eq!(res.status(), Status::NotFound);
+    assert!(body.contains("error"));
 
     // Try to put a message without a proper body.
-    let req = MockRequest::new(Put, "/message/80").header(ContentType::JSON);
-    run_test!(req, |response: Response| {
-        assert_eq!(response.status(), Status::BadRequest);
-    });
+    let res = client.put("/message/80").header(ContentType::JSON).dispatch();
+    assert_eq!(res.status(), Status::BadRequest);
 
     // Try to put a message for an ID that doesn't exist.
-    let req = MockRequest::new(Put, "/message/80")
+    let res = client.put("/message/80")
         .header(ContentType::JSON)
-        .body(r#"{ "contents": "Bye bye, world!" }"#);
+        .body(r#"{ "contents": "Bye bye, world!" }"#)
+        .dispatch();
 
-    run_test!(req, |response: Response| {
-        assert_eq!(response.status(), Status::NotFound);
-    });
+    assert_eq!(res.status(), Status::NotFound);
 }
 
 #[test]
 fn post_get_put_get() {
+    let client = Client::new(rocket()).unwrap();
+
     // Check that a message with ID 1 doesn't exist.
-    let req = MockRequest::new(Get, "/message/1").header(ContentType::JSON);
-    run_test!(req, |response: Response| {
-        assert_eq!(response.status(), Status::NotFound);
-    });
+    let res = client.get("/message/1").header(ContentType::JSON).dispatch();
+    assert_eq!(res.status(), Status::NotFound);
 
     // Add a new message with ID 1.
-    let req = MockRequest::new(Post, "/message/1")
+    let res = client.post("/message/1")
         .header(ContentType::JSON)
-        .body(r#"{ "contents": "Hello, world!" }"#);
+        .body(r#"{ "contents": "Hello, world!" }"#)
+        .dispatch();
 
-    run_test!(req, |response: Response| {
-        assert_eq!(response.status(), Status::Ok);
-    });
+    assert_eq!(res.status(), Status::Ok);
 
     // Check that the message exists with the correct contents.
-    let req = MockRequest::new(Get, "/message/1") .header(ContentType::JSON);
-    run_test!(req, |mut response: Response| {
-        assert_eq!(response.status(), Status::Ok);
-        let body = response.body().unwrap().into_string().unwrap();
-        assert!(body.contains("Hello, world!"));
-    });
+    let mut res = client.get("/message/1").header(ContentType::JSON).dispatch();
+    assert_eq!(res.status(), Status::Ok);
+    let body = res.body().unwrap().into_string().unwrap();
+    assert!(body.contains("Hello, world!"));
 
     // Change the message contents.
-    let req = MockRequest::new(Put, "/message/1")
+    let res = client.put("/message/1")
         .header(ContentType::JSON)
-        .body(r#"{ "contents": "Bye bye, world!" }"#);
+        .body(r#"{ "contents": "Bye bye, world!" }"#)
+        .dispatch();
 
-    run_test!(req, |response: Response| {
-        assert_eq!(response.status(), Status::Ok);
-    });
+    assert_eq!(res.status(), Status::Ok);
 
     // Check that the message exists with the updated contents.
-    let req = MockRequest::new(Get, "/message/1") .header(ContentType::JSON);
-    run_test!(req, |mut response: Response| {
-        assert_eq!(response.status(), Status::Ok);
-        let body = response.body().unwrap().into_string().unwrap();
-        assert!(!body.contains("Hello, world!"));
-        assert!(body.contains("Bye bye, world!"));
-    });
+    let mut res = client.get("/message/1").header(ContentType::JSON).dispatch();
+    assert_eq!(res.status(), Status::Ok);
+    let body = res.body().unwrap().into_string().unwrap();
+    assert!(!body.contains("Hello, world!"));
+    assert!(body.contains("Bye bye, world!"));
 }

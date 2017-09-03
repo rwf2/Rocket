@@ -6,8 +6,8 @@ extern crate rocket;
 #[cfg(test)] mod tests;
 
 #[derive(FromForm)]
-struct Person<'r> {
-    name: &'r str,
+struct Person {
+    name: String,
     age: Option<u8>
 }
 
@@ -21,5 +21,5 @@ fn hello(person: Person) -> String {
 }
 
 fn main() {
-    rocket::ignite().mount("/", routes![hello]).launch()
+    rocket::ignite().mount("/", routes![hello]).launch();
 }

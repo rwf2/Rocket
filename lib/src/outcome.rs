@@ -38,7 +38,7 @@
 //! fails with some error and no processing can or should continue as a result.
 //! The meaning of a failure depends on the context.
 //!
-//! It Rocket, a `Failure` generally means that a request is taken out of normal
+//! In Rocket, a `Failure` generally means that a request is taken out of normal
 //! processing. The request is then given to the catcher corresponding to some
 //! status code. users can catch failures by requesting a type of `Result<S, E>`
 //! or `Option<S>` in request handlers. For example, if a user's handler looks
@@ -80,10 +80,9 @@
 //! `None`.
 
 use std::fmt;
+use std::ops::Try;
 
-use term_painter::Color::*;
-use term_painter::Color;
-use term_painter::ToStyle;
+use yansi::{Paint, Color};
 
 use self::Outcome::*;
 
@@ -105,7 +104,42 @@ pub enum Outcome<S, E, F> {
 
 /// Conversion trait from some type into an Outcome type.
 pub trait IntoOutcome<S, E, F> {
-    fn into_outcome(self) -> Outcome<S, E, F>;
+    /// The type to use when returning an `Outcome::Failure`.
+    type Failure: Sized;
+
+    /// The type to use when returning an `Outcome::Forward`.
+    type Forward: Sized;
+
+    /// Converts `self` into an `Outcome`. If `self` represents a success, an
+    /// `Outcome::Success` is returned. Otherwise, an `Outcome::Failure` is
+    /// returned with `failure` as the inner value.
+    fn into_outcome(self, failure: Self::Failure) -> Outcome<S, E, F>;
+
+    /// Converts `self` into an `Outcome`. If `self` represents a success, an
+    /// `Outcome::Success` is returned. Otherwise, an `Outcome::Forward` is
+    /// returned with `forward` as the inner value.
+    fn or_forward(self, forward: Self::Forward) -> Outcome<S, E, F>;
+}
+
+impl<S, E, F> IntoOutcome<S, E, F> for Option<S> {
+    type Failure = E;
+    type Forward = F;
+
+    #[inline]
+    fn into_outcome(self, failure: E) -> Outcome<S, E, F> {
+        match self {
+            Some(val) => Success(val),
+            None => Failure(failure)
+        }
+    }
+
+    #[inline]
+    fn or_forward(self, forward: F) -> Outcome<S, E, F> {
+        match self {
+            Some(val) => Success(val),
+            None => Forward(forward)
+        }
+    }
 }
 
 impl<S, E, F> Outcome<S, E, F> {
@@ -329,6 +363,72 @@ impl<S, E, F> Outcome<S, E, F> {
         }
     }
 
+    /// Maps an `Outcome<S, E, F>` to an `Outcome<T, E, F>` by applying the
+    /// function `f` to the value of type `S` in `self` if `self` is an
+    /// `Outcome::Success`.
+    ///
+    /// ```rust
+    /// # use rocket::outcome::Outcome;
+    /// # use rocket::outcome::Outcome::*;
+    /// #
+    /// let x: Outcome<i32, &str, usize> = Success(10);
+    ///
+    /// let mapped = x.map(|v| if v == 10 { "10" } else { "not 10" });
+    /// assert_eq!(mapped, Success("10"));
+    /// ```
+    #[inline]
+    pub fn map<T, M: FnOnce(S) -> T>(self, f: M) -> Outcome<T, E, F> {
+        match self {
+            Success(val) => Success(f(val)),
+            Failure(val) => Failure(val),
+            Forward(val) => Forward(val),
+        }
+    }
+
+    /// Maps an `Outcome<S, E, F>` to an `Outcome<S, T, F>` by applying the
+    /// function `f` to the value of type `E` in `self` if `self` is an
+    /// `Outcome::Failure`.
+    ///
+    /// ```rust
+    /// # use rocket::outcome::Outcome;
+    /// # use rocket::outcome::Outcome::*;
+    /// #
+    /// let x: Outcome<i32, &str, usize> = Failure("hi");
+    ///
+    /// let mapped = x.map_failure(|v| if v == "hi" { 10 } else { 0 });
+    /// assert_eq!(mapped, Failure(10));
+    /// ```
+    #[inline]
+    pub fn map_failure<T, M: FnOnce(E) -> T>(self, f: M) -> Outcome<S, T, F> {
+        match self {
+            Success(val) => Success(val),
+            Failure(val) => Failure(f(val)),
+            Forward(val) => Forward(val),
+        }
+    }
+
+    /// Maps an `Outcome<S, E, F>` to an `Outcome<S, E, T>` by applying the
+    /// function `f` to the value of type `F` in `self` if `self` is an
+    /// `Outcome::Forward`.
+    ///
+    /// ```rust
+    /// # use rocket::outcome::Outcome;
+    /// # use rocket::outcome::Outcome::*;
+    /// #
+    /// let x: Outcome<i32, &str, usize> = Forward(5);
+    ///
+    /// let mapped = x.map_forward(|v| if v == 5 { "a" } else { "b" });
+    /// assert_eq!(mapped, Forward("a"));
+    /// ```
+    #[inline]
+    pub fn map_forward<T, M: FnOnce(F) -> T>(self, f: M) -> Outcome<S, E, T> {
+        match self {
+            Success(val) => Success(val),
+            Failure(val) => Failure(val),
+            Forward(val) => Forward(f(val)),
+        }
+    }
+
     /// Converts from `Outcome<S, E, F>` to `Outcome<&mut S, &mut E, &mut F>`.
     ///
     /// ```rust
@@ -354,10 +454,34 @@ impl<S, E, F> Outcome<S, E, F> {
     #[inline]
     fn formatting(&self) -> (Color, &'static str) {
         match *self {
-            Success(..) => (Green, "Success"),
-            Failure(..) => (Red, "Failure"),
-            Forward(..) => (Yellow, "Forward"),
+            Success(..) => (Color::Green, "Success"),
+            Failure(..) => (Color::Red, "Failure"),
+            Forward(..) => (Color::Yellow, "Forward"),
         }
+    }
+}
+
+impl<S, E, F> Try for Outcome<S, E, F> {
+    type Ok = S;
+    type Error = Result<F, E>;
+
+    fn into_result(self) -> Result<Self::Ok, Self::Error> {
+        match self {
+            Success(val) => Ok(val),
+            Forward(val) => Err(Ok(val)),
+            Failure(val) => Err(Err(val)),
+        }
+    }
+
+    fn from_error(val: Self::Error) -> Self {
+        match val {
+            Ok(val) => Forward(val),
+            Err(val) => Failure(val),
+        }
+    }
+
+    fn from_ok(val: Self::Ok) -> Self {
+        Success(val)
     }
 }
 
@@ -370,6 +494,6 @@ impl<S, E, F> fmt::Debug for Outcome<S, E, F> {
 impl<S, E, F> fmt::Display for Outcome<S, E, F> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let (color, string) = self.formatting();
-        write!(f, "{}", color.paint(string))
+        write!(f, "{}", Paint::new(string).fg(color))
     }
 }

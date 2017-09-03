@@ -6,12 +6,12 @@ extern crate rocket;
 #[cfg(test)] mod tests;
 
 #[get("/hello/<name>/<age>")]
-fn hello(name: &str, age: u8) -> String {
+fn hello(name: String, age: u8) -> String {
     format!("Hello, {} year old named {}!", age, name)
 }
 
 #[get("/hello/<name>")]
-fn hi<'r>(name: &'r str) -> &'r str {
+fn hi(name: String) -> String {
     name
 }
 

@@ -1,3 +1,4 @@
+use request::Request;
 use response::{Response, Responder};
 use http::Status;
 
@@ -6,8 +7,8 @@ use http::Status;
 #[derive(Debug)]
 pub struct Failure(pub Status);
 
-impl<'r> Responder<'r> for Failure {
-    fn respond(self) -> Result<Response<'r>, Status> {
+impl Responder<'static> for Failure {
+    fn respond_to(self, _: &Request) -> Result<Response<'static>, Status> {
         Err(self.0)
     }
 }

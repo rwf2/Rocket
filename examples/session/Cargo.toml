@@ -1,0 +1,13 @@
+[package]
+name = "session"
+version = "0.0.0"
+workspace = "../../"
+
+[dependencies]
+rocket = { path = "../../lib" }
+rocket_codegen = { path = "../../codegen" }
+
+[dependencies.rocket_contrib]
+path = "../../contrib"
+default-features = false
+features = ["handlebars_templates"]

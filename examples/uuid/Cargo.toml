@@ -6,13 +6,10 @@ workspace = "../../"
 [dependencies]
 rocket = { path = "../../lib" }
 rocket_codegen = { path = "../../codegen" }
-uuid = "^0.4"
+uuid = "^0.5"
 lazy_static = "^0.2"
 
 [dependencies.rocket_contrib]
 default-features = false
 path = "../../contrib"
 features = ["uuid"]
-
-[dev-dependencies]
-rocket = { path = "../../lib", features = ["testing"] }

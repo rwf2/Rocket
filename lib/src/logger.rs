@@ -4,8 +4,7 @@ use std::str::FromStr;
 use std::fmt;
 
 use log::{self, Log, LogLevel, LogRecord, LogMetadata};
-use term_painter::Color::*;
-use term_painter::ToStyle;
+use yansi::Paint;
 
 struct RocketLogger(LoggingLevel);
 
@@ -32,13 +31,14 @@ impl LoggingLevel {
 }
 
 impl FromStr for LoggingLevel {
-    type Err = ();
+    type Err = &'static str;
+
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let level = match s {
             "critical" => LoggingLevel::Critical,
             "normal" => LoggingLevel::Normal,
             "debug" => LoggingLevel::Debug,
-            _ => return Err(())
+            _ => return Err("a log level (debug, normal, critical)")
         };
 
         Ok(level)
@@ -66,6 +66,13 @@ macro_rules! log_ {
 }
 
 #[doc(hidden)] #[macro_export]
+macro_rules! launch_info {
+    ($format:expr, $($args:expr),*) => {
+        error!(target: "launch", $format, $($args),*)
+    }
+}
+
+#[doc(hidden)] #[macro_export]
 macro_rules! error_ { ($($args:expr),+) => { log_!(error: $($args),+); }; }
 #[doc(hidden)] #[macro_export]
 macro_rules! info_ { ($($args:expr),+) => { log_!(info: $($args),+); }; }
@@ -77,6 +84,7 @@ macro_rules! debug_ { ($($args:expr),+) => { log_!(debug: $($args),+); }; }
 macro_rules! warn_ { ($($args:expr),+) => { log_!(warn: $($args),+); }; }
 
 impl Log for RocketLogger {
+    #[inline(always)]
     fn enabled(&self, md: &LogMetadata) -> bool {
         md.level() <= self.0.max_log_level()
     }
@@ -87,35 +95,44 @@ impl Log for RocketLogger {
             return;
         }
 
-        // Don't print Hyper's messages unless Debug is enabled.
+        // We use the `launch_info` macro to "fake" a high priority info
+        // message. We want to print the message unless the user uses a custom
+        // drain, so we set it's status to critical, but reset it here to info.
+        let level = match record.target() {
+            "launch" => Info,
+            _ => record.level()
+        };
+
+        // Don't print Hyper or Rustls messages unless debug is enabled.
         let from_hyper = record.location().module_path().starts_with("hyper::");
-        if from_hyper && self.0 != LoggingLevel::Debug {
+        let from_rustls = record.location().module_path().starts_with("rustls::");
+        if self.0 != LoggingLevel::Debug && (from_hyper || from_rustls) {
             return;
         }
 
         // In Rocket, we abuse target with value "_" to indicate indentation.
         if record.target() == "_" && self.0 != LoggingLevel::Critical {
-            print!("    {} ", White.paint("=>"));
+            print!("    {} ", Paint::white("=>"));
         }
 
         use log::LogLevel::*;
-        match record.level() {
-            Info => println!("{}", Blue.paint(record.args())),
-            Trace => println!("{}", Magenta.paint(record.args())),
+        match level {
+            Info => println!("{}", Paint::blue(record.args())),
+            Trace => println!("{}", Paint::purple(record.args())),
             Error => {
                 println!("{} {}",
-                         Red.bold().paint("Error:"),
-                         Red.paint(record.args()))
+                         Paint::red("Error:").bold(),
+                         Paint::red(record.args()))
             }
             Warn => {
                 println!("{} {}",
-                         Yellow.bold().paint("Warning:"),
-                         Yellow.paint(record.args()))
+                         Paint::yellow("Warning:").bold(),
+                         Paint::yellow(record.args()))
             }
             Debug => {
                 let loc = record.location();
-                print!("\n{} ", Blue.bold().paint("-->"));
-                println!("{}:{}", Blue.paint(loc.file()), Blue.paint(loc.line()));
+                print!("\n{} ", Paint::blue("-->").bold());
+                println!("{}:{}", Paint::blue(loc.file()), Paint::blue(loc.line()));
                 println!("{}", record.args());
             }
         }
@@ -123,13 +140,26 @@ impl Log for RocketLogger {
 }
 
 #[doc(hidden)]
-pub fn init(level: LoggingLevel) {
+pub fn try_init(level: LoggingLevel, verbose: bool) {
+    if !::isatty::stdout_isatty() {
+        Paint::disable();
+    } else if cfg!(windows) {
+        Paint::enable_windows_ascii();
+    }
+
     let result = log::set_logger(|max_log_level| {
         max_log_level.set(level.max_log_level().to_log_level_filter());
         Box::new(RocketLogger(level))
     });
 
     if let Err(err) = result {
-        println!("Logger failed to initialize: {}", err);
+        if verbose {
+            println!("Logger failed to initialize: {}", err);
+        }
     }
+}
+
+#[doc(hidden)]
+pub fn init(level: LoggingLevel) {
+    try_init(level, true)
 }

@@ -4,16 +4,16 @@
 #[get("/><")] //~ ERROR malformed
 fn get() -> &'static str { "hi" }
 
-#[get("/<name><")] //~ ERROR malformed
-fn get1(name: &str) -> &'static str { "hi" }
+#[get("/<id><")] //~ ERROR malformed
+fn get1(id: usize) -> &'static str { "hi" }
 
-#[get("/<<<<name><")] //~ ERROR malformed
-fn get2(name: &str) -> &'static str { "hi" }
+#[get("/<<<<id><")] //~ ERROR malformed
+fn get2(id: usize) -> &'static str { "hi" }
 
 #[get("/<!>")] //~ ERROR identifiers
 fn get3() -> &'static str { "hi" }
 
-#[get("/<_>")] //~ ERROR ignored
+#[get("/<_>")] //~ ERROR named
 fn get4() -> &'static str { "hi" }
 
 #[get("/<1>")] //~ ERROR identifiers

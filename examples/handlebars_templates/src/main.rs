@@ -3,7 +3,6 @@
 
 extern crate rocket_contrib;
 extern crate rocket;
-extern crate serde_json;
 #[macro_use] extern crate serde_derive;
 
 #[cfg(test)] mod tests;
@@ -40,9 +39,13 @@ fn not_found(req: &Request) -> Template {
     Template::render("error/404", &map)
 }
 
-fn main() {
+fn rocket() -> rocket::Rocket {
     rocket::ignite()
         .mount("/", routes![index, get])
+        .attach(Template::fairing())
         .catch(errors![not_found])
-        .launch();
+}
+
+fn main() {
+    rocket().launch();
 }

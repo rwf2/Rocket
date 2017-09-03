@@ -10,11 +10,16 @@ mod schema {
 }
 
 #[table_name = "tasks"]
-#[derive(Serialize, Queryable, Insertable, FromForm, Debug, Clone)]
+#[derive(Serialize, Queryable, Insertable, Debug, Clone)]
 pub struct Task {
-    id: Option<i32>,
+    pub id: Option<i32>,
     pub description: String,
-    pub completed: Option<bool>
+    pub completed: bool
+}
+
+#[derive(FromForm)]
+pub struct Todo {
+    pub description: String,
 }
 
 impl Task {
@@ -22,8 +27,9 @@ impl Task {
         all_tasks.order(tasks::id.desc()).load::<Task>(conn).unwrap()
     }
 
-    pub fn insert(&self, conn: &SqliteConnection) -> bool {
-        diesel::insert(self).into(tasks::table).execute(conn).is_ok()
+    pub fn insert(todo: Todo, conn: &SqliteConnection) -> bool {
+        let t = Task { id: None, description: todo.description, completed: false };
+        diesel::insert(&t).into(tasks::table).execute(conn).is_ok()
     }
 
     pub fn toggle_with_id(id: i32, conn: &SqliteConnection) -> bool {
@@ -32,7 +38,7 @@ impl Task {
             return false;
         }
 
-        let new_status = !task.unwrap().completed.unwrap();
+        let new_status = !task.unwrap().completed;
         let updated_task = diesel::update(all_tasks.find(id));
         updated_task.set(task_completed.eq(new_status)).execute(conn).is_ok()
     }

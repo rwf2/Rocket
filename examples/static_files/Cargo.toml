@@ -1,6 +1,6 @@
 [package]
 name = "static_files"
-version = "0.0.1"
+version = "0.0.0"
 workspace = "../../"
 
 [dependencies]

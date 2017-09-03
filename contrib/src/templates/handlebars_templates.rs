@@ -1,57 +1,40 @@
 extern crate handlebars;
 
 use super::serde::Serialize;
-use super::TemplateInfo;
+use super::{Engine, TemplateInfo};
 
-use self::handlebars::Handlebars;
+pub use self::handlebars::Handlebars;
 
-static mut HANDLEBARS: Option<Handlebars> = None;
+impl Engine for Handlebars {
+    const EXT: &'static str = "hbs";
 
-pub const EXT: &'static str = "hbs";
-
-// This function must be called a SINGLE TIME from A SINGLE THREAD for safety to
-// hold here and in `render`.
-pub unsafe fn register(templates: &[(&str, &TemplateInfo)]) -> bool {
-    if HANDLEBARS.is_some() {
-        error_!("Internal error: reregistering handlebars!");
-        return false;
-    }
-
-    let mut hb = Handlebars::new();
-    let mut success = true;
-    for &(name, info) in templates {
-        let path = &info.full_path;
-        if let Err(e) = hb.register_template_file(name, path) {
-            error_!("Handlebars template '{}' failed registry: {:?}", name, e);
-            success = false;
+    fn init(templates: &[(&str, &TemplateInfo)]) -> Option<Handlebars> {
+        let mut hb = Handlebars::new();
+        for &(name, info) in templates {
+            let path = &info.path;
+            if let Err(e) = hb.register_template_file(name, path) {
+                error!("Error in Handlebars template '{}'.", name);
+                info_!("{}", e);
+                info_!("Template path: '{}'.", path.to_string_lossy());
+                return None;
+            }
         }
+
+        Some(hb)
     }
 
-    HANDLEBARS = Some(hb);
-    success
-}
-
-pub fn render<T>(name: &str, _info: &TemplateInfo, context: &T) -> Option<String>
-    where T: Serialize
-{
-    let hb = match unsafe { HANDLEBARS.as_ref() } {
-        Some(hb) => hb,
-        None => {
-            error_!("Internal error: `render` called before handlebars init.");
+    fn render<C: Serialize>(&self, name: &str, context: C) -> Option<String> {
+        if self.get_template(name).is_none() {
+            error_!("Handlebars template '{}' does not exist.", name);
             return None;
         }
-    };
 
-    if hb.get_template(name).is_none() {
-        error_!("Handlebars template '{}' does not exist.", name);
-        return None;
-    }
-
-    match hb.render(name, context) {
-        Ok(string) => Some(string),
-        Err(e) => {
-            error_!("Error rendering Handlebars template '{}': {}", name, e);
-            None
+        match Handlebars::render(self, name, &context) {
+            Ok(string) => Some(string),
+            Err(e) => {
+                error_!("Error rendering Handlebars template '{}': {}", name, e);
+                None
+            }
         }
     }
 }

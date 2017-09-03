@@ -1,18 +1,20 @@
 use std::collections::HashMap;
-use std::net::ToSocketAddrs;
+use std::net::{IpAddr, lookup_host};
 use std::path::{Path, PathBuf};
-use std::sync::RwLock;
 use std::convert::AsRef;
 use std::fmt;
 use std::env;
 
+use super::custom_values::*;
+use {num_cpus, base64};
 use config::Environment::*;
-use config::{self, Value, ConfigBuilder, Environment, ConfigError};
-
-use num_cpus;
-use logger::LoggingLevel;
+use config::{Result, ConfigBuilder, Environment, ConfigError, LoggingLevel};
+use config::{Table, Value, Array, Datetime};
+use http::Key;
 
 /// Structure for Rocket application configuration.
+///
+/// # Usage
 ///
 /// A `Config` structure is typically built using the [build](#method.build)
 /// method and [ConfigBuilder](/rocket/config/struct.ConfigBuilder.html)
@@ -28,6 +30,14 @@ use logger::LoggingLevel;
 ///     .workers(12)
 ///     .unwrap();
 /// ```
+///
+/// ## General Configuration
+///
+/// For more information about Rocket's configuration, see the [`config`] module
+/// documentaiton.
+///
+/// [`config`]: /rocket/config/index.html
+#[derive(Clone)]
 pub struct Config {
     /// The environment that this configuration corresponds to.
     pub environment: Environment,
@@ -39,20 +49,29 @@ pub struct Config {
     pub workers: u16,
     /// How much information to log.
     pub log_level: LoggingLevel,
+    /// The secret key.
+    pub(crate) secret_key: SecretKey,
+    /// TLS configuration.
+    pub(crate) tls: Option<TlsConfig>,
+    /// Streaming read size limits.
+    pub limits: Limits,
     /// Extra parameters that aren't part of Rocket's core config.
     pub extras: HashMap<String, Value>,
     /// The path to the configuration file this config belongs to.
     pub config_path: PathBuf,
-    /// The session key.
-    session_key: RwLock<Option<String>>,
 }
 
-macro_rules! parse {
-    ($conf:expr, $name:expr, $val:expr, $method:ident, $expect: expr) => (
-        $val.$method().ok_or_else(|| {
-            $conf.bad_type($name, $val.type_str(), $expect)
-        })
-    );
+macro_rules! config_from_raw {
+    ($config:expr, $name:expr, $value:expr,
+        $($key:ident => ($type:ident, $set:ident, $map:expr)),+ | _ => $rest:expr) => (
+        match $name {
+            $(stringify!($key) => {
+                super::custom_values::$type($config, $name, $value)
+                    .and_then(|parsed| $map($config.$set(parsed)))
+            })+
+            _ => $rest
+        }
+    )
 }
 
 impl Config {
@@ -97,34 +116,95 @@ impl Config {
     /// let mut my_config = Config::new(Environment::Production).expect("cwd");
     /// my_config.set_port(1001);
     /// ```
-    pub fn new(env: Environment) -> config::Result<Config> {
+    pub fn new(env: Environment) -> Result<Config> {
         let cwd = env::current_dir().map_err(|_| ConfigError::BadCWD)?;
         Config::default(env, cwd.as_path().join("Rocket.custom.toml"))
     }
 
-    // Aliases to `default_for` before the method is removed.
-    pub(crate) fn default<P>(env: Environment, path: P) -> config::Result<Config>
-        where P: AsRef<Path>
-    {
-        #[allow(deprecated)]
-        Config::default_for(env, path)
+    /// Returns a builder for `Config` structure where the default parameters
+    /// are set to those of the development environment. The root configuration
+    /// directory is set to the current working directory.
+    ///
+    /// # Errors
+    ///
+    /// If the current directory cannot be retrieved, a `BadCWD` error is
+    /// returned.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use rocket::config::{Config, Environment};
+    ///
+    /// let mut my_config = Config::development().unwrap();
+    /// my_config.set_port(1001);
+    /// ```
+    pub fn development() -> Result<Config> {
+        Config::new(Environment::Development)
+    }
+
+    /// Creates a new configuration using the default parameters from the
+    /// staging environment. The root configuration directory is set to the
+    /// current working directory.
+    ///
+    /// # Errors
+    ///
+    /// If the current directory cannot be retrieved, a `BadCWD` error is
+    /// returned.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use rocket::config::{Config, Environment};
+    ///
+    /// let mut my_config = Config::staging().expect("cwd");
+    /// my_config.set_port(1001);
+    /// ```
+    pub fn staging() -> Result<Config> {
+        Config::new(Environment::Staging)
+    }
+
+    /// Creates a new configuration using the default parameters from the
+    /// production environment. The root configuration directory is set to the
+    /// current working directory.
+    ///
+    /// # Errors
+    ///
+    /// If the current directory cannot be retrieved, a `BadCWD` error is
+    /// returned.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use rocket::config::{Config, Environment};
+    ///
+    /// let mut my_config = Config::production().expect("cwd");
+    /// my_config.set_port(1001);
+    /// ```
+    pub fn production() -> Result<Config> {
+        Config::new(Environment::Production)
     }
 
     /// Returns the default configuration for the environment `env` given that
     /// the configuration was stored at `config_path`. If `config_path` is not
     /// an absolute path, an `Err` of `ConfigError::BadFilePath` is returned.
-    #[deprecated(since="0.2", note="use the `new` or `build` methods instead")]
-    pub fn default_for<P>(env: Environment, config_path: P) -> config::Result<Config>
+    ///
+    /// # Panics
+    ///
+    /// Panics if randomness cannot be retrieved from the OS.
+    pub(crate) fn default<P>(env: Environment, path: P) -> Result<Config>
         where P: AsRef<Path>
     {
-        let config_path = config_path.as_ref().to_path_buf();
+        let config_path = path.as_ref().to_path_buf();
         if config_path.parent().is_none() {
             return Err(ConfigError::BadFilePath(config_path,
                 "Configuration files must be rooted in a directory."));
         }
 
-        // Note: This may truncate if num_cpus::get() > u16::max. That's okay.
-        let default_workers = ::std::cmp::max(num_cpus::get(), 2) as u16;
+        // Note: This may truncate if num_cpus::get() / 2 > u16::max. That's okay.
+        let default_workers = (num_cpus::get() * 2) as u16;
+
+        // Use a generated secret key by default.
+        let key = SecretKey::Generated(Key::generate());
 
         Ok(match env {
             Development => {
@@ -134,7 +214,9 @@ impl Config {
                     port: 8000,
                     workers: default_workers,
                     log_level: LoggingLevel::Normal,
-                    session_key: RwLock::new(None),
+                    secret_key: key,
+                    tls: None,
+                    limits: Limits::default(),
                     extras: HashMap::new(),
                     config_path: config_path,
                 }
@@ -146,7 +228,9 @@ impl Config {
                     port: 80,
                     workers: default_workers,
                     log_level: LoggingLevel::Normal,
-                    session_key: RwLock::new(None),
+                    secret_key: key,
+                    tls: None,
+                    limits: Limits::default(),
                     extras: HashMap::new(),
                     config_path: config_path,
                 }
@@ -158,7 +242,9 @@ impl Config {
                     port: 80,
                     workers: default_workers,
                     log_level: LoggingLevel::Critical,
-                    session_key: RwLock::new(None),
+                    secret_key: key,
+                    tls: None,
+                    limits: Limits::default(),
                     extras: HashMap::new(),
                     config_path: config_path,
                 }
@@ -169,20 +255,16 @@ impl Config {
     /// Constructs a `BadType` error given the entry `name`, the invalid `val`
     /// at that entry, and the `expect`ed type name.
     #[inline(always)]
-    fn bad_type(&self, name: &str, actual: &'static str, expect: &'static str)
-        -> ConfigError {
+    pub(crate) fn bad_type(&self,
+                           name: &str,
+                           actual: &'static str,
+                           expect: &'static str) -> ConfigError {
         let id = format!("{}.{}", self.environment, name);
         ConfigError::BadType(id, expect, actual, self.config_path.clone())
     }
 
-    // Aliases to `set` before the method is removed.
-    pub(crate) fn set_raw(&mut self, name: &str, val: &Value) -> config::Result<()> {
-        #[allow(deprecated)]
-        self.set(name, val)
-    }
-
     /// Sets the configuration `val` for the `name` entry. If the `name` is one
-    /// of "address", "port", "session_key", "log", or "workers" (the "default"
+    /// of "address", "port", "secret_key", "log", or "workers" (the "default"
     /// values), the appropriate value in the `self` Config structure is set.
     /// Otherwise, the value is stored as an `extra`.
     ///
@@ -194,41 +276,23 @@ impl Config {
     ///   * **port**: Integer (16-bit unsigned)
     ///   * **workers**: Integer (16-bit unsigned)
     ///   * **log**: String
-    ///   * **session_key**: String (192-bit base64)
-    #[deprecated(since="0.2", note="use the set_{param} methods instead")]
-    pub fn set(&mut self, name: &str, val: &Value) -> config::Result<()> {
-        if name == "address" {
-            let address_str = parse!(self, name, val, as_str, "a string")?;
-            self.set_address(address_str)?;
-        } else if name == "port" {
-            let port = parse!(self, name, val, as_integer, "an integer")?;
-            if port < 0 || port > (u16::max_value() as i64) {
-                return Err(self.bad_type(name, val.type_str(), "a 16-bit unsigned integer"))
+    ///   * **secret_key**: String (192-bit base64)
+    ///   * **tls**: Table (`certs` (path as String), `key` (path as String))
+    pub(crate) fn set_raw(&mut self, name: &str, val: &Value) -> Result<()> {
+        let (id, ok) = (|val| val, |_| Ok(()));
+        config_from_raw!(self, name, val,
+            address => (str, set_address, id),
+            port => (u16, set_port, ok),
+            workers => (u16, set_workers, ok),
+            secret_key => (str, set_secret_key, id),
+            log => (log_level, set_log_level, ok),
+            tls => (tls_config, set_raw_tls, id),
+            limits => (limits, set_limits, ok)
+            | _ => {
+                self.extras.insert(name.into(), val.clone());
+                Ok(())
             }
-
-            self.set_port(port as u16);
-        } else if name == "workers" {
-            let workers = parse!(self, name, val, as_integer, "an integer")?;
-            if workers < 0 || workers > (u16::max_value() as i64) {
-                return Err(self.bad_type(name, val.type_str(), "a 16-bit unsigned integer"));
-            }
-
-            self.set_workers(workers as u16);
-        } else if name == "session_key" {
-            let key = parse!(self, name, val, as_str, "a string")?;
-            self.set_session_key(key)?;
-        } else if name == "log" {
-            let level_str = parse!(self, name, val, as_str, "a string")?;
-            let expect = "log level ('normal', 'critical', 'debug')";
-            match level_str.parse() {
-                Ok(level) => self.set_log_level(level),
-                Err(_) => return Err(self.bad_type(name, val.type_str(), expect))
-            }
-        } else {
-            self.extras.insert(name.into(), val.clone());
-        }
-
-        Ok(())
+        )
     }
 
     /// Sets the root directory of this configuration to `root`.
@@ -268,19 +332,18 @@ impl Config {
     /// # fn config_test() -> Result<(), ConfigError> {
     /// let mut config = Config::new(Environment::Staging)?;
     /// assert!(config.set_address("localhost").is_ok());
+    /// assert!(config.set_address("::").is_ok());
     /// assert!(config.set_address("?").is_err());
     /// # Ok(())
     /// # }
     /// ```
-    pub fn set_address<A: Into<String>>(&mut self, address: A) -> config::Result<()> {
+    pub fn set_address<A: Into<String>>(&mut self, address: A) -> Result<()> {
         let address = address.into();
-        if address.contains(':') {
-            return Err(self.bad_type("address", "string", "a hostname or IP with no port"));
-        } else if format!("{}:{}", address, 80).to_socket_addrs().is_err() {
+        if address.parse::<IpAddr>().is_err() && lookup_host(&address).is_err() {
             return Err(self.bad_type("address", "string", "a valid hostname or IP"));
         }
 
-        self.address = address.into();
+        self.address = address;
         Ok(())
     }
 
@@ -298,6 +361,7 @@ impl Config {
     /// # Ok(())
     /// # }
     /// ```
+    #[inline]
     pub fn set_port(&mut self, port: u16) {
         self.port = port;
     }
@@ -316,11 +380,12 @@ impl Config {
     /// # Ok(())
     /// # }
     /// ```
+    #[inline]
     pub fn set_workers(&mut self, workers: u16) {
         self.workers = workers;
     }
 
-    /// Sets the `session_key` in `self` to `key` which must be a 192-bit base64
+    /// Sets the `secret_key` in `self` to `key` which must be a 192-bit base64
     /// encoded string.
     ///
     /// # Errors
@@ -336,20 +401,27 @@ impl Config {
     /// # use rocket::config::ConfigError;
     /// # fn config_test() -> Result<(), ConfigError> {
     /// let mut config = Config::new(Environment::Staging)?;
-    /// assert!(config.set_session_key("VheMwXIBygSmOlZAhuWl2B+zgvTN3WW5").is_ok());
-    /// assert!(config.set_session_key("hello? anyone there?").is_err());
+    /// let key = "8Xui8SN4mI+7egV/9dlfYYLGQJeEx4+DwmSQLwDVXJg=";
+    /// assert!(config.set_secret_key(key).is_ok());
+    /// assert!(config.set_secret_key("hello? anyone there?").is_err());
     /// # Ok(())
     /// # }
     /// ```
-    pub fn set_session_key<K: Into<String>>(&mut self, key: K) -> config::Result<()> {
+    pub fn set_secret_key<K: Into<String>>(&mut self, key: K) -> Result<()> {
         let key = key.into();
-        if key.len() != 32 {
-            return Err(self.bad_type("session_key",
-                                     "string",
-                                     "a 192-bit base64 string"));
+        let error = self.bad_type("secret_key", "string",
+                                  "a 256-bit base64 encoded string");
+
+        if key.len() != 44 {
+            return Err(error);
         }
 
-        self.session_key = RwLock::new(Some(key));
+        let bytes = match base64::decode(&key) {
+            Ok(bytes) => bytes,
+            Err(_) => return Err(error)
+        };
+
+        self.secret_key = SecretKey::Provided(Key::from_master(&bytes));
         Ok(())
     }
 
@@ -358,8 +430,7 @@ impl Config {
     /// # Example
     ///
     /// ```rust
-    /// use rocket::LoggingLevel;
-    /// use rocket::config::{Config, Environment};
+    /// use rocket::config::{Config, LoggingLevel, Environment};
     ///
     /// # use rocket::config::ConfigError;
     /// # fn config_test() -> Result<(), ConfigError> {
@@ -368,8 +439,95 @@ impl Config {
     /// # Ok(())
     /// # }
     /// ```
+    #[inline]
     pub fn set_log_level(&mut self, log_level: LoggingLevel) {
         self.log_level = log_level;
+    }
+
+    /// Set the receive limits in `self` to `limits`.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use rocket::config::{Config, Limits};
+    ///
+    /// # use rocket::config::ConfigError;
+    /// # fn config_test() -> Result<(), ConfigError> {
+    /// let mut config = Config::development()?;
+    /// config.set_limits(Limits::default().limit("json", 4 * (1 << 20)));
+    /// # Ok(())
+    /// # }
+    /// ```
+    #[inline]
+    pub fn set_limits(&mut self, limits: Limits) {
+        self.limits = limits;
+    }
+
+    /// Sets the TLS configuration in `self`.
+    ///
+    /// Certificates are read from `certs_path`. The certificate chain must be
+    /// in X.509 PEM format. The private key is read from `key_path`. The
+    /// private key must be an RSA key in either PKCS#1 or PKCS#8 PEM format.
+    ///
+    /// # Errors
+    ///
+    /// If reading either the certificates or private key fails, an error of
+    /// variant `Io` is returned. If either the certificates or private key
+    /// files are malformed or cannot be parsed, an error of `BadType` is
+    /// returned.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use rocket::config::Config;
+    ///
+    /// # use rocket::config::ConfigError;
+    /// # fn config_test() -> Result<(), ConfigError> {
+    /// let mut config = Config::development()?;
+    /// config.set_tls("/etc/ssl/my_certs.pem", "/etc/ssl/priv.key")?;
+    /// # Ok(())
+    /// # }
+    /// ```
+    #[cfg(feature = "tls")]
+    pub fn set_tls(&mut self, certs_path: &str, key_path: &str) -> Result<()> {
+        use hyper_sync_rustls::util as tls;
+        use hyper_sync_rustls::util::Error::Io;
+        let pem_err = "malformed PEM file";
+
+        // Load the certificates.
+        let certs = tls::load_certs(certs_path)
+            .map_err(|e| match e {
+                Io(e) => ConfigError::Io(e, "tls.certs"),
+                _ => self.bad_type("tls", pem_err, "a valid certificates file")
+            })?;
+
+        // And now the private key.
+        let key = tls::load_private_key(key_path)
+            .map_err(|e| match e {
+                Io(e) => ConfigError::Io(e, "tls.key"),
+                _ => self.bad_type("tls", pem_err, "a valid private key file")
+            })?;
+
+        self.tls = Some(TlsConfig { certs, key });
+        Ok(())
+    }
+
+    #[doc(hidden)]
+    #[cfg(not(feature = "tls"))]
+    pub fn set_tls(&mut self, _: &str, _: &str) -> Result<()> {
+        self.tls = Some(TlsConfig);
+        Ok(())
+    }
+
+    #[cfg(not(test))]
+    #[inline(always)]
+    fn set_raw_tls(&mut self, paths: (&str, &str)) -> Result<()> {
+        self.set_tls(paths.0, paths.1)
+    }
+
+    #[cfg(test)]
+    fn set_raw_tls(&mut self, _: (&str, &str)) -> Result<()> {
+        Ok(())
     }
 
     /// Sets the extras for `self` to be the key/value pairs in `extras`.
@@ -379,7 +537,7 @@ impl Config {
     ///
     /// ```rust
     /// use std::collections::HashMap;
-    /// use rocket::config::{Config, Environment, IntoValue};
+    /// use rocket::config::{Config, Environment};
     ///
     /// # use rocket::config::ConfigError;
     /// # fn config_test() -> Result<(), ConfigError> {
@@ -387,13 +545,14 @@ impl Config {
     ///
     /// // Create the `extras` map.
     /// let mut extras = HashMap::new();
-    /// extras.insert("another_port".to_string(), 1044.into_value());
-    /// extras.insert("templates".to_string(), "my_dir".into_value());
+    /// extras.insert("another_port".to_string(), 1044.into());
+    /// extras.insert("templates".to_string(), "my_dir".into());
     ///
     /// config.set_extras(extras);
     /// # Ok(())
     /// # }
     /// ```
+    #[inline]
     pub fn set_extras(&mut self, extras: HashMap<String, Value>) {
         self.extras = extras;
     }
@@ -405,7 +564,7 @@ impl Config {
     ///
     /// ```rust
     /// use std::collections::HashMap;
-    /// use rocket::config::{Config, Environment, IntoValue};
+    /// use rocket::config::{Config, Environment};
     ///
     /// # use rocket::config::ConfigError;
     /// # fn config_test() -> Result<(), ConfigError> {
@@ -414,45 +573,23 @@ impl Config {
     ///
     /// // Add a couple of extras to the config.
     /// let mut extras = HashMap::new();
-    /// extras.insert("another_port".to_string(), 1044.into_value());
-    /// extras.insert("templates".to_string(), "my_dir".into_value());
+    /// extras.insert("another_port".to_string(), 1044.into());
+    /// extras.insert("templates".to_string(), "my_dir".into());
     /// config.set_extras(extras);
     ///
     /// assert_eq!(config.extras().count(), 2);
     /// # Ok(())
     /// # }
     /// ```
+    #[inline]
     pub fn extras<'a>(&'a self) -> impl Iterator<Item=(&'a str, &'a Value)> {
         self.extras.iter().map(|(k, v)| (k.as_str(), v))
     }
 
-    /// Moves the session key string out of the `self` Config, if there is one.
-    /// Because the value is moved out, subsequent calls will result in a return
-    /// value of `None`.
-    ///
-    /// # Example
-    ///
-    /// ```rust
-    /// use rocket::config::{Config, Environment};
-    ///
-    /// // Create a new config with a session key.
-    /// let key = "adL5fFIPmZBrlyHk2YT4NLV3YCk2gFXz";
-    /// let config = Config::build(Environment::Staging)
-    ///     .session_key(key)
-    ///     .unwrap();
-    ///
-    /// // Get the key for the first time.
-    /// let session_key = config.take_session_key();
-    /// assert_eq!(session_key, Some(key.to_string()));
-    ///
-    /// // Try to get the key again.
-    /// let session_key_again = config.take_session_key();
-    /// assert_eq!(session_key_again, None);
-    /// ```
+    /// Retrieves the secret key from `self`.
     #[inline]
-    pub fn take_session_key(&self) -> Option<String> {
-        let mut key = self.session_key.write().expect("couldn't lock session key");
-        key.take()
+    pub(crate) fn secret_key(&self) -> &Key {
+        self.secret_key.inner()
     }
 
     /// Attempts to retrieve the extra named `name` as a string.
@@ -474,9 +611,9 @@ impl Config {
     ///
     /// assert_eq!(config.get_str("my_extra"), Ok("extra_value"));
     /// ```
-    pub fn get_str<'a>(&'a self, name: &str) -> config::Result<&'a str> {
-        let value = self.extras.get(name).ok_or_else(|| ConfigError::NotFound)?;
-        parse!(self, name, value, as_str, "a string")
+    pub fn get_str<'a>(&'a self, name: &str) -> Result<&'a str> {
+        let val = self.extras.get(name).ok_or_else(|| ConfigError::NotFound)?;
+        val.as_str().ok_or_else(|| self.bad_type(name, val.type_str(), "a string"))
     }
 
     /// Attempts to retrieve the extra named `name` as an integer.
@@ -498,9 +635,9 @@ impl Config {
     ///
     /// assert_eq!(config.get_int("my_extra"), Ok(1025));
     /// ```
-    pub fn get_int(&self, name: &str) -> config::Result<i64> {
-        let value = self.extras.get(name).ok_or_else(|| ConfigError::NotFound)?;
-        parse!(self, name, value, as_integer, "an integer")
+    pub fn get_int(&self, name: &str) -> Result<i64> {
+        let val = self.extras.get(name).ok_or_else(|| ConfigError::NotFound)?;
+        val.as_integer().ok_or_else(|| self.bad_type(name, val.type_str(), "an integer"))
     }
 
     /// Attempts to retrieve the extra named `name` as a boolean.
@@ -522,9 +659,9 @@ impl Config {
     ///
     /// assert_eq!(config.get_bool("my_extra"), Ok(true));
     /// ```
-    pub fn get_bool(&self, name: &str) -> config::Result<bool> {
-        let value = self.extras.get(name).ok_or_else(|| ConfigError::NotFound)?;
-        parse!(self, name, value, as_bool, "a boolean")
+    pub fn get_bool(&self, name: &str) -> Result<bool> {
+        let val = self.extras.get(name).ok_or_else(|| ConfigError::NotFound)?;
+        val.as_bool().ok_or_else(|| self.bad_type(name, val.type_str(), "a boolean"))
     }
 
     /// Attempts to retrieve the extra named `name` as a float.
@@ -546,9 +683,87 @@ impl Config {
     ///
     /// assert_eq!(config.get_float("pi"), Ok(3.14159));
     /// ```
-    pub fn get_float(&self, name: &str) -> config::Result<f64> {
-        let value = self.extras.get(name).ok_or_else(|| ConfigError::NotFound)?;
-        parse!(self, name, value, as_float, "a float")
+    pub fn get_float(&self, name: &str) -> Result<f64> {
+        let val = self.extras.get(name).ok_or_else(|| ConfigError::NotFound)?;
+        val.as_float().ok_or_else(|| self.bad_type(name, val.type_str(), "a float"))
+    }
+
+    /// Attempts to retrieve the extra named `name` as a slice of an array.
+    ///
+    /// # Errors
+    ///
+    /// If an extra with `name` doesn't exist, returns an `Err` of `NotFound`.
+    /// If an extra with `name` _does_ exist but is not an array, returns a
+    /// `BadType` error.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use rocket::config::{Config, Environment};
+    ///
+    /// let config = Config::build(Environment::Staging)
+    ///     .extra("numbers", vec![1, 2, 3])
+    ///     .unwrap();
+    ///
+    /// assert!(config.get_slice("numbers").is_ok());
+    /// ```
+    pub fn get_slice(&self, name: &str) -> Result<&Array> {
+        let val = self.extras.get(name).ok_or_else(|| ConfigError::NotFound)?;
+        val.as_array().ok_or_else(|| self.bad_type(name, val.type_str(), "an array"))
+    }
+
+    /// Attempts to retrieve the extra named `name` as a table.
+    ///
+    /// # Errors
+    ///
+    /// If an extra with `name` doesn't exist, returns an `Err` of `NotFound`.
+    /// If an extra with `name` _does_ exist but is not a table, returns a
+    /// `BadType` error.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use std::collections::BTreeMap;
+    /// use rocket::config::{Config, Environment};
+    ///
+    /// let mut table = BTreeMap::new();
+    /// table.insert("my_value".to_string(), 1);
+    ///
+    /// let config = Config::build(Environment::Staging)
+    ///     .extra("my_table", table)
+    ///     .unwrap();
+    ///
+    /// assert!(config.get_table("my_table").is_ok());
+    /// ```
+    pub fn get_table(&self, name: &str) -> Result<&Table> {
+        let val = self.extras.get(name).ok_or_else(|| ConfigError::NotFound)?;
+        val.as_table().ok_or_else(|| self.bad_type(name, val.type_str(), "a table"))
+    }
+
+    /// Attempts to retrieve the extra named `name` as a datetime value.
+    ///
+    /// # Errors
+    ///
+    /// If an extra with `name` doesn't exist, returns an `Err` of `NotFound`.
+    /// If an extra with `name` _does_ exist but is not a datetime, returns a
+    /// `BadType` error.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use rocket::config::{Config, Environment, Value, Datetime};
+    ///
+    /// let date = "1979-05-27T00:32:00-07:00".parse::<Datetime>().unwrap();
+    ///
+    /// let config = Config::build(Environment::Staging)
+    ///     .extra("my_date", Value::Datetime(date.clone()))
+    ///     .unwrap();
+    ///
+    /// assert_eq!(config.get_datetime("my_date"), Ok(&date));
+    /// ```
+    pub fn get_datetime(&self, name: &str) -> Result<&Datetime> {
+        let v = self.extras.get(name).ok_or_else(|| ConfigError::NotFound)?;
+        v.as_datetime().ok_or_else(|| self.bad_type(name, v.type_str(), "a datetime"))
     }
 
     /// Returns the path at which the configuration file for `self` is stored.
@@ -577,7 +792,8 @@ impl Config {
 impl fmt::Debug for Config {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "Config[{}] {{ address: {}, port: {}, workers: {}, log: {:?}",
-               self.environment, self.address, self.port, self.workers, self.log_level)?;
+               self.environment, self.address, self.port, self.workers,
+               self.log_level)?;
 
         for (key, value) in self.extras() {
             write!(f, ", {}: {}", key, value)?;
@@ -587,7 +803,7 @@ impl fmt::Debug for Config {
     }
 }
 
-/// Doesn't consider the session key or config path.
+/// Doesn't consider the secret key or config path.
 impl PartialEq for Config {
     fn eq(&self, other: &Config) -> bool {
         self.address == other.address

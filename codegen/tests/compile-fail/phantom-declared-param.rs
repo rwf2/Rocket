@@ -1,17 +1,17 @@
 #![feature(plugin)]
 #![plugin(rocket_codegen)]
 
-#[get("/<param>")] //~ ERROR declared
-fn get() {  } //~ ERROR isn't in the function signature
+#[get("/<param>")] //~ ERROR unused dynamic parameter: `param`
+fn get() {  } //~ NOTE expected
 
-#[get("/<a>")] //~ ERROR declared
-fn get2() {  } //~ ERROR isn't in the function signature
+#[get("/<a>")] //~ ERROR unused dynamic parameter: `a`
+fn get2() {  } //~ NOTE expected
 
 #[get("/a/b/c/<a>/<b>")]
-    //~^ ERROR 'a' is declared
-    //~^^ ERROR 'b' is declared
+    //~^ ERROR unused dynamic parameter: `a`
+    //~^^ ERROR unused dynamic parameter: `b`
 fn get32() {  }
-    //~^ ERROR isn't in the function signature
-    //~^^ ERROR isn't in the function signature
+    //~^ NOTE expected
+    //~^^ NOTE expected
 
 fn main() {  }

@@ -8,5 +8,4 @@ mod common;
 #[test]
 fn test_production_config() {
     common::test_config(rocket::config::Environment::Production);
-    common::test_hello();
 }

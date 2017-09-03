@@ -18,11 +18,12 @@ pub fn init_pool() -> Pool {
     r2d2::Pool::new(config, manager).expect("db pool")
 }
 
-pub struct Conn(r2d2::PooledConnection<ConnectionManager<SqliteConnection>>);
+pub struct Conn(pub r2d2::PooledConnection<ConnectionManager<SqliteConnection>>);
 
 impl Deref for Conn {
     type Target = SqliteConnection;
 
+    #[inline(always)]
     fn deref(&self) -> &Self::Target {
         &self.0
     }
@@ -32,12 +33,7 @@ impl<'a, 'r> FromRequest<'a, 'r> for Conn {
     type Error = ();
 
     fn from_request(request: &'a Request<'r>) -> request::Outcome<Conn, ()> {
-        let pool = match <State<Pool> as FromRequest>::from_request(request) {
-            Outcome::Success(pool) => pool,
-            Outcome::Failure(e) => return Outcome::Failure(e),
-            Outcome::Forward(_) => return Outcome::Forward(()),
-        };
-
+        let pool = request.guard::<State<Pool>>()?;
         match pool.get() {
             Ok(conn) => Outcome::Success(Conn(conn)),
             Err(_) => Outcome::Failure((Status::ServiceUnavailable, ()))

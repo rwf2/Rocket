@@ -1,3 +1,5 @@
+use std::io::{self, Read};
+
 use outcome::{self, IntoOutcome};
 use outcome::Outcome::*;
 use http::Status;
@@ -8,26 +10,51 @@ use data::Data;
 pub type Outcome<S, E> = outcome::Outcome<S, (Status, E), Data>;
 
 impl<'a, S, E> IntoOutcome<S, (Status, E), Data> for Result<S, E> {
+    type Failure = Status;
+    type Forward = Data;
+
     #[inline]
-    fn into_outcome(self) -> Outcome<S, E> {
+    fn into_outcome(self, status: Status) -> Outcome<S, E> {
         match self {
             Ok(val) => Success(val),
-            Err(err) => Failure((Status::InternalServerError, err))
+            Err(err) => Failure((status, err))
+        }
+    }
+
+    #[inline]
+    fn or_forward(self, data: Data) -> Outcome<S, E> {
+        match self {
+            Ok(val) => Success(val),
+            Err(_) => Forward(data)
         }
     }
 }
 
-/// Trait used to derive an object from incoming request data.
+/// Trait implemented by data guards to derive a value from request body data.
 ///
-/// Types that implement this trait can be used as a target for the `data =
-/// "<param>"` route parmater, as illustrated below:
+/// # Data Guards
+///
+/// A data guard is a [request guard] that operates on a request's body data.
+/// Data guards validate, parse, and optionally convert request body data.
+/// Validation and parsing/conversion is implemented through `FromData`. In
+/// other words, every type that implements `FromData` is a data guard.
+///
+/// [request guard]: /rocket/request/trait.FromRequest.html
+///
+/// Data guards are used as the target of the `data` route attribute parameter.
+/// A handler can have at most one data guard.
+///
+/// ## Example
+///
+/// In the example below, `var` is used as the argument name for the data guard
+/// type `T`. When the `submit` route matches, Rocket will call the `FromData`
+/// implemention for the type `T`. The handler will only be called if the guard
+/// returns succesfully.
 ///
 /// ```rust,ignore
 /// #[post("/submit", data = "<var>")]
 /// fn submit(var: T) -> ... { ... }
 /// ```
-///
-/// In this example, `T` can be any type that implements `FromData`.
 ///
 /// # Outcomes
 ///
@@ -54,6 +81,52 @@ impl<'a, S, E> IntoOutcome<S, (Status, E), Data> for Result<S, E> {
 ///   matching request. This requires that no data has been read from the `Data`
 ///   parameter. Note that users can request an `Option<S>` to catch `Forward`s.
 ///
+/// # Provided Implementations
+///
+/// Rocket implements `FromData` for several built-in types. Their behavior is
+/// documented here.
+///
+///   * **Data**
+///
+///     The identity implementation; simply returns `Data` directly.
+///
+///     _This implementation always returns successfully._
+///
+///   * **Option&lt;T>** _where_ **T: FromData**
+///
+///     The type `T` is derived from the incoming data using `T`'s `FromData`
+///     implementation. If the derivation is a `Success`, the dervived value is
+///     returned in `Some`. Otherwise, a `None` is returned.
+///
+///     _This implementation always returns successfully._
+///
+///   * **Result&lt;T, T::Error>** _where_ **T: FromData**
+///
+///     The type `T` is derived from the incoming data using `T`'s `FromData`
+///     implementation. If derivation is a `Success`, the value is returned in
+///     `Ok`. If the derivation is a `Failure`, the error value is returned in
+///     `Err`. If the derivation is a `Forward`, the request is forwarded.
+///
+///   * **String**
+///
+///     Reads the entire request body into a `String`. If reading fails, returns
+///     a `Failure` with the corresponding `io::Error`.
+///
+///     **WARNING:** Do **not** use this implementation for anything _but_
+///     debugging. This is because the implementation reads the entire body into
+///     memory; since the user controls the size of the body, this is an obvious
+///     vector for a denial of service attack.
+///
+///   * **Vec&lt;u8>**
+///
+///     Reads the entire request body into a `Vec<u8>`. If reading fails,
+///     returns a `Failure` with the corresponding `io::Error`.
+///
+///     **WARNING:** Do **not** use this implementation for anything _but_
+///     debugging. This is because the implementation reads the entire body into
+///     memory; since the user controls the size of the body, this is an obvious
+///     vector for a denial of service attack.
+///
 /// # Example
 ///
 /// Say that you have a custom type, `Person`:
@@ -66,7 +139,7 @@ impl<'a, S, E> IntoOutcome<S, (Status, E), Data> for Result<S, E> {
 /// }
 /// ```
 ///
-/// `Person` has a custom serialization format, so the built-in `JSON` type
+/// `Person` has a custom serialization format, so the built-in `Json` type
 /// doesn't suffice. The format is `<name>:<age>` with `Content-Type:
 /// application/x-person`. You'd like to use `Person` as a `FromData` type so
 /// that you can retrieve it directly from a client's request body:
@@ -102,7 +175,7 @@ impl<'a, S, E> IntoOutcome<S, (Status, E), Data> for Result<S, E> {
 ///     fn from_data(req: &Request, data: Data) -> data::Outcome<Self, String> {
 ///         // Ensure the content type is correct before opening the data.
 ///         let person_ct = ContentType::new("application", "x-person");
-///         if req.content_type() != Some(person_ct) {
+///         if req.content_type() != Some(&person_ct) {
 ///             return Outcome::Forward(data);
 ///         }
 ///
@@ -115,13 +188,13 @@ impl<'a, S, E> IntoOutcome<S, (Status, E), Data> for Result<S, E> {
 ///         // Split the string into two pieces at ':'.
 ///         let (name, age) = match string.find(':') {
 ///             Some(i) => (&string[..i], &string[(i + 1)..]),
-///             None => return Failure((Status::BadRequest, "Missing ':'.".into()))
+///             None => return Failure((Status::UnprocessableEntity, "':'".into()))
 ///         };
 ///
 ///         // Parse the age.
 ///         let age: u16 = match age.parse() {
 ///             Ok(age) => age,
-///             Err(_) => return Failure((Status::BadRequest, "Bad age.".into()))
+///             Err(_) => return Failure((Status::UnprocessableEntity, "Age".into()))
 ///         };
 ///
 ///         // Return successfully.
@@ -139,14 +212,15 @@ impl<'a, S, E> IntoOutcome<S, (Status, E), Data> for Result<S, E> {
 /// # fn main() {  }
 /// ```
 pub trait FromData: Sized {
-    /// The associated error to be returned when parsing fails.
+    /// The associated error to be returned when the guard fails.
     type Error;
 
-    /// Parses an instance of `Self` from the incoming request body data.
+    /// Validates, parses, and converts an instance of `Self` from the incoming
+    /// request body data.
     ///
-    /// If the parse is successful, an outcome of `Success` is returned. If the
-    /// data does not correspond to the type of `Self`, `Forward` is returned.
-    /// If parsing fails, `Failure` is returned.
+    /// If validation and parsing succeeds, an outcome of `Success` is returned.
+    /// If the data is not appropriate given the type of `Self`, `Forward` is
+    /// returned. If parsing fails, `Failure` is returned.
     fn from_data(request: &Request, data: Data) -> Outcome<Self, Self::Error>;
 }
 
@@ -177,6 +251,30 @@ impl<T: FromData> FromData for Option<T> {
         match T::from_data(request, data) {
             Success(val) => Success(Some(val)),
             Failure(_) | Forward(_) => Success(None),
+        }
+    }
+}
+
+impl FromData for String {
+    type Error = io::Error;
+
+    fn from_data(_: &Request, data: Data) -> Outcome<Self, Self::Error> {
+        let mut string = String::new();
+        match data.open().read_to_string(&mut string) {
+            Ok(_) => Success(string),
+            Err(e) => Failure((Status::BadRequest, e))
+        }
+    }
+}
+
+impl FromData for Vec<u8> {
+    type Error = io::Error;
+
+    fn from_data(_: &Request, data: Data) -> Outcome<Self, Self::Error> {
+        let mut bytes = Vec::new();
+        match data.open().read_to_end(&mut bytes) {
+            Ok(_) => Success(bytes),
+            Err(e) => Failure((Status::BadRequest, e))
         }
     }
 }

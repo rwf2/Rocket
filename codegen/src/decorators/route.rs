@@ -12,9 +12,10 @@ use syntax::ast::{Arg, Ident, Stmt, Expr, MetaItem, Path};
 use syntax::ext::base::{Annotatable, ExtCtxt};
 use syntax::ext::build::AstBuilder;
 use syntax::parse::token;
+use syntax::symbol::InternedString;
 use syntax::ptr::P;
 
-use rocket::http::{Method, ContentType};
+use rocket::http::{Method, MediaType};
 
 fn method_to_path(ecx: &ExtCtxt, method: Method) -> Path {
     quote_enum!(ecx, method => ::rocket::http::Method {
@@ -22,38 +23,28 @@ fn method_to_path(ecx: &ExtCtxt, method: Method) -> Path {
     })
 }
 
-fn content_type_to_expr(ecx: &ExtCtxt, ct: Option<ContentType>) -> Option<P<Expr>> {
+fn media_type_to_expr(ecx: &ExtCtxt, ct: Option<MediaType>) -> Option<P<Expr>> {
     ct.map(|ct| {
-        let (top, sub) = (ct.ttype.as_str(), ct.subtype.as_str());
-        quote_expr!(ecx, ::rocket::http::ContentType {
-            ttype: ::rocket::http::ascii::UncasedAscii {
-                string: ::std::borrow::Cow::Borrowed($top)
-            },
-            subtype: ::rocket::http::ascii::UncasedAscii {
-                string: ::std::borrow::Cow::Borrowed($sub)
-            },
-            params: None
+        let (top, sub) = (ct.top().as_str(), ct.sub().as_str());
+        quote_expr!(ecx, ::rocket::http::MediaType {
+            source: ::rocket::http::Source::None,
+            top: ::rocket::http::IndexedStr::Concrete(
+                ::std::borrow::Cow::Borrowed($top)
+            ),
+            sub: ::rocket::http::IndexedStr::Concrete(
+                ::std::borrow::Cow::Borrowed($sub)
+            ),
+            params: ::rocket::http::MediaParams::Static(&[])
         })
     })
 }
 
-trait RouteGenerateExt {
-    fn gen_form(&self, &ExtCtxt, Option<&Spanned<Ident>>, P<Expr>) -> Option<Stmt>;
-    fn missing_declared_err<T: Display>(&self, ecx: &ExtCtxt, arg: &Spanned<T>);
-
-    fn generate_data_statement(&self, ecx: &ExtCtxt) -> Option<Stmt>;
-    fn generate_query_statement(&self, ecx: &ExtCtxt) -> Option<Stmt>;
-    fn generate_param_statements(&self, ecx: &ExtCtxt) -> Vec<Stmt>;
-    fn generate_fn_arguments(&self, ecx: &ExtCtxt) -> Vec<TokenTree>;
-    fn explode(&self, ecx: &ExtCtxt) -> (&str, Path, P<Expr>, P<Expr>);
-}
-
-impl RouteGenerateExt for RouteParams {
+impl RouteParams {
     fn missing_declared_err<T: Display>(&self, ecx: &ExtCtxt, arg: &Spanned<T>) {
-        let fn_span = self.annotated_fn.span();
-        let msg = format!("'{}' is declared as an argument...", arg.node);
-        ecx.span_err(arg.span, &msg);
-        ecx.span_err(fn_span, "...but isn't in the function signature.");
+        let (fn_span, fn_name) = (self.annotated_fn.span(), self.annotated_fn.ident());
+        ecx.struct_span_err(arg.span, &format!("unused dynamic parameter: `{}`", arg.node))
+            .span_note(fn_span, &format!("expected argument named `{}` in `{}`", arg.node, fn_name))
+            .emit();
     }
 
     fn gen_form(&self,
@@ -73,14 +64,17 @@ impl RouteGenerateExt for RouteParams {
         let name = arg.ident().expect("form param identifier").prepend(PARAM_PREFIX);
         let ty = strip_ty_lifetimes(arg.ty.clone());
         Some(quote_stmt!(ecx,
+            #[allow(non_snake_case)]
             let $name: $ty = {
                 let mut items = ::rocket::request::FormItems::from($form_string);
-                let obj = match ::rocket::request::FromForm::from_form_items(items.by_ref()) {
+                let form = ::rocket::request::FromForm::from_form(items.by_ref(), true);
+                #[allow(unreachable_patterns)]
+                let obj = match form {
                     Ok(v) => v,
-                    Err(_) => return ::rocket::Outcome::Forward(_data)
+                    Err(_) => return ::rocket::Outcome::Forward(__data)
                 };
 
-                if !items.exhausted() {
+                if !items.exhaust() {
                     println!("    => The query string {:?} is malformed.", $form_string);
                     return ::rocket::Outcome::Failure(::rocket::http::Status::BadRequest);
                 }
@@ -104,8 +98,9 @@ impl RouteGenerateExt for RouteParams {
         let name = arg.ident().expect("form param identifier").prepend(PARAM_PREFIX);
         let ty = strip_ty_lifetimes(arg.ty.clone());
         Some(quote_stmt!(ecx,
+            #[allow(non_snake_case, unreachable_patterns)]
             let $name: $ty =
-                match ::rocket::data::FromData::from_data(_req, _data) {
+                match ::rocket::data::FromData::from_data(__req, __data) {
                     ::rocket::Outcome::Success(d) => d,
                     ::rocket::Outcome::Forward(d) =>
                         return ::rocket::Outcome::Forward(d),
@@ -119,9 +114,9 @@ impl RouteGenerateExt for RouteParams {
     fn generate_query_statement(&self, ecx: &ExtCtxt) -> Option<Stmt> {
         let param = self.query_param.as_ref();
         let expr = quote_expr!(ecx,
-           match _req.uri().query() {
+           match __req.uri().query() {
                Some(query) => query,
-               None => return ::rocket::Outcome::Forward(_data)
+               None => return ::rocket::Outcome::Forward(__data)
            }
         );
 
@@ -148,24 +143,25 @@ impl RouteGenerateExt for RouteParams {
             // Note: the `None` case shouldn't happen if a route is matched.
             let ident = param.ident().prepend(PARAM_PREFIX);
             let expr = match param {
-                Param::Single(_) => quote_expr!(ecx, match _req.get_param_str($i) {
+                Param::Single(_) => quote_expr!(ecx, match __req.get_param_str($i) {
                     Some(s) => <$ty as ::rocket::request::FromParam>::from_param(s),
-                    None => return ::rocket::Outcome::Forward(_data)
+                    None => return ::rocket::Outcome::Forward(__data)
                 }),
-                Param::Many(_) => quote_expr!(ecx, match _req.get_raw_segments($i) {
+                Param::Many(_) => quote_expr!(ecx, match __req.get_raw_segments($i) {
                     Some(s) => <$ty as ::rocket::request::FromSegments>::from_segments(s),
-                    None => return ::rocket::Outcome::Forward(_data)
+                    None => return ::rocket::Outcome::Forward(__data)
                 }),
             };
 
             let original_ident = param.ident();
             fn_param_statements.push(quote_stmt!(ecx,
+                #[allow(non_snake_case, unreachable_patterns)]
                 let $ident: $ty = match $expr {
                     Ok(v) => v,
                     Err(e) => {
                         println!("    => Failed to parse '{}': {:?}",
                                  stringify!($original_ident), e);
-                        return ::rocket::Outcome::Forward(_data)
+                        return ::rocket::Outcome::Forward(__data)
                     }
                 };
             ).expect("declared param parsing statement"));
@@ -192,13 +188,13 @@ impl RouteGenerateExt for RouteParams {
             let ident = arg.ident().unwrap().prepend(PARAM_PREFIX);
             let ty = strip_ty_lifetimes(arg.ty.clone());
             fn_param_statements.push(quote_stmt!(ecx,
-                #[allow(non_snake_case)]
+                #[allow(non_snake_case, unreachable_patterns)]
                 let $ident: $ty = match
-                        ::rocket::request::FromRequest::from_request(_req) {
-                    ::rocket::outcome::Outcome::Success(v) => v,
-                    ::rocket::outcome::Outcome::Forward(_) =>
-                        return ::rocket::Outcome::forward(_data),
-                    ::rocket::outcome::Outcome::Failure((code, _)) => {
+                        ::rocket::request::FromRequest::from_request(__req) {
+                    ::rocket::Outcome::Success(v) => v,
+                    ::rocket::Outcome::Forward(_) =>
+                        return ::rocket::Outcome::Forward(__data),
+                    ::rocket::Outcome::Failure((code, _)) => {
                         return ::rocket::Outcome::Failure(code)
                     },
                 };
@@ -217,14 +213,15 @@ impl RouteGenerateExt for RouteParams {
         sep_by_tok(ecx, &args, token::Comma)
     }
 
-    fn explode(&self, ecx: &ExtCtxt) -> (&str, Path, P<Expr>, P<Expr>) {
+    fn explode(&self, ecx: &ExtCtxt) -> (InternedString, &str, Path, P<Expr>, P<Expr>) {
+        let name = self.annotated_fn.ident().name.as_str();
         let path = &self.uri.node.as_str();
         let method = method_to_path(ecx, self.method.node);
         let format = self.format.as_ref().map(|kv| kv.value().clone());
-        let content_type = option_as_expr(ecx, &content_type_to_expr(ecx, format));
+        let media_type = option_as_expr(ecx, &media_type_to_expr(ecx, format));
         let rank = option_as_expr(ecx, &self.rank);
 
-        (path, method, content_type, rank)
+        (name, path, method, media_type, rank)
     }
 }
 
@@ -233,9 +230,8 @@ fn generic_route_decorator(known_method: Option<Spanned<Method>>,
                            ecx: &mut ExtCtxt,
                            sp: Span,
                            meta_item: &MetaItem,
-                           annotated: Annotatable)
-    -> Vec<Annotatable>
-{
+                           annotated: Annotatable
+                           ) -> Vec<Annotatable> {
     let mut output = Vec::new();
 
     // Parse the route and generate the code to create the form and param vars.
@@ -251,28 +247,33 @@ fn generic_route_decorator(known_method: Option<Spanned<Method>>,
     let user_fn_name = route.annotated_fn.ident();
     let route_fn_name = user_fn_name.prepend(ROUTE_FN_PREFIX);
     emit_item(&mut output, quote_item!(ecx,
-         fn $route_fn_name<'_b>(_req: &'_b ::rocket::Request,  _data: ::rocket::Data)
+        // Allow the `unreachable_code` lint for those FromParam impls that have
+        // an `Error` associated type of !.
+        #[allow(unreachable_code)]
+        fn $route_fn_name<'_b>(__req: &'_b ::rocket::Request,  __data: ::rocket::Data)
                 -> ::rocket::handler::Outcome<'_b> {
              $param_statements
              $query_statement
              $data_statement
              let responder = $user_fn_name($fn_arguments);
-             ::rocket::handler::Outcome::of(responder)
-         }
+            ::rocket::handler::Outcome::from(__req, responder)
+        }
     ).unwrap());
 
     // Generate and emit the static route info that uses the just generated
     // function as its handler. A proper Rocket route will be created from this.
     let struct_name = user_fn_name.prepend(ROUTE_STRUCT_PREFIX);
-    let (path, method, content_type, rank) = route.explode(ecx);
+    let (name, path, method, media_type, rank) = route.explode(ecx);
     let static_route_info_item =  quote_item!(ecx,
+        /// Rocket code generated static route information structure.
         #[allow(non_upper_case_globals)]
         pub static $struct_name: ::rocket::StaticRouteInfo =
             ::rocket::StaticRouteInfo {
+                name: $name,
                 method: $method,
                 path: $path,
                 handler: $route_fn_name,
-                format: $content_type,
+                format: $media_type,
                 rank: $rank,
             };
     ).expect("static route info");

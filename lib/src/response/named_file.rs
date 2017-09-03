@@ -3,6 +3,7 @@ use std::path::{Path, PathBuf};
 use std::io;
 use std::ops::{Deref, DerefMut};
 
+use request::Request;
 use response::{Response, Responder};
 use http::{Status, ContentType};
 
@@ -78,14 +79,13 @@ impl NamedFile {
 /// [ContentType::from_extension](/rocket/http/struct.ContentType.html#method.from_extension)
 /// for more information. If you would like to stream a file with a different
 /// Content-Type than that implied by its extension, use a `File` directly.
-impl<'r> Responder<'r> for NamedFile {
-    fn respond(self) -> Result<Response<'r>, Status> {
+impl Responder<'static> for NamedFile {
+    fn respond_to(self, _: &Request) -> Result<Response<'static>, Status> {
         let mut response = Response::new();
         if let Some(ext) = self.path().extension() {
             // TODO: Use Cow for lowercase.
             let ext_string = ext.to_string_lossy().to_lowercase();
-            let content_type = ContentType::from_extension(&ext_string);
-            if !content_type.is_any() {
+            if let Some(content_type) = ContentType::from_extension(&ext_string) {
                 response.set_header(content_type);
             }
         }

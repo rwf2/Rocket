@@ -26,7 +26,7 @@
             class="u-full-width {% if msg %}field-{{msg.0}}{% endif %}" />
           {% if msg %}
             <small class="field-{{msg.0}}-msg">
-              {{ msg.1 }}
+               {{ msg.1 }}
             </small>
           {% endif %}
         </div>

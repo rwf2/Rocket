@@ -1,10 +1,9 @@
 //! # Rocket - Code Generation
 //!
 //! This crate implements the code generation portions of Rocket. This includes
-//! custom derives, custom attributes, procedural macros, and lints. The
-//! documentation here is purely technical. The code generation facilities are
-//! documented thoroughly in the [Rocket programming
-//! guide](https://rocket.rs/guide).
+//! custom derives, custom attributes, and procedural macros. The documentation
+//! here is purely technical. The code generation facilities are documented
+//! thoroughly in the [Rocket programming guide](https://rocket.rs/guide).
 //!
 //! ## Custom Attributes
 //!
@@ -39,9 +38,9 @@
 //!
 //! INTEGER := isize, as defined by Rust
 //! STRING := UTF-8 string literal, as defined by Rust
-//! IDENT := Valid identifier, as defined by Rust
+//! IDENT := valid identifier, as defined by Rust
 //!
-//! URI_SEG := Valid HTTP URI Segment
+//! URI_SEG := valid HTTP URI Segment
 //! DYNAMIC_PARAM := '<' IDENT '..'? '>' (string literal)
 //! </pre>
 //!
@@ -70,6 +69,47 @@
 //!
 //!   * **FromForm**
 //!
+//! ### `FromForm`
+//!
+//! The [`FromForm`] derive can be applied to structures with named fields:
+//!
+//!     #[derive(FromForm)]
+//!     struct MyStruct {
+//!         field: usize,
+//!         other: String
+//!     }
+//!
+//! Each field's type is required to implement [`FromFormValue`]. The derive
+//! accepts one field attribute: `form`, with the following syntax:
+//!
+//! <pre>
+//! form := 'field' '=' '"' IDENT '"'
+//!
+//! IDENT := valid identifier, as defined by Rust
+//! </pre>
+//!
+//! When applied, the attribute looks as follows:
+//!
+//!     #[derive(FromForm)]
+//!     struct MyStruct {
+//!         field: usize,
+//!         #[form(field = "renamed_field")]
+//!         other: String
+//!     }
+//!
+//! The derive generates an implementation for the [`FromForm`] trait. The
+//! implementation parses a form whose field names match the field names of the
+//! structure on which the derive was applied. Each field's value is parsed with
+//! the [`FromFormValue`] implementation of the field's type. The `FromForm`
+//! implementation succeeds only when all of the field parses succeed.
+//!
+//! The `form` field attribute can be used to direct that a different incoming
+//! field name is expected. In this case, the attribute's field name is used
+//! instead of the structure's field name when parsing a form.
+//!
+//! [`FromForm`]: /rocket/request/trait.FromForm.html
+//! [`FromFormValue`]: /rocket/request/trait.FromFormValue.html
+//!
 //! ## Procedural Macros
 //!
 //! This crate implements the following procedural macros:
@@ -85,19 +125,6 @@
 //! PATH := a path, as defined by Rust
 //! </pre>
 //!
-//! ## Lints
-//!
-//! This crate implements the following lints:
-//!
-//!   * **unmounted_route**: defaults to _warn_
-//!
-//!     emits a warning when a declared route is not mounted
-//!
-//!   * **unmanaged_state**: defaults to _warn_
-//!
-//!     emits a warning when a `State<T>` request guest is used in a mounted
-//!     route without managing a value for `T`
-//!
 //! # Debugging Codegen
 //!
 //! When the `ROCKET_CODEGEN_DEBUG` environment variable is set, this crate logs
@@ -110,17 +137,15 @@
 //! ```
 
 #![crate_type = "dylib"]
-#![feature(quote, concat_idents, plugin_registrar, rustc_private, unicode)]
+#![feature(quote, concat_idents, plugin_registrar, rustc_private)]
 #![feature(custom_attribute)]
 #![feature(i128_type)]
 #![allow(unused_attributes)]
 #![allow(deprecated)]
 
 #[macro_use] extern crate log;
-#[macro_use] extern crate rustc;
 extern crate syntax;
 extern crate syntax_ext;
-extern crate syntax_pos;
 extern crate rustc_plugin;
 extern crate rocket;
 
@@ -128,7 +153,6 @@ extern crate rocket;
 mod parser;
 mod macros;
 mod decorators;
-mod lints;
 
 use std::env;
 use rustc_plugin::Registry;
@@ -164,18 +188,12 @@ macro_rules! register_derives {
     )
 }
 
-macro_rules! register_lints {
-    ($registry:expr, $($item:ident),+) => ($(
-        $registry.register_late_lint_pass(Box::new(lints::$item::default()));
-    )+)
-}
-
 /// Compiler hook for Rust to register plugins.
 #[plugin_registrar]
 pub fn plugin_registrar(reg: &mut Registry) {
     // Enable logging early if the DEBUG_ENV_VAR is set.
     if env::var(DEBUG_ENV_VAR).is_ok() {
-        ::rocket::logger::init(::rocket::LoggingLevel::Debug);
+        ::rocket::logger::init(::rocket::config::LoggingLevel::Debug);
     }
 
     reg.register_macro("routes", macros::routes);
@@ -196,6 +214,4 @@ pub fn plugin_registrar(reg: &mut Registry) {
         "patch" => patch_decorator,
         "options" => options_decorator
     );
-
-    register_lints!(reg, RocketLint);
 }

@@ -3,9 +3,13 @@
 
 extern crate rocket;
 
+use std::io;
+
 use rocket::request::{Form, FromFormValue};
 use rocket::response::NamedFile;
-use std::io;
+use rocket::http::RawStr;
+
+#[cfg(test)] mod tests;
 
 // TODO: Make deriving `FromForm` for this enum possible.
 #[derive(Debug)]
@@ -14,10 +18,10 @@ enum FormOption {
 }
 
 impl<'v> FromFormValue<'v> for FormOption {
-    type Error = &'v str;
+    type Error = &'v RawStr;
 
-    fn from_form_value(v: &'v str) -> Result<Self, Self::Error> {
-        let variant = match v {
+    fn from_form_value(v: &'v RawStr) -> Result<Self, Self::Error> {
+        let variant = match v.as_str() {
             "a" => FormOption::A,
             "b" => FormOption::B,
             "c" => FormOption::C,
@@ -29,17 +33,19 @@ impl<'v> FromFormValue<'v> for FormOption {
 }
 
 #[derive(Debug, FromForm)]
-struct FormInput {
+struct FormInput<'r> {
     checkbox: bool,
     number: usize,
+    #[form(field = "type")]
     radio: FormOption,
-    password: String,
-    textarea: String,
+    password: &'r RawStr,
+    #[form(field = "textarea")]
+    text_area: String,
     select: FormOption,
 }
 
 #[post("/", data = "<sink>")]
-fn sink(sink: Result<Form<FormInput>, Option<String>>) -> String {
+fn sink<'r>(sink: Result<Form<'r, FormInput<'r>>, Option<String>>) -> String {
     match sink {
         Ok(form) => format!("{:?}", form.get()),
         Err(Some(f)) => format!("Invalid form input: {}", f),
@@ -52,8 +58,10 @@ fn index() -> io::Result<NamedFile> {
     NamedFile::open("static/index.html")
 }
 
+fn rocket() -> rocket::Rocket {
+    rocket::ignite().mount("/", routes![index, sink])
+}
+
 fn main() {
-    rocket::ignite()
-        .mount("/", routes![index, sink])
-        .launch();
+    rocket().launch();
 }

@@ -23,40 +23,32 @@ impl Router {
     }
 
     pub fn add(&mut self, route: Route) {
-        // let selector = (route.method, route.path.segment_count());
         let selector = route.method;
-        self.routes.entry(selector).or_insert_with(|| vec![]).push(route);
+        let entries = self.routes.entry(selector).or_insert_with(|| vec![]);
+        let i = entries.binary_search_by_key(&route.rank, |r| r.rank).unwrap_or_else(|i| i);
+        entries.insert(i, route);
     }
 
-    // TODO: Make a `Router` trait with this function. Rename this `Router`
-    // struct to something like `RocketRouter`. If that happens, returning a
-    // `Route` structure is inflexible. Have it be an associated type.
-    // FIXME: Figure out a way to get more than one route, i.e., to correctly
-    // handle ranking.
     pub fn route<'b>(&'b self, req: &Request) -> Vec<&'b Route> {
-        trace_!("Trying to route: {}", req);
-        // let num_segments = req.uri.segment_count();
-        // self.routes.get(&(req.method, num_segments)).map_or(vec![], |routes| {
-        self.routes.get(&req.method()).map_or(vec![], |routes| {
-            let mut matches: Vec<_> = routes.iter()
+        // Note that routes are presorted by rank on each `add`.
+        let matches = self.routes.get(&req.method()).map_or(vec![], |routes| {
+            routes.iter()
                 .filter(|r| r.collides_with(req))
-                .collect();
+                .collect()
+        });
 
-            // FIXME: Presort vector to avoid a sort on each route.
-            matches.sort_by(|a, b| a.rank.cmp(&b.rank));
-            trace_!("All matches: {:?}", matches);
-            matches
-        })
+        trace_!("Routing the request: {}", req);
+        trace_!("All matches: {:?}", matches);
+        matches
     }
 
-    pub fn has_collisions(&self) -> bool {
-        let mut result = false;
+    pub fn collisions(&self) -> Vec<(&Route, &Route)> {
+        let mut result = vec![];
         for routes in self.routes.values() {
             for (i, a_route) in routes.iter().enumerate() {
                 for b_route in routes.iter().skip(i + 1) {
                     if a_route.collides_with(b_route) {
-                        result = true;
-                        warn!("{} and {} collide!", a_route, b_route);
+                        result.push((a_route, b_route));
                     }
                 }
             }
@@ -64,12 +56,26 @@ impl Router {
 
         result
     }
+
+
+    // This is slow. Don't expose this publicly; only for tests.
+    #[cfg(test)]
+    fn has_collisions(&self) -> bool {
+        !self.collisions().is_empty()
+    }
+
+    #[inline]
+    pub fn routes<'a>(&'a self) -> impl Iterator<Item=&'a Route> + 'a {
+        self.routes.values().flat_map(|v| v.iter())
+    }
 }
 
 #[cfg(test)]
 mod test {
     use super::{Router, Route};
 
+    use rocket::Rocket;
+    use config::Config;
     use http::Method;
     use http::Method::*;
     use http::uri::URI;
@@ -77,8 +83,8 @@ mod test {
     use data::Data;
     use handler::Outcome;
 
-    fn dummy_handler(_req: &Request, _: Data) -> Outcome<'static> {
-        Outcome::of("hi")
+    fn dummy_handler(req: &Request, _: Data) -> Outcome<'static> {
+        Outcome::from(req, "hi")
     }
 
     fn router_with_routes(routes: &[&'static str]) -> Router {
@@ -158,11 +164,9 @@ mod test {
         assert!(!default_rank_route_collisions(&["/a/b", "/a/b/<c..>"]));
     }
 
-    fn route<'a>(router: &'a Router,
-                 method: Method,
-                 uri: &str)
-                 -> Option<&'a Route> {
-        let request = Request::new(method, URI::new(uri));
+    fn route<'a>(router: &'a Router, method: Method, uri: &str) -> Option<&'a Route> {
+        let rocket = Rocket::custom(Config::development().unwrap(), true);
+        let request = Request::new(&rocket, method, URI::new(uri));
         let matches = router.route(&request);
         if matches.len() > 0 {
             Some(matches[0])
@@ -172,7 +176,8 @@ mod test {
     }
 
     fn matches<'a>(router: &'a Router, method: Method, uri: &str) -> Vec<&'a Route> {
-        let request = Request::new(method, URI::new(uri));
+        let rocket = Rocket::custom(Config::development().unwrap(), true);
+        let request = Request::new(&rocket, method, URI::new(uri));
         router.route(&request)
     }
 
@@ -240,7 +245,7 @@ mod test {
     macro_rules! assert_ranked_routes {
         ($routes:expr, $to:expr, $want:expr) => ({
             let router = router_with_routes($routes);
-            let route_path = route(&router, Get, $to).unwrap().path.as_str();
+            let route_path = route(&router, Get, $to).unwrap().uri.as_str();
             assert_eq!(route_path as &str, $want as &str);
         })
     }
@@ -253,6 +258,14 @@ mod test {
         assert_ranked_routes!(&["/<a>/b", "/hi/c"], "/hi/c", "/hi/c");
         assert_ranked_routes!(&["/<a>/<b>", "/hi/a"], "/hi/c", "/<a>/<b>");
         assert_ranked_routes!(&["/hi/a", "/hi/<c>"], "/hi/c", "/hi/<c>");
+        assert_ranked_routes!(&["/a", "/a?<b>"], "/a?b=c", "/a?<b>");
+        assert_ranked_routes!(&["/a", "/a?<b>"], "/a", "/a");
+        assert_ranked_routes!(&["/a", "/<a>", "/a?<b>", "/<a>?<b>"], "/a", "/a");
+        assert_ranked_routes!(&["/a", "/<a>", "/a?<b>", "/<a>?<b>"], "/b", "/<a>");
+        assert_ranked_routes!(&["/a", "/<a>", "/a?<b>", "/<a>?<b>"],
+                              "/b?v=1", "/<a>?<b>");
+        assert_ranked_routes!(&["/a", "/<a>", "/a?<b>", "/<a>?<b>"],
+                              "/a?b=c", "/a?<b>");
     }
 
     fn ranked_collisions(routes: &[(isize, &'static str)]) -> bool {
@@ -286,8 +299,8 @@ mod test {
             let expected = &[$($want),+];
             assert!(routed_to.len() == expected.len());
             for (got, expected) in routed_to.iter().zip(expected.iter()) {
-                assert_eq!(got.path.as_str() as &str, expected.1);
                 assert_eq!(got.rank, expected.0);
+                assert_eq!(got.uri.as_str(), expected.1);
             }
         })
     }
@@ -303,6 +316,18 @@ mod test {
         assert_ranked_routing!(
             to: "b/b",
             with: [(1, "a/<b>"), (2, "b/<b>"), (3, "b/b")],
+            expect: (2, "b/<b>"), (3, "b/b")
+        );
+
+        assert_ranked_routing!(
+            to: "b/b",
+            with: [(2, "b/<b>"), (1, "a/<b>"), (3, "b/b")],
+            expect: (2, "b/<b>"), (3, "b/b")
+        );
+
+        assert_ranked_routing!(
+            to: "b/b",
+            with: [(3, "b/b"), (2, "b/<b>"), (1, "a/<b>")],
             expect: (2, "b/<b>"), (3, "b/b")
         );
 
@@ -334,6 +359,45 @@ mod test {
             to: "/a/b/c/d/e/f",
             with: [(1, "/a/<b..>"), (2, "/a/b/<c..>")],
             expect: (1, "/a/<b..>"), (2, "/a/b/<c..>")
+        );
+    }
+
+    macro_rules! assert_default_ranked_routing {
+        (to: $to:expr, with: $routes:expr, expect: $($want:expr),+) => ({
+            let router = router_with_routes(&$routes);
+            let routed_to = matches(&router, Get, $to);
+            let expected = &[$($want),+];
+            assert!(routed_to.len() == expected.len());
+            for (got, expected) in routed_to.iter().zip(expected.iter()) {
+                assert_eq!(got.uri.as_str(), expected as &str);
+            }
+        })
+    }
+
+    #[test]
+    fn test_default_ranked_routing() {
+        assert_default_ranked_routing!(
+            to: "a/b?v=1",
+            with: ["a/<b>", "a/b"],
+            expect: "a/b", "a/<b>"
+        );
+
+        assert_default_ranked_routing!(
+            to: "a/b?v=1",
+            with: ["a/<b>", "a/b", "a/b?<v>"],
+            expect: "a/b?<v>", "a/b", "a/<b>"
+        );
+
+        assert_default_ranked_routing!(
+            to: "a/b?v=1",
+            with: ["a/<b>", "a/b", "a/b?<v>", "a/<b>?<v>"],
+            expect: "a/b?<v>", "a/b", "a/<b>?<v>", "a/<b>"
+        );
+
+        assert_default_ranked_routing!(
+            to: "a/b",
+            with: ["a/<b>", "a/b", "a/b?<v>", "a/<b>?<v>"],
+            expect: "a/b", "a/<b>"
         );
     }
 

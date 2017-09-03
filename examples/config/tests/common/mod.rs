@@ -1,21 +1,21 @@
-extern crate rocket;
-extern crate config as lib;
+use rocket::{self, State};
+use rocket::fairing::AdHoc;
+use rocket::config::{self, Config, Environment, LoggingLevel};
+use rocket::http::Status;
+use rocket::local::Client;
 
-use rocket::config::{self, Environment};
-use rocket::http::Method;
-use rocket::LoggingLevel;
-use rocket::testing::MockRequest;
+struct LocalConfig(Config);
 
-pub fn test_config(environment: Environment) {
-    // Manually set the config environment variable. Rocket will initialize the
-    // environment in `ignite()`.
-    ::std::env::set_var("ROCKET_ENV", environment.to_string());
-    rocket::ignite().mount("/hello", routes![lib::hello]);
+#[get("/check_config")]
+fn check_config(config: State<LocalConfig>) -> Option<()> {
+    let environment = match ::std::env::var("ROCKET_ENV") {
+        Ok(name) => name,
+        Err(_) => return None
+    };
 
-    // Get the active environment and ensure that it matches our expectations.
-    let config = config::active().unwrap();
-    match environment {
-        Environment::Development => {
+    let config = &config.0;
+    match &*environment {
+        "development" => {
             assert_eq!(config.address, "localhost".to_string());
             assert_eq!(config.port, 8000);
             assert_eq!(config.workers, 1);
@@ -25,7 +25,7 @@ pub fn test_config(environment: Environment) {
             assert_eq!(config.get_str("hi"), Ok("Hello!"));
             assert_eq!(config.get_bool("is_extra"), Ok(true));
         }
-        Environment::Staging => {
+        "staging" => {
             assert_eq!(config.address, "0.0.0.0".to_string());
             assert_eq!(config.port, 80);
             assert_eq!(config.workers, 8);
@@ -33,7 +33,7 @@ pub fn test_config(environment: Environment) {
             assert_eq!(config.environment, config::Environment::Staging);
             assert_eq!(config.extras().count(), 0);
         }
-        Environment::Production => {
+        "production" => {
             assert_eq!(config.address, "0.0.0.0".to_string());
             assert_eq!(config.port, 80);
             assert_eq!(config.workers, 12);
@@ -41,17 +41,28 @@ pub fn test_config(environment: Environment) {
             assert_eq!(config.environment, config::Environment::Production);
             assert_eq!(config.extras().count(), 0);
         }
+        _ => {
+            panic!("Unknown environment in envvar: {}", environment);
+        }
     }
 
-    // Rocket `take`s the key, so this should always be `None`.
-    assert_eq!(config.take_session_key(), None);
+    Some(())
 }
 
-pub fn test_hello() {
-    let rocket = rocket::ignite().mount("/hello", routes![lib::hello]);
-    let mut request = MockRequest::new(Method::Get, "/hello");
-    let mut response = request.dispatch_with(&rocket);
+pub fn test_config(environment: Environment) {
+    // Manually set the config environment variable. Rocket will initialize the
+    // environment in `ignite()`. We'll read this back in the handler to config.
+    ::std::env::set_var("ROCKET_ENV", environment.to_string());
 
-    assert_eq!(response.body().and_then(|b| b.into_string()),
-               Some("Hello, world!".to_string()));
+    let rocket = rocket::ignite()
+        .attach(AdHoc::on_attach(|rocket| {
+            println!("Attaching local config.");
+            let config = rocket.config().clone();
+            Ok(rocket.manage(LocalConfig(config)))
+        }))
+        .mount("/", routes![check_config]);
+
+    let client = Client::new(rocket).unwrap();
+    let response = client.get("/check_config").dispatch();
+    assert_eq!(response.status(), Status::Ok);
 }

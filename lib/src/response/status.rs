@@ -1,4 +1,4 @@
-//! Contains types that set the status code and correspoding headers of a
+//! Contains types that set the status code and corresponding headers of a
 //! response.
 //!
 //! These types are designed to make it easier to respond correctly with a given
@@ -10,6 +10,7 @@
 use std::hash::{Hash, Hasher};
 use std::collections::hash_map::DefaultHasher;
 
+use request::Request;
 use response::{Responder, Response};
 use http::hyper::header;
 use http::Status;
@@ -40,10 +41,10 @@ pub struct Created<R>(pub String, pub Option<R>);
 /// information about the created resource. If no responder is provided, the
 /// response body will be empty.
 impl<'r, R: Responder<'r>> Responder<'r> for Created<R> {
-    default fn respond(self) -> Result<Response<'r>, Status> {
+    default fn respond_to(self, req: &Request) -> Result<Response<'r>, Status> {
         let mut build = Response::build();
         if let Some(responder) = self.1 {
-            build.merge(responder.respond()?);
+            build.merge(responder.respond_to(req)?);
         }
 
         build.status(Status::Created).header(header::Location(self.0)).ok()
@@ -55,14 +56,14 @@ impl<'r, R: Responder<'r>> Responder<'r> for Created<R> {
 /// a `Responder` is provided that implements `Hash`. The `ETag` header is set
 /// to a hash value of the responder.
 impl<'r, R: Responder<'r> + Hash> Responder<'r> for Created<R> {
-    fn respond(self) -> Result<Response<'r>, Status> {
+    fn respond_to(self, req: &Request) -> Result<Response<'r>, Status> {
         let mut hasher = DefaultHasher::default();
         let mut build = Response::build();
         if let Some(responder) = self.1 {
             responder.hash(&mut hasher);
             let hash = hasher.finish().to_string();
 
-            build.merge(responder.respond()?);
+            build.merge(responder.respond_to(req)?);
             build.header(header::ETag(header::EntityTag::strong(hash)));
         }
 
@@ -100,10 +101,10 @@ pub struct Accepted<R>(pub Option<R>);
 /// Sets the status code of the response to 202 Accepted. If the responder is
 /// `Some`, it is used to finalize the response.
 impl<'r, R: Responder<'r>> Responder<'r> for Accepted<R> {
-    fn respond(self) -> Result<Response<'r>, Status> {
+    fn respond_to(self, req: &Request) -> Result<Response<'r>, Status> {
         let mut build = Response::build();
         if let Some(responder) = self.0 {
-            build.merge(responder.respond()?);
+            build.merge(responder.respond_to(req)?);
         }
 
         build.status(Status::Accepted).ok()
@@ -127,7 +128,7 @@ pub struct NoContent;
 /// Sets the status code of the response to 204 No Content. The body of the
 /// response will be empty.
 impl<'r> Responder<'r> for NoContent {
-    fn respond(self) -> Result<Response<'r>, Status> {
+    fn respond_to(self, _: &Request) -> Result<Response<'r>, Status> {
         Response::build().status(Status::NoContent).ok()
     }
 }
@@ -148,9 +149,33 @@ pub struct Reset;
 
 /// Sets the status code of the response to 205 Reset Content. The body of the
 /// response will be empty.
-impl<'r> Responder<'r> for Reset {
-    fn respond(self) -> Result<Response<'r>, Status> {
+impl Responder<'static> for Reset {
+    fn respond_to(self, _: &Request) -> Result<Response<'static>, Status> {
         Response::build().status(Status::ResetContent).ok()
+    }
+}
+
+/// Sets the status of the response to 404 (Not Found).
+///
+/// The remainder of the response is delegated to the wrapped `Responder`.
+///
+/// # Example
+///
+/// ```rust
+/// use rocket::response::status;
+///
+/// # #[allow(unused_variables)]
+/// let response = status::NotFound("Sorry, I couldn't find it!");
+/// ```
+#[derive(Debug, Clone, PartialEq)]
+pub struct NotFound<R>(pub R);
+
+/// Sets the status code of the response to 404 Not Found.
+impl<'r, R: Responder<'r>> Responder<'r> for NotFound<R> {
+    fn respond_to(self, req: &Request) -> Result<Response<'r>, Status> {
+        Response::build_from(self.0.respond_to(req)?)
+            .status(Status::NotFound)
+            .ok()
     }
 }
 
@@ -171,8 +196,8 @@ pub struct Custom<R>(pub Status, pub R);
 /// Sets the status code of the response and then delegates the remainder of the
 /// response to the wrapped responder.
 impl<'r, R: Responder<'r>> Responder<'r> for Custom<R> {
-    fn respond(self) -> Result<Response<'r>, Status> {
-        Response::build_from(self.1.respond()?)
+    fn respond_to(self, req: &Request) -> Result<Response<'r>, Status> {
+        Response::build_from(self.1.respond_to(req)?)
             .status(self.0)
             .ok()
     }

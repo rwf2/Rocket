@@ -1,19 +1,13 @@
-extern crate rocket;
 extern crate rocket_contrib;
 
 use std::env;
-use rocket::config::Config;
-use rocket::config::Environment::*;
+use std::path::PathBuf;
 
-fn init() {
+fn template_root() -> PathBuf {
     let cwd = env::current_dir().expect("current working directory");
-    let tests_dir = cwd.join("tests");
-
-    let config = Config::build(Development).root(tests_dir).unwrap();
-    rocket::custom(config, true);
+    cwd.join("tests").join("templates")
 }
 
-// FIXME: Do something about overlapping configs.
 #[cfg(feature = "tera_templates")]
 mod tera_tests {
     use super::*;
@@ -27,19 +21,17 @@ mod tera_tests {
 
     #[test]
     fn test_tera_templates() {
-        init();
-
         let mut map = HashMap::new();
         map.insert("title", "_test_");
         map.insert("content", "<script />");
 
         // Test with a txt file, which shouldn't escape.
-        let template = Template::render("tera/txt_test", &map);
-        assert_eq!(&template.to_string(), UNESCAPED_EXPECTED);
+        let template = Template::show(template_root(), "tera/txt_test", &map);
+        assert_eq!(template, Some(UNESCAPED_EXPECTED.into()));
 
         // Now with an HTML file, which should.
-        let template = Template::render("tera/html_test", &map);
-        assert_eq!(&template.to_string(), ESCAPED_EXPECTED);
+        let template = Template::show(template_root(), "tera/html_test", &map);
+        assert_eq!(template, Some(ESCAPED_EXPECTED.into()));
     }
 }
 
@@ -54,15 +46,13 @@ mod handlebars_tests {
 
     #[test]
     fn test_handlebars_templates() {
-        init();
-
         let mut map = HashMap::new();
         map.insert("title", "_test_");
         map.insert("content", "<script /> hi");
 
         // Test with a txt file, which shouldn't escape.
-        let template = Template::render("hbs/test", &map);
-        assert_eq!(&template.to_string(), EXPECTED);
+        let template = Template::show(template_root(), "hbs/test", &map);
+        assert_eq!(template, Some(EXPECTED.into()));
     }
 }
 

@@ -20,6 +20,62 @@ pub enum Environment {
 }
 
 impl Environment {
+    /// Returns `true` if `self` is `Environment::Development`.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use rocket::config::Environment;
+    ///
+    /// assert!(Environment::Development.is_dev());
+    /// assert!(!Environment::Production.is_dev());
+    /// ```
+    #[inline]
+    pub fn is_dev(self) -> bool {
+        match self {
+            Development => true,
+            _ => false
+        }
+    }
+
+    /// Returns `true` if `self` is `Environment::Staging`.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use rocket::config::Environment;
+    ///
+    /// assert!(Environment::Staging.is_stage());
+    /// assert!(!Environment::Production.is_stage());
+    /// ```
+    #[inline]
+    pub fn is_stage(self) -> bool {
+        match self {
+            Staging => true,
+            _ => false
+        }
+    }
+
+    /// Returns `true` if `self` is `Environment::Production`.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use rocket::config::Environment;
+    ///
+    /// assert!(Environment::Production.is_prod());
+    /// assert!(!Environment::Staging.is_prod());
+    /// ```
+    #[inline]
+    pub fn is_prod(self) -> bool {
+        match self {
+            Production => true,
+            _ => false
+        }
+    }
+}
+
+impl Environment {
     /// Retrieves the "active" environment as determined by the `ROCKET_ENV`
     /// environment variable. If `ROCKET_ENV` is not set, returns `Development`.
     ///

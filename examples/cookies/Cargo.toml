@@ -1,6 +1,6 @@
 [package]
 name = "cookies"
-version = "0.0.1"
+version = "0.0.0"
 workspace = "../../"
 
 [dependencies]
@@ -11,6 +11,3 @@ rocket_codegen = { path = "../../codegen" }
 path = "../../contrib"
 default-features = false
 features = ["handlebars_templates"]
-
-[dev-dependencies]
-rocket = { path = "../../lib", features = ["testing"] }

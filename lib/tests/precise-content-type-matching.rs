@@ -23,13 +23,11 @@ fn specified_html() -> &'static str {
     "specified_html"
 }
 
-#[cfg(feature = "testing")]
 mod tests {
     use super::*;
 
     use rocket::Rocket;
-    use rocket::testing::MockRequest;
-    use rocket::http::Method::*;
+    use rocket::local::Client;
     use rocket::http::{Status, ContentType};
 
     fn rocket() -> Rocket {
@@ -40,15 +38,15 @@ mod tests {
 
     macro_rules! check_dispatch {
         ($mount:expr, $ct:expr, $body:expr) => (
-            let rocket = rocket();
-            let mut req = MockRequest::new(Post, $mount);
+            let client = Client::new(rocket()).unwrap();
+            let mut req = client.post($mount);
             let ct: Option<ContentType> = $ct;
             if let Some(ct) = ct {
                 req.add_header(ct);
             }
 
-            let mut response = req.dispatch_with(&rocket);
-            let body_str = response.body().and_then(|b| b.into_string());
+            let mut response = req.dispatch();
+            let body_str = response.body_string();
             let body: Option<&'static str> = $body;
             match body {
                 Some(string) => assert_eq!(body_str, Some(string.to_string())),

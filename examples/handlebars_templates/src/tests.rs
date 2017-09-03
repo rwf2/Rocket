@@ -1,18 +1,15 @@
-use rocket;
-use rocket::testing::MockRequest;
+use super::rocket;
+use rocket::local::{Client, LocalResponse};
 use rocket::http::Method::*;
 use rocket::http::Status;
-use rocket::Response;
 use rocket_contrib::Template;
 
-macro_rules! run_test {
-    ($req:expr, $test_fn:expr) => ({
-        let rocket = rocket::ignite()
-            .mount("/", routes![super::index, super::get])
-            .catch(errors![super::not_found]);
+const TEMPLATE_ROOT: &'static str = "templates/";
 
-        let mut req = $req;
-        $test_fn(req.dispatch_with(&rocket));
+macro_rules! dispatch {
+    ($method:expr, $path:expr, $test_fn:expr) => ({
+        let client = Client::new(rocket()).unwrap();
+        $test_fn(client.req($method, $path).dispatch());
     })
 }
 
@@ -20,28 +17,24 @@ macro_rules! run_test {
 fn test_root() {
     // Check that the redirect works.
     for method in &[Get, Head] {
-        let req = MockRequest::new(*method, "/");
-        run_test!(req, |mut response: Response| {
+        dispatch!(*method, "/", |mut response: LocalResponse| {
             assert_eq!(response.status(), Status::SeeOther);
             assert!(response.body().is_none());
 
-            let location_headers: Vec<_> = response.header_values("Location").collect();
-            assert_eq!(location_headers, vec!["/hello/Unknown"]);
+            let location: Vec<_> = response.headers().get("Location").collect();
+            assert_eq!(location, vec!["/hello/Unknown"]);
         });
     }
 
     // Check that other request methods are not accepted (and instead caught).
     for method in &[Post, Put, Delete, Options, Trace, Connect, Patch] {
-        let req = MockRequest::new(*method, "/");
-        run_test!(req, |mut response: Response| {
-            assert_eq!(response.status(), Status::NotFound);
-
+        dispatch!(*method, "/", |mut response: LocalResponse| {
             let mut map = ::std::collections::HashMap::new();
             map.insert("path", "/");
-            let expected = Template::render("error/404", &map).to_string();
+            let expected = Template::show(TEMPLATE_ROOT, "error/404", &map).unwrap();
 
-            let body_string = response.body().and_then(|body| body.into_string());
-            assert_eq!(body_string, Some(expected));
+            assert_eq!(response.status(), Status::NotFound);
+            assert_eq!(response.body_string(), Some(expected));
         });
     }
 }
@@ -49,33 +42,27 @@ fn test_root() {
 #[test]
 fn test_name() {
     // Check that the /hello/<name> route works.
-    let req = MockRequest::new(Get, "/hello/Jack");
-    run_test!(req, |mut response: Response| {
-        assert_eq!(response.status(), Status::Ok);
-
+    dispatch!(Get, "/hello/Jack", |mut response: LocalResponse| {
         let context = super::TemplateContext {
             name: "Jack".to_string(),
             items: vec!["One", "Two", "Three"].iter().map(|s| s.to_string()).collect()
         };
 
-        let expected = Template::render("index", &context).to_string();
-        let body_string = response.body().and_then(|body| body.into_string());
-        assert_eq!(body_string, Some(expected));
+        let expected = Template::show(TEMPLATE_ROOT, "index", &context).unwrap();
+        assert_eq!(response.status(), Status::Ok);
+        assert_eq!(response.body_string(), Some(expected));
     });
 }
 
 #[test]
 fn test_404() {
     // Check that the error catcher works.
-    let req = MockRequest::new(Get, "/hello/");
-    run_test!(req, |mut response: Response| {
-        assert_eq!(response.status(), Status::NotFound);
-
+    dispatch!(Get, "/hello/", |mut response: LocalResponse| {
         let mut map = ::std::collections::HashMap::new();
         map.insert("path", "/hello/");
-        let expected = Template::render("error/404", &map).to_string();
 
-        let body_string = response.body().and_then(|body| body.into_string());
-        assert_eq!(body_string, Some(expected));
+        let expected = Template::show(TEMPLATE_ROOT, "error/404", &map).unwrap();
+        assert_eq!(response.status(), Status::NotFound);
+        assert_eq!(response.body_string(), Some(expected));
     });
 }

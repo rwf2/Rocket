@@ -1,6 +1,6 @@
 use std::convert::AsRef;
 
-use time::{self, Duration};
+use time::Duration;
 
 use outcome::IntoOutcome;
 use response::{Response, Responder};
@@ -53,9 +53,10 @@ const FLASH_COOKIE_NAME: &'static str = "_flash";
 /// #
 /// use rocket::response::{Flash, Redirect};
 /// use rocket::request::FlashMessage;
+/// use rocket::http::RawStr;
 ///
 /// #[post("/login/<name>")]
-/// fn login(name: &str) -> Result<&'static str, Flash<Redirect>> {
+/// fn login(name: &RawStr) -> Result<&'static str, Flash<Redirect>> {
 ///     if name == "special_user" {
 ///         Ok("Hello, special user!")
 ///     } else {
@@ -71,7 +72,7 @@ const FLASH_COOKIE_NAME: &'static str = "_flash";
 ///
 /// fn main() {
 /// # if false { // We don't actually want to launch the server in an example.
-///     rocket::ignite().mount("/", routes![login, index]).launch()
+///     rocket::ignite().mount("/", routes![login, index]).launch();
 /// # }
 /// }
 /// ```
@@ -180,11 +181,11 @@ impl<'r, R: Responder<'r>> Flash<R> {
 /// response handling to the wrapped responder. As a result, the `Outcome` of
 /// the response is the `Outcome` of the wrapped `Responder`.
 impl<'r, R: Responder<'r>> Responder<'r> for Flash<R> {
-    fn respond(self) -> Result<Response<'r>, Status> {
+    fn respond_to(self, req: &Request) -> Result<Response<'r>, Status> {
         trace_!("Flash: setting message: {}:{}", self.name, self.message);
         let cookie = self.cookie();
-        Response::build_from(self.responder.respond()?)
-            .header_adjoin(cookie)
+        Response::build_from(self.responder.respond_to(req)?)
+            .header_adjoin(&cookie)
             .ok()
     }
 }
@@ -220,18 +221,8 @@ impl<'a, 'r> FromRequest<'a, 'r> for Flash<()> {
 
     fn from_request(request: &'a Request<'r>) -> request::Outcome<Self, Self::Error> {
         trace_!("Flash: attemping to retrieve message.");
-        let r = request.cookies().find(FLASH_COOKIE_NAME).ok_or(()).and_then(|cookie| {
+        let r = request.cookies().get(FLASH_COOKIE_NAME).ok_or(()).and_then(|cookie| {
             trace_!("Flash: retrieving message: {:?}", cookie);
-
-            // Create the "deletion" cookie. We'll use it to clear the cookie.
-            let delete_cookie = Cookie::build(FLASH_COOKIE_NAME, "")
-                .max_age(Duration::seconds(0))
-                .expires(time::now() - Duration::days(365))
-                .path("/")
-                .finish();
-
-            // Add the deletion to the cookie jar, replacing the existing cookie.
-            request.cookies().add(delete_cookie);
 
             // Parse the flash message.
             let content = cookie.value();
@@ -245,6 +236,12 @@ impl<'a, 'r> FromRequest<'a, 'r> for Flash<()> {
             Ok(Flash::named(name, msg))
         });
 
-        r.into_outcome()
+        // If we found a flash cookie, delete it from the jar.
+        if r.is_ok() {
+            let cookie = Cookie::build(FLASH_COOKIE_NAME, "").path("/").finish();
+            request.cookies().remove(cookie);
+        }
+
+        r.into_outcome(Status::BadRequest)
     }
 }

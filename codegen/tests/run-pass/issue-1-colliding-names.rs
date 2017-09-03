@@ -4,7 +4,7 @@
 extern crate rocket;
 
 #[get("/<todo>")]
-fn todo(todo: &str) -> &str {
+fn todo(todo: String) -> String {
     todo
 }
 

@@ -10,21 +10,18 @@ fn not_found() -> Redirect {
     Redirect::to("/")
 }
 
-#[cfg(feature = "testing")]
 mod tests {
     use super::*;
-    use rocket::testing::MockRequest;
-    use rocket::http::Method::*;
+    use rocket::local::Client;
     use rocket::http::Status;
 
     #[test]
     fn error_catcher_redirect() {
-        let rocket = rocket::ignite().catch(errors![not_found]);
-        let mut req = MockRequest::new(Get, "/unknown");
-        let response = req.dispatch_with(&rocket);
+        let client = Client::new(rocket::ignite().catch(errors![not_found])).unwrap();
+        let response = client.get("/unknown").dispatch();
         println!("Response:\n{:?}", response);
 
-        let location: Vec<_> = response.header_values("location").collect();
+        let location: Vec<_> = response.headers().get("location").collect();
         assert_eq!(response.status(), Status::SeeOther);
         assert_eq!(location, vec!["/"]);
     }

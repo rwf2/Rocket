@@ -1,13 +1,16 @@
 #![feature(plugin)]
 #![plugin(rocket_codegen)]
 
-#[get("/<name>")] //~ ERROR 'name' is declared
-fn get(other: &str) -> &'static str { "hi" } //~ ERROR isn't in the function
+#[get("/<name>")] //~ ERROR unused dynamic parameter: `name`
+fn get(other: usize) -> &'static str { "hi" } //~ NOTE expected
 
-#[get("/a?<r>")] //~ ERROR 'r' is declared
-fn get1() -> &'static str { "hi" } //~ ERROR isn't in the function
+#[get("/a?<r>")] //~ ERROR unused dynamic parameter: `r`
+fn get1() -> &'static str { "hi" } //~ NOTE expected
 
-#[post("/a", data = "<test>")] //~ ERROR 'test' is declared
-fn post() -> &'static str { "hi" } //~ ERROR isn't in the function
+#[post("/a", data = "<test>")] //~ ERROR unused dynamic parameter: `test`
+fn post() -> &'static str { "hi" } //~ NOTE expected
+
+#[get("/<_r>")] //~ ERROR unused dynamic parameter: `_r`
+fn get2(r: usize) -> &'static str { "hi" } //~ NOTE expected
 
 fn main() {  }

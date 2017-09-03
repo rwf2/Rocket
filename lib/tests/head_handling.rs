@@ -16,17 +16,15 @@ fn index() -> &'static str {
 }
 
 #[head("/other")]
-fn other() -> content::JSON<()> {
-    content::JSON(())
+fn other() -> content::Json<()> {
+    content::Json(())
 }
 
-#[cfg(feature = "testing")]
 mod tests {
     use super::*;
 
     use rocket::Route;
-    use rocket::testing::MockRequest;
-    use rocket::http::Method::*;
+    use rocket::local::Client;
     use rocket::http::{Status, ContentType};
     use rocket::response::Body;
 
@@ -36,12 +34,10 @@ mod tests {
 
     #[test]
     fn auto_head() {
-        let rocket = rocket::ignite().mount("/", routes());
-
-        let mut req = MockRequest::new(Head, "/");
-        let mut response = req.dispatch_with(&rocket);
-
+        let client = Client::new(rocket::ignite().mount("/", routes())).unwrap();
+        let mut response = client.head("/").dispatch();
         assert_eq!(response.status(), Status::Ok);
+
         if let Some(body) = response.body() {
             match body {
                 Body::Sized(_, n) => assert_eq!(n, "Hello, world!".len() as u64),
@@ -50,27 +46,23 @@ mod tests {
 
             assert_eq!(body.into_string(), Some("".to_string()));
         } else {
-            panic!("Expected an empty body!")
+            panic!("Expected a non-empty body!")
         }
 
-
-        let content_type: Vec<_> = response.header_values("Content-Type").collect();
+        let content_type: Vec<_> = response.headers().get("Content-Type").collect();
         assert_eq!(content_type, vec![ContentType::Plain.to_string()]);
 
-        let mut req = MockRequest::new(Head, "/empty");
-        let response = req.dispatch_with(&rocket);
+        let response = client.head("empty").dispatch();
         assert_eq!(response.status(), Status::NoContent);
     }
 
     #[test]
     fn user_head() {
-        let rocket = rocket::ignite().mount("/", routes());
-        let mut req = MockRequest::new(Head, "/other");
-        let response = req.dispatch_with(&rocket);
+        let client = Client::new(rocket::ignite().mount("/", routes())).unwrap();
+        let response = client.head("/other").dispatch();
 
+        let content_type: Vec<_> = response.headers().get("Content-Type").collect();
         assert_eq!(response.status(), Status::Ok);
-
-        let content_type: Vec<_> = response.header_values("Content-Type").collect();
         assert_eq!(content_type, vec![ContentType::JSON.to_string()]);
     }
 }

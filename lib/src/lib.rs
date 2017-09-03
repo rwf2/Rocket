@@ -1,10 +1,16 @@
 #![feature(specialization)]
 #![feature(conservative_impl_trait)]
 #![feature(drop_types_in_const)]
-#![feature(associated_consts)]
 #![feature(const_fn)]
-#![feature(type_ascription)]
-#![feature(pub_restricted)]
+#![feature(lookup_host)]
+#![feature(plugin)]
+#![feature(never_type)]
+#![feature(try_trait)]
+
+#![plugin(pear_codegen)]
+
+// TODO: Version URLs.
+#![doc(html_root_url = "https://api.rocket.rs/rocket/")]
 
 //! # Rocket - Core API Documentation
 //!
@@ -73,7 +79,7 @@
 //!
 //! fn main() {
 //! # if false { // We don't actually want to launch the server in an example.
-//!     rocket::ignite().mount("/", routes![hello]).launch()
+//!     rocket::ignite().mount("/", routes![hello]).launch();
 //! # }
 //! }
 //! ```
@@ -88,13 +94,16 @@
 //!
 //! ## Testing
 //!
-//! Rocket includes a small testing library that can be used to test your Rocket
-//! application. For information on how to test your Rocket applications, see
-//! the [testing module](/rocket/testing) documentation.
-//!
+//! The [local](/rocket/local) module contains structures that facilitate unit
+//! and itegration testing of a Rocket application. The [top-level `local`
+//! module documentation](/rocket/local) and the [testing chapter of the
+//! guide](https://rocket.rs/guide/testing/#testing) include detailed examples.
 
 #[macro_use] extern crate log;
-extern crate term_painter;
+#[macro_use] extern crate pear;
+#[cfg(feature = "tls")] extern crate rustls;
+#[cfg(feature = "tls")] extern crate hyper_sync_rustls;
+extern crate yansi;
 extern crate hyper;
 extern crate url;
 extern crate toml;
@@ -103,11 +112,15 @@ extern crate state;
 extern crate cookie;
 extern crate time;
 extern crate memchr;
+extern crate base64;
+extern crate smallvec;
+extern crate ordermap;
+extern crate isatty;
 
 #[cfg(test)] #[macro_use] extern crate lazy_static;
 
 #[doc(hidden)] #[macro_use] pub mod logger;
-#[cfg(any(test, feature = "testing"))] pub mod testing;
+pub mod local;
 pub mod http;
 pub mod request;
 pub mod response;
@@ -115,8 +128,9 @@ pub mod outcome;
 pub mod config;
 pub mod data;
 pub mod handler;
+pub mod fairing;
+pub mod error;
 
-mod error;
 mod router;
 mod rocket;
 mod codegen;
@@ -125,13 +139,13 @@ mod ext;
 
 #[doc(inline)] pub use response::Response;
 #[doc(inline)] pub use handler::{Handler, ErrorHandler};
-#[doc(inline)] pub use logger::LoggingLevel;
 #[doc(hidden)] pub use codegen::{StaticRouteInfo, StaticCatchInfo};
 #[doc(inline)] pub use outcome::Outcome;
 #[doc(inline)] pub use data::Data;
+#[doc(inline)] pub use config::Config;
+#[doc(inline)] pub use error::Error;
 pub use router::Route;
 pub use request::{Request, State};
-pub use error::Error;
 pub use catcher::Catcher;
 pub use rocket::Rocket;
 

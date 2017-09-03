@@ -60,9 +60,9 @@ fn valid_segments(ecx: &ExtCtxt, uri: &URI, sp: Span) -> bool {
                 ecx.struct_span_err(span, "parameter names must be valid identifiers")
                     .note(&format!("{:?} is not a valid identifier", param))
                     .emit();
-            } else if param.starts_with('_') {
-                ecx.struct_span_err(span, "parameters cannot be ignored")
-                    .note(&format!("{:?} is being ignored", param))
+            } else if param == "_" {
+                ecx.struct_span_err(span, "parameters must be named")
+                    .help("use a name such as `_guard` or `_param`")
                     .emit();
             } else {
                 continue

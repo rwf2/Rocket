@@ -1,3 +1,391 @@
+# Version 0.3.2 (Aug 15, 2017)
+
+## Core
+
+  * Added conversion methods from and to `Box<UncasedStr>`.
+
+## Codegen
+
+  * Lints were removed due to compiler instability. Lints will likely return as
+    a separate `rocket_lints` crate.
+
+# Version 0.3.1 (Aug 11, 2017)
+
+## Core
+
+  * Added support for ASCII colors on modern Windows consoles.
+  * Form field renames can now include _any_ valid characters, not just idents.
+
+## Codegen
+
+  * Ignored named route parameters are now allowed (`_ident`).
+  * Fixed issue where certain paths would cause a lint `assert!` to fail
+    ([#367](https://github.com/SergioBenitez/Rocket/issues/367)).
+  * Lints were updated for `2017-08-10` nightly.
+  * Minimum required `rustc` is `1.21.0-nightly (2017-08-10)`.
+
+## Contrib
+
+  * Tera errors that were previously skipped internally are now emitted.
+
+## Documentation
+
+  * Typos were fixed across the board.
+
+# Version 0.3.0 (Jul 14, 2017)
+
+## New Features
+
+This release includes the following new features:
+
+  * [Fairings], Rocket's structure middleware, were introduced.
+  * [Native TLS support] was introduced.
+  * [Private cookies] were introduced.
+  * A [`MsgPack`] type has been added to [`contrib`] for simple consumption and
+    returning of MessagePack data.
+  * Launch failures ([`LaunchError`]) from [`Rocket::launch()`] are now returned
+    for inspection without panicking.
+  * Routes without query parameters now match requests with or without query
+    parameters.
+  * [Default rankings] range from -4 to -1, preferring static paths and routes
+    with query string matches.
+  * A native [`Accept`] header structure was added.
+  * The [`Accept`] request header can be retrieved via [`Request::accept()`].
+  * Incoming form fields [can be renamed] via a new `#[form(field = "name")]`
+    structure field attribute.
+  * All active routes can be retrieved via [`Rocket::routes()`].
+  * [`Response::body_string()`] was added to retrieve the response body as a
+    `String`.
+  * [`Response::body_bytes()`] was added to retrieve the response body as a
+    `Vec<u8>`.
+  * [`Response::content_type()`] was added to easily retrieve the Content-Type
+    header of a response.
+  * Size limits on incoming data are [now
+    configurable](https://rocket.rs/guide/overview/#configuration).
+  * [`Request::limits()`] was added to retrieve incoming data limits.
+  * Responders may dynamically adjust their response based on the incoming
+    request.
+  * [`Request::guard()`] was added for simple retrieval of request guards.
+  * [`Request::route()`] was added to retrieve the active route, if any.
+  * `&Route` is now a request guard.
+  * The base mount path of a [`Route`] can be retrieved via `Route::base` or
+    `Route::base()`.
+  * [`Cookies`] supports _private_ (authenticated encryption) cookies, encryped
+    with the `secret_key` config key.
+  * `Config::{development, staging, production}` constructors were added for
+    [`Config`].
+  * [`Config::get_datetime()`] was added to retrieve an extra as a `Datetime`.
+  * Forms can be now parsed _leniently_ via the new [`LenientForm`] data guard.
+  * The `?` operator can now be used with `Outcome`.
+  * Quoted string, array, and table  based [configuration parameters] can be set
+    via environment variables.
+  * Log coloring is disabled when `stdout` is not a TTY.
+  * [`FromForm`] is implemented for `Option<T: FromForm>`, `Result<T: FromForm,
+    T::Error>`.
+  * The [`NotFound`] responder was added for simple **404** response
+    construction.
+
+[Fairings]: https://rocket.rs/guide/fairings/
+[Native TLS support]: https://rocket.rs/guide/configuration/#configuring-tls
+[Private cookies]: https://rocket.rs/guide/requests/#private-cookies
+[can be renamed]: https://rocket.rs/guide/requests/#field-renaming
+[`MsgPack`]: https://api.rocket.rs/rocket_contrib/struct.MsgPack.html
+[`Rocket::launch()`]: https://api.rocket.rs/rocket/struct.Rocket.html#method.launch
+[`LaunchError`]: https://api.rocket.rs/rocket/error/struct.LaunchError.html
+[Default rankings]: https://api.rocket.rs/rocket/struct.Route.html
+[`Route`]: https://api.rocket.rs/rocket/struct.Route.html
+[`Accept`]: https://api.rocket.rs/rocket/http/struct.Accept.html
+[`Request::accept()`]: https://api.rocket.rs/rocket/struct.Request.html#method.accept
+[`contrib`]: https://api.rocket.rs/rocket_contrib/
+[`Rocket::routes()`]: https://api.rocket.rs/rocket/struct.Rocket.html#method.routes
+[`Response::body_string()`]: https://api.rocket.rs/rocket/struct.Response.html#method.body_string
+[`Response::body_bytes()`]: https://api.rocket.rs/rocket/struct.Response.html#method.body_bytes
+[`Response::content_type()`]: https://api.rocket.rs/rocket/struct.Response.html#method.content_type
+[`Request::guard()`]: https://api.rocket.rs/rocket/struct.Request.html#method.guard
+[`Request::limits()`]: https://api.rocket.rs/rocket/struct.Request.html#method.limits
+[`Request::route()`]: https://api.rocket.rs/rocket/struct.Request.html#method.route
+[`Config`]: https://api.rocket.rs/rocket/struct.Config.html
+[`Cookies`]: https://api.rocket.rs/rocket/http/enum.Cookies.html
+[`Config::get_datetime()`]: https://api.rocket.rs/rocket/struct.Config.html#method.get_datetime
+[`LenientForm`]: https://api.rocket.rs/rocket/request/struct.LenientForm.html
+[configuration parameters]: https://api.rocket.rs/rocket/config/index.html#environment-variables
+[`NotFound`]: https://api.rocket.rs/rocket/response/status/struct.NotFound.html
+
+## Breaking Changes
+
+This release includes many breaking changes. These changes are listed below
+along with a short note about how to handle the breaking change in existing
+applications.
+
+  * **`session_key` was renamed to `secret_key`, requires a 256-bit base64 key**
+
+    It's unlikely that `session_key` was previously used. If it was, rename
+    `session_key` to `secret_key`. Generate a random 256-bit base64 key using a
+    tool like openssl: `openssl rand -base64 32`.
+
+  * **The `&Cookies` request guard has been removed in favor of `Cookies`**
+
+    Change `&Cookies` in a request guard position to `Cookies`.
+
+  * **`Rocket::launch()` now returns a `LaunchError`, doesn't panic.**
+
+    For the old behavior, suffix a call to `.launch()` with a semicolon:
+    `.launch();`.
+
+  * **Routes without query parameters match requests with or without query
+    parameters.**
+
+    There is no workaround, but this change may allow manual ranks from routes
+    to be removed.
+
+  * **The `format` route attribute on non-payload requests matches against the
+    Accept header.**
+
+    Excepting a custom request guard, there is no workaround. Previously,
+    `format` always matched against the Content-Type header, regardless of
+    whether the request method indicated a payload or not.
+
+  * **A type of `&str` can no longer be used in form structures or parameters.**
+
+    Use the new [`&RawStr`] type instead.
+
+  * **`ContentType` is no longer a request guard.**
+
+    Use `&ContentType` instead.
+
+  * **`Request::content_type()` returns `&ContentType` instead of
+    `ContentType`.**
+
+    Use `.clone()` on `&ContentType` if a type of `ContentType` is required.
+
+  * **`Response::header_values()` was removed. `Response::headers()` now returns
+    an `&HeaderMap`.**
+
+    A call to `Response::headers()` can be replaced with
+    `Response::headers().iter()`. A call to `Response::header_values(name)` can
+    be replaced with `Response::headers().get(name)`.
+
+  * **Route collisions result in a hard error and panic.**
+
+    There is no workaround. Previously, route collisions were a warning.
+
+  * **The [`IntoOutcome`] trait has been expanded and made more flexible.**
+
+    There is no workaround. `IntoOutcome::into_outcome()` now takes a `Failure`
+    value to use. `IntoOutcome::or_forward()` was added to return a `Forward`
+    outcome if `self` indicates an error.
+
+  * **The 'testing' feature was removed.**
+
+    Remove `features = ["testing"]` from `Cargo.toml`. Use the new [`local`]
+    module for testing.
+
+  * **`serde` was updated to 1.0.**
+
+    There is no workaround. Ensure all dependencies rely on `serde` `1.0`.
+
+  * **`config::active()` was removed.**
+
+    Use [`Rocket::config()`] to retrieve the configuration before launch. If
+    needed, use [managed state] to store config information for later use.
+
+  * **The [`Responder`] trait has changed.**
+
+    `Responder::respond(self)` was removed in favor of
+    `Responder::respond_to(self, &Request)`. Responders may dynamically adjust
+    their response based on the incoming request.
+
+  * **`Outcome::of(Responder)` was removed while `Outcome::from(&Request,
+    Responder)` was added.**
+
+    Use `Outcome::from(..)` instead of `Outcome::of(..)`.
+
+  * **Usage of templates requires `Template::fairing()` to be attached.**
+
+    Call `.attach(Template::fairing())` on the application's Rocket instance
+    before launching.
+
+  * **The `Display` implementation of `Template` was removed.**
+
+    Use [`Template::show()`] to render a template directly.
+
+  * **`Request::new()` is no longer exported.**
+
+    There is no workaround.
+
+  * **The [`FromForm`] trait has changed.**
+
+    `Responder::from_form_items(&mut FormItems)` was removed in favor of
+    `Responder::from_form(&mut FormItems, bool)`. The second parameter indicates
+    whether parsing should be strict (if `true`) or lenient (if `false`).
+
+  * **`LoggingLevel` was removed as a root reexport.**
+
+    It can now be imported from `rocket::config::LoggingLevel`.
+
+  * **An `Io` variant was added to [`ConfigError`].**
+
+    Ensure `match`es on `ConfigError` include an `Io` variant.
+
+  * **[`ContentType::from_extension()`] returns an `Option<ContentType>`.**
+
+    For the old behvavior, use `.unwrap_or(ContentType::Any)`.
+
+  * **The `IntoValue` config trait was removed in favor of `Into<Value>`.**
+
+    There is no workaround. Use `Into<Value>` as necessary.
+
+  * **The `rocket_contrib::JSON` type has been renamed to
+    [`rocket_contrib::Json`].**
+
+    Use `Json` instead of `JSON`.
+
+  * **All structs in the [`content`] module use TitleCase names.**
+
+    Use `Json`, `Xml`, `Html`, and `Css` instead of `JSON`, `XML`, `HTML`, and
+    `CSS`, respectively.
+
+[`&RawStr`]: https://api.rocket.rs/rocket/http/struct.RawStr.html
+[`IntoOutcome`]: https://api.rocket.rs/rocket/outcome/trait.IntoOutcome.html
+[`local`]: https://api.rocket.rs/rocket/local/index.html
+[`Rocket::config()`]: https://api.rocket.rs/rocket/struct.Rocket.html#method.config
+[managed state]: https://rocket.rs/guide/state/
+[`Responder`]: https://api.rocket.rs/rocket/response/trait.Responder.html
+[`Template::show()`]: https://api.rocket.rs/rocket_contrib/struct.Template.html#method.show
+[`FromForm`]: https://api.rocket.rs/rocket/request/trait.FromForm.html
+[`ConfigError`]: https://api.rocket.rs/rocket/config/enum.ConfigError.html
+[`ContentType::from_extension()`]: https://api.rocket.rs/rocket/http/struct.ContentType.html#method.from_extension
+[`rocket_contrib::Json`]: https://api.rocket.rs/rocket_contrib/struct.Json.html
+[`content`]: https://api.rocket.rs/rocket/response/content/index.html
+
+## General Improvements
+
+In addition to new features, Rocket saw the following improvements:
+
+  * "Rocket" is now capatilized in the `Server` HTTP header.
+  * The generic parameter of `rocket_contrib::Json` defaults to `json::Value`.
+  * The trailing '...' in the launch message was removed.
+  * The launch message prints regardless of the config environment.
+  * For debugging, `FromData` is implemented for `Vec<u8>` and `String`.
+  * The port displayed on launch is the port resolved, not the one configured.
+  * The `uuid` dependency was updated to `0.5`.
+  * The `base64` dependency was updated to `0.6`.
+  * The `toml` dependency was updated to `0.4`.
+  * The `handlebars` dependency was updated to `0.27`.
+  * The `tera` dependency was updated to `0.10`.
+  * [`yansi`] is now used for all terminal coloring.
+  * The `dev` `rustc` release channel is supported during builds.
+  * [`Config`] is now exported from the root.
+  * [`Request`] implements `Clone` and `Debug`.
+  * The `workers` config parameter now defaults to `num_cpus * 2`.
+  * Console logging for table-based config values is improved.
+  * `PartialOrd`, `Ord`, and `Hash` are now implemented for [`State`].
+  * The format of a request is always logged when available.
+
+[`yansi`]: https://crates.io/crates/yansi
+[`Request`]: https://api.rocket.rs/rocket/struct.Request.html
+[`State`]: https://api.rocket.rs/rocket/struct.State.html
+
+## Infrastructure
+
+  * All examples include a test suite.
+  * The `master` branch now uses a `-dev` version number.
+
+# Version 0.2.8 (Jun 01, 2017)
+
+## Codegen
+
+  * Lints were updated for `2017-06-01` nightly.
+  * Minimum required `rustc` is `1.19.0-nightly (2017-06-01)`.
+
+# Version 0.2.7 (May 26, 2017)
+
+## Codegen
+
+  * Codegen was updated for `2017-05-26` nightly.
+
+# Version 0.2.6 (Apr 17, 2017)
+
+## Codegen
+
+  * Allow `k` and `v` to be used as fields in `FromForm` structures by avoiding
+    identifier collisions ([#265]).
+
+[#265]: https://github.com/SergioBenitez/Rocket/issues/265
+
+# Version 0.2.5 (Apr 16, 2017)
+
+## Codegen
+
+  * Lints were updated for `2017-04-15` nightly.
+  * Minimum required `rustc` is `1.18.0-nightly (2017-04-15)`.
+
+# Version 0.2.4 (Mar 30, 2017)
+
+## Codegen
+
+  * Codegen was updated for `2017-03-30` nightly.
+  * Minimum required `rustc` is `1.18.0-nightly (2017-03-30)`.
+
+# Version 0.2.3 (Mar 22, 2017)
+
+## Fixes
+
+  * Multiple header values for the same header name are now properly preserved
+    (#223).
+
+## Core
+
+  * The `get_slice` and `get_table` methods were added to `Config`.
+  * The `pub_restricted` feature has been stabilized!
+
+## Codegen
+
+  * Lints were updated for `2017-03-20` nightly.
+  * Minimum required `rustc` is `1.17.0-nightly (2017-03-22)`.
+
+## Infrastructure
+
+  * The test script now denies trailing whitespace.
+
+# Version 0.2.2 (Feb 26, 2017)
+
+## Codegen
+
+  * Lints were updated for `2017-02-25`  and `2017-02-26` nightlies.
+  * Minimum required `rustc` is `1.17.0-nightly (2017-02-26)`.
+
+# Version 0.2.1 (Feb 24, 2017)
+
+## Core Fixes
+
+  * `Flash` cookie deletion functions as expected regardless of the path.
+  * `config` properly accepts IPv6 addresses.
+  * Multiple `Set-Cookie` headers are properly set.
+
+## Core Improvements
+
+  * `Display` and `Error` were implemented for `ConfigError`.
+  * `webp`, `ttf`, `otf`, `woff`, and `woff2` were added as known content types.
+  * Routes are presorted for faster routing.
+  * `into_bytes` and `into_inner` methods were added to `Body`.
+
+## Codegen
+
+  * Fixed `unmanaged_state` lint so that it works with prefilled type aliases.
+
+## Contrib
+
+  * Better errors are emitted on Tera template parse errors.
+
+## Documentation
+
+  * Fixed typos in `manage` and `JSON` docs.
+
+## Infrastructure
+
+  * Updated doctests for latest Cargo nightly.
+
 # Version 0.2.0 (Feb 06, 2017)
 
 Detailed release notes for v0.2 can also be found on
@@ -134,7 +522,7 @@ In addition to new features, Rocket saw the following smaller improvements:
   * Clippy issues injected by codegen are resolved.
   * Handlebars was updated to `0.25`.
   * The `PartialEq` implementation of `Config` doesn't consider the path or
-    session key.
+    secret key.
   * Hyper dependency updated to `0.10`.
   * The `Error` type for `JSON as FromData` has been exposed as `SerdeError`.
   * SVG was added as a known Content-Type.

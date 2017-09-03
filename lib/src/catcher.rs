@@ -5,8 +5,7 @@ use error::Error;
 use request::Request;
 
 use std::fmt;
-use term_painter::ToStyle;
-use term_painter::Color::*;
+use yansi::Color::*;
 
 /// An error catching route.
 ///
@@ -55,7 +54,7 @@ use term_painter::Color::*;
 ///
 /// fn main() {
 /// # if false { // We don't actually want to launch the server in an example.
-///     rocket::ignite().catch(errors![internal_error, not_found]).launch()
+///     rocket::ignite().catch(errors![internal_error, not_found]).launch();
 /// # }
 /// }
 /// ```
@@ -79,13 +78,16 @@ impl Catcher {
     /// # #![allow(unused_variables)]
     /// use rocket::{Catcher, Request, Error};
     /// use rocket::response::{Result, Responder};
+    /// use rocket::response::status::Custom;
+    /// use rocket::http::Status;
     ///
     /// fn handle_404<'r>(_: Error, req: &'r Request) -> Result<'r> {
-    ///    format!("Couldn't find: {}", req.uri()).respond()
+    ///     let res = Custom(Status::NotFound, format!("404: {}", req.uri()));
+    ///     res.respond_to(req)
     /// }
     ///
-    /// fn handle_500<'r>(_: Error, _: &'r Request) -> Result<'r> {
-    ///     "Whoops, we messed up!".respond()
+    /// fn handle_500<'r>(_: Error, req: &'r Request) -> Result<'r> {
+    ///     "Whoops, we messed up!".respond_to(req)
     /// }
     ///
     /// let not_found_catcher = Catcher::new(404, handle_404);
@@ -154,10 +156,10 @@ macro_rules! default_errors {
         let mut map = HashMap::new();
 
         $(
-            fn $fn_name<'r>(_: Error, _r: &'r Request) -> response::Result<'r> {
+            fn $fn_name<'r>(_: Error, req: &'r Request) -> response::Result<'r> {
                 status::Custom(Status::from_code($code).unwrap(),
-                    content::HTML(error_page_template!($code, $name, $description))
-                ).respond()
+                    content::Html(error_page_template!($code, $name, $description))
+                ).respond_to(req)
             }
 
             map.insert($code, Catcher::new_default($code, $fn_name));

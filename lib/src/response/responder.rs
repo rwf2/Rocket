@@ -3,7 +3,8 @@ use std::io::Cursor;
 use std::fmt;
 
 use http::{Status, ContentType};
-use response::{Response, Stream};
+use response::Response;
+use request::Request;
 
 /// Trait implemented by types that generate responses for clients.
 ///
@@ -49,12 +50,14 @@ use response::{Response, Stream};
 ///
 ///   * **File**
 ///
-///     Streams the `File` to the client. This is essentially an alias to
-///     `Stream::from(file)`.
+///     Responds with a streamed body containing the data in the `File`. No
+///     `Content-Type` is set. To automatically have a `Content-Type` set based
+///     on the file's extension, use
+///     [`NamedFile`](/rocket/response/struct.NamedFile.html).
 ///
 ///   * **()**
 ///
-///     Responds with an empty body. No Content-Type is set.
+///     Responds with an empty body. No `Content-Type` is set.
 ///
 ///   * **Option&lt;T>**
 ///
@@ -95,6 +98,16 @@ use response::{Response, Stream};
 /// or `ResponseBuilder` struct. Ensure that you document the merging or joining
 /// behavior appropriately.
 ///
+/// ## Inspecting Requests
+///
+/// A `Responder` has access to the request it is responding to. Even so, you
+/// should avoid using the `Request` value as much as possible. This is because
+/// using the `Request` object makes your responder _inpure_, and so the use of
+/// the type as a `Responder` has less intrinsic meaning associated with it. If
+/// the `Responder` were pure, however, it always respond in the same manner,
+/// regardless of the incoming request. Thus, knowing the type is sufficient to
+/// fully determine its functionality.
+///
 /// # Example
 ///
 /// Say that you have a custom type, `Person`:
@@ -133,11 +146,12 @@ use response::{Response, Stream};
 /// #
 /// use std::io::Cursor;
 ///
+/// use rocket::request::Request;
 /// use rocket::response::{self, Response, Responder};
 /// use rocket::http::ContentType;
 ///
 /// impl<'r> Responder<'r> for Person {
-///     fn respond(self) -> response::Result<'r> {
+///     fn respond_to(self, _: &Request) -> response::Result<'r> {
 ///         Response::build()
 ///             .sized_body(Cursor::new(format!("{}:{}", self.name, self.age)))
 ///             .raw_header("X-Person-Name", self.name)
@@ -155,34 +169,21 @@ pub trait Responder<'r> {
     /// Returns `Ok` if a `Response` could be generated successfully. Otherwise,
     /// returns an `Err` with a failing `Status`.
     ///
+    /// The `request` parameter is the `Request` that this `Responder` is
+    /// responding to.
+    ///
     /// When using Rocket's code generation, if an `Ok(Response)` is returned,
     /// the response will be written out to the client. If an `Err(Status)` is
     /// returned, the error catcher for the given status is retrieved and called
     /// to generate a final error response, which is then written out to the
     /// client.
-    fn respond(self) -> Result<Response<'r>, Status>;
+    fn respond_to(self, request: &Request) -> Result<Response<'r>, Status>;
 }
 
 /// Returns a response with Content-Type `text/plain` and a fixed-size body
 /// containing the string `self`. Always returns `Ok`.
-///
-/// # Example
-///
-/// ```rust
-/// use rocket::response::Responder;
-/// use rocket::http::ContentType;
-///
-/// let mut response = "Hello".respond().unwrap();
-///
-/// let body_string = response.body().and_then(|b| b.into_string());
-/// assert_eq!(body_string, Some("Hello".to_string()));
-///
-/// let content_type: Vec<_> = response.header_values("Content-Type").collect();
-/// assert_eq!(content_type.len(), 1);
-/// assert_eq!(content_type[0], ContentType::Plain.to_string());
-/// ```
 impl<'r> Responder<'r> for &'r str {
-    fn respond(self) -> Result<Response<'r>, Status> {
+    fn respond_to(self, _: &Request) -> Result<Response<'r>, Status> {
         Response::build()
             .header(ContentType::Plain)
             .sized_body(Cursor::new(self))
@@ -190,10 +191,10 @@ impl<'r> Responder<'r> for &'r str {
     }
 }
 
-/// Returns a response with Content-Type `text/html` and a fixed-size body
+/// Returns a response with Content-Type `text/plain` and a fixed-size body
 /// containing the string `self`. Always returns `Ok`.
-impl Responder<'static> for String {
-    fn respond(self) -> Result<Response<'static>, Status> {
+impl<'r> Responder<'r> for String {
+    fn respond_to(self, _: &Request) -> Result<Response<'r>, Status> {
         Response::build()
             .header(ContentType::Plain)
             .sized_body(Cursor::new(self))
@@ -201,16 +202,16 @@ impl Responder<'static> for String {
     }
 }
 
-/// Aliases Stream<File>: `Stream::from(self)`.
-impl Responder<'static> for File {
-    fn respond(self) -> Result<Response<'static>, Status> {
-        Stream::from(self).respond()
+/// Returns a response with a sized body for the file. Always returns `Ok`.
+impl<'r> Responder<'r> for File {
+    fn respond_to(self, _: &Request) -> Result<Response<'r>, Status> {
+        Response::build().streamed_body(self).ok()
     }
 }
 
 /// Returns an empty, default `Response`. Always returns `Ok`.
-impl Responder<'static> for () {
-    fn respond(self) -> Result<Response<'static>, Status> {
+impl<'r> Responder<'r> for () {
+    fn respond_to(self, _: &Request) -> Result<Response<'r>, Status> {
         Ok(Response::new())
     }
 }
@@ -218,11 +219,11 @@ impl Responder<'static> for () {
 /// If `self` is `Some`, responds with the wrapped `Responder`. Otherwise prints
 /// a warning message and returns an `Err` of `Status::NotFound`.
 impl<'r, R: Responder<'r>> Responder<'r> for Option<R> {
-    fn respond(self) -> Result<Response<'r>, Status> {
+    fn respond_to(self, req: &Request) -> Result<Response<'r>, Status> {
         self.map_or_else(|| {
             warn_!("Response was `None`.");
             Err(Status::NotFound)
-        }, |r| r.respond())
+        }, |r| r.respond_to(req))
     }
 }
 
@@ -230,8 +231,8 @@ impl<'r, R: Responder<'r>> Responder<'r> for Option<R> {
 /// an error message with the `Err` value returns an `Err` of
 /// `Status::InternalServerError`.
 impl<'r, R: Responder<'r>, E: fmt::Debug> Responder<'r> for Result<R, E> {
-    default fn respond(self) -> Result<Response<'r>, Status> {
-        self.map(|r| r.respond()).unwrap_or_else(|e| {
+    default fn respond_to(self, req: &Request) -> Result<Response<'r>, Status> {
+        self.map(|r| r.respond_to(req)).unwrap_or_else(|e| {
             error_!("Response was `Err`: {:?}.", e);
             Err(Status::InternalServerError)
         })
@@ -241,10 +242,10 @@ impl<'r, R: Responder<'r>, E: fmt::Debug> Responder<'r> for Result<R, E> {
 /// Responds with the wrapped `Responder` in `self`, whether it is `Ok` or
 /// `Err`.
 impl<'r, R: Responder<'r>, E: Responder<'r> + fmt::Debug> Responder<'r> for Result<R, E> {
-    fn respond(self) -> Result<Response<'r>, Status> {
+    fn respond_to(self, req: &Request) -> Result<Response<'r>, Status> {
         match self {
-            Ok(responder) => responder.respond(),
-            Err(responder) => responder.respond(),
+            Ok(responder) => responder.respond_to(req),
+            Err(responder) => responder.respond_to(req),
         }
     }
 }

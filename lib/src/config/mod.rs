@@ -3,7 +3,7 @@
 //! This module implements configuration handling for Rocket. It implements the
 //! parsing and interpretation of the `Rocket.toml` config file and
 //! `ROCKET_{PARAM}` environment variables. It also allows libraries to access
-//! values that have been configured by the user.
+//! user-configured values.
 //!
 //! ## Application Configuration
 //!
@@ -40,9 +40,19 @@
 //!     * examples: `12`, `1`, `4`
 //!   * **log**: _[string]_ how much information to log; one of `"normal"`,
 //!     `"debug"`, or `"critical"`
-//!   * **session_key**: _[string]_ a 192-bit base64 encoded string (32
-//!     characters) to use as the session key
-//!     * example: `"VheMwXIBygSmOlZAhuWl2B+zgvTN3WW5"`
+//!   * **secret_key**: _[string]_ a 256-bit base64 encoded string (44
+//!     characters) to use as the secret key
+//!     * example: `"8Xui8SN4mI+7egV/9dlfYYLGQJeEx4+DwmSQLwDVXJg="`
+//!   * **tls**: _[table]_ a table with two keys:
+//!     1. `certs`: _[string]_ a path to a certificate chain in PEM format
+//!     2. `key`: _[string]_ a path to a private key file in PEM format for the
+//!        certificate in `certs`
+//!
+//!     * example: `{ certs = "/path/to/certs.pem", key = "/path/to/key.pem" }`
+//!   * **limits**: _[table]_ a table where each key (_[string]_) corresponds to
+//!   a data type and the value (_[u64]_) corresponds to the maximum size in
+//!   bytes Rocket should accept for that type.
+//!     * example: `{ forms = 65536 }` (maximum form size to 64KiB)
 //!
 //! ### Rocket.toml
 //!
@@ -50,7 +60,7 @@
 //! each environment. The file is optional. If it is not present, the default
 //! configuration parameters are used.
 //!
-//! The file must be a series of TOML tables, at most one for each environment
+//! The file must be a series of TOML tables, at most one for each environment,
 //! and an optional "global" table, where each table contains key-value pairs
 //! corresponding to configuration parameters for that environment. If a
 //! configuration parameter is missing, the default value is used. The following
@@ -61,29 +71,34 @@
 //! [development]
 //! address = "localhost"
 //! port = 8000
-//! workers = max(number_of_cpus, 2)
+//! workers = [number_of_cpus * 2]
 //! log = "normal"
+//! secret_key = [randomly generated at launch]
+//! limits = { forms = 32768 }
 //!
 //! [staging]
 //! address = "0.0.0.0"
 //! port = 80
-//! workers = max(number_of_cpus, 2)
+//! workers = [number_of_cpus * 2]
 //! log = "normal"
-//! # don't use this key! generate your own and keep it private!
-//! session_key = "VheMwXIBygSmOlZAhuWl2B+zgvTN3WW5"
+//! secret_key = [randomly generated at launch]
+//! limits = { forms = 32768 }
 //!
 //! [production]
 //! address = "0.0.0.0"
 //! port = 80
-//! workers = max(number_of_cpus, 2)
+//! workers = [number_of_cpus * 2]
 //! log = "critical"
-//! # don't use this key! generate your own and keep it private!
-//! session_key = "adL5fFIPmZBrlyHk2YT4NLV3YCk2gFXz"
+//! secret_key = [randomly generated at launch]
+//! limits = { forms = 32768 }
 //! ```
 //!
-//! The `workers` parameter is computed by Rocket automatically; the value above
-//! is not valid TOML syntax. When manually specifying the number of workers,
-//! the value should be an integer: `workers = 10`.
+//! The `workers` and `secret_key` default parameters are computed by Rocket
+//! automatically; the values above are not valid TOML syntax. When manually
+//! specifying the number of workers, the value should be an integer: `workers =
+//! 10`. When manually specifying the secret key, the value should a 256-bit
+//! base64 encoded string. Such a string can be generated with the `openssl`
+//! command line tool: `openssl rand -base64 32`.
 //!
 //! The "global" pseudo-environment can be used to set and/or override
 //! configuration parameters globally. A parameter defined in a `[global]` table
@@ -102,6 +117,19 @@
 //! address = "0.0.0.0"
 //! ```
 //!
+//! ### TLS Configuration
+//!
+//! TLS can be enabled by specifying the `tls.key` and `tls.certs` parameters.
+//! Rocket must be compiled with the `tls` feature enabled for the parameters to
+//! take effect. The recommended way to specify the parameters is via the
+//! `global` environment:
+//!
+//! ```toml
+//! [global.tls]
+//! certs = "/path/to/certs.pem"
+//! key = "/path/to/key.pem"
+//! ```
+//!
 //! ### Environment Variables
 //!
 //! All configuration parameters, including extras, can be overridden through
@@ -116,40 +144,57 @@
 //!
 //! Environment variables take precedence over all other configuration methods:
 //! if the variable is set, it will be used as the value for the parameter.
+//! Variable values are parsed as if they were TOML syntax. As illustration,
+//! consider the following examples:
+//!
+//! ```sh
+//! ROCKET_INTEGER=1
+//! ROCKET_FLOAT=3.14
+//! ROCKET_STRING=Hello
+//! ROCKET_STRING="Hello"
+//! ROCKET_BOOL=true
+//! ROCKET_ARRAY=[1,"b",3.14]
+//! ROCKET_DICT={key="abc",val=123}
+//! ```
 //!
 //! ## Retrieving Configuration Parameters
 //!
 //! Configuration parameters for the currently active configuration environment
-//! can be retrieved via the [active](fn.active.html) function and methods on
-//! the [Config](struct.Config.html) structure. The general structure is to call
-//! `active` and then one of the `get_` methods on the returned `Config`
-//! structure.
+//! can be retrieved via the [config](/rocket/struct.Rocket.html#method.config)
+//! method on an instance of `Rocket` and `get_` methods on the
+//! [Config](struct.Config.html) structure.
 //!
-//! As an example, consider the following code used by the `Template` type to
-//! retrieve the value of the `template_dir` configuration parameter. If the
-//! value isn't present or isn't a string, a default value is used.
+//! The retrivial of configuration parameters usually occurs at launch time via
+//! a [launch fairing](/rocket/fairing/trait.Fairing.html). If information about
+//! the configuraiton is needed later in the program, an attach fairing can be
+//! used to store the information as managed state. As an example of the latter,
+//! consider the following short program which reads the `token` configuration
+//! parameter and stores the value or a default in a `Token` managed state
+//! value:
 //!
 //! ```rust
-//! use std::path::PathBuf;
-//! use rocket::config::{self, ConfigError};
+//! use rocket::fairing::AdHoc;
 //!
-//! const DEFAULT_TEMPLATE_DIR: &'static str = "templates";
+//! struct Token(i64);
 //!
-//! # #[allow(unused_variables)]
-//! let template_dir = config::active().ok_or(ConfigError::NotFound)
-//!     .map(|config| config.root().join(DEFAULT_TEMPLATE_DIR))
-//!     .unwrap_or_else(|_| PathBuf::from(DEFAULT_TEMPLATE_DIR));
+//! fn main() {
+//!     rocket::ignite()
+//!         .attach(AdHoc::on_attach(|rocket| {
+//!             println!("Adding token managed state from config...");
+//!             let token_val = rocket.config().get_int("token").unwrap_or(-1);
+//!             Ok(rocket.manage(Token(token_val)))
+//!         }))
+//! # ;
+//! }
 //! ```
-//!
-//! Libraries should always use a default if a parameter is not defined.
 
 mod error;
 mod environment;
 mod config;
 mod builder;
 mod toml_ext;
+mod custom_values;
 
-use std::sync::{Once, ONCE_INIT};
 use std::fs::{self, File};
 use std::collections::HashMap;
 use std::io::Read;
@@ -159,21 +204,20 @@ use std::env;
 
 use toml;
 
-pub use toml::{Array, Table, Value};
-pub use self::error::{ConfigError, ParsingError};
+pub use self::custom_values::Limits;
+pub use toml::value::{Array, Table, Value, Datetime};
+pub use self::error::ConfigError;
 pub use self::environment::Environment;
 pub use self::config::Config;
 pub use self::builder::ConfigBuilder;
-pub use self::toml_ext::IntoValue;
+pub use logger::LoggingLevel;
+pub(crate) use self::toml_ext::LoggedValue;
 
+use logger;
 use self::Environment::*;
 use self::environment::CONFIG_ENV;
 use self::toml_ext::parse_simple_toml_value;
-use logger::{self, LoggingLevel};
-use http::ascii::uncased_eq;
-
-static INIT: Once = ONCE_INIT;
-static mut CONFIG: Option<RocketConfig> = None;
+use http::uncased::uncased_eq;
 
 const CONFIG_FILENAME: &'static str = "Rocket.toml";
 const GLOBAL_ENV_NAME: &'static str = "global";
@@ -225,11 +269,11 @@ impl RocketConfig {
         let file = RocketConfig::find()?;
 
         // Try to open the config file for reading.
-        let mut handle = File::open(&file).map_err(|_| ConfigError::IOError)?;
+        let mut handle = File::open(&file).map_err(|_| ConfigError::IoError)?;
 
         // Read the configure file to a string for parsing.
         let mut contents = String::new();
-        handle.read_to_string(&mut contents).map_err(|_| ConfigError::IOError)?;
+        handle.read_to_string(&mut contents).map_err(|_| ConfigError::IoError)?;
 
         // Parse the config and return the result.
         RocketConfig::parse(contents, &file)
@@ -276,6 +320,7 @@ impl RocketConfig {
         Err(ConfigError::NotFound)
     }
 
+    #[inline]
     fn get_mut(&mut self, env: Environment) -> &mut Config {
         match self.config.get_mut(&env) {
             Some(config) => config,
@@ -304,33 +349,37 @@ impl RocketConfig {
     }
 
     /// Retrieves the `Config` for the active environment.
+    #[inline]
     pub fn active(&self) -> &Config {
         self.get(self.active_env)
     }
 
     // Override all environments with values from env variables if present.
     fn override_from_env(&mut self) -> Result<()> {
-        'outer: for (env_key, env_val) in env::vars() {
-            if env_key.len() < ENV_VAR_PREFIX.len() {
+        for (key, val) in env::vars() {
+            if key.len() < ENV_VAR_PREFIX.len() {
                 continue
-            } else if !uncased_eq(&env_key[..ENV_VAR_PREFIX.len()], ENV_VAR_PREFIX) {
+            } else if !uncased_eq(&key[..ENV_VAR_PREFIX.len()], ENV_VAR_PREFIX) {
                 continue
             }
 
             // Skip environment variables that are handled elsewhere.
-            for prehandled_var in PREHANDLED_VARS.iter() {
-                if uncased_eq(&env_key, &prehandled_var) {
-                    continue 'outer
-                }
+            if PREHANDLED_VARS.iter().any(|var| uncased_eq(&key, var)) {
+                continue
             }
 
             // Parse the key and value and try to set the variable for all envs.
-            let key = env_key[ENV_VAR_PREFIX.len()..].to_lowercase();
-            let val = parse_simple_toml_value(&env_val);
+            let key = key[ENV_VAR_PREFIX.len()..].to_lowercase();
+            let toml_val = match parse_simple_toml_value(&val) {
+                Ok(val) => val,
+                Err(e) => return Err(ConfigError::BadEnvVal(key, val, e.into()))
+            };
+
             for env in &Environment::all() {
-                match self.get_mut(*env).set_raw(&key, &val) {
-                    Err(ConfigError::BadType(_, exp, _, _)) => {
-                        return Err(ConfigError::BadEnvVal(env_key, env_val, exp))
+                match self.get_mut(*env).set_raw(&key, &toml_val) {
+                    Err(ConfigError::BadType(_, exp, actual, _)) => {
+                        let e = format!("expected {}, but found {}", exp, actual);
+                        return Err(ConfigError::BadEnvVal(key, val, e))
                     }
                     Err(e) => return Err(e),
                     Ok(_) => { /* move along */ }
@@ -344,23 +393,18 @@ impl RocketConfig {
     /// Parses the configuration from the Rocket.toml file. Also overrides any
     /// values there with values from the environment.
     fn parse<P: AsRef<Path>>(src: String, filename: P) -> Result<RocketConfig> {
-        // Get a PathBuf version of the filename.
-        let path = filename.as_ref().to_path_buf();
+        use self::ConfigError::ParseError;
 
         // Parse the source as TOML, if possible.
-        let mut parser = toml::Parser::new(&src);
-        let toml = parser.parse().ok_or_else(|| {
-            let source = src.clone();
-            let errors = parser.errors.iter()
-                .map(|error| ParsingError {
-                    byte_range: (error.lo, error.hi),
-                    start: parser.to_linecol(error.lo),
-                    end: parser.to_linecol(error.hi),
-                    desc: error.desc.clone(),
-                });
-
-            ConfigError::ParseError(source, path.clone(), errors.collect())
-        })?;
+        let path = filename.as_ref().to_path_buf();
+        let table = match src.parse::<toml::Value>() {
+            Ok(toml::Value::Table(table)) => table,
+            Ok(value) => {
+                let err = format!("expected a table, found {}", value.type_str());
+                return Err(ConfigError::ParseError(src, path, err, Some((1, 1))));
+            }
+            Err(e) => return Err(ParseError(src, path, e.to_string(), e.line_col()))
+        };
 
         // Create a config with the defaults; set the env to the active one.
         let mut config = RocketConfig::active_default(filename)?;
@@ -369,7 +413,7 @@ impl RocketConfig {
         let mut global = None;
 
         // Parse the values from the TOML file.
-        for (entry, value) in toml {
+        for (entry, value) in table {
             // Each environment must be a table.
             let kv_pairs = match value.as_table() {
                 Some(table) => table,
@@ -420,32 +464,7 @@ impl RocketConfig {
 /// # Panics
 ///
 /// If there is a problem, prints a nice error message and bails.
-pub(crate) fn init() -> (&'static Config, bool) {
-    let mut this_init = false;
-    unsafe {
-        INIT.call_once(|| {
-            private_init();
-            this_init = true;
-        });
-
-        (CONFIG.as_ref().unwrap().active(), this_init)
-    }
-}
-
-pub(crate) fn custom_init(config: Config) -> (&'static Config, bool) {
-    let mut this_init = false;
-
-    unsafe {
-        INIT.call_once(|| {
-            CONFIG = Some(RocketConfig::new(config));
-            this_init = true;
-        });
-
-        (CONFIG.as_ref().unwrap().active(), this_init)
-    }
-}
-
-unsafe fn private_init() {
+pub(crate) fn init() -> Config {
     let bail = |e: ConfigError| -> ! {
         logger::init(LoggingLevel::Debug);
         e.pretty_print();
@@ -455,9 +474,9 @@ unsafe fn private_init() {
     use self::ConfigError::*;
     let config = RocketConfig::read().unwrap_or_else(|e| {
         match e {
-            ParseError(..) | BadEntry(..) | BadEnv(..) | BadType(..)
-                | BadFilePath(..) | BadEnvVal(..) => bail(e),
-            IOError | BadCWD => warn!("Failed reading Rocket.toml. Using defaults."),
+            ParseError(..) | BadEntry(..) | BadEnv(..) | BadType(..) | Io(..)
+                | BadFilePath(..) | BadEnvVal(..) | UnknownKey(..) => bail(e),
+            IoError | BadCWD => warn!("Failed reading Rocket.toml. Using defaults."),
             NotFound => { /* try using the default below */ }
         }
 
@@ -469,16 +488,8 @@ unsafe fn private_init() {
         RocketConfig::active_default(&default_path).unwrap_or_else(|e| bail(e))
     });
 
-    CONFIG = Some(config);
-}
-
-/// Retrieve the active configuration, if there is one.
-///
-/// This function is guaranteed to return `Some` once a Rocket application has
-/// started. Before a Rocket application has started, or when there is no active
-/// Rocket application (such as during testing), this function will return None.
-pub fn active() -> Option<&'static Config> {
-    unsafe { CONFIG.as_ref().map(|c| c.active()) }
+    // FIXME: Should probably store all of the config.
+    config.active().clone()
 }
 
 #[cfg(test)]
@@ -496,6 +507,7 @@ mod test {
 
     const TEST_CONFIG_FILENAME: &'static str = "/tmp/testing/Rocket.toml";
 
+    // TODO: It's a shame we have to depend on lazy_static just for this.
     lazy_static! {
         static ref ENV_LOCK: Mutex<usize> = Mutex::new(0);
     }
@@ -587,7 +599,7 @@ mod test {
             port = 7810
             workers = 21
             log = "critical"
-            session_key = "01234567890123456789012345678901"
+            secret_key = "8Xui8SN4mI+7egV/9dlfYYLGQJeEx4+DwmSQLwDVXJg="
             template_dir = "mine"
             json = true
             pi = 3.14
@@ -598,7 +610,7 @@ mod test {
             .port(7810)
             .workers(21)
             .log_level(LoggingLevel::Critical)
-            .session_key("01234567890123456789012345678901")
+            .secret_key("8Xui8SN4mI+7egV/9dlfYYLGQJeEx4+DwmSQLwDVXJg=")
             .extra("template_dir", "mine")
             .extra("json", true)
             .extra("pi", 3.14);
@@ -639,10 +651,24 @@ mod test {
                       });
 
         check_config!(RocketConfig::parse(r#"
-                          [dev]
+                          [development]
                           address = "127.0.0.1"
                       "#.to_string(), TEST_CONFIG_FILENAME), {
                           default_config(Development).address("127.0.0.1")
+                      });
+
+        check_config!(RocketConfig::parse(r#"
+                          [development]
+                          address = "::"
+                      "#.to_string(), TEST_CONFIG_FILENAME), {
+                          default_config(Development).address("::")
+                      });
+
+        check_config!(RocketConfig::parse(r#"
+                          [dev]
+                          address = "2001:db8::370:7334"
+                      "#.to_string(), TEST_CONFIG_FILENAME), {
+                          default_config(Development).address("2001:db8::370:7334")
                       });
 
         check_config!(RocketConfig::parse(r#"
@@ -677,6 +703,64 @@ mod test {
         assert!(RocketConfig::parse(r#"
             [staging]
             address = "1.2.3.4:100"
+        "#.to_string(), TEST_CONFIG_FILENAME).is_err());
+    }
+
+    // Only do this test when the tls feature is disabled since the file paths
+    // we're supplying don't actually exist.
+    #[test]
+    fn test_good_tls_values() {
+        // Take the lock so changing the environment doesn't cause races.
+        let _env_lock = ENV_LOCK.lock().unwrap();
+        env::set_var(CONFIG_ENV, "dev");
+
+        assert!(RocketConfig::parse(r#"
+            [staging]
+            tls = { certs = "some/path.pem", key = "some/key.pem" }
+        "#.to_string(), TEST_CONFIG_FILENAME).is_ok());
+
+        assert!(RocketConfig::parse(r#"
+            [staging.tls]
+            certs = "some/path.pem"
+            key = "some/key.pem"
+        "#.to_string(), TEST_CONFIG_FILENAME).is_ok());
+
+        assert!(RocketConfig::parse(r#"
+            [global.tls]
+            certs = "some/path.pem"
+            key = "some/key.pem"
+        "#.to_string(), TEST_CONFIG_FILENAME).is_ok());
+
+        assert!(RocketConfig::parse(r#"
+            [global]
+            tls = { certs = "some/path.pem", key = "some/key.pem" }
+        "#.to_string(), TEST_CONFIG_FILENAME).is_ok());
+    }
+
+    #[test]
+    fn test_bad_tls_config() {
+        // Take the lock so changing the environment doesn't cause races.
+        let _env_lock = ENV_LOCK.lock().unwrap();
+        env::remove_var(CONFIG_ENV);
+
+        assert!(RocketConfig::parse(r#"
+            [development]
+            tls = "hello"
+        "#.to_string(), TEST_CONFIG_FILENAME).is_err());
+
+        assert!(RocketConfig::parse(r#"
+            [development]
+            tls = { certs = "some/path.pem" }
+        "#.to_string(), TEST_CONFIG_FILENAME).is_err());
+
+        assert!(RocketConfig::parse(r#"
+            [development]
+            tls = { certs = "some/path.pem", key = "some/key.pem", extra = "bah" }
+        "#.to_string(), TEST_CONFIG_FILENAME).is_err());
+
+        assert!(RocketConfig::parse(r#"
+            [staging]
+            tls = { cert = "some/path.pem", key = "some/key.pem" }
         "#.to_string(), TEST_CONFIG_FILENAME).is_err());
     }
 
@@ -852,49 +936,49 @@ mod test {
     }
 
     #[test]
-    fn test_good_session_key() {
+    fn test_good_secret_key() {
         // Take the lock so changing the environment doesn't cause races.
         let _env_lock = ENV_LOCK.lock().unwrap();
         env::set_var(CONFIG_ENV, "stage");
 
         check_config!(RocketConfig::parse(r#"
                           [stage]
-                          session_key = "VheMwXIBygSmOlZAhuWl2B+zgvTN3WW5"
+                          secret_key = "TpUiXK2d/v5DFxJnWL12suJKPExKR8h9zd/o+E7SU+0="
                       "#.to_string(), TEST_CONFIG_FILENAME), {
-                          default_config(Staging).session_key(
-                              "VheMwXIBygSmOlZAhuWl2B+zgvTN3WW5"
+                          default_config(Staging).secret_key(
+                              "TpUiXK2d/v5DFxJnWL12suJKPExKR8h9zd/o+E7SU+0="
                           )
                       });
 
         check_config!(RocketConfig::parse(r#"
                           [stage]
-                          session_key = "adL5fFIPmZBrlyHk2YT4NLV3YCk2gFXz"
+                          secret_key = "jTyprDberFUiUFsJ3vcb1XKsYHWNBRvWAnXTlbTgGFU="
                       "#.to_string(), TEST_CONFIG_FILENAME), {
-                          default_config(Staging).session_key(
-                              "adL5fFIPmZBrlyHk2YT4NLV3YCk2gFXz"
+                          default_config(Staging).secret_key(
+                              "jTyprDberFUiUFsJ3vcb1XKsYHWNBRvWAnXTlbTgGFU="
                           )
                       });
     }
 
     #[test]
-    fn test_bad_session_key() {
+    fn test_bad_secret_key() {
         // Take the lock so changing the environment doesn't cause races.
         let _env_lock = ENV_LOCK.lock().unwrap();
         env::remove_var(CONFIG_ENV);
 
         assert!(RocketConfig::parse(r#"
             [dev]
-            session_key = true
+            secret_key = true
         "#.to_string(), TEST_CONFIG_FILENAME).is_err());
 
         assert!(RocketConfig::parse(r#"
             [dev]
-            session_key = 1283724897238945234897
+            secret_key = 1283724897238945234897
         "#.to_string(), TEST_CONFIG_FILENAME).is_err());
 
         assert!(RocketConfig::parse(r#"
             [dev]
-            session_key = "abcv"
+            secret_key = "abcv"
         "#.to_string(), TEST_CONFIG_FILENAME).is_err());
     }
 
@@ -915,7 +999,7 @@ mod test {
 
         assert!(RocketConfig::parse(r#"
             [dev]
-            session_key = "abcv" = other
+            secret_key = "abcv" = other
         "#.to_string(), TEST_CONFIG_FILENAME).is_err());
     }
 
@@ -930,9 +1014,9 @@ mod test {
 
             check_config!(RocketConfig::parse(format!(r#"
                               [{}]
-                              address = "7.6.5.4"
+                              address = "::1"
                           "#, GLOBAL_ENV_NAME), TEST_CONFIG_FILENAME), {
-                              default_config(*env).address("7.6.5.4")
+                              default_config(*env).address("::1")
                           });
 
             check_config!(RocketConfig::parse(format!(r#"

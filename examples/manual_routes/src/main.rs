@@ -1,12 +1,15 @@
 extern crate rocket;
 
+#[cfg(test)]
+mod tests;
+
 use std::io;
 use std::fs::File;
 
 use rocket::{Request, Route, Data, Catcher, Error};
-use rocket::http::Status;
-use rocket::request::FromParam;
+use rocket::http::{Status, RawStr};
 use rocket::response::{self, Responder};
+use rocket::response::status::Custom;
 use rocket::handler::Outcome;
 use rocket::http::Method::*;
 
@@ -14,17 +17,22 @@ fn forward(_req: &Request, data: Data) -> Outcome<'static> {
     Outcome::forward(data)
 }
 
-fn hi(_req: &Request, _: Data) -> Outcome<'static> {
-    Outcome::of("Hello!")
+fn hi(req: &Request, _: Data) -> Outcome<'static> {
+    Outcome::from(req, "Hello!")
 }
 
 fn name<'a>(req: &'a Request, _: Data) -> Outcome<'a> {
-    Outcome::of(req.get_param(0).unwrap_or("unnamed"))
+    let param = req.get_param::<&'a RawStr>(0);
+    Outcome::from(req, param.map(|r| r.as_str()).unwrap_or("unnamed"))
 }
 
 fn echo_url(req: &Request, _: Data) -> Outcome<'static> {
-    let param = req.uri().as_str().split_at(6).1;
-    Outcome::of(String::from_param(param).unwrap())
+    let param = req.uri()
+        .as_str()
+        .split_at(6)
+        .1;
+
+    Outcome::from(req, RawStr::from_str(param).url_decode())
 }
 
 fn upload<'r>(req: &'r Request, data: Data) -> Outcome<'r> {
@@ -36,7 +44,7 @@ fn upload<'r>(req: &'r Request, data: Data) -> Outcome<'r> {
     let file = File::create("/tmp/upload.txt");
     if let Ok(mut file) = file {
         if let Ok(n) = io::copy(&mut data.open(), &mut file) {
-            return Outcome::of(format!("OK: {} bytes uploaded.", n));
+            return Outcome::from(req, format!("OK: {} bytes uploaded.", n));
         }
 
         println!("    => Failed copying.");
@@ -47,15 +55,16 @@ fn upload<'r>(req: &'r Request, data: Data) -> Outcome<'r> {
     }
 }
 
-fn get_upload(_: &Request, _: Data) -> Outcome<'static> {
-    Outcome::of(File::open("/tmp/upload.txt").ok())
+fn get_upload(req: &Request, _: Data) -> Outcome<'static> {
+    Outcome::from(req, File::open("/tmp/upload.txt").ok())
 }
 
 fn not_found_handler<'r>(_: Error, req: &'r Request) -> response::Result<'r> {
-    format!("Couldn't find: {}", req.uri()).respond()
+    let res = Custom(Status::NotFound, format!("Couldn't find: {}", req.uri()));
+    res.respond_to(req)
 }
 
-fn main() {
+fn rocket() -> rocket::Rocket {
     let always_forward = Route::ranked(1, Get, "/", forward);
     let hello = Route::ranked(2, Get, "/", hi);
 
@@ -72,5 +81,8 @@ fn main() {
         .mount("/hello", vec![name.clone()])
         .mount("/hi", vec![name])
         .catch(vec![not_found_catcher])
-        .launch();
+}
+
+fn main() {
+    rocket().launch();
 }

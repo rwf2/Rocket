@@ -4,6 +4,6 @@
 extern crate rocket;
 
 #[get("/")]
-fn get(_: &str) -> &'static str { "hi" } //~ ERROR argument
+fn get(_: usize) -> &'static str { "hi" } //~ ERROR argument
 
 fn main() {  }

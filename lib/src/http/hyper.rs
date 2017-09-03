@@ -13,6 +13,7 @@ pub(crate) use hyper::net;
 
 pub(crate) use hyper::method::Method;
 pub(crate) use hyper::status::StatusCode;
+pub(crate) use hyper::error::Error;
 pub(crate) use hyper::uri::RequestUri;
 pub(crate) use hyper::http::h1;
 pub(crate) use hyper::buffer;

@@ -18,32 +18,26 @@ fn second() -> &'static str {
     "no query"
 }
 
-#[cfg(feature = "testing")]
 mod tests {
     use super::*;
-
     use rocket::Rocket;
-    use rocket::testing::MockRequest;
-    use rocket::http::Method::*;
+    use rocket::local::Client;
 
-    fn assert_no_collision(rocket: &Rocket) {
-        let mut req = MockRequest::new(Get, "/?field=query");
-        let mut response = req.dispatch_with(&rocket);
-        let body_str = response.body().and_then(|b| b.into_string());
-        assert_eq!(body_str, Some("query".to_string()));
+    fn assert_no_collision(rocket: Rocket) {
+        let client = Client::new(rocket).unwrap();
+        let mut response = client.get("/?field=query").dispatch();
+        assert_eq!(response.body_string(), Some("query".into()));
 
-        let mut req = MockRequest::new(Get, "/");
-        let mut response = req.dispatch_with(&rocket);
-        let body_str = response.body().and_then(|b| b.into_string());
-        assert_eq!(body_str, Some("no query".to_string()));
+        let mut response = client.get("/").dispatch();
+        assert_eq!(response.body_string(), Some("no query".into()));
     }
 
     #[test]
     fn check_query_collisions() {
         let rocket = rocket::ignite().mount("/", routes![first, second]);
-        assert_no_collision(&rocket);
+        assert_no_collision(rocket);
 
         let rocket = rocket::ignite().mount("/", routes![second, first]);
-        assert_no_collision(&rocket);
+        assert_no_collision(rocket);
     }
 }

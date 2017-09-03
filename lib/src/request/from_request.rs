@@ -1,45 +1,69 @@
 use std::fmt::Debug;
 use std::net::SocketAddr;
 
-use outcome::{self, IntoOutcome};
+use router::Route;
 use request::Request;
+use outcome::{self, IntoOutcome};
 use outcome::Outcome::*;
 
-use http::{Status, ContentType, Method, Cookies};
+use http::{Status, ContentType, Accept, Method, Cookies};
 use http::uri::URI;
 
 /// Type alias for the `Outcome` of a `FromRequest` conversion.
 pub type Outcome<S, E> = outcome::Outcome<S, (Status, E), ()>;
 
 impl<S, E> IntoOutcome<S, (Status, E), ()> for Result<S, E> {
-    fn into_outcome(self) -> Outcome<S, E> {
+    type Failure = Status;
+    type Forward = ();
+
+    #[inline]
+    fn into_outcome(self, status: Status) -> Outcome<S, E> {
         match self {
             Ok(val) => Success(val),
-            Err(val) => Failure((Status::BadRequest, val))
+            Err(err) => Failure((status, err))
+        }
+    }
+
+    #[inline]
+    fn or_forward(self, _: ()) -> Outcome<S, E> {
+        match self {
+            Ok(val) => Success(val),
+            Err(_) => Forward(())
         }
     }
 }
 
-/// Trait used to derive an object from incoming request metadata.
+/// Trait implemented by request guards to derive a value from incoming
+/// requests.
 ///
-/// An arbitrary number of types that implement this trait can appear as
-/// parameters in a route handler, as illustrated below:
+/// # Request Guards
+///
+/// A request guard is a type that represents an arbitrary validation policy.
+/// The validation policy is implemented through `FromRequest`. In other words,
+/// every type that implements `FromRequest` is a request guard.
+///
+/// Request guards appear as inputs to handlers. An arbitrary number of request
+/// guards can appear as arguments in a route handler. Rocket will automatically
+/// invoke the `FromRequest` implementation for request guards before calling
+/// the handler. Rocket only dispatches requests to a handler when all of its
+/// guards pass.
+///
+/// ## Example
+///
+/// The following dummy handler makes use of three request guards, `A`, `B`, and
+/// `C`. An input type can be identified as a request guard if it is not named
+/// in the route attribute. This is why, for instance, `param` is not a request
+/// guard.
 ///
 /// ```rust,ignore
-/// #[get("/")]
-/// fn index(a: A, b: B, c: C) -> ... { ... }
+/// #[get("/<param>")]
+/// fn index(param: isize, a: A, b: B, c: C) -> ... { ... }
 /// ```
 ///
-/// In this example, `A`, `B`, and `C` can be any types that implements
-/// `FromRequest`. There can be any number of `FromRequest` types in the
-/// function signature. Note that unlike every other derived object in Rocket,
-/// `FromRequest` parameter names do not need to be declared in the route
-/// attribute.
-///
-/// Derivation of `FromRequest` arguments is always attemped in left-to-right
-/// declaration order. In the example above, for instance, the order will be `a`
-/// followed by `b` followed by `c`. If a deriviation fails, the following
-/// aren't attempted.
+/// Request guards always fire in left-to-right declaration order. In the
+/// example above, for instance, the order will be `a` followed by `b` followed
+/// by `c`. Failure is short-circuiting; if one guard fails, the remaining are
+/// not attempted.
 ///
 /// # Outcomes
 ///
@@ -49,8 +73,8 @@ impl<S, E> IntoOutcome<S, (Status, E), ()> for Result<S, E> {
 /// * **Success**(S)
 ///
 ///   If the `Outcome` is `Success`, then the `Success` value will be used as
-///   the value for the corresponding parameter.  As long as all other parsed
-///   types succeed, the request will be handled.
+///   the value for the corresponding parameter.  As long as all other guards
+///   succeed, the request will be handled.
 ///
 /// * **Failure**(Status, E)
 ///
@@ -71,13 +95,6 @@ impl<S, E> IntoOutcome<S, (Status, E), ()> for Result<S, E> {
 /// Rocket implements `FromRequest` for several built-in types. Their behavior
 /// is documented here.
 ///
-///   * **&URI**
-///
-///     Extracts the [URI](/rocket/http/uri/struct.URI.html) from the incoming
-///     request.
-///
-///     _This implementation always returns successfully._
-///
 ///   * **Method**
 ///
 ///     Extracts the [Method](/rocket/http/enum.Method.html) from the incoming
@@ -85,12 +102,28 @@ impl<S, E> IntoOutcome<S, (Status, E), ()> for Result<S, E> {
 ///
 ///     _This implementation always returns successfully._
 ///
-///   * **&Cookies**
+///   * **&URI**
 ///
-///     Returns a borrow to the [Cookies](/rocket/http/type.Cookies.html) in the
-///     incoming request. Note that `Cookies` implements internal mutability, so
-///     a handle to `&Cookies` allows you to get _and_ set cookies in the
+///     Extracts the [URI](/rocket/http/uri/struct.URI.html) from the incoming
 ///     request.
+///
+///     _This implementation always returns successfully._
+///
+///   * **&Route**
+///
+///     Extracts the [Route](/rocket/struct.Route.html) from the request if one
+///     is available. If a route is not available, the request is forwarded.
+///
+///     For information of when a route is avaiable, see the
+///     [`Request::route`](/rocket/struct.Request.html#method.route)
+///     documentation.
+///
+///   * **Cookies**
+///
+///     Returns a borrow to the [Cookies](/rocket/http/enum.Cookies.html) in
+///     the incoming request. Note that `Cookies` implements internal
+///     mutability, so a handle to `Cookies` allows you to get _and_ set cookies
+///     in the request.
 ///
 ///     _This implementation always returns successfully._
 ///
@@ -129,8 +162,8 @@ impl<S, E> IntoOutcome<S, (Status, E), ()> for Result<S, E> {
 /// requests be sent along with a valid API key in a header field. You want to
 /// ensure that the handlers corresponding to these requests don't get called
 /// unless there is an API key in the request and the key is valid. The
-/// following example implements this using an `APIKey` type and a `FromRequest`
-/// implementation for that type. The `APIKey` type is then used in the
+/// following example implements this using an `ApiKey` type and a `FromRequest`
+/// implementation for that type. The `ApiKey` type is then used in the
 /// `senstive` handler.
 ///
 /// ```rust
@@ -142,17 +175,17 @@ impl<S, E> IntoOutcome<S, (Status, E), ()> for Result<S, E> {
 /// use rocket::http::Status;
 /// use rocket::request::{self, Request, FromRequest};
 ///
-/// struct APIKey(String);
+/// struct ApiKey(String);
 ///
 /// /// Returns true if `key` is a valid API key string.
 /// fn is_valid(key: &str) -> bool {
 ///     key == "valid_api_key"
 /// }
 ///
-/// impl<'a, 'r> FromRequest<'a, 'r> for APIKey {
+/// impl<'a, 'r> FromRequest<'a, 'r> for ApiKey {
 ///     type Error = ();
 ///
-///     fn from_request(request: &'a Request<'r>) -> request::Outcome<APIKey, ()> {
+///     fn from_request(request: &'a Request<'r>) -> request::Outcome<ApiKey, ()> {
 ///         let keys: Vec<_> = request.headers().get("x-api-key").collect();
 ///         if keys.len() != 1 {
 ///             return Outcome::Failure((Status::BadRequest, ()));
@@ -163,12 +196,12 @@ impl<S, E> IntoOutcome<S, (Status, E), ()> for Result<S, E> {
 ///             return Outcome::Forward(());
 ///         }
 ///
-///         return Outcome::Success(APIKey(key.to_string()));
+///         return Outcome::Success(ApiKey(key.to_string()));
 ///     }
 /// }
 ///
 /// #[get("/sensitive")]
-/// fn sensitive(key: APIKey) -> &'static str {
+/// fn sensitive(key: ApiKey) -> &'static str {
 /// #   let _key = key;
 ///     "Sensitive data."
 /// }
@@ -188,14 +221,6 @@ pub trait FromRequest<'a, 'r>: Sized {
     fn from_request(request: &'a Request<'r>) -> Outcome<Self, Self::Error>;
 }
 
-impl<'a, 'r> FromRequest<'a, 'r> for &'a URI<'a> {
-    type Error = ();
-
-    fn from_request(request: &'a Request<'r>) -> Outcome<Self, Self::Error> {
-        Success(request.uri())
-    }
-}
-
 impl<'a, 'r> FromRequest<'a, 'r> for Method {
     type Error = ();
 
@@ -204,7 +229,26 @@ impl<'a, 'r> FromRequest<'a, 'r> for Method {
     }
 }
 
-impl<'a, 'r> FromRequest<'a, 'r> for &'a Cookies {
+impl<'a, 'r> FromRequest<'a, 'r> for &'a URI<'a> {
+    type Error = ();
+
+    fn from_request(request: &'a Request<'r>) -> Outcome<Self, Self::Error> {
+        Success(request.uri())
+    }
+}
+
+impl<'a, 'r> FromRequest<'a, 'r> for &'r Route {
+    type Error = ();
+
+    fn from_request(request: &'a Request<'r>) -> Outcome<Self, Self::Error> {
+        match request.route() {
+            Some(route) => Success(route),
+            None => Forward(())
+        }
+    }
+}
+
+impl<'a, 'r> FromRequest<'a, 'r> for Cookies<'a> {
     type Error = ();
 
     fn from_request(request: &'a Request<'r>) -> Outcome<Self, Self::Error> {
@@ -212,7 +256,18 @@ impl<'a, 'r> FromRequest<'a, 'r> for &'a Cookies {
     }
 }
 
-impl<'a, 'r> FromRequest<'a, 'r> for ContentType {
+impl<'a, 'r> FromRequest<'a, 'r> for &'a Accept {
+    type Error = ();
+
+    fn from_request(request: &'a Request<'r>) -> Outcome<Self, Self::Error> {
+        match request.accept() {
+            Some(accept) => Success(accept),
+            None => Forward(())
+        }
+    }
+}
+
+impl<'a, 'r> FromRequest<'a, 'r> for &'a ContentType {
     type Error = ();
 
     fn from_request(request: &'a Request<'r>) -> Outcome<Self, Self::Error> {

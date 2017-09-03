@@ -8,8 +8,8 @@ use syntax::ext::base::{Annotatable, ExtCtxt};
 use syntax::tokenstream::TokenTree;
 use syntax::parse::token;
 
-const ERR_PARAM: &'static str = "_error";
-const REQ_PARAM: &'static str = "_request";
+const ERR_PARAM: &'static str = "__err";
+const REQ_PARAM: &'static str = "__req";
 
 trait ErrorGenerateExt {
     fn generate_fn_arguments(&self, &ExtCtxt, Ident, Ident) -> Vec<TokenTree>;
@@ -71,7 +71,8 @@ pub fn error_decorator(ecx: &mut ExtCtxt,
                                $req_ident: &'_b ::rocket::Request)
                                -> ::rocket::response::Result<'_b> {
             let user_response = $user_fn_name($fn_arguments);
-            let response = ::rocket::response::Responder::respond(user_response)?;
+            let response = ::rocket::response::Responder::respond_to(user_response,
+                                                                     $req_ident)?;
             let status = ::rocket::http::Status::raw($code);
             ::rocket::response::Response::build().status(status).merge(response).ok()
         }

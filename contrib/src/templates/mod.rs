@@ -2,34 +2,38 @@ extern crate serde;
 extern crate serde_json;
 extern crate glob;
 
-#[cfg(feature = "tera_templates")]
-mod tera_templates;
+#[cfg(feature = "tera_templates")] mod tera_templates;
+#[cfg(feature = "handlebars_templates")] mod handlebars_templates;
+mod engine;
+mod context;
 
-#[cfg(feature = "handlebars_templates")]
-mod handlebars_templates;
-
-#[macro_use] mod macros;
-
+use self::engine::{Engine, Engines};
+use self::context::Context;
 use self::serde::Serialize;
+use self::serde_json::{Value, to_value};
 use self::glob::glob;
 
+use std::borrow::Cow;
 use std::path::{Path, PathBuf};
-use std::collections::HashMap;
-use std::fmt;
 
-use rocket::config::{self, ConfigError};
+use rocket::State;
+use rocket::request::Request;
+use rocket::fairing::{Fairing, AdHoc};
 use rocket::response::{self, Content, Responder};
 use rocket::http::{ContentType, Status};
+
+const DEFAULT_TEMPLATE_DIR: &'static str = "templates";
 
 /// The Template type implements generic support for template rendering in
 /// Rocket.
 ///
-/// Templating in Rocket words by first discovering all of the templates inside
+/// Templating in Rocket works by first discovering all of the templates inside
 /// the template directory. The template directory is configurable via the
 /// `template_dir` configuration parameter and defaults to `templates/`. The
 /// path set in `template_dir` should be relative to the Rocket configuration
-/// file. See the [configuration chapter](https://rocket.rs/guide/overview/#configuration)
-/// of the guide for more information on configuration.
+/// file. See the [configuration
+/// chapter](https://rocket.rs/guide/overview/#configuration) of the guide for
+/// more information on configuration.
 ///
 /// Templates are discovered according to their extension. At present, this
 /// library supports the following templates and extensions:
@@ -55,6 +59,13 @@ use rocket::http::{ContentType, Status};
 /// type, and one for the template extension. This means that template
 /// extensions should look like: `.html.hbs`, `.html.tera`, `.xml.hbs`, etc.
 ///
+/// Template discovery is actualized by the template fairing, which itself is
+/// created via the
+/// [`Template::fairing()`](/rocket_contrib/struct.Template.html#method.fairing)
+/// method. In order for _any_ templates to be rendered, the template fairing
+/// must be [attached](/rocket/struct.Rocket.html#method.attach) to the running
+/// Rocket instance.
+///
 /// Templates are rendered with the `render` method. The method takes in the
 /// name of a template and a context to render the template with. The context
 /// can be any type that implements `Serialize` from
@@ -74,7 +85,25 @@ use rocket::http::{ContentType, Status};
 /// features = ["handlebars_templates", "tera_templates"]
 /// ```
 ///
-/// The Template type implements Rocket's `Responder` trait, so it can be
+/// Then, ensure that the template [fairing](/rocket/fairing/) is attached to
+/// your Rocket application:
+///
+/// ```rust
+/// extern crate rocket;
+/// extern crate rocket_contrib;
+///
+/// use rocket_contrib::Template;
+///
+/// fn main() {
+///     rocket::ignite()
+///         // ...
+///         .attach(Template::fairing())
+///         // ...
+///     # ;
+/// }
+/// ```
+///
+/// The `Template` type implements Rocket's `Responder` trait, so it can be
 /// returned from a request handler directly:
 ///
 /// ```rust,ignore
@@ -84,49 +113,68 @@ use rocket::http::{ContentType, Status};
 ///     Template::render("index", &context)
 /// }
 /// ```
-// Fields are: (optionally rendered template, template extension)
 #[derive(Debug)]
-pub struct Template(Option<String>, Option<String>);
+pub struct Template {
+    name: Cow<'static, str>,
+    value: Option<Value>
+}
 
 #[derive(Debug)]
 pub struct TemplateInfo {
     /// The complete path, including `template_dir`, to this template.
-    full_path: PathBuf,
-    /// The complete path, without `template_dir`, to this template.
     path: PathBuf,
     /// The extension for the engine of this template.
     extension: String,
     /// The extension before the engine extension in the template, if any.
-    data_type: Option<String>
-}
-
-const DEFAULT_TEMPLATE_DIR: &'static str = "templates";
-
-lazy_static! {
-    static ref TEMPLATES: HashMap<String, TemplateInfo> = discover_templates();
-    static ref TEMPLATE_DIR: PathBuf = {
-        let default_dir_path = config::active().ok_or(ConfigError::NotFound)
-            .map(|config| config.root().join(DEFAULT_TEMPLATE_DIR))
-            .map_err(|_| {
-                warn_!("No configuration is active!");
-                warn_!("Using default template directory: {:?}", DEFAULT_TEMPLATE_DIR);
-            })
-            .unwrap_or(PathBuf::from(DEFAULT_TEMPLATE_DIR));
-
-        config::active().ok_or(ConfigError::NotFound)
-            .and_then(|config| config.get_str("template_dir"))
-            .map(|user_dir| PathBuf::from(user_dir))
-            .map_err(|e| {
-                if !e.is_not_found() {
-                    e.pretty_print();
-                    warn_!("Using default directory '{:?}'", default_dir_path);
-                }
-            })
-            .unwrap_or(default_dir_path)
-    };
+    data_type: ContentType
 }
 
 impl Template {
+    /// Returns a fairing that intializes and maintains templating state.
+    ///
+    /// This fairing _must_ be attached to any `Rocket` instance that wishes to
+    /// render templates. Failure to attach this fairing will result in a
+    /// "Uninitialized template context: missing fairing." error message when a
+    /// template is attempted to be rendered.
+    ///
+    /// # Example
+    ///
+    /// To attach this fairing, simple call `attach` on the application's
+    /// `Rocket` instance with `Template::fairing()`:
+    ///
+    /// ```rust
+    /// extern crate rocket;
+    /// extern crate rocket_contrib;
+    ///
+    /// use rocket_contrib::Template;
+    ///
+    /// fn main() {
+    ///     rocket::ignite()
+    ///         // ...
+    ///         .attach(Template::fairing())
+    ///         // ...
+    ///     # ;
+    /// }
+    /// ```
+    pub fn fairing() -> impl Fairing {
+        AdHoc::on_attach(|rocket| {
+            let mut template_root = rocket.config().root().join(DEFAULT_TEMPLATE_DIR);
+            match rocket.config().get_str("template_dir") {
+                Ok(dir) => template_root = rocket.config().root().join(dir),
+                Err(ref e) if !e.is_not_found() => {
+                    e.pretty_print();
+                    warn_!("Using default directory '{:?}'", template_root);
+                }
+                Err(_) => {  }
+            };
+
+            match Context::initialize(template_root) {
+                Some(ctxt) => Ok(rocket.manage(ctxt)),
+                None => Err(rocket)
+            }
+        })
+    }
+
     /// Render the template named `name` with the context `context`. The
     /// `context` can be of any type that implements `Serialize`. This is
     /// typically a `HashMap` or a custom `struct`.
@@ -141,30 +189,73 @@ impl Template {
     /// let mut context = HashMap::new();
     ///
     /// # context.insert("test", "test");
-    /// let template = Template::render("index", &context);
-    /// # assert_eq!(template.to_string(), "");
-    pub fn render<S, T>(name: S, context: &T) -> Template
-        where S: AsRef<str>, T: Serialize
+    /// # #[allow(unused_variables)]
+    /// let template = Template::render("index", context);
+    #[inline]
+    pub fn render<S, C>(name: S, context: C) -> Template
+        where S: Into<Cow<'static, str>>, C: Serialize
     {
-        let name = name.as_ref();
-        let template = TEMPLATES.get(name);
-        if template.is_none() {
-            let names: Vec<_> = TEMPLATES.keys().map(|s| s.as_str()).collect();
+        Template { name: name.into(), value: to_value(context).ok() }
+    }
+
+    /// Render the template named `name` located at the path `root` with the
+    /// context `context` into a `String`. This method is _very slow_ and should
+    /// **not** be used in any running Rocket application. This method should
+    /// only be used during testing to validate `Template` responses. For other
+    /// uses, use [`render`](#method.render) instead.
+    ///
+    /// The `context` can be of any type that implements `Serialize`. This is
+    /// typically a `HashMap` or a custom `struct`. The path `root` can be
+    /// relative, in which case it is relative to the current working directory,
+    /// or absolute.
+    ///
+    /// Returns `Some` if the template could be rendered. Otherwise, returns
+    /// `None`. If rendering fails, error output is printed to the console.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use std::collections::HashMap;
+    /// use rocket_contrib::Template;
+    ///
+    /// // Create a `context`. Here, just an empty `HashMap`.
+    /// let mut context = HashMap::new();
+    ///
+    /// # context.insert("test", "test");
+    /// # #[allow(unused_variables)]
+    /// let template = Template::show("templates/", "index", context);
+    #[inline]
+    pub fn show<P, S, C>(root: P, name: S, context: C) -> Option<String>
+        where P: AsRef<Path>, S: Into<Cow<'static, str>>, C: Serialize
+    {
+        let root = root.as_ref().to_path_buf();
+        Context::initialize(root).and_then(|ctxt| {
+            Template::render(name, context).finalize(&ctxt).ok().map(|v| v.0)
+        })
+    }
+
+    #[inline(always)]
+    fn finalize(self, ctxt: &Context) -> Result<(String, ContentType), Status> {
+        let name = &*self.name;
+        let info = ctxt.templates.get(name).ok_or_else(|| {
+            let ts: Vec<_> = ctxt.templates.keys().map(|s| s.as_str()).collect();
             error_!("Template '{}' does not exist.", name);
-            info_!("Known templates: {}", names.join(","));
-            info_!("Searched in '{:?}'.", *TEMPLATE_DIR);
-            return Template(None, None);
-        }
+            info_!("Known templates: {}", ts.join(","));
+            info_!("Searched in '{:?}'.", ctxt.root);
+            Status::InternalServerError
+        })?;
 
-        // Keep this set in-sync with the `engine_set` invocation. The macro
-        // `return`s a `Template` if the extenion in `template` matches an
-        // engine in the set. Otherwise, control will fall through.
-        render_set!(name, template.unwrap(), context,
-            "tera_templates" => tera_templates,
-            "handlebars_templates" => handlebars_templates,
-        );
+        let value = self.value.ok_or_else(|| {
+            error_!("The provided template context failed to serialize.");
+            Status::InternalServerError
+        })?;
 
-        unreachable!("A template extension was discovered but not rendered.")
+        let string = ctxt.engines.render(name, &info, value).ok_or_else(|| {
+            error_!("Template '{}' failed to render.", name);
+            Status::InternalServerError
+        })?;
+
+        Ok((string, info.data_type.clone()))
     }
 }
 
@@ -172,155 +263,15 @@ impl Template {
 /// extension and a fixed-size body containing the rendered template. If
 /// rendering fails, an `Err` of `Status::InternalServerError` is returned.
 impl Responder<'static> for Template {
-    fn respond(self) -> response::Result<'static> {
-        let content_type = match self.1 {
-            Some(ref ext) => ContentType::from_extension(ext),
-            None => ContentType::HTML
-        };
+    fn respond_to(self, req: &Request) -> response::Result<'static> {
+        let ctxt = req.guard::<State<Context>>().succeeded().ok_or_else(|| {
+            error_!("Uninitialized template context: missing fairing.");
+            info_!("To use templates, you must attach `Template::fairing()`.");
+            info_!("See the `Template` documentation for more information.");
+            Status::InternalServerError
+        })?;
 
-        match self.0 {
-            Some(render) => Content(content_type, render).respond(),
-            None => Err(Status::InternalServerError)
-        }
-    }
-}
-
-/// Renders `self`. If the template cannot be rendered, nothing is written.
-impl fmt::Display for Template {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match self.0 {
-            Some(ref render) => render.fmt(f),
-            None => Ok(())
-        }
-    }
-}
-
-/// Removes the file path's extension or does nothing if there is none.
-fn remove_extension<P: AsRef<Path>>(path: P) -> PathBuf {
-    let path = path.as_ref();
-    let stem = match path.file_stem() {
-        Some(stem) => stem,
-        None => return path.to_path_buf()
-    };
-
-    match path.parent() {
-        Some(parent) => parent.join(stem),
-        None => PathBuf::from(stem)
-    }
-}
-
-/// Splits a path into a relative path from TEMPLATE_DIR, a name that
-/// may be used to identify the template, and the template's data type.
-fn split_path(path: &Path) -> (PathBuf, String, Option<String>) {
-    let rel_path = path.strip_prefix(&*TEMPLATE_DIR).unwrap().to_path_buf();
-    let path_no_ext = remove_extension(&rel_path);
-    let data_type = path_no_ext.extension();
-    let mut name = remove_extension(&path_no_ext).to_string_lossy().into_owned();
-
-    // Ensure template name consistency on Windows systems
-    if cfg!(windows) {
-        name = name.replace("\\", "/");
-    }
-
-    (rel_path, name, data_type.map(|d| d.to_string_lossy().into_owned()))
-}
-
-
-/// Returns a HashMap of `TemplateInfo`'s for all of the templates in
-/// `TEMPLATE_DIR`. Templates are all files that match one of the extensions for
-/// engine's in `engine_set`.
-///
-/// **WARNING:** This function should be called ONCE from a SINGLE THREAD.
-fn discover_templates() -> HashMap<String, TemplateInfo> {
-    // Keep this set in-sync with the `render_set` invocation.
-    let engines = engine_set![
-        "tera_templates" => tera_templates,
-        "handlebars_templates" => handlebars_templates,
-    ];
-
-    let mut templates: HashMap<String, TemplateInfo> = HashMap::new();
-    for &(ext, _) in &engines {
-        let mut glob_path: PathBuf = TEMPLATE_DIR.join("**").join("*");
-        glob_path.set_extension(ext);
-        for path in glob(glob_path.to_str().unwrap()).unwrap().filter_map(Result::ok) {
-            let (rel_path, name, data_type) = split_path(&path);
-            if let Some(info) = templates.get(&*name) {
-                warn_!("Template name '{}' does not have a unique path.", name);
-                info_!("Existing path: {:?}", info.full_path);
-                info_!("Additional path: {:?}", path);
-                warn_!("Using existing path for template '{}'.", name);
-                continue;
-            }
-
-            templates.insert(name, TemplateInfo {
-                full_path: path.to_path_buf(),
-                path: rel_path,
-                extension: ext.to_string(),
-                data_type: data_type,
-            });
-        }
-    }
-
-    for &(ext, register_fn) in &engines {
-        let named_templates = templates.iter()
-            .filter(|&(_, i)| i.extension == ext)
-            .map(|(k, i)| (k.as_str(), i))
-            .collect::<Vec<_>>();
-
-        unsafe { register_fn(&*named_templates); }
-    };
-
-    templates
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    /// Combines a `relative_path` and the `TEMPLATE_DIR` path into a full path.
-    fn template_path(relative_path: &str) -> PathBuf {
-        let mut path = PathBuf::from(&*TEMPLATE_DIR);
-        path.push(relative_path);
-        path
-    }
-
-    /// Returns the template system name, given a relative path to a file.
-    fn relative_path_to_name(relative_path: &str) -> String {
-        let path = template_path(relative_path);
-        let (_, name, _) = split_path(&path);
-        name
-    }
-
-    #[test]
-    fn template_path_index_html() {
-        let path = template_path("index.html.hbs");
-        let (rel_path, name, data_type) = split_path(&path);
-
-        assert_eq!(rel_path.to_string_lossy(), "index.html.hbs");
-        assert_eq!(name, "index");
-        assert_eq!(data_type, Some("html".to_owned()));
-    }
-
-    #[test]
-    fn template_path_subdir_index_html() {
-        let path = template_path("subdir/index.html.hbs");
-        let (rel_path, name, data_type) = split_path(&path);
-
-        assert_eq!(rel_path.to_string_lossy(), "subdir/index.html.hbs");
-        assert_eq!(name, "subdir/index");
-        assert_eq!(data_type, Some("html".to_owned()));
-    }
-
-    #[test]
-    fn template_path_doc_examples() {
-        assert_eq!(relative_path_to_name("index.html.hbs"), "index");
-        assert_eq!(relative_path_to_name("index.tera"), "index");
-        assert_eq!(relative_path_to_name("index.hbs"), "index");
-        assert_eq!(relative_path_to_name("dir/index.hbs"), "dir/index");
-        assert_eq!(relative_path_to_name("dir/index.html.tera"), "dir/index");
-        assert_eq!(relative_path_to_name("index.template.html.hbs"),
-                   "index.template");
-        assert_eq!(relative_path_to_name("subdir/index.template.html.hbs"),
-                   "subdir/index.template");
+        let (render, content_type) = self.finalize(&ctxt)?;
+        Content(content_type, render).respond_to(req)
     }
 }

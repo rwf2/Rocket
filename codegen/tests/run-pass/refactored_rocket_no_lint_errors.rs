@@ -1,7 +1,6 @@
 #![feature(plugin)]
 #![plugin(rocket_codegen)]
 #![allow(dead_code, unused_variables)]
-#![deny(unmounted_routes, unmanaged_state)]
 
 extern crate rocket;
 

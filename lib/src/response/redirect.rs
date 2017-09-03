@@ -1,3 +1,4 @@
+use request::Request;
 use response::{Response, Responder};
 use http::hyper::header;
 use http::Status;
@@ -104,7 +105,7 @@ impl Redirect {
 /// the `Location` header field. The body of the response is empty. This
 /// responder does not fail.
 impl Responder<'static> for Redirect {
-    fn respond(self) -> Result<Response<'static>, Status> {
+    fn respond_to(self, _: &Request) -> Result<Response<'static>, Status> {
         Response::build()
             .status(self.0)
             .header(header::Location(self.1))

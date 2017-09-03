@@ -16,7 +16,7 @@ expressibility, and speed. Here's an example of a complete Rocket application:
 extern crate rocket;
 
 #[get("/<name>/<age>")]
-fn hello(name: &str, age: u8) -> String {
+fn hello(name: String, age: u8) -> String {
     format!("Hello, {} year old named {}!", age, name)
 }
 
@@ -105,7 +105,7 @@ example, the tests for routing can be found at the bottom of the
 Code generation tests can be found in `codegen/tests`. We use the
 [compiletest](https://crates.io/crates/compiletest_rs) library, which was
 extracted from `rustc`, for testing. See the [compiler test
-documentation](https://github.com/rust-lang/rust/blob/master/COMPILER_TESTS.md)
+documentation](https://github.com/rust-lang/rust/blob/master/src/test/COMPILER_TESTS.md)
 for information on how to write compiler tests.
 
 ## Documentation
@@ -148,8 +148,8 @@ Rocket is designed to be performant. At this time, its performance is
 [bottlenecked by the Hyper HTTP
 library](https://github.com/SergioBenitez/Rocket/issues/17). Even so, Rocket
 currently performs _significantly better_ than the latest version of
-asynchronous Hyper on a simple "Hello, world!" benchmark. Rocket also performs
-_significantly better_ than the Iron web framework:
+multithreaded asynchronous Hyper on a simple "Hello, world!" benchmark. Rocket
+also performs _significantly better_ than the Iron web framework:
 
 **Machine Specs:**
 
@@ -169,7 +169,7 @@ _significantly better_ than the Iron web framework:
     Requests/sec:  75051.28
     Transfer/sec:     10.45MB
 
-**Hyper v0.10.0-a.0 (1/12/2016)** (46 LOC) results (best of 3, +/- 5000 req/s, +/- 30us latency):
+**Hyper v0.10-rotor (1/12/2016)** (46 LOC) results (best of 3, +/- 5000 req/s, +/- 30us latency):
 
     Running 10s test @ http://localhost:80
       1 threads and 18 connections
@@ -213,3 +213,5 @@ Rocket is licensed under either of the following, at your option:
 
  * Apache License, Version 2.0, ([LICENSE-APACHE](LICENSE-APACHE) or http://www.apache.org/licenses/LICENSE-2.0)
  * MIT License ([LICENSE-MIT](LICENSE-MIT) or http://opensource.org/licenses/MIT)
+
+The Rocket website source is licensed under [separate terms](site/README.md#license).

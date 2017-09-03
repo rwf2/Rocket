@@ -1,9 +1,7 @@
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 
-use config::{Result, Config, Value, Environment};
-use config::toml_ext::IntoValue;
-use logger::LoggingLevel;
+use config::{Result, Config, Value, Environment, Limits, LoggingLevel};
 
 /// Structure following the builder pattern for building `Config` structures.
 #[derive(Clone)]
@@ -18,8 +16,12 @@ pub struct ConfigBuilder {
     pub workers: u16,
     /// How much information to log.
     pub log_level: LoggingLevel,
-    /// The session key.
-    pub session_key: Option<String>,
+    /// The secret key.
+    pub secret_key: Option<String>,
+    /// TLS configuration (path to certificates file, path to private key file).
+    pub tls: Option<(String, String)>,
+    /// Size limits.
+    pub limits: Limits,
     /// Any extra parameters that aren't part of Rocket's config.
     pub extras: HashMap<String, Value>,
     /// The root directory of this config.
@@ -62,7 +64,9 @@ impl ConfigBuilder {
             port: config.port,
             workers: config.workers,
             log_level: config.log_level,
-            session_key: None,
+            secret_key: None,
+            tls: None,
+            limits: config.limits,
             extras: config.extras,
             root: root_dir,
         }
@@ -129,8 +133,7 @@ impl ConfigBuilder {
     /// # Example
     ///
     /// ```rust
-    /// use rocket::LoggingLevel;
-    /// use rocket::config::{Config, Environment};
+    /// use rocket::config::{Config, Environment, LoggingLevel};
     ///
     /// let config = Config::build(Environment::Staging)
     ///     .log_level(LoggingLevel::Critical)
@@ -144,23 +147,60 @@ impl ConfigBuilder {
         self
     }
 
-    /// Sets the `session_key` in the configuration being built.
+    /// Sets the `secret_key` in the configuration being built.
     ///
     /// # Example
     ///
     /// ```rust
-    /// use rocket::LoggingLevel;
+    /// use rocket::config::{Config, Environment, LoggingLevel};
+    ///
+    /// let key = "8Xui8SN4mI+7egV/9dlfYYLGQJeEx4+DwmSQLwDVXJg=";
+    /// let mut config = Config::build(Environment::Staging)
+    ///     .secret_key(key)
+    ///     .unwrap();
+    /// ```
+    pub fn secret_key<K: Into<String>>(mut self, key: K) -> Self {
+        self.secret_key = Some(key.into());
+        self
+    }
+
+    /// Sets the `limits` in the configuration being built.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use rocket::config::{Config, Environment, Limits};
+    ///
+    /// let mut config = Config::build(Environment::Staging)
+    ///     .limits(Limits::new().limit("json", 5 * (1 << 20)))
+    ///     .unwrap();
+    /// ```
+    pub fn limits(mut self, limits: Limits) -> Self {
+        self.limits = limits;
+        self
+    }
+
+    /// Sets the TLS configuration in the configuration being built.
+    ///
+    /// Certificates are read from `certs_path`. The certificate chain must be
+    /// in X.509 PEM format. The private key is read from `key_path`. The
+    /// private key must be an RSA key in either PKCS#1 or PKCS#8 PEM format.
+    ///
+    /// # Example
+    ///
+    /// ```rust
     /// use rocket::config::{Config, Environment};
     ///
-    /// let key = "VheMwXIBygSmOlZAhuWl2B+zgvTN3WW5";
     /// let mut config = Config::build(Environment::Staging)
-    ///     .session_key(key)
+    ///     .tls("/path/to/certs.pem", "/path/to/key.pem")
+    /// # ; /*
     ///     .unwrap();
-    ///
-    /// assert_eq!(config.take_session_key(), Some(key.to_string()));
+    /// # */
     /// ```
-    pub fn session_key<K: Into<String>>(mut self, key: K) -> Self {
-        self.session_key = Some(key.into());
+    pub fn tls<C, K>(mut self, certs_path: C, key_path: K) -> Self
+        where C: Into<String>, K: Into<String>
+    {
+        self.tls = Some((certs_path.into(), key_path.into()));
         self
     }
 
@@ -204,9 +244,9 @@ impl ConfigBuilder {
 
     /// Adds an extra configuration parameter with `name` and `value` to the
     /// configuration being built. The value can be any type that implements
-    /// [IntoValue](/rocket/config/trait.IntoValue.html) including `&str`,
-    /// `String`, `Vec<V: IntoValue>`, `HashMap<S: Into<String>, V: IntoValue>`,
-    /// and all integer and float types.
+    /// `Into<Value>` including `&str`, `String`, `Vec<V: Into<Value>>`,
+    /// `HashMap<S: Into<String>, V: Into<Value>>`, and most integer and float
+    /// types.
     ///
     /// # Example
     ///
@@ -221,8 +261,8 @@ impl ConfigBuilder {
     /// assert_eq!(config.get_float("pi"), Ok(3.14));
     /// assert_eq!(config.get_str("custom_dir"), Ok("/a/b/c"));
     /// ```
-    pub fn extra<V: IntoValue>(mut self, name: &str, value: V) -> Self {
-        self.extras.insert(name.into(), value.into_value());
+    pub fn extra<V: Into<Value>>(mut self, name: &str, value: V) -> Self {
+        self.extras.insert(name.into(), value.into());
         self
     }
 
@@ -231,7 +271,7 @@ impl ConfigBuilder {
     /// # Errors
     ///
     /// If the current working directory cannot be retrieved, returns a `BadCWD`
-    /// error. If the address or session key fail to parse, returns a `BadType`
+    /// error. If the address or secret key fail to parse, returns a `BadType`
     /// error.
     ///
     /// # Example
@@ -248,7 +288,7 @@ impl ConfigBuilder {
     /// assert!(config.is_ok());
     ///
     /// let config = Config::build(Environment::Staging)
-    ///     .address("?")
+    ///     .address("123.123.123.123.123 whoops!")
     ///     .finalize();
     ///
     /// assert!(config.is_err());
@@ -261,9 +301,14 @@ impl ConfigBuilder {
         config.set_log_level(self.log_level);
         config.set_extras(self.extras);
         config.set_root(self.root);
+        config.set_limits(self.limits);
 
-        if let Some(key) = self.session_key {
-            config.set_session_key(key)?;
+        if let Some((certs_path, key_path)) = self.tls {
+            config.set_tls(&certs_path, &key_path)?;
+        }
+
+        if let Some(key) = self.secret_key {
+            config.set_secret_key(key)?;
         }
 
         Ok(config)
@@ -274,7 +319,7 @@ impl ConfigBuilder {
     /// # Panics
     ///
     /// Panics if the current working directory cannot be retrieved or if the
-    /// supplied address or session key fail to parse.
+    /// supplied address, secret key, or TLS configuration fail to parse.
     ///
     /// # Example
     ///
@@ -290,5 +335,29 @@ impl ConfigBuilder {
     #[inline(always)]
     pub fn unwrap(self) -> Config {
         self.finalize().expect("ConfigBuilder::unwrap() failed")
+    }
+
+    /// Returns the `Config` structure that was being built by this builder.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the current working directory cannot be retrieved or if the
+    /// supplied address, secret key, or TLS configuration fail to parse. If a
+    /// panic occurs, the error message `msg` is printed.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use rocket::config::{Config, Environment};
+    ///
+    /// let config = Config::build(Environment::Staging)
+    ///     .address("127.0.0.1")
+    ///     .expect("the configuration is bad!");
+    ///
+    /// assert_eq!(config.address.as_str(), "127.0.0.1");
+    /// ```
+    #[inline(always)]
+    pub fn expect(self, msg: &str) -> Config {
+        self.finalize().expect(msg)
     }
 }
