@@ -791,15 +791,18 @@ impl Config {
 
 impl fmt::Debug for Config {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "Config[{}] {{ address: {}, port: {}, workers: {}, log: {:?}",
-               self.environment, self.address, self.port, self.workers,
-               self.log_level)?;
+        let mut s = f.debug_struct("Config");
+        s.field("environment", &self.environment);
+        s.field("address", &self.address);
+        s.field("port", &self.port);
+        s.field("workers", &self.workers);
+        s.field("log_level", &self.log_level);
 
         for (key, value) in self.extras() {
-            write!(f, ", {}: {}", key, value)?;
+            s.field(key, &value);
         }
 
-        write!(f, " }}")
+        s.finish()
     }
 }
 
