@@ -1,6 +1,7 @@
 use std::fs::File;
 use std::io::Cursor;
 use std::fmt;
+use std::sync::Arc;
 
 use http::{Status, ContentType};
 use response::Response;
@@ -201,6 +202,13 @@ impl<'r> Responder<'r> for String {
             .ok()
     }
 }
+
+impl<'r,R: Responder<'r>> Responder<'r> for Arc<R> {
+    fn respond_to(self, req: &Request) -> Result<Response<'r>, Status> {
+        self.respond_to(req)
+    }
+}
+
 
 /// Returns a response with a sized body for the file. Always returns `Ok`.
 impl<'r> Responder<'r> for File {
