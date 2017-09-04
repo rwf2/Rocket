@@ -140,8 +140,8 @@ pub use self::info_kind::{Info, Kind};
 ///     It may not, however, abort or respond directly to the request; these
 ///     issues are better handled via [request
 ///     guards](/rocket/request/trait.FromRequest.html) or via response
-///     callbacks. A modified request is routed as if it was the original
-///     request.
+///     callbacks. Any modifications to a request are persisted and can
+///     potentially alter how a request is routed.
 ///
 ///   * **Response (`on_response`)**
 ///
