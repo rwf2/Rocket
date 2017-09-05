@@ -13,40 +13,40 @@
 //!
 //!   1. Construct a `Rocket` instance that represents the application.
 //!
-//!     ```rust
-//!     let rocket = rocket::ignite();
-//!     # let _ = rocket;
-//!     ```
+//!      ```rust
+//!      let rocket = rocket::ignite();
+//!      # let _ = rocket;
+//!      ```
 //!
 //!   2. Construct a `Client` using the `Rocket` instance.
 //!
-//!     ```rust
-//!     # use rocket::local::Client;
-//!     # let rocket = rocket::ignite();
-//!     let client = Client::new(rocket).expect("valid rocket instance");
-//!     # let _ = client;
-//!     ```
+//!      ```rust
+//!      # use rocket::local::Client;
+//!      # let rocket = rocket::ignite();
+//!      let client = Client::new(rocket).expect("valid rocket instance");
+//!      # let _ = client;
+//!      ```
 //!
 //!   3. Construct requests using the `Client` instance.
 //!
-//!     ```rust
-//!     # use rocket::local::Client;
-//!     # let rocket = rocket::ignite();
-//!     # let client = Client::new(rocket).unwrap();
-//!     let req = client.get("/");
-//!     # let _ = req;
-//!     ```
+//!      ```rust
+//!      # use rocket::local::Client;
+//!      # let rocket = rocket::ignite();
+//!      # let client = Client::new(rocket).unwrap();
+//!      let req = client.get("/");
+//!      # let _ = req;
+//!      ```
 //!
 //!   3. Dispatch the request to retrieve the response.
 //!
-//!     ```rust
-//!     # use rocket::local::Client;
-//!     # let rocket = rocket::ignite();
-//!     # let client = Client::new(rocket).unwrap();
-//!     # let req = client.get("/");
-//!     let response = req.dispatch();
-//!     # let _ = response;
-//!     ```
+//!      ```rust
+//!      # use rocket::local::Client;
+//!      # let rocket = rocket::ignite();
+//!      # let client = Client::new(rocket).unwrap();
+//!      # let req = client.get("/");
+//!      let response = req.dispatch();
+//!      # let _ = response;
+//!      ```
 //!
 //! All together and in idiomatic fashion, this might look like:
 //!

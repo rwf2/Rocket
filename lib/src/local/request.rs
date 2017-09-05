@@ -41,21 +41,21 @@ use http::{Header, Cookie};
 ///
 ///   1. [`dispatch`]
 ///
-///     This method should always be preferred. The `LocalRequest` is consumed
-///     and a response is returned.
+///      This method should always be preferred. The `LocalRequest` is consumed
+///      and a response is returned.
 ///
 ///   2. [`cloned_dispatch`]
 ///
-///     This method should be used when one `LocalRequest` will be dispatched
-///     many times. This method clones the request and dispatches the clone, so
-///     the request _is not_ consumed and can be reused.
+///      This method should be used when one `LocalRequest` will be dispatched
+///      many times. This method clones the request and dispatches the clone, so
+///      the request _is not_ consumed and can be reused.
 ///
 ///   3. [`mut_dispatch`]
 ///
-///     This method should _only_ be used when either it is known that the
-///     application will not modify the request, or it is desired to see
-///     modifications to the request. No cloning occurs, and the request is not
-///     consumed.
+///      This method should _only_ be used when either it is known that the
+///      application will not modify the request, or it is desired to see
+///      modifications to the request. No cloning occurs, and the request is not
+///      consumed.
 ///
 /// [`Client`]: /rocket/local/struct.Client.html
 /// [`header`]: #method.header

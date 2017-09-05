@@ -168,19 +168,19 @@ pub use self::info_kind::{Info, Kind};
 ///
 ///   1. Assign a name to the `Fairing`.
 ///
-///     This is the `name` field, which can be any arbitrary string. Name your
-///     fairing something illustrative. The name will be logged during the
-///     application's launch procedures.
+///      This is the `name` field, which can be any arbitrary string. Name your
+///      fairing something illustrative. The name will be logged during the
+///      application's launch procedures.
 ///
 ///   2. Determine which callbacks to actually issue on the `Fairing`.
 ///
-///     This is the `kind` field of type
-///     [`Kind`](/rocket/fairing/struct.Kind.html). This field is a bitset that
-///     represents the kinds of callbacks the fairing wishes to receive. Rocket
-///     will only invoke the callbacks that are flagged in this set. `Kind`
-///     structures can be `or`d together to represent any combination of kinds
-///     of callbacks. For instance, to request launch and response callbacks,
-///     return a `kind` field with the value `Kind::Launch | Kind::Response`.
+///      This is the `kind` field of type
+///      [`Kind`](/rocket/fairing/struct.Kind.html). This field is a bitset that
+///      represents the kinds of callbacks the fairing wishes to receive. Rocket
+///      will only invoke the callbacks that are flagged in this set. `Kind`
+///      structures can be `or`d together to represent any combination of kinds
+///      of callbacks. For instance, to request launch and response callbacks,
+///      return a `kind` field with the value `Kind::Launch | Kind::Response`.
 ///
 /// [`info`]: /rocket/fairing/trait.Fairing.html#tymethod.info
 ///
