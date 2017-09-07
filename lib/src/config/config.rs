@@ -1,5 +1,5 @@
 use std::collections::HashMap;
-use std::net::{IpAddr, lookup_host};
+use std::net::ToSocketAddrs;
 use std::path::{Path, PathBuf};
 use std::convert::AsRef;
 use std::fmt;
@@ -344,7 +344,7 @@ impl Config {
     /// ```
     pub fn set_address<A: Into<String>>(&mut self, address: A) -> Result<()> {
         let address = address.into();
-        if address.parse::<IpAddr>().is_err() && lookup_host(&address).is_err() {
+        if (address.as_ref(), 0u16).to_socket_addrs().is_err() {
             return Err(self.bad_type("address", "string", "a valid hostname or IP"));
         }
 
