@@ -105,10 +105,6 @@ impl RawStr {
     /// percent-encoded byte sequences will be replaced � U+FFFD, the
     /// replacement character.
     ///
-    /// # Errors
-    ///
-    /// Returns an `Err` if the percent encoded values are not valid UTF-8.
-    ///
     /// # Example
     ///
     /// With a valid string:
