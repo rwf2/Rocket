@@ -10,7 +10,7 @@ extern crate rocket;
 use rocket::Request;
 use rocket::response::Redirect;
 use rocket_contrib::Template;
-use rocket_contrib::handlebars::{Helper, Handlebars, RenderContext, RenderError};
+use rocket_contrib::handlebars::{Helper, Handlebars, RenderContext, RenderError, JsonRender};
 
 #[derive(Serialize)]
 struct TemplateContext {
@@ -43,26 +43,19 @@ fn not_found(req: &Request) -> Template {
 fn rocket() -> rocket::Rocket {
     rocket::ignite()
         .mount("/", routes![index, get])
-        .attach(Template::fairing())
-        .catch(errors![not_found])
-}
-
-// when you want to register handlebars helpers
-#[allow(dead_code)]
-fn rocket_with_hbs_helper() -> rocket::Rocket {
-    rocket::ignite()
-        .mount("/", routes![index, get])
-        .attach(Template::config_and_fairing(|ctxt| {
-            ctxt.engines_mut()
-                .handlebars()
-                .register_helper("test",
-                                 Box::new(|_: &Helper,
-                                           _: &Handlebars,
-                                           _: &mut RenderContext|
-                                           -> Result<(), RenderError> {
-                                              // do nothing
-                                              Ok(())
-                                          }));
+        .attach(Template::custom(|engines| {
+            engines.handlebars.register_helper(
+                "test", Box::new(|h: &Helper,
+                                 _: &Handlebars,
+                                 rc: &mut RenderContext| -> Result<(), RenderError> {
+                                     if let Some(p0) = h.param(0) {
+                                         rc.writer.write(p0.value()
+                                                         .render()
+                                                         .into_bytes()
+                                                         .as_ref())?;
+                                     }
+                                     Ok(())
+                                 }));
 
         }))
         .catch(errors![not_found])

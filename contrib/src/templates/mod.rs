@@ -158,7 +158,7 @@ impl Template {
     /// }
     /// ```
     pub fn fairing() -> impl Fairing {
-        Template::config_and_fairing(|_| {})
+        Template::custom(|_| {})
     }
 
     /// Returns a fairing that intializes and maintains templating state.
@@ -177,16 +177,14 @@ impl Template {
     /// fn main() {
     ///     rocket::ignite()
     ///         // ...
-    ///         .attach(Template::config_and_fairing(|ctxt| {
-    ///             // ctxt.engines_mut().handlebars().register_helper ...
+    ///         .attach(Template::custom(|engines| {
+    ///             // engines.handlebars.register_helper ...
     ///         }))
     ///         // ...
     ///     # ;
     /// }
     /// ```
-    pub fn config_and_fairing<F>(f: F) -> impl Fairing
-        where F: Fn(&mut Context) + Send + Sync + 'static
-    {
+    pub fn custom<F>(f: F) -> impl Fairing where F: Fn(&mut Engines) + Send + Sync + 'static {
         AdHoc::on_attach(move |rocket| {
             let mut template_root = rocket.config().root_relative(DEFAULT_TEMPLATE_DIR);
 
@@ -200,7 +198,10 @@ impl Template {
             };
 
             match Context::initialize(template_root) {
-                Some(ctxt) => Ok(rocket.manage(ctxt)),
+                Some(mut ctxt) => {
+                    f(&mut ctxt.engines);
+                    Ok(rocket.manage(ctxt))
+                }
                 None => Err(rocket)
             }
         })
