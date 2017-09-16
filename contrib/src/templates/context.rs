@@ -49,10 +49,6 @@ impl Context {
             Context { root, templates, engines }
         })
     }
-
-    pub fn engines_mut(&mut self) -> &mut Engines {
-        &mut self.engines
-    }
 }
 
 /// Removes the file path's extension or does nothing if there is none.
