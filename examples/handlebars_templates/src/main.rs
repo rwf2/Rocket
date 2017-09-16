@@ -45,17 +45,18 @@ fn rocket() -> rocket::Rocket {
         .mount("/", routes![index, get])
         .attach(Template::custom(|engines| {
             engines.handlebars.register_helper(
-                "test", Box::new(|h: &Helper,
-                                 _: &Handlebars,
-                                 rc: &mut RenderContext| -> Result<(), RenderError> {
-                                     if let Some(p0) = h.param(0) {
-                                         rc.writer.write(p0.value()
-                                                         .render()
-                                                         .into_bytes()
-                                                         .as_ref())?;
-                                     }
-                                     Ok(())
-                                 }));
+                "echo", Box::new(|h: &Helper,
+                                  _: &Handlebars,
+                                  rc: &mut RenderContext| -> Result<(), RenderError> {
+                                      if let Some(p0) = h.param(0) {
+                                          rc.writer.write(p0.value()
+                                                          .render()
+                                                          .into_bytes()
+                                                          .as_ref())?;
+                                      }
+                                      Ok(())
+                                  }));
+
         }))
         .catch(catchers![not_found])
 }
