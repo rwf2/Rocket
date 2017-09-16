@@ -10,6 +10,7 @@ extern crate rocket;
 use rocket::Request;
 use rocket::response::Redirect;
 use rocket_contrib::Template;
+use rocket_contrib::handlebars::{Helper, Handlebars, RenderContext, RenderError};
 
 #[derive(Serialize)]
 struct TemplateContext {
@@ -43,6 +44,27 @@ fn rocket() -> rocket::Rocket {
     rocket::ignite()
         .mount("/", routes![index, get])
         .attach(Template::fairing())
+        .catch(catchers![not_found])
+}
+
+// when you want to register handlebars helpers
+#[allow(dead_code)]
+fn rocket_with_hbs_helper() -> rocket::Rocket {
+    rocket::ignite()
+        .mount("/", routes![index, get])
+        .attach(Template::config_and_fairing(|ctxt| {
+            ctxt.engines_mut()
+                .handlebars()
+                .register_helper("test",
+                                 Box::new(|_: &Helper,
+                                           _: &Handlebars,
+                                           _: &mut RenderContext|
+                                           -> Result<(), RenderError> {
+                                              // do nothing
+                                              Ok(())
+                                          }));
+
+        }))
         .catch(catchers![not_found])
 }
 

@@ -69,4 +69,14 @@ impl Engines {
 
         None
     }
+
+    #[cfg(feature = "handlebars_templates")]
+    pub fn handlebars(&mut self) -> &mut Handlebars {
+        &mut self.handlebars
+    }
+
+    #[cfg(feature = "tera_templates")]
+    pub fn tera(&mut self) -> &mut Tera {
+        &mut self.tera
+    }
 }

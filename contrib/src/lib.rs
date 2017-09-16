@@ -74,3 +74,9 @@ mod uuid;
 
 #[cfg(feature = "uuid")]
 pub use uuid::{UUID, UuidParseError};
+
+#[cfg(feature = "handlebars_templates")]
+pub extern crate handlebars;
+
+#[cfg(feature = "tera_templates")]
+pub extern crate tera;
