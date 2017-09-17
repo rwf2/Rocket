@@ -26,11 +26,11 @@ mod tera_tests {
         map.insert("content", "<script />");
 
         // Test with a txt file, which shouldn't escape.
-        let template = Template::show(template_root(), "tera/txt_test", &map);
+        let template = Template::show(template_root(), "tera/txt_test", &map, |_| {});
         assert_eq!(template, Some(UNESCAPED_EXPECTED.into()));
 
         // Now with an HTML file, which should.
-        let template = Template::show(template_root(), "tera/html_test", &map);
+        let template = Template::show(template_root(), "tera/html_test", &map, |_| {});
         assert_eq!(template, Some(ESCAPED_EXPECTED.into()));
     }
 }
@@ -51,8 +51,7 @@ mod handlebars_tests {
         map.insert("content", "<script /> hi");
 
         // Test with a txt file, which shouldn't escape.
-        let template = Template::show(template_root(), "hbs/test", &map);
+        let template = Template::show(template_root(), "hbs/test", &map, |_| {});
         assert_eq!(template, Some(EXPECTED.into()));
     }
 }
-

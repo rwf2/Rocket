@@ -39,11 +39,11 @@ fn test_body(optional_cookie: Option<Cookie<'static>>, expected_body: String) {
 fn test_index() {
     // Render the template with an empty context.
     let mut context: HashMap<&str, &str> = HashMap::new();
-    let template = Template::show(TEMPLATE_ROOT, "index", &context).unwrap();
+    let template = Template::show(TEMPLATE_ROOT, "index", &context, |_| {}).unwrap();
     test_body(None, template);
 
     // Render the template with a context that contains the message.
     context.insert("message", "Hello from Rocket!");
-    let template = Template::show(TEMPLATE_ROOT, "index", &context).unwrap();
+    let template = Template::show(TEMPLATE_ROOT, "index", &context, |_| {}).unwrap();
     test_body(Some(Cookie::new("message", "Hello from Rocket!")), template);
 }

@@ -4,6 +4,8 @@ use rocket::http::Method::*;
 use rocket::http::Status;
 use rocket_contrib::Template;
 
+use rocket_contrib::handlebars::{Helper, Handlebars, RenderContext, RenderError, JsonRender};
+
 const TEMPLATE_ROOT: &'static str = "templates/";
 
 macro_rules! dispatch {
@@ -31,7 +33,7 @@ fn test_root() {
         dispatch!(*method, "/", |mut response: LocalResponse| {
             let mut map = ::std::collections::HashMap::new();
             map.insert("path", "/");
-            let expected = Template::show(TEMPLATE_ROOT, "error/404", &map).unwrap();
+            let expected = Template::show(TEMPLATE_ROOT, "error/404", &map, |_| {}).unwrap();
 
             assert_eq!(response.status(), Status::NotFound);
             assert_eq!(response.body_string(), Some(expected));
@@ -48,7 +50,20 @@ fn test_name() {
             items: vec!["One", "Two", "Three"].iter().map(|s| s.to_string()).collect()
         };
 
-        let expected = Template::show(TEMPLATE_ROOT, "index", &context).unwrap();
+        let expected = Template::show(TEMPLATE_ROOT, "index", &context, |engines| {
+            engines.handlebars.register_helper(
+                "echo", Box::new(|h: &Helper,
+                                  _: &Handlebars,
+                                  rc: &mut RenderContext| -> Result<(), RenderError> {
+                                      if let Some(p0) = h.param(0) {
+                                          rc.writer.write(p0.value()
+                                                          .render()
+                                                          .into_bytes()
+                                                          .as_ref())?;
+                                      }
+                                      Ok(())
+                                  }));
+        }).unwrap();
         assert_eq!(response.status(), Status::Ok);
         assert_eq!(response.body_string(), Some(expected));
     });
@@ -61,7 +76,7 @@ fn test_404() {
         let mut map = ::std::collections::HashMap::new();
         map.insert("path", "/hello/");
 
-        let expected = Template::show(TEMPLATE_ROOT, "error/404", &map).unwrap();
+        let expected = Template::show(TEMPLATE_ROOT, "error/404", &map, |_| {}).unwrap();
         assert_eq!(response.status(), Status::NotFound);
         assert_eq!(response.body_string(), Some(expected));
     });

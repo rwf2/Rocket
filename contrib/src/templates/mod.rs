@@ -257,11 +257,13 @@ impl Template {
     /// # #[allow(unused_variables)]
     /// let template = Template::show("templates/", "index", context);
     #[inline]
-    pub fn show<P, S, C>(root: P, name: S, context: C) -> Option<String>
-        where P: AsRef<Path>, S: Into<Cow<'static, str>>, C: Serialize
+    pub fn show<P, S, C, F>(root: P, name: S, context: C, config_closure: F) -> Option<String>
+        where P: AsRef<Path>, S: Into<Cow<'static, str>>, C: Serialize,
+              F: Fn(&mut Engines) + Send + Sync + 'static
     {
         let root = root.as_ref().to_path_buf();
-        Context::initialize(root).and_then(|ctxt| {
+        Context::initialize(root).and_then(|mut ctxt| {
+            config_closure(&mut ctxt.engines);
             Template::render(name, context).finalize(&ctxt).ok().map(|v| v.0)
         })
     }
