@@ -68,7 +68,7 @@ impl RouteParams {
             #[allow(non_snake_case)]
             let $name: $ty = {
                 let mut items = ::rocket::request::FormItems::from($form_string);
-                let form = ::rocket::request::FromForm::from_form(items.by_ref(), true);
+                let form = ::rocket::request::FromForm::from_form(items.by_ref(), false);
                 #[allow(unreachable_patterns)]
                 let obj = match form {
                     Ok(v) => v,
