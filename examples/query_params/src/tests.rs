@@ -52,6 +52,6 @@ fn non_existent_params() {
     });
 
     run_test!("?age=10&name=john&complete=true", |response: Response| {
-        assert_eq!(response.status(), Status::NotFound);
+        assert_eq!(response.status(), Status::Ok);
     });
 }
