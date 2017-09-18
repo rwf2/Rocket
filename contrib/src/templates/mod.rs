@@ -241,6 +241,9 @@ impl Template {
     /// relative, in which case it is relative to the current working directory,
     /// or absolute.
     ///
+    /// This function accepts a closure for user to configure underlying template
+    /// engine, for example, adding your custom helper.
+    ///
     /// Returns `Some` if the template could be rendered. Otherwise, returns
     /// `None`. If rendering fails, error output is printed to the console.
     ///
@@ -255,7 +258,7 @@ impl Template {
     ///
     /// # context.insert("test", "test");
     /// # #[allow(unused_variables)]
-    /// let template = Template::show("templates/", "index", context);
+    /// let template = Template::show("templates/", "index", context, |_| {});
     #[inline]
     pub fn show<P, S, C, F>(root: P, name: S, context: C, config_closure: F) -> Option<String>
         where P: AsRef<Path>, S: Into<Cow<'static, str>>, C: Serialize,
