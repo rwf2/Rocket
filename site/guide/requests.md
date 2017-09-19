@@ -621,7 +621,7 @@ struct Person {
 }
 ```
 
-The [forms](https://github.com/SergioBenitez/Rocket/tree/v0.3.2/examples/forms)
+The [forms](https://github.com/SergioBenitez/Rocket/tree/v0.3.2/examples/form_validation)
 and [forms kitchen
 sink](https://github.com/SergioBenitez/Rocket/tree/v0.3.2/examples/form_kitchen_sink)
 examples on GitHub provide further illustrations.
