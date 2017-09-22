@@ -158,9 +158,35 @@ impl Template {
     /// }
     /// ```
     pub fn fairing() -> impl Fairing {
-        AdHoc::on_attach(|rocket| {
-            let mut template_root = rocket.config()
-                .root_relative(DEFAULT_TEMPLATE_DIR);
+        Template::custom(|_| {})
+    }
+
+    /// Returns a fairing that intializes and maintains templating state.
+    ///
+    /// This method allows you to configure the template context via the
+    /// closure.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// extern crate rocket;
+    /// extern crate rocket_contrib;
+    ///
+    /// use rocket_contrib::Template;
+    ///
+    /// fn main() {
+    ///     rocket::ignite()
+    ///         // ...
+    ///         .attach(Template::custom(|engines| {
+    ///             // engines.handlebars.register_helper ...
+    ///         }))
+    ///         // ...
+    ///     # ;
+    /// }
+    /// ```
+    pub fn custom<F>(f: F) -> impl Fairing where F: Fn(&mut Engines) + Send + Sync + 'static {
+        AdHoc::on_attach(move |rocket| {
+            let mut template_root = rocket.config().root_relative(DEFAULT_TEMPLATE_DIR);
 
             match rocket.config().get_str("template_dir") {
                 Ok(dir) => template_root = rocket.config().root_relative(dir),
@@ -172,7 +198,10 @@ impl Template {
             };
 
             match Context::initialize(template_root) {
-                Some(ctxt) => Ok(rocket.manage(ctxt)),
+                Some(mut ctxt) => {
+                    f(&mut ctxt.engines);
+                    Ok(rocket.manage(ctxt))
+                }
                 None => Err(rocket)
             }
         })
@@ -212,6 +241,9 @@ impl Template {
     /// relative, in which case it is relative to the current working directory,
     /// or absolute.
     ///
+    /// This function accepts a closure for user to configure underlying template
+    /// engine, for example, adding your custom helper.
+    ///
     /// Returns `Some` if the template could be rendered. Otherwise, returns
     /// `None`. If rendering fails, error output is printed to the console.
     ///
@@ -226,13 +258,15 @@ impl Template {
     ///
     /// # context.insert("test", "test");
     /// # #[allow(unused_variables)]
-    /// let template = Template::show("templates/", "index", context);
+    /// let template = Template::show("templates/", "index", context, |_| {});
     #[inline]
-    pub fn show<P, S, C>(root: P, name: S, context: C) -> Option<String>
-        where P: AsRef<Path>, S: Into<Cow<'static, str>>, C: Serialize
+    pub fn show<P, S, C, F>(root: P, name: S, context: C, config_closure: F) -> Option<String>
+        where P: AsRef<Path>, S: Into<Cow<'static, str>>, C: Serialize,
+              F: Fn(&mut Engines) + Send + Sync + 'static
     {
         let root = root.as_ref().to_path_buf();
-        Context::initialize(root).and_then(|ctxt| {
+        Context::initialize(root).and_then(|mut ctxt| {
+            config_closure(&mut ctxt.engines);
             Template::render(name, context).finalize(&ctxt).ok().map(|v| v.0)
         })
     }

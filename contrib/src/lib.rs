@@ -48,6 +48,12 @@ extern crate serde;
 #[cfg_attr(feature = "json", macro_reexport(json_internal))]
 extern crate serde_json;
 
+#[cfg(feature = "handlebars_templates")]
+pub extern crate handlebars;
+
+#[cfg(feature = "tera_templates")]
+pub extern crate tera;
+
 #[cfg(feature = "json")]
 #[cfg_attr(feature = "json", macro_use)]
 #[doc(hidden)]

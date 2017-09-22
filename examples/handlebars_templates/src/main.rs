@@ -10,6 +10,7 @@ extern crate rocket;
 use rocket::Request;
 use rocket::response::Redirect;
 use rocket_contrib::Template;
+use rocket_contrib::handlebars::{Helper, Handlebars, RenderContext, RenderError, JsonRender};
 
 #[derive(Serialize)]
 struct TemplateContext {
@@ -42,7 +43,21 @@ fn not_found(req: &Request) -> Template {
 fn rocket() -> rocket::Rocket {
     rocket::ignite()
         .mount("/", routes![index, get])
-        .attach(Template::fairing())
+        .attach(Template::custom(|engines| {
+            engines.handlebars.register_helper(
+                "echo", Box::new(|h: &Helper,
+                                  _: &Handlebars,
+                                  rc: &mut RenderContext| -> Result<(), RenderError> {
+                                      if let Some(p0) = h.param(0) {
+                                          rc.writer.write(p0.value()
+                                                          .render()
+                                                          .into_bytes()
+                                                          .as_ref())?;
+                                      }
+                                      Ok(())
+                                  }));
+
+        }))
         .catch(errors![not_found])
 }
 
