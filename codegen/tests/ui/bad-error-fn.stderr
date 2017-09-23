@@ -1,0 +1,18 @@
+error: error catchers can have at most 2 arguments
+ --> $DIR/bad-error-fn.rs:9:1
+  |
+9 | fn err_a(_a: Error, _b: Request, _c: Error) -> &'static str { "hi" }
+  | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  |
+  = help: error catchers can take either a `rocket::Error`, `rocket::Request` type, or both.
+
+error: unknown error catcher argument
+  --> $DIR/bad-error-fn.rs:12:14
+   |
+12 | fn err_b(_a: (isize, usize)) -> &'static str { "hi" }
+   |              ^^^^^^^^^^^^^^
+   |
+   = help: error catchers can take either a `rocket::Error`, `rocket::Request` type, or both.
+
+error: aborting due to 2 previous errors
+

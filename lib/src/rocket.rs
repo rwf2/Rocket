@@ -508,19 +508,19 @@ impl Rocket {
     ///
     /// use rocket::Request;
     ///
-    /// #[error(500)]
+    /// #[catch(500)]
     /// fn internal_error() -> &'static str {
     ///     "Whoops! Looks like we messed up."
     /// }
     ///
-    /// #[error(400)]
+    /// #[catch(400)]
     /// fn not_found(req: &Request) -> String {
     ///     format!("I couldn't find '{}'. Try something else?", req.uri())
     /// }
     ///
     /// fn main() {
     /// # if false { // We don't actually want to launch the server in an example.
-    ///     rocket::ignite().catch(errors![internal_error, not_found])
+    ///     rocket::ignite().catch(catchers![internal_error, not_found])
     /// #       .launch();
     /// # }
     /// }

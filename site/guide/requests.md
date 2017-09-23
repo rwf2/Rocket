@@ -736,22 +736,22 @@ Routing may fail for a variety of reasons. These include:
 If any of these conditions occur, Rocket returns an error to the client. To do
 so, Rocket invokes the _error catcher_ corresponding to the error's status code.
 A catcher is like a route, except it only handles errors. Catchers are declared
-via the `error` attribute, which takes a single integer corresponding to the
+via the `catch` attribute, which takes a single integer corresponding to the
 HTTP status code to catch. For instance, to declare a catcher for **404**
 errors, you'd write:
 
 ```rust
-#[error(404)]
+#[catch(404)]
 fn not_found(req: &Request) -> String { ... }
 ```
 
 As with routes, Rocket needs to know about a catcher before it is used to handle
 errors. The process is similar to mounting: call the `catch` method with a list
-of catchers via the `errors!` macro. The invocation to add the **404** catcher
+of catchers via the `catchers!` macro. The invocation to add the **404** catcher
 declared above looks like:
 
 ```rust
-rocket::ignite().catch(errors![not_found])
+rocket::ignite().catch(catchers![not_found])
 ```
 
 Unlike request handlers, error handlers can only take 0, 1, or 2 parameters of

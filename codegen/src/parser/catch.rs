@@ -7,13 +7,13 @@ use rocket::http::Status;
 use utils::{span, MetaItemExt};
 use super::Function;
 
-/// This structure represents the parsed `error` attribute.
-pub struct ErrorParams {
+/// This structure represents the parsed `catch` attribute.
+pub struct CatchParams {
     pub annotated_fn: Function,
     pub code: Spanned<u16>,
 }
 
-impl ErrorParams {
+impl CatchParams {
     /// Parses the route attribute from the given decorator context. If the
     /// parse is not successful, this function exits early with the appropriate
     /// error message to the user.
@@ -21,7 +21,7 @@ impl ErrorParams {
                 sp: Span,
                 meta_item: &MetaItem,
                 annotated: &Annotatable)
-                -> ErrorParams {
+                -> CatchParams {
         let function = Function::from(annotated).unwrap_or_else(|item_sp| {
             ecx.span_err(sp, "this attribute can only be used on functions...");
             ecx.span_fatal(item_sp, "...but was applied to the item above.");
@@ -40,7 +40,7 @@ impl ErrorParams {
             ecx.span_fatal(sp, "attribute can only have one `code` parameter");
         }
 
-        ErrorParams {
+        CatchParams {
             annotated_fn: function,
             code: parse_code(ecx, &meta_items[0])
         }
@@ -74,8 +74,8 @@ fn parse_code(ecx: &ExtCtxt, meta_item: &NestedMetaItem) -> Spanned<u16> {
     } else {
         ecx.struct_span_err(sp, r#"expected `code = int` or an integer literal"#)
             .help(r#"you can specify the code directly as an integer,
-                  e.g: #[error(404)], or as a key-value pair,
-                  e.g: $[error(code = 404)]"#)
+                  e.g: #[catch(404)], or as a key-value pair,
+                  e.g: $[catch(code = 404)]"#)
             .emit();
     }
 

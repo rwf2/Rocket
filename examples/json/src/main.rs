@@ -61,7 +61,7 @@ fn get(id: ID, map: State<MessageMap>) -> Option<Json<Message>> {
     })
 }
 
-#[error(404)]
+#[catch(404)]
 fn not_found() -> Json<Value> {
     Json(json!({
         "status": "error",
@@ -72,7 +72,7 @@ fn not_found() -> Json<Value> {
 fn rocket() -> rocket::Rocket {
     rocket::ignite()
         .mount("/message", routes![new, update, get])
-        .catch(errors![not_found])
+        .catch(catchers![not_found])
         .manage(Mutex::new(HashMap::<ID, String>::new()))
 }
 

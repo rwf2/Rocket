@@ -35,7 +35,7 @@ fn post_hello(age: u8, name: String) -> content::Json<String> {
     content::Json(serde_json::to_string(&person).unwrap())
 }
 
-#[error(404)]
+#[catch(404)]
 fn not_found(request: &Request) -> content::Html<String> {
     let html = match request.format() {
         Some(ref mt) if !mt.is_json() && !mt.is_plain() => {
@@ -52,6 +52,6 @@ fn not_found(request: &Request) -> content::Html<String> {
 fn main() {
     rocket::ignite()
         .mount("/hello", routes![get_hello, post_hello])
-        .catch(errors![not_found])
+        .catch(catchers![not_found])
         .launch();
 }

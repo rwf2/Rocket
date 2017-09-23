@@ -32,7 +32,7 @@ use yansi::Color::*;
 /// # Code Generation
 ///
 /// Catchers should rarely be used directly. Instead, they are typically
-/// declared using the `error` decorator, as follows:
+/// declared using the `catch` decorator, as follows:
 ///
 /// ```rust
 /// #![feature(plugin)]
@@ -42,24 +42,24 @@ use yansi::Color::*;
 ///
 /// use rocket::Request;
 ///
-/// #[error(500)]
+/// #[catch(500)]
 /// fn internal_error() -> &'static str {
 ///     "Whoops! Looks like we messed up."
 /// }
 ///
-/// #[error(404)]
+/// #[catch(400)]
 /// fn not_found(req: &Request) -> String {
 ///     format!("I couldn't find '{}'. Try something else?", req.uri())
 /// }
 ///
 /// fn main() {
 /// # if false { // We don't actually want to launch the server in an example.
-///     rocket::ignite().catch(errors![internal_error, not_found]).launch();
+///     rocket::ignite().catch(catchers![internal_error, not_found]).launch();
 /// # }
 /// }
 /// ```
 ///
-/// A function decorated with `error` can take in 0, 1, or 2 parameters:
+/// A function decorated with `catch` can take in 0, 1, or 2 parameters:
 /// `Error`, `&Request`, or both, as desired.
 pub struct Catcher {
     /// The HTTP status code to match against.
@@ -151,7 +151,7 @@ macro_rules! error_page_template {
     )
 }
 
-macro_rules! default_errors {
+macro_rules! default_catchers {
     ($($code:expr, $name:expr, $description:expr, $fn_name:ident),+) => (
         let mut map = HashMap::new();
 
@@ -180,7 +180,7 @@ pub mod defaults {
     use error::Error;
 
     pub fn get() -> HashMap<u16, Catcher> {
-        default_errors! {
+        default_catchers! {
             400, "Bad Request", "The request could not be understood by the server due
                 to malformed syntax.", handle_400,
             401, "Unauthorized", "The request requires user authentication.",

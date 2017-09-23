@@ -5,7 +5,7 @@ extern crate rocket;
 
 use rocket::response::Redirect;
 
-#[error(404)]
+#[catch(404)]
 fn not_found() -> Redirect {
     Redirect::to("/")
 }
@@ -17,7 +17,7 @@ mod tests {
 
     #[test]
     fn error_catcher_redirect() {
-        let client = Client::new(rocket::ignite().catch(errors![not_found])).unwrap();
+        let client = Client::new(rocket::ignite().catch(catchers![not_found])).unwrap();
         let response = client.get("/unknown").dispatch();
         println!("Response:\n{:?}", response);
 

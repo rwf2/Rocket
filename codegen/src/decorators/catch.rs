@@ -1,5 +1,5 @@
 use ::{CATCH_STRUCT_PREFIX, CATCH_FN_PREFIX, CATCHER_ATTR};
-use parser::ErrorParams;
+use parser::CatchParams;
 use utils::*;
 
 use syntax::codemap::{Span};
@@ -11,21 +11,21 @@ use syntax::parse::token;
 const ERR_PARAM: &'static str = "__err";
 const REQ_PARAM: &'static str = "__req";
 
-trait ErrorGenerateExt {
+trait CatchGenerateExt {
     fn generate_fn_arguments(&self, &ExtCtxt, Ident, Ident) -> Vec<TokenTree>;
 }
 
-impl ErrorGenerateExt for ErrorParams {
+impl CatchGenerateExt for CatchParams {
     fn generate_fn_arguments(&self, ecx: &ExtCtxt, err: Ident, req: Ident)
             -> Vec<TokenTree> {
-        let arg_help = "error handlers can take either a `rocket::Error` or \
+        let arg_help = "error catchers can take either a `rocket::Error`, \
                       `rocket::Request` type, or both.";
 
         // Retrieve the params from the user's handler and check the number.
         let input_args = &self.annotated_fn.decl().inputs;
         if input_args.len() > 2 {
             let sp = self.annotated_fn.span();
-            ecx.struct_span_err(sp, "error handlers can have at most 2 arguments")
+            ecx.struct_span_err(sp, "error catchers can have at most 2 arguments")
                 .help(arg_help).emit()
         }
 
@@ -35,8 +35,10 @@ impl ErrorGenerateExt for ErrorParams {
                 TyKind::Rptr(..) => Some(req),
                 TyKind::Path(..) => Some(err),
                 _ => {
-                    ecx.struct_span_err(ty.span, "unexpected error handler argument")
-                        .help(arg_help).emit();
+                    ecx.struct_span_err(ty.span, "unknown error catcher argument")
+                        .help(arg_help)
+                        .emit();
+
                     None
                 }
             }
@@ -46,24 +48,24 @@ impl ErrorGenerateExt for ErrorParams {
     }
 }
 
-pub fn error_decorator(ecx: &mut ExtCtxt,
-                       sp: Span,
-                       meta_item: &MetaItem,
-                       annotated: Annotatable)
-    -> Vec<Annotatable>
-{
+pub fn catch_decorator(
+    ecx: &mut ExtCtxt,
+    sp: Span,
+    meta_item: &MetaItem,
+    annotated: Annotatable
+) -> Vec<Annotatable> {
     let mut output = Vec::new();
 
-    // Parse the parameters from the error annotation.
-    let error = ErrorParams::from(ecx, sp, meta_item, &annotated);
+    // Parse the parameters from the `catch` annotation.
+    let catch = CatchParams::from(ecx, sp, meta_item, &annotated);
 
     // Get all of the information we learned from the attribute + function.
-    let user_fn_name = error.annotated_fn.ident();
+    let user_fn_name = catch.annotated_fn.ident();
     let catch_fn_name = user_fn_name.prepend(CATCH_FN_PREFIX);
-    let code = error.code.node;
+    let code = catch.code.node;
     let err_ident = Ident::from_str(ERR_PARAM);
     let req_ident = Ident::from_str(REQ_PARAM);
-    let fn_arguments = error.generate_fn_arguments(ecx, err_ident, req_ident);
+    let fn_arguments = catch.generate_fn_arguments(ecx, err_ident, req_ident);
 
     // Push the Rocket generated catch function.
     emit_item(&mut output, quote_item!(ecx,
@@ -78,7 +80,7 @@ pub fn error_decorator(ecx: &mut ExtCtxt,
         }
     ).expect("catch function"));
 
-    // Push the static catch info. This is what the errors! macro refers to.
+    // Push the static catch info. This is what the `catchers!` macro refers to.
     let struct_name = user_fn_name.prepend(CATCH_STRUCT_PREFIX);
     emit_item(&mut output, quote_item!(ecx,
         #[allow(non_upper_case_globals)]

@@ -9,7 +9,7 @@ fn test<H>(method: Method, uri: &str, header: H, status: Status, body: String)
 {
     let rocket = rocket::ignite()
         .mount("/hello", routes![super::get_hello, super::post_hello])
-        .catch(errors![super::not_found]);
+        .catch(catchers![super::not_found]);
 
     let client = Client::new(rocket).unwrap();
     let mut response = client.req(method, uri).header(header).dispatch();
