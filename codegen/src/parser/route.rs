@@ -27,6 +27,7 @@ pub struct RouteParams {
     pub query_param: Option<Spanned<Ident>>,
     pub format: Option<KVSpanned<MediaType>>,
     pub rank: Option<KVSpanned<isize>>,
+    pub lenient: Option<KVSpanned<bool>>,
 }
 
 impl RouteParams {
@@ -76,7 +77,7 @@ impl RouteParams {
 
         // Parse all of the optional parameters.
         let mut seen_keys = HashSet::new();
-        let (mut rank, mut data, mut format) = Default::default();
+        let (mut rank, mut data, mut format, mut lenient) = Default::default();
         for param in &attr_params[1..] {
             let kv_opt = kv_from_nested(param);
             if kv_opt.is_none() {
@@ -89,6 +90,7 @@ impl RouteParams {
                 "rank" => rank = parse_opt(ecx, &kv, parse_rank),
                 "data" => data = parse_opt(ecx, &kv, parse_data),
                 "format" => format = parse_opt(ecx, &kv, parse_format),
+                "query" => lenient = parse_opt(ecx, &kv, parse_query),
                 _ => {
                     let msg = format!("'{}' is not a known parameter", kv.key());
                     ecx.span_err(kv.span, &msg);
@@ -123,6 +125,7 @@ impl RouteParams {
             query_param: query,
             format: format,
             rank: rank,
+            lenient: lenient,
             annotated_fn: function,
         }
     }
@@ -276,4 +279,21 @@ fn parse_format(ecx: &ExtCtxt, kv: &KVSpanned<LitKind>) -> MediaType {
         .emit();
 
     MediaType::Any
+}
+
+fn parse_query(ecx: &ExtCtxt, kv: &KVSpanned<LitKind>) -> bool { 
+    if let LitKind::Str(ref s, _) = *kv.value() {
+        if s.as_str() == "lenient" {
+            return true
+        } else {
+            ecx.span_err(kv.value.span, "malformed query value");
+        }
+    }
+
+    ecx.struct_span_err(kv.span, r#"'query' must only be "lenient""#)
+        .help("The only time you should specify query is to enable parsing the 
+               query statement leniently. By default, it will be parsed strictly, 
+               so in that case don't add a query key to the decorator.")
+        .emit();
+    false
 }

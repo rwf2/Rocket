@@ -51,7 +51,8 @@ impl RouteParams {
     fn gen_form(&self,
                 ecx: &ExtCtxt,
                 param: Option<&Spanned<Ident>>,
-                form_string: P<Expr>)
+                form_string: P<Expr>,
+                strict: bool)
                 -> Option<Stmt> {
         let arg = param.and_then(|p| self.annotated_fn.find_input(&p.node.name));
         if param.is_none() {
@@ -68,7 +69,7 @@ impl RouteParams {
             #[allow(non_snake_case)]
             let $name: $ty = {
                 let mut items = ::rocket::request::FormItems::from($form_string);
-                let form = ::rocket::request::FromForm::from_form(items.by_ref(), true);
+                let form = ::rocket::request::FromForm::from_form(items.by_ref(), $strict);
                 #[allow(unreachable_patterns)]
                 let obj = match form {
                     Ok(v) => v,
@@ -114,6 +115,11 @@ impl RouteParams {
 
     fn generate_query_statement(&self, ecx: &ExtCtxt) -> Option<Stmt> {
         let param = self.query_param.as_ref();
+        // lenient is only set when strict is false
+        let strict = match self.lenient {
+            Some(_) => false,
+            None => true
+        };
         let expr = quote_expr!(ecx,
            match __req.uri().query() {
                Some(query) => query,
@@ -121,7 +127,7 @@ impl RouteParams {
            }
         );
 
-        self.gen_form(ecx, param, expr)
+        self.gen_form(ecx, param, expr, strict)
     }
 
     // TODO: Add some kind of logging facility in Rocket to get be able to log
