@@ -152,13 +152,13 @@ impl<'c> LocalRequest<'c> {
     ///
     /// # Examples
     ///
-    /// Set the remote address to "8.8.8.8:80":
+    /// Set the remote address to "8.8.8.8:54321":
     ///
     /// ```rust
     /// use rocket::local::Client;
     ///
     /// let client = Client::new(rocket::ignite()).unwrap();
-    /// let address = "8.8.8.8:80".parse().unwrap();
+    /// let address = "8.8.8.8:54321".parse().unwrap();
     /// let req = client.get("/").remote(address);
     /// ```
     #[inline]
