@@ -198,6 +198,12 @@ mod test {
         assert!(route(&router, Get, "/i/a").is_some());
         assert!(route(&router, Get, "/jdlk/asdij").is_some());
 
+        let router = router_with_routes(&["/a?<b>"]);
+        assert!(route(&router, Get, "/a?hi").is_some());
+        assert!(route(&router, Get, "/a?").is_some());
+        assert!(route(&router, Get, "/a#").is_some());
+        assert!(route(&router, Get, "/a").is_some());
+
         let mut router = Router::new();
         router.add(Route::new(Put, "/hello".to_string(), dummy_handler));
         router.add(Route::new(Post, "/hello".to_string(), dummy_handler));
@@ -259,9 +265,14 @@ mod test {
         assert_ranked_routes!(&["/<a>/<b>", "/hi/a"], "/hi/c", "/<a>/<b>");
         assert_ranked_routes!(&["/hi/a", "/hi/<c>"], "/hi/c", "/hi/<c>");
         assert_ranked_routes!(&["/a", "/a?<b>"], "/a?b=c", "/a?<b>");
-        assert_ranked_routes!(&["/a", "/a?<b>"], "/a", "/a");
-        assert_ranked_routes!(&["/a", "/<a>", "/a?<b>", "/<a>?<b>"], "/a", "/a");
-        assert_ranked_routes!(&["/a", "/<a>", "/a?<b>", "/<a>?<b>"], "/b", "/<a>");
+        assert_ranked_routes!(&["/a", "/a?<b>"], "/a", "/a?<b>");
+        assert_ranked_routes!(&["/a", "/a?<b>"], "/a?", "/a?<b>");
+        assert_ranked_routes!(&["/a", "/<a>?<b>"], "/a", "/a");
+        assert_ranked_routes!(&["/a", "/<a>?<b>"], "/a?", "/a");
+        assert_ranked_routes!(&["/<a>", "/a?<b>"], "/a", "/a?<b>");
+        assert_ranked_routes!(&["/<a>", "/a?<b>"], "/a?", "/a?<b>");
+        assert_ranked_routes!(&["/a", "/<a>", "/a?<b>", "/<a>?<b>"], "/a", "/a?<b>");
+        assert_ranked_routes!(&["/a", "/<a>", "/a?<b>", "/<a>?<b>"], "/b", "/<a>?<b>");
         assert_ranked_routes!(&["/a", "/<a>", "/a?<b>", "/<a>?<b>"],
                               "/b?v=1", "/<a>?<b>");
         assert_ranked_routes!(&["/a", "/<a>", "/a?<b>", "/<a>?<b>"],
@@ -397,7 +408,7 @@ mod test {
         assert_default_ranked_routing!(
             to: "a/b",
             with: ["a/<b>", "a/b", "a/b?<v>", "a/<b>?<v>"],
-            expect: "a/b", "a/<b>"
+            expect: "a/b?<v>", "a/b", "a/<b>?<v>", "a/<b>"
         );
     }
 

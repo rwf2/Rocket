@@ -114,12 +114,7 @@ impl RouteParams {
 
     fn generate_query_statement(&self, ecx: &ExtCtxt) -> Option<Stmt> {
         let param = self.query_param.as_ref();
-        let expr = quote_expr!(ecx,
-           match __req.uri().query() {
-               Some(query) => query,
-               None => return ::rocket::Outcome::Forward(__data)
-           }
-        );
+        let expr = quote_expr!(ecx, __req.uri().query());
 
         self.gen_form(ecx, param, expr)
     }

@@ -108,14 +108,11 @@ impl Collider for Route {
 // intended for this Route. Format collisions works like this:
 //   * If route specifies format, it only gets requests for that format.
 //   * If route doesn't specify format, it gets requests for any format.
-// Query collisions work like this:
-//   * If route specifies a query, it only gets request that have queries.
-//   * If route doesn't specify query, requests with & without queries collide.
+// Queries are irrelevant to collision with a route.
 impl<'r> Collider<Request<'r>> for Route {
     fn collides_with(&self, req: &Request<'r>) -> bool {
         self.method == req.method()
             && self.uri.collides_with(req.uri())
-            && self.uri.query().map_or(true, |_| req.uri().query().is_some())
             && match self.format {
                 Some(ref mt_a) => match req.format() {
                     Some(ref mt_b) => mt_a.collides_with(mt_b),
@@ -444,10 +441,10 @@ mod tests {
 
         assert!(req_route_path_collide("/a/b?a=b", "/a/b"));
         assert!(req_route_path_collide("/a/b", "/a/b"));
+        assert!(req_route_path_collide("/a/b", "/a/b?<c>"));
         assert!(req_route_path_collide("/a/b/c/d?", "/a/b/c/d"));
         assert!(req_route_path_collide("/a/b/c/d?v=1&v=2", "/a/b/c/d"));
 
-        assert!(!req_route_path_collide("/a/b", "/a/b?<c>"));
         assert!(!req_route_path_collide("/a/b/c", "/a/b?<c>"));
         assert!(!req_route_path_collide("/a?b=c", "/a/b?<c>"));
         assert!(!req_route_path_collide("/?b=c", "/a/b?<c>"));
