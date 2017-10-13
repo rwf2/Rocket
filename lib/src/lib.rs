@@ -42,7 +42,7 @@
 //! Rocket matures. To use Rocket with the code generation plugin in your
 //! Cargo-based project, add the following to `Cargo.toml`:
 //!
-//! ```rust,ignore
+//! ```toml
 //! [dependencies]
 //! rocket = "*"
 //! rocket_codegen = "*"
