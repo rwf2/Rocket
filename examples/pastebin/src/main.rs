@@ -16,7 +16,7 @@ use rocket::response::content;
 
 use paste_id::PasteID;
 
-const HOST: &'static str = "http://localhost:8000";
+const HOST: &'static str = "http://localhost:54321";
 const ID_LENGTH: usize = 3;
 
 #[post("/", data = "<paste>")]
@@ -45,7 +45,7 @@ fn index() -> &'static str {
           accepts raw data in the body of the request and responds with a URL of
           a page containing the body's content
 
-          EXMAPLE: curl --data-binary @file.txt http://localhost:8000
+          EXMAPLE: curl --data-binary @file.txt http://localhost:54321
 
       GET /<id>
 

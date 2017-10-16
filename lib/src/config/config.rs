@@ -211,7 +211,7 @@ impl Config {
                 Config {
                     environment: Development,
                     address: "localhost".to_string(),
-                    port: 8000,
+                    port: 54321,
                     workers: default_workers,
                     log_level: LoggingLevel::Normal,
                     secret_key: key,

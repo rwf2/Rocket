@@ -30,7 +30,7 @@ use http::{Header, Cookie};
 /// let client = Client::new(rocket::ignite()).expect("valid rocket");
 /// let req = client.post("/")
 ///     .header(ContentType::JSON)
-///     .remote("127.0.0.1:8000".parse().unwrap())
+///     .remote("127.0.0.1:54321".parse().unwrap())
 ///     .cookie(Cookie::new("name", "value"))
 ///     .body(r#"{ "value": 42 }"#);
 /// ```

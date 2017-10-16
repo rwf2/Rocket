@@ -17,7 +17,7 @@ mod remote_rewrite_tests {
 
     use std::net::SocketAddr;
 
-    const KNOWN_IP: &'static str = "127.0.0.1:8000";
+    const KNOWN_IP: &'static str = "127.0.0.1:54321";
 
     fn check_ip(header: Option<Header<'static>>, ip: Option<String>) {
         let addr: SocketAddr = KNOWN_IP.parse().unwrap();

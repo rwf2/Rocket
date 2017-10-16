@@ -8,7 +8,7 @@ msgpack = 1048576 # this is an extra used by the msgpack contrib module
 
 [development]
 address = "localhost"
-port = 8000
+port = 54321
 workers = 1
 log = "normal"
 hi = "Hello!" # this is an unused extra; maybe application specific?

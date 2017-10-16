@@ -172,7 +172,7 @@ impl<'r> Request<'r> {
     ///
     /// # Example
     ///
-    /// Set the remote address to be 127.0.0.1:8000:
+    /// Set the remote address to be 127.0.0.1:54321:
     ///
     /// ```rust
     /// # use rocket::Request;
@@ -180,7 +180,7 @@ impl<'r> Request<'r> {
     /// use std::net::{SocketAddr, IpAddr, Ipv4Addr};
     ///
     /// # Request::example(Method::Get, "/uri", |mut request| {
-    /// let (ip, port) = (IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)), 8000);
+    /// let (ip, port) = (IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)), 54321);
     /// let localhost = SocketAddr::new(ip, port);
     /// request.set_remote(localhost);
     ///

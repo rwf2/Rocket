@@ -17,7 +17,7 @@ fn check_config(config: State<LocalConfig>) -> Option<()> {
     match &*environment {
         "development" => {
             assert_eq!(config.address, "localhost".to_string());
-            assert_eq!(config.port, 8000);
+            assert_eq!(config.port, 54321);
             assert_eq!(config.workers, 1);
             assert_eq!(config.log_level, LoggingLevel::Normal);
             assert_eq!(config.environment, config::Environment::Development);
