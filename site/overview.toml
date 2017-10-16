@@ -157,7 +157,7 @@ The `launch` call starts the server. In development, Rocket prints useful
 information to the console to let you know everything is okay.
 
 ```sh
-🚀  Rocket has launched from http://localhost:8000...
+🚀  Rocket has launched from http://localhost:54321...
 ```
 '''
 

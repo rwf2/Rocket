@@ -59,7 +59,7 @@ value:
 ```toml
 [development]
 address = "localhost"
-port = 8000
+port = 54321
 workers = [number of cpus * 2]
 log = "normal"
 secret_key = [randomly generated at launch]

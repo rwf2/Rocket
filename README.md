@@ -25,7 +25,7 @@ fn main() {
 }
 ```
 
-Visiting `localhost:8000/hello/John/58`, for example, will trigger the `hello`
+Visiting `localhost:54321/hello/John/58`, for example, will trigger the `hello`
 route resulting in the string `Hello, 58 year old named John!` being sent to the
 browser. If an `<age>` string was passed in that can't be parsed as a `u8`, the
 route won't get called, resulting in a 404 error.
@@ -85,7 +85,7 @@ cd examples/hello_world
 cargo run
 ```
 
-You should see `Hello, world!` by visiting `http://localhost:8000`.
+You should see `Hello, world!` by visiting `http://localhost:54321`.
 
 ## Testing
 

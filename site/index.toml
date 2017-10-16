@@ -60,7 +60,7 @@ code = '''
 '''
 text = '''
   This is a **complete Rocket application**. It does exactly what you would
-  expect. If you were to visit **http://localhost:8000/hello/John/58**, you’d
+  expect. If you were to visit **http://localhost:54321/hello/John/58**, you’d
   see:
 
   <span class="callout">Hello, 58 year old named John!</span>
