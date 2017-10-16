@@ -214,7 +214,7 @@ well-formed JSON data: simply return a value of type `Json<T>` where `T` is the
 type of a structure to serialize into JSON. The type `T` must implement the
 [`Serialize`] trait from [`serde`], which can be automatically derived.
 
-An an example, to respond with the JSON value of a `Task` structure, we might
+As an example, to respond with the JSON value of a `Task` structure, we might
 write:
 
 ```rust
