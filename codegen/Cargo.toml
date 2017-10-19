@@ -16,7 +16,7 @@ plugin = true
 
 [dependencies]
 rocket = { version = "0.4.0-dev", path = "../lib/" }
-ordermap = "0.2"
+ordermap = "0.3"
 log = "0.3"
 
 [dev-dependencies]

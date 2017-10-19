@@ -597,7 +597,7 @@ impl Config {
         self.secret_key.inner()
     }
 
-    /// Attempts to retrieve the extra named `name` as a string.
+    /// Attempts to retrieve the extra named `name` as a borrowed string.
     ///
     /// # Errors
     ///
@@ -619,6 +619,29 @@ impl Config {
     pub fn get_str<'a>(&'a self, name: &str) -> Result<&'a str> {
         let val = self.extras.get(name).ok_or_else(|| ConfigError::NotFound)?;
         val.as_str().ok_or_else(|| self.bad_type(name, val.type_str(), "a string"))
+    }
+
+    /// Attempts to retrieve the extra named `name` as an owned string.
+    ///
+    /// # Errors
+    ///
+    /// If an extra with `name` doesn't exist, returns an `Err` of `NotFound`.
+    /// If an extra with `name` _does_ exist but is not a string, returns a
+    /// `BadType` error.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use rocket::config::{Config, Environment};
+    ///
+    /// let config = Config::build(Environment::Staging)
+    ///     .extra("my_extra", "extra_value")
+    ///     .unwrap();
+    ///
+    /// assert_eq!(config.get_string("my_extra"), Ok("extra_value".to_string()));
+    /// ```
+    pub fn get_string(&self, name: &str) -> Result<String> {
+        self.get_str(name).map(|s| s.to_string())
     }
 
     /// Attempts to retrieve the extra named `name` as an integer.

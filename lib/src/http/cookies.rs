@@ -209,10 +209,16 @@ impl<'a> Cookies<'a> {
     /// [`get_private`](#method.get_private) and removed using
     /// [`remove_private`](#method.remove_private).
     ///
-    /// If a path is not set on `cookie`, the `"/"` path will automatically be
-    /// set. If a `SameSite` attribute is not set, the attribute will be set to
-    /// `Strict`. These defaults ensure maximum usability and security. For
-    /// additional security, you may wish to set the `http_only` flag.
+    /// Unless a value is supplied for the given key, the following defaults are
+    /// set on `cookie` before being added to `self`:
+    ///
+    ///    * `path`: `"/"`
+    ///    * `SameSite`: `Strict`
+    ///    * `HttpOnly`: `true`
+    ///    * `Expires`: 1 week from now
+    ///
+    /// These defaults ensure maximum usability and security. For additional
+    /// security, you may wish to set the `secure` flag.
     ///
     /// # Example
     ///
@@ -221,17 +227,20 @@ impl<'a> Cookies<'a> {
     ///
     /// fn handler(mut cookies: Cookies) {
     ///     cookies.add_private(Cookie::new("name", "value"));
-    ///
-    ///     // Set the `HttpOnly` flag.
-    ///     let mut cookie = Cookie::new("name", "value");
-    ///     cookie.set_http_only(true);
-    ///     cookies.add(cookie);
     /// }
     /// ```
     pub fn add_private(&mut self, mut cookie: Cookie<'static>) {
         if let Cookies::Jarred(ref mut jar, key) = *self {
             if cookie.path().is_none() {
                 cookie.set_path("/");
+            }
+
+            if cookie.http_only().is_none() {
+                cookie.set_http_only(true);
+            }
+
+            if cookie.expires().is_none() {
+                cookie.set_expires(::time::now() + ::time::Duration::weeks(1));
             }
 
             if cookie.same_site().is_none() {
