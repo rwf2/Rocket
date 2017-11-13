@@ -25,6 +25,7 @@ members = [
   "examples/json",
   "examples/msgpack",
   "examples/handlebars_templates",
+  "examples/tera_templates",
   "examples/form_kitchen_sink",
   "examples/config",
   "examples/raw_upload",

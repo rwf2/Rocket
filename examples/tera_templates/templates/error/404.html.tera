@@ -1,0 +1,11 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>404</title>
+  </head>
+  <body>
+    <h1>404: Hey! There's nothing here.</h1>
+    The page at {{ path }} does not exist!
+  </body>
+</html>
