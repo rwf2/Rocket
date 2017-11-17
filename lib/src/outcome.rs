@@ -40,7 +40,7 @@
 //!
 //! In Rocket, a `Failure` generally means that a request is taken out of normal
 //! processing. The request is then given to the catcher corresponding to some
-//! status code. users can catch failures by requesting a type of `Result<S, E>`
+//! status code. Users can catch failures by requesting a type of `Result<S, E>`
 //! or `Option<S>` in request handlers. For example, if a user's handler looks
 //! like:
 //!
