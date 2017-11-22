@@ -132,6 +132,10 @@ impl Rocket {
             hyp_res.headers_mut().append_raw(name, value);
         }
 
+        if let Some(_) = response.headers().get_one("Content-Length") {
+            return hyp_res.start()?.end();
+        }
+
         if response.body().is_none() {
             hyp_res.headers_mut().set(header::ContentLength(0));
             return hyp_res.start()?.end();
