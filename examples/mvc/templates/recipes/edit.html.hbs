@@ -1,0 +1,12 @@
+{{#*inline "content"}}
+<h1>Edit recipe</h1>
+<form action="/recipes/{{id}}" method="POST">
+    <input type="hidden" name="_method" value="put" />
+    <div class="form-group">
+        <label for="name">Name</label>
+        <input type="text" class="form-control" name="name" value="{{name}}">
+    </div>
+    <input type="submit" class="btn btn-secondary">
+</form>
+{{/inline}}
+{{~> layouts/main~}}

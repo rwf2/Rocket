@@ -1,0 +1,11 @@
+{{#*inline "content"}}
+<h1>New recipe</h1>
+<form action="/recipes" method="POST">
+    <div class="form-group">
+        <label for="name">Name</label>
+        <input type="text" class="form-control" name="name">
+    </div>
+    <input type="submit" class="btn btn-secondary">
+</form>
+{{/inline}}
+{{~> layouts/main~}}
