@@ -40,11 +40,3 @@ And now you can build project
 $ cargo run
 ~~~
 
-
-## Benchmark
-
-## License
-
-[MIT](https://opensource.org/licenses/MIT)
-
-[Rust]: https://www.rust-lang.org/
