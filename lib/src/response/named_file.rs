@@ -1,11 +1,12 @@
 use std::fs::File;
 use std::path::{Path, PathBuf};
-use std::io::{self, BufReader};
+use std::io;
 use std::ops::{Deref, DerefMut};
 
 use request::Request;
 use response::{Response, Responder};
 use http::{Status, ContentType};
+use response::Body;
 
 /// A file with an associated name; responds with the Content-Type based on the
 /// file extension.
@@ -88,7 +89,11 @@ impl Responder<'static> for NamedFile {
             }
         }
 
-        response.set_streamed_body(BufReader::new(self.take_file()));
+        match self.0.metadata() {
+            Ok(meta) => response.set_raw_body(Body::Sized(self.take_file(), meta.len())),
+            Err(_) => response.set_streamed_body(self.take_file())
+        }
+
         Ok(response)
     }
 }
