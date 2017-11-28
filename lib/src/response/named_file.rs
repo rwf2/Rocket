@@ -88,10 +88,12 @@ impl Responder<'static> for NamedFile {
                 response.set_header(ct);
             }
         }
+
         match self.0.metadata() {
             Ok(meta) => response.set_raw_body(Body::Sized(self.take_file(), meta.len())),
             Err(_) => response.set_streamed_body(self.take_file())
         }
+
         Ok(response)
     }
 }
