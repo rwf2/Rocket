@@ -38,7 +38,7 @@ isatty = "0.1"
 
 [dependencies.cookie]
 git = "https://github.com/alexcrichton/cookie-rs"
-rev = "b8298e"
+rev = "f4e6930"
 features = ["percent-encode", "secure"]
 
 [dev-dependencies]

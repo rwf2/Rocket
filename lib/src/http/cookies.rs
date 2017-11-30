@@ -231,23 +231,43 @@ impl<'a> Cookies<'a> {
     /// ```
     pub fn add_private(&mut self, mut cookie: Cookie<'static>) {
         if let Cookies::Jarred(ref mut jar, key) = *self {
-            if cookie.path().is_none() {
-                cookie.set_path("/");
-            }
-
-            if cookie.http_only().is_none() {
-                cookie.set_http_only(true);
-            }
-
-            if cookie.expires().is_none() {
-                cookie.set_expires(::time::now() + ::time::Duration::weeks(1));
-            }
-
-            if cookie.same_site().is_none() {
-                cookie.set_same_site(SameSite::Strict);
-            }
-
+            Cookies::set_private_defaults(&mut cookie);
             jar.private(key).add(cookie)
+        }
+    }
+
+    /// Adds an original, private `cookie` to the collection.
+    pub(crate) fn add_original_private(&mut self, mut cookie: Cookie<'static>) {
+        if let Cookies::Jarred(ref mut jar, key) = *self {
+            Cookies::set_private_defaults(&mut cookie);
+            jar.private(key).add_original(cookie)
+        }
+    }
+
+    /// For each property mentioned below, this method checks
+    /// if there is provided value and if there is none, set default value.
+    /// Default values are:
+    ///
+    ///    * `path`: `"/"`
+    ///    * `SameSite`: `Strict`
+    ///    * `HttpOnly`: `true`
+    ///    * `Expires`: 1 week from now
+    ///
+    fn set_private_defaults(cookie: &mut Cookie<'static>) {
+        if cookie.path().is_none() {
+            cookie.set_path("/");
+        }
+
+        if cookie.http_only().is_none() {
+            cookie.set_http_only(true);
+        }
+
+        if cookie.expires().is_none() {
+            cookie.set_expires(::time::now() + ::time::Duration::weeks(1));
+        }
+
+        if cookie.same_site().is_none() {
+            cookie.set_same_site(SameSite::Strict);
         }
     }
 
