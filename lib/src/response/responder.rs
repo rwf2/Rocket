@@ -115,7 +115,7 @@ use request::Request;
 /// regardless of the incoming request. Thus, knowing the type is sufficient to
 /// fully determine its functionality.
 ///
-/// # Example
+/// # Example: custom types
 ///
 /// Say that you have a custom type, `Person`:
 ///
@@ -171,6 +171,34 @@ use request::Request;
 /// # #[get("/person")]
 /// # fn person() -> Person { Person { name: "a".to_string(), age: 20 } }
 /// # fn main() {  }
+/// ```
+///
+/// # Example: Different kinds of response
+///
+/// One notable omission from the provided implementations of `Responder` above
+/// is 'either': you might have an endpoint that, aside from a possible error,
+/// might return either a `Redirect` or send some string response from a template.
+/// The recommended way to model this is to introduce your own enum
+/// and provide your own `Responder` implementation for this enum type, for
+/// example:
+/// ```rust
+/// # #![feature(plugin)]
+/// # #![plugin(rocket_codegen)]
+///
+/// enum RetrievedData {
+///   ActualContent(String),
+///   Reference(String),
+/// }
+/// use RetrievedData::*;
+///
+/// impl<'r> Responder<'r> for RetrievedData {
+///   fn respond_to(self, request: &Request) -> Result<Response<'r>, Status> {
+///     match self {
+///       ActualContent(content) => content.to_string().respond_to(request),
+///       Reference(destination) => Redirect::to(&destination).respond_to(request)
+///     }
+///   }
+/// }
 /// ```
 pub trait Responder<'r> {
     /// Returns `Ok` if a `Response` could be generated successfully. Otherwise,
