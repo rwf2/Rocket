@@ -15,9 +15,9 @@ pub trait Engine: Send + Sync + 'static {
 
 pub struct Engines {
     #[cfg(feature = "tera_templates")]
-    tera: Tera,
+    pub tera: Tera,
     #[cfg(feature = "handlebars_templates")]
-    handlebars: Handlebars,
+    pub handlebars: Handlebars,
 }
 
 impl Engines {
