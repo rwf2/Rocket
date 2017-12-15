@@ -181,21 +181,28 @@ use request::Request;
 /// The recommended way to model this is to introduce your own enum
 /// and provide your own `Responder` implementation for this enum type, for
 /// example:
+///
 /// ```rust
 /// # #![feature(plugin)]
 /// # #![plugin(rocket_codegen)]
+/// # extern crate rocket;
+///
+/// use rocket::http::Status;
+/// use rocket::request::Request;
+/// use rocket::response::Response;
+/// use rocket::response::Redirect;
+/// use rocket::response::Responder;
 ///
 /// enum RetrievedData {
 ///   ActualContent(String),
 ///   Reference(String),
 /// }
-/// use RetrievedData::*;
 ///
 /// impl<'r> Responder<'r> for RetrievedData {
 ///   fn respond_to(self, request: &Request) -> Result<Response<'r>, Status> {
 ///     match self {
-///       ActualContent(content) => content.to_string().respond_to(request),
-///       Reference(destination) => Redirect::to(&destination).respond_to(request)
+///       RetrievedData::ActualContent(content) => content.to_string().respond_to(request),
+///       RetrievedData::Reference(destination) => Redirect::to(&destination).respond_to(request)
 ///     }
 ///   }
 /// }
