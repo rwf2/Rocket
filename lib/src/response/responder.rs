@@ -183,10 +183,6 @@ use request::Request;
 /// example:
 ///
 /// ```rust
-/// # #![feature(plugin)]
-/// # #![plugin(rocket_codegen)]
-/// # extern crate rocket;
-///
 /// use rocket::http::Status;
 /// use rocket::request::Request;
 /// use rocket::response::Response;
@@ -202,7 +198,7 @@ use request::Request;
 ///   fn respond_to(self, request: &Request) -> Result<Response<'r>, Status> {
 ///     match self {
 ///       RetrievedData::ActualContent(content) => content.to_string().respond_to(request),
-///       RetrievedData::Reference(destination) => Redirect::to(&destination).respond_to(request)
+///       RetrievedData::Reference(destination) => Redirect::to(destination.to_string()).respond_to(request)
 ///     }
 ///   }
 /// }
