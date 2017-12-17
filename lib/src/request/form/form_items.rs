@@ -74,7 +74,7 @@ use http::RawStr;
 /// ```
 pub struct FormItems<'f> {
     string: &'f RawStr,
-    next_index: usize
+    next_index: usize,
 }
 
 impl<'f> FormItems<'f> {
@@ -145,7 +145,7 @@ impl<'f> FormItems<'f> {
     /// ```
     #[inline]
     pub fn exhaust(&mut self) -> bool {
-        while let Some(_) = self.next() {  }
+        while let Some(_) = self.next() {}
         self.completed()
     }
 
@@ -188,10 +188,7 @@ impl<'f> From<&'f RawStr> for FormItems<'f> {
     /// `x-www-form-urlencoded` form `string`.
     #[inline(always)]
     fn from(string: &'f RawStr) -> FormItems<'f> {
-        FormItems {
-            string: string,
-            next_index: 0
-        }
+        FormItems { string: string, next_index: 0 }
     }
 }
 
@@ -200,10 +197,7 @@ impl<'f> From<&'f str> for FormItems<'f> {
     /// `x-www-form-urlencoded` form `string`.
     #[inline(always)]
     fn from(string: &'f str) -> FormItems<'f> {
-        FormItems {
-            string: string.into(),
-            next_index: 0
-        }
+        FormItems { string: string.into(), next_index: 0 }
     }
 }
 
@@ -211,11 +205,22 @@ impl<'f> Iterator for FormItems<'f> {
     type Item = (&'f RawStr, &'f RawStr);
 
     fn next(&mut self) -> Option<Self::Item> {
+        // check out of bounds because of parameters without value
+        if self.next_index + 1 > self.string.len() {
+            return None;
+        }
+
         let s = &self.string[self.next_index..];
+
+        if s.is_empty() {
+            return None;
+        }
+
         let (key, rest) = match memchr2(b'=', b'&', s.as_bytes()) {
             Some(i) if s.as_bytes()[i] == b'=' => (&s[..i], &s[(i + 1)..]),
+            Some(i) if s.as_bytes()[i] == b'&' => (&s[..i], ""),
             Some(_) => return None,
-            None => return None,
+            None => (s, ""),
         };
 
         if key.is_empty() {
@@ -254,11 +259,15 @@ mod test {
 
                 assert!(actual_key == expected_key,
                         "key [{}] mismatch: expected {}, got {}",
-                        i, expected_key, actual_key);
+                        i,
+                        expected_key,
+                        actual_key);
 
                 assert!(actual_val == expected_val,
                         "val [{}] mismatch: expected {}, got {}",
-                        i, expected_val, actual_val);
+                        i,
+                        expected_val,
+                        actual_val);
             }
         } else {
             assert!(!items.exhaust());
@@ -267,25 +276,27 @@ mod test {
 
     #[test]
     fn test_form_string() {
+        check_form!("", &[]);
         check_form!("username=user&password=pass",
                     &[("username", "user"), ("password", "pass")]);
 
-        check_form!("user=user&user=pass",
-                    &[("user", "user"), ("user", "pass")]);
+        check_form!("user=user&user=pass", &[("user", "user"), ("user", "pass")]);
 
-        check_form!("user=&password=pass",
-                    &[("user", ""), ("password", "pass")]);
+        check_form!("user=&password=pass", &[("user", ""), ("password", "pass")]);
 
         check_form!("a=b", &[("a", "b")]);
         check_form!("value=Hello+World", &[("value", "Hello+World")]);
 
+        check_form!("user", &[("user", "")]);
+        check_form!("user&", &[("user", "")]);
         check_form!("user=", &[("user", "")]);
         check_form!("user=&", &[("user", "")]);
+        check_form!("a=b&a", &[("a", "b"), ("a", "")]);
         check_form!("a=b&a=", &[("a", "b"), ("a", "")]);
+        check_form!("a=b&a=&a=c", &[("a", "b"), ("a", ""), ("a", "c")]);
+        check_form!("a=b&a&a=c", &[("a", "b"), ("a", ""), ("a", "c")]);
 
-        check_form!(@bad "user=&password");
         check_form!(@bad "user=x&&");
-        check_form!(@bad "a=b&a");
         check_form!(@bad "=");
         check_form!(@bad "&");
         check_form!(@bad "=&");
