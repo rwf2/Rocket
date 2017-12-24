@@ -1,7 +1,6 @@
 use std::collections::HashMap;
 use std::str::from_utf8_unchecked;
 use std::cmp::min;
-use std::net::SocketAddr;
 use std::io::{self, Write};
 use std::mem;
 
@@ -173,26 +172,9 @@ impl Rocket {
     /// Preprocess the request for Rocket things. Currently, this means:
     ///
     ///   * Rewriting the method in the request if _method form field exists.
-    ///   * Rewriting the remote IP if the 'X-Real-IP' header is set.
     ///
     /// Keep this in-sync with derive_form when preprocessing form fields.
     fn preprocess_request(&self, req: &mut Request, data: &Data) {
-        // Rewrite the remote IP address. The request must already have an
-        // address associated with it to do this since we need to know the port.
-        if let Some(current) = req.remote() {
-            let ip = req.headers()
-                .get_one("X-Real-IP")
-                .and_then(|ip| {
-                    ip.parse()
-                        .map_err(|_| warn_!("'X-Real-IP' header is malformed: {}", ip))
-                        .ok()
-                });
-
-            if let Some(ip) = ip {
-                req.set_remote(SocketAddr::new(ip, current.port()));
-            }
-        }
-
         // Check if this is a form and if the form contains the special _method
         // field which we use to reinterpret the request's method.
         let data_len = data.peek().len();
