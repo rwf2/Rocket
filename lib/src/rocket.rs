@@ -62,7 +62,7 @@ impl hyper::Handler for Rocket {
                     Error::BadMethod => self.handle_error(Status::BadRequest, &dummy),
                     _ => self.handle_error(Status::InternalServerError, &dummy),
                 };
-                
+
                 return self.issue_response(r, res);
             }
         };
