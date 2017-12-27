@@ -604,6 +604,19 @@ impl Rocket {
         self
     }
 
+    /// Get the managed state of type T, if it exists.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// let rocket = rocket::ignite().manage("example");
+    /// assert_eq!(&"example", rocket.state::<&str>().unwrap());
+    /// ```
+    #[inline(always)]
+    pub fn state<T: Send + Sync + 'static>(&self) -> Option<&T> {
+        self.state.try_get()
+    }
+
     /// Attaches a fairing to this instance of Rocket.
     ///
     /// # Example
