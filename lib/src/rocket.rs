@@ -55,10 +55,14 @@ impl hyper::Handler for Rocket {
         let req_res = Request::from_hyp(self, h_method, h_headers, h_uri, h_addr);
         let mut req = match req_res {
             Ok(req) => req,
-            Err(e) => {
-                error!("Bad incoming request: {}", e);
+            Err((reason, log_message)) => {
+                error!("Bad incoming request: {}", log_message);
                 let dummy = Request::new(self, Method::Get, Uri::new("<unknown>"));
-                let r = self.handle_error(Status::InternalServerError, &dummy);
+                let r = match reason {
+                    Error::BadMethod => self.handle_error(Status::BadRequest, &dummy),
+                    _ => self.handle_error(Status::InternalServerError, &dummy),
+                };
+                
                 return self.issue_response(r, res);
             }
         };

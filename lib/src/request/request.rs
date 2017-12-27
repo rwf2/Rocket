@@ -568,17 +568,17 @@ impl<'r> Request<'r> {
                            h_headers: hyper::header::Headers,
                            h_uri: hyper::RequestUri,
                            h_addr: SocketAddr,
-                           ) -> Result<Request<'r>, String> {
+                           ) -> Result<Request<'r>, (Error, String)> {
         // Get a copy of the URI for later use.
         let uri = match h_uri {
             hyper::RequestUri::AbsolutePath(s) => s,
-            _ => return Err(format!("Bad URI: {}", h_uri)),
+            _ => return Err((Error::Internal, format!("Bad URI: {}", h_uri))),
         };
 
         // Ensure that the method is known. TODO: Allow made-up methods?
         let method = match Method::from_hyp(&h_method) {
             Some(method) => method,
-            None => return Err(format!("Invalid method: {}", h_method))
+            None => return Err((Error::BadMethod, format!("Invalid method: {}", h_method)))
         };
 
         // Construct the request object.
