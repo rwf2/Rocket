@@ -247,18 +247,17 @@ impl Template {
     /// # Example
     ///
     /// ```rust
+    /// # extern crate rocket;
+    /// # extern crate rocket_contrib;
+    ///
     /// use std::collections::HashMap;
     ///
-    /// extern crate rocket;
-    /// extern crate rocket_contrib;
-    ///
     /// use rocket_contrib::Template;
+    /// use rocket::local::Client;
     ///
     /// fn main() {
-    ///     let client =
-    ///         rocket::local::Client::new(rocket::ignite()
-    ///             .attach(Template::fairing())
-    ///         ).expect("valid rocket");
+    ///     let rocket = rocket::ignite().attach(Template::fairing());
+    ///     let client = Client::new(rocket).expect("valid rocket");
     ///
     ///     // Create a `context`. Here, just an empty `HashMap`.
     ///     let mut context = HashMap::new();
@@ -275,9 +274,9 @@ impl Template {
         let ctxt = match rocket.state::<Context>() {
             Some(ctxt) => ctxt,
             None => {
-                warn_!("Uninitialized template context: missing fairing.");
-                info_!("To use templates, you must attach `Template::fairing()`.");
-                info_!("See the `Template` documentation for more information.");
+                warn!("Uninitialized template context: missing fairing.");
+                info!("To use templates, you must attach `Template::fairing()`.");
+                info!("See the `Template` documentation for more information.");
                 return None;
             }
         };

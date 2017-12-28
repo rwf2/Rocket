@@ -10,7 +10,7 @@ extern crate rocket;
 use rocket::Request;
 use rocket::response::Redirect;
 use rocket_contrib::Template;
-use rocket_contrib::handlebars::{HelperDef, Helper, Handlebars, RenderContext, RenderError, JsonRender};
+use rocket_contrib::handlebars::{Helper, Handlebars, RenderContext, RenderError, JsonRender};
 
 #[derive(Serialize)]
 struct TemplateContext {
@@ -40,21 +40,18 @@ fn not_found(req: &Request) -> Template {
     Template::render("error/404", &map)
 }
 
-struct EchoHelper;
-impl HelperDef for EchoHelper {
-    fn call(&self, h: &Helper, _: &Handlebars, rc: &mut RenderContext) -> Result<(), RenderError> {
-        if let Some(p0) = h.param(0) {
-            rc.writer.write(p0.value().render().into_bytes().as_ref())?;
-        };
-        Ok(())
-    }
+fn echo_helper(h: &Helper, _: &Handlebars, rc: &mut RenderContext) -> Result<(), RenderError> {
+    if let Some(p0) = h.param(0) {
+        rc.writer.write(p0.value().render().into_bytes().as_ref())?;
+    };
+    Ok(())
 }
 
 fn rocket() -> rocket::Rocket {
     rocket::ignite()
         .mount("/", routes![index, get])
         .attach(Template::custom(|engines| {
-            engines.handlebars.register_helper("echo", Box::new(EchoHelper));
+            engines.handlebars.register_helper("echo", Box::new(echo_helper));
         }))
         .catch(catchers![not_found])
 }
