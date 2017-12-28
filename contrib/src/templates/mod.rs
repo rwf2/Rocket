@@ -229,16 +229,14 @@ impl Template {
         Template { name: name.into(), value: to_value(context).ok() }
     }
 
-    /// Render the template named `name` located at the path `root` with the
-    /// context `context` into a `String`. This method is _very slow_ and should
+    /// Render the template named `name` with the context `context` into a
+    /// `String`. This method should
     /// **not** be used in any running Rocket application. This method should
     /// only be used during testing to validate `Template` responses. For other
     /// uses, use [`render`](#method.render) instead.
     ///
     /// The `context` can be of any type that implements `Serialize`. This is
-    /// typically a `HashMap` or a custom `struct`. The path `root` can be
-    /// relative, in which case it is relative to the current working directory,
-    /// or absolute.
+    /// typically a `HashMap` or a custom `struct`.
     ///
     /// Returns `Some` if the template could be rendered. Otherwise, returns
     /// `None`. If rendering fails, error output is printed to the console.
