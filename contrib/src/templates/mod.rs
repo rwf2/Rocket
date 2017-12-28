@@ -14,9 +14,9 @@ use self::serde_json::{Value, to_value};
 use self::glob::glob;
 
 use std::borrow::Cow;
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 
-use rocket::State;
+use rocket::{Rocket, State};
 use rocket::request::Request;
 use rocket::fairing::{Fairing, AdHoc};
 use rocket::response::{self, Content, Responder};
@@ -219,22 +219,29 @@ impl Template {
     ///
     /// ```rust
     /// use std::collections::HashMap;
+    ///
+    /// extern crate rocket;
+    /// extern crate rocket_contrib;
+    ///
     /// use rocket_contrib::Template;
     ///
-    /// // Create a `context`. Here, just an empty `HashMap`.
-    /// let mut context = HashMap::new();
+    /// fn main() {
+    ///     let rocket = rocket::ignite().attach(Template::fairing());
     ///
-    /// # context.insert("test", "test");
-    /// # #[allow(unused_variables)]
-    /// let template = Template::show("templates/", "index", context);
+    ///     // Create a `context`. Here, just an empty `HashMap`.
+    ///     let mut context = HashMap::new();
+    ///
+    ///     # context.insert("test", "test");
+    ///     # #[allow(unused_variables)]
+    ///     let template = Template::show(&rocket, "index", context);
+    /// }
+    /// ```
     #[inline]
-    pub fn show<P, S, C>(root: P, name: S, context: C) -> Option<String>
-        where P: AsRef<Path>, S: Into<Cow<'static, str>>, C: Serialize
+    pub fn show<S, C>(rocket: &Rocket, name: S, context: C) -> Option<String>
+        where S: Into<Cow<'static, str>>, C: Serialize
     {
-        let root = root.as_ref().to_path_buf();
-        Context::initialize(root).and_then(|ctxt| {
-            Template::render(name, context).finalize(&ctxt).ok().map(|v| v.0)
-        })
+        let ctxt = rocket.state::<Context>().unwrap();
+        Template::render(name, context).finalize(&ctxt).ok().map(|v| v.0)
     }
 
     #[inline(always)]

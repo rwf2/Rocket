@@ -5,8 +5,6 @@ use rocket::local::Client;
 use rocket::http::*;
 use rocket_contrib::Template;
 
-const TEMPLATE_ROOT: &'static str = "templates/";
-
 #[test]
 fn test_submit() {
     let client = Client::new(rocket()).unwrap();
@@ -37,13 +35,15 @@ fn test_body(optional_cookie: Option<Cookie<'static>>, expected_body: String) {
 
 #[test]
 fn test_index() {
+    let client = Client::new(rocket()).unwrap();
+
     // Render the template with an empty context.
     let mut context: HashMap<&str, &str> = HashMap::new();
-    let template = Template::show(TEMPLATE_ROOT, "index", &context).unwrap();
+    let template = Template::show(client.rocket(), "index", &context).unwrap();
     test_body(None, template);
 
     // Render the template with a context that contains the message.
     context.insert("message", "Hello from Rocket!");
-    let template = Template::show(TEMPLATE_ROOT, "index", &context).unwrap();
+    let template = Template::show(client.rocket(), "index", &context).unwrap();
     test_body(Some(Cookie::new("message", "Hello from Rocket!")), template);
 }
