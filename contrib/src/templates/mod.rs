@@ -187,7 +187,6 @@ impl Template {
     pub fn custom<F>(f: F) -> impl Fairing where F: Fn(&mut Engines) + Send + Sync + 'static {
         AdHoc::on_attach(move |rocket| {
             let mut template_root = rocket.config().root_relative(DEFAULT_TEMPLATE_DIR);
-
             match rocket.config().get_str("template_dir") {
                 Ok(dir) => template_root = rocket.config().root_relative(dir),
                 Err(ConfigError::NotFound) => { /* ignore missing configs */ }
@@ -243,6 +242,7 @@ impl Template {
     ///
     /// Returns `Some` if the template could be rendered. Otherwise, returns
     /// `None`. If rendering fails, error output is printed to the console.
+    /// `None` is also returned if a Template fairing has not been attached.
     ///
     /// # Example
     ///
@@ -255,21 +255,32 @@ impl Template {
     /// use rocket_contrib::Template;
     ///
     /// fn main() {
-    ///     let rocket = rocket::ignite().attach(Template::fairing());
+    ///     let client =
+    ///         rocket::local::Client::new(rocket::ignite()
+    ///             .attach(Template::fairing())
+    ///         ).expect("valid rocket");
     ///
     ///     // Create a `context`. Here, just an empty `HashMap`.
     ///     let mut context = HashMap::new();
     ///
     ///     # context.insert("test", "test");
     ///     # #[allow(unused_variables)]
-    ///     let template = Template::show(&rocket, "index", context);
+    ///     let template = Template::show(client.rocket(), "index", context);
     /// }
     /// ```
     #[inline]
     pub fn show<S, C>(rocket: &Rocket, name: S, context: C) -> Option<String>
         where S: Into<Cow<'static, str>>, C: Serialize
     {
-        let ctxt = rocket.state::<Context>().unwrap();
+        let ctxt = match rocket.state::<Context>() {
+            Some(ctxt) => ctxt,
+            None => {
+                warn_!("Uninitialized template context: missing fairing.");
+                info_!("To use templates, you must attach `Template::fairing()`.");
+                info_!("See the `Template` documentation for more information.");
+                return None;
+            }
+        };
         Template::render(name, context).finalize(&ctxt).ok().map(|v| v.0)
     }
 

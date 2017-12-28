@@ -14,7 +14,9 @@ fn template_root() -> PathBuf {
 }
 
 fn rocket() -> Rocket {
-    let config = Config::build(Environment::Development).extra("template_dir", template_root().to_str().unwrap()).unwrap();
+    let config = Config::build(Environment::Development)
+        .extra("template_dir", template_root().to_str().expect("template directory"))
+        .expect("valid configuration");
     rocket::custom(config, true).attach(Template::fairing())
 }
 

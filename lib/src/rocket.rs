@@ -609,8 +609,14 @@ impl Rocket {
     /// # Example
     ///
     /// ```rust
-    /// let rocket = rocket::ignite().manage("example");
-    /// assert_eq!(&"example", rocket.state::<&str>().unwrap());
+    /// #[derive(PartialEq, Debug)]
+    /// struct MyState(&'static str);
+    ///
+    /// let rocket = rocket::ignite().manage(MyState("hello!"));
+    /// assert_eq!(rocket.state::<MyState>(), Some(&MyState("hello!")));
+    ///
+    /// let client = rocket::local::Client::new(rocket).expect("valid rocket");
+    /// assert_eq!(client.rocket().state::<MyState>(), Some(&MyState("hello!")));
     /// ```
     #[inline(always)]
     pub fn state<T: Send + Sync + 'static>(&self) -> Option<&T> {

@@ -15,7 +15,7 @@ macro_rules! dispatch {
 fn test_root() {
     // Check that the redirect works.
     for method in &[Get, Head] {
-        dispatch!(*method, "/", |_client: &Client, mut response: LocalResponse| {
+        dispatch!(*method, "/", |_: &Client, mut response: LocalResponse| {
             assert_eq!(response.status(), Status::SeeOther);
             assert!(response.body().is_none());
 
