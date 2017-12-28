@@ -230,24 +230,23 @@ impl Template {
     }
 
     /// Render the template named `name` with the context `context` into a
-    /// `String`. This method should
-    /// **not** be used in any running Rocket application. This method should
-    /// only be used during testing to validate `Template` responses. For other
-    /// uses, use [`render`](#method.render) instead.
+    /// `String`. This method should **not** be used in any running Rocket
+    /// application. This method should only be used during testing to
+    /// validate `Template` responses. For other uses, use
+    /// [`render`](#method.render) instead.
     ///
     /// The `context` can be of any type that implements `Serialize`. This is
     /// typically a `HashMap` or a custom `struct`.
     ///
     /// Returns `Some` if the template could be rendered. Otherwise, returns
     /// `None`. If rendering fails, error output is printed to the console.
-    /// `None` is also returned if a Template fairing has not been attached.
+    /// `None` is also returned if a `Template` fairing has not been attached.
     ///
     /// # Example
     ///
     /// ```rust
     /// # extern crate rocket;
     /// # extern crate rocket_contrib;
-    ///
     /// use std::collections::HashMap;
     ///
     /// use rocket_contrib::Template;

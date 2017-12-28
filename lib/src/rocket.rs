@@ -604,7 +604,8 @@ impl Rocket {
         self
     }
 
-    /// Get the managed state of type T, if it exists.
+    /// Returns `Some` of the managed state value for the type `T` if it is
+    /// being managed by this instance of Rocket. Otherwise, returns `None`.
     ///
     /// # Example
     ///
