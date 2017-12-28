@@ -15,6 +15,7 @@ use self::glob::glob;
 
 use std::borrow::Cow;
 use std::path::{Path, PathBuf};
+use std::marker::{Send, Sync};
 
 use rocket::State;
 use rocket::request::Request;
@@ -158,7 +159,11 @@ impl Template {
     /// }
     /// ```
     pub fn fairing() -> impl Fairing {
-        AdHoc::on_attach(|rocket| {
+        Template::fairing_with(|_context| ())
+    }
+
+    pub fn fairing_with<F>(callback: F) -> impl Fairing where F: Fn(&mut Context) + Send + Sync + 'static {
+        AdHoc::on_attach(move |rocket| {
             let mut template_root = rocket.config()
                 .root_relative(DEFAULT_TEMPLATE_DIR);
 
@@ -172,7 +177,10 @@ impl Template {
             };
 
             match Context::initialize(template_root) {
-                Some(ctxt) => Ok(rocket.manage(ctxt)),
+                Some(mut context) => {
+                    callback(&mut context);
+                    Ok(rocket.manage(context))
+                },
                 None => Err(rocket)
             }
         })
