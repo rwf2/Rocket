@@ -58,7 +58,7 @@ impl hyper::Handler for Rocket {
             Err(e) => {
                 error!("Bad incoming request: {}", e);
                 let dummy = Request::new(self, Method::Get, Uri::new("<unknown>"));
-                let r = self.handle_error(Status::InternalServerError, &dummy);
+                let r = self.handle_error(Status::BadRequest, &dummy);
                 return self.issue_response(r, res);
             }
         };
