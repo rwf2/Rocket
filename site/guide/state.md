@@ -180,7 +180,7 @@ use the following dependencies:
 rocket = "0.4.0-dev"
 diesel = { version = "*", features = ["sqlite"] }
 r2d2-diesel = "*"
-r2d2 = "0.8.*"
+r2d2 = "0.8"
 ```
 
 Your `diesel` dependency information will differ. In particular, you should
