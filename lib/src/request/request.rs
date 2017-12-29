@@ -1,5 +1,5 @@
 use std::cell::{Cell, RefCell};
-use std::net::SocketAddr;
+use std::net::{IpAddr, SocketAddr};
 use std::fmt;
 use std::str;
 
@@ -190,6 +190,34 @@ impl<'r> Request<'r> {
     #[inline(always)]
     pub fn set_remote(&mut self, address: SocketAddr) {
         self.remote = Some(address);
+    }
+
+    /// Returns the ip address "X-Real-IP" header if found.
+    ///
+    /// # Example
+    ///
+    /// Get the value of the ip out of the "X-Real-IP" header.
+    ///
+    /// ```rust
+    /// # use rocket::Request;
+    /// # use rocket::http::{Header, Method};
+    /// # use std::net::{SocketAddr, IpAddr, Ipv4Addr};
+    ///
+    /// # Request::example(Method::Get, "/uri", |mut request| {
+    /// request.add_header(Header::new("X-Real-IP", "8.8.8.8"));
+    /// let ip = request.real_ip().expect("X-Real-IP not set");
+    /// assert_eq!(ip, "8.8.8.8".parse::<Ipv4Addr>().unwrap());
+    /// # });
+    /// ```
+    #[inline(always)]
+    pub fn real_ip(&self) -> Option<IpAddr> {
+        self.headers()
+            .get_one("X-Real-IP")
+            .and_then(|ip| {
+                ip.parse()
+                    .map_err(|_| warn_!("'X-Real-IP' header is malformed: {}", ip))
+                    .ok()
+            })
     }
 
     /// Returns a [`HeaderMap`](/rocket/http/struct.HeaderMap.html) of all of
