@@ -72,7 +72,7 @@ fn state(hit_count: State<HitCount>, config: State<Config>) -> T { ... }
 ### Within Guards
 
 It can also be useful to retrieve managed state from a `FromRequest`
-implementation. To do so, simple invoke `State<T>` as a guard using the
+implementation. To do so, simply invoke `State<T>` as a guard using the
 [`Request::guard()`] method.
 
 ```rust
