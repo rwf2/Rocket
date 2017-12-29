@@ -178,8 +178,7 @@ use the following dependencies:
 ```
 [dependencies]
 rocket = "0.4.0-dev"
-diesel = { version = "*", features = ["sqlite"] }
-diesel_codegen = { version = "*", features = ["sqlite"] }
+diesel = { version = "1.0.0-rc1", features = ["sqlite"] }
 r2d2-diesel = "*"
 r2d2 = "*"
 ```
@@ -191,7 +190,6 @@ crates are imported as well:
 ```rust
 extern crate rocket;
 #[macro_use] extern crate diesel;
-#[macro_use] extern crate diesel_codegen;
 extern crate r2d2_diesel;
 extern crate r2d2;
 ```
@@ -219,9 +217,8 @@ static DATABASE_URL: &'static str = env!("DATABASE_URL");
 
 /// Initializes a database pool.
 fn init_pool() -> Pool {
-    let config = r2d2::Config::default();
     let manager = ConnectionManager::<SqliteConnection>::new(DATABASE_URL);
-    r2d2::Pool::new(config, manager).expect("db pool")
+    r2d2::Pool::new(manager).expect("db pool")
 }
 ```
 
