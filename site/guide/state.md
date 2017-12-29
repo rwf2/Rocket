@@ -166,7 +166,7 @@ fn handler(conn: DbConn) { ... }
 ```
 
 [`diesel`]: http://diesel.rs/
-[`r2d2`]: https://docs.rs/r2d2/0.7.2/r2d2/
+[`r2d2`]: https://docs.rs/r2d2/
 
 ### Dependencies
 
