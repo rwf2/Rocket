@@ -178,9 +178,9 @@ use the following dependencies:
 ```
 [dependencies]
 rocket = "0.4.0-dev"
-diesel = { version = "1.0.0-rc1", features = ["sqlite"] }
+diesel = { version = "*", features = ["sqlite"] }
 r2d2-diesel = "*"
-r2d2 = "*"
+r2d2 = "0.8.*"
 ```
 
 Your `diesel` dependency information will differ. In particular, you should
