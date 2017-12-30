@@ -2,14 +2,20 @@ use diesel;
 use diesel::prelude::*;
 use diesel::sqlite::SqliteConnection;
 
+mod schema {
+    table! {
+        tasks {
+            id -> Nullable<Integer>,
+            description -> Text,
+            completed -> Bool,
+        }
+    }
+}
+
 use self::schema::tasks;
 use self::schema::tasks::dsl::{tasks as all_tasks, completed as task_completed};
 
-mod schema {
-    infer_schema!("env:DATABASE_URL");
-}
-
-#[table_name = "tasks"]
+#[table_name="tasks"]
 #[derive(Serialize, Queryable, Insertable, Debug, Clone)]
 pub struct Task {
     pub id: Option<i32>,
@@ -29,7 +35,7 @@ impl Task {
 
     pub fn insert(todo: Todo, conn: &SqliteConnection) -> bool {
         let t = Task { id: None, description: todo.description, completed: false };
-        diesel::insert(&t).into(tasks::table).execute(conn).is_ok()
+        diesel::insert_into(tasks::table).values(&t).execute(conn).is_ok()
     }
 
     pub fn toggle_with_id(id: i32, conn: &SqliteConnection) -> bool {
@@ -47,4 +53,3 @@ impl Task {
         diesel::delete(all_tasks.find(id)).execute(conn).is_ok()
     }
 }
-
