@@ -178,13 +178,12 @@ use the following dependencies:
 ```
 [dependencies]
 rocket = "0.4.0-dev"
-diesel = { version = "*", features = ["sqlite"] }
-r2d2-diesel = "*"
+diesel = { version = "1.0.0-rc1", features = ["sqlite"] }
+r2d2-diesel = "1.0.0-rc1"
 r2d2 = "0.8"
 ```
 
-Your `diesel` dependency information will differ. In particular, you should
-specify the latest versions of these libraries as opposed to using a `*`. The
+Your `diesel` dependency information may differ. The
 crates are imported as well:
 
 ```rust

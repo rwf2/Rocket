@@ -10,9 +10,9 @@ serde = "1.0"
 serde_json = "1.0"
 serde_derive = "1.0"
 r2d2 = "0.8"
-diesel = { version = "*", features = ["sqlite"] }
-diesel_derives = { version = "*", features = ["sqlite"] }
-r2d2-diesel = "*"
+diesel = { version = "1.0.0-rc1", features = ["sqlite"] }
+diesel_derives = { version = "1.0.0-rc1", features = ["sqlite"] }
+r2d2-diesel = "1.0.0-rc1"
 dotenv = "0.10.*" # workaround for broken dependencies
 
 [dev-dependencies]
