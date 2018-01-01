@@ -166,7 +166,7 @@ fn handler(conn: DbConn) { ... }
 ```
 
 [`diesel`]: http://diesel.rs/
-[`r2d2`]: https://docs.rs/r2d2/0.7.2/r2d2/
+[`r2d2`]: https://docs.rs/r2d2/
 
 ### Dependencies
 
@@ -178,20 +178,17 @@ use the following dependencies:
 ```
 [dependencies]
 rocket = "0.4.0-dev"
-diesel = { version = "*", features = ["sqlite"] }
-diesel_codegen = { version = "*", features = ["sqlite"] }
-r2d2-diesel = "*"
-r2d2 = "*"
+diesel = { version = "1.0.0-rc1", features = ["sqlite"] }
+r2d2-diesel = "1.0.0-rc1"
+r2d2 = "0.8"
 ```
 
-Your `diesel` dependency information will differ. In particular, you should
-specify the latest versions of these libraries as opposed to using a `*`. The
-crates are imported as well:
+Your `diesel` dependency information may differ. The crates are imported as
+well:
 
 ```rust
 extern crate rocket;
 #[macro_use] extern crate diesel;
-#[macro_use] extern crate diesel_codegen;
 extern crate r2d2_diesel;
 extern crate r2d2;
 ```
@@ -219,9 +216,8 @@ static DATABASE_URL: &'static str = env!("DATABASE_URL");
 
 /// Initializes a database pool.
 fn init_pool() -> Pool {
-    let config = r2d2::Config::default();
     let manager = ConnectionManager::<SqliteConnection>::new(DATABASE_URL);
-    r2d2::Pool::new(config, manager).expect("db pool")
+    r2d2::Pool::new(manager).expect("db pool")
 }
 ```
 
