@@ -183,8 +183,8 @@ r2d2-diesel = "1.0.0-rc1"
 r2d2 = "0.8"
 ```
 
-Your `diesel` dependency information may differ. The
-crates are imported as well:
+Your `diesel` dependency information may differ. The crates are imported as
+well:
 
 ```rust
 extern crate rocket;
