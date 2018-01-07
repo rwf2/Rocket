@@ -4,7 +4,7 @@ error: 'FIX' is not a valid method
 6 | #[route(FIX, "/hello")]
   |         ^^^
   |
-  = help: valid methods are: `GET`, `PUT`, `POST`, `DELETE`, `PATCH`
+  = help: valid methods are: `GET`, `PUT`, `POST`, `DELETE`, `HEAD`, `PATCH`, `OPTIONS`
 
 error: expected a valid HTTP method identifier
  --> $DIR/route-bad-method.rs:9:9
@@ -12,7 +12,7 @@ error: expected a valid HTTP method identifier
 9 | #[route("hi", "/hello")]
   |         ^^^^
   |
-  = help: valid methods are: `GET`, `PUT`, `POST`, `DELETE`, `PATCH`
+  = help: valid methods are: `GET`, `PUT`, `POST`, `DELETE`, `HEAD`, `PATCH`, `OPTIONS`
 
 error: expected a valid HTTP method identifier
   --> $DIR/route-bad-method.rs:12:9
@@ -20,7 +20,7 @@ error: expected a valid HTTP method identifier
 12 | #[route("GET", "/hello")]
    |         ^^^^^
    |
-   = help: valid methods are: `GET`, `PUT`, `POST`, `DELETE`, `PATCH`
+   = help: valid methods are: `GET`, `PUT`, `POST`, `DELETE`, `HEAD`, `PATCH`, `OPTIONS`
 
 error: expected a valid HTTP method identifier
   --> $DIR/route-bad-method.rs:15:9
@@ -28,7 +28,7 @@ error: expected a valid HTTP method identifier
 15 | #[route(120, "/hello")]
    |         ^^^
    |
-   = help: valid methods are: `GET`, `PUT`, `POST`, `DELETE`, `PATCH`
+   = help: valid methods are: `GET`, `PUT`, `POST`, `DELETE`, `HEAD`, `PATCH`, `OPTIONS`
 
 error: 'CONNECT' is not a valid method
   --> $DIR/route-bad-method.rs:18:9
@@ -36,7 +36,7 @@ error: 'CONNECT' is not a valid method
 18 | #[route(CONNECT, "/hello")]
    |         ^^^^^^^
    |
-   = help: valid methods are: `GET`, `PUT`, `POST`, `DELETE`, `PATCH`
+   = help: valid methods are: `GET`, `PUT`, `POST`, `DELETE`, `HEAD`, `PATCH`, `OPTIONS`
 
 error: aborting due to 5 previous errors
 

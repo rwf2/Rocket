@@ -1,3 +1,24 @@
+# Version 0.3.4 (Dec 14, 2017)
+
+## Core
+
+  * `NamedFile`'s `Responder` implementation now uses a sized body when the
+    file's length is known.
+  * `#[repr(C)]` is used on `str` wrappers to guarantee correct structure layout
+    across platforms.
+  * A `status::BadRequest` `Responder` was added.
+
+## Codegen
+
+  * Codegen was updated for `2017-12-13` nightly.
+  * Minimum required `rustc` is `1.24.0-nightly 2017-12-13`.
+
+## Docs
+
+  * The rustdoc `html_root_url` now points to the correct address.
+  * Fixed typo in fairings guide: ~~event~~ events.
+  * Fixed typo in `Outcome` docs: ~~users~~ Users.
+
 # Version 0.3.3 (Sep 25, 2017)
 
 ## Core

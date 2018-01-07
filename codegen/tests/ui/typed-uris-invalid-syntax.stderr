@@ -62,11 +62,5 @@ error: expected expression, found `<eof>`
 20 |     uri!(simple: id = );
    |                     ^
 
-error: expected argument list after `:`
-  --> $DIR/typed-uris-invalid-syntax.rs:20:21
-   |
-20 |     uri!(simple: id = );
-   |                     ^
-
-error: aborting due to 11 previous errors
+error: aborting due to 10 previous errors
 

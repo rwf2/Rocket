@@ -1,7 +1,6 @@
 use std::collections::HashMap;
 use std::str::from_utf8_unchecked;
 use std::cmp::min;
-use std::net::SocketAddr;
 use std::io::{self, Write};
 use std::mem;
 
@@ -58,7 +57,7 @@ impl hyper::Handler for Rocket {
             Err(e) => {
                 error!("Bad incoming request: {}", e);
                 let dummy = Request::new(self, Method::Get, Uri::new("<unknown>"));
-                let r = self.handle_error(Status::InternalServerError, &dummy);
+                let r = self.handle_error(Status::BadRequest, &dummy);
                 return self.issue_response(r, res);
             }
         };
@@ -173,26 +172,9 @@ impl Rocket {
     /// Preprocess the request for Rocket things. Currently, this means:
     ///
     ///   * Rewriting the method in the request if _method form field exists.
-    ///   * Rewriting the remote IP if the 'X-Real-IP' header is set.
     ///
     /// Keep this in-sync with derive_form when preprocessing form fields.
     fn preprocess_request(&self, req: &mut Request, data: &Data) {
-        // Rewrite the remote IP address. The request must already have an
-        // address associated with it to do this since we need to know the port.
-        if let Some(current) = req.remote() {
-            let ip = req.headers()
-                .get_one("X-Real-IP")
-                .and_then(|ip| {
-                    ip.parse()
-                        .map_err(|_| warn_!("'X-Real-IP' header is malformed: {}", ip))
-                        .ok()
-                });
-
-            if let Some(ip) = ip {
-                req.set_remote(SocketAddr::new(ip, current.port()));
-            }
-        }
-
         // Check if this is a form and if the form contains the special _method
         // field which we use to reinterpret the request's method.
         let data_len = data.peek().len();
@@ -602,6 +584,26 @@ impl Rocket {
         }
 
         self
+    }
+
+    /// Returns `Some` of the managed state value for the type `T` if it is
+    /// being managed by this instance of Rocket. Otherwise, returns `None`.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// #[derive(PartialEq, Debug)]
+    /// struct MyState(&'static str);
+    ///
+    /// let rocket = rocket::ignite().manage(MyState("hello!"));
+    /// assert_eq!(rocket.state::<MyState>(), Some(&MyState("hello!")));
+    ///
+    /// let client = rocket::local::Client::new(rocket).expect("valid rocket");
+    /// assert_eq!(client.rocket().state::<MyState>(), Some(&MyState("hello!")));
+    /// ```
+    #[inline(always)]
+    pub fn state<T: Send + Sync + 'static>(&self) -> Option<&T> {
+        self.state.try_get()
     }
 
     /// Attaches a fairing to this instance of Rocket.

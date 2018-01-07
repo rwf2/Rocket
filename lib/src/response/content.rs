@@ -81,6 +81,7 @@ macro_rules! ctrs {
 }
 
 ctrs! {
+    // FIXME: Add a note that this is _not_ the `contrib` `Json`.
     Json: JSON, "JSON", "application/json",
     Xml: XML, "XML", "text/xml",
     MsgPack: MsgPack, "MessagePack", "application/msgpack",

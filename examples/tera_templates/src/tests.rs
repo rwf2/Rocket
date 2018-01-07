@@ -43,7 +43,7 @@ fn test_name() {
     dispatch!(Get, "/hello/Jack", |client: &Client, mut response: LocalResponse| {
         let context = super::TemplateContext {
             name: "Jack".into(),
-            items: vec!["One".into(), "Two".into(), "Three".into()]
+            items: vec!["One", "Two", "Three"]
         };
 
         let expected = Template::show(client.rocket(), "index", &context).unwrap();

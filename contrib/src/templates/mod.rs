@@ -7,16 +7,18 @@ extern crate glob;
 mod engine;
 mod context;
 
-use self::engine::{Engine, Engines};
+pub use self::engine::Engines;
+
+use self::engine::Engine;
 use self::context::Context;
 use self::serde::Serialize;
 use self::serde_json::{Value, to_value};
 use self::glob::glob;
 
 use std::borrow::Cow;
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 
-use rocket::State;
+use rocket::{Rocket, State};
 use rocket::request::Request;
 use rocket::fairing::{Fairing, AdHoc};
 use rocket::response::{self, Content, Responder};
@@ -61,11 +63,10 @@ const DEFAULT_TEMPLATE_DIR: &'static str = "templates";
 /// extensions should look like: `.html.hbs`, `.html.tera`, `.xml.hbs`, etc.
 ///
 /// Template discovery is actualized by the template fairing, which itself is
-/// created via the
-/// [`Template::fairing()`](/rocket_contrib/struct.Template.html#method.fairing)
-/// method. In order for _any_ templates to be rendered, the template fairing
-/// must be [attached](/rocket/struct.Rocket.html#method.attach) to the running
-/// Rocket instance.
+/// created via the [`Template::fairing()`] or [`Template::custom()`] method. In
+/// order for _any_ templates to be rendered, the template fairing _must_ be
+/// [attached](/rocket/struct.Rocket.html#method.attach) to the running Rocket
+/// instance. Failure to do so will result in an error.
 ///
 /// Templates are rendered with the `render` method. The method takes in the
 /// name of a template and a context to render the template with. The context
@@ -114,6 +115,15 @@ const DEFAULT_TEMPLATE_DIR: &'static str = "templates";
 ///     Template::render("index", &context)
 /// }
 /// ```
+///
+/// # Customizing
+///
+/// You can use the [`Template::custom()`] method to construct a fairing with
+/// customized templating engines. Among other things, this method allows you to
+/// register template helpers and register templates from strings.
+///
+/// [`Template::custom()`]: /rocket_contrib/struct.Template.html#method.custom
+/// [`Template::fairing()`]: /rocket_contrib/struct.Template.html#method.fairing
 #[derive(Debug)]
 pub struct Template {
     name: Cow<'static, str>,
@@ -133,10 +143,16 @@ pub struct TemplateInfo {
 impl Template {
     /// Returns a fairing that intializes and maintains templating state.
     ///
-    /// This fairing _must_ be attached to any `Rocket` instance that wishes to
-    /// render templates. Failure to attach this fairing will result in a
-    /// "Uninitialized template context: missing fairing." error message when a
-    /// template is attempted to be rendered.
+    /// This fairing, or the one returned by [`Template::custom()`], _must_ be
+    /// attached to any `Rocket` instance that wishes to render templates.
+    /// Failure to attach this fairing will result in a "Uninitialized template
+    /// context: missing fairing." error message when a template is attempted to
+    /// be rendered.
+    ///
+    /// If you wish to customize the internal templating engines, use
+    /// [`Template::custom()`] instead.
+    ///
+    /// [`Template::custom()`]: /rocket_contrib/struct.Template.html#method.custom
     ///
     /// # Example
     ///
@@ -158,21 +174,52 @@ impl Template {
     /// }
     /// ```
     pub fn fairing() -> impl Fairing {
-        AdHoc::on_attach(|rocket| {
-            let mut template_root = rocket.config()
-                .root_relative(DEFAULT_TEMPLATE_DIR);
+        Template::custom(|_| {})
+    }
 
+    /// Returns a fairing that intializes and maintains templating state.
+    ///
+    /// Unlike [`Template::fairing()`], this method allows you to configure
+    /// templating engines via the parameter `f`. Note that only the enabled
+    /// templating engines will be accessible from the `Engines` type.
+    ///
+    /// [`Template::fairing()`]: /rocket_contrib/struct.Template.html#method.fairing
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// extern crate rocket;
+    /// extern crate rocket_contrib;
+    ///
+    /// use rocket_contrib::Template;
+    ///
+    /// fn main() {
+    ///     rocket::ignite()
+    ///         // ...
+    ///         .attach(Template::custom(|engines| {
+    ///             // engines.handlebars.register_helper ...
+    ///         }))
+    ///         // ...
+    ///     # ;
+    /// }
+    /// ```
+    pub fn custom<F>(f: F) -> impl Fairing where F: Fn(&mut Engines) + Send + Sync + 'static {
+        AdHoc::on_attach(move |rocket| {
+            let mut template_root = rocket.config().root_relative(DEFAULT_TEMPLATE_DIR);
             match rocket.config().get_str("template_dir") {
                 Ok(dir) => template_root = rocket.config().root_relative(dir),
-                Err(e@ConfigError::NotFound) => {
+                Err(ConfigError::NotFound) => { /* ignore missing configs */ }
+                Err(e) => {
                     e.pretty_print();
-                    warn_!("Using default directory '{:?}'", template_root);
+                    warn_!("Using default templates directory '{:?}'", template_root);
                 }
-                Err(_) => {  }
             };
 
             match Context::initialize(template_root) {
-                Some(ctxt) => Ok(rocket.manage(ctxt)),
+                Some(mut ctxt) => {
+                    f(&mut ctxt.engines);
+                    Ok(rocket.manage(ctxt))
+                }
                 None => Err(rocket)
             }
         })
@@ -201,40 +248,55 @@ impl Template {
         Template { name: name.into(), value: to_value(context).ok() }
     }
 
-    /// Render the template named `name` located at the path `root` with the
-    /// context `context` into a `String`. This method is _very slow_ and should
-    /// **not** be used in any running Rocket application. This method should
-    /// only be used during testing to validate `Template` responses. For other
-    /// uses, use [`render`](#method.render) instead.
+    /// Render the template named `name` with the context `context` into a
+    /// `String`. This method should **not** be used in any running Rocket
+    /// application. This method should only be used during testing to
+    /// validate `Template` responses. For other uses, use
+    /// [`render`](#method.render) instead.
     ///
     /// The `context` can be of any type that implements `Serialize`. This is
-    /// typically a `HashMap` or a custom `struct`. The path `root` can be
-    /// relative, in which case it is relative to the current working directory,
-    /// or absolute.
+    /// typically a `HashMap` or a custom `struct`.
     ///
     /// Returns `Some` if the template could be rendered. Otherwise, returns
     /// `None`. If rendering fails, error output is printed to the console.
+    /// `None` is also returned if a `Template` fairing has not been attached.
     ///
     /// # Example
     ///
     /// ```rust
+    /// # extern crate rocket;
+    /// # extern crate rocket_contrib;
     /// use std::collections::HashMap;
+    ///
     /// use rocket_contrib::Template;
+    /// use rocket::local::Client;
     ///
-    /// // Create a `context`. Here, just an empty `HashMap`.
-    /// let mut context = HashMap::new();
+    /// fn main() {
+    ///     let rocket = rocket::ignite().attach(Template::fairing());
+    ///     let client = Client::new(rocket).expect("valid rocket");
     ///
-    /// # context.insert("test", "test");
-    /// # #[allow(unused_variables)]
-    /// let template = Template::show("templates/", "index", context);
+    ///     // Create a `context`. Here, just an empty `HashMap`.
+    ///     let mut context = HashMap::new();
+    ///
+    ///     # context.insert("test", "test");
+    ///     # #[allow(unused_variables)]
+    ///     let template = Template::show(client.rocket(), "index", context);
+    /// }
+    /// ```
     #[inline]
-    pub fn show<P, S, C>(root: P, name: S, context: C) -> Option<String>
-        where P: AsRef<Path>, S: Into<Cow<'static, str>>, C: Serialize
+    pub fn show<S, C>(rocket: &Rocket, name: S, context: C) -> Option<String>
+        where S: Into<Cow<'static, str>>, C: Serialize
     {
-        let root = root.as_ref().to_path_buf();
-        Context::initialize(root).and_then(|ctxt| {
-            Template::render(name, context).finalize(&ctxt).ok().map(|v| v.0)
-        })
+        let ctxt = match rocket.state::<Context>() {
+            Some(ctxt) => ctxt,
+            None => {
+                warn!("Uninitialized template context: missing fairing.");
+                info!("To use templates, you must attach `Template::fairing()`.");
+                info!("See the `Template` documentation for more information.");
+                return None;
+            }
+        };
+        Template::render(name, context).finalize(&ctxt).ok().map(|v| v.0)
     }
 
     #[inline(always)]

@@ -11,7 +11,7 @@ impl Function {
         let inner = match *annotated {
             Annotatable::Item(ref item) => match item.node {
                 ItemKind::Fn(ref decl, ..) => {
-                    span((item.ident, decl.clone().unwrap()), item.span)
+                    span((item.ident, decl.clone().into_inner()), item.span)
                 }
                 _ => return Err(item.span)
             },

@@ -8,7 +8,7 @@ about incoming requests and outgoing responses.
 
 Any type that implements the [`Fairing`] trait is a _fairing_. Fairings hook
 into Rocket's request lifecycle, receiving callbacks for events such as incoming
-requests and outgoing responses. Rocket passes information about these event to
+requests and outgoing responses. Rocket passes information about these events to
 the fairing, and the fairing can do what it wants with the information. This
 includes rewriting data when applicable, recording information about the event
 or data, or doing nothing at all.

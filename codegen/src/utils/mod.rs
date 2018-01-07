@@ -72,11 +72,13 @@ pub fn attach_and_emit(out: &mut Vec<Annotatable>, attr: Attribute, to: Annotata
     }
 }
 
-pub fn parse_as_tokens(ecx: &ExtCtxt, string: &str) -> Vec<TokenTree> {
+pub fn parse_as_tokens(ecx: &ExtCtxt, s: &str) -> Vec<TokenTree> {
+    use syntax_pos::FileName;
     use syntax::parse::parse_stream_from_source_str as parse_stream;
 
-    let stream = parse_stream("<_>".into(), string.into(), ecx.parse_sess, None);
-    stream.into_trees().collect()
+    parse_stream(FileName::ProcMacroSourceCode, s.into(), ecx.parse_sess, None)
+        .into_trees()
+        .collect()
 }
 
 pub struct TyLifetimeRemover;

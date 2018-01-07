@@ -23,13 +23,13 @@ log = "0.3"
 percent-encoding = "1"
 toml = "0.4.2"
 num_cpus = "1.0"
-state = "0.3.1"
+state = "0.3.3"
 time = "0.1"
-memchr = "1"
-base64 = "0.7"
-smallvec = "0.4"
-pear = "0.0.11"
-pear_codegen = "0.0.11"
+memchr = "2"
+base64 = "0.9"
+smallvec = "0.6"
+pear = "0.0.12"
+pear_codegen = "0.0.12"
 rustls = { version = "0.11.0", optional = true }
 hyper = { version = "0.10.13", default-features = false }
 hyper-sync-rustls = { version = "0.3.0-rc.1", features = ["server"], optional = true }
@@ -38,11 +38,11 @@ isatty = "0.1"
 
 [dependencies.cookie]
 git = "https://github.com/alexcrichton/cookie-rs"
-rev = "b8298e"
+rev = "a15b37a"
 features = ["percent-encode", "secure"]
 
 [dev-dependencies]
-lazy_static = "0.2"
+lazy_static = "1.0"
 rocket_codegen = { version = "0.4.0-dev", path = "../codegen" }
 
 [build-dependencies]

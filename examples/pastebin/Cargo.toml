@@ -6,4 +6,4 @@ workspace = "../../"
 [dependencies]
 rocket = { path = "../../lib" }
 rocket_codegen = { path = "../../codegen" }
-rand = "0.3"
+rand = "0.4"

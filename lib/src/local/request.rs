@@ -189,6 +189,28 @@ impl<'c> LocalRequest<'c> {
         self
     }
 
+    /// Add a [private cookie] to this request.
+    ///
+    /// [private cookie]: /rocket/http/enum.Cookies.html#private-cookies
+    ///
+    /// # Examples
+    ///
+    /// Add `user_id` as a private cookie:
+    ///
+    /// ```rust
+    /// use rocket::local::Client;
+    /// use rocket::http::Cookie;
+    ///
+    /// let client = Client::new(rocket::ignite()).unwrap();
+    /// # #[allow(unused_variables)]
+    /// let req = client.get("/").private_cookie(Cookie::new("user_id", "sb"));
+    /// ```
+    #[inline]
+    pub fn private_cookie(self, cookie: Cookie<'static>) -> Self {
+        self.request.cookies().add_original_private(cookie);
+        self
+    }
+
     // TODO: For CGI, we want to be able to set the body to be stdin without
     // actually reading everything into a vector. Can we allow that here while
     // keeping the simplicity? Looks like it would require us to reintroduce a

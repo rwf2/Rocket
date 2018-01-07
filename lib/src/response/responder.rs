@@ -3,7 +3,7 @@ use std::io::{Cursor, BufReader};
 use std::fmt;
 
 use http::{Status, ContentType};
-use response::{self, Response};
+use response::{self, Response, Body};
 use request::Request;
 
 /// Trait implemented by types that generate responses for clients.
@@ -223,7 +223,11 @@ impl<'r> Responder<'r> for Vec<u8> {
 /// Returns a response with a sized body for the file. Always returns `Ok`.
 impl<'r> Responder<'r> for File {
     fn respond_to(self, _: &Request) -> response::Result<'r> {
-        Response::build().streamed_body(BufReader::new(self)).ok()
+        let (metadata, file) = (self.metadata(), BufReader::new(self));
+        match metadata {
+            Ok(md) => Response::build().raw_body(Body::Sized(file, md.len())).ok(),
+            Err(_) => Response::build().streamed_body(file).ok()
+        }
     }
 }
 
@@ -251,7 +255,7 @@ impl<'r, R: Responder<'r>> Responder<'r> for Option<R> {
 impl<'r, R: Responder<'r>, E: fmt::Debug> Responder<'r> for Result<R, E> {
     default fn respond_to(self, req: &Request) -> response::Result<'r> {
         self.map(|r| r.respond_to(req)).unwrap_or_else(|e| {
-            error_!("Response was `Err`: {:?}.", e);
+            error_!("Response was a non-`Responder` `Err`: {:?}.", e);
             Err(Status::InternalServerError)
         })
     }

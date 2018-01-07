@@ -2,7 +2,7 @@
 #![cfg_attr(feature = "templates", feature(conservative_impl_trait))]
 
 // TODO: Version URLs.
-#![doc(html_root_url = "https://api.rocket.rs/rocket_contrib/")]
+#![doc(html_root_url = "https://api.rocket.rs")]
 
 //! This crate contains officially sanctioned contributor libraries that provide
 //! functionality commonly used by Rocket applications.
@@ -48,6 +48,12 @@ extern crate serde;
 #[cfg_attr(feature = "json", macro_reexport(json_internal))]
 extern crate serde_json;
 
+#[cfg(feature = "handlebars_templates")]
+pub extern crate handlebars;
+
+#[cfg(feature = "tera_templates")]
+pub extern crate tera;
+
 #[cfg(feature = "json")]
 #[cfg_attr(feature = "json", macro_use)]
 #[doc(hidden)]
@@ -67,7 +73,7 @@ pub use msgpack::{MsgPack, MsgPackError};
 mod templates;
 
 #[cfg(feature = "templates")]
-pub use templates::Template;
+pub use templates::{Template, Engines};
 
 #[cfg(feature = "uuid")]
 mod uuid;

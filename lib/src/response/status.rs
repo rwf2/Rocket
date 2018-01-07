@@ -155,6 +155,46 @@ impl Responder<'static> for Reset {
     }
 }
 
+/// Sets the status of the response to 400 (Bad Request).
+///
+/// If a responder is supplied, the remainder of the response is delegated to
+/// it. If there is no responder, the body of the response will be empty.
+///
+/// # Examples
+///
+/// A 400 Bad Request response without a body:
+///
+/// ```rust
+/// use rocket::response::status;
+///
+/// # #[allow(unused_variables)]
+/// let response = status::BadRequest::<()>(None);
+/// ```
+///
+/// A 400 Bad Request response _with_ a body:
+///
+/// ```rust
+/// use rocket::response::status;
+///
+/// # #[allow(unused_variables)]
+/// let response = status::BadRequest(Some("error message"));
+/// ```
+#[derive(Debug, Clone, PartialEq)]
+pub struct BadRequest<R>(pub Option<R>);
+
+/// Sets the status code of the response to 400 Bad Request. If the responder is
+/// `Some`, it is used to finalize the response.
+impl<'r, R: Responder<'r>> Responder<'r> for BadRequest<R> {
+    fn respond_to(self, req: &Request) -> Result<Response<'r>, Status> {
+        let mut build = Response::build();
+        if let Some(responder) = self.0 {
+            build.merge(responder.respond_to(req)?);
+        }
+
+        build.status(Status::BadRequest).ok()
+    }
+}
+
 /// Sets the status of the response to 404 (Not Found).
 ///
 /// The remainder of the response is delegated to the wrapped `Responder`.

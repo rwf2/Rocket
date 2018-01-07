@@ -8,7 +8,7 @@
 #![plugin(pear_codegen)]
 
 // TODO: Version URLs.
-#![doc(html_root_url = "https://api.rocket.rs/rocket/")]
+#![doc(html_root_url = "https://api.rocket.rs")]
 
 //! # Rocket - Core API Documentation
 //!

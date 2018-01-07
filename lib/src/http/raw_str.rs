@@ -2,7 +2,6 @@ use std::ops::{Deref, DerefMut};
 use std::borrow::Cow;
 use std::convert::AsRef;
 use std::cmp::Ordering;
-use std::ascii::AsciiExt;
 use std::str::Utf8Error;
 use std::fmt;
 
@@ -45,6 +44,7 @@ use http::uncased::UncasedStr;
 ///
 /// [`FromParam`]: /rocket/request/trait.FromParam.html
 /// [`FromFormValue`]: /rocket/request/trait.FromFormValue.html
+#[repr(C)]
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct RawStr(str);
 
@@ -102,10 +102,6 @@ impl RawStr {
     /// Returns a percent-decoded version of the string. Any invalid UTF-8
     /// percent-encoded byte sequences will be replaced � U+FFFD, the
     /// replacement character.
-    ///
-    /// # Errors
-    ///
-    /// Returns an `Err` if the percent encoded values are not valid UTF-8.
     ///
     /// # Example
     ///
@@ -275,7 +271,7 @@ impl RawStr {
 impl<'a> From<&'a str> for &'a RawStr {
     #[inline(always)]
     fn from(string: &'a str) -> &'a RawStr {
-        unsafe { ::std::mem::transmute(string) }
+        unsafe { &*(string as *const str as *const RawStr) }
     }
 }
 
@@ -325,30 +321,6 @@ impl ToString for RawStr {
     #[inline(always)]
     fn to_string(&self) -> String {
         String::from(self.as_str())
-    }
-}
-
-impl AsciiExt for RawStr {
-    type Owned = String;
-
-    #[inline(always)]
-    fn is_ascii(&self) -> bool { (self as &str).is_ascii() }
-
-    #[inline(always)]
-    fn to_ascii_uppercase(&self) -> String { (self as &str).to_ascii_uppercase() }
-
-    #[inline(always)]
-    fn to_ascii_lowercase(&self) -> String { (self as &str).to_ascii_lowercase() }
-
-    #[inline(always)]
-    fn make_ascii_uppercase(&mut self) { (self as &mut str).make_ascii_uppercase() }
-
-    #[inline(always)]
-    fn make_ascii_lowercase(&mut self) { (self as &mut str).make_ascii_lowercase() }
-
-    #[inline(always)]
-    fn eq_ignore_ascii_case(&self, o: &RawStr) -> bool {
-        (self as &str).eq_ignore_ascii_case(o as &str)
     }
 }
 

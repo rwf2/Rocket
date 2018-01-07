@@ -1,3 +1,14 @@
+#![crate_type = "dylib"]
+#![feature(quote, concat_idents, plugin_registrar, rustc_private)]
+#![feature(iterator_for_each)]
+#![feature(custom_attribute)]
+#![feature(i128_type)]
+#![allow(unused_attributes)]
+#![allow(deprecated)]
+
+// TODO: Version URLs.
+#![doc(html_root_url = "https://api.rocket.rs")]
+
 //! # Rocket - Code Generation
 //!
 //! This crate implements the code generation portions of Rocket. This includes
@@ -212,17 +223,11 @@
 //! ROCKET_CODEGEN_DEBUG=1 cargo build
 //! ```
 
-#![crate_type = "dylib"]
-#![feature(quote, concat_idents, plugin_registrar, rustc_private)]
-#![feature(iterator_for_each)]
-#![feature(custom_attribute)]
-#![feature(i128_type)]
-#![allow(unused_attributes)]
-#![allow(deprecated)]
 
 #[macro_use] extern crate log;
 extern crate syntax;
 extern crate syntax_ext;
+extern crate syntax_pos;
 extern crate rustc_plugin;
 extern crate rocket;
 extern crate ordermap;

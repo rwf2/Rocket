@@ -9,10 +9,11 @@
     <h3>Here are your items:</h3>
     <ul>
       {{#each items}}
-      <li>{{this}}</li>
+         <li>{{this}}</li>
       {{/each}}
     </ul>
 
-    <p>Try going to <a href="/hello/YourName">/hello/YourName</a></p>
+    <p>Try going to <a href="/hello/YourName">/hello/YourName</a>.</p>
+    <p>Also, check {{ wow "this" }} (custom helper) out!</p>
   </body>
 </html>

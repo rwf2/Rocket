@@ -138,7 +138,7 @@ pub fn uri_internal(
         // replace &expr with [let tmp = expr; &tmp] so that borrows of
         // temporary expressions live at least as long as the call to
         // `from_uri_param`. Otherwise, exprs like &S { .. } won't compile.
-        let cloned_expr = expr.clone().unwrap();
+        let cloned_expr = expr.clone().into_inner();
         if let ast::ExprKind::AddrOf(_, inner) = cloned_expr.node {
             // Only reassign temporary expressions, not locations.
             if !inner.is_location() {

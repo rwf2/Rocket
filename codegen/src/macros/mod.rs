@@ -45,7 +45,7 @@ where F: FnMut(&ExtCtxt, Path) -> P<Expr>
 
             // Now put them all in one vector and return the thing.
             let path_list = sep_by_tok(ecx, &path_exprs, Token::Comma);
-            let output = quote_expr!(ecx, vec![$path_list]).unwrap();
+            let output = quote_expr!(ecx, vec![$path_list]).into_inner();
             MacEager::expr(P(output))
         }
         Err(mut e) => {
@@ -67,6 +67,6 @@ pub fn routes(ecx: &mut ExtCtxt, sp: Span, args: &[TokenTree])
 pub fn catchers(ecx: &mut ExtCtxt, sp: Span, args: &[TokenTree])
         -> Box<MacResult + 'static> {
     prefixing_vec_macro(CATCH_STRUCT_PREFIX, |ecx, path| {
-        quote_expr!(ecx, rocket::Catcher::from(&$path))
+        quote_expr!(ecx, ::rocket::Catcher::from(&$path))
     }, ecx, sp, args)
 }

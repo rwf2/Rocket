@@ -164,8 +164,9 @@ pub fn param_to_ident(ecx: &ExtCtxt, s: Spanned<&str>) -> Option<Spanned<Ident>>
 }
 
 fn parse_method(ecx: &ExtCtxt, meta_item: &NestedMetaItem) -> Spanned<Method> {
-    let valid_methods = "valid methods are: `GET`, `PUT`, `POST`, `DELETE`, `PATCH`";
     let default_method = dummy_spanned(Method::Get);
+    let valid_methods = "valid methods are: `GET`, `PUT`, `POST`, `DELETE`, \
+        `HEAD`, `PATCH`, `OPTIONS`";
 
     if let Some(word) = meta_item.word() {
         if let Ok(method) = Method::from_str(&word.name().as_str()) {

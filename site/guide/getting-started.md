@@ -7,17 +7,16 @@ and then run the application.
 ## Installing Rust
 
 Rocket makes abundant use of Rust's syntax extensions and other advanced,
-unstable features. Because of this, we'll need to use a nightly version of Rust.
-If you already have a working installation of the latest Rust nightly, feel free
-to skip to the next section.
+unstable features. Because of this, we'll need to use a supported _nightly_
+version of Rust.
 
-To install a nightly version of Rust, we recommend using `rustup`. Install
-`rustup` by following the instructions on [its website](https://rustup.rs/).
-Once `rustup` is installed, configure Rust nightly as your default toolchain by
-running the command:
+To install such a version, we recommend using `rustup`. Install `rustup` by
+following the instructions on [its website](https://rustup.rs/). Once `rustup`
+is installed, configure Rust nightly as your default toolchain by running the
+command:
 
 ```sh
-rustup default nightly
+rustup default nightly-2017-12-21
 ```
 
 If you prefer, once we setup a project directory in the following section, you
@@ -25,18 +24,29 @@ can use per-directory overrides to use the nightly version _only_ for your
 Rocket project by running the following command in the directory:
 
 ```sh
-rustup override set nightly
+rustup override set nightly-2017-12-21
 ```
 
 ### Minimum Nightly
 
-Rocket always requires the _latest_ version of Rust nightly. If your Rocket
-application suddently stops building, ensure you're using the latest version of
-Rust nightly and Rocket by updating your toolchain and dependencies with:
+Rocket generally requires the _latest_ version of Rust nightly. At present,
+however, a Rocket dependency fails to build on the latest nightlies, temporarily
+grounding Rocket (see [#513] for details). As a result, you'll need to use the
+last known working nightly release while the issue is resolved. The commands
+above already take this into account by installing the `2017-12-21` nightly.
+
+Once the external issue has been resolved, you can upgrade to the latest nightly
+with `rustup default nightly` or `rustup override set nightly`. If your Rocket
+application suddenly stops building, it's likely that this issue has been
+resolved. If Rocket fails to compile in the future, you should also ensure
+you're using the latest version of Rust nightly and Rocket by updating your
+toolchain and dependencies with:
 
 ```sh
 rustup update && cargo update
 ```
+
+[#513]: https://github.com/SergioBenitez/Rocket/issues/513
 
 ## Hello, world!
 
