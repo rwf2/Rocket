@@ -1,0 +1,19 @@
+[package]
+name = "databases"
+version = "0.1.0"
+authors = ["Karuna Murti <karuna.murti@finc.com>"]
+
+[dependencies]
+rocket = { path = "../../lib" }
+rocket_codegen = { path = "../../codegen" }
+r2d2 = "0.8"
+r2d2-diesel = "1.0"
+r2d2_sqlite = "0.5.0"
+diesel = { version = "1.0", features = ["postgres"] }
+diesel_derives = { version = "1.0", features = ["postgres"] }
+rusqlite = "0.13.0"
+
+[dependencies.rocket_contrib]
+path = "../../contrib"
+default_features = false
+features = [ "connection_pools" ]

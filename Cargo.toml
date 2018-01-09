@@ -7,6 +7,7 @@ members = [
   "codegen/",
   "contrib/",
   "examples/cookies",
+  "examples/databases",
   "examples/errors",
   "examples/form_validation",
   "examples/hello_person",

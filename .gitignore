@@ -25,3 +25,6 @@ scripts/upload-docs.sh
 
 # Uploads in pastebin example.
 examples/pastebin/upload/*
+
+# environment variables in databases example.
+examples/databases/.env

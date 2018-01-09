@@ -1,0 +1,11 @@
+[development]
+sqlite_url = "db_sqlite/sample.sqlite"
+postgres_url = "postgres://user:password@hostname/rocket_development"
+
+[staging]
+sqlite_url = "db_sqlite/sample.sqlite"
+postgres_url = "postgres://user:password@hostname/rocket_staging"
+
+[production]
+sqlite_url = "db_sqlite/sample.sqlite"
+postgres_url = "postgres://user:password@hostname/rocket_production"
