@@ -19,6 +19,7 @@ use self::glob::glob;
 
 use std::borrow::Cow;
 use std::path::PathBuf;
+use std::sync::Mutex;
 
 use rocket::{Rocket, State};
 use rocket::request::Request;
@@ -206,6 +207,10 @@ impl Template {
     /// }
     /// ```
     pub fn custom<F>(f: F) -> impl Fairing where F: Fn(&mut Engines) + Send + Sync + 'static {
+        // TODO: when #522 is fixed, the closure passed into on_attach will be
+        // able to directly consume f without necessitating a Send+Sync wrapper type.
+        let callback_mutex = Mutex::new(Some(f));
+
         AdHoc::on_attach(move |rocket| {
             let mut template_root = rocket.config().root_relative(DEFAULT_TEMPLATE_DIR);
             match rocket.config().get_str("template_dir") {
@@ -217,11 +222,10 @@ impl Template {
                 }
             };
 
-            match Context::initialize(template_root) {
-                Some(mut ctxt) => {
-                    f(&mut ctxt.engines);
-                    Ok(rocket.manage(ctxt))
-                }
+            let callback = callback_mutex.lock().unwrap().take().expect("on_attach fairing called twice!");
+
+            match Context::initialize(template_root, callback) {
+                Some(ctxt) => Ok(rocket.manage(ctxt)),
                 None => Err(rocket)
             }
         })
@@ -315,7 +319,12 @@ impl Template {
             Status::InternalServerError
         })?;
 
-        let string = ctxt.engines.render(name, &info, value).ok_or_else(|| {
+        let engines = ctxt.engines.as_ref().ok_or_else(|| {
+            error_!("An error occurred during the previous template reload.");
+            Status::InternalServerError
+        })?;
+
+        let string = engines.render(name, &info, value).ok_or_else(|| {
             error_!("Template '{}' failed to render.", name);
             Status::InternalServerError
         })?;

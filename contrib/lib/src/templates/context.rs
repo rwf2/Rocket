@@ -11,20 +11,32 @@ pub struct Context {
     pub root: PathBuf,
     /// Mapping from template name to its information.
     pub templates: HashMap<String, TemplateInfo>,
-    /// Mapping from template name to its information.
-    pub engines: Engines
+    /// Loaded template engines, or None if there was a failure during a reload
+    pub engines: Option<Engines>,
+    /// Context customization callback for reuse when reloading
+    pub customize_callback: Box<Fn(&mut Engines) + Send + Sync + 'static>,
 }
 
 impl Context {
-    pub fn initialize(root: PathBuf) -> Option<Context> {
+    pub fn initialize<F>(root: PathBuf, customize_callback: F) -> Option<Context> where F: Fn(&mut Engines) + Send + Sync + 'static {
+        let mut ctxt = Context { root, templates: Default::default(), engines: Default::default(), customize_callback: Box::new(customize_callback) };
+        ctxt.reload();
+        if ctxt.engines.is_some() {
+            Some(ctxt)
+        } else {
+            None
+        }
+    }
+
+    pub fn reload(&mut self) {
         let mut templates: HashMap<String, TemplateInfo> = HashMap::new();
         for ext in Engines::ENABLED_EXTENSIONS {
-            let mut glob_path = root.join("**").join("*");
+            let mut glob_path = self.root.join("**").join("*");
             glob_path.set_extension(ext);
             let glob_path = glob_path.to_str().expect("valid glob path string");
 
             for path in glob(glob_path).unwrap().filter_map(Result::ok) {
-                let (name, data_type_str) = split_path(&root, &path);
+                let (name, data_type_str) = split_path(&self.root, &path);
                 if let Some(info) = templates.get(&*name) {
                     warn_!("Template name '{}' does not have a unique path.", name);
                     info_!("Existing path: {:?}", info.path);
@@ -45,9 +57,13 @@ impl Context {
             }
         }
 
-        Engines::init(&templates).map(|engines| {
-            Context { root, templates, engines }
-        })
+        let engines = Engines::init(&templates).map(|mut engines| {
+            (self.customize_callback)(&mut engines);
+            engines
+        });
+
+        self.templates = templates;
+        self.engines = engines;
     }
 }
 
