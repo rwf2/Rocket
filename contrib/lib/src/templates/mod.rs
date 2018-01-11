@@ -7,6 +7,7 @@ extern crate glob;
 mod engine;
 mod context;
 mod metadata;
+#[cfg(debug_assertions)] mod watch;
 
 pub use self::engine::Engines;
 pub use self::metadata::TemplateMetadata;
@@ -20,6 +21,8 @@ use self::glob::glob;
 use std::borrow::Cow;
 use std::path::PathBuf;
 use std::sync::Mutex;
+#[cfg(debug_assertions)]
+use std::sync::{RwLock, RwLockReadGuard, RwLockWriteGuard};
 
 use rocket::{Rocket, State};
 use rocket::request::Request;
@@ -143,6 +146,37 @@ pub struct TemplateInfo {
     data_type: ContentType
 }
 
+struct ManagedContext(
+    #[cfg(not(debug_assertions))]
+    Context,
+    #[cfg(debug_assertions)]
+    RwLock<Context>,
+);
+
+#[cfg(debug_assertions)]
+impl ManagedContext {
+    fn new(ctxt: Context) -> ManagedContext {
+        ManagedContext(RwLock::new(ctxt))
+    }
+
+    fn get(&self) -> RwLockReadGuard<Context> {
+        self.0.read().unwrap()
+    }
+
+    fn get_mut(&self) -> RwLockWriteGuard<Context> {
+        self.0.write().unwrap()
+    }
+}
+
+#[cfg(not(debug_assertions))]
+impl ManagedContext {
+    fn new(ctxt: Context) -> ManagedContext {
+        ManagedContext(ctxt)
+    }
+
+    fn get(&self) -> &Context { &self.0 }
+}
+
 impl Template {
     /// Returns a fairing that initializes and maintains templating state.
     ///
@@ -207,10 +241,7 @@ impl Template {
     /// }
     /// ```
     pub fn custom<F>(f: F) -> impl Fairing where F: Fn(&mut Engines) + Send + Sync + 'static {
-        // TODO: when #522 is fixed, the closure passed into on_attach will be
-        // able to directly consume f without necessitating a Send+Sync wrapper type.
-        let callback_mutex = Mutex::new(Some(f));
-
+        let callback = Mutex::new(Some(Box::new(f)));
         AdHoc::on_attach(move |rocket| {
             let mut template_root = rocket.config().root_relative(DEFAULT_TEMPLATE_DIR);
             match rocket.config().get_str("template_dir") {
@@ -222,12 +253,20 @@ impl Template {
                 }
             };
 
-            let callback = callback_mutex.lock().unwrap().take().expect("on_attach fairing called twice!");
+            let callback = callback.lock().unwrap().take().expect("on_attach fairing called twice!");
 
-            match Context::initialize(template_root, callback) {
-                Some(ctxt) => Ok(rocket.manage(ctxt)),
-                None => Err(rocket)
-            }
+            let ctxt = match Context::initialize(template_root, callback) {
+                Some(ctxt) => ctxt,
+                None => return Err(rocket),
+            };
+
+            #[cfg(debug_assertions)]
+            let rocket = rocket.attach(AdHoc::on_request(|req, _| {
+                let mc = req.guard::<State<ManagedContext>>().succeeded().expect("context wrapper");
+                mc.get_mut().reload_if_needed();
+            }));
+
+            Ok(rocket.manage(ManagedContext::new(ctxt)))
         })
     }
 
@@ -293,7 +332,7 @@ impl Template {
     pub fn show<S, C>(rocket: &Rocket, name: S, context: C) -> Option<String>
         where S: Into<Cow<'static, str>>, C: Serialize
     {
-        let ctxt = rocket.state::<Context>().or_else(|| {
+        let ctxt = rocket.state::<ManagedContext>().map(ManagedContext::get).or_else(|| {
             warn!("Uninitialized template context: missing fairing.");
             info!("To use templates, you must attach `Template::fairing()`.");
             info!("See the `Template` documentation for more information.");
@@ -338,12 +377,13 @@ impl Template {
 /// rendering fails, an `Err` of `Status::InternalServerError` is returned.
 impl Responder<'static> for Template {
     fn respond_to(self, req: &Request) -> response::Result<'static> {
-        let ctxt = req.guard::<State<Context>>().succeeded().ok_or_else(|| {
+        let mc = req.guard::<State<ManagedContext>>().succeeded().ok_or_else(|| {
             error_!("Uninitialized template context: missing fairing.");
             info_!("To use templates, you must attach `Template::fairing()`.");
             info_!("See the `Template` documentation for more information.");
             Status::InternalServerError
         })?;
+        let ctxt = mc.get();
 
         let (render, content_type) = self.finalize(&ctxt)?;
         Content(content_type, render).respond_to(req)

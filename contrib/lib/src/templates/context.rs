@@ -2,6 +2,8 @@ use std::path::{Path, PathBuf};
 use std::collections::HashMap;
 
 use super::{Engines, TemplateInfo};
+#[cfg(debug_assertions)]
+use super::watch::TemplateWatcher;
 use super::glob;
 
 use rocket::http::ContentType;
@@ -15,16 +17,25 @@ pub struct Context {
     pub engines: Option<Engines>,
     /// Context customization callback for reuse when reloading
     pub customize_callback: Box<Fn(&mut Engines) + Send + Sync + 'static>,
+    /// Filesystem watcher
+    #[cfg(debug_assertions)]
+    pub watcher: TemplateWatcher,
 }
 
 impl Context {
-    pub fn initialize<F>(root: PathBuf, customize_callback: F) -> Option<Context> where F: Fn(&mut Engines) + Send + Sync + 'static {
-        let mut ctxt = Context { root, templates: Default::default(), engines: Default::default(), customize_callback: Box::new(customize_callback) };
+    pub fn initialize(root: PathBuf, customize_callback: Box<Fn(&mut Engines) + Send + Sync + 'static>) -> Option<Context> {
+        let mut ctxt = Context {
+            root: root.clone(),
+            templates: Default::default(),
+            engines: Default::default(),
+            customize_callback: customize_callback,
+            #[cfg(debug_assertions)] watcher: TemplateWatcher::new(root),
+        };
+
         ctxt.reload();
-        if ctxt.engines.is_some() {
-            Some(ctxt)
-        } else {
-            None
+        match ctxt.engines {
+            Some(_) => Some(ctxt),
+            _ => None,
         }
     }
 
@@ -64,6 +75,14 @@ impl Context {
 
         self.templates = templates;
         self.engines = engines;
+    }
+
+    #[cfg(debug_assertions)]
+    pub fn reload_if_needed(&mut self) {
+        if self.watcher.needs_reload() {
+            warn!("Change detected, reloading templates");
+            self.reload();
+        }
     }
 }
 
