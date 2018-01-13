@@ -1,3 +1,36 @@
+# Version 0.3.6 (Jan 12, 2018)
+
+## Core
+
+  * `Rocket.state()` method was added to retrieve managed state from `Rocket`
+    instances.
+  * Nested calls to `Rocket.attach()` are now handled correctly.
+  * JSON API (`application/vnd.api+json`) is now a known media type.
+  * Uncached markers for `ContentType` and `Accept` headers are properly
+    preserved on `Request.clone()`.
+  * Minimum required `rustc` is `1.25.0-nightly 2018-01-12`.
+
+## Codegen
+
+  * Codegen was updated for `2017-12-22` nightly.
+  * Minimum required `rustc` is `1.24.0-nightly 2017-12-22`.
+
+## Docs
+
+  * Fixed typo in state guide: ~~simple~~ simply.
+  * Database example and docs were updated for Diesel 1.0.
+
+## Infrastructure
+
+  * Shell scripts now use `git grep` instead of `egrep` for faster searching.
+
+# Version 0.3.5 (Dec 18, 2017)
+
+## Codegen
+
+  * Codegen was updated for `2017-12-17` nightly.
+  * Minimum required `rustc` is `1.24.0-nightly 2017-12-17`.
+
 # Version 0.3.4 (Dec 14, 2017)
 
 ## Core

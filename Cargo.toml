@@ -38,6 +38,3 @@ members = [
   "examples/tls",
   "examples/fairings",
 ]
-
-[patch.crates-io]
-ring = { git = "https://github.com/SergioBenitez/ring", branch = "v0.12" }

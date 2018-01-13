@@ -63,12 +63,7 @@ guide.
 
 Rocket requires a nightly version of Rust as it makes heavy use of syntax
 extensions. This means that the first two unwieldly lines in the introductory
-example above are required. Due to an issue in a Rocket dependency (see [#513]),
-you must currently build _released_ versions of Rocket with a nightly between
-`nightly-2017-12-18` and `nightly-2017-12-21`. The in-development version of
-Rocket compiles with the _latest_ nightly compiler.
-
-[#513]: https://github.com/SergioBenitez/Rocket/issues/513
+example above are required.
 
 ### Core, Codegen, and Contrib
 

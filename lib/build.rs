@@ -8,8 +8,8 @@ use yansi::Color::{Red, Yellow, Blue, White};
 use version_check::{supports_features, is_min_version, is_min_date};
 
 // Specifies the minimum nightly version needed to compile Rocket.
-const MIN_DATE: &'static str = "2017-11-07";
-const MIN_VERSION: &'static str = "1.23.0-nightly";
+const MIN_DATE: &'static str = "2018-01-12";
+const MIN_VERSION: &'static str = "1.25.0-nightly";
 
 fn main() {
     let ok_channel = supports_features();

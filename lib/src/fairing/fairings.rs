@@ -17,15 +17,18 @@ impl Fairings {
     }
 
     pub fn attach(&mut self, fairing: Box<Fairing>, mut rocket: Rocket) -> Rocket {
-        // Get the kind information.
-        let kind = fairing.info().kind;
-
         // Run the `on_attach` callback if this is an 'attach' fairing.
+        let kind = fairing.info().kind;
         if kind.is(Kind::Attach) {
             rocket = fairing.on_attach(rocket)
                 .unwrap_or_else(|r| { self.attach_failure = true; r })
         }
 
+        self.add(fairing);
+        rocket
+    }
+
+    fn add(&mut self, fairing: Box<Fairing>) {
         // The `Fairings` structure separates `all_fairings` into kind groups so
         // we don't have to search through all fairings and do a comparison at
         // runtime. We need references since a single structure can be multiple
@@ -44,6 +47,7 @@ impl Fairings {
         // reallocations there are irrelvant. Instead, it points into the heap.
         //
         // Also, we don't save attach fairings since we don't need them anymore.
+        let kind = fairing.info().kind;
         if !kind.is_exactly(Kind::Attach) {
             let ptr: &'static Fairing = unsafe { ::std::mem::transmute(&*fairing) };
 
@@ -52,8 +56,12 @@ impl Fairings {
             if kind.is(Kind::Request) { self.request.push(ptr); }
             if kind.is(Kind::Response) { self.response.push(ptr); }
         }
+    }
 
-        rocket
+    pub fn append(&mut self, others: Fairings) {
+        for fairing in others.all_fairings {
+            self.add(fairing);
+        }
     }
 
     #[inline(always)]
