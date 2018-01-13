@@ -244,7 +244,7 @@ Here's our version (in `src/main.rs`):
 fn upload(paste: Data) -> io::Result<String> {
     let id = PasteID::new(3);
     let filename = format!("upload/{id}", id = id);
-    let url = format!("{host}/{id}\n", host = "http://localhost:54321", id = id);
+    let url = format!("{host}/{id}\n", host = "http://localhost:8000", id = id);
 
     // Write the paste out to the file and return the URL.
     paste.stream_to_file(Path::new(&filename))?;
@@ -269,8 +269,8 @@ with the correct ID:
 cargo run
 
 # in a seperate terminal
-echo "Hello, world." | curl --data-binary @- http://localhost:54321
-# => http://localhost:54321/eGs
+echo "Hello, world." | curl --data-binary @- http://localhost:8000
+# => http://localhost:8000/eGs
 
 # back to the terminal running the pastebin
 <ctrl-c>     # kill running process

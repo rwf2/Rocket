@@ -164,7 +164,7 @@ Running the application, the console shows:
 ```sh
 🔧  Configured for development.
     => address: localhost
-    => port: 54321
+    => port: 8000
     => log: normal
     => workers: [logical cores * 2]
     => secret key: generated
@@ -172,10 +172,10 @@ Running the application, the console shows:
     => tls: disabled
 🛰  Mounting '/hello':
     => GET /hello/world
-🚀  Rocket has launched from http://localhost:54321
+🚀  Rocket has launched from http://localhost:8000
 ```
 
-If we visit `localhost:54321/hello/world`, we see `Hello, world!`, exactly as
+If we visit `localhost:8000/hello/world`, we see `Hello, world!`, exactly as
 we expected.
 
 A version of this example's complete crate, ready to `cargo run`, can be found

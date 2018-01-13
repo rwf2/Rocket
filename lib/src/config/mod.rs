@@ -35,7 +35,7 @@
 //!     listen on
 //!     * examples: `"localhost"`, `"0.0.0.0"`, `"1.2.3.4"`
 //!   * **port**: _[integer]_ a port number to listen on
-//!     * examples: `"54321"`, `"80"`, `"4242"`
+//!     * examples: `"8000"`, `"80"`, `"4242"`
 //!   * **workers**: _[integer]_ the number of concurrent workers to use
 //!     * examples: `12`, `1`, `4`
 //!   * **log**: _[string]_ how much information to log; one of `"normal"`,
@@ -70,7 +70,7 @@
 //! ```toml
 //! [development]
 //! address = "localhost"
-//! port = 54321
+//! port = 8000
 //! workers = [number_of_cpus * 2]
 //! log = "normal"
 //! secret_key = [randomly generated at launch]
@@ -78,7 +78,7 @@
 //!
 //! [staging]
 //! address = "0.0.0.0"
-//! port = 54321
+//! port = 8000
 //! workers = [number_of_cpus * 2]
 //! log = "normal"
 //! secret_key = [randomly generated at launch]
@@ -86,7 +86,7 @@
 //!
 //! [production]
 //! address = "0.0.0.0"
-//! port = 54321
+//! port = 8000
 //! workers = [number_of_cpus * 2]
 //! log = "critical"
 //! secret_key = [randomly generated at launch]
