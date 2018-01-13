@@ -13,13 +13,21 @@ pub struct TemplateWatcher {
 }
 
 impl TemplateWatcher {
-    pub fn new<P: AsRef<Path>>(template_root: P) -> TemplateWatcher {
+    pub fn new<P: AsRef<Path>>(template_root: P) -> Option<TemplateWatcher> {
         let (tx, rx) = channel();
-        let mut watcher = watcher(tx, Duration::from_secs(1)).expect("filesystem watcher");
-        watcher.watch(template_root, RecursiveMode::Recursive)
-            .unwrap_or_else(|_| warn!("Templates directory does not exist. Live template reload will be unavailable"));
-
-        TemplateWatcher { _watcher: watcher, recv_queue: Mutex::new(rx) }
+        match watcher(tx, Duration::from_secs(1)) {
+            Ok(mut watcher) => match watcher.watch(template_root, RecursiveMode::Recursive) {
+                Ok(_) => Some(TemplateWatcher { _watcher: watcher, recv_queue: Mutex::new(rx) }),
+                Err(_) => {
+                    warn!("Templates directory does not exist. Live template reload will be unavailable");
+                    None
+                }
+            },
+            Err(_) => {
+                warn!("Could not instantiate a filesystem watcher. Live template reload will be unavailable");
+                None
+            },
+        }
     }
 
     pub fn needs_reload(&self) -> bool {

@@ -17,9 +17,9 @@ pub struct Context {
     pub engines: Option<Engines>,
     /// Context customization callback for reuse when reloading
     pub customize_callback: Box<Fn(&mut Engines) + Send + Sync + 'static>,
-    /// Filesystem watcher
+    /// Filesystem watcher, or None if the directory could not be watched
     #[cfg(debug_assertions)]
-    pub watcher: TemplateWatcher,
+    pub watcher: Option<TemplateWatcher>,
 }
 
 impl Context {
@@ -79,7 +79,7 @@ impl Context {
 
     #[cfg(debug_assertions)]
     pub fn reload_if_needed(&mut self) {
-        if self.watcher.needs_reload() {
+        if self.watcher.as_ref().map(TemplateWatcher::needs_reload).unwrap_or(false) {
             warn!("Change detected, reloading templates");
             self.reload();
         }
