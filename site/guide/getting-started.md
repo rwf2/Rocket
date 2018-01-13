@@ -84,7 +84,7 @@ run`. You should see the following:
 ```sh
 🔧  Configured for development.
     => address: localhost
-    => port: 54321
+    => port: 8000
     => log: normal
     => workers: [core count * 2]
     => secret key: generated
@@ -92,7 +92,7 @@ run`. You should see the following:
     => tls: disabled
 🛰  Mounting '/':
     => GET /
-🚀  Rocket has launched from http://localhost:54321
+🚀  Rocket has launched from http://localhost:8000
 ```
 
-Visit `http://localhost:54321` to see your first Rocket application in action!
+Visit `http://localhost:8000` to see your first Rocket application in action!

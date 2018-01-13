@@ -30,7 +30,7 @@ use http::{Header, Cookie};
 /// let client = Client::new(rocket::ignite()).expect("valid rocket");
 /// let req = client.post("/")
 ///     .header(ContentType::JSON)
-///     .remote("127.0.0.1:54321".parse().unwrap())
+///     .remote("127.0.0.1:8000".parse().unwrap())
 ///     .cookie(Cookie::new("name", "value"))
 ///     .body(r#"{ "value": 42 }"#);
 /// ```
@@ -152,13 +152,13 @@ impl<'c> LocalRequest<'c> {
     ///
     /// # Examples
     ///
-    /// Set the remote address to "8.8.8.8:54321":
+    /// Set the remote address to "8.8.8.8:8000":
     ///
     /// ```rust
     /// use rocket::local::Client;
     ///
     /// let client = Client::new(rocket::ignite()).unwrap();
-    /// let address = "8.8.8.8:54321".parse().unwrap();
+    /// let address = "8.8.8.8:8000".parse().unwrap();
     /// let req = client.get("/").remote(address);
     /// ```
     #[inline]

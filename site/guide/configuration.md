@@ -30,7 +30,7 @@ $ sudo ROCKET_ENV=staging cargo run
 
 🔧  Configured for staging.
     => address: 0.0.0.0
-    => port: 54321
+    => port: 8000
     => log: normal
     => workers: [logical cores * 2]
     => secret key: generated
@@ -38,7 +38,7 @@ $ sudo ROCKET_ENV=staging cargo run
     => tls: disabled
 🛰  Mounting '/':
     => GET /
-🚀  Rocket has launched from http://0.0.0.0:54321
+🚀  Rocket has launched from http://0.0.0.0:8000
 ```
 
 ## Rocket.toml
@@ -59,7 +59,7 @@ value:
 ```toml
 [development]
 address = "localhost"
-port = 54321
+port = 8000
 workers = [number of cpus * 2]
 log = "normal"
 secret_key = [randomly generated at launch]
@@ -67,7 +67,7 @@ limits = { forms = 32768 }
 
 [staging]
 address = "0.0.0.0"
-port = 54321
+port = 8000
 workers = [number of cpus * 2]
 log = "normal"
 secret_key = [randomly generated at launch]
@@ -75,7 +75,7 @@ limits = { forms = 32768 }
 
 [production]
 address = "0.0.0.0"
-port = 54321
+port = 8000
 workers = [number of cpus * 2]
 log = "critical"
 secret_key = [randomly generated at launch]
