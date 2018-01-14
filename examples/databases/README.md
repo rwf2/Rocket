@@ -1,41 +1,35 @@
 # Rocket Databases Example
 
-This example makes use of a SQLite database using rusqlite and PostgreSQL using diesel. As
-a result, you'll need to have `sqlite3` and `posgresql` and its headers installed:
+This example show you how to generate and connect to multiple connection pool.
+The contributed connection_pools helper uses `r2d2`,
+so in theory it can support all connection pool that can be handled by `r2d2`.
+
+This example use 3 different connection pool, PostgreSQL using `r2d2-diesel`,
+Sqlite using `r2d2_sqlite`, and Redis using `r2d2_redis`.
+
+In order to run this application, you need to have libraries and headers for those 3:
 
   * **OS X:** `brew install sqlite`
-  * **Debian/Ubuntu:** `apt-get install libsqlite3-dev`
-  * **Arch:** `pacman -S sqlite`
+  * **Debian/Ubuntu:** `apt-get install libsqlite3-dev libpq-dev redis-server`
+  * **Arch:** `pacman -S sqlite redis postgresql`
 
 ## Running
 
 **Before running, building, or testing this example, you'll need to ensure the
 following:**
 
-  1. A SQLite database file with the proper schema is present.
-
-     On a Unix machine or with bash installed, you can simply run the
-     `boostrap.sh` script to create the database. The script installs the
-     `diesel_cli` tools if they're not already installed and runs the
-     migrations. The script will output a `DATABASE_URL` variable.
-
-     You can also install the Diesel CLI and run the migrations manually with
-     the following commands:
+  1. PostgreSQL must be running and Rocket must be configured to use the proper connection.
+     First go to the example directory and copy the provided `.env.example` to `.env`.
+     Second modify the `.env` file to use the correct configuration to connect to your PostgreSQL instance.
+     Third modify the provided `Rocket.toml` `postgres_url` to use the correct configuration to connect to your PostgreSQL instance.
+     Fourth run the following commands:
 
      ```
      # install Diesel CLI tools
-     cargo install diesel_cli --no-default-features --features sqlite
+     cargo install diesel_cli
 
      # create db/db.sql
-     DATABASE_URL=db/db.sql diesel migration run
+     diesel migration run
      ```
-
-  2. A `DATABASE_URL` environment variable is set that points to the SQLite
-     database file.
-
-     Use the `DATABASE_URL` variable emitted from the `bootstrap.sh` script, or
-     enter it manually, as follows:
-
-     * `DATABASE_URL=db/db.sql cargo build`
-     * `DATABASE_URL=db/db.sql cargo test`
-     * `DATABASE_URL=db/db.sql cargo run`
+  2. Redis must be running and Rocket must be configured to use the proper connection.
+     Modify the provided `Rocket.toml` `redis_url` to use the correct configuration to connect to your Redis server.

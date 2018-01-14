@@ -22,6 +22,7 @@
 //! * [handlebars_templates](struct.Template.html)
 //! * [tera_templates](struct.Template.html)
 //! * [uuid](struct.UUID.html)
+//! * [connection_pools](conn/struct.Conn.html)
 //!
 //! The recommend way to include features from this crate via Cargo in your
 //! project is by adding a `[dependencies.rocket_contrib]` section to your
