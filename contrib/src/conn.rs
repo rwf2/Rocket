@@ -7,9 +7,7 @@ use rocket::request::{self, FromRequest};
 use rocket::{Outcome, Request, State};
 
 pub fn init_pool<T: ManageConnection>(manager: T, max_size: u32) -> Result<Pool<T>, r2d2::Error> {
-    let pool = Pool::builder()
-        .max_size(max_size)
-        .build(manager)?;
+    let pool = Pool::builder().max_size(max_size).build(manager)?;
     Ok(pool)
 }
 
@@ -42,8 +40,10 @@ where
         let pool = request.guard::<State<Pool<T>>>()?;
 
         match pool.get() {
-            Ok(conn) => Outcome::Success(Conn { pooled_connection: conn }),
-            Err(_) => Outcome::Failure((Status::ServiceUnavailable, ()))
+            Ok(conn) => Outcome::Success(Conn {
+                pooled_connection: conn,
+            }),
+            Err(_) => Outcome::Failure((Status::ServiceUnavailable, ())),
         }
     }
 }

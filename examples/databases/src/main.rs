@@ -60,7 +60,8 @@ fn main() {
         .manage(sqlite_pool)
         .manage(diesel_pool)
         .manage(redis_pool)
-        .mount("/",
+        .mount(
+            "/",
             routes![
                 controllers::sqlite_example,
                 controllers::diesel_example,

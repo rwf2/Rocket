@@ -13,11 +13,9 @@ use redis;
 #[get("/sqlite_example")]
 pub fn sqlite_example(conn: Conn<SqliteConnectionManager>) -> String {
     let mut stmt = conn.prepare("SELECT id, name FROM person LIMIT 1").unwrap();
-    let person_iter = stmt.query_map(&[], |row| {
-        Person {
-            id: row.get(0),
-            name: row.get(1),
-        }
+    let person_iter = stmt.query_map(&[], |row| Person {
+        id: row.get(0),
+        name: row.get(1),
     }).unwrap();
     let person = &person_iter.last().unwrap().unwrap();
     format!("Hello user: {} with id: {}", person.name, person.id)
@@ -25,7 +23,8 @@ pub fn sqlite_example(conn: Conn<SqliteConnectionManager>) -> String {
 
 #[get("/diesel_example")]
 pub fn diesel_example(conn: Conn<ConnectionManager<PgConnection>>) -> String {
-    let selected_user = users.select((id, username))
+    let selected_user = users
+        .select((id, username))
         .order(id.asc())
         .first::<User>(&**conn.deref())
         .optional()
