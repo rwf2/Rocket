@@ -9,9 +9,11 @@ rocket_codegen = { path = "../../codegen" }
 r2d2 = "0.8"
 r2d2-diesel = "1.0"
 r2d2_sqlite = "0.5.0"
+r2d2_redis = "0.7.0"
 diesel = { version = "1.0", features = ["postgres"] }
 diesel_derives = { version = "1.0", features = ["postgres"] }
 rusqlite = "0.13.0"
+redis = "0.8.0"
 
 [dependencies.rocket_contrib]
 path = "../../contrib"

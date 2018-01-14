@@ -3,10 +3,12 @@ use diesel::prelude::*;
 use diesel::PgConnection;
 use r2d2_sqlite::SqliteConnectionManager;
 use r2d2_diesel::ConnectionManager;
+use r2d2_redis::RedisConnectionManager;
 use rocket_contrib::conn::Conn;
 use model::{Person, User};
 use schema::users::dsl::users;
 use schema::users::columns::{id, username};
+use redis;
 
 #[get("/sqlite_example")]
 pub fn sqlite_example(conn: Conn<SqliteConnectionManager>) -> String {
@@ -30,4 +32,10 @@ pub fn diesel_example(conn: Conn<ConnectionManager<PgConnection>>) -> String {
         .expect("Failed to load user");
     let user = selected_user.unwrap();
     format!("Hello user: {} with id: {}", user.username, user.id)
+}
+
+#[get("/redis_example")]
+pub fn redis_example(conn: Conn<RedisConnectionManager>) -> String {
+    let reply = redis::cmd("PING").query::<String>(&**conn.deref()).unwrap();
+    format!("Redis query result: {}", reply)
 }
