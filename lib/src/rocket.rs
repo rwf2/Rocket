@@ -131,11 +131,6 @@ impl Rocket {
             hyp_res.headers_mut().append_raw(name, value);
         }
 
-        if response.body().is_none() {
-            hyp_res.headers_mut().set(header::ContentLength(0));
-            return hyp_res.start()?.end();
-        }
-
         match response.body() {
             None => {
                 hyp_res.headers_mut().set(header::ContentLength(0));
