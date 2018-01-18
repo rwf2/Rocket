@@ -21,7 +21,7 @@ use error::{Error, LaunchError, LaunchErrorKind};
 use fairing::{Fairing, Fairings};
 
 use http::{Method, Status, Header};
-use http::hyper::{self, header};
+use http::hyper;
 use http::uri::Uri;
 
 /// The main `Rocket` type: used to mount routes and catchers and launch the
@@ -133,11 +133,9 @@ impl Rocket {
 
         match response.body() {
             None => {
-                hyp_res.headers_mut().set(header::ContentLength(0));
                 hyp_res.start()?.end()
             }
-            Some(Body::Sized(body, size)) => {
-                hyp_res.headers_mut().set(header::ContentLength(size));
+            Some(Body::Sized(body, _)) => {
                 let mut stream = hyp_res.start()?;
                 io::copy(body, &mut stream)?;
                 stream.end()
@@ -203,6 +201,8 @@ impl Rocket {
         self.preprocess_request(request, &data);
         self.fairings.handle_request(request, &data);
 
+        let req_method = request.method();
+
         // Route the request to get a response.
         let mut response = match self.route(request, data) {
             Outcome::Success(mut response) => {
@@ -227,7 +227,6 @@ impl Rocket {
                     info_!("Autohandling {} request.", Paint::white("HEAD"));
                     request.set_method(Method::Get);
                     let mut response = self.dispatch(request, data);
-                    response.strip_body();
                     response
                 } else {
                     self.handle_error(Status::NotFound, request)
@@ -239,6 +238,22 @@ impl Rocket {
         // Add the 'rocket' server header to the response and run fairings.
         // TODO: If removing Hyper, write out `Date` header too.
         response.set_header(Header::new("Server", "Rocket"));
+
+        //Content-Length should be body size for GET and HEAD, unless chunked, in
+        //which case it must not be set
+        match response.body() {
+            None => {
+                response.set_header(Header::new("Content-Length", "0"));
+            },
+            Some(Body::Sized(_, size)) => {
+                response.set_header(Header::new("Content-Length", size.to_string()));
+                if req_method == Method::Head {
+                    response.strip_body();
+                }
+            },
+            Some(Body::Chunked(_, _)) => (),
+        }
+
         self.fairings.handle_response(request, &mut response);
 
         response
