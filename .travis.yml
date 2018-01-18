@@ -2,6 +2,9 @@ language: rust
 sudo: required # so we get a VM with higher specs
 dist: trusty # so we get a VM with higher specs
 cache: cargo
+env:
+  - TEST_FLAGS=
+  - TEST_FLAGS=--release
 rust:
   - nightly
-script: ./scripts/test.sh
+script: ./scripts/test.sh $TEST_FLAGS

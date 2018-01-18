@@ -32,7 +32,7 @@ error: expected identifier, found `<eof>`
   --> $DIR/typed-uris-invalid-syntax.rs:16:18
    |
 16 |     uri!("/mount",);
-   |                  ^
+   |                  ^ expected identifier
 
 error: invalid mount point
   --> $DIR/typed-uris-invalid-syntax.rs:17:10
