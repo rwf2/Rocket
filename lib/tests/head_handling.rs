@@ -16,8 +16,8 @@ fn index() -> &'static str {
 }
 
 #[head("/other")]
-fn other() -> content::Json<()> {
-    content::Json(())
+fn other() -> content::Json<&'static str> {
+    content::Json("{\"h\": 1}")
 }
 
 mod tests {
@@ -52,8 +52,16 @@ mod tests {
         let content_type: Vec<_> = response.headers().get("Content-Type").collect();
         assert_eq!(content_type, vec![ContentType::Plain.to_string()]);
 
+        //Content-Length should be same as for GET (issue 514)
+        let content_length = response.headers().get_one("Content-Length");
+        assert_eq!(content_length, Some("Hello, world!".len().to_string().as_str()));
+
+        //Test empty response
         let response = client.head("empty").dispatch();
         assert_eq!(response.status(), Status::NoContent);
+        let content_length = response.headers().get_one("Content-Length");
+        assert_eq!(content_length, Some("0"));
+
     }
 
     #[test]
@@ -64,5 +72,9 @@ mod tests {
         let content_type: Vec<_> = response.headers().get("Content-Type").collect();
         assert_eq!(response.status(), Status::Ok);
         assert_eq!(content_type, vec![ContentType::JSON.to_string()]);
+
+        let content_length = response.headers().get_one("Content-Length");
+        assert_eq!(content_length, Some("{\"h\": 1}".len().to_string().as_str()));
+
     }
 }
