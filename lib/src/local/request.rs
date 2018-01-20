@@ -4,8 +4,8 @@ use std::mem::transmute;
 use std::net::SocketAddr;
 use std::ops::{Deref, DerefMut};
 
-use {Rocket, Request, Response, Data};
-use http::{Header, Cookie};
+use {Data, Request, Response, Rocket};
+use http::{Cookie, Header};
 
 /// A structure representing a local request as created by [`Client`].
 ///
@@ -71,7 +71,7 @@ pub struct LocalRequest<'c> {
     rocket: &'c Rocket,
     ptr: *mut Request<'c>,
     request: Rc<Request<'c>>,
-    data: Vec<u8>
+    data: Vec<u8>,
 }
 
 impl<'c> LocalRequest<'c> {
@@ -79,7 +79,12 @@ impl<'c> LocalRequest<'c> {
     pub(crate) fn new(rocket: &'c Rocket, request: Request<'c>) -> LocalRequest<'c> {
         let mut req = Rc::new(request);
         let ptr = Rc::get_mut(&mut req).unwrap() as *mut Request;
-        LocalRequest { rocket: rocket, ptr: ptr, request: req, data: vec![] }
+        LocalRequest {
+            rocket: rocket,
+            ptr: ptr,
+            request: req,
+            data: vec![],
+        }
     }
 
     /// Retrieves the inner `Request` as seen by Rocket.
@@ -277,7 +282,7 @@ impl<'c> LocalRequest<'c> {
 
         LocalResponse {
             _request: self.request,
-            response: response
+            response: response,
         }
     }
 
@@ -340,7 +345,7 @@ impl<'c> LocalRequest<'c> {
 
         LocalResponse {
             _request: self.request.clone(),
-            response: response
+            response: response,
         }
     }
 }

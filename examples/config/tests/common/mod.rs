@@ -27,7 +27,7 @@ fn check_config(config: State<LocalConfig>) -> Option<()> {
         }
         "staging" => {
             assert_eq!(config.address, "0.0.0.0".to_string());
-            assert_eq!(config.port, 80);
+            assert_eq!(config.port, 8000);
             assert_eq!(config.workers, 8);
             assert_eq!(config.log_level, LoggingLevel::Normal);
             assert_eq!(config.environment, config::Environment::Staging);
@@ -35,7 +35,7 @@ fn check_config(config: State<LocalConfig>) -> Option<()> {
         }
         "production" => {
             assert_eq!(config.address, "0.0.0.0".to_string());
-            assert_eq!(config.port, 80);
+            assert_eq!(config.port, 8000);
             assert_eq!(config.workers, 12);
             assert_eq!(config.log_level, LoggingLevel::Critical);
             assert_eq!(config.environment, config::Environment::Production);

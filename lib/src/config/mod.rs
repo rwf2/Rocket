@@ -78,7 +78,7 @@
 //!
 //! [staging]
 //! address = "0.0.0.0"
-//! port = 80
+//! port = 8000
 //! workers = [number_of_cpus * 2]
 //! log = "normal"
 //! secret_key = [randomly generated at launch]
@@ -86,7 +86,7 @@
 //!
 //! [production]
 //! address = "0.0.0.0"
-//! port = 80
+//! port = 8000
 //! workers = [number_of_cpus * 2]
 //! log = "critical"
 //! secret_key = [randomly generated at launch]

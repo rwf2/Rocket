@@ -225,7 +225,7 @@ impl Config {
                 Config {
                     environment: Staging,
                     address: "0.0.0.0".to_string(),
-                    port: 80,
+                    port: 8000,
                     workers: default_workers,
                     log_level: LoggingLevel::Normal,
                     secret_key: key,
@@ -239,7 +239,7 @@ impl Config {
                 Config {
                     environment: Production,
                     address: "0.0.0.0".to_string(),
-                    port: 80,
+                    port: 8000,
                     workers: default_workers,
                     log_level: LoggingLevel::Critical,
                     secret_key: key,
