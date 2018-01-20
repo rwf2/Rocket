@@ -63,11 +63,8 @@ impl<T: io::Read> Body<T> {
     /// Attepts to read `self` into a `Vec` and returns it. If reading fails,
     /// returns `None`.
     pub fn into_bytes(self) -> Option<Vec<u8>> {
-        let (mut body, mut vec) = match self {
-            Body::Sized(b, size) => (b, Vec::with_capacity(size as usize)),
-            Body::Chunked(b, _) => (b, Vec::new())
-        };
-
+        let mut vec = Vec::new();
+        let mut body = self.into_inner();
         if let Err(e) = body.read_to_end(&mut vec) {
             error_!("Error reading body: {:?}", e);
             return None;

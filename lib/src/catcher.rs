@@ -239,6 +239,8 @@ pub mod defaults {
                 method, or it lacks the ability to fulfill the request.", handle_501,
             503, "Service Unavailable", "The server is currently unavailable.",
                 handle_503,
+            504, "Gateway Timeout", "The server did not receive a timely
+                response from an upstream server.", handle_504,
             510, "Not Extended", "Further extensions to the request are required for
                 the server to fulfill it.", handle_510
         }
