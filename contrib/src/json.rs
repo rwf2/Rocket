@@ -14,6 +14,23 @@ use serde_json;
 
 pub use serde_json::error::Error as SerdeError;
 
+/// Like [`from_reader`] but eagerly reads the content of the reader to a string
+/// and delegates to `from_str`.
+///
+/// [`from_reader`]: https://docs.serde.rs/serde_json/fn.from_reader.html
+fn from_reader_eager<R, T>(mut reader: R) -> serde_json::Result<T>
+where
+    R: Read,
+    T: DeserializeOwned,
+{
+    let mut s = String::new();
+    if let Err(io_err) = reader.read_to_string(&mut s) {
+        // Error::io is private to serde_json. Do not use.
+        return Err(SerdeError::io(io_err));
+    }
+    serde_json::from_str(&s)
+}
+
 /// The JSON type: implements `FromData` and `Responder`, allowing you to easily
 /// consume and respond with JSON.
 ///
@@ -97,7 +114,7 @@ impl<T: DeserializeOwned> FromData for Json<T> {
         }
 
         let size_limit = request.limits().get("json").unwrap_or(LIMIT);
-        serde_json::from_reader(data.open().take(size_limit))
+        from_reader_eager(data.open().take(size_limit))
             .map(|val| Json(val))
             .map_err(|e| { error_!("Couldn't parse JSON body: {:?}", e); e })
             .into_outcome(Status::BadRequest)
