@@ -1,5 +1,10 @@
+<<<<<<< HEAD:contrib/lib/src/lib.rs
 #![feature(use_extern_macros)]
 
+=======
+#![feature(macro_reexport)]
+#![cfg_attr(feature = "templates", feature(conservative_impl_trait))]
+>>>>>>> Brotli fairing:contrib/src/lib.rs
 // TODO: Version URLs.
 #![doc(html_root_url = "https://api.rocket.rs")]
 
@@ -37,8 +42,10 @@
 //! This crate is expected to grow with time, bringing in outside crates to be
 //! officially supported by Rocket.
 
-#[macro_use] extern crate log;
-#[macro_use] extern crate rocket;
+#[macro_use]
+extern crate log;
+#[macro_use]
+extern crate rocket;
 
 #[cfg(feature = "serde")]
 extern crate serde;
@@ -55,13 +62,16 @@ pub extern crate handlebars;
 #[cfg(feature = "tera_templates")]
 pub extern crate tera;
 
+#[cfg(feature = "brotli_fairing")]
+extern crate brotli;
+
 #[cfg(feature = "json")]
 #[cfg_attr(feature = "json", macro_use)]
 #[doc(hidden)]
 pub mod json;
 
 #[cfg(feature = "json")]
-pub use json::{Json, SerdeError, JsonValue};
+pub use json::{Json, JsonValue, SerdeError};
 
 #[cfg(feature = "msgpack")]
 #[doc(hidden)]
@@ -74,10 +84,20 @@ pub use msgpack::{MsgPack, MsgPackError};
 mod templates;
 
 #[cfg(feature = "templates")]
-pub use templates::{Template, Engines};
+pub use templates::{Engines, Template};
 
 #[cfg(feature = "uuid")]
 mod uuid;
 
 #[cfg(feature = "uuid")]
+<<<<<<< HEAD:contrib/lib/src/lib.rs
 pub use uuid::{Uuid, UuidParseError};
+=======
+pub use uuid::{UuidParseError, UUID};
+
+#[cfg(feature = "brotli_fairing")]
+mod brotli_fairing;
+
+#[cfg(feature = "brotli_fairing")]
+pub use brotli_fairing::BrotliFairing;
+>>>>>>> Brotli fairing:contrib/src/lib.rs

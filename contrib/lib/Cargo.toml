@@ -16,6 +16,7 @@ json = ["serde", "serde_json"]
 msgpack = ["serde", "rmp-serde"]
 tera_templates = ["tera", "templates"]
 handlebars_templates = ["handlebars", "templates"]
+brotli_fairing = ["brotli"]
 
 # Internal use only.
 templates = ["serde", "serde_json", "glob"]
@@ -36,6 +37,12 @@ rmp-serde = { version = "^0.13", optional = true }
 handlebars = { version = "0.32", optional = true }
 glob = { version = "^0.2", optional = true }
 tera = { version = "0.11", optional = true }
+
+# brotli dependencies
+brotli = { version = "1.1.2", optional = true }
+
+[dev-dependencies]
+rocket_codegen = { path = "../codegen" }
 
 [package.metadata.docs.rs]
 all-features = true
