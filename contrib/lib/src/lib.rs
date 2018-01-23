@@ -1,7 +1,16 @@
+<<<<<<< HEAD
 #![feature(crate_visibility_modifier)]
 #![feature(never_type)]
 #![feature(doc_cfg)]
+=======
+<<<<<<< HEAD:contrib/lib/src/lib.rs
+#![feature(use_extern_macros)]
+>>>>>>> Brotli fairing
 
+=======
+#![feature(macro_reexport)]
+#![cfg_attr(feature = "templates", feature(conservative_impl_trait))]
+>>>>>>> Brotli fairing:contrib/src/lib.rs
 // TODO: Version URLs.
 #![doc(html_root_url = "https://api.rocket.rs")]
 
@@ -41,8 +50,10 @@
 //! This crate is expected to grow with time, bringing in outside crates to be
 //! officially supported by Rocket.
 
-#[macro_use] extern crate log;
-#[macro_use] extern crate rocket;
+#[macro_use]
+extern crate log;
+#[macro_use]
+extern crate rocket;
 
 #[cfg(feature = "serde")]
 extern crate serde;
@@ -59,6 +70,9 @@ pub extern crate handlebars;
 #[cfg(feature = "tera_templates")]
 pub extern crate tera;
 
+#[cfg(feature = "brotli_fairing")]
+extern crate brotli;
+
 #[cfg(feature = "json")]
 #[cfg_attr(feature = "json", macro_use)]
 #[doc(hidden)]
@@ -66,6 +80,7 @@ pub mod json;
 
 #[cfg(feature = "json")]
 pub use json::{Json, JsonError, JsonValue};
+
 
 #[cfg(feature = "msgpack")]
 #[doc(hidden)]
@@ -100,3 +115,9 @@ extern crate rocket_contrib_codegen;
 #[cfg(feature = "database_pool_codegen")]
 #[doc(hidden)]
 pub use rocket_contrib_codegen::*;
+
+#[cfg(feature = "brotli_fairing")]
+mod brotli_fairing;
+
+#[cfg(feature = "brotli_fairing")]
+pub use brotli_fairing::BrotliFairing;
