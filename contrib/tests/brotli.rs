@@ -17,7 +17,7 @@ const HELLO: &str = "Hello world!";
 
 fn rocket() -> rocket::Rocket {
     rocket::ignite()
-        .mount("/", routes![index, gzip, br])
+        .mount("/", routes![index, gzip, br, br_image])
         .attach(rocket_contrib::BrotliFairing::fairing())
 }
 
@@ -41,15 +41,22 @@ pub fn br() -> Response<'static> {
         .sized_body(Cursor::new(String::from(HELLO)))
         .finalize()
 }
+#[get("/br_image")]
+pub fn br_image() -> Response<'static> {
+    Response::build()
+        .header(ContentType::Plain)
+        .header(Header::new("Content-Encoding", "br"))
+        .header(Header::new("Content-Type", "image/png"))
+        .sized_body(Cursor::new(String::from(HELLO)))
+        .finalize()
+}
 
 #[test]
 fn test_index() {
     let client = Client::new(rocket()).expect("valid rocket instance");
     let mut response = client
         .get("/")
-        .header(Header::new("Accept-Encoding", "deflate"))
-        .header(Header::new("Accept-Encoding", "gzip"))
-        .header(Header::new("Accept-Encoding", "br"))
+        .header(Header::new("Accept-Encoding", "deflate, gzip, brotli"))
         .dispatch();
     assert_eq!(response.status(), Status::Ok);
     assert!(
@@ -74,9 +81,7 @@ fn test_gzip() {
     let client = Client::new(rocket()).expect("valid rocket instance");
     let mut response = client
         .get("/gzip")
-        .header(Header::new("Accept-Encoding", "deflate"))
-        .header(Header::new("Accept-Encoding", "gzip"))
-        .header(Header::new("Accept-Encoding", "br"))
+        .header(Header::new("Accept-Encoding", "deflate, gzip, brotli"))
         .dispatch();
     assert_eq!(response.status(), Status::Ok);
     assert!(!response
@@ -94,9 +99,7 @@ fn test_br() {
     let client = Client::new(rocket()).expect("valid rocket instance");
     let mut response = client
         .get("/br")
-        .header(Header::new("Accept-Encoding", "deflate"))
-        .header(Header::new("Accept-Encoding", "gzip"))
-        .header(Header::new("Accept-Encoding", "br"))
+        .header(Header::new("Accept-Encoding", "deflate, gzip, brotli"))
         .dispatch();
     assert_eq!(response.status(), Status::Ok);
     assert!(
@@ -121,8 +124,25 @@ fn test_br_not_accepted() {
     let client = Client::new(rocket()).expect("valid rocket instance");
     let mut response = client
         .get("/br")
-        .header(Header::new("Accept-Encoding", "deflate"))
-        .header(Header::new("Accept-Encoding", "gzip"))
+        .header(Header::new("Accept-Encoding", "deflate, gzip"))
+        .dispatch();
+    assert_eq!(response.status(), Status::Ok);
+    assert!(!response
+        .headers()
+        .get("Content-Encoding")
+        .any(|x| x == String::from("br")));
+    assert_eq!(
+        String::from_utf8(response.body_bytes().unwrap()).unwrap(),
+        String::from(HELLO)
+    );
+}
+
+#[test]
+fn test_br_image() {
+    let client = Client::new(rocket()).expect("valid rocket instance");
+    let mut response = client
+        .get("/br_image")
+        .header(Header::new("Accept-Encoding", "deflate, gzip, br"))
         .dispatch();
     assert_eq!(response.status(), Status::Ok);
     assert!(!response
