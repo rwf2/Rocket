@@ -159,7 +159,6 @@ impl Compression {
         for enc in headers.into_iter()
             .filter(|x| x.name() == "Content-Encoding" && x.value() != to_delete) {
             let header = enc.clone();
-            println!("{:?}", header);
             response.adjoin_header(header);
         }
     }
