@@ -203,6 +203,8 @@ impl Rocket {
         self.preprocess_request(request, &data);
         self.fairings.handle_request(request, &data);
 
+	let mut auto_handeled = false;
+
         // Route the request to get a response.
         let mut response = match self.route(request, data) {
             Outcome::Success(mut response) => {
@@ -226,8 +228,14 @@ impl Rocket {
                 if request.method() == Method::Head {
                     info_!("Autohandling {} request.", Paint::white("HEAD"));
                     request.set_method(Method::Get);
-                    let mut response = self.dispatch(request, data);
-                    response.strip_body();
+                    let response = self.dispatch(request, data);
+
+		    //TODO: Remove auto_handeled and change it to
+		    //request.set_method(Method::Head); 
+		    //Rust thinks that `request` is still borrowed here, but it's
+		    //not, so wait until NLL has shipped. 
+		    auto_handeled = true;
+
                     response
                 } else {
                     self.handle_error(Status::NotFound, request)
@@ -242,7 +250,7 @@ impl Rocket {
         self.fairings.handle_response(request, &mut response);
 
         // Strip the body if this is a `HEAD` request.
-        if request.method() == Method::Head {
+        if request.method() == Method::Head || auto_handeled {
             response.strip_body();
         }
 
