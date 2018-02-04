@@ -236,15 +236,15 @@ impl Rocket {
             Outcome::Failure(status) => self.handle_error(status, request),
         };
 
-        // Strip the body if this is a `HEAD` request.
-        if request.method() == Method::Head {
-            response.strip_body();
-        }
-
         // Add the 'rocket' server header to the response and run fairings.
         // TODO: If removing Hyper, write out `Date` header too.
         response.set_header(Header::new("Server", "Rocket"));
         self.fairings.handle_response(request, &mut response);
+
+        // Strip the body if this is a `HEAD` request.
+        if request.method() == Method::Head {
+            response.strip_body();
+        }
 
         response
     }
