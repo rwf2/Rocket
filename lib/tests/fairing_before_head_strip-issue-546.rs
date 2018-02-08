@@ -3,7 +3,7 @@
 
 extern crate rocket;
 
-use rocket::response::{content};
+use rocket::response::content;
 
 #[head("/")]
 fn index() -> content::Json<&'static str> {
@@ -20,20 +20,16 @@ mod fairing_before_head_strip {
     use rocket::fairing::AdHoc;
     use rocket::http::Method;
     use rocket::local::Client;
-    use rocket::http::{Status};
+    use rocket::http::Status;
 
     #[test]
     fn not_empty_before_fairing() {
         let rocket = rocket::ignite()
             .mount("/", routes![index])
             .attach(AdHoc::on_response(|req, res| {
-
-                if req.method() == Method::Head {
-                    if res.body_string() != Some("{ 'test': 'dont strip before fairing' }".into()){
-                        res.set_status(Status::InternalServerError);
-                    }
+                if req.method() != Method::Head || res.body_string() != Some("{ 'test': 'dont strip before fairing' }".into()) {
+                    res.set_status(Status::InternalServerError);
                 }
-
             }));
 
         let client = Client::new(rocket).unwrap();
@@ -47,13 +43,9 @@ mod fairing_before_head_strip {
         let rocket = rocket::ignite()
             .mount("/", routes![auto])
             .attach(AdHoc::on_response(|req, res| {
-
-                if req.method() == Method::Head {
-                    if res.body_string() != Some("{ 'test': 'dont strip before fairing' }".into()){
-                        res.set_status(Status::InternalServerError);
-                    }
+                if req.method() != Method::Head || res.body_string() != Some("{ 'test': 'dont strip before fairing' }".into()) {
+                    res.set_status(Status::InternalServerError);
                 }
-
             }));
 
         let client = Client::new(rocket).unwrap();

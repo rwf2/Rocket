@@ -191,19 +191,32 @@ impl Rocket {
         }
     }
 
-    #[inline]
+    #[inline(always)]
     pub(crate) fn dispatch<'s, 'r>(
         &'s self,
         request: &'r mut Request<'s>,
+        data: Data
+    ) -> Response<'r> {
+        self.dispatch_impl(request, data, true)
+    }
+
+    #[inline]
+    fn dispatch_impl<'s, 'r>(
+        &'s self,
+        request: &'r mut Request<'s>,
         data: Data,
+        run_fairings: bool
     ) -> Response<'r> {
         info!("{}:", request);
 
         // Do a bit of preprocessing before routing; run the attached fairings.
         self.preprocess_request(request, &data);
-        self.fairings.handle_request(request, &data);
 
-	let mut auto_handeled = false;
+        if run_fairings {
+            self.fairings.handle_request(request, &data);
+        }
+
+        let was_head_request = request.method() == Method::Head;
 
         // Route the request to get a response.
         let mut response = match self.route(request, data) {
@@ -228,13 +241,13 @@ impl Rocket {
                 if request.method() == Method::Head {
                     info_!("Autohandling {} request.", Paint::white("HEAD"));
                     request.set_method(Method::Get);
-                    let response = self.dispatch(request, data);
 
-		    //TODO: Remove auto_handeled and change it to
-		    //request.set_method(Method::Head); 
-		    //Rust thinks that `request` is still borrowed here, but it's
-		    //not, so wait until NLL has shipped. 
-		    auto_handeled = true;
+                    let request_old: &'r mut Request<'s> =
+                        unsafe { (&mut *(request as *const _ as *mut _)) };
+
+                    let response = self.dispatch_impl(request, data, false);
+
+                    request_old.set_method(Method::Head);
 
                     response
                 } else {
@@ -247,10 +260,13 @@ impl Rocket {
         // Add the 'rocket' server header to the response and run fairings.
         // TODO: If removing Hyper, write out `Date` header too.
         response.set_header(Header::new("Server", "Rocket"));
-        self.fairings.handle_response(request, &mut response);
+
+        if run_fairings {
+            self.fairings.handle_response(request, &mut response);
+        }
 
         // Strip the body if this is a `HEAD` request.
-        if request.method() == Method::Head || auto_handeled {
+        if was_head_request {
             response.strip_body();
         }
 
