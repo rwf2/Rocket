@@ -55,7 +55,7 @@ mod fairing_before_head_strip {
             .manage(counter)
             .attach(AdHoc::on_request(|req, _| {
                  let c = req.guard::<State<Counter>>().unwrap();
-                 
+
                  if c.get.fetch_add(1, Ordering::Release) != 0 {
                      req.set_method(Method::Put); //On Error set bad Method
                  }
