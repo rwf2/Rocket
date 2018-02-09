@@ -197,6 +197,7 @@ impl Rocket {
         request: &'r mut Request<'s>,
         data: Data
     ) -> Response<'r> {
+        //Dispatch the request and run all fairings on them
         self.dispatch_impl(request, data, true)
     }
 
@@ -240,14 +241,11 @@ impl Rocket {
                 // There was no matching route. Autohandle `HEAD` requests.
                 if request.method() == Method::Head {
                     info_!("Autohandling {} request.", Paint::white("HEAD"));
+
                     request.set_method(Method::Get);
 
-                    let request_old: &'r mut Request<'s> =
-                        unsafe { (&mut *(request as *const _ as *mut _)) };
-
+                    //Dispatch the request again with Method `GET` but without fairings.
                     let response = self.dispatch_impl(request, data, false);
-
-                    request_old.set_method(Method::Head);
 
                     response
                 } else {
