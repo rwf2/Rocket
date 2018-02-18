@@ -108,6 +108,11 @@ extracted from `rustc`, for testing. See the [compiler test
 documentation](https://github.com/rust-lang/rust/blob/master/src/test/COMPILER_TESTS.md)
 for information on how to write compiler tests.
 
+## Deploying Rocket to Cloud
+
+* [Deploying Rocket to Cloud Guide](https://github.com/SergioBenitez/Rocket/issues/171)
+* [Deploying Rocket with Docker](https://blog.hasura.io/how-i-deployed-a-rust-web-app-using-the-rocket-framework-with-docker-424da99b1d8a)
+
 ## Documentation
 
 You can build the Rocket API documentation locally by running
