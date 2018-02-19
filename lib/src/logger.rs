@@ -6,7 +6,7 @@ use std::fmt;
 use log;
 use yansi::Paint;
 
-struct RocketLogger(LoggingLevel);
+struct RocketLogger(LoggingLevel, LoggingOutput);
 
 /// Defines the different levels for log messages.
 #[derive(PartialEq, Eq, Debug, Clone, Copy)]
@@ -57,12 +57,80 @@ impl fmt::Display for LoggingLevel {
     }
 }
 
+/// Defines the different outputs for log messages.
+#[derive(PartialEq, Eq, Debug, Clone, Copy)]
+pub enum LoggingOutput {
+    /// Prints logs to stdout
+    Stdout,
+    /// Prints logs to stderr
+    Stderr,
+    /// Doesn't print any logs
+    Disabled,
+}
+
+impl FromStr for LoggingOutput {
+    type Err = &'static str;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let level = match s {
+            "stdout" => LoggingOutput::Stdout,
+            "stderr" => LoggingOutput::Stderr,
+            "disabled" => LoggingOutput::Disabled,
+            _ => return Err("a log output (stdout, stderr, disabled)")
+        };
+
+        Ok(level)
+    }
+}
+
+impl fmt::Display for LoggingOutput {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let string = match *self {
+            LoggingOutput::Stdout => "stdout",
+            LoggingOutput::Stderr => "stderr",
+            LoggingOutput::Disabled => "disabled",
+        };
+
+        write!(f, "{}", string)
+    }
+}
+
 #[doc(hidden)] #[macro_export]
-macro_rules! log_ { ($name:ident: $($args:tt)*) => { $name!(target: "_", $($args)*) }; }
+macro_rules! log_ {
+    ($name:ident: $fmt_str:expr) => {
+        $name!(
+            concat!("  {rocket_indent} ", $fmt_str),
+            rocket_indent=$crate::yansi::Paint::white("=>")
+        )
+    };
+    ($name:ident: $fmt_str:expr, $($args:tt)*) => {
+        $name!(
+            concat!("  {rocket_indent} ", $fmt_str),
+            $($args)*,
+            rocket_indent=$crate::yansi::Paint::white("=>")
+        )
+    };
+}
 #[doc(hidden)] #[macro_export]
 macro_rules! launch_info { ($($args:tt)*) => { info!(target: "launch", $($args)*) } }
 #[doc(hidden)] #[macro_export]
-macro_rules! launch_info_ { ($($args:tt)*) => { info!(target: "launch_", $($args)*) } }
+macro_rules! launch_info_ {
+    ($fmt_str:expr) => {
+        info!(
+            target: "launch",
+            concat!("  {rocket_indent} ", $fmt_str),
+            rocket_indent=$crate::yansi::Paint::white("=>")
+        )
+    };
+    ($fmt_str:expr, $($args:tt)*) => {
+        info!(
+            target: "launch",
+            concat!("  {rocket_indent} ", $fmt_str),
+            $($args)*,
+            rocket_indent=$crate::yansi::Paint::white("=>")
+        )
+    };
+}
 #[doc(hidden)] #[macro_export]
 macro_rules! error_ { ($($args:expr),+) => { log_!(error: $($args),+); }; }
 #[doc(hidden)] #[macro_export]
@@ -74,10 +142,41 @@ macro_rules! debug_ { ($($args:expr),+) => { log_!(debug: $($args),+); }; }
 #[doc(hidden)] #[macro_export]
 macro_rules! warn_ { ($($args:expr),+) => { log_!(warn: $($args),+); }; }
 
+pub fn format_log(record: &log::Record) -> String {
+    match record.level() {
+        log::Level::Info => format!("{}", Paint::blue(record.args())),
+        log::Level::Trace => format!("{}", Paint::purple(record.args())),
+        log::Level::Error => {
+            format!("{} {}",
+                     Paint::red("Error:").bold(),
+                     Paint::red(record.args()))
+        }
+        log::Level::Warn => {
+            format!("{} {}",
+                     Paint::yellow("Warning:").bold(),
+                     Paint::yellow(record.args()))
+        }
+        log::Level::Debug => {
+            let mut buf = format!("\n{} ", Paint::blue("-->").bold());
+            if let Some(file) = record.file() {
+                buf += &format!("{}", Paint::blue(file));
+            }
+
+            if let Some(line) = record.line() {
+                buf += &format!(":{}", Paint::blue(line));
+            }
+
+            buf + &format!("{}", record.args())
+        }
+    }
+}
+
 impl log::Log for RocketLogger {
     #[inline(always)]
     fn enabled(&self, record: &log::Metadata) -> bool {
-        record.target().starts_with("launch") || record.level() <= self.0.max_log_level()
+        self.1 != LoggingOutput::Disabled &&
+        record.target().starts_with("launch") ||
+        record.level() <= self.0.max_log_level()
     }
 
     fn log(&self, record: &log::Record) {
@@ -94,38 +193,10 @@ impl log::Log for RocketLogger {
             return;
         }
 
-        // In Rocket, we abuse targets with suffix "_" to indicate indentation.
-        if record.target().ends_with('_') {
-            if configged_level != LoggingLevel::Critical || record.target().starts_with("launch") {
-                print!("    {} ", Paint::white("=>"));
-            }
-        }
-
-        match record.level() {
-            log::Level::Info => println!("{}", Paint::blue(record.args())),
-            log::Level::Trace => println!("{}", Paint::purple(record.args())),
-            log::Level::Error => {
-                println!("{} {}",
-                         Paint::red("Error:").bold(),
-                         Paint::red(record.args()))
-            }
-            log::Level::Warn => {
-                println!("{} {}",
-                         Paint::yellow("Warning:").bold(),
-                         Paint::yellow(record.args()))
-            }
-            log::Level::Debug => {
-                print!("\n{} ", Paint::blue("-->").bold());
-                if let Some(file) = record.file() {
-                    print!("{}", Paint::blue(file));
-                }
-
-                if let Some(line) = record.line() {
-                    println!(":{}", Paint::blue(line));
-                }
-
-                println!("{}", record.args());
-            }
+        match self.1 {
+            LoggingOutput::Stdout => println!("{}", format_log(record)),
+            LoggingOutput::Stderr => eprintln!("{}", format_log(record)),
+            LoggingOutput::Disabled => {}, // Theoretically unreachable
         }
     }
 
@@ -134,15 +205,18 @@ impl log::Log for RocketLogger {
     }
 }
 
-pub(crate) fn try_init(level: LoggingLevel, verbose: bool) {
-    if !::isatty::stdout_isatty() {
+pub(crate) fn try_init(level: LoggingLevel,
+                       output: LoggingOutput,
+                       verbose: bool,
+                       force_color: bool) {
+    if !force_color && !::isatty::stdout_isatty() {
         Paint::disable();
     } else if cfg!(windows) {
         Paint::enable_windows_ascii();
     }
 
     push_max_level(level);
-    if let Err(e) = log::set_boxed_logger(Box::new(RocketLogger(level))) {
+    if let Err(e) = log::set_boxed_logger(Box::new(RocketLogger(level, output))) {
         if verbose {
             eprintln!("Logger failed to initialize: {}", e);
         }
@@ -190,6 +264,6 @@ pub(crate) fn pop_max_level() {
 }
 
 #[doc(hidden)]
-pub fn init(level: LoggingLevel) {
-    try_init(level, true)
+pub fn init(level: LoggingLevel, output: LoggingOutput, force_color: bool) {
+    try_init(level, output, true, force_color)
 }

@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 
-use config::{Result, Config, Value, Environment, Limits, LoggingLevel};
+use config::{Result, Config, Value, Environment, Limits, LoggingLevel, LoggingOutput};
 
 /// Structure following the builder pattern for building `Config` structures.
 #[derive(Clone)]
@@ -18,6 +18,12 @@ pub struct ConfigBuilder {
     pub keep_alive: Option<u32>,
     /// How much information to log.
     pub log_level: LoggingLevel,
+    /// The place to print logs to
+    pub log_output: LoggingOutput,
+    /// Force colorful printing
+    pub force_color: bool,
+    /// Enable/Disable emojis
+    pub use_emoji: bool,
     /// The secret key.
     pub secret_key: Option<String>,
     /// TLS configuration (path to certificates file, path to private key file).
@@ -67,6 +73,9 @@ impl ConfigBuilder {
             workers: config.workers,
             keep_alive: config.keep_alive,
             log_level: config.log_level,
+            log_output: config.log_output,
+            force_color: config.force_color,
+            use_emoji: config.use_emoji,
             secret_key: None,
             tls: None,
             limits: config.limits,
@@ -173,6 +182,60 @@ impl ConfigBuilder {
     #[inline]
     pub fn log_level(mut self, log_level: LoggingLevel) -> Self {
         self.log_level = log_level;
+        self
+    }
+
+    /// Sets the `log_output` in the configuation being built.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use rocket::config::{Config, Environment, LoggingOutput};
+    ///
+    /// let config = Config::build(Environment::Staging)
+    ///     .log_output(LoggingOutput::Stderr)
+    ///     .unwrap();
+    ///
+    /// assert_eq!(config.log_output, LoggingOutput::Stderr);
+    #[inline]
+    pub fn log_output(mut self, log_output: LoggingOutput) -> Self {
+        self.log_output = log_output;
+        self
+    }
+
+    /// Sets `force_color` in the configuration being built.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use rocket::config::{Config, Environment};
+    ///
+    /// let config = Config::build(Environment::Staging)
+    ///     .force_color(true)
+    ///     .unwrap();
+    ///
+    /// assert_eq!(config.force_color, true);
+    #[inline]
+    pub fn force_color(mut self, force_color: bool) -> Self {
+        self.force_color = force_color;
+        self
+    }
+
+    /// Sets `use_emoji` in the configuration being built.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use rocket::config::{Config, Environment};
+    ///
+    /// let config = Config::build(Environment::Staging)
+    ///     .use_emoji(false)
+    ///     .unwrap();
+    ///
+    /// assert_eq!(config.use_emoji, false);
+    #[inline]
+    pub fn use_emoji(mut self, use_emoji: bool) -> Self {
+        self.use_emoji = use_emoji;
         self
     }
 
@@ -330,6 +393,9 @@ impl ConfigBuilder {
         config.set_workers(self.workers);
         config.set_keep_alive(self.keep_alive);
         config.set_log_level(self.log_level);
+        config.set_log_output(self.log_output);
+        config.set_force_color(self.force_color);
+        config.set_use_emoji(self.use_emoji);
         config.set_extras(self.extras);
         config.set_root(self.root);
         config.set_limits(self.limits);

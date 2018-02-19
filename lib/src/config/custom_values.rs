@@ -2,7 +2,7 @@ use std::fmt;
 
 #[cfg(feature = "tls")] use rustls::{Certificate, PrivateKey};
 
-use config::{Result, Config, Value, ConfigError, LoggingLevel};
+use config::{Result, Config, Value, ConfigError, LoggingLevel, LoggingOutput};
 use http::uncased::uncased_eq;
 use http::Key;
 
@@ -202,6 +202,13 @@ pub fn str<'a>(conf: &Config, name: &str, v: &'a Value) -> Result<&'a str> {
     v.as_str().ok_or(conf.bad_type(name, v.type_str(), "a string"))
 }
 
+pub fn bool(conf: &Config, name: &str, value: &Value) -> Result<bool> {
+    match value.as_bool() {
+        Some(x) => Ok(x as bool),
+        _ => Err(conf.bad_type(name, value.type_str(), "a bool"))
+    }
+}
+
 pub fn u64(conf: &Config, name: &str, value: &Value) -> Result<u64> {
     match value.as_integer() {
         Some(x) if x >= 0 => Ok(x as u64),
@@ -220,6 +227,14 @@ pub fn log_level(conf: &Config,
                           name: &str,
                           value: &Value
                          ) -> Result<LoggingLevel> {
+    str(conf, name, value)
+        .and_then(|s| s.parse().map_err(|e| conf.bad_type(name, value.type_str(), e)))
+}
+
+pub fn log_output(conf: &Config,
+                          name: &str,
+                          value: &Value
+                      ) -> Result<LoggingOutput> {
     str(conf, name, value)
         .and_then(|s| s.parse().map_err(|e| conf.bad_type(name, value.type_str(), e)))
 }

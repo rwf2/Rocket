@@ -8,7 +8,7 @@ use std::env;
 use super::custom_values::*;
 use {num_cpus, base64};
 use config::Environment::*;
-use config::{Result, ConfigBuilder, Environment, ConfigError, LoggingLevel};
+use config::{Result, ConfigBuilder, Environment, ConfigError, LoggingLevel, LoggingOutput};
 use config::{Table, Value, Array, Datetime};
 use http::Key;
 
@@ -51,6 +51,12 @@ pub struct Config {
     pub keep_alive: Option<u32>,
     /// How much information to log.
     pub log_level: LoggingLevel,
+    /// Where should the logs be printed to? (stdout, stderr, disabled [user-defined impl])
+    pub log_output: LoggingOutput,
+    /// Should the log output be forced to do color?
+    pub force_color: bool,
+    /// Should we print out emoji or not?
+    pub use_emoji: bool,
     /// The secret key.
     pub(crate) secret_key: SecretKey,
     /// TLS configuration.
@@ -217,6 +223,9 @@ impl Config {
                     workers: default_workers,
                     keep_alive: Some(5),
                     log_level: LoggingLevel::Normal,
+                    log_output: LoggingOutput::Stdout,
+                    force_color: false,
+                    use_emoji: true,
                     secret_key: key,
                     tls: None,
                     limits: Limits::default(),
@@ -232,6 +241,9 @@ impl Config {
                     workers: default_workers,
                     keep_alive: Some(5),
                     log_level: LoggingLevel::Normal,
+                    log_output: LoggingOutput::Stdout,
+                    force_color: false,
+                    use_emoji: true,
                     secret_key: key,
                     tls: None,
                     limits: Limits::default(),
@@ -247,6 +259,9 @@ impl Config {
                     workers: default_workers,
                     keep_alive: Some(5),
                     log_level: LoggingLevel::Critical,
+                    log_output: LoggingOutput::Stdout,
+                    force_color: false,
+                    use_emoji: true,
                     secret_key: key,
                     tls: None,
                     limits: Limits::default(),
@@ -292,6 +307,9 @@ impl Config {
             workers => (u16, set_workers, ok),
             keep_alive => (u32_option, set_keep_alive, ok),
             log => (log_level, set_log_level, ok),
+            log_output => (log_output, set_log_output, ok),
+            force_color => (bool, set_force_color, ok),
+            use_emoji => (bool, set_use_emoji, ok),
             secret_key => (str, set_secret_key, id),
             tls => (tls_config, set_raw_tls, id),
             limits => (limits, set_limits, ok),
@@ -479,6 +497,61 @@ impl Config {
     #[inline]
     pub fn set_log_level(&mut self, log_level: LoggingLevel) {
         self.log_level = log_level;
+    }
+
+    /// Sets the logging output for `self` to `log_output`.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use rocket::config::{Config, LoggingOutput, Environment};
+    ///
+    /// # use rocket::config::ConfigError;
+    /// # fn config_text() -> Result<(), ConfigError> {
+    /// let mut config = Config::new(Environment::Staging)?;
+    /// config.set_log_output(LoggingOutput::Stderr);
+    /// # Ok(())
+    /// # }
+    /// ```
+    #[inline]
+    pub fn set_log_output(&mut self, log_output: LoggingOutput) {
+        self.log_output = log_output;
+    }
+
+    /// Set if logs should print colorful messages regardless of if the output is a tty or not.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use rocket::config::{Config, Environment};
+    ///
+    /// # use rocket::config::ConfigError;
+    /// # fn config_test() -> Result<(), ConfigError> {
+    /// let mut config = Config::new(Environment::Staging)?;
+    /// config.set_force_color(true);
+    /// # Ok(())
+    /// # }
+    #[inline]
+    pub fn set_force_color(&mut self, force_color: bool) {
+        self.force_color = force_color;
+    }
+
+    /// Set if logs should ever print emoji.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use rocket::config::{Config, Environment};
+    ///
+    /// # use rocket::config::ConfigError;
+    /// # fn config_test() -> Result<(), ConfigError> {
+    /// let mut config = Config::new(Environment::Staging)?;
+    /// config.set_use_emoji(false);
+    /// # Ok(())
+    /// # }
+    #[inline]
+    pub fn set_use_emoji(&mut self, use_emoji: bool) {
+        self.use_emoji = use_emoji;
     }
 
     /// Set the receive limits in `self` to `limits`.

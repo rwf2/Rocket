@@ -283,7 +283,9 @@ macro_rules! register_macros {
 pub fn plugin_registrar(reg: &mut Registry) {
     // Enable logging early if the DEBUG_ENV_VAR is set.
     if env::var(DEBUG_ENV_VAR).is_ok() {
-        ::rocket::logger::init(::rocket::config::LoggingLevel::Debug);
+        ::rocket::logger::init(::rocket::config::LoggingLevel::Debug,
+                              ::rocket::config::LoggingOutput::Stdout,
+                              false);
     }
 
     register_macros!(reg,

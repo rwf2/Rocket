@@ -44,6 +44,7 @@ features = ["percent-encode", "secure"]
 [dev-dependencies]
 lazy_static = "1.0"
 rocket_codegen = { version = "0.4.0-dev", path = "../codegen" }
+env_logger = "0.5.3"
 
 [build-dependencies]
 yansi = "0.3"

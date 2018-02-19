@@ -22,6 +22,7 @@ use catcher::{self, Catcher};
 use outcome::Outcome;
 use error::{Error, LaunchError, LaunchErrorKind};
 use fairing::{Fairing, Fairings};
+use logger::LoggingOutput;
 
 use http::{Method, Status, Header};
 use http::hyper::{self, header};
@@ -343,7 +344,10 @@ impl Rocket {
     /// Creates a new `Rocket` application using the supplied custom
     /// configuration information. The `Rocket.toml` file, if present, is
     /// ignored. Any environment variables setting config parameters are
-    /// ignored. If `log` is `true`, logging is enabled.
+    /// ignored. If `log` is `false` or the config has `log_output` set to
+    /// `LoggingOutput::Disabled`, the default log implementation is disabled,
+    /// allowing you to use/write one of your own. (`log` is kept around
+    /// for backwards compatibility, use the config for more options)
     ///
     /// This method is typically called through the `rocket::custom` alias.
     ///
@@ -372,16 +376,22 @@ impl Rocket {
 
     #[inline]
     fn configured(config: Config, log: bool) -> Rocket {
-        if log {
+        if log && config.log_output != LoggingOutput::Disabled {
             // Initialize logger. Temporary weaken log level for launch info.
-            logger::try_init(config.log_level, false);
+            logger::try_init(config.log_level, config.log_output, false, config.force_color);
             logger::push_max_level(logger::LoggingLevel::Normal);
         }
 
-        launch_info!("{}Configured for {}.", Paint::masked("🔧  "), config.environment);
+        if config.use_emoji {
+            launch_info!("{}Configured for {}.", Paint::masked("🔧  "), config.environment);
+        } else {
+            launch_info!("Configured for {}.", config.environment);
+        }
         launch_info_!("address: {}", Paint::white(&config.address));
         launch_info_!("port: {}", Paint::white(&config.port));
-        launch_info_!("log: {}", Paint::white(config.log_level));
+        launch_info_!("log: {} to {}",
+                      Paint::white(config.log_level),
+                      Paint::white(config.log_output));
         launch_info_!("workers: {}", Paint::white(config.workers));
         launch_info_!("secret key: {}", Paint::white(&config.secret_key));
         launch_info_!("limits: {}", Paint::white(&config.limits));
@@ -412,13 +422,14 @@ impl Rocket {
                           Paint::white(LoggedValue(value)));
         }
 
+
         Rocket {
-            config: config,
             router: Router::new(),
             default_catchers: catcher::defaults::get(),
             catchers: catcher::defaults::get(),
             state: Container::new(),
-            fairings: Fairings::new(),
+            fairings: Fairings::new(config.use_emoji),
+            config: config,
         }
     }
 
@@ -475,10 +486,16 @@ impl Rocket {
     /// ```
     #[inline]
     pub fn mount(mut self, base: &str, routes: Vec<Route>) -> Self {
-        info!("{}{} '{}':",
-              Paint::masked("🛰  "),
-              Paint::purple("Mounting"),
-              Paint::blue(base));
+        if self.config.use_emoji {
+            info!("{}{} '{}':",
+                  Paint::masked("🛰  "),
+                  Paint::purple("Mounting"),
+                  Paint::blue(base));
+        } else {
+            info!("{} '{}':",
+                  Paint::purple("Mounting"),
+                  Paint::blue(base));
+        }
 
         if base.contains('<') || !base.starts_with('/') {
             error_!("Bad mount point: '{}'.", base);
@@ -530,7 +547,11 @@ impl Rocket {
     /// ```
     #[inline]
     pub fn catch(mut self, catchers: Vec<Catcher>) -> Self {
-        info!("👾  {}:", Paint::purple("Catchers"));
+        if self.config.use_emoji {
+            info!("👾  {}:", Paint::purple("Catchers"));
+        } else {
+            info!("{}:", Paint::purple("Catchers"));
+        }
         for c in catchers {
             if self.catchers.get(&c.code).map_or(false, |e| !e.is_default()) {
                 let msg = "(warning: duplicate catcher!)";
@@ -616,7 +637,7 @@ impl Rocket {
     #[inline]
     pub fn attach<F: Fairing>(mut self, fairing: F) -> Self {
         // Attach the fairings, which requires us to move `self`.
-        let mut fairings = mem::replace(&mut self.fairings, Fairings::new());
+        let mut fairings = mem::replace(&mut self.fairings, Fairings::new(self.config.use_emoji));
         self = fairings.attach(Box::new(fairing), self);
 
         // Make sure we keep all fairings around: the old and newly added ones!
@@ -685,11 +706,18 @@ impl Rocket {
             self.fairings.handle_launch(&self);
 
             let full_addr = format!("{}:{}", self.config.address, self.config.port);
-            launch_info!("{}{} {}{}",
-                         Paint::masked("🚀  "),
-                         Paint::white("Rocket has launched from"),
-                         Paint::white(proto).bold(),
-                         Paint::white(&full_addr).bold());
+            if self.config.use_emoji {
+                launch_info!("{}{} {}{}",
+                             Paint::masked("🚀  "),
+                             Paint::white("Rocket has launched from"),
+                             Paint::white(proto).bold(),
+                             Paint::white(&full_addr).bold());
+            } else {
+                launch_info!("{} {}{}",
+                             Paint::white("Rocket has launched from"),
+                             Paint::white(proto).bold(),
+                             Paint::white(&full_addr).bold());
+            }
 
             // Restore the log level back to what it originally was.
             logger::pop_max_level();

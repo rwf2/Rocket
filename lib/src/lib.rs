@@ -96,13 +96,52 @@
 //! and itegration testing of a Rocket application. The [top-level `local`
 //! module documentation](/rocket/local) and the [testing chapter of the
 //! guide](https://rocket.rs/guide/testing/#testing) include detailed examples.
+//!
+//! ## Custom Logger (currently experimental)
+//!
+//! Rocket uses the `log` crate to handle logging at the moment, and there is a
+//! built-in logger to handle basic logging to either stdout or stderr. You can
+//! configure the output location using the `config::Config::log_output`
+//! property in either your `Rocket.toml` file or other configuration method.
+//! If you for whatever reason need to override how Rocket does its logging,
+//! you can set `log_output` in your config to `disabled` and then setup
+//! whichever logger you want to use instead. For example, if you like the
+//! `env_logger` system better:
+//!
+//! ```rust
+//! #![feature(plugin, decl_macro)]
+//! #![plugin(rocket_codegen)]
+//!
+//! extern crate rocket;
+//! extern crate env_logger;
+//!
+//! use rocket::config::{Config, Environment, LoggingOutput};
+//!
+//! #[get("/")]
+//! fn hello() -> &'static str {
+//!     "Hello, world!"
+//! }
+//!
+//! fn main() {
+//!     env_logger::init();
+//!
+//!     let config = Config::build(Environment::Development)
+//!         .log_output(LoggingOutput::Disabled) // Disable internal logger
+//!         .finalize()
+//!         .unwrap();
+//!
+//! # if false { // We don't actually want to launch the server in an example.
+//!     rocket::custom(config, false).mount("/", routes![hello]).launch();
+//! # }
+//! }
+//! ```
 
 #[macro_use] extern crate log;
 #[macro_use] extern crate pear;
 #[cfg(feature = "tls")] extern crate rustls;
 #[cfg(feature = "tls")] extern crate hyper_sync_rustls;
 #[macro_use] extern crate percent_encoding;
-extern crate yansi;
+#[doc(hidden)] pub extern crate yansi;
 extern crate hyper;
 extern crate toml;
 extern crate num_cpus;

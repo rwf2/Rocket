@@ -8,12 +8,17 @@ pub struct Fairings {
     launch: Vec<&'static Fairing>,
     request: Vec<&'static Fairing>,
     response: Vec<&'static Fairing>,
+    use_emoji: bool,
 }
 
 impl Fairings {
     #[inline]
-    pub fn new() -> Fairings {
-        Fairings::default()
+    pub fn new(use_emoji: bool) -> Fairings {
+        Fairings {
+            use_emoji,
+
+            ..Fairings::default()
+        }
     }
 
     pub fn attach(&mut self, fairing: Box<Fairing>, mut rocket: Rocket) -> Rocket {
@@ -105,7 +110,11 @@ impl Fairings {
         }
 
         if !self.all_fairings.is_empty() {
-            info!("{}{}:", Paint::masked("📡  "), Paint::purple("Fairings"));
+            if self.use_emoji {
+                info!("{}{}:", Paint::masked("📡  "), Paint::purple("Fairings"));
+            } else {
+                info!("{}:", Paint::purple("Fairings"));
+            }
             info_if_nonempty("launch", &self.launch);
             info_if_nonempty("request", &self.request);
             info_if_nonempty("response", &self.response);
