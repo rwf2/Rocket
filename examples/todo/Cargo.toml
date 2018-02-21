@@ -9,10 +9,7 @@ rocket_codegen = { path = "../../codegen" }
 serde = "1.0"
 serde_json = "1.0"
 serde_derive = "1.0"
-r2d2 = "0.8"
-diesel = { version = "1.0", features = ["sqlite"] }
-diesel_derives = { version = "1.0", features = ["sqlite"] }
-r2d2-diesel = "1.0"
+diesel = { version = "1.0", features = ["sqlite", "r2d2"] }
 dotenv = "0.10"
 
 [dev-dependencies]

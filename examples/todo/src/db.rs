@@ -1,23 +1,22 @@
 use std::ops::Deref;
 
-use r2d2;
 use diesel::sqlite::SqliteConnection;
-use r2d2_diesel::ConnectionManager;
+use diesel::r2d2::{ConnectionManager, Pool, PooledConnection};
 
 use rocket::http::Status;
 use rocket::request::{self, FromRequest};
 use rocket::{Request, State, Outcome};
 
-pub type Pool = r2d2::Pool<ConnectionManager<SqliteConnection>>;
+pub type SqlitePool = Pool<ConnectionManager<SqliteConnection>>;
 
 pub const DATABASE_URL: &'static str = env!("DATABASE_URL");
 
-pub fn init_pool() -> Pool {
+pub fn init_pool() -> SqlitePool {
     let manager = ConnectionManager::<SqliteConnection>::new(DATABASE_URL);
-    r2d2::Pool::new(manager).expect("db pool")
+    Pool::new(manager).expect("db pool")
 }
 
-pub struct Conn(pub r2d2::PooledConnection<ConnectionManager<SqliteConnection>>);
+pub struct Conn(pub PooledConnection<ConnectionManager<SqliteConnection>>);
 
 impl Deref for Conn {
     type Target = SqliteConnection;
@@ -32,7 +31,7 @@ impl<'a, 'r> FromRequest<'a, 'r> for Conn {
     type Error = ();
 
     fn from_request(request: &'a Request<'r>) -> request::Outcome<Conn, ()> {
-        let pool = request.guard::<State<Pool>>()?;
+        let pool = request.guard::<State<SqlitePool>>()?;
         match pool.get() {
             Ok(conn) => Outcome::Success(Conn(conn)),
             Err(_) => Outcome::Failure((Status::ServiceUnavailable, ()))
