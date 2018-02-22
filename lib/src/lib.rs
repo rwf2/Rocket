@@ -113,6 +113,7 @@
 //! #![plugin(rocket_codegen)]
 //!
 //! extern crate rocket;
+//! extern crate log;
 //! extern crate env_logger;
 //!
 //! use rocket::config::{Config, Environment, LoggingOutput};
@@ -124,6 +125,7 @@
 //!
 //! fn main() {
 //!     env_logger::init();
+//!     log::set_max_level(log::Level::Info.to_level_filter());
 //!
 //!     let config = Config::build(Environment::Development)
 //!         .log_output(LoggingOutput::Disabled) // Disable internal logger
