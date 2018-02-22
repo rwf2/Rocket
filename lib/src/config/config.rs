@@ -107,9 +107,8 @@ impl Config {
         ConfigBuilder::new(env)
     }
 
-    /// Creates a new configuration using the default parameters for the
-    /// environment `env`. The root configuration directory is set to the
-    /// current working directory.
+    /// Returns a `Config` with the parameters for the environment `env`. The
+    /// root configuration directory is set to the current working directory.
     ///
     /// # Errors
     ///
@@ -129,9 +128,38 @@ impl Config {
         Config::default(env, cwd.as_path().join("Rocket.custom.toml"))
     }
 
-    /// Returns a builder for `Config` structure where the default parameters
-    /// are set to those of the development environment. The root configuration
-    /// directory is set to the current working directory.
+    /// Returns a `Config` with the default parameters of the active environment
+    /// as determined by the `ROCKET_ENV` environment variable.
+    ///
+    /// If `ROCKET_ENV` is not set, the returned `Config` uses development
+    /// environment parameters when the application was compiled in `debug` mode
+    /// and production environment parameters when the application was compiled
+    /// in `release` mode. The root configuration directory is set to the
+    /// current working directory.
+    ///
+    /// This is equivalent to `Config::new(Environment::active()?)`.
+    ///
+    /// # Errors
+    ///
+    /// If the current directory cannot be retrieved, a `BadCWD` error is
+    /// returned. Returns a `BadEnv` error if `ROCKET_ENV` is set and contains
+    /// an invalid or unknown environment name.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use rocket::config::Config;
+    ///
+    /// let mut my_config = Config::active().unwrap();
+    /// my_config.set_port(1001);
+    /// ```
+    pub fn active() -> Result<Config> {
+        Config::new(Environment::active()?)
+    }
+
+    /// Returns a `Config` with the default parameters of the development
+    /// environment. The root configuration directory is set to the current
+    /// working directory.
     ///
     /// # Errors
     ///
@@ -150,9 +178,9 @@ impl Config {
         Config::new(Environment::Development)
     }
 
-    /// Creates a new configuration using the default parameters from the
-    /// staging environment. The root configuration directory is set to the
-    /// current working directory.
+    /// Returns a `Config` with the default parameters of the staging
+    /// environment. The root configuration directory is set to the current
+    /// working directory.
     ///
     /// # Errors
     ///
@@ -171,9 +199,9 @@ impl Config {
         Config::new(Environment::Staging)
     }
 
-    /// Creates a new configuration using the default parameters from the
-    /// production environment. The root configuration directory is set to the
-    /// current working directory.
+    /// Returns a `Config` with the default parameters of the production
+    /// environment. The root configuration directory is set to the current
+    /// working directory.
     ///
     /// # Errors
     ///

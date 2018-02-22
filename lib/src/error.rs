@@ -35,7 +35,7 @@ pub enum Error {
 pub enum LaunchErrorKind {
     Io(io::Error),
     Collision(Vec<(Route, Route)>),
-    FailedFairing,
+    FailedFairings(Vec<&'static str>),
     Unknown(Box<::std::error::Error + Send + Sync>)
 }
 
@@ -160,7 +160,7 @@ impl fmt::Display for LaunchErrorKind {
         match *self {
             LaunchErrorKind::Io(ref e) => write!(f, "I/O error: {}", e),
             LaunchErrorKind::Collision(_) => write!(f, "route collisions detected"),
-            LaunchErrorKind::FailedFairing => write!(f, "a launch fairing failed"),
+            LaunchErrorKind::FailedFairings(_) => write!(f, "a launch fairing failed"),
             LaunchErrorKind::Unknown(ref e) => write!(f, "unknown error: {}", e)
         }
     }
@@ -189,7 +189,7 @@ impl ::std::error::Error for LaunchError {
         match *self.kind() {
             LaunchErrorKind::Io(_) => "an I/O error occured during launch",
             LaunchErrorKind::Collision(_) => "route collisions were detected",
-            LaunchErrorKind::FailedFairing => "a launch fairing reported an error",
+            LaunchErrorKind::FailedFairings(_) => "a launch fairing reported an error",
             LaunchErrorKind::Unknown(_) => "an unknown error occured during launch"
         }
     }
@@ -215,8 +215,12 @@ impl Drop for LaunchError {
                 info_!("Note: Collisions can usually be resolved by ranking routes.");
                 panic!("route collisions detected");
             }
-            LaunchErrorKind::FailedFairing => {
-                error!("Rocket failed to launch due to a failing fairing.");
+            LaunchErrorKind::FailedFairings(ref failures) => {
+                error!("Rocket failed to launch due to failing fairings:");
+                for fairing in failures {
+                    info_!("{}", Paint::white(fairing));
+                }
+
                 panic!("launch fairing failure");
             }
             LaunchErrorKind::Unknown(ref e) => {

@@ -6,7 +6,7 @@ workspace = "../../"
 [dependencies]
 rocket = { path = "../../lib" }
 rocket_codegen = { path = "../../codegen" }
-uuid = "^0.5"
+uuid = ">= 0.5, <= 0.6"
 lazy_static = "1.0"
 
 [dependencies.rocket_contrib]

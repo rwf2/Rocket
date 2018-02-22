@@ -20,69 +20,15 @@ pub enum Environment {
 }
 
 impl Environment {
-    /// Returns `true` if `self` is `Environment::Development`.
-    ///
-    /// # Example
-    ///
-    /// ```rust
-    /// use rocket::config::Environment;
-    ///
-    /// assert!(Environment::Development.is_dev());
-    /// assert!(!Environment::Production.is_dev());
-    /// ```
-    #[inline]
-    pub fn is_dev(self) -> bool {
-        match self {
-            Development => true,
-            _ => false
-        }
-    }
-
-    /// Returns `true` if `self` is `Environment::Staging`.
-    ///
-    /// # Example
-    ///
-    /// ```rust
-    /// use rocket::config::Environment;
-    ///
-    /// assert!(Environment::Staging.is_stage());
-    /// assert!(!Environment::Production.is_stage());
-    /// ```
-    #[inline]
-    pub fn is_stage(self) -> bool {
-        match self {
-            Staging => true,
-            _ => false
-        }
-    }
-
-    /// Returns `true` if `self` is `Environment::Production`.
-    ///
-    /// # Example
-    ///
-    /// ```rust
-    /// use rocket::config::Environment;
-    ///
-    /// assert!(Environment::Production.is_prod());
-    /// assert!(!Environment::Staging.is_prod());
-    /// ```
-    #[inline]
-    pub fn is_prod(self) -> bool {
-        match self {
-            Production => true,
-            _ => false
-        }
-    }
-}
-
-impl Environment {
     /// Retrieves the "active" environment as determined by the `ROCKET_ENV`
-    /// environment variable. If `ROCKET_ENV` is not set, returns `Development`.
+    /// environment variable. If `ROCKET_ENV` is not set, returns `Development`
+    /// when the application was compiled in `debug` mode and `Production` when
+    /// the application was compiled in `release` mode.
     ///
     /// # Errors
     ///
-    /// Returns a `BadEnv` `ConfigError` if `ROCKET_ENV` contains an invalid
-    /// environment name.
+    /// Returns a `BadEnv` `ConfigError` if `ROCKET_ENV` is set and contains an
+    /// invalid or unknown environment name.
     pub fn active() -> Result<Environment, ConfigError> {
         match env::var(CONFIG_ENV) {
             Ok(s) => s.parse().map_err(|_| ConfigError::BadEnv(s)),
@@ -102,6 +48,51 @@ impl Environment {
     #[inline]
     pub(crate) fn all() -> [Environment; 3] {
         [Development, Staging, Production]
+    }
+
+    /// Returns `true` if `self` is `Environment::Development`.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use rocket::config::Environment;
+    ///
+    /// assert!(Environment::Development.is_dev());
+    /// assert!(!Environment::Production.is_dev());
+    /// ```
+    #[inline]
+    pub fn is_dev(self) -> bool {
+        self == Development
+    }
+
+    /// Returns `true` if `self` is `Environment::Staging`.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use rocket::config::Environment;
+    ///
+    /// assert!(Environment::Staging.is_stage());
+    /// assert!(!Environment::Production.is_stage());
+    /// ```
+    #[inline]
+    pub fn is_stage(self) -> bool {
+        self == Staging
+    }
+
+    /// Returns `true` if `self` is `Environment::Production`.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use rocket::config::Environment;
+    ///
+    /// assert!(Environment::Production.is_prod());
+    /// assert!(!Environment::Staging.is_prod());
+    /// ```
+    #[inline]
+    pub fn is_prod(self) -> bool {
+        self == Production
     }
 }
 

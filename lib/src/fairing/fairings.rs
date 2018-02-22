@@ -4,7 +4,7 @@ use fairing::{Fairing, Kind};
 #[derive(Default)]
 pub struct Fairings {
     all_fairings: Vec<Box<Fairing>>,
-    attach_failure: bool,
+    attach_failures: Vec<&'static str>,
     launch: Vec<&'static Fairing>,
     request: Vec<&'static Fairing>,
     response: Vec<&'static Fairing>,
@@ -24,9 +24,10 @@ impl Fairings {
     pub fn attach(&mut self, fairing: Box<Fairing>, mut rocket: Rocket) -> Rocket {
         // Run the `on_attach` callback if this is an 'attach' fairing.
         let kind = fairing.info().kind;
+        let name = fairing.info().name;
         if kind.is(Kind::Attach) {
             rocket = fairing.on_attach(rocket)
-                .unwrap_or_else(|r| { self.attach_failure = true; r })
+                .unwrap_or_else(|r| { self.attach_failures.push(name); r })
         }
 
         self.add(fairing);
@@ -90,8 +91,12 @@ impl Fairings {
         }
     }
 
-    pub fn had_failure(&self) -> bool {
-        self.attach_failure
+    pub fn failures(&self) -> Option<&[&'static str]> {
+        if self.attach_failures.is_empty() {
+            None
+        } else {
+            Some(&self.attach_failures)
+        }
     }
 
     pub fn pretty_print_counts(&self) {

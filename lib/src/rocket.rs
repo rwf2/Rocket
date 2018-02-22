@@ -179,6 +179,7 @@ impl Rocket {
         let data_len = data.peek().len();
         let (min_len, max_len) = ("_method=get".len(), "_method=delete".len());
         let is_form = req.content_type().map_or(false, |ct| ct.is_form());
+
         if is_form && req.method() == Method::Post && data_len >= min_len {
             if let Ok(form) = from_utf8(&data.peek()[..min(data_len, max_len)]) {
                 let method: Option<Result<Method, _>> = FormItems::from(form)
@@ -291,8 +292,8 @@ impl Rocket {
         Outcome::Forward(data)
     }
 
-    // Finds the error catcher for the status `status` and executes it fo the
-    // given request `req`. If a user has registere a catcher for `status`, the
+    // Finds the error catcher for the status `status` and executes it for the
+    // given request `req`. If a user has registers a catcher for `status`, the
     // catcher is called. If the catcher fails to return a good response, the
     // 500 catcher is executed. if there is no registered catcher for `status`,
     // the default catcher is used.
@@ -636,7 +637,7 @@ impl Rocket {
     /// ```
     #[inline]
     pub fn attach<F: Fairing>(mut self, fairing: F) -> Self {
-        // Attach the fairings, which requires us to move `self`.
+        // Attach (and run attach) fairings, which requires us to move `self`.
         let mut fairings = mem::replace(&mut self.fairings, Fairings::new(self.config.use_emoji));
         self = fairings.attach(Box::new(fairing), self);
 
@@ -651,8 +652,8 @@ impl Rocket {
         if !collisions.is_empty() {
             let owned = collisions.iter().map(|&(a, b)| (a.clone(), b.clone()));
             Some(LaunchError::from(LaunchErrorKind::Collision(owned.collect())))
-        } else if self.fairings.had_failure() {
-            Some(LaunchError::from(LaunchErrorKind::FailedFairing))
+        } else if let Some(failures) = self.fairings.failures() {
+            Some(LaunchError::from(LaunchErrorKind::FailedFairings(failures.to_vec())))
         } else {
             None
         }
