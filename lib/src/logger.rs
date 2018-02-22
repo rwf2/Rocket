@@ -99,13 +99,13 @@ impl fmt::Display for LoggingOutput {
 macro_rules! log_ {
     ($name:ident: $fmt_str:expr) => {
         $name!(
-            concat!("  {rocket_indent} ", $fmt_str),
+            concat!("    {rocket_indent} ", $fmt_str),
             rocket_indent=$crate::yansi::Paint::white("=>")
         )
     };
     ($name:ident: $fmt_str:expr, $($args:tt)*) => {
         $name!(
-            concat!("  {rocket_indent} ", $fmt_str),
+            concat!("    {rocket_indent} ", $fmt_str),
             $($args)*,
             rocket_indent=$crate::yansi::Paint::white("=>")
         )
@@ -118,14 +118,14 @@ macro_rules! launch_info_ {
     ($fmt_str:expr) => {
         info!(
             target: "launch",
-            concat!("  {rocket_indent} ", $fmt_str),
+            concat!("    {rocket_indent} ", $fmt_str),
             rocket_indent=$crate::yansi::Paint::white("=>")
         )
     };
     ($fmt_str:expr, $($args:tt)*) => {
         info!(
             target: "launch",
-            concat!("  {rocket_indent} ", $fmt_str),
+            concat!("    {rocket_indent} ", $fmt_str),
             $($args)*,
             rocket_indent=$crate::yansi::Paint::white("=>")
         )
