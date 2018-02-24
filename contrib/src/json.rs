@@ -21,7 +21,7 @@ pub use serde_json::error::Error as SerdeError;
 fn from_reader_eager<R, T>(mut reader: R) -> serde_json::Result<T>
     where R: Read, T: DeserializeOwned
 {
-    let mut s = String::new();
+    let mut s = String::with_capacity(1024);
     if let Err(io_err) = reader.read_to_string(&mut s) {
         // Error::io is private to serde_json. Do not use outside of Rocket.
         return Err(SerdeError::io(io_err));
