@@ -19,9 +19,8 @@
 //! For gzip compression, flate2 crate is used.
 
 use std::io::{Cursor, Write};
-use std::sync::atomic::{AtomicBool, Ordering};
 
-use rocket::{Data, Request, Response};
+use rocket::{Request, Response};
 use rocket::http::{Header, HeaderMap};
 use rocket::fairing::{Fairing, Info, Kind};
 
@@ -32,10 +31,7 @@ use flate2;
 use flate2::write::GzEncoder;
 
 #[derive(Debug, Default)]
-pub struct Compression {
-    accepts_brotli: AtomicBool,
-    accepts_gzip: AtomicBool,
-}
+pub struct Compression;
 
 impl Compression {
     /// This function creates a Compression to be used in your Rocket
@@ -54,26 +50,12 @@ impl Fairing for Compression {
     fn info(&self) -> Info {
         Info {
             name: "Brotli and gzip compressors for responses",
-            kind: Kind::Request | Kind::Response,
+            kind: Kind::Response,
         }
     }
 
-    fn on_request(&self, request: &mut Request, _: &Data) {
-        let accept_headers: Vec<&str> =
-            request.headers().get("Accept-Encoding").collect();
-        if accept_headers.iter().any(|x| x.contains("br")) {
-            self.accepts_brotli.store(true, Ordering::Relaxed);
-        } else {
-            self.accepts_brotli.store(false, Ordering::Relaxed);
-        }
-        if accept_headers.iter().any(|x| x.contains("gzip")) {
-            self.accepts_gzip.store(true, Ordering::Relaxed);
-        } else {
-            self.accepts_gzip.store(false, Ordering::Relaxed);
-        }
-    }
-
-    fn on_response(&self, _request: &Request, response: &mut Response) {
+    fn on_response(&self, request: &Request, response: &mut Response) {
+        let accept_headers: Vec<&str> = request.headers().get("Accept-Encoding").collect();
         let mut content_header = false;
         let mut content_header_br = false;
         let mut content_header_gzip = false;
@@ -98,8 +80,9 @@ impl Fairing for Compression {
         // does not have any Content-Encoding header or the Content-Encoding is
         // brotli and the Content-Type is not an image (images compression
         // ratio is minimum)
-        if self.accepts_brotli.load(Ordering::Relaxed) &&
-           (!content_header || content_header_br) && !image {
+        if accept_headers.iter().any(|x| x.contains("br")) && (!content_header || content_header_br)
+            && !image
+        {
             brotli_compressed = true;
             response.adjoin_header(Header::new("Content-Encoding", "br"));
             let body = response.body_bytes();
@@ -108,7 +91,8 @@ impl Fairing for Compression {
                 let mut compressed = Cursor::new(Vec::<u8>::new());
                 let mut params = brotli::enc::BrotliEncoderInitParams();
                 params.quality = 2;
-                let content_type = headers.get("Content-Type")
+                let content_type = headers
+                    .get("Content-Type")
                     .collect::<Vec<&str>>()
                     .join(", ");
                 if content_type.contains("text/") {
@@ -120,9 +104,10 @@ impl Fairing for Compression {
                     response.set_sized_body(compressed);
                 }
             }
-        } else if self.accepts_gzip.load(Ordering::Relaxed) &&
-           (!content_header || content_header_gzip || content_header_br) &&
-           !image {
+        } else if accept_headers.iter().any(|x| x.contains("gzip"))
+            && (!content_header || content_header_gzip || content_header_br)
+            && !image
+        {
             gzip_compressed = true;
             response.adjoin_header(Header::new("Content-Encoding", "gzip"));
             let body = response.body_bytes();
@@ -130,7 +115,8 @@ impl Fairing for Compression {
                 let mut compressed = Cursor::new(Vec::<u8>::new());
                 if GzEncoder::new(&mut compressed, flate2::Compression::default())
                     .write_all(&body)
-                    .is_ok() {
+                    .is_ok()
+                {
                     response.set_sized_body(compressed);
                 }
             }
@@ -139,25 +125,25 @@ impl Fairing for Compression {
         // if the response has not been compressed with an algorithm and the
         // Content-Encoding is present, it must be removed
         if content_header_br && !brotli_compressed {
-            Compression::remove_content_header("br",
-                                               response.headers().clone(),
-                                               response);
+            Compression::remove_content_header("br", response.headers().clone(), response);
         }
         if content_header_gzip && !gzip_compressed {
-            Compression::remove_content_header("gzip",
-                                               response.headers().clone(),
-                                               response);
+            Compression::remove_content_header("gzip", response.headers().clone(), response);
         }
     }
 }
 
 impl Compression {
-    fn remove_content_header<'a, 'b: 'a>(to_delete: &'a str,
-                                         headers: HeaderMap<'b>,
-                                         response: &mut Response<'a>) {
+    fn remove_content_header<'a, 'b: 'a>(
+        to_delete: &'a str,
+        headers: HeaderMap<'b>,
+        response: &mut Response<'a>,
+    ) {
         response.remove_header("Content-Encoding");
-        for enc in headers.into_iter()
-            .filter(|x| x.name() == "Content-Encoding" && x.value() != to_delete) {
+        for enc in headers
+            .into_iter()
+            .filter(|x| x.name() == "Content-Encoding" && x.value() != to_delete)
+        {
             let header = enc.clone();
             response.adjoin_header(header);
         }
