@@ -211,7 +211,6 @@ impl Rocket {
         // Route the request and run the user's handlers.
         let mut response = self.route_and_process(request, data);
 
-
         // Add the 'rocket' server header to the response and run fairings.
         // TODO: If removing Hyper, write out `Date` header too.
         response.set_header(Header::new("Server", "Rocket"));
@@ -226,10 +225,9 @@ impl Rocket {
         response
     }
 
-
     fn route_and_process<'s, 'r>(
         &'s self,
-        request: &'r Request<'s>,
+        request: &'r mut Request<'s>,
         data: Data
     ) -> Response<'r> {
         // Route the request to get a response.
@@ -248,17 +246,9 @@ impl Rocket {
                 if request.method() == Method::Head {
                     info_!("Autohandling {} request.", Paint::white("HEAD"));
 
-                    // Rust thinks `request` is still borrowed here, but it's
-                    // obviously not (data has nothing to do with it), so we
-                    // convince it to give us another mutable reference.
-                    // TODO: Use something that is well defined, like UnsafeCell.
-                    // But that causes variance issues...so wait for NLL.
-                    let request: &'r mut Request<'s> =
-                        unsafe { (&mut *(request as *const _ as *mut _)) };
-
                     request.set_method(Method::Get);
 
-                    //Dispatch the request again with Method `GET`.
+                    // Dispatch the request again with Method `GET`.
                     let response = self.route_and_process(request, data);
 
                     response
