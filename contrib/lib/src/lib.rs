@@ -57,9 +57,9 @@ pub extern crate handlebars;
 #[cfg(feature = "tera_templates")]
 pub extern crate tera;
 
-#[cfg(feature = "compression")]
+#[cfg(feature = "brotli_compression")]
 extern crate brotli;
-#[cfg(feature = "compression")]
+#[cfg(feature = "gzip_compression")]
 extern crate flate2;
 
 #[cfg(feature = "json")]
@@ -92,9 +92,9 @@ pub use uuid::{Uuid, UuidParseError};
 =======
 pub use uuid::{UuidParseError, UUID};
 
-#[cfg(feature = "compression")]
+#[cfg(any(feature = "brotli_compression", feature = "gzip_compression"))]
 mod compression;
 
-#[cfg(feature = "compression")]
+#[cfg(any(feature = "brotli_compression", feature = "gzip_compression"))]
 pub use compression::Compression;
 
