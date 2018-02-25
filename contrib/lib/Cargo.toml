@@ -16,7 +16,9 @@ json = ["serde", "serde_json"]
 msgpack = ["serde", "rmp-serde"]
 tera_templates = ["tera", "templates"]
 handlebars_templates = ["handlebars", "templates"]
-compression = ["brotli", "flate2"]
+compression = ["brotli_compression", "gzip_compression"]
+brotli_compression = ["brotli"]
+gzip_compression = ["flate2"]
 
 # Internal use only.
 templates = ["serde", "serde_json", "glob"]

@@ -5,8 +5,11 @@
 //!
 //! To add this feature to your Rocket application, use
 //! .attach(rocket_contrib::Compression::fairing())
-//! to your Rocket instance. Note that you must add the feature
-//! "compression" to your rocket_contrib dependency in Cargo.toml.
+//! to your Rocket instance. Note that you must add the
+//! "compression" feature for brotli and gzip compression to your rocket_contrib
+//! dependency in Cargo.toml. Additionally, you can load only brotli compression
+//! using "brotli_compression" feature or load only gzip compression using
+//! "gzip_compression" in your rocket_contrib dependency in Cargo.toml.
 //!
 //! In the brotli algorithm, quality is set to 2 in order to have really fast
 //! compressions with compression ratio similar to gzip. Also, text and font
@@ -18,16 +21,22 @@
 //! For brotli compression, the rust-brotli crate is used.
 //! For gzip compression, flate2 crate is used.
 
-use std::io::{Cursor, Write};
+use std::io::Cursor;
+#[cfg(feature = "gzip_compression")]
+use std::io::Write;
 
 use rocket::{Request, Response};
 use rocket::http::{Header, HeaderMap};
 use rocket::fairing::{Fairing, Info, Kind};
 
+#[cfg(feature = "brotli_compression")]
 use brotli;
+#[cfg(feature = "brotli_compression")]
 use brotli::enc::backward_references::BrotliEncoderMode;
 
+#[cfg(feature = "gzip_compression")]
 use flate2;
+#[cfg(feature = "gzip_compression")]
 use flate2::write::GzEncoder;
 
 #[derive(Debug, Default)]
@@ -59,7 +68,9 @@ impl Fairing for Compression {
         let mut content_header = false;
         let mut content_header_br = false;
         let mut content_header_gzip = false;
+        #[allow(unused_mut)]
         let mut brotli_compressed = false;
+        #[allow(unused_mut)]
         let mut gzip_compressed = false;
         let mut image = false;
         let headers = response.headers().clone();
@@ -80,44 +91,51 @@ impl Fairing for Compression {
         // does not have any Content-Encoding header or the Content-Encoding is
         // brotli and the Content-Type is not an image (images compression
         // ratio is minimum)
-        if accept_headers.iter().any(|x| x.contains("br")) && (!content_header || content_header_br)
-            && !image
+        if cfg!(feature = "brotli_compression") && accept_headers.iter().any(|x| x.contains("br"))
+            && (!content_header || content_header_br) && !image
         {
-            brotli_compressed = true;
-            response.adjoin_header(Header::new("Content-Encoding", "br"));
-            let body = response.body_bytes();
-            if let Some(body) = body {
-                let mut plain = Cursor::new(body);
-                let mut compressed = Cursor::new(Vec::<u8>::new());
-                let mut params = brotli::enc::BrotliEncoderInitParams();
-                params.quality = 2;
-                let content_type = headers
-                    .get("Content-Type")
-                    .collect::<Vec<&str>>()
-                    .join(", ");
-                if content_type.contains("text/") {
-                    params.mode = BrotliEncoderMode::BROTLI_MODE_TEXT;
-                } else if content_type.contains("font/") {
-                    params.mode = BrotliEncoderMode::BROTLI_MODE_FONT;
-                }
-                if brotli::BrotliCompress(&mut plain, &mut compressed, &params).is_ok() {
-                    response.set_sized_body(compressed);
+            #[cfg(feature = "brotli_compression")]
+            {
+                brotli_compressed = true;
+                response.adjoin_header(Header::new("Content-Encoding", "br"));
+                let body = response.body_bytes();
+                if let Some(body) = body {
+                    let mut plain = Cursor::new(body);
+                    let mut compressed = Cursor::new(Vec::<u8>::new());
+                    let mut params = brotli::enc::BrotliEncoderInitParams();
+                    params.quality = 2;
+                    let content_type = headers
+                        .get("Content-Type")
+                        .collect::<Vec<&str>>()
+                        .join(", ");
+                    if content_type.contains("text/") {
+                        params.mode = BrotliEncoderMode::BROTLI_MODE_TEXT;
+                    } else if content_type.contains("font/") {
+                        params.mode = BrotliEncoderMode::BROTLI_MODE_FONT;
+                    }
+                    if brotli::BrotliCompress(&mut plain, &mut compressed, &params).is_ok() {
+                        response.set_sized_body(compressed);
+                    }
                 }
             }
-        } else if accept_headers.iter().any(|x| x.contains("gzip"))
+        } else if cfg!(feature = "gzip_compression")
+            && accept_headers.iter().any(|x| x.contains("gzip"))
             && (!content_header || content_header_gzip || content_header_br)
             && !image
         {
-            gzip_compressed = true;
-            response.adjoin_header(Header::new("Content-Encoding", "gzip"));
-            let body = response.body_bytes();
-            if let Some(body) = body {
-                let mut compressed = Cursor::new(Vec::<u8>::new());
-                if GzEncoder::new(&mut compressed, flate2::Compression::default())
-                    .write_all(&body)
-                    .is_ok()
-                {
-                    response.set_sized_body(compressed);
+            #[cfg(feature = "gzip_compression")]
+            {
+                gzip_compressed = true;
+                response.adjoin_header(Header::new("Content-Encoding", "gzip"));
+                let body = response.body_bytes();
+                if let Some(body) = body {
+                    let mut compressed = Cursor::new(Vec::<u8>::new());
+                    if GzEncoder::new(&mut compressed, flate2::Compression::default())
+                        .write_all(&body)
+                        .is_ok()
+                    {
+                        response.set_sized_body(compressed);
+                    }
                 }
             }
         }
