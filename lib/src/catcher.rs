@@ -47,7 +47,7 @@ use yansi::Color::*;
 ///     "Whoops! Looks like we messed up."
 /// }
 ///
-/// #[catch(400)]
+/// #[catch(404)]
 /// fn not_found(req: &Request) -> String {
 ///     format!("I couldn't find '{}'. Try something else?", req.uri())
 /// }
