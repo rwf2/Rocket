@@ -227,7 +227,7 @@ impl Rocket {
 
     fn route_and_process<'s, 'r>(
         &'s self,
-        request: &'r mut Request<'s>,
+        request: &'r Request<'s>,
         data: Data
     ) -> Response<'r> {
         // Route the request to get a response.
@@ -246,7 +246,7 @@ impl Rocket {
                 if request.method() == Method::Head {
                     info_!("Autohandling {} request.", Paint::white("HEAD"));
 
-                    request.set_method(Method::Get);
+                    request.set_method_interior(Method::Get);
 
                     // Dispatch the request again with Method `GET`.
                     let response = self.route_and_process(request, data);
