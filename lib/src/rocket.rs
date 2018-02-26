@@ -247,9 +247,7 @@ impl Rocket {
 
                     // Dispatch the request again with Method `GET`.
                     request._set_method(Method::Get);
-                    let response = self.route_and_process(request, data);
-
-                    response
+                    self.route_and_process(request, data)
                 } else {
                     self.handle_error(Status::NotFound, request)
                 }

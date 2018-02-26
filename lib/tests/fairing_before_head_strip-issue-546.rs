@@ -3,16 +3,16 @@
 
 extern crate rocket;
 
-use rocket::response::content;
+const RESPONSE_STRING: &'static str = "{'test': 'dont strip before fairing' }";
 
 #[head("/")]
-fn index() -> content::Json<&'static str> {
-    content::Json("{ 'test': 'dont strip before fairing' }")
+fn index() -> &'static str {
+    RESPONSE_STRING
 }
 
 #[get("/")]
-fn auto() -> content::Json<&'static str> {
-    index()
+fn auto() -> &'static str {
+    RESPONSE_STRING
 }
 
 mod fairing_before_head_strip {
@@ -36,12 +36,11 @@ mod fairing_before_head_strip {
             .mount("/", routes![index])
             .attach(AdHoc::on_response(|req, res| {
                 assert_eq!(req.method(), Method::Head);
-                assert_eq!(res.body_string(), Some("{ 'test': 'dont strip before fairing' }".into()));
+                assert_eq!(res.body_string(), Some(RESPONSE_STRING.into()));
             }));
 
         let client = Client::new(rocket).unwrap();
         let response = client.head("/").dispatch();
-
         assert_eq!(response.status(), Status::Ok);
     }
 
@@ -58,12 +57,11 @@ mod fairing_before_head_strip {
             }))
             .attach(AdHoc::on_response(|req, res| {
                 assert_eq!(req.method(), Method::Get);
-                assert_eq!(res.body_string(), Some("{ 'test': 'dont strip before fairing' }".into()));
+                assert_eq!(res.body_string(), Some(RESPONSE_STRING.into()));
             }));
 
         let client = Client::new(rocket).unwrap();
         let response = client.head("/").dispatch();
-
         assert_eq!(response.status(), Status::Ok);
     }
 }
