@@ -446,7 +446,7 @@ impl<'r> Request<'r> {
     /// ```
     pub fn format(&self) -> Option<&MediaType> {
         static ANY: MediaType = MediaType::Any;
-        if self.method.get().supports_payload() {
+        if self.method().supports_payload() {
             self.content_type().map(|ct| ct.media_type())
         } else {
             // FIXME: Should we be using `accept_first` or `preferred`? Or
@@ -707,7 +707,7 @@ impl<'r> fmt::Display for Request<'r> {
     /// Pretty prints a Request. This is primarily used by Rocket's logging
     /// infrastructure.
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{} {}", Paint::green(&self.method.get()), Paint::blue(&self.uri))?;
+        write!(f, "{} {}", Paint::green(self.method()), Paint::blue(&self.uri))?;
 
         // Print the requests media type when the route specifies a format.
         if let Some(media_type) = self.format() {
