@@ -214,7 +214,6 @@ impl Rocket {
         // Add the 'rocket' server header to the response and run fairings.
         // TODO: If removing Hyper, write out `Date` header too.
         response.set_header(Header::new("Server", "Rocket"));
-
         self.fairings.handle_response(request, &mut response);
 
         // Strip the body if this is a `HEAD` request.
@@ -246,9 +245,8 @@ impl Rocket {
                 if request.method() == Method::Head {
                     info_!("Autohandling {} request.", Paint::white("HEAD"));
 
-                    request.set_method_interior(Method::Get);
-
                     // Dispatch the request again with Method `GET`.
+                    request._set_method(Method::Get);
                     let response = self.route_and_process(request, data);
 
                     response

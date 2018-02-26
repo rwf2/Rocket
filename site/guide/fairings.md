@@ -96,8 +96,7 @@ events is described below:
     a response fairing can be used to provide a response when the greater
     applications fails to by rewriting **404** responses as desired. As another
     example, response fairings can also be used to inject headers into all
-    outgoing responses. Beware that the body of a `HEAD` request will be
-    stripped off _after_ all response `Fairings` have been performed.
+    outgoing responses.
 
 ## Implementing
 

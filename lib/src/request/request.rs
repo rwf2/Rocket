@@ -618,7 +618,7 @@ impl<'r> Request<'r> {
 
     /// Set the method of `self`, even if self is a shared reference
     #[inline(always)]
-    pub(crate) fn set_method_interior(&self, method: Method) {
+    pub(crate) fn _set_method(&self, method: Method) {
         self.method.set(method);
     }
 
