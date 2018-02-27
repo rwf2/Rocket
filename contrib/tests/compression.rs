@@ -17,12 +17,11 @@ use std::io::Read;
 
 use flate2::read::GzDecoder;
 
-
 const HELLO: &str = "Hello world!";
 
 fn rocket() -> rocket::Rocket {
     rocket::ignite()
-        .mount("/", routes![index, gzip, br, br_font, br_image, gzip_image])
+        .mount("/", routes![index, br_font, br_image, gzip_image])
         .attach(rocket_contrib::Compression::fairing())
 }
 
@@ -30,47 +29,27 @@ fn rocket() -> rocket::Rocket {
 pub fn index() -> String {
     String::from("Hello world!")
 }
-#[get("/gzip")]
-pub fn gzip() -> Response<'static> {
-    Response::build()
-        .header(ContentType::Plain)
-        .header(Header::new("Content-Encoding", "gzip"))
-        .sized_body(Cursor::new(String::from(HELLO)))
-        .finalize()
-}
-#[get("/br")]
-pub fn br() -> Response<'static> {
-    Response::build()
-        .header(ContentType::Plain)
-        .header(Header::new("Content-Encoding", "br"))
-        .sized_body(Cursor::new(String::from(HELLO)))
-        .finalize()
-}
 #[get("/br_font")]
 pub fn br_font() -> Response<'static> {
     Response::build()
-        .header(Header::new("Content-Encoding", "br"))
-        .header(Header::new("Content-Type", "font/woff"))
+        .header(ContentType::WOFF)
         .sized_body(Cursor::new(String::from(HELLO)))
         .finalize()
 }
 #[get("/br_image")]
 pub fn br_image() -> Response<'static> {
     Response::build()
-        .header(Header::new("Content-Encoding", "br"))
-        .header(Header::new("Content-Type", "image/png"))
+        .header(ContentType::PNG)
         .sized_body(Cursor::new(String::from(HELLO)))
         .finalize()
 }
 #[get("/gzip_image")]
 pub fn gzip_image() -> Response<'static> {
     Response::build()
-        .header(Header::new("Content-Encoding", "gzip"))
-        .header(Header::new("Content-Type", "image/png"))
+        .header(ContentType::PNG)
         .sized_body(Cursor::new(String::from(HELLO)))
         .finalize()
 }
-
 
 // Tests
 
@@ -87,55 +66,7 @@ fn test_index() {
         response
             .headers()
             .get("Content-Encoding")
-            .any(|x| x == String::from("br"))
-    );
-    let mut body_plain = Cursor::new(Vec::<u8>::new());
-    brotli::BrotliDecompress(
-        &mut Cursor::new(response.body_bytes().unwrap()),
-        &mut body_plain,
-    ).unwrap();
-    assert_eq!(
-        String::from_utf8(body_plain.get_mut().to_vec()).unwrap(),
-        String::from(HELLO)
-    );
-}
-
-/// This function should compress the content in gzip (explicit Content-Encoding)
-#[test]
-fn test_gzip() {
-    let client = Client::new(rocket()).expect("valid rocket instance");
-    let mut response = client
-        .get("/gzip")
-        .header(Header::new("Accept-Encoding", "deflate, gzip, brotli"))
-        .dispatch();
-    assert_eq!(response.status(), Status::Ok);
-    assert!(!response
-        .headers()
-        .get("Content-Encoding")
-        .any(|x| x == "br"));
-    assert!(response
-        .headers()
-        .get("Content-Encoding")
-        .any(|x| x == "gzip"));
-    let mut s = String::new();
-    GzDecoder::new(&response.body_bytes().unwrap()[..]).read_to_string(&mut s).unwrap();
-    assert_eq!(s, String::from(HELLO));
-}
-
-/// This function should compress the content in br (explicit Content-Encoding)
-#[test]
-fn test_br() {
-    let client = Client::new(rocket()).expect("valid rocket instance");
-    let mut response = client
-        .get("/br")
-        .header(Header::new("Accept-Encoding", "deflate, gzip, brotli"))
-        .dispatch();
-    assert_eq!(response.status(), Status::Ok);
-    assert!(
-        response
-            .headers()
-            .get("Content-Encoding")
-            .any(|x| x == String::from("br"))
+            .any(|x| x == "br")
     );
     let mut body_plain = Cursor::new(Vec::<u8>::new());
     brotli::BrotliDecompress(
@@ -161,7 +92,7 @@ fn test_br_font() {
         response
             .headers()
             .get("Content-Encoding")
-            .any(|x| x == String::from("br"))
+            .any(|x| x == "br")
     );
     let mut body_plain = Cursor::new(Vec::<u8>::new());
     brotli::BrotliDecompress(
@@ -170,47 +101,6 @@ fn test_br_font() {
     ).unwrap();
     assert_eq!(
         String::from_utf8(body_plain.get_mut().to_vec()).unwrap(),
-        String::from(HELLO)
-    );
-}
-
-/// This function should compress the content in gzip becasue br is not accepted
-#[test]
-fn test_br_not_accepted() {
-    let client = Client::new(rocket()).expect("valid rocket instance");
-    let mut response = client
-        .get("/br")
-        .header(Header::new("Accept-Encoding", "deflate, gzip"))
-        .dispatch();
-    assert_eq!(response.status(), Status::Ok);
-    assert!(!response
-        .headers()
-        .get("Content-Encoding")
-        .any(|x| x == "br"));
-    assert!(response
-        .headers()
-        .get("Content-Encoding")
-        .any(|x| x == "gzip"));
-    let mut s = String::new();
-    GzDecoder::new(&response.body_bytes().unwrap()[..]).read_to_string(&mut s).unwrap();
-    assert_eq!(s, String::from(HELLO));
-}
-
-/// This function should not compress because gzip and br are not accepted
-#[test]
-fn test_br_nor_gzip_not_accepted() {
-    let client = Client::new(rocket()).expect("valid rocket instance");
-    let mut response = client
-        .get("/br")
-        .header(Header::new("Accept-Encoding", "deflate"))
-        .dispatch();
-    assert_eq!(response.status(), Status::Ok);
-    assert!(!response
-        .headers()
-        .get("Content-Encoding")
-        .any(|x| x == "br" || x == "gzip"));
-    assert_eq!(
-        String::from_utf8(response.body_bytes().unwrap()).unwrap(),
         String::from(HELLO)
     );
 }
@@ -253,46 +143,57 @@ fn test_gzip_image() {
     );
 }
 
-// Tests with identity Accept-Encoding, all should not compress
+/// This function should compress the content in gzip becasue br is not accepted
+#[test]
+fn test_br_not_accepted() {
+    let client = Client::new(rocket()).expect("valid rocket instance");
+    let mut response = client
+        .get("/")
+        .header(Header::new("Accept-Encoding", "deflate, gzip"))
+        .dispatch();
+    assert_eq!(response.status(), Status::Ok);
+    assert!(!response
+        .headers()
+        .get("Content-Encoding")
+        .any(|x| x == "br"));
+    assert!(
+        response
+            .headers()
+            .get("Content-Encoding")
+            .any(|x| x == "gzip")
+    );
+    let mut s = String::new();
+    GzDecoder::new(&response.body_bytes().unwrap()[..])
+        .read_to_string(&mut s)
+        .unwrap();
+    assert_eq!(s, String::from(HELLO));
+}
+
+/// This function should not compress because gzip and br are not accepted
+#[test]
+fn test_br_nor_gzip_not_accepted() {
+    let client = Client::new(rocket()).expect("valid rocket instance");
+    let mut response = client
+        .get("/")
+        .header(Header::new("Accept-Encoding", "deflate"))
+        .dispatch();
+    assert_eq!(response.status(), Status::Ok);
+    assert!(!response
+        .headers()
+        .get("Content-Encoding")
+        .any(|x| x == "br" || x == "gzip"));
+    assert_eq!(
+        String::from_utf8(response.body_bytes().unwrap()).unwrap(),
+        String::from(HELLO)
+    );
+}
+
+// Test with identity Accept-Encoding, it should not compress
 #[test]
 fn test_identity() {
     let client = Client::new(rocket()).expect("valid rocket instance");
     let mut response = client
         .get("/")
-        .header(Header::new("Accept-Encoding", "identity"))
-        .dispatch();
-    assert_eq!(response.status(), Status::Ok);
-    assert!(!response
-        .headers()
-        .get("Content-Encoding")
-        .any(|x| x == "gzip" || x == "br"));
-    assert_eq!(
-        String::from_utf8(response.body_bytes().unwrap()).unwrap(),
-        String::from(HELLO)
-    );
-}
-#[test]
-fn test_identity_gzip() {
-    let client = Client::new(rocket()).expect("valid rocket instance");
-    let mut response = client
-        .get("/gzip")
-        .header(Header::new("Accept-Encoding", "identity"))
-        .dispatch();
-    assert_eq!(response.status(), Status::Ok);
-    assert!(!response
-        .headers()
-        .get("Content-Encoding")
-        .any(|x| x == "gzip" || x == "br"));
-    assert_eq!(
-        String::from_utf8(response.body_bytes().unwrap()).unwrap(),
-        String::from(HELLO)
-    );
-}
-#[test]
-fn test_identity_br() {
-    let client = Client::new(rocket()).expect("valid rocket instance");
-    let mut response = client
-        .get("/br")
         .header(Header::new("Accept-Encoding", "identity"))
         .dispatch();
     assert_eq!(response.status(), Status::Ok);

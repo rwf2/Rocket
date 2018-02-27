@@ -1,6 +1,5 @@
 //! This module provides brotli ang gzip compression for all non-image
-//! responses without Content-Encoding header or with Content-Encoding br or
-//! gzip respectively for requests that send Accept-Encoding br and gzip. If
+//! responses for requests that send Accept-Encoding br and gzip. If
 //! accepted, brotli compression is preferred over gzip.
 //!
 //! To add this feature to your Rocket application, use
@@ -26,7 +25,7 @@ use std::io::Cursor;
 use std::io::Write;
 
 use rocket::{Request, Response};
-use rocket::http::{Header, HeaderMap};
+use rocket::http::Header;
 use rocket::fairing::{Fairing, Info, Kind};
 
 #[cfg(feature = "brotli_compression")]
@@ -64,69 +63,54 @@ impl Fairing for Compression {
     }
 
     fn on_response(&self, request: &Request, response: &mut Response) {
-        let accept_headers: Vec<&str> = request.headers().get("Accept-Encoding").collect();
-        let mut content_header = false;
-        let mut content_header_br = false;
-        let mut content_header_gzip = false;
-        #[allow(unused_mut)]
-        let mut brotli_compressed = false;
-        #[allow(unused_mut)]
-        let mut gzip_compressed = false;
-        let mut image = false;
-        let headers = response.headers().clone();
+        let content_type = response.content_type();
+        // Images must not be compressed
+        if let Some(ref content_type) = content_type {
+            if content_type.top() == "image" {
+                return;
+            }
+        }
 
-        if headers.contains("Content-Encoding") {
-            content_header = true;
-            if headers.get("Content-Encoding").any(|x| x == "br") {
-                content_header_br = true;
-            }
-            if headers.get("Content-Encoding").any(|x| x == "gzip") {
-                content_header_gzip = true;
-            }
-        }
-        if headers.get("Content-Type").any(|x| x.contains("image/")) {
-            image = true;
-        }
-        // The compression is done if the request supports brotli, the response
-        // does not have any Content-Encoding header or the Content-Encoding is
-        // brotli and the Content-Type is not an image (images compression
-        // ratio is minimum)
-        if cfg!(feature = "brotli_compression") && accept_headers.iter().any(|x| x.contains("br"))
-            && (!content_header || content_header_br) && !image
+        // The compression is done if the request supports brotli or gzip and
+        // the corresponding feature is enabled
+        if cfg!(feature = "brotli_compression")
+            && request
+                .headers()
+                .get("Accept-Encoding")
+                .flat_map(|e| e.trim().split(","))
+                .any(|e| e.trim() == "br" || e.trim() == "brotli")
         {
             #[cfg(feature = "brotli_compression")]
             {
-                brotli_compressed = true;
-                response.adjoin_header(Header::new("Content-Encoding", "br"));
                 let body = response.body_bytes();
                 if let Some(body) = body {
                     let mut plain = Cursor::new(body);
                     let mut compressed = Cursor::new(Vec::<u8>::new());
                     let mut params = brotli::enc::BrotliEncoderInitParams();
                     params.quality = 2;
-                    let content_type = headers
-                        .get("Content-Type")
-                        .collect::<Vec<&str>>()
-                        .join(", ");
-                    if content_type.contains("text/") {
-                        params.mode = BrotliEncoderMode::BROTLI_MODE_TEXT;
-                    } else if content_type.contains("font/") {
-                        params.mode = BrotliEncoderMode::BROTLI_MODE_FONT;
+                    if let Some(ref content_type) = content_type {
+                        if content_type.top() == "text" {
+                            params.mode = BrotliEncoderMode::BROTLI_MODE_TEXT;
+                        } else if content_type.top() == "font" {
+                            params.mode = BrotliEncoderMode::BROTLI_MODE_FONT;
+                        }
                     }
                     if brotli::BrotliCompress(&mut plain, &mut compressed, &params).is_ok() {
+                        response.remove_header("Content-Encoding");
+                        response.adjoin_header(Header::new("Content-Encoding", "br"));
                         response.set_sized_body(compressed);
                     }
                 }
             }
         } else if cfg!(feature = "gzip_compression")
-            && accept_headers.iter().any(|x| x.contains("gzip"))
-            && (!content_header || content_header_gzip || content_header_br)
-            && !image
+            && request
+                .headers()
+                .get("Accept-Encoding")
+                .flat_map(|e| e.trim().split(","))
+                .any(|e| e.trim() == "gzip")
         {
             #[cfg(feature = "gzip_compression")]
             {
-                gzip_compressed = true;
-                response.adjoin_header(Header::new("Content-Encoding", "gzip"));
                 let body = response.body_bytes();
                 if let Some(body) = body {
                     let mut compressed = Cursor::new(Vec::<u8>::new());
@@ -134,36 +118,12 @@ impl Fairing for Compression {
                         .write_all(&body)
                         .is_ok()
                     {
+                        response.remove_header("Content-Encoding");
+                        response.adjoin_header(Header::new("Content-Encoding", "gzip"));
                         response.set_sized_body(compressed);
                     }
                 }
             }
-        }
-
-        // if the response has not been compressed with an algorithm and the
-        // Content-Encoding is present, it must be removed
-        if content_header_br && !brotli_compressed {
-            Compression::remove_content_header("br", response.headers().clone(), response);
-        }
-        if content_header_gzip && !gzip_compressed {
-            Compression::remove_content_header("gzip", response.headers().clone(), response);
-        }
-    }
-}
-
-impl Compression {
-    fn remove_content_header<'a, 'b: 'a>(
-        to_delete: &'a str,
-        headers: HeaderMap<'b>,
-        response: &mut Response<'a>,
-    ) {
-        response.remove_header("Content-Encoding");
-        for enc in headers
-            .into_iter()
-            .filter(|x| x.name() == "Content-Encoding" && x.value() != to_delete)
-        {
-            let header = enc.clone();
-            response.adjoin_header(header);
         }
     }
 }
