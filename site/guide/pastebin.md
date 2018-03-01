@@ -278,7 +278,7 @@ ls upload    # ensure the upload is there
 cat upload/* # ensure that contents are correct
 ```
 
-Note that since we haven't created a `GET /<id>` route, visting the returned URL
+Note that since we haven't created a `GET /<id>` route, visiting the returned URL
 will result in a **404**. We'll fix that now.
 
 ## Retrieving Pastes

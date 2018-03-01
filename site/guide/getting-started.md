@@ -31,7 +31,7 @@ rustup override set nightly
 ### Minimum Nightly
 
 Rocket always requires the _latest_ version of Rust nightly. If your Rocket
-application suddently stops building, ensure you're using the latest version of
+application suddenly stops building, ensure you're using the latest version of
 Rust nightly and Rocket by updating your toolchain and dependencies with:
 
 ```sh

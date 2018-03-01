@@ -101,7 +101,7 @@ fn hello(name: String, age: u8, cool: bool) -> String {
 ### Raw Strings
 
 You may have noticed an unfamiliar [`RawStr`] type in the code example above.
-This is a special type, provided by Rocket, that represents an unsanitzed,
+This is a special type, provided by Rocket, that represents an unsanitized,
 unvalidated, and undecoded raw string from an HTTP message. It exists to
 separate validated string inputs, represented by types such as `String`, `&str`,
 and `Cow<str>` types, from unvalidated inputs, represented by `&RawStr`. It
@@ -109,7 +109,7 @@ provides helpful methods to convert the unvalidated string into a validated one.
 
 Because `&RawStr` implements [`FromParam`], it can be used as the type of a
 dynamic segment, as in the example above. When used as the type of a dynamic
-segment, a `RawStr` points to a potentially undecoded string. By constrast, a
+segment, a `RawStr` points to a potentially undecoded string. By contrast, a
 `String` is guaranteed to be decoded. Which you should use depends on whether
 you want direct but potentially unsafe access to the string (`&RawStr`), or safe
 access to the string at the cost of an allocation (`String`).
