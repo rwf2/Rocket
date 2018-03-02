@@ -21,7 +21,7 @@ const HELLO: &str = "Hello world!";
 
 fn rocket() -> rocket::Rocket {
     rocket::ignite()
-        .mount("/", routes![index, br_font, br_image, gzip_image])
+        .mount("/", routes![index, font, image])
         .attach(rocket_contrib::Compression::fairing())
 }
 
@@ -29,22 +29,15 @@ fn rocket() -> rocket::Rocket {
 pub fn index() -> String {
     String::from("Hello world!")
 }
-#[get("/br_font")]
-pub fn br_font() -> Response<'static> {
+#[get("/font")]
+pub fn font() -> Response<'static> {
     Response::build()
         .header(ContentType::WOFF)
         .sized_body(Cursor::new(String::from(HELLO)))
         .finalize()
 }
-#[get("/br_image")]
-pub fn br_image() -> Response<'static> {
-    Response::build()
-        .header(ContentType::PNG)
-        .sized_body(Cursor::new(String::from(HELLO)))
-        .finalize()
-}
-#[get("/gzip_image")]
-pub fn gzip_image() -> Response<'static> {
+#[get("/image")]
+pub fn image() -> Response<'static> {
     Response::build()
         .header(ContentType::PNG)
         .sized_body(Cursor::new(String::from(HELLO)))
@@ -84,7 +77,7 @@ fn test_index() {
 fn test_br_font() {
     let client = Client::new(rocket()).expect("valid rocket instance");
     let mut response = client
-        .get("/br_font")
+        .get("/font")
         .header(Header::new("Accept-Encoding", "deflate, gzip, brotli"))
         .dispatch();
     assert_eq!(response.status(), Status::Ok);
@@ -110,7 +103,7 @@ fn test_br_font() {
 fn test_br_image() {
     let client = Client::new(rocket()).expect("valid rocket instance");
     let mut response = client
-        .get("/br_image")
+        .get("/image")
         .header(Header::new("Accept-Encoding", "deflate, gzip, br"))
         .dispatch();
     assert_eq!(response.status(), Status::Ok);
@@ -129,7 +122,7 @@ fn test_br_image() {
 fn test_gzip_image() {
     let client = Client::new(rocket()).expect("valid rocket instance");
     let mut response = client
-        .get("/gzip_image")
+        .get("/image")
         .header(Header::new("Accept-Encoding", "deflate, gzip, br"))
         .dispatch();
     assert_eq!(response.status(), Status::Ok);
