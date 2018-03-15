@@ -42,7 +42,7 @@ impl RouteParams {
     ) -> RouteParams {
         let function = Function::from(annotated).unwrap_or_else(|item_sp| {
             ecx.span_err(sp, "this attribute can only be used on functions...");
-            ecx.span_fatal(item_sp, "...but was applied to the item above.");
+            ecx.span_fatal(item_sp, "...but was applied to the item below.");
         });
 
         let meta_items = meta_item.meta_item_list().unwrap_or_else(|| {
