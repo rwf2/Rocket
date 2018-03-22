@@ -114,7 +114,7 @@ impl<S, E> IntoOutcome<S, (Status, E), ()> for Result<S, E> {
 ///     Extracts the [Route](/rocket/struct.Route.html) from the request if one
 ///     is available. If a route is not available, the request is forwarded.
 ///
-///     For information of when a route is avaiable, see the
+///     For information of when a route is available, see the
 ///     [`Request::route`](/rocket/struct.Request.html#method.route)
 ///     documentation.
 ///
