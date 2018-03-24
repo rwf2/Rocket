@@ -15,7 +15,9 @@ use handlebars::{Helper, Handlebars, RenderContext, RenderError, JsonRender};
 #[derive(Serialize)]
 struct TemplateContext {
     name: String,
-    items: Vec<String>
+    items: Vec<String>,
+    title: String,
+    parent: String,
 }
 
 #[get("/")]
@@ -24,13 +26,31 @@ fn index() -> Redirect {
 }
 
 #[get("/hello/<name>")]
-fn get(name: String) -> Template {
+fn hello(name: String) -> Template {
+    let page = "index".to_string();
+    let title = format!("Rocket Example - {}", page).to_string();
     let context = TemplateContext {
         name: name,
         items: vec!["One".into(), "Two".into(), "Three".into()],
+        parent: "layout".to_string(),
+        title: title,
     };
 
-    Template::render("index", &context)
+    Template::render(page, &context)
+}
+
+#[get("/about")]
+fn about() -> Template {
+    let page = "about".to_string();
+    let title = format!("Rocket Example - {}", page).to_string();
+    let context = TemplateContext {
+        name: "Unknown".to_string(),
+        items: vec!["One".into(), "Two".into(), "Three".into()],
+        parent: "layout".to_string(),
+        title: title,
+    };
+
+    Template::render(page, &context)
 }
 
 #[catch(404)]
@@ -52,7 +72,7 @@ fn wow_helper(h: &Helper, _: &Handlebars, rc: &mut RenderContext) -> HelperResul
 
 fn rocket() -> rocket::Rocket {
     rocket::ignite()
-        .mount("/", routes![index, get])
+        .mount("/", routes![index, hello, about])
         .catch(catchers![not_found])
         .attach(Template::custom(|engines| {
             engines.handlebars.register_helper("wow", Box::new(wow_helper));
