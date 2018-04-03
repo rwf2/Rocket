@@ -27,8 +27,10 @@ impl<'a> Uri<'a> {
     /// absolute, well formed URI.
     pub fn new<T: Into<Cow<'a, str>>>(uri: T) -> Uri<'a> {
         let uri = uri.into();
-        let qmark = uri.find('?');
         let hmark = uri.find('#');
+        let qmark = uri.find('?').and_then(|qloc| {
+            hmark.map_or(Some(qloc), |hloc| if qloc <= hloc { Some(qloc) } else { None })
+        });
 
         let end = uri.len();
         let (path, query, fragment) = match (qmark, hmark) {
@@ -547,6 +549,8 @@ mod tests {
         test_query("/a/b/c/d/e", None);
         test_query("/////", None);
         test_query("//a///", None);
+        test_query("/#", None);
+        test_query("/#?", None);
     }
 
     #[test]
@@ -565,7 +569,9 @@ mod tests {
     fn fragment_exists() {
         test_fragment("/test#abc", Some("abc"));
         test_fragment("/#abc", Some("abc"));
+        test_fragment("/#ab?c", Some("ab?c"));
         test_fragment("/a/b/c?123#a", Some("a"));
+        test_fragment("/a/b/c?123#a?b", Some("a?b"));
         test_fragment("/#a", Some("a"));
     }
 
