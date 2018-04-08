@@ -193,20 +193,46 @@ impl Rocket {
         }
     }
 
-    #[inline]
+    #[inline(always)]
     pub(crate) fn dispatch<'s, 'r>(
         &'s self,
         request: &'r mut Request<'s>,
-        data: Data,
+        data: Data
     ) -> Response<'r> {
         info!("{}:", request);
 
         // Do a bit of preprocessing before routing; run the attached fairings.
         self.preprocess_request(request, &data);
+
+        // Run the request fairings.
         self.fairings.handle_request(request, &data);
 
+        // Check if the request is a `HEAD` request.
+        let was_head_request = request.method() == Method::Head;
+
+        // Route the request and run the user's handlers.
+        let mut response = self.route_and_process(request, data);
+
+        // Add the 'rocket' server header to the response and run fairings.
+        // TODO: If removing Hyper, write out `Date` header too.
+        response.set_header(Header::new("Server", "Rocket"));
+        self.fairings.handle_response(request, &mut response);
+
+        // Strip the body if this is a `HEAD` request.
+        if was_head_request {
+            response.strip_body();
+        }
+
+        response
+    }
+
+    fn route_and_process<'s, 'r>(
+        &'s self,
+        request: &'r Request<'s>,
+        data: Data
+    ) -> Response<'r> {
         // Route the request to get a response.
-        let mut response = match self.route(request, data) {
+        let response = match self.route(request, data) {
             Outcome::Success(mut response) => {
                 // A user's route responded! Set the cookies.
                 for cookie in request.cookies().delta() {
@@ -216,37 +242,20 @@ impl Rocket {
                 response
             }
             Outcome::Forward(data) => {
-                // Rust thinks `request` is still borrowed here, but it's
-                // obviously not (data has nothing to do with it), so we
-                // convince it to give us another mutable reference.
-                // TODO: Use something that is well defined, like UnsafeCell.
-                // But that causes variance issues...so wait for NLL.
-                let request: &'r mut Request<'s> =
-                    unsafe { (&mut *(request as *const _ as *mut _)) };
 
                 // There was no matching route. Autohandle `HEAD` requests.
                 if request.method() == Method::Head {
                     info_!("Autohandling {} request.", Paint::white("HEAD"));
-                    request.set_method(Method::Get);
-                    let mut response = self.dispatch(request, data);
-                    response.strip_body();
-                    response
+
+                    // Dispatch the request again with Method `GET`.
+                    request._set_method(Method::Get);
+                    self.route_and_process(request, data)
                 } else {
                     self.handle_error(Status::NotFound, request)
                 }
             }
             Outcome::Failure(status) => self.handle_error(status, request),
         };
-
-        // Strip the body if this is a `HEAD` request.
-        if request.method() == Method::Head {
-            response.strip_body();
-        }
-
-        // Add the 'rocket' server header to the response and run fairings.
-        // TODO: If removing Hyper, write out `Date` header too.
-        response.set_header(Header::new("Server", "Rocket"));
-        self.fairings.handle_response(request, &mut response);
 
         response
     }

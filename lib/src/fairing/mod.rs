@@ -48,6 +48,15 @@
 //! Furthermore, a `Fairing` should take care to act locally so that the actions
 //! of other `Fairings` are not jeopardized. For instance, unless it is made
 //! abundantly clear, a fairing should not rewrite every request.
+//!
+//! ## Attention
+//!
+//! If Rocket receives a `HEAD` request and no appropriate Route is provided,
+//! Rocket tries to fullfil this request as it were a `GET` request (Autohandling
+//! `HEAD` requests). _Beware_ the request method is set to `GET` on the request which is
+//! provided in the [`on_response`](/rocket/fairing/trait.Fairing.html#method.on_response)
+//! method.
+
 use {Rocket, Request, Response, Data};
 
 mod fairings;
@@ -335,6 +344,11 @@ pub trait Fairing: Send + Sync + 'static {
     /// if `Kind::Response` is in the `kind` field of the `Info` structure for
     /// this fairing. The `&Request` parameter is the request that was routed,
     /// and the `&mut Response` parameter is the resulting response.
+    ///
+    /// ## Note
+    ///
+    /// The body of a `HEAD` request will be stripped off _after_ all response
+    /// `Fairings` have been performed.
     ///
     /// ## Default Implementation
     ///

@@ -37,7 +37,7 @@ struct RequestState<'r> {
 /// data. This includes the HTTP method, URI, cookies, headers, and more.
 #[derive(Clone)]
 pub struct Request<'r> {
-    method: Method,
+    method: Cell<Method>,
     uri: Uri<'r>,
     headers: HeaderMap<'r>,
     remote: Option<SocketAddr>,
@@ -53,7 +53,7 @@ impl<'r> Request<'r> {
                                                 method: Method,
                                                 uri: U) -> Request<'r> {
         Request {
-            method: method,
+            method: Cell::new(method),
             uri: uri.into(),
             headers: HeaderMap::new(),
             remote: None,
@@ -91,7 +91,7 @@ impl<'r> Request<'r> {
     /// ```
     #[inline(always)]
     pub fn method(&self) -> Method {
-        self.method
+        self.method.get()
     }
 
     /// Set the method of `self`.
@@ -111,7 +111,7 @@ impl<'r> Request<'r> {
     /// ```
     #[inline(always)]
     pub fn set_method(&mut self, method: Method) {
-        self.method = method;
+        self.method.set(method);
     }
 
     /// Borrow the URI from `self`, which is guaranteed to be an absolute URI.
@@ -446,7 +446,7 @@ impl<'r> Request<'r> {
     /// ```
     pub fn format(&self) -> Option<&MediaType> {
         static ANY: MediaType = MediaType::Any;
-        if self.method.supports_payload() {
+        if self.method().supports_payload() {
             self.content_type().map(|ct| ct.media_type())
         } else {
             // FIXME: Should we be using `accept_first` or `preferred`? Or
@@ -616,6 +616,12 @@ impl<'r> Request<'r> {
         *self.state.params.borrow_mut() = route.get_param_indexes(self.uri());
     }
 
+    /// Set the method of `self`, even if self is a shared reference
+    #[inline(always)]
+    pub(crate) fn _set_method(&self, method: Method) {
+        self.method.set(method);
+    }
+
     /// Replace all of the cookies in `self` with those in `jar`.
     #[inline]
     pub(crate) fn set_cookies(&mut self, jar: CookieJar) {
@@ -701,7 +707,7 @@ impl<'r> fmt::Display for Request<'r> {
     /// Pretty prints a Request. This is primarily used by Rocket's logging
     /// infrastructure.
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{} {}", Paint::green(&self.method), Paint::blue(&self.uri))?;
+        write!(f, "{} {}", Paint::green(self.method()), Paint::blue(&self.uri))?;
 
         // Print the requests media type when the route specifies a format.
         if let Some(media_type) = self.format() {
