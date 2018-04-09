@@ -21,6 +21,7 @@
 //! * [handlebars_templates](struct.Template.html)
 //! * [tera_templates](struct.Template.html)
 //! * [uuid](struct.UUID.html)
+//! * [connection_pools](conn/struct.Conn.html)
 //!
 //! The recommend way to include features from this crate via Cargo in your
 //! project is by adding a `[dependencies.rocket_contrib]` section to your
@@ -53,6 +54,9 @@ pub extern crate handlebars;
 #[cfg(feature = "tera_templates")]
 pub extern crate tera;
 
+#[cfg(feature = "connection_pools")]
+extern crate r2d2;
+
 #[cfg(feature = "json")]
 #[cfg_attr(feature = "json", macro_use)]
 #[doc(hidden)]
@@ -79,3 +83,6 @@ mod uuid;
 
 #[cfg(feature = "uuid")]
 pub use uuid::{UUID, UuidParseError};
+
+#[cfg(feature = "connection_pools")]
+pub mod conn;

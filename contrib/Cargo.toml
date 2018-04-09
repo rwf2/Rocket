@@ -11,11 +11,12 @@ keywords = ["rocket", "web", "framework", "contrib", "contributed"]
 license = "MIT/Apache-2.0"
 
 [features]
-default = ["json"]
+default = ["json", "connection_pools"]
 json = ["serde", "serde_json"]
 msgpack = ["serde", "rmp-serde"]
 tera_templates = ["tera", "templates"]
 handlebars_templates = ["handlebars", "templates"]
+connection_pools = ["r2d2"]
 
 # Internal use only.
 templates = ["serde", "serde_json", "glob"]
@@ -36,6 +37,9 @@ rmp-serde = { version = "^0.13", optional = true }
 handlebars = { version = "0.32", optional = true }
 glob = { version = "^0.2", optional = true }
 tera = { version = "0.11", optional = true }
+
+# Connection pool dependencies only.
+r2d2 = { version = "0.8", optional = true }
 
 [package.metadata.docs.rs]
 all-features = true
