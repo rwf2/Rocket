@@ -1,4 +1,4 @@
-use std::sync::{Mutex, RwLock, RwLockReadGuard, RwLockWriteGuard};
+use std::sync::Mutex;
 
 use super::DEFAULT_TEMPLATE_DIR;
 use super::context::Context;
@@ -8,38 +8,58 @@ use rocket::{Data, Request, Rocket, State};
 use rocket::config::ConfigError;
 use rocket::fairing::{Fairing, Info, Kind};
 
-pub struct ManagedContext(
-    #[cfg(not(debug_assertions))]
-    Context,
-    #[cfg(debug_assertions)]
-    RwLock<Context>
-);
+#[cfg(not(debug_assertions))]
+mod context {
+    use std::ops::Deref;
+    use super::Context;
+
+    /// Wraps a Context.
+    /// This structure definition allows consuming code to use `get`
+    /// regardless of whether or not debug mode is active, and enforces
+    /// that `get_mut` can only be used in debug mode when the expensive
+    /// interior mutability is active.
+    pub struct ManagedContext(Context);
+
+    impl ManagedContext {
+        pub fn new(ctxt: Context) -> ManagedContext {
+            ManagedContext(ctxt)
+        }
+
+        pub fn get(&self) -> impl Deref<Target=Context> {
+            &self.0
+        }
+    }
+}
 
 #[cfg(debug_assertions)]
-impl ManagedContext {
-    fn new(ctxt: Context) -> ManagedContext {
-        ManagedContext(RwLock::new(ctxt))
-    }
+mod context {
+    use std::ops::{Deref, DerefMut};
+    use std::sync::RwLock;
+    use super::Context;
 
-    pub fn get(&self) -> RwLockReadGuard<Context> {
-        self.0.read().unwrap()
-    }
+    /// Wraps a Context, providing interior mutability in debug mode.
+    /// This structure definition allows consuming code to use `get`
+    /// regardless of whether or not debug mode is active, and enforces
+    /// that `get_mut` can only be used in debug mode when the expensive
+    /// interior mutability is active.
+    pub struct ManagedContext(RwLock<Context>);
 
-    pub fn get_mut(&self) -> RwLockWriteGuard<Context> {
-        self.0.write().unwrap()
+    impl ManagedContext {
+        pub fn new(ctxt: Context) -> ManagedContext {
+            ManagedContext(RwLock::new(ctxt))
+        }
+
+        pub fn get<'a>(&'a self) -> impl Deref<Target=Context> + 'a {
+            self.0.read().unwrap()
+        }
+
+        pub fn get_mut<'a>(&'a self) -> impl DerefMut<Target=Context> + 'a {
+            self.0.write().unwrap()
+        }
     }
 }
 
-#[cfg(not(debug_assertions))]
-impl ManagedContext {
-    pub fn new(ctxt: Context) -> ManagedContext {
-        ManagedContext(ctxt)
-    }
-
-    pub fn get(&self) -> &Context {
-        &self.0
-    }
-}
+pub use self::context::ManagedContext;
 
 pub struct TemplateFairing {
     custom_callback: Mutex<Option<Box<Fn(&mut Engines) + Send + Sync + 'static>>>,
