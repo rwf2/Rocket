@@ -676,7 +676,7 @@ impl Rocket {
         serve!(self, &full_addr, |server, proto| {
             let mut server = match server {
                 Ok(server) => server,
-                Err(e) => return LaunchError::from(e),
+                Err(e) => return LaunchError::from(LaunchErrorKind::Bind(e)),
             };
 
             // Determine the address and port we actually binded to.

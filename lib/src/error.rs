@@ -33,6 +33,7 @@ pub enum Error {
 /// other kinds of launch errors.
 #[derive(Debug)]
 pub enum LaunchErrorKind {
+    Bind(hyper::Error),
     Io(io::Error),
     Collision(Vec<(Route, Route)>),
     FailedFairings(Vec<&'static str>),
@@ -158,6 +159,7 @@ impl fmt::Display for LaunchErrorKind {
     #[inline]
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match *self {
+            LaunchErrorKind::Bind(ref e) => write!(f, "failed to bind to given address: {}", e),
             LaunchErrorKind::Io(ref e) => write!(f, "I/O error: {}", e),
             LaunchErrorKind::Collision(_) => write!(f, "route collisions detected"),
             LaunchErrorKind::FailedFairings(_) => write!(f, "a launch fairing failed"),
@@ -187,6 +189,7 @@ impl ::std::error::Error for LaunchError {
     fn description(&self) -> &str {
         self.mark_handled();
         match *self.kind() {
+            LaunchErrorKind::Bind(_) => "Failed to bind to given address",
             LaunchErrorKind::Io(_) => "an I/O error occured during launch",
             LaunchErrorKind::Collision(_) => "route collisions were detected",
             LaunchErrorKind::FailedFairings(_) => "a launch fairing reported an error",
@@ -202,6 +205,10 @@ impl Drop for LaunchError {
         }
 
         match *self.kind() {
+            LaunchErrorKind::Bind(ref e) => {
+                error!("Rocket failed to launch due to binding issues.");
+                panic!("{}", e);
+            }
             LaunchErrorKind::Io(ref e) => {
                 error!("Rocket failed to launch due to an I/O error.");
                 panic!("{}", e);
