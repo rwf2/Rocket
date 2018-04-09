@@ -301,12 +301,7 @@ impl Template {
             Status::InternalServerError
         })?;
 
-        let engines = ctxt.engines.as_ref().ok_or_else(|| {
-            error_!("An error occurred during the previous template reload.");
-            Status::InternalServerError
-        })?;
-
-        let string = engines.render(name, &info, value).ok_or_else(|| {
+        let string = ctxt.engines.render(name, &info, value).ok_or_else(|| {
             error_!("Template '{}' failed to render.", name);
             Status::InternalServerError
         })?;

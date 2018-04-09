@@ -13,8 +13,8 @@ pub struct Context {
     pub root: PathBuf,
     /// Mapping from template name to its information.
     pub templates: HashMap<String, TemplateInfo>,
-    /// Loaded template engines, or None if there was a failure during a reload
-    pub engines: Option<Engines>,
+    /// Loaded template engines
+    pub engines: Engines,
     /// Context customization callback for reuse when reloading
     pub customize_callback: Box<Fn(&mut Engines) + Send + Sync + 'static>,
     /// Filesystem watcher, or None if the directory could not be watched
@@ -27,31 +27,28 @@ impl Context {
         root: PathBuf,
         customize_callback: Box<Fn(&mut Engines) + Send + Sync + 'static>,
     ) -> Option<Context> {
-        let mut ctxt = Context {
-            root: root.clone(),
-            templates: Default::default(),
-            engines: Default::default(),
-            customize_callback: customize_callback,
-            #[cfg(debug_assertions)]
-            watcher: TemplateWatcher::new(root),
-        };
-
-        ctxt.reload();
-        match ctxt.engines {
-            Some(_) => Some(ctxt),
-            _ => None,
-        }
+        Context::load(&root).map(|(templates, mut engines)| {
+            customize_callback(&mut engines);
+            Context {
+                root: root.clone(),
+                templates,
+                engines,
+                customize_callback: customize_callback,
+                #[cfg(debug_assertions)]
+                watcher: TemplateWatcher::new(root),
+            }
+        })
     }
 
-    pub fn reload(&mut self) {
+    pub fn load(root: &Path) -> Option<(HashMap<String, TemplateInfo>, Engines)> {
         let mut templates: HashMap<String, TemplateInfo> = HashMap::new();
         for ext in Engines::ENABLED_EXTENSIONS {
-            let mut glob_path = self.root.join("**").join("*");
+            let mut glob_path = root.join("**").join("*");
             glob_path.set_extension(ext);
             let glob_path = glob_path.to_str().expect("valid glob path string");
 
             for path in glob(glob_path).unwrap().filter_map(Result::ok) {
-                let (name, data_type_str) = split_path(&self.root, &path);
+                let (name, data_type_str) = split_path(&root, &path);
                 if let Some(info) = templates.get(&*name) {
                     warn_!("Template name '{}' does not have a unique path.", name);
                     info_!("Existing path: {:?}", info.path);
@@ -72,13 +69,22 @@ impl Context {
             }
         }
 
-        let engines = Engines::init(&templates).map(|mut engines| {
-            (self.customize_callback)(&mut engines);
-            engines
-        });
+        Engines::init(&templates).map(|engines| {
+            (templates, engines)
+        })
+    }
 
-        self.templates = templates;
-        self.engines = engines;
+    pub fn reload(&mut self) {
+        match Context::load(&self.root) {
+            Some((templates, mut engines)) => {
+                (self.customize_callback)(&mut engines);
+                self.templates = templates;
+                self.engines = engines;
+            },
+            None => {
+                warn!("An error occurred while reloading templates. The previous templates will remain active.");
+            }
+        };
     }
 
     #[cfg(debug_assertions)]
