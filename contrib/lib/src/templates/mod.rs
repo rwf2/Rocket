@@ -5,6 +5,7 @@ extern crate glob;
 #[cfg(feature = "tera_templates")] mod tera_templates;
 #[cfg(feature = "handlebars_templates")] mod handlebars_templates;
 mod engine;
+mod fairing;
 mod context;
 mod metadata;
 #[cfg(debug_assertions)] mod watch;
@@ -13,6 +14,7 @@ pub use self::engine::Engines;
 pub use self::metadata::TemplateMetadata;
 
 use self::engine::Engine;
+use self::fairing::{TemplateFairing, ManagedContext};
 use self::context::Context;
 use self::serde::Serialize;
 use self::serde_json::{Value, to_value};
@@ -20,16 +22,12 @@ use self::glob::glob;
 
 use std::borrow::Cow;
 use std::path::PathBuf;
-use std::sync::Mutex;
-#[cfg(debug_assertions)]
-use std::sync::{RwLock, RwLockReadGuard, RwLockWriteGuard};
 
 use rocket::{Rocket, State};
 use rocket::request::Request;
-use rocket::fairing::{Fairing, AdHoc};
+use rocket::fairing::Fairing;
 use rocket::response::{self, Content, Responder};
 use rocket::http::{ContentType, Status};
-use rocket::config::ConfigError;
 
 const DEFAULT_TEMPLATE_DIR: &'static str = "templates";
 
@@ -146,37 +144,6 @@ pub struct TemplateInfo {
     data_type: ContentType
 }
 
-struct ManagedContext(
-    #[cfg(not(debug_assertions))]
-    Context,
-    #[cfg(debug_assertions)]
-    RwLock<Context>,
-);
-
-#[cfg(debug_assertions)]
-impl ManagedContext {
-    fn new(ctxt: Context) -> ManagedContext {
-        ManagedContext(RwLock::new(ctxt))
-    }
-
-    fn get(&self) -> RwLockReadGuard<Context> {
-        self.0.read().unwrap()
-    }
-
-    fn get_mut(&self) -> RwLockWriteGuard<Context> {
-        self.0.write().unwrap()
-    }
-}
-
-#[cfg(not(debug_assertions))]
-impl ManagedContext {
-    fn new(ctxt: Context) -> ManagedContext {
-        ManagedContext(ctxt)
-    }
-
-    fn get(&self) -> &Context { &self.0 }
-}
-
 impl Template {
     /// Returns a fairing that initializes and maintains templating state.
     ///
@@ -240,34 +207,10 @@ impl Template {
     ///     # ;
     /// }
     /// ```
-    pub fn custom<F>(f: F) -> impl Fairing where F: Fn(&mut Engines) + Send + Sync + 'static {
-        let callback = Mutex::new(Some(Box::new(f)));
-        AdHoc::on_attach(move |rocket| {
-            let mut template_root = rocket.config().root_relative(DEFAULT_TEMPLATE_DIR);
-            match rocket.config().get_str("template_dir") {
-                Ok(dir) => template_root = rocket.config().root_relative(dir),
-                Err(ConfigError::NotFound) => { /* ignore missing configs */ }
-                Err(e) => {
-                    e.pretty_print();
-                    warn_!("Using default templates directory '{:?}'", template_root);
-                }
-            };
-
-            let callback = callback.lock().unwrap().take().expect("on_attach fairing called twice!");
-
-            let ctxt = match Context::initialize(template_root, callback) {
-                Some(ctxt) => ctxt,
-                None => return Err(rocket),
-            };
-
-            #[cfg(debug_assertions)]
-            let rocket = rocket.attach(AdHoc::on_request(|req, _| {
-                let mc = req.guard::<State<ManagedContext>>().succeeded().expect("context wrapper");
-                mc.get_mut().reload_if_needed();
-            }));
-
-            Ok(rocket.manage(ManagedContext::new(ctxt)))
-        })
+    pub fn custom<F>(f: F) -> impl Fairing
+        where F: Fn(&mut Engines) + Send + Sync + 'static
+    {
+        TemplateFairing::new(f)
     }
 
     /// Render the template named `name` with the context `context`. The

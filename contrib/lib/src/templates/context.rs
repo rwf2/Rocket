@@ -23,13 +23,17 @@ pub struct Context {
 }
 
 impl Context {
-    pub fn initialize(root: PathBuf, customize_callback: Box<Fn(&mut Engines) + Send + Sync + 'static>) -> Option<Context> {
+    pub fn initialize(
+        root: PathBuf,
+        customize_callback: Box<Fn(&mut Engines) + Send + Sync + 'static>,
+    ) -> Option<Context> {
         let mut ctxt = Context {
             root: root.clone(),
             templates: Default::default(),
             engines: Default::default(),
             customize_callback: customize_callback,
-            #[cfg(debug_assertions)] watcher: TemplateWatcher::new(root),
+            #[cfg(debug_assertions)]
+            watcher: TemplateWatcher::new(root),
         };
 
         ctxt.reload();
