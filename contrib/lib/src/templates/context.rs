@@ -2,8 +2,6 @@ use std::path::{Path, PathBuf};
 use std::collections::HashMap;
 
 use super::{Engines, TemplateInfo};
-#[cfg(debug_assertions)]
-use super::watch::TemplateWatcher;
 use super::glob;
 
 use rocket::http::ContentType;
@@ -15,32 +13,13 @@ pub struct Context {
     pub templates: HashMap<String, TemplateInfo>,
     /// Loaded template engines
     pub engines: Engines,
-    /// Context customization callback for reuse when reloading
-    pub customize_callback: Box<Fn(&mut Engines) + Send + Sync + 'static>,
-    /// Filesystem watcher, or None if the directory could not be watched
-    #[cfg(debug_assertions)]
-    pub watcher: Option<TemplateWatcher>,
 }
 
 impl Context {
     pub fn initialize(
         root: PathBuf,
-        customize_callback: Box<Fn(&mut Engines) + Send + Sync + 'static>,
+        customize_callback: &(Fn(&mut Engines) + Send + Sync + 'static),
     ) -> Option<Context> {
-        Context::load(&root).map(|(templates, mut engines)| {
-            customize_callback(&mut engines);
-            Context {
-                root: root.clone(),
-                templates,
-                engines,
-                customize_callback: customize_callback,
-                #[cfg(debug_assertions)]
-                watcher: TemplateWatcher::new(root),
-            }
-        })
-    }
-
-    pub fn load(root: &Path) -> Option<(HashMap<String, TemplateInfo>, Engines)> {
         let mut templates: HashMap<String, TemplateInfo> = HashMap::new();
         for ext in Engines::ENABLED_EXTENSIONS {
             let mut glob_path = root.join("**").join("*");
@@ -69,30 +48,10 @@ impl Context {
             }
         }
 
-        Engines::init(&templates).map(|engines| {
-            (templates, engines)
+        Engines::init(&templates).map(|mut engines| {
+            customize_callback(&mut engines);
+            Context { root, templates, engines }
         })
-    }
-
-    pub fn reload(&mut self) {
-        match Context::load(&self.root) {
-            Some((templates, mut engines)) => {
-                (self.customize_callback)(&mut engines);
-                self.templates = templates;
-                self.engines = engines;
-            },
-            None => {
-                warn!("An error occurred while reloading templates. The previous templates will remain active.");
-            }
-        };
-    }
-
-    #[cfg(debug_assertions)]
-    pub fn reload_if_needed(&mut self) {
-        if self.watcher.as_ref().map(TemplateWatcher::needs_reload).unwrap_or(false) {
-            warn!("Change detected, reloading templates");
-            self.reload();
-        }
     }
 }
 

@@ -1,10 +1,11 @@
-use std::sync::Mutex;
-
 use super::DEFAULT_TEMPLATE_DIR;
 use super::context::Context;
 use super::engine::Engines;
 
-use rocket::{Data, Request, Rocket, State};
+#[cfg(debug_assertions)]
+use super::watch::TemplateWatcher;
+
+use rocket::{Data, Request, Rocket};
 use rocket::config::ConfigError;
 use rocket::fairing::{Fairing, Info, Kind};
 
@@ -25,7 +26,7 @@ mod context {
             ManagedContext(ctxt)
         }
 
-        pub fn get(&self) -> impl Deref<Target=Context> {
+        pub fn get<'a>(&'a self) -> impl Deref<Target=Context> + 'a {
             &self.0
         }
     }
@@ -35,26 +36,41 @@ mod context {
 mod context {
     use std::ops::{Deref, DerefMut};
     use std::sync::RwLock;
-    use super::Context;
+    use super::{Context, Engines, TemplateWatcher};
 
     /// Wraps a Context, providing interior mutability in debug mode.
     /// This structure definition allows consuming code to use `get`
     /// regardless of whether or not debug mode is active, and enforces
     /// that `get_mut` can only be used in debug mode when the expensive
     /// interior mutability is active.
-    pub struct ManagedContext(RwLock<Context>);
+    pub struct ManagedContext{ context: RwLock<Context>, watcher: Option<TemplateWatcher> }
 
     impl ManagedContext {
         pub fn new(ctxt: Context) -> ManagedContext {
-            ManagedContext(RwLock::new(ctxt))
+            let root = ctxt.root.clone();
+            ManagedContext {
+                context: RwLock::new(ctxt),
+                watcher: TemplateWatcher::new(root),
+            }
         }
 
         pub fn get<'a>(&'a self) -> impl Deref<Target=Context> + 'a {
-            self.0.read().unwrap()
+            self.context.read().unwrap()
         }
 
         pub fn get_mut<'a>(&'a self) -> impl DerefMut<Target=Context> + 'a {
-            self.0.write().unwrap()
+            self.context.write().unwrap()
+        }
+
+        pub fn reload_if_needed(&self, custom_callback: &(Fn(&mut Engines) + Send + Sync + 'static)) {
+            if self.watcher.as_ref().map(TemplateWatcher::needs_reload).unwrap_or(false) {
+                warn!("Change detected, reloading templates");
+                let mut ctxt = self.get_mut();
+                match Context::initialize(ctxt.root.clone(), custom_callback) {
+                    Some(new_ctxt) => { *ctxt = new_ctxt; }
+                    None => { warn!("An error occurred while reloading templates. The previous templates will remain active."); }
+                };
+            }
         }
     }
 }
@@ -62,14 +78,16 @@ mod context {
 pub use self::context::ManagedContext;
 
 pub struct TemplateFairing {
-    custom_callback: Mutex<Option<Box<Fn(&mut Engines) + Send + Sync + 'static>>>,
+    custom_callback: Box<Fn(&mut Engines) + Send + Sync + 'static>,
 }
 
 impl TemplateFairing {
     pub fn new<F>(f: F) -> TemplateFairing
         where F: Fn(&mut Engines) + Send + Sync + 'static
     {
-        TemplateFairing { custom_callback: Mutex::new(Some(Box::new(f))) }
+        TemplateFairing {
+            custom_callback: Box::new(f),
+        }
     }
 }
 
@@ -92,21 +110,18 @@ impl Fairing for TemplateFairing {
             }
         };
 
-        let callback = self.custom_callback.lock().unwrap().take().expect("on_attach fairing called twice!");
-
-        let ctxt = match Context::initialize(template_root, callback) {
-            Some(ctxt) => ctxt,
-            None => return Err(rocket),
-        };
-
-        Ok(rocket.manage(ManagedContext::new(ctxt)))
+        match Context::initialize(template_root.clone(), &*self.custom_callback) {
+            Some(ctxt) => { Ok(rocket.manage(ManagedContext::new(ctxt))) }
+            None => Err(rocket),
+        }
     }
 
-    fn on_request(&self, req: &mut Request, _data: &Data) {
+    fn on_request(&self, _req: &mut Request, _data: &Data) {
         #[cfg(debug_assertions)]
         {
-            let mc = req.guard::<State<ManagedContext>>().succeeded().expect("context wrapper");
-            mc.get_mut().reload_if_needed();
+            use rocket::State;
+            let mc = _req.guard::<State<ManagedContext>>().unwrap();
+            mc.reload_if_needed(&*self.custom_callback);
         }
     }
 }
