@@ -1,3 +1,4 @@
+#![cfg(all(feature = "brotli_compression", feature = "gzip_compression"))]
 #![feature(plugin)]
 #![plugin(rocket_codegen)]
 #![feature(decl_macro)]
@@ -7,10 +8,10 @@ extern crate flate2;
 extern crate rocket;
 extern crate rocket_contrib;
 
-use rocket::local::Client;
 use rocket::http::Status;
-use rocket::response::Response;
 use rocket::http::{ContentType, Header};
+use rocket::local::Client;
+use rocket::response::Response;
 
 use std::io::Cursor;
 use std::io::Read;
