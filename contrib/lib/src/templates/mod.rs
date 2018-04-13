@@ -14,7 +14,7 @@ pub use self::engine::Engines;
 pub use self::metadata::TemplateMetadata;
 
 use self::engine::Engine;
-use self::fairing::{TemplateFairing, ManagedContext};
+use self::fairing::{TemplateFairing, ContextManager};
 use self::context::Context;
 use self::serde::Serialize;
 use self::serde_json::{Value, to_value};
@@ -275,7 +275,7 @@ impl Template {
     pub fn show<S, C>(rocket: &Rocket, name: S, context: C) -> Option<String>
         where S: Into<Cow<'static, str>>, C: Serialize
     {
-        let ctxt = rocket.state::<ManagedContext>().map(ManagedContext::get).or_else(|| {
+        let ctxt = rocket.state::<ContextManager>().map(ContextManager::get).or_else(|| {
             warn!("Uninitialized template context: missing fairing.");
             info!("To use templates, you must attach `Template::fairing()`.");
             info!("See the `Template` documentation for more information.");
@@ -315,13 +315,13 @@ impl Template {
 /// rendering fails, an `Err` of `Status::InternalServerError` is returned.
 impl Responder<'static> for Template {
     fn respond_to(self, req: &Request) -> response::Result<'static> {
-        let mc = req.guard::<State<ManagedContext>>().succeeded().ok_or_else(|| {
+        let cm = req.guard::<State<ContextManager>>().succeeded().ok_or_else(|| {
             error_!("Uninitialized template context: missing fairing.");
             info_!("To use templates, you must attach `Template::fairing()`.");
             info_!("See the `Template` documentation for more information.");
             Status::InternalServerError
         })?;
-        let ctxt = mc.get();
+        let ctxt = cm.get();
 
         let (render, content_type) = self.finalize(&ctxt)?;
         Content(content_type, render).respond_to(req)

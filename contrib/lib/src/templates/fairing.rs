@@ -14,16 +14,13 @@ mod context {
     use std::ops::Deref;
     use super::Context;
 
-    /// Wraps a Context.
-    /// This structure definition allows consuming code to use `get`
-    /// regardless of whether or not debug mode is active, and enforces
-    /// that `get_mut` can only be used in debug mode when the expensive
-    /// interior mutability is active.
-    pub struct ManagedContext(Context);
+    /// Wraps a Context. With `cfg(debug_assertions)` active, this structure
+    /// additionally provides a method to reload the context at runtime.
+    pub struct ContextManager(Context);
 
-    impl ManagedContext {
-        pub fn new(ctxt: Context) -> ManagedContext {
-            ManagedContext(ctxt)
+    impl ContextManager {
+        pub fn new(ctxt: Context) -> ContextManager {
+            ContextManager(ctxt)
         }
 
         pub fn get<'a>(&'a self) -> impl Deref<Target=Context> + 'a {
@@ -38,17 +35,14 @@ mod context {
     use std::sync::RwLock;
     use super::{Context, Engines, TemplateWatcher};
 
-    /// Wraps a Context, providing interior mutability in debug mode.
-    /// This structure definition allows consuming code to use `get`
-    /// regardless of whether or not debug mode is active, and enforces
-    /// that `get_mut` can only be used in debug mode when the expensive
-    /// interior mutability is active.
-    pub struct ManagedContext{ context: RwLock<Context>, watcher: Option<TemplateWatcher> }
+    /// Wraps a Context. With `cfg(debug_assertions)` active, this structure
+    /// additionally provides a method to reload the context at runtime.
+    pub struct ContextManager{ context: RwLock<Context>, watcher: Option<TemplateWatcher> }
 
-    impl ManagedContext {
-        pub fn new(ctxt: Context) -> ManagedContext {
+    impl ContextManager {
+        pub fn new(ctxt: Context) -> ContextManager {
             let root = ctxt.root.clone();
-            ManagedContext {
+            ContextManager {
                 context: RwLock::new(ctxt),
                 watcher: TemplateWatcher::new(root),
             }
@@ -58,7 +52,7 @@ mod context {
             self.context.read().unwrap()
         }
 
-        pub fn get_mut<'a>(&'a self) -> impl DerefMut<Target=Context> + 'a {
+        fn get_mut<'a>(&'a self) -> impl DerefMut<Target=Context> + 'a {
             self.context.write().unwrap()
         }
 
@@ -75,7 +69,7 @@ mod context {
     }
 }
 
-pub use self::context::ManagedContext;
+pub use self::context::ContextManager;
 
 pub struct TemplateFairing {
     custom_callback: Box<Fn(&mut Engines) + Send + Sync + 'static>,
@@ -111,7 +105,7 @@ impl Fairing for TemplateFairing {
         };
 
         match Context::initialize(template_root.clone(), &*self.custom_callback) {
-            Some(ctxt) => { Ok(rocket.manage(ManagedContext::new(ctxt))) }
+            Some(ctxt) => { Ok(rocket.manage(ContextManager::new(ctxt))) }
             None => Err(rocket),
         }
     }
@@ -120,8 +114,8 @@ impl Fairing for TemplateFairing {
         #[cfg(debug_assertions)]
         {
             use rocket::State;
-            let mc = _req.guard::<State<ManagedContext>>().unwrap();
-            mc.reload_if_needed(&*self.custom_callback);
+            let cm = _req.guard::<State<ContextManager>>().unwrap();
+            cm.reload_if_needed(&*self.custom_callback);
         }
     }
 }
