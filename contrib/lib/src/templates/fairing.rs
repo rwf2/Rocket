@@ -89,7 +89,11 @@ impl Fairing for TemplateFairing {
     fn info(&self) -> Info {
         Info {
             name: "Templates",
-            kind: Kind::Attach | Kind::Request,
+            kind: if cfg!(debug_assertions) {
+                Kind::Attach | Kind::Request
+            } else {
+                Kind::Attach
+            }
         }
     }
 
