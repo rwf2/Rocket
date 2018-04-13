@@ -16,9 +16,9 @@ pub struct Context {
 }
 
 impl Context {
-    pub fn initialize(
+    pub fn initialize<F: Fn(&mut Engines)>(
         root: PathBuf,
-        customize_callback: &(Fn(&mut Engines) + Send + Sync + 'static),
+        customize_callback: F,
     ) -> Option<Context> {
         let mut templates: HashMap<String, TemplateInfo> = HashMap::new();
         for ext in Engines::ENABLED_EXTENSIONS {

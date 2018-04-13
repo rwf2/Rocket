@@ -56,7 +56,7 @@ mod context {
             self.context.write().unwrap()
         }
 
-        pub fn reload_if_needed(&self, custom_callback: &(Fn(&mut Engines) + Send + Sync + 'static)) {
+        pub fn reload_if_needed<F: Fn(&mut Engines)>(&self, custom_callback: F) {
             if self.watcher.as_ref().map(TemplateWatcher::needs_reload).unwrap_or(false) {
                 warn!("Change detected, reloading templates");
                 let mut ctxt = self.get_mut();
