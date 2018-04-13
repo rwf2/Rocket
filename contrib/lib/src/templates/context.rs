@@ -16,10 +16,7 @@ pub struct Context {
 }
 
 impl Context {
-    pub fn initialize<F: Fn(&mut Engines)>(
-        root: PathBuf,
-        customize_callback: F,
-    ) -> Option<Context> {
+    pub fn initialize(root: PathBuf) -> Option<Context> {
         let mut templates: HashMap<String, TemplateInfo> = HashMap::new();
         for ext in Engines::ENABLED_EXTENSIONS {
             let mut glob_path = root.join("**").join("*");
@@ -48,8 +45,7 @@ impl Context {
             }
         }
 
-        Engines::init(&templates).map(|mut engines| {
-            customize_callback(&mut engines);
+        Engines::init(&templates).map(|engines| {
             Context { root, templates, engines }
         })
     }

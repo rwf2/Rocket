@@ -4,11 +4,12 @@ extern crate glob;
 
 #[cfg(feature = "tera_templates")] mod tera_templates;
 #[cfg(feature = "handlebars_templates")] mod handlebars_templates;
+#[cfg(debug_assertions)] mod watch;
+
 mod engine;
 mod fairing;
 mod context;
 mod metadata;
-#[cfg(debug_assertions)] mod watch;
 
 pub use self::engine::Engines;
 pub use self::metadata::TemplateMetadata;
@@ -210,7 +211,7 @@ impl Template {
     pub fn custom<F>(f: F) -> impl Fairing
         where F: Fn(&mut Engines) + Send + Sync + 'static
     {
-        TemplateFairing::new(f)
+        TemplateFairing::new(Box::new(f))
     }
 
     /// Render the template named `name` with the context `context`. The

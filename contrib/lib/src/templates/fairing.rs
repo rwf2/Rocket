@@ -41,10 +41,9 @@ mod context {
 
     impl ContextManager {
         pub fn new(ctxt: Context) -> ContextManager {
-            let root = ctxt.root.clone();
             ContextManager {
+                watcher: TemplateWatcher::new(ctxt.root.clone()),
                 context: RwLock::new(ctxt),
-                watcher: TemplateWatcher::new(root),
             }
         }
 
@@ -57,12 +56,14 @@ mod context {
         }
 
         pub fn reload_if_needed<F: Fn(&mut Engines)>(&self, custom_callback: F) {
-            if self.watcher.as_ref().map(TemplateWatcher::needs_reload).unwrap_or(false) {
+            if let Some(true) = self.watcher.as_ref().map(TemplateWatcher::needs_reload) {
                 warn!("Change detected, reloading templates");
                 let mut ctxt = self.get_mut();
-                match Context::initialize(ctxt.root.clone(), custom_callback) {
-                    Some(new_ctxt) => { *ctxt = new_ctxt; }
-                    None => { warn!("An error occurred while reloading templates. The previous templates will remain active."); }
+                if let Some(mut new_ctxt) = Context::initialize(ctxt.root.clone()) {
+                    custom_callback(&mut new_ctxt.engines);
+                    *ctxt = new_ctxt;
+                } else {
+                    warn!("An error occurred while reloading templates. The previous templates will remain active.");
                 };
             }
         }
@@ -76,12 +77,9 @@ pub struct TemplateFairing {
 }
 
 impl TemplateFairing {
-    pub fn new<F>(f: F) -> TemplateFairing
-        where F: Fn(&mut Engines) + Send + Sync + 'static
+    pub fn new(custom_callback: Box<Fn(&mut Engines) + Send + Sync + 'static>) -> TemplateFairing
     {
-        TemplateFairing {
-            custom_callback: Box::new(f),
-        }
+        TemplateFairing { custom_callback }
     }
 }
 
@@ -89,11 +87,10 @@ impl Fairing for TemplateFairing {
     fn info(&self) -> Info {
         Info {
             name: "Templates",
-            kind: if cfg!(debug_assertions) {
-                Kind::Attach | Kind::Request
-            } else {
-                Kind::Attach
-            }
+            #[cfg(debug_assertions)]
+            kind: Kind::Attach | Kind::Request,
+            #[cfg(not(debug_assertions))]
+            kind: Kind::Attach,
         }
     }
 
@@ -108,18 +105,19 @@ impl Fairing for TemplateFairing {
             }
         };
 
-        match Context::initialize(template_root.clone(), &*self.custom_callback) {
-            Some(ctxt) => { Ok(rocket.manage(ContextManager::new(ctxt))) }
+        match Context::initialize(template_root.clone()) {
+            Some(mut ctxt) => {
+                (self.custom_callback)(&mut ctxt.engines);
+                Ok(rocket.manage(ContextManager::new(ctxt)))
+            }
             None => Err(rocket),
         }
     }
 
-    fn on_request(&self, _req: &mut Request, _data: &Data) {
-        #[cfg(debug_assertions)]
-        {
-            use rocket::State;
-            let cm = _req.guard::<State<ContextManager>>().unwrap();
-            cm.reload_if_needed(&*self.custom_callback);
-        }
+    #[cfg(debug_assertions)]
+    fn on_request(&self, req: &mut Request, _data: &Data) {
+        use rocket::State;
+        let cm = req.guard::<State<ContextManager>>().unwrap();
+        cm.reload_if_needed(&*self.custom_callback);
     }
 }
