@@ -18,7 +18,7 @@ lazy_static! {
     // A small people lookup table for the sake of this example. In a real
     // application this could be a database lookup. Notice that we use the
     // uuid::Uuid type here and not the rocket_contrib::Uuid type.
-    static ref PEOPLE: HashMap<Uuid, &'static str> = {
+    static ref PEOPLE: HashMap<RealUuid, &'static str> = {
         let mut m = HashMap::new();
         let lacy_id = RealUuid::parse_str("7f205202-7ba1-4c39-b2fc-3e630722bf9f").unwrap();
         let bob_id = RealUuid::parse_str("4da34121-bc7d-4fc1-aee6-bf8de0795333").unwrap();
