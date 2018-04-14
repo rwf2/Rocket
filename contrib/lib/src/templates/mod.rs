@@ -4,7 +4,6 @@ extern crate glob;
 
 #[cfg(feature = "tera_templates")] mod tera_templates;
 #[cfg(feature = "handlebars_templates")] mod handlebars_templates;
-#[cfg(debug_assertions)] mod watch;
 
 mod engine;
 mod fairing;

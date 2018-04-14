@@ -2,9 +2,6 @@ use super::DEFAULT_TEMPLATE_DIR;
 use super::context::Context;
 use super::engine::Engines;
 
-#[cfg(debug_assertions)]
-use super::watch::TemplateWatcher;
-
 use rocket::{Data, Request, Rocket};
 use rocket::config::ConfigError;
 use rocket::fairing::{Fairing, Info, Kind};
@@ -31,19 +28,48 @@ mod context {
 
 #[cfg(debug_assertions)]
 mod context {
+    extern crate notify;
+
     use std::ops::{Deref, DerefMut};
-    use std::sync::RwLock;
-    use super::{Context, Engines, TemplateWatcher};
+    use std::sync::{RwLock, Mutex};
+    use std::sync::mpsc::{channel, Receiver};
+    use std::time::Duration;
+
+    use super::{Context, Engines};
+
+    use self::notify::{watcher, DebouncedEvent, RecommendedWatcher, RecursiveMode, Watcher};
 
     /// Wraps a Context. With `cfg(debug_assertions)` active, this structure
     /// additionally provides a method to reload the context at runtime.
-    pub struct ContextManager{ context: RwLock<Context>, watcher: Option<TemplateWatcher> }
+    pub struct ContextManager {
+        /// The current template context, inside an RwLock so it can be updated
+        context: RwLock<Context>,
+        /// A filesystem watcher. Unused in the code after creation, but must be kept alive
+        _watcher: Option<RecommendedWatcher>,
+        /// Receive end of the message queue for events from `_watcher`
+        recv_queue: Mutex<Receiver<DebouncedEvent>>,
+    }
 
     impl ContextManager {
         pub fn new(ctxt: Context) -> ContextManager {
+            let (tx, rx) = channel();
+
+            let _watcher = if let Ok(mut watcher) = watcher(tx, Duration::from_secs(1)) {
+                if watcher.watch(ctxt.root.clone(), RecursiveMode::Recursive).is_ok() {
+                    Some(watcher)
+                } else {
+                    warn!("Could not monitor the templates directory for changes. Live template reload will be unavailable");
+                    None
+                }
+            } else {
+                warn!("Could not instantiate a filesystem watcher. Live template reload will be unavailable");
+                None
+            };
+
             ContextManager {
-                watcher: TemplateWatcher::new(ctxt.root.clone()),
+                _watcher,
                 context: RwLock::new(ctxt),
+                recv_queue: Mutex::new(rx),
             }
         }
 
@@ -56,7 +82,13 @@ mod context {
         }
 
         pub fn reload_if_needed<F: Fn(&mut Engines)>(&self, custom_callback: F) {
-            if let Some(true) = self.watcher.as_ref().map(TemplateWatcher::needs_reload) {
+            let rx = self.recv_queue.lock().expect("receive queue");
+            let mut changed = false;
+            while let Ok(_) = rx.try_recv() {
+                changed = true;
+            }
+
+            if changed {
                 warn!("Change detected, reloading templates");
                 let mut ctxt = self.get_mut();
                 if let Some(mut new_ctxt) = Context::initialize(ctxt.root.clone()) {
