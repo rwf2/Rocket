@@ -310,7 +310,7 @@ impl Config {
     ///   * **workers**: Integer (16-bit unsigned)
     ///   * **keep_alive**: Integer or Boolean (false) or String ('none')
     ///   * **log**: String
-    ///   * **secret_key**: String (192-bit base64)
+    ///   * **secret_key**: String (256-bit base64)
     ///   * **tls**: Table (`certs` (path as String), `key` (path as String))
     pub(crate) fn set_raw(&mut self, name: &str, val: &Value) -> Result<()> {
         let (id, ok) = (|val| val, |_| Ok(()));
@@ -450,12 +450,12 @@ impl Config {
         self.keep_alive = timeout.into();
     }
 
-    /// Sets the `secret_key` in `self` to `key` which must be a 192-bit base64
+    /// Sets the `secret_key` in `self` to `key` which must be a 256-bit base64
     /// encoded string.
     ///
     /// # Errors
     ///
-    /// If `key` is not a valid 192-bit base64 encoded string, returns a
+    /// If `key` is not a valid 256-bit base64 encoded string, returns a
     /// `BadType` error.
     ///
     /// # Example
