@@ -20,7 +20,7 @@
 //! * [msgpack](struct.MsgPack.html)
 //! * [handlebars_templates](struct.Template.html)
 //! * [tera_templates](struct.Template.html)
-//! * [uuid](struct.UUID.html)
+//! * [uuid](struct.Uuid.html)
 //!
 //! The recommend way to include features from this crate via Cargo in your
 //! project is by adding a `[dependencies.rocket_contrib]` section to your
@@ -78,4 +78,4 @@ pub use templates::{Template, Engines};
 mod uuid;
 
 #[cfg(feature = "uuid")]
-pub use uuid::{UUID, UuidParseError};
+pub use uuid::{Uuid, UuidParseError};
