@@ -8,6 +8,7 @@ extern crate rocket;
 extern crate rocket_contrib;
 
 use std::collections::HashMap;
+use rocket_contrib::Uuid;
 
 #[cfg(test)]
 mod tests;
@@ -29,7 +30,7 @@ lazy_static! {
 }
 
 #[get("/people/<id>")]
-fn people(id: rocket_contrib::Uuid) -> Result<String, String> {
+fn people(id: Uuid) -> Result<String, String> {
     // Because Uuid implements the Deref trait, we use Deref coercion to convert
     // rocket_contrib::Uuid to uuid::Uuid.
     Ok(PEOPLE.get(&id)
