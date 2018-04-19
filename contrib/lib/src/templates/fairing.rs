@@ -108,8 +108,7 @@ pub struct TemplateFairing {
 }
 
 impl TemplateFairing {
-    pub fn new(custom_callback: Box<Fn(&mut Engines) + Send + Sync + 'static>) -> TemplateFairing
-    {
+    pub fn new(custom_callback: Box<Fn(&mut Engines) + Send + Sync + 'static>) -> TemplateFairing {
         TemplateFairing { custom_callback }
     }
 }
@@ -147,8 +146,7 @@ impl Fairing for TemplateFairing {
 
     #[cfg(debug_assertions)]
     fn on_request(&self, req: &mut Request, _data: &Data) {
-        use rocket::State;
-        let cm = req.guard::<State<ContextManager>>().unwrap();
+        let cm = req.guard::<::rocket::State<ContextManager>>().unwrap();
         cm.reload_if_needed(&*self.custom_callback);
     }
 }
