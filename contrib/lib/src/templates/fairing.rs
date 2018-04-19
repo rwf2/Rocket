@@ -56,11 +56,13 @@ mod context {
                 if watcher.watch(ctxt.root.clone(), RecursiveMode::Recursive).is_ok() {
                     Some((watcher, Mutex::new(rx)))
                 } else {
-                    warn!("Could not monitor the templates directory for changes. Live template reload will be unavailable");
+                    warn!("Could not monitor the templates directory for changes.");
+                    warn!("Live template reload will be unavailable");
                     None
                 }
             } else {
-                warn!("Could not instantiate a filesystem watcher. Live template reload will be unavailable");
+                warn!("Could not instantiate a filesystem watcher.");
+                warn!("Live template reload will be unavailable");
                 None
             };
 
@@ -93,7 +95,8 @@ mod context {
                         custom_callback(&mut new_ctxt.engines);
                         *ctxt = new_ctxt;
                     } else {
-                        warn!("An error occurred while reloading templates. The previous templates will remain active.");
+                        warn!("An error occurred while reloading templates.");
+                        warn!("The previous templates will remain active.");
                     };
                 }
             });
