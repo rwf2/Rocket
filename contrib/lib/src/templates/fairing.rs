@@ -44,19 +44,17 @@ mod context {
     pub struct ContextManager {
         /// The current template context, inside an RwLock so it can be updated
         context: RwLock<Context>,
-        /// A filesystem watcher. Unused in the code after creation, but must be kept alive
-        _watcher: Option<RecommendedWatcher>,
-        /// Receive end of the message queue for events from `_watcher`
-        recv_queue: Mutex<Receiver<DebouncedEvent>>,
+        /// A filesystem watcher and the receive queue for its events
+        watcher: Option<(RecommendedWatcher, Mutex<Receiver<DebouncedEvent>>)>,
     }
 
     impl ContextManager {
         pub fn new(ctxt: Context) -> ContextManager {
             let (tx, rx) = channel();
 
-            let _watcher = if let Ok(mut watcher) = watcher(tx, Duration::from_secs(1)) {
+            let watcher = if let Ok(mut watcher) = watcher(tx, Duration::from_secs(1)) {
                 if watcher.watch(ctxt.root.clone(), RecursiveMode::Recursive).is_ok() {
-                    Some(watcher)
+                    Some((watcher, Mutex::new(rx)))
                 } else {
                     warn!("Could not monitor the templates directory for changes. Live template reload will be unavailable");
                     None
@@ -67,9 +65,8 @@ mod context {
             };
 
             ContextManager {
-                _watcher,
+                watcher,
                 context: RwLock::new(ctxt),
-                recv_queue: Mutex::new(rx),
             }
         }
 
@@ -82,22 +79,24 @@ mod context {
         }
 
         pub fn reload_if_needed<F: Fn(&mut Engines)>(&self, custom_callback: F) {
-            let rx = self.recv_queue.lock().expect("receive queue");
-            let mut changed = false;
-            while let Ok(_) = rx.try_recv() {
-                changed = true;
-            }
+            self.watcher.as_ref().map(|w| {
+                let rx = w.1.lock().expect("receive queue");
+                let mut changed = false;
+                while let Ok(_) = rx.try_recv() {
+                    changed = true;
+                }
 
-            if changed {
-                warn!("Change detected, reloading templates");
-                let mut ctxt = self.get_mut();
-                if let Some(mut new_ctxt) = Context::initialize(ctxt.root.clone()) {
-                    custom_callback(&mut new_ctxt.engines);
-                    *ctxt = new_ctxt;
-                } else {
-                    warn!("An error occurred while reloading templates. The previous templates will remain active.");
-                };
-            }
+                if changed {
+                    warn!("Change detected, reloading templates");
+                    let mut ctxt = self.get_mut();
+                    if let Some(mut new_ctxt) = Context::initialize(ctxt.root.clone()) {
+                        custom_callback(&mut new_ctxt.engines);
+                        *ctxt = new_ctxt;
+                    } else {
+                        warn!("An error occurred while reloading templates. The previous templates will remain active.");
+                    };
+                }
+            });
         }
     }
 }
