@@ -113,8 +113,7 @@ impl Fairing for Compression {
                             params.mode = BrotliEncoderMode::BROTLI_MODE_FONT;
                         }
                     }
-                    success = plain.into_inner().read_to_end(&mut plain_buffer).is_ok();
-                    if success {
+                    if plain.into_inner().read_to_end(&mut plain_buffer).is_ok() {
                         success = brotli::BrotliCompress(
                             &mut Cursor::new(plain_buffer),
                             &mut compressed,
@@ -135,8 +134,7 @@ impl Fairing for Compression {
             {
                 let plain = response.body();
                 if let Some(plain) = plain {
-                    success = plain.into_inner().read_to_end(&mut plain_buffer).is_ok();
-                    if success {
+                    if plain.into_inner().read_to_end(&mut plain_buffer).is_ok() {
                         success = GzEncoder::new(&mut compressed, flate2::Compression::default())
                             .write_all(&plain_buffer)
                             .is_ok();
