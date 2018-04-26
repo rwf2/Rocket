@@ -83,6 +83,7 @@ pub fn catch_decorator(
     // Push the static catch info. This is what the `catchers!` macro refers to.
     let struct_name = user_fn_name.prepend(CATCH_STRUCT_PREFIX);
     emit_item(&mut output, quote_item!(ecx,
+        /// Rocket code generated static catch information structure.
         #[allow(non_upper_case_globals)]
         pub static $struct_name: ::rocket::StaticCatchInfo =
             ::rocket::StaticCatchInfo {
