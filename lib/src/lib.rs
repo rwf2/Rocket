@@ -3,6 +3,7 @@
 #![feature(plugin, decl_macro)]
 #![feature(try_trait)]
 #![feature(fnbox)]
+#![feature(never_type)]
 #![recursion_limit="256"]
 
 #![plugin(pear_codegen)]
