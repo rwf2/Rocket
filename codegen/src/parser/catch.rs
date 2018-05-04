@@ -62,7 +62,7 @@ fn parse_code(ecx: &ExtCtxt, meta_item: &NestedMetaItem) -> Spanned<u16> {
 
     let sp = meta_item.span();
     if let Some((name, lit)) = meta_item.name_value() {
-        if name != &"code" {
+        if name != "code" {
             ecx.span_err(sp, "the first key, if any, must be 'code'");
         } else if let LitKind::Int(n, _) = lit.node {
             return code_from_u128(span(n, lit.span))

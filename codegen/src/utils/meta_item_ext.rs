@@ -2,15 +2,15 @@ use syntax::ast::{LitKind, NestedMetaItem, MetaItemKind, Lit};
 use syntax::symbol::Symbol;
 
 pub trait MetaItemExt {
-    fn name_value(&self) -> Option<(&Symbol, &Lit)>;
+    fn name_value(&self) -> Option<(Symbol, &Lit)>;
     fn str_lit(&self) -> Option<&Symbol>;
     fn int_lit(&self) -> Option<u128>;
 }
 
 impl MetaItemExt for NestedMetaItem {
-    fn name_value(&self) -> Option<(&Symbol, &Lit)> {
+    fn name_value(&self) -> Option<(Symbol, &Lit)> {
         self.meta_item().and_then(|mi| match mi.node {
-            MetaItemKind::NameValue(ref l) => Some((&mi.ident.name, l)),
+            MetaItemKind::NameValue(ref l) => Some((mi.name(), l)),
             _ => None,
         })
     }
