@@ -212,7 +212,7 @@ type SqlitePool = Pool<ConnectionManager<SqliteConnection>>;
 static DATABASE_URL: &'static str = env!("DATABASE_URL");
 
 /// Initializes a database pool.
-fn init_pool() -> Pool {
+fn init_pool() -> SqlitePool {
     let manager = ConnectionManager::<SqliteConnection>::new(DATABASE_URL);
     Pool::new(manager).expect("db pool")
 }
