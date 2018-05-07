@@ -116,5 +116,46 @@ mod templates_tests {
             let response = client.get("/tera/test").dispatch();
             assert_eq!(response.status(), Status::NotFound);
         }
+
+        #[cfg(debug_assertions)]
+        #[test]
+        fn test_template_reload() {
+            use rocket::local::Client;
+            use std::fs::{File, remove_file};
+            use std::io::Write;
+            use std::path::Path;
+
+            fn write_file(path: &Path, text: &str) {
+                let mut file = File::create(path).expect("open file");
+                file.write_all(text.as_bytes()).expect("write file");
+            }
+
+            const RELOAD_TEMPLATE: &'static str = "hbs/reload";
+            const INITIAL_TEXT: &'static str = "initial";
+            const NEW_TEXT: &'static str = "reload";
+
+            let reload_path = Path::join(
+                Path::new(env!("CARGO_MANIFEST_DIR")),
+                "tests/templates/hbs/reload.txt.hbs"
+            );
+
+            write_file(&reload_path, INITIAL_TEXT);
+
+            let client = Client::new(rocket()).unwrap();
+
+            // verify that the initial content is correct
+            let initial_rendered = Template::show(client.rocket(), RELOAD_TEMPLATE, ());
+            assert_eq!(initial_rendered, Some(INITIAL_TEXT.into()));
+
+            // write to the file, then dispatch any request to trigger template reload
+            write_file(&reload_path, NEW_TEXT);
+            client.get("/").dispatch();
+
+            // verify that the new content is correct
+            let new_rendered = Template::show(client.rocket(), RELOAD_TEMPLATE, ());
+            assert_eq!(new_rendered, Some(NEW_TEXT.into()));
+
+            remove_file(reload_path).expect("delete template file");
+        }
     }
 }
