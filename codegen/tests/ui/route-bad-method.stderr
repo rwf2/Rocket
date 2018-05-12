@@ -1,42 +1,18 @@
-error: 'FIX' is not a valid method
- --> $DIR/route-bad-method.rs:6:9
+error: not a string literal
+ --> $DIR/route-bad-method.rs:9:9
   |
-6 | #[route(FIX, "/hello")]
+9 | #[route(120, "/hello")]
   |         ^^^
   |
   = help: valid methods are: `GET`, `PUT`, `POST`, `DELETE`, `HEAD`, `PATCH`, `OPTIONS`
 
-error: expected a valid HTTP method identifier
- --> $DIR/route-bad-method.rs:9:9
-  |
-9 | #[route("hi", "/hello")]
-  |         ^^^^
-  |
-  = help: valid methods are: `GET`, `PUT`, `POST`, `DELETE`, `HEAD`, `PATCH`, `OPTIONS`
-
-error: expected a valid HTTP method identifier
+error: 'CONNECT' is not a valid method
   --> $DIR/route-bad-method.rs:12:9
    |
-12 | #[route("GET", "/hello")]
-   |         ^^^^^
+12 | #[route("CONNECT", "/hello")]
+   |         ^^^^^^^^^
    |
    = help: valid methods are: `GET`, `PUT`, `POST`, `DELETE`, `HEAD`, `PATCH`, `OPTIONS`
 
-error: expected a valid HTTP method identifier
-  --> $DIR/route-bad-method.rs:15:9
-   |
-15 | #[route(120, "/hello")]
-   |         ^^^
-   |
-   = help: valid methods are: `GET`, `PUT`, `POST`, `DELETE`, `HEAD`, `PATCH`, `OPTIONS`
-
-error: 'CONNECT' is not a valid method
-  --> $DIR/route-bad-method.rs:18:9
-   |
-18 | #[route(CONNECT, "/hello")]
-   |         ^^^^^^^
-   |
-   = help: valid methods are: `GET`, `PUT`, `POST`, `DELETE`, `HEAD`, `PATCH`, `OPTIONS`
-
-error: aborting due to 5 previous errors
+error: aborting due to 2 previous errors
 

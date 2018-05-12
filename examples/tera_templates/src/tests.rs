@@ -15,7 +15,7 @@ macro_rules! dispatch {
 fn test_root() {
     // Check that the redirect works.
     for method in &[Get, Head] {
-        dispatch!(*method, "/", |_: &Client, mut response: LocalResponse| {
+        dispatch!(method.clone(), "/", |_: &Client, mut response: LocalResponse| {
             assert_eq!(response.status(), Status::SeeOther);
             assert!(response.body().is_none());
 
@@ -26,7 +26,7 @@ fn test_root() {
 
     // Check that other request methods are not accepted (and instead caught).
     for method in &[Post, Put, Delete, Options, Trace, Connect, Patch] {
-        dispatch!(*method, "/", |client: &Client, mut response: LocalResponse| {
+        dispatch!(method.clone(), "/", |client: &Client, mut response: LocalResponse| {
             let mut map = ::std::collections::HashMap::new();
             map.insert("path", "/");
             let expected = Template::show(client.rocket(), "error/404", &map).unwrap();

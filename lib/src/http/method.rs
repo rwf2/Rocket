@@ -10,7 +10,7 @@ use self::Method::*;
 // TODO: Support non-standard methods, here and in codegen.
 
 /// Representation of HTTP methods.
-#[derive(Clone, Copy, PartialEq, Eq, Hash, Debug)]
+#[derive(Clone, PartialEq, Eq, Hash, Debug)]
 pub enum Method {
     Get,
     Put,
@@ -20,7 +20,8 @@ pub enum Method {
     Head,
     Trace,
     Connect,
-    Patch
+    Patch,
+    Extension(String)
 }
 
 impl Method {
@@ -35,7 +36,7 @@ impl Method {
             hyper::Method::Trace => Some(Trace),
             hyper::Method::Connect => Some(Connect),
             hyper::Method::Patch => Some(Patch),
-            hyper::Method::Extension(_) => None,
+            hyper::Method::Extension(ref s) => Some(Extension(s.to_string())),
         }
     }
 
@@ -53,7 +54,8 @@ impl Method {
     #[inline]
     pub fn supports_payload(&self) -> bool {
         match *self {
-            Put | Post | Delete | Patch => true,
+            // TODO: This assumes all custom methods support payloads
+            Put | Post | Delete | Patch | Extension(_) => true,
             Get | Head | Connect | Trace | Options => false,
         }
     }
@@ -68,7 +70,7 @@ impl Method {
     /// assert_eq!(Method::Get.as_str(), "GET");
     /// ```
     #[inline]
-    pub fn as_str(&self) -> &'static str {
+    pub fn as_str<'a>(&'a self) -> &'a str {
         match *self {
             Get => "GET",
             Put => "PUT",
@@ -79,6 +81,7 @@ impl Method {
             Trace => "TRACE",
             Connect => "CONNECT",
             Patch => "PATCH",
+            Extension(ref s) => &s
         }
     }
 }
@@ -99,7 +102,7 @@ impl FromStr for Method {
             x if uncased_eq(x, Trace.as_str()) => Ok(Trace),
             x if uncased_eq(x, Connect.as_str()) => Ok(Connect),
             x if uncased_eq(x, Patch.as_str()) => Ok(Patch),
-            _ => Err(Error::BadMethod),
+            _ => Ok(Extension(s.to_string())),
         }
     }
 }

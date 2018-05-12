@@ -8,20 +8,13 @@ use utils::*;
 
 use syntax::codemap::{Span, Spanned, dummy_spanned};
 use syntax::tokenstream::TokenTree;
-use syntax::ast::{Arg, Ident, Item, Stmt, Expr, MetaItem, Path};
+use syntax::ast::{Arg, Ident, Item, Stmt, Expr, MetaItem};
 use syntax::ext::base::{Annotatable, ExtCtxt};
-use syntax::ext::build::AstBuilder;
 use syntax::parse::token;
 use syntax::symbol::LocalInternedString;
 use syntax::ptr::P;
 
 use rocket::http::{Method, MediaType};
-
-fn method_to_path(ecx: &ExtCtxt, method: Method) -> Path {
-    quote_enum!(ecx, method => ::rocket::http::Method {
-        Options, Get, Post, Put, Delete, Head, Trace, Connect, Patch;
-    })
-}
 
 // FIXME: I think we also want the attributes here.
 fn media_type_to_expr(ecx: &ExtCtxt, ct: Option<MediaType>) -> Option<P<Expr>> {
@@ -260,16 +253,17 @@ impl RouteParams {
         ).expect("consistent uri macro item")
     }
 
-    fn explode(&self, ecx: &ExtCtxt) -> (LocalInternedString, &str, Path, P<Expr>, P<Expr>) {
+    fn explode(&self, ecx: &ExtCtxt) -> (LocalInternedString, &str, &str, P<Expr>, P<Expr>) {
         let name = self.annotated_fn.ident().name.as_str();
         let path = &self.uri.node.as_str();
-        let method = method_to_path(ecx, self.method.node);
+        let method = self.method.node.as_str();
         let format = self.format.as_ref().map(|kv| kv.value().clone());
         let media_type = option_as_expr(ecx, &media_type_to_expr(ecx, format));
         let rank = option_as_expr(ecx, &self.rank);
 
         (name, path, method, media_type, rank)
     }
+
 }
 
 // FIXME: Compilation fails when parameters have the same name as the function!

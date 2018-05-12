@@ -1,9 +1,9 @@
 use handler::{Handler, ErrorHandler};
-use http::{Method, MediaType};
+use http::{MediaType};
 
 pub struct StaticRouteInfo {
     pub name: &'static str,
-    pub method: Method,
+    pub method: &'static str,
     pub path: &'static str,
     pub format: Option<MediaType>,
     pub handler: Handler,

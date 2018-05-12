@@ -137,25 +137,6 @@ pub fn split_idents(path: &str) -> Vec<Ident> {
     path.split("::").map(|segment| Ident::from_str(segment)).collect()
 }
 
-macro_rules! quote_enum {
-    ($ecx:expr, $var:expr => $(::$root:ident)+
-     { $($variant:ident),+ ; $($extra:pat => $result:expr),* }) => ({
-        use syntax::codemap::DUMMY_SP;
-        use syntax::ast::Ident;
-        use $(::$root)+::*;
-        let root_idents = vec![$(Ident::from_str(stringify!($root))),+];
-        match $var {
-            $($variant => {
-                let variant = Ident::from_str(stringify!($variant));
-                let mut idents = root_idents.clone();
-                idents.push(variant);
-                $ecx.path_global(DUMMY_SP, idents)
-            })+
-            $($extra => $result),*
-        }
-    })
-}
-
 macro_rules! try_parse {
     ($sp:expr, $parse:expr) => (
         match $parse {

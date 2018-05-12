@@ -37,7 +37,7 @@ struct RequestState<'r> {
 /// data. This includes the HTTP method, URI, cookies, headers, and more.
 #[derive(Clone)]
 pub struct Request<'r> {
-    method: Cell<Method>,
+    method: RefCell<Method>,
     uri: Uri<'r>,
     headers: HeaderMap<'r>,
     remote: Option<SocketAddr>,
@@ -55,7 +55,7 @@ impl<'r> Request<'r> {
         uri: U
     ) -> Request<'r> {
         Request {
-            method: Cell::new(method),
+            method: RefCell::new(method),
             uri: uri.into(),
             headers: HeaderMap::new(),
             remote: None,
@@ -93,7 +93,7 @@ impl<'r> Request<'r> {
     /// ```
     #[inline(always)]
     pub fn method(&self) -> Method {
-        self.method.get()
+        self.method.borrow().clone()
     }
 
     /// Set the method of `self`.
@@ -621,7 +621,7 @@ impl<'r> Request<'r> {
     /// Set the method of `self`, even when `self` is a shared reference.
     #[inline(always)]
     pub(crate) fn _set_method(&self, method: Method) {
-        self.method.set(method);
+        self.method.replace(method);
     }
 
     /// Replace all of the cookies in `self` with those in `jar`.

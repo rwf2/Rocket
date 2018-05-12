@@ -365,7 +365,7 @@ mod tests {
         where S1: Into<Option<&'static str>>, S2: Into<Option<&'static str>>
     {
         let rocket = Rocket::custom(Config::development().unwrap(), true);
-        let mut req = Request::new(&rocket, m, "/");
+        let mut req = Request::new(&rocket, m.clone(), "/");
         if let Some(mt_str) = mt1.into() {
             if m.supports_payload() {
                 req.replace_header(mt_str.parse::<ContentType>().unwrap());
