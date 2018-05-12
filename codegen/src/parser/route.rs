@@ -187,7 +187,7 @@ fn parse_method(ecx: &ExtCtxt, meta_item: &NestedMetaItem) -> Spanned<Method> {
         }
     }
     if let Some(word) = meta_item.word() {
-        if let Ok(method) = Method::from_str(&word.ident.name.as_str()) {
+        if let Ok(method) = Method::from_str(&word.name().as_str()) {
             if is_valid_method(method.clone()) {
                 return span(method, word.span());
             }
