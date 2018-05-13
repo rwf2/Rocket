@@ -651,6 +651,17 @@ impl Config {
         self.extras.iter().map(|(k, v)| (k.as_str(), v))
     }
 
+    /// Returns if TLS is enabled.
+    ///
+    /// This always returns `false` if the `tls` feature is not enabled.
+    pub fn tls_enabled(&self) -> bool {
+        if cfg!(feature = "tls") {
+            self.tls.is_some()
+        } else {
+            false
+        }
+    }
+
     /// Retrieves the secret key from `self`.
     #[inline]
     pub(crate) fn secret_key(&self) -> &Key {
