@@ -541,7 +541,7 @@ impl<'h> HeaderMap<'h> {
     pub fn iter<'s>(&'s self) -> impl Iterator<Item=Header<'s>> {
         self.headers.iter().flat_map(|(key, values)| {
             values.iter().map(move |val| {
-                Header::new(key.as_str(), val.borrow())
+                Header::new(key.as_str(), &**val)
             })
         })
     }
