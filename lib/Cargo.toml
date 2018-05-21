@@ -29,8 +29,8 @@ time = "0.1"
 memchr = "2"
 base64 = "0.9"
 smallvec = "0.6"
-pear = { git = "http://github.com/SergioBenitez/pear", rev = "44bbca0" }
-pear_codegen = { git = "http://github.com/SergioBenitez/pear", rev = "44bbca0" }
+pear = { git = "http://github.com/SergioBenitez/pear", rev = "a96a7fd" }
+pear_codegen = { git = "http://github.com/SergioBenitez/pear", rev = "a96a7fd" }
 rustls = { version = "0.12.0", optional = true }
 hyper = { version = "0.10.13", default-features = false }
 indexmap = "1.0"

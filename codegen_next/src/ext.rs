@@ -80,8 +80,8 @@ impl FieldsExt for Fields {
 
     fn to_field_members<'f>(&'f self) -> Box<Iterator<Item = FieldMember<'f>> + 'f> {
         Box::new(self.iter().enumerate().map(|(index, field)| {
-            if let Some(ident) = field.ident {
-                FieldMember { field, member: Member::Named(ident) }
+            if let Some(ref ident) = field.ident {
+                FieldMember { field, member: Member::Named(ident.clone()) }
             } else {
                 let index = Index { index: index as u32, span: field.span().into() };
                 let member = Member::Unnamed(index);

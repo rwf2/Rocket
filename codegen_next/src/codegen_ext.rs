@@ -1,35 +1,35 @@
 use syn::*;
 use ext::*;
-use quote::Tokens;
+use proc_macro2::TokenStream;
 use spanned::Spanned;
 
 use FieldMember;
 
 pub trait CodegenFieldsExt {
-    fn surround(&self, tokens: Tokens) -> Tokens;
-    fn ignore_tokens(&self) -> Tokens;
-    fn id_match_tokens(&self) -> Tokens;
+    fn surround(&self, tokens: TokenStream) -> TokenStream;
+    fn ignore_tokens(&self) -> TokenStream;
+    fn id_match_tokens(&self) -> TokenStream;
 }
 
 pub fn field_to_ident(i: usize, field: &Field) -> Ident {
     let name = match field.ident {
-        Some(id) => format!("_{}", id),
+        Some(ref id) => format!("_{}", id),
         None => format!("_{}", i)
     };
 
     Ident::new(&name, field.span().into())
 }
 
-pub fn field_to_match((i, field): (usize, &Field)) -> Tokens {
+pub fn field_to_match((i, field): (usize, &Field)) -> TokenStream {
     let ident = field_to_ident(i, field);
     match field.ident {
-        Some(id) => quote!(#id: #ident),
+        Some(ref id) => quote!(#id: #ident),
         None => quote!(#ident)
     }
 }
 
 impl CodegenFieldsExt for Fields {
-    fn surround(&self, tokens: Tokens) -> Tokens {
+    fn surround(&self, tokens: TokenStream) -> TokenStream {
         match *self {
             Fields::Named(..) => quote!({ #tokens }),
             Fields::Unnamed(..) => quote!(( #tokens )),
@@ -37,11 +37,11 @@ impl CodegenFieldsExt for Fields {
         }
     }
 
-    fn ignore_tokens(&self) -> Tokens {
+    fn ignore_tokens(&self) -> TokenStream {
         self.surround(quote!(..))
     }
 
-    fn id_match_tokens(&self) -> Tokens {
+    fn id_match_tokens(&self) -> TokenStream {
         let idents = self.iter()
             .enumerate()
             .map(field_to_match);
@@ -50,12 +50,12 @@ impl CodegenFieldsExt for Fields {
     }
 }
 
-pub trait TokensExt {
-    fn tokens(&self) -> Tokens;
+pub trait TokenStreamExt {
+    fn tokens(&self) -> TokenStream;
 }
 
-impl<'f> TokensExt for FieldMember<'f> {
-    fn tokens(&self) -> Tokens {
+impl<'f> TokenStreamExt for FieldMember<'f> {
+    fn tokens(&self) -> TokenStream {
         let index = self.member.unnamed().map(|i| i.index).unwrap_or(0);
         let ident = field_to_ident(index as usize, &self.field);
         quote!(#ident)
@@ -64,15 +64,15 @@ impl<'f> TokensExt for FieldMember<'f> {
 
 // use rocket::http::{ContentType, MediaType, Status};
 
-// impl TokensExt for ContentType {
-//     fn tokens(&self) -> Tokens {
+// impl TokenStreamExt for ContentType {
+//     fn tokens(&self) -> TokenStream {
 //         let mt_tokens = self.0.tokens();
 //         quote!(rocket::http::ContentType(#mt_tokens))
 //     }
 // }
 
-// impl TokensExt for MediaType {
-//     fn tokens(&self) -> Tokens {
+// impl TokenStreamExt for MediaType {
+//     fn tokens(&self) -> TokenStream {
 //         let (top, sub) = (self.top().as_str(), self.sub().as_str());
 //         let (keys, values) = (self.params().map(|(k, _)| k), self.params().map(|(_, v)| v));
 //         quote!(rocket::http::MediaType {
@@ -93,8 +93,8 @@ impl<'f> TokensExt for FieldMember<'f> {
 //     }
 // }
 
-// impl TokensExt for Status {
-//     fn tokens(&self) -> Tokens {
+// impl TokenStreamExt for Status {
+//     fn tokens(&self) -> TokenStream {
 //         let (code, reason) = (self.code, self.reason);
 //         quote!(rocket::http::Status { code: #code, reason: #reason })
 //     }

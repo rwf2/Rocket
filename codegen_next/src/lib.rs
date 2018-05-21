@@ -61,13 +61,13 @@ fn real_derive_from_form_value(input: TokenStream) -> PResult<TokenStream> {
     })?;
 
     // Validate the enum.
-    let name = input.ident;
+    let name = input.ident.clone();
     let enum_data = validate_input(input)?;
 
     // Create iterators over the identifers as idents and as strings.
-    let variant_strs = enum_data.variants.iter().map(|v| v.ident.as_ref() as &str);
-    let variant_idents = enum_data.variants.iter().map(|v| v.ident);
-    let names = ::std::iter::repeat(name);
+    let variant_strs = enum_data.variants.iter().map(|v| v.ident.to_string());
+    let variant_idents = enum_data.variants.iter().map(|v| v.ident.clone());
+    let names = ::std::iter::repeat(&name);
 
     // Generate the implementation.
     Ok(quote! {
