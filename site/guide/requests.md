@@ -742,7 +742,9 @@ errors, you'd write:
 
 ```rust
 #[catch(404)]
-fn not_found(req: &Request) -> String { ... }
+fn not_found(_req: &Request) -> String {
+    String::from("Page not found!")
+}
 ```
 
 As with routes, Rocket needs to know about a catcher before it is used to handle
