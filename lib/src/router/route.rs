@@ -31,7 +31,7 @@ pub struct Route {
 fn default_rank(uri: &Uri) -> isize {
     // static path, query = -4; static path, no query = -3
     // dynamic path, query = -2; dynamic path, no query = -1
-    match (!uri.path().contains('<'),  uri.query().is_some()) {
+    match (!uri.path().contains('<'),  uri.query_explicit()) {
         (true, true) => -4,
         (true, false) => -3,
         (false, true) => -2,

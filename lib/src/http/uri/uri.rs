@@ -157,8 +157,7 @@ impl<'a> Uri<'a> {
         &self.uri[i..j]
     }
 
-    /// Returns the query part of this URI without the question mark, if there is
-    /// any.
+    /// Returns the query part of this URI without the question mark.
     ///
     /// ### Examples
     ///
@@ -168,7 +167,7 @@ impl<'a> Uri<'a> {
     /// use rocket::http::uri::Uri;
     ///
     /// let uri = Uri::new("/a/b/c?alphabet=true");
-    /// assert_eq!(uri.query(), Some("alphabet=true"));
+    /// assert_eq!(uri.query(), "alphabet=true");
     /// ```
     ///
     /// A URI without the query part:
@@ -177,11 +176,37 @@ impl<'a> Uri<'a> {
     /// use rocket::http::uri::Uri;
     ///
     /// let uri = Uri::new("/a/b/c");
-    /// assert_eq!(uri.query(), None);
+    /// assert_eq!(uri.query(), "");
     /// ```
     #[inline(always)]
-    pub fn query(&self) -> Option<&str> {
-        self.query.map(|(i, j)| &self.uri[i..j])
+    pub fn query(&self) -> &str {
+        self.query.map(|(i, j)| &self.uri[i..j]).unwrap_or("")
+    }
+
+    /// Returns whether the query part of this URI was explicitly specified.
+    ///
+    /// ### Examples
+    ///
+    /// A URI with a query part:
+    ///
+    /// ```rust
+    /// use rocket::http::uri::Uri;
+    ///
+    /// let uri = Uri::new("/a/b/c?alphabet=true");
+    /// assert!(uri.query_explicit());
+    /// ```
+    ///
+    /// A URI without the query part:
+    ///
+    /// ```rust
+    /// use rocket::http::uri::Uri;
+    ///
+    /// let uri = Uri::new("/a/b/c");
+    /// assert!(!uri.query_explicit());
+    /// ```
+    #[inline(always)]
+    pub fn query_explicit(&self) -> bool {
+        self.query.is_some()
     }
 
     /// Returns the fargment part of this URI without the hash mark, if there is
@@ -338,7 +363,8 @@ impl<'a> fmt::Display for Uri<'a> {
             }
         }
 
-        if let Some(query_str) = self.query() {
+        let query_str = self.query();
+        if !query_str.is_empty() {
             write!(f, "?{}", query_str)?;
         }
 
@@ -534,7 +560,11 @@ mod tests {
 
     fn test_query(uri: &str, query: Option<&str>) {
         let uri = Uri::new(uri);
-        assert_eq!(uri.query(), query);
+        assert_eq!(uri.query_explicit(), query.is_some());
+        match query {
+            Some(q) => assert_eq!(uri.query(), q),
+            None => assert!(uri.query().is_empty()),
+        };
     }
 
     fn test_fragment(uri: &str, fragment: Option<&str>) {
