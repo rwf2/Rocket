@@ -133,7 +133,7 @@ impl RouteParams {
 fn is_valid_method(method: Method) -> bool {
     use rocket::http::Method::*;
     match method {
-        Get | Put | Post | Delete | Head | Patch | Options => true,
+        Get | Put | Post | Delete | Head | Patch | Options | Extension(_) => true,
         Trace | Connect => false
     }
 }
@@ -168,11 +168,29 @@ pub fn param_to_ident(ecx: &ExtCtxt, s: Spanned<&str>) -> Option<Spanned<Ident>>
 fn parse_method(ecx: &ExtCtxt, meta_item: &NestedMetaItem) -> Spanned<Method> {
     let default_method = dummy_spanned(Method::Get);
     let valid_methods = "valid methods are: `GET`, `PUT`, `POST`, `DELETE`, \
-        `HEAD`, `PATCH`, `OPTIONS`";
+                         `HEAD`, `PATCH`, `OPTIONS`";
 
+    if let Some(lit) = meta_item.literal() {
+        if let LitKind::Str(sym, _) = lit.node {
+            if let Ok(method) = Method::from_str(&sym.as_str()) {
+                if is_valid_method(method.clone()) {
+                    return span(method, lit.span);
+                }
+            }
+
+            let msg = format!("'{}' is not a valid method", &sym.as_str());
+            ecx.struct_span_err(lit.span, &msg).help(valid_methods).emit();
+            return default_method;
+
+        } else {
+            let msg = format!("not a string literal");
+            ecx.struct_span_err(lit.span, &msg).help(valid_methods).emit();
+            return default_method;
+        }
+    }
     if let Some(word) = meta_item.word() {
         if let Ok(method) = Method::from_str(&word.name().as_str()) {
-            if is_valid_method(method) {
+            if is_valid_method(method.clone()) {
                 return span(method, word.span());
             }
         }
@@ -181,7 +199,6 @@ fn parse_method(ecx: &ExtCtxt, meta_item: &NestedMetaItem) -> Spanned<Method> {
         ecx.struct_span_err(word.span, &msg).help(valid_methods).emit();
         return default_method;
     }
-
     // Fallthrough. Emit a generic error message and return default method.
     let msg = "expected a valid HTTP method identifier";
     ecx.struct_span_err(meta_item.span, msg).help(valid_methods).emit();

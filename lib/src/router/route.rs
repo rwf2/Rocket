@@ -1,5 +1,6 @@
 use std::fmt;
 use std::convert::From;
+use std::str::FromStr;
 
 use yansi::Color::*;
 
@@ -225,7 +226,7 @@ impl Clone for Route {
     fn clone(&self) -> Route {
         Route {
             name: self.name,
-            method: self.method,
+            method: self.method.clone(),
             handler: self.handler,
             rank: self.rank,
             base: self.base.clone(),
@@ -265,7 +266,7 @@ impl fmt::Debug for Route {
 #[doc(hidden)]
 impl<'a> From<&'a StaticRouteInfo> for Route {
     fn from(info: &'a StaticRouteInfo) -> Route {
-        let mut route = Route::new(info.method, info.path, info.handler);
+        let mut route = Route::new(Method::from_str(info.method).expect("invalid StaticRouteInfo"), info.path, info.handler);
         route.format = info.format.clone();
         route.name = Some(info.name);
         if let Some(rank) = info.rank {
