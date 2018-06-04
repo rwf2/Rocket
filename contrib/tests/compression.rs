@@ -18,7 +18,8 @@ use std::io::Read;
 
 use flate2::read::GzDecoder;
 
-const HELLO: &str = "Hello world!";
+const HELLO: &str = r"This is a message to hello with more than 100 bytes \
+    in order to have to read more than one buffer when gzipping. こんにちは!";
 
 fn rocket() -> rocket::Rocket {
     rocket::ignite()
@@ -28,7 +29,7 @@ fn rocket() -> rocket::Rocket {
 
 #[get("/")]
 pub fn index() -> String {
-    String::from("Hello world!")
+    String::from(HELLO)
 }
 #[get("/font")]
 pub fn font() -> Response<'static> {
@@ -108,10 +109,12 @@ fn test_br_image() {
         .header(Header::new("Accept-Encoding", "deflate, gzip, br"))
         .dispatch();
     assert_eq!(response.status(), Status::Ok);
-    assert!(!response
-        .headers()
-        .get("Content-Encoding")
-        .any(|x| x == "br"));
+    assert!(
+        !response
+            .headers()
+            .get("Content-Encoding")
+            .any(|x| x == "br")
+    );
     assert_eq!(
         String::from_utf8(response.body_bytes().unwrap()).unwrap(),
         String::from(HELLO)
@@ -127,10 +130,12 @@ fn test_gzip_image() {
         .header(Header::new("Accept-Encoding", "deflate, gzip, br"))
         .dispatch();
     assert_eq!(response.status(), Status::Ok);
-    assert!(!response
-        .headers()
-        .get("Content-Encoding")
-        .any(|x| x == "gzip"));
+    assert!(
+        !response
+            .headers()
+            .get("Content-Encoding")
+            .any(|x| x == "gzip")
+    );
     assert_eq!(
         String::from_utf8(response.body_bytes().unwrap()).unwrap(),
         String::from(HELLO)
@@ -146,10 +151,12 @@ fn test_br_not_accepted() {
         .header(Header::new("Accept-Encoding", "deflate, gzip"))
         .dispatch();
     assert_eq!(response.status(), Status::Ok);
-    assert!(!response
-        .headers()
-        .get("Content-Encoding")
-        .any(|x| x == "br"));
+    assert!(
+        !response
+            .headers()
+            .get("Content-Encoding")
+            .any(|x| x == "br")
+    );
     assert!(
         response
             .headers()
@@ -172,10 +179,12 @@ fn test_br_nor_gzip_not_accepted() {
         .header(Header::new("Accept-Encoding", "deflate"))
         .dispatch();
     assert_eq!(response.status(), Status::Ok);
-    assert!(!response
-        .headers()
-        .get("Content-Encoding")
-        .any(|x| x == "br" || x == "gzip"));
+    assert!(
+        !response
+            .headers()
+            .get("Content-Encoding")
+            .any(|x| x == "br" || x == "gzip")
+    );
     assert_eq!(
         String::from_utf8(response.body_bytes().unwrap()).unwrap(),
         String::from(HELLO)
@@ -191,10 +200,12 @@ fn test_identity() {
         .header(Header::new("Accept-Encoding", "identity"))
         .dispatch();
     assert_eq!(response.status(), Status::Ok);
-    assert!(!response
-        .headers()
-        .get("Content-Encoding")
-        .any(|x| x == "gzip" || x == "br"));
+    assert!(
+        !response
+            .headers()
+            .get("Content-Encoding")
+            .any(|x| x == "gzip" || x == "br")
+    );
     assert_eq!(
         String::from_utf8(response.body_bytes().unwrap()).unwrap(),
         String::from(HELLO)

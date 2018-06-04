@@ -21,11 +21,9 @@
 //! For gzip compression, flate2 crate is used.
 
 use std::io::Cursor;
-use std::io::Read;
 use std::io::Seek;
 use std::io::SeekFrom;
-#[cfg(feature = "gzip_compression")]
-use std::io::Write;
+use std::io::{Read, Write};
 
 use rocket::fairing::{Fairing, Info, Kind};
 use rocket::http::Header;
@@ -98,12 +96,9 @@ impl Fairing for Compression {
         if cfg!(feature = "brotli_compression")
             && Compression::accepts_encoding(request, &["br", "brotli"])
         {
-            let mut success = false;
-            let mut plain_buffer: Vec<u8> = Vec::new();
             let mut compressed = Cursor::new(Vec::<u8>::new());
-            {
-                let plain = response.body();
-                if let Some(plain) = plain {
+            if match response.body() {
+                Some(plain) => {
                     let mut params = brotli::enc::BrotliEncoderInitParams();
                     params.quality = 2;
                     if let Some(ref content_type) = content_type {
@@ -113,36 +108,25 @@ impl Fairing for Compression {
                             params.mode = BrotliEncoderMode::BROTLI_MODE_FONT;
                         }
                     }
-                    if plain.into_inner().read_to_end(&mut plain_buffer).is_ok() {
-                        success = brotli::BrotliCompress(
-                            &mut Cursor::new(plain_buffer),
-                            &mut compressed,
-                            &params,
-                        ).is_ok();
-                    }
+                    brotli::BrotliCompress(&mut plain.into_inner(), &mut compressed, &params)
+                        .is_ok()
                 }
-            }
-            if success {
+                None => false,
+            } {
                 Compression::set_body_and_header(response, compressed, "br");
             }
         } else if cfg!(feature = "gzip_compression")
             && Compression::accepts_encoding(request, &["gzip"])
         {
-            let mut success = false;
-            let mut plain_buffer: Vec<u8> = Vec::new();
-            let mut compressed = Cursor::new(Vec::<u8>::new());
-            {
-                let plain = response.body();
-                if let Some(plain) = plain {
-                    if plain.into_inner().read_to_end(&mut plain_buffer).is_ok() {
-                        success = GzEncoder::new(&mut compressed, flate2::Compression::default())
-                            .write_all(&plain_buffer)
-                            .is_ok();
-                    }
-                }
-            }
-            if success {
-                Compression::set_body_and_header(response, compressed, "gzip");
+            let mut gz = GzEncoder::new(
+                Cursor::new(Vec::<u8>::with_capacity(100)),
+                flate2::Compression::default(),
+            );
+            if match response.body() {
+                Some(plain) => gz.write(&plain.into_bytes().unwrap()).is_ok(),
+                None => false,
+            } {
+                Compression::set_body_and_header(response, gz.finish().unwrap(), "gzip");
             }
         }
     }
