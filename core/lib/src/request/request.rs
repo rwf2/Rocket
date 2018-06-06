@@ -1,3 +1,4 @@
+use std::rc::Rc;
 use std::cell::{Cell, RefCell};
 use std::net::{IpAddr, SocketAddr};
 use std::fmt;
@@ -26,6 +27,7 @@ struct RequestState<'r> {
     cookies: RefCell<CookieJar>,
     accept: Storage<Option<Accept>>,
     content_type: Storage<Option<ContentType>>,
+    cache: Rc<Container>,
 }
 
 /// The type of an incoming web request.
@@ -41,7 +43,7 @@ pub struct Request<'r> {
     uri: Uri<'r>,
     headers: HeaderMap<'r>,
     remote: Option<SocketAddr>,
-    state: RequestState<'r>
+    state: RequestState<'r>,
 }
 
 impl<'r> Request<'r> {
@@ -67,6 +69,7 @@ impl<'r> Request<'r> {
                 cookies: RefCell::new(CookieJar::new()),
                 accept: Storage::new(),
                 content_type: Storage::new(),
+                cache: Rc::new(Container::new()),
             }
         }
     }
@@ -76,6 +79,23 @@ impl<'r> Request<'r> {
         let rocket = Rocket::custom(Config::development().unwrap(), true);
         let mut request = Request::new(&rocket, method, uri);
         f(&mut request);
+    }
+
+    /// Retrieves the cached value for type `T` from the request-local cached
+    /// state of `self`. If no such value has previously been cached for
+    /// this request, `f` is called to produce the value which is subsequently
+    /// returned.
+    pub fn local_cache<T, F>(&self, f: F) -> &T
+        where T: Send + Sync + 'static,
+              F: FnOnce(&Request) -> T {
+
+        match self.state.cache.try_get() {
+            Some(cached) => cached,
+            None => {
+                self.state.cache.set(f(self));
+                self.state.cache.get()
+            }
+        }
     }
 
     /// Retrieve the method from `self`.
