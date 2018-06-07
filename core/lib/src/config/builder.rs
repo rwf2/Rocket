@@ -21,7 +21,7 @@ pub struct ConfigBuilder {
     /// The secret key.
     pub secret_key: Option<String>,
     /// TLS configuration (path to certificates file, path to private key file).
-    pub tls: Option<(String, String)>,
+    pub tls: Option<(String, String, String)>,
     /// Size limits.
     pub limits: Limits,
     /// Any extra parameters that aren't part of Rocket's config.
@@ -221,15 +221,15 @@ impl ConfigBuilder {
     /// use rocket::config::{Config, Environment};
     ///
     /// let mut config = Config::build(Environment::Staging)
-    ///     .tls("/path/to/certs.pem", "/path/to/key.pem")
+    ///     .tls("/path/to/certs.pem", "/path/to/key.pem", "")
     /// # ; /*
     ///     .unwrap();
     /// # */
     /// ```
-    pub fn tls<C, K>(mut self, certs_path: C, key_path: K) -> Self
-        where C: Into<String>, K: Into<String>
+    pub fn tls<C, K, W>(mut self, certs_path: C, key_path: K, cert_store_path: W) -> Self
+        where C: Into<String>, K: Into<String>, W: Into<String>
     {
-        self.tls = Some((certs_path.into(), key_path.into()));
+        self.tls = Some((certs_path.into(), key_path.into(), cert_store_path.into()));
         self
     }
 
@@ -334,8 +334,8 @@ impl ConfigBuilder {
         config.set_root(self.root);
         config.set_limits(self.limits);
 
-        if let Some((certs_path, key_path)) = self.tls {
-            config.set_tls(&certs_path, &key_path)?;
+        if let Some((certs_path, key_path, cert_store_path)) = self.tls {
+            config.set_tls(&certs_path, &key_path, Some(&cert_store_path))?;
         }
 
         if let Some(key) = self.secret_key {

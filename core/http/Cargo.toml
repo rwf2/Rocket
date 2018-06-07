@@ -31,6 +31,8 @@ pear = { git = "http://github.com/SergioBenitez/Pear", rev = "b475140" }
 version = "=0.3.0-rc.3"
 features = ["server"]
 optional = true
+git = "https://github.com/Kmoneal/hyper-sync-rustls"
+branch = "feature/mtls"
 
 [dev-dependencies]
 rocket = { version = "0.4.0-dev", path = "../lib" }
