@@ -35,6 +35,8 @@ unicode-xid = "0.2"
 version = "=0.3.0-rc.6"
 features = ["server"]
 optional = true
+git = "https://github.com/Kmoneal/hyper-sync-rustls"
+branch = "feature/mtls"
 
 [dev-dependencies]
 rocket = { version = "0.5.0-dev", path = "../lib" }
