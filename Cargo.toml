@@ -21,6 +21,7 @@ members = [
   "examples/content_types",
   "examples/ranking",
   "examples/testing",
+  "examples/request_state_local_cache",
   "examples/request_guard",
   "examples/stream",
   "examples/json",

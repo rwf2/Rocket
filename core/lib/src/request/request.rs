@@ -85,6 +85,22 @@ impl<'r> Request<'r> {
     /// state of `self`. If no such value has previously been cached for
     /// this request, `f` is called to produce the value which is subsequently
     /// returned.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// # use rocket::http::Method;
+    /// # use rocket::Request;
+    /// # struct User();
+    /// fn current_user(_: &Request) -> User {
+    ///     // Load user...
+    ///     # User()
+    /// }
+    ///
+    /// # Request::example(Method::Get, "/uri", |request| {
+    /// let user = request.local_cache(current_user);
+    /// # });
+    /// ```
     pub fn local_cache<T, F>(&self, f: F) -> &T
         where T: Send + Sync + 'static,
               F: FnOnce(&Request) -> T {
