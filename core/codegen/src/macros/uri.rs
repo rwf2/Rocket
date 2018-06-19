@@ -3,7 +3,7 @@ use std::fmt::Display;
 use syntax::codemap::Span;
 use syntax::ext::base::{DummyResult, ExtCtxt, MacEager, MacResult};
 use syntax::tokenstream::{TokenStream, TokenTree};
-use syntax::ast::{self, MacDelimiter, Ident};
+use syntax::ast::{self, GenericArg, MacDelimiter, Ident};
 use syntax::symbol::Symbol;
 use syntax::parse::PResult;
 use syntax::ext::build::AstBuilder;
@@ -132,8 +132,8 @@ pub fn uri_internal(
 
         // path for call: <T as FromUriParam<_>>::from_uri_param
         let idents = split_idents("rocket::http::uri::FromUriParam");
-        let generics = vec![ecx.ty(span, ast::TyKind::Infer)];
-        let trait_path = ecx.path_all(span, true, idents, vec![], generics, vec![]);
+        let generics = vec![GenericArg::Type(ecx.ty(span, ast::TyKind::Infer))];
+        let trait_path = ecx.path_all(span, true, idents, generics, vec![]);
         let method = Ident::new(Symbol::intern("from_uri_param"), span);
         let (qself, path) = ecx.qpath(ty.clone(), trait_path, method);
 
