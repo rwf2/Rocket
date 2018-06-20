@@ -29,7 +29,7 @@ time = "0.1"
 # TODO: Use pear instead.
 memchr = "2"
 base64 = "0.9"
-pear = { git = "http://github.com/SergioBenitez/Pear", rev = "54667ae" }
+pear = { git = "https://github.com/SergioBenitez/Pear", rev = "54667ae" }
 isatty = "0.1"
 
 [dev-dependencies]
