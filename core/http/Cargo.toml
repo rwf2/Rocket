@@ -17,7 +17,7 @@ categories = ["web-programming"]
 tls = ["rustls", "hyper-sync-rustls"]
 
 [dependencies]
-pear = { git = "http://github.com/SergioBenitez/Pear", rev = "54667ae" }
+pear = { git = "https://github.com/SergioBenitez/Pear", rev = "54667ae" }
 smallvec = "0.6"
 percent-encoding = "1"
 hyper = { version = "0.10.13", default-features = false }
