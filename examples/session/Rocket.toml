@@ -1,10 +1,2 @@
-[dev]
-secret_key = "itlYmFR2vYKrOmFhupMIn/hyB6lYCCTXz4yaQX89XVg="
-
-[staging]
-secret_key = "itlYmFR2vYKrOmFhupMIn/hyB6lYCCTXz4yaQX89XVg="
-address = "localhost"
-port = 8000
-
-[production]
+[global]
 secret_key = "itlYmFR2vYKrOmFhupMIn/hyB6lYCCTXz4yaQX89XVg="
