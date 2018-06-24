@@ -131,7 +131,7 @@ pub fn uri_internal(
 
         // Format argument names cannot begin with _, but a function parameter
         // might. Adding a prefix that starts with a letter handles all cases properly
-        ident.name = Symbol::intern(&format!("f_{}", ident.name));
+        ident.name = Symbol::intern(&format!("fmt{}", ident.name));
         ident.span = span;
 
         // path for call: <T as FromUriParam<_>>::from_uri_param

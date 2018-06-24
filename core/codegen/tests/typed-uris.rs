@@ -50,6 +50,9 @@ fn simple2(id: i32, name: String) -> &'static str { "" }
 #[post("/<id>/<name>")]
 fn simple2_flipped(name: String, id: i32) -> &'static str { "" }
 
+#[post("/<used>/<_unused>")]
+fn unused_param(used: i32, _unused: i32) -> &'static str { "" }
+
 #[post("/<id>")]
 fn guard_1(cookies: Cookies, id: i32) -> &'static str { "" }
 
@@ -90,6 +93,7 @@ fn check_simple_unnamed() {
     assert_uri_eq! {
         uri!(simple: 100) => "/100",
         uri!(simple: -23) => "/-23",
+        uri!(unused_param: 1, 2) => "/1/2",
     }
 
     // The "flipped" test ensures that the order of parameters depends on the
@@ -118,6 +122,7 @@ fn check_simple_named() {
     assert_uri_eq! {
         uri!(simple: id = 100) => "/100",
         uri!(simple: id = -23) => "/-23",
+        uri!(unused_param: used = 1, _unused = 2) => "/1/2",
     }
 
     assert_uri_eq! {
