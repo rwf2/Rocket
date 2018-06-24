@@ -255,7 +255,7 @@ impl InternalUriParams {
 
     pub fn uri_fmt_string(&self) -> String {
         self.uri.node
-            .replace('<', "{")
+            .replace('<', "{fmt")
             .replace("..>", "}")
             .replace('>', "}")
     }
