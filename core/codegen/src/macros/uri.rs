@@ -129,6 +129,7 @@ pub fn uri_internal(
     for (i, &(mut ident, ref ty)) in internal.fn_args.iter().enumerate() {
         let (span, mut expr) = (exprs[i].span, exprs[i].clone());
         ident.span = span;
+        let f_ident = Ident::from_str(&("f_".to_string() + &ident.to_string()));
 
         // path for call: <T as FromUriParam<_>>::from_uri_param
         let idents = split_idents("rocket::http::uri::FromUriParam");
@@ -160,7 +161,7 @@ pub fn uri_internal(
 
         // generating: arg assignment tokens for format string
         let uri_display = quote_path!(ecx, ::rocket::http::uri::UriDisplay);
-        let mut tokens = quote_tokens!(ecx, $ident = &$ident as &$uri_display,);
+        let mut tokens = quote_tokens!(ecx, $f_ident = &$ident as &$uri_display,);
         tokens.iter_mut().for_each(|tree| tree.set_span(span));
         format_assign_tokens.push(tokens);
     }
