@@ -128,8 +128,11 @@ pub fn uri_internal(
     // Building <$T as ::rocket::http::uri::FromUriParam<_>>::from_uri_param($e).
     for (i, &(mut ident, ref ty)) in internal.fn_args.iter().enumerate() {
         let (span, mut expr) = (exprs[i].span, exprs[i].clone());
+
+        // Format argument names cannot begin with _, but a function parameter
+        // might. Adding a prefix that starts with a letter handles all cases properly
+        ident.name = Symbol::intern(&format!("f_{}", ident.name));
         ident.span = span;
-        let f_ident = Ident::from_str(&("f_".to_string() + &ident.to_string()));
 
         // path for call: <T as FromUriParam<_>>::from_uri_param
         let idents = split_idents("rocket::http::uri::FromUriParam");
@@ -161,7 +164,7 @@ pub fn uri_internal(
 
         // generating: arg assignment tokens for format string
         let uri_display = quote_path!(ecx, ::rocket::http::uri::UriDisplay);
-        let mut tokens = quote_tokens!(ecx, $f_ident = &$ident as &$uri_display,);
+        let mut tokens = quote_tokens!(ecx, $ident = &$ident as &$uri_display,);
         tokens.iter_mut().for_each(|tree| tree.set_span(span));
         format_assign_tokens.push(tokens);
     }
