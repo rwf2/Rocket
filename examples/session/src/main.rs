@@ -36,12 +36,12 @@ impl<'a, 'r> FromRequest<'a, 'r> for User {
 }
 
 #[post("/login", data = "<login>")]
-fn login(mut cookies: Cookies, login: Form<Login>) -> Flash<Redirect> {
+fn login(mut cookies: Cookies, login: Form<Login>) -> Result<Redirect, Flash<Redirect>> {
     if login.get().username == "Sergio" && login.get().password == "password" {
         cookies.add_private(Cookie::new("user_id", 1.to_string()));
-        Flash::success(Redirect::to(uri!(index)), "Successfully logged in.")
+        Ok(Redirect::to(uri!(index)))
     } else {
-        Flash::error(Redirect::to(uri!(login_page)), "Invalid username/password.")
+        Err(Flash::error(Redirect::to(uri!(login_page)), "Invalid username/password."))
     }
 }
 
