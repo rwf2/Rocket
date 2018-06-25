@@ -173,6 +173,7 @@ impl Rocket {
     /// Preprocess the request for Rocket things. Currently, this means:
     ///
     ///   * Rewriting the method in the request if _method form field exists.
+    ///   * Writing peer certificate data from data to the request if it exists.
     ///
     /// Keep this in-sync with derive_form when preprocessing form fields.
     fn preprocess_request(&self, req: &mut Request<'_>, data: &Data) {
@@ -193,6 +194,13 @@ impl Rocket {
                     req.set_method(method);
                 }
             }
+        }
+
+        // Move certs to the request
+        #[cfg(feature = "tls")]
+        match data.get_peer_certificates() {
+            Some(certs) => req.set_peer_certificates(certs),
+            None => (),
         }
     }
 

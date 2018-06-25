@@ -10,13 +10,16 @@ use state::{Container, Storage};
 use crate::request::{FromParam, FromSegments, FromRequest, Outcome};
 use crate::request::{FromFormValue, FormItems, FormItem};
 
-use crate::rocket::Rocket;
-use crate::router::Route;
-use crate::config::{Config, Limits};
-use crate::http::{hyper, uri::{Origin, Segments}};
-use crate::http::{Method, Header, HeaderMap, Cookies};
-use crate::http::{RawStr, ContentType, Accept, MediaType};
-use crate::http::private::{Indexed, SmallVec, CookieJar};
+use rocket::Rocket;
+use router::Route;
+use config::{Config, Limits};
+use http::uri::{Origin, Segments};
+use error::Error;
+use http::{Method, Header, HeaderMap, Cookies, CookieJar};
+use http::{RawStr, ContentType, Accept, MediaType};
+use http::hyper;
+#[cfg(feature = "tls")]
+use http::tls::Certificate;
 
 type Indices = (usize, usize);
 
@@ -33,6 +36,8 @@ pub struct Request<'r> {
     headers: HeaderMap<'r>,
     remote: Option<SocketAddr>,
     pub(crate) state: RequestState<'r>,
+    #[cfg(feature = "tls")]
+    peer_certs: Option<Vec<Certificate>>,
 }
 
 #[derive(Clone)]
@@ -78,7 +83,9 @@ impl<'r> Request<'r> {
                 accept: Storage::new(),
                 content_type: Storage::new(),
                 cache: Rc::new(Container::new()),
-            }
+            },
+            #[cfg(feature = "tls")]
+            peer_certs: None,
         };
 
         request.update_cached_uri_info();
@@ -839,6 +846,18 @@ impl<'r> Request<'r> {
         }
 
         Ok(request)
+    }
+
+    /// Set the peer certificates
+    #[cfg(feature = "tls")]
+    pub(crate) fn set_peer_certificates(&mut self, certs: Vec<Certificate>) {
+        self.peer_certs = Some(certs);
+    }
+
+    /// Get the peer certificates
+    #[cfg(feature = "tls")]
+    pub(crate) fn get_peer_certificates(&self) -> &Option<Vec<Certificate>> {
+        &self.peer_certs
     }
 }
 
