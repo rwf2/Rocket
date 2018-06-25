@@ -22,7 +22,8 @@ pub mod ext;
 pub mod tls;
 
 #[doc(hidden)]
-pub mod route;
+#[cfg(feature = "tls")]
+pub mod mtls;
 
 #[macro_use]
 mod docify;

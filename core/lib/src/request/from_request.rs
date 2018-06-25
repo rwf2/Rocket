@@ -8,6 +8,9 @@ use crate::outcome::Outcome::*;
 
 use crate::http::{Status, ContentType, Accept, Method, Cookies, uri::Origin};
 
+#[cfg(feature = "tls")]
+use http::mtls::MutualTlsUser;
+
 /// Type alias for the `Outcome` of a `FromRequest` conversion.
 pub type Outcome<S, E> = outcome::Outcome<S, (Status, E), ()>;
 
@@ -447,3 +450,14 @@ impl<'a, 'r, T: FromRequest<'a, 'r>> FromRequest<'a, 'r> for Option<T> {
     }
 }
 
+#[cfg(feature = "tls")]
+impl <'a, 'r> FromRequest<'a, 'r> for MutualTlsUser {
+    type Error = ();
+
+    fn from_request(request: &'a Request<'r>) -> Outcome<Self, Self::Error> {
+        match request.get_peer_certificates() {
+            Some(certs) => Success(MutualTlsUser::new(certs)),
+            None => Forward(())
+        }
+    }
+}
