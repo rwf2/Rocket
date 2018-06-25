@@ -17,6 +17,8 @@ use error::Error;
 use http::{Method, Header, HeaderMap, Cookies, CookieJar};
 use http::{RawStr, ContentType, Accept, MediaType};
 use http::hyper;
+#[cfg(feature = "tls")]
+use http::tls::Certificate;
 
 #[derive(Clone)]
 struct RequestState<'r> {
@@ -44,6 +46,8 @@ pub struct Request<'r> {
     headers: HeaderMap<'r>,
     remote: Option<SocketAddr>,
     state: RequestState<'r>,
+    #[cfg(feature = "tls")]
+    peer_certs: Option<Vec<Certificate>>,
 }
 
 impl<'r> Request<'r> {
@@ -68,7 +72,9 @@ impl<'r> Request<'r> {
                 accept: Storage::new(),
                 content_type: Storage::new(),
                 cache: Rc::new(Container::new()),
-            }
+            },
+            #[cfg(feature = "tls")]
+            peer_certs: None,
         }
     }
 
@@ -732,6 +738,18 @@ impl<'r> Request<'r> {
         }
 
         Ok(request)
+    }
+
+    /// Set the peer certificates
+    #[cfg(feature = "tls")]
+    pub(crate) fn set_peer_certificates(&mut self, certs: Vec<Certificate>) {
+        self.peer_certs = Some(certs);
+    }
+
+    /// Get the peer certificates
+    #[cfg(feature = "tls")]
+    pub(crate) fn get_peer_certificates(&self) -> &Option<Vec<Certificate>> {
+        &self.peer_certs
     }
 }
 

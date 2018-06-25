@@ -4,6 +4,7 @@ use std::fs::File;
 use std::time::Duration;
 
 #[cfg(feature = "tls")] use super::net_stream::HttpsStream;
+#[cfg(feature = "tls")] use http::tls::Certificate;
 
 use super::data_stream::{DataStream, kill_stream};
 use super::net_stream::NetStream;
@@ -55,6 +56,8 @@ pub struct Data {
     buffer: Vec<u8>,
     is_complete: bool,
     stream: BodyReader,
+    #[cfg(feature = "tls")]
+    peer_certs: Option<Vec<Certificate>>,
 }
 
 impl Data {
@@ -124,6 +127,10 @@ impl Data {
         // Set the read timeout to 5 seconds.
         net_stream.set_read_timeout(Some(Duration::from_secs(5))).expect("timeout set");
 
+        // Grab the certificate info
+        #[cfg(feature = "tls")]
+        let cert_info = net_stream.get_peer_certificates();
+
         // TODO: Explain this.
         trace_!("Hyper buffer: [{}..{}] ({} bytes).", pos, cap, cap - pos);
 
@@ -139,7 +146,18 @@ impl Data {
             ChunkedReader(_, n) => ChunkedReader(inner_data, n)
         };
 
-        Ok(Data::new(http_stream))
+        #[cfg(feature = "tls")]
+        let mut data = Data::new(http_stream);
+        #[cfg(feature = "tls")]
+        match cert_info {
+            Some(certs) => data.set_peer_certificates(certs),
+            None => ()
+        }
+
+        #[cfg(not(feature = "tls"))]
+        let data = Data::new(http_stream);
+
+        Ok(data)
     }
 
     /// Retrieve the `peek` buffer.
@@ -260,7 +278,13 @@ impl Data {
         };
 
         trace_!("Peek bytes: {}/{} bytes.", peek_buf.len(), PEEK_BYTES);
-        Data { buffer: peek_buf, stream, is_complete: eof }
+        Data {
+            buffer: peek_buf,
+            stream: stream,
+            is_complete: eof,
+            #[cfg(feature = "tls")]
+            peer_certs: None,
+        }
     }
 
     /// This creates a `data` object from a local data source `data`.
@@ -272,7 +296,19 @@ impl Data {
             buffer: data,
             stream: HttpReader::SizedReader(empty_stream, 0),
             is_complete: true,
+            #[cfg(feature = "tls")]
+            peer_certs: None,
         }
+    }
+
+    #[cfg(feature = "tls")]
+    fn set_peer_certificates(&mut self, certs: Vec<Certificate>) {
+        self.peer_certs = Some(certs)
+    }
+
+    #[cfg(feature = "tls")]
+    pub(crate) fn get_peer_certificates(&self) -> Option<Vec<Certificate>> {
+        self.peer_certs.clone()
     }
 }
 

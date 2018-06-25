@@ -2,7 +2,7 @@ use std::io;
 use std::net::{SocketAddr, Shutdown};
 use std::time::Duration;
 
-#[cfg(feature = "tls")] use http::tls::{WrappedStream, ServerSession};
+#[cfg(feature = "tls")] use http::tls::{Certificate, WrappedStream, ServerSession};
 use http::hyper::net::{HttpStream, NetworkStream};
 
 use self::NetStream::*;
@@ -17,6 +17,19 @@ pub enum NetStream {
     #[cfg(feature = "tls")]
     Https(HttpsStream),
     Empty,
+}
+
+#[cfg(feature = "tls")]
+impl NetStream {
+    // add code here
+    pub fn get_peer_certificates(&self) -> Option<Vec<Certificate>> {
+        match *self {
+            // stream is a WrappedStream
+            Https(ref stream) => stream.get_peer_certificates(),
+            _ => None
+        }
+
+    }
 }
 
 impl io::Read for NetStream {
