@@ -748,8 +748,8 @@ impl<'r> Request<'r> {
 
     /// Get the peer certificates
     #[cfg(feature = "tls")]
-    pub(crate) fn get_peer_certificates(&self) -> &Option<Vec<Certificate>> {
-        &self.peer_certs
+    pub(crate) fn get_peer_certificates(&self) -> Option<Vec<Certificate>> {
+        self.peer_certs.clone()
     }
 }
 
