@@ -16,6 +16,7 @@ use error::Error;
 use http::{Method, Header, HeaderMap, Cookies, CookieJar};
 use http::{RawStr, ContentType, Accept, MediaType};
 use http::hyper;
+use outcome;
 
 #[derive(Clone)]
 struct RequestState<'r> {
@@ -719,5 +720,15 @@ impl<'r> fmt::Display for Request<'r> {
         }
 
         Ok(())
+    }
+}
+
+impl<'a, 'r> FromRequest<'a, 'r> for &'a Request<'r> {
+    type Error = ();
+
+    fn from_request(
+        request: &'a Request<'r>,
+    ) -> Outcome<&'a Request<'r>, Self::Error> {
+        outcome::Outcome::Success(request)
     }
 }
