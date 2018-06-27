@@ -28,8 +28,11 @@ indexmap = "1.0"
 rustls = { version = "0.16", optional = true }
 state = "0.4"
 cookie = { version = "0.13.2", features = ["percent-encode"] }
-pear = "0.1"
+pear = { git = "http://github.com/SergioBenitez/Pear", rev = "b475140" }
 unicode-xid = "0.2"
+dns-lookup = "0.9.1"
+untrusted = "0.6.1"
+webpki = "0.18.0-alpha4"
 
 [dependencies.hyper-sync-rustls]
 version = "=0.3.0-rc.6"

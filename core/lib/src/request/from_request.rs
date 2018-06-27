@@ -10,6 +10,8 @@ use crate::http::{Status, ContentType, Accept, Method, Cookies, uri::Origin};
 
 #[cfg(feature = "tls")]
 use http::mtls::MutualTlsUser;
+#[cfg(feature = "tls")]
+use http::tls::{lookup_addr, Input, EndEntityCert, DNSNameRef};
 
 /// Type alias for the `Outcome` of a `FromRequest` conversion.
 pub type Outcome<S, E> = outcome::Outcome<S, (Status, E), ()>;
@@ -455,6 +457,33 @@ impl <'a, 'r> FromRequest<'a, 'r> for MutualTlsUser {
     type Error = ();
 
     fn from_request(request: &'a Request<'r>) -> Outcome<Self, Self::Error> {
+        let ip_addr = request.client_ip();
+        if ip_addr.is_none() {
+            return Forward(());
+        }
+        let ip_addr = ip_addr.unwrap();
+        let name = lookup_addr(&ip_addr);
+        if name.is_err() {
+            return Forward(());
+        }
+        let name = name.unwrap();
+        let name = Input::from(name.as_bytes());
+        let common_name = DNSNameRef::try_from_ascii(name);
+        if common_name.is_err() {
+            return Forward(());
+        }
+        let common_name = common_name.unwrap();
+        let certs = request.get_peer_certificates();
+        if certs.is_none() {
+            return Forward(());
+        }
+        let certs = certs.unwrap();
+        let input = Input::from(certs[0].as_ref());
+        let end_entity = EndEntityCert::from(input).unwrap();
+        let verification = end_entity.verify_is_valid_for_dns_name(common_name);
+        if verification.is_err() {
+            return Forward(());
+        }
         match request.get_peer_certificates() {
             Some(certs) => Success(MutualTlsUser::new(certs)),
             None => Forward(())
