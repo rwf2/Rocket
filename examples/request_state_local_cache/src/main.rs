@@ -2,70 +2,59 @@
 #![plugin(rocket_codegen)]
 extern crate rocket;
 
-use std::thread;
-use std::time::Duration;
+use std::sync::atomic::{AtomicUsize, Ordering};
 
-use rocket::request::{self, Request, FromRequest};
+use rocket::request::{self, Request, FromRequest, State};
 use rocket::outcome::Outcome::*;
 
 #[cfg(test)] mod tests;
 
-#[derive(Clone, Copy)]
-struct Sleep();
-struct SleepCached(Sleep);
-struct ForwardGuard();
+struct Atomics {
+    first: AtomicUsize,
+    second: AtomicUsize,
+}
 
-impl<'a, 'r> FromRequest<'a, 'r> for ForwardGuard {
+struct Guard1();
+struct Guard2();
+
+impl<'a, 'r> FromRequest<'a, 'r> for Guard1 {
     type Error = ();
 
-    fn from_request(_: &'a Request<'r>) -> request::Outcome<Self, ()> {
-        Forward(())
+    fn from_request(req: &'a Request<'r>) -> request::Outcome<Self, ()> {
+        req.guard::<State<Atomics>>()?.first.fetch_add(1, Ordering::Relaxed);
+        req.local_cache(|req| {
+            req.guard::<State<Atomics>>().unwrap().second.fetch_add(1, Ordering::Relaxed);
+        });
+
+        Success(Guard1())
     }
 }
 
-impl Sleep {
-    fn get(_: &Request) -> Sleep {
-        thread::sleep(Duration::from_secs(3));
-        Sleep()
-    }
-}
-
-impl<'a, 'r> FromRequest<'a, 'r> for Sleep {
+impl<'a, 'r> FromRequest<'a, 'r> for Guard2 {
     type Error = ();
 
-    fn from_request(request: &'a Request<'r>) -> request::Outcome<Self, ()> {
-        Success(Sleep::get(request))
+    fn from_request(req: &'a Request<'r>) -> request::Outcome<Self, ()> {
+        req.guard::<State<Atomics>>()?.first.fetch_add(1, Ordering::Relaxed);
+        req.local_cache(|req| {
+            req.guard::<State<Atomics>>().unwrap().second.fetch_add(1, Ordering::Relaxed);
+        });
+
+        Success(Guard2())
     }
 }
 
-impl<'a, 'r> FromRequest<'a, 'r> for SleepCached {
-    type Error = ();
-
-    fn from_request(request: &'a Request<'r>) -> request::Outcome<Self, ()> {
-        let s = request.local_cache(Sleep::get);
-        Success(SleepCached(*s))
-    }
-}
 
 #[get("/")]
-fn index(_s: Sleep, _f: ForwardGuard) {
-}
-
-#[get("/", rank = 2)]
-fn index2(_s: Sleep) {
-}
-
-#[get("/cached")]
-fn index_cached(_s: SleepCached, _f: ForwardGuard) {
-}
-
-#[get("/cached", rank = 2)]
-fn index_cached2(_s: SleepCached) {
+fn index(_g1: Guard1, _g2: Guard2) {
 }
 
 fn rocket() -> rocket::Rocket {
     rocket::ignite()
-        .mount("/", routes!(index, index2, index_cached, index_cached2))
+        .manage(Atomics{
+            first: AtomicUsize::new(0),
+            second: AtomicUsize::new(0),
+        })
+        .mount("/", routes!(index))
 }
 
 fn main() {
