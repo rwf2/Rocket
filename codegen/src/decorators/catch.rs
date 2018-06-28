@@ -98,3 +98,17 @@ pub fn catch_decorator(
 
     output
 }
+
+pub fn error_decorator(
+    ecx: &mut ExtCtxt,
+    sp: Span,
+    meta_item: &MetaItem,
+    annotated: Annotatable
+) -> Vec<Annotatable> {
+    ecx.struct_span_warn(sp, "use of deprecated Rocket attribute `error` \
+                              (deprecated since v0.3.15)")
+        .help("the `error` attribute was replaced by the `catch` attribute: \
+               `#[catch(..)]`")
+        .emit();
+    catch_decorator(ecx, sp, meta_item, annotated)
+}

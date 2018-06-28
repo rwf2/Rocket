@@ -60,3 +60,14 @@ pub fn catchers(ecx: &mut ExtCtxt, sp: Span, args: &[TokenTree])
         quote_expr!(ecx, rocket::Catcher::from(&$path))
     }, ecx, sp, args)
 }
+
+#[rustfmt_skip]
+pub fn errors(ecx: &mut ExtCtxt, sp: Span, args: &[TokenTree])
+        -> Box<MacResult + 'static> {
+    ecx.struct_span_warn(sp, "use of deprecated Rocket macro `errors` \
+                              (deprecated since v0.3.15)")
+        .help("the `errors` macro was replaced by the `catchers` macro: \
+               `catchers![..]`")
+        .emit();
+    catchers(ecx, sp, args)
+}

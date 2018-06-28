@@ -199,6 +199,7 @@ pub fn plugin_registrar(reg: &mut Registry) {
     }
 
     reg.register_macro("routes", macros::routes);
+    reg.register_macro("errors", macros::errors);
     reg.register_macro("catchers", macros::catchers);
 
     register_derives!(reg,
@@ -206,6 +207,7 @@ pub fn plugin_registrar(reg: &mut Registry) {
     );
 
     register_decorators!(reg,
+        "error" => error_decorator,
         "catch" => catch_decorator,
         "route" => route_decorator,
         "get" => get_decorator,
