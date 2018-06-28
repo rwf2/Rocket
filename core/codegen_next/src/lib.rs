@@ -9,6 +9,7 @@ extern crate rocket_http;
 
 mod derive;
 mod http_codegen;
+mod prefixing_vec;
 
 crate use derive_utils::{syn, proc_macro2};
 
@@ -27,4 +28,21 @@ pub fn derive_from_form(input: TokenStream) -> TokenStream {
 #[proc_macro_derive(Responder, attributes(response))]
 pub fn derive_responder(input: TokenStream) -> TokenStream {
     derive::responder::derive_responder(input)
+}
+
+const ROUTE_STRUCT_PREFIX: &'static str = "static_rocket_route_info_for_";
+#[proc_macro]
+pub fn routes(input: TokenStream) -> TokenStream {
+    prefixing_vec::prefixing_vec_macro(ROUTE_STRUCT_PREFIX, |path| {
+        quote!(::rocket::Route::from(&#path))
+    }, input)
+}
+
+
+const CATCH_STRUCT_PREFIX: &'static str = "static_rocket_catch_info_for_";
+#[proc_macro]
+pub fn catchers(input: TokenStream) -> TokenStream {
+    prefixing_vec::prefixing_vec_macro(CATCH_STRUCT_PREFIX, |path| {
+        quote!(::rocket::Catcher::from(&#path))
+    }, input)
 }

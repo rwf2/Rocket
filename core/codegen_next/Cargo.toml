@@ -26,4 +26,5 @@ rev = "160da392"
 
 [dev-dependencies]
 rocket = { version = "0.4.0-dev", path = "../lib" }
+rocket_codegen = { version = "0.4.0-dev", path = "../codegen" }
 compiletest_rs = "0.3.14"

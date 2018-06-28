@@ -1,0 +1,8 @@
+error: expected `,` or `::` or end of macro invocation
+ --> $DIR/routes.rs:6:23
+  |
+6 |     let _ = routes![a b];
+  |                       ^
+
+error: aborting due to previous error
+
