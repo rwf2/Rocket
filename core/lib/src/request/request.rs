@@ -91,10 +91,10 @@ impl<'r> Request<'r> {
     /// ```rust
     /// # use rocket::http::Method;
     /// # use rocket::Request;
-    /// # struct User();
-    /// fn current_user(_: &Request) -> User {
+    /// # struct User;
+    /// fn current_user() -> User {
     ///     // Load user...
-    ///     # User()
+    ///     # User
     /// }
     ///
     /// # Request::example(Method::Get, "/uri", |request| {
@@ -103,12 +103,12 @@ impl<'r> Request<'r> {
     /// ```
     pub fn local_cache<T, F>(&self, f: F) -> &T
         where T: Send + Sync + 'static,
-              F: FnOnce(&Request) -> T {
+              F: FnOnce() -> T {
 
         match self.state.cache.try_get() {
             Some(cached) => cached,
             None => {
-                self.state.cache.set(f(self));
+                self.state.cache.set(f());
                 self.state.cache.get()
             }
         }
