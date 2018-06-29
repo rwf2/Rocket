@@ -9,6 +9,7 @@ fn test() {
     let client = Client::new(rocket()).unwrap();
     client.get("/").dispatch();
 
-    assert!(client.rocket().state::<Atomics>().unwrap().first.load(Ordering::Relaxed) == 2, "First is two");
-    assert!(client.rocket().state::<Atomics>().unwrap().second.load(Ordering::Relaxed) == 1, "Secon is one");
+    let atomics = &client.rocket().state::<Atomics>().unwrap();
+    assert!(atomics.uncached.load(Ordering::Relaxed) == 2, "First is two");
+    assert!(atomics.cached.load(Ordering::Relaxed) == 1, "Second is one");
 }
