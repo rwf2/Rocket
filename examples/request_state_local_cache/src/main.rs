@@ -22,12 +22,9 @@ impl<'a, 'r> FromRequest<'a, 'r> for Guard1 {
     type Error = ();
 
     fn from_request(req: &'a Request<'r>) -> request::Outcome<Self, ()> {
-        req.local_cache(|| {
-            let atomics = req.guard::<State<Atomics>>().unwrap();
-            atomics.cached.fetch_add(1, Ordering::Relaxed);
-        });
         let atomics = req.guard::<State<Atomics>>()?;
         atomics.uncached.fetch_add(1, Ordering::Relaxed);
+        req.local_cache(|| atomics.cached.fetch_add(1, Ordering::Relaxed));
 
         Success(Guard1)
     }
@@ -41,7 +38,6 @@ impl<'a, 'r> FromRequest<'a, 'r> for Guard2 {
         Success(Guard2)
     }
 }
-
 
 #[get("/")]
 fn index(_g1: Guard1, _g2: Guard2) {
