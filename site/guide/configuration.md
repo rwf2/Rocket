@@ -163,6 +163,48 @@ to extra configuration parameters when launching:
     => [extra] template_dir: "dev_templates/"
 ```
 
+You can add any configuration options here and use them in the application. For example:
+
+```
+[development]
+assets_dir = "dev_assets/"
+
+[production]
+assets_dir = "prod_assets/"
+```
+
+Then use it in your code through `State`:
+
+```rust
+#![feature(plugin)]
+#![plugin(rocket_codegen)]
+
+extern crate rocket;
+
+use rocket::response::NamedFile;
+use rocket::fairing::AdHoc;
+use rocket::State;
+
+use std::path::{Path, PathBuf};
+
+struct AssetsDir(String);
+
+#[get("/<asset..>")]
+fn assets(asset: PathBuf, assets_dir: State<AssetsDir>) -> Option<NamedFile> {
+    NamedFile::open(Path::new(&assets_dir.0).join(asset)).ok()
+}
+
+fn main() {
+    rocket::ignite()
+        .mount("/", routes![assets])
+        .attach(AdHoc::on_attach(|rocket| {
+            let assets_dir = rocket.config().get_str("assets_dir").unwrap().to_string();
+            Ok(rocket.manage(AssetsDir(assets_dir)))
+        }))
+        .launch();
+}
+```
+
 ## Environment Variables
 
 All configuration parameters, including extras, can be overridden through
