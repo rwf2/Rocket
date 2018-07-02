@@ -33,11 +33,10 @@ mod context {
     use std::ops::{Deref, DerefMut};
     use std::sync::{RwLock, Mutex};
     use std::sync::mpsc::{channel, Receiver};
-    use std::time::Duration;
 
     use super::{Context, Engines};
 
-    use self::notify::{watcher, DebouncedEvent, RecommendedWatcher, RecursiveMode, Watcher};
+    use self::notify::{raw_watcher, RawEvent, RecommendedWatcher, RecursiveMode, Watcher};
 
     /// Wraps a Context. With `cfg(debug_assertions)` active, this structure
     /// additionally provides a method to reload the context at runtime.
@@ -45,14 +44,14 @@ mod context {
         /// The current template context, inside an RwLock so it can be updated
         context: RwLock<Context>,
         /// A filesystem watcher and the receive queue for its events
-        watcher: Option<(RecommendedWatcher, Mutex<Receiver<DebouncedEvent>>)>,
+        watcher: Option<(RecommendedWatcher, Mutex<Receiver<RawEvent>>)>,
     }
 
     impl ContextManager {
         pub fn new(ctxt: Context) -> ContextManager {
             let (tx, rx) = channel();
 
-            let watcher = if let Ok(mut watcher) = watcher(tx, Duration::from_secs(1)) {
+            let watcher = if let Ok(mut watcher) = raw_watcher(tx) {
                 if watcher.watch(ctxt.root.clone(), RecursiveMode::Recursive).is_ok() {
                     Some((watcher, Mutex::new(rx)))
                 } else {
