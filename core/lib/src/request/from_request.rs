@@ -457,36 +457,51 @@ impl <'a, 'r> FromRequest<'a, 'r> for MutualTlsUser {
     type Error = ();
 
     fn from_request(request: &'a Request<'r>) -> Outcome<Self, Self::Error> {
+        // Get peer's IP address
         let ip_addr = request.client_ip();
         if ip_addr.is_none() {
             return Forward(());
         }
         let ip_addr = ip_addr.unwrap();
+
+        // Get name from DNS Server for the peer's IP address
         let name = lookup_addr(&ip_addr);
         if name.is_err() {
             return Forward(());
         }
         let name = name.unwrap();
+
+        // Change name to DNSNameRef
         let name = Input::from(name.as_bytes());
         let common_name = DNSNameRef::try_from_ascii(name);
         if common_name.is_err() {
             return Forward(());
         }
         let common_name = common_name.unwrap();
+
+        // Get certificates the peer provided
         let certs = request.get_peer_certificates();
         if certs.is_none() {
             return Forward(());
         }
         let certs = certs.unwrap();
-        let input = Input::from(certs[0].as_ref());
-        let end_entity = EndEntityCert::from(input).unwrap();
-        let verification = end_entity.verify_is_valid_for_dns_name(common_name);
-        if verification.is_err() {
-            return Forward(());
+
+        // Iterate through the client certificates
+        let certs_copy = certs.clone();
+        for cert in certs_copy {
+            let cert_input = Input::from(cert.as_ref());
+            let end_entity = EndEntityCert::from(cert_input);
+            if end_entity.is_err() {
+                return Forward(());
+            }
+            let end_entity = end_entity.unwrap();
+
+            // Compare certificate is valid for DNS name
+            let verification = end_entity.verify_is_valid_for_dns_name(common_name);
+            if verification.is_ok() {
+                return Success(MutualTlsUser::new(certs));
+            }
         }
-        match request.get_peer_certificates() {
-            Some(certs) => Success(MutualTlsUser::new(certs)),
-            None => Forward(())
-        }
+        Forward(())
     }
 }
