@@ -17,15 +17,18 @@ pub enum LoggingLevel {
     Normal,
     /// Shows everything.
     Debug,
+    /// Shows nothing.
+    Off,
 }
 
 impl LoggingLevel {
     #[inline(always)]
-    fn max_log_level(&self) -> log::Level {
+    fn to_level_filter(&self) -> log::LevelFilter {
         match *self {
-            LoggingLevel::Critical => log::Level::Warn,
-            LoggingLevel::Normal => log::Level::Info,
-            LoggingLevel::Debug => log::Level::Trace,
+            LoggingLevel::Critical => log::LevelFilter::Warn,
+            LoggingLevel::Normal => log::LevelFilter::Info,
+            LoggingLevel::Debug => log::LevelFilter::Trace,
+            LoggingLevel::Off => log::LevelFilter::Off
         }
     }
 }
@@ -38,7 +41,8 @@ impl FromStr for LoggingLevel {
             "critical" => LoggingLevel::Critical,
             "normal" => LoggingLevel::Normal,
             "debug" => LoggingLevel::Debug,
-            _ => return Err("a log level (debug, normal, critical)")
+            "off" => LoggingLevel::Off,
+            _ => return Err("a log level (off, debug, normal, critical)")
         };
 
         Ok(level)
@@ -51,6 +55,7 @@ impl fmt::Display for LoggingLevel {
             LoggingLevel::Critical => "critical",
             LoggingLevel::Normal => "normal",
             LoggingLevel::Debug => "debug",
+            LoggingLevel::Off => "off"
         };
 
         write!(f, "{}", string)
@@ -77,7 +82,10 @@ macro_rules! warn_ { ($($args:expr),+) => { log_!(warn: $($args),+); }; }
 impl log::Log for RocketLogger {
     #[inline(always)]
     fn enabled(&self, record: &log::Metadata) -> bool {
-        record.target().starts_with("launch") || record.level() <= self.0.max_log_level()
+        match self.0.to_level_filter().to_level() {
+            Some(max) => record.level() <= max || record.target().starts_with("launch"),
+            None => false
+        }
     }
 
     fn log(&self, record: &log::Record) {
@@ -134,7 +142,11 @@ impl log::Log for RocketLogger {
     }
 }
 
-pub(crate) fn try_init(level: LoggingLevel, verbose: bool) {
+pub(crate) fn try_init(level: LoggingLevel, verbose: bool) -> bool {
+    if level == LoggingLevel::Off {
+        return false;
+    }
+
     if !::isatty::stdout_isatty() || (cfg!(windows) && !Paint::enable_windows_ascii()) {
         Paint::disable();
     }
@@ -146,7 +158,10 @@ pub(crate) fn try_init(level: LoggingLevel, verbose: bool) {
         }
 
         pop_max_level();
+        return false;
     }
+
+    true
 }
 
 use std::sync::atomic::{AtomicUsize, AtomicBool, Ordering};
@@ -180,7 +195,7 @@ fn usize_to_filter(num: usize) -> log::LevelFilter {
 pub(crate) fn push_max_level(level: LoggingLevel) {
     LAST_LOG_FILTER.store(filter_to_usize(log::max_level()), Ordering::Release);
     PUSHED.store(true, Ordering::Release);
-    log::set_max_level(level.max_log_level().to_level_filter());
+    log::set_max_level(level.to_level_filter());
 }
 
 pub(crate) fn pop_max_level() {
@@ -190,6 +205,6 @@ pub(crate) fn pop_max_level() {
 }
 
 #[doc(hidden)]
-pub fn init(level: LoggingLevel) {
+pub fn init(level: LoggingLevel) -> bool {
     try_init(level, true)
 }

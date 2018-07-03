@@ -73,7 +73,7 @@ impl<'r> Request<'r> {
 
     #[doc(hidden)]
     pub fn example<F: Fn(&mut Request)>(method: Method, uri: &str, f: F) {
-        let rocket = Rocket::custom(Config::development().unwrap(), true);
+        let rocket = Rocket::custom(Config::development().unwrap());
         let mut request = Request::new(&rocket, method, uri);
         f(&mut request);
     }

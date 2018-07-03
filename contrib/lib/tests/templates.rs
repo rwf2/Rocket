@@ -20,7 +20,7 @@ mod templates_tests {
             .extra("template_dir", template_root().to_str().expect("template directory"))
             .expect("valid configuration");
 
-        ::rocket::custom(config, true).attach(Template::fairing())
+        ::rocket::custom(config).attach(Template::fairing())
     }
 
     #[cfg(feature = "tera_templates")]

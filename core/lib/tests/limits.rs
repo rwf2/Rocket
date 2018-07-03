@@ -26,7 +26,7 @@ mod limits_tests {
             .limits(Limits::default().limit("forms", limit))
             .unwrap();
 
-        rocket::custom(config, true).mount("/", routes![super::index])
+        rocket::custom(config).mount("/", routes![super::index])
     }
 
     #[test]

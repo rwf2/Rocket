@@ -997,6 +997,13 @@ mod test {
                       "#.to_string(), TEST_CONFIG_FILENAME), {
                           default_config(Staging).log_level(LoggingLevel::Critical)
                       });
+
+        check_config!(RocketConfig::parse(r#"
+                          [stage]
+                          log = "off"
+                      "#.to_string(), TEST_CONFIG_FILENAME), {
+                          default_config(Staging).log_level(LoggingLevel::Off)
+                      });
     }
 
     #[test]

@@ -160,6 +160,6 @@ pub fn ignite() -> Rocket {
 
 /// Alias to [Rocket::custom()](/rocket/struct.Rocket.html#method.custom).
 /// Creates a new instance of `Rocket` with a custom configuration.
-pub fn custom(config: config::Config, log: bool) -> Rocket {
-    Rocket::custom(config, log)
+pub fn custom(config: config::Config) -> Rocket {
+    Rocket::custom(config)
 }
