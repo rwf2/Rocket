@@ -1,5 +1,4 @@
 #![feature(use_extern_macros)]
-
 // TODO: Version URLs.
 #![doc(html_root_url = "https://api.rocket.rs")]
 
@@ -87,14 +86,10 @@ pub use templates::{Template, Engines};
 mod uuid;
 
 #[cfg(feature = "uuid")]
-<<<<<<< HEAD:contrib/lib/src/lib.rs
 pub use uuid::{Uuid, UuidParseError};
-=======
-pub use uuid::{UuidParseError, UUID};
 
 #[cfg(any(feature = "brotli_compression", feature = "gzip_compression"))]
 mod compression;
 
 #[cfg(any(feature = "brotli_compression", feature = "gzip_compression"))]
 pub use compression::Compression;
-
