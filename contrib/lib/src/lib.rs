@@ -68,7 +68,7 @@ extern crate flate2;
 pub mod json;
 
 #[cfg(feature = "json")]
-pub use json::{Json, JsonValue, SerdeError};
+pub use json::{Json, SerdeError, JsonValue};
 
 #[cfg(feature = "msgpack")]
 #[doc(hidden)]
@@ -81,7 +81,7 @@ pub use msgpack::{MsgPack, MsgPackError};
 mod templates;
 
 #[cfg(feature = "templates")]
-pub use templates::{Engines, Template};
+pub use templates::{Template, Engines};
 
 #[cfg(feature = "uuid")]
 mod uuid;
