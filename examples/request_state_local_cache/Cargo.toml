@@ -1,0 +1,9 @@
+[package]
+name = "request_state_local_cache"
+version = "0.0.0"
+workspace = "../../"
+publish = false
+
+[dependencies]
+rocket = { path = "../../core/lib" }
+rocket_codegen = { path = "../../core/codegen" }
