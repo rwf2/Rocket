@@ -128,6 +128,7 @@ mod templates_tests {
             fn write_file(path: &Path, text: &str) {
                 let mut file = File::create(path).expect("open file");
                 file.write_all(text.as_bytes()).expect("write file");
+                file.sync_all().expect("sync file");
             }
 
             const RELOAD_TEMPLATE: &'static str = "hbs/reload";
