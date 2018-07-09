@@ -6,8 +6,10 @@ extern crate glob;
 #[cfg(feature = "handlebars_templates")] mod handlebars_templates;
 mod engine;
 mod context;
+mod metadata;
 
 pub use self::engine::Engines;
+pub use self::metadata::TemplateMetadata;
 
 use self::engine::Engine;
 use self::context::Context;
