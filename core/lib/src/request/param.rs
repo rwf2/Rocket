@@ -336,7 +336,7 @@ impl<'a> FromSegments<'a> for PathBuf {
 
             if decoded == ".." {
                 buf.pop();
-            } else if decoded.starts_with('.') {
+            } else if decoded.contains("..") {
                 return Err(SegmentError::BadStart('.'))
             } else if decoded.starts_with('*') {
                 return Err(SegmentError::BadStart('*'))
