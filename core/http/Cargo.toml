@@ -33,6 +33,7 @@ unicode-xid = "0.2"
 dns-lookup = "0.9.1"
 untrusted = "0.6.1"
 webpki = "0.18.0-alpha4"
+openssl = "0.10.10"
 
 [dependencies.hyper-sync-rustls]
 version = "=0.3.0-rc.6"
