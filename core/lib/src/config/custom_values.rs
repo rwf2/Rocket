@@ -249,7 +249,7 @@ pub fn tls_config<'v>(conf: &Config,
         Ok((certs, key, None))
     } else {
         Err(conf.bad_type(name, "a table with missing entries",
-                            "a table with `certs`, `key`, and `ca_certs` entries"))
+                            "a table with `certs` and `key` entries"))
     }
 }
 
