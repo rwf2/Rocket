@@ -9,9 +9,7 @@ use outcome::Outcome::*;
 use http::{Status, ContentType, Accept, Method, Cookies, uri::Origin};
 
 #[cfg(feature = "tls")]
-use http::mtls::MutualTlsUser;
-#[cfg(feature = "tls")]
-use http::tls::{lookup_addr, Input, EndEntityCert, DNSNameRef};
+use http::tls::{lookup_addr, Input, EndEntityCert, DNSNameRef, MutualTlsUser};
 
 /// Type alias for the `Outcome` of a `FromRequest` conversion.
 pub type Outcome<S, E> = outcome::Outcome<S, (Status, E), ()>;
@@ -490,7 +488,7 @@ impl <'a, 'r> FromRequest<'a, 'r> for MutualTlsUser {
 
         // Iterate through the client certificates
         let certs_copy = certs.clone();
-        for cert in certs_copy {
+        for (index, cert) in certs_copy.iter().enumerate() {
             let cert_input = Input::from(cert.as_ref());
             let end_entity = EndEntityCert::from(cert_input);
             if end_entity.is_err() {
@@ -501,7 +499,7 @@ impl <'a, 'r> FromRequest<'a, 'r> for MutualTlsUser {
             // Compare certificate is valid for DNS name
             let verification = end_entity.verify_is_valid_for_dns_name(common_name);
             if verification.is_ok() {
-                return Success(MutualTlsUser::new(certs));
+                return Success(MutualTlsUser::new(certs[index].clone()));
             }
         }
         Forward(())

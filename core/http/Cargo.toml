@@ -29,6 +29,7 @@ pear = { git = "http://github.com/SergioBenitez/Pear", rev = "b475140" }
 dns-lookup = "0.9.1"
 untrusted = "0.6.1"
 webpki = "0.18.0-alpha4"
+openssl = "0.10.10"
 
 [dependencies.hyper-sync-rustls]
 version = "=0.3.0-rc.3"
