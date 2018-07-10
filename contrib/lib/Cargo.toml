@@ -37,5 +37,8 @@ handlebars = { version = "0.32", optional = true }
 glob = { version = "^0.2", optional = true }
 tera = { version = "0.11", optional = true }
 
+[dev-dependencies]
+rocket_codegen = { version = "0.4.0-dev", path = "../../core/codegen" }
+
 [package.metadata.docs.rs]
 all-features = true
