@@ -23,7 +23,7 @@ pub enum Error {
     NoKey,
 }
 
-/// The kind of launch error that occured.
+/// The kind of launch error that occurred.
 ///
 /// In almost every instance, a launch error occurs because of an I/O error;
 /// this is represented by the `Io` variant. A launch error may also occur
@@ -183,10 +183,10 @@ impl ::std::error::Error for LaunchError {
         self.mark_handled();
         match *self.kind() {
             LaunchErrorKind::Bind(_) => "failed to bind to given address/port",
-            LaunchErrorKind::Io(_) => "an I/O error occured during launch",
+            LaunchErrorKind::Io(_) => "an I/O error occurred during launch",
             LaunchErrorKind::Collision(_) => "route collisions were detected",
             LaunchErrorKind::FailedFairings(_) => "a launch fairing reported an error",
-            LaunchErrorKind::Unknown(_) => "an unknown error occured during launch"
+            LaunchErrorKind::Unknown(_) => "an unknown error occurred during launch"
         }
     }
 }

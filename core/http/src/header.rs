@@ -126,7 +126,7 @@ pub struct HeaderMap<'h> {
 }
 
 impl<'h> HeaderMap<'h> {
-    /// Returns an empty collection.
+    /// Returns an empty header collection.
     ///
     /// # Example
     ///
@@ -620,7 +620,7 @@ impl<'h> HeaderMap<'h> {
     }
 
     /// Consumes `self` and returns an iterator over all of the headers stored
-    /// in the map in the way they are stored. This is a low-level machinism and
+    /// in the map in the way they are stored. This is a low-level mechanism and
     /// should likely not be used.
     /// WARNING: This is unstable! Do not use this method outside of Rocket!
     #[doc(hidden)]

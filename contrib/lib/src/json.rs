@@ -307,7 +307,7 @@ impl<'a> Responder<'a> for JsonValue {
 /// ```
 ///
 /// Variables or expressions can be interpolated into the JSON literal. Any type
-/// interpolated into an array element or object value must implement Serde's
+/// interpolated into an array element or object value must implement serde's
 /// `Serialize` trait, while any type interpolated into a object key must
 /// implement `Into<String>`.
 ///

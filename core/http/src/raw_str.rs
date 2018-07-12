@@ -39,7 +39,7 @@ use uncased::UncasedStr;
 ///
 /// A `RawStr` is a dynamically sized type (just like `str`). It is always used
 /// through a reference an as `&RawStr` (just like &str). You'll likely
-/// encounted an `&RawStr` as a parameter via [`FromParam`] or as a form value
+/// encounter an `&RawStr` as a parameter via [`FromParam`] or as a form value
 /// via [`FromFormValue`].
 ///
 /// [`FromParam`]: /rocket/request/trait.FromParam.html
@@ -240,7 +240,7 @@ impl RawStr {
             //    allocated. No characters are pushed to `allocated` prior to
             //    this branch running since the `escaped` flag isn't set. To
             //    enter this branch, the current byte must be a valid ASCII
-            //    character. This implies that every byte preceeding forms a
+            //    character. This implies that every byte preceding forms a
             //    valid UTF-8 string since ASCII characters in UTF-8 are never
             //    part of a multi-byte sequence. Thus, extending the `allocated`
             //    vector with these bytes results in a valid UTF-8 string in

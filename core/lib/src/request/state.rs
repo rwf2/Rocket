@@ -85,7 +85,7 @@ use http::Status;
 pub struct State<'r, T: Send + Sync + 'static>(&'r T);
 
 impl<'r, T: Send + Sync + 'static> State<'r, T> {
-    /// Retrieve a borrow to the underyling value with a lifetime of `'r`.
+    /// Retrieve a borrow to the underlying value with a lifetime of `'r`.
     ///
     /// Using this method is typically unnecessary as `State` implements `Deref`
     /// with a `Target` of `T`. This means Rocket will automatically coerce a

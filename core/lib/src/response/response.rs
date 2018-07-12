@@ -60,7 +60,7 @@ impl<T> Body<T> {
 }
 
 impl<T: io::Read> Body<T> {
-    /// Attepts to read `self` into a `Vec` and returns it. If reading fails,
+    /// Attempts to read `self` into a `Vec` and returns it. If reading fails,
     /// returns `None`.
     pub fn into_bytes(self) -> Option<Vec<u8>> {
         let mut vec = Vec::new();
@@ -73,7 +73,7 @@ impl<T: io::Read> Body<T> {
         Some(vec)
     }
 
-    /// Attepts to read `self` into a `String` and returns it. If reading or
+    /// Attempts to read `self` into a `String` and returns it. If reading or
     /// conversion fails, returns `None`.
     pub fn into_string(self) -> Option<String> {
         self.into_bytes()
@@ -99,7 +99,7 @@ impl<T> fmt::Debug for Body<T> {
 /// Type for easily building `Response`s.
 ///
 /// Building a [Response](struct.Response.html) can be a low-level ordeal; this
-/// structure presents a higher-level API that simplified building `Response`s.
+/// structure presents a higher-level API that simplifies building `Response`s.
 ///
 /// # Usage
 ///
@@ -118,7 +118,7 @@ impl<T> fmt::Debug for Body<T> {
 /// the default behavior (using `header(..)`) is to _replace_. When a header is
 /// _replaced_, any existing values for headers with the same name are removed,
 /// and the new value is set. If no header exists, the header is simply added.
-/// On the other hand, when a header is `adjoined`, all existing values will
+/// On the other hand, when a header is _adjoined_, all existing values will
 /// remain, and the `value` of the adjoined header will be added to the set of
 /// existing values, if any. Adjoining maintains order: headers adjoined first
 /// will appear first in the `Response`.
@@ -250,7 +250,7 @@ impl<'r> ResponseBuilder<'r> {
 
     /// Adds `header` to the `Response` by adjoining the header with any
     /// existing headers with the same name that already exist in the
-    /// `Response`. This allow for multiple headers with the same name and
+    /// `Response`. This allows for multiple headers with the same name and
     /// potentially different values to be present in the `Response`.
     ///
     /// The type of `header` can be any type that implements `Into<Header>`.
@@ -279,7 +279,7 @@ impl<'r> ResponseBuilder<'r> {
         self
     }
 
-    /// Adds custom a header to the `Response` with the given name and value,
+    /// Adds a custom header to the `Response` with the given name and value,
     /// replacing any header with the same name that already exists in the
     /// response. If multiple headers with the same name exist, they are all
     /// removed, and only the new header and value will remain.
@@ -307,7 +307,7 @@ impl<'r> ResponseBuilder<'r> {
 
     /// Adds custom header to the `Response` with the given name and value,
     /// adjoining the header with any existing headers with the same name that
-    /// already exist in the `Response`. This allow for multiple headers with
+    /// already exist in the `Response`. This allows for multiple headers with
     /// the same name and potentially different values to be present in the
     /// `Response`.
     ///

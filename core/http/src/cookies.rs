@@ -260,7 +260,8 @@ impl<'a> Cookies<'a> {
     }
 
     /// For each property mentioned below, this method checks
-    /// if there is provided value and if there is none, set default value.
+    /// if there is a provided value and if there is none, sets
+    /// a default value.
     /// Default values are:
     ///
     ///    * `path`: `"/"`
@@ -289,7 +290,7 @@ impl<'a> Cookies<'a> {
     /// Removes `cookie` from this collection and generates a "removal" cookies
     /// to send to the client on response. For correctness, `cookie` must
     /// contain the same `path` and `domain` as the cookie that was initially
-    /// set. Failure to provide the initual `path` and `domain` will result in
+    /// set. Failure to provide the initial `path` and `domain` will result in
     /// cookies that are not properly removed.
     ///
     /// A "removal" cookie is a cookie that has the same name as the original

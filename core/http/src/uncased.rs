@@ -1,7 +1,7 @@
 //! Contains types that encapsulate uncased ASCII strings.
 //!
 //! An 'uncased' ASCII string is case-preserving. That is, the string itself
-//! contains cased charaters, but comparison (including ordering, equaility, and
+//! contains cased characters, but comparison (including ordering, equality, and
 //! hashing) is case-insensitive.
 
 use std::ops::Deref;

@@ -47,7 +47,7 @@ impl StatusClass {
 /// # Usage
 ///
 /// Status classes should rarely be created directly. Instead, an associated
-/// constant should be used; one is declared for every standard status defined
+/// constant should be used; one is declared for every status defined
 /// in the HTTP standard.
 ///
 /// ## Example
@@ -139,7 +139,7 @@ macro_rules! ctrs {
 }
 
 impl Status {
-    /// Creates a new `Status` with `code` and `reason`. This should be _only_
+    /// Creates a new `Status` with `code` and `reason`. This should be used _only_
     /// to construct non-standard HTTP statuses. Use an associated constant for
     /// standard statuses.
     ///

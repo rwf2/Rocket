@@ -131,7 +131,7 @@ use request::form::{FromForm, FormItems};
 /// Whether you should use a `&RawStr` or `String` in your `FromForm` type
 /// depends on your use case. The primary question to answer is: _Can the input
 /// contain characters that must be URL encoded?_ Note that this includes
-/// commmon characters such as spaces. If so, then you must use `String`, whose
+/// common characters such as spaces. If so, then you must use `String`, whose
 /// `FromFormValue` implementation automatically URL decodes strings. Because
 /// the `&RawStr` references will refer directly to the underlying form data,
 /// they will be raw and URL encoded.
@@ -236,7 +236,7 @@ impl<'f, T: FromForm<'f> + 'f> Form<'f, T> {
     // that they don't outlive this structure. So we would really like
     // something like `self` and then to transmute to that. But this doesn't
     // exist. So we do the next best: we use the first lifetime supplied by the
-    // caller via `get()` and contrain everything to that lifetime. This is, in
+    // caller via `get()` and constrain everything to that lifetime. This is, in
     // reality a little coarser than necessary, but the user can simply move the
     // call to right after the creation of a Form object to get the same effect.
     pub(crate) fn new(string: String, strict: bool) -> FormResult<Self, T::Error> {

@@ -131,7 +131,7 @@ impl ConfigBuilder {
         self
     }
 
-    /// Set the keep-alive timeout to `timeout` seconds. If `timeout` is `None`,
+    /// Sets the keep-alive timeout to `timeout` seconds. If `timeout` is `None`,
     /// keep-alive is disabled.
     ///
     /// # Example

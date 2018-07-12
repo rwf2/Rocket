@@ -143,7 +143,7 @@ pub struct TemplateInfo {
 }
 
 impl Template {
-    /// Returns a fairing that intializes and maintains templating state.
+    /// Returns a fairing that initializes and maintains templating state.
     ///
     /// This fairing, or the one returned by [`Template::custom()`], _must_ be
     /// attached to any `Rocket` instance that wishes to render templates.
@@ -179,7 +179,7 @@ impl Template {
         Template::custom(|_| {})
     }
 
-    /// Returns a fairing that intializes and maintains templating state.
+    /// Returns a fairing that initializes and maintains templating state.
     ///
     /// Unlike [`Template::fairing()`], this method allows you to configure
     /// templating engines via the parameter `f`. Note that only the enabled

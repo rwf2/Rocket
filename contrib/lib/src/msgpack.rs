@@ -53,7 +53,7 @@ pub use self::rmp_serde::decode::Error as MsgPackError;
 ///
 /// If you're responding with MessagePack data, return a `MsgPack<T>` type,
 /// where `T` implements `Serialize` from
-/// [Serde](https://github.com/serde-rs/serde). The content type of the response
+/// [serde](https://github.com/serde-rs/serde). The content type of the response
 /// is set to `application/msgpack` automatically.
 ///
 /// ```rust

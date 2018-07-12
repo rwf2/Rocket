@@ -45,9 +45,9 @@ impl Route {
     ///
     /// # Ranking
     ///
-    /// The route rank's is set so that routes with static paths are ranked
-    /// higher than route's with dynamic paths, and routes with query strings
-    /// are ranked higher than ranks without query strings. This default ranking
+    /// The route's rank is set so that routes with static paths are ranked
+    /// higher than routes with dynamic paths, and routes with query strings
+    /// are ranked higher than routes without query strings. This default ranking
     /// is summarized by the table below:
     ///
     /// | static path | query | rank |

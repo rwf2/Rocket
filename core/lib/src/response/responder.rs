@@ -109,9 +109,9 @@ use request::Request;
 ///
 /// A `Responder` has access to the request it is responding to. Even so, you
 /// should avoid using the `Request` value as much as possible. This is because
-/// using the `Request` object makes your responder _inpure_, and so the use of
+/// using the `Request` object makes your responder _impure_, and so the use of
 /// the type as a `Responder` has less intrinsic meaning associated with it. If
-/// the `Responder` were pure, however, it always respond in the same manner,
+/// the `Responder` were pure, however, it would always respond in the same manner,
 /// regardless of the incoming request. Thus, knowing the type is sufficient to
 /// fully determine its functionality.
 ///

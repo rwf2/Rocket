@@ -11,21 +11,21 @@ use std::cell::RefCell;
 /// A `Client` is constructed via the [`new`] or [`untracked`] methods from an
 /// already constructed `Rocket` instance. Once a value of `Client` has been
 /// constructed, the [`LocalRequest`] constructor methods ([`get`], [`put`],
-/// [`post`], and so on) can be used to create a `LocalRequest` for dispaching.
+/// [`post`], and so on) can be used to create a `LocalRequest` for dispatching.
 ///
 /// See the [top-level documentation](/rocket/local/index.html) for more usage
 /// information.
 ///
 /// ## Cookie Tracking
 ///
-/// A `Client` constructed using [`new`] propogates cookie changes made by
+/// A `Client` constructed using [`new`] propagates cookie changes made by
 /// responses to previously dispatched requests. In other words, if a previously
 /// dispatched request resulted in a response that adds a cookie, any future
 /// requests will contain that cookie. Similarly, cookies removed by a response
-/// won't be propogated further.
+/// won't be propagated further.
 ///
 /// This is typically the desired mode of operation for a `Client` as it removes
-/// the burder of manually tracking cookies. Under some circumstances, however,
+/// the burden of manually tracking cookies. Under some circumstances, however,
 /// disabling this tracking may be desired. In these cases, use the
 /// [`untracked`](Client::untracked()) constructor to create a `Client` that
 /// _will not_ track cookies.
@@ -33,7 +33,7 @@ use std::cell::RefCell;
 /// ## Example
 ///
 /// The following snippet creates a `Client` from a `Rocket` instance and
-/// dispathes a local request to `POST /` with a body of `Hello, world!`.
+/// dispatches a local request to `POST /` with a body of `Hello, world!`.
 ///
 /// ```rust
 /// use rocket::local::Client;
@@ -78,14 +78,14 @@ impl Client {
     ///
     /// # Cookie Tracking
     ///
-    /// By default, a `Client` propogates cookie changes made by responses to
+    /// By default, a `Client` propagates cookie changes made by responses to
     /// previously dispatched requests. In other words, if a previously
     /// dispatched request resulted in a response that adds a cookie, any future
     /// requests will contain the new cookies. Similarly, cookies removed by a
-    /// response won't be propogated further.
+    /// response won't be propagated further.
     ///
     /// This is typically the desired mode of operation for a `Client` as it
-    /// removes the burder of manually tracking cookies. Under some
+    /// removes the burden of manually tracking cookies. Under some
     /// circumstances, however, disabling this tracking may be desired. The
     /// [`untracked()`](Client::untracked()) method creates a `Client` that
     /// _will not_ track cookies.
@@ -113,7 +113,7 @@ impl Client {
     /// # Cookie Tracking
     ///
     /// Unlike the [`new()`](Client::new()) constructor, a `Client` returned
-    /// from this method _does not_ automatically propogate cookie changes.
+    /// from this method _does not_ automatically propagate cookie changes.
     ///
     /// # Errors
     ///

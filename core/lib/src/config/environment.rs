@@ -39,7 +39,7 @@ impl Environment {
         }
     }
 
-    /// Returns a string with a comma-seperated list of valid environments.
+    /// Returns a string with a comma-separated list of valid environments.
     pub(crate) fn valid() -> &'static str {
         "development, staging, production"
     }

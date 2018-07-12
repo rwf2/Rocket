@@ -48,8 +48,8 @@ impl<'a, S, E> IntoOutcome<S, (Status, E), Data> for Result<S, E> {
 ///
 /// In the example below, `var` is used as the argument name for the data guard
 /// type `T`. When the `submit` route matches, Rocket will call the `FromData`
-/// implemention for the type `T`. The handler will only be called if the guard
-/// returns succesfully.
+/// implementation for the type `T`. The handler will only be called if the guard
+/// returns successfully.
 ///
 /// ```rust,ignore
 /// #[post("/submit", data = "<var>")]
@@ -95,7 +95,7 @@ impl<'a, S, E> IntoOutcome<S, (Status, E), Data> for Result<S, E> {
 ///   * **Option&lt;T>** _where_ **T: FromData**
 ///
 ///     The type `T` is derived from the incoming data using `T`'s `FromData`
-///     implementation. If the derivation is a `Success`, the dervived value is
+///     implementation. If the derivation is a `Success`, the derived value is
 ///     returned in `Some`. Otherwise, a `None` is returned.
 ///
 ///     _This implementation always returns successfully._

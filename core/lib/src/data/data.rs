@@ -146,8 +146,8 @@ impl Data {
     ///
     /// The peek buffer contains at most 512 bytes of the body of the request.
     /// The actual size of the returned buffer varies by web request. The
-    /// [`peek_complete`](#method.peek_complete) can be used to determine if
-    /// this buffer contains _all_ of the data in the body of the request.
+    /// [`peek_complete`](#method.peek_complete) method can be used to determine
+    /// if this buffer contains _all_ of the data in the body of the request.
     ///
     /// # Example
     ///

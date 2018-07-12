@@ -11,7 +11,7 @@ use hyper::mime::Mime;
 ///
 /// # Usage
 ///
-/// `ContentTypes` should rarely be created directly. Instead, an associated
+/// `ContentType`s should rarely be created directly. Instead, an associated
 /// constant should be used; one is declared for most commonly used content
 /// types.
 ///
@@ -279,7 +279,7 @@ impl<T: Borrow<Mime>> From<T> for ContentType {
 impl From<Mime> for ContentType {
     #[inline]
     fn from(mime: Mime) -> ContentType {
-        // soooo inneficient.
+        // soooo inefficient.
         let params = mime.2.into_iter()
             .map(|(attr, value)| (attr.to_string(), value.to_string()))
             .collect::<Vec<_>>();

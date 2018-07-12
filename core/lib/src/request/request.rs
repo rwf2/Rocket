@@ -528,7 +528,7 @@ impl<'r> Request<'r> {
         self.state.route.get()
     }
 
-    /// Invokes the request guard implemention for `T`, returning its outcome.
+    /// Invokes the request guard implementation for `T`, returning its outcome.
     ///
     /// # Example
     ///

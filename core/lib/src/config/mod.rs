@@ -255,7 +255,7 @@ impl RocketConfig {
         let active_env = config.environment;
 
         // None of these unwraps should fail since the filename is coming from
-        // an existing connfig.
+        // an existing config.
         let mut configs = HashMap::new();
         configs.insert(Development, Config::default(Development, &f).unwrap());
         configs.insert(Staging, Config::default(Staging, &f).unwrap());
@@ -271,7 +271,7 @@ impl RocketConfig {
     /// Read the configuration from the `Rocket.toml` file. The file is search
     /// for recursively up the tree, starting from the CWD.
     pub fn read() -> Result<RocketConfig> {
-        // Find the config file, starting from the `cwd` and working backwords.
+        // Find the config file, starting from the `cwd` and working backwards.
         let file = RocketConfig::find()?;
 
         // Try to open the config file for reading.
@@ -337,7 +337,7 @@ impl RocketConfig {
     /// Set the configuration for the environment `env` to be the configuration
     /// derived from the TOML table `kvs`. The environment must already exist in
     /// `self`, otherwise this function panics. Any existing values are
-    /// overriden by those in `kvs`.
+    /// overridden by those in `kvs`.
     fn set_from_table(&mut self, env: Environment, kvs: &Table) -> Result<()> {
         for (key, value) in kvs {
             self.get_mut(env).set_raw(key, value)?;
@@ -462,7 +462,7 @@ impl RocketConfig {
 /// Initializes the global RocketConfig by reading the Rocket config file from
 /// the current directory or any of its parents. Returns the active
 /// configuration, which is determined by the config env variable. If there as a
-/// problem parsing the configuration, the error is printed and the progam is
+/// problem parsing the configuration, the error is printed and the program is
 /// aborted. If there an I/O issue reading the config file, a warning is printed
 /// and the default configuration is used. If there is no config file, the
 /// default configuration is used.

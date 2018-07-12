@@ -300,7 +300,7 @@ impl Rocket {
     // Finds the error catcher for the status `status` and executes it for the
     // given request `req`. If a user has registers a catcher for `status`, the
     // catcher is called. If the catcher fails to return a good response, the
-    // 500 catcher is executed. if there is no registered catcher for `status`,
+    // 500 catcher is executed. If there is no registered catcher for `status`,
     // the default catcher is used.
     fn handle_error<'r>(&self, status: Status, req: &'r Request) -> Response<'r> {
         warn_!("Responding with {} catcher.", Paint::red(&status));

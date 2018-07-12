@@ -192,7 +192,7 @@ impl<'a> Uri<'a> {
         self.query.map(|(i, j)| &self.uri[i..j])
     }
 
-    /// Returns the fargment part of this URI without the hash mark, if there is
+    /// Returns the fragment part of this URI without the hash mark, if there is
     /// any.
     ///
     /// ### Examples

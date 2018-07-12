@@ -34,7 +34,7 @@ use http::Key;
 /// ## General Configuration
 ///
 /// For more information about Rocket's configuration, see the [`config`] module
-/// documentaiton.
+/// documentation.
 ///
 /// [`config`]: /rocket/config/index.html
 #[derive(Clone)]
@@ -425,7 +425,7 @@ impl Config {
         self.workers = workers;
     }
 
-    /// Set the keep-alive timeout to `timeout` seconds. If `timeout` is `None`,
+    /// Sets the keep-alive timeout to `timeout` seconds. If `timeout` is `None`,
     /// keep-alive is disabled.
     ///
     /// # Example
@@ -509,7 +509,7 @@ impl Config {
         self.log_level = log_level;
     }
 
-    /// Set the receive limits in `self` to `limits`.
+    /// Sets the receive limits in `self` to `limits`.
     ///
     /// # Example
     ///

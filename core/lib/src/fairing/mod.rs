@@ -30,7 +30,7 @@
 //!     .attach(res_fairing);
 //! ```
 //!
-//! Once a fairing is attached, Rocket will execute it at the appropiate time,
+//! Once a fairing is attached, Rocket will execute it at the appropriate time,
 //! which varies depending on the fairing implementation. See the [`Fairing`]
 //! trait documentation for more information on the dispatching of fairing
 //! methods.
@@ -150,7 +150,7 @@ pub use self::info_kind::{Info, Kind};
 ///     A response callback is called when a response is ready to be sent to the
 ///     client. At this point, Rocket has completed all routing, including to
 ///     error catchers, and has generated the would-be final response. A
-///     response callback can modify the response at will. For exammple, a
+///     response callback can modify the response at will. For example, a
 ///     response callback can provide a default response when the user fails to
 ///     handle the request by checking for 404 responses. Note that a given
 ///     `Request` may have changed between `on_request` and `on_response`
@@ -314,7 +314,7 @@ pub trait Fairing: Send + Sync + 'static {
     ///
     /// This method is called just prior to launching the application if
     /// `Kind::Launch` is in the `kind` field of the `Info` structure for this
-    /// fairing. The `&Rocket` parameter curresponds to the application that
+    /// fairing. The `&Rocket` parameter corresponds to the application that
     /// will be launched.
     ///
     /// ## Default Implementation

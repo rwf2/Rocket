@@ -144,7 +144,7 @@ impl<S, E> IntoOutcome<S, (Status, E), ()> for Result<S, E> {
 ///
 ///     The type `T` is derived from the incoming request using `T`'s
 ///     `FromRequest` implementation. If the derivation is a `Success`, the
-///     dervived value is returned in `Some`. Otherwise, a `None` is returned.
+///     derived value is returned in `Some`. Otherwise, a `None` is returned.
 ///
 ///     _This implementation always returns successfully._
 ///
@@ -164,7 +164,7 @@ impl<S, E> IntoOutcome<S, (Status, E), ()> for Result<S, E> {
 /// unless there is an API key in the request and the key is valid. The
 /// following example implements this using an `ApiKey` type and a `FromRequest`
 /// implementation for that type. The `ApiKey` type is then used in the
-/// `senstive` handler.
+/// `sensitive` handler.
 ///
 /// ```rust
 /// # #![feature(plugin, decl_macro)]

@@ -19,9 +19,9 @@ pub type ErrorHandler = for<'r> fn(Error, &'r Request) -> response::Result<'r>;
 impl<'r> Outcome<'r> {
     /// Return the `Outcome` of response to `req` from `responder`.
     ///
-    /// If the responder responds with `Ok`, an outcome of `Success` is returns
-    /// with the response. If the outcomes reeturns `Err`, an outcome of
-    /// `Failure` is returned with the status code.
+    /// If the responder returns `Ok`, an outcome of `Success` is
+    /// returned with the response. If the responder returns `Err`, an
+    /// outcome of `Failure` is returned with the status code.
     ///
     /// # Example
     ///

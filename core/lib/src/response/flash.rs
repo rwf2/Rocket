@@ -12,7 +12,7 @@ use std::sync::atomic::{AtomicBool, Ordering};
 const FLASH_COOKIE_NAME: &'static str = "_flash";
 
 /// Sets a "flash" cookie that will be removed when it is accessed. The
-/// anologous request type is
+/// analogous request type is
 /// [FlashMessage](/rocket/request/type.FlashMessage.html).
 ///
 /// This type makes it easy to send messages across requests. It is typically
@@ -38,7 +38,7 @@ const FLASH_COOKIE_NAME: &'static str = "_flash";
 ///
 /// The `Responder` implementation for `Flash` sets the message cookie and then
 /// uses the passed in responder `res` to complete the response. In other words,
-/// it simply sets a cookie and delagates the rest of the response handling to
+/// it simply sets a cookie and delegates the rest of the response handling to
 /// the wrapped responder.
 ///
 /// # Example
@@ -99,7 +99,7 @@ pub struct Flash<R> {
 ///
 /// A `FlashMessage` holds the parsed contents of the flash cookie. As long as
 /// there is a flash cookie present (set by the `Flash` `Responder`), a
-/// `FlashMessage` reuqest guard will succeed.
+/// `FlashMessage` request guard will succeed.
 ///
 /// The flash cookie is cleared if either the [`name()`] or [`msg()`] method is
 /// called. If neither method is called, the flash cookie is not cleared.
@@ -196,7 +196,7 @@ impl<'r, R: Responder<'r>> Flash<R> {
 }
 
 /// Sets the message cookie and then uses the wrapped responder to complete the
-/// response. In other words, simply sets a cookie and delagates the rest of the
+/// response. In other words, simply sets a cookie and delegates the rest of the
 /// response handling to the wrapped responder. As a result, the `Outcome` of
 /// the response is the `Outcome` of the wrapped `Responder`.
 impl<'r, R: Responder<'r>> Responder<'r> for Flash<R> {
@@ -250,7 +250,7 @@ impl<'a, 'r> FromRequest<'a, 'r> for Flash<&'a Request<'r>> {
     type Error = ();
 
     fn from_request(req: &'a Request<'r>) -> request::Outcome<Self, Self::Error> {
-        trace_!("Flash: attemping to retrieve message.");
+        trace_!("Flash: attempting to retrieve message.");
         req.cookies().get(FLASH_COOKIE_NAME).ok_or(()).and_then(|cookie| {
             trace_!("Flash: retrieving message: {:?}", cookie);
 

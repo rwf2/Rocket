@@ -9,7 +9,7 @@ use request::FormItems;
 /// [rocket_codegen](/rocket_codegen) plugin. When deriving `FromForm`, every
 /// field in the structure must implement
 /// [FromFormValue](trait.FromFormValue.html). Rocket validates each field in
-/// the structure by calling its `FromFormValue` implemention. You may wish to
+/// the structure by calling its `FromFormValue` implementation. You may wish to
 /// implement `FromFormValue` for your own types for custom, automatic
 /// validation.
 ///
@@ -50,10 +50,10 @@ use request::FormItems;
 ///
 /// # Implementing
 ///
-/// Implementing `FromForm` should be a rare occurence. Prefer instead to use
+/// Implementing `FromForm` should be a rare occurrence. Prefer instead to use
 /// Rocket's built-in derivation.
 ///
-/// When implementing `FromForm`, use use the [FormItems](struct.FormItems.html)
+/// When implementing `FromForm`, use the [FormItems](struct.FormItems.html)
 /// iterator to iterate through the raw form key/value pairs. Be aware that form
 /// fields that are typically hidden from your application, such as `_method`,
 /// will be present while iterating. Ensure that you adhere to the properties of

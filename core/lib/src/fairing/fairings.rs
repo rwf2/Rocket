@@ -45,7 +45,7 @@ impl Fairings {
         // We maintain these invariants by not exposing the references and never
         // deallocating `Box<Fairing>` structures. As such, the references will
         // always be valid. Note: `ptr` doesn't point into the `Vec`, so
-        // reallocations there are irrelvant. Instead, it points into the heap.
+        // reallocations there are irrelevant. Instead, it points into the heap.
         //
         // Also, we don't save attach fairings since we don't need them anymore.
         let kind = fairing.info().kind;

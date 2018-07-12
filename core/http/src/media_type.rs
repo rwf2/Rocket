@@ -421,7 +421,7 @@ impl MediaType {
     }
 
     /// Compares `self` with `other` and returns `true` if `self` and `other`
-    /// are exactly equal to eachother, including with respect to their
+    /// are exactly equal to each other, including with respect to their
     /// parameters.
     ///
     /// This is different from the `PartialEq` implementation in that it

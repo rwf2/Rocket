@@ -32,7 +32,7 @@
 //!
 //!   1. [Core](/rocket) - The core library. Needed by every Rocket application.
 //!   2. [Codegen](/rocket_codegen) - Core code generation plugin. Should always
-//!      be used alongsize `rocket`, though it's not necessary.
+//!      be used alongside `rocket`, though it's not necessary.
 //!   3. [Contrib](/rocket_contrib) - Provides useful functionality for many
 //!      Rocket applications. Completely optional.
 //!
@@ -94,7 +94,7 @@
 //! ## Testing
 //!
 //! The [local](/rocket/local) module contains structures that facilitate unit
-//! and itegration testing of a Rocket application. The [top-level `local`
+//! and integration testing of a Rocket application. The [top-level `local`
 //! module documentation](/rocket/local) and the [testing chapter of the
 //! guide](https://rocket.rs/guide/testing/#testing) include detailed examples.
 

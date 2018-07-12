@@ -219,7 +219,7 @@ impl<'r, R: Responder<'r>> Responder<'r> for NotFound<R> {
     }
 }
 
-/// Creates a response with the given status code and underyling responder.
+/// Creates a response with the given status code and underlying responder.
 ///
 /// # Example
 ///

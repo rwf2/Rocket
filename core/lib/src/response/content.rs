@@ -28,7 +28,7 @@ use http::{Status, ContentType};
 
 /// Sets the Content-Type of a `Responder` to a chosen value.
 ///
-/// Delagates the remainder of the response to the wrapped responder.
+/// Delegates the remainder of the response to the wrapped responder.
 ///
 /// # Example
 ///
@@ -65,7 +65,7 @@ macro_rules! ctrs {
             #[doc=$ct_str]
             #[doc="</i>."]
             ///
-            /// Delagates the remainder of the response to the wrapped responder.
+            /// Delegates the remainder of the response to the wrapped responder.
             #[derive(Debug, Clone, PartialEq)]
             pub struct $name<R>(pub R);
 

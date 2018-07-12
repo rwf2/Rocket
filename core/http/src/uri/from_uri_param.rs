@@ -43,7 +43,7 @@ use {RawStr, uri::UriDisplay};
 ///
 /// This is typically only warranted for owned-value types with
 /// corresponding reference types: `String` and `&str`, for instance. In this
-/// case, it's desireable to allow an `&str` to be used in place of a `String`.
+/// case, it's desirable to allow an `&str` to be used in place of a `String`.
 ///
 /// When implementing `FromUriParam`, be aware that Rocket will use the
 /// [`UriDisplay`] implementation of `Target`, _not_ of the source type.
