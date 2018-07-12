@@ -2,7 +2,7 @@ use super::DEFAULT_TEMPLATE_DIR;
 use super::context::Context;
 use super::engine::Engines;
 
-use rocket::{Data, Request, Rocket};
+use rocket::Rocket;
 use rocket::config::ConfigError;
 use rocket::fairing::{Fairing, Info, Kind};
 
@@ -147,7 +147,7 @@ impl Fairing for TemplateFairing {
     }
 
     #[cfg(debug_assertions)]
-    fn on_request(&self, req: &mut Request, _data: &Data) {
+    fn on_request(&self, req: &mut ::rocket::Request, _data: &::rocket::Data) {
         let cm = req.guard::<::rocket::State<ContextManager>>().unwrap();
         cm.reload_if_needed(&*self.custom_callback);
     }
