@@ -74,7 +74,7 @@ fn real_derive_from_form_value(input: TokenStream) -> PResult<TokenStream> {
         impl<'v> ::rocket::request::FromFormValue<'v> for #name {
             type Error = &'v ::rocket::http::RawStr;
 
-            fn from_form_value(v: &'v ::rocket::http::RawStr) -> Result<Self, Self::Error> {
+            fn from_form_value(v: &'v ::rocket::http::RawStr) -> ::std::result::Result<Self, Self::Error> {
                 #(if v.as_uncased_str() == #variant_strs {
                     return ::std::result::Result::Ok(#names::#variant_idents);
                 })*
