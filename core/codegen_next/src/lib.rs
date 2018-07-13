@@ -71,24 +71,15 @@ fn real_derive_from_form_value(input: TokenStream) -> PResult<TokenStream> {
 
     // Generate the implementation.
     Ok(quote! {
-        mod scope {
-            extern crate std;
-            extern crate rocket;
+        impl<'v> ::rocket::request::FromFormValue<'v> for #name {
+            type Error = &'v ::rocket::http::RawStr;
 
-            use self::std::prelude::v1::*;
-            use self::rocket::request::FromFormValue;
-            use self::rocket::http::RawStr;
+            fn from_form_value(v: &'v ::rocket::http::RawStr) -> Result<Self, Self::Error> {
+                #(if v.as_uncased_str() == #variant_strs {
+                    return ::std::result::Result::Ok(#names::#variant_idents);
+                })*
 
-            impl<'v> FromFormValue<'v> for #name {
-                type Error = &'v RawStr;
-
-                fn from_form_value(v: &'v RawStr) -> Result<Self, Self::Error> {
-                    #(if v.as_uncased_str() == #variant_strs {
-                        return Ok(#names::#variant_idents);
-                    })*
-
-                    Err(v)
-                }
+                ::std::result::Result::Err(v)
             }
         }
     }.into())
