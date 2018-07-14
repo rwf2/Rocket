@@ -124,6 +124,8 @@ mod templates_tests {
             use std::fs::{File, remove_file};
             use std::io::Write;
             use std::path::Path;
+            use std::thread;
+            use std::time::Duration;
 
             fn write_file(path: &Path, text: &str) {
                 let mut file = File::create(path).expect("open file");
@@ -148,15 +150,27 @@ mod templates_tests {
             let initial_rendered = Template::show(client.rocket(), RELOAD_TEMPLATE, ());
             assert_eq!(initial_rendered, Some(INITIAL_TEXT.into()));
 
-            // write to the file, then dispatch any request to trigger template reload
+            // write a change to the file
             write_file(&reload_path, NEW_TEXT);
-            client.get("/").dispatch();
 
-            // verify that the new content is correct
-            let new_rendered = Template::show(client.rocket(), RELOAD_TEMPLATE, ());
-            assert_eq!(new_rendered, Some(NEW_TEXT.into()));
+            let mut attempts = 0;
+            loop {
+                // dispatch any request to trigger a template reload
+                client.get("/").dispatch();
 
-            remove_file(reload_path).expect("delete template file");
+                // if the new content is correct, we are done
+                let new_rendered = Template::show(client.rocket(), RELOAD_TEMPLATE, ());
+                if new_rendered == Some(NEW_TEXT.into()) {
+                    remove_file(reload_path).expect("delete template file");
+                    break;
+                }
+
+                // limit the number of attempts, waiting between each
+                attempts += 1;
+                assert!(attempts < 5);
+
+                thread::sleep(Duration::from_millis(250));
+            }
         }
     }
 }
