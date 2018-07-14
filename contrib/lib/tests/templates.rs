@@ -121,7 +121,7 @@ mod templates_tests {
         #[test]
         fn test_template_reload() {
             use rocket::local::Client;
-            use std::fs::{File, remove_file};
+            use std::fs::File;
             use std::io::Write;
             use std::path::Path;
             use std::thread;
@@ -153,24 +153,20 @@ mod templates_tests {
             // write a change to the file
             write_file(&reload_path, NEW_TEXT);
 
-            let mut attempts = 0;
-            loop {
+            for _ in 0..6 {
                 // dispatch any request to trigger a template reload
                 client.get("/").dispatch();
 
                 // if the new content is correct, we are done
                 let new_rendered = Template::show(client.rocket(), RELOAD_TEMPLATE, ());
                 if new_rendered == Some(NEW_TEXT.into()) {
-                    remove_file(reload_path).expect("delete template file");
-                    break;
+                    return;
                 }
-
-                // limit the number of attempts, waiting between each
-                attempts += 1;
-                assert!(attempts < 5);
 
                 thread::sleep(Duration::from_millis(250));
             }
+
+            panic!("failed to reload modified template in 1.5s");
         }
     }
 }
