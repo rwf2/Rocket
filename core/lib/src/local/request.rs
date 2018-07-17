@@ -8,6 +8,9 @@ use crate::{Request, Response, Data};
 use crate::http::{Status, Method, Header, Cookie, uri::Origin, ext::IntoOwned};
 use crate::local::Client;
 
+#[cfg(feature = "tls")]
+use http::tls::Certificate;
+
 /// A structure representing a local request as created by [`Client`].
 ///
 /// # Usage
@@ -288,6 +291,16 @@ impl<'c> LocalRequest<'c> {
     #[cfg(feature = "private-cookies")]
     pub fn private_cookie(self, cookie: Cookie<'static>) -> Self {
         self.request.cookies().add_original_private(cookie);
+        self
+    }
+
+    /// Add a certificate to this request.
+    #[cfg(feature = "tls")]
+    pub fn certificate(mut self, cert: Certificate) -> Self {
+        let mut peer_certs = Vec::new();
+        peer_certs.push(cert);
+        self.request_mut().set_peer_certificates(peer_certs);
+
         self
     }
 
