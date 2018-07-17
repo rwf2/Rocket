@@ -40,6 +40,7 @@ members = [
   "examples/session",
   "examples/raw_sqlite",
   "examples/tls",
+  "examples/mtls",
   "examples/fairings",
   "examples/hello_2018",
   "examples/hello_2015",
