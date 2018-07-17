@@ -460,14 +460,14 @@ impl <'a, 'r> FromRequest<'a, 'r> for MutualTlsUser {
         if ip_addr.is_none() {
             return Forward(());
         }
-        let ip_addr = ip_addr.unwrap();
+        let ip_addr = ip_addr.expect("Client's IP address could not be determined.");
 
-        // Get name from DNS Server for the peer's IP address
+        // Reverse DNS lookup the peer's IP address
         let name = lookup_addr(&ip_addr);
         if name.is_err() {
             return Forward(());
         }
-        let name = name.unwrap();
+        let name = name.expect("Name of the client could not be determined.");
 
         // Change name to DNSNameRef
         let name = Input::from(name.as_bytes());
@@ -475,14 +475,14 @@ impl <'a, 'r> FromRequest<'a, 'r> for MutualTlsUser {
         if common_name.is_err() {
             return Forward(());
         }
-        let common_name = common_name.unwrap();
+        let common_name = common_name.expect("Name of the client was not a valid DNS name.");
 
         // Get certificates the peer provided
         let certs = request.get_peer_certificates();
         if certs.is_none() {
             return Forward(());
         }
-        let certs = certs.unwrap();
+        let certs = certs.expect("Client did not supply any certificates.");
 
         // Iterate through the client certificates
         let certs_copy = certs.clone();
@@ -492,13 +492,21 @@ impl <'a, 'r> FromRequest<'a, 'r> for MutualTlsUser {
             if end_entity.is_err() {
                 return Forward(());
             }
-            let end_entity = end_entity.unwrap();
+            let end_entity = end_entity.expect("EndEntityCert could not be generated from certificate.");
 
             // Compare certificate is valid for DNS name
             let verification = end_entity.verify_is_valid_for_dns_name(common_name);
-            if verification.is_ok() {
-                return Success(MutualTlsUser::new(certs[index].clone()));
+            if verification.is_err() {
+                return Forward(());
             }
+
+            // Parse certificate
+            let mtls_user = MutualTlsUser::new(certs[index].clone());
+            if mtls_user.is_none() {
+                return Forward(());
+            }
+            let mtls_user = mtls_user.expect("MutualTlsUser could not be generated from the certificate provided.");
+            return Success(mtls_user);
         }
         Forward(())
     }
