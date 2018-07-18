@@ -41,7 +41,7 @@ macro_rules! debug {
 }
 
 pub fn span<T>(t: T, span: Span) -> Spanned<T> {
-    Spanned { node: t, span: span }
+    Spanned { node: t, span }
 }
 
 pub fn sep_by_tok<T>(ecx: &ExtCtxt, things: &[T], token: Token) -> Vec<TokenTree>

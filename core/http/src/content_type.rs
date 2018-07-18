@@ -332,7 +332,7 @@ impl FromStr for ContentType {
     /// ```
     #[inline(always)]
     fn from_str(raw: &str) -> Result<ContentType, String> {
-        MediaType::from_str(raw).map(|mt| ContentType(mt))
+        MediaType::from_str(raw).map(ContentType)
     }
 }
 

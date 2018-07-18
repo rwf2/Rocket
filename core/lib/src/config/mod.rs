@@ -225,10 +225,10 @@ use self::environment::CONFIG_ENV;
 use self::toml_ext::parse_simple_toml_value;
 use http::uncased::uncased_eq;
 
-const CONFIG_FILENAME: &'static str = "Rocket.toml";
-const GLOBAL_ENV_NAME: &'static str = "global";
-const ENV_VAR_PREFIX: &'static str = "ROCKET_";
-const PREHANDLED_VARS: [&'static str; 2] = ["ROCKET_CODEGEN_DEBUG", CONFIG_ENV];
+const CONFIG_FILENAME: &str = "Rocket.toml";
+const GLOBAL_ENV_NAME: &str = "global";
+const ENV_VAR_PREFIX: &str = "ROCKET_";
+const PREHANDLED_VARS: [&str; 2] = ["ROCKET_CODEGEN_DEBUG", CONFIG_ENV];
 
 /// Wraps `std::result` with the error type of
 /// [ConfigError](enum.ConfigError.html).

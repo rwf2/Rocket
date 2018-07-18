@@ -43,6 +43,6 @@ impl SpanExt for Span {
     }
 
     fn wrap<T>(self, node: T) -> Spanned<T> {
-        Spanned { node: node, span: self }
+        Spanned { node, span: self }
     }
 }

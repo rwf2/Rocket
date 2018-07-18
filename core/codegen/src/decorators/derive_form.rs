@@ -217,7 +217,7 @@ fn from_form_substructure(cx: &mut ExtCtxt, trait_span: Span, substr: &Substruct
         let (ident, name, span) = extract_field_ident_name(cx, field);
         let stripped_ty = strip_ty_lifetimes(field.ty.clone());
 
-        if let Some(sp) = names.get(&name).map(|sp| *sp) {
+        if let Some(sp) = names.get(&name).cloned() {
             cx.struct_span_err(span, "field with duplicate name")
                 .span_note(sp, "original was declared here")
                 .emit();

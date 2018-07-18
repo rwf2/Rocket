@@ -28,7 +28,7 @@ pub fn uri(
     // so that errors from the `internal` call show up on the user's code.
     let expr = parser.mk_mac_expr(sp,
         ast::Mac_ {
-            path: path,
+            path,
             delim: MacDelimiter::Parenthesis,
             tts: args.to_vec().into_iter().collect::<TokenStream>().into(),
         },

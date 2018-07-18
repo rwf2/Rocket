@@ -40,10 +40,10 @@ impl<'a> Uri<'a> {
         };
 
         Uri {
-            uri: uri,
-            path: path,
-            query: query,
-            fragment: fragment,
+            uri,
+            path,
+            query,
+            fragment,
             segment_count: AtomicIsize::new(EMPTY),
         }
     }

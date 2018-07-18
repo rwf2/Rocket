@@ -9,7 +9,7 @@ use http::{Status, Cookie};
 use std::sync::atomic::{AtomicBool, Ordering};
 
 // The name of the actual flash cookie.
-const FLASH_COOKIE_NAME: &'static str = "_flash";
+const FLASH_COOKIE_NAME: &str = "_flash";
 
 /// Sets a "flash" cookie that will be removed when it is accessed. The
 /// anologous request type is

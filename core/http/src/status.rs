@@ -156,10 +156,7 @@ impl Status {
     /// ```
     #[inline(always)]
     pub const fn new(code: u16, reason: &'static str) -> Status {
-        Status {
-            code: code,
-            reason: reason
-        }
+        Status { code, reason }
     }
 
     /// Returns the class of a given status.

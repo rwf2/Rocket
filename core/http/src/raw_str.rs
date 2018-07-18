@@ -63,7 +63,7 @@ impl RawStr {
     /// let raw_str: &RawStr = "Hello, world!".into();
     /// ```
     #[inline(always)]
-    pub fn from_str<'a>(string: &'a str) -> &'a RawStr {
+    pub fn from_str(string: &str) -> &RawStr {
         string.into()
     }
 

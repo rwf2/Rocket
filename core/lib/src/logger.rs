@@ -23,8 +23,8 @@ pub enum LoggingLevel {
 
 impl LoggingLevel {
     #[inline(always)]
-    fn to_level_filter(&self) -> log::LevelFilter {
-        match *self {
+    fn to_level_filter(self) -> log::LevelFilter {
+        match self {
             LoggingLevel::Critical => log::LevelFilter::Warn,
             LoggingLevel::Normal => log::LevelFilter::Info,
             LoggingLevel::Debug => log::LevelFilter::Trace,
@@ -103,10 +103,11 @@ impl log::Log for RocketLogger {
         }
 
         // In Rocket, we abuse targets with suffix "_" to indicate indentation.
-        if record.target().ends_with('_') {
-            if configged_level != LoggingLevel::Critical || record.target().starts_with("launch") {
-                print!("    {} ", Paint::white("=>"));
-            }
+        if (record.target().ends_with('_')) &&
+            (configged_level != LoggingLevel::Critical ||
+                record.target().starts_with("launch"))
+        {
+            print!("    {} ", Paint::white("=>"));
         }
 
         match record.level() {

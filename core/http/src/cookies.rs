@@ -352,7 +352,7 @@ impl<'a> Cookies<'a> {
     ///     }
     /// }
     /// ```
-    pub fn iter<'s>(&'s self) -> impl Iterator<Item=&'s Cookie<'static>> {
+    pub fn iter(&self) -> impl Iterator<Item=&Cookie<'static>> {
         match *self {
             Cookies::Jarred(ref jar, _) => jar.iter(),
             Cookies::Empty(ref jar) => jar.iter()

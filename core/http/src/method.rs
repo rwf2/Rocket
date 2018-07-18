@@ -52,8 +52,8 @@ impl Method {
     /// assert_eq!(Method::Post.supports_payload(), true);
     /// ```
     #[inline]
-    pub fn supports_payload(&self) -> bool {
-        match *self {
+    pub fn supports_payload(self) -> bool {
+        match self {
             Put | Post | Delete | Patch => true,
             Get | Head | Connect | Trace | Options => false,
         }
@@ -70,8 +70,8 @@ impl Method {
     /// assert_eq!(Method::Get.as_str(), "GET");
     /// ```
     #[inline]
-    pub fn as_str(&self) -> &'static str {
-        match *self {
+    pub fn as_str(self) -> &'static str {
+        match self {
             Get => "GET",
             Put => "PUT",
             Post => "POST",

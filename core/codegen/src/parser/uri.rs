@@ -47,7 +47,7 @@ fn valid_segments(ecx: &ExtCtxt, uri: &Uri, sp: Span) -> bool {
         }
 
         // Check if this is a dynamic param. If so, check it's well-formedness.
-        if segment.starts_with("<") && segment.ends_with(">") {
+        if segment.starts_with('<') && segment.ends_with('>') {
             let mut param = &segment[1..(segment.len() - 1)];
             if segment.ends_with("..>") {
                 segments_span = Some(span);
@@ -69,8 +69,8 @@ fn valid_segments(ecx: &ExtCtxt, uri: &Uri, sp: Span) -> bool {
             }
 
             validated = false;
-        } else if segment.starts_with("<") {
-            if segment[1..].contains("<") || segment.contains(">") {
+        } else if segment.starts_with('<') {
+            if segment[1..].contains('<') || segment.contains('>') {
                 ecx.struct_span_err(span, "malformed parameter")
                     .help("parameters must be of the form '<param>'")
                     .emit();
@@ -82,7 +82,7 @@ fn valid_segments(ecx: &ExtCtxt, uri: &Uri, sp: Span) -> bool {
 
             validated = false;
         } else if Uri::percent_encode(segment) != segment {
-            if segment.contains("<") || segment.contains(">") {
+            if segment.contains('<') || segment.contains('>') {
                 ecx.struct_span_err(span, "malformed parameter")
                     .help("parameters must be of the form '<param>'")
                     .emit();

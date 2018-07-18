@@ -10,6 +10,7 @@ pub use proc_macro2::Delimiter;
 
 pub type Result<T> = ::std::result::Result<T, Diagnostic>;
 
+#[derive(Copy, Clone)]
 pub enum Seperator {
     Comma,
     Pipe,
@@ -23,7 +24,7 @@ pub struct Parser {
 
 impl Parser {
     pub fn new(tokens: TokenStream) -> Parser {
-        let buffer = Box::new(TokenBuffer::new(tokens.into()));
+        let buffer = Box::new(TokenBuffer::new(tokens));
         // Our `Parser` is self-referential. We cast a pointer to the heap
         // allocation as `&'static` to allow the storage of the reference
         // along-side the allocation. This is safe as long as `buffer` is never
@@ -42,7 +43,7 @@ impl Parser {
     pub fn current_span(&self) -> Span {
         self.cursor.token_tree()
             .map(|_| self.cursor.span().unstable())
-            .unwrap_or_else(|| Span::call_site())
+            .unwrap_or_else(Span::call_site)
     }
 
     pub fn parse<T: Synom>(&mut self) -> Result<T> {

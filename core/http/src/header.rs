@@ -267,7 +267,7 @@ impl<'h> HeaderMap<'h> {
     pub fn get_one<'a>(&'a self, name: &str) -> Option<&'a str> {
         self.headers.get(UncasedStr::new(name))
             .and_then(|values| {
-                if values.len() >= 1 { Some(values[0].borrow()) }
+                if !values.is_empty() { Some(values[0].borrow()) }
                 else { None }
             })
     }
@@ -561,7 +561,7 @@ impl<'h> HeaderMap<'h> {
     ///     }
     /// }
     /// ```
-    pub fn iter<'s>(&'s self) -> impl Iterator<Item=Header<'s>> {
+    pub fn iter(&self) -> impl Iterator<Item=Header> {
         self.headers.iter().flat_map(|(key, values)| {
             values.iter().map(move |val| {
                 Header::new(key.as_str(), &**val)
@@ -613,7 +613,7 @@ impl<'h> HeaderMap<'h> {
             value.into_iter().map(move |value| {
                 Header {
                     name: name.clone(),
-                    value: value
+                    value,
                 }
             })
         })

@@ -221,7 +221,7 @@ impl<'c> LocalRequest<'c> {
     ///     .cookie(Cookie::new("user_id", "12"));
     /// ```
     #[inline]
-    pub fn cookie<'a>(self, cookie: Cookie<'a>) -> Self {
+    pub fn cookie(self, cookie: Cookie) -> Self {
         self.request.cookies().add_original(cookie.into_owned());
         self
     }
@@ -242,7 +242,7 @@ impl<'c> LocalRequest<'c> {
     /// let req = client.get("/").cookies(cookies);
     /// ```
     #[inline]
-    pub fn cookies<'a>(self, cookies: Vec<Cookie<'a>>) -> Self {
+    pub fn cookies(self, cookies: Vec<Cookie>) -> Self {
         for cookie in cookies {
             self.request.cookies().add_original(cookie.into_owned());
         }
@@ -339,7 +339,7 @@ impl<'c> LocalRequest<'c> {
 
         LocalResponse {
             _request: self.request,
-            response: response
+            response,
         }
     }
 
@@ -403,7 +403,7 @@ impl<'c> LocalRequest<'c> {
 
         LocalResponse {
             _request: self.request.clone(),
-            response: response
+            response,
         }
     }
 }

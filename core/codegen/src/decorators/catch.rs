@@ -8,8 +8,8 @@ use syntax::ext::base::{Annotatable, ExtCtxt};
 use syntax::tokenstream::TokenTree;
 use syntax::parse::token;
 
-const ERR_PARAM: &'static str = "__err";
-const REQ_PARAM: &'static str = "__req";
+const ERR_PARAM: &str = "__err";
+const REQ_PARAM: &str = "__req";
 
 trait CatchGenerateExt {
     fn generate_fn_arguments(&self, &ExtCtxt, Ident, Ident) -> Vec<TokenTree>;

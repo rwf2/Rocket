@@ -34,7 +34,7 @@ impl CatchParams {
             ecx.span_fatal(sp, "malformed attribute");
         });
 
-        if meta_items.len() < 1 {
+        if meta_items.is_empty() {
             ecx.span_fatal(sp, "attribute requires the `code` parameter");
         } else if meta_items.len() > 1 {
             ecx.span_fatal(sp, "attribute can only have one `code` parameter");

@@ -52,7 +52,7 @@ impl RouteParams {
             ecx.span_fatal(sp, "malformed attribute");
         });
 
-        if meta_items.len() < 1 {
+        if meta_items.is_empty() {
             ecx.span_fatal(sp, "attribute requires at least 1 parameter");
         }
 
@@ -64,7 +64,7 @@ impl RouteParams {
             None => (parse_method(ecx, &meta_items[0]), &meta_items[1..])
         };
 
-        if attr_params.len() < 1 {
+        if attr_params.is_empty() {
             ecx.struct_span_err(sp, "attribute requires at least a path")
                 .help(r#"example: #[get("/my/path")] or #[get(path = "/hi")]"#)
                 .emit();
@@ -119,12 +119,12 @@ impl RouteParams {
         }
 
         RouteParams {
-            method: method,
-            uri: uri,
+            method,
+            uri,
             data_param: data,
             query_param: query,
-            format: format,
-            rank: rank,
+            format,
+            rank,
             annotated_fn: function,
         }
     }

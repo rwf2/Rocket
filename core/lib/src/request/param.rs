@@ -332,7 +332,7 @@ impl<'a> FromSegments<'a> for PathBuf {
         let mut buf = PathBuf::new();
         for segment in segments {
             let decoded = Uri::percent_decode(segment.as_bytes())
-                .map_err(|e| SegmentError::Utf8(e))?;
+                .map_err(SegmentError::Utf8)?;
 
             if decoded == ".." {
                 buf.pop();

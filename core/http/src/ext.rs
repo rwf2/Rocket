@@ -28,8 +28,8 @@ impl<T> IntoCollection<T> for Vec<T> {
     }
 
     #[inline]
-    fn mapped<U, F: FnMut(T) -> U, A: Array<Item=U>>(self, mut f: F) -> SmallVec<A> {
-        self.into_iter().map(|item| f(item)).collect()
+    fn mapped<U, F: FnMut(T) -> U, A: Array<Item=U>>(self, f: F) -> SmallVec<A> {
+        self.into_iter().map(f).collect()
     }
 }
 
@@ -42,8 +42,10 @@ macro_rules! impl_for_slice {
             }
 
             #[inline]
-            fn mapped<U, F: FnMut(T) -> U, A: Array<Item=U>>(self, mut f: F) -> SmallVec<A> {
-                self.iter().cloned().map(|item| f(item)).collect()
+            fn mapped<U, F, A: Array<Item=U>>(self, f: F) -> SmallVec<A>
+                where F: FnMut(T) -> U
+            {
+                self.iter().cloned().map(f).collect()
             }
         }
     )

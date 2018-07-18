@@ -146,7 +146,7 @@ impl UriParams {
 
         // Ensure that both types of arguments were not used at once.
         let (mut homogeneous_args, mut prev_named) = (true, None);
-        for arg in arguments.iter() {
+        for arg in &arguments {
             match prev_named {
                 Some(prev_named) => homogeneous_args = prev_named == arg.is_named(),
                 None => prev_named = Some(arg.is_named()),
@@ -237,7 +237,7 @@ impl InternalUriParams {
                 }
 
                 let (mut missing, mut exprs) = (vec![], vec![]);
-                for (name, expr) in params.into_iter() {
+                for (name, expr) in params {
                     match expr {
                         Some(expr) => exprs.push(expr),
                         None => missing.push(name)
