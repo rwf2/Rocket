@@ -23,8 +23,7 @@ use self::openssl::x509::X509;
 /// A `MutualTlsUser` can be retrieved via its `FromRequest` implementation as a request guard.
 /// Information of the certificate with a matching common name as a reverse DNS lookup of the
 /// client IP address from the accepted certificate chain can be retrieved via the
-/// `get_common_names`, `get_not_before`, `get_not_after`, `get_pem_public_key`,
-/// `get_der_public_key`, and `get_signature` methods.
+/// `get_common_names`, `get_not_before`, and `get_not_after`.
 ///
 /// ##Examples
 ///
@@ -120,10 +119,10 @@ impl MutualTlsUser {
     /// use rocket::http::tls::MutualTlsUser;
     ///
     /// fn handler(mtls: MutualTlsUser) {
-    ///     let cert_start_time = mtls.get_validity_period_not_before();
+    ///     let cert_start_time = mtls.get_not_before();
     /// }
     /// ```
-    pub fn get_validity_period_not_before(&self) -> String {
+    pub fn get_not_before(&self) -> String {
         self.not_before.clone()
     }
 
@@ -136,10 +135,10 @@ impl MutualTlsUser {
     /// use rocket::http::tls::MutualTlsUser;
     ///
     /// fn handler(mtls: MutualTlsUser) {
-    ///     let cert_end_time = mtls.get_validity_period_not_after();
+    ///     let cert_end_time = mtls.get_not_after();
     /// }
     /// ```
-    pub fn get_validity_period_not_after(&self) -> String {
+    pub fn get_not_after(&self) -> String {
         self.not_after.clone()
     }
 }
