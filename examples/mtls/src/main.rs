@@ -8,8 +8,8 @@ use rocket::http::tls::MutualTlsUser;
 #[cfg(test)] mod tests;
 
 #[get("/")]
-fn hello(_mtls: MutualTlsUser) -> String {
-    format!("Hello, world!")
+fn hello(mtls: MutualTlsUser) -> String {
+    format!("Hello, {}!", mtls.get_common_names()[0])
     // format!("{}", mtls.get_common_names()[0])
 }
 
