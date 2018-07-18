@@ -220,9 +220,9 @@ impl ConfigBuilder {
     /// ```rust
     /// use rocket::config::{Config, Environment};
     ///
-    /// let none: Option<String> = None;
+    /// let cert_store_path: Option<String> = None;
     /// let mut config = Config::build(Environment::Staging)
-    ///     .tls("/path/to/certs.pem", "/path/to/key.pem", none)
+    ///     .tls("/path/to/certs.pem", "/path/to/key.pem", cert_store_path)
     /// # ; /*
     ///     .unwrap();
     /// # */
