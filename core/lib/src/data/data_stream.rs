@@ -40,7 +40,7 @@ pub fn kill_stream(stream: &mut BodyReader) {
         Ok(FLUSH_LEN) | Err(_) => {
             warn_!("Data left unread. Force closing network stream.");
             let (_, network) = stream.get_mut().get_mut();
-            if let Err(e) = network.close(Shutdown::Both) {
+            if let Err(e) = network.close(Shutdown::Read) {
                 error_!("Failed to close network stream: {:?}", e);
             }
         }
