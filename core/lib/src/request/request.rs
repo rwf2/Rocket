@@ -490,7 +490,7 @@ impl<'r> Request<'r> {
             // where the client accepts the thing at all?
             self.accept()
                 .map(|accept| accept.preferred().media_type())
-                .or_else(|| Some(&ANY))
+                .or(Some(&ANY))
         }
     }
 
