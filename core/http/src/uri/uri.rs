@@ -39,13 +39,7 @@ impl<'a> Uri<'a> {
             (None, None) => ((0, end), None, None),
         };
 
-        Uri {
-            uri,
-            path,
-            query,
-            fragment,
-            segment_count: AtomicIsize::new(EMPTY),
-        }
+        Uri { uri, path, query, fragment, segment_count: AtomicIsize::new(EMPTY) }
     }
 
     /// Returns the number of segments in the URI. Empty segments, which are

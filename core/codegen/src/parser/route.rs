@@ -119,12 +119,9 @@ impl RouteParams {
         }
 
         RouteParams {
-            method,
-            uri,
+            method, uri, format, rank,
             data_param: data,
             query_param: query,
-            format,
-            rank,
             annotated_fn: function,
         }
     }

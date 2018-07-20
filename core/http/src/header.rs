@@ -611,10 +611,7 @@ impl<'h> HeaderMap<'h> {
     pub fn into_iter(self) -> impl Iterator<Item=Header<'h>> {
         self.headers.into_iter().flat_map(|(name, value)| {
             value.into_iter().map(move |value| {
-                Header {
-                    name: name.clone(),
-                    value,
-                }
+                Header { name: name.clone(), value }
             })
         })
     }

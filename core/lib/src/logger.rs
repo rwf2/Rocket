@@ -103,11 +103,10 @@ impl log::Log for RocketLogger {
         }
 
         // In Rocket, we abuse targets with suffix "_" to indicate indentation.
-        if (record.target().ends_with('_')) &&
-            (configged_level != LoggingLevel::Critical ||
-                record.target().starts_with("launch"))
-        {
-            print!("    {} ", Paint::white("=>"));
+        if record.target().ends_with('_') {
+            if configged_level != LoggingLevel::Critical || record.target().starts_with("launch") {
+                print!("    {} ", Paint::white("=>"));
+            }
         }
 
         match record.level() {
