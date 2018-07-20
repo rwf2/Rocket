@@ -90,6 +90,11 @@ mod http_keep_alive_tests {
         tcp
     }
 
+    // re-implement some methods provided by BufRead and Write
+    // the std versions don't fail on timeout and will hang
+    // some of the time for normal cases and always for some failure
+    // cases
+
     fn write_all<T: Write>(tcp: &mut T, data: &[u8]) -> ::std::io::Result<()> {
         let mut pos = 0;
         loop {
