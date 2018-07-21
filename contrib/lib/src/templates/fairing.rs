@@ -55,12 +55,12 @@ mod context {
                 if watcher.watch(ctxt.root.clone(), RecursiveMode::Recursive).is_ok() {
                     Some((watcher, Mutex::new(rx)))
                 } else {
-                    warn_!("Could not monitor the templates directory for changes.");
+                    warn!("Could not monitor the templates directory for changes.");
                     warn_!("Live template reload will be unavailable");
                     None
                 }
             } else {
-                warn_!("Could not instantiate a filesystem watcher.");
+                warn!("Could not instantiate a filesystem watcher.");
                 warn_!("Live template reload will be unavailable");
                 None
             };
@@ -79,10 +79,10 @@ mod context {
             self.context.write().unwrap()
         }
 
-        /// Checks whether any template files have changed on disk.  If
-        /// there have been changes since the last reload, all templates
-        /// are reinitialized from disk and the user's customization
-        /// callback is run again.
+        /// Checks whether any template files have changed on disk.  If there
+        /// have been changes since the last reload, all templates are
+        /// reinitialized from disk and the user's customization callback is run
+        /// again.
         pub fn reload_if_needed<F: Fn(&mut Engines)>(&self, custom_callback: F) {
             self.watcher.as_ref().map(|w| {
                 let rx = w.1.lock().expect("receive queue");
@@ -109,11 +109,14 @@ mod context {
 
 pub use self::context::ContextManager;
 
-/// The TemplateFairing initializes the template system on attach,
-/// running custom_callback after templates have been loaded.
-/// In debug mode, the fairing checks for modifications to templates
-/// before every request and reloads them if necessary.
+/// The TemplateFairing initializes the template system on attach, running
+/// custom_callback after templates have been loaded.  In debug mode, the
+/// fairing checks for modifications to templates before every request and
+/// reloads them if necessary.
 pub struct TemplateFairing {
+    /// The user-provided customization callback, allowing the use functionality
+    /// specific to individual template engines. In debug mode, this callback
+    /// might be run multiple times as templates are reloaded.
     pub(crate) custom_callback: Box<Fn(&mut Engines) + Send + Sync + 'static>,
 }
 

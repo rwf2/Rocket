@@ -78,6 +78,11 @@ const DEFAULT_TEMPLATE_DIR: &'static str = "templates";
 /// [Serde](https://github.com/serde-rs/json) and would serialize to an `Object`
 /// value.
 ///
+/// In debug mode (without the `--release` flag passed to `cargo`), templates
+/// will be automatically reloaded from disk if any changes have been made to
+/// the templates directory since the previous request. In release builds,
+/// template reloading is unavailable for better performance.
+///
 /// # Usage
 ///
 /// To use, add the `handlebars_templates` feature, the `tera_templates`
