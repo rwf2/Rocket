@@ -65,7 +65,7 @@ impl<'a> TemplateMetadata<'a> {
     /// }
     /// ```
     pub fn contains_template(&self, name: &str) -> bool {
-        self.0.get().templates.contains_key(name)
+        self.0.context().templates.contains_key(name)
     }
 }
 

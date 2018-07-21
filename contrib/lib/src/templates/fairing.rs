@@ -20,7 +20,7 @@ mod context {
             ContextManager(ctxt)
         }
 
-        pub fn get<'a>(&'a self) -> impl Deref<Target=Context> + 'a {
+        pub fn context<'a>(&'a self) -> impl Deref<Target=Context> + 'a {
             &self.0
         }
     }
@@ -55,13 +55,13 @@ mod context {
                 if watcher.watch(ctxt.root.clone(), RecursiveMode::Recursive).is_ok() {
                     Some((watcher, Mutex::new(rx)))
                 } else {
-                    warn!("Could not monitor the templates directory for changes.");
-                    warn!("Live template reload will be unavailable");
+                    warn_!("Could not monitor the templates directory for changes.");
+                    warn_!("Live template reload will be unavailable");
                     None
                 }
             } else {
-                warn!("Could not instantiate a filesystem watcher.");
-                warn!("Live template reload will be unavailable");
+                warn_!("Could not instantiate a filesystem watcher.");
+                warn_!("Live template reload will be unavailable");
                 None
             };
 
@@ -71,14 +71,18 @@ mod context {
             }
         }
 
-        pub fn get<'a>(&'a self) -> impl Deref<Target=Context> + 'a {
+        pub fn context<'a>(&'a self) -> impl Deref<Target=Context> + 'a {
             self.context.read().unwrap()
         }
 
-        fn get_mut<'a>(&'a self) -> impl DerefMut<Target=Context> + 'a {
+        fn context_mut<'a>(&'a self) -> impl DerefMut<Target=Context> + 'a {
             self.context.write().unwrap()
         }
 
+        /// Checks whether any template files have changed on disk.  If
+        /// there have been changes since the last reload, all templates
+        /// are reinitialized from disk and the user's customization
+        /// callback is run again.
         pub fn reload_if_needed<F: Fn(&mut Engines)>(&self, custom_callback: F) {
             self.watcher.as_ref().map(|w| {
                 let rx = w.1.lock().expect("receive queue");
@@ -88,14 +92,14 @@ mod context {
                 }
 
                 if changed {
-                    warn!("Change detected, reloading templates");
-                    let mut ctxt = self.get_mut();
+                    info!("Change detected, reloading templates");
+                    let mut ctxt = self.context_mut();
                     if let Some(mut new_ctxt) = Context::initialize(ctxt.root.clone()) {
                         custom_callback(&mut new_ctxt.engines);
                         *ctxt = new_ctxt;
                     } else {
-                        warn!("An error occurred while reloading templates.");
-                        warn!("The previous templates will remain active.");
+                        warn_!("An error occurred while reloading templates.");
+                        warn_!("The previous templates will remain active.");
                     };
                 }
             });
@@ -105,18 +109,18 @@ mod context {
 
 pub use self::context::ContextManager;
 
+/// The TemplateFairing initializes the template system on attach,
+/// running custom_callback after templates have been loaded.
+/// In debug mode, the fairing checks for modifications to templates
+/// before every request and reloads them if necessary.
 pub struct TemplateFairing {
-    custom_callback: Box<Fn(&mut Engines) + Send + Sync + 'static>,
-}
-
-impl TemplateFairing {
-    pub fn new(custom_callback: Box<Fn(&mut Engines) + Send + Sync + 'static>) -> TemplateFairing {
-        TemplateFairing { custom_callback }
-    }
+    pub(crate) custom_callback: Box<Fn(&mut Engines) + Send + Sync + 'static>,
 }
 
 impl Fairing for TemplateFairing {
     fn info(&self) -> Info {
+        // The on_request part of this fairing only applies in debug
+        // mode, so only register it in debug mode for better performance.
         Info {
             name: "Templates",
             #[cfg(debug_assertions)]
@@ -126,6 +130,11 @@ impl Fairing for TemplateFairing {
         }
     }
 
+    /// Initializes the template context. Templates will be searched for in the
+    /// `template_dir` config variable or the default ([DEFAULT_TEMPLATE_DIR]).
+    /// The user's callback, if any was supplied, is called to customize the
+    /// template engines. In debug mode, the `ContextManager::new` method
+    /// initializes a directory watcher for auto-reloading of templates.
     fn on_attach(&self, rocket: Rocket) -> Result<Rocket, Rocket> {
         let mut template_root = rocket.config().root_relative(DEFAULT_TEMPLATE_DIR);
         match rocket.config().get_str("template_dir") {
@@ -148,7 +157,8 @@ impl Fairing for TemplateFairing {
 
     #[cfg(debug_assertions)]
     fn on_request(&self, req: &mut ::rocket::Request, _data: &::rocket::Data) {
-        let cm = req.guard::<::rocket::State<ContextManager>>().unwrap();
+        let cm = req.guard::<::rocket::State<ContextManager>>()
+            .expect("Template ContextManager registered in on_attach");
         cm.reload_if_needed(&*self.custom_callback);
     }
 }
