@@ -17,6 +17,16 @@ msgpack = ["serde", "rmp-serde"]
 tera_templates = ["tera", "templates"]
 handlebars_templates = ["handlebars", "templates"]
 static_files = []
+database_pool_codegen = ["rocket_contrib_codegen", "rocket_contrib_codegen/database_attribute"]
+database_pool = ["r2d2", "database_pool_codegen"]
+diesel_pg_pool = ["database_pool", "diesel/postgres", "diesel/r2d2"]
+diesel_sqlite_pool = ["database_pool", "diesel/sqlite", "diesel/r2d2"]
+diesel_mysql_pool = ["database_pool", "diesel/mysql", "diesel/r2d2"]
+postgres_pool = ["database_pool", "postgres", "r2d2_postgres"]
+mysql_pool = ["database_pool", "mysql", "r2d2_mysql"]
+sqlite_pool = ["database_pool", "rusqlite", "r2d2_sqlite"]
+cypher_pool = ["database_pool", "rusted_cypher", "r2d2_cypher"]
+redis_pool = ["database_pool", "redis", "r2d2_redis"]
 
 # Internal use only.
 templates = ["serde", "serde_json", "glob"]
@@ -37,6 +47,23 @@ rmp-serde = { version = "^0.13", optional = true }
 handlebars = { version = "1.0", optional = true }
 glob = { version = "0.2", optional = true }
 tera = { version = "0.11", optional = true }
+
+# Database dependencies
+diesel = { version = "1.0", default-features = false, optional = true }
+postgres = { version = "0.15", optional = true }
+r2d2 = { version = "0.8", optional = true }
+r2d2_postgres = { version = "0.14", optional = true }
+mysql = { version = "14", optional = true }
+r2d2_mysql = { version = "9", optional = true }
+rusqlite = { version = "0.13.0", optional = true }
+r2d2_sqlite = { version = "0.5", optional = true }
+rusted_cypher = { version = "1", optional = true }
+r2d2_cypher = { version = "0.4", optional = true }
+redis = { version = "0.8", optional = true }
+r2d2_redis = { version = "0.7", optional = true }
+
+# Contrib codegen dependencies
+rocket_contrib_codegen = { path = "../codegen", optional = true }
 
 [dev-dependencies]
 rocket_codegen = { version = "0.4.0-dev", path = "../../core/codegen" }

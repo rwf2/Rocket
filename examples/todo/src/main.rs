@@ -1,4 +1,4 @@
-#![feature(plugin, decl_macro, const_fn)]
+#![feature(plugin, decl_macro, use_extern_macros, custom_derive, const_fn)]
 #![plugin(rocket_codegen)]
 
 #[macro_use] extern crate rocket;
@@ -8,31 +8,35 @@ extern crate rocket_contrib;
 
 mod static_files;
 mod task;
-mod db;
 #[cfg(test)] mod tests;
 
 use rocket::Rocket;
 use rocket::request::{Form, FlashMessage};
 use rocket::response::{Flash, Redirect};
 use rocket_contrib::Template;
+use rocket_contrib::databases::database;
+use diesel::SqliteConnection;
 
 use task::{Task, Todo};
+
+#[database("sqlite_database")]
+pub struct DbConn(SqliteConnection);
 
 #[derive(Debug, Serialize)]
 struct Context<'a, 'b>{ msg: Option<(&'a str, &'b str)>, tasks: Vec<Task> }
 
 impl<'a, 'b> Context<'a, 'b> {
-    pub fn err(conn: &db::Conn, msg: &'a str) -> Context<'static, 'a> {
+    pub fn err(conn: &DbConn, msg: &'a str) -> Context<'static, 'a> {
         Context{msg: Some(("error", msg)), tasks: Task::all(conn)}
     }
 
-    pub fn raw(conn: &db::Conn, msg: Option<(&'a str, &'b str)>) -> Context<'a, 'b> {
+    pub fn raw(conn: &DbConn, msg: Option<(&'a str, &'b str)>) -> Context<'a, 'b> {
         Context{msg: msg, tasks: Task::all(conn)}
     }
 }
 
 #[post("/", data = "<todo_form>")]
-fn new(todo_form: Form<Todo>, conn: db::Conn) -> Flash<Redirect> {
+fn new(todo_form: Form<Todo>, conn: DbConn) -> Flash<Redirect> {
     let todo = todo_form.into_inner();
     if todo.description.is_empty() {
         Flash::error(Redirect::to("/"), "Description cannot be empty.")
@@ -44,7 +48,7 @@ fn new(todo_form: Form<Todo>, conn: db::Conn) -> Flash<Redirect> {
 }
 
 #[put("/<id>")]
-fn toggle(id: i32, conn: db::Conn) -> Result<Redirect, Template> {
+fn toggle(id: i32, conn: DbConn) -> Result<Redirect, Template> {
     if Task::toggle_with_id(id, &conn) {
         Ok(Redirect::to("/"))
     } else {
@@ -53,7 +57,7 @@ fn toggle(id: i32, conn: db::Conn) -> Result<Redirect, Template> {
 }
 
 #[delete("/<id>")]
-fn delete(id: i32, conn: db::Conn) -> Result<Flash<Redirect>, Template> {
+fn delete(id: i32, conn: DbConn) -> Result<Flash<Redirect>, Template> {
     if Task::delete_with_id(id, &conn) {
         Ok(Flash::success(Redirect::to("/"), "Todo was deleted."))
     } else {
@@ -62,26 +66,24 @@ fn delete(id: i32, conn: db::Conn) -> Result<Flash<Redirect>, Template> {
 }
 
 #[get("/")]
-fn index(msg: Option<FlashMessage>, conn: db::Conn) -> Template {
+fn index(msg: Option<FlashMessage>, conn: DbConn) -> Template {
     Template::render("index", &match msg {
         Some(ref msg) => Context::raw(&conn, Some((msg.name(), msg.msg()))),
         None => Context::raw(&conn, None),
     })
 }
 
-fn rocket() -> (Rocket, Option<db::Conn>) {
-    let pool = db::init_pool();
-    let conn = if cfg!(test) {
-        Some(db::Conn(pool.get().expect("database connection for testing")))
-    } else {
-        None
-    };
-
+fn rocket() -> (Rocket, Option<DbConn>) {
     let rocket = rocket::ignite()
-        .manage(pool)
+        .attach(DbConn::fairing())
         .mount("/", routes![index, static_files::all])
         .mount("/todo", routes![new, toggle, delete])
         .attach(Template::fairing());
+
+    let conn = match cfg!(test) {
+        true => DbConn::get_one(&rocket),
+        false => None,
+    };
 
     (rocket, conn)
 }

@@ -1,0 +1,25 @@
+[package]
+name = "rocket_contrib_codegen"
+version = "0.4.0-dev"
+authors = ["Sergio Benitez <sb@sergio.bz>"]
+description = "Procedural macros for the Rocket contrib libraries."
+documentation = "https://api.rocket.rs/rocket_contrib_codegen/"
+homepage = "https://rocket.rs"
+repository = "https://github.com/SergioBenitez/Rocket"
+readme = "../../../README.md"
+keywords = ["rocket", "contrib", "code", "generation", "proc-macro"]
+license = "MIT/Apache-2.0"
+
+# if publishing, add to config scripts
+publish = false
+
+[features]
+database_attribute = []
+
+[lib]
+proc-macro = true
+
+[dependencies]
+quote = "0.6"
+proc-macro2 = { version = "0.4", features = ["nightly"] }
+syn = { version = "0.14", features = ["full", "extra-traits"] }

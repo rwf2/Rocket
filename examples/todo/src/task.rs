@@ -1,6 +1,4 @@
-use diesel;
-use diesel::prelude::*;
-use diesel::sqlite::SqliteConnection;
+use diesel::{self, prelude::*};
 
 mod schema {
     table! {
