@@ -456,56 +456,50 @@ impl <'a, 'r> FromRequest<'a, 'r> for MutualTlsUser {
 
     fn from_request(request: &'a Request<'r>) -> Outcome<Self, Self::Error> {
         // Get peer's IP address
-        let ip_addr = request.client_ip();
-        if ip_addr.is_none() {
-            return Forward(());
-        }
-        let ip_addr = ip_addr.expect("Client's IP address could not be determined.");
+        let ip_addr = match request.client_ip() {
+            Some(val) => val,
+            None => return Forward(())
+        };
 
         // Reverse DNS lookup the peer's IP address
-        let name = lookup_addr(&ip_addr);
-        if name.is_err() {
-            return Forward(());
-        }
-        let name = name.expect("Name of the client could not be determined.");
+        let name = match lookup_addr(&ip_addr) {
+            Ok(val) => val,
+            Err(_) => return Forward(())
+        };
 
         // Change name to DNSNameRef
         let name = Input::from(name.as_bytes());
-        let common_name = DNSNameRef::try_from_ascii(name);
-        if common_name.is_err() {
-            return Forward(());
-        }
-        let common_name = common_name.expect("Name of the client was not a valid DNS name.");
+        let common_name = match DNSNameRef::try_from_ascii(name) {
+            Ok(val) => val,
+            Err(_) => return Forward(())
+        };
 
         // Get certificates the peer provided
-        let certs = request.get_peer_certificates();
-        if certs.is_none() {
-            return Forward(());
-        }
-        let certs = certs.expect("Client did not supply any certificates.");
+        let certs = match request.get_peer_certificates() {
+            Some(val) => val,
+            None => return Forward(())
+        };
 
         // Iterate through the client certificates
         let certs_copy = certs.clone();
         for (index, cert) in certs_copy.iter().enumerate() {
             let cert_input = Input::from(cert.as_ref());
-            let end_entity = EndEntityCert::from(cert_input);
-            if end_entity.is_err() {
-                return Forward(());
-            }
-            let end_entity = end_entity.expect("EndEntityCert could not be generated from certificate.");
+            let end_entity = match EndEntityCert::from(cert_input) {
+                Ok(val) => val,
+                Err(_) => return Forward(())
+            };
 
             // Compare certificate is valid for DNS name
-            let verification = end_entity.verify_is_valid_for_dns_name(common_name);
-            if verification.is_err() {
-                return Forward(());
-            }
+            let _verification = match end_entity.verify_is_valid_for_dns_name(common_name) {
+                Ok(val) => val,
+                Err(_) => return Forward(())
+            };
 
             // Parse certificate
-            let mtls_user = MutualTlsUser::new(certs[index].clone());
-            if mtls_user.is_none() {
-                return Forward(());
-            }
-            let mtls_user = mtls_user.expect("MutualTlsUser could not be generated from the certificate provided.");
+            let mtls_user = match MutualTlsUser::new(certs[index].clone()) {
+                Some(val) => val,
+                None => return Forward(())
+            };
             return Success(mtls_user);
         }
         Forward(())
