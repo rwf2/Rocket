@@ -57,25 +57,22 @@ pub struct MutualTlsUser {
 impl MutualTlsUser {
     pub fn new(peer_cert: Certificate) -> Option<MutualTlsUser> {
         // Generate an x509 using the certificate provided
-        let x509 = X509::from_der(peer_cert.as_ref());
-        if x509.is_err() {
-            return None;
-        }
-        let x509 = x509.expect("Failed to generate X509.");
+        let x509 = match X509::from_der(peer_cert.as_ref()) {
+            Ok(val) => val,
+            Err(_) => return None
+        };
 
         // Retrieve alt names and store them into a Vec<String>
-        let alt_names = x509.subject_alt_names();
-        if alt_names.is_none() {
-            return None;
-        }
-        let alt_names = alt_names.expect("Alt names for certificate do not exist.");
+        let alt_names = match x509.subject_alt_names() {
+            Some(val) => val,
+            None => return None
+        };
         let mut common_names = Vec::new();
         for name in alt_names {
-            let name = name.dnsname();
-            if name.is_none() {
-                return None;
-            }
-            let name = name.expect("Name does not exist.");
+            let name = match name.dnsname() {
+                Some(val) => val,
+                None => return None
+            };
             common_names.push(format!("{}", name));
         }
 
