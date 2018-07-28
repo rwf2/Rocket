@@ -249,7 +249,7 @@ impl Config {
                     tls: None,
                     limits: Limits::default(),
                     extras: HashMap::new(),
-                    config_path: config_path,
+                    config_path,
                 }
             }
             Staging => {
@@ -264,7 +264,7 @@ impl Config {
                     tls: None,
                     limits: Limits::default(),
                     extras: HashMap::new(),
-                    config_path: config_path,
+                    config_path,
                 }
             }
             Production => {
@@ -279,7 +279,7 @@ impl Config {
                     tls: None,
                     limits: Limits::default(),
                     extras: HashMap::new(),
-                    config_path: config_path,
+                    config_path,
                 }
             }
         })

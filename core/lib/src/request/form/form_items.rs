@@ -197,10 +197,7 @@ impl<'f> From<&'f RawStr> for FormItems<'f> {
     /// `x-www-form-urlencoded` form `string`.
     #[inline(always)]
     fn from(string: &'f RawStr) -> FormItems<'f> {
-        FormItems {
-            string: string,
-            next_index: 0
-        }
+        FormItems { string, next_index: 0 }
     }
 }
 

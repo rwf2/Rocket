@@ -29,7 +29,7 @@ use rocket::fairing::Fairing;
 use rocket::response::{self, Content, Responder};
 use rocket::http::{ContentType, Status};
 
-const DEFAULT_TEMPLATE_DIR: &'static str = "templates";
+const DEFAULT_TEMPLATE_DIR: &str = "templates";
 
 /// The Template type implements generic support for template rendering in
 /// Rocket.

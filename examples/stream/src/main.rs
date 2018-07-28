@@ -13,7 +13,7 @@ use std::fs::File;
 type LimitedRepeat = Take<Repeat>;
 
 // Generate this file using: head -c BYTES /dev/random > big_file.dat
-const FILENAME: &'static str = "big_file.dat";
+const FILENAME: &str = "big_file.dat";
 
 #[get("/")]
 fn root() -> content::Plain<Stream<LimitedRepeat>> {

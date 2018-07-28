@@ -110,7 +110,7 @@ impl FromStr for Uuid {
 impl Deref for Uuid {
     type Target = uuid_ext::Uuid;
 
-    fn deref<'a>(&'a self) -> &'a Self::Target {
+    fn deref(&self) -> &Self::Target {
         &self.0
     }
 }

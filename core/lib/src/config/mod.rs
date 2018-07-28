@@ -262,10 +262,7 @@ impl RocketConfig {
         configs.insert(Production, Config::default(Production, &f).unwrap());
         configs.insert(active_env, config);
 
-        RocketConfig {
-            active_env: active_env,
-            config: configs
-        }
+        RocketConfig { active_env, config: configs }
     }
 
     /// Read the configuration from the `Rocket.toml` file. The file is search

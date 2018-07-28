@@ -16,7 +16,7 @@ use rocket::response::content;
 
 use paste_id::PasteID;
 
-const HOST: &'static str = "http://localhost:8000";
+const HOST: &str = "http://localhost:8000";
 const ID_LENGTH: usize = 3;
 
 #[post("/", data = "<paste>")]

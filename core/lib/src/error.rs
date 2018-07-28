@@ -99,7 +99,7 @@ pub struct LaunchError {
 impl LaunchError {
     #[inline(always)]
     crate fn new(kind: LaunchErrorKind) -> LaunchError {
-        LaunchError { handled: AtomicBool::new(false), kind: kind }
+        LaunchError { handled: AtomicBool::new(false), kind }
     }
 
     #[inline(always)]

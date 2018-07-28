@@ -113,7 +113,7 @@ impl<T: DeserializeOwned> FromData for Json<T> {
 
         let size_limit = request.limits().get("json").unwrap_or(LIMIT);
         from_reader_eager(data.open().take(size_limit))
-            .map(|val| Json(val))
+            .map(Json)
             .map_err(|e| { error_!("Couldn't parse JSON body: {:?}", e); e })
             .into_outcome(Status::BadRequest)
     }
@@ -137,14 +137,14 @@ impl<T> Deref for Json<T> {
     type Target = T;
 
     #[inline(always)]
-    fn deref<'a>(&'a self) -> &'a T {
+    fn deref(&self) -> &T {
         &self.0
     }
 }
 
 impl<T> DerefMut for Json<T> {
     #[inline(always)]
-    fn deref_mut<'a>(&'a mut self) -> &'a mut T {
+    fn deref_mut(&mut self) -> &mut T {
         &mut self.0
     }
 }
@@ -208,14 +208,14 @@ impl Deref for JsonValue {
     type Target = serde_json::Value;
 
     #[inline(always)]
-    fn deref<'a>(&'a self) -> &'a Self::Target {
+    fn deref(&self) -> &Self::Target {
         &self.0
     }
 }
 
 impl DerefMut for JsonValue {
     #[inline(always)]
-    fn deref_mut<'a>(&'a mut self) -> &'a mut Self::Target {
+    fn deref_mut(&mut self) -> &mut Self::Target {
         &mut self.0
     }
 }

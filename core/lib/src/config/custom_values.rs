@@ -129,7 +129,7 @@ impl Limits {
             "forms" => self.forms = limit,
             _ => {
                 let mut found = false;
-                for tuple in self.extra.iter_mut() {
+                for tuple in &mut self.extra {
                     if tuple.0 == name {
                         tuple.1 = limit;
                         found = true;
@@ -199,7 +199,7 @@ impl fmt::Display for Limits {
 }
 
 pub fn str<'a>(conf: &Config, name: &str, v: &'a Value) -> Result<&'a str> {
-    v.as_str().ok_or(conf.bad_type(name, v.type_str(), "a string"))
+    v.as_str().ok_or_else(|| conf.bad_type(name, v.type_str(), "a string"))
 }
 
 pub fn u64(conf: &Config, name: &str, value: &Value) -> Result<u64> {
@@ -211,7 +211,7 @@ pub fn u64(conf: &Config, name: &str, value: &Value) -> Result<u64> {
 
 pub fn u16(conf: &Config, name: &str, value: &Value) -> Result<u16> {
     match value.as_integer() {
-        Some(x) if x >= 0 && x <= (u16::max_value() as i64) => Ok(x as u16),
+        Some(x) if x >= 0 && x <= (i64::from(u16::max_value())) => Ok(x as u16),
         _ => Err(conf.bad_type(name, value.type_str(), "a 16-bit unsigned integer"))
     }
 }
@@ -267,7 +267,7 @@ pub fn u32_option(conf: &Config, name: &str, value: &Value) -> Result<Option<u32
     let err = Err(conf.bad_type(name, value.type_str(), expect));
 
     match value.as_integer() {
-        Some(x) if x >= 0 && x <= (u32::max_value() as i64) => Ok(Some(x as u32)),
+        Some(x) if x >= 0 && x <= (i64::from(u32::max_value())) => Ok(Some(x as u32)),
         Some(_) => err,
         None => match value.as_str() {
             Some(v) if uncased_eq(v, "none") => Ok(None),

@@ -6,7 +6,7 @@ use rocket::http::RawStr;
 use rand::{self, Rng};
 
 /// Table to retrieve base62 values from.
-const BASE62: &'static [u8] = b"0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
+const BASE62: &[u8] = b"0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
 
 /// A _probably_ unique paste ID.
 pub struct PasteID<'a>(Cow<'a, str>);

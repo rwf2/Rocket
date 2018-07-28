@@ -260,11 +260,7 @@ impl Data {
         };
 
         trace_!("Peek bytes: {}/{} bytes.", peek_buf.len(), PEEK_BYTES);
-        Data {
-            buffer: peek_buf,
-            stream: stream,
-            is_complete: eof,
-        }
+        Data { buffer: peek_buf, stream, is_complete: eof }
     }
 
     /// This creates a `data` object from a local data source `data`.

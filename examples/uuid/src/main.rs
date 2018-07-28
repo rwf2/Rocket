@@ -35,7 +35,7 @@ fn people(id: Uuid) -> Result<String, String> {
     // rocket_contrib::Uuid to uuid::Uuid.
     Ok(PEOPLE.get(&id)
         .map(|person| format!("We found: {}", person))
-        .ok_or(format!("Person not found for UUID: {}", id))?)
+        .ok_or_else(|| format!("Person not found for UUID: {}", id))?)
 }
 
 fn rocket() -> rocket::Rocket {

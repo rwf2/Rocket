@@ -43,7 +43,7 @@ impl Context {
                 templates.insert(name, TemplateInfo {
                     path: path.to_path_buf(),
                     extension: ext.to_string(),
-                    data_type: data_type,
+                    data_type,
                 });
             }
         }

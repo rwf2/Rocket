@@ -87,12 +87,10 @@ impl RouteParams {
     }
 
     fn generate_data_statement(&self, ecx: &ExtCtxt) -> Option<Stmt> {
-        let param = self.data_param.as_ref().map(|p| &p.value);
-        let arg = param.and_then(|p| self.annotated_fn.find_input(&p.node.name));
-        if param.is_none() {
-            return None;
-        } else if arg.is_none() {
-            self.missing_declared_err(ecx, param.unwrap());
+        let param = self.data_param.as_ref().map(|p| &p.value)?;
+        let arg = self.annotated_fn.find_input(&param.node.name);
+        if arg.is_none() {
+            self.missing_declared_err(ecx, param);
             return None;
         }
 

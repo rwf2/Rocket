@@ -427,7 +427,7 @@ impl Rocket {
         }
 
         Rocket {
-            config: config,
+            config,
             router: Router::new(),
             default_catchers: catcher::defaults::get(),
             catchers: catcher::defaults::get(),

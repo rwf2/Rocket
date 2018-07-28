@@ -135,7 +135,7 @@ impl<T: DeserializeOwned> FromData for MsgPack<T> {
             return Outcome::Failure((Status::BadRequest, e));
         };
 
-        rmp_serde::from_slice(&buf).map(|val| MsgPack(val))
+        rmp_serde::from_slice(&buf).map(MsgPack)
             .map_err(|e| { error_!("Couldn't parse MessagePack body: {:?}", e); e })
             .into_outcome(Status::BadRequest)
     }
@@ -161,14 +161,14 @@ impl<T> Deref for MsgPack<T> {
     type Target = T;
 
     #[inline(always)]
-    fn deref<'a>(&'a self) -> &'a T {
+    fn deref(&self) -> &T {
         &self.0
     }
 }
 
 impl<T> DerefMut for MsgPack<T> {
     #[inline(always)]
-    fn deref_mut<'a>(&'a mut self) -> &'a mut T {
+    fn deref_mut(&mut self) -> &mut T {
         &mut self.0
     }
 }
