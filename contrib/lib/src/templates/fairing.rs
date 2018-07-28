@@ -114,9 +114,9 @@ pub use self::context::ContextManager;
 /// fairing checks for modifications to templates before every request and
 /// reloads them if necessary.
 pub struct TemplateFairing {
-    /// The user-provided customization callback, allowing the use functionality
-    /// specific to individual template engines. In debug mode, this callback
-    /// might be run multiple times as templates are reloaded.
+    /// The user-provided customization callback, allowing the use of
+    /// functionality specific to individual template engines. In debug mode,
+    /// this callback might be run multiple times as templates are reloaded.
     pub(crate) custom_callback: Box<Fn(&mut Engines) + Send + Sync + 'static>,
 }
 
