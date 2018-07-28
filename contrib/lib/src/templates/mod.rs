@@ -81,7 +81,7 @@ const DEFAULT_TEMPLATE_DIR: &'static str = "templates";
 /// In debug mode (without the `--release` flag passed to `cargo`), templates
 /// will be automatically reloaded from disk if any changes have been made to
 /// the templates directory since the previous request. In release builds,
-/// template reloading is unavailable for better performance.
+/// template reloading is disabled to improve performance and cannot be enabled.
 ///
 /// # Usage
 ///
