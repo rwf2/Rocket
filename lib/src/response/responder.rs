@@ -48,7 +48,14 @@ use request::Request;
 ///     of the response, which is fixed size and not streamed. To stream a
 ///     string, use `Stream::from(Cursor::new(string))`.
 ///
-///   * **Vec<u8>**
+///   * **&\[u8\]**
+///
+///     Sets the `Content-Type` to `application/octet-stream`. The slice
+///     is used as the body of the response, which is fixed size and not
+///     streamed. To stream a slice of bytes, use
+///     `Stream::from(Cursor::new(data))`.
+///
+///   * **Vec&lt;u8>**
 ///
 ///     Sets the `Content-Type` to `application/octet-stream`. The vector's data
 ///     is used as the body of the response, which is fixed size and not
@@ -204,6 +211,17 @@ impl<'r> Responder<'r> for String {
     fn respond_to(self, _: &Request) -> Result<Response<'r>, Status> {
         Response::build()
             .header(ContentType::Plain)
+            .sized_body(Cursor::new(self))
+            .ok()
+    }
+}
+
+/// Returns a response with Content-Type `application/octet-stream` and a
+/// fixed-size body containing the data in `self`. Always returns `Ok`.
+impl<'r> Responder<'r> for &'r [u8] {
+    fn respond_to(self, _: &Request) -> response::Result<'r> {
+        Response::build()
+            .header(ContentType::Binary)
             .sized_body(Cursor::new(self))
             .ok()
     }
