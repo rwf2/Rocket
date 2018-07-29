@@ -27,8 +27,7 @@ rustls = { version = "0.13", optional = true }
 state = "0.4"
 
 [dependencies.cookie]
-git = "https://github.com/alexcrichton/cookie-rs"
-rev = "f191ca50"
+version = "0.11"
 features = ["percent-encode", "secure"]
 
 [dependencies.hyper-sync-rustls]
