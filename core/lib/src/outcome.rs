@@ -484,6 +484,93 @@ impl<S, E, F> Outcome<S, E, F> {
         }
     }
 
+    /// Maps an `Outcome<S, E, F>` to an `Outcome<T, E, F>` by applying the
+    /// function `f` to the value of type `S` in `self` if `self` is an
+    /// `Outcome::Success`.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// # use rocket::outcome::Outcome;
+    /// # use rocket::outcome::Outcome::*;
+    /// #
+    /// let x: Outcome<i32, &str, bool> = Success(10);
+    ///
+    /// let mapped = x.and_then(|v| match v {
+    ///    10 => Success("10"),
+    ///    1 => Forward(false),
+    ///    _ => Failure("30")
+    /// });
+    ///
+    /// assert_eq!(mapped, Success("10"));
+    /// ```
+    #[inline]
+    pub fn and_then<T, M: FnOnce(S) -> Outcome<T, E, F>>(self, f: M) -> Outcome<T, E, F> {
+        match self {
+            Success(val) => f(val),
+            Failure(val) => Failure(val),
+            Forward(val) => Forward(val),
+        }
+    }
+
+    /// Maps an `Outcome<S, E, F>` to an `Outcome<S, T, F>` by applying the
+    /// function `f` to the value of type `E` in `self` if `self` is an
+    /// `Outcome::Failure`.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// # use rocket::outcome::Outcome;
+    /// # use rocket::outcome::Outcome::*;
+    /// #
+    /// let x: Outcome<i32, &str, bool> = Failure("hi");
+    ///
+    /// let mapped = x.failure_then(|v| match v {
+    ///    "hi" => Failure(10),
+    ///    "test" => Forward(false),
+    ///    _ => Success(10)
+    /// });
+    ///
+    /// assert_eq!(mapped, Failure(10));
+    /// ```
+    #[inline]
+    pub fn failure_then<T, M: FnOnce(E) -> Outcome<S, T, F>>(self, f: M) -> Outcome<S, T, F> {
+        match self {
+            Success(val) => Success(val),
+            Failure(val) => f(val),
+            Forward(val) => Forward(val),
+        }
+    }
+
+    /// Maps an `Outcome<S, E, F>` to an `Outcome<S, E, T>` by applying the
+    /// function `f` to the value of type `F` in `self` if `self` is an
+    /// `Outcome::Forward`.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// # use rocket::outcome::Outcome;
+    /// # use rocket::outcome::Outcome::*;
+    /// #
+    /// let x: Outcome<i32, &str, Option<bool>> = Forward(Some(false));
+    ///
+    /// let mapped = x.forward_then(|v| match v {
+    ///    Some(true) => Success(10),
+    ///    Some(false) => Forward(20),
+    ///    None => Failure("10")
+    /// });
+    ///
+    /// assert_eq!(mapped, Forward(20));
+    /// ```
+    #[inline]
+    pub fn forward_then<T, M: FnOnce(F) -> Outcome<S, E, T>>(self, f: M) -> Outcome<S, E, T> {
+        match self {
+            Success(val) => Success(val),
+            Failure(val) => Failure(val),
+            Forward(val) => f(val),
+        }
+    }
+
     /// Converts from `Outcome<S, E, F>` to `Outcome<&mut S, &mut E, &mut F>`.
     ///
     /// ```rust
