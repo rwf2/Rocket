@@ -85,6 +85,19 @@ fn from_request(req: &'a Request<'r>) -> request::Outcome<T, ()> {
 
 [`Request::guard()`]: https://api.rocket.rs/rocket/struct.Request.html#method.guard
 
+### Request-Local State
+
+In addition to application-wide state, each `Request` has its own state container
+that can be used by request guards and fairings. This container can be used to
+cache expensive computations and lookups, such as to a database or external
+server, that might be used by multiple request guards during routing. Fairings
+can provide request-specific data for consumption by request guards in the same
+manner. See the documentation for the [`FromRequest`] and [`Fairing`] traits for
+examples of this functionality.
+
+[`FromRequest`]: https://api.rocket.rs/rocket/request/trait.FromRequest.html
+[`Fairing`]: https://api.rocket.rs/rocket/fairing/trait.Fairing.html
+
 ### Unmanaged State
 
 If you request a `State<T>` for a `T` that is not `managed`, Rocket won't call

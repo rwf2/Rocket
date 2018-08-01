@@ -260,6 +260,67 @@ pub use self::info_kind::{Info, Kind};
 ///     }
 /// }
 /// ```
+///
+/// ## Request-Local Cache
+///
+/// Fairings can use the *request-local cache* to persist data between the
+/// request and the response, or to pass data to a request guard.
+///
+/// ```
+/// # use std::time::{Duration, SystemTime};
+/// # use rocket::Outcome;
+/// # use rocket::{Request, Data, Response};
+/// # use rocket::fairing::{Fairing, Info, Kind};
+/// # use rocket::http::Status;
+/// # use rocket::request::{self, FromRequest};
+/// #
+/// struct RequestTimer;
+/// #[derive(Copy, Clone)]
+/// struct StartTime(SystemTime);
+///
+/// impl Fairing for RequestTimer {
+///     fn info(&self) -> Info {
+///         Info {
+///             name: "Request Timer",
+///             kind: Kind::Request | Kind::Response
+///         }
+///     }
+///
+///     /// Stores the start time of the request
+///     fn on_request(&self, request: &mut Request, _: &Data) {
+///         request.local_cache(|| {
+///             // Note the use of a newtype to disambiguate `StartTime` from
+///             // other SystemTime values that might be stored in request-local
+///             // cache for other purposes
+///             Some(StartTime(SystemTime::now()))
+///         });
+///     }
+///
+///     // Adds a header to the response indicating how long the server took to
+///     // process the request
+///     fn on_response(&self, request: &Request, response: &mut Response) {
+///         let start_time: &Option<StartTime> = request.local_cache(|| None);
+///         if let Some(duration) = start_time.and_then(|s| s.0.elapsed().ok()) {
+///             response.set_raw_header("X-Response-Time", format!("{} ms",
+///                 duration.as_secs() * 1000 + duration.subsec_millis() as u64));
+///         }
+///     }
+/// }
+///
+/// // Allows a route to access the time the request was initiated
+/// impl<'a, 'r> FromRequest<'a, 'r> for StartTime {
+///     type Error = ();
+///
+///     fn from_request(request: &'a Request<'r>) -> request::Outcome<StartTime, ()> {
+///         let start_time: &Option<StartTime> = request.local_cache(|| None);
+///         match *start_time {
+///             Some(time) => Outcome::Success(time),
+///             None => Outcome::Failure((Status::InternalServerError, ())),
+///         }
+///     }
+/// }
+/// ```
+
 pub trait Fairing: Send + Sync + 'static {
     /// Returns an [`Info`](/rocket/fairing/struct.Info.html) structure
     /// containing the `name` and [`Kind`](/rocket/fairing/struct.Kind.html) of
