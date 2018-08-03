@@ -217,7 +217,7 @@ impl<S, E> IntoOutcome<S, (Status, E), ()> for Result<S, E> {
 ///
 /// For example, consider a pair of `User` and `Admin` guards:
 ///
-/// ```
+/// ```rust
 /// # #![feature(plugin, decl_macro)]
 /// # #![plugin(rocket_codegen)]
 /// # extern crate rocket;
@@ -280,7 +280,7 @@ impl<S, E> IntoOutcome<S, (Status, E), ()> for Result<S, E> {
 /// `User` guard directly. For cases such as these, the request-local cache
 /// should be used:
 ///
-/// ```
+/// ```rust
 /// # #![feature(plugin, decl_macro)]
 /// # #![plugin(rocket_codegen)]
 /// # extern crate rocket;
@@ -301,23 +301,43 @@ impl<S, E> IntoOutcome<S, (Status, E), ()> for Result<S, E> {
 /// #     }
 /// # }
 /// #
-///
+/// # struct Admin<'a> { user: &'a User };
+/// #
 /// impl<'a, 'r> FromRequest<'a, 'r> for &'a User {
 ///     type Error = ();
 ///
 ///     fn from_request(request: &'a Request<'r>) -> request::Outcome<&'a User, ()> {
-///         request.local_cache(|| {
-///             // This closure will run only once per request, and future
-///             // invocations will reuse the result of the first calculation
+///         // The closure will run only once per request, and future
+///         // invocations will reuse the result of the first calculation
+///         let user_result = request.local_cache(|| {
 ///             let db = request.guard::<Database>().succeeded()?;
 ///             request.cookies()
 ///                 .get_private("user_id")
 ///                 .and_then(|cookie| cookie.value().parse().ok())
 ///                 .and_then(|id| db.get_user(id).ok())
-///         }).as_ref().or_forward(())
+///         });
+///         user_result.as_ref().or_forward(())
+///     }
+/// }
+///
+/// impl<'a, 'r> FromRequest<'a, 'r> for Admin<'a> {
+///     type Error = ();
+///
+///     fn from_request(request: &'a Request<'r>) -> request::Outcome<Admin<'a>, ()> {
+///         let user = request.guard::<&User>()?;
+///
+///         if user.is_admin {
+///             Outcome::Success(Admin { user })
+///         } else {
+///             Outcome::Forward(())
+///         }
 ///     }
 /// }
 /// ```
+///
+/// Notice that these request guards provide access to *borrowed* data
+/// (`&'a User` and `Admin<'a>`). The data is now owned by the request's cache,
+/// so it must either be borrowed or cloned by the guards.
 
 pub trait FromRequest<'a, 'r>: Sized {
     /// The associated error to be returned if derivation fails.
