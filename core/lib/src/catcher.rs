@@ -35,10 +35,10 @@ use yansi::Color::*;
 /// declared using the `catch` decorator, as follows:
 ///
 /// ```rust
-/// #![feature(plugin, decl_macro)]
+/// #![feature(plugin, decl_macro, proc_macro_non_items)]
 /// #![plugin(rocket_codegen)]
 ///
-/// extern crate rocket;
+/// #[macro_use] extern crate rocket;
 ///
 /// use rocket::Request;
 ///
