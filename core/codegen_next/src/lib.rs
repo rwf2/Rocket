@@ -32,7 +32,7 @@ pub fn derive_responder(input: TokenStream) -> TokenStream {
 
 const ROUTE_STRUCT_PREFIX: &'static str = "static_rocket_route_info_for_";
 #[proc_macro]
-pub fn routes(input: TokenStream) -> TokenStream {
+pub fn rocket_routes_internal(input: TokenStream) -> TokenStream {
     prefixing_vec::prefixing_vec_macro(ROUTE_STRUCT_PREFIX, |path| {
         quote!(::rocket::Route::from(&#path))
     }, input)
@@ -41,7 +41,7 @@ pub fn routes(input: TokenStream) -> TokenStream {
 
 const CATCH_STRUCT_PREFIX: &'static str = "static_rocket_catch_info_for_";
 #[proc_macro]
-pub fn catchers(input: TokenStream) -> TokenStream {
+pub fn rocket_catchers_internal(input: TokenStream) -> TokenStream {
     prefixing_vec::prefixing_vec_macro(CATCH_STRUCT_PREFIX, |path| {
         quote!(::rocket::Catcher::from(&#path))
     }, input)
