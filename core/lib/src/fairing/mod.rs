@@ -276,7 +276,7 @@ pub use self::info_kind::{Info, Kind};
 /// #
 /// struct RequestTimer;
 /// #[derive(Copy, Clone)]
-/// struct StartTime(SystemTime);
+/// struct StartTime(pub Option<SystemTime>);
 ///
 /// impl Fairing for RequestTimer {
 ///     fn info(&self) -> Info {
@@ -288,34 +288,34 @@ pub use self::info_kind::{Info, Kind};
 ///
 ///     /// Stores the start time of the request
 ///     fn on_request(&self, request: &mut Request, _: &Data) {
-///         request.local_cache(|| {
-///             // Note the use of a newtype to disambiguate `StartTime` from
-///             // other SystemTime values that might be stored in request-local
-///             // cache for other purposes
-///             Some(StartTime(SystemTime::now()))
-///         });
+///         // Store a StartTime instead of directly storing a SystemTime,
+///         // to ensure that this usage doesn't conflict with anything else
+///         // that might store a SystemTime in request-local cache.
+///         request.local_cache(|| StartTime(Some(SystemTime::now())));
 ///     }
 ///
-///     // Adds a header to the response indicating how long the server took to
-///     // process the request
+///     /// Adds a header to the response indicating how long the server took to
+///     /// process the request
 ///     fn on_response(&self, request: &Request, response: &mut Response) {
-///         let start_time: &Option<StartTime> = request.local_cache(|| None);
-///         if let Some(duration) = start_time.and_then(|s| s.0.elapsed().ok()) {
+///         let start_time = request.local_cache(|| StartTime(None));
+///         if let Some(Ok(duration)) = start_time.0.map(|st| st.elapsed()) {
 ///             response.set_raw_header("X-Response-Time", format!("{} ms",
 ///                 duration.as_secs() * 1000 + duration.subsec_millis() as u64));
 ///         }
 ///     }
 /// }
 ///
-/// // Allows a route to access the time the request was initiated
+/// // Allows a route to access the time the request was initiated.
+/// // This guard will fail if the RequestTimer fairing was not attached,
+/// // and will never return a StartTime(None).
 /// impl<'a, 'r> FromRequest<'a, 'r> for StartTime {
 ///     type Error = ();
 ///
 ///     fn from_request(request: &'a Request<'r>) -> request::Outcome<StartTime, ()> {
-///         let start_time: &Option<StartTime> = request.local_cache(|| None);
+///         let start_time = request.local_cache(|| StartTime(None));
 ///         match *start_time {
-///             Some(time) => Outcome::Success(time),
-///             None => Outcome::Failure((Status::InternalServerError, ())),
+///             st@StartTime(Some(_)) => Outcome::Success(st),
+///             StartTime(None) => Outcome::Failure((Status::InternalServerError, ())),
 ///         }
 ///     }
 /// }
