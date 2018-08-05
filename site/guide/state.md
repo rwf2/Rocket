@@ -107,9 +107,9 @@ struct RequestId(pub usize);
 /// if the current request does not have one already.
 impl<'a, 'r> FromRequest<'a, 'r> for RequestId {
     fn from_request(request: &'a Request<'r>) -> request::Outcome {
-        // The closure passed to local_cache will only be run once, the
-        // first time the RequestId guard is used. If it is requested again,
-        // local_cache will return the previous value again.
+        // The closure passed to local_cache will be executed at most once per
+        // request, the first time the RequestId guard is used. If it is
+        // requested again, local_cache will return the same value.
         Outcome::Success(request.local_cache(|| {
             RequestId(request_id_counter.fetch_add(1, Ordering::Relaxed))
         }))
