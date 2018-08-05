@@ -4,6 +4,7 @@ use std::path::{Path, PathBuf};
 use std::convert::AsRef;
 use std::fmt;
 use std::env;
+use std::io::{Read, Seek};
 
 use super::custom_values::*;
 use {num_cpus, base64};
@@ -572,6 +573,56 @@ impl Config {
                 Error::Io(e) => ConfigError::Io(e, "tls.key"),
                 _ => self.bad_type("tls", pem_err, "a valid private key file")
             })?;
+
+        self.tls = Some(TlsConfig { certs, key });
+        Ok(())
+    }
+
+    /// Sets the TLS configuration in `self`.
+    ///
+    /// Certificates are read from `certs_read`. The certificate chain must be
+    /// in X.509 PEM format. The private key is read from `key_read`. The
+    /// private key must be an RSA key in either PKCS#1 or PKCS#8 PEM format.
+    ///
+    /// # Errors
+    ///
+    /// If reading either the certificates or private key fails, an error of
+    /// variant `Io` is returned. If either the certificates or private key
+    /// files are malformed or cannot be parsed, an error of `BadType` is
+    /// returned.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use rocket::config::Config;
+    /// use std::io::Cursor;
+    ///
+    /// # use rocket::config::ConfigError;
+    /// # fn config_test() -> Result<(), ConfigError> {
+    /// let mut config = Config::development()?;
+    /// let certfile_bytes = Cursor::new([10, 10, 10, 10].to_vec());
+    /// let keyfile_bytes = Cursor::new([10, 10, 10, 10].to_vec());
+    /// config.set_tls_from_read(certfile_bytes, keyfile_bytes)?;
+    /// # Ok(())
+    /// # }
+    /// ```
+    #[cfg(feature = "tls")]
+    pub fn set_tls_from_read<R: Read + Seek>(&mut self, certs_read: R, key_read: R) -> Result<()> {
+        use http::tls::util::{self, Error};
+
+        let pem_err = "malformed PEM file";
+
+        // Load the certificates.
+        let certs = util::load_certs_from_read(certs_read).map_err(|e| match e {
+            Error::Io(e) => ConfigError::Io(e, "tls.certs"),
+            _ => self.bad_type("tls", pem_err, "a valid certificates file"),
+        })?;
+
+        // And now the private key.
+        let key = util::load_private_key_from_read(key_read).map_err(|e| match e {
+            Error::Io(e) => ConfigError::Io(e, "tls.key"),
+            _ => self.bad_type("tls", pem_err, "a valid private key file"),
+        })?;
 
         self.tls = Some(TlsConfig { certs, key });
         Ok(())
