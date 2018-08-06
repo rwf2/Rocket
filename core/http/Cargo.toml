@@ -32,6 +32,8 @@ rev = "f191ca50"
 features = ["percent-encode", "secure"]
 
 [dependencies.hyper-sync-rustls]
+git = "https://github.com/mettke/hyper-sync-rustls"
+branch = "feature/tls_via_read"
 version = "=0.3.0-rc.3"
 features = ["server"]
 optional = true
