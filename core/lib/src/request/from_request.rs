@@ -207,6 +207,138 @@ impl<S, E> IntoOutcome<S, (Status, E), ()> for Result<S, E> {
 ///
 /// # fn main() { }
 /// ```
+///
+/// # Request-Local Cache
+///
+/// Request guards that perform expensive operations, such as querying a
+/// database or an external service, should use the *request-local cache* to
+/// store the result if they might be invoked multiple times during the routing
+/// of a single request.
+///
+/// For example, consider a pair of `User` and `Admin` guards:
+///
+/// ```rust
+/// # #![feature(plugin, decl_macro)]
+/// # #![plugin(rocket_codegen)]
+/// # extern crate rocket;
+/// #
+/// # use rocket::outcome::{IntoOutcome, Outcome};
+/// # use rocket::request::{self, FromRequest, Request};
+/// # struct User { id: String, is_admin: bool };
+/// # struct Database;
+/// # impl Database {
+/// #     fn get_user(&self, id: String) -> Result<User, ()> {
+/// #         Ok(User { id, is_admin: false })
+/// #     }
+/// # }
+/// # impl<'a, 'r> FromRequest<'a, 'r> for Database {
+/// #     type Error = ();
+/// #     fn from_request(request: &'a Request<'r>) -> request::Outcome<Database, ()> {
+/// #         Outcome::Success(Database)
+/// #     }
+/// # }
+/// #
+/// # struct Admin { user: User };
+/// #
+/// impl<'a, 'r> FromRequest<'a, 'r> for User {
+///     type Error = ();
+///
+///     fn from_request(request: &'a Request<'r>) -> request::Outcome<User, ()> {
+///         let db = request.guard::<Database>()?;
+///         request.cookies()
+///             .get_private("user_id")
+///             .and_then(|cookie| cookie.value().parse().ok())
+///             .and_then(|id| db.get_user(id).ok())
+///             .or_forward(())
+///     }
+/// }
+///
+/// impl<'a, 'r> FromRequest<'a, 'r> for Admin {
+///     type Error = ();
+///
+///     fn from_request(request: &'a Request<'r>) -> request::Outcome<Admin, ()> {
+///         // This will unconditionally query the database!
+///         let user = request.guard::<User>()?;
+///
+///         if user.is_admin {
+///             Outcome::Success(Admin { user })
+///         } else {
+///             Outcome::Forward(())
+///         }
+///     }
+/// }
+///
+/// #[get("/dashboard")]
+/// fn admin_dashboard(admin: Admin) { }
+///
+/// #[get("/dashboard", rank = 2)]
+/// fn user_dashboard(user: User) { }
+/// ```
+///
+/// When a non-admin user is logged in, the database will be queried twice: Once
+/// via the `Admin` guard invoking the `User` guard, and a second time via the
+/// `User` guard directly. For cases such as these, the request-local cache
+/// should be used:
+///
+/// ```rust
+/// # #![feature(plugin, decl_macro)]
+/// # #![plugin(rocket_codegen)]
+/// # extern crate rocket;
+/// #
+/// # use rocket::outcome::{IntoOutcome, Outcome};
+/// # use rocket::request::{self, FromRequest, Request};
+/// # struct User { id: String, is_admin: bool };
+/// # struct Database;
+/// # impl Database {
+/// #     fn get_user(&self, id: String) -> Result<User, ()> {
+/// #         Ok(User { id, is_admin: false })
+/// #     }
+/// # }
+/// # impl<'a, 'r> FromRequest<'a, 'r> for Database {
+/// #     type Error = ();
+/// #     fn from_request(request: &'a Request<'r>) -> request::Outcome<Database, ()> {
+/// #         Outcome::Success(Database)
+/// #     }
+/// # }
+/// #
+/// # struct Admin<'a> { user: &'a User };
+/// #
+/// impl<'a, 'r> FromRequest<'a, 'r> for &'a User {
+///     type Error = ();
+///
+///     fn from_request(request: &'a Request<'r>) -> request::Outcome<&'a User, ()> {
+///         // The closure will run only once per request, and future
+///         // invocations will reuse the result of the first calculation
+///         let user_result = request.local_cache(|| {
+///             let db = request.guard::<Database>().succeeded()?;
+///             request.cookies()
+///                 .get_private("user_id")
+///                 .and_then(|cookie| cookie.value().parse().ok())
+///                 .and_then(|id| db.get_user(id).ok())
+///         });
+///         user_result.as_ref().or_forward(())
+///     }
+/// }
+///
+/// impl<'a, 'r> FromRequest<'a, 'r> for Admin<'a> {
+///     type Error = ();
+///
+///     fn from_request(request: &'a Request<'r>) -> request::Outcome<Admin<'a>, ()> {
+///         let user = request.guard::<&User>()?;
+///
+///         if user.is_admin {
+///             Outcome::Success(Admin { user })
+///         } else {
+///             Outcome::Forward(())
+///         }
+///     }
+/// }
+/// ```
+///
+/// Notice that these request guards provide access to *borrowed* data
+/// (`&'a User` and `Admin<'a>`). The data is now owned by the request's cache,
+/// so it must either be borrowed or cloned by the guards.
+
 pub trait FromRequest<'a, 'r>: Sized {
     /// The associated error to be returned if derivation fails.
     type Error: Debug;

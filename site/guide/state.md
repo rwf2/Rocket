@@ -85,6 +85,50 @@ fn from_request(req: &'a Request<'r>) -> request::Outcome<T, ()> {
 
 [`Request::guard()`]: https://api.rocket.rs/rocket/struct.Request.html#method.guard
 
+### Request-Local State
+
+While managed state is *global* and available application-wide, request-local
+state is *local* to a given request, carried along with the request, and dropped
+once the request is completed. Request-local state can be used whenever a
+`Request` is available, such as in a fairing, a request guard, or a responder.
+
+Request-local state is *cached*: if data of a given type has already been
+stored, it will be reused. This is especially useful for request guards that
+might be invoked multiple times during the routing and processing of a single
+request, such as those dealing with authentication.
+
+```rust
+/// A global counter for arbitrary request IDs
+static request_id_counter: AtomicUsize = AtomicUsize::new(0);
+/// A type that represents request IDs
+struct RequestId(pub usize);
+
+/// Returns the current request's RequestId, assigning one
+/// if the current request does not have one already.
+impl<'a, 'r> FromRequest<'a, 'r> for RequestId {
+    fn from_request(request: &'a Request<'r>) -> request::Outcome {
+        // The closure passed to local_cache will be executed at most once per
+        // request, the first time the RequestId guard is used. If it is
+        // requested again, local_cache will return the same value.
+        Outcome::Success(request.local_cache(|| {
+            RequestId(request_id_counter.fetch_add(1, Ordering::Relaxed))
+        }))
+    }
+}
+```
+
+Another use case for request-local state is request validation. A fairing can
+read request headers, query a database or other external service, and store the
+result in request-local state. The result of the validation is available to each
+individual route and also to any custom `Responder`s, for example from an
+authentication library.
+
+Refer to the documentation for the [`FromRequest`] and [`Fairing`] traits for
+more examples of this functionality.
+
+[`FromRequest`]: https://api.rocket.rs/rocket/request/trait.FromRequest.html
+[`Fairing`]: https://api.rocket.rs/rocket/fairing/trait.Fairing.html
+
 ### Unmanaged State
 
 If you request a `State<T>` for a `T` that is not `managed`, Rocket won't call
