@@ -94,7 +94,7 @@ events is described below:
     A response callback is called when a response is ready to be sent to the
     client. A response callback can modify part or all of the response. As such,
     a response fairing can be used to provide a response when the greater
-    applications fails to by rewriting **404** responses as desired. As another
+    application fails by rewriting **404** responses as desired. As another
     example, response fairings can also be used to inject headers into all
     outgoing responses.
 
