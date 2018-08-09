@@ -149,7 +149,7 @@ impl Fairing for TemplateFairing {
             }
         };
 
-        match Context::initialize(template_root.clone()) {
+        match Context::initialize(template_root) {
             Some(mut ctxt) => {
                 (self.custom_callback)(&mut ctxt.engines);
                 Ok(rocket.manage(ContextManager::new(ctxt)))
