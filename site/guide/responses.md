@@ -48,7 +48,7 @@ fn new(id: usize) -> status::Accepted<String> {
 Similarly, the types in the [`content`
 module](https://api.rocket.rs/rocket/response/content/index.html) can be used to
 override the Content-Type of a response. For instance, to set the Content-Type
-an `&'static str` to JSON, you can use the [`content::Json`] type as follows:
+of `&'static str` to JSON, you can use the [`content::Json`] type as follows:
 
 ```rust
 use rocket::response::content;
