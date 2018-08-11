@@ -2,7 +2,7 @@ use rocket::{Request, State, Outcome};
 use rocket::http::Status;
 use rocket::request::{self, FromRequest};
 
-use templates::Context;
+use super::ContextManager;
 
 /// The `TemplateMetadata` type: implements `FromRequest`, allowing dynamic
 /// queries about template metadata.
@@ -48,7 +48,7 @@ use templates::Context;
 ///     }
 /// }
 /// ```
-pub struct TemplateMetadata<'a>(&'a Context);
+pub struct TemplateMetadata<'a>(&'a ContextManager);
 
 impl<'a> TemplateMetadata<'a> {
     /// Returns `true` if the template with name `name` was loaded at start-up
@@ -65,7 +65,7 @@ impl<'a> TemplateMetadata<'a> {
     /// }
     /// ```
     pub fn contains_template(&self, name: &str) -> bool {
-        self.0.templates.contains_key(name)
+        self.0.context().templates.contains_key(name)
     }
 }
 
@@ -76,9 +76,9 @@ impl<'a, 'r> FromRequest<'a, 'r> for TemplateMetadata<'a> {
     type Error = ();
 
     fn from_request(request: &'a Request) -> request::Outcome<Self, ()> {
-        request.guard::<State<Context>>()
+        request.guard::<State<ContextManager>>()
             .succeeded()
-            .and_then(|ctxt| Some(Outcome::Success(TemplateMetadata(ctxt.inner()))))
+            .and_then(|cm| Some(Outcome::Success(TemplateMetadata(cm.inner()))))
             .unwrap_or_else(|| {
                 error_!("Uninitialized template context: missing fairing.");
                 info_!("To use templates, you must attach `Template::fairing()`.");

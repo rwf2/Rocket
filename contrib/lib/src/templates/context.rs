@@ -11,8 +11,8 @@ pub struct Context {
     pub root: PathBuf,
     /// Mapping from template name to its information.
     pub templates: HashMap<String, TemplateInfo>,
-    /// Mapping from template name to its information.
-    pub engines: Engines
+    /// Loaded template engines
+    pub engines: Engines,
 }
 
 impl Context {

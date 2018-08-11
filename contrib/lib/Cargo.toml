@@ -40,5 +40,8 @@ tera = { version = "0.11", optional = true }
 [dev-dependencies]
 rocket_codegen = { version = "0.4.0-dev", path = "../../core/codegen" }
 
+[target.'cfg(debug_assertions)'.dependencies]
+notify = { version = "^4.0" }
+
 [package.metadata.docs.rs]
 all-features = true

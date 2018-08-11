@@ -116,5 +116,62 @@ mod templates_tests {
             let response = client.get("/tera/test").dispatch();
             assert_eq!(response.status(), Status::NotFound);
         }
+
+        #[test]
+        #[cfg(debug_assertions)]
+        fn test_template_reload() {
+            use std::fs::File;
+            use std::io::Write;
+            use std::path::Path;
+            use std::thread;
+            use std::time::Duration;
+
+            use rocket::local::Client;
+
+            const RELOAD_TEMPLATE: &str = "hbs/reload";
+            const INITIAL_TEXT: &str = "initial";
+            const NEW_TEXT: &str = "reload";
+
+            fn write_file(path: &Path, text: &str) {
+                let mut file = File::create(path).expect("open file");
+                file.write_all(text.as_bytes()).expect("write file");
+                file.sync_all().expect("sync file");
+            }
+
+            let reload_path = Path::join(
+                Path::new(env!("CARGO_MANIFEST_DIR")),
+                "tests/templates/hbs/reload.txt.hbs"
+            );
+
+            // set up the template before initializing the Rocket instance so
+            // that it will be picked up in the initial loading of templates.
+            write_file(&reload_path, INITIAL_TEXT);
+
+            let client = Client::new(rocket()).unwrap();
+
+            // verify that the initial content is correct
+            let initial_rendered = Template::show(client.rocket(), RELOAD_TEMPLATE, ());
+            assert_eq!(initial_rendered, Some(INITIAL_TEXT.into()));
+
+            // write a change to the file
+            write_file(&reload_path, NEW_TEXT);
+
+            for _ in 0..6 {
+                // dispatch any request to trigger a template reload
+                client.get("/").dispatch();
+
+                // if the new content is correct, we are done
+                let new_rendered = Template::show(client.rocket(), RELOAD_TEMPLATE, ());
+                if new_rendered == Some(NEW_TEXT.into()) {
+                    // TODO: deleting the file can break concurrent tests,
+                    // but not deleting the file will leave it as an untracked file in git
+                    return;
+                }
+
+                thread::sleep(Duration::from_millis(250));
+            }
+
+            panic!("failed to reload modified template in 1.5s");
+        }
     }
 }

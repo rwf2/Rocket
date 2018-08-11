@@ -4,7 +4,9 @@ extern crate glob;
 
 #[cfg(feature = "tera_templates")] mod tera_templates;
 #[cfg(feature = "handlebars_templates")] mod handlebars_templates;
+
 mod engine;
+mod fairing;
 mod context;
 mod metadata;
 
@@ -12,6 +14,7 @@ pub use self::engine::Engines;
 pub use self::metadata::TemplateMetadata;
 
 use self::engine::Engine;
+use self::fairing::{TemplateFairing, ContextManager};
 use self::context::Context;
 use self::serde::Serialize;
 use self::serde_json::{Value, to_value};
@@ -22,10 +25,9 @@ use std::path::PathBuf;
 
 use rocket::{Rocket, State};
 use rocket::request::Request;
-use rocket::fairing::{Fairing, AdHoc};
+use rocket::fairing::Fairing;
 use rocket::response::{self, Content, Responder};
 use rocket::http::{ContentType, Status};
-use rocket::config::ConfigError;
 
 const DEFAULT_TEMPLATE_DIR: &'static str = "templates";
 
@@ -75,6 +77,11 @@ const DEFAULT_TEMPLATE_DIR: &'static str = "templates";
 /// can be any type that implements `Serialize` from
 /// [Serde](https://github.com/serde-rs/json) and would serialize to an `Object`
 /// value.
+///
+/// In debug mode (without the `--release` flag passed to `cargo`), templates
+/// will be automatically reloaded from disk if any changes have been made to
+/// the templates directory since the previous request. In release builds,
+/// template reloading is disabled to improve performance and cannot be enabled.
 ///
 /// # Usage
 ///
@@ -205,26 +212,10 @@ impl Template {
     ///     # ;
     /// }
     /// ```
-    pub fn custom<F>(f: F) -> impl Fairing where F: Fn(&mut Engines) + Send + Sync + 'static {
-        AdHoc::on_attach(move |rocket| {
-            let mut template_root = rocket.config().root_relative(DEFAULT_TEMPLATE_DIR);
-            match rocket.config().get_str("template_dir") {
-                Ok(dir) => template_root = rocket.config().root_relative(dir),
-                Err(ConfigError::NotFound) => { /* ignore missing configs */ }
-                Err(e) => {
-                    e.pretty_print();
-                    warn_!("Using default templates directory '{:?}'", template_root);
-                }
-            };
-
-            match Context::initialize(template_root) {
-                Some(mut ctxt) => {
-                    f(&mut ctxt.engines);
-                    Ok(rocket.manage(ctxt))
-                }
-                None => Err(rocket)
-            }
-        })
+    pub fn custom<F>(f: F) -> impl Fairing
+        where F: Fn(&mut Engines) + Send + Sync + 'static
+    {
+        TemplateFairing { custom_callback: Box::new(f) }
     }
 
     /// Render the template named `name` with the context `context`. The
@@ -289,7 +280,7 @@ impl Template {
     pub fn show<S, C>(rocket: &Rocket, name: S, context: C) -> Option<String>
         where S: Into<Cow<'static, str>>, C: Serialize
     {
-        let ctxt = rocket.state::<Context>().or_else(|| {
+        let ctxt = rocket.state::<ContextManager>().map(ContextManager::context).or_else(|| {
             warn!("Uninitialized template context: missing fairing.");
             info!("To use templates, you must attach `Template::fairing()`.");
             info!("See the `Template` documentation for more information.");
@@ -329,12 +320,12 @@ impl Template {
 /// rendering fails, an `Err` of `Status::InternalServerError` is returned.
 impl Responder<'static> for Template {
     fn respond_to(self, req: &Request) -> response::Result<'static> {
-        let ctxt = req.guard::<State<Context>>().succeeded().ok_or_else(|| {
+        let ctxt = req.guard::<State<ContextManager>>().succeeded().ok_or_else(|| {
             error_!("Uninitialized template context: missing fairing.");
             info_!("To use templates, you must attach `Template::fairing()`.");
             info_!("See the `Template` documentation for more information.");
             Status::InternalServerError
-        })?;
+        })?.inner().context();
 
         let (render, content_type) = self.finalize(&ctxt)?;
         Content(content_type, render).respond_to(req)

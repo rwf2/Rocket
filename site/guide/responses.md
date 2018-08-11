@@ -276,6 +276,10 @@ fn main() {
 }
 ```
 
+In debug mode (without the `--release` flag passed to `cargo`), templates are
+automatically reloaded from disk when they are modified. In release builds,
+reloading is disabled to improve performance.
+
 The [`Template`] API
 documentation contains more information about templates, while the [Handlebars
 Templates example on
