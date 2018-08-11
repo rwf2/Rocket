@@ -149,7 +149,7 @@ impl fmt::Display for ConfigError {
             }
             BadEnvVal(ref k, ref v, _) => {
                 write!(f, "environment variable '{}={}' could not be parsed", k, v)
-            }
+            },
         }
     }
 }

@@ -10,13 +10,13 @@
 #[doc(hidden)] pub use hyper::server::Handler as Handler;
 
 #[doc(hidden)] pub use hyper::net;
-
 #[doc(hidden)] pub use hyper::method::Method;
 #[doc(hidden)] pub use hyper::status::StatusCode;
 #[doc(hidden)] pub use hyper::error::Error;
 #[doc(hidden)] pub use hyper::uri::RequestUri;
 #[doc(hidden)] pub use hyper::http::h1;
 #[doc(hidden)] pub use hyper::buffer;
+#[doc(hidden)] pub use hyper::Result;
 
 pub use hyper::mime;
 

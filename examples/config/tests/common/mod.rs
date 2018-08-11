@@ -16,8 +16,8 @@ fn check_config(config: State<'_, LocalConfig>) -> Option<()> {
     let config = &config.0;
     match &*environment {
         "development" => {
-            assert_eq!(config.address, "localhost".to_string());
-            assert_eq!(config.port, 8000);
+            assert_eq!(config.address.to_string(), "localhost");
+            assert_eq!(*config.port, 8000);
             assert_eq!(config.workers, 1);
             assert_eq!(config.log_level, LoggingLevel::Normal);
             assert_eq!(config.environment, config::Environment::Development);
@@ -26,16 +26,16 @@ fn check_config(config: State<'_, LocalConfig>) -> Option<()> {
             assert_eq!(config.get_bool("is_extra"), Ok(true));
         }
         "staging" => {
-            assert_eq!(config.address, "0.0.0.0".to_string());
-            assert_eq!(config.port, 8000);
+            assert_eq!(config.address.to_string(), "0.0.0.0");
+            assert_eq!(*config.port, 8000);
             assert_eq!(config.workers, 8);
             assert_eq!(config.log_level, LoggingLevel::Normal);
             assert_eq!(config.environment, config::Environment::Staging);
             assert_eq!(config.extras().count(), 0);
         }
         "production" => {
-            assert_eq!(config.address, "0.0.0.0".to_string());
-            assert_eq!(config.port, 8000);
+            assert_eq!(config.address.to_string(), "0.0.0.0");
+            assert_eq!(*config.port, 8000);
             assert_eq!(config.workers, 12);
             assert_eq!(config.log_level, LoggingLevel::Critical);
             assert_eq!(config.environment, config::Environment::Production);

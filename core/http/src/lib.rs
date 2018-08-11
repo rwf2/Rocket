@@ -21,6 +21,10 @@ pub mod uri;
 pub mod ext;
 
 #[doc(hidden)]
+#[cfg(unix)]
+pub mod unix;
+
+#[doc(hidden)]
 #[cfg(feature = "tls")]
 pub mod tls;
 

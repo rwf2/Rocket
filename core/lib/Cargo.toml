@@ -37,6 +37,10 @@ base64 = "0.10"
 pear = "0.1"
 atty = "0.2"
 
+[target.'cfg(unix)'.dependencies]
+# Used for unix domain socket file locking.
+fs2 = "0.4"
+
 [build-dependencies]
 yansi = "0.5"
 version_check = "0.9.1"

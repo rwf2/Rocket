@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 
-use crate::config::{Result, Config, Value, Environment, Limits, LoggingLevel};
+use crate::config::{Result, Config, Value, Environment, Limits, LoggingLevel, Port};
 
 /// Structure following the builder pattern for building `Config` structures.
 #[derive(Clone)]
@@ -11,7 +11,7 @@ pub struct ConfigBuilder {
     /// The address to serve on.
     pub address: String,
     /// The port to serve on.
-    pub port: u16,
+    pub port: Port,
     /// The number of workers to run in parallel.
     pub workers: u16,
     /// Keep-alive timeout in seconds or disabled if 0.
@@ -53,7 +53,7 @@ impl ConfigBuilder {
         let config = Config::new(environment);
         ConfigBuilder {
             environment: config.environment,
-            address: config.address,
+            address: config.address.to_string(),
             port: config.port,
             workers: config.workers,
             keep_alive: config.keep_alive.unwrap_or(0),
@@ -77,7 +77,7 @@ impl ConfigBuilder {
     ///     .address("127.0.0.1")
     ///     .unwrap();
     ///
-    /// assert_eq!(config.address.as_str(), "127.0.0.1");
+    /// assert_eq!(config.address.to_string(), "127.0.0.1");
     /// ```
     pub fn address<A: Into<String>>(mut self, address: A) -> Self {
         self.address = address.into();
@@ -95,11 +95,11 @@ impl ConfigBuilder {
     ///     .port(1329)
     ///     .unwrap();
     ///
-    /// assert_eq!(config.port, 1329);
+    /// assert_eq!(*config.port, 1329);
     /// ```
     #[inline]
     pub fn port(mut self, port: u16) -> Self {
-        self.port = port;
+        self.port = Port::Provided(port);
         self
     }
 
@@ -314,8 +314,9 @@ impl ConfigBuilder {
     /// ```
     pub fn finalize(self) -> Result<Config> {
         let mut config = Config::new(self.environment);
+
         config.set_address(self.address)?;
-        config.set_port(self.port);
+        config.set_port(*self.port);
         config.set_workers(self.workers);
         config.set_keep_alive(self.keep_alive);
         config.set_log_level(self.log_level);
@@ -353,7 +354,7 @@ impl ConfigBuilder {
     ///     .address("127.0.0.1")
     ///     .unwrap();
     ///
-    /// assert_eq!(config.address.as_str(), "127.0.0.1");
+    /// assert_eq!(config.address.to_string(), "127.0.0.1");
     /// ```
     #[inline(always)]
     pub fn unwrap(self) -> Config {
@@ -376,7 +377,7 @@ impl ConfigBuilder {
     ///     .address("127.0.0.1")
     ///     .expect("the configuration is bad!");
     ///
-    /// assert_eq!(config.address.as_str(), "127.0.0.1");
+    /// assert_eq!(config.address.to_string(), "127.0.0.1");
     /// ```
     #[inline(always)]
     pub fn expect(self, msg: &str) -> Config {

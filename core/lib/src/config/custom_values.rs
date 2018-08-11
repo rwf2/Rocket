@@ -1,4 +1,5 @@
 use std::fmt;
+use std::ops::{Deref, DerefMut};
 
 #[cfg(feature = "tls")] use crate::http::tls::{Certificate, PrivateKey};
 
@@ -39,6 +40,54 @@ impl fmt::Display for SecretKey {
 
         #[cfg(not(feature = "private-cookies"))]
         write!(f, "private-cookies disabled")
+    }
+}
+
+/// The configured port to serve a Rocket application on.
+#[derive(Copy, Clone, Debug)]
+pub enum Port {
+    Generated(u16),
+    Provided(u16)
+}
+
+impl Deref for Port {
+    type Target = u16;
+
+    fn deref(&self) -> &u16 {
+        match self { Port::Generated(v) | Port::Provided(v) => v }
+    }
+}
+
+impl DerefMut for Port {
+    fn deref_mut(&mut self) -> &mut u16 {
+        match self { Port::Generated(v) | Port::Provided(v) => v }
+    }
+}
+
+impl PartialEq for Port {
+    fn eq(&self, other: &Self) -> bool {
+        self.value() == other.value()
+    }
+}
+
+impl Port {
+    crate fn value(self) -> u16 {
+        match self {
+            Port::Generated(v) | Port::Provided(v) => v
+        }
+    }
+
+    crate fn is_generated(&self) -> bool {
+        match *self {
+            Port::Generated(_) => true,
+            _ => false
+        }
+    }
+}
+
+impl fmt::Display for Port {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        self.value().fmt(f)
     }
 }
 

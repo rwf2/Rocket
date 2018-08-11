@@ -6,7 +6,7 @@ use std::time::Duration;
 #[cfg(feature = "tls")] use super::net_stream::HttpsStream;
 
 use super::data_stream::{DataStream, kill_stream};
-use super::net_stream::NetStream;
+use super::net_stream::{NetStream, try_socket_stream_downcast};
 use crate::ext::ReadExt;
 
 use crate::http::hyper;
@@ -101,6 +101,7 @@ impl Data {
                     stream.downcast_ref::<HttpStream>()
                         .map(|s| NetStream::Http(s.clone()))
                 })
+                .or_else(|| try_socket_stream_downcast(stream))
         }
 
         #[inline(always)]
@@ -108,12 +109,13 @@ impl Data {
         fn concrete_stream(stream: &mut dyn NetworkStream) -> Option<NetStream> {
             stream.downcast_ref::<HttpStream>()
                 .map(|s| NetStream::Http(s.clone()))
+                .or_else(|| try_socket_stream_downcast(stream))
         }
 
         // Retrieve the underlying Http(s)Stream from Hyper.
         let net_stream = match concrete_stream(*body.get_mut().get_mut()) {
             Some(net_stream) => net_stream,
-            None => return Err("Stream is not an HTTP(s) stream!")
+            None => return Err("Unrecognized stream! Not HTTP(s) or Unix!")
         };
 
         // Set the read timeout to 5 seconds.

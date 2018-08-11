@@ -1,12 +1,12 @@
 use std::collections::HashMap;
-use std::net::ToSocketAddrs;
 use std::path::{Path, PathBuf};
 use std::convert::AsRef;
 use std::fmt;
+use std::net::Ipv4Addr;
 
 use crate::config::Environment::*;
 use crate::config::{Result, ConfigBuilder, Environment, ConfigError, LoggingLevel};
-use crate::config::{Table, Value, Array, Datetime};
+use crate::config::{Table, Value, Array, Datetime, Address};
 use crate::http::private::Key;
 
 use super::custom_values::*;
@@ -39,9 +39,9 @@ pub struct Config {
     /// The environment that this configuration corresponds to.
     pub environment: Environment,
     /// The address to serve on.
-    pub address: String,
+    pub address: Address,
     /// The port to serve on.
-    pub port: u16,
+    pub port: Port,
     /// The number of workers to run concurrently.
     pub workers: u16,
     /// Keep-alive timeout in seconds or None if disabled.
@@ -225,8 +225,8 @@ impl Config {
             Development => {
                 Config {
                     environment: Development,
-                    address: "localhost".to_string(),
-                    port: 8000,
+                    address: Address::Hostname("localhost".into()),
+                    port: Port::Generated(8000),
                     workers: default_workers,
                     keep_alive: Some(5),
                     log_level: LoggingLevel::Normal,
@@ -241,8 +241,8 @@ impl Config {
             Staging => {
                 Config {
                     environment: Staging,
-                    address: "0.0.0.0".to_string(),
-                    port: 8000,
+                    address: Address::Ip(Ipv4Addr::new(0, 0, 0, 0).into()),
+                    port: Port::Generated(8000),
                     workers: default_workers,
                     keep_alive: Some(5),
                     log_level: LoggingLevel::Normal,
@@ -257,8 +257,8 @@ impl Config {
             Production => {
                 Config {
                     environment: Production,
-                    address: "0.0.0.0".to_string(),
-                    port: 8000,
+                    address: Address::Ip(Ipv4Addr::new(0, 0, 0, 0).into()),
+                    port: Port::Generated(8000),
                     workers: default_workers,
                     keep_alive: Some(5),
                     log_level: LoggingLevel::Critical,
@@ -340,8 +340,8 @@ impl Config {
     ///
     /// # Errors
     ///
-    /// If `address` is not a valid IP address or hostname, returns a `BadType`
-    /// error.
+    /// If `address` is not a valid IP address, hostname or (on Unix platforms
+    /// only) a Unix domain socket, returns a `BadType` error.
     ///
     /// # Example
     ///
@@ -354,10 +354,11 @@ impl Config {
     /// assert!(config.set_address("?").is_err());
     /// ```
     pub fn set_address<A: Into<String>>(&mut self, address: A) -> Result<()> {
-        let address = address.into();
-        if (&*address, 0u16).to_socket_addrs().is_err() {
-            return Err(self.bad_type("address", "string", "a valid hostname or IP"));
-        }
+        let address = address.into().parse::<Address>().map_err(|_| {
+            #[cfg(unix)] let msg = "a valid hostname, IP, or Unix domain socket path";
+            #[cfg(not(unix))] let msg = "a valid hostname or IP";
+            self.bad_type("address", "string", msg)
+        })?;
 
         self.address = address;
         Ok(())
@@ -372,11 +373,11 @@ impl Config {
     ///
     /// let mut config = Config::new(Environment::Staging);
     /// config.set_port(1024);
-    /// assert_eq!(config.port, 1024);
+    /// assert_eq!(*config.port, 1024);
     /// ```
     #[inline]
     pub fn set_port(&mut self, port: u16) {
-        self.port = port;
+        self.port = Port::Provided(port);
     }
 
     /// Sets the number of `workers` in `self` to `workers`.
@@ -912,6 +913,15 @@ impl Config {
             path.into()
         }
     }
+
+    /// The full address to serve on.
+    crate fn full_address(&self) -> String {
+        match self.address {
+            Address::Hostname(ref host) => format!("{}:{}", host, self.port),
+            Address::Ip(ip) => format!("{}:{}", ip, self.port),
+            Address::Unix(ref path) => format!("{}", path.display())
+        }
+    }
 }
 
 impl fmt::Debug for Config {
@@ -919,7 +929,7 @@ impl fmt::Debug for Config {
         let mut s = f.debug_struct("Config");
         s.field("environment", &self.environment);
         s.field("address", &self.address);
-        s.field("port", &self.port);
+        s.field("port", &*self.port);
         s.field("workers", &self.workers);
         s.field("keep_alive", &self.keep_alive);
         s.field("log_level", &self.log_level);

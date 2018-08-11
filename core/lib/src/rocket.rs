@@ -93,21 +93,35 @@ impl hyper::Handler for Rocket {
 // closure would be different depending on whether TLS was enabled or not.
 #[cfg(not(feature = "tls"))]
 macro_rules! serve {
-    ($rocket:expr, $addr:expr, |$server:ident, $proto:ident| $continue:expr) => ({
-        let ($proto, $server) = ("http://", hyper::Server::http($addr));
+    ($rocket:expr, |$server:ident, $proto:ident| $continue:expr) => ({
+        #[cfg(unix)]
+        {
+            if $rocket.config.address.is_unix() {
+                serve_unix_socket!($rocket, |$server, $proto| $continue);
+            }
+        }
+        let addr = $rocket.config.full_address();
+        let ($proto, $server) = ("http://", hyper::Server::http(addr));
         $continue
     })
 }
 
 #[cfg(feature = "tls")]
 macro_rules! serve {
-    ($rocket:expr, $addr:expr, |$server:ident, $proto:ident| $continue:expr) => ({
+    ($rocket:expr, |$server:ident, $proto:ident| $continue:expr) => ({
+        #[cfg(unix)]
+        {
+            if $rocket.config.address.is_unix() {
+                serve_unix_socket!($rocket, |$server, $proto| $continue);
+            }
+        }
+        let addr = $rocket.config.full_address();
         if let Some(tls) = $rocket.config.tls.clone() {
             let tls = TlsServer::new(tls.certs, tls.key);
-            let ($proto, $server) = ("https://", hyper::Server::https($addr, tls));
+            let ($proto, $server) = ("https://", hyper::Server::https(addr, tls));
             $continue
         } else {
-            let ($proto, $server) = ("http://", hyper::Server::http($addr));
+            let ($proto, $server) = ("http://", hyper::Server::http(addr));
             $continue
         }
     })
@@ -396,7 +410,12 @@ impl Rocket {
 
         launch_info!("{}Configured for {}.", Paint::masked("🔧 "), config.environment);
         launch_info_!("address: {}", Paint::default(&config.address).bold());
-        launch_info_!("port: {}", Paint::default(&config.port).bold());
+        if config.address.is_unix() && !config.port.is_generated() {
+            warn_!("port: {}", Paint::default("invalid").bold());
+            warn_!("port is configured, but address is unix domain socket");
+        } else {
+            launch_info_!("port: {}", Paint::default(&config.port).bold());
+        }
         launch_info_!("log: {}", Paint::default(config.log_level).bold());
         launch_info_!("workers: {}", Paint::default(config.workers).bold());
         launch_info_!("secret key: {}", Paint::default(&config.secret_key).bold());
@@ -687,8 +706,7 @@ impl Rocket {
 
         self.fairings.pretty_print_counts();
 
-        let full_addr = format!("{}:{}", self.config.address, self.config.port);
-        serve!(self, &full_addr, |server, proto| {
+        serve!(self, |server, proto| {
             let mut server = match server {
                 Ok(server) => server,
                 Err(e) => return LaunchError::new(LaunchErrorKind::Bind(e)),
@@ -696,7 +714,7 @@ impl Rocket {
 
             // Determine the address and port we actually binded to.
             match server.local_addr() {
-                Ok(server_addr) => self.config.port = server_addr.port(),
+                Ok(server_addr) => *self.config.port = server_addr.port(),
                 Err(e) => return LaunchError::from(e),
             }
 
@@ -710,7 +728,7 @@ impl Rocket {
             // Run the launch fairings.
             self.fairings.handle_launch(&self);
 
-            let full_addr = format!("{}:{}", self.config.address, self.config.port);
+            let full_addr = self.config.full_address();
             launch_info!("{}{} {}{}",
                          Paint::masked("🚀 "),
                          Paint::default("Rocket has launched from").bold(),
