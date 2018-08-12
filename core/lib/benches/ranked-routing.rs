@@ -1,9 +1,9 @@
-#![feature(test, plugin)]
+#![feature(test, plugin, decl_macro)]
 #![plugin(rocket_codegen)]
 
 extern crate rocket;
 
-use rocket::config::{Environment, Config};
+use rocket::config::{Environment, Config, LoggingLevel};
 
 #[get("/", format = "application/json")]
 fn get() -> &'static str { "json" }
@@ -24,8 +24,8 @@ fn post2() -> &'static str { "html" }
 fn post3() -> &'static str { "plain" }
 
 fn rocket() -> rocket::Rocket {
-    let config = Config::new(Environment::Production).unwrap();
-    rocket::custom(config, false)
+    let config = Config::build(Environment::Production).log_level(LoggingLevel::Off);
+    rocket::custom(config.unwrap())
         .mount("/", routes![get, get2, get3])
         .mount("/", routes![post, post2, post3])
 }

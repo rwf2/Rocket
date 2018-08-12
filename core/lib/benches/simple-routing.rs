@@ -1,11 +1,11 @@
-#![feature(test, plugin)]
+#![feature(test, plugin, decl_macro)]
 #![plugin(rocket_codegen)]
 // #![feature(alloc_system)]
 // extern crate alloc_system;
 
 extern crate rocket;
 
-use rocket::config::{Environment, Config};
+use rocket::config::{Environment, Config, LoggingLevel};
 use rocket::http::RawStr;
 
 #[get("/")]
@@ -33,13 +33,13 @@ fn index_c() -> &'static str { "index" }
 fn index_dyn_a(a: &RawStr) -> &'static str { "index" }
 
 fn hello_world_rocket() -> rocket::Rocket {
-    let config = Config::new(Environment::Production).unwrap();
-    rocket::custom(config, false).mount("/", routes![hello_world])
+    let config = Config::build(Environment::Production).log_level(LoggingLevel::Off);
+    rocket::custom(config.unwrap()).mount("/", routes![hello_world])
 }
 
 fn rocket() -> rocket::Rocket {
-    let config = Config::new(Environment::Production).unwrap();
-    rocket::custom(config, false)
+    let config = Config::build(Environment::Production).log_level(LoggingLevel::Off);
+    rocket::custom(config.unwrap())
         .mount("/", routes![get_index, put_index, post_index, index_a,
                index_b, index_c, index_dyn_a])
 }
@@ -50,7 +50,6 @@ mod benches {
     use super::{hello_world_rocket, rocket};
     use self::test::Bencher;
     use rocket::local::Client;
-    use rocket::http::Method::*;
 
     #[bench]
     fn bench_hello_world(b: &mut Bencher) {
