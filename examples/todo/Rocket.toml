@@ -1,2 +1,5 @@
 [global]
 template_dir = "static"
+
+[global.databases.sqlite_database]
+url = "db/db.sqlite"

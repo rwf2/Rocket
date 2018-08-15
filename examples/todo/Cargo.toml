@@ -19,4 +19,4 @@ rand = "0.5"
 [dependencies.rocket_contrib]
 path = "../../contrib/lib"
 default_features = false
-features = [ "tera_templates" ]
+features = [ "tera_templates", "database_pool", "diesel_sqlite_pool" ]
