@@ -37,7 +37,7 @@ pub fn uri(
             delim: MacDelimiter::Parenthesis,
             tts: args.to_vec().into_iter().collect::<TokenStream>().into(),
         },
-        ::syntax::util::ThinVec::new(),
+        ::syntax::ThinVec::new(),
     );
 
     MacEager::expr(expr)
