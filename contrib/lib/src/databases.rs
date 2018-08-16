@@ -327,7 +327,7 @@
 //! |----------|-----------------------|--------------------------------|------------------------|
 //! | MySQL    | [Diesel]              | [`diesel::MysqlConnection`]    | `diesel_mysql_pool`    |
 //! | MySQL    | [`rust-mysql-simple`] | [`mysql::conn`]                | `mysql_pool`           |
-//! | Postgres | [Diesel]              | [`diesel::PgConnection`]       | `diesel_postgres_pool` |
+//! | Postgres | [Diesel]              | [`diesel::PgConnection`]       | `diesel_pg_pool` |
 //! | Postgres | [Rust-Postgres]       | [`postgres::Connection`]       | `postgres_pool`        |
 //! | Sqlite   | [Diesel]              | [`diesel::SqliteConnection`]   | `diesel_sqlite_pool`   |
 //! | Sqlite   | [`Rustqlite`]         | [`rusqlite::Connection`]       | `sqlite_pool`          |
@@ -376,7 +376,7 @@ pub use rocket_contrib_codegen::database;
 
 use self::r2d2::ManageConnection;
 
-#[cfg(any(feature = "diesel_sqlite_pool", feature = "diesel_postgres_pool", feature = "diesel_mysql_pool"))]
+#[cfg(any(feature = "diesel_sqlite_pool", feature = "diesel_pg_pool", feature = "diesel_mysql_pool"))]
 pub extern crate diesel;
 
 #[cfg(feature = "postgres_pool")]
@@ -410,7 +410,7 @@ pub extern crate r2d2_redis;
 ///
 /// ```toml
 /// [global.databases.my_database]
-/// url = "postgres://root:root@localhost/my_database
+/// url = "postgres://root:root@localhost/my_database"
 /// pool_size = 10
 /// certs = "sample_cert.pem"
 /// key = "key.pem"
