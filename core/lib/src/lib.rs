@@ -1,5 +1,4 @@
 #![feature(specialization)]
-#![feature(const_fn)]
 #![feature(plugin, decl_macro)]
 #![feature(try_trait)]
 #![feature(fnbox)]
