@@ -129,6 +129,13 @@ pub fn database_attr(attr: TokenStream, input: TokenStream) -> Result<TokenStrea
                 &self.0
             }
         }
+        
+        impl ::std::ops::DerefMut for #request_guard_type {
+            #[inline(always)]
+            fn deref_mut(&mut self) -> &mut Self::Target {
+                &mut self.0
+            }
+        }
 
         impl<'a, 'r> #request::FromRequest<'a, 'r> for #request_guard_type {
             type Error = ();
