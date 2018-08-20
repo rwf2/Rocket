@@ -302,7 +302,7 @@ impl Rocket {
     }
 
     // Finds the error catcher for the status `status` and executes it for the
-    // given request `req`. If a user has registers a catcher for `status`, the
+    // given request `req`. If a user has registered a catcher for `status`, the
     // catcher is called. If the catcher fails to return a good response, the
     // 500 catcher is executed. If there is no registered catcher for `status`,
     // the default catcher is used.
