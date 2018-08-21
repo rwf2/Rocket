@@ -1,4 +1,4 @@
-use syntax::codemap::{Span, BytePos};
+use syntax::source_map::{Span, BytePos};
 
 pub trait SpanExt {
     /// Trim the span on the left and right by `length`.

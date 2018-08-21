@@ -1,6 +1,6 @@
 use syntax::ast::*;
 use syntax::ext::base::{ExtCtxt, Annotatable};
-use syntax::codemap::{Span, Spanned, dummy_spanned};
+use syntax::source_map::{Span, Spanned, dummy_spanned};
 
 use rocket::http::Status;
 

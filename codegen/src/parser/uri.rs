@@ -1,5 +1,5 @@
 use syntax::ast::*;
-use syntax::codemap::{Span, Spanned, dummy_spanned};
+use syntax::source_map::{Span, Spanned, dummy_spanned};
 use syntax::ext::base::ExtCtxt;
 
 use rocket::http::uri::URI;

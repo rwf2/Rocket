@@ -1,6 +1,6 @@
 use syntax::ast::Ident;
 use syntax::ext::base::ExtCtxt;
-use syntax::codemap::{Span, Spanned};
+use syntax::source_map::{Span, Spanned};
 
 use utils::{span, SpanExt};
 

@@ -1,5 +1,5 @@
 use syntax::ast::*;
-use syntax::codemap::{Span, Spanned};
+use syntax::source_map::{Span, Spanned};
 use syntax::ext::base::Annotatable;
 use utils::{ArgExt, span};
 

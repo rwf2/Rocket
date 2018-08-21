@@ -1,4 +1,4 @@
-use syntax::codemap::{Spanned, Span, dummy_spanned, DUMMY_SP};
+use syntax::source_map::{Spanned, Span, dummy_spanned, DUMMY_SP};
 use syntax::ext::base::ExtCtxt;
 use syntax::tokenstream::TokenTree;
 use syntax::ext::quote::rt::ToTokens;

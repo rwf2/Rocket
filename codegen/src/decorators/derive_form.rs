@@ -7,7 +7,7 @@ use syntax::ext::base::{Annotatable, ExtCtxt};
 use syntax::print::pprust::{stmt_to_string};
 use syntax::ast::{ItemKind, Expr, MetaItem, Mutability, VariantData, Ident};
 use syntax::ast::{StructField, GenericParamKind};
-use syntax::codemap::Span;
+use syntax::source_map::Span;
 use syntax::ext::build::AstBuilder;
 use syntax::ptr::P;
 

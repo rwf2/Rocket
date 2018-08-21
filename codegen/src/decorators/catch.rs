@@ -2,7 +2,7 @@ use ::{CATCH_STRUCT_PREFIX, CATCH_FN_PREFIX, CATCHER_ATTR};
 use parser::CatchParams;
 use utils::*;
 
-use syntax::codemap::{Span};
+use syntax::source_map::{Span};
 use syntax::ast::{MetaItem, Ident, TyKind};
 use syntax::ext::base::{Annotatable, ExtCtxt};
 use syntax::tokenstream::TokenTree;
