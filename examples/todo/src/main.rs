@@ -20,6 +20,9 @@ use diesel::SqliteConnection;
 
 use task::{Task, Todo};
 
+// This macro from `diesel_migrations` defines an `embedded_migrations` module
+// containing a function named `run`. This allows the example to be run and
+// tested without any outside setup of the database.
 embed_migrations!();
 
 #[database("sqlite_database")]
