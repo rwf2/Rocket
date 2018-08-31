@@ -147,17 +147,16 @@ impl Data {
         };
 
         #[cfg(feature = "tls")]
-        let mut data = Data::new(http_stream);
-        #[cfg(feature = "tls")]
-        match cert_info {
-            Some(certs) => data.set_peer_certificates(certs),
-            None => ()
+        {
+            let mut data = Data::new(http_stream);
+            if let Some(certs) = cert_info {
+                data.set_peer_certificates(certs);
+            }
+            Ok(data)
         }
 
         #[cfg(not(feature = "tls"))]
-        let data = Data::new(http_stream);
-
-        Ok(data)
+        Ok(Data::new(http_stream))
     }
 
     /// Retrieve the `peek` buffer.

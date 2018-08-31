@@ -55,34 +55,23 @@ pub struct MutualTlsUser {
 }
 
 impl MutualTlsUser {
-    pub fn new(peer_cert: Certificate) -> Option<MutualTlsUser> {
+    // TODO: return a Result
+    pub fn new(peer_cert: &Certificate) -> Option<MutualTlsUser> {
         // Generate an x509 using the certificate provided
-        let x509 = match X509::from_der(peer_cert.as_ref()) {
-            Ok(val) => val,
-            Err(_) => return None
-        };
+        let x509 = X509::from_der(peer_cert.as_ref()).ok()?;
 
         // Retrieve alt names and store them into a Vec<String>
-        let alt_names = match x509.subject_alt_names() {
-            Some(val) => val,
-            None => return None
-        };
+        let alt_names = x509.subject_alt_names()?;
         let mut common_names = Vec::new();
         for name in alt_names {
-            let name = match name.dnsname() {
-                Some(val) => val,
-                None => return None
-            };
-            common_names.push(format!("{}", name));
+            common_names.push(name.dnsname()?.to_string())
         }
 
         // Retrieve certificate start time
-        let not_before = x509.not_before().clone();
-        let not_before = format!("{}", not_before);
+        let not_before = format!("{}", x509.not_before());
 
         // Retrieve certificate end time
-        let not_after = x509.not_after().clone();
-        let not_after = format!("{}", not_after);
+        let not_after = format!("{}", x509.not_after());
 
         Some(MutualTlsUser {
             common_names,
@@ -91,7 +80,7 @@ impl MutualTlsUser {
         })
     }
 
-    /// Return a clone of the client's common names.
+    /// Return the client's common names.
     ///
     /// # Example
     ///
@@ -103,11 +92,11 @@ impl MutualTlsUser {
     ///     let cert_common_names = mtls.get_common_names();
     /// }
     /// ```
-    pub fn get_common_names(&self) -> Vec<String> {
-        self.common_names.clone()
+    pub fn get_common_names(&self) -> &[String] {
+        &self.common_names
     }
 
-    /// Return a clone of the client's certificate's validity period start time.
+    /// Return the client's certificate's validity period start time.
     ///
     /// # Example
     ///
@@ -119,11 +108,11 @@ impl MutualTlsUser {
     ///     let cert_start_time = mtls.get_not_before();
     /// }
     /// ```
-    pub fn get_not_before(&self) -> String {
-        self.not_before.clone()
+    pub fn get_not_before(&self) -> &str {
+        self.not_before.as_str()
     }
 
-    /// Return a clone of the client's certificate's validity period end time.
+    /// Return the client's certificate's validity period end time.
     ///
     /// # Example
     ///
@@ -135,7 +124,7 @@ impl MutualTlsUser {
     ///     let cert_end_time = mtls.get_not_after();
     /// }
     /// ```
-    pub fn get_not_after(&self) -> String {
-        self.not_after.clone()
+    pub fn get_not_after(&self) -> &str {
+        self.not_after.as_str()
     }
 }

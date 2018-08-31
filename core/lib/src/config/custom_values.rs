@@ -243,10 +243,8 @@ pub fn tls_config<'v>(conf: &Config,
         }
     }
 
-    if let (Some(certs), Some(key), Some(ca_certs)) = (certs_path, key_path, cert_store_path) {
-        Ok((certs, key, Some(ca_certs)))
-    } else if let (Some(certs), Some(key), None) = (certs_path, key_path, cert_store_path) {
-        Ok((certs, key, None))
+    if let (Some(certs), Some(key)) = (certs_path, key_path) {
+        Ok((certs, key, cert_store_path))
     } else {
         Err(conf.bad_type(name, "a table with missing entries",
                             "a table with `certs` and `key` entries"))

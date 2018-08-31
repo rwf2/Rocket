@@ -227,13 +227,10 @@ impl ConfigBuilder {
     ///     .unwrap();
     /// # */
     /// ```
-    pub fn tls<C, K, W>(mut self, certs_path: C, key_path: K, cert_store_path: Option<W>) -> Self
-        where C: Into<String>, K: Into<String>, W: Into<String>
+    pub fn tls<C, K, W>(mut self, certs_path: C, key_path: K, cert_store_path: W) -> Self
+        where C: Into<String>, K: Into<String>, W: Into<Option<String>>
     {
-        self.tls = match cert_store_path {
-            Some(cert_store) => Some((certs_path.into(), key_path.into(), Some(cert_store.into()))),
-            None => Some((certs_path.into(), key_path.into(), None)),
-        };
+        self.tls = Some((certs_path.into(), key_path.into(), cert_store_path.into()));
         self
     }
 
@@ -339,10 +336,7 @@ impl ConfigBuilder {
         config.set_limits(self.limits);
 
         if let Some((certs_path, key_path, cert_store_path)) = self.tls {
-            match cert_store_path {
-                Some(cert_store) => config.set_tls(&certs_path, &key_path, Some(&cert_store))?,
-                None => config.set_tls(&certs_path, &key_path, None)?,
-            }
+            config.set_tls(&certs_path, &key_path, cert_store_path.as_ref().map(String::as_str))?;
         }
 
         if let Some(key) = self.secret_key {
