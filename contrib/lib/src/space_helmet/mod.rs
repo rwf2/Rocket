@@ -17,11 +17,11 @@
 //!| xss_protect - prevents some xss attacks.  | [X-XSS-Protection](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/X-XSS-Protection)|    ✔    |
 //!| no_sniff - prevents sniffing of mime type.| [X-Content-Type-Options](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/X-Content-Type-Options)    |    ✔    |
 //!| frameguard - prevents clickjacking.        | [X-Frame-Options](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/X-Frame-Options)|    ✔    |
-//!| hsts  - enforces strict use of https.      | [Strict-Transport-Security](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Strict-Transport-Security)|    ❓	  |
+//!| hsts  - enforces strict use of https.      | [Strict-Transport-Security](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Strict-Transport-Security)|    ❓     |
 //!| expect_ct - enables use of certificate transparency.      | [Expect-CT](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Expect-CT)|    ✗    |
 //!| referrer_policy - enables use or referrer policy (for privacy).      | [Referrer-Policy](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Referrer-Policy) | ✗  |
 //!
-//!❓	<i> if tls is enabled for the rocket a Helmet is attached to, hsts will force its use with the default policy and issue a warning.  </i>
+//!❓   <i> if tls is enabled for the rocket a Helmet is attached to, hsts will force its use with the default policy and issue a warning.  </i>
 //!
 //!
 //!
