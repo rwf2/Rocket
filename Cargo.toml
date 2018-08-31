@@ -9,6 +9,7 @@ members = [
   "core/http/",
   "contrib/lib",
   "contrib/codegen",
+  "examples/space_helmet",
   "examples/cookies",
   "examples/errors",
   "examples/form_validation",
