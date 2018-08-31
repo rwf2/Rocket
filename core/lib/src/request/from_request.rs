@@ -9,7 +9,7 @@ use crate::outcome::Outcome::*;
 use crate::http::{Status, ContentType, Accept, Method, Cookies, uri::Origin};
 
 #[cfg(feature = "tls")]
-use http::tls::{lookup_addr, Input, EndEntityCert, DNSNameRef, MutualTlsUser};
+use http::tls::{lookup_addr, Input, Certificate, EndEntityCert, DNSNameRef, MutualTlsUser};
 
 /// Type alias for the `Outcome` of a `FromRequest` conversion.
 pub type Outcome<S, E> = outcome::Outcome<S, (Status, E), ()>;
@@ -455,53 +455,31 @@ impl <'a, 'r> FromRequest<'a, 'r> for MutualTlsUser {
     type Error = ();
 
     fn from_request(request: &'a Request<'r>) -> Outcome<Self, Self::Error> {
-        // Get peer's IP address
-        let ip_addr = match request.client_ip() {
-            Some(val) => val,
-            None => return Forward(())
-        };
+        // Verify the client's common name against the provided certificates
+        // Fail if we can't get the common name or no certificates match.
 
-        // Reverse DNS lookup the peer's IP address
-        let name = match lookup_addr(&ip_addr) {
-            Ok(val) => val,
-            Err(_) => return Forward(())
-        };
-
-        // Change name to DNSNameRef
-        let name = Input::from(name.as_bytes());
-        let common_name = match DNSNameRef::try_from_ascii(name) {
-            Ok(val) => val,
-            Err(_) => return Forward(())
-        };
-
-        // Get certificates the peer provided
-        let certs = match request.get_peer_certificates() {
-            Some(val) => val,
-            None => return Forward(())
-        };
-
-        // Iterate through the client certificates
-        let certs_copy = certs.clone();
-        for (index, cert) in certs_copy.iter().enumerate() {
-            let cert_input = Input::from(cert.as_ref());
-            let end_entity = match EndEntityCert::from(cert_input) {
-                Ok(val) => val,
-                Err(_) => return Forward(())
-            };
-
-            // Compare certificate is valid for DNS name
-            let _verification = match end_entity.verify_is_valid_for_dns_name(common_name) {
-                Ok(val) => val,
-                Err(_) => return Forward(())
-            };
-
-            // Parse certificate
-            let mtls_user = match MutualTlsUser::new(certs[index].clone()) {
-                Some(val) => val,
-                None => return Forward(())
-            };
-            return Success(mtls_user);
+        fn first_valid_cert<'a>(certs: &'a [Certificate], common_name: DNSNameRef) -> Option<&'a Certificate> {
+            certs.iter()
+                .find(|cert| {
+                    let cert_input = Input::from(cert.as_ref());
+                    EndEntityCert::from(cert_input)
+                        .and_then(|ee| ee.verify_is_valid_for_dns_name(common_name).map(|_| true))
+                        .unwrap_or(false)
+                })
         }
-        Forward(())
+
+        // Get peer's IP address
+        let ip_addr = request.client_ip().or_forward(())?;
+
+        // Reverse DNS lookup the peer's IP address to get a DNSNameRef
+        let name = lookup_addr(&ip_addr).ok().or_forward(())?;
+        let input = Input::from(name.as_bytes());
+        let common_name = DNSNameRef::try_from_ascii(input).ok().or_forward(())?;
+
+        // Create a MutualTlsUser from the first valid cert
+        let certs = request.get_peer_certificates().or_forward(())?;
+        let valid_cert = first_valid_cert(&certs, common_name).or_forward(())?;
+
+        MutualTlsUser::new(valid_cert).or_forward(())
     }
 }

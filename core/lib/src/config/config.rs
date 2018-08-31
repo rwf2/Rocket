@@ -539,23 +539,23 @@ impl Config {
             })?;
 
         // Load certs for clients.
-        if cert_store_path == None {
+        if let Some(path) = cert_store_path {
+            let ca_cert_vector = util::load_cert_store_certs(self.root_relative(path))
+                .map_err(|e| match e {
+                    Error::Io(e) => ConfigError::Io(e, "tls.ca_certs"),
+                    _ => self.bad_type("tls", pem_err, "a valid certificate store directory")
+                })?;
+
+            let ca_certs = Some(util::generate_cert_store(ca_cert_vector)
+                .map_err(|e| match e {
+                    _ => self.bad_type("tls", pem_err, "a valid certificate store")
+                })?);
+
+            self.tls = Some(TlsConfig { certs, key, ca_certs });
+        } else {
             self.tls = Some(TlsConfig { certs, key, ca_certs: None });
-            return Ok(());
-        };
+        }
 
-        let ca_cert_vector = util::load_cert_store_certs(self.root_relative(cert_store_path.unwrap()))
-            .map_err(|e| match e {
-                Error::Io(e) => ConfigError::Io(e, "tls.ca_certs"),
-                _ => self.bad_type("tls", pem_err, "a valid certificate store directory")
-            })?;
-
-        let ca_certs = Some(util::generate_cert_store(ca_cert_vector)
-            .map_err(|e| match e {
-                _ => self.bad_type("tls", pem_err, "a valid certificate store")
-            })?);
-
-        self.tls = Some(TlsConfig { certs, key, ca_certs });
         Ok(())
     }
 
