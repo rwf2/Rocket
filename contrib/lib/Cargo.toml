@@ -1,7 +1,7 @@
 [package]
 name = "rocket_contrib"
 version = "0.4.0-dev"
-authors = ["Sergio Benitez <sb@sergio.bz>"]
+authors = ["Sergio Benitez <sb@sergio.bz>", "Tal Garfinkel <talg@cs.stanford.edu>"]
 description = "Community contributed libraries for the Rocket web framework."
 documentation = "https://api.rocket.rs/rocket_contrib/"
 homepage = "https://rocket.rs"
@@ -11,7 +11,7 @@ keywords = ["rocket", "web", "framework", "contrib", "contributed"]
 license = "MIT/Apache-2.0"
 
 [features]
-default = ["json", "static_files"]
+default = ["json", "static_files", "space_helmet"]
 json = ["serde", "serde_json"]
 msgpack = ["serde", "rmp-serde"]
 tera_templates = ["tera", "templates"]
@@ -19,6 +19,7 @@ handlebars_templates = ["handlebars", "templates"]
 static_files = []
 # Internal use only.
 templates = ["serde", "serde_json", "glob"]
+space_helmet = []
 
 # Database pooling features.
 # Iternal use only.

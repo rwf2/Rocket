@@ -19,7 +19,7 @@ use uri::{as_utf8_unchecked, Error};
 /// ```
 ///
 /// Only the host part of the URI is required.
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Authority<'a> {
     source: Option<Cow<'a, str>>,
     user_info: Option<IndexedStr<'a>>,
@@ -27,7 +27,7 @@ pub struct Authority<'a> {
     port: Option<u16>,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 crate enum Host<T> {
     Bracketed(T),
     Raw(T)

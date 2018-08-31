@@ -1,0 +1,22 @@
+[package]
+name = "space_helmet"
+version = "0.0.0"
+workspace = "../../"
+publish = false
+
+[dependencies]
+rocket = { path = "../../core/lib", features = ["tls"]}
+rocket_codegen = { path = "../../core/codegen" }
+
+[dependencies.rocket_contrib]
+path = "../../contrib/lib"
+default-features = false
+features = ["space_helmet"]
+
+[[bin]]
+name = "hello"
+path = "src/hello.rs"
+
+[[bin]]
+name = "hello-warn"
+path = "src/hello-warn.rs"

@@ -31,7 +31,7 @@ impl AsPtr for [u8] {
 }
 
 
-#[derive(PartialEq)]
+#[derive(PartialEq, Clone)]
 pub enum Indexed<'a, T: ?Sized + ToOwned + 'a> {
     Indexed(usize, usize),
     Concrete(Cow<'a, T>)
@@ -175,7 +175,7 @@ impl<'a, T: ?Sized + ToOwned + 'a> Indexed<'a, T>
 }
 
 impl<'a, T: ToOwned + ?Sized + 'a> Clone for Indexed<'a, T> {
-    fn clone(&self) -> Self {
+    default fn clone(&self) -> Self {
         match *self {
             Indexed::Indexed(a, b) => Indexed::Indexed(a, b),
             Indexed::Concrete(ref cow) => Indexed::Concrete(cow.clone())
