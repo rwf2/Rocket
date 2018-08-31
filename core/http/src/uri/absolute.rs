@@ -21,7 +21,7 @@ use uri::{Authority, Origin, Error, as_utf8_unchecked};
 ///
 /// The scheme part of the absolute URI and at least one of authority or origin
 /// are required.
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Absolute<'a> {
     source: Option<Cow<'a, str>>,
     scheme: IndexedStr<'a>,

@@ -89,6 +89,9 @@ pub use uuid::{Uuid, UuidParseError};
 #[cfg(feature = "static_files")]
 pub mod static_files;
 
+#[cfg(feature = "space_helmet")]
+pub mod space_helmet;
+
 #[cfg(feature = "database_pool")]
 pub mod databases;
 

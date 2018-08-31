@@ -39,7 +39,7 @@ use uri::{Origin, Authority, Absolute, Error};
 /// This type also provides the following percent encoding/decoding helper
 /// methods: [`Uri::percent_encode`], [`Uri::percent_decode`], and
 /// [`Uri::percent_decode_lossy`].
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub enum Uri<'a> {
     /// An [`Origin`] URI.
     Origin(Origin<'a>),
