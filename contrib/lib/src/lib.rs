@@ -65,7 +65,7 @@ pub extern crate tera;
 pub mod json;
 
 #[cfg(feature = "json")]
-pub use json::{Json, SerdeError, JsonValue};
+pub use json::{Json, JsonResult, SerdeError, JsonValue};
 
 #[cfg(feature = "msgpack")]
 #[doc(hidden)]

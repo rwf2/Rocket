@@ -99,6 +99,52 @@ impl<T> Json<T> {
     }
 }
 
+/// ## Lenient Routing in the case of a JSON parsing failure
+///
+/// If you're receiving JSON data but you want your handler to fire regardless of
+/// whether the JSON parsing is successful or not, you can specify JsonResult
+/// you can
+/// ```rust,ignore
+/// #[post("/users/", data = "<user>")]
+/// fn new_user(r: JsonResult<User>) {
+///     match r {
+///         JsonResult::Ok(user) => {..}
+///         JsonResult::Err(e,body) => {..}
+///     }
+/// }
+/// ```
+#[derive(Debug)]
+pub enum JsonResult<T> {
+    Ok(T),
+    Err{
+        e: SerdeError,
+        body: String
+    }
+}
+impl<T> JsonResult<T> {
+    /// Consumes the JSON wrapper and returns the wrapped item if Ok, else panic.
+    ///
+    /// # Example
+    /// ```rust
+    /// # use rocket_contrib::JsonResult;
+    /// let string = "Hello".to_string();
+    /// let my_jsonresult = JsonResult::Ok(string);
+    /// assert_eq!(my_jsonresult.unwrap(), "Hello".to_string());
+    /// ```
+    #[inline(always)]
+    pub fn unwrap(self) -> T {
+        match self {
+            JsonResult::Ok(v) => {
+                v
+            },
+            JsonResult::Err { e, body } => {
+                panic!("Couldn't parse JSON body: {:?}", e)
+            }
+        }
+    }
+}
+
+
 /// Default limit for JSON is 1MB.
 const LIMIT: u64 = 1 << 20;
 
@@ -116,6 +162,25 @@ impl<T: DeserializeOwned> FromData for Json<T> {
             .map(Json)
             .map_err(|e| { error_!("Couldn't parse JSON body: {:?}", e); e })
             .into_outcome(Status::BadRequest)
+    }
+}
+
+impl<T: DeserializeOwned> FromData for JsonResult<T> {
+    type Error = SerdeError;
+
+    fn from_data(request: &Request, data: Data) -> data::Outcome<Self, SerdeError> {
+        let size_limit = request.limits().get("json").unwrap_or(LIMIT);
+
+        let mut body = String::with_capacity(512);
+        if let Err(io_err) = data.open().take(size_limit).read_to_string(&mut body) {
+            // Error::io is private to serde_json. Do not use outside of Rocket.
+            return Ok(JsonResult::Err{ e: SerdeError::io(io_err), body }).into_outcome(Status::BadRequest);
+        };
+
+        match serde_json::from_str(&body){
+            Ok(v) => Ok(JsonResult::Ok(v)),
+            Err(e) => Ok(JsonResult::Err{ e, body })
+        }.into_outcome(Status::BadRequest)
     }
 }
 
