@@ -21,7 +21,7 @@ static_files = []
 templates = ["serde", "serde_json", "glob"]
 
 # Database pooling features.
-# Iternal use only.
+# Internal use only.
 database_pool_codegen = ["rocket_contrib_codegen", "rocket_contrib_codegen/database_attribute"]
 database_pool = ["r2d2", "database_pool_codegen"]
 # External features.
