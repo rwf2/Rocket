@@ -4,6 +4,7 @@ extern crate dns_lookup;
 extern crate untrusted;
 extern crate webpki;
 extern crate openssl;
+extern crate time;
 
 pub use self::hyper_sync_rustls::{util, WrappedStream, ServerSession, TlsServer};
 pub use self::rustls::{Certificate, PrivateKey, RootCertStore, internal::pemfile};
@@ -12,6 +13,20 @@ pub use self::untrusted::Input;
 pub use self::webpki::{EndEntityCert, DNSNameRef};
 
 use self::openssl::x509::X509;
+use self::time::{Tm, strptime, ParseError};
+
+type DateTime = Tm;
+
+/// Convert openssl ASN.1 time to a `DateTime`
+fn asn1time_to_datetime(dt: &openssl::asn1::Asn1TimeRef) -> Result<DateTime, ParseError> {
+    // Sep  1 10:02:28 2017 GMT
+    let s = format!("{}", dt);
+    // strip GMT and any space-padding
+    let s = s.trim_right_matches(" GMT").replace("  ", " ");
+
+    let fmt = "%b %d %H:%M:%S %Y";
+    strptime(&s, fmt)
+}
 
 /// Client MTLS certificate information.
 ///
@@ -50,8 +65,8 @@ use self::openssl::x509::X509;
 #[derive(Debug)]
 pub struct MutualTlsUser {
     common_names: Vec<String>,
-    not_before: String,
-    not_after: String,
+    not_before: DateTime,
+    not_after: DateTime,
 }
 
 impl MutualTlsUser {
@@ -68,10 +83,10 @@ impl MutualTlsUser {
         }
 
         // Retrieve certificate start time
-        let not_before = format!("{}", x509.not_before());
+        let not_before = asn1time_to_datetime(x509.not_before()).ok()?;
 
         // Retrieve certificate end time
-        let not_after = format!("{}", x509.not_after());
+        let not_after = asn1time_to_datetime(x509.not_after()).ok()?;
 
         Some(MutualTlsUser {
             common_names,
@@ -108,8 +123,8 @@ impl MutualTlsUser {
     ///     let cert_start_time = mtls.get_not_before();
     /// }
     /// ```
-    pub fn get_not_before(&self) -> &str {
-        self.not_before.as_str()
+    pub fn get_not_before(&self) -> &DateTime {
+        &self.not_before
     }
 
     /// Return the client's certificate's validity period end time.
@@ -124,7 +139,7 @@ impl MutualTlsUser {
     ///     let cert_end_time = mtls.get_not_after();
     /// }
     /// ```
-    pub fn get_not_after(&self) -> &str {
-        self.not_after.as_str()
+    pub fn get_not_after(&self) -> &DateTime {
+        &self.not_after
     }
 }
