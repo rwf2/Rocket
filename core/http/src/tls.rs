@@ -9,11 +9,11 @@ extern crate time;
 pub use self::hyper_sync_rustls::{util, WrappedStream, ServerSession, TlsServer};
 pub use self::rustls::{Certificate, PrivateKey, RootCertStore, internal::pemfile};
 pub use self::dns_lookup::lookup_addr;
-pub use self::untrusted::Input;
-pub use self::webpki::{EndEntityCert, DNSNameRef};
 
 use self::openssl::x509::X509;
 use self::time::{Tm, strptime, ParseError};
+use self::untrusted::Input;
+use self::webpki::{EndEntityCert, DNSNameRef};
 
 type DateTime = Tm;
 
@@ -26,6 +26,30 @@ fn asn1time_to_datetime(dt: &openssl::asn1::Asn1TimeRef) -> Result<DateTime, Par
 
     let fmt = "%b %d %H:%M:%S %Y";
     strptime(&s, fmt)
+}
+
+
+/// Find the first `Certificate` valid for the given DNS name
+fn first_valid_cert_for_name<'a>(dns_name: DNSNameRef, certs: &'a [Certificate]) -> Option<&'a Certificate> {
+    certs.iter()
+        .find(|cert| {
+            let cert_input = Input::from(cert.as_ref());
+            EndEntityCert::from(cert_input)
+                .and_then(|ee| ee.verify_is_valid_for_dns_name(dns_name).map(|_| true))
+                .unwrap_or(false)
+        })
+}
+
+/// Given a domain name and a set of `Certificate`s, return the first certificate
+/// that matches the domain name
+pub fn find_valid_cert_for_peer<'a>(name: &'a str, certs: &'a [Certificate]) -> Result<&'a Certificate, ()> {
+    let input = Input::from(name.as_bytes());
+    let domain_name = DNSNameRef::try_from_ascii(input)?;
+
+    // Find the first valid cert for the given name
+    let valid_cert = first_valid_cert_for_name(domain_name, &certs).ok_or(())?;
+
+    Ok(valid_cert)
 }
 
 /// Client MTLS certificate information.

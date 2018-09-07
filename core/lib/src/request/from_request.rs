@@ -9,7 +9,7 @@ use outcome::Outcome::*;
 use http::{Status, ContentType, Accept, Method, Cookies, uri::Origin};
 
 #[cfg(feature = "tls")]
-use http::tls::{lookup_addr, Input, Certificate, EndEntityCert, DNSNameRef, MutualTlsUser};
+use http::tls::{lookup_addr, find_valid_cert_for_peer, MutualTlsUser};
 
 /// Type alias for the `Outcome` of a `FromRequest` conversion.
 pub type Outcome<S, E> = outcome::Outcome<S, (Status, E), ()>;
@@ -460,27 +460,14 @@ impl <'a, 'r> FromRequest<'a, 'r> for MutualTlsUser {
         // Verify the client's common name against the provided certificates
         // Fail if we can't get the common name or no certificates match.
 
-        fn first_valid_cert<'a>(certs: &'a [Certificate], common_name: DNSNameRef) -> Option<&'a Certificate> {
-            certs.iter()
-                .find(|cert| {
-                    let cert_input = Input::from(cert.as_ref());
-                    EndEntityCert::from(cert_input)
-                        .and_then(|ee| ee.verify_is_valid_for_dns_name(common_name).map(|_| true))
-                        .unwrap_or(false)
-                })
-        }
+        let certs = request.get_peer_certificates().or_forward(())?;
 
-        // Get peer's IP address
+        // Get peer's IP address and look up the DNS name
         let ip_addr = request.client_ip().or_forward(())?;
-
-        // Reverse DNS lookup the peer's IP address to get a DNSNameRef
-        let name = lookup_addr(&ip_addr).ok().or_forward(())?;
-        let input = Input::from(name.as_bytes());
-        let common_name = DNSNameRef::try_from_ascii(input).ok().or_forward(())?;
+        let name = lookup_addr(&ip_addr).map_err(|_| ()).or_forward(())?;
 
         // Create a MutualTlsUser from the first valid cert
-        let certs = request.get_peer_certificates().or_forward(())?;
-        let valid_cert = first_valid_cert(&certs, common_name).or_forward(())?;
+        let valid_cert = find_valid_cert_for_peer(&name, &certs).or_forward(())?;
 
         MutualTlsUser::new(valid_cert).or_forward(())
     }
