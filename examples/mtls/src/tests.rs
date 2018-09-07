@@ -35,5 +35,5 @@ fn hello_world() {
         .remote(socket)
         .dispatch();
 
-    assert_eq!(response.body_string(), Some("Hello, localhost!".into()));
+    assert_eq!(response.body_string(), Some("Hello, MTLS world, MutualTlsUser!".into()));
 }

@@ -9,8 +9,7 @@ use rocket::http::tls::MutualTlsUser;
 
 #[get("/")]
 fn hello(mtls: MutualTlsUser) -> String {
-    format!("Hello, {}!", mtls.get_common_names()[0])
-    // format!("{}", mtls.get_common_names()[0])
+    format!("Hello, MTLS world, {:?}!", mtls)
 }
 
 fn main() {
