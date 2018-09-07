@@ -466,9 +466,9 @@ impl <'a, 'r> FromRequest<'a, 'r> for MutualTlsUser {
         let ip_addr = request.client_ip().or_forward(())?;
         let name = lookup_addr(&ip_addr).map_err(|_| ()).or_forward(())?;
 
-        // Create a MutualTlsUser from the first valid cert
-        let valid_cert = find_valid_cert_for_peer(&name, &certs).or_forward(())?;
+        // Validate the name against the provided certs and create a MutualTlsUser
+        find_valid_cert_for_peer(&name, &certs).or_forward(())?;
 
-        MutualTlsUser::new(valid_cert).or_forward(())
+        Success(MutualTlsUser {})
     }
 }
