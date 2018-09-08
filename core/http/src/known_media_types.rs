@@ -56,6 +56,7 @@ macro_rules! known_extensions {
         "flac" => FLAC,
         "wav" => WAV,
         "mp4" => MPEG4,
+        "mpg4" => MPEG4,
         "h264" => H264,
         "webm" => WEBM,
         "ogg" => OGG,
