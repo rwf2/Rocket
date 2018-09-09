@@ -7,7 +7,7 @@ use std::ops::Deref;
 use rocket::request::{FromParam, FromFormValue};
 use rocket::http::RawStr;
 
-pub use self::uuid_ext::ParseError as UuidParseError;
+pub use self::uuid_ext::parser::ParseError as UuidParseError;
 
 /// Implements `FromParam` and `FormFormValue` for accepting UUID values from
 /// the [uuid](https://github.com/rust-lang-nursery/uuid) crate.
@@ -125,7 +125,7 @@ impl PartialEq<uuid_ext::Uuid> for Uuid {
 #[cfg(test)]
 mod test {
     use super::uuid_ext;
-    use super::{Uuid, UuidParseError};
+    use super::Uuid;
     use super::FromParam;
     use super::FromStr;
 
@@ -161,9 +161,9 @@ mod test {
     }
 
     #[test]
+    #[should_panic(expected = "InvalidLength")]
     fn test_from_param_invalid() {
         let uuid_str = "c1aa1e3b-9614-4895-9ebd-705255fa5bc2p";
-        let uuid_result = Uuid::from_param(uuid_str.into());
-        assert_eq!(uuid_result, Err(UuidParseError::InvalidLength(37)));
+        Uuid::from_param(uuid_str.into()).unwrap();
     }
 }
