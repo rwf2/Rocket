@@ -469,6 +469,6 @@ impl <'a, 'r> FromRequest<'a, 'r> for MutualTlsUser {
         // Validate the name against the provided certs and create a MutualTlsUser
         find_valid_cert_for_peer(&name, &certs).or_forward(())?;
 
-        Success(MutualTlsUser {})
+        Success(MutualTlsUser::new(&name))
     }
 }

@@ -9,7 +9,7 @@ use rocket::http::tls::MutualTlsUser;
 
 #[get("/")]
 fn hello(mtls: MutualTlsUser) -> String {
-    format!("Hello, MTLS world, {:?}!", mtls)
+    format!("Hello, MTLS world, {}!", mtls.subject_name())
 }
 
 fn main() {
