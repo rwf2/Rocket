@@ -40,7 +40,7 @@ pub fn find_valid_cert_for_peer<'a>(name: &'a str, certs: &'a [Certificate]) -> 
 /// ##Examples
 ///
 /// The following short snippet shows `MutualTlsUser` being used as a request guard in a handler to
-/// verify the client's certificate.
+/// verify the client's certificate and print its subject name.
 ///
 /// ```rust
 /// # #![feature(plugin, decl_macro)]
@@ -49,12 +49,40 @@ pub fn find_valid_cert_for_peer<'a>(name: &'a str, certs: &'a [Certificate]) -> 
 /// use rocket::http::tls::MutualTlsUser;
 ///
 /// #[get("/message")]
-/// fn message(mtls:MutualTlsUser) {
-///     println!("Authenticated client");
+/// fn message(mtls: MutualTlsUser) {
+///     println!("{}", mtls.subject_name());
 /// }
 ///
 /// # fn main() { }
 /// ```
 ///
 #[derive(Debug)]
-pub struct MutualTlsUser {}
+pub struct MutualTlsUser {
+    subject_name: String,
+}
+
+impl MutualTlsUser {
+    pub fn new(subject_name: &str) -> MutualTlsUser {
+        // NOTE: `subject_name` is not necessarily the subject name in the certificate,
+        // but it is the name for which the certificate was validated.
+        MutualTlsUser {
+            subject_name: subject_name.to_string()
+        }
+    }
+
+    /// Return the client's subject name.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// # extern crate rocket;
+    /// use rocket::http::tls::MutualTlsUser;
+    ///
+    /// fn handler(mtls: MutualTlsUser) {
+    ///     let subject_name = mtls.subject_name();
+    /// }
+    /// ```
+    pub fn subject_name(&self) -> &str {
+        &self.subject_name
+    }
+}
