@@ -41,4 +41,5 @@ members = [
   "examples/raw_sqlite",
   "examples/tls",
   "examples/fairings",
+  "examples/hello_2018",
 ]

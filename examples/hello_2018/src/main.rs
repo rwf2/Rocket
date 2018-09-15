@@ -1,13 +1,14 @@
 #![feature(plugin, decl_macro, proc_macro_non_items)]
 #![plugin(rocket_codegen)]
 
-#[macro_use] extern crate rocket;
+use rocket;
+use rocket::routes;
 
 #[cfg(test)] mod tests;
 
 #[get("/")]
 fn hello() -> &'static str {
-    "Hello, world!"
+    "Hello, Rust 2018!"
 }
 
 fn main() {

@@ -3,13 +3,9 @@
 
 #[macro_use] extern crate rocket;
 
-#[cfg(test)] mod tests;
-
 #[get("/")]
-fn hello() -> &'static str {
-    "Hello, world!"
-}
+fn get() {}
 
 fn main() {
-    rocket::ignite().mount("/", routes![hello]).launch();
+    rocket::ignite().mount("/", routes![get]);
 }

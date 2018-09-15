@@ -438,8 +438,6 @@ macro_rules! register_macros {
 #[plugin_registrar]
 pub fn plugin_registrar(reg: &mut Registry) {
     register_macros!(reg,
-        "routes" => routes,
-        "catchers" => catchers,
         "uri" => uri,
         "rocket_internal_uri" => uri_internal
     );

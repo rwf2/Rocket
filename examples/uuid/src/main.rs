@@ -1,10 +1,10 @@
-#![feature(plugin, decl_macro)]
+#![feature(plugin, decl_macro, proc_macro_non_items)]
 #![plugin(rocket_codegen)]
 
 #[macro_use]
 extern crate lazy_static;
 extern crate uuid;
-extern crate rocket;
+#[macro_use] extern crate rocket;
 extern crate rocket_contrib;
 
 use std::collections::HashMap;

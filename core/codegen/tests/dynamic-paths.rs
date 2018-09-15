@@ -1,8 +1,8 @@
-#![feature(plugin, decl_macro)]
+#![feature(plugin, decl_macro, proc_macro_non_items)]
 #![plugin(rocket_codegen)]
 #![allow(dead_code, unused_variables)]
 
-extern crate rocket;
+#[macro_use] extern crate rocket;
 
 #[get("/test/<one>/<two>/<three>")]
 fn get(one: String, two: usize, three: isize) -> &'static str { "hi" }

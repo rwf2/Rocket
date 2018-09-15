@@ -1,7 +1,7 @@
-#![feature(plugin, decl_macro, never_type)]
+#![feature(plugin, decl_macro, never_type, proc_macro_non_items)]
 #![plugin(rocket_codegen)]
 
-extern crate rocket;
+#[macro_use] extern crate rocket;
 
 use rocket::request::{self, Request, FromRequest};
 use rocket::outcome::Outcome::*;

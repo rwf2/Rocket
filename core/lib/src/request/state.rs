@@ -21,9 +21,9 @@ use http::Status;
 /// following example does just this:
 ///
 /// ```rust
-/// # #![feature(plugin, decl_macro)]
+/// # #![feature(plugin, decl_macro, proc_macro_non_items)]
 /// # #![plugin(rocket_codegen)]
-/// # extern crate rocket;
+/// # #[macro_use] extern crate rocket;
 /// use rocket::State;
 ///
 /// // In a real application, this would likely be more complex.

@@ -67,10 +67,10 @@
 //! write Rocket applications. Here's a simple example to get you started:
 //!
 //! ```rust
-//! #![feature(plugin, decl_macro)]
+//! #![feature(plugin, decl_macro, proc_macro_non_items)]
 //! #![plugin(rocket_codegen)]
 //!
-//! extern crate rocket;
+//! #[macro_use] extern crate rocket;
 //!
 //! #[get("/")]
 //! fn hello() -> &'static str {
@@ -101,6 +101,16 @@
 
 #[allow(unused_imports)] #[macro_use] extern crate rocket_codegen_next;
 #[doc(hidden)] pub use rocket_codegen_next::*;
+
+#[macro_export]
+macro_rules! routes {
+    ($($input:tt)*) => { $crate::rocket_routes_internal![$($input)*] };
+}
+
+#[macro_export]
+macro_rules! catchers {
+    ($($input:tt)*) => { $crate::rocket_catchers_internal![$($input)*] };
+}
 
 extern crate rocket_http;
 #[macro_use] extern crate log;
