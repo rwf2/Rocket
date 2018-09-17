@@ -46,7 +46,7 @@ mod context {
         /// The current template context, inside an RwLock so it can be updated.
         context: RwLock<Context>,
         /// A filesystem watcher and the receive queue for its events.
-        watcher: Option<(RecommendedWatcher, Mutex<Receiver<RawEvent>>)>,
+        watcher: Option<Mutex<(RecommendedWatcher, Receiver<RawEvent>)>>,
     }
 
     impl ContextManager {
@@ -55,7 +55,7 @@ mod context {
 
             let watcher = if let Ok(mut watcher) = raw_watcher(tx) {
                 if watcher.watch(ctxt.root.clone(), RecursiveMode::Recursive).is_ok() {
-                    Some((watcher, Mutex::new(rx)))
+                    Some(Mutex::new((watcher, rx)))
                 } else {
                     warn!("Could not monitor the templates directory for changes.");
                     warn_!("Live template reload will be unavailable");
@@ -87,9 +87,9 @@ mod context {
         /// again.
         pub fn reload_if_needed<F: Fn(&mut Engines)>(&self, custom_callback: F) {
             self.watcher.as_ref().map(|w| {
-                let rx = w.1.lock().expect("receive queue");
+                let rx_lock = w.lock().expect("receive queue lock");
                 let mut changed = false;
-                while let Ok(_) = rx.try_recv() {
+                while let Ok(_) = rx_lock.1.try_recv() {
                     changed = true;
                 }
 
