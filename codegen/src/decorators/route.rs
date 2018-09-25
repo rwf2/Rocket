@@ -142,16 +142,18 @@ impl RouteGenerateExt for RouteParams {
         let mut declared_set = HashSet::new();
         for (i, param) in self.path_params(ecx).enumerate() {
             declared_set.insert(param.ident().name);
-            let ty = match self.annotated_fn.find_input(&param.ident().name) {
-                Some(arg) => strip_ty_lifetimes(arg.ty.clone()),
+            let arg = match self.annotated_fn.find_input(&param.ident().name) {
+                Some(arg) => arg,
                 None => {
                     self.missing_declared_err(ecx, param.inner());
                     continue;
                 }
             };
 
+            let ty = strip_ty_lifetimes(arg.ty.clone());
+            let ident = arg.ident().expect("function argument ident").prepend(PARAM_PREFIX);
+
             // Note: the `None` case shouldn't happen if a route is matched.
-            let ident = param.ident().prepend(PARAM_PREFIX);
             let expr = match param {
                 Param::Single(_) => quote_expr!(ecx, match __req.get_param_str($i) {
                     Some(s) => <$ty as ::rocket::request::FromParam>::from_param(s),
