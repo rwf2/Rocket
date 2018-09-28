@@ -21,7 +21,6 @@
 //! For gzip compression, flate2 crate is used.
 
 use std::io::Read;
-
 use rocket::fairing::{Fairing, Info, Kind};
 use rocket::http::Header;
 use rocket::{Request, Response};

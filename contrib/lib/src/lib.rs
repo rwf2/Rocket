@@ -1,16 +1,7 @@
-<<<<<<< HEAD
 #![feature(crate_visibility_modifier)]
 #![feature(never_type)]
 #![feature(doc_cfg)]
-=======
-<<<<<<< HEAD:contrib/lib/src/lib.rs
-#![feature(use_extern_macros)]
->>>>>>> Brotli fairing
 
-=======
-#![feature(macro_reexport)]
-#![cfg_attr(feature = "templates", feature(conservative_impl_trait))]
->>>>>>> Brotli fairing:contrib/src/lib.rs
 // TODO: Version URLs.
 #![doc(html_root_url = "https://api.rocket.rs")]
 
@@ -70,8 +61,12 @@ pub extern crate handlebars;
 #[cfg(feature = "tera_templates")]
 pub extern crate tera;
 
-#[cfg(feature = "brotli_fairing")]
+
+#[cfg(feature = "brotli_compression")]
 extern crate brotli;
+#[cfg(feature = "gzip_compression")]
+extern crate flate2;
+
 
 #[cfg(feature = "json")]
 #[cfg_attr(feature = "json", macro_use)]
@@ -119,5 +114,10 @@ pub use rocket_contrib_codegen::*;
 #[cfg(feature = "brotli_fairing")]
 mod brotli_fairing;
 
-#[cfg(feature = "brotli_fairing")]
-pub use brotli_fairing::BrotliFairing;
+
+#[cfg(any(feature = "brotli_compression", feature = "gzip_compression"))]
+mod compression;
+
+#[cfg(any(feature = "brotli_compression", feature = "gzip_compression"))]
+pub use compression::Compression;
+
