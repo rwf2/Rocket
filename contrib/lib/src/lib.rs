@@ -111,9 +111,6 @@ extern crate rocket_contrib_codegen;
 #[doc(hidden)]
 pub use rocket_contrib_codegen::*;
 
-#[cfg(feature = "brotli_fairing")]
-mod brotli_fairing;
-
 
 #[cfg(any(feature = "brotli_compression", feature = "gzip_compression"))]
 mod compression;

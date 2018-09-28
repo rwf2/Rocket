@@ -2,16 +2,19 @@
 #![feature(plugin)]
 #![plugin(rocket_codegen)]
 #![feature(decl_macro)]
+#![feature(proc_macro_non_items)]
 
 extern crate brotli;
 extern crate flate2;
 extern crate rocket;
 extern crate rocket_contrib;
 
+use rocket::routes;
 use rocket::http::Status;
 use rocket::http::{ContentType, Header};
 use rocket::local::Client;
 use rocket::response::Response;
+
 
 use std::io::Cursor;
 use std::io::Read;

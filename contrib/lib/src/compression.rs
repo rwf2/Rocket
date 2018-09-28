@@ -20,10 +20,10 @@
 //! For brotli compression, the rust-brotli crate is used.
 //! For gzip compression, flate2 crate is used.
 
-use std::io::Read;
 use rocket::fairing::{Fairing, Info, Kind};
 use rocket::http::Header;
 use rocket::{Request, Response};
+use std::io::Read;
 
 #[cfg(feature = "brotli_compression")]
 use brotli;
@@ -46,7 +46,7 @@ impl Compression {
     ///
     /// A Compression instance.
     pub fn fairing() -> Compression {
-        Compression { () }
+        Compression { 0: () }
     }
 
     fn accepts_encoding(request: &Request, encodings: &[&str]) -> bool {
