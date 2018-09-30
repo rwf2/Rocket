@@ -57,6 +57,13 @@ impl Compression {
             .any(|e| encodings.contains(&e.trim()))
     }
 
+    fn already_encoded(response: &Response) -> bool {
+        response
+            .headers()
+            .get("Content-Encoding")
+            .any(|e| e != "identity" && e != "chunked")
+    }
+
     fn set_body_and_header<'r, B: Read + 'r>(
         response: &mut Response<'r>,
         body: B,
@@ -77,6 +84,10 @@ impl Fairing for Compression {
     }
 
     fn on_response(&self, request: &Request, response: &mut Response) {
+        if Compression::already_encoded(response) {
+            return;
+        }
+
         let content_type = response.content_type();
         // Images must not be compressed
         if let Some(ref content_type) = content_type {

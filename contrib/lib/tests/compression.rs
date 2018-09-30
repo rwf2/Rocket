@@ -9,24 +9,24 @@ extern crate flate2;
 extern crate rocket;
 extern crate rocket_contrib;
 
-use rocket::routes;
+use rocket::http::hyper::header::{ContentEncoding, Encoding};
 use rocket::http::Status;
 use rocket::http::{ContentType, Header};
 use rocket::local::Client;
 use rocket::response::Response;
-
+use rocket::routes;
 
 use std::io::Cursor;
 use std::io::Read;
 
-use flate2::read::GzDecoder;
+use flate2::read::{GzDecoder, GzEncoder};
 
 const HELLO: &str = r"This is a message to hello with more than 100 bytes \
     in order to have to read more than one buffer when gzipping. こんにちは!";
 
 fn rocket() -> rocket::Rocket {
     rocket::ignite()
-        .mount("/", routes![index, font, image])
+        .mount("/", routes![index, font, image, already_encoded, chunked])
         .attach(rocket_contrib::Compression::fairing())
 }
 
@@ -45,6 +45,26 @@ pub fn font() -> Response<'static> {
 pub fn image() -> Response<'static> {
     Response::build()
         .header(ContentType::PNG)
+        .sized_body(Cursor::new(String::from(HELLO)))
+        .finalize()
+}
+#[get("/already_encoded")]
+pub fn already_encoded() -> Response<'static> {
+    let mut encoder = GzEncoder::new(
+        Cursor::new(String::from(HELLO)),
+        flate2::Compression::default(),
+    );
+    let mut encoded = Vec::new();
+    encoder.read_to_end(&mut encoded).unwrap();
+    Response::build()
+        .header(ContentEncoding(vec![Encoding::Gzip]))
+        .sized_body(Cursor::new(encoded))
+        .finalize()
+}
+#[get("/chunked")]
+pub fn chunked() -> Response<'static> {
+    Response::build()
+        .header(ContentEncoding(vec![Encoding::Chunked]))
         .sized_body(Cursor::new(String::from(HELLO)))
         .finalize()
 }
@@ -70,7 +90,64 @@ fn test_index() {
     brotli::BrotliDecompress(
         &mut Cursor::new(response.body_bytes().unwrap()),
         &mut body_plain,
-    ).unwrap();
+    )
+    .unwrap();
+    assert_eq!(
+        String::from_utf8(body_plain.get_mut().to_vec()).unwrap(),
+        String::from(HELLO)
+    );
+}
+
+/// This function should not compress the content because it is already encoded
+#[test]
+fn test_already_encoded() {
+    let client = Client::new(rocket()).expect("valid rocket instance");
+    let mut response = client
+        .get("/already_encoded")
+        .header(Header::new("Accept-Encoding", "deflate, gzip, brotli"))
+        .dispatch();
+    assert_eq!(response.status(), Status::Ok);
+    assert!(
+        !response
+            .headers()
+            .get("Content-Encoding")
+            .any(|x| x == "br")
+    );
+    assert!(
+        response
+            .headers()
+            .get("Content-Encoding")
+            .any(|x| x == "gzip")
+    );
+    let mut s = String::new();
+    GzDecoder::new(&response.body_bytes().unwrap()[..])
+        .read_to_string(&mut s)
+        .unwrap();
+    assert_eq!(s, String::from(HELLO));
+}
+
+/// This function should compress the content in br because the ContentEncoding
+/// is chunked, not a compression encoding
+#[test]
+fn test_chunked() {
+    let client = Client::new(rocket()).expect("valid rocket instance");
+    let mut response = client
+        .get("/chunked")
+        .header(Header::new("Accept-Encoding", "deflate, gzip, brotli"))
+        .dispatch();
+    assert_eq!(response.status(), Status::Ok);
+    assert!(
+        response
+            .headers()
+            .get("Content-Encoding")
+            .any(|x| x == "br")
+    );
+    let mut body_plain = Cursor::new(Vec::<u8>::new());
+    brotli::BrotliDecompress(
+        &mut Cursor::new(response.body_bytes().unwrap()),
+        &mut body_plain,
+    )
+    .unwrap();
     assert_eq!(
         String::from_utf8(body_plain.get_mut().to_vec()).unwrap(),
         String::from(HELLO)
@@ -96,7 +173,8 @@ fn test_br_font() {
     brotli::BrotliDecompress(
         &mut Cursor::new(response.body_bytes().unwrap()),
         &mut body_plain,
-    ).unwrap();
+    )
+    .unwrap();
     assert_eq!(
         String::from_utf8(body_plain.get_mut().to_vec()).unwrap(),
         String::from(HELLO)
