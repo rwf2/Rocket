@@ -41,8 +41,10 @@
 //! This crate is expected to grow with time, bringing in outside crates to be
 //! officially supported by Rocket.
 
-#[macro_use] extern crate log;
-#[macro_use] extern crate rocket;
+#[macro_use]
+extern crate log;
+#[macro_use]
+extern crate rocket;
 
 #[cfg(feature = "serde")]
 extern crate serde;
@@ -59,6 +61,13 @@ pub extern crate handlebars;
 #[cfg(feature = "tera_templates")]
 pub extern crate tera;
 
+
+#[cfg(feature = "brotli_compression")]
+extern crate brotli;
+#[cfg(feature = "gzip_compression")]
+extern crate flate2;
+
+
 #[cfg(feature = "json")]
 #[cfg_attr(feature = "json", macro_use)]
 #[doc(hidden)]
@@ -66,6 +75,7 @@ pub mod json;
 
 #[cfg(feature = "json")]
 pub use json::{Json, JsonError, JsonValue};
+
 
 #[cfg(feature = "msgpack")]
 #[doc(hidden)]
@@ -100,3 +110,11 @@ extern crate rocket_contrib_codegen;
 #[cfg(feature = "database_pool_codegen")]
 #[doc(hidden)]
 pub use rocket_contrib_codegen::*;
+
+
+#[cfg(any(feature = "brotli_compression", feature = "gzip_compression"))]
+mod compression;
+
+#[cfg(any(feature = "brotli_compression", feature = "gzip_compression"))]
+pub use compression::Compression;
+
