@@ -1,7 +1,6 @@
 #![feature(crate_visibility_modifier)]
 #![feature(never_type)]
 #![feature(doc_cfg)]
-
 #![doc(html_root_url = "https://api.rocket.rs/v0.4")]
 #![doc(html_favicon_url = "https://rocket.rs/v0.4/images/favicon.ico")]
 #![doc(html_logo_url = "https://rocket.rs/v0.4/images/logo-boxed.png")]
@@ -40,15 +39,93 @@
 //! This crate is expected to grow with time, bringing in outside crates to be
 //! officially supported by Rocket.
 
-#[allow(unused_imports)] #[macro_use] extern crate log;
-#[allow(unused_imports)] #[macro_use] extern crate rocket;
+#[allow(unused_imports)]
+#[macro_use]
+extern crate log;
+#[allow(unused_imports)]
+#[macro_use]
+extern crate rocket;
 
-#[cfg(feature="json")] #[macro_use] pub mod json;
-#[cfg(feature="serve")] pub mod serve;
-#[cfg(feature="msgpack")] pub mod msgpack;
-#[cfg(feature="templates")] pub mod templates;
-#[cfg(feature="uuid")] pub mod uuid;
-#[cfg(feature="databases")] pub mod databases;
+#[cfg(feature = "json")]
+#[macro_use]
+pub mod json;
+#[cfg(feature = "databases")]
+pub mod databases;
+#[cfg(feature = "msgpack")]
+pub mod msgpack;
+#[cfg(feature = "serve")]
+pub mod serve;
+#[cfg(feature = "templates")]
+pub mod templates;
+#[cfg(feature = "uuid")]
+pub mod uuid;
 
-#[cfg(feature="databases")] extern crate rocket_contrib_codegen;
-#[cfg(feature="databases")] #[doc(hidden)] pub use rocket_contrib_codegen::*;
+#[cfg(feature = "databases")]
+extern crate rocket_contrib_codegen;
+#[cfg(feature = "databases")]
+#[doc(hidden)]
+pub use rocket_contrib_codegen::*;
+#[cfg(feature = "json")]
+extern crate serde_json;
+
+#[cfg(feature = "json")]
+pub use serde_json::{json_internal, json_internal_vec};
+
+#[cfg(feature = "handlebars_templates")]
+pub extern crate handlebars;
+
+#[cfg(feature = "tera_templates")]
+pub extern crate tera;
+
+#[cfg(feature = "brotli_compression")]
+extern crate brotli;
+#[cfg(feature = "gzip_compression")]
+extern crate flate2;
+
+#[cfg(feature = "json")]
+#[cfg_attr(feature = "json", macro_use)]
+#[doc(hidden)]
+pub mod json;
+
+#[cfg(feature = "json")]
+pub use json::{Json, JsonError, JsonValue};
+
+#[cfg(feature = "msgpack")]
+#[doc(hidden)]
+pub mod msgpack;
+
+#[cfg(feature = "msgpack")]
+pub use msgpack::{MsgPack, MsgPackError};
+
+#[cfg(feature = "templates")]
+mod templates;
+
+#[cfg(feature = "templates")]
+pub use templates::{Engines, Template, TemplateMetadata};
+
+#[cfg(feature = "uuid")]
+mod uuid;
+
+#[cfg(feature = "uuid")]
+pub use uuid::{Uuid, UuidParseError};
+
+#[cfg(feature = "static_files")]
+pub mod static_files;
+
+#[cfg(feature = "database_pool")]
+pub mod databases;
+
+#[cfg(feature = "database_pool_codegen")]
+#[allow(unused_imports)]
+#[macro_use]
+extern crate rocket_contrib_codegen;
+
+#[cfg(feature = "database_pool_codegen")]
+#[doc(hidden)]
+pub use rocket_contrib_codegen::*;
+
+#[cfg(any(feature = "brotli_compression", feature = "gzip_compression"))]
+mod compression;
+
+#[cfg(any(feature = "brotli_compression", feature = "gzip_compression"))]
+pub use compression::Compression;
