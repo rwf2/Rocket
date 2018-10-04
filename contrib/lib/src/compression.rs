@@ -1,24 +1,4 @@
-//! This module provides brotli and gzip compression for all non-image
-//! responses for requests that send Accept-Encoding br and gzip. If
-//! accepted, brotli compression is preferred over gzip.
-//!
-//! To add this feature to your Rocket application, use
-//! .attach(rocket_contrib::Compression::fairing())
-//! to your Rocket instance. Note that you must add the
-//! "compression" feature for brotli and gzip compression to your rocket_contrib
-//! dependency in Cargo.toml. Additionally, you can load only brotli compression
-//! using "brotli_compression" feature or load only gzip compression using
-//! "gzip_compression" in your rocket_contrib dependency in Cargo.toml.
-//!
-//! In the brotli algorithm, quality is set to 2 in order to have really fast
-//! compressions with compression ratio similar to gzip. Also, text and font
-//! compression mode is set regarding the Content-Type of the response.
-//!
-//! In the gzip algorithm, quality is the default (9) in order to have good
-//! compression ratio.
-//!
-//! For brotli compression, the rust-brotli crate is used.
-//! For gzip compression, flate2 crate is used.
+//! Returns a response fairing that compresses all responses.
 
 use rocket::fairing::{Fairing, Info, Kind};
 use rocket::http::Header;
@@ -35,6 +15,50 @@ use flate2;
 #[cfg(feature = "gzip_compression")]
 use flate2::read::GzEncoder;
 
+/// This module provides brotli and gzip compression for all non-image
+/// responses for requests that send Accept-Encoding br and gzip. If
+/// accepted, brotli compression is preferred over gzip.
+///
+/// In the brotli algorithm, quality is set to 2 in order to have really fast
+/// compressions with compression ratio similar to gzip. Also, text and font
+/// compression mode is set regarding the Content-Type of the response.
+///
+/// In the gzip algorithm, quality is the default (9) in order to have good
+/// compression ratio.
+///
+/// For brotli compression, `rust-brotli` crate is used.
+/// For gzip compression, `flate2` crate is used.
+///
+/// # Usage
+///
+/// To use, add the `brotli_compression` feature, the `gzip_compression`
+/// feature or the `compression` feature for using both to the
+/// `rocket_contrib` dependencies section of your `Cargo.toml`:
+///
+/// ```toml,ignore
+/// [dependencies.rocket_contrib]
+/// version = "*"
+/// default-features = false
+/// features = ["compression"]
+/// ```
+///
+/// Then, ensure that the compression [fairing](/rocket/fairing/) is attached to
+/// your Rocket application:
+///
+/// ```rust
+/// extern crate rocket;
+/// extern crate rocket_contrib;
+///
+/// use rocket_contrib::Compression;
+///
+/// fn main() {
+///     rocket::ignite()
+///         // ...
+///         .attach(Compression::fairing())
+///         // ...
+///     # ;
+/// }
+/// ```
 pub struct Compression(());
 
 impl Compression {
@@ -58,10 +82,7 @@ impl Compression {
     }
 
     fn already_encoded(response: &Response) -> bool {
-        response
-            .headers()
-            .get("Content-Encoding")
-            .any(|e| e != "identity" && e != "chunked")
+        response.headers().get("Content-Encoding").next().is_some()
     }
 
     fn set_body_and_header<'r, B: Read + 'r>(

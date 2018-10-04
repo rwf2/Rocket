@@ -26,7 +26,7 @@ const HELLO: &str = r"This is a message to hello with more than 100 bytes \
 
 fn rocket() -> rocket::Rocket {
     rocket::ignite()
-        .mount("/", routes![index, font, image, already_encoded, chunked])
+        .mount("/", routes![index, font, image, already_encoded, identity])
         .attach(rocket_contrib::Compression::fairing())
 }
 
@@ -61,10 +61,10 @@ pub fn already_encoded() -> Response<'static> {
         .sized_body(Cursor::new(encoded))
         .finalize()
 }
-#[get("/chunked")]
-pub fn chunked() -> Response<'static> {
+#[get("/identity")]
+pub fn identity() -> Response<'static> {
     Response::build()
-        .header(ContentEncoding(vec![Encoding::Chunked]))
+        .header(ContentEncoding(vec![Encoding::Identity]))
         .sized_body(Cursor::new(String::from(HELLO)))
         .finalize()
 }
@@ -126,30 +126,30 @@ fn test_already_encoded() {
     assert_eq!(s, String::from(HELLO));
 }
 
-/// This function should compress the content in br because the ContentEncoding
-/// is chunked, not a compression encoding
+/// This function should not compress the content because if a Content-Encoding
+/// header is set the responder do not want to compress
 #[test]
-fn test_chunked() {
+fn test_identity_encoded() {
     let client = Client::new(rocket()).expect("valid rocket instance");
     let mut response = client
-        .get("/chunked")
+        .get("/identity")
         .header(Header::new("Accept-Encoding", "deflate, gzip, brotli"))
         .dispatch();
     assert_eq!(response.status(), Status::Ok);
     assert!(
-        response
+        !response
             .headers()
             .get("Content-Encoding")
             .any(|x| x == "br")
     );
-    let mut body_plain = Cursor::new(Vec::<u8>::new());
-    brotli::BrotliDecompress(
-        &mut Cursor::new(response.body_bytes().unwrap()),
-        &mut body_plain,
-    )
-    .unwrap();
+    assert!(
+        !response
+            .headers()
+            .get("Content-Encoding")
+            .any(|x| x == "gzip")
+    );
     assert_eq!(
-        String::from_utf8(body_plain.get_mut().to_vec()).unwrap(),
+        String::from_utf8(response.body_bytes().unwrap()).unwrap(),
         String::from(HELLO)
     );
 }
