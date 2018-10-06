@@ -88,5 +88,6 @@ ctrs! {
     Html: HTML, "HTML", "text/html",
     Plain: Plain, "plain text", "text/plain",
     Css: CSS, "CSS", "text/css",
-    JavaScript: JavaScript, "JavaScript", "application/javascript"
+    JavaScript: JavaScript, "JavaScript", "application/javascript",
+    Toml: TOML, "TOML", "application/toml"
 }
