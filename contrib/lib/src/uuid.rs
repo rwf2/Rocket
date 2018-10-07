@@ -9,7 +9,7 @@ use rocket::http::RawStr;
 
 pub use self::uuid_ext::parser::ParseError as UuidParseError;
 
-/// Implements `FromParam` and `FormFormValue` for accepting UUID values from
+/// Implements `FromParam` and `FromFormValue` for accepting UUID values from
 /// the [uuid](https://github.com/rust-lang-nursery/uuid) crate.
 ///
 /// # Usage
