@@ -3,7 +3,7 @@
 #![feature(try_trait)]
 #![feature(fnbox)]
 #![feature(never_type)]
-#![feature(proc_macro_non_items)]
+#![feature(proc_macro_hygiene)]
 #![feature(crate_visibility_modifier)]
 #![feature(try_from)]
 #![feature(label_break_value)]
@@ -68,7 +68,7 @@
 //! write Rocket applications. Here's a simple example to get you started:
 //!
 //! ```rust
-//! #![feature(plugin, decl_macro, proc_macro_non_items)]
+//! #![feature(plugin, decl_macro, proc_macro_hygiene)]
 //! #![plugin(rocket_codegen)]
 //!
 //! #[macro_use] extern crate rocket;

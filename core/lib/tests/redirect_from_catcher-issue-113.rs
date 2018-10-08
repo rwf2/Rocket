@@ -1,4 +1,4 @@
-#![feature(plugin, decl_macro, proc_macro_non_items)]
+#![feature(plugin, decl_macro, proc_macro_hygiene)]
 #![plugin(rocket_codegen)]
 
 #[macro_use] extern crate rocket;

@@ -28,7 +28,7 @@ state = "0.4.1"
 time = "0.1"
 memchr = "2" # TODO: Use pear instead.
 base64 = "0.9"
-pear = { git = "http://github.com/SergioBenitez/Pear", rev = "b475140" }
+pear = { git = "http://github.com/SergioBenitez/Pear", rev = "d221e16" }
 isatty = "0.1"
 
 [dev-dependencies]

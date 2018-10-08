@@ -1,5 +1,5 @@
 #![feature(specialization)]
-#![feature(proc_macro_non_items)]
+#![feature(proc_macro_hygiene)]
 #![feature(try_from)]
 #![feature(crate_visibility_modifier)]
 #![recursion_limit="512"]
