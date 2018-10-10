@@ -14,7 +14,7 @@ pub struct ConfigBuilder {
     pub port: u16,
     /// The number of workers to run in parallel.
     pub workers: u16,
-    /// Keep-alive timeout in seconds or None if disabled.
+    /// Keep-alive timeout in seconds or disabled if 0.
     pub keep_alive: u32,
     /// How much information to log.
     pub log_level: LoggingLevel,
