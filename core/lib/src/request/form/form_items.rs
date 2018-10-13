@@ -102,7 +102,7 @@ use http::RawStr;
 /// assert_eq!(items.next(), None);
 /// assert!(items.completed());
 /// ```
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum FormItems<'f> {
     #[doc(hidden)]
     Raw {
@@ -295,6 +295,17 @@ impl<'f> FormItems<'f> {
             FormItems::Cooked { items, ref mut next_index } => *next_index = items.len(),
         }
     }
+
+    pub fn filter_children(self, prefix: &'static str) -> FormItems<'f> {
+        self.filter_map(|mut x| {
+            if x.key.starts_with(prefix) {
+                x.key = x.key[prefix.len()..].into();
+                Some(x)
+            }else {
+                None
+            }
+        }).collect::<Vec<FormItem>>().into_boxed_slice().into()
+    }
 }
 
 impl<'f> From<&'f RawStr> for FormItems<'f> {
@@ -315,6 +326,13 @@ impl<'f> From<&'f [FormItem<'f>]> for FormItems<'f> {
     #[inline(always)]
     fn from(items: &'f [FormItem<'f>]) -> FormItems<'f> {
         FormItems::Cooked { items, next_index: 0 }
+    }
+}
+
+impl<'f> From<Box<[FormItem<'f>]>> for FormItems<'f> {
+    #[inline(always)]
+    fn from(items: Box<[FormItem<'f>]>) -> FormItems<'f> {
+        FormItems::Cooked { items: Box::leak(items), next_index: 0 }
     }
 }
 

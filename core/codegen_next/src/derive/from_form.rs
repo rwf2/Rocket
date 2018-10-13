@@ -3,7 +3,8 @@ use derive_utils::{*, ext::{TypeExt, Split3}};
 
 #[derive(FromMeta)]
 struct Form {
-    field: FormField,
+    field: Option<FormField>,
+    nested: Option<bool>
 }
 
 struct FormField {
@@ -41,8 +42,8 @@ fn validate_struct(gen: &DeriveGenerator, data: Struct) -> Result<()> {
     let mut names = ::std::collections::HashMap::new();
     for field in data.fields().iter() {
         let id = field.ident.as_ref().expect("named field");
-        let field = match Form::from_attrs("form", &field.attrs) {
-            Some(result) => result?.field,
+        let field = match Form::from_attrs("form", &field.attrs) { // TODO: probably could look nicer
+            Some(result) => result?.field.unwrap_or(FormField { span: Spanned::span(&id), name: id.to_string() }),
             None => FormField { span: Spanned::span(&id), name: id.to_string() }
         };
 
@@ -85,28 +86,52 @@ pub fn derive_from_form(input: TokenStream) -> TokenStream {
             let (constructors, matchers, builders) = fields.iter().map(|field| {
                 let (ident, span) = (&field.ident, field.span().into());
                 let default_name = ident.as_ref().expect("named").to_string();
-                let name = Form::from_attrs("form", &field.attrs)
-                    .map(|result| result.map(|form| form.field.name))
-                    .unwrap_or_else(|| Ok(default_name))?;
+                let options = Form::from_attrs("form", &field.attrs)
+                        .map(|result| result.map(|form| (form.field.map(|field| field.name), form.nested)))
+                        .unwrap_or(Ok((None, None)))?;
+
+                let name = options.0.unwrap_or(default_name);
 
                 let ty = field.ty.with_stripped_lifetimes();
-                let ty = quote_spanned! {
-                    span => <#ty as ::rocket::request::FromFormValue>
-                };
 
-                let constructor = quote_spanned!(span => let mut #ident = None;);
+                let nested = options.1.unwrap_or(false);
+                if nested {
+                    let ty = quote_spanned! {
+                      span => <#ty as ::rocket::request::FromForm>
+                    };
 
-                let matcher = quote_spanned! { span =>
-                    #name => { #ident = Some(#ty::from_form_value(__v)
-                                .map_err(|_| #form_error::BadValue(__k, __v))?); },
-                };
+                    let prefix = format!("{}_", name);
+                    let constructor = quote_spanned!(span =>
+                        let #ident = #ty::from_form(&mut __items.clone().filter_children(#prefix), __strict);
+                    );
 
-                let builder = quote_spanned! { span =>
-                    #ident: #ident.or_else(#ty::default)
-                        .ok_or_else(|| #form_error::Missing(#name.into()))?,
-                };
+                    let matcher = quote_spanned!(span =>
+                        _ if __k.starts_with(#prefix) => {}
+                    );
+                    let builder = quote_spanned!(span =>
+                        #ident: #ident?,
+                    );
 
-                Ok((constructor, matcher, builder))
+                    Ok((constructor, matcher, builder))
+                }else {
+                    let ty = quote_spanned! {
+                      span => <#ty as ::rocket::request::FromFormValue>
+                    };
+
+                    let constructor = quote_spanned!(span => let mut #ident = None;);
+
+                    let matcher = quote_spanned! { span =>
+                      #name => { #ident = Some(#ty::from_form_value(__v)
+                                  .map_err(|_| #form_error::BadValue(__k, __v))?); },
+                    };
+
+                    let builder = quote_spanned! { span =>
+                      #ident: #ident.or_else(#ty::default)
+                          .ok_or_else(|| #form_error::Missing(#name.into()))?,
+                    };
+
+                    Ok((constructor, matcher, builder))
+                }
             }).collect::<Result<Vec<_>>>()?.into_iter().split3();
 
             Ok(quote! {

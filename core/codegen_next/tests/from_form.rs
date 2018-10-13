@@ -317,3 +317,44 @@ fn form_errors() {
     let form: Result<WhoopsForm, _> = strict("complete=true");
     assert_eq!(form, Err(FormParseError::Missing("other".into())));
 }
+
+#[derive(Debug, PartialEq, FromForm)]
+struct User {
+    name: String,
+}
+
+#[derive(Debug, PartialEq, FromForm)]
+struct Business {
+    name: String,
+    profits: usize,
+}
+
+#[derive(Debug, PartialEq, FromForm)]
+struct NestedForm {
+    #[form(nested = true)]
+    user: User,
+    #[form(nested = true, field = "their_business")]
+    business: Business,
+    normal: usize,
+}
+
+#[test]
+fn nested() {
+    // Check that forms with nested attributes (fields that implement FromForm)
+    // parse correctly
+    let form: Result<NestedForm, _> =
+        strict("user_name=Alex&their_business_name=ACME&their_business_profits=0&normal=42");
+    assert_eq!(
+        form,
+        Ok(NestedForm {
+            user: User {
+                name: "Alex".into()
+            },
+            business: Business {
+                name: "ACME".into(),
+                profits: 0
+            },
+            normal: 42
+        })
+    );
+}
