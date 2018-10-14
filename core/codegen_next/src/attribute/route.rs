@@ -181,7 +181,7 @@ fn data_expr(ident: &syn::Ident, ty: &syn::Type) -> TokenStream2 {
             Borrowed(Outcome::Success(ref __v)) => {
                 Borrowed(Outcome::Success(::std::borrow::Borrow::borrow(__v)))
             }
-            Borrowed(__o) => Borrowed(__o.map(|_| loop { /* unreachable */ })),
+            Borrowed(__o) => Borrowed(__o.map(|_| loop { unreachable!(); })),
             Owned(__o) => Owned(__o)
         };
 
