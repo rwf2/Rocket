@@ -100,13 +100,12 @@ pub fn derive_from_form(input: TokenStream) -> TokenStream {
                       span => <#ty as ::rocket::request::FromForm>
                     };
 
-                    let prefix = format!("{}_", name);
                     let constructor = quote_spanned!(span =>
-                        let #ident = #ty::from_form(&mut __items.clone().filter_children(#prefix), __strict);
+                        let #ident = #ty::from_form(&mut __items.clone().subform(#name), __strict);
                     );
 
                     let matcher = quote_spanned!(span =>
-                        _ if __k.starts_with(#prefix) => {}
+                        _ if __k.starts_with(#name) => {}
                     );
                     let builder = quote_spanned!(span =>
                         #ident: #ident?,

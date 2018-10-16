@@ -343,7 +343,7 @@ fn nested() {
     // Check that forms with nested attributes (fields that implement FromForm)
     // parse correctly
     let form: Result<NestedForm, _> =
-        strict("user_name=Alex&their_business_name=ACME&their_business_profits=0&normal=42");
+        strict("user.name=Alex&their_business.name=ACME&their_business.profits=0&normal=42");
     assert_eq!(
         form,
         Ok(NestedForm {

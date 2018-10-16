@@ -296,9 +296,10 @@ impl<'f> FormItems<'f> {
         }
     }
 
-    pub fn filter_children(self, prefix: &'static str) -> FormItems<'f> {
+    pub fn subform(self, name: &'static str) -> FormItems<'f> {
+      let prefix = format!("{}.", name);
         self.filter_map(|mut x| {
-            if x.key.starts_with(prefix) {
+            if x.key.starts_with(&prefix) {
                 x.key = x.key[prefix.len()..].into();
                 Some(x)
             }else {
