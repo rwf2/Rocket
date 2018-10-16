@@ -237,6 +237,23 @@ ROCKET_ARRAY=[1,"b",3.14]
 ROCKET_DICT={key="abc",val=123}
 ```
 
+## rocket::custom
+
+Rocket can also be configured using `rocket::custom` and passing configuration options like so:
+
+```rust
+use rocket::config::{Config, Environment};
+
+let config = Config::build(Environment::Staging)
+    .address("1.2.3.4")
+    .port(9234)
+    .finalize()?;
+
+let app = rocket::custom(config, false);
+```
+
+If Rocket is launched through `rocket::custom` it will ignore `Rocket.toml` and any environment variables present, allowing you to use your own configuration loading code.
+
 ## Configuring TLS
 
 Rocket includes built-in, native support for TLS >= 1.2 (Transport Layer
