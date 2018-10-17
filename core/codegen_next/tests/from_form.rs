@@ -338,6 +338,33 @@ struct NestedForm {
     normal: usize,
 }
 
+#[derive(Debug, PartialEq, FromForm)]
+struct Ornament {
+	name: String
+}
+
+#[derive(Debug, PartialEq, FromForm)]
+struct Room {
+	#[form(nested = true)]
+	center: Ornament,
+	name: String
+}
+
+#[derive(Debug, PartialEq, FromForm)]
+struct House {
+	#[form(nested = true)]
+	room: Room,
+	owner: String
+}
+
+#[derive(Debug, PartialEq, FromForm)]
+struct LookAtThing {
+	#[form(nested = true)]
+	house: House,
+	#[form(nested = true)]
+	user: User
+}
+
 #[test]
 fn nested() {
     // Check that forms with nested attributes (fields that implement FromForm)
@@ -355,6 +382,27 @@ fn nested() {
                 profits: 0
             },
             normal: 42
+        })
+    );
+
+	// Check that forms with deeply nested attributes parse correctly
+    let deep: Result<LookAtThing, _> =
+        strict("user.name=Alex&house.owner=Bob&house.room.name=Bedroom&house.room.center.name=Lamp");
+    assert_eq!(
+        deep,
+        Ok(LookAtThing {
+            user: User {
+                name: "Alex".into()
+            },
+			house: House {
+				owner: "Bob".into(),
+				room: Room {
+					name: "Bedroom".into(),
+					center: Ornament {
+						name: "Lamp".into()
+					}
+				}
+			}
         })
     );
 }
