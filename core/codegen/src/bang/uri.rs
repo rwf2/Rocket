@@ -159,9 +159,9 @@ crate fn _uri_internal_macro(input: TokenStream) -> Result<TokenStream> {
     let query = Optional(origin.query().map(|q| explode(q, arguments)));
 
     Ok(quote!({
-        ::rocket::http::uri::Origin::new::<
-            ::std::borrow::Cow<'static, str>,
-            ::std::borrow::Cow<'static, str>,
+        rocket::http::uri::Origin::new::<
+            std::borrow::Cow<'static, str>,
+            std::borrow::Cow<'static, str>,
         >(#path, #query)
     }).into())
 }

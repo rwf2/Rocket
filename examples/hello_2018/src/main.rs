@@ -1,12 +1,17 @@
 #![feature(proc_macro_hygiene, decl_macro)]
 
-#[macro_use] extern crate rocket;
+use rocket::{get, routes, uri};
 
 #[cfg(test)] mod tests;
 
 #[get("/")]
-fn hello() -> &'static str {
-    "Hello, Rust 2018!"
+fn hello() -> String {
+    format!("Hello! Try {}.", uri!(hello_name: "Rust 2018"))
+}
+
+#[rocket::get("/<name>")]
+fn hello_name(name: String) -> String {
+    format!("Hello, {}!", name)
 }
 
 fn main() {

@@ -317,9 +317,9 @@ fn generate_internal_uri_macro(route: &Route) -> TokenStream2 {
     let route_uri = route.attribute.path.origin.0.to_string();
 
     quote! {
-        pub macro #generated_macro_name($($token:tt)*) {
-            rocket_internal_uri!(#route_uri, (#(#dynamic_args),*), $($token)*)
-        }
+        pub macro #generated_macro_name($($token:tt)*) {{
+            rocket::rocket_internal_uri!(#route_uri, (#(#dynamic_args),*), $($token)*)
+        }}
     }
 }
 
