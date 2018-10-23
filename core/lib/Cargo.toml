@@ -18,7 +18,7 @@ categories = ["web-programming::http-server"]
 tls = ["rocket_http/tls"]
 
 [dependencies]
-rocket_codegen_next = { version = "0.4.0-dev", path = "../codegen_next" }
+rocket_codegen = { version = "0.4.0-dev", path = "../codegen" }
 rocket_http = { version = "0.4.0-dev", path = "../http" }
 yansi = "0.4"
 log = "0.4"
@@ -28,7 +28,7 @@ state = "0.4.1"
 time = "0.1"
 memchr = "2" # TODO: Use pear instead.
 base64 = "0.9"
-pear = { git = "http://github.com/SergioBenitez/Pear", rev = "d221e16dd" }
+pear = { git = "http://github.com/SergioBenitez/Pear", rev = "00b9af5" }
 isatty = "0.1"
 
 [dev-dependencies]

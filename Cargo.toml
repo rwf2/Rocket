@@ -4,7 +4,7 @@ codegen-units = 4
 [workspace]
 members = [
   "core/lib/",
-  "core/codegen_next/",
+  "core/codegen/",
   "core/http/",
   "contrib/lib",
   "contrib/codegen",

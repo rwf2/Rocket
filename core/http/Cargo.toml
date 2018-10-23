@@ -25,7 +25,7 @@ indexmap = "1.0"
 rustls = { version = "0.13", optional = true }
 state = "0.4"
 cookie = { version = "0.11", features = ["percent-encode", "secure"] }
-pear = { git = "http://github.com/SergioBenitez/Pear", rev = "d221e16dd" }
+pear = { git = "http://github.com/SergioBenitez/Pear", rev = "00b9af5" }
 unicode-xid = "0.1"
 
 [dependencies.hyper-sync-rustls]

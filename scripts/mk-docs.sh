@@ -20,7 +20,7 @@ fi
 echo ":::: Generating the docs..."
 pushd "${PROJECT_ROOT}" > /dev/null 2>&1
 RUSTDOCFLAGS="-Z unstable-options --crate-version ${ROCKET_VERSION}" \
-  cargo doc -p rocket -p rocket_contrib -p rocket_codegen_next --no-deps --all-features
+  cargo doc -p rocket -p rocket_contrib -p rocket_codegen --no-deps --all-features
 popd > /dev/null 2>&1
 
 # Blank index, for redirection.

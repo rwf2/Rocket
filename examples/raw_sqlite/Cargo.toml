@@ -6,4 +6,4 @@ publish = false
 
 [dependencies]
 rocket = { path = "../../core/lib" }
-rusqlite = "0.13"
+rusqlite = "0.14"

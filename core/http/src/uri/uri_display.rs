@@ -29,32 +29,41 @@ use self::priv_encode_set::PATH_ENCODE_SET;
 /// implementation for these types is used when generating the URI.
 ///
 /// To illustrate `UriDisplay`'s role in code generation for `uri!`, consider
-/// the following fictional route and struct definition:
+/// the following route:
 ///
-/// ```rust,ignore
-/// struct Value { .. };
-///
-/// #[get("/item/<id>/<value>")]
-/// fn get_item(id: i32, value: Value) -> T { .. }
+/// ```rust
+/// # #![feature(proc_macro_hygiene, decl_macro)]
+/// # #[macro_use] extern crate rocket;
+/// # type T = ();
+/// #[get("/item/<id>?<track>")]
+/// fn get_item(id: i32, track: String) -> T { /* .. */ }
 /// ```
 ///
 /// A URI for this route can be generated as follows:
 ///
-/// ```rust,ignore
+/// ```rust
+/// # #![feature(proc_macro_hygiene, decl_macro)]
+/// # #[macro_use] extern crate rocket;
+/// # type T = ();
+/// # #[get("/item/<id>?<track>")]
+/// # fn get_item(id: i32, track: String) -> T { /* .. */ }
+/// #
 /// // With unnamed parameters.
-/// uri!(get_item: 100, Value { .. });
+/// uri!(get_item: 100, "inbound");
 ///
 /// // With named parameters.
-/// uri!(get_item: id = 100, value = Value { .. });
+/// uri!(get_item: id = 100, track = "inbound");
+/// uri!(get_item: track = "inbound", id = 100);
 /// ```
 ///
 /// After verifying parameters and their types, Rocket will generate code
 /// similar to the following:
 ///
-/// ```rust,ignore
-/// format!("/item/{id}/{value}",
-///     id = &100 as &UriDisplay,
-///     value = &Value { .. } as &UriDisplay);
+/// ```rust
+/// # extern crate rocket;
+/// # use rocket::http::uri::UriDisplay;
+/// #
+/// format!("/item/{}?track={}", &100 as &UriDisplay, &"inbound" as &UriDisplay);
 /// ```
 ///
 /// For this expression  to typecheck, both `i32` and `Value` must implement

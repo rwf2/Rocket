@@ -326,24 +326,23 @@ fn generate_internal_uri_macro(route: &Route) -> TokenStream2 {
 fn codegen_route(route: Route) -> Result<TokenStream> {
     // Generate the declarations for path, data, and request guard parameters.
     let mut data_stmt = None;
+    let mut req_guard_definitions = vec![];
     let mut parameter_definitions = vec![];
     for (ident, rocket_ident, ty) in &route.inputs {
         let fn_segment: Segment = ident.into();
-        let parameter_def = match route.segments.get(&fn_segment) {
+        match route.segments.get(&fn_segment) {
             Some(seg) if seg.source == Source::Path => {
-                param_expr(seg, rocket_ident, &ty)
+                parameter_definitions.push(param_expr(seg, rocket_ident, &ty));
             }
             Some(seg) if seg.source == Source::Data => {
                 // the data statement needs to come last, so record it specially
                 data_stmt = Some(data_expr(rocket_ident, &ty));
-                continue;
             }
-            // handle query parameters later
-            Some(_) => continue,
-            None => request_guard_expr(rocket_ident, &ty),
+            Some(_) => continue, // handle query parameters later
+            None => {
+                req_guard_definitions.push(request_guard_expr(rocket_ident, &ty));
+            }
         };
-
-        parameter_definitions.push(parameter_def);
     }
 
     // Generate the declarations for query parameters.
@@ -381,6 +380,7 @@ fn codegen_route(route: Route) -> Result<TokenStream> {
                 request::{Query, FromQuery, FormItems, FormItem},
             };
 
+            #(#req_guard_definitions)*
             #(#parameter_definitions)*
             #data_stmt
 

@@ -1,9 +1,9 @@
 [package]
-name = "rocket_codegen_next"
+name = "rocket_codegen"
 version = "0.4.0-dev"
 authors = ["Sergio Benitez <sb@sergio.bz>"]
 description = "Procedural macros for the Rocket web framework."
-documentation = "https://api.rocket.rs/0.4.0-dev/rocket_codegen_next/"
+documentation = "https://api.rocket.rs/0.4.0-dev/rocket_codegen/"
 homepage = "https://rocket.rs"
 repository = "https://github.com/SergioBenitez/Rocket"
 readme = "../../README.md"

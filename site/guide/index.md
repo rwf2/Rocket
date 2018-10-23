@@ -2,11 +2,11 @@
 
 Welcome to Rocket!
 
-This is the official guide. It is designed to serve as a starting point to
-writing web applications with Rocket and Rust. The guide is also designed to be
-a reference for experienced Rocket developers. This guide is conversational in
-tone. For concise and purely technical documentation, see the [API
-documentation](https://api.rocket.rs).
+This is the official guide for Rocket v0.4. It is designed to serve as a
+starting point to writing web applications with Rocket and Rust. The guide is
+also designed to be a reference for experienced Rocket developers. This guide is
+conversational in tone. For purely technical documentation with examples, see
+the [API documentation](@api).
 
 The guide is split into several sections, each with a focus on a different
 aspect of Rocket. The sections are:
@@ -43,4 +43,3 @@ web IRC client](https://kiwiirc.com/client/irc.mozilla.org/#rocket). You can
 learn more about IRC via Mozilla's [Getting Started with
 IRC](https://developer.mozilla.org/en-US/docs/Mozilla/QA/Getting_Started_with_IRC)
 guide.
-

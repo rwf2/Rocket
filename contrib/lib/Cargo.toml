@@ -28,7 +28,7 @@ diesel_sqlite_pool = ["databases", "diesel/sqlite", "diesel/r2d2"]
 diesel_postgres_pool = ["databases", "diesel/postgres", "diesel/r2d2"]
 diesel_mysql_pool = ["databases", "diesel/mysql", "diesel/r2d2"]
 postgres_pool = ["databases", "postgres", "r2d2_postgres"]
-mysql_pool = ["databases", "mysql", "r2d2_mysql"]
+# mysql_pool = ["databases", "mysql", "r2d2_mysql"]
 sqlite_pool = ["databases", "rusqlite", "r2d2_sqlite"]
 cypher_pool = ["databases", "rusted_cypher", "r2d2_cypher"]
 redis_pool = ["databases", "redis", "r2d2_redis"]
@@ -56,10 +56,10 @@ diesel = { version = "1.0", default-features = false, optional = true }
 postgres = { version = "0.15", optional = true }
 r2d2 = { version = "0.8", optional = true }
 r2d2_postgres = { version = "0.14", optional = true }
-mysql = { version = "14", optional = true }
-r2d2_mysql = { version = "9", optional = true }
-rusqlite = { version = "0.13.0", optional = true }
-r2d2_sqlite = { version = "0.5", optional = true }
+# mysql = { version = "14", optional = true }
+# r2d2_mysql = { version = "9", optional = true }
+rusqlite = { version = "0.14.0", optional = true }
+r2d2_sqlite = { version = "0.6", optional = true }
 rusted_cypher = { version = "1", optional = true }
 r2d2_cypher = { version = "0.4", optional = true }
 redis = { version = "0.9", optional = true }
