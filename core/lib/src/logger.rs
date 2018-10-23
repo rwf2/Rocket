@@ -1,10 +1,12 @@
 //! Rocket's logging infrastructure.
 
+use std::{fmt, env};
 use std::str::FromStr;
-use std::fmt;
 
 use log;
 use yansi::Paint;
+
+crate const COLORS_ENV: &str = "ROCKET_CLI_COLORS";
 
 struct RocketLogger(LoggingLevel);
 
@@ -147,7 +149,10 @@ crate fn try_init(level: LoggingLevel, verbose: bool) -> bool {
         return false;
     }
 
-    if !::isatty::stdout_isatty() || (cfg!(windows) && !Paint::enable_windows_ascii()) {
+    if !::isatty::stdout_isatty()
+        || (cfg!(windows) && !Paint::enable_windows_ascii())
+        || env::var_os(COLORS_ENV).map(|v| v == "0" || v == "off").unwrap_or(false)
+    {
         Paint::disable();
     }
 

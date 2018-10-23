@@ -36,10 +36,10 @@ instance. Usage is straightforward:
     let response = req.dispatch();
     ```
 
-[`local`]: https://api.rocket.rs/rocket/local/index.html
-[`Client`]: https://api.rocket.rs/rocket/local/struct.Client.html
-[`LocalRequest`]: https://api.rocket.rs/rocket/local/struct.LocalRequest.html
-[`Rocket`]: https://api.rocket.rs/rocket/struct.Rocket.html
+[`local`]: @api/rocket/local/
+[`Client`]: @api/rocket/local/struct.Client.html
+[`LocalRequest`]: @api/rocket/local/struct.LocalRequest.html
+[`Rocket`]: @api/rocket/struct.Rocket.html
 
 ## Validating Responses
 
@@ -57,13 +57,13 @@ a few below:
   * [`body_string`]: returns the body data as a `String`.
   * [`body_bytes`]: returns the body data as a `Vec<u8>`.
 
-[`LocalResponse`]: https://api.rocket.rs/rocket/local/struct.LocalResponse.html
-[`Response`]: https://api.rocket.rs/rocket/struct.Response.html
-[`status`]: https://api.rocket.rs/rocket/struct.Response.html#method.status
-[`content_type`]: https://api.rocket.rs/rocket/struct.Response.html#method.content_type
-[`headers`]: https://api.rocket.rs/rocket/struct.Response.html#method.headers
-[`body_string`]: https://api.rocket.rs/rocket/struct.Response.html#method.body_string
-[`body_bytes`]: https://api.rocket.rs/rocket/struct.Response.html#method.body_bytes
+[`LocalResponse`]: @api/rocket/local/struct.LocalResponse.html
+[`Response`]: @api/rocket/struct.Response.html
+[`status`]: @api/rocket/struct.Response.html#method.status
+[`content_type`]: @api/rocket/struct.Response.html#method.content_type
+[`headers`]: @api/rocket/struct.Response.html#method.headers
+[`body_string`]: @api/rocket/struct.Response.html#method.body_string
+[`body_bytes`]: @api/rocket/struct.Response.html#method.body_bytes
 
 These methods are typically used in combination with the `assert_eq!` or
 `assert!` macros as follows:
@@ -178,8 +178,7 @@ mod test {
 ```
 
 The tests can be run with `cargo test`. You can find the full source code to
-[this example on
-GitHub](https://github.com/SergioBenitez/Rocket/tree/v0.4.0-dev/examples/testing).
+[this example on GitHub](@example/testing).
 
 ## Codegen Debug
 
@@ -195,14 +194,20 @@ ROCKET_CODEGEN_DEBUG=1 cargo build
 During compilation, you should see output like:
 
 ```rust
-Emitting item:
-fn rocket_route_fn_hello<'_b>(
-    __req: &'_b ::rocket::Request,
-    __data: ::rocket::Data
-) -> ::rocket::handler::Outcome<'_b> {
-    let responder = hello();
-    ::rocket::handler::Outcome::from(__req, responder)
-}
+note: emitting Rocket code generation debug output
+ --> examples/hello_world/src/main.rs:7:1
+  |
+7 | #[get("/")]
+  | ^^^^^^^^^^^
+  |
+  = note:
+    fn rocket_route_fn_hello<'_b>(
+        __req: &'_b ::rocket::Request,
+        __data: ::rocket::Data
+    ) -> ::rocket::handler::Outcome<'_b> {
+        let responder = hello();
+        ::rocket::handler::Outcome::from(__req, responder)
+    }
 ```
 
 This corresponds to the facade request handler Rocket has generated for the

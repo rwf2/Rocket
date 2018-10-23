@@ -98,8 +98,8 @@
 //!
 //! [testing chapter of the guide]: https://rocket.rs/guide/testing/#testing
 
-#[allow(unused_imports)] #[macro_use] extern crate rocket_codegen_next;
-#[doc(hidden)] pub use rocket_codegen_next::*;
+#[allow(unused_imports)] #[macro_use] extern crate rocket_codegen;
+#[doc(hidden)] pub use rocket_codegen::*;
 
 extern crate rocket_http;
 #[macro_use] extern crate log;

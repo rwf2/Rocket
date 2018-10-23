@@ -209,13 +209,14 @@ crate use self::toml_ext::LoggedValue;
 use logger;
 use self::Environment::*;
 use self::environment::CONFIG_ENV;
+use logger::COLORS_ENV;
 use self::toml_ext::parse_simple_toml_value;
 use http::uncased::uncased_eq;
 
 const CONFIG_FILENAME: &str = "Rocket.toml";
 const GLOBAL_ENV_NAME: &str = "global";
 const ENV_VAR_PREFIX: &str = "ROCKET_";
-const PREHANDLED_VARS: [&str; 2] = ["ROCKET_CODEGEN_DEBUG", CONFIG_ENV];
+const PREHANDLED_VARS: [&str; 3] = ["ROCKET_CODEGEN_DEBUG", CONFIG_ENV, COLORS_ENV];
 
 /// Wraps `std::result` with the error type of [`ConfigError`].
 pub type Result<T> = ::std::result::Result<T, ConfigError>;

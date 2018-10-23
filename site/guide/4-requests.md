@@ -1,6 +1,6 @@
 # Requests
 
-Together, a route's attribute and function signature specify what must be true
+Together, a [`route`] attribute and function signature specify what must be true
 about a request in order for the route's handler to be called. You've already
 seen an example of this in action:
 
@@ -15,8 +15,8 @@ course, you can do much more than specify the method and path of a request.
 Among other things, you can ask Rocket to automatically validate:
 
   * The type of a dynamic path segment.
-  * The type of _many_ dynamic path segments.
-  * The type of incoming data.
+  * The type of _several_ dynamic path segments.
+  * The type of incoming body data.
   * The types of query strings, forms, and form values.
   * The expected incoming or outgoing format of a request.
   * Any arbitrary, user-defined security or validation policies.
@@ -25,6 +25,8 @@ The route attribute and function signature work in tandem to describe these
 validations. Rocket's code generation takes care of actually validating the
 properties. This section describes how to ask Rocket to validate against all of
 these properties and more.
+
+[`route`]: @api/rocket_codegen/attr.route.html
 
 ## Methods
 
@@ -38,7 +40,7 @@ to the root path:
 ```
 
 The grammar for these attributes is defined formally in the
-[`rocket_codegen`](https://api.rocket.rs/rocket_codegen/) API docs.
+[`rocket_codegen`](@api/rocket_codegen/attr.route.html) API docs.
 
 ### HEAD Requests
 
@@ -46,20 +48,20 @@ Rocket handles `HEAD` requests automatically when there exists a `GET` route
 that would otherwise match. It does this by stripping the body from the
 response, if there is one. You can also specialize the handling of a `HEAD`
 request by declaring a route for it; Rocket won't interfere with `HEAD` requests
-your application handles.
+your application explicitly handles.
 
 ### Reinterpreting
 
 Because browsers can only send `GET` and `POST` requests, Rocket _reinterprets_
 request methods under certain conditions. If a `POST` request contains a body of
-`Content-Type: application/x-www-form-urlencoded`, and the form's **first**
+`Content-Type: application/x-www-form-urlencoded` and the form's **first**
 field has the name `_method` and a valid HTTP method name as its value (such as
 `"PUT"`), that field's value is used as the method for the incoming request.
 This allows Rocket applications to submit non-`POST` forms. The [todo
-example](https://github.com/SergioBenitez/Rocket/tree/v0.4.0-dev/examples/todo/static/index.html.tera#L47)
-makes use of this feature to submit `PUT` and `DELETE` requests from a web form.
+example](@example/todo/static/index.html.tera#L47) makes use of this feature to
+submit `PUT` and `DELETE` requests from a web form.
 
-## Dynamic Segments
+## Dynamic Paths
 
 You can declare path segments as dynamic by using angle brackets around variable
 names in a route's path. For example, if we want to say _Hello!_ to anything,
@@ -79,10 +81,10 @@ visit `/hello/John`, the application would respond with `Hello, John!`.
 
 Any number of dynamic path segments are allowed. A path segment can be of any
 type, including your own, as long as the type implements the [`FromParam`]
-trait. Rocket implements `FromParam` for many of the standard library types, as
-well as a few special Rocket types. For the full list of supplied
-implementations, see the [`FromParam` API docs]. Here's a more complete route to
-illustrate varied usage:
+trait. We call these types _parameter guards_. Rocket implements `FromParam` for
+many of the standard library types, as well as a few special Rocket types. For
+the full list of provided implementations, see the [`FromParam` API docs].
+Here's a more complete route to illustrate varied usage:
 
 ```rust
 #[get("/hello/<name>/<age>/<cool>")]
@@ -95,31 +97,73 @@ fn hello(name: String, age: u8, cool: bool) -> String {
 }
 ```
 
-[`FromParam`]: https://api.rocket.rs/rocket/request/trait.FromParam.html
-[`FromParam` API docs]: https://api.rocket.rs/rocket/request/trait.FromParam.html
+[`FromParam`]: @api/rocket/request/trait.FromParam.html
+[`FromParam` API docs]: @api/rocket/request/trait.FromParam.html
 
-### Raw Strings
+! note: Rocket types _raw_ strings separately from decoded strings.
 
-You may have noticed an unfamiliar [`RawStr`] type in the code example above.
-This is a special type, provided by Rocket, that represents an unsanitized,
-unvalidated, and undecoded raw string from an HTTP message. It exists to
-separate validated string inputs, represented by types such as `String`, `&str`,
-and `Cow<str>` types, from unvalidated inputs, represented by `&RawStr`. It
-provides helpful methods to convert the unvalidated string into a validated one.
+  You may have noticed an unfamiliar [`RawStr`] type in the code example above.
+  This is a special type, provided by Rocket, that represents an unsanitized,
+  unvalidated, and undecoded raw string from an HTTP message. It exists to
+  separate validated string inputs, represented by types such as `String`,
+  `&str`, and `Cow<str>`, from unvalidated inputs, represented by `&RawStr`. It
+  also provides helpful methods to convert the unvalidated string into a
+  validated one.
 
-Because `&RawStr` implements [`FromParam`], it can be used as the type of a
-dynamic segment, as in the example above. When used as the type of a dynamic
-segment, a `RawStr` points to a potentially undecoded string. By contrast, a
-`String` is guaranteed to be decoded. Which you should use depends on whether
-you want direct but potentially unsafe access to the string (`&RawStr`), or safe
-access to the string at the cost of an allocation (`String`).
+  Because `&RawStr` implements [`FromParam`], it can be used as the type of a
+  dynamic segment, as in the example above, where the value refers to a
+  potentially undecoded string. By contrast, a `String` is guaranteed to be
+  decoded. Which you should use depends on whether you want direct but
+  potentially unsafe access to the string (`&RawStr`), or safe access to the
+  string at the cost of an allocation (`String`).
 
-[`RawStr`]: https://api.rocket.rs/rocket/http/struct.RawStr.html
+  [`RawStr`]: @api/rocket/http/struct.RawStr.html
+
+### Multiple Segments
+
+You can also match against multiple segments by using `<param..>` in a route
+path. The type of such parameters, known as _segments guards_, must implement
+[`FromSegments`]. A segments guard must be the final component of a path: any
+text after a segments guard will result in a compile-time error.
+
+As an example, the following route matches against all paths that begin with
+`/page/`:
+
+```rust
+use std::path::PathBuf;
+
+#[get("/page/<path..>")]
+fn get_page(path: PathBuf) -> T { ... }
+```
+
+The path after `/page/` will be available in the `path` parameter. The
+`FromSegments` implementation for `PathBuf` ensures that `path` cannot lead to
+[path traversal attacks](https://www.owasp.org/index.php/Path_Traversal). With
+this, a safe and secure static file server can be implemented in 4 lines:
+
+```rust
+#[get("/<file..>")]
+fn files(file: PathBuf) -> Option<NamedFile> {
+    NamedFile::open(Path::new("static/").join(file)).ok()
+}
+```
+
+! tip: Rocket makes it even _easier_ to serve static files!
+
+  If you need to serve static files from your Rocket application, consider using
+  the [`StaticFiles`] custom handler from [`rocket_contrib`], which makes it as
+  simple as:
+
+  `rocket.mount("/public", StaticFiles::from("/static")`
+
+[`rocket_contrib`]: @api/rocket_contrib/
+[`StaticFiles`]: @api/rocket_contrib/serve/struct.StaticFiles.html
+[`FromSegments`]: @api/rocket/request/trait.FromSegments.html
 
 ## Forwarding
 
-Let's take a closer look at the route attribute and signature pair from the last
-example:
+Let's take a closer look at the route attribute and signature pair from a
+previous example:
 
 ```rust
 #[get("/hello/<name>/<age>/<cool>")]
@@ -133,9 +177,9 @@ there are no remaining routes to try. When there are no remaining routes, a
 customizable **404 error** is returned.
 
 Routes are attempted in increasing _rank_ order. Rocket chooses a default
-ranking from -4 to -1, detailed in the next section, for all routes, but a
-route's rank can also be manually set with the `rank` attribute. To illustrate,
-consider the following routes:
+ranking from -6 to -1, detailed in the next section, but a route's rank can also
+be manually set with the `rank` attribute. To illustrate, consider the following
+routes:
 
 ```rust
 #[get("/user/<id>")]
@@ -168,6 +212,11 @@ would never forward. An `Ok` variant would indicate that `<id>` was a valid
 `usize`, while an `Err` would indicate that `<id>` was not a `usize`. The
 `Err`'s value would contain the string that failed to parse as a `usize`.
 
+! tip: It's not just forwards that can be caught!
+
+  In general, when any guard fails for any reason, including parameter guards,
+  you can use an `Option` or `Result` type in its place to catch the failure.
+
 By the way, if you were to omit the `rank` parameter in the `user_str` or
 `user_int` routes, Rocket would emit an error and abort launch, indicating that
 the routes _collide_, or can match against similar incoming requests. The `rank`
@@ -181,89 +230,79 @@ precedence) while routes with dynamic paths and without query strings have
 higher ranks (lower precedence). The table below describes the default ranking
 of a route given its properties.
 
-| static path   | query string   | rank   | example             |
-| ------------- | -------------- | ------ | ------------------- |
-| yes           | yes            | -4     | `/hello?world=true` |
-| yes           | no             | -3     | `/hello`            |
-| no            | yes            | -2     | `/<hi>?world=true`  |
-| no            | no             | -1     | `/<hi>`             |
+| static path | query         | rank | example             |
+|-------------|---------------|------|---------------------|
+| yes         | partly static | -6   | `/hello?world=true` |
+| yes         | fully dynamic | -5   | `/hello/?<world>`   |
+| yes         | none          | -4   | `/hello`            |
+| no          | partly static | -3   | `/<hi>?world=true`  |
+| no          | fully dynamic | -2   | `/<hi>?<world>`     |
+| no          | none          | -1   | `/<hi>`             |
 
-## Multiple Segments
+## Query Strings
 
-You can also match against multiple segments by using `<param..>` in a route
-path. The type of such parameters, known as _segments_ parameters, must
-implement [`FromSegments`]. Segments parameters must be the final component of a
-path: any text after a segments parameter will result in a compile-time error.
-
-As an example, the following route matches against all paths that begin with
-`/page/`:
+Query segments can be declared static or dynamic in much the same way as path
+segments:
 
 ```rust
-#[get("/page/<path..>")]
-fn get_page(path: PathBuf) -> T { ... }
-```
-
-The path after `/page/` will be available in the `path` parameter. The
-`FromSegments` implementation for `PathBuf` ensures that `path` cannot lead to
-[path traversal attacks](https://www.owasp.org/index.php/Path_Traversal). With
-this, a safe and secure static file server can be implemented in 4 lines:
-
-```rust
-#[get("/<file..>")]
-fn files(file: PathBuf) -> Option<NamedFile> {
-    NamedFile::open(Path::new("static/").join(file)).ok()
+#[get("/hello?wave&<name>")]
+fn hello(name: &RawStr) -> String {
+    format!("Hello, {}!", name.as_str())
 }
 ```
 
-[`FromSegments`]: https://api.rocket.rs/rocket/request/trait.FromSegments.html
+The `hello` route above matches any `GET` request to `/hello` that has at least
+one query key of `name` and a query segment of `wave` in any order, ignoring any
+extra query segments. The value of the `name` query parameter is used as the
+value of the `name` function argument. For instance, a request to
+`/hello?wave&name=John` would return `Hello, John!`. Other requests that would
+result in the same response include:
 
-## Format
+  * `/hello?name=John&wave` (reordered)
+  * `/hello?name=John&wave&id=123` (extra segments)
+  * `/hello?id=123&name=John&wave` (reordered, extra segments)
+  * `/hello?name=Bob&name=John&wave` (last value taken)
 
-A route can specify the data format it is willing to accept or respond with
-using the `format` route parameter. The value of the parameter is a string
-identifying an HTTP media type. For instance, for JSON data, the string
-`application/json` can be used.
+Any number of dynamic query segments are allowed. A query segment can be of any
+type, including your own, as long as the type implements the [`FromFormValue`]
+trait.
 
-When a route indicates a payload-supporting method (`PUT`, `POST`, `DELETE`, and
-`PATCH`), the `format` route parameter instructs Rocket to check against the
-`Content-Type` header of the incoming request. Only requests where the
-`Content-Type` header matches the `format` parameter will match to the route.
+[`FromFormValue`]: @api/rocket/request/trait.FromFormValue.html
 
-As an example, consider the following route:
+### Multiple Segments
 
-```rust
-#[post("/user", format = "application/json", data = "<user>")]
-fn new_user(user: Json<User>) -> T { ... }
-```
+As with paths, you can also match against multiple segments in a query by using
+`<param..>`. The type of such parameters, known as _query guards_, must
+implement the [`FromQuery`] trait. Query guards must be the final component of a
+query: any text after a query parameter will result in a compile-time error.
 
-The `format` parameter in the `post` attribute declares that only incoming
-requests with `Content-Type: application/json` will match `new_user`. (The
-`data` parameter is described in the next section.) Shorthand is also supported
-for the most common `format` arguments. Instead of using the full Content-Type,
-`format = "application/json"`, you can also write shorthands like `format =
-"json"`. For a full list of available shorthands, see the
-[`ContentType::parse_flexible()`] documentation.
-
-When a route indicates a non-payload-supporting method (`HEAD`, `OPTIONS`, and,
-these purposes, `GET`) the `format` route parameter instructs Rocket to check
-against the `Accept` header of the incoming request. Only requests where the
-preferred media type in the `Accept` header matches the `format` parameter will
-match to the route.
-
-As an example, consider the following route:
+A query guard validates all otherwise unmatched (by static or dynamic query
+parameters) query segments. While you can implement [`FromQuery`] yourself, most
+use cases will be handled by using the [`Form`] or [`LenientForm`] query guard.
+The [Forms](#forms) section explains using these types in detail. In short,
+these types allow you to use a structure with named fields to automatically
+validate query/form parameters:
 
 ```rust
-#[get("/user/<id>", format = "json")]
-fn user(id: usize) -> Json<User> { ... }
+use rocket::request::Form;
+
+#[derive(FromForm)]
+struct User {
+    name: String,
+    account: usize,
+}
+
+#[get("/item?<id>&<user..>")]
+fn item(id: usize, user: Form<User>) { /* ... */ }
 ```
 
-The `format` parameter in the `get` attribute declares that only incoming
-requests with `application/json` as the preferred media type in the `Accept`
-header will match `user`. If instead the route had been declared as `post`,
-Rocket would match the `format` against the `Content-Type` header of the
-incoming response.
+For a request to `/item?id=100&name=sandal&account=400`, the `item` route above
+sets `id` to `100` and `user` to `User { name: "sandal", account: 400 }`.
 
-[`ContentType::parse_flexible()`]: https://api.rocket.rs/rocket/http/struct.ContentType.html#method.parse_flexible
+For more query handling examples, see [the `query_params`
+example](@example/query_params).
+
+[`FromQuery`]: @api/rocket/request/trait.FromQuery.html
 
 ## Request Guards
 
@@ -280,9 +319,9 @@ invoke the [`FromRequest`] implementation for request guards before calling the
 handler. Rocket only dispatches requests to a handler when all of its guards
 pass.
 
-As an example, the following dummy handler makes use of three request guards,
+For instance, the following dummy handler makes use of three request guards,
 `A`, `B`, and `C`. An input can be identified as a request guard if it is not
-named in the route attribute. This is why `param` is not a request guard.
+named in the route attribute.
 
 ```rust
 #[get("/<param>")]
@@ -295,8 +334,8 @@ short-circuiting; if one guard fails, the remaining are not attempted. To learn
 more about request guards and implementing them, see the [`FromRequest`]
 documentation.
 
-[`FromRequest`]: https://api.rocket.rs/rocket/request/trait.FromRequest.html
-[`Cookies`]: https://api.rocket.rs/rocket/http/enum.Cookies.html
+[`FromRequest`]: @api/rocket/request/trait.FromRequest.html
+[`Cookies`]: @api/rocket/http/enum.Cookies.html
 
 ### Custom Guards
 
@@ -315,6 +354,46 @@ authenticates an administrator using incoming cookies. Then, any handler with an
 `AdminUser` or `ApiKey` type in its argument list is assured to only be invoked
 if the appropriate conditions are met. Request guards centralize policies,
 resulting in a simpler, safer, and more secure applications.
+
+### Guard Transparency
+
+When a request guard type can only be created through its [`FromRequest`]
+implementation, and the type is not `Copy`, the existence of a request guard
+value provides a _type-level proof_ that the current request has been validated
+against an arbitrary policy. This provides powerful means of protecting your
+application against access-control violations by requiring data accessing
+methods to _witness_ a proof of authorization via a request guard. We call the
+notion of using a request guard as a witness _guard transparency_.
+
+As a concrete example, the following application has a function,
+`health_records`, that returns all of the health records in a database. Because
+health records are sensitive information, they should only be accessible by
+super users. The `SuperUser` request guard authenticates and authorizes a super
+user, and its `FromRequest` implementation is the only means by which a
+`SuperUser` can be constructed. By declaring the `health_records` function as
+follows, access control violations against health records are guaranteed to be
+prevented at _compile-time_:
+
+```rust
+fn health_records(user: &SuperUser) -> Records { ... }
+```
+
+The reasoning is as follows:
+
+  1. The `health_records` function requires an `&SuperUser` type.
+  2. The only constructor for a `SuperUser` type is `FromRequest`.
+  3. Only Rocket can provide an active `&Request` to construct via `FromRequest`.
+  4. Thus, there must be a `Request` authorizing a `SuperUser` to call
+     `health_records`.
+
+! note
+
+  At the expense of a lifetime parameter in the guard type, guarantees can be
+  made even stronger by tying the lifetime of the `Request` passed to
+  `FromRequest` to the request guard, ensuring that the guard value always
+  corresponds to an _active_ request.
+
+We recommend leveraging request guard transparency for _all_ data accesses.
 
 ### Forwarding Guards
 
@@ -388,7 +467,7 @@ be set and removed using the `Cookies` guard. The [cookies example] on GitHub
 illustrates further use of the `Cookies` type to get and set cookies, while the
 [`Cookies`] documentation contains complete usage information.
 
-[cookies example]: https://github.com/SergioBenitez/Rocket/tree/v0.4.0-dev/examples/cookies
+[cookies example]: @example/cookies
 
 ### Private Cookies
 
@@ -422,7 +501,7 @@ fn logout(mut cookies: Cookies) -> Flash<Redirect> {
 }
 ```
 
-[`Cookies::add()`]: https://api.rocket.rs/rocket/http/enum.Cookies.html#method.add
+[`Cookies::add()`]: @api/rocket/http/enum.Cookies.html#method.add
 
 ### Secret Key
 
@@ -439,12 +518,12 @@ Generating a string suitable for use as a `secret_key` configuration value is
 usually done through tools like `openssl`. Using `openssl`, a 256-bit base64 key
 can be generated with the command `openssl rand -base64 32`.
 
-For more information on configuration, see the
-[Configuration](/guide/configuration) section of the guide.
+For more information on configuration, see the [Configuration](../configuration)
+section of the guide.
 
-[`get_private`]: https://api.rocket.rs/rocket/http/enum.Cookies.html#method.get_private
-[`add_private`]: https://api.rocket.rs/rocket/http/enum.Cookies.html#method.add_private
-[`remove_private`]: https://api.rocket.rs/rocket/http/enum.Cookies.html#method.remove_private
+[`get_private`]: @api/rocket/http/enum.Cookies.html#method.get_private
+[`add_private`]: @api/rocket/http/enum.Cookies.html#method.add_private
+[`remove_private`]: @api/rocket/http/enum.Cookies.html#method.remove_private
 
 ### One-At-A-Time
 
@@ -482,13 +561,60 @@ guards:
 fn good(custom: Custom, cookies: Cookies) { .. }
 ```
 
+## Format
+
+A route can specify the data format it is willing to accept or respond with by
+using the `format` route parameter. The value of the parameter is a string
+identifying an HTTP media type or a shorthand variant. For instance, for JSON
+data, the string `application/json` of simply `json` can be used.
+
+When a route indicates a payload-supporting method (`PUT`, `POST`, `DELETE`, and
+`PATCH`), the `format` route parameter instructs Rocket to check against the
+`Content-Type` header of the incoming request. Only requests where the
+`Content-Type` header matches the `format` parameter will match to the route.
+
+As an example, consider the following route:
+
+```rust
+#[post("/user", format = "application/json", data = "<user>")]
+fn new_user(user: Json<User>) -> T { ... }
+```
+
+The `format` parameter in the `post` attribute declares that only incoming
+requests with `Content-Type: application/json` will match `new_user`. (The
+`data` parameter is described in the next section.) Shorthand is also supported
+for the most common `format` arguments. Instead of using the full Content-Type,
+`format = "application/json"`, you can also write shorthands like `format =
+"json"`. For a full list of available shorthands, see the
+[`ContentType::parse_flexible()`] documentation.
+
+When a route indicates a non-payload-supporting method (`HEAD`, `OPTIONS`, and,
+these purposes, `GET`) the `format` route parameter instructs Rocket to check
+against the `Accept` header of the incoming request. Only requests where the
+preferred media type in the `Accept` header matches the `format` parameter will
+match to the route.
+
+As an example, consider the following route:
+
+```rust
+#[get("/user/<id>", format = "json")]
+fn user(id: usize) -> Json<User> { ... }
+```
+
+The `format` parameter in the `get` attribute declares that only incoming
+requests with `application/json` as the preferred media type in the `Accept`
+header will match `user`. If instead the route had been declared as `post`,
+Rocket would match the `format` against the `Content-Type` header of the
+incoming response.
+
+[`ContentType::parse_flexible()`]: @api/rocket/http/struct.ContentType.html#method.parse_flexible
+
 ## Body Data
 
-At some point, your web application will need to process body data. Data
-processing, like much of Rocket, is type directed. To indicate that a handler
-expects data, annotate it with `data = "<param>"`, where `param` is an argument
-in the handler. The argument's type must implement the [`FromData`] trait. It
-looks like this, where `T: FromData`:
+Body data processing, like much of Rocket, is type directed. To indicate that a
+handler expects body data, annotate it with `data = "<param>"`, where `param` is
+an argument in the handler. The argument's type must implement the [`FromData`]
+trait. It looks like this, where `T` is assumed to implement `FromData`:
 
 ```rust
 #[post("/", data = "<input>")]
@@ -497,15 +623,15 @@ fn new(input: T) -> String { ... }
 
 Any type that implements [`FromData`] is also known as _data guard_.
 
-[`FromData`]: https://api.rocket.rs/rocket/data/trait.FromData.html
+[`FromData`]: @api/rocket/data/trait.FromData.html
 
 ### Forms
 
-Forms are the most common type of data handled in web applications, and Rocket
-makes handling them easy. Say your application is processing a form submission
-for a new todo `Task`. The form contains two fields: `complete`, a checkbox, and
-`description`, a text field. You can easily handle the form request in Rocket
-as follows:
+Forms are one of the most common types of data handled in web applications, and
+Rocket makes handling them easy. Say your application is processing a form
+submission for a new todo `Task`. The form contains two fields: `complete`, a
+checkbox, and `description`, a text field. You can easily handle the form
+request in Rocket as follows:
 
 ```rust
 #[derive(FromForm)]
@@ -518,23 +644,25 @@ struct Task {
 fn new(task: Form<Task>) -> String { ... }
 ```
 
-The `Form` type implements the `FromData` trait as long as its generic parameter
-implements the [`FromForm`] trait. In the example, we've derived the `FromForm`
-trait automatically for the `Task` structure. `FromForm` can be derived for any
-structure whose fields implement [`FromFormValue`]. If a `POST /todo` request
-arrives, the form data will automatically be parsed into the `Task` structure.
-If the data that arrives isn't of the correct Content-Type, the request is
-forwarded. If the data doesn't parse or is simply invalid, a customizable `400 -
-Bad Request` or `422 - Unprocessable Entity` error is returned. As before, a
-forward or failure can be caught by using the `Option` and `Result` types:
+The [`Form`] type implements the `FromData` trait as long as its generic
+parameter implements the [`FromForm`] trait. In the example, we've derived the
+`FromForm` trait automatically for the `Task` structure. `FromForm` can be
+derived for any structure whose fields implement [`FromFormValue`]. If a `POST
+/todo` request arrives, the form data will automatically be parsed into the
+`Task` structure. If the data that arrives isn't of the correct Content-Type,
+the request is forwarded. If the data doesn't parse or is simply invalid, a
+customizable `400 - Bad Request` or `422 - Unprocessable Entity` error is
+returned. As before, a forward or failure can be caught by using the `Option`
+and `Result` types:
 
 ```rust
 #[post("/todo", data = "<task>")]
 fn new(task: Option<Form<Task>>) -> String { ... }
 ```
 
-[`FromForm`]: https://api.rocket.rs/rocket/request/trait.FromForm.html
-[`FromFormValue`]: https://api.rocket.rs/rocket/request/trait.FromFormValue.html
+[`Form`]: @api/rocket/request/struct.Form.html
+[`FromForm`]: @api/rocket/request/trait.FromForm.html
+[`FromFormValue`]: @api/rocket/request/trait.FromFormValue.html
 
 #### Lenient Parsing
 
@@ -564,7 +692,7 @@ struct Task { .. }
 fn new(task: LenientForm<Task>) { .. }
 ```
 
-[`LenientForm`]: https://api.rocket.rs/rocket/request/struct.LenientForm.html
+[`LenientForm`]: @api/rocket/request/struct.LenientForm.html
 
 #### Field Renaming
 
@@ -629,14 +757,30 @@ struct Person {
 }
 ```
 
-The [forms validation](https://github.com/SergioBenitez/Rocket/tree/v0.4.0-dev/examples/form_validation)
-and [forms kitchen sink](https://github.com/SergioBenitez/Rocket/tree/v0.4.0-dev/examples/form_kitchen_sink)
-examples on GitHub provide further illustrations.
+The `FromFormValue` trait can also be derived for enums with nullary fields:
+
+```rust
+#[derive(FromFormValue)]
+enum MyValue {
+    First,
+    Second,
+    Third,
+}
+```
+
+The derive generates an implementation of the `FromFormValue` trait for the
+decorated enum. The implementation returns successfully when the form value
+matches, case insensitively, the stringified version of a variant's name,
+returning an instance of said variant.
+
+The [form validation](@example/form_validation) and [form kitchen
+sink](@example/form_kitchen_sink) examples provide further illustrations.
 
 ### JSON
 
 Handling JSON data is no harder: simply use the
-[`Json`](https://api.rocket.rs/rocket_contrib/struct.Json.html) type:
+[`Json`](@api/rocket_contrib/json/struct.Json.html) type from
+[`rocket_contrib`]:
 
 ```rust
 #[derive(Deserialize)]
@@ -653,13 +797,13 @@ The only condition is that the generic type in `Json` implements the
 `Deserialize` trait from [Serde](https://github.com/serde-rs/json). See the
 [JSON example] on GitHub for a complete example.
 
-[JSON example]: https://github.com/SergioBenitez/Rocket/tree/v0.4.0-dev/examples/json
+[JSON example]: @example/json
 
 ### Streaming
 
 Sometimes you just want to handle incoming data directly. For example, you might
 want to stream the incoming data out to a file. Rocket makes this as simple as
-possible via the [`Data`](https://api.rocket.rs/rocket/data/struct.Data.html)
+possible via the [`Data`](@api/rocket/data/struct.Data.html)
 type:
 
 ```rust
@@ -674,78 +818,29 @@ The route above accepts any `POST` request to the `/upload` path with
 `tmp/upload.txt`, and the number of bytes written is returned as a plain text
 response if the upload succeeds. If the upload fails, an error response is
 returned. The handler above is complete. It really is that simple! See the
-[GitHub example
-code](https://github.com/SergioBenitez/Rocket/tree/v0.4.0-dev/examples/raw_upload)
-for the full crate.
+[GitHub example code](@example/raw_upload) for the full crate.
 
-## Query Strings
+! warning: You should _always_ set limits when reading incoming data.
 
-Query strings are handled just like forms. A query string can be parsed into any
-structure that implements the `FromForm` trait. They are matched against by
-appending a `?` to the path followed by a static query string or a dynamic
-parameter `<param>`.
+  To prevent DoS attacks, you should limit the amount of data you're willing to
+  accept. The [`take()`] reader adapter makes doing this easy:
+  `data.open().take(LIMIT)`.
 
-For instance, say you change your mind and decide to use query strings instead
-of `POST` forms for new todo tasks in the previous forms example, reproduced
-below:
-
-```rust
-#[derive(FromForm)]
-struct Task { .. }
-
-#[post("/todo", data = "<task>")]
-fn new(task: Form<Task>) -> String { ... }
-```
-
-Rocket makes the transition simple: simply declare `<task>` as a query parameter
-as follows:
-
-```rust
-#[get("/todo?<task>")]
-fn new(task: Task) -> String { ... }
-```
-
-Rocket will parse the query string into the `Task` structure automatically by
-matching the structure field names to the query parameters. If the parse fails,
-the request is forwarded to the next matching route. Parse failures can be
-captured on a per-field or per-form basis.
-
-To catch failures on a per-field basis, use a type of `Option` or `Result` for
-the given field:
-
-```rust
-#[derive(FromForm)]
-struct Task<'r> {
-    description: Result<String, &'r RawStr>,
-    complete: Option<bool>
-}
-```
-
-To catch failures on a per-form basis, change the type of the query string
-target to either `Option` or `Result`:
-
-```rust
-#[get("/todo?<task>")]
-fn new(task: Option<Task>) { ... }
-```
-
-For a concrete illustration on how to handle query parameters, see [the
-`query_params`
-example](https://github.com/SergioBenitez/Rocket/tree/v0.4.0-dev/examples/query_params).
+  [`take()`]: https://doc.rust-lang.org/std/io/trait.Read.html#method.take
 
 ## Error Catchers
 
 Routing may fail for a variety of reasons. These include:
 
-  * A [request guard](#request-guards) returns `Failure`.
-  * A handler returns a [`Responder`](/guide/responses/#responder) that fails.
-  * No matching route was found.
+  * A guard fails.
+  * A handler returns a [`Responder`](../responses/#responder) that fails.
+  * No routes matched.
 
 If any of these conditions occur, Rocket returns an error to the client. To do
 so, Rocket invokes the _catcher_ corresponding to the error's status code. A
 catcher is like a route, except it only handles errors. Rocket provides default
 catchers for all of the standard HTTP error codes. To override a default
-catcher, or declare a catcher for a custom status code, use the `catch`
+catcher, or declare a catcher for a custom status code, use the [`catch`]
 attribute, which takes a single integer corresponding to the HTTP status code to
 catch. For instance, to declare a catcher for `404 Not Found` errors, you'd
 write:
@@ -767,16 +862,19 @@ fn not_found(req: &Request) -> String {
 
 Also as with routes, Rocket needs to know about a catcher before it is used to
 handle errors. The process, known as "registering" a catcher, is similar to
-mounting a route: call the `register` method with a list of catchers via the
-`catchers!` macro. The invocation to add the **404** catcher declared above
+mounting a route: call the [`register()`] method with a list of catchers via the
+[`catchers!`] macro. The invocation to add the **404** catcher declared above
 looks like:
 
 ```rust
 rocket::ignite().register(catchers![not_found])
 ```
 
-Unlike route request handlers, catchers take exactly zero or one parameters. If
-the catcher takes a parameter, it must be of type
-[`&Request`](https://api.rocket.rs/rocket/struct.Request.html) The [error
-catcher example](https://github.com/SergioBenitez/Rocket/tree/v0.4.0-dev/examples/errors)
-on GitHub illustrates their use in full.
+Unlike route request handlers, catchers take exactly zero or one parameter. If
+the catcher takes a parameter, it must be of type [`&Request`] The [error
+catcher example](@example/errors) on GitHub illustrates their use in full.
+
+[`catch`]: @api/rocket_codegen/attr.catch.html
+[`register()`]: @api/rocket/struct.Rocket.html#method.register
+[`catchers!`]: @api/rocket_codegen/macro.catchers.html
+[`&Request`]: @api/rocket/struct.Request.html

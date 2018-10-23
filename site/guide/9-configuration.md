@@ -35,12 +35,13 @@ $ sudo ROCKET_ENV=staging cargo run
     => address: 0.0.0.0
     => port: 8000
     => log: normal
-    => workers: [logical cores * 2]
+    => workers: 24
     => secret key: generated
     => limits: forms = 32KiB
+    => keep-alive: 5s
     => tls: disabled
 🛰  Mounting '/':
-    => GET /
+    => GET / (hello)
 🚀  Rocket has launched from http://0.0.0.0:8000
 ```
 
@@ -64,6 +65,7 @@ value:
 address = "localhost"
 port = 8000
 workers = [number of cpus * 2]
+keep_alive = 5
 log = "normal"
 secret_key = [randomly generated at launch]
 limits = { forms = 32768 }
@@ -72,6 +74,7 @@ limits = { forms = 32768 }
 address = "0.0.0.0"
 port = 8000
 workers = [number of cpus * 2]
+keep_alive = 5
 log = "normal"
 secret_key = [randomly generated at launch]
 limits = { forms = 32768 }
@@ -80,6 +83,7 @@ limits = { forms = 32768 }
 address = "0.0.0.0"
 port = 8000
 workers = [number of cpus * 2]
+keep_alive = 5
 log = "critical"
 secret_key = [randomly generated at launch]
 limits = { forms = 32768 }
@@ -131,8 +135,8 @@ incoming JSON data. You should use the `limits` parameter for your application's
 data limits as well. Data limits can be retrieved at runtime via the
 [`Request::limits()`] method.
 
-[`Request::limits()`]: https://api.rocket.rs/rocket/struct.Request.html#method.limits
-[`Json`]: https://api.rocket.rs/rocket_contrib/struct.Json.html#incoming-data-limits
+[`Request::limits()`]: @api/rocket/struct.Request.html#method.limits
+[`Json`]: @api/rocket_contrib/json/struct.Json.html#incoming-data-limits
 
 ## Extras
 
@@ -140,7 +144,7 @@ In addition to overriding default configuration parameters, a configuration file
 can also define values for any number of _extra_ configuration parameters. While
 these parameters aren't used by Rocket directly, other libraries, or your own
 application, can use them as they wish. As an example, the
-[Template](https://api.rocket.rs/rocket_contrib/struct.Template.html) type
+[Template](@api/rocket_contrib/templates/struct.Template.html) type
 accepts a value for the `template_dir` configuration parameter. The parameter
 can be set in `Rocket.toml` as follows:
 
@@ -167,8 +171,8 @@ To retrieve a custom, extra configuration parameter in your application, we
 recommend using an [ad-hoc attach fairing] in combination with [managed state].
 For example, if your application makes use of a custom `assets_dir` parameter:
 
-[ad-hoc attach fairing]: /guide/fairings/#ad-hoc-fairings
-[managed state]: /guide/state/#managed-state
+[ad-hoc attach fairing]: ../fairings/#ad-hoc-fairings
+[managed state]: ../state/#managed-state
 
 ```toml
 [development]
@@ -237,7 +241,33 @@ ROCKET_ARRAY=[1,"b",3.14]
 ROCKET_DICT={key="abc",val=123}
 ```
 
+## Programmatic
+
+In addition to using environment variables or a config file, Rocket can also be
+configured using the [`rocket::custom()`] method and [`ConfigBuilder`]:
+
+```rust
+use rocket::config::{Config, Environment};
+
+let config = Config::build(Environment::Staging)
+    .address("1.2.3.4")
+    .port(9234)
+    .finalize()?;
+
+let app = rocket::custom(config, false);
+```
+
+Configuration via `rocket::custom()` replaces all configuration from
+`Rocket.toml` or environment variables. In other words, using `rocket::custom()`
+results in `Rocket.toml` and environment variables being ignored.
+
+[`rocket::custom()`]: @api/rocket/fn.custom.html
+[`ConfigBuilder`]: @api/rocket/config/struct.ConfigBuilder.html
+
 ## Configuring TLS
+
+! warning: Rocket's built-in TLS is **not** considered ready for production use.
+  It is intended for development use _only_.
 
 Rocket includes built-in, native support for TLS >= 1.2 (Transport Layer
 Security). In order for TLS support to be enabled, Rocket must be compiled with

@@ -90,7 +90,7 @@ if [ "$1" = "--contrib" ]; then
     diesel_sqlite_pool
     diesel_mysql_pool
     postgres_pool
-    mysql_pool
+    # mysql_pool
     sqlite_pool
     cypher_pool
     redis_pool

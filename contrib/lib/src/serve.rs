@@ -89,7 +89,7 @@ impl ::std::ops::BitOr for Options {
 ///
 /// # Example
 ///
-/// To serve files from this directory at the `/public` path, allowing
+/// To serve files from the `/static` directory at the `/public` path, allowing
 /// `index.html` files to be used to respond to requests for a directory (the
 /// default), you might write the following:
 ///

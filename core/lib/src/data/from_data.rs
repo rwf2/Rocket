@@ -120,6 +120,11 @@ pub type Transformed<'a, T> =
 /// Data guards are used as the target of the `data` route attribute parameter.
 /// A handler can have at most one data guard.
 ///
+/// For many data guards, implementing [`FromDataSimple`] will be simpler and
+/// sufficient. All types that implement `FromDataSimple` automatically
+/// implement `FromData`. Thus, when possible, prefer to implement
+/// [`FromDataSimple`] instead of `FromData`.
+///
 /// [request guard]: ::request::FromRequest
 ///
 /// ## Example

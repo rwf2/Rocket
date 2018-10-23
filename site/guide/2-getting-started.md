@@ -28,15 +28,13 @@ Rocket project by running the following command in the directory:
 rustup override set nightly
 ```
 
-### Minimum Nightly
+! warning: Rocket requires the _latest_ version of Rust nightly.
 
-Rocket always requires the _latest_ version of Rust nightly. If your Rocket
-application suddenly stops building, ensure you're using the latest version of
-Rust nightly and Rocket by updating your toolchain and dependencies with:
+  If your Rocket application suddenly stops building, ensure you're using the
+  latest version of Rust nightly and Rocket by updating your toolchain and
+  dependencies with:
 
-```sh
-rustup update && cargo update
-```
+  `rustup update && cargo update`
 
 ## Hello, world!
 
@@ -48,13 +46,11 @@ cargo new hello-rocket --bin
 cd hello-rocket
 ```
 
-Now, add Rocket and its code generation facilities as dependencies of your
-project by ensuring your `Cargo.toml` contains the following:
+Now, add Rocket as a dependency in your `Cargo.toml`:
 
 ```
 [dependencies]
-rocket = "0.3.6"
-rocket_codegen = "0.3.6"
+rocket = "0.4.0-dev"
 ```
 
 Modify `src/main.rs` so that it contains the code for the Rocket `Hello, world!`
@@ -85,13 +81,21 @@ run`. You should see the following:
     => address: localhost
     => port: 8000
     => log: normal
-    => workers: [core count * 2]
+    => workers: 24
     => secret key: generated
     => limits: forms = 32KiB
+    => keep-alive: 5s
     => tls: disabled
 🛰  Mounting '/':
-    => GET /
+    => GET / (hello)
 🚀  Rocket has launched from http://localhost:8000
 ```
 
 Visit `http://localhost:8000` to see your first Rocket application in action!
+
+! tip: Don't like colors or emoji?
+
+  You can disable colors and emoji by setting the `ROCKET_CLI_COLORS`
+  environment variable to `0` or `off` when running a Rocket binary:
+
+  `ROCKET_CLI_COLORS=off cargo run`
