@@ -40,8 +40,8 @@ use templates::ContextManager;
 pub struct Metadata<'a>(&'a ContextManager);
 
 impl<'a> Metadata<'a> {
-    /// Returns `true` if the template with name `name` was loaded at start-up
-    /// time. Otherwise, returns `false`.
+    /// Returns `true` if the template with the given `name` is currently
+    /// loaded.  Otherwise, returns `false`.
     ///
     /// # Example
     ///
