@@ -318,6 +318,8 @@ fn generate_internal_uri_macro(route: &Route) -> TokenStream2 {
 
     quote! {
         pub macro #generated_macro_name($($token:tt)*) {{
+            extern crate rocket;
+            extern crate std;
             rocket::rocket_internal_uri!(#route_uri, (#(#dynamic_args),*), $($token)*)
         }}
     }
