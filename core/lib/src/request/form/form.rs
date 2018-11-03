@@ -111,7 +111,7 @@ use http::{Status, uri::FromUriParam};
 /// forms = 524288
 /// ```
 #[derive(Debug)]
-pub struct Form<T>(crate T);
+pub struct Form<T>(pub T);
 
 impl<T> Form<T> {
     /// Consumes `self` and returns the parsed value.
