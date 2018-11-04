@@ -81,7 +81,7 @@ run`. You should see the following:
     => address: localhost
     => port: 8000
     => log: normal
-    => workers: 16
+    => workers: [logical cores * 2]
     => secret key: generated
     => limits: forms = 32KiB
     => keep-alive: 5s
