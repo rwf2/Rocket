@@ -81,13 +81,13 @@ run`. You should see the following:
     => address: localhost
     => port: 8000
     => log: normal
-    => workers: [logical cores * 2]
+    => workers: 16
     => secret key: generated
     => limits: forms = 32KiB
     => keep-alive: 5s
     => tls: disabled
 🛰  Mounting '/':
-    => GET / (hello)
+    => GET / (index)
 🚀  Rocket has launched from http://localhost:8000
 ```
 
