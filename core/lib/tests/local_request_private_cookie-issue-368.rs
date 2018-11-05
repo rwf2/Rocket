@@ -4,6 +4,7 @@
 
 use rocket::http::Cookies;
 
+#[cfg(feature = "private-cookies")]
 #[get("/")]
 fn return_private_cookie(mut cookies: Cookies) -> Option<String> {
     match cookies.get_private("cookie_name") {
@@ -12,6 +13,7 @@ fn return_private_cookie(mut cookies: Cookies) -> Option<String> {
     }
 }
 
+#[cfg(feature = "private-cookies")]
 mod tests {
     use super::*;
     use rocket::local::Client;

@@ -5,7 +5,7 @@ workspace = "../../"
 publish = false
 
 [dependencies]
-rocket = { path = "../../core/lib" }
+rocket = { path = "../../core/lib", features = ["private-cookies"] }
 
 [dependencies.rocket_contrib]
 path = "../../contrib/lib"

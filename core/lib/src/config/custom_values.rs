@@ -3,14 +3,17 @@ use std::fmt;
 #[cfg(feature = "tls")] use http::tls::{Certificate, PrivateKey};
 
 use config::{Result, Config, Value, ConfigError, LoggingLevel};
-use http::Key;
 
+#[cfg(feature = "private-cookies")] use http::Key;
+
+#[cfg(feature = "private-cookies")]
 #[derive(Clone)]
 pub enum SecretKey {
     Generated(Key),
     Provided(Key)
 }
 
+#[cfg(feature = "private-cookies")]
 impl SecretKey {
     #[inline]
     crate fn inner(&self) -> &Key {
@@ -28,6 +31,7 @@ impl SecretKey {
     }
 }
 
+#[cfg(feature = "private-cookies")]
 impl fmt::Display for SecretKey {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match *self {

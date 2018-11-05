@@ -10,7 +10,8 @@ use {num_cpus, base64};
 use config::Environment::*;
 use config::{Result, ConfigBuilder, Environment, ConfigError, LoggingLevel};
 use config::{Table, Value, Array, Datetime};
-use http::Key;
+
+#[cfg(feature = "private-cookies")] use http::Key;
 
 /// Structure for Rocket application configuration.
 ///
@@ -49,6 +50,7 @@ pub struct Config {
     /// How much information to log.
     pub log_level: LoggingLevel,
     /// The secret key.
+    #[cfg(feature = "private-cookies")]
     crate secret_key: SecretKey,
     /// TLS configuration.
     crate tls: Option<TlsConfig>,
@@ -231,6 +233,7 @@ impl Config {
         let default_workers = (num_cpus::get() * 2) as u16;
 
         // Use a generated secret key by default.
+        #[cfg(feature = "private-cookies")]
         let key = SecretKey::Generated(Key::generate());
 
         Ok(match env {
@@ -242,6 +245,7 @@ impl Config {
                     workers: default_workers,
                     keep_alive: Some(5),
                     log_level: LoggingLevel::Normal,
+                    #[cfg(feature = "private-cookies")]
                     secret_key: key,
                     tls: None,
                     limits: Limits::default(),
@@ -257,6 +261,7 @@ impl Config {
                     workers: default_workers,
                     keep_alive: Some(5),
                     log_level: LoggingLevel::Normal,
+                    #[cfg(feature = "private-cookies")]
                     secret_key: key,
                     tls: None,
                     limits: Limits::default(),
@@ -272,6 +277,7 @@ impl Config {
                     workers: default_workers,
                     keep_alive: Some(5),
                     log_level: LoggingLevel::Critical,
+                    #[cfg(feature = "private-cookies")]
                     secret_key: key,
                     tls: None,
                     limits: Limits::default(),
@@ -473,6 +479,7 @@ impl Config {
     /// # Ok(())
     /// # }
     /// ```
+    #[cfg(feature = "private-cookies")]
     pub fn set_secret_key<K: Into<String>>(&mut self, key: K) -> Result<()> {
         let key = key.into();
         let error = self.bad_type("secret_key", "string",
@@ -488,6 +495,10 @@ impl Config {
         };
 
         self.secret_key = SecretKey::Provided(Key::from_master(&bytes));
+        Ok(())
+    }
+    #[cfg(not(feature = "private-cookies"))]
+    pub fn set_secret_key<K: Into<String>>(&mut self, key: K) -> Result<()> {
         Ok(())
     }
 
@@ -663,6 +674,7 @@ impl Config {
     }
 
     /// Retrieves the secret key from `self`.
+    #[cfg(feature = "private-cookies")]
     #[inline]
     crate fn secret_key(&self) -> &Key {
         self.secret_key.inner()

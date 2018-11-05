@@ -16,6 +16,7 @@ categories = ["web-programming::http-server"]
 
 [features]
 tls = ["rocket_http/tls"]
+private-cookies = ["rocket_http/private-cookies"]
 
 [dependencies]
 rocket_codegen = { version = "0.4.0-rc.1", path = "../codegen" }

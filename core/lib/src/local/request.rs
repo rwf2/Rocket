@@ -280,6 +280,7 @@ impl<'c> LocalRequest<'c> {
     /// # #[allow(unused_variables)]
     /// let req = client.get("/").private_cookie(Cookie::new("user_id", "sb"));
     /// ```
+    #[cfg(feature = "private-cookies")]
     #[inline]
     pub fn private_cookie(self, cookie: Cookie<'static>) -> Self {
         self.request.cookies().add_original_private(cookie);

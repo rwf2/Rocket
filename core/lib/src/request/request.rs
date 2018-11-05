@@ -290,7 +290,10 @@ impl<'r> Request<'r> {
     pub fn cookies(&self) -> Cookies {
         // FIXME: Can we do better? This is disappointing.
         match self.state.cookies.try_borrow_mut() {
+            #[cfg(feature = "private-cookies")]
             Ok(jar) => Cookies::new(jar, self.state.config.secret_key()),
+            #[cfg(not(feature = "private-cookies"))]
+            Ok(jar) => Cookies::new(jar, &()),
             Err(_) => {
                 error_!("Multiple `Cookies` instances are active at once.");
                 info_!("An instance of `Cookies` must be dropped before another \

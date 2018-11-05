@@ -2,9 +2,15 @@ use std::fmt;
 use std::cell::RefMut;
 
 use cookie::Delta;
-pub use cookie::{Cookie, Key, CookieJar, SameSite};
+pub use cookie::{Cookie, CookieJar, SameSite};
+
+#[cfg(feature = "private-cookies")]
+pub use cookie::Key;
 
 use Header;
+
+#[cfg(not(feature = "private-cookies"))]
+type Key = ();
 
 /// Collection of one or more HTTP cookies.
 ///
@@ -181,6 +187,7 @@ impl<'a> Cookies<'a> {
     ///     let cookie = cookies.get_private("name");
     /// }
     /// ```
+    #[cfg(feature = "private-cookies")]
     pub fn get_private(&mut self, name: &str) -> Option<Cookie<'static>> {
         match *self {
             Cookies::Jarred(ref mut jar, key) => jar.private(key).get(name),
@@ -240,6 +247,7 @@ impl<'a> Cookies<'a> {
     ///     cookies.add_private(Cookie::new("name", "value"));
     /// }
     /// ```
+    #[cfg(feature = "private-cookies")]
     pub fn add_private(&mut self, mut cookie: Cookie<'static>) {
         if let Cookies::Jarred(ref mut jar, key) = *self {
             Cookies::set_private_defaults(&mut cookie);
@@ -249,6 +257,7 @@ impl<'a> Cookies<'a> {
 
     /// Adds an original, private `cookie` to the collection.
     /// WARNING: This is unstable! Do not use this method outside of Rocket!
+    #[cfg(feature = "private-cookies")]
     #[doc(hidden)]
     pub fn add_original_private(&mut self, mut cookie: Cookie<'static>) {
         if let Cookies::Jarred(ref mut jar, key) = *self {
@@ -267,6 +276,7 @@ impl<'a> Cookies<'a> {
     ///    * `HttpOnly`: `true`
     ///    * `Expires`: 1 week from now
     ///
+    #[cfg(feature = "private-cookies")]
     fn set_private_defaults(cookie: &mut Cookie<'static>) {
         if cookie.path().is_none() {
             cookie.set_path("/");
@@ -327,6 +337,7 @@ impl<'a> Cookies<'a> {
     ///     cookies.remove_private(Cookie::named("name"));
     /// }
     /// ```
+    #[cfg(feature = "private-cookies")]
     pub fn remove_private(&mut self, mut cookie: Cookie<'static>) {
         if let Cookies::Jarred(ref mut jar, key) = *self {
             if cookie.path().is_none() {
