@@ -26,11 +26,6 @@ compression = ["brotli_compression", "gzip_compression"]
 brotli_compression = ["brotli"]
 gzip_compression = ["flate2"]
 
-static_files = []
-
-
-# Internal use only.
-templates = ["serde", "serde_json", "glob"]
 
 # The barage of user-facing database features.
 diesel_sqlite_pool = ["databases", "diesel/sqlite", "diesel/r2d2"]
@@ -74,9 +69,6 @@ rusted_cypher = { version = "1", optional = true }
 r2d2_cypher = { version = "0.4", optional = true }
 redis = { version = "0.9", optional = true }
 r2d2_redis = { version = "0.8", optional = true }
-
-# Contrib codegen dependencies
-rocket_contrib_codegen = { path = "../codegen", optional = true }
 
 # Compression dependencies
 brotli = { version = "2.5", optional = true }

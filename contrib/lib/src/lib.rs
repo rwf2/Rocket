@@ -65,70 +65,12 @@ extern crate rocket_contrib_codegen;
 #[cfg(feature = "databases")]
 #[doc(hidden)]
 pub use rocket_contrib_codegen::*;
-#[cfg(feature = "json")]
-extern crate serde_json;
-
-#[cfg(feature = "json")]
-pub use serde_json::{json_internal, json_internal_vec};
-
-#[cfg(feature = "handlebars_templates")]
-pub extern crate handlebars;
-
-#[cfg(feature = "tera_templates")]
-pub extern crate tera;
-
-#[cfg(feature = "brotli_compression")]
-extern crate brotli;
-#[cfg(feature = "gzip_compression")]
-extern crate flate2;
-
-#[cfg(feature = "json")]
-#[cfg_attr(feature = "json", macro_use)]
-#[doc(hidden)]
-pub mod json;
-
-#[cfg(feature = "json")]
-pub use json::{Json, JsonError, JsonValue};
-
-#[cfg(feature = "msgpack")]
-#[doc(hidden)]
-pub mod msgpack;
-
-#[cfg(feature = "msgpack")]
-pub use msgpack::{MsgPack, MsgPackError};
-
-#[cfg(feature = "templates")]
-mod templates;
-
-#[cfg(feature = "templates")]
-pub use templates::{Engines, Template, TemplateMetadata};
-
-#[cfg(feature = "uuid")]
-mod uuid;
-
-#[cfg(feature = "uuid")]
-pub use uuid::{Uuid, UuidParseError};
 
 #[cfg(any(feature = "brotli_compression", feature = "gzip_compression"))]
 pub mod compression;
 
-#[cfg(feature = "static_files")]
-pub mod static_files;
+#[cfg(feature = "brotli_compression")]
+extern crate brotli;
 
-#[cfg(feature = "database_pool")]
-pub mod databases;
-
-#[cfg(feature = "database_pool_codegen")]
-#[allow(unused_imports)]
-#[macro_use]
-extern crate rocket_contrib_codegen;
-
-#[cfg(feature = "database_pool_codegen")]
-#[doc(hidden)]
-pub use rocket_contrib_codegen::*;
-
-#[cfg(any(feature = "brotli_compression", feature = "gzip_compression"))]
-mod compression;
-
-#[cfg(any(feature = "brotli_compression", feature = "gzip_compression"))]
-pub use compression::Compression;
+#[cfg(feature = "gzip_compression")]
+extern crate flate2;

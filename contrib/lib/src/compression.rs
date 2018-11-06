@@ -8,12 +8,8 @@ use rocket::{Request, Response};
 use std::io::Read;
 
 #[cfg(feature = "brotli_compression")]
-extern crate brotli;
-#[cfg(feature = "brotli_compression")]
 use brotli::enc::backward_references::BrotliEncoderMode;
 
-#[cfg(feature = "gzip_compression")]
-extern crate flate2;
 #[cfg(feature = "gzip_compression")]
 use flate2::read::GzEncoder;
 
