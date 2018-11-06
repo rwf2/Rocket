@@ -109,6 +109,9 @@ mod uuid;
 #[cfg(feature = "uuid")]
 pub use uuid::{Uuid, UuidParseError};
 
+#[cfg(any(feature = "brotli_compression", feature = "gzip_compression"))]
+pub mod compression;
+
 #[cfg(feature = "static_files")]
 pub mod static_files;
 
