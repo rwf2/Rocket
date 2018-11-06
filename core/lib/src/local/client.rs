@@ -1,4 +1,4 @@
-use std::cell::RefCell;
+use std::sync::RwLock;
 use std::borrow::Cow;
 
 use Rocket;
@@ -53,7 +53,7 @@ use error::LaunchError;
 /// [`post`]: #method.post
 pub struct Client {
     rocket: Rocket,
-    crate cookies: Option<RefCell<CookieJar>>,
+    crate cookies: Option<RwLock<CookieJar>>,
 }
 
 impl Client {
@@ -62,7 +62,7 @@ impl Client {
     /// set to `None`.
     fn _new(rocket: Rocket, tracked: bool) -> Result<Client, LaunchError> {
         let cookies = match tracked {
-            true => Some(RefCell::new(CookieJar::new())),
+            true => Some(RwLock::new(CookieJar::new())),
             false => None
         };
 
@@ -319,5 +319,17 @@ impl Client {
         where U: Into<Cow<'u, str>>
     {
         LocalRequest::new(self, method, uri.into())
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use super::Client;
+
+    fn assert_sync<T: Sync>() {}
+
+    #[test]
+    fn test_local_client_impl_sync() {
+        assert_sync::<Client>();
     }
 }

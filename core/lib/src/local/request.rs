@@ -111,7 +111,8 @@ impl<'c> LocalRequest<'c> {
 
         // Set up any cookies we know about.
         if let Some(ref jar) = client.cookies {
-            for cookie in jar.borrow().iter() {
+            let cookies = jar.read().expect("LocalRequest::new lock");
+            for cookie in cookies.iter() {
                 request.cookies().add_original(cookie.clone().into_owned());
             }
         }
@@ -408,7 +409,7 @@ impl<'c> LocalRequest<'c> {
         // If the client is tracking cookies, updates the internal cookie jar
         // with the changes reflected by `response`.
         if let Some(ref jar) = client.cookies {
-            let mut jar = jar.borrow_mut();
+            let mut jar = jar.write().expect("LocalRequest::_dispatch lock");
             let current_time = ::time::now();
             for cookie in response.cookies() {
                 if let Some(expires) = cookie.expires() {
