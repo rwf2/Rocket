@@ -177,6 +177,8 @@ impl<'a> Cookies<'a> {
     /// `Cookie` with the decrypted value. If the cookie cannot be found, or the
     /// cookie fails to authenticate or decrypt, `None` is returned.
     ///
+    /// This method is only available when the `private-cookies` feature is enabled.
+    ///
     /// # Example
     ///
     /// ```rust
@@ -237,6 +239,8 @@ impl<'a> Cookies<'a> {
     /// These defaults ensure maximum usability and security. For additional
     /// security, you may wish to set the `secure` flag.
     ///
+    /// This method is only available when the `private-cookies` feature is enabled.
+    ///
     /// # Example
     ///
     /// ```rust
@@ -275,6 +279,8 @@ impl<'a> Cookies<'a> {
     ///    * `SameSite`: `Strict`
     ///    * `HttpOnly`: `true`
     ///    * `Expires`: 1 week from now
+    ///
+    /// This method is only available when the `private-cookies` feature is enabled.
     ///
     #[cfg(feature = "private-cookies")]
     fn set_private_defaults(cookie: &mut Cookie<'static>) {
@@ -326,6 +332,8 @@ impl<'a> Cookies<'a> {
     /// For correct removal, the passed in `cookie` must contain the same `path`
     /// and `domain` as the cookie that was initially set. If a path is not set
     /// on `cookie`, the `"/"` path will automatically be set.
+    ///
+    /// This method is only available when the `private-cookies` feature is enabled.
     ///
     /// # Example
     ///

@@ -268,6 +268,8 @@ impl<'c> LocalRequest<'c> {
     ///
     /// [private cookie]: ::http::Cookies::add_private()
     ///
+    /// This method is only available when the `private-cookies` feature is enabled.
+    ///
     /// # Examples
     ///
     /// Add `user_id` as a private cookie:
