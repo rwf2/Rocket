@@ -39,6 +39,7 @@ macro_rules! known_media_types {
         GZIP (is_gzip): "gzipped binary", "application", "gzip",
         MOV (is_mov): "quicktime video", "video", "quicktime",
         MP4 (is_mp4): "MPEG4 Video", "video", "mp4",
+        ZIP (is_zip): "ZIP archive", "application", "zip",
     })
 }
 
@@ -84,6 +85,7 @@ macro_rules! known_extensions {
         "tif" => TIFF,
         "tiff" => TIFF,
         "mov" => MOV,
+        "zip" => ZIP,
     })
 }
 
