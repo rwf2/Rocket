@@ -503,6 +503,15 @@ fn logout(mut cookies: Cookies) -> Flash<Redirect> {
 
 [`Cookies::add()`]: @api/rocket/http/enum.Cookies.html#method.add
 
+Private Cookies can be omitted at build time by excluding the feature
+`private-cookies`. You can do this by setting the `default-features`
+directive to `false` in your `Cargo.toml`:
+
+```toml
+[dependencies.rocket]
+default-features = false
+```
+
 ### Secret Key
 
 To encrypt private cookies, Rocket uses the 256-bit key specified in the
