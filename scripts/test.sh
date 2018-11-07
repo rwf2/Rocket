@@ -107,6 +107,26 @@ if [ "$1" = "--contrib" ]; then
   done
 
   popd > /dev/null 2>&1
+elif [ "$1" = "--core" ]; then
+  FEATURES=(
+    private-cookies
+    tls
+  )
+
+  pushd "${CORE_ROOT}" > /dev/null 2>&1
+
+  echo ":: Building and testing core [no features]..."
+  CARGO_INCREMENTAL=0 cargo test --no-default-features
+
+  echo ":: Building and testing core [default]..."
+  CARGO_INCREMENTAL=0 cargo test
+
+  for feature in "${FEATURES[@]}"; do
+    echo ":: Building and testing core [${feature}]..."
+    CARGO_INCREMENTAL=0 cargo test --no-default-features --features "${feature}"
+  done
+
+  popd > /dev/null 2>&1
 else
   echo ":: Bootstrapping examples..."
   bootstrap_examples
