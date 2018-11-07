@@ -113,19 +113,6 @@ macro_rules! serve {
     })
 }
 
-#[cfg(feature = "private-cookies")]
-#[inline]
-fn check_secret_key_in_prod(config: &Config) {
-    if config.secret_key.is_generated() && config.environment.is_prod() {
-        warn!("environment is 'production', but no `secret_key` is configured");
-    }
-}
-
-#[cfg(not(feature = "private-cookies"))]
-#[inline]
-fn check_secret_key_in_prod(config: &Config) {
-}
-
 impl Rocket {
     #[inline]
     fn issue_response(&self, response: Response, hyp_res: hyper::FreshResponse) {
@@ -428,7 +415,11 @@ impl Rocket {
             launch_info_!("tls: {}", Paint::white("disabled"));
         }
 
-        check_secret_key_in_prod(&config);
+        #[cfg(feature = "private-cookies")] {
+            if config.secret_key.is_generated() && config.environment.is_prod() {
+                warn!("environment is 'production', but no `secret_key` is configured");
+            }
+        }
 
         for (name, value) in config.extras() {
             launch_info_!("{} {}: {}",
