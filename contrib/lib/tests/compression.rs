@@ -9,6 +9,7 @@ mod compression_tests {
     extern crate brotli;
     extern crate flate2;
 
+    use rocket::config::{Config, Environment};
     use rocket::http::hyper::header::{ContentEncoding, Encoding};
     use rocket::http::Status;
     use rocket::http::{ContentType, Header};
@@ -45,6 +46,14 @@ mod compression_tests {
             .finalize()
     }
 
+    #[get("/tar")]
+    pub fn tar() -> Response<'static> {
+        Response::build()
+            .header(ContentType::TAR)
+            .sized_body(Cursor::new(String::from(HELLO)))
+            .finalize()
+    }
+
     #[get("/already_encoded")]
     pub fn already_encoded() -> Response<'static> {
         let mut encoder = GzEncoder::new(
@@ -69,7 +78,20 @@ mod compression_tests {
 
     fn rocket() -> rocket::Rocket {
         rocket::ignite()
-            .mount("/", routes![index, font, image, already_encoded, identity])
+            .mount(
+                "/",
+                routes![index, font, image, tar, already_encoded, identity],
+            )
+            .attach(rocket_contrib::compression::Compression::fairing())
+    }
+
+    fn rocket_tar_exception() -> rocket::Rocket {
+        let config = Config::build(Environment::Development)
+            .extra("compress.exclude", vec!["application/x-tar"])
+            .expect("valid configuration");
+
+        rocket::custom(config)
+            .mount("/", routes![image, tar])
             .attach(rocket_contrib::compression::Compression::fairing())
     }
 
@@ -235,6 +257,48 @@ mod compression_tests {
             .any(|x| x != "identity"));
         assert_eq!(
             String::from_utf8(response.body_bytes().unwrap()).unwrap(),
+            String::from(HELLO)
+        );
+    }
+
+    #[test]
+    fn test_does_not_compress_custom_exception() {
+        let client = Client::new(rocket_tar_exception()).expect("valid rocket instance");
+        let mut response = client
+            .get("/tar")
+            .header(Header::new("Accept-Encoding", "deflate, gzip, br"))
+            .dispatch();
+        assert_eq!(response.status(), Status::Ok);
+        assert!(!response
+            .headers()
+            .get("Content-Encoding")
+            .any(|x| x != "identity"));
+        assert_eq!(
+            String::from_utf8(response.body_bytes().unwrap()).unwrap(),
+            String::from(HELLO)
+        );
+    }
+
+    #[test]
+    fn test_compress_custom_removed_exception() {
+        let client = Client::new(rocket_tar_exception()).expect("valid rocket instance");
+        let mut response = client
+            .get("/image")
+            .header(Header::new("Accept-Encoding", "deflate, gzip, br"))
+            .dispatch();
+        assert_eq!(response.status(), Status::Ok);
+        assert!(response
+            .headers()
+            .get("Content-Encoding")
+            .any(|x| x == "br"));
+        let mut body_plain = Cursor::new(Vec::<u8>::new());
+        brotli::BrotliDecompress(
+            &mut Cursor::new(response.body_bytes().unwrap()),
+            &mut body_plain,
+        )
+        .expect("decompress response");
+        assert_eq!(
+            String::from_utf8(body_plain.get_mut().to_vec()).unwrap(),
             String::from(HELLO)
         );
     }
