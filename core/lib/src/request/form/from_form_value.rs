@@ -77,8 +77,9 @@ use http::RawStr;
 /// Rocket implements `FromFormValue` for many standard library types. Their
 /// behavior is documented here.
 ///
-///   * **f32, f64, isize, i8, i16, i32, i64, usize, u8, u16, u32, u64
-///     IpAddr, Ipv4Addr, Ipv6Addr, SocketAddrV4, SocketAddrV6, SocketAddr**
+///   * **f32, f64, isize, i8, i16, i32, i64, i128, usize, u8, u16, u32, u64,
+///     u128, IpAddr, Ipv4Addr, Ipv6Addr, SocketAddrV4, SocketAddrV6,
+///     SocketAddr**
 ///
 ///     A value is validated successfully if the `from_str` method for the given
 ///     type returns successfully. Otherwise, the raw form value is returned as
@@ -230,8 +231,9 @@ macro_rules! impl_with_fromstr {
     )+)
 }
 
-impl_with_fromstr!(f32, f64, isize, i8, i16, i32, i64, usize, u8, u16, u32, u64,
-    IpAddr, Ipv4Addr, Ipv6Addr, SocketAddrV4, SocketAddrV6, SocketAddr);
+impl_with_fromstr!(f32, f64, isize, i8, i16, i32, i64, i128, usize, u8, u16,
+    u32, u64, u128, IpAddr, Ipv4Addr, Ipv6Addr, SocketAddrV4, SocketAddrV6,
+    SocketAddr);
 
 impl<'v, T: FromFormValue<'v>> FromFormValue<'v> for Option<T> {
     type Error = !;
