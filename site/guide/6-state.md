@@ -21,7 +21,7 @@ The process for using managed state is simple:
 
 ! note: All managed state must be thread-safe.
 
-  Because Rocket automatically multithreads your application, handlers can to
+  Because Rocket automatically multithreads your application, handlers can
   concurrently access managed state. As a result, managed state must be
   thread-safe. Thanks to Rust, this condition is checked at compile-time by
   ensuring that the type of values you store in managed state implement `Send` +
