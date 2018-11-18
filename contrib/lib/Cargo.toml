@@ -71,7 +71,7 @@ r2d2_redis = { version = "0.8", optional = true }
 time = { version = "0.1.40", optional = true }
 
 [target.'cfg(debug_assertions)'.dependencies]
-notify = { version = "^4.0" }
+notify = { version = "^4.0.6" }
 
 [package.metadata.docs.rs]
 all-features = true
