@@ -26,16 +26,12 @@ mod compressed_tests {
         in order to have to read more than one buffer when gzipping. こんにちは!";
 
     #[get("/")]
-    pub fn index() -> Compressed<'static> {
-        Compressed::new(
-            Response::build()
-                .sized_body(Cursor::new(String::from(HELLO)))
-                .finalize(),
-        )
+    pub fn index() -> Compressed<String> {
+        Compressed::new(String::from(HELLO))
     }
 
     #[get("/font")]
-    pub fn font() -> Compressed<'static> {
+    pub fn font() -> Compressed<Response<'static>> {
         Compressed::new(
             Response::build()
                 .header(ContentType::WOFF)
@@ -45,7 +41,7 @@ mod compressed_tests {
     }
 
     #[get("/image")]
-    pub fn image() -> Compressed<'static> {
+    pub fn image() -> Compressed<Response<'static>> {
         Compressed::new(
             Response::build()
                 .header(ContentType::PNG)
@@ -55,7 +51,7 @@ mod compressed_tests {
     }
 
     #[get("/already_encoded")]
-    pub fn already_encoded() -> Compressed<'static> {
+    pub fn already_encoded() -> Compressed<Response<'static>> {
         let mut encoder = GzEncoder::new(
             Cursor::new(String::from(HELLO)),
             flate2::Compression::default(),
@@ -71,7 +67,7 @@ mod compressed_tests {
     }
 
     #[get("/identity")]
-    pub fn identity() -> Compressed<'static> {
+    pub fn identity() -> Compressed<Response<'static>> {
         Compressed::new(
             Response::build()
                 .header(ContentEncoding(vec![Encoding::Identity]))

@@ -1,70 +1,56 @@
-use rocket::http::hyper::header::Encoding;
+//! Response on demand compression.
+//!
+//! See the [`Compression`](compression::responder::Compressed) type for
+//! further details.
+
 use rocket::response::{self, Responder, Response};
 use rocket::Request;
 
-#[cfg(feature = "brotli_compression")]
-use brotli::enc::backward_references::BrotliEncoderMode;
-
-#[cfg(feature = "gzip_compression")]
-use flate2::read::GzEncoder;
-
 crate use super::CompressionUtils;
 
+/// Compress a `Responder` response ignoring the compression exclusions.
+///
+/// Delegates the remainder of the response to the wrapped `Responder`.
+///
+/// # Usage
+///
+/// To use, add the `brotli_compression` feature, the `gzip_compression`
+/// feature, or the `compression` feature (to enable both algorithms) to the
+/// `rocket_contrib` dependencies section of your `Cargo.toml`:
+///
+/// ```toml,ignore
+/// [dependencies.rocket_contrib]
+/// version = "*"
+/// default-features = false
+/// features = ["compression"]
+/// ```
+///
+/// Then, compress the desired response wrapping a `Responder` inside
+/// `Compressed`:
+///
+/// ```rust
+/// use rocket_contrib::compression::Compressed;
+///
+/// # #[allow(unused_variables)]
+/// let response = Compressed("Hi.");
+/// ```
 #[derive(Debug)]
-pub struct Compressed<'a>(Response<'a>);
+pub struct Compressed<R>(pub R);
 
-impl<'a> Compressed<'a> {
-    pub fn new(response: Response<'a>) -> Compressed<'a> {
+impl<'r, R: Responder<'r>> Compressed<R> {
+    pub fn new(response: R) -> Compressed<R> {
         Compressed { 0: response }
     }
 }
 
-/// Serializes the value into JSON. Returns a response with Content-Type JSON
-/// and a fixed-size body with the serialized value.
-impl<'a> Responder<'a> for Compressed<'a> {
-    #[inline]
-    fn respond_to(self, request: &Request) -> response::Result<'a> {
-        if CompressionUtils::already_encoded(&self.0) {
-            return Ok(self.0);
-        }
+impl<'r, R: Responder<'r>> Responder<'r> for Compressed<R> {
+    #[inline(always)]
+    fn respond_to(self, request: &Request) -> response::Result<'r> {
+        let mut response = Response::build()
+            .merge(self.0.respond_to(request)?)
+            .finalize();
 
-        let mut response = Response::build().merge(self.0).finalize();
-
-        // Do not compress configured types exceptions
-        let content_type = response.content_type();
-        let content_type_top = content_type.as_ref().map(|ct| ct.top());
-
-        // Compression is done when the request accepts brotli or gzip encoding
-        // and the corresponding feature is enabled
-        if cfg!(feature = "brotli_compression") && CompressionUtils::accepts_encoding(request, "br")
-        {
-            if let Some(plain) = response.take_body() {
-                let mut params = brotli::enc::BrotliEncoderInitParams();
-                params.quality = 2;
-                if content_type_top == Some("text".into()) {
-                    params.mode = BrotliEncoderMode::BROTLI_MODE_TEXT;
-                } else if content_type_top == Some("font".into()) {
-                    params.mode = BrotliEncoderMode::BROTLI_MODE_FONT;
-                }
-
-                let compressor =
-                    brotli::CompressorReader::with_params(plain.into_inner(), 4096, &params);
-
-                CompressionUtils::set_body_and_encoding(
-                    &mut response,
-                    compressor,
-                    Encoding::EncodingExt("br".into()),
-                );
-            }
-        } else if cfg!(feature = "gzip_compression")
-            && CompressionUtils::accepts_encoding(request, "gzip")
-        {
-            if let Some(plain) = response.take_body() {
-                let compressor = GzEncoder::new(plain.into_inner(), flate2::Compression::default());
-
-                CompressionUtils::set_body_and_encoding(&mut response, compressor, Encoding::Gzip);
-            }
-        }
+        CompressionUtils::compress_response(request, &mut response, false);
         Ok(response)
     }
 }

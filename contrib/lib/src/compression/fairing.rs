@@ -1,22 +1,17 @@
 //! Automatic response compression.
 //!
-//! See the [`Compression`](compression::Compression) type for further details.
+//! See the [`Compression`](compression::fairing::Compression) type for further
+//! details.
 
 use rocket::config::{ConfigError, Value};
 use rocket::fairing::{Fairing, Info, Kind};
-use rocket::http::hyper::header::Encoding;
 use rocket::Rocket;
 use rocket::{Request, Response};
 
-#[cfg(feature = "brotli_compression")]
-use brotli::enc::backward_references::BrotliEncoderMode;
-
-#[cfg(feature = "gzip_compression")]
-use flate2::read::GzEncoder;
-
-crate use super::context::{Context, ContextManager};
+crate use super::context::Context;
 crate use super::CompressionUtils;
 
+/// The Compression type implements brotli and gzip compression for responses in
 /// accordance with the Accept-Encoding header. If accepted, brotli compression
 /// is preferred over gzip.
 ///
@@ -31,9 +26,21 @@ crate use super::CompressionUtils;
 /// The Compression type implements brotli and gzip compression for responses in
 /// to the default (9) in order to have good compression ratio.
 ///
-/// This fairing does not compress responses with a `Content-Type` matching
-/// `image/*`, nor does it compress responses that already have a
+/// This fairing does not compress responses that already have a
 /// `Content-Encoding` header.
+///
+/// This fairing ignores the responses with a `Content-Type` matching any of
+/// the following default types:
+///
+/// - application/gzip
+/// - application/brotli
+/// - application/zip
+/// - image/*
+/// - application/wasm
+/// - application/binary
+///
+/// The excluded types can be changed changing the `compress.exclude` Rocket
+/// configuration property.
 ///
 /// # Usage
 ///
@@ -104,85 +111,40 @@ impl Fairing for Compression {
     fn on_attach(&self, rocket: Rocket) -> Result<Rocket, Rocket> {
         let mut ctxt = Context::new();
         match rocket.config().get_slice("compress.exclude") {
-            Ok(excps) => {
+            Ok(excls) => {
                 let mut error = false;
-                let mut exceptions_vec = Vec::with_capacity(excps.len());
-                for e in excps {
+                let mut exclusions_vec = Vec::with_capacity(excls.len());
+                for e in excls {
                     match e {
-                        Value::String(s) => exceptions_vec.push(s.clone()),
+                        Value::String(s) => exclusions_vec.push(s.clone()),
                         _ => {
                             error = true;
                             warn_!(
-                                "Exceptions must be strings, using default compression exceptions '{:?}'",
-                                ctxt.exceptions
+                                "Exceptions must be strings, using default compression exclusions '{:?}'",
+                                ctxt.exclusions
                             );
                             break;
                         }
                     }
                 }
                 if !error {
-                    ctxt = Context::with_exceptions(exceptions_vec);
+                    ctxt = Context::with_exclusions(exclusions_vec);
                 }
             }
             Err(ConfigError::Missing(_)) => { /* ignore missing */ }
             Err(e) => {
                 e.pretty_print();
                 warn_!(
-                    "Using default compression exceptions '{:?}'",
-                    ctxt.exceptions
+                    "Using default compression exclusions '{:?}'",
+                    ctxt.exclusions
                 );
             }
         };
 
-        Ok(rocket.manage(ContextManager::new(ctxt)))
+        Ok(rocket.manage(ctxt))
     }
 
     fn on_response(&self, request: &Request, response: &mut Response) {
-        if CompressionUtils::already_encoded(response) {
-            return;
-        }
-
-        let cm = request
-            .guard::<::rocket::State<ContextManager>>()
-            .expect("Compression ContextManager registered in on_attach");
-
-        // Do not compress configured types exceptions
-        let content_type = response.content_type();
-        let content_type_top = content_type.as_ref().map(|ct| ct.top());
-        if CompressionUtils::skip_encoding(&content_type, &content_type_top, &cm) {
-            return;
-        }
-
-        // Compression is done when the request accepts brotli or gzip encoding
-        // and the corresponding feature is enabled
-        if cfg!(feature = "brotli_compression") && CompressionUtils::accepts_encoding(request, "br")
-        {
-            if let Some(plain) = response.take_body() {
-                let mut params = brotli::enc::BrotliEncoderInitParams();
-                params.quality = 2;
-                if content_type_top == Some("text".into()) {
-                    params.mode = BrotliEncoderMode::BROTLI_MODE_TEXT;
-                } else if content_type_top == Some("font".into()) {
-                    params.mode = BrotliEncoderMode::BROTLI_MODE_FONT;
-                }
-
-                let compressor =
-                    brotli::CompressorReader::with_params(plain.into_inner(), 4096, &params);
-
-                CompressionUtils::set_body_and_encoding(
-                    response,
-                    compressor,
-                    Encoding::EncodingExt("br".into()),
-                );
-            }
-        } else if cfg!(feature = "gzip_compression")
-            && CompressionUtils::accepts_encoding(request, "gzip")
-        {
-            if let Some(plain) = response.take_body() {
-                let compressor = GzEncoder::new(plain.into_inner(), flate2::Compression::default());
-
-                CompressionUtils::set_body_and_encoding(response, compressor, Encoding::Gzip);
-            }
-        }
+        CompressionUtils::compress_response(request, response, true);
     }
 }
