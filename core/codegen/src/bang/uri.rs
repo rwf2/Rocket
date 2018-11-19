@@ -119,7 +119,7 @@ fn explode<'a, I>(route_str: &str, items: I) -> TokenStream2
 
         // generating: arg tokens for format string
         fmt_exprs.push(quote_spanned! { span =>
-            &#ident as &rocket::http::uri::UriDisplay
+            &#ident as &dyn rocket::http::uri::UriDisplay
         });
     }
 
