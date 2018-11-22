@@ -319,7 +319,7 @@ type that implements `Serialize` and serializes into an `Object` value, such as
 structs, `HashMaps`, and others.
 
 For a template to be renderable, it must first be registered. The `Template`
-fairing automatically registers all discoverable templates when attached.T he
+fairing automatically registers all discoverable templates when attached. The
 [Fairings](../fairings) sections of the guide provides more information on
 fairings. To attach the template fairing, simply call
 `.attach(Template::fairing())` on an instance of `Rocket` as follows:
