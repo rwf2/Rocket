@@ -187,6 +187,7 @@ Presently, Rocket provides built-in support for the following databases:
 | Sqlite   | [`Rustqlite`]         | [`rusqlite::Connection`]       | `sqlite_pool`          |
 | Neo4j    | [`rusted_cypher`]     | [`rusted_cypher::GraphClient`] | `cypher_pool`          |
 | Redis    | [`redis-rs`]          | [`redis::Connection`]          | `redis_pool`           |
+| MongoDB  | [`mongodb`]           | [`mongodb::Client`]            | `mongodb_pool`         |
 
 [`r2d2`]: https://crates.io/crates/r2d2
 [Diesel]: https://diesel.rs
@@ -204,6 +205,8 @@ Presently, Rocket provides built-in support for the following databases:
 [Rust-Postgres]: https://github.com/sfackler/rust-postgres
 [`rust-mysql-simple`]: https://github.com/blackbeam/rust-mysql-simple
 [`diesel::PgConnection`]: http://docs.diesel.rs/diesel/pg/struct.PgConnection.html
+[`mongodb`]: https://github.com/mongodb-labs/mongo-rust-driver-prototype
+[`mongodb::Client`]: https://docs.rs/mongodb/0.3.12/mongodb/trait.ThreadedClient.html
 
 ### Usage
 

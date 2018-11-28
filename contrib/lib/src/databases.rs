@@ -333,6 +333,7 @@
 //! | Sqlite   | [Rustqlite]           | [`rusqlite::Connection`]       | `sqlite_pool`          |
 //! | Neo4j    | [`rusted_cypher`]     | [`rusted_cypher::GraphClient`] | `cypher_pool`          |
 //! | Redis    | [`redis-rs`]          | [`redis::Connection`]          | `redis_pool`           |
+//! | MongoDB  | [`mongodb`]           | [`mongodb::Client`]            | `mongodb_pool`         |
 //!
 //! [Diesel]: https://diesel.rs
 //! [`redis::Connection`]: https://docs.rs/redis/0.9.0/redis/struct.Connection.html
@@ -349,6 +350,8 @@
 //! [Rust-Postgres]: https://github.com/sfackler/rust-postgres
 //! [`rust-mysql-simple`]: https://github.com/blackbeam/rust-mysql-simple
 //! [`diesel::PgConnection`]: http://docs.diesel.rs/diesel/pg/struct.PgConnection.html
+//! [`mongodb`]: https://github.com/mongodb-labs/mongo-rust-driver-prototype
+//! [`mongodb::Client`]: https://docs.rs/mongodb/0.3.12/mongodb/trait.ThreadedClient.html
 //!
 //! The above table lists all the supported database adapters in this library.
 //! In order to use particular `Poolable` type that's included in this library,
@@ -398,6 +401,9 @@ use self::r2d2::ManageConnection;
 
 #[cfg(feature = "redis_pool")] pub extern crate redis;
 #[cfg(feature = "redis_pool")] pub extern crate r2d2_redis;
+
+#[cfg(feature = "mongodb_pool")] pub extern crate mongodb;
+#[cfg(feature = "mongodb_pool")] pub extern crate r2d2_mongodb;
 
 /// A structure representing a particular database configuration.
 ///
@@ -778,6 +784,17 @@ impl Poolable for redis::Connection {
         let manager = r2d2_redis::RedisConnectionManager::new(config.url).map_err(DbError::Custom)?;
         r2d2::Pool::builder().max_size(config.pool_size).build(manager)
             .map_err(DbError::PoolError)
+    }
+}
+
+#[cfg(feature = "mongodb_pool")]
+impl Poolable for mongodb::db::Database {
+    type Manager = r2d2_mongodb::MongodbConnectionManager;
+    type Error = DbError<mongodb::Error>;
+
+    fn pool(config: DatabaseConfig) -> Result<r2d2::Pool<Self::Manager>, Self::Error> {
+        let manager = r2d2_mongodb::MongodbConnectionManager::new_with_uri(config.url).map_err(DbError::Custom)?;
+        r2d2::Pool::builder().max_size(config.pool_size).build(manager).map_err(DbError::PoolError)
     }
 }
 
