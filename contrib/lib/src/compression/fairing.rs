@@ -5,6 +5,7 @@
 
 use rocket::config::{ConfigError, Value};
 use rocket::fairing::{Fairing, Info, Kind};
+use rocket::http::MediaType;
 use rocket::Rocket;
 use rocket::{Request, Response};
 
@@ -23,7 +24,6 @@ crate use super::CompressionUtils;
 ///
 /// In the gzip compression mode (using the
 /// [flate2](https://github.com/alexcrichton/flate2-rs) crate), quality is set
-/// The Compression type implements brotli and gzip compression for responses in
 /// to the default (9) in order to have good compression ratio.
 ///
 /// This fairing does not compress responses that already have a
@@ -110,27 +110,48 @@ impl Fairing for Compression {
 
     fn on_attach(&self, rocket: Rocket) -> Result<Rocket, Rocket> {
         let mut ctxt = Context::new();
-        match rocket.config().get_slice("compress.exclude") {
-            Ok(excls) => {
-                let mut error = false;
-                let mut exclusions_vec = Vec::with_capacity(excls.len());
-                for e in excls {
-                    match e {
-                        Value::String(s) => exclusions_vec.push(s.clone()),
-                        _ => {
-                            error = true;
-                            warn_!(
-                                "Exceptions must be strings, using default compression exclusions '{:?}'",
+        match rocket.config().get_table("compress").and_then(|t| {
+            t.get("exclude")
+                .ok_or(ConfigError::Missing(String::from("exclude")))
+        }) {
+            Ok(excls) => match excls.as_array() {
+                Some(excls) => {
+                    let mut error = false;
+                    let mut exclusions_vec = Vec::with_capacity(excls.len());
+                    for e in excls {
+                        match e {
+                            Value::String(s) => match MediaType::parse_flexible(s) {
+                                Some(media_type) => exclusions_vec.push(media_type),
+                                None => {
+                                    error = true;
+                                    warn_!(
+                                "Exclusions must be valid content types, using default compression exclusions '{:?}'",
                                 ctxt.exclusions
                             );
-                            break;
+                                    break;
+                                }
+                            },
+                            _ => {
+                                error = true;
+                                warn_!(
+                                "Exclusions must be strings, using default compression exclusions '{:?}'",
+                                ctxt.exclusions
+                            );
+                                break;
+                            }
                         }
                     }
+                    if !error {
+                        ctxt = Context::with_exclusions(exclusions_vec);
+                    }
                 }
-                if !error {
-                    ctxt = Context::with_exclusions(exclusions_vec);
+                None => {
+                    warn_!(
+                                "Exclusions must be an array of strings, using default compression exclusions '{:?}'",
+                                ctxt.exclusions
+                            );
                 }
-            }
+            },
             Err(ConfigError::Missing(_)) => { /* ignore missing */ }
             Err(e) => {
                 e.pretty_print();

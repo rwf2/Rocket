@@ -13,7 +13,7 @@ mod compressed_tests {
     use rocket::http::Status;
     use rocket::http::{ContentType, Header};
     use rocket::local::Client;
-    use rocket::response::Response;
+    use rocket::response::{Content, Response};
     use rocket::routes;
     use rocket_contrib::compression::Compressed;
 
@@ -31,23 +31,13 @@ mod compressed_tests {
     }
 
     #[get("/font")]
-    pub fn font() -> Compressed<Response<'static>> {
-        Compressed::new(
-            Response::build()
-                .header(ContentType::WOFF)
-                .sized_body(Cursor::new(String::from(HELLO)))
-                .finalize(),
-        )
+    pub fn font() -> Compressed<Content<&'static str>> {
+        Compressed::new(Content(ContentType::WOFF, HELLO))
     }
 
     #[get("/image")]
-    pub fn image() -> Compressed<Response<'static>> {
-        Compressed::new(
-            Response::build()
-                .header(ContentType::PNG)
-                .sized_body(Cursor::new(String::from(HELLO)))
-                .finalize(),
-        )
+    pub fn image() -> Compressed<Content<&'static str>> {
+        Compressed::new(Content(ContentType::PNG, HELLO))
     }
 
     #[get("/already_encoded")]

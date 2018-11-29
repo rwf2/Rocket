@@ -86,8 +86,10 @@ mod compression_tests {
     }
 
     fn rocket_tar_exception() -> rocket::Rocket {
+        let mut table = std::collections::BTreeMap::new();
+        table.insert("exclude".to_string(), vec!["application/x-tar"]);
         let config = Config::build(Environment::Development)
-            .extra("compress.exclude", vec!["application/x-tar"])
+            .extra("compress", table)
             .expect("valid configuration");
 
         rocket::custom(config)

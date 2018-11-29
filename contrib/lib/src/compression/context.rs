@@ -1,23 +1,25 @@
 //! Automatic compression exclusions struct and default exclusions.
 
+use rocket::http::MediaType;
+
 crate struct Context {
-    crate exclusions: Vec<String>,
+    crate exclusions: Vec<MediaType>,
 }
 
 impl Context {
     crate fn new() -> Context {
         Context {
             exclusions: vec![
-                String::from("application/gzip"),
-                String::from("application/brotli"),
-                String::from("application/zip"),
-                String::from("image/*"),
-                String::from("application/wasm"),
-                String::from("application/binary"),
+                MediaType::parse_flexible("application/gzip").unwrap(),
+                MediaType::parse_flexible("application/zip").unwrap(),
+                MediaType::parse_flexible("image/*").unwrap(),
+                MediaType::parse_flexible("video/*").unwrap(),
+                MediaType::parse_flexible("application/wasm").unwrap(),
+                MediaType::parse_flexible("application/octet-stream").unwrap(),
             ],
         }
     }
-    crate fn with_exclusions(excls: Vec<String>) -> Context {
+    crate fn with_exclusions(excls: Vec<MediaType>) -> Context {
         Context { exclusions: excls }
     }
 }

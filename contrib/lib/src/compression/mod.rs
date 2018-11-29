@@ -10,7 +10,6 @@ pub use self::responder::Compressed;
 crate use self::context::Context;
 use rocket::http::hyper::header::{ContentEncoding, Encoding};
 use rocket::http::uncased::UncasedStr;
-use rocket::http::MediaType;
 use rocket::{Request, Response};
 use std::io::Read;
 
@@ -50,39 +49,16 @@ impl CompressionUtils {
         content_type_top: &Option<&UncasedStr>,
         context: &rocket::State<Context>,
     ) -> bool {
-        let exceptions = &context.exclusions;
-        exceptions
-            .iter()
-            .filter(|c| match content_type {
-                Some(ref orig_content_type) => match MediaType::parse_flexible(c) {
-                    Some(exc_media_type) => {
-                        if exc_media_type.sub() == "*" {
-                            Some(exc_media_type.top()) == *content_type_top
-                        } else {
-                            exc_media_type == *orig_content_type.media_type()
-                        }
-                    }
-                    None => {
-                        if c.contains("/") {
-                            let split: Vec<&str> = c.split("/").collect();
-
-                            let exc_media_type =
-                                MediaType::new(String::from(split[0]), String::from(split[1]));
-
-                            if split[1] == "*" {
-                                Some(exc_media_type.top()) == *content_type_top
-                            } else {
-                                exc_media_type == *orig_content_type.media_type()
-                            }
-                        } else {
-                            false
-                        }
-                    }
-                },
-                None => false,
-            })
-            .count()
-            > 0
+        match content_type {
+            Some(content_type) => context.exclusions.iter().any(|exc_media_type| {
+                if exc_media_type.sub() == "*" {
+                    Some(exc_media_type.top()) == *content_type_top
+                } else {
+                    *exc_media_type == *content_type.media_type()
+                }
+            }),
+            None => false,
+        }
     }
 
     fn compress_response(request: &Request, response: &mut Response, respect_excludes: bool) {
