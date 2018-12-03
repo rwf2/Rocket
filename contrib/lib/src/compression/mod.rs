@@ -1,15 +1,13 @@
 //! `Compression` fairing and `Compressed` responder to automatically and
 //! on demand respectively compressing responses.
-mod context;
 mod fairing;
 mod responder;
 
 pub use self::fairing::Compression;
 pub use self::responder::Compressed;
 
-crate use self::context::Context;
+crate use self::fairing::Context;
 use rocket::http::hyper::header::{ContentEncoding, Encoding};
-use rocket::http::uncased::UncasedStr;
 use rocket::{Request, Response};
 use std::io::Read;
 
@@ -46,13 +44,12 @@ impl CompressionUtils {
 
     fn skip_encoding(
         content_type: &Option<rocket::http::ContentType>,
-        content_type_top: &Option<&UncasedStr>,
         context: &rocket::State<Context>,
     ) -> bool {
         match content_type {
             Some(content_type) => context.exclusions.iter().any(|exc_media_type| {
                 if exc_media_type.sub() == "*" {
-                    Some(exc_media_type.top()) == *content_type_top
+                    *exc_media_type.top() == *content_type.top()
                 } else {
                     *exc_media_type == *content_type.media_type()
                 }
@@ -67,14 +64,13 @@ impl CompressionUtils {
         }
 
         let content_type = response.content_type();
-        let content_type_top = content_type.as_ref().map(|ct| ct.top());
 
         if respect_excludes {
             let context = request
                 .guard::<::rocket::State<Context>>()
                 .expect("Compression Context registered in on_attach");
 
-            if CompressionUtils::skip_encoding(&content_type, &content_type_top, &context) {
+            if CompressionUtils::skip_encoding(&content_type, &context) {
                 return;
             }
         }
@@ -84,6 +80,7 @@ impl CompressionUtils {
         if cfg!(feature = "brotli_compression") && CompressionUtils::accepts_encoding(request, "br")
         {
             if let Some(plain) = response.take_body() {
+                let content_type_top = content_type.as_ref().map(|ct| ct.top());
                 let mut params = brotli::enc::BrotliEncoderInitParams();
                 params.quality = 2;
                 if content_type_top == Some("text".into()) {

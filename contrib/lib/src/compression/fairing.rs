@@ -9,8 +9,29 @@ use rocket::http::MediaType;
 use rocket::Rocket;
 use rocket::{Request, Response};
 
-crate use super::context::Context;
 crate use super::CompressionUtils;
+
+crate struct Context {
+    crate exclusions: Vec<MediaType>,
+}
+
+impl Context {
+    crate fn new() -> Context {
+        Context {
+            exclusions: vec![
+                MediaType::parse_flexible("application/gzip").unwrap(),
+                MediaType::parse_flexible("application/zip").unwrap(),
+                MediaType::parse_flexible("image/*").unwrap(),
+                MediaType::parse_flexible("video/*").unwrap(),
+                MediaType::parse_flexible("application/wasm").unwrap(),
+                MediaType::parse_flexible("application/octet-stream").unwrap(),
+            ],
+        }
+    }
+    crate fn with_exclusions(excls: Vec<MediaType>) -> Context {
+        Context { exclusions: excls }
+    }
+}
 
 /// The Compression type implements brotli and gzip compression for responses in
 /// accordance with the Accept-Encoding header. If accepted, brotli compression
@@ -34,10 +55,10 @@ crate use super::CompressionUtils;
 ///
 /// - application/gzip
 /// - application/brotli
-/// - application/zip
 /// - image/*
+/// - video/*
 /// - application/wasm
-/// - application/binary
+/// - application/octet-stream
 ///
 /// The excluded types can be changed changing the `compress.exclude` Rocket
 /// configuration property.
