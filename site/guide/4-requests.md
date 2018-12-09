@@ -618,7 +618,7 @@ fn good(custom: Custom, cookies: Cookies) { .. }
 A route can specify the data format it is willing to accept or respond with by
 using the `format` route parameter. The value of the parameter is a string
 identifying an HTTP media type or a shorthand variant. For instance, for JSON
-data, the string `application/json` of simply `json` can be used.
+data, the string `application/json` or simply `json` can be used.
 
 When a route indicates a payload-supporting method (`PUT`, `POST`, `DELETE`, and
 `PATCH`), the `format` route parameter instructs Rocket to check against the
