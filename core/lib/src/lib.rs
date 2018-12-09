@@ -1,12 +1,12 @@
 #![feature(specialization)]
 #![feature(decl_macro)]
 #![feature(try_trait)]
-#![feature(fnbox)]
 #![feature(never_type)]
 #![feature(proc_macro_hygiene)]
 #![feature(crate_visibility_modifier)]
 #![feature(try_from)]
 #![feature(label_break_value)]
+#![feature(unsized_locals)]
 
 #![recursion_limit="256"]
 

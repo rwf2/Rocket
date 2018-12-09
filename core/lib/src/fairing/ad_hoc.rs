@@ -1,5 +1,4 @@
 use std::sync::Mutex;
-use std::boxed::FnBox;
 
 use {Rocket, Request, Response, Data};
 use fairing::{Fairing, Kind, Info};
@@ -43,14 +42,14 @@ pub struct AdHoc {
 
 enum AdHocKind {
     /// An ad-hoc **attach** fairing. Called when the fairing is attached.
-    Attach(Mutex<Option<Box<FnBox(Rocket) -> Result<Rocket, Rocket> + Send + 'static>>>),
+    Attach(Mutex<Option<Box<dyn FnOnce(Rocket) -> Result<Rocket, Rocket> + Send + 'static>>>),
     /// An ad-hoc **launch** fairing. Called just before Rocket launches.
-    Launch(Mutex<Option<Box<FnBox(&Rocket) + Send + 'static>>>),
+    Launch(Mutex<Option<Box<dyn FnOnce(&Rocket) + Send + 'static>>>),
     /// An ad-hoc **request** fairing. Called when a request is received.
-    Request(Box<Fn(&mut Request, &Data) + Send + Sync + 'static>),
+    Request(Box<dyn Fn(&mut Request, &Data) + Send + Sync + 'static>),
     /// An ad-hoc **response** fairing. Called when a response is ready to be
     /// sent to a client.
-    Response(Box<Fn(&Request, &mut Response) + Send + Sync + 'static>),
+    Response(Box<dyn Fn(&Request, &mut Response) + Send + Sync + 'static>),
 }
 
 impl AdHoc {
@@ -146,9 +145,10 @@ impl Fairing for AdHoc {
     fn on_attach(&self, rocket: Rocket) -> Result<Rocket, Rocket> {
         if let AdHocKind::Attach(ref mutex) = self.kind {
             let mut option = mutex.lock().expect("AdHoc::Attach lock");
-            option.take()
-                .expect("internal error: `on_attach` single-call invariant broken")
-                .call_box((rocket,))
+            let f = option
+                .take()
+                .expect("internal error: `on_attach` single-call invariant broken");
+            f(rocket)
         } else {
             Ok(rocket)
         }
@@ -157,9 +157,10 @@ impl Fairing for AdHoc {
     fn on_launch(&self, rocket: &Rocket) {
         if let AdHocKind::Launch(ref mutex) = self.kind {
             let mut option = mutex.lock().expect("AdHoc::Launch lock");
-            option.take()
-                .expect("internal error: `on_launch` single-call invariant broken")
-                .call_box((rocket, ))
+            let f = option
+                .take()
+                .expect("internal error: `on_launch` single-call invariant broken");
+            f(rocket)
         }
     }
 
