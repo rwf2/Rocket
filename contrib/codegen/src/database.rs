@@ -91,7 +91,7 @@ pub fn database_attr(attr: TokenStream, input: TokenStream) -> Result<TokenStrea
 
                 ::rocket::fairing::AdHoc::on_attach(#fairing_name, |rocket| {
                     let pool = #databases::database_config(#name, rocket.config())
-                        .map(#connection_type::pool);
+                        .map(<#connection_type>::pool);
 
                     match pool {
                         Ok(Ok(p)) => Ok(rocket.manage(#pool_type(p))),
@@ -127,6 +127,13 @@ pub fn database_attr(attr: TokenStream, input: TokenStream) -> Result<TokenStrea
             #[inline(always)]
             fn deref(&self) -> &Self::Target {
                 &self.0
+            }
+        }
+
+        impl ::std::ops::DerefMut for #request_guard_type {
+            #[inline(always)]
+            fn deref_mut(&mut self) -> &mut Self::Target {
+                &mut self.0
             }
         }
 
