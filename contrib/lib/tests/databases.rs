@@ -12,11 +12,12 @@ mod databases_tests {
     struct PrimaryDb(diesel::PgConnection);
 }
 
+#[cfg(all(feature = "databases", feature = "sqlite_pool"))]
 #[cfg(test)]
-mod db_integration_tests {
+mod rusqlite_integration_test {
     use std::collections::BTreeMap;
     use rocket::config::{Config, Environment, Value};
-    use rocket_contrib::databases::rusqlite::{self, Result, NO_PARAMS};
+    use rocket_contrib::databases::rusqlite;
     use rocket_contrib::database;
 
     #[database("test_db")]
@@ -38,7 +39,7 @@ mod db_integration_tests {
 
         assert!(connection.is_some());
 
-        let result: Result<i32> = connection.unwrap().query_row("SELECT 1", NO_PARAMS, |row| row.get(0));
+        let result: rusqlite::Result<i32> = connection.unwrap().query_row("SELECT 1", &[], |row| row.get(0));
 
         println!("{:#?}", result);
 
