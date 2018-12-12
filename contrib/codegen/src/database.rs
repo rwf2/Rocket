@@ -20,8 +20,8 @@ const EXAMPLE: &str = "example: `struct MyDatabase(diesel::SqliteConnection);`";
 const ONLY_ON_STRUCTS_MSG: &str = "`database` attribute can only be used on structs";
 const ONLY_UNNAMED_FIELDS: &str = "`database` attribute can only be applied to \
     structs with exactly one unnamed field";
-const NO_GENERIC_STRUCTS: &str = "`database` attribute cannot be applied to a struct \
-    with a generic type";
+const NO_GENERIC_STRUCTS: &str = "`database` attribute cannot be applied to structs \
+    with generics";
 
 fn parse_invocation(attr: TokenStream, input: TokenStream) -> Result<DatabaseInvocation> {
     let attr_stream2 = ::proc_macro2::TokenStream::from(attr);
@@ -31,7 +31,7 @@ fn parse_invocation(attr: TokenStream, input: TokenStream) -> Result<DatabaseInv
 
     let input = ::syn::parse::<DeriveInput>(input).unwrap();
     if !input.generics.params.is_empty() {
-        return Err(input.span().error(NO_GENERIC_STRUCTS));
+        return Err(input.generics.span().error(NO_GENERIC_STRUCTS));
     }
 
     let structure = match input.data {
@@ -56,34 +56,37 @@ fn parse_invocation(attr: TokenStream, input: TokenStream) -> Result<DatabaseInv
     })
 }
 
+#[allow(non_snake_case)]
 pub fn database_attr(attr: TokenStream, input: TokenStream) -> Result<TokenStream> {
     let invocation = parse_invocation(attr, input)?;
 
     // Store everything we're going to need to generate code.
-    let connection_type = &invocation.connection_type;
+    let conn_type = &invocation.connection_type;
     let name = &invocation.db_name;
-    let request_guard_type = &invocation.type_name;
+    let guard_type = &invocation.type_name;
     let vis = &invocation.visibility;
-    let pool_type = Ident::new(&format!("{}Pool", request_guard_type), request_guard_type.span());
+    let pool_type = Ident::new(&format!("{}Pool", guard_type), guard_type.span());
     let fairing_name = format!("'{}' Database Pool", name);
+    let span = conn_type.span().into();
 
     // A few useful paths.
-    let databases = quote!(::rocket_contrib::databases);
-    let r2d2 = quote!(#databases::r2d2);
+    let databases = quote_spanned!(span => ::rocket_contrib::databases);
+    let Poolable = quote_spanned!(span => #databases::Poolable);
+    let r2d2 = quote_spanned!(span => #databases::r2d2);
     let request = quote!(::rocket::request);
 
-    Ok(quote! {
+    let generated_types = quote_spanned! { span =>
         /// The request guard type.
-        #vis struct #request_guard_type(
-            pub #r2d2::PooledConnection<<#connection_type as #databases::Poolable>::Manager>
-        );
+        #vis struct #guard_type(pub #r2d2::PooledConnection<<#conn_type as #Poolable>::Manager>);
 
         /// The pool type.
-        #vis struct #pool_type(
-            #r2d2::Pool<<#connection_type as #databases::Poolable>::Manager>
-        );
+        #vis struct #pool_type(#r2d2::Pool<<#conn_type as #Poolable>::Manager>);
+    };
 
-        impl #request_guard_type {
+    Ok(quote! {
+        #generated_types
+
+        impl #guard_type {
             /// Returns a fairing that initializes the associated database
             /// connection pool.
             pub fn fairing() -> impl ::rocket::fairing::Fairing {
@@ -91,7 +94,7 @@ pub fn database_attr(attr: TokenStream, input: TokenStream) -> Result<TokenStrea
 
                 ::rocket::fairing::AdHoc::on_attach(#fairing_name, |rocket| {
                     let pool = #databases::database_config(#name, rocket.config())
-                        .map(<#connection_type>::pool);
+                        .map(<#conn_type>::pool);
 
                     match pool {
                         Ok(Ok(p)) => Ok(rocket.manage(#pool_type(p))),
@@ -117,12 +120,12 @@ pub fn database_attr(attr: TokenStream, input: TokenStream) -> Result<TokenStrea
             pub fn get_one(rocket: &::rocket::Rocket) -> Option<Self> {
                 rocket.state::<#pool_type>()
                     .and_then(|pool| pool.0.get().ok())
-                    .map(#request_guard_type)
+                    .map(#guard_type)
             }
         }
 
-        impl ::std::ops::Deref for #request_guard_type {
-            type Target = #connection_type;
+        impl ::std::ops::Deref for #guard_type {
+            type Target = #conn_type;
 
             #[inline(always)]
             fn deref(&self) -> &Self::Target {
@@ -130,14 +133,14 @@ pub fn database_attr(attr: TokenStream, input: TokenStream) -> Result<TokenStrea
             }
         }
 
-        impl ::std::ops::DerefMut for #request_guard_type {
+        impl ::std::ops::DerefMut for #guard_type {
             #[inline(always)]
             fn deref_mut(&mut self) -> &mut Self::Target {
                 &mut self.0
             }
         }
 
-        impl<'a, 'r> #request::FromRequest<'a, 'r> for #request_guard_type {
+        impl<'a, 'r> #request::FromRequest<'a, 'r> for #guard_type {
             type Error = ();
 
             fn from_request(request: &'a #request::Request<'r>) -> #request::Outcome<Self, ()> {
@@ -145,7 +148,7 @@ pub fn database_attr(attr: TokenStream, input: TokenStream) -> Result<TokenStrea
                 let pool = request.guard::<::rocket::State<#pool_type>>()?;
 
                 match pool.0.get() {
-                    Ok(conn) => Outcome::Success(#request_guard_type(conn)),
+                    Ok(conn) => Outcome::Success(#guard_type(conn)),
                     Err(_) => Outcome::Failure((Status::ServiceUnavailable, ())),
                 }
             }

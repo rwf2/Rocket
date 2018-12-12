@@ -24,3 +24,8 @@ quote = "0.6"
 [build-dependencies]
 yansi = "0.5"
 version_check = "0.1.3"
+
+[dev-dependencies]
+compiletest_rs = { version = "0.3", features = ["stable"] }
+rocket = { version = "0.4.0", path = "../../core/lib" }
+rocket_contrib = { version = "0.4.0", path = "../lib", features = ["diesel_sqlite_pool"] }

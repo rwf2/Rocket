@@ -1,0 +1,9 @@
+error[E0277]: the trait bound `Unknown: rocket_contrib::databases::Poolable` is not satisfied
+ --> $DIR/database-types.rs:7:10
+  |
+7 | struct A(Unknown);
+  |          ^^^^^^^ the trait `rocket_contrib::databases::Poolable` is not implemented for `Unknown`
+
+error: aborting due to previous error
+
+For more information about this error, try `rustc --explain E0277`.
