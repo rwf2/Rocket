@@ -15,6 +15,7 @@ members = [
   "examples/query_params",
   "examples/hello_world",
   "examples/manual_routes",
+  "examples/mongodb",
   "examples/optional_redirect",
   "examples/redirect",
   "examples/static_files",

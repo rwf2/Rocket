@@ -1,0 +1,2 @@
+[global.databases]
+todo_service  = { url = "mongodb://localhost:27017" }
