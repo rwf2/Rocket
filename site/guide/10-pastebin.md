@@ -178,7 +178,7 @@ Finally, add a dependency for the `rand` crate to the `Cargo.toml` file:
 ```toml
 [dependencies]
 # existing Rocket dependencies...
-rand = "0.3"
+rand = "0.6"
 ```
 
 Then, ensure that your application builds with the new code:
