@@ -45,4 +45,25 @@ mod rusqlite_integration_test {
 
         tx.commit().unwrap();
     }
+
+    #[test]
+    fn deref_impl_present() {
+        let mut test_db: BTreeMap<String, Value> = BTreeMap::new();
+        let mut test_db_opts: BTreeMap<String, Value> = BTreeMap::new();
+        test_db_opts.insert("url".into(), Value::String(":memory:".into()));
+        test_db.insert("test_db".into(), Value::Table(test_db_opts));
+        let config = Config::build(Environment::Development)
+            .extra("databases", Value::Table(test_db))
+            .finalize()
+            .unwrap();
+
+        let rocket = rocket::custom(config).attach(SqliteDb::fairing());
+        let connection = SqliteDb::get_one(&rocket);
+
+        assert!(connection.is_some());
+
+        let result: rusqlite::Result<i32> = connection.unwrap().query_row("SELECT 1", &[], |row| row.get(0));
+
+        assert!(result.is_ok());
+    }
 }
