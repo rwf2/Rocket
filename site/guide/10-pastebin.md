@@ -303,6 +303,14 @@ fn retrieve(id: &RawStr) -> Option<File> {
 }
 ```
 
+Make sure that the route is mounted at the root path:
+
+```rust
+fn main() {
+    rocket::ignite().mount("/", routes![index, upload, retrieve]).launch();
+}
+```
+
 Unfortunately, there's a problem with this code. Can you spot the issue? The
 [`RawStr`](@api/rocket/http/struct.RawStr.html) type should tip you off!
 
