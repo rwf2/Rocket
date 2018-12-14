@@ -5,14 +5,13 @@ use db;
 pub fn get_todos(conn: db::MyDatabase) -> JsonValue {
     match db::get_todos(&conn) {
         Ok(todos) => json!({
-            "status": "success".to_string(), 
+            "status": "success".to_string(),
             "data": todos,
         }),
         Err(e) => json!({
             "status": "error",
             "message": e.to_string(),
-        }) 
-
+        })
     }
 }
 
@@ -34,7 +33,6 @@ pub fn get_todo(conn: db::MyDatabase, id: String) -> JsonValue {
         })
     }
 }
-
 
 #[post("/", format = "json", data = "<body>")]
 pub fn create_todo(conn: db::MyDatabase, body: Json<CreateTodoRequestBody>) -> JsonValue {

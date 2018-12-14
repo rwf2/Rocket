@@ -1,4 +1,4 @@
-use rocket_contrib::databases::mongodb::db::{Database,ThreadedDatabase};
+use rocket_contrib::databases::mongodb::db::{Database,ThreadedDatabase}
 use rocket_contrib::databases::mongodb::{bson,doc,oid::{ObjectId}};
 
 use models::Todo;
@@ -68,7 +68,7 @@ pub fn update_todo(conn: &MyDatabase, id: String, description: String) -> Result
     // https://docs.mongodb.com/manual/reference/operator/update/set/#up._S_set
     let update = doc! {
         "$set": {
-            "description": description.clone() 
+            "description": description.clone()
         }
     };
 
