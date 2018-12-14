@@ -1,4 +1,4 @@
-use rocket_contrib::databases::mongodb::db::{Database,ThreadedDatabase}
+use rocket_contrib::databases::mongodb::db::{Database,ThreadedDatabase};
 use rocket_contrib::databases::mongodb::{bson,doc,oid::{ObjectId}};
 
 use models::Todo;
