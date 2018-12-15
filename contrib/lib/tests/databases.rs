@@ -35,15 +35,16 @@ mod rusqlite_integration_test {
             .unwrap();
 
         let rocket = rocket::custom(config).attach(SqliteDb::fairing());
-        let mut conn = SqliteDb::get_one(&rocket).unwrap();
+        let mut conn = SqliteDb::get_one(&rocket).expect("unable to get connection");
 
+        // Rusqlite's `transaction()` method takes `&mut self`, hence this is
+        // testing the presence of a `DerefMut` trait on the generated
+        // connection type.
         let tx = conn.transaction().unwrap();
 
-        let result: rusqlite::Result<i32> = tx.query_row("SELECT 1", &[], |row| row.get(0));
+        let _: i32 = tx.query_row("SELECT 1", &[], |row| row.get(0)).expect("get row");
 
-        assert!(result.is_ok());
-
-        tx.commit().unwrap();
+        tx.commit();
     }
 
     #[test]
@@ -58,12 +59,8 @@ mod rusqlite_integration_test {
             .unwrap();
 
         let rocket = rocket::custom(config).attach(SqliteDb::fairing());
-        let connection = SqliteDb::get_one(&rocket);
+        let mut conn = SqliteDb::get_one(&rocket).expect("unable to get connection");
 
-        assert!(connection.is_some());
-
-        let result: rusqlite::Result<i32> = connection.unwrap().query_row("SELECT 1", &[], |row| row.get(0));
-
-        assert!(result.is_ok());
+        let _: i32 = conn.query_row("SELECT 1", &[], |row| row.get(0)).expect("get row");
     }
 }
