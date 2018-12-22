@@ -399,3 +399,203 @@ impl<'a> Into<Header<'static>> for &'a XssFilter {
         Header::new(XssFilter::NAME, policy_string)
     }
 }
+
+/// The [Content-Security-Policy] header: specifies origins to protect against [XSS]
+/// attacks.
+///
+/// [Content-Security-Policy]: https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Security-Policy
+/// [XSS]: https://developer.mozilla.org/en-US/docs/Glossary/Cross-site_scripting
+pub struct Csp {
+    default_src: Vec<Cow<'static, str>>,
+    style_src: Vec<Cow<'static, str>>,
+    connect_src: Vec<Cow<'static, str>>,
+    font_src: Vec<Cow<'static, str>>,
+    frame_src: Vec<Cow<'static, str>>,
+    img_src: Vec<Cow<'static, str>>,
+    manifest_src: Vec<Cow<'static, str>>,
+    media_src: Vec<Cow<'static, str>>,
+    object_src: Vec<Cow<'static, str>>,
+    script_src: Vec<Cow<'static, str>>,
+}
+
+impl Policy for Csp {
+    const NAME: &'static str = "Content-Security-Policy";
+
+    fn header(&self) -> Header<'static> {
+        self.into()
+    }
+}
+
+impl Csp {
+    /// Only allow own Uri to load resource
+    pub const SELF: &'static str = "'self'";
+
+    /// Only allow inline resources
+    pub const NONE: &'static str = "'none'";
+
+    pub fn new() -> Csp {
+        Csp {
+            default_src: Vec::new(),
+            style_src: Vec::new(),
+            connect_src: Vec::new(),
+            font_src: Vec::new(),
+            frame_src: Vec::new(),
+            img_src: Vec::new(),
+            manifest_src: Vec::new(),
+            media_src: Vec::new(),
+            object_src: Vec::new(),
+            script_src: Vec::new(),
+        }
+    }
+
+    /// Fallback for other [Content-Security-Policy] directives
+    ///
+    /// [Content-Security-Policy]: https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Security-Policy
+    pub fn add_default_src<S>( mut self, directive: S) -> Csp 
+        where S: Into<Cow<'static, str>>
+    {
+        self.default_src.push(directive.into());
+        self
+    }
+
+    /// Specifies valid stylesheet sources
+    pub fn add_style_src<S>( mut self, directive: S) -> Csp 
+        where S: Into<Cow<'static, str>>
+    {
+        self.style_src.push(directive.into());
+        self
+    }
+
+    /// Specifies valid URLs which can be loaded via scripts
+    pub fn add_connect_src<S>( mut self, directive: S) -> Csp 
+        where S: Into<Cow<'static, str>>
+    {
+        self.connect_src.push(directive.into());
+        self
+    }
+
+    /// Specifies valid font sources, which are loaded using css [@font-face] attribute
+    ///
+    /// [@font-face]: https://developer.mozilla.org/en-US/docs/Web/CSS/@font-face
+    pub fn add_font_src<S>( mut self, directive: S) -> Csp 
+        where S: Into<Cow<'static, str>>
+    {
+        self.font_src.push(directive.into());
+        self
+    }
+
+    /// Specifies valid [<iframe>] and [<frame>] sources
+    ///
+    /// [<iframe>]: https://developer.mozilla.org/en-US/docs/Web/HTML/Element/iframe
+    /// [<frame>]: https://developer.mozilla.org/en-US/docs/Web/HTML/Element/frame
+    pub fn add_frame_src<S>( mut self, directive: S) -> Csp 
+        where S: Into<Cow<'static, str>>
+    {
+        self.frame_src.push(directive.into());
+        self
+    }
+
+    /// Specifies valid image and favicon sources
+    pub fn add_image_src<S>( mut self, directive: S) -> Csp 
+        where S: Into<Cow<'static, str>>
+    {
+        self.img_src.push(directive.into());
+        self
+    }
+
+    /// Specifies valid application manifest file sources
+    pub fn add_manifest_src<S>( mut self, directive: S) -> Csp 
+        where S: Into<Cow<'static, str>>
+    {
+        self.manifest_src.push(directive.into());
+        self
+    }
+
+    /// Specifies valid [<audio>], [<track>] and [<video>] sources
+    ///
+    /// [<audio>]: https://developer.mozilla.org/en-US/docs/Web/HTML/Element/audio
+    /// [<track>]: https://developer.mozilla.org/en-US/docs/Web/HTML/Element/track
+    /// [<video>]: https://developer.mozilla.org/en-US/docs/Web/HTML/Element/video
+    pub fn add_media_src<S>( mut self, directive: S) -> Csp 
+        where S: Into<Cow<'static, str>>
+    {
+        self.media_src.push(directive.into());
+        self
+    }
+
+    /// Specifies valid [<object>], [<applet>] and [<embed>] sources
+    ///
+    /// [<object>]: https://developer.mozilla.org/en-US/docs/Web/HTML/Element/object
+    /// [<applet>]: https://developer.mozilla.org/en-US/docs/Web/HTML/Element/applet
+    /// [<embed>]: https://developer.mozilla.org/en-US/docs/Web/HTML/Element/embed
+    pub fn add_object_src<S>( mut self, directive: S) -> Csp 
+        where S: Into<Cow<'static, str>>
+    {
+        self.object_src.push(directive.into());
+        self
+    }
+
+    /// Specifies valid JavaScript sources
+    pub fn add_script_src<S>( mut self, directive: S) -> Csp 
+        where S: Into<Cow<'static, str>>
+    {
+        self.script_src.push(directive.into());
+        self
+    }
+}
+
+impl<'a> Into<Header<'static>> for &'a Csp {
+    fn into(self) -> Header<'static> {
+        let mut policy_string = String::with_capacity(200);
+
+        if !self.default_src.is_empty() {
+            policy_string.push_str(&format!("default-src {}; ", self.default_src.join(" ")));
+        }
+
+        if !self.style_src.is_empty() {
+            policy_string.push_str(&format!("style-src {}; ", self.style_src.join(" ")));
+        }
+
+        if !self.connect_src.is_empty() {
+            policy_string.push_str(&format!("connect-src {}; ", self.connect_src.join(" ")));
+        }
+
+        if !self.font_src.is_empty() {
+            policy_string.push_str(&format!("font-src {}; ", self.font_src.join(" ")));
+        }
+
+        if !self.frame_src.is_empty() {
+            policy_string.push_str(&format!("frame-src {}; ", self.frame_src.join(" ")));
+        }
+
+        if !self.img_src.is_empty() {
+            policy_string.push_str(&format!("img-src {}; ", self.img_src.join(" ")));
+        }
+
+        if !self.manifest_src.is_empty() {
+            policy_string.push_str(&format!("manifest-src {}; ", self.manifest_src.join(" ")));
+        }
+
+        if !self.media_src.is_empty() {
+            policy_string.push_str(&format!("media-src {}; ", self.media_src.join(" ")));
+        }
+
+        if !self.object_src.is_empty() {
+            policy_string.push_str(&format!("object-src {}; ", self.object_src.join(" ")));
+        }
+
+        if !self.script_src.is_empty() {
+            policy_string.push_str(&format!("script-src {}; ", self.script_src.join(" ")));
+        }
+
+        Header::new(Csp::NAME, policy_string)
+    }
+}
+
+/// Defaults to ---
+impl Default for Csp {
+    fn default() -> Csp {
+        // FIXME: what default value?
+        Csp::new()
+    }
+}

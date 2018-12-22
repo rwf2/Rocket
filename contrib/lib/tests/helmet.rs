@@ -135,4 +135,55 @@ mod helmet_tests {
                 "max-age=30, enforce, report-uri=\"https://www.google.com\"");
         });
     }
+
+    #[test]
+    fn csp_headers_test() {
+        let helmet = SpaceHelmet::default().enable(Csp::new().add_default_src(Csp::SELF));
+        dispatch!(helmet, |response: LocalResponse| {
+            assert_header!(response, "Content-Security-Policy", "default-src 'self'; ");
+        });
+
+        let helmet = SpaceHelmet::default().enable(Csp::new().add_style_src(Csp::SELF));
+        dispatch!(helmet, |response: LocalResponse| {
+            assert_header!(response, "Content-Security-Policy", "style-src 'self'; ");
+        });
+
+        let helmet = SpaceHelmet::default().enable(Csp::new().add_connect_src(Csp::NONE));
+        dispatch!(helmet, |response: LocalResponse| {
+            assert_header!(response, "Content-Security-Policy", "connect-src 'none'; ");
+        });
+
+        let helmet = SpaceHelmet::default().enable(Csp::new().add_font_src(Csp::SELF));
+        dispatch!(helmet, |response: LocalResponse| {
+            assert_header!(response, "Content-Security-Policy", "font-src 'self'; ");
+        });
+
+        let helmet = SpaceHelmet::default().enable(Csp::new().add_frame_src(Csp::SELF));
+        dispatch!(helmet, |response: LocalResponse| {
+            assert_header!(response, "Content-Security-Policy", "frame-src 'self'; ");
+        });
+
+        let helmet = SpaceHelmet::default().enable(Csp::new().add_image_src(Csp::SELF));
+        dispatch!(helmet, |response: LocalResponse| {
+            assert_header!(response, "Content-Security-Policy", "img-src 'self'; ");
+        });
+
+        let helmet = SpaceHelmet::default().enable(Csp::new().add_manifest_src(Csp::SELF));
+        dispatch!(helmet, |response: LocalResponse| {
+            assert_header!(response, "Content-Security-Policy", "manifest-src 'self'; ");
+        });
+
+        let helmet = SpaceHelmet::default().enable(Csp::new().add_media_src(Csp::SELF));
+        dispatch!(helmet, |response: LocalResponse| {
+            assert_header!(response, "Content-Security-Policy", "media-src 'self'; ");
+        });
+        let helmet = SpaceHelmet::default().enable(Csp::new().add_object_src(Csp::SELF));
+        dispatch!(helmet, |response: LocalResponse| {
+            assert_header!(response, "Content-Security-Policy", "object-src 'self'; ");
+        });
+        let helmet = SpaceHelmet::default().enable(Csp::new().add_script_src(Csp::SELF));
+        dispatch!(helmet, |response: LocalResponse| {
+            assert_header!(response, "Content-Security-Policy", "script-src 'self'; ");
+        });
+    }
 }

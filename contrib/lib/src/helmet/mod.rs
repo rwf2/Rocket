@@ -31,6 +31,7 @@
 //! | [Strict-Transport-Security] | Enforces strict use of HTTPS.          | [`Hsts`]     | ?        |
 //! | [Expect-CT]                 | Enables certificate transparency.      | [`ExpectCt`] | ✗        |
 //! | [Referrer-Policy]           | Enables referrer policy.               | [`Referrer`] | ✗        |
+//! | [Content-Security-Policy]   | Enables content security policy.       | [`Csp`]      | ✗        |
 //!
 //! <small>? If TLS is enabled when the application is launched, in a
 //! non-development environment (e.g., staging or production), HSTS is
@@ -43,6 +44,7 @@
 //! [Strict-Transport-Security]: https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Strict-Transport-Security
 //! [Expect-CT]:  https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Expect-CT
 //! [Referrer-Policy]: https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Referrer-Policy
+//! [Content-Security-Policy]: https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Security-Policy
 //! [clickjacking]: https://en.wikipedia.org/wiki/Clickjacking
 //!
 //! [`XssFilter`]: helmet::XssFilter
@@ -51,6 +53,7 @@
 //! [`Hsts`]: helmet::Hsts
 //! [`ExpectCt`]: helmet::ExpectCt
 //! [`Referrer`]: helmet::Referrer
+//! [`Csp`]: helmet::Csp
 //!
 //! # Usage
 //!
