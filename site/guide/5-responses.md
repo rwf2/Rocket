@@ -136,7 +136,7 @@ For the example above, Rocket generates a `Responder` implementation that:
 
 Note that the _first_ field is used as the inner responder while all remaining
 fields (unless ignored with `#[response(ignore)]`) are added as headers to the
-response. The optional `#[responder]` attribute can be used to customize the
+response. The optional `#[response]` attribute can be used to customize the
 status and content-type of the response. Because `ContentType` and `Status` are
 themselves headers, you can also dynamically set the content-type and status by
 simply including fields of these types.
