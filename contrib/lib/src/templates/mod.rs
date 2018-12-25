@@ -136,6 +136,7 @@ use self::fairing::TemplateFairing;
 use self::serde::Serialize;
 use self::serde_json::{Value, to_value};
 use self::glob::glob;
+#[cfg(feature = "handlebars_templates")] use self::handlebars::Handlebars;
 
 use std::borrow::Cow;
 use std::path::PathBuf;
@@ -210,7 +211,7 @@ pub struct Template {
 #[derive(Debug)]
 crate struct TemplateInfo {
     /// The complete path, including `template_dir`, to this template.
-    path: PathBuf,
+    path: Option<PathBuf>,
     /// The extension for the engine of this template.
     extension: String,
     /// The extension before the engine extension in the template, if any.
@@ -360,7 +361,26 @@ impl Template {
     #[inline(always)]
     fn finalize(self, ctxt: &Context) -> Result<(String, ContentType), Status> {
         let name = &*self.name;
-        let info = ctxt.templates.get(name).ok_or_else(|| {
+        let registered_info: Option<TemplateInfo> = {
+            if ctxt.engines.has_template(name) {
+                #[cfg(feature = "handlebars_templates")]
+                {
+                    Some(TemplateInfo {
+                        path: None,
+                        extension: Handlebars::EXT.to_string(),
+                        data_type: ContentType::HTML,
+                    })
+                }
+
+                #[cfg(not(feature = "handlebars_templates"))]
+                {
+                    None
+                }
+            } else {
+                None
+            }
+        };
+        let info = ctxt.templates.get(name).or(registered_info.as_ref()).ok_or_else(|| {
             let ts: Vec<_> = ctxt.templates.keys().map(|s| s.as_str()).collect();
             error_!("Template '{}' does not exist.", name);
             info_!("Known templates: {}", ts.join(","));

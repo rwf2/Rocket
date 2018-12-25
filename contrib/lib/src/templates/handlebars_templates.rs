@@ -9,11 +9,11 @@ impl Engine for Handlebars {
     fn init(templates: &[(&str, &TemplateInfo)]) -> Option<Handlebars> {
         let mut hb = Handlebars::new();
         for &(name, info) in templates {
-            let path = &info.path;
+            let path = info.path.as_ref().unwrap();
             if let Err(e) = hb.register_template_file(name, path) {
                 error!("Error in Handlebars template '{}'.", name);
                 info_!("{}", e);
-                info_!("Template path: '{}'.", path.to_string_lossy());
+                info_!("Template path: '{}'.", path.display());
                 return None;
             }
         }

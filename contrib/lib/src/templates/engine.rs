@@ -109,4 +109,12 @@ impl Engines {
 
         None
     }
+
+    crate fn has_template(&self, name: &str) -> bool {
+        #[cfg(feature = "handlebars_templates")]
+        {
+            return self.handlebars.get_template(name).is_some();
+        }
+        false
+    }
 }

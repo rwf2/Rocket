@@ -29,7 +29,9 @@ impl Context {
                 let (name, data_type_str) = split_path(&root, &path);
                 if let Some(info) = templates.get(&*name) {
                     warn_!("Template name '{}' does not have a unique path.", name);
-                    info_!("Existing path: {:?}", info.path);
+                    if let Some(ref existing_path) = info.path {
+                        info_!("Existing path: {:?}", existing_path);
+                    }
                     info_!("Additional path: {:?}", path);
                     warn_!("Using existing path for template '{}'.", name);
                     continue;
@@ -40,7 +42,7 @@ impl Context {
                     .unwrap_or(ContentType::HTML);
 
                 templates.insert(name, TemplateInfo {
-                    path: path.to_path_buf(),
+                    path: Some(path.to_path_buf()),
                     extension: ext.to_string(),
                     data_type,
                 });
