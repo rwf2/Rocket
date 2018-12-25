@@ -36,7 +36,15 @@ mod templates_tests {
             .extra("template_dir", template_root().to_str().expect("template directory"))
             .expect("valid configuration");
 
-        ::rocket::custom(config).attach(Template::fairing())
+        ::rocket::custom(config)
+            .attach(Template::custom(|_engines| {
+                #[cfg(feature = "handlebars_templates")]
+                {
+                    let hbs_test_tpl = "Hello {{ title }}!";
+                    _engines.handlebars.register_template_string("hbs/test-string", hbs_test_tpl)
+                        .expect("unable to register hbs/test-string template");
+                }
+            }))
             .mount("/", routes![template_check, is_reloading])
     }
 
@@ -106,6 +114,16 @@ mod templates_tests {
             // Test with a txt file, which shouldn't escape.
             let template = Template::show(&rocket, "hbs/test", &map);
             assert_eq!(template, Some(EXPECTED.into()));
+        }
+
+        #[test]
+        fn test_handlebars_string_templates() {
+            let rocket = rocket();
+            let mut map = HashMap::new();
+            map.insert("title", "_test_");
+
+            let template = Template::show(&rocket, "hbs/test-string", &map);
+            assert_eq!(template, Some("Hello _test_!".into()));
         }
 
         #[test]
