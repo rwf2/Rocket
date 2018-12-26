@@ -451,7 +451,7 @@ impl Csp {
     /// Fallback for other [Content-Security-Policy] directives
     ///
     /// [Content-Security-Policy]: https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Security-Policy
-    pub fn add_default_src<S>( mut self, directive: S) -> Csp 
+    pub fn add_default_src<S>(mut self, directive: S) -> Csp
         where S: Into<Cow<'static, str>>
     {
         self.default_src.push(directive.into());
@@ -459,7 +459,7 @@ impl Csp {
     }
 
     /// Specifies valid stylesheet sources
-    pub fn add_style_src<S>( mut self, directive: S) -> Csp 
+    pub fn add_style_src<S>(mut self, directive: S) -> Csp
         where S: Into<Cow<'static, str>>
     {
         self.style_src.push(directive.into());
@@ -467,7 +467,7 @@ impl Csp {
     }
 
     /// Specifies valid URLs which can be loaded via scripts
-    pub fn add_connect_src<S>( mut self, directive: S) -> Csp 
+    pub fn add_connect_src<S>(mut self, directive: S) -> Csp
         where S: Into<Cow<'static, str>>
     {
         self.connect_src.push(directive.into());
@@ -477,7 +477,7 @@ impl Csp {
     /// Specifies valid font sources, which are loaded using css [@font-face] attribute
     ///
     /// [@font-face]: https://developer.mozilla.org/en-US/docs/Web/CSS/@font-face
-    pub fn add_font_src<S>( mut self, directive: S) -> Csp 
+    pub fn add_font_src<S>(mut self, directive: S) -> Csp
         where S: Into<Cow<'static, str>>
     {
         self.font_src.push(directive.into());
@@ -488,7 +488,7 @@ impl Csp {
     ///
     /// [<iframe>]: https://developer.mozilla.org/en-US/docs/Web/HTML/Element/iframe
     /// [<frame>]: https://developer.mozilla.org/en-US/docs/Web/HTML/Element/frame
-    pub fn add_frame_src<S>( mut self, directive: S) -> Csp 
+    pub fn add_frame_src<S>(mut self, directive: S) -> Csp
         where S: Into<Cow<'static, str>>
     {
         self.frame_src.push(directive.into());
@@ -496,7 +496,7 @@ impl Csp {
     }
 
     /// Specifies valid image and favicon sources
-    pub fn add_image_src<S>( mut self, directive: S) -> Csp 
+    pub fn add_image_src<S>(mut self, directive: S) -> Csp
         where S: Into<Cow<'static, str>>
     {
         self.img_src.push(directive.into());
@@ -504,7 +504,7 @@ impl Csp {
     }
 
     /// Specifies valid application manifest file sources
-    pub fn add_manifest_src<S>( mut self, directive: S) -> Csp 
+    pub fn add_manifest_src<S>(mut self, directive: S) -> Csp
         where S: Into<Cow<'static, str>>
     {
         self.manifest_src.push(directive.into());
@@ -516,7 +516,7 @@ impl Csp {
     /// [<audio>]: https://developer.mozilla.org/en-US/docs/Web/HTML/Element/audio
     /// [<track>]: https://developer.mozilla.org/en-US/docs/Web/HTML/Element/track
     /// [<video>]: https://developer.mozilla.org/en-US/docs/Web/HTML/Element/video
-    pub fn add_media_src<S>( mut self, directive: S) -> Csp 
+    pub fn add_media_src<S>(mut self, directive: S) -> Csp
         where S: Into<Cow<'static, str>>
     {
         self.media_src.push(directive.into());
@@ -528,7 +528,7 @@ impl Csp {
     /// [<object>]: https://developer.mozilla.org/en-US/docs/Web/HTML/Element/object
     /// [<applet>]: https://developer.mozilla.org/en-US/docs/Web/HTML/Element/applet
     /// [<embed>]: https://developer.mozilla.org/en-US/docs/Web/HTML/Element/embed
-    pub fn add_object_src<S>( mut self, directive: S) -> Csp 
+    pub fn add_object_src<S>(mut self, directive: S) -> Csp
         where S: Into<Cow<'static, str>>
     {
         self.object_src.push(directive.into());
@@ -536,7 +536,7 @@ impl Csp {
     }
 
     /// Specifies valid JavaScript sources
-    pub fn add_script_src<S>( mut self, directive: S) -> Csp 
+    pub fn add_script_src<S>(mut self, directive: S) -> Csp
         where S: Into<Cow<'static, str>>
     {
         self.script_src.push(directive.into());
