@@ -111,6 +111,11 @@ impl Engines {
     }
 
     crate fn has_template(&self, name: &str) -> bool {
+        #[cfg(feature = "tera_templates")]
+        {
+            // FIXME: we are using a non-public API of tera
+            return self.tera.get_template(name).is_ok();
+        }
         #[cfg(feature = "handlebars_templates")]
         {
             return self.handlebars.get_template(name).is_some();

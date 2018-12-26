@@ -38,6 +38,13 @@ mod templates_tests {
 
         ::rocket::custom(config)
             .attach(Template::custom(|_engines| {
+                #[cfg(feature = "tera_templates")]
+                {
+                    let tera_test_tpl = "Hello {{ title }}!";
+                    _engines.tera.add_raw_template("tera/test-string", tera_test_tpl)
+                        .expect("unable to register tera/test-string template");
+                }
+
                 #[cfg(feature = "handlebars_templates")]
                 {
                     let hbs_test_tpl = "Hello {{ title }}!";
@@ -74,6 +81,16 @@ mod templates_tests {
             // Now with an HTML file, which should.
             let template = Template::show(&rocket, "tera/html_test", &map);
             assert_eq!(template, Some(ESCAPED_EXPECTED.into()));
+        }
+
+        #[test]
+        fn test_tera_string_templates() {
+            let rocket = rocket();
+            let mut map = HashMap::new();
+            map.insert("title", "_test_");
+
+            let template = Template::show(&rocket, "tera/test-string", &map);
+            assert_eq!(template, Some("Hello _test_!".into()));
         }
 
         #[test]

@@ -137,6 +137,7 @@ use self::serde::Serialize;
 use self::serde_json::{Value, to_value};
 use self::glob::glob;
 #[cfg(feature = "handlebars_templates")] use self::handlebars::Handlebars;
+#[cfg(feature = "tera_templates")] use self::tera::Tera;
 
 use std::borrow::Cow;
 use std::path::PathBuf;
@@ -372,9 +373,13 @@ impl Template {
                     })
                 }
 
-                #[cfg(not(feature = "handlebars_templates"))]
+                #[cfg(feature = "tera_templates")]
                 {
-                    None
+                    Some(TemplateInfo {
+                        path: None,
+                        extension: Tera::EXT.to_string(),
+                        data_type: ContentType::HTML,
+                    })
                 }
             } else {
                 None
