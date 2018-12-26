@@ -12,7 +12,8 @@ expressibility, and speed. Here's an example of a complete Rocket application:
 ```rust
 #![feature(proc_macro_hygiene, decl_macro)]
 
-#[macro_use] extern crate rocket;
+extern crate rocket;
+use rocket::{get, routes};
 
 #[get("/<name>/<age>")]
 fn hello(name: String, age: u8) -> String {
