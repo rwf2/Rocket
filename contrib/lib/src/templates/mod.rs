@@ -363,24 +363,24 @@ impl Template {
     fn finalize(self, ctxt: &Context) -> Result<(String, ContentType), Status> {
         let name = &*self.name;
         let registered_info: Option<TemplateInfo> = {
+            // FIXME: ugly and hacky
             if ctxt.engines.has_template(name) {
+                let mut ext = String::new();
                 #[cfg(feature = "handlebars_templates")]
                 {
-                    Some(TemplateInfo {
-                        path: None,
-                        extension: Handlebars::EXT.to_string(),
-                        data_type: ContentType::HTML,
-                    })
+                    ext = Handlebars::EXT.to_string();
                 }
 
                 #[cfg(feature = "tera_templates")]
                 {
-                    Some(TemplateInfo {
-                        path: None,
-                        extension: Tera::EXT.to_string(),
-                        data_type: ContentType::HTML,
-                    })
+                    ext = Tera::EXT.to_string();
                 }
+
+                Some(TemplateInfo {
+                    path: None,
+                    extension: ext,
+                    data_type: ContentType::HTML,
+                })
             } else {
                 None
             }
