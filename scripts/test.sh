@@ -49,24 +49,6 @@ function ensure_trailing_whitespace_free() {
   fi
 }
 
-function bootstrap_examples() {
-  while read -r file; do
-    bootstrap_script="${file}/bootstrap.sh"
-    if [ -x "${bootstrap_script}" ]; then
-      echo "    Bootstrapping ${file}..."
-
-      env_vars=$(bash "${bootstrap_script}")
-      bootstrap_result=$?
-      if [ $bootstrap_result -ne 0 ]; then
-        echo "    Running bootstrap script (${bootstrap_script}) failed!"
-        exit 1
-      else
-        eval $env_vars
-      fi
-    fi
-  done < <(find "${EXAMPLES_DIR}" -maxdepth 1 -type d)
-}
-
 echo ":: Ensuring all crate versions match..."
 check_versions_match "${ALL_PROJECT_DIRS[@]}"
 
@@ -127,9 +109,6 @@ elif [ "$1" = "--core" ]; then
 
   popd > /dev/null 2>&1
 else
-  echo ":: Bootstrapping examples..."
-  bootstrap_examples
-
   echo ":: Building and testing libraries..."
   CARGO_INCREMENTAL=0 cargo test --all-features --all $@
 fi

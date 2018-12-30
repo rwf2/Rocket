@@ -50,4 +50,8 @@ impl Task {
     pub fn delete_with_id(id: i32, conn: &SqliteConnection) -> bool {
         diesel::delete(all_tasks.find(id)).execute(conn).is_ok()
     }
+
+    pub fn delete_all(conn: &SqliteConnection) -> bool {
+        diesel::delete(all_tasks).execute(conn).is_ok()
+    }
 }
