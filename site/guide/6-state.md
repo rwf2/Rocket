@@ -188,6 +188,7 @@ Presently, Rocket provides built-in support for the following databases:
 | Neo4j    | [`rusted_cypher`]     | [`rusted_cypher::GraphClient`] | `cypher_pool`          |
 | Redis    | [`redis-rs`]          | [`redis::Connection`]          | `redis_pool`           |
 | MongoDB  | [`mongodb`]           | [`mongodb::db::Database`]      | `mongodb_pool`         |
+| Memcache | [`memcache`]          | [`memcache::Client`]           | `memcache_pool`        |
 
 [`r2d2`]: https://crates.io/crates/r2d2
 [Diesel]: https://diesel.rs
@@ -207,6 +208,8 @@ Presently, Rocket provides built-in support for the following databases:
 [`diesel::PgConnection`]: http://docs.diesel.rs/diesel/pg/struct.PgConnection.html
 [`mongodb`]: https://github.com/mongodb-labs/mongo-rust-driver-prototype
 [`mongodb::db::Database`]: https://docs.rs/mongodb/0.3.12/mongodb/db/type.Database.html
+[`memcache`]: https://github.com/aisk/rust-memcache
+[`memcache::Client`]: https://docs.rs/memcache/0.11.0/memcache/struct.Client.html
 
 ### Usage
 

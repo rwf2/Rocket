@@ -334,6 +334,7 @@
 //! | Neo4j    | [`rusted_cypher`]     | [`rusted_cypher::GraphClient`] | `cypher_pool`          |
 //! | Redis    | [`redis-rs`]          | [`redis::Connection`]          | `redis_pool`           |
 //! | MongoDB  | [`mongodb`]           | [`mongodb::db::Database`]      | `mongodb_pool`         |
+//! | Memcache | [`memcache`]          | [`memcache::Client`]           | `memcache_pool`        |
 //!
 //! [Diesel]: https://diesel.rs
 //! [`redis::Connection`]: https://docs.rs/redis/0.9.0/redis/struct.Connection.html
@@ -352,6 +353,8 @@
 //! [`diesel::PgConnection`]: http://docs.diesel.rs/diesel/pg/struct.PgConnection.html
 //! [`mongodb`]: https://github.com/mongodb-labs/mongo-rust-driver-prototype
 //! [`mongodb::db::Database`]: https://docs.rs/mongodb/0.3.12/mongodb/db/type.Database.html
+//! [`memcache`]: https://github.com/aisk/rust-memcache
+//! [`memcache::Client`]: https://docs.rs/memcache/0.11.0/memcache/struct.Client.html
 //!
 //! The above table lists all the supported database adapters in this library.
 //! In order to use particular `Poolable` type that's included in this library,
@@ -404,6 +407,9 @@ use self::r2d2::ManageConnection;
 
 #[cfg(feature = "mongodb_pool")] pub extern crate mongodb;
 #[cfg(feature = "mongodb_pool")] pub extern crate r2d2_mongodb;
+
+#[cfg(feature = "memcache_pool")] pub extern crate memcache;
+#[cfg(feature = "memcache_pool")] pub extern crate r2d2_memcache;
 
 /// A structure representing a particular database configuration.
 ///
@@ -794,6 +800,17 @@ impl Poolable for mongodb::db::Database {
 
     fn pool(config: DatabaseConfig) -> Result<r2d2::Pool<Self::Manager>, Self::Error> {
         let manager = r2d2_mongodb::MongodbConnectionManager::new_with_uri(config.url).map_err(DbError::Custom)?;
+        r2d2::Pool::builder().max_size(config.pool_size).build(manager).map_err(DbError::PoolError)
+    }
+}
+
+#[cfg(feature = "memcache_pool")]
+impl Poolable for memcache::Client {
+    type Manager = r2d2_memcache::MemcacheConnectionManager;
+    type Error = DbError<memcache::MemcacheError>;
+
+    fn pool(config: DatabaseConfig) -> Result<r2d2::Pool<Self::Manager>, Self::Error> {
+        let manager = r2d2_memcache::MemcacheConnectionManager::new(config.url);
         r2d2::Pool::builder().max_size(config.pool_size).build(manager).map_err(DbError::PoolError)
     }
 }

@@ -34,6 +34,7 @@ sqlite_pool = ["databases", "rusqlite", "r2d2_sqlite"]
 cypher_pool = ["databases", "rusted_cypher", "r2d2_cypher"]
 redis_pool = ["databases", "redis", "r2d2_redis"]
 mongodb_pool = ["databases", "mongodb", "r2d2-mongodb"]
+memcache_pool = ["databases", "memcache", "r2d2-memcache"]
 
 [dependencies]
 # Global dependencies.
@@ -69,6 +70,8 @@ redis = { version = "0.9", optional = true }
 r2d2_redis = { version = "0.8", optional = true }
 mongodb = { version = "0.3.12", optional = true }
 r2d2-mongodb = { version = "0.2.0", optional = true }
+memcache = { version = "0.11", optional = true }
+r2d2-memcache = { version = "0.3", optional = true }
 
 # SpaceHelmet dependencies
 time = { version = "0.1.40", optional = true }

@@ -96,6 +96,7 @@ if [ "$1" = "--contrib" ]; then
     cypher_pool
     redis_pool
     mongodb_pool
+    memcache_pool
   )
 
   pushd "${CONTRIB_LIB_ROOT}" > /dev/null 2>&1
