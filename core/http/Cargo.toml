@@ -21,7 +21,7 @@ private-cookies = ["cookie/secure"]
 [dependencies]
 smallvec = "0.6"
 percent-encoding = "1"
-hyper = { version = "0.10.13", default-features = false }
+hyper = { version = "0.10.15", default-features = false }
 time = "0.1"
 indexmap = "1.0"
 rustls = { version = "0.14", optional = true }
