@@ -13,7 +13,7 @@ use request::{FromFormValue, FormItems, FormItem};
 use rocket::Rocket;
 use router::Route;
 use config::{Config, Limits};
-use http::{hyper, uri::{Origin, Segments}};
+use http::{hyper, uri::{Uri, Origin, Segments}};
 use http::{Method, Header, HeaderMap, Cookies};
 use http::{RawStr, ContentType, Accept, MediaType};
 use http::private::{Indexed, SmallVec, CookieJar};
@@ -789,10 +789,15 @@ impl<'r> Request<'r> {
         h_addr: SocketAddr,
     ) -> Result<Request<'r>, String> {
         // Get a copy of the URI for later use.
-        let uri = match h_uri {
+        let mut uri = match h_uri {
             hyper::RequestUri::AbsolutePath(s) => s,
             _ => return Err(format!("Bad URI: {}", h_uri)),
         };
+
+        // URI decode the uri, if applicable
+        if uri.contains('%'){
+            uri = Uri::percent_decode_lossy(uri.as_bytes()).to_string();
+        }
 
         // Ensure that the method is known. TODO: Allow made-up methods?
         let method = match Method::from_hyp(&h_method) {
