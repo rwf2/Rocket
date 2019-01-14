@@ -1,8 +1,10 @@
 use std::fs::File;
-use std::io::{Cursor, BufReader};
+use std::io::{self, Cursor, BufReader};
 use std::fmt;
+use std::str::FromStr;
 
-use http::{Status, ContentType, StatusClass};
+use http::{Status, ContentType, StatusClass, Method};
+use http::hyper::header::{AcceptRanges, Range, RangeUnit};
 use response::{self, Response, Body};
 use request::Request;
 
@@ -217,13 +219,100 @@ impl<'r> Responder<'r> for String {
     }
 }
 
+fn try_range_response<'r, B: io::Read + io::Seek + 'r>(req: Request<'r>, mut body: B) -> Result<response::Response<'r>, B> {
+    use std::cmp;
+    use http::hyper::header::{ContentRange, ByteRangeSpec, ContentRangeSpec};
+
+    //  A server MUST ignore a Range header field received with a request method other than GET.
+    if req.method() == Method::Get {
+        return Err(body);
+    }
+     
+    let range = req.headers().get_one("Range").and_then(Range::from_str).map_err(|_| body)?;
+         
+    match range {
+        Range::Bytes(ranges) => {
+            if ranges.len() == 1 {
+                let size = body.seek(io::SeekFrom::End(0))
+                    .expect("Attempted to retrieve size by seeking, but failed.");
+                
+                let (start, end) = match ranges[0] {
+                    ByteRangeSpec::FromTo(mut start, mut end) => {
+                        if end < start {
+                            return Ok(
+                                Response::build()
+                                    .status(Status::RangeNotSatisfiable)
+                                    .header(AcceptRanges(vec![RangeUnit::Bytes]))
+                                    .finalize()
+                            );
+                        }
+                        if start > size {
+                            start = size;
+                        }
+                        if end > size {
+                            end = size;
+                        }
+                        (start, end)
+                    },
+                    ByteRangeSpec::AllFrom(mut start) => {
+                        if start > size {
+                            start = size;
+                        }
+                        (start, size - start)
+                    },
+                    ByteRangeSpec::Last(len) => {
+                        // we could seek to SeekFrom::End(-len), but if we reach a value < 0, that is an error.
+                        // but the RFC reads:
+                        //      If the selected representation is shorter than the specified
+                        //      suffix-length, the entire representation is used.
+                        let start = cmp::max(size - len, 0);
+                        (start, size - start)
+                    }
+                };
+
+                body.seek(io::SeekFrom::Start(start))
+                    .expect("Attempted to seek to the start of the requested range, but failed.");
+
+                return Ok(
+                    Response::build()
+                        .status(Status::PartialContent)
+                        .header(AcceptRanges(vec![RangeUnit::Bytes]))
+                        .header(ContentRange(ContentRangeSpec::Bytes {
+                            range: Some((start, end)),
+                            instance_length: Some(end - start),
+                        }))
+                        .raw_body(Body::Sized(body, end - start))
+                        .finalize()
+                )
+            }
+            // A server MAY ignore the Range header field.
+        },
+        // An origin server MUST ignore a Range header field that contains a
+        // range unit it does not understand.
+        Range::Unregistered(_, _) => {},
+    };
+
+    Err(body)
+}
+
 /// Returns a response with Content-Type `application/octet-stream` and a
 /// fixed-size body containing the data in `self`. Always returns `Ok`.
 impl<'r> Responder<'r> for &'r [u8] {
-    fn respond_to(self, _: &Request) -> response::Result<'r> {
+    fn respond_to(self, req: &Request) -> response::Result<'r> {
+        let mut body = Cursor::new(self);
+        
+        match try_range_response(req, body) {
+            Ok(mut resp) => {
+                resp.set_header(ContentType::Binary);
+                return Ok(resp)
+            },
+            Err(old_body) => body = old_body,
+        };
+
         Response::build()
             .header(ContentType::Binary)
-            .sized_body(Cursor::new(self))
+            .header(AcceptRanges(vec![RangeUnit::Bytes]))
+            .sized_body(body)
             .ok()
     }
 }
@@ -231,20 +320,41 @@ impl<'r> Responder<'r> for &'r [u8] {
 /// Returns a response with Content-Type `application/octet-stream` and a
 /// fixed-size body containing the data in `self`. Always returns `Ok`.
 impl<'r> Responder<'r> for Vec<u8> {
-    fn respond_to(self, _: &Request) -> response::Result<'r> {
+    fn respond_to(self, req: &Request) -> response::Result<'r> {
+        let mut body = Cursor::new(self);
+
+        match try_range_response(req, body) {
+            Ok(mut resp) => {
+                resp.set_header(ContentType::Binary);
+                return Ok(resp)
+            },
+            Err(old_body) => body = old_body,
+        };
+
         Response::build()
             .header(ContentType::Binary)
-            .sized_body(Cursor::new(self))
+            .header(AcceptRanges(vec![RangeUnit::Bytes]))
+            .sized_body(body)
             .ok()
     }
 }
 
 /// Returns a response with a sized body for the file. Always returns `Ok`.
 impl<'r> Responder<'r> for File {
-    fn respond_to(self, _: &Request) -> response::Result<'r> {
-        let (metadata, file) = (self.metadata(), BufReader::new(self));
+    fn respond_to(self, req: &Request) -> response::Result<'r> {
+        let (metadata, mut file) = (self.metadata(), BufReader::new(self));
         match metadata {
-            Ok(md) => Response::build().raw_body(Body::Sized(file, md.len())).ok(),
+            Ok(md) => {
+                match try_range_response(req, body) {
+                    Ok(mut resp) => return Ok(resp),
+                    Err(old_body) => body = old_body,
+                };
+
+                Response::build()
+                .header(AcceptRanges(vec![RangeUnit::Bytes]))
+                .raw_body(Body::Sized(file, md.len()))
+                .ok()
+            },
             Err(_) => Response::build().streamed_body(file).ok()
         }
     }
