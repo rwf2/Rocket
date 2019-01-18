@@ -280,7 +280,8 @@ More specifically, types that return `Some` from their
 [`FromFormValue::default()`] implementations will validate even when a value for
 the given parameter is missing, using the value returned from the `default()`
 method as the parameter's value. On such type is `Option<T>`, which returns
-`None` from its `default()` implementation. By using a type of `Option<T>` for a
+`Some(None)` from its `default()` implementation, indicating that `None` should
+be used in case the parameter is missing. By using a type of `Option<T>` for a
 query parameter, `Some(T)` will be returned only when the parameter is present
 and represents a valid `T`. In all other cases, `None` will be returned. A route
 using `Option<T>` looks as follows:
