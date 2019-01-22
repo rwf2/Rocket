@@ -428,8 +428,7 @@ fn incomplete_route(
     let method_str = method.to_string().to_lowercase();
     // FIXME(proc_macro): there should be a way to get this `Span`.
     let method_span = StringLit::new(format!("#[{}]", method), Span::call_site())
-        .subspan(2..2 + method_str.len())
-        .unwrap_or(Span::call_site());
+        .subspan(2..2 + method_str.len());
 
     let method_ident = syn::Ident::new(&method_str, method_span.into());
 

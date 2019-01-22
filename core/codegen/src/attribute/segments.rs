@@ -57,12 +57,12 @@ impl Hash for Segment {
     }
 }
 
-fn subspan(needle: &str, haystack: &str, span: Span) -> Option<Span> {
+fn subspan(needle: &str, haystack: &str, span: Span) -> Span {
     let index = needle.as_ptr() as usize - haystack.as_ptr() as usize;
     StringLit::new(haystack, span).subspan(index..index + needle.len())
 }
 
-fn trailspan(needle: &str, haystack: &str, span: Span) -> Option<Span> {
+fn trailspan(needle: &str, haystack: &str, span: Span) -> Span {
     let index = needle.as_ptr() as usize - haystack.as_ptr() as usize;
     let lit = StringLit::new(haystack, span);
     if needle.as_ptr() as usize > haystack.as_ptr() as usize {
@@ -78,7 +78,7 @@ fn into_diagnostic(
     span: Span,    // The `Span` of `Source`.
     error: &Error,  // The error.
 ) -> Diagnostic {
-    let seg_span = subspan(segment, source, span).expect("seg_span");
+    let seg_span = subspan(segment, source, span);
     match error {
         Error::Empty => {
             seg_span.error("parameter names cannot be empty")
@@ -106,8 +106,8 @@ fn into_diagnostic(
                 .help("reserved characters include: '%', '+', '&', etc.")
         }
         Error::Trailing(multi) => {
-            let multi_span = subspan(multi, source, span).expect("mutli_span");
-            trailspan(segment, source, span).expect("trailspan")
+            let multi_span = subspan(multi, source, span);
+            trailspan(segment, source, span)
                 .error("unexpected trailing text after a '..' param")
                 .help("a multi-segment param must be the final component")
                 .span_note(multi_span, "multi-segment param is here")
@@ -140,7 +140,7 @@ crate fn parse_segments<P: UriPart>(
                 break;
             }
         } else if let Ok(segment) = result {
-            let seg_span = subspan(&segment.string, string, span).expect("seg");
+            let seg_span = subspan(&segment.string, string, span);
             segments.push(Segment::from(segment, seg_span));
         }
     }

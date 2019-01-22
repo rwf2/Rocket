@@ -172,7 +172,7 @@ impl FromMeta for Origin {
         let uri = http::uri::Origin::parse_route(&string)
             .map_err(|e| {
                 let span = e.index()
-                    .map(|i| string.subspan(i + 1..).expect("origin"))
+                    .map(|i| string.subspan(i + 1..))
                     .unwrap_or(string.span());
 
                 span.error(format!("invalid path URI: {}", e))
@@ -192,8 +192,7 @@ impl FromMeta for Origin {
 impl FromMeta for DataSegment {
     fn from_meta(meta: MetaItem) -> Result<Self> {
         let string = StringLit::from_meta(meta)?;
-        let span = string.subspan(1..(string.len() + 1))
-            .expect("segment");
+        let span = string.subspan(1..(string.len() + 1));
 
         let segment = parse_data_segment(&string, span)?;
         if segment.kind != Kind::Single {
@@ -208,14 +207,14 @@ impl FromMeta for DataSegment {
 impl FromMeta for RoutePath {
     fn from_meta(meta: MetaItem) -> Result<Self> {
         let (origin, string) = (Origin::from_meta(meta)?, StringLit::from_meta(meta)?);
-        let path_span = string.subspan(1..origin.0.path().len() + 1).expect("path");
+        let path_span = string.subspan(1..origin.0.path().len() + 1);
         let path = parse_segments::<Path>(origin.0.path(), path_span);
 
         let query = origin.0.query()
             .map(|q| {
                 let len_to_q = 1 + origin.0.path().len() + 1;
                 let end_of_q = len_to_q + q.len();
-                let query_span = string.subspan(len_to_q..end_of_q).expect("query");
+                let query_span = string.subspan(len_to_q..end_of_q);
                 if q.starts_with('&') || q.contains("&&") || q.ends_with('&') {
                     // TODO: Show a help message with what's expected.
                     Err(query_span.error("query cannot contain empty segments").into())

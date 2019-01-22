@@ -85,7 +85,9 @@ impl StringLit {
         self.1.span()
     }
 
-    pub fn subspan<R: RangeBounds<usize>>(&self, range: R) -> Option<Span> {
-        self.1.subspan(range)
+    /// Attempt to obtain a subspan, or, failing that, produce the full span.
+    /// This will create suboptimal diagnostics, but better than failing to build entirely.
+    pub fn subspan<R: RangeBounds<usize>>(&self, range: R) -> Span {
+        self.1.subspan(range).unwrap_or_else(|| self.span())
     }
 }
