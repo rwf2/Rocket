@@ -20,9 +20,22 @@ macro_rules! make_handler {
 
 make_handler!();
 
+
+macro_rules! foo {
+    ($addr:expr, $name:ident) => {
+        #[get($addr)]
+        fn hi($name: String) -> String {
+            $name
+        }
+    };
+}
+
+// regression test for `#[get] panicking if used inside a macro
+foo!("/hello/<name>", name);
+
 #[test]
 fn test_reexpansion() {
-    let rocket = rocket::ignite().mount("/", routes![easy, hard]);
+    let rocket = rocket::ignite().mount("/", routes![easy, hard, hi]);
     let client = Client::new(rocket).unwrap();
 
     let mut response = client.get("/easy/327").dispatch();
@@ -30,6 +43,9 @@ fn test_reexpansion() {
 
     let mut response = client.get("/hard/72").dispatch();
     assert_eq!(response.body_string().unwrap(), "hard id: 72");
+
+    let mut response = client.get("/hello/fish").dispatch();
+    assert_eq!(response.body_string().unwrap(), "fish");
 }
 
 macro_rules! index {
