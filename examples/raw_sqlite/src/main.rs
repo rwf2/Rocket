@@ -2,6 +2,7 @@
 
 #[macro_use] extern crate rocket;
 extern crate rusqlite;
+use rusqlite::types::ToSql;
 
 #[cfg(test)] mod tests;
 
@@ -15,11 +16,11 @@ fn init_database(conn: &Connection) {
     conn.execute("CREATE TABLE entries (
                   id              INTEGER PRIMARY KEY,
                   name            TEXT NOT NULL
-                  )", &[])
+                  )", &[] as &[&dyn ToSql])
         .expect("create entries table");
 
     conn.execute("INSERT INTO entries (id, name) VALUES ($1, $2)",
-            &[&0, &"Rocketeer"])
+            &[&0 as &dyn ToSql, &"Rocketeer"])
         .expect("insert single entry into entries table");
 }
 
@@ -28,7 +29,7 @@ fn hello(db_conn: State<DbConn>) -> Result<String, Error>  {
     db_conn.lock()
         .expect("db connection lock")
         .query_row("SELECT name FROM entries WHERE id = 0",
-                   &[], |row| { row.get(0) })
+                   &[] as &[&dyn ToSql], |row| { row.get(0) })
 }
 
 fn rocket() -> Rocket {
