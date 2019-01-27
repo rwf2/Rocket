@@ -194,7 +194,7 @@ Presently, Rocket provides built-in support for the following databases:
 [Diesel]: https://diesel.rs
 [`redis::Connection`]: https://docs.rs/redis/0.9.0/redis/struct.Connection.html
 [`rusted_cypher::GraphClient`]: https://docs.rs/rusted_cypher/1.1.0/rusted_cypher/graph/struct.GraphClient.html
-[`rusqlite::Connection`]: https://docs.rs/rusqlite/0.14.0/rusqlite/struct.Connection.html
+[`rusqlite::Connection`]: https://docs.rs/rusqlite/0.16.0/rusqlite/struct.Connection.html
 [`diesel::SqliteConnection`]: http://docs.diesel.rs/diesel/prelude/struct.SqliteConnection.html
 [`postgres::Connection`]: https://docs.rs/postgres/0.15.2/postgres/struct.Connection.html
 [`diesel::PgConnection`]: http://docs.diesel.rs/diesel/pg/struct.PgConnection.html
