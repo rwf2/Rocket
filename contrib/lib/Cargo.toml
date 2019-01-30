@@ -39,7 +39,7 @@ memcache_pool = ["databases", "memcache", "r2d2-memcache"]
 [dependencies]
 # Global dependencies.
 rocket_contrib_codegen = { version = "0.4.0", path = "../codegen", optional = true }
-rocket = { version = "0.4.0", path = "../../core/lib/" }
+rocket = { version = "0.4.0", path = "../../core/lib/", default-features = false }
 log = "0.4"
 
 # Serialization and templating dependencies.
