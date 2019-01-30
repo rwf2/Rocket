@@ -196,7 +196,7 @@ to create an `AdHoc` structure from a function or closure.
 
 As an example, the code below creates a `Rocket` instance with two attached
 ad-hoc fairings. The first, a launch fairing named "Launch Printer", simply
-prints a message indicating that the application is about to the launch. The
+prints a message indicating that the application is about to launch. The
 second named "Put Rewriter", a request fairing, rewrites the method of all
 requests to be `PUT`.
 
