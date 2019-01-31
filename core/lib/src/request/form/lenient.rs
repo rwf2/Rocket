@@ -4,7 +4,7 @@ use request::{Request, form::{Form, FormDataError, FromForm}};
 use data::{Data, Transform, Transformed, FromData, Outcome};
 use http::uri::{Query, FromUriParam};
 
-/// A data gaurd for parsing [`FromForm`] types leniently.
+/// A data guard for parsing [`FromForm`] types leniently.
 ///
 /// This type implements the [`FromData`] trait, and like [`Form`], provides a
 /// generic means to parse arbitrary structures from incoming form data. Unlike
