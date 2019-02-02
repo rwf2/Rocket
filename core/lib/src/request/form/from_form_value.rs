@@ -3,6 +3,8 @@ use std::str::FromStr;
 
 use http::RawStr;
 
+pub use rocket_codegen::FromFormValue;
+
 /// Trait to parse a typed value from a form value.
 ///
 /// This trait is used by Rocket's code generation in two places:

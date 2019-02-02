@@ -6,6 +6,8 @@ use http::{Status, ContentType, StatusClass};
 use response::{self, Response, Body};
 use request::Request;
 
+pub use rocket_codegen::Responder;
+
 /// Trait implemented by types that generate responses for clients.
 ///
 /// Types that implement this trait can be used as the return type of a handler,
