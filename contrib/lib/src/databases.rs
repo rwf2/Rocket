@@ -180,6 +180,13 @@
 //! ROCKET_DATABASES={my_db={url="db.sqlite"}}
 //! ```
 //!
+//! Multiple databases can be specified in the `ROCKET_DATABASES` environment variable
+//! as well by comma separating them:
+//!
+//! ```bash
+//! ROCKET_DATABASES={my_db={url="db.sqlite"},my_pg_db={url="postgres://root:root@localhost/pg_test"}}
+//! ```
+//!
 //! ## Guard Types
 //!
 //! Once a database has been configured, the `#[database]` attribute can be used
@@ -200,6 +207,21 @@
 //!
 //! #[database("my_db")]
 //! struct MyDatabase(diesel::SqliteConnection);
+//! # }
+//! ```
+//!
+//! Tieing your application to a different RDBMS is simple, and follows the same pattern.
+//! Here's an example using Postgres with Diesel as the driver:
+//!
+//! ```rust
+//! # extern crate rocket;
+//! # #[macro_use] extern crate rocket_contrib;
+//! # #[cfg(feature = "diesel_postgres_pool")]
+//! # mod test {
+//! use rocket_contrib::databases::diesel;
+//!
+//! #[database("my_pg_db")]
+//! struct MyPgDatabase(diesel::PgConnection);
 //! # }
 //! ```
 //!
