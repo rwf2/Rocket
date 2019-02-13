@@ -211,17 +211,17 @@
 //! ```
 //!
 //! Tieing your application to a different RDBMS is simple, and follows the same pattern.
-//! Here's an example using Postgres with Diesel as the driver:
+//! Here's an example using Postgres with Rust-Postgres as the driver:
 //!
 //! ```rust
 //! # extern crate rocket;
 //! # #[macro_use] extern crate rocket_contrib;
-//! # #[cfg(feature = "diesel_postgres_pool")]
+//! # #[cfg(feature = "postgres_pool")]
 //! # mod test {
-//! use rocket_contrib::databases::diesel;
+//! use rocket_contrib::databases::postgres;
 //!
 //! #[database("my_pg_db")]
-//! struct MyPgDatabase(diesel::PgConnection);
+//! struct MyPgDatabase(postgres::Connection);
 //! # }
 //! ```
 //!
