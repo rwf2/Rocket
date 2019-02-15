@@ -89,6 +89,13 @@ fn bad_parses() {
     assert_no_parse!("://z7:77777777777777777777777777777`77777777777");
 }
 
+
+// #[test]
+// fn bad_parses_2() {
+//     assert_parse_eq!("/alias?cost={cost}" => uri_origin((0, 6), None));
+// }
+
+
 #[test]
 fn single_byte() {
     assert_parse_eq!(
