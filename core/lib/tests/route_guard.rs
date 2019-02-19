@@ -1,14 +1,18 @@
 #![feature(proc_macro_hygiene, decl_macro)]
 
-#[macro_use] extern crate rocket;
+#[macro_use]
+extern crate rocket;
 
-use std::path::{Path, PathBuf};
 use rocket::http::ext::Normalize;
 use rocket::Route;
+use std::path::{Path, PathBuf};
 
 #[get("/<path..>")]
 fn files(route: &Route, path: PathBuf) -> String {
-    Path::new(route.base()).join(path).normalized_str().to_string()
+    Path::new(route.base())
+        .join(path)
+        .normalized_str()
+        .to_string()
 }
 
 mod route_guard_tests {

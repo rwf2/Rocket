@@ -20,24 +20,25 @@
 //! including [`Template`](rocket_contrib::Template) and
 //! [`Json`](rocket_contrib::Json).
 
-mod responder;
-mod redirect;
 mod named_file;
-mod stream;
+mod redirect;
+mod responder;
 mod response;
+mod stream;
 
 crate mod flash;
 
 pub mod content;
 pub mod status;
 
-pub use self::response::{Response, ResponseBuilder, Body, DEFAULT_CHUNK_SIZE};
-pub use self::responder::Responder;
-pub use self::redirect::Redirect;
+#[doc(inline)]
+pub use self::content::Content;
 pub use self::flash::Flash;
 pub use self::named_file::NamedFile;
+pub use self::redirect::Redirect;
+pub use self::responder::Responder;
+pub use self::response::{Body, Response, ResponseBuilder, DEFAULT_CHUNK_SIZE};
 pub use self::stream::Stream;
-#[doc(inline)] pub use self::content::Content;
 
 /// Type alias for the `Result` of a `Responder::respond` call.
 pub type Result<'r> = ::std::result::Result<self::Response<'r>, ::http::Status>;

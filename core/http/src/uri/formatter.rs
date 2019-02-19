@@ -3,7 +3,7 @@ use std::marker::PhantomData;
 
 use smallvec::SmallVec;
 
-use uri::{UriPart, Path, Query, UriDisplay, Origin};
+use uri::{Origin, Path, Query, UriDisplay, UriPart};
 
 /// A struct used to format strings for [`UriDisplay`].
 ///
@@ -332,7 +332,8 @@ impl<'i, P: UriPart> Formatter<'i, P> {
 
 impl<'i> Formatter<'i, Query> {
     fn with_prefix<F>(&mut self, prefix: &str, f: F) -> fmt::Result
-        where F: FnOnce(&mut Self) -> fmt::Result
+    where
+        F: FnOnce(&mut Self) -> fmt::Result,
     {
         // The `prefix` string is pushed in a `StackVec` for use by recursive
         // (nested) calls to `write_raw`. The string is pushed here and then
@@ -387,7 +388,11 @@ impl<'i> Formatter<'i, Query> {
     /// assert_eq!(uri_string, "name=123");
     /// ```
     #[inline]
-    pub fn write_named_value<T: UriDisplay<Query>>(&mut self, name: &str, value: T) -> fmt::Result {
+    pub fn write_named_value<T: UriDisplay<Query>>(
+        &mut self,
+        name: &str,
+        value: T,
+    ) -> fmt::Result {
         self.refreshed(|f| f.with_prefix(name, |f| f.write_value(value)))
     }
 }
@@ -402,7 +407,7 @@ impl<'i, P: UriPart> fmt::Write for Formatter<'i, P> {
 #[doc(hidden)]
 pub enum UriArgumentsKind<A> {
     Static(&'static str),
-    Dynamic(A)
+    Dynamic(A),
 }
 
 // Used by code generation.
@@ -410,7 +415,7 @@ pub enum UriArgumentsKind<A> {
 pub enum UriQueryArgument<'a> {
     Raw(&'a str),
     NameValue(&'a str, &'a dyn UriDisplay<Query>),
-    Value(&'a dyn UriDisplay<Query>)
+    Value(&'a dyn UriDisplay<Query>),
 }
 
 // Used by code generation.
@@ -424,8 +429,8 @@ pub struct UriArguments<'a> {
 impl<'a> UriArguments<'a> {
     #[doc(hidden)]
     pub fn into_origin(self) -> Origin<'static> {
-        use std::borrow::Cow;
         use self::{UriArgumentsKind::*, UriQueryArgument::*};
+        use std::borrow::Cow;
 
         let path: Cow<'static, str> = match self.path {
             Static(path) => path.into(),

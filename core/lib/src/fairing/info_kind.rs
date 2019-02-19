@@ -26,7 +26,7 @@ pub struct Info {
     /// The name of the fairing.
     pub name: &'static str,
     /// A set representing the callbacks the fairing wishes to receive.
-    pub kind: Kind
+    pub kind: Kind,
 }
 
 /// A bitset representing the kinds of callbacks a

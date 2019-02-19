@@ -1,6 +1,6 @@
-use {Request, Data};
-use handler::{Outcome, ErrorHandler};
-use http::{Method, MediaType};
+use handler::{ErrorHandler, Outcome};
+use http::{MediaType, Method};
+use {Data, Request};
 
 /// Type of a static handler, which users annotate with Rocket's attribute.
 pub type StaticHandler = for<'r> fn(&'r Request, Data) -> Outcome<'r>;

@@ -1,7 +1,6 @@
 #![feature(crate_visibility_modifier)]
 #![feature(never_type)]
 #![feature(doc_cfg)]
-
 #![doc(html_root_url = "https://api.rocket.rs/v0.4")]
 #![doc(html_favicon_url = "https://rocket.rs/v0.4/images/favicon.ico")]
 #![doc(html_logo_url = "https://rocket.rs/v0.4/images/logo-boxed.png")]
@@ -41,16 +40,31 @@
 //! This crate is expected to grow with time, bringing in outside crates to be
 //! officially supported by Rocket.
 
-#[allow(unused_imports)] #[macro_use] extern crate log;
-#[allow(unused_imports)] #[macro_use] extern crate rocket;
+#[allow(unused_imports)]
+#[macro_use]
+extern crate log;
+#[allow(unused_imports)]
+#[macro_use]
+extern crate rocket;
 
-#[cfg(feature="json")] #[macro_use] pub mod json;
-#[cfg(feature="serve")] pub mod serve;
-#[cfg(feature="msgpack")] pub mod msgpack;
-#[cfg(feature="templates")] pub mod templates;
-#[cfg(feature="uuid")] pub mod uuid;
-#[cfg(feature="databases")] pub mod databases;
-#[cfg(feature = "helmet")] pub mod helmet;
+#[cfg(feature = "json")]
+#[macro_use]
+pub mod json;
+#[cfg(feature = "databases")]
+pub mod databases;
+#[cfg(feature = "helmet")]
+pub mod helmet;
+#[cfg(feature = "msgpack")]
+pub mod msgpack;
+#[cfg(feature = "serve")]
+pub mod serve;
+#[cfg(feature = "templates")]
+pub mod templates;
+#[cfg(feature = "uuid")]
+pub mod uuid;
 
-#[cfg(feature="databases")] extern crate rocket_contrib_codegen;
-#[cfg(feature="databases")] #[doc(hidden)] pub use rocket_contrib_codegen::*;
+#[cfg(feature = "databases")]
+extern crate rocket_contrib_codegen;
+#[cfg(feature = "databases")]
+#[doc(hidden)]
+pub use rocket_contrib_codegen::*;

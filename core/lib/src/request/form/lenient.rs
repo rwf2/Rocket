@@ -1,8 +1,11 @@
 use std::ops::Deref;
 
-use request::{Request, form::{Form, FormDataError, FromForm}};
-use data::{Data, Transform, Transformed, FromData, Outcome};
-use http::uri::{Query, FromUriParam};
+use data::{Data, FromData, Outcome, Transform, Transformed};
+use http::uri::{FromUriParam, Query};
+use request::{
+    form::{Form, FormDataError, FromForm},
+    Request,
+};
 
 /// A data guard for parsing [`FromForm`] types leniently.
 ///
@@ -109,7 +112,9 @@ impl<'f, T: FromForm<'f>> FromData<'f> for LenientForm<T> {
     }
 }
 
-impl<'f, A, T: FromUriParam<Query, A> + FromForm<'f>> FromUriParam<Query, A> for LenientForm<T> {
+impl<'f, A, T: FromUriParam<Query, A> + FromForm<'f>> FromUriParam<Query, A>
+    for LenientForm<T>
+{
     type Target = T::Target;
 
     #[inline(always)]

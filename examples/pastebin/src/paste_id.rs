@@ -1,9 +1,9 @@
-use std::fmt;
 use std::borrow::Cow;
+use std::fmt;
 
-use rocket::request::FromParam;
-use rocket::http::RawStr;
 use rand::{self, Rng};
+use rocket::http::RawStr;
+use rocket::request::FromParam;
 
 /// Table to retrieve base62 values from.
 const BASE62: &[u8] = b"0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
@@ -36,9 +36,7 @@ impl<'a> fmt::Display for PasteID<'a> {
 /// Returns `true` if `id` is a valid paste ID and `false` otherwise.
 fn valid_id(id: &str) -> bool {
     id.chars().all(|c| {
-        (c >= 'a' && c <= 'z')
-            || (c >= 'A' && c <= 'Z')
-            || (c >= '0' && c <= '9')
+        (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9')
     })
 }
 
@@ -50,8 +48,7 @@ impl<'a> FromParam<'a> for PasteID<'a> {
     fn from_param(param: &'a RawStr) -> Result<PasteID<'a>, &'a RawStr> {
         match valid_id(param) {
             true => Ok(PasteID(Cow::Borrowed(param))),
-            false => Err(param)
+            false => Err(param),
         }
     }
 }
-

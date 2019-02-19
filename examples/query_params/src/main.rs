@@ -1,15 +1,17 @@
 #![feature(proc_macro_hygiene, decl_macro)]
 
-#[macro_use] extern crate rocket;
+#[macro_use]
+extern crate rocket;
 
-#[cfg(test)] mod tests;
+#[cfg(test)]
+mod tests;
 
 use rocket::request::{Form, LenientForm};
 
 #[derive(FromForm)]
 struct Person {
     name: String,
-    age: Option<u8>
+    age: Option<u8>,
 }
 
 #[get("/hello?<person..>")]

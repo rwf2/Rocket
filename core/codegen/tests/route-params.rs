@@ -7,4 +7,3 @@
 // ) -> String {
 //     format!("{}:{}", user.name, user.nickname)
 // }
-

@@ -1,9 +1,9 @@
-use std::ops::{Deref, DerefMut};
 use std::borrow::Cow;
-use std::convert::AsRef;
 use std::cmp::Ordering;
-use std::str::Utf8Error;
+use std::convert::AsRef;
 use std::fmt;
+use std::ops::{Deref, DerefMut};
+use std::str::Utf8Error;
 
 use uncased::UncasedStr;
 
@@ -266,13 +266,13 @@ impl RawStr {
                         b'/' => allocated.extend_from_slice(b"&#x2F;"),
                         // Old versions of IE treat a ` as a '.
                         b'`' => allocated.extend_from_slice(b"&#96;"),
-                        _ => unreachable!()
+                        _ => unreachable!(),
                     }
 
                     escaped = true;
                 }
                 _ if escaped => allocated.push(*c),
-                _ => {  }
+                _ => {}
             }
         }
 

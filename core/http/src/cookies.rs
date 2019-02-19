@@ -1,10 +1,11 @@
-use std::fmt;
 use std::cell::RefMut;
+use std::fmt;
 
-use Header;
 use cookie::Delta;
+use Header;
 
-#[doc(hidden)] pub use self::key::*;
+#[doc(hidden)]
+pub use self::key::*;
 pub use cookie::{Cookie, CookieJar, SameSite};
 
 /// Types and methods to manage a `Key` when private cookies are enabled.
@@ -20,8 +21,12 @@ mod key {
     pub struct Key;
 
     impl Key {
-        pub fn generate() -> Self { Key }
-        pub fn from_master(_bytes: &[u8]) -> Self { Key }
+        pub fn generate() -> Self {
+            Key
+        }
+        pub fn from_master(_bytes: &[u8]) -> Self {
+            Key
+        }
     }
 }
 
@@ -130,7 +135,7 @@ pub enum Cookies<'a> {
     #[doc(hidden)]
     Jarred(RefMut<'a, CookieJar>, &'a Key),
     #[doc(hidden)]
-    Empty(CookieJar)
+    Empty(CookieJar),
 }
 
 impl<'a> Cookies<'a> {
@@ -152,7 +157,9 @@ impl<'a> Cookies<'a> {
     #[doc(hidden)]
     #[inline(always)]
     pub fn parse_cookie(cookie_str: &str) -> Option<Cookie<'static>> {
-        Cookie::parse_encoded(cookie_str).map(|c| c.into_owned()).ok()
+        Cookie::parse_encoded(cookie_str)
+            .map(|c| c.into_owned())
+            .ok()
     }
 
     /// Adds an original `cookie` to this collection.
@@ -181,7 +188,7 @@ impl<'a> Cookies<'a> {
     pub fn get(&self, name: &str) -> Option<&Cookie<'static>> {
         match *self {
             Cookies::Jarred(ref jar, _) => jar.get(name),
-            Cookies::Empty(_) => None
+            Cookies::Empty(_) => None,
         }
     }
 
@@ -250,10 +257,10 @@ impl<'a> Cookies<'a> {
     ///     }
     /// }
     /// ```
-    pub fn iter(&self) -> impl Iterator<Item=&Cookie<'static>> {
+    pub fn iter(&self) -> impl Iterator<Item = &Cookie<'static>> {
         match *self {
             Cookies::Jarred(ref jar, _) => jar.iter(),
-            Cookies::Empty(ref jar) => jar.iter()
+            Cookies::Empty(ref jar) => jar.iter(),
         }
     }
 
@@ -263,7 +270,7 @@ impl<'a> Cookies<'a> {
     pub fn delta(&self) -> Delta {
         match *self {
             Cookies::Jarred(ref jar, _) => jar.delta(),
-            Cookies::Empty(ref jar) => jar.delta()
+            Cookies::Empty(ref jar) => jar.delta(),
         }
     }
 }
@@ -291,7 +298,7 @@ impl<'a> Cookies<'a> {
     pub fn get_private(&mut self, name: &str) -> Option<Cookie<'static>> {
         match *self {
             Cookies::Jarred(ref mut jar, key) => jar.private(key).get(name),
-            Cookies::Empty(_) => None
+            Cookies::Empty(_) => None,
         }
     }
 
@@ -404,7 +411,7 @@ impl<'a> fmt::Debug for Cookies<'a> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match *self {
             Cookies::Jarred(ref jar, _) => write!(f, "{:?}", jar),
-            Cookies::Empty(ref jar) => write!(f, "{:?}", jar)
+            Cookies::Empty(ref jar) => write!(f, "{:?}", jar),
         }
     }
 }

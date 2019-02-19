@@ -1,9 +1,11 @@
-use super::{rocket, index};
+use super::{index, rocket};
+use rocket::http::{ContentType, Status};
 use rocket::local::Client;
-use rocket::http::{Status, ContentType};
 
 fn extract_id(from: &str) -> Option<String> {
-    from.rfind('/').map(|i| &from[(i + 1)..]).map(|s| s.trim_end().to_string())
+    from.rfind('/')
+        .map(|i| &from[(i + 1)..])
+        .map(|s| s.trim_end().to_string())
 }
 
 #[test]

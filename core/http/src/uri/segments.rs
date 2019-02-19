@@ -65,25 +65,25 @@ impl<'a> Segments<'a> {
     pub fn into_path_buf(self, allow_dotfiles: bool) -> Result<PathBuf, SegmentError> {
         let mut buf = PathBuf::new();
         for segment in self {
-            let decoded = Uri::percent_decode(segment.as_bytes())
-                .map_err(SegmentError::Utf8)?;
+            let decoded =
+                Uri::percent_decode(segment.as_bytes()).map_err(SegmentError::Utf8)?;
 
             if decoded == ".." {
                 buf.pop();
             } else if !allow_dotfiles && decoded.starts_with('.') {
-                return Err(SegmentError::BadStart('.'))
+                return Err(SegmentError::BadStart('.'));
             } else if decoded.starts_with('*') {
-                return Err(SegmentError::BadStart('*'))
+                return Err(SegmentError::BadStart('*'));
             } else if decoded.ends_with(':') {
-                return Err(SegmentError::BadEnd(':'))
+                return Err(SegmentError::BadEnd(':'));
             } else if decoded.ends_with('>') {
-                return Err(SegmentError::BadEnd('>'))
+                return Err(SegmentError::BadEnd('>'));
             } else if decoded.ends_with('<') {
-                return Err(SegmentError::BadEnd('<'))
+                return Err(SegmentError::BadEnd('<'));
             } else if decoded.contains('/') {
-                return Err(SegmentError::BadChar('/'))
+                return Err(SegmentError::BadChar('/'));
             } else if cfg!(windows) && decoded.contains('\\') {
-                return Err(SegmentError::BadChar('\\'))
+                return Err(SegmentError::BadChar('\\'));
             } else {
                 buf.push(&*decoded)
             }

@@ -1,6 +1,7 @@
 #![feature(proc_macro_hygiene, decl_macro)]
 
-#[macro_use] extern crate rocket;
+#[macro_use]
+extern crate rocket;
 
 use rocket::request::FlashMessage;
 use rocket::response::Flash;
@@ -23,8 +24,8 @@ fn used(flash: Option<FlashMessage>) -> Option<String> {
 }
 
 mod flash_lazy_remove_tests {
-    use rocket::local::Client;
     use rocket::http::Status;
+    use rocket::local::Client;
 
     #[test]
     fn test() {

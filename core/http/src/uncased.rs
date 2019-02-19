@@ -4,11 +4,11 @@
 //! contains cased characters, but comparison (including ordering, equality, and
 //! hashing) is case-insensitive.
 
-use std::ops::Deref;
-use std::borrow::{Cow, Borrow};
+use std::borrow::{Borrow, Cow};
 use std::cmp::Ordering;
-use std::hash::{Hash, Hasher};
 use std::fmt;
+use std::hash::{Hash, Hasher};
+use std::ops::Deref;
 
 /// A reference to an uncased (case-preserving) ASCII string. This is typically
 /// created from an `&str` as follows:
@@ -109,7 +109,7 @@ impl PartialEq<UncasedStr> for str {
 
 impl<'a> PartialEq<&'a str> for UncasedStr {
     #[inline(always)]
-    fn eq(&self, other: & &'a str) -> bool {
+    fn eq(&self, other: &&'a str) -> bool {
         self.0.eq_ignore_ascii_case(other)
     }
 }
@@ -128,7 +128,7 @@ impl<'a> From<&'a str> for &'a UncasedStr {
     }
 }
 
-impl Eq for UncasedStr {  }
+impl Eq for UncasedStr {}
 
 impl Hash for UncasedStr {
     #[inline(always)]
@@ -165,7 +165,7 @@ impl fmt::Display for UncasedStr {
 #[derive(Clone, Debug)]
 pub struct Uncased<'s> {
     #[doc(hidden)]
-    pub string: Cow<'s, str>
+    pub string: Cow<'s, str>,
 }
 
 impl<'s> Uncased<'s> {
@@ -183,7 +183,9 @@ impl<'s> Uncased<'s> {
     /// ```
     #[inline(always)]
     pub fn new<S: Into<Cow<'s, str>>>(string: S) -> Uncased<'s> {
-        Uncased { string: string.into() }
+        Uncased {
+            string: string.into(),
+        }
     }
 
     /// Converts `self` into an owned `String`, allocating if necessary.
@@ -242,7 +244,7 @@ impl<'a> Deref for Uncased<'a> {
     }
 }
 
-impl<'a> AsRef<UncasedStr> for Uncased<'a>{
+impl<'a> AsRef<UncasedStr> for Uncased<'a> {
     #[inline(always)]
     fn as_ref(&self) -> &UncasedStr {
         UncasedStr::new(self.string.borrow())
@@ -327,7 +329,7 @@ impl<'b> PartialEq<Uncased<'b>> for str {
 
 impl<'a, 'b> PartialEq<&'b str> for Uncased<'a> {
     #[inline(always)]
-    fn eq(&self, other: & &'b str) -> bool {
+    fn eq(&self, other: &&'b str) -> bool {
         self.as_ref().eq(other)
     }
 }
@@ -339,7 +341,7 @@ impl<'a, 'b> PartialEq<Uncased<'b>> for &'a str {
     }
 }
 
-impl<'s> Eq for Uncased<'s> {  }
+impl<'s> Eq for Uncased<'s> {}
 
 impl<'s> Hash for Uncased<'s> {
     #[inline(always)]
@@ -360,8 +362,8 @@ pub fn uncased_eq<S1: AsRef<str>, S2: AsRef<str>>(s1: S1, s2: S2) -> bool {
 #[cfg(test)]
 mod tests {
     use super::Uncased;
-    use std::hash::{Hash, Hasher};
     use std::collections::hash_map::DefaultHasher;
+    use std::hash::{Hash, Hasher};
 
     fn hash<T: Hash>(t: &T) -> u64 {
         let mut s = DefaultHasher::new();

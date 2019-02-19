@@ -1,22 +1,25 @@
 #![feature(proc_macro_hygiene, decl_macro)]
 
-#[macro_use] extern crate rocket;
-#[macro_use] extern crate serde_derive;
-extern crate serde_json;
+#[macro_use]
+extern crate rocket;
+#[macro_use]
+extern crate serde_derive;
 extern crate rocket_contrib;
+extern crate serde_json;
 
-#[cfg(test)] mod tests;
+#[cfg(test)]
+mod tests;
 
 use std::collections::HashMap;
 
-use rocket::Request;
 use rocket::response::Redirect;
+use rocket::Request;
 use rocket_contrib::templates::Template;
 
 #[derive(Serialize)]
 struct TemplateContext {
     name: String,
-    items: Vec<&'static str>
+    items: Vec<&'static str>,
 }
 
 #[get("/")]
@@ -26,7 +29,10 @@ fn index() -> Redirect {
 
 #[get("/hello/<name>")]
 fn get(name: String) -> Template {
-    let context = TemplateContext { name, items: vec!["One", "Two", "Three"] };
+    let context = TemplateContext {
+        name,
+        items: vec!["One", "Two", "Three"],
+    };
     Template::render("index", &context)
 }
 

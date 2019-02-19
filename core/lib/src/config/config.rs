@@ -1,14 +1,14 @@
 use std::collections::HashMap;
-use std::net::ToSocketAddrs;
-use std::path::{Path, PathBuf};
 use std::convert::AsRef;
 use std::fmt;
+use std::net::ToSocketAddrs;
+use std::path::{Path, PathBuf};
 
 use super::custom_values::*;
-use {num_cpus, base64};
 use config::Environment::*;
-use config::{Result, ConfigBuilder, Environment, ConfigError, LoggingLevel};
-use config::{Table, Value, Array, Datetime};
+use config::{Array, Datetime, Table, Value};
+use config::{ConfigBuilder, ConfigError, Environment, LoggingLevel, Result};
+use {base64, num_cpus};
 
 use http::private::Key;
 
@@ -192,7 +192,8 @@ impl Config {
     ///
     /// Panics if randomness cannot be retrieved from the OS.
     crate fn default_from<P>(env: Environment, path: P) -> Result<Config>
-        where P: AsRef<Path>
+    where
+        P: AsRef<Path>,
     {
         let mut config = Config::default(env);
 
@@ -221,64 +222,60 @@ impl Config {
         let key = SecretKey::Generated(Key::generate());
 
         match env {
-            Development => {
-                Config {
-                    environment: Development,
-                    address: "localhost".to_string(),
-                    port: 8000,
-                    workers: default_workers,
-                    keep_alive: Some(5),
-                    log_level: LoggingLevel::Normal,
-                    secret_key: key,
-                    tls: None,
-                    limits: Limits::default(),
-                    extras: HashMap::new(),
-                    config_file_path: None,
-                    root_path: None,
-                }
-            }
-            Staging => {
-                Config {
-                    environment: Staging,
-                    address: "0.0.0.0".to_string(),
-                    port: 8000,
-                    workers: default_workers,
-                    keep_alive: Some(5),
-                    log_level: LoggingLevel::Normal,
-                    secret_key: key,
-                    tls: None,
-                    limits: Limits::default(),
-                    extras: HashMap::new(),
-                    config_file_path: None,
-                    root_path: None,
-                }
-            }
-            Production => {
-                Config {
-                    environment: Production,
-                    address: "0.0.0.0".to_string(),
-                    port: 8000,
-                    workers: default_workers,
-                    keep_alive: Some(5),
-                    log_level: LoggingLevel::Critical,
-                    secret_key: key,
-                    tls: None,
-                    limits: Limits::default(),
-                    extras: HashMap::new(),
-                    config_file_path: None,
-                    root_path: None,
-                }
-            }
+            Development => Config {
+                environment: Development,
+                address: "localhost".to_string(),
+                port: 8000,
+                workers: default_workers,
+                keep_alive: Some(5),
+                log_level: LoggingLevel::Normal,
+                secret_key: key,
+                tls: None,
+                limits: Limits::default(),
+                extras: HashMap::new(),
+                config_file_path: None,
+                root_path: None,
+            },
+            Staging => Config {
+                environment: Staging,
+                address: "0.0.0.0".to_string(),
+                port: 8000,
+                workers: default_workers,
+                keep_alive: Some(5),
+                log_level: LoggingLevel::Normal,
+                secret_key: key,
+                tls: None,
+                limits: Limits::default(),
+                extras: HashMap::new(),
+                config_file_path: None,
+                root_path: None,
+            },
+            Production => Config {
+                environment: Production,
+                address: "0.0.0.0".to_string(),
+                port: 8000,
+                workers: default_workers,
+                keep_alive: Some(5),
+                log_level: LoggingLevel::Critical,
+                secret_key: key,
+                tls: None,
+                limits: Limits::default(),
+                extras: HashMap::new(),
+                config_file_path: None,
+                root_path: None,
+            },
         }
     }
 
     /// Constructs a `BadType` error given the entry `name`, the invalid `val`
     /// at that entry, and the `expect`ed type name.
     #[inline(always)]
-    crate fn bad_type(&self,
-                           name: &str,
-                           actual: &'static str,
-                           expect: &'static str) -> ConfigError {
+    crate fn bad_type(
+        &self,
+        name: &str,
+        actual: &'static str,
+        expect: &'static str,
+    ) -> ConfigError {
         let id = format!("{}.{}", self.environment, name);
         ConfigError::BadType(id, expect, actual, self.config_file_path.clone())
     }
@@ -443,8 +440,8 @@ impl Config {
     /// ```
     pub fn set_secret_key<K: Into<String>>(&mut self, key: K) -> Result<()> {
         let key = key.into();
-        let error = self.bad_type("secret_key", "string",
-                                  "a 256-bit base64 encoded string");
+        let error =
+            self.bad_type("secret_key", "string", "a 256-bit base64 encoded string");
 
         if key.len() != 44 {
             return Err(error);
@@ -452,7 +449,7 @@ impl Config {
 
         let bytes = match base64::decode(&key) {
             Ok(bytes) => bytes,
-            Err(_) => return Err(error)
+            Err(_) => return Err(error),
         };
 
         self.secret_key = SecretKey::Provided(Key::from_master(&bytes));
@@ -522,18 +519,20 @@ impl Config {
         let pem_err = "malformed PEM file";
 
         // Load the certificates.
-        let certs = util::load_certs(self.root_relative(certs_path))
-            .map_err(|e| match e {
+        let certs =
+            util::load_certs(self.root_relative(certs_path)).map_err(|e| match e {
                 Error::Io(e) => ConfigError::Io(e, "tls.certs"),
-                _ => self.bad_type("tls", pem_err, "a valid certificates file")
+                _ => self.bad_type("tls", pem_err, "a valid certificates file"),
             })?;
 
         // And now the private key.
-        let key = util::load_private_key(self.root_relative(key_path))
-            .map_err(|e| match e {
-                Error::Io(e) => ConfigError::Io(e, "tls.key"),
-                _ => self.bad_type("tls", pem_err, "a valid private key file")
-            })?;
+        let key =
+            util::load_private_key(self.root_relative(key_path)).map_err(
+                |e| match e {
+                    Error::Io(e) => ConfigError::Io(e, "tls.key"),
+                    _ => self.bad_type("tls", pem_err, "a valid private key file"),
+                },
+            )?;
 
         self.tls = Some(TlsConfig { certs, key });
         Ok(())
@@ -549,11 +548,15 @@ impl Config {
     #[inline(always)]
     fn set_raw_tls(&mut self, _paths: (&str, &str)) -> Result<()> {
         #[cfg(not(test))]
-        { self.set_tls(_paths.0, _paths.1) }
+        {
+            self.set_tls(_paths.0, _paths.1)
+        }
 
         // During unit testing, we don't want to actually read certs/keys.
         #[cfg(test)]
-        { Ok(()) }
+        {
+            Ok(())
+        }
     }
 
     /// Sets the extras for `self` to be the key/value pairs in `extras`.
@@ -600,7 +603,7 @@ impl Config {
     /// assert_eq!(config.extras().count(), 2);
     /// ```
     #[inline]
-    pub fn extras<'a>(&'a self) -> impl Iterator<Item=(&'a str, &'a Value)> {
+    pub fn extras<'a>(&'a self) -> impl Iterator<Item = (&'a str, &'a Value)> {
         self.extras.iter().map(|(k, v)| (k.as_str(), v))
     }
 
@@ -640,7 +643,9 @@ impl Config {
     /// assert!(config.get_extra("other").is_err());
     /// ```
     pub fn get_extra<'a>(&'a self, name: &str) -> Result<&'a Value> {
-        self.extras.get(name).ok_or_else(|| ConfigError::Missing(name.into()))
+        self.extras
+            .get(name)
+            .ok_or_else(|| ConfigError::Missing(name.into()))
     }
 
     /// Attempts to retrieve the extra named `name` as a borrowed string.
@@ -664,7 +669,8 @@ impl Config {
     /// ```
     pub fn get_str<'a>(&'a self, name: &str) -> Result<&'a str> {
         let val = self.get_extra(name)?;
-        val.as_str().ok_or_else(|| self.bad_type(name, val.type_str(), "a string"))
+        val.as_str()
+            .ok_or_else(|| self.bad_type(name, val.type_str(), "a string"))
     }
 
     /// Attempts to retrieve the extra named `name` as an owned string.
@@ -711,7 +717,8 @@ impl Config {
     /// ```
     pub fn get_int(&self, name: &str) -> Result<i64> {
         let val = self.get_extra(name)?;
-        val.as_integer().ok_or_else(|| self.bad_type(name, val.type_str(), "an integer"))
+        val.as_integer()
+            .ok_or_else(|| self.bad_type(name, val.type_str(), "an integer"))
     }
 
     /// Attempts to retrieve the extra named `name` as a boolean.
@@ -735,7 +742,8 @@ impl Config {
     /// ```
     pub fn get_bool(&self, name: &str) -> Result<bool> {
         let val = self.get_extra(name)?;
-        val.as_bool().ok_or_else(|| self.bad_type(name, val.type_str(), "a boolean"))
+        val.as_bool()
+            .ok_or_else(|| self.bad_type(name, val.type_str(), "a boolean"))
     }
 
     /// Attempts to retrieve the extra named `name` as a float.
@@ -759,7 +767,8 @@ impl Config {
     /// ```
     pub fn get_float(&self, name: &str) -> Result<f64> {
         let val = self.get_extra(name)?;
-        val.as_float().ok_or_else(|| self.bad_type(name, val.type_str(), "a float"))
+        val.as_float()
+            .ok_or_else(|| self.bad_type(name, val.type_str(), "a float"))
     }
 
     /// Attempts to retrieve the extra named `name` as a slice of an array.
@@ -783,7 +792,8 @@ impl Config {
     /// ```
     pub fn get_slice(&self, name: &str) -> Result<&Array> {
         let val = self.get_extra(name)?;
-        val.as_array().ok_or_else(|| self.bad_type(name, val.type_str(), "an array"))
+        val.as_array()
+            .ok_or_else(|| self.bad_type(name, val.type_str(), "an array"))
     }
 
     /// Attempts to retrieve the extra named `name` as a table.
@@ -811,7 +821,8 @@ impl Config {
     /// ```
     pub fn get_table(&self, name: &str) -> Result<&Table> {
         let val = self.get_extra(name)?;
-        val.as_table().ok_or_else(|| self.bad_type(name, val.type_str(), "a table"))
+        val.as_table()
+            .ok_or_else(|| self.bad_type(name, val.type_str(), "a table"))
     }
 
     /// Attempts to retrieve the extra named `name` as a datetime value.

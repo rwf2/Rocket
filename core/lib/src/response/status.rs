@@ -7,13 +7,13 @@
 //! responders; when they do, the responder finalizes the response by writing
 //! out additional headers and, importantly, the body of the response.
 
-use std::hash::{Hash, Hasher};
 use std::collections::hash_map::DefaultHasher;
+use std::hash::{Hash, Hasher};
 
-use request::Request;
-use response::{Responder, Response};
 use http::hyper::header;
 use http::Status;
+use request::Request;
+use response::{Responder, Response};
 
 /// Sets the status of the response to 201 (Created).
 ///
@@ -47,7 +47,10 @@ impl<'r, R: Responder<'r>> Responder<'r> for Created<R> {
             build.merge(responder.respond_to(req)?);
         }
 
-        build.status(Status::Created).header(header::Location(self.0)).ok()
+        build
+            .status(Status::Created)
+            .header(header::Location(self.0))
+            .ok()
     }
 }
 
@@ -67,7 +70,10 @@ impl<'r, R: Responder<'r> + Hash> Responder<'r> for Created<R> {
             build.header(header::ETag(header::EntityTag::strong(hash)));
         }
 
-        build.status(Status::Created).header(header::Location(self.0)).ok()
+        build
+            .status(Status::Created)
+            .header(header::Location(self.0))
+            .ok()
     }
 }
 

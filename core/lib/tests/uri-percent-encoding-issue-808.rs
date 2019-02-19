@@ -1,9 +1,10 @@
 #![feature(proc_macro_hygiene, decl_macro)]
 
-#[macro_use] extern crate rocket;
+#[macro_use]
+extern crate rocket;
 
-use rocket::response::Redirect;
 use rocket::http::uri::Uri;
+use rocket::response::Redirect;
 
 const NAME: &str = "John[]|\\%@^";
 
@@ -26,11 +27,10 @@ fn rocket() -> rocket::Rocket {
     rocket::ignite().mount("/", routes![hello, uri_redirect, raw_redirect])
 }
 
-
 mod tests {
     use super::*;
+    use rocket::http::{uri::Uri, Status};
     use rocket::local::Client;
-    use rocket::http::{Status, uri::Uri};
 
     #[test]
     fn uri_percent_encoding_redirect() {

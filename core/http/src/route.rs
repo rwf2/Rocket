@@ -3,8 +3,8 @@ use std::marker::PhantomData;
 use unicode_xid::UnicodeXID;
 
 use ext::IntoOwned;
-use uri::{Origin, UriPart, Path, Query};
 use uri::encoding::unsafe_percent_encode;
+use uri::{Origin, Path, Query, UriPart};
 
 use self::Error::*;
 
@@ -42,7 +42,7 @@ impl<'a, P: UriPart + 'static> IntoOwned for RouteSegment<'a, P> {
             kind: self.kind,
             name: IntoOwned::into_owned(self.name),
             index: self.index,
-            _part: PhantomData
+            _part: PhantomData,
         }
     }
 }
@@ -55,7 +55,7 @@ pub enum Error<'a> {
     MissingClose,
     Malformed,
     Uri,
-    Trailing(&'a str)
+    Trailing(&'a str),
 }
 
 pub type SResult<'a, P> = Result<RouteSegment<'a, P>, (&'a str, Error<'a>)>;
@@ -81,7 +81,7 @@ fn is_valid_ident(string: &str) -> bool {
     let mut chars = string.chars();
     match chars.next() {
         Some(c) => is_ident_start(c) && chars.all(is_ident_continue),
-        None => false
+        None => false,
     }
 }
 
@@ -107,11 +107,20 @@ impl<'a, P: UriPart> RouteSegment<'a, P> {
             }
 
             let name = name.into();
-            return Ok(RouteSegment { string, name, kind, index, _part: PhantomData });
+            return Ok(RouteSegment {
+                string,
+                name,
+                kind,
+                index,
+                _part: PhantomData,
+            });
         } else if segment.is_empty() {
             return Err(Empty);
-        } else if segment.starts_with('<') && segment.len() > 1
-                && !segment[1..].contains('<') && !segment[1..].contains('>') {
+        } else if segment.starts_with('<')
+            && segment.len() > 1
+            && !segment[1..].contains('<')
+            && !segment[1..].contains('>')
+        {
             return Err(MissingClose);
         } else if segment.contains('>') || segment.contains('<') {
             return Err(Malformed);
@@ -120,18 +129,18 @@ impl<'a, P: UriPart> RouteSegment<'a, P> {
         }
 
         Ok(RouteSegment {
-            string, index,
+            string,
+            index,
             name: segment.into(),
             kind: Kind::Static,
-            _part: PhantomData
+            _part: PhantomData,
         })
     }
 
-    pub fn parse_many(
-        string: &'a str,
-    ) -> impl Iterator<Item = SResult<P>> {
+    pub fn parse_many(string: &'a str) -> impl Iterator<Item = SResult<P>> {
         let mut last_multi_seg: Option<&str> = None;
-        string.split(P::DELIMITER)
+        string
+            .split(P::DELIMITER)
             .filter(|s| !s.is_empty())
             .enumerate()
             .map(move |(i, seg)| {

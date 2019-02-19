@@ -1,10 +1,10 @@
 use std::borrow::Borrow;
 
-use outcome::{self, IntoOutcome};
-use outcome::Outcome::*;
-use http::Status;
-use request::Request;
 use data::Data;
+use http::Status;
+use outcome::Outcome::*;
+use outcome::{self, IntoOutcome};
+use request::Request;
 
 /// Type alias for the `Outcome` of a `FromData` conversion.
 pub type Outcome<S, E> = outcome::Outcome<S, (Status, E), Data>;
@@ -17,7 +17,7 @@ impl<'a, S, E> IntoOutcome<S, (Status, E), Data> for Result<S, E> {
     fn into_outcome(self, status: Status) -> Outcome<S, E> {
         match self {
             Ok(val) => Success(val),
-            Err(err) => Failure((status, err))
+            Err(err) => Failure((status, err)),
         }
     }
 
@@ -25,7 +25,7 @@ impl<'a, S, E> IntoOutcome<S, (Status, E), Data> for Result<S, E> {
     fn or_forward(self, data: Data) -> Outcome<S, E> {
         match self {
             Ok(val) => Success(val),
-            Err(_) => Forward(data)
+            Err(_) => Forward(data),
         }
     }
 }
@@ -41,7 +41,7 @@ pub enum Transform<T, B = T> {
 
     /// Indicates that data should be or has been transformed into the
     /// [`FromData::Borrowed`] variant.
-    Borrowed(B)
+    Borrowed(B),
 }
 
 impl<T, B> Transform<T, B> {
@@ -102,11 +102,10 @@ impl<T, B> Transform<T, B> {
 ///
 ///   * In either case, the `Outcome`'s `Failure` variant is a value of type
 ///     [`FromData::Error`].
-pub type Transformed<'a, T> =
-    Transform<
-        Outcome<<T as FromData<'a>>::Owned, <T as FromData<'a>>::Error>,
-        Outcome<&'a <T as FromData<'a>>::Borrowed, <T as FromData<'a>>::Error>
-    >;
+pub type Transformed<'a, T> = Transform<
+    Outcome<<T as FromData<'a>>::Owned, <T as FromData<'a>>::Error>,
+    Outcome<&'a <T as FromData<'a>>::Borrowed, <T as FromData<'a>>::Error>,
+>;
 
 /// Trait implemented by data guards to derive a value from request body data.
 ///
@@ -354,7 +353,10 @@ pub trait FromData<'a>: Sized {
     /// If transformation succeeds, an outcome of `Success` is returned.
     /// If the data is not appropriate given the type of `Self`, `Forward` is
     /// returned. On failure, `Failure` is returned.
-    fn transform(request: &Request, data: Data) -> Transform<Outcome<Self::Owned, Self::Error>>;
+    fn transform(
+        request: &Request,
+        data: Data,
+    ) -> Transform<Outcome<Self::Owned, Self::Error>>;
 
     /// Validates, parses, and converts the incoming request body data into an
     /// instance of `Self`.
@@ -383,7 +385,10 @@ pub trait FromData<'a>: Sized {
     /// # unimplemented!()
     /// # }
     /// ```
-    fn from_data(request: &Request, outcome: Transformed<'a, Self>) -> Outcome<Self, Self::Error>;
+    fn from_data(
+        request: &Request,
+        outcome: Transformed<'a, Self>,
+    ) -> Outcome<Self, Self::Error>;
 }
 
 /// The identity implementation of `FromData`. Always returns `Success`.
@@ -393,12 +398,18 @@ impl<'f> FromData<'f> for Data {
     type Borrowed = Data;
 
     #[inline(always)]
-    fn transform(_: &Request, data: Data) -> Transform<Outcome<Self::Owned, Self::Error>> {
+    fn transform(
+        _: &Request,
+        data: Data,
+    ) -> Transform<Outcome<Self::Owned, Self::Error>> {
         Transform::Owned(Success(data))
     }
 
     #[inline(always)]
-    fn from_data(_: &Request, outcome: Transformed<'f, Self>) -> Outcome<Self, Self::Error> {
+    fn from_data(
+        _: &Request,
+        outcome: Transformed<'f, Self>,
+    ) -> Outcome<Self, Self::Error> {
         Success(outcome.owned()?)
     }
 }
@@ -572,7 +583,7 @@ impl FromDataSimple for String {
         let mut string = String::new();
         match data.open().read_to_string(&mut string) {
             Ok(_) => Success(string),
-            Err(e) => Failure((Status::BadRequest, e))
+            Err(e) => Failure((Status::BadRequest, e)),
         }
     }
 }
@@ -586,7 +597,7 @@ impl FromDataSimple for Vec<u8> {
         let mut bytes = Vec::new();
         match data.open().read_to_end(&mut bytes) {
             Ok(_) => Success(bytes),
-            Err(e) => Failure((Status::BadRequest, e))
+            Err(e) => Failure((Status::BadRequest, e)),
         }
     }
 }

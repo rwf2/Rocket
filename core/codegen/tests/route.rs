@@ -1,21 +1,22 @@
 #![feature(proc_macro_hygiene, decl_macro)]
 
-#[macro_use] extern crate rocket;
+#[macro_use]
+extern crate rocket;
 
 use std::path::PathBuf;
 
-use rocket::{Request, Outcome::*};
-use rocket::http::ext::Normalize;
-use rocket::local::Client;
 use rocket::data::{self, Data, FromDataSimple};
+use rocket::http::ext::Normalize;
+use rocket::http::{ContentType, RawStr, Status};
+use rocket::local::Client;
 use rocket::request::Form;
-use rocket::http::{Status, RawStr, ContentType};
+use rocket::{Outcome::*, Request};
 
 // Use all of the code generation avaiable at once.
 
 #[derive(FromForm, UriDisplayQuery)]
 struct Inner<'r> {
-    field: &'r RawStr
+    field: &'r RawStr,
 }
 
 struct Simple(String);
@@ -31,7 +32,12 @@ impl FromDataSimple for Simple {
     }
 }
 
-#[post("/<a>/<name>/name/<path..>?sky=blue&<sky>&<query..>", format = "json", data = "<simple>", rank = 138)]
+#[post(
+    "/<a>/<name>/name/<path..>?sky=blue&<sky>&<query..>",
+    format = "json",
+    data = "<simple>",
+    rank = 138
+)]
 fn post1(
     sky: usize,
     name: &RawStr,
@@ -40,15 +46,34 @@ fn post1(
     path: PathBuf,
     simple: Simple,
 ) -> String {
-    let string = format!("{}, {}, {}, {}, {}, {}",
-        sky, name, a, query.field, path.normalized_str(), simple.0);
+    let string = format!(
+        "{}, {}, {}, {}, {}, {}",
+        sky,
+        name,
+        a,
+        query.field,
+        path.normalized_str(),
+        simple.0
+    );
 
-    let uri = uri!(post2: a, name.url_decode_lossy(), path, sky, query.into_inner());
+    let uri = uri!(
+        post2: a,
+        name.url_decode_lossy(),
+        path,
+        sky,
+        query.into_inner()
+    );
 
     format!("({}) ({})", string, uri.to_string())
 }
 
-#[route(POST, path = "/<a>/<name>/name/<path..>?sky=blue&<sky>&<query..>", format = "json", data = "<simple>", rank = 138)]
+#[route(
+    POST,
+    path = "/<a>/<name>/name/<path..>?sky=blue&<sky>&<query..>",
+    format = "json",
+    data = "<simple>",
+    rank = 138
+)]
 fn post2(
     sky: usize,
     name: &RawStr,
@@ -57,10 +82,23 @@ fn post2(
     path: PathBuf,
     simple: Simple,
 ) -> String {
-    let string = format!("{}, {}, {}, {}, {}, {}",
-        sky, name, a, query.field, path.normalized_str(), simple.0);
+    let string = format!(
+        "{}, {}, {}, {}, {}, {}",
+        sky,
+        name,
+        a,
+        query.field,
+        path.normalized_str(),
+        simple.0
+    );
 
-    let uri = uri!(post2: a, name.url_decode_lossy(), path, sky, query.into_inner());
+    let uri = uri!(
+        post2: a,
+        name.url_decode_lossy(),
+        path,
+        sky,
+        query.into_inner()
+    );
 
     format!("({}) ({})", string, uri.to_string())
 }
@@ -97,8 +135,13 @@ fn test_full_route() {
         .body(simple)
         .dispatch();
 
-    assert_eq!(response.body_string().unwrap(), format!("({}, {}, {}, {}, {}, {}) ({})",
-            sky, name, "A A", "inside", path, simple, expected_uri));
+    assert_eq!(
+        response.body_string().unwrap(),
+        format!(
+            "({}, {}, {}, {}, {}, {}) ({})",
+            sky, name, "A A", "inside", path, simple, expected_uri
+        )
+    );
 
     let response = client.post(format!("/2{}", uri)).body(simple).dispatch();
     assert_eq!(response.status(), Status::NotFound);
@@ -109,6 +152,11 @@ fn test_full_route() {
         .body(simple)
         .dispatch();
 
-    assert_eq!(response.body_string().unwrap(), format!("({}, {}, {}, {}, {}, {}) ({})",
-            sky, name, "A A", "inside", path, simple, expected_uri));
+    assert_eq!(
+        response.body_string().unwrap(),
+        format!(
+            "({}, {}, {}, {}, {}, {}) ({})",
+            sky, name, "A A", "inside", path, simple, expected_uri
+        )
+    );
 }

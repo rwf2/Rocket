@@ -1,8 +1,8 @@
-use std::sync::Mutex;
 use std::boxed::FnBox;
+use std::sync::Mutex;
 
-use {Rocket, Request, Response, Data};
-use fairing::{Fairing, Kind, Info};
+use fairing::{Fairing, Info, Kind};
+use {Data, Request, Response, Rocket};
 
 /// A ad-hoc fairing that can be created from a function or closure.
 ///
@@ -66,9 +66,13 @@ impl AdHoc {
     /// let fairing = AdHoc::on_attach("No-Op", |rocket| Ok(rocket));
     /// ```
     pub fn on_attach<F>(name: &'static str, f: F) -> AdHoc
-        where F: FnOnce(Rocket) -> Result<Rocket, Rocket> + Send + 'static
+    where
+        F: FnOnce(Rocket) -> Result<Rocket, Rocket> + Send + 'static,
     {
-        AdHoc { name, kind: AdHocKind::Attach(Mutex::new(Some(Box::new(f)))) }
+        AdHoc {
+            name,
+            kind: AdHocKind::Attach(Mutex::new(Some(Box::new(f)))),
+        }
     }
 
     /// Constructs an `AdHoc` launch fairing named `name`. The function `f` will
@@ -85,9 +89,13 @@ impl AdHoc {
     /// });
     /// ```
     pub fn on_launch<F>(name: &'static str, f: F) -> AdHoc
-        where F: FnOnce(&Rocket) + Send + 'static
+    where
+        F: FnOnce(&Rocket) + Send + 'static,
     {
-        AdHoc { name, kind: AdHocKind::Launch(Mutex::new(Some(Box::new(f)))) }
+        AdHoc {
+            name,
+            kind: AdHocKind::Launch(Mutex::new(Some(Box::new(f)))),
+        }
     }
 
     /// Constructs an `AdHoc` request fairing named `name`. The function `f`
@@ -105,9 +113,13 @@ impl AdHoc {
     /// });
     /// ```
     pub fn on_request<F>(name: &'static str, f: F) -> AdHoc
-        where F: Fn(&mut Request, &Data) + Send + Sync + 'static
+    where
+        F: Fn(&mut Request, &Data) + Send + Sync + 'static,
     {
-        AdHoc { name, kind: AdHocKind::Request(Box::new(f)) }
+        AdHoc {
+            name,
+            kind: AdHocKind::Request(Box::new(f)),
+        }
     }
 
     /// Constructs an `AdHoc` response fairing named `name`. The function `f`
@@ -125,9 +137,13 @@ impl AdHoc {
     /// });
     /// ```
     pub fn on_response<F>(name: &'static str, f: F) -> AdHoc
-        where F: Fn(&Request, &mut Response) + Send + Sync + 'static
+    where
+        F: Fn(&Request, &mut Response) + Send + Sync + 'static,
     {
-        AdHoc { name, kind: AdHocKind::Response(Box::new(f)) }
+        AdHoc {
+            name,
+            kind: AdHocKind::Response(Box::new(f)),
+        }
     }
 }
 
@@ -140,13 +156,17 @@ impl Fairing for AdHoc {
             AdHocKind::Response(_) => Kind::Response,
         };
 
-        Info { name: self.name, kind }
+        Info {
+            name: self.name,
+            kind,
+        }
     }
 
     fn on_attach(&self, rocket: Rocket) -> Result<Rocket, Rocket> {
         if let AdHocKind::Attach(ref mutex) = self.kind {
             let mut option = mutex.lock().expect("AdHoc::Attach lock");
-            option.take()
+            option
+                .take()
                 .expect("internal error: `on_attach` single-call invariant broken")
                 .call_box((rocket,))
         } else {
@@ -157,9 +177,10 @@ impl Fairing for AdHoc {
     fn on_launch(&self, rocket: &Rocket) {
         if let AdHocKind::Launch(ref mutex) = self.kind {
             let mut option = mutex.lock().expect("AdHoc::Launch lock");
-            option.take()
+            option
+                .take()
                 .expect("internal error: `on_launch` single-call invariant broken")
-                .call_box((rocket, ))
+                .call_box((rocket,))
         }
     }
 

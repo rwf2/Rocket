@@ -9,11 +9,19 @@ impl Engine for Tera {
     fn init(templates: &[(&str, &TemplateInfo)]) -> Option<Tera> {
         // Create the Tera instance.
         let mut tera = Tera::default();
-        let ext = [".html.tera", ".htm.tera", ".xml.tera", ".html", ".htm", ".xml"];
+        let ext = [
+            ".html.tera",
+            ".htm.tera",
+            ".xml.tera",
+            ".html",
+            ".htm",
+            ".xml",
+        ];
         tera.autoescape_on(ext.to_vec());
 
         // Collect into a tuple of (name, path) for Tera.
-        let tera_templates = templates.iter()
+        let tera_templates = templates
+            .iter()
             .map(|&(name, info)| (&info.path, Some(name)))
             .collect::<Vec<_>>();
 

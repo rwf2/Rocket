@@ -1,20 +1,21 @@
 #![feature(proc_macro_hygiene, decl_macro)]
 
-#[macro_use] extern crate rocket;
+#[macro_use]
+extern crate rocket;
 
 use std::io::Read;
 
-use rocket::{Request, Data, Outcome::*};
+use rocket::data::{self, FromDataSimple};
+use rocket::http::{ContentType, RawStr, Status};
 use rocket::local::Client;
 use rocket::request::Form;
-use rocket::data::{self, FromDataSimple};
-use rocket::http::{RawStr, ContentType, Status};
+use rocket::{Data, Outcome::*, Request};
 
 // Test that the data parameters works as expected.
 
 #[derive(FromForm)]
 struct Inner<'r> {
-    field: &'r RawStr
+    field: &'r RawStr,
 }
 
 struct Simple(String);
@@ -33,17 +34,22 @@ impl FromDataSimple for Simple {
 }
 
 #[post("/f", data = "<form>")]
-fn form(form: Form<Inner>) -> String { form.field.url_decode_lossy() }
+fn form(form: Form<Inner>) -> String {
+    form.field.url_decode_lossy()
+}
 
 #[post("/s", data = "<simple>")]
-fn simple(simple: Simple) -> String { simple.0 }
+fn simple(simple: Simple) -> String {
+    simple.0
+}
 
 #[test]
 fn test_data() {
     let rocket = rocket::ignite().mount("/", routes![form, simple]);
     let client = Client::new(rocket).unwrap();
 
-    let mut response = client.post("/f")
+    let mut response = client
+        .post("/f")
         .header(ContentType::Form)
         .body("field=this%20is%20here")
         .dispatch();

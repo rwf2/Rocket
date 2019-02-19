@@ -1,18 +1,22 @@
 #![feature(proc_macro_hygiene, decl_macro)]
 
-#[macro_use] extern crate rocket;
+#[macro_use]
+extern crate rocket;
 
 use std::io;
 
-use rocket::request::{Form, FormError, FormDataError};
-use rocket::response::NamedFile;
 use rocket::http::RawStr;
+use rocket::request::{Form, FormDataError, FormError};
+use rocket::response::NamedFile;
 
-#[cfg(test)] mod tests;
+#[cfg(test)]
+mod tests;
 
 #[derive(Debug, FromFormValue)]
 enum FormOption {
-    A, B, C
+    A,
+    B,
+    C,
 }
 
 #[derive(Debug, FromForm)]

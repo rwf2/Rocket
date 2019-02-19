@@ -107,13 +107,13 @@ pub enum FormItems<'f> {
     #[doc(hidden)]
     Raw {
         string: &'f RawStr,
-        next_index: usize
+        next_index: usize,
     },
     #[doc(hidden)]
     Cooked {
         items: &'f [FormItem<'f>],
-        next_index: usize
-    }
+        next_index: usize,
+    },
 }
 
 /// A form items returned by the [`FormItems`] iterator.
@@ -132,7 +132,7 @@ pub struct FormItem<'f> {
     /// **Note:** The value is _not_ URL decoded. To URL decode the raw strings,
     /// use the [`RawStr::url_decode()`] method or access key-value pairs with
     /// [`key_value_decoded()`](FormItem::key_value_decoded()).
-    pub value: &'f RawStr
+    pub value: &'f RawStr,
 }
 
 impl<'f> FormItem<'f> {
@@ -283,7 +283,7 @@ impl<'f> FormItems<'f> {
     /// ```
     #[inline]
     pub fn exhaust(&mut self) -> bool {
-        while let Some(_) = self.next() {  }
+        while let Some(_) = self.next() {}
         self.completed()
     }
 
@@ -291,8 +291,14 @@ impl<'f> FormItems<'f> {
     #[doc(hidden)]
     pub fn mark_complete(&mut self) {
         match self {
-            FormItems::Raw { string, ref mut next_index } => *next_index = string.len(),
-            FormItems::Cooked { items, ref mut next_index } => *next_index = items.len(),
+            FormItems::Raw {
+                string,
+                ref mut next_index,
+            } => *next_index = string.len(),
+            FormItems::Cooked {
+                items,
+                ref mut next_index,
+            } => *next_index = items.len(),
         }
     }
 }
@@ -300,7 +306,10 @@ impl<'f> FormItems<'f> {
 impl<'f> From<&'f RawStr> for FormItems<'f> {
     #[inline(always)]
     fn from(string: &'f RawStr) -> FormItems<'f> {
-        FormItems::Raw { string, next_index: 0 }
+        FormItems::Raw {
+            string,
+            next_index: 0,
+        }
     }
 }
 
@@ -314,7 +323,10 @@ impl<'f> From<&'f str> for FormItems<'f> {
 impl<'f> From<&'f [FormItem<'f>]> for FormItems<'f> {
     #[inline(always)]
     fn from(items: &'f [FormItem<'f>]) -> FormItems<'f> {
-        FormItems::Cooked { items, next_index: 0 }
+        FormItems::Cooked {
+            items,
+            next_index: 0,
+        }
     }
 }
 
@@ -329,24 +341,26 @@ fn raw<'f>(string: &mut &'f RawStr, index: &mut usize) -> Option<FormItem<'f>> {
         let (key, rest, key_consumed) = match memchr2(b'=', b'&', s.as_bytes()) {
             Some(i) if s.as_bytes()[i] == b'=' => (&s[..i], &s[(i + 1)..], i + 1),
             Some(i) => (&s[..i], &s[i..], i),
-            None => (s, &s[s.len()..], s.len())
+            None => (s, &s[s.len()..], s.len()),
         };
 
         let (value, val_consumed) = match memchr2(b'=', b'&', rest.as_bytes()) {
             Some(i) if rest.as_bytes()[i] == b'=' => return None,
             Some(i) => (&rest[..i], i + 1),
-            None => (rest, rest.len())
+            None => (rest, rest.len()),
         };
 
         *index += key_consumed + val_consumed;
         let raw = &string[start..(start + key_consumed + value.len())];
         match (key.is_empty(), value.is_empty()) {
             (true, true) => continue,
-            _ => return Some(FormItem {
-                raw: raw.into(),
-                key: key.into(),
-                value: value.into()
-            })
+            _ => {
+                return Some(FormItem {
+                    raw: raw.into(),
+                    key: key.into(),
+                    value: value.into(),
+                });
+            }
         }
     }
 }
@@ -356,10 +370,14 @@ impl<'f> Iterator for FormItems<'f> {
 
     fn next(&mut self) -> Option<Self::Item> {
         match self {
-            FormItems::Raw { ref mut string, ref mut next_index } => {
-                raw(string, next_index)
-            }
-            FormItems::Cooked { items, ref mut next_index } => {
+            FormItems::Raw {
+                ref mut string,
+                ref mut next_index,
+            } => raw(string, next_index),
+            FormItems::Cooked {
+                items,
+                ref mut next_index,
+            } => {
                 if *next_index < items.len() {
                     let item = items[*next_index];
                     *next_index += 1;

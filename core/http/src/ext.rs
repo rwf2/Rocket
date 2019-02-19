@@ -7,34 +7,34 @@ use smallvec::{Array, SmallVec};
 /// Trait implemented by types that can be converted into a collection.
 pub trait IntoCollection<T> {
     /// Converts `self` into a collection.
-    fn into_collection<A: Array<Item=T>>(self) -> SmallVec<A>;
+    fn into_collection<A: Array<Item = T>>(self) -> SmallVec<A>;
 
     #[doc(hidden)]
-    fn mapped<U, F: FnMut(T) -> U, A: Array<Item=U>>(self, f: F) -> SmallVec<A>;
+    fn mapped<U, F: FnMut(T) -> U, A: Array<Item = U>>(self, f: F) -> SmallVec<A>;
 }
 
 impl<T> IntoCollection<T> for T {
     #[inline]
-    fn into_collection<A: Array<Item=T>>(self) -> SmallVec<A> {
+    fn into_collection<A: Array<Item = T>>(self) -> SmallVec<A> {
         let mut vec = SmallVec::new();
         vec.push(self);
         vec
     }
 
     #[inline(always)]
-    fn mapped<U, F: FnMut(T) -> U, A: Array<Item=U>>(self, mut f: F) -> SmallVec<A> {
+    fn mapped<U, F: FnMut(T) -> U, A: Array<Item = U>>(self, mut f: F) -> SmallVec<A> {
         f(self).into_collection()
     }
 }
 
 impl<T> IntoCollection<T> for Vec<T> {
     #[inline(always)]
-    fn into_collection<A: Array<Item=T>>(self) -> SmallVec<A> {
+    fn into_collection<A: Array<Item = T>>(self) -> SmallVec<A> {
         SmallVec::from_vec(self)
     }
 
     #[inline]
-    fn mapped<U, F: FnMut(T) -> U, A: Array<Item=U>>(self, f: F) -> SmallVec<A> {
+    fn mapped<U, F: FnMut(T) -> U, A: Array<Item = U>>(self, f: F) -> SmallVec<A> {
         self.into_iter().map(f).collect()
     }
 }

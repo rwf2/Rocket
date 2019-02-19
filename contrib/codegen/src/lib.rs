@@ -1,6 +1,6 @@
 #![feature(proc_macro_span, proc_macro_diagnostic)]
 #![feature(crate_visibility_modifier)]
-#![recursion_limit="256"]
+#![recursion_limit = "256"]
 
 //! # Rocket Contrib - Code Generation
 //! This crate implements the code generation portion of the Rocket Contrib
@@ -28,10 +28,11 @@ extern crate devise;
 extern crate proc_macro;
 
 #[allow(unused_imports)]
-#[macro_use] extern crate quote;
+#[macro_use]
+extern crate quote;
 
 #[allow(unused_imports)]
-crate use devise::{syn, proc_macro2};
+crate use devise::{proc_macro2, syn};
 
 #[cfg(feature = "database_attribute")]
 mod database;

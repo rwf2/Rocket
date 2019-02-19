@@ -1,5 +1,5 @@
-use proc_macro::{Span, TokenStream};
 use devise::*;
+use proc_macro::{Span, TokenStream};
 
 use derive::from_form::Form;
 use proc_macro2::TokenStream as TokenStream2;
@@ -12,7 +12,7 @@ const EXACTLY_ONE_FIELD: &str = "struct must have exactly one field";
 
 fn validate_fields(fields: Fields, parent_span: Span) -> Result<()> {
     if fields.count() == 0 {
-        return Err(parent_span.error(NO_EMPTY_FIELDS))
+        return Err(parent_span.error(NO_EMPTY_FIELDS));
     } else if fields.are_unnamed() && fields.count() > 1 {
         return Err(fields.span().error(ONLY_ONE_UNNAMED));
     } else if fields.are_unit() {
@@ -51,10 +51,12 @@ pub fn derive_uri_display_query(input: TokenStream) -> TokenStream {
         .validate_enum(validate_enum)
         .validate_struct(validate_struct)
         .map_type_generic(move |_, ident, _| quote!(#ident : #UriDisplay))
-        .function(move |_, inner| quote! {
-            fn fmt(&self, f: &mut #Formatter) -> ::std::fmt::Result {
-                #inner
-                Ok(())
+        .function(move |_, inner| {
+            quote! {
+                fn fmt(&self, f: &mut #Formatter) -> ::std::fmt::Result {
+                    #inner
+                    Ok(())
+                }
             }
         })
         .try_map_field(|_, field| {
@@ -81,10 +83,12 @@ pub fn derive_uri_display_query(input: TokenStream) -> TokenStream {
         .data_support(DataSupport::Struct | DataSupport::Enum)
         .generic_support(GenericSupport::Type | GenericSupport::Lifetime)
         .map_type_generic(move |_, ident, _| quote!(#ident : #UriDisplay))
-        .function(|_, _| quote! {
-            type Target = Self;
-            #[inline(always)]
-            fn from_uri_param(param: Self) -> Self { param }
+        .function(|_, _| {
+            quote! {
+                type Target = Self;
+                #[inline(always)]
+                fn from_uri_param(param: Self) -> Self { param }
+            }
         })
         .to_tokens();
 
@@ -95,10 +99,12 @@ pub fn derive_uri_display_query(input: TokenStream) -> TokenStream {
         .data_support(DataSupport::Struct | DataSupport::Enum)
         .generic_support(GenericSupport::Type | GenericSupport::Lifetime)
         .map_type_generic(move |_, ident, _| quote!(#ident : #UriDisplay))
-        .function(|_, _| quote! {
-            type Target = &'__r Self;
-            #[inline(always)]
-            fn from_uri_param(param: &'__r Self) -> &'__r Self { param }
+        .function(|_, _| {
+            quote! {
+                type Target = &'__r Self;
+                #[inline(always)]
+                fn from_uri_param(param: &'__r Self) -> &'__r Self { param }
+            }
         })
         .to_tokens();
 
@@ -109,10 +115,12 @@ pub fn derive_uri_display_query(input: TokenStream) -> TokenStream {
         .data_support(DataSupport::Struct | DataSupport::Enum)
         .generic_support(GenericSupport::Type | GenericSupport::Lifetime)
         .map_type_generic(move |_, ident, _| quote!(#ident : #UriDisplay))
-        .function(|_, _| quote! {
-            type Target = &'__r mut Self;
-            #[inline(always)]
-            fn from_uri_param(param: &'__r mut Self) -> &'__r mut Self { param }
+        .function(|_, _| {
+            quote! {
+                type Target = &'__r mut Self;
+                #[inline(always)]
+                fn from_uri_param(param: &'__r mut Self) -> &'__r mut Self { param }
+            }
         })
         .to_tokens();
 
@@ -136,12 +144,14 @@ pub fn derive_uri_display_path(input: TokenStream) -> TokenStream {
         .map_type_generic(move |_, ident, _| quote!(#ident : #UriDisplay))
         .validate_fields(|_, fields| match fields.count() {
             1 => Ok(()),
-            _ => Err(fields.span().error(EXACTLY_ONE_FIELD))
+            _ => Err(fields.span().error(EXACTLY_ONE_FIELD)),
         })
-        .function(move |_, inner| quote! {
-            fn fmt(&self, f: &mut #Formatter) -> ::std::fmt::Result {
-                #inner
-                Ok(())
+        .function(move |_, inner| {
+            quote! {
+                fn fmt(&self, f: &mut #Formatter) -> ::std::fmt::Result {
+                    #inner
+                    Ok(())
+                }
             }
         })
         .map_field(|_, field| {
@@ -158,10 +168,12 @@ pub fn derive_uri_display_path(input: TokenStream) -> TokenStream {
         .data_support(DataSupport::All)
         .generic_support(GenericSupport::Type | GenericSupport::Lifetime)
         .map_type_generic(move |_, ident, _| quote!(#ident : #UriDisplay))
-        .function(|_, _| quote! {
-            type Target = Self;
-            #[inline(always)]
-            fn from_uri_param(param: Self) -> Self { param }
+        .function(|_, _| {
+            quote! {
+                type Target = Self;
+                #[inline(always)]
+                fn from_uri_param(param: Self) -> Self { param }
+            }
         })
         .to_tokens();
 
@@ -172,10 +184,12 @@ pub fn derive_uri_display_path(input: TokenStream) -> TokenStream {
         .data_support(DataSupport::All)
         .generic_support(GenericSupport::Type | GenericSupport::Lifetime)
         .map_type_generic(move |_, ident, _| quote!(#ident : #UriDisplay))
-        .function(|_, _| quote! {
-            type Target = &'__r Self;
-            #[inline(always)]
-            fn from_uri_param(param: &'__r Self) -> &'__r Self { param }
+        .function(|_, _| {
+            quote! {
+                type Target = &'__r Self;
+                #[inline(always)]
+                fn from_uri_param(param: &'__r Self) -> &'__r Self { param }
+            }
         })
         .to_tokens();
 

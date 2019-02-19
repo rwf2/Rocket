@@ -1,30 +1,31 @@
-use std::collections::HashMap;
-use std::str::from_utf8;
 use std::cmp::min;
+use std::collections::HashMap;
 use std::io::{self, Write};
-use std::time::Duration;
 use std::mem;
+use std::str::from_utf8;
+use std::time::Duration;
 
-use yansi::Paint;
 use state::Container;
+use yansi::Paint;
 
-#[cfg(feature = "tls")] use http::tls::TlsServer;
+#[cfg(feature = "tls")]
+use http::tls::TlsServer;
 
-use {logger, handler};
-use ext::ReadExt;
-use config::{self, Config, LoggedValue};
-use request::{Request, FormItems};
-use data::Data;
-use response::{Body, Response};
-use router::{Router, Route};
 use catcher::{self, Catcher};
-use outcome::Outcome;
+use config::{self, Config, LoggedValue};
+use data::Data;
 use error::{LaunchError, LaunchErrorKind};
+use ext::ReadExt;
 use fairing::{Fairing, Fairings};
+use outcome::Outcome;
+use request::{FormItems, Request};
+use response::{Body, Response};
+use router::{Route, Router};
+use {handler, logger};
 
-use http::{Method, Status, Header};
 use http::hyper::{self, header};
 use http::uri::Origin;
+use http::{Header, Method, Status};
 
 /// The main `Rocket` type: used to mount routes and catchers and launch the
 /// application.
@@ -93,15 +94,15 @@ impl hyper::Handler for Rocket {
 // closure would be different depending on whether TLS was enabled or not.
 #[cfg(not(feature = "tls"))]
 macro_rules! serve {
-    ($rocket:expr, $addr:expr, |$server:ident, $proto:ident| $continue:expr) => ({
+    ($rocket:expr, $addr:expr, |$server:ident, $proto:ident| $continue:expr) => {{
         let ($proto, $server) = ("http://", hyper::Server::http($addr));
         $continue
-    })
+    }};
 }
 
 #[cfg(feature = "tls")]
 macro_rules! serve {
-    ($rocket:expr, $addr:expr, |$server:ident, $proto:ident| $continue:expr) => ({
+    ($rocket:expr, $addr:expr, |$server:ident, $proto:ident| $continue:expr) => {{
         if let Some(tls) = $rocket.config.tls.clone() {
             let tls = TlsServer::new(tls.certs, tls.key);
             let ($proto, $server) = ("https://", hyper::Server::https($addr, tls));
@@ -110,7 +111,7 @@ macro_rules! serve {
             let ($proto, $server) = ("http://", hyper::Server::http($addr));
             $continue
         }
-    })
+    }};
 }
 
 impl Rocket {
@@ -200,7 +201,7 @@ impl Rocket {
     crate fn dispatch<'s, 'r>(
         &'s self,
         request: &'r mut Request<'s>,
-        data: Data
+        data: Data,
     ) -> Response<'r> {
         info!("{}:", request);
 
@@ -233,7 +234,7 @@ impl Rocket {
     fn route_and_process<'s, 'r>(
         &'s self,
         request: &'r Request<'s>,
-        data: Data
+        data: Data,
     ) -> Response<'r> {
         match self.route(request, data) {
             Outcome::Success(mut response) => {
@@ -257,7 +258,7 @@ impl Rocket {
                     self.handle_error(Status::NotFound, request)
                 }
             }
-            Outcome::Failure(status) => self.handle_error(status, request)
+            Outcome::Failure(status) => self.handle_error(status, request),
         }
     }
 
@@ -292,7 +293,7 @@ impl Rocket {
             // to be forwarded. If it does, continue the loop to try again.
             info_!("{} {}", Paint::default("Outcome:").bold(), outcome);
             match outcome {
-                o@Outcome::Success(_) | o@Outcome::Failure(_) => return o,
+                o @ Outcome::Success(_) | o @ Outcome::Failure(_) => return o,
                 Outcome::Forward(unused_data) => data = unused_data,
             };
         }
@@ -306,11 +307,7 @@ impl Rocket {
     // catcher is called. If the catcher fails to return a good response, the
     // 500 catcher is executed. If there is no registered catcher for `status`,
     // the default catcher is used.
-    crate fn handle_error<'r>(
-        &self,
-        status: Status,
-        req: &'r Request
-    ) -> Response<'r> {
+    crate fn handle_error<'r>(&self, status: Status, req: &'r Request) -> Response<'r> {
         warn_!("Responding with {} catcher.", Paint::red(&status));
 
         // Try to get the active catcher but fallback to user's 500 catcher.
@@ -390,7 +387,11 @@ impl Rocket {
             logger::push_max_level(logger::LoggingLevel::Normal);
         }
 
-        launch_info!("{}Configured for {}.", Paint::masked("🔧 "), config.environment);
+        launch_info!(
+            "{}Configured for {}.",
+            Paint::masked("🔧 "),
+            config.environment
+        );
         launch_info_!("address: {}", Paint::default(&config.address).bold());
         launch_info_!("port: {}", Paint::default(&config.port).bold());
         launch_info_!("log: {}", Paint::default(config.log_level).bold());
@@ -399,7 +400,9 @@ impl Rocket {
         launch_info_!("limits: {}", Paint::default(&config.limits).bold());
 
         match config.keep_alive {
-            Some(v) => launch_info_!("keep-alive: {}", Paint::default(format!("{}s", v)).bold()),
+            Some(v) => {
+                launch_info_!("keep-alive: {}", Paint::default(format!("{}s", v)).bold())
+            }
             None => launch_info_!("keep-alive: {}", Paint::default("disabled").bold()),
         }
 
@@ -418,9 +421,12 @@ impl Rocket {
         }
 
         for (name, value) in config.extras() {
-            launch_info_!("{} {}: {}",
-                          Paint::yellow("[extra]"), name,
-                          Paint::default(LoggedValue(value)).bold());
+            launch_info_!(
+                "{} {}: {}",
+                Paint::yellow("[extra]"),
+                name,
+                Paint::default(LoggedValue(value)).bold()
+            );
         }
 
         Rocket {
@@ -489,17 +495,18 @@ impl Rocket {
     /// ```
     #[inline]
     pub fn mount<R: Into<Vec<Route>>>(mut self, base: &str, routes: R) -> Self {
-        info!("{}{} {}{}",
-              Paint::masked("🛰  "),
-              Paint::magenta("Mounting"),
-              Paint::blue(base),
-              Paint::magenta(":"));
+        info!(
+            "{}{} {}{}",
+            Paint::masked("🛰  "),
+            Paint::magenta("Mounting"),
+            Paint::blue(base),
+            Paint::magenta(":")
+        );
 
-        let base_uri = Origin::parse(base)
-            .unwrap_or_else(|e| {
-                error_!("Invalid origin URI '{}' used as mount point.", base);
-                panic!("Error: {}", e);
-            });
+        let base_uri = Origin::parse(base).unwrap_or_else(|e| {
+            error_!("Invalid origin URI '{}' used as mount point.", base);
+            panic!("Error: {}", e);
+        });
 
         if base_uri.query().is_some() {
             error_!("Mount point '{}' contains query string.", base);
@@ -647,11 +654,13 @@ impl Rocket {
     crate fn prelaunch_check(mut self) -> Result<Rocket, LaunchError> {
         self.router = match self.router.collisions() {
             Ok(router) => router,
-            Err(e) => return Err(LaunchError::new(LaunchErrorKind::Collision(e)))
+            Err(e) => return Err(LaunchError::new(LaunchErrorKind::Collision(e))),
         };
 
         if let Some(failures) = self.fairings.failures() {
-            return Err(LaunchError::new(LaunchErrorKind::FailedFairings(failures.to_vec())))
+            return Err(LaunchError::new(LaunchErrorKind::FailedFairings(
+                failures.to_vec(),
+            )));
         }
 
         Ok(self)
@@ -678,7 +687,7 @@ impl Rocket {
     pub fn launch(mut self) -> LaunchError {
         self = match self.prelaunch_check() {
             Ok(rocket) => rocket,
-            Err(launch_error) => return launch_error
+            Err(launch_error) => return launch_error,
         };
 
         self.fairings.pretty_print_counts();
@@ -697,7 +706,10 @@ impl Rocket {
             }
 
             // Set the keep-alive.
-            let timeout = self.config.keep_alive.map(|s| Duration::from_secs(s as u64));
+            let timeout = self
+                .config
+                .keep_alive
+                .map(|s| Duration::from_secs(s as u64));
             server.keep_alive(timeout);
 
             // Freeze managed state for synchronization-free accesses later.
@@ -707,11 +719,13 @@ impl Rocket {
             self.fairings.handle_launch(&self);
 
             let full_addr = format!("{}:{}", self.config.address, self.config.port);
-            launch_info!("{}{} {}{}",
-                         Paint::masked("🚀 "),
-                         Paint::default("Rocket has launched from").bold(),
-                         Paint::default(proto).bold().underline(),
-                         Paint::default(&full_addr).bold().underline());
+            launch_info!(
+                "{}{} {}{}",
+                Paint::masked("🚀 "),
+                Paint::default("Rocket has launched from").bold(),
+                Paint::default(proto).bold().underline(),
+                Paint::default(&full_addr).bold().underline()
+            );
 
             // Restore the log level back to what it originally was.
             logger::pop_max_level();

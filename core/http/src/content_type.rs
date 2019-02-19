@@ -1,12 +1,12 @@
 use std::borrow::{Borrow, Cow};
+use std::fmt;
 use std::ops::Deref;
 use std::str::FromStr;
-use std::fmt;
 
-use header::Header;
-use media_type::{MediaType, Source};
 use ext::IntoCollection;
+use header::Header;
 use hyper::mime::Mime;
+use media_type::{MediaType, Source};
 
 /// Representation of HTTP Content-Types.
 ///
@@ -187,7 +187,9 @@ impl ContentType {
     /// ```
     #[inline(always)]
     pub fn new<T, S>(top: T, sub: S) -> ContentType
-        where T: Into<Cow<'static, str>>, S: Into<Cow<'static, str>>
+    where
+        T: Into<Cow<'static, str>>,
+        S: Into<Cow<'static, str>>,
     {
         ContentType(MediaType::new(top, sub))
     }
@@ -224,9 +226,12 @@ impl ContentType {
     /// ```
     #[inline]
     pub fn with_params<T, S, K, V, P>(top: T, sub: S, ps: P) -> ContentType
-        where T: Into<Cow<'static, str>>, S: Into<Cow<'static, str>>,
-              K: Into<Cow<'static, str>>, V: Into<Cow<'static, str>>,
-              P: IntoCollection<(K, V)>
+    where
+        T: Into<Cow<'static, str>>,
+        S: Into<Cow<'static, str>>,
+        K: Into<Cow<'static, str>>,
+        V: Into<Cow<'static, str>>,
+        P: IntoCollection<(K, V)>,
     {
         ContentType(MediaType::with_params(top, sub, ps))
     }
@@ -281,7 +286,9 @@ impl From<Mime> for ContentType {
     #[inline]
     fn from(mime: Mime) -> ContentType {
         // soooo inefficient.
-        let params = mime.2.into_iter()
+        let params = mime
+            .2
+            .into_iter()
             .map(|(attr, value)| (attr.to_string(), value.to_string()))
             .collect::<Vec<_>>();
 

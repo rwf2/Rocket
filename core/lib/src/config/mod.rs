@@ -181,37 +181,37 @@
 //! }
 //! ```
 
-mod error;
-mod environment;
-mod config;
 mod builder;
-mod toml_ext;
+mod config;
 mod custom_values;
+mod environment;
+mod error;
+mod toml_ext;
 
-use std::fs::{self, File};
 use std::collections::HashMap;
+use std::env;
+use std::fs::{self, File};
 use std::io::Read;
 use std::path::{Path, PathBuf};
 use std::process;
-use std::env;
 
 use toml;
 
-pub use self::custom_values::Limits;
-pub use toml::value::{Array, Table, Value, Datetime};
-pub use self::error::ConfigError;
-pub use self::environment::Environment;
-pub use self::config::Config;
 pub use self::builder::ConfigBuilder;
-pub use logger::LoggingLevel;
+pub use self::config::Config;
+pub use self::custom_values::Limits;
+pub use self::environment::Environment;
+pub use self::error::ConfigError;
 crate use self::toml_ext::LoggedValue;
+pub use logger::LoggingLevel;
+pub use toml::value::{Array, Datetime, Table, Value};
 
-use logger;
-use self::Environment::*;
 use self::environment::CONFIG_ENV;
-use logger::COLORS_ENV;
 use self::toml_ext::parse_simple_toml_value;
+use self::Environment::*;
 use http::uncased::uncased_eq;
+use logger;
+use logger::COLORS_ENV;
 
 const CONFIG_FILENAME: &str = "Rocket.toml";
 const GLOBAL_ENV_NAME: &str = "global";
@@ -240,7 +240,9 @@ impl RocketConfig {
 
         // Read the configure file to a string for parsing.
         let mut contents = String::new();
-        handle.read_to_string(&mut contents).map_err(|_| ConfigError::IoError)?;
+        handle
+            .read_to_string(&mut contents)
+            .map_err(|_| ConfigError::IoError)?;
 
         // Parse the config and return the result.
         RocketConfig::parse(contents, &file)
@@ -287,7 +289,7 @@ impl RocketConfig {
         loop {
             let manifest = current.join(CONFIG_FILENAME);
             if fs::metadata(&manifest).is_ok() {
-                return Ok(manifest)
+                return Ok(manifest);
             }
 
             match current.parent() {
@@ -337,28 +339,28 @@ impl RocketConfig {
     fn override_from_env(&mut self) -> Result<()> {
         for (key, val) in env::vars() {
             if key.len() < ENV_VAR_PREFIX.len() {
-                continue
+                continue;
             } else if !uncased_eq(&key[..ENV_VAR_PREFIX.len()], ENV_VAR_PREFIX) {
-                continue
+                continue;
             }
 
             // Skip environment variables that are handled elsewhere.
             if PREHANDLED_VARS.iter().any(|var| uncased_eq(&key, var)) {
-                continue
+                continue;
             }
 
             // Parse the key and value and try to set the variable for all envs.
             let key = key[ENV_VAR_PREFIX.len()..].to_lowercase();
             let toml_val = match parse_simple_toml_value(&val) {
                 Ok(val) => val,
-                Err(e) => return Err(ConfigError::BadEnvVal(key, val, e))
+                Err(e) => return Err(ConfigError::BadEnvVal(key, val, e)),
             };
 
             for env in &Environment::ALL {
                 match self.get_mut(*env).set_raw(&key, &toml_val) {
                     Err(ConfigError::BadType(_, exp, actual, _)) => {
                         let e = format!("expected {}, but found {}", exp, actual);
-                        return Err(ConfigError::BadEnvVal(key, val, e))
+                        return Err(ConfigError::BadEnvVal(key, val, e));
                     }
                     Err(e) => return Err(e),
                     Ok(_) => { /* move along */ }
@@ -382,7 +384,7 @@ impl RocketConfig {
                 let err = format!("expected a table, found {}", value.type_str());
                 return Err(ConfigError::ParseError(src, path, err, Some((1, 1))));
             }
-            Err(e) => return Err(ParseError(src, path, e.to_string(), e.line_col()))
+            Err(e) => return Err(ParseError(src, path, e.to_string(), e.line_col())),
         };
 
         // Create a config with the defaults; set the env to the active one.
@@ -396,9 +398,14 @@ impl RocketConfig {
             // Each environment must be a table.
             let kv_pairs = match value.as_table() {
                 Some(table) => table,
-                None => return Err(ConfigError::BadType(
-                    entry, "a table", value.type_str(), Some(path.clone())
-                ))
+                None => {
+                    return Err(ConfigError::BadType(
+                        entry,
+                        "a table",
+                        value.type_str(),
+                        Some(path.clone()),
+                    ));
+                }
             };
 
             // Store the global table for later use and move on.
@@ -411,7 +418,7 @@ impl RocketConfig {
             // table entry name and then set all of the key/values.
             match entry.as_str().parse() {
                 Ok(env) => config.set_from_table(env, kv_pairs)?,
-                Err(_) => Err(ConfigError::BadEntry(entry.clone(), path.clone()))?
+                Err(_) => Err(ConfigError::BadEntry(entry.clone(), path.clone()))?,
             }
         }
 
@@ -453,9 +460,8 @@ crate fn init() -> Config {
     use self::ConfigError::*;
     let config = RocketConfig::read().unwrap_or_else(|e| {
         match e {
-            | ParseError(..) | BadEntry(..) | BadEnv(..) | BadType(..) | Io(..)
-            | BadFilePath(..) | BadEnvVal(..) | UnknownKey(..)
-            | Missing(..) => bail(e),
+            ParseError(..) | BadEntry(..) | BadEnv(..) | BadType(..) | Io(..)
+            | BadFilePath(..) | BadEnvVal(..) | UnknownKey(..) | Missing(..) => bail(e),
             IoError => warn!("Failed reading Rocket.toml. Using defaults."),
             NotFound => { /* try using the default below */ }
         }
@@ -472,13 +478,13 @@ mod test {
     use std::env;
     use std::sync::Mutex;
 
-    use super::{RocketConfig, Config, ConfigError, ConfigBuilder};
-    use super::{Environment, GLOBAL_ENV_NAME};
     use super::environment::CONFIG_ENV;
     use super::Environment::*;
     use super::Result;
+    use super::{Config, ConfigBuilder, ConfigError, RocketConfig};
+    use super::{Environment, GLOBAL_ENV_NAME};
 
-    use ::logger::LoggingLevel;
+    use logger::LoggingLevel;
 
     const TEST_CONFIG_FILENAME: &'static str = "/tmp/testing/Rocket.toml";
 
@@ -488,24 +494,24 @@ mod test {
     }
 
     macro_rules! check_config {
-        ($rconfig:expr, $econfig:expr) => (
+        ($rconfig:expr, $econfig:expr) => {
             let expected = $econfig.finalize().unwrap();
             match $rconfig {
                 Ok(config) => assert_eq!(config.active(), &expected),
-                Err(e) => panic!("Config {} failed: {:?}", stringify!($rconfig), e)
+                Err(e) => panic!("Config {} failed: {:?}", stringify!($rconfig), e),
             }
-        );
+        };
 
-        ($env:expr, $rconfig:expr, $econfig:expr) => (
+        ($env:expr, $rconfig:expr, $econfig:expr) => {
             let expected = $econfig.finalize().unwrap();
             match $rconfig {
                 Ok(ref config) => assert_eq!(config.get($env), &expected),
-                Err(ref e) => panic!("Config {} failed: {:?}", stringify!($rconfig), e)
+                Err(ref e) => panic!("Config {} failed: {:?}", stringify!($rconfig), e),
             }
-        );
+        };
     }
 
-    fn active_default() -> Result<RocketConfig>  {
+    fn active_default() -> Result<RocketConfig> {
         RocketConfig::active_default()
     }
 
@@ -521,8 +527,10 @@ mod test {
         // First, without an environment. Should get development defaults on
         // debug builds and productions defaults on non-debug builds.
         env::remove_var(CONFIG_ENV);
-        #[cfg(debug_assertions)] check_config!(active_default(), default_config(Development));
-        #[cfg(not(debug_assertions))] check_config!(active_default(), default_config(Production));
+        #[cfg(debug_assertions)]
+        check_config!(active_default(), default_config(Development));
+        #[cfg(not(debug_assertions))]
+        check_config!(active_default(), default_config(Production));
 
         // Now with an explicit dev environment.
         for env in &["development", "dev"] {
@@ -548,7 +556,9 @@ mod test {
         // Take the lock so changing the environment doesn't cause races.
         let _env_lock = ENV_LOCK.lock().unwrap();
 
-        for env in &["", "p", "pr", "pro", "prodo", " prod", "dev ", "!dev!", "🚀 "] {
+        for env in &[
+            "", "p", "pr", "pro", "prodo", " prod", "dev ", "!dev!", "🚀 ",
+        ] {
             env::set_var(CONFIG_ENV, env);
             let err = ConfigError::BadEnv(env.to_string());
             assert!(active_default().err().map_or(false, |e| e == err));
@@ -561,7 +571,8 @@ mod test {
             let e_str = env.to_string();
             let err = ConfigError::BadEntry(e_str, TEST_CONFIG_FILENAME.into());
             assert!(RocketConfig::parse(toml_table, TEST_CONFIG_FILENAME)
-                    .err().map_or(false, |e| e == err));
+                .err()
+                .map_or(false, |e| e == err));
         }
     }
 
@@ -622,40 +633,65 @@ mod test {
         let _env_lock = ENV_LOCK.lock().unwrap();
         env::set_var(CONFIG_ENV, "dev");
 
-        check_config!(RocketConfig::parse(r#"
+        check_config!(
+            RocketConfig::parse(
+                r#"
                           [development]
                           address = "localhost"
-                      "#.to_string(), TEST_CONFIG_FILENAME), {
-                          default_config(Development).address("localhost")
-                      });
+                      "#
+                .to_string(),
+                TEST_CONFIG_FILENAME
+            ),
+            { default_config(Development).address("localhost") }
+        );
 
-        check_config!(RocketConfig::parse(r#"
+        check_config!(
+            RocketConfig::parse(
+                r#"
                           [development]
                           address = "127.0.0.1"
-                      "#.to_string(), TEST_CONFIG_FILENAME), {
-                          default_config(Development).address("127.0.0.1")
-                      });
+                      "#
+                .to_string(),
+                TEST_CONFIG_FILENAME
+            ),
+            { default_config(Development).address("127.0.0.1") }
+        );
 
-        check_config!(RocketConfig::parse(r#"
+        check_config!(
+            RocketConfig::parse(
+                r#"
                           [development]
                           address = "::"
-                      "#.to_string(), TEST_CONFIG_FILENAME), {
-                          default_config(Development).address("::")
-                      });
+                      "#
+                .to_string(),
+                TEST_CONFIG_FILENAME
+            ),
+            { default_config(Development).address("::") }
+        );
 
-        check_config!(RocketConfig::parse(r#"
+        check_config!(
+            RocketConfig::parse(
+                r#"
                           [dev]
                           address = "2001:db8::370:7334"
-                      "#.to_string(), TEST_CONFIG_FILENAME), {
-                          default_config(Development).address("2001:db8::370:7334")
-                      });
+                      "#
+                .to_string(),
+                TEST_CONFIG_FILENAME
+            ),
+            { default_config(Development).address("2001:db8::370:7334") }
+        );
 
-        check_config!(RocketConfig::parse(r#"
+        check_config!(
+            RocketConfig::parse(
+                r#"
                           [dev]
                           address = "0.0.0.0"
-                      "#.to_string(), TEST_CONFIG_FILENAME), {
-                          default_config(Development).address("0.0.0.0")
-                      });
+                      "#
+                .to_string(),
+                TEST_CONFIG_FILENAME
+            ),
+            { default_config(Development).address("0.0.0.0") }
+        );
     }
 
     #[test]
@@ -664,25 +700,45 @@ mod test {
         let _env_lock = ENV_LOCK.lock().unwrap();
         env::remove_var(CONFIG_ENV);
 
-        assert!(RocketConfig::parse(r#"
+        assert!(RocketConfig::parse(
+            r#"
             [development]
             address = 0000
-        "#.to_string(), TEST_CONFIG_FILENAME).is_err());
+        "#
+            .to_string(),
+            TEST_CONFIG_FILENAME
+        )
+        .is_err());
 
-        assert!(RocketConfig::parse(r#"
+        assert!(RocketConfig::parse(
+            r#"
             [development]
             address = true
-        "#.to_string(), TEST_CONFIG_FILENAME).is_err());
+        "#
+            .to_string(),
+            TEST_CONFIG_FILENAME
+        )
+        .is_err());
 
-        assert!(RocketConfig::parse(r#"
+        assert!(RocketConfig::parse(
+            r#"
             [development]
             address = "........"
-        "#.to_string(), TEST_CONFIG_FILENAME).is_err());
+        "#
+            .to_string(),
+            TEST_CONFIG_FILENAME
+        )
+        .is_err());
 
-        assert!(RocketConfig::parse(r#"
+        assert!(RocketConfig::parse(
+            r#"
             [staging]
             address = "1.2.3.4:100"
-        "#.to_string(), TEST_CONFIG_FILENAME).is_err());
+        "#
+            .to_string(),
+            TEST_CONFIG_FILENAME
+        )
+        .is_err());
     }
 
     // Only do this test when the tls feature is disabled since the file paths
@@ -693,27 +749,47 @@ mod test {
         let _env_lock = ENV_LOCK.lock().unwrap();
         env::set_var(CONFIG_ENV, "dev");
 
-        assert!(RocketConfig::parse(r#"
+        assert!(RocketConfig::parse(
+            r#"
             [staging]
             tls = { certs = "some/path.pem", key = "some/key.pem" }
-        "#.to_string(), TEST_CONFIG_FILENAME).is_ok());
+        "#
+            .to_string(),
+            TEST_CONFIG_FILENAME
+        )
+        .is_ok());
 
-        assert!(RocketConfig::parse(r#"
+        assert!(RocketConfig::parse(
+            r#"
             [staging.tls]
             certs = "some/path.pem"
             key = "some/key.pem"
-        "#.to_string(), TEST_CONFIG_FILENAME).is_ok());
+        "#
+            .to_string(),
+            TEST_CONFIG_FILENAME
+        )
+        .is_ok());
 
-        assert!(RocketConfig::parse(r#"
+        assert!(RocketConfig::parse(
+            r#"
             [global.tls]
             certs = "some/path.pem"
             key = "some/key.pem"
-        "#.to_string(), TEST_CONFIG_FILENAME).is_ok());
+        "#
+            .to_string(),
+            TEST_CONFIG_FILENAME
+        )
+        .is_ok());
 
-        assert!(RocketConfig::parse(r#"
+        assert!(RocketConfig::parse(
+            r#"
             [global]
             tls = { certs = "some/path.pem", key = "some/key.pem" }
-        "#.to_string(), TEST_CONFIG_FILENAME).is_ok());
+        "#
+            .to_string(),
+            TEST_CONFIG_FILENAME
+        )
+        .is_ok());
     }
 
     #[test]
@@ -722,25 +798,45 @@ mod test {
         let _env_lock = ENV_LOCK.lock().unwrap();
         env::remove_var(CONFIG_ENV);
 
-        assert!(RocketConfig::parse(r#"
+        assert!(RocketConfig::parse(
+            r#"
             [development]
             tls = "hello"
-        "#.to_string(), TEST_CONFIG_FILENAME).is_err());
+        "#
+            .to_string(),
+            TEST_CONFIG_FILENAME
+        )
+        .is_err());
 
-        assert!(RocketConfig::parse(r#"
+        assert!(RocketConfig::parse(
+            r#"
             [development]
             tls = { certs = "some/path.pem" }
-        "#.to_string(), TEST_CONFIG_FILENAME).is_err());
+        "#
+            .to_string(),
+            TEST_CONFIG_FILENAME
+        )
+        .is_err());
 
-        assert!(RocketConfig::parse(r#"
+        assert!(RocketConfig::parse(
+            r#"
             [development]
             tls = { certs = "some/path.pem", key = "some/key.pem", extra = "bah" }
-        "#.to_string(), TEST_CONFIG_FILENAME).is_err());
+        "#
+            .to_string(),
+            TEST_CONFIG_FILENAME
+        )
+        .is_err());
 
-        assert!(RocketConfig::parse(r#"
+        assert!(RocketConfig::parse(
+            r#"
             [staging]
             tls = { cert = "some/path.pem", key = "some/key.pem" }
-        "#.to_string(), TEST_CONFIG_FILENAME).is_err());
+        "#
+            .to_string(),
+            TEST_CONFIG_FILENAME
+        )
+        .is_err());
     }
 
     #[test]
@@ -749,26 +845,41 @@ mod test {
         let _env_lock = ENV_LOCK.lock().unwrap();
         env::set_var(CONFIG_ENV, "stage");
 
-        check_config!(RocketConfig::parse(r#"
+        check_config!(
+            RocketConfig::parse(
+                r#"
                           [stage]
                           port = 100
-                      "#.to_string(), TEST_CONFIG_FILENAME), {
-                          default_config(Staging).port(100)
-                      });
+                      "#
+                .to_string(),
+                TEST_CONFIG_FILENAME
+            ),
+            { default_config(Staging).port(100) }
+        );
 
-        check_config!(RocketConfig::parse(r#"
+        check_config!(
+            RocketConfig::parse(
+                r#"
                           [stage]
                           port = 6000
-                      "#.to_string(), TEST_CONFIG_FILENAME), {
-                          default_config(Staging).port(6000)
-                      });
+                      "#
+                .to_string(),
+                TEST_CONFIG_FILENAME
+            ),
+            { default_config(Staging).port(6000) }
+        );
 
-        check_config!(RocketConfig::parse(r#"
+        check_config!(
+            RocketConfig::parse(
+                r#"
                           [stage]
                           port = 65535
-                      "#.to_string(), TEST_CONFIG_FILENAME), {
-                          default_config(Staging).port(65535)
-                      });
+                      "#
+                .to_string(),
+                TEST_CONFIG_FILENAME
+            ),
+            { default_config(Staging).port(65535) }
+        );
     }
 
     #[test]
@@ -777,30 +888,55 @@ mod test {
         let _env_lock = ENV_LOCK.lock().unwrap();
         env::remove_var(CONFIG_ENV);
 
-        assert!(RocketConfig::parse(r#"
+        assert!(RocketConfig::parse(
+            r#"
             [development]
             port = true
-        "#.to_string(), TEST_CONFIG_FILENAME).is_err());
+        "#
+            .to_string(),
+            TEST_CONFIG_FILENAME
+        )
+        .is_err());
 
-        assert!(RocketConfig::parse(r#"
+        assert!(RocketConfig::parse(
+            r#"
             [production]
             port = "hello"
-        "#.to_string(), TEST_CONFIG_FILENAME).is_err());
+        "#
+            .to_string(),
+            TEST_CONFIG_FILENAME
+        )
+        .is_err());
 
-        assert!(RocketConfig::parse(r#"
+        assert!(RocketConfig::parse(
+            r#"
             [staging]
             port = -1
-        "#.to_string(), TEST_CONFIG_FILENAME).is_err());
+        "#
+            .to_string(),
+            TEST_CONFIG_FILENAME
+        )
+        .is_err());
 
-        assert!(RocketConfig::parse(r#"
+        assert!(RocketConfig::parse(
+            r#"
             [staging]
             port = 65536
-        "#.to_string(), TEST_CONFIG_FILENAME).is_err());
+        "#
+            .to_string(),
+            TEST_CONFIG_FILENAME
+        )
+        .is_err());
 
-        assert!(RocketConfig::parse(r#"
+        assert!(RocketConfig::parse(
+            r#"
             [staging]
             port = 105836
-        "#.to_string(), TEST_CONFIG_FILENAME).is_err());
+        "#
+            .to_string(),
+            TEST_CONFIG_FILENAME
+        )
+        .is_err());
     }
 
     #[test]
@@ -809,26 +945,41 @@ mod test {
         let _env_lock = ENV_LOCK.lock().unwrap();
         env::set_var(CONFIG_ENV, "stage");
 
-        check_config!(RocketConfig::parse(r#"
+        check_config!(
+            RocketConfig::parse(
+                r#"
                           [stage]
                           workers = 1
-                      "#.to_string(), TEST_CONFIG_FILENAME), {
-                          default_config(Staging).workers(1)
-                      });
+                      "#
+                .to_string(),
+                TEST_CONFIG_FILENAME
+            ),
+            { default_config(Staging).workers(1) }
+        );
 
-        check_config!(RocketConfig::parse(r#"
+        check_config!(
+            RocketConfig::parse(
+                r#"
                           [stage]
                           workers = 300
-                      "#.to_string(), TEST_CONFIG_FILENAME), {
-                          default_config(Staging).workers(300)
-                      });
+                      "#
+                .to_string(),
+                TEST_CONFIG_FILENAME
+            ),
+            { default_config(Staging).workers(300) }
+        );
 
-        check_config!(RocketConfig::parse(r#"
+        check_config!(
+            RocketConfig::parse(
+                r#"
                           [stage]
                           workers = 65535
-                      "#.to_string(), TEST_CONFIG_FILENAME), {
-                          default_config(Staging).workers(65535)
-                      });
+                      "#
+                .to_string(),
+                TEST_CONFIG_FILENAME
+            ),
+            { default_config(Staging).workers(65535) }
+        );
     }
 
     #[test]
@@ -837,30 +988,55 @@ mod test {
         let _env_lock = ENV_LOCK.lock().unwrap();
         env::remove_var(CONFIG_ENV);
 
-        assert!(RocketConfig::parse(r#"
+        assert!(RocketConfig::parse(
+            r#"
             [development]
             workers = true
-        "#.to_string(), TEST_CONFIG_FILENAME).is_err());
+        "#
+            .to_string(),
+            TEST_CONFIG_FILENAME
+        )
+        .is_err());
 
-        assert!(RocketConfig::parse(r#"
+        assert!(RocketConfig::parse(
+            r#"
             [production]
             workers = "hello"
-        "#.to_string(), TEST_CONFIG_FILENAME).is_err());
+        "#
+            .to_string(),
+            TEST_CONFIG_FILENAME
+        )
+        .is_err());
 
-        assert!(RocketConfig::parse(r#"
+        assert!(RocketConfig::parse(
+            r#"
             [staging]
             workers = -1
-        "#.to_string(), TEST_CONFIG_FILENAME).is_err());
+        "#
+            .to_string(),
+            TEST_CONFIG_FILENAME
+        )
+        .is_err());
 
-        assert!(RocketConfig::parse(r#"
+        assert!(RocketConfig::parse(
+            r#"
             [staging]
             workers = 65536
-        "#.to_string(), TEST_CONFIG_FILENAME).is_err());
+        "#
+            .to_string(),
+            TEST_CONFIG_FILENAME
+        )
+        .is_err());
 
-        assert!(RocketConfig::parse(r#"
+        assert!(RocketConfig::parse(
+            r#"
             [staging]
             workers = 105836
-        "#.to_string(), TEST_CONFIG_FILENAME).is_err());
+        "#
+            .to_string(),
+            TEST_CONFIG_FILENAME
+        )
+        .is_err());
     }
 
     #[test]
@@ -869,33 +1045,53 @@ mod test {
         let _env_lock = ENV_LOCK.lock().unwrap();
         env::set_var(CONFIG_ENV, "stage");
 
-        check_config!(RocketConfig::parse(r#"
+        check_config!(
+            RocketConfig::parse(
+                r#"
                           [stage]
                           keep_alive = 10
-                      "#.to_string(), TEST_CONFIG_FILENAME), {
-                          default_config(Staging).keep_alive(10)
-                      });
+                      "#
+                .to_string(),
+                TEST_CONFIG_FILENAME
+            ),
+            { default_config(Staging).keep_alive(10) }
+        );
 
-        check_config!(RocketConfig::parse(r#"
+        check_config!(
+            RocketConfig::parse(
+                r#"
                           [stage]
                           keep_alive = 0
-                      "#.to_string(), TEST_CONFIG_FILENAME), {
-                          default_config(Staging).keep_alive(0)
-                      });
+                      "#
+                .to_string(),
+                TEST_CONFIG_FILENAME
+            ),
+            { default_config(Staging).keep_alive(0) }
+        );
 
-        check_config!(RocketConfig::parse(r#"
+        check_config!(
+            RocketConfig::parse(
+                r#"
                           [stage]
                           keep_alive = 348
-                      "#.to_string(), TEST_CONFIG_FILENAME), {
-                          default_config(Staging).keep_alive(348)
-                      });
+                      "#
+                .to_string(),
+                TEST_CONFIG_FILENAME
+            ),
+            { default_config(Staging).keep_alive(348) }
+        );
 
-        check_config!(RocketConfig::parse(r#"
+        check_config!(
+            RocketConfig::parse(
+                r#"
                           [stage]
                           keep_alive = 0
-                      "#.to_string(), TEST_CONFIG_FILENAME), {
-                          default_config(Staging).keep_alive(0)
-                      });
+                      "#
+                .to_string(),
+                TEST_CONFIG_FILENAME
+            ),
+            { default_config(Staging).keep_alive(0) }
+        );
     }
 
     #[test]
@@ -904,25 +1100,45 @@ mod test {
         let _env_lock = ENV_LOCK.lock().unwrap();
         env::remove_var(CONFIG_ENV);
 
-        assert!(RocketConfig::parse(r#"
+        assert!(RocketConfig::parse(
+            r#"
             [dev]
             keep_alive = true
-        "#.to_string(), TEST_CONFIG_FILENAME).is_err());
+        "#
+            .to_string(),
+            TEST_CONFIG_FILENAME
+        )
+        .is_err());
 
-        assert!(RocketConfig::parse(r#"
+        assert!(RocketConfig::parse(
+            r#"
             [dev]
             keep_alive = -10
-        "#.to_string(), TEST_CONFIG_FILENAME).is_err());
+        "#
+            .to_string(),
+            TEST_CONFIG_FILENAME
+        )
+        .is_err());
 
-        assert!(RocketConfig::parse(r#"
+        assert!(RocketConfig::parse(
+            r#"
             [dev]
             keep_alive = "Some(10)"
-        "#.to_string(), TEST_CONFIG_FILENAME).is_err());
+        "#
+            .to_string(),
+            TEST_CONFIG_FILENAME
+        )
+        .is_err());
 
-        assert!(RocketConfig::parse(r#"
+        assert!(RocketConfig::parse(
+            r#"
             [dev]
             keep_alive = 4294967296
-        "#.to_string(), TEST_CONFIG_FILENAME).is_err());
+        "#
+            .to_string(),
+            TEST_CONFIG_FILENAME
+        )
+        .is_err());
     }
 
     #[test]
@@ -931,34 +1147,53 @@ mod test {
         let _env_lock = ENV_LOCK.lock().unwrap();
         env::set_var(CONFIG_ENV, "stage");
 
-        check_config!(RocketConfig::parse(r#"
+        check_config!(
+            RocketConfig::parse(
+                r#"
                           [stage]
                           log = "normal"
-                      "#.to_string(), TEST_CONFIG_FILENAME), {
-                          default_config(Staging).log_level(LoggingLevel::Normal)
-                      });
+                      "#
+                .to_string(),
+                TEST_CONFIG_FILENAME
+            ),
+            { default_config(Staging).log_level(LoggingLevel::Normal) }
+        );
 
-
-        check_config!(RocketConfig::parse(r#"
+        check_config!(
+            RocketConfig::parse(
+                r#"
                           [stage]
                           log = "debug"
-                      "#.to_string(), TEST_CONFIG_FILENAME), {
-                          default_config(Staging).log_level(LoggingLevel::Debug)
-                      });
+                      "#
+                .to_string(),
+                TEST_CONFIG_FILENAME
+            ),
+            { default_config(Staging).log_level(LoggingLevel::Debug) }
+        );
 
-        check_config!(RocketConfig::parse(r#"
+        check_config!(
+            RocketConfig::parse(
+                r#"
                           [stage]
                           log = "critical"
-                      "#.to_string(), TEST_CONFIG_FILENAME), {
-                          default_config(Staging).log_level(LoggingLevel::Critical)
-                      });
+                      "#
+                .to_string(),
+                TEST_CONFIG_FILENAME
+            ),
+            { default_config(Staging).log_level(LoggingLevel::Critical) }
+        );
 
-        check_config!(RocketConfig::parse(r#"
+        check_config!(
+            RocketConfig::parse(
+                r#"
                           [stage]
                           log = "off"
-                      "#.to_string(), TEST_CONFIG_FILENAME), {
-                          default_config(Staging).log_level(LoggingLevel::Off)
-                      });
+                      "#
+                .to_string(),
+                TEST_CONFIG_FILENAME
+            ),
+            { default_config(Staging).log_level(LoggingLevel::Off) }
+        );
     }
 
     #[test]
@@ -967,20 +1202,35 @@ mod test {
         let _env_lock = ENV_LOCK.lock().unwrap();
         env::remove_var(CONFIG_ENV);
 
-        assert!(RocketConfig::parse(r#"
+        assert!(RocketConfig::parse(
+            r#"
             [dev]
             log = false
-        "#.to_string(), TEST_CONFIG_FILENAME).is_err());
+        "#
+            .to_string(),
+            TEST_CONFIG_FILENAME
+        )
+        .is_err());
 
-        assert!(RocketConfig::parse(r#"
+        assert!(RocketConfig::parse(
+            r#"
             [development]
             log = 0
-        "#.to_string(), TEST_CONFIG_FILENAME).is_err());
+        "#
+            .to_string(),
+            TEST_CONFIG_FILENAME
+        )
+        .is_err());
 
-        assert!(RocketConfig::parse(r#"
+        assert!(RocketConfig::parse(
+            r#"
             [prod]
             log = "no"
-        "#.to_string(), TEST_CONFIG_FILENAME).is_err());
+        "#
+            .to_string(),
+            TEST_CONFIG_FILENAME
+        )
+        .is_err());
     }
 
     #[test]
@@ -989,23 +1239,35 @@ mod test {
         let _env_lock = ENV_LOCK.lock().unwrap();
         env::set_var(CONFIG_ENV, "stage");
 
-        check_config!(RocketConfig::parse(r#"
+        check_config!(
+            RocketConfig::parse(
+                r#"
                           [stage]
                           secret_key = "TpUiXK2d/v5DFxJnWL12suJKPExKR8h9zd/o+E7SU+0="
-                      "#.to_string(), TEST_CONFIG_FILENAME), {
-                          default_config(Staging).secret_key(
-                              "TpUiXK2d/v5DFxJnWL12suJKPExKR8h9zd/o+E7SU+0="
-                          )
-                      });
+                      "#
+                .to_string(),
+                TEST_CONFIG_FILENAME
+            ),
+            {
+                default_config(Staging)
+                    .secret_key("TpUiXK2d/v5DFxJnWL12suJKPExKR8h9zd/o+E7SU+0=")
+            }
+        );
 
-        check_config!(RocketConfig::parse(r#"
+        check_config!(
+            RocketConfig::parse(
+                r#"
                           [stage]
                           secret_key = "jTyprDberFUiUFsJ3vcb1XKsYHWNBRvWAnXTlbTgGFU="
-                      "#.to_string(), TEST_CONFIG_FILENAME), {
-                          default_config(Staging).secret_key(
-                              "jTyprDberFUiUFsJ3vcb1XKsYHWNBRvWAnXTlbTgGFU="
-                          )
-                      });
+                      "#
+                .to_string(),
+                TEST_CONFIG_FILENAME
+            ),
+            {
+                default_config(Staging)
+                    .secret_key("jTyprDberFUiUFsJ3vcb1XKsYHWNBRvWAnXTlbTgGFU=")
+            }
+        );
     }
 
     #[test]
@@ -1014,20 +1276,35 @@ mod test {
         let _env_lock = ENV_LOCK.lock().unwrap();
         env::remove_var(CONFIG_ENV);
 
-        assert!(RocketConfig::parse(r#"
+        assert!(RocketConfig::parse(
+            r#"
             [dev]
             secret_key = true
-        "#.to_string(), TEST_CONFIG_FILENAME).is_err());
+        "#
+            .to_string(),
+            TEST_CONFIG_FILENAME
+        )
+        .is_err());
 
-        assert!(RocketConfig::parse(r#"
+        assert!(RocketConfig::parse(
+            r#"
             [dev]
             secret_key = 1283724897238945234897
-        "#.to_string(), TEST_CONFIG_FILENAME).is_err());
+        "#
+            .to_string(),
+            TEST_CONFIG_FILENAME
+        )
+        .is_err());
 
-        assert!(RocketConfig::parse(r#"
+        assert!(RocketConfig::parse(
+            r#"
             [dev]
             secret_key = "abcv"
-        "#.to_string(), TEST_CONFIG_FILENAME).is_err());
+        "#
+            .to_string(),
+            TEST_CONFIG_FILENAME
+        )
+        .is_err());
     }
 
     #[test]
@@ -1036,19 +1313,34 @@ mod test {
         let _env_lock = ENV_LOCK.lock().unwrap();
         env::remove_var(CONFIG_ENV);
 
-        assert!(RocketConfig::parse(r#"
+        assert!(RocketConfig::parse(
+            r#"
             [dev
-        "#.to_string(), TEST_CONFIG_FILENAME).is_err());
+        "#
+            .to_string(),
+            TEST_CONFIG_FILENAME
+        )
+        .is_err());
 
-        assert!(RocketConfig::parse(r#"
+        assert!(RocketConfig::parse(
+            r#"
             [dev]
             1. = 2
-        "#.to_string(), TEST_CONFIG_FILENAME).is_err());
+        "#
+            .to_string(),
+            TEST_CONFIG_FILENAME
+        )
+        .is_err());
 
-        assert!(RocketConfig::parse(r#"
+        assert!(RocketConfig::parse(
+            r#"
             [dev]
             secret_key = "abcv" = other
-        "#.to_string(), TEST_CONFIG_FILENAME).is_err());
+        "#
+            .to_string(),
+            TEST_CONFIG_FILENAME
+        )
+        .is_err());
     }
 
     #[test]
@@ -1060,26 +1352,47 @@ mod test {
         for env in &Environment::ALL {
             env::set_var(CONFIG_ENV, env.to_string());
 
-            check_config!(RocketConfig::parse(format!(r#"
+            check_config!(
+                RocketConfig::parse(
+                    format!(
+                        r#"
                               [{}]
                               address = "::1"
-                          "#, GLOBAL_ENV_NAME), TEST_CONFIG_FILENAME), {
-                              default_config(*env).address("::1")
-                          });
+                          "#,
+                        GLOBAL_ENV_NAME
+                    ),
+                    TEST_CONFIG_FILENAME
+                ),
+                { default_config(*env).address("::1") }
+            );
 
-            check_config!(RocketConfig::parse(format!(r#"
+            check_config!(
+                RocketConfig::parse(
+                    format!(
+                        r#"
                               [{}]
                               database = "mysql"
-                          "#, GLOBAL_ENV_NAME), TEST_CONFIG_FILENAME), {
-                              default_config(*env).extra("database", "mysql")
-                          });
+                          "#,
+                        GLOBAL_ENV_NAME
+                    ),
+                    TEST_CONFIG_FILENAME
+                ),
+                { default_config(*env).extra("database", "mysql") }
+            );
 
-            check_config!(RocketConfig::parse(format!(r#"
+            check_config!(
+                RocketConfig::parse(
+                    format!(
+                        r#"
                               [{}]
                               port = 3980
-                          "#, GLOBAL_ENV_NAME), TEST_CONFIG_FILENAME), {
-                              default_config(*env).port(3980)
-                          });
+                          "#,
+                        GLOBAL_ENV_NAME
+                    ),
+                    TEST_CONFIG_FILENAME
+                ),
+                { default_config(*env).port(3980) }
+            );
         }
     }
 
@@ -1089,19 +1402,21 @@ mod test {
         let _env_lock = ENV_LOCK.lock().unwrap();
 
         let pairs = [
-            ("log", "critical"), ("LOG", "debug"), ("PORT", "8110"),
-            ("address", "1.2.3.4"), ("EXTRA_EXTRA", "true"), ("workers", "3")
+            ("log", "critical"),
+            ("LOG", "debug"),
+            ("PORT", "8110"),
+            ("address", "1.2.3.4"),
+            ("EXTRA_EXTRA", "true"),
+            ("workers", "3"),
         ];
 
-        let check_value = |key: &str, val: &str, config: &Config| {
-            match key {
-                "log" => assert_eq!(config.log_level, val.parse().unwrap()),
-                "port" => assert_eq!(config.port, val.parse().unwrap()),
-                "address" => assert_eq!(config.address, val),
-                "extra_extra" => assert_eq!(config.get_bool(key).unwrap(), true),
-                "workers" => assert_eq!(config.workers, val.parse().unwrap()),
-                _ => panic!("Unexpected key: {}", key)
-            }
+        let check_value = |key: &str, val: &str, config: &Config| match key {
+            "log" => assert_eq!(config.log_level, val.parse().unwrap()),
+            "port" => assert_eq!(config.port, val.parse().unwrap()),
+            "address" => assert_eq!(config.address, val),
+            "extra_extra" => assert_eq!(config.get_bool(key).unwrap(), true),
+            "workers" => assert_eq!(config.workers, val.parse().unwrap()),
+            _ => panic!("Unexpected key: {}", key),
         };
 
         // Check that setting the environment variable actually changes the
@@ -1145,7 +1460,8 @@ mod test {
             port = 7810
             workers = 21
             log = "normal"
-        "#.to_string();
+        "#
+        .to_string();
 
         // Check that setting the environment variable actually changes the
         // config for the default active environments.

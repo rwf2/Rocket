@@ -1,11 +1,11 @@
-use std::borrow::{Cow, Borrow};
-use std::str::FromStr;
+use std::borrow::{Borrow, Cow};
 use std::fmt;
 use std::hash::{Hash, Hasher};
+use std::str::FromStr;
 
 use ext::IntoCollection;
+use parse::{parse_media_type, Indexed, IndexedString};
 use uncased::{uncased_eq, UncasedStr};
-use parse::{Indexed, IndexedString, parse_media_type};
 
 use smallvec::SmallVec;
 
@@ -19,7 +19,7 @@ struct MediaParam {
 #[derive(Debug, Clone)]
 pub enum MediaParams {
     Static(&'static [(IndexedString, IndexedString)]),
-    Dynamic(SmallVec<[(IndexedString, IndexedString); 2]>)
+    Dynamic(SmallVec<[(IndexedString, IndexedString); 2]>),
 }
 
 impl ::pear::parsers::Collection for MediaParams {
@@ -32,7 +32,7 @@ impl ::pear::parsers::Collection for MediaParams {
     fn add(&mut self, item: Self::Item) {
         match *self {
             MediaParams::Static(..) => panic!("can't add to static collection!"),
-            MediaParams::Dynamic(ref mut v) => v.push(item)
+            MediaParams::Dynamic(ref mut v) => v.push(item),
         }
     }
 }
@@ -41,7 +41,7 @@ impl ::pear::parsers::Collection for MediaParams {
 pub enum Source {
     Known(&'static str),
     Custom(Cow<'static, str>),
-    None
+    None,
 }
 
 impl Source {
@@ -50,7 +50,7 @@ impl Source {
         match *self {
             Source::Known(s) => Some(s),
             Source::Custom(ref s) => Some(s.borrow()),
-            Source::None => None
+            Source::None => None,
         }
     }
 }
@@ -105,11 +105,13 @@ pub struct MediaType {
     pub sub: IndexedString,
     /// The parameters, if any.
     #[doc(hidden)]
-    pub params: MediaParams
+    pub params: MediaParams,
 }
 
 macro_rules! media_str {
-    ($string:expr) => (Indexed::Concrete(Cow::Borrowed($string)))
+    ($string:expr) => {
+        Indexed::Concrete(Cow::Borrowed($string))
+    };
 }
 
 macro_rules! media_types {
@@ -287,7 +289,9 @@ impl MediaType {
     /// ```
     #[inline]
     pub fn new<T, S>(top: T, sub: S) -> MediaType
-        where T: Into<Cow<'static, str>>, S: Into<Cow<'static, str>>
+    where
+        T: Into<Cow<'static, str>>,
+        S: Into<Cow<'static, str>>,
     {
         MediaType {
             source: Source::None,
@@ -325,20 +329,22 @@ impl MediaType {
     /// ```
     #[inline]
     pub fn with_params<T, S, K, V, P>(top: T, sub: S, ps: P) -> MediaType
-        where T: Into<Cow<'static, str>>, S: Into<Cow<'static, str>>,
-              K: Into<Cow<'static, str>>, V: Into<Cow<'static, str>>,
-              P: IntoCollection<(K, V)>
+    where
+        T: Into<Cow<'static, str>>,
+        S: Into<Cow<'static, str>>,
+        K: Into<Cow<'static, str>>,
+        V: Into<Cow<'static, str>>,
+        P: IntoCollection<(K, V)>,
     {
-        let params = ps.mapped(|(key, val)| (
-            Indexed::Concrete(key.into()),
-            Indexed::Concrete(val.into())
-        ));
+        let params = ps.mapped(|(key, val)| {
+            (Indexed::Concrete(key.into()), Indexed::Concrete(val.into()))
+        });
 
         MediaType {
             source: Source::None,
             top: Indexed::Concrete(top.into()),
             sub: Indexed::Concrete(sub.into()),
-            params: MediaParams::Dynamic(params)
+            params: MediaParams::Dynamic(params),
         }
     }
 
@@ -452,7 +458,7 @@ impl MediaType {
                     (Some(_), Some(_)) => continue,
                     (Some(_), None) => return false,
                     (None, Some(_)) => return false,
-                    (None, None) => return true
+                    (None, None) => return true,
                 }
             }
         }
@@ -485,17 +491,16 @@ impl MediaType {
     /// assert_eq!(png.params().count(), 0);
     /// ```
     #[inline]
-    pub fn params<'a>(&'a self) -> impl Iterator<Item=(&'a str, &'a str)> + 'a {
+    pub fn params<'a>(&'a self) -> impl Iterator<Item = (&'a str, &'a str)> + 'a {
         let param_slice = match self.params {
             MediaParams::Static(slice) => slice,
             MediaParams::Dynamic(ref vec) => &vec[..],
         };
 
-        param_slice.iter()
-            .map(move |&(ref key, ref val)| {
-                let source_str = self.source.as_str();
-                (key.from_source(source_str), val.from_source(source_str))
-            })
+        param_slice.iter().map(move |&(ref key, ref val)| {
+            let source_str = self.source.as_str();
+            (key.from_source(source_str), val.from_source(source_str))
+        })
     }
 
     known_media_types!(media_types);

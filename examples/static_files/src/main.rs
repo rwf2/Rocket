@@ -1,7 +1,8 @@
 extern crate rocket;
 extern crate rocket_contrib;
 
-#[cfg(test)] mod tests;
+#[cfg(test)]
+mod tests;
 
 use rocket_contrib::serve::StaticFiles;
 

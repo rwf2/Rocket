@@ -1,13 +1,15 @@
 use super::rocket;
-use rocket::local::Client;
 use rocket::http::{ContentType, Status};
+use rocket::local::Client;
 
 fn test_login<T>(user: &str, pass: &str, age: &str, status: Status, body: T)
-    where T: Into<Option<&'static str>>
+where
+    T: Into<Option<&'static str>>,
 {
     let client = Client::new(rocket()).unwrap();
     let query = format!("username={}&password={}&age={}", user, pass, age);
-    let mut response = client.post("/login")
+    let mut response = client
+        .post("/login")
         .header(ContentType::Form)
         .body(&query)
         .dispatch();
@@ -33,19 +35,44 @@ fn test_invalid_user() {
 #[test]
 fn test_invalid_password() {
     test_login("Sergio", "password1", "30", Status::Ok, "Wrong password!");
-    test_login("Sergio", "ok", "30", Status::Ok, "Password is invalid: too short!");
+    test_login(
+        "Sergio",
+        "ok",
+        "30",
+        Status::Ok,
+        "Password is invalid: too short!",
+    );
 }
 
 #[test]
 fn test_invalid_age() {
-    test_login("Sergio", "password", "20", Status::Ok, "must be at least 21.");
-    test_login("Sergio", "password", "-100", Status::Ok, "must be at least 21.");
-    test_login("Sergio", "password", "hi", Status::Ok, "value is not a number");
+    test_login(
+        "Sergio",
+        "password",
+        "20",
+        Status::Ok,
+        "must be at least 21.",
+    );
+    test_login(
+        "Sergio",
+        "password",
+        "-100",
+        Status::Ok,
+        "must be at least 21.",
+    );
+    test_login(
+        "Sergio",
+        "password",
+        "hi",
+        Status::Ok,
+        "value is not a number",
+    );
 }
 
 fn check_bad_form(form_str: &str, status: Status) {
     let client = Client::new(rocket()).unwrap();
-    let response = client.post("/login")
+    let response = client
+        .post("/login")
         .header(ContentType::Form)
         .body(form_str)
         .dispatch();
@@ -69,7 +96,7 @@ fn test_bad_form_missing_fields() {
         "age=30",
         "username=Sergio&password=pass",
         "username=Sergio&age=30",
-        "password=pass&age=30"
+        "password=pass&age=30",
     ];
 
     for bad_input in bad_inputs.into_iter() {
@@ -79,6 +106,8 @@ fn test_bad_form_missing_fields() {
 
 #[test]
 fn test_bad_form_additional_fields() {
-    check_bad_form("username=Sergio&password=pass&age=30&addition=1",
-                   Status::UnprocessableEntity);
+    check_bad_form(
+        "username=Sergio&password=pass&age=30&addition=1",
+        Status::UnprocessableEntity,
+    );
 }

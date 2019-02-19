@@ -2,7 +2,7 @@
 
 use std::borrow::Cow;
 
-use rocket::http::{Header, uri::Uri, uncased::UncasedStr};
+use rocket::http::{uncased::UncasedStr, uri::Uri, Header};
 
 use helmet::time::Duration;
 
@@ -79,7 +79,7 @@ impl<P: Policy> SubPolicy for P {
 }
 
 macro_rules! impl_policy {
-    ($T:ty, $name:expr) => (
+    ($T:ty, $name:expr) => {
         impl Policy for $T {
             const NAME: &'static str = $name;
 
@@ -87,7 +87,7 @@ macro_rules! impl_policy {
                 self.into()
             }
         }
-    )
+    };
 }
 
 impl_policy!(XssFilter, "X-XSS-Protection");
@@ -141,7 +141,7 @@ pub enum Referrer {
     /// the full URL of TLS protected resources to insecure origins. Use with
     /// caution._
     UnsafeUrl,
- }
+}
 
 /// Defaults to [`Referrer::NoReferrer`]. Tells the browser to omit the
 /// `Referer` header.
@@ -211,14 +211,16 @@ impl Default for ExpectCt {
 
 impl<'a> Into<Header<'static>> for &'a ExpectCt {
     fn into(self) -> Header<'static> {
-        let policy_string =  match self {
+        let policy_string = match self {
             ExpectCt::Enforce(age) => format!("max-age={}, enforce", age.num_seconds()),
             ExpectCt::Report(age, uri) => {
                 format!(r#"max-age={}, report-uri="{}""#, age.num_seconds(), uri)
             }
-            ExpectCt::ReportAndEnforce(age, uri) => {
-                format!("max-age={}, enforce, report-uri=\"{}\"", age.num_seconds(), uri)
-            }
+            ExpectCt::ReportAndEnforce(age, uri) => format!(
+                "max-age={}, enforce, report-uri=\"{}\"",
+                age.num_seconds(),
+                uri
+            ),
         };
 
         Header::new(ExpectCt::NAME, policy_string)

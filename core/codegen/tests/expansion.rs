@@ -1,6 +1,7 @@
 #![feature(proc_macro_hygiene, decl_macro)]
 
-#[macro_use] extern crate rocket;
+#[macro_use]
+extern crate rocket;
 
 use rocket::local::Client;
 
@@ -15,11 +16,10 @@ macro_rules! make_handler {
         fn hard(id: i32) -> String {
             format!("hard id: {}", id)
         }
-    }
+    };
 }
 
 make_handler!();
-
 
 macro_rules! foo {
     ($addr:expr, $name:ident) => {
@@ -54,7 +54,7 @@ macro_rules! index {
         fn index(thing: rocket::State<$type>) -> String {
             format!("Thing: {}", *thing)
         }
-    }
+    };
 }
 
 index!(i32);

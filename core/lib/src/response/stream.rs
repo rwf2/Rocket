@@ -1,9 +1,9 @@
-use std::io::Read;
 use std::fmt::{self, Debug};
+use std::io::Read;
 
-use request::Request;
-use response::{Response, Responder, DEFAULT_CHUNK_SIZE};
 use http::Status;
+use request::Request;
+use response::{Responder, Response, DEFAULT_CHUNK_SIZE};
 
 /// Streams a response to a client from an arbitrary `Read`er type.
 ///

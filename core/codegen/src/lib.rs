@@ -1,8 +1,7 @@
 #![feature(proc_macro_diagnostic, proc_macro_span)]
 #![feature(crate_visibility_modifier)]
 #![feature(transpose_result)]
-#![recursion_limit="128"]
-
+#![recursion_limit = "128"]
 #![doc(html_root_url = "https://api.rocket.rs/v0.4")]
 #![doc(html_favicon_url = "https://rocket.rs/v0.4/images/favicon.ico")]
 #![doc(html_logo_url = "https://rocket.rs/v0.4/images/logo-boxed.png")]
@@ -58,14 +57,18 @@
 //! ROCKET_CODEGEN_DEBUG=1 cargo build
 //! ```
 
-#[macro_use] extern crate quote;
+#[macro_use]
+extern crate quote;
 extern crate devise;
+extern crate indexmap;
 extern crate proc_macro;
 extern crate rocket_http as http;
-extern crate indexmap;
 
 macro_rules! define {
-    ($val:path as $v:ident) => (#[allow(non_snake_case)] let $v = quote!($val););
+    ($val:path as $v:ident) => {
+        #[allow(non_snake_case)]
+        let $v = quote!($val);
+    };
 }
 
 macro_rules! define_vars_and_mods {
@@ -92,15 +95,15 @@ macro_rules! define_vars_and_mods {
 
 #[macro_use]
 mod proc_macro_ext;
-mod derive;
 mod attribute;
 mod bang;
+mod derive;
 mod http_codegen;
 mod syn_ext;
 
+crate use devise::proc_macro2;
 use http::Method;
 use proc_macro::TokenStream;
-crate use devise::proc_macro2;
 
 crate static ROUTE_STRUCT_PREFIX: &str = "static_rocket_route_info_for_";
 crate static CATCH_STRUCT_PREFIX: &str = "static_rocket_catch_info_for_";
@@ -110,7 +113,7 @@ crate static URI_MACRO_PREFIX: &str = "rocket_uri_macro_";
 crate static ROCKET_PARAM_PREFIX: &str = "__rocket_param_";
 
 macro_rules! emit {
-    ($tokens:expr) => ({
+    ($tokens:expr) => {{
         let tokens = $tokens;
         if ::std::env::var_os("ROCKET_CODEGEN_DEBUG").is_some() {
             ::proc_macro::Span::call_site()
@@ -120,11 +123,11 @@ macro_rules! emit {
         }
 
         tokens
-    })
+    }};
 }
 
 macro_rules! route_attribute {
-    ($name:ident => $method:expr) => (
+    ($name:ident => $method:expr) => {
         /// Attribute to generate a [`Route`] and associated metadata.
         ///
         /// This and all other route attributes can only be applied to free
@@ -310,7 +313,7 @@ macro_rules! route_attribute {
         pub fn $name(args: TokenStream, input: TokenStream) -> TokenStream {
             emit!(attribute::route::route_attribute($method, args, input))
         }
-    )
+    };
 }
 
 route_attribute!(route => None);

@@ -1,7 +1,7 @@
 //! Types representing various errors that can occur in a Rocket application.
 
-use std::{io, fmt};
-use std::sync::atomic::{Ordering, AtomicBool};
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::{fmt, io};
 
 use yansi::Paint;
 
@@ -27,7 +27,7 @@ pub enum LaunchErrorKind {
     /// A launch fairing reported an error.
     FailedFairings(Vec<&'static str>),
     /// An otherwise uncategorized error occurred during launch.
-    Unknown(Box<::std::error::Error + Send + Sync>)
+    Unknown(Box<::std::error::Error + Send + Sync>),
 }
 
 /// An error that occurs during launch.
@@ -82,13 +82,16 @@ pub enum LaunchErrorKind {
 ///   2. You want to display your own error messages.
 pub struct LaunchError {
     handled: AtomicBool,
-    kind: LaunchErrorKind
+    kind: LaunchErrorKind,
 }
 
 impl LaunchError {
     #[inline(always)]
     crate fn new(kind: LaunchErrorKind) -> LaunchError {
-        LaunchError { handled: AtomicBool::new(false), kind }
+        LaunchError {
+            handled: AtomicBool::new(false),
+            kind,
+        }
     }
 
     #[inline(always)]
@@ -125,7 +128,7 @@ impl From<hyper::Error> for LaunchError {
     fn from(error: hyper::Error) -> LaunchError {
         match error {
             hyper::Error::Io(e) => LaunchError::new(LaunchErrorKind::Io(e)),
-            e => LaunchError::new(LaunchErrorKind::Unknown(Box::new(e)))
+            e => LaunchError::new(LaunchErrorKind::Unknown(Box::new(e))),
         }
     }
 }
@@ -145,7 +148,7 @@ impl fmt::Display for LaunchErrorKind {
             LaunchErrorKind::Io(ref e) => write!(f, "I/O error: {}", e),
             LaunchErrorKind::Collision(_) => write!(f, "route collisions detected"),
             LaunchErrorKind::FailedFairings(_) => write!(f, "a launch fairing failed"),
-            LaunchErrorKind::Unknown(ref e) => write!(f, "unknown error: {}", e)
+            LaunchErrorKind::Unknown(ref e) => write!(f, "unknown error: {}", e),
         }
     }
 }
@@ -175,7 +178,7 @@ impl ::std::error::Error for LaunchError {
             LaunchErrorKind::Io(_) => "an I/O error occurred during launch",
             LaunchErrorKind::Collision(_) => "route collisions were detected",
             LaunchErrorKind::FailedFairings(_) => "a launch fairing reported an error",
-            LaunchErrorKind::Unknown(_) => "an unknown error occurred during launch"
+            LaunchErrorKind::Unknown(_) => "an unknown error occurred during launch",
         }
     }
 }
@@ -183,7 +186,7 @@ impl ::std::error::Error for LaunchError {
 impl Drop for LaunchError {
     fn drop(&mut self) {
         if self.was_handled() {
-            return
+            return;
         }
 
         match *self.kind() {
@@ -196,7 +199,9 @@ impl Drop for LaunchError {
                 panic!("{}", e);
             }
             LaunchErrorKind::Collision(ref collisions) => {
-                error!("Rocket failed to launch due to the following routing collisions:");
+                error!(
+                    "Rocket failed to launch due to the following routing collisions:"
+                );
                 for &(ref a, ref b) in collisions {
                     info_!("{} {} {}", a, Paint::red("collides with").italic(), b)
                 }
@@ -220,9 +225,9 @@ impl Drop for LaunchError {
     }
 }
 
-use http::uri;
 use http::ext::IntoOwned;
-use http::route::{Error as SegmentError};
+use http::route::Error as SegmentError;
+use http::uri;
 
 /// Error returned by [`set_uri()`](::Route::set_uri()) on invalid URIs.
 #[derive(Debug)]
@@ -256,9 +261,7 @@ impl fmt::Display for RouteUriError {
             RouteUriError::DynamicBase => {
                 write!(f, "The mount point contains dynamic parameters.")
             }
-            RouteUriError::Uri(error) => {
-                write!(f, "Malformed URI: {}", error)
-            }
+            RouteUriError::Uri(error) => write!(f, "Malformed URI: {}", error),
         }
     }
 }

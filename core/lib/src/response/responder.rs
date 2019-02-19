@@ -1,10 +1,10 @@
-use std::fs::File;
-use std::io::{Cursor, BufReader};
 use std::fmt;
+use std::fs::File;
+use std::io::{BufReader, Cursor};
 
-use http::{Status, ContentType, StatusClass};
-use response::{self, Response, Body};
+use http::{ContentType, Status, StatusClass};
 use request::Request;
+use response::{self, Body, Response};
 
 /// Trait implemented by types that generate responses for clients.
 ///
@@ -245,7 +245,7 @@ impl<'r> Responder<'r> for File {
         let (metadata, file) = (self.metadata(), BufReader::new(self));
         match metadata {
             Ok(md) => Response::build().raw_body(Body::Sized(file, md.len())).ok(),
-            Err(_) => Response::build().streamed_body(file).ok()
+            Err(_) => Response::build().streamed_body(file).ok(),
         }
     }
 }
@@ -261,10 +261,13 @@ impl<'r> Responder<'r> for () {
 /// a warning message and returns an `Err` of `Status::NotFound`.
 impl<'r, R: Responder<'r>> Responder<'r> for Option<R> {
     fn respond_to(self, req: &Request) -> response::Result<'r> {
-        self.map_or_else(|| {
-            warn_!("Response was `None`.");
-            Err(Status::NotFound)
-        }, |r| r.respond_to(req))
+        self.map_or_else(
+            || {
+                warn_!("Response was `None`.");
+                Err(Status::NotFound)
+            },
+            |r| r.respond_to(req),
+        )
     }
 }
 

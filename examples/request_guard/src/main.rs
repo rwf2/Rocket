@@ -1,9 +1,10 @@
 #![feature(proc_macro_hygiene, decl_macro, never_type)]
 
-#[macro_use] extern crate rocket;
+#[macro_use]
+extern crate rocket;
 
-use rocket::request::{self, Request, FromRequest};
 use rocket::outcome::Outcome::*;
+use rocket::request::{self, FromRequest, Request};
 
 #[derive(Debug)]
 struct HeaderCount(usize);
@@ -31,8 +32,8 @@ fn main() {
 
 #[cfg(test)]
 mod test {
-    use rocket::local::Client;
     use rocket::http::Header;
+    use rocket::local::Client;
 
     fn test_header_count<'h>(headers: Vec<Header<'static>>) {
         let client = Client::new(super::rocket()).unwrap();

@@ -1,0 +1,5 @@
+max_width = 90
+condense_wildcard_suffixes = true
+error_on_line_overflow = false
+imports_layout = "HorizontalVertical"
+use_try_shorthand = true

@@ -1,11 +1,11 @@
 use std::fs::File;
-use std::path::{Path, PathBuf};
 use std::io;
 use std::ops::{Deref, DerefMut};
+use std::path::{Path, PathBuf};
 
+use http::ContentType;
 use request::Request;
 use response::{self, Responder};
-use http::ContentType;
 
 /// A file with an associated name; responds with the Content-Type based on the
 /// file extension.

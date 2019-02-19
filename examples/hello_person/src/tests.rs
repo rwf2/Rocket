@@ -1,6 +1,6 @@
 use super::rocket;
-use rocket::local::Client;
 use rocket::http::Status;
+use rocket::local::Client;
 
 fn client() -> Client {
     Client::new(rocket::ignite().mount("/", routes![super::hello, super::hi])).unwrap()
@@ -19,8 +19,10 @@ fn test_404(uri: &str) {
 #[test]
 fn test_hello() {
     for &(name, age) in &[("Mike", 22), ("Michael", 80), ("A", 0), ("a", 127)] {
-        test(&format!("/hello/{}/{}", name, age),
-            format!("Hello, {} year old named {}!", age, name));
+        test(
+            &format!("/hello/{}/{}", name, age),
+            format!("Hello, {} year old named {}!", age, name),
+        );
     }
 }
 

@@ -1,6 +1,7 @@
 #![feature(proc_macro_hygiene, decl_macro)]
 
-#[macro_use] extern crate rocket;
+#[macro_use]
+extern crate rocket;
 
 use rocket::http::uri::Segments;
 
@@ -42,10 +43,17 @@ mod tests {
 
         // We construct a path that matches each of the routes above. We ensure the
         // prefix is stripped, confirming that dynamic segments are working.
-        for prefix in &["", "/test", "/two", "/one/two",
-                        "/point/test", "/point/two", "/point/one/two",
-                        "/static", "/point/static"]
-        {
+        for prefix in &[
+            "",
+            "/test",
+            "/two",
+            "/one/two",
+            "/point/test",
+            "/point/two",
+            "/point/one/two",
+            "/static",
+            "/point/static",
+        ] {
             let path = "this/is/the/path/we/want";
             let mut response = client.get(format!("{}/{}", prefix, path)).dispatch();
             assert_eq!(response.body_string(), Some(path.into()));

@@ -1,15 +1,18 @@
-use std::fmt::Display;
 use proc_macro::TokenStream;
 use proc_macro2::TokenStream as TokenStream2;
+use std::fmt::Display;
 
+use devise::syn::{spanned::Spanned, Expr, Ident, Type};
 use devise::{syn, Result};
-use devise::syn::{Expr, Ident, Type, spanned::Spanned};
-use http::{uri::{Origin, Path, Query}, ext::IntoOwned};
-use http::route::{RouteSegment, Kind, Source};
+use http::route::{Kind, RouteSegment, Source};
+use http::{
+    ext::IntoOwned,
+    uri::{Origin, Path, Query},
+};
 
-use http_codegen::Optional;
-use syn_ext::{IdentExt, syn_to_diag};
 use bang::{prefix_last_segment, uri_parsing::*};
+use http_codegen::Optional;
+use syn_ext::{syn_to_diag, IdentExt};
 
 use URI_MACRO_PREFIX;
 
@@ -32,29 +35,35 @@ crate fn _uri_macro(input: TokenStream) -> Result<TokenStream> {
     Ok(quote!(#path!(#input2)).into())
 }
 
-fn extract_exprs<'a>(internal: &'a InternalUriParams) -> Result<(
-        impl Iterator<Item = (&'a Ident, &'a Type, &'a Expr)>,
-        impl Iterator<Item = (&'a Ident, &'a Type, &'a ArgExpr)>,
-    )>
-{
+fn extract_exprs<'a>(
+    internal: &'a InternalUriParams,
+) -> Result<(
+    impl Iterator<Item = (&'a Ident, &'a Type, &'a Expr)>,
+    impl Iterator<Item = (&'a Ident, &'a Type, &'a ArgExpr)>,
+)> {
     let route_name = &internal.uri_params.route_path;
     match internal.validate() {
         Validation::Ok(exprs) => {
             let path_param_count = internal.route_uri.path().matches('<').count();
             for expr in exprs.iter().take(path_param_count) {
                 if !expr.as_expr().is_some() {
-                    return Err(expr.span().unstable()
-                               .error("path parameters cannot be ignored"));
+                    return Err(expr
+                        .span()
+                        .unstable()
+                        .error("path parameters cannot be ignored"));
                 }
             }
 
             // Create an iterator over all `ident`, `ty`, and `expr` triples.
-            let arguments = internal.fn_args.iter()
+            let arguments = internal
+                .fn_args
+                .iter()
                 .zip(exprs.into_iter())
                 .map(|(FnArg { ident, ty }, expr)| (ident, ty, expr));
 
             // Create iterators for just the path and query parts.
-            let path_params = arguments.clone()
+            let path_params = arguments
+                .clone()
                 .take(path_param_count)
                 .map(|(i, t, e)| (i, t, e.unwrap_expr()));
 
@@ -62,9 +71,12 @@ fn extract_exprs<'a>(internal: &'a InternalUriParams) -> Result<(
             Ok((path_params, query_params))
         }
         Validation::Unnamed(expected, actual) => {
-            let mut diag = internal.uri_params.args_span().error(
-                format!("`{}` route uri expects {} but {} supplied", quote!(#route_name),
-                         p!(expected, "parameter"), p!(actual, "was")));
+            let mut diag = internal.uri_params.args_span().error(format!(
+                "`{}` route uri expects {} but {} supplied",
+                quote!(#route_name),
+                p!(expected, "parameter"),
+                p!(actual, "was")
+            ));
 
             if expected > 0 {
                 let ps = p!("parameter", expected);
@@ -75,10 +87,15 @@ fn extract_exprs<'a>(internal: &'a InternalUriParams) -> Result<(
         }
         Validation::Named(missing, extra, dup) => {
             let e = format!("invalid parameters for `{}` route uri", quote!(#route_name));
-            let mut diag = internal.uri_params.args_span().error(e)
+            let mut diag = internal
+                .uri_params
+                .args_span()
+                .error(e)
                 .note(format!("uri parameters are: {}", internal.fn_args_str()));
 
-            fn join<S: Display, T: Iterator<Item = S>>(iter: T) -> (&'static str, String) {
+            fn join<S: Display, T: Iterator<Item = S>>(
+                iter: T,
+            ) -> (&'static str, String) {
                 let mut items: Vec<_> = iter.map(|i| format!("`{}`", i)).collect();
                 items.dedup();
                 (p!("parameter", items.len()), items.join(", "))
@@ -91,13 +108,15 @@ fn extract_exprs<'a>(internal: &'a InternalUriParams) -> Result<(
 
             if !extra.is_empty() {
                 let (ps, msg) = join(extra.iter());
-                let spans: Vec<_> = extra.iter().map(|ident| ident.span().unstable()).collect();
+                let spans: Vec<_> =
+                    extra.iter().map(|ident| ident.span().unstable()).collect();
                 diag = diag.span_help(spans, format!("unknown {}: {}", ps, msg));
             }
 
             if !dup.is_empty() {
                 let (ps, msg) = join(dup.iter());
-                let spans: Vec<_> = dup.iter().map(|ident| ident.span().unstable()).collect();
+                let spans: Vec<_> =
+                    dup.iter().map(|ident| ident.span().unstable()).collect();
                 diag = diag.span_help(spans, format!("duplicate {}: {}", ps, msg));
             }
 
@@ -106,7 +125,13 @@ fn extract_exprs<'a>(internal: &'a InternalUriParams) -> Result<(
     }
 }
 
-fn add_binding(to: &mut Vec<TokenStream2>, ident: &Ident, ty: &Type, expr: &Expr, source: Source) {
+fn add_binding(
+    to: &mut Vec<TokenStream2>,
+    ident: &Ident,
+    ty: &Type,
+    expr: &Expr,
+    source: Source,
+) {
     let uri_mod = quote!(rocket::http::uri);
     let (span, ident_tmp) = (expr.span(), ident.prepend("tmp_"));
     let from_uri_param = if source == Source::Query {
@@ -124,7 +149,7 @@ fn add_binding(to: &mut Vec<TokenStream2>, ident: &Ident, ty: &Type, expr: &Expr
 fn explode_path<'a, I: Iterator<Item = (&'a Ident, &'a Type, &'a Expr)>>(
     uri: &Origin,
     bindings: &mut Vec<TokenStream2>,
-    mut items: I
+    mut items: I,
 ) -> TokenStream2 {
     let (uri_mod, path) = (quote!(rocket::http::uri), uri.path());
     if !path.contains('<') {
@@ -153,7 +178,7 @@ fn explode_path<'a, I: Iterator<Item = (&'a Ident, &'a Type, &'a Expr)>>(
 fn explode_query<'a, I: Iterator<Item = (&'a Ident, &'a Type, &'a ArgExpr)>>(
     uri: &Origin,
     bindings: &mut Vec<TokenStream2>,
-    mut items: I
+    mut items: I,
 ) -> Option<TokenStream2> {
     let (uri_mod, query) = (quote!(rocket::http::uri), uri.query()?);
     if !query.contains('<') {
@@ -192,7 +217,7 @@ fn explode_query<'a, I: Iterator<Item = (&'a Ident, &'a Type, &'a ArgExpr)>>(
             Kind::Multi => quote_spanned! { expr.span() =>
                 #query_arg::Value(&#ident as &dyn #uri_display)
             },
-            Kind::Static => unreachable!("Kind::Static returns early")
+            Kind::Static => unreachable!("Kind::Static returns early"),
         })
     });
 
@@ -203,7 +228,10 @@ fn explode_query<'a, I: Iterator<Item = (&'a Ident, &'a Type, &'a ArgExpr)>>(
 // query string is mangled by replacing single dynamic parameters in query parts
 // (`<param>`) with `param=<param>`.
 fn build_origin(internal: &InternalUriParams) -> Origin<'static> {
-    let mount_point = internal.uri_params.mount_point.as_ref()
+    let mount_point = internal
+        .uri_params
+        .mount_point
+        .as_ref()
         .map(|origin| origin.path())
         .unwrap_or("");
 
@@ -223,8 +251,9 @@ crate fn _uri_internal_macro(input: TokenStream) -> Result<TokenStream> {
     let path = explode_path(&uri, &mut bindings, path_params);
     let query = Optional(explode_query(&uri, &mut bindings, query_params));
 
-     Ok(quote!({
-         #(#bindings)*
-         #uri_mod::UriArguments { path: #path, query: #query, }.into_origin()
-     }).into())
+    Ok(quote!({
+        #(#bindings)*
+        #uri_mod::UriArguments { path: #path, query: #query, }.into_origin()
+    })
+    .into())
 }

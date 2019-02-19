@@ -1,4 +1,4 @@
-use std::net::{IpAddr, Ipv4Addr, Ipv6Addr, SocketAddrV4, SocketAddrV6, SocketAddr};
+use std::net::{IpAddr, Ipv4Addr, Ipv6Addr, SocketAddr, SocketAddrV4, SocketAddrV6};
 use std::str::FromStr;
 
 use http::RawStr;
@@ -231,9 +231,28 @@ macro_rules! impl_with_fromstr {
     )+)
 }
 
-impl_with_fromstr!(f32, f64, isize, i8, i16, i32, i64, i128, usize, u8, u16,
-    u32, u64, u128, IpAddr, Ipv4Addr, Ipv6Addr, SocketAddrV4, SocketAddrV6,
-    SocketAddr);
+impl_with_fromstr!(
+    f32,
+    f64,
+    isize,
+    i8,
+    i16,
+    i32,
+    i64,
+    i128,
+    usize,
+    u8,
+    u16,
+    u32,
+    u64,
+    u128,
+    IpAddr,
+    Ipv4Addr,
+    Ipv6Addr,
+    SocketAddrV4,
+    SocketAddrV6,
+    SocketAddr
+);
 
 impl<'v, T: FromFormValue<'v>> FromFormValue<'v> for Option<T> {
     type Error = !;
@@ -259,8 +278,8 @@ impl<'v, T: FromFormValue<'v>> FromFormValue<'v> for Result<T, T::Error> {
     #[inline(always)]
     fn from_form_value(v: &'v RawStr) -> Result<Self, Self::Error> {
         match T::from_form_value(v) {
-            ok@Ok(_) => Ok(ok),
-            e@Err(_) => Ok(e),
+            ok @ Ok(_) => Ok(ok),
+            e @ Err(_) => Ok(e),
         }
     }
 }

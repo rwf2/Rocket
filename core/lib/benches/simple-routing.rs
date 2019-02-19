@@ -2,34 +2,51 @@
 // #![feature(alloc_system)]
 // extern crate alloc_system;
 
-#[macro_use] extern crate rocket;
+#[macro_use]
+extern crate rocket;
 
-use rocket::config::{Environment, Config, LoggingLevel};
+use rocket::config::{Config, Environment, LoggingLevel};
 use rocket::http::RawStr;
 
 #[get("/")]
-fn hello_world() -> &'static str { "Hello, world!" }
+fn hello_world() -> &'static str {
+    "Hello, world!"
+}
 
 #[get("/")]
-fn get_index() -> &'static str { "index" }
+fn get_index() -> &'static str {
+    "index"
+}
 
 #[put("/")]
-fn put_index() -> &'static str { "index" }
+fn put_index() -> &'static str {
+    "index"
+}
 
 #[post("/")]
-fn post_index() -> &'static str { "index" }
+fn post_index() -> &'static str {
+    "index"
+}
 
 #[get("/a")]
-fn index_a() -> &'static str { "index" }
+fn index_a() -> &'static str {
+    "index"
+}
 
 #[get("/b")]
-fn index_b() -> &'static str { "index" }
+fn index_b() -> &'static str {
+    "index"
+}
 
 #[get("/c")]
-fn index_c() -> &'static str { "index" }
+fn index_c() -> &'static str {
+    "index"
+}
 
 #[get("/<a>")]
-fn index_dyn_a(a: &RawStr) -> &'static str { "index" }
+fn index_dyn_a(a: &RawStr) -> &'static str {
+    "index"
+}
 
 fn hello_world_rocket() -> rocket::Rocket {
     let config = Config::build(Environment::Production).log_level(LoggingLevel::Off);
@@ -38,16 +55,25 @@ fn hello_world_rocket() -> rocket::Rocket {
 
 fn rocket() -> rocket::Rocket {
     let config = Config::build(Environment::Production).log_level(LoggingLevel::Off);
-    rocket::custom(config.unwrap())
-        .mount("/", routes![get_index, put_index, post_index, index_a,
-               index_b, index_c, index_dyn_a])
+    rocket::custom(config.unwrap()).mount(
+        "/",
+        routes![
+            get_index,
+            put_index,
+            post_index,
+            index_a,
+            index_b,
+            index_c,
+            index_dyn_a
+        ],
+    )
 }
 
 mod benches {
     extern crate test;
 
-    use super::{hello_world_rocket, rocket};
     use self::test::Bencher;
+    use super::{hello_world_rocket, rocket};
     use rocket::local::Client;
 
     #[bench]

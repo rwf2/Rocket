@@ -21,7 +21,8 @@ fn test_file() {
     // Create the 'big_file'
     const CONTENTS: &str = "big_file contents...not so big here";
     let mut file = File::create(super::FILENAME).expect("create big_file");
-    file.write_all(CONTENTS.as_bytes()).expect("write to big_file");
+    file.write_all(CONTENTS.as_bytes())
+        .expect("write to big_file");
 
     // Get the big file contents, hopefully.
     let client = Client::new(super::rocket()).unwrap();

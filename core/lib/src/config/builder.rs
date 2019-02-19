@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 
-use config::{Result, Config, Value, Environment, Limits, LoggingLevel};
+use config::{Config, Environment, Limits, LoggingLevel, Result, Value};
 
 /// Structure following the builder pattern for building `Config` structures.
 #[derive(Clone)]
@@ -218,7 +218,9 @@ impl ConfigBuilder {
     /// # */
     /// ```
     pub fn tls<C, K>(mut self, certs_path: C, key_path: K) -> Self
-        where C: Into<String>, K: Into<String>
+    where
+        C: Into<String>,
+        K: Into<String>,
     {
         self.tls = Some((certs_path.into(), key_path.into()));
         self

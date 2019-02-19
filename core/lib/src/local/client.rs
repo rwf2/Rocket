@@ -1,10 +1,10 @@
-use std::sync::RwLock;
 use std::borrow::Cow;
+use std::sync::RwLock;
 
-use Rocket;
-use local::LocalRequest;
-use http::{Method, private::CookieJar};
 use error::LaunchError;
+use http::{private::CookieJar, Method};
+use local::LocalRequest;
+use Rocket;
 
 /// A structure to construct requests for local dispatching.
 ///
@@ -79,10 +79,13 @@ impl Client {
     fn _new(rocket: Rocket, tracked: bool) -> Result<Client, LaunchError> {
         let cookies = match tracked {
             true => Some(RwLock::new(CookieJar::new())),
-            false => None
+            false => None,
         };
 
-        Ok(Client { rocket: rocket.prelaunch_check()?, cookies })
+        Ok(Client {
+            rocket: rocket.prelaunch_check()?,
+            cookies,
+        })
     }
 
     /// Construct a new `Client` from an instance of `Rocket` with cookie
@@ -243,7 +246,8 @@ impl Client {
     /// ```
     #[inline(always)]
     pub fn delete<'c, 'u: 'c, U>(&'c self, uri: U) -> LocalRequest<'c>
-        where U: Into<Cow<'u, str>>
+    where
+        U: Into<Cow<'u, str>>,
     {
         self.req(Method::Delete, uri)
     }
@@ -265,7 +269,8 @@ impl Client {
     /// ```
     #[inline(always)]
     pub fn options<'c, 'u: 'c, U>(&'c self, uri: U) -> LocalRequest<'c>
-        where U: Into<Cow<'u, str>>
+    where
+        U: Into<Cow<'u, str>>,
     {
         self.req(Method::Options, uri)
     }
@@ -287,7 +292,8 @@ impl Client {
     /// ```
     #[inline(always)]
     pub fn head<'c, 'u: 'c, U>(&'c self, uri: U) -> LocalRequest<'c>
-        where U: Into<Cow<'u, str>>
+    where
+        U: Into<Cow<'u, str>>,
     {
         self.req(Method::Head, uri)
     }
@@ -309,7 +315,8 @@ impl Client {
     /// ```
     #[inline(always)]
     pub fn patch<'c, 'u: 'c, U>(&'c self, uri: U) -> LocalRequest<'c>
-        where U: Into<Cow<'u, str>>
+    where
+        U: Into<Cow<'u, str>>,
     {
         self.req(Method::Patch, uri)
     }
@@ -332,7 +339,8 @@ impl Client {
     /// ```
     #[inline(always)]
     pub fn req<'c, 'u: 'c, U>(&'c self, method: Method, uri: U) -> LocalRequest<'c>
-        where U: Into<Cow<'u, str>>
+    where
+        U: Into<Cow<'u, str>>,
     {
         LocalRequest::new(self, method, uri.into())
     }

@@ -18,16 +18,18 @@ mod private_cookie_test {
 
     mod tests {
         use super::*;
-        use rocket::local::Client;
         use rocket::http::Cookie;
         use rocket::http::Status;
+        use rocket::local::Client;
 
         #[test]
         fn private_cookie_is_returned() {
             let rocket = rocket::ignite().mount("/", routes![return_private_cookie]);
 
             let client = Client::new(rocket).unwrap();
-            let req = client.get("/").private_cookie(Cookie::new("cookie_name", "cookie_value"));
+            let req = client
+                .get("/")
+                .private_cookie(Cookie::new("cookie_name", "cookie_value"));
             let mut response = req.dispatch();
 
             assert_eq!(response.body_string(), Some("cookie_value".into()));
@@ -39,7 +41,9 @@ mod private_cookie_test {
             let rocket = rocket::ignite().mount("/", routes![return_private_cookie]);
 
             let client = Client::new(rocket).unwrap();
-            let req = client.get("/").cookie(Cookie::new("cookie_name", "cookie_value"));
+            let req = client
+                .get("/")
+                .cookie(Cookie::new("cookie_name", "cookie_value"));
             let response = req.dispatch();
 
             assert_eq!(response.status(), Status::NotFound);

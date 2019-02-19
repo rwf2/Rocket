@@ -1,12 +1,13 @@
 #![feature(proc_macro_hygiene, decl_macro)]
 #![allow(dead_code, unused_variables)]
 
-#[macro_use] extern crate rocket;
+#[macro_use]
+extern crate rocket;
 
 use std::path::PathBuf;
 
-use rocket::http::{RawStr, Cookies};
-use rocket::http::uri::{Origin, FromUriParam, Query};
+use rocket::http::uri::{FromUriParam, Origin, Query};
+use rocket::http::{Cookies, RawStr};
 use rocket::request::Form;
 
 #[derive(FromForm, UriDisplayQuery)]
@@ -18,7 +19,10 @@ struct User<'a> {
 impl<'a, 'b> FromUriParam<Query, (&'a str, &'b str)> for User<'a> {
     type Target = User<'a>;
     fn from_uri_param((name, nickname): (&'a str, &'b str)) -> User<'a> {
-        User { name: name.into(), nickname: nickname.to_string() }
+        User {
+            name: name.into(),
+            nickname: nickname.to_string(),
+        }
     }
 }
 
@@ -31,37 +35,37 @@ struct Second {
 }
 
 #[post("/<id>")]
-fn simple(id: i32) { }
+fn simple(id: i32) {}
 
 #[post("/<id>/<name>")]
-fn simple2(id: i32, name: String) { }
+fn simple2(id: i32, name: String) {}
 
 #[post("/<id>/<name>")]
-fn simple2_flipped(name: String, id: i32) { }
+fn simple2_flipped(name: String, id: i32) {}
 
 #[post("/?<id>")]
-fn simple3(id: i32) { }
+fn simple3(id: i32) {}
 
 #[post("/?<id>&<name>")]
-fn simple4(id: i32, name: String) { }
+fn simple4(id: i32, name: String) {}
 
 #[post("/?<id>&<name>")]
-fn simple4_flipped(name: String, id: i32) { }
+fn simple4_flipped(name: String, id: i32) {}
 
 #[post("/<used>/<_unused>")]
-fn unused_param(used: i32, _unused: i32) { }
+fn unused_param(used: i32, _unused: i32) {}
 
 #[post("/<id>")]
-fn guard_1(cookies: Cookies, id: i32) { }
+fn guard_1(cookies: Cookies, id: i32) {}
 
 #[post("/<id>/<name>")]
-fn guard_2(name: String, cookies: Cookies, id: i32) { }
+fn guard_2(name: String, cookies: Cookies, id: i32) {}
 
 #[post("/a/<id>/hi/<name>/hey")]
-fn guard_3(id: i32, name: String, cookies: Cookies) { }
+fn guard_3(id: i32, name: String, cookies: Cookies) {}
 
 #[post("/<id>", data = "<form>")]
-fn no_uri_display_okay(id: i32, form: Form<Second>) { }
+fn no_uri_display_okay(id: i32, form: Form<Second>) {}
 
 #[post("/name/<name>?<foo>&bar=10&<bar>&<query..>", data = "<user>", rank = 2)]
 fn complex<'r>(
@@ -70,17 +74,18 @@ fn complex<'r>(
     query: Form<User<'r>>,
     user: Form<User<'r>>,
     bar: &RawStr,
-    cookies: Cookies
-) {  }
+    cookies: Cookies,
+) {
+}
 
 #[post("/a/<path..>")]
-fn segments(path: PathBuf) { }
+fn segments(path: PathBuf) {}
 
 #[post("/a/<id>/then/<path..>")]
-fn param_and_segments(path: PathBuf, id: usize) { }
+fn param_and_segments(path: PathBuf, id: usize) {}
 
 #[post("/a/<id>/then/<path..>")]
-fn guarded_segments(cookies: Cookies, path: PathBuf, id: usize) { }
+fn guarded_segments(cookies: Cookies, path: PathBuf, id: usize) {}
 
 macro assert_uri_eq($($uri:expr => $expected:expr,)+) {
     $(assert_eq!($uri, Origin::parse($expected).expect("valid origin URI"));)+
@@ -263,7 +268,10 @@ fn check_complex() {
     }
 
     // Ensure variables are correctly processed.
-    let user = User { name: "Robert".into(), nickname: "Bob".into() };
+    let user = User {
+        name: "Robert".into(),
+        nickname: "Bob".into(),
+    };
     assert_uri_eq! {
         uri!(complex: "complex", 0, "high", &user) =>
             "/name/complex?foo=0&bar=10&bar=high&name=Robert&nickname=Bob",
@@ -277,7 +285,9 @@ fn check_complex() {
 #[test]
 fn check_location_promotion() {
     struct S1(String);
-    struct S2 { name: String };
+    struct S2 {
+        name: String,
+    };
 
     let s1 = S1("Bob".into());
     let s2 = S2 { name: "Bob".into() };
@@ -315,7 +325,7 @@ fn check_location_promotion() {
 
 #[test]
 fn check_scoped() {
-    assert_uri_eq!{
+    assert_uri_eq! {
         uri!(typed_uris::simple: 100) => "/typed_uris/100",
         uri!(typed_uris::simple: id = 100) => "/typed_uris/100",
         uri!(typed_uris::deeper::simple: 100) => "/typed_uris/deeper/100",
@@ -326,7 +336,7 @@ mod typed_uris {
     use super::assert_uri_eq;
 
     #[post("/typed_uris/<id>")]
-    fn simple(id: i32) { }
+    fn simple(id: i32) {}
 
     #[test]
     fn check_simple_scoped() {
@@ -342,7 +352,7 @@ mod typed_uris {
         use super::assert_uri_eq;
 
         #[post("/typed_uris/deeper/<id>")]
-        fn simple(id: i32) { }
+        fn simple(id: i32) {}
 
         #[test]
         fn check_deep_scoped() {
@@ -365,8 +375,9 @@ fn optionals(
     foo: Option<usize>,
     bar: Result<String, &RawStr>,
     q1: Result<usize, &RawStr>,
-    rest: Option<Form<Third>>
-) { }
+    rest: Option<Form<Third>>,
+) {
+}
 
 #[test]
 fn test_optional_uri_parameters() {

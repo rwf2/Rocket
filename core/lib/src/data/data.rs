@@ -1,11 +1,12 @@
-use std::io::{self, Read, Write, Cursor, Chain};
-use std::path::Path;
 use std::fs::File;
+use std::io::{self, Chain, Cursor, Read, Write};
+use std::path::Path;
 use std::time::Duration;
 
-#[cfg(feature = "tls")] use super::net_stream::HttpsStream;
+#[cfg(feature = "tls")]
+use super::net_stream::HttpsStream;
 
-use super::data_stream::{DataStream, kill_stream};
+use super::data_stream::{kill_stream, DataStream};
 use super::net_stream::NetStream;
 use ext::ReadExt;
 
@@ -95,10 +96,12 @@ impl Data {
         #[inline(always)]
         #[cfg(feature = "tls")]
         fn concrete_stream(stream: &mut NetworkStream) -> Option<NetStream> {
-            stream.downcast_ref::<HttpsStream>()
+            stream
+                .downcast_ref::<HttpsStream>()
                 .map(|s| NetStream::Https(s.clone()))
                 .or_else(|| {
-                    stream.downcast_ref::<HttpStream>()
+                    stream
+                        .downcast_ref::<HttpStream>()
                         .map(|s| NetStream::Http(s.clone()))
                 })
         }
@@ -106,14 +109,15 @@ impl Data {
         #[inline(always)]
         #[cfg(not(feature = "tls"))]
         fn concrete_stream(stream: &mut NetworkStream) -> Option<NetStream> {
-            stream.downcast_ref::<HttpStream>()
+            stream
+                .downcast_ref::<HttpStream>()
                 .map(|s| NetStream::Http(s.clone()))
         }
 
         // Retrieve the underlying Http(s)Stream from Hyper.
         let net_stream = match concrete_stream(*body.get_mut().get_mut()) {
             Some(net_stream) => net_stream,
-            None => return Err("Stream is not an HTTP(s) stream!")
+            None => return Err("Stream is not an HTTP(s) stream!"),
         };
 
         // Set the read timeout to 5 seconds.
@@ -131,7 +135,7 @@ impl Data {
             SizedReader(_, n) => SizedReader(inner_data, n),
             EofReader(_) => EofReader(inner_data),
             EmptyReader(_) => EmptyReader(inner_data),
-            ChunkedReader(_, n) => ChunkedReader(inner_data, n)
+            ChunkedReader(_, n) => ChunkedReader(inner_data, n),
         };
 
         Ok(Data::new(http_stream))
@@ -251,11 +255,15 @@ impl Data {
                 // Likewise here as above.
                 peek_buf.truncate(0);
                 false
-            },
+            }
         };
 
         trace_!("Peek bytes: {}/{} bytes.", peek_buf.len(), PEEK_BYTES);
-        Data { buffer: peek_buf, stream, is_complete: eof }
+        Data {
+            buffer: peek_buf,
+            stream,
+            is_complete: eof,
+        }
     }
 
     /// This creates a `data` object from a local data source `data`.

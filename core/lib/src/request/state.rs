@@ -1,9 +1,9 @@
 use std::ops::Deref;
 
-use Rocket;
-use request::{self, FromRequest, Request};
-use outcome::Outcome;
 use http::Status;
+use outcome::Outcome;
+use request::{self, FromRequest, Request};
+use Rocket;
 
 /// Request guard to retrieve managed state.
 ///

@@ -1,26 +1,39 @@
 #![feature(proc_macro_hygiene, decl_macro)]
 
-#[macro_use] extern crate rocket;
+#[macro_use]
+extern crate rocket;
 
-use rocket::config::{Environment, Config, LoggingLevel};
+use rocket::config::{Config, Environment, LoggingLevel};
 
 #[get("/", format = "application/json")]
-fn get() -> &'static str { "json" }
+fn get() -> &'static str {
+    "json"
+}
 
 #[get("/", format = "text/html")]
-fn get2() -> &'static str { "html" }
+fn get2() -> &'static str {
+    "html"
+}
 
 #[get("/", format = "text/plain")]
-fn get3() -> &'static str { "plain" }
+fn get3() -> &'static str {
+    "plain"
+}
 
 #[post("/", format = "application/json")]
-fn post() -> &'static str { "json" }
+fn post() -> &'static str {
+    "json"
+}
 
 #[post("/", format = "text/html")]
-fn post2() -> &'static str { "html" }
+fn post2() -> &'static str {
+    "html"
+}
 
 #[post("/", format = "text/plain")]
-fn post3() -> &'static str { "plain" }
+fn post3() -> &'static str {
+    "plain"
+}
 
 fn rocket() -> rocket::Rocket {
     let config = Config::build(Environment::Production).log_level(LoggingLevel::Off);
@@ -32,10 +45,10 @@ fn rocket() -> rocket::Rocket {
 mod benches {
     extern crate test;
 
-    use super::rocket;
     use self::test::Bencher;
-    use rocket::local::Client;
+    use super::rocket;
     use rocket::http::{Accept, ContentType};
+    use rocket::local::Client;
 
     #[bench]
     fn accept_format(b: &mut Bencher) {

@@ -1,7 +1,7 @@
-use response;
-use handler::ErrorHandler;
 use codegen::StaticCatchInfo;
+use handler::ErrorHandler;
 use request::Request;
+use response;
 
 use std::fmt;
 use yansi::Color::*;
@@ -94,7 +94,11 @@ impl Catcher {
     /// ```
     #[inline(always)]
     pub fn new(code: u16, handler: ErrorHandler) -> Catcher {
-        Catcher { code, handler, is_default: false }
+        Catcher {
+            code,
+            handler,
+            is_default: false,
+        }
     }
 
     #[inline(always)]
@@ -104,7 +108,11 @@ impl Catcher {
 
     #[inline(always)]
     fn new_default(code: u16, handler: ErrorHandler) -> Catcher {
-        Catcher { code, handler, is_default: true, }
+        Catcher {
+            code,
+            handler,
+            is_default: true,
+        }
     }
 }
 
@@ -122,18 +130,29 @@ impl fmt::Display for Catcher {
 }
 
 macro_rules! error_page_template {
-    ($code:expr, $name:expr, $description:expr) => (
-        concat!(r#"
+    ($code:expr, $name:expr, $description:expr) => {
+        concat!(
+            r#"
             <!DOCTYPE html>
             <html>
             <head>
                 <meta charset="utf-8">
-                <title>"#, $code, " ", $name, r#"</title>
+                <title>"#,
+            $code,
+            " ",
+            $name,
+            r#"</title>
             </head>
             <body align="center">
                 <div align="center">
-                    <h1>"#, $code, ": ", $name, r#"</h1>
-                    <p>"#, $description, r#"</p>
+                    <h1>"#,
+            $code,
+            ": ",
+            $name,
+            r#"</h1>
+                    <p>"#,
+            $description,
+            r#"</p>
                     <hr />
                     <small>Rocket</small>
                 </div>
@@ -141,7 +160,7 @@ macro_rules! error_page_template {
             </html>
         "#
         )
-    )
+    };
 }
 
 macro_rules! default_catchers {
@@ -167,20 +186,20 @@ pub mod defaults {
 
     use std::collections::HashMap;
 
+    use http::Status;
     use request::Request;
     use response::{self, content, status, Responder};
-    use http::Status;
 
     pub fn get() -> HashMap<u16, Catcher> {
         default_catchers! {
             400, "Bad Request", "The request could not be understood by the server due
                 to malformed syntax.", handle_400,
-            401, "Unauthorized", "The request requires user authentication.",
-                handle_401,
+        401, "Unauthorized", "The request requires user authentication.",
+            handle_401,
             402, "Payment Required", "The request could not be processed due to lack of
                 payment.", handle_402,
-            403, "Forbidden", "The server refused to authorize the request.", handle_403,
-            404, "Not Found", "The requested resource could not be found.", handle_404,
+        403, "Forbidden", "The server refused to authorize the request.", handle_403,
+        404, "Not Found", "The requested resource could not be found.", handle_404,
             405, "Method Not Allowed", "The request method is not supported for the
                 requested resource.", handle_405,
             406, "Not Acceptable", "The requested resource is capable of generating
@@ -230,8 +249,8 @@ pub mod defaults {
                 while processing this request.", handle_500,
             501, "Not Implemented", "The server either does not recognize the request
                 method, or it lacks the ability to fulfill the request.", handle_501,
-            503, "Service Unavailable", "The server is currently unavailable.",
-                handle_503,
+        503, "Service Unavailable", "The server is currently unavailable.",
+            handle_503,
             504, "Gateway Timeout", "The server did not receive a timely
                 response from an upstream server.", handle_504,
             510, "Not Extended", "Further extensions to the request are required for
@@ -239,4 +258,3 @@ pub mod defaults {
         }
     }
 }
-

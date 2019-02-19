@@ -1,12 +1,12 @@
 use std::fmt::Debug;
 use std::net::SocketAddr;
 
-use router::Route;
-use request::Request;
-use outcome::{self, IntoOutcome};
 use outcome::Outcome::*;
+use outcome::{self, IntoOutcome};
+use request::Request;
+use router::Route;
 
-use http::{Status, ContentType, Accept, Method, Cookies, uri::Origin};
+use http::{uri::Origin, Accept, ContentType, Cookies, Method, Status};
 
 /// Type alias for the `Outcome` of a `FromRequest` conversion.
 pub type Outcome<S, E> = outcome::Outcome<S, (Status, E), ()>;
@@ -19,7 +19,7 @@ impl<S, E> IntoOutcome<S, (Status, E), ()> for Result<S, E> {
     fn into_outcome(self, status: Status) -> Outcome<S, E> {
         match self {
             Ok(val) => Success(val),
-            Err(err) => Failure((status, err))
+            Err(err) => Failure((status, err)),
         }
     }
 
@@ -27,7 +27,7 @@ impl<S, E> IntoOutcome<S, (Status, E), ()> for Result<S, E> {
     fn or_forward(self, _: ()) -> Outcome<S, E> {
         match self {
             Ok(val) => Success(val),
-            Err(_) => Forward(())
+            Err(_) => Forward(()),
         }
     }
 }
@@ -379,7 +379,7 @@ impl<'a, 'r> FromRequest<'a, 'r> for &'r Route {
     fn from_request(request: &'a Request<'r>) -> Outcome<Self, Self::Error> {
         match request.route() {
             Some(route) => Success(route),
-            None => Forward(())
+            None => Forward(()),
         }
     }
 }
@@ -398,7 +398,7 @@ impl<'a, 'r> FromRequest<'a, 'r> for &'a Accept {
     fn from_request(request: &'a Request<'r>) -> Outcome<Self, Self::Error> {
         match request.accept() {
             Some(accept) => Success(accept),
-            None => Forward(())
+            None => Forward(()),
         }
     }
 }
@@ -409,7 +409,7 @@ impl<'a, 'r> FromRequest<'a, 'r> for &'a ContentType {
     fn from_request(request: &'a Request<'r>) -> Outcome<Self, Self::Error> {
         match request.content_type() {
             Some(content_type) => Success(content_type),
-            None => Forward(())
+            None => Forward(()),
         }
     }
 }
@@ -420,7 +420,7 @@ impl<'a, 'r> FromRequest<'a, 'r> for SocketAddr {
     fn from_request(request: &'a Request<'r>) -> Outcome<Self, Self::Error> {
         match request.remote() {
             Some(addr) => Success(addr),
-            None => Forward(())
+            None => Forward(()),
         }
     }
 }
@@ -447,4 +447,3 @@ impl<'a, 'r, T: FromRequest<'a, 'r>> FromRequest<'a, 'r> for Option<T> {
         }
     }
 }
-

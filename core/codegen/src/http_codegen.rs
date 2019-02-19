@@ -1,9 +1,9 @@
-use quote::ToTokens;
-use proc_macro2::TokenStream as TokenStream2;
-use devise::{FromMeta, MetaItem, Result, ext::Split2};
-use http::{self, ext::IntoOwned};
+use attribute::segments::{parse_data_segment, parse_segments, Kind, Segment};
+use devise::{ext::Split2, FromMeta, MetaItem, Result};
 use http::uri::{Path, Query};
-use attribute::segments::{parse_segments, parse_data_segment, Segment, Kind};
+use http::{self, ext::IntoOwned};
+use proc_macro2::TokenStream as TokenStream2;
+use quote::ToTokens;
 
 use proc_macro_ext::StringLit;
 
@@ -45,7 +45,9 @@ impl FromMeta for Status {
     fn from_meta(meta: MetaItem) -> Result<Self> {
         let num = usize::from_meta(meta)?;
         if num < 100 || num >= 600 {
-            return Err(meta.value_span().error("status must be in range [100, 599]"));
+            return Err(meta
+                .value_span()
+                .error("status must be in range [100, 599]"));
         }
 
         Ok(Status(http::Status::raw(num as u16)))
@@ -117,11 +119,15 @@ impl ToTokens for MediaType {
 }
 
 const VALID_METHODS_STR: &str = "`GET`, `PUT`, `POST`, `DELETE`, `HEAD`, \
-    `PATCH`, `OPTIONS`";
+                                 `PATCH`, `OPTIONS`";
 
 const VALID_METHODS: &[http::Method] = &[
-    http::Method::Get, http::Method::Put, http::Method::Post,
-    http::Method::Delete, http::Method::Head, http::Method::Patch,
+    http::Method::Get,
+    http::Method::Put,
+    http::Method::Post,
+    http::Method::Delete,
+    http::Method::Head,
+    http::Method::Patch,
     http::Method::Options,
 ];
 
@@ -131,19 +137,23 @@ impl FromMeta for Method {
         let help_text = format!("method must be one of: {}", VALID_METHODS_STR);
 
         if let MetaItem::Ident(ident) = meta {
-            let method = ident.to_string().parse()
+            let method = ident
+                .to_string()
+                .parse()
                 .map_err(|_| span.error("invalid HTTP method").help(&*help_text))?;
 
             if !VALID_METHODS.contains(&method) {
-                return Err(span.error("invalid HTTP method for route handlers")
-                               .help(&*help_text));
+                return Err(span
+                    .error("invalid HTTP method for route handlers")
+                    .help(&*help_text));
             }
 
             return Ok(Method(method));
         }
 
-        Err(span.error(format!("expected identifier, found {}", meta.description()))
-                .help(&*help_text))
+        Err(span
+            .error(format!("expected identifier, found {}", meta.description()))
+            .help(&*help_text))
     }
 }
 
@@ -169,19 +179,21 @@ impl FromMeta for Origin {
     fn from_meta(meta: MetaItem) -> Result<Self> {
         let string = StringLit::from_meta(meta)?;
 
-        let uri = http::uri::Origin::parse_route(&string)
-            .map_err(|e| {
-                let span = e.index()
-                    .map(|i| string.subspan(i + 1..))
-                    .unwrap_or(string.span());
+        let uri = http::uri::Origin::parse_route(&string).map_err(|e| {
+            let span = e
+                .index()
+                .map(|i| string.subspan(i + 1..))
+                .unwrap_or(string.span());
 
-                span.error(format!("invalid path URI: {}", e))
-                    .help("expected path in origin form: \"/path/<param>\"")
-            })?;
+            span.error(format!("invalid path URI: {}", e))
+                .help("expected path in origin form: \"/path/<param>\"")
+        })?;
 
         if !uri.is_normalized() {
             let normalized = uri.to_normalized();
-            return Err(string.span().error("paths cannot contain empty segments")
+            return Err(string
+                .span()
+                .error("paths cannot contain empty segments")
                 .note(format!("expected '{}', found '{}'", normalized, uri)));
         }
 
@@ -196,8 +208,9 @@ impl FromMeta for DataSegment {
 
         let segment = parse_data_segment(&string, span)?;
         if segment.kind != Kind::Single {
-            return Err(span.error("malformed parameter")
-                        .help("parameter must be of the form '<param>'"));
+            return Err(span
+                .error("malformed parameter")
+                .help("parameter must be of the form '<param>'"));
         }
 
         Ok(DataSegment(segment))
@@ -210,23 +223,32 @@ impl FromMeta for RoutePath {
         let path_span = string.subspan(1..origin.0.path().len() + 1);
         let path = parse_segments::<Path>(origin.0.path(), path_span);
 
-        let query = origin.0.query()
+        let query = origin
+            .0
+            .query()
             .map(|q| {
                 let len_to_q = 1 + origin.0.path().len() + 1;
                 let end_of_q = len_to_q + q.len();
                 let query_span = string.subspan(len_to_q..end_of_q);
                 if q.starts_with('&') || q.contains("&&") || q.ends_with('&') {
                     // TODO: Show a help message with what's expected.
-                    Err(query_span.error("query cannot contain empty segments").into())
+                    Err(query_span
+                        .error("query cannot contain empty segments")
+                        .into())
                 } else {
                     parse_segments::<Query>(q, query_span)
                 }
-            }).transpose();
+            })
+            .transpose();
 
         match (path, query) {
-            (Ok(path), Ok(query)) => Ok(RoutePath { origin, path, query }),
+            (Ok(path), Ok(query)) => Ok(RoutePath {
+                origin,
+                path,
+                query,
+            }),
             (Err(diag), Ok(_)) | (Ok(_), Err(diag)) => Err(diag.emit_head()),
-            (Err(d1), Err(d2)) => Err(d1.join(d2).emit_head())
+            (Err(d1), Err(d2)) => Err(d1.join(d2).emit_head()),
         }
     }
 }
@@ -235,7 +257,7 @@ impl<T: ToTokens> ToTokens for Optional<T> {
     fn to_tokens(&self, tokens: &mut TokenStream2) {
         let opt_tokens = match self.0 {
             Some(ref val) => quote!(Some(#val)),
-            None => quote!(None)
+            None => quote!(None),
         };
 
         tokens.extend(opt_tokens);

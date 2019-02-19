@@ -1,5 +1,5 @@
-use std::path::{Path, PathBuf};
 use std::collections::HashMap;
+use std::path::{Path, PathBuf};
 
 use templates::{glob, Engines, TemplateInfo};
 
@@ -35,20 +35,27 @@ impl Context {
                     continue;
                 }
 
-                let data_type = data_type_str.as_ref()
+                let data_type = data_type_str
+                    .as_ref()
                     .and_then(|ext| ContentType::from_extension(ext))
                     .unwrap_or(ContentType::HTML);
 
-                templates.insert(name, TemplateInfo {
-                    path: path.to_path_buf(),
-                    extension: ext.to_string(),
-                    data_type,
-                });
+                templates.insert(
+                    name,
+                    TemplateInfo {
+                        path: path.to_path_buf(),
+                        extension: ext.to_string(),
+                        data_type,
+                    },
+                );
             }
         }
 
-        Engines::init(&templates)
-            .map(|engines| Context { root, templates, engines } )
+        Engines::init(&templates).map(|engines| Context {
+            root,
+            templates,
+            engines,
+        })
     }
 }
 
@@ -57,12 +64,12 @@ fn remove_extension<P: AsRef<Path>>(path: P) -> PathBuf {
     let path = path.as_ref();
     let stem = match path.file_stem() {
         Some(stem) => stem,
-        None => return path.to_path_buf()
+        None => return path.to_path_buf(),
     };
 
     match path.parent() {
         Some(parent) => parent.join(stem),
-        None => PathBuf::from(stem)
+        None => PathBuf::from(stem),
     }
 }
 
@@ -72,7 +79,9 @@ fn split_path(root: &Path, path: &Path) -> (String, Option<String>) {
     let rel_path = path.strip_prefix(root).unwrap().to_path_buf();
     let path_no_ext = remove_extension(&rel_path);
     let data_type = path_no_ext.extension();
-    let mut name = remove_extension(&path_no_ext).to_string_lossy().into_owned();
+    let mut name = remove_extension(&path_no_ext)
+        .to_string_lossy()
+        .into_owned();
 
     // Ensure template name consistency on Windows systems
     if cfg!(windows) {
@@ -127,6 +136,9 @@ mod tests {
         assert_eq!(name_for("dir/index.hbs"), "dir/index");
         assert_eq!(name_for("dir/index.html.tera"), "dir/index");
         assert_eq!(name_for("index.template.html.hbs"), "index.template");
-        assert_eq!(name_for("subdir/index.template.html.hbs"), "subdir/index.template");
+        assert_eq!(
+            name_for("subdir/index.template.html.hbs"),
+            "subdir/index.template"
+        );
     }
 }

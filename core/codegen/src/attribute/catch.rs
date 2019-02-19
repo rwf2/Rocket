@@ -1,17 +1,17 @@
-use proc_macro::{TokenStream, Span};
-use devise::{syn, Spanned, Result, FromMeta};
+use devise::{syn, FromMeta, Result, Spanned};
+use proc_macro::{Span, TokenStream};
 use proc_macro2::TokenStream as TokenStream2;
 
+use self::syn::{parse::Parser, Attribute};
 use http_codegen::Status;
 use syn_ext::{syn_to_diag, IdentExt, ReturnTypeExt};
-use self::syn::{Attribute, parse::Parser};
 use {CATCH_FN_PREFIX, CATCH_STRUCT_PREFIX};
 
 /// The raw, parsed `#[catch(code)]` attribute.
 #[derive(Debug, FromMeta)]
 struct CatchAttribute {
     #[meta(naked)]
-    status: Status
+    status: Status,
 }
 
 /// This structure represents the parsed `catch` attribute an associated items.
@@ -23,19 +23,25 @@ struct CatchParams {
 }
 
 fn parse_params(args: TokenStream2, input: TokenStream) -> Result<CatchParams> {
-    let function: syn::ItemFn = syn::parse(input).map_err(syn_to_diag)
+    let function: syn::ItemFn = syn::parse(input)
+        .map_err(syn_to_diag)
         .map_err(|diag| diag.help("`#[catch]` can only be used on functions"))?;
 
     let full_attr = quote!(#[catch(#args)]);
-    let attrs = Attribute::parse_outer.parse2(full_attr).map_err(syn_to_diag)?;
+    let attrs = Attribute::parse_outer
+        .parse2(full_attr)
+        .map_err(syn_to_diag)?;
     let attribute = match CatchAttribute::from_attrs("catch", &attrs) {
         Some(result) => result.map_err(|d| {
             d.help("`#[catch]` expects a single status integer, e.g.: #[catch(404)]")
         })?,
-        None => return Err(Span::call_site().error("internal error: bad attribute"))
+        None => return Err(Span::call_site().error("internal error: bad attribute")),
     };
 
-    Ok(CatchParams { status: attribute.status, function })
+    Ok(CatchParams {
+        status: attribute.status,
+        function,
+    })
 }
 
 pub fn _catch(args: TokenStream, input: TokenStream) -> Result<TokenStream> {
@@ -57,9 +63,15 @@ pub fn _catch(args: TokenStream, input: TokenStream) -> Result<TokenStream> {
     let (fn_sig, inputs) = match catch.function.decl.inputs.len() {
         0 => (quote!(fn() -> _), quote!()),
         1 => (quote!(fn(&#Request) -> _), quote!(#req)),
-        _ => return Err(catch.function.decl.inputs.span()
+        _ => {
+            return Err(catch
+                .function
+                .decl
+                .inputs
+                .span()
                 .error("invalid number of arguments: must be zero or one")
-                .help("catchers may optionally take an argument of type `&Request`"))
+                .help("catchers may optionally take an argument of type `&Request`"));
+        }
     };
 
     // Set the span of the function name to point to inputs so that a later type
@@ -67,7 +79,11 @@ pub fn _catch(args: TokenStream, input: TokenStream) -> Result<TokenStream> {
     user_catcher_fn_name.set_span(catch.function.decl.inputs.span().into());
 
     // This ensures that "Responder not implemented" points to the return type.
-    let return_type_span = catch.function.decl.output.ty()
+    let return_type_span = catch
+        .function
+        .decl
+        .output
+        .ty()
         .map(|ty| ty.span().into())
         .unwrap_or(Span::call_site().into());
 
@@ -97,9 +113,13 @@ pub fn _catch(args: TokenStream, input: TokenStream) -> Result<TokenStream> {
                 code: #status_code,
                 handler: #generated_fn_name,
             };
-    }.into())
+    }
+    .into())
 }
 
 pub fn catch_attribute(args: TokenStream, input: TokenStream) -> TokenStream {
-    _catch(args, input).unwrap_or_else(|d| { d.emit(); TokenStream::new() })
+    _catch(args, input).unwrap_or_else(|d| {
+        d.emit();
+        TokenStream::new()
+    })
 }

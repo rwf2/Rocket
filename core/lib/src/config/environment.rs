@@ -1,8 +1,8 @@
 use super::ConfigError;
 
+use std::env;
 use std::fmt;
 use std::str::FromStr;
-use std::env;
 
 use self::Environment::*;
 

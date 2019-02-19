@@ -1,10 +1,10 @@
-use std::marker::PhantomData;
 use std::borrow::Cow;
+use std::marker::PhantomData;
 
-use percent_encoding::{EncodeSet, utf8_percent_encode};
+use percent_encoding::{utf8_percent_encode, EncodeSet};
 
-use uri::{UriPart, Path, Query};
 use parse::uri::is_pchar;
+use uri::{Path, Query, UriPart};
 
 #[derive(Clone, Copy)]
 #[allow(non_camel_case_types)]
@@ -12,7 +12,9 @@ crate struct UNSAFE_ENCODE_SET<P: UriPart>(PhantomData<P>);
 
 impl<P: UriPart> Default for UNSAFE_ENCODE_SET<P> {
     #[inline(always)]
-    fn default() -> Self { UNSAFE_ENCODE_SET(PhantomData) }
+    fn default() -> Self {
+        UNSAFE_ENCODE_SET(PhantomData)
+    }
 }
 
 impl EncodeSet for UNSAFE_ENCODE_SET<Path> {
@@ -43,10 +45,11 @@ impl EncodeSet for ENCODE_SET<Path> {
 impl EncodeSet for ENCODE_SET<Query> {
     #[inline(always)]
     fn contains(&self, byte: u8) -> bool {
-        <UNSAFE_ENCODE_SET<Query>>::default().contains(byte) || match byte {
-            b'&' | b'=' => true,
-            _ => false
-        }
+        <UNSAFE_ENCODE_SET<Query>>::default().contains(byte)
+            || match byte {
+                b'&' | b'=' => true,
+                _ => false,
+            }
     }
 }
 
@@ -57,8 +60,8 @@ crate struct DEFAULT_ENCODE_SET;
 impl EncodeSet for DEFAULT_ENCODE_SET {
     #[inline(always)]
     fn contains(&self, byte: u8) -> bool {
-        ENCODE_SET::<Path>(PhantomData).contains(byte) ||
-            ENCODE_SET::<Query>(PhantomData).contains(byte)
+        ENCODE_SET::<Path>(PhantomData).contains(byte)
+            || ENCODE_SET::<Query>(PhantomData).contains(byte)
     }
 }
 
@@ -66,7 +69,7 @@ crate fn unsafe_percent_encode<P: UriPart>(string: &str) -> Cow<str> {
     match P::DELIMITER {
         '/' => percent_encode::<UNSAFE_ENCODE_SET<Path>>(string),
         '&' => percent_encode::<UNSAFE_ENCODE_SET<Query>>(string),
-        _ => percent_encode::<DEFAULT_ENCODE_SET>(string)
+        _ => percent_encode::<DEFAULT_ENCODE_SET>(string),
     }
 }
 

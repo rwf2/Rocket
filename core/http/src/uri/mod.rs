@@ -1,26 +1,26 @@
 //! Types for URIs and traits for rendering URI components.
 
-mod uri;
-mod uri_display;
+mod absolute;
+mod authority;
 mod formatter;
 mod from_uri_param;
 mod origin;
-mod authority;
-mod absolute;
 mod segments;
+mod uri;
+mod uri_display;
 
 crate mod encoding;
 
 pub use parse::uri::Error;
 
-pub use self::uri::*;
-pub use self::authority::*;
-pub use self::origin::*;
 pub use self::absolute::*;
-pub use self::uri_display::*;
+pub use self::authority::*;
 pub use self::formatter::*;
 pub use self::from_uri_param::*;
+pub use self::origin::*;
 pub use self::segments::*;
+pub use self::uri::*;
+pub use self::uri_display::*;
 
 mod private {
     pub trait Sealed {}
@@ -68,7 +68,7 @@ pub trait UriPart: private::Sealed {
 ///
 /// [`UriPart`]: uri::UriPart
 #[derive(Debug, Clone, Copy)]
-pub enum Path {  }
+pub enum Path {}
 
 /// Marker type indicating use of a type for the query [`UriPart`] of a URI.
 ///
@@ -81,7 +81,7 @@ pub enum Path {  }
 ///
 /// [`UriPart`]: uri::UriPart
 #[derive(Debug, Clone, Copy)]
-pub enum Query {  }
+pub enum Query {}
 
 impl UriPart for Path {
     const DELIMITER: char = '/';

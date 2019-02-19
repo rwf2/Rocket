@@ -1,5 +1,5 @@
-use rocket::local::Client;
 use rocket::http::Status;
+use rocket::local::Client;
 
 fn register_hit(client: &Client) {
     let response = client.get("/").dispatch();;
@@ -18,7 +18,9 @@ fn test_count() {
     // Count should start at 0.
     assert_eq!(get_count(&client), 0);
 
-    for _ in 0..99 { register_hit(&client); }
+    for _ in 0..99 {
+        register_hit(&client);
+    }
     assert_eq!(get_count(&client), 99);
 
     register_hit(&client);
@@ -27,8 +29,8 @@ fn test_count() {
 
 #[test]
 fn test_raw_state_count() {
-    use rocket::State;
     use super::{count, index};
+    use rocket::State;
 
     let rocket = super::rocket();
 
@@ -39,12 +41,39 @@ fn test_raw_state_count() {
 
 // Cargo runs each test in parallel on different threads. We use all of these
 // tests below to show (and assert) that state is managed per-Rocket instance.
-#[test] fn test_count_parallel() { test_count() }
-#[test] fn test_count_parallel_2() { test_count() }
-#[test] fn test_count_parallel_3() { test_count() }
-#[test] fn test_count_parallel_4() { test_count() }
-#[test] fn test_count_parallel_5() { test_count() }
-#[test] fn test_count_parallel_6() { test_count() }
-#[test] fn test_count_parallel_7() { test_count() }
-#[test] fn test_count_parallel_8() { test_count() }
-#[test] fn test_count_parallel_9() { test_count() }
+#[test]
+fn test_count_parallel() {
+    test_count()
+}
+#[test]
+fn test_count_parallel_2() {
+    test_count()
+}
+#[test]
+fn test_count_parallel_3() {
+    test_count()
+}
+#[test]
+fn test_count_parallel_4() {
+    test_count()
+}
+#[test]
+fn test_count_parallel_5() {
+    test_count()
+}
+#[test]
+fn test_count_parallel_6() {
+    test_count()
+}
+#[test]
+fn test_count_parallel_7() {
+    test_count()
+}
+#[test]
+fn test_count_parallel_8() {
+    test_count()
+}
+#[test]
+fn test_count_parallel_9() {
+    test_count()
+}

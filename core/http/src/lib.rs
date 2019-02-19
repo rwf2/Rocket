@@ -3,7 +3,7 @@
 #![feature(try_from)]
 #![feature(crate_visibility_modifier)]
 #![feature(doc_cfg)]
-#![recursion_limit="512"]
+#![recursion_limit = "512"]
 
 //! Types that map to concepts in HTTP.
 //!
@@ -13,18 +13,19 @@
 //!
 //! [#17]: https://github.com/SergioBenitez/Rocket/issues/17
 
-#[macro_use] extern crate pear;
+#[macro_use]
+extern crate pear;
+extern crate cookie;
+extern crate indexmap;
 extern crate percent_encoding;
 extern crate smallvec;
-extern crate cookie;
-extern crate time;
-extern crate indexmap;
 extern crate state;
+extern crate time;
 extern crate unicode_xid;
 
+pub mod ext;
 pub mod hyper;
 pub mod uri;
-pub mod ext;
 
 #[doc(hidden)]
 #[cfg(feature = "tls")]
@@ -37,14 +38,14 @@ pub mod route;
 mod docify;
 #[macro_use]
 mod known_media_types;
-mod cookies;
-mod method;
-mod media_type;
-mod content_type;
-mod status;
-mod header;
 mod accept;
+mod content_type;
+mod cookies;
+mod header;
+mod media_type;
+mod method;
 mod raw_str;
+mod status;
 
 crate mod parse;
 
@@ -55,20 +56,20 @@ pub mod private {
     // We need to export these for codegen, but otherwise it's unnecessary.
     // TODO: Expose a `const fn` from ContentType when possible. (see RFC#1817)
     // FIXME(rustc): These show up in the rexported module.
-    pub use parse::Indexed;
     pub use media_type::{MediaParams, Source};
-    pub use smallvec::{SmallVec, Array};
+    pub use parse::Indexed;
+    pub use smallvec::{Array, SmallVec};
 
     // This one we need to expose for core.
-    pub use cookies::{Key, CookieJar};
+    pub use cookies::{CookieJar, Key};
 }
 
-pub use method::Method;
-pub use content_type::ContentType;
 pub use accept::{Accept, QMediaType};
-pub use status::{Status, StatusClass};
+pub use content_type::ContentType;
 pub use header::{Header, HeaderMap};
+pub use method::Method;
 pub use raw_str::RawStr;
+pub use status::{Status, StatusClass};
 
+pub use cookies::{Cookie, Cookies, SameSite};
 pub use media_type::MediaType;
-pub use cookies::{Cookie, SameSite, Cookies};

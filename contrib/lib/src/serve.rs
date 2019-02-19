@@ -14,13 +14,13 @@
 //! features = ["serve"]
 //! ```
 
-use std::path::{PathBuf, Path};
+use std::path::{Path, PathBuf};
 
-use rocket::{Request, Data, Route};
-use rocket::http::{Method, Status, uri::Segments};
 use rocket::handler::{Handler, Outcome};
-use rocket::response::NamedFile;
+use rocket::http::{uri::Segments, Method, Status};
 use rocket::outcome::IntoOutcome;
+use rocket::response::NamedFile;
+use rocket::{Data, Request, Route};
 
 /// A bitset representing configurable options for the [`StaticFiles`] handler.
 ///
@@ -204,7 +204,10 @@ impl StaticFiles {
     /// }
     /// ```
     pub fn new<P: AsRef<Path>>(path: P, options: Options) -> Self {
-        StaticFiles { root: path.as_ref().into(), options }
+        StaticFiles {
+            root: path.as_ref().into(),
+            options,
+        }
     }
 }
 
@@ -241,7 +244,8 @@ impl Handler for StaticFiles {
         // Otherwise, we're handling segments. Get the segments as a `PathBuf`,
         // only allowing dotfiles if the user allowed it.
         let allow_dotfiles = self.options.contains(Options::DotFiles);
-        let path = req.get_segments::<Segments>(0)
+        let path = req
+            .get_segments::<Segments>(0)
             .and_then(|res| res.ok())
             .and_then(|segments| segments.into_path_buf(allow_dotfiles).ok())
             .map(|path| self.root.join(path))

@@ -17,17 +17,17 @@
 extern crate serde;
 extern crate serde_json;
 
-use std::ops::{Deref, DerefMut};
 use std::io::{self, Read};
+use std::ops::{Deref, DerefMut};
 
-use rocket::request::Request;
-use rocket::outcome::Outcome::*;
-use rocket::data::{Outcome, Transform, Transform::*, Transformed, Data, FromData};
-use rocket::response::{self, Responder, content};
+use rocket::data::{Data, FromData, Outcome, Transform, Transform::*, Transformed};
 use rocket::http::Status;
+use rocket::outcome::Outcome::*;
+use rocket::request::Request;
+use rocket::response::{self, content, Responder};
 
-use self::serde::{Serialize, Serializer};
 use self::serde::de::{Deserialize, Deserializer};
+use self::serde::{Serialize, Serializer};
 
 #[doc(hidden)]
 pub use self::serde_json::{json_internal, json_internal_vec};
@@ -140,7 +140,7 @@ impl<'a, T: Deserialize<'a>> FromData<'a> for Json<T> {
         let mut s = String::with_capacity(512);
         match d.open().take(size_limit).read_to_string(&mut s) {
             Ok(_) => Borrowed(Success(s)),
-            Err(e) => Borrowed(Failure((Status::BadRequest, JsonError::Io(e))))
+            Err(e) => Borrowed(Failure((Status::BadRequest, JsonError::Io(e)))),
         }
     }
 
@@ -165,12 +165,12 @@ impl<'a, T: Deserialize<'a>> FromData<'a> for Json<T> {
 /// fails, an `Err` of `Status::InternalServerError` is returned.
 impl<'a, T: Serialize> Responder<'a> for Json<T> {
     fn respond_to(self, req: &Request) -> response::Result<'a> {
-        serde_json::to_string(&self.0).map(|string| {
-            content::Json(string).respond_to(req).unwrap()
-        }).map_err(|e| {
-            error_!("JSON failed to serialize: {:?}", e);
-            Status::InternalServerError
-        })
+        serde_json::to_string(&self.0)
+            .map(|string| content::Json(string).respond_to(req).unwrap())
+            .map_err(|e| {
+                error_!("JSON failed to serialize: {:?}", e);
+                Status::InternalServerError
+            })
     }
 }
 

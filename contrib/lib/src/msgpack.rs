@@ -13,20 +13,20 @@
 //! default-features = false
 //! features = ["msgpack"]
 //! ```
-extern crate serde;
 extern crate rmp_serde;
+extern crate serde;
 
-use std::ops::{Deref, DerefMut};
 use std::io::{Cursor, Read};
+use std::ops::{Deref, DerefMut};
 
-use rocket::request::Request;
-use rocket::outcome::Outcome::*;
-use rocket::data::{Outcome, Transform, Transform::*, Transformed, Data, FromData};
-use rocket::response::{self, Responder, Response};
+use rocket::data::{Data, FromData, Outcome, Transform, Transform::*, Transformed};
 use rocket::http::Status;
+use rocket::outcome::Outcome::*;
+use rocket::request::Request;
+use rocket::response::{self, Responder, Response};
 
-use self::serde::Serialize;
 use self::serde::de::Deserialize;
+use self::serde::Serialize;
 
 pub use self::rmp_serde::decode::Error;
 
@@ -126,7 +126,7 @@ impl<'a, T: Deserialize<'a>> FromData<'a> for MsgPack<T> {
         let size_limit = r.limits().get("msgpack").unwrap_or(LIMIT);
         match d.open().take(size_limit).read_to_end(&mut buf) {
             Ok(_) => Borrowed(Success(buf)),
-            Err(e) => Borrowed(Failure((Status::BadRequest, Error::InvalidDataRead(e))))
+            Err(e) => Borrowed(Failure((Status::BadRequest, Error::InvalidDataRead(e)))),
         }
     }
 
@@ -142,7 +142,7 @@ impl<'a, T: Deserialize<'a>> FromData<'a> for MsgPack<T> {
                     TypeMismatch(_) | OutOfRange | LengthMismatch(_) => {
                         Failure((Status::UnprocessableEntity, e))
                     }
-                    _ => Failure((Status::BadRequest, e))
+                    _ => Failure((Status::BadRequest, e)),
                 }
             }
         }
@@ -154,14 +154,12 @@ impl<'a, T: Deserialize<'a>> FromData<'a> for MsgPack<T> {
 /// serialization fails, an `Err` of `Status::InternalServerError` is returned.
 impl<T: Serialize> Responder<'static> for MsgPack<T> {
     fn respond_to(self, _: &Request) -> response::Result<'static> {
-        rmp_serde::to_vec(&self.0).map_err(|e| {
-            error_!("MsgPack failed to serialize: {:?}", e);
-            Status::InternalServerError
-        }).and_then(|buf| {
-            Response::build()
-                .sized_body(Cursor::new(buf))
-                .ok()
-        })
+        rmp_serde::to_vec(&self.0)
+            .map_err(|e| {
+                error_!("MsgPack failed to serialize: {:?}", e);
+                Status::InternalServerError
+            })
+            .and_then(|buf| Response::build().sized_body(Cursor::new(buf)).ok())
     }
 }
 

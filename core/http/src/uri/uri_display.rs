@@ -1,8 +1,8 @@
-use std::{fmt, path};
 use std::borrow::Cow;
+use std::{fmt, path};
 
+use uri::{Formatter, Path, Query, Uri, UriPart};
 use RawStr;
-use uri::{Uri, UriPart, Path, Query, Formatter};
 
 /// Trait implemented by types that can be displayed as part of a URI in
 /// [`uri!`].
@@ -319,7 +319,7 @@ impl UriDisplay<Path> for path::Path {
         for component in self.components() {
             match component {
                 Component::Prefix(_) | Component::RootDir => continue,
-                _ => f.write_value(&component.as_os_str().to_string_lossy())?
+                _ => f.write_value(&component.as_os_str().to_string_lossy())?,
             }
         }
 
@@ -406,7 +406,7 @@ impl<T: UriDisplay<Query>> UriDisplay<Query> for Option<T> {
     fn fmt(&self, f: &mut Formatter<Query>) -> fmt::Result {
         match self {
             Some(v) => v.fmt(f),
-            None => Ok(())
+            None => Ok(()),
         }
     }
 }
@@ -417,7 +417,7 @@ impl<T: UriDisplay<Query>, E> UriDisplay<Query> for Result<T, E> {
     fn fmt(&self, f: &mut Formatter<Query>) -> fmt::Result {
         match self {
             Ok(v) => v.fmt(f),
-            Err(_) => Ok(())
+            Err(_) => Ok(()),
         }
     }
 }
@@ -458,25 +458,25 @@ impl<T: UriDisplay<Query>, E> UriDisplay<Query> for Result<T, E> {
 /// # struct MyType;
 /// impl Ignorable<Query> for MyType { }
 /// ```
-pub trait Ignorable<P: UriPart> { }
+pub trait Ignorable<P: UriPart> {}
 
-impl<T> Ignorable<Query> for Option<T> { }
-impl<T, E> Ignorable<Query> for Result<T, E> { }
+impl<T> Ignorable<Query> for Option<T> {}
+impl<T, E> Ignorable<Query> for Result<T, E> {}
 
 #[doc(hidden)]
-pub fn assert_ignorable<P: UriPart, T: Ignorable<P>>() {  }
+pub fn assert_ignorable<P: UriPart, T: Ignorable<P>>() {}
 
 #[cfg(test)]
 mod uri_display_tests {
     use std::path;
-    use uri::{FromUriParam, UriDisplay, Query, Path};
+    use uri::{FromUriParam, Path, Query, UriDisplay};
 
     macro_rules! uri_display {
-        (<$P:ident, $Target:ty> $source:expr) => ({
+        (<$P:ident, $Target:ty> $source:expr) => {{
             let tmp = $source;
             let target = <$Target as FromUriParam<$P, _>>::from_uri_param(tmp);
             format!("{}", &target as &dyn UriDisplay<$P>)
-        })
+        }};
     }
 
     macro_rules! assert_display {

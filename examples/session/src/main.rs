@@ -1,22 +1,24 @@
 #![feature(proc_macro_hygiene, decl_macro, never_type)]
 
-#[macro_use] extern crate rocket;
+#[macro_use]
+extern crate rocket;
 extern crate rocket_contrib;
 
-#[cfg(test)] mod tests;
+#[cfg(test)]
+mod tests;
 
 use std::collections::HashMap;
 
-use rocket::outcome::IntoOutcome;
-use rocket::request::{self, Form, FlashMessage, FromRequest, Request};
-use rocket::response::{Redirect, Flash};
 use rocket::http::{Cookie, Cookies};
+use rocket::outcome::IntoOutcome;
+use rocket::request::{self, FlashMessage, Form, FromRequest, Request};
+use rocket::response::{Flash, Redirect};
 use rocket_contrib::templates::Template;
 
 #[derive(FromForm)]
 struct Login {
     username: String,
-    password: String
+    password: String,
 }
 
 #[derive(Debug)]
@@ -26,7 +28,8 @@ impl<'a, 'r> FromRequest<'a, 'r> for User {
     type Error = !;
 
     fn from_request(request: &'a Request<'r>) -> request::Outcome<User, !> {
-        request.cookies()
+        request
+            .cookies()
             .get_private("user_id")
             .and_then(|cookie| cookie.value().parse().ok())
             .map(|id| User(id))
@@ -40,7 +43,10 @@ fn login(mut cookies: Cookies, login: Form<Login>) -> Result<Redirect, Flash<Red
         cookies.add_private(Cookie::new("user_id", 1.to_string()));
         Ok(Redirect::to(uri!(index)))
     } else {
-        Err(Flash::error(Redirect::to(uri!(login_page)), "Invalid username/password."))
+        Err(Flash::error(
+            Redirect::to(uri!(login_page)),
+            "Invalid username/password.",
+        ))
     }
 }
 
@@ -78,9 +84,10 @@ fn index() -> Redirect {
 }
 
 fn rocket() -> rocket::Rocket {
-    rocket::ignite()
-        .attach(Template::fairing())
-        .mount("/", routes![index, user_index, login, logout, login_user, login_page])
+    rocket::ignite().attach(Template::fairing()).mount(
+        "/",
+        routes![index, user_index, login, logout, login_user, login_page],
+    )
 }
 
 fn main() {
