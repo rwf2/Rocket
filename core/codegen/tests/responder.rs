@@ -1,10 +1,11 @@
 #![feature(proc_macro_hygiene, decl_macro)]
 
-#[macro_use] extern crate rocket;
+#[macro_use]
+extern crate rocket;
 
+use rocket::http::{ContentType, Cookie, Status};
 use rocket::local::Client;
 use rocket::response::Responder;
-use rocket::http::{Status, ContentType, Cookie};
 
 #[derive(Responder)]
 pub enum Foo<'r> {
@@ -45,17 +46,23 @@ fn responder_foo() {
     assert_eq!(response.content_type(), Some(ContentType::Binary));
     assert_eq!(response.body_string(), Some("just a test".into()));
 
-    let mut response = Foo::Third { responder: "well, hi", ct: ContentType::JSON }
-        .respond_to(req)
-        .expect("response okay");
+    let mut response = Foo::Third {
+        responder: "well, hi",
+        ct: ContentType::JSON,
+    }
+    .respond_to(req)
+    .expect("response okay");
 
     assert_eq!(response.status(), Status::NotFound);
     assert_eq!(response.content_type(), Some(ContentType::HTML));
     assert_eq!(response.body_string(), Some("well, hi".into()));
 
-    let mut response = Foo::Fourth { string: "goodbye", ct: ContentType::JSON }
-        .respond_to(req)
-        .expect("response okay");
+    let mut response = Foo::Fourth {
+        string: "goodbye",
+        ct: ContentType::JSON,
+    }
+    .respond_to(req)
+    .expect("response okay");
 
     assert_eq!(response.status(), Status::raw(105));
     assert_eq!(response.content_type(), Some(ContentType::JSON));
@@ -82,13 +89,18 @@ fn responder_bar() {
         responder: Foo::Second("foo foo".into()),
         other: ContentType::HTML,
         third: Cookie::new("cookie", "here!"),
-        _yet_another: "uh..hi?".into()
-    }.respond_to(req).expect("response okay");
+        _yet_another: "uh..hi?".into(),
+    }
+    .respond_to(req)
+    .expect("response okay");
 
     assert_eq!(response.status(), Status::InternalServerError);
     assert_eq!(response.content_type(), Some(ContentType::Plain));
     assert_eq!(response.body_string(), Some("foo foo".into()));
-    assert_eq!(response.headers().get_one("Set-Cookie"), Some("cookie=here!"));
+    assert_eq!(
+        response.headers().get_one("Set-Cookie"),
+        Some("cookie=here!")
+    );
 }
 
 #[derive(Responder)]
@@ -103,11 +115,16 @@ fn responder_baz() {
     let local_req = client.get("/");
     let req = local_req.inner();
 
-    let mut response = Baz { responder: "just a custom" }
-        .respond_to(req)
-        .expect("response okay");
+    let mut response = Baz {
+        responder: "just a custom",
+    }
+    .respond_to(req)
+    .expect("response okay");
 
     assert_eq!(response.status(), Status::Ok);
-    assert_eq!(response.content_type(), Some(ContentType::new("application", "x-custom")));
+    assert_eq!(
+        response.content_type(),
+        Some(ContentType::new("application", "x-custom"))
+    );
     assert_eq!(response.body_string(), Some("just a custom".into()));
 }

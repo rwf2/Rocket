@@ -1,7 +1,7 @@
 use std::path::{Path, PathBuf};
 
+use uri::{self, UriDisplay, UriPart};
 use RawStr;
-use uri::{self, UriPart, UriDisplay};
 
 /// Conversion trait for parameters used in [`uri!`] invocations.
 ///
@@ -201,7 +201,10 @@ pub trait FromUriParam<P: UriPart, T> {
     fn from_uri_param(param: T) -> Self::Target;
 }
 
-use std::{borrow::Cow, net::{IpAddr, Ipv4Addr, Ipv6Addr}};
+use std::{
+    borrow::Cow,
+    net::{IpAddr, Ipv4Addr, Ipv6Addr},
+};
 
 #[doc(hidden)]
 #[macro_export(local_inner_macros)]

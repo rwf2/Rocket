@@ -1,8 +1,8 @@
-use std::fmt;
 use super::{rocket, FormInput, FormOption};
+use std::fmt;
 
-use rocket::local::Client;
 use rocket::http::ContentType;
+use rocket::local::Client;
 
 impl fmt::Display for FormOption {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
@@ -15,7 +15,8 @@ impl fmt::Display for FormOption {
 }
 
 fn assert_form_eq(client: &Client, form_str: &str, expected: String) {
-    let mut res = client.post("/")
+    let mut res = client
+        .post("/")
         .header(ContentType::Form)
         .body(form_str)
         .dispatch();
@@ -24,9 +25,10 @@ fn assert_form_eq(client: &Client, form_str: &str, expected: String) {
 }
 
 fn assert_valid_form(client: &Client, input: &FormInput) {
-    let f = format!("checkbox={}&number={}&type={}&password={}&textarea={}&select={}",
-            input.checkbox, input.number, input.radio, input.password,
-            input.text_area, input.select);
+    let f = format!(
+        "checkbox={}&number={}&type={}&password={}&textarea={}&select={}",
+        input.checkbox, input.number, input.radio, input.password, input.text_area, input.select
+    );
     assert_form_eq(client, &f, format!("{:?}", input));
 }
 
@@ -43,7 +45,7 @@ fn test_good_forms() {
         radio: FormOption::A,
         password: "beep".into(),
         text_area: "bop".to_string(),
-        select: FormOption::B
+        select: FormOption::B,
     };
 
     assert_valid_form(&client, &input);
@@ -83,29 +85,41 @@ fn test_good_forms() {
     assert_valid_form(&client, &input);
 
     // checkbox need not be present; defaults to false; accepts 'on' and 'off'
-    assert_valid_raw_form(&client,
-                          "number=133&type=c&password=hi&textarea=hey&select=c",
-                          &input);
+    assert_valid_raw_form(
+        &client,
+        "number=133&type=c&password=hi&textarea=hey&select=c",
+        &input,
+    );
 
-    assert_valid_raw_form(&client,
-                          "checkbox=off&number=133&type=c&password=hi&textarea=hey&select=c",
-                          &input);
+    assert_valid_raw_form(
+        &client,
+        "checkbox=off&number=133&type=c&password=hi&textarea=hey&select=c",
+        &input,
+    );
 
     input.checkbox = true;
-    assert_valid_raw_form(&client,
-                          "checkbox=on&number=133&type=c&password=hi&textarea=hey&select=c",
-                          &input);
+    assert_valid_raw_form(
+        &client,
+        "checkbox=on&number=133&type=c&password=hi&textarea=hey&select=c",
+        &input,
+    );
 }
 
 fn assert_invalid_form(client: &Client, vals: &mut [&str; 6]) {
-    let s = format!("checkbox={}&number={}&type={}&password={}&textarea={}&select={}",
-                    vals[0], vals[1], vals[2], vals[3], vals[4], vals[5]);
+    let s = format!(
+        "checkbox={}&number={}&type={}&password={}&textarea={}&select={}",
+        vals[0], vals[1], vals[2], vals[3], vals[4], vals[5]
+    );
     assert_form_eq(client, &s, format!("Invalid form input: {}", s));
     *vals = ["true", "1", "a", "hi", "hey", "b"];
 }
 
 fn assert_invalid_raw_form(client: &Client, form_str: &str) {
-    assert_form_eq(client, form_str, format!("Invalid form input: {}", form_str));
+    assert_form_eq(
+        client,
+        form_str,
+        format!("Invalid form input: {}", form_str),
+    );
 }
 
 #[test]
@@ -156,7 +170,10 @@ fn check_semantically_invalid_forms() {
 
     // now forms with missing fields
     assert_invalid_raw_form(&client, "number=10&type=a&password=hi&textarea=hey");
-    assert_invalid_raw_form(&client, "number=10&radio=a&password=hi&textarea=hey&select=b");
+    assert_invalid_raw_form(
+        &client,
+        "number=10&radio=a&password=hi&textarea=hey&select=b",
+    );
     assert_invalid_raw_form(&client, "number=10&password=hi&select=b");
     assert_invalid_raw_form(&client, "number=10&select=b");
     assert_invalid_raw_form(&client, "password=hi&select=b");

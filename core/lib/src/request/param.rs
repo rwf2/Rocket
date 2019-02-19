@@ -1,9 +1,12 @@
-use std::str::FromStr;
-use std::path::PathBuf;
-use std::fmt::Debug;
 use std::borrow::Cow;
+use std::fmt::Debug;
+use std::path::PathBuf;
+use std::str::FromStr;
 
-use http::{RawStr, uri::{Segments, SegmentError}};
+use http::{
+    uri::{SegmentError, Segments},
+    RawStr,
+};
 
 /// Trait to convert a dynamic path segment string to a concrete value.
 ///
@@ -213,7 +216,10 @@ impl<'a> FromParam<'a> for String {
 
     #[inline(always)]
     fn from_param(param: &'a RawStr) -> Result<String, Self::Error> {
-        param.percent_decode().map(|cow| cow.into_owned()).map_err(|_| param)
+        param
+            .percent_decode()
+            .map(|cow| cow.into_owned())
+            .map_err(|_| param)
     }
 }
 
@@ -239,7 +245,7 @@ macro_rules! impl_with_fromstr {
     )+)
 }
 
-use std::net::{IpAddr, Ipv4Addr, Ipv6Addr, SocketAddrV4, SocketAddrV6, SocketAddr};
+use std::net::{IpAddr, Ipv4Addr, Ipv6Addr, SocketAddr, SocketAddrV4, SocketAddrV6};
 
 impl_with_fromstr! {
     i8, i16, i32, i64, i128, isize, u8, u16, u32, u64, u128, usize, f32, f64,
@@ -265,7 +271,7 @@ impl<'a, T: FromParam<'a>> FromParam<'a> for Option<T> {
     fn from_param(param: &'a RawStr) -> Result<Self, Self::Error> {
         match T::from_param(param) {
             Ok(val) => Ok(Some(val)),
-            Err(_) => Ok(None)
+            Err(_) => Ok(None),
         }
     }
 }
@@ -349,7 +355,7 @@ impl<'a, T: FromSegments<'a>> FromSegments<'a> for Option<T> {
     fn from_segments(segments: Segments<'a>) -> Result<Option<T>, !> {
         match T::from_segments(segments) {
             Ok(val) => Ok(Some(val)),
-            Err(_) => Ok(None)
+            Err(_) => Ok(None),
         }
     }
 }

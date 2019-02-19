@@ -1,12 +1,12 @@
+use std::borrow::Cow;
 use std::fmt;
-use std::rc::Rc;
 use std::net::SocketAddr;
 use std::ops::{Deref, DerefMut};
-use std::borrow::Cow;
+use std::rc::Rc;
 
-use {Request, Response, Data};
-use http::{Status, Method, Header, Cookie, uri::Origin, ext::IntoOwned};
+use http::{ext::IntoOwned, uri::Origin, Cookie, Header, Method, Status};
 use local::Client;
+use {Data, Request, Response};
 
 /// A structure representing a local request as created by [`Client`].
 ///
@@ -101,11 +101,7 @@ pub struct LocalRequest<'c> {
 
 impl<'c> LocalRequest<'c> {
     #[inline(always)]
-    crate fn new(
-        client: &'c Client,
-        method: Method,
-        uri: Cow<'c, str>
-    ) -> LocalRequest<'c> {
+    crate fn new(client: &'c Client, method: Method, uri: Cow<'c, str>) -> LocalRequest<'c> {
         // We set a dummy string for now and check the user's URI on dispatch.
         let request = Request::new(client.rocket(), method, Origin::dummy());
 
@@ -120,7 +116,13 @@ impl<'c> LocalRequest<'c> {
         // See the comments on the structure for what's going on here.
         let mut request = Rc::new(request);
         let ptr = Rc::get_mut(&mut request).unwrap() as *mut Request;
-        LocalRequest { client, ptr, request, uri, data: vec![] }
+        LocalRequest {
+            client,
+            ptr,
+            request,
+            uri,
+            data: vec![],
+        }
     }
 
     /// Retrieves the inner `Request` as seen by Rocket.
@@ -395,7 +397,7 @@ impl<'c> LocalRequest<'c> {
         request: &'c mut Request<'c>,
         owned_request: Rc<Request<'c>>,
         uri: &str,
-        data: Vec<u8>
+        data: Vec<u8>,
     ) -> LocalResponse<'c> {
         // First, validate the URI, returning an error response (generated from
         // an error catcher) immediately if it's invalid.
@@ -404,7 +406,10 @@ impl<'c> LocalRequest<'c> {
         } else {
             error!("Malformed request URI: {}", uri);
             let res = client.rocket().handle_error(Status::BadRequest, request);
-            return LocalResponse { _request: owned_request, response: res };
+            return LocalResponse {
+                _request: owned_request,
+                response: res,
+            };
         }
 
         // Actually dispatch the request.
@@ -429,7 +434,7 @@ impl<'c> LocalRequest<'c> {
 
         LocalResponse {
             _request: owned_request,
-            response: response
+            response: response,
         }
     }
 }
@@ -481,7 +486,7 @@ impl<'c> Clone for LocalRequest<'c> {
             ptr: self.ptr,
             request: self.request.clone(),
             data: self.data.clone(),
-            uri: self.uri.clone()
+            uri: self.uri.clone(),
         }
     }
 }

@@ -7,9 +7,7 @@
 #![feature(crate_visibility_modifier)]
 #![feature(try_from)]
 #![feature(label_break_value)]
-
-#![recursion_limit="256"]
-
+#![recursion_limit = "256"]
 #![doc(html_root_url = "https://api.rocket.rs/v0.4")]
 #![doc(html_favicon_url = "https://rocket.rs/v0.4/images/favicon.ico")]
 #![doc(html_logo_url = "https://rocket.rs/v0.4/images/logo-boxed.png")]
@@ -98,33 +96,42 @@
 //!
 //! [testing chapter of the guide]: https://rocket.rs/v0.4/guide/testing/#testing
 
-#[allow(unused_imports)] #[macro_use] extern crate rocket_codegen;
-#[doc(hidden)] pub use rocket_codegen::*;
+#[allow(unused_imports)]
+#[macro_use]
+extern crate rocket_codegen;
+#[doc(hidden)]
+pub use rocket_codegen::*;
 
 extern crate rocket_http;
-#[macro_use] extern crate log;
-#[macro_use] extern crate pear;
-extern crate yansi;
-extern crate toml;
+#[macro_use]
+extern crate log;
+#[macro_use]
+extern crate pear;
+extern crate base64;
+extern crate isatty;
+extern crate memchr;
 extern crate num_cpus;
 extern crate state;
 extern crate time;
-extern crate memchr;
-extern crate base64;
-extern crate isatty;
+extern crate toml;
+extern crate yansi;
 
-#[cfg(test)] #[macro_use] extern crate lazy_static;
+#[cfg(test)]
+#[macro_use]
+extern crate lazy_static;
 
-#[doc(hidden)] #[macro_use] pub mod logger;
-pub mod local;
-pub mod request;
-pub mod response;
-pub mod outcome;
+#[doc(hidden)]
+#[macro_use]
+pub mod logger;
 pub mod config;
 pub mod data;
-pub mod handler;
-pub mod fairing;
 pub mod error;
+pub mod fairing;
+pub mod handler;
+pub mod local;
+pub mod outcome;
+pub mod request;
+pub mod response;
 
 // Reexport of HTTP everything.
 pub mod http {
@@ -137,22 +144,28 @@ pub mod http {
     pub use rocket_http::*;
 }
 
-mod router;
-mod rocket;
-mod codegen;
 mod catcher;
+mod codegen;
 mod ext;
+mod rocket;
+mod router;
 
-#[doc(inline)] pub use response::Response;
-#[doc(inline)] pub use handler::{Handler, ErrorHandler};
-#[doc(hidden)] pub use codegen::{StaticRouteInfo, StaticCatchInfo};
-#[doc(inline)] pub use outcome::Outcome;
-#[doc(inline)] pub use data::Data;
-#[doc(inline)] pub use config::Config;
-pub use router::Route;
-pub use request::{Request, State};
 pub use catcher::Catcher;
+#[doc(hidden)]
+pub use codegen::{StaticCatchInfo, StaticRouteInfo};
+#[doc(inline)]
+pub use config::Config;
+#[doc(inline)]
+pub use data::Data;
+#[doc(inline)]
+pub use handler::{ErrorHandler, Handler};
+#[doc(inline)]
+pub use outcome::Outcome;
+pub use request::{Request, State};
+#[doc(inline)]
+pub use response::Response;
 pub use rocket::Rocket;
+pub use router::Route;
 
 /// Alias to [`Rocket::ignite()`] Creates a new instance of `Rocket`.
 pub fn ignite() -> Rocket {

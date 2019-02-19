@@ -23,6 +23,7 @@ tera_templates = ["tera", "templates"]
 handlebars_templates = ["handlebars", "templates"]
 helmet = ["time"]
 serve = []
+cors = []
 
 # The barage of user-facing database features.
 diesel_sqlite_pool = ["databases", "diesel/sqlite", "diesel/r2d2"]

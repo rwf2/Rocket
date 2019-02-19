@@ -1,5 +1,5 @@
-use std::fmt::{self, Display};
 use std::borrow::Cow;
+use std::fmt::{self, Display};
 
 use ext::IntoOwned;
 use parse::{Indexed, IndexedStr};
@@ -30,7 +30,7 @@ pub struct Authority<'a> {
 #[derive(Debug, Clone)]
 crate enum Host<T> {
     Bracketed(T),
-    Raw(T)
+    Raw(T),
 }
 
 impl<T: IntoOwned> IntoOwned for Host<T> {
@@ -49,7 +49,7 @@ impl<'a> IntoOwned for Authority<'a> {
             source: self.source.into_owned(),
             user_info: self.user_info.into_owned(),
             host: self.host.into_owned(),
-            port: self.port
+            port: self.port,
         }
     }
 }
@@ -59,13 +59,13 @@ impl<'a> Authority<'a> {
         source: Cow<'a, [u8]>,
         user_info: Option<Indexed<'a, [u8]>>,
         host: Host<Indexed<'a, [u8]>>,
-        port: Option<u16>
+        port: Option<u16>,
     ) -> Authority<'a> {
         Authority {
             source: Some(as_utf8_unchecked(source)),
             user_info: user_info.map(|u| u.coerce()),
             host: host.map_inner(|inner| inner.coerce()),
-            port: port
+            port: port,
         }
     }
 
@@ -73,13 +73,13 @@ impl<'a> Authority<'a> {
     crate fn new(
         user_info: Option<&'a str>,
         host: Host<&'a str>,
-        port: Option<u16>
+        port: Option<u16>,
     ) -> Authority<'a> {
         Authority {
             source: None,
             user_info: user_info.map(|u| u.into()),
             host: host.map_inner(|inner| inner.into()),
-            port: port
+            port: port,
         }
     }
 
@@ -117,7 +117,9 @@ impl<'a> Authority<'a> {
     /// assert_eq!(uri.user_info(), Some("username:password"));
     /// ```
     pub fn user_info(&self) -> Option<&str> {
-        self.user_info.as_ref().map(|u| u.from_cow_source(&self.source))
+        self.user_info
+            .as_ref()
+            .map(|u| u.from_cow_source(&self.source))
     }
 
     /// Returns the host part of the authority URI.
@@ -188,7 +190,7 @@ impl<'a> Display for Authority<'a> {
 
         match self.host {
             Host::Bracketed(_) => write!(f, "[{}]", self.host())?,
-            Host::Raw(_) => write!(f, "{}", self.host())?
+            Host::Raw(_) => write!(f, "{}", self.host())?,
         }
 
         if let Some(port) = self.port {
@@ -203,7 +205,7 @@ impl<T> Host<T> {
     #[inline]
     fn inner(&self) -> &T {
         match *self {
-            Host::Bracketed(ref inner) | Host::Raw(ref inner) => inner
+            Host::Bracketed(ref inner) | Host::Raw(ref inner) => inner,
         }
     }
 
@@ -211,17 +213,18 @@ impl<T> Host<T> {
     fn is_bracketed(&self) -> bool {
         match *self {
             Host::Bracketed(_) => true,
-            _ => false
+            _ => false,
         }
     }
 
     #[inline]
     fn map_inner<F, U>(self, f: F) -> Host<U>
-        where F: FnOnce(T) -> U
+    where
+        F: FnOnce(T) -> U,
     {
         match self {
             Host::Bracketed(inner) => Host::Bracketed(f(inner)),
-            Host::Raw(inner) => Host::Raw(f(inner))
+            Host::Raw(inner) => Host::Raw(f(inner)),
         }
     }
 }

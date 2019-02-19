@@ -1,11 +1,11 @@
 use std::hash::{Hash, Hasher};
 
 use devise::syn;
-use proc_macro::{Span, Diagnostic};
+use proc_macro::{Diagnostic, Span};
 
-use http::uri::{UriPart, Path};
 use http::route::RouteSegment;
-use proc_macro_ext::{Diagnostics, StringLit, PResult, DResult};
+use http::uri::{Path, UriPart};
+use proc_macro_ext::{DResult, Diagnostics, PResult, StringLit};
 
 crate use http::route::{Error, Kind, Source};
 
@@ -23,11 +23,17 @@ impl Segment {
         let source = match P::DELIMITER {
             '/' => Source::Path,
             '&' => Source::Query,
-            _ => unreachable!("only paths and queries")
+            _ => unreachable!("only paths and queries"),
         };
 
         let (kind, index) = (segment.kind, segment.index);
-        Segment { span, kind, source, index, name: segment.name.into_owned() }
+        Segment {
+            span,
+            kind,
+            source,
+            index,
+            name: segment.name.into_owned(),
+        }
     }
 }
 
@@ -49,7 +55,7 @@ impl PartialEq for Segment {
     }
 }
 
-impl Eq for Segment {  }
+impl Eq for Segment {}
 
 impl Hash for Segment {
     fn hash<H: Hasher>(&self, state: &mut H) {
@@ -76,35 +82,28 @@ fn into_diagnostic(
     segment: &str, // The segment that failed.
     source: &str,  // The haystack where `segment` can be found.
     span: Span,    // The `Span` of `Source`.
-    error: &Error,  // The error.
+    error: &Error, // The error.
 ) -> Diagnostic {
     let seg_span = subspan(segment, source, span);
     match error {
-        Error::Empty => {
-            seg_span.error("parameter names cannot be empty")
-        }
-        Error::Ident(name) => {
-            seg_span.error(format!("`{}` is not a valid identifier", name))
-                .help("parameter names must be valid identifiers")
-        }
-        Error::Ignored => {
-            seg_span.error("parameters must be named")
-                .help("use a name such as `_guard` or `_param`")
-        }
-        Error::MissingClose => {
-            seg_span.error("parameter is missing a closing bracket")
-                .help(format!("did you mean '{}>'?", segment))
-        }
-        Error::Malformed => {
-            seg_span.error("malformed parameter or identifier")
-                .help("parameters must be of the form '<param>'")
-                .help("identifiers cannot contain '<' or '>'")
-        }
-        Error::Uri => {
-            seg_span.error("component contains invalid URI characters")
-                .note("components cannot contain reserved characters")
-                .help("reserved characters include: '%', '+', '&', etc.")
-        }
+        Error::Empty => seg_span.error("parameter names cannot be empty"),
+        Error::Ident(name) => seg_span
+            .error(format!("`{}` is not a valid identifier", name))
+            .help("parameter names must be valid identifiers"),
+        Error::Ignored => seg_span
+            .error("parameters must be named")
+            .help("use a name such as `_guard` or `_param`"),
+        Error::MissingClose => seg_span
+            .error("parameter is missing a closing bracket")
+            .help(format!("did you mean '{}>'?", segment)),
+        Error::Malformed => seg_span
+            .error("malformed parameter or identifier")
+            .help("parameters must be of the form '<param>'")
+            .help("identifiers cannot contain '<' or '>'"),
+        Error::Uri => seg_span
+            .error("component contains invalid URI characters")
+            .note("components cannot contain reserved characters")
+            .help("reserved characters include: '%', '+', '&', etc."),
         Error::Trailing(multi) => {
             let multi_span = subspan(multi, source, span);
             trailspan(segment, source, span)
@@ -126,10 +125,7 @@ crate fn parse_data_segment(segment: &str, span: Span) -> PResult<Segment> {
         .map_err(|e| into_diagnostic(segment, segment, span, &e))
 }
 
-crate fn parse_segments<P: UriPart>(
-    string: &str,
-    span: Span
-) -> DResult<Vec<Segment>> {
+crate fn parse_segments<P: UriPart>(string: &str, span: Span) -> DResult<Vec<Segment>> {
     let mut segments = vec![];
     let mut diags = Diagnostics::new();
 

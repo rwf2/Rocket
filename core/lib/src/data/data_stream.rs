@@ -1,9 +1,9 @@
-use std::io::{self, Read, Cursor, Chain};
+use std::io::{self, Chain, Cursor, Read};
 use std::net::Shutdown;
 
 use super::data::BodyReader;
-use http::hyper::net::NetworkStream;
 use http::hyper::h1::HttpReader;
+use http::hyper::net::NetworkStream;
 
 //                          |-- peek buf --|
 pub type InnerStream = Chain<Cursor<Vec<u8>>, BodyReader>;
@@ -30,8 +30,8 @@ pub fn kill_stream(stream: &mut BodyReader) {
     // Only do the expensive reading if we're not sure we're done.
     use self::HttpReader::*;
     match *stream {
-        SizedReader(_, n) | ChunkedReader(_, Some(n)) if n > 0 => { /* continue */ },
-        _ => return
+        SizedReader(_, n) | ChunkedReader(_, Some(n)) if n > 0 => { /* continue */ }
+        _ => return,
     };
 
     // Take <= 1k from the stream. If there might be more data, force close.
@@ -44,7 +44,7 @@ pub fn kill_stream(stream: &mut BodyReader) {
                 error_!("Failed to close network stream: {:?}", e);
             }
         }
-        Ok(n) => debug!("flushed {} unread bytes", n)
+        Ok(n) => debug!("flushed {} unread bytes", n),
     }
 }
 

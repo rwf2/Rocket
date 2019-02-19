@@ -1,5 +1,5 @@
-use std::fmt::{self, Display};
 use std::borrow::Cow;
+use std::fmt::{self, Display};
 
 use ext::IntoOwned;
 use parse::{Indexed, IndexedStr};
@@ -105,7 +105,7 @@ impl<'a> IntoOwned for Origin<'a> {
             source: self.source.into_owned(),
             path: self.path.into_owned(),
             query: self.query.into_owned(),
-            segment_count: self.segment_count
+            segment_count: self.segment_count,
         }
     }
 }
@@ -115,13 +115,13 @@ impl<'a> Origin<'a> {
     crate unsafe fn raw(
         source: Cow<'a, [u8]>,
         path: Indexed<'a, [u8]>,
-        query: Option<Indexed<'a, [u8]>>
+        query: Option<Indexed<'a, [u8]>>,
     ) -> Origin<'a> {
         Origin {
             source: Some(as_utf8_unchecked(source)),
             path: path.coerce(),
             query: query.map(|q| q.coerce()),
-            segment_count: Storage::new()
+            segment_count: Storage::new(),
         }
     }
 
@@ -130,13 +130,15 @@ impl<'a> Origin<'a> {
     // resulting `Origin's` are not guaranteed to be valid origin URIs!
     #[doc(hidden)]
     pub fn new<P, Q>(path: P, query: Option<Q>) -> Origin<'a>
-        where P: Into<Cow<'a, str>>, Q: Into<Cow<'a, str>>
+    where
+        P: Into<Cow<'a, str>>,
+        Q: Into<Cow<'a, str>>,
     {
         Origin {
             source: None,
             path: Indexed::from(path),
             query: query.map(Indexed::from),
-            segment_count: Storage::new()
+            segment_count: Storage::new(),
         }
     }
 
@@ -209,7 +211,12 @@ impl<'a> Origin<'a> {
         let origin = Origin::parse(copy_of_str)?;
 
         let uri = match origin {
-            Origin { source: Some(_), path, query, segment_count } => Origin {
+            Origin {
+                source: Some(_),
+                path,
+                query,
+                segment_count,
+            } => Origin {
                 segment_count,
                 path: path.into_owned(),
                 query: query.into_owned(),
@@ -220,7 +227,7 @@ impl<'a> Origin<'a> {
                 // borrow".
                 source: Some(Cow::Owned(string)),
             },
-            _ => unreachable!("parser always parses with a source")
+            _ => unreachable!("parser always parses with a source"),
         };
 
         Ok(uri)
@@ -247,9 +254,9 @@ impl<'a> Origin<'a> {
     /// assert!(!abnormal.is_normalized());
     /// ```
     pub fn is_normalized(&self) -> bool {
-        self.path().starts_with('/') &&
-            !self.path().contains("//") &&
-            !(self.path().len() > 1 && self.path().ends_with('/'))
+        self.path().starts_with('/')
+            && !self.path().contains("//")
+            && !(self.path().len() > 1 && self.path().ends_with('/'))
     }
 
     /// Normalizes `self`.
@@ -459,7 +466,14 @@ mod tests {
         let actual = Origin::parse(path).unwrap().segment_count();
         if actual != expected {
             eprintln!("Count mismatch: expected {}, got {}.", expected, actual);
-            eprintln!("{}", if actual != expected { "lifetime" } else { "buf" });
+            eprintln!(
+                "{}",
+                if actual != expected {
+                    "lifetime"
+                } else {
+                    "buf"
+                }
+            );
             eprintln!("Segments (for {}):", path);
             for (i, segment) in Origin::parse(path).unwrap().segments().enumerate() {
                 eprintln!("{}: {}", i, segment);
@@ -472,7 +486,7 @@ mod tests {
     fn eq_segments(path: &str, expected: &[&str]) -> bool {
         let uri = match Origin::parse(path) {
             Ok(uri) => uri,
-            Err(e) => panic!("failed to parse {}: {}", path, e)
+            Err(e) => panic!("failed to parse {}: {}", path, e),
         };
 
         let actual: Vec<&str> = uri.segments().collect();
@@ -586,10 +600,7 @@ mod tests {
 
     #[test]
     fn normalized() {
-        let uri_to_string = |s| Origin::parse(s)
-            .unwrap()
-            .to_normalized()
-            .to_string();
+        let uri_to_string = |s| Origin::parse(s).unwrap().to_normalized().to_string();
 
         assert_eq!(uri_to_string("/"), "/".to_string());
         assert_eq!(uri_to_string("//"), "/".to_string());

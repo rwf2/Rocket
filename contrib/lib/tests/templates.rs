@@ -1,7 +1,8 @@
 #![feature(proc_macro_hygiene, decl_macro)]
 
 #[cfg(feature = "templates")]
-#[macro_use] extern crate rocket;
+#[macro_use]
+extern crate rocket;
 
 #[cfg(feature = "templates")]
 extern crate rocket_contrib;
@@ -10,47 +11,57 @@ extern crate rocket_contrib;
 mod templates_tests {
     use std::path::{Path, PathBuf};
 
-    use rocket::{Rocket, http::RawStr};
     use rocket::config::{Config, Environment};
-    use rocket_contrib::templates::{Template, Metadata};
+    use rocket::{http::RawStr, Rocket};
+    use rocket_contrib::templates::{Metadata, Template};
 
     #[get("/<engine>/<name>")]
     fn template_check(md: Metadata, engine: &RawStr, name: &RawStr) -> Option<()> {
         match md.contains_template(&format!("{}/{}", engine, name)) {
             true => Some(()),
-            false => None
+            false => None,
         }
     }
 
     #[get("/is_reloading")]
     fn is_reloading(md: Metadata) -> Option<()> {
-        if md.reloading() { Some(()) } else { None }
+        if md.reloading() {
+            Some(())
+        } else {
+            None
+        }
     }
 
     fn template_root() -> PathBuf {
-        Path::new(env!("CARGO_MANIFEST_DIR")).join("tests").join("templates")
+        Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("tests")
+            .join("templates")
     }
 
     fn rocket() -> Rocket {
         let config = Config::build(Environment::Development)
-            .extra("template_dir", template_root().to_str().expect("template directory"))
+            .extra(
+                "template_dir",
+                template_root().to_str().expect("template directory"),
+            )
             .expect("valid configuration");
 
-        ::rocket::custom(config).attach(Template::fairing())
+        ::rocket::custom(config)
+            .attach(Template::fairing())
             .mount("/", routes![template_check, is_reloading])
     }
 
     #[cfg(feature = "tera_templates")]
     mod tera_tests {
         use super::*;
-        use std::collections::HashMap;
         use rocket::http::Status;
         use rocket::local::Client;
+        use std::collections::HashMap;
 
-        const UNESCAPED_EXPECTED: &'static str
-            = "\nh_start\ntitle: _test_\nh_end\n\n\n<script />\n\nfoot\n";
-        const ESCAPED_EXPECTED: &'static str
-            = "\nh_start\ntitle: _test_\nh_end\n\n\n&lt;script &#x2F;&gt;\n\nfoot\n";
+        const UNESCAPED_EXPECTED: &'static str =
+            "\nh_start\ntitle: _test_\nh_end\n\n\n<script />\n\nfoot\n";
+        const ESCAPED_EXPECTED: &'static str =
+            "\nh_start\ntitle: _test_\nh_end\n\n\n&lt;script &#x2F;&gt;\n\nfoot\n";
 
         #[test]
         fn test_tera_templates() {
@@ -89,12 +100,12 @@ mod templates_tests {
     #[cfg(feature = "handlebars_templates")]
     mod handlebars_tests {
         use super::*;
-        use std::collections::HashMap;
         use rocket::http::Status;
         use rocket::local::Client;
+        use std::collections::HashMap;
 
-        const EXPECTED: &'static str
-            = "Hello _test_!\n\n<main> &lt;script /&gt; hi </main>\nDone.\n\n";
+        const EXPECTED: &'static str =
+            "Hello _test_!\n\n<main> &lt;script /&gt; hi </main>\nDone.\n\n";
 
         #[test]
         fn test_handlebars_templates() {

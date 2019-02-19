@@ -1,5 +1,5 @@
-use {Rocket, Request, Response, Data};
 use fairing::{Fairing, Kind};
+use {Data, Request, Response, Rocket};
 
 use yansi::Paint;
 
@@ -24,8 +24,10 @@ impl Fairings {
         let kind = fairing.info().kind;
         let name = fairing.info().name;
         if kind.is(Kind::Attach) {
-            rocket = fairing.on_attach(rocket)
-                .unwrap_or_else(|r| { self.attach_failures.push(name); r })
+            rocket = fairing.on_attach(rocket).unwrap_or_else(|r| {
+                self.attach_failures.push(name);
+                r
+            })
         }
 
         self.add(fairing);
@@ -38,9 +40,15 @@ impl Fairings {
             let index = self.all_fairings.len();
             self.all_fairings.push(fairing);
 
-            if kind.is(Kind::Launch) { self.launch.push(index); }
-            if kind.is(Kind::Request) { self.request.push(index); }
-            if kind.is(Kind::Response) { self.response.push(index); }
+            if kind.is(Kind::Launch) {
+                self.launch.push(index);
+            }
+            if kind.is(Kind::Request) {
+                self.request.push(index);
+            }
+            if kind.is(Kind::Response) {
+                self.response.push(index);
+            }
         }
     }
 
@@ -82,12 +90,19 @@ impl Fairings {
     fn info_for(&self, kind: &str, fairings: &[usize]) {
         if !fairings.is_empty() {
             let num = fairings.len();
-            let names = fairings.iter().cloned()
+            let names = fairings
+                .iter()
+                .cloned()
                 .map(|i| self.all_fairings[i].info().name)
                 .collect::<Vec<_>>()
                 .join(", ");
 
-            info_!("{} {}: {}", Paint::default(num).bold(), kind, Paint::default(names).bold());
+            info_!(
+                "{} {}: {}",
+                Paint::default(num).bold(),
+                kind,
+                Paint::default(names).bold()
+            );
         }
     }
 

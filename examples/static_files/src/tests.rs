@@ -1,13 +1,14 @@
 use std::fs::File;
 use std::io::Read;
 
-use rocket::local::Client;
 use rocket::http::Status;
+use rocket::local::Client;
 
 use super::rocket;
 
-fn test_query_file<T> (path: &str, file: T, status: Status)
-    where T: Into<Option<&'static str>>
+fn test_query_file<T>(path: &str, file: T, status: Status)
+where
+    T: Into<Option<&'static str>>,
 {
     let client = Client::new(rocket()).unwrap();
     let mut response = client.get(path).dispatch();
@@ -24,7 +25,8 @@ fn read_file_content(path: &str) -> Vec<u8> {
     let mut fp = File::open(&path).expect(&format!("Can't open {}", path));
     let mut file_content = vec![];
 
-    fp.read_to_end(&mut file_content).expect(&format!("Reading {} failed.", path));
+    fp.read_to_end(&mut file_content)
+        .expect(&format!("Reading {} failed.", path));
     file_content
 }
 

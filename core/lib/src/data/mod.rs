@@ -2,8 +2,8 @@
 
 mod data;
 mod data_stream;
-mod net_stream;
 mod from_data;
+mod net_stream;
 
 pub use self::data::Data;
 pub use self::data_stream::DataStream;

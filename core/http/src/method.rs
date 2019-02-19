@@ -18,7 +18,7 @@ pub enum Method {
     Head,
     Trace,
     Connect,
-    Patch
+    Patch,
 }
 
 impl Method {

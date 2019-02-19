@@ -1,10 +1,10 @@
-use std::fmt;
 use std::borrow::Cow;
+use std::fmt;
 
-use pear::{ParseErr, Expected};
+use ext::IntoOwned;
 use parse::indexed::Context;
 use parse::uri::RawInput;
-use ext::IntoOwned;
+use pear::{Expected, ParseErr};
 
 /// Error emitted on URI parse failure.
 ///
@@ -15,29 +15,36 @@ use ext::IntoOwned;
 #[derive(Debug)]
 pub struct Error<'a> {
     expected: Expected<Or<char, u8>, Cow<'a, str>, String>,
-    context: Option<Context>
+    context: Option<Context>,
 }
 
 #[derive(Debug)]
 enum Or<L, R> {
     A(L),
-    B(R)
+    B(R),
 }
 
 impl<'a> Error<'a> {
     crate fn from(src: &'a str, pear_error: ParseErr<RawInput<'a>>) -> Error<'a> {
-        let new_expected = pear_error.expected.map(|token| {
-            if token.is_ascii() && !token.is_ascii_control() {
-                Or::A(token as char)
-            } else {
-                Or::B(token)
-            }
-        }, String::from_utf8_lossy, |indexed| {
-            let src = Some(src.as_bytes());
-            String::from_utf8_lossy(indexed.from_source(src)).to_string()
-        });
+        let new_expected = pear_error.expected.map(
+            |token| {
+                if token.is_ascii() && !token.is_ascii_control() {
+                    Or::A(token as char)
+                } else {
+                    Or::B(token)
+                }
+            },
+            String::from_utf8_lossy,
+            |indexed| {
+                let src = Some(src.as_bytes());
+                String::from_utf8_lossy(indexed.from_source(src)).to_string()
+            },
+        );
 
-        Error { expected: new_expected, context: pear_error.context }
+        Error {
+            expected: new_expected,
+            context: pear_error.context,
+        }
     }
 
     /// Returns the byte index into the text where the error occurred if it is
@@ -84,7 +91,10 @@ impl<'a> IntoOwned for Error<'a> {
 
     fn into_owned(self) -> Self::Owned {
         let expected = self.expected.map(|i| i, IntoOwned::into_owned, |i| i);
-        Error { expected, context: self.context }
+        Error {
+            expected,
+            context: self.context,
+        }
     }
 }
 
@@ -96,7 +106,7 @@ mod tests {
         ($url:expr => $error:expr) => {{
             let e = origin_from_str($url).unwrap_err();
             assert_eq!(e.to_string(), $error.to_string())
-        }}
+        }};
     }
 
     #[test]

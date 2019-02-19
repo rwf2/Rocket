@@ -1,8 +1,8 @@
 #![allow(dead_code)]
 
 use std::borrow::Cow;
-use std::ops::{Index, Range};
 use std::fmt::{self, Debug};
+use std::ops::{Index, Range};
 
 use pear::{Input, Length};
 
@@ -33,7 +33,7 @@ impl AsPtr for [u8] {
 #[derive(PartialEq)]
 pub enum Indexed<'a, T: ?Sized + ToOwned + 'a> {
     Indexed(usize, usize),
-    Concrete(Cow<'a, T>)
+    Concrete(Cow<'a, T>),
 }
 
 impl<'a, T: ?Sized + ToOwned + 'a, C: Into<Cow<'a, T>>> From<C> for Indexed<'a, T> {
@@ -49,7 +49,7 @@ impl<'a, T: ?Sized + ToOwned + 'a> Indexed<'a, T> {
     pub fn indices(self) -> (usize, usize) {
         match self {
             Indexed::Indexed(a, b) => (a, b),
-            _ => panic!("cannot convert indexed T to U unless indexed")
+            _ => panic!("cannot convert indexed T to U unless indexed"),
         }
     }
 
@@ -58,7 +58,7 @@ impl<'a, T: ?Sized + ToOwned + 'a> Indexed<'a, T> {
     pub fn coerce<U: ?Sized + ToOwned>(self) -> Indexed<'a, U> {
         match self {
             Indexed::Indexed(a, b) => Indexed::Indexed(a, b),
-            _ => panic!("cannot convert indexed T to U unless indexed")
+            _ => panic!("cannot convert indexed T to U unless indexed"),
         }
     }
 
@@ -67,7 +67,7 @@ impl<'a, T: ?Sized + ToOwned + 'a> Indexed<'a, T> {
     pub fn coerce_lifetime<'b>(self) -> Indexed<'b, T> {
         match self {
             Indexed::Indexed(a, b) => Indexed::Indexed(a, b),
-            _ => panic!("cannot coerce lifetime unless indexed")
+            _ => panic!("cannot coerce lifetime unless indexed"),
         }
     }
 }
@@ -78,7 +78,7 @@ impl<'a, T: 'static + ?Sized + ToOwned> IntoOwned for Indexed<'a, T> {
     fn into_owned(self) -> Indexed<'static, T> {
         match self {
             Indexed::Indexed(a, b) => Indexed::Indexed(a, b),
-            Indexed::Concrete(cow) => Indexed::Concrete(IntoOwned::into_owned(cow))
+            Indexed::Concrete(cow) => Indexed::Concrete(IntoOwned::into_owned(cow)),
         }
     }
 }
@@ -93,15 +93,16 @@ impl<'a, T: ?Sized + ToOwned + 'a> Add for Indexed<'a, T> {
         match self {
             Indexed::Indexed(a, b) => match other {
                 Indexed::Indexed(c, d) if b == c && a < d => Indexed::Indexed(a, d),
-                _ => panic!("+ requires indexed")
-            }
-            _ => panic!("+ requires indexed")
+                _ => panic!("+ requires indexed"),
+            },
+            _ => panic!("+ requires indexed"),
         }
     }
 }
 
 impl<'a, T: ?Sized + ToOwned + 'a> Indexed<'a, T>
-    where T: Length + AsPtr + Index<Range<usize>, Output = T>
+where
+    T: Length + AsPtr + Index<Range<usize>, Output = T>,
 {
     // Returns `None` if `needle` is not a substring of `haystack`.
     pub fn checked_from(needle: &T, haystack: &T) -> Option<Indexed<'a, T>> {
@@ -188,13 +189,15 @@ impl<'a, T: ToOwned + ?Sized + 'a> Clone for Indexed<'a, T> {
     fn clone(&self) -> Self {
         match *self {
             Indexed::Indexed(a, b) => Indexed::Indexed(a, b),
-            Indexed::Concrete(ref cow) => Indexed::Concrete(cow.clone())
+            Indexed::Concrete(ref cow) => Indexed::Concrete(cow.clone()),
         }
     }
 }
 
 impl<'a, T: ?Sized + 'a> Debug for Indexed<'a, T>
-    where T: ToOwned + Debug, T::Owned: Debug
+where
+    T: ToOwned + Debug,
+    T::Owned: Debug,
 {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match *self {
@@ -209,7 +212,7 @@ impl<'a, T: ?Sized + Length + ToOwned + 'a> Length for Indexed<'a, T> {
     fn len(&self) -> usize {
         match *self {
             Indexed::Indexed(a, b) => (b - a) as usize,
-            Indexed::Concrete(ref cow) => cow.len()
+            Indexed::Concrete(ref cow) => cow.len(),
         }
     }
 }
@@ -217,7 +220,7 @@ impl<'a, T: ?Sized + Length + ToOwned + 'a> Length for Indexed<'a, T> {
 #[derive(Debug)]
 pub struct IndexedInput<'a, T: ?Sized + 'a> {
     source: &'a T,
-    current: &'a T
+    current: &'a T,
 }
 
 impl<'a, T: ?Sized + 'a> IndexedInput<'a, T> {
@@ -254,11 +257,14 @@ impl<'a> IndexedInput<'a, [u8]> {
 }
 
 macro_rules! impl_indexed_input {
-    ($T:ty, token = $token:ty) => (
+    ($T:ty, token = $token:ty) => {
         impl<'a> From<&'a $T> for IndexedInput<'a, $T> {
             #[inline(always)]
             fn from(source: &'a $T) -> Self {
-                IndexedInput { source: source, current: source }
+                IndexedInput {
+                    source: source,
+                    current: source,
+                }
             }
         }
 
@@ -276,22 +282,23 @@ macro_rules! impl_indexed_input {
 
             #[inline(always)]
             fn peek_slice(&mut self, slice: Self::InSlice) -> Option<Self::Slice> {
-                self.current.peek_slice(slice)
-                    .map(|slice| unsafe {
-                        Indexed::unchecked_from(slice, self.source)
-                    })
+                self.current
+                    .peek_slice(slice)
+                    .map(|slice| unsafe { Indexed::unchecked_from(slice, self.source) })
             }
 
             #[inline(always)]
             fn skip_many<F>(&mut self, cond: F) -> usize
-                where F: FnMut(Self::Token) -> bool
+            where
+                F: FnMut(Self::Token) -> bool,
             {
                 self.current.skip_many(cond)
             }
 
             #[inline(always)]
             fn take_many<F>(&mut self, cond: F) -> Self::Many
-                where F: FnMut(Self::Token) -> bool
+            where
+                F: FnMut(Self::Token) -> bool,
             {
                 let many = self.current.take_many(cond);
                 unsafe { Indexed::unchecked_from(many, self.source) }
@@ -314,13 +321,13 @@ macro_rules! impl_indexed_input {
                 Some(Context { offset, string })
             }
         }
-    )
+    };
 }
 
 #[derive(Debug, PartialEq, Eq, Clone, Hash)]
 pub struct Context {
     pub offset: usize,
-    pub string: String
+    pub string: String,
 }
 
 impl ::std::fmt::Display for Context {

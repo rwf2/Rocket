@@ -18,7 +18,7 @@ pub enum StatusClass {
     ServerError,
     /// Indicates that the status code is nonstandard and unknown: all other
     /// status codes.
-    Unknown
+    Unknown,
 }
 
 macro_rules! class_check_fn {
@@ -89,7 +89,7 @@ pub struct Status {
     /// The HTTP status code associated with this status.
     pub code: u16,
     /// The HTTP reason phrase associated with this status.
-    pub reason: &'static str
+    pub reason: &'static str,
 }
 
 macro_rules! ctrs {
@@ -191,7 +191,7 @@ impl Status {
             3 => StatusClass::Redirection,
             4 => StatusClass::ClientError,
             5 => StatusClass::ServerError,
-            _ => StatusClass::Unknown
+            _ => StatusClass::Unknown,
         }
     }
 
@@ -203,7 +203,7 @@ impl Status {
     pub fn raw(code: u16) -> Status {
         match Status::from_code(code) {
             Some(status) => status,
-            None => Status::new(code, "<unknown code>")
+            None => Status::new(code, "<unknown code>"),
         }
     }
 

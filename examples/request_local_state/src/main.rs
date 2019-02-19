@@ -1,13 +1,15 @@
 #![feature(proc_macro_hygiene, decl_macro)]
 
-#[macro_use] extern crate rocket;
+#[macro_use]
+extern crate rocket;
 
 use std::sync::atomic::{AtomicUsize, Ordering};
 
-use rocket::request::{self, Request, FromRequest, State};
 use rocket::outcome::Outcome::*;
+use rocket::request::{self, FromRequest, Request, State};
 
-#[cfg(test)] mod tests;
+#[cfg(test)]
+mod tests;
 
 #[derive(Default)]
 struct Atomics {

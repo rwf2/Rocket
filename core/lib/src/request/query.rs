@@ -1,4 +1,4 @@
-use request::{FormItems, FormItem, Form, LenientForm, FromForm};
+use request::{Form, FormItem, FormItems, FromForm, LenientForm};
 
 /// Iterator over form items in a query string.
 ///

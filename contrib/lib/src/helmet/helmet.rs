@@ -1,8 +1,8 @@
 use std::collections::HashMap;
 use std::sync::atomic::{AtomicBool, Ordering};
 
-use rocket::http::uncased::UncasedStr;
 use rocket::fairing::{Fairing, Info, Kind};
+use rocket::http::uncased::UncasedStr;
 use rocket::{Request, Response, Rocket};
 
 use helmet::*;
@@ -173,7 +173,7 @@ impl SpaceHelmet {
             if response.headers().contains(name.as_str()) {
                 warn!("Space Helmet: response contains a '{}' header.", name);
                 warn_!("Refusing to overwrite existing header.");
-                continue
+                continue;
             }
 
             // FIXME: Cache the rendered header.

@@ -1,6 +1,7 @@
 #![feature(proc_macro_hygiene, decl_macro)]
 
-#[cfg(test)] mod tests;
+#[cfg(test)]
+mod tests;
 
 use rocket::{get, routes};
 

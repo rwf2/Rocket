@@ -1,4 +1,5 @@
-#[macro_use] extern crate rocket;
+#[macro_use]
+extern crate rocket;
 
 use rocket::request::FromFormValue;
 
@@ -27,7 +28,11 @@ macro_rules! assert_no_parse {
 #[test]
 fn from_form_value_simple() {
     #[derive(Debug, FromFormValue)]
-    enum Foo { A, B, C, }
+    enum Foo {
+        A,
+        B,
+        C,
+    }
 
     assert_parse!("a", "A" => Foo::A);
     assert_parse!("b", "B" => Foo::B);
@@ -38,7 +43,10 @@ fn from_form_value_simple() {
 fn from_form_value_weirder() {
     #[allow(non_camel_case_types)]
     #[derive(Debug, FromFormValue)]
-    enum Foo { Ab_Cd, OtherA }
+    enum Foo {
+        Ab_Cd,
+        OtherA,
+    }
 
     assert_parse!("ab_cd", "ab_CD", "Ab_CD" => Foo::Ab_Cd);
     assert_parse!("othera", "OTHERA", "otherA", "OtherA" => Foo::OtherA);
@@ -47,7 +55,11 @@ fn from_form_value_weirder() {
 #[test]
 fn from_form_value_no_parse() {
     #[derive(Debug, FromFormValue)]
-    enum Foo { A, B, C, }
+    enum Foo {
+        A,
+        B,
+        C,
+    }
 
     assert_no_parse!("abc", "ab", "bc", "ca" => Foo);
     assert_no_parse!("b ", "a ", "c ", "a b" => Foo);
@@ -60,7 +72,7 @@ fn from_form_value_renames() {
         #[form(value = "foo")]
         Bar,
         #[form(value = ":book")]
-        Book
+        Book,
     }
 
     assert_parse!("foo", "FOO", "FoO" => Foo::Bar);

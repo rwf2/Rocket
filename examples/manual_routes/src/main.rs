@@ -3,15 +3,15 @@ extern crate rocket;
 #[cfg(test)]
 mod tests;
 
-use std::{io, env};
 use std::fs::File;
+use std::{env, io};
 
-use rocket::{Request, Handler, Route, Data, Catcher};
-use rocket::http::{Status, RawStr};
-use rocket::response::{self, Responder, status::Custom};
 use rocket::handler::Outcome;
-use rocket::outcome::IntoOutcome;
 use rocket::http::Method::*;
+use rocket::http::{RawStr, Status};
+use rocket::outcome::IntoOutcome;
+use rocket::response::{self, status::Custom, Responder};
+use rocket::{Catcher, Data, Handler, Request, Route};
 
 fn forward<'r>(_req: &'r Request, data: Data) -> Outcome<'r> {
     Outcome::forward(data)
@@ -22,7 +22,8 @@ fn hi<'r>(req: &'r Request, _: Data) -> Outcome<'r> {
 }
 
 fn name<'a>(req: &'a Request, _: Data) -> Outcome<'a> {
-    let param = req.get_param::<&'a RawStr>(0)
+    let param = req
+        .get_param::<&'a RawStr>(0)
         .and_then(|res| res.ok())
         .unwrap_or("unnamed".into());
 
@@ -30,7 +31,8 @@ fn name<'a>(req: &'a Request, _: Data) -> Outcome<'a> {
 }
 
 fn echo_url<'r>(req: &'r Request, _: Data) -> Outcome<'r> {
-    let param = req.get_param::<&RawStr>(1)
+    let param = req
+        .get_param::<&RawStr>(1)
         .and_then(|res| res.ok())
         .into_outcome(Status::BadRequest)?;
 
@@ -68,7 +70,7 @@ fn not_found_handler<'r>(req: &'r Request) -> response::Result<'r> {
 
 #[derive(Clone)]
 struct CustomHandler {
-    data: &'static str
+    data: &'static str,
 }
 
 impl CustomHandler {
@@ -79,7 +81,8 @@ impl CustomHandler {
 
 impl Handler for CustomHandler {
     fn handle<'r>(&self, req: &'r Request, data: Data) -> Outcome<'r> {
-        let id = req.get_param::<&RawStr>(0)
+        let id = req
+            .get_param::<&RawStr>(0)
             .and_then(|res| res.ok())
             .or_forward(data)?;
 

@@ -98,8 +98,8 @@
 //! [`Client`]: local::Client
 //! [`LocalRequest`]: local::LocalRequest
 
-mod request;
 mod client;
+mod request;
 
-pub use self::request::{LocalResponse, LocalRequest};
 pub use self::client::Client;
+pub use self::request::{LocalRequest, LocalResponse};

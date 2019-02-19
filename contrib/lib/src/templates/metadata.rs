@@ -1,6 +1,6 @@
-use rocket::{Request, State, Outcome};
 use rocket::http::Status;
 use rocket::request::{self, FromRequest};
+use rocket::{Outcome, Request, State};
 
 use templates::ContextManager;
 
@@ -91,7 +91,8 @@ impl<'a, 'r> FromRequest<'a, 'r> for Metadata<'a> {
     type Error = ();
 
     fn from_request(request: &'a Request) -> request::Outcome<Self, ()> {
-        request.guard::<State<ContextManager>>()
+        request
+            .guard::<State<ContextManager>>()
             .succeeded()
             .and_then(|cm| Some(Outcome::Success(Metadata(cm.inner()))))
             .unwrap_or_else(|| {

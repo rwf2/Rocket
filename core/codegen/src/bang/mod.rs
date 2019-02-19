@@ -1,10 +1,10 @@
 use proc_macro::TokenStream;
 use proc_macro2::TokenStream as TokenStream2;
 
-use devise::{syn, Spanned, Result};
-use self::syn::{Path, punctuated::Punctuated, parse::Parser, token::Comma};
-use syn_ext::{IdentExt, syn_to_diag};
-use {ROUTE_STRUCT_PREFIX, CATCH_STRUCT_PREFIX};
+use self::syn::{parse::Parser, punctuated::Punctuated, token::Comma, Path};
+use devise::{syn, Result, Spanned};
+use syn_ext::{syn_to_diag, IdentExt};
+use {CATCH_STRUCT_PREFIX, ROUTE_STRUCT_PREFIX};
 
 mod uri;
 mod uri_parsing;
@@ -14,21 +14,20 @@ crate fn prefix_last_segment(path: &mut Path, prefix: &str) {
     last_seg.value_mut().ident = last_seg.value().ident.prepend(prefix);
 }
 
-fn _prefixed_vec(
-    prefix: &str,
-    input: TokenStream,
-    ty: &TokenStream2
-) -> Result<TokenStream2> {
+fn _prefixed_vec(prefix: &str, input: TokenStream, ty: &TokenStream2) -> Result<TokenStream2> {
     // Parse a comma-separated list of paths.
     let mut paths = <Punctuated<Path, Comma>>::parse_terminated
         .parse(input)
         .map_err(syn_to_diag)?;
 
     // Prefix the last segment in each path with `prefix`.
-    paths.iter_mut().for_each(|p| prefix_last_segment(p, prefix));
+    paths
+        .iter_mut()
+        .for_each(|p| prefix_last_segment(p, prefix));
 
     // Return a `vec!` of the prefixed, mapped paths.
-    let prefixed_mapped_paths = paths.iter()
+    let prefixed_mapped_paths = paths
+        .iter()
         .map(|path| quote_spanned!(path.span().into() => #ty::from(&#path)));
 
     Ok(quote!(vec![#(#prefixed_mapped_paths),*]))
@@ -42,7 +41,8 @@ fn prefixed_vec(prefix: &str, input: TokenStream, ty: TokenStream2) -> TokenStre
     quote!({
         let __vector: Vec<#ty> = #vec;
         __vector
-    }).into()
+    })
+    .into()
 }
 
 pub fn routes_macro(input: TokenStream) -> TokenStream {

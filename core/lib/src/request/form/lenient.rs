@@ -1,8 +1,11 @@
 use std::ops::Deref;
 
-use request::{Request, form::{Form, FormDataError, FromForm}};
-use data::{Data, Transform, Transformed, FromData, Outcome};
-use http::uri::{Query, FromUriParam};
+use data::{Data, FromData, Outcome, Transform, Transformed};
+use http::uri::{FromUriParam, Query};
+use request::{
+    form::{Form, FormDataError, FromForm},
+    Request,
+};
 
 /// A data guard for parsing [`FromForm`] types leniently.
 ///

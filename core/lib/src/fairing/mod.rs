@@ -47,14 +47,14 @@
 //! of other `Fairings` are not jeopardized. For instance, unless it is made
 //! abundantly clear, a fairing should not rewrite every request.
 
-use {Rocket, Request, Response, Data};
+use {Data, Request, Response, Rocket};
 
-mod fairings;
 mod ad_hoc;
+mod fairings;
 mod info_kind;
 
-crate use self::fairings::Fairings;
 pub use self::ad_hoc::AdHoc;
+crate use self::fairings::Fairings;
 pub use self::info_kind::{Info, Kind};
 
 // We might imagine that a request fairing returns an `Outcome`. If it returns
@@ -369,7 +369,9 @@ pub trait Fairing: Send + Sync + 'static {
     /// ## Default Implementation
     ///
     /// The default implementation of this method simply returns `Ok(rocket)`.
-    fn on_attach(&self, rocket: Rocket) -> Result<Rocket, Rocket> { Ok(rocket) }
+    fn on_attach(&self, rocket: Rocket) -> Result<Rocket, Rocket> {
+        Ok(rocket)
+    }
 
     /// The launch callback.
     ///

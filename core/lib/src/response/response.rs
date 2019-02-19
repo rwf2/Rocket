@@ -1,8 +1,8 @@
-use std::{io, fmt, str};
 use std::borrow::Cow;
+use std::{fmt, io, str};
 
+use http::{ContentType, Cookie, Header, HeaderMap, Status};
 use response::Responder;
-use http::{Header, HeaderMap, Status, ContentType, Cookie};
 
 /// The default size, in bytes, of a chunk for streamed responses.
 pub const DEFAULT_CHUNK_SIZE: u64 = 4096;
@@ -13,7 +13,7 @@ pub enum Body<T> {
     /// A fixed-size body.
     Sized(T, u64),
     /// A streamed/chunked body, akin to `Transfer-Encoding: chunked`.
-    Chunked(T, u64)
+    Chunked(T, u64),
 }
 
 impl<T> Body<T> {
@@ -21,7 +21,7 @@ impl<T> Body<T> {
     pub fn as_mut(&mut self) -> Body<&mut T> {
         match *self {
             Body::Sized(ref mut b, n) => Body::Sized(b, n),
-            Body::Chunked(ref mut b, n) => Body::Chunked(b, n)
+            Body::Chunked(ref mut b, n) => Body::Chunked(b, n),
         }
     }
 
@@ -31,14 +31,14 @@ impl<T> Body<T> {
     pub fn map<U, F: FnOnce(T) -> U>(self, f: F) -> Body<U> {
         match self {
             Body::Sized(b, n) => Body::Sized(f(b), n),
-            Body::Chunked(b, n) => Body::Chunked(f(b), n)
+            Body::Chunked(b, n) => Body::Chunked(f(b), n),
         }
     }
 
     /// Consumes `self` and returns the inner body.
     pub fn into_inner(self) -> T {
         match self {
-            Body::Sized(b, _) | Body::Chunked(b, _) => b
+            Body::Sized(b, _) | Body::Chunked(b, _) => b,
         }
     }
 
@@ -156,7 +156,7 @@ impl<T> fmt::Debug for Body<T> {
 ///     .finalize();
 /// ```
 pub struct ResponseBuilder<'r> {
-    response: Response<'r>
+    response: Response<'r>,
 }
 
 impl<'r> ResponseBuilder<'r> {
@@ -173,9 +173,7 @@ impl<'r> ResponseBuilder<'r> {
     /// ```
     #[inline(always)]
     pub fn new(base: Response<'r>) -> ResponseBuilder<'r> {
-        ResponseBuilder {
-            response: base
-        }
+        ResponseBuilder { response: base }
     }
 
     /// Sets the status of the `Response` being built to `status`.
@@ -211,8 +209,7 @@ impl<'r> ResponseBuilder<'r> {
     ///     .finalize();
     /// ```
     #[inline(always)]
-    pub fn raw_status(&mut self, code: u16, reason: &'static str)
-            -> &mut ResponseBuilder<'r> {
+    pub fn raw_status(&mut self, code: u16, reason: &'static str) -> &mut ResponseBuilder<'r> {
         self.response.set_raw_status(code, reason);
         self
     }
@@ -241,7 +238,8 @@ impl<'r> ResponseBuilder<'r> {
     /// ```
     #[inline(always)]
     pub fn header<'h: 'r, H>(&mut self, header: H) -> &mut ResponseBuilder<'r>
-        where H: Into<Header<'h>>
+    where
+        H: Into<Header<'h>>,
     {
         self.response.set_header(header);
         self
@@ -271,7 +269,8 @@ impl<'r> ResponseBuilder<'r> {
     /// ```
     #[inline(always)]
     pub fn header_adjoin<'h: 'r, H>(&mut self, header: H) -> &mut ResponseBuilder<'r>
-        where H: Into<Header<'h>>
+    where
+        H: Into<Header<'h>>,
     {
         self.response.adjoin_header(header);
         self
@@ -295,9 +294,14 @@ impl<'r> ResponseBuilder<'r> {
     /// assert_eq!(response.headers().get("X-Custom").count(), 1);
     /// ```
     #[inline(always)]
-    pub fn raw_header<'a: 'r, 'b: 'r, N, V>(&mut self, name: N, value: V)
-            -> &mut ResponseBuilder<'r>
-        where N: Into<Cow<'a, str>>, V: Into<Cow<'b, str>>
+    pub fn raw_header<'a: 'r, 'b: 'r, N, V>(
+        &mut self,
+        name: N,
+        value: V,
+    ) -> &mut ResponseBuilder<'r>
+    where
+        N: Into<Cow<'a, str>>,
+        V: Into<Cow<'b, str>>,
     {
         self.response.set_raw_header(name, value);
         self
@@ -322,9 +326,14 @@ impl<'r> ResponseBuilder<'r> {
     /// assert_eq!(response.headers().get("X-Custom").count(), 2);
     /// ```
     #[inline(always)]
-    pub fn raw_header_adjoin<'a: 'r, 'b: 'r, N, V>(&mut self, name: N, value: V)
-            -> &mut ResponseBuilder<'r>
-        where N: Into<Cow<'a, str>>, V: Into<Cow<'b, str>>
+    pub fn raw_header_adjoin<'a: 'r, 'b: 'r, N, V>(
+        &mut self,
+        name: N,
+        value: V,
+    ) -> &mut ResponseBuilder<'r>
+    where
+        N: Into<Cow<'a, str>>,
+        V: Into<Cow<'b, str>>,
     {
         self.response.adjoin_raw_header(name, value);
         self
@@ -350,7 +359,8 @@ impl<'r> ResponseBuilder<'r> {
     /// ```
     #[inline(always)]
     pub fn sized_body<B>(&mut self, body: B) -> &mut ResponseBuilder<'r>
-        where B: io::Read + io::Seek + 'r
+    where
+        B: io::Read + io::Seek + 'r,
     {
         self.response.set_sized_body(body);
         self
@@ -376,7 +386,8 @@ impl<'r> ResponseBuilder<'r> {
     /// ```
     #[inline(always)]
     pub fn streamed_body<B>(&mut self, body: B) -> &mut ResponseBuilder<'r>
-        where B: io::Read + 'r
+    where
+        B: io::Read + 'r,
     {
         self.response.set_streamed_body(body);
         self
@@ -402,9 +413,11 @@ impl<'r> ResponseBuilder<'r> {
     /// # }
     /// ```
     #[inline(always)]
-    pub fn chunked_body<B: io::Read + 'r>(&mut self, body: B, chunk_size: u64)
-            -> &mut ResponseBuilder<'r>
-    {
+    pub fn chunked_body<B: io::Read + 'r>(
+        &mut self,
+        body: B,
+        chunk_size: u64,
+    ) -> &mut ResponseBuilder<'r> {
         self.response.set_chunked_body(body, chunk_size);
         self
     }
@@ -425,9 +438,7 @@ impl<'r> ResponseBuilder<'r> {
     ///     .finalize();
     /// ```
     #[inline(always)]
-    pub fn raw_body<T: io::Read + 'r>(&mut self, body: Body<T>)
-            -> &mut ResponseBuilder<'r>
-    {
+    pub fn raw_body<T: io::Read + 'r>(&mut self, body: Body<T>) -> &mut ResponseBuilder<'r> {
         self.response.set_raw_body(body);
         self
     }
@@ -672,7 +683,9 @@ impl<'r> Response<'r> {
     /// ```
     #[inline(always)]
     pub fn content_type(&self) -> Option<ContentType> {
-        self.headers().get_one("Content-Type").and_then(|v| v.parse().ok())
+        self.headers()
+            .get_one("Content-Type")
+            .and_then(|v| v.parse().ok())
     }
 
     /// Sets the status of `self` to a custom `status` with status code `code`
@@ -790,7 +803,9 @@ impl<'r> Response<'r> {
     /// ```
     #[inline(always)]
     pub fn set_raw_header<'a: 'r, 'b: 'r, N, V>(&mut self, name: N, value: V) -> bool
-        where N: Into<Cow<'a, str>>, V: Into<Cow<'b, str>>
+    where
+        N: Into<Cow<'a, str>>,
+        V: Into<Cow<'b, str>>,
     {
         self.set_header(Header::new(name, value))
     }
@@ -846,7 +861,9 @@ impl<'r> Response<'r> {
     /// ```
     #[inline(always)]
     pub fn adjoin_raw_header<'a: 'r, 'b: 'r, N, V>(&mut self, name: N, value: V)
-        where N: Into<Cow<'a, str>>, V: Into<Cow<'b, str>>
+    where
+        N: Into<Cow<'a, str>>,
+        V: Into<Cow<'b, str>>,
     {
         self.adjoin_header(Header::new(name, value));
     }
@@ -896,7 +913,7 @@ impl<'r> Response<'r> {
                 Body::Sized(b, size) => Body::Sized(b, size),
                 Body::Chunked(b, chunk_size) => Body::Chunked(b, chunk_size),
             }),
-            None => None
+            None => None,
         }
     }
 
@@ -977,7 +994,7 @@ impl<'r> Response<'r> {
         if let Some(body) = self.take_body() {
             self.body = match body {
                 Body::Sized(_, n) => Some(Body::Sized(Box::new(io::empty()), n)),
-                Body::Chunked(..) => None
+                Body::Chunked(..) => None,
             };
         }
     }
@@ -1004,9 +1021,11 @@ impl<'r> Response<'r> {
     /// ```
     #[inline]
     pub fn set_sized_body<B>(&mut self, mut body: B)
-        where B: io::Read + io::Seek + 'r
+    where
+        B: io::Read + io::Seek + 'r,
     {
-        let size = body.seek(io::SeekFrom::End(0))
+        let size = body
+            .seek(io::SeekFrom::End(0))
             .expect("Attempted to retrieve size by seeking, but failed.");
         body.seek(io::SeekFrom::Start(0))
             .expect("Attempted to reset body by seeking after getting size.");
@@ -1029,7 +1048,10 @@ impl<'r> Response<'r> {
     /// assert_eq!(response.body_string(), Some("aaaaa".to_string()));
     /// ```
     #[inline(always)]
-    pub fn set_streamed_body<B>(&mut self, body: B) where B: io::Read + 'r {
+    pub fn set_streamed_body<B>(&mut self, body: B)
+    where
+        B: io::Read + 'r,
+    {
         self.set_chunked_body(body, DEFAULT_CHUNK_SIZE);
     }
 
@@ -1048,7 +1070,9 @@ impl<'r> Response<'r> {
     /// ```
     #[inline(always)]
     pub fn set_chunked_body<B>(&mut self, body: B, chunk_size: u64)
-            where B: io::Read + 'r {
+    where
+        B: io::Read + 'r,
+    {
         self.body = Some(Body::Chunked(Box::new(body), chunk_size));
     }
 
@@ -1186,7 +1210,7 @@ impl<'r> fmt::Debug for Response<'r> {
 
         match self.body {
             Some(ref body) => writeln!(f, "{:?}", body),
-            None => writeln!(f, "Empty Body")
+            None => writeln!(f, "Empty Body"),
         }
     }
 }

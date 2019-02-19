@@ -22,9 +22,9 @@
 //! let response = content::Html("<h1>Hello, world!</h1>");
 //! ```
 
+use http::{ContentType, Status};
 use request::Request;
-use response::{Response, Responder};
-use http::{Status, ContentType};
+use response::{Responder, Response};
 
 /// Sets the Content-Type of a `Responder` to a chosen value.
 ///

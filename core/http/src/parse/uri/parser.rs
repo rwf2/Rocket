@@ -1,10 +1,10 @@
 use pear::parsers::*;
 use pear::{parser, switch};
 
-use uri::{Uri, Origin, Authority, Absolute, Host};
-use parse::uri::tables::{is_reg_name_char, is_pchar, is_pchar_or_rchar};
+use parse::uri::tables::{is_pchar, is_pchar_or_rchar, is_reg_name_char};
 use parse::uri::RawInput;
 use parse::IndexedBytes;
+use uri::{Absolute, Authority, Host, Origin, Uri};
 
 type Result<'a, T> = ::pear::Result<T, RawInput<'a>>;
 
@@ -24,7 +24,7 @@ crate fn uri<'a>(input: &mut RawInput<'a>) -> Result<'a, Uri<'a>> {
         _ => switch! {
             peek(b'/') => Uri::Origin(origin()?),
             _ => absolute_or_authority()?
-        }
+        },
     }
 }
 
@@ -40,7 +40,8 @@ crate fn rocket_route_origin<'a>(input: &mut RawInput<'a>) -> Result<'a, Origin<
 
 #[parser]
 fn path_and_query<'a, F>(input: &mut RawInput<'a>, is_good_char: F) -> Result<'a, Origin<'a>>
-    where F: Fn(u8) -> bool + Copy
+where
+    F: Fn(u8) -> bool + Copy,
 {
     let path = take_while(is_good_char)?;
 
@@ -87,7 +88,7 @@ fn port<'a>(input: &mut RawInput<'a>) -> Result<'a, u16> {
 #[parser]
 fn authority<'a>(
     input: &mut RawInput<'a>,
-    user_info: Option<IndexedBytes<'a>>
+    user_info: Option<IndexedBytes<'a>>,
 ) -> Result<'a, Authority<'a>> {
     let host = switch! {
         peek(b'[') => Host::Bracketed(delimited(b'[', is_pchar, b']')?),
@@ -101,10 +102,7 @@ fn authority<'a>(
 
 // Callers must ensure that `scheme` is actually ASCII.
 #[parser]
-fn absolute<'a>(
-    input: &mut RawInput<'a>,
-    scheme: IndexedBytes<'a>
-) -> Result<'a, Absolute<'a>> {
+fn absolute<'a>(input: &mut RawInput<'a>, scheme: IndexedBytes<'a>) -> Result<'a, Absolute<'a>> {
     let (authority, path_and_query) = switch! {
         eat_slice(b"://") => {
             let left = take_while(|c| is_reg_name_char(c) || c == b':')?;
@@ -146,9 +144,7 @@ crate fn absolute_only<'a>(input: &mut RawInput<'a>) -> Result<'a, Absolute<'a>>
 }
 
 #[parser]
-fn absolute_or_authority<'a>(
-    input: &mut RawInput<'a>,
-) -> Result<'a, Uri<'a>> {
+fn absolute_or_authority<'a>(input: &mut RawInput<'a>) -> Result<'a, Uri<'a>> {
     let left = take_while(is_reg_name_char)?;
     switch! {
         peek_slice(b":/") => Uri::Absolute(absolute(left)?),

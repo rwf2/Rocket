@@ -2,10 +2,10 @@ use std::convert::AsRef;
 
 use time::Duration;
 
+use http::{Cookie, Status};
 use outcome::IntoOutcome;
-use response::{Response, Responder};
-use request::{self, Request, FromRequest};
-use http::{Status, Cookie};
+use request::{self, FromRequest, Request};
+use response::{Responder, Response};
 use std::sync::atomic::{AtomicBool, Ordering};
 
 // The name of the actual flash cookie.
@@ -245,20 +245,24 @@ impl<'a, 'r> FromRequest<'a, 'r> for Flash<&'a Request<'r>> {
 
     fn from_request(req: &'a Request<'r>) -> request::Outcome<Self, Self::Error> {
         trace_!("Flash: attempting to retrieve message.");
-        req.cookies().get(FLASH_COOKIE_NAME).ok_or(()).and_then(|cookie| {
-            trace_!("Flash: retrieving message: {:?}", cookie);
+        req.cookies()
+            .get(FLASH_COOKIE_NAME)
+            .ok_or(())
+            .and_then(|cookie| {
+                trace_!("Flash: retrieving message: {:?}", cookie);
 
-            // Parse the flash message.
-            let content = cookie.value();
-            let (len_str, kv) = match content.find(|c: char| !c.is_digit(10)) {
-                Some(i) => (&content[..i], &content[i..]),
-                None => (content, ""),
-            };
+                // Parse the flash message.
+                let content = cookie.value();
+                let (len_str, kv) = match content.find(|c: char| !c.is_digit(10)) {
+                    Some(i) => (&content[..i], &content[i..]),
+                    None => (content, ""),
+                };
 
-            match len_str.parse::<usize>() {
-                Ok(i) if i <= kv.len() => Ok(Flash::named(&kv[..i], &kv[i..], req)),
-                _ => Err(())
-            }
-        }).into_outcome(Status::BadRequest)
+                match len_str.parse::<usize>() {
+                    Ok(i) if i <= kv.len() => Ok(Flash::named(&kv[..i], &kv[i..], req)),
+                    _ => Err(()),
+                }
+            })
+            .into_outcome(Status::BadRequest)
     }
 }

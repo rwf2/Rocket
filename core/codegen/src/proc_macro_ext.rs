@@ -1,6 +1,6 @@
 use std::ops::RangeBounds;
 
-use proc_macro::{Span, Diagnostic, Literal};
+use proc_macro::{Diagnostic, Literal, Span};
 
 pub type PResult<T> = ::std::result::Result<T, Diagnostic>;
 
@@ -37,14 +37,14 @@ impl Diagnostics {
     pub fn head_err_or<T>(self, ok: T) -> PResult<T> {
         match self.0.is_empty() {
             true => Ok(ok),
-            false => Err(self.emit_head())
+            false => Err(self.emit_head()),
         }
     }
 
     pub fn err_or<T>(self, ok: T) -> DResult<T> {
         match self.0.is_empty() {
             true => Ok(ok),
-            false => Err(self)
+            false => Err(self),
         }
     }
 }

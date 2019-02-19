@@ -1,22 +1,25 @@
-use std::rc::Rc;
 use std::cell::{Cell, RefCell};
-use std::net::{IpAddr, SocketAddr};
 use std::fmt;
+use std::net::{IpAddr, SocketAddr};
+use std::rc::Rc;
 use std::str;
 
-use yansi::Paint;
 use state::{Container, Storage};
+use yansi::Paint;
 
-use request::{FromParam, FromSegments, FromRequest, Outcome};
-use request::{FromFormValue, FormItems, FormItem};
+use request::{FormItem, FormItems, FromFormValue};
+use request::{FromParam, FromRequest, FromSegments, Outcome};
 
+use config::{Config, Limits};
+use http::private::{CookieJar, Indexed, SmallVec};
+use http::{
+    hyper,
+    uri::{Origin, Segments},
+};
+use http::{Accept, ContentType, MediaType, RawStr};
+use http::{Cookies, Header, HeaderMap, Method};
 use rocket::Rocket;
 use router::Route;
-use config::{Config, Limits};
-use http::{hyper, uri::{Origin, Segments}};
-use http::{Method, Header, HeaderMap, Cookies};
-use http::{RawStr, ContentType, Accept, MediaType};
-use http::private::{Indexed, SmallVec, CookieJar};
 
 type Indices = (usize, usize);
 
@@ -52,17 +55,13 @@ crate struct RequestState<'r> {
 crate struct IndexedFormItem {
     raw: Indices,
     key: Indices,
-    value: Indices
+    value: Indices,
 }
 
 impl<'r> Request<'r> {
     /// Create a new `Request` with the given `method` and `uri`.
     #[inline(always)]
-    crate fn new<'s: 'r>(
-        rocket: &'r Rocket,
-        method: Method,
-        uri: Origin<'s>
-    ) -> Request<'r> {
+    crate fn new<'s: 'r>(rocket: &'r Rocket, method: Method, uri: Origin<'s>) -> Request<'r> {
         let mut request = Request {
             method: Cell::new(method),
             uri: uri,
@@ -78,7 +77,7 @@ impl<'r> Request<'r> {
                 accept: Storage::new(),
                 content_type: Storage::new(),
                 cache: Rc::new(Container::new()),
-            }
+            },
         };
 
         request.update_cached_uri_info();
@@ -227,13 +226,11 @@ impl<'r> Request<'r> {
     /// # });
     /// ```
     pub fn real_ip(&self) -> Option<IpAddr> {
-        self.headers()
-            .get_one("X-Real-IP")
-            .and_then(|ip| {
-                ip.parse()
-                    .map_err(|_| warn_!("'X-Real-IP' header is malformed: {}", ip))
-                    .ok()
-            })
+        self.headers().get_one("X-Real-IP").and_then(|ip| {
+            ip.parse()
+                .map_err(|_| warn_!("'X-Real-IP' header is malformed: {}", ip))
+                .ok()
+        })
     }
 
     /// Attempts to return the client's IP address by first inspecting the
@@ -293,8 +290,10 @@ impl<'r> Request<'r> {
             Ok(jar) => Cookies::new(jar, self.state.config.secret_key()),
             Err(_) => {
                 error_!("Multiple `Cookies` instances are active at once.");
-                info_!("An instance of `Cookies` must be dropped before another \
-                       can be retrieved.");
+                info_!(
+                    "An instance of `Cookies` must be dropped before another \
+                     can be retrieved."
+                );
                 warn_!("The retrieved `Cookies` instance will be empty.");
                 Cookies::empty()
             }
@@ -391,9 +390,14 @@ impl<'r> Request<'r> {
     /// ```
     #[inline(always)]
     pub fn content_type(&self) -> Option<&ContentType> {
-        self.state.content_type.get_or_set(|| {
-            self.headers().get_one("Content-Type").and_then(|v| v.parse().ok())
-        }).as_ref()
+        self.state
+            .content_type
+            .get_or_set(|| {
+                self.headers()
+                    .get_one("Content-Type")
+                    .and_then(|v| v.parse().ok())
+            })
+            .as_ref()
     }
 
     /// Returns the Accept header of `self`. If the header is not present,
@@ -419,9 +423,14 @@ impl<'r> Request<'r> {
     /// ```
     #[inline(always)]
     pub fn accept(&self) -> Option<&Accept> {
-        self.state.accept.get_or_set(|| {
-            self.headers().get_one("Accept").and_then(|v| v.parse().ok())
-        }).as_ref()
+        self.state
+            .accept
+            .get_or_set(|| {
+                self.headers()
+                    .get_one("Accept")
+                    .and_then(|v| v.parse().ok())
+            })
+            .as_ref()
     }
 
     /// Returns the media type "format" of the request.
@@ -551,14 +560,14 @@ impl<'r> Request<'r> {
     /// # });
     /// ```
     pub fn local_cache<T, F>(&self, f: F) -> &T
-        where F: FnOnce() -> T,
-              T: Send + Sync + 'static
+    where
+        F: FnOnce() -> T,
+        T: Send + Sync + 'static,
     {
-        self.state.cache.try_get()
-            .unwrap_or_else(|| {
-                self.state.cache.set(f());
-                self.state.cache.get()
-            })
+        self.state.cache.try_get().unwrap_or_else(|| {
+            self.state.cache.set(f());
+            self.state.cache.get()
+        })
     }
 
     /// Retrieves and parses into `T` the 0-indexed `n`th segment from the
@@ -594,7 +603,8 @@ impl<'r> Request<'r> {
     /// ```
     #[inline]
     pub fn get_param<'a, T>(&'a self, n: usize) -> Option<Result<T, T::Error>>
-        where T: FromParam<'a>
+    where
+        T: FromParam<'a>,
     {
         Some(T::from_param(self.raw_segment_str(n)?))
     }
@@ -638,7 +648,8 @@ impl<'r> Request<'r> {
     /// ```
     #[inline]
     pub fn get_segments<'a, T>(&'a self, n: usize) -> Option<Result<T, T::Error>>
-        where T: FromSegments<'a>
+    where
+        T: FromSegments<'a>,
     {
         Some(T::from_segments(self.raw_segments(n)?))
     }
@@ -682,7 +693,8 @@ impl<'r> Request<'r> {
     /// ```
     #[inline]
     pub fn get_query_value<'a, T>(&'a self, key: &str) -> Option<Result<T, T::Error>>
-        where T: FromFormValue<'a>
+    where
+        T: FromFormValue<'a>,
     {
         self.raw_query_items()?
             .rev()
@@ -711,11 +723,11 @@ impl<'r> Request<'r> {
             .map(|s| indices(s, self.uri.path()))
             .collect();
 
-        let query_items = self.uri.query()
-            .map(|query_str| FormItems::from(query_str)
-                 .map(|item| IndexedFormItem::from(query_str, item))
-                 .collect()
-            );
+        let query_items = self.uri.query().map(|query_str| {
+            FormItems::from(query_str)
+                .map(|item| IndexedFormItem::from(query_str, item))
+                .collect()
+        });
 
         self.state.path_segments = path_segments;
         self.state.query_items = query_items;
@@ -734,7 +746,7 @@ impl<'r> Request<'r> {
     #[inline]
     pub fn raw_segments(&self, n: usize) -> Option<Segments> {
         self.routed_path_segment(n)
-            .map(|(i, _)| Segments(&self.uri.path()[i..]) )
+            .map(|(i, _)| Segments(&self.uri.path()[i..]))
     }
 
     // Returns an iterator over the raw segments of the path URI. Does not take
@@ -742,28 +754,33 @@ impl<'r> Request<'r> {
     #[inline]
     crate fn raw_path_segments(&self) -> impl Iterator<Item = &RawStr> {
         let path = self.uri.path();
-        self.state.path_segments.iter().cloned()
+        self.state
+            .path_segments
+            .iter()
+            .cloned()
             .map(move |(i, j)| path[i..j].into())
     }
 
     #[inline]
     fn routed_path_segment(&self, n: usize) -> Option<(usize, usize)> {
-        let mount_segments = self.route()
-            .map(|r| r.base.segment_count())
-            .unwrap_or(0);
+        let mount_segments = self.route().map(|r| r.base.segment_count()).unwrap_or(0);
 
-        self.state.path_segments.get(mount_segments + n).map(|(i, j)| (*i, *j))
+        self.state
+            .path_segments
+            .get(mount_segments + n)
+            .map(|(i, j)| (*i, *j))
     }
 
     // Retrieves the pre-parsed query items. Used by matching and codegen.
     #[inline]
     pub fn raw_query_items(
-        &self
+        &self,
     ) -> Option<impl Iterator<Item = FormItem> + DoubleEndedIterator + Clone> {
         let query = self.uri.query()?;
-        self.state.query_items.as_ref().map(move |items| {
-            items.iter().map(move |item| item.convert(query))
-        })
+        self.state
+            .query_items
+            .as_ref()
+            .map(move |items| items.iter().map(move |item| item.convert(query)))
     }
 
     /// Set `self`'s parameters given that the route used to reach this request
@@ -797,7 +814,7 @@ impl<'r> Request<'r> {
         // Ensure that the method is known. TODO: Allow made-up methods?
         let method = match Method::from_hyp(&h_method) {
             Some(method) => method,
-            None => return Err(format!("Invalid method: {}", h_method))
+            None => return Err(format!("Invalid method: {}", h_method)),
         };
 
         // We need to re-parse the URI since we don't trust Hyper... :(
@@ -813,7 +830,7 @@ impl<'r> Request<'r> {
             for header in cookie_headers {
                 let raw_str = match ::std::str::from_utf8(header) {
                     Ok(string) => string,
-                    Err(_) => continue
+                    Err(_) => continue,
                 };
 
                 for cookie_str in raw_str.split(';').map(|s| s.trim()) {
@@ -857,7 +874,12 @@ impl<'r> fmt::Display for Request<'r> {
     /// Pretty prints a Request. This is primarily used by Rocket's logging
     /// infrastructure.
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{} {}", Paint::green(self.method()), Paint::blue(&self.uri))?;
+        write!(
+            f,
+            "{} {}",
+            Paint::green(self.method()),
+            Paint::blue(&self.uri)
+        )?;
 
         // Print the requests media type when the route specifies a format.
         if let Some(media_type) = self.format() {
@@ -874,7 +896,11 @@ impl IndexedFormItem {
     #[inline(always)]
     fn from(s: &str, i: FormItem) -> Self {
         let (r, k, v) = (indices(i.raw, s), indices(i.key, s), indices(i.value, s));
-        IndexedFormItem { raw: r, key: k, value: v }
+        IndexedFormItem {
+            raw: r,
+            key: k,
+            value: v,
+        }
     }
 
     #[inline(always)]

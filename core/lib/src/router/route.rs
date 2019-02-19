@@ -1,15 +1,15 @@
-use std::fmt::{self, Display};
 use std::convert::From;
+use std::fmt::{self, Display};
 
 use yansi::Paint;
 
 use codegen::StaticRouteInfo;
-use handler::Handler;
-use http::{Method, MediaType};
-use http::route::{RouteSegment, Kind};
 use error::RouteUriError;
+use handler::Handler;
 use http::ext::IntoOwned;
+use http::route::{Kind, RouteSegment};
 use http::uri::{Origin, Path, Query};
+use http::{MediaType, Method};
 
 /// A route: a method, its handler, path, rank, and format/media type.
 #[derive(Clone)]
@@ -30,7 +30,7 @@ pub struct Route {
     /// The media type this route matches against, if any.
     pub format: Option<MediaType>,
     /// Cached metadata that aids in routing later.
-    crate metadata: Metadata
+    crate metadata: Metadata,
 }
 
 #[derive(Debug, Default, Clone)]
@@ -48,24 +48,36 @@ impl Metadata {
 
         let (query_segments, dyn) = match <RouteSegment<Query>>::parse(&route.uri) {
             Some(results) => {
-                let segments = results.map(|res| res.map(|s| s.into_owned()))
+                let segments = results
+                    .map(|res| res.map(|s| s.into_owned()))
                     .collect::<Result<Vec<_>, _>>()?;
 
                 let dynamic = !segments.iter().any(|s| s.kind == Kind::Static);
 
                 (Some(segments), dynamic)
             }
-            None => (None, true)
+            None => (None, true),
         };
 
-        Ok(Metadata { path_segments, query_segments, fully_dynamic_query: dyn })
+        Ok(Metadata {
+            path_segments,
+            query_segments,
+            fully_dynamic_query: dyn,
+        })
     }
 }
 
 #[inline(always)]
 fn default_rank(route: &Route) -> isize {
-    let static_path = route.metadata.path_segments.iter().all(|s| s.kind == Kind::Static);
-    let partly_static_query = route.uri.query().map(|_| !route.metadata.fully_dynamic_query);
+    let static_path = route
+        .metadata
+        .path_segments
+        .iter()
+        .all(|s| s.kind == Kind::Static);
+    let partly_static_query = route
+        .uri
+        .query()
+        .map(|_| !route.metadata.fully_dynamic_query);
     match (static_path, partly_static_query) {
         (true, Some(true)) => -6,   // static path, partly static query
         (true, Some(false)) => -5,  // static path, fully dynamic query
@@ -142,7 +154,9 @@ impl Route {
     ///
     /// Panics if `path` is not a valid origin URI or Rocket route URI.
     pub fn new<S, H>(method: Method, path: S, handler: H) -> Route
-        where S: AsRef<str>, H: Handler + 'static
+    where
+        S: AsRef<str>,
+        H: Handler + 'static,
     {
         let mut route = Route::ranked(0, method, path, handler);
         route.rank = default_rank(&route);
@@ -171,7 +185,9 @@ impl Route {
     ///
     /// Panics if `path` is not a valid origin URI or Rocket route URI.
     pub fn ranked<S, H>(rank: isize, method: Method, path: S, handler: H) -> Route
-        where S: AsRef<str>, H: Handler + 'static
+    where
+        S: AsRef<str>,
+        H: Handler + 'static,
     {
         let path = path.as_ref();
         let uri = Origin::parse_route(path)
@@ -185,7 +201,9 @@ impl Route {
             base: Origin::dummy(),
             handler: Box::new(handler),
             metadata: Metadata::default(),
-            method, rank, uri
+            method,
+            rank,
+            uri,
         };
 
         route.update_metadata().unwrap_or_else(|e| panic(path, e));
@@ -261,7 +279,7 @@ impl Route {
     pub fn set_uri<'a>(
         &mut self,
         mut base: Origin<'a>,
-        path: Origin<'a>
+        path: Origin<'a>,
     ) -> Result<(), RouteUriError> {
         base.clear_query();
         for segment in <RouteSegment<Path>>::parse(&base) {
@@ -282,7 +300,12 @@ impl Route {
 
 impl fmt::Display for Route {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{} {}", Paint::green(&self.method), Paint::blue(&self.uri))?;
+        write!(
+            f,
+            "{} {}",
+            Paint::green(&self.method),
+            Paint::blue(&self.uri)
+        )?;
 
         if self.rank > 1 {
             write!(f, " [{}]", Paint::default(&self.rank).bold())?;
@@ -293,8 +316,13 @@ impl fmt::Display for Route {
         }
 
         if let Some(name) = self.name {
-            write!(f, " {}{}{}",
-                   Paint::cyan("("), Paint::magenta(name), Paint::cyan(")"))?;
+            write!(
+                f,
+                " {}{}{}",
+                Paint::cyan("("),
+                Paint::magenta(name),
+                Paint::cyan(")")
+            )?;
         }
 
         Ok(())

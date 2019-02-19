@@ -3,9 +3,9 @@ use std::result::Result as StdResult;
 
 use config::Value;
 
-use pear::{Result, parser, switch};
-use pear::parsers::*;
 use pear::combinators::*;
+use pear::parsers::*;
+use pear::{parser, switch, Result};
 
 #[inline(always)]
 pub fn is_whitespace(byte: char) -> bool {
@@ -16,7 +16,7 @@ pub fn is_whitespace(byte: char) -> bool {
 fn is_not_separator(byte: char) -> bool {
     match byte {
         ',' | '{' | '}' | '[' | ']' => false,
-        _ => true
+        _ => true,
     }
 }
 
@@ -25,7 +25,7 @@ fn is_not_separator(byte: char) -> bool {
 fn is_ident_char(byte: char) -> bool {
     match byte {
         '0'...'9' | 'A'...'Z' | 'a'...'z' | '_' | '-' => true,
-        _ => false
+        _ => false,
     }
 }
 
@@ -95,7 +95,9 @@ impl<'a> fmt::Display for LoggedValue<'a> {
                 write!(f, "{{ ")?;
                 for (i, (key, val)) in map.iter().enumerate() {
                     write!(f, "{} = {}", key, LoggedValue(val))?;
-                    if i != map.len() - 1 { write!(f, ", ")?; }
+                    if i != map.len() - 1 {
+                        write!(f, ", ")?;
+                    }
                 }
 
                 write!(f, " }}")
@@ -106,17 +108,17 @@ impl<'a> fmt::Display for LoggedValue<'a> {
 
 #[cfg(test)]
 mod test {
-    use std::collections::BTreeMap;
     use super::parse_simple_toml_value;
     use super::Value::{self, *};
+    use std::collections::BTreeMap;
 
     macro_rules! assert_parse {
-        ($string:expr, $value:expr) => (
+        ($string:expr, $value:expr) => {
             match parse_simple_toml_value($string) {
                 Ok(value) => assert_eq!(value, $value),
-                Err(e) => panic!("{:?} failed to parse: {:?}", $string, e)
+                Err(e) => panic!("{:?} failed to parse: {:?}", $string, e),
             };
-        )
+        };
     }
 
     #[test]
@@ -136,36 +138,48 @@ mod test {
 
         assert_parse!("{}", Table(BTreeMap::new()));
 
-        assert_parse!("{a=b}", Table({
-            let mut map = BTreeMap::new();
-            map.insert("a".into(), "b".into());
-            map
-        }));
+        assert_parse!(
+            "{a=b}",
+            Table({
+                let mut map = BTreeMap::new();
+                map.insert("a".into(), "b".into());
+                map
+            })
+        );
 
-        assert_parse!("{v=1, on=true,pi=3.14}", Table({
-            let mut map = BTreeMap::new();
-            map.insert("v".into(), 1.into());
-            map.insert("on".into(), true.into());
-            map.insert("pi".into(), 3.14.into());
-            map
-        }));
+        assert_parse!(
+            "{v=1, on=true,pi=3.14}",
+            Table({
+                let mut map = BTreeMap::new();
+                map.insert("v".into(), 1.into());
+                map.insert("on".into(), true.into());
+                map.insert("pi".into(), 3.14.into());
+                map
+            })
+        );
 
-        assert_parse!("{v=[1, 2, 3], v2=[a, \"b\"], on=true,pi=3.14}", Table({
-            let mut map = BTreeMap::new();
-            map.insert("v".into(), vec![1, 2, 3].into());
-            map.insert("v2".into(), vec!["a", "b"].into());
-            map.insert("on".into(), true.into());
-            map.insert("pi".into(), 3.14.into());
-            map
-        }));
+        assert_parse!(
+            "{v=[1, 2, 3], v2=[a, \"b\"], on=true,pi=3.14}",
+            Table({
+                let mut map = BTreeMap::new();
+                map.insert("v".into(), vec![1, 2, 3].into());
+                map.insert("v2".into(), vec!["a", "b"].into());
+                map.insert("on".into(), true.into());
+                map.insert("pi".into(), 3.14.into());
+                map
+            })
+        );
 
-        assert_parse!("{v=[[1], [2, 3], [4,5]]}", Table({
-            let mut map = BTreeMap::new();
-            let first: Value = vec![1].into();
-            let second: Value = vec![2, 3].into();
-            let third: Value = vec![4, 5].into();
-            map.insert("v".into(), vec![first, second, third].into());
-            map
-        }));
+        assert_parse!(
+            "{v=[[1], [2, 3], [4,5]]}",
+            Table({
+                let mut map = BTreeMap::new();
+                let first: Value = vec![1].into();
+                let second: Value = vec![2, 3].into();
+                let third: Value = vec![4, 5].into();
+                map.insert("v".into(), vec![first, second, third].into());
+                map
+            })
+        );
     }
 }

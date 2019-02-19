@@ -3,7 +3,7 @@ use std::fmt::{self, Display};
 
 use ext::IntoOwned;
 use parse::{Indexed, IndexedStr};
-use uri::{Authority, Origin, Error, as_utf8_unchecked};
+use uri::{as_utf8_unchecked, Authority, Error, Origin};
 
 /// A URI with a scheme, authority, path, and query:
 /// `http://user:pass@domain.com:4444/path?query`.
@@ -62,10 +62,13 @@ impl<'a> Absolute<'a> {
     crate fn new(
         scheme: &'a str,
         authority: Option<Authority<'a>>,
-        origin: Option<Origin<'a>>
+        origin: Option<Origin<'a>>,
     ) -> Absolute<'a> {
         Absolute {
-            source: None, scheme: scheme.into(), authority, origin
+            source: None,
+            scheme: scheme.into(),
+            authority,
+            origin,
         }
     }
 
@@ -162,7 +165,7 @@ impl<'a> Display for Absolute<'a> {
         write!(f, "{}", self.scheme())?;
         match self.authority {
             Some(ref authority) => write!(f, "://{}", authority)?,
-            None => write!(f, ":")?
+            None => write!(f, ":")?,
         }
 
         if let Some(ref origin) = self.origin {
@@ -172,4 +175,3 @@ impl<'a> Display for Absolute<'a> {
         Ok(())
     }
 }
-

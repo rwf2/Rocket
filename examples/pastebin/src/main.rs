@@ -1,17 +1,19 @@
 #![feature(proc_macro_hygiene, decl_macro)]
 
-#[macro_use] extern crate rocket;
+#[macro_use]
+extern crate rocket;
 extern crate rand;
 
 mod paste_id;
-#[cfg(test)] mod tests;
+#[cfg(test)]
+mod tests;
 
-use std::io;
 use std::fs::File;
+use std::io;
 use std::path::Path;
 
-use rocket::Data;
 use rocket::response::content;
+use rocket::Data;
 
 use paste_id::PasteID;
 

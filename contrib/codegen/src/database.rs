@@ -1,6 +1,6 @@
+use devise::{Result, Spanned};
 use proc_macro::TokenStream;
-use devise::{Spanned, Result};
-use syn::{DataStruct, Fields, Data, Type, LitStr, DeriveInput, Ident, Visibility};
+use syn::{Data, DataStruct, DeriveInput, Fields, Ident, LitStr, Type, Visibility};
 
 #[derive(Debug)]
 struct DatabaseInvocation {
@@ -19,9 +19,9 @@ struct DatabaseInvocation {
 const EXAMPLE: &str = "example: `struct MyDatabase(diesel::SqliteConnection);`";
 const ONLY_ON_STRUCTS_MSG: &str = "`database` attribute can only be used on structs";
 const ONLY_UNNAMED_FIELDS: &str = "`database` attribute can only be applied to \
-    structs with exactly one unnamed field";
+                                   structs with exactly one unnamed field";
 const NO_GENERIC_STRUCTS: &str = "`database` attribute cannot be applied to structs \
-    with generics";
+                                  with generics";
 
 fn parse_invocation(attr: TokenStream, input: TokenStream) -> Result<DatabaseInvocation> {
     let attr_stream2 = ::proc_macro2::TokenStream::from(attr);
@@ -36,7 +36,7 @@ fn parse_invocation(attr: TokenStream, input: TokenStream) -> Result<DatabaseInv
 
     let structure = match input.data {
         Data::Struct(s) => s,
-        _ => return Err(input.span().error(ONLY_ON_STRUCTS_MSG))
+        _ => return Err(input.span().error(ONLY_ON_STRUCTS_MSG)),
     };
 
     let inner_type = match structure.fields {
@@ -44,7 +44,13 @@ fn parse_invocation(attr: TokenStream, input: TokenStream) -> Result<DatabaseInv
             let first = fields.unnamed.first().expect("checked length");
             first.value().ty.clone()
         }
-        _ => return Err(structure.fields.span().error(ONLY_UNNAMED_FIELDS).help(EXAMPLE))
+        _ => {
+            return Err(structure
+                .fields
+                .span()
+                .error(ONLY_UNNAMED_FIELDS)
+                .help(EXAMPLE));
+        }
     };
 
     Ok(DatabaseInvocation {
@@ -153,5 +159,6 @@ pub fn database_attr(attr: TokenStream, input: TokenStream) -> Result<TokenStrea
                 }
             }
         }
-    }.into())
+    }
+    .into())
 }

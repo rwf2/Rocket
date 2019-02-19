@@ -1,10 +1,10 @@
 //! Types and traits for request and error handlers and their return values.
 
 use data::Data;
-use request::Request;
-use response::{self, Response, Responder};
 use http::Status;
 use outcome;
+use request::Request;
+use response::{self, Responder, Response};
 
 /// Type alias for the `Outcome` of a `Handler`.
 pub type Outcome<'r> = outcome::Outcome<Response<'r>, Status, Data>;
@@ -170,7 +170,8 @@ impl Clone for Box<Handler> {
 }
 
 impl<F: Clone + Sync + Send + 'static> Handler for F
-    where for<'r> F: Fn(&'r Request, Data) -> Outcome<'r>
+where
+    for<'r> F: Fn(&'r Request, Data) -> Outcome<'r>,
 {
     #[inline(always)]
     fn handle<'r>(&self, req: &'r Request, data: Data) -> Outcome<'r> {
@@ -202,7 +203,7 @@ impl<'r> Outcome<'r> {
     pub fn from<T: Responder<'r>>(req: &Request, responder: T) -> Outcome<'r> {
         match responder.respond_to(req) {
             Ok(response) => outcome::Outcome::Success(response),
-            Err(status) => outcome::Outcome::Failure(status)
+            Err(status) => outcome::Outcome::Failure(status),
         }
     }
 

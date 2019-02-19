@@ -17,11 +17,11 @@
 pub extern crate uuid as uuid_crate;
 
 use std::fmt;
-use std::str::FromStr;
 use std::ops::Deref;
+use std::str::FromStr;
 
-use rocket::request::{FromParam, FromFormValue};
 use rocket::http::RawStr;
+use rocket::request::{FromFormValue, FromParam};
 
 pub use self::uuid_crate::parser::ParseError;
 
@@ -149,9 +149,9 @@ impl PartialEq<uuid_crate::Uuid> for Uuid {
 #[cfg(test)]
 mod test {
     use super::uuid_crate;
-    use super::Uuid;
     use super::FromParam;
     use super::FromStr;
+    use super::Uuid;
 
     #[test]
     fn test_from_str() {

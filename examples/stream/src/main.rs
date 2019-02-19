@@ -1,13 +1,15 @@
 #![feature(proc_macro_hygiene, decl_macro)]
 
-#[macro_use] extern crate rocket;
+#[macro_use]
+extern crate rocket;
 
-#[cfg(test)] mod tests;
+#[cfg(test)]
+mod tests;
 
 use rocket::response::{content, Stream};
 
-use std::io::{self, repeat, Repeat, Read, Take};
 use std::fs::File;
+use std::io::{self, repeat, Read, Repeat, Take};
 
 type LimitedRepeat = Take<Repeat>;
 

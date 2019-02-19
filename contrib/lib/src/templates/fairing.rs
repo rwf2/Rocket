@@ -1,8 +1,8 @@
-use templates::{DEFAULT_TEMPLATE_DIR, Context, Engines};
+use templates::{Context, Engines, DEFAULT_TEMPLATE_DIR};
 
-use rocket::Rocket;
 use rocket::config::ConfigError;
 use rocket::fairing::{Fairing, Info, Kind};
+use rocket::Rocket;
 
 crate use self::context::ContextManager;
 
@@ -20,7 +20,7 @@ mod context {
             ContextManager(ctxt)
         }
 
-        crate fn context<'a>(&'a self) -> impl Deref<Target=Context> + 'a {
+        crate fn context<'a>(&'a self) -> impl Deref<Target = Context> + 'a {
             &self.0
         }
 
@@ -35,8 +35,8 @@ mod context {
     extern crate notify;
 
     use std::ops::{Deref, DerefMut};
-    use std::sync::{RwLock, Mutex};
     use std::sync::mpsc::{channel, Receiver};
+    use std::sync::{Mutex, RwLock};
 
     use templates::{Context, Engines};
 
@@ -75,7 +75,7 @@ mod context {
             }
         }
 
-        crate fn context<'a>(&'a self) -> impl Deref<Target=Context> + 'a {
+        crate fn context<'a>(&'a self) -> impl Deref<Target = Context> + 'a {
             self.context.read().unwrap()
         }
 
@@ -83,7 +83,7 @@ mod context {
             self.watcher.is_some()
         }
 
-        fn context_mut<'a>(&'a self) -> impl DerefMut<Target=Context> + 'a {
+        fn context_mut<'a>(&'a self) -> impl DerefMut<Target = Context> + 'a {
             self.context.write().unwrap()
         }
 
@@ -166,7 +166,8 @@ impl Fairing for TemplateFairing {
 
     #[cfg(debug_assertions)]
     fn on_request(&self, req: &mut ::rocket::Request, _data: &::rocket::Data) {
-        let cm = req.guard::<::rocket::State<ContextManager>>()
+        let cm = req
+            .guard::<::rocket::State<ContextManager>>()
             .expect("Template ContextManager registered in on_attach");
 
         cm.reload_if_needed(&*self.custom_callback);

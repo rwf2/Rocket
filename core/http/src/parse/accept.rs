@@ -1,9 +1,9 @@
 use pear::parser;
 use pear::parsers::*;
 
-use {Accept, QMediaType};
 use parse::checkers::is_whitespace;
 use parse::media_type::media_type;
+use {Accept, QMediaType};
 
 type Input<'a> = ::parse::IndexedInput<'a, str>;
 type Result<'a, T> = ::pear::Result<T, Input<'a>>;
@@ -16,9 +16,9 @@ fn weighted_media_type<'a>(input: &mut Input<'a>) -> Result<'a, QMediaType> {
             Some(q) if q > 1. => return Err(pear_error!("q value must be <= 1")),
             Some(q) if q < 0. => return Err(pear_error!("q value must be > 0")),
             Some(q) => Some(q),
-            None => return Err(pear_error!("invalid media-type weight"))
+            None => return Err(pear_error!("invalid media-type weight")),
         },
-        _ => None
+        _ => None,
     };
 
     QMediaType(media_type, weight)
@@ -35,16 +35,16 @@ pub fn parse_accept(input: &str) -> Result<Accept> {
 
 #[cfg(test)]
 mod test {
-    use MediaType;
     use super::parse_accept;
+    use MediaType;
 
     macro_rules! assert_parse {
-        ($string:expr) => ({
+        ($string:expr) => {{
             match parse_accept($string) {
                 Ok(accept) => accept,
-                Err(e) => panic!("{:?} failed to parse: {}", $string, e)
+                Err(e) => panic!("{:?} failed to parse: {}", $string, e),
             }
-        });
+        }};
     }
 
     macro_rules! assert_parse_eq {
@@ -68,18 +68,26 @@ mod test {
         assert_parse!("audio/*; q=0.2, audio/basic");
         assert_parse!("text/plain; q=0.5, text/html, text/x-dvi; q=0.8, text/x-c");
         assert_parse!("text/*, text/html, text/html;level=1, */*");
-        assert_parse!("text/*;q=0.3, text/html;q=0.7, text/html;level=1, \
-               text/html;level=2;q=0.4, */*;q=0.5");
+        assert_parse!(
+            "text/*;q=0.3, text/html;q=0.7, text/html;level=1, \
+             text/html;level=2;q=0.4, */*;q=0.5"
+        );
     }
 
     #[test]
     fn check_parse_eq() {
         assert_parse_eq!("text/html", [MediaType::HTML]);
-        assert_parse_eq!("text/html, application/json",
-                         [MediaType::HTML, MediaType::JSON]);
-        assert_parse_eq!("text/html; charset=utf-8; v=1, application/json",
-                         [MediaType::HTML, MediaType::JSON]);
-        assert_parse_eq!("text/html, text/html; q=0.1, text/html; q=0.2",
-                         [MediaType::HTML, MediaType::HTML, MediaType::HTML]);
+        assert_parse_eq!(
+            "text/html, application/json",
+            [MediaType::HTML, MediaType::JSON]
+        );
+        assert_parse_eq!(
+            "text/html; charset=utf-8; v=1, application/json",
+            [MediaType::HTML, MediaType::JSON]
+        );
+        assert_parse_eq!(
+            "text/html, text/html; q=0.1, text/html; q=0.2",
+            [MediaType::HTML, MediaType::HTML, MediaType::HTML]
+        );
     }
 }

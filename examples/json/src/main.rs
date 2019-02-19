@@ -1,13 +1,17 @@
 #![feature(proc_macro_hygiene, decl_macro)]
 
-#[macro_use] extern crate rocket;
-#[macro_use] extern crate rocket_contrib;
-#[macro_use] extern crate serde_derive;
+#[macro_use]
+extern crate rocket;
+#[macro_use]
+extern crate rocket_contrib;
+#[macro_use]
+extern crate serde_derive;
 
-#[cfg(test)] mod tests;
+#[cfg(test)]
+mod tests;
 
-use std::sync::Mutex;
 use std::collections::HashMap;
+use std::sync::Mutex;
 
 use rocket::State;
 use rocket_contrib::json::{Json, JsonValue};
@@ -21,7 +25,7 @@ type MessageMap = Mutex<HashMap<ID, String>>;
 #[derive(Serialize, Deserialize)]
 struct Message {
     id: Option<ID>,
-    contents: String
+    contents: String,
 }
 
 // TODO: This example can be improved by using `route` with multiple HTTP verbs.
@@ -56,7 +60,7 @@ fn get(id: ID, map: State<MessageMap>) -> Option<Json<Message>> {
     hashmap.get(&id).map(|contents| {
         Json(Message {
             id: Some(id),
-            contents: contents.clone()
+            contents: contents.clone(),
         })
     })
 }

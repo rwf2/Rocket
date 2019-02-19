@@ -1,5 +1,5 @@
-use std::io;
 use http::RawStr;
+use std::io;
 
 /// Error returned by the [`FromForm`](::request::FromForm) derive on form
 /// parsing errors.
@@ -34,7 +34,7 @@ pub enum FormDataError<'f, E> {
     Malformed(&'f str),
     /// The form string (in `.1`) failed to parse as the intended structure. The
     /// error type in `.0` contains further details.
-    Parse(E, &'f str)
+    Parse(E, &'f str),
 }
 
 /// Alias to the type of form errors returned by the [`FromData`]

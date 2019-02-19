@@ -1,11 +1,11 @@
-use std::{io, fmt};
-use std::path::PathBuf;
 use std::error::Error;
+use std::path::PathBuf;
+use std::{fmt, io};
 
 use yansi::Paint;
 
-use super::Environment;
 use self::ConfigError::*;
+use super::Environment;
 
 /// The type of a configuration error.
 #[derive(Debug)]
@@ -64,19 +64,33 @@ impl ConfigError {
                 info_!("{}", error);
             }
             BadFilePath(ref path, reason) => {
-                error!("configuration file path {} is invalid", Paint::default(path.display()).bold());
+                error!(
+                    "configuration file path {} is invalid",
+                    Paint::default(path.display()).bold()
+                );
                 info_!("{}", reason);
             }
             BadEntry(ref name, ref filename) => {
                 let valid_entries = format!("{}, global", valid_envs);
-                error!("{} is not a known configuration environment",
-                       Paint::default(format!("[{}]", name)).bold());
+                error!(
+                    "{} is not a known configuration environment",
+                    Paint::default(format!("[{}]", name)).bold()
+                );
                 info_!("in {}", Paint::default(filename.display()).bold());
-                info_!("valid environments are: {}", Paint::default(valid_entries).bold());
+                info_!(
+                    "valid environments are: {}",
+                    Paint::default(valid_entries).bold()
+                );
             }
             BadEnv(ref name) => {
-                error!("{} is not a valid ROCKET_ENV value", Paint::default(name).bold());
-                info_!("valid environments are: {}", Paint::default(valid_envs).bold());
+                error!(
+                    "{} is not a valid ROCKET_ENV value",
+                    Paint::default(name).bold()
+                );
+                info_!(
+                    "valid environments are: {}",
+                    Paint::default(valid_envs).bold()
+                );
             }
             BadType(ref name, expected, actual, ref filename) => {
                 error!("{} key could not be parsed", Paint::default(name).bold());
@@ -84,26 +98,37 @@ impl ConfigError {
                     info_!("in {}", Paint::default(filename.display()).bold());
                 }
 
-                info_!("expected value to be {}, but found {}",
-                       Paint::default(expected).bold(), Paint::default(actual).bold());
+                info_!(
+                    "expected value to be {}, but found {}",
+                    Paint::default(expected).bold(),
+                    Paint::default(actual).bold()
+                );
             }
             ParseError(_, ref filename, ref desc, line_col) => {
                 error!("config file failed to parse due to invalid TOML");
                 info_!("{}", desc);
                 info_!("in {}", Paint::default(filename.display()).bold());
                 if let Some((line, col)) = line_col {
-                    info_!("at line {}, column {}",
-                           Paint::default(line + 1).bold(), Paint::default(col + 1).bold());
+                    info_!(
+                        "at line {}, column {}",
+                        Paint::default(line + 1).bold(),
+                        Paint::default(col + 1).bold()
+                    );
                 }
             }
             BadEnvVal(ref key, ref value, ref error) => {
-                error!("environment variable {} could not be parsed",
-                   Paint::default(format!("ROCKET_{}={}", key.to_uppercase(), value)).bold());
+                error!(
+                    "environment variable {} could not be parsed",
+                    Paint::default(format!("ROCKET_{}={}", key.to_uppercase(), value)).bold()
+                );
                 info_!("{}", error);
             }
             UnknownKey(ref key) => {
-                error!("the configuration key {} is unknown and disallowed in \
-                       this position", Paint::default(key).bold());
+                error!(
+                    "the configuration key {} is unknown and disallowed in \
+                     this position",
+                    Paint::default(key).bold()
+                );
             }
             Missing(ref key) => {
                 error!("missing configuration key: {}", Paint::default(key).bold());
@@ -125,7 +150,7 @@ impl ConfigError {
     pub fn is_not_found(&self) -> bool {
         match *self {
             NotFound => true,
-            _ => false
+            _ => false,
         }
     }
 }
@@ -141,9 +166,7 @@ impl fmt::Display for ConfigError {
             ParseError(..) => write!(f, "the config file contains invalid TOML"),
             UnknownKey(ref k) => write!(f, "'{}' is an unknown key", k),
             Missing(ref k) => write!(f, "missing key: '{}'", k),
-            BadEntry(ref e, _) => {
-                write!(f, "{:?} is not a valid `[environment]` entry", e)
-            }
+            BadEntry(ref e, _) => write!(f, "{:?} is not a valid `[environment]` entry", e),
             BadType(ref n, e, a, _) => {
                 write!(f, "type mismatch for '{}'. expected {}, found {}", n, e, a)
             }
@@ -186,14 +209,19 @@ impl PartialEq for ConfigError {
             (&BadType(ref n1, e1, a1, _), &BadType(ref n2, e2, a2, _)) => {
                 n1 == n2 && e1 == e2 && a1 == a2
             }
-            (&BadEnvVal(ref k1, ref v1, _), &BadEnvVal(ref k2, ref v2, _)) => {
-                k1 == k2 && v1 == v2
-            }
+            (&BadEnvVal(ref k1, ref v1, _), &BadEnvVal(ref k2, ref v2, _)) => k1 == k2 && v1 == v2,
             (&Missing(ref k1), &Missing(ref k2)) => k1 == k2,
-            (&NotFound, _) | (&IoError, _) | (&Io(..), _)
-                | (&BadFilePath(..), _) | (&BadEnv(..), _) | (&ParseError(..), _)
-                | (&UnknownKey(..), _) | (&BadEntry(..), _) | (&BadType(..), _)
-                | (&BadEnvVal(..), _) | (&Missing(..), _) => false
+            (&NotFound, _)
+            | (&IoError, _)
+            | (&Io(..), _)
+            | (&BadFilePath(..), _)
+            | (&BadEnv(..), _)
+            | (&ParseError(..), _)
+            | (&UnknownKey(..), _)
+            | (&BadEntry(..), _)
+            | (&BadType(..), _)
+            | (&BadEnvVal(..), _)
+            | (&Missing(..), _) => false,
         }
     }
 }

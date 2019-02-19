@@ -1,14 +1,15 @@
 use std::collections::HashMap;
 
 use super::rocket;
-use rocket::local::Client;
 use rocket::http::*;
+use rocket::local::Client;
 use rocket_contrib::templates::Template;
 
 #[test]
 fn test_submit() {
     let client = Client::new(rocket()).unwrap();
-    let response = client.post("/submit")
+    let response = client
+        .post("/submit")
         .header(ContentType::Form)
         .body("message=Hello from Rocket!")
         .dispatch();
@@ -17,7 +18,10 @@ fn test_submit() {
     let location_headers: Vec<_> = response.headers().get("Location").collect();
 
     assert_eq!(response.status(), Status::SeeOther);
-    assert_eq!(cookie_headers, vec!["message=Hello%20from%20Rocket!".to_string()]);
+    assert_eq!(
+        cookie_headers,
+        vec!["message=Hello%20from%20Rocket!".to_string()]
+    );
     assert_eq!(location_headers, vec!["/".to_string()]);
 }
 

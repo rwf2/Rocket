@@ -11,14 +11,14 @@ mod schema {
 }
 
 use self::schema::tasks;
-use self::schema::tasks::dsl::{tasks as all_tasks, completed as task_completed};
+use self::schema::tasks::dsl::{completed as task_completed, tasks as all_tasks};
 
-#[table_name="tasks"]
+#[table_name = "tasks"]
 #[derive(Serialize, Queryable, Insertable, Debug, Clone)]
 pub struct Task {
     pub id: Option<i32>,
     pub description: String,
-    pub completed: bool
+    pub completed: bool,
 }
 
 #[derive(FromForm)]
@@ -28,12 +28,22 @@ pub struct Todo {
 
 impl Task {
     pub fn all(conn: &SqliteConnection) -> Vec<Task> {
-        all_tasks.order(tasks::id.desc()).load::<Task>(conn).unwrap()
+        all_tasks
+            .order(tasks::id.desc())
+            .load::<Task>(conn)
+            .unwrap()
     }
 
     pub fn insert(todo: Todo, conn: &SqliteConnection) -> bool {
-        let t = Task { id: None, description: todo.description, completed: false };
-        diesel::insert_into(tasks::table).values(&t).execute(conn).is_ok()
+        let t = Task {
+            id: None,
+            description: todo.description,
+            completed: false,
+        };
+        diesel::insert_into(tasks::table)
+            .values(&t)
+            .execute(conn)
+            .is_ok()
     }
 
     pub fn toggle_with_id(id: i32, conn: &SqliteConnection) -> bool {
@@ -44,7 +54,10 @@ impl Task {
 
         let new_status = !task.unwrap().completed;
         let updated_task = diesel::update(all_tasks.find(id));
-        updated_task.set(task_completed.eq(new_status)).execute(conn).is_ok()
+        updated_task
+            .set(task_completed.eq(new_status))
+            .execute(conn)
+            .is_ok()
     }
 
     pub fn delete_with_id(id: i32, conn: &SqliteConnection) -> bool {

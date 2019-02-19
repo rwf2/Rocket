@@ -1,13 +1,13 @@
-use std::fmt::{self, Display};
-use std::convert::From;
 use std::borrow::Cow;
-use std::str::Utf8Error;
+use std::convert::From;
 use std::convert::TryFrom;
+use std::fmt::{self, Display};
+use std::str::Utf8Error;
 
 use ext::IntoOwned;
 use parse::Indexed;
-use uri::{Origin, Authority, Absolute, Error};
 use uri::encoding::{percent_encode, DEFAULT_ENCODE_SET};
+use uri::{Absolute, Authority, Error, Origin};
 
 /// An `enum` encapsulating any of the possible URI variants.
 ///
@@ -112,7 +112,7 @@ impl<'a> Uri<'a> {
     pub fn origin(&self) -> Option<&Origin<'a>> {
         match self {
             Uri::Origin(ref inner) => Some(inner),
-            _ => None
+            _ => None,
         }
     }
 
@@ -134,7 +134,7 @@ impl<'a> Uri<'a> {
     pub fn authority(&self) -> Option<&Authority<'a>> {
         match self {
             Uri::Authority(ref inner) => Some(inner),
-            _ => None
+            _ => None,
         }
     }
 
@@ -156,7 +156,7 @@ impl<'a> Uri<'a> {
     pub fn absolute(&self) -> Option<&Absolute<'a>> {
         match self {
             Uri::Absolute(ref inner) => Some(inner),
-            _ => None
+            _ => None,
         }
     }
 
@@ -215,7 +215,7 @@ impl<'a> Uri<'a> {
 crate unsafe fn as_utf8_unchecked(input: Cow<[u8]>) -> Cow<str> {
     match input {
         Cow::Borrowed(bytes) => Cow::Borrowed(::std::str::from_utf8_unchecked(bytes)),
-        Cow::Owned(bytes) => Cow::Owned(String::from_utf8_unchecked(bytes))
+        Cow::Owned(bytes) => Cow::Owned(String::from_utf8_unchecked(bytes)),
     }
 }
 
@@ -248,7 +248,7 @@ impl<'a> IntoOwned for Uri<'a> {
             Uri::Origin(origin) => Uri::Origin(origin.into_owned()),
             Uri::Authority(authority) => Uri::Authority(authority.into_owned()),
             Uri::Absolute(absolute) => Uri::Absolute(absolute.into_owned()),
-            Uri::Asterisk => Uri::Asterisk
+            Uri::Asterisk => Uri::Asterisk,
         }
     }
 }
@@ -259,19 +259,19 @@ impl<'a> Display for Uri<'a> {
             Uri::Origin(ref origin) => write!(f, "{}", origin),
             Uri::Authority(ref authority) => write!(f, "{}", authority),
             Uri::Absolute(ref absolute) => write!(f, "{}", absolute),
-            Uri::Asterisk => write!(f, "*")
+            Uri::Asterisk => write!(f, "*"),
         }
     }
 }
 
 macro_rules! impl_uri_from {
-    ($type:ident) => (
+    ($type:ident) => {
         impl<'a> From<$type<'a>> for Uri<'a> {
             fn from(other: $type<'a>) -> Uri<'a> {
                 Uri::$type(other)
             }
         }
-    )
+    };
 }
 
 impl_uri_from!(Origin);

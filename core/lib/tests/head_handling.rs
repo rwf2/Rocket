@@ -1,6 +1,7 @@
 #![feature(proc_macro_hygiene, decl_macro)]
 
-#[macro_use] extern crate rocket;
+#[macro_use]
+extern crate rocket;
 
 use rocket::{http::Status, response::content};
 
@@ -24,10 +25,10 @@ mod head_handling_tests {
 
     use std::io::Read;
 
-    use rocket::Route;
+    use rocket::http::{ContentType, Status};
     use rocket::local::Client;
-    use rocket::http::{Status, ContentType};
     use rocket::response::Body;
+    use rocket::Route;
 
     fn routes() -> Vec<Route> {
         routes![index, empty, other]
@@ -41,7 +42,7 @@ mod head_handling_tests {
                 assert_eq!(size, expected_size);
                 assert_eq!(n, 0);
             }
-            _ => panic!("Expected a sized body.")
+            _ => panic!("Expected a sized body."),
         }
     }
 

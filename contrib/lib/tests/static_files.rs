@@ -5,13 +5,13 @@ extern crate rocket_contrib;
 
 #[cfg(feature = "static")]
 mod static_tests {
-    use std::{io::Read, fs::File};
     use std::path::{Path, PathBuf};
+    use std::{fs::File, io::Read};
 
-    use rocket::{self, Rocket};
-    use rocket_contrib::serve::{StaticFiles, Options};
     use rocket::http::Status;
     use rocket::local::Client;
+    use rocket::{self, Rocket};
+    use rocket_contrib::serve::{Options, StaticFiles};
 
     fn static_root() -> PathBuf {
         Path::new(env!("CARGO_MANIFEST_DIR"))
@@ -26,7 +26,10 @@ mod static_tests {
             .mount("/no_index", StaticFiles::new(&root, Options::None))
             .mount("/dots", StaticFiles::new(&root, Options::DotFiles))
             .mount("/index", StaticFiles::new(&root, Options::Index))
-            .mount("/both", StaticFiles::new(&root, Options::DotFiles | Options::Index))
+            .mount(
+                "/both",
+                StaticFiles::new(&root, Options::DotFiles | Options::Index),
+            )
     }
 
     static REGULAR_FILES: &[&str] = &[
@@ -36,15 +39,9 @@ mod static_tests {
         "other/hello.txt",
     ];
 
-    static HIDDEN_FILES: &[&str] = &[
-        ".hidden",
-        "inner/.hideme",
-    ];
+    static HIDDEN_FILES: &[&str] = &[".hidden", "inner/.hideme"];
 
-    static INDEXED_DIRECTORIES: &[&str] = &[
-        "",
-        "inner/",
-    ];
+    static INDEXED_DIRECTORIES: &[&str] = &["", "inner/"];
 
     fn assert_file(client: &Client, prefix: &str, path: &str, exists: bool) {
         let full_path = format!("/{}", Path::new(prefix).join(path).display());
@@ -59,7 +56,8 @@ mod static_tests {
 
             let mut file = File::open(path).expect("open file");
             let mut expected_contents = String::new();
-            file.read_to_string(&mut expected_contents).expect("read file");
+            file.read_to_string(&mut expected_contents)
+                .expect("read file");
             assert_eq!(response.body_string(), Some(expected_contents));
         } else {
             assert_eq!(response.status(), Status::NotFound);
@@ -67,7 +65,9 @@ mod static_tests {
     }
 
     fn assert_all(client: &Client, prefix: &str, paths: &[&str], exist: bool) {
-        paths.iter().for_each(|path| assert_file(client, prefix, path, exist))
+        paths
+            .iter()
+            .for_each(|path| assert_file(client, prefix, path, exist))
     }
 
     #[test]

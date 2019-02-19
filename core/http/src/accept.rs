@@ -1,12 +1,12 @@
+use std::fmt;
 use std::ops::Deref;
 use std::str::FromStr;
-use std::fmt;
 
 use smallvec::SmallVec;
 
-use {Header, MediaType};
 use ext::IntoCollection;
 use parse::parse_accept;
+use {Header, MediaType};
 
 /// A `MediaType` with an associated quality value.
 #[derive(Debug, Clone, PartialEq)]
@@ -85,7 +85,7 @@ impl Deref for QMediaType {
 #[derive(Debug, Clone)]
 pub enum AcceptParams {
     Static(&'static [QMediaType]),
-    Dynamic(SmallVec<[QMediaType; 1]>)
+    Dynamic(SmallVec<[QMediaType; 1]>),
 }
 
 impl ::pear::parsers::Collection for AcceptParams {
@@ -98,7 +98,7 @@ impl ::pear::parsers::Collection for AcceptParams {
     fn add(&mut self, item: Self::Item) {
         match *self {
             AcceptParams::Static(..) => panic!("can't add to static collection!"),
-            AcceptParams::Dynamic(ref mut v) => v.push(item)
+            AcceptParams::Dynamic(ref mut v) => v.push(item),
         }
     }
 }
@@ -314,7 +314,7 @@ impl Accept {
     /// assert_eq!(iter.next(), None);
     /// ```
     #[inline(always)]
-    pub fn iter<'a>(&'a self) -> impl Iterator<Item=&'a QMediaType> + 'a {
+    pub fn iter<'a>(&'a self) -> impl Iterator<Item = &'a QMediaType> + 'a {
         let slice = match self.0 {
             AcceptParams::Static(slice) => slice,
             AcceptParams::Dynamic(ref vec) => &vec[..],
@@ -345,7 +345,7 @@ impl Accept {
     /// assert_eq!(iter.next(), None);
     /// ```
     #[inline(always)]
-    pub fn media_types<'a>(&'a self) -> impl Iterator<Item=&'a MediaType> + 'a {
+    pub fn media_types<'a>(&'a self) -> impl Iterator<Item = &'a MediaType> + 'a {
         self.iter().map(|weighted_mt| weighted_mt.media_type())
     }
 
@@ -390,12 +390,12 @@ mod test {
     use {Accept, MediaType};
 
     macro_rules! assert_preference {
-        ($string:expr, $expect:expr) => (
+        ($string:expr, $expect:expr) => {
             let accept: Accept = $string.parse().expect("accept string parse");
             let expected: MediaType = $expect.parse().expect("media type parse");
             let preferred = accept.preferred();
             assert_eq!(preferred.media_type().to_string(), expected.to_string());
-        )
+        };
     }
 
     #[test]
@@ -427,9 +427,10 @@ mod test {
 
         assert_preference!("a/b; v=1, a/b; v=1; c=2", "a/b; v=1; c=2");
         assert_preference!("a/b; v=1; c=2, a/b; v=1", "a/b; v=1; c=2");
-        assert_preference!("a/b; q=0.5; v=1, a/b; q=0.5; v=1; c=2",
-            "a/b; q=0.5; v=1; c=2");
-        assert_preference!("a/b; q=0.6; v=1, a/b; q=0.5; v=1; c=2",
-            "a/b; q=0.6; v=1");
+        assert_preference!(
+            "a/b; q=0.5; v=1, a/b; q=0.5; v=1; c=2",
+            "a/b; q=0.5; v=1; c=2"
+        );
+        assert_preference!("a/b; q=0.6; v=1, a/b; q=0.5; v=1; c=2", "a/b; q=0.6; v=1");
     }
 }

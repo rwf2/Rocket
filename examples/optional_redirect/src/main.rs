@@ -1,12 +1,13 @@
 #![feature(proc_macro_hygiene, decl_macro)]
 
-#[macro_use] extern crate rocket;
+#[macro_use]
+extern crate rocket;
 
 #[cfg(test)]
 mod tests;
 
-use rocket::response::Redirect;
 use rocket::http::RawStr;
+use rocket::response::Redirect;
 
 #[get("/")]
 fn root() -> Redirect {
@@ -27,5 +28,7 @@ fn login() -> &'static str {
 }
 
 fn main() {
-    rocket::ignite().mount("/", routes![root, user, login]).launch();
+    rocket::ignite()
+        .mount("/", routes![root, user, login])
+        .launch();
 }

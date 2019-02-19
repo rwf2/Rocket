@@ -45,11 +45,13 @@ impl<'h> Header<'h> {
     /// ```
     #[inline(always)]
     pub fn new<'a: 'h, 'b: 'h, N, V>(name: N, value: V) -> Header<'h>
-        where N: Into<Cow<'a, str>>, V: Into<Cow<'b, str>>
+    where
+        N: Into<Cow<'a, str>>,
+        V: Into<Cow<'b, str>>,
     {
         Header {
             name: Uncased::new(name),
-            value: value.into()
+            value: value.into(),
         }
     }
 
@@ -121,7 +123,7 @@ impl<'h> fmt::Display for Header<'h> {
 /// returns values for headers of names "AbC", "ABC", "abc", and so on.
 #[derive(Clone, Debug, PartialEq, Default)]
 pub struct HeaderMap<'h> {
-    headers: IndexMap<Uncased<'h>, Vec<Cow<'h, str>>>
+    headers: IndexMap<Uncased<'h>, Vec<Cow<'h, str>>>,
 }
 
 impl<'h> HeaderMap<'h> {
@@ -137,7 +139,9 @@ impl<'h> HeaderMap<'h> {
     /// ```
     #[inline(always)]
     pub fn new() -> HeaderMap<'h> {
-        HeaderMap { headers: IndexMap::new() }
+        HeaderMap {
+            headers: IndexMap::new(),
+        }
     }
 
     /// Returns true if `self` contains a header with the name `name`.
@@ -181,7 +185,10 @@ impl<'h> HeaderMap<'h> {
     /// ```
     #[inline]
     pub fn len(&self) -> usize {
-        self.headers.iter().flat_map(|(_, values)| values.iter()).count()
+        self.headers
+            .iter()
+            .flat_map(|(_, values)| values.iter())
+            .count()
     }
 
     /// Returns `true` if there are no headers stored in the map. Otherwise
@@ -222,7 +229,7 @@ impl<'h> HeaderMap<'h> {
     /// assert_eq!(values.next(), None);
     /// ```
     #[inline]
-    pub fn get<'a>(&'a self, name: &str) -> impl Iterator<Item=&'a str> {
+    pub fn get<'a>(&'a self, name: &str) -> impl Iterator<Item = &'a str> {
         self.headers
             .get(UncasedStr::new(name))
             .into_iter()
@@ -264,11 +271,13 @@ impl<'h> HeaderMap<'h> {
     /// ```
     #[inline]
     pub fn get_one<'a>(&'a self, name: &str) -> Option<&'a str> {
-        self.headers.get(UncasedStr::new(name))
-            .and_then(|values| {
-                if !values.is_empty() { Some(values[0].borrow()) }
-                else { None }
-            })
+        self.headers.get(UncasedStr::new(name)).and_then(|values| {
+            if !values.is_empty() {
+                Some(values[0].borrow())
+            } else {
+                None
+            }
+        })
     }
 
     /// Replace any header that matches the name of `header.name` with `header`.
@@ -324,7 +333,9 @@ impl<'h> HeaderMap<'h> {
     #[inline(always)]
     pub fn replace<'p: 'h, H: Into<Header<'p>>>(&mut self, header: H) -> bool {
         let header = header.into();
-        self.headers.insert(header.name, vec![header.value]).is_some()
+        self.headers
+            .insert(header.name, vec![header.value])
+            .is_some()
     }
 
     /// A convenience method to replace a header using a raw name and value.
@@ -347,7 +358,9 @@ impl<'h> HeaderMap<'h> {
     /// ```
     #[inline(always)]
     pub fn replace_raw<'a: 'h, 'b: 'h, N, V>(&mut self, name: N, value: V) -> bool
-        where N: Into<Cow<'a, str>>, V: Into<Cow<'b, str>>
+    where
+        N: Into<Cow<'a, str>>,
+        V: Into<Cow<'b, str>>,
     {
         self.replace(Header::new(name, value))
     }
@@ -375,7 +388,9 @@ impl<'h> HeaderMap<'h> {
     /// ```
     #[inline(always)]
     pub fn replace_all<'n, 'v: 'h, H>(&mut self, name: H, values: Vec<Cow<'v, str>>)
-        where 'n: 'h, H: Into<Cow<'n, str>>
+    where
+        'n: 'h,
+        H: Into<Cow<'n, str>>,
     {
         self.headers.insert(Uncased::new(name), values);
     }
@@ -398,7 +413,10 @@ impl<'h> HeaderMap<'h> {
     #[inline(always)]
     pub fn add<'p: 'h, H: Into<Header<'p>>>(&mut self, header: H) {
         let header = header.into();
-        self.headers.entry(header.name).or_insert(vec![]).push(header.value);
+        self.headers
+            .entry(header.name)
+            .or_insert(vec![])
+            .push(header.value);
     }
 
     /// A convenience method to add a header using a raw name and value.
@@ -421,7 +439,9 @@ impl<'h> HeaderMap<'h> {
     /// ```
     #[inline(always)]
     pub fn add_raw<'a: 'h, 'b: 'h, N, V>(&mut self, name: N, value: V)
-        where N: Into<Cow<'a, str>>, V: Into<Cow<'b, str>>
+    where
+        N: Into<Cow<'a, str>>,
+        V: Into<Cow<'b, str>>,
     {
         self.add(Header::new(name, value))
     }
@@ -453,9 +473,12 @@ impl<'h> HeaderMap<'h> {
     /// ```
     #[inline(always)]
     pub fn add_all<'n, H>(&mut self, name: H, values: &mut Vec<Cow<'h, str>>)
-        where 'n:'h, H: Into<Cow<'n, str>>
+    where
+        'n: 'h,
+        H: Into<Cow<'n, str>>,
     {
-        self.headers.entry(Uncased::new(name))
+        self.headers
+            .entry(Uncased::new(name))
             .or_insert(vec![])
             .append(values)
     }
@@ -560,11 +583,11 @@ impl<'h> HeaderMap<'h> {
     ///     }
     /// }
     /// ```
-    pub fn iter(&self) -> impl Iterator<Item=Header> {
+    pub fn iter(&self) -> impl Iterator<Item = Header> {
         self.headers.iter().flat_map(|(key, values)| {
-            values.iter().map(move |val| {
-                Header::new(key.as_str(), &**val)
-            })
+            values
+                .iter()
+                .map(move |val| Header::new(key.as_str(), &**val))
         })
     }
 
@@ -607,10 +630,11 @@ impl<'h> HeaderMap<'h> {
     /// ```
     // TODO: Implement IntoIterator.
     #[inline(always)]
-    pub fn into_iter(self) -> impl Iterator<Item=Header<'h>> {
+    pub fn into_iter(self) -> impl Iterator<Item = Header<'h>> {
         self.headers.into_iter().flat_map(|(name, value)| {
-            value.into_iter().map(move |value| {
-                Header { name: name.clone(), value }
+            value.into_iter().map(move |value| Header {
+                name: name.clone(),
+                value,
             })
         })
     }
@@ -621,8 +645,7 @@ impl<'h> HeaderMap<'h> {
     /// WARNING: This is unstable! Do not use this method outside of Rocket!
     #[doc(hidden)]
     #[inline]
-    pub fn into_iter_raw(self)
-            -> impl Iterator<Item=(Uncased<'h>, Vec<Cow<'h, str>>)> {
+    pub fn into_iter_raw(self) -> impl Iterator<Item = (Uncased<'h>, Vec<Cow<'h, str>>)> {
         self.headers.into_iter()
     }
 }

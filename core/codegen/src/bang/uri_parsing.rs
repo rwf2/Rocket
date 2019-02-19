@@ -1,15 +1,15 @@
 use proc_macro::Span;
 
-use devise::{syn, Spanned};
-use devise::proc_macro2::TokenStream as TokenStream2;
 use devise::ext::TypeExt;
+use devise::proc_macro2::TokenStream as TokenStream2;
+use devise::{syn, Spanned};
 use quote::ToTokens;
 
-use self::syn::{Expr, Ident, LitStr, Path, Token, Type};
 use self::syn::parse::{self, Parse, ParseStream};
 use self::syn::punctuated::Punctuated;
+use self::syn::{Expr, Ident, LitStr, Path, Token, Type};
 
-use http::{uri::Origin, ext::IntoOwned};
+use http::{ext::IntoOwned, uri::Origin};
 use indexmap::IndexMap;
 
 #[derive(Debug)]
@@ -54,7 +54,7 @@ pub enum Validation<'a> {
     // (Missing, Extra, Duplicate)
     Named(Vec<&'a Ident>, Vec<&'a Ident>, Vec<&'a Ident>),
     // Everything is okay; here are the expressions in the route decl order.
-    Ok(Vec<&'a ArgExpr>)
+    Ok(Vec<&'a ArgExpr>),
 }
 
 // This is invoked by Rocket itself. The `uri!` macro expands to a call to a
@@ -119,13 +119,19 @@ impl Parse for UriParams {
             let string = input.parse::<LitStr>()?;
             let mount_point = Origin::parse_owned(string.value()).map_err(|_| {
                 // TODO(proc_macro): use error, add example as a help
-                parse::Error::new(string.span(), "invalid mount point; \
-                    mount points must be static, absolute URIs: `/example`")
+                parse::Error::new(
+                    string.span(),
+                    "invalid mount point; \
+                     mount points must be static, absolute URIs: `/example`",
+                )
             })?;
 
             if !input.peek(Token![,]) && input.cursor().eof() {
-                return err(string.span().unstable(), "unexpected end of input: \
-                    expected ',' followed by route path");
+                return err(
+                    string.span().unstable(),
+                    "unexpected end of input: \
+                     expected ',' followed by route path",
+                );
             }
 
             input.parse::<Token![,]>()?;
@@ -140,7 +146,11 @@ impl Parse for UriParams {
         // If there are no arguments, finish early.
         if !input.peek(Token![:]) && input.cursor().eof() {
             let arguments = Args::Unnamed(Punctuated::new());
-            return Ok(Self { mount_point, route_path, arguments });
+            return Ok(Self {
+                mount_point,
+                route_path,
+                arguments,
+            });
         }
 
         // Parse arguments
@@ -162,16 +172,23 @@ impl Parse for UriParams {
         }
 
         if !homogeneous_args {
-            return err(arguments.span(), "named and unnamed parameters cannot be mixed");
+            return err(
+                arguments.span(),
+                "named and unnamed parameters cannot be mixed",
+            );
         }
 
         // Create the `Args` enum, which properly record one-kind-of-argument-ness.
         let arguments = match prev_named {
             Some(true) => Args::Named(arguments),
-            _ => Args::Unnamed(arguments)
+            _ => Args::Unnamed(arguments),
         };
 
-        Ok(Self { mount_point, route_path, arguments })
+        Ok(Self {
+            mount_point,
+            route_path,
+            arguments,
+        })
     }
 }
 
@@ -203,13 +220,18 @@ impl Parse for InternalUriParams {
 
         input.parse::<Token![,]>()?;
         let uri_params = input.parse::<UriParams>()?;
-        Ok(InternalUriParams { route_uri, fn_args, uri_params })
+        Ok(InternalUriParams {
+            route_uri,
+            fn_args,
+            uri_params,
+        })
     }
 }
 
 impl InternalUriParams {
     pub fn fn_args_str(&self) -> String {
-        self.fn_args.iter()
+        self.fn_args
+            .iter()
             .map(|FnArg { ident, ty }| format!("{}: {}", ident, quote!(#ty).to_string().trim()))
             .collect::<Vec<_>>()
             .join(", ")
@@ -220,11 +242,16 @@ impl InternalUriParams {
         match args {
             Args::Unnamed(inner) => {
                 let (expected, actual) = (self.fn_args.len(), inner.len());
-                if expected != actual { Validation::Unnamed(expected, actual) }
-                else { Validation::Ok(args.unnamed().unwrap().collect()) }
-            },
+                if expected != actual {
+                    Validation::Unnamed(expected, actual)
+                } else {
+                    Validation::Ok(args.unnamed().unwrap().collect())
+                }
+            }
             Args::Named(_) => {
-                let mut params: IndexMap<&Ident, Option<&ArgExpr>> = self.fn_args.iter()
+                let mut params: IndexMap<&Ident, Option<&ArgExpr>> = self
+                    .fn_args
+                    .iter()
                     .map(|FnArg { ident, .. }| (ident, None))
                     .collect();
 
@@ -241,7 +268,7 @@ impl InternalUriParams {
                 for (name, expr) in params {
                     match expr {
                         Some(expr) => exprs.push(expr),
-                        None => missing.push(name)
+                        None => missing.push(name),
                     }
                 }
 
@@ -260,7 +287,7 @@ impl UriParams {
     pub fn args_span(&self) -> Span {
         match self.arguments.num() {
             0 => self.route_path.span(),
-            _ => self.arguments.span()
+            _ => self.arguments.span(),
         }
     }
 }
@@ -269,7 +296,7 @@ impl Arg {
     fn is_named(&self) -> bool {
         match *self {
             Arg::Named(..) => true,
-            _ => false
+            _ => false,
         }
     }
 
@@ -298,14 +325,14 @@ impl Args {
     fn named(&self) -> Option<impl Iterator<Item = (&Ident, &ArgExpr)>> {
         match self {
             Args::Named(args) => Some(args.iter().map(|arg| arg.named())),
-            _ => None
+            _ => None,
         }
     }
 
     fn unnamed(&self) -> Option<impl Iterator<Item = &ArgExpr>> {
         match self {
             Args::Unnamed(args) => Some(args.iter().map(|arg| arg.unnamed())),
-            _ => None
+            _ => None,
         }
     }
 }
@@ -314,7 +341,7 @@ impl ArgExpr {
     pub fn as_expr(&self) -> Option<&Expr> {
         match self {
             ArgExpr::Expr(expr) => Some(expr),
-            _ => None
+            _ => None,
         }
     }
 
@@ -330,7 +357,7 @@ impl ToTokens for ArgExpr {
     fn to_tokens(&self, tokens: &mut TokenStream2) {
         match self {
             ArgExpr::Expr(e) => e.to_tokens(tokens),
-            ArgExpr::Ignored(e) => e.to_tokens(tokens)
+            ArgExpr::Ignored(e) => e.to_tokens(tokens),
         }
     }
 }
@@ -347,7 +374,7 @@ impl ToTokens for Arg {
 impl ToTokens for Args {
     fn to_tokens(&self, tokens: &mut TokenStream2) {
         match self {
-            Args::Unnamed(e) | Args::Named(e) => e.to_tokens(tokens)
+            Args::Unnamed(e) | Args::Named(e) => e.to_tokens(tokens),
         }
     }
 }

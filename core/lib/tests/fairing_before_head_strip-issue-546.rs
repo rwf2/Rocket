@@ -1,6 +1,7 @@
 #![feature(proc_macro_hygiene, decl_macro)]
 
-#[macro_use] extern crate rocket;
+#[macro_use]
+extern crate rocket;
 
 const RESPONSE_STRING: &'static str = "This is the body. Hello, world!";
 
@@ -22,8 +23,8 @@ mod fairing_before_head_strip {
 
     use rocket::fairing::AdHoc;
     use rocket::http::Method;
-    use rocket::local::Client;
     use rocket::http::Status;
+    use rocket::local::Client;
     use rocket::State;
 
     #[test]

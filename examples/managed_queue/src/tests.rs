@@ -1,5 +1,5 @@
-use rocket::local::Client;
 use rocket::http::Status;
+use rocket::local::Client;
 
 #[test]
 fn test_push_pop() {

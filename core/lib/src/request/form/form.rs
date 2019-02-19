@@ -1,9 +1,15 @@
 use std::ops::Deref;
 
+use data::{Data, FromData, Outcome, Transform, Transformed};
+use http::{
+    uri::{FromUriParam, Query},
+    Status,
+};
 use outcome::Outcome::*;
-use request::{Request, form::{FromForm, FormItems, FormDataError}};
-use data::{Outcome, Transform, Transformed, Data, FromData};
-use http::{Status, uri::{Query, FromUriParam}};
+use request::{
+    form::{FormDataError, FormItems, FromForm},
+    Request,
+};
 
 /// A data guard for parsing [`FromForm`] types strictly.
 ///
@@ -148,10 +154,7 @@ impl<T> Deref for Form<T> {
 }
 
 impl<'f, T: FromForm<'f>> Form<T> {
-    crate fn from_data(
-        form_str: &'f str,
-        strict: bool
-    ) -> Outcome<T, FormDataError<'f, T::Error>> {
+    crate fn from_data(form_str: &'f str, strict: bool) -> Outcome<T, FormDataError<'f, T::Error>> {
         use self::FormDataError::*;
 
         let mut items = FormItems::from(form_str);
@@ -189,10 +192,7 @@ impl<'f, T: FromForm<'f>> FromData<'f> for Form<T> {
     type Owned = String;
     type Borrowed = str;
 
-    fn transform(
-        request: &Request,
-        data: Data
-    ) -> Transform<Outcome<Self::Owned, Self::Error>> {
+    fn transform(request: &Request, data: Data) -> Transform<Outcome<Self::Owned, Self::Error>> {
         use std::{cmp::min, io::Read};
 
         let outcome = 'o: {

@@ -6,24 +6,36 @@
 
 extern crate hyper;
 
-#[doc(hidden)] pub use self::hyper::server::Request as Request;
-#[doc(hidden)] pub use self::hyper::server::Response as Response;
-#[doc(hidden)] pub use self::hyper::server::Server as Server;
-#[doc(hidden)] pub use self::hyper::server::Handler as Handler;
+#[doc(hidden)]
+pub use self::hyper::server::Handler;
+#[doc(hidden)]
+pub use self::hyper::server::Request;
+#[doc(hidden)]
+pub use self::hyper::server::Response;
+#[doc(hidden)]
+pub use self::hyper::server::Server;
 
-#[doc(hidden)] pub use self::hyper::net;
+#[doc(hidden)]
+pub use self::hyper::net;
 
-#[doc(hidden)] pub use self::hyper::method::Method;
-#[doc(hidden)] pub use self::hyper::status::StatusCode;
-#[doc(hidden)] pub use self::hyper::error::Error;
-#[doc(hidden)] pub use self::hyper::uri::RequestUri;
-#[doc(hidden)] pub use self::hyper::http::h1;
-#[doc(hidden)] pub use self::hyper::buffer;
+#[doc(hidden)]
+pub use self::hyper::buffer;
+#[doc(hidden)]
+pub use self::hyper::error::Error;
+#[doc(hidden)]
+pub use self::hyper::http::h1;
+#[doc(hidden)]
+pub use self::hyper::method::Method;
+#[doc(hidden)]
+pub use self::hyper::status::StatusCode;
+#[doc(hidden)]
+pub use self::hyper::uri::RequestUri;
 
 pub use self::hyper::mime;
 
 /// Type alias to `self::hyper::Response<'a, self::hyper::net::Fresh>`.
-#[doc(hidden)] pub type FreshResponse<'a> = self::Response<'a, self::net::Fresh>;
+#[doc(hidden)]
+pub type FreshResponse<'a> = self::Response<'a, self::net::Fresh>;
 
 /// Reexported Hyper header types.
 pub mod header {

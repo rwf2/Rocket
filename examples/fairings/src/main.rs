@@ -1,17 +1,19 @@
 #![feature(proc_macro_hygiene, decl_macro)]
 
-#[macro_use] extern crate rocket;
+#[macro_use]
+extern crate rocket;
 
 use std::io::Cursor;
 use std::sync::atomic::{AtomicUsize, Ordering};
 
-use rocket::{Request, State, Data, Response};
 use rocket::fairing::{AdHoc, Fairing, Info, Kind};
-use rocket::http::{Method, ContentType, Status};
+use rocket::http::{ContentType, Method, Status};
+use rocket::{Data, Request, Response, State};
 
 struct Token(i64);
 
-#[cfg(test)] mod tests;
+#[cfg(test)]
+mod tests;
 
 #[derive(Default)]
 struct Counter {
@@ -23,7 +25,7 @@ impl Fairing for Counter {
     fn info(&self) -> Info {
         Info {
             name: "GET/POST Counter",
-            kind: Kind::Request | Kind::Response
+            kind: Kind::Request | Kind::Response,
         }
     }
 
@@ -37,7 +39,7 @@ impl Fairing for Counter {
 
     fn on_response(&self, request: &Request, response: &mut Response) {
         if response.status() != Status::NotFound {
-            return
+            return;
         }
 
         if request.method() == Method::Get && request.uri().path() == "/counts" {

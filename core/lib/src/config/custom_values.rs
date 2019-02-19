@@ -1,22 +1,22 @@
 use std::fmt;
 
+use http::private::Key;
 #[cfg(feature = "tls")]
 use http::tls::{Certificate, PrivateKey};
-use http::private::Key;
 
-use config::{Result, Config, Value, ConfigError, LoggingLevel};
+use config::{Config, ConfigError, LoggingLevel, Result, Value};
 
 #[derive(Clone)]
 pub enum SecretKey {
     Generated(Key),
-    Provided(Key)
+    Provided(Key),
 }
 
 impl SecretKey {
     #[inline]
     crate fn inner(&self) -> &Key {
         match *self {
-            SecretKey::Generated(ref key) | SecretKey::Provided(ref key) => key
+            SecretKey::Generated(ref key) | SecretKey::Provided(ref key) => key,
         }
     }
 
@@ -25,7 +25,7 @@ impl SecretKey {
         match *self {
             #[cfg(feature = "private-cookies")]
             SecretKey::Generated(_) => true,
-            _ => false
+            _ => false,
         }
     }
 }
@@ -47,7 +47,7 @@ impl fmt::Display for SecretKey {
 #[derive(Clone)]
 pub struct TlsConfig {
     pub certs: Vec<Certificate>,
-    pub key: PrivateKey
+    pub key: PrivateKey,
 }
 
 #[cfg(not(feature = "tls"))]
@@ -84,13 +84,16 @@ pub struct TlsConfig;
 pub struct Limits {
     // We cache this internally but don't share that fact in the API.
     crate forms: u64,
-    extra: Vec<(String, u64)>
+    extra: Vec<(String, u64)>,
 }
 
 impl Default for Limits {
     fn default() -> Limits {
         // Default limit for forms is 32KiB.
-        Limits { forms: 32 * 1024, extra: Vec::new() }
+        Limits {
+            forms: 32 * 1024,
+            extra: Vec::new(),
+        }
     }
 }
 
@@ -203,44 +206,42 @@ impl fmt::Display for Limits {
 }
 
 pub fn str<'a>(conf: &Config, name: &str, v: &'a Value) -> Result<&'a str> {
-    v.as_str().ok_or_else(|| conf.bad_type(name, v.type_str(), "a string"))
+    v.as_str()
+        .ok_or_else(|| conf.bad_type(name, v.type_str(), "a string"))
 }
 
 pub fn u64(conf: &Config, name: &str, value: &Value) -> Result<u64> {
     match value.as_integer() {
         Some(x) if x >= 0 => Ok(x as u64),
-        _ => Err(conf.bad_type(name, value.type_str(), "an unsigned integer"))
+        _ => Err(conf.bad_type(name, value.type_str(), "an unsigned integer")),
     }
 }
 
 pub fn u16(conf: &Config, name: &str, value: &Value) -> Result<u16> {
     match value.as_integer() {
         Some(x) if x >= 0 && x <= (u16::max_value() as i64) => Ok(x as u16),
-        _ => Err(conf.bad_type(name, value.type_str(), "a 16-bit unsigned integer"))
+        _ => Err(conf.bad_type(name, value.type_str(), "a 16-bit unsigned integer")),
     }
 }
 
 pub fn u32(conf: &Config, name: &str, value: &Value) -> Result<u32> {
     match value.as_integer() {
         Some(x) if x >= 0 && x <= (u32::max_value() as i64) => Ok(x as u32),
-        _ => Err(conf.bad_type(name, value.type_str(), "a 32-bit unsigned integer"))
+        _ => Err(conf.bad_type(name, value.type_str(), "a 32-bit unsigned integer")),
     }
 }
 
-pub fn log_level(conf: &Config,
-                          name: &str,
-                          value: &Value
-                         ) -> Result<LoggingLevel> {
-    str(conf, name, value)
-        .and_then(|s| s.parse().map_err(|e| conf.bad_type(name, value.type_str(), e)))
+pub fn log_level(conf: &Config, name: &str, value: &Value) -> Result<LoggingLevel> {
+    str(conf, name, value).and_then(|s| {
+        s.parse()
+            .map_err(|e| conf.bad_type(name, value.type_str(), e))
+    })
 }
 
-pub fn tls_config<'v>(conf: &Config,
-                               name: &str,
-                               value: &'v Value,
-                               ) -> Result<(&'v str, &'v str)> {
+pub fn tls_config<'v>(conf: &Config, name: &str, value: &'v Value) -> Result<(&'v str, &'v str)> {
     let (mut certs_path, mut key_path) = (None, None);
-    let table = value.as_table()
+    let table = value
+        .as_table()
         .ok_or_else(|| conf.bad_type(name, value.type_str(), "a table"))?;
 
     let env = conf.environment;
@@ -248,20 +249,24 @@ pub fn tls_config<'v>(conf: &Config,
         match key.as_str() {
             "certs" => certs_path = Some(str(conf, "tls.certs", value)?),
             "key" => key_path = Some(str(conf, "tls.key", value)?),
-            _ => return Err(ConfigError::UnknownKey(format!("{}.tls.{}", env, key)))
+            _ => return Err(ConfigError::UnknownKey(format!("{}.tls.{}", env, key))),
         }
     }
 
     if let (Some(certs), Some(key)) = (certs_path, key_path) {
         Ok((certs, key))
     } else {
-        Err(conf.bad_type(name, "a table with missing entries",
-                            "a table with `certs` and `key` entries"))
+        Err(conf.bad_type(
+            name,
+            "a table with missing entries",
+            "a table with `certs` and `key` entries",
+        ))
     }
 }
 
 pub fn limits(conf: &Config, name: &str, value: &Value) -> Result<Limits> {
-    let table = value.as_table()
+    let table = value
+        .as_table()
         .ok_or_else(|| conf.bad_type(name, value.type_str(), "a table"))?;
 
     let mut limits = Limits::default();

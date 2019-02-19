@@ -1,13 +1,15 @@
 #![feature(proc_macro_hygiene, decl_macro)]
 
-#[macro_use] extern crate rocket;
+#[macro_use]
+extern crate rocket;
 
-#[cfg(test)] mod tests;
+#[cfg(test)]
+mod tests;
 
 use std::sync::atomic::{AtomicUsize, Ordering};
 
-use rocket::State;
 use rocket::response::content;
+use rocket::State;
 
 struct HitCount(AtomicUsize);
 

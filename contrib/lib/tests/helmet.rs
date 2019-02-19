@@ -6,23 +6,24 @@ extern crate rocket;
 
 #[cfg(feature = "helmet")]
 mod helmet_tests {
-    extern crate time;
     extern crate rocket_contrib;
+    extern crate time;
 
     use rocket;
-    use rocket::http::{Status, uri::Uri};
+    use rocket::http::{uri::Uri, Status};
     use rocket::local::{Client, LocalResponse};
 
     use self::rocket_contrib::helmet::*;
     use self::time::Duration;
 
-    #[get("/")] fn hello() { }
+    #[get("/")]
+    fn hello() {}
 
     macro_rules! assert_header {
         ($response:ident, $name:expr, $value:expr) => {
             match $response.headers().get_one($name) {
                 Some(value) => assert_eq!(value, $value),
-                None => panic!("missing header '{}' with value '{}'", $name, $value)
+                None => panic!("missing header '{}' with value '{}'", $name, $value),
             }
         };
     }
@@ -42,7 +43,7 @@ mod helmet_tests {
             let response = client.get("/").dispatch();
             assert_eq!(response.status(), Status::Ok);
             $closure(response)
-        }}
+        }};
     }
 
     #[test]
@@ -121,17 +122,29 @@ mod helmet_tests {
         let helmet = SpaceHelmet::default()
             .enable(Frame::AllowFrom(allow_uri))
             .enable(XssFilter::EnableReport(report_uri))
-            .enable(ExpectCt::ReportAndEnforce(Duration::seconds(30), enforce_uri));
+            .enable(ExpectCt::ReportAndEnforce(
+                Duration::seconds(30),
+                enforce_uri,
+            ));
 
         dispatch!(helmet, |response: LocalResponse| {
-            assert_header!(response, "X-Frame-Options",
-                           "ALLOW-FROM https://www.google.com");
+            assert_header!(
+                response,
+                "X-Frame-Options",
+                "ALLOW-FROM https://www.google.com"
+            );
 
-            assert_header!(response, "X-XSS-Protection",
-                           "1; report=https://www.google.com");
+            assert_header!(
+                response,
+                "X-XSS-Protection",
+                "1; report=https://www.google.com"
+            );
 
-            assert_header!(response, "Expect-CT",
-                "max-age=30, enforce, report-uri=\"https://www.google.com\"");
+            assert_header!(
+                response,
+                "Expect-CT",
+                "max-age=30, enforce, report-uri=\"https://www.google.com\""
+            );
         });
     }
 }

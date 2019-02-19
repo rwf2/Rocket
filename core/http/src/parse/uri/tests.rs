@@ -1,6 +1,6 @@
-use uri::{Uri, Origin, Authority, Absolute};
 use parse::uri::*;
 use uri::Host::*;
+use uri::{Absolute, Authority, Origin, Uri};
 
 macro_rules! assert_parse_eq {
     ($($from:expr => $to:expr),+) => (
