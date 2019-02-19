@@ -60,6 +60,9 @@ pub struct CORS {
 }
 
 impl CORS {
+    // Config/setup methods
+    // ====================
+
     /// Helper to create empty CORS object.
     fn new(allow_origin: AllowedOrigin) -> CORS {
         CORS {
@@ -190,33 +193,33 @@ impl CORS {
         self
     }
 
+    // Request handling methods
+    // ========================
+
     /// Handle a preflight CORS request (method OPTIONS)
     fn handle_preflight(&self, request: &Request, response: &mut Response) {
         // Only handle requests that weren't handled explicitally.
         if response.status() != Status::NotFound {
             return;
         }
-        let headers = request.headers();
-        // Our response object
+
+        // swap out the old response and drop it
         let mut cors_response = Response::build().status(Status::Ok).finalize();
-        // If the request doesn't match our allowed requests, return a client failure.
-        if !self.check_origin(request, &mut cors_response) {
-            return;
-        }
-        if !self.check_method(request, &mut cors_response) {
-            return;
-        }
-        if !self.check_headers(request, &mut cors_response) {
-            return;
-        }
         mem::swap(&mut cors_response, response);
-        if self.allow_credentials {
-            response.set_raw_header("Access-Control-Allow-Credentails", "true");
+        drop(cors_response);
+
+        // Run check and set the CORS headers.
+        if !self.check_origin(request, response) {
+            return;
         }
-        if self.expose_headers.len() > 0 {
-            set_exposed_headers_header(response, &self.expose_headers);
+        if !self.check_method(request, response) {
+            return;
         }
-        // drop old response.
+        if !self.check_headers(request, response) {
+            return;
+        }
+        self.add_allow_credentials(response);
+        self.add_allow_headers(response);
     }
 
     /// Modify a standard request to add CORS.
@@ -224,6 +227,8 @@ impl CORS {
         if !self.check_origin(request, response) {
             return;
         }
+        self.add_allow_credentials(response);
+        self.add_allow_headers(response);
     }
 
     /// If the origin check passes, add the related header, else replace with an error response.
@@ -283,6 +288,18 @@ impl CORS {
             set_headers_header(response, &self.allow_headers);
         }
         true
+    }
+
+    fn add_allow_credentials(&self, response: &mut Response) {
+        if self.allow_credentials {
+            response.set_raw_header("Access-Control-Allow-Credentials", "true");
+        }
+    }
+
+    fn add_allow_headers(&self, response: &mut Response) {
+        if self.expose_headers.len() > 0 {
+            set_exposed_headers_header(response, &self.expose_headers);
+        }
     }
 }
 
