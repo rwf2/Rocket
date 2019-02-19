@@ -37,6 +37,20 @@ macro_rules! assert_no_parse {
     ($($from:expr),+,) => (assert_no_parse!($($from),+))
 }
 
+macro_rules! assert_parses {
+    ($($from:expr),+) => (
+        $(
+            if let Err(e) = from_str($from) {
+                println!("{:?} not parsed!", $from);
+                panic!("Error is: {:?}", e);
+            }
+        )+
+    );
+
+    ($($from:expr),+,) => (assert_parses!($($from),+))
+}
+
+
 macro_rules! assert_displays_eq {
     ($($string:expr),+) => (
         $(
@@ -89,12 +103,20 @@ fn bad_parses() {
     assert_no_parse!("://z7:77777777777777777777777777777`77777777777");
 }
 
-
-// #[test]
-// fn bad_parses_2() {
-//     assert_parse_eq!("/alias?cost={cost}" => uri_origin((0, 6), None));
-// }
-
+#[test]
+fn test_parse_issue_924_samples() {
+    assert_parses!("/path?param={value}", "/path/?param={value}", "/some/path/?param={forgot-to-replace-placeholder}");
+    assert_parses!("/path?param={value}&onemore={value}");
+    assert_parses!("/some/path/?tags=[]", "/some/path/?tags=[rocket,is,perfect]");
+    assert_parses!("/some/path/?tags=[rocket,is,perfect]&users={arenot}#headline");
+    assert_parses!("/rocket/@user/");
+    assert_parses!("/rocket/@user/?tags=[rocket,%F0%9F%98%8B]");
+    assert_parses!("/rocket/?username=@sergio&tags=[rocket,%F0%9F%98%8B]");
+    assert_parses!("/rocket/?Key+With+Spaces=value+too");
+    assert_no_parse!("/rocket/?Key+With+\'");
+    assert_no_parse!("/rocket/?query=>5");
+    assert_parses!("/rocket/?query=%3E5");
+}
 
 #[test]
 fn single_byte() {
