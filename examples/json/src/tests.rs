@@ -1,4 +1,4 @@
-use rocket;
+use super::rocket;
 use rocket::local::Client;
 use rocket::http::{Status, ContentType};
 
