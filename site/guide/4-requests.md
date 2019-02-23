@@ -276,15 +276,9 @@ string contains all of the static components of a route's query string, the
 request will be routed to that route. This allows for optional parameters,
 validating even when a parameter is missing.
 
-More specifically, types that return `Some` from their
-[`FromFormValue::default()`] implementations will validate even when a value for
-the given parameter is missing, using the value returned from the `default()`
-method as the parameter's value. On such type is `Option<T>`, which returns
-`Some(None)` from its `default()` implementation, indicating that `None` should
-be used in case the parameter is missing. By using a type of `Option<T>` for a
-query parameter, `Some(T)` will be returned only when the parameter is present
-and represents a valid `T`. In all other cases, `None` will be returned. A route
-using `Option<T>` looks as follows:
+To achieve this, use `Option<T>` as a type for your field and return `Some(None)` in
+[`FromFormValue::default()`]. This will make sure that your field is set to `None`
+whenever the query parameter is missing. A route using `Option<T>` looks as follows:
 
 ```rust
 #[get("/hello?wave&<name>")]
