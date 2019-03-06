@@ -38,6 +38,7 @@ const QUERY_CHARS: [u8; 256] = [
         0,     0,     0,  b'!',     0,     0,  b'$',  b'%',  b'&',     0, //  3x
      b'(',  b')',  b'*',  b'+',  b',',  b'-',  b'.',  b'/',  b'0',  b'1', //  4x
      b'2',  b'3',  b'4',  b'5',  b'6',  b'7',  b'8',  b'9',  b':',  b';', //  5x
+//      <             > (we allow this chars: while they are not valid in URLs but in URI)
         1,  b'=',     1,  b'?',  b'@',  b'A',  b'B',  b'C',  b'D',  b'E', //  6x
      b'F',  b'G',  b'H',  b'I',  b'J',  b'K',  b'L',  b'M',  b'N',  b'O', //  7x
      b'P',  b'Q',  b'R',  b'S',  b'T',  b'U',  b'V',  b'W',  b'X',  b'Y', //  8x

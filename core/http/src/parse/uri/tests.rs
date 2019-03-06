@@ -114,9 +114,13 @@ fn test_parse_issue_924_samples() {
     assert_parses!("/rocket/?username=@sergio&tags=[rocket,%F0%9F%98%8B]");
     assert_parses!("/rocket/?Key+With+Spaces=value+too");
     assert_no_parse!("/rocket/?Key+With+\'");
-    assert_no_parse!("/rocket/?query=>5");
     assert_parses!("/rocket/?query=%3E5");
 }
+
+// #[test]
+// fn test_parse_issue_924_angular_brackets() {
+//     assert_no_parse!("/rocket/?query=>5");
+// }
 
 #[test]
 fn single_byte() {
