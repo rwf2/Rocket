@@ -2,7 +2,7 @@ use pear::parsers::*;
 use pear::{parser, switch};
 
 use uri::{Uri, Origin, Authority, Absolute, Host};
-use parse::uri::tables::{is_reg_name_char, is_pchar, is_pchar_or_rchar};
+use parse::uri::tables::{is_reg_name_char, is_pchar, is_pchar_or_rchar, is_query_char};
 use parse::uri::RawInput;
 use parse::IndexedBytes;
 
@@ -30,23 +30,24 @@ crate fn uri<'a>(input: &mut RawInput<'a>) -> Result<'a, Uri<'a>> {
 
 #[parser]
 crate fn origin<'a>(input: &mut RawInput<'a>) -> Result<'a, Origin<'a>> {
-    (peek(b'/')?, path_and_query(is_pchar)?).1
+    (peek(b'/')?, path_and_query(is_pchar, is_query_char)?).1
 }
 
 #[parser]
 crate fn rocket_route_origin<'a>(input: &mut RawInput<'a>) -> Result<'a, Origin<'a>> {
-    (peek(b'/')?, path_and_query(is_pchar_or_rchar)?).1
+    (peek(b'/')?, path_and_query(is_pchar_or_rchar, is_query_char)?).1
 }
 
 #[parser]
-fn path_and_query<'a, F>(input: &mut RawInput<'a>, is_good_char: F) -> Result<'a, Origin<'a>>
-    where F: Fn(u8) -> bool + Copy
+fn path_and_query<'a, F, Fq>(input: &mut RawInput<'a>, is_good_char: F, is_query_char: Fq) -> Result<'a, Origin<'a>>
+    where F: Fn(u8) -> bool + Copy, Fq: Fn(u8) -> bool + Copy
 {
     let path = take_while(is_good_char)?;
 
+    // todo:
     // FIXME(rustc): We should be able to use `pear_try`, but rustc...is broken.
     let query = switch! {
-        eat(b'?') => Some(take_while(|c| is_good_char(c) || c == b'?')?),
+        eat(b'?') => Some(take_while(|c| is_query_char(c) || c == b'?')?),
         _ => None
     };
 
@@ -116,10 +117,10 @@ fn absolute<'a>(
                 }
             };
 
-            let path_and_query = pear_try!(path_and_query(is_pchar));
+            let path_and_query = pear_try!(path_and_query(is_pchar, is_query_char));
             (Some(authority), path_and_query)
         },
-        eat(b':') => (None, Some(path_and_query(is_pchar)?)),
+        eat(b':') => (None, Some(path_and_query(is_pchar, is_query_char)?)),
         _ => return Err(pear_error!("expected ':' but none was found"))
     };
 

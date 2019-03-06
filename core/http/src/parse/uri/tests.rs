@@ -108,7 +108,7 @@ fn test_parse_issue_924_samples() {
     assert_parses!("/path?param={value}", "/path/?param={value}", "/some/path/?param={forgot-to-replace-placeholder}");
     assert_parses!("/path?param={value}&onemore={value}");
     assert_parses!("/some/path/?tags=[]", "/some/path/?tags=[rocket,is,perfect]");
-    assert_parses!("/some/path/?tags=[rocket,is,perfect]&users={arenot}#headline");
+    assert_parses!("/some/path/?tags=[rocket,is,perfect]&clients={arenot}");
     assert_parses!("/rocket/@user/");
     assert_parses!("/rocket/@user/?tags=[rocket,%F0%9F%98%8B]");
     assert_parses!("/rocket/?username=@sergio&tags=[rocket,%F0%9F%98%8B]");
