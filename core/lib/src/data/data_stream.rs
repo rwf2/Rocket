@@ -1,7 +1,7 @@
 use std::pin::Pin;
 use std::task::{Context, Poll};
 
-use tokio_io::AsyncRead;
+use tokio::io::AsyncRead;
 
 // TODO.async: Consider storing the real type here instead of a Box to avoid
 // the dynamic dispatch

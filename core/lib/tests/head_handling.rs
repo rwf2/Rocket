@@ -22,7 +22,7 @@ fn other() -> content::Json<&'static str> {
 mod head_handling_tests {
     use super::*;
 
-    use tokio_io::{AsyncRead, AsyncReadExt};
+    use tokio::io::{AsyncRead, AsyncReadExt};
 
     use rocket::Route;
     use rocket::local::Client;

@@ -119,16 +119,16 @@ impl Rocket {
         tx: oneshot::Sender<hyper::Response<hyper::Body>>,
     ) -> impl Future<Output = io::Result<()>> + 'r {
         async move {
-            let mut hyp_res = hyper::Response::builder();
-            hyp_res.status(response.status().code);
+            let mut hyp_res = hyper::Response::builder()
+                .status(response.status().code);
 
             for header in response.headers().iter() {
                 let name = header.name.as_str();
                 let value = header.value.as_bytes();
-                hyp_res.header(name, value);
+                hyp_res = hyp_res.header(name, value);
             }
 
-            let send_response = move |mut hyp_res: hyper::ResponseBuilder, body| -> io::Result<()> {
+            let send_response = move |hyp_res: hyper::ResponseBuilder, body| -> io::Result<()> {
                 let response = hyp_res.body(body).map_err(|e| io::Error::new(io::ErrorKind::Other, e))?;
                 tx.send(response).expect("channel receiver should not be dropped");
                 Ok(())
@@ -136,15 +136,15 @@ impl Rocket {
 
             match response.body() {
                 None => {
-                    hyp_res.header(header::CONTENT_LENGTH, "0");
+                    hyp_res = hyp_res.header(header::CONTENT_LENGTH, "0");
                     send_response(hyp_res, hyper::Body::empty())?;
                 }
                 Some(Body::Sized(body, size)) => {
-                    hyp_res.header(header::CONTENT_LENGTH, size.to_string());
+                    hyp_res = hyp_res.header(header::CONTENT_LENGTH, size.to_string());
                     let (mut sender, hyp_body) = hyper::Body::channel();
                     send_response(hyp_res, hyp_body)?;
 
-                    let mut stream = body.into_chunk_stream(4096);
+                    let mut stream = body.into_bytes_stream(4096);
                     while let Some(next) = stream.next().await {
                         sender.send_data(next?).await.map_err(|e| io::Error::new(io::ErrorKind::Other, e))?;
                     }
@@ -155,7 +155,7 @@ impl Rocket {
                     let (mut sender, hyp_body) = hyper::Body::channel();
                     send_response(hyp_res, hyp_body)?;
 
-                    let mut stream = body.into_chunk_stream(chunk_size.try_into().expect("u64 -> usize overflow"));
+                    let mut stream = body.into_bytes_stream(chunk_size.try_into().expect("u64 -> usize overflow"));
                     while let Some(next) = stream.next().await {
                         sender.send_data(next?).await.map_err(|e| io::Error::new(io::ErrorKind::Other, e))?;
                     }
@@ -824,29 +824,24 @@ impl Rocket {
         });
 
         #[cfg(feature = "ctrl_c_shutdown")]
-        match tokio::net::signal::ctrl_c() {
-            Ok(mut ctrl_c) => {
-                runtime.spawn(async move {
-                    // Stop listening for `ctrl_c` if the server shuts down
-                    // a different way to avoid waiting forever.
-                    futures_util::future::select(
-                        ctrl_c.next(),
-                        cancel_ctrl_c_listener_receiver,
-                    ).await;
-
-                    // Request the server shutdown.
-                    shutdown_handle.shutdown();
-                });
-            },
-            Err(err) => {
-                // Signal handling isn't strictly necessary, so we can skip it
-                // if necessary. It's a good idea to let the user know we're
-                // doing so in case they are expecting certain behavior.
-                let message = "Not listening for shutdown keybinding.";
-                warn!("{}", Paint::yellow(message));
-                info_!("Error: {}", err);
-            },
-        }
+        runtime.spawn(async move {
+            futures_util::select!(
+                a = tokio::signal::ctrl_c => {
+                    match a {
+                        Ok(_) => shutdown_handle.shutdown(),
+                        Err(err) => {
+                            // Signal handling isn't strictly necessary, so we can skip it
+                            // if necessary. It's a good idea to let the user know we're
+                            // doing so in case they are expecting certain behavior.
+                            let message = "Not listening for shutdown keybinding.";
+                            warn!("{}", Paint::yellow(message));
+                            info_!("Error: {}", err);
+                        },
+                    }
+                },
+                _ = cancel_ctrl_c_listener_receiver => shutdown_handle.shutdown(),
+            );
+        });
 
         server.boxed()
     }
@@ -873,8 +868,8 @@ impl Rocket {
     pub fn launch(self) -> Result<(), crate::error::Error> {
         // TODO.async What meaning should config.workers have now?
         // Initialize the tokio runtime
-        let runtime = tokio::runtime::Builder::new()
-            .core_threads(self.config.workers as usize)
+        let mut runtime = tokio::runtime::Builder::new()
+            .num_threads(self.config.workers as usize)
             .build()
             .expect("Cannot build runtime!");
 

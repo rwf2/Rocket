@@ -18,7 +18,7 @@ use std::ops::{Deref, DerefMut};
 use std::io;
 use std::iter::FromIterator;
 
-use tokio_io::AsyncReadExt;
+use tokio::io::AsyncReadExt;
 
 use rocket::request::Request;
 use rocket::outcome::Outcome::*;

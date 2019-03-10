@@ -7,7 +7,7 @@ use std::pin::Pin;
 use std::sync::Arc;
 use std::task::{Context, Poll};
 
-use tokio_net::tcp::{TcpListener, TcpStream};
+use tokio::net::{TcpListener, TcpStream};
 
 use tokio_rustls::{TlsAcceptor, server::TlsStream};
 use tokio_rustls::rustls;
@@ -91,7 +91,7 @@ impl Listener for TlsListener {
                 TlsListenerState::Listening => {
                     match self.listener.poll_accept(cx) {
                         Poll::Pending => return Poll::Pending,
-                        Poll::Ready(Ok(stream)) => {
+                        Poll::Ready(Ok((stream, _))) => {
                             self.state = TlsListenerState::Accepting(Box::pin(self.acceptor.accept(stream)));
                         }
                         Poll::Ready(Err(e)) => {

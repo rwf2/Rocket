@@ -1,6 +1,6 @@
 use std::fmt::{self, Debug};
 
-use tokio_io::AsyncRead;
+use tokio::io::AsyncRead;
 
 use crate::request::Request;
 use crate::response::{Response, Responder, ResultFuture, DEFAULT_CHUNK_SIZE};

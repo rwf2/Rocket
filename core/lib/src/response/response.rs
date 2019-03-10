@@ -3,7 +3,7 @@ use std::borrow::Cow;
 use std::future::Future;
 use std::pin::Pin;
 
-use tokio_io::{AsyncRead, AsyncReadExt};
+use tokio::io::{AsyncRead, AsyncReadExt};
 use futures_util::future::FutureExt;
 
 use crate::response::{Responder, ResultFuture};

@@ -27,11 +27,10 @@ ctrl_c_shutdown = ["tokio/signal"]
 [dependencies]
 rocket_codegen = { version = "0.5.0-dev", path = "../codegen" }
 rocket_http = { version = "0.5.0-dev", path = "../http" }
-futures-core-preview = "0.3.0-alpha.19"
-futures-channel-preview = "0.3.0-alpha.19"
-futures-util-preview = "0.3.0-alpha.19"
-tokio = "=0.2.0-alpha.6"
-tokio-io = "=0.2.0-alpha.6"
+futures-core = "0.3"
+futures-channel = "0.3"
+futures-util = "0.3"
+tokio = { version = "0.2", features = ["fs", "signal", "io-util"] }
 yansi = "0.5"
 log = { version = "0.4", features = ["std"] }
 toml = "0.4.7"
@@ -48,7 +47,5 @@ yansi = "0.5"
 version_check = "0.9.1"
 
 [dev-dependencies]
-futures-preview = "0.3.0-alpha.19"
-futures-tokio-compat = { git = "https://github.com/Nemo157/futures-tokio-compat", rev = "8a93702" }
 # TODO: Find a way to not depend on this.
 lazy_static = "1.0"

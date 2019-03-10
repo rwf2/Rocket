@@ -4,15 +4,15 @@ use std::io;
 use std::net::SocketAddr;
 use std::pin::Pin;
 use std::task::{Context, Poll};
-use std::time::{Duration, Instant};
+use std::time::Duration;
 
 use hyper::server::accept::Accept;
 
 use log::{debug, error};
 
-use tokio_io::{AsyncRead, AsyncWrite};
-use tokio_timer::Delay;
-use tokio_net::tcp::{TcpListener, TcpStream};
+use tokio::io::{AsyncRead, AsyncWrite};
+use tokio::time::Delay;
+use tokio::net::{TcpListener, TcpStream};
 
 // TODO.async: 'Listener' and 'Connection' provide common enough functionality
 // that they could be introduced in upstream libraries.
@@ -100,8 +100,7 @@ impl<L: Listener> Incoming<L> {
                         error!("accept error: {}", e);
 
                         // Sleep for the specified duration
-                        let delay = Instant::now() + duration;
-                        let mut error_delay = tokio_timer::delay(delay);
+                        let mut error_delay = tokio::time::delay_for(duration);
 
                         match Pin::new(&mut error_delay).poll(cx) {
                             Poll::Ready(()) => {

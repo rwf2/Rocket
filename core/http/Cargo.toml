@@ -23,16 +23,14 @@ private-cookies = ["cookie/secure"]
 smallvec = "0.6"
 percent-encoding = "1"
 # TODO.async: stop using stream-unstable
-hyper = { version = "=0.13.0-alpha.4", default-features = false, features = ["unstable-stream"] }
-http = "0.1.17"
+hyper = { version = "0.13", default-features = false, features = ["stream"] }
+http = "0.2"
 mime = "0.3.13"
 time = "0.1"
 indexmap = "1.0"
 state = "0.4"
-tokio-rustls = { version = "0.12.0-alpha.4", optional = true }
-tokio-io = "=0.2.0-alpha.6"
-tokio-net = { version = "=0.2.0-alpha.6", features = ["tcp"] }
-tokio-timer = "=0.3.0-alpha.6"
+tokio-rustls = { version = "0.12", optional = true }
+tokio = { version = "0.2", features = ["net", "time"] }
 cookie = { git = "https://github.com/SergioBenitez/cookie-rs", rev = "e0f3e6c", features = ["percent-encode"] }
 pear = "0.1"
 unicode-xid = "0.1"

@@ -3,22 +3,22 @@ use std::pin::Pin;
 use std::task::{Poll, Context};
 
 use futures_core::{ready, future::BoxFuture, stream::Stream};
-use tokio_io::{AsyncRead, AsyncReadExt as _};
+use tokio::io::{AsyncRead, AsyncReadExt as _};
 
 use crate::http::hyper;
-use hyper::{Chunk, Payload};
+use hyper::{Bytes, HttpBody};
 
-pub struct IntoChunkStream<R> {
+pub struct IntoBytesStream<R> {
     inner: R,
     buf_size: usize,
     buffer: Vec<u8>,
 }
 
 // TODO.async: Verify correctness of this implementation.
-impl<R> Stream for IntoChunkStream<R>
+impl<R> Stream for IntoBytesStream<R>
     where R: AsyncRead + Unpin
 {
-    type Item = Result<Chunk, io::Error>;
+    type Item = Result<Bytes, io::Error>;
 
     fn poll_next(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>>{
         assert!(self.buffer.len() == self.buf_size);
@@ -32,15 +32,15 @@ impl<R> Stream for IntoChunkStream<R>
             Poll::Ready(Ok(n)) => {
                 let mut next = std::mem::replace(buffer, vec![0; buf_size]);
                 next.truncate(n);
-                Poll::Ready(Some(Ok(Chunk::from(next))))
+                Poll::Ready(Some(Ok(Bytes::from(next))))
             }
         }
     }
 }
 
 pub trait AsyncReadExt: AsyncRead {
-    fn into_chunk_stream(self, buf_size: usize) -> IntoChunkStream<Self> where Self: Sized {
-        IntoChunkStream { inner: self, buf_size, buffer: vec![0; buf_size] }
+    fn into_bytes_stream(self, buf_size: usize) -> IntoBytesStream<Self> where Self: Sized {
+        IntoBytesStream { inner: self, buf_size, buffer: vec![0; buf_size] }
     }
 
     // TODO.async: Verify correctness of this implementation.
@@ -72,7 +72,7 @@ pub struct AsyncReadBody {
 
 enum AsyncReadBodyState {
     Pending,
-    Partial(Cursor<Chunk>),
+    Partial(Cursor<Bytes>),
     Done,
 }
 
@@ -88,7 +88,7 @@ impl AsyncRead for AsyncReadBody {
             match self.state {
                 AsyncReadBodyState::Pending => {
                     match ready!(Pin::new(&mut self.inner).poll_data(cx)) {
-                        Some(Ok(chunk)) => self.state = AsyncReadBodyState::Partial(Cursor::new(chunk)),
+                        Some(Ok(bytes)) => self.state = AsyncReadBodyState::Partial(Cursor::new(bytes)),
                         Some(Err(e)) => return Poll::Ready(Err(io::Error::new(io::ErrorKind::Other, e))),
                         None => self.state = AsyncReadBodyState::Done,
                     }

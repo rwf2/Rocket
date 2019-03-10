@@ -5,11 +5,10 @@
 //! while necessary.
 
 #[doc(hidden)] pub use hyper::{Body, Request, Response, Server};
-#[doc(hidden)] pub use hyper::body::{Payload, Sender as BodySender};
+#[doc(hidden)] pub use hyper::body::{Bytes, HttpBody, Sender as BodySender};
 #[doc(hidden)] pub use hyper::error::Error;
-#[doc(hidden)] pub use hyper::service::{make_service_fn, service_fn, MakeService, Service};
+#[doc(hidden)] pub use hyper::service::{make_service_fn, service_fn, Service};
 
-#[doc(hidden)] pub use hyper::Chunk;
 #[doc(hidden)] pub use http::header::HeaderMap;
 #[doc(hidden)] pub use http::header::HeaderName as HeaderName;
 #[doc(hidden)] pub use http::header::HeaderValue as HeaderValue;

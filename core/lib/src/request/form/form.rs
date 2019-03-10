@@ -1,6 +1,6 @@
 use std::ops::Deref;
 
-use tokio_io::AsyncReadExt;
+use tokio::io::AsyncReadExt;
 
 use crate::outcome::Outcome::*;
 use crate::request::{Request, form::{FromForm, FormItems, FormDataError}};
