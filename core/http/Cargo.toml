@@ -16,7 +16,7 @@ edition = "2018"
 
 [features]
 default = []
-tls = ["rustls", "hyper-sync-rustls"]
+tls = ["tokio-rustls"]
 private-cookies = ["cookie/secure"]
 
 [dependencies]
@@ -27,16 +27,11 @@ http = "0.1.17"
 mime = "0.3.13"
 time = "0.1"
 indexmap = "1.0"
-rustls = { version = "0.15", optional = true }
 state = "0.4"
+tokio-rustls = { version = "0.9.2", optional = true }
 cookie = { version = "0.12", features = ["percent-encode"] }
 pear = "0.1"
 unicode-xid = "0.1"
-
-[dependencies.hyper-sync-rustls]
-version = "=0.3.0-rc.5"
-features = ["server"]
-optional = true
 
 [dev-dependencies]
 rocket = { version = "0.5.0-dev", path = "../lib" }

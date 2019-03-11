@@ -1,5 +1,7 @@
 //! Types and traits for request and error handlers and their return values.
 
+use futures::future::Future;
+
 use crate::data::Data;
 use crate::request::Request;
 use crate::response::{self, Response, Responder};
@@ -8,6 +10,9 @@ use crate::outcome;
 
 /// Type alias for the `Outcome` of a `Handler`.
 pub type Outcome<'r> = outcome::Outcome<Response<'r>, Status, Data>;
+
+/// Type alias for the unwieldy `Handler` return type
+pub type HandlerFuture<'r> = std::pin::Pin<Box<dyn Future<Output = Outcome<'r>> + Send + 'r>>;
 
 /// Trait implemented by types that can handle requests.
 ///
@@ -142,7 +147,7 @@ pub trait Handler: Cloneable + Send + Sync + 'static {
     /// a response. Otherwise, if the return value is `Forward(Data)`, the next
     /// matching route is attempted. If there are no other matching routes, the
     /// `404` error catcher is invoked.
-    fn handle<'r>(&self, request: &'r Request<'_>, data: Data) -> Outcome<'r>;
+    fn handle<'r>(&self, request: &'r Request<'_>, data: Data) -> HandlerFuture<'r>;
 }
 
 /// Unfortunate but necessary hack to be able to clone a `Box<Handler>`.
@@ -170,16 +175,18 @@ impl Clone for Box<dyn Handler> {
 }
 
 impl<F: Clone + Sync + Send + 'static> Handler for F
-    where for<'r> F: Fn(&'r Request<'_>, Data) -> Outcome<'r>
+    where for<'r> F: Fn(&'r Request<'_>, Data) -> HandlerFuture<'r>
 {
     #[inline(always)]
-    fn handle<'r>(&self, req: &'r Request<'_>, data: Data) -> Outcome<'r> {
+    fn handle<'r>(&self, req: &'r Request<'_>, data: Data) -> HandlerFuture<'r> {
         self(req, data)
     }
 }
 
 /// The type of an error handler.
-pub type ErrorHandler = for<'r> fn(&'r Request<'_>) -> response::Result<'r>;
+pub type ErrorHandler = for<'r> fn(&'r Request<'_>) -> ErrorHandlerFuture<'r>;
+
+pub type ErrorHandlerFuture<'r> = std::pin::Pin<Box<dyn Future<Output = response::Result<'r>> + Send + 'r>>;
 
 impl<'r> Outcome<'r> {
     /// Return the `Outcome` of response to `req` from `responder`.

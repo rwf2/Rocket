@@ -3,6 +3,7 @@
 #![feature(proc_macro_hygiene)]
 #![feature(crate_visibility_modifier)]
 #![feature(label_break_value)]
+#![feature(async_await)]
 
 #![recursion_limit="256"]
 

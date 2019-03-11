@@ -1,18 +1,20 @@
 use std::collections::HashMap;
 use std::convert::From;
-use std::str::{from_utf8, FromStr};
 use std::cmp::min;
+use std::io;
 use std::mem;
 use std::net::ToSocketAddrs;
 use std::sync::Arc;
+use std::pin::Pin;
 
-use futures::{Future, Stream};
-use futures::future::{self, FutureResult};
+use futures::compat::Compat;
+use futures::future::{Future, FutureExt, TryFutureExt};
+use futures::io::AsyncReadExt;
 
 use yansi::Paint;
 use state::Container;
 use tokio::net::TcpListener;
-use tokio::prelude::{Future as _, Stream as _};
+use tokio::prelude::Stream as _;
 
 #[cfg(feature = "tls")] use crate::http::tls::TlsAcceptor;
 
@@ -58,13 +60,13 @@ impl std::ops::Deref for RocketHyperService {
 impl<Ctx> hyper::MakeService<Ctx> for RocketHyperService {
     type ReqBody = hyper::Body;
     type ResBody = hyper::Body;
-    type Error = hyper::Error;
+    type Error = io::Error;
     type Service = RocketHyperService;
-    type Future = FutureResult<Self::Service, Self::MakeError>;
+    type Future = Compat<futures::future::Ready<Result<Self::Service, Self::MakeError>>>;
     type MakeError = Self::Error;
 
     fn make_service(&mut self, _: Ctx) -> Self::Future {
-        future::ok(RocketHyperService { rocket: self.rocket.clone() })
+        futures::future::ok(RocketHyperService { rocket: self.rocket.clone() }).compat()
     }
 }
 
@@ -72,8 +74,8 @@ impl<Ctx> hyper::MakeService<Ctx> for RocketHyperService {
 impl hyper::Service for RocketHyperService {
     type ReqBody = hyper::Body;
     type ResBody = hyper::Body;
-    type Error = hyper::Error;
-    type Future = Box<dyn future::Future<Item = hyper::Response<Self::ResBody>, Error = Self::Error> + Send>;
+    type Error = io::Error;
+    type Future = Compat<Pin<Box<dyn Future<Output = Result<hyper::Response<Self::ResBody>, Self::Error>> + Send>>>;
 
     // This function tries to hide all of the Hyper-ness from Rocket. It
     // essentially converts Hyper types into Rocket types, then calls the
@@ -84,44 +86,120 @@ impl hyper::Service for RocketHyperService {
         &mut self,
         hyp_req: hyper::Request<Self::ReqBody>,
     ) -> Self::Future {
-        let (parts, body) = hyp_req.into_parts();
+        let rocket = self.rocket.clone();
+        async move {
+            // Get all of the information from Hyper.
+            let (h_parts, h_body) = hyp_req.into_parts();
 
-        // Convert the Hyper request into a Rocket request.
-        let req_res = Request::from_hyp(&self.config, &self.state, &parts);
-        let mut req = match req_res {
-            Ok(req) => req,
-            Err(e) => {
-                error!("Bad incoming request: {}", e);
-                // TODO: We don't have a request to pass in, so we just
-                // fabricate one. This is weird. We should let the user know
-                // that we failed to parse a request (by invoking some special
-                // handler) instead of doing this.
-                let dummy = Request::new(&self.config, &self.state, Method::Get, Origin::dummy());
-                let r = self.handle_error(Status::BadRequest, &dummy);
-                return Box::new(future::ok(hyper::Response::from(r)));
-            }
-        };
+            // TODO.async: Get the client address somehow.
+            let h_addr = "0.0.0.0:0".parse().expect("socket addr");
 
-        let this = self.clone();
+            // Convert the Hyper request into a Rocket request.
+            let req_res = Request::from_hyp(&rocket, h_parts.method, h_parts.headers, h_parts.uri, h_addr);
+            let mut req = match req_res {
+                Ok(req) => req,
+                Err(e) => {
+                    error!("Bad incoming request: {}", e);
+                    // TODO: We don't have a request to pass in, so we just
+                    // fabricate one. This is weird. We should let the user know
+                    // that we failed to parse a request (by invoking some special
+                    // handler) instead of doing this.
+                    let dummy = Request::new(&rocket, Method::Get, Origin::dummy());
+                    let r = rocket.handle_error(Status::BadRequest, &dummy).await;
+                    return rocket.issue_response(r).await;
+                }
+            };
 
-        let response = body.concat2()
-            .map(move |chunk| {
-                let body = chunk.iter().rev().cloned().collect::<Vec<u8>>();
-                let data = Data::new(body);
+            // Retrieve the data from the hyper body.
+            let data = Data::from_hyp(h_body).await;
 
-                // TODO: Due to life time constraints the clone of the service has been made.
-                // TODO: It should not be necessary but it is required to find a better solution
-                let mut req = Request::from_hyp(&this.config, &this.state, &parts).unwrap();
-                // Dispatch the request to get a response, then write that response out.
-                let response = this.dispatch(&mut req, data);
-                hyper::Response::from(response)
-            });
-
-        Box::new(response)
+            // Dispatch the request to get a response, then write that response out.
+            let r = rocket.dispatch(&mut req, data).await;
+            rocket.issue_response(r).await
+        }.boxed().compat()
     }
 }
 
-impl RocketHyperService {
+impl Rocket {
+    // TODO.async: Reconsider io::Result
+    #[inline]
+    fn issue_response<'r>(&self, response: Response<'r>) -> impl Future<Output = io::Result<hyper::Response<hyper::Body>>> + 'r {
+        let result = self.write_response(response);
+        Box::pin(async move {
+            match result.await {
+                Ok(r) => {
+                    info_!("{}", Paint::green("Response succeeded."));
+                    Ok(r)
+                }
+                Err(e) => {
+                    error_!("Failed to write response: {:?}.", e);
+                    Err(e)
+                }
+            }
+        })
+    }
+
+    #[inline]
+    fn write_response<'r>(
+        &self,
+        mut response: Response<'r>,
+    ) -> impl Future<Output = io::Result<hyper::Response<hyper::Body>>> + 'r {
+        Box::pin(async move {
+            let mut hyp_res = hyper::Response::builder();
+            hyp_res.status(response.status().code);
+
+            for header in response.headers().iter() {
+                let name = header.name.as_str();
+                let value = header.value.as_bytes();
+                hyp_res.header(name, value);
+            }
+
+            let body = match response.body() {
+                None => {
+                    hyp_res.header(header::CONTENT_LENGTH, "0");
+                    hyper::Body::empty()
+                }
+                Some(Body::Sized(body, size)) => {
+                    hyp_res.header(header::CONTENT_LENGTH, size.to_string());
+
+                    // TODO.async: Stream the data instead of buffering.
+                    // TODO.async: Possible truncation (u64 -> usize)
+                    let mut buffer = Vec::with_capacity(size as usize);
+                    body.read_to_end(&mut buffer).await?;
+                    hyper::Body::from(buffer)
+                }
+                Some(Body::Chunked(body, _chunk_size)) => {
+    //                // This _might_ happen on a 32-bit machine!
+    //                if chunk_size > (usize::max_value() as u64) {
+    //                    let msg = "chunk size exceeds limits of usize type";
+    //                    return Err(io::Error::new(io::ErrorKind::Other, msg));
+    //                }
+    //
+    //                // The buffer stores the current chunk being written out.
+    //                let mut buffer = vec![0; chunk_size as usize];
+    //                let mut stream = hyp_res.start()?;
+    //                loop {
+    //                    match body.read_max(&mut buffer)? {
+    //                        0 => break,
+    //                        n => stream.write_all(&buffer[..n])?,
+    //                    }
+    //                }
+    //
+    //                stream.end()
+
+                    // TODO.async: Stream the data instead of buffering.
+                    let mut buffer = Vec::new();
+                    body.read_to_end(&mut buffer).await?;
+                    hyper::Body::from(buffer)
+                }
+            };
+
+            Ok(hyp_res.body(body).map_err(|e| io::Error::new(io::ErrorKind::Other, e))?)
+        })
+    }
+}
+
+impl Rocket {
     /// Preprocess the request for Rocket things. Currently, this means:
     ///
     ///   * Rewriting the method in the request if _method form field exists.
@@ -135,7 +213,7 @@ impl RocketHyperService {
         let is_form = req.content_type().map_or(false, |ct| ct.is_form());
 
         if is_form && req.method() == Method::Post && data_len >= min_len {
-            if let Ok(form) = from_utf8(&data.peek()[..min(data_len, max_len)]) {
+            if let Ok(form) = std::str::from_utf8(&data.peek()[..min(data_len, max_len)]) {
                 let method: Option<Result<Method, _>> = FormItems::from(form)
                     .filter(|item| item.key.as_str() == "_method")
                     .map(|item| item.value.parse())
@@ -149,71 +227,76 @@ impl RocketHyperService {
     }
 
     #[inline]
-    crate fn dispatch<'s, 'r>(
+    crate fn dispatch<'s, 'r: 's>(
         &'s self,
         request: &'r mut Request<'s>,
         data: Data
-    ) -> Response<'r> {
-        info!("{}:", request);
+    ) -> impl Future<Output = Response<'r>> + 's {
+        async move {
+            info!("{}:", request);
 
-        // Do a bit of preprocessing before routing.
-        self.preprocess_request(request, &data);
+            // Do a bit of preprocessing before routing.
+            self.preprocess_request(request, &data);
 
-        // Run the request fairings.
-        self.fairings.handle_request(request, &data);
+            // Run the request fairings.
+            self.fairings.handle_request(request, &data);
 
-        // Remember if the request is a `HEAD` request for later body stripping.
-        let was_head_request = request.method() == Method::Head;
+            // Remember if the request is a `HEAD` request for later body stripping.
+            let was_head_request = request.method() == Method::Head;
 
-        // Route the request and run the user's handlers.
-        let mut response = self.route_and_process(request, data);
+            // Route the request and run the user's handlers.
+            let mut response = self.route_and_process(request, data).await;
 
-        // Add a default 'Server' header if it isn't already there.
-        // TODO: If removing Hyper, write out `Date` header too.
-        if !response.headers().contains("Server") {
-            response.set_header(Header::new("Server", "Rocket"));
+            // Add a default 'Server' header if it isn't already there.
+            // TODO: If removing Hyper, write out `Date` header too.
+            if !response.headers().contains("Server") {
+                response.set_header(Header::new("Server", "Rocket"));
+            }
+
+            // Run the response fairings.
+            self.fairings.handle_response(request, &mut response);
+
+            // Strip the body if this is a `HEAD` request.
+            if was_head_request {
+                response.strip_body();
+            }
+
+            response
         }
-
-        // Run the response fairings.
-        self.fairings.handle_response(request, &mut response);
-
-        // Strip the body if this is a `HEAD` request.
-        if was_head_request {
-            response.strip_body();
-        }
-
-        response
     }
 
     /// Route the request and process the outcome to eventually get a response.
-    fn route_and_process<'s, 'r>(
+    fn route_and_process<'s, 'r: 's>(
         &'s self,
         request: &'r Request<'s>,
         data: Data
-    ) -> Response<'r> {
-        match self.route(request, data) {
-            Outcome::Success(mut response) => {
-                // A user's route responded! Set the cookies.
-                for cookie in request.cookies().delta() {
-                    response.adjoin_header(cookie);
-                }
+    ) -> impl Future<Output = Response<'r>> + Send + 's {
+        async move {
+            match self.route(request, data).await {
+                Outcome::Success(mut response) => {
+                    // A user's route responded! Set the cookies.
+                    for cookie in request.cookies().delta() {
+                        response.adjoin_header(cookie);
+                    }
 
-                response
-            }
-            Outcome::Forward(data) => {
-                // There was no matching route. Autohandle `HEAD` requests.
-                if request.method() == Method::Head {
-                    info_!("Autohandling {} request.", Paint::default("HEAD").bold());
-
-                    // Dispatch the request again with Method `GET`.
-                    request._set_method(Method::Get);
-                    self.route_and_process(request, data)
-                } else {
-                    // No match was found and it can't be autohandled. 404.
-                    self.handle_error(Status::NotFound, request)
+                    response
                 }
+                Outcome::Forward(data) => {
+                    // There was no matching route. Autohandle `HEAD` requests.
+                    if request.method() == Method::Head {
+                        info_!("Autohandling {} request.", Paint::default("HEAD").bold());
+
+                        // Dispatch the request again with Method `GET`.
+                        request._set_method(Method::Get);
+                        let try_next: Pin<Box<dyn Future<Output = _> + Send>> = Box::pin(self.route_and_process(request, data));
+                        try_next.await
+                    } else {
+                        // No match was found and it can't be autohandled. 404.
+                        self.handle_error(Status::NotFound, request).await
+                    }
+                }
+                Outcome::Failure(status) => self.handle_error(status, request).await
             }
-            Outcome::Failure(status) => self.handle_error(status, request)
         }
     }
 
@@ -229,32 +312,34 @@ impl RocketHyperService {
     // (ensuring `handler` takes an immutable borrow), any caller to `route`
     // should be able to supply an `&mut` and retain an `&` after the call.
     #[inline]
-    crate fn route<'s, 'r>(
+    crate fn route<'s, 'r: 's>(
         &'s self,
         request: &'r Request<'s>,
         mut data: Data,
-    ) -> handler::Outcome<'r> {
-        // Go through the list of matching routes until we fail or succeed.
-        let matches = self.router.route(request);
-        for route in matches {
-            // Retrieve and set the requests parameters.
-            info_!("Matched: {}", route);
-            request.set_route(route);
+    ) -> impl Future<Output = handler::Outcome<'r>> + 's {
+        async move {
+            // Go through the list of matching routes until we fail or succeed.
+            let matches = self.router.route(request);
+            for route in matches {
+                // Retrieve and set the requests parameters.
+                info_!("Matched: {}", route);
+                request.set_route(route);
 
-            // Dispatch the request to the handler.
-            let outcome = route.handler.handle(request, data);
+                // Dispatch the request to the handler.
+                let outcome = route.handler.handle(request, data).await;
 
-            // Check if the request processing completed or if the request needs
-            // to be forwarded. If it does, continue the loop to try again.
-            info_!("{} {}", Paint::default("Outcome:").bold(), outcome);
-            match outcome {
-                o@Outcome::Success(_) | o@Outcome::Failure(_) => return o,
-                Outcome::Forward(unused_data) => data = unused_data,
-            };
+                // Check if the request processing completed (Some) or if the request needs
+                // to be forwarded. If it does, continue the loop (None) to try again.
+                info_!("{} {}", Paint::default("Outcome:").bold(), outcome);
+                match outcome {
+                    o@Outcome::Success(_) | o@Outcome::Failure(_) => return o,
+                    Outcome::Forward(unused_data) => data = unused_data,
+                }
+            }
+
+            error_!("No matching routes for {}.", request);
+            Outcome::Forward(data)
         }
-
-        error_!("No matching routes for {}.", request);
-        Outcome::Forward(data)
     }
 
     // Finds the error catcher for the status `status` and executes it for the
@@ -262,48 +347,35 @@ impl RocketHyperService {
     // catcher is called. If the catcher fails to return a good response, the
     // 500 catcher is executed. If there is no registered catcher for `status`,
     // the default catcher is used.
-    crate fn handle_error<'r>(
-        &self,
+    crate fn handle_error<'s, 'r: 's>(
+        &'s self,
         status: Status,
-        req: &'r Request<'_>
-    ) -> Response<'r> {
-        warn_!("Responding with {} catcher.", Paint::red(&status));
+        req: &'r Request<'s>
+    ) -> impl Future<Output = Response<'r>> + 's {
+        async move {
+            warn_!("Responding with {} catcher.", Paint::red(&status));
 
-        // Try to get the active catcher but fallback to user's 500 catcher.
-        let catcher = self.catchers.get(&status.code).unwrap_or_else(|| {
-            error_!("No catcher found for {}. Using 500 catcher.", status);
-            self.catchers.get(&500).expect("500 catcher.")
-        });
+            // Try to get the active catcher but fallback to user's 500 catcher.
+            let catcher = self.catchers.get(&status.code).unwrap_or_else(|| {
+                error_!("No catcher found for {}. Using 500 catcher.", status);
+                self.catchers.get(&500).expect("500 catcher.")
+            });
 
-        // Dispatch to the user's catcher. If it fails, use the default 500.
-        catcher.handle(req).unwrap_or_else(|err_status| {
-            error_!("Catcher failed with status: {}!", err_status);
-            warn_!("Using default 500 error catcher.");
-            let default = self.default_catchers.get(&500).expect("Default 500");
-            default.handle(req).expect("Default 500 response.")
-        })
+            // Dispatch to the user's catcher. If it fails, use the default 500.
+            match catcher.handle(req).await {
+                Ok(r) => return r,
+                Err(err_status) => {
+                    error_!("Catcher failed with status: {}!", err_status);
+                    warn_!("Using default 500 error catcher.");
+                    let default = self.default_catchers.get(&500).expect("Default 500");
+                    default.handle(req).await.expect("Default 500 response.")
+                }
+            }
+        }
     }
 }
 
 impl Rocket {
-
-    #[inline]
-    crate fn dispatch<'s, 'r>(
-        &'s self,
-        request: &'r mut Request<'s>,
-        data: Data
-    ) -> Response<'r> {
-        unimplemented!("TODO")
-    }
-
-    crate fn handle_error<'r>(
-        &self,
-        status: Status,
-        req: &'r Request<'_>
-    ) -> Response<'r> {
-        unimplemented!("TODO")
-    }
-
     /// Create a new `Rocket` application using the configuration information in
     /// `Rocket.toml`. If the file does not exist or if there is an I/O error
     /// reading the file, the defaults are used. See the [`config`]
@@ -482,7 +554,6 @@ impl Rocket {
             panic!("Invalid mount point.");
         }
 
-        let mut router = self.router.clone();
         for mut route in routes.into() {
             let path = route.uri.clone();
             if let Err(e) = route.set_uri(base_uri.clone(), path) {
@@ -491,10 +562,8 @@ impl Rocket {
             }
 
             info_!("{}", route);
-            router.add(route);
+            self.router.add(route);
         }
-
-        self.router = router;
 
         self
     }
@@ -656,6 +725,8 @@ impl Rocket {
     /// # }
     /// ```
     pub fn launch(mut self) -> LaunchError {
+        #[cfg(feature = "tls")] use crate::http::tls;
+
         self = match self.prelaunch_check() {
             Ok(rocket) => rocket,
             Err(launch_error) => return launch_error
@@ -670,30 +741,36 @@ impl Rocket {
             .build()
             .expect("Cannot build runtime!");
 
-        let threads = self.config.workers as usize;
+        let full_addr = format!("{}:{}", self.config.address, self.config.port);
+        let addrs = match full_addr.to_socket_addrs() {
+            Ok(a) => a.collect::<Vec<_>>(),
+            // TODO.async: Reconsider this error type
+            Err(e) => return From::from(io::Error::new(io::ErrorKind::Other, e)),
+        };
 
-        let full_addr = format!("{}:{}", self.config.address, self.config.port)
-            .to_socket_addrs()
-            .expect("A valid socket address")
-            .next()
-            .unwrap();
-
-        let listener = match TcpListener::bind(&full_addr) {
+        let listener = match TcpListener::bind(&addrs[0]) {
             Ok(listener) => listener,
             Err(e) => return LaunchError::new(LaunchErrorKind::Bind(e)),
         };
 
         // Determine the address and port we actually binded to.
         match listener.local_addr() {
-            Ok(server_addr) => /* TODO self.config.port = */ server_addr.port(),
+            Ok(server_addr) => self.config.port = server_addr.port(),
             Err(e) => return LaunchError::from(e),
-        };
+        }
+
+        // TODO.async Move all of this to http crate somewhere
+        // TODO.async Is boxing everything really the best we can do here?
+        trait AsyncReadWrite: tokio::io::AsyncRead + tokio::io::AsyncWrite + Send { }
+        impl<T> AsyncReadWrite for T where T: tokio::io::AsyncRead + tokio::io::AsyncWrite + Send { }
 
         let proto;
-        let incoming;
+        let incoming: Box<dyn tokio::prelude::Stream<Item=Box<dyn AsyncReadWrite>, Error=std::io::Error> + Send>;
 
         #[cfg(feature = "tls")]
         {
+            use tokio::prelude::Future;
+
             // TODO.async: Can/should we make the clone unnecessary (by reference, or by moving out?)
             if let Some(tls) = self.config.tls.clone() {
                 proto = "https://";
@@ -706,20 +783,25 @@ impl Rocket {
 
                 incoming = Box::new(listener.incoming().and_then(move |stream| {
                     config.accept(stream)
-                        .map(|stream| Box::new(stream))
+                        .map(|stream| Box::new(stream) as Box<dyn AsyncReadWrite>)
                 }));
-            }
-            else {
+            } else {
                 proto = "http://";
-                incoming = Box::new(listener.incoming().map(|stream| Box::new(stream)));
+                incoming = Box::new(listener.incoming().map(|stream| Box::new(stream) as Box<dyn AsyncReadWrite>));
             }
         }
 
+        // TODO.async: Duplicated code
         #[cfg(not(feature = "tls"))]
         {
             proto = "http://";
-            incoming = Box::new(listener.incoming().map(|stream| Box::new(stream)));
+            incoming = Box::new(listener.incoming().map(|stream| Box::new(stream) as Box<dyn AsyncReadWrite>));
         }
+
+        // TODO.async: Set the keep-alive.
+//        // Set the keep-alive.
+//        let timeout = self.config.keep_alive.map(|s| Duration::from_secs(s as u64));
+//        server.keep_alive(timeout);
 
         // Freeze managed state for synchronization-free accesses later.
         self.state.freeze();
@@ -746,7 +828,7 @@ impl Rocket {
         // TODO.async: Use with_graceful_shutdown, and let launch() return a Result<(), Error>
         runtime.block_on(server).expect("TODO.async handle error");
 
-        unreachable!("the call to `handle_threads` should block on success")
+        unreachable!("the call to `block_on` should block on success")
     }
 
     /// Returns an iterator over all of the routes mounted on this instance of
@@ -829,36 +911,5 @@ impl Rocket {
     #[inline(always)]
     pub fn config(&self) -> &Config {
         &self.config
-    }
-}
-
-// TODO: consider try_from here?
-impl<'a> From<Response<'a>> for hyper::Response<hyper::Body> {
-    fn from(mut response: Response<'_>) -> Self {
-
-        let mut builder = hyper::Response::builder();
-        builder.status(hyper::StatusCode::from_u16(response.status().code).expect(""));
-
-        for header in response.headers().iter() {
-            // FIXME: Using hyper here requires two allocations.
-            let name = hyper::HeaderName::from_str(&header.name.into_string()).unwrap();
-            let value = hyper::HeaderValue::from_bytes(header.value.as_bytes()).unwrap();
-            builder.header(name, value);
-        }
-
-        match response.body() {
-            None => {
-                builder.body(hyper::Body::empty())
-            },
-            Some(Body::Sized(body, size)) => {
-                let mut buffer = Vec::with_capacity(size as usize);
-                body.read_to_end(&mut buffer);
-                builder.header(header::CONTENT_LENGTH, hyper::HeaderValue::from(size));
-                builder.body(hyper::Body::from(buffer))
-            },
-            Some(Body::Chunked(mut body, chunk_size)) => {
-                unimplemented!()
-            }
-        }.unwrap()
     }
 }

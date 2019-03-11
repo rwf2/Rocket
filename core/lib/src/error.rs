@@ -19,7 +19,7 @@ use crate::router::Route;
 #[derive(Debug)]
 pub enum LaunchErrorKind {
     /// Binding to the provided address/port failed.
-    Bind(std::io::Error),
+    Bind(io::Error),
     /// An I/O error occurred during launch.
     Io(io::Error),
     /// Route collisions were detected.
@@ -123,10 +123,9 @@ impl LaunchError {
 impl From<hyper::Error> for LaunchError {
     #[inline]
     fn from(error: hyper::Error) -> LaunchError {
-        match error {
-            // TODO hyper::Error::Io(e) => LaunchError::new(LaunchErrorKind::Io(e)),
-            e => LaunchError::new(LaunchErrorKind::Unknown(Box::new(e)))
-        }
+        // TODO.async: Should "hyper error" be another variant of LaunchErrorKind?
+        // Or should this use LaunchErrorKind::Io?
+        LaunchError::new(LaunchErrorKind::Unknown(Box::new(error)))
     }
 }
 

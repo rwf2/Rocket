@@ -1,7 +1,7 @@
 use std::ops::Deref;
 
 use crate::request::{Request, form::{Form, FormDataError, FromForm}};
-use crate::data::{Data, Transform, Transformed, FromData, Outcome};
+use crate::data::{Data, Transformed, FromData, TransformFuture, FromDataFuture};
 use crate::http::uri::{Query, FromUriParam};
 
 /// A data guard for parsing [`FromForm`] types leniently.
@@ -95,17 +95,19 @@ impl<T> Deref for LenientForm<T> {
     }
 }
 
-impl<'f, T: FromForm<'f>> FromData<'f> for LenientForm<T> {
+impl<'f, T: FromForm<'f> + Send + 'f> FromData<'f> for LenientForm<T> {
     type Error = FormDataError<'f, T::Error>;
     type Owned = String;
     type Borrowed = str;
 
-    fn transform(r: &Request<'_>, d: Data) -> Transform<Outcome<Self::Owned, Self::Error>> {
+    fn transform(r: &Request<'_>, d: Data) -> TransformFuture<'f, Self::Owned, Self::Error> {
         <Form<T>>::transform(r, d)
     }
 
-    fn from_data(_: &Request<'_>, o: Transformed<'f, Self>) -> Outcome<Self, Self::Error> {
-        <Form<T>>::from_data(o.borrowed()?, false).map(LenientForm)
+    fn from_data(_: &Request<'_>, o: Transformed<'f, Self>) -> FromDataFuture<'f, Self, Self::Error> {
+        Box::pin(futures::future::ready(o.borrowed().and_then(|form| {
+            <Form<T>>::from_data(form, false).map(LenientForm)
+        })))
     }
 }
 

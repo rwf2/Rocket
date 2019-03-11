@@ -1,5 +1,6 @@
 #![feature(proc_macro_diagnostic, proc_macro_span)]
 #![feature(crate_visibility_modifier)]
+#![feature(async_await)]
 #![recursion_limit="128"]
 
 #![doc(html_root_url = "https://api.rocket.rs/v0.5")]
@@ -87,6 +88,8 @@ macro_rules! define_vars_and_mods {
     (@Data as $v:ident) => (define!(::rocket::Data as $v));
     (@StaticRouteInfo as $v:ident) => (define!(::rocket::StaticRouteInfo as $v));
     (@SmallVec as $v:ident) => (define!(::rocket::http::private::SmallVec as $v));
+    (@HandlerFuture as $v:ident) => (define!(::rocket::handler::HandlerFuture as $v));
+    (@ErrorHandlerFuture as $v:ident) => (define!(::rocket::handler::ErrorHandlerFuture as $v));
     ($($name:ident),*) => ($(define_vars_and_mods!(@$name as $name);)*)
 }
 

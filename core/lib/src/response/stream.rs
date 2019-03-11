@@ -1,19 +1,20 @@
-use std::io::Read;
 use std::fmt::{self, Debug};
+
+use futures::io::AsyncRead;
 
 use crate::request::Request;
 use crate::response::{Response, Responder, DEFAULT_CHUNK_SIZE};
 use crate::http::Status;
 
-/// Streams a response to a client from an arbitrary `Read`er type.
+/// Streams a response to a client from an arbitrary `AsyncRead`er type.
 ///
 /// The client is sent a "chunked" response, where the chunk size is at most
 /// 4KiB. This means that at most 4KiB are stored in memory while the response
 /// is being sent. This type should be used when sending responses that are
 /// arbitrarily large in size, such as when streaming from a local socket.
-pub struct Stream<T: Read>(T, u64);
+pub struct Stream<T: AsyncRead>(T, u64);
 
-impl<T: Read> Stream<T> {
+impl<T: AsyncRead> Stream<T> {
     /// Create a new stream from the given `reader` and sets the chunk size for
     /// each streamed chunk to `chunk_size` bytes.
     ///
@@ -34,7 +35,7 @@ impl<T: Read> Stream<T> {
     }
 }
 
-impl<T: Read + Debug> Debug for Stream<T> {
+impl<T: AsyncRead + Debug> Debug for Stream<T> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "Stream({:?})", self.0)
     }
@@ -54,7 +55,7 @@ impl<T: Read + Debug> Debug for Stream<T> {
 /// # #[allow(unused_variables)]
 /// let response = Stream::from(io::stdin());
 /// ```
-impl<T: Read> From<T> for Stream<T> {
+impl<T: AsyncRead> From<T> for Stream<T> {
     fn from(reader: T) -> Self {
         Stream(reader, DEFAULT_CHUNK_SIZE)
     }
@@ -68,7 +69,7 @@ impl<T: Read> From<T> for Stream<T> {
 /// If reading from the input stream fails at any point during the response, the
 /// response is abandoned, and the response ends abruptly. An error is printed
 /// to the console with an indication of what went wrong.
-impl<'r, T: Read + 'r> Responder<'r> for Stream<T> {
+impl<'r, T: AsyncRead + Send + 'r> Responder<'r> for Stream<T> {
     fn respond_to(self, _: &Request<'_>) -> Result<Response<'r>, Status> {
         Response::build().chunked_body(self.0, self.1).ok()
     }

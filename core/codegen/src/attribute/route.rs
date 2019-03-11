@@ -178,7 +178,7 @@ fn data_expr(ident: &syn::Ident, ty: &syn::Type) -> TokenStream2 {
     define_vars_and_mods!(req, data, FromData, Outcome, Transform);
     let span = ident.span().unstable().join(ty.span()).unwrap().into();
     quote_spanned! { span =>
-        let __transform = <#ty as #FromData>::transform(#req, #data);
+        let __transform = <#ty as #FromData>::transform(#req, #data).await;
 
         #[allow(unreachable_patterns, unreachable_code)]
         let __outcome = match __transform {
@@ -195,7 +195,7 @@ fn data_expr(ident: &syn::Ident, ty: &syn::Type) -> TokenStream2 {
         };
 
         #[allow(non_snake_case, unreachable_patterns, unreachable_code)]
-        let #ident: #ty = match <#ty as #FromData>::from_data(#req, __outcome) {
+        let #ident: #ty = match <#ty as #FromData>::from_data(#req, __outcome).await {
             #Outcome::Success(__d) => __d,
             #Outcome::Forward(__d) => return #Outcome::Forward(__d),
             #Outcome::Failure((__c, _)) => return #Outcome::Failure(__c),
@@ -384,7 +384,7 @@ fn codegen_route(route: Route) -> Result<TokenStream> {
     }
 
     // Gather everything we need.
-    define_vars_and_mods!(req, data, handler, Request, Data, StaticRouteInfo);
+    define_vars_and_mods!(req, data, handler, Request, Data, StaticRouteInfo, HandlerFuture);
     let (vis, user_handler_fn) = (&route.function.vis, &route.function);
     let user_handler_fn_name = &user_handler_fn.sig.ident;
     let generated_fn_name = user_handler_fn_name.prepend(ROUTE_FN_PREFIX);
@@ -396,6 +396,16 @@ fn codegen_route(route: Route) -> Result<TokenStream> {
     let rank = Optional(route.attribute.rank);
     let format = Optional(route.attribute.format);
 
+    let responder_stmt = if user_handler_fn.sig.asyncness.is_some() {
+        quote! {
+            let ___responder = #user_handler_fn_name(#(#parameter_names),*).await;
+        }
+    } else {
+        quote! {
+            let ___responder = #user_handler_fn_name(#(#parameter_names),*);
+        }
+    };
+
     Ok(quote! {
         #user_handler_fn
 
@@ -403,13 +413,15 @@ fn codegen_route(route: Route) -> Result<TokenStream> {
         #vis fn #generated_fn_name<'_b>(
             #req: &'_b #Request,
             #data: #Data
-        ) -> #handler::Outcome<'_b> {
-            #(#req_guard_definitions)*
-            #(#parameter_definitions)*
-            #data_stmt
+        ) -> #HandlerFuture<'_b> {
+            Box::pin(async move {
+                #(#req_guard_definitions)*
+                #(#parameter_definitions)*
+                #data_stmt
 
-            let ___responder = #user_handler_fn_name(#(#parameter_names),*);
-            #handler::Outcome::from(#req, ___responder)
+                #responder_stmt
+                #handler::Outcome::from(#req, ___responder)
+            })
         }
 
         /// Rocket code generated wrapping URI macro.

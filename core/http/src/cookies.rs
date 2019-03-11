@@ -1,5 +1,4 @@
 use std::fmt;
-use std::cell::RefMut;
 
 use crate::Header;
 use cookie::Delta;
@@ -128,7 +127,7 @@ mod key {
 /// 32`.
 pub enum Cookies<'a> {
     #[doc(hidden)]
-    Jarred(RefMut<'a, CookieJar>, &'a Key),
+    Jarred(CookieJar, &'a Key, Box<dyn FnOnce(CookieJar) + Send + 'a>),
     #[doc(hidden)]
     Empty(CookieJar)
 }
@@ -137,8 +136,8 @@ impl<'a> Cookies<'a> {
     /// WARNING: This is unstable! Do not use this method outside of Rocket!
     #[inline]
     #[doc(hidden)]
-    pub fn new(jar: RefMut<'a, CookieJar>, key: &'a Key) -> Cookies<'a> {
-        Cookies::Jarred(jar, key)
+    pub fn new<F: FnOnce(CookieJar) + Send + 'a>(jar: CookieJar, key: &'a Key, on_drop: F) -> Cookies<'a> {
+        Cookies::Jarred(jar, key, Box::new(on_drop))
     }
 
     /// WARNING: This is unstable! Do not use this method outside of Rocket!
@@ -160,7 +159,7 @@ impl<'a> Cookies<'a> {
     #[inline]
     #[doc(hidden)]
     pub fn add_original(&mut self, cookie: Cookie<'static>) {
-        if let Cookies::Jarred(ref mut jar, _) = *self {
+        if let Cookies::Jarred(ref mut jar, _, _) = *self {
             jar.add_original(cookie)
         }
     }
@@ -180,7 +179,7 @@ impl<'a> Cookies<'a> {
     /// ```
     pub fn get(&self, name: &str) -> Option<&Cookie<'static>> {
         match *self {
-            Cookies::Jarred(ref jar, _) => jar.get(name),
+            Cookies::Jarred(ref jar, _, _) => jar.get(name),
             Cookies::Empty(_) => None
         }
     }
@@ -205,7 +204,7 @@ impl<'a> Cookies<'a> {
     /// }
     /// ```
     pub fn add(&mut self, cookie: Cookie<'static>) {
-        if let Cookies::Jarred(ref mut jar, _) = *self {
+        if let Cookies::Jarred(ref mut jar, _, _) = *self {
             jar.add(cookie)
         }
     }
@@ -231,7 +230,7 @@ impl<'a> Cookies<'a> {
     /// }
     /// ```
     pub fn remove(&mut self, cookie: Cookie<'static>) {
-        if let Cookies::Jarred(ref mut jar, _) = *self {
+        if let Cookies::Jarred(ref mut jar, _, _) = *self {
             jar.remove(cookie)
         }
     }
@@ -252,7 +251,7 @@ impl<'a> Cookies<'a> {
     /// ```
     pub fn iter(&self) -> impl Iterator<Item=&Cookie<'static>> {
         match *self {
-            Cookies::Jarred(ref jar, _) => jar.iter(),
+            Cookies::Jarred(ref jar, _, _) => jar.iter(),
             Cookies::Empty(ref jar) => jar.iter()
         }
     }
@@ -262,8 +261,18 @@ impl<'a> Cookies<'a> {
     #[doc(hidden)]
     pub fn delta(&self) -> Delta<'_> {
         match *self {
-            Cookies::Jarred(ref jar, _) => jar.delta(),
+            Cookies::Jarred(ref jar, _, _) => jar.delta(),
             Cookies::Empty(ref jar) => jar.delta()
+        }
+    }
+}
+
+impl<'a> Drop for Cookies<'a> {
+    fn drop(&mut self) {
+        if let Cookies::Jarred(ref mut jar, _, ref mut on_drop) = *self {
+            let jar = std::mem::replace(jar, CookieJar::new());
+            let on_drop = std::mem::replace(on_drop, Box::new(|_| {}));
+            on_drop(jar);
         }
     }
 }
@@ -290,7 +299,7 @@ impl Cookies<'_> {
     /// ```
     pub fn get_private(&mut self, name: &str) -> Option<Cookie<'static>> {
         match *self {
-            Cookies::Jarred(ref mut jar, key) => jar.private(key).get(name),
+            Cookies::Jarred(ref mut jar, key, _) => jar.private(key).get(name),
             Cookies::Empty(_) => None
         }
     }
@@ -326,7 +335,7 @@ impl Cookies<'_> {
     /// }
     /// ```
     pub fn add_private(&mut self, mut cookie: Cookie<'static>) {
-        if let Cookies::Jarred(ref mut jar, key) = *self {
+        if let Cookies::Jarred(ref mut jar, key, _) = *self {
             Cookies::set_private_defaults(&mut cookie);
             jar.private(key).add(cookie)
         }
@@ -336,7 +345,7 @@ impl Cookies<'_> {
     /// WARNING: This is unstable! Do not use this method outside of Rocket!
     #[doc(hidden)]
     pub fn add_original_private(&mut self, mut cookie: Cookie<'static>) {
-        if let Cookies::Jarred(ref mut jar, key) = *self {
+        if let Cookies::Jarred(ref mut jar, key, _) = *self {
             Cookies::set_private_defaults(&mut cookie);
             jar.private(key).add_original(cookie)
         }
@@ -390,7 +399,7 @@ impl Cookies<'_> {
     /// }
     /// ```
     pub fn remove_private(&mut self, mut cookie: Cookie<'static>) {
-        if let Cookies::Jarred(ref mut jar, key) = *self {
+        if let Cookies::Jarred(ref mut jar, key, _) = *self {
             if cookie.path().is_none() {
                 cookie.set_path("/");
             }
@@ -403,7 +412,7 @@ impl Cookies<'_> {
 impl fmt::Debug for Cookies<'_> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match *self {
-            Cookies::Jarred(ref jar, _) => write!(f, "{:?}", jar),
+            Cookies::Jarred(ref jar, _, _) => write!(f, "{:?}", jar),
             Cookies::Empty(ref jar) => write!(f, "{:?}", jar)
         }
     }

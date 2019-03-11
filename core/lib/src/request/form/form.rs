@@ -1,9 +1,12 @@
 use std::ops::Deref;
 
+use futures::io::AsyncReadExt;
+
 use crate::outcome::Outcome::*;
 use crate::request::{Request, form::{FromForm, FormItems, FormDataError}};
-use crate::data::{Outcome, Transform, Transformed, Data, FromData};
+use crate::data::{Outcome, Transform, Transformed, Data, FromData, TransformFuture, FromDataFuture};
 use crate::http::{Status, uri::{Query, FromUriParam}};
+use crate::ext::AsyncReadExt as _;
 
 /// A data guard for parsing [`FromForm`] types strictly.
 ///
@@ -184,7 +187,7 @@ impl<'f, T: FromForm<'f>> Form<T> {
 ///
 /// All relevant warnings and errors are written to the console in Rocket
 /// logging format.
-impl<'f, T: FromForm<'f>> FromData<'f> for Form<T> {
+impl<'f, T: FromForm<'f> + Send + 'f> FromData<'f> for Form<T> {
     type Error = FormDataError<'f, T::Error>;
     type Owned = String;
     type Borrowed = str;
@@ -192,30 +195,31 @@ impl<'f, T: FromForm<'f>> FromData<'f> for Form<T> {
     fn transform(
         request: &Request<'_>,
         data: Data
-    ) -> Transform<Outcome<Self::Owned, Self::Error>> {
-        use std::{cmp::min, io::Read};
+    ) -> TransformFuture<'f, Self::Owned, Self::Error> {
+        if !request.content_type().map_or(false, |ct| ct.is_form()) {
+            warn_!("Form data does not have form content type.");
+            return Box::pin(futures::future::ready(Transform::Borrowed(Forward(data))));
+        }
 
-        let outcome = 'o: {
-            if !request.content_type().map_or(false, |ct| ct.is_form()) {
-                warn_!("Form data does not have form content type.");
-                break 'o Forward(data);
+        let limit = request.limits().forms;
+        let mut stream = data.open().take(limit);
+        Box::pin(async move {
+            let mut buf = Vec::new();
+            if let Err(e) = stream.read_to_end(&mut buf).await {
+                return Transform::Borrowed(Failure((Status::InternalServerError, FormDataError::Io(e))));
             }
 
-            let limit = request.limits().forms;
-            let mut stream = data.open().take(limit);
-            let mut form_string = String::with_capacity(min(4096, limit) as usize);
-            if let Err(e) = stream.read_to_string(&mut form_string) {
-                break 'o Failure((Status::InternalServerError, FormDataError::Io(e)));
-            }
-
-            break 'o Success(form_string);
-        };
-
-        Transform::Borrowed(outcome)
+            Transform::Borrowed(match String::from_utf8(buf) {
+                Ok(s) => Success(s),
+                Err(e) => Failure((Status::BadRequest, FormDataError::Io(std::io::Error::new(std::io::ErrorKind::Other, e)))),
+            })
+        })
     }
 
-    fn from_data(_: &Request<'_>, o: Transformed<'f, Self>) -> Outcome<Self, Self::Error> {
-        <Form<T>>::from_data(o.borrowed()?, true).map(Form)
+    fn from_data(_: &Request<'_>, o: Transformed<'f, Self>) -> FromDataFuture<'f, Self, Self::Error> {
+        Box::pin(futures::future::ready(o.borrowed().and_then(|data| {
+            <Form<T>>::from_data(data, true).map(Form)
+        })))
     }
 }
 

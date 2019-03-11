@@ -516,23 +516,33 @@ impl Config {
     /// ```
     #[cfg(feature = "tls")]
     pub fn set_tls(&mut self, certs_path: &str, key_path: &str) -> Result<()> {
-        use crate::http::tls::util::{self, Error};
+        use crate::http::tls::pemfile::{certs, rsa_private_keys};
+        use std::fs::File;
+        use std::io::BufReader;
 
         let pem_err = "malformed PEM file";
 
+        // TODO.async: Fully copy from hyper-sync-rustls, move to http/src/tls
+        // Partially extracted from hyper-sync-rustls
+
         // Load the certificates.
-        let certs = util::load_certs(self.root_relative(certs_path))
-            .map_err(|e| match e {
-                Error::Io(e) => ConfigError::Io(e, "tls.certs"),
-                _ => self.bad_type("tls", pem_err, "a valid certificates file")
-            })?;
+        let certs = match File::open(self.root_relative(certs_path)) {
+            Ok(file) => certs(&mut BufReader::new(file)).map_err(|_| {
+                self.bad_type("tls", pem_err, "a valid certificates file")
+            }),
+            Err(e) => Err(ConfigError::Io(e, "tls.certs"))?,
+        }?;
 
         // And now the private key.
-        let key = util::load_private_key(self.root_relative(key_path))
-            .map_err(|e| match e {
-                Error::Io(e) => ConfigError::Io(e, "tls.key"),
-                _ => self.bad_type("tls", pem_err, "a valid private key file")
-            })?;
+        let mut keys = match File::open(self.root_relative(key_path)) {
+            Ok(file) => rsa_private_keys(&mut BufReader::new(file)).map_err(|_| {
+                self.bad_type("tls", pem_err, "a valid private key file")
+            }),
+            Err(e) => Err(ConfigError::Io(e, "tls.key")),
+        }?;
+
+        // TODO.async: Proper check for one key
+        let key = keys.remove(0);
 
         self.tls = Some(TlsConfig { certs, key });
         Ok(())

@@ -1,3 +1,5 @@
+use futures::future::Future;
+
 use crate::response;
 use crate::handler::ErrorHandler;
 use crate::codegen::StaticCatchInfo;
@@ -98,7 +100,7 @@ impl Catcher {
     }
 
     #[inline(always)]
-    crate fn handle<'r>(&self, req: &'r Request<'_>) -> response::Result<'r> {
+    crate fn handle<'r>(&self, req: &'r Request<'_>) -> impl Future<Output = response::Result<'r>> {
         (self.handler)(req)
     }
 
@@ -149,10 +151,12 @@ macro_rules! default_catchers {
         let mut map = HashMap::new();
 
         $(
-            fn $fn_name<'r>(req: &'r Request<'_>) -> response::Result<'r> {
-                status::Custom(Status::from_code($code).unwrap(),
-                    content::Html(error_page_template!($code, $name, $description))
-                ).respond_to(req)
+            fn $fn_name<'r>(req: &'r Request<'_>) -> std::pin::Pin<Box<dyn std::future::Future<Output = response::Result<'r>> + Send + 'r>> {
+                (async move {
+                    status::Custom(Status::from_code($code).unwrap(),
+                        content::Html(error_page_template!($code, $name, $description))
+                    ).respond_to(req)
+                }).boxed()
             }
 
             map.insert($code, Catcher::new_default($code, $fn_name));
@@ -164,6 +168,7 @@ macro_rules! default_catchers {
 
 pub mod defaults {
     use super::Catcher;
+    use futures::future::FutureExt;
 
     use std::collections::HashMap;
 

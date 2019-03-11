@@ -4,17 +4,17 @@
 //! These types will, with certainty, be removed with time, but they reside here
 //! while necessary.
 
-#[doc(hidden)] pub use hyper::{Body, Request, Response};
+#[doc(hidden)] pub use hyper::{Body, Request, Response, Server};
 #[doc(hidden)] pub use hyper::body::Payload as Payload;
 #[doc(hidden)] pub use hyper::error::Error;
-#[doc(hidden)] pub use hyper::server::Server;
 #[doc(hidden)] pub use hyper::service::{MakeService, Service};
 
 #[doc(hidden)] pub use hyper::Chunk;
+#[doc(hidden)] pub use http::header::HeaderMap;
 #[doc(hidden)] pub use http::header::HeaderName as HeaderName;
 #[doc(hidden)] pub use http::header::HeaderValue as HeaderValue;
 #[doc(hidden)] pub use http::method::Method;
-#[doc(hidden)] pub use http::request::Parts;
+#[doc(hidden)] pub use http::request::Parts as RequestParts;
 #[doc(hidden)] pub use http::status::StatusCode;
 #[doc(hidden)] pub use http::uri::Uri;
 

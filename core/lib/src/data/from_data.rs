@@ -1,4 +1,8 @@
 use std::borrow::Borrow;
+use std::pin::Pin;
+
+use futures::future::{ready, Future, FutureExt};
+use futures::io::AsyncReadExt;
 
 use crate::outcome::{self, IntoOutcome};
 use crate::outcome::Outcome::*;
@@ -107,6 +111,9 @@ pub type Transformed<'a, T> =
         Outcome<<T as FromData<'a>>::Owned, <T as FromData<'a>>::Error>,
         Outcome<&'a <T as FromData<'a>>::Borrowed, <T as FromData<'a>>::Error>
     >;
+
+pub type TransformFuture<'a, T, E> = Pin<Box<dyn Future<Output = Transform<Outcome<T, E>>> + Send + 'a>>;
+pub type FromDataFuture<'a, T, E> = Pin<Box<dyn Future<Output = Outcome<T, E>> + Send + 'a>>;
 
 /// Trait implemented by data guards to derive a value from request body data.
 ///
@@ -321,7 +328,7 @@ pub type Transformed<'a, T> =
 /// [`FromDataSimple`] documentation.
 pub trait FromData<'a>: Sized {
     /// The associated error to be returned when the guard fails.
-    type Error;
+    type Error: Send;
 
     /// The owned type returned from [`FromData::transform()`].
     ///
@@ -354,7 +361,7 @@ pub trait FromData<'a>: Sized {
     /// If transformation succeeds, an outcome of `Success` is returned.
     /// If the data is not appropriate given the type of `Self`, `Forward` is
     /// returned. On failure, `Failure` is returned.
-    fn transform(request: &Request<'_>, data: Data) -> Transform<Outcome<Self::Owned, Self::Error>>;
+    fn transform(request: &Request<'_>, data: Data) -> TransformFuture<'a, Self::Owned, Self::Error>;
 
     /// Validates, parses, and converts the incoming request body data into an
     /// instance of `Self`.
@@ -383,23 +390,23 @@ pub trait FromData<'a>: Sized {
     /// # unimplemented!()
     /// # }
     /// ```
-    fn from_data(request: &Request<'_>, outcome: Transformed<'a, Self>) -> Outcome<Self, Self::Error>;
+    fn from_data(request: &Request<'_>, outcome: Transformed<'a, Self>) -> FromDataFuture<'a, Self, Self::Error>;
 }
 
 /// The identity implementation of `FromData`. Always returns `Success`.
-impl<'f> FromData<'f> for Data {
+impl<'a> FromData<'a> for Data {
     type Error = std::convert::Infallible;
     type Owned = Data;
-    type Borrowed = Data;
+    type Borrowed = ();
 
     #[inline(always)]
-    fn transform(_: &Request<'_>, data: Data) -> Transform<Outcome<Self::Owned, Self::Error>> {
-        Transform::Owned(Success(data))
+    fn transform(_: &Request<'_>, data: Data) -> TransformFuture<'a, Self::Owned, Self::Error> {
+        Box::pin(ready(Transform::Owned(Success(data))))
     }
 
     #[inline(always)]
-    fn from_data(_: &Request<'_>, outcome: Transformed<'f, Self>) -> Outcome<Self, Self::Error> {
-        Success(outcome.owned()?)
+    fn from_data(_: &Request<'_>, outcome: Transformed<'a, Self>) -> FromDataFuture<'a, Self, Self::Error> {
+        Box::pin(ready(outcome.owned()))
     }
 }
 
@@ -493,8 +500,9 @@ impl<'f> FromData<'f> for Data {
 /// # fn main() {  }
 /// ```
 pub trait FromDataSimple: Sized {
+    // TODO.async: Can/should we relax this 'static? And how?
     /// The associated error to be returned when the guard fails.
-    type Error;
+    type Error: Send + 'static;
 
     /// Validates, parses, and converts an instance of `Self` from the incoming
     /// request body data.
@@ -502,22 +510,25 @@ pub trait FromDataSimple: Sized {
     /// If validation and parsing succeeds, an outcome of `Success` is returned.
     /// If the data is not appropriate given the type of `Self`, `Forward` is
     /// returned. If parsing fails, `Failure` is returned.
-    fn from_data(request: &Request<'_>, data: Data) -> Outcome<Self, Self::Error>;
+    fn from_data(request: &Request<'_>, data: Data) -> FromDataFuture<'static, Self, Self::Error>;
 }
 
-impl<'a, T: FromDataSimple> FromData<'a> for T {
+impl<'a, T: FromDataSimple + 'a> FromData<'a> for T {
     type Error = T::Error;
     type Owned = Data;
-    type Borrowed = Data;
+    type Borrowed = ();
 
     #[inline(always)]
-    fn transform(_: &Request<'_>, d: Data) -> Transform<Outcome<Self::Owned, Self::Error>> {
-        Transform::Owned(Success(d))
+    fn transform(_: &Request<'_>, d: Data) -> TransformFuture<'a, Self::Owned, Self::Error> {
+        Box::pin(ready(Transform::Owned(Success(d))))
     }
 
     #[inline(always)]
-    fn from_data(req: &Request<'_>, o: Transformed<'a, Self>) -> Outcome<Self, Self::Error> {
-        T::from_data(req, o.owned()?)
+    fn from_data(req: &Request<'_>, o: Transformed<'a, Self>) -> FromDataFuture<'a, Self, Self::Error> {
+        match o.owned() {
+            Success(data) => T::from_data(req, data),
+            _ => unreachable!(),
+        }
     }
 }
 
@@ -527,17 +538,17 @@ impl<'a, T: FromData<'a> + 'a> FromData<'a> for Result<T, T::Error> {
     type Borrowed = T::Borrowed;
 
     #[inline(always)]
-    fn transform(r: &Request<'_>, d: Data) -> Transform<Outcome<Self::Owned, Self::Error>> {
+    fn transform(r: &Request<'_>, d: Data) -> TransformFuture<'a, Self::Owned, Self::Error> {
         T::transform(r, d)
     }
 
     #[inline(always)]
-    fn from_data(r: &Request<'_>, o: Transformed<'a, Self>) -> Outcome<Self, Self::Error> {
-        match T::from_data(r, o) {
+    fn from_data(r: &Request<'_>, o: Transformed<'a, Self>) -> FromDataFuture<'a, Self, Self::Error> {
+        Box::pin(T::from_data(r, o).map(|x| match x {
             Success(val) => Success(Ok(val)),
             Forward(data) => Forward(data),
             Failure((_, e)) => Success(Err(e)),
-        }
+        }))
     }
 }
 
@@ -547,46 +558,52 @@ impl<'a, T: FromData<'a> + 'a> FromData<'a> for Option<T> {
     type Borrowed = T::Borrowed;
 
     #[inline(always)]
-    fn transform(r: &Request<'_>, d: Data) -> Transform<Outcome<Self::Owned, Self::Error>> {
+    fn transform(r: &Request<'_>, d: Data) -> TransformFuture<'a, Self::Owned, Self::Error> {
         T::transform(r, d)
     }
 
     #[inline(always)]
-    fn from_data(r: &Request<'_>, o: Transformed<'a, Self>) -> Outcome<Self, Self::Error> {
-        match T::from_data(r, o) {
+    fn from_data(r: &Request<'_>, o: Transformed<'a, Self>) -> FromDataFuture<'a, Self, Self::Error> {
+        Box::pin(T::from_data(r, o).map(|x| match x {
             Success(val) => Success(Some(val)),
             Failure(_) | Forward(_) => Success(None),
-        }
+        }))
     }
 }
 
 #[cfg(debug_assertions)]
-use std::io::{self, Read};
-
-#[cfg(debug_assertions)]
 impl FromDataSimple for String {
-    type Error = io::Error;
+    type Error = std::io::Error;
 
     #[inline(always)]
-    fn from_data(_: &Request<'_>, data: Data) -> Outcome<Self, Self::Error> {
-        let mut string = String::new();
-        match data.open().read_to_string(&mut string) {
-            Ok(_) => Success(string),
-            Err(e) => Failure((Status::BadRequest, e))
-        }
+    fn from_data(_: &Request<'_>, data: Data) -> FromDataFuture<'static, Self, Self::Error> {
+        Box::pin(async {
+            let mut stream = data.open();
+            let mut buf = Vec::new();
+            if let Err(e) = stream.read_to_end(&mut buf).await {
+                return Failure((Status::BadRequest, e));
+            }
+            match String::from_utf8(buf) {
+                Ok(s) => Success(s),
+                Err(e) => Failure((Status::BadRequest, std::io::Error::new(std::io::ErrorKind::Other, e))),
+            }
+        })
     }
 }
 
 #[cfg(debug_assertions)]
 impl FromDataSimple for Vec<u8> {
-    type Error = io::Error;
+    type Error = std::io::Error;
 
     #[inline(always)]
-    fn from_data(_: &Request<'_>, data: Data) -> Outcome<Self, Self::Error> {
-        let mut bytes = Vec::new();
-        match data.open().read_to_end(&mut bytes) {
-            Ok(_) => Success(bytes),
-            Err(e) => Failure((Status::BadRequest, e))
-        }
+    fn from_data(_: &Request<'_>, data: Data) -> FromDataFuture<'static, Self, Self::Error> {
+        Box::pin(async {
+            let mut stream = data.open();
+            let mut buf = Vec::new();
+            match stream.read_to_end(&mut buf).await {
+                Ok(_) => Success(buf),
+                Err(e) => Failure((Status::BadRequest, e)),
+            }
+        })
     }
 }

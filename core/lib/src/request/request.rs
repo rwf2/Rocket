@@ -1,5 +1,4 @@
-use std::rc::Rc;
-use std::cell::{Cell, RefCell};
+use std::sync::{Arc, RwLock, Mutex};
 use std::net::{IpAddr, SocketAddr};
 use std::fmt;
 use std::str;
@@ -26,26 +25,26 @@ type Indices = (usize, usize);
 /// should likely only be used when writing [`FromRequest`] implementations. It
 /// contains all of the information for a given web request except for the body
 /// data. This includes the HTTP method, URI, cookies, headers, and more.
-#[derive(Clone)]
+//#[derive(Clone)]
 pub struct Request<'r> {
-    method: Cell<Method>,
+    method: RwLock<Method>,
     uri: Origin<'r>,
     headers: HeaderMap<'r>,
     remote: Option<SocketAddr>,
     crate state: RequestState<'r>,
 }
 
-#[derive(Clone)]
+//#[derive(Clone)]
 crate struct RequestState<'r> {
     crate config: &'r Config,
     crate managed: &'r Container,
     crate path_segments: SmallVec<[Indices; 12]>,
     crate query_items: Option<SmallVec<[IndexedFormItem; 6]>>,
-    crate route: Cell<Option<&'r Route>>,
-    crate cookies: RefCell<CookieJar>,
+    crate route: RwLock<Option<&'r Route>>,
+    crate cookies: Mutex<Option<CookieJar>>,
     crate accept: Storage<Option<Accept>>,
     crate content_type: Storage<Option<ContentType>>,
-    crate cache: Rc<Container>,
+    crate cache: Arc<Container>,
 }
 
 #[derive(Clone)]
@@ -59,26 +58,25 @@ impl<'r> Request<'r> {
     /// Create a new `Request` with the given `method` and `uri`.
     #[inline(always)]
     crate fn new<'s: 'r>(
-        config: &'r Config,
-        managed: &'r Container,
+        rocket: &'r Rocket,
         method: Method,
         uri: Origin<'s>
     ) -> Request<'r> {
         let mut request = Request {
-            method: Cell::new(method),
+            method: RwLock::new(method),
             uri: uri,
             headers: HeaderMap::new(),
             remote: None,
             state: RequestState {
                 path_segments: SmallVec::new(),
                 query_items: None,
-                config,
-                managed,
-                route: Cell::new(None),
-                cookies: RefCell::new(CookieJar::new()),
+                config: &rocket.config,
+                managed: &rocket.state,
+                route: RwLock::new(None),
+                cookies: Mutex::new(Some(CookieJar::new())),
                 accept: Storage::new(),
                 content_type: Storage::new(),
-                cache: Rc::new(Container::new()),
+                cache: Arc::new(Container::new()),
             }
         };
 
@@ -101,7 +99,7 @@ impl<'r> Request<'r> {
     /// ```
     #[inline(always)]
     pub fn method(&self) -> Method {
-        self.method.get()
+        *self.method.read().unwrap()
     }
 
     /// Set the method of `self`.
@@ -290,9 +288,13 @@ impl<'r> Request<'r> {
     /// ```
     pub fn cookies(&self) -> Cookies<'_> {
         // FIXME: Can we do better? This is disappointing.
-        match self.state.cookies.try_borrow_mut() {
-            Ok(jar) => Cookies::new(jar, self.state.config.secret_key()),
-            Err(_) => {
+        let mut guard = self.state.cookies.lock().expect("cookies lock");
+        match guard.take() {
+            Some(jar) => {
+                let mutex = &self.state.cookies;
+                Cookies::new(jar, self.state.config.secret_key(), move |jar| *mutex.lock().expect("cookies lock") = Some(jar))
+            }
+            None => {
                 error_!("Multiple `Cookies` instances are active at once.");
                 info_!("An instance of `Cookies` must be dropped before another \
                        can be retrieved.");
@@ -497,7 +499,7 @@ impl<'r> Request<'r> {
     /// # });
     /// ```
     pub fn route(&self) -> Option<&'r Route> {
-        self.state.route.get()
+        *self.state.route.read().unwrap()
     }
 
     /// Invokes the request guard implementation for `T`, returning its outcome.
@@ -700,7 +702,7 @@ impl<'r> Request<'r> {
     pub fn example<F: Fn(&mut Request<'_>)>(method: Method, uri: &str, f: F) {
         let rocket = Rocket::custom(Config::development());
         let uri = Origin::parse(uri).expect("invalid URI in example");
-        let mut request = Request::new(&rocket.config, &rocket.state, method, uri);
+        let mut request = Request::new(&rocket, method, uri);
         f(&mut request);
     }
 
@@ -771,79 +773,66 @@ impl<'r> Request<'r> {
     /// was `route`. Use during routing when attempting a given route.
     #[inline(always)]
     crate fn set_route(&self, route: &'r Route) {
-        self.state.route.set(Some(route));
+        * self.state.route.write().unwrap() = Some(route);
     }
 
     /// Set the method of `self`, even when `self` is a shared reference. Used
     /// during routing to override methods for re-routing.
     #[inline(always)]
     crate fn _set_method(&self, method: Method) {
-        self.method.set(method);
+        *self.method.write().unwrap() = method;
     }
 
     /// Convert from Hyper types into a Rocket Request.
     crate fn from_hyp(
-        config: &'r Config,
-        managed: &'r Container,
-        request_parts: &hyper::Parts,
+        rocket: &'r Rocket,
+        h_method: hyper::Method,
+        h_headers: hyper::HeaderMap<hyper::HeaderValue>,
+        h_uri: hyper::Uri,
+        h_addr: SocketAddr,
     ) -> Result<Request<'r>, String> {
-
-        let h_uri = &request_parts.uri;
-        let h_headers = &request_parts.headers;
-        let h_version = &request_parts.version;
-        let h_method = &request_parts.method;;
-
-//        if !h_uri.is_absolute() {
-//            return Err(format!("Bad URI: {}", h_uri));
-//        };
+        // TODO.async: Can we avoid this allocation?
+        // TODO.async: Assert that uri is "absolute"
+        // Get a copy of the URI for later use.
+        let uri = h_uri.to_string();
 
         // Ensure that the method is known. TODO: Allow made-up methods?
-        let method = match Method::from_hyp(h_method) {
+        let method = match Method::from_hyp(&h_method) {
             Some(method) => method,
-            None => return Err(format!("Unknown method: {}", h_method))
+            None => return Err(format!("Unknown or invalid method: {}", h_method))
         };
 
         // We need to re-parse the URI since we don't trust Hyper... :(
-        let uri = Origin::parse_owned(format!("{}", h_uri)).map_err(|e| e.to_string())?;
+        let uri = Origin::parse_owned(format!("{}", uri)).map_err(|e| e.to_string())?;
 
         // Construct the request object.
-        let mut request = Request::new(config, managed, method, uri);
-//        request.set_remote(match hyp_req.remote_addr() {
-//            Some(remote) => remote,
-//            None => return Err(String::from("Missing remote address"))
-//        });
+        let mut request = Request::new(rocket, method, uri);
+        request.set_remote(h_addr);
 
         // Set the request cookies, if they exist.
-        let cookie_headers = h_headers.get_all("Cookie").iter();
-        // TODO if cookie_headers.peek().is_some() {
-            let mut cookie_jar = CookieJar::new();
-            for header in cookie_headers {
-                let raw_str = match std::str::from_utf8(header.as_bytes()) {
-                    Ok(string) => string,
-                    Err(_) => continue
-                };
+        let mut cookie_jar = CookieJar::new();
+        for header in h_headers.get_all("Cookie") {
+            // TODO.async: This used to only allow UTF-8 but now only allows ASCII
+            // (needs verification)
+            let raw_str = match header.to_str() {
+                Ok(string) => string,
+                Err(_) => continue
+            };
 
-                for cookie_str in raw_str.split(';').map(|s| s.trim()) {
-                    if let Some(cookie) = Cookies::parse_cookie(cookie_str) {
-                        cookie_jar.add_original(cookie);
-                    }
+            for cookie_str in raw_str.split(';').map(|s| s.trim()) {
+                if let Some(cookie) = Cookies::parse_cookie(cookie_str) {
+                    cookie_jar.add_original(cookie);
                 }
             }
-
-            request.state.cookies = RefCell::new(cookie_jar);
-        // TODO }
+        }
+        request.state.cookies = Mutex::new(Some(cookie_jar));
 
         // Set the rest of the headers.
         for (name, value) in h_headers.iter() {
-
-            // TODO if let Some(header_values) = h_headers.get_all(hyp.name()) {
-
-                    // This is not totally correct since values needn't be UTF8.
-                    let value_str = String::from_utf8_lossy(value.as_bytes()).into_owned();
-                    let header = Header::new(name.to_string(), value_str);
-                    request.add_header(header);
-
-            // TODO }
+            // This is not totally correct since values needn't be UTF8.
+            let value_str = String::from_utf8_lossy(value.as_bytes()).into_owned();
+            let header = Header::new(name.to_string(), value_str);
+            request.add_header(header);
         }
 
         Ok(request)

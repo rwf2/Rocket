@@ -93,7 +93,7 @@ use crate::request::FormItems;
 /// ```
 pub trait FromForm<'f>: Sized {
     /// The associated error to be returned when parsing fails.
-    type Error;
+    type Error: Send;
 
     /// Parses an instance of `Self` from the iterator of form items `it`.
     ///

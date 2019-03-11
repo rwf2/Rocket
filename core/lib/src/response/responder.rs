@@ -2,6 +2,8 @@ use std::fs::File;
 use std::io::{Cursor, BufReader};
 use std::fmt;
 
+use futures::compat::AsyncRead01CompatExt;
+
 use crate::http::{Status, ContentType, StatusClass};
 use crate::response::{self, Response, Body};
 use crate::request::Request;
@@ -242,10 +244,11 @@ impl Responder<'_> for Vec<u8> {
 /// Returns a response with a sized body for the file. Always returns `Ok`.
 impl Responder<'_> for File {
     fn respond_to(self, _: &Request<'_>) -> response::Result<'static> {
-        let (metadata, file) = (self.metadata(), BufReader::new(self));
+        let metadata = self.metadata();
+        let stream = BufReader::new(tokio::fs::File::from_std(self)).compat();
         match metadata {
-            Ok(md) => Response::build().raw_body(Body::Sized(file, md.len())).ok(),
-            Err(_) => Response::build().streamed_body(file).ok()
+            Ok(md) => Response::build().raw_body(Body::Sized(stream, md.len())).ok(),
+            Err(_) => Response::build().streamed_body(stream).ok()
         }
     }
 }

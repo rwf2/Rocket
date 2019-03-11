@@ -24,12 +24,12 @@ tls = ["rocket_http/tls"]
 private-cookies = ["rocket_http/private-cookies"]
 
 [dependencies]
-futures = "0.1"
 rocket_codegen = { version = "0.5.0-dev", path = "../codegen" }
 rocket_http = { version = "0.5.0-dev", path = "../http" }
+futures-preview = { version = "0.3.0-alpha.14", features = ["compat", "io-compat"] }
 tokio = "0.1.16"
 yansi = "0.5"
-log = "0.4"
+log = { version = "0.4", features = ["std"] }
 toml = "0.4.7"
 num_cpus = "1.0"
 state = "0.4.1"
