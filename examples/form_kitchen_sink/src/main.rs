@@ -1,11 +1,10 @@
-#![feature(plugin, decl_macro)]
-#![plugin(rocket_codegen)]
+#![feature(proc_macro_hygiene, decl_macro)]
 
 #[macro_use] extern crate rocket;
 
 use std::io;
 
-use rocket::request::Form;
+use rocket::request::{Form, FormError, FormDataError};
 use rocket::response::NamedFile;
 use rocket::http::RawStr;
 
@@ -29,11 +28,13 @@ struct FormInput<'r> {
 }
 
 #[post("/", data = "<sink>")]
-fn sink<'r>(sink: Result<Form<'r, FormInput<'r>>, Option<String>>) -> String {
+fn sink(sink: Result<Form<FormInput>, FormError>) -> String {
     match sink {
-        Ok(form) => format!("{:?}", form.get()),
-        Err(Some(f)) => format!("Invalid form input: {}", f),
-        Err(None) => format!("Form input was invalid UTF8."),
+        Ok(form) => format!("{:?}", &*form),
+        Err(FormDataError::Io(_)) => format!("Form input was invalid UTF-8."),
+        Err(FormDataError::Malformed(f)) | Err(FormDataError::Parse(_, f)) => {
+            format!("Invalid form input: {}", f)
+        }
     }
 }
 

@@ -1,7 +1,6 @@
-#![feature(plugin, decl_macro)]
-#![plugin(rocket_codegen)]
+#![feature(proc_macro_hygiene, decl_macro)]
 
-extern crate rocket;
+#[macro_use] extern crate rocket;
 
 #[cfg(test)] mod tests;
 
@@ -23,7 +22,7 @@ fn main() {
     let e = rocket::ignite()
         // .mount("/", routes![hello, hello]) // uncoment this to get an error
         .mount("/", routes![hello])
-        .catch(catchers![not_found])
+        .register(catchers![not_found])
         .launch();
 
     println!("Whoops! Rocket didn't launch!");

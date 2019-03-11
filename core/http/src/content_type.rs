@@ -3,7 +3,8 @@ use std::ops::Deref;
 use std::str::FromStr;
 use std::fmt;
 
-use {Header, MediaType, Source};
+use header::Header;
+use media_type::{MediaType, Source};
 use ext::IntoCollection;
 use hyper::mime::Mime;
 

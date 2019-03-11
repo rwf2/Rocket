@@ -14,8 +14,8 @@ pub struct ConfigBuilder {
     pub port: u16,
     /// The number of workers to run in parallel.
     pub workers: u16,
-    /// Keep-alive timeout in seconds or None if disabled.
-    pub keep_alive: Option<u32>,
+    /// Keep-alive timeout in seconds or disabled if 0.
+    pub keep_alive: u32,
     /// How much information to log.
     pub log_level: LoggingLevel,
     /// The secret key.
@@ -26,21 +26,15 @@ pub struct ConfigBuilder {
     pub limits: Limits,
     /// Any extra parameters that aren't part of Rocket's config.
     pub extras: HashMap<String, Value>,
-    /// The root directory of this config.
-    pub root: PathBuf,
+    /// The root directory of this config, if any.
+    pub root: Option<PathBuf>,
 }
 
 impl ConfigBuilder {
     /// Create a new `ConfigBuilder` instance using the default parameters from
-    /// the given `environment`. The root configuration directory is set to the
-    /// current working directory.
+    /// the given `environment`.
     ///
-    /// This method is typically called indirectly via
-    /// [Config::build](/rocket/config/struct.Config.html#method.build).
-    ///
-    /// # Panics
-    ///
-    /// Panics if the current directory cannot be retrieved.
+    /// This method is typically called indirectly via [`Config::build()`].
     ///
     /// # Example
     ///
@@ -56,22 +50,19 @@ impl ConfigBuilder {
     /// # assert!(config.is_ok());
     /// ```
     pub fn new(environment: Environment) -> ConfigBuilder {
-        let config = Config::new(environment)
-            .expect("ConfigBuilder::new(): couldn't get current directory.");
-
-        let root_dir = PathBuf::from(config.root());
+        let config = Config::new(environment);
         ConfigBuilder {
             environment: config.environment,
             address: config.address,
             port: config.port,
             workers: config.workers,
-            keep_alive: config.keep_alive,
+            keep_alive: config.keep_alive.unwrap_or(0),
             log_level: config.log_level,
             secret_key: None,
             tls: None,
             limits: config.limits,
             extras: config.extras,
-            root: root_dir,
+            root: None,
         }
     }
 
@@ -131,7 +122,7 @@ impl ConfigBuilder {
         self
     }
 
-    /// Sets the keep-alive timeout to `timeout` seconds. If `timeout` is `None`,
+    /// Sets the keep-alive timeout to `timeout` seconds. If `timeout` is `0`,
     /// keep-alive is disabled.
     ///
     /// # Example
@@ -146,14 +137,14 @@ impl ConfigBuilder {
     /// assert_eq!(config.keep_alive, Some(10));
     ///
     /// let config = Config::build(Environment::Staging)
-    ///     .keep_alive(None)
+    ///     .keep_alive(0)
     ///     .unwrap();
     ///
     /// assert_eq!(config.keep_alive, None);
     /// ```
     #[inline]
-    pub fn keep_alive<T: Into<Option<u32>>>(mut self, timeout: T) -> Self {
-        self.keep_alive = timeout.into();
+    pub fn keep_alive(mut self, timeout: u32) -> Self {
+        self.keep_alive = timeout;
         self
     }
 
@@ -265,10 +256,10 @@ impl ConfigBuilder {
     ///     .root("/my_app/dir")
     ///     .unwrap();
     ///
-    /// assert_eq!(config.root(), Path::new("/my_app/dir"));
+    /// assert_eq!(config.root().unwrap(), Path::new("/my_app/dir"));
     /// ```
     pub fn root<P: AsRef<Path>>(mut self, path: P) -> Self {
-        self.root = path.as_ref().to_path_buf();
+        self.root = Some(path.as_ref().to_path_buf());
         self
     }
 
@@ -300,9 +291,7 @@ impl ConfigBuilder {
     ///
     /// # Errors
     ///
-    /// If the current working directory cannot be retrieved, returns a `BadCWD`
-    /// error. If the address or secret key fail to parse, returns a `BadType`
-    /// error.
+    /// If the address or secret key fail to parse, returns a `BadType` error.
     ///
     /// # Example
     ///
@@ -313,7 +302,7 @@ impl ConfigBuilder {
     ///     .address("127.0.0.1")
     ///     .port(700)
     ///     .workers(12)
-    ///     .keep_alive(None)
+    ///     .keep_alive(0)
     ///     .finalize();
     ///
     /// assert!(config.is_ok());
@@ -325,15 +314,18 @@ impl ConfigBuilder {
     /// assert!(config.is_err());
     /// ```
     pub fn finalize(self) -> Result<Config> {
-        let mut config = Config::new(self.environment)?;
+        let mut config = Config::new(self.environment);
         config.set_address(self.address)?;
         config.set_port(self.port);
         config.set_workers(self.workers);
         config.set_keep_alive(self.keep_alive);
         config.set_log_level(self.log_level);
         config.set_extras(self.extras);
-        config.set_root(self.root);
         config.set_limits(self.limits);
+
+        if let Some(root) = self.root {
+            config.set_root(root);
+        }
 
         if let Some((certs_path, key_path, cert_store_path)) = self.tls {
             config.set_tls(&certs_path, &key_path, cert_store_path.as_ref().map(String::as_str))?;
@@ -350,8 +342,8 @@ impl ConfigBuilder {
     ///
     /// # Panics
     ///
-    /// Panics if the current working directory cannot be retrieved or if the
-    /// supplied address, secret key, or TLS configuration fail to parse.
+    /// Panics if the supplied address, secret key, or TLS configuration fail to
+    /// parse.
     ///
     /// # Example
     ///
@@ -373,9 +365,8 @@ impl ConfigBuilder {
     ///
     /// # Panics
     ///
-    /// Panics if the current working directory cannot be retrieved or if the
-    /// supplied address, secret key, or TLS configuration fail to parse. If a
-    /// panic occurs, the error message `msg` is printed.
+    /// Panics if the supplied address, secret key, or TLS configuration fail to
+    /// parse. If a panic occurs, the error message `msg` is printed.
     ///
     /// # Example
     ///

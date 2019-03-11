@@ -1,9 +1,8 @@
-#![feature(test, plugin, decl_macro)]
-#![plugin(rocket_codegen)]
+#![feature(proc_macro_hygiene, decl_macro)]
 // #![feature(alloc_system)]
 // extern crate alloc_system;
 
-extern crate rocket;
+#[macro_use] extern crate rocket;
 
 use rocket::config::{Environment, Config, LoggingLevel};
 use rocket::http::RawStr;

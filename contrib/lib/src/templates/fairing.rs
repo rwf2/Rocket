@@ -1,29 +1,31 @@
-use super::DEFAULT_TEMPLATE_DIR;
-use super::context::Context;
-use super::engine::Engines;
+use templates::{DEFAULT_TEMPLATE_DIR, Context, Engines};
 
 use rocket::Rocket;
 use rocket::config::ConfigError;
 use rocket::fairing::{Fairing, Info, Kind};
 
-pub use self::context::ContextManager;
+crate use self::context::ContextManager;
 
 #[cfg(not(debug_assertions))]
 mod context {
     use std::ops::Deref;
-    use super::Context;
+    use templates::Context;
 
     /// Wraps a Context. With `cfg(debug_assertions)` active, this structure
     /// additionally provides a method to reload the context at runtime.
-    pub struct ContextManager(Context);
+    crate struct ContextManager(Context);
 
     impl ContextManager {
-        pub fn new(ctxt: Context) -> ContextManager {
+        crate fn new(ctxt: Context) -> ContextManager {
             ContextManager(ctxt)
         }
 
-        pub fn context<'a>(&'a self) -> impl Deref<Target=Context> + 'a {
+        crate fn context<'a>(&'a self) -> impl Deref<Target=Context> + 'a {
             &self.0
+        }
+
+        crate fn is_reloading(&self) -> bool {
+            false
         }
     }
 }
@@ -36,35 +38,35 @@ mod context {
     use std::sync::{RwLock, Mutex};
     use std::sync::mpsc::{channel, Receiver};
 
-    use super::{Context, Engines};
+    use templates::{Context, Engines};
 
     use self::notify::{raw_watcher, RawEvent, RecommendedWatcher, RecursiveMode, Watcher};
 
     /// Wraps a Context. With `cfg(debug_assertions)` active, this structure
     /// additionally provides a method to reload the context at runtime.
-    pub struct ContextManager {
+    crate struct ContextManager {
         /// The current template context, inside an RwLock so it can be updated.
         context: RwLock<Context>,
         /// A filesystem watcher and the receive queue for its events.
-        watcher: Option<(RecommendedWatcher, Mutex<Receiver<RawEvent>>)>,
+        watcher: Option<Mutex<(RecommendedWatcher, Receiver<RawEvent>)>>,
     }
 
     impl ContextManager {
-        pub fn new(ctxt: Context) -> ContextManager {
+        crate fn new(ctxt: Context) -> ContextManager {
             let (tx, rx) = channel();
+            let watcher = raw_watcher(tx).and_then(|mut watcher| {
+                watcher.watch(ctxt.root.canonicalize()?, RecursiveMode::Recursive)?;
+                Ok(watcher)
+            });
 
-            let watcher = if let Ok(mut watcher) = raw_watcher(tx) {
-                if watcher.watch(ctxt.root.clone(), RecursiveMode::Recursive).is_ok() {
-                    Some((watcher, Mutex::new(rx)))
-                } else {
-                    warn!("Could not monitor the templates directory for changes.");
-                    warn_!("Live template reload will be unavailable");
+            let watcher = match watcher {
+                Ok(watcher) => Some(Mutex::new((watcher, rx))),
+                Err(e) => {
+                    warn!("Failed to enable live template reloading: {}", e);
+                    debug_!("Reload error: {:?}", e);
+                    warn_!("Live template reloading is unavailable.");
                     None
                 }
-            } else {
-                warn!("Could not instantiate a filesystem watcher.");
-                warn_!("Live template reload will be unavailable");
-                None
             };
 
             ContextManager {
@@ -73,8 +75,12 @@ mod context {
             }
         }
 
-        pub fn context<'a>(&'a self) -> impl Deref<Target=Context> + 'a {
+        crate fn context<'a>(&'a self) -> impl Deref<Target=Context> + 'a {
             self.context.read().unwrap()
+        }
+
+        crate fn is_reloading(&self) -> bool {
+            self.watcher.is_some()
         }
 
         fn context_mut<'a>(&'a self) -> impl DerefMut<Target=Context> + 'a {
@@ -85,11 +91,11 @@ mod context {
         /// have been changes since the last reload, all templates are
         /// reinitialized from disk and the user's customization callback is run
         /// again.
-        pub fn reload_if_needed<F: Fn(&mut Engines)>(&self, custom_callback: F) {
+        crate fn reload_if_needed<F: Fn(&mut Engines)>(&self, custom_callback: F) {
             self.watcher.as_ref().map(|w| {
-                let rx = w.1.lock().expect("receive queue");
+                let rx_lock = w.lock().expect("receive queue lock");
                 let mut changed = false;
-                while let Ok(_) = rx.try_recv() {
+                while let Ok(_) = rx_lock.1.try_recv() {
                     changed = true;
                 }
 
@@ -117,7 +123,7 @@ pub struct TemplateFairing {
     /// The user-provided customization callback, allowing the use of
     /// functionality specific to individual template engines. In debug mode,
     /// this callback might be run multiple times as templates are reloaded.
-    pub(crate) custom_callback: Box<Fn(&mut Engines) + Send + Sync + 'static>,
+    crate custom_callback: Box<Fn(&mut Engines) + Send + Sync + 'static>,
 }
 
 impl Fairing for TemplateFairing {

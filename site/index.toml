@@ -1,40 +1,43 @@
 ###############################################################################
-# Top features: displayed in the header under the introductory text.
+# Release info: displayed between bars in the header
 ###############################################################################
 
 [release]
-url = "https://crates.io/crates/rocket"
-version = "0.4.0-dev"
-date = "Jul 14, 2017"
+version = "0.4.0"
+date = "Dec 06, 2018"
+
+###############################################################################
+# Top features: displayed in the header under the introductory text.
+###############################################################################
 
 [[top_features]]
 title = "Type Safe"
 text = "From request to response Rocket ensures that your types mean something."
 image = "helmet"
 button = "Learn More"
-url = "/overview/#how-rocket-works"
+url = "overview/#how-rocket-works"
 
 [[top_features]]
 title = "Boilerplate Free"
 text = "Spend your time writing code that really matters, and let Rocket generate the rest."
 image = "robot-free"
 button = "See Examples"
-url = "/overview/#anatomy-of-a-rocket-application"
+url = "overview/#anatomy-of-a-rocket-application"
 
 [[top_features]]
 title = "Easy To Use"
-text = "Rocket makes extensive use of Rust's code generation tools to provide a clean API."
+text = "Simple, intuitive APIs make Rocket approachable, no matter your background."
 image = "sun"
 button = "Get Started"
-url = "/guide"
+url = "guide"
 margin = 2
 
 [[top_features]]
 title = "Extensible"
-text = "Easily create your own primitives that any Rocket application can use."
+text = "Create your own first-class primitives that any Rocket application can use."
 image = "telescope"
 button = "See How"
-url = "/overview/#anatomy-of-a-rocket-application"
+url = "overview/#anatomy-of-a-rocket-application"
 margin = 9
 
 ###############################################################################
@@ -44,10 +47,9 @@ margin = 9
 [[sections]]
 title = "Hello, Rocket!"
 code = '''
-  #![feature(plugin)]
-  #![plugin(rocket_codegen)]
+  #![feature(proc_macro_hygiene, decl_macro)]
 
-  extern crate rocket;
+  #[macro_use] extern crate rocket;
 
   #[get("/hello/<name>/<age>")]
   fn hello(name: String, age: u8) -> String {
@@ -81,7 +83,7 @@ code = '''
 
   #[post("/", data = "<task>")]
   fn new(task: Form<Task>) -> Flash<Redirect> {
-      if task.get().description.is_empty() {
+      if task.description.is_empty() {
           Flash::error(Redirect::to("/"), "Cannot be empty.")
       } else {
           Flash::success(Redirect::to("/"), "Task added.")
@@ -106,10 +108,10 @@ code = '''
      contents: String,
   }
 
-  #[put("/<id>", data = "<message>")]
-  fn update(id: ID, message: Json<Message>) -> JsonValue {
-      if DB.contains_key(&id) {
-          DB.insert(id, &message.contents);
+  #[put("/<id>", data = "<msg>")]
+  fn update(db: &Db, id: Id, msg: Json<Message>) -> JsonValue {
+      if db.contains_key(&id) {
+          db.insert(id, &msg.contents);
           json!({ "status": "ok" })
       } else {
           json!({ "status": "error" })
@@ -133,9 +135,9 @@ text = '''
 
 [[bottom_features]]
 title = 'Templating'
-text = "Rocket makes rendering templates a breeze with built-in templating support."
+text = "Rocket makes templating a breeze with built-in templating support."
 image = 'templating-icon'
-url = '/guide/responses/#templates'
+url = 'guide/responses/#templates'
 button = 'Learn More'
 color = 'blue'
 
@@ -143,7 +145,7 @@ color = 'blue'
 title = 'Cookies'
 text = "View, add, or remove cookies, with or without encryption, without hassle."
 image = 'cookies-icon'
-url = '/guide/requests/#cookies'
+url = 'guide/requests/#cookies'
 button = 'Learn More'
 color = 'purple'
 margin = -6
@@ -152,7 +154,7 @@ margin = -6
 title = 'Streams'
 text = "Rocket streams all incoming and outgoing data, so size isn't a concern."
 image = 'streams-icon'
-url = '/guide/requests/#streaming'
+url = 'guide/requests/#streaming'
 button = 'Learn More'
 color = 'red'
 margin = -29
@@ -161,33 +163,41 @@ margin = -29
 title = 'Config Environments'
 text = "Configure your application your way for development, staging, and production."
 image = 'config-icon'
-url = '/guide/configuration/#environment'
+url = 'guide/configuration/#environment'
 button = 'Learn More'
 color = 'yellow'
-margin = -3
-
-[[bottom_features]]
-title = 'Query Strings'
-text = "Handling query strings and parameters is type-safe and easy in Rocket."
-image = 'query-icon'
-url = '/guide/requests/#query-strings'
-button = 'Learn More'
-color = 'orange'
 margin = -3
 
 [[bottom_features]]
 title = 'Testing Library'
 text = "Unit test your applications with ease using the built-in testing library."
 image = 'testing-icon'
-url = '/guide/testing#testing'
+url = 'guide/testing#testing'
+button = 'Learn More'
+color = 'orange'
+
+[[bottom_features]]
+title = 'Typed URIs'
+text = "Rocket typechecks route URIs for you so you never mistype a URI again."
+image = 'ship-icon'
+url = 'guide/responses/#typed-uris'
 button = 'Learn More'
 color = 'green'
+margin = -20
 
-# Blocked on Hyper/OpenSSL.
 # [[bottom_features]]
-# title = 'Signed Sessions'
-# text = "Safe, secure, signed sessions are built-in to Rocket so your users can stay safe."
-# image = 'sessions-icon'
-# url = '/overview'
+# title = 'Query Strings'
+# text = "Handling query strings and parameters is type-safe and easy in Rocket."
+# image = 'query-icon'
+# url = 'guide/requests/#query-strings'
 # button = 'Learn More'
-# color = 'green'
+# color = 'red'
+# margin = -3
+
+# [[bottom_features]]
+# title = 'Private Cookies'
+# text = "Safe, secure, private cookies are built-in so your users can stay safe."
+# image = 'sessions-icon'
+# url = 'guide/requests/#private-cookies'
+# button = 'Learn More'
+# color = 'purple'

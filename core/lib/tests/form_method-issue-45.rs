@@ -1,5 +1,4 @@
-#![feature(plugin, decl_macro)]
-#![plugin(rocket_codegen)]
+#![feature(proc_macro_hygiene, decl_macro)]
 
 #[macro_use] extern crate rocket;
 
@@ -12,7 +11,7 @@ struct FormData {
 
 #[patch("/", data = "<form_data>")]
 fn bug(form_data: Form<FormData>) -> &'static str {
-    assert_eq!("Form data", &form_data.get().form_data);
+    assert_eq!("Form data", form_data.form_data);
     "OK"
 }
 

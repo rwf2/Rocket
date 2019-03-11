@@ -17,9 +17,8 @@ pub struct Header<'h> {
 impl<'h> Header<'h> {
     /// Constructs a new header. This method should be used rarely and only for
     /// non-standard headers. Instead, prefer to use the `Into<Header>`
-    /// implementations of many types, including
-    /// [ContentType](struct.ContentType.html) and all of the headers in
-    /// [http::hyper::header](hyper/header/index.html).
+    /// implementations of many types, including [`ContentType`] and all of the
+    /// headers in [`http::hyper::header`](hyper::header).
     ///
     /// # Examples
     ///

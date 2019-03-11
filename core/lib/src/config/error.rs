@@ -1,17 +1,15 @@
+use std::{io, fmt};
 use std::path::PathBuf;
 use std::error::Error;
-use std::{io, fmt};
+
+use yansi::Paint;
 
 use super::Environment;
 use self::ConfigError::*;
 
-use yansi::Color::White;
-
 /// The type of a configuration error.
 #[derive(Debug)]
 pub enum ConfigError {
-    /// The current working directory could not be determined.
-    BadCWD,
     /// The configuration file was not found.
     NotFound,
     /// There was an I/O error while reading the configuration file.
@@ -35,7 +33,7 @@ pub enum ConfigError {
     /// A config key was specified with a value of the wrong type.
     ///
     /// Parameters: (entry_name, expected_type, actual_type, filename)
-    BadType(String, &'static str, &'static str, PathBuf),
+    BadType(String, &'static str, &'static str, Option<PathBuf>),
     /// There was a TOML parsing error.
     ///
     /// Parameters: (toml_source_string, filename, error_description, line/col)
@@ -57,56 +55,58 @@ pub enum ConfigError {
 impl ConfigError {
     /// Prints this configuration error with Rocket formatting.
     pub fn pretty_print(&self) {
-        let valid_envs = Environment::valid();
+        let valid_envs = Environment::VALID;
         match *self {
-            BadCWD => error!("couldn't get current working directory"),
             NotFound => error!("config file was not found"),
             IoError => error!("failed reading the config file: IO error"),
             Io(ref error, param) => {
-                error!("I/O error while setting {}:", White.paint(param));
+                error!("I/O error while setting {}:", Paint::default(param).bold());
                 info_!("{}", error);
             }
             BadFilePath(ref path, reason) => {
-                error!("configuration file path '{:?}' is invalid", path);
+                error!("configuration file path {} is invalid", Paint::default(path.display()).bold());
                 info_!("{}", reason);
             }
             BadEntry(ref name, ref filename) => {
-                let valid_entries = format!("{}, and global", valid_envs);
-                error!("[{}] is not a known configuration environment", name);
-                info_!("in {:?}", White.paint(filename));
-                info_!("valid environments are: {}", White.paint(valid_entries));
+                let valid_entries = format!("{}, global", valid_envs);
+                error!("{} is not a known configuration environment",
+                       Paint::default(format!("[{}]", name)).bold());
+                info_!("in {}", Paint::default(filename.display()).bold());
+                info_!("valid environments are: {}", Paint::default(valid_entries).bold());
             }
             BadEnv(ref name) => {
-                error!("'{}' is not a valid ROCKET_ENV value", name);
-                info_!("valid environments are: {}", White.paint(valid_envs));
+                error!("{} is not a valid ROCKET_ENV value", Paint::default(name).bold());
+                info_!("valid environments are: {}", Paint::default(valid_envs).bold());
             }
             BadType(ref name, expected, actual, ref filename) => {
-                error!("{} key could not be parsed", White.paint(name));
-                info_!("in {:?}", White.paint(filename));
+                error!("{} key could not be parsed", Paint::default(name).bold());
+                if let Some(filename) = filename {
+                    info_!("in {}", Paint::default(filename.display()).bold());
+                }
+
                 info_!("expected value to be {}, but found {}",
-                       White.paint(expected), White.paint(actual));
+                       Paint::default(expected).bold(), Paint::default(actual).bold());
             }
             ParseError(_, ref filename, ref desc, line_col) => {
                 error!("config file failed to parse due to invalid TOML");
                 info_!("{}", desc);
+                info_!("in {}", Paint::default(filename.display()).bold());
                 if let Some((line, col)) = line_col {
-                    info_!("at {:?}:{}:{}", White.paint(filename),
-                           White.paint(line + 1), White.paint(col + 1));
-                } else {
-                    info_!("in {:?}", White.paint(filename));
+                    info_!("at line {}, column {}",
+                           Paint::default(line + 1).bold(), Paint::default(col + 1).bold());
                 }
             }
             BadEnvVal(ref key, ref value, ref error) => {
-                error!("environment variable '{}={}' could not be parsed",
-                       White.paint(key), White.paint(value));
-                info_!("{}", White.paint(error));
+                error!("environment variable {} could not be parsed",
+                   Paint::default(format!("ROCKET_{}={}", key.to_uppercase(), value)).bold());
+                info_!("{}", error);
             }
             UnknownKey(ref key) => {
-                error!("the configuration key '{}' is unknown and disallowed in \
-                       this position", White.paint(key));
+                error!("the configuration key {} is unknown and disallowed in \
+                       this position", Paint::default(key).bold());
             }
             Missing(ref key) => {
-                error!("missing configuration key: '{}'", White.paint(key));
+                error!("missing configuration key: {}", Paint::default(key).bold());
             }
         }
     }
@@ -133,7 +133,6 @@ impl ConfigError {
 impl fmt::Display for ConfigError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match *self {
-            BadCWD => write!(f, "couldn't get current working directory"),
             NotFound => write!(f, "config file was not found"),
             IoError => write!(f, "I/O error while reading the config file"),
             Io(ref e, p) => write!(f, "I/O error while setting '{}': {}", p, e),
@@ -158,7 +157,6 @@ impl fmt::Display for ConfigError {
 impl Error for ConfigError {
     fn description(&self) -> &str {
         match *self {
-            BadCWD => "the current working directory could not be determined",
             NotFound => "config file was not found",
             IoError => "there was an I/O error while reading the config file",
             Io(..) => "an I/O error occured while setting a configuration parameter",
@@ -177,7 +175,6 @@ impl Error for ConfigError {
 impl PartialEq for ConfigError {
     fn eq(&self, other: &ConfigError) -> bool {
         match (self, other) {
-            (&BadCWD, &BadCWD) => true,
             (&NotFound, &NotFound) => true,
             (&IoError, &IoError) => true,
             (&Io(_, p1), &Io(_, p2)) => p1 == p2,
@@ -193,7 +190,7 @@ impl PartialEq for ConfigError {
                 k1 == k2 && v1 == v2
             }
             (&Missing(ref k1), &Missing(ref k2)) => k1 == k2,
-            (&BadCWD, _) | (&NotFound, _) | (&IoError, _) | (&Io(..), _)
+            (&NotFound, _) | (&IoError, _) | (&Io(..), _)
                 | (&BadFilePath(..), _) | (&BadEnv(..), _) | (&ParseError(..), _)
                 | (&UnknownKey(..), _) | (&BadEntry(..), _) | (&BadType(..), _)
                 | (&BadEnvVal(..), _) | (&Missing(..), _) => false

@@ -1,0 +1,65 @@
+error[E0277]: the trait bound `Q: rocket::request::FromParam<'_>` is not satisfied
+ --> $DIR/route-type-errors.rs:8:7
+  |
+8 | fn f0(foo: Q) {} //~ ERROR FromParam
+  |       ^^^^^^ the trait `rocket::request::FromParam<'_>` is not implemented for `Q`
+
+error[E0277]: the trait bound `Q: rocket::request::FromSegments<'_>` is not satisfied
+  --> $DIR/route-type-errors.rs:11:7
+   |
+11 | fn f1(foo: Q) {} //~ ERROR FromSegments
+   |       ^^^^^^ the trait `rocket::request::FromSegments<'_>` is not implemented for `Q`
+
+error[E0277]: the trait bound `Q: rocket::request::FromFormValue<'_>` is not satisfied
+  --> $DIR/route-type-errors.rs:14:7
+   |
+14 | fn f2(foo: Q) {} //~ ERROR FromFormValue
+   |       ^^^^^^ the trait `rocket::request::FromFormValue<'_>` is not implemented for `Q`
+
+error[E0277]: the trait bound `Q: rocket::request::FromQuery<'_>` is not satisfied
+  --> $DIR/route-type-errors.rs:17:7
+   |
+17 | fn f3(foo: Q) {} //~ ERROR FromQuery
+   |       ^^^^^^ the trait `rocket::request::FromQuery<'_>` is not implemented for `Q`
+
+error[E0277]: the trait bound `Q: rocket::data::FromDataSimple` is not satisfied
+  --> $DIR/route-type-errors.rs:20:7
+   |
+20 | fn f4(foo: Q) {} //~ ERROR FromData
+   |       ^^^^^^ the trait `rocket::data::FromDataSimple` is not implemented for `Q`
+   |
+   = note: required because of the requirements on the impl of `rocket::data::FromData<'_>` for `Q`
+
+error[E0277]: the trait bound `Q: rocket::request::FromRequest<'_, '_>` is not satisfied
+  --> $DIR/route-type-errors.rs:23:7
+   |
+23 | fn f5(a: Q, foo: Q) {}
+   |       ^^^^ the trait `rocket::request::FromRequest<'_, '_>` is not implemented for `Q`
+
+error[E0277]: the trait bound `Q: rocket::request::FromParam<'_>` is not satisfied
+  --> $DIR/route-type-errors.rs:23:13
+   |
+23 | fn f5(a: Q, foo: Q) {}
+   |             ^^^^^^ the trait `rocket::request::FromParam<'_>` is not implemented for `Q`
+
+error[E0277]: the trait bound `Q: rocket::request::FromRequest<'_, '_>` is not satisfied
+  --> $DIR/route-type-errors.rs:28:7
+   |
+28 | fn f6(a: Q, foo: Q, good: usize, bar: Q) {}
+   |       ^^^^ the trait `rocket::request::FromRequest<'_, '_>` is not implemented for `Q`
+
+error[E0277]: the trait bound `Q: rocket::request::FromParam<'_>` is not satisfied
+  --> $DIR/route-type-errors.rs:28:13
+   |
+28 | fn f6(a: Q, foo: Q, good: usize, bar: Q) {}
+   |             ^^^^^^ the trait `rocket::request::FromParam<'_>` is not implemented for `Q`
+
+error[E0277]: the trait bound `Q: rocket::request::FromParam<'_>` is not satisfied
+  --> $DIR/route-type-errors.rs:28:34
+   |
+28 | fn f6(a: Q, foo: Q, good: usize, bar: Q) {}
+   |                                  ^^^^^^ the trait `rocket::request::FromParam<'_>` is not implemented for `Q`
+
+error: aborting due to 10 previous errors
+
+For more information about this error, try `rustc --explain E0277`.

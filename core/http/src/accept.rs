@@ -120,19 +120,18 @@ impl PartialEq for AcceptParams {
 /// The HTTP Accept header.
 ///
 /// An `Accept` header is composed of zero or more media types, each of which
-/// may have an optional quality value (a [`QMediaType`]). The header is sent by an HTTP client to
-/// describe the formats it accepts as well as the order in which it prefers
-/// different formats.
+/// may have an optional quality value (a [`QMediaType`]). The header is sent by
+/// an HTTP client to describe the formats it accepts as well as the order in
+/// which it prefers different formats.
 ///
 /// # Usage
 ///
 /// The Accept header of an incoming request can be retrieved via the
-/// [`Request::accept`] method. The [`preferred`] method can be used to retrieve
-/// the client's preferred media type.
+/// [`Request::accept()`] method. The [`preferred()`] method can be used to
+/// retrieve the client's preferred media type.
 ///
-/// [`Request::accept`]: /rocket/struct.Request.html#method.accept
-/// [`preferred`]: /rocket/http/struct.Accept.html#method.preferred
-/// [`QMediaType`]: /rocket/http/struct.QMediaType.html
+/// [`Request::accept`]: ::rocket::Request::accept()
+/// [`preferred()`]: Accept::preferred()
 ///
 /// An `Accept` type with a single, common media type can be easily constructed
 /// via provided associated constants.

@@ -1,16 +1,15 @@
-#![feature(plugin, decl_macro)]
-#![plugin(rocket_codegen)]
+#![feature(proc_macro_hygiene, decl_macro)]
 
 extern crate rocket;
 extern crate rocket_contrib;
 
-#[cfg(feature = "static_files")]
-mod static_files_tests {
+#[cfg(feature = "static")]
+mod static_tests {
     use std::{io::Read, fs::File};
     use std::path::{Path, PathBuf};
 
     use rocket::{self, Rocket};
-    use rocket_contrib::static_files::{StaticFiles, Options};
+    use rocket_contrib::serve::{StaticFiles, Options};
     use rocket::http::Status;
     use rocket::local::Client;
 

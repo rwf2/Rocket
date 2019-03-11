@@ -1,7 +1,6 @@
 use response;
 use handler::ErrorHandler;
 use codegen::StaticCatchInfo;
-use error::Error;
 use request::Request;
 
 use std::fmt;
@@ -11,9 +10,9 @@ use yansi::Color::*;
 ///
 /// Catchers are routes that run when errors occur. They correspond directly
 /// with the HTTP error status code they will be handling and are registered
-/// with Rocket via the [Rocket::catch](/rocket/struct.Rocket.html#method.catch)
-/// method. For example, to handle "404 not found" errors, a catcher for the
-/// "404" status code is registered.
+/// with Rocket via [`Rocket::register()`](::Rocket::register()). For example,
+/// to handle "404 not found" errors, a catcher for the "404" status code is
+/// registered.
 ///
 /// Because error handlers are only called when all routes are exhausted, they
 /// should not fail nor forward. If an error catcher fails, the user will
@@ -35,10 +34,9 @@ use yansi::Color::*;
 /// declared using the `catch` decorator, as follows:
 ///
 /// ```rust
-/// #![feature(plugin, decl_macro)]
-/// #![plugin(rocket_codegen)]
+/// #![feature(proc_macro_hygiene, decl_macro)]
 ///
-/// extern crate rocket;
+/// #[macro_use] extern crate rocket;
 ///
 /// use rocket::Request;
 ///
@@ -54,18 +52,19 @@ use yansi::Color::*;
 ///
 /// fn main() {
 /// # if false { // We don't actually want to launch the server in an example.
-///     rocket::ignite().catch(catchers![internal_error, not_found]).launch();
+///     rocket::ignite().register(catchers![internal_error, not_found]).launch();
 /// # }
 /// }
 /// ```
 ///
-/// A function decorated with `catch` can take in 0, 1, or 2 parameters:
-/// `Error`, `&Request`, or both, as desired.
+/// A function decorated with `catch` must take exactly zero or one arguments.
+/// If the catcher takes an argument, it must be of type [`&Request`](Request).
 pub struct Catcher {
     /// The HTTP status code to match against.
     pub code: u16,
-    handler: ErrorHandler,
-    is_default: bool,
+    /// The catcher's associated handler.
+    pub handler: ErrorHandler,
+    crate is_default: bool,
 }
 
 impl Catcher {
@@ -76,17 +75,17 @@ impl Catcher {
     ///
     /// ```rust
     /// # #![allow(unused_variables)]
-    /// use rocket::{Catcher, Request, Error};
+    /// use rocket::{Catcher, Request};
     /// use rocket::response::{Result, Responder};
     /// use rocket::response::status::Custom;
     /// use rocket::http::Status;
     ///
-    /// fn handle_404<'r>(_: Error, req: &'r Request) -> Result<'r> {
+    /// fn handle_404<'r>(req: &'r Request) -> Result<'r> {
     ///     let res = Custom(Status::NotFound, format!("404: {}", req.uri()));
     ///     res.respond_to(req)
     /// }
     ///
-    /// fn handle_500<'r>(_: Error, req: &'r Request) -> Result<'r> {
+    /// fn handle_500<'r>(req: &'r Request) -> Result<'r> {
     ///     "Whoops, we messed up!".respond_to(req)
     /// }
     ///
@@ -99,18 +98,13 @@ impl Catcher {
     }
 
     #[inline(always)]
-    crate fn handle<'r>(&self, e: Error, r: &'r Request) -> response::Result<'r> {
-        (self.handler)(e, r)
+    crate fn handle<'r>(&self, req: &'r Request) -> response::Result<'r> {
+        (self.handler)(req)
     }
 
     #[inline(always)]
     fn new_default(code: u16, handler: ErrorHandler) -> Catcher {
         Catcher { code, handler, is_default: true, }
-    }
-
-    #[inline(always)]
-    crate fn is_default(&self) -> bool {
-        self.is_default
     }
 }
 
@@ -155,7 +149,7 @@ macro_rules! default_catchers {
         let mut map = HashMap::new();
 
         $(
-            fn $fn_name<'r>(_: Error, req: &'r Request) -> response::Result<'r> {
+            fn $fn_name<'r>(req: &'r Request) -> response::Result<'r> {
                 status::Custom(Status::from_code($code).unwrap(),
                     content::Html(error_page_template!($code, $name, $description))
                 ).respond_to(req)
@@ -176,7 +170,6 @@ pub mod defaults {
     use request::Request;
     use response::{self, content, status, Responder};
     use http::Status;
-    use error::Error;
 
     pub fn get() -> HashMap<u16, Catcher> {
         default_catchers! {

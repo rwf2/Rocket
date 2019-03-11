@@ -1,7 +1,9 @@
-#![feature(plugin, decl_macro)]
-#![plugin(rocket_codegen)]
+#![feature(proc_macro_hygiene, decl_macro)]
 
-extern crate rocket;
+#[cfg(feature = "templates")]
+#[macro_use] extern crate rocket;
+
+#[cfg(feature = "templates")]
 extern crate rocket_contrib;
 
 #[cfg(feature = "templates")]
@@ -10,14 +12,19 @@ mod templates_tests {
 
     use rocket::{Rocket, http::RawStr};
     use rocket::config::{Config, Environment};
-    use rocket_contrib::{Template, TemplateMetadata};
+    use rocket_contrib::templates::{Template, Metadata};
 
     #[get("/<engine>/<name>")]
-    fn template_check(md: TemplateMetadata, engine: &RawStr, name: &RawStr) -> Option<()> {
+    fn template_check(md: Metadata, engine: &RawStr, name: &RawStr) -> Option<()> {
         match md.contains_template(&format!("{}/{}", engine, name)) {
             true => Some(()),
             false => None
         }
+    }
+
+    #[get("/is_reloading")]
+    fn is_reloading(md: Metadata) -> Option<()> {
+        if md.reloading() { Some(()) } else { None }
     }
 
     fn template_root() -> PathBuf {
@@ -30,7 +37,7 @@ mod templates_tests {
             .expect("valid configuration");
 
         ::rocket::custom(config).attach(Template::fairing())
-            .mount("/", routes![template_check])
+            .mount("/", routes![template_check, is_reloading])
     }
 
     #[cfg(feature = "tera_templates")]
@@ -140,8 +147,14 @@ mod templates_tests {
             let reload_path = template_root().join("hbs").join("reload.txt.hbs");
             write_file(&reload_path, INITIAL_TEXT);
 
-            // verify that the initial content is correct
+            // set up the client. if we can't reload templates, then just quit
             let client = Client::new(rocket()).unwrap();
+            let res = client.get("/is_reloading").dispatch();
+            if res.status() != Status::Ok {
+                return;
+            }
+
+            // verify that the initial content is correct
             let initial_rendered = Template::show(client.rocket(), RELOAD_TEMPLATE, ());
             assert_eq!(initial_rendered, Some(INITIAL_TEXT.into()));
 
@@ -155,6 +168,7 @@ mod templates_tests {
                 // if the new content is correct, we are done
                 let new_rendered = Template::show(client.rocket(), RELOAD_TEMPLATE, ());
                 if new_rendered == Some(NEW_TEXT.into()) {
+                    write_file(&reload_path, INITIAL_TEXT);
                     return;
                 }
 

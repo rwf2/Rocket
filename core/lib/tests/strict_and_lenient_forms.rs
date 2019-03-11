@@ -1,5 +1,4 @@
-#![feature(plugin, decl_macro)]
-#![plugin(rocket_codegen)]
+#![feature(proc_macro_hygiene, decl_macro)]
 
 #[macro_use] extern crate rocket;
 
@@ -12,13 +11,13 @@ struct MyForm<'r> {
 }
 
 #[post("/strict", data = "<form>")]
-fn strict<'r>(form: Form<'r, MyForm<'r>>) -> String {
-    form.get().field.as_str().into()
+fn strict<'r>(form: Form<MyForm<'r>>) -> String {
+    form.field.as_str().into()
 }
 
 #[post("/lenient", data = "<form>")]
-fn lenient<'r>(form: LenientForm<'r, MyForm<'r>>) -> String {
-    form.get().field.as_str().into()
+fn lenient<'r>(form: LenientForm<MyForm<'r>>) -> String {
+    form.field.as_str().into()
 }
 
 mod strict_and_lenient_forms_tests {

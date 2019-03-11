@@ -1,19 +1,17 @@
 use std::collections::HashMap;
 
-use super::serde::Serialize;
-use super::TemplateInfo;
+use templates::{TemplateInfo, serde::Serialize};
 
-#[cfg(feature = "tera_templates")] use super::tera_templates::Tera;
-#[cfg(feature = "handlebars_templates")] use super::handlebars_templates::Handlebars;
+#[cfg(feature = "tera_templates")] use templates::tera::Tera;
+#[cfg(feature = "handlebars_templates")] use templates::handlebars::Handlebars;
 
-pub trait Engine: Send + Sync + 'static {
+crate trait Engine: Send + Sync + 'static {
     const EXT: &'static str;
 
     fn init(templates: &[(&str, &TemplateInfo)]) -> Option<Self> where Self: Sized;
     fn render<C: Serialize>(&self, name: &str, context: C) -> Option<String>;
 }
 
-#[doc(cfg(feature = "tera_templates"))]
 /// A structure exposing access to templating engines.
 ///
 /// Calling methods on the exposed template engine types may require importing
@@ -21,13 +19,14 @@ pub trait Engine: Send + Sync + 'static {
 /// imported from the reexported crate at the root of `rocket_contrib` to avoid
 /// version mismatches. For instance, when registering a Tera filter, the
 /// [`tera::Value`] and [`tera::Result`] types are required. Import them from
-/// `rocket_contrib::tera`. The example below illustrates this:
+/// `rocket_contrib::templates::tera`. The example below illustrates this:
 ///
 /// ```rust
+/// # #[cfg(feature = "tera_templates")] {
 /// use std::collections::HashMap;
 ///
-/// use rocket_contrib::{Template, Engines};
-/// use rocket_contrib::tera::{self, Value};
+/// use rocket_contrib::templates::{Template, Engines};
+/// use rocket_contrib::templates::tera::{self, Value};
 ///
 /// fn my_filter(value: Value, _: HashMap<String, Value>) -> tera::Result<Value> {
 ///     # /*
@@ -38,26 +37,22 @@ pub trait Engine: Send + Sync + 'static {
 /// Template::custom(|engines: &mut Engines| {
 ///     engines.tera.register_filter("my_filter", my_filter);
 /// });
+/// # }
 /// ```
 ///
-/// [`tera::Value`]: https://docs.rs/tera/0.10.10/tera/enum.Value.html
-/// [`tera::Result`]: https://docs.rs/tera/0.10.10/tera/type.Result.html
+/// [`tera::Value`]: ::templates::tera::Value
+/// [`tera::Result`]: ::templates::tera::Result
 pub struct Engines {
-    #[cfg(feature = "tera_templates")]
-    /// A [`Tera`] structure. This field is only available when the
+    /// A `Tera` templating engine. This field is only available when the
     /// `tera_templates` feature is enabled. When calling methods on the `Tera`
-    /// instance, ensure you use types imported from `rocket_contrib::tera` to
-    /// avoid version mismatches.
-    ///
-    /// [`Tera`]: https://docs.rs/tera/0.10.10/tera/struct.Tera.html
+    /// instance, ensure you use types imported from
+    /// `rocket_contrib::templates::tera` to avoid version mismatches.
+    #[cfg(feature = "tera_templates")]
     pub tera: Tera,
-    /// A [`Handlebars`] structure. This field is only available when the
+    /// The Handlebars templating engine. This field is only available when the
     /// `handlebars_templates` feature is enabled. When calling methods on the
-    /// `Tera` instance, ensure you use types
-    /// imported from `rocket_contrib::handlebars` to avoid version mismatches.
-    ///
-    /// [`Handlebars`]:
-    ///     https://docs.rs/handlebars/0.29.1/handlebars/struct.Handlebars.html
+    /// `Tera` instance, ensure you use types imported from
+    /// `rocket_contrib::templates::handlebars` to avoid version mismatches.
     #[cfg(feature = "handlebars_templates")]
     pub handlebars: Handlebars,
 }

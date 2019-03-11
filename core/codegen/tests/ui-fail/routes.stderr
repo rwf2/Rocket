@@ -1,0 +1,20 @@
+error: expected `,`
+ --> $DIR/routes.rs:6:23
+  |
+6 |     let _ = routes![a b]; //~ ERROR expected `,`
+  |                       ^
+
+error: expected identifier
+ --> $DIR/routes.rs:8:24
+  |
+8 |     let _ = routes![a::, ]; //~ ERROR expected identifier
+  |                        ^
+
+error: unexpected end of input, expected identifier
+ --> $DIR/routes.rs:9:13
+  |
+9 |     let _ = routes![a::]; //~ ERROR expected identifier
+  |             ^^^^^^^^^^^^
+
+error: aborting due to 3 previous errors
+

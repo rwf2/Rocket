@@ -1,5 +1,6 @@
 use std::ops::Deref;
 
+use Rocket;
 use request::{self, FromRequest, Request};
 use outcome::Outcome;
 use http::Status;
@@ -9,10 +10,10 @@ use http::Status;
 /// This type can be used as a request guard to retrieve the state Rocket is
 /// managing for some type `T`. This allows for the sharing of state across any
 /// number of handlers. A value for the given type must previously have been
-/// registered to be managed by Rocket via the
-/// [manage](/rocket/struct.Rocket.html#method.manage) method. The type being
-/// managed must be thread safe and sendable across thread boundaries. In other
-/// words, it must implement `Send + Sync + 'static`.
+/// registered to be managed by Rocket via
+/// [`Rocket::manage()`](::Rocket::manage()). The type being managed must be
+/// thread safe and sendable across thread boundaries. In other words, it must
+/// implement [`Send`] + [`Sync`] + 'static`.
 ///
 /// # Example
 ///
@@ -21,9 +22,8 @@ use http::Status;
 /// following example does just this:
 ///
 /// ```rust
-/// # #![feature(plugin, decl_macro)]
-/// # #![plugin(rocket_codegen)]
-/// # extern crate rocket;
+/// # #![feature(proc_macro_hygiene, decl_macro)]
+/// # #[macro_use] extern crate rocket;
 /// use rocket::State;
 ///
 /// // In a real application, this would likely be more complex.
@@ -60,10 +60,8 @@ use http::Status;
 ///
 /// Because `State` is itself a request guard, managed state can be retrieved
 /// from another request guard's implementation. In the following code example,
-/// `Item` retrieves the `MyConfig` managed state in its `FromRequest`
+/// `Item` retrieves the `MyConfig` managed state in its [`FromRequest`]
 /// implementation using the [`Request::guard()`] method.
-///
-/// [`Request::guard()`]: /rocket/struct.Request.html#method.guard
 ///
 /// ```rust
 /// use rocket::State;
@@ -81,16 +79,39 @@ use http::Status;
 ///     }
 /// }
 /// ```
+///
+/// # Testing with `State`
+///
+/// When unit testing your application, you may find it necessary to manually
+/// construct a type of `State` to pass to your functions. To do so, use the
+/// [`State::from()`] static method:
+///
+/// ```rust
+/// # #![feature(proc_macro_hygiene, decl_macro)]
+/// # #[macro_use] extern crate rocket;
+/// use rocket::State;
+///
+/// struct MyManagedState(usize);
+///
+/// #[get("/")]
+/// fn handler(state: State<MyManagedState>) -> String {
+///     state.0.to_string()
+/// }
+///
+/// let rocket = rocket::ignite().manage(MyManagedState(127));
+/// let state = State::from(&rocket).expect("managing `MyManagedState`");
+/// assert_eq!(handler(state), "127");
+/// ```
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct State<'r, T: Send + Sync + 'static>(&'r T);
 
 impl<'r, T: Send + Sync + 'static> State<'r, T> {
     /// Retrieve a borrow to the underlying value with a lifetime of `'r`.
     ///
-    /// Using this method is typically unnecessary as `State` implements `Deref`
-    /// with a `Target` of `T`. This means Rocket will automatically coerce a
-    /// `State<T>` to an `&T` as required. This method should only be used when
-    /// a longer lifetime is required.
+    /// Using this method is typically unnecessary as `State` implements
+    /// [`Deref`] with a [`Deref::Target`] of `T`. This means Rocket will
+    /// automatically coerce a `State<T>` to an `&T` as required. This method
+    /// should only be used when a longer lifetime is required.
     ///
     /// # Example
     ///
@@ -115,15 +136,41 @@ impl<'r, T: Send + Sync + 'static> State<'r, T> {
     pub fn inner(&self) -> &'r T {
         self.0
     }
+
+    /// Returns the managed state value in `rocket` for the type `T` if it is
+    /// being managed by `rocket`. Otherwise, returns `None`.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use rocket::State;
+    ///
+    /// #[derive(Debug, PartialEq)]
+    /// struct Managed(usize);
+    ///
+    /// #[derive(Debug, PartialEq)]
+    /// struct Unmanaged(usize);
+    ///
+    /// let rocket = rocket::ignite().manage(Managed(7));
+    ///
+    /// let state: Option<State<Managed>> = State::from(&rocket);
+    /// assert_eq!(state.map(|s| s.inner()), Some(&Managed(7)));
+    ///
+    /// let state: Option<State<Unmanaged>> = State::from(&rocket);
+    /// assert_eq!(state, None);
+    /// ```
+    #[inline(always)]
+    pub fn from(rocket: &'r Rocket) -> Option<Self> {
+        rocket.state.try_get::<T>().map(State)
+    }
 }
 
-// TODO: Doc.
 impl<'a, 'r, T: Send + Sync + 'static> FromRequest<'a, 'r> for State<'r, T> {
     type Error = ();
 
     #[inline(always)]
     fn from_request(req: &'a Request<'r>) -> request::Outcome<State<'r, T>, ()> {
-        match req.get_state::<T>() {
+        match req.state.managed.try_get::<T>() {
             Some(state) => Outcome::Success(State(state)),
             None => {
                 error_!("Attempted to retrieve unmanaged state!");

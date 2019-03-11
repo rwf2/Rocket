@@ -1,0 +1,58 @@
+error: expected string literal
+ --> $DIR/database-syntax.rs:5:1
+  |
+5 | #[database]
+  | ^^^^^^^^^^^
+
+error: expected string literal
+ --> $DIR/database-syntax.rs:9:12
+  |
+9 | #[database(1)]
+  |            ^
+
+error: expected string literal
+  --> $DIR/database-syntax.rs:13:12
+   |
+13 | #[database(123)]
+   |            ^^^
+
+error: expected string literal
+  --> $DIR/database-syntax.rs:17:12
+   |
+17 | #[database("hello" "hi")]
+   |            ^^^^^^^^^^^^
+
+error: `database` attribute can only be used on structs
+  --> $DIR/database-syntax.rs:22:1
+   |
+22 | enum Foo {  }
+   | ^^^^^^^^^^^^^
+
+error: `database` attribute can only be applied to structs with exactly one unnamed field
+  --> $DIR/database-syntax.rs:26:11
+   |
+26 | struct Bar(diesel::SqliteConnection, diesel::SqliteConnection);
+   |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   |
+   = help: example: `struct MyDatabase(diesel::SqliteConnection);`
+
+error: `database` attribute can only be used on structs
+  --> $DIR/database-syntax.rs:30:1
+   |
+30 | union Baz {  }
+   | ^^^^^^^^^^^^^^
+
+error: `database` attribute cannot be applied to structs with generics
+  --> $DIR/database-syntax.rs:34:9
+   |
+34 | struct E<'r>(&'r str);
+   |         ^^^^
+
+error: `database` attribute cannot be applied to structs with generics
+  --> $DIR/database-syntax.rs:38:9
+   |
+38 | struct F<T>(T);
+   |         ^^^
+
+error: aborting due to 9 previous errors
+

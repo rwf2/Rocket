@@ -7,6 +7,7 @@ use std::convert::TryFrom;
 use ext::IntoOwned;
 use parse::Indexed;
 use uri::{Origin, Authority, Absolute, Error};
+use uri::encoding::{percent_encode, DEFAULT_ENCODE_SET};
 
 /// An `enum` encapsulating any of the possible URI variants.
 ///
@@ -18,11 +19,11 @@ use uri::{Origin, Authority, Absolute, Error};
 ///
 /// Nevertheless, the `Uri` type is typically enountered as a conversion target.
 /// In particular, you will likely see generic bounds of the form: `T:
-/// TryInto<Uri>` (for instance, in [`Redirect`](rocket::Redirect) methods).
-/// This means that you can provide any type `T` that implements `TryInto<Uri>`,
-/// or, equivalently, any type `U` for which `Uri` implements `TryFrom<U>` or
-/// `From<U>`. These include `&str` and `String`, [`Origin`], [`Authority`], and
-/// [`Absolute`].
+/// TryInto<Uri>` (for instance, in [`Redirect`](::rocket::response::Redirect)
+/// methods). This means that you can provide any type `T` that implements
+/// `TryInto<Uri>`, or, equivalently, any type `U` for which `Uri` implements
+/// `TryFrom<U>` or `From<U>`. These include `&str` and `String`, [`Origin`],
+/// [`Authority`], and [`Absolute`].
 ///
 /// ## Parsing
 ///
@@ -37,15 +38,23 @@ use uri::{Origin, Authority, Absolute, Error};
 /// ## Percent Encoding/Decoding
 ///
 /// This type also provides the following percent encoding/decoding helper
-/// methods: [`Uri::percent_encode`], [`Uri::percent_decode`], and
-/// [`Uri::percent_decode_lossy`].
+/// methods: [`Uri::percent_encode()`], [`Uri::percent_decode()`], and
+/// [`Uri::percent_decode_lossy()`].
+///
+/// [`Origin`]: uri::Origin
+/// [`Authority`]: uri::Authority
+/// [`Absolute`]: uri::Absolute
+/// [`Uri::parse()`]: uri::Uri::parse()
+/// [`Uri::percent_encode()`]: uri::Uri::percent_encode()
+/// [`Uri::percent_decode()`]: uri::Uri::percent_decode()
+/// [`Uri::percent_decode_lossy()`]: uri::Uri::percent_decode_lossy()
 #[derive(Debug, PartialEq, Clone)]
 pub enum Uri<'a> {
-    /// An [`Origin`] URI.
+    /// An origin URI.
     Origin(Origin<'a>),
-    /// An [`Authority`] URI.
+    /// An authority URI.
     Authority(Authority<'a>),
-    /// An [`Absolute`] URI.
+    /// An absolute URI.
     Absolute(Absolute<'a>),
     /// An asterisk: exactly `*`.
     Asterisk,
@@ -151,9 +160,8 @@ impl<'a> Uri<'a> {
         }
     }
 
-    /// Returns a URL-encoded version of the string. Any characters outside of
-    /// visible ASCII-range are encoded as well as ' ', '"', '#', '<', '>', '`',
-    /// '?', '{', '}', '%', and '/'.
+    /// Returns a URL-encoded version of the string. Any reserved characters are
+    /// percent-encoded.
     ///
     /// # Examples
     ///
@@ -162,11 +170,10 @@ impl<'a> Uri<'a> {
     /// use rocket::http::uri::Uri;
     ///
     /// let encoded = Uri::percent_encode("hello?a=<b>hi</b>");
-    /// assert_eq!(encoded, "hello%3Fa=%3Cb%3Ehi%3C%2Fb%3E");
+    /// assert_eq!(encoded, "hello%3Fa%3D%3Cb%3Ehi%3C%2Fb%3E");
     /// ```
     pub fn percent_encode(string: &str) -> Cow<str> {
-        let set = ::percent_encoding::PATH_SEGMENT_ENCODE_SET;
-        ::percent_encoding::utf8_percent_encode(string, set).into()
+        percent_encode::<DEFAULT_ENCODE_SET>(string)
     }
 
     /// Returns a URL-decoded version of the string. If the percent encoded

@@ -95,7 +95,7 @@ pub struct Status {
 macro_rules! ctrs {
     ($($code:expr, $code_str:expr, $name:ident => $reason:expr),+) => {
         $(
-            #[doc="[Status](struct.Status.html) with code <b>"]
+            #[doc="[`Status`] with code <b>"]
             #[doc=$code_str]
             #[doc="</b> and reason <i>"]
             #[doc=$reason]
@@ -134,7 +134,6 @@ macro_rules! ctrs {
                 _ => None
             }
         }
-
     };
 }
 

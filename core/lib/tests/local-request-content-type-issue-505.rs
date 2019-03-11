@@ -1,7 +1,6 @@
-#![feature(plugin, decl_macro)]
-#![plugin(rocket_codegen)]
+#![feature(proc_macro_hygiene, decl_macro)]
 
-extern crate rocket;
+#[macro_use] extern crate rocket;
 
 use rocket::Outcome::*;
 use rocket::{Request, Data};
@@ -21,9 +20,9 @@ impl<'a, 'r> FromRequest<'a, 'r> for HasContentType {
     }
 }
 
-use rocket::data::{self, FromData};
+use rocket::data::{self, FromDataSimple};
 
-impl FromData for HasContentType {
+impl FromDataSimple for HasContentType {
     type Error = ();
 
     fn from_data(request: &Request, data: Data) -> data::Outcome<Self, ()> {

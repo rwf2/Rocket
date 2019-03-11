@@ -1,21 +1,28 @@
-#![feature(plugin, decl_macro, custom_derive)]
-#![plugin(rocket_codegen)]
+#![feature(proc_macro_hygiene, decl_macro)]
 
 #[macro_use] extern crate rocket;
 #[macro_use] extern crate diesel;
+#[macro_use] extern crate diesel_migrations;
+#[macro_use] extern crate log;
 #[macro_use] extern crate serde_derive;
-extern crate rocket_contrib;
+#[macro_use] extern crate rocket_contrib;
 
 mod task;
 #[cfg(test)] mod tests;
 
 use rocket::Rocket;
+use rocket::fairing::AdHoc;
 use rocket::request::{Form, FlashMessage};
 use rocket::response::{Flash, Redirect};
-use rocket_contrib::{Template, databases::database, static_files::StaticFiles};
+use rocket_contrib::{templates::Template, serve::StaticFiles};
 use diesel::SqliteConnection;
 
 use task::{Task, Todo};
+
+// This macro from `diesel_migrations` defines an `embedded_migrations` module
+// containing a function named `run`. This allows the example to be run and
+// tested without any outside setup of the database.
+embed_migrations!();
 
 #[database("sqlite_database")]
 pub struct DbConn(SqliteConnection);
@@ -71,22 +78,27 @@ fn index(msg: Option<FlashMessage>, conn: DbConn) -> Template {
     })
 }
 
-fn rocket() -> (Rocket, Option<DbConn>) {
-    let rocket = rocket::ignite()
+fn run_db_migrations(rocket: Rocket) -> Result<Rocket, Rocket> {
+    let conn = DbConn::get_one(&rocket).expect("database connection");
+    match embedded_migrations::run(&*conn) {
+        Ok(()) => Ok(rocket),
+        Err(e) => {
+            error!("Failed to run database migrations: {:?}", e);
+            Err(rocket)
+        }
+    }
+}
+
+fn rocket() -> Rocket {
+    rocket::ignite()
         .attach(DbConn::fairing())
+        .attach(AdHoc::on_attach("Database Migrations", run_db_migrations))
         .mount("/", StaticFiles::from("static/"))
         .mount("/", routes![index])
         .mount("/todo", routes![new, toggle, delete])
-        .attach(Template::fairing());
-
-    let conn = match cfg!(test) {
-        true => DbConn::get_one(&rocket),
-        false => None,
-    };
-
-    (rocket, conn)
+        .attach(Template::fairing())
 }
 
 fn main() {
-    rocket().0.launch();
+    rocket().launch();
 }

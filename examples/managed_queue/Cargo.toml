@@ -5,6 +5,5 @@ workspace = "../.."
 publish = false
 
 [dependencies]
-crossbeam = "0.4"
+crossbeam = "0.5"
 rocket = { path = "../../core/lib" }
-rocket_codegen = { path = "../../core/codegen" }

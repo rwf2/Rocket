@@ -12,8 +12,7 @@ use std::sync::atomic::{AtomicBool, Ordering};
 const FLASH_COOKIE_NAME: &str = "_flash";
 
 /// Sets a "flash" cookie that will be removed when it is accessed. The
-/// analogous request type is
-/// [FlashMessage](/rocket/request/type.FlashMessage.html).
+/// analogous request type is [`FlashMessage`].
 ///
 /// This type makes it easy to send messages across requests. It is typically
 /// used for "status" messages after redirects. For instance, if a user attempts
@@ -30,9 +29,8 @@ const FLASH_COOKIE_NAME: &str = "_flash";
 /// [error](#method.error) constructors create messages with the corresponding
 /// names.
 ///
-/// Messages can be retrieved on the request side via the
-/// [FlashMessage](/rocket/request/type.FlashMessage.html) type and the
-/// [name](#method.name) and [msg](#method.msg) methods.
+/// Messages can be retrieved on the request side via the [`FlashMessage`] type
+/// and the [name](#method.name) and [msg](#method.msg) methods.
 ///
 /// # Response
 ///
@@ -47,11 +45,8 @@ const FLASH_COOKIE_NAME: &str = "_flash";
 /// message on both the request and response sides.
 ///
 /// ```rust
-/// # #![feature(plugin, decl_macro)]
-/// # #![plugin(rocket_codegen)]
-/// #
-/// # extern crate rocket;
-/// #
+/// # #![feature(proc_macro_hygiene, decl_macro)]
+/// # #[macro_use] extern crate rocket;
 /// use rocket::response::{Flash, Redirect};
 /// use rocket::request::FlashMessage;
 /// use rocket::http::RawStr;
@@ -92,8 +87,7 @@ pub struct Flash<R> {
     inner: R,
 }
 
-/// Type alias to retrieve [`Flash`](/rocket/response/struct.Flash.html)
-/// messages from a request.
+/// Type alias to retrieve [`Flash`] messages from a request.
 ///
 /// # Flash Cookie
 ///
@@ -104,8 +98,8 @@ pub struct Flash<R> {
 /// The flash cookie is cleared if either the [`name()`] or [`msg()`] method is
 /// called. If neither method is called, the flash cookie is not cleared.
 ///
-/// [`name()`]: /rocket/response.struct.Flash.html#method.name
-/// [`msg()`]: /rocket/response.struct.Flash.html#method.msg
+/// [`name()`]: Flash::name()
+/// [`msg()`]: Flash::msg()
 pub type FlashMessage<'a, 'r> = ::response::Flash<&'a Request<'r>>;
 
 impl<'r, R: Responder<'r>> Flash<R> {

@@ -19,9 +19,8 @@ use http::{RawStr, uri::{Segments, SegmentError}};
 /// handler for the dynamic `"/<id>"` path:
 ///
 /// ```rust
-/// # #![feature(plugin, decl_macro)]
-/// # #![plugin(rocket_codegen)]
-/// # extern crate rocket;
+/// # #![feature(proc_macro_hygiene, decl_macro)]
+/// # #[macro_use] extern crate rocket;
 /// #[get("/<id>")]
 /// fn hello(id: usize) -> String {
 /// # let _id = id;
@@ -55,9 +54,8 @@ use http::{RawStr, uri::{Segments, SegmentError}};
 /// parameter as follows:
 ///
 /// ```rust
-/// # #![feature(plugin, decl_macro)]
-/// # #![plugin(rocket_codegen)]
-/// # extern crate rocket;
+/// # #![feature(proc_macro_hygiene, decl_macro)]
+/// # #[macro_use] extern crate rocket;
 /// # use rocket::http::RawStr;
 /// #[get("/<id>")]
 /// fn hello(id: Result<usize, &RawStr>) -> String {
@@ -74,14 +72,15 @@ use http::{RawStr, uri::{Segments, SegmentError}};
 /// Rocket implements `FromParam` for several standard library types. Their
 /// behavior is documented here.
 ///
-///   * **f32, f64, isize, i8, i16, i32, i64, usize, u8, u16, u32, u64, bool,
-///     IpAddr, Ipv4Addr, Ipv6Addr, SocketAddrV4, SocketAddrV6, SocketAddr**
+///   * **f32, f64, isize, i8, i16, i32, i64, i128, usize, u8, u16, u32, u64,
+///     u128, bool, IpAddr, Ipv4Addr, Ipv6Addr, SocketAddrV4, SocketAddrV6,
+///     SocketAddr**
 ///
 ///     A value is parsed successfully if the `from_str` method from the given
 ///     type returns successfully. Otherwise, the raw path segment is returned
 ///     in the `Err` value.
 ///
-///   * **&[`RawStr`](/rocket/http/struct.RawStr.html)**
+///   * **[`&RawStr`](RawStr)**
 ///
 ///     _This implementation always returns successfully._
 ///
@@ -118,7 +117,7 @@ use http::{RawStr, uri::{Segments, SegmentError}};
 ///
 /// Say you want to parse a segment of the form:
 ///
-/// ```ignore
+/// ```text
 /// [a-zA-Z]+:[0-9]+
 /// ```
 ///
@@ -168,9 +167,8 @@ use http::{RawStr, uri::{Segments, SegmentError}};
 /// dynamic path segment:
 ///
 /// ```rust
-/// # #![feature(plugin, decl_macro)]
-/// # #![plugin(rocket_codegen)]
-/// # extern crate rocket;
+/// # #![feature(proc_macro_hygiene, decl_macro)]
+/// # #[macro_use] extern crate rocket;
 /// # use rocket::request::FromParam;
 /// # use rocket::http::RawStr;
 /// # #[allow(dead_code)]
@@ -193,11 +191,11 @@ use http::{RawStr, uri::{Segments, SegmentError}};
 /// # fn main() {  }
 /// ```
 pub trait FromParam<'a>: Sized {
-    /// The associated error to be returned when parsing fails.
+    /// The associated error to be returned if parsing/validation fails.
     type Error: Debug;
 
-    /// Parses an instance of `Self` from a dynamic path parameter string or
-    /// returns an `Error` if one cannot be parsed.
+    /// Parses and validates an instance of `Self` from a path parameter string
+    /// or returns an `Error` if parsing or validation fails.
     fn from_param(param: &'a RawStr) -> Result<Self, Self::Error>;
 }
 
@@ -244,8 +242,8 @@ macro_rules! impl_with_fromstr {
 use std::net::{IpAddr, Ipv4Addr, Ipv6Addr, SocketAddrV4, SocketAddrV6, SocketAddr};
 
 impl_with_fromstr! {
-    i8, i16, i32, i64, isize, u8, u16, u32, u64, usize, f32, f64, bool,
-    IpAddr, Ipv4Addr, Ipv6Addr, SocketAddrV4, SocketAddrV6, SocketAddr
+    i8, i16, i32, i64, i128, isize, u8, u16, u32, u64, u128, usize, f32, f64,
+    bool, IpAddr, Ipv4Addr, Ipv6Addr, SocketAddrV4, SocketAddrV6, SocketAddr
 }
 
 impl<'a, T: FromParam<'a>> FromParam<'a> for Result<T, T::Error> {
@@ -274,22 +272,22 @@ impl<'a, T: FromParam<'a>> FromParam<'a> for Option<T> {
 
 /// Trait to convert _many_ dynamic path segment strings to a concrete value.
 ///
-/// This is the `..` analog to [FromParam](trait.FromParam.html), and its
-/// functionality is identical to it with one exception: this trait applies to
-/// segment parameters of the form `<param..>`, where `param` is of some type
-/// `T` that implements `FromSegments`. `T::from_segments` is called to convert
-/// the matched segments (via the
-/// [Segments](/rocket/http/uri/struct.Segments.html) iterator) into the
-/// implementing type.
+/// This is the `..` analog to [`FromParam`], and its functionality is identical
+/// to it with one exception: this trait applies to segment parameters of the
+/// form `<param..>`, where `param` is of some type `T` that implements
+/// `FromSegments`. `T::from_segments` is called to convert the matched segments
+/// (via the [`Segments`] iterator) into the implementing type.
 ///
 /// # Provided Implementations
 ///
-/// Rocket implements `FromParam` for `PathBuf`. The `PathBuf` implementation
-/// constructs a path from the segments iterator. Each segment is
-/// percent-decoded. If a segment equals ".." before or after decoding, the
-/// previous segment (if any) is omitted. For security purposes, any other
-/// segments that begin with "*" or "." are ignored.  If a percent-decoded
-/// segment results in invalid UTF8, an `Err` is returned with the `Utf8Error`.
+/// **`PathBuf`**
+///
+/// The `PathBuf` implementation constructs a path from the segments iterator.
+/// Each segment is percent-decoded. If a segment equals ".." before or after
+/// decoding, the previous segment (if any) is omitted. For security purposes,
+/// any other segments that begin with "*" or "." are ignored.  If a
+/// percent-decoded segment results in invalid UTF8, an `Err` is returned with
+/// the `Utf8Error`.
 pub trait FromSegments<'a>: Sized {
     /// The associated error to be returned when parsing fails.
     type Error: Debug;

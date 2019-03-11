@@ -9,23 +9,19 @@ set -e
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 source "${SCRIPT_DIR}/config.sh"
 
-function mk_doc() {
-  local dir=$1
-  pushd "${dir}" > /dev/null 2>&1
-    echo ":: Documenting '${dir}'..."
-    cargo doc --no-deps --all-features
-  popd > /dev/null 2>&1
-}
-
-# We need to clean-up beforehand so we don't get all of the dependencies.
-echo ":::: Cleaning up before documenting..."
-cargo clean
-cargo update
+if [ "${1}" != "-d" ]; then
+  # We need to clean-up beforehand so we don't get all of the dependencies.
+  echo ":::: Cleaning up before documenting..."
+  cargo clean
+  cargo update
+fi
 
 # Generate the rustdocs for all of the crates.
-for dir in "${ALL_PROJECT_DIRS[@]}"; do
-  mk_doc "${dir}"
-done
+echo ":::: Generating the docs..."
+pushd "${PROJECT_ROOT}" > /dev/null 2>&1
+RUSTDOCFLAGS="-Z unstable-options --crate-version ${ROCKET_VERSION}" \
+  cargo doc -p rocket -p rocket_contrib -p rocket_codegen --no-deps --all-features
+popd > /dev/null 2>&1
 
 # Blank index, for redirection.
 touch "${DOC_DIR}/index.html"

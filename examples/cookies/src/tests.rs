@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use super::rocket;
 use rocket::local::Client;
 use rocket::http::*;
-use rocket_contrib::Template;
+use rocket_contrib::templates::Template;
 
 #[test]
 fn test_submit() {

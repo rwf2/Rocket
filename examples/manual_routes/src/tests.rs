@@ -24,8 +24,8 @@ fn test_name() {
 
 #[test]
 fn test_echo() {
-    let uri = format!("/echo:echo%20text");
-    test(&uri, ContentType::Plain, Status::Ok, "echo text".into());
+    let uri = format!("/echo/echo%20this%20text");
+    test(&uri, ContentType::Plain, Status::Ok, "echo this text".into());
 }
 
 #[test]

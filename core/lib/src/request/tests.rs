@@ -20,7 +20,7 @@ macro_rules! assert_headers {
         $(expected.entry($key).or_insert(vec![]).append(&mut vec![$($value),+]);)+
 
         // Dispatch the request and check that the headers are what we expect.
-        let config = Config::development().unwrap();
+        let config = Config::development();
         let r = Rocket::custom(config);
         let req = Request::from_hyp(&r, h_method, h_headers, h_uri, h_addr).unwrap();
         let actual_headers = req.headers();

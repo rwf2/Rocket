@@ -1,8 +1,7 @@
-#![feature(plugin, decl_macro, never_type)]
-#![plugin(rocket_codegen)]
+#![feature(proc_macro_hygiene, decl_macro, never_type)]
 
-extern crate rocket_contrib;
 #[macro_use] extern crate rocket;
+extern crate rocket_contrib;
 
 #[cfg(test)] mod tests;
 
@@ -12,7 +11,7 @@ use rocket::outcome::IntoOutcome;
 use rocket::request::{self, Form, FlashMessage, FromRequest, Request};
 use rocket::response::{Redirect, Flash};
 use rocket::http::{Cookie, Cookies};
-use rocket_contrib::Template;
+use rocket_contrib::templates::Template;
 
 #[derive(FromForm)]
 struct Login {
@@ -37,7 +36,7 @@ impl<'a, 'r> FromRequest<'a, 'r> for User {
 
 #[post("/login", data = "<login>")]
 fn login(mut cookies: Cookies, login: Form<Login>) -> Result<Redirect, Flash<Redirect>> {
-    if login.get().username == "Sergio" && login.get().password == "password" {
+    if login.username == "Sergio" && login.password == "password" {
         cookies.add_private(Cookie::new("user_id", 1.to_string()));
         Ok(Redirect::to(uri!(index)))
     } else {

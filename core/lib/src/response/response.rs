@@ -98,19 +98,19 @@ impl<T> fmt::Debug for Body<T> {
 
 /// Type for easily building `Response`s.
 ///
-/// Building a [Response](struct.Response.html) can be a low-level ordeal; this
-/// structure presents a higher-level API that simplifies building `Response`s.
+/// Building a [`Response`] can be a low-level ordeal; this structure presents a
+/// higher-level API that simplifies building `Response`s.
 ///
 /// # Usage
 ///
 /// `ResponseBuilder` follows the builder pattern and is usually obtained by
-/// calling [build](struct.Response.html#method.build) on `Response`. Almost all
-/// methods take the current builder as a mutable reference and return the same
-/// mutable reference with field(s) modified in the `Responder` being built.
-/// These method calls can be chained: `build.a().b()`.
+/// calling [`Response::build()`] on `Response`. Almost all methods take the
+/// current builder as a mutable reference and return the same mutable reference
+/// with field(s) modified in the `Responder` being built. These method calls
+/// can be chained: `build.a().b()`.
 ///
 /// To finish building and retrieve the built `Response`, use the
-/// [finalize](#method.finalize) or [ok](#method.ok) methods.
+/// [`finalize()`](#method.finalize) or [`ok()`](#method.ok) methods.
 ///
 /// ## Headers
 ///
@@ -223,9 +223,8 @@ impl<'r> ResponseBuilder<'r> {
     /// value will remain.
     ///
     /// The type of `header` can be any type that implements `Into<Header>`.
-    /// This includes `Header` itself,
-    /// [ContentType](/rocket/http/struct.ContentType.html) and [hyper::header
-    /// types](/rocket/http/hyper/header/index.html).
+    /// This includes `Header` itself, [`ContentType`](::http::ContentType) and
+    /// [hyper::header types](::http::hyper::header).
     ///
     /// # Example
     ///
@@ -254,9 +253,8 @@ impl<'r> ResponseBuilder<'r> {
     /// potentially different values to be present in the `Response`.
     ///
     /// The type of `header` can be any type that implements `Into<Header>`.
-    /// This includes `Header` itself,
-    /// [ContentType](/rocket/http/struct.ContentType.html) and [hyper::header
-    /// types](/rocket/http/hyper/header/index.html).
+    /// This includes `Header` itself, [`ContentType`](::http::ContentType) and
+    /// [hyper::header types](::http::hyper::header).
     ///
     /// # Example
     ///
@@ -557,7 +555,7 @@ impl<'r> ResponseBuilder<'r> {
     }
 }
 
-/// A response, as returned by `Responder`s.
+/// A response, as returned by types implementing [`Responder`].
 #[derive(Default)]
 pub struct Response<'r> {
     status: Option<Status>,
@@ -720,8 +718,7 @@ impl<'r> Response<'r> {
         cookies
     }
 
-    /// Returns a [`HeaderMap`](/rocket/http/struct.HeaderMap.html) of all of
-    /// the headers in `self`.
+    /// Returns a [`HeaderMap`] of all of the headers in `self`.
     ///
     /// # Example
     ///
@@ -746,8 +743,8 @@ impl<'r> Response<'r> {
     /// Sets the header `header` in `self`. Any existing headers with the name
     /// `header.name` will be lost, and only `header` will remain. The type of
     /// `header` can be any type that implements `Into<Header>`. This includes
-    /// `Header` itself, [`ContentType`](/rocket/http/struct.ContentType.html)
-    /// and [`hyper::header` types](/rocket/http/hyper/header/index.html).
+    /// `Header` itself, [`ContentType`](::http::ContentType) and
+    /// [`hyper::header` types](::http::hyper::header).
     ///
     /// # Example
     ///
@@ -802,8 +799,8 @@ impl<'r> Response<'r> {
     /// name `header.name`, another header with the same name and value
     /// `header.value` is added. The type of `header` can be any type that
     /// implements `Into<Header>`. This includes `Header` itself,
-    /// [`ContentType`](/rocket/http/struct.ContentType.html) and
-    /// [`hyper::header` types](/rocket/http/hyper/header/index.html).
+    /// [`ContentType`](::http::ContentType) and [`hyper::header`
+    /// types](::http::hyper::header).
     ///
     /// # Example
     ///
@@ -828,9 +825,9 @@ impl<'r> Response<'r> {
     /// Adds a custom header with name `name` and value `value` to `self`. If
     /// `self` already contains headers with the name `name`, another header
     /// with the same `name` and `value` is added. The type of `header` can be
-    /// any type that implements `Into<Header>`. This includes `Header` itself,
-    /// [`ContentType`](/rocket/http/struct.ContentType.html) and
-    /// [`hyper::header` types](/rocket/http/hyper/header/index.html).
+    /// any type implements `Into<Header>`. This includes `Header` itself,
+    /// [`ContentType`](::http::ContentType) and [`hyper::header`
+    /// types](::http::hyper::header).
     ///
     /// # Example
     ///
@@ -1018,8 +1015,8 @@ impl<'r> Response<'r> {
 
     /// Sets the body of `self` to be `body`, which will be streamed. The chunk
     /// size of the stream is
-    /// [DEFAULT_CHUNK_SIZE](/rocket/response/constant.DEFAULT_CHUNK_SIZE.html).
-    /// Use [set_chunked_body](#method.set_chunked_body) for custom chunk sizes.
+    /// [DEFAULT_CHUNK_SIZE](::response::DEFAULT_CHUNK_SIZE). Use
+    /// [set_chunked_body](#method.set_chunked_body) for custom chunk sizes.
     ///
     /// # Example
     ///

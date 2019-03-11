@@ -1,25 +1,21 @@
 use request::FormItems;
 
 /// Trait to create an instance of some type from an HTTP form.
-/// [Form](struct.Form.html) requires its generic type to implement this trait.
+/// [`Form`](::request::Form) requires its generic type to implement this trait.
 ///
 /// # Deriving
 ///
-/// This trait can be automatically derived via the
-/// [rocket_codegen](/rocket_codegen) plugin. When deriving `FromForm`, every
+/// This trait can be automatically derived. When deriving `FromForm`, every
 /// field in the structure must implement
-/// [FromFormValue](trait.FromFormValue.html). Rocket validates each field in
+/// [`FromFormValue`](::request::FromFormValue). Rocket validates each field in
 /// the structure by calling its `FromFormValue` implementation. You may wish to
 /// implement `FromFormValue` for your own types for custom, automatic
 /// validation.
 ///
 /// ```rust
-/// #![feature(plugin, decl_macro)]
-/// #![plugin(rocket_codegen)]
+/// # #![feature(proc_macro_hygiene, decl_macro)]
 /// # #![allow(deprecated, dead_code, unused_attributes)]
-///
-/// #[macro_use] extern crate rocket;
-///
+/// # #[macro_use] extern crate rocket;
 /// #[derive(FromForm)]
 /// struct TodoTask {
 ///     description: String,
@@ -34,16 +30,15 @@ use request::FormItems;
 /// data via the `data` parameter and `Form` type.
 ///
 /// ```rust
-/// # #![feature(plugin, decl_macro)]
+/// # #![feature(proc_macro_hygiene, decl_macro)]
 /// # #![allow(deprecated, dead_code, unused_attributes)]
-/// # #![plugin(rocket_codegen)]
 /// # #[macro_use] extern crate rocket;
 /// # use rocket::request::Form;
 /// # #[derive(FromForm)]
 /// # struct TodoTask { description: String, completed: bool }
 /// #[post("/submit", data = "<task>")]
 /// fn submit_task(task: Form<TodoTask>) -> String {
-///     format!("New task: {}", task.get().description)
+///     format!("New task: {}", task.description)
 /// }
 /// # fn main() {  }
 /// ```
@@ -53,11 +48,11 @@ use request::FormItems;
 /// Implementing `FromForm` should be a rare occurrence. Prefer instead to use
 /// Rocket's built-in derivation.
 ///
-/// When implementing `FromForm`, use the [FormItems](struct.FormItems.html)
-/// iterator to iterate through the raw form key/value pairs. Be aware that form
-/// fields that are typically hidden from your application, such as `_method`,
-/// will be present while iterating. Ensure that you adhere to the properties of
-/// the `strict` parameter, as detailed in the documentation below.
+/// When implementing `FromForm`, use the [`FormItems`] iterator to iterate
+/// through the raw form key/value pairs. Be aware that form fields that are
+/// typically hidden from your application, such as `_method`, will be present
+/// while iterating. Ensure that you adhere to the properties of the `strict`
+/// parameter, as detailed in the documentation below.
 ///
 /// ## Example
 ///
@@ -81,10 +76,10 @@ use request::FormItems;
 ///     fn from_form(items: &mut FormItems<'f>, strict: bool) -> Result<Item, ()> {
 ///         let mut field = None;
 ///
-///         for (key, value) in items {
-///             match key.as_str() {
+///         for item in items {
+///             match item.key.as_str() {
 ///                 "balloon" | "space" if field.is_none() => {
-///                     let decoded = value.url_decode().map_err(|_| ())?;
+///                     let decoded = item.value.url_decode().map_err(|_| ())?;
 ///                     field = Some(decoded);
 ///                 }
 ///                 _ if strict => return Err(()),
@@ -113,16 +108,6 @@ pub trait FromForm<'f>: Sized {
     /// When `strict` is `true` and unexpected, extra fields are present in
     /// `it`, an instance of `Self::Error` will be returned.
     fn from_form(it: &mut FormItems<'f>, strict: bool) -> Result<Self, Self::Error>;
-}
-
-/// This implementation should only be used during debugging!
-impl<'f> FromForm<'f> for &'f str {
-    type Error = !;
-
-    fn from_form(items: &mut FormItems<'f>, _: bool) -> Result<Self, !> {
-        items.mark_complete();
-        Ok(items.inner_str())
-    }
 }
 
 impl<'f, T: FromForm<'f>> FromForm<'f> for Option<T> {

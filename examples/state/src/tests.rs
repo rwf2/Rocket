@@ -25,6 +25,18 @@ fn test_count() {
     assert_eq!(get_count(&client), 100);
 }
 
+#[test]
+fn test_raw_state_count() {
+    use rocket::State;
+    use super::{count, index};
+
+    let rocket = super::rocket();
+
+    assert_eq!(count(State::from(&rocket).unwrap()), "0");
+    assert!(index(State::from(&rocket).unwrap()).0.contains("Visits: 1"));
+    assert_eq!(count(State::from(&rocket).unwrap()), "1");
+}
+
 // Cargo runs each test in parallel on different threads. We use all of these
 // tests below to show (and assert) that state is managed per-Rocket instance.
 #[test] fn test_count_parallel() { test_count() }

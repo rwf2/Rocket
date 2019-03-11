@@ -40,7 +40,15 @@ impl Method {
     }
 
     /// Returns `true` if an HTTP request with the method represented by `self`
-    /// supports a payload.
+    /// always supports a payload.
+    ///
+    /// The following methods always support payloads:
+    ///
+    ///   * `PUT`, `POST`, `DELETE`, `PATCH`
+    ///
+    /// The following methods _do not_ always support payloads:
+    ///
+    ///   * `GET`, `HEAD`, `CONNECT`, `TRACE`, `OPTIONS`
     ///
     /// # Example
     ///

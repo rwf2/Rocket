@@ -1,6 +1,6 @@
-#![feature(plugin, decl_macro)]
-#![plugin(rocket_codegen)]
-extern crate rocket;
+#![feature(proc_macro_hygiene, decl_macro)]
+
+#[macro_use] extern crate rocket;
 
 #[cfg(test)]
 mod tests;

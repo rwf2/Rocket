@@ -87,13 +87,13 @@ impl Fairings {
                 .collect::<Vec<_>>()
                 .join(", ");
 
-            info_!("{} {}: {}", Paint::white(num), kind, Paint::white(names));
+            info_!("{} {}: {}", Paint::default(num).bold(), kind, Paint::default(names).bold());
         }
     }
 
     pub fn pretty_print_counts(&self) {
         if !self.all_fairings.is_empty() {
-            info!("{}{}:", Paint::masked("📡  "), Paint::purple("Fairings"));
+            info!("{}{}:", Paint::masked("📡 "), Paint::magenta("Fairings"));
             self.info_for("launch", &self.launch);
             self.info_for("request", &self.request);
             self.info_for("response", &self.response);

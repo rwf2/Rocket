@@ -1,0 +1,37 @@
+error[E0277]: the trait bound `usize: rocket::response::Responder<'_>` is not satisfied
+ --> $DIR/catch_type_errors.rs:6:30
+  |
+6 | fn f1(_request: &Request) -> usize {
+  |                              ^^^^^ the trait `rocket::response::Responder<'_>` is not implemented for `usize`
+  |
+  = note: required by `rocket::response::Responder::respond_to`
+
+error[E0277]: the trait bound `bool: rocket::response::Responder<'_>` is not satisfied
+  --> $DIR/catch_type_errors.rs:12:30
+   |
+12 | fn f2(_request: &Request) -> bool {
+   |                              ^^^^ the trait `rocket::response::Responder<'_>` is not implemented for `bool`
+   |
+   = note: required by `rocket::response::Responder::respond_to`
+
+error[E0308]: mismatched types
+  --> $DIR/catch_type_errors.rs:18:7
+   |
+18 | fn f3(_request: bool) -> usize {
+   |       ^^^^^^^^^^^^^^ expected reference, found bool
+   |
+   = note: expected type `for<'r, 's> fn(&'r rocket::Request<'s>) -> _`
+              found type `fn(bool) -> usize {f3}`
+
+error[E0277]: the trait bound `usize: rocket::response::Responder<'_>` is not satisfied
+  --> $DIR/catch_type_errors.rs:24:12
+   |
+24 | fn f4() -> usize {
+   |            ^^^^^ the trait `rocket::response::Responder<'_>` is not implemented for `usize`
+   |
+   = note: required by `rocket::response::Responder::respond_to`
+
+error: aborting due to 4 previous errors
+
+Some errors occurred: E0277, E0308.
+For more information about an error, try `rustc --explain E0277`.

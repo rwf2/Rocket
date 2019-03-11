@@ -1,16 +1,16 @@
-#![feature(plugin, decl_macro)]
-#![plugin(rocket_codegen)]
+#![feature(proc_macro_hygiene, decl_macro)]
 
-extern crate rocket;
+#[macro_use] extern crate rocket;
 #[macro_use] extern crate rocket_contrib;
 #[macro_use] extern crate serde_derive;
 
 #[cfg(test)] mod tests;
 
-use rocket_contrib::{Json, JsonValue};
-use rocket::State;
-use std::collections::HashMap;
 use std::sync::Mutex;
+use std::collections::HashMap;
+
+use rocket::State;
+use rocket_contrib::json::{Json, JsonValue};
 
 // The type to represent the ID of a message.
 type ID = usize;
@@ -72,7 +72,7 @@ fn not_found() -> JsonValue {
 fn rocket() -> rocket::Rocket {
     rocket::ignite()
         .mount("/message", routes![new, update, get])
-        .catch(catchers![not_found])
+        .register(catchers![not_found])
         .manage(Mutex::new(HashMap::<ID, String>::new()))
 }
 

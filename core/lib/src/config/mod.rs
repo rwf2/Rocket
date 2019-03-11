@@ -31,37 +31,25 @@
 //! not used by Rocket itself but can be used by external libraries. The
 //! standard configuration parameters are:
 //!
-//!   * **address**: _[string]_ an IP address or host the application will
-//!     listen on
-//!     * examples: `"localhost"`, `"0.0.0.0"`, `"1.2.3.4"`
-//!   * **port**: _[integer]_ a port number to listen on
-//!     * examples: `"8000"`, `"80"`, `"4242"`
-//!   * **workers**: _[integer]_ the number of concurrent workers to use
-//!     * examples: `12`, `1`, `4`
-//!   * **keep_alive**: _[integer, 'false', or 'none']_ timeout, in seconds, for
-//!     HTTP keep-alive. disabled on 'false' or 'none'
-//!     * examples: `5`, `60`, `false`, `"none"`
-//!   * **log**: _[string]_ how much information to log; one of `"off"`,
-//!     `"normal"`, `"debug"`, or `"critical"`
-//!   * **secret_key**: _[string]_ a 256-bit base64 encoded string (44
-//!     characters) to use as the secret key
-//!     * example: `"8Xui8SN4mI+7egV/9dlfYYLGQJeEx4+DwmSQLwDVXJg="`
-//!   * **tls**: _[table]_ a table with two keys:
-//!     1. `certs`: _[string]_ a path to a certificate chain in PEM format
-//!     2. `key`: _[string]_ a path to a private key file in PEM format for the
-//!        certificate in `certs`
-//!
-//!     * example: `{ certs = "/path/to/certs.pem", key = "/path/to/key.pem" }`
-//!   * **limits**: _[table]_ a table where each key (_[string]_) corresponds to
-//!   a data type and the value (_[u64]_) corresponds to the maximum size in
-//!   bytes Rocket should accept for that type.
-//!     * example: `{ forms = 65536 }` (maximum form size to 64KiB)
+//! | name       | type           | description                                                 | examples                   |
+//! |------------|----------------|-------------------------------------------------------------|----------------------------|
+//! | address    | string         | ip address or host to listen on                             | `"localhost"`, `"1.2.3.4"` |
+//! | port       | integer        | port number to listen on                                    | `8000`, `80`               |
+//! | keep_alive | integer        | keep-alive timeout in seconds                               | `0` (disable), `10`        |
+//! | workers    | integer        | number of concurrent thread workers                         | `36`, `512`                |
+//! | log        | string         | max log level: `"off"`, `"normal"`, `"debug"`, `"critical"` | `"off"`, `"normal"`        |
+//! | secret_key | 256-bit base64 | secret key for private cookies                              | `"8Xui8SI..."` (44 chars)  |
+//! | tls        | table          | tls config table with two keys (`certs`, `key`)             | _see below_                |
+//! | tls.certs  | string         | path to certificate chain in PEM format                     | `"private/cert.pem"`       |
+//! | tls.key    | string         | path to private key for `tls.certs` in PEM format           | `"private/key.pem"`        |
+//! | limits     | table          | map from data type (string) to data limit (integer: bytes)  | `{ forms = 65536 }`        |
 //!
 //! ### Rocket.toml
 //!
-//! The `Rocket.toml` file is used to specify the configuration parameters for
-//! each environment. The file is optional. If it is not present, the default
-//! configuration parameters are used.
+//! `Rocket.toml` is a Rocket application's configuration file. It can
+//! optionally be used to specify the configuration parameters for each
+//! environment. If it is not present, the default configuration parameters or
+//! environment supplied parameters are used.
 //!
 //! The file must be a series of TOML tables, at most one for each environment,
 //! and an optional "global" table, where each table contains key-value pairs
@@ -166,14 +154,13 @@
 //! ## Retrieving Configuration Parameters
 //!
 //! Configuration parameters for the currently active configuration environment
-//! can be retrieved via the [config](/rocket/struct.Rocket.html#method.config)
-//! method on an instance of `Rocket` and `get_` methods on the
-//! [Config](struct.Config.html) structure.
+//! can be retrieved via the [`Rocket::config()`] `Rocket` and `get_` methods on
+//! [`Config`] structure.
 //!
 //! The retrivial of configuration parameters usually occurs at launch time via
-//! a [launch fairing](/rocket/fairing/trait.Fairing.html). If information about
-//! the configuraiton is needed later in the program, an attach fairing can be
-//! used to store the information as managed state. As an example of the latter,
+//! a [launch fairing](::fairing::Fairing). If information about the
+//! configuraiton is needed later in the program, an attach fairing can be used
+//! to store the information as managed state. As an example of the latter,
 //! consider the following short program which reads the `token` configuration
 //! parameter and stores the value or a default in a `Token` managed state
 //! value:
@@ -222,16 +209,16 @@ crate use self::toml_ext::LoggedValue;
 use logger;
 use self::Environment::*;
 use self::environment::CONFIG_ENV;
+use logger::COLORS_ENV;
 use self::toml_ext::parse_simple_toml_value;
 use http::uncased::uncased_eq;
 
 const CONFIG_FILENAME: &str = "Rocket.toml";
 const GLOBAL_ENV_NAME: &str = "global";
 const ENV_VAR_PREFIX: &str = "ROCKET_";
-const PREHANDLED_VARS: [&str; 2] = ["ROCKET_CODEGEN_DEBUG", CONFIG_ENV];
+const PREHANDLED_VARS: [&str; 3] = ["ROCKET_CODEGEN_DEBUG", CONFIG_ENV, COLORS_ENV];
 
-/// Wraps `std::result` with the error type of
-/// [ConfigError](enum.ConfigError.html).
+/// Wraps `std::result` with the error type of [`ConfigError`].
 pub type Result<T> = ::std::result::Result<T, ConfigError>;
 
 #[doc(hidden)]
@@ -242,29 +229,6 @@ pub struct RocketConfig {
 }
 
 impl RocketConfig {
-    /// Create a new configuration using the passed in `config` for all
-    /// environments. The Rocket.toml file is ignored, as are environment
-    /// variables.
-    ///
-    /// # Panics
-    ///
-    /// If the current working directory can't be retrieved, this function
-    /// panics.
-    pub fn new(config: Config) -> RocketConfig {
-        let f = config.config_path.clone();
-        let active_env = config.environment;
-
-        // None of these unwraps should fail since the filename is coming from
-        // an existing config.
-        let mut configs = HashMap::new();
-        configs.insert(Development, Config::default(Development, &f).unwrap());
-        configs.insert(Staging, Config::default(Staging, &f).unwrap());
-        configs.insert(Production, Config::default(Production, &f).unwrap());
-        configs.insert(active_env, config);
-
-        RocketConfig { active_env, config: configs }
-    }
-
     /// Read the configuration from the `Rocket.toml` file. The file is search
     /// for recursively up the tree, starting from the CWD.
     pub fn read() -> Result<RocketConfig> {
@@ -284,11 +248,17 @@ impl RocketConfig {
 
     /// Return the default configuration for all environments and marks the
     /// active environment (via the CONFIG_ENV variable) as active.
-    pub fn active_default<P: AsRef<Path>>(filename: P) -> Result<RocketConfig> {
+    pub fn active_default_from(filename: Option<&Path>) -> Result<RocketConfig> {
         let mut defaults = HashMap::new();
-        defaults.insert(Development, Config::default(Development, &filename)?);
-        defaults.insert(Staging, Config::default(Staging, &filename)?);
-        defaults.insert(Production, Config::default(Production, &filename)?);
+        if let Some(path) = filename {
+            defaults.insert(Development, Config::default_from(Development, &path)?);
+            defaults.insert(Staging, Config::default_from(Staging, &path)?);
+            defaults.insert(Production, Config::default_from(Production, &path)?);
+        } else {
+            defaults.insert(Development, Config::default(Development));
+            defaults.insert(Staging, Config::default(Staging));
+            defaults.insert(Production, Config::default(Production));
+        }
 
         let mut config = RocketConfig {
             active_env: Environment::active()?,
@@ -300,12 +270,18 @@ impl RocketConfig {
         Ok(config)
     }
 
+    /// Return the default configuration for all environments and marks the
+    /// active environment (via the CONFIG_ENV variable) as active.
+    pub fn active_default() -> Result<RocketConfig> {
+        RocketConfig::active_default_from(None)
+    }
+
     /// Iteratively search for `CONFIG_FILENAME` starting at the current working
     /// directory and working up through its parents. Returns the path to the
     /// file or an Error::NoKey if the file couldn't be found. If the current
     /// working directory can't be determined, return `BadCWD`.
     fn find() -> Result<PathBuf> {
-        let cwd = env::current_dir().map_err(|_| ConfigError::BadCWD)?;
+        let cwd = env::current_dir().map_err(|_| ConfigError::NotFound)?;
         let mut current = cwd.as_path();
 
         loop {
@@ -378,7 +354,7 @@ impl RocketConfig {
                 Err(e) => return Err(ConfigError::BadEnvVal(key, val, e))
             };
 
-            for env in &Environment::all() {
+            for env in &Environment::ALL {
                 match self.get_mut(*env).set_raw(&key, &toml_val) {
                     Err(ConfigError::BadType(_, exp, actual, _)) => {
                         let e = format!("expected {}, but found {}", exp, actual);
@@ -410,7 +386,7 @@ impl RocketConfig {
         };
 
         // Create a config with the defaults; set the env to the active one.
-        let mut config = RocketConfig::active_default(filename)?;
+        let mut config = RocketConfig::active_default_from(Some(filename.as_ref()))?;
 
         // Store all of the global overrides, if any, for later use.
         let mut global = None;
@@ -421,7 +397,7 @@ impl RocketConfig {
             let kv_pairs = match value.as_table() {
                 Some(table) => table,
                 None => return Err(ConfigError::BadType(
-                    entry, "a table", value.type_str(), path.clone()
+                    entry, "a table", value.type_str(), Some(path.clone())
                 ))
             };
 
@@ -441,7 +417,7 @@ impl RocketConfig {
 
         // Override all of the environments with the global values.
         if let Some(ref global_kv_pairs) = global {
-            for env in &Environment::all() {
+            for env in &Environment::ALL {
                 config.set_from_table(*env, global_kv_pairs)?;
             }
         }
@@ -480,16 +456,11 @@ crate fn init() -> Config {
             | ParseError(..) | BadEntry(..) | BadEnv(..) | BadType(..) | Io(..)
             | BadFilePath(..) | BadEnvVal(..) | UnknownKey(..)
             | Missing(..) => bail(e),
-            IoError | BadCWD => warn!("Failed reading Rocket.toml. Using defaults."),
+            IoError => warn!("Failed reading Rocket.toml. Using defaults."),
             NotFound => { /* try using the default below */ }
         }
 
-        let default_path = match env::current_dir() {
-            Ok(path) => path.join(&format!(".{}.{}", "default", CONFIG_FILENAME)),
-            Err(_) => bail(ConfigError::BadCWD)
-        };
-
-        RocketConfig::active_default(&default_path).unwrap_or_else(|e| bail(e))
+        RocketConfig::active_default().unwrap_or_else(|e| bail(e))
     });
 
     // FIXME: Should probably store all of the config.
@@ -535,7 +506,7 @@ mod test {
     }
 
     fn active_default() -> Result<RocketConfig>  {
-        RocketConfig::active_default(TEST_CONFIG_FILENAME)
+        RocketConfig::active_default()
     }
 
     fn default_config(env: Environment) -> ConfigBuilder {
@@ -605,7 +576,7 @@ mod test {
             port = 7810
             workers = 21
             log = "critical"
-            keep_alive = false
+            keep_alive = 0
             secret_key = "8Xui8SN4mI+7egV/9dlfYYLGQJeEx4+DwmSQLwDVXJg="
             template_dir = "mine"
             json = true
@@ -617,7 +588,7 @@ mod test {
             .port(7810)
             .workers(21)
             .log_level(LoggingLevel::Critical)
-            .keep_alive(None)
+            .keep_alive(0)
             .secret_key("8Xui8SN4mI+7egV/9dlfYYLGQJeEx4+DwmSQLwDVXJg=")
             .extra("template_dir", "mine")
             .extra("json", true)
@@ -921,23 +892,9 @@ mod test {
 
         check_config!(RocketConfig::parse(r#"
                           [stage]
-                          keep_alive = false
+                          keep_alive = 0
                       "#.to_string(), TEST_CONFIG_FILENAME), {
-                          default_config(Staging).keep_alive(None)
-                      });
-
-        check_config!(RocketConfig::parse(r#"
-                          [stage]
-                          keep_alive = "none"
-                      "#.to_string(), TEST_CONFIG_FILENAME), {
-                          default_config(Staging).keep_alive(None)
-                      });
-
-        check_config!(RocketConfig::parse(r#"
-                          [stage]
-                          keep_alive = "None"
-                      "#.to_string(), TEST_CONFIG_FILENAME), {
-                          default_config(Staging).keep_alive(None)
+                          default_config(Staging).keep_alive(0)
                       });
     }
 
@@ -1085,7 +1042,7 @@ mod test {
 
         assert!(RocketConfig::parse(r#"
             [dev]
-            1.2.3 = 2
+            1. = 2
         "#.to_string(), TEST_CONFIG_FILENAME).is_err());
 
         assert!(RocketConfig::parse(r#"
@@ -1100,7 +1057,7 @@ mod test {
         let _env_lock = ENV_LOCK.lock().unwrap();
 
         // Test first that we can override each environment.
-        for env in &Environment::all() {
+        for env in &Environment::ALL {
             env::set_var(CONFIG_ENV, env.to_string());
 
             check_config!(RocketConfig::parse(format!(r#"
@@ -1154,14 +1111,14 @@ mod test {
 
             let rconfig = active_default().unwrap();
             // Check that it overrides the active config.
-            for env in &Environment::all() {
+            for env in &Environment::ALL {
                 env::set_var(CONFIG_ENV, env.to_string());
                 let rconfig = active_default().unwrap();
                 check_value(&*key.to_lowercase(), val, rconfig.active());
             }
 
             // And non-active configs.
-            for env in &Environment::all() {
+            for env in &Environment::ALL {
                 check_value(&*key.to_lowercase(), val, rconfig.get(*env));
             }
         }
@@ -1199,7 +1156,7 @@ mod test {
             check_value(&*key.to_lowercase(), val, r.active());
 
             // And non-active configs.
-            for env in &Environment::all() {
+            for env in &Environment::ALL {
                 check_value(&*key.to_lowercase(), val, r.get(*env));
             }
         }

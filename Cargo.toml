@@ -5,7 +5,6 @@ codegen-units = 4
 members = [
   "core/lib/",
   "core/codegen/",
-  "core/codegen_next/",
   "core/http/",
   "contrib/lib",
   "contrib/codegen",
@@ -42,4 +41,5 @@ members = [
   "examples/tls",
   "examples/mtls",
   "examples/fairings",
+  "examples/hello_2018",
 ]

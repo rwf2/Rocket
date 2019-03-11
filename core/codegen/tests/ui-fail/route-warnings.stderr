@@ -1,0 +1,42 @@
+warning: 'application/x-custom' is not a known media type
+ --> $DIR/route-warnings.rs:9:21
+  |
+9 | #[get("/", format = "application/x-custom")] //~ WARNING not a known media type
+  |                     ^^^^^^^^^^^^^^^^^^^^^^
+
+warning: 'x-custom/plain' is not a known media type
+  --> $DIR/route-warnings.rs:12:21
+   |
+12 | #[get("/", format = "x-custom/plain")] //~ WARNING not a known media type
+   |                     ^^^^^^^^^^^^^^^^
+
+warning: 'x-custom/x-custom' is not a known media type
+  --> $DIR/route-warnings.rs:15:21
+   |
+15 | #[get("/", format = "x-custom/x-custom")] //~ WARNING not a known media type
+   |                     ^^^^^^^^^^^^^^^^^^^
+
+warning: `data` used with non-payload-supporting method
+  --> $DIR/route-warnings.rs:20:12
+   |
+20 | #[get("/", data = "<_foo>")] //~ WARNING used with non-payload-supporting method
+   |            ^^^^^^^^^^^^^^^
+   |
+note: 'GET' does not typically support payloads
+  --> $DIR/route-warnings.rs:20:3
+   |
+20 | #[get("/", data = "<_foo>")] //~ WARNING used with non-payload-supporting method
+   |   ^^^
+
+warning: `data` used with non-payload-supporting method
+  --> $DIR/route-warnings.rs:23:13
+   |
+23 | #[head("/", data = "<_foo>")] //~ WARNING used with non-payload-supporting method
+   |             ^^^^^^^^^^^^^^^
+   |
+note: 'HEAD' does not typically support payloads
+  --> $DIR/route-warnings.rs:23:3
+   |
+23 | #[head("/", data = "<_foo>")] //~ WARNING used with non-payload-supporting method
+   |   ^^^^
+

@@ -177,6 +177,6 @@ fn check_bad_utf8() {
     let client = Client::new(rocket()).unwrap();
     unsafe {
         let bad_str = ::std::str::from_utf8_unchecked(b"a=\xff");
-        assert_form_eq(&client, bad_str, "Form input was invalid UTF8.".into());
+        assert_form_eq(&client, bad_str, "Form input was invalid UTF-8.".into());
     }
 }

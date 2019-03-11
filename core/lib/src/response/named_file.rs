@@ -19,7 +19,7 @@ impl NamedFile {
     ///
     /// This function will return an error if path does not already exist. Other
     /// errors may also be returned according to
-    /// [OpenOptions::open](https://doc.rust-lang.org/std/fs/struct.OpenOptions.html#method.open).
+    /// [`OpenOptions::open()`](std::fs::OpenOptions::open()).
     ///
     /// # Examples
     ///
@@ -75,10 +75,9 @@ impl NamedFile {
 
 /// Streams the named file to the client. Sets or overrides the Content-Type in
 /// the response according to the file's extension if the extension is
-/// recognized. See
-/// [ContentType::from_extension](/rocket/http/struct.ContentType.html#method.from_extension)
-/// for more information. If you would like to stream a file with a different
-/// Content-Type than that implied by its extension, use a `File` directly.
+/// recognized. See [`ContentType::from_extension()`] for more information. If
+/// you would like to stream a file with a different Content-Type than that
+/// implied by its extension, use a [`File`] directly.
 impl<'r> Responder<'r> for NamedFile {
     fn respond_to(self, req: &Request) -> response::Result<'r> {
         let mut response = self.1.respond_to(req)?;

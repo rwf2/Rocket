@@ -62,19 +62,14 @@ impl Source {
 /// A `MediaType` should rarely be used directly. Instead, one is typically used
 /// indirectly via types like [`Accept`] and [`ContentType`], which internally
 /// contain `MediaType`s. Nonetheless, a `MediaType` can be created via the
-/// [`new`], [`with_params`], and [`from_extension`] methods. The preferred
-/// method, however, is to create a `MediaType` via an associated constant.
-///
-/// [`Accept`]: /rocket/http/struct.Accept.html
-/// [`ContentType`]: /rocket/http/struct.ContentType.html
-/// [`new`]: /rocket/http/struct.MediaType.html#method.new
-/// [`with_params`]: /rocket/http/struct.MediaType.html#method.with_params
-/// [`from_extension`]: /rocket/http/struct.MediaType.html#method.from_extension
+/// [`MediaType::new()`], [`MediaType::with_params()`], and
+/// [`MediaType::from_extension`()] methods. The preferred method, however, is
+/// to create a `MediaType` via an associated constant.
 ///
 /// ## Example
 ///
-/// A media type of `application/json` can be instantiated via the `JSON`
-/// constant:
+/// A media type of `application/json` can be instantiated via the
+/// [`MediaType::JSON`] constant:
 ///
 /// ```rust
 /// # extern crate rocket;
@@ -96,9 +91,7 @@ impl Source {
 /// typically the comparison that is desired.
 ///
 /// If an exact comparison is desired that takes into account parameters, the
-/// [`exact_eq`] method can be used.
-///
-/// [`exact_eq`]: /rocket/http/struct.MediaType.html#method.exact_eq
+/// [`exact_eq()`](MediaType::exact_eq()) method can be used.
 #[derive(Debug, Clone)]
 pub struct MediaType {
     /// Storage for the entire media type string.

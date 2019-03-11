@@ -16,9 +16,12 @@ static DB_LOCK: Mutex<()> = Mutex::new(());
 macro_rules! run_test {
     (|$client:ident, $conn:ident| $block:expr) => ({
         let _lock = DB_LOCK.lock();
-        let (rocket, db) = super::rocket();
+        let rocket = super::rocket();
+        let db = super::DbConn::get_one(&rocket);
         let $client = Client::new(rocket).expect("Rocket client");
         let $conn = db.expect("failed to get database connection for testing");
+        assert!(Task::delete_all(&$conn), "failed to delete all tasks for testing");
+
         $block
     })
 }

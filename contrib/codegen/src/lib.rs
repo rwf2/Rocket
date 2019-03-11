@@ -24,14 +24,14 @@
 //! DATABASE_NAME := (string literal)
 //! </pre>
 
-extern crate derive_utils;
+extern crate devise;
 extern crate proc_macro;
 
 #[allow(unused_imports)]
 #[macro_use] extern crate quote;
 
 #[allow(unused_imports)]
-crate use derive_utils::{syn, proc_macro2};
+crate use devise::{syn, proc_macro2};
 
 #[cfg(feature = "database_attribute")]
 mod database;

@@ -1,11 +1,11 @@
 [package]
 name = "rocket"
-version = "0.4.0-dev"
+version = "0.4.0"
 authors = ["Sergio Benitez <sb@sergio.bz>"]
 description = """
 Web framework for nightly with a focus on ease-of-use, expressibility, and speed.
 """
-documentation = "https://api.rocket.rs/rocket/"
+documentation = "https://api.rocket.rs/v0.4/rocket/"
 homepage = "https://rocket.rs"
 repository = "https://github.com/SergioBenitez/Rocket"
 readme = "../../README.md"
@@ -14,31 +14,32 @@ license = "MIT/Apache-2.0"
 build = "build.rs"
 categories = ["web-programming::http-server"]
 
+[package.metadata.docs.rs]
+all-features = true
+
 [features]
+default = ["private-cookies"]
 tls = ["rocket_http/tls"]
+private-cookies = ["rocket_http/private-cookies"]
 
 [dependencies]
-rocket_codegen_next = { version = "0.4.0-dev", path = "../codegen_next" }
-rocket_http = { version = "0.4.0-dev", path = "../http" }
-yansi = "0.4"
+rocket_codegen = { version = "0.4.0", path = "../codegen" }
+rocket_http = { version = "0.4.0", path = "../http" }
+yansi = "0.5"
 log = "0.4"
-toml = "0.4.2"
+toml = "0.4.7"
 num_cpus = "1.0"
 state = "0.4.1"
 time = "0.1"
 memchr = "2" # TODO: Use pear instead.
-base64 = "0.9"
-pear = { git = "http://github.com/SergioBenitez/Pear", rev = "b475140" }
+base64 = "0.10"
+pear = "0.1"
 isatty = "0.1"
+
+[build-dependencies]
+yansi = "0.5"
+version_check = "0.1.3"
 
 [dev-dependencies]
 # TODO: Find a way to not depend on this.
 lazy_static = "1.0"
-rocket_codegen = { version = "0.4.0-dev", path = "../codegen" }
-
-[build-dependencies]
-yansi = "0.4"
-version_check = "0.1.3"
-
-[package.metadata.docs.rs]
-all-features = true

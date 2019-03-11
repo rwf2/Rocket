@@ -2,7 +2,7 @@ use super::rocket;
 use rocket::local::{Client, LocalResponse};
 use rocket::http::Method::*;
 use rocket::http::Status;
-use rocket_contrib::Template;
+use rocket_contrib::templates::Template;
 
 macro_rules! dispatch {
     ($method:expr, $path:expr, $test_fn:expr) => ({

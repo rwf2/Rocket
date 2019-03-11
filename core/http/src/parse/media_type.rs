@@ -3,7 +3,7 @@ use std::borrow::Cow;
 use pear::{parser, switch};
 use pear::parsers::*;
 
-use {MediaType, Source};
+use media_type::{MediaType, Source};
 use parse::checkers::{is_whitespace, is_valid_token};
 use parse::IndexedStr;
 

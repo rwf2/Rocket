@@ -1,7 +1,6 @@
-#![feature(plugin, decl_macro)]
-#![plugin(rocket_codegen)]
+#![feature(proc_macro_hygiene, decl_macro)]
 
-extern crate rocket;
+#[macro_use] extern crate rocket;
 
 const RESPONSE_STRING: &'static str = "This is the body. Hello, world!";
 

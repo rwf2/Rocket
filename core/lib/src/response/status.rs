@@ -111,50 +111,6 @@ impl<'r, R: Responder<'r>> Responder<'r> for Accepted<R> {
     }
 }
 
-/// Sets the status of the response to 204 (No Content).
-///
-/// # Example
-///
-/// ```rust
-/// use rocket::response::status;
-///
-/// # #[allow(unused_variables)]
-/// let response = status::NoContent;
-/// ```
-// TODO: This would benefit from Header support.
-#[derive(Debug, Clone, PartialEq)]
-pub struct NoContent;
-
-/// Sets the status code of the response to 204 No Content. The body of the
-/// response will be empty.
-impl<'r> Responder<'r> for NoContent {
-    fn respond_to(self, _: &Request) -> Result<Response<'r>, Status> {
-        Response::build().status(Status::NoContent).ok()
-    }
-}
-
-
-/// Sets the status of the response to 205 (Reset Content).
-///
-/// # Example
-///
-/// ```rust
-/// use rocket::response::status;
-///
-/// # #[allow(unused_variables)]
-/// let response = status::Reset;
-/// ```
-#[derive(Debug, Copy, Clone, PartialEq)]
-pub struct Reset;
-
-/// Sets the status code of the response to 205 Reset Content. The body of the
-/// response will be empty.
-impl Responder<'static> for Reset {
-    fn respond_to(self, _: &Request) -> Result<Response<'static>, Status> {
-        Response::build().status(Status::ResetContent).ok()
-    }
-}
-
 /// Sets the status of the response to 400 (Bad Request).
 ///
 /// If a responder is supplied, the remainder of the response is delegated to

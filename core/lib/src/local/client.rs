@@ -1,26 +1,26 @@
-use std::cell::RefCell;
+use std::sync::RwLock;
 use std::borrow::Cow;
 
 use Rocket;
 use local::LocalRequest;
-use http::{Method, CookieJar};
+use http::{Method, private::CookieJar};
 use error::LaunchError;
 
 /// A structure to construct requests for local dispatching.
 ///
 /// # Usage
 ///
-/// A `Client` is constructed via the [`new`] or [`untracked`] methods from an
-/// already constructed `Rocket` instance. Once a value of `Client` has been
-/// constructed, the [`LocalRequest`] constructor methods ([`get`], [`put`],
-/// [`post`], and so on) can be used to create a `LocalRequest` for dispatching.
+/// A `Client` is constructed via the [`new()`] or [`untracked()`] methods from
+/// an already constructed `Rocket` instance. Once a value of `Client` has been
+/// constructed, the [`LocalRequest`] constructor methods ([`get()`], [`put()`],
+/// [`post()`], and so on) can be used to create a `LocalRequest` for
+/// dispatching.
 ///
-/// See the [top-level documentation](/rocket/local/index.html) for more usage
-/// information.
+/// See the [top-level documentation](::local) for more usage information.
 ///
 /// ## Cookie Tracking
 ///
-/// A `Client` constructed using [`new`] propagates cookie changes made by
+/// A `Client` constructed using [`new()`] propagates cookie changes made by
 /// responses to previously dispatched requests. In other words, if a previously
 /// dispatched request resulted in a response that adds a cookie, any future
 /// requests will contain that cookie. Similarly, cookies removed by a response
@@ -29,8 +29,23 @@ use error::LaunchError;
 /// This is typically the desired mode of operation for a `Client` as it removes
 /// the burden of manually tracking cookies. Under some circumstances, however,
 /// disabling this tracking may be desired. In these cases, use the
-/// [`untracked`](Client::untracked()) constructor to create a `Client` that
+/// [`untracked()`](Client::untracked()) constructor to create a `Client` that
 /// _will not_ track cookies.
+///
+/// ### Synchronization
+///
+/// While `Client` implements `Sync`, using it in a multithreaded environment
+/// while tracking cookies can result in surprising, non-deterministic behavior.
+/// This is because while cookie modifications are serialized, the exact
+/// ordering depends on when requests are dispatched. Specifically, when cookie
+/// tracking is enabled, all request dispatches are serialized, which in-turn
+/// serializes modifications to the internally tracked cookies.
+///
+/// If possible, refrain from sharing a single instance of `Client` across
+/// multiple threads. Instead, prefer to create a unique instance of `Client`
+/// per thread. If it's not possible, ensure that either you are not depending
+/// on cookies, the ordering of their modifications, or both, or have arranged
+/// for dispatches to occur in a deterministic ordering.
 ///
 /// ## Example
 ///
@@ -47,15 +62,14 @@ use error::LaunchError;
 ///     .dispatch();
 /// ```
 ///
-/// [`new`]: #method.new
-/// [`untracked`]: #method.untracked
-/// [`LocalRequest`]: /rocket/local/struct.LocalRequest.html
-/// [`get`]: #method.get
-/// [`put`]: #method.put
-/// [`post`]: #method.post
+/// [`new()`]: #method.new
+/// [`untracked()`]: #method.untracked
+/// [`get()`]: #method.get
+/// [`put()`]: #method.put
+/// [`post()`]: #method.post
 pub struct Client {
     rocket: Rocket,
-    crate cookies: Option<RefCell<CookieJar>>,
+    crate cookies: Option<RwLock<CookieJar>>,
 }
 
 impl Client {
@@ -64,7 +78,7 @@ impl Client {
     /// set to `None`.
     fn _new(rocket: Rocket, tracked: bool) -> Result<Client, LaunchError> {
         let cookies = match tracked {
-            true => Some(RefCell::new(CookieJar::new())),
+            true => Some(RwLock::new(CookieJar::new())),
             false => None
         };
 
@@ -152,9 +166,8 @@ impl Client {
     ///
     /// When dispatched, the request will be served by the instance of Rocket
     /// within `self`. The request is not dispatched automatically. To actually
-    /// dispatch the request, call [`dispatch`] on the returned request.
-    ///
-    /// [`dispatch`]: /rocket/local/struct.LocalRequest.html#method.dispatch
+    /// dispatch the request, call [`LocalRequest::dispatch()`] on the returned
+    /// request.
     ///
     /// # Example
     ///
@@ -173,9 +186,8 @@ impl Client {
     ///
     /// When dispatched, the request will be served by the instance of Rocket
     /// within `self`. The request is not dispatched automatically. To actually
-    /// dispatch the request, call [`dispatch`] on the returned request.
-    ///
-    /// [`dispatch`]: /rocket/local/struct.LocalRequest.html#method.dispatch
+    /// dispatch the request, call [`LocalRequest::dispatch()`] on the returned
+    /// request.
     ///
     /// # Example
     ///
@@ -194,9 +206,8 @@ impl Client {
     ///
     /// When dispatched, the request will be served by the instance of Rocket
     /// within `self`. The request is not dispatched automatically. To actually
-    /// dispatch the request, call [`dispatch`] on the returned request.
-    ///
-    /// [`dispatch`]: /rocket/local/struct.LocalRequest.html#method.dispatch
+    /// dispatch the request, call [`LocalRequest::dispatch()`] on the returned
+    /// request.
     ///
     /// # Example
     ///
@@ -219,9 +230,8 @@ impl Client {
     ///
     /// When dispatched, the request will be served by the instance of Rocket
     /// within `self`. The request is not dispatched automatically. To actually
-    /// dispatch the request, call [`dispatch`] on the returned request.
-    ///
-    /// [`dispatch`]: /rocket/local/struct.LocalRequest.html#method.dispatch
+    /// dispatch the request, call [`LocalRequest::dispatch()`] on the returned
+    /// request.
     ///
     /// # Example
     ///
@@ -242,9 +252,8 @@ impl Client {
     ///
     /// When dispatched, the request will be served by the instance of Rocket
     /// within `self`. The request is not dispatched automatically. To actually
-    /// dispatch the request, call [`dispatch`] on the returned request.
-    ///
-    /// [`dispatch`]: /rocket/local/struct.LocalRequest.html#method.dispatch
+    /// dispatch the request, call [`LocalRequest::dispatch()`] on the returned
+    /// request.
     ///
     /// # Example
     ///
@@ -265,9 +274,8 @@ impl Client {
     ///
     /// When dispatched, the request will be served by the instance of Rocket
     /// within `self`. The request is not dispatched automatically. To actually
-    /// dispatch the request, call [`dispatch`] on the returned request.
-    ///
-    /// [`dispatch`]: /rocket/local/struct.LocalRequest.html#method.dispatch
+    /// dispatch the request, call [`LocalRequest::dispatch()`] on the returned
+    /// request.
     ///
     /// # Example
     ///
@@ -288,9 +296,8 @@ impl Client {
     ///
     /// When dispatched, the request will be served by the instance of Rocket
     /// within `self`. The request is not dispatched automatically. To actually
-    /// dispatch the request, call [`dispatch`] on the returned request.
-    ///
-    /// [`dispatch`]: /rocket/local/struct.LocalRequest.html#method.dispatch
+    /// dispatch the request, call [`LocalRequest::dispatch()`] on the returned
+    /// request.
     ///
     /// # Example
     ///
@@ -311,9 +318,8 @@ impl Client {
     ///
     /// When dispatched, the request will be served by the instance of Rocket
     /// within `self`. The request is not dispatched automatically. To actually
-    /// dispatch the request, call [`dispatch`] on the returned request.
-    ///
-    /// [`dispatch`]: /rocket/local/struct.LocalRequest.html#method.dispatch
+    /// dispatch the request, call [`LocalRequest::dispatch()`] on the returned
+    /// request.
     ///
     /// # Example
     ///
@@ -329,5 +335,17 @@ impl Client {
         where U: Into<Cow<'u, str>>
     {
         LocalRequest::new(self, method, uri.into())
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use super::Client;
+
+    fn assert_sync<T: Sync>() {}
+
+    #[test]
+    fn test_local_client_impl_sync() {
+        assert_sync::<Client>();
     }
 }

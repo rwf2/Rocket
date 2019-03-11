@@ -1,16 +1,15 @@
-use std::fmt::{self, Debug};
+use std::ops::Deref;
 
-use request::Request;
-use request::form::{Form, FromForm};
-use data::{self, Data, FromData};
+use request::{Request, form::{Form, FormDataError, FromForm}};
+use data::{Data, Transform, Transformed, FromData, Outcome};
+use http::uri::{Query, FromUriParam};
 
-/// A `FromData` type for parsing `FromForm` types leniently.
+/// A data guard for parsing [`FromForm`] types leniently.
 ///
-/// This type implements the `FromData` trait, and like
-/// [`Form`](/rocket/request/struct.Form.html), provides a generic means to
-/// parse arbitrary structures from incoming form data. Unlike `Form`, this type
-/// uses a _lenient_ parsing strategy: forms that contains a superset of the
-/// expected fields (i.e, extra fields) will parse successfully.
+/// This type implements the [`FromData`] trait, and like [`Form`], provides a
+/// generic means to parse arbitrary structures from incoming form data. Unlike
+/// `Form`, this type uses a _lenient_ parsing strategy: forms that contains a
+/// superset of the expected fields (i.e, extra fields) will parse successfully.
 ///
 /// # Leniency
 ///
@@ -22,9 +21,8 @@ use data::{self, Data, FromData};
 ///
 /// # Usage
 ///
-/// The usage of a `LenientForm` type is equivalent to that of
-/// [`Form`](/rocket/request/struct.Form.html), so we defer details to its
-/// documentation. We provide shallow information here.
+/// The usage of a `LenientForm` type is equivalent to that of [`Form`], so we
+/// defer details to its documentation.
 ///
 /// `LenientForm` implements `FromData`, so it can be used directly as a target
 /// of the `data = "<param>"` route parameter. For instance, if some structure
@@ -32,9 +30,21 @@ use data::{self, Data, FromData};
 /// automatically parsed into the `T` structure with the following route and
 /// handler:
 ///
-/// ```rust,ignore
-/// #[post("/form_submit", data = "<param>")]
-/// fn submit(form: LenientForm<T>) ... { ... }
+/// ```rust
+/// # #![feature(proc_macro_hygiene, decl_macro)]
+/// # #[macro_use] extern crate rocket;
+/// use rocket::request::LenientForm;
+///
+/// #[derive(FromForm)]
+/// struct UserInput {
+///     value: String
+/// }
+///
+/// #[post("/submit", data = "<user_input>")]
+/// fn submit_task(user_input: LenientForm<UserInput>) -> String {
+///     format!("Your value: {}", user_input.value)
+/// }
+/// # fn main() {  }
 /// ```
 ///
 /// ## Incoming Data Limits
@@ -48,74 +58,16 @@ use data::{self, Data, FromData};
 /// [global.limits]
 /// forms = 524288
 /// ```
-pub struct LenientForm<'f, T: FromForm<'f> + 'f>(Form<'f, T>);
+#[derive(Debug)]
+pub struct LenientForm<T>(pub T);
 
-impl<'f, T: FromForm<'f> + 'f> LenientForm<'f, T> {
-    /// Immutably borrow the parsed type.
+impl<T> LenientForm<T> {
+    /// Consumes `self` and returns the parsed value.
     ///
     /// # Example
     ///
     /// ```rust
-    /// # #![feature(plugin, decl_macro)]
-    /// # #![plugin(rocket_codegen)]
-    /// # #[macro_use] extern crate rocket;
-    /// use rocket::request::LenientForm;
-    ///
-    /// #[derive(FromForm)]
-    /// struct MyForm {
-    ///     field: String,
-    /// }
-    ///
-    /// #[post("/submit", data = "<form>")]
-    /// fn submit(form: LenientForm<MyForm>) -> String {
-    ///     format!("Form field is: {}", form.get().field)
-    /// }
-    /// #
-    /// # fn main() { }
-    /// ```
-    #[inline(always)]
-    pub fn get(&'f self) -> &T {
-        self.0.get()
-    }
-
-    /// Returns the raw form string that was used to parse the encapsulated
-    /// object.
-    ///
-    /// # Example
-    ///
-    /// ```rust
-    /// # #![feature(plugin, decl_macro)]
-    /// # #![plugin(rocket_codegen)]
-    /// # #[macro_use] extern crate rocket;
-    /// use rocket::request::LenientForm;
-    ///
-    /// #[derive(FromForm)]
-    /// struct MyForm {
-    ///     field: String,
-    /// }
-    ///
-    /// #[post("/submit", data = "<form>")]
-    /// fn submit(form: LenientForm<MyForm>) -> String {
-    ///     format!("Raw form string is: {}", form.raw_form_string())
-    /// }
-    /// #
-    /// # fn main() { }
-    #[inline(always)]
-    pub fn raw_form_string(&'f self) -> &str {
-        self.0.raw_form_string()
-    }
-}
-
-impl<'f, T: FromForm<'f> + 'static> LenientForm<'f, T> {
-    /// Consumes `self` and returns the parsed value. For safety reasons, this
-    /// method may only be called when the parsed value contains no
-    /// non-`'static` references.
-    ///
-    /// # Example
-    ///
-    /// ```rust
-    /// # #![feature(plugin, decl_macro)]
-    /// # #![plugin(rocket_codegen)]
+    /// # #![feature(proc_macro_hygiene, decl_macro)]
     /// # #[macro_use] extern crate rocket;
     /// use rocket::request::LenientForm;
     ///
@@ -128,39 +80,40 @@ impl<'f, T: FromForm<'f> + 'static> LenientForm<'f, T> {
     /// fn submit(form: LenientForm<MyForm>) -> String {
     ///     form.into_inner().field
     /// }
-    /// #
     /// # fn main() { }
     #[inline(always)]
     pub fn into_inner(self) -> T {
-        self.0.into_inner()
+        self.0
     }
 }
 
-impl<'f, T: FromForm<'f> + Debug + 'f> Debug for LenientForm<'f, T> {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        self.0.fmt(f)
+impl<T> Deref for LenientForm<T> {
+    type Target = T;
+
+    fn deref(&self) -> &T {
+        &self.0
     }
 }
 
-impl<'f, T: FromForm<'f>> FromData for LenientForm<'f, T> where T::Error: Debug {
-    /// The raw form string, if it was able to be retrieved from the request.
-    type Error = Option<String>;
+impl<'f, T: FromForm<'f>> FromData<'f> for LenientForm<T> {
+    type Error = FormDataError<'f, T::Error>;
+    type Owned = String;
+    type Borrowed = str;
 
-    /// Parses a `LenientForm` from incoming form data.
-    ///
-    /// If the content type of the request data is not
-    /// `application/x-www-form-urlencoded`, `Forward`s the request. If the form
-    /// data cannot be parsed into a `T`, a `Failure` with status code
-    /// `UnprocessableEntity` is returned. If the form string is malformed, a
-    /// `Failure` with status code `BadRequest` is returned. Finally, if reading
-    /// the incoming stream fails, returns a `Failure` with status code
-    /// `InternalServerError`. In all failure cases, the raw form string is
-    /// returned if it was able to be retrieved from the incoming stream.
-    ///
-    /// All relevant warnings and errors are written to the console in Rocket
-    /// logging format.
-    #[inline]
-    fn from_data(request: &Request, data: Data) -> data::Outcome<Self, Self::Error> {
-        super::from_data(request, data, false).map(LenientForm)
+    fn transform(r: &Request, d: Data) -> Transform<Outcome<Self::Owned, Self::Error>> {
+        <Form<T>>::transform(r, d)
+    }
+
+    fn from_data(_: &Request, o: Transformed<'f, Self>) -> Outcome<Self, Self::Error> {
+        <Form<T>>::from_data(o.borrowed()?, false).map(LenientForm)
+    }
+}
+
+impl<'f, A, T: FromUriParam<Query, A> + FromForm<'f>> FromUriParam<Query, A> for LenientForm<T> {
+    type Target = T::Target;
+
+    #[inline(always)]
+    fn from_uri_param(param: A) -> Self::Target {
+        T::from_uri_param(param)
     }
 }

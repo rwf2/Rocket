@@ -1,14 +1,14 @@
-#![feature(plugin, decl_macro)]
-#![plugin(rocket_codegen)]
+#![feature(proc_macro_hygiene, decl_macro)]
 
-extern crate rocket;
+#[macro_use] extern crate rocket;
 
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
+use rocket::http::ext::Normalize;
 use rocket::Route;
 
 #[get("/<path..>")]
 fn files(route: &Route, path: PathBuf) -> String {
-    format!("{}/{}", route.base(), path.to_string_lossy())
+    Path::new(route.base()).join(path).normalized_str().to_string()
 }
 
 mod route_guard_tests {

@@ -1,3 +1,414 @@
+# Version 0.4.0 (Dec 06, 2018)
+
+## New Features
+
+This release includes the following new features:
+
+  * Introduced [Typed URIs].
+  * Introduced [ORM agnostic database support].
+  * Introduced [Request-Local State].
+  * Introduced mountable static-file serving via [`StaticFiles`].
+  * Introduced automatic [live template reloading].
+  * Introduced custom stateful handlers via [`Handler`].
+  * Introduced [transforming] data guards via [`FromData::transform()`].
+  * Introduced revamped [query string handling].
+  * Introduced the [`SpaceHelmet`] security and privacy headers fairing.
+  * Private cookies are gated behind a `private-cookies` default feature.
+  * Added [derive for `FromFormValue`].
+  * Added [derive for `Responder`].
+  * Added [`Template::custom()`] for customizing templating engines including
+    registering filters and helpers.
+  * Cookies are automatically tracked and propagated by [`Client`].
+  * Private cookies can be added to local requests with
+    [`LocalRequest::private_cookie()`].
+  * Release builds default to the `production` environment.
+  * Keep-alive can be configured via the `keep_alive` configuration parameter.
+  * Allow CLI colors and emoji to be disabled with `ROCKET_CLI_COLORS=off`.
+  * Route `format` accepts [shorthands] such as `json` and `html`.
+  * Implemented [`Responder` for `Status`].
+  * Added [`Response::cookies()`] for retrieving response cookies.
+  * All logging is disabled when `log` is set to `off`.
+  * Added [`Metadata`] guard for retrieving templating information.
+  * The [`Uri`] type parses URIs according to RFC 7230 into one of [`Origin`],
+    [`Absolute`], or [`Authority`].
+  * Added [`Outcome::and_then()`], [`Outcome::failure_then()`], and
+    [`Outcome::forward_then()`].
+  * Implemented `Responder` for `&[u8]`.
+  * Any `T: Into<Vec<Route>>` can be [`mount()`]ed.
+  * [Default rankings] range from -6 to -1, differentiating on static query
+    strings.
+  * Added [`Request::get_query_value()`] for retrieving a query value by key.
+  * Applications can launch without a working directory.
+  * Added [`State::from()`] for constructing `State` values.
+
+[`SpaceHelmet`]: https://api.rocket.rs/v0.4/rocket_contrib/helmet/index.html
+[`State::from()`]: https://api.rocket.rs/v0.4/rocket/struct.State.html#method.from
+[Typed URIs]: https://rocket.rs/v0.4/guide/responses/#typed-uris
+[ORM agnostic database support]: https://rocket.rs/v0.4/guide/state/#databases
+[`Template::custom()`]: https://api.rocket.rs/v0.4/rocket_contrib/templates/struct.Template.html#method.custom
+[`LocalRequest::private_cookie()`]: https://api.rocket.rs/v0.4/rocket/local/struct.LocalRequest.html#method.private_cookie
+[`LocalRequest`]: https://api.rocket.rs/v0.4/rocket/local/struct.LocalRequest.html
+[shorthands]: https://api.rocket.rs/v0.4/rocket/http/struct.ContentType.html#method.parse_flexible
+[derive for `FromFormValue`]: https://api.rocket.rs/v0.4/rocket_codegen/derive.FromFormValue.html
+[derive for `Responder`]: https://api.rocket.rs/v0.4/rocket_codegen/derive.Responder.html
+[`Response::cookies()`]: https://api.rocket.rs/v0.4/rocket/struct.Response.html#method.cookies
+[`Client`]: https://api.rocket.rs/v0.4/rocket/local/struct.Client.html
+[Request-Local State]: https://rocket.rs/v0.4/guide/state/#request-local-state
+[`Metadata`]: https://api.rocket.rs/v0.4/rocket_contrib/templates/struct.Metadata.html
+[`Uri`]: https://api.rocket.rs/v0.4/rocket/http/uri/enum.Uri.html
+[`Origin`]: https://api.rocket.rs/v0.4/rocket/http/uri/struct.Origin.html
+[`Absolute`]: https://api.rocket.rs/v0.4/rocket/http/uri/struct.Absolute.html
+[`Authority`]: https://api.rocket.rs/v0.4/rocket/http/uri/struct.Authority.html
+[`Outcome::and_then()`]: https://api.rocket.rs/v0.4/rocket/enum.Outcome.html#method.and_then
+[`Outcome::forward_then()`]: https://api.rocket.rs/v0.4/rocket/enum.Outcome.html#method.forward_then
+[`Outcome::failure_then()`]: https://api.rocket.rs/v0.4/rocket/enum.Outcome.html#method.failure_then
+[`StaticFiles`]: https://api.rocket.rs/v0.4/rocket_contrib/serve/struct.StaticFiles.html
+[live template reloading]: https://rocket.rs/v0.4/guide/responses/#live-reloading
+[`Handler`]: https://api.rocket.rs/v0.4/rocket/trait.Handler.html
+[`mount()`]: https://api.rocket.rs/v0.4/rocket/struct.Rocket.html#method.mount
+[`FromData::transform()`]: https://api.rocket.rs/v0.4/rocket/data/trait.FromData.html#tymethod.transform
+[transforming]: https://api.rocket.rs/v0.4/rocket/data/trait.FromData.html#transforming
+[query string handling]: https://rocket.rs/v0.4/guide/requests/#query-strings
+[Default rankings]: https://rocket.rs/v0.4/guide/requests/#default-ranking
+[`Request::get_query_value()`]: https://api.rocket.rs/v0.4/rocket/struct.Request.html#method.get_query_value
+[`Responder` for `Status`]: https://rocket.rs/v0.4/guide/responses/#status
+
+## Codegen Rewrite
+
+The [`rocket_codegen`] crate has been entirely rewritten using to-be-stable
+procedural macro APIs. We expect nightly breakages to drop dramatically, likely
+to zero, as a result. The new prelude import for Rocket applications is:
+
+```diff
+- #![feature(plugin)]
+- #![plugin(rocket_codegen)]
++ #![feature(proc_macro_hygiene, decl_macro)]
+
+- extern crate rocket;
++ #[macro_use] extern crate rocket;
+```
+
+The [`rocket_codegen`] crate should **_not_** be a direct dependency. Remove it
+from your `Cargo.toml`:
+
+```diff
+[dependencies]
+- rocket = "0.3"
++ rocket = "0.4"
+- rocket_codegen = "0.3"
+```
+
+[`rocket_codegen`]: https://api.rocket.rs/v0.4/rocket_codegen/index.html
+
+## Breaking Changes
+
+This release includes many breaking changes. These changes are listed below
+along with a short note about how to handle the breaking change in existing
+applications when applicable.
+
+  * **Route and catcher attributes respect function privacy.**
+
+    To mount a route or register a catcher outside of the module it is declared,
+    ensure that the handler function is marked `pub` or `crate`.
+
+  * **Query handling syntax has been completely revamped.**
+
+    A query parameter of `<param>` is now `<param..>`. Consider whether your
+    application benefits from the revamped [query string handling].
+
+  * **The `#[error]` attribute and `errors!` macro were removed.**
+
+    Use `#[catch]` and `catchers!` instead.
+
+  * **`Rocket::catch()` was renamed to [`Rocket::register()`].**
+
+    Change calls of the form `.catch(errors![..])` to
+    `.register(catchers![..])`.
+
+  * **The `#[catch]` attribute only accepts functions with 0 or 1 argument.**
+
+    Ensure the argument to the catcher, if any, is of type `&Request`.
+
+  * **[`json!`] returns a [`JsonValue`], no longer needs wrapping.**
+
+    Change instances of `Json(json!(..))` to `json!` and change the
+    corresponding type to `JsonValue`.
+
+  * **All environments default to port 8000.**
+
+    Manually configure a port of `80` for the `stage` and `production`
+    environments for the previous behavior.
+
+  * **Release builds default to the production environment.**
+
+    Manually set the environment to `debug` with `ROCKET_ENV=debug` for the
+    previous behavior.
+
+  * **[`Form`] and [`LenientForm`] lost a lifetime parameter, `get()` method.**
+
+    Change a type of `Form<'a, T<'a>>` to `Form<T>` or `Form<T<'a>>`. `Form<T>`
+    and `LenientForm<T>` now implement `Deref<Target = T>`, allowing for calls
+    to `.get()` to be removed.
+
+  * **[`ring`] was updated to 0.13.**
+
+    Ensure all transitive dependencies to `ring` refer to version `0.13`.
+
+  * **`Uri` was largely replaced by [`Origin`].**
+
+    In general, replace the type `Uri` with `Origin`. The `base` and `uri`
+    fields of [`Route`] are now of type [`Origin`]. The `&Uri` guard is now
+    `&Origin`. [`Request::uri()`] now returns an [`Origin`].
+
+  * **All items in [`rocket_contrib`] are namespaced behind modules.**
+
+    * `Json` is now `json::Json`
+    * `MsgPack` is now `msgpack::MsgPack`
+    * `MsgPackError` is now `msgpack::Error`
+    * `Template` is now `templates::Template`
+    * `UUID` is now `uuid::Uuid`
+    * `Value` is replaced by `json::JsonValue`
+
+  * **TLS certificates require the `subjectAltName` extension.**
+
+    Ensure that your TLS certificates contain the `subjectAltName` extension
+    with a value set to your domain.
+
+  * **Route paths, mount points, and [`LocalRequest`] URIs are strictly
+    checked.**
+
+    Ensure your mount points are absolute paths with no parameters, ensure your
+    route paths are absolute paths with proper parameter syntax, and ensure that
+    paths passed to `LocalRequest` are valid.
+
+  * **[`Template::show()`] takes an `&Rocket`, doesn't accept a `root`.**
+
+    Use [`client.rocket()`] to get a reference to an instance of `Rocket` when
+    testing. Use [`Template::render()`] in routes.
+
+  * **[`Request::remote()`] returns the _actual_ remote IP, doesn't rewrite.**
+
+    Use [`Request::real_ip()`] or [`Request::client_ip()`] to retrieve the IP
+    address from the "X-Real-IP" header if it is present.
+
+  * **[`Bind`] variant was added to [`LaunchErrorKind`].**
+
+    Ensure matches on `LaunchErrorKind` include or ignore the `Bind` variant.
+
+  * **Cookies are automatically tracked and propagated by [`Client`].**
+
+    For the previous behavior, construct a `Client` with
+    [`Client::untracked()`].
+
+  * **`UUID` was renamed to [`Uuid`].**
+
+    Use `Uuid` instead of `UUID`.
+
+  * **`LocalRequest::cloned_dispatch()` was removed.**
+
+    Chain calls to `.clone().dispatch()` for the previous behavior.
+
+  * **[`Redirect`] constructors take a generic type of `T:
+    TryInto<Uri<'static>>`.**
+
+    A call to a `Redirect` constructor with a non-`'static` `&str`  of the form
+    `Redirect::to(string)` should become `Redirect::to(string.to_string())`,
+    heap-allocating the string before being passed to the constructor.
+
+  * **The [`FromData`] impl for [`Form`] and [`LenientForm`] now return an error
+    of type [`FormDataError`].**
+
+    On non-I/O errors, the form string is stored in the variant as an `&'f str`.
+
+  * **[`Missing`] variant was added to [`ConfigError`].**
+
+    Ensure matches on `ConfigError` include or ignore the `Missing` variant.
+
+  * **The [`FromData`] impl for [`Json`] now returns an error of type
+    [`JsonError`].**
+
+    The previous `SerdeError` is now the `.1` member of the `JsonError` `enum`.
+    Match and destruct the variant for the previous behavior.
+
+  * **[`FromData`] is now emulated by [`FromDataSimple`].**
+
+    Change _implementations_, not uses, of `FromData` to `FromDataSimple`.
+    Consider whether your implementation could benefit from [transformations].
+
+  * **[`FormItems`] iterates over values of type [`FormItem`].**
+
+    Map using `.map(|item| item.key_value())` for the previous behavior.
+
+  * **[`LaunchErrorKind::Collision`] contains a vector of the colliding routes.**
+
+    Destruct using `LaunchErrorKind::Collision(..)` to ignore the vector.
+
+  * **[`Request::get_param()`] and [`Request::get_segments()`] are indexed by
+    _segment_, not dynamic parameter.**
+
+    Modify the `n` argument in calls to these functions appropriately.
+
+  * **Method-based route attributes no longer accept a keyed `path` parameter.**
+
+    Change an attribute of the form `#[get(path = "..")]` to `#[get("..")]`.
+
+  * **[`Json`] and [`MsgPack`] data guards no longer reject requests with an
+    unexpected Content-Type**
+
+    To approximate the previous behavior, add a `format = "json"` route
+    parameter when using `Json` or `format = "msgpack"` when using `MsgPack`.
+
+  * **Implemented [`Responder` for `Status`]. Removed `Failure`,
+    `status::NoContent`, and `status::Reset` responders.**
+
+    Replace uses of `Failure(status)` with `status` directly. Replace
+    `status::NoContent` with `Status::NoContent`. Replace `status::Reset` with
+    `Status::ResetContent`.
+
+  * **[`Config::root()`] returns an `Option<&Path>` instead of an `&Path`.**
+
+    For the previous behavior, use `config.root().unwrap()`.
+
+  * **[`Status::new()`] is no longer `const`.**
+
+    Construct a `Status` directly.
+
+  * **[`Config`] constructors return a `Config` instead of a `Result<Config>`.**
+
+  * **`ConfigError::BadCWD`, `Config.config_path` were removed.**
+
+  * **[`Json`] no longer has a default value for its type parameter.**
+
+  * **Using `data` on a non-payload method route is a warning instead of error.**
+
+  * **The `raw_form_string` method of [`Form`] and [`LenientForm`] was
+    removed.**
+
+  * **Various impossible `Error` associated types are now set to `!`.**
+
+  * **All [`AdHoc`] constructors require a name as the first parameter.**
+
+  * **The top-level `Error` type was removed.**
+
+[`LaunchErrorKind::Collision`]: https://api.rocket.rs/v0.4/rocket/error/enum.LaunchErrorKind.html#variant.Collision
+[`json!`]: https://api.rocket.rs/v0.4/rocket_contrib/macro.json.html
+[`JsonValue`]: https://api.rocket.rs/v0.4/rocket_contrib/json/struct.JsonValue.html
+[`Json`]: https://api.rocket.rs/v0.4/rocket_contrib/json/struct.Json.html
+[`ring`]: https://crates.io/crates/ring
+[`Template::show()`]: https://api.rocket.rs/v0.4/rocket_contrib/templates/struct.Template.html#method.show
+[`Template::render()`]: https://api.rocket.rs/v0.4/rocket_contrib/templates/struct.Template.html#method.render
+[`client.rocket()`]: https://api.rocket.rs/v0.4/rocket/local/struct.Client.html#method.rocket
+[`Request::remote()`]: https://api.rocket.rs/v0.4/rocket/struct.Request.html#method.remote
+[`Request::real_ip()`]: https://api.rocket.rs/v0.4/rocket/struct.Request.html#method.real_ip
+[`Request::client_ip()`]: https://api.rocket.rs/v0.4/rocket/struct.Request.html#method.client_ip
+[`Bind`]: https://api.rocket.rs/v0.4/rocket/error/enum.LaunchErrorKind.html#variant.Bind
+[`LaunchErrorKind`]: https://api.rocket.rs/v0.4/rocket/error/enum.LaunchErrorKind.html
+[`Client::untracked()`]: https://api.rocket.rs/v0.4/rocket/local/struct.Client.html#method.untracked
+[`Uuid`]: https://api.rocket.rs/v0.4/rocket_contrib/uuid/struct.Uuid.html
+[`Route`]: https://api.rocket.rs/v0.4/rocket/struct.Route.html
+[`Redirect`]: https://api.rocket.rs/v0.4/rocket/response/struct.Redirect.html
+[`Request::uri()`]: https://api.rocket.rs/v0.4/rocket/struct.Request.html#method.uri
+[`FormDataError`]: https://api.rocket.rs/v0.4/rocket/request/enum.FormDataError.html
+[`FromData`]: https://api.rocket.rs/v0.4/rocket/data/trait.FromData.html
+[`Form`]: https://api.rocket.rs/v0.4/rocket/request/struct.Form.html
+[`LenientForm`]: https://api.rocket.rs/v0.4/rocket/request/struct.LenientForm.html
+[`AdHoc`]: https://api.rocket.rs/v0.4/rocket/fairing/struct.AdHoc.html
+[`Missing`]: https://api.rocket.rs/v0.4/rocket/config/enum.ConfigError.html#variant.Missing
+[`ConfigError`]: https://api.rocket.rs/v0.4/rocket/config/enum.ConfigError.html
+[`Rocket::register()`]: https://api.rocket.rs/v0.4/rocket/struct.Rocket.html#method.register
+[`JsonError`]: https://api.rocket.rs/v0.4/rocket_contrib/json/enum.JsonError.html
+[transformations]: https://api.rocket.rs/v0.4/rocket/data/trait.FromData.html#transforming
+[`FromDataSimple`]: https://api.rocket.rs/v0.4/rocket/data/trait.FromDataSimple.html
+[`Request::get_param()`]: https://api.rocket.rs/v0.4/rocket/struct.Request.html#method.get_param
+[`Request::get_segments()`]: https://api.rocket.rs/v0.4/rocket/struct.Request.html#method.get_segments
+[`FormItem`]: https://api.rocket.rs/v0.4/rocket/request/struct.FormItem.html
+[`rocket_contrib`]: https://api.rocket.rs/v0.4/rocket_contrib/index.html
+[`MsgPack`]: https://api.rocket.rs/v0.4/rocket_contrib/msgpack/struct.MsgPack.html
+[`Status::new()`]: https://api.rocket.rs/v0.4/rocket/http/struct.Status.html#method.new
+[`Config`]: https://api.rocket.rs/v0.4/rocket/struct.Config.html
+[`Config::root()`]: https://api.rocket.rs/v0.4/rocket/struct.Config.html#method.root
+
+## General Improvements
+
+In addition to new features, Rocket saw the following improvements:
+
+  * Log messages now refer to routes by name.
+  * Collision errors on launch name the colliding routes.
+  * Launch fairing failures refer to the failing fairing by name.
+  * The default `403` catcher now references authorization, not authentication.
+  * Private cookies are set to `HttpOnly` and are given an expiration date of 1
+    week by default.
+  * A [Tera templates example] was added.
+  * All macros, derives, and attributes are individually documented in
+    [`rocket_codegen`].
+  * Invalid client requests receive a response of `400` instead of `500`.
+  * Response bodies are reliably stripped on `HEAD` requests.
+  * Added a default catcher for `504: Gateway Timeout`.
+  * Configuration information is logged in all environments.
+  * Use of `unsafe` was reduced from 9 to 2 in core library.
+  * [`FormItems`] now parses empty keys and values as well as keys without
+    values.
+  * Added [`Config::active()`] as a shorthand for
+    `Config::new(Environment::active()?)`.
+  * Address/port binding errors at launch are detected and explicitly emitted.
+  * [`Flash`] cookies are cleared only after they are inspected.
+  * `Sync` bound on [`AdHoc::on_attach()`], [`AdHoc::on_launch()`] was removed.
+  * [`AdHoc::on_attach()`], [`AdHoc::on_launch()`] accept an `FnOnce`.
+  * Added [`Config::root_relative()`] for retrieving paths relative to the
+    configuration file.
+  * Added [`Config::tls_enabled()`] for determining whether TLS is actively
+    enabled.
+  * ASCII color codes are not emitted on versions of Windows that do not support
+    them.
+  * Added FLAC (`audio/flac`), Icon (`image/x-icon`), WEBA (`audio/webm`), TIFF
+    (`image/tiff`), AAC (`audio/aac`), Calendar (`text/calendar`), MPEG
+    (`video/mpeg`), TAR (`application/x-tar`), GZIP (`application/gzip`), MOV
+    (`video/quicktime`), MP4 (`video/mp4`), ZIP (`application/zip`) as known
+    media types.
+  * Added `.weba` (`WEBA`), `.ogv` (`OGG`), `.mp4` (`MP4`), `.mpeg4` (`MP4`),
+    `.aac` (`AAC`), `.ics` (`Calendar`), `.bin` (`Binary`), `.mpg` (`MPEG`),
+    `.mpeg` (`MPEG`), `.tar` (`TAR`), `.gz` (`GZIP`), `.tif` (`TIFF`), `.tiff`
+    (`TIFF`), `.mov` (`MOV`) as known extensions.
+  * Interaction between route attributes and declarative macros has been
+    improved.
+  * Generated code now logs through logging infrastructures as opposed to using
+    `println!`.
+  * Routing has been optimized by caching routing metadata.
+  * [`Form`] and [`LenientForm`] can be publicly constructed.
+  * Console coloring uses default terminal colors instead of white.
+  * Console coloring is consistent across all messages.
+  * `i128` and `u128` now implement [`FromParam`], [`FromFormValue`].
+  * The `base64` dependency was updated to `0.10`.
+  * The `log` dependency was updated to `0.4`.
+  * The `handlebars` dependency was updated to `1.0`.
+  * The `tera` dependency was updated to `0.11`.
+  * The `uuid` dependency was updated to `0.7`.
+  * The `rustls` dependency was updated to `0.14`.
+  * The `cookie` dependency was updated to `0.11`.
+
+[Tera templates example]: https://github.com/SergioBenitez/Rocket/tree/v0.4/examples/tera_templates
+[`FormItems`]: https://api.rocket.rs/v0.4/rocket/request/enum.FormItems.html
+[`Config::active()`]: https://api.rocket.rs/v0.4/rocket/config/struct.Config.html#method.active
+[`Flash`]: https://api.rocket.rs/v0.4/rocket/response/struct.Flash.html
+[`AdHoc::on_attach()`]: https://api.rocket.rs/v0.4/rocket/fairing/struct.AdHoc.html#method.on_attach
+[`AdHoc::on_launch()`]: https://api.rocket.rs/v0.4/rocket/fairing/struct.AdHoc.html#method.on_launch
+[`Config::root_relative()`]: https://api.rocket.rs/v0.4/rocket/struct.Config.html#method.root_relative
+[`Config::tls_enabled()`]: https://api.rocket.rs/v0.4/rocket/struct.Config.html#method.tls_enabled
+[`rocket_codegen`]: https://api.rocket.rs/v0.4/rocket_codegen/index.html
+[`FromParam`]: https://api.rocket.rs/v0.4/rocket/request/trait.FromParam.html
+[`FromFormValue`]: https://api.rocket.rs/v0.4/rocket/request/trait.FromFormValue.html
+[`Data`]: https://api.rocket.rs/v0.4/rocket/struct.Data.html
+
+## Infrastructure
+
+  * All documentation is versioned.
+  * Previous, current, and development versions of all documentation are hosted.
+  * The repository was reorganized with top-level directories of `core` and
+    `contrib`.
+  * The `http` module was split into its own `rocket_http` crate. This is an
+    internal change only.
+  * All uses of `unsafe` are documented with informal proofs of correctness.
+
 # Version 0.3.16 (Aug 24, 2018)
 
 ## Codegen
@@ -278,7 +689,7 @@ This release includes the following new features:
   * [`Response::content_type()`] was added to easily retrieve the Content-Type
     header of a response.
   * Size limits on incoming data are [now
-    configurable](https://rocket.rs/guide/configuration/#data-limits).
+    configurable](https://rocket.rs/v0.3/guide/configuration/#data-limits).
   * [`Request::limits()`] was added to retrieve incoming data limits.
   * Responders may dynamically adjust their response based on the incoming
     request.
@@ -302,31 +713,31 @@ This release includes the following new features:
   * The [`NotFound`] responder was added for simple **404** response
     construction.
 
-[Fairings]: https://rocket.rs/guide/fairings/
-[Native TLS support]: https://rocket.rs/guide/configuration/#configuring-tls
-[Private cookies]: https://rocket.rs/guide/requests/#private-cookies
-[can be renamed]: https://rocket.rs/guide/requests/#field-renaming
-[`MsgPack`]: https://api.rocket.rs/rocket_contrib/struct.MsgPack.html
-[`Rocket::launch()`]: https://api.rocket.rs/rocket/struct.Rocket.html#method.launch
-[`LaunchError`]: https://api.rocket.rs/rocket/error/struct.LaunchError.html
-[Default rankings]: https://api.rocket.rs/rocket/struct.Route.html
-[`Route`]: https://api.rocket.rs/rocket/struct.Route.html
-[`Accept`]: https://api.rocket.rs/rocket/http/struct.Accept.html
-[`Request::accept()`]: https://api.rocket.rs/rocket/struct.Request.html#method.accept
-[`contrib`]: https://api.rocket.rs/rocket_contrib/
-[`Rocket::routes()`]: https://api.rocket.rs/rocket/struct.Rocket.html#method.routes
-[`Response::body_string()`]: https://api.rocket.rs/rocket/struct.Response.html#method.body_string
-[`Response::body_bytes()`]: https://api.rocket.rs/rocket/struct.Response.html#method.body_bytes
-[`Response::content_type()`]: https://api.rocket.rs/rocket/struct.Response.html#method.content_type
-[`Request::guard()`]: https://api.rocket.rs/rocket/struct.Request.html#method.guard
-[`Request::limits()`]: https://api.rocket.rs/rocket/struct.Request.html#method.limits
-[`Request::route()`]: https://api.rocket.rs/rocket/struct.Request.html#method.route
-[`Config`]: https://api.rocket.rs/rocket/struct.Config.html
-[`Cookies`]: https://api.rocket.rs/rocket/http/enum.Cookies.html
-[`Config::get_datetime()`]: https://api.rocket.rs/rocket/struct.Config.html#method.get_datetime
-[`LenientForm`]: https://api.rocket.rs/rocket/request/struct.LenientForm.html
-[configuration parameters]: https://api.rocket.rs/rocket/config/index.html#environment-variables
-[`NotFound`]: https://api.rocket.rs/rocket/response/status/struct.NotFound.html
+[Fairings]: https://rocket.rs/v0.3/guide/fairings/
+[Native TLS support]: https://rocket.rs/v0.3/guide/configuration/#configuring-tls
+[Private cookies]: https://rocket.rs/v0.3/guide/requests/#private-cookies
+[can be renamed]: https://rocket.rs/v0.3/guide/requests/#field-renaming
+[`MsgPack`]: https://api.rocket.rs/v0.3/rocket_contrib/struct.MsgPack.html
+[`Rocket::launch()`]: https://api.rocket.rs/v0.3/rocket/struct.Rocket.html#method.launch
+[`LaunchError`]: https://api.rocket.rs/v0.3/rocket/error/struct.LaunchError.html
+[Default rankings]: https://api.rocket.rs/v0.3/rocket/struct.Route.html
+[`Route`]: https://api.rocket.rs/v0.3/rocket/struct.Route.html
+[`Accept`]: https://api.rocket.rs/v0.3/rocket/http/struct.Accept.html
+[`Request::accept()`]: https://api.rocket.rs/v0.3/rocket/struct.Request.html#method.accept
+[`contrib`]: https://api.rocket.rs/v0.3/rocket_contrib/
+[`Rocket::routes()`]: https://api.rocket.rs/v0.3/rocket/struct.Rocket.html#method.routes
+[`Response::body_string()`]: https://api.rocket.rs/v0.3/rocket/struct.Response.html#method.body_string
+[`Response::body_bytes()`]: https://api.rocket.rs/v0.3/rocket/struct.Response.html#method.body_bytes
+[`Response::content_type()`]: https://api.rocket.rs/v0.3/rocket/struct.Response.html#method.content_type
+[`Request::guard()`]: https://api.rocket.rs/v0.3/rocket/struct.Request.html#method.guard
+[`Request::limits()`]: https://api.rocket.rs/v0.3/rocket/struct.Request.html#method.limits
+[`Request::route()`]: https://api.rocket.rs/v0.3/rocket/struct.Request.html#method.route
+[`Config`]: https://api.rocket.rs/v0.3/rocket/struct.Config.html
+[`Cookies`]: https://api.rocket.rs/v0.3/rocket/http/enum.Cookies.html
+[`Config::get_datetime()`]: https://api.rocket.rs/v0.3/rocket/struct.Config.html#method.get_datetime
+[`LenientForm`]: https://api.rocket.rs/v0.3/rocket/request/struct.LenientForm.html
+[configuration parameters]: https://api.rocket.rs/v0.3/rocket/config/index.html#environment-variables
+[`NotFound`]: https://api.rocket.rs/v0.3/rocket/response/status/struct.NotFound.html
 
 ## Breaking Changes
 
@@ -462,18 +873,18 @@ applications.
     Use `Json`, `Xml`, `Html`, and `Css` instead of `JSON`, `XML`, `HTML`, and
     `CSS`, respectively.
 
-[`&RawStr`]: https://api.rocket.rs/rocket/http/struct.RawStr.html
-[`IntoOutcome`]: https://api.rocket.rs/rocket/outcome/trait.IntoOutcome.html
-[`local`]: https://api.rocket.rs/rocket/local/index.html
-[`Rocket::config()`]: https://api.rocket.rs/rocket/struct.Rocket.html#method.config
-[managed state]: https://rocket.rs/guide/state/
-[`Responder`]: https://api.rocket.rs/rocket/response/trait.Responder.html
-[`Template::show()`]: https://api.rocket.rs/rocket_contrib/struct.Template.html#method.show
-[`FromForm`]: https://api.rocket.rs/rocket/request/trait.FromForm.html
-[`ConfigError`]: https://api.rocket.rs/rocket/config/enum.ConfigError.html
-[`ContentType::from_extension()`]: https://api.rocket.rs/rocket/http/struct.ContentType.html#method.from_extension
-[`rocket_contrib::Json`]: https://api.rocket.rs/rocket_contrib/struct.Json.html
-[`content`]: https://api.rocket.rs/rocket/response/content/index.html
+[`&RawStr`]: https://api.rocket.rs/v0.3/rocket/http/struct.RawStr.html
+[`IntoOutcome`]: https://api.rocket.rs/v0.3/rocket/outcome/trait.IntoOutcome.html
+[`local`]: https://api.rocket.rs/v0.3/rocket/local/index.html
+[`Rocket::config()`]: https://api.rocket.rs/v0.3/rocket/struct.Rocket.html#method.config
+[managed state]: https://rocket.rs/v0.3/guide/state/
+[`Responder`]: https://api.rocket.rs/v0.3/rocket/response/trait.Responder.html
+[`Template::show()`]: https://api.rocket.rs/v0.3/rocket_contrib/struct.Template.html#method.show
+[`FromForm`]: https://api.rocket.rs/v0.3/rocket/request/trait.FromForm.html
+[`ConfigError`]: https://api.rocket.rs/v0.3/rocket/config/enum.ConfigError.html
+[`ContentType::from_extension()`]: https://api.rocket.rs/v0.3/rocket/http/struct.ContentType.html#method.from_extension
+[`rocket_contrib::Json`]: https://api.rocket.rs/v0.3/rocket_contrib/struct.Json.html
+[`content`]: https://api.rocket.rs/v0.3/rocket/response/content/index.html
 
 ## General Improvements
 
@@ -498,10 +909,11 @@ In addition to new features, Rocket saw the following improvements:
   * Console logging for table-based config values is improved.
   * `PartialOrd`, `Ord`, and `Hash` are now implemented for [`State`].
   * The format of a request is always logged when available.
+  * Route matching on `format` now functions as documented.
 
 [`yansi`]: https://crates.io/crates/yansi
-[`Request`]: https://api.rocket.rs/rocket/struct.Request.html
-[`State`]: https://api.rocket.rs/rocket/struct.State.html
+[`Request`]: https://api.rocket.rs/v0.3/rocket/struct.Request.html
+[`State`]: https://api.rocket.rs/v0.3/rocket/struct.State.html
 
 ## Infrastructure
 
@@ -606,7 +1018,7 @@ In addition to new features, Rocket saw the following improvements:
 # Version 0.2.0 (Feb 06, 2017)
 
 Detailed release notes for v0.2 can also be found on
-[rocket.rs](https://rocket.rs/news/2017-02-06-version-0.2/).
+[rocket.rs](https://rocket.rs/v0.3/news/2017-02-06-version-0.2/).
 
 ## New Features
 

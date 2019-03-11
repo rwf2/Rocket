@@ -8,6 +8,41 @@ use http::Status;
 /// An empty redirect response to a given URL.
 ///
 /// This type simplifies returning a redirect response to the client.
+///
+/// # Usage
+///
+/// All constructors accept a generic type of `T: TryInto<Uri<'static>>`. Among
+/// the candidate types are:
+///
+///   * `String`
+///   * `&'static str`
+///   * [`Origin`](::http::uri::Origin)
+///   * [`Authority`](::http::uri::Authority)
+///   * [`Absolute`](::http::uri::Absolute)
+///   * [`Uri`](::http::uri::Uri)
+///
+/// Any non-`'static` strings must first be allocated using `.to_string()` or
+/// similar before being passed to a `Redirect` constructor. When redirecting to
+/// a route, _always_ use [`uri!`] to construct a valid [`Origin`]:
+///
+/// ```rust
+/// # #![feature(proc_macro_hygiene, decl_macro)]
+/// # #[macro_use] extern crate rocket;
+/// use rocket::response::Redirect;
+///
+/// #[get("/hello/<name>/<age>")]
+/// fn hello(name: String, age: u8) -> String {
+///     format!("Hello, {} year old named {}!", age, name)
+/// }
+///
+/// #[get("/hi/<name>/<age>")]
+/// fn hi(name: String, age: u8) -> Redirect {
+///     Redirect::to(uri!(hello: name, age))
+/// }
+/// ```
+///
+/// [`Origin`]: ::http::uri::Origin
+/// [`uri!`]: ../../rocket_codegen/macro.uri.html
 #[derive(Debug)]
 pub struct Redirect(Status, Option<Uri<'static>>);
 
@@ -22,8 +57,9 @@ impl Redirect {
     /// ```rust
     /// use rocket::response::Redirect;
     ///
-    /// # #[allow(unused_variables)]
+    /// # let query = "foo";
     /// let redirect = Redirect::to("/other_url");
+    /// let redirect = Redirect::to(format!("https://google.com/{}", query));
     /// ```
     pub fn to<U: TryInto<Uri<'static>>>(uri: U) -> Redirect {
         Redirect(Status::SeeOther, uri.try_into().ok())
@@ -40,8 +76,9 @@ impl Redirect {
    /// ```rust
    /// use rocket::response::Redirect;
    ///
-   /// # #[allow(unused_variables)]
+   /// # let query = "foo";
    /// let redirect = Redirect::temporary("/other_url");
+   /// let redirect = Redirect::temporary(format!("https://google.com/{}", query));
    /// ```
    pub fn temporary<U: TryInto<Uri<'static>>>(uri: U) -> Redirect {
        Redirect(Status::TemporaryRedirect, uri.try_into().ok())
@@ -59,8 +96,9 @@ impl Redirect {
    /// ```rust
    /// use rocket::response::Redirect;
    ///
-   /// # #[allow(unused_variables)]
+   /// # let query = "foo";
    /// let redirect = Redirect::permanent("/other_url");
+   /// let redirect = Redirect::permanent(format!("https://google.com/{}", query));
    /// ```
    pub fn permanent<U: TryInto<Uri<'static>>>(uri: U) -> Redirect {
        Redirect(Status::PermanentRedirect, uri.try_into().ok())
@@ -78,8 +116,9 @@ impl Redirect {
    /// ```rust
    /// use rocket::response::Redirect;
    ///
-   /// # #[allow(unused_variables)]
+   /// # let query = "foo";
    /// let redirect = Redirect::found("/other_url");
+   /// let redirect = Redirect::found(format!("https://google.com/{}", query));
    /// ```
    pub fn found<U: TryInto<Uri<'static>>>(uri: U) -> Redirect {
        Redirect(Status::Found, uri.try_into().ok())
@@ -95,8 +134,9 @@ impl Redirect {
    /// ```rust
    /// use rocket::response::Redirect;
    ///
-   /// # #[allow(unused_variables)]
+   /// # let query = "foo";
    /// let redirect = Redirect::moved("/other_url");
+   /// let redirect = Redirect::moved(format!("https://google.com/{}", query));
    /// ```
    pub fn moved<U: TryInto<Uri<'static>>>(uri: U) -> Redirect {
        Redirect(Status::MovedPermanently, uri.try_into().ok())
@@ -104,9 +144,10 @@ impl Redirect {
 }
 
 /// Constructs a response with the appropriate status code and the given URL in
-/// the `Location` header field. The body of the response is empty. This
-/// responder does not fail.
-impl Responder<'static> for Redirect {
+/// the `Location` header field. The body of the response is empty. If the URI
+/// value used to create the `Responder` is an invalid URI, an error of
+/// `Status::InternalServerError` is returned.
+impl<'a> Responder<'a> for Redirect {
     fn respond_to(self, _: &Request) -> Result<Response<'static>, Status> {
         if let Some(uri) = self.1 {
             Response::build()

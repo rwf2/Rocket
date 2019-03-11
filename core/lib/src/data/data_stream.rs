@@ -11,9 +11,9 @@ pub type InnerStream = Chain<Cursor<Vec<u8>>, BodyReader>;
 /// Raw data stream of a request body.
 ///
 /// This stream can only be obtained by calling
-/// [Data::open](/rocket/data/struct.Data.html#method.open). The stream contains
-/// all of the data in the body of the request. It exposes no methods directly.
-/// Instead, it must be used as an opaque `Read` structure.
+/// [`Data::open()`](::data::Data::open()). The stream contains all of the data
+/// in the body of the request. It exposes no methods directly. Instead, it must
+/// be used as an opaque [`Read`] structure.
 pub struct DataStream(crate InnerStream);
 
 // TODO: Have a `BufRead` impl for `DataStream`. At the moment, this isn't

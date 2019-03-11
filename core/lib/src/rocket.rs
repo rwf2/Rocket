@@ -19,7 +19,7 @@ use response::{Body, Response};
 use router::{Router, Route};
 use catcher::{self, Catcher};
 use outcome::Outcome;
-use error::{Error, LaunchError, LaunchErrorKind};
+use error::{LaunchError, LaunchErrorKind};
 use fairing::{Fairing, Fairings};
 
 use http::{Method, Status, Header};
@@ -186,8 +186,8 @@ impl Rocket {
         if is_form && req.method() == Method::Post && data_len >= min_len {
             if let Ok(form) = from_utf8(&data.peek()[..min(data_len, max_len)]) {
                 let method: Option<Result<Method, _>> = FormItems::from(form)
-                    .filter(|&(key, _)| key.as_str() == "_method")
-                    .map(|(_, value)| value.parse())
+                    .filter(|item| item.key.as_str() == "_method")
+                    .map(|item| item.value.parse())
                     .next();
 
                 if let Some(Ok(method)) = method {
@@ -255,7 +255,7 @@ impl Rocket {
             Outcome::Forward(data) => {
                 // There was no matching route. Autohandle `HEAD` requests.
                 if request.method() == Method::Head {
-                    info_!("Autohandling {} request.", Paint::white("HEAD"));
+                    info_!("Autohandling {} request.", Paint::default("HEAD").bold());
 
                     // Dispatch the request again with Method `GET`.
                     request._set_method(Method::Get);
@@ -298,7 +298,7 @@ impl Rocket {
 
             // Check if the request processing completed or if the request needs
             // to be forwarded. If it does, continue the loop to try again.
-            info_!("{} {}", Paint::white("Outcome:"), outcome);
+            info_!("{} {}", Paint::default("Outcome:").bold(), outcome);
             match outcome {
                 o@Outcome::Success(_) | o@Outcome::Failure(_) => return o,
                 Outcome::Forward(unused_data) => data = unused_data,
@@ -310,7 +310,7 @@ impl Rocket {
     }
 
     // Finds the error catcher for the status `status` and executes it for the
-    // given request `req`. If a user has registers a catcher for `status`, the
+    // given request `req`. If a user has registered a catcher for `status`, the
     // catcher is called. If the catcher fails to return a good response, the
     // 500 catcher is executed. If there is no registered catcher for `status`,
     // the default catcher is used.
@@ -328,22 +328,21 @@ impl Rocket {
         });
 
         // Dispatch to the user's catcher. If it fails, use the default 500.
-        let error = Error::NoRoute;
-        catcher.handle(error, req).unwrap_or_else(|err_status| {
+        catcher.handle(req).unwrap_or_else(|err_status| {
             error_!("Catcher failed with status: {}!", err_status);
             warn_!("Using default 500 error catcher.");
             let default = self.default_catchers.get(&500).expect("Default 500");
-            default.handle(error, req).expect("Default 500 response.")
+            default.handle(req).expect("Default 500 response.")
         })
     }
 
     /// Create a new `Rocket` application using the configuration information in
     /// `Rocket.toml`. If the file does not exist or if there is an I/O error
-    /// reading the file, the defaults are used. See the
-    /// [config](/rocket/config/index.html) documentation for more information
-    /// on defaults.
+    /// reading the file, the defaults are used. See the [`config`]
+    /// documentation for more information on defaults.
     ///
-    /// This method is typically called through the `rocket::ignite` alias.
+    /// This method is typically called through the
+    /// [`rocket::ignite()`](::ignite) alias.
     ///
     /// # Panics
     ///
@@ -364,9 +363,8 @@ impl Rocket {
     }
 
     /// Creates a new `Rocket` application using the supplied custom
-    /// configuration information. The `Rocket.toml` file, if present, is
-    /// ignored. Any environment variables setting config parameters are
-    /// ignored. If `log` is `true`, logging is enabled.
+    /// configuration. The `Rocket.toml` file, if present, is ignored. Any
+    /// environment variables setting config parameters are ignored.
     ///
     /// This method is typically called through the `rocket::custom` alias.
     ///
@@ -400,27 +398,27 @@ impl Rocket {
             logger::push_max_level(logger::LoggingLevel::Normal);
         }
 
-        launch_info!("{}Configured for {}.", Paint::masked("🔧  "), config.environment);
-        launch_info_!("address: {}", Paint::white(&config.address));
-        launch_info_!("port: {}", Paint::white(&config.port));
-        launch_info_!("log: {}", Paint::white(config.log_level));
-        launch_info_!("workers: {}", Paint::white(config.workers));
-        launch_info_!("secret key: {}", Paint::white(&config.secret_key));
-        launch_info_!("limits: {}", Paint::white(&config.limits));
+        launch_info!("{}Configured for {}.", Paint::masked("🔧 "), config.environment);
+        launch_info_!("address: {}", Paint::default(&config.address).bold());
+        launch_info_!("port: {}", Paint::default(&config.port).bold());
+        launch_info_!("log: {}", Paint::default(config.log_level).bold());
+        launch_info_!("workers: {}", Paint::default(config.workers).bold());
+        launch_info_!("secret key: {}", Paint::default(&config.secret_key).bold());
+        launch_info_!("limits: {}", Paint::default(&config.limits).bold());
 
         match config.keep_alive {
-            Some(v) => launch_info_!("keep-alive: {}", Paint::white(format!("{}s", v))),
-            None => launch_info_!("keep-alive: {}", Paint::white("disabled")),
+            Some(v) => launch_info_!("keep-alive: {}", Paint::default(format!("{}s", v)).bold()),
+            None => launch_info_!("keep-alive: {}", Paint::default("disabled").bold()),
         }
 
         let tls_configured = config.tls.is_some();
         if tls_configured && cfg!(feature = "tls") {
-            launch_info_!("tls: {}", Paint::white("enabled"));
+            launch_info_!("tls: {}", Paint::default("enabled").bold());
         } else if tls_configured {
-            error_!("tls: {}", Paint::white("disabled"));
+            error_!("tls: {}", Paint::default("disabled").bold());
             error_!("tls is configured, but the tls feature is disabled");
         } else {
-            launch_info_!("tls: {}", Paint::white("disabled"));
+            launch_info_!("tls: {}", Paint::default("disabled").bold());
         }
 
         if config.secret_key.is_generated() && config.environment.is_prod() {
@@ -429,9 +427,8 @@ impl Rocket {
 
         for (name, value) in config.extras() {
             launch_info_!("{} {}: {}",
-                          Paint::yellow("[extra]"),
-                          Paint::blue(name),
-                          Paint::white(LoggedValue(value)));
+                          Paint::yellow("[extra]"), name,
+                          Paint::default(LoggedValue(value)).bold());
         }
 
         Rocket {
@@ -464,9 +461,8 @@ impl Rocket {
     /// dispatched to the `hi` route.
     ///
     /// ```rust
-    /// # #![feature(plugin, decl_macro)]
-    /// # #![plugin(rocket_codegen)]
-    /// # extern crate rocket;
+    /// # #![feature(proc_macro_hygiene, decl_macro)]
+    /// # #[macro_use] extern crate rocket;
     /// #
     /// #[get("/world")]
     /// fn hi() -> &'static str {
@@ -501,15 +497,11 @@ impl Rocket {
     /// ```
     #[inline]
     pub fn mount<R: Into<Vec<Route>>>(mut self, base: &str, routes: R) -> Self {
-        info!("{}{} '{}':",
+        info!("{}{} {}{}",
               Paint::masked("🛰  "),
-              Paint::purple("Mounting"),
-              Paint::blue(base));
-
-        if base.contains('<') || base.contains('>') {
-            error_!("Mount point '{}' contains dynamic paramters.", base);
-            panic!("Invalid mount point.");
-        }
+              Paint::magenta("Mounting"),
+              Paint::blue(base),
+              Paint::magenta(":"));
 
         let base_uri = Origin::parse(base)
             .unwrap_or_else(|e| {
@@ -522,22 +514,12 @@ impl Rocket {
             panic!("Invalid mount point.");
         }
 
-        if !base_uri.is_normalized() {
-            error_!("Mount point '{}' is not normalized.", base_uri);
-            info_!("Expected: '{}'.", base_uri.to_normalized());
-            panic!("Invalid mount point.");
-        }
-
         for mut route in routes.into() {
-            let complete_uri = format!("{}/{}", base_uri, route.uri);
-            let uri = Origin::parse_route(&complete_uri)
-                .unwrap_or_else(|e| {
-                    error_!("Invalid route URI: {}", base);
-                    panic!("Error: {}", e)
-                });
-
-            route.set_base(base_uri.clone());
-            route.set_uri(uri.to_normalized());
+            let path = route.uri.clone();
+            if let Err(e) = route.set_uri(base_uri.clone(), path) {
+                error_!("{}", e);
+                panic!("Invalid route URI.");
+            }
 
             info_!("{}", route);
             self.router.add(route);
@@ -551,11 +533,8 @@ impl Rocket {
     /// # Examples
     ///
     /// ```rust
-    /// #![feature(plugin, decl_macro)]
-    /// #![plugin(rocket_codegen)]
-    ///
-    /// extern crate rocket;
-    ///
+    /// # #![feature(proc_macro_hygiene, decl_macro)]
+    /// # #[macro_use] extern crate rocket;
     /// use rocket::Request;
     ///
     /// #[catch(500)]
@@ -570,18 +549,18 @@ impl Rocket {
     ///
     /// fn main() {
     /// # if false { // We don't actually want to launch the server in an example.
-    ///     rocket::ignite().catch(catchers![internal_error, not_found])
+    ///     rocket::ignite()
+    ///         .register(catchers![internal_error, not_found])
     /// #       .launch();
     /// # }
     /// }
     /// ```
     #[inline]
-    pub fn catch(mut self, catchers: Vec<Catcher>) -> Self {
-        info!("{}{}:", Paint::masked("👾  "), Paint::purple("Catchers"));
+    pub fn register(mut self, catchers: Vec<Catcher>) -> Self {
+        info!("{}{}", Paint::masked("👾 "), Paint::magenta("Catchers:"));
         for c in catchers {
-            if self.catchers.get(&c.code).map_or(false, |e| !e.is_default()) {
-                let msg = "(warning: duplicate catcher!)";
-                info_!("{} {}", c, Paint::yellow(msg));
+            if self.catchers.get(&c.code).map_or(false, |e| !e.is_default) {
+                info_!("{} {}", c, Paint::yellow("(warning: duplicate catcher!)"));
             } else {
                 info_!("{}", c);
             }
@@ -598,10 +577,9 @@ impl Rocket {
     /// refers to a different `T`.
     ///
     /// Managed state can be retrieved by any request handler via the
-    /// [State](/rocket/struct.State.html) request guard. In particular, if a
-    /// value of type `T` is managed by Rocket, adding `State<T>` to the list of
-    /// arguments in a request handler instructs Rocket to retrieve the managed
-    /// value.
+    /// [`State`](::State) request guard. In particular, if a value of type `T`
+    /// is managed by Rocket, adding `State<T>` to the list of arguments in a
+    /// request handler instructs Rocket to retrieve the managed value.
     ///
     /// # Panics
     ///
@@ -610,9 +588,8 @@ impl Rocket {
     /// # Example
     ///
     /// ```rust
-    /// # #![feature(plugin, decl_macro)]
-    /// # #![plugin(rocket_codegen)]
-    /// # extern crate rocket;
+    /// # #![feature(proc_macro_hygiene, decl_macro)]
+    /// # #[macro_use] extern crate rocket;
     /// use rocket::State;
     ///
     /// struct MyValue(usize);
@@ -648,9 +625,8 @@ impl Rocket {
     /// # Example
     ///
     /// ```rust
-    /// # #![feature(plugin, decl_macro)]
-    /// # #![plugin(rocket_codegen)]
-    /// # extern crate rocket;
+    /// # #![feature(proc_macro_hygiene, decl_macro)]
+    /// # #[macro_use] extern crate rocket;
     /// use rocket::Rocket;
     /// use rocket::fairing::AdHoc;
     ///
@@ -700,8 +676,6 @@ impl Rocket {
     /// without first being inspected. See the [`LaunchError`] documentation for
     /// more information.
     ///
-    /// [`LaunchError`]: /rocket/error/struct.LaunchError.html
-    ///
     /// # Example
     ///
     /// ```rust
@@ -742,10 +716,10 @@ impl Rocket {
 
             let full_addr = format!("{}:{}", self.config.address, self.config.port);
             launch_info!("{}{} {}{}",
-                         Paint::masked("🚀  "),
-                         Paint::white("Rocket has launched from"),
-                         Paint::white(proto).bold(),
-                         Paint::white(&full_addr).bold());
+                         Paint::masked("🚀 "),
+                         Paint::default("Rocket has launched from").bold(),
+                         Paint::default(proto).bold().underline(),
+                         Paint::default(&full_addr).bold().underline());
 
             // Restore the log level back to what it originally was.
             logger::pop_max_level();
@@ -765,9 +739,8 @@ impl Rocket {
     /// # Example
     ///
     /// ```rust
-    /// # #![feature(plugin, decl_macro)]
-    /// # #![plugin(rocket_codegen)]
-    /// # extern crate rocket;
+    /// # #![feature(proc_macro_hygiene, decl_macro)]
+    /// # #[macro_use] extern crate rocket;
     /// use rocket::Rocket;
     /// use rocket::fairing::AdHoc;
     ///
@@ -822,9 +795,8 @@ impl Rocket {
     /// # Example
     ///
     /// ```rust
-    /// # #![feature(plugin, decl_macro)]
-    /// # #![plugin(rocket_codegen)]
-    /// # extern crate rocket;
+    /// # #![feature(proc_macro_hygiene, decl_macro)]
+    /// # #[macro_use] extern crate rocket;
     /// use rocket::Rocket;
     /// use rocket::fairing::AdHoc;
     ///

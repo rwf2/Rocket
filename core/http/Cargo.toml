@@ -1,11 +1,11 @@
 [package]
 name = "rocket_http"
-version = "0.4.0-dev"
+version = "0.4.0"
 authors = ["Sergio Benitez <sb@sergio.bz>"]
 description = """
 Types, traits, and parsers for HTTP requests, responses, and headers.
 """
-documentation = "https://api.rocket.rs/rocket_http/"
+documentation = "https://api.rocket.rs/v0.4/rocket_http/"
 homepage = "https://rocket.rs"
 repository = "https://github.com/SergioBenitez/Rocket"
 readme = "../../README.md"
@@ -14,7 +14,9 @@ license = "MIT/Apache-2.0"
 categories = ["web-programming"]
 
 [features]
+default = []
 tls = ["rustls", "hyper-sync-rustls"]
+private-cookies = ["cookie/secure"]
 
 [dependencies]
 smallvec = "0.6"
@@ -22,21 +24,21 @@ percent-encoding = "1"
 hyper = { version = "0.10.13", default-features = false }
 time = "0.1"
 indexmap = "1.0"
-rustls = { version = "0.13", optional = true }
+rustls = { version = "0.14", optional = true }
 state = "0.4"
-cookie = { version = "0.11", features = ["percent-encode", "secure"] }
-pear = { git = "http://github.com/SergioBenitez/Pear", rev = "b475140" }
+cookie = { version = "0.11", features = ["percent-encode"] }
+pear = "0.1"
+unicode-xid = "0.1"
 dns-lookup = "0.9.1"
 untrusted = "0.6.1"
 webpki = "0.18.0-alpha4"
 
 [dependencies.hyper-sync-rustls]
-version = "=0.3.0-rc.3"
+version = "=0.3.0-rc.4"
 features = ["server"]
 optional = true
 git = "https://github.com/Kmoneal/hyper-sync-rustls"
 branch = "feature/mtls"
 
 [dev-dependencies]
-rocket = { version = "0.4.0-dev", path = "../lib" }
-rocket_codegen = { version = "0.4.0-dev", path = "../codegen" }
+rocket = { version = "0.4.0", path = "../lib" }

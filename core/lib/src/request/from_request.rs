@@ -57,38 +57,42 @@ impl<S, E> IntoOutcome<S, (Status, E), ()> for Result<S, E> {
 /// in the route attribute. This is why, for instance, `param` is not a request
 /// guard.
 ///
-/// ```rust,ignore
+/// ```rust
+/// # #![feature(proc_macro_hygiene, decl_macro)]
+/// # #[macro_use] extern crate rocket;
+/// # use rocket::http::Method;
+/// # type A = Method; type B = Method; type C = Method; type T = ();
 /// #[get("/<param>")]
-/// fn index(param: isize, a: A, b: B, c: C) -> ... { ... }
+/// fn index(param: isize, a: A, b: B, c: C) -> T { /* ... */ }
+/// # fn main() {}
 /// ```
 ///
 /// Request guards always fire in left-to-right declaration order. In the
-/// example above, for instance, the order will be `a` followed by `b` followed
-/// by `c`. Failure is short-circuiting; if one guard fails, the remaining are
-/// not attempted.
+/// example above, the order is `a` followed by `b` followed by `c`. Failure is
+/// short-circuiting; if one guard fails, the remaining are not attempted.
 ///
 /// # Outcomes
 ///
-/// The returned [Outcome](/rocket/outcome/index.html) of a `from_request` call
-/// determines how the incoming request will be processed.
+/// The returned [`Outcome`] of a `from_request` call determines how the
+/// incoming request will be processed.
 ///
 /// * **Success**(S)
 ///
-///   If the `Outcome` is `Success`, then the `Success` value will be used as
+///   If the `Outcome` is [`Success`], then the `Success` value will be used as
 ///   the value for the corresponding parameter.  As long as all other guards
 ///   succeed, the request will be handled.
 ///
 /// * **Failure**(Status, E)
 ///
-///   If the `Outcome` is `Failure`, the request will fail with the given status
-///   code and error. The designated error
-///   [Catcher](/rocket/struct.Catcher.html) will be used to respond to the
-///   request. Note that users can request types of `Result<S, E>` and
-///   `Option<S>` to catch `Failure`s and retrieve the error value.
+///   If the `Outcome` is [`Failure`], the request will fail with the given
+///   status code and error. The designated error [`Catcher`](::Catcher) will be
+///   used to respond to the request. Note that users can request types of
+///   `Result<S, E>` and `Option<S>` to catch `Failure`s and retrieve the error
+///   value.
 ///
 /// * **Forward**
 ///
-///   If the `Outcome` is `Forward`, the request will be forwarded to the next
+///   If the `Outcome` is [`Forward`], the request will be forwarded to the next
 ///   matching request. Note that users can request an `Option<S>` to catch
 ///   `Forward`s.
 ///
@@ -99,45 +103,40 @@ impl<S, E> IntoOutcome<S, (Status, E), ()> for Result<S, E> {
 ///
 ///   * **Method**
 ///
-///     Extracts the [Method](/rocket/http/enum.Method.html) from the incoming
-///     request.
+///     Extracts the [`Method`] from the incoming request.
 ///
 ///     _This implementation always returns successfully._
 ///
 ///   * **&Origin**
 ///
-///     Extracts the [`Origin`](/rocket/http/uri/struct.Origin.html) URI from
-///     the incoming request.
+///     Extracts the [`Origin`] URI from the incoming request.
 ///
 ///     _This implementation always returns successfully._
 ///
 ///   * **&Route**
 ///
-///     Extracts the [Route](/rocket/struct.Route.html) from the request if one
-///     is available. If a route is not available, the request is forwarded.
+///     Extracts the [`Route`] from the request if one is available. If a route
+///     is not available, the request is forwarded.
 ///
-///     For information on when an `&Route` is available, see the
-///     [`Request::route`](/rocket/struct.Request.html#method.route)
-///     documentation.
+///     For information on when an `&Route` is available, see
+///     [`Request::route()`].
 ///
 ///   * **Cookies**
 ///
-///     Returns a borrow to the [Cookies](/rocket/http/enum.Cookies.html) in
-///     the incoming request. Note that `Cookies` implements internal
-///     mutability, so a handle to `Cookies` allows you to get _and_ set cookies
-///     in the request.
+///     Returns a borrow to the [`Cookies`] in the incoming request. Note that
+///     `Cookies` implements internal mutability, so a handle to `Cookies`
+///     allows you to get _and_ set cookies in the request.
 ///
 ///     _This implementation always returns successfully._
 ///
 ///   * **ContentType**
 ///
-///     Extracts the [ContentType](/rocket/http/struct.ContentType.html) from
-///     the incoming request. If the request didn't specify a Content-Type, the
-///     request is forwarded.
+///     Extracts the [`ContentType`] from the incoming request. If the request
+///     didn't specify a Content-Type, the request is forwarded.
 ///
 ///   * **SocketAddr**
 ///
-///     Extracts the remote address of the incoming request as a `SocketAddr`.
+///     Extracts the remote address of the incoming request as a [`SocketAddr`].
 ///     If the remote address is not known, the request is forwarded.
 ///
 ///     _This implementation always returns successfully._
@@ -169,9 +168,8 @@ impl<S, E> IntoOutcome<S, (Status, E), ()> for Result<S, E> {
 /// `sensitive` handler.
 ///
 /// ```rust
-/// # #![feature(plugin, decl_macro)]
-/// # #![plugin(rocket_codegen)]
-/// # extern crate rocket;
+/// # #![feature(proc_macro_hygiene, decl_macro)]
+/// # #[macro_use] extern crate rocket;
 /// #
 /// use rocket::Outcome;
 /// use rocket::http::Status;
@@ -225,13 +223,12 @@ impl<S, E> IntoOutcome<S, (Status, E), ()> for Result<S, E> {
 /// routes (`admin_dashboard` and `user_dashboard`):
 ///
 /// ```rust
-/// # #![feature(plugin, decl_macro, never_type)]
-/// # #![plugin(rocket_codegen)]
-/// # extern crate rocket;
-/// #
+/// # #![feature(proc_macro_hygiene, decl_macro)]
+/// # #[macro_use] extern crate rocket;
+/// # #[cfg(feature = "private-cookies")] mod inner {
 /// # use rocket::outcome::{IntoOutcome, Outcome};
 /// # use rocket::request::{self, FromRequest, Request};
-/// # struct User { id: String, is_admin: bool };
+/// # struct User { id: String, is_admin: bool }
 /// # struct Database;
 /// # impl Database {
 /// #     fn get_user(&self, id: String) -> Result<User, ()> {
@@ -245,7 +242,7 @@ impl<S, E> IntoOutcome<S, (Status, E), ()> for Result<S, E> {
 /// #     }
 /// # }
 /// #
-/// # struct Admin { user: User };
+/// # struct Admin { user: User }
 /// #
 /// impl<'a, 'r> FromRequest<'a, 'r> for User {
 ///     type Error = ();
@@ -280,6 +277,7 @@ impl<S, E> IntoOutcome<S, (Status, E), ()> for Result<S, E> {
 ///
 /// #[get("/dashboard", rank = 2)]
 /// fn user_dashboard(user: User) { }
+/// # }
 /// ```
 ///
 /// When a non-admin user is logged in, the database will be queried twice: once
@@ -288,13 +286,13 @@ impl<S, E> IntoOutcome<S, (Status, E), ()> for Result<S, E> {
 /// used, as illustrated below:
 ///
 /// ```rust
-/// # #![feature(plugin, decl_macro, never_type)]
-/// # #![plugin(rocket_codegen)]
-/// # extern crate rocket;
-/// #
+/// # #![feature(proc_macro_hygiene, decl_macro)]
+/// # #![feature(never_type)]
+/// # #[macro_use] extern crate rocket;
+/// # #[cfg(feature = "private-cookies")] mod inner {
 /// # use rocket::outcome::{IntoOutcome, Outcome};
 /// # use rocket::request::{self, FromRequest, Request};
-/// # struct User { id: String, is_admin: bool };
+/// # struct User { id: String, is_admin: bool }
 /// # struct Database;
 /// # impl Database {
 /// #     fn get_user(&self, id: String) -> Result<User, ()> {
@@ -308,7 +306,7 @@ impl<S, E> IntoOutcome<S, (Status, E), ()> for Result<S, E> {
 /// #     }
 /// # }
 /// #
-/// # struct Admin<'a> { user: &'a User };
+/// # struct Admin<'a> { user: &'a User }
 /// #
 /// impl<'a, 'r> FromRequest<'a, 'r> for &'a User {
 ///     type Error = !;
@@ -341,12 +339,13 @@ impl<S, E> IntoOutcome<S, (Status, E), ()> for Result<S, E> {
 ///         }
 ///     }
 /// }
+/// # }
 /// ```
 ///
 /// Notice that these request guards provide access to *borrowed* data (`&'a
 /// User` and `Admin<'a>`) as the data is now owned by the request's cache.
 ///
-/// [request-local state]: https://rocket.rs/guide/state/#request-local-state
+/// [request-local state]: https://rocket.rs/v0.4/guide/state/#request-local-state
 
 pub trait FromRequest<'a, 'r>: Sized {
     /// The associated error to be returned if derivation fails.

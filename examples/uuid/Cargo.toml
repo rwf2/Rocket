@@ -6,9 +6,8 @@ publish = false
 
 [dependencies]
 rocket = { path = "../../core/lib" }
-rocket_codegen = { path = "../../core/codegen" }
-uuid = "0.7"
 lazy_static = "1.0"
+uuid = "0.7"
 
 [dependencies.rocket_contrib]
 default-features = false

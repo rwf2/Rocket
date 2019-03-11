@@ -1,13 +1,12 @@
-#![feature(plugin, decl_macro)]
-#![plugin(rocket_codegen)]
+#![feature(proc_macro_hygiene, decl_macro)]
 
-extern crate rocket;
+#[macro_use] extern crate rocket;
 
-use rocket::response::{status, content};
+use rocket::{http::Status, response::content};
 
 #[get("/empty")]
-fn empty() -> status::NoContent {
-    status::NoContent
+fn empty() -> Status {
+    Status::NoContent
 }
 
 #[get("/")]

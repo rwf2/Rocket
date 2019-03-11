@@ -1,5 +1,4 @@
-#![feature(plugin, decl_macro)]
-#![plugin(rocket_codegen)]
+#![feature(proc_macro_hygiene, decl_macro)]
 
 #[macro_use] extern crate rocket;
 
@@ -51,10 +50,8 @@ impl<'v> FromFormValue<'v> for AdultAge {
     }
 }
 
-#[post("/login", data = "<user_form>")]
-fn login<'a>(user_form: Form<'a, UserLogin<'a>>) -> Result<Redirect, String> {
-    let user = user_form.get();
-
+#[post("/login", data = "<user>")]
+fn login(user: Form<UserLogin>) -> Result<Redirect, String> {
     if let Err(e) = user.age {
         return Err(format!("Age is invalid: {}", e));
     }

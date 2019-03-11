@@ -8,18 +8,16 @@
 //! to perform an action once a Rocket application has launched.
 //!
 //! To learn more about writing a fairing, see the [`Fairing`] trait
-//! documentation. You can also use [`AdHoc`] to create a fairing on-the-fly
-//! from a closure or function.
-//!
-//! [`AdHoc`]: /rocket/fairing/enum.AdHoc.html
+//! documentation. You can also use [`AdHoc`](fairing::AdHoc) to create a
+//! fairing on-the-fly from a closure or function.
 //!
 //! ## Attaching
 //!
 //! You must inform Rocket about fairings that you wish to be active by calling
-//! the [`attach`](/rocket/struct.Rocket.html#method.attach) method on the
-//! [`Rocket`](/rocket/struct.Rocket.html) instance and passing in the
-//! appropriate [`Fairing`]. For instance, to attach fairings named
-//! `req_fairing` and `res_fairing` to a new Rocket instance, you might write:
+//! [`Rocket::attach()`] method on the application's [`Rocket`] instance and
+//! passing in the appropriate [`Fairing`]. For instance, to attach fairings
+//! named `req_fairing` and `res_fairing` to a new Rocket instance, you might
+//! write:
 //!
 //! ```rust
 //! # use rocket::fairing::AdHoc;
@@ -35,7 +33,7 @@
 //! trait documentation for more information on the dispatching of fairing
 //! methods.
 //!
-//! [`Fairing`]: /rocket/fairing/trait.Fairing.html
+//! [`Fairing`]: ::fairing::Fairing
 //!
 //! ## Ordering
 //!
@@ -90,9 +88,9 @@ pub use self::info_kind::{Info, Kind};
 /// entire application. On the other hand, you _should_ use a fairing to record
 /// timing and/or usage statistics or to implement global security policies.
 ///
-/// [request guard]: /rocket/request/trait.FromRequest.html
-/// [request guards]: /rocket/request/trait.FromRequest.html
-/// [data guards]: /rocket/data/trait.FromData.html
+/// [request guard]: ::request::FromRequest
+/// [request guards]: ::request::FromRequest
+/// [data guards]: ::data::FromData
 ///
 /// ## Fairing Callbacks
 ///
@@ -105,13 +103,12 @@ pub use self::info_kind::{Info, Kind};
 ///
 ///   * **Attach (`on_attach`)**
 ///
-///     An attach callback, represented by the
-///     [`on_attach`](/rocket/fairing/trait.Fairing.html#method.on_attach)
-///     method, is called when a fairing is first attached via the
-///     [`attach`](/rocket/struct.Rocket.html#method.attach) method. The state
-///     of the `Rocket` instance is, at this point, not finalized, as the user
-///     may still add additional information to the `Rocket` instance. As a
-///     result, it is unwise to depend on the state of the `Rocket` instance.
+///     An attach callback, represented by the [`Fairing::on_attach()`] method,
+///     is called when a fairing is first attached via [`Rocket::attach()`]
+///     method. The state of the `Rocket` instance is, at this point, not
+///     finalized, as the user may still add additional information to the
+///     `Rocket` instance. As a result, it is unwise to depend on the state of
+///     the `Rocket` instance.
 ///
 ///     An attach callback can arbitrarily modify the `Rocket` instance being
 ///     constructed. It returns `Ok` if it would like launching to proceed
@@ -121,43 +118,39 @@ pub use self::info_kind::{Info, Kind};
 ///
 ///   * **Launch (`on_launch`)**
 ///
-///     A launch callback, represented by the
-///     [`on_launch`](/rocket/fairing/trait.Fairing.html#method.on_launch)
-///     method, is called immediately before the Rocket application has
-///     launched. At this point, Rocket has opened a socket for listening but
-///     has not yet begun accepting connections. A launch callback can inspect
-///     the `Rocket` instance being launched.
+///     A launch callback, represented by the [`Fairing::on_launch()`] method,
+///     is called immediately before the Rocket application has launched. At
+///     this point, Rocket has opened a socket for listening but has not yet
+///     begun accepting connections. A launch callback can inspect the `Rocket`
+///     instance being launched.
 ///
 ///   * **Request (`on_request`)**
 ///
-///     A request callback, represented by the
-///     [`on_request`](/rocket/fairing/trait.Fairing.html#method.on_request)
-///     method, is called just after a request is received, immediately after
+///     A request callback, represented by the [`Fairing::on_request()`] method,
+///     is called just after a request is received, immediately after
 ///     pre-processing the request with method changes due to `_method` form
 ///     fields. At this point, Rocket has parsed the incoming HTTP request into
-///     [`Request`](/rocket/struct.Request.html) and
-///     [`Data`](/rocket/struct.Data.html) structures but has not routed the
-///     request. A request callback can modify the request at will and
-///     [`peek`](/rocket/struct.Data.html#method.peek) into the incoming data.
-///     It may not, however, abort or respond directly to the request; these
-///     issues are better handled via [request
-///     guards](/rocket/request/trait.FromRequest.html) or via response
-///     callbacks. Any modifications to a request are persisted and can
-///     potentially alter how a request is routed.
-///
+///     [`Request`] and [`Data`] structures but has not routed the request. A
+///     request callback can modify the request at will and [`Data::peek()`]
+///     into the incoming data. It may not, however, abort or respond directly
+///     to the request; these issues are better handled via [request guards] or
+///     via response callbacks. Any modifications to a request are persisted and
+///     can potentially alter how a request is routed.
+///=
 ///   * **Response (`on_response`)**
 ///
-///     A response callback is called when a response is ready to be sent to the
-///     client. At this point, Rocket has completed all routing, including to
-///     error catchers, and has generated the would-be final response. A
-///     response callback can modify the response at will. For example, a
-///     response callback can provide a default response when the user fails to
-///     handle the request by checking for 404 responses. Note that a given
-///     `Request` may have changed between `on_request` and `on_response`
-///     invocations. Apart from any change made by other fairings, Rocket sets
-///     the method for `HEAD` requests to `GET` if there is no matching `HEAD`
-///     handler for that request. Additionally, Rocket will automatically strip
-///     the body for `HEAD` requests _after_ response fairings have run.
+///     A response callback, represented by the [`Fairing::on_response()`]
+///     method, is called when a response is ready to be sent to the client. At
+///     this point, Rocket has completed all routing, including to error
+///     catchers, and has generated the would-be final response. A response
+///     callback can modify the response at will. For example, a response
+///     callback can provide a default response when the user fails to handle
+///     the request by checking for 404 responses. Note that a given `Request`
+///     may have changed between `on_request` and `on_response` invocations.
+///     Apart from any change made by other fairings, Rocket sets the method for
+///     `HEAD` requests to `GET` if there is no matching `HEAD` handler for that
+///     request. Additionally, Rocket will automatically strip the body for
+///     `HEAD` requests _after_ response fairings have run.
 ///
 /// # Implementing
 ///
@@ -170,8 +163,7 @@ pub use self::info_kind::{Info, Kind};
 /// ## Fairing `Info`
 ///
 /// Every `Fairing` must implement the [`info`] method, which returns an
-/// [`Info`](/rocket/fairing/struct.Info.html) structure. This structure is used
-/// by Rocket to:
+/// [`Info`] structure. This structure is used by Rocket to:
 ///
 ///   1. Assign a name to the `Fairing`.
 ///
@@ -181,32 +173,30 @@ pub use self::info_kind::{Info, Kind};
 ///
 ///   2. Determine which callbacks to actually issue on the `Fairing`.
 ///
-///      This is the `kind` field of type
-///      [`Kind`](/rocket/fairing/struct.Kind.html). This field is a bitset that
+///      This is the `kind` field of type [`Kind`]. This field is a bitset that
 ///      represents the kinds of callbacks the fairing wishes to receive. Rocket
 ///      will only invoke the callbacks that are flagged in this set. `Kind`
 ///      structures can be `or`d together to represent any combination of kinds
 ///      of callbacks. For instance, to request launch and response callbacks,
 ///      return a `kind` field with the value `Kind::Launch | Kind::Response`.
 ///
-/// [`info`]: /rocket/fairing/trait.Fairing.html#tymethod.info
+/// [`info`]: Fairing::info()
 ///
 /// ## Restrictions
 ///
-/// A `Fairing` must be `Send + Sync + 'static`. This means that the fairing
-/// must be sendable across thread boundaries (`Send`), thread-safe (`Sync`),
-/// and have only `'static` references, if any (`'static`). Note that these
-/// bounds _do not_ prohibit a `Fairing` from holding state: the state need
-/// simply be thread-safe and statically available or heap allocated.
+/// A `Fairing` must be [`Send`] + [`Sync`] + `'static`. This means that the
+/// fairing must be sendable across thread boundaries (`Send`), thread-safe
+/// (`Sync`), and have only `'static` references, if any (`'static`). Note that
+/// these bounds _do not_ prohibit a `Fairing` from holding state: the state
+/// need simply be thread-safe and statically available or heap allocated.
 ///
 /// ## Example
 ///
 /// Imagine that we want to record the number of `GET` and `POST` requests that
-/// our application has received. While we could do this with [request
-/// guards](/rocket/request/trait.FromRequest.html) and [managed
-/// state](/rocket/request/struct.State.html), it would require us to annotate
-/// every `GET` and `POST` request with custom types, polluting handler
-/// signatures. Instead, we can create a simple fairing that acts globally.
+/// our application has received. While we could do this with [request guards]
+/// and [managed state](::request::State), it would require us to annotate every
+/// `GET` and `POST` request with custom types, polluting handler signatures.
+/// Instead, we can create a simple fairing that acts globally.
 ///
 /// The `Counter` fairing below records the number of all `GET` and `POST`
 /// requests received. It makes these counts available at a special `'/counts'`
@@ -330,13 +320,12 @@ pub use self::info_kind::{Info, Kind};
 /// }
 /// ```
 ///
-/// [request-local state]: https://rocket.rs/guide/state/#request-local-state
+/// [request-local state]: https://rocket.rs/v0.4/guide/state/#request-local-state
 
 pub trait Fairing: Send + Sync + 'static {
-    /// Returns an [`Info`](/rocket/fairing/struct.Info.html) structure
-    /// containing the `name` and [`Kind`](/rocket/fairing/struct.Kind.html) of
-    /// this fairing. The `name` can be any arbitrary string. `Kind` must be an
-    /// `or`d set of `Kind` variants.
+    /// Returns an [`Info`] structure containing the `name` and [`Kind`] of this
+    /// fairing. The `name` can be any arbitrary string. `Kind` must be an `or`d
+    /// set of `Kind` variants.
     ///
     /// This is the only required method of a `Fairing`. All other methods have
     /// no-op default implementations.

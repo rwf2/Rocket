@@ -1,6 +1,7 @@
 use rocket::local::Client;
 use rocket::http::{Status, ContentType};
 
+use std::env;
 use std::io::Read;
 use std::fs::{self, File};
 
@@ -16,7 +17,8 @@ fn test_index() {
 #[test]
 fn test_raw_upload() {
     // Delete the upload file before we begin.
-    let _ = fs::remove_file("/tmp/upload.txt");
+    let upload_file = env::temp_dir().join("upload.txt");
+    let _ = fs::remove_file(&upload_file);
 
     // Do the upload. Make sure we get the expected results.
     let client = Client::new(super::rocket()).unwrap();
@@ -30,7 +32,7 @@ fn test_raw_upload() {
 
     // Ensure we find the body in the /tmp/upload.txt file.
     let mut file_contents = String::new();
-    let mut file = File::open("/tmp/upload.txt").expect("open upload.txt file");
+    let mut file = File::open(&upload_file).expect("open upload.txt file");
     file.read_to_string(&mut file_contents).expect("read upload.txt");
     assert_eq!(&file_contents, UPLOAD_CONTENTS);
 }

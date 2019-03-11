@@ -1,9 +1,7 @@
-extern crate tera;
+use templates::serde::Serialize;
+use templates::{Engine, TemplateInfo};
 
-use super::serde::Serialize;
-use super::{Engine, TemplateInfo};
-
-pub use self::tera::Tera;
+pub use templates::tera::Tera;
 
 impl Engine for Tera {
     const EXT: &'static str = "tera";

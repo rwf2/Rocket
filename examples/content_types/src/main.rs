@@ -1,15 +1,14 @@
-#![feature(plugin, decl_macro)]
-#![plugin(rocket_codegen)]
+#![feature(proc_macro_hygiene, decl_macro)]
 
-extern crate rocket;
+#[macro_use] extern crate rocket;
+#[macro_use] extern crate serde_derive;
 extern crate serde_json;
-#[macro_use]
-extern crate serde_derive;
 
 #[cfg(test)] mod tests;
 
-use rocket::Request;
-use rocket::response::content;
+use std::io::{self, Read};
+
+use rocket::{Request, response::content, data::Data};
 
 #[derive(Debug, Serialize, Deserialize)]
 struct Person {
@@ -30,10 +29,16 @@ fn get_hello(name: String, age: u8) -> content::Json<String> {
 
 // In a `POST` request and all other payload supporting request types, the
 // content type is matched against the `format` in the route attribute.
-#[post("/<age>", format = "plain", data = "<name>")]
-fn post_hello(age: u8, name: String) -> content::Json<String> {
+//
+// Note that `content::Json` simply sets the content-type to `application/json`.
+// In a real application, we wouldn't use `serde_json` directly; instead, we'd
+// use `contrib::Json` to automatically serialize a type into JSON.
+#[post("/<age>", format = "plain", data = "<name_data>")]
+fn post_hello(age: u8, name_data: Data) -> io::Result<content::Json<String>> {
+    let mut name = String::with_capacity(32);
+    name_data.open().take(32).read_to_string(&mut name)?;
     let person = Person { name: name, age: age, };
-    content::Json(serde_json::to_string(&person).unwrap())
+    Ok(content::Json(serde_json::to_string(&person).unwrap()))
 }
 
 #[catch(404)]
@@ -53,6 +58,6 @@ fn not_found(request: &Request) -> content::Html<String> {
 fn main() {
     rocket::ignite()
         .mount("/hello", routes![get_hello, post_hello])
-        .catch(catchers![not_found])
+        .register(catchers![not_found])
         .launch();
 }

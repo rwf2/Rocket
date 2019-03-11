@@ -3,22 +3,21 @@ use std::net::ToSocketAddrs;
 use std::path::{Path, PathBuf};
 use std::convert::AsRef;
 use std::fmt;
-use std::env;
 
 use super::custom_values::*;
 use {num_cpus, base64};
 use config::Environment::*;
 use config::{Result, ConfigBuilder, Environment, ConfigError, LoggingLevel};
 use config::{Table, Value, Array, Datetime};
-use http::Key;
+
+use http::private::Key;
 
 /// Structure for Rocket application configuration.
 ///
 /// # Usage
 ///
-/// A `Config` structure is typically built using the [build](#method.build)
-/// method and [ConfigBuilder](/rocket/config/struct.ConfigBuilder.html)
-/// methods:
+/// A `Config` structure is typically built using [`Config::build()`] and
+/// builder methods on the returned [`ConfigBuilder`] structure:
 ///
 /// ```rust
 /// use rocket::config::{Config, Environment};
@@ -33,10 +32,8 @@ use http::Key;
 ///
 /// ## General Configuration
 ///
-/// For more information about Rocket's configuration, see the [`config`] module
-/// documentation.
-///
-/// [`config`]: /rocket/config/index.html
+/// For more information about Rocket's configuration, see the
+/// [`config`](::config) module documentation.
 #[derive(Clone)]
 pub struct Config {
     /// The environment that this configuration corresponds to.
@@ -59,8 +56,10 @@ pub struct Config {
     pub limits: Limits,
     /// Extra parameters that aren't part of Rocket's core config.
     pub extras: HashMap<String, Value>,
-    /// The path to the configuration file this config belongs to.
-    pub config_path: PathBuf,
+    /// The path to the configuration file this config was loaded from, if any.
+    crate config_file_path: Option<PathBuf>,
+    /// The path root-relative files will be rooted from.
+    crate root_path: Option<PathBuf>,
 }
 
 macro_rules! config_from_raw {
@@ -78,12 +77,7 @@ macro_rules! config_from_raw {
 
 impl Config {
     /// Returns a builder for `Config` structure where the default parameters
-    /// are set to those of `env`. The root configuration directory is set to
-    /// the current working directory.
-    ///
-    /// # Panics
-    ///
-    /// Panics if the current directory cannot be retrieved.
+    /// are set to those of `env`.
     ///
     /// # Example
     ///
@@ -101,25 +95,18 @@ impl Config {
         ConfigBuilder::new(env)
     }
 
-    /// Returns a `Config` with the parameters for the environment `env`. The
-    /// root configuration directory is set to the current working directory.
-    ///
-    /// # Errors
-    ///
-    /// If the current directory cannot be retrieved, a `BadCWD` error is
-    /// returned.
+    /// Returns a `Config` with the parameters for the environment `env`.
     ///
     /// # Example
     ///
     /// ```rust
     /// use rocket::config::{Config, Environment};
     ///
-    /// let mut my_config = Config::new(Environment::Production).expect("cwd");
+    /// let mut my_config = Config::new(Environment::Production);
     /// my_config.set_port(1001);
     /// ```
-    pub fn new(env: Environment) -> Result<Config> {
-        let cwd = env::current_dir().map_err(|_| ConfigError::BadCWD)?;
-        Config::default(env, cwd.as_path().join("Rocket.custom.toml"))
+    pub fn new(env: Environment) -> Config {
+        Config::default(env)
     }
 
     /// Returns a `Config` with the default parameters of the active environment
@@ -128,16 +115,14 @@ impl Config {
     /// If `ROCKET_ENV` is not set, the returned `Config` uses development
     /// environment parameters when the application was compiled in `debug` mode
     /// and production environment parameters when the application was compiled
-    /// in `release` mode. The root configuration directory is set to the
-    /// current working directory.
+    /// in `release` mode.
     ///
     /// This is equivalent to `Config::new(Environment::active()?)`.
     ///
     /// # Errors
     ///
-    /// If the current directory cannot be retrieved, a `BadCWD` error is
-    /// returned. Returns a `BadEnv` error if `ROCKET_ENV` is set and contains
-    /// an invalid or unknown environment name.
+    /// Returns a `BadEnv` error if `ROCKET_ENV` is set and contains an invalid
+    /// or unknown environment name.
     ///
     /// # Example
     ///
@@ -148,95 +133,94 @@ impl Config {
     /// my_config.set_port(1001);
     /// ```
     pub fn active() -> Result<Config> {
-        Config::new(Environment::active()?)
+        Ok(Config::new(Environment::active()?))
     }
 
     /// Returns a `Config` with the default parameters of the development
-    /// environment. The root configuration directory is set to the current
-    /// working directory.
-    ///
-    /// # Errors
-    ///
-    /// If the current directory cannot be retrieved, a `BadCWD` error is
-    /// returned.
+    /// environment.
     ///
     /// # Example
     ///
     /// ```rust
     /// use rocket::config::{Config, Environment};
     ///
-    /// let mut my_config = Config::development().unwrap();
+    /// let mut my_config = Config::development();
     /// my_config.set_port(1001);
     /// ```
-    pub fn development() -> Result<Config> {
+    pub fn development() -> Config {
         Config::new(Environment::Development)
     }
 
     /// Returns a `Config` with the default parameters of the staging
-    /// environment. The root configuration directory is set to the current
-    /// working directory.
-    ///
-    /// # Errors
-    ///
-    /// If the current directory cannot be retrieved, a `BadCWD` error is
-    /// returned.
+    /// environment.
     ///
     /// # Example
     ///
     /// ```rust
     /// use rocket::config::{Config, Environment};
     ///
-    /// let mut my_config = Config::staging().expect("cwd");
+    /// let mut my_config = Config::staging();
     /// my_config.set_port(1001);
     /// ```
-    pub fn staging() -> Result<Config> {
+    pub fn staging() -> Config {
         Config::new(Environment::Staging)
     }
 
     /// Returns a `Config` with the default parameters of the production
-    /// environment. The root configuration directory is set to the current
-    /// working directory.
-    ///
-    /// # Errors
-    ///
-    /// If the current directory cannot be retrieved, a `BadCWD` error is
-    /// returned.
+    /// environment.
     ///
     /// # Example
     ///
     /// ```rust
     /// use rocket::config::{Config, Environment};
     ///
-    /// let mut my_config = Config::production().expect("cwd");
+    /// let mut my_config = Config::production();
     /// my_config.set_port(1001);
     /// ```
-    pub fn production() -> Result<Config> {
+    pub fn production() -> Config {
         Config::new(Environment::Production)
     }
 
     /// Returns the default configuration for the environment `env` given that
-    /// the configuration was stored at `config_path`. If `config_path` is not
-    /// an absolute path, an `Err` of `ConfigError::BadFilePath` is returned.
+    /// the configuration was stored at `config_file_path`.
+    ///
+    /// # Error
+    ///
+    /// Return a `BadFilePath` error if `path` does not have a parent.
     ///
     /// # Panics
     ///
     /// Panics if randomness cannot be retrieved from the OS.
-    crate fn default<P>(env: Environment, path: P) -> Result<Config>
+    crate fn default_from<P>(env: Environment, path: P) -> Result<Config>
         where P: AsRef<Path>
     {
-        let config_path = path.as_ref().to_path_buf();
-        if config_path.parent().is_none() {
-            return Err(ConfigError::BadFilePath(config_path,
-                "Configuration files must be rooted in a directory."));
+        let mut config = Config::default(env);
+
+        let config_file_path = path.as_ref().to_path_buf();
+        if let Some(parent) = config_file_path.parent() {
+            config.set_root(parent);
+        } else {
+            let msg = "Configuration files must be rooted in a directory.";
+            return Err(ConfigError::BadFilePath(config_file_path.clone(), msg));
         }
 
+        config.config_file_path = Some(config_file_path);
+        Ok(config)
+    }
+
+    /// Returns the default configuration for the environment `env`.
+    ///
+    /// # Panics
+    ///
+    /// Panics if randomness cannot be retrieved from the OS.
+    crate fn default(env: Environment) -> Config {
         // Note: This may truncate if num_cpus::get() / 2 > u16::max. That's okay.
         let default_workers = (num_cpus::get() * 2) as u16;
 
         // Use a generated secret key by default.
         let key = SecretKey::Generated(Key::generate());
 
-        Ok(match env {
+        match env {
             Development => {
                 Config {
                     environment: Development,
@@ -249,7 +233,8 @@ impl Config {
                     tls: None,
                     limits: Limits::default(),
                     extras: HashMap::new(),
-                    config_path,
+                    config_file_path: None,
+                    root_path: None,
                 }
             }
             Staging => {
@@ -264,7 +249,8 @@ impl Config {
                     tls: None,
                     limits: Limits::default(),
                     extras: HashMap::new(),
-                    config_path,
+                    config_file_path: None,
+                    root_path: None,
                 }
             }
             Production => {
@@ -279,10 +265,11 @@ impl Config {
                     tls: None,
                     limits: Limits::default(),
                     extras: HashMap::new(),
-                    config_path,
+                    config_file_path: None,
+                    root_path: None,
                 }
             }
-        })
+        }
     }
 
     /// Constructs a `BadType` error given the entry `name`, the invalid `val`
@@ -293,7 +280,7 @@ impl Config {
                            actual: &'static str,
                            expect: &'static str) -> ConfigError {
         let id = format!("{}.{}", self.environment, name);
-        ConfigError::BadType(id, expect, actual, self.config_path.clone())
+        ConfigError::BadType(id, expect, actual, self.config_file_path.clone())
     }
 
     /// Sets the configuration `val` for the `name` entry. If the `name` is one
@@ -308,7 +295,7 @@ impl Config {
     ///   * **address**: String
     ///   * **port**: Integer (16-bit unsigned)
     ///   * **workers**: Integer (16-bit unsigned)
-    ///   * **keep_alive**: Integer or Boolean (false) or String ('none')
+    ///   * **keep_alive**: Integer
     ///   * **log**: String
     ///   * **secret_key**: String (256-bit base64)
     ///   * **tls**: Table (`certs` (path as String), `key` (path as String))
@@ -318,7 +305,7 @@ impl Config {
             address => (str, set_address, id),
             port => (u16, set_port, ok),
             workers => (u16, set_workers, ok),
-            keep_alive => (u32_option, set_keep_alive, ok),
+            keep_alive => (u32, set_keep_alive, ok),
             log => (log_level, set_log_level, ok),
             secret_key => (str, set_secret_key, id),
             tls => (tls_config, set_raw_tls, id),
@@ -338,22 +325,16 @@ impl Config {
     /// # use std::path::Path;
     /// use rocket::config::{Config, Environment};
     ///
-    /// # use rocket::config::ConfigError;
-    /// # fn config_test() -> Result<(), ConfigError> {
-    /// let mut config = Config::new(Environment::Staging)?;
-    /// config.set_root("/tmp/my_app");
+    /// let mut config = Config::new(Environment::Staging);
+    /// config.set_root("/var/my_app");
     ///
-    /// assert_eq!(config.root(), Path::new("/tmp/my_app"));
-    /// # Ok(())
-    /// # }
+    /// # #[cfg(not(windows))]
+    /// assert_eq!(config.root().unwrap(), Path::new("/var/my_app"));
+    /// # #[cfg(windows)]
+    /// assert_eq!(config.root().unwrap(), Path::new("C:\\var\\my_app"));
     /// ```
     pub fn set_root<P: AsRef<Path>>(&mut self, path: P) {
-        let new_path = match self.config_path.file_name() {
-            Some(file) => path.as_ref().join(file),
-            None => path.as_ref().join("Rocket.custom.toml")
-        };
-
-        self.config_path = new_path
+        self.root_path = Some(path.as_ref().into());
     }
 
     /// Sets the address of `self` to `address`.
@@ -368,14 +349,10 @@ impl Config {
     /// ```rust
     /// use rocket::config::{Config, Environment};
     ///
-    /// # use rocket::config::ConfigError;
-    /// # fn config_test() -> Result<(), ConfigError> {
-    /// let mut config = Config::new(Environment::Staging)?;
+    /// let mut config = Config::new(Environment::Staging);
     /// assert!(config.set_address("localhost").is_ok());
     /// assert!(config.set_address("::").is_ok());
     /// assert!(config.set_address("?").is_err());
-    /// # Ok(())
-    /// # }
     /// ```
     pub fn set_address<A: Into<String>>(&mut self, address: A) -> Result<()> {
         let address = address.into();
@@ -394,12 +371,9 @@ impl Config {
     /// ```rust
     /// use rocket::config::{Config, Environment};
     ///
-    /// # use rocket::config::ConfigError;
-    /// # fn config_test() -> Result<(), ConfigError> {
-    /// let mut config = Config::new(Environment::Staging)?;
+    /// let mut config = Config::new(Environment::Staging);
     /// config.set_port(1024);
-    /// # Ok(())
-    /// # }
+    /// assert_eq!(config.port, 1024);
     /// ```
     #[inline]
     pub fn set_port(&mut self, port: u16) {
@@ -413,19 +387,16 @@ impl Config {
     /// ```rust
     /// use rocket::config::{Config, Environment};
     ///
-    /// # use rocket::config::ConfigError;
-    /// # fn config_test() -> Result<(), ConfigError> {
-    /// let mut config = Config::new(Environment::Staging)?;
+    /// let mut config = Config::new(Environment::Staging);
     /// config.set_workers(64);
-    /// # Ok(())
-    /// # }
+    /// assert_eq!(config.workers, 64);
     /// ```
     #[inline]
     pub fn set_workers(&mut self, workers: u16) {
         self.workers = workers;
     }
 
-    /// Sets the keep-alive timeout to `timeout` seconds. If `timeout` is `None`,
+    /// Sets the keep-alive timeout to `timeout` seconds. If `timeout` is `0`,
     /// keep-alive is disabled.
     ///
     /// # Example
@@ -433,21 +404,23 @@ impl Config {
     /// ```rust
     /// use rocket::config::Config;
     ///
-    /// # use rocket::config::ConfigError;
-    /// # fn config_test() -> Result<(), ConfigError> {
-    /// let mut config = Config::development()?;
+    /// let mut config = Config::development();
     ///
     /// // Set keep-alive timeout to 10 seconds.
     /// config.set_keep_alive(10);
+    /// assert_eq!(config.keep_alive, Some(10));
     ///
     /// // Disable keep-alive.
-    /// config.set_keep_alive(None);
-    /// # Ok(())
-    /// # }
+    /// config.set_keep_alive(0);
+    /// assert_eq!(config.keep_alive, None);
     /// ```
     #[inline]
-    pub fn set_keep_alive<T: Into<Option<u32>>>(&mut self, timeout: T) {
-        self.keep_alive = timeout.into();
+    pub fn set_keep_alive(&mut self, timeout: u32) {
+        if timeout == 0 {
+            self.keep_alive = None;
+        } else {
+            self.keep_alive = Some(timeout);
+        }
     }
 
     /// Sets the `secret_key` in `self` to `key` which must be a 256-bit base64
@@ -463,14 +436,10 @@ impl Config {
     /// ```rust
     /// use rocket::config::{Config, Environment};
     ///
-    /// # use rocket::config::ConfigError;
-    /// # fn config_test() -> Result<(), ConfigError> {
-    /// let mut config = Config::new(Environment::Staging)?;
+    /// let mut config = Config::new(Environment::Staging);
     /// let key = "8Xui8SN4mI+7egV/9dlfYYLGQJeEx4+DwmSQLwDVXJg=";
     /// assert!(config.set_secret_key(key).is_ok());
     /// assert!(config.set_secret_key("hello? anyone there?").is_err());
-    /// # Ok(())
-    /// # }
     /// ```
     pub fn set_secret_key<K: Into<String>>(&mut self, key: K) -> Result<()> {
         let key = key.into();
@@ -497,12 +466,9 @@ impl Config {
     /// ```rust
     /// use rocket::config::{Config, LoggingLevel, Environment};
     ///
-    /// # use rocket::config::ConfigError;
-    /// # fn config_test() -> Result<(), ConfigError> {
-    /// let mut config = Config::new(Environment::Staging)?;
+    /// let mut config = Config::new(Environment::Staging);
     /// config.set_log_level(LoggingLevel::Critical);
-    /// # Ok(())
-    /// # }
+    /// assert_eq!(config.log_level, LoggingLevel::Critical);
     /// ```
     #[inline]
     pub fn set_log_level(&mut self, log_level: LoggingLevel) {
@@ -516,12 +482,8 @@ impl Config {
     /// ```rust
     /// use rocket::config::{Config, Limits};
     ///
-    /// # use rocket::config::ConfigError;
-    /// # fn config_test() -> Result<(), ConfigError> {
-    /// let mut config = Config::development()?;
+    /// let mut config = Config::development();
     /// config.set_limits(Limits::default().limit("json", 4 * (1 << 20)));
-    /// # Ok(())
-    /// # }
     /// ```
     #[inline]
     pub fn set_limits(&mut self, limits: Limits) {
@@ -619,9 +581,7 @@ impl Config {
     /// use std::collections::HashMap;
     /// use rocket::config::{Config, Environment};
     ///
-    /// # use rocket::config::ConfigError;
-    /// # fn config_test() -> Result<(), ConfigError> {
-    /// let mut config = Config::new(Environment::Staging)?;
+    /// let mut config = Config::new(Environment::Staging);
     ///
     /// // Create the `extras` map.
     /// let mut extras = HashMap::new();
@@ -629,8 +589,6 @@ impl Config {
     /// extras.insert("templates".to_string(), "my_dir".into());
     ///
     /// config.set_extras(extras);
-    /// # Ok(())
-    /// # }
     /// ```
     #[inline]
     pub fn set_extras(&mut self, extras: HashMap<String, Value>) {
@@ -646,9 +604,7 @@ impl Config {
     /// use std::collections::HashMap;
     /// use rocket::config::{Config, Environment};
     ///
-    /// # use rocket::config::ConfigError;
-    /// # fn config_test() -> Result<(), ConfigError> {
-    /// let mut config = Config::new(Environment::Staging)?;
+    /// let mut config = Config::new(Environment::Staging);
     /// assert_eq!(config.extras().count(), 0);
     ///
     /// // Add a couple of extras to the config.
@@ -658,8 +614,6 @@ impl Config {
     /// config.set_extras(extras);
     ///
     /// assert_eq!(config.extras().count(), 2);
-    /// # Ok(())
-    /// # }
     /// ```
     #[inline]
     pub fn extras<'a>(&'a self) -> impl Iterator<Item=(&'a str, &'a Value)> {
@@ -903,9 +857,13 @@ impl Config {
             .ok_or_else(|| self.bad_type(name, val.type_str(), "a datetime"))
     }
 
-    /// Returns the path at which the configuration file for `self` is stored.
-    /// For instance, if the configuration file is at `/tmp/Rocket.toml`, the
-    /// path `/tmp` is returned.
+    /// Returns the root path of the configuration, if one is known.
+    ///
+    /// For configurations loaded from a `Rocket.toml` file, this will be the
+    /// directory in which the file is stored. For instance, if the
+    /// configuration file is at `/tmp/Rocket.toml`, the path `/tmp` is
+    /// returned. For other configurations, this will be the path set via
+    /// [`Config::set_root()`] or [`ConfigBuilder::root()`].
     ///
     /// # Example
     ///
@@ -913,44 +871,62 @@ impl Config {
     /// use std::env::current_dir;
     /// use rocket::config::{Config, Environment};
     ///
-    /// let config = Config::new(Environment::Staging)
-    ///     .expect("can retrieve current directory");
+    /// let mut config = Config::new(Environment::Staging);
+    /// assert_eq!(config.root(), None);
     ///
-    /// assert_eq!(config.root(), current_dir().unwrap());
+    /// let cwd = current_dir().expect("have cwd");
+    /// config.set_root(&cwd);
+    /// assert_eq!(config.root().unwrap(), cwd);
     /// ```
-    pub fn root(&self) -> &Path {
-        match self.config_path.parent() {
-            Some(parent) => parent,
-            None => panic!("root(): path {:?} has no parent", self.config_path)
-        }
+    pub fn root(&self) -> Option<&Path> {
+        self.root_path.as_ref().map(|p| p.as_ref())
     }
 
-    /// If `path` is a relative path, `path` is appended to the [`root`] at
-    /// which the configuration file for `self` is stored and the new path is
-    /// returned. If `path` is absolute, `path` is returned unaltered.
+    /// Returns `path` relative to this configuration.
     ///
-    /// [`root`]: /rocket/struct.Config.html#method.root
+    /// The path that is returned depends on whether:
+    ///
+    ///   1. Whether `path` is absolute or relative.
+    ///   2. Whether there is a [`Config::root()`] configured.
+    ///   3. Whether there is a current directory.
+    ///
+    /// If `path` is absolute, it is returned unaltered. Otherwise, if `path` is
+    /// relative and there is a root configured, the root is prepended to `path`
+    /// and the newlt concatenated path is returned. Otherwise, if there is a
+    /// current directory, it is preprended to `path` and the newly concatenated
+    /// path is returned. Finally, if all else fails, the path is simply
+    /// returned.
     ///
     /// # Example
     ///
     /// ```rust
-    /// use std::env::current_dir;
     /// use std::path::Path;
+    /// use std::env::current_dir;
+    ///
     /// use rocket::config::{Config, Environment};
     ///
-    /// let config = Config::new(Environment::Staging)
-    ///     .expect("can retrieve current directory");
+    /// let mut config = Config::new(Environment::Staging);
     ///
-    /// assert_eq!(config.root(), current_dir().unwrap());
-    /// assert_eq!(config.root_relative("abc"), config.root().join("abc"));
+    /// let cwd = current_dir().expect("have cwd");
+    /// config.set_root(&cwd);
+    /// assert_eq!(config.root().unwrap(), cwd);
+    ///
+    /// assert_eq!(config.root_relative("abc"), cwd.join("abc"));
+    /// # #[cfg(not(windows))]
     /// assert_eq!(config.root_relative("/abc"), Path::new("/abc"));
+    /// # #[cfg(windows)]
+    /// # assert_eq!(config.root_relative("C:\\abc"), Path::new("C:\\abc"));
     /// ```
     pub fn root_relative<P: AsRef<Path>>(&self, path: P) -> PathBuf {
         let path = path.as_ref();
         if path.is_absolute() {
             path.into()
+        } else if let Some(root) = self.root() {
+            root.join(path)
+        } else if let Ok(cwd) = ::std::env::current_dir() {
+            cwd.join(path)
         } else {
-            self.root().join(path)
+            path.into()
         }
     }
 }

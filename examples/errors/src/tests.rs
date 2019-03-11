@@ -5,7 +5,7 @@ use rocket::http::Status;
 fn test(uri: &str, status: Status, body: String) {
     let rocket = rocket::ignite()
         .mount("/", routes![super::hello])
-        .catch(catchers![super::not_found]);
+        .register(catchers![super::not_found]);
 
     let client = Client::new(rocket).unwrap();
     let mut response = client.get(uri).dispatch();

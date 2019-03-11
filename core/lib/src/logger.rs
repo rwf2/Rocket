@@ -1,10 +1,12 @@
 //! Rocket's logging infrastructure.
 
+use std::{fmt, env};
 use std::str::FromStr;
-use std::fmt;
 
 use log;
 use yansi::Paint;
+
+crate const COLORS_ENV: &str = "ROCKET_CLI_COLORS";
 
 struct RocketLogger(LoggingLevel);
 
@@ -103,24 +105,25 @@ impl log::Log for RocketLogger {
         }
 
         // In Rocket, we abuse targets with suffix "_" to indicate indentation.
+        let is_launch = record.target().starts_with("launch");
         if record.target().ends_with('_') {
-            if configged_level != LoggingLevel::Critical || record.target().starts_with("launch") {
-                print!("    {} ", Paint::white("=>"));
+            if configged_level != LoggingLevel::Critical || is_launch {
+                print!("    {} ", Paint::default("=>").bold());
             }
         }
 
         match record.level() {
-            log::Level::Info => println!("{}", Paint::blue(record.args())),
-            log::Level::Trace => println!("{}", Paint::purple(record.args())),
+            log::Level::Info => println!("{}", Paint::blue(record.args()).wrap()),
+            log::Level::Trace => println!("{}", Paint::magenta(record.args()).wrap()),
             log::Level::Error => {
                 println!("{} {}",
                          Paint::red("Error:").bold(),
-                         Paint::red(record.args()))
+                         Paint::red(record.args()).wrap())
             }
             log::Level::Warn => {
                 println!("{} {}",
                          Paint::yellow("Warning:").bold(),
-                         Paint::yellow(record.args()))
+                         Paint::yellow(record.args()).wrap())
             }
             log::Level::Debug => {
                 print!("\n{} ", Paint::blue("-->").bold());
@@ -147,7 +150,10 @@ crate fn try_init(level: LoggingLevel, verbose: bool) -> bool {
         return false;
     }
 
-    if !::isatty::stdout_isatty() || (cfg!(windows) && !Paint::enable_windows_ascii()) {
+    if !::isatty::stdout_isatty()
+        || (cfg!(windows) && !Paint::enable_windows_ascii())
+        || env::var_os(COLORS_ENV).map(|v| v == "0" || v == "off").unwrap_or(false)
+    {
         Paint::disable();
     }
 
@@ -209,13 +215,15 @@ pub fn init(level: LoggingLevel) -> bool {
     try_init(level, true)
 }
 
-// This method exists as a shim for the log macros that need to be called from
-// an end user's code. It was added as part of the work to support database
-// connection pools via procedural macros.
-#[doc(hidden)]
-pub fn log_err(indented: bool, msg: &str) {
-    match indented {
-        true => error_!("{}", msg),
-        false => error!("{}", msg),
-    }
+// Expose logging macros as (hidden) funcions for use by core/contrib codegen.
+macro_rules! external_log_function {
+    ($fn_name:ident: $macro_name:ident) => (
+        #[doc(hidden)] #[inline(always)]
+        pub fn $fn_name(msg: &str) { $macro_name!("{}", msg); }
+    )
 }
+
+external_log_function!(error: error);
+external_log_function!(error_: error_);
+external_log_function!(warn: warn);
+external_log_function!(warn_: warn_);

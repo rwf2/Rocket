@@ -39,6 +39,22 @@ impl<'a> Error<'a> {
 
         Error { expected: new_expected, context: pear_error.context }
     }
+
+    /// Returns the byte index into the text where the error occurred if it is
+    /// known.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// # extern crate rocket;
+    /// use rocket::http::uri::Origin;
+    ///
+    /// let err = Origin::parse("/foo bar").unwrap_err();
+    /// assert_eq!(err.index(), Some(4));
+    /// ```
+    pub fn index(&self) -> Option<usize> {
+        self.context.as_ref().map(|c| c.offset)
+    }
 }
 
 impl fmt::Display for Or<char, u8> {

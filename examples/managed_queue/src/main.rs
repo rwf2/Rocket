@@ -1,30 +1,23 @@
-#![feature(plugin, decl_macro)]
-#![plugin(rocket_codegen)]
+#![feature(proc_macro_hygiene, decl_macro)]
 
-extern crate crossbeam;
 #[macro_use] extern crate rocket;
+extern crate crossbeam;
 
 #[cfg(test)] mod tests;
 
-use crossbeam::queue::MsQueue;
 use rocket::State;
+use crossbeam::queue::MsQueue;
 
-#[derive(FromForm, Debug)]
-struct Event {
-    description: String
-}
-
-struct LogChannel(MsQueue<Event>);
+struct LogChannel(MsQueue<String>);
 
 #[put("/push?<event>")]
-fn push(event: Event, queue: State<LogChannel>) {
+fn push(event: String, queue: State<LogChannel>) {
     queue.0.push(event);
 }
 
 #[get("/pop")]
 fn pop(queue: State<LogChannel>) -> String {
-    let queue = &queue.0;
-    queue.pop().description
+    queue.0.pop()
 }
 
 fn rocket() -> rocket::Rocket {

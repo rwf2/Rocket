@@ -28,12 +28,16 @@ const PEEK_BYTES: usize = 512;
 ///
 /// This type is the only means by which the body of a request can be retrieved.
 /// This type is not usually used directly. Instead, types that implement
-/// [FromData](/rocket/data/trait.FromData.html) are used via code generation by
-/// specifying the `data = "<param>"` route parameter as follows:
+/// [`FromData`](::data::Data) are used via code generation by specifying the
+/// `data = "<var>"` route parameter as follows:
 ///
-/// ```rust,ignore
+/// ```rust
+/// # #![feature(proc_macro_hygiene, decl_macro)]
+/// # #[macro_use] extern crate rocket;
+/// # type DataGuard = ::rocket::data::Data;
 /// #[post("/submit", data = "<var>")]
-/// fn submit(var: T) -> ... { ... }
+/// fn submit(var: DataGuard) { /* ... */ }
+/// # fn main() { }
 /// ```
 ///
 /// Above, `T` can be any type that implements `FromData`. Note that `Data`
@@ -42,7 +46,7 @@ const PEEK_BYTES: usize = 512;
 /// # Reading Data
 ///
 /// Data may be read from a `Data` object by calling either the
-/// [open](#method.open) or [peek](#method.peek) methods.
+/// [`open()`](Data::open()) or [`peek()`](Data::peek()) methods.
 ///
 /// The `open` method consumes the `Data` object and returns the raw data
 /// stream. The `Data` object is consumed for safety reasons: consuming the
@@ -91,18 +95,9 @@ impl Data {
 
     // FIXME: This is absolutely terrible (downcasting!), thanks to Hyper.
     crate fn from_hyp(mut body: HyperBodyReader) -> Result<Data, &'static str> {
-        // Steal the internal, undecoded data buffer and net stream from Hyper.
-        let (mut hyper_buf, pos, cap) = body.get_mut().take_buf();
-        // This is only valid because we know that hyper's `cap` represents the
-        // actual length of the vector. As such, this is really only setting
-        // things up correctly for future use. See
-        // https://github.com/hyperium/hyper/commit/bbbce5f for confirmation.
-        unsafe { hyper_buf.set_len(cap); }
-        let hyper_net_stream = body.get_ref().get_ref();
-
-        #[cfg(feature = "tls")]
         #[inline(always)]
-        fn concrete_stream(stream: &&mut NetworkStream) -> Option<NetStream> {
+        #[cfg(feature = "tls")]
+        fn concrete_stream(stream: &mut NetworkStream) -> Option<NetStream> {
             stream.downcast_ref::<HttpsStream>()
                 .map(|s| NetStream::Https(s.clone()))
                 .or_else(|| {
@@ -111,34 +106,34 @@ impl Data {
                 })
         }
 
-        #[cfg(not(feature = "tls"))]
         #[inline(always)]
-        fn concrete_stream(stream: &&mut NetworkStream) -> Option<NetStream> {
+        #[cfg(not(feature = "tls"))]
+        fn concrete_stream(stream: &mut NetworkStream) -> Option<NetStream> {
             stream.downcast_ref::<HttpStream>()
                 .map(|s| NetStream::Http(s.clone()))
         }
 
         // Retrieve the underlying Http(s)Stream from Hyper.
-        let net_stream = match concrete_stream(hyper_net_stream) {
+        let net_stream = match concrete_stream(*body.get_mut().get_mut()) {
             Some(net_stream) => net_stream,
             None => return Err("Stream is not an HTTP(s) stream!")
         };
 
         // Set the read timeout to 5 seconds.
-        net_stream.set_read_timeout(Some(Duration::from_secs(5))).expect("timeout set");
-
+        let _ = net_stream.set_read_timeout(Some(Duration::from_secs(5)));
+ 
         // Grab the certificate info
         #[cfg(feature = "tls")]
         let cert_info = net_stream.get_peer_certificates();
 
-        // TODO: Explain this.
-        trace_!("Hyper buffer: [{}..{}] ({} bytes).", pos, cap, cap - pos);
-
+        // Steal the internal, undecoded data buffer from Hyper.
+        let (mut hyper_buf, pos, cap) = body.get_mut().take_buf();
+        hyper_buf.truncate(cap); // slow, but safe
         let mut cursor = Cursor::new(hyper_buf);
         cursor.set_position(pos as u64);
-        let inner_data = cursor.chain(net_stream);
 
-        // Create an HTTP reader from the stream.
+        // Create an HTTP reader from the buffer + stream.
+        let inner_data = cursor.chain(net_stream);
         let http_stream = match body {
             SizedReader(_, n) => SizedReader(inner_data, n),
             EofReader(_) => EofReader(inner_data),
@@ -253,7 +248,7 @@ impl Data {
     // bytes can be read from `stream`.
     #[inline(always)]
     crate fn new(mut stream: BodyReader) -> Data {
-        trace_!("Date::new({:?})", stream);
+        trace_!("Data::new({:?})", stream);
         let mut peek_buf: Vec<u8> = vec![0; PEEK_BYTES];
 
         // Fill the buffer with as many bytes as possible. If we read less than

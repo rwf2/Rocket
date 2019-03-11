@@ -67,10 +67,9 @@
 //! consider the following complete "Hello, world!" application, with testing.
 //!
 //! ```rust
-//! #![feature(plugin, decl_macro)]
-//! #![plugin(rocket_codegen)]
+//! #![feature(proc_macro_hygiene, decl_macro)]
 //!
-//! extern crate rocket;
+//! #[macro_use] extern crate rocket;
 //!
 //! #[get("/")]
 //! fn hello() -> &'static str {
@@ -96,10 +95,8 @@
 //! }
 //! ```
 //!
-//! [`Client`]: /rocket/local/struct.Client.html
-//! [`LocalRequest`]: /rocket/local/struct.LocalRequest.html
-//! [`Rocket`]: /rocket/struct.Rocket.html
-//!
+//! [`Client`]: local::Client
+//! [`LocalRequest`]: local::LocalRequest
 
 mod request;
 mod client;

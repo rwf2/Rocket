@@ -23,27 +23,33 @@ function relative() {
   fi
 }
 
+# Full and major version of Rocket
+ROCKET_VERSION="0.4.0"
+ROCKET_MAJOR_VERSION="0.4"
+CURRENT_RELEASE=true
+
 # Root of workspace-like directories.
 PROJECT_ROOT=$(relative "") || exit $?
 CORE_ROOT=$(relative "core") || exit $?
 CONTRIB_ROOT=$(relative "contrib") || exit $?
+SITE_ROOT=$(relative "site") || exit $?
 
 # Root of project-like directories.
 CORE_LIB_ROOT=$(relative "core/lib") || exit $?
 CORE_CODEGEN_ROOT=$(relative "core/codegen") || exit $?
-CORE_CODEGEN_NEXT_ROOT=$(relative "core/codegen_next") || exit $?
 CORE_HTTP_ROOT=$(relative "core/http") || exit $?
 CONTRIB_LIB_ROOT=$(relative "contrib/lib") || exit $?
+CONTRIB_CODEGEN_ROOT=$(relative "contrib/codegen") || exit $?
 
 # Root of infrastructure directories.
 EXAMPLES_DIR=$(relative "examples") || exit $?
 DOC_DIR=$(relative "target/doc") || exit $?
 
 ALL_PROJECT_DIRS=(
-    "${CORE_LIB_ROOT}"
-    "${CORE_CODEGEN_ROOT}"
-    "${CORE_CODEGEN_NEXT_ROOT}"
     "${CORE_HTTP_ROOT}"
+    "${CORE_CODEGEN_ROOT}"
+    "${CORE_LIB_ROOT}"
+    "${CONTRIB_CODEGEN_ROOT}"
     "${CONTRIB_LIB_ROOT}"
 )
 
@@ -52,12 +58,13 @@ if [ "${1}" = "-p" ]; then
   echo "PROJECT_ROOT: ${PROJECT_ROOT}"
   echo "CORE_ROOT: ${CORE_ROOT}"
   echo "CONTRIB_ROOT: ${CONTRIB_ROOT}"
+  echo "SITE_ROOT: ${SITE_ROOT}"
   echo "CORE_LIB_ROOT: ${CORE_LIB_ROOT}"
   echo "CORE_CODEGEN_ROOT: ${CORE_CODEGEN_ROOT}"
-  echo "CORE_CODEGEN_NEXT_ROOT: ${CORE_CODEGEN_NEXT_ROOT}"
   echo "CORE_HTTP_ROOT: ${CORE_HTTP_ROOT}"
   echo "CONTRIB_LIB_ROOT: ${CONTRIB_LIB_ROOT}"
+  echo "CONTRIB_CODEGEN_ROOT: ${CONTRIB_CODEGEN_ROOT}"
   echo "EXAMPLES_DIR: ${EXAMPLES_DIR}"
   echo "DOC_DIR: ${DOC_DIR}"
-  echo "ALL_PROJECT_DIRECTORIES: ${ALL_PROJECT_DIRECTORIES[*]}"
+  echo "ALL_PROJECT_DIRS: ${ALL_PROJECT_DIRS[*]}"
 fi

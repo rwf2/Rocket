@@ -6,6 +6,7 @@ env:
   - TEST_FLAGS=
   - TEST_FLAGS=--release
   - TEST_FLAGS=--contrib
+  - TEST_FLAGS=--core
 rust:
   - nightly
 script: ./scripts/test.sh $TEST_FLAGS

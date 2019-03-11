@@ -1,9 +1,0 @@
-warning: `data` route parameter used with non-payload-supporting method
- --> $DIR/data-without-post.rs:6:12
-  |
-6 | #[get("/", data = "<something>")]
-  |            ^^^^^^^^^^^^^^^^^^^^
-  |
-  = note: 'GET' does not typically support payloads
-  = note: the 'format' attribute parameter will match against the 'Accept' header
-

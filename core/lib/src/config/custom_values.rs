@@ -1,10 +1,10 @@
 use std::fmt;
 
-#[cfg(feature = "tls")] use http::tls::{Certificate, PrivateKey, RootCertStore};
+#[cfg(feature = "tls")]
+use http::tls::{Certificate, PrivateKey, RootCertStore};
+use http::private::Key;
 
 use config::{Result, Config, Value, ConfigError, LoggingLevel};
-use http::uncased::uncased_eq;
-use http::Key;
 
 #[derive(Clone)]
 pub enum SecretKey {
@@ -23,6 +23,7 @@ impl SecretKey {
     #[inline]
     crate fn is_generated(&self) -> bool {
         match *self {
+            #[cfg(feature = "private-cookies")]
             SecretKey::Generated(_) => true,
             _ => false
         }
@@ -31,10 +32,14 @@ impl SecretKey {
 
 impl fmt::Display for SecretKey {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        #[cfg(feature = "private-cookies")]
         match *self {
             SecretKey::Generated(_) => write!(f, "generated"),
             SecretKey::Provided(_) => write!(f, "provided"),
         }
+
+        #[cfg(not(feature = "private-cookies"))]
+        write!(f, "private-cookies disabled")
     }
 }
 
@@ -60,8 +65,7 @@ pub struct TlsConfig;
 ///
 /// # Defaults
 ///
-/// As documented in the [config module](/rocket/config/), the default limits
-/// are as follows:
+/// As documented in [`config`](::config), the default limits are as follows:
 ///
 ///   * **forms**: 32KiB
 ///
@@ -217,6 +221,13 @@ pub fn u16(conf: &Config, name: &str, value: &Value) -> Result<u16> {
     }
 }
 
+pub fn u32(conf: &Config, name: &str, value: &Value) -> Result<u32> {
+    match value.as_integer() {
+        Some(x) if x >= 0 && x <= (u32::max_value() as i64) => Ok(x as u32),
+        _ => Err(conf.bad_type(name, value.type_str(), "a 32-bit unsigned integer"))
+    }
+}
+
 pub fn log_level(conf: &Config,
                           name: &str,
                           value: &Value
@@ -262,22 +273,4 @@ pub fn limits(conf: &Config, name: &str, value: &Value) -> Result<Limits> {
     }
 
     Ok(limits)
-}
-
-pub fn u32_option(conf: &Config, name: &str, value: &Value) -> Result<Option<u32>> {
-    let expect = "a 32-bit unsigned integer or 'none' or 'false'";
-    let err = Err(conf.bad_type(name, value.type_str(), expect));
-
-    match value.as_integer() {
-        Some(x) if x >= 0 && x <= (u32::max_value() as i64) => Ok(Some(x as u32)),
-        Some(_) => err,
-        None => match value.as_str() {
-            Some(v) if uncased_eq(v, "none") => Ok(None),
-            Some(_) => err,
-            _ => match value.as_bool() {
-                Some(false) => Ok(None),
-                _ => err
-            }
-        }
-    }
 }

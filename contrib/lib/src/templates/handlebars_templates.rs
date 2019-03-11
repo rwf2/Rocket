@@ -1,9 +1,7 @@
-extern crate handlebars;
+use templates::serde::Serialize;
+use templates::{Engine, TemplateInfo};
 
-use super::serde::Serialize;
-use super::{Engine, TemplateInfo};
-
-pub use self::handlebars::Handlebars;
+pub use templates::handlebars::Handlebars;
 
 impl Engine for Handlebars {
     const EXT: &'static str = "hbs";

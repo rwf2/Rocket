@@ -8,21 +8,6 @@ use yansi::Paint;
 use http::hyper;
 use router::Route;
 
-/// [unstable] Error type for Rocket. Likely to change.
-#[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
-pub enum Error {
-    /// The request method was bad.
-    BadMethod,
-    /// The value could not be parsed.
-    BadParse,
-    /// There was no such route.
-    NoRoute, // TODO: Add a chain of routes attempted.
-    /// The error was internal.
-    Internal,
-    /// The requested key/index does not exist.
-    NoKey,
-}
-
 /// The kind of launch error that occurred.
 ///
 /// In almost every instance, a launch error occurs because of an I/O error;
@@ -33,18 +18,22 @@ pub enum Error {
 /// other kinds of launch errors.
 #[derive(Debug)]
 pub enum LaunchErrorKind {
+    /// Binding to the provided address/port failed.
     Bind(hyper::Error),
+    /// An I/O error occurred during launch.
     Io(io::Error),
+    /// Route collisions were detected.
     Collision(Vec<(Route, Route)>),
+    /// A launch fairing reported an error.
     FailedFairings(Vec<&'static str>),
+    /// An otherwise uncategorized error occurred during launch.
     Unknown(Box<::std::error::Error + Send + Sync>)
 }
 
 /// An error that occurs during launch.
 ///
-/// A `LaunchError` is returned by
-/// [rocket::launch](/rocket/struct.Rocket.html#method.launch) when launching an
-/// application fails for some reason.
+/// A `LaunchError` is returned by [`launch()`](::Rocket::launch()) when
+/// launching an application fails.
 ///
 /// # Panics
 ///
@@ -218,7 +207,7 @@ impl Drop for LaunchError {
             LaunchErrorKind::FailedFairings(ref failures) => {
                 error!("Rocket failed to launch due to failing fairings:");
                 for fairing in failures {
-                    info_!("{}", Paint::white(fairing));
+                    info_!("{}", fairing);
                 }
 
                 panic!("launch fairing failure");
@@ -226,6 +215,49 @@ impl Drop for LaunchError {
             LaunchErrorKind::Unknown(ref e) => {
                 error!("Rocket failed to launch due to an unknown error.");
                 panic!("{}", e);
+            }
+        }
+    }
+}
+
+use http::uri;
+use http::ext::IntoOwned;
+use http::route::{Error as SegmentError};
+
+/// Error returned by [`set_uri()`](::Route::set_uri()) on invalid URIs.
+#[derive(Debug)]
+pub enum RouteUriError {
+    /// The base (mount point) or route path contains invalid segments.
+    Segment,
+    /// The route URI is not a valid URI.
+    Uri(uri::Error<'static>),
+    /// The base (mount point) contains dynamic segments.
+    DynamicBase,
+}
+
+impl<'a> From<(&'a str, SegmentError<'a>)> for RouteUriError {
+    fn from(_: (&'a str, SegmentError<'a>)) -> Self {
+        RouteUriError::Segment
+    }
+}
+
+impl<'a> From<uri::Error<'a>> for RouteUriError {
+    fn from(error: uri::Error<'a>) -> Self {
+        RouteUriError::Uri(error.into_owned())
+    }
+}
+
+impl fmt::Display for RouteUriError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            RouteUriError::Segment => {
+                write!(f, "The URI contains malformed dynamic route path segments.")
+            }
+            RouteUriError::DynamicBase => {
+                write!(f, "The mount point contains dynamic parameters.")
+            }
+            RouteUriError::Uri(error) => {
+                write!(f, "Malformed URI: {}", error)
             }
         }
     }

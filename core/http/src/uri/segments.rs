@@ -120,4 +120,3 @@ impl<'a> Iterator for Segments<'a> {
     //     self.1.unwrap_or_else(self.fold(0, |cnt, _| cnt + 1))
     // }
 }
-

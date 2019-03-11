@@ -6,7 +6,6 @@ publish = false
 
 [dependencies]
 rocket = { path = "../../core/lib" }
-rocket_codegen = { path = "../../core/codegen" }
 
 [dependencies.rocket_contrib]
 path = "../../contrib/lib"

@@ -1,0 +1,314 @@
+error: fieldless structs or variants are not supported
+ --> $DIR/uri_display.rs:7:1
+  |
+7 | struct Foo1;
+  | ^^^^^^^^^^^^
+  |
+note: error occurred while deriving `UriDisplay`
+ --> $DIR/uri_display.rs:3:10
+  |
+3 | #[derive(UriDisplayQuery)]
+  |          ^^^^^^^^^^^^^^^
+
+error: fieldless structs or variants are not supported
+  --> $DIR/uri_display.rs:14:1
+   |
+14 | struct Foo2();
+   | ^^^^^^^^^^^^^^
+   |
+note: error occurred while deriving `UriDisplay`
+  --> $DIR/uri_display.rs:10:10
+   |
+10 | #[derive(UriDisplayQuery)]
+   |          ^^^^^^^^^^^^^^^
+
+error: empty enums are not supported
+  --> $DIR/uri_display.rs:21:1
+   |
+21 | enum Foo3 { }
+   | ^^^^^^^^^^^^^
+   |
+note: error occurred while deriving `UriDisplay`
+  --> $DIR/uri_display.rs:17:10
+   |
+17 | #[derive(UriDisplayQuery)]
+   |          ^^^^^^^^^^^^^^^
+
+error: fieldless structs or variants are not supported
+  --> $DIR/uri_display.rs:29:5
+   |
+29 |     Variant,
+   |     ^^^^^^^
+   |
+note: error occurred while deriving `UriDisplay`
+  --> $DIR/uri_display.rs:24:10
+   |
+24 | #[derive(UriDisplayQuery)]
+   |          ^^^^^^^^^^^^^^^
+
+error: tuple structs or variants must have exactly one field
+  --> $DIR/uri_display.rs:37:12
+   |
+37 | struct Foo5(String, String);
+   |            ^^^^^^^^^^^^^^^^
+   |
+note: error occurred while deriving `UriDisplay`
+  --> $DIR/uri_display.rs:33:10
+   |
+33 | #[derive(UriDisplayQuery)]
+   |          ^^^^^^^^^^^^^^^
+
+error: invalid value: expected string literal
+  --> $DIR/uri_display.rs:45:20
+   |
+45 |     #[form(field = 123)]
+   |                    ^^^
+   |
+note: error occurred while deriving `UriDisplay`
+  --> $DIR/uri_display.rs:40:10
+   |
+40 | #[derive(UriDisplayQuery)]
+   |          ^^^^^^^^^^^^^^^
+
+error: struct must have exactly one field
+  --> $DIR/uri_display.rs:53:12
+   |
+53 | struct Foo7(String, usize);
+   |            ^^^^^^^^^^^^^^^
+   |
+note: error occurred while deriving `UriDisplay`
+  --> $DIR/uri_display.rs:50:10
+   |
+50 | #[derive(UriDisplayPath)]
+   |          ^^^^^^^^^^^^^^
+
+error: struct must have exactly one field
+  --> $DIR/uri_display.rs:59:1
+   |
+59 | struct Foo8;
+   | ^^^^^^^^^^^^
+   |
+note: error occurred while deriving `UriDisplay`
+  --> $DIR/uri_display.rs:56:10
+   |
+56 | #[derive(UriDisplayPath)]
+   |          ^^^^^^^^^^^^^^
+
+error: enums are not supported
+  --> $DIR/uri_display.rs:65:1
+   |
+65 | enum Foo9 {  }
+   | ^^^^^^^^^^^^^^
+   |
+note: error occurred while deriving `UriDisplay`
+  --> $DIR/uri_display.rs:62:10
+   |
+62 | #[derive(UriDisplayPath)]
+   |          ^^^^^^^^^^^^^^
+
+error: named structs are not supported
+  --> $DIR/uri_display.rs:71:1
+   |
+71 | / struct Foo10 {
+72 | | //~^ ERROR not supported
+73 | |     named: usize
+74 | | }
+   | |_^
+   |
+note: error occurred while deriving `UriDisplay`
+  --> $DIR/uri_display.rs:68:10
+   |
+68 | #[derive(UriDisplayPath)]
+   |          ^^^^^^^^^^^^^^
+
+error[E0277]: the trait bound `Foo1: rocket::http::uri::UriDisplay<rocket::http::uri::Query>` is not satisfied
+ --> $DIR/uri_display.rs:3:10
+  |
+3 | #[derive(UriDisplayQuery)]
+  |          ^^^^^^^^^^^^^^^ the trait `rocket::http::uri::UriDisplay<rocket::http::uri::Query>` is not implemented for `Foo1`
+
+error[E0277]: the trait bound `Foo1: rocket::http::uri::UriDisplay<rocket::http::uri::Query>` is not satisfied
+ --> $DIR/uri_display.rs:3:10
+  |
+3 | #[derive(UriDisplayQuery)]
+  |          ^^^^^^^^^^^^^^^ the trait `rocket::http::uri::UriDisplay<rocket::http::uri::Query>` is not implemented for `Foo1`
+  |
+  = note: required because of the requirements on the impl of `rocket::http::uri::UriDisplay<rocket::http::uri::Query>` for `&Foo1`
+
+error[E0277]: the trait bound `Foo1: rocket::http::uri::UriDisplay<rocket::http::uri::Query>` is not satisfied
+ --> $DIR/uri_display.rs:3:10
+  |
+3 | #[derive(UriDisplayQuery)]
+  |          ^^^^^^^^^^^^^^^ the trait `rocket::http::uri::UriDisplay<rocket::http::uri::Query>` is not implemented for `Foo1`
+  |
+  = note: required because of the requirements on the impl of `rocket::http::uri::UriDisplay<rocket::http::uri::Query>` for `&mut Foo1`
+
+error[E0277]: the trait bound `Foo2: rocket::http::uri::UriDisplay<rocket::http::uri::Query>` is not satisfied
+  --> $DIR/uri_display.rs:10:10
+   |
+10 | #[derive(UriDisplayQuery)]
+   |          ^^^^^^^^^^^^^^^ the trait `rocket::http::uri::UriDisplay<rocket::http::uri::Query>` is not implemented for `Foo2`
+
+error[E0277]: the trait bound `Foo2: rocket::http::uri::UriDisplay<rocket::http::uri::Query>` is not satisfied
+  --> $DIR/uri_display.rs:10:10
+   |
+10 | #[derive(UriDisplayQuery)]
+   |          ^^^^^^^^^^^^^^^ the trait `rocket::http::uri::UriDisplay<rocket::http::uri::Query>` is not implemented for `Foo2`
+   |
+   = note: required because of the requirements on the impl of `rocket::http::uri::UriDisplay<rocket::http::uri::Query>` for `&Foo2`
+
+error[E0277]: the trait bound `Foo2: rocket::http::uri::UriDisplay<rocket::http::uri::Query>` is not satisfied
+  --> $DIR/uri_display.rs:10:10
+   |
+10 | #[derive(UriDisplayQuery)]
+   |          ^^^^^^^^^^^^^^^ the trait `rocket::http::uri::UriDisplay<rocket::http::uri::Query>` is not implemented for `Foo2`
+   |
+   = note: required because of the requirements on the impl of `rocket::http::uri::UriDisplay<rocket::http::uri::Query>` for `&mut Foo2`
+
+error[E0277]: the trait bound `Foo3: rocket::http::uri::UriDisplay<rocket::http::uri::Query>` is not satisfied
+  --> $DIR/uri_display.rs:17:10
+   |
+17 | #[derive(UriDisplayQuery)]
+   |          ^^^^^^^^^^^^^^^ the trait `rocket::http::uri::UriDisplay<rocket::http::uri::Query>` is not implemented for `Foo3`
+
+error[E0277]: the trait bound `Foo3: rocket::http::uri::UriDisplay<rocket::http::uri::Query>` is not satisfied
+  --> $DIR/uri_display.rs:17:10
+   |
+17 | #[derive(UriDisplayQuery)]
+   |          ^^^^^^^^^^^^^^^ the trait `rocket::http::uri::UriDisplay<rocket::http::uri::Query>` is not implemented for `Foo3`
+   |
+   = note: required because of the requirements on the impl of `rocket::http::uri::UriDisplay<rocket::http::uri::Query>` for `&Foo3`
+
+error[E0277]: the trait bound `Foo3: rocket::http::uri::UriDisplay<rocket::http::uri::Query>` is not satisfied
+  --> $DIR/uri_display.rs:17:10
+   |
+17 | #[derive(UriDisplayQuery)]
+   |          ^^^^^^^^^^^^^^^ the trait `rocket::http::uri::UriDisplay<rocket::http::uri::Query>` is not implemented for `Foo3`
+   |
+   = note: required because of the requirements on the impl of `rocket::http::uri::UriDisplay<rocket::http::uri::Query>` for `&mut Foo3`
+
+error[E0277]: the trait bound `Foo4: rocket::http::uri::UriDisplay<rocket::http::uri::Query>` is not satisfied
+  --> $DIR/uri_display.rs:24:10
+   |
+24 | #[derive(UriDisplayQuery)]
+   |          ^^^^^^^^^^^^^^^ the trait `rocket::http::uri::UriDisplay<rocket::http::uri::Query>` is not implemented for `Foo4`
+
+error[E0277]: the trait bound `Foo4: rocket::http::uri::UriDisplay<rocket::http::uri::Query>` is not satisfied
+  --> $DIR/uri_display.rs:24:10
+   |
+24 | #[derive(UriDisplayQuery)]
+   |          ^^^^^^^^^^^^^^^ the trait `rocket::http::uri::UriDisplay<rocket::http::uri::Query>` is not implemented for `Foo4`
+   |
+   = note: required because of the requirements on the impl of `rocket::http::uri::UriDisplay<rocket::http::uri::Query>` for `&Foo4`
+
+error[E0277]: the trait bound `Foo4: rocket::http::uri::UriDisplay<rocket::http::uri::Query>` is not satisfied
+  --> $DIR/uri_display.rs:24:10
+   |
+24 | #[derive(UriDisplayQuery)]
+   |          ^^^^^^^^^^^^^^^ the trait `rocket::http::uri::UriDisplay<rocket::http::uri::Query>` is not implemented for `Foo4`
+   |
+   = note: required because of the requirements on the impl of `rocket::http::uri::UriDisplay<rocket::http::uri::Query>` for `&mut Foo4`
+
+error[E0277]: the trait bound `Foo5: rocket::http::uri::UriDisplay<rocket::http::uri::Query>` is not satisfied
+  --> $DIR/uri_display.rs:33:10
+   |
+33 | #[derive(UriDisplayQuery)]
+   |          ^^^^^^^^^^^^^^^ the trait `rocket::http::uri::UriDisplay<rocket::http::uri::Query>` is not implemented for `Foo5`
+
+error[E0277]: the trait bound `Foo5: rocket::http::uri::UriDisplay<rocket::http::uri::Query>` is not satisfied
+  --> $DIR/uri_display.rs:33:10
+   |
+33 | #[derive(UriDisplayQuery)]
+   |          ^^^^^^^^^^^^^^^ the trait `rocket::http::uri::UriDisplay<rocket::http::uri::Query>` is not implemented for `Foo5`
+   |
+   = note: required because of the requirements on the impl of `rocket::http::uri::UriDisplay<rocket::http::uri::Query>` for `&Foo5`
+
+error[E0277]: the trait bound `Foo5: rocket::http::uri::UriDisplay<rocket::http::uri::Query>` is not satisfied
+  --> $DIR/uri_display.rs:33:10
+   |
+33 | #[derive(UriDisplayQuery)]
+   |          ^^^^^^^^^^^^^^^ the trait `rocket::http::uri::UriDisplay<rocket::http::uri::Query>` is not implemented for `Foo5`
+   |
+   = note: required because of the requirements on the impl of `rocket::http::uri::UriDisplay<rocket::http::uri::Query>` for `&mut Foo5`
+
+error[E0277]: the trait bound `Foo6: rocket::http::uri::UriDisplay<rocket::http::uri::Query>` is not satisfied
+  --> $DIR/uri_display.rs:40:10
+   |
+40 | #[derive(UriDisplayQuery)]
+   |          ^^^^^^^^^^^^^^^ the trait `rocket::http::uri::UriDisplay<rocket::http::uri::Query>` is not implemented for `Foo6`
+
+error[E0277]: the trait bound `Foo6: rocket::http::uri::UriDisplay<rocket::http::uri::Query>` is not satisfied
+  --> $DIR/uri_display.rs:40:10
+   |
+40 | #[derive(UriDisplayQuery)]
+   |          ^^^^^^^^^^^^^^^ the trait `rocket::http::uri::UriDisplay<rocket::http::uri::Query>` is not implemented for `Foo6`
+   |
+   = note: required because of the requirements on the impl of `rocket::http::uri::UriDisplay<rocket::http::uri::Query>` for `&Foo6`
+
+error[E0277]: the trait bound `Foo6: rocket::http::uri::UriDisplay<rocket::http::uri::Query>` is not satisfied
+  --> $DIR/uri_display.rs:40:10
+   |
+40 | #[derive(UriDisplayQuery)]
+   |          ^^^^^^^^^^^^^^^ the trait `rocket::http::uri::UriDisplay<rocket::http::uri::Query>` is not implemented for `Foo6`
+   |
+   = note: required because of the requirements on the impl of `rocket::http::uri::UriDisplay<rocket::http::uri::Query>` for `&mut Foo6`
+
+error[E0277]: the trait bound `Foo7: rocket::http::uri::UriDisplay<rocket::http::uri::Path>` is not satisfied
+  --> $DIR/uri_display.rs:50:10
+   |
+50 | #[derive(UriDisplayPath)]
+   |          ^^^^^^^^^^^^^^ the trait `rocket::http::uri::UriDisplay<rocket::http::uri::Path>` is not implemented for `Foo7`
+
+error[E0277]: the trait bound `Foo7: rocket::http::uri::UriDisplay<rocket::http::uri::Path>` is not satisfied
+  --> $DIR/uri_display.rs:50:10
+   |
+50 | #[derive(UriDisplayPath)]
+   |          ^^^^^^^^^^^^^^ the trait `rocket::http::uri::UriDisplay<rocket::http::uri::Path>` is not implemented for `Foo7`
+   |
+   = note: required because of the requirements on the impl of `rocket::http::uri::UriDisplay<rocket::http::uri::Path>` for `&Foo7`
+
+error[E0277]: the trait bound `Foo8: rocket::http::uri::UriDisplay<rocket::http::uri::Path>` is not satisfied
+  --> $DIR/uri_display.rs:56:10
+   |
+56 | #[derive(UriDisplayPath)]
+   |          ^^^^^^^^^^^^^^ the trait `rocket::http::uri::UriDisplay<rocket::http::uri::Path>` is not implemented for `Foo8`
+
+error[E0277]: the trait bound `Foo8: rocket::http::uri::UriDisplay<rocket::http::uri::Path>` is not satisfied
+  --> $DIR/uri_display.rs:56:10
+   |
+56 | #[derive(UriDisplayPath)]
+   |          ^^^^^^^^^^^^^^ the trait `rocket::http::uri::UriDisplay<rocket::http::uri::Path>` is not implemented for `Foo8`
+   |
+   = note: required because of the requirements on the impl of `rocket::http::uri::UriDisplay<rocket::http::uri::Path>` for `&Foo8`
+
+error[E0277]: the trait bound `Foo9: rocket::http::uri::UriDisplay<rocket::http::uri::Path>` is not satisfied
+  --> $DIR/uri_display.rs:62:10
+   |
+62 | #[derive(UriDisplayPath)]
+   |          ^^^^^^^^^^^^^^ the trait `rocket::http::uri::UriDisplay<rocket::http::uri::Path>` is not implemented for `Foo9`
+
+error[E0277]: the trait bound `Foo9: rocket::http::uri::UriDisplay<rocket::http::uri::Path>` is not satisfied
+  --> $DIR/uri_display.rs:62:10
+   |
+62 | #[derive(UriDisplayPath)]
+   |          ^^^^^^^^^^^^^^ the trait `rocket::http::uri::UriDisplay<rocket::http::uri::Path>` is not implemented for `Foo9`
+   |
+   = note: required because of the requirements on the impl of `rocket::http::uri::UriDisplay<rocket::http::uri::Path>` for `&Foo9`
+
+error[E0277]: the trait bound `Foo10: rocket::http::uri::UriDisplay<rocket::http::uri::Path>` is not satisfied
+  --> $DIR/uri_display.rs:68:10
+   |
+68 | #[derive(UriDisplayPath)]
+   |          ^^^^^^^^^^^^^^ the trait `rocket::http::uri::UriDisplay<rocket::http::uri::Path>` is not implemented for `Foo10`
+
+error[E0277]: the trait bound `Foo10: rocket::http::uri::UriDisplay<rocket::http::uri::Path>` is not satisfied
+  --> $DIR/uri_display.rs:68:10
+   |
+68 | #[derive(UriDisplayPath)]
+   |          ^^^^^^^^^^^^^^ the trait `rocket::http::uri::UriDisplay<rocket::http::uri::Path>` is not implemented for `Foo10`
+   |
+   = note: required because of the requirements on the impl of `rocket::http::uri::UriDisplay<rocket::http::uri::Path>` for `&Foo10`
+
+error: aborting due to 36 previous errors
+
+For more information about this error, try `rustc --explain E0277`.

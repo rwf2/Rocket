@@ -94,7 +94,27 @@ impl<'a, B: 'static + ToOwned + ?Sized> IntoOwned for Cow<'a, B> {
     type Owned = Cow<'static, B>;
 
     #[inline(always)]
-    fn into_owned(self) -> Self::Owned {
+    fn into_owned(self) -> <Self as IntoOwned>::Owned {
         Cow::Owned(self.into_owned())
+    }
+}
+
+use std::path::Path;
+
+// Outside of http, this is used by a test.
+#[doc(hidden)]
+pub trait Normalize {
+    fn normalized_str(&self) -> Cow<str>;
+}
+
+impl<T: AsRef<Path>> Normalize for T {
+    #[cfg(windows)]
+    fn normalized_str(&self) -> Cow<str> {
+        self.as_ref().to_string_lossy().replace('\\', "/").into()
+    }
+
+    #[cfg(not(windows))]
+    fn normalized_str(&self) -> Cow<str> {
+        self.as_ref().to_string_lossy()
     }
 }

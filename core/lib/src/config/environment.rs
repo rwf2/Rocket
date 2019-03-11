@@ -20,6 +20,12 @@ pub enum Environment {
 }
 
 impl Environment {
+    /// List of all of the possible environments.
+    crate const ALL: [Environment; 3] = [Development, Staging, Production];
+
+    /// String of all valid environments.
+    crate const VALID: &'static str = "development, staging, production";
+
     /// Retrieves the "active" environment as determined by the `ROCKET_ENV`
     /// environment variable. If `ROCKET_ENV` is not set, returns `Development`
     /// when the application was compiled in `debug` mode and `Production` when
@@ -37,17 +43,6 @@ impl Environment {
             #[cfg(not(debug_assertions))]
             _ => Ok(Production),
         }
-    }
-
-    /// Returns a string with a comma-separated list of valid environments.
-    crate fn valid() -> &'static str {
-        "development, staging, production"
-    }
-
-    /// Returns a list of all of the possible environments.
-    #[inline]
-    crate fn all() -> [Environment; 3] {
-        [Development, Staging, Production]
     }
 
     /// Returns `true` if `self` is `Environment::Development`.

@@ -1,0 +1,94 @@
+[[articles]]
+title = """
+  Rocket v0.4: Typed URIs, Database Support, Revamped Queries, & More!
+"""
+slug = "2018-12-08-version-0.4"
+author = "Sergio Benitez"
+author_url = "https://sergio.bz"
+date = "December 08, 2018"
+snippet = """
+I am elated to announce that the next major release of Rocket is now available!
+Rocket 0.4 is a step forward in every direction: it is **packed** with features
+and improvements that increase developer productivity, improve application
+security and robustness, provide new opportunities for extensibility, and
+deliver a renewed degree of toolchain stability.
+
+Rocket 0.4 is the culmination of more than a year of development. During this
+time, more than 600 changes were committed, almost 400 issues were closed, and
+over 165 pull requests were submitted. The Rocket community has proved steadfast
+in its support: a sincere thank you to everyone involved!
+"""
+
+[[articles]]
+title = "Rocket's 2nd v0.4 Release Candidate"
+slug = "2018-11-30-version-0.4-rc-2"
+author = "Sergio Benitez"
+author_url = "https://sergio.bz"
+date = "November 30, 2018"
+snippet = """
+After a successful and productive initial v0.4 release candidate, I am happy to
+announce that the second release candidate for Rocket v0.4 is now available.
+
+This release candidate fixes issues identified during the first release
+candidate, introduces further features, and leverages upstream `rustc`
+contributions for improved diagnostics and stability. As before, this is an
+opportunity to discover issues with Rocket v0.4 and its documentation before its
+general release. We encourage all users to migrate their applications to the
+second release candidate and report any issues to the [GitHub issue tracker].
+
+[GitHub issue tracker]: https://github.com/SergioBenitez/Rocket/issues
+"""
+
+[[articles]]
+title = "Rocket v0.4 Release Candidate"
+slug = "2018-10-31-version-0.4-rc"
+author = "Sergio Benitez"
+author_url = "https://sergio.bz"
+date = "October 31, 2018"
+snippet = """
+I am delighted to announce that a release candidate for Rocket v0.4 is available
+today! This release brings over a year of features, improvements, and
+refinements, resolving some of the most called for requests and bringing Rocket
+measurably closer to stable compatibility.
+
+The release candidate is an opportunity to discover issues with Rocket v0.4 and
+its documentation before its general release. We encourage all users to migrate
+their applications to the release candidate and report any issues to the [GitHub
+issue tracker].
+
+[GitHub issue tracker]: https://github.com/SergioBenitez/Rocket/issues
+"""
+
+[[articles]]
+title = "Rocket v0.3: Fairings, TLS, Private Cookies"
+slug = "2017-07-14-version-0.3"
+author = "Sergio Benitez"
+author_url = "https://sergio.bz"
+date = "July 14, 2017"
+snippet = """
+I'm excited to announce that the next major release of Rocket is available
+today! Rocket 0.3 is packed with new features and improvements that increase
+developer productivity, improve application security, and provide new
+opportunities for extensibility. Rocket 0.3 is the culmination of almost 6
+months of work. During this time, more than 225 changes were committed, over 100
+issues (primarily questions and feature requests) were closed, and over 40 pull
+requests were submitted. The Rocket community has proven steadfast in their
+support: a sincere thank you to everyone involved!
+"""
+
+[[articles]]
+title = "Rocket v0.2: Managed State & More"
+slug = "2017-02-06-version-0.2"
+author = "Sergio Benitez"
+author_url = "https://sergio.bz"
+date = "February 06, 2017"
+snippet = """
+Today marks the first major release since Rocket's debut a little over a month
+ago. Rocket v0.2 packs a ton of new features, fixes, and general improvements.
+Much of the development in v0.2 was led by the community, either through reports
+via the [GitHub issue tracker](https://github.com/SergioBenitez/Rocket/issues)
+or via direct contributions. In fact, there have been **20 unique contributors**
+to Rocket's codebase since Rocket's initial introduction! Community feedback has
+been incredible. As a special thank you, we include the names of these
+contributors at the end of this article.
+"""

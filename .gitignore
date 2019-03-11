@@ -19,6 +19,7 @@ Cargo.lock
 
 # The upload script, for now.
 scripts/upload-docs.sh
+scripts/redirect.html
 
 # Backup files.
 *.bak

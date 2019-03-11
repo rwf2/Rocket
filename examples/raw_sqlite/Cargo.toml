@@ -6,5 +6,4 @@ publish = false
 
 [dependencies]
 rocket = { path = "../../core/lib" }
-rocket_codegen = { path = "../../core/codegen" }
-rusqlite = "0.13"
+rusqlite = "0.14"

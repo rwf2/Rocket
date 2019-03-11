@@ -1,13 +1,14 @@
 mod parser;
 mod error;
 mod tables;
-#[cfg(test)]
-mod tests;
+
+#[cfg(test)] mod tests;
 
 use uri::{Uri, Origin, Absolute, Authority};
 use parse::indexed::IndexedInput;
 use self::parser::{uri, origin, authority_only, absolute_only, rocket_route_origin};
 
+crate use self::tables::is_pchar;
 pub use self::error::Error;
 
 type RawInput<'a> = IndexedInput<'a, [u8]>;

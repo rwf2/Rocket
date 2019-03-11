@@ -1,18 +1,17 @@
 use std::path::{Path, PathBuf};
 use std::collections::HashMap;
 
-use super::{Engines, TemplateInfo};
-use super::glob;
+use templates::{glob, Engines, TemplateInfo};
 
 use rocket::http::ContentType;
 
-pub struct Context {
+crate struct Context {
     /// The root of the template directory.
-    pub root: PathBuf,
+    crate root: PathBuf,
     /// Mapping from template name to its information.
-    pub templates: HashMap<String, TemplateInfo>,
+    crate templates: HashMap<String, TemplateInfo>,
     /// Loaded template engines
-    pub engines: Engines,
+    crate engines: Engines,
 }
 
 impl Context {
