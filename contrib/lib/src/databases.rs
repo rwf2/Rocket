@@ -118,8 +118,8 @@
 //! sqlite_db = { url = "db.sqlite" }
 //!
 //! # Option 2:
-//! [global.databases.pg_db]
-//! url = "mysql://root:root@localhost/pg_db"
+//! [global.databases.my_db]
+//! url = "mysql://root:root@localhost/my_db"
 //!
 //! # With a `pool_size` key:
 //! [global.databases]
