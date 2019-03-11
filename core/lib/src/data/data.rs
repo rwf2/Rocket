@@ -121,7 +121,7 @@ impl Data {
 
         // Set the read timeout to 5 seconds.
         let _ = net_stream.set_read_timeout(Some(Duration::from_secs(5)));
- 
+
         // Grab the certificate info
         #[cfg(feature = "tls")]
         let cert_info = net_stream.get_peer_certificates();
