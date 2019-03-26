@@ -476,7 +476,7 @@ fn admin_panel_redirect() -> Redirect {
 
 The three routes above encode authentication _and_ authorization. The
 `admin_panel` route only succeeds if an administrator is logged in. Only then is
-the admin panel displayed. If the user is not an admin, the `AdminUser` route
+the admin panel displayed. If the user is not an admin, the `admin` route
 will forward. Since the `admin_panel_user` route is ranked next highest, it is
 attempted next. This route succeeds if there is _any_ user signed in, and an
 authorization failure message is displayed. Finally, if a user isn't signed in,
