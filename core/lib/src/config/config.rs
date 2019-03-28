@@ -10,7 +10,7 @@ use crate::config::{Table, Value, Array, Datetime};
 use crate::http::private::Key;
 
 use super::custom_values::*;
-use {num_cpus, base64};
+use {num_cpus, base16, base64};
 
 /// Structure for Rocket application configuration.
 ///
@@ -298,7 +298,7 @@ impl Config {
     ///   * **workers**: Integer (16-bit unsigned)
     ///   * **keep_alive**: Integer
     ///   * **log**: String
-    ///   * **secret_key**: String (256-bit base64)
+    ///   * **secret_key**: String (256-bit base64 or base16)
     ///   * **tls**: Table (`certs` (path as String), `key` (path as String))
     pub(crate) fn set_raw(&mut self, name: &str, val: &Value) -> Result<()> {
         let (id, ok) = (|val| val, |_| Ok(()));
@@ -423,11 +423,11 @@ impl Config {
     }
 
     /// Sets the `secret_key` in `self` to `key` which must be a 256-bit base64
-    /// encoded string.
+    /// or base16 encoded string.
     ///
     /// # Errors
     ///
-    /// If `key` is not a valid 256-bit base64 encoded string, returns a
+    /// If `key` is not a valid 256-bit encoded string, returns a
     /// `BadType` error.
     ///
     /// # Example
@@ -438,20 +438,31 @@ impl Config {
     /// let mut config = Config::new(Environment::Staging);
     /// let key = "8Xui8SN4mI+7egV/9dlfYYLGQJeEx4+DwmSQLwDVXJg=";
     /// assert!(config.set_secret_key(key).is_ok());
+    /// let key = "fe4c5b09a9ac372156e44ce133bc940685ef5e0394d6e9274aadacc21e4f2643";
+    /// assert!(config.set_secret_key(key).is_ok());
     /// assert!(config.set_secret_key("hello? anyone there?").is_err());
     /// ```
     pub fn set_secret_key<K: Into<String>>(&mut self, key: K) -> Result<()> {
         let key = key.into();
         let error = self.bad_type("secret_key", "string",
-                                  "a 256-bit base64 encoded string");
+                                  "a 256-bit base16 or base64 encoded string");
 
-        if key.len() != 44 {
-            return Err(error);
-        }
-
-        let bytes = match base64::decode(&key) {
-            Ok(bytes) => bytes,
-            Err(_) => return Err(error)
+        let bytes = match key.len() {
+            44 => {
+                match base64::decode(&key) {
+                    Ok(bytes) => bytes,
+                    Err(_) => return Err(error)
+                }
+            }
+            64 => {
+                match base16::decode(&key) {
+                    Ok(bytes) => bytes,
+                    Err(_) => return Err(error)
+                }
+            }
+            _ => {
+                return Err(error)
+            }
         };
 
         self.secret_key = SecretKey::Provided(Key::from_master(&bytes));
