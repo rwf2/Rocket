@@ -92,9 +92,9 @@ limits = { forms = 32768 }
 The `workers` and `secret_key` default parameters are computed by Rocket
 automatically; the values above are not valid TOML syntax. When manually
 specifying the number of workers, the value should be an integer: `workers =
-10`. When manually specifying the secret key, the value should a 256-bit base64
-encoded string. Such a string can be generated using a tool such as openssl:
-`openssl rand -base64 32`.
+10`. When manually specifying the secret key, the value should a random 256-bit
+value, encoded as a base64 or base16 string. Such a string can be generated
+using a tool like openssl: `openssl rand -base64 32`.
 
 The "global" pseudo-environment can be used to set and/or override configuration
 parameters globally. A parameter defined in a `[global]` table sets, or

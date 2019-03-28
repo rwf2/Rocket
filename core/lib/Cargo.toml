@@ -34,6 +34,7 @@ state = "0.4.1"
 time = "0.1"
 memchr = "2" # TODO: Use pear instead.
 base64 = "0.10"
+base16 = "0.2"
 pear = "0.1"
 atty = "0.2"
 
