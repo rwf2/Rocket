@@ -10,6 +10,8 @@ mod query;
 #[cfg(test)]
 mod tests;
 
+#[doc(hidden)] pub use rocket_codegen::{FromForm, FromFormValue};
+
 pub use self::request::Request;
 pub use self::from_request::{FromRequest, Outcome};
 pub use self::param::{FromParam, FromSegments};

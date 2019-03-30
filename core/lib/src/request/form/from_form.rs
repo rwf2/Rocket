@@ -1,7 +1,5 @@
 use request::FormItems;
 
-pub use rocket_codegen::FromForm;
-
 /// Trait to create an instance of some type from an HTTP form.
 /// [`Form`](::request::Form) requires its generic type to implement this trait.
 ///
