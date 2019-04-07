@@ -9,11 +9,16 @@ pub fn syn_to_diag(error: syn::parse::Error) -> Diagnostic {
 
 pub trait IdentExt {
     fn prepend(&self, string: &str) -> syn::Ident;
+    fn append(&self, string: &str) -> syn::Ident;
 }
 
 impl IdentExt for syn::Ident {
     fn prepend(&self, string: &str) -> syn::Ident {
         syn::Ident::new(&format!("{}{}", string, self), self.span())
+    }
+
+    fn append(&self, string: &str) -> syn::Ident {
+        syn::Ident::new(&format!("{}{}", self, string), self.span())
     }
 }
 

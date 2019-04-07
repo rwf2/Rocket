@@ -1,3 +1,5 @@
+use rand::{Rng, distributions::Alphanumeric};
+
 use proc_macro::{TokenStream, Span};
 use crate::proc_macro2::TokenStream as TokenStream2;
 use devise::{syn, Spanned, SpanWrapped, Result, FromMeta, ext::TypeExt};
@@ -325,15 +327,26 @@ fn generate_internal_uri_macro(route: &Route) -> TokenStream2 {
         .map(|name| route.inputs.iter().find(|(ident, ..)| ident == name).unwrap())
         .map(|(ident, _, ty)| quote!(#ident: #ty));
 
-    let generated_macro_name = route.function.ident.prepend(URI_MACRO_PREFIX);
+    let random_part = rand::thread_rng().sample_iter(&Alphanumeric).take(8).collect::<String>();
+
+    let mut generated_macro_name = route.function.ident.prepend(URI_MACRO_PREFIX);
+    generated_macro_name.set_span(Span::call_site().into());
+    let inner_generated_macro_name = generated_macro_name.append(&random_part);
     let route_uri = route.attribute.path.origin.0.to_string();
 
     quote! {
-        pub macro #generated_macro_name($($token:tt)*) {{
-            extern crate std;
-            extern crate rocket;
-            rocket::rocket_internal_uri!(#route_uri, (#(#dynamic_args),*), $($token)*)
-        }}
+        #[doc(hidden)]
+        #[macro_export]
+        macro_rules! #inner_generated_macro_name {
+            ($($token:tt)*) => {{
+                extern crate std;
+                extern crate rocket;
+                rocket::rocket_internal_uri!(#route_uri, (#(#dynamic_args),*), $($token)*)
+            }};
+        }
+
+        #[doc(hidden)]
+        pub use #inner_generated_macro_name as #generated_macro_name;
     }
 }
 
