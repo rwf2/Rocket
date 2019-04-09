@@ -1,6 +1,5 @@
 #![feature(specialization)]
 #![feature(proc_macro_hygiene)]
-#![feature(try_from)]
 #![feature(crate_visibility_modifier)]
 #![feature(doc_cfg)]
 #![recursion_limit="512"]
