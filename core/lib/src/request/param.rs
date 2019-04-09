@@ -2,6 +2,7 @@ use std::str::FromStr;
 use std::path::PathBuf;
 use std::fmt::Debug;
 use std::borrow::Cow;
+use std::convert::Infallible;
 
 use crate::http::{RawStr, uri::{Segments, SegmentError}};
 
@@ -205,7 +206,7 @@ pub trait FromParam<'a>: Sized {
 }
 
 impl<'a> FromParam<'a> for &'a RawStr {
-    type Error = !;
+    type Error = Infallible;
 
     #[inline(always)]
     fn from_param(param: &'a RawStr) -> Result<&'a RawStr, Self::Error> {
@@ -258,7 +259,7 @@ impl_with_fromstr! {
 }
 
 impl<'a, T: FromParam<'a>> FromParam<'a> for Result<T, T::Error> {
-    type Error = !;
+    type Error = Infallible;
 
     #[inline]
     fn from_param(param: &'a RawStr) -> Result<Self, Self::Error> {
@@ -270,7 +271,7 @@ impl<'a, T: FromParam<'a>> FromParam<'a> for Result<T, T::Error> {
 }
 
 impl<'a, T: FromParam<'a>> FromParam<'a> for Option<T> {
-    type Error = !;
+    type Error = Infallible;
 
     #[inline]
     fn from_param(param: &'a RawStr) -> Result<Self, Self::Error> {
@@ -309,7 +310,7 @@ pub trait FromSegments<'a>: Sized {
 }
 
 impl<'a> FromSegments<'a> for Segments<'a> {
-    type Error = !;
+    type Error = Infallible;
 
     #[inline(always)]
     fn from_segments(segments: Segments<'a>) -> Result<Segments<'a>, Self::Error> {
@@ -342,10 +343,10 @@ impl FromSegments<'_> for PathBuf {
 }
 
 impl<'a, T: FromSegments<'a>> FromSegments<'a> for Result<T, T::Error> {
-    type Error = !;
+    type Error = Infallible;
 
     #[inline]
-    fn from_segments(segments: Segments<'a>) -> Result<Result<T, T::Error>, !> {
+    fn from_segments(segments: Segments<'a>) -> Result<Result<T, T::Error>, Self::Error> {
         match T::from_segments(segments) {
             Ok(val) => Ok(Ok(val)),
             Err(e) => Ok(Err(e)),
@@ -354,10 +355,10 @@ impl<'a, T: FromSegments<'a>> FromSegments<'a> for Result<T, T::Error> {
 }
 
 impl<'a, T: FromSegments<'a>> FromSegments<'a> for Option<T> {
-    type Error = !;
+    type Error = Infallible;
 
     #[inline]
-    fn from_segments(segments: Segments<'a>) -> Result<Option<T>, !> {
+    fn from_segments(segments: Segments<'a>) -> Result<Option<T>, Self::Error> {
         match T::from_segments(segments) {
             Ok(val) => Ok(Some(val)),
             Err(_) => Ok(None)

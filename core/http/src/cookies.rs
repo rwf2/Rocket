@@ -1,10 +1,11 @@
-use std::fmt;
 use std::cell::RefMut;
+use std::fmt;
 
-use crate::Header;
 use cookie::Delta;
+use crate::Header;
 
-#[doc(hidden)] pub use self::key::*;
+#[doc(hidden)]
+pub use self::key::*;
 pub use cookie::{Cookie, CookieJar, SameSite};
 
 /// Types and methods to manage a `Key` when private cookies are enabled.
@@ -20,8 +21,12 @@ mod key {
     pub struct Key;
 
     impl Key {
-        pub fn generate() -> Self { Key }
-        pub fn from_master(_bytes: &[u8]) -> Self { Key }
+        pub fn generate() -> Self {
+            Key
+        }
+        pub fn from_master(_bytes: &[u8]) -> Self {
+            Key
+        }
     }
 }
 
@@ -74,20 +79,21 @@ mod key {
 /// [private cookie]: Cookies::add_private()
 ///
 /// ```rust
-/// # #![feature(proc_macro_hygiene, decl_macro, never_type)]
+/// # #![feature(proc_macro_hygiene, decl_macro)]
 /// # #[macro_use] extern crate rocket;
 /// #
 /// use rocket::http::Status;
 /// use rocket::outcome::IntoOutcome;
 /// use rocket::request::{self, Request, FromRequest};
+/// use std::convert::Infallible;
 ///
 /// // In practice, we'd probably fetch the user from the database.
 /// struct User(usize);
 ///
 /// impl FromRequest<'_, '_> for User {
-///     type Error = !;
+///     type Error = Infallible;
 ///
-///     fn from_request(request: &Request<'_>) -> request::Outcome<User, !> {
+///     fn from_request(request: &Request<'_>) -> request::Outcome<Self, Self::Error> {
 ///         request.cookies()
 ///             .get_private("user_id")
 ///             .and_then(|cookie| cookie.value().parse().ok())
@@ -130,7 +136,7 @@ pub enum Cookies<'a> {
     #[doc(hidden)]
     Jarred(RefMut<'a, CookieJar>, &'a Key),
     #[doc(hidden)]
-    Empty(CookieJar)
+    Empty(CookieJar),
 }
 
 impl<'a> Cookies<'a> {
@@ -152,7 +158,9 @@ impl<'a> Cookies<'a> {
     #[doc(hidden)]
     #[inline(always)]
     pub fn parse_cookie(cookie_str: &str) -> Option<Cookie<'static>> {
-        Cookie::parse_encoded(cookie_str).map(|c| c.into_owned()).ok()
+        Cookie::parse_encoded(cookie_str)
+            .map(|c| c.into_owned())
+            .ok()
     }
 
     /// Adds an original `cookie` to this collection.
@@ -181,7 +189,7 @@ impl<'a> Cookies<'a> {
     pub fn get(&self, name: &str) -> Option<&Cookie<'static>> {
         match *self {
             Cookies::Jarred(ref jar, _) => jar.get(name),
-            Cookies::Empty(_) => None
+            Cookies::Empty(_) => None,
         }
     }
 
@@ -250,10 +258,10 @@ impl<'a> Cookies<'a> {
     ///     }
     /// }
     /// ```
-    pub fn iter(&self) -> impl Iterator<Item=&Cookie<'static>> {
+    pub fn iter(&self) -> impl Iterator<Item = &Cookie<'static>> {
         match *self {
             Cookies::Jarred(ref jar, _) => jar.iter(),
-            Cookies::Empty(ref jar) => jar.iter()
+            Cookies::Empty(ref jar) => jar.iter(),
         }
     }
 
@@ -263,7 +271,7 @@ impl<'a> Cookies<'a> {
     pub fn delta(&self) -> Delta<'_> {
         match *self {
             Cookies::Jarred(ref jar, _) => jar.delta(),
-            Cookies::Empty(ref jar) => jar.delta()
+            Cookies::Empty(ref jar) => jar.delta(),
         }
     }
 }
@@ -291,7 +299,7 @@ impl Cookies<'_> {
     pub fn get_private(&mut self, name: &str) -> Option<Cookie<'static>> {
         match *self {
             Cookies::Jarred(ref mut jar, key) => jar.private(key).get(name),
-            Cookies::Empty(_) => None
+            Cookies::Empty(_) => None,
         }
     }
 
@@ -404,7 +412,7 @@ impl fmt::Debug for Cookies<'_> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match *self {
             Cookies::Jarred(ref jar, _) => write!(f, "{:?}", jar),
-            Cookies::Empty(ref jar) => write!(f, "{:?}", jar)
+            Cookies::Empty(ref jar) => write!(f, "{:?}", jar),
         }
     }
 }

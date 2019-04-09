@@ -1,4 +1,5 @@
 use std::borrow::Borrow;
+use std::convert::Infallible;
 
 use crate::outcome::{self, IntoOutcome};
 use crate::outcome::Outcome::*;
@@ -388,7 +389,7 @@ pub trait FromData<'a>: Sized {
 
 /// The identity implementation of `FromData`. Always returns `Success`.
 impl<'f> FromData<'f> for Data {
-    type Error = !;
+    type Error = Infallible;
     type Owned = Data;
     type Borrowed = Data;
 

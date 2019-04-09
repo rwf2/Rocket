@@ -1,10 +1,11 @@
-#![feature(proc_macro_hygiene, decl_macro, never_type)]
+#![feature(proc_macro_hygiene, decl_macro)]
 
 #[macro_use] extern crate rocket;
 
 #[cfg(test)] mod tests;
 
 use std::collections::HashMap;
+use std::convert::Infallible;
 
 use rocket::outcome::IntoOutcome;
 use rocket::request::{self, Form, FlashMessage, FromRequest, Request};
@@ -22,9 +23,9 @@ struct Login {
 struct User(usize);
 
 impl<'a, 'r> FromRequest<'a, 'r> for User {
-    type Error = !;
+    type Error = Infallible;
 
-    fn from_request(request: &'a Request<'r>) -> request::Outcome<User, !> {
+    fn from_request(request: &'a Request<'r>) -> request::Outcome<User, Infallible> {
         request.cookies()
             .get_private("user_id")
             .and_then(|cookie| cookie.value().parse().ok())

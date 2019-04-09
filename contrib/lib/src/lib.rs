@@ -1,5 +1,4 @@
 #![feature(crate_visibility_modifier)]
-#![feature(never_type)]
 #![feature(doc_cfg)]
 
 #![doc(html_root_url = "https://api.rocket.rs/v0.5")]

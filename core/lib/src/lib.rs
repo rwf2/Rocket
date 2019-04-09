@@ -1,7 +1,6 @@
 #![feature(specialization)]
 #![feature(decl_macro)]
 #![feature(try_trait)]
-#![feature(never_type)]
 #![feature(proc_macro_hygiene)]
 #![feature(crate_visibility_modifier)]
 #![feature(label_break_value)]

@@ -4,6 +4,7 @@ use std::num::{
     NonZeroI8, NonZeroI16, NonZeroI32, NonZeroI64, NonZeroI128, NonZeroIsize,
     NonZeroU8, NonZeroU16, NonZeroU32, NonZeroU64, NonZeroU128, NonZeroUsize,
 };
+use std::convert::Infallible;
 
 use crate::http::RawStr;
 
@@ -191,7 +192,7 @@ pub trait FromFormValue<'v>: Sized {
 }
 
 impl<'v> FromFormValue<'v> for &'v RawStr {
-    type Error = !;
+    type Error = Infallible;
 
     // This just gives the raw string.
     #[inline(always)]
@@ -248,7 +249,7 @@ impl_with_fromstr!(
 );
 
 impl<'v, T: FromFormValue<'v>> FromFormValue<'v> for Option<T> {
-    type Error = !;
+    type Error = Infallible;
 
     #[inline(always)]
     fn from_form_value(v: &'v RawStr) -> Result<Self, Self::Error> {
@@ -266,7 +267,7 @@ impl<'v, T: FromFormValue<'v>> FromFormValue<'v> for Option<T> {
 
 // // TODO: Add more useful implementations (range, regex, etc.).
 impl<'v, T: FromFormValue<'v>> FromFormValue<'v> for Result<T, T::Error> {
-    type Error = !;
+    type Error = Infallible;
 
     #[inline(always)]
     fn from_form_value(v: &'v RawStr) -> Result<Self, Self::Error> {

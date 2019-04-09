@@ -1,5 +1,6 @@
 use std::fmt::Debug;
 use std::net::SocketAddr;
+use std::convert::Infallible;
 
 use crate::router::Route;
 use crate::request::Request;
@@ -284,11 +285,11 @@ impl<S, E> IntoOutcome<S, (Status, E), ()> for Result<S, E> {
 ///
 /// ```rust
 /// # #![feature(proc_macro_hygiene, decl_macro)]
-/// # #![feature(never_type)]
 /// # #[macro_use] extern crate rocket;
 /// # #[cfg(feature = "private-cookies")] mod inner {
 /// # use rocket::outcome::{IntoOutcome, Outcome};
 /// # use rocket::request::{self, FromRequest, Request};
+/// # use std::convert::Infallible;
 /// # struct User { id: String, is_admin: bool }
 /// # struct Database;
 /// # impl Database {
@@ -306,9 +307,9 @@ impl<S, E> IntoOutcome<S, (Status, E), ()> for Result<S, E> {
 /// # struct Admin<'a> { user: &'a User }
 /// #
 /// impl<'a> FromRequest<'a, '_> for &'a User {
-///     type Error = !;
+///     type Error = Infallible;
 ///
-///     fn from_request(request: &'a Request<'_>) -> request::Outcome<&'a User, !> {
+///     fn from_request(request: &'a Request<'_>) -> request::Outcome<Self, Self::Error> {
 ///         // This closure will execute at most once per request, regardless of
 ///         // the number of times the `User` guard is executed.
 ///         let user_result = request.local_cache(|| {
@@ -324,9 +325,9 @@ impl<S, E> IntoOutcome<S, (Status, E), ()> for Result<S, E> {
 /// }
 ///
 /// impl<'a> FromRequest<'a, '_> for Admin<'a> {
-///     type Error = !;
+///     type Error = Infallible;
 ///
-///     fn from_request(request: &'a Request<'_>) -> request::Outcome<Admin<'a>, !> {
+///     fn from_request(request: &'a Request<'_>) -> request::Outcome<Self, Self::Error> {
 ///         let user = request.guard::<&User>()?;
 ///
 ///         if user.is_admin {
@@ -358,7 +359,7 @@ pub trait FromRequest<'a, 'r>: Sized {
 }
 
 impl FromRequest<'_, '_> for Method {
-    type Error = !;
+    type Error = Infallible;
 
     fn from_request(request: &Request<'_>) -> Outcome<Self, Self::Error> {
         Success(request.method())
@@ -366,7 +367,7 @@ impl FromRequest<'_, '_> for Method {
 }
 
 impl<'a> FromRequest<'a, '_> for &'a Origin<'a> {
-    type Error = !;
+    type Error = Infallible;
 
     fn from_request(request: &'a Request<'_>) -> Outcome<Self, Self::Error> {
         Success(request.uri())
@@ -374,7 +375,7 @@ impl<'a> FromRequest<'a, '_> for &'a Origin<'a> {
 }
 
 impl<'r> FromRequest<'_, 'r> for &'r Route {
-    type Error = !;
+    type Error = Infallible;
 
     fn from_request(request: &Request<'r>) -> Outcome<Self, Self::Error> {
         match request.route() {
@@ -385,7 +386,7 @@ impl<'r> FromRequest<'_, 'r> for &'r Route {
 }
 
 impl<'a> FromRequest<'a, '_> for Cookies<'a> {
-    type Error = !;
+    type Error = Infallible;
 
     fn from_request(request: &'a Request<'_>) -> Outcome<Self, Self::Error> {
         Success(request.cookies())
@@ -393,7 +394,7 @@ impl<'a> FromRequest<'a, '_> for Cookies<'a> {
 }
 
 impl<'a> FromRequest<'a, '_> for &'a Accept {
-    type Error = !;
+    type Error = Infallible;
 
     fn from_request(request: &'a Request<'_>) -> Outcome<Self, Self::Error> {
         match request.accept() {
@@ -404,7 +405,7 @@ impl<'a> FromRequest<'a, '_> for &'a Accept {
 }
 
 impl<'a> FromRequest<'a, '_> for &'a ContentType {
-    type Error = !;
+    type Error = Infallible;
 
     fn from_request(request: &'a Request<'_>) -> Outcome<Self, Self::Error> {
         match request.content_type() {
@@ -415,7 +416,7 @@ impl<'a> FromRequest<'a, '_> for &'a ContentType {
 }
 
 impl FromRequest<'_, '_> for SocketAddr {
-    type Error = !;
+    type Error = Infallible;
 
     fn from_request(request: &Request<'_>) -> Outcome<Self, Self::Error> {
         match request.remote() {
@@ -426,7 +427,7 @@ impl FromRequest<'_, '_> for SocketAddr {
 }
 
 impl<'a, 'r, T: FromRequest<'a, 'r>> FromRequest<'a, 'r> for Result<T, T::Error> {
-    type Error = !;
+    type Error = Infallible;
 
     fn from_request(request: &'a Request<'r>) -> Outcome<Self, Self::Error> {
         match T::from_request(request) {
@@ -438,7 +439,7 @@ impl<'a, 'r, T: FromRequest<'a, 'r>> FromRequest<'a, 'r> for Result<T, T::Error>
 }
 
 impl<'a, 'r, T: FromRequest<'a, 'r>> FromRequest<'a, 'r> for Option<T> {
-    type Error = !;
+    type Error = Infallible;
 
     fn from_request(request: &'a Request<'r>) -> Outcome<Self, Self::Error> {
         match T::from_request(request) {
