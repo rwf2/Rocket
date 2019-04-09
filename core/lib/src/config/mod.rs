@@ -445,36 +445,23 @@ impl RocketConfig {
 ///
 /// If there is a problem, prints a nice error message and bails.
 crate fn init() -> Config {
-    let bail = |e: ConfigError| -> Infallible {
+    let bail = |e: ConfigError| -> ! {
         logger::init(LoggingLevel::Debug);
         e.pretty_print();
-        process::exit(1);
+        process::exit(1)
     };
-
-    // The compiler is unable to realize that a function returning `Infallible`
-    // will never return. We use `unreachable_unchecked()` to hint to the
-    // compiler that this location in code can never be reached, and it doesn't
-    // need to verify that fact. Once `Infallible` becomes an alias to `!`, this
-    // macro can be removed and its invocations replaced with `bail(e)`.
-    // FIXME: Remove when `!` type stabilizes.
-    macro_rules! bail {
-        ($e:ident) => {{
-            bail($e);
-            unsafe { std::hint::unreachable_unchecked() }
-        }}
-    }
 
     use self::ConfigError::*;
     let config = RocketConfig::read().unwrap_or_else(|e| {
         match e {
             | ParseError(..) | BadEntry(..) | BadEnv(..) | BadType(..) | Io(..)
             | BadFilePath(..) | BadEnvVal(..) | UnknownKey(..)
-            | Missing(..) => bail!(e),
+            | Missing(..) => bail(e),
             IoError => warn!("Failed reading Rocket.toml. Using defaults."),
             NotFound => { /* try using the default below */ }
         }
 
-        RocketConfig::active_default().unwrap_or_else(|e| bail!(e))
+        RocketConfig::active_default().unwrap_or_else(|e| bail(e))
     });
 
     // FIXME: Should probably store all of the config.
