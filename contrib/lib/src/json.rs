@@ -280,7 +280,7 @@ impl From<serde_json::Value> for JsonValue {
 
 impl<T> FromIterator<T> for JsonValue where serde_json::Value: FromIterator<T> {
     fn from_iter<I: IntoIterator<Item=T>>(iter: I) -> Self {
-        JsonValue(iter.into_iter().collect())
+        JsonValue(serde_json::Value::from_iter(iter))
     }
 }
 
