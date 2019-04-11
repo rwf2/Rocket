@@ -154,7 +154,7 @@ fn files(file: PathBuf) -> Option<NamedFile> {
   the [`StaticFiles`] custom handler from [`rocket_contrib`], which makes it as
   simple as:
 
-  `rocket.mount("/public", StaticFiles::from("/static")`
+  `rocket.mount("/public", StaticFiles::from("/static"))`
 
 [`rocket_contrib`]: @api/rocket_contrib/
 [`StaticFiles`]: @api/rocket_contrib/serve/struct.StaticFiles.html
