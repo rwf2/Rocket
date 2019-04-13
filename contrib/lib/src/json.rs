@@ -128,6 +128,9 @@ pub enum JsonError<'a> {
     /// received from the user, while the `Error` in `.1` is the deserialization
     /// error from `serde`.
     Parse(&'a str, serde_json::error::Error),
+
+    /// The client's data is larger than the specified limit.
+    PayloadTooLarge,
 }
 
 impl<'a, T: Deserialize<'a>> FromData<'a> for Json<T> {
@@ -138,7 +141,14 @@ impl<'a, T: Deserialize<'a>> FromData<'a> for Json<T> {
     fn transform(r: &Request, d: Data) -> Transform<Outcome<Self::Owned, Self::Error>> {
         let size_limit = r.limits().get("json").unwrap_or(LIMIT);
         let mut s = String::with_capacity(512);
-        match d.open().take(size_limit).read_to_string(&mut s) {
+        match d.open().take(size_limit + 1).read_to_string(&mut s) {
+            Ok(n) if n as u64 > size_limit => {
+                error_!("JSON payload too large.");
+                Borrowed(Failure((
+                    Status::PayloadTooLarge,
+                    JsonError::PayloadTooLarge,
+                )))
+            }
             Ok(_) => Borrowed(Success(s)),
             Err(e) => Borrowed(Failure((Status::BadRequest, JsonError::Io(e))))
         }
