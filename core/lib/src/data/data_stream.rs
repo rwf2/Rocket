@@ -16,6 +16,43 @@ pub type InnerStream = Chain<Cursor<Vec<u8>>, BodyReader>;
 /// be used as an opaque [`Read`] structure.
 pub struct DataStream(crate InnerStream);
 
+impl DataStream {
+    pub fn read_to_string_with_limit(
+        &mut self,
+        buf: &mut String,
+        limit: usize,
+    ) -> Result<usize, LimitReadError> {
+        self.do_with_limit(limit, |r| r.read_to_string(buf))
+    }
+
+    pub fn read_to_end_with_limit(
+        &mut self,
+        buf: &mut Vec<u8>,
+        limit: usize,
+    ) -> Result<usize, LimitReadError> {
+        self.do_with_limit(limit, |r| r.read_to_end(buf))
+    }
+
+    fn do_with_limit<F: FnOnce(&mut io::Take<&mut Self>) -> io::Result<T>, T>(
+        &mut self,
+        limit: usize,
+        f: F,
+    ) -> Result<T, LimitReadError> {
+        let mut r = self.by_ref().take(limit as u64 + 1);
+        let s = f(&mut r).map_err(LimitReadError::Io)?;
+        if r.limit() > 0 {
+            Ok(s)
+        } else {
+            Err(LimitReadError::LimitReached)
+        }
+    }
+}
+
+pub enum LimitReadError {
+    LimitReached,
+    Io(io::Error),
+}
+
 // TODO: Have a `BufRead` impl for `DataStream`. At the moment, this isn't
 // possible since Hyper's `HttpReader` doesn't implement `BufRead`.
 impl Read for DataStream {
