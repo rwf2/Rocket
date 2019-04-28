@@ -298,6 +298,7 @@ impl Template {
     /// # context.insert("test", "test");
     /// # #[allow(unused_variables)]
     /// let template = Template::render("index", context);
+    /// ```
     #[inline]
     pub fn render<S, C>(name: S, context: C) -> Template
         where S: Into<Cow<'static, str>>, C: Serialize
