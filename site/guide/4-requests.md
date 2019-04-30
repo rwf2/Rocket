@@ -183,13 +183,23 @@ routes:
 
 ```rust
 #[get("/user/<id>")]
-fn user(id: usize) -> T { ... }
+fn user(id: usize) -> String {
+    format!("Unsigned ID, {}!", id)
+}
 
 #[get("/user/<id>", rank = 2)]
-fn user_int(id: isize) -> T { ... }
+fn user_int(id: isize) -> String {
+    format!("Signed ID, {}!", id)
+}
 
 #[get("/user/<id>", rank = 3)]
-fn user_str(id: &RawStr) -> T { ... }
+fn user_str(id: &RawStr) -> String {
+    format!("String ID, {}!", id)
+}
+
+fn main() {
+    rocket::ignite().mount("/", routes![user, user_int, user_str]).launch();
+}
 ```
 
 Notice the `rank` parameters in `user_int` and `user_str`. If we run this
