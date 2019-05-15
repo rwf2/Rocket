@@ -192,13 +192,13 @@ Presently, Rocket provides built-in support for the following databases:
 
 [`r2d2`]: https://crates.io/crates/r2d2
 [Diesel]: https://diesel.rs
-[`redis::Connection`]: https://docs.rs/redis/0.9.0/redis/struct.Connection.html
+[`redis::Connection`]: https://docs.rs/redis/0.10.0/redis/struct.Connection.html
 [`rusted_cypher::GraphClient`]: https://docs.rs/rusted_cypher/1.1.0/rusted_cypher/graph/struct.GraphClient.html
 [`rusqlite::Connection`]: https://docs.rs/rusqlite/0.16.0/rusqlite/struct.Connection.html
 [`diesel::SqliteConnection`]: http://docs.diesel.rs/diesel/prelude/struct.SqliteConnection.html
 [`postgres::Connection`]: https://docs.rs/postgres/0.15.2/postgres/struct.Connection.html
 [`diesel::PgConnection`]: http://docs.diesel.rs/diesel/pg/struct.PgConnection.html
-[`mysql::conn`]: https://docs.rs/mysql/14.0.0/mysql/struct.Conn.html
+[`mysql::conn`]: https://docs.rs/mysql/16.0.0/mysql/struct.Conn.html
 [`diesel::MysqlConnection`]: http://docs.diesel.rs/diesel/mysql/struct.MysqlConnection.html
 [`redis-rs`]: https://github.com/mitsuhiko/redis-rs
 [`rusted_cypher`]: https://github.com/livioribeiro/rusted-cypher
