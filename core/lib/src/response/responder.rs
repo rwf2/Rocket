@@ -219,84 +219,89 @@ impl<'r> Responder<'r> for String {
     }
 }
 
-fn range_response<'r, B: io::Seek + io::Read + 'r>(mut body: B, req: &Request) -> Response<'r> {
-    use std::cmp;
-    use http::hyper::header::{ContentRange, ByteRangeSpec, ContentRangeSpec};
-    
-    //  A server MUST ignore a Range header field received with a request method other than GET.
-    if req.method() != Method::Get {
-        let range = req.headers().get_one("Range").and_then(|x| Range::from_str(x).ok());
-        match range {
-            Some(Range::Bytes(ranges)) => {
-                if ranges.len() == 1 {
-                    let size = body.seek(io::SeekFrom::End(0))
-                        .expect("Attempted to retrieve size by seeking, but failed.");
-                    
-                    let (start, end) = match ranges[0] {
-                        ByteRangeSpec::FromTo(mut start, mut end) => {
-                            if end < start {
-                                return Response::build()
-                                    .status(Status::RangeNotSatisfiable)
-                                    .header(AcceptRanges(vec![RangeUnit::Bytes]))
-                                    .finalize()
-                            }
-                            if start > size {
-                                start = size;
-                            }
-                            if end > size {
-                                end = size;
-                            }
-                            (start, end)
-                        },
-                        ByteRangeSpec::AllFrom(mut start) => {
-                            if start > size {
-                                start = size;
-                            }
-                            (start, size - start)
-                        },
-                        ByteRangeSpec::Last(len) => {
-                            // we could seek to SeekFrom::End(-len), but if we reach a value < 0, that is an error.
-                            // but the RFC reads:
-                            //      If the selected representation is shorter than the specified
-                            //      suffix-length, the entire representation is used.
-                            let start = cmp::max(size - len, 0);
-                            (start, size - start)
-                        }
-                    };
+pub struct RangeResponder<B: io::Seek + io::Read>(pub B);
 
-                    body.seek(io::SeekFrom::Start(start))
-                        .expect("Attempted to seek to the start of the requested range, but failed.");
+impl<'r, B: io::Seek + io::Read + 'r> Responder<'r> for RangeResponder<B> {
+    fn respond_to(self, req: &Request) -> response::Result<'r> {
+        use std::cmp;
+        use http::hyper::header::{ContentRange, ByteRangeSpec, ContentRangeSpec};
 
-                    return Response::build()
-                        .status(Status::PartialContent)
-                        .header(AcceptRanges(vec![RangeUnit::Bytes]))
-                        .header(ContentRange(ContentRangeSpec::Bytes {
-                            range: Some((start, end)),
-                            instance_length: Some(end - start),
-                        }))
-                        .raw_body(Body::Sized(body, end - start))
-                        .finalize()
-                }
-                // A server MAY ignore the Range header field.
-            },
-            // An origin server MUST ignore a Range header field that contains a
-            // range unit it does not understand.
-            Some(Range::Unregistered(_, _)) => {},
-            None => {},
-        };
+        let mut body = self.0; 
+        //  A server MUST ignore a Range header field received with a request method other than GET.
+        if req.method() != Method::Get {
+            let range = req.headers().get_one("Range").and_then(|x| Range::from_str(x).ok());
+            match range {
+                Some(Range::Bytes(ranges)) => {
+                    if ranges.len() == 1 {
+                        let size = body.seek(io::SeekFrom::End(0))
+                            .expect("Attempted to retrieve size by seeking, but failed.");
+                        
+                        let (start, end) = match ranges[0] {
+                            ByteRangeSpec::FromTo(mut start, mut end) => {
+                                if end < start {
+                                    return Response::build()
+                                        .status(Status::RangeNotSatisfiable)
+                                        .header(AcceptRanges(vec![RangeUnit::Bytes]))
+                                        .ok()
+                                }
+                                if start > size {
+                                    start = size;
+                                }
+                                if end > size {
+                                    end = size;
+                                }
+                                (start, end)
+                            },
+                            ByteRangeSpec::AllFrom(mut start) => {
+                                if start > size {
+                                    start = size;
+                                }
+                                (start, size - start)
+                            },
+                            ByteRangeSpec::Last(len) => {
+                                // we could seek to SeekFrom::End(-len), but if we reach a value < 0, that is an error.
+                                // but the RFC reads:
+                                //      If the selected representation is shorter than the specified
+                                //      suffix-length, the entire representation is used.
+                                let start = cmp::max(size - len, 0);
+                                (start, size - start)
+                            }
+                        };
+
+                        body.seek(io::SeekFrom::Start(start))
+                            .expect("Attempted to seek to the start of the requested range, but failed.");
+
+                        return Response::build()
+                            .status(Status::PartialContent)
+                            .header(AcceptRanges(vec![RangeUnit::Bytes]))
+                            .header(ContentRange(ContentRangeSpec::Bytes {
+                                range: Some((start, end)),
+                                instance_length: Some(end - start),
+                            }))
+                            .raw_body(Body::Sized(body, end - start))
+                            .ok()
+                    }
+                    // A server MAY ignore the Range header field.
+                },
+                // An origin server MUST ignore a Range header field that contains a
+                // range unit it does not understand.
+                Some(Range::Unregistered(_, _)) => {},
+                None => {},
+            };
+        }
+
+        Response::build()
+            .header(AcceptRanges(vec![RangeUnit::Bytes]))
+            .sized_body(body)
+            .ok()
     }
-
-    Response::build()
-        .header(AcceptRanges(vec![RangeUnit::Bytes]))
-        .sized_body(body)
-        .finalize()
 }
 
 /// Returns a response with Content-Type `application/octet-stream` and a
 /// fixed-size body containing the data in `self`. Always returns `Ok`.
 impl<'r> Responder<'r> for &'r [u8] {
     fn respond_to(self, req: &Request) -> response::Result<'r> {
-        Response::build_from(range_response(Cursor::new(self), req))
+        Response::build_from(RangeResponder(Cursor::new(self)).respond_to(req)?)
             .header(ContentType::Binary)
             .ok()
     }
@@ -306,7 +311,7 @@ impl<'r> Responder<'r> for &'r [u8] {
 /// fixed-size body containing the data in `self`. Always returns `Ok`.
 impl<'r> Responder<'r> for Vec<u8> {
     fn respond_to(self, req: &Request) -> response::Result<'r> {
-        Response::build_from(range_response(Cursor::new(self), req))
+        Response::build_from(RangeResponder(Cursor::new(self)).respond_to(req)?)
             .header(ContentType::Binary)
             .ok()
     }
@@ -315,7 +320,7 @@ impl<'r> Responder<'r> for Vec<u8> {
 /// Returns a response with a sized body for the file. Always returns `Ok`.
 impl<'r> Responder<'r> for File {
     fn respond_to(self, req: &Request) -> response::Result<'r> {
-        Response::build_from(range_response(BufReader::new(self), req)).ok()
+        RangeResponder(BufReader::new(self)).respond_to(req)
     }
 }
 
