@@ -96,6 +96,7 @@ impl_policy!(Frame, "X-Frame-Options");
 impl_policy!(Hsts, "Strict-Transport-Security");
 impl_policy!(ExpectCt, "Expect-CT");
 impl_policy!(Referrer, "Referrer-Policy");
+impl_policy!(ContentSecurityPolicy, "Content-Security-Policy");
 
 /// The [Referrer-Policy] header: controls the value set by the browser for the
 /// [Referer] header.
@@ -397,5 +398,181 @@ impl<'a> Into<Header<'static>> for &'a XssFilter {
         };
 
         Header::new(XssFilter::NAME, policy_string)
+    }
+}
+
+/// The [Content-Security-Policy Level 2] header: header allows web site administrators to control
+/// resources the user agent is allowed to load for a given page.
+///
+/// https://developer.mozilla.org/en-US/docs/Web/HTTP/CSP
+/// https://w3c.github.io/webappsec-csp/2/
+
+pub trait Source: Send + Sync + 'static {
+    fn rule(&self) -> String;
+}
+
+pub enum SchemeSource {
+    Http,
+    Https
+}
+
+impl Source for SchemeSource {
+    fn rule(&self) -> String {
+        match self {
+            SchemeSource::Http => "http:".to_string(),
+            SchemeSource::Https => "https:".to_string()
+        }
+    }
+}
+
+pub enum HostSource {
+    Uri(String)
+}
+
+impl Source for HostSource {
+    fn rule(&self) -> String {
+        match self {
+            HostSource::Uri(uri) => uri.to_string()
+        }
+    }
+}
+
+pub enum KeywordSource {
+    Selfy,
+    Noney,
+    UnsafeInline,
+    UnsafeEval,
+    Data,
+    Blob,
+}
+
+impl Source for KeywordSource {
+    fn rule(&self) -> String {
+        match self {
+            KeywordSource::Selfy => "'self'".to_string(),
+            KeywordSource::Noney => "'none'".to_string(),
+            KeywordSource::UnsafeInline => "'unsafe-inline'".to_string(),
+            KeywordSource::UnsafeEval => "'unsafe-eval'".to_string(),
+            KeywordSource::Data => "data:".to_string(),
+            KeywordSource::Blob => "blob:".to_string()
+        }
+    }
+}
+
+pub enum NonceSouce {
+    Value(String)
+}
+
+impl Source for NonceSouce {
+    fn rule(&self) -> String {
+        match self {
+            NonceSouce::Value(value) => format!("'nonce-{}'", value).to_string(),
+        }
+    }
+}
+
+pub enum HashSource {
+    Sha256(String),
+    Sha384(String),
+    Sha512(String)
+}
+
+impl Source for HashSource {
+    fn rule(&self) -> String {
+        match self {
+            HashSource::Sha256(hash) => format!("'sha256-{}'", hash).to_string(),
+            HashSource::Sha384(hash) => format!("'sha384-{}'", hash).to_string(),
+            HashSource::Sha512(hash) => format!("'sha512-{}'", hash).to_string(),
+        }
+    }
+}
+
+type SourceList = Vec<Box<Source>>;
+
+pub enum Directive {
+    DefaultSrc(SourceList), // default-src
+    ScriptSrc(SourceList), // script-src
+    StyleSrc(SourceList), // style-src
+    ImgSrc(SourceList), // img-src
+    ConnectSrc(SourceList), // connect-src
+    FontSrc(SourceList), // font-src
+    ObjectSrc(SourceList), // object-src
+    MediaSrc(SourceList), // media-src
+    ChildSrc(SourceList), // child-src
+    ReportUri(HostSource), // report-uri
+}
+
+impl Directive {
+    fn collapse(&self, list: &SourceList) -> String {
+        list.iter().map(|s| s.rule()).collect::<Vec<String>>().join(" ")
+    }
+
+    fn rule(&self) -> String {
+        match self {
+            Directive::DefaultSrc(list) => format!("default-src: {}", self.collapse(list)),
+            Directive::ScriptSrc(list) => format!("script-src: {}", self.collapse(list)),
+            Directive::StyleSrc(list) => format!("style-src: {}", self.collapse(list)),
+            Directive::ImgSrc(list) => format!("img-src: {}", self.collapse(list)),
+            Directive::ConnectSrc(list) => format!("connect-src: {}", self.collapse(list)),
+            Directive::FontSrc(list) => format!("font-src: {}", self.collapse(list)),
+            Directive::ObjectSrc(list) => format!("object-src: {}", self.collapse(list)),
+            Directive::MediaSrc(list) => format!("media-src: {}", self.collapse(list)),
+            Directive::ChildSrc(list) => format!("child-src: {}", self.collapse(list)),
+            Directive::ReportUri(source) => format!("report-uri: {}", source.rule())
+        }
+    }
+}
+
+type DirectiveList = Vec<Directive>;
+
+pub enum ContentSecurityPolicy {
+    /// Disables Content Security Policy.
+    Disable,
+
+    /// Enables Content Security Policy. The browser will block request to hosts not set in the
+    /// given rules for each kind of resource.
+    Enable(DirectiveList),
+
+    /// Enables Content Security Policy but in report only mode. The browser will alert about
+    /// violations but not blocking them.
+    ReportOnly(DirectiveList),
+}
+
+/// Defaults to [`ContentSecurityPolicy::Enable`].
+impl Default for ContentSecurityPolicy {
+    fn default() -> ContentSecurityPolicy {
+        ContentSecurityPolicy::Disable
+    }
+}
+
+impl<'a> Into<Header<'static>> for &'a ContentSecurityPolicy {
+    fn into(self) -> Header<'static> {
+        let (suffix, policy_string) : (&str, Cow<'static, str>) = match self {
+            ContentSecurityPolicy::Disable => ("", "0".into()), // FIXME: Not sure how to disable it
+            ContentSecurityPolicy::Enable(directives) => {
+                let value = directives
+                    .iter()
+                    .map(|directive| directive.rule())
+                    .collect::<Vec<String>>()
+                    .join("; ")
+                    .into();
+
+                ("", value)
+            },
+            ContentSecurityPolicy::ReportOnly(directives) => {
+                let value = directives
+                    .iter()
+                    .map(|directive| directive.rule())
+                    .collect::<Vec<String>>()
+                    .join("; ")
+                    .into();
+
+                ("-Report-Only", value)
+            },
+        };
+
+        let name = format!("{}{}", ContentSecurityPolicy::NAME, suffix);
+
+        Header::new(name, policy_string)
     }
 }
