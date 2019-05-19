@@ -158,16 +158,16 @@ crate fn try_init(level: LoggingLevel, verbose: bool) -> bool {
     }
 
     push_max_level(level);
-    if let Err(e) = log::set_boxed_logger(Box::new(RocketLogger(level))) {
+/*    if let Err(e) = log::set_boxed_logger(Box::new(RocketLogger(level))) {
         if verbose {
             eprintln!("Logger failed to initialize: {}", e);
         }
 
         pop_max_level();
         return false;
-    }
+    }*/
 
-    true
+    false
 }
 
 use std::sync::atomic::{AtomicUsize, AtomicBool, Ordering};

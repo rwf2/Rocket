@@ -1,3 +1,5 @@
+extern crate http;
+
 use std::fmt;
 use std::str::FromStr;
 
@@ -24,18 +26,18 @@ pub enum Method {
 impl Method {
     /// WARNING: This is unstable! Do not use this method outside of Rocket!
     #[doc(hidden)]
-    pub fn from_hyp(method: &hyper::Method) -> Option<Method> {
+    pub fn from_hyp(method: &http::method::Method) -> Option<Method> {
         match *method {
-            hyper::Method::Get => Some(Get),
-            hyper::Method::Put => Some(Put),
-            hyper::Method::Post => Some(Post),
-            hyper::Method::Delete => Some(Delete),
-            hyper::Method::Options => Some(Options),
-            hyper::Method::Head => Some(Head),
-            hyper::Method::Trace => Some(Trace),
-            hyper::Method::Connect => Some(Connect),
-            hyper::Method::Patch => Some(Patch),
-            hyper::Method::Extension(_) => None,
+            http::method::Method::GET => Some(Get),
+            http::method::Method::PUT => Some(Put),
+            http::method::Method::POST => Some(Post),
+            http::method::Method::DELETE => Some(Delete),
+            http::method::Method::OPTIONS => Some(Options),
+            http::method::Method::HEAD => Some(Head),
+            http::method::Method::TRACE => Some(Trace),
+            http::method::Method::CONNECT => Some(Connect),
+            http::method::Method::PATCH => Some(Patch),
+            _ => None,
         }
     }
 
