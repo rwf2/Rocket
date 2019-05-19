@@ -3,6 +3,8 @@ use std::cell::{Cell, RefCell};
 use std::net::{IpAddr, SocketAddr};
 use std::fmt;
 use std::str;
+use std::str::FromStr;
+use std::sync::Arc;
 
 use yansi::Paint;
 use state::{Container, Storage};
@@ -13,7 +15,7 @@ use crate::request::{FromFormValue, FormItems, FormItem};
 use crate::rocket::Rocket;
 use crate::router::Route;
 use crate::config::{Config, Limits};
-use crate::http::{hyper, uri::{Origin, Segments}};
+use crate::http::{hyper, uri::{Origin, Segments, Uri}};
 use crate::http::{Method, Header, HeaderMap, Cookies};
 use crate::http::{RawStr, ContentType, Accept, MediaType};
 use crate::http::private::{Indexed, SmallVec, CookieJar};
@@ -59,7 +61,8 @@ impl<'r> Request<'r> {
     /// Create a new `Request` with the given `method` and `uri`.
     #[inline(always)]
     crate fn new<'s: 'r>(
-        rocket: &'r Rocket,
+        config: &'r Config,
+        managed: &'r Container,
         method: Method,
         uri: Origin<'s>
     ) -> Request<'r> {
@@ -71,8 +74,8 @@ impl<'r> Request<'r> {
             state: RequestState {
                 path_segments: SmallVec::new(),
                 query_items: None,
-                config: &rocket.config,
-                managed: &rocket.state,
+                config,
+                managed,
                 route: Cell::new(None),
                 cookies: RefCell::new(CookieJar::new()),
                 accept: Storage::new(),
@@ -699,7 +702,7 @@ impl<'r> Request<'r> {
     pub fn example<F: Fn(&mut Request<'_>)>(method: Method, uri: &str, f: F) {
         let rocket = Rocket::custom(Config::development());
         let uri = Origin::parse(uri).expect("invalid URI in example");
-        let mut request = Request::new(&rocket, method, uri);
+        let mut request = Request::new(&rocket.config, &rocket.state, method, uri);
         f(&mut request);
     }
 
@@ -782,36 +785,42 @@ impl<'r> Request<'r> {
 
     /// Convert from Hyper types into a Rocket Request.
     crate fn from_hyp(
-        rocket: &'r Rocket,
-        h_method: hyper::Method,
-        h_headers: hyper::header::Headers,
-        h_uri: hyper::RequestUri,
-        h_addr: SocketAddr,
+        config: &'r Config,
+        managed: &'r Container,
+        request_parts: &hyper::Parts,
     ) -> Result<Request<'r>, String> {
-        // Get a copy of the URI for later use.
-        let uri = match h_uri {
-            hyper::RequestUri::AbsolutePath(s) => s,
-            _ => return Err(format!("Bad URI: {}", h_uri)),
-        };
+
+        let h_uri = &request_parts.uri;
+        let h_headers = &request_parts.headers;
+        let h_version = &request_parts.version;
+        let h_method = &request_parts.method;;
+
+//        if !h_uri.is_absolute() {
+//            return Err(format!("Bad URI: {}", h_uri));
+//        };
 
         // Ensure that the method is known. TODO: Allow made-up methods?
-        let method = match Method::from_hyp(&h_method) {
+        let method = match Method::from_hyp(h_method) {
             Some(method) => method,
-            None => return Err(format!("Invalid method: {}", h_method))
+            None => return Err(format!("Unknown method: {}", h_method))
         };
 
         // We need to re-parse the URI since we don't trust Hyper... :(
-        let uri = Origin::parse_owned(uri).map_err(|e| e.to_string())?;
+        let uri = Origin::parse_owned(format!("{}", h_uri)).map_err(|e| e.to_string())?;
 
         // Construct the request object.
-        let mut request = Request::new(rocket, method, uri);
-        request.set_remote(h_addr);
+        let mut request = Request::new(config, managed, method, uri);
+//        request.set_remote(match hyp_req.remote_addr() {
+//            Some(remote) => remote,
+//            None => return Err(String::from("Missing remote address"))
+//        });
 
         // Set the request cookies, if they exist.
-        if let Some(cookie_headers) = h_headers.get_raw("Cookie") {
+        let cookie_headers = h_headers.get_all("Cookie").iter();
+        // TODO if cookie_headers.peek().is_some() {
             let mut cookie_jar = CookieJar::new();
             for header in cookie_headers {
-                let raw_str = match std::str::from_utf8(header) {
+                let raw_str = match ::std::str::from_utf8(header.as_bytes()) {
                     Ok(string) => string,
                     Err(_) => continue
                 };
@@ -824,18 +833,19 @@ impl<'r> Request<'r> {
             }
 
             request.state.cookies = RefCell::new(cookie_jar);
-        }
+        // TODO }
 
         // Set the rest of the headers.
-        for hyp in h_headers.iter() {
-            if let Some(header_values) = h_headers.get_raw(hyp.name()) {
-                for value in header_values {
+        for (name, value) in h_headers.iter() {
+
+            // TODO if let Some(header_values) = h_headers.get_all(hyp.name()) {
+
                     // This is not totally correct since values needn't be UTF8.
-                    let value_str = String::from_utf8_lossy(value).into_owned();
-                    let header = Header::new(hyp.name().to_string(), value_str);
+                    let value_str = String::from_utf8_lossy(value.as_bytes()).into_owned();
+                    let header = Header::new(name.to_string(), value_str);
                     request.add_header(header);
-                }
-            }
+
+            // TODO }
         }
 
         Ok(request)

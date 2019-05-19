@@ -94,6 +94,20 @@ impl<'a> Uri<'a> {
         crate::parse::uri::from_str(string)
     }
 
+//    pub fn from_hyp(uri: &'a hyper::Uri) -> Uri<'a> {
+//        match uri.is_absolute() {
+//            true => Uri::Absolute(Absolute::new(
+//                uri.scheme().unwrap(),
+//                match uri.host() {
+//                    Some(host) => Some(Authority::new(None, Host::Raw(host), uri.port())),
+//                    None => None
+//                },
+//                None
+//            )),
+//            false => Uri::Asterisk
+//        }
+//    }
+
     /// Returns the internal instance of `Origin` if `self` is a `Uri::Origin`.
     /// Otherwise, returns `None`.
     ///

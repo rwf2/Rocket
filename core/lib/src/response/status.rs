@@ -13,7 +13,7 @@ use std::collections::hash_map::DefaultHasher;
 use crate::request::Request;
 use crate::response::{Responder, Response};
 use crate::http::hyper::header;
-use crate::http::Status;
+use crate::http::{Header, Status};
 
 /// Sets the status of the response to 201 (Created).
 ///
@@ -47,7 +47,10 @@ impl<'r, R: Responder<'r>> Responder<'r> for Created<R> {
             build.merge(responder.respond_to(req)?);
         }
 
-        build.status(Status::Created).header(header::Location(self.0)).ok()
+        build.status(Status::Created).header(Header::new(
+            header::LOCATION.as_str(),
+            self.0
+        )).ok()
     }
 }
 
@@ -64,10 +67,16 @@ impl<'r, R: Responder<'r> + Hash> Responder<'r> for Created<R> {
             let hash = hasher.finish().to_string();
 
             build.merge(responder.respond_to(req)?);
-            build.header(header::ETag(header::EntityTag::strong(hash)));
+            build.header(Header::new(
+                header::ETAG.as_str(),
+                hash, // TODO header::EntityTag::strong(hash)
+            ));
         }
 
-        build.status(Status::Created).header(header::Location(self.0)).ok()
+        build.status(Status::Created).header(Header::new(
+            header::LOCATION.as_str(),
+            self.0
+        )).ok()
     }
 }
 

@@ -6,7 +6,7 @@ use std::fmt;
 use crate::header::Header;
 use crate::media_type::{MediaType, Source};
 use crate::ext::IntoCollection;
-use crate::hyper::mime::Mime;
+use mime::Mime;
 
 /// Representation of HTTP Content-Types.
 ///
@@ -281,11 +281,11 @@ impl From<Mime> for ContentType {
     #[inline]
     fn from(mime: Mime) -> ContentType {
         // soooo inefficient.
-        let params = mime.2.into_iter()
+        let params = mime.params().into_iter()
             .map(|(attr, value)| (attr.to_string(), value.to_string()))
             .collect::<Vec<_>>();
 
-        ContentType::with_params(mime.0.to_string(), mime.1.to_string(), params)
+        ContentType::with_params(mime.type_().to_string(), mime.subtype().to_string(), params)
     }
 }
 

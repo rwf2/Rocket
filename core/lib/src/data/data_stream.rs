@@ -1,12 +1,7 @@
-use std::io::{self, Read, Cursor, Chain};
+use std::io::{self, Chain, Cursor, Read, Write};
 use std::net::Shutdown;
 
-use super::data::BodyReader;
-use crate::http::hyper::net::NetworkStream;
-use crate::http::hyper::h1::HttpReader;
-
-//                          |-- peek buf --|
-pub type InnerStream = Chain<Cursor<Vec<u8>>, BodyReader>;
+pub type InnerStream = Cursor<Vec<u8>>;
 
 /// Raw data stream of a request body.
 ///
@@ -26,9 +21,9 @@ impl Read for DataStream {
     }
 }
 
-pub fn kill_stream(stream: &mut BodyReader) {
+/* pub fn kill_stream(stream: &mut BodyReader) {
     // Only do the expensive reading if we're not sure we're done.
-    use self::HttpReader::*;
+    // TODO use self::HttpReader::*;
     match *stream {
         SizedReader(_, n) | ChunkedReader(_, Some(n)) if n > 0 => { /* continue */ },
         _ => return
@@ -46,10 +41,10 @@ pub fn kill_stream(stream: &mut BodyReader) {
         }
         Ok(n) => debug!("flushed {} unread bytes", n)
     }
-}
+}*/
 
 impl Drop for DataStream {
     fn drop(&mut self) {
-        kill_stream(&mut self.0.get_mut().1);
+        // TODO kill_stream(&mut self.0.get_mut().1);
     }
 }

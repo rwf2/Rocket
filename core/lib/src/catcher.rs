@@ -59,6 +59,7 @@ use yansi::Color::*;
 ///
 /// A function decorated with `catch` must take exactly zero or one arguments.
 /// If the catcher takes an argument, it must be of type [`&Request`](Request).
+#[derive(Clone)]
 pub struct Catcher {
     /// The HTTP status code to match against.
     pub code: u16,
