@@ -1,2 +1,2 @@
 unstable_features = true
-ignore = ["src", "contrib", "core", "examples"]
+ignore = ["/"]
