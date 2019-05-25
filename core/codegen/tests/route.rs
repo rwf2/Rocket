@@ -1,5 +1,7 @@
 #![feature(proc_macro_hygiene, decl_macro)]
 
+#![deny(non_snake_case)]
+
 #[macro_use] extern crate rocket;
 
 use std::path::PathBuf;
@@ -63,6 +65,10 @@ fn post2(
     let uri = uri!(post2: a, name.url_decode_lossy(), path, sky, query.into_inner());
 
     format!("({}) ({})", string, uri.to_string())
+}
+
+#[post("/<_unused_param>?<_unused_query>", data="<_unused_data>")]
+fn test_unused_params(_unused_param: String, _unused_query: String, _unused_data: Data) {
 }
 
 #[test]
