@@ -177,6 +177,7 @@ three simple steps:
 
 Presently, Rocket provides built-in support for the following databases:
 
+<!-- Note: Keep this table in sync with contrib/lib/src/databases.rs -->
 | Kind     | Driver                | Version   | `Poolable` Type                | Feature                |
 |----------|-----------------------|-----------|--------------------------------|------------------------|
 | MySQL    | [Diesel]              | `1`       | [`diesel::MysqlConnection`]    | `diesel_mysql_pool`    |
