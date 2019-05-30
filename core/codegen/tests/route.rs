@@ -1,5 +1,8 @@
 #![feature(proc_macro_hygiene, decl_macro)]
 
+// Rocket sometimes generates mangled identifiers that activate the
+// non_snake_case lint. We deny the lint in this test to ensure that
+// code generation uses #[allow(non_snake_case)] in the appropriate places.
 #![deny(non_snake_case)]
 
 #[macro_use] extern crate rocket;
