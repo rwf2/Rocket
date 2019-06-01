@@ -228,7 +228,7 @@ impl<'r, B: io::Seek + io::Read + 'r> Responder<'r> for RangeResponder<B> {
 
         let mut body = self.0; 
         //  A server MUST ignore a Range header field received with a request method other than GET.
-        if req.method() != Method::Get {
+        if req.method() == Method::Get {
             let range = req.headers().get_one("Range").and_then(|x| Range::from_str(x).ok());
             match range {
                 Some(Range::Bytes(ranges)) => {
