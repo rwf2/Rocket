@@ -255,7 +255,7 @@ impl<'r, B: io::Seek + io::Read + 'r> Responder<'r> for RangeResponder<B> {
                                 if start > size {
                                     start = size;
                                 }
-                                (start, size - start)
+                                (start, size)
                             },
                             ByteRangeSpec::Last(len) => {
                                 // we could seek to SeekFrom::End(-len), but if we reach a value < 0, that is an error.
@@ -263,7 +263,7 @@ impl<'r, B: io::Seek + io::Read + 'r> Responder<'r> for RangeResponder<B> {
                                 //      If the selected representation is shorter than the specified
                                 //      suffix-length, the entire representation is used.
                                 let start = size.checked_sub(len).unwrap_or(0);
-                                (start, size - start)
+                                (start, size)
                             }
                         };
 
