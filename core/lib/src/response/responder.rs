@@ -319,7 +319,11 @@ impl<'r> Responder<'r> for Vec<u8> {
 /// Returns a response with a sized body for the file. Always returns `Ok`.
 impl<'r> Responder<'r> for File {
     fn respond_to(self, req: &Request) -> response::Result<'r> {
-        RangeResponder(BufReader::new(self)).respond_to(req)
+        let (metadata, file) = (self.metadata(), BufReader::new(self));
+        match metadata {
+            Ok(_) => RangeResponder(file).respond_to(req),
+            Err(_) => Response::build().streamed_body(file).ok()
+        }        
     }
 }
 
