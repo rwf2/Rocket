@@ -14,7 +14,7 @@ mod tests {
     use rocket::local::Client;
     use rocket::http::Status;
     use rocket::http::hyper::header::{Range, ByteRangeSpec};
-    
+
     fn rocket() -> Rocket {
         rocket::ignite()
             .mount("/", routes![data])
@@ -35,9 +35,9 @@ mod tests {
         let mut response = client.get("/")
             .header(Range::bytes(1, 4))
             .dispatch();
-        
+
         assert_eq!(response.status(), Status::PartialContent);
-        
+
         {
             let headers = response.headers();
             assert_eq!(headers.get_one("Content-Range"), Some("bytes 1-4/10"));
@@ -45,26 +45,26 @@ mod tests {
 
         assert_eq!(response.body_bytes(), Some(vec![1, 2, 3]));
     }
-    
+
     #[test]
     fn range_between_invalid() {
         let client = Client::new(rocket()).unwrap();
         let response = client.get("/")
             .header(Range::bytes(4, 2))
             .dispatch();
-        
+
         assert_eq!(response.status(), Status::RangeNotSatisfiable);
     }
-    
+
     #[test]
     fn range_between_overflow() {
         let client = Client::new(rocket()).unwrap();
         let mut response = client.get("/")
             .header(Range::bytes(11, 12))
             .dispatch();
-        
+
         assert_eq!(response.status(), Status::PartialContent);
-        
+
         {
             let headers = response.headers();
             assert_eq!(headers.get_one("Content-Range"), Some("bytes 10-10/10"));
@@ -83,7 +83,7 @@ mod tests {
             .dispatch();
 
         assert_eq!(response.status(), Status::PartialContent);
-        
+
         {
             let headers = response.headers();
             assert_eq!(headers.get_one("Content-Range"), Some("bytes 4-10/10"));
@@ -100,9 +100,9 @@ mod tests {
                 ByteRangeSpec::AllFrom(12),
             ]))
             .dispatch();
-        
+
         assert_eq!(response.status(), Status::PartialContent);
-        
+
         {
             let headers = response.headers();
             assert_eq!(headers.get_one("Content-Range"), Some("bytes 10-10/10"));
@@ -121,7 +121,7 @@ mod tests {
             .dispatch();
 
         assert_eq!(response.status(), Status::PartialContent);
-        
+
         {
             let headers = response.headers();
             assert_eq!(headers.get_one("Content-Range"), Some("bytes 7-10/10"));
@@ -129,7 +129,7 @@ mod tests {
 
         assert_eq!(response.body_bytes(), Some(vec![7, 8, 9]));
     }
-    
+
     #[test]
     fn range_last_overflow() {
         let client = Client::new(rocket()).unwrap();
@@ -140,7 +140,7 @@ mod tests {
             .dispatch();
 
         assert_eq!(response.status(), Status::PartialContent);
-        
+
         {
             let headers = response.headers();
             assert_eq!(headers.get_one("Content-Range"), Some("bytes 0-10/10"));

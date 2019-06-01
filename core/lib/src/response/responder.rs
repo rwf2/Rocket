@@ -260,7 +260,7 @@ impl<'r, B: io::Seek + io::Read + 'r> Responder<'r> for RangeResponder<B> {
     fn respond_to(self, req: &Request) -> response::Result<'r> {
         use http::hyper::header::{ContentRange, ByteRangeSpec, ContentRangeSpec};
 
-        let mut body = self.0; 
+        let mut body = self.0;
         //  A server MUST ignore a Range header field received with a request method other than GET.
         if req.method() == Method::Get {
             let range = req.headers().get_one("Range").map(|x| Range::from_str(x));
@@ -269,7 +269,7 @@ impl<'r, B: io::Seek + io::Read + 'r> Responder<'r> for RangeResponder<B> {
                     if ranges.len() == 1 {
                         let size = body.seek(io::SeekFrom::End(0))
                             .expect("Attempted to retrieve size by seeking, but failed.");
-                        
+
                         let (start, end) = match ranges[0] {
                             ByteRangeSpec::FromTo(mut start, mut end) => {
                                 if start > size {
@@ -359,7 +359,7 @@ impl<'r> Responder<'r> for File {
         match metadata {
             Ok(_) => RangeResponder(file).respond_to(req),
             Err(_) => Response::build().streamed_body(file).ok()
-        }        
+        }
     }
 }
 
