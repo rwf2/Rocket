@@ -263,21 +263,15 @@ impl<'r, B: io::Seek + io::Read + 'r> Responder<'r> for RangeResponder<B> {
         let mut body = self.0; 
         //  A server MUST ignore a Range header field received with a request method other than GET.
         if req.method() == Method::Get {
-            let range = req.headers().get_one("Range").and_then(|x| Range::from_str(x).ok());
+            let range = req.headers().get_one("Range").map(|x| Range::from_str(x));
             match range {
-                Some(Range::Bytes(ranges)) => {
+                Some(Ok(Range::Bytes(ranges))) => {
                     if ranges.len() == 1 {
                         let size = body.seek(io::SeekFrom::End(0))
                             .expect("Attempted to retrieve size by seeking, but failed.");
                         
                         let (start, end) = match ranges[0] {
                             ByteRangeSpec::FromTo(mut start, mut end) => {
-                                if end < start {
-                                    return Response::build()
-                                        .status(Status::RangeNotSatisfiable)
-                                        .header(AcceptRanges(vec![RangeUnit::Bytes]))
-                                        .ok()
-                                }
                                 if start > size {
                                     start = size;
                                 }
@@ -319,7 +313,14 @@ impl<'r, B: io::Seek + io::Read + 'r> Responder<'r> for RangeResponder<B> {
                 },
                 // An origin server MUST ignore a Range header field that contains a
                 // range unit it does not understand.
-                Some(Range::Unregistered(_, _)) => {},
+                Some(Ok(Range::Unregistered(_, _))) => {},
+                Some(Err(_)) => {
+                    // Malformed
+                    return Response::build()
+                        .status(Status::RangeNotSatisfiable)
+                        .header(AcceptRanges(vec![RangeUnit::Bytes]))
+                        .ok()
+                }
                 None => {},
             };
         }
