@@ -34,7 +34,7 @@ pub mod status;
 #[doc(hidden)] pub use rocket_codegen::Responder;
 
 pub use self::response::{Response, ResponseBuilder, Body, DEFAULT_CHUNK_SIZE};
-pub use self::responder::Responder;
+pub use self::responder::{RangeResponder, Responder};
 pub use self::redirect::Redirect;
 pub use self::flash::Flash;
 pub use self::named_file::NamedFile;
