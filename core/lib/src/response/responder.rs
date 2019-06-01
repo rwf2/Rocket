@@ -220,6 +220,40 @@ impl<'r> Responder<'r> for String {
     }
 }
 
+/// A special responder type, that may be used by custom [`Responder`][response::Responder]
+/// implementation to wrap any type implementing [`io::Seek`](std::io::Seek) and [`io::Read`](std::io::Read)
+/// to support [range requests](https://developer.mozilla.org/en-US/docs/Web/HTTP/Range_requests).
+///
+/// # **Note:**
+/// `&[u8]`, `Vec<u8>`, [`File`](std::fs::File) and [`NamedFile`](response::NamedFile)
+/// are implemented using `RangeResponder`. There is no need to wrap these types,
+/// they do support range requests out of the box.
+///
+/// # Example
+/// ```rust
+/// # #![feature(proc_macro_hygiene, decl_macro)]
+/// # #[macro_use] extern crate rocket;
+/// #
+/// # struct CustomIoType;
+/// # impl std::io::Read for CustomIoType {
+/// #     fn read(&mut self, buf: &mut [u8]) -> std::io::Result<usize> { Ok(0) }
+/// # }
+/// # impl std::io::Seek for CustomIoType {
+/// #     fn seek(&mut self, pos: std::io::SeekFrom) -> std::io::Result<u64> { Ok(0) }
+/// # }
+/// #
+/// use rocket::request::Request;
+/// use rocket::response::{self, Response, Responder, RangeResponder};
+/// use rocket::http::ContentType;
+///
+/// impl<'r> Responder<'r> for CustomIoType {
+///     fn respond_to(self, req: &Request) -> response::Result<'r> {
+///         Response::build_from(RangeResponder(self).respond_to(req)?)
+///             .header(ContentType::Binary)
+///             .ok()
+///     }
+/// }
+/// ```
 pub struct RangeResponder<B: io::Seek + io::Read>(pub B);
 
 impl<'r, B: io::Seek + io::Read + 'r> Responder<'r> for RangeResponder<B> {
