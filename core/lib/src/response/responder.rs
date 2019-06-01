@@ -275,7 +275,7 @@ impl<'r, B: io::Seek + io::Read + 'r> Responder<'r> for RangeResponder<B> {
                             .header(AcceptRanges(vec![RangeUnit::Bytes]))
                             .header(ContentRange(ContentRangeSpec::Bytes {
                                 range: Some((start, end)),
-                                instance_length: Some(end - start),
+                                instance_length: Some(size),
                             }))
                             .raw_body(Body::Sized(body, end - start))
                             .ok()
