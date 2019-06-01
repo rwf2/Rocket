@@ -58,20 +58,21 @@ use request::Request;
 ///
 ///     Sets the `Content-Type` to `application/octet-stream`. The slice
 ///     is used as the body of the response, which is fixed size and not
-///     streamed. To stream a slice of bytes, use
+///     streamed. Supports range requests. To stream a slice of bytes, use
 ///     `Stream::from(Cursor::new(data))`.
 ///
 ///   * **Vec&lt;u8>**
 ///
 ///     Sets the `Content-Type` to `application/octet-stream`. The vector's data
 ///     is used as the body of the response, which is fixed size and not
-///     streamed. To stream a vector of bytes, use
+///     streamed. Supports range requests. To stream a vector of bytes, use
 ///     `Stream::from(Cursor::new(vec))`.
 ///
 ///   * **File**
 ///
 ///     Responds with a streamed body containing the data in the `File`. No
-///     `Content-Type` is set. To automatically have a `Content-Type` set based
+///     `Content-Type` is set. Supports range requests.
+///     To automatically have a `Content-Type` set based
 ///     on the file's extension, use [`NamedFile`](::response::NamedFile).
 ///
 ///   * **()**
