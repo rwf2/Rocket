@@ -223,7 +223,6 @@ pub struct RangeResponder<B: io::Seek + io::Read>(pub B);
 
 impl<'r, B: io::Seek + io::Read + 'r> Responder<'r> for RangeResponder<B> {
     fn respond_to(self, req: &Request) -> response::Result<'r> {
-        use std::cmp;
         use http::hyper::header::{ContentRange, ByteRangeSpec, ContentRangeSpec};
 
         let mut body = self.0; 
@@ -263,7 +262,7 @@ impl<'r, B: io::Seek + io::Read + 'r> Responder<'r> for RangeResponder<B> {
                                 // but the RFC reads:
                                 //      If the selected representation is shorter than the specified
                                 //      suffix-length, the entire representation is used.
-                                let start = cmp::max(size - len, 0);
+                                let start = size.checked_sub(len).unwrap_or(0);
                                 (start, size - start)
                             }
                         };
