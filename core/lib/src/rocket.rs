@@ -143,9 +143,11 @@ impl Rocket {
                 hyp_res.start()?.end()
             }
             Some(Body::Sized(body, size)) => {
+                use std::io::Read;
+
                 hyp_res.headers_mut().set(header::ContentLength(size));
                 let mut stream = hyp_res.start()?;
-                io::copy(body, &mut stream)?;
+                io::copy(&mut body.take(size), &mut stream)?;
                 stream.end()
             }
             Some(Body::Chunked(mut body, chunk_size)) => {
