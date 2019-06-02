@@ -272,6 +272,8 @@ impl<'r, B: io::Seek + io::Read + 'r> Responder<'r> for RangeResponder<B> {
 
                         let (start, end) = match ranges[0] {
                             ByteRangeSpec::FromTo(start, mut end) => {
+                                // make end exclusive
+                                end += 1;
                                 if end > size {
                                     end = size;
                                 }
@@ -304,7 +306,8 @@ impl<'r, B: io::Seek + io::Read + 'r> Responder<'r> for RangeResponder<B> {
                             .status(Status::PartialContent)
                             .header(AcceptRanges(vec![RangeUnit::Bytes]))
                             .header(ContentRange(ContentRangeSpec::Bytes {
-                                range: Some((start, end)),
+                                // make end inclusive again
+                                range: Some((start, end - 1)),
                                 instance_length: Some(size),
                             }))
                             .raw_body(Body::Sized(body, end - start))
