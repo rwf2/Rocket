@@ -271,19 +271,13 @@ impl<'r, B: io::Seek + io::Read + 'r> Responder<'r> for RangeResponder<B> {
                             .expect("Attempted to retrieve size by seeking, but failed.");
 
                         let (start, end) = match ranges[0] {
-                            ByteRangeSpec::FromTo(mut start, mut end) => {
-                                if start > size {
-                                    start = size;
-                                }
+                            ByteRangeSpec::FromTo(start, mut end) => {
                                 if end > size {
                                     end = size;
                                 }
                                 (start, end)
                             },
-                            ByteRangeSpec::AllFrom(mut start) => {
-                                if start > size {
-                                    start = size;
-                                }
+                            ByteRangeSpec::AllFrom(start) => {
                                 (start, size)
                             },
                             ByteRangeSpec::Last(len) => {
@@ -295,6 +289,13 @@ impl<'r, B: io::Seek + io::Read + 'r> Responder<'r> for RangeResponder<B> {
                                 (start, size)
                             }
                         };
+
+                        if start > size {
+                            return Response::build()
+                                .status(Status::RangeNotSatisfiable)
+                                .header(AcceptRanges(vec![RangeUnit::Bytes]))
+                                .ok()
+                        }
 
                         body.seek(io::SeekFrom::Start(start))
                             .expect("Attempted to seek to the start of the requested range, but failed.");
