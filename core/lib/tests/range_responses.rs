@@ -43,7 +43,7 @@ mod tests {
             assert_eq!(headers.get_one("Content-Range"), Some("bytes 1-4/10"));
         }
 
-        assert_eq!(response.body_bytes(), Some(vec![1, 2, 3]));
+        assert_eq!(response.body_bytes(), Some(vec![1, 2, 3, 4]));
     }
 
     #[test]
@@ -59,18 +59,11 @@ mod tests {
     #[test]
     fn range_between_overflow() {
         let client = Client::new(rocket()).unwrap();
-        let mut response = client.get("/")
+        let response = client.get("/")
             .header(Range::bytes(11, 12))
             .dispatch();
 
-        assert_eq!(response.status(), Status::PartialContent);
-
-        {
-            let headers = response.headers();
-            assert_eq!(headers.get_one("Content-Range"), Some("bytes 10-10/10"));
-        }
-
-        assert_eq!(response.body_bytes(), Some(vec![]));
+        assert_eq!(response.status(), Status::RangeNotSatisfiable);
     }
 
     #[test]
@@ -86,7 +79,7 @@ mod tests {
 
         {
             let headers = response.headers();
-            assert_eq!(headers.get_one("Content-Range"), Some("bytes 4-10/10"));
+            assert_eq!(headers.get_one("Content-Range"), Some("bytes 4-9/10"));
         }
 
         assert_eq!(response.body_bytes(), Some(vec![4, 5, 6, 7, 8, 9]));
@@ -95,20 +88,13 @@ mod tests {
     #[test]
     fn range_from_overflow() {
         let client = Client::new(rocket()).unwrap();
-        let mut response = client.get("/")
+        let response = client.get("/")
             .header(Range::Bytes(vec![
                 ByteRangeSpec::AllFrom(12),
             ]))
             .dispatch();
 
-        assert_eq!(response.status(), Status::PartialContent);
-
-        {
-            let headers = response.headers();
-            assert_eq!(headers.get_one("Content-Range"), Some("bytes 10-10/10"));
-        }
-
-        assert_eq!(response.body_bytes(), Some(vec![]));
+        assert_eq!(response.status(), Status::RangeNotSatisfiable);
     }
 
     #[test]
@@ -124,7 +110,7 @@ mod tests {
 
         {
             let headers = response.headers();
-            assert_eq!(headers.get_one("Content-Range"), Some("bytes 7-10/10"));
+            assert_eq!(headers.get_one("Content-Range"), Some("bytes 7-9/10"));
         }
 
         assert_eq!(response.body_bytes(), Some(vec![7, 8, 9]));
@@ -143,7 +129,7 @@ mod tests {
 
         {
             let headers = response.headers();
-            assert_eq!(headers.get_one("Content-Range"), Some("bytes 0-10/10"));
+            assert_eq!(headers.get_one("Content-Range"), Some("bytes 0-9/10"));
         }
 
         assert_eq!(response.body_bytes(), Some(Vec::from(data())));
