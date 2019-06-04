@@ -17,11 +17,12 @@
 pub extern crate uuid as uuid_crate;
 
 use std::fmt;
-use std::str::FromStr;
 use std::ops::Deref;
+use std::str::FromStr;
 
-use rocket::request::{FromParam, FromFormValue};
-use rocket::http::RawStr;
+use rocket::http::uri::{Formatter, Path, Query, UriDisplay};
+use rocket::http::{impl_from_uri_param_identity, RawStr};
+use rocket::request::{FromFormValue, FromParam};
 
 pub use self::uuid_crate::parser::ParseError;
 
@@ -100,6 +101,23 @@ impl fmt::Display for Uuid {
     }
 }
 
+impl UriDisplay<Path> for Uuid {
+    #[inline(always)]
+    fn fmt(&self, f: &mut Formatter<Path>) -> fmt::Result {
+        f.write_value(&format!("{}", self.0))
+    }
+}
+
+impl UriDisplay<Query> for Uuid {
+    #[inline(always)]
+    fn fmt(&self, f: &mut Formatter<Query>) -> fmt::Result {
+        f.write_value(&format!("{}", self.0))
+    }
+}
+
+impl_from_uri_param_identity!([Path] Uuid);
+impl_from_uri_param_identity!([Query] Uuid);
+
 impl<'a> FromParam<'a> for Uuid {
     type Error = ParseError;
 
@@ -149,9 +167,9 @@ impl PartialEq<uuid_crate::Uuid> for Uuid {
 #[cfg(test)]
 mod test {
     use super::uuid_crate;
-    use super::Uuid;
     use super::FromParam;
     use super::FromStr;
+    use super::Uuid;
 
     #[test]
     fn test_from_str() {
