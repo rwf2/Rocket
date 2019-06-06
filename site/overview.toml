@@ -135,7 +135,7 @@ fn not_found() -> T { ... }
 [[panels]]
 name = "Launching"
 content = '''
-Launching a Rocket application is the funnest part! For Rocket to begin
+Launching a Rocket application is the most fun part! For Rocket to begin
 dispatching requests to routes, the routes need to be _mounted_. After mounting,
 the application needs to be _launched_. These two steps, usually done in `main`,
 look like:
