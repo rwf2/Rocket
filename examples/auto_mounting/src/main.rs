@@ -34,7 +34,7 @@ mod disabled {
     #[get("/w")] // will not be mounted
     fn w() -> &'static str {
         "this route should be disabled"
-    }   
+    }
 }
 
 fn main() {

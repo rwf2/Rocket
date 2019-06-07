@@ -110,7 +110,7 @@ extern crate time;
 extern crate memchr;
 extern crate base64;
 extern crate atty;
-#[cfg(feature="auto-mount")] #[doc(hidden)]pub extern crate inventory; 
+#[cfg(feature="auto-mount")] #[doc(hidden)]pub extern crate inventory;
 
 #[cfg(test)] #[macro_use] extern crate lazy_static;
 

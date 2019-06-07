@@ -16,9 +16,9 @@ pub mod __default_auto_mount_info {
 }
 
 /// Allows to configure behavior of [auto_mount()](Rocket::auto_mount) for all routes in module
-/// 
+///
 /// # Example - set base path for all routes in module
-/// 
+///
 /// ```rust
 /// # #![feature(proc_macro_hygiene, decl_macro)]
 /// # #[macro_use] extern crate rocket;
@@ -26,17 +26,17 @@ pub mod __default_auto_mount_info {
 ///
 /// mod secret_routes {
 ///     mod_auto_mount!("/foo");
-/// 
+///
 ///     // this route will be mounted at /foo/bar when auto_mount() is used
-///     #[get("/bar")] 
+///     #[get("/bar")]
 ///     fn bar() -> &'static str {
 ///         "Hello!"
-///     } 
+///     }
 /// }
-/// 
+///
 /// ```
 ///  # Example - disable automatic mounting for all routes in module
-/// 
+///
 /// ```rust
 /// # #![feature(proc_macro_hygiene, decl_macro)]
 /// # #[macro_use] extern crate rocket;
@@ -44,12 +44,12 @@ pub mod __default_auto_mount_info {
 ///
 /// mod secret_routes {
 ///     mod_auto_mount!(disabled);
-/// 
+///
 ///     // this route will not be mounted by auto_mount()
-///     #[get("/secret")] 
+///     #[get("/secret")]
 ///     fn secret() -> &'static str {
 ///         "secret route"
-///     } 
+///     }
 /// }
 /// ```
 #[macro_export]

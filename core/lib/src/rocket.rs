@@ -812,9 +812,9 @@ impl Rocket {
     }
 
     /// Mounts all available routes in compiled binary
-    /// 
+    ///
     /// # Example
-    /// 
+    ///
     /// ```rust
     /// # #![feature(proc_macro_hygiene, decl_macro)]
     /// # #[macro_use] extern crate rocket;
@@ -828,7 +828,7 @@ impl Rocket {
     /// # }
     /// }
     /// ```
-    /// 
+    ///
     /// See the [mod_auto_mount!() macro ](macro.mod_auto_mount.html) for information about configuring automatic mounting
 
     #[cfg(feature="auto-mount")]
