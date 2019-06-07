@@ -21,6 +21,7 @@ all-features = true
 default = ["private-cookies"]
 tls = ["rocket_http/tls"]
 private-cookies = ["rocket_http/private-cookies"]
+auto-mount = ["rocket_codegen/auto-mount", "inventory"]
 
 [dependencies]
 rocket_codegen = { version = "0.5.0-dev", path = "../codegen" }
@@ -35,6 +36,7 @@ memchr = "2" # TODO: Use pear instead.
 base64 = "0.10"
 pear = "0.1"
 atty = "0.2"
+inventory = { version = "0.1", optional = true}
 
 [build-dependencies]
 yansi = "0.5"

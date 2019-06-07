@@ -110,6 +110,7 @@ extern crate time;
 extern crate memchr;
 extern crate base64;
 extern crate atty;
+#[cfg(feature="auto-mount")] #[doc(hidden)]pub extern crate inventory; 
 
 #[cfg(test)] #[macro_use] extern crate lazy_static;
 
@@ -140,6 +141,7 @@ mod rocket;
 mod codegen;
 mod catcher;
 mod ext;
+#[cfg(feature="auto-mount")] #[doc(hidden)] pub mod auto_mount;
 
 #[doc(inline)] pub use response::Response;
 #[doc(inline)] pub use handler::{Handler, ErrorHandler};

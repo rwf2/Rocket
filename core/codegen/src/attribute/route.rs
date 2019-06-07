@@ -337,6 +337,23 @@ fn generate_internal_uri_macro(route: &Route) -> TokenStream2 {
     }
 }
 
+fn generate_auto_mount(generated_struct_name: &syn::Ident) -> TokenStream2 {
+
+    #[cfg(feature="auto-mount")]
+    quote! {
+        #[allow(unused_imports)]
+        use ::rocket::auto_mount::__default_auto_mount_info::*;
+
+        rocket::inventory::submit!{
+            #![crate = rocket]
+            ::rocket::auto_mount::AutoMountRoute {route:  & #generated_struct_name, mod_info: &__rocket_mod_auto_mount_info}
+        }
+    }
+
+    #[cfg(not(feature="auto-mount"))]
+    quote!{}
+}
+
 fn codegen_route(route: Route) -> Result<TokenStream> {
     // Generate the declarations for path, data, and request guard parameters.
     let mut data_stmt = None;
@@ -376,6 +393,7 @@ fn codegen_route(route: Route) -> Result<TokenStream> {
     let path = route.attribute.path.origin.0.to_string();
     let rank = Optional(route.attribute.rank);
     let format = Optional(route.attribute.format);
+    let auto_mount_info = generate_auto_mount(&generated_struct_name);
 
     Ok(quote! {
         #user_handler_fn
@@ -407,6 +425,8 @@ fn codegen_route(route: Route) -> Result<TokenStream> {
                 format: #format,
                 rank: #rank,
             };
+
+        #auto_mount_info
     }.into())
 }
 

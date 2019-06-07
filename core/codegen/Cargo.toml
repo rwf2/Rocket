@@ -14,6 +14,10 @@ build = "build.rs"
 [lib]
 proc-macro = true
 
+[features]
+default=[]
+auto-mount = []
+
 [dependencies]
 indexmap = "1.0"
 quote = "0.6.1"

@@ -8,6 +8,7 @@ members = [
   "core/http/",
   "contrib/lib",
   "contrib/codegen",
+  "examples/auto_mounting",
   "examples/cookies",
   "examples/errors",
   "examples/form_validation",

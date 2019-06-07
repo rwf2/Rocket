@@ -810,4 +810,34 @@ impl Rocket {
     pub fn config(&self) -> &Config {
         &self.config
     }
+
+    /// Mounts all available routes in compiled binary
+    /// 
+    /// # Example
+    /// 
+    /// ```rust
+    /// # #![feature(proc_macro_hygiene, decl_macro)]
+    /// # #[macro_use] extern crate rocket;
+    /// use rocket::Rocket;
+    ///
+    /// fn main() {
+    /// # if false { // We don't actually want to launch the server in an example.
+    ///     rocket::ignite()
+    ///         .auto_mount()
+    ///         .launch();
+    /// # }
+    /// }
+    /// ```
+    /// 
+    /// See the [mod_auto_mount!() macro ](macro.mod_auto_mount.html) for information about configuring automatic mounting
+
+    #[cfg(feature="auto-mount")]
+    pub fn auto_mount(mut self) -> Self {
+        for route in ::inventory::iter::<::auto_mount::AutoMountRoute > {
+            if route.mod_info.enabled {
+                self = self.mount(route.mod_info.base,vec![route.route.into()]);
+            }
+        }
+        self
+    }
 }

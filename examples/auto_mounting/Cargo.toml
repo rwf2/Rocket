@@ -1,0 +1,9 @@
+[package]
+name = "auto_mounting"
+version = "0.0.0"
+workspace = "../../"
+publish = false
+edition = "2018"
+
+[dependencies]
+rocket = { path = "../../core/lib", features=["auto-mount"]}
