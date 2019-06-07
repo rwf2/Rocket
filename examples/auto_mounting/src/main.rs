@@ -22,7 +22,7 @@ mod test {
         "This is y route in test module"
     }
 
-    #[get("/z")] // will be mounted to /test/w
+    #[get("/z")] // will be mounted to /test/z
     fn z() -> &'static str {
         "This is z route in test module"
     }
