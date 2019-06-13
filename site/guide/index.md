@@ -26,6 +26,7 @@ aspect of Rocket. The sections are:
    - **[Testing](testing/):** how to unit and integration test a Rocket
      application.
    - **[Configuration](configuration/):** how to configure a Rocket application.
+   - **[Deployment](deployment/):** how to deploy a Rocket application in production.
    - **[Pastebin](pastebin/):** a tutorial on how to create a pastebin with
      Rocket.
    - **[Conclusion](conclusion/):** concludes the guide and discusses next steps
