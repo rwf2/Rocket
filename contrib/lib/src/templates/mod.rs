@@ -111,10 +111,6 @@
 //! [`Template::custom()`]: templates::Template::custom()
 //! [`Template::render()`]: templates::Template::render()
 
-extern crate serde;
-extern crate serde_json;
-extern crate glob;
-
 #[cfg(feature = "tera_templates")] pub extern crate tera;
 #[cfg(feature = "tera_templates")] mod tera_templates;
 
@@ -133,9 +129,9 @@ crate use self::fairing::ContextManager;
 
 use self::engine::Engine;
 use self::fairing::TemplateFairing;
-use self::serde::Serialize;
-use self::serde_json::{Value, to_value};
-use self::glob::glob;
+
+use serde::Serialize;
+use serde_json::{Value, to_value};
 
 use std::borrow::Cow;
 use std::path::PathBuf;
@@ -387,8 +383,8 @@ impl Template {
 /// extension and a fixed-size body containing the rendered template. If
 /// rendering fails, an `Err` of `Status::InternalServerError` is returned.
 impl Responder<'static> for Template {
-    fn respond_to(self, req: &Request) -> response::Result<'static> {
-        let ctxt = req.guard::<State<ContextManager>>().succeeded().ok_or_else(|| {
+    fn respond_to(self, req: &Request<'_>) -> response::Result<'static> {
+        let ctxt = req.guard::<State<'_, ContextManager>>().succeeded().ok_or_else(|| {
             error_!("Uninitialized template context: missing fairing.");
             info_!("To use templates, you must attach `Template::fairing()`.");
             info_!("See the `Template` documentation for more information.");

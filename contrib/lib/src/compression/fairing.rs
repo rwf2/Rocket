@@ -144,9 +144,9 @@ impl Fairing for Compression {
         Ok(rocket.manage(ctxt))
     }
 
-    fn on_response(&self, request: &Request, response: &mut Response) {
+    fn on_response(&self, request: &Request<'_>, response: &mut Response<'_>) {
         let context = request
-            .guard::<::rocket::State<Context>>()
+            .guard::<rocket::State<'_, Context>>()
             .expect("Compression Context registered in on_attach");
 
         super::CompressionUtils::compress_response(request, response, &context.exclusions);

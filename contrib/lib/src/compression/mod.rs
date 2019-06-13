@@ -46,7 +46,7 @@ use self::flate2::read::GzEncoder;
 struct CompressionUtils;
 
 impl CompressionUtils {
-    fn accepts_encoding(request: &Request, encoding: &str) -> bool {
+    fn accepts_encoding(request: &Request<'_>, encoding: &str) -> bool {
         request
             .headers()
             .get("Accept-Encoding")
@@ -55,7 +55,7 @@ impl CompressionUtils {
             .any(|accept| accept == encoding)
     }
 
-    fn already_encoded(response: &Response) -> bool {
+    fn already_encoded(response: &Response<'_>) -> bool {
         response.headers().get("Content-Encoding").next().is_some()
     }
 
@@ -84,7 +84,7 @@ impl CompressionUtils {
         }
     }
 
-    fn compress_response(request: &Request, response: &mut Response, exclusions: &[MediaType]) {
+    fn compress_response(request: &Request<'_>, response: &mut Response<'_>, exclusions: &[MediaType]) {
         if CompressionUtils::already_encoded(response) {
             return;
         }

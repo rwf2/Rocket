@@ -2,7 +2,7 @@ use rocket::{Request, State, Outcome};
 use rocket::http::Status;
 use rocket::request::{self, FromRequest};
 
-use templates::ContextManager;
+use crate::templates::ContextManager;
 
 /// Request guard for dynamiclly querying template metadata.
 ///
@@ -90,8 +90,8 @@ impl<'a> Metadata<'a> {
 impl<'a, 'r> FromRequest<'a, 'r> for Metadata<'a> {
     type Error = ();
 
-    fn from_request(request: &'a Request) -> request::Outcome<Self, ()> {
-        request.guard::<State<ContextManager>>()
+    fn from_request(request: &'a Request<'_>) -> request::Outcome<Self, ()> {
+        request.guard::<State<'_, ContextManager>>()
             .succeeded()
             .and_then(|cm| Some(Outcome::Success(Metadata(cm.inner()))))
             .unwrap_or_else(|| {

@@ -9,6 +9,7 @@ repository = "https://github.com/SergioBenitez/Rocket"
 readme = "../../README.md"
 keywords = ["rocket", "web", "framework", "contrib", "contributed"]
 license = "MIT/Apache-2.0"
+edition = "2018"
 
 [features]
 # Internal use only.

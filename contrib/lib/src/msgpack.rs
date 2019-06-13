@@ -1,6 +1,6 @@
 //! Automatic MessagePack (de)serialization support.
 //!
-//! See the [`MsgPack`](msgpack::MessagePack) type for further details.
+//! See the [`MsgPack`](crate::msgpack::MsgPack) type for further details.
 //!
 //! # Enabling
 //!
@@ -13,8 +13,6 @@
 //! default-features = false
 //! features = ["msgpack"]
 //! ```
-extern crate serde;
-extern crate rmp_serde;
 
 use std::io::Read;
 use std::ops::{Deref, DerefMut};
@@ -25,10 +23,10 @@ use rocket::data::{Outcome, Transform, Transform::*, Transformed, Data, FromData
 use rocket::response::{self, Responder, content};
 use rocket::http::Status;
 
-use self::serde::Serialize;
-use self::serde::de::Deserialize;
+use serde::Serialize;
+use serde::de::Deserialize;
 
-pub use self::rmp_serde::decode::Error;
+pub use rmp_serde::decode::Error;
 
 /// The `MsgPack` type: implements [`FromData`] and [`Responder`], allowing you
 /// to easily consume and respond with MessagePack data.
@@ -121,7 +119,7 @@ impl<'a, T: Deserialize<'a>> FromData<'a> for MsgPack<T> {
     type Owned = Vec<u8>;
     type Borrowed = [u8];
 
-    fn transform(r: &Request, d: Data) -> Transform<Outcome<Self::Owned, Self::Error>> {
+    fn transform(r: &Request<'_>, d: Data) -> Transform<Outcome<Self::Owned, Self::Error>> {
         let mut buf = Vec::new();
         let size_limit = r.limits().get("msgpack").unwrap_or(LIMIT);
         match d.open().take(size_limit).read_to_end(&mut buf) {
@@ -130,7 +128,7 @@ impl<'a, T: Deserialize<'a>> FromData<'a> for MsgPack<T> {
         }
     }
 
-    fn from_data(_: &Request, o: Transformed<'a, Self>) -> Outcome<Self, Self::Error> {
+    fn from_data(_: &Request<'_>, o: Transformed<'a, Self>) -> Outcome<Self, Self::Error> {
         use self::Error::*;
 
         let buf = o.borrowed()?;
@@ -153,7 +151,7 @@ impl<'a, T: Deserialize<'a>> FromData<'a> for MsgPack<T> {
 /// Content-Type `MsgPack` and a fixed-size body with the serialization. If
 /// serialization fails, an `Err` of `Status::InternalServerError` is returned.
 impl<T: Serialize> Responder<'static> for MsgPack<T> {
-    fn respond_to(self, req: &Request) -> response::Result<'static> {
+    fn respond_to(self, req: &Request<'_>) -> response::Result<'static> {
         rmp_serde::to_vec(&self.0).map_err(|e| {
             error_!("MsgPack failed to serialize: {:?}", e);
             Status::InternalServerError

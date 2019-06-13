@@ -1,9 +1,11 @@
 use std::collections::HashMap;
 
-use templates::{TemplateInfo, serde::Serialize};
+use serde::Serialize;
 
-#[cfg(feature = "tera_templates")] use templates::tera::Tera;
-#[cfg(feature = "handlebars_templates")] use templates::handlebars::Handlebars;
+use crate::templates::TemplateInfo;
+
+#[cfg(feature = "tera_templates")] use crate::templates::tera::Tera;
+#[cfg(feature = "handlebars_templates")] use crate::templates::handlebars::Handlebars;
 
 crate trait Engine: Send + Sync + 'static {
     const EXT: &'static str;
@@ -40,8 +42,8 @@ crate trait Engine: Send + Sync + 'static {
 /// # }
 /// ```
 ///
-/// [`tera::Value`]: ::templates::tera::Value
-/// [`tera::Result`]: ::templates::tera::Result
+/// [`tera::Value`]: crate::templates::tera::Value
+/// [`tera::Result`]: crate::templates::tera::Result
 pub struct Engines {
     /// A `Tera` templating engine. This field is only available when the
     /// `tera_templates` feature is enabled. When calling methods on the `Tera`

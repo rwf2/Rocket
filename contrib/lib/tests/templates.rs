@@ -4,9 +4,6 @@
 #[macro_use] extern crate rocket;
 
 #[cfg(feature = "templates")]
-extern crate rocket_contrib;
-
-#[cfg(feature = "templates")]
 mod templates_tests {
     use std::path::{Path, PathBuf};
 
@@ -15,7 +12,7 @@ mod templates_tests {
     use rocket_contrib::templates::{Template, Metadata};
 
     #[get("/<engine>/<name>")]
-    fn template_check(md: Metadata, engine: &RawStr, name: &RawStr) -> Option<()> {
+    fn template_check(md: Metadata<'_>, engine: &RawStr, name: &RawStr) -> Option<()> {
         match md.contains_template(&format!("{}/{}", engine, name)) {
             true => Some(()),
             false => None
@@ -23,7 +20,7 @@ mod templates_tests {
     }
 
     #[get("/is_reloading")]
-    fn is_reloading(md: Metadata) -> Option<()> {
+    fn is_reloading(md: Metadata<'_>) -> Option<()> {
         if md.reloading() { Some(()) } else { None }
     }
 
@@ -36,7 +33,7 @@ mod templates_tests {
             .extra("template_dir", template_root().to_str().expect("template directory"))
             .expect("valid configuration");
 
-        ::rocket::custom(config).attach(Template::fairing())
+        rocket::custom(config).attach(Template::fairing())
             .mount("/", routes![template_check, is_reloading])
     }
 

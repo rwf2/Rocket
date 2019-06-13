@@ -5,13 +5,7 @@
 extern crate rocket;
 
 #[cfg(all(feature = "brotli_compression", feature = "gzip_compression"))]
-extern crate rocket_contrib;
-
-#[cfg(all(feature = "brotli_compression", feature = "gzip_compression"))]
 mod compress_responder_tests {
-    extern crate brotli;
-    extern crate flate2;
-
     use rocket::http::hyper::header::{ContentEncoding, Encoding};
     use rocket::http::Status;
     use rocket::http::{ContentType, Header};
@@ -22,7 +16,7 @@ mod compress_responder_tests {
     use std::io::Cursor;
     use std::io::Read;
 
-    use self::flate2::read::{GzDecoder, GzEncoder};
+    use flate2::read::{GzDecoder, GzEncoder};
 
     const HELLO: &str = r"This is a message to hello with more than 100 bytes \
         in order to have to read more than one buffer when gzipping. こんにちは!";

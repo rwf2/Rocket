@@ -4,16 +4,16 @@ use std::borrow::Cow;
 
 use rocket::http::{Header, uri::Uri, uncased::UncasedStr};
 
-use helmet::time::Duration;
+use time::Duration;
 
 /// Trait implemented by security and privacy policy headers.
 ///
 /// Types that implement this trait can be [`enable()`]d and [`disable()`]d on
 /// instances of [`SpaceHelmet`].
 ///
-/// [`SpaceHelmet`]: ::helmet::SpaceHelmet
-/// [`enable()`]: ::helmet::SpaceHelmet::enable()
-/// [`disable()`]: ::helmet::SpaceHelmet::disable()
+/// [`SpaceHelmet`]: crate::helmet::SpaceHelmet
+/// [`enable()`]: crate::helmet::SpaceHelmet::enable()
+/// [`disable()`]: crate::helmet::SpaceHelmet::disable()
 pub trait Policy: Default + Send + Sync + 'static {
     /// The actual name of the HTTP header.
     ///

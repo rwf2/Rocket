@@ -5,7 +5,7 @@ use rocket::http::uncased::UncasedStr;
 use rocket::fairing::{Fairing, Info, Kind};
 use rocket::{Request, Response, Rocket};
 
-use helmet::*;
+use crate::helmet::*;
 
 /// A [`Fairing`](../../rocket/fairing/trait.Fairing.html) that adds HTTP
 /// headers to outgoing responses that control security features on the browser.
@@ -167,7 +167,7 @@ impl SpaceHelmet {
 
     /// Sets all of the headers in `self.policies` in `response` as long as the
     /// header is not already in the response.
-    fn apply(&self, response: &mut Response) {
+    fn apply(&self, response: &mut Response<'_>) {
         for policy in self.policies.values() {
             let name = policy.name();
             if response.headers().contains(name.as_str()) {
@@ -196,7 +196,7 @@ impl Fairing for SpaceHelmet {
         }
     }
 
-    fn on_response(&self, _request: &Request, response: &mut Response) {
+    fn on_response(&self, _request: &Request<'_>, response: &mut Response<'_>) {
         self.apply(response);
     }
 

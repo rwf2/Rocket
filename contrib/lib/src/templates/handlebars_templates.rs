@@ -1,7 +1,8 @@
-use templates::serde::Serialize;
-use templates::{Engine, TemplateInfo};
+use serde::Serialize;
 
-pub use templates::handlebars::Handlebars;
+use crate::templates::{Engine, TemplateInfo};
+
+pub use crate::templates::handlebars::Handlebars;
 
 impl Engine for Handlebars {
     const EXT: &'static str = "hbs";

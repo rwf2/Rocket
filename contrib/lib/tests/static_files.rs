@@ -1,8 +1,5 @@
 #![feature(proc_macro_hygiene, decl_macro)]
 
-extern crate rocket;
-extern crate rocket_contrib;
-
 #[cfg(feature = "serve")]
 mod static_tests {
     use std::{io::Read, fs::File};

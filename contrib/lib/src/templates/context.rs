@@ -1,7 +1,7 @@
 use std::path::{Path, PathBuf};
 use std::collections::HashMap;
 
-use templates::{glob, Engines, TemplateInfo};
+use crate::templates::{Engines, TemplateInfo};
 
 use rocket::http::ContentType;
 
@@ -25,7 +25,7 @@ impl Context {
             glob_path.set_extension(ext);
             let glob_path = glob_path.to_str().expect("valid glob path string");
 
-            for path in glob(glob_path).unwrap().filter_map(Result::ok) {
+            for path in glob::glob(glob_path).unwrap().filter_map(Result::ok) {
                 let (name, data_type_str) = split_path(&root, &path);
                 if let Some(info) = templates.get(&*name) {
                     warn_!("Template name '{}' does not have a unique path.", name);

@@ -1,4 +1,4 @@
-use templates::{DEFAULT_TEMPLATE_DIR, Context, Engines};
+use crate::templates::{DEFAULT_TEMPLATE_DIR, Context, Engines};
 
 use rocket::Rocket;
 use rocket::config::ConfigError;
@@ -9,7 +9,7 @@ crate use self::context::ContextManager;
 #[cfg(not(debug_assertions))]
 mod context {
     use std::ops::Deref;
-    use templates::Context;
+    use crate::templates::Context;
 
     /// Wraps a Context. With `cfg(debug_assertions)` active, this structure
     /// additionally provides a method to reload the context at runtime.
@@ -32,15 +32,13 @@ mod context {
 
 #[cfg(debug_assertions)]
 mod context {
-    extern crate notify;
-
     use std::ops::{Deref, DerefMut};
     use std::sync::{RwLock, Mutex};
     use std::sync::mpsc::{channel, Receiver};
 
-    use templates::{Context, Engines};
+    use notify::{raw_watcher, RawEvent, RecommendedWatcher, RecursiveMode, Watcher};
 
-    use self::notify::{raw_watcher, RawEvent, RecommendedWatcher, RecursiveMode, Watcher};
+    use crate::templates::{Context, Engines};
 
     /// Wraps a Context. With `cfg(debug_assertions)` active, this structure
     /// additionally provides a method to reload the context at runtime.
@@ -123,7 +121,7 @@ pub struct TemplateFairing {
     /// The user-provided customization callback, allowing the use of
     /// functionality specific to individual template engines. In debug mode,
     /// this callback might be run multiple times as templates are reloaded.
-    crate custom_callback: Box<Fn(&mut Engines) + Send + Sync + 'static>,
+    crate custom_callback: Box<dyn Fn(&mut Engines) + Send + Sync + 'static>,
 }
 
 impl Fairing for TemplateFairing {
@@ -165,8 +163,8 @@ impl Fairing for TemplateFairing {
     }
 
     #[cfg(debug_assertions)]
-    fn on_request(&self, req: &mut ::rocket::Request, _data: &::rocket::Data) {
-        let cm = req.guard::<::rocket::State<ContextManager>>()
+    fn on_request(&self, req: &mut rocket::Request<'_>, _data: &rocket::Data) {
+        let cm = req.guard::<rocket::State<'_, ContextManager>>()
             .expect("Template ContextManager registered in on_attach");
 
         cm.reload_if_needed(&*self.custom_callback);

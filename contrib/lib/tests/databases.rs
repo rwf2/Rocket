@@ -1,6 +1,3 @@
-extern crate rocket;
-extern crate rocket_contrib;
-
 #[cfg(all(feature = "diesel_sqlite_pool", feature = "diesel_postgres_pool"))]
 mod databases_tests {
     use rocket_contrib::databases::{database, diesel};
@@ -20,7 +17,7 @@ mod rusqlite_integration_test {
     use rocket_contrib::databases::rusqlite;
     use rocket_contrib::database;
 
-    use self::rusqlite::types::ToSql;
+    use rusqlite::types::ToSql;
 
     #[database("test_db")]
     struct SqliteDb(pub rusqlite::Connection);

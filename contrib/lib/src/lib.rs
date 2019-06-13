@@ -6,6 +6,8 @@
 #![doc(html_favicon_url = "https://rocket.rs/v0.5/images/favicon.ico")]
 #![doc(html_logo_url = "https://rocket.rs/v0.5/images/logo-boxed.png")]
 
+#![warn(rust_2018_idioms)]
+
 //! This crate contains officially sanctioned contributor libraries that provide
 //! functionality commonly used by Rocket applications.
 //!
@@ -54,5 +56,4 @@
 #[cfg(feature = "helmet")] pub mod helmet;
 #[cfg(any(feature="brotli_compression", feature="gzip_compression"))] pub mod compression;
 
-#[cfg(feature="databases")] extern crate rocket_contrib_codegen;
 #[cfg(feature="databases")] #[doc(hidden)] pub use rocket_contrib_codegen::*;

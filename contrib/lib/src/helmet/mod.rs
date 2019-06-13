@@ -103,8 +103,6 @@
 //!
 //! [OWASP]: https://www.owasp.org/index.php/OWASP_Secure_Headers_Project#tab=Headers
 
-extern crate time;
-
 mod helmet;
 mod policy;
 

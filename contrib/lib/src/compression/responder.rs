@@ -36,7 +36,7 @@ pub struct Compress<R>(pub R);
 
 impl<'r, R: Responder<'r>> Responder<'r> for Compress<R> {
     #[inline(always)]
-    fn respond_to(self, request: &Request) -> response::Result<'r> {
+    fn respond_to(self, request: &Request<'_>) -> response::Result<'r> {
         let mut response = Response::build()
             .merge(self.0.respond_to(request)?)
             .finalize();

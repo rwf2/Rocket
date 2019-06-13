@@ -6,15 +6,11 @@ extern crate rocket;
 
 #[cfg(feature = "helmet")]
 mod helmet_tests {
-    extern crate time;
-    extern crate rocket_contrib;
-
-    use rocket;
     use rocket::http::{Status, uri::Uri};
     use rocket::local::{Client, LocalResponse};
 
-    use self::rocket_contrib::helmet::*;
-    use self::time::Duration;
+    use rocket_contrib::helmet::*;
+    use time::Duration;
 
     #[get("/")] fn hello() { }
 
@@ -47,7 +43,7 @@ mod helmet_tests {
 
     #[test]
     fn default_headers_test() {
-        dispatch!(SpaceHelmet::default(), |response: LocalResponse| {
+        dispatch!(SpaceHelmet::default(), |response: LocalResponse<'_>| {
             assert_header!(response, "X-XSS-Protection", "1");
             assert_header!(response, "X-Frame-Options", "SAMEORIGIN");
             assert_header!(response, "X-Content-Type-Options", "nosniff");
@@ -57,14 +53,14 @@ mod helmet_tests {
     #[test]
     fn disable_headers_test() {
         let helmet = SpaceHelmet::default().disable::<XssFilter>();
-        dispatch!(helmet, |response: LocalResponse| {
+        dispatch!(helmet, |response: LocalResponse<'_>| {
             assert_header!(response, "X-Frame-Options", "SAMEORIGIN");
             assert_header!(response, "X-Content-Type-Options", "nosniff");
             assert_no_header!(response, "X-XSS-Protection");
         });
 
         let helmet = SpaceHelmet::default().disable::<Frame>();
-        dispatch!(helmet, |response: LocalResponse| {
+        dispatch!(helmet, |response: LocalResponse<'_>| {
             assert_header!(response, "X-XSS-Protection", "1");
             assert_header!(response, "X-Content-Type-Options", "nosniff");
             assert_no_header!(response, "X-Frame-Options");
@@ -75,13 +71,13 @@ mod helmet_tests {
             .disable::<XssFilter>()
             .disable::<NoSniff>();
 
-        dispatch!(helmet, |response: LocalResponse| {
+        dispatch!(helmet, |response: LocalResponse<'_>| {
             assert_no_header!(response, "X-Frame-Options");
             assert_no_header!(response, "X-XSS-Protection");
             assert_no_header!(response, "X-Content-Type-Options");
         });
 
-        dispatch!(SpaceHelmet::new(), |response: LocalResponse| {
+        dispatch!(SpaceHelmet::new(), |response: LocalResponse<'_>| {
             assert_no_header!(response, "X-Frame-Options");
             assert_no_header!(response, "X-XSS-Protection");
             assert_no_header!(response, "X-Content-Type-Options");
@@ -95,7 +91,7 @@ mod helmet_tests {
             .enable(ExpectCt::default())
             .enable(Referrer::default());
 
-        dispatch!(helmet, |response: LocalResponse| {
+        dispatch!(helmet, |response: LocalResponse<'_>| {
             assert_header!(
                 response,
                 "Strict-Transport-Security",
@@ -123,7 +119,7 @@ mod helmet_tests {
             .enable(XssFilter::EnableReport(report_uri))
             .enable(ExpectCt::ReportAndEnforce(Duration::seconds(30), enforce_uri));
 
-        dispatch!(helmet, |response: LocalResponse| {
+        dispatch!(helmet, |response: LocalResponse<'_>| {
             assert_header!(response, "X-Frame-Options",
                            "ALLOW-FROM https://www.google.com");
 

@@ -86,7 +86,7 @@ impl Default for Options {
     }
 }
 
-impl ::std::ops::BitOr for Options {
+impl std::ops::BitOr for Options {
     type Output = Self;
 
     #[inline(always)]
@@ -272,8 +272,8 @@ impl Into<Vec<Route>> for StaticFiles {
 }
 
 impl Handler for StaticFiles {
-    fn handle<'r>(&self, req: &'r Request, _: Data) -> Outcome<'r> {
-        fn handle_index<'r>(opt: Options, r: &'r Request, path: &Path) -> Outcome<'r> {
+    fn handle<'r>(&self, req: &'r Request<'_>, _: Data) -> Outcome<'r> {
+        fn handle_index<'r>(opt: Options, r: &'r Request<'_>, path: &Path) -> Outcome<'r> {
             if !opt.contains(Options::Index) {
                 return Outcome::failure(Status::NotFound);
             }
@@ -292,7 +292,7 @@ impl Handler for StaticFiles {
         // Otherwise, we're handling segments. Get the segments as a `PathBuf`,
         // only allowing dotfiles if the user allowed it.
         let allow_dotfiles = self.options.contains(Options::DotFiles);
-        let path = req.get_segments::<Segments>(0)
+        let path = req.get_segments::<Segments<'_>>(0)
             .and_then(|res| res.ok())
             .and_then(|segments| segments.into_path_buf(allow_dotfiles).ok())
             .map(|path| self.root.join(path))
