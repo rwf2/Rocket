@@ -3,12 +3,12 @@ use std::borrow::Cow;
 use pear::{parser, switch};
 use pear::parsers::*;
 
-use media_type::{MediaType, Source};
-use parse::checkers::{is_whitespace, is_valid_token};
-use parse::IndexedStr;
+use crate::media_type::{MediaType, Source};
+use crate::parse::checkers::{is_whitespace, is_valid_token};
+use crate::parse::IndexedStr;
 
-type Input<'a> = ::parse::IndexedInput<'a, str>;
-type Result<'a, T> = ::pear::Result<T, Input<'a>>;
+type Input<'a> = crate::parse::IndexedInput<'a, str>;
+type Result<'a, T> = pear::Result<T, Input<'a>>;
 
 #[parser]
 fn quoted_string<'a>(input: &mut Input<'a>) -> Result<'a, IndexedStr<'a>> {
@@ -54,13 +54,13 @@ pub fn media_type<'a>(input: &mut Input<'a>) -> Result<'a, MediaType> {
     }
 }
 
-pub fn parse_media_type(input: &str) -> Result<MediaType> {
+pub fn parse_media_type(input: &str) -> Result<'_, MediaType> {
     parse!(media_type: &mut input.into())
 }
 
 #[cfg(test)]
 mod test {
-    use MediaType;
+    use crate::MediaType;
     use super::parse_media_type;
 
     macro_rules! assert_no_parse {

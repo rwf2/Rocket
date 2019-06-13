@@ -12,6 +12,7 @@ readme = "../../README.md"
 keywords = ["rocket", "web", "framework", "http"]
 license = "MIT/Apache-2.0"
 categories = ["web-programming"]
+edition = "2018"
 
 [features]
 default = []

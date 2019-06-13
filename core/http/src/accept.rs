@@ -4,9 +4,9 @@ use std::fmt;
 
 use smallvec::SmallVec;
 
-use {Header, MediaType};
-use ext::IntoCollection;
-use parse::parse_accept;
+use crate::{Header, MediaType};
+use crate::ext::IntoCollection;
+use crate::parse::parse_accept;
 
 /// A `MediaType` with an associated quality value.
 #[derive(Debug, Clone, PartialEq)]
@@ -88,7 +88,7 @@ pub enum AcceptParams {
     Dynamic(SmallVec<[QMediaType; 1]>)
 }
 
-impl ::pear::parsers::Collection for AcceptParams {
+impl pear::parsers::Collection for AcceptParams {
     type Item = QMediaType;
 
     fn new() -> Self {
@@ -130,7 +130,7 @@ impl PartialEq for AcceptParams {
 /// [`Request::accept()`] method. The [`preferred()`] method can be used to
 /// retrieve the client's preferred media type.
 ///
-/// [`Request::accept`]: ::rocket::Request::accept()
+/// [`Request::accept`]: rocket::Request::accept()
 /// [`preferred()`]: Accept::preferred()
 ///
 /// An `Accept` type with a single, common media type can be easily constructed
@@ -353,7 +353,7 @@ impl Accept {
 }
 
 impl fmt::Display for Accept {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         for (i, media_type) in self.iter().enumerate() {
             if i >= 1 {
                 write!(f, ", {}", media_type.0)?;
@@ -387,7 +387,7 @@ impl Into<Header<'static>> for Accept {
 
 #[cfg(test)]
 mod test {
-    use {Accept, MediaType};
+    use crate::{Accept, MediaType};
 
     macro_rules! assert_preference {
         ($string:expr, $expect:expr) => (

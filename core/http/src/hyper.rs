@@ -4,40 +4,38 @@
 //! These types will, with certainty, be removed with time, but they reside here
 //! while necessary.
 
-extern crate hyper;
+#[doc(hidden)] pub use hyper::server::Request as Request;
+#[doc(hidden)] pub use hyper::server::Response as Response;
+#[doc(hidden)] pub use hyper::server::Server as Server;
+#[doc(hidden)] pub use hyper::server::Handler as Handler;
 
-#[doc(hidden)] pub use self::hyper::server::Request as Request;
-#[doc(hidden)] pub use self::hyper::server::Response as Response;
-#[doc(hidden)] pub use self::hyper::server::Server as Server;
-#[doc(hidden)] pub use self::hyper::server::Handler as Handler;
+#[doc(hidden)] pub use hyper::net;
 
-#[doc(hidden)] pub use self::hyper::net;
+#[doc(hidden)] pub use hyper::method::Method;
+#[doc(hidden)] pub use hyper::status::StatusCode;
+#[doc(hidden)] pub use hyper::error::Error;
+#[doc(hidden)] pub use hyper::uri::RequestUri;
+#[doc(hidden)] pub use hyper::http::h1;
+#[doc(hidden)] pub use hyper::buffer;
 
-#[doc(hidden)] pub use self::hyper::method::Method;
-#[doc(hidden)] pub use self::hyper::status::StatusCode;
-#[doc(hidden)] pub use self::hyper::error::Error;
-#[doc(hidden)] pub use self::hyper::uri::RequestUri;
-#[doc(hidden)] pub use self::hyper::http::h1;
-#[doc(hidden)] pub use self::hyper::buffer;
+pub use hyper::mime;
 
-pub use self::hyper::mime;
-
-/// Type alias to `self::hyper::Response<'a, self::hyper::net::Fresh>`.
+/// Type alias to `hyper::Response<'a, hyper::net::Fresh>`.
 #[doc(hidden)] pub type FreshResponse<'a> = self::Response<'a, self::net::Fresh>;
 
 /// Reexported Hyper header types.
 pub mod header {
-    use Header;
+    use crate::Header;
 
-    use super::hyper::header::Header as HyperHeaderTrait;
+    use hyper::header::Header as HyperHeaderTrait;
 
     macro_rules! import_hyper_items {
-        ($($item:ident),*) => ($(pub use super::hyper::header::$item;)*)
+        ($($item:ident),*) => ($(pub use hyper::header::$item;)*)
     }
 
     macro_rules! import_hyper_headers {
         ($($name:ident),*) => ($(
-            impl ::std::convert::From<self::$name> for Header<'static> {
+            impl std::convert::From<self::$name> for Header<'static> {
                 fn from(header: self::$name) -> Header<'static> {
                     Header::new($name::header_name(), header.to_string())
                 }

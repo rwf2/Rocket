@@ -1,12 +1,12 @@
 use pear::parsers::*;
 use pear::{parser, switch};
 
-use uri::{Uri, Origin, Authority, Absolute, Host};
-use parse::uri::tables::{is_reg_name_char, is_pchar, is_pchar_or_rchar};
-use parse::uri::RawInput;
-use parse::IndexedBytes;
+use crate::uri::{Uri, Origin, Authority, Absolute, Host};
+use crate::parse::uri::tables::{is_reg_name_char, is_pchar, is_pchar_or_rchar};
+use crate::parse::uri::RawInput;
+use crate::parse::IndexedBytes;
 
-type Result<'a, T> = ::pear::Result<T, RawInput<'a>>;
+type Result<'a, T> = pear::Result<T, RawInput<'a>>;
 
 #[parser]
 crate fn uri<'a>(input: &mut RawInput<'a>) -> Result<'a, Uri<'a>> {

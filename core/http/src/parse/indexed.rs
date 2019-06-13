@@ -6,7 +6,7 @@ use std::fmt::{self, Debug};
 
 use pear::{Input, Length};
 
-use ext::IntoOwned;
+use crate::ext::IntoOwned;
 
 pub type IndexedString = Indexed<'static, str>;
 pub type IndexedStr<'a> = Indexed<'a, str>;
@@ -154,7 +154,7 @@ impl<'a, T: ?Sized + ToOwned + 'a> Indexed<'a, T>
     ///
     /// Panics if `self` is an indexed string and `string` is None.
     // pub fn to_source(&self, source: Option<&'a T>) -> &T {
-    pub fn from_cow_source<'s>(&'s self, source: &'s Option<Cow<T>>) -> &'s T {
+    pub fn from_cow_source<'s>(&'s self, source: &'s Option<Cow<'_, T>>) -> &'s T {
         if self.is_indexed() && source.is_none() {
             panic!("Cannot convert indexed str to str without base string!")
         }
@@ -196,7 +196,7 @@ impl<'a, T: ToOwned + ?Sized + 'a> Clone for Indexed<'a, T> {
 impl<'a, T: ?Sized + 'a> Debug for Indexed<'a, T>
     where T: ToOwned + Debug, T::Owned: Debug
 {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match *self {
             Indexed::Indexed(a, b) => fmt::Debug::fmt(&(a, b), f),
             Indexed::Concrete(ref cow) => fmt::Debug::fmt(cow, f),
@@ -215,7 +215,7 @@ impl<'a, T: ?Sized + Length + ToOwned + 'a> Length for Indexed<'a, T> {
 }
 
 #[derive(Debug)]
-pub struct IndexedInput<'a, T: ?Sized + 'a> {
+pub struct IndexedInput<'a, T: ?Sized> {
     source: &'a T,
     current: &'a T
 }
@@ -235,7 +235,7 @@ impl<'a, T: ToOwned + ?Sized + 'a> IndexedInput<'a, T> {
 }
 
 impl<'a> IndexedInput<'a, [u8]> {
-    pub fn backtrack(&mut self, n: usize) -> ::pear::Result<(), Self> {
+    pub fn backtrack(&mut self, n: usize) -> pear::Result<(), Self> {
         let source_addr = self.source.as_ptr() as usize;
         let current_addr = self.current.as_ptr() as usize;
         if current_addr > n && (current_addr - n) >= source_addr {
@@ -323,8 +323,8 @@ pub struct Context {
     pub string: String
 }
 
-impl ::std::fmt::Display for Context {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+impl std::fmt::Display for Context {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         const LIMIT: usize = 7;
         write!(f, "[{}:]", self.offset)?;
 

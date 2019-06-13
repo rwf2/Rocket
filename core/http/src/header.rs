@@ -3,7 +3,7 @@ use std::fmt;
 
 use indexmap::IndexMap;
 
-use uncased::{Uncased, UncasedStr};
+use crate::uncased::{Uncased, UncasedStr};
 
 /// Simple representation of an HTTP header.
 #[derive(Debug, Clone, Hash, PartialEq, Eq)]
@@ -17,8 +17,9 @@ pub struct Header<'h> {
 impl<'h> Header<'h> {
     /// Constructs a new header. This method should be used rarely and only for
     /// non-standard headers. Instead, prefer to use the `Into<Header>`
-    /// implementations of many types, including [`ContentType`] and all of the
-    /// headers in [`http::hyper::header`](hyper::header).
+    /// implementations of many types, including
+    /// [`ContentType`](crate::ContentType) and all of the headers in
+    /// [`http::hyper::header`](hyper::header).
     ///
     /// # Examples
     ///
@@ -106,7 +107,7 @@ impl<'h> Header<'h> {
 
 impl<'h> fmt::Display for Header<'h> {
     #[inline(always)]
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}: {}", self.name, self.value)
     }
 }
@@ -520,7 +521,7 @@ impl<'h> HeaderMap<'h> {
     /// ```
     #[inline(always)]
     pub fn remove_all(&mut self) -> Vec<Header<'h>> {
-        let old_map = ::std::mem::replace(self, HeaderMap::new());
+        let old_map = std::mem::replace(self, HeaderMap::new());
         old_map.into_iter().collect()
     }
 
@@ -560,7 +561,7 @@ impl<'h> HeaderMap<'h> {
     ///     }
     /// }
     /// ```
-    pub fn iter(&self) -> impl Iterator<Item=Header> {
+    pub fn iter(&self) -> impl Iterator<Item=Header<'_>> {
         self.headers.iter().flat_map(|(key, values)| {
             values.iter().map(move |val| {
                 Header::new(key.as_str(), &**val)

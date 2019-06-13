@@ -156,7 +156,7 @@ impl Ord for UncasedStr {
 
 impl fmt::Display for UncasedStr {
     #[inline(always)]
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         self.0.fmt(f)
     }
 }
@@ -299,7 +299,7 @@ impl<'a> Ord for Uncased<'a> {
 
 impl<'s> fmt::Display for Uncased<'s> {
     #[inline(always)]
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         self.string.fmt(f)
     }
 }

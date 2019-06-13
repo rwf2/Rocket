@@ -3,10 +3,10 @@ use std::ops::Deref;
 use std::str::FromStr;
 use std::fmt;
 
-use header::Header;
-use media_type::{MediaType, Source};
-use ext::IntoCollection;
-use hyper::mime::Mime;
+use crate::header::Header;
+use crate::media_type::{MediaType, Source};
+use crate::ext::IntoCollection;
+use crate::hyper::mime::Mime;
 
 /// Representation of HTTP Content-Types.
 ///
@@ -350,7 +350,7 @@ impl fmt::Display for ContentType {
     /// assert_eq!(ct, "application/json");
     /// ```
     #[inline(always)]
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}", self.0)
     }
 }

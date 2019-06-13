@@ -1,12 +1,12 @@
 use pear::parser;
 use pear::parsers::*;
 
-use {Accept, QMediaType};
-use parse::checkers::is_whitespace;
-use parse::media_type::media_type;
+use crate::{Accept, QMediaType};
+use crate::parse::checkers::is_whitespace;
+use crate::parse::media_type::media_type;
 
-type Input<'a> = ::parse::IndexedInput<'a, str>;
-type Result<'a, T> = ::pear::Result<T, Input<'a>>;
+type Input<'a> = crate::parse::IndexedInput<'a, str>;
+type Result<'a, T> = pear::Result<T, Input<'a>>;
 
 #[parser]
 fn weighted_media_type<'a>(input: &mut Input<'a>) -> Result<'a, QMediaType> {
@@ -29,13 +29,13 @@ fn accept<'a>(input: &mut Input<'a>) -> Result<'a, Accept> {
     Accept(series(false, ',', is_whitespace, weighted_media_type)?)
 }
 
-pub fn parse_accept(input: &str) -> Result<Accept> {
+pub fn parse_accept(input: &str) -> Result<'_, Accept> {
     parse!(accept: &mut input.into())
 }
 
 #[cfg(test)]
 mod test {
-    use MediaType;
+    use crate::MediaType;
     use super::parse_accept;
 
     macro_rules! assert_parse {

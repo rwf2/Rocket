@@ -4,10 +4,10 @@ use std::borrow::Cow;
 use std::str::Utf8Error;
 use std::convert::TryFrom;
 
-use ext::IntoOwned;
-use parse::Indexed;
-use uri::{Origin, Authority, Absolute, Error};
-use uri::encoding::{percent_encode, DEFAULT_ENCODE_SET};
+use crate::ext::IntoOwned;
+use crate::parse::Indexed;
+use crate::uri::{Origin, Authority, Absolute, Error};
+use crate::uri::encoding::{percent_encode, DEFAULT_ENCODE_SET};
 
 /// An `enum` encapsulating any of the possible URI variants.
 ///
@@ -19,7 +19,7 @@ use uri::encoding::{percent_encode, DEFAULT_ENCODE_SET};
 ///
 /// Nevertheless, the `Uri` type is typically enountered as a conversion target.
 /// In particular, you will likely see generic bounds of the form: `T:
-/// TryInto<Uri>` (for instance, in [`Redirect`](::rocket::response::Redirect)
+/// TryInto<Uri>` (for instance, in [`Redirect`](rocket::response::Redirect)
 /// methods). This means that you can provide any type `T` that implements
 /// `TryInto<Uri>`, or, equivalently, any type `U` for which `Uri` implements
 /// `TryFrom<U>` or `From<U>`. These include `&str` and `String`, [`Origin`],
@@ -41,13 +41,13 @@ use uri::encoding::{percent_encode, DEFAULT_ENCODE_SET};
 /// methods: [`Uri::percent_encode()`], [`Uri::percent_decode()`], and
 /// [`Uri::percent_decode_lossy()`].
 ///
-/// [`Origin`]: uri::Origin
-/// [`Authority`]: uri::Authority
-/// [`Absolute`]: uri::Absolute
-/// [`Uri::parse()`]: uri::Uri::parse()
-/// [`Uri::percent_encode()`]: uri::Uri::percent_encode()
-/// [`Uri::percent_decode()`]: uri::Uri::percent_decode()
-/// [`Uri::percent_decode_lossy()`]: uri::Uri::percent_decode_lossy()
+/// [`Origin`]: crate::uri::Origin
+/// [`Authority`]: crate::uri::Authority
+/// [`Absolute`]: crate::uri::Absolute
+/// [`Uri::parse()`]: crate::uri::Uri::parse()
+/// [`Uri::percent_encode()`]: crate::uri::Uri::percent_encode()
+/// [`Uri::percent_decode()`]: crate::uri::Uri::percent_decode()
+/// [`Uri::percent_decode_lossy()`]: crate::uri::Uri::percent_decode_lossy()
 #[derive(Debug, PartialEq, Clone)]
 pub enum Uri<'a> {
     /// An origin URI.
@@ -90,8 +90,8 @@ impl<'a> Uri<'a> {
     /// // Invalid URIs fail to parse.
     /// Uri::parse("foo bar").expect_err("invalid URI");
     /// ```
-    pub fn parse(string: &'a str) -> Result<Uri<'a>, Error> {
-        ::parse::uri::from_str(string)
+    pub fn parse(string: &'a str) -> Result<Uri<'a>, Error<'_>> {
+        crate::parse::uri::from_str(string)
     }
 
     /// Returns the internal instance of `Origin` if `self` is a `Uri::Origin`.
@@ -172,7 +172,7 @@ impl<'a> Uri<'a> {
     /// let encoded = Uri::percent_encode("hello?a=<b>hi</b>");
     /// assert_eq!(encoded, "hello%3Fa%3D%3Cb%3Ehi%3C%2Fb%3E");
     /// ```
-    pub fn percent_encode(string: &str) -> Cow<str> {
+    pub fn percent_encode(string: &str) -> Cow<'_, str> {
         percent_encode::<DEFAULT_ENCODE_SET>(string)
     }
 
@@ -188,8 +188,8 @@ impl<'a> Uri<'a> {
     /// let decoded = Uri::percent_decode("/Hello%2C%20world%21".as_bytes());
     /// assert_eq!(decoded.unwrap(), "/Hello, world!");
     /// ```
-    pub fn percent_decode(string: &[u8]) -> Result<Cow<str>, Utf8Error> {
-        let decoder = ::percent_encoding::percent_decode(string);
+    pub fn percent_decode(string: &[u8]) -> Result<Cow<'_, str>, Utf8Error> {
+        let decoder = percent_encoding::percent_decode(string);
         decoder.decode_utf8()
     }
 
@@ -206,15 +206,15 @@ impl<'a> Uri<'a> {
     /// let decoded = Uri::percent_decode_lossy("/Hello%2C%20world%21".as_bytes());
     /// assert_eq!(decoded, "/Hello, world!");
     /// ```
-    pub fn percent_decode_lossy(string: &[u8]) -> Cow<str> {
-        let decoder = ::percent_encoding::percent_decode(string);
+    pub fn percent_decode_lossy(string: &[u8]) -> Cow<'_, str> {
+        let decoder = percent_encoding::percent_decode(string);
         decoder.decode_utf8_lossy()
     }
 }
 
-crate unsafe fn as_utf8_unchecked(input: Cow<[u8]>) -> Cow<str> {
+crate unsafe fn as_utf8_unchecked(input: Cow<'_, [u8]>) -> Cow<'_, str> {
     match input {
-        Cow::Borrowed(bytes) => Cow::Borrowed(::std::str::from_utf8_unchecked(bytes)),
+        Cow::Borrowed(bytes) => Cow::Borrowed(std::str::from_utf8_unchecked(bytes)),
         Cow::Owned(bytes) => Cow::Owned(String::from_utf8_unchecked(bytes))
     }
 }
@@ -254,7 +254,7 @@ impl<'a> IntoOwned for Uri<'a> {
 }
 
 impl<'a> Display for Uri<'a> {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match *self {
             Uri::Origin(ref origin) => write!(f, "{}", origin),
             Uri::Authority(ref authority) => write!(f, "{}", authority),

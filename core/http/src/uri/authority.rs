@@ -1,9 +1,9 @@
 use std::fmt::{self, Display};
 use std::borrow::Cow;
 
-use ext::IntoOwned;
-use parse::{Indexed, IndexedStr};
-use uri::{as_utf8_unchecked, Error};
+use crate::ext::IntoOwned;
+use crate::parse::{Indexed, IndexedStr};
+use crate::uri::{as_utf8_unchecked, Error};
 
 /// A URI with an authority only: `user:pass@host:8000`.
 ///
@@ -102,7 +102,7 @@ impl<'a> Authority<'a> {
     /// Authority::parse("http://google.com").expect_err("invalid authority");
     /// ```
     pub fn parse(string: &'a str) -> Result<Authority<'a>, Error<'a>> {
-        ::parse::uri::authority_from_str(string)
+        crate::parse::uri::authority_from_str(string)
     }
 
     /// Returns the user info part of the authority URI, if there is one.
@@ -181,7 +181,7 @@ impl<'a, 'b> PartialEq<Authority<'b>> for Authority<'a> {
 }
 
 impl<'a> Display for Authority<'a> {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         if let Some(user_info) = self.user_info() {
             write!(f, "{}@", user_info)?;
         }

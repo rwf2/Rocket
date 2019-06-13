@@ -3,9 +3,9 @@ use std::str::FromStr;
 use std::fmt;
 use std::hash::{Hash, Hasher};
 
-use ext::IntoCollection;
-use uncased::{uncased_eq, UncasedStr};
-use parse::{Indexed, IndexedString, parse_media_type};
+use crate::ext::IntoCollection;
+use crate::uncased::{uncased_eq, UncasedStr};
+use crate::parse::{Indexed, IndexedString, parse_media_type};
 
 use smallvec::SmallVec;
 
@@ -22,7 +22,7 @@ pub enum MediaParams {
     Dynamic(SmallVec<[(IndexedString, IndexedString); 2]>)
 }
 
-impl ::pear::parsers::Collection for MediaParams {
+impl pear::parsers::Collection for MediaParams {
     type Item = (IndexedString, IndexedString);
 
     fn new() -> Self {
@@ -60,11 +60,12 @@ impl Source {
 /// # Usage
 ///
 /// A `MediaType` should rarely be used directly. Instead, one is typically used
-/// indirectly via types like [`Accept`] and [`ContentType`], which internally
-/// contain `MediaType`s. Nonetheless, a `MediaType` can be created via the
-/// [`MediaType::new()`], [`MediaType::with_params()`], and
-/// [`MediaType::from_extension`()] methods. The preferred method, however, is
-/// to create a `MediaType` via an associated constant.
+/// indirectly via types like [`Accept`](crate::Accept) and
+/// [`ContentType`](crate::ContentType), which internally contain `MediaType`s.
+/// Nonetheless, a `MediaType` can be created via the [`MediaType::new()`],
+/// [`MediaType::with_params()`], and [`MediaType::from_extension`()] methods.
+/// The preferred method, however, is to create a `MediaType` via an associated
+/// constant.
 ///
 /// ## Example
 ///
@@ -533,7 +534,7 @@ impl Hash for MediaType {
 
 impl fmt::Display for MediaType {
     #[inline]
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         if let Source::Known(src) = self.source {
             src.fmt(f)
         } else {

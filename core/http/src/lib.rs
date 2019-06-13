@@ -4,6 +4,8 @@
 #![feature(doc_cfg)]
 #![recursion_limit="512"]
 
+#![warn(rust_2018_idioms)]
+
 //! Types that map to concepts in HTTP.
 //!
 //! This module exports types that map to HTTP concepts or to the underlying
@@ -13,13 +15,6 @@
 //! [#17]: https://github.com/SergioBenitez/Rocket/issues/17
 
 #[macro_use] extern crate pear;
-extern crate percent_encoding;
-extern crate smallvec;
-extern crate cookie;
-extern crate time;
-extern crate indexmap;
-extern crate state;
-extern crate unicode_xid;
 
 pub mod hyper;
 pub mod uri;
@@ -54,20 +49,20 @@ pub mod private {
     // We need to export these for codegen, but otherwise it's unnecessary.
     // TODO: Expose a `const fn` from ContentType when possible. (see RFC#1817)
     // FIXME(rustc): These show up in the rexported module.
-    pub use parse::Indexed;
-    pub use media_type::{MediaParams, Source};
+    pub use crate::parse::Indexed;
+    pub use crate::media_type::{MediaParams, Source};
     pub use smallvec::{SmallVec, Array};
 
     // This one we need to expose for core.
-    pub use cookies::{Key, CookieJar};
+    pub use crate::cookies::{Key, CookieJar};
 }
 
-pub use method::Method;
-pub use content_type::ContentType;
-pub use accept::{Accept, QMediaType};
-pub use status::{Status, StatusClass};
-pub use header::{Header, HeaderMap};
-pub use raw_str::RawStr;
+pub use crate::method::Method;
+pub use crate::content_type::ContentType;
+pub use crate::accept::{Accept, QMediaType};
+pub use crate::status::{Status, StatusClass};
+pub use crate::header::{Header, HeaderMap};
+pub use crate::raw_str::RawStr;
 
-pub use media_type::MediaType;
-pub use cookies::{Cookie, SameSite, Cookies};
+pub use crate::media_type::MediaType;
+pub use crate::cookies::{Cookie, SameSite, Cookies};

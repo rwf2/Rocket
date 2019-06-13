@@ -273,7 +273,7 @@ impl Status {
 
 impl fmt::Display for Status {
     #[inline(always)]
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{} {}", self.code, self.reason)
     }
 }

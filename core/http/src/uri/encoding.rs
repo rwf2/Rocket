@@ -3,8 +3,8 @@ use std::borrow::Cow;
 
 use percent_encoding::{EncodeSet, utf8_percent_encode};
 
-use uri::{UriPart, Path, Query};
-use parse::uri::is_pchar;
+use crate::uri::{UriPart, Path, Query};
+use crate::parse::uri::is_pchar;
 
 #[derive(Clone, Copy)]
 #[allow(non_camel_case_types)]
@@ -62,7 +62,7 @@ impl EncodeSet for DEFAULT_ENCODE_SET {
     }
 }
 
-crate fn unsafe_percent_encode<P: UriPart>(string: &str) -> Cow<str> {
+crate fn unsafe_percent_encode<P: UriPart>(string: &str) -> Cow<'_, str> {
     match P::DELIMITER {
         '/' => percent_encode::<UNSAFE_ENCODE_SET<Path>>(string),
         '&' => percent_encode::<UNSAFE_ENCODE_SET<Query>>(string),
@@ -70,6 +70,6 @@ crate fn unsafe_percent_encode<P: UriPart>(string: &str) -> Cow<str> {
     }
 }
 
-crate fn percent_encode<S: EncodeSet + Default>(string: &str) -> Cow<str> {
+crate fn percent_encode<S: EncodeSet + Default>(string: &str) -> Cow<'_, str> {
     utf8_percent_encode(string, S::default()).into()
 }

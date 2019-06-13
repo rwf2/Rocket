@@ -104,7 +104,7 @@ use std::path::Path;
 // Outside of http, this is used by a test.
 #[doc(hidden)]
 pub trait Normalize {
-    fn normalized_str(&self) -> Cow<str>;
+    fn normalized_str(&self) -> Cow<'_, str>;
 }
 
 impl<T: AsRef<Path>> Normalize for T {
@@ -114,7 +114,7 @@ impl<T: AsRef<Path>> Normalize for T {
     }
 
     #[cfg(not(windows))]
-    fn normalized_str(&self) -> Cow<str> {
+    fn normalized_str(&self) -> Cow<'_, str> {
         self.as_ref().to_string_lossy()
     }
 }

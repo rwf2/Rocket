@@ -1,10 +1,11 @@
 use std::borrow::Cow;
 use std::marker::PhantomData;
+
 use unicode_xid::UnicodeXID;
 
-use ext::IntoOwned;
-use uri::{Origin, UriPart, Path, Query};
-use uri::encoding::unsafe_percent_encode;
+use crate::ext::IntoOwned;
+use crate::uri::{Origin, UriPart, Path, Query};
+use crate::uri::encoding::unsafe_percent_encode;
 
 use self::Error::*;
 
@@ -86,7 +87,7 @@ fn is_valid_ident(string: &str) -> bool {
 }
 
 impl<'a, P: UriPart> RouteSegment<'a, P> {
-    pub fn parse_one(segment: &'a str) -> Result<Self, Error> {
+    pub fn parse_one(segment: &'a str) -> Result<Self, Error<'_>> {
         let (string, index) = (segment.into(), None);
 
         // Check if this is a dynamic param. If so, check its well-formedness.
@@ -129,7 +130,7 @@ impl<'a, P: UriPart> RouteSegment<'a, P> {
 
     pub fn parse_many(
         string: &'a str,
-    ) -> impl Iterator<Item = SResult<P>> {
+    ) -> impl Iterator<Item = SResult<'_, P>> {
         let mut last_multi_seg: Option<&str> = None;
         string.split(P::DELIMITER)
             .filter(|s| !s.is_empty())
@@ -151,13 +152,13 @@ impl<'a, P: UriPart> RouteSegment<'a, P> {
 }
 
 impl<'a> RouteSegment<'a, Path> {
-    pub fn parse(uri: &'a Origin) -> impl Iterator<Item = SResult<'a, Path>> {
+    pub fn parse(uri: &'a Origin<'_>) -> impl Iterator<Item = SResult<'a, Path>> {
         Self::parse_many(uri.path())
     }
 }
 
 impl<'a> RouteSegment<'a, Query> {
-    pub fn parse(uri: &'a Origin) -> Option<impl Iterator<Item = SResult<'a, Query>>> {
+    pub fn parse(uri: &'a Origin<'_>) -> Option<impl Iterator<Item = SResult<'a, Query>>> {
         uri.query().map(|q| Self::parse_many(q))
     }
 }

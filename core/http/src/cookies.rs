@@ -1,7 +1,7 @@
 use std::fmt;
 use std::cell::RefMut;
 
-use Header;
+use crate::Header;
 use cookie::Delta;
 
 #[doc(hidden)] pub use self::key::*;
@@ -40,7 +40,7 @@ mod key {
 /// can be added or removed via the [`add()`], [`add_private()`], [`remove()`],
 /// and [`remove_private()`] methods.
 ///
-/// [`Request::cookies()`]: ::rocket::Request::cookies()
+/// [`Request::cookies()`]: rocket::Request::cookies()
 /// [`get()`]: #method.get
 /// [`get_private()`]: #method.get_private
 /// [`add()`]: #method.add
@@ -260,7 +260,7 @@ impl<'a> Cookies<'a> {
     /// WARNING: This is unstable! Do not use this method outside of Rocket!
     #[inline]
     #[doc(hidden)]
-    pub fn delta(&self) -> Delta {
+    pub fn delta(&self) -> Delta<'_> {
         match *self {
             Cookies::Jarred(ref jar, _) => jar.delta(),
             Cookies::Empty(ref jar) => jar.delta()
@@ -362,7 +362,7 @@ impl<'a> Cookies<'a> {
         }
 
         if cookie.expires().is_none() {
-            cookie.set_expires(::time::now() + ::time::Duration::weeks(1));
+            cookie.set_expires(time::now() + time::Duration::weeks(1));
         }
 
         if cookie.same_site().is_none() {
@@ -401,7 +401,7 @@ impl<'a> Cookies<'a> {
 }
 
 impl<'a> fmt::Debug for Cookies<'a> {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match *self {
             Cookies::Jarred(ref jar, _) => write!(f, "{:?}", jar),
             Cookies::Empty(ref jar) => write!(f, "{:?}", jar)
@@ -410,13 +410,13 @@ impl<'a> fmt::Debug for Cookies<'a> {
 }
 
 impl<'c> From<Cookie<'c>> for Header<'static> {
-    fn from(cookie: Cookie) -> Header<'static> {
+    fn from(cookie: Cookie<'_>) -> Header<'static> {
         Header::new("Set-Cookie", cookie.encoded().to_string())
     }
 }
 
 impl<'a, 'c> From<&'a Cookie<'c>> for Header<'static> {
-    fn from(cookie: &Cookie) -> Header<'static> {
+    fn from(cookie: &Cookie<'_>) -> Header<'static> {
         Header::new("Set-Cookie", cookie.encoded().to_string())
     }
 }

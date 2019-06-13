@@ -1,7 +1,7 @@
 use std::path::PathBuf;
 use std::str::Utf8Error;
 
-use uri::Uri;
+use crate::uri::Uri;
 
 /// Iterator over the segments of an absolute URI path. Skips empty segments.
 ///

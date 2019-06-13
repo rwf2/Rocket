@@ -1,7 +1,7 @@
 use std::path::{Path, PathBuf};
 
-use RawStr;
-use uri::{self, UriPart, UriDisplay};
+use crate::RawStr;
+use crate::uri::{self, UriPart, UriDisplay};
 
 /// Conversion trait for parameters used in [`uri!`] invocations.
 ///
@@ -187,17 +187,17 @@ use uri::{self, UriPart, UriDisplay};
 /// assert_eq!(uri.query(), Some("name=Robert%20Mike&nickname=Bob"));
 /// ```
 ///
-/// [`uri!`]: ::rocket_codegen::uri
-/// [`UriDisplay`]: uri::UriDisplay
-/// [`FromUriParam::Target`]: uri::FromUriParam::Target
-/// [`Path`]: uri::Path
+/// [`uri!`]: rocket_codegen::uri
+/// [`UriDisplay`]: crate::uri::UriDisplay
+/// [`FromUriParam::Target`]: crate::uri::FromUriParam::Target
+/// [`Path`]: crate::uri::Path
 pub trait FromUriParam<P: UriPart, T> {
     /// The resulting type of this conversion.
     type Target: UriDisplay<P>;
 
     /// Converts a value of type `T` into a value of type `Self::Target`. The
     /// resulting value of type `Self::Target` will be rendered into a URI using
-    /// its [`UriDisplay`](uri::UriDisplay) implementation.
+    /// its [`UriDisplay`](crate::uri::UriDisplay) implementation.
     fn from_uri_param(param: T) -> Self::Target;
 }
 
@@ -277,9 +277,9 @@ macro_rules! impl_conversion_ref {
 ///      * Example: `impl_from_uri_param_identity!([Path] ('a) MyType<'a>);`
 ///      * Generates: `impl<'a> FromUriParam<Path, _> for MyType<'a> { ... }`
 ///
-/// [`FromUriParam`]: uri::FromUriParam
-/// [`Path`]: uri::Path
-/// [`Query`]: uri::Query
+/// [`FromUriParam`]: crate::uri::FromUriParam
+/// [`Path`]: crate::uri::Path
+/// [`Query`]: crate::uri::Query
 #[macro_export(local_inner_macros)]
 macro_rules! impl_from_uri_param_identity {
     ($(($($l:tt)*) $T:ty),*) => ($( impl_conversion_ref!(($($l)*) $T => $T); )*);

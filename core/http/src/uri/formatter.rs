@@ -3,7 +3,7 @@ use std::marker::PhantomData;
 
 use smallvec::SmallVec;
 
-use uri::{UriPart, Path, Query, UriDisplay, Origin};
+use crate::uri::{UriPart, Path, Query, UriDisplay, Origin};
 
 /// A struct used to format strings for [`UriDisplay`].
 ///
@@ -16,9 +16,9 @@ use uri::{UriPart, Path, Query, UriDisplay, Origin};
 /// formatting parameters in the query part of the URI. The
 /// [`write_named_value()`] method is only available to `UriDisplay<Query>`.
 ///
-/// [`UriPart`]: uri::UriPart
-/// [`Path`]: uri::Path
-/// [`Query`]: uri::Query
+/// [`UriPart`]: crate::uri::UriPart
+/// [`Path`]: crate::uri::Path
+/// [`Query`]: crate::uri::Query
 ///
 /// # Overview
 ///
@@ -39,9 +39,9 @@ use uri::{UriPart, Path, Query, UriDisplay, Origin};
 ///     calls `write_named_vlaue()`, the nested names are joined by a `.`,
 ///     written out followed by a `=`, followed by the value.
 ///
-/// [`UriDisplay`]: uri::UriDisplay
-/// [`UriDisplay::fmt()`]: uri::UriDisplay::fmt()
-/// [`write_named_value()`]: uri::Formatter::write_named_value()
+/// [`UriDisplay`]: crate::uri::UriDisplay
+/// [`UriDisplay::fmt()`]: crate::uri::UriDisplay::fmt()
+/// [`write_named_value()`]: crate::uri::Formatter::write_named_value()
 ///
 /// # Usage
 ///
@@ -59,7 +59,7 @@ use uri::{UriPart, Path, Query, UriDisplay, Origin};
 /// called, after a call to `write_named_value` or `write_value`, or after a
 /// call to [`refresh()`].
 ///
-/// [`refresh()`]: uri::Formatter::refresh()
+/// [`refresh()`]: crate::uri::Formatter::refresh()
 ///
 /// # Example
 ///
@@ -146,8 +146,8 @@ use uri::{UriPart, Path, Query, UriDisplay, Origin};
 /// assert_eq!(uri_string, "number=42+47");
 /// ```
 ///
-/// [`write_value()`]: uri::Formatter::write_value()
-/// [`write_raw()`]: uri::Formatter::write_raw()
+/// [`write_value()`]: crate::uri::Formatter::write_value()
+/// [`write_raw()`]: crate::uri::Formatter::write_raw()
 pub struct Formatter<'i, P: UriPart> {
     prefixes: SmallVec<[&'static str; 3]>,
     inner: &'i mut (dyn Write + 'i),
@@ -347,7 +347,7 @@ impl<'i> Formatter<'i, Query> {
         //
         // Said succinctly: this `prefixes` stack shadows a subset of the
         // `with_prefix` stack precisely, making it reachable to other code.
-        let prefix: &'static str = unsafe { ::std::mem::transmute(prefix) };
+        let prefix: &'static str = unsafe { std::mem::transmute(prefix) };
 
         self.prefixes.push(prefix);
         let result = f(self);

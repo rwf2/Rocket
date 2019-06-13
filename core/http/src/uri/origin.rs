@@ -1,9 +1,9 @@
 use std::fmt::{self, Display};
 use std::borrow::Cow;
 
-use ext::IntoOwned;
-use parse::{Indexed, IndexedStr};
-use uri::{as_utf8_unchecked, Error, Segments};
+use crate::ext::IntoOwned;
+use crate::parse::{Indexed, IndexedStr};
+use crate::uri::{as_utf8_unchecked, Error, Segments};
 
 use state::Storage;
 
@@ -63,7 +63,7 @@ use state::Storage;
 /// # }
 /// ```
 ///
-/// The [`Origin::to_normalized()`](uri::Origin::to_normalized()) method can be
+/// The [`Origin::to_normalized()`](crate::uri::Origin::to_normalized()) method can be
 /// used to normalize any `Origin`:
 ///
 /// ```rust
@@ -166,7 +166,7 @@ impl<'a> Origin<'a> {
     /// Origin::parse("foo bar").expect_err("invalid URI");
     /// ```
     pub fn parse(string: &'a str) -> Result<Origin<'a>, Error<'a>> {
-        ::parse::uri::origin_from_str(string)
+        crate::parse::uri::origin_from_str(string)
     }
 
     // Parses an `Origin` that may contain `<` or `>` characters which are
@@ -174,12 +174,12 @@ impl<'a> Origin<'a> {
     // this outside of Rocket!
     #[doc(hidden)]
     pub fn parse_route(string: &'a str) -> Result<Origin<'a>, Error<'a>> {
-        ::parse::uri::route_origin_from_str(string)
+        crate::parse::uri::route_origin_from_str(string)
     }
 
     /// Parses the string `string` into an `Origin`. Parsing will never
     /// allocate. This method should be used instead of
-    /// [`Origin::parse()`](uri::Origin::parse()) when the source URI is already
+    /// [`Origin::parse()`](crate::uri::Origin::parse()) when the source URI is already
     /// a `String`. Returns an `Error` if `string` is not a valid origin URI.
     ///
     /// # Example
@@ -270,7 +270,7 @@ impl<'a> Origin<'a> {
     /// assert!(normalized.is_normalized());
     /// assert_eq!(normalized, Origin::parse("/a/b/c/d").unwrap());
     /// ```
-    pub fn to_normalized(&self) -> Origin {
+    pub fn to_normalized(&self) -> Origin<'_> {
         if self.is_normalized() {
             Origin::new(self.path(), self.query())
         } else {
@@ -403,7 +403,7 @@ impl<'a> Origin<'a> {
     /// }
     /// ```
     #[inline(always)]
-    pub fn segments(&self) -> Segments {
+    pub fn segments(&self) -> Segments<'_> {
         Segments(self.path())
     }
 
@@ -441,7 +441,7 @@ impl<'a> Origin<'a> {
 }
 
 impl<'a> Display for Origin<'a> {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}", self.path())?;
         if let Some(q) = self.query() {
             write!(f, "?{}", q)?;
@@ -482,7 +482,7 @@ mod tests {
     #[test]
     fn send_and_sync() {
         fn assert<T: Send + Sync>() {};
-        assert::<Origin>();
+        assert::<Origin<'_>>();
     }
 
     #[test]

@@ -1,9 +1,9 @@
 use std::borrow::Cow;
 use std::fmt::{self, Display};
 
-use ext::IntoOwned;
-use parse::{Indexed, IndexedStr};
-use uri::{Authority, Origin, Error, as_utf8_unchecked};
+use crate::ext::IntoOwned;
+use crate::parse::{Indexed, IndexedStr};
+use crate::uri::{Authority, Origin, Error, as_utf8_unchecked};
 
 /// A URI with a scheme, authority, path, and query:
 /// `http://user:pass@domain.com:4444/path?query`.
@@ -85,7 +85,7 @@ impl<'a> Absolute<'a> {
     /// assert_eq!(uri.origin(), None);
     /// ```
     pub fn parse(string: &'a str) -> Result<Absolute<'a>, Error<'a>> {
-        ::parse::uri::absolute_from_str(string)
+        crate::parse::uri::absolute_from_str(string)
     }
 
     /// Returns the scheme part of the absolute URI.
@@ -158,7 +158,7 @@ impl<'a, 'b> PartialEq<Absolute<'b>> for Absolute<'a> {
 }
 
 impl<'a> Display for Absolute<'a> {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}", self.scheme())?;
         match self.authority {
             Some(ref authority) => write!(f, "://{}", authority)?,

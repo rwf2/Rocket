@@ -5,7 +5,7 @@ use std::cmp::Ordering;
 use std::str::Utf8Error;
 use std::fmt;
 
-use uncased::UncasedStr;
+use crate::uncased::UncasedStr;
 
 /// A reference to a string inside of a raw HTTP message.
 ///
@@ -47,8 +47,8 @@ use uncased::UncasedStr;
 /// encounter an `&RawStr` as a parameter via [`FromParam`] or as a form value
 /// via [`FromFormValue`].
 ///
-/// [`FromParam`]: ::rocket::request::FromParam
-/// [`FromFormValue`]: ::rocket::request::FromFormValue
+/// [`FromParam`]: rocket::request::FromParam
+/// [`FromFormValue`]: rocket::request::FromFormValue
 #[repr(transparent)]
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct RawStr(str);
@@ -98,13 +98,13 @@ impl RawStr {
     /// use rocket::http::RawStr;
     ///
     /// // Note: Rocket should never hand you a bad `&RawStr`.
-    /// let bad_str = unsafe { ::std::str::from_utf8_unchecked(b"a=\xff") };
+    /// let bad_str = unsafe { std::str::from_utf8_unchecked(b"a=\xff") };
     /// let bad_raw_str = RawStr::from_str(bad_str);
     /// assert!(bad_raw_str.percent_decode().is_err());
     /// ```
     #[inline(always)]
-    pub fn percent_decode(&self) -> Result<Cow<str>, Utf8Error> {
-        ::percent_encoding::percent_decode(self.as_bytes()).decode_utf8()
+    pub fn percent_decode(&self) -> Result<Cow<'_, str>, Utf8Error> {
+        percent_encoding::percent_decode(self.as_bytes()).decode_utf8()
     }
 
     /// Returns a percent-decoded version of the string. Any invalid UTF-8
@@ -131,13 +131,13 @@ impl RawStr {
     /// use rocket::http::RawStr;
     ///
     /// // Note: Rocket should never hand you a bad `&RawStr`.
-    /// let bad_str = unsafe { ::std::str::from_utf8_unchecked(b"a=\xff") };
+    /// let bad_str = unsafe { std::str::from_utf8_unchecked(b"a=\xff") };
     /// let bad_raw_str = RawStr::from_str(bad_str);
     /// assert_eq!(bad_raw_str.percent_decode_lossy(), "a=�");
     /// ```
     #[inline(always)]
-    pub fn percent_decode_lossy(&self) -> Cow<str> {
-        ::percent_encoding::percent_decode(self.as_bytes()).decode_utf8_lossy()
+    pub fn percent_decode_lossy(&self) -> Cow<'_, str> {
+        percent_encoding::percent_decode(self.as_bytes()).decode_utf8_lossy()
     }
 
     /// Returns a URL-decoded version of the string. This is identical to
@@ -193,7 +193,7 @@ impl RawStr {
     /// use rocket::http::RawStr;
     ///
     /// // Note: Rocket should never hand you a bad `&RawStr`.
-    /// let bad_str = unsafe { ::std::str::from_utf8_unchecked(b"a+b=\xff") };
+    /// let bad_str = unsafe { std::str::from_utf8_unchecked(b"a+b=\xff") };
     /// let bad_raw_str = RawStr::from_str(bad_str);
     /// assert_eq!(bad_raw_str.url_decode_lossy(), "a b=�");
     /// ```
@@ -245,7 +245,7 @@ impl RawStr {
     /// let escaped = raw_str.html_escape();
     /// assert_eq!(escaped, "大阪");
     /// ```
-    pub fn html_escape(&self) -> Cow<str> {
+    pub fn html_escape(&self) -> Cow<'_, str> {
         let mut escaped = false;
         let mut allocated = Vec::new(); // this is allocation free
         for c in self.as_bytes() {
@@ -426,7 +426,7 @@ impl DerefMut for RawStr {
 
 impl fmt::Display for RawStr {
     #[inline(always)]
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         self.0.fmt(f)
     }
 }

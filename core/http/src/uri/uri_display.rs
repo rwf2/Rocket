@@ -1,8 +1,8 @@
 use std::{fmt, path};
 use std::borrow::Cow;
 
-use RawStr;
-use uri::{Uri, UriPart, Path, Query, Formatter};
+use crate::RawStr;
+use crate::uri::{Uri, UriPart, Path, Query, Formatter};
 
 /// Trait implemented by types that can be displayed as part of a URI in
 /// [`uri!`].
@@ -44,9 +44,9 @@ use uri::{Uri, UriPart, Path, Query, Formatter};
 /// # { fn fmt(&self, f: &mut Formatter<P>) -> fmt::Result { Ok(()) } }
 /// ```
 ///
-/// [`UriPart`]: uri::UriPart
-/// [`Path`]: uri::Path
-/// [`Query`]: uri::Query
+/// [`UriPart`]: crate::uri::UriPart
+/// [`Path`]: crate::uri::Path
+/// [`Query`]: crate::uri::Query
 ///
 /// # Code Generation
 ///
@@ -168,7 +168,7 @@ use uri::{Uri, UriPart, Path, Query, Formatter};
 ///     If the `Result` is `Ok`, uses the implementation of `UriDisplay` for
 ///     `T`. Otherwise, nothing is rendered.
 ///
-/// [`FromUriParam`]: uri::FromUriParam
+/// [`FromUriParam`]: crate::uri::FromUriParam
 ///
 /// # Deriving
 ///
@@ -204,15 +204,15 @@ use uri::{Uri, UriPart, Path, Query, Formatter};
 /// [`Formatter::write_value()`] for every unnamed field. See the [`UriDisplay`
 /// derive] documentation for full details.
 ///
-/// [`Ignorable`]: uri::Ignorable
+/// [`Ignorable`]: crate::uri::Ignorable
 /// [`UriDisplay` derive]: ../../../rocket_codegen/derive.UriDisplay.html
-/// [`Formatter::write_named_value()`]: uri::Formatter::write_named_value()
-/// [`Formatter::write_value()`]: uri::Formatter::write_value()
+/// [`Formatter::write_named_value()`]: crate::uri::Formatter::write_named_value()
+/// [`Formatter::write_value()`]: crate::uri::Formatter::write_value()
 ///
 /// # Implementing
 ///
 /// Implementing `UriDisplay` is similar to implementing
-/// [`Display`](::std::fmt::Display) with the caveat that extra care must be
+/// [`Display`](std::fmt::Display) with the caveat that extra care must be
 /// taken to ensure that the written string is URI-safe. As mentioned before, in
 /// practice, this means that the string must either be percent-encoded or
 /// consist only of characters that are alphanumeric, "-", ".", "_", or "~".
@@ -221,7 +221,7 @@ use uri::{Uri, UriPart, Path, Query, Formatter};
 /// existing implementations of `UriDisplay` as much as possible. In the example
 /// below, for instance, `Name`'s implementation defers to `String`'s
 /// implementation. To percent-encode a string, use
-/// [`Uri::percent_encode()`](uri::Uri::percent_encode()).
+/// [`Uri::percent_encode()`](crate::uri::Uri::percent_encode()).
 ///
 /// ## Example
 ///
@@ -291,13 +291,13 @@ use uri::{Uri, UriPart, Path, Query, Formatter};
 /// ```
 pub trait UriDisplay<P: UriPart> {
     /// Formats `self` in a URI-safe manner using the given formatter.
-    fn fmt(&self, f: &mut Formatter<P>) -> fmt::Result;
+    fn fmt(&self, f: &mut Formatter<'_, P>) -> fmt::Result;
 }
 
-impl<'a, P: UriPart> fmt::Display for &'a UriDisplay<P> {
+impl<'a, P: UriPart> fmt::Display for &'a dyn UriDisplay<P> {
     #[inline(always)]
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        UriDisplay::fmt(*self, &mut <Formatter<P>>::new(f))
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        UriDisplay::fmt(*self, &mut <Formatter<'_, P>>::new(f))
     }
 }
 
@@ -306,14 +306,14 @@ impl<'a, P: UriPart> fmt::Display for &'a UriDisplay<P> {
 /// Percent-encodes the raw string.
 impl<P: UriPart> UriDisplay<P> for str {
     #[inline(always)]
-    fn fmt(&self, f: &mut Formatter<P>) -> fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_, P>) -> fmt::Result {
         f.write_raw(&Uri::percent_encode(self))
     }
 }
 
 /// Percent-encodes each segment in the path and normalizes separators.
 impl UriDisplay<Path> for path::Path {
-    fn fmt(&self, f: &mut Formatter<Path>) -> fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_, Path>) -> fmt::Result {
         use std::path::Component;
 
         for component in self.components() {
@@ -332,7 +332,7 @@ macro_rules! impl_with_display {
         /// This implementation is identical to the `Display` implementation.
         impl<P: UriPart> UriDisplay<P> for $T  {
             #[inline(always)]
-            fn fmt(&self, f: &mut Formatter<P>) -> fmt::Result {
+            fn fmt(&self, f: &mut Formatter<'_, P>) -> fmt::Result {
                 use std::fmt::Write;
                 write!(f, "{}", self)
             }
@@ -355,7 +355,7 @@ impl_with_display! {
 /// Percent-encodes the raw string. Defers to `str`.
 impl<P: UriPart> UriDisplay<P> for RawStr {
     #[inline(always)]
-    fn fmt(&self, f: &mut Formatter<P>) -> fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_, P>) -> fmt::Result {
         self.as_str().fmt(f)
     }
 }
@@ -363,7 +363,7 @@ impl<P: UriPart> UriDisplay<P> for RawStr {
 /// Percent-encodes the raw string. Defers to `str`.
 impl<P: UriPart> UriDisplay<P> for String {
     #[inline(always)]
-    fn fmt(&self, f: &mut Formatter<P>) -> fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_, P>) -> fmt::Result {
         self.as_str().fmt(f)
     }
 }
@@ -371,7 +371,7 @@ impl<P: UriPart> UriDisplay<P> for String {
 /// Percent-encodes the raw string. Defers to `str`.
 impl<'a, P: UriPart> UriDisplay<P> for Cow<'a, str> {
     #[inline(always)]
-    fn fmt(&self, f: &mut Formatter<P>) -> fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_, P>) -> fmt::Result {
         self.as_ref().fmt(f)
     }
 }
@@ -379,7 +379,7 @@ impl<'a, P: UriPart> UriDisplay<P> for Cow<'a, str> {
 /// Percent-encodes each segment in the path and normalizes separators.
 impl UriDisplay<Path> for path::PathBuf {
     #[inline(always)]
-    fn fmt(&self, f: &mut Formatter<Path>) -> fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_, Path>) -> fmt::Result {
         self.as_path().fmt(f)
     }
 }
@@ -387,7 +387,7 @@ impl UriDisplay<Path> for path::PathBuf {
 /// Defers to the `UriDisplay<P>` implementation for `T`.
 impl<'a, P: UriPart, T: UriDisplay<P> + ?Sized> UriDisplay<P> for &'a T {
     #[inline(always)]
-    fn fmt(&self, f: &mut Formatter<P>) -> fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_, P>) -> fmt::Result {
         UriDisplay::fmt(*self, f)
     }
 }
@@ -395,7 +395,7 @@ impl<'a, P: UriPart, T: UriDisplay<P> + ?Sized> UriDisplay<P> for &'a T {
 /// Defers to the `UriDisplay<P>` implementation for `T`.
 impl<'a, P: UriPart, T: UriDisplay<P> + ?Sized> UriDisplay<P> for &'a mut T {
     #[inline(always)]
-    fn fmt(&self, f: &mut Formatter<P>) -> fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_, P>) -> fmt::Result {
         UriDisplay::fmt(*self, f)
     }
 }
@@ -403,7 +403,7 @@ impl<'a, P: UriPart, T: UriDisplay<P> + ?Sized> UriDisplay<P> for &'a mut T {
 /// Defers to the `UriDisplay<Query>` implementation for `T`.
 impl<T: UriDisplay<Query>> UriDisplay<Query> for Option<T> {
     #[inline(always)]
-    fn fmt(&self, f: &mut Formatter<Query>) -> fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_, Query>) -> fmt::Result {
         match self {
             Some(v) => v.fmt(f),
             None => Ok(())
@@ -414,7 +414,7 @@ impl<T: UriDisplay<Query>> UriDisplay<Query> for Option<T> {
 /// Defers to the `UriDisplay<Query>` implementation for `T`.
 impl<T: UriDisplay<Query>, E> UriDisplay<Query> for Result<T, E> {
     #[inline(always)]
-    fn fmt(&self, f: &mut Formatter<Query>) -> fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_, Query>) -> fmt::Result {
         match self {
             Ok(v) => v.fmt(f),
             Err(_) => Ok(())
@@ -469,7 +469,7 @@ pub fn assert_ignorable<P: UriPart, T: Ignorable<P>>() {  }
 #[cfg(test)]
 mod uri_display_tests {
     use std::path;
-    use uri::{FromUriParam, UriDisplay, Query, Path};
+    use crate::uri::{FromUriParam, UriDisplay, Query, Path};
 
     macro_rules! uri_display {
         (<$P:ident, $Target:ty> $source:expr) => ({
@@ -577,7 +577,7 @@ mod uri_display_tests {
 
     #[test]
     fn check_ignorables() {
-        use uri::assert_ignorable;
+        use crate::uri::assert_ignorable;
 
         assert_ignorable::<Query, Option<usize>>();
         assert_ignorable::<Query, Option<Wrapper<usize>>>();

@@ -2,9 +2,9 @@ use std::fmt;
 use std::borrow::Cow;
 
 use pear::{ParseErr, Expected};
-use parse::indexed::Context;
-use parse::uri::RawInput;
-use ext::IntoOwned;
+use crate::parse::indexed::Context;
+use crate::parse::uri::RawInput;
+use crate::ext::IntoOwned;
 
 /// Error emitted on URI parse failure.
 ///
@@ -58,7 +58,7 @@ impl<'a> Error<'a> {
 }
 
 impl fmt::Display for Or<char, u8> {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match *self {
             Or::A(left) => write!(f, "'{}'", left),
             Or::B(right) => write!(f, "non-ASCII byte {}", right),
@@ -67,7 +67,7 @@ impl fmt::Display for Or<char, u8> {
 }
 
 impl<'a> fmt::Display for Error<'a> {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         // This relies on specialization of the `Display` impl for `Expected`.
         write!(f, "{}", self.expected)?;
 
@@ -90,7 +90,7 @@ impl<'a> IntoOwned for Error<'a> {
 
 #[cfg(test)]
 mod tests {
-    use parse::uri::origin_from_str;
+    use crate::parse::uri::origin_from_str;
 
     macro_rules! check_err {
         ($url:expr => $error:expr) => {{

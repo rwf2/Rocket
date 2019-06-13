@@ -1,7 +1,7 @@
 use std::fmt;
 use std::str::FromStr;
 
-use {hyper, uncased::uncased_eq};
+use crate::{hyper, uncased::uncased_eq};
 
 use self::Method::*;
 
@@ -116,7 +116,7 @@ impl FromStr for Method {
 
 impl fmt::Display for Method {
     #[inline(always)]
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         self.as_str().fmt(f)
     }
 }

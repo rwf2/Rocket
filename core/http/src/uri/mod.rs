@@ -11,7 +11,7 @@ mod segments;
 
 crate mod encoding;
 
-pub use parse::uri::Error;
+pub use crate::parse::uri::Error;
 
 pub use self::uri::*;
 pub use self::authority::*;
@@ -48,10 +48,10 @@ mod private {
 /// approach enables succinct, type-checked generic implementations of these
 /// items.
 ///
-/// [`Query`]: uri::Query
-/// [`Path`]: uri::Path
-/// [`UriDisplay`]: uri::UriDisplay
-/// [`Formatter`]: uri::Formatter
+/// [`Query`]: crate::uri::Query
+/// [`Path`]: crate::uri::Path
+/// [`UriDisplay`]: crate::uri::UriDisplay
+/// [`Formatter`]: crate::uri::Formatter
 pub trait UriPart: private::Sealed {
     const DELIMITER: char;
 }
@@ -66,7 +66,7 @@ pub trait UriPart: private::Sealed {
 ///        ^------------------ Path
 /// ```
 ///
-/// [`UriPart`]: uri::UriPart
+/// [`UriPart`]: crate::uri::UriPart
 #[derive(Debug, Clone, Copy)]
 pub enum Path {  }
 
@@ -79,7 +79,7 @@ pub enum Path {  }
 ///                            ^-------------- Query
 /// ```
 ///
-/// [`UriPart`]: uri::UriPart
+/// [`UriPart`]: crate::uri::UriPart
 #[derive(Debug, Clone, Copy)]
 pub enum Query {  }
 
