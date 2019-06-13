@@ -1,10 +1,10 @@
 use std::sync::RwLock;
 use std::borrow::Cow;
 
-use Rocket;
-use local::LocalRequest;
-use http::{Method, private::CookieJar};
-use error::LaunchError;
+use crate::Rocket;
+use crate::local::LocalRequest;
+use crate::http::{Method, private::CookieJar};
+use crate::error::LaunchError;
 
 /// A structure to construct requests for local dispatching.
 ///
@@ -16,7 +16,7 @@ use error::LaunchError;
 /// [`post()`], and so on) can be used to create a `LocalRequest` for
 /// dispatching.
 ///
-/// See the [top-level documentation](::local) for more usage information.
+/// See the [top-level documentation](crate::local) for more usage information.
 ///
 /// ## Cookie Tracking
 ///

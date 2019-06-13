@@ -1,10 +1,10 @@
 use std::borrow::Borrow;
 
-use outcome::{self, IntoOutcome};
-use outcome::Outcome::*;
-use http::Status;
-use request::Request;
-use data::Data;
+use crate::outcome::{self, IntoOutcome};
+use crate::outcome::Outcome::*;
+use crate::http::Status;
+use crate::request::Request;
+use crate::data::Data;
 
 /// Type alias for the `Outcome` of a `FromData` conversion.
 pub type Outcome<S, E> = outcome::Outcome<S, (Status, E), Data>;
@@ -125,7 +125,7 @@ pub type Transformed<'a, T> =
 /// implement `FromData`. Thus, when possible, prefer to implement
 /// [`FromDataSimple`] instead of `FromData`.
 ///
-/// [request guard]: ::request::FromRequest
+/// [request guard]: crate::request::FromRequest
 ///
 /// ## Example
 ///
@@ -137,7 +137,7 @@ pub type Transformed<'a, T> =
 /// ```rust
 /// # #![feature(proc_macro_hygiene, decl_macro)]
 /// # #[macro_use] extern crate rocket;
-/// # type DataGuard = ::rocket::data::Data;
+/// # type DataGuard = rocket::data::Data;
 /// #[post("/submit", data = "<var>")]
 /// fn submit(var: DataGuard) { /* ... */ }
 /// # fn main() { }
@@ -252,7 +252,7 @@ pub type Transformed<'a, T> =
 /// * **Failure**(Status, E)
 ///
 ///   If the `Outcome` is [`Failure`], the request will fail with the given
-///   status code and error. The designated error [`Catcher`](::Catcher) will be
+///   status code and error. The designated error [`Catcher`](crate::Catcher) will be
 ///   used to respond to the request. Note that users can request types of
 ///   `Result<S, E>` and `Option<S>` to catch `Failure`s and retrieve the error
 ///   value.
@@ -354,7 +354,7 @@ pub trait FromData<'a>: Sized {
     /// If transformation succeeds, an outcome of `Success` is returned.
     /// If the data is not appropriate given the type of `Self`, `Forward` is
     /// returned. On failure, `Failure` is returned.
-    fn transform(request: &Request, data: Data) -> Transform<Outcome<Self::Owned, Self::Error>>;
+    fn transform(request: &Request<'_>, data: Data) -> Transform<Outcome<Self::Owned, Self::Error>>;
 
     /// Validates, parses, and converts the incoming request body data into an
     /// instance of `Self`.
@@ -383,7 +383,7 @@ pub trait FromData<'a>: Sized {
     /// # unimplemented!()
     /// # }
     /// ```
-    fn from_data(request: &Request, outcome: Transformed<'a, Self>) -> Outcome<Self, Self::Error>;
+    fn from_data(request: &Request<'_>, outcome: Transformed<'a, Self>) -> Outcome<Self, Self::Error>;
 }
 
 /// The identity implementation of `FromData`. Always returns `Success`.
@@ -393,12 +393,12 @@ impl<'f> FromData<'f> for Data {
     type Borrowed = Data;
 
     #[inline(always)]
-    fn transform(_: &Request, data: Data) -> Transform<Outcome<Self::Owned, Self::Error>> {
+    fn transform(_: &Request<'_>, data: Data) -> Transform<Outcome<Self::Owned, Self::Error>> {
         Transform::Owned(Success(data))
     }
 
     #[inline(always)]
-    fn from_data(_: &Request, outcome: Transformed<'f, Self>) -> Outcome<Self, Self::Error> {
+    fn from_data(_: &Request<'_>, outcome: Transformed<'f, Self>) -> Outcome<Self, Self::Error> {
         Success(outcome.owned()?)
     }
 }
@@ -429,7 +429,7 @@ impl<'f> FromData<'f> for Data {
 /// ```rust
 /// # #![feature(proc_macro_hygiene, decl_macro)]
 /// # #[macro_use] extern crate rocket;
-/// # type Person = ::rocket::data::Data;
+/// # type Person = rocket::data::Data;
 /// #[post("/person", data = "<person>")]
 /// fn person(person: Person) -> &'static str {
 ///     "Saved the new person to the database!"
@@ -502,7 +502,7 @@ pub trait FromDataSimple: Sized {
     /// If validation and parsing succeeds, an outcome of `Success` is returned.
     /// If the data is not appropriate given the type of `Self`, `Forward` is
     /// returned. If parsing fails, `Failure` is returned.
-    fn from_data(request: &Request, data: Data) -> Outcome<Self, Self::Error>;
+    fn from_data(request: &Request<'_>, data: Data) -> Outcome<Self, Self::Error>;
 }
 
 impl<'a, T: FromDataSimple> FromData<'a> for T {
@@ -511,12 +511,12 @@ impl<'a, T: FromDataSimple> FromData<'a> for T {
     type Borrowed = Data;
 
     #[inline(always)]
-    fn transform(_: &Request, d: Data) -> Transform<Outcome<Self::Owned, Self::Error>> {
+    fn transform(_: &Request<'_>, d: Data) -> Transform<Outcome<Self::Owned, Self::Error>> {
         Transform::Owned(Success(d))
     }
 
     #[inline(always)]
-    fn from_data(req: &Request, o: Transformed<'a, Self>) -> Outcome<Self, Self::Error> {
+    fn from_data(req: &Request<'_>, o: Transformed<'a, Self>) -> Outcome<Self, Self::Error> {
         T::from_data(req, o.owned()?)
     }
 }
@@ -527,12 +527,12 @@ impl<'a, T: FromData<'a> + 'a> FromData<'a> for Result<T, T::Error> {
     type Borrowed = T::Borrowed;
 
     #[inline(always)]
-    fn transform(r: &Request, d: Data) -> Transform<Outcome<Self::Owned, Self::Error>> {
+    fn transform(r: &Request<'_>, d: Data) -> Transform<Outcome<Self::Owned, Self::Error>> {
         T::transform(r, d)
     }
 
     #[inline(always)]
-    fn from_data(r: &Request, o: Transformed<'a, Self>) -> Outcome<Self, Self::Error> {
+    fn from_data(r: &Request<'_>, o: Transformed<'a, Self>) -> Outcome<Self, Self::Error> {
         match T::from_data(r, o) {
             Success(val) => Success(Ok(val)),
             Forward(data) => Forward(data),
@@ -547,12 +547,12 @@ impl<'a, T: FromData<'a> + 'a> FromData<'a> for Option<T> {
     type Borrowed = T::Borrowed;
 
     #[inline(always)]
-    fn transform(r: &Request, d: Data) -> Transform<Outcome<Self::Owned, Self::Error>> {
+    fn transform(r: &Request<'_>, d: Data) -> Transform<Outcome<Self::Owned, Self::Error>> {
         T::transform(r, d)
     }
 
     #[inline(always)]
-    fn from_data(r: &Request, o: Transformed<'a, Self>) -> Outcome<Self, Self::Error> {
+    fn from_data(r: &Request<'_>, o: Transformed<'a, Self>) -> Outcome<Self, Self::Error> {
         match T::from_data(r, o) {
             Success(val) => Success(Some(val)),
             Failure(_) | Forward(_) => Success(None),
@@ -568,7 +568,7 @@ impl FromDataSimple for String {
     type Error = io::Error;
 
     #[inline(always)]
-    fn from_data(_: &Request, data: Data) -> Outcome<Self, Self::Error> {
+    fn from_data(_: &Request<'_>, data: Data) -> Outcome<Self, Self::Error> {
         let mut string = String::new();
         match data.open().read_to_string(&mut string) {
             Ok(_) => Success(string),
@@ -582,7 +582,7 @@ impl FromDataSimple for Vec<u8> {
     type Error = io::Error;
 
     #[inline(always)]
-    fn from_data(_: &Request, data: Data) -> Outcome<Self, Self::Error> {
+    fn from_data(_: &Request<'_>, data: Data) -> Outcome<Self, Self::Error> {
         let mut bytes = Vec::new();
         match data.open().read_to_end(&mut bytes) {
             Ok(_) => Success(bytes),

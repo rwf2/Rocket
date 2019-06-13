@@ -33,7 +33,7 @@
 //! trait documentation for more information on the dispatching of fairing
 //! methods.
 //!
-//! [`Fairing`]: ::fairing::Fairing
+//! [`Fairing`]: crate::fairing::Fairing
 //!
 //! ## Ordering
 //!
@@ -47,7 +47,7 @@
 //! of other `Fairings` are not jeopardized. For instance, unless it is made
 //! abundantly clear, a fairing should not rewrite every request.
 
-use {Rocket, Request, Response, Data};
+use crate::{Rocket, Request, Response, Data};
 
 mod fairings;
 mod ad_hoc;
@@ -88,9 +88,9 @@ pub use self::info_kind::{Info, Kind};
 /// entire application. On the other hand, you _should_ use a fairing to record
 /// timing and/or usage statistics or to implement global security policies.
 ///
-/// [request guard]: ::request::FromRequest
-/// [request guards]: ::request::FromRequest
-/// [data guards]: ::data::FromData
+/// [request guard]: crate::request::FromRequest
+/// [request guards]: crate::request::FromRequest
+/// [data guards]: crate::data::FromData
 ///
 /// ## Fairing Callbacks
 ///
@@ -194,7 +194,7 @@ pub use self::info_kind::{Info, Kind};
 ///
 /// Imagine that we want to record the number of `GET` and `POST` requests that
 /// our application has received. While we could do this with [request guards]
-/// and [managed state](::request::State), it would require us to annotate every
+/// and [managed state](crate::request::State), it would require us to annotate every
 /// `GET` and `POST` request with custom types, polluting handler signatures.
 /// Instead, we can create a simple fairing that acts globally.
 ///
@@ -395,7 +395,7 @@ pub trait Fairing: Send + Sync + 'static {
     ///
     /// The default implementation of this method does nothing.
     #[allow(unused_variables)]
-    fn on_request(&self, request: &mut Request, data: &Data) {}
+    fn on_request(&self, request: &mut Request<'_>, data: &Data) {}
 
     /// The response callback.
     ///
@@ -408,10 +408,10 @@ pub trait Fairing: Send + Sync + 'static {
     ///
     /// The default implementation of this method does nothing.
     #[allow(unused_variables)]
-    fn on_response(&self, request: &Request, response: &mut Response) {}
+    fn on_response(&self, request: &Request<'_>, response: &mut Response<'_>) {}
 }
 
-impl<T: Fairing> Fairing for ::std::sync::Arc<T> {
+impl<T: Fairing> Fairing for std::sync::Arc<T> {
     #[inline]
     fn info(&self) -> Info {
         (self as &T).info()
@@ -428,12 +428,12 @@ impl<T: Fairing> Fairing for ::std::sync::Arc<T> {
     }
 
     #[inline]
-    fn on_request(&self, request: &mut Request, data: &Data) {
+    fn on_request(&self, request: &mut Request<'_>, data: &Data) {
         (self as &T).on_request(request, data)
     }
 
     #[inline]
-    fn on_response(&self, request: &Request, response: &mut Response) {
+    fn on_response(&self, request: &Request<'_>, response: &mut Response<'_>) {
         (self as &T).on_response(request, response)
     }
 }

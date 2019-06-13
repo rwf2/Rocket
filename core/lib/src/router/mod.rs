@@ -5,15 +5,15 @@ use std::collections::hash_map::HashMap;
 
 pub use self::route::Route;
 
-use request::Request;
-use http::Method;
+use crate::request::Request;
+use crate::http::Method;
 
 // type Selector = (Method, usize);
 type Selector = Method;
 
 // A handler to use when one is needed temporarily.
-crate fn dummy_handler<'r>(r: &'r ::Request, _: ::Data) -> ::handler::Outcome<'r> {
-    ::Outcome::from(r, ())
+crate fn dummy_handler<'r>(r: &'r crate::Request<'_>, _: crate::Data) -> crate::handler::Outcome<'r> {
+    crate::Outcome::from(r, ())
 }
 
 #[derive(Default)]
@@ -35,7 +35,7 @@ impl Router {
         entries.insert(i, route);
     }
 
-    pub fn route<'b>(&'b self, req: &Request) -> Vec<&'b Route> {
+    pub fn route<'b>(&'b self, req: &Request<'_>) -> Vec<&'b Route> {
         // Note that routes are presorted by rank on each `add`.
         let matches = self.routes.get(&req.method()).map_or(vec![], |routes| {
             routes.iter()
@@ -57,9 +57,9 @@ impl Router {
                     for b_route in right.iter_mut() {
                         if a_route.collides_with(b_route) {
                             let dummy_a = Route::new(Method::Get, "/", dummy_handler);
-                            let a = ::std::mem::replace(a_route, dummy_a);
+                            let a = std::mem::replace(a_route, dummy_a);
                             let dummy_b = Route::new(Method::Get, "/", dummy_handler);
-                            let b = ::std::mem::replace(b_route, dummy_b);
+                            let b = std::mem::replace(b_route, dummy_b);
                             collisions.push((a, b));
                         }
                     }
@@ -100,12 +100,12 @@ impl Router {
 mod test {
     use super::{Router, Route, dummy_handler};
 
-    use rocket::Rocket;
-    use config::Config;
-    use http::Method;
-    use http::Method::*;
-    use http::uri::Origin;
-    use request::Request;
+    use crate::rocket::Rocket;
+    use crate::config::Config;
+    use crate::http::Method;
+    use crate::http::Method::*;
+    use crate::http::uri::Origin;
+    use crate::request::Request;
 
     fn router_with_routes(routes: &[&'static str]) -> Router {
         let mut router = Router::new();

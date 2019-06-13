@@ -9,9 +9,10 @@
 //! processing next.
 //!
 //! The `Outcome` type is the return type of many of the core Rocket traits,
-//! including [`FromRequest`](::request::FromRequest),
-//! [`FromData`](::data::FromData), and [`Responder`](::response::Responder). It
-//! is also the return type of request handlers via the [`Response`] type.
+//! including [`FromRequest`](crate::request::FromRequest),
+//! [`FromData`](crate::data::FromData), and
+//! [`Responder`](crate::response::Responder). It is also the return type of
+//! request handlers via the [`Response`] type.
 //!
 //! # Success
 //!
@@ -87,7 +88,7 @@ use self::Outcome::*;
 /// An enum representing success (`Success`), failure (`Failure`), or
 /// forwarding (`Forward`).
 ///
-/// See the [top level documentation](::outcome) for detailed information.
+/// See the [top level documentation](crate::outcome) for detailed information.
 #[must_use]
 #[derive(Clone, Copy, PartialEq, PartialOrd, Eq, Ord, Hash)]
 pub enum Outcome<S, E, F> {
@@ -625,13 +626,13 @@ impl<S, E, F> Try for Outcome<S, E, F> {
 }
 
 impl<S, E, F> fmt::Debug for Outcome<S, E, F> {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "Outcome::{}", self.formatting().1)
     }
 }
 
 impl<S, E, F> fmt::Display for Outcome<S, E, F> {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let (color, string) = self.formatting();
         write!(f, "{}", Paint::default(string).fg(color))
     }

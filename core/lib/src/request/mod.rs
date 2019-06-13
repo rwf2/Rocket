@@ -22,4 +22,4 @@ pub use self::state::State;
 pub use self::query::{Query, FromQuery};
 
 #[doc(inline)]
-pub use response::flash::FlashMessage;
+pub use crate::response::flash::FlashMessage;

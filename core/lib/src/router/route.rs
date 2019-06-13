@@ -3,13 +3,13 @@ use std::convert::From;
 
 use yansi::Paint;
 
-use codegen::StaticRouteInfo;
-use handler::Handler;
-use http::{Method, MediaType};
-use http::route::{RouteSegment, Kind};
-use error::RouteUriError;
-use http::ext::IntoOwned;
-use http::uri::{Origin, Path, Query};
+use crate::codegen::StaticRouteInfo;
+use crate::handler::Handler;
+use crate::http::{Method, MediaType};
+use crate::http::route::{RouteSegment, Kind};
+use crate::error::RouteUriError;
+use crate::http::ext::IntoOwned;
+use crate::http::uri::{Origin, Path, Query};
 
 /// A route: a method, its handler, path, rank, and format/media type.
 #[derive(Clone)]
@@ -19,7 +19,7 @@ pub struct Route {
     /// The method this route matches against.
     pub method: Method,
     /// The function that should be called when the route matches.
-    pub handler: Box<Handler>,
+    pub handler: Box<dyn Handler>,
     /// The base mount point of this `Route`.
     pub base: Origin<'static>,
     /// The uri (in Rocket's route format) that should be matched against. This
@@ -42,11 +42,11 @@ crate struct Metadata {
 
 impl Metadata {
     fn from(route: &Route) -> Result<Metadata, RouteUriError> {
-        let path_segments = <RouteSegment<Path>>::parse(&route.uri)
+        let path_segments = <RouteSegment<'_, Path>>::parse(&route.uri)
             .map(|res| res.map(|s| s.into_owned()))
             .collect::<Result<Vec<_>, _>>()?;
 
-        let (query_segments, dyn) = match <RouteSegment<Query>>::parse(&route.uri) {
+        let (query_segments, is_dyn) = match <RouteSegment<'_, Query>>::parse(&route.uri) {
             Some(results) => {
                 let segments = results.map(|res| res.map(|s| s.into_owned()))
                     .collect::<Result<Vec<_>, _>>()?;
@@ -58,7 +58,7 @@ impl Metadata {
             None => (None, true)
         };
 
-        Ok(Metadata { path_segments, query_segments, fully_dynamic_query: dyn })
+        Ok(Metadata { path_segments, query_segments, fully_dynamic_query: is_dyn })
     }
 }
 
@@ -264,7 +264,7 @@ impl Route {
         path: Origin<'a>
     ) -> Result<(), RouteUriError> {
         base.clear_query();
-        for segment in <RouteSegment<Path>>::parse(&base) {
+        for segment in <RouteSegment<'_, Path>>::parse(&base) {
             if segment?.kind != Kind::Static {
                 return Err(RouteUriError::DynamicBase);
             }
@@ -281,7 +281,7 @@ impl Route {
 }
 
 impl fmt::Display for Route {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{} {}", Paint::green(&self.method), Paint::blue(&self.uri))?;
 
         if self.rank > 1 {
@@ -302,7 +302,7 @@ impl fmt::Display for Route {
 }
 
 impl fmt::Debug for Route {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("Route")
             .field("name", &self.name)
             .field("method", &self.method)

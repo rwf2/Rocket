@@ -1,5 +1,3 @@
-extern crate rocket;
-
 #[test]
 #[should_panic]
 fn bad_dynamic_mount() {

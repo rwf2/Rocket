@@ -1,6 +1,6 @@
 use std::ops::BitOr;
 
-/// Information about a [`Fairing`](::fairing::Fairing).
+/// Information about a [`Fairing`](crate::fairing::Fairing).
 ///
 /// The `name` field is an arbitrary name for a fairing. The `kind` field is a
 /// is an `or`d set of [`Kind`] structures. Rocket uses the values set in `Kind`
@@ -30,7 +30,7 @@ pub struct Info {
 }
 
 /// A bitset representing the kinds of callbacks a
-/// [`Fairing`](::fairing::Fairing) wishes to receive.
+/// [`Fairing`](crate::fairing::Fairing) wishes to receive.
 ///
 /// A fairing can request any combination of any of the following kinds of
 /// callbacks:

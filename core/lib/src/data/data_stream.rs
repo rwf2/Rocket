@@ -2,8 +2,8 @@ use std::io::{self, Read, Cursor, Chain};
 use std::net::Shutdown;
 
 use super::data::BodyReader;
-use http::hyper::net::NetworkStream;
-use http::hyper::h1::HttpReader;
+use crate::http::hyper::net::NetworkStream;
+use crate::http::hyper::h1::HttpReader;
 
 //                          |-- peek buf --|
 pub type InnerStream = Chain<Cursor<Vec<u8>>, BodyReader>;
@@ -11,7 +11,7 @@ pub type InnerStream = Chain<Cursor<Vec<u8>>, BodyReader>;
 /// Raw data stream of a request body.
 ///
 /// This stream can only be obtained by calling
-/// [`Data::open()`](::data::Data::open()). The stream contains all of the data
+/// [`Data::open()`](crate::data::Data::open()). The stream contains all of the data
 /// in the body of the request. It exposes no methods directly. Instead, it must
 /// be used as an opaque [`Read`] structure.
 pub struct DataStream(crate InnerStream);

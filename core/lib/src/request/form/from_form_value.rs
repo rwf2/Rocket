@@ -1,13 +1,13 @@
 use std::net::{IpAddr, Ipv4Addr, Ipv6Addr, SocketAddrV4, SocketAddrV6, SocketAddr};
 use std::str::FromStr;
 
-use http::RawStr;
+use crate::http::RawStr;
 
 /// Trait to parse a typed value from a form value.
 ///
 /// This trait is used by Rocket's code generation in two places:
 ///
-///   1. Fields in structs deriving [`FromForm`](::request::FromForm) are
+///   1. Fields in structs deriving [`FromForm`](crate::request::FromForm) are
 ///      required to implement this trait.
 ///   2. Types of dynamic query parameters (`?<param>`) are required to
 ///      implement this trait.

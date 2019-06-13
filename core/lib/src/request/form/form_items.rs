@@ -1,6 +1,6 @@
 use memchr::memchr2;
 
-use http::RawStr;
+use crate::http::RawStr;
 
 /// Iterator over the key/value pairs of a given HTTP form string.
 ///
@@ -380,7 +380,7 @@ impl<'f> Iterator for FormItems<'f> {
 //         #[inline(always)]
 //         fn from(triples: &'f [(&'f str, &'f str, &'f str)]) -> FormItems<'f> {
 //             // Safe because RawStr(str) is repr(transparent).
-//             let triples = unsafe { ::std::mem::transmute(triples) };
+//             let triples = unsafe { std::mem::transmute(triples) };
 //             FormItems::Cooked { triples, next_index: 0 }
 //         }
 //     }
@@ -391,7 +391,7 @@ impl<'f> Iterator for FormItems<'f> {
 //     }
 
 //     fn check_form<'a, T>(items: T, expected: Option<&[(&str, &str, &str)]>)
-//         where T: Into<FormItems<'a>> + ::std::fmt::Debug
+//         where T: Into<FormItems<'a>> + std::fmt::Debug
 //     {
 //         let string = format!("{:?}", items);
 //         let mut items = items.into();

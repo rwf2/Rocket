@@ -1,8 +1,8 @@
 use std::{io, fmt, str};
 use std::borrow::Cow;
 
-use response::Responder;
-use http::{Header, HeaderMap, Status, ContentType, Cookie};
+use crate::response::Responder;
+use crate::http::{Header, HeaderMap, Status, ContentType, Cookie};
 
 /// The default size, in bytes, of a chunk for streamed responses.
 pub const DEFAULT_CHUNK_SIZE: u64 = 4096;
@@ -88,7 +88,7 @@ impl<T: io::Read> Body<T> {
 }
 
 impl<T> fmt::Debug for Body<T> {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match *self {
             Body::Sized(_, n) => writeln!(f, "Sized Body [{} bytes]", n),
             Body::Chunked(_, n) => writeln!(f, "Chunked Body [{} bytes]", n),
@@ -223,8 +223,8 @@ impl<'r> ResponseBuilder<'r> {
     /// value will remain.
     ///
     /// The type of `header` can be any type that implements `Into<Header>`.
-    /// This includes `Header` itself, [`ContentType`](::http::ContentType) and
-    /// [hyper::header types](::http::hyper::header).
+    /// This includes `Header` itself, [`ContentType`](crate::http::ContentType) and
+    /// [hyper::header types](crate::http::hyper::header).
     ///
     /// # Example
     ///
@@ -253,8 +253,8 @@ impl<'r> ResponseBuilder<'r> {
     /// potentially different values to be present in the `Response`.
     ///
     /// The type of `header` can be any type that implements `Into<Header>`.
-    /// This includes `Header` itself, [`ContentType`](::http::ContentType) and
-    /// [hyper::header types](::http::hyper::header).
+    /// This includes `Header` itself, [`ContentType`](crate::http::ContentType) and
+    /// [hyper::header types](crate::http::hyper::header).
     ///
     /// # Example
     ///
@@ -533,7 +533,7 @@ impl<'r> ResponseBuilder<'r> {
     /// ```
     #[inline(always)]
     pub fn finalize(&mut self) -> Response<'r> {
-        ::std::mem::replace(&mut self.response, Response::new())
+        std::mem::replace(&mut self.response, Response::new())
     }
 
     /// Retrieve the built `Response` wrapped in `Ok`.
@@ -560,7 +560,7 @@ impl<'r> ResponseBuilder<'r> {
 pub struct Response<'r> {
     status: Option<Status>,
     headers: HeaderMap<'r>,
-    body: Option<Body<Box<io::Read + 'r>>>,
+    body: Option<Body<Box<dyn io::Read + 'r>>>,
 }
 
 impl<'r> Response<'r> {
@@ -707,7 +707,7 @@ impl<'r> Response<'r> {
     /// response.set_header(Cookie::new("hello", "world!"));
     /// assert_eq!(response.cookies(), vec![Cookie::new("hello", "world!")]);
     /// ```
-    pub fn cookies(&self) -> Vec<Cookie> {
+    pub fn cookies(&self) -> Vec<Cookie<'_>> {
         let mut cookies = vec![];
         for header in self.headers().get("Set-Cookie") {
             if let Ok(cookie) = Cookie::parse_encoded(header) {
@@ -743,8 +743,8 @@ impl<'r> Response<'r> {
     /// Sets the header `header` in `self`. Any existing headers with the name
     /// `header.name` will be lost, and only `header` will remain. The type of
     /// `header` can be any type that implements `Into<Header>`. This includes
-    /// `Header` itself, [`ContentType`](::http::ContentType) and
-    /// [`hyper::header` types](::http::hyper::header).
+    /// `Header` itself, [`ContentType`](crate::http::ContentType) and
+    /// [`hyper::header` types](crate::http::hyper::header).
     ///
     /// # Example
     ///
@@ -799,8 +799,8 @@ impl<'r> Response<'r> {
     /// name `header.name`, another header with the same name and value
     /// `header.value` is added. The type of `header` can be any type that
     /// implements `Into<Header>`. This includes `Header` itself,
-    /// [`ContentType`](::http::ContentType) and [`hyper::header`
-    /// types](::http::hyper::header).
+    /// [`ContentType`](crate::http::ContentType) and [`hyper::header`
+    /// types](crate::http::hyper::header).
     ///
     /// # Example
     ///
@@ -826,8 +826,8 @@ impl<'r> Response<'r> {
     /// `self` already contains headers with the name `name`, another header
     /// with the same `name` and `value` is added. The type of `header` can be
     /// any type implements `Into<Header>`. This includes `Header` itself,
-    /// [`ContentType`](::http::ContentType) and [`hyper::header`
-    /// types](::http::hyper::header).
+    /// [`ContentType`](crate::http::ContentType) and [`hyper::header`
+    /// types](crate::http::hyper::header).
     ///
     /// # Example
     ///
@@ -889,7 +889,7 @@ impl<'r> Response<'r> {
     /// assert_eq!(response.body_string(), Some("Hello, world!".to_string()));
     /// ```
     #[inline(always)]
-    pub fn body(&mut self) -> Option<Body<&mut io::Read>> {
+    pub fn body(&mut self) -> Option<Body<&mut dyn io::Read>> {
         // Looks crazy, right? Needed so Rust infers lifetime correctly. Weird.
         match self.body.as_mut() {
             Some(body) => Some(match body.as_mut() {
@@ -966,7 +966,7 @@ impl<'r> Response<'r> {
     /// assert!(response.body().is_none());
     /// ```
     #[inline(always)]
-    pub fn take_body(&mut self) -> Option<Body<Box<io::Read + 'r>>> {
+    pub fn take_body(&mut self) -> Option<Body<Box<dyn io::Read + 'r>>> {
         self.body.take()
     }
 
@@ -1015,7 +1015,7 @@ impl<'r> Response<'r> {
 
     /// Sets the body of `self` to be `body`, which will be streamed. The chunk
     /// size of the stream is
-    /// [DEFAULT_CHUNK_SIZE](::response::DEFAULT_CHUNK_SIZE). Use
+    /// [DEFAULT_CHUNK_SIZE](crate::response::DEFAULT_CHUNK_SIZE). Use
     /// [set_chunked_body](#method.set_chunked_body) for custom chunk sizes.
     ///
     /// # Example
@@ -1177,7 +1177,7 @@ impl<'r> Response<'r> {
 }
 
 impl<'r> fmt::Debug for Response<'r> {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         writeln!(f, "{}", self.status())?;
 
         for header in self.headers().iter() {
@@ -1191,11 +1191,11 @@ impl<'r> fmt::Debug for Response<'r> {
     }
 }
 
-use request::Request;
+use crate::request::Request;
 
 impl<'r> Responder<'r> for Response<'r> {
     /// This is the identity implementation. It simply returns `Ok(self)`.
-    fn respond_to(self, _: &Request) -> Result<Response<'r>, Status> {
+    fn respond_to(self, _: &Request<'_>) -> Result<Response<'r>, Status> {
         Ok(self)
     }
 }

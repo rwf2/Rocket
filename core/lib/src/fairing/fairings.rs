@@ -1,11 +1,11 @@
-use {Rocket, Request, Response, Data};
-use fairing::{Fairing, Kind};
+use crate::{Rocket, Request, Response, Data};
+use crate::fairing::{Fairing, Kind};
 
 use yansi::Paint;
 
 #[derive(Default)]
 pub struct Fairings {
-    all_fairings: Vec<Box<Fairing>>,
+    all_fairings: Vec<Box<dyn Fairing>>,
     attach_failures: Vec<&'static str>,
     // The vectors below hold indices into `all_fairings`.
     launch: Vec<usize>,
@@ -19,7 +19,7 @@ impl Fairings {
         Fairings::default()
     }
 
-    pub fn attach(&mut self, fairing: Box<Fairing>, mut rocket: Rocket) -> Rocket {
+    pub fn attach(&mut self, fairing: Box<dyn Fairing>, mut rocket: Rocket) -> Rocket {
         // Run the `on_attach` callback if this is an 'attach' fairing.
         let kind = fairing.info().kind;
         let name = fairing.info().name;
@@ -32,7 +32,7 @@ impl Fairings {
         rocket
     }
 
-    fn add(&mut self, fairing: Box<Fairing>) {
+    fn add(&mut self, fairing: Box<dyn Fairing>) {
         let kind = fairing.info().kind;
         if !kind.is_exactly(Kind::Attach) {
             let index = self.all_fairings.len();
@@ -58,14 +58,14 @@ impl Fairings {
     }
 
     #[inline(always)]
-    pub fn handle_request(&self, req: &mut Request, data: &Data) {
+    pub fn handle_request(&self, req: &mut Request<'_>, data: &Data) {
         for &i in &self.request {
             self.all_fairings[i].on_request(req, data);
         }
     }
 
     #[inline(always)]
-    pub fn handle_response(&self, request: &Request, response: &mut Response) {
+    pub fn handle_response(&self, request: &Request<'_>, response: &mut Response<'_>) {
         for &i in &self.response {
             self.all_fairings[i].on_response(request, response);
         }

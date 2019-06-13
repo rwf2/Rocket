@@ -1,7 +1,7 @@
 use std::sync::Mutex;
 
-use {Rocket, Request, Response, Data};
-use fairing::{Fairing, Kind, Info};
+use crate::{Rocket, Request, Response, Data};
+use crate::fairing::{Fairing, Kind, Info};
 
 /// A ad-hoc fairing that can be created from a function or closure.
 ///
@@ -46,10 +46,10 @@ enum AdHocKind {
     /// An ad-hoc **launch** fairing. Called just before Rocket launches.
     Launch(Mutex<Option<Box<dyn FnOnce(&Rocket) + Send + 'static>>>),
     /// An ad-hoc **request** fairing. Called when a request is received.
-    Request(Box<dyn Fn(&mut Request, &Data) + Send + Sync + 'static>),
+    Request(Box<dyn Fn(&mut Request<'_>, &Data) + Send + Sync + 'static>),
     /// An ad-hoc **response** fairing. Called when a response is ready to be
     /// sent to a client.
-    Response(Box<dyn Fn(&Request, &mut Response) + Send + Sync + 'static>),
+    Response(Box<dyn Fn(&Request<'_>, &mut Response<'_>) + Send + Sync + 'static>),
 }
 
 impl AdHoc {
@@ -104,7 +104,7 @@ impl AdHoc {
     /// });
     /// ```
     pub fn on_request<F>(name: &'static str, f: F) -> AdHoc
-        where F: Fn(&mut Request, &Data) + Send + Sync + 'static
+        where F: Fn(&mut Request<'_>, &Data) + Send + Sync + 'static
     {
         AdHoc { name, kind: AdHocKind::Request(Box::new(f)) }
     }
@@ -124,7 +124,7 @@ impl AdHoc {
     /// });
     /// ```
     pub fn on_response<F>(name: &'static str, f: F) -> AdHoc
-        where F: Fn(&Request, &mut Response) + Send + Sync + 'static
+        where F: Fn(&Request<'_>, &mut Response<'_>) + Send + Sync + 'static
     {
         AdHoc { name, kind: AdHocKind::Response(Box::new(f)) }
     }
@@ -160,13 +160,13 @@ impl Fairing for AdHoc {
         }
     }
 
-    fn on_request(&self, request: &mut Request, data: &Data) {
+    fn on_request(&self, request: &mut Request<'_>, data: &Data) {
         if let AdHocKind::Request(ref callback) = self.kind {
             callback(request, data)
         }
     }
 
-    fn on_response(&self, request: &Request, response: &mut Response) {
+    fn on_response(&self, request: &Request<'_>, response: &mut Response<'_>) {
         if let AdHocKind::Response(ref callback) = self.kind {
             callback(request, response)
         }

@@ -1,9 +1,9 @@
 use std::convert::TryInto;
 
-use request::Request;
-use response::{Response, Responder};
-use http::uri::Uri;
-use http::Status;
+use crate::request::Request;
+use crate::response::{Response, Responder};
+use crate::http::uri::Uri;
+use crate::http::Status;
 
 /// An empty redirect response to a given URL.
 ///
@@ -16,10 +16,10 @@ use http::Status;
 ///
 ///   * `String`
 ///   * `&'static str`
-///   * [`Origin`](::http::uri::Origin)
-///   * [`Authority`](::http::uri::Authority)
-///   * [`Absolute`](::http::uri::Absolute)
-///   * [`Uri`](::http::uri::Uri)
+///   * [`Origin`](crate::http::uri::Origin)
+///   * [`Authority`](crate::http::uri::Authority)
+///   * [`Absolute`](crate::http::uri::Absolute)
+///   * [`Uri`](crate::http::uri::Uri)
 ///
 /// Any non-`'static` strings must first be allocated using `.to_string()` or
 /// similar before being passed to a `Redirect` constructor. When redirecting to
@@ -41,7 +41,7 @@ use http::Status;
 /// }
 /// ```
 ///
-/// [`Origin`]: ::http::uri::Origin
+/// [`Origin`]: crate::http::uri::Origin
 /// [`uri!`]: ../../rocket_codegen/macro.uri.html
 #[derive(Debug)]
 pub struct Redirect(Status, Option<Uri<'static>>);
@@ -148,7 +148,7 @@ impl Redirect {
 /// value used to create the `Responder` is an invalid URI, an error of
 /// `Status::InternalServerError` is returned.
 impl<'a> Responder<'a> for Redirect {
-    fn respond_to(self, _: &Request) -> Result<Response<'static>, Status> {
+    fn respond_to(self, _: &Request<'_>) -> Result<Response<'static>, Status> {
         if let Some(uri) = self.1 {
             Response::build()
                 .status(self.0)

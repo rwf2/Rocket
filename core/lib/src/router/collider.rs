@@ -1,8 +1,8 @@
 use super::Route;
 
-use http::MediaType;
-use http::route::Kind;
-use request::Request;
+use crate::http::MediaType;
+use crate::http::route::Kind;
+use crate::request::Request;
 
 impl Route {
     /// Determines if two routes can match against some request. That is, if two
@@ -38,7 +38,7 @@ impl Route {
     ///     request query string, though in any position.
     ///     - If no query in route, requests with/without queries match.
     #[doc(hidden)]
-    pub fn matches(&self, req: &Request) -> bool {
+    pub fn matches(&self, req: &Request<'_>) -> bool {
         self.method == req.method()
             && paths_match(self, req)
             && queries_match(self, req)
@@ -64,7 +64,7 @@ fn paths_collide(route: &Route, other: &Route) -> bool {
     a_segments.len() == b_segments.len()
 }
 
-fn paths_match(route: &Route, request: &Request) -> bool {
+fn paths_match(route: &Route, request: &Request<'_>) -> bool {
     let route_segments = &route.metadata.path_segments;
     if route_segments.len() > request.state.path_segments.len() {
         return false;
@@ -82,7 +82,7 @@ fn paths_match(route: &Route, request: &Request) -> bool {
     route_segments.len() == request.state.path_segments.len()
 }
 
-fn queries_match(route: &Route, request: &Request) -> bool {
+fn queries_match(route: &Route, request: &Request<'_>) -> bool {
     if route.metadata.fully_dynamic_query {
         return true;
     }
@@ -126,7 +126,7 @@ fn formats_collide(route: &Route, other: &Route) -> bool {
     }
 }
 
-fn formats_match(route: &Route, request: &Request) -> bool {
+fn formats_match(route: &Route, request: &Request<'_>) -> bool {
     if !route.method.supports_payload() {
         route.format.as_ref()
             .and_then(|a| request.format().map(|b| (a, b)))
@@ -153,13 +153,13 @@ mod tests {
     use std::str::FromStr;
 
     use super::*;
-    use rocket::Rocket;
-    use config::Config;
-    use request::Request;
-    use router::{dummy_handler, route::Route};
-    use http::{Method, MediaType, ContentType, Accept};
-    use http::uri::Origin;
-    use http::Method::*;
+    use crate::rocket::Rocket;
+    use crate::config::Config;
+    use crate::request::Request;
+    use crate::router::{dummy_handler, route::Route};
+    use crate::http::{Method, MediaType, ContentType, Accept};
+    use crate::http::uri::Origin;
+    use crate::http::Method::*;
 
     type SimpleRoute = (Method, &'static str);
 

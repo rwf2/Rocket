@@ -1,8 +1,8 @@
 use std::net::{IpAddr, Ipv4Addr, SocketAddr};
 use std::collections::HashMap;
 
-use {Rocket, Request, Config};
-use http::hyper;
+use crate::{Rocket, Request, Config};
+use crate::http::hyper;
 
 macro_rules! assert_headers {
     ($($key:expr => [$($value:expr),+]),+) => ({

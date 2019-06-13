@@ -1,7 +1,7 @@
-use response;
-use handler::ErrorHandler;
-use codegen::StaticCatchInfo;
-use request::Request;
+use crate::response;
+use crate::handler::ErrorHandler;
+use crate::codegen::StaticCatchInfo;
+use crate::request::Request;
 
 use std::fmt;
 use yansi::Color::*;
@@ -10,7 +10,7 @@ use yansi::Color::*;
 ///
 /// Catchers are routes that run when errors occur. They correspond directly
 /// with the HTTP error status code they will be handling and are registered
-/// with Rocket via [`Rocket::register()`](::Rocket::register()). For example,
+/// with Rocket via [`Rocket::register()`](crate::Rocket::register()). For example,
 /// to handle "404 not found" errors, a catcher for the "404" status code is
 /// registered.
 ///
@@ -98,7 +98,7 @@ impl Catcher {
     }
 
     #[inline(always)]
-    crate fn handle<'r>(&self, req: &'r Request) -> response::Result<'r> {
+    crate fn handle<'r>(&self, req: &'r Request<'_>) -> response::Result<'r> {
         (self.handler)(req)
     }
 
@@ -116,7 +116,7 @@ impl<'a> From<&'a StaticCatchInfo> for Catcher {
 }
 
 impl fmt::Display for Catcher {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}", Blue.paint(&self.code))
     }
 }
@@ -149,7 +149,7 @@ macro_rules! default_catchers {
         let mut map = HashMap::new();
 
         $(
-            fn $fn_name<'r>(req: &'r Request) -> response::Result<'r> {
+            fn $fn_name<'r>(req: &'r Request<'_>) -> response::Result<'r> {
                 status::Custom(Status::from_code($code).unwrap(),
                     content::Html(error_page_template!($code, $name, $description))
                 ).respond_to(req)
@@ -167,9 +167,9 @@ pub mod defaults {
 
     use std::collections::HashMap;
 
-    use request::Request;
-    use response::{self, content, status, Responder};
-    use http::Status;
+    use crate::request::Request;
+    use crate::response::{self, content, status, Responder};
+    use crate::http::Status;
 
     pub fn get() -> HashMap<u16, Catcher> {
         default_catchers! {

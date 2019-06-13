@@ -2,9 +2,9 @@ use std::fs::File;
 use std::io::{Cursor, BufReader};
 use std::fmt;
 
-use http::{Status, ContentType, StatusClass};
-use response::{self, Response, Body};
-use request::Request;
+use crate::http::{Status, ContentType, StatusClass};
+use crate::response::{self, Response, Body};
+use crate::request::Request;
 
 /// Trait implemented by types that generate responses for clients.
 ///
@@ -70,7 +70,7 @@ use request::Request;
 ///
 ///     Responds with a streamed body containing the data in the `File`. No
 ///     `Content-Type` is set. To automatically have a `Content-Type` set based
-///     on the file's extension, use [`NamedFile`](::response::NamedFile).
+///     on the file's extension, use [`NamedFile`](crate::response::NamedFile).
 ///
 ///   * **()**
 ///
@@ -192,13 +192,13 @@ pub trait Responder<'r> {
     /// returned, the error catcher for the given status is retrieved and called
     /// to generate a final error response, which is then written out to the
     /// client.
-    fn respond_to(self, request: &Request) -> response::Result<'r>;
+    fn respond_to(self, request: &Request<'_>) -> response::Result<'r>;
 }
 
 /// Returns a response with Content-Type `text/plain` and a fixed-size body
 /// containing the string `self`. Always returns `Ok`.
 impl<'r> Responder<'r> for &'r str {
-    fn respond_to(self, _: &Request) -> response::Result<'r> {
+    fn respond_to(self, _: &Request<'_>) -> response::Result<'r> {
         Response::build()
             .header(ContentType::Plain)
             .sized_body(Cursor::new(self))
@@ -209,7 +209,7 @@ impl<'r> Responder<'r> for &'r str {
 /// Returns a response with Content-Type `text/plain` and a fixed-size body
 /// containing the string `self`. Always returns `Ok`.
 impl<'r> Responder<'r> for String {
-    fn respond_to(self, _: &Request) -> response::Result<'r> {
+    fn respond_to(self, _: &Request<'_>) -> response::Result<'r> {
         Response::build()
             .header(ContentType::Plain)
             .sized_body(Cursor::new(self))
@@ -220,7 +220,7 @@ impl<'r> Responder<'r> for String {
 /// Returns a response with Content-Type `application/octet-stream` and a
 /// fixed-size body containing the data in `self`. Always returns `Ok`.
 impl<'r> Responder<'r> for &'r [u8] {
-    fn respond_to(self, _: &Request) -> response::Result<'r> {
+    fn respond_to(self, _: &Request<'_>) -> response::Result<'r> {
         Response::build()
             .header(ContentType::Binary)
             .sized_body(Cursor::new(self))
@@ -231,7 +231,7 @@ impl<'r> Responder<'r> for &'r [u8] {
 /// Returns a response with Content-Type `application/octet-stream` and a
 /// fixed-size body containing the data in `self`. Always returns `Ok`.
 impl<'r> Responder<'r> for Vec<u8> {
-    fn respond_to(self, _: &Request) -> response::Result<'r> {
+    fn respond_to(self, _: &Request<'_>) -> response::Result<'r> {
         Response::build()
             .header(ContentType::Binary)
             .sized_body(Cursor::new(self))
@@ -241,7 +241,7 @@ impl<'r> Responder<'r> for Vec<u8> {
 
 /// Returns a response with a sized body for the file. Always returns `Ok`.
 impl<'r> Responder<'r> for File {
-    fn respond_to(self, _: &Request) -> response::Result<'r> {
+    fn respond_to(self, _: &Request<'_>) -> response::Result<'r> {
         let (metadata, file) = (self.metadata(), BufReader::new(self));
         match metadata {
             Ok(md) => Response::build().raw_body(Body::Sized(file, md.len())).ok(),
@@ -252,7 +252,7 @@ impl<'r> Responder<'r> for File {
 
 /// Returns an empty, default `Response`. Always returns `Ok`.
 impl<'r> Responder<'r> for () {
-    fn respond_to(self, _: &Request) -> response::Result<'r> {
+    fn respond_to(self, _: &Request<'_>) -> response::Result<'r> {
         Ok(Response::new())
     }
 }
@@ -260,7 +260,7 @@ impl<'r> Responder<'r> for () {
 /// If `self` is `Some`, responds with the wrapped `Responder`. Otherwise prints
 /// a warning message and returns an `Err` of `Status::NotFound`.
 impl<'r, R: Responder<'r>> Responder<'r> for Option<R> {
-    fn respond_to(self, req: &Request) -> response::Result<'r> {
+    fn respond_to(self, req: &Request<'_>) -> response::Result<'r> {
         self.map_or_else(|| {
             warn_!("Response was `None`.");
             Err(Status::NotFound)
@@ -272,7 +272,7 @@ impl<'r, R: Responder<'r>> Responder<'r> for Option<R> {
 /// an error message with the `Err` value returns an `Err` of
 /// `Status::InternalServerError`.
 impl<'r, R: Responder<'r>, E: fmt::Debug> Responder<'r> for Result<R, E> {
-    default fn respond_to(self, req: &Request) -> response::Result<'r> {
+    default fn respond_to(self, req: &Request<'_>) -> response::Result<'r> {
         self.map(|r| r.respond_to(req)).unwrap_or_else(|e| {
             error_!("Response was a non-`Responder` `Err`: {:?}.", e);
             Err(Status::InternalServerError)
@@ -283,7 +283,7 @@ impl<'r, R: Responder<'r>, E: fmt::Debug> Responder<'r> for Result<R, E> {
 /// Responds with the wrapped `Responder` in `self`, whether it is `Ok` or
 /// `Err`.
 impl<'r, R: Responder<'r>, E: Responder<'r> + fmt::Debug> Responder<'r> for Result<R, E> {
-    fn respond_to(self, req: &Request) -> response::Result<'r> {
+    fn respond_to(self, req: &Request<'_>) -> response::Result<'r> {
         match self {
             Ok(responder) => responder.respond_to(req),
             Err(responder) => responder.respond_to(req),
@@ -306,7 +306,7 @@ impl<'r, R: Responder<'r>, E: Responder<'r> + fmt::Debug> Responder<'r> for Resu
 /// status code emit an error message and forward to the `500` (internal server
 /// error) catcher.
 impl<'r> Responder<'r> for Status {
-    fn respond_to(self, _: &Request) -> response::Result<'r> {
+    fn respond_to(self, _: &Request<'_>) -> response::Result<'r> {
         match self.class() {
             StatusClass::ClientError | StatusClass::ServerError => Err(self),
             StatusClass::Success if self.code < 206 => {

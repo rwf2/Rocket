@@ -1,10 +1,9 @@
 use std::fmt;
 
-#[cfg(feature = "tls")]
-use http::tls::{Certificate, PrivateKey};
-use http::private::Key;
+#[cfg(feature = "tls")] use crate::http::tls::{Certificate, PrivateKey};
 
-use config::{Result, Config, Value, ConfigError, LoggingLevel};
+use crate::http::private::Key;
+use crate::config::{Result, Config, Value, ConfigError, LoggingLevel};
 
 #[derive(Clone)]
 pub enum SecretKey {
@@ -31,7 +30,7 @@ impl SecretKey {
 }
 
 impl fmt::Display for SecretKey {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         #[cfg(feature = "private-cookies")]
         match *self {
             SecretKey::Generated(_) => write!(f, "generated"),
@@ -64,7 +63,7 @@ pub struct TlsConfig;
 ///
 /// # Defaults
 ///
-/// As documented in [`config`](::config), the default limits are as follows:
+/// As documented in [`config`](crate::config), the default limits are as follows:
 ///
 ///   * **forms**: 32KiB
 ///
@@ -180,8 +179,8 @@ impl Limits {
 }
 
 impl fmt::Display for Limits {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        fn fmt_size(n: u64, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        fn fmt_size(n: u64, f: &mut fmt::Formatter<'_>) -> fmt::Result {
             if (n & ((1 << 20) - 1)) == 0 {
                 write!(f, "{}MiB", n >> 20)
             } else if (n & ((1 << 10) - 1)) == 0 {

@@ -52,7 +52,7 @@ impl FromStr for LoggingLevel {
 }
 
 impl fmt::Display for LoggingLevel {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let string = match *self {
             LoggingLevel::Critical => "critical",
             LoggingLevel::Normal => "normal",
@@ -83,14 +83,14 @@ macro_rules! warn_ { ($($args:expr),+) => { log_!(warn: $($args),+); }; }
 
 impl log::Log for RocketLogger {
     #[inline(always)]
-    fn enabled(&self, record: &log::Metadata) -> bool {
+    fn enabled(&self, record: &log::Metadata<'_>) -> bool {
         match self.0.to_level_filter().to_level() {
             Some(max) => record.level() <= max || record.target().starts_with("launch"),
             None => false
         }
     }
 
-    fn log(&self, record: &log::Record) {
+    fn log(&self, record: &log::Record<'_>) {
         // Print nothing if this level isn't enabled and this isn't launch info.
         if !self.enabled(record.metadata()) {
             return;
@@ -150,7 +150,7 @@ crate fn try_init(level: LoggingLevel, verbose: bool) -> bool {
         return false;
     }
 
-    if !::atty::is(::atty::Stream::Stdout)
+    if !atty::is(atty::Stream::Stdout)
         || (cfg!(windows) && !Paint::enable_windows_ascii())
         || env::var_os(COLORS_ENV).map(|v| v == "0" || v == "off").unwrap_or(false)
     {

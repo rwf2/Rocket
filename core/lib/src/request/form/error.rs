@@ -1,7 +1,7 @@
 use std::io;
-use http::RawStr;
+use crate::http::RawStr;
 
-/// Error returned by the [`FromForm`](::request::FromForm) derive on form
+/// Error returned by the [`FromForm`](crate::request::FromForm) derive on form
 /// parsing errors.
 ///
 /// If multiple errors occur while parsing a form, the first error in the
@@ -22,8 +22,8 @@ pub enum FormParseError<'f> {
     Missing(&'f RawStr),
 }
 
-/// Error returned by the [`FromData`](::data::FromData) implementations of
-/// [`Form`](::request::Form) and [`LenientForm`](::request::LenientForm).
+/// Error returned by the [`FromData`](crate::data::FromData) implementations of
+/// [`Form`](crate::request::Form) and [`LenientForm`](crate::request::LenientForm).
 #[derive(Debug)]
 pub enum FormDataError<'f, E> {
     /// An I/O error occurred while reading reading the data stream. This can
@@ -43,9 +43,9 @@ pub enum FormDataError<'f, E> {
 ///
 /// This alias is particularly useful when "catching" form errors in routes.
 ///
-/// [`FromData`]: ::data::FromData
-/// [`Form<T>`]: ::request::Form
-/// [`FromForm`]: ::request::FromForm
+/// [`FromData`]: crate::data::FromData
+/// [`Form<T>`]: crate::request::Form
+/// [`FromForm`]: crate::request::FromForm
 ///
 /// # Example
 ///

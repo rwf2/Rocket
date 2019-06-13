@@ -3,9 +3,9 @@ use std::path::{Path, PathBuf};
 use std::io;
 use std::ops::{Deref, DerefMut};
 
-use request::Request;
-use response::{self, Responder};
-use http::ContentType;
+use crate::request::Request;
+use crate::response::{self, Responder};
+use crate::http::ContentType;
 
 /// A file with an associated name; responds with the Content-Type based on the
 /// file extension.
@@ -79,7 +79,7 @@ impl NamedFile {
 /// you would like to stream a file with a different Content-Type than that
 /// implied by its extension, use a [`File`] directly.
 impl<'r> Responder<'r> for NamedFile {
-    fn respond_to(self, req: &Request) -> response::Result<'r> {
+    fn respond_to(self, req: &Request<'_>) -> response::Result<'r> {
         let mut response = self.1.respond_to(req)?;
         if let Some(ext) = self.0.extension() {
             if let Some(ct) = ContentType::from_extension(&ext.to_string_lossy()) {

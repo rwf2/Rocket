@@ -1,12 +1,12 @@
 use std::fmt::Debug;
 use std::net::SocketAddr;
 
-use router::Route;
-use request::Request;
-use outcome::{self, IntoOutcome};
-use outcome::Outcome::*;
+use crate::router::Route;
+use crate::request::Request;
+use crate::outcome::{self, IntoOutcome};
+use crate::outcome::Outcome::*;
 
-use http::{Status, ContentType, Accept, Method, Cookies, uri::Origin};
+use crate::http::{Status, ContentType, Accept, Method, Cookies, uri::Origin};
 
 /// Type alias for the `Outcome` of a `FromRequest` conversion.
 pub type Outcome<S, E> = outcome::Outcome<S, (Status, E), ()>;
@@ -82,7 +82,7 @@ impl<S, E> IntoOutcome<S, (Status, E), ()> for Result<S, E> {
 /// * **Failure**(Status, E)
 ///
 ///   If the `Outcome` is [`Failure`], the request will fail with the given
-///   status code and error. The designated error [`Catcher`](::Catcher) will be
+///   status code and error. The designated error [`Catcher`](crate::Catcher) will be
 ///   used to respond to the request. Note that users can request types of
 ///   `Result<S, E>` and `Option<S>` to catch `Failure`s and retrieve the error
 ///   value.

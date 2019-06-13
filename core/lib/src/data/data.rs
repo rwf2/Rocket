@@ -7,15 +7,15 @@ use std::time::Duration;
 
 use super::data_stream::{DataStream, kill_stream};
 use super::net_stream::NetStream;
-use ext::ReadExt;
+use crate::ext::ReadExt;
 
-use http::hyper;
-use http::hyper::h1::HttpReader;
-use http::hyper::h1::HttpReader::*;
-use http::hyper::net::{HttpStream, NetworkStream};
+use crate::http::hyper;
+use crate::http::hyper::h1::HttpReader;
+use crate::http::hyper::h1::HttpReader::*;
+use crate::http::hyper::net::{HttpStream, NetworkStream};
 
 pub type HyperBodyReader<'a, 'b> =
-    self::HttpReader<&'a mut hyper::buffer::BufReader<&'b mut NetworkStream>>;
+    self::HttpReader<&'a mut hyper::buffer::BufReader<&'b mut dyn NetworkStream>>;
 
 //                              |---- from hyper ----|
 pub type BodyReader = HttpReader<Chain<Cursor<Vec<u8>>, NetStream>>;
@@ -27,13 +27,13 @@ const PEEK_BYTES: usize = 512;
 ///
 /// This type is the only means by which the body of a request can be retrieved.
 /// This type is not usually used directly. Instead, types that implement
-/// [`FromData`](::data::Data) are used via code generation by specifying the
-/// `data = "<var>"` route parameter as follows:
+/// [`FromData`](crate::data::FromData) are used via code generation by
+/// specifying the `data = "<var>"` route parameter as follows:
 ///
 /// ```rust
 /// # #![feature(proc_macro_hygiene, decl_macro)]
 /// # #[macro_use] extern crate rocket;
-/// # type DataGuard = ::rocket::data::Data;
+/// # type DataGuard = rocket::data::Data;
 /// #[post("/submit", data = "<var>")]
 /// fn submit(var: DataGuard) { /* ... */ }
 /// # fn main() { }
@@ -79,22 +79,22 @@ impl Data {
     /// }
     /// ```
     pub fn open(mut self) -> DataStream {
-        let buffer = ::std::mem::replace(&mut self.buffer, vec![]);
+        let buffer = std::mem::replace(&mut self.buffer, vec![]);
         let empty_stream = Cursor::new(vec![]).chain(NetStream::Empty);
 
         // FIXME: Insert a `BufReader` in front of the `NetStream` with capacity
         // 4096. We need the new `Chain` methods to get the inner reader to
         // actually do this, however.
         let empty_http_stream = HttpReader::SizedReader(empty_stream, 0);
-        let stream = ::std::mem::replace(&mut self.stream, empty_http_stream);
+        let stream = std::mem::replace(&mut self.stream, empty_http_stream);
         DataStream(Cursor::new(buffer).chain(stream))
     }
 
     // FIXME: This is absolutely terrible (downcasting!), thanks to Hyper.
-    crate fn from_hyp(mut body: HyperBodyReader) -> Result<Data, &'static str> {
+    crate fn from_hyp(mut body: HyperBodyReader<'_, '_>) -> Result<Data, &'static str> {
         #[inline(always)]
         #[cfg(feature = "tls")]
-        fn concrete_stream(stream: &mut NetworkStream) -> Option<NetStream> {
+        fn concrete_stream(stream: &mut dyn NetworkStream) -> Option<NetStream> {
             stream.downcast_ref::<HttpsStream>()
                 .map(|s| NetStream::Https(s.clone()))
                 .or_else(|| {
@@ -105,7 +105,7 @@ impl Data {
 
         #[inline(always)]
         #[cfg(not(feature = "tls"))]
-        fn concrete_stream(stream: &mut NetworkStream) -> Option<NetStream> {
+        fn concrete_stream(stream: &mut dyn NetworkStream) -> Option<NetStream> {
             stream.downcast_ref::<HttpStream>()
                 .map(|s| NetStream::Http(s.clone()))
         }

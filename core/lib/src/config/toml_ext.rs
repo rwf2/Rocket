@@ -1,7 +1,7 @@
 use std::fmt;
 use std::result::Result as StdResult;
 
-use config::Value;
+use crate::config::Value;
 
 use pear::{Result, parser, switch};
 use pear::parsers::*;
@@ -24,7 +24,7 @@ fn is_not_separator(byte: char) -> bool {
 #[inline(always)]
 fn is_ident_char(byte: char) -> bool {
     match byte {
-        '0'...'9' | 'A'...'Z' | 'a'...'z' | '_' | '-' => true,
+        '0'..='9' | 'A'..='Z' | 'a'..='z' | '_' | '-' => true,
         _ => false
     }
 }
@@ -85,8 +85,8 @@ crate struct LoggedValue<'a>(pub &'a Value);
 
 impl<'a> fmt::Display for LoggedValue<'a> {
     #[inline]
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        use config::Value::*;
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        use crate::config::Value::*;
         match *self.0 {
             String(_) | Integer(_) | Float(_) | Boolean(_) | Datetime(_) | Array(_) => {
                 self.0.fmt(f)

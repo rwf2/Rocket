@@ -158,7 +158,7 @@
 //! [`Config`] structure.
 //!
 //! The retrivial of configuration parameters usually occurs at launch time via
-//! a [launch fairing](::fairing::Fairing). If information about the
+//! a [launch fairing](crate::fairing::Fairing). If information about the
 //! configuraiton is needed later in the program, an attach fairing can be used
 //! to store the information as managed state. As an example of the latter,
 //! consider the following short program which reads the `token` configuration
@@ -203,15 +203,15 @@ pub use self::error::ConfigError;
 pub use self::environment::Environment;
 pub use self::config::Config;
 pub use self::builder::ConfigBuilder;
-pub use logger::LoggingLevel;
+pub use crate::logger::LoggingLevel;
 crate use self::toml_ext::LoggedValue;
 
-use logger;
+use crate::logger;
 use self::Environment::*;
 use self::environment::CONFIG_ENV;
-use logger::COLORS_ENV;
+use crate::logger::COLORS_ENV;
 use self::toml_ext::parse_simple_toml_value;
-use http::uncased::uncased_eq;
+use crate::http::uncased::uncased_eq;
 
 const CONFIG_FILENAME: &str = "Rocket.toml";
 const GLOBAL_ENV_NAME: &str = "global";
@@ -219,7 +219,7 @@ const ENV_VAR_PREFIX: &str = "ROCKET_";
 const PREHANDLED_VARS: [&str; 3] = ["ROCKET_CODEGEN_DEBUG", CONFIG_ENV, COLORS_ENV];
 
 /// Wraps `std::result` with the error type of [`ConfigError`].
-pub type Result<T> = ::std::result::Result<T, ConfigError>;
+pub type Result<T> = std::result::Result<T, ConfigError>;
 
 #[doc(hidden)]
 #[derive(Debug, PartialEq)]
@@ -478,7 +478,7 @@ mod test {
     use super::Environment::*;
     use super::Result;
 
-    use ::logger::LoggingLevel;
+    use crate::logger::LoggingLevel;
 
     const TEST_CONFIG_FILENAME: &'static str = "/tmp/testing/Rocket.toml";
 

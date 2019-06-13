@@ -10,10 +10,10 @@
 use std::hash::{Hash, Hasher};
 use std::collections::hash_map::DefaultHasher;
 
-use request::Request;
-use response::{Responder, Response};
-use http::hyper::header;
-use http::Status;
+use crate::request::Request;
+use crate::response::{Responder, Response};
+use crate::http::hyper::header;
+use crate::http::Status;
 
 /// Sets the status of the response to 201 (Created).
 ///
@@ -41,7 +41,7 @@ pub struct Created<R>(pub String, pub Option<R>);
 /// information about the created resource. If no responder is provided, the
 /// response body will be empty.
 impl<'r, R: Responder<'r>> Responder<'r> for Created<R> {
-    default fn respond_to(self, req: &Request) -> Result<Response<'r>, Status> {
+    default fn respond_to(self, req: &Request<'_>) -> Result<Response<'r>, Status> {
         let mut build = Response::build();
         if let Some(responder) = self.1 {
             build.merge(responder.respond_to(req)?);
@@ -56,7 +56,7 @@ impl<'r, R: Responder<'r>> Responder<'r> for Created<R> {
 /// a `Responder` is provided that implements `Hash`. The `ETag` header is set
 /// to a hash value of the responder.
 impl<'r, R: Responder<'r> + Hash> Responder<'r> for Created<R> {
-    fn respond_to(self, req: &Request) -> Result<Response<'r>, Status> {
+    fn respond_to(self, req: &Request<'_>) -> Result<Response<'r>, Status> {
         let mut hasher = DefaultHasher::default();
         let mut build = Response::build();
         if let Some(responder) = self.1 {
@@ -101,7 +101,7 @@ pub struct Accepted<R>(pub Option<R>);
 /// Sets the status code of the response to 202 Accepted. If the responder is
 /// `Some`, it is used to finalize the response.
 impl<'r, R: Responder<'r>> Responder<'r> for Accepted<R> {
-    fn respond_to(self, req: &Request) -> Result<Response<'r>, Status> {
+    fn respond_to(self, req: &Request<'_>) -> Result<Response<'r>, Status> {
         let mut build = Response::build();
         if let Some(responder) = self.0 {
             build.merge(responder.respond_to(req)?);
@@ -141,7 +141,7 @@ pub struct BadRequest<R>(pub Option<R>);
 /// Sets the status code of the response to 400 Bad Request. If the responder is
 /// `Some`, it is used to finalize the response.
 impl<'r, R: Responder<'r>> Responder<'r> for BadRequest<R> {
-    fn respond_to(self, req: &Request) -> Result<Response<'r>, Status> {
+    fn respond_to(self, req: &Request<'_>) -> Result<Response<'r>, Status> {
         let mut build = Response::build();
         if let Some(responder) = self.0 {
             build.merge(responder.respond_to(req)?);
@@ -168,7 +168,7 @@ pub struct NotFound<R>(pub R);
 
 /// Sets the status code of the response to 404 Not Found.
 impl<'r, R: Responder<'r>> Responder<'r> for NotFound<R> {
-    fn respond_to(self, req: &Request) -> Result<Response<'r>, Status> {
+    fn respond_to(self, req: &Request<'_>) -> Result<Response<'r>, Status> {
         Response::build_from(self.0.respond_to(req)?)
             .status(Status::NotFound)
             .ok()
@@ -192,7 +192,7 @@ pub struct Custom<R>(pub Status, pub R);
 /// Sets the status code of the response and then delegates the remainder of the
 /// response to the wrapped responder.
 impl<'r, R: Responder<'r>> Responder<'r> for Custom<R> {
-    fn respond_to(self, req: &Request) -> Result<Response<'r>, Status> {
+    fn respond_to(self, req: &Request<'_>) -> Result<Response<'r>, Status> {
         Response::build_from(self.1.respond_to(req)?)
             .status(self.0)
             .ok()

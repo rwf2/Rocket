@@ -5,8 +5,8 @@ use std::sync::atomic::{Ordering, AtomicBool};
 
 use yansi::Paint;
 
-use http::hyper;
-use router::Route;
+use crate::http::hyper;
+use crate::router::Route;
 
 /// The kind of launch error that occurred.
 ///
@@ -27,12 +27,12 @@ pub enum LaunchErrorKind {
     /// A launch fairing reported an error.
     FailedFairings(Vec<&'static str>),
     /// An otherwise uncategorized error occurred during launch.
-    Unknown(Box<::std::error::Error + Send + Sync>)
+    Unknown(Box<dyn std::error::Error + Send + Sync>)
 }
 
 /// An error that occurs during launch.
 ///
-/// A `LaunchError` is returned by [`launch()`](::Rocket::launch()) when
+/// A `LaunchError` is returned by [`launch()`](crate::Rocket::launch()) when
 /// launching an application fails.
 ///
 /// # Panics
@@ -139,7 +139,7 @@ impl From<io::Error> for LaunchError {
 
 impl fmt::Display for LaunchErrorKind {
     #[inline]
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match *self {
             LaunchErrorKind::Bind(ref e) => write!(f, "binding failed: {}", e),
             LaunchErrorKind::Io(ref e) => write!(f, "I/O error: {}", e),
@@ -152,7 +152,7 @@ impl fmt::Display for LaunchErrorKind {
 
 impl fmt::Debug for LaunchError {
     #[inline]
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         self.mark_handled();
         write!(f, "{:?}", self.kind())
     }
@@ -160,13 +160,13 @@ impl fmt::Debug for LaunchError {
 
 impl fmt::Display for LaunchError {
     #[inline]
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         self.mark_handled();
         write!(f, "{}", self.kind())
     }
 }
 
-impl ::std::error::Error for LaunchError {
+impl std::error::Error for LaunchError {
     #[inline]
     fn description(&self) -> &str {
         self.mark_handled();
@@ -220,11 +220,11 @@ impl Drop for LaunchError {
     }
 }
 
-use http::uri;
-use http::ext::IntoOwned;
-use http::route::{Error as SegmentError};
+use crate::http::uri;
+use crate::http::ext::IntoOwned;
+use crate::http::route::{Error as SegmentError};
 
-/// Error returned by [`set_uri()`](::Route::set_uri()) on invalid URIs.
+/// Error returned by [`set_uri()`](crate::Route::set_uri()) on invalid URIs.
 #[derive(Debug)]
 pub enum RouteUriError {
     /// The base (mount point) or route path contains invalid segments.
@@ -248,7 +248,7 @@ impl<'a> From<uri::Error<'a>> for RouteUriError {
 }
 
 impl fmt::Display for RouteUriError {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             RouteUriError::Segment => {
                 write!(f, "The URI contains malformed dynamic route path segments.")

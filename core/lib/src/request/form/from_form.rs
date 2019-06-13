@@ -1,13 +1,13 @@
-use request::FormItems;
+use crate::request::FormItems;
 
 /// Trait to create an instance of some type from an HTTP form.
-/// [`Form`](::request::Form) requires its generic type to implement this trait.
+/// [`Form`](crate::request::Form) requires its generic type to implement this trait.
 ///
 /// # Deriving
 ///
 /// This trait can be automatically derived. When deriving `FromForm`, every
 /// field in the structure must implement
-/// [`FromFormValue`](::request::FromFormValue). Rocket validates each field in
+/// [`FromFormValue`](crate::request::FromFormValue). Rocket validates each field in
 /// the structure by calling its `FromFormValue` implementation. You may wish to
 /// implement `FromFormValue` for your own types for custom, automatic
 /// validation.

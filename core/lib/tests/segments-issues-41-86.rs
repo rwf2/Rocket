@@ -5,27 +5,27 @@
 use rocket::http::uri::Segments;
 
 #[get("/test/<path..>")]
-fn test(path: Segments) -> String {
+fn test(path: Segments<'_>) -> String {
     path.collect::<Vec<_>>().join("/")
 }
 
 #[get("/two/<path..>")]
-fn two(path: Segments) -> String {
+fn two(path: Segments<'_>) -> String {
     path.collect::<Vec<_>>().join("/")
 }
 
 #[get("/one/two/<path..>")]
-fn one_two(path: Segments) -> String {
+fn one_two(path: Segments<'_>) -> String {
     path.collect::<Vec<_>>().join("/")
 }
 
 #[get("/<path..>", rank = 2)]
-fn none(path: Segments) -> String {
+fn none(path: Segments<'_>) -> String {
     path.collect::<Vec<_>>().join("/")
 }
 
 #[get("/static/<user>/is/<path..>")]
-fn dual(user: String, path: Segments) -> String {
+fn dual(user: String, path: Segments<'_>) -> String {
     user + "/is/" + &path.collect::<Vec<_>>().join("/")
 }
 

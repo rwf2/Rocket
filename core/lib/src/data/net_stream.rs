@@ -2,8 +2,8 @@ use std::io;
 use std::net::{SocketAddr, Shutdown};
 use std::time::Duration;
 
-#[cfg(feature = "tls")] use http::tls::{WrappedStream, ServerSession};
-use http::hyper::net::{HttpStream, NetworkStream};
+#[cfg(feature = "tls")] use crate::http::tls::{WrappedStream, ServerSession};
+use crate::http::hyper::net::{HttpStream, NetworkStream};
 
 use self::NetStream::*;
 

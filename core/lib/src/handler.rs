@@ -1,10 +1,10 @@
 //! Types and traits for request and error handlers and their return values.
 
-use data::Data;
-use request::Request;
-use response::{self, Response, Responder};
-use http::Status;
-use outcome;
+use crate::data::Data;
+use crate::request::Request;
+use crate::response::{self, Response, Responder};
+use crate::http::Status;
+use crate::outcome;
 
 /// Type alias for the `Outcome` of a `Handler`.
 pub type Outcome<'r> = outcome::Outcome<Response<'r>, Status, Data>;
@@ -142,7 +142,7 @@ pub trait Handler: Cloneable + Send + Sync + 'static {
     /// a response. Otherwise, if the return value is `Forward(Data)`, the next
     /// matching route is attempted. If there are no other matching routes, the
     /// `404` error catcher is invoked.
-    fn handle<'r>(&self, request: &'r Request, data: Data) -> Outcome<'r>;
+    fn handle<'r>(&self, request: &'r Request<'_>, data: Data) -> Outcome<'r>;
 }
 
 /// Unfortunate but necessary hack to be able to clone a `Box<Handler>`.
@@ -152,34 +152,34 @@ pub trait Handler: Cloneable + Send + Sync + 'static {
 /// `Handler` automatically implement `Cloneable`.
 pub trait Cloneable {
     /// Clones `self`.
-    fn clone_handler(&self) -> Box<Handler>;
+    fn clone_handler(&self) -> Box<dyn Handler>;
 }
 
 impl<T: Handler + Clone> Cloneable for T {
     #[inline(always)]
-    fn clone_handler(&self) -> Box<Handler> {
+    fn clone_handler(&self) -> Box<dyn Handler> {
         Box::new(self.clone())
     }
 }
 
-impl Clone for Box<Handler> {
+impl Clone for Box<dyn Handler> {
     #[inline(always)]
-    fn clone(&self) -> Box<Handler> {
+    fn clone(&self) -> Box<dyn Handler> {
         self.clone_handler()
     }
 }
 
 impl<F: Clone + Sync + Send + 'static> Handler for F
-    where for<'r> F: Fn(&'r Request, Data) -> Outcome<'r>
+    where for<'r> F: Fn(&'r Request<'_>, Data) -> Outcome<'r>
 {
     #[inline(always)]
-    fn handle<'r>(&self, req: &'r Request, data: Data) -> Outcome<'r> {
+    fn handle<'r>(&self, req: &'r Request<'_>, data: Data) -> Outcome<'r> {
         self(req, data)
     }
 }
 
 /// The type of an error handler.
-pub type ErrorHandler = for<'r> fn(&'r Request) -> response::Result<'r>;
+pub type ErrorHandler = for<'r> fn(&'r Request<'_>) -> response::Result<'r>;
 
 impl<'r> Outcome<'r> {
     /// Return the `Outcome` of response to `req` from `responder`.
@@ -199,7 +199,7 @@ impl<'r> Outcome<'r> {
     /// }
     /// ```
     #[inline]
-    pub fn from<T: Responder<'r>>(req: &Request, responder: T) -> Outcome<'r> {
+    pub fn from<T: Responder<'r>>(req: &Request<'_>, responder: T) -> Outcome<'r> {
         match responder.respond_to(req) {
             Ok(response) => outcome::Outcome::Success(response),
             Err(status) => outcome::Outcome::Failure(status)

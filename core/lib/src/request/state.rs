@@ -1,9 +1,9 @@
 use std::ops::Deref;
 
-use Rocket;
-use request::{self, FromRequest, Request};
-use outcome::Outcome;
-use http::Status;
+use crate::Rocket;
+use crate::request::{self, FromRequest, Request};
+use crate::outcome::Outcome;
+use crate::http::Status;
 
 /// Request guard to retrieve managed state.
 ///
@@ -11,7 +11,7 @@ use http::Status;
 /// managing for some type `T`. This allows for the sharing of state across any
 /// number of handlers. A value for the given type must previously have been
 /// registered to be managed by Rocket via
-/// [`Rocket::manage()`](::Rocket::manage()). The type being managed must be
+/// [`Rocket::manage()`]. The type being managed must be
 /// thread safe and sendable across thread boundaries. In other words, it must
 /// implement [`Send`] + [`Sync`] + 'static`.
 ///

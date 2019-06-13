@@ -3,7 +3,7 @@ use std::path::PathBuf;
 use std::fmt::Debug;
 use std::borrow::Cow;
 
-use http::{RawStr, uri::{Segments, SegmentError}};
+use crate::http::{RawStr, uri::{Segments, SegmentError}};
 
 /// Trait to convert a dynamic path segment string to a concrete value.
 ///

@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 
-use config::{Result, Config, Value, Environment, Limits, LoggingLevel};
+use crate::config::{Result, Config, Value, Environment, Limits, LoggingLevel};
 
 /// Structure following the builder pattern for building `Config` structures.
 #[derive(Clone)]

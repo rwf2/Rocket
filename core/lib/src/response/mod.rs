@@ -1,7 +1,7 @@
 //! Types and traits to build and send responses.
 //!
 //! The return type of a Rocket handler can be any type that implements the
-//! [`Responder`](::response::Responder) trait, which means that the type knows
+//! [`Responder`](crate::response::Responder) trait, which means that the type knows
 //! how to generate a [`Response`]. Among other things, this module contains
 //! several such types.
 //!
@@ -42,4 +42,4 @@ pub use self::stream::Stream;
 #[doc(inline)] pub use self::content::Content;
 
 /// Type alias for the `Result` of a `Responder::respond` call.
-pub type Result<'r> = ::std::result::Result<self::Response<'r>, ::http::Status>;
+pub type Result<'r> = std::result::Result<self::Response<'r>, crate::http::Status>;

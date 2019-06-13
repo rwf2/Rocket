@@ -2,10 +2,10 @@ use std::convert::AsRef;
 
 use time::Duration;
 
-use outcome::IntoOutcome;
-use response::{Response, Responder};
-use request::{self, Request, FromRequest};
-use http::{Status, Cookie};
+use crate::outcome::IntoOutcome;
+use crate::response::{Response, Responder};
+use crate::request::{self, Request, FromRequest};
+use crate::http::{Status, Cookie};
 use std::sync::atomic::{AtomicBool, Ordering};
 
 // The name of the actual flash cookie.
@@ -100,7 +100,7 @@ pub struct Flash<R> {
 ///
 /// [`name()`]: Flash::name()
 /// [`msg()`]: Flash::msg()
-pub type FlashMessage<'a, 'r> = ::response::Flash<&'a Request<'r>>;
+pub type FlashMessage<'a, 'r> = crate::response::Flash<&'a Request<'r>>;
 
 impl<'r, R: Responder<'r>> Flash<R> {
     /// Constructs a new `Flash` message with the given `name`, `msg`, and
@@ -194,7 +194,7 @@ impl<'r, R: Responder<'r>> Flash<R> {
 /// response handling to the wrapped responder. As a result, the `Outcome` of
 /// the response is the `Outcome` of the wrapped `Responder`.
 impl<'r, R: Responder<'r>> Responder<'r> for Flash<R> {
-    fn respond_to(self, req: &Request) -> Result<Response<'r>, Status> {
+    fn respond_to(self, req: &Request<'_>) -> Result<Response<'r>, Status> {
         trace_!("Flash: setting message: {}:{}", self.name, self.message);
         req.cookies().add(self.cookie());
         self.inner.respond_to(req)

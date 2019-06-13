@@ -1,8 +1,8 @@
 use std::ops::Deref;
 
-use request::{Request, form::{Form, FormDataError, FromForm}};
-use data::{Data, Transform, Transformed, FromData, Outcome};
-use http::uri::{Query, FromUriParam};
+use crate::request::{Request, form::{Form, FormDataError, FromForm}};
+use crate::data::{Data, Transform, Transformed, FromData, Outcome};
+use crate::http::uri::{Query, FromUriParam};
 
 /// A data guard for parsing [`FromForm`] types leniently.
 ///
@@ -100,11 +100,11 @@ impl<'f, T: FromForm<'f>> FromData<'f> for LenientForm<T> {
     type Owned = String;
     type Borrowed = str;
 
-    fn transform(r: &Request, d: Data) -> Transform<Outcome<Self::Owned, Self::Error>> {
+    fn transform(r: &Request<'_>, d: Data) -> Transform<Outcome<Self::Owned, Self::Error>> {
         <Form<T>>::transform(r, d)
     }
 
-    fn from_data(_: &Request, o: Transformed<'f, Self>) -> Outcome<Self, Self::Error> {
+    fn from_data(_: &Request<'_>, o: Transformed<'f, Self>) -> Outcome<Self, Self::Error> {
         <Form<T>>::from_data(o.borrowed()?, false).map(LenientForm)
     }
 }

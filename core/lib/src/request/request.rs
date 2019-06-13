@@ -7,16 +7,16 @@ use std::str;
 use yansi::Paint;
 use state::{Container, Storage};
 
-use request::{FromParam, FromSegments, FromRequest, Outcome};
-use request::{FromFormValue, FormItems, FormItem};
+use crate::request::{FromParam, FromSegments, FromRequest, Outcome};
+use crate::request::{FromFormValue, FormItems, FormItem};
 
-use rocket::Rocket;
-use router::Route;
-use config::{Config, Limits};
-use http::{hyper, uri::{Origin, Segments}};
-use http::{Method, Header, HeaderMap, Cookies};
-use http::{RawStr, ContentType, Accept, MediaType};
-use http::private::{Indexed, SmallVec, CookieJar};
+use crate::rocket::Rocket;
+use crate::router::Route;
+use crate::config::{Config, Limits};
+use crate::http::{hyper, uri::{Origin, Segments}};
+use crate::http::{Method, Header, HeaderMap, Cookies};
+use crate::http::{RawStr, ContentType, Accept, MediaType};
+use crate::http::private::{Indexed, SmallVec, CookieJar};
 
 type Indices = (usize, usize);
 
@@ -135,7 +135,7 @@ impl<'r> Request<'r> {
     /// # });
     /// ```
     #[inline(always)]
-    pub fn uri(&self) -> &Origin {
+    pub fn uri(&self) -> &Origin<'_> {
         &self.uri
     }
 
@@ -287,7 +287,7 @@ impl<'r> Request<'r> {
     /// request.cookies().add(Cookie::new("ans", format!("life: {}", 38 + 4)));
     /// # });
     /// ```
-    pub fn cookies(&self) -> Cookies {
+    pub fn cookies(&self) -> Cookies<'_> {
         // FIXME: Can we do better? This is disappointing.
         match self.state.cookies.try_borrow_mut() {
             Ok(jar) => Cookies::new(jar, self.state.config.secret_key()),
@@ -696,7 +696,7 @@ impl<'r> Request<'r> {
 #[doc(hidden)]
 impl<'r> Request<'r> {
     // Only used by doc-tests! Needs to be `pub` because doc-test are external.
-    pub fn example<F: Fn(&mut Request)>(method: Method, uri: &str, f: F) {
+    pub fn example<F: Fn(&mut Request<'_>)>(method: Method, uri: &str, f: F) {
         let rocket = Rocket::custom(Config::development());
         let uri = Origin::parse(uri).expect("invalid URI in example");
         let mut request = Request::new(&rocket, method, uri);
@@ -732,7 +732,7 @@ impl<'r> Request<'r> {
     /// Get the segments beginning at the `n`th, 0-indexed, after the mount
     /// point for the currently matched route, if they exist. Used by codegen.
     #[inline]
-    pub fn raw_segments(&self, n: usize) -> Option<Segments> {
+    pub fn raw_segments(&self, n: usize) -> Option<Segments<'_>> {
         self.routed_path_segment(n)
             .map(|(i, _)| Segments(&self.uri.path()[i..]) )
     }
@@ -759,7 +759,7 @@ impl<'r> Request<'r> {
     #[inline]
     pub fn raw_query_items(
         &self
-    ) -> Option<impl Iterator<Item = FormItem> + DoubleEndedIterator + Clone> {
+    ) -> Option<impl Iterator<Item = FormItem<'_>> + DoubleEndedIterator + Clone> {
         let query = self.uri.query()?;
         self.state.query_items.as_ref().map(move |items| {
             items.iter().map(move |item| item.convert(query))
@@ -811,7 +811,7 @@ impl<'r> Request<'r> {
         if let Some(cookie_headers) = h_headers.get_raw("Cookie") {
             let mut cookie_jar = CookieJar::new();
             for header in cookie_headers {
-                let raw_str = match ::std::str::from_utf8(header) {
+                let raw_str = match std::str::from_utf8(header) {
                     Ok(string) => string,
                     Err(_) => continue
                 };
@@ -843,7 +843,7 @@ impl<'r> Request<'r> {
 }
 
 impl<'r> fmt::Debug for Request<'r> {
-    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
         fmt.debug_struct("Request")
             .field("method", &self.method)
             .field("uri", &self.uri)
@@ -856,7 +856,7 @@ impl<'r> fmt::Debug for Request<'r> {
 impl<'r> fmt::Display for Request<'r> {
     /// Pretty prints a Request. This is primarily used by Rocket's logging
     /// infrastructure.
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{} {}", Paint::green(self.method()), Paint::blue(&self.uri))?;
 
         // Print the requests media type when the route specifies a format.
@@ -872,7 +872,7 @@ impl<'r> fmt::Display for Request<'r> {
 
 impl IndexedFormItem {
     #[inline(always)]
-    fn from(s: &str, i: FormItem) -> Self {
+    fn from(s: &str, i: FormItem<'_>) -> Self {
         let (r, k, v) = (indices(i.raw, s), indices(i.key, s), indices(i.value, s));
         IndexedFormItem { raw: r, key: k, value: v }
     }

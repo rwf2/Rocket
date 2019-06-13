@@ -1,9 +1,9 @@
 use std::ops::Deref;
 
-use outcome::Outcome::*;
-use request::{Request, form::{FromForm, FormItems, FormDataError}};
-use data::{Outcome, Transform, Transformed, Data, FromData};
-use http::{Status, uri::{Query, FromUriParam}};
+use crate::outcome::Outcome::*;
+use crate::request::{Request, form::{FromForm, FormItems, FormDataError}};
+use crate::data::{Outcome, Transform, Transformed, Data, FromData};
+use crate::http::{Status, uri::{Query, FromUriParam}};
 
 /// A data guard for parsing [`FromForm`] types strictly.
 ///
@@ -17,7 +17,7 @@ use http::{Status, uri::{Query, FromUriParam}};
 /// error on missing and/or extra fields. For instance, if an incoming form
 /// contains the fields "a", "b", and "c" while `T` only contains "a" and "c",
 /// the form _will not_ parse as `Form<T>`. If you would like to admit extra
-/// fields without error, see [`LenientForm`](::request::LenientForm).
+/// fields without error, see [`LenientForm`](crate::request::LenientForm).
 ///
 /// # Usage
 ///
@@ -89,7 +89,7 @@ use http::{Status, uri::{Query, FromUriParam}};
 /// depends on your use case. The primary question to answer is: _Can the input
 /// contain characters that must be URL encoded?_ Note that this includes common
 /// characters such as spaces. If so, then you must use `String`, whose
-/// [`FromFormValue`](::request::FromFormValue) implementation automatically URL
+/// [`FromFormValue`](crate::request::FromFormValue) implementation automatically URL
 /// decodes the value. Because the `&RawStr` references will refer directly to
 /// the underlying form data, they will be raw and URL encoded.
 ///
@@ -190,7 +190,7 @@ impl<'f, T: FromForm<'f>> FromData<'f> for Form<T> {
     type Borrowed = str;
 
     fn transform(
-        request: &Request,
+        request: &Request<'_>,
         data: Data
     ) -> Transform<Outcome<Self::Owned, Self::Error>> {
         use std::{cmp::min, io::Read};
@@ -214,7 +214,7 @@ impl<'f, T: FromForm<'f>> FromData<'f> for Form<T> {
         Transform::Borrowed(outcome)
     }
 
-    fn from_data(_: &Request, o: Transformed<'f, Self>) -> Outcome<Self, Self::Error> {
+    fn from_data(_: &Request<'_>, o: Transformed<'f, Self>) -> Outcome<Self, Self::Error> {
         <Form<T>>::from_data(o.borrowed()?, true).map(Form)
     }
 }

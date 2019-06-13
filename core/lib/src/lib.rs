@@ -12,6 +12,8 @@
 #![doc(html_favicon_url = "https://rocket.rs/v0.5/images/favicon.ico")]
 #![doc(html_logo_url = "https://rocket.rs/v0.5/images/logo-boxed.png")]
 
+#![warn(rust_2018_idioms)]
+
 //! # Rocket - Core API Documentation
 //!
 //! Hello, and welcome to the core Rocket API documentation!
@@ -99,17 +101,8 @@
 #[allow(unused_imports)] #[macro_use] extern crate rocket_codegen;
 #[doc(hidden)] pub use rocket_codegen::*;
 
-extern crate rocket_http;
 #[macro_use] extern crate log;
 #[macro_use] extern crate pear;
-extern crate yansi;
-extern crate toml;
-extern crate num_cpus;
-extern crate state;
-extern crate time;
-extern crate memchr;
-extern crate base64;
-extern crate atty;
 
 #[cfg(test)] #[macro_use] extern crate lazy_static;
 
@@ -141,16 +134,16 @@ mod codegen;
 mod catcher;
 mod ext;
 
-#[doc(inline)] pub use response::Response;
-#[doc(inline)] pub use handler::{Handler, ErrorHandler};
-#[doc(hidden)] pub use codegen::{StaticRouteInfo, StaticCatchInfo};
-#[doc(inline)] pub use outcome::Outcome;
-#[doc(inline)] pub use data::Data;
-#[doc(inline)] pub use config::Config;
-pub use router::Route;
-pub use request::{Request, State};
-pub use catcher::Catcher;
-pub use rocket::Rocket;
+#[doc(inline)] pub use crate::response::Response;
+#[doc(inline)] pub use crate::handler::{Handler, ErrorHandler};
+#[doc(hidden)] pub use crate::codegen::{StaticRouteInfo, StaticCatchInfo};
+#[doc(inline)] pub use crate::outcome::Outcome;
+#[doc(inline)] pub use crate::data::Data;
+#[doc(inline)] pub use crate::config::Config;
+pub use crate::router::Route;
+pub use crate::request::{Request, State};
+pub use crate::catcher::Catcher;
+pub use crate::rocket::Rocket;
 
 /// Alias to [`Rocket::ignite()`] Creates a new instance of `Rocket`.
 pub fn ignite() -> Rocket {

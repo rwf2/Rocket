@@ -4,13 +4,13 @@ use std::path::{Path, PathBuf};
 use std::convert::AsRef;
 use std::fmt;
 
+use crate::config::Environment::*;
+use crate::config::{Result, ConfigBuilder, Environment, ConfigError, LoggingLevel};
+use crate::config::{Table, Value, Array, Datetime};
+use crate::http::private::Key;
+
 use super::custom_values::*;
 use {num_cpus, base64};
-use config::Environment::*;
-use config::{Result, ConfigBuilder, Environment, ConfigError, LoggingLevel};
-use config::{Table, Value, Array, Datetime};
-
-use http::private::Key;
 
 /// Structure for Rocket application configuration.
 ///
@@ -33,7 +33,7 @@ use http::private::Key;
 /// ## General Configuration
 ///
 /// For more information about Rocket's configuration, see the
-/// [`config`](::config) module documentation.
+/// [`config`](crate::config) module documentation.
 #[derive(Clone)]
 pub struct Config {
     /// The environment that this configuration corresponds to.
@@ -96,7 +96,7 @@ impl Config {
     }
 
     /// Returns a `Config` with the default parameters for the environment
-    /// `env`. See [`config`](::config) for a list of defaults.
+    /// `env`. See [`config`](crate::config) for a list of defaults.
     ///
     /// # Example
     ///
@@ -138,7 +138,7 @@ impl Config {
     }
 
     /// Returns a `Config` with the default parameters of the development
-    /// environment. See [`config`](::config) for a list of defaults.
+    /// environment. See [`config`](crate::config) for a list of defaults.
     ///
     /// # Example
     ///
@@ -153,7 +153,7 @@ impl Config {
     }
 
     /// Returns a `Config` with the default parameters of the staging
-    /// environment. See [`config`](::config) for a list of defaults.
+    /// environment. See [`config`](crate::config) for a list of defaults.
     ///
     /// # Example
     ///
@@ -168,7 +168,7 @@ impl Config {
     }
 
     /// Returns a `Config` with the default parameters of the production
-    /// environment. See [`config`](::config) for a list of defaults.
+    /// environment. See [`config`](crate::config) for a list of defaults.
     ///
     /// # Example
     ///
@@ -518,7 +518,7 @@ impl Config {
     /// ```
     #[cfg(feature = "tls")]
     pub fn set_tls(&mut self, certs_path: &str, key_path: &str) -> Result<()> {
-        use http::tls::util::{self, Error};
+        use crate::http::tls::util::{self, Error};
 
         let pem_err = "malformed PEM file";
 
@@ -908,7 +908,7 @@ impl Config {
             path.into()
         } else if let Some(root) = self.root() {
             root.join(path)
-        } else if let Ok(cwd) = ::std::env::current_dir() {
+        } else if let Ok(cwd) = std::env::current_dir() {
             cwd.join(path)
         } else {
             path.into()
@@ -917,7 +917,7 @@ impl Config {
 }
 
 impl fmt::Debug for Config {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let mut s = f.debug_struct("Config");
         s.field("environment", &self.environment);
         s.field("address", &self.address);

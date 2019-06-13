@@ -1,6 +1,6 @@
 #![feature(proc_macro_hygiene, decl_macro)]
 
-extern crate rocket;
+use rocket;
 
 use rocket::{get, routes};
 use rocket::request::{Form, FromForm, FromFormValue};
@@ -14,7 +14,7 @@ enum Thing {
 }
 
 impl std::fmt::Display for Thing {
-    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match *self {
             Thing::A => write!(f, "a"),
             Thing::B => write!(f, "b"),

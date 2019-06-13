@@ -131,7 +131,7 @@ impl ConfigError {
 }
 
 impl fmt::Display for ConfigError {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match *self {
             NotFound => write!(f, "config file was not found"),
             IoError => write!(f, "I/O error while reading the config file"),

@@ -15,7 +15,7 @@ struct Counter {
 }
 
 #[get("/")]
-fn index(counter: State<Counter>) -> String {
+fn index(counter: State<'_, Counter>) -> String {
     let attaches = counter.attach.load(Ordering::Relaxed);
     let gets = counter.get.load(Ordering::Acquire);
     format!("{}, {}", attaches, gets)
@@ -30,7 +30,7 @@ fn rocket() -> rocket::Rocket {
             let rocket = rocket.manage(counter)
                 .attach(AdHoc::on_request("Inner", |req, _| {
                     if req.method() == Method::Get {
-                        let counter = req.guard::<State<Counter>>().unwrap();
+                        let counter = req.guard::<State<'_, Counter>>().unwrap();
                         counter.get.fetch_add(1, Ordering::Release);
                     }
                 }));

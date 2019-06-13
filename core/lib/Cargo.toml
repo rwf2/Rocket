@@ -13,6 +13,7 @@ keywords = ["rocket", "web", "framework", "server"]
 license = "MIT/Apache-2.0"
 build = "build.rs"
 categories = ["web-programming::http-server"]
+edition = "2018"
 
 [package.metadata.docs.rs]
 all-features = true

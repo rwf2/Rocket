@@ -22,9 +22,9 @@
 //! let response = content::Html("<h1>Hello, world!</h1>");
 //! ```
 
-use request::Request;
-use response::{Response, Responder};
-use http::{Status, ContentType};
+use crate::request::Request;
+use crate::response::{Response, Responder};
+use crate::http::{Status, ContentType};
 
 /// Sets the Content-Type of a `Responder` to a chosen value.
 ///
@@ -48,7 +48,7 @@ pub struct Content<R>(pub ContentType, pub R);
 /// delegates the remainder of the response to the wrapped responder.
 impl<'r, R: Responder<'r>> Responder<'r> for Content<R> {
     #[inline(always)]
-    fn respond_to(self, req: &Request) -> Result<Response<'r>, Status> {
+    fn respond_to(self, req: &Request<'_>) -> Result<Response<'r>, Status> {
         Response::build()
             .merge(self.1.respond_to(req)?)
             .header(self.0)
@@ -72,7 +72,7 @@ macro_rules! ctrs {
             /// Sets the Content-Type of the response then delegates the
             /// remainder of the response to the wrapped responder.
             impl<'r, R: Responder<'r>> Responder<'r> for $name<R> {
-                fn respond_to(self, req: &Request) -> Result<Response<'r>, Status> {
+                fn respond_to(self, req: &Request<'_>) -> Result<Response<'r>, Status> {
                     Content(ContentType::$ct, self.0).respond_to(req)
                 }
             }

@@ -4,9 +4,9 @@ use std::net::SocketAddr;
 use std::ops::{Deref, DerefMut};
 use std::borrow::Cow;
 
-use {Request, Response, Data};
-use http::{Status, Method, Header, Cookie, uri::Origin, ext::IntoOwned};
-use local::Client;
+use crate::{Request, Response, Data};
+use crate::http::{Status, Method, Header, Cookie, uri::Origin, ext::IntoOwned};
+use crate::local::Client;
 
 /// A structure representing a local request as created by [`Client`].
 ///
@@ -56,7 +56,7 @@ use local::Client;
 /// same request needs to be dispatched multiple times, the request can first be
 /// cloned and then dispatched: `request.clone().dispatch()`.
 ///
-/// [`Client`]: ::local::Client
+/// [`Client`]: crate::local::Client
 /// [`header`]: #method.header
 /// [`add_header`]: #method.add_header
 /// [`cookie`]: #method.cookie
@@ -119,7 +119,7 @@ impl<'c> LocalRequest<'c> {
 
         // See the comments on the structure for what's going on here.
         let mut request = Rc::new(request);
-        let ptr = Rc::get_mut(&mut request).unwrap() as *mut Request;
+        let ptr = Rc::get_mut(&mut request).unwrap() as *mut Request<'_>;
         LocalRequest { client, ptr, request, uri, data: vec![] }
     }
 
@@ -160,8 +160,8 @@ impl<'c> LocalRequest<'c> {
     /// Any type that implements `Into<Header>` can be used here. Among others,
     /// this includes [`ContentType`] and [`Accept`].
     ///
-    /// [`ContentType`]: ::http::ContentType
-    /// [`Accept`]: ::http::Accept
+    /// [`ContentType`]: crate::http::ContentType
+    /// [`Accept`]: crate::http::Accept
     ///
     /// # Examples
     ///
@@ -236,7 +236,7 @@ impl<'c> LocalRequest<'c> {
     ///     .cookie(Cookie::new("user_id", "12"));
     /// ```
     #[inline]
-    pub fn cookie(self, cookie: Cookie) -> Self {
+    pub fn cookie(self, cookie: Cookie<'_>) -> Self {
         self.request.cookies().add_original(cookie.into_owned());
         self
     }
@@ -257,7 +257,7 @@ impl<'c> LocalRequest<'c> {
     /// let req = client.get("/").cookies(cookies);
     /// ```
     #[inline]
-    pub fn cookies(self, cookies: Vec<Cookie>) -> Self {
+    pub fn cookies(self, cookies: Vec<Cookie<'_>>) -> Self {
         for cookie in cookies {
             self.request.cookies().add_original(cookie.into_owned());
         }
@@ -270,7 +270,7 @@ impl<'c> LocalRequest<'c> {
     /// This method is only available when the `private-cookies` feature is
     /// enabled.
     ///
-    /// [private cookie]: ::http::Cookies::add_private()
+    /// [private cookie]: crate::http::Cookies::add_private()
     ///
     /// # Examples
     ///
@@ -384,7 +384,7 @@ impl<'c> LocalRequest<'c> {
     #[inline(always)]
     pub fn mut_dispatch(&mut self) -> LocalResponse<'c> {
         let req = self.long_lived_request();
-        let data = ::std::mem::replace(&mut self.data, vec![]);
+        let data = std::mem::replace(&mut self.data, vec![]);
         let rc_req = self.request.clone();
         LocalRequest::_dispatch(self.client, req, rc_req, &self.uri, data)
     }
@@ -414,7 +414,7 @@ impl<'c> LocalRequest<'c> {
         // with the changes reflected by `response`.
         if let Some(ref jar) = client.cookies {
             let mut jar = jar.write().expect("LocalRequest::_dispatch() write lock");
-            let current_time = ::time::now();
+            let current_time = time::now();
             for cookie in response.cookies() {
                 if let Some(expires) = cookie.expires() {
                     if expires <= current_time {
@@ -435,7 +435,7 @@ impl<'c> LocalRequest<'c> {
 }
 
 impl<'c> fmt::Debug for LocalRequest<'c> {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         fmt::Debug::fmt(&self.request, f)
     }
 }
@@ -469,7 +469,7 @@ impl<'c> DerefMut for LocalResponse<'c> {
 }
 
 impl<'c> fmt::Debug for LocalResponse<'c> {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         fmt::Debug::fmt(&self.response, f)
     }
 }
