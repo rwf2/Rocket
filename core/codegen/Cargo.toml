@@ -10,6 +10,7 @@ readme = "../../README.md"
 keywords = ["rocket", "web", "framework", "code", "generation"]
 license = "MIT/Apache-2.0"
 build = "build.rs"
+edition = "2018"
 
 [lib]
 proc-macro = true

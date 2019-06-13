@@ -28,7 +28,7 @@ struct Simple(String);
 impl FromDataSimple for Simple {
     type Error = ();
 
-    fn from_data(_: &Request, data: Data) -> data::Outcome<Self, ()> {
+    fn from_data(_: &Request<'_>, data: Data) -> data::Outcome<Self, ()> {
         use std::io::Read;
         let mut string = String::new();
         data.open().take(64).read_to_string(&mut string).unwrap();
@@ -41,7 +41,7 @@ fn post1(
     sky: usize,
     name: &RawStr,
     a: String,
-    query: Form<Inner>,
+    query: Form<Inner<'_>>,
     path: PathBuf,
     simple: Simple,
 ) -> String {
@@ -58,7 +58,7 @@ fn post2(
     sky: usize,
     name: &RawStr,
     a: String,
-    query: Form<Inner>,
+    query: Form<Inner<'_>>,
     path: PathBuf,
     simple: Simple,
 ) -> String {

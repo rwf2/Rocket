@@ -52,13 +52,13 @@ fn simple4_flipped(name: String, id: i32) { }
 fn unused_param(used: i32, _unused: i32) { }
 
 #[post("/<id>")]
-fn guard_1(cookies: Cookies, id: i32) { }
+fn guard_1(cookies: Cookies<'_>, id: i32) { }
 
 #[post("/<id>/<name>")]
-fn guard_2(name: String, cookies: Cookies, id: i32) { }
+fn guard_2(name: String, cookies: Cookies<'_>, id: i32) { }
 
 #[post("/a/<id>/hi/<name>/hey")]
-fn guard_3(id: i32, name: String, cookies: Cookies) { }
+fn guard_3(id: i32, name: String, cookies: Cookies<'_>) { }
 
 #[post("/<id>", data = "<form>")]
 fn no_uri_display_okay(id: i32, form: Form<Second>) { }
@@ -70,7 +70,7 @@ fn complex<'r>(
     query: Form<User<'r>>,
     user: Form<User<'r>>,
     bar: &RawStr,
-    cookies: Cookies
+    cookies: Cookies<'_>
 ) {  }
 
 #[post("/a/<path..>")]
@@ -80,7 +80,7 @@ fn segments(path: PathBuf) { }
 fn param_and_segments(path: PathBuf, id: usize) { }
 
 #[post("/a/<id>/then/<path..>")]
-fn guarded_segments(cookies: Cookies, path: PathBuf, id: usize) { }
+fn guarded_segments(cookies: Cookies<'_>, path: PathBuf, id: usize) { }
 
 macro assert_uri_eq($($uri:expr => $expected:expr,)+) {
     $(assert_eq!($uri, Origin::parse($expected).expect("valid origin URI"));)+
@@ -332,9 +332,9 @@ mod typed_uris {
     fn check_simple_scoped() {
         assert_uri_eq! {
             uri!(simple: id = 100) => "/typed_uris/100",
-            uri!(::simple: id = 100) => "/100",
-            uri!("/mount", ::simple: id = 100) => "/mount/100",
-            uri!(::simple2: id = 100, name = "hello") => "/100/hello",
+            uri!(crate::simple: id = 100) => "/100",
+            uri!("/mount", crate::simple: id = 100) => "/mount/100",
+            uri!(crate::simple2: id = 100, name = "hello") => "/100/hello",
         }
     }
 
@@ -348,7 +348,7 @@ mod typed_uris {
         fn check_deep_scoped() {
             assert_uri_eq! {
                 uri!(super::simple: id = 100) => "/typed_uris/100",
-                uri!(::simple: id = 100) => "/100",
+                uri!(crate::simple: id = 100) => "/100",
             }
         }
     }
@@ -365,7 +365,7 @@ fn optionals(
     foo: Option<usize>,
     bar: Result<String, &RawStr>,
     q1: Result<usize, &RawStr>,
-    rest: Option<Form<Third>>
+    rest: Option<Form<Third<'_>>>
 ) { }
 
 #[test]

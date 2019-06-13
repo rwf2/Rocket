@@ -1,8 +1,8 @@
 use proc_macro::{Span, TokenStream};
 use devise::*;
 
-use derive::from_form::Form;
-use proc_macro2::TokenStream as TokenStream2;
+use crate::derive::from_form::Form;
+use crate::proc_macro2::TokenStream as TokenStream2;
 
 const NO_EMPTY_FIELDS: &str = "fieldless structs or variants are not supported";
 const NO_NULLARY: &str = "nullary items are not supported";
@@ -10,7 +10,7 @@ const NO_EMPTY_ENUMS: &str = "empty enums are not supported";
 const ONLY_ONE_UNNAMED: &str = "tuple structs or variants must have exactly one field";
 const EXACTLY_ONE_FIELD: &str = "struct must have exactly one field";
 
-fn validate_fields(fields: Fields, parent_span: Span) -> Result<()> {
+fn validate_fields(fields: Fields<'_>, parent_span: Span) -> Result<()> {
     if fields.count() == 0 {
         return Err(parent_span.error(NO_EMPTY_FIELDS))
     } else if fields.are_unnamed() && fields.count() > 1 {
@@ -22,11 +22,11 @@ fn validate_fields(fields: Fields, parent_span: Span) -> Result<()> {
     Ok(())
 }
 
-fn validate_struct(gen: &DeriveGenerator, data: Struct) -> Result<()> {
+fn validate_struct(gen: &DeriveGenerator, data: Struct<'_>) -> Result<()> {
     validate_fields(data.fields(), gen.input.span())
 }
 
-fn validate_enum(gen: &DeriveGenerator, data: Enum) -> Result<()> {
+fn validate_enum(gen: &DeriveGenerator, data: Enum<'_>) -> Result<()> {
     if data.variants().count() == 0 {
         return Err(gen.input.span().error(NO_EMPTY_ENUMS));
     }

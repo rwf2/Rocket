@@ -103,7 +103,7 @@ fn base_conditions() {
         "checkbox=off", "textarea=", "select=a", "radio=c",
     ].join("&");
 
-    let input: Option<FormInput> = strict(&form_string).ok();
+    let input: Option<FormInput<'_>> = strict(&form_string).ok();
     assert_eq!(input, Some(FormInput {
         checkbox: false,
         number: 10,
@@ -114,26 +114,26 @@ fn base_conditions() {
     }));
 
     // Argument not in string with default in form.
-    let default: Option<DefaultInput> = strict("").ok();
+    let default: Option<DefaultInput<'_>> = strict("").ok();
     assert_eq!(default, Some(DefaultInput {
         arg: None
     }));
 
     // Ensure _method can be captured if desired.
-    let manual: Option<ManualMethod> = strict("_method=put&done=true").ok();
+    let manual: Option<ManualMethod<'_>> = strict("_method=put&done=true").ok();
     assert_eq!(manual, Some(ManualMethod {
         _method: Some("put".into()),
         done: true
     }));
 
-    let manual: Option<ManualMethod> = lenient("_method=put&done=true").ok();
+    let manual: Option<ManualMethod<'_>> = lenient("_method=put&done=true").ok();
     assert_eq!(manual, Some(ManualMethod {
         _method: Some("put".into()),
         done: true
     }));
 
     // And ignored when not present.
-    let manual: Option<ManualMethod> = strict("done=true").ok();
+    let manual: Option<ManualMethod<'_>> = strict("done=true").ok();
     assert_eq!(manual, Some(ManualMethod {
         _method: None,
         done: true
@@ -146,14 +146,14 @@ fn base_conditions() {
     }));
 
     // Check that a `bool` value that isn't in the form is marked as `false`.
-    let manual: Option<UnpresentCheckboxTwo> = strict("something=hello").ok();
+    let manual: Option<UnpresentCheckboxTwo<'_>> = strict("something=hello").ok();
     assert_eq!(manual, Some(UnpresentCheckboxTwo {
         checkbox: false,
         something: "hello".into()
     }));
 
     // Check that a structure with one field `v` parses correctly.
-    let manual: Option<FieldNamedV> = strict("v=abc").ok();
+    let manual: Option<FieldNamedV<'_>> = strict("v=abc").ok();
     assert_eq!(manual, Some(FieldNamedV {
         v: "abc".into()
     }));
@@ -163,33 +163,33 @@ fn base_conditions() {
 #[test]
 fn lenient_parsing() {
     // Check that a structure with one field `v` parses correctly (lenient).
-    let manual: Option<FieldNamedV> = lenient("v=abc").ok();
+    let manual: Option<FieldNamedV<'_>> = lenient("v=abc").ok();
     assert_eq!(manual, Some(FieldNamedV { v: "abc".into() }));
 
-    let manual: Option<FieldNamedV> = lenient("v=abc&a=123").ok();
+    let manual: Option<FieldNamedV<'_>> = lenient("v=abc&a=123").ok();
     assert_eq!(manual, Some(FieldNamedV { v: "abc".into() }));
 
-    let manual: Option<FieldNamedV> = lenient("c=abcddef&v=abc&a=123").ok();
+    let manual: Option<FieldNamedV<'_>> = lenient("c=abcddef&v=abc&a=123").ok();
     assert_eq!(manual, Some(FieldNamedV { v: "abc".into() }));
 
     // Check default values (bool) with lenient parsing.
-    let manual: Option<UnpresentCheckboxTwo> = lenient("something=hello").ok();
+    let manual: Option<UnpresentCheckboxTwo<'_>> = lenient("something=hello").ok();
     assert_eq!(manual, Some(UnpresentCheckboxTwo {
         checkbox: false,
         something: "hello".into()
     }));
 
-    let manual: Option<UnpresentCheckboxTwo> = lenient("hi=hi&something=hello").ok();
+    let manual: Option<UnpresentCheckboxTwo<'_>> = lenient("hi=hi&something=hello").ok();
     assert_eq!(manual, Some(UnpresentCheckboxTwo {
         checkbox: false,
         something: "hello".into()
     }));
 
     // Check that a missing field doesn't parse, even leniently.
-    let manual: Option<FieldNamedV> = lenient("a=abc").ok();
+    let manual: Option<FieldNamedV<'_>> = lenient("a=abc").ok();
     assert!(manual.is_none());
 
-    let manual: Option<FieldNamedV> = lenient("_method=abc").ok();
+    let manual: Option<FieldNamedV<'_>> = lenient("_method=abc").ok();
     assert!(manual.is_none());
 }
 
@@ -257,19 +257,19 @@ fn generics() {
         "string=hello", "other=00128"
     ].join("&");
 
-    let form: Option<YetOneMore<usize>> = strict(&form_string).ok();
+    let form: Option<YetOneMore<'_, usize>> = strict(&form_string).ok();
     assert_eq!(form, Some(YetOneMore {
         string: "hello".into(),
         other: 128,
     }));
 
-    let form: Option<YetOneMore<u8>> = strict(&form_string).ok();
+    let form: Option<YetOneMore<'_, u8>> = strict(&form_string).ok();
     assert_eq!(form, Some(YetOneMore {
         string: "hello".into(),
         other: 128,
     }));
 
-    let form: Option<YetOneMore<i8>> = strict(&form_string).ok();
+    let form: Option<YetOneMore<'_, i8>> = strict(&form_string).ok();
     assert!(form.is_none());
 
     let form_string = &[

@@ -2,9 +2,9 @@ use std::ops::RangeBounds;
 
 use proc_macro::{Span, Diagnostic, Literal};
 
-pub type PResult<T> = ::std::result::Result<T, Diagnostic>;
+pub type PResult<T> = std::result::Result<T, Diagnostic>;
 
-pub type DResult<T> = ::std::result::Result<T, Diagnostics>;
+pub type DResult<T> = std::result::Result<T, Diagnostics>;
 
 // An experiment.
 pub struct Diagnostics(Vec<Diagnostic>);

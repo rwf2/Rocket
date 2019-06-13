@@ -22,7 +22,7 @@ struct Simple(String);
 impl FromDataSimple for Simple {
     type Error = ();
 
-    fn from_data(_: &Request, data: Data) -> data::Outcome<Self, ()> {
+    fn from_data(_: &Request<'_>, data: Data) -> data::Outcome<Self, ()> {
         let mut string = String::new();
         if let Err(_) = data.open().take(64).read_to_string(&mut string) {
             return Failure((Status::InternalServerError, ()));
@@ -33,7 +33,7 @@ impl FromDataSimple for Simple {
 }
 
 #[post("/f", data = "<form>")]
-fn form(form: Form<Inner>) -> String { form.field.url_decode_lossy() }
+fn form(form: Form<Inner<'_>>) -> String { form.field.url_decode_lossy() }
 
 #[post("/s", data = "<simple>")]
 fn simple(simple: Simple) -> String { simple.0 }

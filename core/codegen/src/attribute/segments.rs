@@ -3,11 +3,11 @@ use std::hash::{Hash, Hasher};
 use devise::syn;
 use proc_macro::{Span, Diagnostic};
 
-use http::uri::{UriPart, Path};
-use http::route::RouteSegment;
-use proc_macro_ext::{Diagnostics, StringLit, PResult, DResult};
+use crate::http::uri::{UriPart, Path};
+use crate::http::route::RouteSegment;
+use crate::proc_macro_ext::{Diagnostics, StringLit, PResult, DResult};
 
-crate use http::route::{Error, Kind, Source};
+crate use crate::http::route::{Error, Kind, Source};
 
 #[derive(Debug, Clone)]
 crate struct Segment {
@@ -19,7 +19,7 @@ crate struct Segment {
 }
 
 impl Segment {
-    fn from<P: UriPart>(segment: RouteSegment<P>, span: Span) -> Segment {
+    fn from<P: UriPart>(segment: RouteSegment<'_, P>, span: Span) -> Segment {
         let source = match P::DELIMITER {
             '/' => Source::Path,
             '&' => Source::Query,
@@ -76,7 +76,7 @@ fn into_diagnostic(
     segment: &str, // The segment that failed.
     source: &str,  // The haystack where `segment` can be found.
     span: Span,    // The `Span` of `Source`.
-    error: &Error,  // The error.
+    error: &Error<'_>,  // The error.
 ) -> Diagnostic {
     let seg_span = subspan(segment, source, span);
     match error {
@@ -116,7 +116,7 @@ fn into_diagnostic(
 }
 
 crate fn parse_data_segment(segment: &str, span: Span) -> PResult<Segment> {
-    <RouteSegment<Path>>::parse_one(segment)
+    <RouteSegment<'_, Path>>::parse_one(segment)
         .map(|segment| {
             let mut seg = Segment::from(segment, span);
             seg.source = Source::Data;
@@ -133,7 +133,7 @@ crate fn parse_segments<P: UriPart>(
     let mut segments = vec![];
     let mut diags = Diagnostics::new();
 
-    for result in <RouteSegment<P>>::parse_many(string) {
+    for result in <RouteSegment<'_, P>>::parse_many(string) {
         if let Err((segment_string, error)) = result {
             diags.push(into_diagnostic(segment_string, string, span, &error));
             if let Error::Trailing(..) = error {

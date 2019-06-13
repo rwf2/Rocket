@@ -1,5 +1,3 @@
-extern crate rocket;
-
 use rocket::request::FromFormValue;
 
 macro_rules! assert_parse {

@@ -1,10 +1,10 @@
 use proc_macro::TokenStream;
-use proc_macro2::TokenStream as TokenStream2;
+use crate::proc_macro2::TokenStream as TokenStream2;
 
 use devise::{syn, Spanned, Result};
 use self::syn::{Path, punctuated::Punctuated, parse::Parser, token::Comma};
-use syn_ext::{IdentExt, syn_to_diag};
-use {ROUTE_STRUCT_PREFIX, CATCH_STRUCT_PREFIX};
+use crate::syn_ext::{IdentExt, syn_to_diag};
+use crate::{ROUTE_STRUCT_PREFIX, CATCH_STRUCT_PREFIX};
 
 mod uri;
 mod uri_parsing;

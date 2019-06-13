@@ -1,7 +1,5 @@
 #![feature(proc_macro_hygiene, decl_macro)]
 
-extern crate rocket;
-
 use rocket::local::Client;
 use rocket::response::Responder;
 use rocket::http::{Status, ContentType, Cookie};
@@ -14,12 +12,12 @@ pub enum Foo<'r> {
     #[response(status = 404, content_type = "html")]
     Third {
         responder: &'r str,
-        ct: ::rocket::http::ContentType,
+        ct: rocket::http::ContentType,
     },
     #[response(status = 105)]
     Fourth {
         string: &'r str,
-        ct: ::rocket::http::ContentType,
+        ct: rocket::http::ContentType,
     },
 }
 

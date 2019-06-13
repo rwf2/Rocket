@@ -27,7 +27,7 @@ struct Thing3 {
 #[derive(Responder)]
 struct Thing4 {
     thing: String,
-    other: ::rocket::http::ContentType,
+    other: rocket::http::ContentType,
     then: String,
     //~^ ERROR Header
 }

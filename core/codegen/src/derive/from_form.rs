@@ -23,7 +23,7 @@ fn is_valid_field_name(s: &str) -> bool {
 }
 
 impl FromMeta for FormField {
-    fn from_meta(meta: MetaItem) -> Result<Self> {
+    fn from_meta(meta: MetaItem<'_>) -> Result<Self> {
         let string = String::from_meta(meta)?;
         if !is_valid_field_name(&string) {
             return Err(meta.value_span().error("invalid form field name"));
@@ -33,7 +33,7 @@ impl FromMeta for FormField {
     }
 }
 
-fn validate_struct(gen: &DeriveGenerator, data: Struct) -> Result<()> {
+fn validate_struct(gen: &DeriveGenerator, data: Struct<'_>) -> Result<()> {
     if data.fields().is_empty() {
         return Err(gen.input.span().error("at least one field is required"));
     }

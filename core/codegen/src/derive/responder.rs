@@ -3,7 +3,7 @@ use proc_macro::TokenStream;
 use devise::{*, ext::TypeExt};
 use devise::proc_macro2::TokenStream as TokenStream2;
 
-use http_codegen::{ContentType, Status};
+use crate::http_codegen::{ContentType, Status};
 
 #[derive(Default, FromMeta)]
 struct ItemAttr {

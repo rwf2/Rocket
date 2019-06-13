@@ -7,7 +7,7 @@ use rocket::http::uri::{UriDisplay, Query, Path};
 
 macro_rules! assert_uri_display_query {
     ($v:expr, $s:expr) => (
-        let uri_string = format!("{}", &$v as &UriDisplay<Query>);
+        let uri_string = format!("{}", &$v as &dyn UriDisplay<Query>);
         assert_eq!(uri_string, $s);
     )
 }
@@ -117,7 +117,7 @@ fn uri_display_bam() {
 
 macro_rules! assert_uri_display_path {
     ($v:expr, $s:expr) => (
-        let uri_string = format!("{}", &$v as &UriDisplay<Path>);
+        let uri_string = format!("{}", &$v as &dyn UriDisplay<Path>);
         assert_eq!(uri_string, $s);
     )
 }

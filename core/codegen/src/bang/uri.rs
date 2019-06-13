@@ -1,17 +1,17 @@
 use std::fmt::Display;
 use proc_macro::TokenStream;
-use proc_macro2::TokenStream as TokenStream2;
+use crate::proc_macro2::TokenStream as TokenStream2;
 
 use devise::{syn, Result};
 use devise::syn::{Expr, Ident, Type, spanned::Spanned};
-use http::{uri::{Origin, Path, Query}, ext::IntoOwned};
-use http::route::{RouteSegment, Kind, Source};
+use crate::http::{uri::{Origin, Path, Query}, ext::IntoOwned};
+use crate::http::route::{RouteSegment, Kind, Source};
 
-use http_codegen::Optional;
-use syn_ext::{IdentExt, syn_to_diag};
-use bang::{prefix_last_segment, uri_parsing::*};
+use crate::http_codegen::Optional;
+use crate::syn_ext::{IdentExt, syn_to_diag};
+use crate::bang::{prefix_last_segment, uri_parsing::*};
 
-use URI_MACRO_PREFIX;
+use crate::URI_MACRO_PREFIX;
 
 macro_rules! p {
     (@go $num:expr, $singular:expr, $plural:expr) => (
@@ -122,7 +122,7 @@ fn add_binding(to: &mut Vec<TokenStream2>, ident: &Ident, ty: &Type, expr: &Expr
 }
 
 fn explode_path<'a, I: Iterator<Item = (&'a Ident, &'a Type, &'a Expr)>>(
-    uri: &Origin,
+    uri: &Origin<'_>,
     bindings: &mut Vec<TokenStream2>,
     mut items: I
 ) -> TokenStream2 {
@@ -132,7 +132,7 @@ fn explode_path<'a, I: Iterator<Item = (&'a Ident, &'a Type, &'a Expr)>>(
     }
 
     let uri_display = quote!(#uri_mod::UriDisplay<#uri_mod::Path>);
-    let dyn_exprs = <RouteSegment<Path>>::parse(uri).map(|segment| {
+    let dyn_exprs = <RouteSegment<'_, Path>>::parse(uri).map(|segment| {
         let segment = segment.expect("segment okay; prechecked on parse");
         match segment.kind {
             Kind::Static => {
@@ -151,7 +151,7 @@ fn explode_path<'a, I: Iterator<Item = (&'a Ident, &'a Type, &'a Expr)>>(
 }
 
 fn explode_query<'a, I: Iterator<Item = (&'a Ident, &'a Type, &'a ArgExpr)>>(
-    uri: &Origin,
+    uri: &Origin<'_>,
     bindings: &mut Vec<TokenStream2>,
     mut items: I
 ) -> Option<TokenStream2> {
@@ -162,7 +162,7 @@ fn explode_query<'a, I: Iterator<Item = (&'a Ident, &'a Type, &'a ArgExpr)>>(
 
     let query_arg = quote!(#uri_mod::UriQueryArgument);
     let uri_display = quote!(#uri_mod::UriDisplay<#uri_mod::Query>);
-    let dyn_exprs = <RouteSegment<Query>>::parse(uri)?.filter_map(|segment| {
+    let dyn_exprs = <RouteSegment<'_, Query>>::parse(uri)?.filter_map(|segment| {
         let segment = segment.expect("segment okay; prechecked on parse");
         if segment.kind == Kind::Static {
             let string = &segment.string;

@@ -9,7 +9,7 @@ use self::syn::{Expr, Ident, LitStr, Path, Token, Type};
 use self::syn::parse::{self, Parse, ParseStream};
 use self::syn::punctuated::Punctuated;
 
-use http::{uri::Origin, ext::IntoOwned};
+use crate::http::{uri::Origin, ext::IntoOwned};
 use indexmap::IndexMap;
 
 #[derive(Debug)]
@@ -79,7 +79,7 @@ pub struct InternalUriParams {
 }
 
 impl Parse for ArgExpr {
-    fn parse(input: ParseStream) -> parse::Result<Self> {
+    fn parse(input: ParseStream<'_>) -> parse::Result<Self> {
         if input.peek(Token![_]) {
             return Ok(ArgExpr::Ignored(input.parse::<Token![_]>()?));
         }
@@ -89,7 +89,7 @@ impl Parse for ArgExpr {
 }
 
 impl Parse for Arg {
-    fn parse(input: ParseStream) -> parse::Result<Self> {
+    fn parse(input: ParseStream<'_>) -> parse::Result<Self> {
         let has_key = input.peek2(Token![=]);
         if has_key {
             let ident = input.parse::<Ident>()?;
@@ -109,7 +109,7 @@ fn err<T, S: AsRef<str>>(span: Span, s: S) -> parse::Result<T> {
 
 impl Parse for UriParams {
     // Parses the mount point, if any, route identifier, and arguments.
-    fn parse(input: ParseStream) -> parse::Result<Self> {
+    fn parse(input: ParseStream<'_>) -> parse::Result<Self> {
         if input.is_empty() {
             return Err(input.error("call to `uri!` cannot be empty"));
         }
@@ -176,7 +176,7 @@ impl Parse for UriParams {
 }
 
 impl Parse for FnArg {
-    fn parse(input: ParseStream) -> parse::Result<FnArg> {
+    fn parse(input: ParseStream<'_>) -> parse::Result<FnArg> {
         let ident = input.parse::<Ident>()?;
         input.parse::<Token![:]>()?;
         let mut ty = input.parse::<Type>()?;
@@ -186,7 +186,7 @@ impl Parse for FnArg {
 }
 
 impl Parse for InternalUriParams {
-    fn parse(input: ParseStream) -> parse::Result<InternalUriParams> {
+    fn parse(input: ParseStream<'_>) -> parse::Result<InternalUriParams> {
         let route_uri_str = input.parse::<LitStr>()?;
         input.parse::<Token![,]>()?;
 
@@ -215,7 +215,7 @@ impl InternalUriParams {
             .join(", ")
     }
 
-    pub fn validate(&self) -> Validation {
+    pub fn validate(&self) -> Validation<'_> {
         let args = &self.uri_params.arguments;
         match args {
             Args::Unnamed(inner) => {

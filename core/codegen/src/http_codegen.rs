@@ -1,11 +1,11 @@
 use quote::ToTokens;
-use proc_macro2::TokenStream as TokenStream2;
+use crate::proc_macro2::TokenStream as TokenStream2;
 use devise::{FromMeta, MetaItem, Result, ext::Split2};
-use http::{self, ext::IntoOwned};
-use http::uri::{Path, Query};
-use attribute::segments::{parse_segments, parse_data_segment, Segment, Kind};
+use crate::http::{self, ext::IntoOwned};
+use crate::http::uri::{Path, Query};
+use crate::attribute::segments::{parse_segments, parse_data_segment, Segment, Kind};
 
-use proc_macro_ext::StringLit;
+use crate::proc_macro_ext::StringLit;
 
 #[derive(Debug)]
 crate struct ContentType(crate http::ContentType);
@@ -29,7 +29,7 @@ crate struct DataSegment(crate Segment);
 crate struct Optional<T>(crate Option<T>);
 
 impl FromMeta for StringLit {
-    fn from_meta(meta: MetaItem) -> Result<Self> {
+    fn from_meta(meta: MetaItem<'_>) -> Result<Self> {
         Ok(StringLit::new(String::from_meta(meta)?, meta.value_span()))
     }
 }
@@ -42,7 +42,7 @@ crate struct RoutePath {
 }
 
 impl FromMeta for Status {
-    fn from_meta(meta: MetaItem) -> Result<Self> {
+    fn from_meta(meta: MetaItem<'_>) -> Result<Self> {
         let num = usize::from_meta(meta)?;
         if num < 100 || num >= 600 {
             return Err(meta.value_span().error("status must be in range [100, 599]"));
@@ -60,7 +60,7 @@ impl ToTokens for Status {
 }
 
 impl FromMeta for ContentType {
-    fn from_meta(meta: MetaItem) -> Result<Self> {
+    fn from_meta(meta: MetaItem<'_>) -> Result<Self> {
         http::ContentType::parse_flexible(&String::from_meta(meta)?)
             .map(ContentType)
             .ok_or(meta.value_span().error("invalid or unknown content type"))
@@ -76,7 +76,7 @@ impl ToTokens for ContentType {
 }
 
 impl FromMeta for MediaType {
-    fn from_meta(meta: MetaItem) -> Result<Self> {
+    fn from_meta(meta: MetaItem<'_>) -> Result<Self> {
         let mt = http::MediaType::parse_flexible(&String::from_meta(meta)?)
             .ok_or(meta.value_span().error("invalid or unknown media type"))?;
 
@@ -126,7 +126,7 @@ const VALID_METHODS: &[http::Method] = &[
 ];
 
 impl FromMeta for Method {
-    fn from_meta(meta: MetaItem) -> Result<Self> {
+    fn from_meta(meta: MetaItem<'_>) -> Result<Self> {
         let span = meta.value_span();
         let help_text = format!("method must be one of: {}", VALID_METHODS_STR);
 
@@ -166,7 +166,7 @@ impl ToTokens for Method {
 }
 
 impl FromMeta for Origin {
-    fn from_meta(meta: MetaItem) -> Result<Self> {
+    fn from_meta(meta: MetaItem<'_>) -> Result<Self> {
         let string = StringLit::from_meta(meta)?;
 
         let uri = http::uri::Origin::parse_route(&string)
@@ -190,7 +190,7 @@ impl FromMeta for Origin {
 }
 
 impl FromMeta for DataSegment {
-    fn from_meta(meta: MetaItem) -> Result<Self> {
+    fn from_meta(meta: MetaItem<'_>) -> Result<Self> {
         let string = StringLit::from_meta(meta)?;
         let span = string.subspan(1..(string.len() + 1));
 
@@ -205,7 +205,7 @@ impl FromMeta for DataSegment {
 }
 
 impl FromMeta for RoutePath {
-    fn from_meta(meta: MetaItem) -> Result<Self> {
+    fn from_meta(meta: MetaItem<'_>) -> Result<Self> {
         let (origin, string) = (Origin::from_meta(meta)?, StringLit::from_meta(meta)?);
         let path_span = string.subspan(1..origin.0.path().len() + 1);
         let path = parse_segments::<Path>(origin.0.path(), path_span);
