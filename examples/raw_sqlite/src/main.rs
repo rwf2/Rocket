@@ -1,7 +1,7 @@
 #![feature(proc_macro_hygiene, decl_macro)]
 
 #[macro_use] extern crate rocket;
-extern crate rusqlite;
+
 use rusqlite::types::ToSql;
 
 #[cfg(test)] mod tests;
@@ -25,7 +25,7 @@ fn init_database(conn: &Connection) {
 }
 
 #[get("/")]
-fn hello(db_conn: State<DbConn>) -> Result<String, Error>  {
+fn hello(db_conn: State<'_, DbConn>) -> Result<String, Error>  {
     db_conn.lock()
         .expect("db connection lock")
         .query_row("SELECT name FROM entries WHERE id = 0",

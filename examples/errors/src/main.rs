@@ -12,7 +12,7 @@ fn hello(name: String, age: i8) -> String {
 }
 
 #[catch(404)]
-fn not_found(req: &rocket::Request) -> content::Html<String> {
+fn not_found(req: &rocket::Request<'_>) -> content::Html<String> {
     content::Html(format!("<p>Sorry, but '{}' is not a valid path!</p>
             <p>Try visiting /hello/&lt;name&gt;/&lt;age&gt; instead.</p>",
             req.uri()))

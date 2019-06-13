@@ -22,7 +22,7 @@ impl<'a, 'r> FromRequest<'a, 'r> for Guard1 {
     type Error = ();
 
     fn from_request(req: &'a Request<'r>) -> request::Outcome<Self, ()> {
-        let atomics = req.guard::<State<Atomics>>()?;
+        let atomics = req.guard::<State<'_, Atomics>>()?;
         atomics.uncached.fetch_add(1, Ordering::Relaxed);
         req.local_cache(|| atomics.cached.fetch_add(1, Ordering::Relaxed));
 

@@ -17,7 +17,7 @@ use rocket::response::{Flash, Redirect};
 use rocket_contrib::{templates::Template, serve::StaticFiles};
 use diesel::SqliteConnection;
 
-use task::{Task, Todo};
+use crate::task::{Task, Todo};
 
 // This macro from `diesel_migrations` defines an `embedded_migrations` module
 // containing a function named `run`. This allows the example to be run and
@@ -71,7 +71,7 @@ fn delete(id: i32, conn: DbConn) -> Result<Flash<Redirect>, Template> {
 }
 
 #[get("/")]
-fn index(msg: Option<FlashMessage>, conn: DbConn) -> Template {
+fn index(msg: Option<FlashMessage<'_, '_>>, conn: DbConn) -> Template {
     Template::render("index", &match msg {
         Some(ref msg) => Context::raw(&conn, Some((msg.name(), msg.msg()))),
         None => Context::raw(&conn, None),

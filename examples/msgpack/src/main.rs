@@ -2,7 +2,6 @@
 
 #[macro_use] extern crate rocket;
 #[macro_use] extern crate serde_derive;
-extern crate rocket_contrib;
 
 #[cfg(test)] mod tests;
 
@@ -20,7 +19,7 @@ fn get(id: usize) -> MsgPack<Message<'static>> {
 }
 
 #[post("/", data = "<data>", format = "msgpack")]
-fn create(data: MsgPack<Message>) -> String {
+fn create(data: MsgPack<Message<'_>>) -> String {
     data.contents.to_string()
 }
 

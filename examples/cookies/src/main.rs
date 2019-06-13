@@ -1,7 +1,6 @@
 #![feature(proc_macro_hygiene, decl_macro)]
 
 #[macro_use] extern crate rocket;
-extern crate rocket_contrib;
 
 #[cfg(test)]
 mod tests;
@@ -19,13 +18,13 @@ struct Message {
 }
 
 #[post("/submit", data = "<message>")]
-fn submit(mut cookies: Cookies, message: Form<Message>) -> Redirect {
+fn submit(mut cookies: Cookies<'_>, message: Form<Message>) -> Redirect {
     cookies.add(Cookie::new("message", message.into_inner().message));
     Redirect::to("/")
 }
 
 #[get("/")]
-fn index(cookies: Cookies) -> Template {
+fn index(cookies: Cookies<'_>) -> Template {
     let cookie = cookies.get("message");
     let mut context = HashMap::new();
     if let Some(ref cookie) = cookie {

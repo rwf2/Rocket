@@ -51,7 +51,7 @@ impl<'v> FromFormValue<'v> for AdultAge {
 }
 
 #[post("/login", data = "<user>")]
-fn login(user: Form<UserLogin>) -> Result<Redirect, String> {
+fn login(user: Form<UserLogin<'_>>) -> Result<Redirect, String> {
     if let Err(e) = user.age {
         return Err(format!("Age is invalid: {}", e));
     }

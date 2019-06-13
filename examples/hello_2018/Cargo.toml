@@ -2,8 +2,8 @@
 name = "hello_2018"
 version = "0.0.0"
 workspace = "../../"
-publish = false
 edition = "2018"
+publish = false
 
 [dependencies]
 rocket = { path = "../../core/lib" }

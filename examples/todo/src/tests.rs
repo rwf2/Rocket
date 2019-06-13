@@ -1,9 +1,7 @@
-extern crate parking_lot;
-extern crate rand;
-
 use super::task::Task;
-use self::parking_lot::Mutex;
-use self::rand::{Rng, thread_rng, distributions::Alphanumeric};
+
+use parking_lot::Mutex;
+use rand::{Rng, thread_rng, distributions::Alphanumeric};
 
 use rocket::local::Client;
 use rocket::http::{Status, ContentType};

@@ -16,7 +16,7 @@ macro_rules! dispatch {
 fn test_root() {
     // Check that the redirect works.
     for method in &[Get, Head] {
-        dispatch!(*method, "/", |_: &Client, mut response: LocalResponse| {
+        dispatch!(*method, "/", |_: &Client, mut response: LocalResponse<'_>| {
             assert_eq!(response.status(), Status::SeeOther);
             assert!(response.body().is_none());
 
@@ -27,8 +27,8 @@ fn test_root() {
 
     // Check that other request methods are not accepted (and instead caught).
     for method in &[Post, Put, Delete, Options, Trace, Connect, Patch] {
-        dispatch!(*method, "/", |client: &Client, mut response: LocalResponse| {
-            let mut map = ::std::collections::HashMap::new();
+        dispatch!(*method, "/", |client: &Client, mut response: LocalResponse<'_>| {
+            let mut map = std::collections::HashMap::new();
             map.insert("path", "/");
             let expected = Template::show(client.rocket(), "error/404", &map).unwrap();
 
@@ -41,7 +41,7 @@ fn test_root() {
 #[test]
 fn test_name() {
     // Check that the /hello/<name> route works.
-    dispatch!(Get, "/hello/Jack%20Daniels", |client: &Client, mut response: LocalResponse| {
+    dispatch!(Get, "/hello/Jack%20Daniels", |client: &Client, mut response: LocalResponse<'_>| {
         let context = TemplateContext {
             title: "Hello",
             name: Some("Jack Daniels".into()),
@@ -58,8 +58,8 @@ fn test_name() {
 #[test]
 fn test_404() {
     // Check that the error catcher works.
-    dispatch!(Get, "/hello/", |client: &Client, mut response: LocalResponse| {
-        let mut map = ::std::collections::HashMap::new();
+    dispatch!(Get, "/hello/", |client: &Client, mut response: LocalResponse<'_>| {
+        let mut map = std::collections::HashMap::new();
         map.insert("path", "/hello/");
 
         let expected = Template::show(client.rocket(), "error/404", &map).unwrap();

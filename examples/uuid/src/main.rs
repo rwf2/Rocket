@@ -2,8 +2,6 @@
 
 #[macro_use] extern crate rocket;
 #[macro_use] extern crate lazy_static;
-extern crate rocket_contrib;
-extern crate uuid;
 
 use std::collections::HashMap;
 use rocket_contrib::uuid::Uuid;

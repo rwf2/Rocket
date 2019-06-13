@@ -2,6 +2,7 @@
 name = "tls"
 version = "0.0.0"
 workspace = "../../"
+edition = "2018"
 publish = false
 
 [dependencies]

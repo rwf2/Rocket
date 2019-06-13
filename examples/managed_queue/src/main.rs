@@ -1,7 +1,6 @@
 #![feature(proc_macro_hygiene, decl_macro)]
 
 #[macro_use] extern crate rocket;
-extern crate crossbeam;
 
 #[cfg(test)] mod tests;
 
@@ -11,12 +10,12 @@ use crossbeam::queue::SegQueue;
 struct LogChannel(SegQueue<String>);
 
 #[put("/push?<event>")]
-fn push(event: String, queue: State<LogChannel>) {
+fn push(event: String, queue: State<'_, LogChannel>) {
     queue.0.push(event);
 }
 
 #[get("/pop")]
-fn pop(queue: State<LogChannel>) -> Option<String> {
+fn pop(queue: State<'_, LogChannel>) -> Option<String> {
     queue.0.pop().ok()
 }
 

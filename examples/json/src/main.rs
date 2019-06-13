@@ -26,7 +26,7 @@ struct Message {
 
 // TODO: This example can be improved by using `route` with multiple HTTP verbs.
 #[post("/<id>", format = "json", data = "<message>")]
-fn new(id: ID, message: Json<Message>, map: State<MessageMap>) -> JsonValue {
+fn new(id: ID, message: Json<Message>, map: State<'_, MessageMap>) -> JsonValue {
     let mut hashmap = map.lock().expect("map lock.");
     if hashmap.contains_key(&id) {
         json!({
@@ -40,7 +40,7 @@ fn new(id: ID, message: Json<Message>, map: State<MessageMap>) -> JsonValue {
 }
 
 #[put("/<id>", format = "json", data = "<message>")]
-fn update(id: ID, message: Json<Message>, map: State<MessageMap>) -> Option<JsonValue> {
+fn update(id: ID, message: Json<Message>, map: State<'_, MessageMap>) -> Option<JsonValue> {
     let mut hashmap = map.lock().unwrap();
     if hashmap.contains_key(&id) {
         hashmap.insert(id, message.0.contents);
@@ -51,7 +51,7 @@ fn update(id: ID, message: Json<Message>, map: State<MessageMap>) -> Option<Json
 }
 
 #[get("/<id>", format = "json")]
-fn get(id: ID, map: State<MessageMap>) -> Option<Json<Message>> {
+fn get(id: ID, map: State<'_, MessageMap>) -> Option<Json<Message>> {
     let hashmap = map.lock().unwrap();
     hashmap.get(&id).map(|contents| {
         Json(Message {

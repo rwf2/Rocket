@@ -1,7 +1,6 @@
 #![feature(proc_macro_hygiene, decl_macro)]
 
 #[macro_use] extern crate rocket;
-extern crate rand;
 
 mod paste_id;
 #[cfg(test)] mod tests;
@@ -13,7 +12,7 @@ use std::path::Path;
 use rocket::Data;
 use rocket::response::content;
 
-use paste_id::PasteID;
+use crate::paste_id::PasteID;
 
 const HOST: &str = "http://localhost:8000";
 const ID_LENGTH: usize = 3;
@@ -29,7 +28,7 @@ fn upload(paste: Data) -> io::Result<String> {
 }
 
 #[get("/<id>")]
-fn retrieve(id: PasteID) -> Option<content::Plain<File>> {
+fn retrieve(id: PasteID<'_>) -> Option<content::Plain<File>> {
     let filename = format!("upload/{id}", id = id);
     File::open(&filename).map(|f| content::Plain(f)).ok()
 }

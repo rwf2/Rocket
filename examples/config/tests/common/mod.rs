@@ -7,8 +7,8 @@ use rocket::local::Client;
 struct LocalConfig(Config);
 
 #[get("/check_config")]
-fn check_config(config: State<LocalConfig>) -> Option<()> {
-    let environment = match ::std::env::var("ROCKET_ENV") {
+fn check_config(config: State<'_, LocalConfig>) -> Option<()> {
+    let environment = match std::env::var("ROCKET_ENV") {
         Ok(name) => name,
         Err(_) => return None
     };
@@ -52,7 +52,7 @@ fn check_config(config: State<LocalConfig>) -> Option<()> {
 pub fn test_config(environment: Environment) {
     // Manually set the config environment variable. Rocket will initialize the
     // environment in `ignite()`. We'll read this back in the handler to config.
-    ::std::env::set_var("ROCKET_ENV", environment.to_string());
+    std::env::set_var("ROCKET_ENV", environment.to_string());
 
     let rocket = rocket::ignite()
         .attach(AdHoc::on_attach("Local Config", |rocket| {

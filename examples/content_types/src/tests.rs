@@ -1,5 +1,3 @@
-use super::rocket;
-use super::serde_json;
 use super::Person;
 use rocket::http::{Accept, ContentType, Header, MediaType, Method, Status};
 use rocket::local::Client;

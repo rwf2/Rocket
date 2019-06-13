@@ -1,4 +1,3 @@
-use super::rocket;
 use rocket::local::Client;
 
 fn test(uri: &str, expected: String) {

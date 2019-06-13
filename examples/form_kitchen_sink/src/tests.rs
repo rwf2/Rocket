@@ -5,7 +5,7 @@ use rocket::local::Client;
 use rocket::http::ContentType;
 
 impl fmt::Display for FormOption {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match *self {
             FormOption::A => write!(f, "a"),
             FormOption::B => write!(f, "b"),
@@ -23,14 +23,14 @@ fn assert_form_eq(client: &Client, form_str: &str, expected: String) {
     assert_eq!(res.body_string(), Some(expected));
 }
 
-fn assert_valid_form(client: &Client, input: &FormInput) {
+fn assert_valid_form(client: &Client, input: &FormInput<'_>) {
     let f = format!("checkbox={}&number={}&type={}&password={}&textarea={}&select={}",
             input.checkbox, input.number, input.radio, input.password,
             input.text_area, input.select);
     assert_form_eq(client, &f, format!("{:?}", input));
 }
 
-fn assert_valid_raw_form(client: &Client, form_str: &str, input: &FormInput) {
+fn assert_valid_raw_form(client: &Client, form_str: &str, input: &FormInput<'_>) {
     assert_form_eq(client, form_str, format!("{:?}", input));
 }
 
@@ -176,7 +176,7 @@ fn check_structurally_invalid_forms() {
 fn check_bad_utf8() {
     let client = Client::new(rocket()).unwrap();
     unsafe {
-        let bad_str = ::std::str::from_utf8_unchecked(b"a=\xff");
+        let bad_str = std::str::from_utf8_unchecked(b"a=\xff");
         assert_form_eq(&client, bad_str, "Form input was invalid UTF-8.".into());
     }
 }

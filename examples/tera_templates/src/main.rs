@@ -2,8 +2,6 @@
 
 #[macro_use] extern crate rocket;
 #[macro_use] extern crate serde_derive;
-extern crate serde_json;
-extern crate rocket_contrib;
 
 #[cfg(test)] mod tests;
 
@@ -31,7 +29,7 @@ fn get(name: String) -> Template {
 }
 
 #[catch(404)]
-fn not_found(req: &Request) -> Template {
+fn not_found(req: &Request<'_>) -> Template {
     let mut map = HashMap::new();
     map.insert("path", req.uri().path());
     Template::render("error/404", &map)

@@ -3,7 +3,7 @@ use rocket::Response;
 use rocket::local::Client;
 use rocket::http::{Status, Cookie, ContentType};
 
-fn user_id_cookie(response: &Response) -> Option<Cookie<'static>> {
+fn user_id_cookie(response: &Response<'_>) -> Option<Cookie<'static>> {
     let cookie = response.headers()
         .get("Set-Cookie")
         .filter(|v| v.starts_with("user_id"))

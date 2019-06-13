@@ -2,15 +2,12 @@
 
 #[macro_use] extern crate rocket;
 #[macro_use] extern crate serde_derive;
-extern crate rocket_contrib;
 
 #[cfg(test)] mod tests;
 
 use rocket::Request;
 use rocket::response::Redirect;
 use rocket_contrib::templates::{Template, handlebars};
-
-use handlebars::{Helper, Handlebars, Context, RenderContext, Output, HelperResult, JsonRender};
 
 #[derive(Serialize)]
 struct TemplateContext {
@@ -47,18 +44,20 @@ fn about() -> Template {
 }
 
 #[catch(404)]
-fn not_found(req: &Request) -> Template {
+fn not_found(req: &Request<'_>) -> Template {
     let mut map = std::collections::HashMap::new();
     map.insert("path", req.uri().path());
     Template::render("error/404", &map)
 }
 
+use self::handlebars::{Helper, Handlebars, Context, RenderContext, Output, HelperResult, JsonRender};
+
 fn wow_helper(
-    h: &Helper,
+    h: &Helper<'_, '_>,
     _: &Handlebars,
     _: &Context,
-    _: &mut RenderContext,
-    out: &mut Output
+    _: &mut RenderContext<'_>,
+    out: &mut dyn Output
 ) -> HelperResult {
     if let Some(param) = h.param(0) {
         out.write("<b><i>")?;

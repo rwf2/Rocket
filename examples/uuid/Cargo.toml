@@ -2,6 +2,7 @@
 name = "uuid"
 version = "0.1.0"
 workspace = "../../"
+edition = "2018"
 publish = false
 
 [dependencies]

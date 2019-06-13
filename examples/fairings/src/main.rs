@@ -27,7 +27,7 @@ impl Fairing for Counter {
         }
     }
 
-    fn on_request(&self, request: &mut Request, _: &Data) {
+    fn on_request(&self, request: &mut Request<'_>, _: &Data) {
         if request.method() == Method::Get {
             self.get.fetch_add(1, Ordering::Relaxed);
         } else if request.method() == Method::Post {
@@ -35,7 +35,7 @@ impl Fairing for Counter {
         }
     }
 
-    fn on_response(&self, request: &Request, response: &mut Response) {
+    fn on_response(&self, request: &Request<'_>, response: &mut Response<'_>) {
         if response.status() != Status::NotFound {
             return
         }
@@ -58,7 +58,7 @@ fn hello() -> &'static str {
 }
 
 #[get("/token")]
-fn token(token: State<Token>) -> String {
+fn token(token: State<'_, Token>) -> String {
     format!("{}", token.0)
 }
 

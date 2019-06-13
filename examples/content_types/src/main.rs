@@ -2,7 +2,6 @@
 
 #[macro_use] extern crate rocket;
 #[macro_use] extern crate serde_derive;
-extern crate serde_json;
 
 #[cfg(test)] mod tests;
 
@@ -42,7 +41,7 @@ fn post_hello(age: u8, name_data: Data) -> io::Result<content::Json<String>> {
 }
 
 #[catch(404)]
-fn not_found(request: &Request) -> content::Html<String> {
+fn not_found(request: &Request<'_>) -> content::Html<String> {
     let html = match request.format() {
         Some(ref mt) if !mt.is_json() && !mt.is_plain() => {
             format!("<p>'{}' requests are not supported.</p>", mt)
