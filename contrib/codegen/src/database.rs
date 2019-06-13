@@ -1,6 +1,6 @@
 use proc_macro::TokenStream;
 use devise::{Spanned, Result};
-use syn::{DataStruct, Fields, Data, Type, LitStr, DeriveInput, Ident, Visibility};
+use crate::syn::{DataStruct, Fields, Data, Type, LitStr, DeriveInput, Ident, Visibility};
 
 #[derive(Debug)]
 struct DatabaseInvocation {
@@ -24,12 +24,12 @@ const NO_GENERIC_STRUCTS: &str = "`database` attribute cannot be applied to stru
     with generics";
 
 fn parse_invocation(attr: TokenStream, input: TokenStream) -> Result<DatabaseInvocation> {
-    let attr_stream2 = ::proc_macro2::TokenStream::from(attr);
+    let attr_stream2 = crate::proc_macro2::TokenStream::from(attr);
     let attr_span = attr_stream2.span();
-    let string_lit = ::syn::parse2::<LitStr>(attr_stream2)
+    let string_lit = crate::syn::parse2::<LitStr>(attr_stream2)
         .map_err(|_| attr_span.error("expected string literal"))?;
 
-    let input = ::syn::parse::<DeriveInput>(input).unwrap();
+    let input = crate::syn::parse::<DeriveInput>(input).unwrap();
     if !input.generics.params.is_empty() {
         return Err(input.generics.span().error(NO_GENERIC_STRUCTS));
     }

@@ -10,6 +10,7 @@ readme = "../../README.md"
 keywords = ["rocket", "contrib", "code", "generation", "proc-macro"]
 license = "MIT/Apache-2.0"
 build = "build.rs"
+edition = "2018"
 
 [features]
 database_attribute = []

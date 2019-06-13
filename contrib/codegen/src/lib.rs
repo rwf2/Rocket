@@ -2,6 +2,8 @@
 #![feature(crate_visibility_modifier)]
 #![recursion_limit="256"]
 
+#![warn(rust_2018_idioms)]
+
 //! # Rocket Contrib - Code Generation
 //! This crate implements the code generation portion of the Rocket Contrib
 //! crate. This is for officially sanctioned contributor libraries that require
@@ -24,7 +26,6 @@
 //! DATABASE_NAME := (string literal)
 //! </pre>
 
-extern crate devise;
 extern crate proc_macro;
 
 #[allow(unused_imports)]
@@ -43,7 +44,7 @@ use proc_macro::TokenStream;
 #[cfg(feature = "database_attribute")]
 #[proc_macro_attribute]
 pub fn database(attr: TokenStream, input: TokenStream) -> TokenStream {
-    ::database::database_attr(attr, input).unwrap_or_else(|diag| {
+    crate::database::database_attr(attr, input).unwrap_or_else(|diag| {
         diag.emit();
         TokenStream::new()
     })
