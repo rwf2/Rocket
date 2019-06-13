@@ -11,18 +11,18 @@ Rocket can be deployed to production in a few different ways:
 
 ## Render
 
-Render is a modern cloud platform that offers native support for Rust, fully managed SSL, custom domains, managed databases, zero-downtime deploys, and websocket support.
+Render is a modern cloud platform that offers native support for Rust, fully managed SSL, custom domains, databases, zero-downtime deploys, and websocket support.
 
-Render integrates directly with GitHub to automatically build and deploy your app on every push. It supports multiple Rust toolchains including `nightly`.
+Render integrates with GitHub to automatically build and deploy your app on every push. It supports multiple Rust toolchains including `nightly`.
 
-Assuming you have a `Cargo.toml` at the root of you repo, going live on Render takes just a few clicks:
+Assuming you have a `Cargo.toml` at the root of you repo, going live on Render takes just a few minutes:
 
-1. Add a file called `rust-toolchain` and the root of your repo, and add valid nightly version to it. You can use the latest nightly version like so:
+1. Add a file called `rust-toolchain` at the root of your repo, and add a valid nightly version to it. You can use the latest nightly version:
     ```text
     nightly
     ```
 
-    You can also pin the nightly version for your app by specifying a date as follows:
+    Alternatively, you can pin the nightly version for your app:
 
     ```text
     nightly-06-10-2019
