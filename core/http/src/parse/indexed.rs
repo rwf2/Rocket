@@ -72,7 +72,7 @@ impl<'a, T: ?Sized + ToOwned + 'a> Indexed<'a, T> {
     }
 }
 
-impl<'a, T: 'static + ?Sized + ToOwned> IntoOwned for Indexed<'a, T> {
+impl<T: 'static + ?Sized + ToOwned> IntoOwned for Indexed<'_, T> {
     type Owned = Indexed<'static, T>;
 
     fn into_owned(self) -> Indexed<'static, T> {
@@ -234,7 +234,7 @@ impl<'a, T: ToOwned + ?Sized + 'a> IndexedInput<'a, T> {
     }
 }
 
-impl<'a> IndexedInput<'a, [u8]> {
+impl IndexedInput<'_, [u8]> {
     pub fn backtrack(&mut self, n: usize) -> pear::Result<(), Self> {
         let source_addr = self.source.as_ptr() as usize;
         let current_addr = self.current.as_ptr() as usize;

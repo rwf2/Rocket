@@ -136,7 +136,7 @@ use crate::uri::{self, UriPart, UriDisplay};
 ///     nickname: String,
 /// }
 ///
-/// impl<'a> UriDisplay<Query> for User<'a> {
+/// impl UriDisplay<Query> for User<'_> {
 ///     fn fmt(&self, f: &mut Formatter<Query>) -> fmt::Result {
 ///         f.write_named_value("name", &self.name)?;
 ///         f.write_named_value("nickname", &self.nickname)
@@ -165,7 +165,7 @@ use crate::uri::{self, UriPart, UriDisplay};
 /// # #[derive(FromForm)]
 /// # struct User<'a> { name: &'a RawStr, nickname: String, }
 /// #
-/// # impl<'a> UriDisplay<Query> for User<'a> {
+/// # impl UriDisplay<Query> for User<'_> {
 /// #     fn fmt(&self, f: &mut Formatter<Query>) -> fmt::Result {
 /// #         f.write_named_value("name", &self.name)?;
 /// #         f.write_named_value("nickname", &self.nickname)

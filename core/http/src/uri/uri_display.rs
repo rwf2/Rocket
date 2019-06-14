@@ -294,7 +294,7 @@ pub trait UriDisplay<P: UriPart> {
     fn fmt(&self, f: &mut Formatter<'_, P>) -> fmt::Result;
 }
 
-impl<'a, P: UriPart> fmt::Display for &'a dyn UriDisplay<P> {
+impl<P: UriPart> fmt::Display for &dyn UriDisplay<P> {
     #[inline(always)]
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         UriDisplay::fmt(*self, &mut <Formatter<'_, P>>::new(f))
@@ -369,7 +369,7 @@ impl<P: UriPart> UriDisplay<P> for String {
 }
 
 /// Percent-encodes the raw string. Defers to `str`.
-impl<'a, P: UriPart> UriDisplay<P> for Cow<'a, str> {
+impl<P: UriPart> UriDisplay<P> for Cow<'_, str> {
     #[inline(always)]
     fn fmt(&self, f: &mut Formatter<'_, P>) -> fmt::Result {
         self.as_ref().fmt(f)
@@ -385,7 +385,7 @@ impl UriDisplay<Path> for path::PathBuf {
 }
 
 /// Defers to the `UriDisplay<P>` implementation for `T`.
-impl<'a, P: UriPart, T: UriDisplay<P> + ?Sized> UriDisplay<P> for &'a T {
+impl<P: UriPart, T: UriDisplay<P> + ?Sized> UriDisplay<P> for &T {
     #[inline(always)]
     fn fmt(&self, f: &mut Formatter<'_, P>) -> fmt::Result {
         UriDisplay::fmt(*self, f)
@@ -393,7 +393,7 @@ impl<'a, P: UriPart, T: UriDisplay<P> + ?Sized> UriDisplay<P> for &'a T {
 }
 
 /// Defers to the `UriDisplay<P>` implementation for `T`.
-impl<'a, P: UriPart, T: UriDisplay<P> + ?Sized> UriDisplay<P> for &'a mut T {
+impl<P: UriPart, T: UriDisplay<P> + ?Sized> UriDisplay<P> for &mut T {
     #[inline(always)]
     fn fmt(&self, f: &mut Formatter<'_, P>) -> fmt::Result {
         UriDisplay::fmt(*self, f)

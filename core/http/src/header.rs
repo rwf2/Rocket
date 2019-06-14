@@ -105,7 +105,7 @@ impl<'h> Header<'h> {
     }
 }
 
-impl<'h> fmt::Display for Header<'h> {
+impl fmt::Display for Header<'_> {
     #[inline(always)]
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}: {}", self.name, self.value)
@@ -223,7 +223,7 @@ impl<'h> HeaderMap<'h> {
     /// assert_eq!(values.next(), None);
     /// ```
     #[inline]
-    pub fn get<'a>(&'a self, name: &str) -> impl Iterator<Item=&'a str> {
+    pub fn get(&self, name: &str) -> impl Iterator<Item=&str> {
         self.headers
             .get(UncasedStr::new(name))
             .into_iter()

@@ -41,7 +41,7 @@ impl<T: IntoOwned> IntoOwned for Host<T> {
     }
 }
 
-impl<'a> IntoOwned for Authority<'a> {
+impl IntoOwned for Authority<'_> {
     type Owned = Authority<'static>;
 
     fn into_owned(self) -> Authority<'static> {
@@ -171,7 +171,7 @@ impl<'a> Authority<'a> {
     }
 }
 
-impl<'a, 'b> PartialEq<Authority<'b>> for Authority<'a> {
+impl<'b> PartialEq<Authority<'b>> for Authority<'_> {
     fn eq(&self, other: &Authority<'b>) -> bool {
         self.user_info() == other.user_info()
             && self.host() == other.host()
@@ -180,7 +180,7 @@ impl<'a, 'b> PartialEq<Authority<'b>> for Authority<'a> {
     }
 }
 
-impl<'a> Display for Authority<'a> {
+impl Display for Authority<'_> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         if let Some(user_info) = self.user_info() {
             write!(f, "{}@", user_info)?;

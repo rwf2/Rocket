@@ -330,7 +330,7 @@ impl<'i, P: UriPart> Formatter<'i, P> {
     }
 }
 
-impl<'i> Formatter<'i, Query> {
+impl Formatter<'_, Query> {
     fn with_prefix<F>(&mut self, prefix: &str, f: F) -> fmt::Result
         where F: FnOnce(&mut Self) -> fmt::Result
     {
@@ -392,7 +392,7 @@ impl<'i> Formatter<'i, Query> {
     }
 }
 
-impl<'i, P: UriPart> fmt::Write for Formatter<'i, P> {
+impl<P: UriPart> fmt::Write for Formatter<'_, P> {
     fn write_str(&mut self, s: &str) -> fmt::Result {
         self.write_raw(s)
     }
@@ -421,7 +421,7 @@ pub struct UriArguments<'a> {
 }
 
 // Used by code generation.
-impl<'a> UriArguments<'a> {
+impl UriArguments<'_> {
     #[doc(hidden)]
     pub fn into_origin(self) -> Origin<'static> {
         use std::borrow::Cow;

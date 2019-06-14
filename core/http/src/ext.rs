@@ -41,7 +41,7 @@ impl<T> IntoCollection<T> for Vec<T> {
 
 macro_rules! impl_for_slice {
     ($($size:tt)*) => (
-        impl<'a, T: Clone> IntoCollection<T> for &'a [T $($size)*] {
+        impl<T: Clone> IntoCollection<T> for &[T $($size)*] {
             #[inline(always)]
             fn into_collection<A: Array<Item=T>>(self) -> SmallVec<A> {
                 self.iter().cloned().collect()
@@ -90,7 +90,7 @@ impl<T: IntoOwned> IntoOwned for Option<T> {
     }
 }
 
-impl<'a, B: 'static + ToOwned + ?Sized> IntoOwned for Cow<'a, B> {
+impl<B: 'static + ToOwned + ?Sized> IntoOwned for Cow<'_, B> {
     type Owned = Cow<'static, B>;
 
     #[inline(always)]

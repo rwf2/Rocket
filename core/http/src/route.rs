@@ -33,7 +33,7 @@ pub struct RouteSegment<'a, P: UriPart> {
     _part: PhantomData<P>,
 }
 
-impl<'a, P: UriPart + 'static> IntoOwned for RouteSegment<'a, P> {
+impl<P: UriPart + 'static> IntoOwned for RouteSegment<'_, P> {
     type Owned = RouteSegment<'static, P>;
 
     #[inline]

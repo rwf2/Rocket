@@ -40,7 +40,7 @@ pub enum SegmentError {
     BadEnd(char),
 }
 
-impl<'a> Segments<'a> {
+impl Segments<'_> {
     /// Creates a `PathBuf` from a `Segments` iterator. The returned `PathBuf`
     /// is percent-decoded. If a segment is equal to "..", the previous segment
     /// (if any) is skipped.

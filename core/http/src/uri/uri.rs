@@ -240,7 +240,7 @@ impl TryFrom<String> for Uri<'static> {
     }
 }
 
-impl<'a> IntoOwned for Uri<'a> {
+impl IntoOwned for Uri<'_> {
     type Owned = Uri<'static>;
 
     fn into_owned(self) -> Uri<'static> {
@@ -253,7 +253,7 @@ impl<'a> IntoOwned for Uri<'a> {
     }
 }
 
-impl<'a> Display for Uri<'a> {
+impl Display for Uri<'_> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match *self {
             Uri::Origin(ref origin) => write!(f, "{}", origin),

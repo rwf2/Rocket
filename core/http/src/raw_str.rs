@@ -373,7 +373,7 @@ impl PartialEq<String> for RawStr {
     }
 }
 
-impl<'a> PartialEq<String> for &'a RawStr {
+impl PartialEq<String> for &'_ RawStr {
     #[inline(always)]
     fn eq(&self, other: &String) -> bool {
         self.as_str() == other.as_str()

@@ -29,7 +29,7 @@ pub struct Absolute<'a> {
     origin: Option<Origin<'a>>,
 }
 
-impl<'a> IntoOwned for Absolute<'a> {
+impl IntoOwned for Absolute<'_> {
     type Owned = Absolute<'static>;
 
     fn into_owned(self) -> Self::Owned {
@@ -149,7 +149,7 @@ impl<'a> Absolute<'a> {
     }
 }
 
-impl<'a, 'b> PartialEq<Absolute<'b>> for Absolute<'a> {
+impl<'b> PartialEq<Absolute<'b>> for Absolute<'_> {
     fn eq(&self, other: &Absolute<'b>) -> bool {
         self.scheme() == other.scheme()
             && self.authority() == other.authority()
@@ -157,7 +157,7 @@ impl<'a, 'b> PartialEq<Absolute<'b>> for Absolute<'a> {
     }
 }
 
-impl<'a> Display for Absolute<'a> {
+impl Display for Absolute<'_> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}", self.scheme())?;
         match self.authority {

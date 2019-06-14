@@ -84,10 +84,10 @@ mod key {
 /// // In practice, we'd probably fetch the user from the database.
 /// struct User(usize);
 ///
-/// impl<'a, 'r> FromRequest<'a, 'r> for User {
+/// impl FromRequest<'_, '_> for User {
 ///     type Error = !;
 ///
-///     fn from_request(request: &'a Request<'r>) -> request::Outcome<User, !> {
+///     fn from_request(request: &Request<'_>) -> request::Outcome<User, !> {
 ///         request.cookies()
 ///             .get_private("user_id")
 ///             .and_then(|cookie| cookie.value().parse().ok())
@@ -269,7 +269,7 @@ impl<'a> Cookies<'a> {
 }
 
 #[cfg(feature = "private-cookies")]
-impl<'a> Cookies<'a> {
+impl Cookies<'_> {
     /// Returns a reference to the `Cookie` inside this collection with the name
     /// `name` and authenticates and decrypts the cookie's value, returning a
     /// `Cookie` with the decrypted value. If the cookie cannot be found, or the
@@ -400,7 +400,7 @@ impl<'a> Cookies<'a> {
     }
 }
 
-impl<'a> fmt::Debug for Cookies<'a> {
+impl fmt::Debug for Cookies<'_> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match *self {
             Cookies::Jarred(ref jar, _) => write!(f, "{:?}", jar),
@@ -409,13 +409,13 @@ impl<'a> fmt::Debug for Cookies<'a> {
     }
 }
 
-impl<'c> From<Cookie<'c>> for Header<'static> {
+impl From<Cookie<'_>> for Header<'static> {
     fn from(cookie: Cookie<'_>) -> Header<'static> {
         Header::new("Set-Cookie", cookie.encoded().to_string())
     }
 }
 
-impl<'a, 'c> From<&'a Cookie<'c>> for Header<'static> {
+impl From<&Cookie<'_>> for Header<'static> {
     fn from(cookie: &Cookie<'_>) -> Header<'static> {
         Header::new("Set-Cookie", cookie.encoded().to_string())
     }

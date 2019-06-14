@@ -66,7 +66,7 @@ impl fmt::Display for Or<char, u8> {
     }
 }
 
-impl<'a> fmt::Display for Error<'a> {
+impl fmt::Display for Error<'_> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         // This relies on specialization of the `Display` impl for `Expected`.
         write!(f, "{}", self.expected)?;
@@ -79,7 +79,7 @@ impl<'a> fmt::Display for Error<'a> {
     }
 }
 
-impl<'a> IntoOwned for Error<'a> {
+impl IntoOwned for Error<'_> {
     type Owned = Error<'static>;
 
     fn into_owned(self) -> Self::Owned {

@@ -107,14 +107,14 @@ impl PartialEq<UncasedStr> for str {
     }
 }
 
-impl<'a> PartialEq<&'a str> for UncasedStr {
+impl PartialEq<&str> for UncasedStr {
     #[inline(always)]
-    fn eq(&self, other: & &'a str) -> bool {
+    fn eq(&self, other: &&str) -> bool {
         self.0.eq_ignore_ascii_case(other)
     }
 }
 
-impl<'a> PartialEq<UncasedStr> for &'a str {
+impl PartialEq<UncasedStr> for &str {
     #[inline(always)]
     fn eq(&self, other: &UncasedStr) -> bool {
         other.0.eq_ignore_ascii_case(self)
@@ -233,7 +233,7 @@ impl<'s> Uncased<'s> {
     }
 }
 
-impl<'a> Deref for Uncased<'a> {
+impl Deref for Uncased<'_> {
     type Target = UncasedStr;
 
     #[inline(always)]
@@ -242,14 +242,14 @@ impl<'a> Deref for Uncased<'a> {
     }
 }
 
-impl<'a> AsRef<UncasedStr> for Uncased<'a>{
+impl AsRef<UncasedStr> for Uncased<'_>{
     #[inline(always)]
     fn as_ref(&self) -> &UncasedStr {
         UncasedStr::new(self.string.borrow())
     }
 }
 
-impl<'a> Borrow<UncasedStr> for Uncased<'a> {
+impl Borrow<UncasedStr> for Uncased<'_> {
     #[inline(always)]
     fn borrow(&self) -> &UncasedStr {
         self.as_str().into()
@@ -284,64 +284,64 @@ impl<'s, 'c: 's, T: Into<Cow<'c, str>>> From<T> for Uncased<'s> {
     }
 }
 
-impl<'a, 'b> PartialOrd<Uncased<'b>> for Uncased<'a> {
+impl<'b> PartialOrd<Uncased<'b>> for Uncased<'_> {
     #[inline(always)]
     fn partial_cmp(&self, other: &Uncased<'b>) -> Option<Ordering> {
         self.as_ref().partial_cmp(other.as_ref())
     }
 }
 
-impl<'a> Ord for Uncased<'a> {
+impl Ord for Uncased<'_> {
     fn cmp(&self, other: &Self) -> Ordering {
         self.as_ref().cmp(other.as_ref())
     }
 }
 
-impl<'s> fmt::Display for Uncased<'s> {
+impl fmt::Display for Uncased<'_> {
     #[inline(always)]
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         self.string.fmt(f)
     }
 }
 
-impl<'a, 'b> PartialEq<Uncased<'b>> for Uncased<'a> {
+impl<'b> PartialEq<Uncased<'b>> for Uncased<'_> {
     #[inline(always)]
     fn eq(&self, other: &Uncased<'b>) -> bool {
         self.as_ref().eq(other.as_ref())
     }
 }
 
-impl<'a> PartialEq<str> for Uncased<'a> {
+impl PartialEq<str> for Uncased<'_> {
     #[inline(always)]
     fn eq(&self, other: &str) -> bool {
         self.as_ref().eq(other)
     }
 }
 
-impl<'b> PartialEq<Uncased<'b>> for str {
+impl PartialEq<Uncased<'_>> for str {
     #[inline(always)]
-    fn eq(&self, other: &Uncased<'b>) -> bool {
+    fn eq(&self, other: &Uncased<'_>) -> bool {
         other.as_ref().eq(self)
     }
 }
 
-impl<'a, 'b> PartialEq<&'b str> for Uncased<'a> {
+impl<'b> PartialEq<&'b str> for Uncased<'_> {
     #[inline(always)]
     fn eq(&self, other: & &'b str) -> bool {
         self.as_ref().eq(other)
     }
 }
 
-impl<'a, 'b> PartialEq<Uncased<'b>> for &'a str {
+impl<'b> PartialEq<Uncased<'b>> for &str {
     #[inline(always)]
     fn eq(&self, other: &Uncased<'b>) -> bool {
         other.as_ref().eq(self)
     }
 }
 
-impl<'s> Eq for Uncased<'s> {  }
+impl Eq for Uncased<'_> {  }
 
-impl<'s> Hash for Uncased<'s> {
+impl Hash for Uncased<'_> {
     #[inline(always)]
     fn hash<H: Hasher>(&self, hasher: &mut H) {
         self.as_ref().hash(hasher)

@@ -91,13 +91,13 @@ pub struct Origin<'a> {
     crate segment_count: Storage<usize>,
 }
 
-impl<'a, 'b> PartialEq<Origin<'b>> for Origin<'a> {
+impl<'b> PartialEq<Origin<'b>> for Origin<'_> {
     fn eq(&self, other: &Origin<'b>) -> bool {
         self.path() == other.path() && self.query() == other.query()
     }
 }
 
-impl<'a> IntoOwned for Origin<'a> {
+impl IntoOwned for Origin<'_> {
     type Owned = Origin<'static>;
 
     fn into_owned(self) -> Origin<'static> {
@@ -440,7 +440,7 @@ impl<'a> Origin<'a> {
     }
 }
 
-impl<'a> Display for Origin<'a> {
+impl Display for Origin<'_> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}", self.path())?;
         if let Some(q) = self.query() {
