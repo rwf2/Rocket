@@ -36,7 +36,7 @@ use crate::request::{FormItems, FormItem, Form, LenientForm, FromForm};
 /// # struct MyType;
 /// # type Result = std::result::Result<MyType, ()>;
 /// #
-/// # impl<'q> FromQuery<'q> for MyType {
+/// # impl FromQuery<'_> for MyType {
 /// #    type Error = ();
 /// #
 /// fn from_query(query: Query) -> Result {

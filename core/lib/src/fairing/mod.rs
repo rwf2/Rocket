@@ -308,10 +308,10 @@ pub use self::info_kind::{Info, Kind};
 /// pub struct StartTime(pub SystemTime);
 ///
 /// // Allows a route to access the time a request was initiated.
-/// impl<'a, 'r> FromRequest<'a, 'r> for StartTime {
+/// impl FromRequest<'_, '_> for StartTime {
 ///     type Error = ();
 ///
-///     fn from_request(request: &'a Request<'r>) -> request::Outcome<StartTime, ()> {
+///     fn from_request(request: &Request<'_>) -> request::Outcome<StartTime, ()> {
 ///         match *request.local_cache(|| TimerStart(None)) {
 ///             TimerStart(Some(time)) => Outcome::Success(StartTime(time)),
 ///             TimerStart(None) => Outcome::Failure((Status::InternalServerError, ())),

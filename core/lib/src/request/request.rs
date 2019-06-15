@@ -842,7 +842,7 @@ impl<'r> Request<'r> {
     }
 }
 
-impl<'r> fmt::Debug for Request<'r> {
+impl fmt::Debug for Request<'_> {
     fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
         fmt.debug_struct("Request")
             .field("method", &self.method)
@@ -853,7 +853,7 @@ impl<'r> fmt::Debug for Request<'r> {
     }
 }
 
-impl<'r> fmt::Display for Request<'r> {
+impl fmt::Display for Request<'_> {
     /// Pretty prints a Request. This is primarily used by Rocket's logging
     /// infrastructure.
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {

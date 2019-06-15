@@ -78,8 +78,8 @@ impl NamedFile {
 /// recognized. See [`ContentType::from_extension()`] for more information. If
 /// you would like to stream a file with a different Content-Type than that
 /// implied by its extension, use a [`File`] directly.
-impl<'r> Responder<'r> for NamedFile {
-    fn respond_to(self, req: &Request<'_>) -> response::Result<'r> {
+impl Responder<'_> for NamedFile {
+    fn respond_to(self, req: &Request<'_>) -> response::Result<'static> {
         let mut response = self.1.respond_to(req)?;
         if let Some(ext) = self.0.extension() {
             if let Some(ct) = ContentType::from_extension(&ext.to_string_lossy()) {
@@ -131,7 +131,7 @@ impl io::Seek for NamedFile {
     }
 }
 
-impl<'a> io::Read for &'a NamedFile {
+impl io::Read for &NamedFile {
     fn read(&mut self, buf: &mut [u8]) -> io::Result<usize> {
         self.file().read(buf)
     }
@@ -141,7 +141,7 @@ impl<'a> io::Read for &'a NamedFile {
     }
 }
 
-impl<'a> io::Write for &'a NamedFile {
+impl io::Write for &NamedFile {
     fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
         self.file().write(buf)
     }
@@ -151,7 +151,7 @@ impl<'a> io::Write for &'a NamedFile {
     }
 }
 
-impl<'a> io::Seek for &'a NamedFile {
+impl io::Seek for &NamedFile {
     fn seek(&mut self, pos: io::SeekFrom) -> io::Result<u64> {
         self.file().seek(pos)
     }

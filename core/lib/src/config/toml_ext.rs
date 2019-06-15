@@ -83,7 +83,7 @@ pub fn parse_simple_toml_value(mut input: &str) -> StdResult<Value, String> {
 /// `Display`. This is used to log config values at initialization.
 crate struct LoggedValue<'a>(pub &'a Value);
 
-impl<'a> fmt::Display for LoggedValue<'a> {
+impl fmt::Display for LoggedValue<'_> {
     #[inline]
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         use crate::config::Value::*;

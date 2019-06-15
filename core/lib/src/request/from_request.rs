@@ -186,10 +186,10 @@ impl<S, E> IntoOutcome<S, (Status, E), ()> for Result<S, E> {
 ///     Invalid,
 /// }
 ///
-/// impl<'a, 'r> FromRequest<'a, 'r> for ApiKey {
+/// impl FromRequest<'_, '_> for ApiKey {
 ///     type Error = ApiKeyError;
 ///
-///     fn from_request(request: &'a Request<'r>) -> request::Outcome<Self, Self::Error> {
+///     fn from_request(request: &Request<'_>) -> request::Outcome<Self, Self::Error> {
 ///         let keys: Vec<_> = request.headers().get("x-api-key").collect();
 ///         match keys.len() {
 ///             0 => Outcome::Failure((Status::BadRequest, ApiKeyError::Missing)),
@@ -232,19 +232,19 @@ impl<S, E> IntoOutcome<S, (Status, E), ()> for Result<S, E> {
 /// #         Ok(User { id, is_admin: false })
 /// #     }
 /// # }
-/// # impl<'a, 'r> FromRequest<'a, 'r> for Database {
+/// # impl FromRequest<'_, '_> for Database {
 /// #     type Error = ();
-/// #     fn from_request(request: &'a Request<'r>) -> request::Outcome<Database, ()> {
+/// #     fn from_request(request: &Request<'_>) -> request::Outcome<Database, ()> {
 /// #         Outcome::Success(Database)
 /// #     }
 /// # }
 /// #
 /// # struct Admin { user: User }
 /// #
-/// impl<'a, 'r> FromRequest<'a, 'r> for User {
+/// impl FromRequest<'_, '_> for User {
 ///     type Error = ();
 ///
-///     fn from_request(request: &'a Request<'r>) -> request::Outcome<User, ()> {
+///     fn from_request(request: &Request<'_>) -> request::Outcome<User, ()> {
 ///         let db = request.guard::<Database>()?;
 ///         request.cookies()
 ///             .get_private("user_id")
@@ -254,10 +254,10 @@ impl<S, E> IntoOutcome<S, (Status, E), ()> for Result<S, E> {
 ///     }
 /// }
 ///
-/// impl<'a, 'r> FromRequest<'a, 'r> for Admin {
+/// impl FromRequest<'_, '_> for Admin {
 ///     type Error = ();
 ///
-///     fn from_request(request: &'a Request<'r>) -> request::Outcome<Admin, ()> {
+///     fn from_request(request: &Request<'_>) -> request::Outcome<Admin, ()> {
 ///         // This will unconditionally query the database!
 ///         let user = request.guard::<User>()?;
 ///
@@ -296,19 +296,19 @@ impl<S, E> IntoOutcome<S, (Status, E), ()> for Result<S, E> {
 /// #         Ok(User { id, is_admin: false })
 /// #     }
 /// # }
-/// # impl<'a, 'r> FromRequest<'a, 'r> for Database {
+/// # impl FromRequest<'_, '_> for Database {
 /// #     type Error = ();
-/// #     fn from_request(request: &'a Request<'r>) -> request::Outcome<Database, ()> {
+/// #     fn from_request(request: &Request<'_>) -> request::Outcome<Database, ()> {
 /// #         Outcome::Success(Database)
 /// #     }
 /// # }
 /// #
 /// # struct Admin<'a> { user: &'a User }
 /// #
-/// impl<'a, 'r> FromRequest<'a, 'r> for &'a User {
+/// impl<'a> FromRequest<'a, '_> for &'a User {
 ///     type Error = !;
 ///
-///     fn from_request(request: &'a Request<'r>) -> request::Outcome<&'a User, !> {
+///     fn from_request(request: &'a Request<'_>) -> request::Outcome<&'a User, !> {
 ///         // This closure will execute at most once per request, regardless of
 ///         // the number of times the `User` guard is executed.
 ///         let user_result = request.local_cache(|| {
@@ -323,10 +323,10 @@ impl<S, E> IntoOutcome<S, (Status, E), ()> for Result<S, E> {
 ///     }
 /// }
 ///
-/// impl<'a, 'r> FromRequest<'a, 'r> for Admin<'a> {
+/// impl<'a> FromRequest<'a, '_> for Admin<'a> {
 ///     type Error = !;
 ///
-///     fn from_request(request: &'a Request<'r>) -> request::Outcome<Admin<'a>, !> {
+///     fn from_request(request: &'a Request<'_>) -> request::Outcome<Admin<'a>, !> {
 ///         let user = request.guard::<&User>()?;
 ///
 ///         if user.is_admin {
@@ -357,26 +357,26 @@ pub trait FromRequest<'a, 'r>: Sized {
     fn from_request(request: &'a Request<'r>) -> Outcome<Self, Self::Error>;
 }
 
-impl<'a, 'r> FromRequest<'a, 'r> for Method {
+impl FromRequest<'_, '_> for Method {
     type Error = !;
 
-    fn from_request(request: &'a Request<'r>) -> Outcome<Self, Self::Error> {
+    fn from_request(request: &Request<'_>) -> Outcome<Self, Self::Error> {
         Success(request.method())
     }
 }
 
-impl<'a, 'r> FromRequest<'a, 'r> for &'a Origin<'a> {
+impl<'a> FromRequest<'a, '_> for &'a Origin<'a> {
     type Error = !;
 
-    fn from_request(request: &'a Request<'r>) -> Outcome<Self, Self::Error> {
+    fn from_request(request: &'a Request<'_>) -> Outcome<Self, Self::Error> {
         Success(request.uri())
     }
 }
 
-impl<'a, 'r> FromRequest<'a, 'r> for &'r Route {
+impl<'r> FromRequest<'_, 'r> for &'r Route {
     type Error = !;
 
-    fn from_request(request: &'a Request<'r>) -> Outcome<Self, Self::Error> {
+    fn from_request(request: &Request<'r>) -> Outcome<Self, Self::Error> {
         match request.route() {
             Some(route) => Success(route),
             None => Forward(())
@@ -384,18 +384,18 @@ impl<'a, 'r> FromRequest<'a, 'r> for &'r Route {
     }
 }
 
-impl<'a, 'r> FromRequest<'a, 'r> for Cookies<'a> {
+impl<'a> FromRequest<'a, '_> for Cookies<'a> {
     type Error = !;
 
-    fn from_request(request: &'a Request<'r>) -> Outcome<Self, Self::Error> {
+    fn from_request(request: &'a Request<'_>) -> Outcome<Self, Self::Error> {
         Success(request.cookies())
     }
 }
 
-impl<'a, 'r> FromRequest<'a, 'r> for &'a Accept {
+impl<'a> FromRequest<'a, '_> for &'a Accept {
     type Error = !;
 
-    fn from_request(request: &'a Request<'r>) -> Outcome<Self, Self::Error> {
+    fn from_request(request: &'a Request<'_>) -> Outcome<Self, Self::Error> {
         match request.accept() {
             Some(accept) => Success(accept),
             None => Forward(())
@@ -403,10 +403,10 @@ impl<'a, 'r> FromRequest<'a, 'r> for &'a Accept {
     }
 }
 
-impl<'a, 'r> FromRequest<'a, 'r> for &'a ContentType {
+impl<'a> FromRequest<'a, '_> for &'a ContentType {
     type Error = !;
 
-    fn from_request(request: &'a Request<'r>) -> Outcome<Self, Self::Error> {
+    fn from_request(request: &'a Request<'_>) -> Outcome<Self, Self::Error> {
         match request.content_type() {
             Some(content_type) => Success(content_type),
             None => Forward(())
@@ -414,10 +414,10 @@ impl<'a, 'r> FromRequest<'a, 'r> for &'a ContentType {
     }
 }
 
-impl<'a, 'r> FromRequest<'a, 'r> for SocketAddr {
+impl FromRequest<'_, '_> for SocketAddr {
     type Error = !;
 
-    fn from_request(request: &'a Request<'r>) -> Outcome<Self, Self::Error> {
+    fn from_request(request: &Request<'_>) -> Outcome<Self, Self::Error> {
         match request.remote() {
             Some(addr) => Success(addr),
             None => Forward(())

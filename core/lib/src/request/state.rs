@@ -70,10 +70,10 @@ use crate::http::Status;
 /// # struct MyConfig{ user_val: String };
 /// struct Item(String);
 ///
-/// impl<'a, 'r> FromRequest<'a, 'r> for Item {
+/// impl FromRequest<'_, '_> for Item {
 ///     type Error = ();
 ///
-///     fn from_request(request: &'a Request<'r>) -> request::Outcome<Item, ()> {
+///     fn from_request(request: &Request<'_>) -> request::Outcome<Item, ()> {
 ///         request.guard::<State<MyConfig>>()
 ///             .map(|my_config| Item(my_config.user_val.clone()))
 ///     }
@@ -165,11 +165,11 @@ impl<'r, T: Send + Sync + 'static> State<'r, T> {
     }
 }
 
-impl<'a, 'r, T: Send + Sync + 'static> FromRequest<'a, 'r> for State<'r, T> {
+impl<'r, T: Send + Sync + 'static> FromRequest<'_, 'r> for State<'r, T> {
     type Error = ();
 
     #[inline(always)]
-    fn from_request(req: &'a Request<'r>) -> request::Outcome<State<'r, T>, ()> {
+    fn from_request(req: &Request<'r>) -> request::Outcome<State<'r, T>, ()> {
         match req.state.managed.try_get::<T>() {
             Some(state) => Outcome::Success(State(state)),
             None => {
@@ -180,7 +180,7 @@ impl<'a, 'r, T: Send + Sync + 'static> FromRequest<'a, 'r> for State<'r, T> {
     }
 }
 
-impl<'r, T: Send + Sync + 'static> Deref for State<'r, T> {
+impl<T: Send + Sync + 'static> Deref for State<'_, T> {
     type Target = T;
 
     #[inline(always)]

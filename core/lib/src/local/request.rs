@@ -434,7 +434,7 @@ impl<'c> LocalRequest<'c> {
     }
 }
 
-impl<'c> fmt::Debug for LocalRequest<'c> {
+impl fmt::Debug for LocalRequest<'_> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         fmt::Debug::fmt(&self.request, f)
     }
@@ -468,7 +468,7 @@ impl<'c> DerefMut for LocalResponse<'c> {
     }
 }
 
-impl<'c> fmt::Debug for LocalResponse<'c> {
+impl fmt::Debug for LocalResponse<'_> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         fmt::Debug::fmt(&self.response, f)
     }

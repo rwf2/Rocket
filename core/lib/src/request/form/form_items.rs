@@ -211,7 +211,7 @@ impl<'f> FormItem<'f> {
     }
 }
 
-impl<'f> FormItems<'f> {
+impl FormItems<'_> {
     /// Returns `true` if the form string was parsed to completion. Returns
     /// `false` otherwise. All valid form strings will parse to completion,
     /// while invalid form strings will not.

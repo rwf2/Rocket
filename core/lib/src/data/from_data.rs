@@ -9,7 +9,7 @@ use crate::data::Data;
 /// Type alias for the `Outcome` of a `FromData` conversion.
 pub type Outcome<S, E> = outcome::Outcome<S, (Status, E), Data>;
 
-impl<'a, S, E> IntoOutcome<S, (Status, E), Data> for Result<S, E> {
+impl<S, E> IntoOutcome<S, (Status, E), Data> for Result<S, E> {
     type Failure = Status;
     type Forward = Data;
 

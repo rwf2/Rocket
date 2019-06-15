@@ -165,8 +165,8 @@ use crate::request::Request;
 /// use rocket::response::{self, Response, Responder};
 /// use rocket::http::ContentType;
 ///
-/// impl<'r> Responder<'r> for Person {
-///     fn respond_to(self, _: &Request) -> response::Result<'r> {
+/// impl Responder<'_> for Person {
+///     fn respond_to(self, _: &Request) -> response::Result<'static> {
 ///         Response::build()
 ///             .sized_body(Cursor::new(format!("{}:{}", self.name, self.age)))
 ///             .raw_header("X-Person-Name", self.name)
@@ -208,8 +208,8 @@ impl<'r> Responder<'r> for &'r str {
 
 /// Returns a response with Content-Type `text/plain` and a fixed-size body
 /// containing the string `self`. Always returns `Ok`.
-impl<'r> Responder<'r> for String {
-    fn respond_to(self, _: &Request<'_>) -> response::Result<'r> {
+impl Responder<'_> for String {
+    fn respond_to(self, _: &Request<'_>) -> response::Result<'static> {
         Response::build()
             .header(ContentType::Plain)
             .sized_body(Cursor::new(self))
@@ -230,8 +230,8 @@ impl<'r> Responder<'r> for &'r [u8] {
 
 /// Returns a response with Content-Type `application/octet-stream` and a
 /// fixed-size body containing the data in `self`. Always returns `Ok`.
-impl<'r> Responder<'r> for Vec<u8> {
-    fn respond_to(self, _: &Request<'_>) -> response::Result<'r> {
+impl Responder<'_> for Vec<u8> {
+    fn respond_to(self, _: &Request<'_>) -> response::Result<'static> {
         Response::build()
             .header(ContentType::Binary)
             .sized_body(Cursor::new(self))
@@ -240,8 +240,8 @@ impl<'r> Responder<'r> for Vec<u8> {
 }
 
 /// Returns a response with a sized body for the file. Always returns `Ok`.
-impl<'r> Responder<'r> for File {
-    fn respond_to(self, _: &Request<'_>) -> response::Result<'r> {
+impl Responder<'_> for File {
+    fn respond_to(self, _: &Request<'_>) -> response::Result<'static> {
         let (metadata, file) = (self.metadata(), BufReader::new(self));
         match metadata {
             Ok(md) => Response::build().raw_body(Body::Sized(file, md.len())).ok(),
@@ -251,8 +251,8 @@ impl<'r> Responder<'r> for File {
 }
 
 /// Returns an empty, default `Response`. Always returns `Ok`.
-impl<'r> Responder<'r> for () {
-    fn respond_to(self, _: &Request<'_>) -> response::Result<'r> {
+impl Responder<'_> for () {
+    fn respond_to(self, _: &Request<'_>) -> response::Result<'static> {
         Ok(Response::new())
     }
 }
@@ -305,8 +305,8 @@ impl<'r, R: Responder<'r>, E: Responder<'r> + fmt::Debug> Responder<'r> for Resu
 /// `100` responds with any empty body and the given status code, and all other
 /// status code emit an error message and forward to the `500` (internal server
 /// error) catcher.
-impl<'r> Responder<'r> for Status {
-    fn respond_to(self, _: &Request<'_>) -> response::Result<'r> {
+impl Responder<'_> for Status {
+    fn respond_to(self, _: &Request<'_>) -> response::Result<'static> {
         match self.class() {
             StatusClass::ClientError | StatusClass::ServerError => Err(self),
             StatusClass::Success if self.code < 206 => {

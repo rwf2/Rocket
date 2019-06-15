@@ -1176,7 +1176,7 @@ impl<'r> Response<'r> {
     }
 }
 
-impl<'r> fmt::Debug for Response<'r> {
+impl fmt::Debug for Response<'_> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         writeln!(f, "{}", self.status())?;
 

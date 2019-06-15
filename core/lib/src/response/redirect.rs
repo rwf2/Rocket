@@ -147,7 +147,7 @@ impl Redirect {
 /// the `Location` header field. The body of the response is empty. If the URI
 /// value used to create the `Responder` is an invalid URI, an error of
 /// `Status::InternalServerError` is returned.
-impl<'a> Responder<'a> for Redirect {
+impl Responder<'_> for Redirect {
     fn respond_to(self, _: &Request<'_>) -> Result<Response<'static>, Status> {
         if let Some(uri) = self.1 {
             Response::build()
