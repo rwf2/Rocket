@@ -22,8 +22,6 @@
 //! application vulnerable to attacks including BREACH. These risks should be
 //! evaluated in the context of your application before enabling compression.
 //!
-#[cfg(feature="brotli_compression")] extern crate brotli;
-#[cfg(feature="gzip_compression")] extern crate flate2;
 
 mod fairing;
 mod responder;
@@ -38,10 +36,10 @@ use rocket::http::hyper::header::{ContentEncoding, Encoding};
 use rocket::{Request, Response};
 
 #[cfg(feature = "brotli_compression")]
-use self::brotli::enc::backward_references::BrotliEncoderMode;
+use brotli::enc::backward_references::BrotliEncoderMode;
 
 #[cfg(feature = "gzip_compression")]
-use self::flate2::read::GzEncoder;
+use flate2::read::GzEncoder;
 
 struct CompressionUtils;
 
