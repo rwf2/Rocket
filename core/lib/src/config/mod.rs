@@ -483,7 +483,7 @@ mod test {
     const TEST_CONFIG_FILENAME: &'static str = "/tmp/testing/Rocket.toml";
 
     // TODO: It's a shame we have to depend on lazy_static just for this.
-    lazy_static! {
+    lazy_static::lazy_static! {
         static ref ENV_LOCK: Mutex<usize> = Mutex::new(0);
     }
 

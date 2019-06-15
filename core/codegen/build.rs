@@ -1,8 +1,5 @@
 //! Ensures Rocket isn't compiled with an incompatible version of Rust.
 
-extern crate yansi;
-extern crate version_check;
-
 use yansi::{Paint, Color::{Red, Yellow, Blue}};
 
 // Specifies the minimum nightly version needed to compile Rocket.

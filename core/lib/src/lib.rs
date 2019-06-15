@@ -104,8 +104,6 @@
 #[macro_use] extern crate log;
 #[macro_use] extern crate pear;
 
-#[cfg(test)] #[macro_use] extern crate lazy_static;
-
 #[doc(hidden)] #[macro_use] pub mod logger;
 pub mod local;
 pub mod request;
