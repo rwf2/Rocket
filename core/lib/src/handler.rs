@@ -152,19 +152,19 @@ pub trait Handler: Cloneable + Send + Sync + 'static {
 /// `Handler` automatically implement `Cloneable`.
 pub trait Cloneable {
     /// Clones `self`.
-    fn clone_handler(&self) -> Box<Handler>;
+    fn clone_handler(&self) -> Box<dyn Handler>;
 }
 
 impl<T: Handler + Clone> Cloneable for T {
     #[inline(always)]
-    fn clone_handler(&self) -> Box<Handler> {
+    fn clone_handler(&self) -> Box<dyn Handler> {
         Box::new(self.clone())
     }
 }
 
-impl Clone for Box<Handler> {
+impl Clone for Box<dyn Handler> {
     #[inline(always)]
-    fn clone(&self) -> Box<Handler> {
+    fn clone(&self) -> Box<dyn Handler> {
         self.clone_handler()
     }
 }

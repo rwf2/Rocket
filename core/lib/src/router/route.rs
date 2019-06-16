@@ -19,7 +19,7 @@ pub struct Route {
     /// The method this route matches against.
     pub method: Method,
     /// The function that should be called when the route matches.
-    pub handler: Box<Handler>,
+    pub handler: Box<dyn Handler>,
     /// The base mount point of this `Route`.
     pub base: Origin<'static>,
     /// The uri (in Rocket's route format) that should be matched against. This

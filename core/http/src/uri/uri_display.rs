@@ -294,7 +294,7 @@ pub trait UriDisplay<P: UriPart> {
     fn fmt(&self, f: &mut Formatter<P>) -> fmt::Result;
 }
 
-impl<'a, P: UriPart> fmt::Display for &'a UriDisplay<P> {
+impl<'a, P: UriPart> fmt::Display for &'a dyn UriDisplay<P> {
     #[inline(always)]
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         UriDisplay::fmt(*self, &mut <Formatter<P>>::new(f))

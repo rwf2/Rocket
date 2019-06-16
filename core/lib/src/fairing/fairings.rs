@@ -5,7 +5,7 @@ use yansi::Paint;
 
 #[derive(Default)]
 pub struct Fairings {
-    all_fairings: Vec<Box<Fairing>>,
+    all_fairings: Vec<Box<dyn Fairing>>,
     attach_failures: Vec<&'static str>,
     // The vectors below hold indices into `all_fairings`.
     launch: Vec<usize>,
@@ -19,7 +19,7 @@ impl Fairings {
         Fairings::default()
     }
 
-    pub fn attach(&mut self, fairing: Box<Fairing>, mut rocket: Rocket) -> Rocket {
+    pub fn attach(&mut self, fairing: Box<dyn Fairing>, mut rocket: Rocket) -> Rocket {
         // Run the `on_attach` callback if this is an 'attach' fairing.
         let kind = fairing.info().kind;
         let name = fairing.info().name;
@@ -32,7 +32,7 @@ impl Fairings {
         rocket
     }
 
-    fn add(&mut self, fairing: Box<Fairing>) {
+    fn add(&mut self, fairing: Box<dyn Fairing>) {
         let kind = fairing.info().kind;
         if !kind.is_exactly(Kind::Attach) {
             let index = self.all_fairings.len();

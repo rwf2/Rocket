@@ -24,7 +24,7 @@ fn is_not_separator(byte: char) -> bool {
 #[inline(always)]
 fn is_ident_char(byte: char) -> bool {
     match byte {
-        '0'...'9' | 'A'...'Z' | 'a'...'z' | '_' | '-' => true,
+        '0'..='9' | 'A'..='Z' | 'a'..='z' | '_' | '-' => true,
         _ => false
     }
 }

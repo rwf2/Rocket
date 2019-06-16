@@ -123,7 +123,7 @@ pub struct TemplateFairing {
     /// The user-provided customization callback, allowing the use of
     /// functionality specific to individual template engines. In debug mode,
     /// this callback might be run multiple times as templates are reloaded.
-    crate custom_callback: Box<Fn(&mut Engines) + Send + Sync + 'static>,
+    crate custom_callback: Box<dyn Fn(&mut Engines) + Send + Sync + 'static>,
 }
 
 impl Fairing for TemplateFairing {

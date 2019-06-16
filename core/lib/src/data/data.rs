@@ -15,7 +15,7 @@ use http::hyper::h1::HttpReader::*;
 use http::hyper::net::{HttpStream, NetworkStream};
 
 pub type HyperBodyReader<'a, 'b> =
-    self::HttpReader<&'a mut hyper::buffer::BufReader<&'b mut NetworkStream>>;
+    self::HttpReader<&'a mut hyper::buffer::BufReader<&'b mut dyn NetworkStream>>;
 
 //                              |---- from hyper ----|
 pub type BodyReader = HttpReader<Chain<Cursor<Vec<u8>>, NetStream>>;
@@ -94,7 +94,7 @@ impl Data {
     crate fn from_hyp(mut body: HyperBodyReader) -> Result<Data, &'static str> {
         #[inline(always)]
         #[cfg(feature = "tls")]
-        fn concrete_stream(stream: &mut NetworkStream) -> Option<NetStream> {
+        fn concrete_stream(stream: &mut dyn NetworkStream) -> Option<NetStream> {
             stream.downcast_ref::<HttpsStream>()
                 .map(|s| NetStream::Https(s.clone()))
                 .or_else(|| {

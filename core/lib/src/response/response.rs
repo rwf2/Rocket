@@ -560,7 +560,7 @@ impl<'r> ResponseBuilder<'r> {
 pub struct Response<'r> {
     status: Option<Status>,
     headers: HeaderMap<'r>,
-    body: Option<Body<Box<io::Read + 'r>>>,
+    body: Option<Body<Box<dyn io::Read + 'r>>>,
 }
 
 impl<'r> Response<'r> {
@@ -889,7 +889,7 @@ impl<'r> Response<'r> {
     /// assert_eq!(response.body_string(), Some("Hello, world!".to_string()));
     /// ```
     #[inline(always)]
-    pub fn body(&mut self) -> Option<Body<&mut io::Read>> {
+    pub fn body(&mut self) -> Option<Body<&mut dyn io::Read>> {
         // Looks crazy, right? Needed so Rust infers lifetime correctly. Weird.
         match self.body.as_mut() {
             Some(body) => Some(match body.as_mut() {
@@ -966,7 +966,7 @@ impl<'r> Response<'r> {
     /// assert!(response.body().is_none());
     /// ```
     #[inline(always)]
-    pub fn take_body(&mut self) -> Option<Body<Box<io::Read + 'r>>> {
+    pub fn take_body(&mut self) -> Option<Body<Box<dyn io::Read + 'r>>> {
         self.body.take()
     }
 
