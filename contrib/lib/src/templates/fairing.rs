@@ -73,7 +73,7 @@ mod context {
             }
         }
 
-        crate fn context<'a>(&'a self) -> impl Deref<Target=Context> + 'a {
+        crate fn context(&self) -> impl Deref<Target=Context> + '_ {
             self.context.read().unwrap()
         }
 
@@ -81,7 +81,7 @@ mod context {
             self.watcher.is_some()
         }
 
-        fn context_mut<'a>(&'a self) -> impl DerefMut<Target=Context> + 'a {
+        fn context_mut(&self) -> impl DerefMut<Target=Context> + '_ {
             self.context.write().unwrap()
         }
 

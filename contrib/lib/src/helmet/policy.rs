@@ -151,8 +151,8 @@ impl Default for Referrer {
     }
 }
 
-impl<'h, 'a> Into<Header<'h>> for &'a Referrer {
-    fn into(self) -> Header<'h> {
+impl Into<Header<'static>> for &Referrer {
+    fn into(self) -> Header<'static> {
         let policy_string = match self {
             Referrer::NoReferrer => "no-referrer",
             Referrer::NoReferrerWhenDowngrade => "no-referrer-when-downgrade",
@@ -209,7 +209,7 @@ impl Default for ExpectCt {
     }
 }
 
-impl<'a> Into<Header<'static>> for &'a ExpectCt {
+impl Into<Header<'static>> for &ExpectCt {
     fn into(self) -> Header<'static> {
         let policy_string =  match self {
             ExpectCt::Enforce(age) => format!("max-age={}, enforce", age.num_seconds()),
@@ -243,8 +243,8 @@ impl Default for NoSniff {
     }
 }
 
-impl<'h, 'a> Into<Header<'h>> for &'a NoSniff {
-    fn into(self) -> Header<'h> {
+impl Into<Header<'static>> for &NoSniff {
+    fn into(self) -> Header<'static> {
         Header::new(NoSniff::NAME, "nosniff")
     }
 }
@@ -295,7 +295,7 @@ impl Default for Hsts {
     }
 }
 
-impl<'a> Into<Header<'static>> for &'a Hsts {
+impl Into<Header<'static>> for &Hsts {
     fn into(self) -> Header<'static> {
         let policy_string = match self {
             Hsts::Enable(age) => format!("max-age={}", age.num_seconds()),
@@ -345,7 +345,7 @@ impl Default for Frame {
     }
 }
 
-impl<'a> Into<Header<'static>> for &'a Frame {
+impl Into<Header<'static>> for &Frame {
     fn into(self) -> Header<'static> {
         let policy_string: Cow<'static, str> = match self {
             Frame::Deny => "DENY".into(),
@@ -387,7 +387,7 @@ impl Default for XssFilter {
     }
 }
 
-impl<'a> Into<Header<'static>> for &'a XssFilter {
+impl Into<Header<'static>> for &XssFilter {
     fn into(self) -> Header<'static> {
         let policy_string: Cow<'static, str> = match self {
             XssFilter::Disable => "0".into(),
