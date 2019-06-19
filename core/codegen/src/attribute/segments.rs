@@ -31,7 +31,7 @@ impl Segment {
     }
 }
 
-impl<'a> From<&'a syn::Ident> for Segment {
+impl From<&syn::Ident> for Segment {
     fn from(ident: &syn::Ident) -> Segment {
         Segment {
             kind: Kind::Static,
