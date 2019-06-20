@@ -1,4 +1,4 @@
-#![feature(proc_macro_hygiene, decl_macro)]
+#![feature(proc_macro_hygiene)]
 
 // Rocket sometimes generates mangled identifiers that activate the
 // non_snake_case lint. We deny the lint in this test to ensure that

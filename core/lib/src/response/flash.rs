@@ -45,7 +45,7 @@ const FLASH_COOKIE_NAME: &str = "_flash";
 /// message on both the request and response sides.
 ///
 /// ```rust
-/// # #![feature(proc_macro_hygiene, decl_macro)]
+/// # #![feature(proc_macro_hygiene)]
 /// # #[macro_use] extern crate rocket;
 /// use rocket::response::{Flash, Redirect};
 /// use rocket::request::FlashMessage;

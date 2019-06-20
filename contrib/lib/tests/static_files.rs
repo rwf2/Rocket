@@ -1,4 +1,4 @@
-#![feature(proc_macro_hygiene, decl_macro)]
+#![feature(proc_macro_hygiene)]
 
 #[cfg(feature = "serve")]
 mod static_tests {

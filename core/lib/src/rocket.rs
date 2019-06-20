@@ -457,7 +457,7 @@ impl Rocket {
     /// dispatched to the `hi` route.
     ///
     /// ```rust
-    /// # #![feature(proc_macro_hygiene, decl_macro)]
+    /// # #![feature(proc_macro_hygiene)]
     /// # #[macro_use] extern crate rocket;
     /// #
     /// #[get("/world")]
@@ -529,7 +529,7 @@ impl Rocket {
     /// # Examples
     ///
     /// ```rust
-    /// # #![feature(proc_macro_hygiene, decl_macro)]
+    /// # #![feature(proc_macro_hygiene)]
     /// # #[macro_use] extern crate rocket;
     /// use rocket::Request;
     ///
@@ -584,7 +584,7 @@ impl Rocket {
     /// # Example
     ///
     /// ```rust
-    /// # #![feature(proc_macro_hygiene, decl_macro)]
+    /// # #![feature(proc_macro_hygiene)]
     /// # #[macro_use] extern crate rocket;
     /// use rocket::State;
     ///
@@ -621,7 +621,7 @@ impl Rocket {
     /// # Example
     ///
     /// ```rust
-    /// # #![feature(proc_macro_hygiene, decl_macro)]
+    /// # #![feature(proc_macro_hygiene)]
     /// # #[macro_use] extern crate rocket;
     /// use rocket::Rocket;
     /// use rocket::fairing::AdHoc;
@@ -735,7 +735,7 @@ impl Rocket {
     /// # Example
     ///
     /// ```rust
-    /// # #![feature(proc_macro_hygiene, decl_macro)]
+    /// # #![feature(proc_macro_hygiene)]
     /// # #[macro_use] extern crate rocket;
     /// use rocket::Rocket;
     /// use rocket::fairing::AdHoc;
@@ -791,7 +791,7 @@ impl Rocket {
     /// # Example
     ///
     /// ```rust
-    /// # #![feature(proc_macro_hygiene, decl_macro)]
+    /// # #![feature(proc_macro_hygiene)]
     /// # #[macro_use] extern crate rocket;
     /// use rocket::Rocket;
     /// use rocket::fairing::AdHoc;

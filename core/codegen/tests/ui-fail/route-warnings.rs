@@ -1,6 +1,6 @@
 // must-compile-successfully
 
-#![feature(proc_macro_hygiene, decl_macro)]
+#![feature(proc_macro_hygiene)]
 
 #[macro_use] extern crate rocket;
 

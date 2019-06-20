@@ -10,7 +10,7 @@ Rocket is web framework for Rust (nightly) with a focus on ease-of-use,
 expressibility, and speed. Here's an example of a complete Rocket application:
 
 ```rust
-#![feature(proc_macro_hygiene, decl_macro)]
+#![feature(proc_macro_hygiene)]
 
 #[macro_use] extern crate rocket;
 

@@ -1,4 +1,4 @@
-#![feature(proc_macro_hygiene, decl_macro)]
+#![feature(proc_macro_hygiene)]
 #![allow(dead_code, unused_variables)]
 
 #[macro_use] extern crate rocket;
@@ -6,7 +6,7 @@
 use std::path::PathBuf;
 
 use rocket::http::{RawStr, Cookies};
-use rocket::http::uri::{Origin, FromUriParam, Query};
+use rocket::http::uri::{FromUriParam, Query};
 use rocket::request::Form;
 
 #[derive(FromForm, UriDisplayQuery)]
@@ -82,8 +82,10 @@ fn param_and_segments(path: PathBuf, id: usize) { }
 #[post("/a/<id>/then/<path..>")]
 fn guarded_segments(cookies: Cookies<'_>, path: PathBuf, id: usize) { }
 
-macro assert_uri_eq($($uri:expr => $expected:expr,)+) {
-    $(assert_eq!($uri, Origin::parse($expected).expect("valid origin URI"));)+
+macro_rules! assert_uri_eq {
+    ($($uri:expr => $expected:expr,)+) => {
+        $(assert_eq!($uri, rocket::http::uri::Origin::parse($expected).expect("valid origin URI"));)+
+    };
 }
 
 #[test]
@@ -323,8 +325,6 @@ fn check_scoped() {
 }
 
 mod typed_uris {
-    use super::assert_uri_eq;
-
     #[post("/typed_uris/<id>")]
     fn simple(id: i32) { }
 
@@ -339,8 +339,6 @@ mod typed_uris {
     }
 
     pub mod deeper {
-        use super::assert_uri_eq;
-
         #[post("/typed_uris/deeper/<id>")]
         fn simple(id: i32) { }
 

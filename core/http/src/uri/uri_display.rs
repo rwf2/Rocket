@@ -61,7 +61,7 @@ use crate::uri::{Uri, UriPart, Path, Query, Formatter};
 /// the following route:
 ///
 /// ```rust
-/// # #![feature(proc_macro_hygiene, decl_macro)]
+/// # #![feature(proc_macro_hygiene)]
 /// # #[macro_use] extern crate rocket;
 /// #[get("/item/<id>?<track>")]
 /// fn get_item(id: i32, track: Option<String>) { /* .. */ }
@@ -70,7 +70,7 @@ use crate::uri::{Uri, UriPart, Path, Query, Formatter};
 /// A URI for this route can be generated as follows:
 ///
 /// ```rust
-/// # #![feature(proc_macro_hygiene, decl_macro)]
+/// # #![feature(proc_macro_hygiene)]
 /// # #[macro_use] extern crate rocket;
 /// # type T = ();
 /// # #[get("/item/<id>?<track>")]
@@ -234,7 +234,7 @@ use crate::uri::{Uri, UriPart, Path, Query, Formatter};
 /// `UriDisplay` implementation is required.
 ///
 /// ```rust
-/// # #![feature(proc_macro_hygiene, decl_macro)]
+/// # #![feature(proc_macro_hygiene)]
 /// # #[macro_use] extern crate rocket;
 /// use rocket::http::RawStr;
 /// use rocket::request::FromParam;
@@ -432,7 +432,7 @@ impl<T: UriDisplay<Query>, E> UriDisplay<Query> for Result<T, E> {
 /// trait for the corresponding `UriPart`.
 ///
 /// ```rust
-/// # #![feature(proc_macro_hygiene, decl_macro)]
+/// # #![feature(proc_macro_hygiene)]
 /// # #[macro_use] extern crate rocket;
 /// #[get("/item/<id>?<track>")]
 /// fn get_item(id: i32, track: Option<u8>) { /* .. */ }

@@ -30,7 +30,7 @@ use crate::http::{Status, uri::{Query, FromUriParam}};
 /// implements the `FromForm` trait:
 ///
 /// ```rust
-/// # #![feature(proc_macro_hygiene, decl_macro)]
+/// # #![feature(proc_macro_hygiene)]
 /// # #[macro_use] extern crate rocket;
 /// use rocket::request::Form;
 /// use rocket::http::RawStr;
@@ -66,7 +66,7 @@ use crate::http::{Status, uri::{Query, FromUriParam}};
 /// A handler that handles a form of this type can similarly by written:
 ///
 /// ```rust
-/// # #![feature(proc_macro_hygiene, decl_macro)]
+/// # #![feature(proc_macro_hygiene)]
 /// # #![allow(deprecated, unused_attributes)]
 /// # #[macro_use] extern crate rocket;
 /// # use rocket::request::Form;
@@ -119,7 +119,7 @@ impl<T> Form<T> {
     /// # Example
     ///
     /// ```rust
-    /// # #![feature(proc_macro_hygiene, decl_macro)]
+    /// # #![feature(proc_macro_hygiene)]
     /// # #[macro_use] extern crate rocket;
     /// use rocket::request::Form;
     ///

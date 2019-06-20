@@ -50,7 +50,7 @@ And finally, create a skeleton Rocket application to work off of in
 `src/main.rs`:
 
 ```rust
-#![feature(proc_macro_hygiene, decl_macro)]
+#![feature(proc_macro_hygiene)]
 
 #[macro_use] extern crate rocket;
 

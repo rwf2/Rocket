@@ -1,5 +1,4 @@
 #![feature(specialization)]
-#![feature(decl_macro)]
 #![feature(try_trait)]
 #![feature(proc_macro_hygiene)]
 #![feature(crate_visibility_modifier)]
@@ -52,7 +51,7 @@
 //! Then, add the following to the top of your `main.rs` file:
 //!
 //! ```rust
-//! #![feature(proc_macro_hygiene, decl_macro)]
+//! #![feature(proc_macro_hygiene)]
 //!
 //! #[macro_use] extern crate rocket;
 //! # #[get("/")] fn hello() { }
@@ -63,7 +62,7 @@
 //! write Rocket applications. Here's a simple example to get you started:
 //!
 //! ```rust
-//! #![feature(proc_macro_hygiene, decl_macro)]
+//! #![feature(proc_macro_hygiene)]
 //!
 //! #[macro_use] extern crate rocket;
 //!
