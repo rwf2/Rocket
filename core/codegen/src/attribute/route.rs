@@ -1,4 +1,5 @@
-use rand::{Rng, distributions::Alphanumeric};
+use std::collections::hash_map::DefaultHasher;
+use std::hash::{Hash, Hasher};
 
 use proc_macro::{TokenStream, Span};
 use crate::proc_macro2::TokenStream as TokenStream2;
@@ -327,11 +328,16 @@ fn generate_internal_uri_macro(route: &Route) -> TokenStream2 {
         .map(|name| route.inputs.iter().find(|(ident, ..)| ident == name).unwrap())
         .map(|(ident, _, ty)| quote!(#ident: #ty));
 
-    let random_part = rand::thread_rng().sample_iter(&Alphanumeric).take(8).collect::<String>();
+    let mut hasher = DefaultHasher::new();
+    let route_span = route.function.span();
+    route_span.source_file().path().hash(&mut hasher);
+    let line_column = route_span.start();
+    line_column.line.hash(&mut hasher);
+    line_column.column.hash(&mut hasher);
 
     let mut generated_macro_name = route.function.ident.prepend(URI_MACRO_PREFIX);
     generated_macro_name.set_span(Span::call_site().into());
-    let inner_generated_macro_name = generated_macro_name.append(&random_part);
+    let inner_generated_macro_name = generated_macro_name.append(&hasher.finish().to_string());
     let route_uri = route.attribute.path.origin.0.to_string();
 
     quote! {
