@@ -73,7 +73,9 @@ use http::{RawStr, uri::{Segments, SegmentError}};
 /// behavior is documented here.
 ///
 ///   * **f32, f64, isize, i8, i16, i32, i64, i128, usize, u8, u16, u32, u64,
-///     u128, bool, IpAddr, Ipv4Addr, Ipv6Addr, SocketAddrV4, SocketAddrV6,
+///     u128, bool, NonZeroI8, NonZeroI16, NonZeroI32, NonZeroI64, NonZeroI128,
+///     NonZeroIsize, NonZeroU8, NonZeroU16, NonZeroU32, NonZeroU64, NonZeroU128,
+///     NonZeroUsize, IpAddr, Ipv4Addr, Ipv6Addr, SocketAddrV4, SocketAddrV6,
 ///     SocketAddr**
 ///
 ///     A value is parsed successfully if the `from_str` method from the given

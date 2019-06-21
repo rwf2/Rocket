@@ -1,3 +1,7 @@
+use std::num::{
+    NonZeroI8, NonZeroI16, NonZeroI32, NonZeroI64, NonZeroI128, NonZeroIsize,
+    NonZeroU8, NonZeroU16, NonZeroU32, NonZeroU64, NonZeroU128, NonZeroUsize,
+};
 use std::net::{IpAddr, Ipv4Addr, Ipv6Addr, SocketAddrV4, SocketAddrV6, SocketAddr};
 use std::str::FromStr;
 
@@ -78,7 +82,9 @@ use http::RawStr;
 /// behavior is documented here.
 ///
 ///   * **f32, f64, isize, i8, i16, i32, i64, i128, usize, u8, u16, u32, u64,
-///     u128, IpAddr, Ipv4Addr, Ipv6Addr, SocketAddrV4, SocketAddrV6,
+///     u128, NonZeroI8, NonZeroI16, NonZeroI32, NonZeroI64, NonZeroI128,
+///     NonZeroIsize, NonZeroU8, NonZeroU16, NonZeroU32, NonZeroU64, NonZeroU128,
+///     NonZeroUsize, IpAddr, Ipv4Addr, Ipv6Addr, SocketAddrV4, SocketAddrV6,
 ///     SocketAddr**
 ///
 ///     A value is validated successfully if the `from_str` method for the given
@@ -231,9 +237,12 @@ macro_rules! impl_with_fromstr {
     )+)
 }
 
-impl_with_fromstr!(f32, f64, isize, i8, i16, i32, i64, i128, usize, u8, u16,
-    u32, u64, u128, IpAddr, Ipv4Addr, Ipv6Addr, SocketAddrV4, SocketAddrV6,
-    SocketAddr);
+impl_with_fromstr!(
+    f32, f64, isize, i8, i16, i32, i64, i128, usize, u8, u16, u32, u64, u128,
+    NonZeroI8, NonZeroI16, NonZeroI32, NonZeroI64, NonZeroI128, NonZeroIsize,
+    NonZeroU8, NonZeroU16, NonZeroU32, NonZeroU64, NonZeroU128, NonZeroUsize,
+    IpAddr, Ipv4Addr, Ipv6Addr, SocketAddrV4, SocketAddrV6, SocketAddr
+);
 
 impl<'v, T: FromFormValue<'v>> FromFormValue<'v> for Option<T> {
     type Error = !;
