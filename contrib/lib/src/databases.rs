@@ -395,6 +395,7 @@
 //! [request guards]: rocket::request::FromRequest
 //! [`Poolable`]: databases::Poolable
 
+#![allow(unused_extern_crates)]
 pub extern crate r2d2;
 
 #[cfg(any(feature = "diesel_sqlite_pool",
