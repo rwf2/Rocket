@@ -14,7 +14,7 @@
 //! features = ["uuid"]
 //! ```
 
-pub use uuid as uuid_crate;
+pub extern crate uuid as uuid_crate;
 
 use std::fmt;
 use std::str::FromStr;
