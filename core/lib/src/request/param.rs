@@ -72,11 +72,14 @@ use http::{RawStr, uri::{Segments, SegmentError}};
 /// Rocket implements `FromParam` for several standard library types. Their
 /// behavior is documented here.
 ///
-///   * **f32, f64, isize, i8, i16, i32, i64, i128, usize, u8, u16, u32, u64,
-///     u128, bool, NonZeroI8, NonZeroI16, NonZeroI32, NonZeroI64, NonZeroI128,
-///     NonZeroIsize, NonZeroU8, NonZeroU16, NonZeroU32, NonZeroU64, NonZeroU128,
-///     NonZeroUsize, IpAddr, Ipv4Addr, Ipv6Addr, SocketAddrV4, SocketAddrV6,
-///     SocketAddr**
+///   *
+///       * Primitive types: **f32, f64, isize, i8, i16, i32, i64, i128,
+///         usize, u8, u16, u32, u64, u128, bool**
+///       * `IpAddr` and `SocketAddr` types: **IpAddr, Ipv4Addr, Ipv6Addr,
+///         SocketAddrV4, SocketAddrV6, SocketAddr**
+///       * `NonZero*` types: **NonZeroI8, NonZeroI16, NonZeroI32, NonZeroI64,
+///         NonZeroI128, NonZeroIsize, NonZeroU8, NonZeroU16, NonZeroU32,
+///         NonZeroU64, NonZeroU128, NonZeroUsize**
 ///
 ///     A value is parsed successfully if the `from_str` method from the given
 ///     type returns successfully. Otherwise, the raw path segment is returned
