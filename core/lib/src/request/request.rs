@@ -3,8 +3,6 @@ use std::cell::{Cell, RefCell};
 use std::net::{IpAddr, SocketAddr};
 use std::fmt;
 use std::str;
-use std::str::FromStr;
-use std::sync::Arc;
 
 use yansi::Paint;
 use state::{Container, Storage};
@@ -15,7 +13,7 @@ use crate::request::{FromFormValue, FormItems, FormItem};
 use crate::rocket::Rocket;
 use crate::router::Route;
 use crate::config::{Config, Limits};
-use crate::http::{hyper, uri::{Origin, Segments, Uri}};
+use crate::http::{hyper, uri::{Origin, Segments}};
 use crate::http::{Method, Header, HeaderMap, Cookies};
 use crate::http::{RawStr, ContentType, Accept, MediaType};
 use crate::http::private::{Indexed, SmallVec, CookieJar};
@@ -820,7 +818,7 @@ impl<'r> Request<'r> {
         // TODO if cookie_headers.peek().is_some() {
             let mut cookie_jar = CookieJar::new();
             for header in cookie_headers {
-                let raw_str = match ::std::str::from_utf8(header.as_bytes()) {
+                let raw_str = match std::str::from_utf8(header.as_bytes()) {
                     Ok(string) => string,
                     Err(_) => continue
                 };

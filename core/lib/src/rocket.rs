@@ -2,10 +2,8 @@ use std::collections::HashMap;
 use std::convert::From;
 use std::str::{from_utf8, FromStr};
 use std::cmp::min;
-use std::io::{self, Write};
-use std::time::Duration;
 use std::mem;
-use std::net::{IpAddr, SocketAddr, ToSocketAddrs};
+use std::net::ToSocketAddrs;
 use std::sync::Arc;
 
 use futures::{Future, Stream};
@@ -19,7 +17,6 @@ use tokio::prelude::{Future as _, Stream as _};
 #[cfg(feature = "tls")] use crate::http::tls::TlsAcceptor;
 
 use crate::{logger, handler};
-use crate::ext::ReadExt;
 use crate::config::{self, Config, LoggedValue};
 use crate::request::{Request, FormItems};
 use crate::data::Data;
@@ -45,16 +42,20 @@ pub struct Rocket {
     fairings: Fairings,
 }
 
-struct RocketArcs {
-    config: Arc<Config>,
-    router: Arc<Router>,
-    default_catchers: Arc<HashMap<u16, Catcher>>,
-    catchers: Arc<HashMap<u16, Catcher>>,
-    state: Arc<Container>,
-    fairings: Arc<Fairings>,
+#[derive(Clone)]
+struct RocketHyperService {
+    rocket: Arc<Rocket>,
 }
 
-impl<Ctx> hyper::MakeService<Ctx> for RocketArcs {
+impl std::ops::Deref for RocketHyperService {
+    type Target = Rocket;
+
+    fn deref(&self) -> &Self::Target {
+        &*self.rocket
+    }
+}
+
+impl<Ctx> hyper::MakeService<Ctx> for RocketHyperService {
     type ReqBody = hyper::Body;
     type ResBody = hyper::Body;
     type Error = hyper::Error;
@@ -63,18 +64,8 @@ impl<Ctx> hyper::MakeService<Ctx> for RocketArcs {
     type MakeError = Self::Error;
 
     fn make_service(&mut self, _: Ctx) -> Self::Future {
-        future::ok(RocketHyperService::new(self))
+        future::ok(RocketHyperService { rocket: self.rocket.clone() })
     }
-}
-
-#[derive(Clone)]
-pub struct RocketHyperService {
-    config: Arc<Config>,
-    router: Arc<Router>,
-    default_catchers: Arc<HashMap<u16, Catcher>>,
-    catchers: Arc<HashMap<u16, Catcher>>,
-    state: Arc<Container>,
-    fairings: Arc<Fairings>,
 }
 
 #[doc(hidden)]
@@ -82,8 +73,7 @@ impl hyper::Service for RocketHyperService {
     type ReqBody = hyper::Body;
     type ResBody = hyper::Body;
     type Error = hyper::Error;
-    //type Future = FutureResult<hyper::Response<Self::ResBody>, Self::Error>;
-    type Future = Box<future::Future<Item = hyper::Response<Self::ResBody>, Error = Self::Error> + Send>;
+    type Future = Box<dyn future::Future<Item = hyper::Response<Self::ResBody>, Error = Self::Error> + Send>;
 
     // This function tries to hide all of the Hyper-ness from Rocket. It
     // essentially converts Hyper types into Rocket types, then calls the
@@ -132,19 +122,6 @@ impl hyper::Service for RocketHyperService {
 }
 
 impl RocketHyperService {
-
-    #[inline]
-    fn new(rocket: &RocketArcs) -> RocketHyperService {
-        RocketHyperService {
-            config: rocket.config.clone(),
-            router: rocket.router.clone(),
-            default_catchers: rocket.default_catchers.clone(),
-            catchers: rocket.catchers.clone(),
-            state: rocket.state.clone(),
-            fairings: rocket.fairings.clone(),
-        }
-    }
-
     /// Preprocess the request for Rocket things. Currently, this means:
     ///
     ///   * Rewriting the method in the request if _method form field exists.
@@ -322,7 +299,7 @@ impl Rocket {
     crate fn handle_error<'r>(
         &self,
         status: Status,
-        req: &'r Request
+        req: &'r Request<'_>
     ) -> Response<'r> {
         unimplemented!("TODO")
     }
@@ -553,8 +530,6 @@ impl Rocket {
     pub fn register(mut self, catchers: Vec<Catcher>) -> Self {
         info!("{}{}", Paint::masked("👾 "), Paint::magenta("Catchers:"));
 
-        let mut current_catchers = self.catchers.clone();
-
         for c in catchers {
             if self.catchers.get(&c.code).map_or(false, |e| !e.is_default) {
                 info_!("{} {}", c, Paint::yellow("(warning: duplicate catcher!)"));
@@ -562,10 +537,8 @@ impl Rocket {
                 info_!("{}", c);
             }
 
-            current_catchers.insert(c.code, c);
+            self.catchers.insert(c.code, c);
         }
-
-        self.catchers = current_catchers;
 
         self
     }
@@ -763,12 +736,12 @@ impl Rocket {
         // Restore the log level back to what it originally was.
         logger::pop_max_level();
 
-        let arcs = RocketArcs::from(self);
+        let service = RocketHyperService { rocket: Arc::new(self) };
 
         // NB: executor must be passed manually here, see hyperium/hyper#1537
         let server = hyper::Server::builder(incoming)
             .executor(runtime.executor())
-            .serve(arcs);
+            .serve(service);
 
         // TODO.async: Use with_graceful_shutdown, and let launch() return a Result<(), Error>
         runtime.block_on(server).expect("TODO.async handle error");
@@ -859,22 +832,9 @@ impl Rocket {
     }
 }
 
-impl From<Rocket> for RocketArcs {
-    fn from(mut rocket: Rocket) -> Self {
-        RocketArcs {
-            config: Arc::new(rocket.config),
-            router: Arc::new(rocket.router),
-            default_catchers: Arc::new(rocket.default_catchers),
-            catchers: Arc::new(rocket.catchers),
-            state: Arc::new(rocket.state),
-            fairings: Arc::new(rocket.fairings),
-        }
-    }
-}
-
 // TODO: consider try_from here?
 impl<'a> From<Response<'a>> for hyper::Response<hyper::Body> {
-    fn from(mut response: Response) -> Self {
+    fn from(mut response: Response<'_>) -> Self {
 
         let mut builder = hyper::Response::builder();
         builder.status(hyper::StatusCode::from_u16(response.status().code).expect(""));

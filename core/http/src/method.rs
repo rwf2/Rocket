@@ -1,9 +1,7 @@
-extern crate http;
-
 use std::fmt;
 use std::str::FromStr;
 
-use crate::{hyper, uncased::uncased_eq};
+use crate::uncased::uncased_eq;
 
 use self::Method::*;
 
