@@ -25,7 +25,7 @@ Assuming you have a `Cargo.toml` at the root of you repo, going live on Render t
     Alternatively, you can pin the nightly version for your app:
 
     ```text
-    nightly-06-10-2019
+    nightly-07-01-2019
     ```
 
     Render will automatically detect and install the toolchain specified in this file. Commit and push your changes before proceeding to the next step.
@@ -48,4 +48,4 @@ Render has additional guides for deploying Rocket apps on their platform:
 * [Deploy a Rust GraphQL Server with Juniper
 ](https://render.com/docs/deploy-rust-graphql)
 
-Learn more in [Render docs](https:/render.com/docs).
+Learn more in [Render docs](https://render.com/docs).
