@@ -1,11 +1,9 @@
 #![feature(specialization)]
 #![feature(decl_macro)]
 #![feature(try_trait)]
-#![feature(fnbox)]
 #![feature(never_type)]
 #![feature(proc_macro_hygiene)]
 #![feature(crate_visibility_modifier)]
-#![feature(try_from)]
 #![feature(label_break_value)]
 
 #![recursion_limit="256"]
@@ -47,7 +45,7 @@
 //!
 //! ```toml
 //! [dependencies]
-//! rocket = "0.4.1"
+//! rocket = "0.4.2"
 //! ```
 //!
 //! Then, add the following to the top of your `main.rs` file:

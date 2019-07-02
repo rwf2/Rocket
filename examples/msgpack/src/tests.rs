@@ -13,6 +13,7 @@ fn msgpack_get() {
     let client = Client::new(rocket()).unwrap();
     let mut res = client.get("/message/1").header(ContentType::MsgPack).dispatch();
     assert_eq!(res.status(), Status::Ok);
+    assert_eq!(res.content_type(), Some(ContentType::MsgPack));
 
     // Check that the message is `[1, "Hello, world!"]`
     assert_eq!(&res.body_bytes().unwrap(),

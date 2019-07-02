@@ -9,7 +9,7 @@
 //!
 //! ```toml
 //! [dependencies.rocket_contrib]
-//! version = "0.4.1"
+//! version = "0.4.2"
 //! default-features = false
 //! features = ["json"]
 //! ```
@@ -19,6 +19,7 @@ extern crate serde_json;
 
 use std::ops::{Deref, DerefMut};
 use std::io::{self, Read};
+use std::iter::FromIterator;
 
 use rocket::request::Request;
 use rocket::outcome::Outcome::*;
@@ -274,6 +275,12 @@ impl From<serde_json::Value> for JsonValue {
     #[inline(always)]
     fn from(value: serde_json::Value) -> JsonValue {
         JsonValue(value)
+    }
+}
+
+impl<T> FromIterator<T> for JsonValue where serde_json::Value: FromIterator<T> {
+    fn from_iter<I: IntoIterator<Item=T>>(iter: I) -> Self {
+        JsonValue(serde_json::Value::from_iter(iter))
     }
 }
 

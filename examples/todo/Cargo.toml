@@ -14,7 +14,7 @@ diesel_migrations = "1.3"
 log = "0.4"
 
 [dev-dependencies]
-parking_lot = { version = "0.6", features = ["nightly"] }
+parking_lot = { version = "0.8", features = ["nightly"] }
 rand = "0.6"
 
 [dependencies.rocket_contrib]

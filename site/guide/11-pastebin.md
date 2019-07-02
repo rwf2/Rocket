@@ -22,11 +22,11 @@ curl --data-binary @test.txt https://paste.rs/
 
 The finished product is composed of the following routes:
 
-  * index: **GET /** - returns a simple HTML page with instructions about how
+  * index: **`GET /`** - returns a simple HTML page with instructions about how
     to use the service
-  * upload: **POST /** - accepts raw data in the body of the request and
+  * upload: **`POST /`** - accepts raw data in the body of the request and
     responds with a URL of a page containing the body's content
-  * retrieve: **GET /&lt;id>** - retrieves the content for the paste with id
+  * retrieve: **`GET /<id>`** - retrieves the content for the paste with id
     `<id>`
 
 ## Getting Started
@@ -43,7 +43,7 @@ Then add the usual Rocket dependencies to the `Cargo.toml` file:
 
 ```toml
 [dependencies]
-rocket = "0.4.1"
+rocket = "0.4.2"
 ```
 
 And finally, create a skeleton Rocket application to work off of in

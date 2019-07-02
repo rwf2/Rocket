@@ -1,6 +1,6 @@
 #![feature(proc_macro_hygiene, decl_macro)]
 
-#[macro_use] extern crate rocket;
+extern crate rocket;
 
 use rocket::local::Client;
 use rocket::response::Responder;

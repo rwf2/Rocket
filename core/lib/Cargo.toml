@@ -1,6 +1,6 @@
 [package]
 name = "rocket"
-version = "0.4.1"
+version = "0.4.2"
 authors = ["Sergio Benitez <sb@sergio.bz>"]
 description = """
 Web framework for nightly with a focus on ease-of-use, expressibility, and speed.
@@ -23,8 +23,8 @@ tls = ["rocket_http/tls"]
 private-cookies = ["rocket_http/private-cookies"]
 
 [dependencies]
-rocket_codegen = { version = "0.4.1", path = "../codegen" }
-rocket_http = { version = "0.4.1", path = "../http" }
+rocket_codegen = { version = "0.4.2", path = "../codegen" }
+rocket_http = { version = "0.4.2", path = "../http" }
 yansi = "0.5"
 log = "0.4"
 toml = "0.4.7"
@@ -38,7 +38,7 @@ atty = "0.2"
 
 [build-dependencies]
 yansi = "0.5"
-version_check = "0.1.3"
+version_check = "0.9.1"
 
 [dev-dependencies]
 # TODO: Find a way to not depend on this.

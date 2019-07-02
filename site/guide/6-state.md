@@ -177,18 +177,19 @@ three simple steps:
 
 Presently, Rocket provides built-in support for the following databases:
 
-| Kind     | Driver                | `Poolable` Type                | Feature                |
-|----------|-----------------------|--------------------------------|------------------------|
-| MySQL    | [Diesel]              | [`diesel::MysqlConnection`]    | `diesel_mysql_pool`    |
-| MySQL    | [`rust-mysql-simple`] | [`mysql::conn`]                | `mysql_pool`           |
-| Postgres | [Diesel]              | [`diesel::PgConnection`]       | `diesel_postgres_pool` |
-| Postgres | [Rust-Postgres]       | [`postgres::Connection`]       | `postgres_pool`        |
-| Sqlite   | [Diesel]              | [`diesel::SqliteConnection`]   | `diesel_sqlite_pool`   |
-| Sqlite   | [`Rustqlite`]         | [`rusqlite::Connection`]       | `sqlite_pool`          |
-| Neo4j    | [`rusted_cypher`]     | [`rusted_cypher::GraphClient`] | `cypher_pool`          |
-| Redis    | [`redis-rs`]          | [`redis::Connection`]          | `redis_pool`           |
-| MongoDB  | [`mongodb`]           | [`mongodb::db::Database`]      | `mongodb_pool`         |
-| Memcache | [`memcache`]          | [`memcache::Client`]           | `memcache_pool`        |
+<!-- Note: Keep this table in sync with contrib/lib/src/databases.rs -->
+| Kind     | Driver                | Version   | `Poolable` Type                | Feature                |
+|----------|-----------------------|-----------|--------------------------------|------------------------|
+| MySQL    | [Diesel]              | `1`       | [`diesel::MysqlConnection`]    | `diesel_mysql_pool`    |
+| MySQL    | [`rust-mysql-simple`] | `16`      | [`mysql::conn`]                | `mysql_pool`           |
+| Postgres | [Diesel]              | `1`       | [`diesel::PgConnection`]       | `diesel_postgres_pool` |
+| Postgres | [Rust-Postgres]       | `0.15`    | [`postgres::Connection`]       | `postgres_pool`        |
+| Sqlite   | [Diesel]              | `1`       | [`diesel::SqliteConnection`]   | `diesel_sqlite_pool`   |
+| Sqlite   | [`Rustqlite`]         | `0.16`    | [`rusqlite::Connection`]       | `sqlite_pool`          |
+| Neo4j    | [`rusted_cypher`]     | `1`       | [`rusted_cypher::GraphClient`] | `cypher_pool`          |
+| Redis    | [`redis-rs`]          | `0.10`    | [`redis::Connection`]          | `redis_pool`           |
+| MongoDB  | [`mongodb`]           | `0.3.12`  | [`mongodb::db::Database`]      | `mongodb_pool`         |
+| Memcache | [`memcache`]          | `0.11`    | [`memcache::Client`]           | `memcache_pool`        |
 
 [`r2d2`]: https://crates.io/crates/r2d2
 [Diesel]: https://diesel.rs
@@ -221,7 +222,7 @@ databases, you'd write in `Cargo.toml`:
 
 ```toml
 [dependencies.rocket_contrib]
-version = "0.4.1"
+version = "0.4.2"
 default-features = false
 features = ["diesel_sqlite_pool"]
 ```
@@ -264,6 +265,15 @@ request guard:
 fn get_logs(conn: LogsDbConn, id: usize) -> Result<Logs> {
     logs::filter(id.eq(log_id)).load(&*conn)
 }
+```
+
+If your application uses features of a database engine that are not available
+by default, for example support for `chrono` or `uuid`, you may enable those
+features by adding them in `Cargo.toml` like so:
+
+```toml
+[dependencies]
+postgres = { version = "0.15", features = ["with-chrono"] }
 ```
 
 For more on Rocket's built-in database support, see the

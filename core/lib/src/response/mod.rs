@@ -31,6 +31,8 @@ crate mod flash;
 pub mod content;
 pub mod status;
 
+#[doc(hidden)] pub use rocket_codegen::Responder;
+
 pub use self::response::{Response, ResponseBuilder, Body, DEFAULT_CHUNK_SIZE};
 pub use self::responder::Responder;
 pub use self::redirect::Redirect;

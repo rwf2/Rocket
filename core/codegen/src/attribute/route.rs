@@ -220,9 +220,11 @@ fn query_exprs(route: &Route) -> Option<TokenStream2> {
 
         let decl = match segment.kind {
             Kind::Single => quote_spanned! { span =>
+                #[allow(non_snake_case)]
                 let mut #ident: Option<#ty> = None;
             },
             Kind::Multi => quote_spanned! { span =>
+                #[allow(non_snake_case)]
                 let mut #trail = #SmallVec::<[#request::FormItem; 8]>::new();
             },
             Kind::Static => quote!()
@@ -253,6 +255,7 @@ fn query_exprs(route: &Route) -> Option<TokenStream2> {
 
         let builder = match segment.kind {
             Kind::Single => quote_spanned! { span =>
+                #[allow(non_snake_case)]
                 let #ident = match #ident.or_else(<#ty as #request::FromFormValue>::default) {
                     Some(__v) => __v,
                     None => {
@@ -262,6 +265,7 @@ fn query_exprs(route: &Route) -> Option<TokenStream2> {
                 };
             },
             Kind::Multi => quote_spanned! { span =>
+                #[allow(non_snake_case)]
                 let #ident = match <#ty as #request::FromQuery>::from_query(#Query(&#trail)) {
                     Ok(__v) => __v,
                     Err(__e) => {

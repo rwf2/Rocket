@@ -39,8 +39,8 @@ const PEEK_BYTES: usize = 512;
 /// # fn main() { }
 /// ```
 ///
-/// Above, `T` can be any type that implements `FromData`. Note that `Data`
-/// itself implements `FromData`.
+/// Above, `DataGuard` can be any type that implements `FromData`. Note that
+/// `Data` itself implements `FromData`.
 ///
 /// # Reading Data
 ///

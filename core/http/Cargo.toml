@@ -1,6 +1,6 @@
 [package]
 name = "rocket_http"
-version = "0.4.1"
+version = "0.4.2"
 authors = ["Sergio Benitez <sb@sergio.bz>"]
 description = """
 Types, traits, and parsers for HTTP requests, responses, and headers.
@@ -36,4 +36,4 @@ features = ["server"]
 optional = true
 
 [dev-dependencies]
-rocket = { version = "0.4.1", path = "../lib" }
+rocket = { version = "0.4.2", path = "../lib" }

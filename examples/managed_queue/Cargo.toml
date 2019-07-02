@@ -5,5 +5,5 @@ workspace = "../.."
 publish = false
 
 [dependencies]
-crossbeam = "0.5"
+crossbeam = "0.7"
 rocket = { path = "../../core/lib" }

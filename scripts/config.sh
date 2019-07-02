@@ -24,7 +24,7 @@ function relative() {
 }
 
 # Full and major version of Rocket
-ROCKET_VERSION="0.4.1"
+ROCKET_VERSION="0.4.2"
 ROCKET_MAJOR_VERSION="0.4"
 CURRENT_RELEASE=true
 

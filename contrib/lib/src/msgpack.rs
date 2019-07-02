@@ -9,20 +9,20 @@
 //!
 //! ```toml
 //! [dependencies.rocket_contrib]
-//! version = "0.4.1"
+//! version = "0.4.2"
 //! default-features = false
 //! features = ["msgpack"]
 //! ```
 extern crate serde;
 extern crate rmp_serde;
 
+use std::io::Read;
 use std::ops::{Deref, DerefMut};
-use std::io::{Cursor, Read};
 
 use rocket::request::Request;
 use rocket::outcome::Outcome::*;
 use rocket::data::{Outcome, Transform, Transform::*, Transformed, Data, FromData};
-use rocket::response::{self, Responder, Response};
+use rocket::response::{self, Responder, content};
 use rocket::http::Status;
 
 use self::serde::Serialize;
@@ -153,14 +153,12 @@ impl<'a, T: Deserialize<'a>> FromData<'a> for MsgPack<T> {
 /// Content-Type `MsgPack` and a fixed-size body with the serialization. If
 /// serialization fails, an `Err` of `Status::InternalServerError` is returned.
 impl<T: Serialize> Responder<'static> for MsgPack<T> {
-    fn respond_to(self, _: &Request) -> response::Result<'static> {
+    fn respond_to(self, req: &Request) -> response::Result<'static> {
         rmp_serde::to_vec(&self.0).map_err(|e| {
             error_!("MsgPack failed to serialize: {:?}", e);
             Status::InternalServerError
         }).and_then(|buf| {
-            Response::build()
-                .sized_body(Cursor::new(buf))
-                .ok()
+            content::MsgPack(buf).respond_to(req)
         })
     }
 }

@@ -1,3 +1,34 @@
+# Version 0.4.2 (Jun 28, 2019)
+
+## Core
+
+  * Replaced use of `FnBox` with `Box<dyn FnOnce>`.
+  * Removed the stablized feature gates `try_from` and `transpose_result`.
+  * Derive macros are reexported alongside their respective traits.
+  * Minimum required `rustc` is `1.35.0-nightly (2019-04-05)`.
+
+## Codegen
+
+  * `JsonValue` now implements `FromIterator`.
+  * `non_snake_case` errors are silenced in generated code.
+  * Minimum required `rustc` is `1.33.0-nightly (2019-01-03)`.
+
+## Contrib
+
+  * Allow setting custom ranks on `StaticFiles` via [`StaticFiles::rank()`].
+  * `MsgPack` correctly sets a MessagePack Content-Type on responses.
+
+## Docs
+
+  * Fixed typos across rustdocs and guide.
+  * Documented library versions in contrib database documentation.
+
+## Infrastructure
+
+  * Updated internal dependencies to their latest versions.
+
+[`StaticFiles::rank()`]: https://api.rocket.rs/v0.4/rocket_contrib/serve/struct.StaticFiles.html#method.rank
+
 # Version 0.4.1 (May 11, 2019)
 
 ## Core

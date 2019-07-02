@@ -1,6 +1,5 @@
 #![feature(proc_macro_diagnostic, proc_macro_span)]
 #![feature(crate_visibility_modifier)]
-#![feature(transpose_result)]
 #![recursion_limit="128"]
 
 #![doc(html_root_url = "https://api.rocket.rs/v0.4")]
@@ -22,7 +21,7 @@
 //!
 //! ```toml
 //! [dependencies]
-//! rocket = "0.4.1"
+//! rocket = "0.4.2"
 //! ```
 //!
 //! And to import all macros, attributes, and derives via `#[macro_use]` in the

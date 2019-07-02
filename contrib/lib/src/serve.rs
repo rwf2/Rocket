@@ -9,7 +9,7 @@
 //!
 //! ```toml
 //! [dependencies.rocket_contrib]
-//! version = "0.4.1"
+//! version = "0.4.2"
 //! default-features = false
 //! features = ["serve"]
 //! ```
@@ -30,13 +30,13 @@ use rocket::outcome::IntoOutcome;
 ///   * [`Options::DotFiles`] - In addition to visible files, return dotfiles.
 ///   * [`Options::Index`] - Render `index.html` pages for directory requests.
 ///
-/// Two `Options` structures can be `or`d together to slect two or more options.
+/// `Options` structures can be `or`d together to select two or more options.
 /// For instance, to request that both dot files and index pages be returned,
 /// use `Options::DotFiles | Options::Index`.
 #[derive(Debug, Clone, Copy)]
 pub struct Options(u8);
 
-#[allow(non_upper_case_globals)]
+#[allow(non_upper_case_globals, non_snake_case)]
 impl Options {
     /// `Options` representing the empty set. No dotfiles or index pages are
     /// rendered. This is different than the _default_, which enables `Index`.
@@ -80,6 +80,12 @@ impl Options {
     }
 }
 
+impl Default for Options {
+    fn default() -> Self {
+        Options::Index
+    }
+}
+
 impl ::std::ops::BitOr for Options {
     type Output = Self;
 
@@ -94,12 +100,14 @@ impl ::std::ops::BitOr for Options {
 /// This handler makes it simple to serve static files from a directory on the
 /// local file system. To use it, construct a `StaticFiles` using either
 /// [`StaticFiles::from()`] or [`StaticFiles::new()`] then simply `mount` the
-/// handler at a desired path.
+/// handler at a desired path. When mounted, the handler will generate route(s)
+/// that serve the desired static files.
 ///
 /// # Options
 ///
 /// The handler's functionality can be customized by passing an [`Options`] to
-/// [`StaticFiles::new()`].
+/// [`StaticFiles::new()`]. Additionally, the rank of generate routes, which
+/// defaults to `10`, can be set via the [`StaticFiles::rank()`] builder method.
 ///
 /// # Example
 ///
@@ -150,12 +158,18 @@ impl ::std::ops::BitOr for Options {
 pub struct StaticFiles {
     root: PathBuf,
     options: Options,
+    rank: isize,
 }
 
 impl StaticFiles {
+    /// The default rank use by `StaticFiles` routes.
+    const DEFAULT_RANK: isize = 10;
+
     /// Constructs a new `StaticFiles` that serves files from the file system
-    /// `path`. By default, [`Options::Index`] is enabled. To serve static files
-    /// with other options, use [`StaticFiles::new()`].
+    /// `path`. By default, [`Options::Index`] is set, and the generated routes
+    /// have a rank of `10`. To serve static files with other options, use
+    /// [`StaticFiles::new()`]. To choose a different rank for generated routes,
+    /// use [`StaticFiles::rank()`].
     ///
     /// # Example
     ///
@@ -175,18 +189,36 @@ impl StaticFiles {
     /// # }
     /// }
     /// ```
+    ///
+    /// Exactly as before, but set the rank for generated routes to `30`.
+    ///
+    /// ```rust
+    /// # extern crate rocket;
+    /// # extern crate rocket_contrib;
+    /// use rocket_contrib::serve::StaticFiles;
+    ///
+    /// fn main() {
+    /// # if false {
+    ///     rocket::ignite()
+    ///         .mount("/static", StaticFiles::from("/www/public").rank(30))
+    ///         .launch();
+    /// # }
+    /// }
+    /// ```
     pub fn from<P: AsRef<Path>>(path: P) -> Self {
-        StaticFiles::new(path, Options::Index)
+        StaticFiles::new(path, Options::default())
     }
 
     /// Constructs a new `StaticFiles` that serves files from the file system
-    /// `path` with `options` enabled.
+    /// `path` with `options` enabled. By default, the handler's routes have a
+    /// rank of `10`. To choose a different rank, use [`StaticFiles::rank()`].
     ///
     /// # Example
     ///
     /// Serve the static files in the `/www/public` local directory on path
     /// `/static` without serving index files or dot files. Additionally, serve
-    /// the same files on `/pub` while also seriving index files and dot files.
+    /// the same files on `/pub` with a route rank of -1 while also serving
+    /// index files and dot files.
     ///
     /// ```rust
     /// # extern crate rocket;
@@ -198,21 +230,40 @@ impl StaticFiles {
     ///     let options = Options::Index | Options::DotFiles;
     ///     rocket::ignite()
     ///         .mount("/static", StaticFiles::from("/www/public"))
-    ///         .mount("/pub", StaticFiles::new("/www/public", options))
+    ///         .mount("/pub", StaticFiles::new("/www/public", options).rank(-1))
     ///         .launch();
     /// # }
     /// }
     /// ```
     pub fn new<P: AsRef<Path>>(path: P, options: Options) -> Self {
-        StaticFiles { root: path.as_ref().into(), options }
+        StaticFiles { root: path.as_ref().into(), options, rank: Self::DEFAULT_RANK }
+    }
+
+    /// Sets the rank for generated routes to `rank`.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// # extern crate rocket_contrib;
+    /// use rocket_contrib::serve::{StaticFiles, Options};
+    ///
+    /// // A `StaticFiles` created with `from()` with routes of rank `3`.
+    /// StaticFiles::from("/public").rank(3);
+    ///
+    /// // A `StaticFiles` created with `new()` with routes of rank `-15`.
+    /// StaticFiles::new("/public", Options::Index).rank(-15);
+    /// ```
+    pub fn rank(mut self, rank: isize) -> Self {
+        self.rank = rank;
+        self
     }
 }
 
 impl Into<Vec<Route>> for StaticFiles {
     fn into(self) -> Vec<Route> {
-        let non_index = Route::ranked(10, Method::Get, "/<path..>", self.clone());
+        let non_index = Route::ranked(self.rank, Method::Get, "/<path..>", self.clone());
         if self.options.contains(Options::Index) {
-            let index = Route::ranked(10, Method::Get, "/", self);
+            let index = Route::ranked(self.rank, Method::Get, "/", self);
             vec![index, non_index]
         } else {
             vec![non_index]
