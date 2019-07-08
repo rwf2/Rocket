@@ -45,7 +45,7 @@ impl FromStr for Address {
     type Err = io::Error;
 
     fn from_str(string: &str) -> io::Result<Self> {
-        #[cfg(unix)]
+        #[cfg(any(unix, windows))]
         {
             if string.starts_with(Address::UNIX_PREFIX) {
                 let address = &string[Address::UNIX_PREFIX.len()..];

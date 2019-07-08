@@ -4,7 +4,10 @@ use std::io::{self, Read, Write};
 use std::path::Path;
 use std::net::{Ipv4Addr, SocketAddr, SocketAddrV4};
 use std::time::Duration;
+#[cfg(unix)]
 use std::os::unix::net::{UnixListener, UnixStream};
+#[cfg(windows)]
+use uds_windows::{UnixListener, UnixStream};
 
 use crate::hyper;
 use crate::hyper::net::{NetworkStream, NetworkListener};

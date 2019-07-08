@@ -341,7 +341,8 @@ impl Config {
     /// # Errors
     ///
     /// If `address` is not a valid IP address, hostname or (on Unix platforms
-    /// only) a Unix domain socket, returns a `BadType` error.
+    /// or Windows 10/Server version 1809 and later only) a Unix domain socket,
+    /// returns a `BadType` error.
     ///
     /// # Example
     ///
@@ -355,8 +356,8 @@ impl Config {
     /// ```
     pub fn set_address<A: Into<String>>(&mut self, address: A) -> Result<()> {
         let address = address.into().parse::<Address>().map_err(|_| {
-            #[cfg(unix)] let msg = "a valid hostname, IP, or Unix domain socket path";
-            #[cfg(not(unix))] let msg = "a valid hostname or IP";
+            #[cfg(any(unix, windows))] let msg = "a valid hostname, IP, or Unix domain socket path";
+            #[cfg(not(any(unix, windows)))] let msg = "a valid hostname or IP";
             self.bad_type("address", "string", msg)
         })?;
 

@@ -36,5 +36,9 @@ version = "=0.3.0-rc.5"
 features = ["server"]
 optional = true
 
+[target.'cfg(windows)'.dependencies]
+# Used for Windows Unix domain socket support
+uds_windows = "0.1.4"
+
 [dev-dependencies]
 rocket = { version = "0.5.0-dev", path = "../lib" }

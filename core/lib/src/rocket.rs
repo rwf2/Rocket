@@ -94,7 +94,7 @@ impl hyper::Handler for Rocket {
 #[cfg(not(feature = "tls"))]
 macro_rules! serve {
     ($rocket:expr, |$server:ident, $proto:ident| $continue:expr) => ({
-        #[cfg(unix)]
+        #[cfg(any(unix, windows))]
         {
             if $rocket.config.address.is_unix() {
                 serve_unix_socket!($rocket, |$server, $proto| $continue);
@@ -109,7 +109,7 @@ macro_rules! serve {
 #[cfg(feature = "tls")]
 macro_rules! serve {
     ($rocket:expr, |$server:ident, $proto:ident| $continue:expr) => ({
-        #[cfg(unix)]
+        #[cfg(any(unix, windows))]
         {
             if $rocket.config.address.is_unix() {
                 serve_unix_socket!($rocket, |$server, $proto| $continue);

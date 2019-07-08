@@ -659,7 +659,7 @@ mod test {
                           default_config(Development).address("0.0.0.0")
                       });
 
-        #[cfg(unix)]
+        #[cfg(any(unix, windows))]
         {
             check_config!(RocketConfig::parse(r#"
                             [dev]
@@ -696,7 +696,7 @@ mod test {
             address = "1.2.3.4:100"
         "#.to_string(), TEST_CONFIG_FILENAME).is_err());
 
-        #[cfg(unix)]
+        #[cfg(any(unix, windows))]
         {
             assert!(RocketConfig::parse(r#"
                 [staging]
@@ -706,15 +706,6 @@ mod test {
             assert!(RocketConfig::parse(r#"
                 [staging]
                 address = "/tmp/rocket.sock"
-            "#.to_string(), TEST_CONFIG_FILENAME).is_err());
-        }
-
-        #[cfg(windows)]
-        {
-            // No Unix domain socket support for Windows in Rocket yet.
-            assert!(RocketConfig::parse(r#"
-                [staging]
-                address = "unix:/tmp/rocket.sock"
             "#.to_string(), TEST_CONFIG_FILENAME).is_err());
         }
     }

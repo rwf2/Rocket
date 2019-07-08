@@ -125,7 +125,7 @@ pub mod http {
     pub use rocket_http::*;
 }
 
-#[cfg(unix)] #[macro_use] mod unix;
+#[cfg(any(unix, windows))] #[macro_use] mod unix;
 mod router;
 mod rocket;
 mod codegen;
