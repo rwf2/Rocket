@@ -1,8 +1,8 @@
 use std::fmt;
 use std::cell::RefMut;
 
-use cookie::Delta;
 use crate::Header;
+use cookie::Delta;
 
 #[doc(hidden)] pub use self::key::*;
 pub use cookie::{Cookie, CookieJar, SameSite};
