@@ -6,7 +6,7 @@ use futures::io::{self, AsyncRead, AsyncReadExt as _, AsyncWrite};
 use futures::future::Future;
 use futures::stream::TryStreamExt;
 
-use super::data_stream::{DataStream, kill_stream};
+use super::data_stream::DataStream;
 
 use crate::http::hyper;
 
@@ -232,11 +232,5 @@ impl Data {
 impl std::borrow::Borrow<()> for Data {
     fn borrow(&self) -> &() {
         &()
-    }
-}
-
-impl Drop for Data {
-    fn drop(&mut self) {
-        kill_stream(&mut self.stream);
     }
 }

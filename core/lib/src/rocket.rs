@@ -5,6 +5,7 @@ use std::io;
 use std::mem;
 use std::net::ToSocketAddrs;
 use std::sync::Arc;
+use std::time::Duration;
 use std::pin::Pin;
 
 use futures::compat::Compat;
@@ -13,8 +14,6 @@ use futures::io::AsyncReadExt;
 
 use yansi::Paint;
 use state::Container;
-use tokio::net::TcpListener;
-use tokio::prelude::Stream as _;
 
 #[cfg(feature = "tls")] use crate::http::tls::TlsAcceptor;
 
@@ -47,6 +46,7 @@ pub struct Rocket {
 #[derive(Clone)]
 struct RocketHyperService {
     rocket: Arc<Rocket>,
+    remote_addr: std::net::SocketAddr,
 }
 
 impl std::ops::Deref for RocketHyperService {
@@ -54,19 +54,6 @@ impl std::ops::Deref for RocketHyperService {
 
     fn deref(&self) -> &Self::Target {
         &*self.rocket
-    }
-}
-
-impl<Ctx> hyper::MakeService<Ctx> for RocketHyperService {
-    type ReqBody = hyper::Body;
-    type ResBody = hyper::Body;
-    type Error = io::Error;
-    type Service = RocketHyperService;
-    type Future = Compat<futures::future::Ready<Result<Self::Service, Self::MakeError>>>;
-    type MakeError = Self::Error;
-
-    fn make_service(&mut self, _: Ctx) -> Self::Future {
-        futures::future::ok(RocketHyperService { rocket: self.rocket.clone() }).compat()
     }
 }
 
@@ -87,12 +74,11 @@ impl hyper::Service for RocketHyperService {
         hyp_req: hyper::Request<Self::ReqBody>,
     ) -> Self::Future {
         let rocket = self.rocket.clone();
+        let h_addr = self.remote_addr;
+
         async move {
             // Get all of the information from Hyper.
             let (h_parts, h_body) = hyp_req.into_parts();
-
-            // TODO.async: Get the client address somehow.
-            let h_addr = "0.0.0.0:0".parse().expect("socket addr");
 
             // Convert the Hyper request into a Rocket request.
             let req_res = Request::from_hyp(&rocket, h_parts.method, h_parts.headers, h_parts.uri, h_addr);
@@ -748,60 +734,22 @@ impl Rocket {
             Err(e) => return From::from(io::Error::new(io::ErrorKind::Other, e)),
         };
 
-        let listener = match TcpListener::bind(&addrs[0]) {
-            Ok(listener) => listener,
+        // TODO.async: support for TLS, unix sockets.
+        // Likely will be implemented with a custom "Incoming" type.
+
+        let mut incoming = match hyper::AddrIncoming::bind(&addrs[0]) {
+            Ok(incoming) => incoming,
             Err(e) => return LaunchError::new(LaunchErrorKind::Bind(e)),
         };
 
         // Determine the address and port we actually binded to.
-        match listener.local_addr() {
-            Ok(server_addr) => self.config.port = server_addr.port(),
-            Err(e) => return LaunchError::from(e),
-        }
+        self.config.port = incoming.local_addr().port();
 
-        // TODO.async Move all of this to http crate somewhere
-        // TODO.async Is boxing everything really the best we can do here?
-        trait AsyncReadWrite: tokio::io::AsyncRead + tokio::io::AsyncWrite + Send { }
-        impl<T> AsyncReadWrite for T where T: tokio::io::AsyncRead + tokio::io::AsyncWrite + Send { }
+        let proto = "http://";
 
-        let proto;
-        let incoming: Box<dyn tokio::prelude::Stream<Item=Box<dyn AsyncReadWrite>, Error=std::io::Error> + Send>;
-
-        #[cfg(feature = "tls")]
-        {
-            use tokio::prelude::Future;
-
-            // TODO.async: Can/should we make the clone unnecessary (by reference, or by moving out?)
-            if let Some(tls) = self.config.tls.clone() {
-                proto = "https://";
-                let mut config = tls::rustls::ServerConfig::new(tls::rustls::NoClientAuth::new());
-                config.set_single_cert(tls.certs, tls.key).expect("invalid key or certificate");
-
-                // TODO.async: I once observed an unhandled AlertReceived(UnknownCA) but
-                // have no idea what happened and cannot reproduce.
-                let config = TlsAcceptor::from(Arc::new(config));
-
-                incoming = Box::new(listener.incoming().and_then(move |stream| {
-                    config.accept(stream)
-                        .map(|stream| Box::new(stream) as Box<dyn AsyncReadWrite>)
-                }));
-            } else {
-                proto = "http://";
-                incoming = Box::new(listener.incoming().map(|stream| Box::new(stream) as Box<dyn AsyncReadWrite>));
-            }
-        }
-
-        // TODO.async: Duplicated code
-        #[cfg(not(feature = "tls"))]
-        {
-            proto = "http://";
-            incoming = Box::new(listener.incoming().map(|stream| Box::new(stream) as Box<dyn AsyncReadWrite>));
-        }
-
-        // TODO.async: Set the keep-alive.
-//        // Set the keep-alive.
-//        let timeout = self.config.keep_alive.map(|s| Duration::from_secs(s as u64));
-//        server.keep_alive(timeout);
+        // Set the keep-alive.
+        let timeout = self.config.keep_alive.map(|s| Duration::from_secs(s as u64));
+        incoming.set_keepalive(timeout);
 
         // Freeze managed state for synchronization-free accesses later.
         self.state.freeze();
@@ -818,7 +766,13 @@ impl Rocket {
         // Restore the log level back to what it originally was.
         logger::pop_max_level();
 
-        let service = RocketHyperService { rocket: Arc::new(self) };
+        let rocket = Arc::new(self);
+        let service = hyper::make_service_fn(move |socket: &hyper::AddrStream| {
+            futures::future::ok::<_, Box<dyn std::error::Error + Send + Sync>>(RocketHyperService {
+                rocket: rocket.clone(),
+                remote_addr: socket.remote_addr(),
+            }).compat()
+        });
 
         // NB: executor must be passed manually here, see hyperium/hyper#1537
         let server = hyper::Server::builder(incoming)

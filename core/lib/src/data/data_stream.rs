@@ -34,28 +34,3 @@ impl AsyncRead for DataStream {
         }
     }
 }
-
-// TODO.async: Either implement this somehow, or remove the
-// `Drop` impl and other references to kill_stream
-pub fn kill_stream(_stream: &mut dyn AsyncRead) {
-//    // Only do the expensive reading if we're not sure we're done.
-//
-//    // Take <= 1k from the stream. If there might be more data, force close.
-//    const FLUSH_LEN: u64 = 1024;
-//    match io::copy(&mut stream.take(FLUSH_LEN), &mut io::sink()) {
-//        Ok(FLUSH_LEN) | Err(_) => {
-//            warn_!("Data left unread. Force closing network stream.");
-//            let (_, network) = stream.get_mut().get_mut();
-//            if let Err(e) = network.close(Shutdown::Read) {
-//                error_!("Failed to close network stream: {:?}", e);
-//            }
-//        }
-//        Ok(n) => debug!("flushed {} unread bytes", n)
-//    }
-}
-
-impl Drop for DataStream {
-    fn drop(&mut self) {
-        kill_stream(&mut self.1);
-    }
-}

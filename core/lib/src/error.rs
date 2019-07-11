@@ -19,7 +19,7 @@ use crate::router::Route;
 #[derive(Debug)]
 pub enum LaunchErrorKind {
     /// Binding to the provided address/port failed.
-    Bind(io::Error),
+    Bind(hyper::Error),
     /// An I/O error occurred during launch.
     Io(io::Error),
     /// Route collisions were detected.
