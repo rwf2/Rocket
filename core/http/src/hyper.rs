@@ -16,6 +16,7 @@
 #[doc(hidden)] pub use http::header::HeaderValue as HeaderValue;
 #[doc(hidden)] pub use http::method::Method;
 #[doc(hidden)] pub use http::request::Parts as RequestParts;
+#[doc(hidden)] pub use http::response::Builder as ResponseBuilder;
 #[doc(hidden)] pub use http::status::StatusCode;
 #[doc(hidden)] pub use http::uri::Uri;
 
