@@ -1,4 +1,4 @@
-#![feature(proc_macro_hygiene)]
+#![feature(proc_macro_hygiene, async_await)]
 
 #[macro_use] extern crate rocket;
 
@@ -40,7 +40,7 @@ mod strict_and_lenient_forms_tests {
             .dispatch();
 
         assert_eq!(response.status(), Status::Ok);
-        assert_eq!(response.body_string(), Some(FIELD_VALUE.into()));
+        assert_eq!(response.body_string_wait(), Some(FIELD_VALUE.into()));
 
         let response = client.post("/strict")
             .header(ContentType::Form)
@@ -59,7 +59,7 @@ mod strict_and_lenient_forms_tests {
             .dispatch();
 
         assert_eq!(response.status(), Status::Ok);
-        assert_eq!(response.body_string(), Some(FIELD_VALUE.into()));
+        assert_eq!(response.body_string_wait(), Some(FIELD_VALUE.into()));
 
         let mut response = client.post("/lenient")
             .header(ContentType::Form)
@@ -67,6 +67,6 @@ mod strict_and_lenient_forms_tests {
             .dispatch();
 
         assert_eq!(response.status(), Status::Ok);
-        assert_eq!(response.body_string(), Some(FIELD_VALUE.into()));
+        assert_eq!(response.body_string_wait(), Some(FIELD_VALUE.into()));
     }
 }

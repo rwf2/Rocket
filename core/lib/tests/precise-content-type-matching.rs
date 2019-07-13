@@ -1,4 +1,4 @@
-#![feature(proc_macro_hygiene)]
+#![feature(proc_macro_hygiene, async_await)]
 
 #[macro_use] extern crate rocket;
 
@@ -45,7 +45,7 @@ mod tests {
             }
 
             let mut response = req.dispatch();
-            let body_str = response.body_string();
+            let body_str = response.body_string_wait();
             let body: Option<&'static str> = $body;
             match body {
                 Some(string) => assert_eq!(body_str, Some(string.to_string())),

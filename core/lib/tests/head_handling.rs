@@ -1,4 +1,4 @@
-#![feature(proc_macro_hygiene)]
+#![feature(proc_macro_hygiene, async_await)]
 
 #[macro_use] extern crate rocket;
 
@@ -22,7 +22,7 @@ fn other() -> content::Json<&'static str> {
 mod head_handling_tests {
     use super::*;
 
-    use std::io::Read;
+    use futures::io::AsyncReadExt;
 
     use rocket::Route;
     use rocket::local::Client;
@@ -33,13 +33,15 @@ mod head_handling_tests {
         routes![index, empty, other]
     }
 
-    fn assert_empty_sized_body<T: Read>(body: Body<T>, expected_size: u64) {
+    fn assert_empty_sized_body<T: futures::AsyncRead + Unpin>(body: Body<T>, expected_size: u64) {
         match body {
             Body::Sized(mut body, size) => {
                 let mut buffer = vec![];
-                let n = body.read_to_end(&mut buffer).unwrap();
+                futures::executor::block_on(async {
+                    body.read_to_end(&mut buffer).await.unwrap();
+                });
                 assert_eq!(size, expected_size);
-                assert_eq!(n, 0);
+                assert_eq!(buffer.len(), 0);
             }
             _ => panic!("Expected a sized body.")
         }
@@ -57,7 +59,7 @@ mod head_handling_tests {
 
         let mut response = client.head("/empty").dispatch();
         assert_eq!(response.status(), Status::NoContent);
-        assert!(response.body_bytes().is_none());
+        assert!(response.body_bytes_wait().is_none());
     }
 
     #[test]

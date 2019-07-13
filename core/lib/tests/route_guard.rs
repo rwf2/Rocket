@@ -1,4 +1,4 @@
-#![feature(proc_macro_hygiene)]
+#![feature(proc_macro_hygiene, async_await)]
 
 #[macro_use] extern crate rocket;
 
@@ -17,7 +17,7 @@ mod route_guard_tests {
 
     fn assert_path(client: &Client, path: &str) {
         let mut res = client.get(path).dispatch();
-        assert_eq!(res.body_string(), Some(path.into()));
+        assert_eq!(res.body_string_wait(), Some(path.into()));
     }
 
     #[test]

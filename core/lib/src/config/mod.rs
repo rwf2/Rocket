@@ -1096,10 +1096,10 @@ mod test {
         let check_value = |key: &str, val: &str, config: &Config| {
             match key {
                 "log" => assert_eq!(config.log_level, val.parse().unwrap()),
-                "port" => assert_eq!(config.port, val.parse().unwrap()),
+                "port" => assert_eq!(config.port, val.parse::<u16>().unwrap()),
                 "address" => assert_eq!(config.address, val),
                 "extra_extra" => assert_eq!(config.get_bool(key).unwrap(), true),
-                "workers" => assert_eq!(config.workers, val.parse().unwrap()),
+                "workers" => assert_eq!(config.workers, val.parse::<u16>().unwrap()),
                 _ => panic!("Unexpected key: {}", key)
             }
         };

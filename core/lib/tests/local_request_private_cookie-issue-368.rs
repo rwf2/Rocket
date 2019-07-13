@@ -1,4 +1,4 @@
-#![feature(proc_macro_hygiene)]
+#![feature(proc_macro_hygiene, async_await)]
 
 #[macro_use]
 #[cfg(feature = "private-cookies")]
@@ -30,7 +30,7 @@ mod private_cookie_test {
             let req = client.get("/").private_cookie(Cookie::new("cookie_name", "cookie_value"));
             let mut response = req.dispatch();
 
-            assert_eq!(response.body_string(), Some("cookie_value".into()));
+            assert_eq!(response.body_string_wait(), Some("cookie_value".into()));
             assert_eq!(response.headers().get_one("Set-Cookie"), None);
         }
 

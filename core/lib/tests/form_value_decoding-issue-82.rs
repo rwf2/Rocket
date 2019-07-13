@@ -1,4 +1,4 @@
-#![feature(proc_macro_hygiene)]
+#![feature(proc_macro_hygiene, async_await)]
 
 #[macro_use] extern crate rocket;
 
@@ -28,7 +28,7 @@ mod tests {
             .dispatch();
 
         assert_eq!(response.status(), Status::Ok);
-        assert_eq!(Some(decoded.to_string()), response.body_string());
+        assert_eq!(Some(decoded.to_string()), response.body_string_wait());
     }
 
     #[test]

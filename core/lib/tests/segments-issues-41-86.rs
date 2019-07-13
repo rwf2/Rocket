@@ -1,4 +1,4 @@
-#![feature(proc_macro_hygiene)]
+#![feature(proc_macro_hygiene, async_await)]
 
 #[macro_use] extern crate rocket;
 
@@ -48,7 +48,7 @@ mod tests {
         {
             let path = "this/is/the/path/we/want";
             let mut response = client.get(format!("{}/{}", prefix, path)).dispatch();
-            assert_eq!(response.body_string(), Some(path.into()));
+            assert_eq!(response.body_string_wait(), Some(path.into()));
         }
     }
 }

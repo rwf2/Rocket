@@ -1,4 +1,4 @@
-#![feature(proc_macro_hygiene)]
+#![feature(proc_macro_hygiene, async_await)]
 
 #[macro_use] extern crate rocket;
 
@@ -47,14 +47,14 @@ mod nested_fairing_attaches_tests {
     fn test_counts() {
         let client = Client::new(rocket()).unwrap();
         let mut response = client.get("/").dispatch();
-        assert_eq!(response.body_string(), Some("1, 1".into()));
+        assert_eq!(response.body_string_wait(), Some("1, 1".into()));
 
         let mut response = client.get("/").dispatch();
-        assert_eq!(response.body_string(), Some("1, 2".into()));
+        assert_eq!(response.body_string_wait(), Some("1, 2".into()));
 
         client.get("/").dispatch();
         client.get("/").dispatch();
         let mut response = client.get("/").dispatch();
-        assert_eq!(response.body_string(), Some("1, 5".into()));
+        assert_eq!(response.body_string_wait(), Some("1, 5".into()));
     }
 }

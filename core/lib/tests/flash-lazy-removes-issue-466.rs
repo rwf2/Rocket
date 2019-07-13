@@ -1,4 +1,4 @@
-#![feature(proc_macro_hygiene)]
+#![feature(proc_macro_hygiene, async_await)]
 
 #[macro_use] extern crate rocket;
 
@@ -49,7 +49,7 @@ mod flash_lazy_remove_tests {
 
         // Now use it.
         let mut response = client.get("/use").dispatch();
-        assert_eq!(response.body_string(), Some(FLASH_MESSAGE.into()));
+        assert_eq!(response.body_string_wait(), Some(FLASH_MESSAGE.into()));
 
         // Now it should be gone.
         let response = client.get("/unused").dispatch();

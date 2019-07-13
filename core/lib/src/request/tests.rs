@@ -7,13 +7,13 @@ use crate::http::hyper;
 macro_rules! assert_headers {
     ($($key:expr => [$($value:expr),+]),+) => ({
         // Set up the parameters to the hyper request object.
-        let h_method = hyper::Method::Get;
-        let h_uri = hyper::RequestUri::AbsolutePath("/test".to_string());
+        let h_method = hyper::Method::GET;
+        let h_uri = "/test".parse().unwrap();
         let h_addr = SocketAddr::new(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)), 8000);
-        let mut h_headers = hyper::header::Headers::new();
+        let mut h_headers = hyper::HeaderMap::new();
 
         // Add all of the passed in headers to the request.
-        $($(h_headers.append_raw($key.to_string(), $value.as_bytes().into());)+)+
+        $($(h_headers.append($key, hyper::HeaderValue::from_str($value).unwrap());)+)+
 
         // Build up what we expect the headers to actually be.
         let mut expected = HashMap::new();

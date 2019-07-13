@@ -458,6 +458,16 @@ pub struct LocalResponse<'c> {
     response: Response<'c>,
 }
 
+impl LocalResponse<'_> {
+    pub fn body_string_wait(&mut self) -> Option<String> {
+        futures::executor::block_on(self.body_string())
+    }
+
+    pub fn body_bytes_wait(&mut self) -> Option<Vec<u8>> {
+        futures::executor::block_on(self.body_bytes())
+    }
+}
+
 impl<'c> Deref for LocalResponse<'c> {
     type Target = Response<'c>;
 

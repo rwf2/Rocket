@@ -1,4 +1,4 @@
-#![feature(proc_macro_hygiene)]
+#![feature(proc_macro_hygiene, async_await)]
 
 #[macro_use] extern crate rocket;
 
@@ -28,7 +28,7 @@ mod tests {
             .body("_method=patch&form_data=Form+data")
             .dispatch();
 
-        assert_eq!(response.body_string(), Some("OK".into()));
+        assert_eq!(response.body_string_wait(), Some("OK".into()));
     }
 
     #[test]

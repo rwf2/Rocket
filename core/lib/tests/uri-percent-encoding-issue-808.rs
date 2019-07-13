@@ -1,4 +1,4 @@
-#![feature(proc_macro_hygiene)]
+#![feature(proc_macro_hygiene, async_await)]
 
 #[macro_use] extern crate rocket;
 
@@ -54,6 +54,6 @@ mod tests {
         let name = Uri::percent_encode(NAME);
         let mut response = client.get(format!("/hello/{}", name)).dispatch();
         assert_eq!(response.status(), Status::Ok);
-        assert_eq!(response.body_string().unwrap(), format!("Hello, {}!", NAME));
+        assert_eq!(response.body_string_wait().unwrap(), format!("Hello, {}!", NAME));
     }
 }

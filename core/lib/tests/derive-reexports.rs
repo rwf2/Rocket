@@ -1,4 +1,4 @@
-#![feature(proc_macro_hygiene)]
+#![feature(proc_macro_hygiene, async_await)]
 
 use rocket;
 
@@ -51,8 +51,8 @@ fn test_derive_reexports() {
     let client = Client::new(rocket).unwrap();
 
     let mut response = client.get("/").dispatch();
-    assert_eq!(response.body_string().unwrap(), "hello");
+    assert_eq!(response.body_string_wait().unwrap(), "hello");
 
     let mut response = client.get("/?thing=b").dispatch();
-    assert_eq!(response.body_string().unwrap(), "b");
+    assert_eq!(response.body_string_wait().unwrap(), "b");
 }

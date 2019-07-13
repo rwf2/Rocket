@@ -1,4 +1,4 @@
-#![feature(proc_macro_hygiene)]
+#![feature(proc_macro_hygiene, async_await)]
 #![allow(dead_code)] // This test is only here so that we can ensure it compiles.
 
 #[macro_use] extern crate rocket;

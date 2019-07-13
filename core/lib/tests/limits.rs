@@ -1,4 +1,4 @@
-#![feature(proc_macro_hygiene)]
+#![feature(proc_macro_hygiene, async_await)]
 
 #[macro_use] extern crate rocket;
 
@@ -36,7 +36,7 @@ mod limits_tests {
             .header(ContentType::Form)
             .dispatch();
 
-        assert_eq!(response.body_string(), Some("Hello world".into()));
+        assert_eq!(response.body_string_wait(), Some("Hello world".into()));
     }
 
     #[test]
@@ -47,7 +47,7 @@ mod limits_tests {
             .header(ContentType::Form)
             .dispatch();
 
-        assert_eq!(response.body_string(), Some("Hello world".into()));
+        assert_eq!(response.body_string_wait(), Some("Hello world".into()));
     }
 
     #[test]
@@ -69,6 +69,6 @@ mod limits_tests {
             .header(ContentType::Form)
             .dispatch();
 
-        assert_eq!(response.body_string(), Some("Hell".into()));
+        assert_eq!(response.body_string_wait(), Some("Hell".into()));
     }
 }
