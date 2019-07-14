@@ -194,6 +194,20 @@ impl Drop for LaunchError {
         match *self.kind() {
             LaunchErrorKind::Bind(ref e) => {
                 error!("Rocket failed to bind network socket to given address/port.");
+                #[cfg(windows)]
+                {
+                    match e {
+                        hyper::Error::Io(ref io_err) => {
+                            if let Some(err_code) = io_err.raw_os_error() {
+                                if err_code == 10047 {
+                                    // An address incompatible with the requested protocol was used
+                                    info_!("Note: Unix domain socket only works on Windows 10/Server version 1809 or later.");
+                                }
+                            }
+                        }
+                        _ => {}
+                    }
+                }
                 panic!("{}", e);
             }
             LaunchErrorKind::Io(ref e) => {
