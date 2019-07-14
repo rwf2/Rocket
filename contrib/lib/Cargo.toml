@@ -52,7 +52,7 @@ serde_json = { version = "1.0.26", optional = true }
 rmp-serde = { version = "^0.13", optional = true }
 
 # Templating dependencies.
-handlebars = { version = "1.0", optional = true }
+handlebars = { version = "2.0", optional = true }
 glob = { version = "0.3", optional = true }
 tera = { version = "0.11", optional = true }
 
