@@ -1,16 +1,17 @@
+#![feature(test)]
 #![feature(proc_macro_hygiene)]
 
 #[macro_use] extern crate rocket;
 
 use rocket::config::{Environment, Config, LoggingLevel};
 
-#[get("/", format = "application/json")]
+#[get("/", format = "application/json", rank = 1)]
 fn get() -> &'static str { "json" }
 
-#[get("/", format = "text/html")]
+#[get("/", format = "text/html", rank = 2)]
 fn get2() -> &'static str { "html" }
 
-#[get("/", format = "text/plain")]
+#[get("/", format = "text/plain", rank = 3)]
 fn get3() -> &'static str { "plain" }
 
 #[post("/", format = "application/json")]

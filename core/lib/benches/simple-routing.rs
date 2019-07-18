@@ -1,6 +1,5 @@
+#![feature(test)]
 #![feature(proc_macro_hygiene)]
-// #![feature(alloc_system)]
-// extern crate alloc_system;
 
 #[macro_use] extern crate rocket;
 
@@ -28,8 +27,8 @@ fn index_b() -> &'static str { "index" }
 #[get("/c")]
 fn index_c() -> &'static str { "index" }
 
-#[get("/<a>")]
-fn index_dyn_a(a: &RawStr) -> &'static str { "index" }
+#[get("/<_a>")]
+fn index_dyn_a(_a: &RawStr) -> &'static str { "index" }
 
 fn hello_world_rocket() -> rocket::Rocket {
     let config = Config::build(Environment::Production).log_level(LoggingLevel::Off);
