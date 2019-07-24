@@ -1,3 +1,6 @@
+use std::pin::Pin;
+use std::future::Future;
+
 use crate::{Rocket, Request, Response, Data};
 use crate::fairing::{Fairing, Kind};
 
@@ -65,10 +68,12 @@ impl Fairings {
     }
 
     #[inline(always)]
-    pub fn handle_response(&self, request: &Request<'_>, response: &mut Response<'_>) {
-        for &i in &self.response {
-            self.all_fairings[i].on_response(request, response);
-        }
+    pub fn handle_response<'a, 'r>(&'a self, request: &'a Request<'r>, response: &'a mut Response<'r>) -> Pin<Box<dyn Future<Output=()> + Send + 'a>> {
+        Box::pin(async move {
+            for &i in &self.response {
+                self.all_fairings[i].on_response(request, response).await;
+            }
+        })
     }
 
     pub fn failures(&self) -> Option<&[&'static str]> {

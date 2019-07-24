@@ -14,7 +14,7 @@ pub struct CustomResponder<'r, R> {
 }
 
 impl<'r, R: Responder<'r>> Responder<'r> for CustomResponder<'r, R> {
-    fn respond_to(self, _: &rocket::Request) -> response::Result<'r> {
+    fn respond_to(self, _: &rocket::Request) -> response::ResultFuture<'r> {
         unimplemented!()
     }
 }

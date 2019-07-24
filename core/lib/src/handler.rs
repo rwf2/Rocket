@@ -206,11 +206,13 @@ impl<'r> Outcome<'r> {
     /// }
     /// ```
     #[inline]
-    pub fn from<T: Responder<'r>>(req: &Request<'_>, responder: T) -> Outcome<'r> {
-        match responder.respond_to(req) {
-            Ok(response) => outcome::Outcome::Success(response),
-            Err(status) => outcome::Outcome::Failure(status)
-        }
+    pub fn from<T: Responder<'r> + Send + 'r>(req: &'r Request<'_>, responder: T) -> HandlerFuture<'r> {
+        Box::pin(async move {
+            match responder.respond_to(req).await {
+                Ok(response) => outcome::Outcome::Success(response),
+                Err(status) => outcome::Outcome::Failure(status)
+            }
+        })
     }
 
     /// Return the `Outcome` of response to `req` from `responder`.
@@ -230,13 +232,15 @@ impl<'r> Outcome<'r> {
     /// }
     /// ```
     #[inline]
-    pub fn from_or_forward<T>(req: &Request<'_>, data: Data, responder: T) -> Outcome<'r>
-        where T: Responder<'r>
+    pub fn from_or_forward<T: 'r>(req: &'r Request<'_>, data: Data, responder: T) -> HandlerFuture<'r>
+        where T: Responder<'r> + Send
     {
-        match responder.respond_to(req) {
-            Ok(response) => outcome::Outcome::Success(response),
-            Err(_) => outcome::Outcome::Forward(data)
-        }
+        Box::pin(async move {
+            match responder.respond_to(req).await {
+                Ok(response) => outcome::Outcome::Success(response),
+                Err(_) => outcome::Outcome::Forward(data)
+            }
+        })
     }
 
     /// Return an `Outcome` of `Failure` with the status code `code`. This is

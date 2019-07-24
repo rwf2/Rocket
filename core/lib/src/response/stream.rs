@@ -3,7 +3,7 @@ use std::fmt::{self, Debug};
 use futures::io::AsyncRead;
 
 use crate::request::Request;
-use crate::response::{Response, Responder, DEFAULT_CHUNK_SIZE};
+use crate::response::{Response, Responder, ResultFuture, DEFAULT_CHUNK_SIZE};
 use crate::http::Status;
 
 /// Streams a response to a client from an arbitrary `AsyncRead`er type.
@@ -70,7 +70,9 @@ impl<T: AsyncRead> From<T> for Stream<T> {
 /// response is abandoned, and the response ends abruptly. An error is printed
 /// to the console with an indication of what went wrong.
 impl<'r, T: AsyncRead + Send + 'r> Responder<'r> for Stream<T> {
-    fn respond_to(self, _: &Request<'_>) -> Result<Response<'r>, Status> {
-        Response::build().chunked_body(self.0, self.1).ok()
+    fn respond_to(self, _: &'r Request<'_>) -> ResultFuture<'r> {
+        Box::pin(async {
+            Response::build().chunked_body(self.0, self.1).ok()
+        })
     }
 }

@@ -1,3 +1,5 @@
+use std::future::Future;
+use std::pin::Pin;
 use std::sync::Mutex;
 
 use crate::{Rocket, Request, Response, Data};
@@ -49,7 +51,7 @@ enum AdHocKind {
     Request(Box<dyn Fn(&mut Request<'_>, &Data) + Send + Sync + 'static>),
     /// An ad-hoc **response** fairing. Called when a response is ready to be
     /// sent to a client.
-    Response(Box<dyn Fn(&Request<'_>, &mut Response<'_>) + Send + Sync + 'static>),
+    Response(Box<dyn for<'a, 'r> Fn(&'a Request<'r>, &'a mut Response<'r>) -> Pin<Box<dyn Future<Output=()> + Send + 'a>> + Send + Sync + 'static>),
 }
 
 impl AdHoc {
@@ -124,7 +126,7 @@ impl AdHoc {
     /// });
     /// ```
     pub fn on_response<F>(name: &'static str, f: F) -> AdHoc
-        where F: Fn(&Request<'_>, &mut Response<'_>) + Send + Sync + 'static
+        where F: for<'a, 'r> Fn(&'a Request<'r>, &'a mut Response<'r>) -> Pin<Box<dyn Future<Output=()> + Send + 'a>> + Send + Sync + 'static
     {
         AdHoc { name, kind: AdHocKind::Response(Box::new(f)) }
     }
@@ -166,9 +168,11 @@ impl Fairing for AdHoc {
         }
     }
 
-    fn on_response(&self, request: &Request<'_>, response: &mut Response<'_>) {
+    fn on_response<'a, 'r>(&'a self, request: &'a Request<'r>, response: &'a mut Response<'r>) -> Pin<Box<dyn Future<Output=()> + Send + 'a>> {
         if let AdHocKind::Response(ref callback) = self.kind {
             callback(request, response)
+        } else {
+            Box::pin(async { })
         }
     }
 }

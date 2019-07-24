@@ -194,103 +194,127 @@ pub trait Responder<'r> {
     /// returned, the error catcher for the given status is retrieved and called
     /// to generate a final error response, which is then written out to the
     /// client.
-    fn respond_to(self, request: &Request<'_>) -> response::Result<'r>;
+    fn respond_to(self, request: &'r Request<'_>) -> response::ResultFuture<'r>;
 }
 
 /// Returns a response with Content-Type `text/plain` and a fixed-size body
 /// containing the string `self`. Always returns `Ok`.
 impl<'r> Responder<'r> for &'r str {
-    fn respond_to(self, _: &Request<'_>) -> response::Result<'r> {
-        Response::build()
-            .header(ContentType::Plain)
-            .sized_body(Cursor::new(self))
-            .ok()
+    fn respond_to(self, _: &Request<'_>) -> response::ResultFuture<'r> {
+        Box::pin(async move {
+            Response::build()
+                .header(ContentType::Plain)
+                .sized_body(Cursor::new(self))
+                .ok()
+        })
     }
 }
 
 /// Returns a response with Content-Type `text/plain` and a fixed-size body
 /// containing the string `self`. Always returns `Ok`.
 impl Responder<'_> for String {
-    fn respond_to(self, _: &Request<'_>) -> response::Result<'static> {
-        Response::build()
-            .header(ContentType::Plain)
-            .sized_body(Cursor::new(self))
-            .ok()
+    fn respond_to(self, _: &Request<'_>) -> response::ResultFuture<'static> {
+        Box::pin(async move {
+            Response::build()
+                .header(ContentType::Plain)
+                .sized_body(Cursor::new(self))
+                .ok()
+        })
     }
 }
 
 /// Returns a response with Content-Type `application/octet-stream` and a
 /// fixed-size body containing the data in `self`. Always returns `Ok`.
 impl<'r> Responder<'r> for &'r [u8] {
-    fn respond_to(self, _: &Request<'_>) -> response::Result<'r> {
-        Response::build()
-            .header(ContentType::Binary)
-            .sized_body(Cursor::new(self))
-            .ok()
+    fn respond_to(self, _: &Request<'_>) -> response::ResultFuture<'r> {
+        Box::pin(async move {
+            Response::build()
+                .header(ContentType::Binary)
+                .sized_body(Cursor::new(self))
+                .ok()
+        })
     }
 }
 
 /// Returns a response with Content-Type `application/octet-stream` and a
 /// fixed-size body containing the data in `self`. Always returns `Ok`.
 impl Responder<'_> for Vec<u8> {
-    fn respond_to(self, _: &Request<'_>) -> response::Result<'static> {
-        Response::build()
-            .header(ContentType::Binary)
-            .sized_body(Cursor::new(self))
-            .ok()
+    fn respond_to(self, _: &Request<'_>) -> response::ResultFuture<'static> {
+        Box::pin(async move {
+            Response::build()
+                .header(ContentType::Binary)
+                .sized_body(Cursor::new(self))
+                .ok()
+        })
     }
 }
 
 /// Returns a response with a sized body for the file. Always returns `Ok`.
 impl Responder<'_> for File {
-    fn respond_to(self, _: &Request<'_>) -> response::Result<'static> {
-        let metadata = self.metadata();
-        let stream = BufReader::new(tokio::fs::File::from_std(self)).compat();
-        match metadata {
-            Ok(md) => Response::build().raw_body(Body::Sized(stream, md.len())).ok(),
-            Err(_) => Response::build().streamed_body(stream).ok()
-        }
+    fn respond_to(self, _: &Request<'_>) -> response::ResultFuture<'static> {
+        Box::pin(async move {
+            let metadata = self.metadata();
+            let stream = BufReader::new(tokio::fs::File::from_std(self)).compat();
+            match metadata {
+                Ok(md) => Response::build().raw_body(Body::Sized(stream, md.len())).ok(),
+                Err(_) => Response::build().streamed_body(stream).ok()
+            }
+        })
     }
 }
 
 /// Returns an empty, default `Response`. Always returns `Ok`.
 impl Responder<'_> for () {
-    fn respond_to(self, _: &Request<'_>) -> response::Result<'static> {
-        Ok(Response::new())
+    fn respond_to(self, _: &Request<'_>) -> response::ResultFuture<'static> {
+        Box::pin(async move {
+            Ok(Response::new())
+        })
     }
 }
 
 /// If `self` is `Some`, responds with the wrapped `Responder`. Otherwise prints
 /// a warning message and returns an `Err` of `Status::NotFound`.
-impl<'r, R: Responder<'r>> Responder<'r> for Option<R> {
-    fn respond_to(self, req: &Request<'_>) -> response::Result<'r> {
-        self.map_or_else(|| {
-            warn_!("Response was `None`.");
-            Err(Status::NotFound)
-        }, |r| r.respond_to(req))
+impl<'r, R: Responder<'r> + Send + 'r> Responder<'r> for Option<R> {
+    fn respond_to(self, req: &'r Request<'_>) -> response::ResultFuture<'r> {
+        Box::pin(async move {
+            match self {
+                Some(r) => r.respond_to(req).await,
+                None => {
+                    warn_!("Response was `None`.");
+                    Err(Status::NotFound)
+                },
+            }
+        })
     }
 }
 
 /// If `self` is `Ok`, responds with the wrapped `Responder`. Otherwise prints
 /// an error message with the `Err` value returns an `Err` of
 /// `Status::InternalServerError`.
-impl<'r, R: Responder<'r>, E: fmt::Debug> Responder<'r> for Result<R, E> {
-    default fn respond_to(self, req: &Request<'_>) -> response::Result<'r> {
-        self.map(|r| r.respond_to(req)).unwrap_or_else(|e| {
-            error_!("Response was a non-`Responder` `Err`: {:?}.", e);
-            Err(Status::InternalServerError)
+impl<'r, R: Responder<'r> + Send + 'r, E: fmt::Debug + Send + 'r> Responder<'r> for Result<R, E> {
+    default fn respond_to(self, req: &'r Request<'_>) -> response::ResultFuture<'r> {
+        Box::pin(async move {
+            match self {
+                Ok(r) => r.respond_to(req).await,
+                Err(e) => {
+                    error_!("Response was a non-`Responder` `Err`: {:?}.", e);
+                    Err(Status::InternalServerError)
+                }
+            }
         })
     }
 }
 
 /// Responds with the wrapped `Responder` in `self`, whether it is `Ok` or
 /// `Err`.
-impl<'r, R: Responder<'r>, E: Responder<'r> + fmt::Debug> Responder<'r> for Result<R, E> {
-    fn respond_to(self, req: &Request<'_>) -> response::Result<'r> {
-        match self {
-            Ok(responder) => responder.respond_to(req),
-            Err(responder) => responder.respond_to(req),
-        }
+impl<'r, R: Responder<'r> + Send + 'r, E: Responder<'r> + fmt::Debug + Send + 'r> Responder<'r> for Result<R, E> {
+    fn respond_to(self, req: &'r Request<'_>) -> response::ResultFuture<'r> {
+        Box::pin(async move {
+            match self {
+                Ok(responder) => responder.respond_to(req).await,
+                Err(responder) => responder.respond_to(req).await,
+            }
+        })
     }
 }
 
@@ -308,21 +332,23 @@ impl<'r, R: Responder<'r>, E: Responder<'r> + fmt::Debug> Responder<'r> for Resu
 /// `100` responds with any empty body and the given status code, and all other
 /// status code emit an error message and forward to the `500` (internal server
 /// error) catcher.
-impl Responder<'_> for Status {
-    fn respond_to(self, _: &Request<'_>) -> response::Result<'static> {
-        match self.class() {
-            StatusClass::ClientError | StatusClass::ServerError => Err(self),
-            StatusClass::Success if self.code < 206 => {
-                Response::build().status(self).ok()
+impl<'r> Responder<'r> for Status {
+    fn respond_to(self, _: &'r Request<'_>) -> response::ResultFuture<'r> {
+        Box::pin(async move {
+            match self.class() {
+                StatusClass::ClientError | StatusClass::ServerError => Err(self),
+                StatusClass::Success if self.code < 206 => {
+                    Response::build().status(self).ok()
+                }
+                StatusClass::Informational if self.code == 100 => {
+                    Response::build().status(self).ok()
+                }
+                _ => {
+                    error_!("Invalid status used as responder: {}.", self);
+                    warn_!("Fowarding to 500 (Internal Server Error) catcher.");
+                    Err(Status::InternalServerError)
+                }
             }
-            StatusClass::Informational if self.code == 100 => {
-                Response::build().status(self).ok()
-            }
-            _ => {
-                error_!("Invalid status used as responder: {}.", self);
-                warn_!("Fowarding to 500 (Internal Server Error) catcher.");
-                Err(Status::InternalServerError)
-            }
-        }
+        })
     }
 }

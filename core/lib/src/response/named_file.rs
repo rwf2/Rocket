@@ -78,16 +78,18 @@ impl NamedFile {
 /// recognized. See [`ContentType::from_extension()`] for more information. If
 /// you would like to stream a file with a different Content-Type than that
 /// implied by its extension, use a [`File`] directly.
-impl Responder<'_> for NamedFile {
-    fn respond_to(self, req: &Request<'_>) -> response::Result<'static> {
-        let mut response = self.1.respond_to(req)?;
-        if let Some(ext) = self.0.extension() {
-            if let Some(ct) = ContentType::from_extension(&ext.to_string_lossy()) {
-                response.set_header(ct);
+impl<'r> Responder<'r> for NamedFile {
+    fn respond_to(self, req: &'r Request<'_>) -> response::ResultFuture<'r> {
+        Box::pin(async move {
+            let mut response = self.1.respond_to(req).await?;
+            if let Some(ext) = self.0.extension() {
+                if let Some(ct) = ContentType::from_extension(&ext.to_string_lossy()) {
+                    response.set_header(ct);
+                }
             }
-        }
 
-        Ok(response)
+            Ok(response)
+        })
     }
 }
 

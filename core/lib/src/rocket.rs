@@ -266,7 +266,7 @@ impl Rocket {
             }
 
             // Run the response fairings.
-            self.fairings.handle_response(request, &mut response);
+            self.fairings.handle_response(request, &mut response).await;
 
             // Strip the body if this is a `HEAD` request.
             if was_head_request {

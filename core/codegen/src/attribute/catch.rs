@@ -74,7 +74,7 @@ pub fn _catch(args: TokenStream, input: TokenStream) -> Result<TokenStream> {
     let catcher_response = quote_spanned!(return_type_span => {
         // Emit this to force a type signature check.
         let #catcher: #fn_sig = #user_catcher_fn_name;
-        ::rocket::response::Responder::respond_to(#catcher(#inputs), #req)?
+        ::rocket::response::Responder::respond_to(#catcher(#inputs), #req).await?
     });
 
     // Generate the catcher, keeping the user's input around.

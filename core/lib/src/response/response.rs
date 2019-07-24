@@ -5,7 +5,7 @@ use std::pin::Pin;
 use futures::future::{Future, FutureExt};
 use futures::io::{AsyncRead, AsyncReadExt};
 
-use crate::response::Responder;
+use crate::response::{Responder, ResultFuture};
 use crate::http::{Header, HeaderMap, Status, ContentType, Cookie};
 use crate::ext::AsyncReadExt as _;
 
@@ -1216,7 +1216,9 @@ use crate::request::Request;
 
 impl<'r> Responder<'r> for Response<'r> {
     /// This is the identity implementation. It simply returns `Ok(self)`.
-    fn respond_to(self, _: &Request<'_>) -> Result<Response<'r>, Status> {
-        Ok(self)
+    fn respond_to(self, _: &'r Request<'_>) -> ResultFuture<'r> {
+        Box::pin(async {
+            Ok(self)
+        })
     }
 }

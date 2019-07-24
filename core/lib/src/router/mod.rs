@@ -15,7 +15,7 @@ type Selector = Method;
 
 // A handler to use when one is needed temporarily.
 crate fn dummy_handler<'r>(r: &'r Request<'_>, _: crate::Data) -> std::pin::Pin<Box<dyn Future<Output = crate::handler::Outcome<'r>> + Send + 'r>> {
-    futures::future::ready(crate::Outcome::from(r, ())).boxed()
+    crate::Outcome::from(r, ())
 }
 
 #[derive(Default)]

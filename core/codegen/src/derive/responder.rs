@@ -32,8 +32,8 @@ pub fn derive_responder(input: TokenStream) -> TokenStream {
         .function(|_, inner| quote! {
             fn respond_to(
                 self,
-                __req: &::rocket::Request
-            ) -> ::rocket::response::Result<'__r> {
+                __req: &'__r ::rocket::Request
+            ) -> ::rocket::response::ResultFuture<'__r> {
                 #inner
             }
         })
@@ -50,7 +50,7 @@ pub fn derive_responder(input: TokenStream) -> TokenStream {
                 quote_spanned! { f.span().into() =>
                    let mut __res = <#ty as ::rocket::response::Responder>::respond_to(
                        #accessor, __req
-                   )?;
+                   ).await?;
                 }
             }).expect("have at least one field");
 
@@ -70,11 +70,13 @@ pub fn derive_responder(input: TokenStream) -> TokenStream {
             });
 
             Ok(quote! {
-                #responder
-                #(#headers)*
-                #content_type
-                #status
-                Ok(__res)
+                Box::pin(async move {
+                    #responder
+                    #(#headers)*
+                    #content_type
+                    #status
+                    Ok(__res)
+                })
             })
         })
         .to_tokens()

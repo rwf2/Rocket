@@ -420,7 +420,7 @@ fn codegen_route(route: Route) -> Result<TokenStream> {
                 #data_stmt
 
                 #responder_stmt
-                #handler::Outcome::from(#req, ___responder)
+                #handler::Outcome::from(#req, ___responder).await
             })
         }
 

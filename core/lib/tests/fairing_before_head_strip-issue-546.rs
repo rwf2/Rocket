@@ -34,16 +34,16 @@ mod fairing_before_head_strip {
                 assert_eq!(req.method(), Method::Head);
             }))
             .attach(AdHoc::on_response("Check HEAD 2", |req, res| {
-                assert_eq!(req.method(), Method::Head);
-                // TODO.async: Needs async on_response fairings
-                // assert_eq!(res.body_string().await, Some(RESPONSE_STRING.into()));
+                Box::pin(async move {
+                    assert_eq!(req.method(), Method::Head);
+                    assert_eq!(res.body_string().await, Some(RESPONSE_STRING.into()));
+                })
             }));
 
         let client = Client::new(rocket).unwrap();
         let mut response = client.head("/").dispatch();
         assert_eq!(response.status(), Status::Ok);
-        // TODO.async: See above
-        // assert!(response.body().is_none());
+        assert!(response.body().is_none());
     }
 
     #[test]
@@ -63,15 +63,15 @@ mod fairing_before_head_strip {
                 assert_eq!(c.0.fetch_add(1, Ordering::SeqCst), 0);
             }))
             .attach(AdHoc::on_response("Check GET", |req, res| {
-                assert_eq!(req.method(), Method::Get);
-                // TODO.async: Needs async on_response fairings
-                // assert_eq!(res.body_string().await, Some(RESPONSE_STRING.into()));
+                Box::pin(async move {
+                    assert_eq!(req.method(), Method::Get);
+                    assert_eq!(res.body_string().await, Some(RESPONSE_STRING.into()));
+                })
             }));
 
         let client = Client::new(rocket).unwrap();
         let mut response = client.head("/").dispatch();
         assert_eq!(response.status(), Status::Ok);
-        // TODO.async: See above
-        // assert!(response.body().is_none());
+        assert!(response.body().is_none());
     }
 }
