@@ -141,6 +141,7 @@ pub use crate::router::Route;
 pub use crate::request::{Request, State};
 pub use crate::catcher::Catcher;
 pub use crate::rocket::Rocket;
+pub use ext::AsyncReadExt;
 
 /// Alias to [`Rocket::ignite()`] Creates a new instance of `Rocket`.
 pub fn ignite() -> Rocket {

@@ -35,7 +35,7 @@ fn can_login() {
     let client = Client::new(rocket()).unwrap();
 
     let mut response = client.get("/login").dispatch();
-    let body = response.body_string().unwrap();
+    let body = response.body_string_wait().unwrap();
     assert_eq!(response.status(), Status::Ok);
     assert!(body.contains("Please login to continue."));
 }
@@ -54,7 +54,7 @@ fn login_logout_succeeds() {
 
     // Ensure we're logged in.
     let mut response = client.get("/").cookie(login_cookie.clone()).dispatch();
-    let body = response.body_string().unwrap();
+    let body = response.body_string_wait().unwrap();
     assert_eq!(response.status(), Status::Ok);
     assert!(body.contains("Logged in with user ID 1"));
 

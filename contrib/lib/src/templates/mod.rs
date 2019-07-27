@@ -37,7 +37,7 @@
 //!      of the template file minus the last two extensions, from a handler.
 //!
 //!      ```rust
-//!      # #![feature(proc_macro_hygiene)]
+//!      # #![feature(proc_macro_hygiene, async_await)]
 //!      # #[macro_use] extern crate rocket;
 //!      # #[macro_use] extern crate rocket_contrib;
 //!      # fn context() {  }
@@ -184,7 +184,7 @@ const DEFAULT_TEMPLATE_DIR: &str = "templates";
 /// returned from a request handler directly:
 ///
 /// ```rust
-/// # #![feature(proc_macro_hygiene)]
+/// # #![feature(proc_macro_hygiene, async_await)]
 /// # #[macro_use] extern crate rocket;
 /// # #[macro_use] extern crate rocket_contrib;
 /// # fn context() {  }
@@ -387,16 +387,21 @@ impl Template {
 /// Returns a response with the Content-Type derived from the template's
 /// extension and a fixed-size body containing the rendered template. If
 /// rendering fails, an `Err` of `Status::InternalServerError` is returned.
-impl Responder<'static> for Template {
-    fn respond_to(self, req: &Request<'_>) -> response::Result<'static> {
-        let ctxt = req.guard::<State<'_, ContextManager>>().succeeded().ok_or_else(|| {
-            error_!("Uninitialized template context: missing fairing.");
-            info_!("To use templates, you must attach `Template::fairing()`.");
-            info_!("See the `Template` documentation for more information.");
-            Status::InternalServerError
-        })?.inner().context();
+impl<'r> Responder<'r> for Template {
+    fn respond_to(self, req: &'r Request<'_>) -> response::ResultFuture<'r> {
+        Box::pin(async move {
+            let (render, content_type) = {
+                let ctxt = req.guard::<State<'_, ContextManager>>().succeeded().ok_or_else(|| {
+                    error_!("Uninitialized template context: missing fairing.");
+                    info_!("To use templates, you must attach `Template::fairing()`.");
+                    info_!("See the `Template` documentation for more information.");
+                    Status::InternalServerError
+                })?.inner().context();
 
-        let (render, content_type) = self.finalize(&ctxt)?;
-        Content(content_type, render).respond_to(req)
+                self.finalize(&ctxt)?
+            };
+
+            Content(content_type, render).respond_to(req).await
+        })
     }
 }

@@ -42,6 +42,7 @@ memcache_pool = ["databases", "memcache", "r2d2-memcache"]
 
 [dependencies]
 # Global dependencies.
+futures-preview = { version = "0.3.0-alpha.17" }
 rocket_contrib_codegen = { version = "0.5.0-dev", path = "../codegen", optional = true }
 rocket = { version = "0.5.0-dev", path = "../../core/lib/", default-features = false }
 log = "0.4"

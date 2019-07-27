@@ -73,7 +73,7 @@
 //! Whenever a connection to the database is needed:
 //!
 //! ```rust
-//! # #![feature(proc_macro_hygiene)]
+//! # #![feature(proc_macro_hygiene, async_await)]
 //! #
 //! # #[macro_use] extern crate rocket;
 //! # #[macro_use] extern crate rocket_contrib;
@@ -289,7 +289,7 @@
 //! connection to a given database:
 //!
 //! ```rust
-//! # #![feature(proc_macro_hygiene)]
+//! # #![feature(proc_macro_hygiene, async_await)]
 //! #
 //! # #[macro_use] extern crate rocket;
 //! # #[macro_use] extern crate rocket_contrib;
@@ -311,7 +311,7 @@
 //! connection type:
 //!
 //! ```rust
-//! # #![feature(proc_macro_hygiene)]
+//! # #![feature(proc_macro_hygiene, async_await)]
 //! #
 //! # #[macro_use] extern crate rocket;
 //! # #[macro_use] extern crate rocket_contrib;

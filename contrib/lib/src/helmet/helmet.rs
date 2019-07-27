@@ -196,8 +196,10 @@ impl Fairing for SpaceHelmet {
         }
     }
 
-    fn on_response(&self, _request: &Request<'_>, response: &mut Response<'_>) {
-        self.apply(response);
+    fn on_response<'a>(&'a self, _request: &'a Request<'_>, response: &'a mut Response<'_>) -> std::pin::Pin<Box<dyn std::future::Future<Output=()> + Send + 'a>> {
+        Box::pin(async move {
+            self.apply(response);
+        })
     }
 
     fn on_launch(&self, rocket: &Rocket) {

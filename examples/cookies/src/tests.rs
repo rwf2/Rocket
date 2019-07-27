@@ -30,7 +30,7 @@ fn test_body(optional_cookie: Option<Cookie<'static>>, expected_body: String) {
     };
 
     assert_eq!(response.status(), Status::Ok);
-    assert_eq!(response.body_string(), Some(expected_body));
+    assert_eq!(response.body_string_wait(), Some(expected_body));
 }
 
 #[test]

@@ -15,14 +15,17 @@
 //! ```
 
 use std::ops::{Deref, DerefMut};
-use std::io::{self, Read};
+use std::io;
 use std::iter::FromIterator;
+
+use futures::io::AsyncReadExt;
 
 use rocket::request::Request;
 use rocket::outcome::Outcome::*;
-use rocket::data::{Outcome, Transform, Transform::*, Transformed, Data, FromData};
+use rocket::data::{Transform::*, Transformed, Data, FromData, TransformFuture, FromDataFuture};
 use rocket::response::{self, Responder, content};
 use rocket::http::Status;
+use rocket::AsyncReadExt as _;
 
 use serde::{Serialize, Serializer};
 use serde::de::{Deserialize, Deserializer};
@@ -41,7 +44,7 @@ pub use serde_json::{json_internal, json_internal_vec};
 /// or from [`serde`]. The data is parsed from the HTTP request body.
 ///
 /// ```rust
-/// # #![feature(proc_macro_hygiene)]
+/// # #![feature(proc_macro_hygiene, async_await)]
 /// # #[macro_use] extern crate rocket;
 /// # extern crate rocket_contrib;
 /// # type User = usize;
@@ -65,7 +68,7 @@ pub use serde_json::{json_internal, json_internal_vec};
 /// set to `application/json` automatically.
 ///
 /// ```rust
-/// # #![feature(proc_macro_hygiene)]
+/// # #![feature(proc_macro_hygiene, async_await)]
 /// # #[macro_use] extern crate rocket;
 /// # extern crate rocket_contrib;
 /// # type User = usize;
@@ -133,42 +136,53 @@ impl<'a, T: Deserialize<'a>> FromData<'a> for Json<T> {
     type Owned = String;
     type Borrowed = str;
 
-    fn transform(r: &Request<'_>, d: Data) -> Transform<Outcome<Self::Owned, Self::Error>> {
+    fn transform(r: &Request<'_>, d: Data) -> TransformFuture<'a, Self::Owned, Self::Error> {
         let size_limit = r.limits().get("json").unwrap_or(LIMIT);
-        let mut s = String::with_capacity(512);
-        match d.open().take(size_limit).read_to_string(&mut s) {
-            Ok(_) => Borrowed(Success(s)),
-            Err(e) => Borrowed(Failure((Status::BadRequest, JsonError::Io(e))))
-        }
+        Box::pin(async move {
+            let mut v = Vec::with_capacity(512);
+            let mut reader = d.open().take(size_limit);
+            match reader.read_to_end(&mut v).await {
+                Ok(_) => {
+                    match String::from_utf8(v) {
+                        Ok(s) => Borrowed(Success(s)),
+                        Err(e) => Borrowed(Failure((Status::BadRequest, JsonError::Io(std::io::Error::new(std::io::ErrorKind::Other, e))))),
+                    }
+                },
+                Err(e) => Borrowed(Failure((Status::BadRequest, JsonError::Io(e))))
+            }
+        })
     }
 
-    fn from_data(_: &Request<'_>, o: Transformed<'a, Self>) -> Outcome<Self, Self::Error> {
-        let string = o.borrowed()?;
-        match serde_json::from_str(&string) {
-            Ok(v) => Success(Json(v)),
-            Err(e) => {
-                error_!("Couldn't parse JSON body: {:?}", e);
-                if e.is_data() {
-                    Failure((Status::UnprocessableEntity, JsonError::Parse(string, e)))
-                } else {
-                    Failure((Status::BadRequest, JsonError::Parse(string, e)))
+    fn from_data(_: &Request<'_>, o: Transformed<'a, Self>) -> FromDataFuture<'a, Self, Self::Error> {
+        Box::pin(async move {
+            let string = o.borrowed()?;
+            match serde_json::from_str(&string) {
+                Ok(v) => Success(Json(v)),
+                Err(e) => {
+                    error_!("Couldn't parse JSON body: {:?}", e);
+                    if e.is_data() {
+                        Failure((Status::UnprocessableEntity, JsonError::Parse(string, e)))
+                    } else {
+                        Failure((Status::BadRequest, JsonError::Parse(string, e)))
+                    }
                 }
             }
-        }
+        })
     }
 }
 
 /// Serializes the wrapped value into JSON. Returns a response with Content-Type
 /// JSON and a fixed-size body with the serialized value. If serialization
 /// fails, an `Err` of `Status::InternalServerError` is returned.
-impl<'a, T: Serialize> Responder<'a> for Json<T> {
-    fn respond_to(self, req: &Request<'_>) -> response::Result<'a> {
-        serde_json::to_string(&self.0).map(|string| {
-            content::Json(string).respond_to(req).unwrap()
-        }).map_err(|e| {
-            error_!("JSON failed to serialize: {:?}", e);
-            Status::InternalServerError
-        })
+impl<'r, T: Serialize> Responder<'r> for Json<T> {
+    fn respond_to(self, req: &'r Request<'_>) -> response::ResultFuture<'r> {
+        match serde_json::to_string(&self.0) {
+            Ok(string) => Box::pin(async move { Ok(content::Json(string).respond_to(req).await.unwrap()) }),
+            Err(e) => Box::pin(async move {
+                error_!("JSON failed to serialize: {:?}", e);
+                Err(Status::InternalServerError)
+            })
+        }
     }
 }
 
@@ -210,7 +224,7 @@ impl<T> DerefMut for Json<T> {
 /// fashion during request handling. This looks something like:
 ///
 /// ```rust
-/// # #![feature(proc_macro_hygiene)]
+/// # #![feature(proc_macro_hygiene, async_await)]
 /// # #[macro_use] extern crate rocket;
 /// # #[macro_use] extern crate rocket_contrib;
 /// use rocket_contrib::json::JsonValue;
@@ -283,9 +297,9 @@ impl<T> FromIterator<T> for JsonValue where serde_json::Value: FromIterator<T> {
 
 /// Serializes the value into JSON. Returns a response with Content-Type JSON
 /// and a fixed-size body with the serialized value.
-impl<'a> Responder<'a> for JsonValue {
+impl<'r> Responder<'r> for JsonValue {
     #[inline]
-    fn respond_to(self, req: &Request<'_>) -> response::Result<'a> {
+    fn respond_to(self, req: &'r Request<'_>) -> response::ResultFuture<'r> {
         content::Json(self.0.to_string()).respond_to(req)
     }
 }
@@ -305,7 +319,7 @@ impl<'a> Responder<'a> for JsonValue {
 /// value created with this macro can be returned from a handler as follows:
 ///
 /// ```rust
-/// # #![feature(proc_macro_hygiene)]
+/// # #![feature(proc_macro_hygiene, async_await)]
 /// # #[macro_use] extern crate rocket;
 /// # #[macro_use] extern crate rocket_contrib;
 /// use rocket_contrib::json::JsonValue;

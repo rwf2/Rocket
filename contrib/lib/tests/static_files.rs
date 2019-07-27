@@ -1,4 +1,4 @@
-#![feature(proc_macro_hygiene)]
+#![feature(proc_macro_hygiene, async_await)]
 
 #[cfg(feature = "serve")]
 mod static_tests {
@@ -57,7 +57,7 @@ mod static_tests {
             let mut file = File::open(path).expect("open file");
             let mut expected_contents = String::new();
             file.read_to_string(&mut expected_contents).expect("read file");
-            assert_eq!(response.body_string(), Some(expected_contents));
+            assert_eq!(response.body_string_wait(), Some(expected_contents));
         } else {
             assert_eq!(response.status(), Status::NotFound);
         }
@@ -133,11 +133,11 @@ mod static_tests {
 
         let mut response = client.get("/default/ireallydontexist").dispatch();
         assert_eq!(response.status(), Status::Ok);
-        assert_eq!(response.body_string().unwrap(), "ireallydontexist");
+        assert_eq!(response.body_string_wait().unwrap(), "ireallydontexist");
 
         let mut response = client.get("/default/idont/exist").dispatch();
         assert_eq!(response.status(), Status::Ok);
-        assert_eq!(response.body_string().unwrap(), "idont/exist");
+        assert_eq!(response.body_string_wait().unwrap(), "idont/exist");
 
         assert_all(&client, "both", REGULAR_FILES, true);
         assert_all(&client, "both", HIDDEN_FILES, true);

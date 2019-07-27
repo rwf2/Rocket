@@ -10,13 +10,13 @@ fn bad_get_put() {
     let mut res = client.get("/message/99").header(ContentType::JSON).dispatch();
     assert_eq!(res.status(), Status::NotFound);
 
-    let body = res.body_string().unwrap();
+    let body = res.body_string_wait().unwrap();
     assert!(body.contains("error"));
     assert!(body.contains("Resource was not found."));
 
     // Try to get a message with an invalid ID.
     let mut res = client.get("/message/hi").header(ContentType::JSON).dispatch();
-    let body = res.body_string().unwrap();
+    let body = res.body_string_wait().unwrap();
     assert_eq!(res.status(), Status::NotFound);
     assert!(body.contains("error"));
 
@@ -52,7 +52,7 @@ fn post_get_put_get() {
     // Check that the message exists with the correct contents.
     let mut res = client.get("/message/1").header(ContentType::JSON).dispatch();
     assert_eq!(res.status(), Status::Ok);
-    let body = res.body().unwrap().into_string().unwrap();
+    let body = res.body_string_wait().unwrap();
     assert!(body.contains("Hello, world!"));
 
     // Change the message contents.
@@ -66,7 +66,7 @@ fn post_get_put_get() {
     // Check that the message exists with the updated contents.
     let mut res = client.get("/message/1").header(ContentType::JSON).dispatch();
     assert_eq!(res.status(), Status::Ok);
-    let body = res.body().unwrap().into_string().unwrap();
+    let body = res.body_string_wait().unwrap();
     assert!(!body.contains("Hello, world!"));
     assert!(body.contains("Bye bye, world!"));
 }

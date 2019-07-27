@@ -32,7 +32,7 @@ fn test_root() {
             let expected = Template::show(client.rocket(), "error/404", &map).unwrap();
 
             assert_eq!(response.status(), Status::NotFound);
-            assert_eq!(response.body_string(), Some(expected));
+            assert_eq!(response.body_string_wait(), Some(expected));
         });
     }
 }
@@ -48,7 +48,7 @@ fn test_name() {
 
         let expected = Template::show(client.rocket(), "index", &context).unwrap();
         assert_eq!(response.status(), Status::Ok);
-        assert_eq!(response.body_string(), Some(expected));
+        assert_eq!(response.body_string_wait(), Some(expected));
     });
 }
 
@@ -61,6 +61,6 @@ fn test_404() {
 
         let expected = Template::show(client.rocket(), "error/404", &map).unwrap();
         assert_eq!(response.status(), Status::NotFound);
-        assert_eq!(response.body_string(), Some(expected));
+        assert_eq!(response.body_string_wait(), Some(expected));
     });
 }
