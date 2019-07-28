@@ -195,20 +195,23 @@ impl<'f, T: FromForm<'f>> FromData<'f> for Form<T> {
     ) -> Transform<Outcome<Self::Owned, Self::Error>> {
         use std::{cmp::min, io::Read};
 
-        let outcome = 'o: {
+        // This will not loop indefinitely, as we will always break on the first
+        // iteration. If the [`label_break_value`](https://git.io/rust-label-break-value)
+        // ever stabilizes, we can use that instead.
+        let outcome = loop {
             if !request.content_type().map_or(false, |ct| ct.is_form()) {
                 warn_!("Form data does not have form content type.");
-                break 'o Forward(data);
+                break Forward(data);
             }
 
             let limit = request.limits().forms;
             let mut stream = data.open().take(limit);
             let mut form_string = String::with_capacity(min(4096, limit) as usize);
             if let Err(e) = stream.read_to_string(&mut form_string) {
-                break 'o Failure((Status::InternalServerError, FormDataError::Io(e)));
+                break Failure((Status::InternalServerError, FormDataError::Io(e)));
             }
 
-            break 'o Success(form_string);
+            break Success(form_string);
         };
 
         Transform::Borrowed(outcome)
