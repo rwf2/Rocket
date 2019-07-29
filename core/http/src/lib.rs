@@ -1,7 +1,6 @@
 #![feature(specialization)]
 #![feature(proc_macro_hygiene)]
 #![feature(crate_visibility_modifier)]
-#![feature(doc_cfg)]
 #![recursion_limit="512"]
 
 #![warn(rust_2018_idioms)]

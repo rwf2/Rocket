@@ -1,5 +1,4 @@
 #![feature(crate_visibility_modifier)]
-#![feature(doc_cfg)]
 
 #![doc(html_root_url = "https://api.rocket.rs/v0.5")]
 #![doc(html_favicon_url = "https://rocket.rs/v0.5/images/favicon.ico")]
