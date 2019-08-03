@@ -13,10 +13,13 @@ fn test_query_file<T> (path: &str, file: T, status: Status)
     let mut response = client.get(path).dispatch();
     assert_eq!(response.status(), status);
 
-    let body_data = response.body().and_then(|body| body.into_bytes());
     if let Some(filename) = file.into() {
         let expected_data = read_file_content(filename);
-        assert!(body_data.map_or(false, |s| s == expected_data));
+        let body = response.body_bytes_wait().unwrap();
+        assert_eq!(body,
+                    expected_data);
+//        assert!(body_data == &expected_data);
+//        assert!(body_data.map_or(false, |s| s == expected_data));
     }
 }
 

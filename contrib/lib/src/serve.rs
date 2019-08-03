@@ -14,12 +14,12 @@
 //! features = ["serve"]
 //! ```
 
-use std::path::{PathBuf, Path};
+use std::path::{Path, PathBuf};
 
-use rocket::{Request, Data, Route};
-use rocket::http::{Method, uri::Segments};
-use rocket::handler::{Handler, Outcome};
+use rocket::handler::{Handler, HandlerFuture, Outcome};
+use rocket::http::{uri::Segments, Method};
 use rocket::response::NamedFile;
+use rocket::{Data, Request, Route};
 
 /// A bitset representing configurable options for the [`StaticFiles`] handler.
 ///
@@ -237,7 +237,11 @@ impl StaticFiles {
     /// }
     /// ```
     pub fn new<P: AsRef<Path>>(path: P, options: Options) -> Self {
-        StaticFiles { root: path.as_ref().into(), options, rank: Self::DEFAULT_RANK }
+        StaticFiles {
+            root: path.as_ref().into(),
+            options,
+            rank: Self::DEFAULT_RANK,
+        }
     }
 
     /// Sets the rank for generated routes to `rank`.
@@ -273,10 +277,15 @@ impl Into<Vec<Route>> for StaticFiles {
 }
 
 impl Handler for StaticFiles {
-    fn handle<'r>(&self, req: &'r Request<'_>, data: Data) -> Outcome<'r> {
-        fn handle_dir<'r>(opt: Options, r: &'r Request<'_>, d: Data, path: &Path) -> Outcome<'r> {
+    fn handle<'r>(&self, req: &'r Request<'_>, data: Data) -> HandlerFuture<'r> {
+        fn handle_dir<'r>(
+            opt: Options,
+            r: &'r Request<'_>,
+            d: Data,
+            path: &Path,
+        ) -> HandlerFuture<'r> {
             if !opt.contains(Options::Index) {
-                return Outcome::forward(d);
+                return Box::pin(async move { Outcome::forward(d) });
             }
 
             let file = NamedFile::open(path.join("index.html")).ok();
@@ -294,7 +303,8 @@ impl Handler for StaticFiles {
         // Otherwise, we're handling segments. Get the segments as a `PathBuf`,
         // only allowing dotfiles if the user allowed it.
         let allow_dotfiles = self.options.contains(Options::DotFiles);
-        let path = req.get_segments::<Segments<'_>>(0)
+        let path = req
+            .get_segments::<Segments<'_>>(0)
             .and_then(|res| res.ok())
             .and_then(|segments| segments.into_path_buf(allow_dotfiles).ok())
             .map(|path| self.root.join(path));
@@ -302,7 +312,7 @@ impl Handler for StaticFiles {
         match &path {
             Some(path) if path.is_dir() => handle_dir(self.options, req, data, path),
             Some(path) => Outcome::from_or_forward(req, data, NamedFile::open(path).ok()),
-            None => Outcome::forward(data)
+            None => Box::pin(async move { Outcome::forward(data) }),
         }
     }
 }
