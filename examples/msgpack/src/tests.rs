@@ -16,7 +16,7 @@ fn msgpack_get() {
     assert_eq!(res.content_type(), Some(ContentType::MsgPack));
 
     // Check that the message is `[1, "Hello, world!"]`
-    assert_eq!(&res.body_bytes().unwrap(),
+    assert_eq!(&res.body_bytes_wait().unwrap(),
                &[146, 1, 173, 72, 101, 108, 108, 111, 44, 32, 119, 111, 114, 108, 100, 33]);
 }
 
@@ -30,5 +30,5 @@ fn msgpack_post() {
         .dispatch();
 
     assert_eq!(res.status(), Status::Ok);
-    assert_eq!(res.body_string(), Some("Goodbye, world!".into()));
+    assert_eq!(res.body_string_wait(), Some("Goodbye, world!".into()));
 }
