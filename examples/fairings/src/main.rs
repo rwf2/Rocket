@@ -35,20 +35,24 @@ impl Fairing for Counter {
         }
     }
 
-    fn on_response(&self, request: &Request<'_>, response: &mut Response<'_>) {
-        if response.status() != Status::NotFound {
-            return
-        }
+    fn on_response<'a, 'r>(&'a self, request: &'a Request<'r>, response: &'a mut Response<'r>)
+        -> std::pin::Pin<Box<dyn std::future::Future<Output=()> + Send + 'a>>
+    {
+        Box::pin(async move {
+            if response.status() != Status::NotFound {
+                return
+            }
 
-        if request.method() == Method::Get && request.uri().path() == "/counts" {
-            let get_count = self.get.load(Ordering::Relaxed);
-            let post_count = self.post.load(Ordering::Relaxed);
+            if request.method() == Method::Get && request.uri().path() == "/counts" {
+                let get_count = self.get.load(Ordering::Relaxed);
+                let post_count = self.post.load(Ordering::Relaxed);
 
-            let body = format!("Get: {}\nPost: {}", get_count, post_count);
-            response.set_status(Status::Ok);
-            response.set_header(ContentType::Plain);
-            response.set_sized_body(Cursor::new(body));
-        }
+                let body = format!("Get: {}\nPost: {}", get_count, post_count);
+                response.set_status(Status::Ok);
+                response.set_header(ContentType::Plain);
+                response.set_sized_body(Cursor::new(body));
+            }
+        })
     }
 }
 
@@ -82,10 +86,12 @@ fn rocket() -> rocket::Rocket {
             }
         }))
         .attach(AdHoc::on_response("Response Rewriter", |req, res| {
-            if req.uri().path() == "/" {
-                println!("    => Rewriting response body.");
-                res.set_sized_body(Cursor::new("Hello, fairings!"));
-            }
+            Box::pin(async move {
+                if req.uri().path() == "/" {
+                    println!("    => Rewriting response body.");
+                    res.set_sized_body(Cursor::new("Hello, fairings!"));
+                }
+            })
         }))
 }
 
