@@ -24,7 +24,7 @@
 
 use crate::request::Request;
 use crate::response::{Response, Responder, ResultFuture};
-use crate::http::{Status, ContentType};
+use crate::http::ContentType;
 
 /// Sets the Content-Type of a `Responder` to a chosen value.
 ///

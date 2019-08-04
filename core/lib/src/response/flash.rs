@@ -3,7 +3,7 @@ use std::convert::AsRef;
 use time::Duration;
 
 use crate::outcome::IntoOutcome;
-use crate::response::{Response, Responder, ResultFuture};
+use crate::response::{Responder, ResultFuture};
 use crate::request::{self, Request, FromRequest};
 use crate::http::{Status, Cookie};
 use std::sync::atomic::{AtomicBool, Ordering};

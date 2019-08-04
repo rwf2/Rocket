@@ -4,7 +4,6 @@ use futures::io::AsyncRead;
 
 use crate::request::Request;
 use crate::response::{Response, Responder, ResultFuture, DEFAULT_CHUNK_SIZE};
-use crate::http::Status;
 
 /// Streams a response to a client from an arbitrary `AsyncRead`er type.
 ///

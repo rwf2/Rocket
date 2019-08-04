@@ -3,7 +3,7 @@ mod route;
 
 use std::collections::hash_map::HashMap;
 
-use futures::future::{Future, FutureExt};
+use futures::future::Future;
 
 pub use self::route::Route;
 
