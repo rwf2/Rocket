@@ -9,5 +9,5 @@ fn test_push_pop() {
     assert_eq!(response.status(), Status::Ok);
 
     let mut response = client.get("/pop").dispatch();
-    assert_eq!(response.body_string(), Some("test1".to_string()));
+    assert_eq!(response.body_string_wait(), Some("test1".to_string()));
 }

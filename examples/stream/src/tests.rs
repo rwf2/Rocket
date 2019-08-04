@@ -9,7 +9,7 @@ fn test_root() {
     let mut res = client.get("/").dispatch();
 
     // Check that we have exactly 25,000 'a'.
-    let res_str = res.body_string().unwrap();
+    let res_str = res.body_string_wait().unwrap();
     assert_eq!(res_str.len(), 25000);
     for byte in res_str.as_bytes() {
         assert_eq!(*byte, b'a');
@@ -26,7 +26,7 @@ fn test_file() {
     // Get the big file contents, hopefully.
     let client = Client::new(super::rocket()).unwrap();
     let mut res = client.get("/big_file").dispatch();
-    assert_eq!(res.body_string(), Some(CONTENTS.into()));
+    assert_eq!(res.body_string_wait(), Some(CONTENTS.into()));
 
     // Delete the 'big_file'.
     fs::remove_file(super::FILENAME).expect("remove big_file");

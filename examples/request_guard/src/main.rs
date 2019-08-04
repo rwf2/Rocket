@@ -43,7 +43,7 @@ mod test {
 
         let mut response = req.dispatch();
         let expect = format!("Your request contained {} headers!", headers.len());
-        assert_eq!(response.body_string(), Some(expect));
+        assert_eq!(response.body_string_wait(), Some(expect));
     }
 
     #[test]

@@ -8,7 +8,7 @@ fn register_hit(client: &Client) {
 
 fn get_count(client: &Client) -> usize {
     let mut response = client.get("/count").dispatch();
-    response.body_string().and_then(|s| s.parse().ok()).unwrap()
+    response.body_string_wait().and_then(|s| s.parse().ok()).unwrap()
 }
 
 #[test]

@@ -5,7 +5,7 @@ fn hello_world() {
     let rocket = rocket::ignite().mount("/", routes![super::hello]);
     let client = Client::new(rocket).unwrap();
     let mut response = client.get("/").dispatch();
-    assert_eq!(response.body_string(), Some("Hello, Rust 2015!".into()));
+    assert_eq!(response.body_string_wait(), Some("Hello, Rust 2015!".into()));
 }
 
 // Tests unrelated to the example.
@@ -38,13 +38,13 @@ mod scoped_uri_tests {
     fn test_inner_hello() {
         let client = Client::new(rocket()).unwrap();
         let mut response = client.get("/").dispatch();
-        assert_eq!(response.body_string(), Some("Hello! Try /Rust%202015.".into()));
+        assert_eq!(response.body_string_wait(), Some("Hello! Try /Rust%202015.".into()));
     }
 
     #[test]
     fn test_hello_name() {
         let client = Client::new(rocket()).unwrap();
         let mut response = client.get("/Rust%202015").dispatch();
-        assert_eq!(response.body_string().unwrap(), "Hello, Rust 2015! This is /Rust%202015.");
+        assert_eq!(response.body_string_wait().unwrap(), "Hello, Rust 2015! This is /Rust%202015.");
     }
 }

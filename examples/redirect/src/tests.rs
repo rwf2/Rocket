@@ -26,5 +26,5 @@ fn test_root() {
 fn test_login() {
     let client = client();
     let mut r = client.get("/login").dispatch();
-    assert_eq!(r.body_string(), Some("Hi! Please log in before continuing.".into()));
+    assert_eq!(r.body_string_wait(), Some("Hi! Please log in before continuing.".into()));
 }

@@ -14,20 +14,20 @@ fn check_index() {
     let mut response = client.get("/").dispatch();
     assert_eq!(response.status(), Status::Ok);
     assert_eq!(response.content_type(), Some(ContentType::Plain));
-    assert_eq!(response.body_string(), Some(index().into()))
+    assert_eq!(response.body_string_wait(), Some(index().into()))
 }
 
 fn upload_paste(client: &Client, body: &str) -> String {
     let mut response = client.post("/").body(body).dispatch();
     assert_eq!(response.status(), Status::Ok);
     assert_eq!(response.content_type(), Some(ContentType::Plain));
-    extract_id(&response.body_string().unwrap()).unwrap()
+    extract_id(&response.body_string_wait().unwrap()).unwrap()
 }
 
 fn download_paste(client: &Client, id: &str) -> String {
     let mut response = client.get(format!("/{}", id)).dispatch();
     assert_eq!(response.status(), Status::Ok);
-    response.body_string().unwrap()
+    response.body_string_wait().unwrap()
 }
 
 #[test]

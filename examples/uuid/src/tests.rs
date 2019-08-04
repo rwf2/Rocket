@@ -5,7 +5,7 @@ use rocket::http::Status;
 fn test(uri: &str, expected: &str) {
     let client = Client::new(rocket()).unwrap();
     let mut res = client.get(uri).dispatch();
-    assert_eq!(res.body_string(), Some(expected.into()));
+    assert_eq!(res.body_string_wait(), Some(expected.into()));
 }
 
 fn test_404(uri: &str) {

@@ -20,7 +20,7 @@ fn assert_form_eq(client: &Client, form_str: &str, expected: String) {
         .body(form_str)
         .dispatch();
 
-    assert_eq!(res.body_string(), Some(expected));
+    assert_eq!(res.body_string_wait(), Some(expected));
 }
 
 fn assert_valid_form(client: &Client, input: &FormInput<'_>) {

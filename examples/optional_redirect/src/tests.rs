@@ -12,7 +12,7 @@ fn test_200(uri: &str, expected_body: &str) {
     let client = client();
     let mut response = client.get(uri).dispatch();
     assert_eq!(response.status(), Status::Ok);
-    assert_eq!(response.body_string(), Some(expected_body.to_string()));
+    assert_eq!(response.body_string_wait(), Some(expected_body.to_string()));
 }
 
 fn test_303(uri: &str, expected_location: &str) {

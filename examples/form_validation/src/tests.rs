@@ -14,7 +14,7 @@ fn test_login<T>(user: &str, pass: &str, age: &str, status: Status, body: T)
 
     assert_eq!(response.status(), status);
     if let Some(expected_str) = body.into() {
-        let body_str = response.body_string();
+        let body_str = response.body_string_wait();
         assert!(body_str.map_or(false, |s| s.contains(expected_str)));
     }
 }

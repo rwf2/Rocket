@@ -4,7 +4,7 @@ fn test(uri: &str, expected: String) {
     let rocket = rocket::ignite().mount("/", routes![super::hello, super::hi]);
     let client = Client::new(rocket).unwrap();
     let mut response = client.get(uri).dispatch();
-    assert_eq!(response.body_string(), Some(expected));
+    assert_eq!(response.body_string_wait(), Some(expected));
 }
 
 #[test]

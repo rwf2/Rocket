@@ -7,7 +7,7 @@ fn client() -> Client {
 
 fn test(uri: &str, expected: String) {
     let client = client();
-    assert_eq!(client.get(uri).dispatch().body_string(), Some(expected));
+    assert_eq!(client.get(uri).dispatch().body_string_wait(), Some(expected));
 }
 
 fn test_404(uri: &str) {

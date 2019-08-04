@@ -12,7 +12,7 @@ fn test<H>(method: Method, uri: &str, header: H, status: Status, body: String)
     let client = Client::new(rocket).unwrap();
     let mut response = client.req(method, uri).header(header).dispatch();
     assert_eq!(response.status(), status);
-    assert_eq!(response.body_string(), Some(body));
+    assert_eq!(response.body_string_wait(), Some(body));
 }
 
 #[test]
