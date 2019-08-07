@@ -20,9 +20,10 @@
 //! write:
 //!
 //! ```rust
+//! # #![feature(async_await)]
 //! # use rocket::fairing::AdHoc;
 //! # let req_fairing = AdHoc::on_request("Request", |_, _| ());
-//! # let res_fairing = AdHoc::on_response("Response", |_, _| ());
+//! # let res_fairing = AdHoc::on_response("Response", |_, _| Box::pin(async move {}));
 //! let rocket = rocket::ignite()
 //!     .attach(req_fairing)
 //!     .attach(res_fairing);
@@ -206,7 +207,10 @@ pub use self::info_kind::{Info, Kind};
 /// path.
 ///
 /// ```rust
+/// # #![feature(async_await)]
+/// use std::future::Future;
 /// use std::io::Cursor;
+/// use std::pin::Pin;
 /// use std::sync::atomic::{AtomicUsize, Ordering};
 ///
 /// use rocket::{Request, Data, Response};
@@ -235,21 +239,23 @@ pub use self::info_kind::{Info, Kind};
 ///         }
 ///     }
 ///
-///     fn on_response(&self, request: &Request, response: &mut Response) {
-///         // Don't change a successful user's response, ever.
-///         if response.status() != Status::NotFound {
-///             return
-///         }
+///     fn on_response<'a, 'r>(&'a self, request: &'a Request<'r>, response: &'a mut Response<'r>) -> Pin<Box<dyn Future<Output=()> + Send + 'a>> {
+///         Box::pin(async move {
+///             // Don't change a successful user's response, ever.
+///             if response.status() != Status::NotFound {
+///                 return
+///             }
 ///
-///         if request.method() == Method::Get && request.uri().path() == "/counts" {
-///             let get_count = self.get.load(Ordering::Relaxed);
-///             let post_count = self.post.load(Ordering::Relaxed);
+///             if request.method() == Method::Get && request.uri().path() == "/counts" {
+///                 let get_count = self.get.load(Ordering::Relaxed);
+///                 let post_count = self.post.load(Ordering::Relaxed);
 ///
-///             let body = format!("Get: {}\nPost: {}", get_count, post_count);
-///             response.set_status(Status::Ok);
-///             response.set_header(ContentType::Plain);
-///             response.set_sized_body(Cursor::new(body));
-///         }
+///                 let body = format!("Get: {}\nPost: {}", get_count, post_count);
+///                 response.set_status(Status::Ok);
+///                 response.set_header(ContentType::Plain);
+///                 response.set_sized_body(Cursor::new(body));
+///             }
+///         })
 ///     }
 /// }
 /// ```
@@ -265,6 +271,9 @@ pub use self::info_kind::{Info, Kind};
 /// request guard.
 ///
 /// ```rust
+/// # #![feature(async_await)]
+/// # use std::future::Future;
+/// # use std::pin::Pin;
 /// # use std::time::{Duration, SystemTime};
 /// # use rocket::Outcome;
 /// # use rocket::{Request, Data, Response};
@@ -297,12 +306,14 @@ pub use self::info_kind::{Info, Kind};
 ///
 ///     /// Adds a header to the response indicating how long the server took to
 ///     /// process the request.
-///     fn on_response(&self, request: &Request, response: &mut Response) {
-///         let start_time = request.local_cache(|| TimerStart(None));
-///         if let Some(Ok(duration)) = start_time.0.map(|st| st.elapsed()) {
-///             let ms = duration.as_secs() * 1000 + duration.subsec_millis() as u64;
-///             response.set_raw_header("X-Response-Time", format!("{} ms", ms));
-///         }
+///     fn on_response<'a, 'r>(&'a self, request: &'a Request<'r>, response: &'a mut Response<'r>) -> Pin<Box<dyn Future<Output=()> + Send + 'a>> {
+///         Box::pin(async move {
+///             let start_time = request.local_cache(|| TimerStart(None));
+///             if let Some(Ok(duration)) = start_time.0.map(|st| st.elapsed()) {
+///                 let ms = duration.as_secs() * 1000 + duration.subsec_millis() as u64;
+///                 response.set_raw_header("X-Response-Time", format!("{} ms", ms));
+///             }
+///         })
 ///     }
 /// }
 ///

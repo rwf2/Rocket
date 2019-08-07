@@ -50,7 +50,7 @@ pub enum FormDataError<'f, E> {
 /// # Example
 ///
 /// ```rust
-/// # #![feature(proc_macro_hygiene)]
+/// # #![feature(proc_macro_hygiene, async_await)]
 /// # #[macro_use] extern crate rocket;
 /// use rocket::request::{Form, FormError, FormDataError};
 ///

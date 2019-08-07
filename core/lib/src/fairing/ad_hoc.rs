@@ -117,12 +117,15 @@ impl AdHoc {
     /// # Example
     ///
     /// ```rust
+    /// # #![feature(async_await)]
     /// use rocket::fairing::AdHoc;
     ///
     /// // The no-op response fairing.
     /// let fairing = AdHoc::on_response("Dummy", |req, resp| {
-    ///     // do something with the request and pending response...
-    /// #   let (_, _) = (req, resp);
+    ///     Box::pin(async move {
+    ///         // do something with the request and pending response...
+    /// #       let (_, _) = (req, resp);
+    ///     })
     /// });
     /// ```
     pub fn on_response<F>(name: &'static str, f: F) -> AdHoc

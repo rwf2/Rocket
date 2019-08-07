@@ -53,7 +53,7 @@ mod key {
 /// a handler to retrieve the value of a "message" cookie.
 ///
 /// ```rust
-/// # #![feature(proc_macro_hygiene)]
+/// # #![feature(proc_macro_hygiene, async_await)]
 /// # #[macro_use] extern crate rocket;
 /// use rocket::http::Cookies;
 ///
@@ -73,7 +73,7 @@ mod key {
 /// [private cookie]: Cookies::add_private()
 ///
 /// ```rust
-/// # #![feature(proc_macro_hygiene)]
+/// # #![feature(proc_macro_hygiene, async_await)]
 /// # #[macro_use] extern crate rocket;
 /// #
 /// use rocket::http::Status;

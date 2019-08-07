@@ -1,7 +1,7 @@
 // normalize-stderr-test: "<(.*) as (.*)>" -> "$1 as $$TRAIT"
 // normalize-stderr-test: "and \d+ others" -> "and $$N others"
 
-#![feature(proc_macro_hygiene)]
+#![feature(proc_macro_hygiene, async_await)]
 
 #[macro_use] extern crate rocket;
 

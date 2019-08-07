@@ -1,4 +1,4 @@
-#![feature(proc_macro_hygiene)]
+#![feature(proc_macro_hygiene, async_await)]
 // #![feature(alloc_system)]
 // extern crate alloc_system;
 

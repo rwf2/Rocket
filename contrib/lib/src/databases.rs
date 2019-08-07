@@ -50,7 +50,7 @@
 //! In your application's source code, one-time:
 //!
 //! ```rust
-//! #![feature(proc_macro_hygiene)]
+//! #![feature(proc_macro_hygiene, async_await)]
 //!
 //! #[macro_use] extern crate rocket;
 //! #[macro_use] extern crate rocket_contrib;

@@ -513,7 +513,7 @@ impl Rocket {
     /// dispatched to the `hi` route.
     ///
     /// ```rust
-    /// # #![feature(proc_macro_hygiene)]
+    /// # #![feature(proc_macro_hygiene, async_await)]
     /// # #[macro_use] extern crate rocket;
     /// #
     /// #[get("/world")]
@@ -535,10 +535,10 @@ impl Rocket {
     ///
     /// ```rust
     /// use rocket::{Request, Route, Data};
-    /// use rocket::handler::Outcome;
+    /// use rocket::handler::{HandlerFuture, Outcome};
     /// use rocket::http::Method::*;
     ///
-    /// fn hi<'r>(req: &'r Request, _: Data) -> Outcome<'r> {
+    /// fn hi<'r>(req: &'r Request, _: Data) -> HandlerFuture<'r> {
     ///     Outcome::from(req, "Hello!")
     /// }
     ///
@@ -585,7 +585,7 @@ impl Rocket {
     /// # Examples
     ///
     /// ```rust
-    /// # #![feature(proc_macro_hygiene)]
+    /// # #![feature(proc_macro_hygiene, async_await)]
     /// # #[macro_use] extern crate rocket;
     /// use rocket::Request;
     ///
@@ -641,7 +641,7 @@ impl Rocket {
     /// # Example
     ///
     /// ```rust
-    /// # #![feature(proc_macro_hygiene)]
+    /// # #![feature(proc_macro_hygiene, async_await)]
     /// # #[macro_use] extern crate rocket;
     /// use rocket::State;
     ///
@@ -678,7 +678,7 @@ impl Rocket {
     /// # Example
     ///
     /// ```rust
-    /// # #![feature(proc_macro_hygiene)]
+    /// # #![feature(proc_macro_hygiene, async_await)]
     /// # #[macro_use] extern crate rocket;
     /// use rocket::Rocket;
     /// use rocket::fairing::AdHoc;
@@ -819,7 +819,7 @@ impl Rocket {
     /// # Example
     ///
     /// ```rust
-    /// # #![feature(proc_macro_hygiene)]
+    /// # #![feature(proc_macro_hygiene, async_await)]
     /// # #[macro_use] extern crate rocket;
     /// use rocket::Rocket;
     /// use rocket::fairing::AdHoc;
@@ -875,7 +875,7 @@ impl Rocket {
     /// # Example
     ///
     /// ```rust
-    /// # #![feature(proc_macro_hygiene)]
+    /// # #![feature(proc_macro_hygiene, async_await)]
     /// # #[macro_use] extern crate rocket;
     /// use rocket::Rocket;
     /// use rocket::fairing::AdHoc;

@@ -26,7 +26,7 @@ use crate::http::Status;
 /// a route, _always_ use [`uri!`] to construct a valid [`Origin`]:
 ///
 /// ```rust
-/// # #![feature(proc_macro_hygiene)]
+/// # #![feature(proc_macro_hygiene, async_await)]
 /// # #[macro_use] extern crate rocket;
 /// use rocket::response::Redirect;
 ///

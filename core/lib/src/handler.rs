@@ -42,15 +42,16 @@ pub type HandlerFuture<'r> = std::pin::Pin<Box<dyn Future<Output = Outcome<'r>> 
 /// Such a handler might be written and used as follows:
 ///
 /// ```rust
+/// # #![feature(async_await)]
 /// # #[derive(Copy, Clone)] enum Kind { Simple, Intermediate, Complex, }
 /// use rocket::{Request, Data, Route, http::Method};
-/// use rocket::handler::{self, Handler, Outcome};
+/// use rocket::handler::{self, Handler, Outcome, HandlerFuture};
 ///
 /// #[derive(Clone)]
 /// struct CustomHandler(Kind);
 ///
 /// impl Handler for CustomHandler {
-///     fn handle<'r>(&self, req: &'r Request, data: Data) -> Outcome<'r> {
+///     fn handle<'r>(&self, req: &'r Request, data: Data) -> HandlerFuture<'r> {
 ///         match self.0 {
 ///             Kind::Simple => Outcome::from(req, "simple"),
 ///             Kind::Intermediate => Outcome::from(req, "intermediate"),
@@ -91,7 +92,7 @@ pub type HandlerFuture<'r> = std::pin::Pin<Box<dyn Future<Output = Outcome<'r>> 
 /// managed state and a static route, as follows:
 ///
 /// ```rust
-/// # #![feature(proc_macro_hygiene)]
+/// # #![feature(proc_macro_hygiene, async_await)]
 /// # #[macro_use] extern crate rocket;
 /// #
 /// # #[derive(Copy, Clone)]
@@ -198,10 +199,11 @@ impl<'r> Outcome<'r> {
     /// # Example
     ///
     /// ```rust
+    /// # #![feature(async_await)]
     /// use rocket::{Request, Data};
-    /// use rocket::handler::Outcome;
+    /// use rocket::handler::{Outcome, HandlerFuture};
     ///
-    /// fn str_responder(req: &Request, _: Data) -> Outcome<'static> {
+    /// fn str_responder<'r>(req: &'r Request, _: Data) -> HandlerFuture<'r> {
     ///     Outcome::from(req, "Hello, world!")
     /// }
     /// ```
@@ -224,10 +226,11 @@ impl<'r> Outcome<'r> {
     /// # Example
     ///
     /// ```rust
+    /// # #![feature(async_await)]
     /// use rocket::{Request, Data};
-    /// use rocket::handler::Outcome;
+    /// use rocket::handler::{Outcome, HandlerFuture};
     ///
-    /// fn str_responder(req: &Request, data: Data) -> Outcome<'static> {
+    /// fn str_responder<'r>(req: &'r Request, data: Data) -> HandlerFuture<'r> {
     ///     Outcome::from_or_forward(req, data, "Hello, world!")
     /// }
     /// ```
@@ -252,12 +255,15 @@ impl<'r> Outcome<'r> {
     /// # Example
     ///
     /// ```rust
+    /// # #![feature(async_await)]
     /// use rocket::{Request, Data};
-    /// use rocket::handler::Outcome;
+    /// use rocket::handler::{Outcome, HandlerFuture};
     /// use rocket::http::Status;
     ///
-    /// fn bad_req_route(_: &Request, _: Data) -> Outcome<'static> {
-    ///     Outcome::failure(Status::BadRequest)
+    /// fn bad_req_route<'r>(_: &'r Request, _: Data) -> HandlerFuture<'r> {
+    ///     Box::pin(async move {
+    ///         Outcome::failure(Status::BadRequest)
+    ///     })
     /// }
     /// ```
     #[inline(always)]
@@ -274,11 +280,14 @@ impl<'r> Outcome<'r> {
     /// # Example
     ///
     /// ```rust
+    /// # #![feature(async_await)]
     /// use rocket::{Request, Data};
-    /// use rocket::handler::Outcome;
+    /// use rocket::handler::{Outcome, HandlerFuture};
     ///
-    /// fn always_forward(_: &Request, data: Data) -> Outcome<'static> {
-    ///     Outcome::forward(data)
+    /// fn always_forward<'r>(_: &'r Request, data: Data) -> HandlerFuture<'r> {
+    ///     Box::pin(async move {
+    ///         Outcome::forward(data)
+    ///     })
     /// }
     /// ```
     #[inline(always)]

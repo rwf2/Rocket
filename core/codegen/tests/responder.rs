@@ -1,4 +1,4 @@
-#![feature(proc_macro_hygiene)]
+#![feature(proc_macro_hygiene, async_await)]
 
 use rocket::local::Client;
 use rocket::response::Responder;

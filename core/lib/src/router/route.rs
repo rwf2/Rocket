@@ -108,8 +108,8 @@ impl Route {
     /// use rocket::Route;
     /// use rocket::http::Method;
     /// # use rocket::{Request, Data};
-    /// # use rocket::handler::Outcome;
-    /// # fn handler<'r>(request: &'r Request, _data: Data) -> Outcome<'r> {
+    /// # use rocket::handler::{Outcome, HandlerFuture};
+    /// # fn handler<'r>(request: &'r Request, _data: Data) -> HandlerFuture<'r> {
     /// #     Outcome::from(request, "Hello, world!")
     /// # }
     ///
@@ -158,8 +158,8 @@ impl Route {
     /// use rocket::Route;
     /// use rocket::http::Method;
     /// # use rocket::{Request, Data};
-    /// # use rocket::handler::Outcome;
-    /// # fn handler<'r>(request: &'r Request, _data: Data) -> Outcome<'r> {
+    /// # use rocket::handler::{Outcome, HandlerFuture};
+    /// # fn handler<'r>(request: &'r Request, _data: Data) -> HandlerFuture<'r> {
     /// #     Outcome::from(request, "Hello, world!")
     /// # }
     ///
@@ -208,9 +208,9 @@ impl Route {
     /// use rocket::Route;
     /// use rocket::http::Method;
     /// # use rocket::{Request, Data};
-    /// # use rocket::handler::Outcome;
+    /// # use rocket::handler::{Outcome, HandlerFuture};
     /// #
-    /// # fn handler<'r>(request: &'r Request, _data: Data) -> Outcome<'r> {
+    /// # fn handler<'r>(request: &'r Request, _data: Data) -> HandlerFuture<'r> {
     /// #     Outcome::from(request, "Hello, world!")
     /// # }
     ///
@@ -242,9 +242,9 @@ impl Route {
     /// use rocket::Route;
     /// use rocket::http::{Method, uri::Origin};
     /// # use rocket::{Request, Data};
-    /// # use rocket::handler::Outcome;
+    /// # use rocket::handler::{Outcome, HandlerFuture};
     /// #
-    /// # fn handler<'r>(request: &'r Request, _data: Data) -> Outcome<'r> {
+    /// # fn handler<'r>(request: &'r Request, _data: Data) -> HandlerFuture<'r> {
     /// #     Outcome::from(request, "Hello, world!")
     /// # }
     ///

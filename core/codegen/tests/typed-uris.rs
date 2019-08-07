@@ -1,4 +1,4 @@
-#![feature(proc_macro_hygiene)]
+#![feature(proc_macro_hygiene, async_await)]
 #![allow(dead_code, unused_variables)]
 
 #[macro_use] extern crate rocket;

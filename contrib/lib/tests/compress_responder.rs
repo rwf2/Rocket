@@ -1,4 +1,4 @@
-#![feature(proc_macro_hygiene)]
+#![feature(proc_macro_hygiene, async_await)]
 
 #[macro_use]
 #[cfg(all(feature = "brotli_compression", feature = "gzip_compression"))]
