@@ -129,9 +129,7 @@ impl<'a> Origin<'a> {
     // of Rocket. This should _really_ not be used outside of Rocket because the
     // resulting `Origin's` are not guaranteed to be valid origin URIs!
     #[doc(hidden)]
-    pub fn new<P, Q>(path: P, query: Option<Q>) -> Origin<'a>
-        where P: Into<Cow<'a, str>>, Q: Into<Cow<'a, str>>
-    {
+    pub fn new(path: impl Into<Cow<'a, str>>, query: Option<impl Into<Cow<'a, str>>>) -> Origin<'a> {
         Origin {
             source: None,
             path: Indexed::from(path),
@@ -145,7 +143,7 @@ impl<'a> Origin<'a> {
     // Rocket, though doing so would be less harmful.
     #[doc(hidden)]
     pub fn dummy() -> Origin<'static> {
-        Origin::new::<&'static str, &'static str>("/", None)
+        Origin::new("/", None as Option<&'static str>)
     }
 
     /// Parses the string `string` into an `Origin`. Parsing will never

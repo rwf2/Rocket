@@ -289,7 +289,7 @@ pub type FromDataFuture<'a, T, E> = Pin<Box<dyn Future<Output = Outcome<T, E>> +
 ///
 ///     _This implementation always returns successfully._
 ///
-///   * **Option&lt;T>** _where_ **T: FromData**
+///   * **Option&lt;T: FromData>**
 ///
 ///     The type `T` is derived from the incoming data using `T`'s `FromData`
 ///     implementation. If the derivation is a `Success`, the derived value is

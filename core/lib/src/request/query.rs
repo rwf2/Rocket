@@ -120,17 +120,17 @@ impl<'q> Iterator for Query<'q> {
 /// Rocket implements `FromQuery` for several standard types. Their behavior is
 /// documented here.
 ///
-///   * **Form&lt;T>** _where_ **T: FromForm**
+///   * **Form&lt;T: FromForm>**
 ///
 ///     Parses the query as a strict form, where each key is mapped to a field
 ///     in `T`. See [`Form`] for more information.
 ///
-///   * **LenientForm&lt;T>** _where_ **T: FromForm**
+///   * **LenientForm&lt;T: FromForm>**
 ///
 ///     Parses the query as a lenient form, where each key is mapped to a field
 ///     in `T`. See [`LenientForm`] for more information.
 ///
-///   * **Option&lt;T>** _where_ **T: FromQuery**
+///   * **Option&lt;T: FromQuery>**
 ///
 ///     _This implementation always returns successfully._
 ///

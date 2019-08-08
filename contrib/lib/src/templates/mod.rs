@@ -277,9 +277,7 @@ impl Template {
     ///     # ;
     /// }
     /// ```
-    pub fn custom<F>(f: F) -> impl Fairing
-        where F: Fn(&mut Engines) + Send + Sync + 'static
-    {
+    pub fn custom(f: impl Fn(&mut Engines) + Send + Sync + 'static) -> impl Fairing {
         TemplateFairing { custom_callback: Box::new(f) }
     }
 
@@ -301,9 +299,7 @@ impl Template {
     /// let template = Template::render("index", context);
     /// ```
     #[inline]
-    pub fn render<S, C>(name: S, context: C) -> Template
-        where S: Into<Cow<'static, str>>, C: Serialize
-    {
+    pub fn render(name: impl Into<Cow<'static, str>>, context: impl Serialize) -> Template {
         Template { name: name.into(), value: to_value(context).ok() }
     }
 
@@ -343,9 +339,11 @@ impl Template {
     /// }
     /// ```
     #[inline]
-    pub fn show<S, C>(rocket: &Rocket, name: S, context: C) -> Option<String>
-        where S: Into<Cow<'static, str>>, C: Serialize
-    {
+    pub fn show(
+        rocket: &Rocket,
+        name: impl Into<Cow<'static, str>>,
+        context: impl Serialize,
+    ) -> Option<String> {
         let ctxt = rocket.state::<ContextManager>().map(ContextManager::context).or_else(|| {
             warn!("Uninitialized template context: missing fairing.");
             info!("To use templates, you must attach `Template::fairing()`.");

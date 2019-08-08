@@ -130,7 +130,7 @@ use crate::uri::{Uri, UriPart, Path, Query, Formatter};
 /// Rocket implements `UriDisplay<Path>` (but not `UriDisplay<Query>`) for
 /// several built-in types.
 ///
-///   * `T` for **`Option<T>`** _where_ **`T: UriDisplay<Path>`**
+///   * `T` for **`Option<T: UriDisplay<Path>>`**
 ///
 ///     Uses the implementation of `UriDisplay` for `T::Target`.
 ///
@@ -138,7 +138,7 @@ use crate::uri::{Uri, UriPart, Path, Query, Formatter};
 ///     the parameter in `uri!`. Note that `Option<T>` itself _does not_
 ///     implement `UriDisplay<Path>`.
 ///
-///   * `T` for **`Result<T, E>`** _where_ **`T: UriDisplay<Path>`**
+///   * `T` for **`Result<T: UriDisplay<Path>, E>`**
 ///
 ///     Uses the implementation of `UriDisplay` for `T::Target`.
 ///
@@ -158,15 +158,15 @@ use crate::uri::{Uri, UriPart, Path, Query, Formatter};
 ///     type that can be converted into a `T` using [`FromUriParam`] can be used
 ///     in place of a `Form<T>` in a `uri!` invocation.
 ///
-///   * **`Option<T>`** _where_ **`T: UriDisplay<Query>`**
+///   * **`Option<impl UriDisplay<Query>>`**
 ///
 ///     If the `Option` is `Some`, uses the implementation of `UriDisplay` for
 ///     `T`. Otherwise, nothing is rendered.
 ///
-///   * **`Result<T, E>`** _where_ **`T: UriDisplay<Query>`**
+///   * **`Result<impl UriDisplay<Query>, E>`**
 ///
-///     If the `Result` is `Ok`, uses the implementation of `UriDisplay` for
-///     `T`. Otherwise, nothing is rendered.
+///     If the `Result` is `Ok`, uses the implementation of `UriDisplay`.
+///     Otherwise, nothing is rendered.
 ///
 /// [`FromUriParam`]: crate::uri::FromUriParam
 ///

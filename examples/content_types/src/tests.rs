@@ -2,9 +2,13 @@ use super::Person;
 use rocket::http::{Accept, ContentType, Header, MediaType, Method, Status};
 use rocket::local::Client;
 
-fn test<H>(method: Method, uri: &str, header: H, status: Status, body: String)
-    where H: Into<Header<'static>>
-{
+fn test(
+    method: Method,
+    uri: &str,
+    header: impl Into<Header<'static>>,
+    status: Status,
+    body: String,
+) {
     let rocket = rocket::ignite()
         .mount("/hello", routes![super::get_hello, super::post_hello])
         .register(catchers![super::not_found]);

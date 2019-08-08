@@ -14,7 +14,7 @@ crate fn uri<'a>(input: &mut RawInput<'a>) -> Result<'a, Uri<'a>> {
         0 => return Err(pear_error!("empty URI")),
         1 => switch! {
             eat(b'*') => Uri::Asterisk,
-            eat(b'/') => Uri::Origin(Origin::new::<_, &str>("/", None)),
+            eat(b'/') => Uri::Origin(Origin::new("/", None as Option<&str>)),
             _ => unsafe {
                 // the `is_reg_name_char` guarantees ASCII
                 let host = Host::Raw(take_n_if(1, is_reg_name_char)?);
@@ -39,9 +39,10 @@ crate fn rocket_route_origin<'a>(input: &mut RawInput<'a>) -> Result<'a, Origin<
 }
 
 #[parser]
-fn path_and_query<'a, F>(input: &mut RawInput<'a>, is_good_char: F) -> Result<'a, Origin<'a>>
-    where F: Fn(u8) -> bool + Copy
-{
+fn path_and_query<'a>(
+    input: &mut RawInput<'a>,
+    is_good_char: impl Fn(u8) -> bool + Copy,
+) -> Result<'a, Origin<'a>> {
     let path = take_while(is_good_char)?;
 
     // FIXME(rustc): We should be able to use `pear_try`, but rustc...is broken.

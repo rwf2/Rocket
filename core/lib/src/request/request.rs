@@ -553,10 +553,7 @@ impl<'r> Request<'r> {
     /// let user = request.local_cache(|| current_user(request));
     /// # });
     /// ```
-    pub fn local_cache<T, F>(&self, f: F) -> &T
-        where F: FnOnce() -> T,
-              T: Send + Sync + 'static
-    {
+    pub fn local_cache<T: Send + Sync + 'static>(&self, f: impl FnOnce() -> T) -> &T {
         self.state.cache.try_get()
             .unwrap_or_else(|| {
                 self.state.cache.set(f());
@@ -596,9 +593,7 @@ impl<'r> Request<'r> {
     /// # });
     /// ```
     #[inline]
-    pub fn get_param<'a, T>(&'a self, n: usize) -> Option<Result<T, T::Error>>
-        where T: FromParam<'a>
-    {
+    pub fn get_param<'a, T: FromParam<'a>>(&'a self, n: usize) -> Option<Result<T, T::Error>> {
         Some(T::from_param(self.raw_segment_str(n)?))
     }
 
@@ -640,9 +635,7 @@ impl<'r> Request<'r> {
     /// # });
     /// ```
     #[inline]
-    pub fn get_segments<'a, T>(&'a self, n: usize) -> Option<Result<T, T::Error>>
-        where T: FromSegments<'a>
-    {
+    pub fn get_segments<'a, T: FromSegments<'a>>(&'a self, n: usize) -> Option<Result<T, T::Error>> {
         Some(T::from_segments(self.raw_segments(n)?))
     }
 
@@ -684,9 +677,7 @@ impl<'r> Request<'r> {
     /// # });
     /// ```
     #[inline]
-    pub fn get_query_value<'a, T>(&'a self, key: &str) -> Option<Result<T, T::Error>>
-        where T: FromFormValue<'a>
-    {
+    pub fn get_query_value<'a, T: FromFormValue<'a>>(&'a self, key: &str) -> Option<Result<T, T::Error>> {
         self.raw_query_items()?
             .rev()
             .find(|item| item.key.as_str() == key)

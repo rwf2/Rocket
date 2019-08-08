@@ -85,14 +85,14 @@ use crate::request::Request;
 ///     the client. Otherwise, an `Err` with status **404 Not Found** is
 ///     returned and a warning is printed to the console.
 ///
-///   * **Result&lt;T, E>** _where_ **E: Debug**
+///   * **Result&lt;T, E: Debug>**
 ///
 ///     If the `Result` is `Ok`, the wrapped responder is used to respond to the
 ///     client. Otherwise, an `Err` with status **500 Internal Server Error** is
 ///     returned and the error is printed to the console using the `Debug`
 ///     implementation.
 ///
-///   * **Result&lt;T, E>** _where_ **E: Debug + Responder**
+///   * **Result&lt;T, E: Debug + Responder>**
 ///
 ///     If the `Result` is `Ok`, the wrapped `Ok` responder is used to respond
 ///     to the client. If the `Result` is `Err`, the wrapped `Err` responder is

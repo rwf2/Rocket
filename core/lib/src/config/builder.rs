@@ -217,9 +217,7 @@ impl ConfigBuilder {
     ///     .unwrap();
     /// # */
     /// ```
-    pub fn tls<C, K>(mut self, certs_path: C, key_path: K) -> Self
-        where C: Into<String>, K: Into<String>
-    {
+    pub fn tls(mut self, certs_path: impl Into<String>, key_path: impl Into<String>) -> Self {
         self.tls = Some((certs_path.into(), key_path.into()));
         self
     }

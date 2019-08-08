@@ -15,7 +15,7 @@ pub struct Take<R>{
 }
 
 // TODO.async: Verify correctness of this implementation.
-impl<R> AsyncRead for Take<R> where R: AsyncRead + Unpin {
+impl<R: AsyncRead + Unpin> AsyncRead for Take<R> {
     fn poll_read(mut self: Pin<&mut Self>, cx: &mut Context<'_>, buf: &mut [u8]) -> Poll<Result<usize, io::Error>> {
         if self.limit == 0 {
             return Poll::Ready(Ok(0));
@@ -40,9 +40,7 @@ pub struct IntoChunkStream<R> {
 }
 
 // TODO.async: Verify correctness of this implementation.
-impl<R> Stream for IntoChunkStream<R>
-    where R: AsyncRead + Unpin
-{
+impl<R: AsyncRead + Unpin> Stream for IntoChunkStream<R> {
     type Item = Result<Chunk, io::Error>;
 
     fn poll_next(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>>{

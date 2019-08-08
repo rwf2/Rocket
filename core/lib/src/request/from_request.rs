@@ -138,7 +138,7 @@ impl<S, E> IntoOutcome<S, (Status, E), ()> for Result<S, E> {
 ///
 ///     _This implementation always returns successfully._
 ///
-///   * **Option&lt;T>** _where_ **T: FromRequest**
+///   * **Option&lt;T: FromRequest>**
 ///
 ///     The type `T` is derived from the incoming request using `T`'s
 ///     `FromRequest` implementation. If the derivation is a `Success`, the

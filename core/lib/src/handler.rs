@@ -235,9 +235,11 @@ impl<'r> Outcome<'r> {
     /// }
     /// ```
     #[inline]
-    pub fn from_or_forward<T: 'r>(req: &'r Request<'_>, data: Data, responder: T) -> HandlerFuture<'r>
-        where T: Responder<'r> + Send
-    {
+    pub fn from_or_forward(
+        req: &'r Request<'_>,
+        data: Data,
+        responder: impl Responder<'r> + Send + 'r,
+    ) -> HandlerFuture<'r> {
         Box::pin(async move {
             match responder.respond_to(req).await {
                 Ok(response) => outcome::Outcome::Success(response),

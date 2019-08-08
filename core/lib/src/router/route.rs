@@ -141,9 +141,7 @@ impl Route {
     /// # Panics
     ///
     /// Panics if `path` is not a valid origin URI or Rocket route URI.
-    pub fn new<S, H>(method: Method, path: S, handler: H) -> Route
-        where S: AsRef<str>, H: Handler + 'static
-    {
+    pub fn new(method: Method, path: impl AsRef<str>, handler: impl Handler + 'static) -> Route {
         let mut route = Route::ranked(0, method, path, handler);
         route.rank = default_rank(&route);
         route
@@ -170,9 +168,12 @@ impl Route {
     /// # Panics
     ///
     /// Panics if `path` is not a valid origin URI or Rocket route URI.
-    pub fn ranked<S, H>(rank: isize, method: Method, path: S, handler: H) -> Route
-        where S: AsRef<str>, H: Handler + 'static
-    {
+    pub fn ranked(
+        rank: isize,
+        method: Method,
+        path: impl AsRef<str>,
+        handler: impl Handler + 'static
+    ) -> Route {
         let path = path.as_ref();
         let uri = Origin::parse_route(path)
             .unwrap_or_else(|e| panic(path, e))

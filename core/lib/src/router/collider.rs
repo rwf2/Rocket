@@ -340,9 +340,11 @@ mod tests {
         assert!(!mt_mt_collide("something/*", "random/else"));
     }
 
-    fn r_mt_mt_collide<S1, S2>(m: Method, mt1: S1, mt2: S2) -> bool
-        where S1: Into<Option<&'static str>>, S2: Into<Option<&'static str>>
-    {
+    fn r_mt_mt_collide(
+        m: Method,
+        mt1: impl Into<Option<&'static str>>,
+        mt2: impl Into<Option<&'static str>>,
+    ) -> bool {
         let mut route_a = Route::new(m, "/", dummy_handler);
         if let Some(mt_str) = mt1.into() {
             route_a.format = Some(mt_str.parse::<MediaType>().unwrap());
@@ -398,9 +400,11 @@ mod tests {
         assert!(!r_mt_mt_collide(Post, "other/html", "text/html"));
     }
 
-    fn req_route_mt_collide<S1, S2>(m: Method, mt1: S1, mt2: S2) -> bool
-        where S1: Into<Option<&'static str>>, S2: Into<Option<&'static str>>
-    {
+    fn req_route_mt_collide(
+        m: Method,
+        mt1: impl Into<Option<&'static str>>,
+        mt2: impl Into<Option<&'static str>>,
+    ) -> bool {
         let rocket = Rocket::custom(Config::development());
         let mut req = Request::new(&rocket, m, Origin::dummy());
         if let Some(mt_str) = mt1.into() {

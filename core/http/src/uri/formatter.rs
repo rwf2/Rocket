@@ -331,9 +331,11 @@ impl<'i, P: UriPart> Formatter<'i, P> {
 }
 
 impl Formatter<'_, Query> {
-    fn with_prefix<F>(&mut self, prefix: &str, f: F) -> fmt::Result
-        where F: FnOnce(&mut Self) -> fmt::Result
-    {
+    fn with_prefix(
+        &mut self,
+        prefix: &str,
+        f: impl FnOnce(&mut Self) -> fmt::Result
+    ) -> fmt::Result {
         // The `prefix` string is pushed in a `StackVec` for use by recursive
         // (nested) calls to `write_raw`. The string is pushed here and then
         // popped here. `self.prefixes` is modified nowhere else, and no strings

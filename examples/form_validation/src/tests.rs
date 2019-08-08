@@ -2,9 +2,13 @@ use super::rocket;
 use rocket::local::Client;
 use rocket::http::{ContentType, Status};
 
-fn test_login<T>(user: &str, pass: &str, age: &str, status: Status, body: T)
-    where T: Into<Option<&'static str>>
-{
+fn test_login(
+    user: &str,
+    pass: &str,
+    age: &str,
+    status: Status,
+    body: impl Into<Option<&'static str>>,
+) {
     let client = Client::new(rocket()).unwrap();
     let query = format!("username={}&password={}&age={}", user, pass, age);
     let mut response = client.post("/login")

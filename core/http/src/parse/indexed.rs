@@ -100,8 +100,7 @@ impl<'a, T: ?Sized + ToOwned + 'a> Add for Indexed<'a, T> {
     }
 }
 
-impl<'a, T: ?Sized + ToOwned + 'a> Indexed<'a, T>
-    where T: Length + AsPtr + Index<Range<usize>, Output = T>
+impl<'a, T: ?Sized + ToOwned + Length + AsPtr + Index<Range<usize>, Output = T> + 'a> Indexed<'a, T>
 {
     // Returns `None` if `needle` is not a substring of `haystack`.
     pub fn checked_from(needle: &T, haystack: &T) -> Option<Indexed<'a, T>> {
@@ -193,8 +192,8 @@ impl<'a, T: ToOwned + ?Sized + 'a> Clone for Indexed<'a, T> {
     }
 }
 
-impl<'a, T: ?Sized + 'a> Debug for Indexed<'a, T>
-    where T: ToOwned + Debug, T::Owned: Debug
+impl<'a, T: ?Sized + ToOwned + Debug + 'a> Debug for Indexed<'a, T>
+    where T::Owned: Debug
 {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match *self {
@@ -283,16 +282,12 @@ macro_rules! impl_indexed_input {
             }
 
             #[inline(always)]
-            fn skip_many<F>(&mut self, cond: F) -> usize
-                where F: FnMut(Self::Token) -> bool
-            {
+            fn skip_many<F: FnMut(Self::Token) -> bool>(&mut self, cond: F) -> usize {
                 self.current.skip_many(cond)
             }
 
             #[inline(always)]
-            fn take_many<F>(&mut self, cond: F) -> Self::Many
-                where F: FnMut(Self::Token) -> bool
-            {
+            fn take_many<F: FnMut(Self::Token) -> bool>(&mut self, cond: F) -> Self::Many {
                 let many = self.current.take_many(cond);
                 unsafe { Indexed::unchecked_from(many, self.source) }
             }

@@ -216,9 +216,7 @@ impl<T> Host<T> {
     }
 
     #[inline]
-    fn map_inner<F, U>(self, f: F) -> Host<U>
-        where F: FnOnce(T) -> U
-    {
+    fn map_inner<U>(self, f: impl FnOnce(T) -> U) -> Host<U> {
         match self {
             Host::Bracketed(inner) => Host::Bracketed(f(inner)),
             Host::Raw(inner) => Host::Raw(f(inner))

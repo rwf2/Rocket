@@ -6,9 +6,7 @@ use rocket::http::Status;
 
 use super::rocket;
 
-async fn test_query_file<T> (path: &str, file: T, status: Status)
-    where T: Into<Option<&'static str>>
-{
+async fn test_query_file(path: &str, file: impl Into<Option<&'static str>>, status: Status) {
     let client = Client::new(rocket()).unwrap();
     let mut response = client.get(path).dispatch();
     assert_eq!(response.status(), status);

@@ -66,9 +66,10 @@ impl AdHoc {
     /// // The no-op attach fairing.
     /// let fairing = AdHoc::on_attach("No-Op", |rocket| Ok(rocket));
     /// ```
-    pub fn on_attach<F>(name: &'static str, f: F) -> AdHoc
-        where F: FnOnce(Rocket) -> Result<Rocket, Rocket> + Send + 'static
-    {
+    pub fn on_attach(
+        name: &'static str,
+        f: impl FnOnce(Rocket) -> Result<Rocket, Rocket> + Send + 'static,
+    ) -> AdHoc {
         AdHoc { name, kind: AdHocKind::Attach(Mutex::new(Some(Box::new(f)))) }
     }
 
@@ -85,9 +86,7 @@ impl AdHoc {
     ///     println!("Launching in T-3..2..1..");
     /// });
     /// ```
-    pub fn on_launch<F>(name: &'static str, f: F) -> AdHoc
-        where F: FnOnce(&Rocket) + Send + 'static
-    {
+    pub fn on_launch(name: &'static str, f: impl FnOnce(&Rocket) + Send + 'static) -> AdHoc {
         AdHoc { name, kind: AdHocKind::Launch(Mutex::new(Some(Box::new(f)))) }
     }
 
@@ -105,9 +104,10 @@ impl AdHoc {
     /// #   let (_, _) = (req, data);
     /// });
     /// ```
-    pub fn on_request<F>(name: &'static str, f: F) -> AdHoc
-        where F: Fn(&mut Request<'_>, &Data) + Send + Sync + 'static
-    {
+    pub fn on_request(
+        name: &'static str,
+        f: impl Fn(&mut Request<'_>, &Data) + Send + Sync + 'static,
+    ) -> AdHoc {
         AdHoc { name, kind: AdHocKind::Request(Box::new(f)) }
     }
 
@@ -128,8 +128,13 @@ impl AdHoc {
     ///     })
     /// });
     /// ```
-    pub fn on_response<F>(name: &'static str, f: F) -> AdHoc
-        where F: for<'a, 'r> Fn(&'a Request<'r>, &'a mut Response<'r>) -> Pin<Box<dyn Future<Output=()> + Send + 'a>> + Send + Sync + 'static
+    pub fn on_response(
+        name: &'static str,
+        f: impl for<'a, 'r> Fn(
+            &'a Request<'r>,
+            &'a mut Response<'r>,
+        ) -> Pin<Box<dyn Future<Output=()> + Send + 'a>> + Send + Sync + 'static
+    ) -> AdHoc
     {
         AdHoc { name, kind: AdHocKind::Response(Box::new(f)) }
     }

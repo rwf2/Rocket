@@ -192,9 +192,7 @@ impl Config {
     /// # Panics
     ///
     /// Panics if randomness cannot be retrieved from the OS.
-    crate fn default_from<P>(env: Environment, path: P) -> Result<Config>
-        where P: AsRef<Path>
-    {
+    crate fn default_from(env: Environment, path: impl AsRef<Path>) -> Result<Config> {
         let mut config = Config::default(env);
 
         let config_file_path = path.as_ref().to_path_buf();

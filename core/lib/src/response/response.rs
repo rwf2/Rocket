@@ -248,9 +248,7 @@ impl<'r> ResponseBuilder<'r> {
     /// assert_eq!(response.headers().get("Content-Type").count(), 1);
     /// ```
     #[inline(always)]
-    pub fn header<'h: 'r, H>(&mut self, header: H) -> &mut ResponseBuilder<'r>
-        where H: Into<Header<'h>>
-    {
+    pub fn header<'h: 'r>(&mut self, header: impl Into<Header<'h>>) -> &mut ResponseBuilder<'r> {
         self.response.set_header(header);
         self
     }
@@ -279,9 +277,7 @@ impl<'r> ResponseBuilder<'r> {
     /// assert_eq!(response.headers().get("Accept").count(), 2);
     /// ```
     #[inline(always)]
-    pub fn header_adjoin<'h: 'r, H>(&mut self, header: H) -> &mut ResponseBuilder<'r>
-        where H: Into<Header<'h>>
-    {
+    pub fn header_adjoin<'h: 'r>(&mut self, header: impl Into<Header<'h>>) -> &mut ResponseBuilder<'r> {
         self.response.adjoin_header(header);
         self
     }
@@ -304,10 +300,11 @@ impl<'r> ResponseBuilder<'r> {
     /// assert_eq!(response.headers().get("X-Custom").count(), 1);
     /// ```
     #[inline(always)]
-    pub fn raw_header<'a: 'r, 'b: 'r, N, V>(&mut self, name: N, value: V)
-            -> &mut ResponseBuilder<'r>
-        where N: Into<Cow<'a, str>>, V: Into<Cow<'b, str>>
-    {
+    pub fn raw_header<'a: 'r, 'b: 'r>(
+        &mut self,
+        name: impl Into<Cow<'a, str>>,
+        value: impl Into<Cow<'b, str>>,
+    ) -> &mut ResponseBuilder<'r> {
         self.response.set_raw_header(name, value);
         self
     }
@@ -331,10 +328,11 @@ impl<'r> ResponseBuilder<'r> {
     /// assert_eq!(response.headers().get("X-Custom").count(), 2);
     /// ```
     #[inline(always)]
-    pub fn raw_header_adjoin<'a: 'r, 'b: 'r, N, V>(&mut self, name: N, value: V)
-            -> &mut ResponseBuilder<'r>
-        where N: Into<Cow<'a, str>>, V: Into<Cow<'b, str>>
-    {
+    pub fn raw_header_adjoin<'a: 'r, 'b: 'r>(
+        &mut self,
+        name: impl Into<Cow<'a, str>>,
+        value: impl Into<Cow<'b, str>>,
+    ) -> &mut ResponseBuilder<'r> {
         self.response.adjoin_raw_header(name, value);
         self
     }
@@ -361,9 +359,10 @@ impl<'r> ResponseBuilder<'r> {
     /// # }
     /// ```
     #[inline(always)]
-    pub fn sized_body<B>(&mut self, body: B) -> &mut ResponseBuilder<'r>
-        where B: AsyncRead + io::Seek + Send + Unpin + 'r
-    {
+    pub fn sized_body(
+        &mut self,
+        body: impl AsyncRead + io::Seek + Send + Unpin + 'r,
+    ) -> &mut ResponseBuilder<'r> {
         self.response.set_sized_body(body);
         self
     }
@@ -389,9 +388,7 @@ impl<'r> ResponseBuilder<'r> {
     /// # }
     /// ```
     #[inline(always)]
-    pub fn streamed_body<B>(&mut self, body: B) -> &mut ResponseBuilder<'r>
-        where B: AsyncRead + Send + 'r
-    {
+    pub fn streamed_body(&mut self, body: impl AsyncRead + Send + 'r) -> &mut ResponseBuilder<'r> {
         self.response.set_streamed_body(body);
         self
     }
@@ -805,9 +802,11 @@ impl<'r> Response<'r> {
     /// assert_eq!(response.headers().len(), 1);
     /// ```
     #[inline(always)]
-    pub fn set_raw_header<'a: 'r, 'b: 'r, N, V>(&mut self, name: N, value: V) -> bool
-        where N: Into<Cow<'a, str>>, V: Into<Cow<'b, str>>
-    {
+    pub fn set_raw_header<'a: 'r, 'b: 'r>(
+        &mut self,
+        name: impl Into<Cow<'a, str>>,
+        value: impl Into<Cow<'b, str>>,
+    ) -> bool {
         self.set_header(Header::new(name, value))
     }
 
@@ -862,9 +861,11 @@ impl<'r> Response<'r> {
     /// assert_eq!(custom_headers.next(), None);
     /// ```
     #[inline(always)]
-    pub fn adjoin_raw_header<'a: 'r, 'b: 'r, N, V>(&mut self, name: N, value: V)
-        where N: Into<Cow<'a, str>>, V: Into<Cow<'b, str>>
-    {
+    pub fn adjoin_raw_header<'a: 'r, 'b: 'r>(
+        &mut self,
+        name: impl Into<Cow<'a, str>>,
+        value: impl Into<Cow<'b, str>>,
+    ) {
         self.adjoin_header(Header::new(name, value));
     }
 
@@ -1050,9 +1051,7 @@ impl<'r> Response<'r> {
     /// # })
     /// ```
     #[inline]
-    pub fn set_sized_body<B>(&mut self, mut body: B)
-        where B: AsyncRead + io::Seek + Send + Unpin + 'r
-    {
+    pub fn set_sized_body(&mut self, mut body: impl AsyncRead + io::Seek + Send + Unpin + 'r) {
         let size = body.seek(io::SeekFrom::End(0))
             .expect("Attempted to retrieve size by seeking, but failed.");
         body.seek(io::SeekFrom::Start(0))
@@ -1081,7 +1080,7 @@ impl<'r> Response<'r> {
     /// # })
     /// ```
     #[inline(always)]
-    pub fn set_streamed_body<B>(&mut self, body: B) where B: AsyncRead + Send + 'r {
+    pub fn set_streamed_body(&mut self, body: impl AsyncRead + Send + 'r) {
         self.set_chunked_body(body, DEFAULT_CHUNK_SIZE);
     }
 
@@ -1104,8 +1103,7 @@ impl<'r> Response<'r> {
     /// # })
     /// ```
     #[inline(always)]
-    pub fn set_chunked_body<B>(&mut self, body: B, chunk_size: u64)
-            where B: AsyncRead + Send + 'r {
+    pub fn set_chunked_body(&mut self, body: impl AsyncRead + Send + 'r, chunk_size: u64) {
         self.body = Some(Body::Chunked(Box::pin(body), chunk_size));
     }
 
@@ -1130,8 +1128,7 @@ impl<'r> Response<'r> {
     /// # })
     /// ```
     #[inline(always)]
-    pub fn set_raw_body<T>(&mut self, body: Body<T>)
-            where T: AsyncRead + Send + Unpin + 'r {
+    pub fn set_raw_body(&mut self, body: Body<impl AsyncRead + Send + Unpin + 'r>) {
         self.body = Some(match body {
             Body::Sized(b, n) => Body::Sized(Box::pin(b.take(n)), n),
             Body::Chunked(b, n) => Body::Chunked(Box::pin(b), n),

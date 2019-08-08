@@ -66,9 +66,11 @@ fn parse_route(attr: RouteAttribute, function: syn::ItemFn) -> Result<Route> {
 
     // Collect all of the dynamic segments in an `IndexSet`, checking for dups.
     let mut segments: IndexSet<Segment> = IndexSet::new();
-    fn dup_check<I>(set: &mut IndexSet<Segment>, iter: I, diags: &mut Diagnostics)
-        where I: Iterator<Item = Segment>
-    {
+    fn dup_check(
+        set: &mut IndexSet<Segment>,
+        iter: impl Iterator<Item = Segment>,
+        diags: &mut Diagnostics,
+    ) {
         for segment in iter.filter(|s| s.kind != Kind::Static) {
             let span = segment.span;
             if let Some(previous) = set.replace(segment) {

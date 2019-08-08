@@ -390,9 +390,7 @@ impl<'f> Iterator for FormItems<'f> {
 //         ($string:expr, $expected:expr) => (check_form(&$string[..], Some($expected)));
 //     }
 
-//     fn check_form<'a, T>(items: T, expected: Option<&[(&str, &str, &str)]>)
-//         where T: Into<FormItems<'a>> + std::fmt::Debug
-//     {
+//     fn check_form<'a>(items: impl Into<FormItems<'a>> + Debug, expected: Option<&[(&str, &str, &str)]>) {
 //         let string = format!("{:?}", items);
 //         let mut items = items.into();
 //         let results: Vec<_> = items.by_ref().map(|item| item.explode()).collect();

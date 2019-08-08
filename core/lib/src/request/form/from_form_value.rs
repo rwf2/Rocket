@@ -113,7 +113,7 @@ use crate::http::RawStr;
 ///     string is returned. Otherwise, an `Err` with the original form value is
 ///     returned.
 ///
-///   * **Option&lt;T>** _where_ **T: FromFormValue**
+///   * **Option&lt;T: FromFormValue>**
 ///
 ///     _This implementation always returns successfully._
 ///

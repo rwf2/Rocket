@@ -103,7 +103,7 @@ use crate::http::{RawStr, uri::{Segments, SegmentError}};
 ///     decode is successful, the decoded string is returned. Otherwise, an
 ///     `Err` with the original path segment is returned.
 ///
-///   * **Option&lt;T>** _where_ **T: FromParam**
+///   * **Option&lt;T: FromParam>**
 ///
 ///     _This implementation always returns successfully._
 ///

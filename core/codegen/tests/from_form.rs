@@ -3,9 +3,10 @@
 use rocket::request::{FromForm, FormItems, FormParseError};
 use rocket::http::RawStr;
 
-fn parse<'f, T>(string: &'f str, strict: bool) -> Result<T, FormParseError<'f>>
-    where T: FromForm<'f, Error = FormParseError<'f>>
-{
+fn parse<'f, T: FromForm<'f, Error = FormParseError<'f>>>(
+    string: &'f str,
+    strict: bool,
+) -> Result<T, FormParseError<'f>> {
     let mut items = FormItems::from(string);
     let result = T::from_form(items.by_ref(), strict);
     if !items.exhaust() {
@@ -15,15 +16,15 @@ fn parse<'f, T>(string: &'f str, strict: bool) -> Result<T, FormParseError<'f>>
     result
 }
 
-fn strict<'f, T>(string: &'f str) -> Result<T, FormParseError<'f>>
-    where T: FromForm<'f, Error = FormParseError<'f>>
-{
+fn strict<'f, T: FromForm<'f, Error = FormParseError<'f>>>(
+    string: &'f str,
+) -> Result<T, FormParseError<'f>> {
     parse(string, true)
 }
 
-fn lenient<'f, T>(string: &'f str) -> Result<T, FormParseError<'f>>
-    where T: FromForm<'f, Error = FormParseError<'f>>
-{
+fn lenient<'f, T: FromForm<'f, Error = FormParseError<'f>>>(
+    string: &'f str,
+) -> Result<T, FormParseError<'f>> {
     parse(string, false)
 }
 

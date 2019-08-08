@@ -10,7 +10,7 @@ pub trait IntoCollection<T> {
     fn into_collection<A: Array<Item=T>>(self) -> SmallVec<A>;
 
     #[doc(hidden)]
-    fn mapped<U, F: FnMut(T) -> U, A: Array<Item=U>>(self, f: F) -> SmallVec<A>;
+    fn mapped<U, A: Array<Item=U>>(self, f: impl FnMut(T) -> U) -> SmallVec<A>;
 }
 
 impl<T> IntoCollection<T> for T {
@@ -22,7 +22,7 @@ impl<T> IntoCollection<T> for T {
     }
 
     #[inline(always)]
-    fn mapped<U, F: FnMut(T) -> U, A: Array<Item=U>>(self, mut f: F) -> SmallVec<A> {
+    fn mapped<U, A: Array<Item=U>>(self, mut f: impl FnMut(T) -> U) -> SmallVec<A> {
         f(self).into_collection()
     }
 }
@@ -34,7 +34,7 @@ impl<T> IntoCollection<T> for Vec<T> {
     }
 
     #[inline]
-    fn mapped<U, F: FnMut(T) -> U, A: Array<Item=U>>(self, f: F) -> SmallVec<A> {
+    fn mapped<U, A: Array<Item=U>>(self, f: impl FnMut(T) -> U) -> SmallVec<A> {
         self.into_iter().map(f).collect()
     }
 }
@@ -48,9 +48,7 @@ macro_rules! impl_for_slice {
             }
 
             #[inline]
-            fn mapped<U, F, A: Array<Item=U>>(self, f: F) -> SmallVec<A>
-                where F: FnMut(T) -> U
-            {
+            fn mapped<U, A: Array<Item=U>>(self, f: impl FnMut(T) -> U) -> SmallVec<A> {
                 self.iter().cloned().map(f).collect()
             }
         }

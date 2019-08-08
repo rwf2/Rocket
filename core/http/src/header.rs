@@ -45,9 +45,10 @@ impl<'h> Header<'h> {
     /// assert_eq!(header.to_string(), "X-Custom-Header: custom value");
     /// ```
     #[inline(always)]
-    pub fn new<'a: 'h, 'b: 'h, N, V>(name: N, value: V) -> Header<'h>
-        where N: Into<Cow<'a, str>>, V: Into<Cow<'b, str>>
-    {
+    pub fn new<'a: 'h, 'b: 'h>(
+        name: impl Into<Cow<'a, str>>,
+        value: impl Into<Cow<'b, str>>,
+    ) -> Header<'h> {
         Header {
             name: Uncased::new(name),
             value: value.into()
@@ -347,9 +348,11 @@ impl<'h> HeaderMap<'h> {
     /// assert_eq!(map.len(), 1);
     /// ```
     #[inline(always)]
-    pub fn replace_raw<'a: 'h, 'b: 'h, N, V>(&mut self, name: N, value: V) -> bool
-        where N: Into<Cow<'a, str>>, V: Into<Cow<'b, str>>
-    {
+    pub fn replace_raw<'a: 'h, 'b: 'h>(
+        &mut self, name:
+        impl Into<Cow<'a, str>>,
+        value: impl Into<Cow<'b, str>>
+    ) -> bool {
         self.replace(Header::new(name, value))
     }
 
@@ -375,9 +378,11 @@ impl<'h> HeaderMap<'h> {
     /// assert_eq!(vals, vec!["value_3", "value_4"]);
     /// ```
     #[inline(always)]
-    pub fn replace_all<'n, 'v: 'h, H>(&mut self, name: H, values: Vec<Cow<'v, str>>)
-        where 'n: 'h, H: Into<Cow<'n, str>>
-    {
+    pub fn replace_all<'n: 'h, 'v: 'h>(
+        &mut self,
+        name: impl Into<Cow<'n, str>>,
+        values: Vec<Cow<'v, str>>,
+    ) {
         self.headers.insert(Uncased::new(name), values);
     }
 
@@ -421,9 +426,11 @@ impl<'h> HeaderMap<'h> {
     /// assert_eq!(values, vec!["value_1", "value_2"]);
     /// ```
     #[inline(always)]
-    pub fn add_raw<'a: 'h, 'b: 'h, N, V>(&mut self, name: N, value: V)
-        where N: Into<Cow<'a, str>>, V: Into<Cow<'b, str>>
-    {
+    pub fn add_raw<'a: 'h, 'b: 'h>(
+        &mut self,
+        name: impl Into<Cow<'a, str>>,
+        value: impl Into<Cow<'b, str>>,
+    ) {
         self.add(Header::new(name, value))
     }
 
@@ -453,9 +460,11 @@ impl<'h> HeaderMap<'h> {
     /// assert_eq!(values, vec!["value_1", "value_2", "value_3", "value_4"]);
     /// ```
     #[inline(always)]
-    pub fn add_all<'n, H>(&mut self, name: H, values: &mut Vec<Cow<'h, str>>)
-        where 'n:'h, H: Into<Cow<'n, str>>
-    {
+    pub fn add_all<'n: 'h>(
+        &mut self,
+        name: impl Into<Cow<'n, str>>,
+        values: &mut Vec<Cow<'h, str>>,
+    ) {
         self.headers.entry(Uncased::new(name))
             .or_insert(vec![])
             .append(values)

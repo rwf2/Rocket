@@ -242,9 +242,7 @@ impl Client {
     /// let req = client.delete("/hello");
     /// ```
     #[inline(always)]
-    pub fn delete<'c, 'u: 'c, U>(&'c self, uri: U) -> LocalRequest<'c>
-        where U: Into<Cow<'u, str>>
-    {
+    pub fn delete<'c, 'u: 'c>(&'c self, uri: impl Into<Cow<'u, str>>) -> LocalRequest<'c> {
         self.req(Method::Delete, uri)
     }
 
@@ -264,9 +262,7 @@ impl Client {
     /// let req = client.options("/hello");
     /// ```
     #[inline(always)]
-    pub fn options<'c, 'u: 'c, U>(&'c self, uri: U) -> LocalRequest<'c>
-        where U: Into<Cow<'u, str>>
-    {
+    pub fn options<'c, 'u: 'c>(&'c self, uri: impl Into<Cow<'u, str>>) -> LocalRequest<'c> {
         self.req(Method::Options, uri)
     }
 
@@ -286,9 +282,7 @@ impl Client {
     /// let req = client.head("/hello");
     /// ```
     #[inline(always)]
-    pub fn head<'c, 'u: 'c, U>(&'c self, uri: U) -> LocalRequest<'c>
-        where U: Into<Cow<'u, str>>
-    {
+    pub fn head<'c, 'u: 'c>(&'c self, uri: impl Into<Cow<'u, str>>) -> LocalRequest<'c> {
         self.req(Method::Head, uri)
     }
 
@@ -308,9 +302,7 @@ impl Client {
     /// let req = client.patch("/hello");
     /// ```
     #[inline(always)]
-    pub fn patch<'c, 'u: 'c, U>(&'c self, uri: U) -> LocalRequest<'c>
-        where U: Into<Cow<'u, str>>
-    {
+    pub fn patch<'c, 'u: 'c>(&'c self, uri: impl Into<Cow<'u, str>>) -> LocalRequest<'c> {
         self.req(Method::Patch, uri)
     }
 
@@ -331,9 +323,7 @@ impl Client {
     /// let req = client.req(Method::Get, "/hello");
     /// ```
     #[inline(always)]
-    pub fn req<'c, 'u: 'c, U>(&'c self, method: Method, uri: U) -> LocalRequest<'c>
-        where U: Into<Cow<'u, str>>
-    {
+    pub fn req<'c, 'u: 'c>(&'c self, method: Method, uri: impl Into<Cow<'u, str>>) -> LocalRequest<'c> {
         LocalRequest::new(self, method, uri.into())
     }
 }

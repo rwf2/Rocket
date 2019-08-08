@@ -287,9 +287,7 @@ impl MediaType {
     /// assert_eq!(custom.sub(), "x-person");
     /// ```
     #[inline]
-    pub fn new<T, S>(top: T, sub: S) -> MediaType
-        where T: Into<Cow<'static, str>>, S: Into<Cow<'static, str>>
-    {
+    pub fn new(top: impl Into<Cow<'static, str>>, sub: impl Into<Cow<'static, str>>) -> MediaType {
         MediaType {
             source: Source::None,
             top: Indexed::Concrete(top.into()),
@@ -325,11 +323,11 @@ impl MediaType {
     /// assert_eq!(mt.to_string(), "text/person; name=bob; ref=2382".to_string());
     /// ```
     #[inline]
-    pub fn with_params<T, S, K, V, P>(top: T, sub: S, ps: P) -> MediaType
-        where T: Into<Cow<'static, str>>, S: Into<Cow<'static, str>>,
-              K: Into<Cow<'static, str>>, V: Into<Cow<'static, str>>,
-              P: IntoCollection<(K, V)>
-    {
+    pub fn with_params<K: Into<Cow<'static, str>>, V: Into<Cow<'static, str>>>(
+        top: impl Into<Cow<'static, str>>,
+        sub: impl Into<Cow<'static, str>>,
+        ps: impl IntoCollection<(K, V)>,
+    ) -> MediaType {
         let params = ps.mapped(|(key, val)| (
             Indexed::Concrete(key.into()),
             Indexed::Concrete(val.into())
