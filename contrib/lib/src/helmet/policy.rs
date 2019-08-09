@@ -96,6 +96,7 @@ impl_policy!(Frame, "X-Frame-Options");
 impl_policy!(Hsts, "Strict-Transport-Security");
 impl_policy!(ExpectCt, "Expect-CT");
 impl_policy!(Referrer, "Referrer-Policy");
+impl_policy!(DnsPrefetchControl, "X-DNS-Prefetch-Control");
 
 /// The [Referrer-Policy] header: controls the value set by the browser for the
 /// [Referer] header.
@@ -397,5 +398,35 @@ impl Into<Header<'static>> for &XssFilter {
         };
 
         Header::new(XssFilter::NAME, policy_string)
+    }
+}
+
+/// The [X-DNS-Prefetch-Contro] header: controls the value set by the browser for the
+/// [X-DNS-Prefetch-Contro] header.
+///
+/// Tells the browser if it should perform domain name resolution on both links
+/// that the user may choose to follow as well as URLs for items referenced by the
+/// document, including images, CSS, JavaScript, and so forth.
+///
+/// [X-DNS-Prefetch-Control]: https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/X-DNS-Prefetch-Control
+pub enum DnsPrefetchControl {
+    On,
+    Off,
+}
+
+impl Default for DnsPrefetchControl {
+    fn default() -> DnsPrefetchControl {
+        DnsPrefetchControl::Off
+    }
+}
+
+impl Into<Header<'static>> for &DnsPrefetchControl {
+    fn into(self) -> Header<'static> {
+        let policy_string = match self {
+            DnsPrefetchControl::On => "on",
+            DnsPrefetchControl::Off => "off",
+        };
+
+        Header::new(DnsPrefetchControl::NAME, policy_string)
     }
 }
