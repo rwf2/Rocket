@@ -67,4 +67,15 @@ fn login_logout_succeeds() {
     let response = client.post("/logout").cookie(login_cookie).dispatch();
     let cookie = user_id_cookie(&response).expect("logout cookie");
     assert!(cookie.value().is_empty());
+
+    // The user should be redirected back to the login page.
+    assert_eq!(response.status(), Status::SeeOther);
+    assert_eq!(response.headers().get_one("Location"), Some("/login"));
+
+    // The page should show the success message, and no errors.
+    let mut response = client.get("/login").dispatch();
+    let body = response.body_string().unwrap();
+    assert_eq!(response.status(), Status::Ok);
+    assert!(body.contains("Successfully logged out."));
+    assert!(!body.contains("Error"));
 }
