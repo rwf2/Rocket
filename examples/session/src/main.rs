@@ -59,6 +59,9 @@ fn login_page(flash: Option<FlashMessage<'_, '_>>) -> Template {
     let mut context = HashMap::new();
     if let Some(ref msg) = flash {
         context.insert("flash", msg.msg());
+        if msg.name() == "error" {
+            context.insert("flash_type", "Error");
+        }
     }
 
     Template::render("login", &context)

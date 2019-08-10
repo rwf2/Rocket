@@ -11,7 +11,7 @@
      <p>Please login to continue.</p>
 
       {{#if flash}}
-         <p>Error: {{ flash }}</p>
+         <p>{{#if flash_type}}{{flash_type}}: {{/if}}{{ flash }}</p>
       {{/if}}
 
       <form action="/login" method="post" accept-charset="utf-8">
