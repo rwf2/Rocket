@@ -1,5 +1,4 @@
 use std::path::Path;
-use std::pin::Pin;
 
 use futures::compat::{Future01CompatExt, Stream01CompatExt, AsyncWrite01CompatExt};
 use futures::io::{self, AsyncRead, AsyncReadExt as _, AsyncWrite};
@@ -181,41 +180,39 @@ impl Data {
     // bytes `vec[pos..cap]` are buffered and unread. The remainder of the data
     // bytes can be read from `stream`.
     #[inline(always)]
-    crate fn new(body: hyper::Body) -> Pin<Box<dyn Future<Output = Data> + Send>> {
+    crate async fn new(body: hyper::Body) -> Data {
         trace_!("Data::new({:?})", body);
 
         let mut stream = body.compat().map_err(|e| {
             io::Error::new(io::ErrorKind::Other, e)
         }).into_async_read();
 
-        Box::pin(async {
-            let mut peek_buf = vec![0; PEEK_BYTES];
+        let mut peek_buf = vec![0; PEEK_BYTES];
 
-            let eof = match stream.read_max(&mut peek_buf[..]).await {
-                Ok(n) => {
-                    trace_!("Filled peek buf with {} bytes.", n);
+        let eof = match stream.read_max(&mut peek_buf[..]).await {
+            Ok(n) => {
+                trace_!("Filled peek buf with {} bytes.", n);
 
-                    // TODO.async: This has not gone away, and I don't entirely
-                    // understand what's happening here
+                // TODO.async: This has not gone away, and I don't entirely
+                // understand what's happening here
 
-                    // We can use `set_len` here instead of `truncate`, but we'll
-                    // take the performance hit to avoid `unsafe`. All of this code
-                    // should go away when we migrate away from hyper 0.10.x.
+                // We can use `set_len` here instead of `truncate`, but we'll
+                // take the performance hit to avoid `unsafe`. All of this code
+                // should go away when we migrate away from hyper 0.10.x.
 
-                    peek_buf.truncate(n);
-                    n < PEEK_BYTES
-                }
-                Err(e) => {
-                    error_!("Failed to read into peek buffer: {:?}.", e);
-                    // Likewise here as above.
-                    peek_buf.truncate(0);
-                    false
-                }
-            };
+                peek_buf.truncate(n);
+                n < PEEK_BYTES
+            }
+            Err(e) => {
+                error_!("Failed to read into peek buffer: {:?}.", e);
+                // Likewise here as above.
+                peek_buf.truncate(0);
+                false
+            }
+        };
 
-            trace_!("Peek bytes: {}/{} bytes.", peek_buf.len(), PEEK_BYTES);
-            Data { buffer: peek_buf, stream: Box::new(stream), is_complete: eof }
-        })
+        trace_!("Peek bytes: {}/{} bytes.", peek_buf.len(), PEEK_BYTES);
+        Data { buffer: peek_buf, stream: Box::new(stream), is_complete: eof }
     }
 
     /// This creates a `data` object from a local data source `data`.
