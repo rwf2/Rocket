@@ -18,7 +18,7 @@ use std::path::{PathBuf, Path};
 
 use rocket::{Request, Data, Route};
 use rocket::http::{Method, uri::Segments};
-use rocket::handler::{Handler, Outcome};
+use rocket::handler::{Handler, HandlerFuture, Outcome};
 use rocket::response::NamedFile;
 
 /// A bitset representing configurable options for the [`StaticFiles`] handler.
@@ -273,10 +273,12 @@ impl Into<Vec<Route>> for StaticFiles {
 }
 
 impl Handler for StaticFiles {
-    fn handle<'r>(&self, req: &'r Request<'_>, data: Data) -> Outcome<'r> {
-        fn handle_dir<'r>(opt: Options, r: &'r Request<'_>, d: Data, path: &Path) -> Outcome<'r> {
+    fn handle<'r>(&self, req: &'r Request<'_>, data: Data) -> HandlerFuture<'r> {
+        use futures::future;
+
+        fn handle_dir<'r>(opt: Options, r: &'r Request<'_>, d: Data, path: &Path) -> HandlerFuture<'r> {
             if !opt.contains(Options::Index) {
-                return Outcome::forward(d);
+                return Box::pin(future::ready(Outcome::forward(d)));
             }
 
             let file = NamedFile::open(path.join("index.html")).ok();
@@ -288,7 +290,7 @@ impl Handler for StaticFiles {
         let current_route = req.route().expect("route while handling");
         let is_segments_route = current_route.uri.path().ends_with(">");
         if !is_segments_route {
-            return handle_dir(self.options, req, data, &self.root);
+            return Box::pin(handle_dir(self.options, req, data, &self.root));
         }
 
         // Otherwise, we're handling segments. Get the segments as a `PathBuf`,
@@ -302,7 +304,7 @@ impl Handler for StaticFiles {
         match &path {
             Some(path) if path.is_dir() => handle_dir(self.options, req, data, path),
             Some(path) => Outcome::from_or_forward(req, data, NamedFile::open(path).ok()),
-            None => Outcome::forward(data)
+            None => Box::pin(future::ready(Outcome::forward(data)))
         }
     }
 }
