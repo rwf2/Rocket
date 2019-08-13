@@ -139,15 +139,10 @@ impl<'a, T: Deserialize<'a>> FromData<'a> for Json<T> {
     fn transform(r: &Request<'_>, d: Data) -> TransformFuture<'a, Self::Owned, Self::Error> {
         let size_limit = r.limits().get("json").unwrap_or(LIMIT);
         Box::pin(async move {
-            let mut v = Vec::with_capacity(512);
+            let mut s = String::with_capacity(512);
             let mut reader = d.open().take(size_limit);
-            match reader.read_to_end(&mut v).await {
-                Ok(_) => {
-                    match String::from_utf8(v) {
-                        Ok(s) => Borrowed(Success(s)),
-                        Err(e) => Borrowed(Failure((Status::BadRequest, JsonError::Io(std::io::Error::new(std::io::ErrorKind::Other, e))))),
-                    }
-                },
+            match reader.read_to_string(&mut s).await {
+                Ok(_) => Borrowed(Success(s)),
                 Err(e) => Borrowed(Failure((Status::BadRequest, JsonError::Io(e))))
             }
         })

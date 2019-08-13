@@ -142,7 +142,7 @@ pub type FromDataFuture<'a, T, E> = Pin<Box<dyn Future<Output = Outcome<T, E>> +
 /// if the guard returns successfully.
 ///
 /// ```rust
-/// # #![feature(proc_macro_hygiene)]
+/// # #![feature(proc_macro_hygiene, async_await)]
 /// # #[macro_use] extern crate rocket;
 /// # type DataGuard = rocket::data::Data;
 /// #[post("/submit", data = "<var>")]
@@ -188,15 +188,19 @@ pub type FromDataFuture<'a, T, E> = Pin<Box<dyn Future<Output = Outcome<T, E>> +
 /// `String` (an `&str`).
 ///
 /// ```rust
-/// # #![feature(proc_macro_hygiene)]
+/// # #![feature(proc_macro_hygiene, async_await)]
 /// # #[macro_use] extern crate rocket;
 /// # #[derive(Debug)]
 /// # struct Name<'a> { first: &'a str, last: &'a str, }
 /// use std::io::{self, Read};
 ///
+/// use futures::io::AsyncReadExt;
+///
 /// use rocket::{Request, Data, Outcome::*};
-/// use rocket::data::{FromData, Outcome, Transform, Transformed};
+/// use rocket::data::{FromData, Outcome, Transform, Transformed, TransformFuture, FromDataFuture};
 /// use rocket::http::Status;
+///
+/// use rocket::AsyncReadExt as _;
 ///
 /// const NAME_LIMIT: u64 = 256;
 ///
@@ -210,32 +214,36 @@ pub type FromDataFuture<'a, T, E> = Pin<Box<dyn Future<Output = Outcome<T, E>> +
 ///     type Owned = String;
 ///     type Borrowed = str;
 ///
-///     fn transform(_: &Request, data: Data) -> Transform<Outcome<Self::Owned, Self::Error>> {
-///         let mut stream = data.open().take(NAME_LIMIT);
-///         let mut string = String::with_capacity((NAME_LIMIT / 2) as usize);
-///         let outcome = match stream.read_to_string(&mut string) {
-///             Ok(_) => Success(string),
-///             Err(e) => Failure((Status::InternalServerError, NameError::Io(e)))
-///         };
+///     fn transform(_: &Request, data: Data) -> TransformFuture<'a, Self::Owned, Self::Error> {
+///         Box::pin(async move {
+///             let mut stream = data.open().take(NAME_LIMIT);
+///             let mut string = String::with_capacity((NAME_LIMIT / 2) as usize);
+///             let outcome = match stream.read_to_string(&mut string).await {
+///                 Ok(_) => Success(string),
+///                 Err(e) => Failure((Status::InternalServerError, NameError::Io(e)))
+///             };
 ///
-///         // Returning `Borrowed` here means we get `Borrowed` in `from_data`.
-///         Transform::Borrowed(outcome)
+///             // Returning `Borrowed` here means we get `Borrowed` in `from_data`.
+///             Transform::Borrowed(outcome)
+///         })
 ///     }
 ///
-///     fn from_data(_: &Request, outcome: Transformed<'a, Self>) -> Outcome<Self, Self::Error> {
-///         // Retrieve a borrow to the now transformed `String` (an &str). This
-///         // is only correct because we know we _always_ return a `Borrowed` from
-///         // `transform` above.
-///         let string = outcome.borrowed()?;
+///     fn from_data(_: &Request, outcome: Transformed<'a, Self>) -> FromDataFuture<'a, Self, Self::Error> {
+///         Box::pin(async move {
+///             // Retrieve a borrow to the now transformed `String` (an &str). This
+///             // is only correct because we know we _always_ return a `Borrowed` from
+///             // `transform` above.
+///             let string = outcome.borrowed()?;
 ///
-///         // Perform a crude, inefficient parse.
-///         let splits: Vec<&str> = string.split(" ").collect();
-///         if splits.len() != 2 || splits.iter().any(|s| s.is_empty()) {
-///             return Failure((Status::UnprocessableEntity, NameError::Parse));
-///         }
+///             // Perform a crude, inefficient parse.
+///             let splits: Vec<&str> = string.split(" ").collect();
+///             if splits.len() != 2 || splits.iter().any(|s| s.is_empty()) {
+///                 return Failure((Status::UnprocessableEntity, NameError::Parse));
+///             }
 ///
-///         // Return successfully.
-///         Success(Name { first: splits[0], last: splits[1] })
+///             // Return successfully.
+///             Success(Name { first: splits[0], last: splits[1] })
+///         })
 ///     }
 /// }
 /// # #[post("/person", data = "<person>")]
@@ -434,7 +442,7 @@ impl<'a> FromData<'a> for Data {
 /// that you can retrieve it directly from a client's request body:
 ///
 /// ```rust
-/// # #![feature(proc_macro_hygiene)]
+/// # #![feature(proc_macro_hygiene, async_await)]
 /// # #[macro_use] extern crate rocket;
 /// # type Person = rocket::data::Data;
 /// #[post("/person", data = "<person>")]
@@ -446,7 +454,7 @@ impl<'a> FromData<'a> for Data {
 /// A `FromDataSimple` implementation allowing this looks like:
 ///
 /// ```rust
-/// # #![feature(proc_macro_hygiene)]
+/// # #![feature(proc_macro_hygiene, async_await)]
 /// # #[macro_use] extern crate rocket;
 /// #
 /// # #[derive(Debug)]
@@ -454,9 +462,13 @@ impl<'a> FromData<'a> for Data {
 /// #
 /// use std::io::Read;
 ///
+/// use futures::io::AsyncReadExt;
+///
 /// use rocket::{Request, Data, Outcome, Outcome::*};
-/// use rocket::data::{self, FromDataSimple};
+/// use rocket::data::{self, FromDataSimple, FromDataFuture};
 /// use rocket::http::{Status, ContentType};
+///
+/// use rocket::AsyncReadExt as _;
 ///
 /// // Always use a limit to prevent DoS attacks.
 /// const LIMIT: u64 = 256;
@@ -464,33 +476,36 @@ impl<'a> FromData<'a> for Data {
 /// impl FromDataSimple for Person {
 ///     type Error = String;
 ///
-///     fn from_data(req: &Request, data: Data) -> data::Outcome<Self, String> {
+///     fn from_data(req: &Request, data: Data) -> FromDataFuture<'static, Self, String> {
 ///         // Ensure the content type is correct before opening the data.
 ///         let person_ct = ContentType::new("application", "x-person");
 ///         if req.content_type() != Some(&person_ct) {
-///             return Outcome::Forward(data);
+///             return Box::pin(async move { Outcome::Forward(data) });
 ///         }
 ///
-///         // Read the data into a String.
-///         let mut string = String::new();
-///         if let Err(e) = data.open().take(LIMIT).read_to_string(&mut string) {
-///             return Failure((Status::InternalServerError, format!("{:?}", e)));
-///         }
+///         Box::pin(async move {
+///             // Read the data into a String.
+///             let mut string = String::new();
+///             let mut reader = data.open().take(LIMIT);
+///             if let Err(e) = reader.read_to_string(&mut string).await {
+///                 return Failure((Status::InternalServerError, format!("{:?}", e)));
+///             }
 ///
-///         // Split the string into two pieces at ':'.
-///         let (name, age) = match string.find(':') {
-///             Some(i) => (string[..i].to_string(), &string[(i + 1)..]),
-///             None => return Failure((Status::UnprocessableEntity, "':'".into()))
-///         };
+///             // Split the string into two pieces at ':'.
+///             let (name, age) = match string.find(':') {
+///                 Some(i) => (string[..i].to_string(), &string[(i + 1)..]),
+///                 None => return Failure((Status::UnprocessableEntity, "':'".into()))
+///             };
 ///
-///         // Parse the age.
-///         let age: u16 = match age.parse() {
-///             Ok(age) => age,
-///             Err(_) => return Failure((Status::UnprocessableEntity, "Age".into()))
-///         };
+///             // Parse the age.
+///             let age: u16 = match age.parse() {
+///                 Ok(age) => age,
+///                 Err(_) => return Failure((Status::UnprocessableEntity, "Age".into()))
+///             };
 ///
-///         // Return successfully.
-///         Success(Person { name, age })
+///             // Return successfully.
+///             Success(Person { name, age })
+///         })
 ///     }
 /// }
 /// # #[post("/person", data = "<person>")]
@@ -578,14 +593,11 @@ impl FromDataSimple for String {
     #[inline(always)]
     fn from_data(_: &Request<'_>, data: Data) -> FromDataFuture<'static, Self, Self::Error> {
         Box::pin(async {
-            let mut stream = data.open();
-            let mut buf = Vec::new();
-            if let Err(e) = stream.read_to_end(&mut buf).await {
-                return Failure((Status::BadRequest, e));
-            }
-            match String::from_utf8(buf) {
-                Ok(s) => Success(s),
-                Err(e) => Failure((Status::BadRequest, std::io::Error::new(std::io::ErrorKind::Other, e))),
+            let mut string = String::new();
+            let mut reader = data.open();
+            match reader.read_to_string(&mut string).await {
+                Ok(_) => Success(string),
+                Err(e) => Failure((Status::BadRequest, e)),
             }
         })
     }
