@@ -1,5 +1,5 @@
 use std::fmt;
-use std::rc::Rc;
+use std::sync::Arc;
 use std::net::SocketAddr;
 use std::ops::{Deref, DerefMut};
 use std::borrow::Cow;
@@ -67,16 +67,16 @@ use crate::local::Client;
 /// [`mut_dispatch`]: #method.mut_dispatch
 pub struct LocalRequest<'c> {
     client: &'c Client,
-    // This pointer exists to access the `Rc<Request>` mutably inside of
+    // This pointer exists to access the `Arc<Request>` mutably inside of
     // `LocalRequest`. This is the only place that a `Request` can be accessed
     // mutably. This is accomplished via the private `request_mut()` method.
     ptr: *mut Request<'c>,
-    // This `Rc` exists so that we can transfer ownership to the `LocalResponse`
+    // This `Arc` exists so that we can transfer ownership to the `LocalResponse`
     // selectively on dispatch. This is necessary because responses may point
     // into the request, and thus the request and all of its data needs to be
     // alive while the response is accessible.
     //
-    // Because both a `LocalRequest` and a `LocalResponse` can hold an `Rc` to
+    // Because both a `LocalRequest` and a `LocalResponse` can hold an `Arc` to
     // the same `Request`, _and_ the `LocalRequest` can mutate the request, we
     // must ensure that 1) neither `LocalRequest` not `LocalResponse` are `Sync`
     // or `Send` and 2) mutations carried out in `LocalRequest` are _stable_:
@@ -85,7 +85,7 @@ pub struct LocalRequest<'c> {
     // even if the `Request` is mutated by a `LocalRequest`, those mutations are
     // not observable by `LocalResponse`.
     //
-    // The first is ensured by the embedding of the `Rc` type which is neither
+    // The first is ensured by the embedding of the `Arc` type which is neither
     // `Send` nor `Sync`. The second is more difficult to argue. First, observe
     // that any methods of `LocalRequest` that _remove_ values from `Request`
     // only remove _Copy_ values, in particular, `SocketAddr`. Second, the
@@ -94,7 +94,7 @@ pub struct LocalRequest<'c> {
     // `Response`. And finally, observe how all of the data stored in `Request`
     // is converted into its owned counterpart before insertion, ensuring stable
     // addresses. Together, these properties guarantee the second condition.
-    request: Rc<Request<'c>>,
+    request: Arc<Request<'c>>,
     data: Vec<u8>,
     uri: Cow<'c, str>,
 }
@@ -118,8 +118,8 @@ impl<'c> LocalRequest<'c> {
         }
 
         // See the comments on the structure for what's going on here.
-        let mut request = Rc::new(request);
-        let ptr = Rc::get_mut(&mut request).unwrap() as *mut Request<'_>;
+        let mut request = Arc::new(request);
+        let ptr = Arc::get_mut(&mut request).unwrap() as *mut Request<'_>;
         LocalRequest { client, ptr, request, uri, data: vec![] }
     }
 
@@ -150,7 +150,7 @@ impl<'c> LocalRequest<'c> {
     fn long_lived_request<'a>(&mut self) -> &'a mut Request<'c> {
         // See the comments in the structure for the argument of correctness.
         // Additionally, the caller must ensure that the owned instance of
-        // `Rc<Request>` remains valid as long as the returned reference can be
+        // `Arc<Request>` remains valid as long as the returned reference can be
         // accessed.
         unsafe { &mut *self.ptr }
     }
@@ -393,7 +393,7 @@ impl<'c> LocalRequest<'c> {
     fn _dispatch(
         client: &'c Client,
         request: &'c mut Request<'c>,
-        owned_request: Rc<Request<'c>>,
+        owned_request: Arc<Request<'c>>,
         uri: &str,
         data: Vec<u8>
     ) -> LocalResponse<'c> {
@@ -454,7 +454,7 @@ impl fmt::Debug for LocalRequest<'_> {
 /// when invoking methods, a `LocalResponse` can be treated exactly as if it
 /// were a `Response`.
 pub struct LocalResponse<'c> {
-    _request: Rc<Request<'c>>,
+    _request: Arc<Request<'c>>,
     response: Response<'c>,
 }
 

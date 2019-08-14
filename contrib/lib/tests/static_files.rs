@@ -43,7 +43,7 @@ mod static_tests {
         "inner/",
     ];
 
-    fn assert_file(client: &Client, prefix: &str, path: &str, exists: bool) {
+    async fn assert_file(client: &Client, prefix: &str, path: &str, exists: bool) {
         let full_path = format!("/{}/{}", prefix, path);
         let mut response = client.get(full_path).dispatch();
         if exists {
@@ -57,50 +57,60 @@ mod static_tests {
             let mut file = File::open(path).expect("open file");
             let mut expected_contents = String::new();
             file.read_to_string(&mut expected_contents).expect("read file");
-            assert_eq!(response.body_string_wait(), Some(expected_contents));
+            assert_eq!(response.body_string().await, Some(expected_contents));
         } else {
             assert_eq!(response.status(), Status::NotFound);
         }
     }
 
-    fn assert_all(client: &Client, prefix: &str, paths: &[&str], exist: bool) {
-        paths.iter().for_each(|path| assert_file(client, prefix, path, exist))
+    async fn assert_all(client: &Client, prefix: &str, paths: &[&str], exist: bool) {
+        for path in paths.iter() {
+            assert_file(client, prefix, path, exist).await;
+        }
     }
 
     #[test]
     fn test_static_no_index() {
-        let client = Client::new(rocket()).expect("valid rocket");
-        assert_all(&client, "no_index", REGULAR_FILES, true);
-        assert_all(&client, "no_index", HIDDEN_FILES, false);
-        assert_all(&client, "no_index", INDEXED_DIRECTORIES, false);
+        rocket::async_test(async {
+            let client = Client::new(rocket()).expect("valid rocket");
+            assert_all(&client, "no_index", REGULAR_FILES, true).await;
+            assert_all(&client, "no_index", HIDDEN_FILES, false).await;
+            assert_all(&client, "no_index", INDEXED_DIRECTORIES, false).await;
+        })
     }
 
     #[test]
     fn test_static_hidden() {
-        let client = Client::new(rocket()).expect("valid rocket");
-        assert_all(&client, "dots", REGULAR_FILES, true);
-        assert_all(&client, "dots", HIDDEN_FILES, true);
-        assert_all(&client, "dots", INDEXED_DIRECTORIES, false);
+        rocket::async_test(async {
+            let client = Client::new(rocket()).expect("valid rocket");
+            assert_all(&client, "dots", REGULAR_FILES, true).await;
+            assert_all(&client, "dots", HIDDEN_FILES, true).await;
+            assert_all(&client, "dots", INDEXED_DIRECTORIES, false).await;
+        })
     }
 
     #[test]
     fn test_static_index() {
-        let client = Client::new(rocket()).expect("valid rocket");
-        assert_all(&client, "index", REGULAR_FILES, true);
-        assert_all(&client, "index", HIDDEN_FILES, false);
-        assert_all(&client, "index", INDEXED_DIRECTORIES, true);
+        rocket::async_test(async {
+            let client = Client::new(rocket()).expect("valid rocket");
+            assert_all(&client, "index", REGULAR_FILES, true).await;
+            assert_all(&client, "index", HIDDEN_FILES, false).await;
+            assert_all(&client, "index", INDEXED_DIRECTORIES, true).await;
 
-        assert_all(&client, "default", REGULAR_FILES, true);
-        assert_all(&client, "default", HIDDEN_FILES, false);
-        assert_all(&client, "default", INDEXED_DIRECTORIES, true);
+            assert_all(&client, "default", REGULAR_FILES, true).await;
+            assert_all(&client, "default", HIDDEN_FILES, false).await;
+            assert_all(&client, "default", INDEXED_DIRECTORIES, true).await;
+        })
     }
 
     #[test]
     fn test_static_all() {
-        let client = Client::new(rocket()).expect("valid rocket");
-        assert_all(&client, "both", REGULAR_FILES, true);
-        assert_all(&client, "both", HIDDEN_FILES, true);
-        assert_all(&client, "both", INDEXED_DIRECTORIES, true);
+        rocket::async_test(async {
+            let client = Client::new(rocket()).expect("valid rocket");
+            assert_all(&client, "both", REGULAR_FILES, true).await;
+            assert_all(&client, "both", HIDDEN_FILES, true).await;
+            assert_all(&client, "both", INDEXED_DIRECTORIES, true).await;
+        })
     }
 
     #[test]
@@ -119,28 +129,30 @@ mod static_tests {
 
     #[test]
     fn test_forwarding() {
-        use rocket::http::RawStr;
-        use rocket::{get, routes};
+        rocket::async_test(async {
+            use rocket::http::RawStr;
+            use rocket::{get, routes};
 
-        #[get("/<value>", rank = 20)]
-        fn catch_one(value: String) -> String { value }
+            #[get("/<value>", rank = 20)]
+            fn catch_one(value: String) -> String { value }
 
-        #[get("/<a>/<b>", rank = 20)]
-        fn catch_two(a: &RawStr, b: &RawStr) -> String { format!("{}/{}", a, b) }
+            #[get("/<a>/<b>", rank = 20)]
+            fn catch_two(a: &RawStr, b: &RawStr) -> String { format!("{}/{}", a, b) }
 
-        let rocket = rocket().mount("/default", routes![catch_one, catch_two]);
-        let client = Client::new(rocket).expect("valid rocket");
+            let rocket = rocket().mount("/default", routes![catch_one, catch_two]);
+            let client = Client::new(rocket).expect("valid rocket");
 
-        let mut response = client.get("/default/ireallydontexist").dispatch();
-        assert_eq!(response.status(), Status::Ok);
-        assert_eq!(response.body_string_wait().unwrap(), "ireallydontexist");
+            let mut response = client.get("/default/ireallydontexist").dispatch();
+            assert_eq!(response.status(), Status::Ok);
+            assert_eq!(response.body_string().await.unwrap(), "ireallydontexist");
 
-        let mut response = client.get("/default/idont/exist").dispatch();
-        assert_eq!(response.status(), Status::Ok);
-        assert_eq!(response.body_string_wait().unwrap(), "idont/exist");
+            let mut response = client.get("/default/idont/exist").dispatch();
+            assert_eq!(response.status(), Status::Ok);
+            assert_eq!(response.body_string().await.unwrap(), "idont/exist");
 
-        assert_all(&client, "both", REGULAR_FILES, true);
-        assert_all(&client, "both", HIDDEN_FILES, true);
-        assert_all(&client, "both", INDEXED_DIRECTORIES, true);
+            assert_all(&client, "both", REGULAR_FILES, true).await;
+            assert_all(&client, "both", HIDDEN_FILES, true).await;
+            assert_all(&client, "both", INDEXED_DIRECTORIES, true).await;
+        })
     }
 }

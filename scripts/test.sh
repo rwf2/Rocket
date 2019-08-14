@@ -67,8 +67,7 @@ if [ "$1" = "--contrib" ]; then
     msgpack
     tera_templates
     handlebars_templates
-# TODO.async: serve needs tests to use tokio runtime, blocked on #1071
-#    serve
+    serve
     helmet
     diesel_postgres_pool
     diesel_sqlite_pool
@@ -87,9 +86,8 @@ if [ "$1" = "--contrib" ]; then
 
   pushd "${CONTRIB_LIB_ROOT}" > /dev/null 2>&1
 
-# TODO.async: default_features includes `serve`
-#  echo ":: Building and testing contrib [default]..."
-#  CARGO_INCREMENTAL=0 cargo test
+  echo ":: Building and testing contrib [default]..."
+  CARGO_INCREMENTAL=0 cargo test
 
   for feature in "${FEATURES[@]}"; do
     echo ":: Building and testing contrib [${feature}]..."

@@ -1,3 +1,5 @@
+#![feature(async_await)]
+
 extern crate rocket;
 extern crate rocket_contrib;
 
