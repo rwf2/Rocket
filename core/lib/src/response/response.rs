@@ -268,11 +268,12 @@ impl<'r> ResponseBuilder<'r> {
     ///
     /// ```rust
     /// use rocket::Response;
-    /// use rocket::http::hyper::header::Accept;
+    /// use rocket::http::Header;
+    /// use rocket::http::hyper::header::ACCEPT;
     ///
     /// let response = Response::build()
-    ///     .header_adjoin(Accept::json())
-    ///     .header_adjoin(Accept::text())
+    ///     .header_adjoin(Header::new(ACCEPT.as_str(), "application/json"))
+    ///     .header_adjoin(Header::new(ACCEPT.as_str(), "text/plain"))
     ///     .finalize();
     ///
     /// assert_eq!(response.headers().get("Accept").count(), 2);
@@ -338,20 +339,23 @@ impl<'r> ResponseBuilder<'r> {
         self
     }
 
+    // TODO.async: un-ignore this test once Seek/AsyncSeek situation has been resolved.
     /// Sets the body of the `Response` to be the fixed-sized `body`.
     ///
     /// # Example
     ///
-    /// ```rust
+    /// ```rust,ignore
+    /// # #![feature(async_await)]
     /// use rocket::Response;
-    /// use std::fs::File;
+    /// use futures::compat::{AsyncRead01CompatExt, Future01CompatExt};
+    /// use tokio::fs::File;
     /// # use std::io;
     ///
     /// # #[allow(dead_code)]
-    /// # fn test() -> io::Result<()> {
+    /// # async fn test() -> io::Result<()> {
     /// # #[allow(unused_variables)]
     /// let response = Response::build()
-    ///     .sized_body(File::open("body.txt")?)
+    ///     .sized_body(File::open("body.txt").compat().await?.compat())
     ///     .finalize();
     /// # Ok(())
     /// # }
@@ -369,15 +373,17 @@ impl<'r> ResponseBuilder<'r> {
     /// # Example
     ///
     /// ```rust
+    /// # #![feature(async_await)]
     /// use rocket::Response;
-    /// use std::fs::File;
+    /// use futures::compat::{AsyncRead01CompatExt, Future01CompatExt};
+    /// use tokio::fs::File;
     /// # use std::io;
     ///
     /// # #[allow(dead_code)]
-    /// # fn test() -> io::Result<()> {
+    /// # async fn test() -> io::Result<()> {
     /// # #[allow(unused_variables)]
     /// let response = Response::build()
-    ///     .streamed_body(File::open("body.txt")?)
+    ///     .streamed_body(File::open("body.txt").compat().await?.compat())
     ///     .finalize();
     /// # Ok(())
     /// # }
@@ -396,15 +402,17 @@ impl<'r> ResponseBuilder<'r> {
     /// # Example
     ///
     /// ```rust
+    /// # #![feature(async_await)]
     /// use rocket::Response;
-    /// use std::fs::File;
+    /// use futures::compat::{AsyncRead01CompatExt, Future01CompatExt};
+    /// use tokio::fs::File;
     /// # use std::io;
     ///
     /// # #[allow(dead_code)]
-    /// # fn test() -> io::Result<()> {
+    /// # async fn test() -> io::Result<()> {
     /// # #[allow(unused_variables)]
     /// let response = Response::build()
-    ///     .chunked_body(File::open("body.txt")?, 8096)
+    ///     .chunked_body(File::open("body.txt").compat().await?.compat(), 8096)
     ///     .finalize();
     /// # Ok(())
     /// # }
@@ -814,15 +822,16 @@ impl<'r> Response<'r> {
     ///
     /// ```rust
     /// use rocket::Response;
-    /// use rocket::http::hyper::header::Accept;
+    /// use rocket::http::Header;
+    /// use rocket::http::hyper::header::ACCEPT;
     ///
     /// let mut response = Response::new();
-    /// response.adjoin_header(Accept::json());
-    /// response.adjoin_header(Accept::text());
+    /// response.adjoin_header(Header::new(ACCEPT.as_str(), "application/json"));
+    /// response.adjoin_header(Header::new(ACCEPT.as_str(), "text/plain"));
     ///
     /// let mut accept_headers = response.headers().iter();
-    /// assert_eq!(accept_headers.next(), Some(Accept::json().into()));
-    /// assert_eq!(accept_headers.next(), Some(Accept::text().into()));
+    /// assert_eq!(accept_headers.next(), Some(Header::new(ACCEPT.as_str(), "application/json")));
+    /// assert_eq!(accept_headers.next(), Some(Header::new(ACCEPT.as_str(), "text/plain")));
     /// assert_eq!(accept_headers.next(), None);
     /// ```
     #[inline(always)]
@@ -887,14 +896,17 @@ impl<'r> Response<'r> {
     /// # Example
     ///
     /// ```rust
+    /// # #![feature(async_await)]
     /// use std::io::Cursor;
     /// use rocket::Response;
     ///
+    /// # rocket::async_test(async {
     /// let mut response = Response::new();
     /// assert!(response.body().is_none());
     ///
     /// response.set_sized_body(Cursor::new("Hello, world!"));
-    /// assert_eq!(response.body_string(), Some("Hello, world!".to_string()));
+    /// assert_eq!(response.body_string().await, Some("Hello, world!".to_string()));
+    /// # })
     /// ```
     #[inline(always)]
     pub fn body(&mut self) -> Option<Body<&mut (dyn AsyncRead + Unpin + Send)>> {
@@ -916,15 +928,18 @@ impl<'r> Response<'r> {
     /// # Example
     ///
     /// ```rust
+    /// # #![feature(async_await)]
     /// use std::io::Cursor;
     /// use rocket::Response;
     ///
+    /// # rocket::async_test(async {
     /// let mut response = Response::new();
     /// assert!(response.body().is_none());
     ///
     /// response.set_sized_body(Cursor::new("Hello, world!"));
-    /// assert_eq!(response.body_string(), Some("Hello, world!".to_string()));
+    /// assert_eq!(response.body_string().await, Some("Hello, world!".to_string()));
     /// assert!(response.body().is_none());
+    /// # })
     /// ```
     #[inline(always)]
     pub fn body_string(&mut self) -> impl Future<Output = Option<String>> + 'r {
@@ -944,15 +959,18 @@ impl<'r> Response<'r> {
     /// # Example
     ///
     /// ```rust
+    /// # #![feature(async_await)]
     /// use std::io::Cursor;
     /// use rocket::Response;
     ///
+    /// # rocket::async_test(async {
     /// let mut response = Response::new();
     /// assert!(response.body().is_none());
     ///
     /// response.set_sized_body(Cursor::new("hi!"));
-    /// assert_eq!(response.body_bytes(), Some(vec![0x68, 0x69, 0x21]));
+    /// assert_eq!(response.body_bytes().await, Some(vec![0x68, 0x69, 0x21]));
     /// assert!(response.body().is_none());
+    /// # })
     /// ```
     #[inline(always)]
     pub fn body_bytes(&mut self) -> impl Future<Output = Option<Vec<u8>>> + 'r {
@@ -971,9 +989,11 @@ impl<'r> Response<'r> {
     /// # Example
     ///
     /// ```rust
+    /// # #![feature(async_await)]
     /// use std::io::Cursor;
     /// use rocket::Response;
     ///
+    /// # rocket::async_test(async {
     /// let mut response = Response::new();
     /// assert!(response.body().is_none());
     ///
@@ -981,9 +1001,13 @@ impl<'r> Response<'r> {
     /// assert!(response.body().is_some());
     ///
     /// let body = response.take_body();
-    /// let body_string = body.and_then(|b| b.into_string());
+    /// let body_string = match body {
+    ///     Some(b) => b.into_string().await,
+    ///     None => None,
+    /// };
     /// assert_eq!(body_string, Some("Hello, world!".to_string()));
     /// assert!(response.body().is_none());
+    /// # })
     /// ```
     #[inline(always)]
     pub fn take_body(&mut self) -> Option<Body<Pin<Box<dyn AsyncRead + Send + 'r>>>> {
@@ -1015,12 +1039,15 @@ impl<'r> Response<'r> {
     /// # Example
     ///
     /// ```rust
+    /// # #![feature(async_await)]
     /// use std::io::Cursor;
     /// use rocket::Response;
     ///
+    /// # rocket::async_test(async {
     /// let mut response = Response::new();
     /// response.set_sized_body(Cursor::new("Hello, world!"));
-    /// assert_eq!(response.body_string(), Some("Hello, world!".to_string()));
+    /// assert_eq!(response.body_string().await, Some("Hello, world!".to_string()));
+    /// # })
     /// ```
     #[inline]
     pub fn set_sized_body<B>(&mut self, mut body: B)
@@ -1041,12 +1068,17 @@ impl<'r> Response<'r> {
     /// # Example
     ///
     /// ```rust
-    /// use std::io::{AsyncRead, repeat};
+    /// # #![feature(async_await)]
+    /// use std::io::repeat;
+    /// use futures::io::AsyncReadExt;
     /// use rocket::Response;
+    /// use rocket::AsyncReadExt as _;
     ///
+    /// # rocket::async_test(async {
     /// let mut response = Response::new();
     /// response.set_streamed_body(repeat(97).take(5));
-    /// assert_eq!(response.body_string(), Some("aaaaa".to_string()));
+    /// assert_eq!(response.body_string().await, Some("aaaaa".to_string()));
+    /// # })
     /// ```
     #[inline(always)]
     pub fn set_streamed_body<B>(&mut self, body: B) where B: AsyncRead + Send + 'r {
@@ -1059,12 +1091,17 @@ impl<'r> Response<'r> {
     /// # Example
     ///
     /// ```rust
-    /// use std::io::{AsyncRead, repeat};
+    /// # #![feature(async_await)]
+    /// use std::io::repeat;
+    /// use futures::io::AsyncReadExt;
     /// use rocket::Response;
+    /// use rocket::AsyncReadExt as _;
     ///
+    /// # rocket::async_test(async {
     /// let mut response = Response::new();
     /// response.set_chunked_body(repeat(97).take(5), 10);
-    /// assert_eq!(response.body_string(), Some("aaaaa".to_string()));
+    /// assert_eq!(response.body_string().await, Some("aaaaa".to_string()));
+    /// # })
     /// ```
     #[inline(always)]
     pub fn set_chunked_body<B>(&mut self, body: B, chunk_size: u64)
@@ -1079,15 +1116,18 @@ impl<'r> Response<'r> {
     /// # Example
     ///
     /// ```rust
+    /// # #![feature(async_await)]
     /// use std::io::Cursor;
     /// use rocket::response::{Response, Body};
     ///
+    /// # rocket::async_test(async {
     /// let body = Body::Sized(Cursor::new("Hello!"), 6);
     ///
     /// let mut response = Response::new();
     /// response.set_raw_body(body);
     ///
-    /// assert_eq!(response.body_string(), Some("Hello!".to_string()));
+    /// assert_eq!(response.body_string().await, Some("Hello!".to_string()));
+    /// # })
     /// ```
     #[inline(always)]
     pub fn set_raw_body<T>(&mut self, body: Body<T>)

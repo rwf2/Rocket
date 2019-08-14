@@ -106,16 +106,12 @@ elif [ "$1" = "--core" ]; then
   pushd "${CORE_LIB_ROOT}" > /dev/null 2>&1
 
   echo ":: Building and testing core [no features]..."
-# TODO.async: --lib because doc tests are not complete
-  CARGO_INCREMENTAL=0 cargo test --no-default-features --lib
-#  CARGO_INCREMENTAL=0 cargo test --no-default-features
+  CARGO_INCREMENTAL=0 cargo test --no-default-features
 
   for feature in "${FEATURES[@]}"; do
     echo ":: Building and testing core [${feature}]..."
 
-# TODO.async: --lib because doc tests are not complete
-    CARGO_INCREMENTAL=0 cargo test --no-default-features --features "${feature}" --lib
-#    CARGO_INCREMENTAL=0 cargo test --no-default-features --features "${feature}"
+    CARGO_INCREMENTAL=0 cargo test --no-default-features --features "${feature}"
   done
 
   popd > /dev/null 2>&1

@@ -133,20 +133,22 @@ impl Data {
     /// # Example
     ///
     /// ```rust
+    /// # #![feature(async_await)]
     /// use std::io;
+    /// use futures::io::AllowStdIo;
     /// use rocket::Data;
     ///
-    /// fn handler(mut data: Data) -> io::Result<String> {
+    /// async fn handler(mut data: Data) -> io::Result<String> {
     ///     // write all of the data to stdout
-    ///     data.stream_to(&mut io::stdout())
-    ///         .map(|n| format!("Wrote {} bytes.", n))
+    ///     let written = data.stream_to(AllowStdIo::new(io::stdout())).await?;
+    ///     Ok(format!("Wrote {} bytes.", written))
     /// }
     /// ```
     #[inline(always)]
-    pub fn stream_to<'w, W: AsyncWrite + Unpin>(self, writer: &'w mut W) -> impl Future<Output = io::Result<u64>> + 'w {
+    pub fn stream_to<'w, W: AsyncWrite + Unpin + 'w>(self, mut writer: W) -> impl Future<Output = io::Result<u64>> + 'w {
         Box::pin(async move {
             let stream = self.open();
-            stream.copy_into(writer).await
+            stream.copy_into(&mut writer).await
         })
     }
 
@@ -159,19 +161,20 @@ impl Data {
     /// # Example
     ///
     /// ```rust
+    /// # #![feature(async_await)]
     /// use std::io;
     /// use rocket::Data;
     ///
-    /// fn handler(mut data: Data) -> io::Result<String> {
-    ///     data.stream_to_file("/static/file")
-    ///         .map(|n| format!("Wrote {} bytes to /static/file", n))
+    /// async fn handler(mut data: Data) -> io::Result<String> {
+    ///     let written = data.stream_to_file("/static/file").await?;
+    ///     Ok(format!("Wrote {} bytes to /static/file", written))
     /// }
     /// ```
     #[inline(always)]
     pub fn stream_to_file<P: AsRef<Path> + Send + 'static>(self, path: P) -> impl Future<Output = io::Result<u64>> {
         Box::pin(async move {
-            let mut file = tokio::fs::File::create(path).compat().await?.compat();
-            self.stream_to(&mut file).await
+            let file = tokio::fs::File::create(path).compat().await?.compat();
+            self.stream_to(file).await
         })
     }
 

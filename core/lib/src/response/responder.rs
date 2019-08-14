@@ -167,7 +167,7 @@ use crate::request::Request;
 /// use rocket::response::{self, Response, Responder};
 /// use rocket::http::ContentType;
 ///
-/// impl Responder<'r> for Person {
+/// impl<'r> Responder<'r> for Person {
 ///     fn respond_to(self, _: &'r Request) -> response::ResultFuture<'r> {
 ///         Box::pin(async move {
 ///             Response::build()

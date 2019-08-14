@@ -24,10 +24,11 @@ impl<T: AsyncRead> Stream<T> {
     ///
     /// ```rust
     /// use std::io;
+    /// use futures::io::AllowStdIo;
     /// use rocket::response::Stream;
     ///
     /// # #[allow(unused_variables)]
-    /// let response = Stream::chunked(io::stdin(), 10);
+    /// let response = Stream::chunked(AllowStdIo::new(io::stdin()), 10);
     /// ```
     pub fn chunked(reader: T, chunk_size: u64) -> Stream<T> {
         Stream(reader, chunk_size)
@@ -49,10 +50,11 @@ impl<T: AsyncRead + Debug> Debug for Stream<T> {
 ///
 /// ```rust
 /// use std::io;
+/// use futures::io::AllowStdIo;
 /// use rocket::response::Stream;
 ///
 /// # #[allow(unused_variables)]
-/// let response = Stream::from(io::stdin());
+/// let response = Stream::from(AllowStdIo::new(io::stdin()));
 /// ```
 impl<T: AsyncRead> From<T> for Stream<T> {
     fn from(reader: T) -> Self {

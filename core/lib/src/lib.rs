@@ -153,3 +153,13 @@ pub fn ignite() -> Rocket {
 pub fn custom(config: config::Config) -> Rocket {
     Rocket::custom(config)
 }
+
+// TODO.async: More thoughtful plan for async tests
+/// WARNING: This is unstable! Do not use this method outside of Rocket!
+#[doc(hidden)]
+pub fn async_test(fut: impl std::future::Future<Output = ()> + Send + 'static) {
+    use futures::future::{FutureExt, TryFutureExt};
+
+    let mut runtime = tokio::runtime::Runtime::new().expect("create tokio runtime");
+    runtime.block_on(fut.boxed().unit_error().compat()).expect("unit_error future returned Err");
+}
