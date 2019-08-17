@@ -37,15 +37,12 @@ impl Fairing for CorsFairing {
 
         for route in rocket.routes()
         {
-            println!("{:?}", route.uri.path());
+            let uri_route = route.uri.path();
+            let preflight = Route::new(Method::Options, uri_route, OptionsHandler::new());
+            new_routes.push(preflight);
         }
 
-
-        let r = Route::new(Method::Options, "/foo", OptionsHandler::new());
-        new_routes.push(r);
-        //Route::new(..)
         rocket = rocket.mount("/", new_routes);
-
         Ok(rocket)
     }
 
@@ -59,7 +56,8 @@ impl Fairing for CorsFairing {
     #[allow(unused_variables)]
     fn on_response(&self, request: &Request<'_>, response: &mut Response<'_>) {
         response.set_header(Header::new("Access-Control-Allow-Origin", "*"));
-        //unimplemented!();
+        response.set_header(Header::new("Access-Control-Allow-Methods", "POST, PATCH, DELETE"));
+        response.set_header(Header::new("Access-Control-Allow-Headers", "content-type"));
     }
 }
 
