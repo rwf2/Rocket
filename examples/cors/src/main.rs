@@ -4,7 +4,7 @@
 
 extern crate rocket_contrib;
 
-#[get("/")]
+#[get("/test")]
 fn get_index() -> &'static str {
     "Hi"
 }

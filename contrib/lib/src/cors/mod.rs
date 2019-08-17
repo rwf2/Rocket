@@ -5,8 +5,13 @@ use rocket::Data;
 use rocket::Request;
 use rocket::Response;
 use rocket::Rocket;
+use rocket::Route;
+use rocket::Handler;
+use rocket::handler::Outcome;
 use rocket::http::Header;
+use rocket::http::Method;
 
+#[derive(Debug)]
 pub struct CorsFairing {
     origins: Vec<String>
 }
@@ -27,9 +32,20 @@ impl Fairing for CorsFairing {
         }
     }
 
-    fn on_attach(&self, rocket: Rocket) -> Result<Rocket, Rocket> { 
-        //println!("Failed at on_attach, ln 30");
-        //unimplemented!();
+    fn on_attach(&self, mut rocket:Rocket) -> Result<Rocket, Rocket> { 
+        let mut new_routes:Vec<Route> = Vec::new();
+
+        for route in rocket.routes()
+        {
+            println!("{:?}", route.uri.path());
+        }
+
+
+        let r = Route::new(Method::Options, "/foo", OptionsHandler::new());
+        new_routes.push(r);
+        //Route::new(..)
+        rocket = rocket.mount("/", new_routes);
+
         Ok(rocket)
     }
 
@@ -44,5 +60,22 @@ impl Fairing for CorsFairing {
     fn on_response(&self, request: &Request<'_>, response: &mut Response<'_>) {
         response.set_header(Header::new("Access-Control-Allow-Origin", "*"));
         //unimplemented!();
+    }
+}
+
+#[derive(Clone)]
+struct OptionsHandler {
+    
+}
+
+impl OptionsHandler {
+    pub fn new() -> OptionsHandler {
+        OptionsHandler { }
+    }
+}
+
+impl Handler for OptionsHandler {
+    fn handle<'r>(&self, req: &'r Request, data: Data) -> Outcome<'r> {
+        Outcome::from(req, "hello world")
     }
 }
