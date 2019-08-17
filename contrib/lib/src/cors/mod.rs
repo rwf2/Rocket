@@ -1,5 +1,6 @@
 use rocket::fairing::Fairing;
 use rocket::fairing::Info;
+use rocket::fairing::Kind;
 use rocket::Data;
 use rocket::Request;
 use rocket::Response;
@@ -19,7 +20,10 @@ impl CorsFairing {
 
 impl Fairing for CorsFairing {
     fn info(&self) -> Info {
-        unimplemented!();
+        Info {
+            name: "Cors Fairing",
+            kind: Kind::Attach | Kind::Response
+        }
     }
 
     fn on_attach(&self, rocket: Rocket) -> Result<Rocket, Rocket> { 
