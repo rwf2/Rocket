@@ -14,10 +14,15 @@ fn hello() -> &'static str {
     "Hello, world!"
 }
 
+#[patch("/notes/<_id>", data="<_input>")]
+fn patch_notes(_id: u64, _input: String) -> &'static str {
+    "Hello, world!"
+}
+
 
 fn main() {
     rocket::ignite()
-        .mount("/", routes![hello, get_index])
+        .mount("/", routes![hello, get_index, patch_notes])
         .attach(rocket_contrib::cors::CorsFairing::new())
         .launch();
 }
