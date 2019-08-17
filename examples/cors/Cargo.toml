@@ -1,0 +1,14 @@
+[package]
+name = "cors"
+version = "0.0.0"
+workspace = "../../"
+edition = "2018"
+publish = false
+
+[dependencies]
+rocket = { path = "../../core/lib" }
+
+[dependencies.rocket_contrib]
+path = "../../contrib/lib"
+default-features = false
+features = ["cors"]

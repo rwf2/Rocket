@@ -42,4 +42,5 @@ members = [
   "examples/fairings",
   "examples/hello_2018",
   "examples/hello_2015",
+  "examples/cors"
 ]

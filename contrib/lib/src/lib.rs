@@ -54,5 +54,5 @@
 #[cfg(feature="databases")] pub mod databases;
 #[cfg(feature = "helmet")] pub mod helmet;
 #[cfg(any(feature="brotli_compression", feature="gzip_compression"))] pub mod compression;
-
+#[cfg(feature="cors")] pub mod cors;
 #[cfg(feature="databases")] #[doc(hidden)] pub use rocket_contrib_codegen::*;

@@ -27,6 +27,7 @@ serve = []
 compression = ["brotli_compression", "gzip_compression"]
 brotli_compression = ["brotli"]
 gzip_compression = ["flate2"]
+cors = []
 
 # The barage of user-facing database features.
 diesel_sqlite_pool = ["databases", "diesel/sqlite", "diesel/r2d2"]
