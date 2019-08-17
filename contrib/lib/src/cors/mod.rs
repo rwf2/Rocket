@@ -20,15 +20,8 @@ use rocket::http::Status;
 
 #[derive(Debug)]
 pub struct CorsFairing {
+    headers: Vec<String>,
     origins: Vec<String>
-}
-
-impl CorsFairing {
-    pub fn new() -> CorsFairing{
-        CorsFairing {
-            origins: Vec::new()
-        }
-    }
 }
 
 impl Fairing for CorsFairing {
@@ -40,7 +33,10 @@ impl Fairing for CorsFairing {
     }
 
     fn on_attach(&self, mut rocket:Rocket) -> Result<Rocket, Rocket> { 
-        let options_handler = OptionsHandler::new(vec![String::from("PATCH"), String::from("PUT"), String::from("POST")]);
+        let mthds = vec![String::from("PATCH"), String::from("PUT"), String::from("POST")];
+        //let hdrs = vec![String::from("content-type")];
+
+        let options_handler = OptionsHandler::new(mthds, self.headers.clone());
 
 
         let mut new_routes:Vec<Route> = Vec::new();
@@ -67,29 +63,48 @@ impl Fairing for CorsFairing {
     #[allow(unused_variables)]
     fn on_response(&self, request: &Request<'_>, response: &mut Response<'_>) {
         response.set_header(Header::new("Access-Control-Allow-Origin", "*"));
-        //response.set_header(Header::new("Access-Control-Allow-Methods", "POST, PATCH, DELETE"));
-        //response.set_header(Header::new("Access-Control-Allow-Headers", "content-type"));
     }
 }
 
 struct OptionsResponder {
-    allowed_methods: Vec<String>
+    allowed_methods: Vec<String>,
+    allowed_headers: Vec<String>
 }
 
-impl<'r> Responder<'r> for OptionsResponder {
-    fn respond_to(self, request: &Request) -> rocket::response::Result<'r> {
-        let mut methods = String::new();
-        for x in 0..self.allowed_methods.len() {
-            methods.push_str(&self.allowed_methods[x]);
-
-            if x < self.allowed_methods.len() - 1 {
-                methods.push_str(", ");
-            }
+fn comma_list(strings: &Vec<String>) -> String {
+    let mut list = String::new();
+    for x in 0..strings.len() {
+        list.push_str(&strings[x]);
+        if x < strings.len() - 1 {
+            list.push_str(", ");
         }
+    }
+
+    list
+}
+
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    fn test1() {
+        assert_eq!(comma_list(&vec![String::from("Hello")]), "Hello");
+    }
+}
+
+
+impl<'r> Responder<'r> for OptionsResponder {
+    fn respond_to(self, _request: &Request<'_>) -> rocket::response::Result<'r> {
+
+        let methods = comma_list(&self.allowed_methods);
+        let headers = comma_list(&self.allowed_headers);
+
         let mut response = Response::build();
         
         response.raw_header("Access-Control-Allow-Methods", methods);
-        response.raw_header("Access-Control-Allow-Headers", "content-type");
+        response.raw_header("Access-Control-Allow-Headers", headers);
         response.status(Status::Ok)
         .ok()
     }
@@ -97,23 +112,53 @@ impl<'r> Responder<'r> for OptionsResponder {
 
 #[derive(Clone)]
 struct OptionsHandler {
-    allowed_methods: Vec<String>
+    allowed_methods: Vec<String>,
+    allowed_headers: Vec<String>
 }
 
 impl OptionsHandler {
-    pub fn new(allowed_methods: Vec<String>) -> OptionsHandler {
+    pub fn new(allowed_methods: Vec<String>, allowed_headers: Vec<String>) -> OptionsHandler {
         OptionsHandler { 
-            allowed_methods: allowed_methods
+            allowed_methods: allowed_methods,
+            allowed_headers: allowed_headers
         }
     }
 }
 
 impl Handler for OptionsHandler {
-    fn handle<'r>(&self, req: &'r Request, data: Data) -> Outcome<'r> {
+    fn handle<'r>(&self, req: &'r Request<'_>, _data: Data) -> Outcome<'r> {
         let responder = OptionsResponder{
-            allowed_methods: self.allowed_methods.clone()
+            allowed_methods: self.allowed_methods.clone(),
+            allowed_headers: self.allowed_headers.clone()
         };
 
         Outcome::from(req, responder)
+    }
+}
+
+
+pub struct CorsFairingBuilder {
+    headers: Vec<String>,
+    origins: Vec<String>
+}
+
+impl CorsFairingBuilder {
+    pub fn new() -> CorsFairingBuilder {
+        CorsFairingBuilder{
+            headers: Vec::new(),
+            origins: Vec::new()
+        }
+    }
+
+    pub fn build(self) -> CorsFairing {
+        CorsFairing{
+            headers: self.headers,
+            origins: self.origins
+        }
+    }
+
+    pub fn add_header(mut self, header: String) -> Self {
+        self.headers.push(header);
+        self
     }
 }
