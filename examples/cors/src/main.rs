@@ -4,6 +4,11 @@
 
 extern crate rocket_contrib;
 
+#[get("/")]
+fn get_index() -> &'static str {
+    "Hi"
+}
+
 #[post("/")]
 fn hello() -> &'static str {
     "Hello, world!"
@@ -12,7 +17,7 @@ fn hello() -> &'static str {
 
 fn main() {
     rocket::ignite()
-        .mount("/", routes![hello])
+        .mount("/", routes![hello, get_index])
         .attach(rocket_contrib::cors::CorsFairing::new())
         .launch();
 }

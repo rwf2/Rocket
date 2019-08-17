@@ -5,6 +5,7 @@ use rocket::Data;
 use rocket::Request;
 use rocket::Response;
 use rocket::Rocket;
+use rocket::http::Header;
 
 pub struct CorsFairing {
     origins: Vec<String>
@@ -27,7 +28,9 @@ impl Fairing for CorsFairing {
     }
 
     fn on_attach(&self, rocket: Rocket) -> Result<Rocket, Rocket> { 
-        unimplemented!();
+        //println!("Failed at on_attach, ln 30");
+        //unimplemented!();
+        Ok(rocket)
     }
 
     
@@ -39,6 +42,7 @@ impl Fairing for CorsFairing {
 
     #[allow(unused_variables)]
     fn on_response(&self, request: &Request<'_>, response: &mut Response<'_>) {
-        unimplemented!();
+        response.set_header(Header::new("Access-Control-Allow-Origin", "*"));
+        //unimplemented!();
     }
 }
