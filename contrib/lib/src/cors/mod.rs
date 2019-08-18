@@ -15,9 +15,10 @@ use rocket::http::Status;
 
 // TODO Determine methods actually used and then only return them.
 // TODO Specify origins.
-// TODO Unit tests
 // TODO Documentation
 // TODO Good default values for headers, etc.
+// TODO Perhaps clone the settings or something.
+
 
 #[derive(Debug)]
 pub struct CorsFairing {
