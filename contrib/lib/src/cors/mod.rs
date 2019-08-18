@@ -157,8 +157,8 @@ impl CorsFairingBuilder {
         }
     }
 
-    pub fn add_header(mut self, header: String) -> Self {
-        self.headers.push(header);
+    pub fn add_header(mut self, header: &str) -> Self {
+        self.headers.push(String::from(header));
         self
     }
 }
