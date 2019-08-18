@@ -15,8 +15,9 @@ use rocket::http::Status;
 
 // TODO Determine methods actually used and then only return them.
 // TODO Specify origins.
-// TODO Only set Access-Control-Allow-Methods, Access-Control-Allow-Headers headers on OPTIONS call
-// TODO Options should not return anything
+// TODO Unit tests
+// TODO Documentation
+// TODO Good default values for headers, etc.
 
 #[derive(Debug)]
 pub struct CorsFairing {
@@ -34,7 +35,6 @@ impl Fairing for CorsFairing {
 
     fn on_attach(&self, mut rocket:Rocket) -> Result<Rocket, Rocket> { 
         let mthds = vec![String::from("PATCH"), String::from("PUT"), String::from("POST")];
-        //let hdrs = vec![String::from("content-type")];
 
         let options_handler = OptionsHandler::new(mthds, self.headers.clone());
 
