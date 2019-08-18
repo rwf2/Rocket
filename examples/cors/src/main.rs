@@ -4,6 +4,8 @@
 
 extern crate rocket_contrib;
 
+use rocket_contrib::cors::CorsFairingBuilder;
+
 #[get("/test")]
 fn get_index() -> &'static str {
     "Hi"
@@ -23,6 +25,8 @@ fn patch_notes(_id: u64, _input: String) -> &'static str {
 fn main() {
     rocket::ignite()
         .mount("/", routes![hello, get_index, patch_notes])
-        .attach(rocket_contrib::cors::CorsFairingBuilder::new().add_header(String::from("content-type")).build())
+        .attach(CorsFairingBuilder::new()
+            .add_header(String::from("content-type"))
+            .build())
         .launch();
 }
