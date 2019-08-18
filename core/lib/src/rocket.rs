@@ -680,25 +680,20 @@ impl Rocket {
         Ok(self)
     }
 
-    /// Starts the application server and begins listening for and dispatching
-    /// requests to mounted routes and catchers. Unless there is an error, this
-    /// function does not return and blocks until program termination.
-    ///
-    /// # Error
-    ///
-    /// If there is a problem starting the application, a [`LaunchError`] is
-    /// returned. Note that a value of type `LaunchError` panics if dropped
-    /// without first being inspected. See the [`LaunchError`] documentation for
-    /// more information.
+    /// Identical to `launch()`, but using a custom Tokio runtime.
     ///
     /// # Example
     ///
     /// ```rust
+    /// // This gives us the default behavior. Alternatively, we could use a
+    /// // `tokio::runtime::Builder` to configure with greater detail.
+    /// let runtime = tokio::runtime::Runtime::new();
+    ///
     /// # if false {
-    /// rocket::ignite().launch();
+    /// rocket::ignite().launch_on(runtime);
     /// # }
     /// ```
-    pub fn launch(mut self) -> LaunchError {
+    pub fn launch_on(mut self, mut runtime: tokio::runtime::Runtime) -> LaunchError {
         #[cfg(feature = "tls")] use crate::http::tls;
 
         self = match self.prelaunch_check() {
@@ -707,13 +702,6 @@ impl Rocket {
         };
 
         self.fairings.pretty_print_counts();
-
-        // TODO.async What meaning should config.workers have now?
-        // Initialize the tokio runtime
-        let runtime = tokio::runtime::Builder::new()
-            .core_threads(self.config.workers as usize)
-            .build()
-            .expect("Cannot build runtime!");
 
         let full_addr = format!("{}:{}", self.config.address, self.config.port);
         let addrs = match full_addr.to_socket_addrs() {
@@ -776,6 +764,35 @@ impl Rocket {
         runtime.block_on(server).expect("TODO.async handle error");
 
         unreachable!("the call to `block_on` should block on success")
+    }
+
+    /// Starts the application server and begins listening for and dispatching
+    /// requests to mounted routes and catchers. Unless there is an error, this
+    /// function does not return and blocks until program termination.
+    ///
+    /// # Error
+    ///
+    /// If there is a problem starting the application, a [`LaunchError`] is
+    /// returned. Note that a value of type `LaunchError` panics if dropped
+    /// without first being inspected. See the [`LaunchError`] documentation for
+    /// more information.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// # if false {
+    /// rocket::ignite().launch();
+    /// # }
+    /// ```
+    pub fn launch(self) -> LaunchError {
+        // TODO.async What meaning should config.workers have now?
+        // Initialize the tokio runtime
+        let runtime = tokio::runtime::Builder::new()
+            .core_threads(self.config.workers as usize)
+            .build()
+            .expect("Cannot build runtime!");
+
+        self.launch_on(runtime)
     }
 
     /// Returns an iterator over all of the routes mounted on this instance of
