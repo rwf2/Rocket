@@ -4,6 +4,7 @@
 
 extern crate rocket_contrib;
 
+use rocket::Data;
 use rocket_contrib::cors::CorsFairingBuilder;
 
 #[get("/test")]
@@ -17,7 +18,7 @@ fn hello() -> &'static str {
 }
 
 #[patch("/notes/<_id>", data="<_input>")]
-fn patch_notes(_id: u64, _input: String) -> &'static str {
+fn patch_notes(_id: u64, _input: Data) -> &'static str {
     "Hello, world!"
 }
 
