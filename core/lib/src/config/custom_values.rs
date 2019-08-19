@@ -13,14 +13,14 @@ pub enum SecretKey {
 
 impl SecretKey {
     #[inline]
-    crate fn inner(&self) -> &Key {
+    pub(crate) fn inner(&self) -> &Key {
         match *self {
             SecretKey::Generated(ref key) | SecretKey::Provided(ref key) => key
         }
     }
 
     #[inline]
-    crate fn is_generated(&self) -> bool {
+    pub(crate) fn is_generated(&self) -> bool {
         match *self {
             #[cfg(feature = "private-cookies")]
             SecretKey::Generated(_) => true,
@@ -82,7 +82,7 @@ pub struct TlsConfig;
 #[derive(Debug, Clone)]
 pub struct Limits {
     // We cache this internally but don't share that fact in the API.
-    crate forms: u64,
+    pub(crate) forms: u64,
     extra: Vec<(String, u64)>
 }
 

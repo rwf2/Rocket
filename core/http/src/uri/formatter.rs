@@ -158,7 +158,7 @@ pub struct Formatter<'i, P: UriPart> {
 
 impl<'i, P: UriPart> Formatter<'i, P> {
     #[inline(always)]
-    crate fn new(inner: &'i mut (dyn Write + 'i)) -> Self {
+    pub(crate) fn new(inner: &'i mut (dyn Write + 'i)) -> Self {
         Formatter {
             inner,
             prefixes: SmallVec::new(),

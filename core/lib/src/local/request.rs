@@ -101,7 +101,7 @@ pub struct LocalRequest<'c> {
 
 impl<'c> LocalRequest<'c> {
     #[inline(always)]
-    crate fn new(
+    pub(crate) fn new(
         client: &'c Client,
         method: Method,
         uri: Cow<'c, str>

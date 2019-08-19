@@ -1,5 +1,3 @@
-#![feature(crate_visibility_modifier)]
-#![feature(doc_cfg)]
 #![feature(async_await)]
 
 #![doc(html_root_url = "https://api.rocket.rs/v0.5")]

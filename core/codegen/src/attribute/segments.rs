@@ -7,15 +7,15 @@ use crate::http::uri::{UriPart, Path};
 use crate::http::route::RouteSegment;
 use crate::proc_macro_ext::{Diagnostics, StringLit, PResult, DResult};
 
-crate use crate::http::route::{Error, Kind, Source};
+pub(crate) use crate::http::route::{Error, Kind, Source};
 
 #[derive(Debug, Clone)]
-crate struct Segment {
-    crate span: Span,
-    crate kind: Kind,
-    crate source: Source,
-    crate name: String,
-    crate index: Option<usize>,
+pub(crate) struct Segment {
+    pub(crate) span: Span,
+    pub(crate) kind: Kind,
+    pub(crate) source: Source,
+    pub(crate) name: String,
+    pub(crate) index: Option<usize>,
 }
 
 impl Segment {
@@ -115,7 +115,7 @@ fn into_diagnostic(
     }
 }
 
-crate fn parse_data_segment(segment: &str, span: Span) -> PResult<Segment> {
+pub(crate) fn parse_data_segment(segment: &str, span: Span) -> PResult<Segment> {
     <RouteSegment<'_, Path>>::parse_one(segment)
         .map(|segment| {
             let mut seg = Segment::from(segment, span);
@@ -126,7 +126,7 @@ crate fn parse_data_segment(segment: &str, span: Span) -> PResult<Segment> {
         .map_err(|e| into_diagnostic(segment, segment, span, &e))
 }
 
-crate fn parse_segments<P: UriPart>(
+pub(crate) fn parse_segments<P: UriPart>(
     string: &str,
     span: Span
 ) -> DResult<Vec<Segment>> {

@@ -26,7 +26,7 @@ mod named_file;
 mod stream;
 mod response;
 
-crate mod flash;
+pub(crate) mod flash;
 
 pub mod content;
 pub mod status;

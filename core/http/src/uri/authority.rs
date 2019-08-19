@@ -28,7 +28,7 @@ pub struct Authority<'a> {
 }
 
 #[derive(Debug, Clone)]
-crate enum Host<T> {
+pub(crate) enum Host<T> {
     Bracketed(T),
     Raw(T)
 }
@@ -55,7 +55,7 @@ impl IntoOwned for Authority<'_> {
 }
 
 impl<'a> Authority<'a> {
-    crate unsafe fn raw(
+    pub(crate) unsafe fn raw(
         source: Cow<'a, [u8]>,
         user_info: Option<Indexed<'a, [u8]>>,
         host: Host<Indexed<'a, [u8]>>,
@@ -70,7 +70,7 @@ impl<'a> Authority<'a> {
     }
 
     #[cfg(test)]
-    crate fn new(
+    pub(crate) fn new(
         user_info: Option<&'a str>,
         host: Host<&'a str>,
         port: Option<u16>

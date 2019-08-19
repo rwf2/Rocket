@@ -1,7 +1,5 @@
 #![feature(specialization)]
 #![feature(proc_macro_hygiene, async_await)]
-#![feature(crate_visibility_modifier)]
-#![feature(doc_cfg)]
 #![recursion_limit="512"]
 
 #![warn(rust_2018_idioms)]
@@ -40,7 +38,7 @@ mod header;
 mod accept;
 mod raw_str;
 
-crate mod parse;
+pub(crate) mod parse;
 
 pub mod uncased;
 

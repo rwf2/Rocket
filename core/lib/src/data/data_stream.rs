@@ -11,7 +11,7 @@ use futures::task::{Poll, Context};
 /// [`Data::open()`](crate::data::Data::open()). The stream contains all of the data
 /// in the body of the request. It exposes no methods directly. Instead, it must
 /// be used as an opaque [`Read`] structure.
-pub struct DataStream(crate Vec<u8>, crate Box<dyn AsyncRead + Unpin + Send>);
+pub struct DataStream(pub(crate) Vec<u8>, pub(crate) Box<dyn AsyncRead + Unpin + Send>);
 
 // TODO.async: Consider implementing `AsyncBufRead`
 

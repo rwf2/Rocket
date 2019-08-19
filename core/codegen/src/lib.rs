@@ -1,5 +1,4 @@
 #![feature(proc_macro_diagnostic, proc_macro_span)]
-#![feature(crate_visibility_modifier)]
 #![feature(async_await)]
 #![recursion_limit="128"]
 
@@ -103,14 +102,14 @@ mod syn_ext;
 
 use crate::http::Method;
 use proc_macro::TokenStream;
-crate use devise::proc_macro2;
+pub(crate) use devise::proc_macro2;
 
-crate static ROUTE_STRUCT_PREFIX: &str = "static_rocket_route_info_for_";
-crate static CATCH_STRUCT_PREFIX: &str = "static_rocket_catch_info_for_";
-crate static CATCH_FN_PREFIX: &str = "rocket_catch_fn_";
-crate static ROUTE_FN_PREFIX: &str = "rocket_route_fn_";
-crate static URI_MACRO_PREFIX: &str = "rocket_uri_macro_";
-crate static ROCKET_PARAM_PREFIX: &str = "__rocket_param_";
+pub(crate) static ROUTE_STRUCT_PREFIX: &str = "static_rocket_route_info_for_";
+pub(crate) static CATCH_STRUCT_PREFIX: &str = "static_rocket_catch_info_for_";
+pub(crate) static CATCH_FN_PREFIX: &str = "rocket_catch_fn_";
+pub(crate) static ROUTE_FN_PREFIX: &str = "rocket_route_fn_";
+pub(crate) static URI_MACRO_PREFIX: &str = "rocket_uri_macro_";
+pub(crate) static ROCKET_PARAM_PREFIX: &str = "__rocket_param_";
 
 macro_rules! emit {
     ($tokens:expr) => ({

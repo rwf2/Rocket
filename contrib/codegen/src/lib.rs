@@ -1,5 +1,4 @@
-#![feature(proc_macro_span, proc_macro_diagnostic)]
-#![feature(crate_visibility_modifier)]
+#![feature(proc_macro_diagnostic)]
 #![recursion_limit="256"]
 
 #![warn(rust_2018_idioms)]
@@ -32,7 +31,7 @@ extern crate proc_macro;
 #[macro_use] extern crate quote;
 
 #[allow(unused_imports)]
-crate use devise::{syn, proc_macro2};
+pub(crate) use devise::{syn, proc_macro2};
 
 #[cfg(feature = "database_attribute")]
 mod database;

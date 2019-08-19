@@ -8,25 +8,25 @@ use crate::attribute::segments::{parse_segments, parse_data_segment, Segment, Ki
 use crate::proc_macro_ext::StringLit;
 
 #[derive(Debug)]
-crate struct ContentType(crate http::ContentType);
+pub(crate) struct ContentType(pub(crate) http::ContentType);
 
 #[derive(Debug)]
-crate struct Status(crate http::Status);
+pub(crate) struct Status(pub(crate) http::Status);
 
 #[derive(Debug)]
-crate struct MediaType(crate http::MediaType);
+pub(crate) struct MediaType(pub(crate) http::MediaType);
 
 #[derive(Debug)]
-crate struct Method(crate http::Method);
+pub(crate) struct Method(pub(crate) http::Method);
 
 #[derive(Debug)]
-crate struct Origin(crate http::uri::Origin<'static>);
+pub(crate) struct Origin(pub(crate) http::uri::Origin<'static>);
 
 #[derive(Clone, Debug)]
-crate struct DataSegment(crate Segment);
+pub(crate) struct DataSegment(pub(crate) Segment);
 
 #[derive(Clone, Debug)]
-crate struct Optional<T>(crate Option<T>);
+pub(crate) struct Optional<T>(pub(crate) Option<T>);
 
 impl FromMeta for StringLit {
     fn from_meta(meta: MetaItem<'_>) -> Result<Self> {
@@ -35,10 +35,10 @@ impl FromMeta for StringLit {
 }
 
 #[derive(Debug)]
-crate struct RoutePath {
-    crate origin: Origin,
-    crate path: Vec<Segment>,
-    crate query: Option<Vec<Segment>>,
+pub(crate) struct RoutePath {
+    pub(crate) origin: Origin,
+    pub(crate) path: Vec<Segment>,
+    pub(crate) query: Option<Vec<Segment>>,
 }
 
 impl FromMeta for Status {

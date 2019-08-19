@@ -25,7 +25,7 @@ enum Or<L, R> {
 }
 
 impl<'a> Error<'a> {
-    crate fn from(src: &'a str, pear_error: ParseErr<RawInput<'a>>) -> Error<'a> {
+    pub(crate) fn from(src: &'a str, pear_error: ParseErr<RawInput<'a>>) -> Error<'a> {
         let new_expected = pear_error.expected.map(|token| {
             if token.is_ascii() && !token.is_ascii_control() {
                 Or::A(token as char)

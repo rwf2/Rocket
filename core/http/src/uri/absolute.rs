@@ -44,7 +44,7 @@ impl IntoOwned for Absolute<'_> {
 
 impl<'a> Absolute<'a> {
     #[inline]
-    crate unsafe fn raw(
+    pub(crate) unsafe fn raw(
         source: Cow<'a, [u8]>,
         scheme: Indexed<'a, [u8]>,
         authority: Option<Authority<'a>>,
@@ -59,7 +59,7 @@ impl<'a> Absolute<'a> {
     }
 
     #[cfg(test)]
-    crate fn new(
+    pub(crate) fn new(
         scheme: &'a str,
         authority: Option<Authority<'a>>,
         origin: Option<Origin<'a>>

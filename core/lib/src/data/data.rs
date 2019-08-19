@@ -75,7 +75,7 @@ impl Data {
         DataStream(buffer, stream)
     }
 
-    crate fn from_hyp(body: hyper::Body) -> impl Future<Output = Data> {
+    pub(crate) fn from_hyp(body: hyper::Body) -> impl Future<Output = Data> {
         // TODO.async: This used to also set the read timeout to 5 seconds.
 
         Data::new(body)
@@ -180,7 +180,7 @@ impl Data {
     // bytes `vec[pos..cap]` are buffered and unread. The remainder of the data
     // bytes can be read from `stream`.
     #[inline(always)]
-    crate async fn new(body: hyper::Body) -> Data {
+    pub(crate) async fn new(body: hyper::Body) -> Data {
         trace_!("Data::new({:?})", body);
 
         let mut stream = body.compat().map_err(|e| {
@@ -217,7 +217,7 @@ impl Data {
 
     /// This creates a `data` object from a local data source `data`.
     #[inline]
-    crate fn local(data: Vec<u8>) -> Data {
+    pub(crate) fn local(data: Vec<u8>) -> Data {
         Data {
             buffer: data,
             stream: Box::new(&[][..]),
