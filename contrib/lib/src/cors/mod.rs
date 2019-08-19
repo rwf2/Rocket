@@ -18,7 +18,7 @@ use rocket::http::Status;
 // TODO Documentation
 // TODO Good default values for headers, etc.
 // TODO Perhaps clone the settings or something.
-
+// TODO Add a marker parameter "AllowOrigin" or "DenyOrigin"?  See what other cors libraries (node, sprint) have done.  What is the default?  What is the verb?
 
 #[derive(Debug)]
 pub struct CorsFairing {
@@ -35,21 +35,24 @@ impl Fairing for CorsFairing {
     }
 
     fn on_attach(&self, mut rocket:Rocket) -> Result<Rocket, Rocket> { 
-        let mthds = vec![String::from("PATCH"), String::from("PUT"), String::from("POST")];
+        use std::collections::HashMap;
 
-        let options_handler = OptionsHandler::new(mthds, self.headers.clone());
+        let mut uri_methods : HashMap<String, Vec<Method>> = HashMap::new();
+        for route in rocket.routes()
+        {
+            let methods = uri_methods.entry(route.uri.path().to_string()).or_insert(Vec::new());
+            methods.push(route.method);
+        }
 
 
         let mut new_routes:Vec<Route> = Vec::new();
+        for (uri, methods) in uri_methods.iter() {
+            let options_handler = OptionsHandler::new(methods.clone(), self.headers.clone());
 
-
-        for route in rocket.routes()
-        {
-            let uri_route = route.uri.path();
-            let preflight = Route::new(Method::Options, uri_route, options_handler.clone());
+            let preflight = Route::new(Method::Options, uri, options_handler);
             new_routes.push(preflight);
         }
-
+        
         rocket = rocket.mount("/", new_routes);
         Ok(rocket)
     }
@@ -68,7 +71,7 @@ impl Fairing for CorsFairing {
 }
 
 struct OptionsResponder {
-    allowed_methods: Vec<String>,
+    allowed_methods: Vec<Method>,
     allowed_headers: Vec<String>
 }
 
@@ -99,7 +102,7 @@ mod test {
 impl<'r> Responder<'r> for OptionsResponder {
     fn respond_to(self, _request: &Request<'_>) -> rocket::response::Result<'r> {
 
-        let methods = comma_list(&self.allowed_methods);
+        let methods = comma_list(&self.allowed_methods.iter().map(|x| format!("{}", x)).collect());
         let headers = comma_list(&self.allowed_headers);
 
         let mut response = Response::build();
@@ -113,12 +116,12 @@ impl<'r> Responder<'r> for OptionsResponder {
 
 #[derive(Clone)]
 struct OptionsHandler {
-    allowed_methods: Vec<String>,
+    allowed_methods: Vec<Method>,
     allowed_headers: Vec<String>
 }
 
 impl OptionsHandler {
-    pub fn new(allowed_methods: Vec<String>, allowed_headers: Vec<String>) -> OptionsHandler {
+    pub fn new(allowed_methods: Vec<Method>, allowed_headers: Vec<String>) -> OptionsHandler {
         OptionsHandler { 
             allowed_methods: allowed_methods,
             allowed_headers: allowed_headers
