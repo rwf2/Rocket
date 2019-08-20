@@ -142,7 +142,7 @@ pub type FromDataFuture<'a, T, E> = Pin<Box<dyn Future<Output = Outcome<T, E>> +
 /// if the guard returns successfully.
 ///
 /// ```rust
-/// # #![feature(proc_macro_hygiene, async_await)]
+/// # #![feature(proc_macro_hygiene)]
 /// # #[macro_use] extern crate rocket;
 /// # type DataGuard = rocket::data::Data;
 /// #[post("/submit", data = "<var>")]
@@ -188,7 +188,7 @@ pub type FromDataFuture<'a, T, E> = Pin<Box<dyn Future<Output = Outcome<T, E>> +
 /// `String` (an `&str`).
 ///
 /// ```rust
-/// # #![feature(proc_macro_hygiene, async_await)]
+/// # #![feature(proc_macro_hygiene)]
 /// # #[macro_use] extern crate rocket;
 /// # #[derive(Debug)]
 /// # struct Name<'a> { first: &'a str, last: &'a str, }
@@ -442,7 +442,7 @@ impl<'a> FromData<'a> for Data {
 /// that you can retrieve it directly from a client's request body:
 ///
 /// ```rust
-/// # #![feature(proc_macro_hygiene, async_await)]
+/// # #![feature(proc_macro_hygiene)]
 /// # #[macro_use] extern crate rocket;
 /// # type Person = rocket::data::Data;
 /// #[post("/person", data = "<person>")]
@@ -454,7 +454,7 @@ impl<'a> FromData<'a> for Data {
 /// A `FromDataSimple` implementation allowing this looks like:
 ///
 /// ```rust
-/// # #![feature(proc_macro_hygiene, async_await)]
+/// # #![feature(proc_macro_hygiene)]
 /// # #[macro_use] extern crate rocket;
 /// #
 /// # #[derive(Debug)]

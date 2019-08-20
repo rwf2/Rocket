@@ -22,7 +22,7 @@ use crate::http::Status;
 /// following example does just this:
 ///
 /// ```rust
-/// # #![feature(proc_macro_hygiene, async_await)]
+/// # #![feature(proc_macro_hygiene)]
 /// # #[macro_use] extern crate rocket;
 /// use rocket::State;
 ///
@@ -87,7 +87,7 @@ use crate::http::Status;
 /// [`State::from()`] static method:
 ///
 /// ```rust
-/// # #![feature(proc_macro_hygiene, async_await)]
+/// # #![feature(proc_macro_hygiene)]
 /// # #[macro_use] extern crate rocket;
 /// use rocket::State;
 ///

@@ -36,7 +36,7 @@ use yansi::Color::*;
 /// declared using the `catch` decorator, as follows:
 ///
 /// ```rust
-/// #![feature(proc_macro_hygiene, async_await)]
+/// #![feature(proc_macro_hygiene)]
 ///
 /// #[macro_use] extern crate rocket;
 ///
