@@ -26,8 +26,9 @@ private-cookies = ["rocket_http/private-cookies"]
 [dependencies]
 rocket_codegen = { version = "0.5.0-dev", path = "../codegen" }
 rocket_http = { version = "0.5.0-dev", path = "../http" }
-futures-preview = { version = "0.3.0-alpha.18", features = ["compat", "io-compat"] }
-tokio = "0.1.16"
+futures-preview = "0.3.0-alpha.18"
+futures-tokio-compat = { git = "https://github.com/Nemo157/futures-tokio-compat", rev = "8a93702" }
+tokio = "0.2.0-alpha.2"
 yansi = "0.5"
 log = { version = "0.4", features = ["std"] }
 toml = "0.4.7"

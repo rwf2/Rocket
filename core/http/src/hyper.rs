@@ -5,7 +5,7 @@
 //! while necessary.
 
 #[doc(hidden)] pub use hyper::{Body, Request, Response, Server};
-#[doc(hidden)] pub use hyper::body::Payload as Payload;
+#[doc(hidden)] pub use hyper::body::{Payload, Sender as BodySender};
 #[doc(hidden)] pub use hyper::error::Error;
 #[doc(hidden)] pub use hyper::service::{make_service_fn, MakeService, Service};
 #[doc(hidden)] pub use hyper::server::conn::{AddrIncoming, AddrStream};

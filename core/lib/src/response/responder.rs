@@ -1,8 +1,9 @@
 use std::fs::File;
-use std::io::{Cursor, BufReader};
+use std::io::Cursor;
 use std::fmt;
 
-use futures::compat::AsyncRead01CompatExt;
+use futures::io::BufReader;
+use futures_tokio_compat::Compat as TokioCompat;
 
 use crate::http::{Status, ContentType, StatusClass};
 use crate::response::{self, Response, Body};
@@ -256,7 +257,7 @@ impl Responder<'_> for File {
     fn respond_to(self, _: &Request<'_>) -> response::ResultFuture<'static> {
         Box::pin(async move {
             let metadata = self.metadata();
-            let stream = BufReader::new(tokio::fs::File::from_std(self)).compat();
+            let stream = BufReader::new(TokioCompat::new(tokio::fs::File::from_std(self)));
             match metadata {
                 Ok(md) => Response::build().raw_body(Body::Sized(stream, md.len())).ok(),
                 Err(_) => Response::build().streamed_body(stream).ok()

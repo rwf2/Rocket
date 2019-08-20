@@ -1,9 +1,9 @@
 use std::path::Path;
 
-use futures::compat::{Future01CompatExt, Stream01CompatExt, AsyncWrite01CompatExt};
 use futures::io::{self, AsyncRead, AsyncReadExt as _, AsyncWrite};
 use futures::future::Future;
 use futures::stream::TryStreamExt;
+use futures_tokio_compat::Compat as TokioCompat;
 
 use super::data_stream::DataStream;
 
@@ -171,10 +171,10 @@ impl Data {
     /// }
     /// ```
     #[inline(always)]
-    pub fn stream_to_file<P: AsRef<Path> + Send + 'static>(self, path: P) -> impl Future<Output = io::Result<u64>> {
+    pub fn stream_to_file<P: AsRef<Path> + Send + Unpin + 'static>(self, path: P) -> impl Future<Output = io::Result<u64>> {
         Box::pin(async move {
-            let file = tokio::fs::File::create(path).compat().await?.compat();
-            self.stream_to(file).await
+            let mut file = TokioCompat::new(tokio::fs::File::create(path).await?);
+            self.stream_to(&mut file).await
         })
     }
 
@@ -186,7 +186,7 @@ impl Data {
     crate async fn new(body: hyper::Body) -> Data {
         trace_!("Data::new({:?})", body);
 
-        let mut stream = body.compat().map_err(|e| {
+        let mut stream = body.map_err(|e| {
             io::Error::new(io::ErrorKind::Other, e)
         }).into_async_read();
 

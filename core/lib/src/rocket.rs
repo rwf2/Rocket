@@ -8,11 +8,10 @@ use std::sync::Arc;
 use std::time::Duration;
 use std::pin::Pin;
 
-use futures::compat::{Compat, Executor01CompatExt, Sink01CompatExt};
-use futures::future::{Future, FutureExt, TryFutureExt};
-use futures::sink::SinkExt;
+use futures::future::{Future, FutureExt};
 use futures::stream::StreamExt;
 use futures::task::SpawnExt;
+use futures_tokio_compat::Compat as TokioCompat;
 
 use yansi::Paint;
 use state::Container;
@@ -65,7 +64,7 @@ impl hyper::Service for RocketHyperService {
     type ReqBody = hyper::Body;
     type ResBody = hyper::Body;
     type Error = io::Error;
-    type Future = Compat<Pin<Box<dyn Future<Output = Result<hyper::Response<Self::ResBody>, Self::Error>> + Send>>>;
+    type Future = Pin<Box<dyn Future<Output = Result<hyper::Response<Self::ResBody>, Self::Error>> + Send>>;
 
     // This function tries to hide all of the Hyper-ness from Rocket. It
     // essentially converts Hyper types into Rocket types, then calls the
@@ -115,7 +114,7 @@ impl hyper::Service for RocketHyperService {
 
         async move {
             Ok(rx.await.expect("TODO.async: sender was dropped, error instead"))
-        }.boxed().compat()
+        }.boxed()
     }
 }
 
@@ -169,40 +168,26 @@ impl Rocket {
                 }
                 Some(Body::Sized(body, size)) => {
                     hyp_res.header(header::CONTENT_LENGTH, size.to_string());
-                    let (sender, hyp_body) = hyper::Body::channel();
+                    let (mut sender, hyp_body) = hyper::Body::channel();
                     send_response(hyp_res, hyp_body)?;
 
                     let mut stream = body.into_chunk_stream(4096);
-                    let mut sink = sender.sink_compat().sink_map_err(|e| {
-                        io::Error::new(io::ErrorKind::Other, e)
-                    });
-
                     while let Some(next) = stream.next().await {
-                        sink.send(next?).await?;
+                        futures::future::poll_fn(|cx| sender.poll_ready(cx)).await.expect("TODO.async client gone?");
+                        sender.send_data(next?).expect("send chunk");
                     }
-
-                    // TODO.async: This should be better, but it creates an
-                    // incomprehensible error messasge instead
-                    // stream.forward(sink).await;
                 }
                 Some(Body::Chunked(body, chunk_size)) => {
                     // TODO.async: This is identical to Body::Sized except for the chunk size
 
-                    let (sender, hyp_body) = hyper::Body::channel();
+                    let (mut sender, hyp_body) = hyper::Body::channel();
                     send_response(hyp_res, hyp_body)?;
 
                     let mut stream = body.into_chunk_stream(chunk_size.try_into().expect("u64 -> usize overflow"));
-                    let mut sink = sender.sink_compat().sink_map_err(|e| {
-                        io::Error::new(io::ErrorKind::Other, e)
-                    });
-
                     while let Some(next) = stream.next().await {
-                        sink.send(next?).await?;
+                        futures::future::poll_fn(|cx| sender.poll_ready(cx)).await.expect("TODO.async client gone?");
+                        sender.send_data(next?).expect("send chunk");
                     }
-
-                    // TODO.async: This should be better, but it creates an
-                    // incomprehensible error messasge instead
-                    // stream.forward(sink).await;
                 }
             };
 
@@ -748,7 +733,7 @@ impl Rocket {
 
         // TODO.async What meaning should config.workers have now?
         // Initialize the tokio runtime
-        let mut runtime = tokio::runtime::Builder::new()
+        let runtime = tokio::runtime::Builder::new()
             .core_threads(self.config.workers as usize)
             .build()
             .expect("Cannot build runtime!");
@@ -793,13 +778,13 @@ impl Rocket {
         logger::pop_max_level();
 
         let rocket = Arc::new(self);
-        let spawn = Box::new(runtime.executor().compat());
+        let spawn = Box::new(TokioCompat::new(runtime.executor()));
         let service = hyper::make_service_fn(move |socket: &hyper::AddrStream| {
             futures::future::ok::<_, Box<dyn std::error::Error + Send + Sync>>(RocketHyperService {
                 rocket: rocket.clone(),
                 spawn: spawn.clone(),
                 remote_addr: socket.remote_addr(),
-            }).compat()
+            })
         });
 
         // NB: executor must be passed manually here, see hyperium/hyper#1537
