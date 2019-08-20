@@ -345,7 +345,6 @@ impl<'r> ResponseBuilder<'r> {
     /// # Example
     ///
     /// ```rust,ignore
-    /// # #![feature(async_await)]
     /// use rocket::Response;
     /// use futures::compat::{AsyncRead01CompatExt, Future01CompatExt};
     /// use tokio::fs::File;
@@ -373,7 +372,6 @@ impl<'r> ResponseBuilder<'r> {
     /// # Example
     ///
     /// ```rust
-    /// # #![feature(async_await)]
     /// use rocket::Response;
     /// use futures::compat::{AsyncRead01CompatExt, Future01CompatExt};
     /// use tokio::fs::File;
@@ -402,7 +400,6 @@ impl<'r> ResponseBuilder<'r> {
     /// # Example
     ///
     /// ```rust
-    /// # #![feature(async_await)]
     /// use rocket::Response;
     /// use futures::compat::{AsyncRead01CompatExt, Future01CompatExt};
     /// use tokio::fs::File;
@@ -896,7 +893,6 @@ impl<'r> Response<'r> {
     /// # Example
     ///
     /// ```rust
-    /// # #![feature(async_await)]
     /// use std::io::Cursor;
     /// use rocket::Response;
     ///
@@ -928,7 +924,6 @@ impl<'r> Response<'r> {
     /// # Example
     ///
     /// ```rust
-    /// # #![feature(async_await)]
     /// use std::io::Cursor;
     /// use rocket::Response;
     ///
@@ -959,7 +954,6 @@ impl<'r> Response<'r> {
     /// # Example
     ///
     /// ```rust
-    /// # #![feature(async_await)]
     /// use std::io::Cursor;
     /// use rocket::Response;
     ///
@@ -989,7 +983,6 @@ impl<'r> Response<'r> {
     /// # Example
     ///
     /// ```rust
-    /// # #![feature(async_await)]
     /// use std::io::Cursor;
     /// use rocket::Response;
     ///
@@ -1039,7 +1032,6 @@ impl<'r> Response<'r> {
     /// # Example
     ///
     /// ```rust
-    /// # #![feature(async_await)]
     /// use std::io::Cursor;
     /// use rocket::Response;
     ///
@@ -1068,7 +1060,6 @@ impl<'r> Response<'r> {
     /// # Example
     ///
     /// ```rust
-    /// # #![feature(async_await)]
     /// use std::io::repeat;
     /// use futures::io::AsyncReadExt;
     /// use rocket::Response;
@@ -1091,7 +1082,6 @@ impl<'r> Response<'r> {
     /// # Example
     ///
     /// ```rust
-    /// # #![feature(async_await)]
     /// use std::io::repeat;
     /// use futures::io::AsyncReadExt;
     /// use rocket::Response;
@@ -1116,7 +1106,6 @@ impl<'r> Response<'r> {
     /// # Example
     ///
     /// ```rust
-    /// # #![feature(async_await)]
     /// use std::io::Cursor;
     /// use rocket::response::{Response, Body};
     ///

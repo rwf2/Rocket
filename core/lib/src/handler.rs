@@ -42,7 +42,6 @@ pub type HandlerFuture<'r> = std::pin::Pin<Box<dyn Future<Output = Outcome<'r>> 
 /// Such a handler might be written and used as follows:
 ///
 /// ```rust
-/// # #![feature(async_await)]
 /// # #[derive(Copy, Clone)] enum Kind { Simple, Intermediate, Complex, }
 /// use rocket::{Request, Data, Route, http::Method};
 /// use rocket::handler::{self, Handler, Outcome, HandlerFuture};
@@ -92,7 +91,7 @@ pub type HandlerFuture<'r> = std::pin::Pin<Box<dyn Future<Output = Outcome<'r>> 
 /// managed state and a static route, as follows:
 ///
 /// ```rust
-/// # #![feature(proc_macro_hygiene, async_await)]
+/// # #![feature(proc_macro_hygiene)]
 /// # #[macro_use] extern crate rocket;
 /// #
 /// # #[derive(Copy, Clone)]
@@ -199,7 +198,6 @@ impl<'r> Outcome<'r> {
     /// # Example
     ///
     /// ```rust
-    /// # #![feature(async_await)]
     /// use rocket::{Request, Data};
     /// use rocket::handler::{Outcome, HandlerFuture};
     ///
@@ -226,7 +224,6 @@ impl<'r> Outcome<'r> {
     /// # Example
     ///
     /// ```rust
-    /// # #![feature(async_await)]
     /// use rocket::{Request, Data};
     /// use rocket::handler::{Outcome, HandlerFuture};
     ///
@@ -255,7 +252,6 @@ impl<'r> Outcome<'r> {
     /// # Example
     ///
     /// ```rust
-    /// # #![feature(async_await)]
     /// use rocket::{Request, Data};
     /// use rocket::handler::{Outcome, HandlerFuture};
     /// use rocket::http::Status;
@@ -280,7 +276,6 @@ impl<'r> Outcome<'r> {
     /// # Example
     ///
     /// ```rust
-    /// # #![feature(async_await)]
     /// use rocket::{Request, Data};
     /// use rocket::handler::{Outcome, HandlerFuture};
     ///

@@ -1,4 +1,4 @@
-#![feature(proc_macro_hygiene, async_await)]
+#![feature(proc_macro_hygiene)]
 
 use rocket;
 

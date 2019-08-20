@@ -117,7 +117,6 @@ impl AdHoc {
     /// # Example
     ///
     /// ```rust
-    /// # #![feature(async_await)]
     /// use rocket::fairing::AdHoc;
     ///
     /// // The no-op response fairing.
