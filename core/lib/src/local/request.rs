@@ -405,13 +405,13 @@ impl<'c> LocalRequest<'c> {
             request.set_uri(uri.into_owned());
         } else {
             error!("Malformed request URI: {}", uri);
-            return futures::executor::block_on(async move {
+            return tokio::runtime::Runtime::new().expect("create runtime").block_on(async move {
                 let res = client.rocket().handle_error(Status::BadRequest, request).await;
                 LocalResponse { _request: owned_request, response: res }
             })
         }
 
-        futures::executor::block_on(async move {
+        tokio::runtime::Runtime::new().expect("create runtime").block_on(async move {
             // Actually dispatch the request.
             let response = client.rocket().dispatch(request, Data::local(data)).await;
 
@@ -460,11 +460,11 @@ pub struct LocalResponse<'c> {
 
 impl LocalResponse<'_> {
     pub fn body_string_wait(&mut self) -> Option<String> {
-        futures::executor::block_on(self.body_string())
+        tokio::runtime::Runtime::new().expect("create runtime").block_on(self.body_string())
     }
 
     pub fn body_bytes_wait(&mut self) -> Option<Vec<u8>> {
-        futures::executor::block_on(self.body_bytes())
+        tokio::runtime::Runtime::new().expect("create runtime").block_on(self.body_bytes())
     }
 }
 

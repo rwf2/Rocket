@@ -37,7 +37,7 @@ mod head_handling_tests {
         match body {
             Body::Sized(mut body, size) => {
                 let mut buffer = vec![];
-                futures::executor::block_on(async {
+                tokio::runtime::Runtime::new().expect("create runtime").block_on(async {
                     body.read_to_end(&mut buffer).await.unwrap();
                 });
                 assert_eq!(size, expected_size);
