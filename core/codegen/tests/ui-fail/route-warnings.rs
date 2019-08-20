@@ -1,6 +1,6 @@
 // must-compile-successfully
 
-#![feature(proc_macro_hygiene, async_await)]
+#![feature(proc_macro_hygiene)]
 
 #[macro_use] extern crate rocket;
 

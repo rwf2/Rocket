@@ -44,7 +44,7 @@ pub use serde_json::{json_internal, json_internal_vec};
 /// or from [`serde`]. The data is parsed from the HTTP request body.
 ///
 /// ```rust
-/// # #![feature(proc_macro_hygiene, async_await)]
+/// # #![feature(proc_macro_hygiene)]
 /// # #[macro_use] extern crate rocket;
 /// # extern crate rocket_contrib;
 /// # type User = usize;
@@ -68,7 +68,7 @@ pub use serde_json::{json_internal, json_internal_vec};
 /// set to `application/json` automatically.
 ///
 /// ```rust
-/// # #![feature(proc_macro_hygiene, async_await)]
+/// # #![feature(proc_macro_hygiene)]
 /// # #[macro_use] extern crate rocket;
 /// # extern crate rocket_contrib;
 /// # type User = usize;
@@ -219,7 +219,7 @@ impl<T> DerefMut for Json<T> {
 /// fashion during request handling. This looks something like:
 ///
 /// ```rust
-/// # #![feature(proc_macro_hygiene, async_await)]
+/// # #![feature(proc_macro_hygiene)]
 /// # #[macro_use] extern crate rocket;
 /// # #[macro_use] extern crate rocket_contrib;
 /// use rocket_contrib::json::JsonValue;
@@ -314,7 +314,7 @@ impl<'r> Responder<'r> for JsonValue {
 /// value created with this macro can be returned from a handler as follows:
 ///
 /// ```rust
-/// # #![feature(proc_macro_hygiene, async_await)]
+/// # #![feature(proc_macro_hygiene)]
 /// # #[macro_use] extern crate rocket;
 /// # #[macro_use] extern crate rocket_contrib;
 /// use rocket_contrib::json::JsonValue;

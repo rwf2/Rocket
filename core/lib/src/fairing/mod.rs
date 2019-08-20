@@ -20,7 +20,6 @@
 //! write:
 //!
 //! ```rust
-//! # #![feature(async_await)]
 //! # use rocket::fairing::AdHoc;
 //! # let req_fairing = AdHoc::on_request("Request", |_, _| ());
 //! # let res_fairing = AdHoc::on_response("Response", |_, _| Box::pin(async move {}));
@@ -207,7 +206,6 @@ pub use self::info_kind::{Info, Kind};
 /// path.
 ///
 /// ```rust
-/// # #![feature(async_await)]
 /// use std::future::Future;
 /// use std::io::Cursor;
 /// use std::pin::Pin;
@@ -271,7 +269,6 @@ pub use self::info_kind::{Info, Kind};
 /// request guard.
 ///
 /// ```rust
-/// # #![feature(async_await)]
 /// # use std::future::Future;
 /// # use std::pin::Pin;
 /// # use std::time::{Duration, SystemTime};
