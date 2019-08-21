@@ -11,7 +11,11 @@
 // note, I think all of these can be integration tests
 #[cfg(feature = "cors")]
 mod cors_tests {
+    use rocket::http::Method;
+    use rocket::Route;
     use rocket_contrib::cors::*;
+    use rocket::local::*;
+    use rocket::http::Status;
 
     #[test]
     pub fn test_basic() {
@@ -19,23 +23,34 @@ mod cors_tests {
     }
 
     #[get("/test")]
-    pub fn test_get_route() -> &'static str {
+    pub fn sample_get_route() -> &'static str {
+        "Hi"
+    }
+
+    #[delete("/test")]
+    pub fn sample_delete_route() -> &'static str {
         "Hi"
     }
 
     #[test]
     pub fn test_one_method() {
         let rocket = rocket::ignite()
-            .mount("/", routes![test_get_route])
+            .mount("/", routes![sample_get_route, sample_delete_route])
             .attach(CorsFairingBuilder::new()
                 .build());
 
-        let mut count = 0;
-        for _ in rocket.routes() {
-            count = count + 1;
-        }
-        assert_eq!(2, count);
+        let routes : Vec<&Route> = rocket.routes()
+            .filter(|x| x.method == Method::Options)
+            .filter(|x| x.uri.path() == "/test")
+            .collect();
+        assert_eq!(1, routes.len());
 
+        let client = Client::new(rocket).expect("valid rocket instance");
+
+        // Dispatch a request to 'GET /' and validate the response.
+        let response = client.options("/test").dispatch();
+        assert_eq!(response.status(), Status::Ok);
+        assert_eq!(response.headers().get_one("Access-Control-Allow-Methods"), Some("DELETE, GET".into()));
     }
 
     // Test to ensure the method names are collected when multiple

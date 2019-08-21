@@ -101,8 +101,9 @@ mod test {
 
 impl<'r> Responder<'r> for OptionsResponder {
     fn respond_to(self, _request: &Request<'_>) -> rocket::response::Result<'r> {
-
-        let methods = comma_list(&self.allowed_methods.iter().map(|x| format!("{}", x)).collect());
+        let mut meths: Vec<String> = self.allowed_methods.iter().map(|x| format!("{}", x)).collect();
+        meths.sort();
+        let methods = comma_list(&meths);
         let headers = comma_list(&self.allowed_headers);
 
         let mut response = Response::build();
