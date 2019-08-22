@@ -623,6 +623,25 @@ guards:
 fn good(custom: Custom, cookies: Cookies) { .. }
 ```
 
+When using request guards that modify cookies on-demand, such as
+`FlashMessage`, a similar problem occurs. The fix in this case is to `drop` the
+`Cookies` instance before accessing the `FlashMessage`.
+
+```rust
+#[get("/")]
+fn bad(cookies: Cookies, flash: FlashMessage) {
+    let msg = flash.msg();
+}
+```
+
+```rust
+#[get("/")]
+fn good(cookies: Cookies, flash: FlashMessage) {
+    std::mem::drop(cookies);
+    let msg = flash.msg();
+}
+```
+
 ## Format
 
 A route can specify the data format it is willing to accept or respond with by
