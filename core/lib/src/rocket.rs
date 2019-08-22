@@ -680,7 +680,8 @@ impl Rocket {
         Ok(self)
     }
 
-    /// Identical to `launch()`, but using a custom Tokio runtime.
+    /// Identical to `launch()`, but using a custom Tokio runtime. The runtime
+    /// has no other restrictions, and can have other tasks running on it.
     ///
     /// # Example
     ///
@@ -690,16 +691,16 @@ impl Rocket {
     /// let runtime = tokio::runtime::Runtime::new();
     ///
     /// # if false {
-    /// rocket::ignite().launch_on(runtime);
+    /// let fut = rocket::ignite().launch_on(&runtime);
+    /// fut.then(|_| {
+    ///     // do things after the server shuts down
+    /// });
     /// # }
     /// ```
-    pub fn launch_on(mut self, mut runtime: tokio::runtime::Runtime) -> LaunchError {
+    pub async fn launch_on(mut self, runtime: &tokio::runtime::Runtime) -> Result<(), LaunchError> {
         #[cfg(feature = "tls")] use crate::http::tls;
 
-        self = match self.prelaunch_check() {
-            Ok(rocket) => rocket,
-            Err(launch_error) => return launch_error
-        };
+        self = self.prelaunch_check()?;
 
         self.fairings.pretty_print_counts();
 
@@ -707,7 +708,7 @@ impl Rocket {
         let addrs = match full_addr.to_socket_addrs() {
             Ok(a) => a.collect::<Vec<_>>(),
             // TODO.async: Reconsider this error type
-            Err(e) => return From::from(io::Error::new(io::ErrorKind::Other, e)),
+            Err(e) => return Err(From::from(io::Error::new(io::ErrorKind::Other, e))),
         };
 
         // TODO.async: support for TLS, unix sockets.
@@ -715,7 +716,7 @@ impl Rocket {
 
         let mut incoming = match hyper::AddrIncoming::bind(&addrs[0]) {
             Ok(incoming) => incoming,
-            Err(e) => return LaunchError::new(LaunchErrorKind::Bind(e)),
+            Err(e) => return Err(LaunchError::new(LaunchErrorKind::Bind(e))),
         };
 
         // Determine the address and port we actually binded to.
@@ -760,10 +761,9 @@ impl Rocket {
             .executor(runtime.executor())
             .serve(service);
 
-        // TODO.async: Use with_graceful_shutdown, and let launch() return a Result<(), Error>
-        runtime.block_on(server).expect("TODO.async handle error");
-
-        unreachable!("the call to `block_on` should block on success")
+        let (future, handle) = server.remote_handle();
+        runtime.spawn(future);
+        Ok(handle.await?)
     }
 
     /// Starts the application server and begins listening for and dispatching
@@ -792,7 +792,11 @@ impl Rocket {
             .build()
             .expect("Cannot build runtime!");
 
-        self.launch_on(runtime)
+        // TODO.async: Use with_graceful_shutdown, and let launch() return a Result<(), Error>
+        match runtime.block_on(self.launch_on(&runtime)) {
+            Ok(_) => unreachable!(),
+            Err(err) => err,
+        }
     }
 
     /// Returns an iterator over all of the routes mounted on this instance of
