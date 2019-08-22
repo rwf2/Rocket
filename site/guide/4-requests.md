@@ -538,7 +538,7 @@ methods are suffixed with `_private`. These methods are: [`get_private`],
 ```rust
 /// Retrieve the user's ID, if any.
 #[get("/user_id")]
-fn user_id(cookies: Cookies) -> Option<String> {
+fn user_id(mut cookies: Cookies) -> Option<String> {
     cookies.get_private("user_id")
         .map(|cookie| format!("User ID: {}", cookie.value()))
 }
