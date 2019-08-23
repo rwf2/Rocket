@@ -209,9 +209,9 @@ crate use self::toml_ext::LoggedValue;
 use crate::logger;
 use self::Environment::*;
 use self::environment::CONFIG_ENV;
-use crate::logger::COLORS_ENV;
 use self::toml_ext::parse_simple_toml_value;
 use crate::http::uncased::uncased_eq;
+use self::config::COLORS_ENV;
 
 const CONFIG_FILENAME: &str = "Rocket.toml";
 const GLOBAL_ENV_NAME: &str = "global";
@@ -445,7 +445,7 @@ impl RocketConfig {
 /// If there is a problem, prints a nice error message and bails.
 crate fn init() -> Config {
     let bail = |e: ConfigError| -> ! {
-        logger::init(LoggingLevel::Debug);
+        logger::init(LoggingLevel::Debug, true);
         e.pretty_print();
         process::exit(1)
     };

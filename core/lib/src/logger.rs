@@ -6,8 +6,6 @@ use std::str::FromStr;
 use log;
 use yansi::Paint;
 
-crate const COLORS_ENV: &str = "ROCKET_CLI_COLORS";
-
 struct RocketLogger(LoggingLevel);
 
 /// Defines the different levels for log messages.
@@ -145,15 +143,12 @@ impl log::Log for RocketLogger {
     }
 }
 
-crate fn try_init(level: LoggingLevel, verbose: bool) -> bool {
+crate fn try_init(level: LoggingLevel, colorful: bool, verbose: bool) -> bool {
     if level == LoggingLevel::Off {
         return false;
     }
 
-    if !atty::is(atty::Stream::Stdout)
-        || (cfg!(windows) && !Paint::enable_windows_ascii())
-        || env::var_os(COLORS_ENV).map(|v| v == "0" || v == "off").unwrap_or(false)
-    {
+    if !colorful {
         Paint::disable();
     }
 
@@ -211,8 +206,8 @@ crate fn pop_max_level() {
 }
 
 #[doc(hidden)]
-pub fn init(level: LoggingLevel) -> bool {
-    try_init(level, true)
+pub fn init(level: LoggingLevel, colorful: bool) -> bool {
+    try_init(level, colorful, true)
 }
 
 // Expose logging macros as (hidden) funcions for use by core/contrib codegen.

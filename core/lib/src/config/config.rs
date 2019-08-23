@@ -11,6 +11,10 @@ use crate::http::private::Key;
 
 use super::custom_values::*;
 use {num_cpus, base64};
+use yansi::Paint;
+use std::env;
+
+crate const COLORS_ENV: &str = "ROCKET_CLI_COLORS";
 
 /// Structure for Rocket application configuration.
 ///
@@ -60,6 +64,8 @@ pub struct Config {
     crate config_file_path: Option<PathBuf>,
     /// The path root-relative files will be rooted from.
     crate root_path: Option<PathBuf>,
+    /// Enable colorful logging.
+    pub colorful_logging: bool,
 }
 
 macro_rules! config_from_raw {
@@ -221,6 +227,10 @@ impl Config {
         // Use a generated secret key by default.
         let key = SecretKey::Generated(Key::generate());
 
+        let enable_colorful_logging = if !atty::is(atty::Stream::Stdout)
+            || (cfg!(windows) && !Paint::enable_windows_ascii())
+            || env::var_os(COLORS_ENV).map(|v| v == "0" || v == "off").unwrap_or(false) { false } else { true };
+
         match env {
             Development => {
                 Config {
@@ -236,6 +246,7 @@ impl Config {
                     extras: HashMap::new(),
                     config_file_path: None,
                     root_path: None,
+                    colorful_logging: enable_colorful_logging,
                 }
             }
             Staging => {
@@ -252,6 +263,7 @@ impl Config {
                     extras: HashMap::new(),
                     config_file_path: None,
                     root_path: None,
+                    colorful_logging: enable_colorful_logging,
                 }
             }
             Production => {
@@ -268,6 +280,7 @@ impl Config {
                     extras: HashMap::new(),
                     config_file_path: None,
                     root_path: None,
+                    colorful_logging: enable_colorful_logging,
                 }
             }
         }
@@ -553,6 +566,36 @@ impl Config {
         // During unit testing, we don't want to actually read certs/keys.
         #[cfg(test)]
         { Ok(()) }
+    }
+
+    /// Enables colorful logging.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use rocket::config::{Config, LoggingLevel, Environment};
+    ///
+    /// let mut config = Config::new(Environment::Staging);
+    /// config.enable_colorful_logging();
+    /// ```
+    #[inline]
+    pub fn enable_colorful_logging(&mut self) {
+        self.colorful_logging = true;
+    }
+
+    /// Disables colorful logging.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use rocket::config::{Config, LoggingLevel, Environment};
+    ///
+    /// let mut config = Config::new(Environment::Staging);
+    /// config.enable_colorful_logging();
+    /// ```
+    #[inline]
+    pub fn disable_colorful_logging(&mut self) {
+        self.colorful_logging = false;
     }
 
     /// Sets the extras for `self` to be the key/value pairs in `extras`.
@@ -942,5 +985,6 @@ impl PartialEq for Config {
             && self.keep_alive == other.keep_alive
             && self.environment == other.environment
             && self.extras == other.extras
+            && self.colorful_logging == other.colorful_logging
     }
 }

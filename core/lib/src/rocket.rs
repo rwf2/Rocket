@@ -389,7 +389,7 @@ impl Rocket {
 
     #[inline]
     fn configured(config: Config) -> Rocket {
-        if logger::try_init(config.log_level, false) {
+        if logger::try_init(config.log_level, config.colorful_logging,false) {
             // Temporary weaken log level for launch info.
             logger::push_max_level(logger::LoggingLevel::Normal);
         }
