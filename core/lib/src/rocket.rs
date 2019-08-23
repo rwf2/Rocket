@@ -680,8 +680,10 @@ impl Rocket {
         Ok(self)
     }
 
-    /// Identical to `launch()`, but using a custom Tokio runtime. The runtime
-    /// has no other restrictions, and can have other tasks running on it.
+    /// Similar to `launch()`, but using a custom Tokio runtime and returning
+    /// a `Future` that completes along with the server. The runtime has no
+    /// restrictions other than being Tokio-based, and can have other tasks
+    /// running on it.
     ///
     /// # Example
     ///
@@ -691,13 +693,17 @@ impl Rocket {
     /// let runtime = tokio::runtime::Runtime::new();
     ///
     /// # if false {
-    /// let fut = rocket::ignite().launch_on(&runtime);
-    /// fut.then(|_| {
+    /// let fut = rocket::ignite().spawn_on(&runtime).expect("error launching server");
+    /// fut.then(|result| {
     ///     // do things after the server shuts down
+    ///     assert!(result.is_ok());
     /// });
     /// # }
     /// ```
-    pub async fn launch_on(mut self, runtime: &tokio::runtime::Runtime) -> Result<(), LaunchError> {
+    pub fn spawn_on(
+        mut self,
+        runtime: &tokio::runtime::Runtime,
+    ) -> Result<impl Future<Output = Result<(), rocket_http::hyper::Error>>, LaunchError> {
         #[cfg(feature = "tls")] use crate::http::tls;
 
         self = self.prelaunch_check()?;
@@ -763,7 +769,7 @@ impl Rocket {
 
         let (future, handle) = server.remote_handle();
         runtime.spawn(future);
-        Ok(handle.await?)
+        Ok(handle)
     }
 
     /// Starts the application server and begins listening for and dispatching
@@ -793,8 +799,11 @@ impl Rocket {
             .expect("Cannot build runtime!");
 
         // TODO.async: Use with_graceful_shutdown, and let launch() return a Result<(), Error>
-        match runtime.block_on(self.launch_on(&runtime)) {
-            Ok(_) => unreachable!(),
+        match self.spawn_on(&runtime) {
+            Ok(fut) => match runtime.block_on(fut) {
+                Ok(_) => unreachable!("the call to `block_on` should block on success"),
+                Err(err) => err.into(),
+            }
             Err(err) => err,
         }
     }
