@@ -227,7 +227,7 @@ impl Config {
         // Use a generated secret key by default.
         let key = SecretKey::Generated(Key::generate());
 
-        let enable_colorful_logging = !(!atty::is(atty::Stream::Stdout)
+        let colorful_logging = !(!atty::is(atty::Stream::Stdout)
             || (cfg!(windows) && !Paint::enable_windows_ascii())
             || env::var_os(COLORS_ENV).map(|v| v == "0" || v == "off").unwrap_or(false));
 
@@ -246,7 +246,7 @@ impl Config {
                     extras: HashMap::new(),
                     config_file_path: None,
                     root_path: None,
-                    colorful_logging: enable_colorful_logging,
+                    colorful_logging,
                 }
             }
             Staging => {
@@ -263,7 +263,7 @@ impl Config {
                     extras: HashMap::new(),
                     config_file_path: None,
                     root_path: None,
-                    colorful_logging: enable_colorful_logging,
+                    colorful_logging,
                 }
             }
             Production => {
@@ -280,7 +280,7 @@ impl Config {
                     extras: HashMap::new(),
                     config_file_path: None,
                     root_path: None,
-                    colorful_logging: enable_colorful_logging,
+                    colorful_logging,
                 }
             }
         }
