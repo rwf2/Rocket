@@ -8,7 +8,7 @@ use std::sync::Arc;
 use std::time::Duration;
 use std::pin::Pin;
 
-use futures::future::Future;
+use futures::future::{Future, FutureExt, TryFutureExt};
 use futures::stream::StreamExt;
 use futures::task::SpawnExt;
 use futures_tokio_compat::Compat as TokioCompat;
@@ -700,10 +700,11 @@ impl Rocket {
     /// });
     /// # }
     /// ```
+    // TODO.async Decide on an return type, possibly creating a discriminated union.
     pub fn spawn_on(
         mut self,
         runtime: &tokio::runtime::Runtime,
-    ) -> Result<impl Future<Output = Result<(), rocket_http::hyper::Error>>, LaunchError> {
+    ) -> Result<impl Future<Output = Result<(), Box<dyn std::error::Error>>>, LaunchError> {
         #[cfg(feature = "tls")] use crate::http::tls;
 
         self = self.prelaunch_check()?;
@@ -769,7 +770,7 @@ impl Rocket {
 
         let (future, handle) = server.remote_handle();
         runtime.spawn(future);
-        Ok(handle)
+        Ok(handle.err_into())
     }
 
     /// Starts the application server and begins listening for and dispatching
@@ -790,7 +791,8 @@ impl Rocket {
     /// rocket::ignite().launch();
     /// # }
     /// ```
-    pub fn launch(self) -> LaunchError {
+    // TODO.async Decide on an return type, possibly creating a discriminated union.
+    pub fn launch(self) -> Box<dyn std::error::Error> {
         // TODO.async What meaning should config.workers have now?
         // Initialize the tokio runtime
         let runtime = tokio::runtime::Builder::new()
@@ -802,9 +804,9 @@ impl Rocket {
         match self.spawn_on(&runtime) {
             Ok(fut) => match runtime.block_on(fut) {
                 Ok(_) => unreachable!("the call to `block_on` should block on success"),
-                Err(err) => err.into(),
+                Err(err) => err,
             }
-            Err(err) => err,
+            Err(err) => Box::new(err),
         }
     }
 
