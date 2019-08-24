@@ -22,25 +22,25 @@ mod private_cookie_test {
         use rocket::http::Cookie;
         use rocket::http::Status;
 
-        #[test]
-        fn private_cookie_is_returned() {
+        #[rocket::async_test]
+        async fn private_cookie_is_returned() {
             let rocket = rocket::ignite().mount("/", routes![return_private_cookie]);
 
             let client = Client::new(rocket).unwrap();
             let req = client.get("/").private_cookie(Cookie::new("cookie_name", "cookie_value"));
-            let mut response = req.dispatch();
+            let mut response = req.dispatch().await;
 
-            assert_eq!(response.body_string_wait(), Some("cookie_value".into()));
+            assert_eq!(response.body_string().await, Some("cookie_value".into()));
             assert_eq!(response.headers().get_one("Set-Cookie"), None);
         }
 
-        #[test]
-        fn regular_cookie_is_not_returned() {
+        #[rocket::async_test]
+        async fn regular_cookie_is_not_returned() {
             let rocket = rocket::ignite().mount("/", routes![return_private_cookie]);
 
             let client = Client::new(rocket).unwrap();
             let req = client.get("/").cookie(Cookie::new("cookie_name", "cookie_value"));
-            let response = req.dispatch();
+            let response = req.dispatch().await;
 
             assert_eq!(response.status(), Status::NotFound);
         }

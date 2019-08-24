@@ -32,28 +32,28 @@ mod tests {
     use rocket::local::Client;
     use rocket::http::{Status, uri::Uri};
 
-    #[test]
-    fn uri_percent_encoding_redirect() {
+    #[rocket::async_test]
+    async fn uri_percent_encoding_redirect() {
         let expected_location = vec!["/hello/John%5B%5D%7C%5C%25@%5E"];
         let client = Client::new(rocket()).unwrap();
 
-        let response = client.get("/raw").dispatch();
+        let response = client.get("/raw").dispatch().await;
         let location: Vec<_> = response.headers().get("location").collect();
         assert_eq!(response.status(), Status::SeeOther);
         assert_eq!(&location, &expected_location);
 
-        let response = client.get("/uri").dispatch();
+        let response = client.get("/uri").dispatch().await;
         let location: Vec<_> = response.headers().get("location").collect();
         assert_eq!(response.status(), Status::SeeOther);
         assert_eq!(&location, &expected_location);
     }
 
-    #[test]
-    fn uri_percent_encoding_get() {
+    #[rocket::async_test]
+    async fn uri_percent_encoding_get() {
         let client = Client::new(rocket()).unwrap();
         let name = Uri::percent_encode(NAME);
-        let mut response = client.get(format!("/hello/{}", name)).dispatch();
+        let mut response = client.get(format!("/hello/{}", name)).dispatch().await;
         assert_eq!(response.status(), Status::Ok);
-        assert_eq!(response.body_string_wait().unwrap(), format!("Hello, {}!", NAME));
+        assert_eq!(response.body_string().await.unwrap(), format!("Hello, {}!", NAME));
     }
 }

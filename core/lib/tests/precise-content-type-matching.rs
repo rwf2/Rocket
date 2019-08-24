@@ -44,8 +44,8 @@ mod tests {
                 req.add_header(ct);
             }
 
-            let mut response = req.dispatch();
-            let body_str = response.body_string_wait();
+            let mut response = req.dispatch().await;
+            let body_str = response.body_string().await;
             let body: Option<&'static str> = $body;
             match body {
                 Some(string) => assert_eq!(body_str, Some(string.to_string())),
@@ -54,15 +54,15 @@ mod tests {
         )
     }
 
-    #[test]
-    fn exact_match_or_forward() {
+    #[rocket::async_test]
+    async fn exact_match_or_forward() {
         check_dispatch!("/first", Some(ContentType::JSON), Some("specified"));
         check_dispatch!("/first", None, Some("unspecified"));
         check_dispatch!("/first", Some(ContentType::HTML), Some("unspecified"));
     }
 
-    #[test]
-    fn exact_match_or_none() {
+    #[rocket::async_test]
+    async fn exact_match_or_none() {
         check_dispatch!("/second", Some(ContentType::JSON), Some("specified_json"));
         check_dispatch!("/second", Some(ContentType::HTML), Some("specified_html"));
         check_dispatch!("/second", Some(ContentType::CSV), None);

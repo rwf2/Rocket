@@ -43,16 +43,16 @@ fn number(params: Form<ThingForm>) -> DerivedResponder {
     DerivedResponder { data: params.thing.to_string() }
 }
 
-#[test]
-fn test_derive_reexports() {
+#[rocket::async_test]
+async fn test_derive_reexports() {
     use rocket::local::Client;
 
     let rocket = rocket::ignite().mount("/", routes![index, number]);
     let client = Client::new(rocket).unwrap();
 
-    let mut response = client.get("/").dispatch();
-    assert_eq!(response.body_string_wait().unwrap(), "hello");
+    let mut response = client.get("/").dispatch().await;
+    assert_eq!(response.body_string().await.unwrap(), "hello");
 
-    let mut response = client.get("/?thing=b").dispatch();
-    assert_eq!(response.body_string_wait().unwrap(), "b");
+    let mut response = client.get("/?thing=b").dispatch().await;
+    assert_eq!(response.body_string().await.unwrap(), "b");
 }

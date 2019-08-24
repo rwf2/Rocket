@@ -31,42 +31,42 @@ mod strict_and_lenient_forms_tests {
         Client::new(rocket::ignite().mount("/", routes![strict, lenient])).unwrap()
     }
 
-    #[test]
-    fn test_strict_form() {
+    #[rocket::async_test]
+    async fn test_strict_form() {
         let client = client();
         let mut response = client.post("/strict")
             .header(ContentType::Form)
             .body(format!("field={}", FIELD_VALUE))
-            .dispatch();
+            .dispatch().await;
 
         assert_eq!(response.status(), Status::Ok);
-        assert_eq!(response.body_string_wait(), Some(FIELD_VALUE.into()));
+        assert_eq!(response.body_string().await, Some(FIELD_VALUE.into()));
 
         let response = client.post("/strict")
             .header(ContentType::Form)
             .body(format!("field={}&extra=whoops", FIELD_VALUE))
-            .dispatch();
+            .dispatch().await;
 
         assert_eq!(response.status(), Status::UnprocessableEntity);
     }
 
-    #[test]
-    fn test_lenient_form() {
+    #[rocket::async_test]
+    async fn test_lenient_form() {
         let client = client();
         let mut response = client.post("/lenient")
             .header(ContentType::Form)
             .body(format!("field={}", FIELD_VALUE))
-            .dispatch();
+            .dispatch().await;
 
         assert_eq!(response.status(), Status::Ok);
-        assert_eq!(response.body_string_wait(), Some(FIELD_VALUE.into()));
+        assert_eq!(response.body_string().await, Some(FIELD_VALUE.into()));
 
         let mut response = client.post("/lenient")
             .header(ContentType::Form)
             .body(format!("field={}&extra=whoops", FIELD_VALUE))
-            .dispatch();
+            .dispatch().await;
 
         assert_eq!(response.status(), Status::Ok);
-        assert_eq!(response.body_string_wait(), Some(FIELD_VALUE.into()));
+        assert_eq!(response.body_string().await, Some(FIELD_VALUE.into()));
     }
 }
