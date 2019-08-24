@@ -62,7 +62,9 @@ pub fn test_config(environment: Environment) {
         }))
         .mount("/", routes![check_config]);
 
-    let client = Client::new(rocket).unwrap();
-    let response = client.get("/check_config").dispatch();
-    assert_eq!(response.status(), Status::Ok);
+    rocket::async_test(async move {
+        let client = Client::new(rocket).unwrap();
+        let response = client.get("/check_config").dispatch().await;
+        assert_eq!(response.status(), Status::Ok);
+    })
 }

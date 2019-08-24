@@ -3,10 +3,12 @@ use rocket::local::Client;
 use rocket::http::{ContentType, Status};
 
 fn test(uri: &str, content_type: ContentType, status: Status, body: String) {
-    let client = Client::new(rocket()).unwrap();;
-    let mut response = client.get(uri).header(content_type).dispatch();
-    assert_eq!(response.status(), status);
-    assert_eq!(response.body_string_wait(), Some(body));
+    rocket::async_test(async move {
+        let client = Client::new(rocket()).unwrap();;
+        let mut response = client.get(uri).header(content_type).dispatch().await;
+        assert_eq!(response.status(), status);
+        assert_eq!(response.body_string().await, Some(body));
+    })
 }
 
 #[test]
@@ -39,14 +41,14 @@ fn test_upload() {
     let response = client.post("/upload")
         .header(ContentType::Plain)
         .body(&expected_body)
-        .dispatch();
+        .dispatch().await;
 
     assert_eq!(response.status(), Status::Ok);
 
     // Ensure we get back the same body.
-    let mut response = client.get("/upload").dispatch();
+    let mut response = client.get("/upload").dispatch().await;
     assert_eq!(response.status(), Status::Ok);
-    assert_eq!(response.body_string_wait(), Some(expected_body));
+    assert_eq!(response.body_string().await, Some(expected_body));
 }
 
 #[test]

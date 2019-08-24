@@ -15,12 +15,14 @@ impl fmt::Display for FormOption {
 }
 
 fn assert_form_eq(client: &Client, form_str: &str, expected: String) {
-    let mut res = client.post("/")
-        .header(ContentType::Form)
-        .body(form_str)
-        .dispatch();
+    rocket::async_test(async move {
+        let mut res = client.post("/")
+            .header(ContentType::Form)
+            .body(form_str)
+            .dispatch().await;
 
-    assert_eq!(res.body_string_wait(), Some(expected));
+        assert_eq!(res.body_string().await, Some(expected));
+    })
 }
 
 fn assert_valid_form(client: &Client, input: &FormInput<'_>) {

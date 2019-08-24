@@ -8,12 +8,12 @@ use rocket_contrib::templates::Template;
 macro_rules! dispatch {
     ($method:expr, $path:expr, $test_fn:expr) => ({
         let client = Client::new(rocket()).unwrap();
-        $test_fn(&client, client.req($method, $path).dispatch());
+        $test_fn(&client, client.req($method, $path).dispatch().await);
     })
 }
 
-#[test]
-fn test_root() {
+#[rocket::async_test]
+async fn test_root() {
     // Check that the redirect works.
     for method in &[Get, Head] {
         dispatch!(*method, "/", |_: &Client, mut response: LocalResponse<'_>| {
@@ -33,13 +33,13 @@ fn test_root() {
             let expected = Template::show(client.rocket(), "error/404", &map).unwrap();
 
             assert_eq!(response.status(), Status::NotFound);
-            assert_eq!(response.body_string_wait(), Some(expected));
+            assert_eq!(response.body_string().await, Some(expected));
         });
     }
 }
 
-#[test]
-fn test_name() {
+#[rocket::async_test]
+async fn test_name() {
     // Check that the /hello/<name> route works.
     dispatch!(Get, "/hello/Jack%20Daniels", |client: &Client, mut response: LocalResponse<'_>| {
         let context = TemplateContext {
@@ -51,12 +51,12 @@ fn test_name() {
 
         let expected = Template::show(client.rocket(), "index", &context).unwrap();
         assert_eq!(response.status(), Status::Ok);
-        assert_eq!(response.body_string_wait(), Some(expected));
+        assert_eq!(response.body_string().await, Some(expected));
     });
 }
 
-#[test]
-fn test_404() {
+#[rocket::async_test]
+async fn test_404() {
     // Check that the error catcher works.
     dispatch!(Get, "/hello/", |client: &Client, mut response: LocalResponse<'_>| {
         let mut map = std::collections::HashMap::new();
@@ -64,6 +64,6 @@ fn test_404() {
 
         let expected = Template::show(client.rocket(), "error/404", &map).unwrap();
         assert_eq!(response.status(), Status::NotFound);
-        assert_eq!(response.body_string_wait(), Some(expected));
+        assert_eq!(response.body_string().await, Some(expected));
     });
 }
