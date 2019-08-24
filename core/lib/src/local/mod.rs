@@ -44,8 +44,10 @@
 //!      # let rocket = rocket::ignite();
 //!      # let client = Client::new(rocket).unwrap();
 //!      # let req = client.get("/");
-//!      let response = req.dispatch();
+//!      # let _ = async {
+//!      let response = req.dispatch().await;
 //!      # let _ = response;
+//!      # };
 //!      ```
 //!
 //! All together and in idiomatic fashion, this might look like:
@@ -53,11 +55,13 @@
 //! ```rust
 //! use rocket::local::Client;
 //!
+//! # let _ = async {
 //! let client = Client::new(rocket::ignite()).expect("valid rocket");
 //! let response = client.post("/")
 //!     .body("Hello, world!")
-//!     .dispatch();
+//!     .dispatch().await;
 //! # let _ = response;
+//! # };
 //! ```
 //!
 //! # Unit/Integration Testing
@@ -82,15 +86,15 @@
 //!     use super::{rocket, hello};
 //!     use rocket::local::Client;
 //!
-//!     #[test]
+//!     #[rocket::async_test]
 //!     fn test_hello_world() {
 //!         // Construct a client to use for dispatching requests.
 //!         let rocket = rocket::ignite().mount("/", routes![hello]);
 //!         let client = Client::new(rocket).expect("valid rocket instance");
 //!
 //!         // Dispatch a request to 'GET /' and validate the response.
-//!         let mut response = client.get("/").dispatch();
-//!         assert_eq!(response.body_string(), Some("Hello, world!".into()));
+//!         let mut response = client.get("/").dispatch().await;
+//!         assert_eq!(response.body_string().await, Some("Hello, world!".into()));
 //!     }
 //! }
 //! ```

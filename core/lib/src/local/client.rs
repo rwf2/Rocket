@@ -55,11 +55,13 @@ use crate::error::LaunchError;
 /// ```rust
 /// use rocket::local::Client;
 ///
+/// # let _ = async {
 /// let rocket = rocket::ignite();
 /// let client = Client::new(rocket).expect("valid rocket");
 /// let response = client.post("/")
 ///     .body("Hello, world!")
-///     .dispatch();
+///     .dispatch().await;
+/// # };
 /// ```
 ///
 /// [`new()`]: #method.new

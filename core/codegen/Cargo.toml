@@ -27,4 +27,5 @@ version_check = "0.9.1"
 
 [dev-dependencies]
 rocket = { version = "0.5.0-dev", path = "../lib" }
+futures-preview = "0.3.0-alpha.18"
 compiletest_rs = { version = "0.3", features = ["stable"] }

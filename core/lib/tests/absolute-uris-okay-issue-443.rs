@@ -18,16 +18,16 @@ mod test_absolute_uris_okay {
     use super::*;
     use rocket::local::Client;
 
-    #[test]
-    fn redirect_works() {
+    #[rocket::async_test]
+    async fn redirect_works() {
         let rocket = rocket::ignite().mount("/", routes![google, rocket]);
         let client = Client::new(rocket).unwrap();
 
-        let response = client.get("/google").dispatch();
+        let response = client.get("/google").dispatch().await;
         let location = response.headers().get_one("Location");
         assert_eq!(location, Some("https://www.google.com"));
 
-        let response = client.get("/rocket").dispatch();
+        let response = client.get("/rocket").dispatch().await;
         let location = response.headers().get_one("Location");
         assert_eq!(location, Some("https://rocket.rs:80"));
     }

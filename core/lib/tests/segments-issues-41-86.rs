@@ -33,8 +33,8 @@ mod tests {
     use super::*;
     use rocket::local::Client;
 
-    #[test]
-    fn segments_works() {
+    #[rocket::async_test]
+    async fn segments_works() {
         let rocket = rocket::ignite()
             .mount("/", routes![test, two, one_two, none, dual])
             .mount("/point", routes![test, two, one_two, dual]);
@@ -47,8 +47,8 @@ mod tests {
                         "/static", "/point/static"]
         {
             let path = "this/is/the/path/we/want";
-            let mut response = client.get(format!("{}/{}", prefix, path)).dispatch();
-            assert_eq!(response.body_string_wait(), Some(path.into()));
+            let mut response = client.get(format!("{}/{}", prefix, path)).dispatch().await;
+            assert_eq!(response.body_string().await, Some(path.into()));
         }
     }
 }

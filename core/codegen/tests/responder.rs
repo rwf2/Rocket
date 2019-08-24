@@ -21,43 +21,47 @@ pub enum Foo<'r> {
     },
 }
 
-#[test]
-fn responder_foo() {
+#[rocket::async_test]
+async fn responder_foo() {
     let client = Client::new(rocket::ignite()).expect("valid rocket");
     let local_req = client.get("/");
     let req = local_req.inner();
 
     let mut response = Foo::First("hello".into())
         .respond_to(req)
+        .await
         .expect("response okay");
 
     assert_eq!(response.status(), Status::Ok);
     assert_eq!(response.content_type(), Some(ContentType::Plain));
-    assert_eq!(response.body_string(), Some("hello".into()));
+    assert_eq!(response.body_string().await, Some("hello".into()));
 
     let mut response = Foo::Second("just a test".into())
         .respond_to(req)
+        .await
         .expect("response okay");
 
     assert_eq!(response.status(), Status::InternalServerError);
     assert_eq!(response.content_type(), Some(ContentType::Binary));
-    assert_eq!(response.body_string(), Some("just a test".into()));
+    assert_eq!(response.body_string().await, Some("just a test".into()));
 
     let mut response = Foo::Third { responder: "well, hi", ct: ContentType::JSON }
         .respond_to(req)
+        .await
         .expect("response okay");
 
     assert_eq!(response.status(), Status::NotFound);
     assert_eq!(response.content_type(), Some(ContentType::HTML));
-    assert_eq!(response.body_string(), Some("well, hi".into()));
+    assert_eq!(response.body_string().await, Some("well, hi".into()));
 
     let mut response = Foo::Fourth { string: "goodbye", ct: ContentType::JSON }
         .respond_to(req)
+        .await
         .expect("response okay");
 
     assert_eq!(response.status(), Status::raw(105));
     assert_eq!(response.content_type(), Some(ContentType::JSON));
-    assert_eq!(response.body_string(), Some("goodbye".into()));
+    assert_eq!(response.body_string().await, Some("goodbye".into()));
 }
 
 #[derive(Responder)]
@@ -70,8 +74,8 @@ pub struct Bar<'r> {
     _yet_another: String,
 }
 
-#[test]
-fn responder_bar() {
+#[rocket::async_test]
+async fn responder_bar() {
     let client = Client::new(rocket::ignite()).expect("valid rocket");
     let local_req = client.get("/");
     let req = local_req.inner();
@@ -81,11 +85,11 @@ fn responder_bar() {
         other: ContentType::HTML,
         third: Cookie::new("cookie", "here!"),
         _yet_another: "uh..hi?".into()
-    }.respond_to(req).expect("response okay");
+    }.respond_to(req).await.expect("response okay");
 
     assert_eq!(response.status(), Status::InternalServerError);
     assert_eq!(response.content_type(), Some(ContentType::Plain));
-    assert_eq!(response.body_string(), Some("foo foo".into()));
+    assert_eq!(response.body_string().await, Some("foo foo".into()));
     assert_eq!(response.headers().get_one("Set-Cookie"), Some("cookie=here!"));
 }
 
@@ -95,17 +99,18 @@ pub struct Baz {
     responder: &'static str,
 }
 
-#[test]
-fn responder_baz() {
+#[rocket::async_test]
+async fn responder_baz() {
     let client = Client::new(rocket::ignite()).expect("valid rocket");
     let local_req = client.get("/");
     let req = local_req.inner();
 
     let mut response = Baz { responder: "just a custom" }
         .respond_to(req)
+        .await
         .expect("response okay");
 
     assert_eq!(response.status(), Status::Ok);
     assert_eq!(response.content_type(), Some(ContentType::new("application", "x-custom")));
-    assert_eq!(response.body_string(), Some("just a custom".into()));
+    assert_eq!(response.body_string().await, Some("just a custom".into()));
 }

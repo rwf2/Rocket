@@ -26,37 +26,37 @@ mod flash_lazy_remove_tests {
     use rocket::local::Client;
     use rocket::http::Status;
 
-    #[test]
-    fn test() {
+    #[rocket::async_test]
+    async fn test() {
         use super::*;
         let r = rocket::ignite().mount("/", routes![set, unused, used]);
         let client = Client::new(r).unwrap();
 
         // Ensure the cookie's not there at first.
-        let response = client.get("/unused").dispatch();
+        let response = client.get("/unused").dispatch().await;
         assert_eq!(response.status(), Status::NotFound);
 
         // Set the flash cookie.
-        client.post("/").dispatch();
+        client.post("/").dispatch().await;
 
         // Try once.
-        let response = client.get("/unused").dispatch();
+        let response = client.get("/unused").dispatch().await;
         assert_eq!(response.status(), Status::Ok);
 
         // Try again; should still be there.
-        let response = client.get("/unused").dispatch();
+        let response = client.get("/unused").dispatch().await;
         assert_eq!(response.status(), Status::Ok);
 
         // Now use it.
-        let mut response = client.get("/use").dispatch();
-        assert_eq!(response.body_string_wait(), Some(FLASH_MESSAGE.into()));
+        let mut response = client.get("/use").dispatch().await;
+        assert_eq!(response.body_string().await, Some(FLASH_MESSAGE.into()));
 
         // Now it should be gone.
-        let response = client.get("/unused").dispatch();
+        let response = client.get("/unused").dispatch().await;
         assert_eq!(response.status(), Status::NotFound);
 
         // Still gone.
-        let response = client.get("/use").dispatch();
+        let response = client.get("/use").dispatch().await;
         assert_eq!(response.status(), Status::NotFound);
     }
 }

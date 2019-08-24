@@ -33,19 +33,19 @@ macro_rules! foo {
 // regression test for `#[get] panicking if used inside a macro
 foo!("/hello/<name>", name);
 
-#[test]
-fn test_reexpansion() {
+#[rocket::async_test]
+async fn test_reexpansion() {
     let rocket = rocket::ignite().mount("/", routes![easy, hard, hi]);
     let client = Client::new(rocket).unwrap();
 
-    let mut response = client.get("/easy/327").dispatch();
-    assert_eq!(response.body_string().unwrap(), "easy id: 327");
+    let mut response = client.get("/easy/327").dispatch().await;
+    assert_eq!(response.body_string().await.unwrap(), "easy id: 327");
 
-    let mut response = client.get("/hard/72").dispatch();
-    assert_eq!(response.body_string().unwrap(), "hard id: 72");
+    let mut response = client.get("/hard/72").dispatch().await;
+    assert_eq!(response.body_string().await.unwrap(), "hard id: 72");
 
-    let mut response = client.get("/hello/fish").dispatch();
-    assert_eq!(response.body_string().unwrap(), "fish");
+    let mut response = client.get("/hello/fish").dispatch().await;
+    assert_eq!(response.body_string().await.unwrap(), "fish");
 }
 
 macro_rules! index {
@@ -59,11 +59,11 @@ macro_rules! index {
 
 index!(i32);
 
-#[test]
-fn test_index() {
+#[rocket::async_test]
+async fn test_index() {
     let rocket = rocket::ignite().mount("/", routes![index]).manage(100i32);
     let client = Client::new(rocket).unwrap();
 
-    let mut response = client.get("/").dispatch();
-    assert_eq!(response.body_string().unwrap(), "Thing: 100");
+    let mut response = client.get("/").dispatch().await;
+    assert_eq!(response.body_string().await.unwrap(), "Thing: 100");
 }

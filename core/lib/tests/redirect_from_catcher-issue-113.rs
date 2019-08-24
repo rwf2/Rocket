@@ -14,10 +14,10 @@ mod tests {
     use rocket::local::Client;
     use rocket::http::Status;
 
-    #[test]
-    fn error_catcher_redirect() {
+    #[rocket::async_test]
+    async fn error_catcher_redirect() {
         let client = Client::new(rocket::ignite().register(catchers![not_found])).unwrap();
-        let response = client.get("/unknown").dispatch();
+        let response = client.get("/unknown").dispatch().await;
         println!("Response:\n{:?}", response);
 
         let location: Vec<_> = response.headers().get("location").collect();

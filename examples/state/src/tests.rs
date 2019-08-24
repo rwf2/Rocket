@@ -1,28 +1,28 @@
 use rocket::local::Client;
 use rocket::http::Status;
 
-fn register_hit(client: &Client) {
-    let response = client.get("/").dispatch();;
+async fn register_hit(client: &Client) {
+    let response = client.get("/").dispatch().await;
     assert_eq!(response.status(), Status::Ok);
 }
 
-fn get_count(client: &Client) -> usize {
-    let mut response = client.get("/count").dispatch();
-    response.body_string_wait().and_then(|s| s.parse().ok()).unwrap()
+async fn get_count(client: &Client) -> usize {
+    let mut response = client.get("/count").dispatch().await;
+    response.body_string().await.and_then(|s| s.parse().ok()).unwrap()
 }
 
-#[test]
-fn test_count() {
+#[rocket::async_test]
+async fn test_count() {
     let client = Client::new(super::rocket()).unwrap();
 
     // Count should start at 0.
-    assert_eq!(get_count(&client), 0);
+    assert_eq!(get_count(&client).await, 0);
 
-    for _ in 0..99 { register_hit(&client); }
-    assert_eq!(get_count(&client), 99);
+    for _ in 0..99 { register_hit(&client).await; }
+    assert_eq!(get_count(&client).await, 99);
 
-    register_hit(&client);
-    assert_eq!(get_count(&client), 100);
+    register_hit(&client).await;
+    assert_eq!(get_count(&client).await, 100);
 }
 
 #[test]

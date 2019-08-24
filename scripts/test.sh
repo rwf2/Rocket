@@ -67,7 +67,8 @@ if [ "$1" = "--contrib" ]; then
     msgpack
     tera_templates
     handlebars_templates
-    serve
+# TODO.async: tokio-rs/tokio#1356
+#    serve
     helmet
     diesel_postgres_pool
     diesel_sqlite_pool
@@ -86,8 +87,9 @@ if [ "$1" = "--contrib" ]; then
 
   pushd "${CONTRIB_LIB_ROOT}" > /dev/null 2>&1
 
-  echo ":: Building and testing contrib [default]..."
-  CARGO_INCREMENTAL=0 cargo test
+# TODO.async: 'serve' (broken) is a default feature
+#  echo ":: Building and testing contrib [default]..."
+#  CARGO_INCREMENTAL=0 cargo test
 
   for feature in "${FEATURES[@]}"; do
     echo ":: Building and testing contrib [${feature}]..."
