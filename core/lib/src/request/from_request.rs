@@ -5,6 +5,7 @@ use crate::router::Route;
 use crate::request::Request;
 use crate::outcome::{self, IntoOutcome};
 use crate::outcome::Outcome::*;
+use crate::shutdown::ShutdownHandle;
 
 use crate::http::{Status, ContentType, Accept, Method, Cookies, uri::Origin};
 
@@ -421,6 +422,14 @@ impl FromRequest<'_, '_> for SocketAddr {
             Some(addr) => Success(addr),
             None => Forward(())
         }
+    }
+}
+
+impl FromRequest<'_, '_> for ShutdownHandle {
+    type Error = std::convert::Infallible;
+
+    fn from_request(request: &Request<'_>) -> Outcome<Self, Self::Error> {
+        Success(request.state.managed.get::<ShutdownHandle>().clone())
     }
 }
 

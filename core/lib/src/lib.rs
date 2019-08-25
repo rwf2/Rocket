@@ -112,6 +112,7 @@ pub mod data;
 pub mod handler;
 pub mod fairing;
 pub mod error;
+pub mod shutdown;
 
 // Reexport of HTTP everything.
 pub mod http {

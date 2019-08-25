@@ -29,6 +29,7 @@ use crate::outcome::Outcome;
 use crate::error::{LaunchError, LaunchErrorKind};
 use crate::fairing::{Fairing, Fairings};
 use crate::ext::AsyncReadExt;
+use crate::shutdown::{Shutdown, ShutdownHandle};
 
 use crate::http::{Method, Status, Header};
 use crate::http::hyper::{self, header};
@@ -43,6 +44,7 @@ pub struct Rocket {
     catchers: HashMap<u16, Catcher>,
     crate state: Container,
     fairings: Fairings,
+    shutdown: Shutdown,
 }
 
 // This function tries to hide all of the Hyper-ness from Rocket. It
@@ -445,14 +447,19 @@ impl Rocket {
                           Paint::default(LoggedValue(value)).bold());
         }
 
-        Rocket {
+        let rocket = Rocket {
             config,
             router: Router::new(),
             default_catchers: catcher::defaults::get(),
             catchers: catcher::defaults::get(),
             state: Container::new(),
             fairings: Fairings::new(),
-        }
+            shutdown: Shutdown::new(),
+        };
+
+        rocket.state.set(rocket.shutdown.sender.clone());
+
+        rocket
     }
 
     /// Mounts all of the routes in the supplied vector at the given `base`
@@ -752,6 +759,9 @@ impl Rocket {
         // Restore the log level back to what it originally was.
         logger::pop_max_level();
 
+        let shutdown_receiver = self.shutdown.receiver
+            .take().expect("shutdown receiver has already been used");
+
         let rocket = Arc::new(self);
         let spawn = Box::new(TokioCompat::new(runtime.executor()));
         let service = hyper::make_service_fn(move |socket: &hyper::AddrStream| {
@@ -768,7 +778,8 @@ impl Rocket {
         // NB: executor must be passed manually here, see hyperium/hyper#1537
         let server = hyper::Server::builder(incoming)
             .executor(runtime.executor())
-            .serve(service);
+            .serve(service)
+            .with_graceful_shutdown(shutdown_receiver);
 
         let (future, handle) = server.remote_handle();
         runtime.spawn(future);
@@ -776,8 +787,9 @@ impl Rocket {
     }
 
     /// Starts the application server and begins listening for and dispatching
-    /// requests to mounted routes and catchers. Unless there is an error, this
-    /// function does not return and blocks until program termination.
+    /// requests to mounted routes and catchers. This function does not return
+    /// unless a shutdown is requested via a [`ShutdownHandle`] or there is an
+    /// error.
     ///
     /// # Error
     ///
@@ -794,7 +806,7 @@ impl Rocket {
     /// # }
     /// ```
     // TODO.async Decide on an return type, possibly creating a discriminated union.
-    pub fn launch(self) -> Box<dyn std::error::Error> {
+    pub fn launch(self) -> Result<(), Box<dyn std::error::Error>> {
         // TODO.async What meaning should config.workers have now?
         // Initialize the tokio runtime
         let runtime = tokio::runtime::Builder::new()
@@ -802,14 +814,42 @@ impl Rocket {
             .build()
             .expect("Cannot build runtime!");
 
-        // TODO.async: Use with_graceful_shutdown, and let launch() return a Result<(), Error>
         match self.spawn_on(&runtime) {
-            Ok(fut) => match runtime.block_on(fut) {
-                Ok(_) => unreachable!("the call to `block_on` should block on success"),
-                Err(err) => err,
-            }
-            Err(err) => Box::new(err),
+            Ok(fut) => runtime.block_on(fut).map(|_| ()),
+            Err(err) => Err(Box::new(err)),
         }
+    }
+
+    /// Returns a [`ShutdownHandle`], which can be used to gracefully terminate
+    /// the instance of Rocket. As you can dynamically retreive a
+    /// `ShutdownHandle` in routes, this should only be used when access is
+    /// needed externally.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// # #![feature(proc_macro_hygiene)]
+    /// # use std::{thread, time::Duration};
+    /// #
+    /// let rocket = rocket::ignite();
+    /// let handle = rocket.get_shutdown_handle();
+    /// # let real_handle = rocket.get_shutdown_handle();
+    ///
+    /// # if false {
+    /// thread::spawn(move || {
+    ///     thread::sleep(Duration::from_secs(10));
+    ///     handle.shutdown();
+    /// });
+    /// # }
+    /// # real_handle.shutdown();
+    ///
+    /// // Shuts down after 10 seconds
+    /// let shutdown_result = rocket.launch();
+    /// assert!(shutdown_result.is_ok());
+    /// ```
+    #[inline(always)]
+    pub fn get_shutdown_handle(&self) -> ShutdownHandle {
+        self.shutdown.sender.clone()
     }
 
     /// Returns an iterator over all of the routes mounted on this instance of
