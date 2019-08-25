@@ -1,9 +1,0 @@
-[package]
-name = "hello_2015"
-version = "0.0.0"
-workspace = "../../"
-edition = "2015"
-publish = false
-
-[dependencies]
-rocket = { path = "../../core/lib" }
