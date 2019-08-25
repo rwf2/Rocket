@@ -15,5 +15,5 @@ fn hi(name: String) -> String {
 }
 
 fn main() {
-    rocket::ignite().mount("/", routes![hello, hi]).launch();
+    let _ = rocket::ignite().mount("/", routes![hello, hi]).launch();
 }

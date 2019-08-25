@@ -26,5 +26,6 @@ fn main() {
         .launch();
 
     println!("Whoops! Rocket didn't launch!");
-    println!("This went wrong: {}", e);
+    // TODO.async Uncomment the following line once `.launch()`'s error type is determined.
+    // println!("This went wrong: {}", e);
 }

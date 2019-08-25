@@ -78,5 +78,5 @@ fn rocket() -> rocket::Rocket {
 }
 
 fn main() {
-    rocket().launch();
+    let _ = rocket().launch();
 }

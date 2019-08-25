@@ -10,5 +10,5 @@ fn hello() -> &'static str {
 }
 
 fn main() {
-    rocket::ignite().mount("/", routes![hello]).launch();
+    let _ = rocket::ignite().mount("/", routes![hello]).launch();
 }

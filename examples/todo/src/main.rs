@@ -100,5 +100,5 @@ fn rocket() -> Rocket {
 }
 
 fn main() {
-    rocket().launch();
+    let _ = rocket().launch();
 }

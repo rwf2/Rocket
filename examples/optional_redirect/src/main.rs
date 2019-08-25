@@ -27,5 +27,5 @@ fn login() -> &'static str {
 }
 
 fn main() {
-    rocket::ignite().mount("/", routes![root, user, login]).launch();
+    let _ = rocket::ignite().mount("/", routes![root, user, login]).launch();
 }
