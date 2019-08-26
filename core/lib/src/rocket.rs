@@ -8,7 +8,7 @@ use std::sync::Arc;
 use std::time::Duration;
 use std::pin::Pin;
 
-use futures::future::{Future, FutureExt, TryFutureExt};
+use futures::future::{Future, FutureExt};
 use futures::channel::mpsc;
 use futures::stream::StreamExt;
 use futures::task::SpawnExt;
@@ -714,11 +714,10 @@ impl Rocket {
     /// });
     /// # }
     /// ```
-    // TODO.async Decide on an return type, possibly creating a discriminated union.
     pub fn spawn_on(
         mut self,
         runtime: &tokio::runtime::Runtime,
-    ) -> Result<impl Future<Output = Result<(), Box<dyn std::error::Error>>>, LaunchError> {
+    ) -> Result<impl Future<Output = Result<(), hyper::Error>>, LaunchError> {
         #[cfg(feature = "tls")] use crate::http::tls;
 
         self = self.prelaunch_check()?;
@@ -782,14 +781,14 @@ impl Rocket {
         });
 
         // NB: executor must be passed manually here, see hyperium/hyper#1537
-        let server = hyper::Server::builder(incoming)
+        let (future, handle) = hyper::Server::builder(incoming)
             .executor(runtime.executor())
             .serve(service)
-            .with_graceful_shutdown(async move { shutdown_receiver.next().await; });
+            .with_graceful_shutdown(async move { shutdown_receiver.next().await; })
+            .remote_handle();
 
-        let (future, handle) = server.remote_handle();
         runtime.spawn(future);
-        Ok(handle.err_into())
+        Ok(handle)
     }
 
     /// Starts the application server and begins listening for and dispatching
@@ -811,8 +810,9 @@ impl Rocket {
     /// rocket::ignite().launch();
     /// # }
     /// ```
-    // TODO.async Decide on an return type, possibly creating a discriminated union.
-    pub fn launch(self) -> Result<(), Box<dyn std::error::Error>> {
+    pub fn launch(self) -> Result<(), crate::error::Error> {
+        use crate::error::Error;
+
         // TODO.async What meaning should config.workers have now?
         // Initialize the tokio runtime
         let runtime = tokio::runtime::Builder::new()
@@ -821,8 +821,8 @@ impl Rocket {
             .expect("Cannot build runtime!");
 
         match self.spawn_on(&runtime) {
-            Ok(fut) => runtime.block_on(fut),
-            Err(err) => Err(Box::new(err)),
+            Ok(fut) => runtime.block_on(fut).map_err(Error::Run),
+            Err(err) => Err(Error::Launch(err)),
         }
     }
 
