@@ -9,6 +9,7 @@ use std::time::Duration;
 use std::pin::Pin;
 
 use futures::future::{Future, FutureExt, TryFutureExt};
+use futures::channel::mpsc;
 use futures::stream::StreamExt;
 use futures::task::SpawnExt;
 use futures_tokio_compat::Compat as TokioCompat;
@@ -29,7 +30,7 @@ use crate::outcome::Outcome;
 use crate::error::{LaunchError, LaunchErrorKind};
 use crate::fairing::{Fairing, Fairings};
 use crate::ext::AsyncReadExt;
-use crate::shutdown::{Shutdown, ShutdownHandle};
+use crate::shutdown::ShutdownHandle;
 
 use crate::http::{Method, Status, Header};
 use crate::http::hyper::{self, header};
@@ -44,7 +45,8 @@ pub struct Rocket {
     catchers: HashMap<u16, Catcher>,
     crate state: Container,
     fairings: Fairings,
-    shutdown: Shutdown,
+    shutdown_handle: ShutdownHandle,
+    shutdown_receiver: Option<mpsc::Receiver<()>>,
 }
 
 // This function tries to hide all of the Hyper-ness from Rocket. It
@@ -447,6 +449,8 @@ impl Rocket {
                           Paint::default(LoggedValue(value)).bold());
         }
 
+        let (shutdown_sender, shutdown_receiver) = mpsc::channel(1);
+
         let rocket = Rocket {
             config,
             router: Router::new(),
@@ -454,10 +458,11 @@ impl Rocket {
             catchers: catcher::defaults::get(),
             state: Container::new(),
             fairings: Fairings::new(),
-            shutdown: Shutdown::new(),
+            shutdown_handle: ShutdownHandle(shutdown_sender),
+            shutdown_receiver: Some(shutdown_receiver),
         };
 
-        rocket.state.set(rocket.shutdown.sender.clone());
+        rocket.state.set(rocket.shutdown_handle.clone());
 
         rocket
     }
@@ -759,7 +764,8 @@ impl Rocket {
         // Restore the log level back to what it originally was.
         logger::pop_max_level();
 
-        let shutdown_receiver = self.shutdown.receiver
+        // We need to take this before moving `self` into an `Arc`.
+        let mut shutdown_receiver = self.shutdown_receiver
             .take().expect("shutdown receiver has already been used");
 
         let rocket = Arc::new(self);
@@ -779,7 +785,7 @@ impl Rocket {
         let server = hyper::Server::builder(incoming)
             .executor(runtime.executor())
             .serve(service)
-            .with_graceful_shutdown(shutdown_receiver);
+            .with_graceful_shutdown(async move { shutdown_receiver.next().await; });
 
         let (future, handle) = server.remote_handle();
         runtime.spawn(future);
@@ -849,7 +855,7 @@ impl Rocket {
     /// ```
     #[inline(always)]
     pub fn get_shutdown_handle(&self) -> ShutdownHandle {
-        self.shutdown.sender.clone()
+        self.shutdown_handle.clone()
     }
 
     /// Returns an iterator over all of the routes mounted on this instance of

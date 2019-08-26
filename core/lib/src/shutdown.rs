@@ -1,28 +1,5 @@
-use futures::{channel::mpsc, stream::StreamExt};
-use std::{
-    future::Future,
-    pin::Pin,
-    task::{Context, Poll},
-};
-
-/// Wrapper around an mpsc channel.
-#[derive(Debug)]
-crate struct Shutdown {
-    crate sender: ShutdownHandle,
-    crate receiver: Option<Receiver>,
-}
-
-impl Shutdown {
-    /// Create a `Shutdown`.
-    #[inline]
-    crate fn new() -> Self {
-        let (sender, receiver) = mpsc::channel(1);
-        Self {
-            sender: ShutdownHandle(sender),
-            receiver: Some(Receiver(receiver)),
-        }
-    }
-}
+use crate::request::{FromRequest, Outcome, Request};
+use futures::channel::mpsc;
 
 /// # Example
 ///
@@ -42,12 +19,13 @@ impl Shutdown {
 ///     # if false {
 ///     rocket::ignite()
 ///         .mount("/", routes![shutdown])
-///         .launch();
+///         .launch()
+///         .expect("server failed unexpectedly");
 ///     # }
 /// }
 /// ```
 #[derive(Debug, Clone)]
-pub struct ShutdownHandle(mpsc::Sender<()>);
+pub struct ShutdownHandle(crate mpsc::Sender<()>);
 
 impl ShutdownHandle {
     /// Notify Rocket to shut down gracefully.
@@ -63,16 +41,11 @@ impl ShutdownHandle {
     }
 }
 
-/// Thin wrapper around an `mpsc::Receiver`,
-/// implementing `Future`, which waits for the first value.
-#[derive(Debug)]
-crate struct Receiver(mpsc::Receiver<()>);
-
-impl Future for Receiver {
-    type Output = ();
+impl FromRequest<'_, '_> for ShutdownHandle {
+    type Error = std::convert::Infallible;
 
     #[inline]
-    fn poll(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
-        self.0.poll_next_unpin(cx).map(|opt| opt.unwrap_or(()))
+    fn from_request(request: &Request<'_>) -> Outcome<Self, Self::Error> {
+        Outcome::Success(request.state.managed.get::<ShutdownHandle>().clone())
     }
 }
