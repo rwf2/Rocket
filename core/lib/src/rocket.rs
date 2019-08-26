@@ -821,7 +821,7 @@ impl Rocket {
             .expect("Cannot build runtime!");
 
         match self.spawn_on(&runtime) {
-            Ok(fut) => runtime.block_on(fut).map(|_| ()),
+            Ok(fut) => runtime.block_on(fut),
             Err(err) => Err(Box::new(err)),
         }
     }
