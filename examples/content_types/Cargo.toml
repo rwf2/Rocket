@@ -6,6 +6,7 @@ edition = "2018"
 publish = false
 
 [dependencies]
+futures-preview = "0.3.0-alpha.18"
 rocket = { path = "../../core/lib" }
 serde = "1.0"
 serde_json = "1.0"
