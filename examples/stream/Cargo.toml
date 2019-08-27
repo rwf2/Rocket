@@ -7,3 +7,6 @@ publish = false
 
 [dependencies]
 rocket = { path = "../../core/lib" }
+futures-preview = "0.3.0-alpha.18"
+tokio = "0.2.0-alpha.2"
+futures-tokio-compat = { git = "https://github.com/Nemo157/futures-tokio-compat" }
