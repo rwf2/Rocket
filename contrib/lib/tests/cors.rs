@@ -17,11 +17,6 @@ mod cors_tests {
     use rocket::local::*;
     use rocket::http::Status;
 
-    #[test]
-    pub fn test_basic() {
-        let _ = CorsFairingBuilder::new();
-    }
-
     #[get("/test")]
     pub fn sample_get_route() -> &'static str {
         "Hi"
@@ -31,6 +26,21 @@ mod cors_tests {
     pub fn sample_delete_route() -> &'static str {
         "Hi"
     }
+
+    // TODO name after Cross Origin.  Example CrossOrigin
+    
+    // Include on all responses 
+    //   Access-Control-Allow-Credentials
+    //   Access-Control-Allow-Origin
+    // Requested on preflight
+    //   `Access-Control-Request-Method` 
+    //   `Access-Control-Request-Headers` 
+    // Include on preflight
+    //   Access-Control-Allow-Methods` 
+    //   `Access-Control-Allow-Headers` 
+    //   `Access-Control-Max-Age` 
+    //   `Access-Control-Expose-Headers` 
+    
 
     #[test]
     pub fn test_one_method() {

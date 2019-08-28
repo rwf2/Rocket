@@ -13,7 +13,6 @@ use rocket::http::Header;
 use rocket::http::Method;
 use rocket::http::Status;
 
-// TODO Determine methods actually used and then only return them.
 // TODO Specify origins.
 // TODO Documentation
 // TODO Good default values for headers, etc.
@@ -140,7 +139,6 @@ impl Handler for OptionsHandler {
         Outcome::from(req, responder)
     }
 }
-
 
 pub struct CorsFairingBuilder {
     headers: Vec<String>,
