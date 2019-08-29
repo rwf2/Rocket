@@ -691,6 +691,14 @@ impl<'r> Request<'r> {
     }
 }
 
+impl<'a, 'r> FromRequest<'a, 'r> for &'a Request<'r> {
+    type Error = ();
+
+    fn from_request(request: &'a Request<'r>) -> Outcome<Self, Self::Error> {
+        Outcome::Success(&request)
+    }
+}
+
 // All of these methods only exist for internal, including codegen, purposes.
 // They _are not_ part of the stable API.
 #[doc(hidden)]
