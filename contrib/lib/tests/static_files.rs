@@ -70,7 +70,7 @@ mod static_tests {
     }
 
     #[rocket::async_test]
-    fn test_static_no_index() {
+    async fn test_static_no_index() {
         let client = Client::new(rocket()).expect("valid rocket");
         assert_all(&client, "no_index", REGULAR_FILES, true).await;
         assert_all(&client, "no_index", HIDDEN_FILES, false).await;
@@ -78,7 +78,7 @@ mod static_tests {
     }
 
     #[rocket::async_test]
-    fn test_static_hidden() {
+    async fn test_static_hidden() {
         let client = Client::new(rocket()).expect("valid rocket");
         assert_all(&client, "dots", REGULAR_FILES, true).await;
         assert_all(&client, "dots", HIDDEN_FILES, true).await;
@@ -86,7 +86,7 @@ mod static_tests {
     }
 
     #[rocket::async_test]
-    fn test_static_index() {
+    async fn test_static_index() {
         let client = Client::new(rocket()).expect("valid rocket");
         assert_all(&client, "index", REGULAR_FILES, true).await;
         assert_all(&client, "index", HIDDEN_FILES, false).await;
@@ -98,7 +98,7 @@ mod static_tests {
     }
 
     #[rocket::async_test]
-    fn test_static_all() {
+    async fn test_static_all() {
         let client = Client::new(rocket()).expect("valid rocket");
         assert_all(&client, "both", REGULAR_FILES, true).await;
         assert_all(&client, "both", HIDDEN_FILES, true).await;
@@ -120,7 +120,7 @@ mod static_tests {
     }
 
     #[rocket::async_test]
-    fn test_forwarding() {
+    async fn test_forwarding() {
         use rocket::http::RawStr;
         use rocket::{get, routes};
 

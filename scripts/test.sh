@@ -67,8 +67,7 @@ if [ "$1" = "--contrib" ]; then
     msgpack
     tera_templates
     handlebars_templates
-# TODO.async: tokio-rs/tokio#1356
-#    serve
+    serve
     helmet
     diesel_postgres_pool
     diesel_sqlite_pool
@@ -80,16 +79,14 @@ if [ "$1" = "--contrib" ]; then
     redis_pool
     mongodb_pool
     memcache_pool
-# TODO.async: compression not yet ported to async
-#    brotli_compression
-#    gzip_compression
+    brotli_compression
+    gzip_compression
   )
 
   pushd "${CONTRIB_LIB_ROOT}" > /dev/null 2>&1
 
-# TODO.async: 'serve' (broken) is a default feature
-#  echo ":: Building and testing contrib [default]..."
-#  CARGO_INCREMENTAL=0 cargo test
+  echo ":: Building and testing contrib [default]..."
+  CARGO_INCREMENTAL=0 cargo test
 
   for feature in "${FEATURES[@]}"; do
     echo ":: Building and testing contrib [${feature}]..."
@@ -117,6 +114,5 @@ elif [ "$1" = "--core" ]; then
   popd > /dev/null 2>&1
 else
   echo ":: Building and testing libraries..."
-# TODO.async: see other failures above
-#  CARGO_INCREMENTAL=0 cargo test --all-features --all $@
+  CARGO_INCREMENTAL=0 cargo test --all-features --all $@
 fi
