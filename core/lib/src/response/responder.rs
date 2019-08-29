@@ -3,7 +3,6 @@ use std::io::Cursor;
 use std::fmt;
 
 use futures::io::BufReader;
-use futures_tokio_compat::Compat as TokioCompat;
 
 use crate::http::{Status, ContentType, StatusClass};
 use crate::response::{self, Response, Body};
@@ -256,8 +255,9 @@ impl Responder<'_> for Vec<u8> {
 impl Responder<'_> for File {
     fn respond_to(self, _: &Request<'_>) -> response::ResultFuture<'static> {
         Box::pin(async move {
-            let metadata = self.metadata();
-            let stream = BufReader::new(TokioCompat::new(tokio::fs::File::from_std(self)));
+            let file = async_std::fs::File::from(self);
+            let metadata = file.metadata().await;
+            let stream = BufReader::new(file);
             match metadata {
                 Ok(md) => Response::build().raw_body(Body::Sized(stream, md.len())).ok(),
                 Err(_) => Response::build().streamed_body(stream).ok()

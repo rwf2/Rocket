@@ -28,7 +28,7 @@ rocket_codegen = { version = "0.5.0-dev", path = "../codegen" }
 rocket_http = { version = "0.5.0-dev", path = "../http" }
 futures-preview = "0.3.0-alpha.18"
 futures-tokio-compat = { git = "https://github.com/Nemo157/futures-tokio-compat", rev = "8a93702" }
-tokio = "0.2.0-alpha.2"
+tokio = "=0.2.0-alpha.2"
 yansi = "0.5"
 log = { version = "0.4", features = ["std"] }
 toml = "0.4.7"
@@ -39,6 +39,7 @@ memchr = "2" # TODO: Use pear instead.
 base64 = "0.10"
 pear = "0.1"
 atty = "0.2"
+async-std = "0.99.4"
 
 [build-dependencies]
 yansi = "0.5"
