@@ -4,9 +4,7 @@ extern crate rocket;
 mod tests;
 
 use std::env;
-
-use futures_tokio_compat::Compat as TokioCompat;
-use tokio::fs::File;
+use async_std::fs::File;
 
 use rocket::{Request, Handler, Route, Data, Catcher};
 use rocket::http::{Status, RawStr};
@@ -52,7 +50,7 @@ fn upload<'r>(req: &'r Request, data: Data) -> HandlerFuture<'r> {
 
         let file = File::create(env::temp_dir().join("upload.txt")).await;
         if let Ok(file) = file {
-            if let Ok(n) = data.stream_to(TokioCompat::new(file)).await {
+            if let Ok(n) = data.stream_to(file).await {
                 return Outcome::from(req, format!("OK: {} bytes uploaded.", n)).await;
             }
 
