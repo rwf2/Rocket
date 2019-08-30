@@ -8,8 +8,8 @@ use std::{io, env};
 use rocket::Data;
 
 #[post("/upload", format = "plain", data = "<data>")]
-fn upload(data: Data) -> io::Result<String> {
-    data.stream_to_file(env::temp_dir().join("upload.txt")).map(|n| n.to_string())
+async fn upload(data: Data) -> io::Result<String> {
+    data.stream_to_file(env::temp_dir().join("upload.txt")).await.map(|n| n.to_string())
 }
 
 #[get("/")]

@@ -7,3 +7,5 @@ publish = false
 
 [dependencies]
 rocket = { path = "../../core/lib" }
+futures-preview = "0.3.0-alpha.18"
+async-std = "0.99.4"

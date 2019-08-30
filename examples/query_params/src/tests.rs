@@ -5,19 +5,19 @@ use rocket::http::Status;
 macro_rules! run_test {
     ($query:expr, $test_fn:expr) => ({
         let client = Client::new(rocket()).unwrap();
-        $test_fn(client.get(format!("/hello{}", $query)).dispatch());
+        $test_fn(client.get(format!("/hello{}", $query)).dispatch().await);
     })
 }
 
 #[test]
 fn age_and_name_params() {
     run_test!("?age=10&name=john", |mut response: Response<'_>| {
-        assert_eq!(response.body_string_wait(),
+        assert_eq!(response.body_string().await,
             Some("Hello, 10 year old named john!".into()));
     });
 
     run_test!("?age=20&name=john", |mut response: Response<'_>| {
-        assert_eq!(response.body_string_wait(),
+        assert_eq!(response.body_string().await,
             Some("20 years old? Hi, john!".into()));
     });
 }
@@ -25,12 +25,12 @@ fn age_and_name_params() {
 #[test]
 fn age_param_only() {
     run_test!("?age=10", |mut response: Response<'_>| {
-        assert_eq!(response.body_string_wait(),
+        assert_eq!(response.body_string().await,
             Some("We're gonna need a name, and only a name.".into()));
     });
 
     run_test!("?age=20", |mut response: Response<'_>| {
-        assert_eq!(response.body_string_wait(),
+        assert_eq!(response.body_string().await,
             Some("We're gonna need a name, and only a name.".into()));
     });
 }
@@ -38,19 +38,19 @@ fn age_param_only() {
 #[test]
 fn name_param_only() {
     run_test!("?name=John", |mut response: Response<'_>| {
-        assert_eq!(response.body_string_wait(), Some("Hello John!".into()));
+        assert_eq!(response.body_string().await, Some("Hello John!".into()));
     });
 }
 
 #[test]
 fn no_params() {
     run_test!("", |mut response: Response<'_>| {
-        assert_eq!(response.body_string_wait(),
+        assert_eq!(response.body_string().await,
             Some("We're gonna need a name, and only a name.".into()));
     });
 
     run_test!("?", |mut response: Response<'_>| {
-        assert_eq!(response.body_string_wait(),
+        assert_eq!(response.body_string().await,
             Some("We're gonna need a name, and only a name.".into()));
     });
 }
@@ -58,12 +58,12 @@ fn no_params() {
 #[test]
 fn extra_params() {
     run_test!("?age=20&name=Bob&extra", |mut response: Response<'_>| {
-        assert_eq!(response.body_string_wait(),
+        assert_eq!(response.body_string().await,
             Some("20 years old? Hi, Bob!".into()));
     });
 
     run_test!("?age=30&name=Bob&extra", |mut response: Response<'_>| {
-        assert_eq!(response.body_string_wait(),
+        assert_eq!(response.body_string().await,
             Some("We're gonna need a name, and only a name.".into()));
     });
 }

@@ -14,13 +14,16 @@ static DB_LOCK: Mutex<()> = Mutex::new(());
 macro_rules! run_test {
     (|$client:ident, $conn:ident| $block:expr) => ({
         let _lock = DB_LOCK.lock();
-        let rocket = super::rocket();
-        let db = super::DbConn::get_one(&rocket);
-        let $client = Client::new(rocket).expect("Rocket client");
-        let $conn = db.expect("failed to get database connection for testing");
-        assert!(Task::delete_all(&$conn), "failed to delete all tasks for testing");
 
-        $block
+        rocket::async_test(async move {
+            let rocket = super::rocket();
+            let db = super::DbConn::get_one(&rocket);
+            let $client = Client::new(rocket).expect("Rocket client");
+            let $conn = db.expect("failed to get database connection for testing");
+            assert!(Task::delete_all(&$conn), "failed to delete all tasks for testing");
+
+            $block
+        })
     })
 }
 
@@ -34,7 +37,7 @@ fn test_insertion_deletion() {
         client.post("/todo")
             .header(ContentType::Form)
             .body("description=My+first+task")
-            .dispatch();
+            .dispatch().await;
 
         // Ensure we have one more task in the database.
         let new_tasks = Task::all(&conn);
@@ -46,7 +49,7 @@ fn test_insertion_deletion() {
 
         // Issue a request to delete the task.
         let id = new_tasks[0].id.unwrap();
-        client.delete(format!("/todo/{}", id)).dispatch();
+        client.delete(format!("/todo/{}", id)).dispatch().await;
 
         // Ensure it's gone.
         let final_tasks = Task::all(&conn);
@@ -64,17 +67,17 @@ fn test_toggle() {
         client.post("/todo")
             .header(ContentType::Form)
             .body("description=test_for_completion")
-            .dispatch();
+            .dispatch().await;
 
         let task = Task::all(&conn)[0].clone();
         assert_eq!(task.completed, false);
 
         // Issue a request to toggle the task; ensure it is completed.
-        client.put(format!("/todo/{}", task.id.unwrap())).dispatch();
+        client.put(format!("/todo/{}", task.id.unwrap())).dispatch().await;
         assert_eq!(Task::all(&conn)[0].completed, true);
 
         // Issue a request to toggle the task; ensure it's not completed again.
-        client.put(format!("/todo/{}", task.id.unwrap())).dispatch();
+        client.put(format!("/todo/{}", task.id.unwrap())).dispatch().await;
         assert_eq!(Task::all(&conn)[0].completed, false);
     })
 }
@@ -83,7 +86,6 @@ fn test_toggle() {
 fn test_many_insertions() {
     const ITER: usize = 100;
 
-    let mut rng = thread_rng();
     run_test!(|client, conn| {
         // Get the number of tasks initially.
         let init_num = Task::all(&conn).len();
@@ -91,11 +93,11 @@ fn test_many_insertions() {
 
         for i in 0..ITER {
             // Issue a request to insert a new task with a random description.
-            let desc: String = rng.sample_iter(&Alphanumeric).take(12).collect();
+            let desc: String = thread_rng().sample_iter(&Alphanumeric).take(12).collect();
             client.post("/todo")
                 .header(ContentType::Form)
                 .body(format!("description={}", desc))
-                .dispatch();
+                .dispatch().await;
 
             // Record the description we choose for this iteration.
             descs.insert(0, desc);
@@ -117,7 +119,7 @@ fn test_bad_form_submissions() {
         // Submit an empty form. We should get a 422 but no flash error.
         let res = client.post("/todo")
             .header(ContentType::Form)
-            .dispatch();
+            .dispatch().await;
 
         let mut cookies = res.headers().get("Set-Cookie");
         assert_eq!(res.status(), Status::UnprocessableEntity);
@@ -128,7 +130,7 @@ fn test_bad_form_submissions() {
         let res = client.post("/todo")
             .header(ContentType::Form)
             .body("description=")
-            .dispatch();
+            .dispatch().await;
 
         let mut cookies = res.headers().get("Set-Cookie");
         assert!(cookies.any(|value| value.contains("error")));
@@ -137,7 +139,7 @@ fn test_bad_form_submissions() {
         let res = client.post("/todo")
             .header(ContentType::Form)
             .body("evil=smile")
-            .dispatch();
+            .dispatch().await;
 
         let mut cookies = res.headers().get("Set-Cookie");
         assert_eq!(res.status(), Status::UnprocessableEntity);

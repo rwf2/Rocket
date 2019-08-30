@@ -26,8 +26,8 @@ mod fairing_before_head_strip {
     use rocket::http::Status;
     use rocket::State;
 
-    #[test]
-    fn not_auto_handled() {
+    #[rocket::async_test]
+    async fn not_auto_handled() {
         let rocket = rocket::ignite()
             .mount("/", routes![head])
             .attach(AdHoc::on_request("Check HEAD", |req, _| {
@@ -41,13 +41,13 @@ mod fairing_before_head_strip {
             }));
 
         let client = Client::new(rocket).unwrap();
-        let mut response = client.head("/").dispatch();
+        let mut response = client.head("/").dispatch().await;
         assert_eq!(response.status(), Status::Ok);
         assert!(response.body().is_none());
     }
 
-    #[test]
-    fn auto_handled() {
+    #[rocket::async_test]
+    async fn auto_handled() {
         #[derive(Default)]
         struct Counter(AtomicUsize);
 
@@ -70,7 +70,7 @@ mod fairing_before_head_strip {
             }));
 
         let client = Client::new(rocket).unwrap();
-        let mut response = client.head("/").dispatch();
+        let mut response = client.head("/").dispatch().await;
         assert_eq!(response.status(), Status::Ok);
         assert!(response.body().is_none());
     }

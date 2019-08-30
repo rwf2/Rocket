@@ -1,9 +1,9 @@
 use super::rocket;
 use rocket::local::Client;
 
-#[test]
-fn hello() {
+#[rocket::async_test]
+async fn hello() {
     let client = Client::new(rocket()).unwrap();
-    let mut response = client.get("/").dispatch();
-    assert_eq!(response.body_string_wait(), Some("Rocketeer".into()));
+    let mut response = client.get("/").dispatch().await;
+    assert_eq!(response.body_string().await, Some("Rocketeer".into()));
 }

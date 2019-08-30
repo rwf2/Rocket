@@ -5,13 +5,13 @@ use rocket::local::Client;
 use rocket::http::*;
 use rocket_contrib::templates::Template;
 
-#[test]
-fn test_submit() {
+#[rocket::async_test]
+async fn test_submit() {
     let client = Client::new(rocket()).unwrap();
     let response = client.post("/submit")
         .header(ContentType::Form)
         .body("message=Hello from Rocket!")
-        .dispatch();
+        .dispatch().await;
 
     let cookie_headers: Vec<_> = response.headers().get("Set-Cookie").collect();
     let location_headers: Vec<_> = response.headers().get("Location").collect();
@@ -21,29 +21,29 @@ fn test_submit() {
     assert_eq!(location_headers, vec!["/".to_string()]);
 }
 
-fn test_body(optional_cookie: Option<Cookie<'static>>, expected_body: String) {
+async fn test_body(optional_cookie: Option<Cookie<'static>>, expected_body: String) {
     // Attach a cookie if one is given.
     let client = Client::new(rocket()).unwrap();
     let mut response = match optional_cookie {
-        Some(cookie) => client.get("/").cookie(cookie).dispatch(),
-        None => client.get("/").dispatch(),
+        Some(cookie) => client.get("/").cookie(cookie).dispatch().await,
+        None => client.get("/").dispatch().await,
     };
 
     assert_eq!(response.status(), Status::Ok);
-    assert_eq!(response.body_string_wait(), Some(expected_body));
+    assert_eq!(response.body_string().await, Some(expected_body));
 }
 
-#[test]
-fn test_index() {
+#[rocket::async_test]
+async fn test_index() {
     let client = Client::new(rocket()).unwrap();
 
     // Render the template with an empty context.
     let mut context: HashMap<&str, &str> = HashMap::new();
     let template = Template::show(client.rocket(), "index", &context).unwrap();
-    test_body(None, template);
+    test_body(None, template).await;
 
     // Render the template with a context that contains the message.
     context.insert("message", "Hello from Rocket!");
     let template = Template::show(client.rocket(), "index", &context).unwrap();
-    test_body(Some(Cookie::new("message", "Hello from Rocket!")), template);
+    test_body(Some(Cookie::new("message", "Hello from Rocket!")), template).await;
 }

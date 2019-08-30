@@ -1,11 +1,11 @@
 use rocket::{self, routes, local::Client};
 
-#[test]
-fn hello_world() {
+#[rocket::async_test]
+async fn hello_world() {
     let rocket = rocket::ignite().mount("/", routes![super::hello]);
     let client = Client::new(rocket).unwrap();
-    let mut response = client.get("/").dispatch();
-    assert_eq!(response.body_string_wait(), Some("Hello, Rust 2018!".into()));
+    let mut response = client.get("/").dispatch().await;
+    assert_eq!(response.body_string().await, Some("Hello, Rust 2018!".into()));
 }
 
 // Tests unrelated to the example.
@@ -34,17 +34,17 @@ mod scoped_uri_tests {
 
     use rocket::local::Client;
 
-    #[test]
-    fn test_inner_hello() {
+    #[rocket::async_test]
+    async fn test_inner_hello() {
         let client = Client::new(rocket()).unwrap();
-        let mut response = client.get("/").dispatch();
-        assert_eq!(response.body_string_wait(), Some("Hello! Try /Rust%202018.".into()));
+        let mut response = client.get("/").dispatch().await;
+        assert_eq!(response.body_string().await, Some("Hello! Try /Rust%202018.".into()));
     }
 
-    #[test]
-    fn test_hello_name() {
+    #[rocket::async_test]
+    async fn test_hello_name() {
         let client = Client::new(rocket()).unwrap();
-        let mut response = client.get("/Rust%202018").dispatch();
-        assert_eq!(response.body_string_wait().unwrap(), "Hello, Rust 2018! This is /Rust%202018.");
+        let mut response = client.get("/Rust%202018").dispatch().await;
+        assert_eq!(response.body_string().await.unwrap(), "Hello, Rust 2018! This is /Rust%202018.");
     }
 }

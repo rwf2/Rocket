@@ -1,31 +1,31 @@
 use rocket::local::Client;
 use rocket::http::Status;
 
-fn test(uri: &str, status: Status, body: String) {
+async fn test(uri: &str, status: Status, body: String) {
     let rocket = rocket::ignite()
         .mount("/", routes![super::hello])
         .register(catchers![super::not_found]);
 
     let client = Client::new(rocket).unwrap();
-    let mut response = client.get(uri).dispatch();
+    let mut response = client.get(uri).dispatch().await;
     assert_eq!(response.status(), status);
-    assert_eq!(response.body_string_wait(), Some(body));
+    assert_eq!(response.body_string().await, Some(body));
 }
 
-#[test]
-fn test_hello() {
+#[rocket::async_test]
+async fn test_hello() {
     let (name, age) = ("Arthur", 42);
     let uri = format!("/hello/{}/{}", name, age);
-    test(&uri, Status::Ok, format!("Hello, {} year old named {}!", age, name));
+    test(&uri, Status::Ok, format!("Hello, {} year old named {}!", age, name)).await;
 }
 
-#[test]
-fn test_hello_invalid_age() {
+#[rocket::async_test]
+async fn test_hello_invalid_age() {
     for &(name, age) in &[("Ford", -129), ("Trillian", 128)] {
         let uri = format!("/hello/{}/{}", name, age);
         let body = format!("<p>Sorry, but '{}' is not a valid path!</p>
             <p>Try visiting /hello/&lt;name&gt;/&lt;age&gt; instead.</p>",
                            uri);
-        test(&uri, Status::NotFound, body);
+        test(&uri, Status::NotFound, body).await;
     }
 }

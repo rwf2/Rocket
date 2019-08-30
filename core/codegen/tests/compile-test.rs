@@ -85,6 +85,7 @@ fn run_mode(mode: &'static str, path: &'static str) {
     config.clean_rmeta();
 
     config.target_rustcflags = Some([
+        String::from("--edition=2018"),
         link_flag("-L", "crate", &[]),
         link_flag("-L", "dependency", &["deps"]),
         extern_dep("rocket_http", Kind::Static).expect("find http dep"),

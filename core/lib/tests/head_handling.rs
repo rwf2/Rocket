@@ -33,13 +33,11 @@ mod head_handling_tests {
         routes![index, empty, other]
     }
 
-    fn assert_empty_sized_body<T: futures::AsyncRead + Unpin>(body: Body<T>, expected_size: u64) {
+    async fn assert_empty_sized_body<T: futures::AsyncRead + Unpin>(body: Body<T>, expected_size: u64) {
         match body {
             Body::Sized(mut body, size) => {
                 let mut buffer = vec![];
-                tokio::runtime::Runtime::new().expect("create runtime").block_on(async {
-                    body.read_to_end(&mut buffer).await.unwrap();
-                });
+                body.read_to_end(&mut buffer).await.unwrap();
                 assert_eq!(size, expected_size);
                 assert_eq!(buffer.len(), 0);
             }
@@ -47,27 +45,27 @@ mod head_handling_tests {
         }
     }
 
-    #[test]
-    fn auto_head() {
+    #[rocket::async_test]
+    async fn auto_head() {
         let client = Client::new(rocket::ignite().mount("/", routes())).unwrap();
-        let mut response = client.head("/").dispatch();
+        let mut response = client.head("/").dispatch().await;
         assert_eq!(response.status(), Status::Ok);
-        assert_empty_sized_body(response.body().unwrap(), 13);
+        assert_empty_sized_body(response.body().unwrap(), 13).await;
 
         let content_type: Vec<_> = response.headers().get("Content-Type").collect();
         assert_eq!(content_type, vec![ContentType::Plain.to_string()]);
 
-        let mut response = client.head("/empty").dispatch();
+        let mut response = client.head("/empty").dispatch().await;
         assert_eq!(response.status(), Status::NoContent);
-        assert!(response.body_bytes_wait().is_none());
+        assert!(response.body_bytes().await.is_none());
     }
 
-    #[test]
-    fn user_head() {
+    #[rocket::async_test]
+    async fn user_head() {
         let client = Client::new(rocket::ignite().mount("/", routes())).unwrap();
-        let mut response = client.head("/other").dispatch();
+        let mut response = client.head("/other").dispatch().await;
         assert_eq!(response.status(), Status::Ok);
-        assert_empty_sized_body(response.body().unwrap(), 17);
+        assert_empty_sized_body(response.body().unwrap(), 17).await;
 
         let content_type: Vec<_> = response.headers().get("Content-Type").collect();
         assert_eq!(content_type, vec![ContentType::JSON.to_string()]);

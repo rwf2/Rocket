@@ -7,7 +7,7 @@ mod paste_id;
 
 use std::io;
 use std::fs::File;
-use std::path::Path;
+use std::path::PathBuf;
 
 use rocket::Data;
 use rocket::response::content;
@@ -18,12 +18,12 @@ const HOST: &str = "http://localhost:8000";
 const ID_LENGTH: usize = 3;
 
 #[post("/", data = "<paste>")]
-fn upload(paste: Data) -> io::Result<String> {
+async fn upload(paste: Data) -> io::Result<String> {
     let id = PasteID::new(ID_LENGTH);
     let filename = format!("upload/{id}", id = id);
     let url = format!("{host}/{id}\n", host = HOST, id = id);
 
-    paste.stream_to_file(Path::new(&filename))?;
+    paste.stream_to_file(PathBuf::from(filename)).await?;
     Ok(url)
 }
 

@@ -3,20 +3,22 @@ use rocket::local::Client;
 use rocket::http::{ContentType, Status};
 
 fn test_login<T>(user: &str, pass: &str, age: &str, status: Status, body: T)
-    where T: Into<Option<&'static str>>
+    where T: Into<Option<&'static str>> + Send
 {
-    let client = Client::new(rocket()).unwrap();
-    let query = format!("username={}&password={}&age={}", user, pass, age);
-    let mut response = client.post("/login")
-        .header(ContentType::Form)
-        .body(&query)
-        .dispatch();
+    rocket::async_test(async move {
+        let client = Client::new(rocket()).unwrap();
+        let query = format!("username={}&password={}&age={}", user, pass, age);
+        let mut response = client.post("/login")
+            .header(ContentType::Form)
+            .body(&query)
+            .dispatch().await;
 
-    assert_eq!(response.status(), status);
-    if let Some(expected_str) = body.into() {
-        let body_str = response.body_string_wait();
-        assert!(body_str.map_or(false, |s| s.contains(expected_str)));
-    }
+        assert_eq!(response.status(), status);
+        if let Some(expected_str) = body.into() {
+            let body_str = response.body_string().await;
+            assert!(body_str.map_or(false, |s| s.contains(expected_str)));
+        }
+    })
 }
 
 #[test]
@@ -44,13 +46,15 @@ fn test_invalid_age() {
 }
 
 fn check_bad_form(form_str: &str, status: Status) {
-    let client = Client::new(rocket()).unwrap();
-    let response = client.post("/login")
-        .header(ContentType::Form)
-        .body(form_str)
-        .dispatch();
+    rocket::async_test(async {
+        let client = Client::new(rocket()).unwrap();
+        let response = client.post("/login")
+            .header(ContentType::Form)
+            .body(form_str)
+            .dispatch().await;
 
-    assert_eq!(response.status(), status);
+        assert_eq!(response.status(), status);
+    })
 }
 
 #[test]

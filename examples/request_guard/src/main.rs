@@ -34,26 +34,26 @@ mod test {
     use rocket::local::Client;
     use rocket::http::Header;
 
-    fn test_header_count<'h>(headers: Vec<Header<'static>>) {
+    async fn test_header_count<'h>(headers: Vec<Header<'static>>) {
         let client = Client::new(super::rocket()).unwrap();
         let mut req = client.get("/");
         for header in headers.iter().cloned() {
             req.add_header(header);
         }
 
-        let mut response = req.dispatch();
+        let mut response = req.dispatch().await;
         let expect = format!("Your request contained {} headers!", headers.len());
-        assert_eq!(response.body_string_wait(), Some(expect));
+        assert_eq!(response.body_string().await, Some(expect));
     }
 
-    #[test]
-    fn test_n_headers() {
+    #[rocket::async_test]
+    async fn test_n_headers() {
         for i in 0..50 {
             let headers = (0..i)
                 .map(|n| Header::new(n.to_string(), n.to_string()))
                 .collect();
 
-            test_header_count(headers);
+            test_header_count(headers).await;
         }
     }
 }

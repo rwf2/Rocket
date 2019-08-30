@@ -28,11 +28,16 @@ struct Simple(String);
 impl FromDataSimple for Simple {
     type Error = ();
 
-    fn from_data(_: &Request<'_>, data: Data) -> data::Outcome<Self, ()> {
-        use std::io::Read;
-        let mut string = String::new();
-        data.open().take(64).read_to_string(&mut string).unwrap();
-        Success(Simple(string))
+    fn from_data(_: &Request<'_>, data: Data) -> data::FromDataFuture<'static, Self, ()> {
+        Box::pin(async move {
+            use futures::io::AsyncReadExt as _;
+            use rocket::AsyncReadExt as _;
+
+            let mut string = String::new();
+            let mut stream = data.open().take(64);
+            stream.read_to_string(&mut string).await.unwrap();
+            Success(Simple(string))
+        })
     }
 }
 
@@ -74,8 +79,8 @@ fn post2(
 fn test_unused_params(_unused_param: String, _unused_query: String, _unused_data: Data) {
 }
 
-#[test]
-fn test_full_route() {
+#[rocket::async_test]
+async fn test_full_route() {
     let rocket = rocket::ignite()
         .mount("/1", routes![post1])
         .mount("/2", routes![post2]);
@@ -94,30 +99,30 @@ fn test_full_route() {
     let uri = format!("{}{}", path_part, query_part);
     let expected_uri = format!("{}?sky=blue&sky={}&{}", path_part, sky, query);
 
-    let response = client.post(&uri).body(simple).dispatch();
+    let response = client.post(&uri).body(simple).dispatch().await;
     assert_eq!(response.status(), Status::NotFound);
 
-    let response = client.post(format!("/1{}", uri)).body(simple).dispatch();
+    let response = client.post(format!("/1{}", uri)).body(simple).dispatch().await;
     assert_eq!(response.status(), Status::NotFound);
 
     let mut response = client
         .post(format!("/1{}", uri))
         .header(ContentType::JSON)
         .body(simple)
-        .dispatch();
+        .dispatch().await;
 
-    assert_eq!(response.body_string().unwrap(), format!("({}, {}, {}, {}, {}, {}) ({})",
+    assert_eq!(response.body_string().await.unwrap(), format!("({}, {}, {}, {}, {}, {}) ({})",
             sky, name, "A A", "inside", path, simple, expected_uri));
 
-    let response = client.post(format!("/2{}", uri)).body(simple).dispatch();
+    let response = client.post(format!("/2{}", uri)).body(simple).dispatch().await;
     assert_eq!(response.status(), Status::NotFound);
 
     let mut response = client
         .post(format!("/2{}", uri))
         .header(ContentType::JSON)
         .body(simple)
-        .dispatch();
+        .dispatch().await;
 
-    assert_eq!(response.body_string().unwrap(), format!("({}, {}, {}, {}, {}, {}) ({})",
+    assert_eq!(response.body_string().await.unwrap(), format!("({}, {}, {}, {}, {}, {}) ({})",
             sky, name, "A A", "inside", path, simple, expected_uri));
 }

@@ -60,33 +60,33 @@ mod local_request_content_type_tests {
         rocket::ignite().mount("/", routes![rg_ct, data_has_ct, data_no_ct])
     }
 
-    #[test]
-    fn has_no_ct() {
+    #[rocket::async_test]
+    async fn has_no_ct() {
         let client = Client::new(rocket()).unwrap();
 
         let mut req = client.post("/");
-        assert_eq!(req.clone().dispatch().body_string_wait(), Some("Absent".to_string()));
-        assert_eq!(req.mut_dispatch().body_string_wait(), Some("Absent".to_string()));
-        assert_eq!(req.dispatch().body_string_wait(), Some("Absent".to_string()));
+//        assert_eq!(req.clone().dispatch().await.body_string().await, Some("Absent".to_string()));
+        assert_eq!(req.mut_dispatch().await.body_string().await, Some("Absent".to_string()));
+        assert_eq!(req.dispatch().await.body_string().await, Some("Absent".to_string()));
 
         let mut req = client.post("/data");
-        assert_eq!(req.clone().dispatch().body_string_wait(), Some("Data Absent".to_string()));
-        assert_eq!(req.mut_dispatch().body_string_wait(), Some("Data Absent".to_string()));
-        assert_eq!(req.dispatch().body_string_wait(), Some("Data Absent".to_string()));
+//        assert_eq!(req.clone().dispatch().await.body_string().await, Some("Data Absent".to_string()));
+        assert_eq!(req.mut_dispatch().await.body_string().await, Some("Data Absent".to_string()));
+        assert_eq!(req.dispatch().await.body_string().await, Some("Data Absent".to_string()));
     }
 
-    #[test]
-    fn has_ct() {
+    #[rocket::async_test]
+    async fn has_ct() {
         let client = Client::new(rocket()).unwrap();
 
         let mut req = client.post("/").header(ContentType::JSON);
-        assert_eq!(req.clone().dispatch().body_string_wait(), Some("Present".to_string()));
-        assert_eq!(req.mut_dispatch().body_string_wait(), Some("Present".to_string()));
-        assert_eq!(req.dispatch().body_string_wait(), Some("Present".to_string()));
+//        assert_eq!(req.clone().dispatch().await.body_string().await, Some("Present".to_string()));
+        assert_eq!(req.mut_dispatch().await.body_string().await, Some("Present".to_string()));
+        assert_eq!(req.dispatch().await.body_string().await, Some("Present".to_string()));
 
         let mut req = client.post("/data").header(ContentType::JSON);
-        assert_eq!(req.clone().dispatch().body_string_wait(), Some("Data Present".to_string()));
-        assert_eq!(req.mut_dispatch().body_string_wait(), Some("Data Present".to_string()));
-        assert_eq!(req.dispatch().body_string_wait(), Some("Data Present".to_string()));
+//        assert_eq!(req.clone().dispatch().await.body_string().await, Some("Data Present".to_string()));
+        assert_eq!(req.mut_dispatch().await.body_string().await, Some("Data Present".to_string()));
+        assert_eq!(req.dispatch().await.body_string().await, Some("Data Present".to_string()));
     }
 }

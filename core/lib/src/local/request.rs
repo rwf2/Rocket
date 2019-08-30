@@ -67,10 +67,6 @@ use crate::local::Client;
 /// [`mut_dispatch`]: #method.mut_dispatch
 pub struct LocalRequest<'c> {
     client: &'c Client,
-    // This pointer exists to access the `Arc<Request>` mutably inside of
-    // `LocalRequest`. This is the only place that a `Request` can be accessed
-    // mutably. This is accomplished via the private `request_mut()` method.
-    ptr: *mut Request<'c>,
     // This `Arc` exists so that we can transfer ownership to the `LocalResponse`
     // selectively on dispatch. This is necessary because responses may point
     // into the request, and thus the request and all of its data needs to be
@@ -118,9 +114,8 @@ impl<'c> LocalRequest<'c> {
         }
 
         // See the comments on the structure for what's going on here.
-        let mut request = Arc::new(request);
-        let ptr = Arc::get_mut(&mut request).unwrap() as *mut Request<'_>;
-        LocalRequest { client, ptr, request, uri, data: vec![] }
+        let request = Arc::new(request);
+        LocalRequest { client, request, uri, data: vec![] }
     }
 
     /// Retrieves the inner `Request` as seen by Rocket.
@@ -142,7 +137,7 @@ impl<'c> LocalRequest<'c> {
     #[inline(always)]
     fn request_mut(&mut self) -> &mut Request<'c> {
         // See the comments in the structure for the argument of correctness.
-        unsafe { &mut *self.ptr }
+        Arc::get_mut(&mut self.request).expect("mutable aliasing!")
     }
 
     // This method should _never_ be publicly exposed!
@@ -152,7 +147,7 @@ impl<'c> LocalRequest<'c> {
         // Additionally, the caller must ensure that the owned instance of
         // `Arc<Request>` remains valid as long as the returned reference can be
         // accessed.
-        unsafe { &mut *self.ptr }
+        unsafe { &mut *(self.request_mut() as *mut _) }
     }
 
     /// Add a header to this request.
@@ -351,9 +346,9 @@ impl<'c> LocalRequest<'c> {
     /// let response = client.get("/").dispatch();
     /// ```
     #[inline(always)]
-    pub fn dispatch(mut self) -> LocalResponse<'c> {
+    pub async fn dispatch(mut self) -> LocalResponse<'c> {
         let r = self.long_lived_request();
-        LocalRequest::_dispatch(self.client, r, self.request, &self.uri, self.data)
+        LocalRequest::_dispatch(self.client, r, self.request, &self.uri, self.data).await
     }
 
     /// Dispatches the request, returning the response.
@@ -375,22 +370,28 @@ impl<'c> LocalRequest<'c> {
     /// ```rust
     /// use rocket::local::Client;
     ///
-    /// let client = Client::new(rocket::ignite()).unwrap();
+    /// rocket::async_test(async {
+    ///     let client = Client::new(rocket::ignite()).unwrap();
     ///
-    /// let mut req = client.get("/");
-    /// let response_a = req.mut_dispatch();
-    /// let response_b = req.mut_dispatch();
+    ///     let mut req = client.get("/");
+    ///     let response_a = req.mut_dispatch().await;
+    ///     // TODO.async: Annoying. Is this really a good example to show?
+    ///     drop(response_a);
+    ///     let response_b = req.mut_dispatch().await;
+    /// })
     /// ```
     #[inline(always)]
-    pub fn mut_dispatch(&mut self) -> LocalResponse<'c> {
+    pub async fn mut_dispatch(&mut self) -> LocalResponse<'c> {
         let req = self.long_lived_request();
         let data = std::mem::replace(&mut self.data, vec![]);
         let rc_req = self.request.clone();
-        LocalRequest::_dispatch(self.client, req, rc_req, &self.uri, data)
+        LocalRequest::_dispatch(self.client, req, rc_req, &self.uri, data).await
     }
 
     // Performs the actual dispatch.
-    fn _dispatch(
+    // TODO.async: @jebrosen suspects there might be actual UB in here after all,
+    //             and now we just went and mixed threads into it
+    async fn _dispatch(
         client: &'c Client,
         request: &'c mut Request<'c>,
         owned_request: Arc<Request<'c>>,
@@ -405,38 +406,34 @@ impl<'c> LocalRequest<'c> {
             request.set_uri(uri.into_owned());
         } else {
             error!("Malformed request URI: {}", uri);
-            return tokio::runtime::Runtime::new().expect("create runtime").block_on(async move {
-                let res = client.rocket().handle_error(Status::BadRequest, request).await;
-                LocalResponse { _request: owned_request, response: res }
-            })
+            let res = client.rocket().handle_error(Status::BadRequest, request).await;
+            return LocalResponse { _request: owned_request, response: res };
         }
 
-        tokio::runtime::Runtime::new().expect("create runtime").block_on(async move {
-            // Actually dispatch the request.
-            let response = client.rocket().dispatch(request, Data::local(data)).await;
+        // Actually dispatch the request.
+        let response = client.rocket().dispatch(request, Data::local(data)).await;
 
-            // If the client is tracking cookies, updates the internal cookie jar
-            // with the changes reflected by `response`.
-            if let Some(ref jar) = client.cookies {
-                let mut jar = jar.write().expect("LocalRequest::_dispatch() write lock");
-                let current_time = time::now();
-                for cookie in response.cookies() {
-                    if let Some(expires) = cookie.expires() {
-                        if expires <= current_time {
-                            jar.force_remove(cookie);
-                            continue;
-                        }
+        // If the client is tracking cookies, updates the internal cookie jar
+        // with the changes reflected by `response`.
+        if let Some(ref jar) = client.cookies {
+            let mut jar = jar.write().expect("LocalRequest::_dispatch() write lock");
+            let current_time = time::now();
+            for cookie in response.cookies() {
+                if let Some(expires) = cookie.expires() {
+                    if expires <= current_time {
+                        jar.force_remove(cookie);
+                        continue;
                     }
-
-                    jar.add(cookie.into_owned());
                 }
-            }
 
-            LocalResponse {
-                _request: owned_request,
-                response: response
+                jar.add(cookie.into_owned());
             }
-        })
+        }
+
+        LocalResponse {
+            _request: owned_request,
+            response: response
+        }
     }
 }
 
@@ -456,16 +453,6 @@ impl fmt::Debug for LocalRequest<'_> {
 pub struct LocalResponse<'c> {
     _request: Arc<Request<'c>>,
     response: Response<'c>,
-}
-
-impl LocalResponse<'_> {
-    pub fn body_string_wait(&mut self) -> Option<String> {
-        tokio::runtime::Runtime::new().expect("create runtime").block_on(self.body_string())
-    }
-
-    pub fn body_bytes_wait(&mut self) -> Option<Vec<u8>> {
-        tokio::runtime::Runtime::new().expect("create runtime").block_on(self.body_bytes())
-    }
 }
 
 impl<'c> Deref for LocalResponse<'c> {
@@ -490,17 +477,17 @@ impl fmt::Debug for LocalResponse<'_> {
     }
 }
 
-impl<'c> Clone for LocalRequest<'c> {
-    fn clone(&self) -> LocalRequest<'c> {
-        LocalRequest {
-            client: self.client,
-            ptr: self.ptr,
-            request: self.request.clone(),
-            data: self.data.clone(),
-            uri: self.uri.clone()
-        }
-    }
-}
+// TODO.async: Figure out a way to accomplish this
+//impl<'c> Clone for LocalRequest<'c> {
+//    fn clone(&self) -> LocalRequest<'c> {
+//        LocalRequest {
+//            client: self.client,
+//            request: self.request.clone(),
+//            data: self.data.clone(),
+//            uri: self.uri.clone()
+//        }
+//    }
+//}
 
 // #[cfg(test)]
 mod tests {

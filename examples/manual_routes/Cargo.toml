@@ -7,3 +7,4 @@ publish = false
 
 [dependencies]
 rocket = { path = "../../core/lib" }
+async-std = "0.99.4"

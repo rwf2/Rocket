@@ -65,20 +65,20 @@ mod templates_tests {
             assert_eq!(template, Some(ESCAPED_EXPECTED.into()));
         }
 
-        #[test]
-        fn test_template_metadata_with_tera() {
+        #[rocket::async_test]
+        async fn test_template_metadata_with_tera() {
             let client = Client::new(rocket()).unwrap();
 
-            let response = client.get("/tera/txt_test").dispatch();
+            let response = client.get("/tera/txt_test").dispatch().await;
             assert_eq!(response.status(), Status::Ok);
 
-            let response = client.get("/tera/html_test").dispatch();
+            let response = client.get("/tera/html_test").dispatch().await;
             assert_eq!(response.status(), Status::Ok);
 
-            let response = client.get("/tera/not_existing").dispatch();
+            let response = client.get("/tera/not_existing").dispatch().await;
             assert_eq!(response.status(), Status::NotFound);
 
-            let response = client.get("/hbs/txt_test").dispatch();
+            let response = client.get("/hbs/txt_test").dispatch().await;
             assert_eq!(response.status(), Status::NotFound);
         }
     }
@@ -105,23 +105,23 @@ mod templates_tests {
             assert_eq!(template, Some(EXPECTED.into()));
         }
 
-        #[test]
-        fn test_template_metadata_with_handlebars() {
+        #[rocket::async_test]
+        async fn test_template_metadata_with_handlebars() {
             let client = Client::new(rocket()).unwrap();
 
-            let response = client.get("/hbs/test").dispatch();
+            let response = client.get("/hbs/test").dispatch().await;
             assert_eq!(response.status(), Status::Ok);
 
-            let response = client.get("/hbs/not_existing").dispatch();
+            let response = client.get("/hbs/not_existing").dispatch().await;
             assert_eq!(response.status(), Status::NotFound);
 
-            let response = client.get("/tera/test").dispatch();
+            let response = client.get("/tera/test").dispatch().await;
             assert_eq!(response.status(), Status::NotFound);
         }
 
-        #[test]
+        #[rocket::async_test]
         #[cfg(debug_assertions)]
-        fn test_template_reload() {
+        async fn test_template_reload() {
             use std::fs::File;
             use std::io::Write;
             use std::thread;
@@ -146,7 +146,7 @@ mod templates_tests {
 
             // set up the client. if we can't reload templates, then just quit
             let client = Client::new(rocket()).unwrap();
-            let res = client.get("/is_reloading").dispatch();
+            let res = client.get("/is_reloading").dispatch().await;
             if res.status() != Status::Ok {
                 return;
             }
@@ -160,7 +160,7 @@ mod templates_tests {
 
             for _ in 0..6 {
                 // dispatch any request to trigger a template reload
-                client.get("/").dispatch();
+                client.get("/").dispatch().await;
 
                 // if the new content is correct, we are done
                 let new_rendered = Template::show(client.rocket(), RELOAD_TEMPLATE, ());
@@ -169,6 +169,7 @@ mod templates_tests {
                     return;
                 }
 
+                // TODO.async: blocking call in async context
                 // otherwise, retry a few times, waiting 250ms in between
                 thread::sleep(Duration::from_millis(250));
             }

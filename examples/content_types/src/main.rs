@@ -5,9 +5,12 @@
 
 #[cfg(test)] mod tests;
 
-use std::io::{self, Read};
+use std::io;
+
+use futures::io::AsyncReadExt as _;
 
 use rocket::{Request, response::content, data::Data};
+use rocket::AsyncReadExt as _;
 
 #[derive(Debug, Serialize, Deserialize)]
 struct Person {
@@ -33,9 +36,10 @@ fn get_hello(name: String, age: u8) -> content::Json<String> {
 // In a real application, we wouldn't use `serde_json` directly; instead, we'd
 // use `contrib::Json` to automatically serialize a type into JSON.
 #[post("/<age>", format = "plain", data = "<name_data>")]
-fn post_hello(age: u8, name_data: Data) -> io::Result<content::Json<String>> {
+async fn post_hello(age: u8, name_data: Data) -> io::Result<content::Json<String>> {
     let mut name = String::with_capacity(32);
-    name_data.open().take(32).read_to_string(&mut name)?;
+    let mut stream = name_data.open().take(32);
+    stream.read_to_string(&mut name).await?;
     let person = Person { name: name, age: age, };
     Ok(content::Json(serde_json::to_string(&person).unwrap()))
 }

@@ -21,11 +21,11 @@ mod test {
     use rocket::local::Client;
     use rocket::http::Status;
 
-    #[test]
-    fn test_hello() {
+    #[rocket::async_test]
+    async fn test_hello() {
         let client = Client::new(rocket()).unwrap();
-        let mut response = client.get("/").dispatch();
+        let mut response = client.get("/").dispatch().await;
         assert_eq!(response.status(), Status::Ok);
-        assert_eq!(response.body_string_wait(), Some("Hello, world!".into()));
+        assert_eq!(response.body_string().await, Some("Hello, world!".into()));
     }
 }

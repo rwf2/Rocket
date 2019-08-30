@@ -346,15 +346,14 @@ impl<'r> ResponseBuilder<'r> {
     ///
     /// ```rust,ignore
     /// use rocket::Response;
-    /// use futures::compat::{AsyncRead01CompatExt, Future01CompatExt};
-    /// use tokio::fs::File;
+    /// use async_std::fs::File;
     /// # use std::io;
     ///
     /// # #[allow(dead_code)]
     /// # async fn test() -> io::Result<()> {
     /// # #[allow(unused_variables)]
     /// let response = Response::build()
-    ///     .sized_body(File::open("body.txt").compat().await?.compat())
+    ///     .sized_body(File::open("body.txt").await?)
     ///     .finalize();
     /// # Ok(())
     /// # }
@@ -373,15 +372,14 @@ impl<'r> ResponseBuilder<'r> {
     ///
     /// ```rust
     /// use rocket::Response;
-    /// use futures::compat::{AsyncRead01CompatExt, Future01CompatExt};
-    /// use tokio::fs::File;
+    /// use async_std::fs::File;
     /// # use std::io;
     ///
     /// # #[allow(dead_code)]
     /// # async fn test() -> io::Result<()> {
     /// # #[allow(unused_variables)]
     /// let response = Response::build()
-    ///     .streamed_body(File::open("body.txt").compat().await?.compat())
+    ///     .streamed_body(File::open("body.txt").await?)
     ///     .finalize();
     /// # Ok(())
     /// # }
@@ -401,15 +399,14 @@ impl<'r> ResponseBuilder<'r> {
     ///
     /// ```rust
     /// use rocket::Response;
-    /// use futures::compat::{AsyncRead01CompatExt, Future01CompatExt};
-    /// use tokio::fs::File;
+    /// use async_std::fs::File;
     /// # use std::io;
     ///
     /// # #[allow(dead_code)]
     /// # async fn test() -> io::Result<()> {
     /// # #[allow(unused_variables)]
     /// let response = Response::build()
-    ///     .chunked_body(File::open("body.txt").compat().await?.compat(), 8096)
+    ///     .chunked_body(File::open("body.txt").await?, 8096)
     ///     .finalize();
     /// # Ok(())
     /// # }

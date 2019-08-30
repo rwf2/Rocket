@@ -3,7 +3,6 @@ use std::path::Path;
 use futures::io::{self, AsyncRead, AsyncReadExt as _, AsyncWrite};
 use futures::future::Future;
 use futures::stream::TryStreamExt;
-use futures_tokio_compat::Compat as TokioCompat;
 
 use super::data_stream::DataStream;
 
@@ -171,7 +170,7 @@ impl Data {
     #[inline(always)]
     pub fn stream_to_file<P: AsRef<Path> + Send + Unpin + 'static>(self, path: P) -> impl Future<Output = io::Result<u64>> {
         Box::pin(async move {
-            let mut file = TokioCompat::new(tokio::fs::File::create(path).await?);
+            let mut file = async_std::fs::File::create(path).await?;
             self.stream_to(&mut file).await
         })
     }

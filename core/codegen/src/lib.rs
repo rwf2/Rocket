@@ -386,6 +386,11 @@ pub fn catch(args: TokenStream, input: TokenStream) -> TokenStream {
     emit!(attribute::catch::catch_attribute(args, input))
 }
 
+#[proc_macro_attribute]
+pub fn async_test(args: TokenStream, input: TokenStream) -> TokenStream {
+    emit!(attribute::async_test::async_test_attribute(args, input))
+}
+
 /// Derive for the [`FromFormValue`] trait.
 ///
 /// The [`FromFormValue`] derive can be applied to enums with nullary
