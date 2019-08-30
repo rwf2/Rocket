@@ -9,7 +9,7 @@ use std::time::Duration;
 use std::pin::Pin;
 
 use futures::future::{Future, FutureExt};
-use futures::channel::mpsc;
+use futures::channel::{mpsc, oneshot};
 use futures::stream::StreamExt;
 use futures::task::SpawnExt;
 use futures_tokio_compat::Compat as TokioCompat;
@@ -780,30 +780,45 @@ impl Rocket {
                 }))
             }
         });
+        let (ctrl_c_sender, ctrl_c_receiver) = oneshot::channel();
 
         // NB: executor must be passed manually here, see hyperium/hyper#1537
         let (future, handle) = hyper::Server::builder(incoming)
             .executor(runtime.executor())
             .serve(service)
-            .with_graceful_shutdown(async move { shutdown_receiver.next().await; })
+            .with_graceful_shutdown(async move {
+                shutdown_receiver.next().await;
+
+                // We only need to kill the signal handler if it's being polled.
+                if !ctrl_c_sender.is_canceled() {
+                    ctrl_c_sender.send(()).expect("error attempting to kill signal handler");
+                }
+            })
             .remote_handle();
 
         runtime.spawn(future);
 
         match tokio::net::signal::ctrl_c() {
             Ok(signal) => {
-                // FIXME If the server shuts down and ctrl+c (or equivalent) is
-                // never pressed, this future remains on the runtime, causing a
-                // small memory leak. It should be possible to kill this future
-                // via a oneshot that is triggered alongside graceful shutdown.
                 runtime.spawn(async move {
-                    signal.into_future().then(|_| {
+                    let mut signal_handler = signal.into_future().then(|_| {
                         // Request the server shutdown.
                         shutdown_handle.shutdown();
 
                         // `for_each()` requires a `Future` to be returned.
                         futures::future::ready(())
-                    }).await
+                    });
+
+                    // Race the futures against each other. In doing so, we
+                    // ensure a future is dropped from the runtime upon
+                    // completion of the other. This prevents a potential memory
+                    // leak where the server shuts down by means other than an
+                    // intercepted signal, leaving the signal handler being
+                    // polled indefinitely.
+                    futures::select!(
+                        _ = signal_handler => (),
+                        _ = ctrl_c_receiver.fuse() => (),
+                    );
                 });
             },
             Err(err) => {
