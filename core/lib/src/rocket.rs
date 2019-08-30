@@ -763,9 +763,10 @@ impl Rocket {
         // Restore the log level back to what it originally was.
         logger::pop_max_level();
 
-        // We need to take this before moving `self` into an `Arc`.
+        // We need to get these values before moving `self` into an `Arc`.
         let mut shutdown_receiver = self.shutdown_receiver
             .take().expect("shutdown receiver has already been used");
+        let shutdown_handle = self.get_shutdown_handle();
 
         let rocket = Arc::new(self);
         let spawn = Box::new(TokioCompat::new(runtime.executor()));
@@ -788,6 +789,33 @@ impl Rocket {
             .remote_handle();
 
         runtime.spawn(future);
+
+        match tokio::net::signal::ctrl_c() {
+            Ok(signal) => {
+                // FIXME If the server shuts down and ctrl+c (or equivalent) is
+                // never pressed, this future remains on the runtime, causing a
+                // small memory leak. It should be possible to kill this future
+                // via a oneshot that is triggered alongside graceful shutdown.
+                runtime.spawn(async move {
+                    signal.into_future().then(|_| {
+                        // Request the server shutdown.
+                        shutdown_handle.shutdown();
+
+                        // `for_each()` requires a `Future` to be returned.
+                        futures::future::ready(())
+                    }).await
+                });
+            },
+            Err(err) => {
+                // Signal handling isn't strictly necessary, so we can skip it
+                // if necessary. It's a good idea to let the user know we're
+                // doing so in case they are expecting certain behavior.
+                let message = "Not listening for shutdown keybinding.";
+                warn!("{}", Paint::yellow(message));
+                info_!("Error: {}", err);
+            },
+        }
+
         Ok(handle)
     }
 
