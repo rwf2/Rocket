@@ -110,18 +110,19 @@ impl LaunchError {
         self.handled.store(true, Ordering::Release)
     }
 
-    // TODO.async Once the error type for `.launch()` is decided,
-    // this doctest should be reeneabled.
     /// Retrieve the `kind` of the launch error.
     ///
     /// # Example
     ///
-    /// ```rust,ignore
+    /// ```rust
+    /// use rocket::error::Error;
     /// # if false {
-    /// let error = rocket::ignite().launch();
-    ///
-    /// // This line is only reached if launch failed.
-    /// let error_kind = error.kind();
+    /// if let Err(error) = rocket::ignite().launch() {
+    ///     match error {
+    ///         Error::Launch(err_kind) => println!("Found a launch error: {}", err_kind),
+    ///         Error::Run(err) => println!("Error at runtime"),
+    ///     }
+    /// }
     /// # }
     /// ```
     #[inline]

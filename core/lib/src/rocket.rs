@@ -780,45 +780,40 @@ impl Rocket {
                 }))
             }
         });
-        let (ctrl_c_sender, ctrl_c_receiver) = oneshot::channel();
+
+        #[cfg(feature = "ctrl_c_shutdown")]
+        let (cancel_ctrl_c_listener_sender, cancel_ctrl_c_listener_receiver) = oneshot::channel();
 
         // NB: executor must be passed manually here, see hyperium/hyper#1537
         let (future, handle) = hyper::Server::builder(incoming)
             .executor(runtime.executor())
             .serve(service)
-            .with_graceful_shutdown(async move {
-                shutdown_receiver.next().await;
-
-                // We only need to kill the signal handler if it's being polled.
-                if !ctrl_c_sender.is_canceled() {
-                    ctrl_c_sender.send(()).expect("error attempting to kill signal handler");
-                }
+            .with_graceful_shutdown(async move { shutdown_receiver.next().await; })
+            .inspect(|_| {
+                #[cfg(feature = "ctrl_c_shutdown")]
+                let _ = cancel_ctrl_c_listener_sender.send(());
             })
             .remote_handle();
 
         runtime.spawn(future);
 
+        #[cfg(feature = "ctrl_c_shutdown")]
         match tokio::net::signal::ctrl_c() {
-            Ok(signal) => {
+            Ok(mut ctrl_c) => {
                 runtime.spawn(async move {
-                    let mut signal_handler = signal.into_future().then(|_| {
-                        // Request the server shutdown.
-                        shutdown_handle.shutdown();
-
-                        // `for_each()` requires a `Future` to be returned.
-                        futures::future::ready(())
-                    });
-
                     // Race the futures against each other. In doing so, we
                     // ensure a future is dropped from the runtime upon
                     // completion of the other. This prevents a potential memory
                     // leak where the server shuts down by means other than an
                     // intercepted signal, leaving the signal handler being
                     // polled indefinitely.
-                    futures::select!(
-                        _ = signal_handler => (),
-                        _ = ctrl_c_receiver.fuse() => (),
-                    );
+                    futures::future::select(
+                        ctrl_c.next(),
+                        cancel_ctrl_c_listener_receiver,
+                    ).await;
+
+                    // Request the server shutdown.
+                    shutdown_handle.shutdown();
                 });
             },
             Err(err) => {
