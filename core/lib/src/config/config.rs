@@ -221,7 +221,7 @@ impl Config {
         let key = SecretKey::Generated(Key::generate());
 
         match env {
-            Development => {
+            Environment::Development => {
                 Config {
                     environment: Development,
                     address: "localhost".to_string(),
@@ -237,7 +237,7 @@ impl Config {
                     root_path: None,
                 }
             }
-            Staging => {
+            Environment::Staging => {
                 Config {
                     environment: Staging,
                     address: "0.0.0.0".to_string(),
@@ -253,7 +253,7 @@ impl Config {
                     root_path: None,
                 }
             }
-            Production => {
+            Environment::Production => {
                 Config {
                     environment: Production,
                     address: "0.0.0.0".to_string(),
