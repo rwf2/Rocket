@@ -119,7 +119,7 @@ impl LaunchError {
     /// # if false {
     /// if let Err(error) = rocket::ignite().launch() {
     ///     match error {
-    ///         Error::Launch(err_kind) => println!("Found a launch error: {}", err_kind),
+    ///         Error::Launch(err) => println!("Found a launch error: {}", err.kind()),
     ///         Error::Run(err) => println!("Error at runtime"),
     ///     }
     /// }

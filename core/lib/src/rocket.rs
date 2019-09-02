@@ -801,12 +801,8 @@ impl Rocket {
         match tokio::net::signal::ctrl_c() {
             Ok(mut ctrl_c) => {
                 runtime.spawn(async move {
-                    // Race the futures against each other. In doing so, we
-                    // ensure a future is dropped from the runtime upon
-                    // completion of the other. This prevents a potential memory
-                    // leak where the server shuts down by means other than an
-                    // intercepted signal, leaving the signal handler being
-                    // polled indefinitely.
+                    // Stop listening for `ctrl_c` if the server shuts down
+                    // a different way to avoid waiting forever.
                     futures::future::select(
                         ctrl_c.next(),
                         cancel_ctrl_c_listener_receiver,
@@ -865,9 +861,8 @@ impl Rocket {
     }
 
     /// Returns a [`ShutdownHandle`], which can be used to gracefully terminate
-    /// the instance of Rocket. As you can dynamically retreive a
-    /// `ShutdownHandle` in routes, this should only be used when access is
-    /// needed externally.
+    /// the instance of Rocket. In routes, you should use the [`ShutdownHandle`]
+    /// request guard.
     ///
     /// # Example
     ///
