@@ -2,7 +2,7 @@ use std::io;
 use std::pin::Pin;
 
 use futures::io::{AsyncRead, AsyncReadExt as _};
-use futures::future::{Future};
+use futures::future::Future;
 use futures::stream::Stream;
 use futures::task::{Poll, Context};
 
