@@ -65,7 +65,7 @@ impl<'a> Authority<'a> {
             source: Some(as_utf8_unchecked(source)),
             user_info: user_info.map(|u| u.coerce()),
             host: host.map_inner(|inner| inner.coerce()),
-            port: port
+            port,
         }
     }
 
@@ -79,7 +79,7 @@ impl<'a> Authority<'a> {
             source: None,
             user_info: user_info.map(|u| u.into()),
             host: host.map_inner(|inner| inner.into()),
-            port: port
+            port,
         }
     }
 

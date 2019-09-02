@@ -53,8 +53,8 @@ impl<'a> Absolute<'a> {
         Absolute {
             source: Some(as_utf8_unchecked(source)),
             scheme: scheme.coerce(),
-            authority: authority,
-            origin: origin,
+            authority,
+            origin,
         }
     }
 
