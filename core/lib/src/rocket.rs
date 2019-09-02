@@ -30,7 +30,7 @@ use crate::outcome::Outcome;
 use crate::error::{LaunchError, LaunchErrorKind};
 use crate::fairing::{Fairing, Fairings};
 use crate::ext::AsyncReadExt;
-use crate::shutdown::ShutdownHandle;
+use crate::shutdown::{ShutdownHandle, ShutdownHandleManaged};
 
 use crate::http::{Method, Status, Header};
 use crate::http::hyper::{self, header};
@@ -462,7 +462,7 @@ impl Rocket {
             shutdown_receiver: Some(shutdown_receiver),
         };
 
-        rocket.state.set(rocket.shutdown_handle.clone());
+        rocket.state.set(ShutdownHandleManaged(rocket.shutdown_handle.clone()));
 
         rocket
     }

@@ -42,6 +42,9 @@ impl FromRequest<'_, '_> for ShutdownHandle {
 
     #[inline]
     fn from_request(request: &Request<'_>) -> Outcome<Self, Self::Error> {
-        Outcome::Success(request.state.managed.get::<ShutdownHandle>().clone())
+        Outcome::Success(request.state.managed.get::<ShutdownHandleManaged>().0.clone())
     }
 }
+
+// Use this type in managed state to avoid placing `ShutdownHandle` in it.
+crate struct ShutdownHandleManaged(crate ShutdownHandle);
