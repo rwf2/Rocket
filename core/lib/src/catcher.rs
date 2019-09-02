@@ -167,7 +167,7 @@ macro_rules! default_catchers {
     )
 }
 
-pub mod defaults {
+crate mod defaults {
     use super::Catcher;
     use futures::future::FutureExt;
 
@@ -177,7 +177,7 @@ pub mod defaults {
     use crate::response::{self, content, status, Responder};
     use crate::http::Status;
 
-    pub fn get() -> HashMap<u16, Catcher> {
+    crate fn get() -> HashMap<u16, Catcher> {
         default_catchers! {
             400, "Bad Request", "The request could not be understood by the server due
                 to malformed syntax.", handle_400,

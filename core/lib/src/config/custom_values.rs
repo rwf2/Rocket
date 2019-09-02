@@ -6,7 +6,7 @@ use crate::http::private::Key;
 use crate::config::{Result, Config, Value, ConfigError, LoggingLevel};
 
 #[derive(Clone)]
-pub enum SecretKey {
+crate enum SecretKey {
     Generated(Key),
     Provided(Key)
 }
@@ -51,7 +51,7 @@ pub struct TlsConfig {
 
 #[cfg(not(feature = "tls"))]
 #[derive(Clone)]
-pub struct TlsConfig;
+crate struct TlsConfig;
 
 /// Mapping from data type to size limits.
 ///
@@ -201,32 +201,32 @@ impl fmt::Display for Limits {
     }
 }
 
-pub fn str<'a>(conf: &Config, name: &str, v: &'a Value) -> Result<&'a str> {
+crate fn str<'a>(conf: &Config, name: &str, v: &'a Value) -> Result<&'a str> {
     v.as_str().ok_or_else(|| conf.bad_type(name, v.type_str(), "a string"))
 }
 
-pub fn u64(conf: &Config, name: &str, value: &Value) -> Result<u64> {
+crate fn u64(conf: &Config, name: &str, value: &Value) -> Result<u64> {
     match value.as_integer() {
         Some(x) if x >= 0 => Ok(x as u64),
         _ => Err(conf.bad_type(name, value.type_str(), "an unsigned integer"))
     }
 }
 
-pub fn u16(conf: &Config, name: &str, value: &Value) -> Result<u16> {
+crate fn u16(conf: &Config, name: &str, value: &Value) -> Result<u16> {
     match value.as_integer() {
         Some(x) if x >= 0 && x <= (u16::max_value() as i64) => Ok(x as u16),
         _ => Err(conf.bad_type(name, value.type_str(), "a 16-bit unsigned integer"))
     }
 }
 
-pub fn u32(conf: &Config, name: &str, value: &Value) -> Result<u32> {
+crate fn u32(conf: &Config, name: &str, value: &Value) -> Result<u32> {
     match value.as_integer() {
         Some(x) if x >= 0 && x <= (u32::max_value() as i64) => Ok(x as u32),
         _ => Err(conf.bad_type(name, value.type_str(), "a 32-bit unsigned integer"))
     }
 }
 
-pub fn log_level(conf: &Config,
+crate fn log_level(conf: &Config,
                           name: &str,
                           value: &Value
                          ) -> Result<LoggingLevel> {
@@ -234,7 +234,7 @@ pub fn log_level(conf: &Config,
         .and_then(|s| s.parse().map_err(|e| conf.bad_type(name, value.type_str(), e)))
 }
 
-pub fn tls_config<'v>(conf: &Config,
+crate fn tls_config<'v>(conf: &Config,
                                name: &str,
                                value: &'v Value,
                                ) -> Result<(&'v str, &'v str)> {
@@ -259,7 +259,7 @@ pub fn tls_config<'v>(conf: &Config,
     }
 }
 
-pub fn limits(conf: &Config, name: &str, value: &Value) -> Result<Limits> {
+crate fn limits(conf: &Config, name: &str, value: &Value) -> Result<Limits> {
     let table = value.as_table()
         .ok_or_else(|| conf.bad_type(name, value.type_str(), "a table"))?;
 

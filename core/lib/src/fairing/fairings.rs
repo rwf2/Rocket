@@ -4,7 +4,7 @@ use crate::fairing::{Fairing, Kind};
 use yansi::Paint;
 
 #[derive(Default)]
-pub struct Fairings {
+crate struct Fairings {
     all_fairings: Vec<Box<dyn Fairing>>,
     attach_failures: Vec<&'static str>,
     // The vectors below hold indices into `all_fairings`.
@@ -15,11 +15,11 @@ pub struct Fairings {
 
 impl Fairings {
     #[inline]
-    pub fn new() -> Fairings {
+    crate fn new() -> Fairings {
         Fairings::default()
     }
 
-    pub fn attach(&mut self, fairing: Box<dyn Fairing>, mut rocket: Rocket) -> Rocket {
+    crate fn attach(&mut self, fairing: Box<dyn Fairing>, mut rocket: Rocket) -> Rocket {
         // Run the `on_attach` callback if this is an 'attach' fairing.
         let kind = fairing.info().kind;
         let name = fairing.info().name;
@@ -44,34 +44,34 @@ impl Fairings {
         }
     }
 
-    pub fn append(&mut self, others: Fairings) {
+    crate fn append(&mut self, others: Fairings) {
         for fairing in others.all_fairings {
             self.add(fairing);
         }
     }
 
     #[inline(always)]
-    pub fn handle_launch(&self, rocket: &Rocket) {
+    crate fn handle_launch(&self, rocket: &Rocket) {
         for &i in &self.launch {
             self.all_fairings[i].on_launch(rocket);
         }
     }
 
     #[inline(always)]
-    pub fn handle_request(&self, req: &mut Request<'_>, data: &Data) {
+    crate fn handle_request(&self, req: &mut Request<'_>, data: &Data) {
         for &i in &self.request {
             self.all_fairings[i].on_request(req, data);
         }
     }
 
     #[inline(always)]
-    pub async fn handle_response<'r>(&self, request: &Request<'r>, response: &mut Response<'r>) {
+    crate async fn handle_response<'r>(&self, request: &Request<'r>, response: &mut Response<'r>) {
         for &i in &self.response {
             self.all_fairings[i].on_response(request, response).await;
         }
     }
 
-    pub fn failures(&self) -> Option<&[&'static str]> {
+    crate fn failures(&self) -> Option<&[&'static str]> {
         if self.attach_failures.is_empty() {
             None
         } else {
@@ -91,7 +91,7 @@ impl Fairings {
         }
     }
 
-    pub fn pretty_print_counts(&self) {
+    crate fn pretty_print_counts(&self) {
         if !self.all_fairings.is_empty() {
             info!("{}{}:", Paint::masked("📡 "), Paint::magenta("Fairings"));
             self.info_for("launch", &self.launch);

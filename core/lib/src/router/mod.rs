@@ -19,16 +19,16 @@ crate fn dummy_handler<'r>(r: &'r Request<'_>, _: crate::Data) -> std::pin::Pin<
 }
 
 #[derive(Default)]
-pub struct Router {
+crate struct Router {
     routes: HashMap<Selector, Vec<Route>>,
 }
 
 impl Router {
-    pub fn new() -> Router {
+    crate fn new() -> Router {
         Router { routes: HashMap::new() }
     }
 
-    pub fn add(&mut self, route: Route) {
+    crate fn add(&mut self, route: Route) {
         let selector = route.method;
         let entries = self.routes.entry(selector).or_insert_with(|| vec![]);
         let i = entries.binary_search_by_key(&route.rank, |r| r.rank)
@@ -37,7 +37,7 @@ impl Router {
         entries.insert(i, route);
     }
 
-    pub fn route<'b>(&'b self, req: &Request<'_>) -> Vec<&'b Route> {
+    crate fn route<'b>(&'b self, req: &Request<'_>) -> Vec<&'b Route> {
         // Note that routes are presorted by rank on each `add`.
         let matches = self.routes.get(&req.method()).map_or(vec![], |routes| {
             routes.iter()
@@ -77,7 +77,7 @@ impl Router {
     }
 
     #[inline]
-    pub fn routes<'a>(&'a self) -> impl Iterator<Item=&'a Route> + 'a {
+    crate fn routes<'a>(&'a self) -> impl Iterator<Item=&'a Route> + 'a {
         self.routes.values().flat_map(|v| v.iter())
     }
 

@@ -8,7 +8,7 @@ use pear::parsers::*;
 use pear::combinators::*;
 
 #[inline(always)]
-pub fn is_whitespace(byte: char) -> bool {
+crate fn is_whitespace(byte: char) -> bool {
     byte == ' ' || byte == '\t'
 }
 
@@ -75,13 +75,13 @@ fn value<'a>(input: &mut &'a str) -> Result<Value, &'a str> {
     val
 }
 
-pub fn parse_simple_toml_value(mut input: &str) -> StdResult<Value, String> {
+crate fn parse_simple_toml_value(mut input: &str) -> StdResult<Value, String> {
     parse!(value: &mut input).map_err(|e| e.to_string())
 }
 
 /// A simple wrapper over a `Value` reference with a custom implementation of
 /// `Display`. This is used to log config values at initialization.
-crate struct LoggedValue<'a>(pub &'a Value);
+crate struct LoggedValue<'a>(crate &'a Value);
 
 impl fmt::Display for LoggedValue<'_> {
     #[inline]
