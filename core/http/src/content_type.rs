@@ -281,7 +281,7 @@ impl From<Mime> for ContentType {
     #[inline]
     fn from(mime: Mime) -> ContentType {
         // soooo inefficient.
-        let params = mime.params().into_iter()
+        let params = mime.params()
             .map(|(attr, value)| (attr.to_string(), value.to_string()))
             .collect::<Vec<_>>();
 
