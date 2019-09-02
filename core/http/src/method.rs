@@ -3,7 +3,7 @@ use std::str::FromStr;
 
 use crate::uncased::uncased_eq;
 
-use self::Method::*;
+use Method::*;
 
 // TODO: Support non-standard methods, here and in codegen.
 

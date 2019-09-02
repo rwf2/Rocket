@@ -1,8 +1,8 @@
 use proc_macro::TokenStream;
 use crate::proc_macro2::TokenStream as TokenStream2;
 
-use devise::{syn, Spanned, Result};
-use self::syn::{Path, punctuated::Punctuated, parse::Parser, token::Comma};
+use devise::{Spanned, Result};
+use devise::syn::{Path, punctuated::Punctuated, parse::Parser, token::Comma};
 use crate::syn_ext::{IdentExt, syn_to_diag};
 use crate::{ROUTE_STRUCT_PREFIX, CATCH_STRUCT_PREFIX};
 

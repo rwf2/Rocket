@@ -5,7 +5,7 @@ use std::error::Error;
 use yansi::Paint;
 
 use super::Environment;
-use self::ConfigError::*;
+use ConfigError::*;
 
 /// The type of a configuration error.
 #[derive(Debug)]

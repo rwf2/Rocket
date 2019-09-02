@@ -8,7 +8,7 @@ use indexmap::IndexSet;
 
 use crate::proc_macro_ext::{Diagnostics, StringLit};
 use crate::syn_ext::{syn_to_diag, IdentExt};
-use self::syn::{Attribute, parse::Parser};
+use devise::syn::{Attribute, parse::Parser};
 
 use crate::http_codegen::{Method, MediaType, RoutePath, DataSegment, Optional};
 use crate::attribute::segments::{Source, Kind, Segment};

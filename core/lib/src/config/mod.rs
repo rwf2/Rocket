@@ -197,20 +197,20 @@ use std::env;
 
 use toml;
 
-pub use self::custom_values::Limits;
+pub use custom_values::Limits;
 pub use toml::value::{Array, Table, Value, Datetime};
-pub use self::error::ConfigError;
-pub use self::environment::Environment;
-pub use self::config::Config;
-pub use self::builder::ConfigBuilder;
+pub use error::ConfigError;
+pub use environment::Environment;
+pub use config::Config;
+pub use builder::ConfigBuilder;
 pub use crate::logger::LoggingLevel;
-crate use self::toml_ext::LoggedValue;
+crate use toml_ext::LoggedValue;
 
 use crate::logger;
-use self::Environment::*;
-use self::environment::CONFIG_ENV;
+use Environment::*;
+use environment::CONFIG_ENV;
 use crate::logger::COLORS_ENV;
-use self::toml_ext::parse_simple_toml_value;
+use toml_ext::parse_simple_toml_value;
 use crate::http::uncased::uncased_eq;
 
 const CONFIG_FILENAME: &str = "Rocket.toml";
@@ -372,7 +372,7 @@ impl RocketConfig {
     /// Parses the configuration from the Rocket.toml file. Also overrides any
     /// values there with values from the environment.
     fn parse<P: AsRef<Path>>(src: String, filename: P) -> Result<RocketConfig> {
-        use self::ConfigError::ParseError;
+        use ConfigError::ParseError;
 
         // Parse the source as TOML, if possible.
         let path = filename.as_ref().to_path_buf();
@@ -450,7 +450,7 @@ crate fn init() -> Config {
         process::exit(1)
     };
 
-    use self::ConfigError::*;
+    use ConfigError::*;
     let config = RocketConfig::read().unwrap_or_else(|e| {
         match e {
             | ParseError(..) | BadEntry(..) | BadEnv(..) | BadType(..) | Io(..)

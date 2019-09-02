@@ -33,15 +33,15 @@ pub mod status;
 
 #[doc(hidden)] pub use rocket_codegen::Responder;
 
-pub use self::response::{Response, ResponseBuilder, Body, DEFAULT_CHUNK_SIZE};
-pub use self::responder::Responder;
-pub use self::redirect::Redirect;
-pub use self::flash::Flash;
-pub use self::named_file::NamedFile;
-pub use self::stream::Stream;
-#[doc(inline)] pub use self::content::Content;
+pub use response::{Response, ResponseBuilder, Body, DEFAULT_CHUNK_SIZE};
+pub use responder::Responder;
+pub use redirect::Redirect;
+pub use flash::Flash;
+pub use named_file::NamedFile;
+pub use stream::Stream;
+#[doc(inline)] pub use content::Content;
 
 /// Type alias for the `Result` of a `Responder::respond` call.
-pub type Result<'r> = std::result::Result<self::Response<'r>, crate::http::Status>;
+pub type Result<'r> = std::result::Result<Response<'r>, crate::http::Status>;
 /// Type alias for the `Result` of a `Responder::respond` call.
 pub type ResultFuture<'r> = std::pin::Pin<Box<dyn std::future::Future<Output=Result<'r>> + Send + 'r>>;

@@ -105,5 +105,5 @@
 mod request;
 mod client;
 
-pub use self::request::{LocalResponse, LocalRequest};
-pub use self::client::Client;
+pub use request::{LocalResponse, LocalRequest};
+pub use client::Client;

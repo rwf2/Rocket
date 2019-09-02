@@ -33,7 +33,7 @@ mod benches {
     extern crate test;
 
     use super::rocket;
-    use self::test::Bencher;
+    use test::Bencher;
     use rocket::local::Client;
     use rocket::http::{Accept, ContentType};
 

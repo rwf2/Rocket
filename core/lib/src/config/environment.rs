@@ -4,7 +4,7 @@ use std::fmt;
 use std::str::FromStr;
 use std::env;
 
-use self::Environment::*;
+use Environment::*;
 
 pub const CONFIG_ENV: &str = "ROCKET_ENV";
 

@@ -6,10 +6,10 @@ mod tables;
 
 use crate::uri::{Uri, Origin, Absolute, Authority};
 use crate::parse::indexed::IndexedInput;
-use self::parser::{uri, origin, authority_only, absolute_only, rocket_route_origin};
+use parser::{uri, origin, authority_only, absolute_only, rocket_route_origin};
 
-crate use self::tables::is_pchar;
-pub use self::error::Error;
+crate use tables::is_pchar;
+pub use error::Error;
 
 type RawInput<'a> = IndexedInput<'a, [u8]>;
 

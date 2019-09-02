@@ -7,7 +7,7 @@ use crate::ext::IntoOwned;
 use crate::uri::{Origin, UriPart, Path, Query};
 use crate::uri::encoding::unsafe_percent_encode;
 
-use self::Error::*;
+use Error::*;
 
 #[derive(Debug, PartialEq, Eq, Copy, Clone)]
 pub enum Kind {

@@ -3,10 +3,10 @@ mod accept;
 mod checkers;
 mod indexed;
 
-pub use self::media_type::*;
-pub use self::accept::*;
+pub use media_type::*;
+pub use accept::*;
 
 pub mod uri;
 
 // Exposed for codegen.
-#[doc(hidden)] pub use self::indexed::*;
+#[doc(hidden)] pub use indexed::*;

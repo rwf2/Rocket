@@ -3,7 +3,7 @@ use std::fmt;
 use crate::Header;
 use cookie::Delta;
 
-#[doc(hidden)] pub use self::key::*;
+#[doc(hidden)] pub use key::*;
 pub use cookie::{Cookie, CookieJar, SameSite};
 
 /// Types and methods to manage a `Key` when private cookies are enabled.

@@ -47,7 +47,7 @@ mod benches {
     extern crate test;
 
     use super::{hello_world_rocket, rocket};
-    use self::test::Bencher;
+    use test::Bencher;
     use rocket::local::Client;
 
     #[bench]

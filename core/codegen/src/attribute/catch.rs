@@ -4,7 +4,7 @@ use crate::proc_macro2::TokenStream as TokenStream2;
 
 use crate::http_codegen::Status;
 use crate::syn_ext::{syn_to_diag, IdentExt, ReturnTypeExt};
-use self::syn::{Attribute, parse::Parser};
+use devise::syn::{Attribute, parse::Parser};
 use crate::{CATCH_FN_PREFIX, CATCH_STRUCT_PREFIX};
 
 /// The raw, parsed `#[catch(code)]` attribute.

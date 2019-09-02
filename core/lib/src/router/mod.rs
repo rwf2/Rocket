@@ -5,7 +5,7 @@ use std::collections::hash_map::HashMap;
 
 use futures::future::Future;
 
-pub use self::route::Route;
+pub use route::Route;
 
 use crate::request::Request;
 use crate::http::Method;

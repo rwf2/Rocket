@@ -425,7 +425,8 @@ impl UriArguments<'_> {
     #[doc(hidden)]
     pub fn into_origin(self) -> Origin<'static> {
         use std::borrow::Cow;
-        use self::{UriArgumentsKind::*, UriQueryArgument::*};
+        use UriArgumentsKind::*;
+        use UriQueryArgument::*;
 
         let path: Cow<'static, str> = match self.path {
             Static(path) => path.into(),

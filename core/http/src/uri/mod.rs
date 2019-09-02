@@ -13,14 +13,14 @@ crate mod encoding;
 
 pub use crate::parse::uri::Error;
 
-pub use self::uri::*;
-pub use self::authority::*;
-pub use self::origin::*;
-pub use self::absolute::*;
-pub use self::uri_display::*;
-pub use self::formatter::*;
-pub use self::from_uri_param::*;
-pub use self::segments::*;
+pub use uri::*;
+pub use authority::*;
+pub use origin::*;
+pub use absolute::*;
+pub use uri_display::*;
+pub use formatter::*;
+pub use from_uri_param::*;
+pub use segments::*;
 
 mod private {
     pub trait Sealed {}

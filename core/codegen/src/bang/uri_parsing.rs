@@ -5,9 +5,9 @@ use devise::proc_macro2::TokenStream as TokenStream2;
 use devise::ext::TypeExt;
 use quote::ToTokens;
 
-use self::syn::{Expr, Ident, LitStr, Path, Token, Type};
-use self::syn::parse::{self, Parse, ParseStream};
-use self::syn::punctuated::Punctuated;
+use devise::syn::{Expr, Ident, LitStr, Path, Token, Type};
+use devise::syn::parse::{self, Parse, ParseStream};
+use devise::syn::punctuated::Punctuated;
 
 use crate::http::{uri::Origin, ext::IntoOwned};
 use indexmap::IndexMap;

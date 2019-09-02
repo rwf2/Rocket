@@ -83,7 +83,7 @@ use std::ops::Try;
 
 use yansi::{Paint, Color};
 
-use self::Outcome::*;
+use Outcome::*;
 
 /// An enum representing success (`Success`), failure (`Failure`), or
 /// forwarding (`Forward`).

@@ -155,7 +155,7 @@ impl<'f, T: FromForm<'f>> Form<T> {
         form_str: &'f str,
         strict: bool
     ) -> Outcome<T, FormDataError<'f, T::Error>> {
-        use self::FormDataError::*;
+        use FormDataError::*;
 
         let mut items = FormItems::from(form_str);
         let result = T::from_form(&mut items, strict);
