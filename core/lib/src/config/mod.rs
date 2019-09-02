@@ -374,11 +374,11 @@ impl RocketConfig {
 
         // Parse the source as TOML, if possible.
         let path = filename.as_ref().to_path_buf();
-        let table = match src.parse::<toml::Value>() {
+        let table = match src.parse::<Value>() {
             Ok(toml::Value::Table(table)) => table,
             Ok(value) => {
                 let err = format!("expected a table, found {}", value.type_str());
-                return Err(ConfigError::ParseError(src, path, err, Some((1, 1))));
+                return Err(ParseError(src, path, err, Some((1, 1))));
             }
             Err(e) => return Err(ParseError(src, path, e.to_string(), e.line_col()))
         };

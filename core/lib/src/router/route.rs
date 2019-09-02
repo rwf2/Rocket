@@ -280,7 +280,7 @@ impl Route {
     }
 }
 
-impl fmt::Display for Route {
+impl Display for Route {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{} {}", Paint::green(&self.method), Paint::blue(&self.uri))?;
 

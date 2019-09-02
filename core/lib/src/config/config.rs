@@ -148,7 +148,7 @@ impl Config {
     /// my_config.set_port(1001);
     /// ```
     pub fn development() -> Config {
-        Config::new(Environment::Development)
+        Config::new(Development)
     }
 
     /// Returns a `Config` with the default parameters of the staging
@@ -163,7 +163,7 @@ impl Config {
     /// my_config.set_port(1001);
     /// ```
     pub fn staging() -> Config {
-        Config::new(Environment::Staging)
+        Config::new(Staging)
     }
 
     /// Returns a `Config` with the default parameters of the production
@@ -178,7 +178,7 @@ impl Config {
     /// my_config.set_port(1001);
     /// ```
     pub fn production() -> Config {
-        Config::new(Environment::Production)
+        Config::new(Production)
     }
 
     /// Returns the default configuration for the environment `env` given that

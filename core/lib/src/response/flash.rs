@@ -100,7 +100,7 @@ pub struct Flash<R> {
 ///
 /// [`name()`]: Flash::name()
 /// [`msg()`]: Flash::msg()
-pub type FlashMessage<'a, 'r> = crate::response::Flash<&'a Request<'r>>;
+pub type FlashMessage<'a, 'r> = Flash<&'a Request<'r>>;
 
 impl<'r, R: Responder<'r>> Flash<R> {
     /// Constructs a new `Flash` message with the given `name`, `msg`, and
