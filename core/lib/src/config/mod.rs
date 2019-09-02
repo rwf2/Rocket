@@ -195,8 +195,6 @@ use std::path::{Path, PathBuf};
 use std::process;
 use std::env;
 
-use toml;
-
 pub use custom_values::Limits;
 pub use toml::value::{Array, Table, Value, Datetime};
 pub use error::ConfigError;

@@ -3,7 +3,6 @@
 use std::{fmt, env};
 use std::str::FromStr;
 
-use log;
 use yansi::Paint;
 
 crate const COLORS_ENV: &str = "ROCKET_CLI_COLORS";

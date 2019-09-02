@@ -10,7 +10,6 @@ use crate::config::{Table, Value, Array, Datetime};
 use crate::http::private::Key;
 
 use super::custom_values::*;
-use {num_cpus, base64};
 
 /// Structure for Rocket application configuration.
 ///

@@ -1,7 +1,5 @@
 #![feature(proc_macro_hygiene)]
 
-use rocket;
-
 use rocket::{get, routes};
 use rocket::request::{Form, FromForm, FromFormValue};
 use rocket::response::Responder;
