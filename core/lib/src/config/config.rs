@@ -568,7 +568,7 @@ impl Config {
         { Ok(()) }
     }
 
-    /// Enables colorful logging.
+    /// Enables / disables the colorful logging output.
     ///
     /// # Example
     ///
@@ -576,26 +576,11 @@ impl Config {
     /// use rocket::config::{Config, LoggingLevel, Environment};
     ///
     /// let mut config = Config::new(Environment::Staging);
-    /// config.enable_colorful_logging();
+    /// config.set_colorful_logging(true);
     /// ```
     #[inline]
-    pub fn enable_colorful_logging(&mut self) {
-        self.colorful_logging = true;
-    }
-
-    /// Disables colorful logging.
-    ///
-    /// # Example
-    ///
-    /// ```rust
-    /// use rocket::config::{Config, LoggingLevel, Environment};
-    ///
-    /// let mut config = Config::new(Environment::Staging);
-    /// config.enable_colorful_logging();
-    /// ```
-    #[inline]
-    pub fn disable_colorful_logging(&mut self) {
-        self.colorful_logging = false;
+    pub fn set_colorful_logging(&mut self, enable: bool) {
+        self.colorful_logging = enable;
     }
 
     /// Sets the extras for `self` to be the key/value pairs in `extras`.
