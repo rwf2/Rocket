@@ -22,7 +22,7 @@ private-cookies = ["cookie/secure"]
 [dependencies]
 smallvec = "0.6"
 percent-encoding = "1"
-hyper = { git = "https://github.com/hyperium/hyper", rev = "049b513", default-features = false, features = ["runtime"] }
+hyper = { version = "=0.13.0-alpha.1", default-features = false, features = ["runtime"] }
 http = "0.1.17"
 mime = "0.3.13"
 time = "0.1"
