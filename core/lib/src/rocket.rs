@@ -151,7 +151,7 @@ impl Rocket {
                     let mut stream = body.into_chunk_stream(4096);
                     while let Some(next) = stream.next().await {
                         futures::future::poll_fn(|cx| sender.poll_ready(cx)).await.expect("TODO.async client gone?");
-                        sender.send_data(next?).expect("send chunk");
+                        sender.send_data(next?).await.expect("send chunk");
                     }
                 }
                 Some(Body::Chunked(body, chunk_size)) => {
@@ -163,7 +163,7 @@ impl Rocket {
                     let mut stream = body.into_chunk_stream(chunk_size.try_into().expect("u64 -> usize overflow"));
                     while let Some(next) = stream.next().await {
                         futures::future::poll_fn(|cx| sender.poll_ready(cx)).await.expect("TODO.async client gone?");
-                        sender.send_data(next?).expect("send chunk");
+                        sender.send_data(next?).await.expect("send chunk");
                     }
                 }
             };
