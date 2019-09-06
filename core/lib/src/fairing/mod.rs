@@ -47,8 +47,7 @@
 //! of other `Fairings` are not jeopardized. For instance, unless it is made
 //! abundantly clear, a fairing should not rewrite every request.
 
-use std::pin::Pin;
-use std::future::Future;
+use futures::future::BoxFuture;
 
 use crate::{Rocket, Request, Response, Data};
 
@@ -419,7 +418,7 @@ pub trait Fairing: Send + Sync + 'static {
     ///
     /// The default implementation of this method does nothing.
     #[allow(unused_variables)]
-    fn on_response<'a, 'r>(&'a self, request: &'a Request<'r>, response: &'a mut Response<'r>) -> Pin<Box<dyn Future<Output=()> + Send + 'a>> {
+    fn on_response<'a, 'r>(&'a self, request: &'a Request<'r>, response: &'a mut Response<'r>) -> BoxFuture<'a, ()> {
         Box::pin(async { })
     }
 }
@@ -446,7 +445,7 @@ impl<T: Fairing> Fairing for std::sync::Arc<T> {
     }
 
     #[inline]
-    fn on_response<'a, 'r>(&'a self, request: &'a Request<'r>, response: &'a mut Response<'r>) -> Pin<Box<dyn Future<Output=()> + Send + 'a>> {
+    fn on_response<'a, 'r>(&'a self, request: &'a Request<'r>, response: &'a mut Response<'r>) -> BoxFuture<'a, ()> {
         (self as &T).on_response(request, response)
     }
 }

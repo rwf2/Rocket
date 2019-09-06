@@ -6,9 +6,8 @@ use std::mem;
 use std::net::ToSocketAddrs;
 use std::sync::Arc;
 use std::time::Duration;
-use std::pin::Pin;
 
-use futures::future::{Future, FutureExt, TryFutureExt};
+use futures::future::{Future, FutureExt, TryFutureExt, BoxFuture};
 use futures::stream::StreamExt;
 use futures::task::SpawnExt;
 use futures_tokio_compat::Compat as TokioCompat;
@@ -260,7 +259,7 @@ impl Rocket {
 
                         // Dispatch the request again with Method `GET`.
                         request._set_method(Method::Get);
-                        let try_next: Pin<Box<dyn Future<Output = _> + Send>> = Box::pin(self.route_and_process(request, data));
+                        let try_next: BoxFuture<'_, _> = Box::pin(self.route_and_process(request, data));
                         try_next.await
                     } else {
                         // No match was found and it can't be autohandled. 404.

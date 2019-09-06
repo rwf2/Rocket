@@ -2,7 +2,7 @@ use std::io;
 use std::pin::Pin;
 
 use futures::io::{AsyncRead, AsyncReadExt as _};
-use futures::future::{Future};
+use futures::future::BoxFuture;
 use futures::stream::Stream;
 use futures::task::{Poll, Context};
 
@@ -73,7 +73,7 @@ pub trait AsyncReadExt: AsyncRead {
     }
 
     // TODO.async: Verify correctness of this implementation.
-    fn read_max<'a>(&'a mut self, mut buf: &'a mut [u8]) -> Pin<Box<dyn Future<Output=io::Result<usize>> + Send + '_>>
+    fn read_max<'a>(&'a mut self, mut buf: &'a mut [u8]) -> BoxFuture<'_, io::Result<usize>>
         where Self: Send + Unpin
     {
         Box::pin(async move {
