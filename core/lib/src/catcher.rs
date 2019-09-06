@@ -153,11 +153,9 @@ macro_rules! default_catchers {
 
         $(
             fn $fn_name<'r>(req: &'r Request<'_>) -> std::pin::Pin<Box<dyn std::future::Future<Output = response::Result<'r>> + Send + 'r>> {
-                (async move {
-                    status::Custom(Status::from_code($code).unwrap(),
-                        content::Html(error_page_template!($code, $name, $description))
-                    ).respond_to(req).await
-                }).boxed()
+                status::Custom(Status::from_code($code).unwrap(),
+                    content::Html(error_page_template!($code, $name, $description))
+                ).respond_to(req)
             }
 
             map.insert($code, Catcher::new_default($code, $fn_name));
@@ -169,7 +167,6 @@ macro_rules! default_catchers {
 
 pub mod defaults {
     use super::Catcher;
-    use futures::future::FutureExt;
 
     use std::collections::HashMap;
 
