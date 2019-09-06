@@ -3,6 +3,7 @@ use std::io::Cursor;
 use std::fmt;
 
 use futures::io::BufReader;
+use futures::future;
 
 use crate::http::{Status, ContentType, StatusClass};
 use crate::response::{self, Response, Body};
@@ -279,15 +280,13 @@ impl Responder<'_> for () {
 /// a warning message and returns an `Err` of `Status::NotFound`.
 impl<'r, R: Responder<'r> + Send + 'r> Responder<'r> for Option<R> {
     fn respond_to(self, req: &'r Request<'_>) -> response::ResultFuture<'r> {
-        Box::pin(async move {
-            match self {
-                Some(r) => r.respond_to(req).await,
-                None => {
-                    warn_!("Response was `None`.");
-                    Err(Status::NotFound)
-                },
-            }
-        })
+        match self {
+            Some(r) => r.respond_to(req),
+            None => {
+                warn_!("Response was `None`.");
+                Box::pin(future::err(Status::NotFound))
+            },
+        }
     }
 }
 
@@ -296,15 +295,13 @@ impl<'r, R: Responder<'r> + Send + 'r> Responder<'r> for Option<R> {
 /// `Status::InternalServerError`.
 impl<'r, R: Responder<'r> + Send + 'r, E: fmt::Debug + Send + 'r> Responder<'r> for Result<R, E> {
     default fn respond_to(self, req: &'r Request<'_>) -> response::ResultFuture<'r> {
-        Box::pin(async move {
-            match self {
-                Ok(r) => r.respond_to(req).await,
-                Err(e) => {
-                    error_!("Response was a non-`Responder` `Err`: {:?}.", e);
-                    Err(Status::InternalServerError)
-                }
+        match self {
+            Ok(r) => r.respond_to(req),
+            Err(e) => {
+                error_!("Response was a non-`Responder` `Err`: {:?}.", e);
+                Box::pin(future::err(Status::InternalServerError))
             }
-        })
+        }
     }
 }
 
@@ -312,12 +309,10 @@ impl<'r, R: Responder<'r> + Send + 'r, E: fmt::Debug + Send + 'r> Responder<'r> 
 /// `Err`.
 impl<'r, R: Responder<'r> + Send + 'r, E: Responder<'r> + fmt::Debug + Send + 'r> Responder<'r> for Result<R, E> {
     fn respond_to(self, req: &'r Request<'_>) -> response::ResultFuture<'r> {
-        Box::pin(async move {
-            match self {
-                Ok(responder) => responder.respond_to(req).await,
-                Err(responder) => responder.respond_to(req).await,
-            }
-        })
+        match self {
+            Ok(responder) => responder.respond_to(req),
+            Err(responder) => responder.respond_to(req),
+        }
     }
 }
 
