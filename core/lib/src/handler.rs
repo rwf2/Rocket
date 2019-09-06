@@ -1,6 +1,6 @@
 //! Types and traits for request and error handlers and their return values.
 
-use futures::future::Future;
+use futures::future::BoxFuture;
 
 use crate::data::Data;
 use crate::request::Request;
@@ -12,7 +12,7 @@ use crate::outcome;
 pub type Outcome<'r> = outcome::Outcome<Response<'r>, Status, Data>;
 
 /// Type alias for the unwieldy `Handler` return type
-pub type HandlerFuture<'r> = std::pin::Pin<Box<dyn Future<Output = Outcome<'r>> + Send + 'r>>;
+pub type HandlerFuture<'r> = BoxFuture<'r, Outcome<'r>>;
 
 /// Trait implemented by types that can handle requests.
 ///
@@ -186,7 +186,7 @@ impl<F: Clone + Sync + Send + 'static> Handler for F
 /// The type of an error handler.
 pub type ErrorHandler = for<'r> fn(&'r Request<'_>) -> ErrorHandlerFuture<'r>;
 
-pub type ErrorHandlerFuture<'r> = std::pin::Pin<Box<dyn Future<Output = response::Result<'r>> + Send + 'r>>;
+pub type ErrorHandlerFuture<'r> = BoxFuture<'r, response::Result<'r>>;
 
 impl<'r> Outcome<'r> {
     /// Return the `Outcome` of response to `req` from `responder`.

@@ -1,7 +1,6 @@
 use std::borrow::Borrow;
-use std::pin::Pin;
 
-use futures::future::{ready, Future, FutureExt};
+use futures::future::{ready, FutureExt, BoxFuture};
 use futures::io::AsyncReadExt;
 
 use crate::outcome::{self, IntoOutcome};
@@ -112,8 +111,8 @@ pub type Transformed<'a, T> =
         Outcome<&'a <T as FromData<'a>>::Borrowed, <T as FromData<'a>>::Error>
     >;
 
-pub type TransformFuture<'a, T, E> = Pin<Box<dyn Future<Output = Transform<Outcome<T, E>>> + Send + 'a>>;
-pub type FromDataFuture<'a, T, E> = Pin<Box<dyn Future<Output = Outcome<T, E>> + Send + 'a>>;
+pub type TransformFuture<'a, T, E> = BoxFuture<'a, Transform<Outcome<T, E>>>;
+pub type FromDataFuture<'a, T, E> = BoxFuture<'a, Outcome<T, E>>;
 
 /// Trait implemented by data guards to derive a value from request body data.
 ///

@@ -3,7 +3,7 @@ mod route;
 
 use std::collections::hash_map::HashMap;
 
-use futures::future::Future;
+use futures::future::BoxFuture;
 
 pub use self::route::Route;
 
@@ -14,7 +14,7 @@ use crate::http::Method;
 type Selector = Method;
 
 // A handler to use when one is needed temporarily.
-crate fn dummy_handler<'r>(r: &'r Request<'_>, _: crate::Data) -> std::pin::Pin<Box<dyn Future<Output = crate::handler::Outcome<'r>> + Send + 'r>> {
+crate fn dummy_handler<'r>(r: &'r Request<'_>, _: crate::Data) -> BoxFuture<'r, crate::handler::Outcome<'r>> {
     crate::Outcome::from(r, ())
 }
 
