@@ -14,6 +14,7 @@
 //! features = ["json"]
 //! ```
 
+use std::fmt;
 use std::ops::{Deref, DerefMut};
 use std::io::{self, Read};
 use std::iter::FromIterator;
@@ -169,6 +170,26 @@ impl<'a, T: Serialize> Responder<'a> for Json<T> {
             error_!("JSON failed to serialize: {:?}", e);
             Status::InternalServerError
         })
+    }
+}
+
+/// Serializes the wrapped value as a string
+/// ```rust
+/// #[post("/entities", format = "application/json", data = "<entity>")]
+/// fn user(entity: Json<Entity>) -> ... {
+///     log::info!("Received {}", entity.to_string());
+///     /* ... */
+/// }
+/// ```
+impl<T: Serialize> fmt::Display for Json<T> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match serde_json::to_string(&self.0) {
+            Ok(s) => write!(f, "{}", s),
+            Err(e) => {
+                error_!("JSON failed to serialize: {:?}", e);
+                write!(f, "{}", e.to_string())
+            },
+        }
     }
 }
 
