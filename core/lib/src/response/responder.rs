@@ -98,6 +98,12 @@ use crate::request::Request;
 ///     to the client. If the `Result` is `Err`, the wrapped `Err` responder is
 ///     used to respond to the client.
 ///
+///   * **::either::Either&lt;L, R>** _where_ **L: Responder** and **R:
+///     Responder**
+///
+///     Respond with either `L` or `R`. This is similar to the above, but does
+///     not require a `Debug` implementation.
+///
 /// # Implementation Tips
 ///
 /// This section describes a few best practices to take into account when
@@ -312,6 +318,16 @@ impl<'r, R: Responder<'r> + Send + 'r, E: Responder<'r> + fmt::Debug + Send + 'r
         match self {
             Ok(responder) => responder.respond_to(req),
             Err(responder) => responder.respond_to(req),
+        }
+    }
+}
+
+/// Responds with the wrapped `Responder`.
+impl<'r, L: Responder<'r> + Send + 'r, R: Responder<'r> + Send + 'r> Responder<'r> for either::Either<L, R> {
+    fn respond_to(self, req: &'r Request<'_>) -> response::ResultFuture<'r> {
+        match self {
+            either::Left(responder) => responder.respond_to(req),
+            either::Right(responder) => responder.respond_to(req),
         }
     }
 }
