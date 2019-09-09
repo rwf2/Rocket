@@ -98,8 +98,7 @@ use crate::request::Request;
 ///     to the client. If the `Result` is `Err`, the wrapped `Err` responder is
 ///     used to respond to the client.
 ///
-///   * **::either::Either&lt;L, R>** _where_ **L: Responder** and **R:
-///     Responder**
+///   * **Either&lt;L, R>** _where_ **L: Responder** and **R: Responder**
 ///
 ///     Respond with either `L` or `R`. This is similar to the above, but does
 ///     not require a `Debug` implementation.

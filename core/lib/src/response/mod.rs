@@ -33,6 +33,8 @@ pub mod status;
 
 #[doc(hidden)] pub use rocket_codegen::Responder;
 
+#[doc(inline)] pub use either::Either;
+
 pub use self::response::{Response, ResponseBuilder, Body, DEFAULT_CHUNK_SIZE};
 pub use self::responder::Responder;
 pub use self::redirect::Redirect;
