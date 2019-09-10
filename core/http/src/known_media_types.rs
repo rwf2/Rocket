@@ -40,7 +40,7 @@ macro_rules! known_media_types {
         MOV (is_mov): "quicktime video", "video", "quicktime",
         MP4 (is_mp4): "MPEG4 Video", "video", "mp4",
         ZIP (is_zip): "ZIP archive", "application", "zip",
-        MP3 (is_mp3): "MP3 Audio", "audio", "mp3",
+        MP3 (is_mp3): "MP3 Audio", "audio", "mpeg
     })
 }
 
