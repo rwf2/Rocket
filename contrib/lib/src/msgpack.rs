@@ -131,7 +131,7 @@ impl<'a, T: Deserialize<'a>> FromData<'a> for MsgPack<T> {
     fn from_data(_: &Request<'_>, o: Transformed<'a, Self>) -> Outcome<Self, Self::Error> {
         use self::Error::*;
 
-        let buf = o.borrowed()?;
+        let buf = try_outcome!(o.borrowed());
         match rmp_serde::from_slice(&buf) {
             Ok(val) => Success(MsgPack(val)),
             Err(e) => {

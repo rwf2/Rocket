@@ -145,7 +145,7 @@ pub fn database_attr(attr: TokenStream, input: TokenStream) -> Result<TokenStrea
 
             fn from_request(request: &'a #request::Request<'r>) -> #request::Outcome<Self, ()> {
                 use ::rocket::{Outcome, http::Status};
-                let pool = request.guard::<::rocket::State<#pool_type>>()?;
+                let pool = ::rocket::try_outcome!(request.guard::<::rocket::State<#pool_type>>());
 
                 match pool.0.get() {
                     Ok(conn) => Outcome::Success(#guard_type(conn)),

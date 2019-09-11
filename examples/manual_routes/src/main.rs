@@ -11,6 +11,7 @@ use rocket::http::{Status, RawStr};
 use rocket::response::{self, Responder, status::Custom};
 use rocket::handler::Outcome;
 use rocket::outcome::IntoOutcome;
+use rocket::try_outcome;
 use rocket::http::Method::*;
 
 fn forward<'r>(_req: &'r Request, data: Data) -> Outcome<'r> {
@@ -30,9 +31,9 @@ fn name<'a>(req: &'a Request, _: Data) -> Outcome<'a> {
 }
 
 fn echo_url<'r>(req: &'r Request, _: Data) -> Outcome<'r> {
-    let param = req.get_param::<&RawStr>(1)
+    let param = try_outcome!(req.get_param::<&RawStr>(1)
         .and_then(|res| res.ok())
-        .into_outcome(Status::BadRequest)?;
+        .into_outcome(Status::BadRequest));
 
     Outcome::try_from(req, RawStr::from_str(param).url_decode())
 }
@@ -79,9 +80,9 @@ impl CustomHandler {
 
 impl Handler for CustomHandler {
     fn handle<'r>(&self, req: &'r Request, data: Data) -> Outcome<'r> {
-        let id = req.get_param::<&RawStr>(0)
+        let id = try_outcome!(req.get_param::<&RawStr>(0)
             .and_then(|res| res.ok())
-            .or_forward(data)?;
+            .or_forward(data));
 
         Outcome::from(req, format!("{} - {}", self.data, id))
     }

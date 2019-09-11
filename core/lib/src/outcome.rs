@@ -79,7 +79,6 @@
 //! `None`.
 
 use std::fmt;
-use std::ops::Try;
 
 use yansi::{Paint, Color};
 
@@ -601,28 +600,17 @@ impl<S, E, F> Outcome<S, E, F> {
     }
 }
 
-impl<S, E, F> Try for Outcome<S, E, F> {
-    type Ok = S;
-    type Error = Result<F, E>;
-
-    fn into_result(self) -> Result<Self::Ok, Self::Error> {
-        match self {
-            Success(val) => Ok(val),
-            Forward(val) => Err(Ok(val)),
-            Failure(val) => Err(Err(val)),
-        }
-    }
-
-    fn from_error(val: Self::Error) -> Self {
-        match val {
-            Ok(val) => Forward(val),
-            Err(val) => Failure(val),
-        }
-    }
-
-    fn from_ok(val: Self::Ok) -> Self {
-        Success(val)
-    }
+#[macro_export]
+macro_rules! try_outcome {
+    ($expr:expr $(,)?) => (match $expr {
+        $crate::outcome::Outcome::Success(val) => val,
+        $crate::outcome::Outcome::Failure(e) => {
+            return $crate::outcome::Outcome::Failure(::std::convert::From::from(e))
+        },
+        $crate::outcome::Outcome::Forward(f) => {
+            return $crate::outcome::Outcome::Forward(::std::convert::From::from(f))
+        },
+    });
 }
 
 impl<S, E, F> fmt::Debug for Outcome<S, E, F> {

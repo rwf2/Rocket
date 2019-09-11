@@ -143,7 +143,7 @@ impl<'a, T: Deserialize<'a>> FromData<'a> for Json<T> {
     }
 
     fn from_data(_: &Request<'_>, o: Transformed<'a, Self>) -> Outcome<Self, Self::Error> {
-        let string = o.borrowed()?;
+        let string = try_outcome!(o.borrowed());
         match serde_json::from_str(&string) {
             Ok(v) => Success(Json(v)),
             Err(e) => {

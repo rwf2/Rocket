@@ -219,7 +219,7 @@ pub type Transformed<'a, T> =
 ///         // Retrieve a borrow to the now transformed `String` (an &str). This
 ///         // is only correct because we know we _always_ return a `Borrowed` from
 ///         // `transform` above.
-///         let string = outcome.borrowed()?;
+///         let string = try_outcome!(outcome.borrowed());
 ///
 ///         // Perform a crude, inefficient parse.
 ///         let splits: Vec<&str> = string.split(" ").collect();
@@ -373,13 +373,13 @@ pub trait FromData<'a>: Sized {
     /// # use rocket::data::{Data, FromData, Transformed, Outcome};
     /// # fn f<'a>(outcome: Transformed<'a, Data>) -> Outcome<Data, <Data as FromData<'a>>::Error> {
     /// // If `Owned` was returned from `transform`:
-    /// let data = outcome.owned()?;
+    /// let data = try_outcome!(outcome.owned());
     /// # unimplemented!()
     /// # }
     ///
     /// # fn g<'a>(outcome: Transformed<'a, Data>) -> Outcome<Data, <Data as FromData<'a>>::Error> {
     /// // If `Borrowed` was returned from `transform`:
-    /// let data = outcome.borrowed()?;
+    /// let data = try_outcome!(outcome.borrowed());
     /// # unimplemented!()
     /// # }
     /// ```
@@ -399,7 +399,7 @@ impl<'f> FromData<'f> for Data {
 
     #[inline(always)]
     fn from_data(_: &Request<'_>, outcome: Transformed<'f, Self>) -> Outcome<Self, Self::Error> {
-        Success(outcome.owned()?)
+        outcome.owned()
     }
 }
 
@@ -517,7 +517,7 @@ impl<'a, T: FromDataSimple> FromData<'a> for T {
 
     #[inline(always)]
     fn from_data(req: &Request<'_>, o: Transformed<'a, Self>) -> Outcome<Self, Self::Error> {
-        T::from_data(req, o.owned()?)
+        o.owned().and_then(|t| T::from_data(req, t))
     }
 }
 

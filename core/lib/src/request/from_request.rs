@@ -245,7 +245,7 @@ impl<S, E> IntoOutcome<S, (Status, E), ()> for Result<S, E> {
 ///     type Error = ();
 ///
 ///     fn from_request(request: &Request<'_>) -> request::Outcome<User, ()> {
-///         let db = request.guard::<Database>()?;
+///         let db = try_outcome!(request.guard::<Database>());
 ///         request.cookies()
 ///             .get_private("user_id")
 ///             .and_then(|cookie| cookie.value().parse().ok())
@@ -259,7 +259,7 @@ impl<S, E> IntoOutcome<S, (Status, E), ()> for Result<S, E> {
 ///
 ///     fn from_request(request: &Request<'_>) -> request::Outcome<Admin, ()> {
 ///         // This will unconditionally query the database!
-///         let user = request.guard::<User>()?;
+///         let user = try_outcome!(request.guard::<User>());
 ///
 ///         if user.is_admin {
 ///             Outcome::Success(Admin { user })
@@ -326,7 +326,7 @@ impl<S, E> IntoOutcome<S, (Status, E), ()> for Result<S, E> {
 ///     type Error = std::convert::Infallible;
 ///
 ///     fn from_request(request: &'a Request<'_>) -> request::Outcome<Self, Self::Error> {
-///         let user = request.guard::<&User>()?;
+///         let user = try_outcome!(request.guard::<&User>());
 ///
 ///         if user.is_admin {
 ///             Outcome::Success(Admin { user })

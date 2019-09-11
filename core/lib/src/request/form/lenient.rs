@@ -105,7 +105,7 @@ impl<'f, T: FromForm<'f>> FromData<'f> for LenientForm<T> {
     }
 
     fn from_data(_: &Request<'_>, o: Transformed<'f, Self>) -> Outcome<Self, Self::Error> {
-        <Form<T>>::from_data(o.borrowed()?, false).map(LenientForm)
+        o.borrowed().and_then(|t| <Form<T>>::from_data(t, false).map(LenientForm))
     }
 }
 
