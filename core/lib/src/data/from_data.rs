@@ -370,7 +370,8 @@ pub trait FromData<'a>: Sized {
     /// following:
     ///
     /// ```rust
-    /// # use rocket::data::{Data, FromData, Transformed, Outcome};
+    /// # #[macro_use] extern crate rocket;
+    /// use rocket::data::{Data, FromData, Transformed, Outcome};
     /// # fn f<'a>(outcome: Transformed<'a, Data>) -> Outcome<Data, <Data as FromData<'a>>::Error> {
     /// // If `Owned` was returned from `transform`:
     /// let data = try_outcome!(outcome.owned());
