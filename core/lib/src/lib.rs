@@ -1,7 +1,6 @@
 #![feature(try_trait)]
 #![feature(proc_macro_hygiene)]
 #![feature(crate_visibility_modifier)]
-#![feature(label_break_value)]
 
 #![recursion_limit="256"]
 

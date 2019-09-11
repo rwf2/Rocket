@@ -195,23 +195,19 @@ impl<'f, T: FromForm<'f>> FromData<'f> for Form<T> {
     ) -> Transform<Outcome<Self::Owned, Self::Error>> {
         use std::{cmp::min, io::Read};
 
-        let outcome = 'o: {
-            if !request.content_type().map_or(false, |ct| ct.is_form()) {
-                warn_!("Form data does not have form content type.");
-                break 'o Forward(data);
-            }
+        if !request.content_type().map_or(false, |ct| ct.is_form()) {
+            warn_!("Form data does not have form content type.");
+            return Transform::Borrowed(Forward(data))
+        }
 
-            let limit = request.limits().forms;
-            let mut stream = data.open().take(limit);
-            let mut form_string = String::with_capacity(min(4096, limit) as usize);
-            if let Err(e) = stream.read_to_string(&mut form_string) {
-                break 'o Failure((Status::InternalServerError, FormDataError::Io(e)));
-            }
+        let limit = request.limits().forms;
+        let mut stream = data.open().take(limit);
+        let mut form_string = String::with_capacity(min(4096, limit) as usize);
+        if let Err(e) = stream.read_to_string(&mut form_string) {
+            return Transform::Borrowed(Failure((Status::InternalServerError, FormDataError::Io(e))))
+        }
 
-            break 'o Success(form_string);
-        };
-
-        Transform::Borrowed(outcome)
+        Transform::Borrowed(Success(form_string))
     }
 
     fn from_data(_: &Request<'_>, o: Transformed<'f, Self>) -> Outcome<Self, Self::Error> {
