@@ -403,8 +403,8 @@ impl Cookies<'_> {
 impl fmt::Debug for Cookies<'_> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match *self {
-            Cookies::Jarred(ref jar, _) => write!(f, "{:?}", jar),
-            Cookies::Empty(ref jar) => write!(f, "{:?}", jar)
+            Cookies::Jarred(ref jar, _) => jar.fmt(f),
+            Cookies::Empty(ref jar) => jar.fmt(f)
         }
     }
 }

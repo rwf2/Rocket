@@ -154,7 +154,7 @@ impl fmt::Debug for LaunchError {
     #[inline]
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         self.mark_handled();
-        write!(f, "{:?}", self.kind())
+        self.kind().fmt(f)
     }
 }
 

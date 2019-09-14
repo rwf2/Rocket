@@ -36,7 +36,7 @@ impl<T: Read> Stream<T> {
 
 impl<T: Read + Debug> Debug for Stream<T> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "Stream({:?})", self.0)
+        f.debug_tuple("Stream").field(&self.0).finish()
     }
 }
 
