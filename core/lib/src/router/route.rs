@@ -30,14 +30,14 @@ pub struct Route {
     /// The media type this route matches against, if any.
     pub format: Option<MediaType>,
     /// Cached metadata that aids in routing later.
-    crate metadata: Metadata
+    pub(crate) metadata: Metadata
 }
 
 #[derive(Debug, Default, Clone)]
-crate struct Metadata {
-    crate path_segments: Vec<RouteSegment<'static, Path>>,
-    crate query_segments: Option<Vec<RouteSegment<'static, Query>>>,
-    crate fully_dynamic_query: bool,
+pub(crate) struct Metadata {
+    pub path_segments: Vec<RouteSegment<'static, Path>>,
+    pub query_segments: Option<Vec<RouteSegment<'static, Query>>>,
+    pub fully_dynamic_query: bool,
 }
 
 impl Metadata {

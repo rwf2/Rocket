@@ -148,7 +148,7 @@ impl<T> Deref for Form<T> {
 }
 
 impl<'f, T: FromForm<'f>> Form<T> {
-    crate fn from_data(
+    pub(crate) fn from_data(
         form_str: &'f str,
         strict: bool
     ) -> Outcome<T, FormDataError<'f, T::Error>> {

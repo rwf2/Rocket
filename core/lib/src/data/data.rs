@@ -91,7 +91,7 @@ impl Data {
     }
 
     // FIXME: This is absolutely terrible (downcasting!), thanks to Hyper.
-    crate fn from_hyp(mut body: HyperBodyReader<'_, '_>) -> Result<Data, &'static str> {
+    pub(crate) fn from_hyp(mut body: HyperBodyReader<'_, '_>) -> Result<Data, &'static str> {
         #[inline(always)]
         #[cfg(feature = "tls")]
         fn concrete_stream(stream: &mut dyn NetworkStream) -> Option<NetStream> {
@@ -230,7 +230,7 @@ impl Data {
     // bytes `vec[pos..cap]` are buffered and unread. The remainder of the data
     // bytes can be read from `stream`.
     #[inline(always)]
-    crate fn new(mut stream: BodyReader) -> Data {
+    pub(crate) fn new(mut stream: BodyReader) -> Data {
         trace_!("Data::new({:?})", stream);
         let mut peek_buf: Vec<u8> = vec![0; PEEK_BYTES];
 
@@ -260,7 +260,7 @@ impl Data {
 
     /// This creates a `data` object from a local data source `data`.
     #[inline]
-    crate fn local(data: Vec<u8>) -> Data {
+    pub(crate) fn local(data: Vec<u8>) -> Data {
         let empty_stream = Cursor::new(vec![]).chain(NetStream::Empty);
 
         Data {

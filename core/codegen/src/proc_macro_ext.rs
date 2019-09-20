@@ -63,7 +63,7 @@ impl From<Vec<Diagnostic>> for Diagnostics {
 
 use std::ops::Deref;
 
-pub struct StringLit(crate String, crate Literal);
+pub struct StringLit(pub String, pub Literal);
 
 impl Deref for StringLit {
     type Target = str;

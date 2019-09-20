@@ -4,7 +4,7 @@ use rocket::Rocket;
 use rocket::config::ConfigError;
 use rocket::fairing::{Fairing, Info, Kind};
 
-crate use self::context::ContextManager;
+pub(crate) use self::context::ContextManager;
 
 #[cfg(not(debug_assertions))]
 mod context {
@@ -13,18 +13,18 @@ mod context {
 
     /// Wraps a Context. With `cfg(debug_assertions)` active, this structure
     /// additionally provides a method to reload the context at runtime.
-    crate struct ContextManager(Context);
+    pub(crate) struct ContextManager(Context);
 
     impl ContextManager {
-        crate fn new(ctxt: Context) -> ContextManager {
+        pub fn new(ctxt: Context) -> ContextManager {
             ContextManager(ctxt)
         }
 
-        crate fn context<'a>(&'a self) -> impl Deref<Target=Context> + 'a {
+        pub fn context<'a>(&'a self) -> impl Deref<Target=Context> + 'a {
             &self.0
         }
 
-        crate fn is_reloading(&self) -> bool {
+        pub fn is_reloading(&self) -> bool {
             false
         }
     }
@@ -42,7 +42,7 @@ mod context {
 
     /// Wraps a Context. With `cfg(debug_assertions)` active, this structure
     /// additionally provides a method to reload the context at runtime.
-    crate struct ContextManager {
+    pub(crate) struct ContextManager {
         /// The current template context, inside an RwLock so it can be updated.
         context: RwLock<Context>,
         /// A filesystem watcher and the receive queue for its events.
@@ -50,7 +50,7 @@ mod context {
     }
 
     impl ContextManager {
-        crate fn new(ctxt: Context) -> ContextManager {
+        pub fn new(ctxt: Context) -> ContextManager {
             let (tx, rx) = channel();
             let watcher = raw_watcher(tx).and_then(|mut watcher| {
                 watcher.watch(ctxt.root.canonicalize()?, RecursiveMode::Recursive)?;
@@ -73,11 +73,11 @@ mod context {
             }
         }
 
-        crate fn context(&self) -> impl Deref<Target=Context> + '_ {
+        pub fn context(&self) -> impl Deref<Target=Context> + '_ {
             self.context.read().unwrap()
         }
 
-        crate fn is_reloading(&self) -> bool {
+        pub fn is_reloading(&self) -> bool {
             self.watcher.is_some()
         }
 
@@ -89,7 +89,7 @@ mod context {
         /// have been changes since the last reload, all templates are
         /// reinitialized from disk and the user's customization callback is run
         /// again.
-        crate fn reload_if_needed<F: Fn(&mut Engines)>(&self, custom_callback: F) {
+        pub fn reload_if_needed<F: Fn(&mut Engines)>(&self, custom_callback: F) {
             self.watcher.as_ref().map(|w| {
                 let rx_lock = w.lock().expect("receive queue lock");
                 let mut changed = false;
@@ -121,7 +121,7 @@ pub struct TemplateFairing {
     /// The user-provided customization callback, allowing the use of
     /// functionality specific to individual template engines. In debug mode,
     /// this callback might be run multiple times as templates are reloaded.
-    crate custom_callback: Box<dyn Fn(&mut Engines) + Send + Sync + 'static>,
+    pub custom_callback: Box<dyn Fn(&mut Engines) + Send + Sync + 'static>,
 }
 
 impl Fairing for TemplateFairing {

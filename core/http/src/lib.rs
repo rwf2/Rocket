@@ -1,5 +1,4 @@
 #![feature(proc_macro_hygiene)]
-#![feature(crate_visibility_modifier)]
 #![recursion_limit="512"]
 
 #![warn(rust_2018_idioms)]
@@ -38,7 +37,7 @@ mod header;
 mod accept;
 mod raw_str;
 
-crate mod parse;
+pub(crate) mod parse;
 
 pub mod uncased;
 

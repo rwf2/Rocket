@@ -63,7 +63,7 @@ pub trait Policy: Default + Send + Sync + 'static {
     fn header(&self) -> Header<'static>;
 }
 
-crate trait SubPolicy: Send + Sync {
+pub(crate) trait SubPolicy: Send + Sync {
     fn name(&self) -> &'static UncasedStr;
     fn header(&self) -> Header<'static>;
 }

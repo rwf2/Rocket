@@ -53,7 +53,7 @@ mod fairings;
 mod ad_hoc;
 mod info_kind;
 
-crate use self::fairings::Fairings;
+pub(crate) use self::fairings::Fairings;
 pub use self::ad_hoc::AdHoc;
 pub use self::info_kind::{Info, Kind};
 

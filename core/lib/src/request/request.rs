@@ -32,24 +32,24 @@ pub struct Request<'r> {
     uri: Origin<'r>,
     headers: HeaderMap<'r>,
     remote: Option<SocketAddr>,
-    crate state: RequestState<'r>,
+    pub(crate) state: RequestState<'r>,
 }
 
 #[derive(Clone)]
-crate struct RequestState<'r> {
-    crate config: &'r Config,
-    crate managed: &'r Container,
-    crate path_segments: SmallVec<[Indices; 12]>,
-    crate query_items: Option<SmallVec<[IndexedFormItem; 6]>>,
-    crate route: Cell<Option<&'r Route>>,
-    crate cookies: RefCell<CookieJar>,
-    crate accept: Storage<Option<Accept>>,
-    crate content_type: Storage<Option<ContentType>>,
-    crate cache: Rc<Container>,
+pub(crate) struct RequestState<'r> {
+    pub config: &'r Config,
+    pub managed: &'r Container,
+    pub path_segments: SmallVec<[Indices; 12]>,
+    pub query_items: Option<SmallVec<[IndexedFormItem; 6]>>,
+    pub route: Cell<Option<&'r Route>>,
+    pub cookies: RefCell<CookieJar>,
+    pub accept: Storage<Option<Accept>>,
+    pub content_type: Storage<Option<ContentType>>,
+    pub cache: Rc<Container>,
 }
 
 #[derive(Clone)]
-crate struct IndexedFormItem {
+pub(crate) struct IndexedFormItem {
     raw: Indices,
     key: Indices,
     value: Indices
@@ -58,7 +58,7 @@ crate struct IndexedFormItem {
 impl<'r> Request<'r> {
     /// Create a new `Request` with the given `method` and `uri`.
     #[inline(always)]
-    crate fn new<'s: 'r>(
+    pub(crate) fn new<'s: 'r>(
         rocket: &'r Rocket,
         method: Method,
         uri: Origin<'s>
@@ -740,7 +740,7 @@ impl<'r> Request<'r> {
     // Returns an iterator over the raw segments of the path URI. Does not take
     // into account the current route. This is used during routing.
     #[inline]
-    crate fn raw_path_segments(&self) -> impl Iterator<Item = &RawStr> {
+    pub(crate) fn raw_path_segments(&self) -> impl Iterator<Item = &RawStr> {
         let path = self.uri.path();
         self.state.path_segments.iter().cloned()
             .map(move |(i, j)| path[i..j].into())
@@ -769,19 +769,19 @@ impl<'r> Request<'r> {
     /// Set `self`'s parameters given that the route used to reach this request
     /// was `route`. Use during routing when attempting a given route.
     #[inline(always)]
-    crate fn set_route(&self, route: &'r Route) {
+    pub(crate) fn set_route(&self, route: &'r Route) {
         self.state.route.set(Some(route));
     }
 
     /// Set the method of `self`, even when `self` is a shared reference. Used
     /// during routing to override methods for re-routing.
     #[inline(always)]
-    crate fn _set_method(&self, method: Method) {
+    pub(crate) fn _set_method(&self, method: Method) {
         self.method.set(method);
     }
 
     /// Convert from Hyper types into a Rocket Request.
-    crate fn from_hyp(
+    pub(crate) fn from_hyp(
         rocket: &'r Rocket,
         h_method: hyper::Method,
         h_headers: hyper::header::Headers,

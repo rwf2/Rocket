@@ -8,7 +8,7 @@ use crate::parse::uri::is_pchar;
 
 #[derive(Clone, Copy)]
 #[allow(non_camel_case_types)]
-crate struct UNSAFE_ENCODE_SET<P: UriPart>(PhantomData<P>);
+pub struct UNSAFE_ENCODE_SET<P: UriPart>(PhantomData<P>);
 
 impl<P: UriPart> Default for UNSAFE_ENCODE_SET<P> {
     #[inline(always)]
@@ -31,7 +31,7 @@ impl EncodeSet for UNSAFE_ENCODE_SET<Query> {
 
 #[derive(Clone, Copy)]
 #[allow(non_camel_case_types)]
-crate struct ENCODE_SET<P: UriPart>(PhantomData<P>);
+pub struct ENCODE_SET<P: UriPart>(PhantomData<P>);
 
 impl EncodeSet for ENCODE_SET<Path> {
     #[inline(always)]
@@ -52,7 +52,7 @@ impl EncodeSet for ENCODE_SET<Query> {
 
 #[derive(Default, Clone, Copy)]
 #[allow(non_camel_case_types)]
-crate struct DEFAULT_ENCODE_SET;
+pub struct DEFAULT_ENCODE_SET;
 
 impl EncodeSet for DEFAULT_ENCODE_SET {
     #[inline(always)]
@@ -62,7 +62,7 @@ impl EncodeSet for DEFAULT_ENCODE_SET {
     }
 }
 
-crate fn unsafe_percent_encode<P: UriPart>(string: &str) -> Cow<'_, str> {
+pub fn unsafe_percent_encode<P: UriPart>(string: &str) -> Cow<'_, str> {
     match P::DELIMITER {
         '/' => percent_encode::<UNSAFE_ENCODE_SET<Path>>(string),
         '&' => percent_encode::<UNSAFE_ENCODE_SET<Query>>(string),
@@ -70,6 +70,6 @@ crate fn unsafe_percent_encode<P: UriPart>(string: &str) -> Cow<'_, str> {
     }
 }
 
-crate fn percent_encode<S: EncodeSet + Default>(string: &str) -> Cow<'_, str> {
+pub fn percent_encode<S: EncodeSet + Default>(string: &str) -> Cow<'_, str> {
     utf8_percent_encode(string, S::default()).into()
 }

@@ -12,7 +12,7 @@ use crate::http::Method;
 type Selector = Method;
 
 // A handler to use when one is needed temporarily.
-crate fn dummy_handler<'r>(r: &'r crate::Request<'_>, _: crate::Data) -> crate::handler::Outcome<'r> {
+pub(crate) fn dummy_handler<'r>(r: &'r crate::Request<'_>, _: crate::Data) -> crate::handler::Outcome<'r> {
     crate::Outcome::from(r, ())
 }
 
@@ -48,7 +48,7 @@ impl Router {
         matches
     }
 
-    crate fn collisions(mut self) -> Result<Router, Vec<(Route, Route)>> {
+    pub(crate) fn collisions(mut self) -> Result<Router, Vec<(Route, Route)>> {
         let mut collisions = vec![];
         for routes in self.routes.values_mut() {
             for i in 0..routes.len() {

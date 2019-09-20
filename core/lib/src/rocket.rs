@@ -29,11 +29,11 @@ use crate::http::uri::Origin;
 /// The main `Rocket` type: used to mount routes and catchers and launch the
 /// application.
 pub struct Rocket {
-    crate config: Config,
+    pub(crate) config: Config,
     router: Router,
     default_catchers: HashMap<u16, Catcher>,
     catchers: HashMap<u16, Catcher>,
-    crate state: Container,
+    pub(crate) state: Container,
     fairings: Fairings,
 }
 
@@ -197,7 +197,7 @@ impl Rocket {
     }
 
     #[inline]
-    crate fn dispatch<'s, 'r>(
+    pub(crate) fn dispatch<'s, 'r>(
         &'s self,
         request: &'r mut Request<'s>,
         data: Data
@@ -277,7 +277,7 @@ impl Rocket {
     // (ensuring `handler` takes an immutable borrow), any caller to `route`
     // should be able to supply an `&mut` and retain an `&` after the call.
     #[inline]
-    crate fn route<'s, 'r>(
+    pub(crate) fn route<'s, 'r>(
         &'s self,
         request: &'r Request<'s>,
         mut data: Data,
@@ -310,7 +310,7 @@ impl Rocket {
     // catcher is called. If the catcher fails to return a good response, the
     // 500 catcher is executed. If there is no registered catcher for `status`,
     // the default catcher is used.
-    crate fn handle_error<'r>(
+    pub(crate) fn handle_error<'r>(
         &self,
         status: Status,
         req: &'r Request<'_>
@@ -648,7 +648,7 @@ impl Rocket {
         self
     }
 
-    crate fn prelaunch_check(mut self) -> Result<Rocket, LaunchError> {
+    pub(crate) fn prelaunch_check(mut self) -> Result<Rocket, LaunchError> {
         self.router = match self.router.collisions() {
             Ok(router) => router,
             Err(e) => return Err(LaunchError::new(LaunchErrorKind::Collision(e)))

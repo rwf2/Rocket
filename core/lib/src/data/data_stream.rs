@@ -14,7 +14,7 @@ pub type InnerStream = Chain<Cursor<Vec<u8>>, BodyReader>;
 /// [`Data::open()`](crate::data::Data::open()). The stream contains all of the data
 /// in the body of the request. It exposes no methods directly. Instead, it must
 /// be used as an opaque [`Read`] structure.
-pub struct DataStream(crate InnerStream);
+pub struct DataStream(pub(crate) InnerStream);
 
 // TODO: Have a `BufRead` impl for `DataStream`. At the moment, this isn't
 // possible since Hyper's `HttpReader` doesn't implement `BufRead`.

@@ -5,13 +5,13 @@ use crate::templates::{Engines, TemplateInfo};
 
 use rocket::http::ContentType;
 
-crate struct Context {
+pub(crate) struct Context {
     /// The root of the template directory.
-    crate root: PathBuf,
+    pub root: PathBuf,
     /// Mapping from template name to its information.
-    crate templates: HashMap<String, TemplateInfo>,
+    pub templates: HashMap<String, TemplateInfo>,
     /// Loaded template engines
-    crate engines: Engines,
+    pub engines: Engines,
 }
 
 impl Context {

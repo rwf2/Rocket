@@ -49,17 +49,17 @@ pub struct Config {
     /// How much information to log.
     pub log_level: LoggingLevel,
     /// The secret key.
-    crate secret_key: SecretKey,
+    pub(crate) secret_key: SecretKey,
     /// TLS configuration.
-    crate tls: Option<TlsConfig>,
+    pub(crate) tls: Option<TlsConfig>,
     /// Streaming read size limits.
     pub limits: Limits,
     /// Extra parameters that aren't part of Rocket's core config.
     pub extras: HashMap<String, Value>,
     /// The path to the configuration file this config was loaded from, if any.
-    crate config_file_path: Option<PathBuf>,
+    pub(crate) config_file_path: Option<PathBuf>,
     /// The path root-relative files will be rooted from.
-    crate root_path: Option<PathBuf>,
+    pub(crate) root_path: Option<PathBuf>,
 }
 
 macro_rules! config_from_raw {
@@ -192,7 +192,7 @@ impl Config {
     /// # Panics
     ///
     /// Panics if randomness cannot be retrieved from the OS.
-    crate fn default_from<P>(env: Environment, path: P) -> Result<Config>
+    pub(crate) fn default_from<P>(env: Environment, path: P) -> Result<Config>
         where P: AsRef<Path>
     {
         let mut config = Config::default(env);
@@ -214,7 +214,7 @@ impl Config {
     /// # Panics
     ///
     /// Panics if randomness cannot be retrieved from the OS.
-    crate fn default(env: Environment) -> Config {
+    pub(crate) fn default(env: Environment) -> Config {
         // Note: This may truncate if num_cpus::get() / 2 > u16::max. That's okay.
         let default_workers = (num_cpus::get() * 2) as u16;
 
@@ -276,7 +276,7 @@ impl Config {
     /// Constructs a `BadType` error given the entry `name`, the invalid `val`
     /// at that entry, and the `expect`ed type name.
     #[inline(always)]
-    crate fn bad_type(&self,
+    pub(crate) fn bad_type(&self,
                            name: &str,
                            actual: &'static str,
                            expect: &'static str) -> ConfigError {
@@ -300,7 +300,7 @@ impl Config {
     ///   * **log**: String
     ///   * **secret_key**: String (256-bit base64)
     ///   * **tls**: Table (`certs` (path as String), `key` (path as String))
-    crate fn set_raw(&mut self, name: &str, val: &Value) -> Result<()> {
+    pub(crate) fn set_raw(&mut self, name: &str, val: &Value) -> Result<()> {
         let (id, ok) = (|val| val, |_| Ok(()));
         config_from_raw!(self, name, val,
             address => (str, set_address, id),
@@ -616,7 +616,7 @@ impl Config {
 
     /// Retrieves the secret key from `self`.
     #[inline]
-    crate fn secret_key(&self) -> &Key {
+    pub(crate) fn secret_key(&self) -> &Key {
         self.secret_key.inner()
     }
 

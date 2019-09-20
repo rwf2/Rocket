@@ -23,7 +23,7 @@ macro_rules! p {
     ($n:expr, "parameter") => (p!(@go $n, "1 parameter", format!("{} parameters", $n)));
 }
 
-crate fn _uri_macro(input: TokenStream) -> Result<TokenStream> {
+pub fn _uri_macro(input: TokenStream) -> Result<TokenStream> {
     let input2: TokenStream2 = input.clone().into();
     let mut params = syn::parse::<UriParams>(input).map_err(syn_to_diag)?;
     prefix_last_segment(&mut params.route_path, URI_MACRO_PREFIX);
@@ -212,7 +212,7 @@ fn build_origin(internal: &InternalUriParams) -> Origin<'static> {
     Origin::new(path, query).to_normalized().into_owned()
 }
 
-crate fn _uri_internal_macro(input: TokenStream) -> Result<TokenStream> {
+pub fn _uri_internal_macro(input: TokenStream) -> Result<TokenStream> {
     // Parse the internal invocation and the user's URI param expressions.
     let internal = syn::parse::<InternalUriParams>(input).map_err(syn_to_diag)?;
     let (path_params, query_params) = extract_exprs(&internal)?;

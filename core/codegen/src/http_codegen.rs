@@ -8,25 +8,25 @@ use crate::attribute::segments::{parse_segments, parse_data_segment, Segment, Ki
 use crate::proc_macro_ext::StringLit;
 
 #[derive(Debug)]
-crate struct ContentType(crate http::ContentType);
+pub struct ContentType(pub http::ContentType);
 
 #[derive(Debug)]
-crate struct Status(crate http::Status);
+pub struct Status(pub http::Status);
 
 #[derive(Debug)]
-crate struct MediaType(crate http::MediaType);
+pub struct MediaType(pub http::MediaType);
 
 #[derive(Debug)]
-crate struct Method(crate http::Method);
+pub struct Method(pub http::Method);
 
 #[derive(Debug)]
-crate struct Origin(crate http::uri::Origin<'static>);
+pub struct Origin(pub http::uri::Origin<'static>);
 
 #[derive(Clone, Debug)]
-crate struct DataSegment(crate Segment);
+pub struct DataSegment(pub Segment);
 
 #[derive(Clone, Debug)]
-crate struct Optional<T>(crate Option<T>);
+pub struct Optional<T>(pub Option<T>);
 
 impl FromMeta for StringLit {
     fn from_meta(meta: MetaItem<'_>) -> Result<Self> {
@@ -35,10 +35,10 @@ impl FromMeta for StringLit {
 }
 
 #[derive(Debug)]
-crate struct RoutePath {
-    crate origin: Origin,
-    crate path: Vec<Segment>,
-    crate query: Option<Vec<Segment>>,
+pub struct RoutePath {
+    pub origin: Origin,
+    pub path: Vec<Segment>,
+    pub query: Option<Vec<Segment>>,
 }
 
 impl FromMeta for Status {

@@ -9,7 +9,7 @@ use crate::{ROUTE_STRUCT_PREFIX, CATCH_STRUCT_PREFIX};
 mod uri;
 mod uri_parsing;
 
-crate fn prefix_last_segment(path: &mut Path, prefix: &str) {
+pub fn prefix_last_segment(path: &mut Path, prefix: &str) {
     let mut last_seg = path.segments.last_mut().expect("syn::Path has segments");
     last_seg.ident = last_seg.ident.prepend(prefix);
 }

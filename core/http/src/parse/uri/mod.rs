@@ -8,7 +8,7 @@ use crate::uri::{Uri, Origin, Absolute, Authority};
 use crate::parse::indexed::IndexedInput;
 use self::parser::{uri, origin, authority_only, absolute_only, rocket_route_origin};
 
-crate use self::tables::is_pchar;
+pub use self::tables::is_pchar;
 pub use self::error::Error;
 
 type RawInput<'a> = IndexedInput<'a, [u8]>;

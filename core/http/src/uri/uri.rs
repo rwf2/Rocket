@@ -62,7 +62,7 @@ pub enum Uri<'a> {
 
 impl<'a> Uri<'a> {
     #[inline]
-    crate unsafe fn raw_absolute(
+    pub(crate) unsafe fn raw_absolute(
         source: Cow<'a, [u8]>,
         scheme: Indexed<'a, [u8]>,
         path: Indexed<'a, [u8]>,
@@ -212,7 +212,7 @@ impl<'a> Uri<'a> {
     }
 }
 
-crate unsafe fn as_utf8_unchecked(input: Cow<'_, [u8]>) -> Cow<'_, str> {
+pub(crate) unsafe fn as_utf8_unchecked(input: Cow<'_, [u8]>) -> Cow<'_, str> {
     match input {
         Cow::Borrowed(bytes) => Cow::Borrowed(std::str::from_utf8_unchecked(bytes)),
         Cow::Owned(bytes) => Cow::Owned(String::from_utf8_unchecked(bytes))

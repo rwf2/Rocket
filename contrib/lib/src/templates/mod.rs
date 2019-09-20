@@ -129,8 +129,8 @@ mod metadata;
 
 pub use self::engine::Engines;
 pub use self::metadata::Metadata;
-crate use self::context::Context;
-crate use self::fairing::ContextManager;
+pub(crate) use self::context::Context;
+pub(crate) use self::fairing::ContextManager;
 
 use self::engine::Engine;
 use self::fairing::TemplateFairing;
@@ -209,7 +209,7 @@ pub struct Template {
 }
 
 #[derive(Debug)]
-crate struct TemplateInfo {
+pub(crate) struct TemplateInfo {
     /// The complete path, including `template_dir`, to this template.
     path: PathBuf,
     /// The extension for the engine of this template.

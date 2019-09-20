@@ -9,7 +9,7 @@ use crate::parse::IndexedBytes;
 type Result<'a, T> = pear::Result<T, RawInput<'a>>;
 
 #[parser]
-crate fn uri<'a>(input: &mut RawInput<'a>) -> Result<'a, Uri<'a>> {
+pub fn uri<'a>(input: &mut RawInput<'a>) -> Result<'a, Uri<'a>> {
     match input.len() {
         0 => return Err(pear_error!("empty URI")),
         1 => switch! {
@@ -29,12 +29,12 @@ crate fn uri<'a>(input: &mut RawInput<'a>) -> Result<'a, Uri<'a>> {
 }
 
 #[parser]
-crate fn origin<'a>(input: &mut RawInput<'a>) -> Result<'a, Origin<'a>> {
+pub fn origin<'a>(input: &mut RawInput<'a>) -> Result<'a, Origin<'a>> {
     (peek(b'/')?, path_and_query(is_pchar)?).1
 }
 
 #[parser]
-crate fn rocket_route_origin<'a>(input: &mut RawInput<'a>) -> Result<'a, Origin<'a>> {
+pub fn rocket_route_origin<'a>(input: &mut RawInput<'a>) -> Result<'a, Origin<'a>> {
     (peek(b'/')?, path_and_query(is_pchar_or_rchar)?).1
 }
 
@@ -128,7 +128,7 @@ fn absolute<'a>(
 }
 
 #[parser]
-crate fn authority_only<'a>(input: &mut RawInput<'a>) -> Result<'a, Authority<'a>> {
+pub fn authority_only<'a>(input: &mut RawInput<'a>) -> Result<'a, Authority<'a>> {
     if let Uri::Authority(authority) = absolute_or_authority()? {
         Ok(authority)
     } else {
@@ -137,7 +137,7 @@ crate fn authority_only<'a>(input: &mut RawInput<'a>) -> Result<'a, Authority<'a
 }
 
 #[parser]
-crate fn absolute_only<'a>(input: &mut RawInput<'a>) -> Result<'a, Absolute<'a>> {
+pub fn absolute_only<'a>(input: &mut RawInput<'a>) -> Result<'a, Absolute<'a>> {
     if let Uri::Absolute(absolute) = absolute_or_authority()? {
         Ok(absolute)
     } else {

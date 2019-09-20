@@ -973,7 +973,7 @@ impl<'r> Response<'r> {
     // Makes the `Read`er in the body empty but leaves the size of the body if
     // it exists. Only meant to be used to handle HEAD requests automatically.
     #[inline(always)]
-    crate fn strip_body(&mut self) {
+    pub(crate) fn strip_body(&mut self) {
         if let Some(body) = self.take_body() {
             self.body = match body {
                 Body::Sized(_, n) => Some(Body::Sized(Box::new(io::empty()), n)),

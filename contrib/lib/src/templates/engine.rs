@@ -7,7 +7,7 @@ use crate::templates::TemplateInfo;
 #[cfg(feature = "tera_templates")] use crate::templates::tera::Tera;
 #[cfg(feature = "handlebars_templates")] use crate::templates::handlebars::Handlebars;
 
-crate trait Engine: Send + Sync + 'static {
+pub(crate) trait Engine: Send + Sync + 'static {
     const EXT: &'static str;
 
     fn init(templates: &[(&str, &TemplateInfo)]) -> Option<Self> where Self: Sized;
@@ -60,12 +60,12 @@ pub struct Engines {
 }
 
 impl Engines {
-    crate const ENABLED_EXTENSIONS: &'static [&'static str] = &[
+    pub(crate) const ENABLED_EXTENSIONS: &'static [&'static str] = &[
         #[cfg(feature = "tera_templates")] Tera::EXT,
         #[cfg(feature = "handlebars_templates")] Handlebars::EXT,
     ];
 
-    crate fn init(templates: &HashMap<String, TemplateInfo>) -> Option<Engines> {
+    pub(crate) fn init(templates: &HashMap<String, TemplateInfo>) -> Option<Engines> {
         fn inner<E: Engine>(templates: &HashMap<String, TemplateInfo>) -> Option<E> {
             let named_templates = templates.iter()
                 .filter(|&(_, i)| i.extension == E::EXT)
@@ -89,7 +89,7 @@ impl Engines {
         })
     }
 
-    crate fn render<C: Serialize>(
+    pub(crate) fn render<C: Serialize>(
         &self,
         name: &str,
         info: &TemplateInfo,

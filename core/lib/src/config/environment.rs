@@ -21,10 +21,10 @@ pub enum Environment {
 
 impl Environment {
     /// List of all of the possible environments.
-    crate const ALL: [Environment; 3] = [Development, Staging, Production];
+    pub(crate) const ALL: [Environment; 3] = [Development, Staging, Production];
 
     /// String of all valid environments.
-    crate const VALID: &'static str = "development, staging, production";
+    pub(crate) const VALID: &'static str = "development, staging, production";
 
     /// Retrieves the "active" environment as determined by the `ROCKET_ENV`
     /// environment variable. If `ROCKET_ENV` is not set, returns `Development`

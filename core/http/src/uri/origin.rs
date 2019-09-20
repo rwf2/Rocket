@@ -85,10 +85,10 @@ use state::Storage;
 /// ```
 #[derive(Clone, Debug)]
 pub struct Origin<'a> {
-    crate source: Option<Cow<'a, str>>,
-    crate path: IndexedStr<'a>,
-    crate query: Option<IndexedStr<'a>>,
-    crate segment_count: Storage<usize>,
+    pub(crate) source: Option<Cow<'a, str>>,
+    pub(crate) path: IndexedStr<'a>,
+    pub(crate) query: Option<IndexedStr<'a>>,
+    pub(crate) segment_count: Storage<usize>,
 }
 
 impl<'b> PartialEq<Origin<'b>> for Origin<'_> {
@@ -112,7 +112,7 @@ impl IntoOwned for Origin<'_> {
 
 impl<'a> Origin<'a> {
     #[inline]
-    crate unsafe fn raw(
+    pub(crate) unsafe fn raw(
         source: Cow<'a, [u8]>,
         path: Indexed<'a, [u8]>,
         query: Option<Indexed<'a, [u8]>>

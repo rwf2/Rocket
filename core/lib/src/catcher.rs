@@ -64,7 +64,7 @@ pub struct Catcher {
     pub code: u16,
     /// The catcher's associated handler.
     pub handler: ErrorHandler,
-    crate is_default: bool,
+    pub(crate) is_default: bool,
 }
 
 impl Catcher {
@@ -98,7 +98,7 @@ impl Catcher {
     }
 
     #[inline(always)]
-    crate fn handle<'r>(&self, req: &'r Request<'_>) -> response::Result<'r> {
+    pub(crate) fn handle<'r>(&self, req: &'r Request<'_>) -> response::Result<'r> {
         (self.handler)(req)
     }
 

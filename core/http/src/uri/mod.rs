@@ -9,7 +9,7 @@ mod authority;
 mod absolute;
 mod segments;
 
-crate mod encoding;
+pub(crate) mod encoding;
 
 pub use crate::parse::uri::Error;
 
