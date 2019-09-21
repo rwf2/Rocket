@@ -115,12 +115,12 @@ use crate::http::Method;
 use proc_macro::TokenStream;
 use devise::proc_macro2;
 
-pub(crate) static ROUTE_STRUCT_PREFIX: &str = "static_rocket_route_info_for_";
-pub(crate) static CATCH_STRUCT_PREFIX: &str = "static_rocket_catch_info_for_";
-pub(crate) static CATCH_FN_PREFIX: &str = "rocket_catch_fn_";
-pub(crate) static ROUTE_FN_PREFIX: &str = "rocket_route_fn_";
-pub(crate) static URI_MACRO_PREFIX: &str = "rocket_uri_macro_";
-pub(crate) static ROCKET_PARAM_PREFIX: &str = "__rocket_param_";
+static ROUTE_STRUCT_PREFIX: &str = "static_rocket_route_info_for_";
+static CATCH_STRUCT_PREFIX: &str = "static_rocket_catch_info_for_";
+static CATCH_FN_PREFIX: &str = "rocket_catch_fn_";
+static ROUTE_FN_PREFIX: &str = "rocket_route_fn_";
+static URI_MACRO_PREFIX: &str = "rocket_uri_macro_";
+static ROCKET_PARAM_PREFIX: &str = "__rocket_param_";
 
 macro_rules! emit {
     ($tokens:expr) => ({
