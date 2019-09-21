@@ -36,8 +36,7 @@ mod status;
 mod header;
 mod accept;
 mod raw_str;
-
-pub(crate) mod parse;
+mod parse;
 
 pub mod uncased;
 

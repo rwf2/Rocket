@@ -113,7 +113,7 @@ mod syn_ext;
 
 use crate::http::Method;
 use proc_macro::TokenStream;
-pub(crate) use devise::proc_macro2;
+use devise::proc_macro2;
 
 pub(crate) static ROUTE_STRUCT_PREFIX: &str = "static_rocket_route_info_for_";
 pub(crate) static CATCH_STRUCT_PREFIX: &str = "static_rocket_catch_info_for_";
