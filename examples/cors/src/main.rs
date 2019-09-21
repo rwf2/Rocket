@@ -28,6 +28,7 @@ fn main() {
         .mount("/", routes![hello, get_index, patch_notes])
         .attach(CorsFairingBuilder::new()
             .add_header(&"content-type")
-            .build())
+            .build()
+            .unwrap())
         .launch();
 }
