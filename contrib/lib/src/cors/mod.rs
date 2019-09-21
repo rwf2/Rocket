@@ -22,7 +22,7 @@ use rocket::http::Status;
 #[derive(Debug)]
 pub struct CorsFairing {
     headers: Vec<String>,
-    origins: Vec<String>
+    origin: Origin
 }
 
 impl Fairing for CorsFairing {
@@ -65,7 +65,12 @@ impl Fairing for CorsFairing {
 
     #[allow(unused_variables)]
     fn on_response(&self, request: &Request<'_>, response: &mut Response<'_>) {
-        response.set_header(Header::new("Access-Control-Allow-Origin", "*"));
+        let origin_str = match self.origin {
+            Origin::Any => "*".to_string(),
+            Origin::Explicit(ref uri) => uri.to_string()
+        };
+
+        response.set_header(Header::new("Access-Control-Allow-Origin", origin_str));
     }
 }
 
@@ -140,28 +145,57 @@ impl Handler for OptionsHandler {
     }
 }
 
+#[derive(Debug)]
+enum Origin {
+    Any,
+    Explicit(String)
+}
+
 pub struct CorsFairingBuilder {
     headers: Vec<String>,
-    origins: Vec<String>
+    origin: Option<Origin>
+}
+
+#[derive(Debug, PartialEq)]
+pub enum CorsFairingError {
+    /// If the programmer has not chosen any origin then an error will be returned.
+    NoOrigin
 }
 
 impl CorsFairingBuilder {
     pub fn new() -> CorsFairingBuilder {
         CorsFairingBuilder{
             headers: Vec::new(),
-            origins: Vec::new()
+            origin: None
         }
     }
 
-    pub fn build(self) -> CorsFairing {
-        CorsFairing{
-            headers: self.headers,
-            origins: self.origins
+    pub fn build(self) -> Result<CorsFairing,CorsFairingError> {
+        match self.origin {
+            Some(origin) => {
+                Ok(CorsFairing{
+                    headers: self.headers,
+                    origin: origin
+                })
+            },
+            None => Result::Err(CorsFairingError::NoOrigin)
         }
     }
 
     pub fn add_header(mut self, header: &str) -> Self {
         self.headers.push(String::from(header));
+        self
+    }
+
+    pub fn any_origin(mut self) -> Self {
+        self.origin = Some(Origin::Any);
+
+        self
+    }
+
+    pub fn explicit_origin(mut self, uri: &str) -> Self {
+        self.origin = Some(Origin::Explicit(uri.to_string()));        
+
         self
     }
 }

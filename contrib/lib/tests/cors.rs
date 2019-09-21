@@ -44,9 +44,11 @@ mod cors_tests {
         let rocket = rocket::ignite()
             .mount("/", routes![sample_delete_route])
             .attach(CorsFairingBuilder::new()
-                .build());
+                .any_origin()
+                .build().unwrap());
 
         let client = Client::new(rocket).expect("valid rocket instance");
+
         let response = client.options("/test").dispatch();
         assert_eq!(response.status(), Status::Ok);
         assert_eq!(response.headers().get_one("Access-Control-Allow-Methods"), Some("DELETE".into()));
@@ -58,12 +60,55 @@ mod cors_tests {
         let rocket = rocket::ignite()
             .mount("/", routes![sample_get_route, sample_delete_route])
             .attach(CorsFairingBuilder::new()
-                .build());
+                .any_origin()
+                .build().unwrap());
 
         let client = Client::new(rocket).expect("valid rocket instance");
 
         let response = client.options("/test").dispatch();
         assert_eq!(response.status(), Status::Ok);
         assert_eq!(response.headers().get_one("Access-Control-Allow-Methods"), Some("DELETE, GET".into()));
+    }
+
+    // Ensure that the proper error is reported if the programmes does not select any origin.
+    #[test]
+    pub fn test_no_origin_error() {
+        let err = CorsFairingBuilder::new()
+            .build()
+            .expect_err("expected error");
+
+        assert_eq!(CorsFairingError::NoOrigin, err);
+    }
+
+    /// Test that the any origin works correctly.
+    #[test]
+    pub fn test_any_origin() {
+        let rocket = rocket::ignite()
+            .mount("/", routes![sample_delete_route])
+            .attach(CorsFairingBuilder::new()
+                .any_origin()
+                .build().unwrap());
+
+        let client = Client::new(rocket).expect("valid rocket instance");
+
+        let response = client.options("/test").dispatch();
+        assert_eq!(response.status(), Status::Ok);
+        assert_eq!(response.headers().get_one("Access-Control-Allow-Origin"), Some("*".into()));
+    }
+
+    #[test]
+    pub fn test_explicit_origin() {
+        let rocket = rocket::ignite()
+            .mount("/", routes![sample_delete_route])
+            .attach(CorsFairingBuilder::new()
+                .explicit_origin("https://example.com/")
+                .build()
+                .unwrap());
+
+        let client = Client::new(rocket).expect("valid rocket instance");
+
+        let response = client.options("/test").dispatch();
+        assert_eq!(response.status(), Status::Ok);
+        assert_eq!(response.headers().get_one("Access-Control-Allow-Origin"), Some("https://example.com/".into()));
     }
 }
