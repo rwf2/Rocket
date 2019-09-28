@@ -134,7 +134,7 @@ impl Fairing for CorsFairing {
                                 Value::Array(x) => {
                                     let result: Vec<String> = x.iter()
                                         .filter_map(|val| match val { 
-                                            rocket::config::Value::String(s) => Some(s.clone()),
+                                            Value::String(s) => Some(s.clone()),
                                             _ => None
                                         })
                                         .collect();
@@ -158,38 +158,6 @@ impl Fairing for CorsFairing {
                 }
             }
         };
-
-        /*
-        let origin = match &self.config {
-            Some(ref config) => match config.origin {
-                Some(ref origin) => string_from_origin(&origin),
-                None => origin_from_config(&rocket)
-            },
-            None => {
-                origin_from_config(&rocket)
-            }
-        };        
-
-        let headers = match &self.config {
-            Some(ref config) => config.headers.clone(),
-            None => {
-                if let Ok(headers) = rocket.config().get_slice("allowed_cross_origin_headers") {
-                    let result: Vec<String> = headers.iter()
-                        .filter_map(|val| match val { 
-                            rocket::config::Value::String(s) => Some(s.clone()),
-                            _ => None
-                        })
-                        .collect();
-
-                    result
-                } else {
-                    warn_!("Bad headers.");
-
-                    Vec::new()
-                }
-            }
-        };
-        */
 
         let ctx = CorsContext {
             origin: origin
@@ -345,5 +313,9 @@ impl CorsFairingConfig {
         self.origin = Some(Origin::Explicit(uri.to_string()));        
 
         self
+    }
+
+    pub fn foo() -> () {
+        
     }
 }
