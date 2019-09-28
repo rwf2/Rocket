@@ -1,14 +1,6 @@
 #![feature(proc_macro_hygiene)]
 #[macro_use] extern crate rocket;
 
-// TODO Test with an allow-any origin
-// TODO Test with two origins
-// TODO Test with one origin
-// TODO Test a variety of methods (delete, put, post)
-// TODO Test with headers
-// TODO Test with no headers
-// TODO Test with multiple headers
-// note, I think all of these can be integration tests
 #[cfg(feature = "cors")]
 mod cors_tests {
     use rocket_contrib::cors::*;
@@ -25,27 +17,15 @@ mod cors_tests {
         "Hi"
     }
 
-    // TODO name after Cross Origin.  Example CrossOrigin
-    
-    // Include on all responses 
-    //   Access-Control-Allow-Credentials
-    //   Access-Control-Allow-Origin
-    // Requested on preflight
-    //   `Access-Control-Request-Method` 
-    //   `Access-Control-Request-Headers` 
-    // Include on preflight
-    //   Access-Control-Allow-Methods` 
-    //   `Access-Control-Allow-Headers` 
-    //   `Access-Control-Max-Age` 
-    //   `Access-Control-Expose-Headers` 
+
 
     #[test]
     pub fn test_one_method() {
         let rocket = rocket::ignite()
             .mount("/", routes![sample_delete_route])
-            .attach(CorsFairingBuilder::new()
+            .attach(CorsFairingConfig::new()
                 .any_origin()
-                .build().unwrap());
+                .fairing());
 
         let client = Client::new(rocket).expect("valid rocket instance");
 
@@ -59,9 +39,9 @@ mod cors_tests {
     pub fn test_many_method() {
         let rocket = rocket::ignite()
             .mount("/", routes![sample_get_route, sample_delete_route])
-            .attach(CorsFairingBuilder::new()
+            .attach(CorsFairingConfig::new()
                 .any_origin()
-                .build().unwrap());
+                .fairing());
 
         let client = Client::new(rocket).expect("valid rocket instance");
 
@@ -70,24 +50,14 @@ mod cors_tests {
         assert_eq!(response.headers().get_one("Access-Control-Allow-Methods"), Some("DELETE, GET".into()));
     }
 
-    // Ensure that the proper error is reported if the programmes does not select any origin.
-    #[test]
-    pub fn test_no_origin_error() {
-        let err = CorsFairingBuilder::new()
-            .build()
-            .expect_err("expected error");
-
-        assert_eq!(CorsFairingError::NoOrigin, err);
-    }
-
     /// Test that the any origin works correctly.
     #[test]
     pub fn test_any_origin() {
         let rocket = rocket::ignite()
             .mount("/", routes![sample_delete_route])
-            .attach(CorsFairingBuilder::new()
+            .attach(CorsFairingConfig::new()
                 .any_origin()
-                .build().unwrap());
+                .fairing());
 
         let client = Client::new(rocket).expect("valid rocket instance");
 
@@ -100,10 +70,9 @@ mod cors_tests {
     pub fn test_explicit_origin() {
         let rocket = rocket::ignite()
             .mount("/", routes![sample_delete_route])
-            .attach(CorsFairingBuilder::new()
+            .attach(CorsFairingConfig::new()
                 .explicit_origin("https://example.com/")
-                .build()
-                .unwrap());
+                .fairing());
 
         let client = Client::new(rocket).expect("valid rocket instance");
 

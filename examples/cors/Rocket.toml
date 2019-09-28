@@ -4,3 +4,7 @@ port = 8000
 keep_alive = 5
 log = "normal"
 limits = { forms = 32768 }
+
+[development.cors]
+allow_origin = "https://example.com/"
+allow_headers = ["X-Foo", "X-Bar"]

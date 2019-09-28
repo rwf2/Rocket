@@ -5,7 +5,7 @@
 extern crate rocket_contrib;
 
 use rocket::Data;
-use rocket_contrib::cors::CorsFairingBuilder;
+use rocket_contrib::cors::CorsFairing;
 
 #[get("/test")]
 fn get_index() -> &'static str {
@@ -26,9 +26,6 @@ fn patch_notes(_id: u64, _input: Data) -> &'static str {
 fn main() {
     rocket::ignite()
         .mount("/", routes![hello, get_index, patch_notes])
-        .attach(CorsFairingBuilder::new()
-            .add_header(&"content-type")
-            .build()
-            .unwrap())
+        .attach(CorsFairing::new())
         .launch();
 }
