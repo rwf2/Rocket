@@ -1,3 +1,47 @@
+//! A fairing to implement automatic [Cross-origin resource sharing](https://en.wikipedia.org/wiki/Cross-origin_resource_sharing).
+//! 
+//! This fairing will automatically add appropriate Access-Control-* headers 
+//! to every route and generate preflight routes (OPTIONS) where required.
+//!
+//!
+//! # Enabling
+//!
+//! This module is only available when the 'cors' feature is enabled.  Enable
+//! cors in `Cargo.toml` as follows:
+//!
+//! ```toml
+//! [dependencies.rocket_contrib]
+//! version = "0.5.0-dev"
+//! features = ["cors"]
+//! ```
+//!
+//! Then add the fairing to your rocket before launching.
+//! 
+//! ```rust
+//! #![feature(proc_macro_hygiene)]
+//! 
+//! #[macro_use] extern crate rocket;
+//! 
+//! use rocket_contrib::cors::CorsFairingBuilder;
+//! 
+//! #[get("/")]
+//! fn index() -> &'static str {
+//!     "Hello, world!"
+//! }
+//!
+//! fn main() {
+//!     let rocket = rocket::ignite()
+//!         .mount("/", routes![index])
+//!         // Add CorsFairing *after* your routes.
+//!         .attach(CorsFairingBuilder::new()
+//!             .explicit_origin("https://example.com/")
+//!             .build().unwrap());
+//! # if false { // We don't actually want to launch the server in an example.
+//!     rocket.launch();
+//! # }
+//! }
+//! ```
+//!
 use rocket::fairing::Fairing;
 use rocket::fairing::Info;
 use rocket::fairing::Kind;
@@ -13,11 +57,7 @@ use rocket::http::Header;
 use rocket::http::Method;
 use rocket::http::Status;
 
-// TODO Specify origins.
-// TODO Documentation
-// TODO Good default values for headers, etc.
-// TODO Perhaps clone the settings or something.
-// TODO Add a marker parameter "AllowOrigin" or "DenyOrigin"?  See what other cors libraries (node, sprint) have done.  What is the default?  What is the verb?
+
 
 #[derive(Debug)]
 pub struct CorsFairing {
