@@ -69,10 +69,10 @@ impl<'a, T: Deserialize<'a>> FromData<'a> for Ron<T> {
 
 impl<'r, T: Serialize> Responder<'r> for Ron<T> {
     fn respond_to(self, req: &'r Request<'_>) -> response::ResultFuture<'r> {
-        match ron::ser::to_string(&self.0) {
+        match ron::ser::to_string_pretty(&self.0, ron::ser::PrettyConfig::default()) {
             Ok(string) => Box::pin(async move { Ok(content::Ron(string).respond_to(req).await.unwrap()) }),
             Err(e) => Box::pin (async move {
-                error_!("JSON failed to serialize: {:?}", e);
+                error_!("RON failed to serialize: {:?}", e);
                 Err(Status::InternalServerError)
             })
         }
