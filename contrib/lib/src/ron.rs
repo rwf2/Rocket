@@ -69,7 +69,7 @@ impl<'a, T: Deserialize<'a>> FromData<'a> for Ron<T> {
 
 impl<'r, T: Serialize> Responder<'r> for Ron<T> {
     fn respond_to(self, req: &'r Request<'_>) -> response::ResultFuture<'r> {
-        match ron::ser::to_string_pretty(&self.0, ron::ser::PrettyConfig::default()) {
+        match serialize(&self.0) {
             Ok(string) => Box::pin(async move { Ok(content::Ron(string).respond_to(req).await.unwrap()) }),
             Err(e) => Box::pin (async move {
                 error_!("RON failed to serialize: {:?}", e);
@@ -79,6 +79,14 @@ impl<'r, T: Serialize> Responder<'r> for Ron<T> {
     }
 }
 
+fn serialize<T>(value: &T) -> ron::ser::Result<String>
+where
+    T: Serialize,
+{
+    let mut s = ron::ser::Serializer::new(Some(ron::ser::PrettyConfig::default()), true);
+    value.serialize(&mut s)?;
+    Ok(s.into_output_string())
+}
 
 impl<T> Deref for Ron<T> {
     type Target = T;
