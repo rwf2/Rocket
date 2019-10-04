@@ -47,7 +47,7 @@ impl Fairing for TestFairing
         if self.initialized.load(Ordering::Relaxed) == false {
             panic!("This should have been set to true in `Fairing::on_launch`");
         }
-    } 
+    }
 }
 
 #[get("/<name>/<age>")]
