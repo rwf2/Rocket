@@ -661,6 +661,21 @@ impl Rocket {
         Ok(self)
     }
 
+    pub(crate) fn testing_launch(mut self) -> Result<Rocket, LaunchError> {
+        self = match self.prelaunch_check() {
+            Ok(rocket) => rocket,
+            Err(launch_error) => return Err(launch_error)
+        };
+
+        // Freeze managed state for synchronization-free accesses later.
+        self.state.freeze();
+
+        // Run the launch fairings.
+        self.fairings.handle_launch(&self);
+
+        Ok(self)
+    }
+
     /// Starts the application server and begins listening for and dispatching
     /// requests to mounted routes and catchers. Unless there is an error, this
     /// function does not return and blocks until program termination.

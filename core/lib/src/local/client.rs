@@ -82,7 +82,7 @@ impl Client {
             false => None
         };
 
-        Ok(Client { rocket: rocket.prelaunch_check()?, cookies })
+        Ok(Client { rocket: rocket.testing_launch()?, cookies })
     }
 
     /// Construct a new `Client` from an instance of `Rocket` with cookie
