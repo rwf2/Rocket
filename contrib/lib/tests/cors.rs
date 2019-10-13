@@ -3,7 +3,8 @@
 
 #[cfg(feature = "cors")]
 mod cors_tests {
-    use rocket_contrib::cors::*;
+    use rocket_contrib::cors::CorsFairing;
+    use rocket_contrib::cors::config::*;
     use rocket::local::*;
     use rocket::http::Status;
 
@@ -23,9 +24,7 @@ mod cors_tests {
     pub fn test_one_method() {
         let rocket = rocket::ignite()
             .mount("/", routes![sample_delete_route])
-            .attach(CorsFairingConfig::new()
-                .any_origin()
-                .fairing());
+            .attach(CorsFairing::with_config(CorsFairingConfig::with_any_origin()));
 
         let client = Client::new(rocket).expect("valid rocket instance");
 
@@ -39,9 +38,8 @@ mod cors_tests {
     pub fn test_many_method() {
         let rocket = rocket::ignite()
             .mount("/", routes![sample_get_route, sample_delete_route])
-            .attach(CorsFairingConfig::new()
-                .any_origin()
-                .fairing());
+            .attach(CorsFairing::with_config(CorsFairingConfig::with_any_origin()));
+
 
         let client = Client::new(rocket).expect("valid rocket instance");
 
@@ -55,9 +53,8 @@ mod cors_tests {
     pub fn test_any_origin() {
         let rocket = rocket::ignite()
             .mount("/", routes![sample_delete_route])
-            .attach(CorsFairingConfig::new()
-                .any_origin()
-                .fairing());
+            .attach(CorsFairing::with_config(CorsFairingConfig::with_any_origin()));
+
 
         let client = Client::new(rocket).expect("valid rocket instance");
 
@@ -70,9 +67,8 @@ mod cors_tests {
     pub fn test_explicit_origin() {
         let rocket = rocket::ignite()
             .mount("/", routes![sample_delete_route])
-            .attach(CorsFairingConfig::new()
-                .explicit_origin("https://example.com/")
-                .fairing());
+            .attach(CorsFairing::with_config(CorsFairingConfig::with_origin("https://example.com/".to_owned())));
+
 
         let client = Client::new(rocket).expect("valid rocket instance");
 

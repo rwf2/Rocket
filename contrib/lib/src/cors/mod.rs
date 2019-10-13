@@ -64,22 +64,72 @@ use rocket::http::Header;
 use rocket::http::Method;
 use rocket::http::Status;
 
+pub mod config;
+
+use config::CorsFairingConfig;
+
 struct CorsContext {
     origin: String
 }
 
 #[derive(Debug)]
 pub struct CorsFairing {
-    config: Option<CorsFairingConfig>
+    provided_config: Option<CorsFairingConfig>
 }
 
 impl CorsFairing {
     pub fn new() -> CorsFairing {
         CorsFairing {
-            config: None
+            provided_config: None
         }
-    }    
+    }
+
+    pub fn with_config(cors_fairing_config: CorsFairingConfig) -> CorsFairing {
+        CorsFairing {
+            provided_config: Some(cors_fairing_config)
+        }
+    }
 }
+
+fn make_from_rocket_config(config:&super::rocket::Config) -> Result<CorsFairingConfig, String> {
+    match config.get_table("cors") {
+        Ok(cors_table) => {
+
+            let origin = match cors_table.get("allow_origin") {
+                Some(origin_value) => match origin_value {
+                    Value::String(s) => s.clone(),
+                    _ => {
+                        return Err("\"allow_origin\" configuration entry is missing.".to_string());
+                    }
+                },
+                None => {
+                    return Err("Missing allow origin".to_string());
+                }
+            };
+
+            let mut headers = Vec::new();
+            if let Some(allow_headers_value) = cors_table.get("allow-headers") {
+                if let Value::Array(allow_headers_array) = allow_headers_value {
+                    allow_headers_array
+                        .iter()
+                        .filter_map(|val| match val { 
+                            Value::String(s) => Some(s.clone()),
+                            _ => None
+                        })
+                        .for_each(|x| headers.push(x));
+
+                }
+            };
+        
+            Ok(CorsFairingConfig {
+                origin: origin,
+                headers: headers
+            })
+        },
+        Err(_) => Err("Cors configuration missing.  Add a [development.cors] table (or equivalent configuration) to your Rocket.toml.".to_string())
+    }
+}
+
 
 impl Fairing for CorsFairing {
     fn info(&self) -> Info {
@@ -89,78 +139,26 @@ impl Fairing for CorsFairing {
         }
     }
 
+    
     fn on_attach(&self, mut rocket:Rocket) -> Result<Rocket, Rocket> { 
         use std::collections::HashMap;
 
-        // TODO Factor this configuration out.  I should be able to reuse most of this configuration within
-        // code between a test and the regular Rocket configuration.
-        let (origin, headers) = match &self.config {
-            Some(ref config) => {
-                let origin = match &config.origin {
-                    Some(ref origin) => match origin {
-                        Origin::Any => String::from("*"),
-                        Origin::Explicit(s) => s.clone()
-                    },
-                    None => {
-                        warn_!("Bad headers.");
-
-                        String::from("")
-                    }
-                };
-
-                (origin, config.headers.clone())
-            },
+        let config = match &self.provided_config {
+            Some(config) => config.clone(),
             None => {
-                if let Ok(cors_table) = rocket.config().get_table("cors") {
-                    let origin = match cors_table.get("allow_origin") {
-                        Some(origin_value) => match origin_value {
-                            Value::String(s) => s.clone(),
-                            _ => {
-                                warn_!("\"allow_origin\" configuration entry is missing.");
-
-                                String::from("")
-                            }
-                        },
-                        None => {
-                            warn_!("Missing allow origin");
-
-                            String::from("")
-                        }
-                    };
-
-                    let headers = match cors_table.get("allow-headers") {
-                        Some(allow_headers_value) => {
-                            match allow_headers_value {
-                                Value::Array(x) => {
-                                    let result: Vec<String> = x.iter()
-                                        .filter_map(|val| match val { 
-                                            Value::String(s) => Some(s.clone()),
-                                            _ => None
-                                        })
-                                        .collect();
-
-                                    result
-                                },
-                                _ => {
-                                warn_!("Bad allow origin");
-
-                                    Vec::new()
-                                }
-                            }
-                            
-                        },
-                        _ => Vec::new()
-                    };
-                    
-                    (origin, headers)
-                } else {
-                    (String::from(""), Vec::new())
+                match make_from_rocket_config(rocket.config()) {
+                    Ok(config) => config,
+                    Err(msg) => {
+                        error!("{}", msg);
+                        // Early return because we don't have a working Cors configuration.
+                        return Err(rocket)
+                    }
                 }
             }
         };
 
         let ctx = CorsContext {
-            origin: origin
+            origin: config.origin.clone()
         };
         
         let mut uri_methods : HashMap<String, Vec<Method>> = HashMap::new();
@@ -173,7 +171,7 @@ impl Fairing for CorsFairing {
 
         let mut new_routes:Vec<Route> = Vec::new();
         for (uri, methods) in uri_methods.iter() {
-            let options_handler = OptionsHandler::new(methods.clone(), headers.clone());
+            let options_handler = OptionsHandler::new(methods.clone(), config.headers.clone());
 
             let preflight = Route::new(Method::Options, uri, options_handler);
             new_routes.push(preflight);
@@ -269,53 +267,5 @@ impl Handler for OptionsHandler {
         };
 
         Outcome::from(req, responder)
-    }
-}
-
-#[derive(Debug)]
-enum Origin {
-    Any,
-    Explicit(String)
-}
-
-#[derive(Debug)]
-pub struct CorsFairingConfig {
-    headers: Vec<String>,
-    origin: Option<Origin>
-}
-
-impl CorsFairingConfig {
-    pub fn new() -> CorsFairingConfig {
-        CorsFairingConfig{
-            headers: Vec::new(),
-            origin: None
-        }
-    }
-
-    pub fn fairing(self) -> CorsFairing {
-        CorsFairing {
-            config: Some(self)
-        }
-    }
-
-    pub fn add_header(mut self, header: &str) -> Self {
-        self.headers.push(String::from(header));
-        self
-    }
-
-    pub fn any_origin(mut self) -> Self {
-        self.origin = Some(Origin::Any);
-
-        self
-    }
-
-    pub fn explicit_origin(mut self, uri: &str) -> Self {
-        self.origin = Some(Origin::Explicit(uri.to_string()));        
-
-        self
-    }
-
-    pub fn foo() -> () {
-        
     }
 }
