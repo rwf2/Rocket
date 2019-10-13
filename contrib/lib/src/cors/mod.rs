@@ -52,7 +52,6 @@ use rocket::config::Value;
 use rocket::fairing::Fairing;
 use rocket::fairing::Info;
 use rocket::fairing::Kind;
-use rocket::response::Responder;
 use rocket::Data;
 use rocket::Request;
 use rocket::Response;
@@ -62,11 +61,12 @@ use rocket::Handler;
 use rocket::handler::Outcome;
 use rocket::http::Header;
 use rocket::http::Method;
-use rocket::http::Status;
 
 pub mod config;
-
 use config::CorsFairingConfig;
+
+mod responder;
+use responder::PreflightCors;
 
 struct CorsContext {
     origin: String
@@ -198,52 +198,6 @@ impl Fairing for CorsFairing {
     }
 }
 
-struct OptionsResponder {
-    allowed_methods: Vec<Method>,
-    allowed_headers: Vec<String>
-}
-
-fn comma_list(strings: &Vec<String>) -> String {
-    let mut list = String::new();
-    for x in 0..strings.len() {
-        list.push_str(&strings[x]);
-        if x < strings.len() - 1 {
-            list.push_str(", ");
-        }
-    }
-
-    list
-}
-
-
-#[cfg(test)]
-mod test {
-    use super::*;
-
-    #[test]
-    fn test1() {
-        assert_eq!(comma_list(&vec![String::from("Hello")]), "Hello");
-        assert_eq!(comma_list(&vec![String::from("Hello"), String::from("World")]), "Hello, World");
-    }
-}
-
-
-impl<'r> Responder<'r> for OptionsResponder {
-    fn respond_to(self, _request: &Request<'_>) -> rocket::response::Result<'r> {
-        let mut meths: Vec<String> = self.allowed_methods.iter().map(|x| format!("{}", x)).collect();
-        meths.sort();
-        let methods = comma_list(&meths);
-        let headers = comma_list(&self.allowed_headers);
-
-        let mut response = Response::build();
-        
-        response.raw_header("Access-Control-Allow-Methods", methods);
-        response.raw_header("Access-Control-Allow-Headers", headers);
-        response.status(Status::Ok)
-        .ok()
-    }
-}
-
 #[derive(Clone)]
 struct OptionsHandler {
     allowed_methods: Vec<Method>,
@@ -261,7 +215,7 @@ impl OptionsHandler {
 
 impl Handler for OptionsHandler {
     fn handle<'r>(&self, req: &'r Request<'_>, _data: Data) -> Outcome<'r> {
-        let responder = OptionsResponder{
+        let responder = PreflightCors {
             allowed_methods: self.allowed_methods.clone(),
             allowed_headers: self.allowed_headers.clone()
         };
