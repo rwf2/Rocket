@@ -1,5 +1,6 @@
 use std::sync::{Arc, RwLock, Mutex};
 use std::net::{IpAddr, SocketAddr};
+use std::future::Future;
 use std::fmt;
 use std::str;
 
@@ -562,6 +563,23 @@ impl<'r> Request<'r> {
                 self.state.cache.set(f());
                 self.state.cache.get()
             })
+    }
+
+    /// Retrieves the cached value for type `T` from the request-local cached
+    /// state of `self`. If no such value has previously been cached for this
+    /// request, `fut` is `await`ed to produce the value which is subsequently
+    /// returned.
+    pub async fn local_cache_async<T, F>(&self, fut: F) -> &T
+        where F: Future<Output = T>,
+              T: Send + Sync + 'static
+    {
+        match self.state.cache.try_get() {
+            Some(s) => s,
+            None => {
+                self.state.cache.set(fut.await);
+                self.state.cache.get()
+            }
+        }
     }
 
     /// Retrieves and parses into `T` the 0-indexed `n`th segment from the
