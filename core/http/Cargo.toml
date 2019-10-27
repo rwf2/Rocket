@@ -29,7 +29,7 @@ rustls = { version = "0.15", optional = true }
 state = "0.4"
 cookie = { version = "0.12", features = ["percent-encode"] }
 pear = "0.1"
-unicode-xid = "0.1"
+unicode-xid = "0.2"
 
 [dependencies.hyper-sync-rustls]
 version = "=0.3.0-rc.5"

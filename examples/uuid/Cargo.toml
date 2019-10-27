@@ -8,7 +8,7 @@ publish = false
 [dependencies]
 rocket = { path = "../../core/lib" }
 lazy_static = "1.0"
-uuid = "0.7"
+uuid = "0.8"
 
 [dependencies.rocket_contrib]
 default-features = false
