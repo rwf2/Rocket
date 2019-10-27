@@ -569,7 +569,23 @@ impl<'r> Request<'r> {
     /// state of `self`. If no such value has previously been cached for this
     /// request, `fut` is `await`ed to produce the value which is subsequently
     /// returned.
-    pub async fn local_cache_async<T, F>(&self, fut: F) -> &T
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// # use rocket::http::Method;
+    /// # use rocket::Request;
+    /// # type User = ();
+    /// async fn current_user<'r>(request: &Request<'r>) -> User {
+    ///     // Validate request for a given user, load from database, etc.
+    /// }
+    ///
+    /// # Request::example(Method::Get, "/uri", |request| rocket::async_test(async {
+    /// let user = request.local_cache_async(async {
+    ///     current_user(request).await
+    /// }).await;
+    /// # }));
+    pub async fn local_cache_async<'a, T, F>(&'a self, fut: F) -> &'a T
         where F: Future<Output = T>,
               T: Send + Sync + 'static
     {
