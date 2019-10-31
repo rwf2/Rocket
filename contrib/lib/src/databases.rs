@@ -139,8 +139,8 @@
 //!
 //! ### Procedurally
 //!
-//! Databases can also be configured procedurally database via
-//! `rocket::custom()`. The example below does just this:
+//! Databases can also be configured procedurally via `rocket::custom()`.
+//! The example below does just this:
 //!
 //! ```rust
 //! extern crate rocket;
