@@ -20,7 +20,7 @@ tls = ["rustls", "hyper-sync-rustls"]
 private-cookies = ["cookie/secure"]
 
 [dependencies]
-smallvec = "0.6"
+smallvec = "1.0"
 percent-encoding = "1"
 hyper = { version = "0.10.13", default-features = false }
 time = "0.1"
