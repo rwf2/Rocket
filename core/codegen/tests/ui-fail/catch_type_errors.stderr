@@ -18,10 +18,7 @@ error[E0308]: mismatched types
   --> $DIR/catch_type_errors.rs:17:1
    |
 17 | #[catch(404)]
-   | ^^^^^^^^^^^^^ expected bool, found reference
-   |
-   = note: expected type `bool`
-              found type `&'_b rocket::Request<'_>`
+   | ^^^^^^^^^^^^^ expected `bool`, found `&rocket::Request<'_>`
 
 error[E0277]: the trait bound `usize: rocket::response::Responder<'_>` is not satisfied
   --> $DIR/catch_type_errors.rs:18:26

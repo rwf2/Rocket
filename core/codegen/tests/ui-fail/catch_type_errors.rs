@@ -15,8 +15,9 @@ fn f2(_request: &Request) -> bool {
 }
 
 #[catch(404)]
+//~^ ERROR mismatched types
 fn f3(_request: bool) -> usize {
-    //~^ ERROR mismatched types
+    //~^ ERROR usize: rocket::response::Responder
     10
 }
 
