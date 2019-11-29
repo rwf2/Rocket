@@ -26,6 +26,9 @@ use crate::http::{Method, Status, Header};
 use crate::http::hyper::{self, header};
 use crate::http::uri::Origin;
 
+use crate::State;
+use std::collections::HashSet;
+
 /// The main `Rocket` type: used to mount routes and catchers and launch the
 /// application.
 pub struct Rocket {
@@ -35,6 +38,8 @@ pub struct Rocket {
     catchers: HashMap<u16, Catcher>,
     pub(crate) state: Container,
     fairings: Fairings,
+    managed_state_types: HashSet<std::any::TypeId>,
+    requested_state_types: HashSet<std::any::TypeId>,
 }
 
 #[doc(hidden)]
@@ -434,6 +439,8 @@ impl Rocket {
             catchers: catcher::defaults::get(),
             state: Container::new(),
             fairings: Fairings::new(),
+            managed_state_types: HashSet::new(),
+            requested_state_types: HashSet::new(),
         }
     }
 
@@ -511,6 +518,16 @@ impl Rocket {
         }
 
         for mut route in routes.into() {
+            for state in &route.states {
+                match state {
+                    Some(typeid) => {
+                        self.requested_state_types.insert(*typeid);
+                    }
+                    _ => {}
+                }
+                
+            }
+
             let path = route.uri.clone();
             if let Err(e) = route.set_uri(base_uri.clone(), path) {
                 error_!("{}", e);
@@ -605,7 +622,9 @@ impl Rocket {
     /// }
     /// ```
     #[inline]
-    pub fn manage<T: Send + Sync + 'static>(self, state: T) -> Self {
+    pub fn manage<T: Send + Sync + 'static>(mut self, state: T) -> Self {
+        self.managed_state_types.insert(std::any::TypeId::of::<State<'_, T>>());
+
         if !self.state.set::<T>(state) {
             error!("State for this type is already being managed!");
             panic!("Aborting due to duplicately managed state.");
@@ -680,6 +699,19 @@ impl Rocket {
     /// # }
     /// ```
     pub fn launch(mut self) -> LaunchError {
+        println!("Rocket manages {} types.", self.managed_state_types.len());
+        println!("Managed types: {:#?}", self.managed_state_types);
+        println!("Rocket routes requested {} types.", self.requested_state_types.len());
+        println!("Managed types: {:#?}", self.requested_state_types);
+
+        for t in self.managed_state_types.difference(&self.requested_state_types) {
+            println!("Managed state {:?} is unused.", t);
+        }
+
+        for t in self.requested_state_types.difference(&self.managed_state_types) {
+            println!("Requested state {:?} is not managed. => this will result in http 500 error.", t);
+        }
+
         self = match self.prelaunch_check() {
             Ok(rocket) => rocket,
             Err(launch_error) => return launch_error

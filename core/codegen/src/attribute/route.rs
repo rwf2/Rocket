@@ -374,6 +374,21 @@ fn generate_respond_expr(route: &Route) -> TokenStream2 {
     }
 }
 
+struct RouteStates<'a>{
+    states: Vec<Option<&'a syn::Type>>,
+}
+
+impl quote::ToTokens for RouteStates<'_> {
+    fn to_tokens(&self, tokens: &mut TokenStream2) {
+        for state in &self.states {
+            match state {
+                Some(syn_type) => tokens.extend(quote! { Some(std::any::TypeId::of::<#syn_type>()), }),
+                None => tokens.extend(quote! { None, }),
+            }
+        }
+    }
+}
+
 fn codegen_route(route: Route) -> Result<TokenStream> {
     // Generate the declarations for path, data, and request guard parameters.
     let mut data_stmt = None;
@@ -414,6 +429,25 @@ fn codegen_route(route: Route) -> Result<TokenStream> {
     let path = route.attribute.path.origin.0.to_string();
     let rank = Optional(route.attribute.rank);
     let format = Optional(route.attribute.format);
+    let mut states: Vec<Option<&syn::Type>> = vec![None; 16];
+
+    // Find all managed states
+    let mut iter = 0;
+    for (_arg_ident, _, ty) in &route.inputs {
+        match ty {
+            syn::Type::Path(type_path) => {
+                if let Some(path_segment) = type_path.path.segments.first() {
+                    if path_segment.ident == "State" {
+                        states[iter] = Some(ty);
+                        iter += 1;
+                    }
+                }
+            },
+            _ => {}
+        }
+    }
+
+    let states = RouteStates {states};
 
     Ok(quote! {
         #user_handler_fn
@@ -443,6 +477,7 @@ fn codegen_route(route: Route) -> Result<TokenStream> {
                 handler: #generated_fn_name,
                 format: #format,
                 rank: #rank,
+                states: [ #states ],
             };
     }.into())
 }

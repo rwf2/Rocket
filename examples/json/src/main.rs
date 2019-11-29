@@ -1,4 +1,5 @@
 #![feature(proc_macro_hygiene)]
+#![feature(const_type_id)]
 
 #[macro_use] extern crate rocket;
 #[macro_use] extern crate rocket_contrib;

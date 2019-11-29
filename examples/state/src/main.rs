@@ -1,4 +1,5 @@
 #![feature(proc_macro_hygiene)]
+#![feature(const_type_id)]
 
 #[macro_use] extern crate rocket;
 
@@ -11,8 +12,13 @@ use rocket::response::content;
 
 struct HitCount(AtomicUsize);
 
+struct HitCountUnused(AtomicUsize);
+
+struct HitCountUnmanaged(AtomicUsize);
+
 #[get("/")]
-fn index(hit_count: State<'_, HitCount>) -> content::Html<String> {
+fn index(hit_count: State<'_, HitCount>, hhh: State<HitCountUnmanaged>) -> content::Html<String> {
+    hhh.0.fetch_add(1, Ordering::Relaxed);
     hit_count.0.fetch_add(1, Ordering::Relaxed);
     let msg = "Your visit has been recorded!";
     let count = format!("Visits: {}", count(hit_count));
@@ -28,6 +34,7 @@ fn rocket() -> rocket::Rocket {
     rocket::ignite()
         .mount("/", routes![index, count])
         .manage(HitCount(AtomicUsize::new(0)))
+        .manage(HitCountUnused(AtomicUsize::new(0)))
 }
 
 fn main() {

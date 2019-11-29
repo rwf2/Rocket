@@ -30,7 +30,9 @@ pub struct Route {
     /// The media type this route matches against, if any.
     pub format: Option<MediaType>,
     /// Cached metadata that aids in routing later.
-    pub(crate) metadata: Metadata
+    pub(crate) metadata: Metadata,
+    /// The states requested by this route
+    pub states: Vec<Option<std::any::TypeId>>,
 }
 
 #[derive(Debug, Default, Clone)]
@@ -185,7 +187,7 @@ impl Route {
             base: Origin::dummy(),
             handler: Box::new(handler),
             metadata: Metadata::default(),
-            method, rank, uri
+            method, rank, uri, states: Vec::new()
         };
 
         route.update_metadata().unwrap_or_else(|e| panic(path, e));
@@ -325,6 +327,7 @@ impl From<&StaticRouteInfo> for Route {
         if let Some(rank) = info.rank {
             route.rank = rank;
         }
+        route.states = Vec::from(&info.states[..]);
 
         route
     }
