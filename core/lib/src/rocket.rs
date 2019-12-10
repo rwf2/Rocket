@@ -823,22 +823,24 @@ impl Rocket {
 
         #[cfg(feature = "ctrl_c_shutdown")]
         runtime.spawn(async move {
-            futures_util::select!(
-                a = tokio::signal::ctrl_c => {
-                    match a {
-                        Ok(_) => shutdown_handle.shutdown(),
-                        Err(err) => {
-                            // Signal handling isn't strictly necessary, so we can skip it
-                            // if necessary. It's a good idea to let the user know we're
-                            // doing so in case they are expecting certain behavior.
-                            let message = "Not listening for shutdown keybinding.";
-                            warn!("{}", Paint::yellow(message));
-                            info_!("Error: {}", err);
-                        },
-                    }
-                },
-                _ = cancel_ctrl_c_listener_receiver => shutdown_handle.shutdown(),
-            );
+            use futures_util::future::{select, Either};
+
+            let either = select(
+                tokio::signal::ctrl_c().boxed(),
+                cancel_ctrl_c_listener_receiver,
+            ).await;
+
+            match either {
+                Either::Left((Ok(_), _)) | Either::Right((_, _)) => shutdown_handle.shutdown(),
+                Either::Left((Err(err), _)) => {
+                    // Signal handling isn't strictly necessary, so we can skip it
+                    // if necessary. It's a good idea to let the user know we're
+                    // doing so in case they are expecting certain behavior.
+                    let message = "Not listening for shutdown keybinding.";
+                    warn!("{}", Paint::yellow(message));
+                    info_!("Error: {}", err);
+                }
+            }
         });
 
         server.boxed()
