@@ -34,7 +34,7 @@ tokio = { version = "0.2", features = ["net", "time"] }
 cookie = { git = "https://github.com/SergioBenitez/cookie-rs", rev = "e0f3e6c", features = ["percent-encode"] }
 pear = "0.1"
 unicode-xid = "0.1"
-futures-core-preview = "0.3.0-alpha.19"
+futures-core = "0.3"
 log = "0.4"
 
 [dev-dependencies]
