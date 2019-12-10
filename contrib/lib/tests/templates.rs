@@ -169,7 +169,7 @@ mod templates_tests {
                 }
 
                 // otherwise, retry a few times, waiting 250ms in between
-                tokio_timer::delay_for(Duration::from_millis(250)).await;
+                tokio::time::delay_for(Duration::from_millis(250)).await;
             }
 
             panic!("failed to reload modified template in 1.5s");

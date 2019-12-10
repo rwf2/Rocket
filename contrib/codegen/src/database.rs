@@ -73,7 +73,7 @@ pub fn database_attr(attr: TokenStream, input: TokenStream) -> Result<TokenStrea
     let databases = quote_spanned!(span => ::rocket_contrib::databases);
     let Poolable = quote_spanned!(span => #databases::Poolable);
     let r2d2 = quote_spanned!(span => #databases::r2d2);
-    let tokio_executor = quote_spanned!(span => #databases::tokio_executor);
+    let tokio = quote_spanned!(span => #databases::tokio);
     let request = quote!(::rocket::request);
 
     let generated_types = quote_spanned! { span =>
@@ -149,12 +149,12 @@ pub fn database_attr(attr: TokenStream, input: TokenStream) -> Result<TokenStrea
                 Box::pin(async move {
                     let pool = ::rocket::try_outcome!(request.guard::<::rocket::State<'_, #pool_type>>()).0.clone();
 
-                    #tokio_executor::blocking::run(move || {
+                    #tokio::task::spawn_blocking(move || {
                         match pool.get() {
                             Ok(conn) => Outcome::Success(#guard_type(conn)),
                             Err(_) => Outcome::Failure((Status::ServiceUnavailable, ())),
                         }
-                    }).await
+                    }).await.unwrap_or(Outcome::Failure((Status::ServiceUnavailable, ())))
                 })
             }
         }

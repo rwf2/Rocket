@@ -30,7 +30,7 @@ impl FromDataSimple for Simple {
 
     fn from_data(_: &Request<'_>, data: Data) -> data::FromDataFuture<'static, Self, ()> {
         Box::pin(async move {
-            use tokio_io::AsyncReadExt;
+            use tokio::io::AsyncReadExt;
 
             let mut string = String::new();
             let mut stream = data.open().take(64);

@@ -14,7 +14,7 @@ edition = "2018"
 [features]
 # Internal use only.
 templates = ["serde", "serde_json", "glob"]
-databases = ["r2d2", "tokio-executor", "rocket_contrib_codegen/database_attribute"]
+databases = ["r2d2", "tokio/blocking", "rocket_contrib_codegen/database_attribute"]
 
 # User-facing features.
 default = ["json", "serve"]
@@ -65,7 +65,6 @@ uuid = { version = "0.7", optional = true }
 diesel = { version = "1.0", default-features = false, optional = true }
 postgres = { version = "0.15", optional = true }
 r2d2 = { version = "0.8", optional = true }
-tokio-executor = { version = "0.2.0-alpha.6", optional = true }
 r2d2_postgres = { version = "0.14", optional = true }
 mysql = { version = "16.0", optional = true }
 r2d2_mysql = { version = "16.0", optional = true }
