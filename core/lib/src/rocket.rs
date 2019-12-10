@@ -738,9 +738,8 @@ impl Rocket {
             }
         });
 
-        // NB: executor must be passed manually here, see hyperium/hyper#1537
         hyper::Server::builder(Incoming::from_listener(listener))
-            .executor(tokio::executor::DefaultExecutor::current())
+            .executor(hyper::Executor)
             .serve(service)
             .with_graceful_shutdown(async move { shutdown_receiver.next().await; })
             .await
@@ -869,6 +868,8 @@ impl Rocket {
         // TODO.async What meaning should config.workers have now?
         // Initialize the tokio runtime
         let mut runtime = tokio::runtime::Builder::new()
+            .threaded_scheduler()
+            .enable_all()
             .num_threads(self.config.workers as usize)
             .build()
             .expect("Cannot build runtime!");

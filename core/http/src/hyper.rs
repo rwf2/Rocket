@@ -43,3 +43,15 @@ pub mod header {
         VARY
     }
 }
+
+#[derive(Clone, Copy, Debug)]
+pub struct Executor;
+
+impl<F> hyper::rt::Executor<F> for Executor
+where
+    F: futures_core::future::Future<Output = ()> + Send + 'static,
+{
+    fn execute(&self, fut: F) {
+        tokio::spawn(fut);
+    }
+}
