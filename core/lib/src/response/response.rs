@@ -1057,14 +1057,12 @@ impl<'r> Response<'r> {
     /// # Example
     ///
     /// ```rust
-    /// use futures::io::repeat;
-    /// use futures_tokio_compat::Compat;
-    /// use tokio::io::AsyncReadExt;
+    /// use tokio::io::{repeat, AsyncReadExt};
     /// use rocket::Response;
     ///
     /// # rocket::async_test(async {
     /// let mut response = Response::new();
-    /// response.set_streamed_body(Compat::new(repeat(97)).take(5));
+    /// response.set_streamed_body(repeat(97).take(5));
     /// assert_eq!(response.body_string().await, Some("aaaaa".to_string()));
     /// # })
     /// ```
@@ -1079,14 +1077,12 @@ impl<'r> Response<'r> {
     /// # Example
     ///
     /// ```rust
-    /// use futures::io::repeat;
-    /// use futures_tokio_compat::Compat;
-    /// use tokio::io::AsyncReadExt;
+    /// use tokio::io::{repeat, AsyncReadExt};
     /// use rocket::Response;
     ///
     /// # rocket::async_test(async {
     /// let mut response = Response::new();
-    /// response.set_chunked_body(Compat::new(repeat(97)).take(5), 10);
+    /// response.set_chunked_body(repeat(97).take(5), 10);
     /// assert_eq!(response.body_string().await, Some("aaaaa".to_string()));
     /// # })
     /// ```

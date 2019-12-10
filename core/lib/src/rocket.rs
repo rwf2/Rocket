@@ -755,11 +755,9 @@ impl Rocket {
     /// # Example
     ///
     /// ```rust
-    /// use futures::future::FutureExt;
-    ///
     /// // This gives us the default behavior. Alternatively, we could use a
     /// // `tokio::runtime::Builder` to configure with greater detail.
-    /// let runtime = tokio::runtime::Runtime::new().expect("error creating runtime");
+    /// let mut runtime = tokio::runtime::Runtime::new().expect("error creating runtime");
     ///
     /// # if false {
     /// let server_done = rocket::ignite().spawn_on(&runtime);
