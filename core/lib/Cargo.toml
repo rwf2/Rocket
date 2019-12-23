@@ -19,7 +19,7 @@ edition = "2018"
 all-features = true
 
 [features]
-default = ["private-cookies"]
+default = ["private-cookies", "either"]
 tls = ["rocket_http/tls"]
 private-cookies = ["rocket_http/private-cookies"]
 
@@ -37,6 +37,7 @@ base64 = "0.11"
 base16 = "0.2"
 pear = "0.1"
 atty = "0.2"
+either = { version = "1.5", optional = true }
 
 [build-dependencies]
 yansi = "0.5"

@@ -310,3 +310,10 @@ impl Responder<'_> for Status {
         }
     }
 }
+
+#[cfg(feature = "either")]
+impl<'r, L: Responder<'r>, R: Responder<'r>> Responder<'r> for either::Either<L, R> {
+    fn respond_to(self, req: &Request<'_>) -> response::Result<'r> {
+        self.either(|l|l.respond_to(req), |r|r.respond_to(req))
+    }
+}
