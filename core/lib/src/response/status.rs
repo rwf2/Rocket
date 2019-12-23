@@ -212,7 +212,7 @@ impl<'r, R: Responder<'r>> Responder<'r> for Accepted<R> {
 }
 
 /// Sets the status of the response to 204 (No Content).
-/// 
+///
 /// If a responder is supplied, the remainder of the response is delegated to
 /// it. The body will be empty even if the responder sets a non-empty body.
 ///
@@ -220,7 +220,7 @@ impl<'r, R: Responder<'r>> Responder<'r> for Accepted<R> {
 pub struct NoContent<R>(pub Option<R>);
 
 /// Sets the status code of the response to 204 No Content. If the responder is
-/// `Some`, it is used to finalize the response. 
+/// `Some`, it is used to finalize the response.
 /// The body will be empty even if the responder sets a non-empty body.
 impl<'r, R: Responder<'r>> Responder<'r> for NoContent<R> {
     fn respond_to(self, req: &Request<'_>) -> Result<Response<'r>, Status> {
@@ -235,7 +235,7 @@ impl<'r, R: Responder<'r>> Responder<'r> for NoContent<R> {
 }
 
 /// Sets the status of the response to 205 (Reset Content).
-/// 
+///
 /// If a responder is supplied, the remainder of the response is delegated to
 /// it. The body will be empty even if the responder sets a non-empty body.
 ///
