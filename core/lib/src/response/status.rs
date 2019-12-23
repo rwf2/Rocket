@@ -211,6 +211,52 @@ impl<'r, R: Responder<'r>> Responder<'r> for Accepted<R> {
     }
 }
 
+/// Sets the status of the response to 204 (No Content).
+/// 
+/// If a responder is supplied, the remainder of the response is delegated to
+/// it. The body will be empty even if the responder sets a non-empty body.
+///
+#[derive(Debug, Clone, PartialEq)]
+pub struct NoContent<R>(pub Option<R>);
+
+/// Sets the status code of the response to 204 No Content. If the responder is
+/// `Some`, it is used to finalize the response. 
+/// The body will be empty even if the responder sets a non-empty body.
+impl<'r, R: Responder<'r>> Responder<'r> for NoContent<R> {
+    fn respond_to(self, req: &Request) -> Result<Response<'r>, Status> {
+        let mut build = Response::build();
+        if let Some(responder) = self.0 {
+            build.merge(responder.respond_to(req)?);
+        }
+
+        build.sized_body(std::io::Cursor::new(""));
+        build.status(Status::NoContent).ok()
+    }
+}
+
+/// Sets the status of the response to 205 (Reset Content).
+/// 
+/// If a responder is supplied, the remainder of the response is delegated to
+/// it. The body will be empty even if the responder sets a non-empty body.
+///
+#[derive(Debug, Clone, PartialEq)]
+pub struct ResetContent<R>(pub Option<R>);
+
+/// Sets the status code of the response to 205 Reset Content. If the responder is
+/// `Some`, it is used to finalize the response.
+/// The body will be empty even if the responder sets a non-empty body.
+impl<'r, R: Responder<'r>> Responder<'r> for ResetContent<R> {
+    fn respond_to(self, req: &Request) -> Result<Response<'r>, Status> {
+        let mut build = Response::build();
+        if let Some(responder) = self.0 {
+            build.merge(responder.respond_to(req)?);
+        }
+
+        build.sized_body(std::io::Cursor::new(""));
+        build.status(Status::ResetContent).ok()
+    }
+}
+
 /// Sets the status of the response to 400 (Bad Request).
 ///
 /// If a responder is supplied, the remainder of the response is delegated to
@@ -251,6 +297,48 @@ impl<'r, R: Responder<'r>> Responder<'r> for BadRequest<R> {
     }
 }
 
+/// Sets the status of the response to 401 (Unauthorized).
+///
+/// If a responder is supplied, the remainder of the response is delegated to
+/// it. If there is no responder, the body of the response will be empty.
+///
+#[derive(Debug, Clone, PartialEq)]
+pub struct Unauthorized<R>(pub Option<R>);
+
+/// Sets the status code of the response to 401 Unauthorized. If the responder is
+/// `Some`, it is used to finalize the response.
+impl<'r, R: Responder<'r>> Responder<'r> for Unauthorized<R> {
+    fn respond_to(self, req: &Request) -> Result<Response<'r>, Status> {
+        let mut build = Response::build();
+        if let Some(responder) = self.0 {
+            build.merge(responder.respond_to(req)?);
+        }
+
+        build.status(Status::Unauthorized).ok()
+    }
+}
+
+/// Sets the status of the response to 403 (Forbidden).
+///
+/// If a responder is supplied, the remainder of the response is delegated to
+/// it. If there is no responder, the body of the response will be empty.
+///
+#[derive(Debug, Clone, PartialEq)]
+pub struct Forbidden<R>(pub Option<R>);
+
+/// Sets the status code of the response to 403 Forbidden. If the responder is
+/// `Some`, it is used to finalize the response.
+impl<'r, R: Responder<'r>> Responder<'r> for Forbidden<R> {
+    fn respond_to(self, req: &Request) -> Result<Response<'r>, Status> {
+        let mut build = Response::build();
+        if let Some(responder) = self.0 {
+            build.merge(responder.respond_to(req)?);
+        }
+
+        build.status(Status::Forbidden).ok()
+    }
+}
+
 /// Sets the status of the response to 404 (Not Found).
 ///
 /// The remainder of the response is delegated to the wrapped `Responder`.
@@ -272,6 +360,70 @@ impl<'r, R: Responder<'r>> Responder<'r> for NotFound<R> {
         Response::build_from(self.0.respond_to(req)?)
             .status(Status::NotFound)
             .ok()
+    }
+}
+
+
+/// Sets the status of the response to 409 (Conflict).
+///
+/// If a responder is supplied, the remainder of the response is delegated to
+/// it. If there is no responder, the body of the response will be empty.
+///
+#[derive(Debug, Clone, PartialEq)]
+pub struct Conflict<R>(pub Option<R>);
+
+/// Sets the status code of the response to 409 Conflict. If the responder is
+/// `Some`, it is used to finalize the response.
+impl<'r, R: Responder<'r>> Responder<'r> for Conflict<R> {
+    fn respond_to(self, req: &Request) -> Result<Response<'r>, Status> {
+        let mut build = Response::build();
+        if let Some(responder) = self.0 {
+            build.merge(responder.respond_to(req)?);
+        }
+
+        build.status(Status::Conflict).ok()
+    }
+}
+
+/// Sets the status of the response to 410 (Gone).
+///
+/// If a responder is supplied, the remainder of the response is delegated to
+/// it. If there is no responder, the body of the response will be empty.
+///
+#[derive(Debug, Clone, PartialEq)]
+pub struct Gone<R>(pub Option<R>);
+
+/// Sets the status code of the response to 410 Gone. If the responder is
+/// `Some`, it is used to finalize the response.
+impl<'r, R: Responder<'r>> Responder<'r> for Gone<R> {
+    fn respond_to(self, req: &Request) -> Result<Response<'r>, Status> {
+        let mut build = Response::build();
+        if let Some(responder) = self.0 {
+            build.merge(responder.respond_to(req)?);
+        }
+
+        build.status(Status::Gone).ok()
+    }
+}
+
+/// Sets the status of the response to 451 (Unavailable For Legal Reasons).
+///
+/// If a responder is supplied, the remainder of the response is delegated to
+/// it. If there is no responder, the body of the response will be empty.
+///
+#[derive(Debug, Clone, PartialEq)]
+pub struct UnavailableForLegalReasons<R>(pub Option<R>);
+
+/// Sets the status code of the response to 451 Unavailable For Legal Reasons.
+///  If the responder is `Some`, it is used to finalize the response.
+impl<'r, R: Responder<'r>> Responder<'r> for UnavailableForLegalReasons<R> {
+    fn respond_to(self, req: &Request) -> Result<Response<'r>, Status> {
+        let mut build = Response::build();
+        if let Some(responder) = self.0 {
+            build.merge(responder.respond_to(req)?);
+        }
+
+        build.status(Status::UnavailableForLegalReasons).ok()
     }
 }
 
