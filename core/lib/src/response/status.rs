@@ -213,47 +213,26 @@ impl<'r, R: Responder<'r>> Responder<'r> for Accepted<R> {
 
 /// Sets the status of the response to 204 (No Content).
 ///
-/// If a responder is supplied, the remainder of the response is delegated to
-/// it. The body will be empty even if the responder sets a non-empty body.
+/// The response body will be empty.
 ///
+/// # Example
+///
+/// A 204 No Content response:
+///
+/// ```rust
+/// use rocket::response::status;
+///
+/// # #[allow(unused_variables)]
+/// let response = status::NoContent;
+/// ```
 #[derive(Debug, Clone, PartialEq)]
-pub struct NoContent<R>(pub Option<R>);
+pub struct NoContent;
 
-/// Sets the status code of the response to 204 No Content. If the responder is
-/// `Some`, it is used to finalize the response.
-/// The body will be empty even if the responder sets a non-empty body.
-impl<'r, R: Responder<'r>> Responder<'r> for NoContent<R> {
-    fn respond_to(self, req: &Request<'_>) -> Result<Response<'r>, Status> {
+/// Sets the status code of the response to 204 No Content.
+impl<'r> Responder<'r> for NoContent {
+    fn respond_to(self, _: &Request<'_>) -> Result<Response<'r>, Status> {
         let mut build = Response::build();
-        if let Some(responder) = self.0 {
-            build.merge(responder.respond_to(req)?);
-        }
-
-        build.sized_body(std::io::Cursor::new(""));
         build.status(Status::NoContent).ok()
-    }
-}
-
-/// Sets the status of the response to 205 (Reset Content).
-///
-/// If a responder is supplied, the remainder of the response is delegated to
-/// it. The body will be empty even if the responder sets a non-empty body.
-///
-#[derive(Debug, Clone, PartialEq)]
-pub struct ResetContent<R>(pub Option<R>);
-
-/// Sets the status code of the response to 205 Reset Content. If the responder is
-/// `Some`, it is used to finalize the response.
-/// The body will be empty even if the responder sets a non-empty body.
-impl<'r, R: Responder<'r>> Responder<'r> for ResetContent<R> {
-    fn respond_to(self, req: &Request<'_>) -> Result<Response<'r>, Status> {
-        let mut build = Response::build();
-        if let Some(responder) = self.0 {
-            build.merge(responder.respond_to(req)?);
-        }
-
-        build.sized_body(std::io::Cursor::new(""));
-        build.status(Status::ResetContent).ok()
     }
 }
 
@@ -302,6 +281,25 @@ impl<'r, R: Responder<'r>> Responder<'r> for BadRequest<R> {
 /// If a responder is supplied, the remainder of the response is delegated to
 /// it. If there is no responder, the body of the response will be empty.
 ///
+/// # Examples
+///
+/// A 401 Unauthorized response without a body:
+///
+/// ```rust
+/// use rocket::response::status;
+///
+/// # #[allow(unused_variables)]
+/// let response = status::Unauthorized::<()>(None);
+/// ```
+///
+/// A 401 Unauthorized response _with_ a body:
+///
+/// ```rust
+/// use rocket::response::status;
+///
+/// # #[allow(unused_variables)]
+/// let response = status::Unauthorized(Some("error message"));
+/// ```
 #[derive(Debug, Clone, PartialEq)]
 pub struct Unauthorized<R>(pub Option<R>);
 
@@ -323,6 +321,25 @@ impl<'r, R: Responder<'r>> Responder<'r> for Unauthorized<R> {
 /// If a responder is supplied, the remainder of the response is delegated to
 /// it. If there is no responder, the body of the response will be empty.
 ///
+/// # Examples
+///
+/// A 403 Forbidden response without a body:
+///
+/// ```rust
+/// use rocket::response::status;
+///
+/// # #[allow(unused_variables)]
+/// let response = status::Forbidden::<()>(None);
+/// ```
+///
+/// A 403 Forbidden response _with_ a body:
+///
+/// ```rust
+/// use rocket::response::status;
+///
+/// # #[allow(unused_variables)]
+/// let response = status::Forbidden(Some("error message"));
+/// ```
 #[derive(Debug, Clone, PartialEq)]
 pub struct Forbidden<R>(pub Option<R>);
 
@@ -369,6 +386,25 @@ impl<'r, R: Responder<'r>> Responder<'r> for NotFound<R> {
 /// If a responder is supplied, the remainder of the response is delegated to
 /// it. If there is no responder, the body of the response will be empty.
 ///
+/// # Examples
+///
+/// A 409 Conflict response without a body:
+///
+/// ```rust
+/// use rocket::response::status;
+///
+/// # #[allow(unused_variables)]
+/// let response = status::Conflict::<()>(None);
+/// ```
+///
+/// A 409 Conflict response _with_ a body:
+///
+/// ```rust
+/// use rocket::response::status;
+///
+/// # #[allow(unused_variables)]
+/// let response = status::Conflict(Some("error message"));
+/// ```
 #[derive(Debug, Clone, PartialEq)]
 pub struct Conflict<R>(pub Option<R>);
 
@@ -382,48 +418,6 @@ impl<'r, R: Responder<'r>> Responder<'r> for Conflict<R> {
         }
 
         build.status(Status::Conflict).ok()
-    }
-}
-
-/// Sets the status of the response to 410 (Gone).
-///
-/// If a responder is supplied, the remainder of the response is delegated to
-/// it. If there is no responder, the body of the response will be empty.
-///
-#[derive(Debug, Clone, PartialEq)]
-pub struct Gone<R>(pub Option<R>);
-
-/// Sets the status code of the response to 410 Gone. If the responder is
-/// `Some`, it is used to finalize the response.
-impl<'r, R: Responder<'r>> Responder<'r> for Gone<R> {
-    fn respond_to(self, req: &Request<'_>) -> Result<Response<'r>, Status> {
-        let mut build = Response::build();
-        if let Some(responder) = self.0 {
-            build.merge(responder.respond_to(req)?);
-        }
-
-        build.status(Status::Gone).ok()
-    }
-}
-
-/// Sets the status of the response to 451 (Unavailable For Legal Reasons).
-///
-/// If a responder is supplied, the remainder of the response is delegated to
-/// it. If there is no responder, the body of the response will be empty.
-///
-#[derive(Debug, Clone, PartialEq)]
-pub struct UnavailableForLegalReasons<R>(pub Option<R>);
-
-/// Sets the status code of the response to 451 Unavailable For Legal Reasons.
-///  If the responder is `Some`, it is used to finalize the response.
-impl<'r, R: Responder<'r>> Responder<'r> for UnavailableForLegalReasons<R> {
-    fn respond_to(self, req: &Request<'_>) -> Result<Response<'r>, Status> {
-        let mut build = Response::build();
-        if let Some(responder) = self.0 {
-            build.merge(responder.respond_to(req)?);
-        }
-
-        build.status(Status::UnavailableForLegalReasons).ok()
     }
 }
 
