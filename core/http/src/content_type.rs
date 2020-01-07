@@ -39,7 +39,9 @@ use crate::ext::IntoCollection;
 /// use rocket::response::Response;
 ///
 /// # #[allow(unused_variables)]
-/// let response = Response::build().header(ContentType::HTML).finalize();
+/// # rocket::async_test(async {
+/// let response = Response::build().header(ContentType::HTML).await;
+/// # })
 /// ```
 #[derive(Debug, Clone, PartialEq, Hash)]
 pub struct ContentType(pub MediaType);

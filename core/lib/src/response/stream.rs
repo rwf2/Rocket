@@ -69,7 +69,7 @@ impl<T: AsyncRead> From<T> for Stream<T> {
 impl<'r, T: AsyncRead + Send + 'r> Responder<'r> for Stream<T> {
     fn respond_to(self, _: &'r Request<'_>) -> ResultFuture<'r> {
         Box::pin(async {
-            Response::build().chunked_body(self.0, self.1).ok()
+            Response::build().chunked_body(self.0, self.1).ok().await
         })
     }
 }

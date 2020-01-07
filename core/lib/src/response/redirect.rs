@@ -154,7 +154,7 @@ impl<'r> Responder<'r> for Redirect {
                 Response::build()
                     .status(self.0)
                     .raw_header("Location", uri.to_string())
-                    .ok()
+                    .ok().await
             } else {
                 error!("Invalid URI used for redirect.");
                 Err(Status::InternalServerError)

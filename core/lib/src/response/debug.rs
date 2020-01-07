@@ -68,7 +68,7 @@ impl<'r, E: std::fmt::Debug + Send + 'r> Responder<'r> for Debug<E> {
         Box::pin(async move {
             warn_!("Debug: {:?}", Paint::default(self.0));
             warn_!("Debug always responds with {}.", Status::InternalServerError);
-            Response::build().status(Status::InternalServerError).ok()
+            Response::build().status(Status::InternalServerError).ok().await
         })
     }
 }

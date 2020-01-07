@@ -2,8 +2,9 @@ use std::{io, fmt, str};
 use std::borrow::Cow;
 use std::future::Future;
 use std::pin::Pin;
+use std::task::{Context, Poll};
 
-use tokio::io::{AsyncRead, AsyncReadExt};
+use tokio::io::{AsyncRead, AsyncReadExt, AsyncSeek, AsyncSeekExt};
 use futures_util::future::FutureExt;
 
 use crate::response::{Responder, ResultFuture};
@@ -118,7 +119,7 @@ impl<T> fmt::Debug for Body<T> {
 /// can be chained: `build.a().b()`.
 ///
 /// To finish building and retrieve the built `Response`, use the
-/// [`finalize()`](#method.finalize) or [`ok()`](#method.ok) methods.
+/// `await` keyword.
 ///
 /// ## Headers
 ///
@@ -152,6 +153,8 @@ impl<T> fmt::Debug for Body<T> {
 /// use std::io::Cursor;
 /// use rocket::response::Response;
 /// use rocket::http::{Status, ContentType};
+/// 
+/// # rocket::async_test(async {
 ///
 /// # #[allow(unused_variables)]
 /// let response = Response::build()
@@ -161,10 +164,13 @@ impl<T> fmt::Debug for Body<T> {
 ///     .raw_header("X-Teapot-Model", "Utopia")
 ///     .raw_header_adjoin("X-Teapot-Model", "Series 1")
 ///     .sized_body(Cursor::new("Brewing the best coffee!"))
-///     .finalize();
+///     .await;
+/// 
+/// # })
 /// ```
 pub struct ResponseBuilder<'r> {
-    response: Response<'r>
+    response: Response<'r>,
+    sized_body: Option<Pin<Box<dyn Future<Output=Body<Pin<Box<dyn AsyncRead + Send + 'r>>>> + Send + 'r>>>,
 }
 
 impl<'r> ResponseBuilder<'r> {
@@ -182,7 +188,8 @@ impl<'r> ResponseBuilder<'r> {
     #[inline(always)]
     pub fn new(base: Response<'r>) -> ResponseBuilder<'r> {
         ResponseBuilder {
-            response: base
+            response: base,
+            sized_body: None,
         }
     }
 
@@ -193,11 +200,15 @@ impl<'r> ResponseBuilder<'r> {
     /// ```rust
     /// use rocket::Response;
     /// use rocket::http::Status;
+    /// 
+    /// # rocket::async_test(async {
     ///
     /// # #[allow(unused_variables)]
     /// let response = Response::build()
     ///     .status(Status::NotFound)
-    ///     .finalize();
+    ///     .await;
+    /// 
+    /// # })
     /// ```
     #[inline(always)]
     pub fn status(&mut self, status: Status) -> &mut ResponseBuilder<'r> {
@@ -212,11 +223,14 @@ impl<'r> ResponseBuilder<'r> {
     ///
     /// ```rust
     /// use rocket::Response;
+    /// 
+    /// # rocket::async_test(async {
     ///
     /// # #[allow(unused_variables)]
     /// let response = Response::build()
     ///     .raw_status(699, "Alien Encounter")
-    ///     .finalize();
+    ///     .await;
+    /// # })
     /// ```
     #[inline(always)]
     pub fn raw_status(&mut self, code: u16, reason: &'static str)
@@ -239,13 +253,17 @@ impl<'r> ResponseBuilder<'r> {
     /// ```rust
     /// use rocket::Response;
     /// use rocket::http::ContentType;
+    /// 
+    /// # rocket::async_test(async {
     ///
     /// let response = Response::build()
     ///     .header(ContentType::JSON)
     ///     .header(ContentType::HTML)
-    ///     .finalize();
+    ///     .await;
     ///
     /// assert_eq!(response.headers().get("Content-Type").count(), 1);
+    /// 
+    /// # })
     /// ```
     #[inline(always)]
     pub fn header<'h: 'r, H>(&mut self, header: H) -> &mut ResponseBuilder<'r>
@@ -270,13 +288,17 @@ impl<'r> ResponseBuilder<'r> {
     /// use rocket::Response;
     /// use rocket::http::Header;
     /// use rocket::http::hyper::header::ACCEPT;
+    /// 
+    /// # rocket::async_test(async {
     ///
     /// let response = Response::build()
     ///     .header_adjoin(Header::new(ACCEPT.as_str(), "application/json"))
     ///     .header_adjoin(Header::new(ACCEPT.as_str(), "text/plain"))
-    ///     .finalize();
+    ///     .await;
     ///
     /// assert_eq!(response.headers().get("Accept").count(), 2);
+    /// 
+    /// # })
     /// ```
     #[inline(always)]
     pub fn header_adjoin<'h: 'r, H>(&mut self, header: H) -> &mut ResponseBuilder<'r>
@@ -295,13 +317,17 @@ impl<'r> ResponseBuilder<'r> {
     ///
     /// ```rust
     /// use rocket::Response;
+    /// 
+    /// # rocket::async_test(async {
     ///
     /// let response = Response::build()
     ///     .raw_header("X-Custom", "first")
     ///     .raw_header("X-Custom", "second")
-    ///     .finalize();
+    ///     .await;
     ///
     /// assert_eq!(response.headers().get("X-Custom").count(), 1);
+    /// 
+    /// # })
     /// ```
     #[inline(always)]
     pub fn raw_header<'a: 'r, 'b: 'r, N, V>(&mut self, name: N, value: V)
@@ -322,13 +348,17 @@ impl<'r> ResponseBuilder<'r> {
     ///
     /// ```rust
     /// use rocket::Response;
+    /// 
+    /// # rocket::async_test(async {
     ///
     /// let response = Response::build()
     ///     .raw_header_adjoin("X-Custom", "first")
     ///     .raw_header_adjoin("X-Custom", "second")
-    ///     .finalize();
+    ///     .await;
     ///
     /// assert_eq!(response.headers().get("X-Custom").count(), 2);
+    /// 
+    /// # })
     /// ```
     #[inline(always)]
     pub fn raw_header_adjoin<'a: 'r, 'b: 'r, N, V>(&mut self, name: N, value: V)
@@ -339,12 +369,11 @@ impl<'r> ResponseBuilder<'r> {
         self
     }
 
-    // TODO.async: un-ignore this test once Seek/AsyncSeek situation has been resolved.
     /// Sets the body of the `Response` to be the fixed-sized `body`.
     ///
     /// # Example
     ///
-    /// ```rust,ignore
+    /// ```rust
     /// use rocket::Response;
     /// use tokio::fs::File;
     /// # use std::io;
@@ -354,15 +383,21 @@ impl<'r> ResponseBuilder<'r> {
     /// # #[allow(unused_variables)]
     /// let response = Response::build()
     ///     .sized_body(File::open("body.txt").await?)
-    ///     .finalize();
+    ///     .await;
     /// # Ok(())
     /// # }
     /// ```
     #[inline(always)]
-    pub fn sized_body<B>(&mut self, body: B) -> &mut ResponseBuilder<'r>
-        where B: AsyncRead + io::Seek + Send + Unpin + 'r
+    pub fn sized_body<B: 'r>(&mut self, mut body: B) -> &mut ResponseBuilder<'r>
+        where B: AsyncRead + AsyncSeek + Send + Unpin + 'r
     {
-        self.response.set_sized_body(body);
+        self.sized_body = Some(Box::pin(async {
+            let size = body.seek(io::SeekFrom::End(0)).await
+                .expect("Attempted to retrieve size by seeking, but failed.");
+            body.seek(io::SeekFrom::Start(0)).await
+                .expect("Attempted to reset body by seeking after getting size.");
+            Body::Sized(Box::pin(body.take(size)) as Pin<Box<dyn AsyncRead + Send>>, size)
+        }));
         self
     }
 
@@ -380,7 +415,7 @@ impl<'r> ResponseBuilder<'r> {
     /// # #[allow(unused_variables)]
     /// let response = Response::build()
     ///     .streamed_body(File::open("body.txt").await?)
-    ///     .finalize();
+    ///     .await;
     /// # Ok(())
     /// # }
     /// ```
@@ -389,6 +424,7 @@ impl<'r> ResponseBuilder<'r> {
         where B: AsyncRead + Send + 'r
     {
         self.response.set_streamed_body(body);
+        self.sized_body = None;
         self
     }
 
@@ -407,7 +443,7 @@ impl<'r> ResponseBuilder<'r> {
     /// # #[allow(unused_variables)]
     /// let response = Response::build()
     ///     .chunked_body(File::open("body.txt").await?, 8096)
-    ///     .finalize();
+    ///     .await;
     /// # Ok(())
     /// # }
     /// ```
@@ -416,6 +452,7 @@ impl<'r> ResponseBuilder<'r> {
             -> &mut ResponseBuilder<'r>
     {
         self.response.set_chunked_body(body, chunk_size);
+        self.sized_body = None;
         self
     }
 
@@ -428,17 +465,22 @@ impl<'r> ResponseBuilder<'r> {
     /// ```rust
     /// use std::io::Cursor;
     /// use rocket::response::{Response, Body};
+    /// 
+    /// # rocket::async_test(async {
     ///
     /// # #[allow(unused_variables)]
     /// let response = Response::build()
     ///     .raw_body(Body::Sized(Cursor::new("Hello!"), 6))
-    ///     .finalize();
+    ///     .await;
+    /// 
+    /// # })
     /// ```
     #[inline(always)]
     pub fn raw_body<T: AsyncRead + Send + Unpin + 'r>(&mut self, body: Body<T>)
             -> &mut ResponseBuilder<'r>
     {
         self.response.set_raw_body(body);
+        self.sized_body = None;
         self
     }
 
@@ -453,19 +495,21 @@ impl<'r> ResponseBuilder<'r> {
     /// ```rust
     /// use rocket::Response;
     /// use rocket::http::{Status, ContentType};
+    /// 
+    /// # rocket::async_test(async {
     ///
     /// let base = Response::build()
     ///     .status(Status::NotFound)
     ///     .header(ContentType::HTML)
     ///     .raw_header("X-Custom", "value 1")
-    ///     .finalize();
+    ///     .await;
     ///
     /// let response = Response::build()
     ///     .status(Status::ImATeapot)
     ///     .raw_header("X-Custom", "value 2")
     ///     .raw_header_adjoin("X-Custom", "value 3")
     ///     .merge(base)
-    ///     .finalize();
+    ///     .await;
     ///
     /// assert_eq!(response.status(), Status::NotFound);
     ///
@@ -478,9 +522,14 @@ impl<'r> ResponseBuilder<'r> {
     /// let custom_values: Vec<_> = response.headers().get("X-Custom").collect();
     /// assert_eq!(custom_values, vec!["value 1"]);
     /// # }
+    /// 
+    /// # });
     /// ```
     #[inline(always)]
-    pub fn merge(&mut self, other: Response<'r>) -> &mut ResponseBuilder<'r> {
+    pub fn merge(&mut self, mut other: Response<'r>) -> &mut ResponseBuilder<'r> {
+        if other.body().is_some() {
+            self.sized_body = None;
+        }
         self.response.merge(other);
         self
     }
@@ -497,19 +546,21 @@ impl<'r> ResponseBuilder<'r> {
     /// ```rust
     /// use rocket::Response;
     /// use rocket::http::{Status, ContentType};
+    /// 
+    /// # rocket::async_test(async {
     ///
     /// let other = Response::build()
     ///     .status(Status::NotFound)
     ///     .header(ContentType::HTML)
     ///     .raw_header("X-Custom", "value 1")
-    ///     .finalize();
+    ///     .await;
     ///
     /// let response = Response::build()
     ///     .status(Status::ImATeapot)
     ///     .raw_header("X-Custom", "value 2")
     ///     .raw_header_adjoin("X-Custom", "value 3")
     ///     .join(other)
-    ///     .finalize();
+    ///     .await;
     ///
     /// assert_eq!(response.status(), Status::ImATeapot);
     ///
@@ -522,28 +573,13 @@ impl<'r> ResponseBuilder<'r> {
     /// let custom_values: Vec<_> = response.headers().get("X-Custom").collect();
     /// assert_eq!(custom_values, vec!["value 2", "value 3", "value 1"]);
     /// # }
+    /// 
+    /// # })
     /// ```
     #[inline(always)]
     pub fn join(&mut self, other: Response<'r>) -> &mut ResponseBuilder<'r> {
         self.response.join(other);
         self
-    }
-
-    /// Retrieve the built `Response`.
-    ///
-    /// # Example
-    ///
-    /// ```rust
-    /// use rocket::Response;
-    ///
-    /// # #[allow(unused_variables)]
-    /// let response = Response::build()
-    ///     // build the response
-    ///     .finalize();
-    /// ```
-    #[inline(always)]
-    pub fn finalize(&mut self) -> Response<'r> {
-        std::mem::replace(&mut self.response, Response::new())
     }
 
     /// Retrieve the built `Response` wrapped in `Ok`.
@@ -552,16 +588,42 @@ impl<'r> ResponseBuilder<'r> {
     ///
     /// ```rust
     /// use rocket::Response;
+    /// 
+    /// # rocket::async_test(async {
     ///
     /// let response: Result<Response, ()> = Response::build()
     ///     // build the response
-    ///     .ok();
+    ///     .ok().await;
     ///
     /// assert!(response.is_ok());
+    /// 
+    /// # })
     /// ```
     #[inline(always)]
-    pub fn ok<T>(&mut self) -> Result<Response<'r>, T> {
-        Ok(self.finalize())
+    pub async fn ok<E>(&mut self) -> Result<Response<'r>, E> {
+        Ok(self.await)
+    }
+}
+
+impl<'r> Future for ResponseBuilder<'r> {
+    type Output = Response<'r>;
+    fn poll(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
+        let s = self.get_mut();
+        let sb = std::mem::replace(&mut s.sized_body, None);
+        if let Some(mut sized_body) = sb {
+            match sized_body.as_mut().poll(cx) {
+                Poll::Pending => {
+                    s.sized_body = Some(sized_body);
+                    Poll::Pending
+                }
+                Poll::Ready(body) => {
+                    s.response.body = Some(body);
+                    Poll::Ready(std::mem::replace(&mut s.response, Response::new()))
+                }
+            }
+        } else {
+            Poll::Ready(std::mem::replace(&mut s.response, Response::new()))
+        }
     }
 }
 
@@ -897,7 +959,7 @@ impl<'r> Response<'r> {
     /// let mut response = Response::new();
     /// assert!(response.body().is_none());
     ///
-    /// response.set_sized_body(Cursor::new("Hello, world!"));
+    /// response.set_sized_body(Cursor::new("Hello, world!")).await;
     /// assert_eq!(response.body_string().await, Some("Hello, world!".to_string()));
     /// # })
     /// ```
@@ -928,7 +990,7 @@ impl<'r> Response<'r> {
     /// let mut response = Response::new();
     /// assert!(response.body().is_none());
     ///
-    /// response.set_sized_body(Cursor::new("Hello, world!"));
+    /// response.set_sized_body(Cursor::new("Hello, world!")).await;
     /// assert_eq!(response.body_string().await, Some("Hello, world!".to_string()));
     /// assert!(response.body().is_none());
     /// # })
@@ -958,7 +1020,7 @@ impl<'r> Response<'r> {
     /// let mut response = Response::new();
     /// assert!(response.body().is_none());
     ///
-    /// response.set_sized_body(Cursor::new("hi!"));
+    /// response.set_sized_body(Cursor::new("hi!")).await;
     /// assert_eq!(response.body_bytes().await, Some(vec![0x68, 0x69, 0x21]));
     /// assert!(response.body().is_none());
     /// # })
@@ -987,7 +1049,7 @@ impl<'r> Response<'r> {
     /// let mut response = Response::new();
     /// assert!(response.body().is_none());
     ///
-    /// response.set_sized_body(Cursor::new("Hello, world!"));
+    /// response.set_sized_body(Cursor::new("Hello, world!")).await;
     /// assert!(response.body().is_some());
     ///
     /// let body = response.take_body();
@@ -1018,7 +1080,8 @@ impl<'r> Response<'r> {
 
     /// Sets the body of `self` to be the fixed-sized `body`. The size of the
     /// body is obtained by `seek`ing to the end and then `seek`ing back to the
-    /// start.
+    /// start. Since this is an asynchronous operation, it returns a promise
+    /// that holds onto this Response until it is finished.
     ///
     /// # Panics
     ///
@@ -1034,17 +1097,16 @@ impl<'r> Response<'r> {
     ///
     /// # rocket::async_test(async {
     /// let mut response = Response::new();
-    /// response.set_sized_body(Cursor::new("Hello, world!"));
+    /// response.set_sized_body(Cursor::new("Hello, world!")).await;
     /// assert_eq!(response.body_string().await, Some("Hello, world!".to_string()));
     /// # })
     /// ```
-    #[inline]
-    pub fn set_sized_body<B>(&mut self, mut body: B)
-        where B: AsyncRead + io::Seek + Send + Unpin + 'r
+    pub async fn set_sized_body<B>(&mut self, mut body: B)
+        where B: AsyncRead + AsyncSeek + Send + Unpin + 'r
     {
-        let size = body.seek(io::SeekFrom::End(0))
+        let size = body.seek(io::SeekFrom::End(0)).await
             .expect("Attempted to retrieve size by seeking, but failed.");
-        body.seek(io::SeekFrom::Start(0))
+        body.seek(io::SeekFrom::Start(0)).await
             .expect("Attempted to reset body by seeking after getting size.");
         self.body = Some(Body::Sized(Box::pin(body.take(size)), size));
     }
@@ -1129,19 +1191,21 @@ impl<'r> Response<'r> {
     /// ```rust
     /// use rocket::Response;
     /// use rocket::http::{Status, ContentType};
+    /// 
+    /// # rocket::async_test(async {
     ///
     /// let base = Response::build()
     ///     .status(Status::NotFound)
     ///     .header(ContentType::HTML)
     ///     .raw_header("X-Custom", "value 1")
-    ///     .finalize();
+    ///     .await;
     ///
     /// let response = Response::build()
     ///     .status(Status::ImATeapot)
     ///     .raw_header("X-Custom", "value 2")
     ///     .raw_header_adjoin("X-Custom", "value 3")
     ///     .merge(base)
-    ///     .finalize();
+    ///     .await;
     ///
     /// assert_eq!(response.status(), Status::NotFound);
     ///
@@ -1154,6 +1218,8 @@ impl<'r> Response<'r> {
     /// let custom_values: Vec<_> = response.headers().get("X-Custom").collect();
     /// assert_eq!(custom_values, vec!["value 1"]);
     /// # }
+    /// 
+    /// # })
     /// ```
     pub fn merge(&mut self, other: Response<'r>) {
         if let Some(status) = other.status {
@@ -1178,19 +1244,21 @@ impl<'r> Response<'r> {
     /// ```rust
     /// use rocket::Response;
     /// use rocket::http::{Status, ContentType};
+    /// 
+    /// # rocket::async_test(async {
     ///
     /// let other = Response::build()
     ///     .status(Status::NotFound)
     ///     .header(ContentType::HTML)
     ///     .raw_header("X-Custom", "value 1")
-    ///     .finalize();
+    ///     .await;
     ///
     /// let response = Response::build()
     ///     .status(Status::ImATeapot)
     ///     .raw_header("X-Custom", "value 2")
     ///     .raw_header_adjoin("X-Custom", "value 3")
     ///     .join(other)
-    ///     .finalize();
+    ///     .await;
     ///
     /// assert_eq!(response.status(), Status::ImATeapot);
     ///
@@ -1203,6 +1271,8 @@ impl<'r> Response<'r> {
     /// let custom_values: Vec<_> = response.headers().get("X-Custom").collect();
     /// assert_eq!(custom_values, vec!["value 2", "value 3", "value 1"]);
     /// # }
+    /// 
+    /// # })
     /// ```
     pub fn join(&mut self, other: Response<'r>) {
         if self.status.is_none() {

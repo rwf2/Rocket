@@ -101,7 +101,7 @@ pub fn _catch(args: TokenStream, input: TokenStream) -> Result<TokenStream> {
                 #Response::build()
                     .status(#status)
                     .merge(__response)
-                    .ok()
+                    .ok().await
             })
         }
 

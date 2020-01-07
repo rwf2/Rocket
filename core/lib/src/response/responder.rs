@@ -162,7 +162,7 @@ use crate::request::Request;
 ///                 .raw_header("X-Person-Name", self.name)
 ///                 .raw_header("X-Person-Age", self.age.to_string())
 ///                 .header(ContentType::new("application", "x-person"))
-///                 .ok()
+///                 .ok().await
 ///         })
 ///     }
 /// }
@@ -194,7 +194,7 @@ impl<'r> Responder<'r> for &'r str {
             Response::build()
                 .header(ContentType::Plain)
                 .sized_body(Cursor::new(self))
-                .ok()
+                .ok().await
         })
     }
 }
@@ -207,7 +207,7 @@ impl Responder<'_> for String {
             Response::build()
                 .header(ContentType::Plain)
                 .sized_body(Cursor::new(self))
-                .ok()
+                .ok().await
         })
     }
 }
@@ -220,7 +220,7 @@ impl<'r> Responder<'r> for &'r [u8] {
             Response::build()
                 .header(ContentType::Binary)
                 .sized_body(Cursor::new(self))
-                .ok()
+                .ok().await
         })
     }
 }
@@ -233,7 +233,7 @@ impl Responder<'_> for Vec<u8> {
             Response::build()
                 .header(ContentType::Binary)
                 .sized_body(Cursor::new(self))
-                .ok()
+                .ok().await
         })
     }
 }
@@ -246,8 +246,8 @@ impl Responder<'_> for File {
             let metadata = file.metadata().await;
             let stream = BufReader::new(file);
             match metadata {
-                Ok(md) => Response::build().raw_body(Body::Sized(stream, md.len())).ok(),
-                Err(_) => Response::build().streamed_body(stream).ok()
+                Ok(md) => Response::build().raw_body(Body::Sized(stream, md.len())).ok().await,
+                Err(_) => Response::build().streamed_body(stream).ok().await
             }
         })
     }
@@ -307,10 +307,10 @@ impl<'r> Responder<'r> for Status {
             match self.class() {
                 StatusClass::ClientError | StatusClass::ServerError => Err(self),
                 StatusClass::Success if self.code < 206 => {
-                    Response::build().status(self).ok()
+                    Response::build().status(self).ok().await
                 }
                 StatusClass::Informational if self.code == 100 => {
-                    Response::build().status(self).ok()
+                    Response::build().status(self).ok().await
                 }
                 _ => {
                     error_!("Invalid status used as responder: {}.", self);

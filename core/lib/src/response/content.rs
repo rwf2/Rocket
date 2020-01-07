@@ -53,7 +53,7 @@ impl<'r, R: Responder<'r> + Send + 'r> Responder<'r> for Content<R> {
             Response::build()
                 .merge(self.1.respond_to(req).await?)
                 .header(self.0)
-                .ok()
+                .ok().await
         })
     }
 }

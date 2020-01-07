@@ -6,10 +6,10 @@ use rocket::Response;
 use rocket::http::Header;
 
 #[get("/do_not_overwrite")]
-fn do_not_overwrite() -> Response<'static> {
+async fn do_not_overwrite() -> Response<'static> {
     Response::build()
         .header(Header::new("Server", "Test"))
-        .finalize()
+        .await
 }
 
 #[get("/use_default")]
