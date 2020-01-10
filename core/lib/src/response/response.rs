@@ -1090,8 +1090,8 @@ impl<'r> Response<'r> {
 
     /// Sets the body of `self` to be the fixed-sized `body`. The size of the
     /// body is obtained by `seek`ing to the end and then `seek`ing back to the
-    /// start. Since this is an asynchronous operation, it returns a promise
-    /// that holds onto this Response until it is finished.
+    /// start. Since this is an asynchronous operation, it returns a future
+    /// and should be `await`-ed on.
     ///
     /// # Panics
     ///
