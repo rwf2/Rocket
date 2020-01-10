@@ -403,7 +403,7 @@ impl<'r> ResponseBuilder<'r> {
     /// # }
     /// ```
     #[inline(always)]
-    pub fn sized_body<B: 'r>(&mut self, body: B) -> &mut ResponseBuilder<'r>
+    pub fn sized_body<B>(&mut self, body: B) -> &mut ResponseBuilder<'r>
         where B: AsyncRead + AsyncSeek + Send + Unpin + 'r
     {
         self.pending_sized_body = Some(Box::new(body));
