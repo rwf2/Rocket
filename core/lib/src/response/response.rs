@@ -1,4 +1,4 @@
-use std::{io, fmt, str};
+use std::{io, fmt, str, mem};
 use std::borrow::Cow;
 use std::future::Future;
 use std::pin::Pin;
@@ -105,6 +105,19 @@ impl<T> fmt::Debug for Body<T> {
     }
 }
 
+// error[E0225]: only auto traits can be used as additional traits in a trait object
+//   --> core/lib/src/response/response.rs:173:52
+//    |
+//186 |     pending_sized_body: Option<Box<dyn AsyncRead + AsyncSeek + Send + 'r>>,
+//    |                                        ---------   ^^^^^^^^^
+//    |                                        |           |
+//    |                                        |           additional non-auto trait
+//    |                                        |           trait alias used in trait object type (additional use)
+//    |                                        first non-auto trait
+//    |                                        trait alias used in trait object type (first use)
+trait AsyncReadAsyncSeek: AsyncRead + AsyncSeek + Unpin + Send {}
+impl<T: AsyncRead + AsyncSeek + Unpin + Send> AsyncReadAsyncSeek for T {}
+
 /// Type for easily building `Response`s.
 ///
 /// Building a [`Response`] can be a low-level ordeal; this structure presents a
@@ -170,7 +183,8 @@ impl<T> fmt::Debug for Body<T> {
 /// ```
 pub struct ResponseBuilder<'r> {
     response: Response<'r>,
-    sized_body: Option<Pin<Box<dyn Future<Output=Body<Pin<Box<dyn AsyncRead + Send + 'r>>>> + Send + 'r>>>,
+    pending_sized_body: Option<Box<dyn AsyncReadAsyncSeek + 'r>>,
+    fut: Option<Pin<Box<dyn Future<Output=Response<'r>> + Send + 'r>>>,
 }
 
 impl<'r> ResponseBuilder<'r> {
@@ -189,7 +203,8 @@ impl<'r> ResponseBuilder<'r> {
     pub fn new(base: Response<'r>) -> ResponseBuilder<'r> {
         ResponseBuilder {
             response: base,
-            sized_body: None,
+            pending_sized_body: None,
+            fut: None,
         }
     }
 
@@ -388,16 +403,10 @@ impl<'r> ResponseBuilder<'r> {
     /// # }
     /// ```
     #[inline(always)]
-    pub fn sized_body<B: 'r>(&mut self, mut body: B) -> &mut ResponseBuilder<'r>
+    pub fn sized_body<B: 'r>(&mut self, body: B) -> &mut ResponseBuilder<'r>
         where B: AsyncRead + AsyncSeek + Send + Unpin + 'r
     {
-        self.sized_body = Some(Box::pin(async {
-            let size = body.seek(io::SeekFrom::End(0)).await
-                .expect("Attempted to retrieve size by seeking, but failed.");
-            body.seek(io::SeekFrom::Start(0)).await
-                .expect("Attempted to reset body by seeking after getting size.");
-            Body::Sized(Box::pin(body.take(size)) as Pin<Box<dyn AsyncRead + Send>>, size)
-        }));
+        self.pending_sized_body = Some(Box::new(body));
         self
     }
 
@@ -424,7 +433,7 @@ impl<'r> ResponseBuilder<'r> {
         where B: AsyncRead + Send + 'r
     {
         self.response.set_streamed_body(body);
-        self.sized_body = None;
+        self.pending_sized_body = None;
         self
     }
 
@@ -452,7 +461,7 @@ impl<'r> ResponseBuilder<'r> {
             -> &mut ResponseBuilder<'r>
     {
         self.response.set_chunked_body(body, chunk_size);
-        self.sized_body = None;
+        self.pending_sized_body = None;
         self
     }
 
@@ -480,7 +489,7 @@ impl<'r> ResponseBuilder<'r> {
             -> &mut ResponseBuilder<'r>
     {
         self.response.set_raw_body(body);
-        self.sized_body = None;
+        self.pending_sized_body = None;
         self
     }
 
@@ -528,7 +537,7 @@ impl<'r> ResponseBuilder<'r> {
     #[inline(always)]
     pub fn merge(&mut self, mut other: Response<'r>) -> &mut ResponseBuilder<'r> {
         if other.body().is_some() {
-            self.sized_body = None;
+            self.pending_sized_body = None;
         }
         self.response.merge(other);
         self
@@ -608,22 +617,23 @@ impl<'r> ResponseBuilder<'r> {
 impl<'r> Future for ResponseBuilder<'r> {
     type Output = Response<'r>;
     fn poll(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
-        let s = self.get_mut();
-        let sb = std::mem::replace(&mut s.sized_body, None);
-        if let Some(mut sized_body) = sb {
-            match sized_body.as_mut().poll(cx) {
-                Poll::Pending => {
-                    s.sized_body = Some(sized_body);
-                    Poll::Pending
-                }
-                Poll::Ready(body) => {
-                    s.response.body = Some(body);
-                    Poll::Ready(std::mem::replace(&mut s.response, Response::new()))
-                }
-            }
+        let this = self.get_mut();
+        let mut fut = mem::replace(&mut this.fut, None);
+        let poll = if let Some(ref mut fut) = fut {
+            fut.as_mut().poll(cx)
         } else {
-            Poll::Ready(std::mem::replace(&mut s.response, Response::new()))
-        }
+            let mut response = mem::replace(&mut this.response, Response::new());
+            let pending_sized_body = mem::replace(&mut this.pending_sized_body, None);
+            let mut fut = Box::pin(async {
+                if let Some(sb) = pending_sized_body {
+                    response.set_sized_body(sb).await;
+                }
+                response
+            });
+            fut.as_mut().poll(cx)
+        };
+        mem::replace(&mut this.fut, fut);
+        poll
     }
 }
 
