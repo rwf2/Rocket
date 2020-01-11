@@ -611,22 +611,17 @@ impl<'r> Future for ResponseBuilder<'r> {
     type Output = Response<'r>;
     fn poll(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
         let this = self.get_mut();
-        let mut fut = mem::replace(&mut this.fut, None);
-        let poll = if let Some(ref mut fut) = fut {
-            fut.as_mut().poll(cx)
-        } else {
+        if this.fut.is_none() {
             let mut response = mem::replace(&mut this.response, Response::new());
             let pending_sized_body = mem::replace(&mut this.pending_sized_body, None);
-            let mut fut = Box::pin(async {
+            this.fut = Some(Box::pin(async {
                 if let Some(sb) = pending_sized_body {
                     response.set_sized_body(sb).await;
                 }
                 response
-            });
-            fut.as_mut().poll(cx)
-        };
-        mem::replace(&mut this.fut, fut);
-        poll
+            }));
+        }
+        this.fut.as_mut().expect("this.fut.is_none() checked and assigned Some").as_mut().poll(cx)
     }
 }
 
