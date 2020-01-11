@@ -105,16 +105,9 @@ impl<T> fmt::Debug for Body<T> {
     }
 }
 
-// error[E0225]: only auto traits can be used as additional traits in a trait object
-//   --> core/lib/src/response/response.rs:173:52
-//    |
-//186 |     pending_sized_body: Option<Box<dyn AsyncRead + AsyncSeek + Send + 'r>>,
-//    |                                        ---------   ^^^^^^^^^
-//    |                                        |           |
-//    |                                        |           additional non-auto trait
-//    |                                        |           trait alias used in trait object type (additional use)
-//    |                                        first non-auto trait
-//    |                                        trait alias used in trait object type (first use)
+/// Internal workaround for `Box<dyn AsyncRead + AsyncSeek>` not being allowed.
+/// 
+/// https://github.com/rust-lang/rfcs/issues/2035
 trait AsyncReadAsyncSeek: AsyncRead + AsyncSeek + Unpin + Send {}
 impl<T: AsyncRead + AsyncSeek + Unpin + Send> AsyncReadAsyncSeek for T {}
 
