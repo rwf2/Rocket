@@ -401,11 +401,9 @@ pub extern crate r2d2;
 #[doc(hidden)]
 pub use tokio::task::spawn_blocking;
 
-#[cfg(any(
-    feature = "diesel_sqlite_pool",
-    feature = "diesel_postgres_pool",
-    feature = "diesel_mysql_pool"
-))]
+#[cfg(any(feature = "diesel_sqlite_pool",
+          feature = "diesel_postgres_pool",
+          feature = "diesel_mysql_pool"))]
 pub extern crate diesel;
 
 use std::collections::BTreeMap;
@@ -416,43 +414,28 @@ use rocket::config::{self, Value};
 
 use self::r2d2::ManageConnection;
 
-#[doc(hidden)]
-pub use rocket_contrib_codegen::*;
+#[doc(hidden)] pub use rocket_contrib_codegen::*;
 
-#[cfg(feature = "postgres_pool")]
-pub extern crate postgres;
-#[cfg(feature = "postgres_pool")]
-pub extern crate r2d2_postgres;
+#[cfg(feature = "postgres_pool")] pub extern crate postgres;
+#[cfg(feature = "postgres_pool")] pub extern crate r2d2_postgres;
 
-#[cfg(feature = "mysql_pool")]
-pub extern crate mysql;
-#[cfg(feature = "mysql_pool")]
-pub extern crate r2d2_mysql;
+#[cfg(feature = "mysql_pool")] pub extern crate mysql;
+#[cfg(feature = "mysql_pool")] pub extern crate r2d2_mysql;
 
-#[cfg(feature = "sqlite_pool")]
-pub extern crate r2d2_sqlite;
-#[cfg(feature = "sqlite_pool")]
-pub extern crate rusqlite;
+#[cfg(feature = "sqlite_pool")] pub extern crate rusqlite;
+#[cfg(feature = "sqlite_pool")] pub extern crate r2d2_sqlite;
 
-#[cfg(feature = "cypher_pool")]
-pub extern crate r2d2_cypher;
-#[cfg(feature = "cypher_pool")]
-pub extern crate rusted_cypher;
+#[cfg(feature = "cypher_pool")] pub extern crate rusted_cypher;
+#[cfg(feature = "cypher_pool")] pub extern crate r2d2_cypher;
 
-#[cfg(feature = "redis_pool")]
-pub extern crate r2d2_redis;
-#[cfg(feature = "redis_pool")]
-pub extern crate redis;
+#[cfg(feature = "redis_pool")] pub extern crate redis;
+#[cfg(feature = "redis_pool")] pub extern crate r2d2_redis;
 
-#[cfg(feature = "mongodb_pool")]
-pub extern crate mongodb;
-#[cfg(feature = "mongodb_pool")]
-pub extern crate r2d2_mongodb;
+#[cfg(feature = "mongodb_pool")] pub extern crate mongodb;
+#[cfg(feature = "mongodb_pool")] pub extern crate r2d2_mongodb;
 
-#[cfg(feature = "memcache_pool")]
-pub extern crate memcache;
-#[cfg(feature = "memcache_pool")]
-pub extern crate r2d2_memcache;
+#[cfg(feature = "memcache_pool")] pub extern crate memcache;
+#[cfg(feature = "memcache_pool")] pub extern crate r2d2_memcache;
 
 /// A structure representing a particular database configuration.
 ///
@@ -583,26 +566,23 @@ pub enum ConfigError {
 /// ```
 pub fn database_config<'a>(
     name: &str,
-    from: &'a config::Config,
+    from: &'a config::Config
 ) -> Result<DatabaseConfig<'a>, ConfigError> {
     // Find the first `databases` config that's a table with a key of 'name'
     // equal to `name`.
-    let connection_config = from
-        .get_table("databases")
+    let connection_config = from.get_table("databases")
         .map_err(|_| ConfigError::MissingTable)?
         .get(name)
         .ok_or(ConfigError::MissingKey)?
         .as_table()
         .ok_or(ConfigError::MalformedConfiguration)?;
 
-    let maybe_url = connection_config
-        .get("url")
+    let maybe_url = connection_config.get("url")
         .ok_or(ConfigError::MissingUrl)?;
 
     let url = maybe_url.as_str().ok_or(ConfigError::MalformedUrl)?;
 
-    let pool_size = connection_config
-        .get("pool_size")
+    let pool_size = connection_config.get("pool_size")
         .and_then(Value::as_integer)
         .unwrap_or(from.workers as i64);
 
@@ -614,32 +594,30 @@ pub fn database_config<'a>(
     extras.remove("url");
     extras.remove("pool_size");
 
-    Ok(DatabaseConfig {
-        url,
-        pool_size: pool_size as u32,
-        extras: extras,
-    })
+    Ok(DatabaseConfig { url, pool_size: pool_size as u32, extras: extras })
 }
 
 impl<'a> Display for ConfigError {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         match self {
-            ConfigError::MissingTable => write!(
-                f,
-                "A table named `databases` was not found for this configuration"
-            ),
-            ConfigError::MissingKey => write!(
-                f,
-                "An entry in the `databases` table was not found for this key"
-            ),
+            ConfigError::MissingTable => {
+                write!(f, "A table named `databases` was not found for this configuration")
+            },
+            ConfigError::MissingKey => {
+                write!(f, "An entry in the `databases` table was not found for this key")
+            },
             ConfigError::MalformedConfiguration => {
                 write!(f, "The configuration for this database is malformed")
             }
-            ConfigError::MissingUrl => write!(f, "The connection URL is missing for this database"),
-            ConfigError::MalformedUrl => write!(f, "The specified connection URL is malformed"),
+            ConfigError::MissingUrl => {
+                write!(f, "The connection URL is missing for this database")
+            },
+            ConfigError::MalformedUrl => {
+                write!(f, "The specified connection URL is malformed")
+            },
             ConfigError::InvalidPoolSize(invalid_size) => {
                 write!(f, "'{}' is not a valid value for `pool_size`", invalid_size)
-            }
+            },
         }
     }
 }
@@ -736,7 +714,7 @@ impl<'a> Display for ConfigError {
 /// existing implementations of [`Poolable`].
 pub trait Poolable: Send + Sized + 'static {
     /// The associated connection manager for the given connection type.
-    type Manager: ManageConnection<Connection = Self>;
+    type Manager: ManageConnection<Connection=Self>;
     /// The associated error type in the event that constructing the connection
     /// manager and/or the connection pool fails.
     type Error;
@@ -753,9 +731,7 @@ impl Poolable for diesel::SqliteConnection {
 
     fn pool(config: DatabaseConfig<'_>) -> Result<r2d2::Pool<Self::Manager>, Self::Error> {
         let manager = diesel::r2d2::ConnectionManager::new(config.url);
-        r2d2::Pool::builder()
-            .max_size(config.pool_size)
-            .build(manager)
+        r2d2::Pool::builder().max_size(config.pool_size).build(manager)
     }
 }
 
@@ -766,9 +742,7 @@ impl Poolable for diesel::PgConnection {
 
     fn pool(config: DatabaseConfig<'_>) -> Result<r2d2::Pool<Self::Manager>, Self::Error> {
         let manager = diesel::r2d2::ConnectionManager::new(config.url);
-        r2d2::Pool::builder()
-            .max_size(config.pool_size)
-            .build(manager)
+        r2d2::Pool::builder().max_size(config.pool_size).build(manager)
     }
 }
 
@@ -779,9 +753,7 @@ impl Poolable for diesel::MysqlConnection {
 
     fn pool(config: DatabaseConfig<'_>) -> Result<r2d2::Pool<Self::Manager>, Self::Error> {
         let manager = diesel::r2d2::ConnectionManager::new(config.url);
-        r2d2::Pool::builder()
-            .max_size(config.pool_size)
-            .build(manager)
+        r2d2::Pool::builder().max_size(config.pool_size).build(manager)
     }
 }
 
@@ -797,9 +769,7 @@ impl Poolable for postgres::Client {
             postgres::tls::NoTls,
         );
 
-        r2d2::Pool::builder()
-            .max_size(config.pool_size)
-            .build(manager)
+        r2d2::Pool::builder().max_size(config.pool_size).build(manager)
             .map_err(DbError::PoolError)
     }
 }
@@ -812,9 +782,7 @@ impl Poolable for mysql::Conn {
     fn pool(config: DatabaseConfig<'_>) -> Result<r2d2::Pool<Self::Manager>, Self::Error> {
         let opts = mysql::OptsBuilder::from_opts(config.url);
         let manager = r2d2_mysql::MysqlConnectionManager::new(opts);
-        r2d2::Pool::builder()
-            .max_size(config.pool_size)
-            .build(manager)
+        r2d2::Pool::builder().max_size(config.pool_size).build(manager)
     }
 }
 
@@ -826,9 +794,7 @@ impl Poolable for rusqlite::Connection {
     fn pool(config: DatabaseConfig<'_>) -> Result<r2d2::Pool<Self::Manager>, Self::Error> {
         let manager = r2d2_sqlite::SqliteConnectionManager::file(config.url);
 
-        r2d2::Pool::builder()
-            .max_size(config.pool_size)
-            .build(manager)
+        r2d2::Pool::builder().max_size(config.pool_size).build(manager)
     }
 }
 
@@ -838,12 +804,8 @@ impl Poolable for rusted_cypher::GraphClient {
     type Error = r2d2::Error;
 
     fn pool(config: DatabaseConfig<'_>) -> Result<r2d2::Pool<Self::Manager>, Self::Error> {
-        let manager = r2d2_cypher::CypherConnectionManager {
-            url: config.url.to_string(),
-        };
-        r2d2::Pool::builder()
-            .max_size(config.pool_size)
-            .build(manager)
+        let manager = r2d2_cypher::CypherConnectionManager { url: config.url.to_string() };
+        r2d2::Pool::builder().max_size(config.pool_size).build(manager)
     }
 }
 
@@ -853,11 +815,8 @@ impl Poolable for redis::Connection {
     type Error = DbError<redis::RedisError>;
 
     fn pool(config: DatabaseConfig<'_>) -> Result<r2d2::Pool<Self::Manager>, Self::Error> {
-        let manager =
-            r2d2_redis::RedisConnectionManager::new(config.url).map_err(DbError::Custom)?;
-        r2d2::Pool::builder()
-            .max_size(config.pool_size)
-            .build(manager)
+        let manager = r2d2_redis::RedisConnectionManager::new(config.url).map_err(DbError::Custom)?;
+        r2d2::Pool::builder().max_size(config.pool_size).build(manager)
             .map_err(DbError::PoolError)
     }
 }
@@ -868,12 +827,8 @@ impl Poolable for mongodb::db::Database {
     type Error = DbError<mongodb::Error>;
 
     fn pool(config: DatabaseConfig<'_>) -> Result<r2d2::Pool<Self::Manager>, Self::Error> {
-        let manager = r2d2_mongodb::MongodbConnectionManager::new_with_uri(config.url)
-            .map_err(DbError::Custom)?;
-        r2d2::Pool::builder()
-            .max_size(config.pool_size)
-            .build(manager)
-            .map_err(DbError::PoolError)
+        let manager = r2d2_mongodb::MongodbConnectionManager::new_with_uri(config.url).map_err(DbError::Custom)?;
+        r2d2::Pool::builder().max_size(config.pool_size).build(manager).map_err(DbError::PoolError)
     }
 }
 
@@ -884,25 +839,21 @@ impl Poolable for memcache::Client {
 
     fn pool(config: DatabaseConfig<'_>) -> Result<r2d2::Pool<Self::Manager>, Self::Error> {
         let manager = r2d2_memcache::MemcacheConnectionManager::new(config.url);
-        r2d2::Pool::builder()
-            .max_size(config.pool_size)
-            .build(manager)
-            .map_err(DbError::PoolError)
+        r2d2::Pool::builder().max_size(config.pool_size).build(manager).map_err(DbError::PoolError)
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use super::{database_config, ConfigError::*};
-    use rocket::{
-        config::{Environment, Value},
-        Config,
-    };
     use std::collections::BTreeMap;
+    use rocket::{Config, config::{Environment, Value}};
+    use super::{ConfigError::*, database_config};
 
     #[test]
     fn no_database_entry_in_config_returns_error() {
-        let config = Config::build(Environment::Development).finalize().unwrap();
+        let config = Config::build(Environment::Development)
+            .finalize()
+            .unwrap();
         let database_config_result = database_config("dummy_db", &config);
 
         assert_eq!(Err(MissingTable), database_config_result);

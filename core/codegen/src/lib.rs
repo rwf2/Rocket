@@ -1,8 +1,10 @@
 #![feature(proc_macro_diagnostic, proc_macro_span)]
-#![recursion_limit = "128"]
+#![recursion_limit="128"]
+
 #![doc(html_root_url = "https://api.rocket.rs/v0.5")]
 #![doc(html_favicon_url = "https://rocket.rs/v0.5/images/favicon.ico")]
 #![doc(html_logo_url = "https://rocket.rs/v0.5/images/logo-boxed.png")]
+
 #![warn(rust_2018_idioms)]
 
 //! # Rocket - Code Generation
@@ -56,8 +58,8 @@
 //! ROCKET_CODEGEN_DEBUG=1 cargo build
 //! ```
 
-#[macro_use]
-extern crate quote;
+#[macro_use] extern crate quote;
+extern crate proc_macro;
 
 use rocket_http as http;
 
@@ -105,15 +107,15 @@ macro_rules! define_vars_and_mods {
 
 #[macro_use]
 mod proc_macro_ext;
+mod derive;
 mod attribute;
 mod bang;
-mod derive;
 mod http_codegen;
 mod syn_ext;
 
 use crate::http::Method;
-use devise::proc_macro2;
 use proc_macro::TokenStream;
+use devise::proc_macro2;
 
 static ROUTE_STRUCT_PREFIX: &str = "static_rocket_route_info_for_";
 static CATCH_STRUCT_PREFIX: &str = "static_rocket_catch_info_for_";
@@ -123,7 +125,7 @@ static URI_MACRO_PREFIX: &str = "rocket_uri_macro_";
 static ROCKET_PARAM_PREFIX: &str = "__rocket_param_";
 
 macro_rules! emit {
-    ($tokens:expr) => {{
+    ($tokens:expr) => ({
         let tokens = $tokens;
         if std::env::var_os("ROCKET_CODEGEN_DEBUG").is_some() {
             proc_macro::Span::call_site()
@@ -133,11 +135,11 @@ macro_rules! emit {
         }
 
         tokens
-    }};
+    })
 }
 
 macro_rules! route_attribute {
-    ($name:ident => $method:expr) => {
+    ($name:ident => $method:expr) => (
         /// Attribute to generate a [`Route`] and associated metadata.
         ///
         /// This and all other route attributes can only be applied to free
@@ -323,7 +325,7 @@ macro_rules! route_attribute {
         pub fn $name(args: TokenStream, input: TokenStream) -> TokenStream {
             emit!(attribute::route::route_attribute($method, args, input))
         }
-    };
+    )
 }
 
 route_attribute!(route => None);
