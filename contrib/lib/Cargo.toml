@@ -50,7 +50,7 @@ log = "0.4"
 # Serialization and templating dependencies.
 serde = { version = "1.0", optional = true }
 serde_json = { version = "1.0.26", optional = true }
-rmp-serde = { version = "^0.13", optional = true }
+rmp-serde = { version = "0.14.0", optional = true }
 
 # Templating dependencies.
 handlebars = { version = "2.0", optional = true }
