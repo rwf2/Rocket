@@ -1,8 +1,7 @@
-use serde::Serialize;
-
+pub use crate::templates::tera::{Context, Tera};
 use crate::templates::{Engine, TemplateInfo};
-
-pub use crate::templates::tera::Tera;
+use serde::Serialize;
+use std::error::Error;
 
 impl Engine for Tera {
     const EXT: &'static str = "tera";
@@ -10,19 +9,30 @@ impl Engine for Tera {
     fn init(templates: &[(&str, &TemplateInfo)]) -> Option<Tera> {
         // Create the Tera instance.
         let mut tera = Tera::default();
-        let ext = [".html.tera", ".htm.tera", ".xml.tera", ".html", ".htm", ".xml"];
+        let ext = [
+            ".html.tera",
+            ".htm.tera",
+            ".xml.tera",
+            ".html",
+            ".htm",
+            ".xml",
+        ];
         tera.autoescape_on(ext.to_vec());
 
         // Collect into a tuple of (name, path) for Tera.
-        let tera_templates = templates.iter()
+        let tera_templates = templates
+            .iter()
             .map(|&(name, info)| (&info.path, Some(name)))
             .collect::<Vec<_>>();
 
         // Finally try to tell Tera about all of the templates.
         if let Err(e) = tera.add_template_files(tera_templates) {
             error!("Failed to initialize Tera templating.");
-            for error in e.iter() {
-                info_!("{}", error);
+
+            let mut error = e.source();
+            while let Some(err) = error {
+                info_!("{}", err);
+                error = err.source();
             }
 
             None
@@ -37,12 +47,26 @@ impl Engine for Tera {
             return None;
         };
 
-        match Tera::render(self, name, &context) {
+        let tera_ctx = match Context::from_serialize(context) {
+            Ok(ctx) => ctx,
+            Err(_) => {
+                error_!(
+                    "Error generating context when rendering Tera template '{}'.",
+                    name
+                );
+                return None;
+            }
+        };
+
+        match Tera::render(self, name, &tera_ctx) {
             Ok(string) => Some(string),
             Err(e) => {
                 error_!("Error rendering Tera template '{}'.", name);
-                for error in e.iter() {
-                    error_!("{}", error);
+
+                let mut error = e.source();
+                while let Some(err) = error {
+                    error_!("{}", err);
+                    error = err.source();
                 }
 
                 None

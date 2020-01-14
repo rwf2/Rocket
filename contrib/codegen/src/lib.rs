@@ -1,6 +1,5 @@
 #![feature(proc_macro_diagnostic)]
-#![recursion_limit="256"]
-
+#![recursion_limit = "256"]
 #![warn(rust_2018_idioms)]
 
 //! # Rocket Contrib - Code Generation
@@ -26,13 +25,12 @@
 //! DATABASE_NAME := (string literal)
 //! </pre>
 
-extern crate proc_macro;
+#[allow(unused_imports)]
+#[macro_use]
+extern crate quote;
 
 #[allow(unused_imports)]
-#[macro_use] extern crate quote;
-
-#[allow(unused_imports)]
-use devise::{syn, proc_macro2};
+use devise::{proc_macro2, syn};
 
 #[cfg(feature = "database_attribute")]
 mod database;
