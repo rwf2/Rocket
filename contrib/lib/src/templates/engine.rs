@@ -30,7 +30,7 @@ pub(crate) trait Engine: Send + Sync + 'static {
 /// use rocket_contrib::templates::{Template, Engines};
 /// use rocket_contrib::templates::tera::{self, Value};
 ///
-/// fn my_filter(value: Value, _: HashMap<String, Value>) -> tera::Result<Value> {
+/// fn my_filter(value: &Value, _: &HashMap<String, Value>) -> tera::Result<Value> {
 ///     # /*
 ///     ...
 ///     # */ unimplemented!();
