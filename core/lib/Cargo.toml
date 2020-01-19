@@ -29,7 +29,7 @@ rocket_http = { version = "0.5.0-dev", path = "../http" }
 futures = "0.3.0"
 yansi = "0.5"
 log = { version = "0.4", features = ["std"] }
-toml = "0.4.7"
+toml = "0.5"
 num_cpus = "1.0"
 state = "0.4.1"
 time = "0.2.11"

@@ -44,7 +44,8 @@ fn key_value<'a>(input: &mut &'a str) -> Result<(String, Value), &'a str> {
 
 #[parser]
 fn table<'a>(input: &mut &'a str) -> Result<Value, &'a str> {
-    Value::Table(collection('{', key_value, ',', '}')?)
+    let map: std::collections::BTreeMap<_, _> = collection('{', key_value, ',', '}')?;
+    Value::Table(map.into_iter().collect())
 }
 
 #[parser]
@@ -103,7 +104,8 @@ impl fmt::Display for LoggedValue<'_> {
 
 #[cfg(test)]
 mod test {
-    use std::collections::BTreeMap;
+    use toml::map::Map;
+
     use super::parse_simple_toml_value;
     use super::Value::{self, *};
 
@@ -131,16 +133,16 @@ mod test {
         assert_parse!("[1, 2, 3]", vec![1, 2, 3].into());
         assert_parse!("[1.32, 2]", Array(vec![1.32.into(), 2.into()]));
 
-        assert_parse!("{}", Table(BTreeMap::new()));
+        assert_parse!("{}", Table(Map::new()));
 
         assert_parse!("{a=b}", Table({
-            let mut map = BTreeMap::new();
+            let mut map = Map::new();
             map.insert("a".into(), "b".into());
             map
         }));
 
         assert_parse!("{v=1, on=true,pi=3.14}", Table({
-            let mut map = BTreeMap::new();
+            let mut map = Map::new();
             map.insert("v".into(), 1.into());
             map.insert("on".into(), true.into());
             map.insert("pi".into(), 3.14.into());
@@ -148,7 +150,7 @@ mod test {
         }));
 
         assert_parse!("{v=[1, 2, 3], v2=[a, \"b\"], on=true,pi=3.14}", Table({
-            let mut map = BTreeMap::new();
+            let mut map = Map::new();
             map.insert("v".into(), vec![1, 2, 3].into());
             map.insert("v2".into(), vec!["a", "b"].into());
             map.insert("on".into(), true.into());
@@ -157,7 +159,7 @@ mod test {
         }));
 
         assert_parse!("{v=[[1], [2, 3], [4,5]]}", Table({
-            let mut map = BTreeMap::new();
+            let mut map = Map::new();
             let first: Value = vec![1].into();
             let second: Value = vec![2, 3].into();
             let third: Value = vec![4, 5].into();
