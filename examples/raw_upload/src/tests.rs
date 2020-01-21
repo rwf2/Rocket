@@ -1,9 +1,9 @@
+use rocket::http::{ContentType, Status};
 use rocket::local::Client;
-use rocket::http::{Status, ContentType};
 
 use std::env;
-use std::io::Read;
 use std::fs::{self, File};
+use std::io::Read;
 
 const UPLOAD_CONTENTS: &str = "Hey! I'm going to be uploaded. :D Yay!";
 
@@ -22,7 +22,8 @@ fn test_raw_upload() {
 
     // Do the upload. Make sure we get the expected results.
     let client = Client::new(super::rocket()).unwrap();
-    let mut res = client.post("/upload")
+    let mut res = client
+        .post("/upload")
         .header(ContentType::Plain)
         .body(UPLOAD_CONTENTS)
         .dispatch();
@@ -33,6 +34,7 @@ fn test_raw_upload() {
     // Ensure we find the body in the /tmp/upload.txt file.
     let mut file_contents = String::new();
     let mut file = File::open(&upload_file).expect("open upload.txt file");
-    file.read_to_string(&mut file_contents).expect("read upload.txt");
+    file.read_to_string(&mut file_contents)
+        .expect("read upload.txt");
     assert_eq!(&file_contents, UPLOAD_CONTENTS);
 }

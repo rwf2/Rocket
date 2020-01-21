@@ -1,11 +1,9 @@
-use rocket::local::Client;
 use rocket::http::Status;
+use rocket::local::Client;
 
 fn client() -> Client {
-    let rocket = rocket::ignite()
-        .mount("/", routes![super::root, super::user, super::login]);
+    let rocket = rocket::ignite().mount("/", routes![super::root, super::user, super::login]);
     Client::new(rocket).unwrap()
-
 }
 
 fn test_200(uri: &str, expected_body: &str) {
@@ -26,8 +24,10 @@ fn test_303(uri: &str, expected_location: &str) {
 #[test]
 fn test() {
     test_200("/users/Sergio", "Hello, Sergio!");
-    test_200("/users/login",
-             "Hi! That user doesn't exist. Maybe you need to log in?");
+    test_200(
+        "/users/login",
+        "Hi! That user doesn't exist. Maybe you need to log in?",
+    );
 }
 
 #[test]

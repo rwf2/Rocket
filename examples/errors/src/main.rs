@@ -1,8 +1,10 @@
 #![feature(proc_macro_hygiene)]
 
-#[macro_use] extern crate rocket;
+#[macro_use]
+extern crate rocket;
 
-#[cfg(test)] mod tests;
+#[cfg(test)]
+mod tests;
 
 use rocket::response::content;
 
@@ -13,9 +15,11 @@ fn hello(name: String, age: i8) -> String {
 
 #[catch(404)]
 fn not_found(req: &rocket::Request<'_>) -> content::Html<String> {
-    content::Html(format!("<p>Sorry, but '{}' is not a valid path!</p>
+    content::Html(format!(
+        "<p>Sorry, but '{}' is not a valid path!</p>
             <p>Try visiting /hello/&lt;name&gt;/&lt;age&gt; instead.</p>",
-            req.uri()))
+        req.uri()
+    ))
 }
 
 fn main() {

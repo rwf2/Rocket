@@ -1,5 +1,5 @@
-use rocket::local::Client;
 use rocket::http::Status;
+use rocket::local::Client;
 
 fn client() -> Client {
     let rocket = rocket::ignite().mount("/", routes![super::root, super::login]);
@@ -26,5 +26,8 @@ fn test_root() {
 fn test_login() {
     let client = client();
     let mut r = client.get("/login").dispatch();
-    assert_eq!(r.body_string(), Some("Hi! Please log in before continuing.".into()));
+    assert_eq!(
+        r.body_string(),
+        Some("Hi! Please log in before continuing.".into())
+    );
 }

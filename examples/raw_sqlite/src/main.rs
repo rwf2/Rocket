@@ -1,37 +1,48 @@
 #![feature(proc_macro_hygiene)]
 
-#[macro_use] extern crate rocket;
+#[macro_use]
+extern crate rocket;
 
 use rusqlite::types::ToSql;
 
-#[cfg(test)] mod tests;
+#[cfg(test)]
+mod tests;
 
 use std::sync::Mutex;
 
-use rocket::{Rocket, State, response::Debug};
+use rocket::{response::Debug, Rocket, State};
 
 use rusqlite::{Connection, Error};
 
 type DbConn = Mutex<Connection>;
 
 fn init_database(conn: &Connection) {
-    conn.execute("CREATE TABLE entries (
+    conn.execute(
+        "CREATE TABLE entries (
                   id              INTEGER PRIMARY KEY,
                   name            TEXT NOT NULL
-                  )", &[] as &[&dyn ToSql])
-        .expect("create entries table");
+                  )",
+        &[] as &[&dyn ToSql],
+    )
+    .expect("create entries table");
 
-    conn.execute("INSERT INTO entries (id, name) VALUES ($1, $2)",
-            &[&0 as &dyn ToSql, &"Rocketeer"])
-        .expect("insert single entry into entries table");
+    conn.execute(
+        "INSERT INTO entries (id, name) VALUES ($1, $2)",
+        &[&0 as &dyn ToSql, &"Rocketeer"],
+    )
+    .expect("insert single entry into entries table");
 }
 
 #[get("/")]
-fn hello(db_conn: State<'_, DbConn>) -> Result<String, Debug<Error>>  {
-    db_conn.lock()
+fn hello(db_conn: State<'_, DbConn>) -> Result<String, Debug<Error>> {
+    db_conn
+        .lock()
         .expect("db connection lock")
-        .query_row("SELECT name FROM entries WHERE id = 0",
-                   &[] as &[&dyn ToSql], |row| { row.get(0) })
+        .query_row(
+            "SELECT name FROM entries WHERE id = 0",
+            &[] as &[&dyn ToSql],
+            |row| row.get(0),
+        )
         .map_err(Debug)
 }
 

@@ -1,10 +1,10 @@
 use super::task::Task;
 
 use parking_lot::Mutex;
-use rand::{Rng, thread_rng, distributions::Alphanumeric};
+use rand::{distributions::Alphanumeric, thread_rng, Rng};
 
+use rocket::http::{ContentType, Status};
 use rocket::local::Client;
-use rocket::http::{Status, ContentType};
 
 // We use a lock to synchronize between tests so DB operations don't collide.
 // For now. In the future, we'll have a nice way to run each test in a DB
@@ -12,16 +12,19 @@ use rocket::http::{Status, ContentType};
 static DB_LOCK: Mutex<()> = Mutex::new(());
 
 macro_rules! run_test {
-    (|$client:ident, $conn:ident| $block:expr) => ({
+    (|$client:ident, $conn:ident| $block:expr) => {{
         let _lock = DB_LOCK.lock();
         let rocket = super::rocket();
         let db = super::DbConn::get_one(&rocket);
         let $client = Client::new(rocket).expect("Rocket client");
         let $conn = db.expect("failed to get database connection for testing");
-        assert!(Task::delete_all(&$conn), "failed to delete all tasks for testing");
+        assert!(
+            Task::delete_all(&$conn),
+            "failed to delete all tasks for testing"
+        );
 
         $block
-    })
+    }};
 }
 
 #[test]
@@ -31,7 +34,8 @@ fn test_insertion_deletion() {
         let init_tasks = Task::all(&conn);
 
         // Issue a request to insert a new task.
-        client.post("/todo")
+        client
+            .post("/todo")
             .header(ContentType::Form)
             .body("description=My+first+task")
             .dispatch();
@@ -61,7 +65,8 @@ fn test_insertion_deletion() {
 fn test_toggle() {
     run_test!(|client, conn| {
         // Issue a request to insert a new task; ensure it's not yet completed.
-        client.post("/todo")
+        client
+            .post("/todo")
             .header(ContentType::Form)
             .body("description=test_for_completion")
             .dispatch();
@@ -92,7 +97,8 @@ fn test_many_insertions() {
         for i in 0..ITER {
             // Issue a request to insert a new task with a random description.
             let desc: String = rng.sample_iter(&Alphanumeric).take(12).collect();
-            client.post("/todo")
+            client
+                .post("/todo")
                 .header(ContentType::Form)
                 .body(format!("description={}", desc))
                 .dispatch();
@@ -115,9 +121,7 @@ fn test_many_insertions() {
 fn test_bad_form_submissions() {
     run_test!(|client, _conn| {
         // Submit an empty form. We should get a 422 but no flash error.
-        let res = client.post("/todo")
-            .header(ContentType::Form)
-            .dispatch();
+        let res = client.post("/todo").header(ContentType::Form).dispatch();
 
         let mut cookies = res.headers().get("Set-Cookie");
         assert_eq!(res.status(), Status::UnprocessableEntity);
@@ -125,7 +129,8 @@ fn test_bad_form_submissions() {
 
         // Submit a form with an empty description. We look for 'error' in the
         // cookies which corresponds to flash message being set as an error.
-        let res = client.post("/todo")
+        let res = client
+            .post("/todo")
             .header(ContentType::Form)
             .body("description=")
             .dispatch();
@@ -134,7 +139,8 @@ fn test_bad_form_submissions() {
         assert!(cookies.any(|value| value.contains("error")));
 
         // Submit a form without a description. Expect a 422 but no flash error.
-        let res = client.post("/todo")
+        let res = client
+            .post("/todo")
             .header(ContentType::Form)
             .body("evil=smile")
             .dispatch();

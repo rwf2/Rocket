@@ -1,8 +1,8 @@
-use rocket::{self, State};
-use rocket::fairing::AdHoc;
 use rocket::config::{self, Config, Environment, LoggingLevel};
+use rocket::fairing::AdHoc;
 use rocket::http::Status;
 use rocket::local::Client;
+use rocket::{self, State};
 
 struct LocalConfig(Config);
 
@@ -10,7 +10,7 @@ struct LocalConfig(Config);
 fn check_config(config: State<'_, LocalConfig>) -> Option<()> {
     let environment = match std::env::var("ROCKET_ENV") {
         Ok(name) => name,
-        Err(_) => return None
+        Err(_) => return None,
     };
 
     let config = &config.0;

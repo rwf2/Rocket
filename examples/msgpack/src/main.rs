@@ -1,21 +1,27 @@
 #![feature(proc_macro_hygiene)]
 
-#[macro_use] extern crate rocket;
-#[macro_use] extern crate serde_derive;
+#[macro_use]
+extern crate rocket;
+#[macro_use]
+extern crate serde_derive;
 
-#[cfg(test)] mod tests;
+#[cfg(test)]
+mod tests;
 
 use rocket_contrib::msgpack::MsgPack;
 
 #[derive(Serialize, Deserialize)]
 struct Message<'r> {
     id: usize,
-    contents: &'r str
+    contents: &'r str,
 }
 
 #[get("/<id>", format = "msgpack")]
 fn get(id: usize) -> MsgPack<Message<'static>> {
-    MsgPack(Message { id: id, contents: "Hello, world!", })
+    MsgPack(Message {
+        id: id,
+        contents: "Hello, world!",
+    })
 }
 
 #[post("/", data = "<data>", format = "msgpack")]

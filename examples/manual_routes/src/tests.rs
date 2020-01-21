@@ -1,6 +1,6 @@
 use super::*;
-use rocket::local::Client;
 use rocket::http::{ContentType, Status};
+use rocket::local::Client;
 
 fn test(uri: &str, content_type: ContentType, status: Status, body: String) {
     let client = Client::new(rocket()).unwrap();
@@ -25,7 +25,12 @@ fn test_name() {
 #[test]
 fn test_echo() {
     let uri = format!("/echo/echo%20this%20text");
-    test(&uri, ContentType::Plain, Status::Ok, "echo this text".into());
+    test(
+        &uri,
+        ContentType::Plain,
+        Status::Ok,
+        "echo this text".into(),
+    );
 }
 
 #[test]
@@ -33,10 +38,12 @@ fn test_upload() {
     let client = Client::new(rocket()).unwrap();
     let expected_body = "Lorem ipsum dolor sit amet, consectetur adipiscing elit, \
                          sed do eiusmod tempor incididunt ut labore et dolore \
-                         magna aliqua".to_string();
+                         magna aliqua"
+        .to_string();
 
     // Upload the body.
-    let response = client.post("/upload")
+    let response = client
+        .post("/upload")
         .header(ContentType::Plain)
         .body(&expected_body)
         .dispatch();

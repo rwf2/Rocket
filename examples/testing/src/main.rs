@@ -1,6 +1,7 @@
 #![feature(proc_macro_hygiene)]
 
-#[macro_use] extern crate rocket;
+#[macro_use]
+extern crate rocket;
 
 #[get("/")]
 fn hello() -> &'static str {
@@ -18,8 +19,8 @@ fn main() {
 #[cfg(test)]
 mod test {
     use super::rocket;
-    use rocket::local::Client;
     use rocket::http::Status;
+    use rocket::local::Client;
 
     #[test]
     fn test_hello() {

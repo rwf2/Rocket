@@ -1,4 +1,4 @@
-use rocket::{self, routes, local::Client};
+use rocket::{self, local::Client, routes};
 
 #[test]
 fn hello_world() {
@@ -23,7 +23,11 @@ mod scoped_uri_tests {
 
     #[get("/<name>")]
     fn hello_name(name: String) -> String {
-        format!("Hello, {}! This is {}.", name, rocket::uri!(hello_name: &name))
+        format!(
+            "Hello, {}! This is {}.",
+            name,
+            rocket::uri!(hello_name: &name)
+        )
     }
 
     fn rocket() -> rocket::Rocket {
@@ -38,13 +42,19 @@ mod scoped_uri_tests {
     fn test_inner_hello() {
         let client = Client::new(rocket()).unwrap();
         let mut response = client.get("/").dispatch();
-        assert_eq!(response.body_string(), Some("Hello! Try /Rust%202018.".into()));
+        assert_eq!(
+            response.body_string(),
+            Some("Hello! Try /Rust%202018.".into())
+        );
     }
 
     #[test]
     fn test_hello_name() {
         let client = Client::new(rocket()).unwrap();
         let mut response = client.get("/Rust%202018").dispatch();
-        assert_eq!(response.body_string().unwrap(), "Hello, Rust 2018! This is /Rust%202018.");
+        assert_eq!(
+            response.body_string().unwrap(),
+            "Hello, Rust 2018! This is /Rust%202018."
+        );
     }
 }

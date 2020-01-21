@@ -1,10 +1,12 @@
 #![feature(proc_macro_hygiene)]
 
-#[macro_use] extern crate rocket;
+#[macro_use]
+extern crate rocket;
 
 use rocket::http::RawStr;
 
-#[cfg(test)] mod tests;
+#[cfg(test)]
+mod tests;
 
 #[get("/hello/<name>/<age>")]
 fn hello(name: String, age: i8) -> String {

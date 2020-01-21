@@ -1,10 +1,11 @@
 use super::rocket;
-use rocket::Response;
+use rocket::http::{ContentType, Cookie, Status};
 use rocket::local::Client;
-use rocket::http::{Status, Cookie, ContentType};
+use rocket::Response;
 
 fn user_id_cookie(response: &Response<'_>) -> Option<Cookie<'static>> {
-    let cookie = response.headers()
+    let cookie = response
+        .headers()
         .get("Set-Cookie")
         .filter(|v| v.starts_with("user_id"))
         .nth(0)
@@ -14,7 +15,8 @@ fn user_id_cookie(response: &Response<'_>) -> Option<Cookie<'static>> {
 }
 
 fn login(client: &Client, user: &str, pass: &str) -> Option<Cookie<'static>> {
-    let response = client.post("/login")
+    let response = client
+        .post("/login")
         .header(ContentType::Form)
         .body(format!("username={}&password={}", user, pass))
         .dispatch();

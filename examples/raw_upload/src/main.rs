@@ -1,11 +1,13 @@
 #![feature(proc_macro_hygiene)]
 
-#[macro_use] extern crate rocket;
+#[macro_use]
+extern crate rocket;
 
-#[cfg(test)] mod tests;
+#[cfg(test)]
+mod tests;
 
-use std::{io, env};
-use rocket::{Data, response::Debug};
+use rocket::{response::Debug, Data};
+use std::{env, io};
 
 #[post("/upload", format = "plain", data = "<data>")]
 fn upload(data: Data) -> Result<String, Debug<io::Error>> {

@@ -1,21 +1,28 @@
 #![feature(proc_macro_hygiene)]
 
-#[macro_use] extern crate rocket;
-#[macro_use] extern crate diesel;
-#[macro_use] extern crate diesel_migrations;
-#[macro_use] extern crate log;
-#[macro_use] extern crate serde_derive;
-#[macro_use] extern crate rocket_contrib;
+#[macro_use]
+extern crate rocket;
+#[macro_use]
+extern crate diesel;
+#[macro_use]
+extern crate diesel_migrations;
+#[macro_use]
+extern crate log;
+#[macro_use]
+extern crate serde_derive;
+#[macro_use]
+extern crate rocket_contrib;
 
 mod task;
-#[cfg(test)] mod tests;
+#[cfg(test)]
+mod tests;
 
-use rocket::Rocket;
-use rocket::fairing::AdHoc;
-use rocket::request::{Form, FlashMessage};
-use rocket::response::{Flash, Redirect};
-use rocket_contrib::{templates::Template, serve::StaticFiles};
 use diesel::SqliteConnection;
+use rocket::fairing::AdHoc;
+use rocket::request::{FlashMessage, Form};
+use rocket::response::{Flash, Redirect};
+use rocket::Rocket;
+use rocket_contrib::{serve::StaticFiles, templates::Template};
 
 use crate::task::{Task, Todo};
 
@@ -28,15 +35,24 @@ embed_migrations!();
 pub struct DbConn(SqliteConnection);
 
 #[derive(Debug, Serialize)]
-struct Context<'a, 'b>{ msg: Option<(&'a str, &'b str)>, tasks: Vec<Task> }
+struct Context<'a, 'b> {
+    msg: Option<(&'a str, &'b str)>,
+    tasks: Vec<Task>,
+}
 
 impl<'a, 'b> Context<'a, 'b> {
     pub fn err(conn: &DbConn, msg: &'a str) -> Context<'static, 'a> {
-        Context{msg: Some(("error", msg)), tasks: Task::all(conn)}
+        Context {
+            msg: Some(("error", msg)),
+            tasks: Task::all(conn),
+        }
     }
 
     pub fn raw(conn: &DbConn, msg: Option<(&'a str, &'b str)>) -> Context<'a, 'b> {
-        Context{msg: msg, tasks: Task::all(conn)}
+        Context {
+            msg: msg,
+            tasks: Task::all(conn),
+        }
     }
 }
 
@@ -57,7 +73,10 @@ fn toggle(id: i32, conn: DbConn) -> Result<Redirect, Template> {
     if Task::toggle_with_id(id, &conn) {
         Ok(Redirect::to("/"))
     } else {
-        Err(Template::render("index", &Context::err(&conn, "Couldn't toggle task.")))
+        Err(Template::render(
+            "index",
+            &Context::err(&conn, "Couldn't toggle task."),
+        ))
     }
 }
 
@@ -66,16 +85,22 @@ fn delete(id: i32, conn: DbConn) -> Result<Flash<Redirect>, Template> {
     if Task::delete_with_id(id, &conn) {
         Ok(Flash::success(Redirect::to("/"), "Todo was deleted."))
     } else {
-        Err(Template::render("index", &Context::err(&conn, "Couldn't delete task.")))
+        Err(Template::render(
+            "index",
+            &Context::err(&conn, "Couldn't delete task."),
+        ))
     }
 }
 
 #[get("/")]
 fn index(msg: Option<FlashMessage<'_, '_>>, conn: DbConn) -> Template {
-    Template::render("index", &match msg {
-        Some(ref msg) => Context::raw(&conn, Some((msg.name(), msg.msg()))),
-        None => Context::raw(&conn, None),
-    })
+    Template::render(
+        "index",
+        &match msg {
+            Some(ref msg) => Context::raw(&conn, Some((msg.name(), msg.msg()))),
+            None => Context::raw(&conn, None),
+        },
+    )
 }
 
 fn run_db_migrations(rocket: Rocket) -> Result<Rocket, Rocket> {

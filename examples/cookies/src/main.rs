@@ -1,15 +1,16 @@
 #![feature(proc_macro_hygiene)]
 
-#[macro_use] extern crate rocket;
+#[macro_use]
+extern crate rocket;
 
 #[cfg(test)]
 mod tests;
 
 use std::collections::HashMap;
 
+use rocket::http::{Cookie, Cookies};
 use rocket::request::Form;
 use rocket::response::Redirect;
-use rocket::http::{Cookie, Cookies};
 use rocket_contrib::templates::Template;
 
 #[derive(FromForm)]
@@ -35,7 +36,9 @@ fn index(cookies: Cookies<'_>) -> Template {
 }
 
 fn rocket() -> rocket::Rocket {
-    rocket::ignite().mount("/", routes![submit, index]).attach(Template::fairing())
+    rocket::ignite()
+        .mount("/", routes![submit, index])
+        .attach(Template::fairing())
 }
 
 fn main() {

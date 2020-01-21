@@ -1,11 +1,13 @@
 #![feature(proc_macro_hygiene)]
 
-#[macro_use] extern crate rocket;
+#[macro_use]
+extern crate rocket;
 
-#[cfg(test)] mod tests;
+#[cfg(test)]
+mod tests;
 
-use rocket::State;
 use crossbeam::queue::SegQueue;
+use rocket::State;
 
 struct LogChannel(SegQueue<String>);
 
