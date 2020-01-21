@@ -58,7 +58,7 @@ jobs:
   - ${{ if eq(parameters.name, 'Windows') }}:
     - script: |
         curl -sSf -o rustup-init.exe https://win.rustup.rs
-        rustup-init.exe -y --default-toolchain $(rust_version)
+        rustup-init.exe -y --default-host x86_64-pc-windows-msvc --default-toolchain $(rust_version)
         echo ##vso[task.setvariable variable=PATH]%PATH%;%USERPROFILE%\.cargo\bin
       displayName: 'Install Rust ($(rust_version))'
 
