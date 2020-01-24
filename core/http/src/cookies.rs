@@ -236,6 +236,17 @@ impl<'a> Cookies<'a> {
         }
     }
 
+    /// Removes all delta cookies.
+    /// WARNING: This is unstable! Do not use this method outside of Rocket!
+    #[inline]
+    #[doc(hidden)]
+    pub fn reset_delta(&mut self) {
+        match *self {
+            Cookies::Jarred(ref mut jar, _) => jar.reset_delta(),
+            Cookies::Empty(ref mut jar) => jar.reset_delta()
+        }
+    }
+
     /// Returns an iterator over all of the cookies present in this collection.
     ///
     /// # Example

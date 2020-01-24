@@ -899,13 +899,20 @@ Routing may fail for a variety of reasons. These include:
   * No routes matched.
 
 If any of these conditions occur, Rocket returns an error to the client. To do
-so, Rocket invokes the _catcher_ corresponding to the error's status code. A
-catcher is like a route, except it only handles errors. Rocket provides default
-catchers for all of the standard HTTP error codes. To override a default
-catcher, or declare a catcher for a custom status code, use the [`catch`]
-attribute, which takes a single integer corresponding to the HTTP status code to
-catch. For instance, to declare a catcher for `404 Not Found` errors, you'd
-write:
+so, Rocket invokes the _catcher_ corresponding to the error's status code.
+Catchers are similar to routes except in that:
+
+  1. Catchers are only invoked on error conditions.
+  2. Catchers are declared with the `catch` attribute.
+  3. Catchers are _registered_ with [`register()`] instead of [`mount()`].
+  4. Any modifications to cookies are cleared before a catcher is invoked.
+  5. Error catchers cannot invoke guards of any sort.
+
+Rocket provides default catchers for all of the standard HTTP error codes. To
+override a default catcher, or declare a catcher for a custom status code, use
+the [`catch`] attribute, which takes a single integer corresponding to the HTTP
+status code to catch. For instance, to declare a catcher for `404 Not Found`
+errors, you'd write:
 
 ```rust
 #[catch(404)]
@@ -933,10 +940,11 @@ rocket::ignite().register(catchers![not_found])
 ```
 
 Unlike route request handlers, catchers take exactly zero or one parameter. If
-the catcher takes a parameter, it must be of type [`&Request`] The [error
+the catcher takes a parameter, it must be of type [`&Request`]. The [error
 catcher example](@example/errors) on GitHub illustrates their use in full.
 
 [`catch`]: @api/rocket_codegen/attr.catch.html
 [`register()`]: @api/rocket/struct.Rocket.html#method.register
+[`mount()`]: @api/rocket/struct.Rocket.html#method.mount
 [`catchers!`]: @api/rocket_codegen/macro.catchers.html
 [`&Request`]: @api/rocket/struct.Request.html
