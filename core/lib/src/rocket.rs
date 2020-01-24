@@ -135,23 +135,22 @@ impl Rocket {
                 hyp_res = hyp_res.header(header::CONTENT_LENGTH, "0");
                 send_response(hyp_res, hyper::Body::empty())?;
             }
-            Some(Body::Sized(body, size)) => {
-                hyp_res = hyp_res.header(header::CONTENT_LENGTH, size.to_string());
-                let (mut sender, hyp_body) = hyper::Body::channel();
-                send_response(hyp_res, hyp_body)?;
-
-                let mut stream = body.into_bytes_stream(4096);
-                while let Some(next) = stream.next().await {
-                    sender.send_data(next?).await.map_err(|e| io::Error::new(io::ErrorKind::Other, e))?;
-                }
-            }
-            Some(Body::Chunked(body, chunk_size)) => {
-                // TODO.async: This is identical to Body::Sized except for the chunk size
+            Some(body) => {
+                let (body, chunk_size) = match body {
+                    Body::Chunked(body, chunk_size) => {
+                        (body, chunk_size.try_into().expect("u64 -> usize overflow"))
+                    }
+                    Body::Sized(body, size) => {
+                        hyp_res = hyp_res.header(header::CONTENT_LENGTH, size.to_string());
+                        (body, 4096usize)
+                    }
+                };
 
                 let (mut sender, hyp_body) = hyper::Body::channel();
                 send_response(hyp_res, hyp_body)?;
 
-                let mut stream = body.into_bytes_stream(chunk_size.try_into().expect("u64 -> usize overflow"));
+                let mut stream = body.into_bytes_stream(chunk_size);
+
                 while let Some(next) = stream.next().await {
                     sender.send_data(next?).await.map_err(|e| io::Error::new(io::ErrorKind::Other, e))?;
                 }
