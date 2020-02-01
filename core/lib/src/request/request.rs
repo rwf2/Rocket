@@ -11,7 +11,7 @@ use futures_util::future::BoxFuture;
 use crate::request::{FromParam, FromSegments, FromRequest, Outcome};
 use crate::request::{FromFormValue, FormItems, FormItem};
 
-use crate::rocket::Rocket;
+use crate::rocket::{Rocket, RocketInner};
 use crate::router::Route;
 use crate::config::{Config, Limits};
 use crate::http::{hyper, uri::{Origin, Segments}};
@@ -60,7 +60,7 @@ impl<'r> Request<'r> {
     /// Create a new `Request` with the given `method` and `uri`.
     #[inline(always)]
     pub(crate) fn new<'s: 'r>(
-        rocket: &'r Rocket,
+        rocket: &'r RocketInner,
         method: Method,
         uri: Origin<'s>
     ) -> Request<'r> {
@@ -738,7 +738,7 @@ impl<'r> Request<'r> {
     pub fn example<F: Fn(&mut Request<'_>)>(method: Method, uri: &str, f: F) {
         let rocket = Rocket::custom(Config::development());
         let uri = Origin::parse(uri).expect("invalid URI in example");
-        let mut request = Request::new(&rocket, method, uri);
+        let mut request = Request::new(rocket.inner_ref(), method, uri);
         f(&mut request);
     }
 
@@ -821,7 +821,7 @@ impl<'r> Request<'r> {
 
     /// Convert from Hyper types into a Rocket Request.
     pub(crate) fn from_hyp(
-        rocket: &'r Rocket,
+        rocket: &'r RocketInner,
         h_method: hyper::Method,
         h_headers: hyper::HeaderMap<hyper::HeaderValue>,
         h_uri: &'r hyper::Uri,

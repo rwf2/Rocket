@@ -199,8 +199,8 @@ fn assets(asset: PathBuf, assets_dir: State<AssetsDir>) -> Option<NamedFile> {
 fn main() {
     rocket::ignite()
         .mount("/", routes![assets])
-        .attach(AdHoc::on_attach("Assets Config", |rocket| {
-            let assets_dir = rocket.config()
+        .attach(AdHoc::on_attach("Assets Config", |mut rocket| {
+            let assets_dir = rocket.inspect().config()
                 .get_str("assets_dir")
                 .unwrap_or("assets/")
                 .to_string();

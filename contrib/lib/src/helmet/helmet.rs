@@ -3,7 +3,7 @@ use std::sync::atomic::{AtomicBool, Ordering};
 
 use rocket::http::uncased::UncasedStr;
 use rocket::fairing::{Fairing, Info, Kind};
-use rocket::{Request, Response, Rocket};
+use rocket::{Inspector, Request, Response};
 
 use crate::helmet::*;
 
@@ -201,7 +201,7 @@ impl Fairing for SpaceHelmet {
         self.apply(res);
     }
 
-    fn on_launch(&self, rocket: &Rocket) {
+    fn on_launch(&self, rocket: Inspector<'_>) {
         if rocket.config().tls_enabled()
             && !rocket.config().environment.is_dev()
             && !self.is_enabled::<Hsts>()

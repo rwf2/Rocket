@@ -51,17 +51,17 @@ mod templates_tests {
 
         #[test]
         fn test_tera_templates() {
-            let rocket = rocket();
+            let mut rocket = rocket();
             let mut map = HashMap::new();
             map.insert("title", "_test_");
             map.insert("content", "<script />");
 
             // Test with a txt file, which shouldn't escape.
-            let template = Template::show(&rocket, "tera/txt_test", &map);
+            let template = Template::show(rocket.inspect(), "tera/txt_test", &map);
             assert_eq!(template, Some(UNESCAPED_EXPECTED.into()));
 
             // Now with an HTML file, which should.
-            let template = Template::show(&rocket, "tera/html_test", &map);
+            let template = Template::show(rocket.inspect(), "tera/html_test", &map);
             assert_eq!(template, Some(ESCAPED_EXPECTED.into()));
         }
 
@@ -95,13 +95,13 @@ mod templates_tests {
 
         #[test]
         fn test_handlebars_templates() {
-            let rocket = rocket();
+            let mut rocket = rocket();
             let mut map = HashMap::new();
             map.insert("title", "_test_");
             map.insert("content", "<script /> hi");
 
             // Test with a txt file, which shouldn't escape.
-            let template = Template::show(&rocket, "hbs/test", &map);
+            let template = Template::show(rocket.inspect(), "hbs/test", &map);
             assert_eq!(template, Some(EXPECTED.into()));
         }
 

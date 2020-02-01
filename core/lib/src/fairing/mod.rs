@@ -47,7 +47,7 @@
 //! of other `Fairings` are not jeopardized. For instance, unless it is made
 //! abundantly clear, a fairing should not rewrite every request.
 
-use crate::{Rocket, Request, Response, Data};
+use crate::{Inspector, Rocket, Request, Response, Data};
 
 mod fairings;
 mod ad_hoc;
@@ -196,7 +196,7 @@ pub use self::info_kind::{Info, Kind};
 /// decorated with an attribute of `#[rocket::async_trait]`:
 ///
 /// ```rust
-/// use rocket::{Rocket, Request, Data, Response};
+/// use rocket::{Inspector, Rocket, Request, Data, Response};
 /// use rocket::fairing::{Fairing, Info, Kind};
 ///
 /// # struct MyType;
@@ -212,7 +212,7 @@ pub use self::info_kind::{Info, Kind};
 ///         # unimplemented!()
 ///     }
 ///
-///     fn on_launch(&self, rocket: &Rocket) {
+///     fn on_launch(&self, rocket: Inspector<'_>) {
 ///         /* ... */
 ///         # unimplemented!()
 ///     }
@@ -421,14 +421,14 @@ pub trait Fairing: Send + Sync + 'static {
     ///
     /// This method is called just prior to launching the application if
     /// `Kind::Launch` is in the `kind` field of the `Info` structure for this
-    /// fairing. The `&Rocket` parameter corresponds to the application that
+    /// fairing. The `Inspector` parameter corresponds to the application that
     /// will be launched.
     ///
     /// ## Default Implementation
     ///
     /// The default implementation of this method does nothing.
     #[allow(unused_variables)]
-    fn on_launch(&self, rocket: &Rocket) {}
+    fn on_launch(&self, rocket: Inspector<'_>) {}
 
     /// The request callback.
     ///
@@ -470,7 +470,7 @@ impl<T: Fairing> Fairing for std::sync::Arc<T> {
     }
 
     #[inline]
-    fn on_launch(&self, rocket: &Rocket) {
+    fn on_launch(&self, rocket: Inspector<'_>) {
         (self as &T).on_launch(rocket)
     }
 
