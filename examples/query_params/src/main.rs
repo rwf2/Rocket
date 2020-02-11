@@ -8,6 +8,8 @@ use rocket::request::{Form, LenientForm};
 
 #[derive(FromForm)]
 struct Person {
+    /// Use the `form` attribute to expect an invalid Rust identifier in the HTTP form.
+    #[form(field = "first-name")]
     name: String,
     age: Option<u8>
 }

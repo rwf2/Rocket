@@ -11,12 +11,12 @@ macro_rules! run_test {
 
 #[test]
 fn age_and_name_params() {
-    run_test!("?age=10&name=john", |mut response: Response<'_>| {
+    run_test!("?age=10&first-name=john", |mut response: Response<'_>| {
         assert_eq!(response.body_string(),
             Some("Hello, 10 year old named john!".into()));
     });
 
-    run_test!("?age=20&name=john", |mut response: Response<'_>| {
+    run_test!("?age=20&first-name=john", |mut response: Response<'_>| {
         assert_eq!(response.body_string(),
             Some("20 years old? Hi, john!".into()));
     });
@@ -37,7 +37,7 @@ fn age_param_only() {
 
 #[test]
 fn name_param_only() {
-    run_test!("?name=John", |mut response: Response<'_>| {
+    run_test!("?first-name=John", |mut response: Response<'_>| {
         assert_eq!(response.body_string(), Some("Hello John!".into()));
     });
 }
@@ -57,12 +57,12 @@ fn no_params() {
 
 #[test]
 fn extra_params() {
-    run_test!("?age=20&name=Bob&extra", |mut response: Response<'_>| {
+    run_test!("?age=20&first-name=Bob&extra", |mut response: Response<'_>| {
         assert_eq!(response.body_string(),
             Some("20 years old? Hi, Bob!".into()));
     });
 
-    run_test!("?age=30&name=Bob&extra", |mut response: Response<'_>| {
+    run_test!("?age=30&first-name=Bob&extra", |mut response: Response<'_>| {
         assert_eq!(response.body_string(),
             Some("We're gonna need a name, and only a name.".into()));
     });
@@ -70,7 +70,7 @@ fn extra_params() {
 
 #[test]
 fn wrong_path() {
-    run_test!("/other?age=20&name=Bob", |response: Response<'_>| {
+    run_test!("/other?age=20&first-name=Bob", |response: Response<'_>| {
         assert_eq!(response.status(), Status::NotFound);
     });
 }
