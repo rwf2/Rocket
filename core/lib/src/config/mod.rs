@@ -5,6 +5,13 @@
 //! `ROCKET_{PARAM}` environment variables. It also allows libraries to access
 //! user-configured values.
 //!
+//! The environment variable `ROCKET_CONFIG_FILE` can be used to specify
+//! a custom `Rocket.toml` config file, for example:
+//!
+//! ```sh
+//! ROCKET_CONFIG_FILE=/path/to/Rocket.custom.toml ./target/release/rocket_app
+//! ```
+//!
 //! ## Application Configuration
 //!
 //! ### Environments
@@ -280,7 +287,23 @@ impl RocketConfig {
     /// directory and working up through its parents. Returns the path to the
     /// file or an Error::NoKey if the file couldn't be found. If the current
     /// working directory can't be determined, return `BadCWD`.
+    ///
+    /// NOTE: The path to the configuration file can be set explicitly
+    /// with the ROCKET_CONFIG_FILE environment variable.
     fn find() -> Result<PathBuf> {
+        match env::var(format!("{}{}", ENV_VAR_PREFIX, "CONFIG_FILE")) {
+            Ok(filename) => {
+                if filename.len() > 0 {
+                    let path = Path::new(&filename).to_path_buf();
+                    if path.exists() {
+                        return Ok(path);
+                    } else {
+                        panic!("find(): config file at path '{}' does not exist", filename);
+                    }
+                }
+            }
+            Err(_) => (),
+        };
         let cwd = env::current_dir().map_err(|_| ConfigError::NotFound)?;
         let mut current = cwd.as_path();
 
