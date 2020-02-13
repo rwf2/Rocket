@@ -1,4 +1,5 @@
-use diesel::{self, prelude::*};
+use diesel::{self, result::Error as DieselError, prelude::*};
+type Result<T> = std::result::Result<T, DieselError>;
 
 mod schema {
     table! {
@@ -27,32 +28,35 @@ pub struct Todo {
 }
 
 impl Task {
-    pub fn all(conn: &SqliteConnection) -> Vec<Task> {
-        all_tasks.order(tasks::id.desc()).load::<Task>(conn).unwrap()
+    pub fn all(conn: &SqliteConnection) -> Result<Vec<Task>> {
+        all_tasks.order(tasks::id.desc()).load::<Task>(conn)
     }
 
-    pub fn insert(todo: Todo, conn: &SqliteConnection) -> bool {
+    pub fn insert(todo: Todo, conn: &SqliteConnection) -> Result<()> {
         let t = Task { id: None, description: todo.description, completed: false };
-        diesel::insert_into(tasks::table).values(&t).execute(conn).is_ok()
+        diesel::insert_into(tasks::table).values(&t).execute(conn)?;
+
+        Ok(())
     }
 
-    pub fn toggle_with_id(id: i32, conn: &SqliteConnection) -> bool {
-        let task = all_tasks.find(id).get_result::<Task>(conn);
-        if task.is_err() {
-            return false;
-        }
+    pub fn toggle_with_id(id: i32, conn: &SqliteConnection) -> Result<()> {
+        let task = all_tasks.find(id).get_result::<Task>(conn)?;
 
-        let new_status = !task.unwrap().completed;
+        let new_status = !task.completed;
         let updated_task = diesel::update(all_tasks.find(id));
-        updated_task.set(task_completed.eq(new_status)).execute(conn).is_ok()
+        updated_task.set(task_completed.eq(new_status)).execute(conn)?;
+
+        Ok(())
     }
 
-    pub fn delete_with_id(id: i32, conn: &SqliteConnection) -> bool {
-        diesel::delete(all_tasks.find(id)).execute(conn).is_ok()
+    pub fn delete_with_id(id: i32, conn: &SqliteConnection) -> Result<()> {
+        diesel::delete(all_tasks.find(id)).execute(conn)?;
+        Ok(())
     }
 
     #[cfg(test)]
-    pub fn delete_all(conn: &SqliteConnection) -> bool {
-        diesel::delete(all_tasks).execute(conn).is_ok()
+    pub fn delete_all(conn: &SqliteConnection) -> Result<()> {
+        diesel::delete(all_tasks).execute(conn)?;
+        Ok(())
     }
 }

@@ -32,11 +32,11 @@ struct Context<'a, 'b>{ msg: Option<(&'a str, &'b str)>, tasks: Vec<Task> }
 
 impl<'a, 'b> Context<'a, 'b> {
     pub fn err(conn: &DbConn, msg: &'a str) -> Context<'static, 'a> {
-        Context{msg: Some(("error", msg)), tasks: Task::all(conn)}
+        Context{msg: Some(("error", msg)), tasks: Task::all(conn).unwrap()}
     }
 
     pub fn raw(conn: &DbConn, msg: Option<(&'a str, &'b str)>) -> Context<'a, 'b> {
-        Context{msg: msg, tasks: Task::all(conn)}
+        Context{msg: msg, tasks: Task::all(conn).unwrap()}
     }
 }
 
@@ -45,7 +45,7 @@ fn new(todo_form: Form<Todo>, conn: DbConn) -> Flash<Redirect> {
     let todo = todo_form.into_inner();
     if todo.description.is_empty() {
         Flash::error(Redirect::to("/"), "Description cannot be empty.")
-    } else if Task::insert(todo, &conn) {
+    } else if Task::insert(todo, &conn).is_ok() {
         Flash::success(Redirect::to("/"), "Todo successfully added.")
     } else {
         Flash::error(Redirect::to("/"), "Whoops! The server failed.")
@@ -54,20 +54,22 @@ fn new(todo_form: Form<Todo>, conn: DbConn) -> Flash<Redirect> {
 
 #[put("/<id>")]
 fn toggle(id: i32, conn: DbConn) -> Result<Redirect, Template> {
-    if Task::toggle_with_id(id, &conn) {
-        Ok(Redirect::to("/"))
-    } else {
-        Err(Template::render("index", &Context::err(&conn, "Couldn't toggle task.")))
-    }
+    Task::toggle_with_id(id, &conn).map_err(|e| Template::render(
+        "index",
+        &Context::err(&conn, &format!("Couldn't toggle task: {}", e))
+    ))?;
+
+    Ok(Redirect::to("/"))
 }
 
 #[delete("/<id>")]
 fn delete(id: i32, conn: DbConn) -> Result<Flash<Redirect>, Template> {
-    if Task::delete_with_id(id, &conn) {
-        Ok(Flash::success(Redirect::to("/"), "Todo was deleted."))
-    } else {
-        Err(Template::render("index", &Context::err(&conn, "Couldn't delete task.")))
-    }
+    Task::delete_with_id(id, &conn).map_err(|e| Template::render(
+        "index",
+        &Context::err(&conn, &format!("Couldn't delete task: {}", e))
+    ))?;
+
+    Ok(Flash::success(Redirect::to("/"), "Todo was deleted."))
 }
 
 #[get("/")]
