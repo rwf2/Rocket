@@ -31,12 +31,18 @@ pub struct DbConn(SqliteConnection);
 struct Context<'a, 'b>{ msg: Option<(&'a str, &'b str)>, tasks: Vec<Task> }
 
 impl<'a, 'b> Context<'a, 'b> {
-    pub fn err(conn: &DbConn, msg: &'a str) -> Context<'static, 'a> {
-        Context{msg: Some(("error", msg)), tasks: Task::all(conn).unwrap()}
+    pub fn err(conn: &DbConn, msg: &'b str) -> Context<'static, 'b> {
+        Self::raw(conn, Some(("error", msg)))
     }
 
-    pub fn raw(conn: &DbConn, msg: Option<(&'a str, &'b str)>) -> Context<'a, 'b> {
-        Context{msg: msg, tasks: Task::all(conn).unwrap()}
+    pub fn raw<'x, 'y>(conn: &DbConn, msg: Option<(&'x str, &'y str)>) -> Context<'x, 'y> {
+        match Task::all(conn) {
+            Ok(tasks) => Context{msg: msg, tasks},
+            Err(_) => Context{
+                msg: Some(("error", "Couldn't access the task database.")),
+                tasks: vec![]
+            }
+        }
     }
 }
 
