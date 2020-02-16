@@ -49,10 +49,10 @@ mod templates_tests {
         const ESCAPED_EXPECTED: &'static str
             = "\nh_start\ntitle: _test_\nh_end\n\n\n&lt;script &#x2F;&gt;\n\nfoot\n";
 
-        #[test]
-        fn test_tera_templates() {
+        #[rocket::async_test]
+        async fn test_tera_templates() {
             let mut rocket = rocket();
-            let manifest = rocket.inspect();
+            let manifest = rocket.inspect().await;
             let mut map = HashMap::new();
             map.insert("title", "_test_");
             map.insert("content", "<script />");
@@ -68,7 +68,7 @@ mod templates_tests {
 
         #[rocket::async_test]
         async fn test_template_metadata_with_tera() {
-            let client = Client::new(rocket()).unwrap();
+            let client = Client::new(rocket()).await.unwrap();
 
             let response = client.get("/tera/txt_test").dispatch().await;
             assert_eq!(response.status(), Status::Ok);
@@ -94,10 +94,10 @@ mod templates_tests {
         const EXPECTED: &'static str
             = "Hello _test_!\n\n<main> &lt;script /&gt; hi </main>\nDone.\n\n";
 
-        #[test]
-        fn test_handlebars_templates() {
+        #[rocket::async_test]
+        async fn test_handlebars_templates() {
             let mut rocket = rocket();
-            let manifest = rocket.inspect();
+            let manifest = rocket.inspect().await;
             let mut map = HashMap::new();
             map.insert("title", "_test_");
             map.insert("content", "<script /> hi");
@@ -109,7 +109,7 @@ mod templates_tests {
 
         #[rocket::async_test]
         async fn test_template_metadata_with_handlebars() {
-            let client = Client::new(rocket()).unwrap();
+            let client = Client::new(rocket()).await.unwrap();
 
             let response = client.get("/hbs/test").dispatch().await;
             assert_eq!(response.status(), Status::Ok);
@@ -146,7 +146,7 @@ mod templates_tests {
             write_file(&reload_path, INITIAL_TEXT);
 
             // set up the client. if we can't reload templates, then just quit
-            let client = Client::new(rocket()).unwrap();
+            let client = Client::new(rocket()).await.unwrap();
             let res = client.get("/is_reloading").dispatch().await;
             if res.status() != Status::Ok {
                 return;

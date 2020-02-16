@@ -93,8 +93,8 @@ pub fn database_attr(attr: TokenStream, input: TokenStream) -> Result<TokenStrea
             pub fn fairing() -> impl ::rocket::fairing::Fairing {
                 use #databases::Poolable;
 
-                ::rocket::fairing::AdHoc::on_attach(#fairing_name, |mut rocket| {
-                    let pool = #databases::database_config(#name, rocket.inspect().config())
+                ::rocket::fairing::AdHoc::on_attach(#fairing_name, |mut rocket| Box::pin(async move {
+                    let pool = #databases::database_config(#name, rocket.inspect().await.config())
                         .map(<#conn_type>::pool);
 
                     match pool {
@@ -112,7 +112,7 @@ pub fn database_attr(attr: TokenStream, input: TokenStream) -> Result<TokenStrea
                             Err(rocket)
                         },
                     }
-                })
+                }))
             }
 
             /// Retrieves a connection of type `Self` from the `rocket`

@@ -23,7 +23,7 @@ mod test {
 
     #[rocket::async_test]
     async fn test_hello() {
-        let client = Client::new(rocket()).unwrap();
+        let client = Client::new(rocket()).await.unwrap();
         let mut response = client.get("/").dispatch().await;
         assert_eq!(response.status(), Status::Ok);
         assert_eq!(response.body_string().await, Some("Hello, world!".into()));

@@ -67,11 +67,11 @@ fn rocket() -> rocket::Rocket {
     rocket::ignite()
         .mount("/", routes![hello, token])
         .attach(Counter::default())
-        .attach(AdHoc::on_attach("Token State", |mut rocket| {
+        .attach(AdHoc::on_attach("Token State", |mut rocket| Box::pin(async move {
             println!("Adding token managed state...");
-            let token_val = rocket.inspect().config().get_int("token").unwrap_or(-1);
+            let token_val = rocket.inspect().await.config().get_int("token").unwrap_or(-1);
             Ok(rocket.manage(Token(token_val)))
-        }))
+        })))
         .attach(AdHoc::on_launch("Launch Message", |_| {
             println!("Rocket is about to launch!");
         }))

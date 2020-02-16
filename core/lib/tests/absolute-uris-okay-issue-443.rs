@@ -21,7 +21,7 @@ mod test_absolute_uris_okay {
     #[rocket::async_test]
     async fn redirect_works() {
         let rocket = rocket::ignite().mount("/", routes![google, rocket]);
-        let client = Client::new(rocket).unwrap();
+        let client = Client::new(rocket).await.unwrap();
 
         let response = client.get("/google").dispatch().await;
         let location = response.headers().get_one("Location");

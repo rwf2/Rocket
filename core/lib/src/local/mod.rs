@@ -23,8 +23,10 @@
 //!      ```rust
 //!      # use rocket::local::Client;
 //!      # let rocket = rocket::ignite();
-//!      let client = Client::new(rocket).expect("valid rocket instance");
+//!      # let _ = async {
+//!      let client = Client::new(rocket).await.expect("valid rocket instance");
 //!      # let _ = client;
+//!      # };
 //!      ```
 //!
 //!   3. Construct requests using the `Client` instance.
@@ -32,9 +34,11 @@
 //!      ```rust
 //!      # use rocket::local::Client;
 //!      # let rocket = rocket::ignite();
-//!      # let client = Client::new(rocket).unwrap();
+//!      # let _ = async {
+//!      # let client = Client::new(rocket).await.unwrap();
 //!      let req = client.get("/");
 //!      # let _ = req;
+//!      # };
 //!      ```
 //!
 //!   3. Dispatch the request to retrieve the response.
@@ -42,9 +46,9 @@
 //!      ```rust
 //!      # use rocket::local::Client;
 //!      # let rocket = rocket::ignite();
-//!      # let client = Client::new(rocket).unwrap();
-//!      # let req = client.get("/");
 //!      # let _ = async {
+//!      # let client = Client::new(rocket).await.unwrap();
+//!      # let req = client.get("/");
 //!      let response = req.dispatch().await;
 //!      # let _ = response;
 //!      # };
@@ -56,7 +60,7 @@
 //! use rocket::local::Client;
 //!
 //! # let _ = async {
-//! let client = Client::new(rocket::ignite()).expect("valid rocket");
+//! let client = Client::new(rocket::ignite()).await.expect("valid rocket");
 //! let response = client.post("/")
 //!     .body("Hello, world!")
 //!     .dispatch().await;

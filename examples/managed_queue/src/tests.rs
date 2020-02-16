@@ -3,7 +3,7 @@ use rocket::http::Status;
 
 #[rocket::async_test]
 async fn test_push_pop() {
-    let client = Client::new(super::rocket()).unwrap();
+    let client = Client::new(super::rocket()).await.unwrap();
 
     let response = client.put("/push?event=test1").dispatch().await;
     assert_eq!(response.status(), Status::Ok);

@@ -52,7 +52,7 @@ impl<'r, R> Created<R> {
     ///
     /// # rocket::async_test(async move {
     /// # let rocket = rocket::ignite().mount("/", routes![create]);
-    /// # let client = Client::new(rocket).unwrap();
+    /// # let client = Client::new(rocket).await.unwrap();
     /// let mut response = client.get("/").dispatch().await;
     ///
     /// let loc = response.headers().get_one("Location");
@@ -84,7 +84,7 @@ impl<'r, R> Created<R> {
     ///
     /// # rocket::async_test(async move {
     /// # let rocket = rocket::ignite().mount("/", routes![create]);
-    /// # let client = Client::new(rocket).unwrap();
+    /// # let client = Client::new(rocket).await.unwrap();
     /// let mut response = client.get("/").dispatch().await;
     ///
     /// let body = response.body_string().await;
@@ -122,7 +122,7 @@ impl<'r, R> Created<R> {
     ///
     /// # rocket::async_test(async move {
     /// # let rocket = rocket::ignite().mount("/", routes![create]);
-    /// # let client = Client::new(rocket).unwrap();
+    /// # let client = Client::new(rocket).await.unwrap();
     /// let mut response = client.get("/").dispatch().await;
     ///
     /// let body = response.body_string().await;

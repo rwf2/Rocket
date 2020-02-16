@@ -78,8 +78,8 @@ fn index(msg: Option<FlashMessage<'_, '_>>, conn: DbConn) -> Template {
     })
 }
 
-fn run_db_migrations(mut rocket: Rocket) -> Result<Rocket, Rocket> {
-    let conn = DbConn::get_one(rocket.inspect()).expect("database connection");
+async fn run_db_migrations(mut rocket: Rocket) -> Result<Rocket, Rocket> {
+    let conn = DbConn::get_one(rocket.inspect().await).expect("database connection");
     match embedded_migrations::run(&*conn) {
         Ok(()) => Ok(rocket),
         Err(e) => {
@@ -92,7 +92,7 @@ fn run_db_migrations(mut rocket: Rocket) -> Result<Rocket, Rocket> {
 fn rocket() -> Rocket {
     rocket::ignite()
         .attach(DbConn::fairing())
-        .attach(AdHoc::on_attach("Database Migrations", run_db_migrations))
+        .attach(AdHoc::on_attach("Database Migrations", |rocket| Box::pin(async move { run_db_migrations(rocket).await })))
         .mount("/", StaticFiles::from("static/"))
         .mount("/", routes![index])
         .mount("/todo", routes![new, toggle, delete])

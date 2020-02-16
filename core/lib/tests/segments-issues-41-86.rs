@@ -38,7 +38,7 @@ mod tests {
         let rocket = rocket::ignite()
             .mount("/", routes![test, two, one_two, none, dual])
             .mount("/point", routes![test, two, one_two, dual]);
-        let client = Client::new(rocket).unwrap();
+        let client = Client::new(rocket).await.unwrap();
 
         // We construct a path that matches each of the routes above. We ensure the
         // prefix is stripped, confirming that dynamic segments are working.

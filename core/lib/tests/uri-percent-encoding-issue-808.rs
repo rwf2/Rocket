@@ -35,7 +35,7 @@ mod tests {
     #[rocket::async_test]
     async fn uri_percent_encoding_redirect() {
         let expected_location = vec!["/hello/John%5B%5D%7C%5C%25@%5E"];
-        let client = Client::new(rocket()).unwrap();
+        let client = Client::new(rocket()).await.unwrap();
 
         let response = client.get("/raw").dispatch().await;
         let location: Vec<_> = response.headers().get("location").collect();
@@ -50,7 +50,7 @@ mod tests {
 
     #[rocket::async_test]
     async fn uri_percent_encoding_get() {
-        let client = Client::new(rocket()).unwrap();
+        let client = Client::new(rocket()).await.unwrap();
         let name = Uri::percent_encode(NAME);
         let mut response = client.get(format!("/hello/{}", name)).dispatch().await;
         assert_eq!(response.status(), Status::Ok);

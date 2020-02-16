@@ -44,7 +44,7 @@ fn simple(simple: Simple) -> String { simple.0 }
 #[rocket::async_test]
 async fn test_data() {
     let rocket = rocket::ignite().mount("/", routes![form, simple]);
-    let client = Client::new(rocket).unwrap();
+    let client = Client::new(rocket).await.unwrap();
 
     let mut response = client.post("/f")
         .header(ContentType::Form)

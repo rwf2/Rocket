@@ -22,7 +22,7 @@ mod tests {
 
     #[rocket::async_test]
     async fn method_eval() {
-        let client = Client::new(rocket::ignite().mount("/", routes![bug])).unwrap();
+        let client = Client::new(rocket::ignite().mount("/", routes![bug])).await.unwrap();
         let mut response = client.post("/")
             .header(ContentType::Form)
             .body("_method=patch&form_data=Form+data")
@@ -33,7 +33,7 @@ mod tests {
 
     #[rocket::async_test]
     async fn get_passes_through() {
-        let client = Client::new(rocket::ignite().mount("/", routes![bug])).unwrap();
+        let client = Client::new(rocket::ignite().mount("/", routes![bug])).await.unwrap();
         let response = client.get("/")
             .header(ContentType::Form)
             .body("_method=patch&form_data=Form+data")

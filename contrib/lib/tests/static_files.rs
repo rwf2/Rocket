@@ -71,7 +71,7 @@ mod static_tests {
 
     #[rocket::async_test]
     async fn test_static_no_index() {
-        let client = Client::new(rocket()).expect("valid rocket");
+        let client = Client::new(rocket()).await.expect("valid rocket");
         assert_all(&client, "no_index", REGULAR_FILES, true).await;
         assert_all(&client, "no_index", HIDDEN_FILES, false).await;
         assert_all(&client, "no_index", INDEXED_DIRECTORIES, false).await;
@@ -79,7 +79,7 @@ mod static_tests {
 
     #[rocket::async_test]
     async fn test_static_hidden() {
-        let client = Client::new(rocket()).expect("valid rocket");
+        let client = Client::new(rocket()).await.expect("valid rocket");
         assert_all(&client, "dots", REGULAR_FILES, true).await;
         assert_all(&client, "dots", HIDDEN_FILES, true).await;
         assert_all(&client, "dots", INDEXED_DIRECTORIES, false).await;
@@ -87,7 +87,7 @@ mod static_tests {
 
     #[rocket::async_test]
     async fn test_static_index() {
-        let client = Client::new(rocket()).expect("valid rocket");
+        let client = Client::new(rocket()).await.expect("valid rocket");
         assert_all(&client, "index", REGULAR_FILES, true).await;
         assert_all(&client, "index", HIDDEN_FILES, false).await;
         assert_all(&client, "index", INDEXED_DIRECTORIES, true).await;
@@ -99,7 +99,7 @@ mod static_tests {
 
     #[rocket::async_test]
     async fn test_static_all() {
-        let client = Client::new(rocket()).expect("valid rocket");
+        let client = Client::new(rocket()).await.expect("valid rocket");
         assert_all(&client, "both", REGULAR_FILES, true).await;
         assert_all(&client, "both", HIDDEN_FILES, true).await;
         assert_all(&client, "both", INDEXED_DIRECTORIES, true).await;
@@ -131,7 +131,7 @@ mod static_tests {
         fn catch_two(a: &RawStr, b: &RawStr) -> String { format!("{}/{}", a, b) }
 
         let rocket = rocket().mount("/default", routes![catch_one, catch_two]);
-        let client = Client::new(rocket).expect("valid rocket");
+        let client = Client::new(rocket).await.expect("valid rocket");
 
         let mut response = client.get("/default/ireallydontexist").dispatch().await;
         assert_eq!(response.status(), Status::Ok);

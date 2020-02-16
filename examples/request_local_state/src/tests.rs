@@ -5,7 +5,7 @@ use rocket::local::Client;
 
 #[rocket::async_test]
 async fn test() {
-    let client = Client::new(rocket()).unwrap();
+    let client = Client::new(rocket()).await.unwrap();
     client.get("/sync").dispatch().await;
 
     let atomics = client.manifest().state::<Atomics>().unwrap();

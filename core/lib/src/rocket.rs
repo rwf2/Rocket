@@ -398,13 +398,13 @@ impl Manifest {
     }
 
     #[inline]
-    fn _attach(mut self, fairing: Box<dyn Fairing>) -> Self {
+    async fn _attach(mut self, fairing: Box<dyn Fairing>) -> Self {
         // Attach (and run attach) fairings, which requires us to move `self`.
         let mut fairings = mem::replace(&mut self.fairings, Fairings::new());
 
         let mut rocket = Rocket { manifest: Some(self), pending: vec![] };
-        rocket = fairings.attach(fairing, rocket);
-        self = rocket.finish_and_take_manifest();
+        rocket = fairings.attach(fairing, rocket).await;
+        self = rocket.finish_and_take_manifest().await;
 
         // Make sure we keep all fairings around: the old and newly added ones!
         fairings.append(self.fairings);
@@ -793,23 +793,23 @@ impl Rocket {
         self
     }
 
-    pub(crate) fn finish(&mut self) {
-        // We need to preserve insertion order here,
-        // so we don't simply use `self.pending.pop()`
-        while !self.pending.is_empty() {
-            let op = self.pending.remove(0);
-            let manifest = self.manifest.take().expect("TODO error message");
-            self.manifest = Some(match op {
-                BuildOperation::Mount(base, routes) => manifest._mount(base, routes),
-                BuildOperation::Register(catchers) => manifest._register(catchers),
-                BuildOperation::Manage(callback) => manifest._manage(callback),
-                BuildOperation::Attach(fairing) => manifest._attach(fairing),
-            });
-        }
+    pub(crate) fn finish(&mut self) -> BoxFuture<'_, ()> {
+        Box::pin(async move {
+            while !self.pending.is_empty() {
+                let op = self.pending.remove(0);
+                let manifest = self.manifest.take().expect("TODO error message");
+                self.manifest = Some(match op {
+                    BuildOperation::Mount(base, routes) => manifest._mount(base, routes),
+                    BuildOperation::Register(catchers) => manifest._register(catchers),
+                    BuildOperation::Manage(callback) => manifest._manage(callback),
+                    BuildOperation::Attach(fairing) => manifest._attach(fairing).await,
+                });
+            }
+        })
     }
 
-    pub(crate) fn finish_and_take_manifest(mut self) -> Manifest {
-        self.finish();
+    pub(crate) async fn finish_and_take_manifest(mut self) -> Manifest {
+        self.finish().await;
         self.manifest.take().expect("internal error: finish() should have replaced self.manifest")
     }
 
@@ -841,7 +841,7 @@ impl Rocket {
 
         use crate::error::Error::Launch;
 
-        let mut manifest = self.finish_and_take_manifest();
+        let mut manifest = self.finish_and_take_manifest().await;
         manifest.prelaunch_check().map_err(crate::error::Error::Launch)?;
 
         let config = manifest.config();
@@ -943,13 +943,10 @@ impl Rocket {
     /// rocket::ignite().launch();
     /// # }
     /// ```
-    pub fn launch(mut self) -> Result<(), crate::error::Error> {
-        let workers = self.inspect().config().workers as usize;
-
+    pub fn launch(self) -> Result<(), crate::error::Error> {
         // Initialize the tokio runtime
         let mut runtime = tokio::runtime::Builder::new()
             .threaded_scheduler()
-            .core_threads(workers)
             .enable_all()
             .build()
             .expect("Cannot build runtime!");
@@ -970,12 +967,14 @@ impl Rocket {
     /// # Example
     ///
     /// ```rust
+    /// # let _ = async {
     /// let mut rocket = rocket::ignite();
-    /// let config = rocket.inspect().config();
+    /// let config = rocket.inspect().await.config();
     /// # let _ = config;
+    /// # };
     /// ```
-    pub fn inspect(&mut self) -> &Manifest {
-        self.finish();
+    pub async fn inspect(&mut self) -> &Manifest {
+        self.finish().await;
         self._manifest()
     }
 }
@@ -991,8 +990,9 @@ impl Manifest {
     /// # #![feature(proc_macro_hygiene)]
     /// # use std::{thread, time::Duration};
     /// #
+    /// # rocket::async_test(async {
     /// let mut rocket = rocket::ignite();
-    /// let handle = rocket.inspect().get_shutdown_handle();
+    /// let handle = rocket.inspect().await.get_shutdown_handle();
     ///
     /// # if false {
     /// thread::spawn(move || {
@@ -1004,6 +1004,7 @@ impl Manifest {
     /// let shutdown_result = rocket.launch();
     /// assert!(shutdown_result.is_ok());
     /// # }
+    /// # });
     /// ```
     #[inline(always)]
     pub fn get_shutdown_handle(&self) -> ShutdownHandle {
@@ -1027,11 +1028,12 @@ impl Manifest {
     /// }
     ///
     /// fn main() {
+    /// # rocket::async_test(async move {
     ///     let mut rocket = rocket::ignite()
     ///         .mount("/", routes![hello])
     ///         .mount("/hi", routes![hello]);
     ///
-    ///     for route in rocket.inspect().routes() {
+    ///     for route in rocket.inspect().await.routes() {
     ///         match route.base() {
     ///             "/" => assert_eq!(route.uri.path(), "/hello"),
     ///             "/hi" => assert_eq!(route.uri.path(), "/hi/hello"),
@@ -1039,7 +1041,8 @@ impl Manifest {
     ///         }
     ///     }
     ///
-    ///     assert_eq!(rocket.inspect().routes().count(), 2);
+    ///     assert_eq!(rocket.inspect().await.routes().count(), 2);
+    /// # });
     /// }
     /// ```
     #[inline(always)]
@@ -1056,11 +1059,13 @@ impl Manifest {
     /// #[derive(PartialEq, Debug)]
     /// struct MyState(&'static str);
     ///
+    /// # rocket::async_test(async {
     /// let mut rocket = rocket::ignite().manage(MyState("hello!"));
-    /// assert_eq!(rocket.inspect().state::<MyState>(), Some(&MyState("hello!")));
+    /// assert_eq!(rocket.inspect().await.state::<MyState>(), Some(&MyState("hello!")));
     ///
-    /// let client = rocket::local::Client::new(rocket).expect("valid rocket");
+    /// let client = rocket::local::Client::new(rocket).await.expect("valid rocket");
     /// assert_eq!(client.manifest().state::<MyState>(), Some(&MyState("hello!")));
+    /// # });
     /// ```
     #[inline(always)]
     pub fn state<T: Send + Sync + 'static>(&self) -> Option<&T> {

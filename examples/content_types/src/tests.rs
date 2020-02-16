@@ -9,7 +9,7 @@ async fn test<H>(method: Method, uri: &str, header: H, status: Status, body: Str
         .mount("/hello", routes![super::get_hello, super::post_hello])
         .register(catchers![super::not_found]);
 
-    let client = Client::new(rocket).unwrap();
+    let client = Client::new(rocket).await.unwrap();
     let mut response = client.req(method, uri).header(header).dispatch().await;
     assert_eq!(response.status(), status);
     assert_eq!(response.body_string().await, Some(body));

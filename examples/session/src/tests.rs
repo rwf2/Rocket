@@ -24,7 +24,7 @@ async fn login(client: &Client, user: &str, pass: &str) -> Option<Cookie<'static
 
 #[rocket::async_test]
 async fn redirect_on_index() {
-    let client = Client::new(rocket()).unwrap();
+    let client = Client::new(rocket()).await.unwrap();
     let response = client.get("/").dispatch().await;
     assert_eq!(response.status(), Status::SeeOther);
     assert_eq!(response.headers().get_one("Location"), Some("/login"));
@@ -32,7 +32,7 @@ async fn redirect_on_index() {
 
 #[rocket::async_test]
 async fn can_login() {
-    let client = Client::new(rocket()).unwrap();
+    let client = Client::new(rocket()).await.unwrap();
 
     let mut response = client.get("/login").dispatch().await;
     let body = response.body_string().await.unwrap();
@@ -42,14 +42,14 @@ async fn can_login() {
 
 #[rocket::async_test]
 async fn login_fails() {
-    let client = Client::new(rocket()).unwrap();
+    let client = Client::new(rocket()).await.unwrap();
     assert!(login(&client, "Seergio", "password").await.is_none());
     assert!(login(&client, "Sergio", "idontknow").await.is_none());
 }
 
 #[rocket::async_test]
 async fn login_logout_succeeds() {
-    let client = Client::new(rocket()).unwrap();
+    let client = Client::new(rocket()).await.unwrap();
     let login_cookie = login(&client, "Sergio", "password").await.expect("logged in");
 
     // Ensure we're logged in.
