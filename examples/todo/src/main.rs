@@ -32,7 +32,7 @@ struct Context<'a>{ msg: Option<(&'a str, &'a str)>, tasks: Vec<Task> }
 
 impl<'a> Context<'a> {
     pub fn err(conn: &DbConn, msg: &'a str) -> Context<'a> {
-        Self::raw(conn, Some(("error", msg)))
+         Context{msg: Some(("error", msg)), tasks: Task::all(conn).unwrap_or_default()} 
     }
 
     pub fn raw(conn: &DbConn, msg: Option<(&'a str, &'a str)>) -> Context<'a> {
@@ -51,10 +51,10 @@ fn new(todo_form: Form<Todo>, conn: DbConn) -> Flash<Redirect> {
     let todo = todo_form.into_inner();
     if todo.description.is_empty() {
         Flash::error(Redirect::to("/"), "Description cannot be empty.")
-    } else if Task::insert(todo, &conn).is_ok() {
-        Flash::success(Redirect::to("/"), "Todo successfully added.")
+    } else if let Err(e) = Task::insert(todo, &conn) {
+        Flash::error(Redirect::to("/"), &format!("Database error: {}", e))
     } else {
-        Flash::error(Redirect::to("/"), "Whoops! The server failed.")
+        Flash::success(Redirect::to("/"), "Todo successfully added.")
     }
 }
 
