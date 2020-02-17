@@ -28,14 +28,14 @@ embed_migrations!();
 pub struct DbConn(SqliteConnection);
 
 #[derive(Debug, Serialize)]
-struct Context<'a, 'b>{ msg: Option<(&'a str, &'b str)>, tasks: Vec<Task> }
+struct Context<'a>{ msg: Option<(&'a str, &'a str)>, tasks: Vec<Task> }
 
-impl<'a, 'b> Context<'a, 'b> {
-    pub fn err(conn: &DbConn, msg: &'b str) -> Context<'static, 'b> {
+impl<'a> Context<'a> {
+    pub fn err(conn: &DbConn, msg: &'a str) -> Context<'a> {
         Self::raw(conn, Some(("error", msg)))
     }
 
-    pub fn raw<'x, 'y>(conn: &DbConn, msg: Option<(&'x str, &'y str)>) -> Context<'x, 'y> {
+    pub fn raw(conn: &DbConn, msg: Option<(&'a str, &'a str)>) -> Context<'a> {
         match Task::all(conn) {
             Ok(tasks) => Context{msg: msg, tasks},
             Err(_) => Context{
@@ -60,22 +60,18 @@ fn new(todo_form: Form<Todo>, conn: DbConn) -> Flash<Redirect> {
 
 #[put("/<id>")]
 fn toggle(id: i32, conn: DbConn) -> Result<Redirect, Template> {
-    Task::toggle_with_id(id, &conn).map_err(|e| Template::render(
-        "index",
-        &Context::err(&conn, &format!("Couldn't toggle task: {}", e))
-    ))?;
-
-    Ok(Redirect::to("/"))
+    match Task::toggle_with_id(id, &conn) {
+        Ok(()) => Ok(Redirect::to("/")),
+        Err(e) => Err(Template::render("index", &Context::err(&conn, &format!("Couldn't toggle task: {}", e)))),
+    }
 }
 
 #[delete("/<id>")]
 fn delete(id: i32, conn: DbConn) -> Result<Flash<Redirect>, Template> {
-    Task::delete_with_id(id, &conn).map_err(|e| Template::render(
-        "index",
-        &Context::err(&conn, &format!("Couldn't delete task: {}", e))
-    ))?;
-
-    Ok(Flash::success(Redirect::to("/"), "Todo was deleted."))
+    match Task::delete_with_id(id, &conn) {
+        Ok(()) => Ok(Flash::success(Redirect::to("/"), "Todo was deleted.")),
+        Err(e) => Err(Template::render("index", &Context::err(&conn, &format!("Couldn't delete task: {}", e)))),
+    }
 }
 
 #[get("/")]
