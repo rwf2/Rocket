@@ -164,3 +164,14 @@ pub fn async_test<R>(fut: impl std::future::Future<Output = R> + Send) -> R {
         .expect("create tokio runtime")
         .block_on(fut)
 }
+
+/// WARNING: This is unstable! Do not use this method outside of Rocket!
+#[doc(hidden)]
+pub fn async_main<R>(fut: impl std::future::Future<Output = R> + Send) -> R {
+    tokio::runtime::Builder::new()
+        .threaded_scheduler()
+        .enable_all()
+        .build()
+        .expect("create tokio runtime")
+        .block_on(fut)
+}
