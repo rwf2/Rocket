@@ -638,10 +638,11 @@ impl Rocket {
     ///     "Hello!"
     /// }
     ///
-    /// fn main() {
+    /// #[rocket::main]
+    /// async fn main() {
     /// # if false { // We don't actually want to launch the server in an example.
     ///     rocket::ignite().mount("/hello", routes![hi])
-    /// #       .launch();
+    /// #       .launch().await;
     /// # }
     /// }
     /// ```
@@ -659,10 +660,10 @@ impl Rocket {
     ///     Outcome::from(req, "Hello!")
     /// }
     ///
-    /// # if false { // We don't actually want to launch the server in an example.
+    /// # let _ = async { // We don't actually want to launch the server in an example.
     /// rocket::ignite().mount("/hello", vec![Route::new(Get, "/world", hi)])
-    /// #     .launch();
-    /// # }
+    /// #     .launch().await;
+    /// # };
     /// ```
     #[inline]
     pub fn mount<R: Into<Vec<Route>>>(mut self, base: &str, routes: R) -> Self {
@@ -700,11 +701,12 @@ impl Rocket {
     ///     format!("I couldn't find '{}'. Try something else?", req.uri())
     /// }
     ///
-    /// fn main() {
+    /// #[rocket::main]
+    /// async fn main() {
     /// # if false { // We don't actually want to launch the server in an example.
     ///     rocket::ignite()
     ///         .register(catchers![internal_error, not_found])
-    /// #       .launch();
+    /// #       .launch().await;
     /// # }
     /// }
     /// ```
@@ -742,12 +744,14 @@ impl Rocket {
     ///     format!("The stateful value is: {}", state.0)
     /// }
     ///
-    /// fn main() {
+    /// #[rocket::main]
+    /// async fn main() {
     /// # if false { // We don't actually want to launch the server in an example.
     ///     rocket::ignite()
     ///         .mount("/", routes![index])
     ///         .manage(MyValue(10))
-    ///         .launch();
+    ///         .launch()
+    ///         .await;
     /// # }
     /// }
     /// ```
@@ -777,13 +781,15 @@ impl Rocket {
     /// use rocket::Rocket;
     /// use rocket::fairing::AdHoc;
     ///
-    /// fn main() {
+    /// #[rocket::main]
+    /// async fn main() {
     /// # if false { // We don't actually want to launch the server in an example.
     ///     rocket::ignite()
     ///         .attach(AdHoc::on_launch("Launch Message", |_| {
     ///             println!("Rocket is launching!");
     ///         }))
-    ///         .launch();
+    ///         .launch()
+    ///         .await;
     /// # }
     /// }
     /// ```
@@ -829,15 +835,15 @@ impl Rocket {
     /// # Example
     ///
     /// ```rust
-    /// #[tokio::main]
+    /// #[rocket::main]
     /// async fn main() {
     /// # if false {
-    ///     let result = rocket::ignite().launch();
+    ///     let result = rocket::ignite().launch().await;
     ///     assert!(result.is_ok());
     /// # }
     /// }
     /// ```
-    async fn serve(self) -> Result<(), crate::error::Error> {
+    pub async fn launch(self) -> Result<(), crate::error::Error> {
         use std::net::ToSocketAddrs;
 
         use crate::error::Error::Launch;
@@ -921,40 +927,6 @@ impl Rocket {
         server.await
     }
 
-    /// Starts the application server and begins listening for and dispatching
-    /// requests to mounted routes and catchers. This function does not return
-    /// unless a shutdown is requested via a [`ShutdownHandle`] or there is an
-    /// error.
-    ///
-    /// This is a convenience function that creates a suitable default runtime
-    /// and launches the server on that runtime. If you already have a runtime,
-    /// use the [`Rocket::serve`] method instead.
-    ///
-    /// # Error
-    ///
-    /// If there is a problem starting the application, a [`LaunchError`] is
-    /// returned. Note that a value of type `LaunchError` panics if dropped
-    /// without first being inspected. See the [`LaunchError`] documentation for
-    /// more information.
-    ///
-    /// # Example
-    ///
-    /// ```rust
-    /// # if false {
-    /// rocket::ignite().launch();
-    /// # }
-    /// ```
-    pub fn launch(self) -> Result<(), crate::error::Error> {
-        // Initialize the tokio runtime
-        let mut runtime = tokio::runtime::Builder::new()
-            .threaded_scheduler()
-            .enable_all()
-            .build()
-            .expect("Cannot build runtime!");
-
-        runtime.block_on(async move { self.serve().await })
-    }
-
     pub(crate) fn _manifest(&self) -> &Manifest {
         self.manifest.as_ref().expect("internal error: manifest was taken and not replaced. Was `inspect()` called but not polled to completion?")
     }
@@ -1002,7 +974,7 @@ impl Manifest {
     /// });
     ///
     /// // Shuts down after 10 seconds
-    /// let shutdown_result = rocket.launch();
+    /// let shutdown_result = rocket.launch().await;
     /// assert!(shutdown_result.is_ok());
     /// # }
     /// # });
@@ -1083,13 +1055,15 @@ impl Manifest {
     /// use rocket::Rocket;
     /// use rocket::fairing::AdHoc;
     ///
-    /// fn main() {
+    /// #[rocket::main]
+    /// async fn main() {
     /// # if false { // We don't actually want to launch the server in an example.
     ///     rocket::ignite()
     ///         .attach(AdHoc::on_launch("Config Printer", |rocket| {
     ///             println!("Rocket launch config: {:?}", rocket.config());
     ///         }))
-    ///         .launch();
+    ///         .launch()
+    ///         .await;
     /// # }
     /// }
     /// ```

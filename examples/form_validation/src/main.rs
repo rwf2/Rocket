@@ -81,6 +81,7 @@ fn rocket() -> rocket::Rocket {
         .mount("/", routes![files::index, files::files, user_page, login])
 }
 
-fn main() {
-    let _ = rocket().launch();
+#[rocket::main]
+async fn main() {
+    let _ = rocket().launch().await;
 }

@@ -118,6 +118,7 @@ fn rocket() -> rocket::Rocket {
         .register(vec![not_found_catcher])
 }
 
-fn main() {
-    let _ = rocket().launch();
+#[rocket::main]
+async fn main() {
+    let _ = rocket().launch().await;
 }

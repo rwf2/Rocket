@@ -42,7 +42,8 @@ use crate::http::Status;
 ///     state.inner().user_val.as_str()
 /// }
 ///
-/// fn main() {
+/// #[rocket::main]
+/// async fn main() {
 ///     let config = MyConfig {
 ///         user_val: "user input".to_string()
 ///     };
@@ -51,7 +52,8 @@ use crate::http::Status;
 ///     rocket::ignite()
 ///         .mount("/", routes![index, raw_config_value])
 ///         .manage(config)
-///         .launch();
+///         .launch()
+///         .await;
 /// # }
 /// }
 /// ```

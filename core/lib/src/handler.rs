@@ -65,11 +65,13 @@ pub type HandlerFuture<'r> = BoxFuture<'r, Outcome<'r>>;
 ///     }
 /// }
 ///
-/// fn main() {
+/// #[rocket::main]
+/// async fn main() {
 /// # if false {
 ///     rocket::ignite()
 ///         .mount("/", CustomHandler(Kind::Simple))
-///         .launch();
+///         .launch()
+///         .await;
 /// # }
 /// }
 /// ```
@@ -112,12 +114,14 @@ pub type HandlerFuture<'r> = BoxFuture<'r, Outcome<'r>>;
 ///     }
 /// }
 ///
-/// fn main() {
+/// #[rocket::main]
+/// async fn main() {
 /// # if false {
 ///     rocket::ignite()
 ///         .mount("/", routes![custom_handler])
 ///         .manage(Kind::Simple)
-///         .launch();
+///         .launch()
+///         .await;
 /// # }
 /// }
 /// ```

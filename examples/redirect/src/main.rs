@@ -16,6 +16,7 @@ fn login() -> &'static str {
     "Hi! Please log in before continuing."
 }
 
-fn main() {
-    let _ = rocket::ignite().mount("/", routes![root, login]).launch();
+#[rocket::main]
+async fn main() {
+    let _ = rocket::ignite().mount("/", routes![root, login]).launch().await;
 }

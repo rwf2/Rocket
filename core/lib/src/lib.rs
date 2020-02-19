@@ -67,9 +67,10 @@
 //!     "Hello, world!"
 //! }
 //!
-//! fn main() {
+//! #[rocket::main]
+//! async fn main() {
 //! # if false { // We don't actually want to launch the server in an example.
-//!     rocket::ignite().mount("/", routes![hello]).launch();
+//!     rocket::ignite().mount("/", routes![hello]).launch().await;
 //! # }
 //! }
 //! ```

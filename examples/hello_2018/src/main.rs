@@ -9,6 +9,7 @@ fn hello() -> &'static str {
     "Hello, Rust 2018!"
 }
 
-fn main() {
-    let _ = rocket::ignite().mount("/", routes![hello]).launch();
+#[rocket::main]
+async fn main() {
+    let _ = rocket::ignite().mount("/", routes![hello]).launch().await;
 }

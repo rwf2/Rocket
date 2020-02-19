@@ -52,7 +52,8 @@ example, the following snippet attached two fairings,  `req_fairing` and
 rocket::ignite()
     .attach(req_fairing)
     .attach(res_fairing)
-    .launch();
+    .launch()
+    .await;
 ```
 
 [`attach`]: @api/rocket/struct.Rocket.html#method.attach

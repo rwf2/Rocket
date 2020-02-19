@@ -54,8 +54,9 @@ And finally, create a skeleton Rocket application to work off of in
 
 #[macro_use] extern crate rocket;
 
-fn main() {
-    rocket::ignite().launch();
+#[rocket::main]
+async fn main() {
+    rocket::ignite().launch().await;
 }
 ```
 
@@ -105,8 +106,9 @@ Remember that routes first need to be mounted before Rocket dispatches requests
 to them. To mount the `index` route, modify the main function so that it reads:
 
 ```rust
-fn main() {
-    rocket::ignite().mount("/", routes![index]).launch();
+#[rocket::main]
+async fn main() {
+    rocket::ignite().mount("/", routes![index]).launch().await;
 }
 ```
 
@@ -252,8 +254,9 @@ async fn upload(paste: Data) -> Result<String, Debug<io::Error>> {
 Ensure that the route is mounted at the root path:
 
 ```rust
-fn main() {
-    rocket::ignite().mount("/", routes![index, upload]).launch();
+#[rocket::main]
+async fn main() {
+    rocket::ignite().mount("/", routes![index, upload]).launch().await;
 }
 ```
 
@@ -305,8 +308,9 @@ fn retrieve(id: &RawStr) -> Option<File> {
 Make sure that the route is mounted at the root path:
 
 ```rust
-fn main() {
-    rocket::ignite().mount("/", routes![index, upload, retrieve]).launch();
+#[rocket::main]
+async fn main() {
+    rocket::ignite().mount("/", routes![index, upload, retrieve]).launch().await;
 }
 ```
 

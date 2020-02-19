@@ -25,6 +25,7 @@ fn rocket() -> rocket::Rocket {
         .manage(LogChannel(SegQueue::new()))
 }
 
-fn main() {
-    let _ = rocket().launch();
+#[rocket::main]
+async fn main() {
+    let _ = rocket().launch().await;
 }

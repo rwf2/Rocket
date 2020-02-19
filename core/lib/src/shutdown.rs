@@ -24,11 +24,13 @@ use tokio::sync::mpsc;
 ///     "Shutting down..."
 /// }
 ///
-/// fn main() {
+/// #[rocket::main]
+/// async fn main() {
 ///     # if false {
 ///     rocket::ignite()
 ///         .mount("/", routes![shutdown])
 ///         .launch()
+///         .await
 ///         .expect("server failed unexpectedly");
 ///     # }
 /// }

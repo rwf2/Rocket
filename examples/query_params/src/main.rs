@@ -34,6 +34,7 @@ fn rocket() -> rocket::Rocket {
     rocket::ignite().mount("/", routes![hello, hello_20])
 }
 
-fn main() {
-    let _ = rocket().launch();
+#[rocket::main]
+async fn main() {
+    let _ = rocket().launch().await;
 }

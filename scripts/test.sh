@@ -60,7 +60,7 @@ ensure_tab_free
 #ensure_trailing_whitespace_free
 
 echo ":: Updating dependencies..."
-cargo update
+#cargo update
 
 if [ "$1" = "--contrib" ]; then
   FEATURES=(
