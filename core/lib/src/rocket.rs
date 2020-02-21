@@ -7,7 +7,7 @@ use std::sync::Arc;
 
 use futures_util::future::{Future, FutureExt, BoxFuture};
 use futures_util::stream::StreamExt;
-use tokio::sync::{mpsc, oneshot};
+use tokio::sync::{broadcast, oneshot};
 
 use yansi::Paint;
 use state::Container;
@@ -40,7 +40,7 @@ pub struct Rocket {
     pub(crate) state: Container,
     fairings: Fairings,
     shutdown_handle: ShutdownHandle,
-    shutdown_receiver: Option<mpsc::Receiver<()>>,
+    shutdown_receiver: Option<broadcast::Receiver<()>>,
 }
 
 // This function tries to hide all of the Hyper-ness from Rocket. It
@@ -433,7 +433,7 @@ impl Rocket {
                           Paint::default(LoggedValue(value)).bold());
         }
 
-        let (shutdown_sender, shutdown_receiver) = mpsc::channel(1);
+        let (shutdown_sender, shutdown_receiver) = broadcast::channel(1);
 
         let rocket = Rocket {
             config,
@@ -744,7 +744,7 @@ impl Rocket {
         hyper::Server::builder(Incoming::from_listener(listener))
             .executor(TokioExecutor)
             .serve(service)
-            .with_graceful_shutdown(async move { shutdown_receiver.recv().await; })
+            .with_graceful_shutdown(async move { let _ = shutdown_receiver.recv().await; })
             .await
             .map_err(|e| crate::error::Error::Run(Box::new(e)))
     }
