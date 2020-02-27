@@ -182,7 +182,7 @@ impl Config {
     }
 
     /// Returns the default configuration for the environment `env` given that
-    /// the configuration was stored at `config_file_path`.
+    /// the configuration was stored at `path`.
     ///
     /// # Error
     ///

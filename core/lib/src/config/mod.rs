@@ -246,6 +246,17 @@ impl RocketConfig {
         RocketConfig::parse(contents, &file)
     }
 
+    /// Read the configuration from the file at `path`.
+    pub fn read_from(path: &Path) -> Result<RocketConfig> {
+        // Read in file
+        let mut file = File::open(path).map_err(|_| ConfigError::IoError)?;
+        let mut contents = String::new();
+        file.read_to_string(&mut contents)
+            .map_err(|_| ConfigError::IoError)?;
+        // Parse contents
+        RocketConfig::parse(contents, &path)
+    }
+
     /// Return the default configuration for all environments and marks the
     /// active environment (via the CONFIG_ENV variable) as active.
     pub fn active_default_from(filename: Option<&Path>) -> Result<RocketConfig> {
