@@ -50,17 +50,11 @@ impl Task {
     }
 
     pub fn delete_with_id(id: i32, conn: &SqliteConnection) -> Result<()> {
-        match diesel::delete(all_tasks.find(id)).execute(conn) {
-            Ok(_) => Ok(()),
-            Err(e) => Err(e)
-        }
+        diesel::delete(all_tasks.find(id)).execute(conn).map(|_| ())
     }
 
     #[cfg(test)]
     pub fn delete_all(conn: &SqliteConnection) -> Result<()> {
-        match diesel::delete(all_tasks).execute(conn) {
-            Ok(_) => Ok(()),
-            Err(e) => Err(e),
-        }
+        diesel::delete(all_tasks).execute(conn).map(|_| ())
     }
 }
