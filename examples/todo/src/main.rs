@@ -92,7 +92,7 @@ async fn run_db_migrations(mut rocket: Rocket) -> Result<Rocket, Rocket> {
 fn rocket() -> Rocket {
     rocket::ignite()
         .attach(DbConn::fairing())
-        .attach(AdHoc::on_attach("Database Migrations", |rocket| Box::pin(async move { run_db_migrations(rocket).await })))
+        .attach(AdHoc::on_attach("Database Migrations", run_db_migrations))
         .mount("/", StaticFiles::from("static/"))
         .mount("/", routes![index])
         .mount("/todo", routes![new, toggle, delete])

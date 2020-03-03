@@ -24,7 +24,7 @@ fn index(counter: State<'_, Counter>) -> String {
 fn rocket() -> rocket::Rocket {
     rocket::ignite()
         .mount("/", routes![index])
-        .attach(AdHoc::on_attach("Outer", |rocket| Box::pin(async move {
+        .attach(AdHoc::on_attach("Outer", |rocket| async move {
             let counter = Counter::default();
             counter.attach.fetch_add(1, Ordering::Relaxed);
             let rocket = rocket.manage(counter)
@@ -39,7 +39,7 @@ fn rocket() -> rocket::Rocket {
                 }));
 
             Ok(rocket)
-        })))
+        }))
 }
 
 mod nested_fairing_attaches_tests {

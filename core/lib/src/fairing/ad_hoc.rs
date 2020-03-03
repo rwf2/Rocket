@@ -1,6 +1,6 @@
 use std::sync::Mutex;
 
-use futures_util::future::BoxFuture;
+use futures_util::future::{Future, BoxFuture};
 
 use crate::{Manifest, Rocket, Request, Response, Data};
 use crate::fairing::{Fairing, Kind, Info};
@@ -66,12 +66,14 @@ impl AdHoc {
     /// use rocket::fairing::AdHoc;
     ///
     /// // The no-op attach fairing.
-    /// let fairing = AdHoc::on_attach("No-Op", |rocket| Box::pin(async move { Ok(rocket) }));
+    /// let fairing = AdHoc::on_attach("No-Op", |rocket| async move { Ok(rocket) });
     /// ```
-    pub fn on_attach<F: Send + 'static>(name: &'static str, f: F) -> AdHoc
-        where F: FnOnce(Rocket) -> BoxFuture<'static, Result<Rocket, Rocket>>
+    pub fn on_attach<F, Fut>(name: &'static str, f: F) -> AdHoc
+    where
+        F: FnOnce(Rocket) -> Fut + Send + 'static,
+        Fut: Future<Output=Result<Rocket, Rocket>> + Send + 'static,
     {
-        AdHoc { name, kind: AdHocKind::Attach(Mutex::new(Some(Box::new(f)))) }
+        AdHoc { name, kind: AdHocKind::Attach(Mutex::new(Some(Box::new(|rocket| Box::pin(f(rocket)))))) }
     }
 
     /// Constructs an `AdHoc` launch fairing named `name`. The function `f` will
