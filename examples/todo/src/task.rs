@@ -50,11 +50,16 @@ impl Task {
     }
 
     pub fn delete_with_id(id: i32, conn: &SqliteConnection) -> Result<()> {
+        // `.execute` returns a usize representing the number of
+        // database rows affected by this modification.
+        // In a larger app these metrics may be useful,
+        // but for a simple example we'll ignore them.
         diesel::delete(all_tasks.find(id)).execute(conn).map(|_| ())
     }
 
     #[cfg(test)]
     pub fn delete_all(conn: &SqliteConnection) -> Result<()> {
+        // see comment in `.delete_with_id`.
         diesel::delete(all_tasks).execute(conn).map(|_| ())
     }
 }
