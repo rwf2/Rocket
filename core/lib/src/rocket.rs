@@ -794,6 +794,8 @@ impl Rocket {
     }
 
     pub(crate) fn finish(&mut self) {
+        // We need to preserve insertion order here,
+        // so we don't simply use `self.pending.pop()`
         while !self.pending.is_empty() {
             let op = self.pending.remove(0);
             let manifest = self._take_manifest();
