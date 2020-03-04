@@ -793,6 +793,7 @@ impl Rocket {
         self
     }
 
+    // NB: Not an `async fn` because _attach() calls finish(), recursing.
     pub(crate) fn finish(&mut self) -> BoxFuture<'_, ()> {
         Box::pin(async move {
             while !self.pending.is_empty() {
