@@ -30,7 +30,7 @@ async fn test_root() {
         dispatch!(*method, "/", |client, response| {
             let mut map = std::collections::HashMap::new();
             map.insert("path", "/");
-            let expected = Template::show(client.rocket(), "error/404", &map).unwrap();
+            let expected = Template::show(client.manifest(), "error/404", &map).unwrap();
 
             assert_eq!(response.status(), Status::NotFound);
             assert_eq!(response.body_string().await, Some(expected));
@@ -47,7 +47,7 @@ async fn test_name() {
             items: vec!["One", "Two", "Three"]
         };
 
-        let expected = Template::show(client.rocket(), "index", &context).unwrap();
+        let expected = Template::show(client.manifest(), "index", &context).unwrap();
         assert_eq!(response.status(), Status::Ok);
         assert_eq!(response.body_string().await, Some(expected));
     });
@@ -60,7 +60,7 @@ async fn test_404() {
         let mut map = std::collections::HashMap::new();
         map.insert("path", "/hello/");
 
-        let expected = Template::show(client.rocket(), "error/404", &map).unwrap();
+        let expected = Template::show(client.manifest(), "error/404", &map).unwrap();
         assert_eq!(response.status(), Status::NotFound);
         assert_eq!(response.body_string().await, Some(expected));
     });

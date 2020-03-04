@@ -151,7 +151,7 @@ mod templates_tests {
             }
 
             // verify that the initial content is correct
-            let initial_rendered = Template::show(client.rocket(), RELOAD_TEMPLATE, ());
+            let initial_rendered = Template::show(client.manifest(), RELOAD_TEMPLATE, ());
             assert_eq!(initial_rendered, Some(INITIAL_TEXT.into()));
 
             // write a change to the file
@@ -162,7 +162,7 @@ mod templates_tests {
                 client.get("/").dispatch().await;
 
                 // if the new content is correct, we are done
-                let new_rendered = Template::show(client.rocket(), RELOAD_TEMPLATE, ());
+                let new_rendered = Template::show(client.manifest(), RELOAD_TEMPLATE, ());
                 if new_rendered == Some(NEW_TEXT.into()) {
                     write_file(&reload_path, INITIAL_TEXT);
                     return;

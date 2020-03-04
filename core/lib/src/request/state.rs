@@ -1,6 +1,6 @@
 use std::ops::Deref;
 
-use crate::rocket::Inspector;
+use crate::rocket::Manifest;
 use crate::request::{self, FromRequest, Request};
 use crate::outcome::Outcome;
 use crate::http::Status;
@@ -153,17 +153,17 @@ impl<'r, T: Send + Sync + 'static> State<'r, T> {
     /// struct Unmanaged(usize);
     ///
     /// let mut rocket = rocket::ignite().manage(Managed(7));
-    /// let inspector = rocket.inspect();
+    /// let manifest = rocket.inspect();
     ///
-    /// let state: Option<State<Managed>> = State::from(inspector);
+    /// let state: Option<State<Managed>> = State::from(manifest);
     /// assert_eq!(state.map(|s| s.inner()), Some(&Managed(7)));
     ///
-    /// let state: Option<State<Unmanaged>> = State::from(inspector);
+    /// let state: Option<State<Unmanaged>> = State::from(manifest);
     /// assert_eq!(state, None);
     /// ```
     #[inline(always)]
-    pub fn from(rocket: Inspector<'r>) -> Option<Self> {
-        rocket.state().map(State)
+    pub fn from(manifest: &'r Manifest) -> Option<Self> {
+        manifest.state().map(State)
     }
 }
 

@@ -33,18 +33,22 @@ use crate::http::uri::Origin;
 /// The main `Rocket` type: used to mount routes and catchers and launch the
 /// application.
 pub struct Rocket {
-    pub(crate) inner: Option<RocketInner>,
+    pub(crate) manifest: Option<Manifest>,
     pending: Vec<BuildOperation>,
 }
 
 enum BuildOperation {
     Mount(Origin<'static>, Vec<Route>),
     Register(Vec<Catcher>),
-    Manage(Box<dyn FnOnce(RocketInner) -> RocketInner + Send + Sync + 'static>),
+    Manage(Box<dyn FnOnce(Manifest) -> Manifest + Send + Sync + 'static>),
     Attach(Box<dyn Fairing>),
 }
 
-pub(crate) struct RocketInner {
+/// The state of an unlaunched [`Rocket`].
+///
+/// A `Manifest` includes configuration, managed state, and mounted routes and
+/// can be accessed through [`Rocket::inspect`] before launching.
+pub struct Manifest {
     pub(crate) config: Config,
     router: Router,
     default_catchers: HashMap<u16, Catcher>,
@@ -55,21 +59,13 @@ pub(crate) struct RocketInner {
     shutdown_receiver: Option<mpsc::Receiver<()>>,
 }
 
-/// A readonly view into the current state of an unlaunched [`Rocket`].
-///
-/// The `Rocket` type only provides a single method for inspection,
-/// [`Rocket::inspect`], which returns this type. An `Inspector` instance can be
-/// used to access configuration, managed state, and mounted routes.
-#[derive(Copy, Clone)]
-pub struct Inspector<'r>(pub(crate) &'r RocketInner);
-
 // This function tries to hide all of the Hyper-ness from Rocket. It
 // essentially converts Hyper types into Rocket types, then calls the
 // `dispatch` function, which knows nothing about Hyper. Because responding
 // depends on the `HyperResponse` type, this function does the actual
 // response processing.
 fn hyper_service_fn(
-    rocket: Arc<RocketInner>,
+    rocket: Arc<Manifest>,
     h_addr: std::net::SocketAddr,
     hyp_req: hyper::Request<hyper::Body>,
 ) -> impl Future<Output = Result<hyper::Response<hyper::Body>, io::Error>> {
@@ -112,7 +108,7 @@ fn hyper_service_fn(
     }
 }
 
-impl RocketInner {
+impl Manifest {
     #[inline]
     async fn issue_response(
         &self,
@@ -181,7 +177,7 @@ impl RocketInner {
     }
 }
 
-impl RocketInner {
+impl Manifest {
     /// Preprocess the request for Rocket things. Currently, this means:
     ///
     ///   * Rewriting the method in the request if _method form field exists.
@@ -357,7 +353,7 @@ impl RocketInner {
     }
 }
 
-impl RocketInner {
+impl Manifest {
     #[inline]
     fn _mount(mut self, base: Origin<'static>, routes: Vec<Route>) -> Self {
         info!("{}{} {}{}",
@@ -397,7 +393,7 @@ impl RocketInner {
     }
 
     #[inline]
-    fn _manage(self, callback: Box<dyn FnOnce(RocketInner) -> RocketInner>) -> Self {
+    fn _manage(self, callback: Box<dyn FnOnce(Manifest) -> Manifest>) -> Self {
         callback(self)
     }
 
@@ -406,11 +402,11 @@ impl RocketInner {
         // Attach (and run attach) fairings, which requires us to move `self`.
         let mut fairings = mem::replace(&mut self.fairings, Fairings::new());
 
-        let mut rocket = Rocket { inner: Some(self), pending: vec![] };
+        let mut rocket = Rocket { manifest: Some(self), pending: vec![] };
         rocket = fairings.attach(fairing, rocket);
         rocket.finish();
 
-        self = rocket.take_inner();
+        self = rocket._take_manifest();
 
         // Make sure we keep all fairings around: the old and newly added ones!
         fairings.append(self.fairings);
@@ -458,7 +454,7 @@ impl RocketInner {
         self.state.freeze();
 
         // Run the launch fairings.
-        self.fairings.handle_launch(Inspector(&self));
+        self.fairings.handle_launch(&self);
 
         launch_info!("{}{} {}{}",
                      Paint::masked("🚀 "),
@@ -600,7 +596,7 @@ impl Rocket {
 
         let (shutdown_sender, shutdown_receiver) = mpsc::channel(1);
 
-        let inner = RocketInner {
+        let manifest = Manifest {
             config,
             router: Router::new(),
             default_catchers: catcher::defaults::get(),
@@ -611,9 +607,9 @@ impl Rocket {
             shutdown_receiver: Some(shutdown_receiver),
         };
 
-        inner.state.set(ShutdownHandleManaged(inner.shutdown_handle.clone()));
+        manifest.state.set(ShutdownHandleManaged(manifest.shutdown_handle.clone()));
 
-        Rocket { inner: Some(inner), pending: vec![] }
+        Rocket { manifest: Some(manifest), pending: vec![] }
     }
 
     /// Mounts all of the routes in the supplied vector at the given `base`
@@ -800,12 +796,12 @@ impl Rocket {
     pub(crate) fn finish(&mut self) {
         while !self.pending.is_empty() {
             let op = self.pending.remove(0);
-            let inner = self.take_inner();
-            self.inner = Some(match op {
-                BuildOperation::Mount(base, routes) => inner._mount(base, routes),
-                BuildOperation::Register(catchers) => inner._register(catchers),
-                BuildOperation::Manage(callback) => inner._manage(callback),
-                BuildOperation::Attach(fairing) => inner._attach(fairing),
+            let manifest = self._take_manifest();
+            self.manifest = Some(match op {
+                BuildOperation::Mount(base, routes) => manifest._mount(base, routes),
+                BuildOperation::Register(catchers) => manifest._register(catchers),
+                BuildOperation::Manage(callback) => manifest._manage(callback),
+                BuildOperation::Attach(fairing) => manifest._attach(fairing),
             });
         }
     }
@@ -840,11 +836,11 @@ impl Rocket {
 
         self.finish();
 
-        self.inner_mut().prelaunch_check().map_err(crate::error::Error::Launch)?;
+        self._manifest_mut().prelaunch_check().map_err(crate::error::Error::Launch)?;
 
-        let inspector = self.inspect();
+        let manifest = self.inspect();
 
-        let config = inspector.config();
+        let config = manifest.config();
 
         let full_addr = format!("{}:{}", config.address, config.port);
         let addrs = match full_addr.to_socket_addrs() {
@@ -858,7 +854,7 @@ impl Rocket {
             shutdown_handle,
             (cancel_ctrl_c_listener_sender, cancel_ctrl_c_listener_receiver)
         ) = (
-            inspector.get_shutdown_handle(),
+            manifest.get_shutdown_handle(),
             oneshot::channel(),
         );
 
@@ -869,13 +865,13 @@ impl Rocket {
                         Ok(ok) => ok,
                         Err(err) => return Err(Launch(LaunchError::new(LaunchErrorKind::Bind(err)))),
                     };
-                    self.take_inner().listen_on(listener)
+                    self._take_manifest().listen_on(listener)
                 }};
             }
 
             #[cfg(feature = "tls")]
             {
-                let config = inspector.config();
+                let config = manifest.config();
                 if let Some(tls) = config.tls.clone() {
                     listen_on!(crate::http::tls::bind_tls(addr, tls.certs, tls.key).await).boxed()
                 } else {
@@ -957,22 +953,22 @@ impl Rocket {
         runtime.block_on(async move { self.serve().await })
     }
 
-    pub(crate) fn take_inner(&mut self) -> RocketInner {
-        self.inner.take().expect("TODO error message")
+    pub(crate) fn _take_manifest(&mut self) -> Manifest {
+        self.manifest.take().expect("TODO error message")
     }
 
-    pub(crate) fn inner_ref(&self) -> &RocketInner {
-        self.inner.as_ref().expect("TODO error message")
+    pub(crate) fn _manifest(&self) -> &Manifest {
+        self.manifest.as_ref().expect("TODO error message")
     }
 
-    pub(crate) fn inner_mut(&mut self) -> &mut RocketInner {
-        self.inner.as_mut().expect("TODO error message")
+    pub(crate) fn _manifest_mut(&mut self) -> &mut Manifest {
+        self.manifest.as_mut().expect("TODO error message")
     }
 
     /// Access the current state of this `Rocket` instance.
     ///
-    /// The `Inspector` type provides methods such as [`Inspector::routes`]
-    /// and [`Inspector::state`]. This method is called to get an `Inspector`
+    /// The `Mnaifest` type provides methods such as [`Manifest::routes`]
+    /// and [`Manifest::state`]. This method is called to get an `Manifest`
     /// instance.
     ///
     /// # Example
@@ -982,13 +978,13 @@ impl Rocket {
     /// let config = rocket.inspect().config();
     /// # let _ = config;
     /// ```
-    pub fn inspect(&mut self) -> Inspector<'_> {
+    pub fn inspect(&mut self) -> &Manifest {
         self.finish();
-        Inspector(self.inner_ref())
+        self._manifest()
     }
 }
 
-impl<'r> Inspector<'r> {
+impl Manifest {
     /// Returns a [`ShutdownHandle`], which can be used to gracefully terminate
     /// the instance of Rocket. In routes, you should use the [`ShutdownHandle`]
     /// request guard.
@@ -1015,7 +1011,7 @@ impl<'r> Inspector<'r> {
     /// ```
     #[inline(always)]
     pub fn get_shutdown_handle(&self) -> ShutdownHandle {
-        self.0.shutdown_handle.clone()
+        self.shutdown_handle.clone()
     }
 
     /// Returns an iterator over all of the routes mounted on this instance of
@@ -1051,8 +1047,8 @@ impl<'r> Inspector<'r> {
     /// }
     /// ```
     #[inline(always)]
-    pub fn routes(&self) -> impl Iterator<Item = &'r Route> + 'r {
-        self.0.router.routes()
+    pub fn routes(&self) -> impl Iterator<Item = &Route> + '_ {
+        self.router.routes()
     }
 
     /// Returns `Some` of the managed state value for the type `T` if it is
@@ -1068,11 +1064,11 @@ impl<'r> Inspector<'r> {
     /// assert_eq!(rocket.inspect().state::<MyState>(), Some(&MyState("hello!")));
     ///
     /// let client = rocket::local::Client::new(rocket).expect("valid rocket");
-    /// assert_eq!(client.rocket().state::<MyState>(), Some(&MyState("hello!")));
+    /// assert_eq!(client.manifest().state::<MyState>(), Some(&MyState("hello!")));
     /// ```
     #[inline(always)]
-    pub fn state<T: Send + Sync + 'static>(&self) -> Option<&'r T> {
-        self.0.state.try_get()
+    pub fn state<T: Send + Sync + 'static>(&self) -> Option<&T> {
+        self.state.try_get()
     }
 
     /// Returns the active configuration.
@@ -1096,7 +1092,7 @@ impl<'r> Inspector<'r> {
     /// }
     /// ```
     #[inline(always)]
-    pub fn config(&self) -> &'r Config {
-        &self.0.config
+    pub fn config(&self) -> &Config {
+        &self.config
     }
 }
