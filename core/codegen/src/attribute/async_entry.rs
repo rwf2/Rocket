@@ -18,7 +18,7 @@ fn parse_input(input: TokenStream, attr_name: &str) -> Result<syn::ItemFn> {
     Ok(function)
 }
 
-pub fn _entry_point(_args: TokenStream, input: TokenStream, attr_name: &str, is_test: bool) -> Result<TokenStream> {
+pub fn _async_entry(_args: TokenStream, input: TokenStream, attr_name: &str, is_test: bool) -> Result<TokenStream> {
     let function = parse_input(input, attr_name)?;
 
     let attrs = &function.attrs;
@@ -45,9 +45,9 @@ pub fn _entry_point(_args: TokenStream, input: TokenStream, attr_name: &str, is_
 }
 
 pub fn async_test_attribute(args: TokenStream, input: TokenStream) -> TokenStream {
-    _entry_point(args, input, "async_test", true).unwrap_or_else(|d| { d.emit(); TokenStream::new() })
+    _async_entry(args, input, "async_test", true).unwrap_or_else(|d| { d.emit(); TokenStream::new() })
 }
 
 pub fn main_attribute(args: TokenStream, input: TokenStream) -> TokenStream {
-    _entry_point(args, input, "main", false).unwrap_or_else(|d| { d.emit(); TokenStream::new() })
+    _async_entry(args, input, "main", false).unwrap_or_else(|d| { d.emit(); TokenStream::new() })
 }
