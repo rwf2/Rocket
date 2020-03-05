@@ -837,10 +837,8 @@ impl Rocket {
         use crate::error::Error::Launch;
 
         self.finish();
-
-        self._manifest_mut().prelaunch_check().map_err(crate::error::Error::Launch)?;
-
-        let manifest = self.inspect();
+        let mut manifest = self._take_manifest();
+        manifest.prelaunch_check().map_err(crate::error::Error::Launch)?;
 
         let config = manifest.config();
 
@@ -867,7 +865,7 @@ impl Rocket {
                         Ok(ok) => ok,
                         Err(err) => return Err(Launch(LaunchError::new(LaunchErrorKind::Bind(err)))),
                     };
-                    self._take_manifest().listen_on(listener)
+                    manifest.listen_on(listener)
                 }};
             }
 
@@ -961,10 +959,6 @@ impl Rocket {
 
     pub(crate) fn _manifest(&self) -> &Manifest {
         self.manifest.as_ref().expect("TODO error message")
-    }
-
-    pub(crate) fn _manifest_mut(&mut self) -> &mut Manifest {
-        self.manifest.as_mut().expect("TODO error message")
     }
 
     /// Access the current state of this `Rocket` instance.
