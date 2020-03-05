@@ -19,7 +19,7 @@ use std::path::{PathBuf, Path};
 use rocket::{Request, Data, Route};
 use rocket::http::{Method, uri::Segments};
 use rocket::handler::{Handler, Outcome};
-use rocket::response::NamedFile;
+use rocket::response::{NamedFile, Redirect};
 
 /// A bitset representing configurable options for the [`StaticFiles`] handler.
 ///
@@ -272,7 +272,7 @@ impl StaticFiles {
 impl Into<Vec<Route>> for StaticFiles {
     fn into(self) -> Vec<Route> {
         let non_index = Route::ranked(self.rank, Method::Get, "/<path..>", self.clone());
-        if self.options.contains(Options::Index) {
+        if self.options.contains(Options::Index) || self.options.contains(Options::RedirectDirs) {
             let index = Route::ranked(self.rank, Method::Get, "/", self);
             vec![index, non_index]
         } else {
@@ -284,6 +284,10 @@ impl Into<Vec<Route>> for StaticFiles {
 impl Handler for StaticFiles {
     fn handle<'r>(&self, req: &'r Request<'_>, data: Data) -> Outcome<'r> {
         fn handle_dir<'r>(opt: Options, r: &'r Request<'_>, d: Data, path: &Path) -> Outcome<'r> {
+            if opt.contains(Options::RedirectDirs) && !r.uri().path().ends_with("/") {
+                return Outcome::from_or_forward(r, d, Redirect::moved(r.uri().path().to_owned() + "/"))
+            }
+
             if !opt.contains(Options::Index) {
                 return Outcome::forward(d);
             }
