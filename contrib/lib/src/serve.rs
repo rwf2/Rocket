@@ -53,6 +53,15 @@ impl Options {
     /// directories beginning with `.`. This is _not_ enabled by default.
     pub const DotFiles: Options = Options(0b0010);
 
+    /// `Options` enabling redirecting requests for directories if necessary
+    /// to ensure the path has a trailing `/`. When this is enabled, the
+    /// [`StaticFiles`] handler will respond to requests for a directory
+    /// without a trailing `/` with a permanent redirect to the same path
+    /// with a trailing `/`. This ensures relative URLs within any document
+    /// served for that directory will be interpreted relative to that
+    /// directory, rather than its parent. This is _not_ enabled by default.
+    pub const RedirectDirs: Options = Options(0b0100);
+
     /// Returns `true` if `self` is a superset of `other`. In other words,
     /// returns `true` if all of the options in `other` are also in `self`.
     ///
