@@ -404,9 +404,7 @@ impl Manifest {
 
         let mut rocket = Rocket { manifest: Some(self), pending: vec![] };
         rocket = fairings.attach(fairing, rocket);
-        rocket.finish();
-
-        self = rocket._take_manifest();
+        self = rocket.finish_and_take_manifest();
 
         // Make sure we keep all fairings around: the old and newly added ones!
         fairings.append(self.fairings);
@@ -798,7 +796,7 @@ impl Rocket {
         // so we don't simply use `self.pending.pop()`
         while !self.pending.is_empty() {
             let op = self.pending.remove(0);
-            let manifest = self._take_manifest();
+            let manifest = self.manifest.take().expect("TODO error message");
             self.manifest = Some(match op {
                 BuildOperation::Mount(base, routes) => manifest._mount(base, routes),
                 BuildOperation::Register(catchers) => manifest._register(catchers),
@@ -806,6 +804,11 @@ impl Rocket {
                 BuildOperation::Attach(fairing) => manifest._attach(fairing),
             });
         }
+    }
+
+    pub(crate) fn finish_and_take_manifest(mut self) -> Manifest {
+        self.finish();
+        self.manifest.take().expect("internal error: finish() should have replaced self.manifest")
     }
 
     /// Returns a `Future` that drives the server, listening for and dispathcing
@@ -831,13 +834,12 @@ impl Rocket {
     /// # }
     /// }
     /// ```
-    async fn serve(mut self) -> Result<(), crate::error::Error> {
+    async fn serve(self) -> Result<(), crate::error::Error> {
         use std::net::ToSocketAddrs;
 
         use crate::error::Error::Launch;
 
-        self.finish();
-        let mut manifest = self._take_manifest();
+        let mut manifest = self.finish_and_take_manifest();
         manifest.prelaunch_check().map_err(crate::error::Error::Launch)?;
 
         let config = manifest.config();
@@ -951,10 +953,6 @@ impl Rocket {
             .expect("Cannot build runtime!");
 
         runtime.block_on(async move { self.serve().await })
-    }
-
-    pub(crate) fn _take_manifest(&mut self) -> Manifest {
-        self.manifest.take().expect("TODO error message")
     }
 
     pub(crate) fn _manifest(&self) -> &Manifest {

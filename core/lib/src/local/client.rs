@@ -78,9 +78,8 @@ impl Client {
     /// Constructs a new `Client`. If `tracked` is `true`, an empty `CookieJar`
     /// is created for cookie tracking. Otherwise, the internal `CookieJar` is
     /// set to `None`.
-    fn _new(mut rocket: Rocket, tracked: bool) -> Result<Client, LaunchError> {
-        rocket.finish();
-        let mut manifest = rocket._take_manifest();
+    fn _new(rocket: Rocket, tracked: bool) -> Result<Client, LaunchError> {
+        let mut manifest = rocket.finish_and_take_manifest();
         manifest.prelaunch_check()?;
 
         let cookies = match tracked {
