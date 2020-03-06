@@ -758,8 +758,10 @@ impl Rocket {
                 error!("State for this type is already being managed!");
                 panic!("Aborting due to duplicately managed state.");
             }
+
             rocket
         })));
+
         self
     }
 
