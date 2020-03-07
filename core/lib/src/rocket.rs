@@ -798,7 +798,7 @@ impl Rocket {
         Box::pin(async move {
             while !self.pending.is_empty() {
                 let op = self.pending.remove(0);
-                let manifest = self.manifest.take().expect("TODO error message");
+                let manifest = self.manifest.take().expect("internal error: manifest was taken and not replaced. Was `inspect()` called but not polled to completion?");
                 self.manifest = Some(match op {
                     BuildOperation::Mount(base, routes) => manifest._mount(base, routes),
                     BuildOperation::Register(catchers) => manifest._register(catchers),
@@ -956,7 +956,7 @@ impl Rocket {
     }
 
     pub(crate) fn _manifest(&self) -> &Manifest {
-        self.manifest.as_ref().expect("TODO error message")
+        self.manifest.as_ref().expect("internal error: manifest was taken and not replaced. Was `inspect()` called but not polled to completion?")
     }
 
     /// Access the current state of this `Rocket` instance.
