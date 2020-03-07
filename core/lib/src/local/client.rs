@@ -150,7 +150,8 @@ impl Client {
         Client::_new(rocket, false)
     }
 
-    /// Returns the instance of `Rocket` this client is creating requests for.
+    /// Returns a reference to the `Manifest` of the `Rocket` this client is
+    /// creating requests for.
     ///
     /// # Example
     ///
@@ -160,8 +161,8 @@ impl Client {
     /// let my_rocket = rocket::ignite();
     /// let client = Client::new(my_rocket).expect("valid rocket");
     ///
-    /// // get the instance of `my_rocket` within `client`
-    /// let my_rocket = client.manifest();
+    /// // get access to the manifest within `client`
+    /// let manifest = client.manifest();
     /// ```
     #[inline(always)]
     pub fn manifest(&self) -> &Manifest {
