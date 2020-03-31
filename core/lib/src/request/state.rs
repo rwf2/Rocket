@@ -13,7 +13,7 @@ use crate::http::Status;
 /// registered to be managed by Rocket via
 /// [`Rocket::manage()`]. The type being managed must be
 /// thread safe and sendable across thread boundaries. In other words, it must
-/// implement [`Send`] + [`Sync`] + 'static`.
+/// implement [`Send`] + [`Sync`] + `'static`.
 ///
 /// # Example
 ///
