@@ -2,7 +2,7 @@ use std::{fmt, path};
 use std::borrow::Cow;
 
 use RawStr;
-use uri::{Uri, UriPart, Path, Query, Formatter};
+use uri::{segments, Uri, UriPart, Path, Query, Formatter};
 
 /// Trait implemented by types that can be displayed as part of a URI in
 /// [`uri!`].
@@ -386,6 +386,17 @@ impl UriDisplay<Path> for path::PathBuf {
     }
 }
 
+/// Converts Segments into a Path.
+impl<'a> UriDisplay<Path> for segments::Segments<'a> {
+    fn fmt(&self, f: &mut Formatter<Path>) -> fmt::Result {
+        for segment in self.clone() {
+            f.refresh();
+            f.write_raw(segment)?
+        };
+        f.write_raw("")
+    }
+}
+
 /// Defers to the `UriDisplay<P>` implementation for `T`.
 impl<'a, P: UriPart, T: UriDisplay<P> + ?Sized> UriDisplay<P> for &'a T {
     #[inline(always)]
@@ -471,7 +482,7 @@ pub fn assert_ignorable<P: UriPart, T: Ignorable<P>>() {  }
 #[cfg(test)]
 mod uri_display_tests {
     use std::path;
-    use uri::{FromUriParam, UriDisplay, Query, Path};
+    use uri::{segments, FromUriParam, UriDisplay, Query, Path, Origin};
 
     macro_rules! uri_display {
         (<$P:ident, $Target:ty> $source:expr) => ({
@@ -542,6 +553,10 @@ mod uri_display_tests {
 
         assert_display!(<Path, path::PathBuf> &"hi/wo rld", "hi/wo%20rld");
         assert_display!(<Path, path::PathBuf> &"hi there", "hi%20there");
+
+
+        assert_display!(<Path, segments::Segments> "hello/wo rld", "hello/wo%20rld");
+        assert_display!(<Path, segments::Segments> &"hello/wo rld", "hello/wo%20rld");
     }
 
     struct Wrapper<T>(T);

@@ -1,7 +1,7 @@
 use std::path::{Path, PathBuf};
 
 use RawStr;
-use uri::{self, UriPart, UriDisplay};
+use uri::{self, segments, UriPart, UriDisplay};
 
 /// Conversion trait for parameters used in [`uri!`] invocations.
 ///
@@ -337,6 +337,31 @@ impl<'a, 'b> FromUriParam<uri::Path, &'a &'b str> for PathBuf {
         Path::new(*param)
     }
 }
+
+impl<'a> FromUriParam<uri::Path, &'a PathBuf> for segments::Segments<'a> {
+    type Target = segments::Segments<'a>;
+
+    fn from_uri_param(p: &'a std::path::PathBuf) -> segments::Segments<'a> {
+        segments::Segments(&(p.as_path().to_str().unwrap()))
+    }
+}
+
+impl<'a> FromUriParam<uri::Path, &'a str> for segments::Segments<'a> {
+    type Target = segments::Segments<'a>;
+
+    fn from_uri_param(p: &'a str) -> segments::Segments<'a> {
+        segments::Segments(&p)
+    }
+}
+
+impl<'a, 'b> FromUriParam<uri::Path, &'a &'b str> for segments::Segments<'_> {
+    type Target = segments::Segments<'b>;
+
+    fn from_uri_param(p: &'a &'b str) -> segments::Segments<'b> {
+        segments::Segments(*p)
+    }
+}
+
 
 /// A no cost conversion allowing any `T` to be used in place of an `Option<T>`.
 impl<P: UriPart, A, T: FromUriParam<P, A>> FromUriParam<P, A> for Option<T> {
