@@ -102,7 +102,7 @@ use rocket::local::Client;
 use rocket::http::{ContentType, Status};
 
 let rocket = rocket::ignite().mount("/", routes![hello]);
-let client = Client::new(rocket).expect("valid rocket instance");
+let client = Client::new(rocket).expect("invalid rocket instance");
 let mut response = client.get("/").dispatch();
 
 assert_eq!(response.status(), Status::Ok);
@@ -175,7 +175,7 @@ testing: we _want_ our tests to panic when something goes wrong.
 # fn rocket() -> rocket::Rocket { rocket::ignite() }
 # use rocket::local::Client;
 
-let client = Client::new(rocket()).expect("valid rocket instance");
+let client = Client::new(rocket()).expect("invalid rocket instance");
 ```
 
 Then, we create a new `GET /` request and dispatch it, getting back our
@@ -184,7 +184,7 @@ application's response:
 ```rust
 # fn rocket() -> rocket::Rocket { rocket::ignite() }
 # use rocket::local::Client;
-# let client = Client::new(rocket()).expect("valid rocket instance");
+# let client = Client::new(rocket()).expect("invalid rocket instance");
 let mut response = client.get("/").dispatch();
 ```
 
@@ -207,7 +207,7 @@ We do this by checking the `Response` object directly:
 use rocket::http::{ContentType, Status};
 #
 # let rocket = rocket::ignite().mount("/", routes![hello]);
-# let client = Client::new(rocket).expect("valid rocket instance");
+# let client = Client::new(rocket).expect("invalid rocket instance");
 # let mut response = client.get("/").dispatch();
 
 assert_eq!(response.status(), Status::Ok);
@@ -241,7 +241,7 @@ mod test {
     #[test]
     # */ pub
     fn hello_world() {
-        let client = Client::new(rocket()).expect("valid rocket instance");
+        let client = Client::new(rocket()).expect("invalid rocket instance");
         let mut response = client.get("/").dispatch();
         assert_eq!(response.status(), Status::Ok);
         assert_eq!(response.body_string(), Some("Hello, world!".into()));
