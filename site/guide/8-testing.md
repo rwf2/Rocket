@@ -24,7 +24,7 @@ instance. Usage is straightforward:
      ```rust
      # use rocket::local::Client;
      # let rocket = rocket::ignite();
-     let client = Client::new(rocket).expect("valid rocket instance");
+     let client = Client::new(rocket).expect("invalid rocket instance");
      # let _ = client;
      ```
 
