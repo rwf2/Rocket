@@ -4,7 +4,7 @@ use std::fs::File;
 use std::time::Duration;
 
 #[cfg(feature = "tls")] use super::net_stream::HttpsStream;
-#[cfg(feature = "tls")] use http::tls::Certificate;
+#[cfg(feature = "tls")] use rocket_http::tls::Certificate;
 
 use super::data_stream::{DataStream, kill_stream};
 use super::net_stream::NetStream;
@@ -127,7 +127,8 @@ impl Data {
         let cert_info = net_stream.get_peer_certificates();
 
         // TODO: Explain this.
-        trace_!("Hyper buffer: [{}..{}] ({} bytes).", pos, cap, cap - pos);
+        // FIXME
+        // trace_!("Hyper buffer: [{}..{}] ({} bytes).", pos, cap, cap - pos);
 
         // Steal the internal, undecoded data buffer from Hyper.
         let (mut hyper_buf, pos, cap) = body.get_mut().take_buf();

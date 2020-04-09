@@ -1,4 +1,3 @@
-use super::rocket;
 use rocket::local::Client;
 use rocket::http::tls::pemfile;
 
@@ -8,7 +7,7 @@ use std::net::{IpAddr, Ipv4Addr, SocketAddr};
 
 #[test]
 fn hello_world() {
-    let rocket = rocket::ignite().mount("/", routes![super::hello]);
+    let rocket = rocket::ignite().mount("/", rocket::routes![super::hello]);
 
     // Open client's certificate
     let cert_file = OpenOptions::new()

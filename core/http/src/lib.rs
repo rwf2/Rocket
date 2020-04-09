@@ -21,10 +21,6 @@ pub mod ext;
 #[cfg(feature = "tls")]
 pub mod tls;
 
-#[doc(hidden)]
-#[cfg(feature = "tls")]
-pub mod mtls;
-
 #[macro_use]
 mod docify;
 #[macro_use]
@@ -38,6 +34,7 @@ mod header;
 mod accept;
 mod raw_str;
 mod parse;
+pub mod route;
 
 pub mod uncased;
 
@@ -62,4 +59,4 @@ pub use crate::header::{Header, HeaderMap};
 pub use crate::raw_str::RawStr;
 
 pub use crate::media_type::MediaType;
-pub use crate::cookies::{Cookie, SameSite, Cookies};
+pub use crate::cookies::{Cookie, SameSite, Cookies, CookieJar};

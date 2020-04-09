@@ -1,15 +1,15 @@
 use std::fmt::Debug;
 use std::net::SocketAddr;
 
-use crate::router::Route;
-use crate::request::Request;
-use crate::outcome::{self, IntoOutcome};
 use crate::outcome::Outcome::*;
+use crate::outcome::{self, IntoOutcome};
+use crate::request::Request;
+use crate::router::Route;
 
-use crate::http::{Status, ContentType, Accept, Method, Cookies, uri::Origin};
+use crate::http::{uri::Origin, Accept, ContentType, Cookies, Method, Status};
 
 #[cfg(feature = "tls")]
-use http::tls::{lookup_addr, find_valid_cert_for_peer, MutualTlsUser};
+use rocket_http::tls::{find_valid_cert_for_peer, lookup_addr, MutualTlsUser};
 
 /// Type alias for the `Outcome` of a `FromRequest` conversion.
 pub type Outcome<S, E> = outcome::Outcome<S, (Status, E), ()>;
@@ -22,7 +22,7 @@ impl<S, E> IntoOutcome<S, (Status, E), ()> for Result<S, E> {
     fn into_outcome(self, status: Status) -> Outcome<S, E> {
         match self {
             Ok(val) => Success(val),
-            Err(err) => Failure((status, err))
+            Err(err) => Failure((status, err)),
         }
     }
 
@@ -30,7 +30,7 @@ impl<S, E> IntoOutcome<S, (Status, E), ()> for Result<S, E> {
     fn or_forward(self, _: ()) -> Outcome<S, E> {
         match self {
             Ok(val) => Success(val),
-            Err(_) => Forward(())
+            Err(_) => Forward(()),
         }
     }
 }
@@ -381,7 +381,7 @@ impl<'r> FromRequest<'_, 'r> for &'r Route {
     fn from_request(request: &Request<'r>) -> Outcome<Self, Self::Error> {
         match request.route() {
             Some(route) => Success(route),
-            None => Forward(())
+            None => Forward(()),
         }
     }
 }
@@ -400,7 +400,7 @@ impl<'a> FromRequest<'a, '_> for &'a Accept {
     fn from_request(request: &'a Request<'_>) -> Outcome<Self, Self::Error> {
         match request.accept() {
             Some(accept) => Success(accept),
-            None => Forward(())
+            None => Forward(()),
         }
     }
 }
@@ -411,7 +411,7 @@ impl<'a> FromRequest<'a, '_> for &'a ContentType {
     fn from_request(request: &'a Request<'_>) -> Outcome<Self, Self::Error> {
         match request.content_type() {
             Some(content_type) => Success(content_type),
-            None => Forward(())
+            None => Forward(()),
         }
     }
 }
@@ -422,7 +422,7 @@ impl FromRequest<'_, '_> for SocketAddr {
     fn from_request(request: &Request<'_>) -> Outcome<Self, Self::Error> {
         match request.remote() {
             Some(addr) => Success(addr),
-            None => Forward(())
+            None => Forward(()),
         }
     }
 }
@@ -451,21 +451,34 @@ impl<'a, 'r, T: FromRequest<'a, 'r>> FromRequest<'a, 'r> for Option<T> {
 }
 
 #[cfg(feature = "tls")]
-impl <'a, 'r> FromRequest<'a, 'r> for MutualTlsUser {
+impl<'a, 'r> FromRequest<'a, 'r> for MutualTlsUser {
     type Error = ();
 
     fn from_request(request: &'a Request<'r>) -> Outcome<Self, Self::Error> {
         // Verify the client's common name against the provided certificates
         // Fail if we can't get the common name or no certificates match.
 
-        let certs = request.get_peer_certificates().or_forward(())?;
+        // FIXME: probably very poor code here
+
+        let certs = match request.get_peer_certificates() {
+            Some(certs) => certs,
+            None => return Outcome::Forward(()),
+        };
 
         // Get peer's IP address and look up the DNS name
-        let ip_addr = request.client_ip().or_forward(())?;
-        let name = lookup_addr(&ip_addr).map_err(|_| ()).or_forward(())?;
+        let ip_addr = match request.client_ip() {
+            Some(ip) => ip,
+            None => return Outcome::Forward(()),
+        };
+        let name = match lookup_addr(&ip_addr) {
+            Ok(name) => name,
+            Err(_) => return Outcome::Forward(()),
+        };
 
         // Validate the name against the provided certs and create a MutualTlsUser
-        find_valid_cert_for_peer(&name, &certs).or_forward(())?;
+        if let Err(_) = find_valid_cert_for_peer(&name, &certs) {
+            return Outcome::Forward(());
+        }
 
         Success(MutualTlsUser::new(&name))
     }

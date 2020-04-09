@@ -10,16 +10,17 @@ use state::{Container, Storage};
 use crate::request::{FromParam, FromSegments, FromRequest, Outcome};
 use crate::request::{FromFormValue, FormItems, FormItem};
 
-use rocket::Rocket;
-use router::Route;
-use config::{Config, Limits};
-use http::uri::{Origin, Segments};
-use error::Error;
-use http::{Method, Header, HeaderMap, Cookies, CookieJar};
-use http::{RawStr, ContentType, Accept, MediaType};
-use http::hyper;
+use crate::rocket::Rocket;
+use crate::router::Route;
+use crate::config::{Config, Limits};
+use rocket_http::uri::{Origin, Segments};
+// use crate::error::Error;
+use rocket_http::{Method, Header, HeaderMap, Cookies, CookieJar};
+use rocket_http::{RawStr, ContentType, Accept, MediaType};
+use rocket_http::hyper;
+use rocket_http::private::{Indexed, SmallVec};
 #[cfg(feature = "tls")]
-use http::tls::Certificate;
+use rocket_http::tls::Certificate;
 
 type Indices = (usize, usize);
 
@@ -44,7 +45,7 @@ pub struct Request<'r> {
 pub(crate) struct RequestState<'r> {
     pub config: &'r Config,
     pub managed: &'r Container,
-    pub path_segments: SmallVec<[Indices; 12]>,
+    pub path_segments: SmallVec<[Indices;12]>,
     pub query_items: Option<SmallVec<[IndexedFormItem; 6]>>,
     pub route: Cell<Option<&'r Route>>,
     pub cookies: RefCell<CookieJar>,

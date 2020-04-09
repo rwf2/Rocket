@@ -9,7 +9,7 @@ use crate::http::{Status, Method, Header, Cookie, uri::Origin, ext::IntoOwned};
 use crate::local::Client;
 
 #[cfg(feature = "tls")]
-use http::tls::Certificate;
+use rocket_http::tls::Certificate;
 
 /// A structure representing a local request as created by [`Client`].
 ///

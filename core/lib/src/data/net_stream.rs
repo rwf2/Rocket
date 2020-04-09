@@ -2,8 +2,8 @@ use std::io;
 use std::net::{SocketAddr, Shutdown};
 use std::time::Duration;
 
-#[cfg(feature = "tls")] use http::tls::{Certificate, WrappedStream, ServerSession};
-use http::hyper::net::{HttpStream, NetworkStream};
+#[cfg(feature = "tls")] use rocket_http::tls::{Certificate, WrappedStream, ServerSession};
+use rocket_http::hyper::net::{HttpStream, NetworkStream};
 
 use self::NetStream::*;
 

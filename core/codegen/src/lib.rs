@@ -59,8 +59,6 @@
 //! ```
 
 #[macro_use] extern crate quote;
-extern crate proc_macro;
-
 use rocket_http as http;
 
 macro_rules! vars_and_mods {

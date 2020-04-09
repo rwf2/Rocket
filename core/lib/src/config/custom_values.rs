@@ -1,6 +1,6 @@
 use std::fmt;
 
-#[cfg(feature = "tls")] use http::tls::{Certificate, PrivateKey, RootCertStore};
+#[cfg(feature = "tls")] use rocket_http::tls::{Certificate, PrivateKey, RootCertStore};
 
 use crate::http::private::Key;
 use crate::config::{Result, Config, Value, ConfigError, LoggingLevel};

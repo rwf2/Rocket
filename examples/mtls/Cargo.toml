@@ -3,6 +3,7 @@ name = "mtls"
 version = "0.0.0"
 workspace = "../../"
 publish = false
+edition = "2018"
 
 [dependencies]
 rocket = { path = "../../core/lib", features = ["tls"] }

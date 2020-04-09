@@ -514,14 +514,14 @@ impl Config {
     ///
     /// # use rocket::config::ConfigError;
     /// # fn config_test() -> Result<(), ConfigError> {
-    /// let mut config = Config::development()?;
+    /// let mut config = Config::development();
     /// config.set_tls("/etc/ssl/my_certs.pem", "/etc/ssl/priv.key", None)?;
     /// # Ok(())
     /// # }
     /// ```
     #[cfg(feature = "tls")]
     pub fn set_tls(&mut self, certs_path: &str, key_path: &str, cert_store_path: Option<&str>) -> Result<()> {
-        use http::tls::util::{self, Error};
+        use rocket_http::tls::util::{self, Error};
         let pem_err = "malformed PEM file";
 
         // Load the certificates.
