@@ -322,7 +322,7 @@ impl ConfigBuilder {
         config.set_log_level(self.log_level);
         config.set_extras(self.extras);
         config.set_limits(self.limits);
-        
+
         if let Some(root) = self.root {
             config.set_root(root);
         }
