@@ -252,8 +252,8 @@ impl Rocket {
                     // Return early so we don't set cookies twice.
                     return self.route_and_process(request, data);
                 } else {
-                    // No match was found and it can't be autohandled. 404.
-                    self.handle_error(Status::NotFound, request)
+                    // No match was found and it can't be autohandled. 405.
+                    self.handle_error(Status::MethodNotAllowed, request)
                 }
             }
             Outcome::Failure(status) => self.handle_error(status, request),
