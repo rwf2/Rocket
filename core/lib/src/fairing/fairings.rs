@@ -1,5 +1,6 @@
 use crate::{Rocket, Request, Response, Data};
 use crate::fairing::{Fairing, Kind};
+use crate::logger::PaintExt;
 
 use yansi::Paint;
 
@@ -93,7 +94,7 @@ impl Fairings {
 
     pub fn pretty_print_counts(&self) {
         if !self.all_fairings.is_empty() {
-            info!("{}{}:", Paint::masked("📡 "), Paint::magenta("Fairings"));
+            info!("{}{}:", Paint::emoji("📡 "), Paint::magenta("Fairings"));
             self.info_for("launch", &self.launch);
             self.info_for("request", &self.request);
             self.info_for("response", &self.response);

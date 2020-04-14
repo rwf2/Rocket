@@ -21,6 +21,7 @@ use crate::catcher::{self, Catcher};
 use crate::outcome::Outcome;
 use crate::error::{LaunchError, LaunchErrorKind};
 use crate::fairing::{Fairing, Fairings};
+use crate::logger::PaintExt;
 
 use crate::http::{Method, Status, Header};
 use crate::http::hyper::{self, header};
@@ -403,7 +404,7 @@ impl Rocket {
             logger::push_max_level(logger::LoggingLevel::Normal);
         }
 
-        launch_info!("{}Configured for {}.", Paint::masked("🔧 "), config.environment);
+        launch_info!("{}Configured for {}.", Paint::emoji("🔧 "), config.environment);
         launch_info_!("address: {}", Paint::default(&config.address).bold());
         launch_info_!("port: {}", Paint::default(&config.port).bold());
         launch_info_!("log: {}", Paint::default(config.log_level).bold());
@@ -503,7 +504,7 @@ impl Rocket {
     #[inline]
     pub fn mount<R: Into<Vec<Route>>>(mut self, base: &str, routes: R) -> Self {
         info!("{}{} {}{}",
-              Paint::masked("🛰  "),
+              Paint::emoji("🛰  "),
               Paint::magenta("Mounting"),
               Paint::blue(base),
               Paint::magenta(":"));
@@ -562,7 +563,7 @@ impl Rocket {
     /// ```
     #[inline]
     pub fn register(mut self, catchers: Vec<Catcher>) -> Self {
-        info!("{}{}", Paint::masked("👾 "), Paint::magenta("Catchers:"));
+        info!("{}{}", Paint::emoji("👾 "), Paint::magenta("Catchers:"));
         for c in catchers {
             if self.catchers.get(&c.code).map_or(false, |e| !e.is_default) {
                 info_!("{} {}", c, Paint::yellow("(warning: duplicate catcher!)"));
@@ -721,7 +722,7 @@ impl Rocket {
 
             let full_addr = format!("{}:{}", self.config.address, self.config.port);
             launch_info!("{}{} {}{}",
-                         Paint::masked("🚀 "),
+                         Paint::emoji("🚀 "),
                          Paint::default("Rocket has launched from").bold(),
                          Paint::default(proto).bold().underline(),
                          Paint::default(&full_addr).bold().underline());
