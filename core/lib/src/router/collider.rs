@@ -39,8 +39,7 @@ impl Route {
     ///     - If no query in route, requests with/without queries match.
     #[doc(hidden)]
     pub fn matches(&self, req: &Request<'_>) -> bool {
-        self.method == req.method()
-            && paths_match(self, req)
+        paths_match(self, req)
             && queries_match(self, req)
             && formats_match(self, req)
     }

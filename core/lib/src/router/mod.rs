@@ -36,12 +36,15 @@ impl Router {
     }
 
     pub fn route<'b>(&'b self, req: &Request<'_>) -> Vec<&'b Route> {
-        // Note that routes are presorted by rank on each `add`.
-        let matches = self.routes.get(&req.method()).map_or(vec![], |routes| {
-            routes.iter()
-                .filter(|r| r.matches(req))
-                .collect()
-        });
+        
+        let mut matches = Vec::new();
+        for (_method, vec_route) in self.routes.iter(){
+            for _route in vec_route{
+                if _route.matches(req){
+                    matches.push(_route);
+                }
+            }
+        }
 
         trace_!("Routing the request: {}", req);
         trace_!("All matches: {:?}", matches);
