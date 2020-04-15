@@ -253,7 +253,7 @@ impl Rocket {
                     return self.route_and_process(request, data);
                 } else {
                     // No match was found and it can't be autohandled. 405.
-                    self.handle_error(Status::MethodNotAllowed, request)
+                    self.handle_error(Status::NotFound, request)
                 }
             }
             Outcome::Failure(status) => self.handle_error(status, request),
@@ -287,21 +287,32 @@ impl Rocket {
     ) -> handler::Outcome<'r> {
         // Go through the list of matching routes until we fail or succeed.
         let matches = self.router.route(request);
+
         for route in matches {
-            // Retrieve and set the requests parameters.
-            info_!("Matched: {}", route);
-            request.set_route(route);
+            
+            // Must pass HEAD requests foward
+            if (&request.method() != &Method::Head) && (&route.method != &request.method()){
+                error_!("No matching routes for {}.", request);
+                info_!("{} {}", Paint::yellow("A similar route exists:").bold(), route);
+                return Outcome::Failure(Status::MethodNotAllowed)
+            }else{
+                // Retrieve and set the requests parameters.
+                info_!("Matched: {}", route);
+                
+                request.set_route(route);
 
-            // Dispatch the request to the handler.
-            let outcome = route.handler.handle(request, data);
+                // Dispatch the request to the handler.
+                let outcome = route.handler.handle(request, data);
+    
+                // Check if the request processing completed or if the request needs
+                // to be forwarded. If it does, continue the loop to try again.
+                info_!("{} {}", Paint::default("Outcome:").bold(), outcome);
+                match outcome {
+                    o@Outcome::Success(_) | o@Outcome::Failure(_) => return o,
+                    Outcome::Forward(unused_data) => data = unused_data,
+                };
+            }
 
-            // Check if the request processing completed or if the request needs
-            // to be forwarded. If it does, continue the loop to try again.
-            info_!("{} {}", Paint::default("Outcome:").bold(), outcome);
-            match outcome {
-                o@Outcome::Success(_) | o@Outcome::Failure(_) => return o,
-                Outcome::Forward(unused_data) => data = unused_data,
-            };
         }
 
         error_!("No matching routes for {}.", request);
