@@ -5,14 +5,17 @@ use std::collections::hash_map::HashMap;
 
 pub use self::route::Route;
 
-use crate::request::Request;
 use crate::http::Method;
+use crate::request::Request;
 
 // type Selector = (Method, usize);
 type Selector = Method;
 
 // A handler to use when one is needed temporarily.
-pub(crate) fn dummy_handler<'r>(r: &'r crate::Request<'_>, _: crate::Data) -> crate::handler::Outcome<'r> {
+pub(crate) fn dummy_handler<'r>(
+    r: &'r crate::Request<'_>,
+    _: crate::Data,
+) -> crate::handler::Outcome<'r> {
     crate::Outcome::from(r, ())
 }
 
@@ -23,24 +26,26 @@ pub struct Router {
 
 impl Router {
     pub fn new() -> Router {
-        Router { routes: HashMap::new() }
+        Router {
+            routes: HashMap::new(),
+        }
     }
 
     pub fn add(&mut self, route: Route) {
         let selector = route.method;
         let entries = self.routes.entry(selector).or_insert_with(|| vec![]);
-        let i = entries.binary_search_by_key(&route.rank, |r| r.rank)
+        let i = entries
+            .binary_search_by_key(&route.rank, |r| r.rank)
             .unwrap_or_else(|i| i);
 
         entries.insert(i, route);
     }
 
     pub fn route<'b>(&'b self, req: &Request<'_>) -> Vec<&'b Route> {
-        
         let mut matches = Vec::new();
-        for (_method, vec_route) in self.routes.iter(){
-            for _route in vec_route{
-                if _route.matches(req){
+        for (_method, vec_route) in self.routes.iter() {
+            for _route in vec_route {
+                if _route.matches(req) {
                     matches.push(_route);
                 }
             }
@@ -78,7 +83,7 @@ impl Router {
     }
 
     #[inline]
-    pub fn routes<'a>(&'a self) -> impl Iterator<Item=&'a Route> + 'a {
+    pub fn routes<'a>(&'a self) -> impl Iterator<Item = &'a Route> + 'a {
         self.routes.values().flat_map(|v| v.iter())
     }
 
@@ -101,14 +106,14 @@ impl Router {
 
 #[cfg(test)]
 mod test {
-    use super::{Router, Route, dummy_handler};
+    use super::{dummy_handler, Route, Router};
 
-    use crate::rocket::Rocket;
     use crate::config::Config;
+    use crate::http::uri::Origin;
     use crate::http::Method;
     use crate::http::Method::*;
-    use crate::http::uri::Origin;
     use crate::request::Request;
+    use crate::rocket::Rocket;
 
     fn router_with_routes(routes: &[&'static str]) -> Router {
         let mut router = Router::new();
@@ -188,12 +193,24 @@ mod test {
     fn test_collisions_query() {
         // Query shouldn't affect things when unranked.
         assert!(unranked_route_collisions(&["/hello?<foo>", "/hello"]));
-        assert!(unranked_route_collisions(&["/<a>?foo=bar", "/hello?foo=bar&cat=fat"]));
-        assert!(unranked_route_collisions(&["/<a>?foo=bar", "/hello?foo=bar&cat=fat"]));
+        assert!(unranked_route_collisions(&[
+            "/<a>?foo=bar",
+            "/hello?foo=bar&cat=fat"
+        ]));
+        assert!(unranked_route_collisions(&[
+            "/<a>?foo=bar",
+            "/hello?foo=bar&cat=fat"
+        ]));
         assert!(unranked_route_collisions(&["/<a>", "/<b>?<foo>"]));
-        assert!(unranked_route_collisions(&["/hello/bob?a=b", "/hello/<b>?d=e"]));
+        assert!(unranked_route_collisions(&[
+            "/hello/bob?a=b",
+            "/hello/<b>?d=e"
+        ]));
         assert!(unranked_route_collisions(&["/<foo>?a=b", "/foo?d=e"]));
-        assert!(unranked_route_collisions(&["/<foo>?a=b&<c>", "/<foo>?d=e&<c>"]));
+        assert!(unranked_route_collisions(&[
+            "/<foo>?a=b&<c>",
+            "/<foo>?d=e&<c>"
+        ]));
         assert!(unranked_route_collisions(&["/<foo>?a=b&<c>", "/<foo>?d=e"]));
     }
 
@@ -209,8 +226,14 @@ mod test {
     #[test]
     fn test_no_collision_when_ranked() {
         assert!(!default_rank_route_collisions(&["/<a>", "/hello"]));
-        assert!(!default_rank_route_collisions(&["/hello/bob", "/hello/<b>"]));
-        assert!(!default_rank_route_collisions(&["/a/b/c/d", "/<a>/<b>/c/d"]));
+        assert!(!default_rank_route_collisions(&[
+            "/hello/bob",
+            "/hello/<b>"
+        ]));
+        assert!(!default_rank_route_collisions(&[
+            "/a/b/c/d",
+            "/<a>/<b>/c/d"
+        ]));
         assert!(!default_rank_route_collisions(&["/hi", "/<hi>"]));
         assert!(!default_rank_route_collisions(&["/hi", "/<hi>"]));
         assert!(!default_rank_route_collisions(&["/a/b", "/a/b/<c..>"]));
@@ -219,7 +242,10 @@ mod test {
     #[test]
     fn test_collision_when_ranked_query() {
         assert!(default_rank_route_collisions(&["/a?a=b", "/a?c=d"]));
-        assert!(default_rank_route_collisions(&["/<foo>?a=b", "/<foo>?c=d&<d>"]));
+        assert!(default_rank_route_collisions(&[
+            "/<foo>?a=b",
+            "/<foo>?c=d&<d>"
+        ]));
     }
 
     #[test]
@@ -309,11 +335,11 @@ mod test {
     }
 
     macro_rules! assert_ranked_routes {
-        ($routes:expr, $to:expr, $want:expr) => ({
+        ($routes:expr, $to:expr, $want:expr) => {{
             let router = router_with_routes($routes);
             let route_path = route(&router, Get, $to).unwrap().uri.to_string();
             assert_eq!(route_path, $want.to_string());
-        })
+        }};
     }
 
     #[test]
