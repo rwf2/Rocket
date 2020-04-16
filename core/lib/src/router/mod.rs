@@ -308,9 +308,9 @@ mod test {
     #[test]
     fn test_err_routing() {
         let router = router_with_routes(&["/hello"]);
-        assert!(route(&router, Put, "/hello").is_none());
-        assert!(route(&router, Post, "/hello").is_none());
-        assert!(route(&router, Options, "/hello").is_none());
+        assert!(route(&router, Put, "/hello").is_some());
+        assert!(route(&router, Post, "/hello").is_some());
+        assert!(route(&router, Options, "/hello").is_some());
         assert!(route(&router, Get, "/hell").is_none());
         assert!(route(&router, Get, "/hi").is_none());
         assert!(route(&router, Get, "/hello/there").is_none());
@@ -318,20 +318,19 @@ mod test {
         assert!(route(&router, Get, "/hillo").is_none());
 
         let router = router_with_routes(&["/<a>"]);
-        assert!(route(&router, Put, "/hello").is_none());
-        assert!(route(&router, Post, "/hello").is_none());
-        assert!(route(&router, Options, "/hello").is_none());
+        assert!(route(&router, Put, "/hello").is_some());
+        assert!(route(&router, Post, "/hello").is_some());
+        assert!(route(&router, Options, "/hello").is_some());
         assert!(route(&router, Get, "/hello/there").is_none());
         assert!(route(&router, Get, "/hello/i").is_none());
 
         let router = router_with_routes(&["/<a>/<b>"]);
+        assert!(route(&router, Put, "/a/b").is_some());
+        assert!(route(&router, Put, "/hello/hi").is_some());
         assert!(route(&router, Get, "/a/b/c").is_none());
         assert!(route(&router, Get, "/a").is_none());
         assert!(route(&router, Get, "/a/").is_none());
         assert!(route(&router, Get, "/a/b/c/d").is_none());
-        assert!(route(&router, Put, "/hello/hi").is_none());
-        assert!(route(&router, Put, "/a/b").is_none());
-        assert!(route(&router, Put, "/a/b").is_none());
     }
 
     macro_rules! assert_ranked_routes {

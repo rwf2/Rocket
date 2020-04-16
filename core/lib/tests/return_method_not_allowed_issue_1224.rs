@@ -3,12 +3,12 @@
 #[macro_use]
 extern crate rocket;
 
-#[get("/")]
+#[get("/index")]
 fn get_index() -> &'static str {
     "GET index :)"
 }
 
-#[post("/")]
+#[post("/index")]
 fn post_index() -> &'static str {
     "POST index :)"
 }
@@ -26,12 +26,11 @@ mod tests {
     #[test]
     fn test_http_200_when_same_route_with_diff_meth() {
         let rocket = rocket::ignite()
-            .mount("/", routes![get_index])
-            .mount("/", routes![post_index]);
+            .mount("/", routes![get_index, post_index]);
 
         let client = Client::new(rocket).unwrap();
 
-        let response = client.post("/").dispatch();
+        let response = client.post("/index").dispatch();
 
         assert_eq!(response.status(), Status::Ok);
     }
@@ -42,7 +41,7 @@ mod tests {
 
         let client = Client::new(rocket).unwrap();
 
-        let response = client.head("/").dispatch();
+        let response = client.head("/index").dispatch();
 
         assert_eq!(response.status(), Status::Ok);
     }
@@ -53,7 +52,7 @@ mod tests {
 
         let client = Client::new(rocket).unwrap();
 
-        let response = client.get("/").dispatch();
+        let response = client.get("/index").dispatch();
 
         assert_eq!(response.status(), Status::Ok);
     }
@@ -64,7 +63,7 @@ mod tests {
 
         let client = Client::new(rocket).unwrap();
 
-        let response = client.get("/?say=hi").dispatch();
+        let response = client.get("/index?say=hi").dispatch();
 
         assert_eq!(response.status(), Status::Ok);
     }
@@ -86,7 +85,7 @@ mod tests {
 
         let client = Client::new(rocket).unwrap();
 
-        let response = client.post("/").dispatch();
+        let response = client.post("/index").dispatch();
 
         assert_eq!(response.status(), Status::MethodNotAllowed);
     }
