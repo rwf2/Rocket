@@ -12,32 +12,32 @@ macro_rules! dispatch {
     })
 }
 
-// FIND A MATCHING TEMPLATE TO HTTP 405 HERE
-// #[test]
-// fn test_root() {
-//     // Check that the redirect works.
-//     for method in &[Get, Head] {
-//         dispatch!(*method, "/", |_: &Client, mut response: LocalResponse<'_>| {
-//             assert_eq!(response.status(), Status::SeeOther);
-//             assert!(response.body().is_none());
+#[test]
+fn test_root() {
+    // Check that the redirect works.
+    for method in &[Get, Head] {
+        dispatch!(*method, "/", |_: &Client, mut response: LocalResponse<'_>| {
+            assert_eq!(response.status(), Status::SeeOther);
+            assert!(response.body().is_none());
 
-//             let location: Vec<_> = response.headers().get("Location").collect();
-//             assert_eq!(location, vec!["/hello/Unknown"]);
-//         });
-//     }
+            let location: Vec<_> = response.headers().get("Location").collect();
+            assert_eq!(location, vec!["/hello/Unknown"]);
+        });
+    }
 
-//     // Check that other request methods are not accepted (and instead caught).
-//     for method in &[Post, Put, Delete, Options, Trace, Connect, Patch] {
-//         dispatch!(*method, "/", |client: &Client, mut response: LocalResponse<'_>| {
-//             let mut map = std::collections::HashMap::new();
-//             map.insert("path", "/");
-//             let expected = Template::show(client.rocket(), "error/405", &map).unwrap();
+    // Check that other request methods are not accepted (and instead caught).
+    for method in &[Post, Put, Delete, Options, Trace, Connect, Patch] {
+        dispatch!(*method, "/", |client: &Client, mut response: LocalResponse<'_>| {
+            let mut map = std::collections::HashMap::new();
+            map.insert("path", "/");
+            //let expected = Template::show(client.rocket(), "error/405", &map).unwrap();
 
-//             assert_eq!(response.status(), Status::MethodNotAllowed);
-//             assert_eq!(response.body_string(), Some(expected));
-//         });
-//     }
-// }
+            assert_eq!(response.status(), Status::MethodNotAllowed);
+            // FIND A MATCHING TEMPLATE TO HTTP 405 HERE
+            //assert_eq!(response.body_string(), Some(expected));
+        });
+    }
+}
 
 #[test]
 fn test_name() {

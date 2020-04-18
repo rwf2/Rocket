@@ -61,7 +61,7 @@ mod fairing_before_head_strip {
                 assert_eq!(c.0.fetch_add(1, Ordering::SeqCst), 0);
             }))
             .attach(AdHoc::on_response("Check GET", |req, res| {
-                assert_eq!(req.method(), Method::Get);
+                assert_eq!(req.method(), Method::Head);
                 assert_eq!(res.body_string(), Some(RESPONSE_STRING.into()));
             }));
 
