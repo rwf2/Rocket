@@ -212,7 +212,7 @@ impl Rocket {
 
         // Route the request and run the user's handlers.
         let mut response = self.route_and_process(request, data);
-        
+
         // Add a default 'Server' header if it isn't already there.
         // TODO: If removing Hyper, write out `Date` header too.
         if !response.headers().contains("Server") {
@@ -283,14 +283,12 @@ impl Rocket {
         let matches = self.router.route(request);
         let mut counter: usize = 0;
         for route in &matches {
-
             counter += 1;
 
             // Must pass HEAD requests foward
             if (&request.method() != &Method::Head) && (&route.method != &request.method()) {
-                
                 // Must make sure it consumed all list before fail
-                if &counter == &matches.len(){
+                if &counter == &matches.len() {
                     error_!("No matching routes for {}.", request);
                     info_!(
                         "{} {}",
@@ -298,15 +296,10 @@ impl Rocket {
                         route
                     );
                     return Outcome::Failure(Status::MethodNotAllowed);
-
-                }else{
-
-                    continue
-
+                } else {
+                    continue;
                 }
-
             } else {
-
                 // Retrieve and set the requests parameters.
                 info_!("Matched: {}", route);
 
