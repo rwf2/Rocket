@@ -1,3 +1,5 @@
+// normalize-stderr-test: "::: (.*)/core/http" -> "::: $$ROCKET/core/http"
+
 #[macro_use] extern crate rocket;
 
 #[derive(UriDisplayQuery)]

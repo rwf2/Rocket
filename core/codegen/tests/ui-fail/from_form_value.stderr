@@ -98,5 +98,5 @@ note: error occurred while deriving `FromFormValue`
    |          ^^^^^^^^^^^^^
    = note: this error originates in a derive macro (in Nightly builds, run with -Z macro-backtrace for more info)
 
-error: aborting due to 7 previous errors
+error: aborting due to 7 previous errors; 1 warning emitted
 

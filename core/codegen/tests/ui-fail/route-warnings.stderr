@@ -42,3 +42,5 @@ note: 'HEAD' does not typically support payloads
    |   ^^^^
    = note: this warning originates in an attribute macro (in Nightly builds, run with -Z macro-backtrace for more info)
 
+warning: 5 warnings emitted
+
