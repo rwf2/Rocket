@@ -373,7 +373,7 @@ impl Cookies<'_> {
         }
 
         if cookie.expires().is_none() {
-            cookie.set_expires(time::OffsetDateTime::now() + time::Duration::weeks(1));
+            cookie.set_expires(time::OffsetDateTime::now_utc() + time::Duration::weeks(1));
         }
 
         if cookie.same_site().is_none() {
