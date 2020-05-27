@@ -414,7 +414,7 @@ impl<'c> LocalRequest<'c> {
         // with the changes reflected by `response`.
         if let Some(ref jar) = client.cookies {
             let mut jar = jar.write().expect("LocalRequest::_dispatch() write lock");
-            let current_time = time::OffsetDateTime::now();
+            let current_time = time::OffsetDateTime::now_utc();
             for cookie in response.cookies() {
                 if let Some(expires) = cookie.expires() {
                     if expires <= current_time {
