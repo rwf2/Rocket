@@ -68,4 +68,11 @@ fn post_get_put_get() {
     let body = res.into_string().unwrap();
     assert!(!body.contains("Hello, world!"));
     assert!(body.contains("Bye bye, world!"));
+
+    // Check that the message exists with the updated contents.
+    let res = client.get("/message/1?labels=%5B%22label1%22%2C%20%22label2%22%5D").header(ContentType::JSON).dispatch();
+    assert_eq!(res.status(), Status::Ok);
+    let body = res.into_string().unwrap();
+    assert!(!body.contains("Hello, world!"));
+    assert!(body.contains("Bye bye, world! with labels: label1,label2"));
 }

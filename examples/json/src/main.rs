@@ -20,7 +20,7 @@ type MessageMap = Mutex<HashMap<ID, String>>;
 #[derive(Serialize, Deserialize)]
 struct Message {
     id: Option<ID>,
-    contents: String
+    contents: String,
 }
 
 // TODO: This example can be improved by using `route` with multiple HTTP verbs.
@@ -49,13 +49,13 @@ fn update(id: ID, message: Json<Message>, map: State<'_, MessageMap>) -> Option<
     }
 }
 
-#[get("/<id>", format = "json")]
-fn get(id: ID, map: State<'_, MessageMap>) -> Option<Json<Message>> {
+#[get("/<id>?<labels>", format = "json")]
+fn get(id: ID, labels: Option<Json<Vec<String>>>, map: State<'_, MessageMap>) -> Option<Json<Message>> {
     let hashmap = map.lock().unwrap();
     hashmap.get(&id).map(|contents| {
         Json(Message {
             id: Some(id),
-            contents: contents.clone()
+            contents: labels.map_or_else(|| contents.clone(), |labels| format!("{} with labels: {}", contents, labels.0.join(","))),
         })
     })
 }

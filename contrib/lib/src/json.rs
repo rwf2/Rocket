@@ -18,23 +18,23 @@ use std::ops::{Deref, DerefMut};
 use std::io;
 use std::iter::FromIterator;
 
-use rocket::request::Request;
+use rocket::request::{Request, FromFormValue};
 use rocket::outcome::Outcome::*;
 use rocket::data::{Data, ByteUnit, Transform::*, Transformed};
 use rocket::data::{FromTransformedData, TransformFuture, FromDataFuture};
-use rocket::http::Status;
+use rocket::http::{Status, RawStr};
 use rocket::response::{self, Responder, content};
 
 use serde::{Serialize, Serializer};
-use serde::de::{Deserialize, Deserializer};
+use serde::de::{Deserialize, Deserializer, DeserializeOwned};
 
 #[doc(hidden)]
 pub use serde_json::{json_internal, json_internal_vec};
 
-/// The JSON type: implements [`FromTransformedData`] and [`Responder`], allowing you to
+/// The JSON type: implements [`FromTransformedData`], [`FromFormValue`] and [`Responder`], allowing you to
 /// easily consume and respond with JSON.
 ///
-/// ## Receiving JSON
+/// ## Receiving JSON from Body
 ///
 /// If you're receiving JSON data, simply add a `data` parameter to your route
 /// arguments and ensure the type of the parameter is a `Json<T>`, where `T` is
@@ -156,6 +156,19 @@ impl<'a, T: Deserialize<'a>> FromTransformedData<'a> for Json<T> {
                 }
             }
         })
+    }
+}
+
+
+impl<'a, T: DeserializeOwned> FromFormValue<'a> for Json<T> {
+    type Error = &'a RawStr;
+
+    #[inline(always)]
+    fn from_form_value(v: &'a RawStr) -> Result<Self, Self::Error> {
+        return v.url_decode().ok()
+            .and_then(|value| serde_json::from_str::<T>(value.as_str()).ok())
+            .map(|value| Json(value))
+            .ok_or(v);
     }
 }
 
