@@ -142,7 +142,7 @@ impl<'q> Iterator for Query<'q> {
 ///
 ///     _This implementation always returns successfully._
 ///
-///     The path segment is parsed by `T`'s `FromQuery` mplementation. The
+///     The path segment is parsed by `T`'s `FromQuery` implementation. The
 ///     returned `Result` value is returned.
 ///
 /// # Example
