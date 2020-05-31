@@ -289,9 +289,6 @@ being ignored.
 
 ## Configuring TLS
 
-! warning: Rocket's built-in TLS is **not** considered ready for production use.
-  It is intended for development use _only_.
-
 Rocket includes built-in, native support for TLS >= 1.2 (Transport Layer
 Security). In order for TLS support to be enabled, Rocket must be compiled with
 the `"tls"` feature. To do this, add the `"tls"` feature to the `rocket`
