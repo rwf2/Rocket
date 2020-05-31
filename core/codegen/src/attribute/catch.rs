@@ -83,6 +83,7 @@ pub fn _catch(args: TokenStream, input: TokenStream) -> Result<TokenStream> {
         #user_catcher_fn
 
         /// Rocket code generated wrapping catch function.
+        #[doc(hidden)]
         #vis fn #generated_fn_name<'_b>(#req: &'_b #Request) -> #response::Result<'_b> {
             let __response = #catcher_response;
             #Response::build()
@@ -92,6 +93,7 @@ pub fn _catch(args: TokenStream, input: TokenStream) -> Result<TokenStream> {
         }
 
         /// Rocket code generated static catcher info.
+        #[doc(hidden)]
         #[allow(non_upper_case_globals)]
         #vis static #generated_struct_name: ::rocket::StaticCatchInfo =
             ::rocket::StaticCatchInfo {
