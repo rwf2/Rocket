@@ -231,24 +231,25 @@ mod test {
     use super::chrono_crate;
     use super::FromParam;
     use super::FromStr;
+    use super::NaiveDate;
     use super::NaiveDateTime;
 
     #[test]
-    fn test_from_str() {
+    fn test_naivedatetime_from_str() {
         let datetime_str = "2011-12-03T10:15:30";
         let datetime_wrapper = NaiveDateTime::from_str(datetime_str).unwrap();
         assert_eq!("2011-12-03 10:15:30", datetime_wrapper.to_string())
     }
 
     #[test]
-    fn test_from_param() {
+    fn test_naivedatetime_param() {
         let datetime_str = "2011-12-03T10:15:30";
         let datetime_wrapper = NaiveDateTime::from_param(datetime_str.into()).unwrap();
         assert_eq!("2011-12-03 10:15:30", datetime_wrapper.to_string())
     }
 
     #[test]
-    fn test_into_inner() {
+    fn test_naivedatetime_into_inner() {
         let datetime_str = "2011-12-03T10:15:30";
         let datetime_wrapper = NaiveDateTime::from_param(datetime_str.into()).unwrap();
         let real_datetime: chrono_crate::NaiveDateTime = datetime_str.parse().unwrap();
@@ -257,7 +258,7 @@ mod test {
     }
 
     #[test]
-    fn test_partial_eq() {
+    fn test_naivedatetime_partial_eq() {
         let datetime_str = "2011-12-03T10:15:30";
         let datetime_wrapper = NaiveDateTime::from_param(datetime_str.into()).unwrap();
         let real_datetime: chrono_crate::NaiveDateTime = datetime_str.parse().unwrap();
@@ -265,7 +266,7 @@ mod test {
     }
 
     #[test]
-    fn test_inner_eq() {
+    fn test_naivedatetime_inner_eq() {
         let iso8601_str = "2020-01-01T10:30:45";
         let real_datetime = chrono_crate::NaiveDateTime::from_str(iso8601_str).unwrap();
 
@@ -277,8 +278,57 @@ mod test {
 
     #[test]
     #[should_panic]
-    fn test_from_param_invalid() {
+    fn test_naivedatetime_from_param_invalid() {
         let datetime_str = "2011-12-03";
         NaiveDateTime::from_param(datetime_str.into()).unwrap();
+    }
+
+    #[test]
+    fn test_naivedate_from_str() {
+        let date_str = "2011-12-03";
+        let date_wrapper = NaiveDate::from_str(date_str).unwrap();
+        assert_eq!("2011-12-03", date_wrapper.to_string())
+    }
+
+    #[test]
+    fn test_naivedate_param() {
+        let date_str = "2011-12-03";
+        let date_wrapper = NaiveDate::from_param(date_str.into()).unwrap();
+        assert_eq!("2011-12-03", date_wrapper.to_string())
+    }
+
+    #[test]
+    fn test_naivedate_into_inner() {
+        let date_str = "2011-12-03";
+        let date_wrapper = NaiveDate::from_param(date_str.into()).unwrap();
+        let real_date: chrono_crate::NaiveDate = date_str.parse().unwrap();
+        let inner_date: chrono_crate::NaiveDate = date_wrapper.into_inner();
+        assert_eq!(real_date, inner_date)
+    }
+
+    #[test]
+    fn test_naivedate_partial_eq() {
+        let date_str = "2011-12-03";
+        let date_wrapper = NaiveDate::from_param(date_str.into()).unwrap();
+        let real_date: chrono_crate::NaiveDate = date_str.parse().unwrap();
+        assert_eq!(date_wrapper, real_date)
+    }
+
+    #[test]
+    fn test_naivedate_inner_eq() {
+        let iso8601_str = "2020-01-01";
+        let real_date = chrono_crate::NaiveDate::from_str(iso8601_str).unwrap();
+
+        let my_inner_date = NaiveDate::from_str(iso8601_str)
+            .expect("valid NaiveDate string")
+            .into_inner();
+        assert_eq!(real_date, my_inner_date);
+    }
+
+    #[test]
+    #[should_panic]
+    fn test_naivedate_from_param_invalid() {
+        let date_str = "2020-01-01T10:30:45";
+        NaiveDate::from_param(date_str.into()).unwrap();
     }
 }
