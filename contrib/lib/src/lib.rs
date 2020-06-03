@@ -49,6 +49,7 @@
 #[cfg(feature="msgpack")] pub mod msgpack;
 #[cfg(feature="templates")] pub mod templates;
 #[cfg(feature="uuid")] pub mod uuid;
+#[cfg(feature="datetime")] pub mod datetime;
 #[cfg(feature="databases")] pub mod databases;
 #[cfg(feature = "helmet")] pub mod helmet;
 #[cfg(any(feature="brotli_compression", feature="gzip_compression"))] pub mod compression;
