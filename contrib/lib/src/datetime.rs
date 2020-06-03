@@ -1,10 +1,14 @@
-//! NaiveDateTime (ISO 8601) parameter and form value parsing support.
+//! Date / Time (ISO 8601) parameter and form value parsing support.
 //!
-//! See the [`chrono::NaiveDateTime`] type for further details.
+//! Support is provided for the following types:
+//!   - [`chrono::Date`]
+//!   - [`chrono::DateTime`]
+//!   - [`chrono::NaiveDate`]
+//!   - [`chrono::NaiveDateTime`]
 //!
 //! # Enabling
 //!
-//! This module is only available when the `NaiveDateTime` feature is enabled. Enable it
+//! This module is only available when the `datetime` feature is enabled. Enable it
 //! in `Cargo.toml` as follows:
 //!
 //! ```toml
@@ -25,19 +29,114 @@ use rocket::request::{FromFormValue, FromParam};
 
 type ParseError = self::chrono_crate::format::ParseError;
 
-/// Implements [`FromParam`] and [`FromFormValue`] for accepting ISO-8601 formatted DateTime values without timezones.
+// NaiveDate
+// -------------
+
+/// # Enabling
 ///
-/// # Usage
-///
-/// To use, add the `NaiveDateTime` feature to the `rocket_contrib` dependencies section
-/// of your `Cargo.toml`:
+/// This type is only available when the `datetime` feature is enabled. Enable it
+/// in `Cargo.toml` as follows:
 ///
 /// ```toml
 /// [dependencies.rocket_contrib]
 /// version = "0.5.0-dev"
 /// default-features = false
 /// features = ["datetime"]
+///
+/// # Usage
+///
+/// You can use the `NaiveDate` type directly as a target of a dynamic parameter:
+///
+/// ```rust
+/// # #[macro_use] extern crate rocket;
+/// # #[macro_use] extern crate rocket_contrib;
+/// use rocket_contrib::datetime::NaiveDate;
+///
+/// #[get("/logs/<date>")]
+/// fn get_logs(date: NaiveDate) -> String {
+///     format!("We found: {}", date)
+/// }
 /// ```
+///
+/// You can also use the `NaiveDate` as a form value, including in query strings:
+///
+/// ```rust
+/// # #[macro_use] extern crate rocket;
+/// # #[macro_use] extern crate rocket_contrib;
+/// use rocket_contrib::datetime::NaiveDate;
+///
+/// #[get("/logs?<date>")]
+/// fn logs(date: NaiveDate) -> String {
+///     format!("What date is it Mr. Wolf? It's {}", date)
+/// }
+
+#[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Debug)]
+pub struct NaiveDate(chrono_crate::NaiveDate);
+
+impl NaiveDate {
+    #[inline(always)]
+    pub fn into_inner(self) -> chrono_crate::NaiveDate {
+        self.0
+    }
+}
+
+impl fmt::Display for NaiveDate {
+    #[inline(always)]
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        self.0.fmt(f)
+    }
+}
+
+impl<'a> FromParam<'a> for NaiveDate {
+    type Error = ParseError;
+
+    /// A value is successfully parsed if `param` is a properly formatted NaiveDate.
+    /// Otherwise, a `ParseError` is returned.
+    #[inline(always)]
+    fn from_param(param: &'a RawStr) -> Result<NaiveDate, Self::Error> {
+        param.parse()
+    }
+}
+
+impl<'v> FromFormValue<'v> for NaiveDate {
+    type Error = &'v RawStr;
+
+    /// A value is successfully parsed if `form_value` is a properly formatted
+    /// NaiveDate. Otherwise, the raw form value is returned.
+    #[inline(always)]
+    fn from_form_value(form_value: &'v RawStr) -> Result<NaiveDate, &'v RawStr> {
+        form_value.parse().map_err(|_| form_value)
+    }
+}
+
+impl FromStr for NaiveDate {
+    type Err = ParseError;
+
+    #[inline]
+    fn from_str(s: &str) -> Result<NaiveDate, Self::Err> {
+        s.parse().map(NaiveDate)
+    }
+}
+
+impl Deref for NaiveDate {
+    type Target = chrono_crate::NaiveDate;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+impl PartialEq<chrono_crate::NaiveDate> for NaiveDate {
+    #[inline(always)]
+    fn eq(&self, other: &chrono_crate::NaiveDate) -> bool {
+        self.0.eq(other)
+    }
+}
+
+// NaiveDateTime
+// -------------
+
+/// # Usage
 ///
 /// You can use the `NaiveDateTime` type directly as a target of a dynamic parameter:
 ///
@@ -63,27 +162,11 @@ type ParseError = self::chrono_crate::format::ParseError;
 /// fn logs(datetime: NaiveDateTime) -> String {
 ///     format!("What time is it Mr. Wolf? It's {}", datetime)
 /// }
+
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Debug)]
 pub struct NaiveDateTime(chrono_crate::NaiveDateTime);
 
 impl NaiveDateTime {
-    /// Consumes the NaiveDateTime wrapper, returning the underlying `chrono::NaiveDateTime` type.
-    ///
-    /// # Example
-    /// ```rust
-    /// # use std::str::FromStr;
-    /// # fn main() {
-    /// use rocket_contrib::datetime::{chrono_crate, NaiveDateTime};
-    ///
-    /// let iso8601_str = "2020-01-01T10:30:45";
-    /// let real_datetime = chrono_crate::NaiveDateTime::from_str(iso8601_str).unwrap();
-    /// let my_inner_datetime = NaiveDateTime::from_str(iso8601_str)
-    ///     .expect("valid NaiveDateTime string")
-    ///     .into_inner();
-    ///
-    /// assert_eq!(real_datetime, my_inner_datetime);
-    /// # }
-    /// ```
     #[inline(always)]
     pub fn into_inner(self) -> chrono_crate::NaiveDateTime {
         self.0
