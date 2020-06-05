@@ -795,7 +795,18 @@ impl Rocket {
         self
     }
 
-    // NB: Not an `async fn` because _attach() calls finish(), recursing.
+    // Instead of requiring the user to individually `await` each call to
+    // `attach()`, some operations are queued in `self.pending`. Functions that
+    // want to provide read access to any data from the Manifest, such as
+    // `inspect()`, need to apply those pending operations first.
+    //
+    // This function returns a future that executes those pending operations,
+    // requiring only a single `await` at the call site. After completion,
+    // `self.pending` will be empty and `self.manifest` will reflect all pending
+    // changes.
+    //
+    // Note that this returns a boxed future, because `_attach()` calls this
+    // function again creating a cycle.
     pub(crate) fn finish(&mut self) -> BoxFuture<'_, ()> {
         Box::pin(async move {
             while !self.pending.is_empty() {
