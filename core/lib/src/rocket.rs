@@ -960,6 +960,49 @@ impl Rocket {
         self.finish().await;
         self._manifest()
     }
+
+    /// Returns `Some` of the managed state value for the type `T` if it is
+    /// being managed by `self`. Otherwise, returns `None`.
+    ///
+    /// This function is equivalent to `.inspect().await.config()` and is
+    /// provided as a convenience.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// #[derive(PartialEq, Debug)]
+    /// struct MyState(&'static str);
+    ///
+    /// # rocket::async_test(async {
+    /// let mut rocket = rocket::ignite().manage(MyState("hello!"));
+    /// assert_eq!(rocket.state::<MyState>().await, Some(&MyState("hello!")));
+    /// # });
+    /// ```
+    pub async fn state<T: Send + Sync + 'static>(&mut self) -> Option<&T> {
+        self.inspect().await.state()
+    }
+
+    /// Returns the active configuration.
+    ///
+    /// This function is equivalent to `.inspect().await.config()` and is
+    /// provided as a convenience.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// # #![feature(proc_macro_hygiene)]
+    /// # #[macro_use] extern crate rocket;
+    /// use rocket::Rocket;
+    /// use rocket::fairing::AdHoc;
+    ///
+    /// # rocket::async_test(async {
+    /// let mut rocket = rocket::ignite();
+    /// println!("Rocket config: {:?}", rocket.config().await);
+    /// # });
+    /// ```
+    pub async fn config(&mut self) -> &Config {
+        self.inspect().await.config()
+    }
 }
 
 impl Manifest {
@@ -1069,8 +1112,8 @@ impl Manifest {
     /// async fn main() {
     /// # if false { // We don't actually want to launch the server in an example.
     ///     rocket::ignite()
-    ///         .attach(AdHoc::on_launch("Config Printer", |rocket| {
-    ///             println!("Rocket launch config: {:?}", rocket.config());
+    ///         .attach(AdHoc::on_launch("Config Printer", |manifest| {
+    ///             println!("Rocket launch config: {:?}", manifest.config());
     ///         }))
     ///         .launch()
     ///         .await;

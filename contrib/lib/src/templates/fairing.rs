@@ -152,8 +152,7 @@ impl Fairing for TemplateFairing {
     /// template engines. In debug mode, the `ContextManager::new` method
     /// initializes a directory watcher for auto-reloading of templates.
     async fn on_attach(&self, mut rocket: Rocket) -> Result<Rocket, Rocket> {
-        let manifest = rocket.inspect().await;
-        let config = manifest.config();
+        let config = rocket.config().await;
         let mut template_root = config.root_relative(DEFAULT_TEMPLATE_DIR);
         match config.get_str("template_dir") {
             Ok(dir) => template_root = config.root_relative(dir),
