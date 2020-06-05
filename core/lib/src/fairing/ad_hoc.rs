@@ -157,8 +157,7 @@ impl Fairing for AdHoc {
 
     async fn on_attach(&self, rocket: Rocket) -> Result<Rocket, Rocket> {
         if let AdHocKind::Attach(ref mutex) = self.kind {
-            let f = mutex
-                .lock()
+            let f = mutex.lock()
                 .expect("AdHoc::Attach lock")
                 .take()
                 .expect("internal error: `on_attach` one-call invariant broken");

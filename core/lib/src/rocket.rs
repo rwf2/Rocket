@@ -47,7 +47,7 @@ enum BuildOperation {
 /// The state of an unlaunched [`Rocket`].
 ///
 /// A `Manifest` includes configuration, managed state, and mounted routes and
-/// can be accessed through [`Rocket::inspect`] before launching.
+/// can be accessed through [`Rocket::inspect()`] before launching.
 pub struct Manifest {
     pub(crate) config: Config,
     router: Router,
@@ -435,11 +435,7 @@ impl Manifest {
         // Determine the address and port we actually binded to.
         self.config.port = listener.local_addr().map(|a| a.port()).unwrap_or(0);
 
-        let proto = if self.config.tls.is_some() {
-            "https://"
-        } else {
-            "http://"
-        };
+        let proto = self.config.tls.as_ref().map_or("http://", |_| "https://");
 
         let full_addr = format!("{}:{}", self.config.address, self.config.port);
 
@@ -804,7 +800,9 @@ impl Rocket {
         Box::pin(async move {
             while !self.pending.is_empty() {
                 let op = self.pending.remove(0);
-                let manifest = self.manifest.take().expect("internal error: manifest was taken and not replaced. Was `inspect()` called but not polled to completion?");
+                let manifest = self.manifest.take()
+                    .expect("internal error: manifest was taken and not replaced. \
+                             Was `inspect()` called but not polled to completion?");
                 self.manifest = Some(match op {
                     BuildOperation::Mount(base, routes) => manifest._mount(base, routes),
                     BuildOperation::Register(catchers) => manifest._register(catchers),
@@ -820,13 +818,14 @@ impl Rocket {
         self.manifest.take().expect("internal error: finish() should have replaced self.manifest")
     }
 
-    /// Returns a `Future` that drives the server, listening for and dispathcing
+    /// Returns a `Future` that drives the server, listening for and dispatching
     /// requests to mounted routes and catchers. The `Future` completes when the
-    /// server is shut down (via a [`ShutdownHandle`] or encounters a fatal
+    /// server is shut down, via a [`ShutdownHandle`], or encounters a fatal
     /// error.  If the `ctrl_c_shutdown` feature is enabled, the server will
     /// also shut down once `Ctrl-C` is pressed.
     ///
     /// # Error
+    ///
     /// If there is a problem starting the application, an [`Error`] is
     /// returned. Note that a value of type `Error` panics if dropped
     /// without first being inspected. See the [`Error`] documentation for
@@ -852,7 +851,6 @@ impl Rocket {
         manifest.prelaunch_check().map_err(crate::error::Error::Launch)?;
 
         let config = manifest.config();
-
         let full_addr = format!("{}:{}", config.address, config.port);
         let addrs = match full_addr.to_socket_addrs() {
             Ok(a) => a.collect::<Vec<_>>(),
@@ -928,13 +926,14 @@ impl Rocket {
     }
 
     pub(crate) fn _manifest(&self) -> &Manifest {
-        self.manifest.as_ref().expect("internal error: manifest was taken and not replaced. Was `inspect()` called but not polled to completion?")
+        self.manifest.as_ref().expect("internal error: manifest was taken and not replaced. \
+                                      Was `inspect()` called but not polled to completion?")
     }
 
     /// Access the current state of this `Rocket` instance.
     ///
-    /// The `Mnaifest` type provides methods such as [`Manifest::routes`]
-    /// and [`Manifest::state`]. This method is called to get an `Manifest`
+    /// The `Manifest` type provides methods such as [`Manifest::routes()`]
+    /// and [`Manifest::state()`]. This method is called to get a `Manifest`
     /// instance.
     ///
     /// # Example
