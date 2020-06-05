@@ -215,7 +215,7 @@ impl<'f, T: FromForm<'f> + Send + 'f> FromData<'f> for Form<T> {
     }
 
     fn from_data(_: &'f Request<'_>, o: Transformed<'f, Self>) -> FromDataFuture<'f, Self, Self::Error> {
-        Box::pin(futures_util::future::ready(o.borrowed().and_then(|data| {
+        Box::pin(futures::future::ready(o.borrowed().and_then(|data| {
             <Form<T>>::from_data(data, true).map(Form)
         })))
     }

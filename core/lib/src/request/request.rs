@@ -6,7 +6,7 @@ use std::str;
 
 use yansi::Paint;
 use state::{Container, Storage};
-use futures_util::future::BoxFuture;
+use futures::future::BoxFuture;
 
 use crate::request::{FromParam, FromSegments, FromRequest, Outcome};
 use crate::request::{FromFormValue, FormItems, FormItem};

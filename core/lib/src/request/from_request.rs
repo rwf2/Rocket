@@ -1,7 +1,7 @@
 use std::fmt::Debug;
 use std::net::SocketAddr;
 
-use futures_util::future::BoxFuture;
+use futures::future::BoxFuture;
 
 use crate::router::Route;
 use crate::request::Request;
@@ -467,7 +467,7 @@ impl<'a, 'r, T: FromRequest<'a, 'r> + 'a> FromRequest<'a, 'r> for Result<T, T::E
         where 'a: 'y, 'r: 'y
     {
         // TODO: FutureExt::map is a workaround (see rust-lang/rust#60658)
-        use futures_util::future::FutureExt;
+        use futures::future::FutureExt;
         T::from_request(request).map(|x| match x {
             Success(val) => Success(Ok(val)),
             Failure((_, e)) => Success(Err(e)),
@@ -483,7 +483,7 @@ impl<'a, 'r, T: FromRequest<'a, 'r> + 'a> FromRequest<'a, 'r> for Option<T> {
         where 'a: 'y, 'r: 'y
     {
         // TODO: FutureExt::map is a workaround (see rust-lang/rust#60658)
-        use futures_util::future::FutureExt;
+        use futures::future::FutureExt;
         T::from_request(request).map(|x| match x {
             Success(val) => Success(Some(val)),
             Failure(_) | Forward(_) => Success(None),

@@ -153,7 +153,7 @@ macro_rules! default_catchers {
         let mut map = HashMap::new();
 
         $(
-            fn $fn_name<'r>(req: &'r Request<'_>) -> futures_util::future::BoxFuture<'r, response::Result<'r>> {
+            fn $fn_name<'r>(req: &'r Request<'_>) -> futures::future::BoxFuture<'r, response::Result<'r>> {
                 status::Custom(Status::from_code($code).unwrap(),
                     content::Html(error_page_template!($code, $name, $description))
                 ).respond_to(req)
