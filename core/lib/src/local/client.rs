@@ -79,7 +79,7 @@ impl Client {
     /// is created for cookie tracking. Otherwise, the internal `CookieJar` is
     /// set to `None`.
     async fn _new(rocket: Rocket, tracked: bool) -> Result<Client, LaunchError> {
-        let mut manifest = rocket.finish_and_take_manifest().await;
+        let mut manifest = rocket.actualize_and_take_manifest().await;
         manifest.prelaunch_check()?;
 
         let cookies = match tracked {

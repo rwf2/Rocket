@@ -404,7 +404,7 @@ impl Manifest {
 
         let mut rocket = Rocket { manifest: Some(self), pending: vec![] };
         rocket = fairings.attach(fairing, rocket).await;
-        self = rocket.finish_and_take_manifest().await;
+        self = rocket.actualize_and_take_manifest().await;
 
         // Make sure we keep all fairings around: the old and newly added ones!
         fairings.append(self.fairings);
@@ -797,8 +797,8 @@ impl Rocket {
 
     // Instead of requiring the user to individually `await` each call to
     // `attach()`, some operations are queued in `self.pending`. Functions that
-    // want to provide read access to any data from the Manifest, such as
-    // `inspect()`, need to apply those pending operations first.
+    // need access to any data from the Manifest, such as `inspect()` and
+    // `launch()`, must first apply those pending operations.
     //
     // This function returns a future that executes those pending operations,
     // requiring only a single `await` at the call site. After completion,
@@ -807,7 +807,7 @@ impl Rocket {
     //
     // Note that this returns a boxed future, because `_attach()` calls this
     // function again creating a cycle.
-    pub(crate) fn finish(&mut self) -> BoxFuture<'_, ()> {
+    pub(crate) fn actualize_manifest(&mut self) -> BoxFuture<'_, ()> {
         Box::pin(async move {
             while !self.pending.is_empty() {
                 let op = self.pending.remove(0);
@@ -824,9 +824,9 @@ impl Rocket {
         })
     }
 
-    pub(crate) async fn finish_and_take_manifest(mut self) -> Manifest {
-        self.finish().await;
-        self.manifest.take().expect("internal error: finish() should have replaced self.manifest")
+    pub(crate) async fn actualize_and_take_manifest(mut self) -> Manifest {
+        self.actualize_manifest().await;
+        self.manifest.take().expect("internal error: actualize_manifest() should have replaced self.manifest")
     }
 
     /// Returns a `Future` that drives the server, listening for and dispatching
@@ -858,7 +858,7 @@ impl Rocket {
 
         use crate::error::Error::Launch;
 
-        let mut manifest = self.finish_and_take_manifest().await;
+        let mut manifest = self.actualize_and_take_manifest().await;
         manifest.prelaunch_check().map_err(crate::error::Error::Launch)?;
 
         let config = manifest.config();
@@ -957,7 +957,7 @@ impl Rocket {
     /// # };
     /// ```
     pub async fn inspect(&mut self) -> &Manifest {
-        self.finish().await;
+        self.actualize_manifest().await;
         self._manifest()
     }
 
