@@ -1054,7 +1054,7 @@ impl Manifest {
     /// }
     ///
     /// fn main() {
-    /// # rocket::async_test(async move {
+    /// # rocket::async_test(async {
     ///     let mut rocket = rocket::ignite()
     ///         .mount("/", routes![hello])
     ///         .mount("/hi", routes![hello]);

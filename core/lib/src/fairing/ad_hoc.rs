@@ -66,7 +66,7 @@ impl AdHoc {
     /// use rocket::fairing::AdHoc;
     ///
     /// // The no-op attach fairing.
-    /// let fairing = AdHoc::on_attach("No-Op", |rocket| async move { Ok(rocket) });
+    /// let fairing = AdHoc::on_attach("No-Op", |rocket| async { Ok(rocket) });
     /// ```
     pub fn on_attach<F, Fut>(name: &'static str, f: F) -> AdHoc
     where

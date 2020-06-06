@@ -93,7 +93,7 @@ pub fn database_attr(attr: TokenStream, input: TokenStream) -> Result<TokenStrea
             pub fn fairing() -> impl ::rocket::fairing::Fairing {
                 use #databases::Poolable;
 
-                ::rocket::fairing::AdHoc::on_attach(#fairing_name, |mut rocket| async move {
+                ::rocket::fairing::AdHoc::on_attach(#fairing_name, |mut rocket| async {
                     let pool = #databases::database_config(#name, rocket.config().await)
                         .map(<#conn_type>::pool);
 
