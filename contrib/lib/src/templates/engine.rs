@@ -4,13 +4,17 @@ use serde::Serialize;
 
 use crate::templates::TemplateInfo;
 
-#[cfg(feature = "tera_templates")] use crate::templates::tera::Tera;
-#[cfg(feature = "handlebars_templates")] use crate::templates::handlebars::Handlebars;
+#[cfg(feature = "handlebars_templates")]
+use crate::templates::handlebars::Handlebars;
+#[cfg(feature = "tera_templates")]
+use crate::templates::tera::Tera;
 
 pub(crate) trait Engine: Send + Sync + 'static {
     const EXT: &'static str;
 
-    fn init(templates: &[(&str, &TemplateInfo)]) -> Option<Self> where Self: Sized;
+    fn init(templates: &[(&str, &TemplateInfo)]) -> Option<Self>
+    where
+        Self: Sized;
     fn render<C: Serialize>(&self, name: &str, context: C) -> Option<String>;
 }
 
@@ -62,18 +66,21 @@ pub struct Engines {
     /// `Tera` instance, ensure you use types imported from
     /// `rocket_contrib::templates::handlebars` to avoid version mismatches.
     #[cfg(feature = "handlebars_templates")]
-    pub handlebars: Handlebars,
+    pub handlebars: Handlebars<'static>,
 }
 
 impl Engines {
     pub(crate) const ENABLED_EXTENSIONS: &'static [&'static str] = &[
-        #[cfg(feature = "tera_templates")] Tera::EXT,
-        #[cfg(feature = "handlebars_templates")] Handlebars::EXT,
+        #[cfg(feature = "tera_templates")]
+        Tera::EXT,
+        #[cfg(feature = "handlebars_templates")]
+        Handlebars::EXT,
     ];
 
     pub(crate) fn init(templates: &HashMap<String, TemplateInfo>) -> Option<Engines> {
         fn inner<E: Engine>(templates: &HashMap<String, TemplateInfo>) -> Option<E> {
-            let named_templates = templates.iter()
+            let named_templates = templates
+                .iter()
                 .filter(|&(_, i)| i.extension == E::EXT)
                 .map(|(k, i)| (k.as_str(), i))
                 .collect::<Vec<_>>();
@@ -85,12 +92,12 @@ impl Engines {
             #[cfg(feature = "tera_templates")]
             tera: match inner::<Tera>(templates) {
                 Some(tera) => tera,
-                None => return None
+                None => return None,
             },
             #[cfg(feature = "handlebars_templates")]
-            handlebars: match inner::<Handlebars>(templates) {
+            handlebars: match inner::<Handlebars<'static>>(templates) {
                 Some(hb) => hb,
-                None => return None
+                None => return None,
             },
         })
     }
@@ -99,7 +106,7 @@ impl Engines {
         &self,
         name: &str,
         info: &TemplateInfo,
-        context: C
+        context: C,
     ) -> Option<String> {
         #[cfg(feature = "tera_templates")]
         {

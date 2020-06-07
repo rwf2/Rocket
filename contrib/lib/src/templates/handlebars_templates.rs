@@ -4,10 +4,10 @@ use crate::templates::{Engine, TemplateInfo};
 
 pub use crate::templates::handlebars::Handlebars;
 
-impl Engine for Handlebars {
+impl Engine for Handlebars<'static> {
     const EXT: &'static str = "hbs";
 
-    fn init(templates: &[(&str, &TemplateInfo)]) -> Option<Handlebars> {
+    fn init(templates: &[(&str, &TemplateInfo)]) -> Option<Handlebars<'static>> {
         let mut hb = Handlebars::new();
         for &(name, info) in templates {
             let path = &info.path;
