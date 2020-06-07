@@ -89,9 +89,9 @@ You should see `Hello, world!` by visiting `http://localhost:8000`.
 
 To test Rocket, simply run `./scripts/test.sh` from the root of the source tree.
 This will build and test the `core`, `codegen`, and `contrib` libraries as well
-as all of the examples. The `test.sh` script accepts no flags or either the
-`--release` flag to test in release mode or the `--contrib` flag to test all
-`contrib` modules individually. This script gets run by CI.
+as all of the examples. The `test.sh` script optionally accepts the
+`--release` flag to test in release mode and the `--contrib` flag to test all
+`contrib` modules individually. This script which is run by CI.
 
 To test a crate individually, run `cargo test --all-features` in the
 corresponding crate directory.
