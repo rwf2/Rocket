@@ -65,7 +65,7 @@ impl<E> From<E> for Debug<E> {
 
 #[crate::async_trait]
 impl<'r, E: std::fmt::Debug + Send + 'r> Responder<'r> for Debug<E> {
-    async fn respond_to(self, _: &'r Request<'_>) -> response::Result<'r> {
+    async fn respond_to(self, _: &Request<'_>) -> response::Result<'r> where 'r: 'async_trait {
         warn_!("Debug: {:?}", Paint::default(self.0));
         warn_!("Debug always responds with {}.", Status::InternalServerError);
         Response::build().status(Status::InternalServerError).ok()

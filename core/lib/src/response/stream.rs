@@ -68,7 +68,7 @@ impl<T: AsyncRead> From<T> for Stream<T> {
 /// to the console with an indication of what went wrong.
 #[crate::async_trait]
 impl<'r, T: AsyncRead + Send + 'r> Responder<'r> for Stream<T> {
-    async fn respond_to(self, _: &'r Request<'_>) -> response::Result<'r> {
+    async fn respond_to(self, _: &Request<'_>) -> response::Result<'r> where 'r: 'async_trait {
         Response::build().chunked_body(self.0, self.1).ok()
     }
 }

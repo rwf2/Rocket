@@ -162,7 +162,7 @@ impl<'r, R> Created<R> {
 /// header is set to a hash value of the responder.
 #[crate::async_trait]
 impl<'r, R: Responder<'r> + Send + 'r> Responder<'r> for Created<R> {
-    async fn respond_to(self, req: &'r Request<'_>) -> response::Result<'r> {
+    async fn respond_to(self, req: &Request<'_>) -> response::Result<'r> where 'r: 'async_trait {
         let mut response = Response::build();
         if let Some(responder) = self.1 {
             response.merge(responder.respond_to(req).await?);
@@ -209,7 +209,7 @@ pub struct Accepted<R>(pub Option<R>);
 /// `Some`, it is used to finalize the response.
 #[crate::async_trait]
 impl<'r, R: Responder<'r> + Send + 'r> Responder<'r> for Accepted<R> {
-    async fn respond_to(self, req: &'r Request<'_>) -> response::Result<'r> {
+    async fn respond_to(self, req: &Request<'_>) -> response::Result<'r> where 'r: 'async_trait {
         let mut build = Response::build();
         if let Some(responder) = self.0 {
             build.merge(responder.respond_to(req).await?);
@@ -250,7 +250,7 @@ pub struct BadRequest<R>(pub Option<R>);
 /// `Some`, it is used to finalize the response.
 #[crate::async_trait]
 impl<'r, R: Responder<'r> + Send + 'r> Responder<'r> for BadRequest<R> {
-    async fn respond_to(self, req: &'r Request<'_>) -> response::Result<'r> {
+    async fn respond_to(self, req: &Request<'_>) -> response::Result<'r> where 'r: 'async_trait {
         let mut build = Response::build();
         if let Some(responder) = self.0 {
             build.merge(responder.respond_to(req).await?);
@@ -278,7 +278,7 @@ pub struct NotFound<R>(pub R);
 /// Sets the status code of the response to 404 Not Found.
 #[crate::async_trait]
 impl<'r, R: Responder<'r> + Send + 'r> Responder<'r> for NotFound<R> {
-    async fn respond_to(self, req: &'r Request<'_>) -> response::Result<'r> {
+    async fn respond_to(self, req: &Request<'_>) -> response::Result<'r> where 'r: 'async_trait {
         Response::build_from(self.0.respond_to(req).await?)
             .status(Status::NotFound)
             .ok()
@@ -303,7 +303,7 @@ pub struct Custom<R>(pub Status, pub R);
 /// response to the wrapped responder.
 #[crate::async_trait]
 impl<'r, R: Responder<'r> + Send + 'r> Responder<'r> for Custom<R> {
-    async fn respond_to(self, req: &'r Request<'_>) -> response::Result<'r> {
+    async fn respond_to(self, req: &Request<'_>) -> response::Result<'r> where 'r: 'async_trait {
         Response::build_from(self.1.respond_to(req).await?)
             .status(self.0)
             .ok()

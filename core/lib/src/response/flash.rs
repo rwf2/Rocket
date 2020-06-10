@@ -195,7 +195,7 @@ impl<'r, R: Responder<'r>> Flash<R> {
 /// the response is the `Outcome` of the wrapped `Responder`.
 #[crate::async_trait]
 impl<'r, R: Responder<'r> + Send + 'r> Responder<'r> for Flash<R> {
-    async fn respond_to(self, req: &'r Request<'_>) -> response::Result<'r> {
+    async fn respond_to(self, req: &Request<'_>) -> response::Result<'r> where 'r: 'async_trait {
         trace_!("Flash: setting message: {}:{}", self.name, self.message);
         req.cookies().add(self.cookie());
         self.inner.respond_to(req).await

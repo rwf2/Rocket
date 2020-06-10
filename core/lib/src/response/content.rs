@@ -49,7 +49,7 @@ pub struct Content<R>(pub ContentType, pub R);
 #[crate::async_trait]
 impl<'r, R: Responder<'r> + Send + 'r> Responder<'r> for Content<R> {
     #[inline(always)]
-    async fn respond_to(self, req: &'r Request<'_>) -> response::Result<'r> {
+    async fn respond_to(self, req: &Request<'_>) -> response::Result<'r> where 'r: 'async_trait {
         Response::build()
             .merge(self.1.respond_to(req).await?)
             .header(self.0)
@@ -75,8 +75,8 @@ macro_rules! ctrs {
             /// Sets the Content-Type of the response then delegates the
             /// remainder of the response to the wrapped responder.
             impl<'r, R: Responder<'r> + Send + 'r> Responder<'r> for $name<R> {
-                fn respond_to<'a, 'x>(self, req: &'r Request<'a>) -> BoxFuture<'x, response::Result<'r>>
-                    where 'a: 'x, 'r: 'x, Self: 'x
+                fn respond_to<'a, 'b, 'x>(self, req: &'a Request<'b>) -> BoxFuture<'x, response::Result<'r>>
+                    where 'a: 'x, 'b: 'x, 'r: 'x, Self: 'x
                 {
                     Content(ContentType::$ct, self.0).respond_to(req)
                 }

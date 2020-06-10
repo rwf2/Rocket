@@ -1206,7 +1206,7 @@ use crate::request::Request;
 #[crate::async_trait]
 impl<'r> Responder<'r> for Response<'r> {
     /// This is the identity implementation. It simply returns `Ok(self)`.
-    async fn respond_to(self, _: &'r Request<'_>) -> response::Result<'r> {
+    async fn respond_to(self, _: &Request<'_>) -> response::Result<'r> {
         Ok(self)
     }
 }

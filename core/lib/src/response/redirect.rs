@@ -149,7 +149,7 @@ impl Redirect {
 /// `Status::InternalServerError` is returned.
 #[crate::async_trait]
 impl<'r> Responder<'r> for Redirect {
-    async fn respond_to(self, _: &'r Request<'_>) -> response::Result<'r> {
+    async fn respond_to(self, _: &Request<'_>) -> response::Result<'r> {
         if let Some(uri) = self.1 {
             Response::build()
                 .status(self.0)

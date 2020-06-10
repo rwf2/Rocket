@@ -80,7 +80,7 @@ impl NamedFile {
 /// implied by its extension, use a [`File`] directly.
 #[crate::async_trait]
 impl<'r> Responder<'r> for NamedFile {
-    async fn respond_to(self, req: &'r Request<'_>) -> response::Result<'r> {
+    async fn respond_to(self, req: &Request<'_>) -> response::Result<'r> {
         let mut response = self.1.respond_to(req).await?;
         if let Some(ext) = self.0.extension() {
             if let Some(ct) = ContentType::from_extension(&ext.to_string_lossy()) {
