@@ -45,7 +45,8 @@ impl hyper::Handler for Rocket {
     // depends on the `HyperResponse` type, this function does the actual
     // response processing.
     fn handle<'h, 'k>(
-        &self, hyp_req: hyper::Request<'h, 'k>,
+        &self, 
+        hyp_req: hyper::Request<'h, 'k>,
         res: hyper::FreshResponse<'h>
     ) {
         // Get all of the information from Hyper.
@@ -274,7 +275,7 @@ impl Rocket {
     /// additional routes to try (forward). The corresponding outcome for each
     /// condition is returned.
     //
-    //  : We _should_ be able to take an `&mut` here and mutate the request
+    // TODO: We _should_ be able to take an `&mut` here and mutate the request
     // at any pointer _before_ we pass it to a handler as long as we drop the
     // outcome. That should be safe. Since no mutable borrow can be held
     // (ensuring `handler` takes an immutable borrow), any caller to `route`
@@ -523,10 +524,10 @@ impl Rocket {
     #[inline]
     pub fn mount<R: Into<Vec<Route>>>(mut self, base: &str, routes: R) -> Self {
         info!("{}{} {}{}",
-        Paint::masked("🛰  "),
-        Paint::magenta("Mounting"),
-        Paint::blue(base),
-        Paint::magenta(":"));
+            Paint::masked("🛰  "),
+            Paint::magenta("Mounting"),
+            Paint::blue(base),
+            Paint::magenta(":"));
 
         let base_uri = Origin::parse(base)
             .unwrap_or_else(|e| {

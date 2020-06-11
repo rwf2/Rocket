@@ -5,8 +5,8 @@ use std::collections::hash_map::HashMap;
 
 pub use self::route::Route;
 
-use crate::http::Method;
 use crate::request::Request;
+use crate::http::Method;
 
 // type Selector = (Method, usize);
 type Selector = Method;
