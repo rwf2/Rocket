@@ -11,6 +11,9 @@ use std::sync::atomic::{AtomicBool, Ordering};
 // The name of the actual flash cookie.
 const FLASH_COOKIE_NAME: &str = "_flash";
 
+// Character to use as a delimiter after the cookie's name's length.
+const FLASH_COOKIE_DELIM: char = ':';
+
 /// Sets a "flash" cookie that will be removed when it is accessed. The
 /// analogous request type is [`FlashMessage`].
 ///
@@ -181,7 +184,9 @@ impl<'r, R: Responder<'r>> Flash<R> {
     }
 
     fn cookie(&self) -> Cookie<'static> {
-        let content = format!("{}{}{}", self.name.len(), self.name, self.message);
+        let content = format!("{}{}{}{}",
+            self.name.len(), FLASH_COOKIE_DELIM, self.name, self.message);
+
         Cookie::build(FLASH_COOKIE_NAME, content)
             .max_age(Duration::minutes(5))
             .path("/")
@@ -250,9 +255,9 @@ impl<'a, 'r> FromRequest<'a, 'r> for Flash<&'a Request<'r>> {
 
             // Parse the flash message.
             let content = cookie.value();
-            let (len_str, kv) = match content.find(|c: char| !c.is_digit(10)) {
-                Some(i) => (&content[..i], &content[i..]),
-                None => (content, ""),
+            let (len_str, kv) = match content.find(FLASH_COOKIE_DELIM) {
+                Some(i) => (&content[..i], &content[(i + 1)..]),
+                None => return Err(()),
             };
 
             match len_str.parse::<usize>() {

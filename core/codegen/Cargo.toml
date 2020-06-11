@@ -8,7 +8,7 @@ homepage = "https://rocket.rs"
 repository = "https://github.com/SergioBenitez/Rocket"
 readme = "../../README.md"
 keywords = ["rocket", "web", "framework", "code", "generation"]
-license = "MIT/Apache-2.0"
+license = "MIT OR Apache-2.0"
 build = "build.rs"
 edition = "2018"
 

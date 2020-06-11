@@ -1,6 +1,6 @@
 //! Automatic JSON (de)serialization support.
 //!
-//! See the [`Json`](json::Json) type for further details.
+//! See the [`Json`] type for further details.
 //!
 //! # Enabling
 //!

@@ -62,7 +62,7 @@ pub struct Engines {
     /// `Tera` instance, ensure you use types imported from
     /// `rocket_contrib::templates::handlebars` to avoid version mismatches.
     #[cfg(feature = "handlebars_templates")]
-    pub handlebars: Handlebars,
+    pub handlebars: Handlebars<'static>,
 }
 
 impl Engines {
@@ -88,7 +88,7 @@ impl Engines {
                 None => return None
             },
             #[cfg(feature = "handlebars_templates")]
-            handlebars: match inner::<Handlebars>(templates) {
+            handlebars: match inner::<Handlebars<'static>>(templates) {
                 Some(hb) => hb,
                 None => return None
             },

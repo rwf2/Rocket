@@ -210,6 +210,21 @@ pub(crate) fn pop_max_level() {
     }
 }
 
+pub(crate) trait PaintExt {
+    fn emoji(item: &str) -> Paint<&str>;
+}
+
+impl PaintExt for Paint<&str> {
+    /// Paint::masked(), but hidden on Windows due to broken output. See #1122.
+    fn emoji(item: &str) -> Paint<&str> {
+        if cfg!(windows) {
+            Paint::masked("")
+        } else {
+            Paint::masked(item)
+        }
+    }
+}
+
 #[doc(hidden)]
 pub fn init(level: LoggingLevel) -> bool {
     try_init(level, true)

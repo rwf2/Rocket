@@ -14,6 +14,8 @@ pub enum ConfigError {
     NotFound,
     /// There was an I/O error while reading the configuration file.
     IoError,
+    /// There was an error retrieving randomness from the OS.
+    RandFailure,
     /// There was an I/O error while setting a configuration parameter.
     ///
     /// Parameters: (io_error, config_param_name)
@@ -59,12 +61,14 @@ impl ConfigError {
         match *self {
             NotFound => error!("config file was not found"),
             IoError => error!("failed reading the config file: IO error"),
+            RandFailure => error!("failed to read randomness from the OS"),
             Io(ref error, param) => {
                 error!("I/O error while setting {}:", Paint::default(param).bold());
                 info_!("{}", error);
             }
             BadFilePath(ref path, reason) => {
-                error!("configuration file path {} is invalid", Paint::default(path.display()).bold());
+                error!("configuration file path {} is invalid",
+                    Paint::default(path.display()).bold());
                 info_!("{}", reason);
             }
             BadEntry(ref name, ref filename) => {
@@ -135,6 +139,7 @@ impl fmt::Display for ConfigError {
         match *self {
             NotFound => write!(f, "config file was not found"),
             IoError => write!(f, "I/O error while reading the config file"),
+            RandFailure => write!(f, "randomness could not be retrieved from the OS"),
             Io(ref e, p) => write!(f, "I/O error while setting '{}': {}", p, e),
             BadFilePath(ref p, _) => write!(f, "{:?} is not a valid config path", p),
             BadEnv(ref e) => write!(f, "{:?} is not a valid `ROCKET_ENV` value", e),
@@ -159,6 +164,7 @@ impl Error for ConfigError {
         match *self {
             NotFound => "config file was not found",
             IoError => "there was an I/O error while reading the config file",
+            RandFailure => "randomness could not be retrieved from the OS",
             Io(..) => "an I/O error occured while setting a configuration parameter",
             BadFilePath(..) => "the config file path is invalid",
             BadEntry(..) => "an environment specified as `[environment]` is invalid",
@@ -177,6 +183,7 @@ impl PartialEq for ConfigError {
         match (self, other) {
             (&NotFound, &NotFound) => true,
             (&IoError, &IoError) => true,
+            (&RandFailure, &RandFailure) => true,
             (&Io(_, p1), &Io(_, p2)) => p1 == p2,
             (&BadFilePath(ref p1, _), &BadFilePath(ref p2, _)) => p1 == p2,
             (&BadEnv(ref e1), &BadEnv(ref e2)) => e1 == e2,
@@ -190,7 +197,7 @@ impl PartialEq for ConfigError {
                 k1 == k2 && v1 == v2
             }
             (&Missing(ref k1), &Missing(ref k2)) => k1 == k2,
-            (&NotFound, _) | (&IoError, _) | (&Io(..), _)
+            (&NotFound, _) | (&IoError, _) | (&RandFailure, _) | (&Io(..), _)
                 | (&BadFilePath(..), _) | (&BadEnv(..), _) | (&ParseError(..), _)
                 | (&UnknownKey(..), _) | (&BadEntry(..), _) | (&BadType(..), _)
                 | (&BadEnvVal(..), _) | (&Missing(..), _) => false

@@ -1,7 +1,6 @@
 //! Gzip and Brotli response compression.
 //!
-//! See the [`Compression`](compression::Compression) and
-//! [`Compress`](compression::Compress) types for further details.
+//! See the [`Compression`] and [`Compress`] types for further details.
 //!
 //! # Enabling
 //!

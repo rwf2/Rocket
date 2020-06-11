@@ -130,7 +130,7 @@ impl PartialEq for AcceptParams {
 /// [`Request::accept()`] method. The [`preferred()`] method can be used to
 /// retrieve the client's preferred media type.
 ///
-/// [`Request::accept`]: rocket::Request::accept()
+/// [`Request::accept()`]: rocket::Request::accept()
 /// [`preferred()`]: Accept::preferred()
 ///
 /// An `Accept` type with a single, common media type can be easily constructed

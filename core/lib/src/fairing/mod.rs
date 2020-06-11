@@ -8,8 +8,8 @@
 //! to perform an action once a Rocket application has launched.
 //!
 //! To learn more about writing a fairing, see the [`Fairing`] trait
-//! documentation. You can also use [`AdHoc`](fairing::AdHoc) to create a
-//! fairing on-the-fly from a closure or function.
+//! documentation. You can also use [`AdHoc`] to create a fairing on-the-fly
+//! from a closure or function.
 //!
 //! ## Attaching
 //!

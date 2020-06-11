@@ -41,7 +41,7 @@ use crate::http::Status;
 /// }
 /// ```
 ///
-/// [`Origin`]: crate::::http::uri::Origin
+/// [`Origin`]: crate::http::uri::Origin
 /// [`uri!`]: ../macro.uri.html
 #[derive(Debug)]
 pub struct Redirect(Status, Option<Uri<'static>>);

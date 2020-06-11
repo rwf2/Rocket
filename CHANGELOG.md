@@ -1,3 +1,30 @@
+# Version 0.4.5 (May 30, 2020)
+
+## Core
+
+  * [[#1312], [`89150f`]] Fixed a low-severity, minimal impact soundness issue in
+    `LocalRequest::clone()`.
+  * [[#1263], [`376f74`]] Fixed a cookie serialization issue that led to
+    incorrect cookie deserialization in certain cases.
+  * Removed dependency on `ring` for private cookies and thus Rocket, by
+    default.
+  * Added [`Origin::map_path()`] for manipulating `Origin` paths.
+  * Added [`handler::Outcome::from_or_forward()`].
+  * Added [`Options::NormalizeDirs`] option to `StaticFiles`.
+  * Improved accessibility of default error HTML.
+
+## Docs
+
+  * Fixed various typos.
+
+[#1312]: https://github.com/SergioBenitez/Rocket/issues/1312
+[`89150f`]: https://github.com/SergioBenitez/Rocket/commit/89150f
+[#1263]: https://github.com/SergioBenitez/Rocket/issues/1263
+[`376f74`]: https://github.com/SergioBenitez/Rocket/commit/376f74
+[`Origin::map_path()`]: https://api.rocket.rs/v0.4/rocket/http/uri/struct.Origin.html#method.map_path
+[`handler::Outcome::from_or_forward()`]: https://api.rocket.rs/v0.4/rocket/handler/type.Outcome.html#method.from_or_forward
+[`Options::NormalizeDirs`]: https://api.rocket.rs/v0.4/rocket_contrib/serve/struct.Options.html#associatedconstant.NormalizeDirs
+
 # Version 0.4.4 (Mar 09, 2020)
 
 ## Core

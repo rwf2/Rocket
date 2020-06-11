@@ -56,7 +56,7 @@ fn wow_helper(
     h: &Helper<'_, '_>,
     _: &Handlebars,
     _: &Context,
-    _: &mut RenderContext<'_>,
+    _: &mut RenderContext<'_, '_>,
     out: &mut dyn Output
 ) -> HelperResult {
     if let Some(param) = h.param(0) {

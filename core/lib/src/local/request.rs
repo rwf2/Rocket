@@ -414,7 +414,7 @@ impl<'c> LocalRequest<'c> {
         // with the changes reflected by `response`.
         if let Some(ref jar) = client.cookies {
             let mut jar = jar.write().expect("LocalRequest::_dispatch() write lock");
-            let current_time = time::OffsetDateTime::now();
+            let current_time = time::OffsetDateTime::now_utc();
             for cookie in response.cookies() {
                 if let Some(expires) = cookie.expires() {
                     if expires <= current_time {
@@ -476,19 +476,35 @@ impl fmt::Debug for LocalResponse<'_> {
 
 impl<'c> Clone for LocalRequest<'c> {
     fn clone(&self) -> LocalRequest<'c> {
+        // Don't alias the existing `Request`. See #1312.
+        let mut request = Rc::new(self.inner().clone());
+        let ptr = Rc::get_mut(&mut request).unwrap() as *mut Request<'_>;
+
         LocalRequest {
+            ptr, request,
             client: self.client,
-            ptr: self.ptr,
-            request: self.request.clone(),
             data: self.data.clone(),
             uri: self.uri.clone()
         }
     }
 }
 
-// #[cfg(test)]
+#[cfg(test)]
 mod tests {
-    // Someday...
+    use crate::Request;
+    use crate::local::Client;
+
+    #[test]
+    fn clone_unique_ptr() {
+        let client = Client::new(crate::ignite()).unwrap();
+        let r1 = client.get("/");
+        let r2 = r1.clone();
+
+        assert_ne!(
+            r1.inner() as *const Request<'_>,
+            r2.inner() as *const Request<'_>
+        );
+    }
 
     // #[test]
     // #[compile_fail]

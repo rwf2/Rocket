@@ -6,7 +6,7 @@ use std::fmt;
 
 use crate::config::Environment::*;
 use crate::config::{Result, ConfigBuilder, Environment, ConfigError, LoggingLevel};
-use crate::config::{Table, Value, Array, Datetime};
+use crate::config::{FullConfig, Table, Value, Array, Datetime};
 use crate::http::private::Key;
 
 use super::custom_values::*;
@@ -75,8 +75,60 @@ macro_rules! config_from_raw {
 }
 
 impl Config {
+    /// Reads configuration values from the nearest `Rocket.toml`, searching for
+    /// a file by that name upwards from the current working directory to its
+    /// parents, as well as from environment variables named `ROCKET_{PARAM}` as
+    /// specified in the [`config`](crate::config) module documentation. Returns
+    /// the active configuration.
+    ///
+    /// Specifically, this method:
+    ///
+    ///   1. Locates the nearest `Rocket.toml` configuration file.
+    ///   2. Retrieves the active environment according to
+    ///      [`Environment::active()`].
+    ///   3. Parses and validates the configuration file in its entirety,
+    ///      extracting the values from the active environment.
+    ///   4. Overrides parameters with values set in `ROCKET_{PARAM}`
+    ///      environment variables.
+    ///
+    /// Any error encountered while performing these steps is returned.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use rocket::config::Config;
+    ///
+    /// # if false {
+    /// let config = Config::read().unwrap();
+    /// # }
+    /// ```
+    pub fn read() -> Result<Config> {
+        Self::read_from(&FullConfig::find_config_path()?)
+    }
+
+    /// This method is exactly like [`Config::read()`] except it uses the file
+    /// at `path` as the configuration file instead of searching for the nearest
+    /// `Rocket.toml`. The file must have the same format as `Rocket.toml`.
+    ///
+    /// See [`Config::read()`] for more.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use rocket::config::Config;
+    ///
+    /// # if false {
+    /// let config = Config::read_from("/var/my-config.toml").unwrap();
+    /// # }
+    /// ```
+    pub fn read_from<P: AsRef<Path>>(path: P) -> Result<Config> {
+        FullConfig::read_from(path.as_ref()).map(FullConfig::take_active)
+    }
+
     /// Returns a builder for `Config` structure where the default parameters
-    /// are set to those of `env`.
+    /// are set to those of `env`. This _does not_ read any configuration
+    /// parameters from any source. See [`config`](crate::config) for a list of
+    /// defaults.
     ///
     /// # Example
     ///
@@ -95,7 +147,12 @@ impl Config {
     }
 
     /// Returns a `Config` with the default parameters for the environment
-    /// `env`. See [`config`](crate::config) for a list of defaults.
+    /// `env`. This _does not_ read any configuration parameters from any
+    /// source. See [`config`](crate::config) for a list of defaults.
+    ///
+    /// # Panics
+    ///
+    /// Panics if randomness cannot be retrieved from the OS.
     ///
     /// # Example
     ///
@@ -106,11 +163,12 @@ impl Config {
     /// my_config.set_port(1001);
     /// ```
     pub fn new(env: Environment) -> Config {
-        Config::default(env)
+        Config::default(env).expect("failed to read randomness from the OS")
     }
 
     /// Returns a `Config` with the default parameters of the active environment
-    /// as determined by the `ROCKET_ENV` environment variable.
+    /// as determined by the `ROCKET_ENV` environment variable. This _does not_
+    /// read any configuration parameters from any source.
     ///
     /// If `ROCKET_ENV` is not set, the returned `Config` uses development
     /// environment parameters when the application was compiled in `debug` mode
@@ -182,19 +240,17 @@ impl Config {
     }
 
     /// Returns the default configuration for the environment `env` given that
-    /// the configuration was stored at `config_file_path`.
+    /// the configuration was stored at `path`. This doesn't read the file at
+    /// `path`; it simply uses `path` to set the config path property in the
+    /// returned `Config`.
     ///
     /// # Error
     ///
     /// Return a `BadFilePath` error if `path` does not have a parent.
-    ///
-    /// # Panics
-    ///
-    /// Panics if randomness cannot be retrieved from the OS.
     pub(crate) fn default_from<P>(env: Environment, path: P) -> Result<Config>
         where P: AsRef<Path>
     {
-        let mut config = Config::default(env);
+        let mut config = Config::default(env)?;
 
         let config_file_path = path.as_ref().to_path_buf();
         if let Some(parent) = config_file_path.parent() {
@@ -209,18 +265,15 @@ impl Config {
     }
 
     /// Returns the default configuration for the environment `env`.
-    ///
-    /// # Panics
-    ///
-    /// Panics if randomness cannot be retrieved from the OS.
-    pub(crate) fn default(env: Environment) -> Config {
+    pub(crate) fn default(env: Environment) -> Result<Config> {
         // Note: This may truncate if num_cpus::get() / 2 > u16::max. That's okay.
         let default_workers = (num_cpus::get() * 2) as u16;
 
         // Use a generated secret key by default.
-        let key = SecretKey::Generated(Key::generate());
+        let new_key = Key::try_generate().ok_or(ConfigError::RandFailure)?;
+        let key = SecretKey::Generated(new_key);
 
-        match env {
+        Ok(match env {
             Development => {
                 Config {
                     environment: Development,
@@ -269,7 +322,7 @@ impl Config {
                     root_path: None,
                 }
             }
-        }
+        })
     }
 
     /// Constructs a `BadType` error given the entry `name`, the invalid `val`
@@ -459,7 +512,7 @@ impl Config {
             _ => return Err(e)
         };
 
-        self.secret_key = SecretKey::Provided(Key::from_master(&bytes));
+        self.secret_key = SecretKey::Provided(Key::derive_from(&bytes));
         Ok(())
     }
 

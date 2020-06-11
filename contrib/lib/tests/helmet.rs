@@ -130,4 +130,22 @@ mod helmet_tests {
                 "max-age=30, enforce, report-uri=\"https://www.google.com\"");
         });
     }
+
+    #[test]
+    fn prefetch_test() {
+        let helmet = SpaceHelmet::default().enable(Prefetch::default());
+        dispatch!(helmet, |response: LocalResponse<'_>| {
+            assert_header!(response, "X-DNS-Prefetch-Control", "off");
+        });
+
+        let helmet = SpaceHelmet::default().enable(Prefetch::Off);
+        dispatch!(helmet, |response: LocalResponse<'_>| {
+            assert_header!(response, "X-DNS-Prefetch-Control", "off");
+        });
+
+        let helmet = SpaceHelmet::default().enable(Prefetch::On);
+        dispatch!(helmet, |response: LocalResponse<'_>| {
+            assert_header!(response, "X-DNS-Prefetch-Control", "on");
+        });
+    }
 }

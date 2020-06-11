@@ -12,7 +12,7 @@ use state::Container;
 
 use crate::{logger, handler};
 use crate::ext::ReadExt;
-use crate::config::{self, Config, LoggedValue};
+use crate::config::{Config, FullConfig, ConfigError, LoggedValue};
 use crate::request::{Request, FormItems};
 use crate::data::Data;
 use crate::response::{Body, Response};
@@ -21,6 +21,7 @@ use crate::catcher::{self, Catcher};
 use crate::outcome::Outcome;
 use crate::error::{LaunchError, LaunchErrorKind};
 use crate::fairing::{Fairing, Fairings};
+use crate::logger::PaintExt;
 
 use crate::http::{Method, Status, Header};
 use crate::http::hyper::{self, header};
@@ -364,16 +365,17 @@ impl Rocket {
 
     /// Create a new `Rocket` application using the configuration information in
     /// `Rocket.toml`. If the file does not exist or if there is an I/O error
-    /// reading the file, the defaults are used. See the [`config`]
-    /// documentation for more information on defaults.
+    /// reading the file, the defaults are used. See the
+    /// [`config`](crate::config) documentation for more information on
+    /// defaults.
     ///
     /// This method is typically called through the
     /// [`rocket::ignite()`](crate::ignite) alias.
     ///
     /// # Panics
     ///
-    /// If there is an error parsing the `Rocket.toml` file, this functions
-    /// prints a nice error message and then exits the process.
+    /// If there is an error reading configuration sources, this function prints
+    /// a nice error message and then exits the process.
     ///
     /// # Examples
     ///
@@ -382,10 +384,22 @@ impl Rocket {
     /// rocket::ignite()
     /// # };
     /// ```
-    #[inline]
     pub fn ignite() -> Rocket {
-        // Note: init() will exit the process under config errors.
-        Rocket::configured(config::init())
+        Config::read()
+            .or_else(|e| match e {
+                ConfigError::IoError => {
+                    warn!("Failed to read 'Rocket.toml'. Using defaults.");
+                    Ok(FullConfig::active_default(None)?.take_active())
+                }
+                ConfigError::NotFound => Ok(FullConfig::active_default(None)?.take_active()),
+                _ => Err(e)
+            })
+            .map(Rocket::configured)
+            .unwrap_or_else(|e: ConfigError| {
+                logger::init(logger::LoggingLevel::Debug);
+                e.pretty_print();
+                std::process::exit(1)
+            })
     }
 
     /// Creates a new `Rocket` application using the supplied custom
@@ -424,7 +438,7 @@ impl Rocket {
             logger::push_max_level(logger::LoggingLevel::Normal);
         }
 
-        launch_info!("{}Configured for {}.", Paint::masked("🔧 "), config.environment);
+        launch_info!("{}Configured for {}.", Paint::emoji("🔧 "), config.environment);
         launch_info_!("address: {}", Paint::default(&config.address).bold());
         launch_info_!("port: {}", Paint::default(&config.port).bold());
         launch_info_!("log: {}", Paint::default(config.log_level).bold());
@@ -524,10 +538,11 @@ impl Rocket {
     #[inline]
     pub fn mount<R: Into<Vec<Route>>>(mut self, base: &str, routes: R) -> Self {
         info!("{}{} {}{}",
-                Paint::masked("🛰  "),
-                Paint::magenta("Mounting"),
-                Paint::blue(base),
-                Paint::magenta(":"));
+
+              Paint::emoji("🛰  "),
+              Paint::magenta("Mounting"),
+              Paint::blue(base),
+              Paint::magenta(":"));
 
         let base_uri = Origin::parse(base)
             .unwrap_or_else(|e| {
@@ -583,7 +598,7 @@ impl Rocket {
     /// ```
     #[inline]
     pub fn register(mut self, catchers: Vec<Catcher>) -> Self {
-        info!("{}{}", Paint::masked("👾 "), Paint::magenta("Catchers:"));
+        info!("{}{}", Paint::emoji("👾 "), Paint::magenta("Catchers:"));
         for c in catchers {
             if self.catchers.get(&c.code).map_or(false, |e| !e.is_default) {
                 info_!("{} {}", c, Paint::yellow("(warning: duplicate catcher!)"));
@@ -742,7 +757,7 @@ impl Rocket {
 
             let full_addr = format!("{}:{}", self.config.address, self.config.port);
             launch_info!("{}{} {}{}",
-                         Paint::masked("🚀 "),
+                         Paint::emoji("🚀 "),
                          Paint::default("Rocket has launched from").bold(),
                          Paint::default(proto).bold().underline(),
                          Paint::default(&full_addr).bold().underline());

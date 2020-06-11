@@ -21,7 +21,8 @@ mod key {
 
     impl Key {
         pub fn generate() -> Self { Key }
-        pub fn from_master(_bytes: &[u8]) -> Self { Key }
+        pub fn try_generate() -> Option<Self> { Some(Key) }
+        pub fn derive_from(_bytes: &[u8]) -> Self { Key }
     }
 }
 
@@ -373,7 +374,7 @@ impl Cookies<'_> {
         }
 
         if cookie.expires().is_none() {
-            cookie.set_expires(time::OffsetDateTime::now() + time::Duration::weeks(1));
+            cookie.set_expires(time::OffsetDateTime::now_utc() + time::Duration::weeks(1));
         }
 
         if cookie.same_site().is_none() {

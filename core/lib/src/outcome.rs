@@ -12,7 +12,7 @@
 //! including [`FromRequest`](crate::request::FromRequest),
 //! [`FromData`](crate::data::FromData), and
 //! [`Responder`](crate::response::Responder). It is also the return type of
-//! request handlers via the [`Response`] type.
+//! request handlers via the [`Response`](crate::response::Response) type.
 //!
 //! # Success
 //!

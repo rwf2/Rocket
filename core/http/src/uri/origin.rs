@@ -316,6 +316,42 @@ impl<'a> Origin<'a> {
         self.path.from_cow_source(&self.source)
     }
 
+    /// Applies the function `f` to the internal `path` and returns a new
+    /// `Origin` with the new path. If the path returned from `f` is invalid,
+    /// returns `None`. Otherwise, returns `Some`, even if the new path is
+    /// _abnormal_.
+    ///
+    /// ### Examples
+    ///
+    /// Affix a trailing slash if one isn't present.
+    ///
+    /// ```rust
+    /// # extern crate rocket;
+    /// use rocket::http::uri::Origin;
+    ///
+    /// let old_uri = Origin::parse("/a/b/c").unwrap();
+    /// let expected_uri = Origin::parse("/a/b/c/").unwrap();
+    /// assert_eq!(old_uri.map_path(|p| p.to_owned() + "/"), Some(expected_uri));
+    ///
+    /// let old_uri = Origin::parse("/a/b/c/").unwrap();
+    /// let expected_uri = Origin::parse("/a/b/c//").unwrap();
+    /// assert_eq!(old_uri.map_path(|p| p.to_owned() + "/"), Some(expected_uri));
+    /// ```
+    #[inline]
+    pub fn map_path<F: FnOnce(&str) -> String>(&self, f: F) -> Option<Self> {
+        let path = f(self.path());
+        if !path.starts_with('/') || !path.bytes().all(crate::parse::uri::is_pchar) {
+            return None;
+        }
+
+        Some(Origin {
+            source: self.source.clone(),
+            path: path.into(),
+            query: self.query.clone(),
+            segment_count: Storage::new(),
+        })
+    }
+
     /// Returns the query part of this URI without the question mark, if there is
     /// any.
     ///
