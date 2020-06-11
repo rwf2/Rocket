@@ -396,9 +396,7 @@ mod tests {
     }
 
     fn req_route_mt_collide<S1, S2>(m: Method, mt1: S1, mt2: S2) -> bool
-    where
-        S1: Into<Option<&'static str>>,
-        S2: Into<Option<&'static str>>,
+        where S1: Into<Option<&'static str>>, S2: Into<Option<&'static str>>
     {
         let rocket = Rocket::custom(Config::development());
         let mut req = Request::new(&rocket, m, Origin::dummy());
