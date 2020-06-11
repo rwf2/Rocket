@@ -1,7 +1,7 @@
 use super::Route;
 
-use crate::http::route::Kind;
 use crate::http::MediaType;
+use crate::http::route::Kind;
 use crate::request::Request;
 
 impl Route {
