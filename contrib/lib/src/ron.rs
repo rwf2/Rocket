@@ -1,3 +1,19 @@
+//! Automatic RON (de)serialization support.
+//!
+//! See the [`Ron`](crate::ron:Ron) type for further details.
+//!
+//! # Enabling
+//!
+//! This module is only available when the `ron` feature is enabled. Enable it
+//! in `Cargo.toml` as follows:
+//!
+//! ```toml
+//! [dependencies.rocket_contrib]
+//! version = "0.5.0-dev"
+//! default-features = false
+//! features = ["ron"]
+//! ```
+
 use std::ops::{Deref, DerefMut};
 use std::io;
 use std::iter::FromIterator;
@@ -14,10 +30,76 @@ use serde::{Serialize, Serializer};
 use serde::de::{Deserialize, Deserializer};
 
 
+/// The RON type: implements [`FromData`] and [`Responder`], allowing you to
+/// easily consume and respond with RON.
+///
+/// ## Receiving RON
+///
+/// If you're receiving RON data, simply add a `data` parameter to your route
+/// arguments and ensure the type of the parameter is a `Ron<T>`, where `T` is
+/// some type you'd like to parse from RON. `T` must implement [`Deserialize`]
+/// or from [`serde`]. The data is parsed from the HTTP request body.
+///
+/// ```rust
+/// # #![feature(proc_macro_hygiene)]
+/// # #[macro_use] extern crate rocket;
+/// # extern crate rocket_contrib;
+/// # type User = usize;
+/// use rocket_contrib::ron::Ron;
+///
+/// #[post("/users", data = "<user>")]
+/// fn new_user(user: Json<User>) {
+///     /* ... */
+/// }
+/// ```
+///
+/// ## Sending RON
+///
+/// If you're responding with RON data, return a `Ron<T>` type, where `T`
+/// implements [`Serialize`] from [`serde`]. The content type of the response is
+/// set to `text/plain` automatically.
+///
+/// ```rust
+/// # #![feature(proc_macro_hygiene)]
+/// # #[macro_use] extern crate rocket;
+/// # extern crate rocket_contrib;
+/// # type User = usize;
+/// use rocket_contrib::ron::Ron;
+///
+/// #[get("/users/<id>")]
+/// fn user(id: usize) -> Ron<User> {
+///     let user_from_id = User::from(id);
+///     /* ... */
+///     Ron(user_from_id)
+/// }
+/// ```
+///
+/// ## Incoming Data Limits
+///
+/// The default size limit for incoming RON data is 1MiB. Setting a limit
+/// protects your application from denial of service (DoS) attacks and from
+/// resource exhaustion through high memory consumption. The limit can be
+/// increased by setting the `limits.ron` configuration parameter. For
+/// instance, to increase the JSON limit to 5MiB for all environments, you may
+/// add the following to your `Rocket.toml`:
+///
+/// ```toml
+/// [global.limits]
+/// ron = 5242880
+/// ```
 #[derive(Debug)]
 pub struct Ron<T>(pub T);
 
 impl<T> Ron<T> {
+    /// Consumes the RON wrapper and returns the wrapped item.
+    ///
+    /// # Example
+    /// ```rust
+    /// # use rocket_contrib::ron::Ron;
+    /// let sring = "Hello".to_string();
+    /// let my_ron = Ron(string);
+    /// assert_eq!(my_ron.into_inner(), "Hello".to_string());
+    /// ```
     #[inline(always)]
     pub fn into_inner(self) -> T {
         self.0
@@ -28,10 +110,17 @@ impl<T> Ron<T> {
 /// Default limit for RON is 1MB.
 const LIMIT: u64 = 1 << 20;
 
+/// An error returned by the [`Ron`] data guard when incoming data fails to
+/// serialize as RON.
 #[derive(Debug)]
 pub enum RonError<'a> {
+    /// An I/O error occurred while reading the incoming request data.
     Io(io::Error),
 
+    /// The client's data was received successfully but failed to parse as valid
+    /// RON or as the requested type. The `&str` value in `.0` is the raw data
+    /// received from the user, while the `Error` in `.1` is the deserialization
+    /// error from `serde`.
     Parse(&'a str, ron::de::Error),
 }
 
@@ -67,6 +156,9 @@ impl<'a, T: Deserialize<'a>> FromData<'a> for Ron<T> {
 }
 
 
+/// Serializes the wrapped value into RON. Returns a response with Content-Type
+/// Text and a fixed-size body with the serialized value. If serialization
+/// fails, an `Err` of `Status::InternalServerError` is returned.
 impl<'r, T: Serialize> Responder<'r> for Ron<T> {
     fn respond_to(self, req: &'r Request<'_>) -> response::ResultFuture<'r> {
         match serialize(&self.0) {
