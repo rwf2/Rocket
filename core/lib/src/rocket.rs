@@ -964,7 +964,7 @@ impl Rocket {
     /// Returns `Some` of the managed state value for the type `T` if it is
     /// being managed by `self`. Otherwise, returns `None`.
     ///
-    /// This function is equivalent to `.inspect().await.config()` and is
+    /// This function is equivalent to `.inspect().await.state()` and is
     /// provided as a convenience.
     ///
     /// # Example
