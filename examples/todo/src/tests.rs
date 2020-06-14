@@ -16,8 +16,8 @@ macro_rules! run_test {
         let _lock = DB_LOCK.lock();
 
         rocket::async_test(async move {
-            let rocket = super::rocket();
-            let db = super::DbConn::get_one(&rocket);
+            let mut rocket = super::rocket();
+            let db = super::DbConn::get_one(rocket.inspect());
             let $client = Client::new(rocket).expect("Rocket client");
             let $conn = db.expect("failed to get database connection for testing");
             assert!(Task::delete_all(&$conn), "failed to delete all tasks for testing");

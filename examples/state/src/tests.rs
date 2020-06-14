@@ -30,11 +30,12 @@ fn test_raw_state_count() {
     use rocket::State;
     use super::{count, index};
 
-    let rocket = super::rocket();
+    let mut rocket = super::rocket();
+    let manifest = rocket.inspect();
 
-    assert_eq!(count(State::from(&rocket).unwrap()), "0");
-    assert!(index(State::from(&rocket).unwrap()).0.contains("Visits: 1"));
-    assert_eq!(count(State::from(&rocket).unwrap()), "1");
+    assert_eq!(count(State::from(manifest).unwrap()), "0");
+    assert!(index(State::from(manifest).unwrap()).0.contains("Visits: 1"));
+    assert_eq!(count(State::from(manifest).unwrap()), "1");
 }
 
 // Cargo runs each test in parallel on different threads. We use all of these

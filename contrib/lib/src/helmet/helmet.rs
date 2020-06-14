@@ -3,7 +3,7 @@ use std::sync::atomic::{AtomicBool, Ordering};
 
 use rocket::http::uncased::UncasedStr;
 use rocket::fairing::{Fairing, Info, Kind};
-use rocket::{Request, Response, Rocket};
+use rocket::{Manifest, Request, Response};
 
 use crate::helmet::*;
 
@@ -201,9 +201,9 @@ impl Fairing for SpaceHelmet {
         self.apply(res);
     }
 
-    fn on_launch(&self, rocket: &Rocket) {
-        if rocket.config().tls_enabled()
-            && !rocket.config().environment.is_dev()
+    fn on_launch(&self, manifest: &Manifest) {
+        if manifest.config().tls_enabled()
+            && !manifest.config().environment.is_dev()
             && !self.is_enabled::<Hsts>()
         {
             warn_!("Space Helmet: deploying with TLS without enabling HSTS.");

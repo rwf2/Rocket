@@ -1,4 +1,4 @@
-use crate::{Rocket, Request, Response, Data};
+use crate::{Manifest, Rocket, Request, Response, Data};
 use crate::fairing::{Fairing, Kind};
 
 use yansi::Paint;
@@ -51,9 +51,9 @@ impl Fairings {
     }
 
     #[inline(always)]
-    pub fn handle_launch(&self, rocket: &Rocket) {
+    pub fn handle_launch(&self, manifest: &Manifest) {
         for &i in &self.launch {
-            self.all_fairings[i].on_launch(rocket);
+            self.all_fairings[i].on_launch(manifest);
         }
     }
 

@@ -402,7 +402,7 @@ mod tests {
         where S1: Into<Option<&'static str>>, S2: Into<Option<&'static str>>
     {
         let rocket = Rocket::custom(Config::development());
-        let mut req = Request::new(&rocket, m, Origin::dummy());
+        let mut req = Request::new(rocket._manifest(), m, Origin::dummy());
         if let Some(mt_str) = mt1.into() {
             if m.supports_payload() {
                 req.replace_header(mt_str.parse::<ContentType>().unwrap());
@@ -469,7 +469,7 @@ mod tests {
 
     fn req_route_path_match(a: &'static str, b: &'static str) -> bool {
         let rocket = Rocket::custom(Config::development());
-        let req = Request::new(&rocket, Get, Origin::parse(a).expect("valid URI"));
+        let req = Request::new(&rocket._manifest(), Get, Origin::parse(a).expect("valid URI"));
         let route = Route::ranked(0, Get, b.to_string(), dummy_handler);
         route.matches(&req)
     }

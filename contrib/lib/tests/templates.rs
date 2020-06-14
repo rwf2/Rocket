@@ -51,17 +51,18 @@ mod templates_tests {
 
         #[test]
         fn test_tera_templates() {
-            let rocket = rocket();
+            let mut rocket = rocket();
+            let manifest = rocket.inspect();
             let mut map = HashMap::new();
             map.insert("title", "_test_");
             map.insert("content", "<script />");
 
             // Test with a txt file, which shouldn't escape.
-            let template = Template::show(&rocket, "tera/txt_test", &map);
+            let template = Template::show(manifest, "tera/txt_test", &map);
             assert_eq!(template, Some(UNESCAPED_EXPECTED.into()));
 
             // Now with an HTML file, which should.
-            let template = Template::show(&rocket, "tera/html_test", &map);
+            let template = Template::show(manifest, "tera/html_test", &map);
             assert_eq!(template, Some(ESCAPED_EXPECTED.into()));
         }
 
@@ -95,13 +96,14 @@ mod templates_tests {
 
         #[test]
         fn test_handlebars_templates() {
-            let rocket = rocket();
+            let mut rocket = rocket();
+            let manifest = rocket.inspect();
             let mut map = HashMap::new();
             map.insert("title", "_test_");
             map.insert("content", "<script /> hi");
 
             // Test with a txt file, which shouldn't escape.
-            let template = Template::show(&rocket, "hbs/test", &map);
+            let template = Template::show(manifest, "hbs/test", &map);
             assert_eq!(template, Some(EXPECTED.into()));
         }
 
@@ -151,7 +153,7 @@ mod templates_tests {
             }
 
             // verify that the initial content is correct
-            let initial_rendered = Template::show(client.rocket(), RELOAD_TEMPLATE, ());
+            let initial_rendered = Template::show(client.manifest(), RELOAD_TEMPLATE, ());
             assert_eq!(initial_rendered, Some(INITIAL_TEXT.into()));
 
             // write a change to the file
@@ -162,7 +164,7 @@ mod templates_tests {
                 client.get("/").dispatch().await;
 
                 // if the new content is correct, we are done
-                let new_rendered = Template::show(client.rocket(), RELOAD_TEMPLATE, ());
+                let new_rendered = Template::show(client.manifest(), RELOAD_TEMPLATE, ());
                 if new_rendered == Some(NEW_TEXT.into()) {
                     write_file(&reload_path, INITIAL_TEXT);
                     return;

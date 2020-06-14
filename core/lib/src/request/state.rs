@@ -1,6 +1,6 @@
 use std::ops::Deref;
 
-use crate::Rocket;
+use crate::rocket::Manifest;
 use crate::request::{self, FromRequest, Request};
 use crate::outcome::Outcome;
 use crate::http::Status;
@@ -99,8 +99,8 @@ use crate::http::Status;
 ///     state.0.to_string()
 /// }
 ///
-/// let rocket = rocket::ignite().manage(MyManagedState(127));
-/// let state = State::from(&rocket).expect("managing `MyManagedState`");
+/// let mut rocket = rocket::ignite().manage(MyManagedState(127));
+/// let state = State::from(rocket.inspect()).expect("managing `MyManagedState`");
 /// assert_eq!(handler(state), "127");
 /// ```
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -152,17 +152,18 @@ impl<'r, T: Send + Sync + 'static> State<'r, T> {
     /// #[derive(Debug, PartialEq)]
     /// struct Unmanaged(usize);
     ///
-    /// let rocket = rocket::ignite().manage(Managed(7));
+    /// let mut rocket = rocket::ignite().manage(Managed(7));
+    /// let manifest = rocket.inspect();
     ///
-    /// let state: Option<State<Managed>> = State::from(&rocket);
+    /// let state: Option<State<Managed>> = State::from(manifest);
     /// assert_eq!(state.map(|s| s.inner()), Some(&Managed(7)));
     ///
-    /// let state: Option<State<Unmanaged>> = State::from(&rocket);
+    /// let state: Option<State<Unmanaged>> = State::from(manifest);
     /// assert_eq!(state, None);
     /// ```
     #[inline(always)]
-    pub fn from(rocket: &'r Rocket) -> Option<Self> {
-        rocket.state.try_get::<T>().map(State)
+    pub fn from(manifest: &'r Manifest) -> Option<Self> {
+        manifest.state().map(State)
     }
 }
 

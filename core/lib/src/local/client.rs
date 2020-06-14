@@ -1,7 +1,7 @@
 use std::sync::RwLock;
 use std::borrow::Cow;
 
-use crate::Rocket;
+use crate::rocket::{Rocket, Manifest};
 use crate::local::LocalRequest;
 use crate::http::{Method, private::CookieJar};
 use crate::error::LaunchError;
@@ -70,7 +70,7 @@ use crate::error::LaunchError;
 /// [`put()`]: #method.put
 /// [`post()`]: #method.post
 pub struct Client {
-    rocket: Rocket,
+    manifest: Manifest,
     pub(crate) cookies: Option<RwLock<CookieJar>>,
 }
 
@@ -79,12 +79,15 @@ impl Client {
     /// is created for cookie tracking. Otherwise, the internal `CookieJar` is
     /// set to `None`.
     fn _new(rocket: Rocket, tracked: bool) -> Result<Client, LaunchError> {
+        let mut manifest = rocket.actualize_and_take_manifest();
+        manifest.prelaunch_check()?;
+
         let cookies = match tracked {
             true => Some(RwLock::new(CookieJar::new())),
             false => None
         };
 
-        Ok(Client { rocket: rocket.prelaunch_check()?, cookies })
+        Ok(Client { manifest, cookies })
     }
 
     /// Construct a new `Client` from an instance of `Rocket` with cookie
@@ -146,7 +149,8 @@ impl Client {
         Client::_new(rocket, false)
     }
 
-    /// Returns the instance of `Rocket` this client is creating requests for.
+    /// Returns a reference to the `Manifest` of the `Rocket` this client is
+    /// creating requests for.
     ///
     /// # Example
     ///
@@ -156,12 +160,12 @@ impl Client {
     /// let my_rocket = rocket::ignite();
     /// let client = Client::new(my_rocket).expect("valid rocket");
     ///
-    /// // get the instance of `my_rocket` within `client`
-    /// let my_rocket = client.rocket();
+    /// // get access to the manifest within `client`
+    /// let manifest = client.manifest();
     /// ```
     #[inline(always)]
-    pub fn rocket(&self) -> &Rocket {
-        &self.rocket
+    pub fn manifest(&self) -> &Manifest {
+        &self.manifest
     }
 
     /// Create a local `GET` request to the URI `uri`.

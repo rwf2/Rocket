@@ -141,7 +141,7 @@ use serde_json::{Value, to_value};
 use std::borrow::Cow;
 use std::path::PathBuf;
 
-use rocket::{Rocket, State};
+use rocket::{Manifest, State};
 use rocket::request::Request;
 use rocket::fairing::Fairing;
 use rocket::response::{self, Content, Responder};
@@ -339,14 +339,14 @@ impl Template {
     ///
     ///     # context.insert("test", "test");
     ///     # #[allow(unused_variables)]
-    ///     let template = Template::show(client.rocket(), "index", context);
+    ///     let template = Template::show(client.manifest(), "index", context);
     /// }
     /// ```
     #[inline]
-    pub fn show<S, C>(rocket: &Rocket, name: S, context: C) -> Option<String>
+    pub fn show<S, C>(manifest: &Manifest, name: S, context: C) -> Option<String>
         where S: Into<Cow<'static, str>>, C: Serialize
     {
-        let ctxt = rocket.state::<ContextManager>().map(ContextManager::context).or_else(|| {
+        let ctxt = manifest.state::<ContextManager>().map(ContextManager::context).or_else(|| {
             warn!("Uninitialized template context: missing fairing.");
             info!("To use templates, you must attach `Template::fairing()`.");
             info!("See the `Template` documentation for more information.");

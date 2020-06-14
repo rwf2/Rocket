@@ -55,9 +55,9 @@ pub fn test_config(environment: Environment) {
     std::env::set_var("ROCKET_ENV", environment.to_string());
 
     let rocket = rocket::ignite()
-        .attach(AdHoc::on_attach("Local Config", |rocket| {
+        .attach(AdHoc::on_attach("Local Config", |mut rocket| {
             println!("Attaching local config.");
-            let config = rocket.config().clone();
+            let config = rocket.inspect().config().clone();
             Ok(rocket.manage(LocalConfig(config)))
         }))
         .mount("/", routes![check_config]);

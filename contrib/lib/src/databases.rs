@@ -239,7 +239,7 @@
 //!      Returns a fairing that initializes the associated database connection
 //!      pool.
 //!
-//!   * `fn get_one(&Rocket) -> Option<Self>`
+//!   * `fn get_one(&Manifest) -> Option<Self>`
 //!
 //!     Retrieves a connection from the configured pool. Returns `Some` as long
 //!     as `Self::fairing()` has been attached and there is at least one
@@ -548,16 +548,17 @@ pub enum ConfigError {
 /// #     .extra("databases", databases)
 /// #     .expect("custom config okay");
 /// #
-/// # rocket::custom(config).attach(AdHoc::on_attach("Testing", |rocket| {
+/// # rocket::custom(config).attach(AdHoc::on_attach("Testing", |mut rocket| {
 /// # {
-/// let config = database_config("my_db", rocket.config()).unwrap();
+/// let manifest = rocket.inspect();
+/// let config = database_config("my_db", manifest.config()).unwrap();
 /// assert_eq!(config.url, "db/db.sqlite");
 /// assert_eq!(config.pool_size, 25);
 ///
-/// let other_config = database_config("my_other_db", rocket.config()).unwrap();
+/// let other_config = database_config("my_other_db", manifest.config()).unwrap();
 /// assert_eq!(other_config.url, "mysql://root:root@localhost/database");
 ///
-/// let error = database_config("invalid_db", rocket.config()).unwrap_err();
+/// let error = database_config("invalid_db", manifest.config()).unwrap_err();
 /// assert_eq!(error, ConfigError::MissingKey);
 /// # }
 /// #
