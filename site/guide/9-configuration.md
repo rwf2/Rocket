@@ -200,7 +200,7 @@ fn main() {
     rocket::ignite()
         .mount("/", routes![assets])
         .attach(AdHoc::on_attach("Assets Config", |mut rocket| {
-            let assets_dir = rocket.inspect().await.config()
+            let assets_dir = rocket.config().await
                 .get_str("assets_dir")
                 .unwrap_or("assets/")
                 .to_string();

@@ -69,7 +69,7 @@ fn rocket() -> rocket::Rocket {
         .attach(Counter::default())
         .attach(AdHoc::on_attach("Token State", |mut rocket| async {
             println!("Adding token managed state...");
-            let token_val = rocket.inspect().await.config().get_int("token").unwrap_or(-1);
+            let token_val = rocket.config().await.get_int("token").unwrap_or(-1);
             Ok(rocket.manage(Token(token_val)))
         }))
         .attach(AdHoc::on_launch("Launch Message", |_| {

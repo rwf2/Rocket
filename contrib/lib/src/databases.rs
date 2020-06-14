@@ -550,15 +550,15 @@ pub enum ConfigError {
 /// #
 /// # rocket::custom(config).attach(AdHoc::on_attach("Testing", |mut rocket| async {
 /// # {
-/// let manifest = rocket.inspect().await;
-/// let config = database_config("my_db", manifest.config()).unwrap();
+/// let rocket_config = rocket.config().await;
+/// let config = database_config("my_db", rocket_config).unwrap();
 /// assert_eq!(config.url, "db/db.sqlite");
 /// assert_eq!(config.pool_size, 25);
 ///
-/// let other_config = database_config("my_other_db", manifest.config()).unwrap();
+/// let other_config = database_config("my_other_db", rocket_config).unwrap();
 /// assert_eq!(other_config.url, "mysql://root:root@localhost/database");
 ///
-/// let error = database_config("invalid_db", manifest.config()).unwrap_err();
+/// let error = database_config("invalid_db", rocket_config).unwrap_err();
 /// assert_eq!(error, ConfigError::MissingKey);
 /// # }
 /// #
