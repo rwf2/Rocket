@@ -27,7 +27,6 @@ ctrl_c_shutdown = ["tokio/signal"]
 [dependencies]
 rocket_codegen = { version = "0.5.0-dev", path = "../codegen" }
 rocket_http = { version = "0.5.0-dev", path = "../http" }
-futures-util = "0.3.0"
 futures = "0.3.0"
 tokio = { version = "0.2.9", features = ["fs", "io-std", "io-util", "rt-threaded", "sync"] }
 yansi = "0.5"

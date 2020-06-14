@@ -59,7 +59,7 @@ impl<'r, R: Responder<'r> + Send + 'r> Responder<'r> for Content<R> {
 
 macro_rules! ctrs {
     ($($name:ident: $ct:ident, $name_str:expr, $ct_str:expr),+) => {
-        use futures_util::future::BoxFuture;
+        use futures::future::BoxFuture;
 
         $(
             #[doc="Override the `Content-Type` of the response to <b>"]

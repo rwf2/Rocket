@@ -2,7 +2,7 @@ use std::io::{self, Cursor};
 use std::pin::Pin;
 use std::task::{Poll, Context};
 
-use futures_util::{ready, future::BoxFuture, stream::Stream};
+use futures::{ready, future::BoxFuture, stream::Stream};
 use tokio::io::{AsyncRead, AsyncReadExt as _};
 
 use crate::http::hyper;

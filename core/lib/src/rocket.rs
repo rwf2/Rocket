@@ -5,8 +5,8 @@ use std::io;
 use std::mem;
 use std::sync::Arc;
 
-use futures_util::future::{Future, FutureExt, BoxFuture};
-use futures_util::stream::StreamExt;
+use futures::future::{Future, FutureExt, BoxFuture};
+use futures::stream::StreamExt;
 use tokio::sync::{mpsc, oneshot};
 
 use yansi::Paint;
@@ -914,7 +914,7 @@ impl Rocket {
         #[cfg(feature = "ctrl_c_shutdown")]
         {
             tokio::spawn(async move {
-                use futures_util::future::{select, Either};
+                use futures::future::{select, Either};
 
                 let either = select(
                     tokio::signal::ctrl_c().boxed(),

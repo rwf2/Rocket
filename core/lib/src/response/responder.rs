@@ -2,7 +2,7 @@ use std::fs::File;
 use std::io::Cursor;
 
 use tokio::io::BufReader;
-use futures_util::future::BoxFuture;
+use futures::future::BoxFuture;
 
 use crate::http::{Status, ContentType, StatusClass};
 use crate::response::{self, Response, Body};

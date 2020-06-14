@@ -27,7 +27,7 @@ impl FromDataSimple for HasContentType {
     type Error = ();
 
     fn from_data(request: &Request<'_>, data: Data) -> data::FromDataFuture<'static, Self, Self::Error> {
-        Box::pin(futures_util::future::ready(if request.content_type().is_some() {
+        Box::pin(futures::future::ready(if request.content_type().is_some() {
             Success(HasContentType)
         } else {
             Forward(data)
