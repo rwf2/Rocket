@@ -99,9 +99,11 @@ use crate::http::Status;
 ///     state.0.to_string()
 /// }
 ///
+/// # rocket::async_test(async {
 /// let mut rocket = rocket::ignite().manage(MyManagedState(127));
-/// let state = State::from(rocket.inspect()).expect("managing `MyManagedState`");
+/// let state = State::from(rocket.inspect().await).expect("managing `MyManagedState`");
 /// assert_eq!(handler(state), "127");
+/// # });
 /// ```
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct State<'r, T: Send + Sync + 'static>(&'r T);
@@ -152,14 +154,16 @@ impl<'r, T: Send + Sync + 'static> State<'r, T> {
     /// #[derive(Debug, PartialEq)]
     /// struct Unmanaged(usize);
     ///
+    /// # rocket::async_test(async {
     /// let mut rocket = rocket::ignite().manage(Managed(7));
-    /// let manifest = rocket.inspect();
+    /// let manifest = rocket.inspect().await;
     ///
     /// let state: Option<State<Managed>> = State::from(manifest);
     /// assert_eq!(state.map(|s| s.inner()), Some(&Managed(7)));
     ///
     /// let state: Option<State<Unmanaged>> = State::from(manifest);
     /// assert_eq!(state, None);
+    /// # });
     /// ```
     #[inline(always)]
     pub fn from(manifest: &'r Manifest) -> Option<Self> {

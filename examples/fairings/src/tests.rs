@@ -3,14 +3,14 @@ use rocket::local::Client;
 
 #[rocket::async_test]
 async fn rewrite_get_put() {
-    let client = Client::new(rocket()).unwrap();
+    let client = Client::new(rocket()).await.unwrap();
     let mut response = client.get("/").dispatch().await;
     assert_eq!(response.body_string().await, Some("Hello, fairings!".into()));
 }
 
 #[rocket::async_test]
 async fn counts() {
-    let client = Client::new(rocket()).unwrap();
+    let client = Client::new(rocket()).await.unwrap();
 
     // Issue 1 GET request.
     client.get("/").dispatch().await;
@@ -30,7 +30,7 @@ async fn counts() {
 
 #[rocket::async_test]
 async fn token() {
-    let client = Client::new(rocket()).unwrap();
+    let client = Client::new(rocket()).await.unwrap();
 
     // Ensure the token is '123', which is what we have in `Rocket.toml`.
     let mut res = client.get("/token").dispatch().await;

@@ -26,7 +26,7 @@ mod private_cookie_test {
         async fn private_cookie_is_returned() {
             let rocket = rocket::ignite().mount("/", routes![return_private_cookie]);
 
-            let client = Client::new(rocket).unwrap();
+            let client = Client::new(rocket).await.unwrap();
             let req = client.get("/").private_cookie(Cookie::new("cookie_name", "cookie_value"));
             let mut response = req.dispatch().await;
 
@@ -38,7 +38,7 @@ mod private_cookie_test {
         async fn regular_cookie_is_not_returned() {
             let rocket = rocket::ignite().mount("/", routes![return_private_cookie]);
 
-            let client = Client::new(rocket).unwrap();
+            let client = Client::new(rocket).await.unwrap();
             let req = client.get("/").cookie(Cookie::new("cookie_name", "cookie_value"));
             let response = req.dispatch().await;
 

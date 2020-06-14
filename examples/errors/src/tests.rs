@@ -6,7 +6,7 @@ async fn test(uri: &str, status: Status, body: String) {
         .mount("/", routes![super::hello])
         .register(catchers![super::not_found]);
 
-    let client = Client::new(rocket).unwrap();
+    let client = Client::new(rocket).await.unwrap();
     let mut response = client.get(uri).dispatch().await;
     assert_eq!(response.status(), status);
     assert_eq!(response.body_string().await, Some(body));

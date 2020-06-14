@@ -1,6 +1,6 @@
 use std::sync::Mutex;
 
-use futures_util::future::BoxFuture;
+use futures_util::future::{Future, BoxFuture};
 
 use crate::{Manifest, Rocket, Request, Response, Data};
 use crate::fairing::{Fairing, Kind, Info};
@@ -46,7 +46,7 @@ pub struct AdHoc {
 
 enum AdHocKind {
     /// An ad-hoc **attach** fairing. Called when the fairing is attached.
-    Attach(Mutex<Option<Box<dyn FnOnce(Rocket) -> Result<Rocket, Rocket> + Send + 'static>>>),
+    Attach(Mutex<Option<Box<dyn FnOnce(Rocket) -> BoxFuture<'static, Result<Rocket, Rocket>> + Send + 'static>>>),
     /// An ad-hoc **launch** fairing. Called just before Rocket launches.
     Launch(Mutex<Option<Box<dyn FnOnce(&Manifest) + Send + 'static>>>),
     /// An ad-hoc **request** fairing. Called when a request is received.
@@ -66,12 +66,14 @@ impl AdHoc {
     /// use rocket::fairing::AdHoc;
     ///
     /// // The no-op attach fairing.
-    /// let fairing = AdHoc::on_attach("No-Op", |rocket| Ok(rocket));
+    /// let fairing = AdHoc::on_attach("No-Op", |rocket| async { Ok(rocket) });
     /// ```
-    pub fn on_attach<F: Send + 'static>(name: &'static str, f: F) -> AdHoc
-        where F: FnOnce(Rocket) -> Result<Rocket, Rocket>
+    pub fn on_attach<F, Fut>(name: &'static str, f: F) -> AdHoc
+    where
+        F: FnOnce(Rocket) -> Fut + Send + 'static,
+        Fut: Future<Output=Result<Rocket, Rocket>> + Send + 'static,
     {
-        AdHoc { name, kind: AdHocKind::Attach(Mutex::new(Some(Box::new(f)))) }
+        AdHoc { name, kind: AdHocKind::Attach(Mutex::new(Some(Box::new(|rocket| Box::pin(f(rocket)))))) }
     }
 
     /// Constructs an `AdHoc` launch fairing named `name`. The function `f` will
@@ -153,11 +155,13 @@ impl Fairing for AdHoc {
         Info { name: self.name, kind }
     }
 
-    fn on_attach(&self, rocket: Rocket) -> Result<Rocket, Rocket> {
+    async fn on_attach(&self, rocket: Rocket) -> Result<Rocket, Rocket> {
         if let AdHocKind::Attach(ref mutex) = self.kind {
-            let mut opt = mutex.lock().expect("AdHoc::Attach lock");
-            let f = opt.take().expect("internal error: `on_attach` one-call invariant broken");
-            f(rocket)
+            let f = mutex.lock()
+                .expect("AdHoc::Attach lock")
+                .take()
+                .expect("internal error: `on_attach` one-call invariant broken");
+            f(rocket).await
         } else {
             Ok(rocket)
         }

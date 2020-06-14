@@ -30,7 +30,7 @@ mod limits_tests {
 
     #[rocket::async_test]
     async fn large_enough() {
-        let client = Client::new(rocket_with_forms_limit(128)).unwrap();
+        let client = Client::new(rocket_with_forms_limit(128)).await.unwrap();
         let mut response = client.post("/")
             .body("value=Hello+world")
             .header(ContentType::Form)
@@ -41,7 +41,7 @@ mod limits_tests {
 
     #[rocket::async_test]
     async fn just_large_enough() {
-        let client = Client::new(rocket_with_forms_limit(17)).unwrap();
+        let client = Client::new(rocket_with_forms_limit(17)).await.unwrap();
         let mut response = client.post("/")
             .body("value=Hello+world")
             .header(ContentType::Form)
@@ -52,7 +52,7 @@ mod limits_tests {
 
     #[rocket::async_test]
     async fn much_too_small() {
-        let client = Client::new(rocket_with_forms_limit(4)).unwrap();
+        let client = Client::new(rocket_with_forms_limit(4)).await.unwrap();
         let response = client.post("/")
             .body("value=Hello+world")
             .header(ContentType::Form)
@@ -63,7 +63,7 @@ mod limits_tests {
 
     #[rocket::async_test]
     async fn contracted() {
-        let client = Client::new(rocket_with_forms_limit(10)).unwrap();
+        let client = Client::new(rocket_with_forms_limit(10)).await.unwrap();
         let mut response = client.post("/")
             .body("value=Hello+world")
             .header(ContentType::Form)

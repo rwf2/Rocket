@@ -85,7 +85,7 @@ async fn test_full_route() {
         .mount("/1", routes![post1])
         .mount("/2", routes![post2]);
 
-    let client = Client::new(rocket).unwrap();
+    let client = Client::new(rocket).await.unwrap();
 
     let a = "A%20A";
     let name = "Bob%20McDonald";

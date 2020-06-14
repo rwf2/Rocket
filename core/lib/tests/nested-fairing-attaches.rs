@@ -24,7 +24,7 @@ fn index(counter: State<'_, Counter>) -> String {
 fn rocket() -> rocket::Rocket {
     rocket::ignite()
         .mount("/", routes![index])
-        .attach(AdHoc::on_attach("Outer", |rocket| {
+        .attach(AdHoc::on_attach("Outer", |rocket| async {
             let counter = Counter::default();
             counter.attach.fetch_add(1, Ordering::Relaxed);
             let rocket = rocket.manage(counter)
@@ -48,7 +48,7 @@ mod nested_fairing_attaches_tests {
 
     #[rocket::async_test]
     async fn test_counts() {
-        let client = Client::new(rocket()).unwrap();
+        let client = Client::new(rocket()).await.unwrap();
         let mut response = client.get("/").dispatch().await;
         assert_eq!(response.body_string().await, Some("1, 1".into()));
 

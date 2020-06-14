@@ -30,7 +30,7 @@ mod flash_lazy_remove_tests {
     async fn test() {
         use super::*;
         let r = rocket::ignite().mount("/", routes![set, unused, used]);
-        let client = Client::new(r).unwrap();
+        let client = Client::new(r).await.unwrap();
 
         // Ensure the cookie's not there at first.
         let response = client.get("/unused").dispatch().await;

@@ -207,7 +207,7 @@ pub use self::info_kind::{Info, Kind};
 ///         # unimplemented!()
 ///     }
 ///
-///     fn on_attach(&self, rocket: Rocket) -> Result<Rocket, Rocket> {
+///     async fn on_attach(&self, rocket: Rocket) -> Result<Rocket, Rocket> {
 ///         /* ... */
 ///         # unimplemented!()
 ///     }
@@ -415,7 +415,7 @@ pub trait Fairing: Send + Sync + 'static {
     /// ## Default Implementation
     ///
     /// The default implementation of this method simply returns `Ok(rocket)`.
-    fn on_attach(&self, rocket: Rocket) -> Result<Rocket, Rocket> { Ok(rocket) }
+    async fn on_attach(&self, rocket: Rocket) -> Result<Rocket, Rocket> { Ok(rocket) }
 
     /// The launch callback.
     ///
@@ -465,8 +465,8 @@ impl<T: Fairing> Fairing for std::sync::Arc<T> {
     }
 
     #[inline]
-    fn on_attach(&self, rocket: Rocket) -> Result<Rocket, Rocket> {
-        (self as &T).on_attach(rocket)
+    async fn on_attach(&self, rocket: Rocket) -> Result<Rocket, Rocket> {
+        (self as &T).on_attach(rocket).await
     }
 
     #[inline]

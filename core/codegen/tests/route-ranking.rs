@@ -21,7 +21,7 @@ fn get3(_number: u64) -> &'static str { "3" }
 #[rocket::async_test]
 async fn test_ranking() {
     let rocket = rocket::ignite().mount("/", routes![get0, get1, get2, get3]);
-    let client = Client::new(rocket).unwrap();
+    let client = Client::new(rocket).await.unwrap();
 
     let mut response = client.get("/0").dispatch().await;
     assert_eq!(response.body_string().await.unwrap(), "0");
@@ -41,12 +41,12 @@ async fn test_ranking() {
 #[get("/<_n>")]
 fn get0b(_n: u8) {  }
 
-#[test]
-fn test_rank_collision() {
+#[rocket::async_test]
+async fn test_rank_collision() {
     use rocket::error::LaunchErrorKind;
 
     let rocket = rocket::ignite().mount("/", routes![get0, get0b]);
-    let client_result = Client::new(rocket);
+    let client_result = Client::new(rocket).await;
     match client_result.as_ref().map_err(|e| e.kind()) {
         Err(LaunchErrorKind::Collision(..)) => { /* o.k. */ },
         Ok(_) => panic!("client succeeded unexpectedly"),

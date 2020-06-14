@@ -55,15 +55,15 @@ pub fn test_config(environment: Environment) {
     std::env::set_var("ROCKET_ENV", environment.to_string());
 
     let rocket = rocket::ignite()
-        .attach(AdHoc::on_attach("Local Config", |mut rocket| {
+        .attach(AdHoc::on_attach("Local Config", |mut rocket| async {
             println!("Attaching local config.");
-            let config = rocket.inspect().config().clone();
+            let config = rocket.inspect().await.config().clone();
             Ok(rocket.manage(LocalConfig(config)))
         }))
         .mount("/", routes![check_config]);
 
     rocket::async_test(async move {
-        let client = Client::new(rocket).unwrap();
+        let client = Client::new(rocket).await.unwrap();
         let response = client.get("/check_config").dispatch().await;
         assert_eq!(response.status(), Status::Ok);
     })

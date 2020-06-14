@@ -331,8 +331,9 @@ impl Template {
     /// use rocket::local::Client;
     ///
     /// fn main() {
+    /// # rocket::async_test(async {
     ///     let rocket = rocket::ignite().attach(Template::fairing());
-    ///     let client = Client::new(rocket).expect("valid rocket");
+    ///     let client = Client::new(rocket).await.expect("valid rocket");
     ///
     ///     // Create a `context`. Here, just an empty `HashMap`.
     ///     let mut context = HashMap::new();
@@ -340,6 +341,7 @@ impl Template {
     ///     # context.insert("test", "test");
     ///     # #[allow(unused_variables)]
     ///     let template = Template::show(client.manifest(), "index", context);
+    /// # });
     /// }
     /// ```
     #[inline]

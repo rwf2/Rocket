@@ -36,7 +36,7 @@ mod test {
     use rocket::http::Header;
 
     async fn test_header_count<'h>(headers: Vec<Header<'static>>) {
-        let client = Client::new(super::rocket()).unwrap();
+        let client = Client::new(super::rocket()).await.unwrap();
         let mut req = client.get("/");
         for header in headers.iter().cloned() {
             req.add_header(header);

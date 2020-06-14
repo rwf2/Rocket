@@ -21,7 +21,7 @@ mod tests {
     use rocket::http::Status;
 
     async fn check_decoding(raw: &str, decoded: &str) {
-        let client = Client::new(rocket::ignite().mount("/", routes![bug])).unwrap();
+        let client = Client::new(rocket::ignite().mount("/", routes![bug])).await.unwrap();
         let mut response = client.post("/")
             .header(ContentType::Form)
             .body(format!("form_data={}", raw))

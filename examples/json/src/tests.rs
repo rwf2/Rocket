@@ -4,7 +4,7 @@ use rocket::http::{Status, ContentType};
 
 #[rocket::async_test]
 async fn bad_get_put() {
-    let client = Client::new(rocket()).unwrap();
+    let client = Client::new(rocket()).await.unwrap();
 
     // Try to get a message with an ID that doesn't exist.
     let mut res = client.get("/message/99").header(ContentType::JSON).dispatch().await;
@@ -35,7 +35,7 @@ async fn bad_get_put() {
 
 #[rocket::async_test]
 async fn post_get_put_get() {
-    let client = Client::new(rocket()).unwrap();
+    let client = Client::new(rocket()).await.unwrap();
 
     // Check that a message with ID 1 doesn't exist.
     let res = client.get("/message/1").header(ContentType::JSON).dispatch().await;

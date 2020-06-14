@@ -34,7 +34,7 @@ mod helmet_tests {
     macro_rules! dispatch {
         ($helmet:expr, $closure:expr) => {{
             let rocket = rocket::ignite().mount("/", routes![hello]).attach($helmet);
-            let client = Client::new(rocket).unwrap();
+            let client = Client::new(rocket).await.unwrap();
             let response = client.get("/").dispatch().await;
             assert_eq!(response.status(), Status::Ok);
             $closure(response)

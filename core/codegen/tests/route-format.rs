@@ -39,7 +39,7 @@ async fn test_formats() {
         .mount("/", routes![json, xml, json_long, msgpack_long, msgpack,
                plain, binary, other]);
 
-    let client = Client::new(rocket).unwrap();
+    let client = Client::new(rocket).await.unwrap();
 
     let mut response = client.post("/").header(ContentType::JSON).dispatch().await;
     assert_eq!(response.body_string().await.unwrap(), "json");
@@ -85,7 +85,7 @@ async fn test_custom_formats() {
     let rocket = rocket::ignite()
         .mount("/", routes![get_foo, post_foo, get_bar_baz, put_bar_baz]);
 
-    let client = Client::new(rocket).unwrap();
+    let client = Client::new(rocket).await.unwrap();
 
     let foo_a = Accept::new(&[MediaType::new("application", "foo").into()]);
     let foo_ct = ContentType::new("application", "foo");

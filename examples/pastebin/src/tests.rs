@@ -8,7 +8,7 @@ fn extract_id(from: &str) -> Option<String> {
 
 #[rocket::async_test]
 async fn check_index() {
-    let client = Client::new(rocket()).unwrap();
+    let client = Client::new(rocket()).await.unwrap();
 
     // Ensure the index returns what we expect.
     let mut response = client.get("/").dispatch().await;
@@ -32,7 +32,7 @@ async fn download_paste(client: &Client, id: &str) -> String {
 
 #[rocket::async_test]
 async fn pasting() {
-    let client = Client::new(rocket()).unwrap();
+    let client = Client::new(rocket()).await.unwrap();
 
     // Do a trivial upload, just to make sure it works.
     let body_1 = "Hello, world!";

@@ -47,7 +47,7 @@ mod head_handling_tests {
 
     #[rocket::async_test]
     async fn auto_head() {
-        let client = Client::new(rocket::ignite().mount("/", routes())).unwrap();
+        let client = Client::new(rocket::ignite().mount("/", routes())).await.unwrap();
         let mut response = client.head("/").dispatch().await;
         assert_eq!(response.status(), Status::Ok);
         assert_empty_sized_body(response.body().unwrap(), 13).await;
@@ -62,7 +62,7 @@ mod head_handling_tests {
 
     #[rocket::async_test]
     async fn user_head() {
-        let client = Client::new(rocket::ignite().mount("/", routes())).unwrap();
+        let client = Client::new(rocket::ignite().mount("/", routes())).await.unwrap();
         let mut response = client.head("/other").dispatch().await;
         assert_eq!(response.status(), Status::Ok);
         assert_empty_sized_body(response.body().unwrap(), 17).await;

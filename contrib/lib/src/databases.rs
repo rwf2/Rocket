@@ -548,9 +548,9 @@ pub enum ConfigError {
 /// #     .extra("databases", databases)
 /// #     .expect("custom config okay");
 /// #
-/// # rocket::custom(config).attach(AdHoc::on_attach("Testing", |mut rocket| {
+/// # rocket::custom(config).attach(AdHoc::on_attach("Testing", |mut rocket| async {
 /// # {
-/// let manifest = rocket.inspect();
+/// let manifest = rocket.inspect().await;
 /// let config = database_config("my_db", manifest.config()).unwrap();
 /// assert_eq!(config.url, "db/db.sqlite");
 /// assert_eq!(config.pool_size, 25);

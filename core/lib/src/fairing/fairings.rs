@@ -19,12 +19,12 @@ impl Fairings {
         Fairings::default()
     }
 
-    pub fn attach(&mut self, fairing: Box<dyn Fairing>, mut rocket: Rocket) -> Rocket {
+    pub async fn attach(&mut self, fairing: Box<dyn Fairing>, mut rocket: Rocket) -> Rocket {
         // Run the `on_attach` callback if this is an 'attach' fairing.
         let kind = fairing.info().kind;
         let name = fairing.info().name;
         if kind.is(Kind::Attach) {
-            rocket = fairing.on_attach(rocket)
+            rocket = fairing.on_attach(rocket).await
                 .unwrap_or_else(|r| { self.attach_failures.push(name); r })
         }
 

@@ -28,12 +28,14 @@ use crate::local::Client;
 /// use rocket::local::Client;
 /// use rocket::http::{ContentType, Cookie};
 ///
-/// let client = Client::new(rocket::ignite()).expect("valid rocket");
+/// # rocket::async_test(async {
+/// let client = Client::new(rocket::ignite()).await.expect("valid rocket");
 /// let req = client.post("/")
 ///     .header(ContentType::JSON)
 ///     .remote("127.0.0.1:8000".parse().unwrap())
 ///     .cookie(Cookie::new("name", "value"))
 ///     .body(r#"{ "value": 42 }"#);
+/// # });
 /// ```
 ///
 /// # Dispatching
@@ -125,9 +127,11 @@ impl<'c> LocalRequest<'c> {
     /// ```rust
     /// use rocket::local::Client;
     ///
-    /// let client = Client::new(rocket::ignite()).expect("valid rocket");
+    /// # rocket::async_test(async {
+    /// let client = Client::new(rocket::ignite()).await.expect("valid rocket");
     /// let req = client.get("/");
     /// let inner_req = req.inner();
+    /// # });
     /// ```
     #[inline]
     pub fn inner(&self) -> &Request<'c> {
@@ -166,9 +170,11 @@ impl<'c> LocalRequest<'c> {
     /// use rocket::local::Client;
     /// use rocket::http::ContentType;
     ///
+    /// # rocket::async_test(async {
     /// # #[allow(unused_variables)]
-    /// let client = Client::new(rocket::ignite()).unwrap();
+    /// let client = Client::new(rocket::ignite()).await.unwrap();
     /// let req = client.get("/").header(ContentType::JSON);
+    /// # });
     /// ```
     #[inline]
     pub fn header<H: Into<Header<'static>>>(mut self, header: H) -> Self {
@@ -186,9 +192,11 @@ impl<'c> LocalRequest<'c> {
     /// use rocket::local::Client;
     /// use rocket::http::ContentType;
     ///
-    /// let client = Client::new(rocket::ignite()).unwrap();
+    /// # rocket::async_test(async {
+    /// let client = Client::new(rocket::ignite()).await.unwrap();
     /// let mut req = client.get("/");
     /// req.add_header(ContentType::JSON);
+    /// # });
     /// ```
     #[inline]
     pub fn add_header<H: Into<Header<'static>>>(&mut self, header: H) {
@@ -204,9 +212,11 @@ impl<'c> LocalRequest<'c> {
     /// ```rust
     /// use rocket::local::Client;
     ///
-    /// let client = Client::new(rocket::ignite()).unwrap();
+    /// # rocket::async_test(async {
+    /// let client = Client::new(rocket::ignite()).await.unwrap();
     /// let address = "8.8.8.8:80".parse().unwrap();
     /// let req = client.get("/").remote(address);
+    /// # });
     /// ```
     #[inline]
     pub fn remote(mut self, address: SocketAddr) -> Self {
@@ -224,11 +234,13 @@ impl<'c> LocalRequest<'c> {
     /// use rocket::local::Client;
     /// use rocket::http::Cookie;
     ///
-    /// let client = Client::new(rocket::ignite()).unwrap();
+    /// # rocket::async_test(async {
+    /// let client = Client::new(rocket::ignite()).await.unwrap();
     /// # #[allow(unused_variables)]
     /// let req = client.get("/")
     ///     .cookie(Cookie::new("username", "sb"))
     ///     .cookie(Cookie::new("user_id", "12"));
+    /// # });
     /// ```
     #[inline]
     pub fn cookie(self, cookie: Cookie<'_>) -> Self {
@@ -246,10 +258,12 @@ impl<'c> LocalRequest<'c> {
     /// use rocket::local::Client;
     /// use rocket::http::Cookie;
     ///
-    /// let client = Client::new(rocket::ignite()).unwrap();
+    /// # rocket::async_test(async {
+    /// let client = Client::new(rocket::ignite()).await.unwrap();
     /// let cookies = vec![Cookie::new("a", "b"), Cookie::new("c", "d")];
     /// # #[allow(unused_variables)]
     /// let req = client.get("/").cookies(cookies);
+    /// # });
     /// ```
     #[inline]
     pub fn cookies(self, cookies: Vec<Cookie<'_>>) -> Self {
@@ -275,9 +289,11 @@ impl<'c> LocalRequest<'c> {
     /// use rocket::local::Client;
     /// use rocket::http::Cookie;
     ///
-    /// let client = Client::new(rocket::ignite()).unwrap();
+    /// # rocket::async_test(async {
+    /// let client = Client::new(rocket::ignite()).await.unwrap();
     /// # #[allow(unused_variables)]
     /// let req = client.get("/").private_cookie(Cookie::new("user_id", "sb"));
+    /// # });
     /// ```
     #[inline]
     #[cfg(feature = "private-cookies")]
@@ -301,11 +317,13 @@ impl<'c> LocalRequest<'c> {
     /// use rocket::local::Client;
     /// use rocket::http::ContentType;
     ///
-    /// let client = Client::new(rocket::ignite()).unwrap();
+    /// # rocket::async_test(async {
+    /// let client = Client::new(rocket::ignite()).await.unwrap();
     /// # #[allow(unused_variables)]
     /// let req = client.post("/")
     ///     .header(ContentType::JSON)
     ///     .body(r#"{ "key": "value", "array": [1, 2, 3], }"#);
+    /// # });
     /// ```
     #[inline]
     pub fn body<S: AsRef<[u8]>>(mut self, body: S) -> Self {
@@ -323,9 +341,11 @@ impl<'c> LocalRequest<'c> {
     /// use rocket::local::Client;
     /// use rocket::http::ContentType;
     ///
-    /// let client = Client::new(rocket::ignite()).unwrap();
+    /// # rocket::async_test(async {
+    /// let client = Client::new(rocket::ignite()).await.unwrap();
     /// let mut req = client.post("/").header(ContentType::JSON);
     /// req.set_body(r#"{ "key": "value", "array": [1, 2, 3], }"#);
+    /// # });
     /// ```
     #[inline]
     pub fn set_body<S: AsRef<[u8]>>(&mut self, body: S) {
@@ -342,8 +362,10 @@ impl<'c> LocalRequest<'c> {
     /// ```rust
     /// use rocket::local::Client;
     ///
-    /// let client = Client::new(rocket::ignite()).unwrap();
+    /// # rocket::async_test(async {
+    /// let client = Client::new(rocket::ignite()).await.unwrap();
     /// let response = client.get("/").dispatch();
+    /// # });
     /// ```
     #[inline(always)]
     pub async fn dispatch(mut self) -> LocalResponse<'c> {
@@ -371,7 +393,7 @@ impl<'c> LocalRequest<'c> {
     /// use rocket::local::Client;
     ///
     /// rocket::async_test(async {
-    ///     let client = Client::new(rocket::ignite()).unwrap();
+    ///     let client = Client::new(rocket::ignite()).await.unwrap();
     ///
     ///     let mut req = client.get("/");
     ///     let response_a = req.mut_dispatch().await;

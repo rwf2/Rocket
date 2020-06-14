@@ -16,7 +16,7 @@ mod tests {
 
     #[rocket::async_test]
     async fn error_catcher_redirect() {
-        let client = Client::new(rocket::ignite().register(catchers![not_found])).unwrap();
+        let client = Client::new(rocket::ignite().register(catchers![not_found])).await.unwrap();
         let response = client.get("/unknown").dispatch().await;
         println!("Response:\n{:?}", response);
 

@@ -398,13 +398,13 @@ impl Manifest {
     }
 
     #[inline]
-    fn _attach(mut self, fairing: Box<dyn Fairing>) -> Self {
+    async fn _attach(mut self, fairing: Box<dyn Fairing>) -> Self {
         // Attach (and run attach) fairings, which requires us to move `self`.
         let mut fairings = mem::replace(&mut self.fairings, Fairings::new());
 
         let mut rocket = Rocket { manifest: Some(self), pending: vec![] };
-        rocket = fairings.attach(fairing, rocket);
-        self = rocket.actualize_and_take_manifest();
+        rocket = fairings.attach(fairing, rocket).await;
+        self = rocket.actualize_and_take_manifest().await;
 
         // Make sure we keep all fairings around: the old and newly added ones!
         fairings.append(self.fairings);
@@ -789,33 +789,50 @@ impl Rocket {
         self
     }
 
-    pub(crate) fn actualize_manifest(&mut self) {
-        while !self.pending.is_empty() {
-            // We need to preserve insertion order here,
-            // so we can't use `self.pending.pop()`
-            let op = self.pending.remove(0);
-            let manifest = self.manifest.take().expect("TODO error message");
-            self.manifest = Some(match op {
-                BuildOperation::Mount(base, routes) => manifest._mount(base, routes),
-                BuildOperation::Register(catchers) => manifest._register(catchers),
-                BuildOperation::Manage(callback) => manifest._manage(callback),
-                BuildOperation::Attach(fairing) => manifest._attach(fairing),
-            });
-        }
+    // Instead of requiring the user to individually `await` each call to
+    // `attach()`, some operations are queued in `self.pending`. Functions that
+    // want to provide read access to any data from the Manifest, such as
+    // `inspect()`, need to apply those pending operations first.
+    //
+    // This function returns a future that executes those pending operations,
+    // requiring only a single `await` at the call site. After completion,
+    // `self.pending` will be empty and `self.manifest` will reflect all pending
+    // changes.
+    //
+    // Note that this returns a boxed future, because `_attach()` calls this
+    // function again creating a cycle.
+    pub(crate) fn actualize_manifest(&mut self) -> BoxFuture<'_, ()> {
+        Box::pin(async move {
+            while !self.pending.is_empty() {
+                // We need to preserve insertion order here,
+                // so we can't use `self.pending.pop()`
+                let op = self.pending.remove(0);
+                let manifest = self.manifest.take()
+                    .expect("internal error: manifest was taken and not replaced. \
+                            Was `inspect()` called but not polled to completion?");
+                self.manifest = Some(match op {
+                    BuildOperation::Mount(base, routes) => manifest._mount(base, routes),
+                    BuildOperation::Register(catchers) => manifest._register(catchers),
+                    BuildOperation::Manage(callback) => manifest._manage(callback),
+                    BuildOperation::Attach(fairing) => manifest._attach(fairing).await,
+                });
+            }
+        })
     }
 
-    pub(crate) fn actualize_and_take_manifest(mut self) -> Manifest {
-        self.actualize_manifest();
+    pub(crate) async fn actualize_and_take_manifest(mut self) -> Manifest {
+        self.actualize_manifest().await;
         self.manifest.take().expect("internal error: actualize_manifest() should have replaced self.manifest")
     }
 
-    /// Returns a `Future` that drives the server, listening for and dispathcing
+    /// Returns a `Future` that drives the server, listening for and dispatching
     /// requests to mounted routes and catchers. The `Future` completes when the
-    /// server is shut down (via a [`ShutdownHandle`] or encounters a fatal
+    /// server is shut down, via a [`ShutdownHandle`], or encounters a fatal
     /// error.  If the `ctrl_c_shutdown` feature is enabled, the server will
     /// also shut down once `Ctrl-C` is pressed.
     ///
     /// # Error
+    ///
     /// If there is a problem starting the application, an [`Error`] is
     /// returned. Note that a value of type `Error` panics if dropped
     /// without first being inspected. See the [`Error`] documentation for
@@ -837,11 +854,10 @@ impl Rocket {
 
         use crate::error::Error::Launch;
 
-        let mut manifest = self.actualize_and_take_manifest();
+        let mut manifest = self.actualize_and_take_manifest().await;
         manifest.prelaunch_check().map_err(crate::error::Error::Launch)?;
 
         let config = manifest.config();
-
         let full_addr = format!("{}:{}", config.address, config.port);
         let addrs = match full_addr.to_socket_addrs() {
             Ok(a) => a.collect::<Vec<_>>(),
@@ -939,13 +955,10 @@ impl Rocket {
     /// rocket::ignite().launch();
     /// # }
     /// ```
-    pub fn launch(mut self) -> Result<(), crate::error::Error> {
-        let workers = self.inspect().config().workers as usize;
-
+    pub fn launch(self) -> Result<(), crate::error::Error> {
         // Initialize the tokio runtime
         let mut runtime = tokio::runtime::Builder::new()
             .threaded_scheduler()
-            .core_threads(workers)
             .enable_all()
             .build()
             .expect("Cannot build runtime!");
@@ -954,24 +967,27 @@ impl Rocket {
     }
 
     pub(crate) fn _manifest(&self) -> &Manifest {
-        self.manifest.as_ref().expect("TODO error message")
+        self.manifest.as_ref().expect("internal error: manifest was taken and not replaced. \
+                                      Was `inspect()` called but not polled to completion?")
     }
 
     /// Access the current state of this `Rocket` instance.
     ///
-    /// The `Mnaifest` type provides methods such as [`Manifest::routes`]
-    /// and [`Manifest::state`]. This method is called to get an `Manifest`
+    /// The `Manifest` type provides methods such as [`Manifest::routes()`]
+    /// and [`Manifest::state()`]. This method is called to get a `Manifest`
     /// instance.
     ///
     /// # Example
     ///
     /// ```rust
+    /// # rocket::async_test(async {
     /// let mut rocket = rocket::ignite();
-    /// let config = rocket.inspect().config();
+    /// let config = rocket.inspect().await.config();
     /// # let _ = config;
+    /// # });
     /// ```
-    pub fn inspect(&mut self) -> &Manifest {
-        self.actualize_manifest();
+    pub async fn inspect(&mut self) -> &Manifest {
+        self.actualize_manifest().await;
         self._manifest()
     }
 }
@@ -987,8 +1003,9 @@ impl Manifest {
     /// # #![feature(proc_macro_hygiene)]
     /// # use std::{thread, time::Duration};
     /// #
+    /// # rocket::async_test(async {
     /// let mut rocket = rocket::ignite();
-    /// let handle = rocket.inspect().get_shutdown_handle();
+    /// let handle = rocket.inspect().await.get_shutdown_handle();
     ///
     /// # if false {
     /// thread::spawn(move || {
@@ -1000,6 +1017,7 @@ impl Manifest {
     /// let shutdown_result = rocket.launch();
     /// assert!(shutdown_result.is_ok());
     /// # }
+    /// # });
     /// ```
     #[inline(always)]
     pub fn get_shutdown_handle(&self) -> ShutdownHandle {
@@ -1023,11 +1041,12 @@ impl Manifest {
     /// }
     ///
     /// fn main() {
+    /// # rocket::async_test(async {
     ///     let mut rocket = rocket::ignite()
     ///         .mount("/", routes![hello])
     ///         .mount("/hi", routes![hello]);
     ///
-    ///     for route in rocket.inspect().routes() {
+    ///     for route in rocket.inspect().await.routes() {
     ///         match route.base() {
     ///             "/" => assert_eq!(route.uri.path(), "/hello"),
     ///             "/hi" => assert_eq!(route.uri.path(), "/hi/hello"),
@@ -1035,7 +1054,8 @@ impl Manifest {
     ///         }
     ///     }
     ///
-    ///     assert_eq!(rocket.inspect().routes().count(), 2);
+    ///     assert_eq!(rocket.inspect().await.routes().count(), 2);
+    /// # });
     /// }
     /// ```
     #[inline(always)]
@@ -1052,11 +1072,13 @@ impl Manifest {
     /// #[derive(PartialEq, Debug)]
     /// struct MyState(&'static str);
     ///
+    /// # rocket::async_test(async {
     /// let mut rocket = rocket::ignite().manage(MyState("hello!"));
-    /// assert_eq!(rocket.inspect().state::<MyState>(), Some(&MyState("hello!")));
+    /// assert_eq!(rocket.inspect().await.state::<MyState>(), Some(&MyState("hello!")));
     ///
-    /// let client = rocket::local::Client::new(rocket).expect("valid rocket");
+    /// let client = rocket::local::Client::new(rocket).await.expect("valid rocket");
     /// assert_eq!(client.manifest().state::<MyState>(), Some(&MyState("hello!")));
+    /// # });
     /// ```
     #[inline(always)]
     pub fn state<T: Send + Sync + 'static>(&self) -> Option<&T> {

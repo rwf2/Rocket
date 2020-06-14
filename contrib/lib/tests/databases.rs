@@ -22,8 +22,8 @@ mod rusqlite_integration_test {
     #[database("test_db")]
     struct SqliteDb(pub rusqlite::Connection);
 
-    #[test]
-    fn deref_mut_impl_present() {
+    #[rocket::async_test]
+    async fn deref_mut_impl_present() {
         let mut test_db: BTreeMap<String, Value> = BTreeMap::new();
         let mut test_db_opts: BTreeMap<String, Value> = BTreeMap::new();
         test_db_opts.insert("url".into(), Value::String(":memory:".into()));
@@ -34,7 +34,7 @@ mod rusqlite_integration_test {
             .unwrap();
 
         let mut rocket = rocket::custom(config).attach(SqliteDb::fairing());
-        let mut conn = SqliteDb::get_one(rocket.inspect()).expect("unable to get connection");
+        let mut conn = SqliteDb::get_one(rocket.inspect().await).expect("unable to get connection");
 
         // Rusqlite's `transaction()` method takes `&mut self`; this tests the
         // presence of a `DerefMut` trait on the generated connection type.
@@ -43,8 +43,8 @@ mod rusqlite_integration_test {
         tx.commit().expect("committed transaction");
     }
 
-    #[test]
-    fn deref_impl_present() {
+    #[rocket::async_test]
+    async fn deref_impl_present() {
         let mut test_db: BTreeMap<String, Value> = BTreeMap::new();
         let mut test_db_opts: BTreeMap<String, Value> = BTreeMap::new();
         test_db_opts.insert("url".into(), Value::String(":memory:".into()));
@@ -55,7 +55,7 @@ mod rusqlite_integration_test {
             .unwrap();
 
         let mut rocket = rocket::custom(config).attach(SqliteDb::fairing());
-        let conn = SqliteDb::get_one(rocket.inspect()).expect("unable to get connection");
+        let conn = SqliteDb::get_one(rocket.inspect().await).expect("unable to get connection");
         let _: i32 = conn.query_row("SELECT 1", &[] as &[&dyn ToSql], |row| row.get(0)).expect("get row");
     }
 }

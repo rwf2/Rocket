@@ -27,13 +27,13 @@ mod strict_and_lenient_forms_tests {
 
     const FIELD_VALUE: &str = "just_some_value";
 
-    fn client() -> Client {
-        Client::new(rocket::ignite().mount("/", routes![strict, lenient])).unwrap()
+    async fn client() -> Client {
+        Client::new(rocket::ignite().mount("/", routes![strict, lenient])).await.unwrap()
     }
 
     #[rocket::async_test]
     async fn test_strict_form() {
-        let client = client();
+        let client = client().await;
         let mut response = client.post("/strict")
             .header(ContentType::Form)
             .body(format!("field={}", FIELD_VALUE))
@@ -52,7 +52,7 @@ mod strict_and_lenient_forms_tests {
 
     #[rocket::async_test]
     async fn test_lenient_form() {
-        let client = client();
+        let client = client().await;
         let mut response = client.post("/lenient")
             .header(ContentType::Form)
             .body(format!("field={}", FIELD_VALUE))

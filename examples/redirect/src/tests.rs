@@ -1,14 +1,14 @@
 use rocket::local::Client;
 use rocket::http::Status;
 
-fn client() -> Client {
+async fn client() -> Client {
     let rocket = rocket::ignite().mount("/", routes![super::root, super::login]);
-    Client::new(rocket).unwrap()
+    Client::new(rocket).await.unwrap()
 }
 
 #[rocket::async_test]
 async fn test_root() {
-    let client = client();
+    let client = client().await;
     let mut response = client.get("/").dispatch().await;
 
     assert!(response.body().is_none());
@@ -24,7 +24,7 @@ async fn test_root() {
 
 #[rocket::async_test]
 async fn test_login() {
-    let client = client();
+    let client = client().await;
     let mut r = client.get("/login").dispatch().await;
     assert_eq!(r.body_string().await, Some("Hi! Please log in before continuing.".into()));
 }

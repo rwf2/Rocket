@@ -174,9 +174,9 @@
 //!
 //! fn main() {
 //!     rocket::ignite()
-//!         .attach(AdHoc::on_attach("Token Config", |mut rocket| {
+//!         .attach(AdHoc::on_attach("Token Config", |mut rocket| async {
 //!             println!("Adding token managed state from config...");
-//!             let token_val = rocket.inspect().config().get_int("token").unwrap_or(-1);
+//!             let token_val = rocket.inspect().await.config().get_int("token").unwrap_or(-1);
 //!             Ok(rocket.manage(Token(token_val)))
 //!         }))
 //! # ;

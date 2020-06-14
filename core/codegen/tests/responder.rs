@@ -23,7 +23,7 @@ pub enum Foo<'r> {
 
 #[rocket::async_test]
 async fn responder_foo() {
-    let client = Client::new(rocket::ignite()).expect("valid rocket");
+    let client = Client::new(rocket::ignite()).await.expect("valid rocket");
     let local_req = client.get("/");
     let req = local_req.inner();
 
@@ -72,7 +72,7 @@ pub struct Bar<'r> {
 
 #[rocket::async_test]
 async fn responder_bar() {
-    let client = Client::new(rocket::ignite()).expect("valid rocket");
+    let client = Client::new(rocket::ignite()).await.expect("valid rocket");
     let local_req = client.get("/");
     let req = local_req.inner();
 
@@ -97,7 +97,7 @@ pub struct Baz {
 
 #[rocket::async_test]
 async fn responder_baz() {
-    let client = Client::new(rocket::ignite()).expect("valid rocket");
+    let client = Client::new(rocket::ignite()).await.expect("valid rocket");
     let local_req = client.get("/");
     let req = local_req.inner();
 
