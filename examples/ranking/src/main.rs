@@ -16,6 +16,7 @@ fn hi(name: String, age: &RawStr) -> String {
     format!("Hi {}! Your age ({}) is kind of funky.", name, age)
 }
 
-fn main() {
-    let _ = rocket::ignite().mount("/", routes![hi, hello]).launch();
+#[rocket::main]
+async fn main() {
+    let _ = rocket::ignite().mount("/", routes![hi, hello]).launch().await;
 }

@@ -27,6 +27,7 @@ fn rocket() -> rocket::Rocket {
     rocket::ignite().mount("/message", routes![get, create])
 }
 
-fn main() {
-    let _ = rocket().launch();
+#[rocket::main]
+async fn main() {
+    let _ = rocket().launch().await;
 }

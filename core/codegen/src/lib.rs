@@ -407,7 +407,12 @@ pub fn catch(args: TokenStream, input: TokenStream) -> TokenStream {
 
 #[proc_macro_attribute]
 pub fn async_test(args: TokenStream, input: TokenStream) -> TokenStream {
-    emit!(attribute::async_test::async_test_attribute(args, input))
+    emit!(attribute::async_entry::async_test_attribute(args, input))
+}
+
+#[proc_macro_attribute]
+pub fn main(args: TokenStream, input: TokenStream) -> TokenStream {
+    emit!(attribute::async_entry::main_attribute(args, input))
 }
 
 /// Derive for the [`FromFormValue`] trait.

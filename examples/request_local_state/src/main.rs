@@ -84,6 +84,7 @@ fn rocket() -> rocket::Rocket {
         .mount("/", routes![r_sync, r_async])
 }
 
-fn main() {
-    let _ = rocket().launch();
+#[rocket::main]
+async fn main() {
+    let _ = rocket().launch().await;
 }

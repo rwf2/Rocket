@@ -94,6 +94,7 @@ fn rocket() -> rocket::Rocket {
         }))
 }
 
-fn main() {
-    let _ = rocket().launch();
+#[rocket::main]
+async fn main() {
+    let _ = rocket().launch().await;
 }

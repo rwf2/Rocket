@@ -38,6 +38,7 @@ fn rocket() -> rocket::Rocket {
     rocket::ignite().mount("/", routes![submit, index]).attach(Template::fairing())
 }
 
-fn main() {
-    let _ = rocket().launch();
+#[rocket::main]
+async fn main() {
+    let _ = rocket().launch().await;
 }

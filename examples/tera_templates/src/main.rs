@@ -42,6 +42,7 @@ fn rocket() -> rocket::Rocket {
         .register(catchers![not_found])
 }
 
-fn main() {
-    let _ = rocket().launch();
+#[rocket::main]
+async fn main() {
+    let _ = rocket().launch().await;
 }

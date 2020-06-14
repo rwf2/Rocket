@@ -121,11 +121,13 @@ impl std::ops::BitOr for Options {
 /// # extern crate rocket_contrib;
 /// use rocket_contrib::serve::StaticFiles;
 ///
-/// fn main() {
+/// #[rocket::main]
+/// async fn main() {
 /// # if false {
 ///     rocket::ignite()
 ///         .mount("/public", StaticFiles::from("/static"))
-///         .launch();
+///         .launch()
+///         .await;
 /// # }
 /// }
 /// ```
@@ -147,11 +149,13 @@ impl std::ops::BitOr for Options {
 /// # extern crate rocket_contrib;
 /// use rocket_contrib::serve::StaticFiles;
 ///
-/// fn main() {
+/// #[rocket::main]
+/// async fn main() {
 /// # if false {
 ///     rocket::ignite()
 ///         .mount("/", StaticFiles::from(concat!(env!("CARGO_MANIFEST_DIR"), "/static")))
-///         .launch();
+///         .launch()
+///         .await;
 /// # }
 /// }
 /// ```
@@ -182,11 +186,13 @@ impl StaticFiles {
     /// # extern crate rocket_contrib;
     /// use rocket_contrib::serve::StaticFiles;
     ///
-    /// fn main() {
+    /// #[rocket::main]
+    /// async fn main() {
     /// # if false {
     ///     rocket::ignite()
     ///         .mount("/static", StaticFiles::from("/www/public"))
-    ///         .launch();
+    ///         .launch()
+    ///         .await;
     /// # }
     /// }
     /// ```
@@ -198,11 +204,13 @@ impl StaticFiles {
     /// # extern crate rocket_contrib;
     /// use rocket_contrib::serve::StaticFiles;
     ///
-    /// fn main() {
+    /// #[rocket::main]
+    /// async fn main() {
     /// # if false {
     ///     rocket::ignite()
     ///         .mount("/static", StaticFiles::from("/www/public").rank(30))
-    ///         .launch();
+    ///         .launch()
+    ///         .await;
     /// # }
     /// }
     /// ```
@@ -226,13 +234,15 @@ impl StaticFiles {
     /// # extern crate rocket_contrib;
     /// use rocket_contrib::serve::{StaticFiles, Options};
     ///
-    /// fn main() {
+    /// #[rocket::main]
+    /// async fn main() {
     /// # if false {
     ///     let options = Options::Index | Options::DotFiles;
     ///     rocket::ignite()
     ///         .mount("/static", StaticFiles::from("/www/public"))
     ///         .mount("/pub", StaticFiles::new("/www/public", options).rank(-1))
-    ///         .launch();
+    ///         .launch()
+    ///         .await;
     /// # }
     /// }
     /// ```

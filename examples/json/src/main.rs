@@ -76,6 +76,7 @@ fn rocket() -> rocket::Rocket {
         .manage(Mutex::new(HashMap::<ID, String>::new()))
 }
 
-fn main() {
-    let _ = rocket().launch();
+#[rocket::main]
+async fn main() {
+    let _ = rocket().launch().await;
 }

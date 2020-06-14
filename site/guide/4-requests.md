@@ -191,10 +191,12 @@ fn user_int(id: isize) -> T { ... }
 #[get("/user/<id>", rank = 3)]
 fn user_str(id: &RawStr) -> T { ... }
 
-fn main() {
+#[rocket::main]
+async fn main() {
     rocket::ignite()
         .mount("/", routes![user, user_int, user_str])
-        .launch();
+        .launch()
+        .await;
 }
 ```
 

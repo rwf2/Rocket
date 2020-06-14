@@ -52,9 +52,10 @@ use yansi::Color::*;
 ///     format!("I couldn't find '{}'. Try something else?", req.uri())
 /// }
 ///
-/// fn main() {
+/// #[rocket::main]
+/// async fn main() {
 /// # if false { // We don't actually want to launch the server in an example.
-///     rocket::ignite().register(catchers![internal_error, not_found]).launch();
+///     rocket::ignite().register(catchers![internal_error, not_found]).launch().await;
 /// # }
 /// }
 /// ```

@@ -94,8 +94,9 @@ fn rocket() -> Rocket {
     rocket::ignite().mount("/", routes![hello])
 }
 
-fn main() {
-    rocket().launch();
+#[rocket::main]
+async fn main() {
+    rocket().launch().await;
 }
 ```
 

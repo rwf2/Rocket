@@ -65,8 +65,8 @@ pub enum LaunchErrorKind {
 /// ```rust
 /// use rocket::error::Error;
 ///
-/// # if false {
-/// if let Err(error) = rocket::ignite().launch() {
+/// # let _ = async {
+/// if let Err(error) = rocket::ignite().launch().await {
 ///     match error {
 ///         Error::Launch(error) => {
 ///             // This case is only reached if launching failed. This println "inspects" the error.
@@ -82,20 +82,20 @@ pub enum LaunchErrorKind {
 ///     }
 /// }
 ///
-/// # }
+/// # };
 /// ```
 ///
 /// When a value of this type panics, the corresponding error message is pretty
 /// printed to the console. The following illustrates this:
 ///
 /// ```rust
-/// # if false {
-/// let error = rocket::ignite().launch();
+/// # let _ = async {
+/// let error = rocket::ignite().launch().await;
 ///
 /// // This call to drop (explicit here for demonstration) will result in
 /// // `error` being pretty-printed to the console along with a `panic!`.
 /// drop(error);
-/// # }
+/// # };
 /// ```
 ///
 /// # Usage
@@ -136,14 +136,14 @@ impl LaunchError {
     ///
     /// ```rust
     /// use rocket::error::Error;
-    /// # if false {
-    /// if let Err(error) = rocket::ignite().launch() {
+    /// # let _ = async {
+    /// if let Err(error) = rocket::ignite().launch().await {
     ///     match error {
     ///         Error::Launch(err) => println!("Found a launch error: {}", err.kind()),
     ///         Error::Run(err) => println!("Error at runtime"),
     ///     }
     /// }
-    /// # }
+    /// # };
     /// ```
     #[inline]
     pub fn kind(&self) -> &LaunchErrorKind {

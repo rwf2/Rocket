@@ -196,7 +196,8 @@ fn assets(asset: PathBuf, assets_dir: State<AssetsDir>) -> Option<NamedFile> {
     NamedFile::open(Path::new(&assets_dir.0).join(asset)).ok()
 }
 
-fn main() {
+#[rocket::main]
+async fn main() {
     rocket::ignite()
         .mount("/", routes![assets])
         .attach(AdHoc::on_attach("Assets Config", |mut rocket| {
@@ -207,7 +208,8 @@ fn main() {
 
             Ok(rocket.manage(AssetsDir(assets_dir)))
         }))
-        .launch();
+        .launch()
+        .await;
 }
 ```
 
@@ -256,7 +258,8 @@ let config = Config::build(Environment::Staging)
 
 rocket::custom(config)
     .mount(..)
-    .launch();
+    .launch()
+    .await;
 ```
 
 Configuration via `rocket::custom()` replaces calls to `rocket::ignite()` and

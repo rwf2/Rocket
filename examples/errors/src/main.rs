@@ -18,12 +18,13 @@ fn not_found(req: &rocket::Request<'_>) -> content::Html<String> {
             req.uri()))
 }
 
-fn main() {
+#[rocket::main]
+async fn main() {
     let result = rocket::ignite()
         // .mount("/", routes![hello, hello]) // uncoment this to get an error
         .mount("/", routes![hello])
         .register(catchers![not_found])
-        .launch();
+        .launch().await;
 
     if let Err(e) = result {
         println!("Whoops! Rocket didn't launch!");
