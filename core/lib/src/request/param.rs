@@ -154,7 +154,7 @@ use crate::http::{RawStr, uri::{Segments, SegmentError}};
 ///             _ => return Err(param)
 ///         };
 ///
-///         if !key.chars().all(|c| (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z')) {
+///         if !key.chars().all(|c| c.is_ascii_alphabetic()) {
 ///             return Err(param);
 ///         }
 ///

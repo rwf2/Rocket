@@ -64,7 +64,7 @@ fn port_from<'a>(input: &mut RawInput<'a>, bytes: &IndexedBytes<'a>) -> Result<'
     let source = Some(input.cow_source());
     let string = bytes.from_cow_source(&source);
     for (&b, i) in string.iter().rev().zip(&[1, 10, 100, 1000, 10000]) {
-        if b < b'0' || b > b'9' {
+        if !b.is_ascii_digit() {
             return Err(pear_error!("port byte is out of range"));
         }
 
@@ -80,7 +80,7 @@ fn port_from<'a>(input: &mut RawInput<'a>, bytes: &IndexedBytes<'a>) -> Result<'
 
 #[parser]
 fn port<'a>(input: &mut RawInput<'a>) -> Result<'a, u16> {
-    let port_str = take_n_while(5, |c| c >= b'0' && c <= b'9')?;
+    let port_str = take_n_while(5, |c| c.is_ascii_digit())?;
     port_from(&port_str)?
 }
 

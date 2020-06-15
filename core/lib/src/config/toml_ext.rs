@@ -23,10 +23,7 @@ fn is_not_separator(byte: char) -> bool {
 // FIXME: Be more permissive here?
 #[inline(always)]
 fn is_ident_char(byte: char) -> bool {
-    match byte {
-        '0'..='9' | 'A'..='Z' | 'a'..='z' | '_' | '-' => true,
-        _ => false
-    }
+    byte.is_ascii_alphanumeric() || byte == '_' || byte == '-'
 }
 
 #[parser]

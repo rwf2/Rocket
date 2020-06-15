@@ -63,18 +63,15 @@ pub type SResult<'a, P> = Result<RouteSegment<'a, P>, (&'a str, Error<'a>)>;
 
 #[inline]
 fn is_ident_start(c: char) -> bool {
-    ('a' <= c && c <= 'z')
-        || ('A' <= c && c <= 'Z')
+    c.is_ascii_alphabetic()
         || c == '_'
         || (c > '\x7f' && UnicodeXID::is_xid_start(c))
 }
 
 #[inline]
 fn is_ident_continue(c: char) -> bool {
-    ('a' <= c && c <= 'z')
-        || ('A' <= c && c <= 'Z')
+    c.is_ascii_alphanumeric()
         || c == '_'
-        || ('0' <= c && c <= '9')
         || (c > '\x7f' && UnicodeXID::is_xid_continue(c))
 }
 
