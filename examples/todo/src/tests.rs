@@ -19,8 +19,8 @@ macro_rules! run_test {
             let mut rocket = super::rocket();
             let db = super::DbConn::get_one(rocket.inspect().await);
             let $client = Client::new(rocket).await.expect("Rocket client");
-            let $conn = db.expect("failed to get database connection for testing");
-            assert!(Task::delete_all(&$conn), "failed to delete all tasks for testing");
+            let mut $conn = db.expect("failed to get database connection for testing");
+            assert!($conn.run(|c| Task::delete_all(c)).await, "failed to delete all tasks for testing");
 
             $block
         })
@@ -31,7 +31,7 @@ macro_rules! run_test {
 fn test_insertion_deletion() {
     run_test!(|client, conn| {
         // Get the tasks before making changes.
-        let init_tasks = Task::all(&conn);
+        let init_tasks = conn.run(|c| Task::all(c)).await;
 
         // Issue a request to insert a new task.
         client.post("/todo")
@@ -40,7 +40,7 @@ fn test_insertion_deletion() {
             .dispatch().await;
 
         // Ensure we have one more task in the database.
-        let new_tasks = Task::all(&conn);
+        let new_tasks = conn.run(|c| Task::all(c)).await;
         assert_eq!(new_tasks.len(), init_tasks.len() + 1);
 
         // Ensure the task is what we expect.
@@ -52,7 +52,7 @@ fn test_insertion_deletion() {
         client.delete(format!("/todo/{}", id)).dispatch().await;
 
         // Ensure it's gone.
-        let final_tasks = Task::all(&conn);
+        let final_tasks = conn.run(|c| Task::all(c)).await;
         assert_eq!(final_tasks.len(), init_tasks.len());
         if final_tasks.len() > 0 {
             assert_ne!(final_tasks[0].description, "My first task");
@@ -69,16 +69,16 @@ fn test_toggle() {
             .body("description=test_for_completion")
             .dispatch().await;
 
-        let task = Task::all(&conn)[0].clone();
+        let task = conn.run(|c| Task::all(c)).await[0].clone();
         assert_eq!(task.completed, false);
 
         // Issue a request to toggle the task; ensure it is completed.
         client.put(format!("/todo/{}", task.id.unwrap())).dispatch().await;
-        assert_eq!(Task::all(&conn)[0].completed, true);
+        assert_eq!(conn.run(|c| Task::all(c)).await[0].completed, true);
 
         // Issue a request to toggle the task; ensure it's not completed again.
         client.put(format!("/todo/{}", task.id.unwrap())).dispatch().await;
-        assert_eq!(Task::all(&conn)[0].completed, false);
+        assert_eq!(conn.run(|c| Task::all(c)).await[0].completed, false);
     })
 }
 
@@ -88,7 +88,7 @@ fn test_many_insertions() {
 
     run_test!(|client, conn| {
         // Get the number of tasks initially.
-        let init_num = Task::all(&conn).len();
+        let init_num = conn.run(|c| Task::all(c)).await.len();
         let mut descs = Vec::new();
 
         for i in 0..ITER {
@@ -103,7 +103,7 @@ fn test_many_insertions() {
             descs.insert(0, desc);
 
             // Ensure the task was inserted properly and all other tasks remain.
-            let tasks = Task::all(&conn);
+            let tasks = conn.run(|c| Task::all(c)).await;
             assert_eq!(tasks.len(), init_num + i + 1);
 
             for j in 0..i {

@@ -157,7 +157,6 @@ request-local state to implement request timing.
 [`FromRequest` request-local state]: @api/rocket/request/trait.FromRequest.html#request-local-state
 [`Fairing`]: @api/rocket/fairing/trait.Fairing.html#request-local-state
 
-<!-- TODO.async: rewrite? -->
 ## Databases
 
 Rocket includes built-in, ORM-agnostic support for databases. In particular,
@@ -261,14 +260,24 @@ fn rocket() -> rocket::Rocket {
 ```
 
 That's it! Whenever a connection to the database is needed, use your type as a
-request guard:
+request guard. The database can be used by calling `run`:
 
 ```rust
 #[get("/logs/<id>")]
-fn get_logs(conn: LogsDbConn, id: usize) -> Result<Logs> {
-    logs::filter(id.eq(log_id)).load(&*conn)
+async fn get_logs(conn: LogsDbConn, id: usize) -> Result<Logs> {
+    conn.run(|c| {
+        logs::filter(id.eq(log_id)).load(c)
+    }).await
 }
 ```
+
+! note
+
+  The database engines supported by `#[database]` are *synchronous*. The `run()`
+  function offloads this synchronous work via `tokio::spawn_blocking`, so that
+  database access does not interfere with other in-flight requests. See
+  [Cooperative Multitasking](../overview/#cooperative-multitasking) for more
+  information on why this is necessary.
 
 If your application uses features of a database engine that are not available
 by default, for example support for `chrono` or `uuid`, you may enable those

@@ -328,8 +328,8 @@
 //! }
 //!
 //! #[get("/")]
-//! fn my_handler(conn: MyDatabase) -> Data {
-//!     load_from_db(&*conn)
+//! async fn my_handler(mut conn: MyDatabase) -> Data {
+//!     conn.run(|c| load_from_db(c)).await
 //! }
 //! # }
 //! ```
