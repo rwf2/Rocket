@@ -1,5 +1,3 @@
 // This example's illustration is the Rocket.toml file.
-#[rocket::main]
-async fn main() {
-    let _ = rocket::ignite().launch().await;
-}
+#[rocket::launch]
+fn rocket() -> rocket::Rocket { rocket::ignite() }

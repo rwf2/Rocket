@@ -1,5 +1,3 @@
-#![feature(proc_macro_hygiene)]
-
 #[macro_use] extern crate rocket;
 
 #[cfg(test)] mod tests;
@@ -9,7 +7,7 @@ fn hello() -> &'static str {
     "Hello, world!"
 }
 
-#[rocket::main]
-async fn main() {
-    let _ = rocket::ignite().mount("/", routes![hello]).launch().await;
+#[launch]
+fn rocket() -> rocket::Rocket {
+    rocket::ignite().mount("/", routes![hello])
 }

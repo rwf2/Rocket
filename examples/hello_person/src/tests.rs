@@ -1,17 +1,13 @@
 use rocket::local::Client;
 use rocket::http::Status;
 
-async fn client() -> Client {
-    Client::new(rocket::ignite().mount("/", routes![super::hello, super::hi])).await.unwrap()
-}
-
 async fn test(uri: String, expected: String) {
-    let client = client().await;
+    let client = Client::new(super::rocket()).await.unwrap();
     assert_eq!(client.get(&uri).dispatch().await.body_string().await, Some(expected));
 }
 
 async fn test_404(uri: &'static str) {
-    let client = client().await;
+    let client = Client::new(super::rocket()).await.unwrap();
     assert_eq!(client.get(uri).dispatch().await.status(), Status::NotFound);
 }
 

@@ -35,14 +35,10 @@ fn not_found(req: &Request<'_>) -> Template {
     Template::render("error/404", &map)
 }
 
+#[rocket::launch]
 fn rocket() -> rocket::Rocket {
     rocket::ignite()
         .mount("/", routes![index, get])
         .attach(Template::fairing())
         .register(catchers![not_found])
-}
-
-#[rocket::main]
-async fn main() {
-    let _ = rocket().launch().await;
 }

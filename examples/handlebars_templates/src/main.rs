@@ -68,6 +68,7 @@ fn wow_helper(
     Ok(())
 }
 
+#[rocket::launch]
 fn rocket() -> rocket::Rocket {
     rocket::ignite()
         .mount("/", routes![index, hello, about])
@@ -75,9 +76,4 @@ fn rocket() -> rocket::Rocket {
         .attach(Template::custom(|engines| {
             engines.handlebars.register_helper("wow", Box::new(wow_helper));
         }))
-}
-
-#[rocket::main]
-async fn main() {
-    let _ = rocket().launch().await;
 }

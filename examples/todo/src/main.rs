@@ -89,6 +89,7 @@ async fn run_db_migrations(mut rocket: Rocket) -> Result<Rocket, Rocket> {
     }
 }
 
+#[rocket::launch]
 fn rocket() -> Rocket {
     rocket::ignite()
         .attach(DbConn::fairing())
@@ -97,9 +98,4 @@ fn rocket() -> Rocket {
         .mount("/", routes![index])
         .mount("/todo", routes![new, toggle, delete])
         .attach(Template::fairing())
-}
-
-#[rocket::main]
-async fn main() {
-    let _ = rocket().launch().await;
 }

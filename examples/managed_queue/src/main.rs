@@ -19,13 +19,9 @@ fn pop(queue: State<'_, LogChannel>) -> Option<String> {
     queue.0.pop().ok()
 }
 
+#[rocket::launch]
 fn rocket() -> rocket::Rocket {
     rocket::ignite()
         .mount("/", routes![push, pop])
         .manage(LogChannel(SegQueue::new()))
-}
-
-#[rocket::main]
-async fn main() {
-    let _ = rocket().launch().await;
 }

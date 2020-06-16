@@ -22,13 +22,9 @@ fn header_count(header_count: HeaderCount) -> String {
     format!("Your request contained {} headers!", header_count.0)
 }
 
+#[rocket::launch]
 fn rocket() -> rocket::Rocket {
     rocket::ignite().mount("/", routes![header_count])
-}
-
-#[rocket::main]
-async fn main() {
-    let _ = rocket().launch().await;
 }
 
 #[cfg(test)]

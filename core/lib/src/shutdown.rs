@@ -27,11 +27,13 @@ use tokio::sync::mpsc;
 /// #[rocket::main]
 /// async fn main() {
 ///     # if false {
-///     rocket::ignite()
+///     let result = rocket::ignite()
 ///         .mount("/", routes![shutdown])
 ///         .launch()
-///         .await
-///         .expect("server failed unexpectedly");
+///         .await;
+///
+///     // If there server shut down (by visting `/shutdown`), `result` is `Ok`.
+///     result.expect("server failed unexpectedly");
 ///     # }
 /// }
 /// ```

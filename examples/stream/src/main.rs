@@ -22,11 +22,7 @@ async fn file() -> Option<Stream<File>> {
     File::open(FILENAME).await.map(Stream::from).ok()
 }
 
+#[rocket::launch]
 fn rocket() -> rocket::Rocket {
     rocket::ignite().mount("/", routes![root, file])
-}
-
-#[rocket::main]
-async fn main() {
-    let _ = rocket().launch().await;
 }

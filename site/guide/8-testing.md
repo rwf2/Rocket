@@ -90,13 +90,9 @@ fn hello() -> &'static str {
     "Hello, world!"
 }
 
-fn rocket() -> Rocket {
+#[rocket::launch]
+fn rocket() -> rocket::Rocket {
     rocket::ignite().mount("/", routes![hello])
-}
-
-#[rocket::main]
-async fn main() {
-    rocket().launch().await;
 }
 ```
 

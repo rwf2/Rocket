@@ -17,11 +17,7 @@ fn index() -> &'static str {
     "Upload your text files by POSTing them to /upload."
 }
 
+#[rocket::launch]
 fn rocket() -> rocket::Rocket {
     rocket::ignite().mount("/", routes![index, upload])
-}
-
-#[rocket::main]
-async fn main() {
-    let _ = rocket().launch().await;
 }

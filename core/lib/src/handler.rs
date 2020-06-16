@@ -65,14 +65,11 @@ pub type HandlerFuture<'r> = BoxFuture<'r, Outcome<'r>>;
 ///     }
 /// }
 ///
-/// #[rocket::main]
-/// async fn main() {
-/// # if false {
-///     rocket::ignite()
-///         .mount("/", CustomHandler(Kind::Simple))
-///         .launch()
-///         .await;
-/// # }
+/// # /*
+/// #[rocket::launch]
+/// # */
+/// fn rocket() -> rocket::Rocket {
+///     rocket::ignite().mount("/", CustomHandler(Kind::Simple))
 /// }
 /// ```
 ///
@@ -114,15 +111,13 @@ pub type HandlerFuture<'r> = BoxFuture<'r, Outcome<'r>>;
 ///     }
 /// }
 ///
-/// #[rocket::main]
-/// async fn main() {
-/// # if false {
+/// # /*
+/// #[rocket::launch]
+/// # */
+/// fn rocket() -> rocket::Rocket {
 ///     rocket::ignite()
 ///         .mount("/", routes![custom_handler])
 ///         .manage(Kind::Simple)
-///         .launch()
-///         .await;
-/// # }
 /// }
 /// ```
 ///

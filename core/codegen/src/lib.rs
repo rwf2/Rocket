@@ -405,14 +405,22 @@ pub fn catch(args: TokenStream, input: TokenStream) -> TokenStream {
     emit!(attribute::catch::catch_attribute(args, input))
 }
 
+/// FIXME: Document.
 #[proc_macro_attribute]
 pub fn async_test(args: TokenStream, input: TokenStream) -> TokenStream {
     emit!(attribute::async_entry::async_test_attribute(args, input))
 }
 
+/// FIXME: Document.
 #[proc_macro_attribute]
 pub fn main(args: TokenStream, input: TokenStream) -> TokenStream {
     emit!(attribute::async_entry::main_attribute(args, input))
+}
+
+/// FIXME: Document.
+#[proc_macro_attribute]
+pub fn launch(args: TokenStream, input: TokenStream) -> TokenStream {
+    emit!(attribute::async_entry::launch_attribute(args, input))
 }
 
 /// Derive for the [`FromFormValue`] trait.

@@ -5,11 +5,7 @@ extern crate rocket_contrib;
 
 use rocket_contrib::serve::StaticFiles;
 
+#[rocket::launch]
 fn rocket() -> rocket::Rocket {
     rocket::ignite().mount("/", StaticFiles::from("static"))
-}
-
-#[rocket::main]
-async fn main() {
-    let _ = rocket().launch().await;
 }

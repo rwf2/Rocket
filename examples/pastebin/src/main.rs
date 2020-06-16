@@ -51,11 +51,7 @@ fn index() -> &'static str {
     "
 }
 
+#[rocket::launch]
 fn rocket() -> rocket::Rocket {
     rocket::ignite().mount("/", routes![index, upload, retrieve])
-}
-
-#[rocket::main]
-async fn main() {
-    let _ = rocket().launch().await;
 }

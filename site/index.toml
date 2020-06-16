@@ -47,8 +47,6 @@ margin = 9
 [[sections]]
 title = "Hello, Rocket!"
 code = '''
-  #![feature(proc_macro_hygiene)]
-
   #[macro_use] extern crate rocket;
 
   #[get("/hello/<name>/<age>")]
@@ -56,8 +54,9 @@ code = '''
       format!("Hello, {} year old named {}!", age, name)
   }
 
-  fn main() {
-      rocket::ignite().mount("/", routes![hello]).launch();
+  #[launch]
+  fn rocket() -> rocket::Rocket {
+      rocket::ignite().mount("/", routes![hello])
   }
 '''
 text = '''

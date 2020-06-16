@@ -63,6 +63,7 @@ fn token(token: State<'_, Token>) -> String {
     format!("{}", token.0)
 }
 
+#[rocket::launch]
 fn rocket() -> rocket::Rocket {
     rocket::ignite()
         .mount("/", routes![hello, token])
@@ -92,9 +93,4 @@ fn rocket() -> rocket::Rocket {
                 }
             })
         }))
-}
-
-#[rocket::main]
-async fn main() {
-    let _ = rocket().launch().await;
 }

@@ -23,11 +23,7 @@ fn create(data: MsgPack<Message<'_>>) -> String {
     data.contents.to_string()
 }
 
+#[rocket::launch]
 fn rocket() -> rocket::Rocket {
     rocket::ignite().mount("/message", routes![get, create])
-}
-
-#[rocket::main]
-async fn main() {
-    let _ = rocket().launch().await;
 }

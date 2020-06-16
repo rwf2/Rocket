@@ -98,6 +98,7 @@ impl Handler for CustomHandler {
     }
 }
 
+#[rocket::launch]
 fn rocket() -> rocket::Rocket {
     let always_forward = Route::ranked(1, Get, "/", forward);
     let hello = Route::ranked(2, Get, "/", hi);
@@ -116,9 +117,4 @@ fn rocket() -> rocket::Rocket {
         .mount("/hi", vec![name])
         .mount("/custom", CustomHandler::new("some data here"))
         .register(vec![not_found_catcher])
-}
-
-#[rocket::main]
-async fn main() {
-    let _ = rocket().launch().await;
 }

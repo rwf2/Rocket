@@ -119,17 +119,14 @@ impl std::ops::BitOr for Options {
 /// ```rust
 /// # extern crate rocket;
 /// # extern crate rocket_contrib;
+/// # mod no_main {
 /// use rocket_contrib::serve::StaticFiles;
 ///
-/// #[rocket::main]
-/// async fn main() {
-/// # if false {
-///     rocket::ignite()
-///         .mount("/public", StaticFiles::from("/static"))
-///         .launch()
-///         .await;
-/// # }
+/// #[rocket::launch]
+/// fn rocket() -> rocket::Rocket {
+///     rocket::ignite().mount("/public", StaticFiles::from("/static"))
 /// }
+/// # }
 /// ```
 ///
 /// With this, requests for files at `/public/<path..>` will be handled by
@@ -147,17 +144,15 @@ impl std::ops::BitOr for Options {
 /// ```rust
 /// # extern crate rocket;
 /// # extern crate rocket_contrib;
+/// # mod no_main {
 /// use rocket_contrib::serve::StaticFiles;
 ///
-/// #[rocket::main]
-/// async fn main() {
-/// # if false {
+/// #[rocket::launch]
+/// fn rocket() -> rocket::Rocket {
 ///     rocket::ignite()
 ///         .mount("/", StaticFiles::from(concat!(env!("CARGO_MANIFEST_DIR"), "/static")))
-///         .launch()
-///         .await;
-/// # }
 /// }
+/// # }
 /// ```
 #[derive(Clone)]
 pub struct StaticFiles {
@@ -184,17 +179,15 @@ impl StaticFiles {
     /// ```rust
     /// # extern crate rocket;
     /// # extern crate rocket_contrib;
+    /// # mod no_main {
     /// use rocket_contrib::serve::StaticFiles;
     ///
-    /// #[rocket::main]
-    /// async fn main() {
-    /// # if false {
+    /// #[rocket::launch]
+    /// fn rocket() -> rocket::Rocket {
     ///     rocket::ignite()
     ///         .mount("/static", StaticFiles::from("/www/public"))
-    ///         .launch()
-    ///         .await;
-    /// # }
     /// }
+    /// # }
     /// ```
     ///
     /// Exactly as before, but set the rank for generated routes to `30`.
@@ -202,17 +195,15 @@ impl StaticFiles {
     /// ```rust
     /// # extern crate rocket;
     /// # extern crate rocket_contrib;
+    /// # mod no_main {
     /// use rocket_contrib::serve::StaticFiles;
     ///
-    /// #[rocket::main]
-    /// async fn main() {
-    /// # if false {
+    /// #[rocket::launch]
+    /// fn rocket() -> rocket::Rocket {
     ///     rocket::ignite()
     ///         .mount("/static", StaticFiles::from("/www/public").rank(30))
-    ///         .launch()
-    ///         .await;
-    /// # }
     /// }
+    /// # }
     /// ```
     pub fn from<P: AsRef<Path>>(path: P) -> Self {
         StaticFiles::new(path, Options::default())
@@ -232,19 +223,17 @@ impl StaticFiles {
     /// ```rust
     /// # extern crate rocket;
     /// # extern crate rocket_contrib;
+    /// # mod no_main {
     /// use rocket_contrib::serve::{StaticFiles, Options};
     ///
-    /// #[rocket::main]
-    /// async fn main() {
-    /// # if false {
+    /// #[rocket::launch]
+    /// fn rocket() -> rocket::Rocket {
     ///     let options = Options::Index | Options::DotFiles;
     ///     rocket::ignite()
     ///         .mount("/static", StaticFiles::from("/www/public"))
     ///         .mount("/pub", StaticFiles::new("/www/public", options).rank(-1))
-    ///         .launch()
-    ///         .await;
-    /// # }
     /// }
+    /// # }
     /// ```
     pub fn new<P: AsRef<Path>>(path: P, options: Options) -> Self {
         StaticFiles { root: path.as_ref().into(), options, rank: Self::DEFAULT_RANK }

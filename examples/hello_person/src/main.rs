@@ -14,7 +14,7 @@ fn hi(name: String) -> String {
     name
 }
 
-#[rocket::main]
-async fn main() {
-    let _ = rocket::ignite().mount("/", routes![hello, hi]).launch().await;
+#[rocket::launch]
+fn rocket() -> rocket::Rocket {
+    rocket::ignite().mount("/", routes![hello, hi])
 }

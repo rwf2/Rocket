@@ -2,15 +2,12 @@
 
 #[macro_use] extern crate rocket;
 
-use rusqlite::types::ToSql;
-
 #[cfg(test)] mod tests;
 
 use std::sync::Mutex;
 
 use rocket::{Rocket, State, response::Debug};
-
-use rusqlite::{Connection, Error};
+use rusqlite::{Connection, Error, types::ToSql};
 
 type DbConn = Mutex<Connection>;
 
@@ -35,6 +32,7 @@ fn hello(db_conn: State<'_, DbConn>) -> Result<String, Debug<Error>>  {
         .map_err(Debug)
 }
 
+#[rocket::launch]
 fn rocket() -> Rocket {
     // Open a new in-memory SQLite database.
     let conn = Connection::open_in_memory().expect("in memory db");
@@ -46,9 +44,4 @@ fn rocket() -> Rocket {
     rocket::ignite()
         .manage(Mutex::new(conn))
         .mount("/", routes![hello])
-}
-
-#[rocket::main]
-async fn main() {
-    let _ = rocket().launch().await;
 }

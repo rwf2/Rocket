@@ -191,17 +191,14 @@ fn user_int(id: isize) -> T { ... }
 #[get("/user/<id>", rank = 3)]
 fn user_str(id: &RawStr) -> T { ... }
 
-#[rocket::main]
-async fn main() {
-    rocket::ignite()
-        .mount("/", routes![user, user_int, user_str])
-        .launch()
-        .await;
+#[rocket::launch]
+fn rocket() -> rocket::Rocket {
+    rocket::ignite().mount("/", routes![user, user_int, user_str])
 }
 ```
 
 Notice the `rank` parameters in `user_int` and `user_str`. If we run this
-application with the routes mounted at the root path, as is done in `main`
+application with the routes mounted at the root path, as is done in `rocket`
 above, requests to `/user/<id>` (such as `/user/123`, `/user/Bob`, and so on)
 will be routed as follows:
 

@@ -63,10 +63,9 @@ fn not_found(request: &Request<'_>) -> Html<String> {
     Html(html)
 }
 
-#[rocket::main]
-async fn main() {
-    let _ = rocket::ignite()
+#[rocket::launch]
+fn rocket() -> rocket::Rocket {
+    rocket::ignite()
         .mount("/hello", routes![get_hello, post_hello])
         .register(catchers![not_found])
-        .launch().await;
 }

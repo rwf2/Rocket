@@ -1,8 +1,7 @@
 use rocket::local::Client;
 
 async fn test(uri: String, expected: String) {
-    let rocket = rocket::ignite().mount("/", routes![super::hello, super::hi]);
-    let client = Client::new(rocket).await.unwrap();
+    let client = Client::new(super::rocket()).await.unwrap();
     let mut response = client.get(&uri).dispatch().await;
     assert_eq!(response.body_string().await, Some(expected));
 }

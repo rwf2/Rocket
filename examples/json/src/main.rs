@@ -69,14 +69,10 @@ fn not_found() -> JsonValue {
     })
 }
 
+#[rocket::launch]
 fn rocket() -> rocket::Rocket {
     rocket::ignite()
         .mount("/message", routes![new, update, get])
         .register(catchers![not_found])
         .manage(Mutex::new(HashMap::<ID, String>::new()))
-}
-
-#[rocket::main]
-async fn main() {
-    let _ = rocket().launch().await;
 }

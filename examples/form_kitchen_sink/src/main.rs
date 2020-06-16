@@ -41,11 +41,7 @@ fn index() -> Option<NamedFile> {
     NamedFile::open("static/index.html").ok()
 }
 
+#[rocket::launch]
 fn rocket() -> rocket::Rocket {
     rocket::ignite().mount("/", routes![index, sink])
-}
-
-#[rocket::main]
-async fn main() {
-    let _ = rocket().launch().await;
 }

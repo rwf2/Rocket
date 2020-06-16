@@ -80,13 +80,9 @@ fn index() -> Redirect {
     Redirect::to(uri!(login_page))
 }
 
+#[rocket::launch]
 fn rocket() -> rocket::Rocket {
     rocket::ignite()
         .attach(Template::fairing())
         .mount("/", routes![index, user_index, login, logout, login_user, login_page])
-}
-
-#[rocket::main]
-async fn main() {
-    let _ = rocket().launch().await;
 }

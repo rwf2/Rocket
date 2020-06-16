@@ -196,8 +196,8 @@ fn assets(asset: PathBuf, assets_dir: State<AssetsDir>) -> Option<NamedFile> {
     NamedFile::open(Path::new(&assets_dir.0).join(asset)).ok()
 }
 
-#[rocket::main]
-async fn main() {
+#[rocket::launch]
+fn rocket() -> rocket::Rocket {
     rocket::ignite()
         .mount("/", routes![assets])
         .attach(AdHoc::on_attach("Assets Config", |mut rocket| {
@@ -208,8 +208,6 @@ async fn main() {
 
             Ok(rocket.manage(AssetsDir(assets_dir)))
         }))
-        .launch()
-        .await;
 }
 ```
 

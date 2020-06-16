@@ -62,12 +62,9 @@
 //! #[database("sqlite_logs")]
 //! struct LogsDbConn(diesel::SqliteConnection);
 //!
-//! #[rocket::main]
-//! async fn main() {
-//!     rocket::ignite()
-//!        .attach(LogsDbConn::fairing())
-//!        .launch()
-//!        .await;
+//! #[rocket::launch]
+//! fn rocket() -> rocket::Rocket {
+//!     rocket::ignite().attach(LogsDbConn::fairing())
 //! }
 //! # } fn main() {}
 //! ```
@@ -152,8 +149,8 @@
 //! use std::collections::HashMap;
 //! use rocket::config::{Config, Environment, Value};
 //!
-//! #[rocket::main]
-//! async fn main() {
+//! #[rocket::launch]
+//! fn rocket() -> rocket::Rocket {
 //!     let mut database_config = HashMap::new();
 //!     let mut databases = HashMap::new();
 //!
@@ -167,7 +164,7 @@
 //!         .finalize()
 //!         .unwrap();
 //!
-//!     rocket::custom(config).launch().await;
+//!     rocket::custom(config)
 //! }
 //! # } fn main() {}
 //! ```
@@ -266,8 +263,8 @@
 //! #[database("my_db")]
 //! struct MyDatabase(diesel::SqliteConnection);
 //!
-//! #[rocket::main]
-//! async fn main() {
+//! #[rocket::launch]
+//! fn rocket() -> rocket::Rocket {
 //! #     let mut db_config = HashMap::new();
 //! #     let mut databases = HashMap::new();
 //! #
@@ -280,10 +277,7 @@
 //! #         .finalize()
 //! #         .unwrap();
 //! #
-//!     rocket::custom(config)
-//!         .attach(MyDatabase::fairing())
-//!         .launch()
-//!         .await;
+//!     rocket::custom(config).attach(MyDatabase::fairing())
 //! }
 //! # } fn main() {}
 //! ```

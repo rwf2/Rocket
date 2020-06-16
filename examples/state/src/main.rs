@@ -24,13 +24,9 @@ fn count(hit_count: State<'_, HitCount>) -> String {
     hit_count.0.load(Ordering::Relaxed).to_string()
 }
 
+#[rocket::launch]
 fn rocket() -> rocket::Rocket {
     rocket::ignite()
         .mount("/", routes![index, count])
         .manage(HitCount(AtomicUsize::new(0)))
-}
-
-#[rocket::main]
-async fn main() {
-    let _ = rocket().launch().await;
 }

@@ -634,12 +634,11 @@ impl Rocket {
     ///     "Hello!"
     /// }
     ///
-    /// #[rocket::main]
-    /// async fn main() {
-    /// # if false { // We don't actually want to launch the server in an example.
+    /// # /*
+    /// #[rocket::launch]
+    /// # */
+    /// fn rocket() -> rocket::Rocket {
     ///     rocket::ignite().mount("/hello", routes![hi])
-    /// #       .launch().await;
-    /// # }
     /// }
     /// ```
     ///
@@ -697,13 +696,11 @@ impl Rocket {
     ///     format!("I couldn't find '{}'. Try something else?", req.uri())
     /// }
     ///
-    /// #[rocket::main]
-    /// async fn main() {
-    /// # if false { // We don't actually want to launch the server in an example.
-    ///     rocket::ignite()
-    ///         .register(catchers![internal_error, not_found])
-    /// #       .launch().await;
-    /// # }
+    /// # /*
+    /// #[rocket::launch]
+    /// # */
+    /// fn rocket() -> rocket::Rocket {
+    ///     rocket::ignite().register(catchers![internal_error, not_found])
     /// }
     /// ```
     #[inline]
@@ -740,15 +737,13 @@ impl Rocket {
     ///     format!("The stateful value is: {}", state.0)
     /// }
     ///
-    /// #[rocket::main]
-    /// async fn main() {
-    /// # if false { // We don't actually want to launch the server in an example.
+    /// # /*
+    /// #[rocket::launch]
+    /// # */
+    /// fn rocket() -> rocket::Rocket {
     ///     rocket::ignite()
     ///         .mount("/", routes![index])
     ///         .manage(MyValue(10))
-    ///         .launch()
-    ///         .await;
-    /// # }
     /// }
     /// ```
     #[inline]
@@ -777,16 +772,14 @@ impl Rocket {
     /// use rocket::Rocket;
     /// use rocket::fairing::AdHoc;
     ///
-    /// #[rocket::main]
-    /// async fn main() {
-    /// # if false { // We don't actually want to launch the server in an example.
+    /// # /*
+    /// #[rocket::launch]
+    /// # */
+    /// fn rocket() -> rocket::Rocket {
     ///     rocket::ignite()
     ///         .attach(AdHoc::on_launch("Launch Message", |_| {
     ///             println!("Rocket is launching!");
     ///         }))
-    ///         .launch()
-    ///         .await;
-    /// # }
     /// }
     /// ```
     #[inline]
@@ -1110,16 +1103,14 @@ impl Manifest {
     /// use rocket::Rocket;
     /// use rocket::fairing::AdHoc;
     ///
-    /// #[rocket::main]
-    /// async fn main() {
-    /// # if false { // We don't actually want to launch the server in an example.
+    /// # /*
+    /// #[rocket::launch]
+    /// # */
+    /// fn rocket() -> rocket::Rocket {
     ///     rocket::ignite()
     ///         .attach(AdHoc::on_launch("Config Printer", |manifest| {
     ///             println!("Rocket launch config: {:?}", manifest.config());
     ///         }))
-    ///         .launch()
-    ///         .await;
-    /// # }
     /// }
     /// ```
     #[inline(always)]

@@ -7,13 +7,9 @@ fn hello() -> &'static str {
     "Hello, world!"
 }
 
+#[rocket::launch]
 fn rocket() -> rocket::Rocket {
     rocket::ignite().mount("/", routes![hello])
-}
-
-#[rocket::main]
-async fn main() {
-    let _ = rocket().launch().await;
 }
 
 #[cfg(test)]
