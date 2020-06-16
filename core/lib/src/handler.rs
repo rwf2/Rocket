@@ -41,7 +41,7 @@ pub type HandlerFuture<'r> = BoxFuture<'r, Outcome<'r>>;
 ///
 /// Such a handler might be written and used as follows:
 ///
-/// ```rust
+/// ```rust,no_run
 /// # #[derive(Copy, Clone)] enum Kind { Simple, Intermediate, Complex, }
 /// use rocket::{Request, Data, Route, http::Method};
 /// use rocket::handler::{self, Handler, Outcome, HandlerFuture};
@@ -65,9 +65,7 @@ pub type HandlerFuture<'r> = BoxFuture<'r, Outcome<'r>>;
 ///     }
 /// }
 ///
-/// # /*
 /// #[rocket::launch]
-/// # */
 /// fn rocket() -> rocket::Rocket {
 ///     rocket::ignite().mount("/", CustomHandler(Kind::Simple))
 /// }
@@ -89,7 +87,7 @@ pub type HandlerFuture<'r> = BoxFuture<'r, Outcome<'r>>;
 /// The previous example could have been implemented using a combination of
 /// managed state and a static route, as follows:
 ///
-/// ```rust
+/// ```rust,no_run
 /// # #![feature(proc_macro_hygiene)]
 /// # #[macro_use] extern crate rocket;
 /// #
@@ -111,9 +109,7 @@ pub type HandlerFuture<'r> = BoxFuture<'r, Outcome<'r>>;
 ///     }
 /// }
 ///
-/// # /*
 /// #[rocket::launch]
-/// # */
 /// fn rocket() -> rocket::Rocket {
 ///     rocket::ignite()
 ///         .mount("/", routes![custom_handler])

@@ -57,7 +57,7 @@
 //! See the [guide](https://rocket.rs/v0.5/guide) for more information on how to
 //! write Rocket applications. Here's a simple example to get you started:
 //!
-//! ```rust
+//! ```rust,no_run
 //! #![feature(proc_macro_hygiene)]
 //!
 //! #[macro_use] extern crate rocket;
@@ -67,9 +67,7 @@
 //!     "Hello, world!"
 //! }
 //!
-//! # /*
 //! #[rocket::launch]
-//! # */
 //! fn rocket() -> rocket::Rocket {
 //!     rocket::ignite().mount("/", routes![hello])
 //! }

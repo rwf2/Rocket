@@ -21,7 +21,7 @@ use crate::http::Status;
 /// like to initialize at start-up and later access it in several handlers. The
 /// following example does just this:
 ///
-/// ```rust
+/// ```rust,no_run
 /// # #![feature(proc_macro_hygiene)]
 /// # #[macro_use] extern crate rocket;
 /// use rocket::State;
@@ -42,9 +42,7 @@ use crate::http::Status;
 ///     state.inner().user_val.as_str()
 /// }
 ///
-/// # /*
 /// #[rocket::launch]
-/// # */
 /// fn rocket() -> rocket::Rocket {
 ///     rocket::ignite()
 ///         .mount("/", routes![index, raw_config_value])
