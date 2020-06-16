@@ -150,7 +150,7 @@ fn rocket() -> Rocket {
 The `mount` call takes a base path and a set of routes via the `routes!` macro.
 The base path (`/base` above) is prepended to the path of every route in the
 list. This namespaces the routes, allowing for composition. The `#[launch]`
-attrbutes creates a `main` function that starts the server. In development,
+attribute creates a `main` function that starts the server. In development,
 Rocket prints useful information to the console to let you know everything is
 okay.
 

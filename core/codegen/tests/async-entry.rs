@@ -1,7 +1,7 @@
 #![allow(dead_code, unused_variables)]
 
 mod a {
-    // async launch that uses async.
+    // async launch that is async.
     #[rocket::launch]
     async fn rocket() -> rocket::Rocket {
         let _ = rocket::ignite().launch().await;
@@ -14,7 +14,7 @@ mod a {
 }
 
 mod b {
-    // async launch that doesn't use async.
+    // async launch that isn't async.
     #[rocket::launch]
     async fn main2() -> rocket::Rocket {
         rocket::ignite()
@@ -38,7 +38,7 @@ mod c {
 }
 
 mod d {
-    // main with async, using async.
+    // main with async, is async.
     #[rocket::main]
     async fn main() {
         let _ = rocket::ignite().launch().await;
@@ -46,13 +46,13 @@ mod d {
 }
 
 mod e {
-    // main with async, not using async.
+    // main with async, isn't async.
     #[rocket::main]
     async fn main() { }
 }
 
 mod f {
-    // main with async, using async, with termination return.
+    // main with async, is async, with termination return.
     #[rocket::main]
     async fn main() -> Result<(), String> {
         let result = rocket::ignite().launch().await;
@@ -61,14 +61,14 @@ mod f {
 }
 
 mod g {
-    // main with async, not using async, with termination return.
+    // main with async, isn't async, with termination return.
     #[rocket::main]
     async fn main() -> Result<(), String> {
         Ok(())
     }
 }
 
-// main with async, using async, with termination return.
+// main with async, is async, with termination return.
 #[rocket::main]
 async fn main() -> Result<(), String> {
     let result = rocket::ignite().launch().await;
