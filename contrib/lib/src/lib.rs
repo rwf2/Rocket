@@ -44,6 +44,7 @@
 #[allow(unused_imports)] #[macro_use] extern crate rocket;
 
 #[cfg(feature="json")] #[macro_use] pub mod json;
+#[cfg(feature="serde_ron")] pub mod ron;
 #[cfg(feature="serve")] pub mod serve;
 #[cfg(feature="msgpack")] pub mod msgpack;
 #[cfg(feature="templates")] pub mod templates;

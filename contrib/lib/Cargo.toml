@@ -20,6 +20,7 @@ databases = ["r2d2", "tokio/blocking", "tokio/rt-threaded", "rocket_contrib_code
 default = ["json", "serve"]
 json = ["serde", "serde_json", "tokio/io-util"]
 msgpack = ["serde", "rmp-serde", "tokio/io-util"]
+ron = ["serde", "ron_crate"]
 tera_templates = ["tera", "templates"]
 handlebars_templates = ["handlebars", "templates"]
 helmet = ["time"]
@@ -51,6 +52,7 @@ log = "0.4"
 serde = { version = "1.0", optional = true }
 serde_json = { version = "1.0.26", optional = true }
 rmp-serde = { version = "0.14.0", optional = true }
+ron_crate = { version = "0.5.1", optional = true, package = "ron" }
 
 # Templating dependencies.
 handlebars = { version = "2.0", optional = true }
