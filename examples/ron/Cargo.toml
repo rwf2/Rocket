@@ -1,0 +1,17 @@
+[package]
+name = "ron"
+version = "0.0.0"
+workspace = "../../"
+edition = "2018"
+publish = false
+
+[dependencies]
+rocket = { path = "../../core/lib" }
+serde = "1.0"
+ron = "0.5.1"
+serde_derive = "1.0"
+
+[dependencies.rocket_contrib]
+path = "../../contrib/lib"
+default-features = false
+features = ["ron"]
