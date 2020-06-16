@@ -16,9 +16,9 @@
 
 use std::ops::{Deref, DerefMut};
 use std::io;
-use std::iter::FromIterator;
 
-use tokio_io::AsyncReadExt;
+use crate::rocket::tokio::io::AsyncReadExt;
+use rocket::futures::future::BoxFuture;
 
 use rocket::request::Request;
 use rocket::outcome::Outcome::*;
@@ -26,9 +26,8 @@ use rocket::data::{Transform::*, Transformed, Data, FromData, TransformFuture, F
 use rocket::response::{self, Responder, content};
 use rocket::http::Status;
 
-use serde::{Serialize, Serializer};
-use serde::de::{Deserialize, Deserializer};
-
+use serde::Serialize;
+use serde::de::Deserialize;
 
 /// The RON type: implements [`FromData`] and [`Responder`], allowing you to
 /// easily consume and respond with RON.
@@ -121,7 +120,7 @@ pub enum RonError<'a> {
     /// RON or as the requested type. The `&str` value in `.0` is the raw data
     /// received from the user, while the `Error` in `.1` is the deserialization
     /// error from `serde`.
-    Parse(&'a str, ron::de::Error),
+    Parse(&'a str, ron_crate::de::Error),
 }
 
 impl<'a, T: Deserialize<'a>> FromData<'a> for Ron<T> {
@@ -129,7 +128,7 @@ impl<'a, T: Deserialize<'a>> FromData<'a> for Ron<T> {
     type Owned = String;
     type Borrowed= str;
  
-    fn transform(r: &Request<'_>, d: Data) -> TransformFuture<'a, Self::Owned, Self::Error> {
+    fn transform<'r>(r: &'r Request<'_>, d: Data) -> TransformFuture<'r, Self::Owned, Self::Error> {
         let size_limit = r.limits().get("ron").unwrap_or(LIMIT);
         Box::pin(async move {
             let mut s = String::with_capacity(512);
@@ -144,7 +143,7 @@ impl<'a, T: Deserialize<'a>> FromData<'a> for Ron<T> {
     fn from_data(_: &Request<'_>, o: Transformed<'a, Self>) -> FromDataFuture<'a, Self, Self::Error> {
         Box::pin(async move {
             let string = try_outcome!(o.borrowed());
-            match ron::de::from_str(&string) {
+            match ron_crate::de::from_str(&string) {
                 Ok(v) => Success(Ron(v)),
                 Err(e) => {
                     error_!("Couldn't parse RON body: {:?}", e);
@@ -160,24 +159,17 @@ impl<'a, T: Deserialize<'a>> FromData<'a> for Ron<T> {
 /// Text and a fixed-size body with the serialized value. If serialization
 /// fails, an `Err` of `Status::InternalServerError` is returned.
 impl<'r, T: Serialize> Responder<'r> for Ron<T> {
-    fn respond_to(self, req: &'r Request<'_>) -> response::ResultFuture<'r> {
-        match serialize(&self.0) {
-            Ok(string) => Box::pin(async move { Ok(content::Ron(string).respond_to(req).await.unwrap()) }),
+    fn respond_to<'a, 'x>(self, req: &'r Request<'a>) -> BoxFuture<'x, response::Result<'r>>
+        where 'a: 'x, 'r: 'x, Self: 'x
+    {
+        match ron_crate::ser::to_string_pretty(&self.0, ron_crate::ser::PrettyConfig::default()) {
+            Ok(string) => Box::pin(async move { Ok(content::Plain(string).respond_to(req).await.unwrap()) }),
             Err(e) => Box::pin (async move {
                 error_!("RON failed to serialize: {:?}", e);
                 Err(Status::InternalServerError)
             })
         }
     }
-}
-
-fn serialize<T>(value: &T) -> ron::ser::Result<String>
-where
-    T: Serialize,
-{
-    let mut s = ron::ser::Serializer::new(Some(ron::ser::PrettyConfig::default()), true);
-    value.serialize(&mut s)?;
-    Ok(s.into_output_string())
 }
 
 impl<T> Deref for Ron<T> {
