@@ -47,7 +47,7 @@ use serde::de::Deserialize;
 /// use rocket_contrib::ron::Ron;
 ///
 /// #[post("/users", data = "<user>")]
-/// fn new_user(user: Json<User>) {
+/// fn new_user(user: Ron<User>) {
 ///     /* ... */
 /// }
 /// ```
@@ -79,7 +79,7 @@ use serde::de::Deserialize;
 /// protects your application from denial of service (DoS) attacks and from
 /// resource exhaustion through high memory consumption. The limit can be
 /// increased by setting the `limits.ron` configuration parameter. For
-/// instance, to increase the JSON limit to 5MiB for all environments, you may
+/// instance, to increase the RON limit to 5MiB for all environments, you may
 /// add the following to your `Rocket.toml`:
 ///
 /// ```toml
@@ -95,7 +95,7 @@ impl<T> Ron<T> {
     /// # Example
     /// ```rust
     /// # use rocket_contrib::ron::Ron;
-    /// let sring = "Hello".to_string();
+    /// let string = "Hello".to_string();
     /// let my_ron = Ron(string);
     /// assert_eq!(my_ron.into_inner(), "Hello".to_string());
     /// ```
