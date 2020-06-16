@@ -11,7 +11,7 @@ mod main_a {
 mod main_b {
     #[rocket::main]
     async fn foo() { }
-    //~^^ ERROR `main`
+    //~^^ WARNING `main`
 }
 
 mod main_d {

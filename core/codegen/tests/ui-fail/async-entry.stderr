@@ -11,18 +11,18 @@ note: this function must be `async`
   |     ^^^^^^^^
   = note: this error originates in an attribute macro (in Nightly builds, run with -Z macro-backtrace for more info)
 
-error: attribute can only be applied to `main` function
+warning: attribute is typically applied to `main` function
   --> $DIR/async-entry.rs:12:5
    |
 12 |     #[rocket::main]
    |     ^^^^^^^^^^^^^^^
    |
-note: this function must be `main`
+note: this function is not `main`
   --> $DIR/async-entry.rs:13:5
    |
 13 |     async fn foo() { }
    |     ^^^^^^^^^^^^^^
-   = note: this error originates in an attribute macro (in Nightly builds, run with -Z macro-backtrace for more info)
+   = note: this warning originates in an attribute macro (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: attribute can only be applied to `async` functions
   --> $DIR/async-entry.rs:18:5
@@ -156,7 +156,7 @@ error[E0277]: `main` has invalid return type `rocket::rocket::Rocket`
     |
     = help: consider using `()`, or a `Result`
 
-error: aborting due to 14 previous errors
+error: aborting due to 13 previous errors; 1 warning emitted
 
 Some errors have detailed explanations: E0277, E0308, E0728.
 For more information about an error, try `rustc --explain E0277`.

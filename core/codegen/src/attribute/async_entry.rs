@@ -18,15 +18,16 @@ impl EntryAttr for Main {
     const REQUIRES_ASYNC: bool = true;
 
     fn function(f: &syn::ItemFn, block: &syn::Block) -> Result<TokenStream2> {
-        let (vis, mut sig) = (&f.vis, f.sig.clone());
+        let (attrs, vis, mut sig) = (&f.attrs, &f.vis, f.sig.clone());
         if sig.ident != "main" {
-            return Err(Span::call_site()
-                .error("attribute can only be applied to `main` function")
-                .span_note(sig.span(), "this function must be `main`"));
+            Span::call_site()
+                .warning("attribute is typically applied to `main` function")
+                .span_note(sig.span(), "this function is not `main`")
+                .emit();
         }
 
         sig.asyncness = None;
-        Ok(quote_spanned!(block.span().into() => #vis #sig {
+        Ok(quote_spanned!(block.span().into() => #(#attrs)* #vis #sig {
             ::rocket::async_main(async move #block)
         }))
     }
@@ -38,9 +39,9 @@ impl EntryAttr for Test {
     const REQUIRES_ASYNC: bool = true;
 
     fn function(f: &syn::ItemFn, block: &syn::Block) -> Result<TokenStream2> {
-        let (vis, mut sig) = (&f.vis, f.sig.clone());
+        let (attrs, vis, mut sig) = (&f.attrs, &f.vis, f.sig.clone());
         sig.asyncness = None;
-        Ok(quote_spanned!(block.span().into() => #[test] #vis #sig {
+        Ok(quote_spanned!(block.span().into() => #(#attrs)* #[test] #vis #sig {
             ::rocket::async_test(async move #block)
         }))
     }
@@ -66,31 +67,24 @@ impl EntryAttr for Launch {
                 .span_note(f.sig.span(), "this function must return a value"))
         };
 
-        let (vis, mut sig) = (&f.vis, f.sig.clone());
-        sig.ident = syn::Ident::new("main", sig.ident.span());
-        sig.output = syn::ReturnType::Default;
-        sig.asyncness = None;
-
         let rocket = quote_spanned!(ty.span().into() => {
             let ___rocket: #ty = #block;
             let ___rocket: ::rocket::Rocket = ___rocket;
             ___rocket
         });
 
-        if f.sig.asyncness.is_some() {
-            Ok(quote_spanned!(block.span().into() => #vis #sig {
-                ::rocket::async_main(async move {
-                    let _ = #rocket.launch().await;
-                })
-            } #[allow(dead_code)] #f))
-        } else {
-            Ok(quote_spanned!(block.span().into() => #vis #sig {
-                ::rocket::async_main({
-                    let ___rocket = #rocket;
-                    async move { let _ = ___rocket.launch().await; }
-                })
-            } #[allow(dead_code)] #f))
-        }
+        let (vis, mut sig) = (&f.vis, f.sig.clone());
+        sig.ident = syn::Ident::new("main", sig.ident.span());
+        sig.output = syn::ReturnType::Default;
+        sig.asyncness = None;
+
+        Ok(quote_spanned!(block.span().into() =>
+            #[allow(dead_code)] #f
+
+            #vis #sig {
+                ::rocket::async_main(async move { let _ = #rocket.launch().await; })
+            }
+        ))
     }
 }
 
@@ -116,9 +110,7 @@ fn parse_input<A: EntryAttr>(input: TokenStream) -> Result<syn::ItemFn> {
 
 fn _async_entry<A: EntryAttr>(_args: TokenStream, input: TokenStream) -> Result<TokenStream> {
     let function = parse_input::<A>(input)?;
-    let (original_attrs, block) = (&function.attrs, &function.block);
-    let new_fn = A::function(&function, block)?;
-    Ok(quote!(#(#original_attrs)* #new_fn).into())
+    A::function(&function, &function.block).map(|t| t.into())
 }
 
 pub fn async_test_attribute(args: TokenStream, input: TokenStream) -> TokenStream {
