@@ -54,7 +54,7 @@ mod local_request_content_type_tests {
     use super::*;
 
     use rocket::Rocket;
-    use rocket::local::Client;
+    use rocket::local::asynchronous::Client;
     use rocket::http::ContentType;
 
     fn rocket() -> Rocket {

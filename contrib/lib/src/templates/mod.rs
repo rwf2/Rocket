@@ -328,7 +328,7 @@ impl Template {
     /// use std::collections::HashMap;
     ///
     /// use rocket_contrib::templates::Template;
-    /// use rocket::local::Client;
+    /// use rocket::local::asynchronous::Client;
     ///
     /// fn main() {
     /// # rocket::async_test(async {

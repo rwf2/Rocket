@@ -1,7 +1,7 @@
 use std::fs::{self, File};
 use std::io::prelude::*;
 
-use rocket::local::Client;
+use rocket::local::asynchronous::Client;
 
 #[rocket::async_test]
 async fn test_root() {

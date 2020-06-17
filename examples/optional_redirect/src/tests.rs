@@ -1,4 +1,4 @@
-use rocket::local::Client;
+use rocket::local::asynchronous::Client;
 use rocket::http::Status;
 
 async fn test_200(uri: &str, expected_body: &str) {

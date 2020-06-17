@@ -29,7 +29,7 @@ fn rocket() -> rocket::Rocket {
 
 #[cfg(test)]
 mod test {
-    use rocket::local::Client;
+    use rocket::local::asynchronous::Client;
     use rocket::http::Header;
 
     async fn test_header_count<'h>(headers: Vec<Header<'static>>) {

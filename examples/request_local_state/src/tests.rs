@@ -1,7 +1,7 @@
 use std::sync::atomic::Ordering;
 
 use super::{rocket, Atomics};
-use rocket::local::Client;
+use rocket::local::asynchronous::Client;
 
 #[rocket::async_test]
 async fn test() {

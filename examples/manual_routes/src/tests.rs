@@ -1,5 +1,5 @@
 use super::*;
-use rocket::local::Client;
+use rocket::local::asynchronous::Client;
 use rocket::http::{ContentType, Status};
 
 fn test(uri: &str, content_type: ContentType, status: Status, body: String) {

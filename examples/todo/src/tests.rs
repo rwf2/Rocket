@@ -3,7 +3,7 @@ use super::task::Task;
 use parking_lot::Mutex;
 use rand::{Rng, thread_rng, distributions::Alphanumeric};
 
-use rocket::local::Client;
+use rocket::local::asynchronous::Client;
 use rocket::http::{Status, ContentType};
 
 // We use a lock to synchronize between tests so DB operations don't collide.

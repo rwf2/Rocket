@@ -22,7 +22,7 @@ fn lenient<'r>(form: LenientForm<MyForm<'r>>) -> String {
 
 mod strict_and_lenient_forms_tests {
     use super::*;
-    use rocket::local::Client;
+    use rocket::local::asynchronous::Client;
     use rocket::http::{Status, ContentType};
 
     const FIELD_VALUE: &str = "just_some_value";

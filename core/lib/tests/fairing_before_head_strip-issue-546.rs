@@ -22,7 +22,7 @@ mod fairing_before_head_strip {
 
     use rocket::fairing::AdHoc;
     use rocket::http::Method;
-    use rocket::local::Client;
+    use rocket::local::asynchronous::Client;
     use rocket::http::Status;
     use rocket::State;
 

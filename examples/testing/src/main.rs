@@ -15,7 +15,7 @@ fn rocket() -> rocket::Rocket {
 #[cfg(test)]
 mod test {
     use super::rocket;
-    use rocket::local::Client;
+    use rocket::local::asynchronous::Client;
     use rocket::http::Status;
 
     #[rocket::async_test]

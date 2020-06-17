@@ -1,4 +1,4 @@
-use rocket::{self, local::Client};
+use rocket::{self, local::asynchronous::Client};
 
 #[rocket::async_test]
 async fn hello_world() {
@@ -31,7 +31,7 @@ mod scoped_uri_tests {
             .mount("/", rocket::routes![inner::hello])
     }
 
-    use rocket::local::Client;
+    use rocket::local::asynchronous::Client;
 
     #[rocket::async_test]
     async fn test_inner_hello() {

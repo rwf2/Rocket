@@ -3,7 +3,7 @@
 #[macro_use] extern crate rocket;
 
 use rocket::{Request, Data, Outcome::*};
-use rocket::local::Client;
+use rocket::local::asynchronous::Client;
 use rocket::request::Form;
 use rocket::data::{self, FromDataSimple};
 use rocket::http::{RawStr, ContentType, Status};

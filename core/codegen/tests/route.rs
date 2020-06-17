@@ -11,7 +11,7 @@ use std::path::PathBuf;
 
 use rocket::{Request, Outcome::*};
 use rocket::http::ext::Normalize;
-use rocket::local::Client;
+use rocket::local::asynchronous::Client;
 use rocket::data::{self, Data, FromDataSimple};
 use rocket::request::Form;
 use rocket::http::{Status, RawStr, ContentType};

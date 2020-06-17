@@ -1,6 +1,6 @@
 use super::rocket;
 use rocket::Response;
-use rocket::local::Client;
+use rocket::local::asynchronous::Client;
 use rocket::http::{Status, Cookie, ContentType};
 
 fn user_id_cookie(response: &Response<'_>) -> Option<Cookie<'static>> {

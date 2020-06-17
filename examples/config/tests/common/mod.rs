@@ -2,7 +2,7 @@ use rocket::{self, State};
 use rocket::fairing::AdHoc;
 use rocket::config::{self, Config, Environment, LoggingLevel};
 use rocket::http::Status;
-use rocket::local::Client;
+use rocket::local::asynchronous::Client;
 
 struct LocalConfig(Config);
 

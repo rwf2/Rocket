@@ -23,7 +23,7 @@ fn used(flash: Option<FlashMessage<'_, '_>>) -> Option<String> {
 }
 
 mod flash_lazy_remove_tests {
-    use rocket::local::Client;
+    use rocket::local::asynchronous::Client;
     use rocket::http::Status;
 
     #[rocket::async_test]

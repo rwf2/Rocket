@@ -18,7 +18,7 @@ mod private_cookie_test {
 
     mod tests {
         use super::*;
-        use rocket::local::Client;
+        use rocket::local::asynchronous::Client;
         use rocket::http::Cookie;
         use rocket::http::Status;
 

@@ -1,4 +1,4 @@
-use rocket::local::Client;
+use rocket::local::asynchronous::Client;
 
 #[rocket::async_test]
 async fn hello_world() {

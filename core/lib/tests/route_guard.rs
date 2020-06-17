@@ -13,7 +13,7 @@ fn files(route: &Route, path: PathBuf) -> String {
 
 mod route_guard_tests {
     use super::*;
-    use rocket::local::Client;
+    use rocket::local::asynchronous::Client;
 
     async fn assert_path(client: &Client, path: &str) {
         let mut res = client.get(path).dispatch().await;

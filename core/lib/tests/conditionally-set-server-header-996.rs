@@ -17,7 +17,7 @@ fn use_default() { }
 
 mod conditionally_set_server_header {
     use super::*;
-    use rocket::local::Client;
+    use rocket::local::asynchronous::Client;
 
     #[rocket::async_test]
     async fn do_not_overwrite_server_header() {

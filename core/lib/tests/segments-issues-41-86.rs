@@ -31,7 +31,7 @@ fn dual(user: String, path: Segments<'_>) -> String {
 
 mod tests {
     use super::*;
-    use rocket::local::Client;
+    use rocket::local::asynchronous::Client;
 
     #[rocket::async_test]
     async fn segments_works() {

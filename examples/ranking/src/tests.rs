@@ -1,4 +1,4 @@
-use rocket::local::Client;
+use rocket::local::asynchronous::Client;
 
 async fn test(uri: String, expected: String) {
     let client = Client::new(super::rocket()).await.unwrap();

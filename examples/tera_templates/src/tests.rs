@@ -1,5 +1,5 @@
 use super::rocket;
-use rocket::local::Client;
+use rocket::local::asynchronous::Client;
 use rocket::http::Method::*;
 use rocket::http::Status;
 use rocket_contrib::templates::Template;

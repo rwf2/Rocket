@@ -1,5 +1,5 @@
 use crate::rocket;
-use rocket::local::Client;
+use rocket::local::asynchronous::Client;
 use rocket::http::{Status, ContentType};
 
 #[rocket::async_test]

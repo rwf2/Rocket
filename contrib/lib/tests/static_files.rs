@@ -8,7 +8,7 @@ mod static_tests {
     use rocket::{self, Rocket, Route};
     use rocket_contrib::serve::{StaticFiles, Options};
     use rocket::http::Status;
-    use rocket::local::Client;
+    use rocket::local::asynchronous::Client;
 
     fn static_root() -> PathBuf {
         Path::new(env!("CARGO_MANIFEST_DIR"))

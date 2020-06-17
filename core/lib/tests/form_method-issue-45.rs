@@ -17,7 +17,7 @@ fn bug(form_data: Form<FormData>) -> &'static str {
 
 mod tests {
     use super::*;
-    use rocket::local::Client;
+    use rocket::local::asynchronous::Client;
     use rocket::http::{Status, ContentType};
 
     #[rocket::async_test]

@@ -42,7 +42,7 @@ impl<'r, R> Created<R> {
     ///
     /// ```rust
     /// # #![feature(proc_macro_hygiene)]
-    /// # use rocket::{get, routes, local::Client};
+    /// # use rocket::{get, routes, local::asynchronous::Client};
     /// use rocket::response::status;
     ///
     /// #[get("/")]
@@ -73,7 +73,7 @@ impl<'r, R> Created<R> {
     ///
     /// ```rust
     /// # #![feature(proc_macro_hygiene)]
-    /// # use rocket::{get, routes, local::Client};
+    /// # use rocket::{get, routes, local::asynchronous::Client};
     /// use rocket::response::status;
     ///
     /// #[get("/")]
@@ -109,7 +109,7 @@ impl<'r, R> Created<R> {
     ///
     /// ```rust
     /// # #![feature(proc_macro_hygiene)]
-    /// # use rocket::{get, routes, local::Client};
+    /// # use rocket::{get, routes, local::asynchronous::Client};
     /// use rocket::response::status;
     ///
     /// #[get("/")]

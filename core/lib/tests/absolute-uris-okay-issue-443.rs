@@ -16,7 +16,7 @@ fn rocket() -> Redirect {
 
 mod test_absolute_uris_okay {
     use super::*;
-    use rocket::local::Client;
+    use rocket::local::asynchronous::Client;
 
     #[rocket::async_test]
     async fn redirect_works() {

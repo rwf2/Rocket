@@ -5,7 +5,7 @@ use std::borrow::Cow;
 
 use crate::{Request, Response};
 use crate::http::{Method, Header, Cookie};
-use crate::local::blocking::Client;
+use crate::local::{asynchronous, blocking::Client};
 
 // TODO: Explain difference from async LocalRequest
 /// A structure representing a local request as created by [`Client`].
@@ -66,7 +66,7 @@ use crate::local::blocking::Client;
 /// [`dispatch`]: #method.dispatch
 /// [`mut_dispatch`]: #method.mut_dispatch
 pub struct LocalRequest<'c> {
-    inner: crate::local::LocalRequest<'c>,
+    inner: asynchronous::LocalRequest<'c>,
     client: &'c Client,
 }
 
@@ -76,7 +76,7 @@ impl<'c> LocalRequest<'c> {
         method: Method,
         uri: Cow<'c, str>
     ) -> LocalRequest<'c> {
-        let inner = crate::local::LocalRequest::new(&client.inner, method, uri);
+        let inner = asynchronous::LocalRequest::new(&client.inner, method, uri);
         Self { inner, client }
     }
 
@@ -293,40 +293,6 @@ impl<'c> LocalRequest<'c> {
         let inner = self.client.block_on(self.inner.dispatch());
         LocalResponse { inner, client: self.client }
     }
-
-    /// Dispatches the request, returning the response.
-    ///
-    /// This method _does not_ consume or clone `self`. Any changes to the
-    /// request that occur during handling will be visible after this method is
-    /// called. For instance, body data is always consumed after a request is
-    /// dispatched. As such, only the first call to `mut_dispatch` for a given
-    /// `LocalRequest` will contains the original body data.
-    ///
-    /// This method should _only_ be used when either it is known that
-    /// the application will not modify the request, or it is desired to see
-    /// modifications to the request. Prefer to use [`dispatch`] instead.
-    ///
-    /// [`dispatch`]: #method.dispatch
-    ///
-    /// # Example
-    ///
-    /// ```rust
-    /// use rocket::local::blocking::Client;
-    ///
-    /// let client = Client::new(rocket::ignite()).unwrap();
-    ///
-    /// let mut req = client.get("/");
-    /// let response_a = req.mut_dispatch();
-    /// // TODO.async: Annoying. Is this really a good example to show?
-    /// drop(response_a);
-    /// let response_b = req.mut_dispatch();
-    /// ```
-    #[inline(always)]
-    pub fn mut_dispatch(&mut self) -> LocalResponse<'c> {
-        let inner = self.client.block_on(self.inner.mut_dispatch());
-        LocalResponse { inner, client: self.client }
-    }
-
 }
 
 impl fmt::Debug for LocalRequest<'_> {
@@ -343,7 +309,7 @@ impl fmt::Debug for LocalRequest<'_> {
 /// when invoking methods, a `LocalResponse` can be treated exactly as if it
 /// were a `Response`.
 pub struct LocalResponse<'c> {
-    inner: crate::local::LocalResponse<'c>,
+    inner: asynchronous::LocalResponse<'c>,
     client: &'c Client,
 }
 

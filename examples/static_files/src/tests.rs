@@ -1,7 +1,7 @@
 use std::fs::File;
 use std::io::Read;
 
-use rocket::local::Client;
+use rocket::local::asynchronous::Client;
 use rocket::http::Status;
 
 use super::rocket;

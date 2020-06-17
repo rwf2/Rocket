@@ -29,7 +29,7 @@ fn rocket() -> rocket::Rocket {
 
 mod tests {
     use super::*;
-    use rocket::local::Client;
+    use rocket::local::asynchronous::Client;
     use rocket::http::{Status, uri::Uri};
 
     #[rocket::async_test]

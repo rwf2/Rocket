@@ -25,7 +25,7 @@ mod head_handling_tests {
     use tokio::io::AsyncReadExt;
 
     use rocket::Route;
-    use rocket::local::Client;
+    use rocket::local::asynchronous::Client;
     use rocket::http::{Status, ContentType};
     use rocket::response::ResponseBody;
 

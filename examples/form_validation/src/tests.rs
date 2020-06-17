@@ -1,5 +1,5 @@
 use super::rocket;
-use rocket::local::Client;
+use rocket::local::asynchronous::Client;
 use rocket::http::{ContentType, Status};
 
 fn test_login<T>(user: &str, pass: &str, age: &str, status: Status, body: T)

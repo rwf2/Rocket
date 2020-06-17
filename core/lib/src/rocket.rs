@@ -1104,6 +1104,7 @@ impl Cargo {
     ///
     /// # rocket::async_test(async {
     /// let mut rocket = rocket::ignite().manage(MyState("hello!"));
+    ///
     /// let cargo = rocket.inspect().await;
     /// assert_eq!(cargo.state::<MyState>(), Some(&MyState("hello!")));
     /// # });

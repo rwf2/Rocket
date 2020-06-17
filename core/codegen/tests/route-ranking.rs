@@ -2,7 +2,7 @@
 
 #[macro_use] extern crate rocket;
 
-use rocket::local::Client;
+use rocket::local::asynchronous::Client;
 
 // Test that manual/auto ranking works as expected.
 

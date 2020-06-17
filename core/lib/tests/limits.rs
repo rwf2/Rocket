@@ -17,7 +17,7 @@ fn index(form: Form<Simple>) -> String {
 mod limits_tests {
     use rocket;
     use rocket::config::{Environment, Config, Limits};
-    use rocket::local::Client;
+    use rocket::local::asynchronous::Client;
     use rocket::http::{Status, ContentType};
 
     fn rocket_with_forms_limit(limit: u64) -> rocket::Rocket {

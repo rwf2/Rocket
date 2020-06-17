@@ -1,5 +1,5 @@
 use super::{rocket, index};
-use rocket::local::Client;
+use rocket::local::asynchronous::Client;
 use rocket::http::{Status, ContentType};
 
 fn extract_id(from: &str) -> Option<String> {

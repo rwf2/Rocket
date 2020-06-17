@@ -11,7 +11,7 @@ fn not_found() -> Redirect {
 
 mod tests {
     use super::*;
-    use rocket::local::Client;
+    use rocket::local::asynchronous::Client;
     use rocket::http::Status;
 
     #[rocket::async_test]

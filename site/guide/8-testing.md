@@ -108,7 +108,7 @@ First, we'll create a `test` module with the proper imports:
 #[cfg(test)]
 mod test {
     use super::rocket;
-    use rocket::local::Client;
+    use rocket::local::asynchronous::Client;
     use rocket::http::Status;
 
     #[rocket::async_test]
@@ -167,7 +167,7 @@ That's it! Altogether, this looks like:
 #[cfg(test)]
 mod test {
     use super::rocket;
-    use rocket::local::Client;
+    use rocket::local::asynchronous::Client;
     use rocket::http::Status;
 
     #[rocket::async_test]

@@ -1,6 +1,6 @@
 use super::Person;
 use rocket::http::{Accept, ContentType, Header, MediaType, Method, Status};
-use rocket::local::Client;
+use rocket::local::asynchronous::Client;
 
 async fn test<H>(method: Method, uri: &str, header: H, status: Status, body: String)
     where H: Into<Header<'static>>

@@ -42,7 +42,7 @@ mod templates_tests {
         use super::*;
         use std::collections::HashMap;
         use rocket::http::Status;
-        use rocket::local::Client;
+        use rocket::local::asynchronous::Client;
 
         const UNESCAPED_EXPECTED: &'static str
             = "\nh_start\ntitle: _test_\nh_end\n\n\n<script />\n\nfoot\n";
@@ -89,7 +89,7 @@ mod templates_tests {
         use super::*;
         use std::collections::HashMap;
         use rocket::http::Status;
-        use rocket::local::Client;
+        use rocket::local::asynchronous::Client;
 
         const EXPECTED: &'static str
             = "Hello _test_!\n\n<main> &lt;script /&gt; hi </main>\nDone.\n\n";
@@ -128,7 +128,7 @@ mod templates_tests {
             use std::io::Write;
             use std::time::Duration;
 
-            use rocket::local::Client;
+            use rocket::local::asynchronous::Client;
 
             const RELOAD_TEMPLATE: &str = "hbs/reload";
             const INITIAL_TEXT: &str = "initial";

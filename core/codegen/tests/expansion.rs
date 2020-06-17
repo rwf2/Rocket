@@ -2,7 +2,7 @@
 
 #[macro_use] extern crate rocket;
 
-use rocket::local::Client;
+use rocket::local::asynchronous::Client;
 
 #[get("/easy/<id>")]
 fn easy(id: i32) -> String {

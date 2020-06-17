@@ -1,12 +1,11 @@
 use std::fmt;
-use std::sync::Arc;
 use std::net::SocketAddr;
 use std::ops::{Deref, DerefMut};
 use std::borrow::Cow;
 
 use crate::{Request, Response, Data};
 use crate::http::{Status, Method, Header, Cookie, uri::Origin, ext::IntoOwned};
-use crate::local::Client;
+use crate::local::asynchronous::Client;
 
 /// A structure representing a local request as created by [`Client`].
 ///
@@ -25,7 +24,7 @@ use crate::local::Client;
 /// `POST` request to `/` with a JSON body:
 ///
 /// ```rust
-/// use rocket::local::Client;
+/// use rocket::local::asynchronous::Client;
 /// use rocket::http::{ContentType, Cookie};
 ///
 /// # rocket::async_test(async {
@@ -58,7 +57,7 @@ use crate::local::Client;
 /// same request needs to be dispatched multiple times, the request can first be
 /// cloned and then dispatched: `request.clone().dispatch()`.
 ///
-/// [`Client`]: crate::local::Client
+/// [`Client`]: crate::local::asynchronous::Client
 /// [`header`]: #method.header
 /// [`add_header`]: #method.add_header
 /// [`cookie`]: #method.cookie
@@ -69,30 +68,7 @@ use crate::local::Client;
 /// [`mut_dispatch`]: #method.mut_dispatch
 pub struct LocalRequest<'c> {
     client: &'c Client,
-    // This `Arc` exists so that we can transfer ownership to the `LocalResponse`
-    // selectively on dispatch. This is necessary because responses may point
-    // into the request, and thus the request and all of its data needs to be
-    // alive while the response is accessible.
-    //
-    // Because both a `LocalRequest` and a `LocalResponse` can hold an `Arc` to
-    // the same `Request`, _and_ the `LocalRequest` can mutate the request, we
-    // must ensure that 1) neither `LocalRequest` not `LocalResponse` are `Sync`
-    // or `Send` and 2) mutations carried out in `LocalRequest` are _stable_:
-    // they never _remove_ data, and any reallocations (say, for vectors or
-    // hashmaps) result in object pointers remaining the same. This means that
-    // even if the `Request` is mutated by a `LocalRequest`, those mutations are
-    // not observable by `LocalResponse`.
-    //
-    // The first is ensured by the embedding of the `Arc` type which is neither
-    // `Send` nor `Sync`. The second is more difficult to argue. First, observe
-    // that any methods of `LocalRequest` that _remove_ values from `Request`
-    // only remove _Copy_ values, in particular, `SocketAddr`. Second, the
-    // lifetime of the `Request` object is tied to the lifetime of the
-    // `LocalResponse`, so references from `Request` cannot be dangling in
-    // `Response`. And finally, observe how all of the data stored in `Request`
-    // is converted into its owned counterpart before insertion, ensuring stable
-    // addresses. Together, these properties guarantee the second condition.
-    request: Arc<Request<'c>>,
+    request: Request<'c>,
     data: Vec<u8>,
     uri: Cow<'c, str>,
 }
@@ -116,7 +92,6 @@ impl<'c> LocalRequest<'c> {
         }
 
         // See the comments on the structure for what's going on here.
-        let request = Arc::new(request);
         LocalRequest { client, request, uri, data: vec![] }
     }
 
@@ -125,7 +100,7 @@ impl<'c> LocalRequest<'c> {
     /// # Example
     ///
     /// ```rust
-    /// use rocket::local::Client;
+    /// use rocket::local::asynchronous::Client;
     ///
     /// # rocket::async_test(async {
     /// let client = Client::new(rocket::ignite()).await.expect("valid rocket");
@@ -135,13 +110,12 @@ impl<'c> LocalRequest<'c> {
     /// ```
     #[inline]
     pub fn inner(&self) -> &Request<'c> {
-        &*self.request
+        &self.request
     }
 
     #[inline(always)]
     fn request_mut(&mut self) -> &mut Request<'c> {
-        // See the comments in the structure for the argument of correctness.
-        Arc::get_mut(&mut self.request).expect("mutable aliasing!")
+        &mut self.request
     }
 
     // This method should _never_ be publicly exposed!
@@ -167,7 +141,7 @@ impl<'c> LocalRequest<'c> {
     /// Add the Content-Type header:
     ///
     /// ```rust
-    /// use rocket::local::Client;
+    /// use rocket::local::asynchronous::Client;
     /// use rocket::http::ContentType;
     ///
     /// # rocket::async_test(async {
@@ -189,7 +163,7 @@ impl<'c> LocalRequest<'c> {
     /// Add the Content-Type header:
     ///
     /// ```rust
-    /// use rocket::local::Client;
+    /// use rocket::local::asynchronous::Client;
     /// use rocket::http::ContentType;
     ///
     /// # rocket::async_test(async {
@@ -210,7 +184,7 @@ impl<'c> LocalRequest<'c> {
     /// Set the remote address to "8.8.8.8:80":
     ///
     /// ```rust
-    /// use rocket::local::Client;
+    /// use rocket::local::asynchronous::Client;
     ///
     /// # rocket::async_test(async {
     /// let client = Client::new(rocket::ignite()).await.unwrap();
@@ -231,7 +205,7 @@ impl<'c> LocalRequest<'c> {
     /// Add `user_id` cookie:
     ///
     /// ```rust
-    /// use rocket::local::Client;
+    /// use rocket::local::asynchronous::Client;
     /// use rocket::http::Cookie;
     ///
     /// # rocket::async_test(async {
@@ -255,7 +229,7 @@ impl<'c> LocalRequest<'c> {
     /// Add `user_id` cookie:
     ///
     /// ```rust
-    /// use rocket::local::Client;
+    /// use rocket::local::asynchronous::Client;
     /// use rocket::http::Cookie;
     ///
     /// # rocket::async_test(async {
@@ -286,7 +260,7 @@ impl<'c> LocalRequest<'c> {
     /// Add `user_id` as a private cookie:
     ///
     /// ```rust
-    /// use rocket::local::Client;
+    /// use rocket::local::asynchronous::Client;
     /// use rocket::http::Cookie;
     ///
     /// # rocket::async_test(async {
@@ -314,7 +288,7 @@ impl<'c> LocalRequest<'c> {
     /// Set the body to be a JSON structure; also sets the Content-Type.
     ///
     /// ```rust
-    /// use rocket::local::Client;
+    /// use rocket::local::asynchronous::Client;
     /// use rocket::http::ContentType;
     ///
     /// # rocket::async_test(async {
@@ -338,7 +312,7 @@ impl<'c> LocalRequest<'c> {
     /// Set the body to be a JSON structure; also sets the Content-Type.
     ///
     /// ```rust
-    /// use rocket::local::Client;
+    /// use rocket::local::asynchronous::Client;
     /// use rocket::http::ContentType;
     ///
     /// # rocket::async_test(async {
@@ -360,7 +334,7 @@ impl<'c> LocalRequest<'c> {
     /// # Example
     ///
     /// ```rust
-    /// use rocket::local::Client;
+    /// use rocket::local::asynchronous::Client;
     ///
     /// # rocket::async_test(async {
     /// let client = Client::new(rocket::ignite()).await.unwrap();
@@ -373,50 +347,13 @@ impl<'c> LocalRequest<'c> {
         LocalRequest::_dispatch(self.client, r, self.request, &self.uri, self.data).await
     }
 
-    /// Dispatches the request, returning the response.
-    ///
-    /// This method _does not_ consume or clone `self`. Any changes to the
-    /// request that occur during handling will be visible after this method is
-    /// called. For instance, body data is always consumed after a request is
-    /// dispatched. As such, only the first call to `mut_dispatch` for a given
-    /// `LocalRequest` will contains the original body data.
-    ///
-    /// This method should _only_ be used when either it is known that
-    /// the application will not modify the request, or it is desired to see
-    /// modifications to the request. Prefer to use [`dispatch`] instead.
-    ///
-    /// [`dispatch`]: #method.dispatch
-    ///
-    /// # Example
-    ///
-    /// ```rust
-    /// use rocket::local::Client;
-    ///
-    /// rocket::async_test(async {
-    ///     let client = Client::new(rocket::ignite()).await.unwrap();
-    ///
-    ///     let mut req = client.get("/");
-    ///     let response_a = req.mut_dispatch().await;
-    ///     // TODO.async: Annoying. Is this really a good example to show?
-    ///     drop(response_a);
-    ///     let response_b = req.mut_dispatch().await;
-    /// })
-    /// ```
-    #[inline(always)]
-    pub async fn mut_dispatch(&mut self) -> LocalResponse<'c> {
-        let req = self.long_lived_request();
-        let data = std::mem::replace(&mut self.data, vec![]);
-        let rc_req = self.request.clone();
-        LocalRequest::_dispatch(self.client, req, rc_req, &self.uri, data).await
-    }
-
     // Performs the actual dispatch.
     // TODO.async: @jebrosen suspects there might be actual UB in here after all,
     //             and now we just went and mixed threads into it
     async fn _dispatch(
         client: &'c Client,
         request: &'c mut Request<'c>,
-        owned_request: Arc<Request<'c>>,
+        owned_request: Request<'c>,
         uri: &str,
         data: Vec<u8>
     ) -> LocalResponse<'c> {
@@ -473,7 +410,7 @@ impl fmt::Debug for LocalRequest<'_> {
 /// when invoking methods, a `LocalResponse` can be treated exactly as if it
 /// were a `Response`.
 pub struct LocalResponse<'c> {
-    _request: Arc<Request<'c>>,
+    _request: Request<'c>,
     response: Response<'c>,
 }
 
@@ -511,8 +448,20 @@ impl fmt::Debug for LocalResponse<'_> {
 //    }
 //}
 
-// #[cfg(test)]
+#[cfg(test)]
 mod tests {
+    // use crate::local::asynchronous::*;
+
+    // #[test]
+    // fn it_panics() {
+    //     crate::async_test(async {
+    //         let client = Client::new(crate::ignite()).await.unwrap();
+    //         let mut req = client.get("/");
+    //         let _res1 = req.mut_dispatch();
+    //         let _res2 = req.mut_dispatch();
+    //     })
+    // }
+
     // Someday...
 
     // #[test]
@@ -546,7 +495,7 @@ mod tests {
     // This checks that a response can't outlive the `Client`.
     // #[compile_fail]
     // fn test() {
-    //     use {Rocket, local::Client};
+    //     use {Rocket, local::asynchronous::Client};
 
     //     let rocket = Rocket::ignite();
     //     let res = {
@@ -562,7 +511,7 @@ mod tests {
     // This checks that a response can't outlive the `Client`.
     // #[compile_fail]
     // fn test() {
-    //     use {Rocket, local::Client};
+    //     use {Rocket, local::asynchronous::Client};
 
     //     let rocket = Rocket::ignite();
     //     let res = {
@@ -579,7 +528,7 @@ mod tests {
     // moving `client` while it is borrowed.
     // #[compile_fail]
     // fn test() {
-    //     use {Rocket, local::Client};
+    //     use {Rocket, local::asynchronous::Client};
 
     //     let rocket = Rocket::ignite();
     //     let client = Client::new(rocket).unwrap();
@@ -595,7 +544,7 @@ mod tests {
 
     // #[compile_fail]
     // fn test() {
-    //     use {Rocket, local::Client};
+    //     use {Rocket, local::asynchronous::Client};
 
     //     let rocket1 = Rocket::ignite();
     //     let rocket2 = Rocket::ignite();

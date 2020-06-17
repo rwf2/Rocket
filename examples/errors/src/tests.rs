@@ -1,4 +1,4 @@
-use rocket::local::Client;
+use rocket::local::asynchronous::Client;
 use rocket::http::Status;
 
 async fn test(uri: &str, status: Status, body: String) {

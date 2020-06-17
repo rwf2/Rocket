@@ -1,5 +1,5 @@
 use super::rocket;
-use rocket::local::Client;
+use rocket::local::asynchronous::Client;
 
 #[rocket::async_test]
 async fn rewrite_get_put() {

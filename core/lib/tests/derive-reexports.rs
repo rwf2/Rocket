@@ -45,7 +45,7 @@ fn number(params: Form<ThingForm>) -> DerivedResponder {
 
 #[rocket::async_test]
 async fn test_derive_reexports() {
-    use rocket::local::Client;
+    use rocket::local::asynchronous::Client;
 
     let rocket = rocket::ignite().mount("/", routes![index, number]);
     let client = Client::new(rocket).await.unwrap();
