@@ -41,7 +41,7 @@ impl Context {
 }
 
 #[post("/", data = "<todo_form>")]
-async fn new(todo_form: Form<Todo>, mut conn: DbConn) -> Flash<Redirect> {
+async fn new(todo_form: Form<Todo>, conn: DbConn) -> Flash<Redirect> {
     conn.run(|conn| {
         let todo = todo_form.into_inner();
         if todo.description.is_empty() {
@@ -55,7 +55,7 @@ async fn new(todo_form: Form<Todo>, mut conn: DbConn) -> Flash<Redirect> {
 }
 
 #[put("/<id>")]
-async fn toggle(id: i32, mut conn: DbConn) -> Result<Redirect, Template> {
+async fn toggle(id: i32, conn: DbConn) -> Result<Redirect, Template> {
     conn.run(move |conn| {
         if Task::toggle_with_id(id, &conn) {
             Ok(Redirect::to("/"))
@@ -66,7 +66,7 @@ async fn toggle(id: i32, mut conn: DbConn) -> Result<Redirect, Template> {
 }
 
 #[delete("/<id>")]
-async fn delete(id: i32, mut conn: DbConn) -> Result<Flash<Redirect>, Template> {
+async fn delete(id: i32, conn: DbConn) -> Result<Flash<Redirect>, Template> {
     conn.run(move |conn| {
         if Task::delete_with_id(id, &conn) {
             Ok(Flash::success(Redirect::to("/"), "Todo was deleted."))
@@ -77,7 +77,7 @@ async fn delete(id: i32, mut conn: DbConn) -> Result<Flash<Redirect>, Template> 
 }
 
 #[get("/")]
-async fn index(msg: Option<FlashMessage<'_, '_>>, mut conn: DbConn) -> Template {
+async fn index(msg: Option<FlashMessage<'_, '_>>, conn: DbConn) -> Template {
     let msg = msg.map(|m| (m.name().to_string(), m.msg().to_string()));
 
     conn.run(|conn| {
@@ -86,7 +86,7 @@ async fn index(msg: Option<FlashMessage<'_, '_>>, mut conn: DbConn) -> Template 
 }
 
 async fn run_db_migrations(mut rocket: Rocket) -> Result<Rocket, Rocket> {
-    let mut conn = DbConn::get_one(rocket.inspect().await).expect("database connection");
+    let conn = DbConn::get_one(rocket.inspect().await).expect("database connection");
     conn.run(move |c| {
         match embedded_migrations::run(&*c) {
             Ok(()) => Ok(rocket),

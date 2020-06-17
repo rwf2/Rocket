@@ -19,7 +19,7 @@ macro_rules! run_test {
             let mut rocket = super::rocket();
             let db = super::DbConn::get_one(rocket.inspect().await);
             let $client = Client::new(rocket).await.expect("Rocket client");
-            let mut $conn = db.expect("failed to get database connection for testing");
+            let $conn = db.expect("failed to get database connection for testing");
             assert!($conn.run(|c| Task::delete_all(c)).await, "failed to delete all tasks for testing");
 
             $block
