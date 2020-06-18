@@ -21,7 +21,7 @@ private-cookies = ["cookie/private", "cookie/key-expansion"]
 
 [dependencies]
 smallvec = "1.0"
-percent-encoding = "1"
+percent-encoding = "2"
 hyper = { version = "0.13.0", default-features = false }
 http = "0.2"
 mime = "0.3.13"
