@@ -1,3 +1,5 @@
+#![feature(const_if_match)]
+#![feature(const_loop)]
 #![feature(proc_macro_hygiene)]
 #![recursion_limit="512"]
 

@@ -30,7 +30,7 @@ const PATH_CHARS: [u8; 256] = [
 ];
 
 #[inline(always)]
-pub fn is_pchar(c: u8) -> bool {
+pub const fn is_pchar(c: u8) -> bool {
     PATH_CHARS[c as usize] == c
 }
 
