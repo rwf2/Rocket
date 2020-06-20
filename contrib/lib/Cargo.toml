@@ -82,7 +82,7 @@ r2d2-memcache = { version = "0.5", optional = true }
 time = { version = "0.1.40", optional = true }
 
 # Compression dependencies
-async-compression = { version = "0.3.4", optional = true, features = ["all-implementations"] }
+async-compression = { version = "0.3.4", optional = true, features = ["futures-bufread"] }
 tokio-util = { version = "0.3.1", optional = true, features = ["compat"] }
 
 [target.'cfg(debug_assertions)'.dependencies]
