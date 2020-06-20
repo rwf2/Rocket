@@ -95,6 +95,7 @@ impl Compression {
     }
 }
 
+#[rocket::async_trait]
 impl Fairing for Compression {
     fn info(&self) -> Info {
         Info {
@@ -103,26 +104,30 @@ impl Fairing for Compression {
         }
     }
 
-    fn on_attach(&self, rocket: Rocket) -> Result<Rocket, Rocket> {
+    async fn on_attach(&self, mut rocket: Rocket) -> Result<Rocket, Rocket> {
         let mut ctxt = Context::default();
 
-        match rocket.config().get_table("compress").and_then(|t| {
-            t.get("exclude").ok_or_else(|| ConfigError::Missing(String::from("exclude")))
+        match rocket.config().await.get_table("compress").and_then(|t| {
+            t.get("exclude")
+                .ok_or_else(|| ConfigError::Missing(String::from("exclude")))
         }) {
             Ok(excls) => match excls.as_array() {
                 Some(excls) => {
-                    ctxt.exclusions = excls.iter().flat_map(|ex| {
-                        if let Value::String(s) = ex {
-                            let mt = MediaType::parse_flexible(s);
-                            if mt.is_none() {
-                                warn_!("Ignoring invalid media type '{:?}'", s);
+                    ctxt.exclusions = excls
+                        .iter()
+                        .flat_map(|ex| {
+                            if let Value::String(s) = ex {
+                                let mt = MediaType::parse_flexible(s);
+                                if mt.is_none() {
+                                    warn_!("Ignoring invalid media type '{:?}'", s);
+                                }
+                                mt
+                            } else {
+                                warn_!("Ignoring non-string media type '{:?}'", ex);
+                                None
                             }
-                            mt
-                        } else {
-                            warn_!("Ignoring non-string media type '{:?}'", ex);
-                            None
-                        }
-                    }).collect();
+                        })
+                        .collect();
                 }
                 None => {
                     warn_!(
@@ -144,11 +149,12 @@ impl Fairing for Compression {
         Ok(rocket.manage(ctxt))
     }
 
-    fn on_response(&self, request: &Request<'_>, response: &mut Response<'_>) {
+    async fn on_response<'a>(&'a self, request: &'a Request<'_>, response: &'a mut Response<'_>) {
         let context = request
             .guard::<rocket::State<'_, Context>>()
+            .await
             .expect("Compression Context registered in on_attach");
 
-        super::CompressionUtils::compress_response(request, response, &context.exclusions);
+        super::CompressionUtils::compress_response(request, response, &context.exclusions).await;
     }
 }

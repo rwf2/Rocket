@@ -50,7 +50,6 @@
 #[cfg(feature="uuid")] pub mod uuid;
 #[cfg(feature="databases")] pub mod databases;
 #[cfg(feature = "helmet")] pub mod helmet;
-// TODO.async: Migrate compression, reenable this, tests, and add to docs.
-//#[cfg(any(feature="brotli_compression", feature="gzip_compression"))] pub mod compression;
+#[cfg(any(feature="brotli_compression", feature="gzip_compression"))] pub mod compression;
 
 #[cfg(feature="databases")] #[doc(hidden)] pub use rocket_contrib_codegen::*;

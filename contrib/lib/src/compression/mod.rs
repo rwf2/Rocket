@@ -29,17 +29,17 @@ mod responder;
 pub use self::fairing::Compression;
 pub use self::responder::Compress;
 
-use std::io::Read;
-
+use rocket::futures::io::BufReader;
 use rocket::http::MediaType;
-use rocket::http::hyper::header::{ContentEncoding, Encoding};
 use rocket::{Request, Response};
+use tokio::io::AsyncRead;
+use tokio_util::compat::{FuturesAsyncReadCompatExt, Tokio02AsyncReadCompatExt};
 
 #[cfg(feature = "brotli_compression")]
-use brotli::enc::backward_references::BrotliEncoderMode;
+use async_compression::futures::bufread::BrotliEncoder;
 
 #[cfg(feature = "gzip_compression")]
-use flate2::read::GzEncoder;
+use async_compression::futures::bufread::GzipEncoder;
 
 struct CompressionUtils;
 
@@ -57,12 +57,12 @@ impl CompressionUtils {
         response.headers().get("Content-Encoding").next().is_some()
     }
 
-    fn set_body_and_encoding<'r, B: Read + 'r>(
+    fn set_body_and_encoding<'r, B: AsyncRead + Send + 'r>(
         response: &mut Response<'r>,
         body: B,
-        encoding: Encoding,
+        encoding: &'r str,
     ) {
-        response.set_header(ContentEncoding(vec![encoding]));
+        response.set_raw_header("Content-Encoding", encoding);
         response.set_streamed_body(body);
     }
 
@@ -82,7 +82,11 @@ impl CompressionUtils {
         }
     }
 
-    fn compress_response(request: &Request<'_>, response: &mut Response<'_>, exclusions: &[MediaType]) {
+    async fn compress_response(
+        request: &Request<'_>,
+        response: &mut Response<'_>,
+        exclusions: &[MediaType],
+    ) {
         if CompressionUtils::already_encoded(response) {
             return;
         }
@@ -100,23 +104,10 @@ impl CompressionUtils {
             #[cfg(feature = "brotli_compression")]
             {
                 if let Some(plain) = response.take_body() {
-                    let content_type_top = content_type.as_ref().map(|ct| ct.top());
-                    let mut params = brotli::enc::BrotliEncoderInitParams();
-                    params.quality = 2;
-                    if content_type_top == Some("text".into()) {
-                        params.mode = BrotliEncoderMode::BROTLI_MODE_TEXT;
-                    } else if content_type_top == Some("font".into()) {
-                        params.mode = BrotliEncoderMode::BROTLI_MODE_FONT;
-                    }
+                    let buf_reader = BufReader::new(plain.into_inner().compat());
+                    let compressor = BrotliEncoder::new(buf_reader);
 
-                    let compressor =
-                        brotli::CompressorReader::with_params(plain.into_inner(), 4096, &params);
-
-                    CompressionUtils::set_body_and_encoding(
-                        response,
-                        compressor,
-                        Encoding::EncodingExt("br".into()),
-                    );
+                    CompressionUtils::set_body_and_encoding(response, compressor.compat(), "br");
                 }
             }
         } else if cfg!(feature = "gzip_compression")
@@ -125,9 +116,10 @@ impl CompressionUtils {
             #[cfg(feature = "gzip_compression")]
             {
                 if let Some(plain) = response.take_body() {
-                    let compressor = GzEncoder::new(plain.into_inner(), flate2::Compression::default());
+                    let buf_reader = BufReader::new(plain.into_inner().compat());
+                    let compressor = GzipEncoder::new(buf_reader);
 
-                    CompressionUtils::set_body_and_encoding(response, compressor, Encoding::Gzip);
+                    CompressionUtils::set_body_and_encoding(response, compressor.compat(), "gzip");
                 }
             }
         }

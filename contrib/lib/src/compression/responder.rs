@@ -34,14 +34,15 @@ use super::CompressionUtils;
 #[derive(Debug)]
 pub struct Compress<R>(pub R);
 
-impl<'r, R: Responder<'r>> Responder<'r> for Compress<R> {
+#[rocket::async_trait]
+impl<'r, R: Responder<'r> + Send> Responder<'r> for Compress<R> {
     #[inline(always)]
-    fn respond_to(self, request: &Request<'_>) -> response::Result<'r> {
+    async fn respond_to(self, request: &'r Request<'_>) -> response::Result<'r> {
         let mut response = Response::build()
-            .merge(self.0.respond_to(request)?)
+            .merge(self.0.respond_to(request).await?)
             .finalize();
 
-        CompressionUtils::compress_response(request, &mut response, &[]);
+        CompressionUtils::compress_response(request, &mut response, &[]).await;
         Ok(response)
     }
 }
