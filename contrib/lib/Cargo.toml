@@ -25,8 +25,8 @@ handlebars_templates = ["handlebars", "templates"]
 helmet = ["time"]
 serve = []
 compression = ["brotli_compression", "gzip_compression"]
-brotli_compression = ["async-compression/brotli", "tokio-util"]
-gzip_compression = ["async-compression/gzip", "tokio-util"]
+brotli_compression = ["async-compression/brotli", "tokio", "tokio-util"]
+gzip_compression = ["async-compression/gzip", "tokio", "tokio-util"]
 
 # The barage of user-facing database features.
 diesel_sqlite_pool = ["databases", "diesel/sqlite", "diesel/r2d2"]
