@@ -154,20 +154,37 @@ impl<'a, T: Deserialize<'a>> FromData<'a> for Ron<T> {
     }
 }
 
-
 /// Serializes the wrapped value into RON. Returns a response with Content-Type
 /// Text and a fixed-size body with the serialized value. If serialization
 /// fails, an `Err` of `Status::InternalServerError` is returned.
 impl<'r, T: Serialize> Responder<'r> for Ron<T> {
     fn respond_to<'a, 'x>(self, req: &'r Request<'a>) -> BoxFuture<'x, response::Result<'r>>
-        where 'a: 'x, 'r: 'x, Self: 'x
+    where
+        'a: 'x,
+        'r: 'x,
+        Self: 'x,
     {
-        match ron_crate::ser::to_string_pretty(&self.0, ron_crate::ser::PrettyConfig::default()) {
-            Ok(string) => Box::pin(async move { Ok(content::Plain(string).respond_to(req).await.unwrap()) }),
-            Err(e) => Box::pin (async move {
+        let mut output = Vec::new();
+        match ron_crate::ser::Serializer::new(
+            &mut output,
+            Some(ron_crate::ser::PrettyConfig::default()),
+            true,
+        ) {
+            Ok(mut serializer) => {
+                match self.0.serialize(&mut serializer) {
+                    Ok(_) => Box::pin(async move {
+                        Ok(content::Plain(output).respond_to(req).await.unwrap())
+                    }),
+                    Err(e) => Box::pin(async move {
+                        error_!("RON failed to serialize: {:?}", e);
+                        Err(Status::InternalServerError)
+                    }),
+                }
+            }
+            Err(e) => Box::pin(async move {
                 error_!("RON failed to serialize: {:?}", e);
                 Err(Status::InternalServerError)
-            })
+            }),
         }
     }
 }
