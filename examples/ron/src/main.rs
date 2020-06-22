@@ -23,30 +23,30 @@ struct Message {
     contents: String
 }
 
-#[derive(Serialize, Deserialize)]
-struct ErrorMessage {
-    status: String,
-    reason: Option<String>
+#[derive(Serialize)]
+struct StatusMessage {
+    status: &'static str,
+    reason: Option<&'static str>
 }
 
 // TODO: This example can be improved by using `route` with multiple HTTP verbs.
 #[post("/<id>", data = "<message>")]
-fn new(id: ID, message: Ron<Message>, map: State<'_, MessageMap>) -> Ron<ErrorMessage> {
+fn new(id: ID, message: Ron<Message>, map: State<'_, MessageMap>) -> Ron<StatusMessage> {
     let mut hashmap = map.lock().expect("map lock.");
     if hashmap.contains_key(&id) {
-       Ron(ErrorMessage{status: "error".to_owned(), reason: Some("ID exists. Try put.".to_owned())})
+       Ron(StatusMessage{status: "error", reason: Some("ID exists. Try put.")})
     } else {
         hashmap.insert(id, message.0.contents);
-        Ron(ErrorMessage{status: "ok".to_owned(), reason: None})
+        Ron(StatusMessage{status: "ok", reason: None})
     }
 }
 
 #[put("/<id>", data = "<message>")]
-fn update(id: ID, message: Ron<Message>, map: State<'_, MessageMap>) -> Option<Ron<ErrorMessage>> {
+fn update(id: ID, message: Ron<Message>, map: State<'_, MessageMap>) -> Option<Ron<StatusMessage>> {
     let mut hashmap = map.lock().unwrap();
     if hashmap.contains_key(&id) {
         hashmap.insert(id, message.0.contents);
-        Some(Ron(ErrorMessage{status: "ok".to_owned(), reason: None}))
+        Some(Ron(StatusMessage{status: "ok", reason: None}))
     } else {
         None
     }
@@ -64,10 +64,10 @@ fn get(id: ID, map: State<'_, MessageMap>) -> Option<Ron<Message>> {
 }
 
 #[catch(404)]
-fn not_found() -> Ron<ErrorMessage> {
-    Ron(ErrorMessage {
-        status: "error".to_owned(),
-        reason: Some("Resource was not found.".to_owned())
+fn not_found() -> Ron<StatusMessage> {
+    Ron(StatusMessage {
+        status: "error",
+        reason: Some("Resource was not found.")
     })
 }
 
