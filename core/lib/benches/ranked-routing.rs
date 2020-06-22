@@ -36,7 +36,7 @@ mod benches {
 
     use super::rocket;
     use self::test::Bencher;
-    use rocket::local::Client;
+    use rocket::local::blocking::Client;
     use rocket::http::{Accept, ContentType};
 
     fn client(_rocket: rocket::Rocket) -> Option<Client> {

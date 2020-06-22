@@ -1,3 +1,5 @@
+// TODO: Explain difference from async Client
+//!
 //! Structures for local dispatching of requests, primarily for testing.
 //!
 //! This module allows for simple request dispatching against a local,
@@ -21,51 +23,43 @@
 //!   2. Construct a `Client` using the `Rocket` instance.
 //!
 //!      ```rust
-//!      # use rocket::local::Client;
+//!      # use rocket::local::blocking::Client;
 //!      # let rocket = rocket::ignite();
-//!      # rocket::async_test(async {
-//!      let client = Client::new(rocket).await.expect("valid rocket instance");
+//!      let client = Client::new(rocket).expect("valid rocket instance");
 //!      # let _ = client;
-//!      # });
 //!      ```
 //!
 //!   3. Construct requests using the `Client` instance.
 //!
 //!      ```rust
-//!      # use rocket::local::Client;
+//!      # use rocket::local::blocking::Client;
 //!      # let rocket = rocket::ignite();
-//!      # rocket::async_test(async {
-//!      # let client = Client::new(rocket).await.unwrap();
+//!      # let client = Client::new(rocket).unwrap();
 //!      let req = client.get("/");
 //!      # let _ = req;
-//!      # });
 //!      ```
 //!
 //!   3. Dispatch the request to retrieve the response.
 //!
 //!      ```rust
-//!      # use rocket::local::Client;
+//!      # use rocket::local::blocking::Client;
 //!      # let rocket = rocket::ignite();
-//!      # rocket::async_test(async {
-//!      # let client = Client::new(rocket).await.unwrap();
+//!      # let client = Client::new(rocket).unwrap();
 //!      # let req = client.get("/");
-//!      let response = req.dispatch().await;
+//!      let response = req.dispatch();
 //!      # let _ = response;
-//!      # });
 //!      ```
 //!
 //! All together and in idiomatic fashion, this might look like:
 //!
 //! ```rust
-//! use rocket::local::Client;
+//! use rocket::local::blocking::Client;
 //!
-//! # rocket::async_test(async {
-//! let client = Client::new(rocket::ignite()).await.expect("valid rocket");
+//! let client = Client::new(rocket::ignite()).expect("valid rocket");
 //! let response = client.post("/")
 //!     .body("Hello, world!")
-//!     .dispatch().await;
+//!     .dispatch();
 //! # let _ = response;
-//! # });
 //! ```
 //!
 //! # Unit/Integration Testing
@@ -88,25 +82,23 @@
 //! #[cfg(test)]
 //! mod test {
 //!     use super::{rocket, hello};
-//!     use rocket::local::Client;
+//!     use rocket::local::blocking::Client;
 //!
-//!     #[rocket::async_test]
 //!     fn test_hello_world() {
 //!         // Construct a client to use for dispatching requests.
 //!         let rocket = rocket::ignite().mount("/", routes![hello]);
 //!         let client = Client::new(rocket).expect("valid rocket instance");
 //!
 //!         // Dispatch a request to 'GET /' and validate the response.
-//!         let mut response = client.get("/").dispatch().await;
-//!         assert_eq!(response.body_string().await, Some("Hello, world!".into()));
+//!         let mut response = client.get("/").dispatch();
+//!         assert_eq!(response.body_string(), Some("Hello, world!".into()));
 //!     }
 //! }
 //! ```
 //!
-//! [`Client`]: crate::local::Client
-//! [`LocalRequest`]: crate::local::LocalRequest
+//! [`Client`]: crate::local::blocking::Client
+//! [`LocalRequest`]: crate::local::blocking::LocalRequest
 
-pub mod blocking;
 mod request;
 mod client;
 

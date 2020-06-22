@@ -1,92 +1,35 @@
-use std::sync::RwLock;
 use std::borrow::Cow;
+use std::cell::RefCell;
 
-use crate::rocket::{Rocket, Cargo};
-use crate::local::LocalRequest;
-use crate::http::{Method, private::CookieJar};
 use crate::error::LaunchError;
+use crate::http::Method;
+use crate::local::blocking::LocalRequest;
+use crate::rocket::{Rocket, Manifest};
 
-/// A structure to construct requests for local dispatching.
-///
-/// # Usage
-///
-/// A `Client` is constructed via the [`new()`] or [`untracked()`] methods from
-/// an already constructed `Rocket` instance. Once a value of `Client` has been
-/// constructed, the [`LocalRequest`] constructor methods ([`get()`], [`put()`],
-/// [`post()`], and so on) can be used to create a `LocalRequest` for
-/// dispatching.
-///
-/// See the [top-level documentation](crate::local) for more usage information.
-///
-/// ## Cookie Tracking
-///
-/// A `Client` constructed using [`new()`] propagates cookie changes made by
-/// responses to previously dispatched requests. In other words, if a previously
-/// dispatched request resulted in a response that adds a cookie, any future
-/// requests will contain that cookie. Similarly, cookies removed by a response
-/// won't be propagated further.
-///
-/// This is typically the desired mode of operation for a `Client` as it removes
-/// the burden of manually tracking cookies. Under some circumstances, however,
-/// disabling this tracking may be desired. In these cases, use the
-/// [`untracked()`](Client::untracked()) constructor to create a `Client` that
-/// _will not_ track cookies.
-///
-/// ### Synchronization
-///
-/// While `Client` implements `Sync`, using it in a multithreaded environment
-/// while tracking cookies can result in surprising, non-deterministic behavior.
-/// This is because while cookie modifications are serialized, the exact
-/// ordering depends on when requests are dispatched. Specifically, when cookie
-/// tracking is enabled, all request dispatches are serialized, which in-turn
-/// serializes modifications to the internally tracked cookies.
-///
-/// If possible, refrain from sharing a single instance of `Client` across
-/// multiple threads. Instead, prefer to create a unique instance of `Client`
-/// per thread. If it's not possible, ensure that either you are not depending
-/// on cookies, the ordering of their modifications, or both, or have arranged
-/// for dispatches to occur in a deterministic ordering.
-///
-/// ## Example
-///
-/// The following snippet creates a `Client` from a `Rocket` instance and
-/// dispatches a local request to `POST /` with a body of `Hello, world!`.
-///
-/// ```rust
-/// use rocket::local::Client;
-///
-/// # rocket::async_test(async {
-/// let rocket = rocket::ignite();
-/// let client = Client::new(rocket).await.expect("valid rocket");
-/// let response = client.post("/")
-///     .body("Hello, world!")
-///     .dispatch().await;
-/// # });
-/// ```
-///
-/// [`new()`]: #method.new
-/// [`untracked()`]: #method.untracked
-/// [`get()`]: #method.get
-/// [`put()`]: #method.put
-/// [`post()`]: #method.post
 pub struct Client {
-    cargo: Cargo,
-    pub(crate) cookies: Option<RwLock<CookieJar>>,
+    pub(crate) inner: crate::local::Client,
+    runtime: RefCell<tokio::runtime::Runtime>,
 }
 
 impl Client {
-    /// Constructs a new `Client`. If `tracked` is `true`, an empty `CookieJar`
-    /// is created for cookie tracking. Otherwise, the internal `CookieJar` is
-    /// set to `None`.
-    pub(crate) async fn _new(rocket: Rocket, tracked: bool) -> Result<Client, LaunchError> {
-        rocket.prelaunch_check().await?;
+    fn _new(rocket: Rocket, tracked: bool) -> Result<Client, LaunchError> {
+        let mut runtime = tokio::runtime::Builder::new()
+            .basic_scheduler()
+            .enable_all()
+            .build()
+            .expect("create tokio runtime");
 
-        let cookies = match tracked {
-            true => Some(RwLock::new(CookieJar::new())),
-            false => None
-        };
+        // Initialize the Rocket instance
+        let inner = runtime.block_on(crate::local::Client::_new(rocket, tracked))?;
 
-        Ok(Client { cargo: rocket.into_cargo().await, cookies })
+        Ok(Self { inner, runtime: RefCell::new(runtime) })
+    }
+
+    pub(crate) fn block_on<F, R>(&self, fut: F) -> R
+    where
+        F: std::future::Future<Output=R>,
+    {
+        self.runtime.borrow_mut().block_on(fut)
     }
 
     /// Construct a new `Client` from an instance of `Rocket` with cookie
@@ -114,15 +57,13 @@ impl Client {
     /// # Example
     ///
     /// ```rust
-    /// use rocket::local::Client;
+    /// use rocket::local::blocking::Client;
     ///
-    /// # let _ = async {
-    /// let client = Client::new(rocket::ignite()).await.expect("valid rocket");
-    /// # };
+    /// let client = Client::new(rocket::ignite()).expect("valid rocket");
     /// ```
     #[inline(always)]
-    pub async fn new(rocket: Rocket) -> Result<Client, LaunchError> {
-        Client::_new(rocket, true).await
+    pub fn new(rocket: Rocket) -> Result<Client, LaunchError> {
+        Self::_new(rocket, true)
     }
 
     /// Construct a new `Client` from an instance of `Rocket` _without_ cookie
@@ -141,55 +82,32 @@ impl Client {
     /// # Example
     ///
     /// ```rust
-    /// use rocket::local::Client;
+    /// use rocket::local::blocking::Client;
     ///
-    /// # rocket::async_test(async {
-    /// let client = Client::untracked(rocket::ignite()).await.expect("valid rocket");
-    /// # });
+    /// let client = Client::untracked(rocket::ignite()).expect("valid rocket");
     /// ```
     #[inline(always)]
-    pub async fn untracked(rocket: Rocket) -> Result<Client, LaunchError> {
-        Client::_new(rocket, false).await
+    pub fn untracked(rocket: Rocket) -> Result<Client, LaunchError> {
+        Self::_new(rocket, false)
     }
 
-    /// Returns a reference to the `Rocket` of the `Rocket` this client is
+    /// Returns a reference to the `Manifest` of the `Rocket` this client is
     /// creating requests for.
     ///
     /// # Example
     ///
     /// ```rust
-    /// use rocket::local::Client;
+    /// use rocket::local::blocking::Client;
     ///
-    /// # rocket::async_test(async {
     /// let my_rocket = rocket::ignite();
-    /// let client = Client::new(my_rocket).await.expect("valid rocket");
+    /// let client = Client::new(my_rocket).expect("valid rocket");
     ///
-    /// let rocket = client.rocket();
-    /// # });
+    /// // get access to the manifest within `client`
+    /// let manifest = client.manifest();
     /// ```
     #[inline(always)]
-    pub fn rocket(&self) -> &Rocket {
-        &*self.cargo
-    }
-
-    /// Returns a reference to the `Rocket` of the `Rocket` this client is
-    /// creating requests for.
-    ///
-    /// # Example
-    ///
-    /// ```rust
-    /// use rocket::local::Client;
-    ///
-    /// # rocket::async_test(async {
-    /// let my_rocket = rocket::ignite();
-    /// let client = Client::new(my_rocket).await.expect("valid rocket");
-    ///
-    /// let cargo = client.cargo();
-    /// # });
-    /// ```
-    #[inline(always)]
-    pub fn cargo(&self) -> &Cargo {
-        &self.cargo
+    pub fn manifest(&self) -> &Manifest {
+        self.inner.manifest()
     }
 
     /// Create a local `GET` request to the URI `uri`.
@@ -202,12 +120,10 @@ impl Client {
     /// # Example
     ///
     /// ```rust
-    /// use rocket::local::Client;
+    /// use rocket::local::blocking::Client;
     ///
-    /// # rocket::async_test(async {
-    /// let client = Client::new(rocket::ignite()).await.expect("valid rocket");
+    /// let client = Client::new(rocket::ignite()).expect("valid rocket");
     /// let req = client.get("/hello");
-    /// # });
     /// ```
     #[inline(always)]
     pub fn get<'c, 'u: 'c, U: Into<Cow<'u, str>>>(&'c self, uri: U) -> LocalRequest<'c> {
@@ -224,12 +140,10 @@ impl Client {
     /// # Example
     ///
     /// ```rust
-    /// use rocket::local::Client;
+    /// use rocket::local::blocking::Client;
     ///
-    /// # rocket::async_test(async {
-    /// let client = Client::new(rocket::ignite()).await.expect("valid rocket");
+    /// let client = Client::new(rocket::ignite()).expect("valid rocket");
     /// let req = client.put("/hello");
-    /// # });
     /// ```
     #[inline(always)]
     pub fn put<'c, 'u: 'c, U: Into<Cow<'u, str>>>(&'c self, uri: U) -> LocalRequest<'c> {
@@ -246,16 +160,14 @@ impl Client {
     /// # Example
     ///
     /// ```rust
-    /// use rocket::local::Client;
+    /// use rocket::local::blocking::Client;
     /// use rocket::http::ContentType;
     ///
-    /// # rocket::async_test(async {
-    /// let client = Client::new(rocket::ignite()).await.expect("valid rocket");
+    /// let client = Client::new(rocket::ignite()).expect("valid rocket");
     ///
     /// let req = client.post("/hello")
     ///     .body("field=value&otherField=123")
     ///     .header(ContentType::Form);
-    /// # });
     /// ```
     #[inline(always)]
     pub fn post<'c, 'u: 'c, U: Into<Cow<'u, str>>>(&'c self, uri: U) -> LocalRequest<'c> {
@@ -272,12 +184,10 @@ impl Client {
     /// # Example
     ///
     /// ```rust
-    /// use rocket::local::Client;
+    /// use rocket::local::blocking::Client;
     ///
-    /// # rocket::async_test(async {
-    /// let client = Client::new(rocket::ignite()).await.expect("valid rocket");
+    /// let client = Client::new(rocket::ignite()).expect("valid rocket");
     /// let req = client.delete("/hello");
-    /// # });
     /// ```
     #[inline(always)]
     pub fn delete<'c, 'u: 'c, U>(&'c self, uri: U) -> LocalRequest<'c>
@@ -296,12 +206,10 @@ impl Client {
     /// # Example
     ///
     /// ```rust
-    /// use rocket::local::Client;
+    /// use rocket::local::blocking::Client;
     ///
-    /// # rocket::async_test(async {
-    /// let client = Client::new(rocket::ignite()).await.expect("valid rocket");
+    /// let client = Client::new(rocket::ignite()).expect("valid rocket");
     /// let req = client.options("/hello");
-    /// # });
     /// ```
     #[inline(always)]
     pub fn options<'c, 'u: 'c, U>(&'c self, uri: U) -> LocalRequest<'c>
@@ -320,12 +228,10 @@ impl Client {
     /// # Example
     ///
     /// ```rust
-    /// use rocket::local::Client;
+    /// use rocket::local::blocking::Client;
     ///
-    /// # rocket::async_test(async {
-    /// let client = Client::new(rocket::ignite()).await.expect("valid rocket");
+    /// let client = Client::new(rocket::ignite()).expect("valid rocket");
     /// let req = client.head("/hello");
-    /// # });
     /// ```
     #[inline(always)]
     pub fn head<'c, 'u: 'c, U>(&'c self, uri: U) -> LocalRequest<'c>
@@ -344,12 +250,10 @@ impl Client {
     /// # Example
     ///
     /// ```rust
-    /// use rocket::local::Client;
+    /// use rocket::local::blocking::Client;
     ///
-    /// # rocket::async_test(async {
-    /// let client = Client::new(rocket::ignite()).await.expect("valid rocket");
+    /// let client = Client::new(rocket::ignite()).expect("valid rocket");
     /// let req = client.patch("/hello");
-    /// # });
     /// ```
     #[inline(always)]
     pub fn patch<'c, 'u: 'c, U>(&'c self, uri: U) -> LocalRequest<'c>
@@ -368,13 +272,11 @@ impl Client {
     /// # Example
     ///
     /// ```rust
-    /// use rocket::local::Client;
+    /// use rocket::local::blocking::Client;
     /// use rocket::http::Method;
     ///
-    /// # rocket::async_test(async {
-    /// let client = Client::new(rocket::ignite()).await.expect("valid rocket");
+    /// let client = Client::new(rocket::ignite()).expect("valid rocket");
     /// let req = client.req(Method::Get, "/hello");
-    /// # });
     /// ```
     #[inline(always)]
     pub fn req<'c, 'u: 'c, U>(&'c self, method: Method, uri: U) -> LocalRequest<'c>
@@ -386,12 +288,5 @@ impl Client {
 
 #[cfg(test)]
 mod test {
-    use super::Client;
-
-    fn assert_sync<T: Sync>() {}
-
-    #[test]
-    fn test_local_client_impl_sync() {
-        assert_sync::<Client>();
-    }
+    // TODO: assert that client is !Sync - e.g. with static_assertions or another tool
 }

@@ -1,7 +1,7 @@
 use std::fmt;
 use super::{rocket, FormInput, FormOption};
 
-use rocket::local::Client;
+use rocket::local::blocking::Client;
 use rocket::http::ContentType;
 
 impl fmt::Display for FormOption {
@@ -19,9 +19,9 @@ macro_rules! assert_form_eq {
         let mut res = $client.post("/")
             .header(ContentType::Form)
             .body($form_str)
-            .dispatch().await;
+            .dispatch();
 
-        assert_eq!(res.body_string().await, Some($expected));
+        assert_eq!(res.body_string(), Some($expected));
     }};
 }
 
@@ -40,9 +40,9 @@ macro_rules! assert_valid_raw_form {
     }};
 }
 
-#[rocket::async_test]
-async fn test_good_forms() {
-    let client = Client::new(rocket()).await.unwrap();
+#[test]
+fn test_good_forms() {
+    let client = Client::new(rocket()).unwrap();
     let mut input = FormInput {
         checkbox: true,
         number: 310,
@@ -119,9 +119,9 @@ macro_rules! assert_invalid_raw_form {
     }};
 }
 
-#[rocket::async_test]
-async fn check_semantically_invalid_forms() {
-    let client = Client::new(rocket()).await.unwrap();
+#[test]
+fn check_semantically_invalid_forms() {
+    let client = Client::new(rocket()).unwrap();
     let mut form_vals = ["true", "1", "a", "hi", "hey", "b"];
 
     form_vals[0] = "not true";
@@ -175,17 +175,17 @@ async fn check_semantically_invalid_forms() {
     assert_invalid_raw_form!(&client, "");
 }
 
-#[rocket::async_test]
-async fn check_structurally_invalid_forms() {
-    let client = Client::new(rocket()).await.unwrap();
+#[test]
+fn check_structurally_invalid_forms() {
+    let client = Client::new(rocket()).unwrap();
     assert_invalid_raw_form!(&client, "==&&&&&&==");
     assert_invalid_raw_form!(&client, "a&=b");
     assert_invalid_raw_form!(&client, "=");
 }
 
-#[rocket::async_test]
-async fn check_bad_utf8() {
-    let client = Client::new(rocket()).await.unwrap();
+#[test]
+fn check_bad_utf8() {
+    let client = Client::new(rocket()).unwrap();
     unsafe {
         let bad_str = std::str::from_utf8_unchecked(b"a=\xff");
         assert_form_eq!(&client, bad_str, "Form input was invalid UTF-8.".into());

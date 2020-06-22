@@ -48,7 +48,7 @@ mod benches {
 
     use super::{hello_world_rocket, rocket};
     use self::test::Bencher;
-    use rocket::local::Client;
+    use rocket::local::blocking::Client;
 
     fn client(_rocket: rocket::Rocket) -> Option<Client> {
         unimplemented!("waiting for sync-client");
