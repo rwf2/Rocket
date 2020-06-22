@@ -18,7 +18,6 @@ use std::ops::{Deref, DerefMut};
 use std::io;
 
 use crate::rocket::tokio::io::AsyncReadExt;
-use rocket::futures::future::BoxFuture;
 
 use rocket::request::Request;
 use rocket::outcome::Outcome::*;
@@ -157,35 +156,23 @@ impl<'a, T: Deserialize<'a>> FromData<'a> for Ron<T> {
 /// Serializes the wrapped value into RON. Returns a response with Content-Type
 /// Text and a fixed-size body with the serialized value. If serialization
 /// fails, an `Err` of `Status::InternalServerError` is returned.
-impl<'r, T: Serialize> Responder<'r> for Ron<T> {
-    fn respond_to<'a, 'x>(self, req: &'r Request<'a>) -> BoxFuture<'x, response::Result<'r>>
-    where
-        'a: 'x,
-        'r: 'x,
-        Self: 'x,
-    {
+impl<'r, T: Serialize> Responder<'r, 'static> for Ron<T> {
+    fn respond_to(self, req: &'r Request<'_>) -> response::Result<'static> {
         let mut output = Vec::new();
-        match ron_crate::ser::Serializer::new(
+        let mut serializer = ron_crate::ser::Serializer::new(
             &mut output,
             Some(ron_crate::ser::PrettyConfig::default()),
             true,
-        ) {
-            Ok(mut serializer) => {
-                match self.0.serialize(&mut serializer) {
-                    Ok(_) => Box::pin(async move {
-                        Ok(content::Plain(output).respond_to(req).await.unwrap())
-                    }),
-                    Err(e) => Box::pin(async move {
-                        error_!("RON failed to serialize: {:?}", e);
-                        Err(Status::InternalServerError)
-                    }),
-                }
-            }
-            Err(e) => Box::pin(async move {
-                error_!("RON failed to serialize: {:?}", e);
-                Err(Status::InternalServerError)
-            }),
-        }
+        )
+        .map_err(|e| {
+            error_!("RON failed to serialize: {:?}", e);
+            Status::InternalServerError
+        })?;
+        self.0.serialize(&mut serializer).map_err(|e| {
+            error_!("RON failed to serialize: {:?}", e);
+            Status::InternalServerError
+        })?;
+        content::Plain(output).respond_to(req)
     }
 }
 
