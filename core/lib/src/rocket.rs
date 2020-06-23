@@ -288,41 +288,49 @@ impl Rocket {
         mut data: Data,
     ) -> handler::Outcome<'r> {
         // Go through the list of matching routes until we fail or succeed.
-        let matches = self.router.route(request);
-        let mut counter: usize = 0;
-        for route in &matches {
-            counter += 1;
+        let method_matches = self.router.route(request, true);
+        if method_matches.len() > 0 {
+            for route in &method_matches {
+                 // Retrieve and set the requests parameters.
+                 info_!("Matched: {}", route);
 
-            // Must pass HEAD requests foward
-            if (&request.method() != &Method::Head) && (&route.method != &request.method()) {
-                // Must make sure it consumed all list before fail
-                if &counter == &matches.len() {
-                    error_!("No matching routes for {}.", request);
-                    info_!(
-                        "{} {}",
-                        Paint::yellow("A similar route exists:").bold(),
-                        route
-                    );
-                    return Outcome::Failure(Status::MethodNotAllowed);
-                } else {
-                    continue;
-                }
-            } else {
-                // Retrieve and set the requests parameters.
-                info_!("Matched: {}", route);
+                 request.set_route(route);
+ 
+                 // Dispatch the request to the handler.
+                 let outcome = route.handler.handle(request, data);
+ 
+                 // Check if the request processing completed or if the request needs
+                 // to be forwarded. If it does, continue the loop to try again.
+                 info_!("{} {}", Paint::default("Outcome:").bold(), outcome);
+                 match outcome {
+                     o @ Outcome::Success(_) | o @ Outcome::Failure(_) => return o,
+                     Outcome::Forward(unused_data) => data = unused_data,
+                 };
+            }
+        }
 
-                request.set_route(route);
+        let match_any = self.router.route(request, false);        
+        if match_any.len() > 0 {
 
-                // Dispatch the request to the handler.
-                let outcome = route.handler.handle(request, data);
-
-                // Check if the request processing completed or if the request needs
-                // to be forwarded. If it does, continue the loop to try again.
-                info_!("{} {}", Paint::default("Outcome:").bold(), outcome);
-                match outcome {
-                    o @ Outcome::Success(_) | o @ Outcome::Failure(_) => return o,
-                    Outcome::Forward(unused_data) => data = unused_data,
-                };
+            let mut counter: usize = 0;
+            for route in &match_any {
+                counter += 1;
+    
+                // Must pass HEAD requests foward
+                if (&request.method() != &Method::Head) {
+                    // Must make sure it consumed all list before fail
+                    if &counter == &match_any.len() && !method_matches.iter().any(|item| route.collides_with(item)){
+                        error_!("No matching routes for {}.", request);
+                        info_!(
+                            "{} {}",
+                            Paint::yellow("A similar route exists:").bold(),
+                            route
+                        );
+                        return Outcome::Failure(Status::MethodNotAllowed);
+                    } else {
+                        continue;
+                    }
+                } 
             }
         }
 

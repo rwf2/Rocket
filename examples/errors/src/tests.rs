@@ -21,7 +21,7 @@ fn test_hello() {
 
 #[test]
 fn test_hello_invalid_age() {
-    for &(name, age) in &[("Ford", -129), ("Trillian", 128)] {
+    for &(name, age) in &[("Ford", "s"), ("Trillian", "f")] {
         let uri = format!("/hello/{}/{}", name, age);
         let body = format!("<p>Sorry, but '{}' is not a valid path!</p>
             <p>Try visiting /hello/&lt;name&gt;/&lt;age&gt; instead.</p>",

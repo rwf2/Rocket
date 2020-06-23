@@ -21,6 +21,7 @@ pub struct Router {
     routes: HashMap<Selector, Vec<Route>>,
 }
 
+
 impl Router {
     pub fn new() -> Router {
         Router { routes: HashMap::new() }
@@ -35,18 +36,21 @@ impl Router {
         entries.insert(i, route);
     }
 
-    pub fn route<'b>(&'b self, req: &Request<'_>) -> Vec<&'b Route> {
+    // TODO: Describe restric param
+    pub fn route<'b>(&'b self, req: &Request<'_>, restrict: bool) -> Vec<&'b Route> {
         let mut matches = Vec::new();
-        for (_method, vec_route) in self.routes.iter() {
-            for _route in vec_route {
-                if _route.matches(req) {
+        for (_method, routes_vec) in self.routes.iter() {
+            for _route in routes_vec {
+                if _route.matches_by_method(req) {
+                    matches.push(_route);
+                } else if !restrict && _route.match_any(req){
                     matches.push(_route);
                 }
             }
         }
 
-        trace_!("Routing the request: {}", req);
-        trace_!("All matches: {:?}", matches);
+        trace_!("Routing by method: {}", req);
+        trace_!("All matches by method: {:?}", matches);
         matches
     }
 
@@ -232,7 +236,7 @@ mod test {
     fn route<'a>(router: &'a Router, method: Method, uri: &str) -> Option<&'a Route> {
         let rocket = Rocket::custom(Config::development());
         let request = Request::new(&rocket, method, Origin::parse(uri).unwrap());
-        let matches = router.route(&request);
+        let matches = router.route(&request, false);
         if matches.len() > 0 {
             Some(matches[0])
         } else {
@@ -243,7 +247,7 @@ mod test {
     fn matches<'a>(router: &'a Router, method: Method, uri: &str) -> Vec<&'a Route> {
         let rocket = Rocket::custom(Config::development());
         let request = Request::new(&rocket, method, Origin::parse(uri).unwrap());
-        router.route(&request)
+        router.route(&request, false)
     }
 
     #[test]
