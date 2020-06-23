@@ -4,10 +4,12 @@ extern crate rocket;
 struct Unknown;
 
 #[database("foo")]
+//~^ ERROR Unknown: rocket_contrib::databases::Poolable
 struct A(Unknown);
 //~^ ERROR Unknown: rocket_contrib::databases::Poolable
 
 #[database("foo")]
+//~^ ERROR Vec<i32>: rocket_contrib::databases::Poolable
 struct B(Vec<i32>);
 //~^ ERROR Vec<i32>: rocket_contrib::databases::Poolable
 
