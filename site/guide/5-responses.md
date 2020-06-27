@@ -59,7 +59,7 @@ use rocket::response::content;
 
 #[get("/")]
 fn json() -> content::Json<&'static str> {
-    content::Json("{ 'hi': 'world' }")
+    content::Json("{ \"hi\": \"world\" }")
 }
 ```
 
