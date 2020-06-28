@@ -7,7 +7,14 @@
 //!
 //! # Usage
 //!
-//! This module contains a [`Client`] structure that is used to create
+//! This module contains two variants of the local API: [`asynchronous`] and
+//! [`blocking`]. The primary difference between the two is in usage: the
+//! `asynchronous` API requires an asynchronous test entry point such as
+//! `#[rocket::async_test]`, while the `blocking` API can be used with
+//! `#[test]`. Additionally, several methods in the `asynchronous` API are
+//! `async` and must therefore be `await`ed.
+//!
+//! Both APIs include a [`Client`] structure that is used to create
 //! [`LocalRequest`] structures that can be dispatched against a given
 //! [`Rocket`](crate::Rocket) instance. Usage is straightforward:
 //!
