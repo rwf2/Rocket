@@ -3,10 +3,30 @@ use std::borrow::Cow;
 use crate::{Request, http::Method, local::asynchronous};
 
 use super::{Client, LocalResponse};
+
+struct_request! { [
+/// ## Example
+///
+/// The following snippet uses the available builder methods to construct a
+/// `POST` request to `/` with a JSON body:
+///
+/// ```rust
+/// use rocket::local::blocking::{Client, LocalRequest};
+/// use rocket::http::{ContentType, Cookie};
+///
+/// let client = Client::new(rocket::ignite()).expect("valid rocket");
+/// let req = client.post("/")
+///     .header(ContentType::JSON)
+///     .remote("127.0.0.1:8000".parse().unwrap())
+///     .cookie(Cookie::new("name", "value"))
+///     .body(r#"{ "value": 42 }"#);
+/// ```
+]
 #[derive(Clone)]
 pub struct LocalRequest<'c> {
     inner: asynchronous::LocalRequest<'c>,
     client: &'c Client,
+}
 }
 
 impl<'c> LocalRequest<'c> {

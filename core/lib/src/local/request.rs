@@ -1,62 +1,38 @@
-//! A structure representing a local request as created by [`Client`].
-//!
-//! # Usage
-//!
-//! A `LocalRequest` value is constructed via method constructors on [`Client`].
-//! Headers can be added via the [`header`] builder method and the
-//! [`add_header`] method. Cookies can be added via the [`cookie`] builder
-//! method. The remote IP address can be set via the [`remote`] builder method.
-//! The body of the request can be set via the [`body`] builder method or
-//! [`set_body`] method.
-//!
-//! ## Example
-//!
-//! The following snippet uses the available builder methods to construct a
-//! `POST` request to `/` with a JSON body:
-//!
-//! ```rust
-//! use rocket::local::asynchronous::Client;
-//! use rocket::http::{ContentType, Cookie};
-//!
-//! # rocket::async_test(async {
-//! let client = Client::new(rocket::ignite()).await.expect("valid rocket");
-//! let req = client.post("/")
-//!     .header(ContentType::JSON)
-//!     .remote("127.0.0.1:8000".parse().unwrap())
-//!     .cookie(Cookie::new("name", "value"))
-//!     .body(r#"{ "value": 42 }"#);
-//! # });
-//! ```
-//!
-//! # Dispatching
-//!
-//! A `LocalRequest` can be dispatched in one of two ways:
-//!
-//!   1. [`dispatch`]
-//!
-//!      This method should always be preferred. The `LocalRequest` is consumed
-//!      and a response is returned.
-//!
-//!   2. [`mut_dispatch`]
-//!
-//!      This method should _only_ be used when either it is known that the
-//!      application will not modify the request, or it is desired to see
-//!      modifications to the request. No cloning occurs, and the request is not
-//!      consumed.
-//!
-//! Additionally, note that `LocalRequest` implements `Clone`. As such, if the
-//! same request needs to be dispatched multiple times, the request can first be
-//! cloned and then dispatched: `request.clone().dispatch()`.
-//!
-//! [`Client`]: crate::local::asynchronous::Client
-//! [`header`]: #method.header
-//! [`add_header`]: #method.add_header
-//! [`cookie`]: #method.cookie
-//! [`remote`]: #method.remote
-//! [`body`]: #method.body
-//! [`set_body`]: #method.set_body
-//! [`dispatch`]: #method.dispatch
-//! [`mut_dispatch`]: #method.mut_dispatch
+macro_rules! struct_request {
+    ([$(#[$attr:meta])*] $item:item) =>
+{
+    /// A structure representing a local request as created by [`Client`].
+    ///
+    /// # Usage
+    ///
+    /// A `LocalRequest` value is constructed via method constructors on [`Client`].
+    /// Headers can be added via the [`header`] builder method and the
+    /// [`add_header`] method. Cookies can be added via the [`cookie`] builder
+    /// method. The remote IP address can be set via the [`remote`] builder method.
+    /// The body of the request can be set via the [`body`] builder method or
+    /// [`set_body`] method.
+    ///
+    $(#[$attr])*
+    ///
+    /// # Dispatching
+    ///
+    /// A `LocalRequest` is dispatched by calling [`dispatch`].
+    /// The `LocalRequest` is consumed and a response is returned.
+    ///
+    /// Note that `LocalRequest` implements `Clone`. As such, if the
+    /// same request needs to be dispatched multiple times, the request can first be
+    /// cloned and then dispatched: `request.clone().dispatch()`.
+    ///
+    /// [`Client`]: super::Client
+    /// [`header`]: #method.header
+    /// [`add_header`]: #method.add_header
+    /// [`cookie`]: #method.cookie
+    /// [`remote`]: #method.remote
+    /// [`body`]: #method.body
+    /// [`set_body`]: #method.set_body
+    /// [`dispatch`]: #method.dispatch
+    $item
+}}
 
 macro_rules! impl_request {
     ($import:literal $(@$prefix:tt $suffix:tt)? $name:ident) =>
