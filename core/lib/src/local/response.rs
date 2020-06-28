@@ -1,10 +1,17 @@
-//! A structure representing a response from dispatching a local request.
-//!
-//! This structure is a thin wrapper around [`Response`]. It implements no
-//! methods of its own; all functionality is exposed via the [`Deref`] and
-//! [`DerefMut`] implementations with a target of `Response`. In other words,
-//! when invoking methods, a `LocalResponse` can be treated exactly as if it
-//! were a `Response`.
+macro_rules! struct_response {
+    ($item:item) =>
+{
+    /// A structure representing a response from dispatching a local request.
+    ///
+    /// This structure is a thin wrapper around [`Response`]. It implements no
+    /// methods of its own; all functionality is exposed via the [`Deref`]
+    /// implementation with a target of `Response`. In other words, when
+    /// invoking methods, a `LocalResponse` can be treated exactly as if it were
+    /// a (read-only) `Response`.
+    ///
+    /// [`Deref`]: std::ops::Deref
+    $item
+}}
 
 macro_rules! impl_response {
     ($import:literal $(@$prefix:tt $suffix:tt)? $name:ident) =>

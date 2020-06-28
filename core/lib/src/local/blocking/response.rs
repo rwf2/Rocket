@@ -2,9 +2,11 @@ use crate::{Response, local::asynchronous};
 
 use super::Client;
 
+struct_response! {
 pub struct LocalResponse<'c> {
     pub(in super) inner: asynchronous::LocalResponse<'c>,
     pub(in super) client: &'c Client,
+}
 }
 
 impl<'c> LocalResponse<'c> {

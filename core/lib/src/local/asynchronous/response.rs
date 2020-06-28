@@ -1,8 +1,10 @@
 use crate::{Request, Response};
 
+struct_response! {
 pub struct LocalResponse<'c> {
     pub(in super) _request: Request<'c>,
     pub(in super) inner: Response<'c>,
+}
 }
 
 impl<'c> LocalResponse<'c> {
