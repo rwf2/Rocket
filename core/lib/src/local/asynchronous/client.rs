@@ -6,9 +6,44 @@ use crate::rocket::{Rocket, Cargo};
 use crate::http::{Method, private::CookieJar};
 use crate::error::LaunchError;
 
+struct_client! { [
+///
+/// ### Synchronization
+///
+/// While `Client` implements `Sync`, using it in a multithreaded environment
+/// while tracking cookies can result in surprising, non-deterministic behavior.
+/// This is because while cookie modifications are serialized, the exact
+/// ordering depends on when requests are dispatched. Specifically, when cookie
+/// tracking is enabled, all request dispatches are serialized, which in-turn
+/// serializes modifications to the internally tracked cookies.
+///
+/// If possible, refrain from sharing a single instance of `Client` across
+/// multiple threads. Instead, prefer to create a unique instance of `Client`
+/// per thread. If it's not possible, ensure that either you are not depending
+/// on cookies, the ordering of their modifications, or both, or have arranged
+/// for dispatches to occur in a deterministic ordering.
+///
+/// ## Example
+///
+/// The following snippet creates a `Client` from a `Rocket` instance and
+/// dispatches a local request to `POST /` with a body of `Hello, world!`.
+///
+/// ```rust
+/// use rocket::local::asynchronous::Client;
+///
+/// # rocket::async_test(async {
+/// let rocket = rocket::ignite();
+/// let client = Client::new(rocket).await.expect("valid rocket");
+/// let response = client.post("/")
+///     .body("Hello, world!")
+///     .dispatch().await;
+/// # });
+/// ```
+]
 pub struct Client {
     cargo: Cargo,
     pub(crate) cookies: Option<RwLock<CookieJar>>,
+}
 }
 
 impl Client {

@@ -5,9 +5,27 @@ use crate::http::Method;
 use crate::local::{asynchronous, blocking::LocalRequest};
 use crate::rocket::{Rocket, Cargo};
 
+struct_client! { [
+///
+/// ## Example
+///
+/// The following snippet creates a `Client` from a `Rocket` instance and
+/// dispatches a local request to `POST /` with a body of `Hello, world!`.
+///
+/// ```rust
+/// use rocket::local::blocking::Client;
+///
+/// let rocket = rocket::ignite();
+/// let client = Client::new(rocket).expect("valid rocket");
+/// let response = client.post("/")
+///     .body("Hello, world!")
+///     .dispatch();
+/// ```
+]
 pub struct Client {
     pub(crate) inner: asynchronous::Client,
     runtime: RefCell<tokio::runtime::Runtime>,
+}
 }
 
 impl Client {
