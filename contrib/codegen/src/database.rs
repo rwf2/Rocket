@@ -65,7 +65,6 @@ pub fn database_attr(attr: TokenStream, input: TokenStream) -> Result<TokenStrea
     let name = &invocation.db_name;
     let guard_type = &invocation.type_name;
     let vis = &invocation.visibility;
-    let pool_type = Ident::new(&format!("{}Pool", guard_type), guard_type.span());
     let fairing_name = format!("'{}' Database Pool", name);
     let span = conn_type.span().into();
 
@@ -73,19 +72,11 @@ pub fn database_attr(attr: TokenStream, input: TokenStream) -> Result<TokenStrea
     let databases = quote_spanned!(span => ::rocket_contrib::databases);
     let Poolable = quote_spanned!(span => #databases::Poolable);
     let r2d2 = quote_spanned!(span => #databases::r2d2);
-    let spawn_blocking = quote_spanned!(span => #databases::spawn_blocking);
     let request = quote!(::rocket::request);
-    let Arc = quote!(::std::sync::Arc);
-    let Semaphore = quote!(::rocket::tokio::sync::Semaphore);
 
     let generated_types = quote_spanned! { span =>
         /// The request guard type.
-        // TODO: Nest this and pool_type in another module to prevent direct
-        // access to fields by user code.
-        #vis struct #guard_type(#r2d2::Pool<<#conn_type as #Poolable>::Manager>, #Arc<#Semaphore>);
-
-        /// The pool type.
-        #vis struct #pool_type(#r2d2::Pool<<#conn_type as #Poolable>::Manager>, #Arc<#Semaphore>);
+        #vis struct #guard_type(#databases::ConnectionPool<#conn_type>);
     };
 
     Ok(quote! {
@@ -95,36 +86,14 @@ pub fn database_attr(attr: TokenStream, input: TokenStream) -> Result<TokenStrea
             /// Returns a fairing that initializes the associated database
             /// connection pool.
             pub fn fairing() -> impl ::rocket::fairing::Fairing {
-                use #databases::Poolable;
-
-                ::rocket::fairing::AdHoc::on_attach(#fairing_name, |mut rocket| async {
-                    let config = #databases::database_config(#name, rocket.config().await);
-                    let pool = config.map(|c| (c.pool_size, <#conn_type>::pool(c)));
-
-                    match pool {
-                        Ok((size, Ok(p))) => Ok(rocket.manage(#pool_type(p, #Arc::new(#Semaphore::new(size as usize))))),
-                        Err(config_error) => {
-                            ::rocket::logger::error(
-                                &format!("Database configuration failure: '{}'", #name));
-                            ::rocket::logger::error_(&format!("{}", config_error));
-                            Err(rocket)
-                        },
-                        Ok((_, Err(pool_error))) => {
-                            ::rocket::logger::error(
-                                &format!("Failed to initialize pool for '{}'", #name));
-                            ::rocket::logger::error_(&format!("{:?}", pool_error));
-                            Err(rocket)
-                        },
-                    }
-                })
+                <#databases::ConnectionPool<#conn_type>>::fairing(#fairing_name, #name)
             }
 
             /// Retrieves a connection of type `Self` from the `rocket`
             /// instance. Returns `Some` as long as `Self::fairing()` has been
             /// attached.
             pub fn get_one(cargo: &::rocket::Cargo) -> Option<Self> {
-                cargo.state::<#pool_type>()
-                    .map(|c| #guard_type(c.0.clone(), c.1.clone()))
+                <#databases::ConnectionPool<#conn_type>>::get_one(cargo).map(Self)
             }
 
             /// Runs the provided closure on a blocking threadpool. The closure
@@ -136,14 +105,7 @@ pub fn database_attr(attr: TokenStream, input: TokenStream) -> Result<TokenStrea
                 F: FnOnce(&mut #r2d2::PooledConnection<<#conn_type as #Poolable>::Manager>) -> R + Send + 'static,
                 R: Send + 'static,
             {
-                let _permit = self.1.acquire().await;
-                let pool = self.0.clone();
-                let ret = #spawn_blocking(move || {
-                    let mut conn = pool.get().expect("TODO");
-                    let ret = f(&mut conn);
-                    ret
-                }).await.expect("failed to spawn a blocking task to use a pooled connection");
-                ret
+                self.0.run(f).await
             }
         }
 
@@ -152,9 +114,7 @@ pub fn database_attr(attr: TokenStream, input: TokenStream) -> Result<TokenStrea
             type Error = ();
 
             async fn from_request(request: &'a #request::Request<'r>) -> #request::Outcome<Self, ()> {
-                use ::rocket::{Outcome, http::Status};
-                let inner = ::rocket::try_outcome!(request.guard::<::rocket::State<'_, #pool_type>>().await);
-                Outcome::Success(#guard_type(inner.0.clone(), inner.1.clone()))
+                <#databases::ConnectionPool<#conn_type>>::from_request(request).await.map(Self)
             }
         }
     }.into())

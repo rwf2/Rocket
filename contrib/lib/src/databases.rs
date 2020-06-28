@@ -408,8 +408,11 @@ pub extern crate diesel;
 use std::collections::BTreeMap;
 use std::fmt::{self, Display, Formatter};
 use std::marker::{Send, Sized};
+use std::sync::Arc;
 
 use rocket::config::{self, Value};
+
+use rocket::tokio::sync::Semaphore;
 
 use self::r2d2::ManageConnection;
 
@@ -717,7 +720,7 @@ pub trait Poolable: Send + Sized + 'static {
     type Manager: ManageConnection<Connection=Self>;
     /// The associated error type in the event that constructing the connection
     /// manager and/or the connection pool fails.
-    type Error;
+    type Error: std::fmt::Debug;
 
     /// Creates an `r2d2` connection pool for `Manager::Connection`, returning
     /// the pool on success.
@@ -840,6 +843,82 @@ impl Poolable for memcache::Client {
     fn pool(config: DatabaseConfig<'_>) -> Result<r2d2::Pool<Self::Manager>, Self::Error> {
         let manager = r2d2_memcache::MemcacheConnectionManager::new(config.url);
         r2d2::Pool::builder().max_size(config.pool_size).build(manager).map_err(DbError::PoolError)
+    }
+}
+
+#[doc(hidden)]
+/// Unstable internal details of generated code for the #[database] attribute.
+///
+/// This type is implemented here instead of in generated code to ensure all
+/// types are properly checked.
+pub struct ConnectionPool<C: Poolable> {
+    pool: r2d2::Pool<C::Manager>,
+    semaphore: Arc<Semaphore>,
+}
+
+impl<C: Poolable> ConnectionPool<C> {
+    pub fn fairing(fairing_name: &'static str, config_name: &'static str) -> impl rocket::fairing::Fairing {
+        rocket::fairing::AdHoc::on_attach(fairing_name, move |mut rocket| async move {
+            let config = database_config(config_name, rocket.config().await);
+            let pool = config.map(|c| (c.pool_size, C::pool(c)));
+
+            match pool {
+                Ok((size, Ok(p))) => {
+                    let managed = ConnectionPool::<C> {
+                        pool: p,
+                        semaphore: Arc::new(Semaphore::new(size as usize)),
+                    };
+                    Ok(rocket.manage(managed))
+                },
+                Err(config_error) => {
+                    ::rocket::logger::error(
+                        &format!("Database configuration failure: '{}'", config_name));
+                    ::rocket::logger::error_(&format!("{}", config_error));
+                    Err(rocket)
+                },
+                Ok((_, Err(pool_error))) => {
+                    ::rocket::logger::error(
+                        &format!("Failed to initialize pool for '{}'", config_name));
+                    ::rocket::logger::error_(&format!("{:?}", pool_error));
+                    Err(rocket)
+                },
+            }
+        })
+    }
+
+    pub fn get_one(cargo: &::rocket::Cargo) -> Option<Self> {
+        cargo.state::<Self>().map(|c| Self {
+            pool: c.pool.clone(),
+            semaphore: c.semaphore.clone(),
+        })
+    }
+
+    pub async fn run<F, R>(&self, f: F) -> R
+    where
+        F: FnOnce(&mut r2d2::PooledConnection<C::Manager>) -> R + Send + 'static,
+        R: Send + 'static,
+    {
+        let _permit = self.semaphore.acquire().await;
+        let pool = self.pool.clone();
+        let ret = tokio::task::spawn_blocking(move || {
+            let mut conn = pool.get().expect("TODO");
+            let ret = f(&mut conn);
+            ret
+        }).await.expect("failed to spawn a blocking task to use a pooled connection");
+        ret
+    }
+}
+
+#[::rocket::async_trait]
+impl<'a, 'r, C: Poolable> rocket::request::FromRequest<'a, 'r> for ConnectionPool<C> {
+    type Error = ();
+
+    async fn from_request(request: &'a rocket::request::Request<'r>) -> rocket::request::Outcome<Self, ()> {
+        let inner = ::rocket::try_outcome!(request.guard::<::rocket::State<'_, Self>>().await);
+        rocket::Outcome::Success(Self {
+            pool: inner.pool.clone(),
+            semaphore: inner.semaphore.clone(),
+        })
     }
 }
 
