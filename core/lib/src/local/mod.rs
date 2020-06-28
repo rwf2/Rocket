@@ -104,7 +104,7 @@
 //! ```
 //!
 //! [`Client`]: crate::local::asynchronous::Client
-//! [`LocalRequest`]: crate::local::LocalRequest
+//! [`LocalRequest`]: crate::local::asynchronous::LocalRequest
 
 #[macro_use] mod client;
 #[macro_use] mod request;
