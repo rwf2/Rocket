@@ -34,9 +34,9 @@ async fn redirect_on_index() {
 async fn can_login() {
     let client = Client::new(rocket()).await.unwrap();
 
-    let mut response = client.get("/login").dispatch().await;
-    let body = response.body_string().await.unwrap();
+    let response = client.get("/login").dispatch().await;
     assert_eq!(response.status(), Status::Ok);
+    let body = response.into_string().await.unwrap();
     assert!(body.contains("Please login to continue."));
 }
 
@@ -53,9 +53,9 @@ async fn login_logout_succeeds() {
     let login_cookie = login(&client, "Sergio", "password").await.expect("logged in");
 
     // Ensure we're logged in.
-    let mut response = client.get("/").cookie(login_cookie.clone()).dispatch().await;
-    let body = response.body_string().await.unwrap();
+    let response = client.get("/").cookie(login_cookie.clone()).dispatch().await;
     assert_eq!(response.status(), Status::Ok);
+    let body = response.into_string().await.unwrap();
     assert!(body.contains("Logged in with user ID 1"));
 
     // One more.
@@ -73,9 +73,9 @@ async fn login_logout_succeeds() {
     assert_eq!(response.headers().get_one("Location"), Some("/login"));
 
     // The page should show the success message, and no errors.
-    let mut response = client.get("/login").dispatch().await;
-    let body = response.body_string().await.unwrap();
+    let response = client.get("/login").dispatch().await;
     assert_eq!(response.status(), Status::Ok);
+    let body = response.into_string().await.unwrap();
     assert!(body.contains("Successfully logged out."));
     assert!(!body.contains("Error"));
 }

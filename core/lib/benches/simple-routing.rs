@@ -57,20 +57,18 @@ mod benches {
     #[bench]
     fn bench_hello_world(b: &mut Bencher) {
         let client = client(hello_world_rocket()).unwrap();
-        let mut request = client.get("/");
 
         b.iter(|| {
-            request.mut_dispatch();
+            client.get("/").dispatch();
         });
     }
 
     #[bench]
     fn bench_single_get_index(b: &mut Bencher) {
         let client = client(rocket()).unwrap();
-        let mut request = client.get("/");
 
         b.iter(|| {
-            request.mut_dispatch();
+            client.get("/").dispatch();
         });
     }
 
@@ -85,8 +83,8 @@ mod benches {
         requests.push(client.post("/"));
 
         b.iter(|| {
-            for request in requests.iter_mut() {
-                request.mut_dispatch();
+            for request in &requests {
+                request.clone().dispatch();
             }
         });
     }
@@ -102,8 +100,8 @@ mod benches {
         requests.push(client.get("/123"));
 
         b.iter(|| {
-            for request in requests.iter_mut() {
-                request.mut_dispatch();
+            for request in &requests {
+                request.clone().dispatch();
             }
         });
     }
@@ -125,8 +123,8 @@ mod benches {
         requests.push(client.get("/123"));
 
         b.iter(|| {
-            for request in requests.iter_mut() {
-                request.mut_dispatch();
+            for request in &requests {
+                request.clone().dispatch();
             }
         });
     }

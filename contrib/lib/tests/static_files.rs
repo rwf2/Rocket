@@ -45,7 +45,7 @@ mod static_tests {
 
     async fn assert_file(client: &Client, prefix: &str, path: &str, exists: bool) {
         let full_path = format!("/{}/{}", prefix, path);
-        let mut response = client.get(full_path).dispatch().await;
+        let response = client.get(full_path).dispatch().await;
         if exists {
             assert_eq!(response.status(), Status::Ok);
 
@@ -57,7 +57,7 @@ mod static_tests {
             let mut file = File::open(path).expect("open file");
             let mut expected_contents = String::new();
             file.read_to_string(&mut expected_contents).expect("read file");
-            assert_eq!(response.body_string().await, Some(expected_contents));
+            assert_eq!(response.into_string().await, Some(expected_contents));
         } else {
             assert_eq!(response.status(), Status::NotFound);
         }
@@ -133,13 +133,13 @@ mod static_tests {
         let rocket = rocket().mount("/default", routes![catch_one, catch_two]);
         let client = Client::new(rocket).await.expect("valid rocket");
 
-        let mut response = client.get("/default/ireallydontexist").dispatch().await;
+        let response = client.get("/default/ireallydontexist").dispatch().await;
         assert_eq!(response.status(), Status::Ok);
-        assert_eq!(response.body_string().await.unwrap(), "ireallydontexist");
+        assert_eq!(response.into_string().await.unwrap(), "ireallydontexist");
 
-        let mut response = client.get("/default/idont/exist").dispatch().await;
+        let response = client.get("/default/idont/exist").dispatch().await;
         assert_eq!(response.status(), Status::Ok);
-        assert_eq!(response.body_string().await.unwrap(), "idont/exist");
+        assert_eq!(response.into_string().await.unwrap(), "idont/exist");
 
         assert_all(&client, "both", REGULAR_FILES, true).await;
         assert_all(&client, "both", HIDDEN_FILES, true).await;

@@ -28,10 +28,10 @@ mod private_cookie_test {
 
             let client = Client::new(rocket).await.unwrap();
             let req = client.get("/").private_cookie(Cookie::new("cookie_name", "cookie_value"));
-            let mut response = req.dispatch().await;
+            let response = req.dispatch().await;
 
-            assert_eq!(response.body_string().await, Some("cookie_value".into()));
             assert_eq!(response.headers().get_one("Set-Cookie"), None);
+            assert_eq!(response.into_string().await, Some("cookie_value".into()));
         }
 
         #[rocket::async_test]

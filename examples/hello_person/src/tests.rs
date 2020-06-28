@@ -3,7 +3,7 @@ use rocket::http::Status;
 
 async fn test(uri: String, expected: String) {
     let client = Client::new(super::rocket()).await.unwrap();
-    assert_eq!(client.get(&uri).dispatch().await.body_string().await, Some(expected));
+    assert_eq!(client.get(&uri).dispatch().await.into_string().await, Some(expected));
 }
 
 async fn test_404(uri: &'static str) {

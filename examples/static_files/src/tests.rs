@@ -10,10 +10,10 @@ async fn test_query_file<T> (path: &str, file: T, status: Status)
     where T: Into<Option<&'static str>>
 {
     let client = Client::new(rocket()).await.unwrap();
-    let mut response = client.get(path).dispatch().await;
+    let response = client.get(path).dispatch().await;
     assert_eq!(response.status(), status);
 
-    let body_data = response.body_bytes().await;
+    let body_data = response.into_bytes().await;
     if let Some(filename) = file.into() {
         let expected_data = read_file_content(filename);
         assert!(body_data.map_or(false, |s| s == expected_data));

@@ -16,8 +16,8 @@ mod route_guard_tests {
     use rocket::local::asynchronous::Client;
 
     async fn assert_path(client: &Client, path: &str) {
-        let mut res = client.get(path).dispatch().await;
-        assert_eq!(res.body_string().await, Some(path.into()));
+        let res = client.get(path).dispatch().await;
+        assert_eq!(res.into_string().await, Some(path.into()));
     }
 
     #[rocket::async_test]

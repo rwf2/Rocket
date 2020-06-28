@@ -1,7 +1,5 @@
 use std::borrow::Cow;
 use std::cell::RefCell;
-use std::rc::Rc;
-
 use crate::error::LaunchError;
 use crate::http::Method;
 use crate::local::{asynchronous, blocking::LocalRequest};
@@ -9,7 +7,7 @@ use crate::rocket::{Rocket, Cargo};
 
 pub struct Client {
     pub(crate) inner: asynchronous::Client,
-    runtime: Rc<RefCell<tokio::runtime::Runtime>>,
+    runtime: RefCell<tokio::runtime::Runtime>,
 }
 
 impl Client {
@@ -22,7 +20,7 @@ impl Client {
 
         // Initialize the Rocket instance
         let inner = runtime.block_on(asynchronous::Client::_new(rocket, tracked))?;
-        Ok(Self { inner, runtime: Rc::new(RefCell::new(runtime)) })
+        Ok(Self { inner, runtime: RefCell::new(runtime) })
     }
 
     #[doc(hidden)]
@@ -42,7 +40,7 @@ impl Client {
 
     #[inline(always)]
     fn _cargo(&self) -> &Cargo {
-        self._cargo()
+        self.inner._cargo()
     }
 
     #[inline(always)]
@@ -67,6 +65,9 @@ mod doctest {
     ///
     /// fn test<T>() {};
     /// test::<Client>();
+    ///
+    /// fn is_send<T: Send>() {};
+    /// is_send::<Client>();
     /// ```
     ///
     /// ```compile_fail
@@ -74,13 +75,6 @@ mod doctest {
     ///
     /// fn not_sync<T: Sync>() {};
     /// not_sync::<Client>();
-    /// ```
-    ///
-    /// ```compile_fail
-    /// use rocket::local::blocking::Client;
-    ///
-    /// fn not_send<T: Send>() {};
-    /// not_send::<Client>();
     /// ```
     #[allow(dead_code)]
     fn test_not_sync_or_send() {}

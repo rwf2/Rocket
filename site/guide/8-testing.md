@@ -76,7 +76,7 @@ let mut response = client.get("/").dispatch().await;
 assert_eq!(response.status(), Status::Ok);
 assert_eq!(response.content_type(), Some(ContentType::Plain));
 assert!(response.headers().get_one("X-Special").is_some());
-assert_eq!(response.body_string().await, Some("Expected Body.".into()));
+assert_eq!(response.into_string().await, Some("Expected Body.".into()));
 ```
 
 ## Testing "Hello, world!"
@@ -158,7 +158,7 @@ We do this by checking the `Response` object directly:
 
 ```rust
 assert_eq!(response.status(), Status::Ok);
-assert_eq!(response.body_string().await, Some("Hello, world!".into()));
+assert_eq!(response.into_string().await, Some("Hello, world!".into()));
 ```
 
 That's it! Altogether, this looks like:
@@ -175,7 +175,7 @@ mod test {
         let client = Client::new(rocket()).expect("valid rocket instance");
         let mut response = client.get("/").dispatch().await;
         assert_eq!(response.status(), Status::Ok);
-        assert_eq!(response.body_string().await, Some("Hello, world!".into()));
+        assert_eq!(response.into_string().await, Some("Hello, world!".into()));
     }
 }
 ```

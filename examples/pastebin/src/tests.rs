@@ -11,23 +11,23 @@ async fn check_index() {
     let client = Client::new(rocket()).await.unwrap();
 
     // Ensure the index returns what we expect.
-    let mut response = client.get("/").dispatch().await;
+    let response = client.get("/").dispatch().await;
     assert_eq!(response.status(), Status::Ok);
     assert_eq!(response.content_type(), Some(ContentType::Plain));
-    assert_eq!(response.body_string().await, Some(index().into()))
+    assert_eq!(response.into_string().await, Some(index().into()))
 }
 
 async fn upload_paste(client: &Client, body: &str) -> String {
-    let mut response = client.post("/").body(body).dispatch().await;
+    let response = client.post("/").body(body).dispatch().await;
     assert_eq!(response.status(), Status::Ok);
     assert_eq!(response.content_type(), Some(ContentType::Plain));
-    extract_id(&response.body_string().await.unwrap()).unwrap()
+    extract_id(&response.into_string().await.unwrap()).unwrap()
 }
 
 async fn download_paste(client: &Client, id: &str) -> String {
-    let mut response = client.get(format!("/{}", id)).dispatch().await;
+    let response = client.get(format!("/{}", id)).dispatch().await;
     assert_eq!(response.status(), Status::Ok);
-    response.body_string().await.unwrap()
+    response.into_string().await.unwrap()
 }
 
 #[rocket::async_test]

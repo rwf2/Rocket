@@ -8,7 +8,7 @@ use rocket_contrib::templates::Template;
 macro_rules! dispatch {
     ($method:expr, $path:expr, |$client:ident, $response:ident| $body:expr) => ({
         let $client = Client::new(rocket()).await.unwrap();
-        let mut $response = $client.req($method, $path).dispatch().await;
+        let $response = $client.req($method, $path).dispatch().await;
         $body
     })
 }
@@ -34,7 +34,7 @@ async fn test_root() {
             let expected = Template::show(client.cargo(), "error/404", &map).unwrap();
 
             assert_eq!(response.status(), Status::NotFound);
-            assert_eq!(response.body_string().await, Some(expected));
+            assert_eq!(response.into_string().await, Some(expected));
         });
     }
 }
@@ -52,7 +52,7 @@ async fn test_name() {
 
         let expected = Template::show(client.cargo(), "index", &context).unwrap();
         assert_eq!(response.status(), Status::Ok);
-        assert_eq!(response.body_string().await, Some(expected));
+        assert_eq!(response.into_string().await, Some(expected));
     });
 }
 
@@ -65,6 +65,6 @@ async fn test_404() {
 
         let expected = Template::show(client.cargo(), "error/404", &map).unwrap();
         assert_eq!(response.status(), Status::NotFound);
-        assert_eq!(response.body_string().await, Some(expected));
+        assert_eq!(response.into_string().await, Some(expected));
     });
 }

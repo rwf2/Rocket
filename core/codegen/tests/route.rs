@@ -105,24 +105,24 @@ async fn test_full_route() {
     let response = client.post(format!("/1{}", uri)).body(simple).dispatch().await;
     assert_eq!(response.status(), Status::NotFound);
 
-    let mut response = client
+    let response = client
         .post(format!("/1{}", uri))
         .header(ContentType::JSON)
         .body(simple)
         .dispatch().await;
 
-    assert_eq!(response.body_string().await.unwrap(), format!("({}, {}, {}, {}, {}, {}) ({})",
+    assert_eq!(response.into_string().await.unwrap(), format!("({}, {}, {}, {}, {}, {}) ({})",
             sky, name, "A A", "inside", path, simple, expected_uri));
 
     let response = client.post(format!("/2{}", uri)).body(simple).dispatch().await;
     assert_eq!(response.status(), Status::NotFound);
 
-    let mut response = client
+    let response = client
         .post(format!("/2{}", uri))
         .header(ContentType::JSON)
         .body(simple)
         .dispatch().await;
 
-    assert_eq!(response.body_string().await.unwrap(), format!("({}, {}, {}, {}, {}, {}) ({})",
+    assert_eq!(response.into_string().await.unwrap(), format!("({}, {}, {}, {}, {}, {}) ({})",
             sky, name, "A A", "inside", path, simple, expected_uri));
 }

@@ -80,7 +80,7 @@ mod compress_responder_tests {
             .any(|x| x == "br"));
         let mut body_plain = Cursor::new(Vec::<u8>::new());
         brotli::BrotliDecompress(
-            &mut Cursor::new(response.body_bytes().unwrap()),
+            &mut Cursor::new(response.into_bytes().unwrap()),
             &mut body_plain,
         )
         .expect("decompress response");
@@ -104,7 +104,7 @@ mod compress_responder_tests {
             .any(|x| x == "br"));
         let mut body_plain = Cursor::new(Vec::<u8>::new());
         brotli::BrotliDecompress(
-            &mut Cursor::new(response.body_bytes().unwrap()),
+            &mut Cursor::new(response.into_bytes().unwrap()),
             &mut body_plain,
         )
         .expect("decompress response");
@@ -131,7 +131,7 @@ mod compress_responder_tests {
             .get("Content-Encoding")
             .any(|x| x == "gzip"));
         let mut s = String::new();
-        GzDecoder::new(&response.body_bytes().unwrap()[..])
+        GzDecoder::new(&response.into_bytes().unwrap()[..])
             .read_to_string(&mut s)
             .expect("decompress response");
         assert_eq!(s, String::from(HELLO));
@@ -154,7 +154,7 @@ mod compress_responder_tests {
             .get("Content-Encoding")
             .any(|x| x == "gzip"));
         let mut s = String::new();
-        GzDecoder::new(&response.body_bytes().unwrap()[..])
+        GzDecoder::new(&response.into_bytes().unwrap()[..])
             .read_to_string(&mut s)
             .expect("decompress response");
         assert_eq!(s, String::from(HELLO));
@@ -173,7 +173,7 @@ mod compress_responder_tests {
             .get("Content-Encoding")
             .any(|x| x != "identity"));
         assert_eq!(
-            String::from_utf8(response.body_bytes().unwrap()).unwrap(),
+            String::from_utf8(response.into_bytes().unwrap()).unwrap(),
             String::from(HELLO)
         );
     }
@@ -192,7 +192,7 @@ mod compress_responder_tests {
             .any(|x| x == "br"));
         let mut body_plain = Cursor::new(Vec::<u8>::new());
         brotli::BrotliDecompress(
-            &mut Cursor::new(response.body_bytes().unwrap()),
+            &mut Cursor::new(response.into_bytes().unwrap()),
             &mut body_plain,
         )
         .expect("decompress response");
@@ -215,7 +215,7 @@ mod compress_responder_tests {
             .get("Content-Encoding")
             .any(|x| x != "identity"));
         assert_eq!(
-            String::from_utf8(response.body_bytes().unwrap()).unwrap(),
+            String::from_utf8(response.into_bytes().unwrap()).unwrap(),
             String::from(HELLO)
         );
     }
@@ -233,7 +233,7 @@ mod compress_responder_tests {
             .get("Content-Encoding")
             .any(|x| x != "identity"));
         assert_eq!(
-            String::from_utf8(response.body_bytes().unwrap()).unwrap(),
+            String::from_utf8(response.into_bytes().unwrap()).unwrap(),
             String::from(HELLO)
         );
     }

@@ -98,7 +98,7 @@
 //!
 //!         // Dispatch a request to 'GET /' and validate the response.
 //!         let mut response = client.get("/").dispatch().await;
-//!         assert_eq!(response.body_string().await, Some("Hello, world!".into()));
+//!         assert_eq!(response.into_string().await, Some("Hello, world!".into()));
 //!     }
 //! }
 //! ```
@@ -106,75 +106,9 @@
 //! [`Client`]: crate::local::asynchronous::Client
 //! [`LocalRequest`]: crate::local::LocalRequest
 
-#[macro_use]
-mod client;
-pub mod blocking;
+#[macro_use] mod client;
+#[macro_use] mod request;
+#[macro_use] mod response;
+
 pub mod asynchronous;
-
-// FIXME: Where should this documentation go? Perhaps top-level to avoid
-// duplication in each `Client`?
-
-/// A structure to construct requests for local dispatching.
-///
-/// # Usage
-///
-/// A `Client` is constructed via the [`new()`] or [`untracked()`] methods from
-/// an already constructed `Rocket` instance. Once a value of `Client` has been
-/// constructed, the [`LocalRequest`] constructor methods ([`get()`], [`put()`],
-/// [`post()`], and so on) can be used to create a `LocalRequest` for
-/// dispatching.
-///
-/// See the [top-level documentation](crate::local) for more usage information.
-///
-/// ## Cookie Tracking
-///
-/// A `Client` constructed using [`new()`] propagates cookie changes made by
-/// responses to previously dispatched requests. In other words, if a previously
-/// dispatched request resulted in a response that adds a cookie, any future
-/// requests will contain that cookie. Similarly, cookies removed by a response
-/// won't be propagated further.
-///
-/// This is typically the desired mode of operation for a `Client` as it removes
-/// the burden of manually tracking cookies. Under some circumstances, however,
-/// disabling this tracking may be desired. In these cases, use the
-/// [`untracked()`](Client::untracked()) constructor to create a `Client` that
-/// _will not_ track cookies.
-///
-/// ### Synchronization
-///
-/// While `Client` implements `Sync`, using it in a multithreaded environment
-/// while tracking cookies can result in surprising, non-deterministic behavior.
-/// This is because while cookie modifications are serialized, the exact
-/// ordering depends on when requests are dispatched. Specifically, when cookie
-/// tracking is enabled, all request dispatches are serialized, which in-turn
-/// serializes modifications to the internally tracked cookies.
-///
-/// If possible, refrain from sharing a single instance of `Client` across
-/// multiple threads. Instead, prefer to create a unique instance of `Client`
-/// per thread. If it's not possible, ensure that either you are not depending
-/// on cookies, the ordering of their modifications, or both, or have arranged
-/// for dispatches to occur in a deterministic ordering.
-///
-/// ## Example
-///
-/// The following snippet creates a `Client` from a `Rocket` instance and
-/// dispatches a local request to `POST /` with a body of `Hello, world!`.
-///
-/// ```rust
-/// use rocket::local::asynchronous::Client;
-///
-/// # rocket::async_test(async {
-/// let rocket = rocket::ignite();
-/// let client = Client::new(rocket).await.expect("valid rocket");
-/// let response = client.post("/")
-///     .body("Hello, world!")
-///     .dispatch().await;
-/// # });
-/// ```
-///
-/// [`new()`]: #method.new
-/// [`untracked()`]: #method.untracked
-/// [`get()`]: #method.get
-/// [`put()`]: #method.put
-/// [`post()`]: #method.post
-fn client() {}
+pub mod blocking;

@@ -1,3 +1,67 @@
+//! A structure to construct requests for local dispatching.
+//!
+//! # Usage
+//!
+//! A `Client` is constructed via the [`new()`] or [`untracked()`] methods from
+//! an already constructed `Rocket` instance. Once a value of `Client` has been
+//! constructed, the [`LocalRequest`] constructor methods ([`get()`], [`put()`],
+//! [`post()`], and so on) can be used to create a `LocalRequest` for
+//! dispatching.
+//!
+//! See the [top-level documentation](crate::local) for more usage information.
+//!
+//! ## Cookie Tracking
+//!
+//! A `Client` constructed using [`new()`] propagates cookie changes made by
+//! responses to previously dispatched requests. In other words, if a previously
+//! dispatched request resulted in a response that adds a cookie, any future
+//! requests will contain that cookie. Similarly, cookies removed by a response
+//! won't be propagated further.
+//!
+//! This is typically the desired mode of operation for a `Client` as it removes
+//! the burden of manually tracking cookies. Under some circumstances, however,
+//! disabling this tracking may be desired. In these cases, use the
+//! [`untracked()`](Client::untracked()) constructor to create a `Client` that
+//! _will not_ track cookies.
+//!
+//! ### Synchronization
+//!
+//! While `Client` implements `Sync`, using it in a multithreaded environment
+//! while tracking cookies can result in surprising, non-deterministic behavior.
+//! This is because while cookie modifications are serialized, the exact
+//! ordering depends on when requests are dispatched. Specifically, when cookie
+//! tracking is enabled, all request dispatches are serialized, which in-turn
+//! serializes modifications to the internally tracked cookies.
+//!
+//! If possible, refrain from sharing a single instance of `Client` across
+//! multiple threads. Instead, prefer to create a unique instance of `Client`
+//! per thread. If it's not possible, ensure that either you are not depending
+//! on cookies, the ordering of their modifications, or both, or have arranged
+//! for dispatches to occur in a deterministic ordering.
+//!
+//! ## Example
+//!
+//! The following snippet creates a `Client` from a `Rocket` instance and
+//! dispatches a local request to `POST /` with a body of `Hello, world!`.
+//!
+//! ```rust
+//! use rocket::local::asynchronous::Client;
+//!
+//! # rocket::async_test(async {
+//! let rocket = rocket::ignite();
+//! let client = Client::new(rocket).await.expect("valid rocket");
+//! let response = client.post("/")
+//!     .body("Hello, world!")
+//!     .dispatch().await;
+//! # });
+//! ```
+//!
+//! [`new()`]: #method.new
+//! [`untracked()`]: #method.untracked
+//! [`get()`]: #method.get
+//! [`put()`]: #method.put
+//! [`post()`]: #method.post
+
 macro_rules! req_method {
     ($import:literal, $NAME:literal, $f:ident, $method:expr) => (
         req_method!(@
@@ -39,7 +103,7 @@ macro_rules! req_method {
 }
 
 macro_rules! impl_client {
-    ($import:literal $(@$prefix:tt $postfix:tt)? $name:ident) =>
+    ($import:literal $(@$prefix:tt $suffix:tt)? $name:ident) =>
 {
     impl $name {
         /// Construct a new `Client` from an instance of `Rocket` with cookie
@@ -72,7 +136,7 @@ macro_rules! impl_client {
         /// ```
         #[inline(always)]
         pub $($prefix)? fn new(rocket: Rocket) -> Result<Self, LaunchError> {
-            Self::_new(rocket, true) $(.$postfix)?
+            Self::_new(rocket, true) $(.$suffix)?
         }
 
         /// Construct a new `Client` from an instance of `Rocket` _without_
@@ -95,7 +159,7 @@ macro_rules! impl_client {
         /// let client = Client::untracked(rocket);
         /// ```
         pub $($prefix)? fn untracked(rocket: Rocket) -> Result<Self, LaunchError> {
-            Self::_new(rocket, true) $(.$postfix)?
+            Self::_new(rocket, true) $(.$suffix)?
         }
 
         /// Returns a reference to the `Rocket` this client is creating requests
@@ -108,7 +172,7 @@ macro_rules! impl_client {
         ///
         /// # Client::_test(|client| {
         /// let client: Client = client;
-        /// client.manifest();
+        /// let rocket = client.rocket();
         /// # });
         /// ```
         #[inline(always)]
@@ -122,12 +186,10 @@ macro_rules! impl_client {
         /// # Example
         ///
         /// ```rust
-        /// use rocket::local::Client;
+        #[doc = $import]
         ///
-        /// # rocket::async_test(async {
-        /// let my_rocket = rocket::ignite();
-        /// let client = Client::new(my_rocket).await.expect("valid rocket");
-        ///
+        /// # Client::_test(|client| {
+        /// let client: Client = client;
         /// let cargo = client.cargo();
         /// # });
         /// ```

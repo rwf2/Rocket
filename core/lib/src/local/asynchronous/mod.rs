@@ -1,5 +1,7 @@
 mod client;
 mod request;
+mod response;
 
-pub use client::Client;
-pub use request::{LocalRequest, LocalResponse};
+pub use client::*;
+pub use request::*;
+pub use response::*;

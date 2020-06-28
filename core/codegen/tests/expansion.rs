@@ -38,14 +38,14 @@ async fn test_reexpansion() {
     let rocket = rocket::ignite().mount("/", routes![easy, hard, hi]);
     let client = Client::new(rocket).await.unwrap();
 
-    let mut response = client.get("/easy/327").dispatch().await;
-    assert_eq!(response.body_string().await.unwrap(), "easy id: 327");
+    let response = client.get("/easy/327").dispatch().await;
+    assert_eq!(response.into_string().await.unwrap(), "easy id: 327");
 
-    let mut response = client.get("/hard/72").dispatch().await;
-    assert_eq!(response.body_string().await.unwrap(), "hard id: 72");
+    let response = client.get("/hard/72").dispatch().await;
+    assert_eq!(response.into_string().await.unwrap(), "hard id: 72");
 
-    let mut response = client.get("/hello/fish").dispatch().await;
-    assert_eq!(response.body_string().await.unwrap(), "fish");
+    let response = client.get("/hello/fish").dispatch().await;
+    assert_eq!(response.into_string().await.unwrap(), "fish");
 }
 
 macro_rules! index {
@@ -64,6 +64,6 @@ async fn test_index() {
     let rocket = rocket::ignite().mount("/", routes![index]).manage(100i32);
     let client = Client::new(rocket).await.unwrap();
 
-    let mut response = client.get("/").dispatch().await;
-    assert_eq!(response.body_string().await.unwrap(), "Thing: 100");
+    let response = client.get("/").dispatch().await;
+    assert_eq!(response.into_string().await.unwrap(), "Thing: 100");
 }

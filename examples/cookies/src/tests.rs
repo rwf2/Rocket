@@ -24,13 +24,13 @@ async fn test_submit() {
 async fn test_body(optional_cookie: Option<Cookie<'static>>, expected_body: String) {
     // Attach a cookie if one is given.
     let client = Client::new(rocket()).await.unwrap();
-    let mut response = match optional_cookie {
+    let response = match optional_cookie {
         Some(cookie) => client.get("/").cookie(cookie).dispatch().await,
         None => client.get("/").dispatch().await,
     };
 
     assert_eq!(response.status(), Status::Ok);
-    assert_eq!(response.body_string().await, Some(expected_body));
+    assert_eq!(response.into_string().await, Some(expected_body));
 }
 
 #[rocket::async_test]

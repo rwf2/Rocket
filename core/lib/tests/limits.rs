@@ -31,23 +31,23 @@ mod limits_tests {
     #[rocket::async_test]
     async fn large_enough() {
         let client = Client::new(rocket_with_forms_limit(128)).await.unwrap();
-        let mut response = client.post("/")
+        let response = client.post("/")
             .body("value=Hello+world")
             .header(ContentType::Form)
             .dispatch().await;
 
-        assert_eq!(response.body_string().await, Some("Hello world".into()));
+        assert_eq!(response.into_string().await, Some("Hello world".into()));
     }
 
     #[rocket::async_test]
     async fn just_large_enough() {
         let client = Client::new(rocket_with_forms_limit(17)).await.unwrap();
-        let mut response = client.post("/")
+        let response = client.post("/")
             .body("value=Hello+world")
             .header(ContentType::Form)
             .dispatch().await;
 
-        assert_eq!(response.body_string().await, Some("Hello world".into()));
+        assert_eq!(response.into_string().await, Some("Hello world".into()));
     }
 
     #[rocket::async_test]
@@ -64,11 +64,11 @@ mod limits_tests {
     #[rocket::async_test]
     async fn contracted() {
         let client = Client::new(rocket_with_forms_limit(10)).await.unwrap();
-        let mut response = client.post("/")
+        let response = client.post("/")
             .body("value=Hello+world")
             .header(ContentType::Form)
             .dispatch().await;
 
-        assert_eq!(response.body_string().await, Some("Hell".into()));
+        assert_eq!(response.into_string().await, Some("Hell".into()));
     }
 }

@@ -9,7 +9,7 @@ async fn client() -> Client {
 #[rocket::async_test]
 async fn test_root() {
     let client = client().await;
-    let mut response = client.get("/").dispatch().await;
+    let response = client.get("/").dispatch().await;
 
     assert!(response.body().is_none());
     assert_eq!(response.status(), Status::SeeOther);
@@ -25,6 +25,6 @@ async fn test_root() {
 #[rocket::async_test]
 async fn test_login() {
     let client = client().await;
-    let mut r = client.get("/login").dispatch().await;
-    assert_eq!(r.body_string().await, Some("Hi! Please log in before continuing.".into()));
+    let r = client.get("/login").dispatch().await;
+    assert_eq!(r.into_string().await, Some("Hi! Please log in before continuing.".into()));
 }

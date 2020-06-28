@@ -34,13 +34,13 @@ mod strict_and_lenient_forms_tests {
     #[rocket::async_test]
     async fn test_strict_form() {
         let client = client().await;
-        let mut response = client.post("/strict")
+        let response = client.post("/strict")
             .header(ContentType::Form)
             .body(format!("field={}", FIELD_VALUE))
             .dispatch().await;
 
         assert_eq!(response.status(), Status::Ok);
-        assert_eq!(response.body_string().await, Some(FIELD_VALUE.into()));
+        assert_eq!(response.into_string().await, Some(FIELD_VALUE.into()));
 
         let response = client.post("/strict")
             .header(ContentType::Form)
@@ -53,20 +53,20 @@ mod strict_and_lenient_forms_tests {
     #[rocket::async_test]
     async fn test_lenient_form() {
         let client = client().await;
-        let mut response = client.post("/lenient")
+        let response = client.post("/lenient")
             .header(ContentType::Form)
             .body(format!("field={}", FIELD_VALUE))
             .dispatch().await;
 
         assert_eq!(response.status(), Status::Ok);
-        assert_eq!(response.body_string().await, Some(FIELD_VALUE.into()));
+        assert_eq!(response.into_string().await, Some(FIELD_VALUE.into()));
 
-        let mut response = client.post("/lenient")
+        let response = client.post("/lenient")
             .header(ContentType::Form)
             .body(format!("field={}&extra=whoops", FIELD_VALUE))
             .dispatch().await;
 
         assert_eq!(response.status(), Status::Ok);
-        assert_eq!(response.body_string().await, Some(FIELD_VALUE.into()));
+        assert_eq!(response.into_string().await, Some(FIELD_VALUE.into()));
     }
 }

@@ -44,12 +44,13 @@ mod tests {
                 req.add_header(ct);
             }
 
-            let mut response = req.dispatch().await;
-            let body_str = response.body_string().await;
+            let response = req.dispatch().await;
+            let status = response.status();
+            let body_str = response.into_string().await;
             let body: Option<&'static str> = $body;
             match body {
                 Some(string) => assert_eq!(body_str, Some(string.to_string())),
-                None => assert_eq!(response.status(), Status::NotFound)
+                None => assert_eq!(status, Status::NotFound)
             }
         )
     }

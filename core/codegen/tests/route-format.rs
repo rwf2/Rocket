@@ -41,26 +41,26 @@ async fn test_formats() {
 
     let client = Client::new(rocket).await.unwrap();
 
-    let mut response = client.post("/").header(ContentType::JSON).dispatch().await;
-    assert_eq!(response.body_string().await.unwrap(), "json");
+    let response = client.post("/").header(ContentType::JSON).dispatch().await;
+    assert_eq!(response.into_string().await.unwrap(), "json");
 
-    let mut response = client.post("/").header(ContentType::MsgPack).dispatch().await;
-    assert_eq!(response.body_string().await.unwrap(), "msgpack_long");
+    let response = client.post("/").header(ContentType::MsgPack).dispatch().await;
+    assert_eq!(response.into_string().await.unwrap(), "msgpack_long");
 
-    let mut response = client.post("/").header(ContentType::XML).dispatch().await;
-    assert_eq!(response.body_string().await.unwrap(), "xml");
+    let response = client.post("/").header(ContentType::XML).dispatch().await;
+    assert_eq!(response.into_string().await.unwrap(), "xml");
 
-    let mut response = client.get("/").header(Accept::Plain).dispatch().await;
-    assert_eq!(response.body_string().await.unwrap(), "plain");
+    let response = client.get("/").header(Accept::Plain).dispatch().await;
+    assert_eq!(response.into_string().await.unwrap(), "plain");
 
-    let mut response = client.get("/").header(Accept::Binary).dispatch().await;
-    assert_eq!(response.body_string().await.unwrap(), "binary");
+    let response = client.get("/").header(Accept::Binary).dispatch().await;
+    assert_eq!(response.into_string().await.unwrap(), "binary");
 
-    let mut response = client.get("/").header(ContentType::JSON).dispatch().await;
-    assert_eq!(response.body_string().await.unwrap(), "plain");
+    let response = client.get("/").header(ContentType::JSON).dispatch().await;
+    assert_eq!(response.into_string().await.unwrap(), "plain");
 
-    let mut response = client.get("/").dispatch().await;
-    assert_eq!(response.body_string().await.unwrap(), "plain");
+    let response = client.get("/").dispatch().await;
+    assert_eq!(response.into_string().await.unwrap(), "plain");
 
     let response = client.put("/").header(ContentType::HTML).dispatch().await;
     assert_eq!(response.status(), Status::NotFound);
@@ -92,20 +92,20 @@ async fn test_custom_formats() {
     let bar_baz_ct = ContentType::new("bar", "baz");
     let bar_baz_a = Accept::new(&[MediaType::new("bar", "baz").into()]);
 
-    let mut response = client.get("/").header(foo_a).dispatch().await;
-    assert_eq!(response.body_string().await.unwrap(), "get_foo");
+    let response = client.get("/").header(foo_a).dispatch().await;
+    assert_eq!(response.into_string().await.unwrap(), "get_foo");
 
-    let mut response = client.post("/").header(foo_ct).dispatch().await;
-    assert_eq!(response.body_string().await.unwrap(), "post_foo");
+    let response = client.post("/").header(foo_ct).dispatch().await;
+    assert_eq!(response.into_string().await.unwrap(), "post_foo");
 
-    let mut response = client.get("/").header(bar_baz_a).dispatch().await;
-    assert_eq!(response.body_string().await.unwrap(), "get_bar_baz");
+    let response = client.get("/").header(bar_baz_a).dispatch().await;
+    assert_eq!(response.into_string().await.unwrap(), "get_bar_baz");
 
-    let mut response = client.put("/").header(bar_baz_ct).dispatch().await;
-    assert_eq!(response.body_string().await.unwrap(), "put_bar_baz");
+    let response = client.put("/").header(bar_baz_ct).dispatch().await;
+    assert_eq!(response.into_string().await.unwrap(), "put_bar_baz");
 
-    let mut response = client.get("/").dispatch().await;
-    assert_eq!(response.body_string().await.unwrap(), "get_foo");
+    let response = client.get("/").dispatch().await;
+    assert_eq!(response.into_string().await.unwrap(), "get_foo");
 
     let response = client.put("/").header(ContentType::HTML).dispatch().await;
     assert_eq!(response.status(), Status::NotFound);

@@ -6,10 +6,10 @@ use rocket::local::asynchronous::Client;
 #[rocket::async_test]
 async fn test_root() {
     let client = Client::new(super::rocket()).await.unwrap();
-    let mut res = client.get("/").dispatch().await;
+    let res = client.get("/").dispatch().await;
 
     // Check that we have exactly 25,000 'a'.
-    let res_str = res.body_string().await.unwrap();
+    let res_str = res.into_string().await.unwrap();
     assert_eq!(res_str.len(), 25000);
     for byte in res_str.as_bytes() {
         assert_eq!(*byte, b'a');
@@ -25,8 +25,8 @@ async fn test_file() {
 
     // Get the big file contents, hopefully.
     let client = Client::new(super::rocket()).await.unwrap();
-    let mut res = client.get("/big_file").dispatch().await;
-    assert_eq!(res.body_string().await, Some(CONTENTS.into()));
+    let res = client.get("/big_file").dispatch().await;
+    assert_eq!(res.into_string().await, Some(CONTENTS.into()));
 
     // Delete the 'big_file'.
     fs::remove_file(super::FILENAME).expect("remove big_file");

@@ -39,9 +39,9 @@ mod test {
             req.add_header(header);
         }
 
-        let mut response = req.dispatch().await;
+        let response = req.dispatch().await;
         let expect = format!("Your request contained {} headers!", headers.len());
-        assert_eq!(response.body_string().await, Some(expect));
+        assert_eq!(response.into_string().await, Some(expect));
     }
 
     #[rocket::async_test]

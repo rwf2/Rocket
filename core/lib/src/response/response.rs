@@ -68,6 +68,13 @@ impl<A, B> Body<A, B>
     where A: AsyncRead + AsyncSeek + Send + Unpin,
           B: AsyncRead + Send + Unpin
 {
+    pub fn known_size(&self) -> Option<usize> {
+        match self {
+            Body::Sized(_, Some(known)) => Some(*known),
+            _ => None
+        }
+    }
+
     /// Attempts to compute the size of `self` if it is `Body::Sized`. If it is
     /// not, simply returned `None`. Also returned `None` if determining the
     /// body's size failed.
@@ -904,8 +911,7 @@ impl<'r> Response<'r> {
         self.headers.remove(name);
     }
 
-    /// Returns a mutable borrow of the body of `self`, if there is one. The
-    /// body is borrowed mutably to allow for reading.
+    /// Returns an immutable borrow of the body of `self`, if there is one.
     ///
     /// # Example
     ///
@@ -919,11 +925,34 @@ impl<'r> Response<'r> {
     ///
     /// let string = "Hello, world!";
     /// response.set_sized_body(string.len(), Cursor::new(string));
-    /// assert_eq!(response.body_string().await, Some("Hello, world!".to_string()));
+    /// assert!(response.body().is_some());
     /// # })
     /// ```
     #[inline(always)]
-    pub fn body(&mut self) -> Option<&mut ResponseBody<'r>> {
+    pub fn body(&self) -> Option<&ResponseBody<'r>> {
+        self.body.as_ref()
+    }
+
+    /// Returns a mutable borrow of the body of `self`, if there is one. A
+    /// mutable borrow allows for reading the body.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use std::io::Cursor;
+    /// use rocket::Response;
+    ///
+    /// # rocket::async_test(async {
+    /// let mut response = Response::new();
+    /// assert!(response.body().is_none());
+    ///
+    /// let string = "Hello, world!";
+    /// response.set_sized_body(string.len(), Cursor::new(string));
+    /// assert!(response.body_mut().is_some());
+    /// # })
+    /// ```
+    #[inline(always)]
+    pub fn body_mut(&mut self) -> Option<&mut ResponseBody<'r>> {
         self.body.as_mut()
     }
 
@@ -1043,7 +1072,7 @@ impl<'r> Response<'r> {
     ///
     /// let mut response = Response::new();
     /// response.set_sized_body(string.len(), Cursor::new(string));
-    /// assert_eq!(response.body_string().await, Some("Hello, world!".to_string()));
+    /// assert_eq!(response.body_string().await.unwrap(), "Hello, world!");
     /// # })
     /// ```
     pub fn set_sized_body<B, S>(&mut self, size: S, body: B)
@@ -1067,7 +1096,7 @@ impl<'r> Response<'r> {
     /// # rocket::async_test(async {
     /// let mut response = Response::new();
     /// response.set_streamed_body(repeat(97).take(5));
-    /// assert_eq!(response.body_string().await, Some("aaaaa".to_string()));
+    /// assert_eq!(response.body_string().await.unwrap(), "aaaaa");
     /// # })
     /// ```
     #[inline(always)]
@@ -1087,7 +1116,7 @@ impl<'r> Response<'r> {
     /// # rocket::async_test(async {
     /// let mut response = Response::new();
     /// response.set_chunked_body(repeat(97).take(5), 10);
-    /// assert_eq!(response.body_string().await, Some("aaaaa".to_string()));
+    /// assert_eq!(response.body_string().await.unwrap(), "aaaaa");
     /// # })
     /// ```
     #[inline(always)]
@@ -1114,7 +1143,7 @@ impl<'r> Response<'r> {
     /// let body = Body::Sized(Cursor::new(string), Some(string.len()));
     /// response.set_raw_body::<Cursor<&'static str>, Cursor<&'static str>>(body);
     ///
-    /// assert_eq!(response.body_string().await, Some("Hello!".to_string()));
+    /// assert_eq!(response.body_string().await.unwrap(), "Hello!");
     /// # })
     /// ```
     #[inline(always)]

@@ -50,9 +50,9 @@ async fn test_derive_reexports() {
     let rocket = rocket::ignite().mount("/", routes![index, number]);
     let client = Client::new(rocket).await.unwrap();
 
-    let mut response = client.get("/").dispatch().await;
-    assert_eq!(response.body_string().await.unwrap(), "hello");
+    let response = client.get("/").dispatch().await;
+    assert_eq!(response.into_string().await.unwrap(), "hello");
 
-    let mut response = client.get("/?thing=b").dispatch().await;
-    assert_eq!(response.body_string().await.unwrap(), "b");
+    let response = client.get("/?thing=b").dispatch().await;
+    assert_eq!(response.into_string().await.unwrap(), "b");
 }

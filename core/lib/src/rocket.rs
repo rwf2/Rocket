@@ -262,7 +262,7 @@ impl Rocket {
             })
         };
 
-        match response.body() {
+        match response.body_mut() {
             None => {
                 hyp_res = hyp_res.header(header::CONTENT_LENGTH, "0");
                 send_response(hyp_res, hyper::Body::empty())?;

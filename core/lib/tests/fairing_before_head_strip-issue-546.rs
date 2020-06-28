@@ -43,7 +43,7 @@ mod fairing_before_head_strip {
             }));
 
         let client = Client::new(rocket).await.unwrap();
-        let mut response = client.head("/").dispatch().await;
+        let response = client.head("/").dispatch().await;
         assert_eq!(response.status(), Status::Ok);
         assert!(response.body().is_none());
     }
@@ -74,7 +74,7 @@ mod fairing_before_head_strip {
             }));
 
         let client = Client::new(rocket).await.unwrap();
-        let mut response = client.head("/").dispatch().await;
+        let response = client.head("/").dispatch().await;
         assert_eq!(response.status(), Status::Ok);
         assert!(response.body().is_none());
     }

@@ -7,6 +7,7 @@ use std::str;
 use yansi::Paint;
 use state::{Container, Storage};
 use futures::future::BoxFuture;
+use atomic::Atomic;
 
 use crate::request::{FromParam, FromSegments, FromRequest, Outcome};
 use crate::request::{FromFormValue, FormItems, FormItem};
@@ -27,16 +28,14 @@ type Indices = (usize, usize);
 /// should likely only be used when writing [`FromRequest`] implementations. It
 /// contains all of the information for a given web request except for the body
 /// data. This includes the HTTP method, URI, cookies, headers, and more.
-//#[derive(Clone)]
 pub struct Request<'r> {
-    method: RwLock<Method>,
+    method: Atomic<Method>,
     uri: Origin<'r>,
     headers: HeaderMap<'r>,
     remote: Option<SocketAddr>,
     pub(crate) state: RequestState<'r>,
 }
 
-//#[derive(Clone)]
 pub(crate) struct RequestState<'r> {
     pub config: &'r Config,
     pub managed: &'r Container,
@@ -47,6 +46,42 @@ pub(crate) struct RequestState<'r> {
     pub accept: Storage<Option<Accept>>,
     pub content_type: Storage<Option<ContentType>>,
     pub cache: Arc<Container>,
+}
+
+impl<'r> Request<'r> {
+    pub(crate) fn clone(&self) -> Self {
+        Request {
+            method: Atomic::new(self.method()),
+            uri: self.uri.clone(),
+            headers: self.headers.clone(),
+            remote: self.remote.clone(),
+            state: self.state.clone(),
+        }
+    }
+}
+
+impl<'r> RequestState<'r> {
+    fn clone(&self) -> RequestState<'r> {
+        let route = self.route.try_read()
+            .map(|r| r.clone())
+            .unwrap_or(None);
+
+        let cookies = self.cookies.try_lock()
+            .map(|j| j.clone())
+            .unwrap_or_else(|_| Some(CookieJar::new()));
+
+        RequestState {
+            config: self.config,
+            managed: self.managed,
+            path_segments: self.path_segments.clone(),
+            query_items: self.query_items.clone(),
+            route: RwLock::new(route),
+            cookies: Mutex::new(cookies),
+            accept: self.accept.clone(),
+            content_type: self.content_type.clone(),
+            cache: self.cache.clone(),
+        }
+    }
 }
 
 #[derive(Clone)]
@@ -65,7 +100,7 @@ impl<'r> Request<'r> {
         uri: Origin<'s>
     ) -> Request<'r> {
         let mut request = Request {
-            method: RwLock::new(method),
+            method: Atomic::new(method),
             uri: uri,
             headers: HeaderMap::new(),
             remote: None,
@@ -101,7 +136,7 @@ impl<'r> Request<'r> {
     /// ```
     #[inline(always)]
     pub fn method(&self) -> Method {
-        *self.method.read().unwrap()
+        self.method.load(atomic::Ordering::Acquire)
     }
 
     /// Set the method of `self`.
@@ -827,7 +862,7 @@ impl<'r> Request<'r> {
     /// during routing to override methods for re-routing.
     #[inline(always)]
     pub(crate) fn _set_method(&self, method: Method) {
-        *self.method.write().unwrap() = method;
+        self.method.store(method, atomic::Ordering::Release)
     }
 
     /// Convert from Hyper types into a Rocket Request.

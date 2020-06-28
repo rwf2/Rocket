@@ -49,15 +49,15 @@ mod nested_fairing_attaches_tests {
     #[rocket::async_test]
     async fn test_counts() {
         let client = Client::new(rocket()).await.unwrap();
-        let mut response = client.get("/").dispatch().await;
-        assert_eq!(response.body_string().await, Some("1, 1".into()));
+        let response = client.get("/").dispatch().await;
+        assert_eq!(response.into_string().await, Some("1, 1".into()));
 
-        let mut response = client.get("/").dispatch().await;
-        assert_eq!(response.body_string().await, Some("1, 2".into()));
+        let response = client.get("/").dispatch().await;
+        assert_eq!(response.into_string().await, Some("1, 2".into()));
 
         client.get("/").dispatch().await;
         client.get("/").dispatch().await;
-        let mut response = client.get("/").dispatch().await;
-        assert_eq!(response.body_string().await, Some("1, 5".into()));
+        let response = client.get("/").dispatch().await;
+        assert_eq!(response.into_string().await, Some("1, 5".into()));
     }
 }

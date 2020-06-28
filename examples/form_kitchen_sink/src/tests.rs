@@ -16,12 +16,12 @@ impl fmt::Display for FormOption {
 
 macro_rules! assert_form_eq {
     ($client:expr, $form_str:expr, $expected:expr) => {{
-        let mut res = $client.post("/")
+        let res = $client.post("/")
             .header(ContentType::Form)
             .body($form_str)
             .dispatch();
 
-        assert_eq!(res.body_string(), Some($expected));
+        assert_eq!(res.into_string(), Some($expected));
     }};
 }
 

@@ -91,7 +91,7 @@
 //!
 //!         // Dispatch a request to 'GET /' and validate the response.
 //!         let mut response = client.get("/").dispatch();
-//!         assert_eq!(response.body_string(), Some("Hello, world!".into()));
+//!         assert_eq!(response.into_string(), Some("Hello, world!".into()));
 //!     }
 //! }
 //! ```
@@ -99,8 +99,10 @@
 //! [`Client`]: crate::local::blocking::Client
 //! [`LocalRequest`]: crate::local::blocking::LocalRequest
 
-mod request;
 mod client;
+mod request;
+mod response;
 
-pub use self::request::{LocalResponse, LocalRequest};
-pub use self::client::Client;
+pub use self::client::*;
+pub use self::request::*;
+pub use self::response::*;

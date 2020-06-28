@@ -8,14 +8,14 @@ fn test_login<T>(user: &str, pass: &str, age: &str, status: Status, body: T)
     rocket::async_test(async move {
         let client = Client::new(rocket()).await.unwrap();
         let query = format!("username={}&password={}&age={}", user, pass, age);
-        let mut response = client.post("/login")
+        let response = client.post("/login")
             .header(ContentType::Form)
             .body(&query)
             .dispatch().await;
 
         assert_eq!(response.status(), status);
         if let Some(expected_str) = body.into() {
-            let body_str = response.body_string().await;
+            let body_str = response.into_string().await;
             assert!(body_str.map_or(false, |s| s.contains(expected_str)));
         }
     })

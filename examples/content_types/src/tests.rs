@@ -6,9 +6,9 @@ async fn test<H>(method: Method, uri: &str, header: H, status: Status, body: Str
     where H: Into<Header<'static>>
 {
     let client = Client::new(super::rocket()).await.unwrap();
-    let mut response = client.req(method, uri).header(header).dispatch().await;
+    let response = client.req(method, uri).header(header).dispatch().await;
     assert_eq!(response.status(), status);
-    assert_eq!(response.body_string().await, Some(body));
+    assert_eq!(response.into_string().await, Some(body));
 }
 
 #[rocket::async_test]

@@ -10,8 +10,8 @@ const UPLOAD_CONTENTS: &str = "Hey! I'm going to be uploaded. :D Yay!";
 #[rocket::async_test]
 async fn test_index() {
     let client = Client::new(super::rocket()).await.unwrap();
-    let mut res = client.get("/").dispatch().await;
-    assert_eq!(res.body_string().await, Some(super::index().to_string()));
+    let res = client.get("/").dispatch().await;
+    assert_eq!(res.into_string().await, Some(super::index().to_string()));
 }
 
 #[rocket::async_test]
@@ -22,13 +22,13 @@ async fn test_raw_upload() {
 
     // Do the upload. Make sure we get the expected results.
     let client = Client::new(super::rocket()).await.unwrap();
-    let mut res = client.post("/upload")
+    let res = client.post("/upload")
         .header(ContentType::Plain)
         .body(UPLOAD_CONTENTS)
         .dispatch().await;
 
     assert_eq!(res.status(), Status::Ok);
-    assert_eq!(res.body_string().await, Some(UPLOAD_CONTENTS.len().to_string()));
+    assert_eq!(res.into_string().await, Some(UPLOAD_CONTENTS.len().to_string()));
 
     // Ensure we find the body in the /tmp/upload.txt file.
     let mut file_contents = String::new();
