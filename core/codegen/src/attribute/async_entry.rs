@@ -73,6 +73,7 @@ impl EntryAttr for Launch {
             ___rocket
         });
 
+        // FIXME: Don't duplicate the `#block` here!
         let (vis, mut sig) = (&f.vis, f.sig.clone());
         sig.ident = syn::Ident::new("main", sig.ident.span());
         sig.output = syn::ReturnType::Default;

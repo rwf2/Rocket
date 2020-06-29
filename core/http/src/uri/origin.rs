@@ -200,9 +200,9 @@ impl<'a> Origin<'a> {
         // For this to be correct and safe, we need to ensure that:
         //
         //  1. No `&mut` references to `string` are created after this line.
-        //  2. `string` isn't dropped by `copy_of_str` is live.
+        //  2. `string` isn't dropped while `copy_of_str` is live.
         //
-        // These two facts can be easily verified. An `&mut` can be created
+        // These two facts can be easily verified. An `&mut` can't be created
         // because `string` isn't `mut`. Then, `string` is clearly not dropped
         // since it's passed in to `source`.
         let copy_of_str = unsafe { &*(string.as_str() as *const str) };

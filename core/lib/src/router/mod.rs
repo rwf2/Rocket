@@ -17,7 +17,7 @@ type Selector = Method;
 pub(crate) fn dummy_handler<'r>(
     r: &'r Request<'_>, _: crate::Data
 ) -> BoxFuture<'r, crate::handler::Outcome<'r>> {
-    crate::Outcome::from(r, ())
+    crate::Outcome::from(r, ()).pin()
 }
 
 #[derive(Default)]
@@ -233,7 +233,7 @@ mod test {
 
     fn route<'a>(router: &'a Router, method: Method, uri: &str) -> Option<&'a Route> {
         let rocket = Rocket::custom(Config::development());
-        let request = Request::new(rocket._manifest(), method, Origin::parse(uri).unwrap());
+        let request = Request::new(&rocket, method, Origin::parse(uri).unwrap());
         let matches = router.route(&request);
         if matches.len() > 0 {
             Some(matches[0])
@@ -244,7 +244,7 @@ mod test {
 
     fn matches<'a>(router: &'a Router, method: Method, uri: &str) -> Vec<&'a Route> {
         let rocket = Rocket::custom(Config::development());
-        let request = Request::new(rocket._manifest(), method, Origin::parse(uri).unwrap());
+        let request = Request::new(&rocket, method, Origin::parse(uri).unwrap());
         router.route(&request)
     }
 

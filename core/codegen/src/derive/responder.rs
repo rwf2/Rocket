@@ -17,7 +17,11 @@ struct FieldAttr {
 }
 
 pub fn derive_responder(input: TokenStream) -> TokenStream {
-    DeriveGenerator::build_for(input, quote!(impl<'__r> ::rocket::response::Responder<'__r>))
+    // NOTE: Due to a bug in devise, we can't do the more correct:
+    // quote!(impl<'__r, '__o: '__r> ::rocket::response::Responder<'__r, '__o>))
+    // replace_generic(1, 0)
+    // A bugfix (on devise master) fixes this so the above works. Hack.
+    DeriveGenerator::build_for(input, quote!(impl<'__r> ::rocket::response::Responder<'__r, '__r>))
         .generic_support(GenericSupport::Lifetime)
         .data_support(DataSupport::Struct | DataSupport::Enum)
         .replace_generic(0, 0)
@@ -30,17 +34,15 @@ pub fn derive_responder(input: TokenStream) -> TokenStream {
             false => Ok(())
         })
         .function(|_, inner| quote! {
-            fn respond_to<'__i, '__x>(
+            fn respond_to(
                 self,
-                __req: &'__r ::rocket::request::Request<'__i>
-            ) -> ::rocket::futures::future::BoxFuture<'__x, ::rocket::response::Result<'__r>>
-                where '__i: '__x, '__r: '__x, Self: '__x
-            {
+                __req: &'__r ::rocket::request::Request
+            ) -> ::rocket::response::Result<'__r> {
                 #inner
             }
         })
         .try_map_fields(|_, fields| {
-            define_vars_and_mods!(_Ok, _Box);
+            define_vars_and_mods!(_Ok);
             fn set_header_tokens<T: ToTokens + Spanned>(item: T) -> TokenStream2 {
                 quote_spanned!(item.span().into() => __res.set_header(#item);)
             }
@@ -53,7 +55,7 @@ pub fn derive_responder(input: TokenStream) -> TokenStream {
                 quote_spanned! { f.span().into() =>
                    let mut __res = <#ty as ::rocket::response::Responder>::respond_to(
                        #accessor, __req
-                   ).await?;
+                   )?;
                 }
             }).expect("have at least one field");
 
@@ -73,13 +75,11 @@ pub fn derive_responder(input: TokenStream) -> TokenStream {
             });
 
             Ok(quote! {
-                #_Box::pin(async move {
-                    #responder
-                    #(#headers)*
-                    #content_type
-                    #status
-                    #_Ok(__res)
-                })
+                #responder
+                #(#headers)*
+                #content_type
+                #status
+                #_Ok(__res)
             })
         })
         .to_tokens()

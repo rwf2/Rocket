@@ -110,7 +110,7 @@ impl Route {
     /// # use rocket::{Request, Data};
     /// # use rocket::handler::{Outcome, HandlerFuture};
     /// # fn handler<'r>(request: &'r Request, _data: Data) -> HandlerFuture<'r> {
-    /// #     Outcome::from(request, "Hello, world!")
+    /// #     Outcome::from(request, "Hello, world!").pin()
     /// # }
     ///
     /// // this is rank -6 (static path, ~static query)
@@ -160,7 +160,7 @@ impl Route {
     /// # use rocket::{Request, Data};
     /// # use rocket::handler::{Outcome, HandlerFuture};
     /// # fn handler<'r>(request: &'r Request, _data: Data) -> HandlerFuture<'r> {
-    /// #     Outcome::from(request, "Hello, world!")
+    /// #     Outcome::from(request, "Hello, world!").pin()
     /// # }
     ///
     /// // this is a rank 1 route matching requests to `GET /`
@@ -211,7 +211,7 @@ impl Route {
     /// # use rocket::handler::{Outcome, HandlerFuture};
     /// #
     /// # fn handler<'r>(request: &'r Request, _data: Data) -> HandlerFuture<'r> {
-    /// #     Outcome::from(request, "Hello, world!")
+    /// #     Outcome::from(request, "Hello, world!").pin()
     /// # }
     ///
     /// let mut index = Route::new(Method::Get, "/", handler);
@@ -245,7 +245,7 @@ impl Route {
     /// # use rocket::handler::{Outcome, HandlerFuture};
     /// #
     /// # fn handler<'r>(request: &'r Request, _data: Data) -> HandlerFuture<'r> {
-    /// #     Outcome::from(request, "Hello, world!")
+    /// #     Outcome::from(request, "Hello, world!").pin()
     /// # }
     ///
     /// let mut index = Route::new(Method::Get, "/", handler);

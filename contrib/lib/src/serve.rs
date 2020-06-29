@@ -18,7 +18,7 @@ use std::path::{PathBuf, Path};
 
 use rocket::{Request, Data, Route};
 use rocket::http::{Method, uri::Segments};
-use rocket::handler::{Handler, HandlerFuture, Outcome};
+use rocket::handler::{Handler, Outcome};
 use rocket::response::NamedFile;
 
 /// A bitset representing configurable options for the [`StaticFiles`] handler.
@@ -259,23 +259,26 @@ impl Into<Vec<Route>> for StaticFiles {
     }
 }
 
+async fn handle_dir<'r, P>(opt: Options, r: &'r Request<'_>, d: Data, p: P) -> Outcome<'r>
+    where P: AsRef<Path>
+{
+    if !opt.contains(Options::Index) {
+        return Outcome::forward(d);
+    }
+
+    let file = NamedFile::open(p.as_ref().join("index.html")).await.ok();
+    Outcome::from_or_forward(r, d, file)
+}
+
+#[rocket::async_trait]
 impl Handler for StaticFiles {
-    fn handle<'r>(&self, req: &'r Request<'_>, data: Data) -> HandlerFuture<'r> {
-        fn handle_dir<'r>(opt: Options, r: &'r Request<'_>, d: Data, path: &Path) -> HandlerFuture<'r> {
-            if !opt.contains(Options::Index) {
-                return Box::pin(async move { Outcome::forward(d) });
-            }
-
-            let file = NamedFile::open(path.join("index.html")).ok();
-            Outcome::from_or_forward(r, d, file)
-        }
-
+    async fn handle<'r, 's: 'r>(&'s self, req: &'r Request<'_>, data: Data) -> Outcome<'r> {
         // If this is not the route with segments, handle it only if the user
         // requested a handling of index files.
         let current_route = req.route().expect("route while handling");
         let is_segments_route = current_route.uri.path().ends_with(">");
         if !is_segments_route {
-            return handle_dir(self.options, req, data, &self.root);
+            return handle_dir(self.options, req, data, &self.root).await;
         }
 
         // Otherwise, we're handling segments. Get the segments as a `PathBuf`,
@@ -286,10 +289,10 @@ impl Handler for StaticFiles {
             .and_then(|segments| segments.into_path_buf(allow_dotfiles).ok())
             .map(|path| self.root.join(path));
 
-        match &path {
-            Some(path) if path.is_dir() => handle_dir(self.options, req, data, path),
-            Some(path) => Outcome::from_or_forward(req, data, NamedFile::open(path).ok()),
-            None => Box::pin(async move { Outcome::forward(data) }),
+        match path {
+            Some(p) if p.is_dir() => handle_dir(self.options, req, data, p).await,
+            Some(p) => Outcome::from_or_forward(req, data, NamedFile::open(p).await.ok()),
+            None => Outcome::forward(data),
         }
     }
 }

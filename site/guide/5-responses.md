@@ -160,14 +160,12 @@ to `text/plain`. To get a taste for what such a `Responder` implementation looks
 like, here's the implementation for `String`:
 
 ```rust
-impl Responder<'_> for String {
-    fn respond_to(self, _: &Request<'_>) -> rocket::response::ResultFuture<'static> {
-        Box::pin(async move {
-            Response::build()
-                .header(ContentType::Plain)
-                .sized_body(Cursor::new(self))
-                .ok()
-        })
+impl<'r> Responder<'r, 'static> for String {
+    fn respond_to(self, _: &'r Request<'_>) -> response::Result<'static> {
+        Response::build()
+            .header(ContentType::Plain)
+            .sized_body(self.len(), Cursor::new(self))
+            .ok()
     }
 }
 ```

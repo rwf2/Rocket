@@ -139,7 +139,7 @@ mod ext;
 pub use crate::router::Route;
 pub use crate::request::{Request, State};
 pub use crate::catcher::Catcher;
-pub use crate::rocket::{Manifest, Rocket};
+pub use crate::rocket::{Cargo, Rocket};
 
 /// Alias to [`Rocket::ignite()`] Creates a new instance of `Rocket`.
 pub fn ignite() -> Rocket {

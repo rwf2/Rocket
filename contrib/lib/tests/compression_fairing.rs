@@ -48,8 +48,7 @@ mod compression_fairing_tests {
         encoder.read_to_end(&mut encoded).await.unwrap();
         Response::build()
             .raw_header("Content-Encoding", "gzip")
-            .sized_body(std::io::Cursor::new(encoded))
-            .await
+            .sized_body(encoded.len(), Cursor::new(encoded))
             .finalize()
     }
 
@@ -57,8 +56,7 @@ mod compression_fairing_tests {
     pub async fn identity() -> Response<'static> {
         Response::build()
             .raw_header("Content-Encoding", "identity")
-            .sized_body(std::io::Cursor::new(String::from(HELLO)))
-            .await
+            .sized_body(HELLO.len(), Cursor::new(String::from(HELLO)))
             .finalize()
     }
 

@@ -28,7 +28,7 @@ async fn responder_foo() {
     let req = local_req.inner();
 
     let mut response = Foo::First("hello".into())
-        .respond_to(req).await
+        .respond_to(req)
         .expect("response okay");
 
     assert_eq!(response.status(), Status::Ok);
@@ -36,7 +36,7 @@ async fn responder_foo() {
     assert_eq!(response.body_string().await, Some("hello".into()));
 
     let mut response = Foo::Second("just a test".into())
-        .respond_to(req).await
+        .respond_to(req)
         .expect("response okay");
 
     assert_eq!(response.status(), Status::InternalServerError);
@@ -44,7 +44,7 @@ async fn responder_foo() {
     assert_eq!(response.body_string().await, Some("just a test".into()));
 
     let mut response = Foo::Third { responder: "well, hi", ct: ContentType::JSON }
-        .respond_to(req).await
+        .respond_to(req)
         .expect("response okay");
 
     assert_eq!(response.status(), Status::NotFound);
@@ -52,7 +52,7 @@ async fn responder_foo() {
     assert_eq!(response.body_string().await, Some("well, hi".into()));
 
     let mut response = Foo::Fourth { string: "goodbye", ct: ContentType::JSON }
-        .respond_to(req).await
+        .respond_to(req)
         .expect("response okay");
 
     assert_eq!(response.status(), Status::raw(105));
@@ -81,7 +81,7 @@ async fn responder_bar() {
         other: ContentType::HTML,
         third: Cookie::new("cookie", "here!"),
         _yet_another: "uh..hi?".into()
-    }.respond_to(req).await.expect("response okay");
+    }.respond_to(req).expect("response okay");
 
     assert_eq!(response.status(), Status::InternalServerError);
     assert_eq!(response.content_type(), Some(ContentType::Plain));
@@ -102,7 +102,7 @@ async fn responder_baz() {
     let req = local_req.inner();
 
     let mut response = Baz { responder: "just a custom" }
-        .respond_to(req).await
+        .respond_to(req)
         .expect("response okay");
 
     assert_eq!(response.status(), Status::Ok);

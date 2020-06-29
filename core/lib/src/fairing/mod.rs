@@ -47,7 +47,7 @@
 //! of other `Fairings` are not jeopardized. For instance, unless it is made
 //! abundantly clear, a fairing should not rewrite every request.
 
-use crate::{Manifest, Rocket, Request, Response, Data};
+use crate::{Cargo, Rocket, Request, Response, Data};
 
 mod fairings;
 mod ad_hoc;
@@ -196,7 +196,7 @@ pub use self::info_kind::{Info, Kind};
 /// decorated with an attribute of `#[rocket::async_trait]`:
 ///
 /// ```rust
-/// use rocket::{Manifest, Rocket, Request, Data, Response};
+/// use rocket::{Cargo, Rocket, Request, Data, Response};
 /// use rocket::fairing::{Fairing, Info, Kind};
 ///
 /// # struct MyType;
@@ -212,7 +212,7 @@ pub use self::info_kind::{Info, Kind};
 ///         # unimplemented!()
 ///     }
 ///
-///     fn on_launch(&self, manifest: &Manifest) {
+///     fn on_launch(&self, cargo: &Cargo) {
 ///         /* ... */
 ///         # unimplemented!()
 ///     }
@@ -287,7 +287,7 @@ pub use self::info_kind::{Info, Kind};
 ///             let body = format!("Get: {}\nPost: {}", get_count, post_count);
 ///             res.set_status(Status::Ok);
 ///             res.set_header(ContentType::Plain);
-///             res.set_sized_body(Cursor::new(body));
+///             res.set_sized_body(body.len(), Cursor::new(body));
 ///         }
 ///     }
 /// }
@@ -421,14 +421,14 @@ pub trait Fairing: Send + Sync + 'static {
     ///
     /// This method is called just prior to launching the application if
     /// `Kind::Launch` is in the `kind` field of the `Info` structure for this
-    /// fairing. The `Manifest` parameter corresponds to the application that
+    /// fairing. The `Cargo` parameter corresponds to the application that
     /// will be launched.
     ///
     /// ## Default Implementation
     ///
     /// The default implementation of this method does nothing.
     #[allow(unused_variables)]
-    fn on_launch(&self, manifest: &Manifest) {}
+    fn on_launch(&self, cargo: &Cargo) {}
 
     /// The request callback.
     ///
@@ -470,8 +470,8 @@ impl<T: Fairing> Fairing for std::sync::Arc<T> {
     }
 
     #[inline]
-    fn on_launch(&self, manifest: &Manifest) {
-        (self as &T).on_launch(manifest)
+    fn on_launch(&self, cargo: &Cargo) {
+        (self as &T).on_launch(cargo)
     }
 
     #[inline]

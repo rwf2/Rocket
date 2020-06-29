@@ -39,11 +39,11 @@ async fn test_index() {
 
     // Render the template with an empty context.
     let mut context: HashMap<&str, &str> = HashMap::new();
-    let template = Template::show(client.manifest(), "index", &context).unwrap();
+    let template = Template::show(client.cargo(), "index", &context).unwrap();
     test_body(None, template).await;
 
     // Render the template with a context that contains the message.
     context.insert("message", "Hello from Rocket!");
-    let template = Template::show(client.manifest(), "index", &context).unwrap();
+    let template = Template::show(client.cargo(), "index", &context).unwrap();
     test_body(Some(Cookie::new("message", "Hello from Rocket!")), template).await;
 }

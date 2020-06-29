@@ -287,9 +287,9 @@ impl RocketConfig {
         let mut current = cwd.as_path();
 
         loop {
-            let manifest = current.join(CONFIG_FILENAME);
-            if fs::metadata(&manifest).is_ok() {
-                return Ok(manifest)
+            let config_file = current.join(CONFIG_FILENAME);
+            if fs::metadata(&config_file).is_ok() {
+                return Ok(config_file)
             }
 
             match current.parent() {

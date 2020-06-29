@@ -369,19 +369,14 @@ fn generate_respond_expr(route: &Route) -> TokenStream2 {
     let parameter_names = route.inputs.iter()
         .map(|(_, rocket_ident, _)| rocket_ident);
 
-    let responder_stmt = if route.function.sig.asyncness.is_some() {
-        quote_spanned! { ret_span =>
-            let ___responder = #user_handler_fn_name(#(#parameter_names),*).await;
-        }
-    } else {
-        quote_spanned! { ret_span =>
-            let ___responder = #user_handler_fn_name(#(#parameter_names),*);
-        }
+    let _await = route.function.sig.asyncness.map(|a| quote_spanned!(a.span().into() => .await));
+    let responder_stmt = quote_spanned! { ret_span =>
+        let ___responder = #user_handler_fn_name(#(#parameter_names),*) #_await;
     };
 
     quote_spanned! { ret_span =>
         #responder_stmt
-        #handler::Outcome::from(#req, ___responder).await
+        #handler::Outcome::from(#req, ___responder)
     }
 }
 

@@ -96,7 +96,7 @@ pub struct Flash<R> {
 /// [`msg()`]: Flash::msg()
 pub type FlashMessage<'a, 'r> = crate::response::Flash<&'a Request<'r>>;
 
-impl<'r, R: Responder<'r>> Flash<R> {
+impl<R> Flash<R> {
     /// Constructs a new `Flash` message with the given `name`, `msg`, and
     /// underlying `responder`.
     ///
@@ -187,12 +187,11 @@ impl<'r, R: Responder<'r>> Flash<R> {
 /// response. In other words, simply sets a cookie and delegates the rest of the
 /// response handling to the wrapped responder. As a result, the `Outcome` of
 /// the response is the `Outcome` of the wrapped `Responder`.
-#[crate::async_trait]
-impl<'r, R: Responder<'r> + Send + 'r> Responder<'r> for Flash<R> {
-    async fn respond_to(self, req: &'r Request<'_>) -> response::Result<'r> {
+impl<'r, 'o: 'r, R: Responder<'r, 'o>> Responder<'r, 'o> for Flash<R> {
+    fn respond_to(self, req: &'r Request<'_>) -> response::Result<'o> {
         trace_!("Flash: setting message: {}:{}", self.name, self.message);
         req.cookies().add(self.cookie());
-        self.inner.respond_to(req).await
+        self.inner.respond_to(req)
     }
 }
 

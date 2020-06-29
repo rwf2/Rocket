@@ -11,7 +11,7 @@ use futures::future::BoxFuture;
 use crate::request::{FromParam, FromSegments, FromRequest, Outcome};
 use crate::request::{FromFormValue, FormItems, FormItem};
 
-use crate::rocket::{Rocket, Manifest};
+use crate::rocket::Rocket;
 use crate::router::Route;
 use crate::config::{Config, Limits};
 use crate::http::{hyper, uri::{Origin, Segments}};
@@ -60,7 +60,7 @@ impl<'r> Request<'r> {
     /// Create a new `Request` with the given `method` and `uri`.
     #[inline(always)]
     pub(crate) fn new<'s: 'r>(
-        manifest: &'r Manifest,
+        rocket: &'r Rocket,
         method: Method,
         uri: Origin<'s>
     ) -> Request<'r> {
@@ -72,8 +72,8 @@ impl<'r> Request<'r> {
             state: RequestState {
                 path_segments: SmallVec::new(),
                 query_items: None,
-                config: &manifest.config,
-                managed: &manifest.state,
+                config: &rocket.config,
+                managed: &rocket.managed_state,
                 route: RwLock::new(None),
                 cookies: Mutex::new(Some(CookieJar::new())),
                 accept: Storage::new(),
@@ -294,7 +294,11 @@ impl<'r> Request<'r> {
         match guard.take() {
             Some(jar) => {
                 let mutex = &self.state.cookies;
-                Cookies::new(jar, self.state.config.secret_key(), move |jar| *mutex.lock().expect("cookies lock") = Some(jar))
+                let on_drop = move |jar| {
+                    *mutex.lock().expect("cookies lock") = Some(jar);
+                };
+
+                Cookies::new(jar, self.state.config.secret_key(), on_drop)
             }
             None => {
                 error_!("Multiple `Cookies` instances are active at once.");
@@ -537,6 +541,13 @@ impl<'r> Request<'r> {
         T::from_request(self)
     }
 
+    #[inline(always)]
+    pub fn managed_state<T>(&self) -> Option<&'r T>
+        where T: Send + Sync + 'static
+    {
+        self.state.managed.try_get::<T>()
+    }
+
     /// Retrieves the cached value for type `T` from the request-local cached
     /// state of `self`. If no such value has previously been cached for this
     /// request, `f` is called to produce the value which is subsequently
@@ -738,7 +749,7 @@ impl<'r> Request<'r> {
     pub fn example<F: Fn(&mut Request<'_>)>(method: Method, uri: &str, f: F) {
         let rocket = Rocket::custom(Config::development());
         let uri = Origin::parse(uri).expect("invalid URI in example");
-        let mut request = Request::new(rocket._manifest(), method, uri);
+        let mut request = Request::new(&rocket, method, uri);
         f(&mut request);
     }
 
@@ -821,7 +832,7 @@ impl<'r> Request<'r> {
 
     /// Convert from Hyper types into a Rocket Request.
     pub(crate) fn from_hyp(
-        manifest: &'r Manifest,
+        rocket: &'r Rocket,
         h_method: hyper::Method,
         h_headers: hyper::HeaderMap<hyper::HeaderValue>,
         h_uri: &'r hyper::Uri,
@@ -843,7 +854,7 @@ impl<'r> Request<'r> {
         let uri = Origin::parse(uri).map_err(|e| e.to_string())?;
 
         // Construct the request object.
-        let mut request = Request::new(manifest, method, uri);
+        let mut request = Request::new(rocket, method, uri);
         request.set_remote(h_addr);
 
         // Set the request cookies, if they exist.

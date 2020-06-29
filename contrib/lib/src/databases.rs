@@ -239,7 +239,7 @@
 //!      Returns a fairing that initializes the associated database connection
 //!      pool.
 //!
-//!   * `fn get_one(&Manifest) -> Option<Self>`
+//!   * `fn get_one(&Cargo) -> Option<Self>`
 //!
 //!     Retrieves a connection from the configured pool. Returns `Some` as long
 //!     as `Self::fairing()` has been attached and there is at least one

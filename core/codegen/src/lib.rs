@@ -96,7 +96,7 @@ vars_and_mods! {
     StaticRouteInfo => rocket::StaticRouteInfo,
     SmallVec => rocket::http::private::SmallVec,
     HandlerFuture => rocket::handler::HandlerFuture,
-    ErrorHandlerFuture => rocket::handler::ErrorHandlerFuture,
+    CatcherFuture => rocket::handler::CatcherFuture,
     _Option => ::std::option::Option,
     _Result => ::std::result::Result,
     _Some => ::std::option::Option::Some,

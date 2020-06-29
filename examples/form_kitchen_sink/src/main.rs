@@ -3,8 +3,9 @@
 #[macro_use] extern crate rocket;
 
 use rocket::request::{Form, FormError, FormDataError};
-use rocket::response::NamedFile;
 use rocket::http::RawStr;
+
+use rocket_contrib::serve::StaticFiles;
 
 #[cfg(test)] mod tests;
 
@@ -36,12 +37,7 @@ fn sink(sink: Result<Form<FormInput<'_>>, FormError<'_>>) -> String {
     }
 }
 
-#[get("/")]
-fn index() -> Option<NamedFile> {
-    NamedFile::open("static/index.html").ok()
-}
-
 #[rocket::launch]
 fn rocket() -> rocket::Rocket {
-    rocket::ignite().mount("/", routes![index, sink])
+    rocket::ignite().mount("/", routes![sink]).mount("/", StaticFiles::from("static/"))
 }

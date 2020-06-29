@@ -97,9 +97,7 @@ impl<'r, R> Created<R> {
     /// assert_eq!(etag, None);
     /// # });
     /// ```
-    pub fn body(mut self, responder: R) -> Self
-        where R: Responder<'r>
-    {
+    pub fn body(mut self, responder: R) -> Self {
         self.1 = Some(responder);
         self
     }
@@ -135,9 +133,7 @@ impl<'r, R> Created<R> {
     /// assert_eq!(etag, Some(r#""13046220615156895040""#));
     /// # });
     /// ```
-    pub fn tagged_body(mut self, responder: R) -> Self
-        where R: Responder<'r> + Hash
-    {
+    pub fn tagged_body(mut self, responder: R) -> Self where R: Hash {
         let mut hasher = &mut DefaultHasher::default();
         responder.hash(&mut hasher);
         let hash = hasher.finish();
@@ -160,12 +156,11 @@ impl<'r, R> Created<R> {
 /// the response with the `Responder`, the `ETag` header is set conditionally if
 /// a hashable `Responder` is provided via [`Created::tagged_body()`]. The `ETag`
 /// header is set to a hash value of the responder.
-#[crate::async_trait]
-impl<'r, R: Responder<'r> + Send + 'r> Responder<'r> for Created<R> {
-    async fn respond_to(self, req: &'r Request<'_>) -> response::Result<'r> {
+impl<'r, 'o: 'r, R: Responder<'r, 'o>> Responder<'r, 'o> for Created<R> {
+    fn respond_to(self, req: &'r Request<'_>) -> response::Result<'o> {
         let mut response = Response::build();
         if let Some(responder) = self.1 {
-            response.merge(responder.respond_to(req).await?);
+            response.merge(responder.respond_to(req)?);
         }
 
         if let Some(hash) = self.2 {
@@ -207,12 +202,11 @@ pub struct Accepted<R>(pub Option<R>);
 
 /// Sets the status code of the response to 202 Accepted. If the responder is
 /// `Some`, it is used to finalize the response.
-#[crate::async_trait]
-impl<'r, R: Responder<'r> + Send + 'r> Responder<'r> for Accepted<R> {
-    async fn respond_to(self, req: &'r Request<'_>) -> response::Result<'r> {
+impl<'r, 'o: 'r, R: Responder<'r, 'o>> Responder<'r, 'o> for Accepted<R> {
+    fn respond_to(self, req: &'r Request<'_>) -> response::Result<'o> {
         let mut build = Response::build();
         if let Some(responder) = self.0 {
-            build.merge(responder.respond_to(req).await?);
+            build.merge(responder.respond_to(req)?);
         }
 
         build.status(Status::Accepted).ok()
@@ -248,12 +242,11 @@ pub struct BadRequest<R>(pub Option<R>);
 
 /// Sets the status code of the response to 400 Bad Request. If the responder is
 /// `Some`, it is used to finalize the response.
-#[crate::async_trait]
-impl<'r, R: Responder<'r> + Send + 'r> Responder<'r> for BadRequest<R> {
-    async fn respond_to(self, req: &'r Request<'_>) -> response::Result<'r> {
+impl<'r, 'o: 'r, R: Responder<'r, 'o>> Responder<'r, 'o> for BadRequest<R> {
+    fn respond_to(self, req: &'r Request<'_>) -> response::Result<'o> {
         let mut build = Response::build();
         if let Some(responder) = self.0 {
-            build.merge(responder.respond_to(req).await?);
+            build.merge(responder.respond_to(req)?);
         }
 
         build.status(Status::BadRequest).ok()
@@ -276,10 +269,9 @@ impl<'r, R: Responder<'r> + Send + 'r> Responder<'r> for BadRequest<R> {
 pub struct NotFound<R>(pub R);
 
 /// Sets the status code of the response to 404 Not Found.
-#[crate::async_trait]
-impl<'r, R: Responder<'r> + Send + 'r> Responder<'r> for NotFound<R> {
-    async fn respond_to(self, req: &'r Request<'_>) -> response::Result<'r> {
-        Response::build_from(self.0.respond_to(req).await?)
+impl<'r, 'o: 'r, R: Responder<'r, 'o>> Responder<'r, 'o> for NotFound<R> {
+    fn respond_to(self, req: &'r Request<'_>) -> response::Result<'o> {
+        Response::build_from(self.0.respond_to(req)?)
             .status(Status::NotFound)
             .ok()
     }
@@ -301,10 +293,9 @@ pub struct Custom<R>(pub Status, pub R);
 
 /// Sets the status code of the response and then delegates the remainder of the
 /// response to the wrapped responder.
-#[crate::async_trait]
-impl<'r, R: Responder<'r> + Send + 'r> Responder<'r> for Custom<R> {
-    async fn respond_to(self, req: &'r Request<'_>) -> response::Result<'r> {
-        Response::build_from(self.1.respond_to(req).await?)
+impl<'r, 'o: 'r, R: Responder<'r, 'o>> Responder<'r, 'o> for Custom<R> {
+    fn respond_to(self, req: &'r Request<'_>) -> response::Result<'o> {
+        Response::build_from(self.1.respond_to(req)?)
             .status(self.0)
             .ok()
     }

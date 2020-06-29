@@ -11,7 +11,7 @@ use crate::response::{self, Response, Responder, DEFAULT_CHUNK_SIZE};
 /// 4KiB. This means that at most 4KiB are stored in memory while the response
 /// is being sent. This type should be used when sending responses that are
 /// arbitrarily large in size, such as when streaming from a local socket.
-pub struct Stream<T: AsyncRead>(T, u64);
+pub struct Stream<T: AsyncRead>(T, usize);
 
 impl<T: AsyncRead> Stream<T> {
     /// Create a new stream from the given `reader` and sets the chunk size for
@@ -28,7 +28,7 @@ impl<T: AsyncRead> Stream<T> {
     /// # #[allow(unused_variables)]
     /// let response = Stream::chunked(tokio::io::stdin(), 10);
     /// ```
-    pub fn chunked(reader: T, chunk_size: u64) -> Stream<T> {
+    pub fn chunked(reader: T, chunk_size: usize) -> Stream<T> {
         Stream(reader, chunk_size)
     }
 }
@@ -66,9 +66,8 @@ impl<T: AsyncRead> From<T> for Stream<T> {
 /// If reading from the input stream fails at any point during the response, the
 /// response is abandoned, and the response ends abruptly. An error is printed
 /// to the console with an indication of what went wrong.
-#[crate::async_trait]
-impl<'r, T: AsyncRead + Send + 'r> Responder<'r> for Stream<T> {
-    async fn respond_to(self, _: &'r Request<'_>) -> response::Result<'r> {
+impl<'r, 'o: 'r, T: AsyncRead + Send + 'o> Responder<'r, 'o> for Stream<T> {
+    fn respond_to(self, _: &'r Request<'_>) -> response::Result<'o> {
         Response::build().chunked_body(self.0, self.1).ok()
     }
 }

@@ -30,6 +30,7 @@ pub use self::fairing::Compression;
 pub use self::responder::Compress;
 
 use rocket::http::MediaType;
+use rocket::response::Body;
 use rocket::{Request, Response};
 use tokio::io::{AsyncRead, BufReader};
 
@@ -101,10 +102,13 @@ impl CompressionUtils {
         {
             #[cfg(feature = "brotli_compression")]
             {
-                if let Some(plain) = response.take_body() {
+                if let Some(body) = response.take_body() {
                     CompressionUtils::set_body_and_encoding(
                         response,
-                        BrotliEncoder::new(BufReader::new(plain.into_inner())),
+                        BrotliEncoder::new(BufReader::new(match body {
+                            Body::Chunked(p, _) => p,
+                            Body::Sized(p, _) => Box::pin(p),
+                        })),
                         "br",
                     );
                 }
@@ -114,10 +118,13 @@ impl CompressionUtils {
         {
             #[cfg(feature = "gzip_compression")]
             {
-                if let Some(plain) = response.take_body() {
+                if let Some(body) = response.take_body() {
                     CompressionUtils::set_body_and_encoding(
                         response,
-                        GzipEncoder::new(BufReader::new(plain.into_inner())),
+                        GzipEncoder::new(BufReader::new(match body {
+                            Body::Chunked(p, _) => p,
+                            Body::Sized(p, _) => Box::pin(p),
+                        })),
                         "gzip",
                     );
                 }

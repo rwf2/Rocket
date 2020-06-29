@@ -23,7 +23,6 @@ use rocket::outcome::Outcome::*;
 use rocket::data::{Data, FromData, FromDataFuture, Transform::*, TransformFuture, Transformed};
 use rocket::http::Status;
 use rocket::response::{self, content, Responder};
-use rocket::futures::future::BoxFuture;
 
 use serde::Serialize;
 use serde::de::Deserialize;
@@ -157,17 +156,15 @@ impl<'a, T: Deserialize<'a>> FromData<'a> for MsgPack<T> {
 /// Serializes the wrapped value into MessagePack. Returns a response with
 /// Content-Type `MsgPack` and a fixed-size body with the serialization. If
 /// serialization fails, an `Err` of `Status::InternalServerError` is returned.
-impl<'r, T: Serialize> Responder<'r> for MsgPack<T> {
-    fn respond_to<'a, 'x>(self, req: &'r Request<'a>) -> BoxFuture<'x, response::Result<'r>>
-        where 'a: 'x, 'r: 'x, Self: 'x
-    {
-        match rmp_serde::to_vec(&self.0) {
-            Ok(buf) => content::MsgPack(buf).respond_to(req),
-            Err(e) =>  {
+impl<'r, T: Serialize> Responder<'r, 'static> for MsgPack<T> {
+    fn respond_to(self, req: &'r Request<'_>) -> response::Result<'static> {
+        let buf = rmp_serde::to_vec(&self.0)
+            .map_err(|e| {
                 error_!("MsgPack failed to serialize: {:?}", e);
-                Box::pin(async { Err(Status::InternalServerError) })
-            }
-        }
+                Status::InternalServerError
+            })?;
+
+        content::MsgPack(buf).respond_to(req)
     }
 }
 

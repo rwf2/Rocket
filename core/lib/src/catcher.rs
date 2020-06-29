@@ -77,18 +77,18 @@ impl Catcher {
     /// ```rust
     /// # #![allow(unused_variables)]
     /// use rocket::{Catcher, Request};
-    /// use rocket::handler::ErrorHandlerFuture;
+    /// use rocket::handler::CatcherFuture;
     /// use rocket::response::{Result, Responder};
     /// use rocket::response::status::Custom;
     /// use rocket::http::Status;
     ///
-    /// fn handle_404<'r>(req: &'r Request) -> ErrorHandlerFuture<'r> {
+    /// fn handle_404<'r>(req: &'r Request) -> CatcherFuture<'r> {
     ///    let res = Custom(Status::NotFound, format!("404: {}", req.uri()));
-    ///    res.respond_to(req)
+    ///    Box::pin(async move { res.respond_to(req) })
     /// }
     ///
-    /// fn handle_500<'r>(req: &'r Request) -> ErrorHandlerFuture<'r> {
-    ///     "Whoops, we messed up!".respond_to(req)
+    /// fn handle_500<'r>(req: &'r Request) -> CatcherFuture<'r> {
+    ///     Box::pin(async move{ "Whoops, we messed up!".respond_to(req) })
     /// }
     ///
     /// let not_found_catcher = Catcher::new(404, handle_404);
@@ -123,6 +123,15 @@ impl fmt::Display for Catcher {
     }
 }
 
+impl fmt::Debug for Catcher {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("Catcher")
+            .field("code", &self.code)
+            .field("default", &self.is_default)
+            .finish()
+    }
+}
+
 macro_rules! error_page_template {
     ($code:expr, $name:expr, $description:expr) => (
         concat!(r#"
@@ -151,10 +160,10 @@ macro_rules! default_catchers {
         let mut map = HashMap::new();
 
         $(
-            fn $fn_name<'r>(req: &'r Request<'_>) -> futures::future::BoxFuture<'r, response::Result<'r>> {
-                status::Custom(Status::from_code($code).unwrap(),
-                    content::Html(error_page_template!($code, $name, $description))
-                ).respond_to(req)
+            fn $fn_name<'r>(req: &'r Request<'_>) -> crate::handler::CatcherFuture<'r> {
+                let status = Status::from_code($code).unwrap();
+                let html = content::Html(error_page_template!($code, $name, $description));
+                Box::pin(async move { status::Custom(status, html).respond_to(req) })
             }
 
             map.insert($code, Catcher::new_default($code, $fn_name));
@@ -170,7 +179,7 @@ pub mod defaults {
     use std::collections::HashMap;
 
     use crate::request::Request;
-    use crate::response::{self, content, status, Responder};
+    use crate::response::{content, status, Responder};
     use crate::http::Status;
 
     pub fn get() -> HashMap<u16, Catcher> {
@@ -241,4 +250,3 @@ pub mod defaults {
         }
     }
 }
-

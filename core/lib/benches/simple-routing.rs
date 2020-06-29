@@ -42,6 +42,7 @@ fn rocket() -> rocket::Rocket {
                index_b, index_c, index_dyn_a])
 }
 
+#[allow(unused_must_use)]
 mod benches {
     extern crate test;
 
@@ -49,9 +50,13 @@ mod benches {
     use self::test::Bencher;
     use rocket::local::Client;
 
+    fn client(_rocket: rocket::Rocket) -> Option<Client> {
+        unimplemented!("waiting for sync-client");
+    }
+
     #[bench]
     fn bench_hello_world(b: &mut Bencher) {
-        let client = Client::new(hello_world_rocket()).unwrap();
+        let client = client(hello_world_rocket()).unwrap();
         let mut request = client.get("/");
 
         b.iter(|| {
@@ -61,7 +66,7 @@ mod benches {
 
     #[bench]
     fn bench_single_get_index(b: &mut Bencher) {
-        let client = Client::new(rocket()).unwrap();
+        let client = client(rocket()).unwrap();
         let mut request = client.get("/");
 
         b.iter(|| {
@@ -71,7 +76,7 @@ mod benches {
 
     #[bench]
     fn bench_get_put_post_index(b: &mut Bencher) {
-        let client = Client::new(rocket()).unwrap();
+        let client = client(rocket()).unwrap();
 
         // Hold all of the requests we're going to make during the benchmark.
         let mut requests = vec![];
@@ -88,7 +93,7 @@ mod benches {
 
     #[bench]
     fn bench_dynamic(b: &mut Bencher) {
-        let client = Client::new(rocket()).unwrap();
+        let client = client(rocket()).unwrap();
 
         // Hold all of the requests we're going to make during the benchmark.
         let mut requests = vec![];
@@ -105,11 +110,11 @@ mod benches {
 
     #[bench]
     fn bench_simple_routing(b: &mut Bencher) {
-        let client = Client::new(rocket()).unwrap();
+        let client = client(rocket()).unwrap();
 
         // Hold all of the requests we're going to make during the benchmark.
         let mut requests = vec![];
-        for route in client.manifest().routes() {
+        for route in client.cargo().routes() {
             let request = client.req(route.method, route.uri.path());
             requests.push(request);
         }

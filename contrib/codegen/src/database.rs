@@ -118,8 +118,8 @@ pub fn database_attr(attr: TokenStream, input: TokenStream) -> Result<TokenStrea
             /// Retrieves a connection of type `Self` from the `rocket`
             /// instance. Returns `Some` as long as `Self::fairing()` has been
             /// attached and there is at least one connection in the pool.
-            pub fn get_one(manifest: &::rocket::Manifest) -> Option<Self> {
-                manifest.state::<#pool_type>()
+            pub fn get_one(cargo: &::rocket::Cargo) -> Option<Self> {
+                cargo.state::<#pool_type>()
                     .and_then(|pool| pool.0.get().ok())
                     .map(#guard_type)
             }

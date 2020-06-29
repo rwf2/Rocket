@@ -147,9 +147,8 @@ impl Redirect {
 /// the `Location` header field. The body of the response is empty. If the URI
 /// value used to create the `Responder` is an invalid URI, an error of
 /// `Status::InternalServerError` is returned.
-#[crate::async_trait]
-impl<'r> Responder<'r> for Redirect {
-    async fn respond_to(self, _: &'r Request<'_>) -> response::Result<'r> {
+impl<'r> Responder<'r, 'static> for Redirect {
+    fn respond_to(self, _: &'r Request<'_>) -> response::Result<'static> {
         if let Some(uri) = self.1 {
             Response::build()
                 .status(self.0)

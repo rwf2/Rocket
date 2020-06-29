@@ -43,8 +43,7 @@ mod compress_responder_tests {
         Compress(
             Response::build()
                 .raw_header("Content-Encoding", "gzip")
-                .sized_body(std::io::Cursor::new(encoded))
-                .await
+                .sized_body(encoded.len(), Cursor::new(encoded))
                 .finalize(),
         )
     }
@@ -54,8 +53,7 @@ mod compress_responder_tests {
         Compress(
             Response::build()
                 .raw_header("Content-Encoding", "identity")
-                .sized_body(std::io::Cursor::new(String::from(HELLO)))
-                .await
+                .sized_body(HELLO.len(), Cursor::new(String::from(HELLO)))
                 .finalize(),
         )
     }

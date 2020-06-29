@@ -30,6 +30,7 @@ fn rocket() -> rocket::Rocket {
         .mount("/", routes![post, post2, post3])
 }
 
+#[allow(unused_must_use)]
 mod benches {
     extern crate test;
 
@@ -38,9 +39,13 @@ mod benches {
     use rocket::local::Client;
     use rocket::http::{Accept, ContentType};
 
+    fn client(_rocket: rocket::Rocket) -> Option<Client> {
+        unimplemented!("waiting for sync-client");
+    }
+
     #[bench]
     fn accept_format(b: &mut Bencher) {
-        let client = Client::new(rocket()).unwrap();
+        let client = client(rocket()).unwrap();
         let mut requests = vec![];
         requests.push(client.get("/").header(Accept::JSON));
         requests.push(client.get("/").header(Accept::HTML));
@@ -55,7 +60,7 @@ mod benches {
 
     #[bench]
     fn content_type_format(b: &mut Bencher) {
-        let client = Client::new(rocket()).unwrap();
+        let client = client(rocket()).unwrap();
         let mut requests = vec![];
         requests.push(client.post("/").header(ContentType::JSON));
         requests.push(client.post("/").header(ContentType::HTML));

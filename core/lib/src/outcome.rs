@@ -601,6 +601,12 @@ impl<S, E, F> Outcome<S, E, F> {
         }
     }
 }
+impl<'a, S: Send + 'a, E: Send + 'a, F: Send + 'a> Outcome<S, E, F> {
+    #[inline]
+    pub fn pin(self) -> futures::future::BoxFuture<'a, Self> {
+        Box::pin(async move { self })
+    }
+}
 
 /// Unwraps an [`Outcome`] to its success value, otherwise propagating the
 /// forward or failure.

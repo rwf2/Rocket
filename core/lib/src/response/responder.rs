@@ -1,11 +1,8 @@
 use std::fs::File;
 use std::io::Cursor;
 
-use tokio::io::BufReader;
-use futures::future::BoxFuture;
-
 use crate::http::{Status, ContentType, StatusClass};
-use crate::response::{self, Response, Body};
+use crate::response::{self, Response};
 use crate::request::Request;
 
 /// Trait implemented by types that generate responses for clients.
@@ -113,44 +110,15 @@ use crate::request::Request;
 /// regardless of the incoming request. Thus, knowing the type is sufficient to
 /// fully determine its functionality.
 ///
-/// # Async Trait
+/// ## Lifetimes
 ///
-/// [`Responder`] is an _async_ trait. Implementations of `Responder` may be
-/// decorated with an attribute of `#[rocket::async_trait]`, allowing the
-/// `respond_to` method to be implemented as an `async fn`:
-///
-/// ```rust
-/// use rocket::response::{self, Responder};
-/// use rocket::request::Request;
-/// # struct MyType;
-///
-/// #[rocket::async_trait]
-/// impl<'r> Responder<'r> for MyType {
-///     async fn respond_to(self, _: &'r Request<'_>) -> response::Result<'r> {
-///         /* .. */
-///         # unimplemented!()
-///     }
-/// }
-/// ```
-///
-/// In certain cases, including when implementing a _wrapping_ responder, it may
-/// be desirable to perform work before entering an `async` section, or to
-/// return a future directly. In this case, `Responder` can be implemented as:
-///
-/// ```rust
-/// use rocket::response::{self, Responder};
-/// use rocket::futures::future::BoxFuture;
-/// use rocket::request::Request;
-/// # struct MyType<R> { inner: R };
-///
-/// impl<'r, R: Responder<'r>> Responder<'r> for MyType<R> {
-///     fn respond_to<'a, 'x>(self, req: &'r Request<'a>) -> BoxFuture<'x, response::Result<'r>>
-///         where 'a: 'x, 'r: 'x, Self: 'x
-///     {
-///         self.inner.respond_to(req)
-///     }
-/// }
-/// ```
+/// `Responder` has two lifetimes: `Responder<'r, 'o: 'r>`. The first lifetime,
+/// `'r`, refers to the reference to the `&'r Request`, while the second
+/// lifetime refers to the returned `Response<'o>`. The bound `'o: 'r` allows
+/// `'o` to be any lifetime that lives at least as long as the `Request`. In
+/// particular, this includes borrows from the `Request` itself (where `'o` would
+/// be `'r` as in `impl<'r> Responder<'r, 'r>`) as well as `'static` data (where
+/// `'o` would be `'static` as in `impl<'r> Responder<'r, 'static>`).
 ///
 /// # Example
 ///
@@ -196,12 +164,11 @@ use crate::request::Request;
 /// use rocket::response::{self, Response, Responder};
 /// use rocket::http::ContentType;
 ///
-/// #[rocket::async_trait]
-/// impl<'r> Responder<'r> for Person {
-///     async fn respond_to(self, _: &'r Request<'_>) -> response::Result<'r> {
+/// impl<'r> Responder<'r, 'static> for Person {
+///     fn respond_to(self, _: &'r Request<'_>) -> response::Result<'static> {
 ///         let person_string = format!("{}:{}", self.name, self.age);
 ///         Response::build()
-///             .sized_body(Cursor::new(person_string)).await
+///             .sized_body(person_string.len(), Cursor::new(person_string))
 ///             .raw_header("X-Person-Name", self.name)
 ///             .raw_header("X-Person-Age", self.age.to_string())
 ///             .header(ContentType::new("application", "x-person"))
@@ -213,8 +180,7 @@ use crate::request::Request;
 /// # fn person() -> Person { Person { name: "a".to_string(), age: 20 } }
 /// # fn main() {  }
 /// ```
-#[crate::async_trait]
-pub trait Responder<'r> {
+pub trait Responder<'r, 'o: 'r> {
     /// Returns `Ok` if a `Response` could be generated successfully. Otherwise,
     /// returns an `Err` with a failing `Status`.
     ///
@@ -226,97 +192,83 @@ pub trait Responder<'r> {
     /// returned, the error catcher for the given status is retrieved and called
     /// to generate a final error response, which is then written out to the
     /// client.
-    async fn respond_to(self, request: &'r Request<'_>) -> response::Result<'r>;
+    fn respond_to(self, request: &'r Request<'_>) -> response::Result<'o>;
 }
 
 /// Returns a response with Content-Type `text/plain` and a fixed-size body
 /// containing the string `self`. Always returns `Ok`.
-#[crate::async_trait]
-impl<'r> Responder<'r> for &'r str {
-    async fn respond_to(self, _: &'r Request<'_>) -> response::Result<'r> {
+impl<'r, 'o: 'r> Responder<'r, 'o> for &'o str {
+    fn respond_to(self, _: &'r Request<'_>) -> response::Result<'o> {
         Response::build()
             .header(ContentType::Plain)
-            .sized_body(Cursor::new(self)).await
+            .sized_body(self.len(), Cursor::new(self))
             .ok()
     }
 }
 
 /// Returns a response with Content-Type `text/plain` and a fixed-size body
 /// containing the string `self`. Always returns `Ok`.
-#[crate::async_trait]
-impl<'r> Responder<'r> for String {
-    async fn respond_to(self, _: &'r Request<'_>) -> response::Result<'r> {
+impl<'r> Responder<'r, 'static> for String {
+    fn respond_to(self, _: &'r Request<'_>) -> response::Result<'static> {
         Response::build()
             .header(ContentType::Plain)
-            .sized_body(Cursor::new(self)).await
+            .sized_body(self.len(), Cursor::new(self))
             .ok()
     }
 }
 
 /// Returns a response with Content-Type `application/octet-stream` and a
 /// fixed-size body containing the data in `self`. Always returns `Ok`.
-#[crate::async_trait]
-impl<'r> Responder<'r> for &'r [u8] {
-    async fn respond_to(self, _: &'r Request<'_>) -> response::Result<'r> {
+impl<'r, 'o: 'r> Responder<'r, 'o> for &'o [u8] {
+    fn respond_to(self, _: &'r Request<'_>) -> response::Result<'o> {
         Response::build()
             .header(ContentType::Binary)
-            .sized_body(Cursor::new(self)).await
+            .sized_body(self.len(), Cursor::new(self))
             .ok()
     }
 }
 
 /// Returns a response with Content-Type `application/octet-stream` and a
 /// fixed-size body containing the data in `self`. Always returns `Ok`.
-#[crate::async_trait]
-impl<'r> Responder<'r> for Vec<u8> {
-    async fn respond_to(self, _: &'r Request<'_>) -> response::Result<'r> {
+impl<'r> Responder<'r, 'static> for Vec<u8> {
+    fn respond_to(self, _: &'r Request<'_>) -> response::Result<'static> {
         Response::build()
             .header(ContentType::Binary)
-            .sized_body(Cursor::new(self)).await
+            .sized_body(self.len(), Cursor::new(self))
             .ok()
     }
 }
 
 /// Returns a response with a sized body for the file. Always returns `Ok`.
-#[crate::async_trait]
-impl<'r> Responder<'r> for File {
-    async fn respond_to(self, req: &'r Request<'_>) -> response::Result<'r> {
-        tokio::fs::File::from(self).respond_to(req).await
+impl<'r> Responder<'r, 'static> for File {
+    fn respond_to(self, req: &'r Request<'_>) -> response::Result<'static> {
+        tokio::fs::File::from(self).respond_to(req)
     }
 }
 
 /// Returns a response with a sized body for the file. Always returns `Ok`.
-#[crate::async_trait]
-impl<'r> Responder<'r> for tokio::fs::File {
-    async fn respond_to(self, _: &'r Request<'_>) -> response::Result<'r> {
-        let metadata = self.metadata().await;
-        let stream = BufReader::new(self);
-        match metadata {
-            Ok(md) => Response::build().raw_body(Body::Sized(stream, md.len())).ok(),
-            Err(_) => Response::build().streamed_body(stream).ok()
-        }
+impl<'r> Responder<'r, 'static> for tokio::fs::File {
+    fn respond_to(self, _: &'r Request<'_>) -> response::Result<'static> {
+        Response::build().sized_body(None, self).ok()
     }
 }
 
 /// Returns an empty, default `Response`. Always returns `Ok`.
-#[crate::async_trait]
-impl<'r> Responder<'r> for () {
-    async fn respond_to(self, _: &'r Request<'_>) -> response::Result<'r> {
+impl<'r> Responder<'r, 'static> for () {
+    fn respond_to(self, _: &'r Request<'_>) -> response::Result<'static> {
         Ok(Response::new())
     }
 }
 
 /// If `self` is `Some`, responds with the wrapped `Responder`. Otherwise prints
 /// a warning message and returns an `Err` of `Status::NotFound`.
-impl<'r, R: Responder<'r>> Responder<'r> for Option<R> {
-    fn respond_to<'a, 'x>(self, req: &'r Request<'a>) -> BoxFuture<'x, response::Result<'r>>
-        where 'a: 'x, 'r: 'x, Self: 'x
-    {
+impl<'r, 'o: 'r, R: Responder<'r, 'o>> Responder<'r, 'o> for Option<R> {
+    fn respond_to(self, req: &'r Request<'_>) -> response::Result<'o> {
         match self {
             Some(r) => r.respond_to(req),
             None => {
                 warn_!("Response was `None`.");
-                Box::pin(async { Err(Status::NotFound) })
+                Err(Status::NotFound)
             },
         }
     }
@@ -324,10 +276,10 @@ impl<'r, R: Responder<'r>> Responder<'r> for Option<R> {
 
 // Responds with the wrapped `Responder` in `self`, whether it is `Ok` or
 /// `Err`.
-impl<'r, R: Responder<'r>, E: Responder<'r>> Responder<'r> for Result<R, E> {
-    fn respond_to<'a, 'x>(self, req: &'r Request<'a>) -> BoxFuture<'x, response::Result<'r>>
-        where 'a: 'x, 'r: 'x, Self: 'x
-    {
+impl<'r, 'o: 'r, 't: 'o, 'e: 'o, T, E> Responder<'r, 'o> for Result<T, E>
+    where T: Responder<'r, 't>, E: Responder<'r, 'e>
+{
+    fn respond_to(self, req: &'r Request<'_>) -> response::Result<'o> {
         match self {
             Ok(responder) => responder.respond_to(req),
             Err(responder) => responder.respond_to(req),
@@ -349,9 +301,8 @@ impl<'r, R: Responder<'r>, E: Responder<'r>> Responder<'r> for Result<R, E> {
 /// `100` responds with any empty body and the given status code, and all other
 /// status code emit an error message and forward to the `500` (internal server
 /// error) catcher.
-#[crate::async_trait]
-impl<'r> Responder<'r> for Status {
-    async fn respond_to(self, _: &'r Request<'_>) -> response::Result<'r> {
+impl<'r> Responder<'r, 'static> for Status {
+    fn respond_to(self, _: &'r Request<'_>) -> response::Result<'static> {
         match self.class() {
             StatusClass::ClientError | StatusClass::ServerError => Err(self),
             StatusClass::Success if self.code < 206 => {

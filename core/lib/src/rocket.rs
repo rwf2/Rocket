@@ -1,13 +1,14 @@
-use std::collections::HashMap;
-use std::convert::{From, TryInto};
+use std::{io, mem};
 use std::cmp::min;
-use std::io;
-use std::mem;
 use std::sync::Arc;
+use std::collections::HashMap;
 
-use futures::future::{Future, FutureExt, BoxFuture};
+#[allow(unused_imports)]
+use futures::future::FutureExt;
 use futures::stream::StreamExt;
+use futures::future::{Future, BoxFuture};
 use tokio::sync::{mpsc, oneshot};
+use ref_cast::RefCast;
 
 use yansi::Paint;
 use state::Container;
@@ -33,39 +34,149 @@ use crate::http::uri::Origin;
 /// The main `Rocket` type: used to mount routes and catchers and launch the
 /// application.
 pub struct Rocket {
-    pub(crate) manifest: Option<Manifest>,
-    pending: Vec<BuildOperation>,
-}
-
-enum BuildOperation {
-    Mount(Origin<'static>, Vec<Route>),
-    Register(Vec<Catcher>),
-    Manage(Box<dyn FnOnce(Manifest) -> Manifest + Send + Sync + 'static>),
-    Attach(Box<dyn Fairing>),
-}
-
-/// The state of an unlaunched [`Rocket`].
-///
-/// A `Manifest` includes configuration, managed state, and mounted routes and
-/// can be accessed through [`Rocket::inspect()`] before launching.
-pub struct Manifest {
+    manifest: Vec<PreLaunchOp>,
     pub(crate) config: Config,
     router: Router,
     default_catchers: HashMap<u16, Catcher>,
     catchers: HashMap<u16, Catcher>,
-    pub(crate) state: Container,
+    pub(crate) managed_state: Container,
     fairings: Fairings,
     shutdown_handle: ShutdownHandle,
     shutdown_receiver: Option<mpsc::Receiver<()>>,
 }
 
-// This function tries to hide all of the Hyper-ness from Rocket. It
-// essentially converts Hyper types into Rocket types, then calls the
-// `dispatch` function, which knows nothing about Hyper. Because responding
-// depends on the `HyperResponse` type, this function does the actual
-// response processing.
+/// An operation that occurs prior to launching a Rocket instance.
+enum PreLaunchOp {
+    Mount(Origin<'static>, Vec<Route>),
+    Register(Vec<Catcher>),
+    Manage(&'static str, Box<dyn FnOnce(&mut Container) + Send + Sync + 'static>),
+    Attach(Box<dyn Fairing>),
+}
+
+/// A frozen view into the contents of an instance of `Rocket`.
+///
+/// Obtained via [`Rocket::inspect()`].
+#[derive(RefCast)]
+#[repr(transparent)]
+pub struct Cargo(Rocket);
+
+impl Rocket {
+    #[inline]
+    fn _mount(&mut self, base: Origin<'static>, routes: Vec<Route>) {
+        info!("{}{} {}{}",
+              Paint::masked("🛰  "),
+              Paint::magenta("Mounting"),
+              Paint::blue(&base),
+              Paint::magenta(":"));
+
+        for mut route in routes {
+            let path = route.uri.clone();
+            if let Err(e) = route.set_uri(base.clone(), path) {
+                error_!("{}", e);
+                panic!("Invalid route URI.");
+            }
+
+            info_!("{}", route);
+            self.router.add(route);
+        }
+    }
+
+    #[inline]
+    fn _register(&mut self, catchers: Vec<Catcher>) {
+        info!("{}{}", Paint::masked("👾 "), Paint::magenta("Catchers:"));
+
+        for c in catchers {
+            if self.catchers.get(&c.code).map_or(false, |e| !e.is_default) {
+                info_!("{} {}", c, Paint::yellow("(warning: duplicate catcher!)"));
+            } else {
+                info_!("{}", c);
+            }
+
+            self.catchers.insert(c.code, c);
+        }
+    }
+
+    #[inline]
+    async fn _attach(mut self, fairing: Box<dyn Fairing>) -> Self {
+        // Attach (and run attach-) fairings, which requires us to move `self`.
+        let mut fairings = mem::replace(&mut self.fairings, Fairings::new());
+        self = fairings.attach(fairing, self).await;
+
+        // Note that `self.fairings` may now be non-empty! Move them to the end.
+        fairings.append(self.fairings);
+        self.fairings = fairings;
+        self
+    }
+
+    // Create a "dummy" instance of `Rocket` to use while mem-swapping `self`.
+    fn dummy() -> Rocket {
+        Rocket {
+            manifest: vec![],
+            config: Config::development(),
+            router: Router::new(),
+            default_catchers: HashMap::new(),
+            catchers: HashMap::new(),
+            managed_state: Container::new(),
+            fairings: Fairings::new(),
+            shutdown_handle: ShutdownHandle(mpsc::channel(1).0),
+            shutdown_receiver: None,
+        }
+    }
+
+    // Instead of requiring the user to individually `await` each call to
+    // `attach()`, some operations are queued in `self.pending`. Functions that
+    // want to provide read access to any data from the Cargo, such as
+    // `inspect()`, need to apply those pending operations first.
+    //
+    // This function returns a future that executes those pending operations,
+    // requiring only a single `await` at the call site. After completion,
+    // `self.pending` will be empty and `self.manifest` will reflect all pending
+    // changes.
+    //
+    // Note that this returns a boxed future, because `_attach()` calls this
+    // function again creating a cycle.
+    fn actualize_manifest(&mut self) -> BoxFuture<'_, ()> {
+        Box::pin(async move {
+            // Note: attach fairings may add more ops to the `manifest`! We
+            // process them as a stack to maintain proper ordering.
+            let mut manifest = mem::replace(&mut self.manifest, vec![]);
+            while !manifest.is_empty() {
+                trace_!("[MANIEST PROGRESS]: {:?}", manifest);
+                match manifest.remove(0) {
+                    PreLaunchOp::Manage(_, callback) => callback(&mut self.managed_state),
+                    PreLaunchOp::Mount(base, routes) => self._mount(base, routes),
+                    PreLaunchOp::Register(catchers) => self._register(catchers),
+                    PreLaunchOp::Attach(fairing) => {
+                        let rocket = mem::replace(self, Rocket::dummy());
+                        *self = rocket._attach(fairing).await;
+                        self.manifest.append(&mut manifest);
+                        manifest = mem::replace(&mut self.manifest, vec![]);
+                    }
+                }
+            }
+        })
+    }
+
+    pub(crate) async fn into_cargo(mut self) -> Cargo {
+        self.actualize_manifest().await;
+        Cargo(self)
+    }
+
+    fn cargo(&self) -> &Cargo {
+        if !self.manifest.is_empty() {
+            panic!("internal error: immutable launch state with manifest");
+        }
+
+        Cargo::ref_cast(self)
+    }
+}
+
+// This function tries to hide all of the Hyper-ness from Rocket. It essentially
+// converts Hyper types into Rocket types, then calls the `dispatch` function,
+// which knows nothing about Hyper. Because responding depends on the
+// `HyperResponse` type, this function does the actual response processing.
 fn hyper_service_fn(
-    rocket: Arc<Manifest>,
+    rocket: Arc<Rocket>,
     h_addr: std::net::SocketAddr,
     hyp_req: hyper::Request<hyper::Body>,
 ) -> impl Future<Output = Result<hyper::Response<hyper::Body>, io::Error>> {
@@ -108,7 +219,7 @@ fn hyper_service_fn(
     }
 }
 
-impl Manifest {
+impl Rocket {
     #[inline]
     async fn issue_response(
         &self,
@@ -142,8 +253,13 @@ impl Manifest {
         }
 
         let send_response = move |hyp_res: hyper::ResponseBuilder, body| -> io::Result<()> {
-            let response = hyp_res.body(body).map_err(|e| io::Error::new(io::ErrorKind::Other, e))?;
-            tx.send(response).map_err(|_| io::Error::new(io::ErrorKind::BrokenPipe, "Client disconnected before the response was started"))
+            let response = hyp_res.body(body)
+                .map_err(|e| io::Error::new(io::ErrorKind::Other, e))?;
+
+            tx.send(response).map_err(|_| {
+                let msg =  "Client disconnected before the response was started";
+                io::Error::new(io::ErrorKind::BrokenPipe, msg)
+            })
         };
 
         match response.body() {
@@ -152,32 +268,29 @@ impl Manifest {
                 send_response(hyp_res, hyper::Body::empty())?;
             }
             Some(body) => {
-                let (body, chunk_size) = match body {
-                    Body::Chunked(body, chunk_size) => {
-                        (body, chunk_size.try_into().expect("u64 -> usize overflow"))
-                    }
-                    Body::Sized(body, size) => {
-                        hyp_res = hyp_res.header(header::CONTENT_LENGTH, size.to_string());
-                        (body, 4096usize)
-                    }
+                if let Some(s) = body.size().await {
+                    hyp_res = hyp_res.header(header::CONTENT_LENGTH, s.to_string());
+                }
+
+                let chunk_size = match *body {
+                    Body::Chunked(_, chunk_size) => chunk_size as usize,
+                    Body::Sized(_, _) => crate::response::DEFAULT_CHUNK_SIZE,
                 };
 
                 let (mut sender, hyp_body) = hyper::Body::channel();
                 send_response(hyp_res, hyp_body)?;
 
-                let mut stream = body.into_bytes_stream(chunk_size);
-
+                let mut stream = body.as_reader().into_bytes_stream(chunk_size);
                 while let Some(next) = stream.next().await {
-                    sender.send_data(next?).await.map_err(|e| io::Error::new(io::ErrorKind::Other, e))?;
+                    sender.send_data(next?).await
+                        .map_err(|e| io::Error::new(io::ErrorKind::Other, e))?;
                 }
             }
         };
 
         Ok(())
     }
-}
 
-impl Manifest {
     /// Preprocess the request for Rocket things. Currently, this means:
     ///
     ///   * Rewriting the method in the request if _method form field exists.
@@ -201,45 +314,6 @@ impl Manifest {
                     req.set_method(method);
                 }
             }
-        }
-    }
-
-    #[inline]
-    pub(crate) fn dispatch<'s, 'r: 's>(
-        &'s self,
-        request: &'r mut Request<'s>,
-        data: Data
-    ) -> impl Future<Output = Response<'r>> + 's {
-        async move {
-            info!("{}:", request);
-
-            // Do a bit of preprocessing before routing.
-            self.preprocess_request(request, &data);
-
-            // Run the request fairings.
-            self.fairings.handle_request(request, &data).await;
-
-            // Remember if the request is a `HEAD` request for later body stripping.
-            let was_head_request = request.method() == Method::Head;
-
-            // Route the request and run the user's handlers.
-            let mut response = self.route_and_process(request, data).await;
-
-            // Add a default 'Server' header if it isn't already there.
-            // TODO: If removing Hyper, write out `Date` header too.
-            if !response.headers().contains("Server") {
-                response.set_header(Header::new("Server", "Rocket"));
-            }
-
-            // Run the response fairings.
-            self.fairings.handle_response(request, &mut response).await;
-
-            // Strip the body if this is a `HEAD` request.
-            if was_head_request {
-                response.strip_body();
-            }
-
-            response
         }
     }
 
@@ -320,6 +394,45 @@ impl Manifest {
         }
     }
 
+    #[inline]
+    pub(crate) fn dispatch<'s, 'r: 's>(
+        &'s self,
+        request: &'r mut Request<'s>,
+        data: Data
+    ) -> impl Future<Output = Response<'r>> + 's {
+        async move {
+            info!("{}:", request);
+
+            // Do a bit of preprocessing before routing.
+            self.preprocess_request(request, &data);
+
+            // Run the request fairings.
+            self.fairings.handle_request(request, &data).await;
+
+            // Remember if the request is `HEAD` for later body stripping.
+            let was_head_request = request.method() == Method::Head;
+
+            // Route the request and run the user's handlers.
+            let mut response = self.route_and_process(request, data).await;
+
+            // Add a default 'Server' header if it isn't already there.
+            // TODO: If removing Hyper, write out `Date` header too.
+            if !response.headers().contains("Server") {
+                response.set_header(Header::new("Server", "Rocket"));
+            }
+
+            // Run the response fairings.
+            self.fairings.handle_response(request, &mut response).await;
+
+            // Strip the body if this is a `HEAD` request.
+            if was_head_request {
+                response.strip_body();
+            }
+
+            response
+        }
+    }
+
     // Finds the error catcher for the status `status` and executes it for the
     // given request `req`. If a user has registered a catcher for `status`, the
     // catcher is called. If the catcher fails to return a good response, the
@@ -351,104 +464,23 @@ impl Manifest {
             }
         }
     }
-}
-
-impl Manifest {
-    #[inline]
-    fn _mount(mut self, base: Origin<'static>, routes: Vec<Route>) -> Self {
-        info!("{}{} {}{}",
-              Paint::masked("🛰  "),
-              Paint::magenta("Mounting"),
-              Paint::blue(&base),
-              Paint::magenta(":"));
-
-        for mut route in routes {
-            let path = route.uri.clone();
-            if let Err(e) = route.set_uri(base.clone(), path) {
-                error_!("{}", e);
-                panic!("Invalid route URI.");
-            }
-
-            info_!("{}", route);
-            self.router.add(route);
-        }
-
-        self
-    }
-
-    #[inline]
-    fn _register(mut self, catchers: Vec<Catcher>) -> Self {
-        info!("{}{}", Paint::masked("👾 "), Paint::magenta("Catchers:"));
-
-        for c in catchers {
-            if self.catchers.get(&c.code).map_or(false, |e| !e.is_default) {
-                info_!("{} {}", c, Paint::yellow("(warning: duplicate catcher!)"));
-            } else {
-                info_!("{}", c);
-            }
-
-            self.catchers.insert(c.code, c);
-        }
-        self
-    }
-
-    #[inline]
-    fn _manage(self, callback: Box<dyn FnOnce(Manifest) -> Manifest>) -> Self {
-        callback(self)
-    }
-
-    #[inline]
-    async fn _attach(mut self, fairing: Box<dyn Fairing>) -> Self {
-        // Attach (and run attach) fairings, which requires us to move `self`.
-        let mut fairings = mem::replace(&mut self.fairings, Fairings::new());
-
-        let mut rocket = Rocket { manifest: Some(self), pending: vec![] };
-        rocket = fairings.attach(fairing, rocket).await;
-        self = rocket.actualize_and_take_manifest().await;
-
-        // Make sure we keep all fairings around: the old and newly added ones!
-        fairings.append(self.fairings);
-        self.fairings = fairings;
-        self
-    }
-
-    pub(crate) fn prelaunch_check(&mut self) -> Result<(), LaunchError> {
-        if let Err(e) = self.router.collisions() {
-            return Err(LaunchError::new(LaunchErrorKind::Collision(e)));
-        }
-
-        if let Some(failures) = self.fairings.failures() {
-            return Err(LaunchError::new(LaunchErrorKind::FailedFairings(failures.to_vec())))
-        }
-
-        Ok(())
-    }
 
     // TODO.async: Solidify the Listener APIs and make this function public
     async fn listen_on<L>(mut self, listener: L) -> Result<(), crate::error::Error>
-    where
-        L: Listener + Send + Unpin + 'static,
-        <L as Listener>::Connection: Send + Unpin + 'static,
+        where L: Listener + Send + Unpin + 'static,
+              <L as Listener>::Connection: Send + Unpin + 'static,
     {
-        self.fairings.pretty_print_counts();
-
         // Determine the address and port we actually binded to.
         self.config.port = listener.local_addr().map(|a| a.port()).unwrap_or(0);
-
         let proto = self.config.tls.as_ref().map_or("http://", |_| "https://");
-
         let full_addr = format!("{}:{}", self.config.address, self.config.port);
 
-        // Set the keep-alive.
-        // TODO.async: implement keep-alive in Listener
-        // let timeout = self.config.keep_alive.map(|s| Duration::from_secs(s as u64));
-        // listener.set_keepalive(timeout);
-
         // Freeze managed state for synchronization-free accesses later.
-        self.state.freeze();
+        self.managed_state.freeze();
 
         // Run the launch fairings.
-        self.fairings.handle_launch(&self);
+        self.fairings.pretty_print_counts();
+        self.fairings.handle_launch(self.cargo());
 
         launch_info!("{}{} {}{}",
                      Paint::masked("🚀 "),
@@ -458,6 +490,11 @@ impl Manifest {
 
         // Restore the log level back to what it originally was.
         logger::pop_max_level();
+
+        // Set the keep-alive.
+        // TODO.async: implement keep-alive in Listener
+        // let timeout = self.config.keep_alive.map(|s| Duration::from_secs(s as u64));
+        // listener.set_keepalive(timeout);
 
         // We need to get this before moving `self` into an `Arc`.
         let mut shutdown_receiver = self.shutdown_receiver
@@ -588,22 +625,20 @@ impl Rocket {
                           Paint::default(LoggedValue(value)).bold());
         }
 
+        let managed_state = Container::new();
         let (shutdown_sender, shutdown_receiver) = mpsc::channel(1);
+        let shutdown_handle = ShutdownHandle(shutdown_sender);
+        managed_state.set(ShutdownHandleManaged(shutdown_handle.clone()));
 
-        let manifest = Manifest {
-            config,
+        Rocket {
+            config, managed_state, shutdown_handle,
+            manifest: vec![],
             router: Router::new(),
             default_catchers: catcher::defaults::get(),
             catchers: catcher::defaults::get(),
-            state: Container::new(),
             fairings: Fairings::new(),
-            shutdown_handle: ShutdownHandle(shutdown_sender),
             shutdown_receiver: Some(shutdown_receiver),
-        };
-
-        manifest.state.set(ShutdownHandleManaged(manifest.shutdown_handle.clone()));
-
-        Rocket { manifest: Some(manifest), pending: vec![] }
+        }
     }
 
     /// Mounts all of the routes in the supplied vector at the given `base`
@@ -650,7 +685,7 @@ impl Rocket {
     /// use rocket::http::Method::*;
     ///
     /// fn hi<'r>(req: &'r Request, _: Data) -> HandlerFuture<'r> {
-    ///     Outcome::from(req, "Hello!")
+    ///     Outcome::from(req, "Hello!").pin()
     /// }
     ///
     /// # let _ = async { // We don't actually want to launch the server in an example.
@@ -671,7 +706,7 @@ impl Rocket {
             panic!("Invalid mount point.");
         }
 
-        self.pending.push(BuildOperation::Mount(base_uri, routes.into()));
+        self.manifest.push(PreLaunchOp::Mount(base_uri, routes.into()));
         self
     }
 
@@ -701,7 +736,7 @@ impl Rocket {
     /// ```
     #[inline]
     pub fn register(mut self, catchers: Vec<Catcher>) -> Self {
-        self.pending.push(BuildOperation::Register(catchers));
+        self.manifest.push(PreLaunchOp::Register(catchers));
         self
     }
 
@@ -742,13 +777,12 @@ impl Rocket {
     /// ```
     #[inline]
     pub fn manage<T: Send + Sync + 'static>(mut self, state: T) -> Self {
-        self.pending.push(BuildOperation::Manage(Box::new(|rocket| {
-            if !rocket.state.set::<T>(state) {
-                error!("State for this type is already being managed!");
+        let type_name = std::any::type_name::<T>();
+        self.manifest.push(PreLaunchOp::Manage(type_name, Box::new(move |managed| {
+            if !managed.set::<T>(state) {
+                error!("State for type '{}' is already being managed!", type_name);
                 panic!("Aborting due to duplicately managed state.");
             }
-
-            rocket
         })));
 
         self
@@ -776,44 +810,115 @@ impl Rocket {
     /// ```
     #[inline]
     pub fn attach<F: Fairing>(mut self, fairing: F) -> Self {
-        self.pending.push(BuildOperation::Attach(Box::new(fairing)));
+        self.manifest.push(PreLaunchOp::Attach(Box::new(fairing)));
         self
     }
 
-    // Instead of requiring the user to individually `await` each call to
-    // `attach()`, some operations are queued in `self.pending`. Functions that
-    // want to provide read access to any data from the Manifest, such as
-    // `inspect()`, need to apply those pending operations first.
-    //
-    // This function returns a future that executes those pending operations,
-    // requiring only a single `await` at the call site. After completion,
-    // `self.pending` will be empty and `self.manifest` will reflect all pending
-    // changes.
-    //
-    // Note that this returns a boxed future, because `_attach()` calls this
-    // function again creating a cycle.
-    pub(crate) fn actualize_manifest(&mut self) -> BoxFuture<'_, ()> {
-        Box::pin(async move {
-            while !self.pending.is_empty() {
-                // We need to preserve insertion order here,
-                // so we can't use `self.pending.pop()`
-                let op = self.pending.remove(0);
-                let manifest = self.manifest.take()
-                    .expect("internal error: manifest was taken and not replaced. \
-                            Was `inspect()` called but not polled to completion?");
-                self.manifest = Some(match op {
-                    BuildOperation::Mount(base, routes) => manifest._mount(base, routes),
-                    BuildOperation::Register(catchers) => manifest._register(catchers),
-                    BuildOperation::Manage(callback) => manifest._manage(callback),
-                    BuildOperation::Attach(fairing) => manifest._attach(fairing).await,
-                });
-            }
-        })
+    /// Access the current state of this `Rocket` instance.
+    ///
+    /// The `Cargo` type provides methods such as [`Cargo::routes()`]
+    /// and [`Cargo::state()`]. This method is called to get a `Cargo`
+    /// instance.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// # rocket::async_test(async {
+    /// let mut rocket = rocket::ignite();
+    /// let config = rocket.inspect().await.config();
+    /// # let _ = config;
+    /// # });
+    /// ```
+    pub async fn inspect(&mut self) -> &Cargo {
+        self.actualize_manifest().await;
+        self.cargo()
     }
 
-    pub(crate) async fn actualize_and_take_manifest(mut self) -> Manifest {
+    /// Returns `Some` of the managed state value for the type `T` if it is
+    /// being managed by `self`. Otherwise, returns `None`.
+    ///
+    /// This function is equivalent to `.inspect().await.state()` and is
+    /// provided as a convenience.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// #[derive(PartialEq, Debug)]
+    /// struct MyState(&'static str);
+    ///
+    /// # rocket::async_test(async {
+    /// let mut rocket = rocket::ignite().manage(MyState("hello!"));
+    /// assert_eq!(rocket.state::<MyState>().await, Some(&MyState("hello!")));
+    /// # });
+    /// ```
+    pub async fn state<T: Send + Sync + 'static>(&mut self) -> Option<&T> {
+        self.inspect().await.state()
+    }
+
+    /// Returns the active configuration.
+    ///
+    /// This function is equivalent to `.inspect().await.config()` and is
+    /// provided as a convenience.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use rocket::Rocket;
+    /// use rocket::fairing::AdHoc;
+    ///
+    /// # rocket::async_test(async {
+    /// let mut rocket = rocket::ignite();
+    /// println!("Rocket config: {:?}", rocket.config().await);
+    /// # });
+    /// ```
+    pub async fn config(&mut self) -> &Config {
+        self.inspect().await.config()
+    }
+
+    /// Returns a [`ShutdownHandle`], which can be used to gracefully terminate
+    /// the instance of Rocket. In routes, you should use the [`ShutdownHandle`]
+    /// request guard.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// # #![feature(proc_macro_hygiene)]
+    /// # use std::{thread, time::Duration};
+    /// #
+    /// # rocket::async_test(async {
+    /// let mut rocket = rocket::ignite();
+    /// let handle = rocket.inspect().await.shutdown_handle();
+    ///
+    /// # if false {
+    /// thread::spawn(move || {
+    ///     thread::sleep(Duration::from_secs(10));
+    ///     handle.shutdown();
+    /// });
+    ///
+    /// // Shuts down after 10 seconds
+    /// let shutdown_result = rocket.launch().await;
+    /// assert!(shutdown_result.is_ok());
+    /// # }
+    /// # });
+    /// ```
+    #[inline(always)]
+    pub fn shutdown_handle(&self) -> ShutdownHandle {
+        self.shutdown_handle.clone()
+    }
+
+    /// Perform "pre-launch" checks: verify that there are no routing colisions
+    /// and that there were no fairing failures.
+    pub(crate) async fn prelaunch_check(&mut self) -> Result<(), LaunchError> {
         self.actualize_manifest().await;
-        self.manifest.take().expect("internal error: actualize_manifest() should have replaced self.manifest")
+        if let Err(e) = self.router.collisions() {
+            return Err(LaunchError::new(LaunchErrorKind::Collision(e)));
+        }
+
+        if let Some(failures) = self.fairings.failures() {
+            return Err(LaunchError::new(LaunchErrorKind::FailedFairings(failures.to_vec())))
+        }
+
+        Ok(())
     }
 
     /// Returns a `Future` that drives the server, listening for and dispatching
@@ -840,28 +945,24 @@ impl Rocket {
     /// # }
     /// }
     /// ```
-    pub async fn launch(self) -> Result<(), crate::error::Error> {
+    pub async fn launch(mut self) -> Result<(), crate::error::Error> {
         use std::net::ToSocketAddrs;
-
         use crate::error::Error::Launch;
 
-        let mut manifest = self.actualize_and_take_manifest().await;
-        manifest.prelaunch_check().map_err(crate::error::Error::Launch)?;
+        self.prelaunch_check().await.map_err(crate::error::Error::Launch)?;
 
-        let config = manifest.config();
-        let full_addr = format!("{}:{}", config.address, config.port);
-        let addrs = match full_addr.to_socket_addrs() {
-            Ok(a) => a.collect::<Vec<_>>(),
-            Err(e) => return Err(Launch(From::from(e))),
+        let full_addr = format!("{}:{}", self.config.address, self.config.port);
+        let addr = match full_addr.to_socket_addrs() {
+            Ok(mut addrs) => addrs.next().expect(">= 1 socket addr"),
+            Err(e) => return Err(Launch(e.into())),
         };
-        let addr = addrs[0];
 
         #[cfg(feature = "ctrl_c_shutdown")]
         let (
             shutdown_handle,
             (cancel_ctrl_c_listener_sender, cancel_ctrl_c_listener_receiver)
         ) = (
-            manifest.get_shutdown_handle(),
+            self.shutdown_handle.clone(),
             oneshot::channel(),
         );
 
@@ -872,14 +973,13 @@ impl Rocket {
                         Ok(ok) => ok,
                         Err(err) => return Err(Launch(LaunchError::new(LaunchErrorKind::Bind(err)))),
                     };
-                    manifest.listen_on(listener)
+                    self.listen_on(listener)
                 }};
             }
 
             #[cfg(feature = "tls")]
             {
-                let config = manifest.config();
-                if let Some(tls) = config.tls.clone() {
+                if let Some(tls) = self.config.tls.clone() {
                     listen_on!(crate::http::tls::bind_tls(addr, tls.certs, tls.key).await).boxed()
                 } else {
                     listen_on!(crate::http::private::bind_tcp(addr).await).boxed()
@@ -922,108 +1022,38 @@ impl Rocket {
 
         server.await
     }
+}
 
-    pub(crate) fn _manifest(&self) -> &Manifest {
-        self.manifest.as_ref().expect("internal error: manifest was taken and not replaced. \
-                                      Was `inspect()` called but not polled to completion?")
-    }
-
-    /// Access the current state of this `Rocket` instance.
-    ///
-    /// The `Manifest` type provides methods such as [`Manifest::routes()`]
-    /// and [`Manifest::state()`]. This method is called to get a `Manifest`
-    /// instance.
-    ///
-    /// # Example
-    ///
-    /// ```rust
-    /// # rocket::async_test(async {
-    /// let mut rocket = rocket::ignite();
-    /// let config = rocket.inspect().await.config();
-    /// # let _ = config;
-    /// # });
-    /// ```
-    pub async fn inspect(&mut self) -> &Manifest {
-        self.actualize_manifest().await;
-        self._manifest()
-    }
-
-    /// Returns `Some` of the managed state value for the type `T` if it is
-    /// being managed by `self`. Otherwise, returns `None`.
-    ///
-    /// This function is equivalent to `.inspect().await.state()` and is
-    /// provided as a convenience.
-    ///
-    /// # Example
-    ///
-    /// ```rust
-    /// #[derive(PartialEq, Debug)]
-    /// struct MyState(&'static str);
-    ///
-    /// # rocket::async_test(async {
-    /// let mut rocket = rocket::ignite().manage(MyState("hello!"));
-    /// assert_eq!(rocket.state::<MyState>().await, Some(&MyState("hello!")));
-    /// # });
-    /// ```
-    pub async fn state<T: Send + Sync + 'static>(&mut self) -> Option<&T> {
-        self.inspect().await.state()
-    }
-
-    /// Returns the active configuration.
-    ///
-    /// This function is equivalent to `.inspect().await.config()` and is
-    /// provided as a convenience.
-    ///
-    /// # Example
-    ///
-    /// ```rust
-    /// # #![feature(proc_macro_hygiene)]
-    /// # #[macro_use] extern crate rocket;
-    /// use rocket::Rocket;
-    /// use rocket::fairing::AdHoc;
-    ///
-    /// # rocket::async_test(async {
-    /// let mut rocket = rocket::ignite();
-    /// println!("Rocket config: {:?}", rocket.config().await);
-    /// # });
-    /// ```
-    pub async fn config(&mut self) -> &Config {
-        self.inspect().await.config()
+impl std::fmt::Debug for PreLaunchOp {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) ->  std::fmt::Result {
+        use PreLaunchOp::*;
+        match self {
+            Mount(origin, routes) => f.debug_tuple("PreLaunchOp::Mount")
+                .field(&origin)
+                .field(&routes)
+                .finish(),
+            Register(catchers) => f.debug_tuple("PreLaunchOp::Register")
+                .field(&catchers)
+                .finish(),
+            Manage(name, _) => f.debug_tuple("PreLaunchOp::Manage")
+                .field(&name)
+                .finish(),
+            Attach(fairing) => f.debug_tuple("PreLaunchOp::Attach")
+                .field(&fairing.info())
+                .finish()
+        }
     }
 }
 
-impl Manifest {
-    /// Returns a [`ShutdownHandle`], which can be used to gracefully terminate
-    /// the instance of Rocket. In routes, you should use the [`ShutdownHandle`]
-    /// request guard.
-    ///
-    /// # Example
-    ///
-    /// ```rust
-    /// # #![feature(proc_macro_hygiene)]
-    /// # use std::{thread, time::Duration};
-    /// #
-    /// # rocket::async_test(async {
-    /// let mut rocket = rocket::ignite();
-    /// let handle = rocket.inspect().await.get_shutdown_handle();
-    ///
-    /// # if false {
-    /// thread::spawn(move || {
-    ///     thread::sleep(Duration::from_secs(10));
-    ///     handle.shutdown();
-    /// });
-    ///
-    /// // Shuts down after 10 seconds
-    /// let shutdown_result = rocket.launch().await;
-    /// assert!(shutdown_result.is_ok());
-    /// # }
-    /// # });
-    /// ```
-    #[inline(always)]
-    pub fn get_shutdown_handle(&self) -> ShutdownHandle {
-        self.shutdown_handle.clone()
-    }
+impl std::ops::Deref for Cargo {
+    type Target = Rocket;
 
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+impl Cargo {
     /// Returns an iterator over all of the routes mounted on this instance of
     /// Rocket.
     ///
@@ -1060,7 +1090,7 @@ impl Manifest {
     /// ```
     #[inline(always)]
     pub fn routes(&self) -> impl Iterator<Item = &Route> + '_ {
-        self.router.routes()
+        self.0.router.routes()
     }
 
     /// Returns `Some` of the managed state value for the type `T` if it is
@@ -1074,15 +1104,13 @@ impl Manifest {
     ///
     /// # rocket::async_test(async {
     /// let mut rocket = rocket::ignite().manage(MyState("hello!"));
-    /// assert_eq!(rocket.inspect().await.state::<MyState>(), Some(&MyState("hello!")));
-    ///
-    /// let client = rocket::local::Client::new(rocket).await.expect("valid rocket");
-    /// assert_eq!(client.manifest().state::<MyState>(), Some(&MyState("hello!")));
+    /// let cargo = rocket.inspect().await;
+    /// assert_eq!(cargo.state::<MyState>(), Some(&MyState("hello!")));
     /// # });
     /// ```
     #[inline(always)]
     pub fn state<T: Send + Sync + 'static>(&self) -> Option<&T> {
-        self.state.try_get()
+        self.0.managed_state.try_get()
     }
 
     /// Returns the active configuration.
@@ -1098,13 +1126,13 @@ impl Manifest {
     /// #[rocket::launch]
     /// fn rocket() -> rocket::Rocket {
     ///     rocket::ignite()
-    ///         .attach(AdHoc::on_launch("Config Printer", |manifest| {
-    ///             println!("Rocket launch config: {:?}", manifest.config());
+    ///         .attach(AdHoc::on_launch("Config Printer", |cargo| {
+    ///             println!("Rocket launch config: {:?}", cargo.config());
     ///         }))
     /// }
     /// ```
     #[inline(always)]
     pub fn config(&self) -> &Config {
-        &self.config
+        &self.0.config
     }
 }

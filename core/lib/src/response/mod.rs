@@ -34,7 +34,8 @@ pub mod status;
 
 #[doc(hidden)] pub use rocket_codegen::Responder;
 
-pub use self::response::{Response, ResponseBuilder, Body, DEFAULT_CHUNK_SIZE};
+pub use self::response::DEFAULT_CHUNK_SIZE;
+pub use self::response::{Response, ResponseBody, ResponseBuilder, Body};
 pub use self::responder::Responder;
 pub use self::redirect::Redirect;
 pub use self::flash::Flash;
@@ -44,4 +45,4 @@ pub use self::debug::Debug;
 #[doc(inline)] pub use self::content::Content;
 
 /// Type alias for the `Result` of a [`Responder::respond_to()`] call.
-pub type Result<'r> = std::result::Result<self::Response<'r>, crate::http::Status>;
+pub type Result<'r> = std::result::Result<Response<'r>, crate::http::Status>;

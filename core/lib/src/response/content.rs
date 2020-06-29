@@ -46,12 +46,10 @@ pub struct Content<R>(pub ContentType, pub R);
 
 /// Overrides the Content-Type of the response to the wrapped `ContentType` then
 /// delegates the remainder of the response to the wrapped responder.
-#[crate::async_trait]
-impl<'r, R: Responder<'r> + Send + 'r> Responder<'r> for Content<R> {
-    #[inline(always)]
-    async fn respond_to(self, req: &'r Request<'_>) -> response::Result<'r> {
+impl<'r, 'o: 'r, R: Responder<'r, 'o>> Responder<'r, 'o> for Content<R> {
+    fn respond_to(self, req: &'r Request<'_>) -> response::Result<'o> {
         Response::build()
-            .merge(self.1.respond_to(req).await?)
+            .merge(self.1.respond_to(req)?)
             .header(self.0)
             .ok()
     }
@@ -59,8 +57,6 @@ impl<'r, R: Responder<'r> + Send + 'r> Responder<'r> for Content<R> {
 
 macro_rules! ctrs {
     ($($name:ident: $ct:ident, $name_str:expr, $ct_str:expr),+) => {
-        use futures::future::BoxFuture;
-
         $(
             #[doc="Override the `Content-Type` of the response to <b>"]
             #[doc=$name_str]
@@ -74,10 +70,8 @@ macro_rules! ctrs {
 
             /// Sets the Content-Type of the response then delegates the
             /// remainder of the response to the wrapped responder.
-            impl<'r, R: Responder<'r> + Send + 'r> Responder<'r> for $name<R> {
-                fn respond_to<'a, 'x>(self, req: &'r Request<'a>) -> BoxFuture<'x, response::Result<'r>>
-                    where 'a: 'x, 'r: 'x, Self: 'x
-                {
+            impl<'r, 'o: 'r, R: Responder<'r, 'o>> Responder<'r, 'o> for $name<R> {
+                fn respond_to(self, req: &'r Request<'_>) -> response::Result<'o> {
                     Content(ContentType::$ct, self.0).respond_to(req)
                 }
             }

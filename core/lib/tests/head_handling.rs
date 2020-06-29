@@ -22,27 +22,24 @@ fn other() -> content::Json<&'static str> {
 mod head_handling_tests {
     use super::*;
 
-    use tokio::io::{AsyncRead, AsyncReadExt};
+    use tokio::io::AsyncReadExt;
 
     use rocket::Route;
     use rocket::local::Client;
     use rocket::http::{Status, ContentType};
-    use rocket::response::Body;
+    use rocket::response::ResponseBody;
 
     fn routes() -> Vec<Route> {
         routes![index, empty, other]
     }
 
-    async fn assert_empty_sized_body<T: AsyncRead + Unpin>(body: Body<T>, expected_size: u64) {
-        match body {
-            Body::Sized(mut body, size) => {
-                let mut buffer = vec![];
-                body.read_to_end(&mut buffer).await.unwrap();
-                assert_eq!(size, expected_size);
-                assert_eq!(buffer.len(), 0);
-            }
-            _ => panic!("Expected a sized body.")
-        }
+    async fn assert_empty_sized_body(body: &mut ResponseBody<'_>, expected_size: usize) {
+        let size = body.size().await.expect("sized body");
+        assert_eq!(size, expected_size);
+
+        let mut buffer = vec![];
+        body.as_reader().read_to_end(&mut buffer).await.unwrap();
+        assert_eq!(buffer.len(), 0);
     }
 
     #[rocket::async_test]

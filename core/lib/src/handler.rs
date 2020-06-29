@@ -25,6 +25,11 @@ pub type HandlerFuture<'r> = BoxFuture<'r, Outcome<'r>>;
 /// user provided state to make a request handling decision, you should consider
 /// implementing a custom `Handler`.
 ///
+/// ## Async Trait
+///
+/// [`Handler`] is an _async_ trait. Implementations of `Handler` must be
+/// decorated with an attribute of `#[rocket::async_trait]`.
+///
 /// # Example
 ///
 /// Say you'd like to write a handler that changes its functionality based on an
@@ -44,13 +49,14 @@ pub type HandlerFuture<'r> = BoxFuture<'r, Outcome<'r>>;
 /// ```rust,no_run
 /// # #[derive(Copy, Clone)] enum Kind { Simple, Intermediate, Complex, }
 /// use rocket::{Request, Data, Route, http::Method};
-/// use rocket::handler::{self, Handler, Outcome, HandlerFuture};
+/// use rocket::handler::{self, Handler, Outcome};
 ///
 /// #[derive(Clone)]
 /// struct CustomHandler(Kind);
 ///
+/// #[rocket::async_trait]
 /// impl Handler for CustomHandler {
-///     fn handle<'r>(&self, req: &'r Request, data: Data) -> HandlerFuture<'r> {
+///     async fn handle<'r, 's: 'r>(&'s self, req: &'r Request<'_>, data: Data) -> Outcome<'r> {
 ///         match self.0 {
 ///             Kind::Simple => Outcome::from(req, "simple"),
 ///             Kind::Intermediate => Outcome::from(req, "intermediate"),
@@ -131,6 +137,7 @@ pub type HandlerFuture<'r> = BoxFuture<'r, Outcome<'r>>;
 /// Use this alternative when a single configuration is desired and your custom
 /// handler is private to your application. For all other cases, a custom
 /// `Handler` implementation is preferred.
+#[crate::async_trait]
 pub trait Handler: Cloneable + Send + Sync + 'static {
     /// Called by Rocket when a `Request` with its associated `Data` should be
     /// handled by this handler.
@@ -142,7 +149,7 @@ pub trait Handler: Cloneable + Send + Sync + 'static {
     /// generate a response. Otherwise, if the return value is `Forward(Data)`,
     /// the next matching route is attempted. If there are no other matching
     /// routes, the `404` error catcher is invoked.
-    fn handle<'r>(&self, request: &'r Request<'_>, data: Data) -> HandlerFuture<'r>;
+    async fn handle<'r, 's: 'r>(&'s self, request: &'r Request<'_>, data: Data) -> Outcome<'r>;
 }
 
 /// Unfortunate but necessary hack to be able to clone a `Box<Handler>`.
@@ -169,22 +176,23 @@ impl Clone for Box<dyn Handler> {
     }
 }
 
+#[crate::async_trait]
 impl<F: Clone + Sync + Send + 'static> Handler for F
-    where for<'r> F: Fn(&'r Request<'_>, Data) -> HandlerFuture<'r>
+    where for<'x> F: Fn(&'x Request<'_>, Data) -> HandlerFuture<'x>
 {
     #[inline(always)]
-    fn handle<'r>(&self, req: &'r Request<'_>, data: Data) -> HandlerFuture<'r> {
-        self(req, data)
+    async fn handle<'r, 's: 'r>(&'s self, req: &'r Request<'_>, data: Data) -> Outcome<'r> {
+        self(req, data).await
     }
 }
 
 /// The type of an error handler.
-pub type ErrorHandler = for<'r> fn(&'r Request<'_>) -> ErrorHandlerFuture<'r>;
+pub type ErrorHandler = for<'r> fn(&'r Request<'_>) -> CatcherFuture<'r>;
 
 /// Type type of `Future` returned by an error handler.
-pub type ErrorHandlerFuture<'r> = BoxFuture<'r, response::Result<'r>>;
+pub type CatcherFuture<'r> = BoxFuture<'r, response::Result<'r>>;
 
-impl<'r> Outcome<'r> {
+impl<'r, 'o: 'r> Outcome<'o> {
     /// Return the `Outcome` of response to `req` from `responder`.
     ///
     /// If the responder returns `Ok`, an outcome of `Success` is
@@ -195,20 +203,18 @@ impl<'r> Outcome<'r> {
     ///
     /// ```rust
     /// use rocket::{Request, Data};
-    /// use rocket::handler::{Outcome, HandlerFuture};
+    /// use rocket::handler::Outcome;
     ///
-    /// fn str_responder<'r>(req: &'r Request, _: Data) -> HandlerFuture<'r> {
+    /// fn str_responder<'r>(req: &'r Request, _: Data) -> Outcome<'r> {
     ///     Outcome::from(req, "Hello, world!")
     /// }
     /// ```
     #[inline]
-    pub fn from<T: Responder<'r> + Send + 'r>(req: &'r Request<'_>, responder: T) -> HandlerFuture<'r> {
-        Box::pin(async move {
-            match responder.respond_to(req).await {
-                Ok(response) => outcome::Outcome::Success(response),
-                Err(status) => outcome::Outcome::Failure(status)
-            }
-        })
+    pub fn from<R: Responder<'r, 'o>>(req: &'r Request<'_>, responder: R) -> Outcome<'o> {
+        match responder.respond_to(req) {
+            Ok(response) => outcome::Outcome::Success(response),
+            Err(status) => outcome::Outcome::Failure(status)
+        }
     }
 
     /// Return the `Outcome` of response to `req` from `responder`.
@@ -221,23 +227,21 @@ impl<'r> Outcome<'r> {
     ///
     /// ```rust
     /// use rocket::{Request, Data};
-    /// use rocket::handler::{Outcome, HandlerFuture};
+    /// use rocket::handler::Outcome;
     ///
-    /// fn str_responder<'r>(req: &'r Request, _: Data) -> HandlerFuture<'r> {
+    /// fn str_responder<'r>(req: &'r Request, _: Data) -> Outcome<'r> {
     ///     Outcome::from(req, "Hello, world!")
     /// }
     /// ```
     #[inline]
-    pub fn try_from<T, E>(req: &'r Request<'_>, result: Result<T, E>) -> HandlerFuture<'r>
-        where T: Responder<'r> + Send + 'r, E: std::fmt::Debug + Send + 'r
+    pub fn try_from<R, E>(req: &'r Request<'_>, result: Result<R, E>) -> Outcome<'o>
+        where R: Responder<'r, 'o>, E: std::fmt::Debug
     {
-        Box::pin(async move {
-            let responder = result.map_err(crate::response::Debug);
-            match responder.respond_to(req).await {
-                Ok(response) => outcome::Outcome::Success(response),
-                Err(status) => outcome::Outcome::Failure(status)
-            }
-        })
+        let responder = result.map_err(crate::response::Debug);
+        match responder.respond_to(req) {
+            Ok(response) => outcome::Outcome::Success(response),
+            Err(status) => outcome::Outcome::Failure(status)
+        }
     }
 
     /// Return the `Outcome` of response to `req` from `responder`.
@@ -250,22 +254,20 @@ impl<'r> Outcome<'r> {
     ///
     /// ```rust
     /// use rocket::{Request, Data};
-    /// use rocket::handler::{Outcome, HandlerFuture};
+    /// use rocket::handler::Outcome;
     ///
-    /// fn str_responder<'r>(req: &'r Request, data: Data) -> HandlerFuture<'r> {
+    /// fn str_responder<'r>(req: &'r Request, data: Data) -> Outcome<'r> {
     ///     Outcome::from_or_forward(req, data, "Hello, world!")
     /// }
     /// ```
     #[inline]
-    pub fn from_or_forward<T: 'r>(req: &'r Request<'_>, data: Data, responder: T) -> HandlerFuture<'r>
-        where T: Responder<'r> + Send
+    pub fn from_or_forward<R>(req: &'r Request<'_>, data: Data, responder: R) -> Outcome<'o>
+        where R: Responder<'r, 'o>
     {
-        Box::pin(async move {
-            match responder.respond_to(req).await {
-                Ok(response) => outcome::Outcome::Success(response),
-                Err(_) => outcome::Outcome::Forward(data)
-            }
-        })
+        match responder.respond_to(req) {
+            Ok(response) => outcome::Outcome::Success(response),
+            Err(_) => outcome::Outcome::Forward(data)
+        }
     }
 
     /// Return an `Outcome` of `Failure` with the status code `code`. This is
@@ -278,13 +280,11 @@ impl<'r> Outcome<'r> {
     ///
     /// ```rust
     /// use rocket::{Request, Data};
-    /// use rocket::handler::{Outcome, HandlerFuture};
+    /// use rocket::handler::Outcome;
     /// use rocket::http::Status;
     ///
-    /// fn bad_req_route<'r>(_: &'r Request, _: Data) -> HandlerFuture<'r> {
-    ///     Box::pin(async move {
-    ///         Outcome::failure(Status::BadRequest)
-    ///     })
+    /// fn bad_req_route<'r>(_: &'r Request, _: Data) -> Outcome<'r> {
+    ///     Outcome::failure(Status::BadRequest)
     /// }
     /// ```
     #[inline(always)]
@@ -302,12 +302,10 @@ impl<'r> Outcome<'r> {
     ///
     /// ```rust
     /// use rocket::{Request, Data};
-    /// use rocket::handler::{Outcome, HandlerFuture};
+    /// use rocket::handler::Outcome;
     ///
-    /// fn always_forward<'r>(_: &'r Request, data: Data) -> HandlerFuture<'r> {
-    ///     Box::pin(async move {
-    ///         Outcome::forward(data)
-    ///     })
+    /// fn always_forward<'r>(_: &'r Request, data: Data) -> Outcome<'r> {
+    ///     Outcome::forward(data)
     /// }
     /// ```
     #[inline(always)]

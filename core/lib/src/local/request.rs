@@ -105,7 +105,7 @@ impl<'c> LocalRequest<'c> {
         uri: Cow<'c, str>
     ) -> LocalRequest<'c> {
         // We set a dummy string for now and check the user's URI on dispatch.
-        let request = Request::new(client.manifest(), method, Origin::dummy());
+        let request = Request::new(client.rocket(), method, Origin::dummy());
 
         // Set up any cookies we know about.
         if let Some(ref jar) = client.cookies {
@@ -428,12 +428,12 @@ impl<'c> LocalRequest<'c> {
             request.set_uri(uri.into_owned());
         } else {
             error!("Malformed request URI: {}", uri);
-            let res = client.manifest().handle_error(Status::BadRequest, request).await;
+            let res = client.rocket().handle_error(Status::BadRequest, request).await;
             return LocalResponse { _request: owned_request, response: res };
         }
 
         // Actually dispatch the request.
-        let response = client.manifest().dispatch(request, Data::local(data)).await;
+        let response = client.rocket().dispatch(request, Data::local(data)).await;
 
         // If the client is tracking cookies, updates the internal cookie jar
         // with the changes reflected by `response`.

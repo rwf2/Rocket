@@ -7,11 +7,10 @@ use std::env;
 
 use rocket::{Request, Handler, Route, Data, Catcher, try_outcome};
 use rocket::http::{Status, RawStr};
-use rocket::response::{self, Responder, status::Custom};
-use rocket::handler::{Outcome, HandlerFuture};
+use rocket::response::{Responder, status::Custom};
+use rocket::handler::{Outcome, HandlerFuture, CatcherFuture};
 use rocket::outcome::IntoOutcome;
 use rocket::http::Method::*;
-use rocket::futures::future::BoxFuture;
 use rocket::tokio::fs::File;
 
 fn forward<'r>(_req: &'r Request, data: Data) -> HandlerFuture<'r> {
@@ -19,26 +18,25 @@ fn forward<'r>(_req: &'r Request, data: Data) -> HandlerFuture<'r> {
 }
 
 fn hi<'r>(req: &'r Request, _: Data) -> HandlerFuture<'r> {
-    Box::pin(async move { Outcome::from(req, "Hello!").await })
+    Outcome::from(req, "Hello!").pin()
 }
 
 fn name<'a>(req: &'a Request, _: Data) -> HandlerFuture<'a> {
-    Box::pin(async move {
-        let param = req.get_param::<&'a RawStr>(0)
-            .and_then(|res| res.ok())
-            .unwrap_or("unnamed".into());
+    let param = req.get_param::<&'a RawStr>(0)
+        .and_then(|res| res.ok())
+        .unwrap_or("unnamed".into());
 
-        Outcome::from(req, param.as_str()).await
-    })
+    Outcome::from(req, param.as_str()).pin()
 }
 
 fn echo_url<'r>(req: &'r Request, _: Data) -> HandlerFuture<'r> {
+    let param_outcome = req.get_param::<&RawStr>(1)
+        .and_then(|res| res.ok())
+        .into_outcome(Status::BadRequest);
+
     Box::pin(async move {
-        let param_outcome = req.get_param::<&RawStr>(1)
-            .and_then(|res| res.ok())
-            .into_outcome(Status::BadRequest);
         let param = try_outcome!(param_outcome);
-        Outcome::try_from(req, RawStr::from_str(param).url_decode()).await
+        Outcome::try_from(req, RawStr::from_str(param).url_decode())
     })
 }
 
@@ -52,7 +50,7 @@ fn upload<'r>(req: &'r Request, data: Data) -> HandlerFuture<'r> {
         let file = File::create(env::temp_dir().join("upload.txt")).await;
         if let Ok(file) = file {
             if let Ok(n) = data.stream_to(file).await {
-                return Outcome::from(req, format!("OK: {} bytes uploaded.", n)).await;
+                return Outcome::from(req, format!("OK: {} bytes uploaded.", n));
             }
 
             println!("    => Failed copying.");
@@ -65,12 +63,12 @@ fn upload<'r>(req: &'r Request, data: Data) -> HandlerFuture<'r> {
 }
 
 fn get_upload<'r>(req: &'r Request, _: Data) -> HandlerFuture<'r> {
-    Outcome::from(req, std::fs::File::open(env::temp_dir().join("upload.txt")).ok())
+    Outcome::from(req, std::fs::File::open(env::temp_dir().join("upload.txt")).ok()).pin()
 }
 
-fn not_found_handler<'r>(req: &'r Request) -> BoxFuture<'r, response::Result<'r>> {
+fn not_found_handler<'r>(req: &'r Request) -> CatcherFuture<'r> {
     let res = Custom(Status::NotFound, format!("Couldn't find: {}", req.uri()));
-    res.respond_to(req)
+    Box::pin(async move { res.respond_to(req) })
 }
 
 #[derive(Clone)]
@@ -84,17 +82,17 @@ impl CustomHandler {
     }
 }
 
-impl Handler for CustomHandler {
-    fn handle<'r>(&self, req: &'r Request, data: Data) -> HandlerFuture<'r> {
-        let self_data = self.data;
-        Box::pin(async move {
-            let id_outcome = req.get_param::<&RawStr>(0)
-                .and_then(|res| res.ok())
-                .or_forward(data);
+// FIXME: Will this work?
 
-            let id = try_outcome!(id_outcome);
-            Outcome::from(req, format!("{} - {}", self_data, id)).await
-        })
+#[rocket::async_trait]
+impl Handler for CustomHandler {
+    async fn handle<'r, 's: 'r>(&'s self, req: &'r Request<'_>, data: Data) -> Outcome<'r> {
+        let self_data = self.data;
+        let id = req.get_param::<&RawStr>(0)
+            .and_then(|res| res.ok())
+            .or_forward(data);
+
+        Outcome::from(req, format!("{} - {}", self_data, try_outcome!(id)))
     }
 }
 

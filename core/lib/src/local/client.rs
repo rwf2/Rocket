@@ -1,7 +1,7 @@
 use std::sync::RwLock;
 use std::borrow::Cow;
 
-use crate::rocket::{Rocket, Manifest};
+use crate::rocket::{Rocket, Cargo};
 use crate::local::LocalRequest;
 use crate::http::{Method, private::CookieJar};
 use crate::error::LaunchError;
@@ -70,7 +70,7 @@ use crate::error::LaunchError;
 /// [`put()`]: #method.put
 /// [`post()`]: #method.post
 pub struct Client {
-    manifest: Manifest,
+    cargo: Cargo,
     pub(crate) cookies: Option<RwLock<CookieJar>>,
 }
 
@@ -78,16 +78,14 @@ impl Client {
     /// Constructs a new `Client`. If `tracked` is `true`, an empty `CookieJar`
     /// is created for cookie tracking. Otherwise, the internal `CookieJar` is
     /// set to `None`.
-    async fn _new(rocket: Rocket, tracked: bool) -> Result<Client, LaunchError> {
-        let mut manifest = rocket.actualize_and_take_manifest().await;
-        manifest.prelaunch_check()?;
-
+    async fn _new(mut rocket: Rocket, tracked: bool) -> Result<Client, LaunchError> {
+        rocket.prelaunch_check().await?;
         let cookies = match tracked {
             true => Some(RwLock::new(CookieJar::new())),
             false => None
         };
 
-        Ok(Client { manifest, cookies })
+        Ok(Client { cargo: rocket.into_cargo().await, cookies })
     }
 
     /// Construct a new `Client` from an instance of `Rocket` with cookie
@@ -153,7 +151,7 @@ impl Client {
         Client::_new(rocket, false).await
     }
 
-    /// Returns a reference to the `Manifest` of the `Rocket` this client is
+    /// Returns a reference to the `Rocket` of the `Rocket` this client is
     /// creating requests for.
     ///
     /// # Example
@@ -165,13 +163,32 @@ impl Client {
     /// let my_rocket = rocket::ignite();
     /// let client = Client::new(my_rocket).await.expect("valid rocket");
     ///
-    /// // get access to the manifest within `client`
-    /// let manifest = client.manifest();
+    /// let rocket = client.rocket();
     /// # });
     /// ```
     #[inline(always)]
-    pub fn manifest(&self) -> &Manifest {
-        &self.manifest
+    pub fn rocket(&self) -> &Rocket {
+        &*self.cargo
+    }
+
+    /// Returns a reference to the `Rocket` of the `Rocket` this client is
+    /// creating requests for.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use rocket::local::Client;
+    ///
+    /// # rocket::async_test(async {
+    /// let my_rocket = rocket::ignite();
+    /// let client = Client::new(my_rocket).await.expect("valid rocket");
+    ///
+    /// let cargo = client.cargo();
+    /// # });
+    /// ```
+    #[inline(always)]
+    pub fn cargo(&self) -> &Cargo {
+        &self.cargo
     }
 
     /// Create a local `GET` request to the URI `uri`.

@@ -48,7 +48,7 @@ impl Fairing for Counter {
             let body = format!("Get: {}\nPost: {}", get_count, post_count);
             res.set_status(Status::Ok);
             res.set_header(ContentType::Plain);
-            res.set_sized_body(Cursor::new(body)).await;
+            res.set_sized_body(body.len(), Cursor::new(body));
         }
     }
 }
@@ -89,7 +89,7 @@ fn rocket() -> rocket::Rocket {
             Box::pin(async move {
                 if req.uri().path() == "/" {
                     println!("    => Rewriting response body.");
-                    res.set_sized_body(Cursor::new("Hello, fairings!")).await;
+                    res.set_sized_body(None, Cursor::new("Hello, fairings!"));
                 }
             })
         }))
