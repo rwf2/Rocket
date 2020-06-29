@@ -29,17 +29,15 @@ mod responder;
 pub use self::fairing::Compression;
 pub use self::responder::Compress;
 
-use rocket::futures::io::BufReader;
 use rocket::http::MediaType;
 use rocket::{Request, Response};
-use tokio::io::AsyncRead;
-use tokio_util::compat::{FuturesAsyncReadCompatExt, Tokio02AsyncReadCompatExt};
+use tokio::io::{AsyncRead, BufReader};
 
 #[cfg(feature = "brotli_compression")]
-use async_compression::futures::bufread::BrotliEncoder;
+use async_compression::tokio_02::bufread::BrotliEncoder;
 
 #[cfg(feature = "gzip_compression")]
-use async_compression::futures::bufread::GzipEncoder;
+use async_compression::tokio_02::bufread::GzipEncoder;
 
 struct CompressionUtils;
 
@@ -82,7 +80,7 @@ impl CompressionUtils {
         }
     }
 
-    async fn compress_response(
+    fn compress_response(
         request: &Request<'_>,
         response: &mut Response<'_>,
         exclusions: &[MediaType],
@@ -104,10 +102,11 @@ impl CompressionUtils {
             #[cfg(feature = "brotli_compression")]
             {
                 if let Some(plain) = response.take_body() {
-                    let buf_reader = BufReader::new(plain.into_inner().compat());
-                    let compressor = BrotliEncoder::new(buf_reader);
-
-                    CompressionUtils::set_body_and_encoding(response, compressor.compat(), "br");
+                    CompressionUtils::set_body_and_encoding(
+                        response,
+                        BrotliEncoder::new(BufReader::new(plain.into_inner())),
+                        "br",
+                    );
                 }
             }
         } else if cfg!(feature = "gzip_compression")
@@ -116,10 +115,11 @@ impl CompressionUtils {
             #[cfg(feature = "gzip_compression")]
             {
                 if let Some(plain) = response.take_body() {
-                    let buf_reader = BufReader::new(plain.into_inner().compat());
-                    let compressor = GzipEncoder::new(buf_reader);
-
-                    CompressionUtils::set_body_and_encoding(response, compressor.compat(), "gzip");
+                    CompressionUtils::set_body_and_encoding(
+                        response,
+                        GzipEncoder::new(BufReader::new(plain.into_inner())),
+                        "gzip",
+                    );
                 }
             }
         }

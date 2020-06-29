@@ -42,7 +42,7 @@ impl<'r, R: Responder<'r> + Send> Responder<'r> for Compress<R> {
             .merge(self.0.respond_to(request).await?)
             .finalize();
 
-        CompressionUtils::compress_response(request, &mut response, &[]).await;
+        CompressionUtils::compress_response(request, &mut response, &[]);
         Ok(response)
     }
 }

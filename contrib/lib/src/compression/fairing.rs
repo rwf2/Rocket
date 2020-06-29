@@ -155,6 +155,6 @@ impl Fairing for Compression {
             .await
             .expect("Compression Context registered in on_attach");
 
-        super::CompressionUtils::compress_response(request, response, &context.exclusions).await;
+        super::CompressionUtils::compress_response(request, response, &context.exclusions);
     }
 }

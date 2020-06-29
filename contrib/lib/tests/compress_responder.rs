@@ -6,15 +6,16 @@ extern crate rocket;
 
 #[cfg(all(feature = "brotli_compression", feature = "gzip_compression"))]
 mod compress_responder_tests {
-    use rocket::futures::io::Cursor;
-    use rocket::futures::prelude::*;
+    use std::io::Cursor;
+
     use rocket::http::Status;
     use rocket::http::{ContentType, Header};
     use rocket::local::Client;
     use rocket::response::{Content, Response};
     use rocket_contrib::compression::Compress;
 
-    use async_compression::futures::bufread::{BrotliDecoder, GzipDecoder, GzipEncoder};
+    use async_compression::tokio_02::bufread::{BrotliDecoder, GzipDecoder, GzipEncoder};
+    use tokio::prelude::*;
 
     const HELLO: &str = r"This is a message to hello with more than 100 bytes \
         in order to have to read more than one buffer when gzipping. こんにちは!";
