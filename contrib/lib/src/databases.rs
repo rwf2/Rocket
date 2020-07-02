@@ -891,14 +891,14 @@ impl<C: Poolable> ConnectionPool<C> {
 
     pub async fn run<F, R>(&self, f: F) -> R
     where
-        F: FnOnce(&mut r2d2::PooledConnection<C::Manager>) -> R + Send + 'static,
+        F: FnOnce(&mut C) -> R + Send + 'static,
         R: Send + 'static,
     {
         let _permit = self.semaphore.acquire().await;
         let pool = self.pool.clone();
         let ret = tokio::task::spawn_blocking(move || {
             let mut conn = pool.get().expect("TODO");
-            let ret = f(&mut conn);
+            let ret = f(&mut *conn);
             ret
         }).await.expect("failed to spawn a blocking task to use a pooled connection");
         ret
