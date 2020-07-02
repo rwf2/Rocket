@@ -173,7 +173,7 @@ three simple steps:
 
   1. Configure the databases in `Rocket.toml`.
   2. Associate a request guard type and fairing with each database.
-  3. Use the request guard to retrieve a connection in a handler.
+  3. Use the request guard to retrieve and use a connection in a handler.
 
 Presently, Rocket provides built-in support for the following databases:
 
@@ -260,7 +260,7 @@ fn rocket() -> rocket::Rocket {
 ```
 
 That's it! Whenever a connection to the database is needed, use your type as a
-request guard. The database can be used by calling `run`:
+request guard. The database can be accessed by calling the `run` method:
 
 ```rust
 #[get("/logs/<id>")]
@@ -273,11 +273,12 @@ async fn get_logs(conn: LogsDbConn, id: usize) -> Result<Logs> {
 
 ! note
 
-  The database engines supported by `#[database]` are *synchronous*. The `run()`
-  function offloads this synchronous work via `tokio::spawn_blocking`, so that
-  database access does not interfere with other in-flight requests. See
-  [Cooperative Multitasking](../overview/#cooperative-multitasking) for more
-  information on why this is necessary.
+  The database engines supported by `#[database]` are *synchronous*, and
+  normally block the thread of execution. The `run()` function automatically
+  uses `tokio::spawn_blocking` so that database access does not interfere with
+  other in-flight requests. See [Cooperative
+  Multitasking](../overview/#cooperative-multitasking) for more information on
+  why this is necessary.
 
 If your application uses features of a database engine that are not available
 by default, for example support for `chrono` or `uuid`, you may enable those

@@ -88,9 +88,9 @@
 //! # type Result<T> = std::result::Result<T, ()>;
 //! #
 //! #[get("/logs/<id>")]
-//! fn get_logs(conn: LogsDbConn, id: usize) -> Result<Logs> {
+//! async fn get_logs(conn: LogsDbConn, id: usize) -> Result<Logs> {
 //! # /*
-//!     Logs::by_id(&*conn, id)
+//!     conn.run(|c| Logs::by_id(c, id)).await
 //! # */
 //! # Ok(())
 //! }
@@ -226,11 +226,9 @@
 //! ```
 //!
 //! The macro generates a [`FromRequest`] implementation for the decorated type,
-//! allowing the type to be used as a request guard. This implementation
-//! retrieves a connection from the database pool or fails with a
-//! `Status::ServiceUnavailable` if no connections are available. The macro also
-//! generates an implementation of the [`Deref`](std::ops::Deref) trait with
-//! the internal `Poolable` type as the target.
+//! allowing the type to be used as a request guard. This implementation always
+//! succeeds; database availability is not actually checked until `run()` is
+//! called.
 //!
 //! The macro will also generate two inherent methods on the decorated type:
 //!
@@ -241,9 +239,8 @@
 //!
 //!   * `fn get_one(&Cargo) -> Option<Self>`
 //!
-//!     Retrieves a connection from the configured pool. Returns `Some` as long
-//!     as `Self::fairing()` has been attached and there is at least one
-//!     connection in the pool.
+//!     Retrieves a connection wrapper from the configured pool. Returns `Some`
+//!     as long as `Self::fairing()` has been attached.
 //!
 //! The fairing returned from the generated `fairing()` method _must_ be
 //! attached for the request guard implementation to succeed. Putting the pieces
@@ -284,8 +281,8 @@
 //!
 //! ## Handlers
 //!
-//! Finally, simply use your type as a request guard in a handler to retrieve a
-//! connection to a given database:
+//! Finally, use your type as a request guard in a handler to retrieve a
+//! connection wrapper for the database:
 //!
 //! ```rust
 //! # #![feature(proc_macro_hygiene)]
@@ -306,8 +303,7 @@
 //! # }
 //! ```
 //!
-//! The generated `Deref` implementation allows easy access to the inner
-//! connection type:
+//! A connection can be retrieved and used with the `run()` method:
 //!
 //! ```rust
 //! # #![feature(proc_macro_hygiene)]
