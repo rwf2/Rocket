@@ -1,12 +1,14 @@
 use std::{io, mem};
 use std::sync::Arc;
+use std::sync::atomic::AtomicBool;
 use std::collections::HashMap;
+use std::time::Duration;
 
 #[allow(unused_imports)]
 use futures::future::FutureExt;
 use futures::stream::StreamExt;
 use futures::future::{Future, BoxFuture};
-use tokio::sync::{mpsc, oneshot};
+use tokio::sync::{broadcast, oneshot};
 use ref_cast::RefCast;
 
 use yansi::Paint;
@@ -41,7 +43,7 @@ pub struct Rocket {
     default_catcher: Option<Catcher>,
     catchers: HashMap<u16, Catcher>,
     fairings: Fairings,
-    shutdown_receiver: Option<mpsc::Receiver<()>>,
+    shutdown_receiver: Option<broadcast::Receiver<()>>,
     pub(crate) shutdown_handle: Shutdown,
 }
 
@@ -118,6 +120,7 @@ impl Rocket {
 
     // Create a "dummy" instance of `Rocket` to use while mem-swapping `self`.
     fn dummy() -> Rocket {
+        let (tx, _) = broadcast::channel(1);
         Rocket {
             manifest: vec![],
             config: Config::development(),
@@ -126,7 +129,7 @@ impl Rocket {
             catchers: HashMap::new(),
             managed_state: Container::new(),
             fairings: Fairings::new(),
-            shutdown_handle: Shutdown(mpsc::channel(1).0),
+            shutdown_handle: Shutdown(tx, Arc::new(AtomicBool::new(false))),
             shutdown_receiver: None,
         }
     }
@@ -189,6 +192,10 @@ async fn hyper_service_fn(
     // the response metadata (and a body channel) beforehand.
     let (tx, rx) = oneshot::channel();
 
+    // The shutdown subscription needs to be opened before dispatching the request.
+    // Otherwise, if shutdown begins during initial request processing, we would miss it.
+    let shutdown_receiver = rocket.shutdown_handle.0.subscribe();
+
     tokio::spawn(async move {
         // Get all of the information from Hyper.
         let (h_parts, h_body) = hyp_req.into_parts();
@@ -205,7 +212,7 @@ async fn hyper_service_fn(
                 // handler) instead of doing this.
                 let dummy = Request::new(&rocket, Method::Get, Origin::dummy());
                 let r = rocket.handle_error(Status::BadRequest, &dummy).await;
-                return rocket.issue_response(r, tx).await;
+                return rocket.issue_response(r, tx, shutdown_receiver).await;
             }
         };
 
@@ -215,7 +222,7 @@ async fn hyper_service_fn(
         // Dispatch the request to get a response, then write that response out.
         let token = rocket.preprocess_request(&mut req, &mut data).await;
         let r = rocket.dispatch(token, &mut req, data).await;
-        rocket.issue_response(r, tx).await;
+        rocket.issue_response(r, tx, shutdown_receiver).await;
     });
 
     rx.await.map_err(|e| io::Error::new(io::ErrorKind::Other, e))
@@ -227,14 +234,37 @@ impl Rocket {
         &self,
         response: Response<'_>,
         tx: oneshot::Sender<hyper::Response<hyper::Body>>,
+        mut shutdown_receiver: broadcast::Receiver<()>,
     ) {
+        let wait_on_shutdown = response.wait_on_shutdown();
         let result = self.write_response(response, tx);
-        match result.await {
-            Ok(()) => {
-                info_!("{}", Paint::green("Response succeeded."));
+        let mut shutdown_receiver = if wait_on_shutdown != Duration::from_millis(0) {
+            let (tx, rx) = broadcast::channel(1);
+            tokio::spawn(async move {
+                let _ = shutdown_receiver.recv().await;
+                tokio::time::delay_for(wait_on_shutdown).await;
+                tx.send(()).expect("there should always be at least one shutdown listener");
+            });
+            rx
+        } else {
+            shutdown_receiver
+        };
+        tokio::select!{
+            result = result => {
+                match result {
+                    Ok(()) => {
+                        info_!("{}", Paint::green("Response succeeded."));
+                    }
+                    Err(e) => {
+                        error_!("Failed to write response: {:?}.", e);
+                    }
+                }
             }
-            Err(e) => {
-                error_!("Failed to write response: {:?}.", e);
+            // The error returned by `recv()` is discarded here.
+            // This is fine, because the only case where it returns that error is
+            // if the sender is dropped, which would indicate shutdown anyway.
+            _ = shutdown_receiver.recv() => {
+                info_!("{}", Paint::red("Response cancelled for shutdown."));
             }
         }
     }
@@ -517,8 +547,7 @@ impl Rocket {
         // listener.set_keepalive(timeout);
 
         // We need to get this before moving `self` into an `Arc`.
-        let mut shutdown_receiver = self.shutdown_receiver
-            .take().expect("shutdown receiver has already been used");
+        let mut shutdown_receiver = self.shutdown_receiver.take().expect("a rocket will listen exactly once");
 
         let rocket = Arc::new(self);
         let service = hyper::make_service_fn(move |connection: &<L as Listener>::Connection| {
@@ -545,7 +574,9 @@ impl Rocket {
         hyper::Server::builder(Incoming::from_listener(listener))
             .executor(TokioExecutor)
             .serve(service)
-            .with_graceful_shutdown(async move { shutdown_receiver.recv().await; })
+            // Discarding the error is fine, because it indicates that the sender has been dropped.
+            // If the sender is dropped, then the Rocket is dropped, and that means we're shutting down.
+            .with_graceful_shutdown(async move { let _ = shutdown_receiver.recv().await; })
             .await
             .map_err(|e| crate::error::Error::Run(Box::new(e)))
     }
@@ -661,17 +692,17 @@ impl Rocket {
         }
 
         let managed_state = Container::new();
-        let (shutdown_sender, shutdown_receiver) = mpsc::channel(1);
+        let (shutdown_sender, shutdown_receiver) = broadcast::channel(1);
 
         Rocket {
             config, managed_state,
-            shutdown_handle: Shutdown(shutdown_sender),
+            shutdown_handle: Shutdown(shutdown_sender, Arc::new(AtomicBool::new(false))),
+            shutdown_receiver: Some(shutdown_receiver),
             manifest: vec![],
             router: Router::new(),
             default_catcher: None,
             catchers: HashMap::new(),
             fairings: Fairings::new(),
-            shutdown_receiver: Some(shutdown_receiver),
         }
     }
 
