@@ -291,21 +291,21 @@ impl Rocket {
         let method_matches = self.router.route(request, true);
         if method_matches.len() > 0 {
             for route in &method_matches {
-                 // Retrieve and set the requests parameters.
-                 info_!("Matched: {}", route);
+                // Retrieve and set the requests parameters.
+                info_!("Matched: {}", route);
 
-                 request.set_route(route);
+                request.set_route(route);
  
-                 // Dispatch the request to the handler.
-                 let outcome = route.handler.handle(request, data);
+                // Dispatch the request to the handler.
+                let outcome = route.handler.handle(request, data);
  
-                 // Check if the request processing completed or if the request needs
-                 // to be forwarded. If it does, continue the loop to try again.
-                 info_!("{} {}", Paint::default("Outcome:").bold(), outcome);
-                 match outcome {
-                     o @ Outcome::Success(_) | o @ Outcome::Failure(_) => return o,
-                     Outcome::Forward(unused_data) => data = unused_data,
-                 };
+                // Check if the request processing completed or if the request needs
+                // to be forwarded. If it does, continue the loop to try again.
+                info_!("{} {}", Paint::default("Outcome:").bold(), outcome);
+                match outcome {
+                    o @ Outcome::Success(_) | o @ Outcome::Failure(_) => return o,
+                    Outcome::Forward(unused_data) => data = unused_data,
+                };
             }
         }
 
@@ -331,7 +331,7 @@ impl Rocket {
                     continue
                 } 
                 
-                // FIXME: fix it before reopen PR (Drunpy - 2020-07-03)
+                // FIXME: fix before reopen PR (Drunpy - 2020-07-03)
                 // Not sure if this check is right here... shouldn't be inside the router?
                 else if &route.method != &request.method() {
                     return Outcome::Failure(Status::MethodNotAllowed);
