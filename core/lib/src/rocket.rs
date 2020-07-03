@@ -309,28 +309,36 @@ impl Rocket {
             }
         }
 
+        error_!("No matching routes for {}.", request);
+        
         let match_any = self.router.route(request, false);        
         if match_any.len() > 0 {
 
-            let mut counter: usize = 0;
+            info_!(
+                "{}",
+                Paint::yellow("A similar route exists: ").bold()
+            );
+
             for route in &match_any {
-                counter += 1;
-    
+                
+                info_!(
+                    " - {}",
+                    Paint::yellow(&route).bold()
+                );
+
                 // Must pass HEAD requests foward
-                if (&request.method() != &Method::Head) {
-                    // Must make sure it consumed all list before fail
-                    if &counter == &match_any.len() && !method_matches.iter().any(|item| route.collides_with(item)){
-                        error_!("No matching routes for {}.", request);
-                        info_!(
-                            "{} {}",
-                            Paint::yellow("A similar route exists:").bold(),
-                            route
-                        );
-                        return Outcome::Failure(Status::MethodNotAllowed);
-                    } else {
-                        continue;
-                    }
+                if &request.method() == &Method::Head {
+                    continue
                 } 
+                
+                // FIXME: fix it before reopen PR (Drunpy - 2020-07-03)
+                // Not sure if this check is right here... shouldn't be inside the router?
+                else if &route.method != &request.method() {
+                    return Outcome::Failure(Status::MethodNotAllowed);
+                } 
+                
+                continue
+                    
             }
         }
 
