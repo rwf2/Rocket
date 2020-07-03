@@ -12,8 +12,7 @@ mod databases_tests {
 #[cfg(all(feature = "databases", feature = "sqlite_pool"))]
 #[cfg(test)]
 mod rusqlite_integration_test {
-    use std::collections::BTreeMap;
-    use rocket::config::{Config, Environment, Value};
+    use rocket::config::{Config, Environment, Value, Map};
     use rocket_contrib::databases::rusqlite;
     use rocket_contrib::database;
 
@@ -24,8 +23,8 @@ mod rusqlite_integration_test {
 
     #[rocket::async_test]
     async fn deref_mut_impl_present() {
-        let mut test_db: BTreeMap<String, Value> = BTreeMap::new();
-        let mut test_db_opts: BTreeMap<String, Value> = BTreeMap::new();
+        let mut test_db: Map<String, Value> = Map::new();
+        let mut test_db_opts: Map<String, Value> = Map::new();
         test_db_opts.insert("url".into(), Value::String(":memory:".into()));
         test_db.insert("test_db".into(), Value::Table(test_db_opts));
         let config = Config::build(Environment::Development)
@@ -45,8 +44,8 @@ mod rusqlite_integration_test {
 
     #[rocket::async_test]
     async fn deref_impl_present() {
-        let mut test_db: BTreeMap<String, Value> = BTreeMap::new();
-        let mut test_db_opts: BTreeMap<String, Value> = BTreeMap::new();
+        let mut test_db: Map<String, Value> = Map::new();
+        let mut test_db_opts: Map<String, Value> = Map::new();
         test_db_opts.insert("url".into(), Value::String(":memory:".into()));
         test_db.insert("test_db".into(), Value::Table(test_db_opts));
         let config = Config::build(Environment::Development)
