@@ -185,6 +185,10 @@ fn hyper_service_fn(
     // the response metadata (and a body channel) beforehand.
     let (tx, rx) = oneshot::channel();
 
+    // The shutdown subscription needs to be opened before dispatching the request.
+    // Otherwise, if shutdown begins during initial request processing, we would miss it.
+    let shutdown_receiver = rocket.shutdown_handle.0.subscribe();
+
     tokio::spawn(async move {
         // Get all of the information from Hyper.
         let (h_parts, h_body) = hyp_req.into_parts();
@@ -201,7 +205,7 @@ fn hyper_service_fn(
                 // handler) instead of doing this.
                 let dummy = Request::new(&rocket, Method::Get, Origin::dummy());
                 let r = rocket.handle_error(Status::BadRequest, &dummy).await;
-                return rocket.issue_response(r, tx).await;
+                return rocket.issue_response(r, tx, shutdown_receiver).await;
             }
         };
 
@@ -210,7 +214,7 @@ fn hyper_service_fn(
 
         // Dispatch the request to get a response, then write that response out.
         let r = rocket.dispatch(&mut req, data).await;
-        rocket.issue_response(r, tx).await;
+        rocket.issue_response(r, tx, shutdown_receiver).await;
     });
 
     async move {
@@ -224,6 +228,7 @@ impl Rocket {
         &self,
         response: Response<'_>,
         tx: oneshot::Sender<hyper::Response<hyper::Body>>,
+        mut shutdown_receiver: broadcast::Receiver<()>,
     ) {
         let finish_on_shutdown = response.finish_on_shutdown();
         let result = self.write_response(response, tx);
@@ -237,7 +242,6 @@ impl Rocket {
                 }
             }
         } else {
-            let mut recv = self.shutdown_handle.0.subscribe();
             tokio::select!{
                 result = result => {
                     match result {
@@ -252,7 +256,7 @@ impl Rocket {
                 // The error returned by `recv()` is discarded here.
                 // This is fine, because the only case where it returns that error is
                 // if the sender is dropped, which would indicate shutdown anyway.
-                _ = recv.recv() => {
+                _ = shutdown_receiver.recv() => {
                     info_!("{}", Paint::red("Response cancelled for shutdown."));
                 }
             }
