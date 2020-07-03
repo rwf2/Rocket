@@ -36,7 +36,15 @@ impl Router {
         entries.insert(i, route);
     }
 
-    // TODO: Describe restric param
+    // Param `restrict` will restrict the route matching by the http method of `req`
+    // With `restrict` == false and `req` method is GET both will be matched:
+    //        - GET hello/world
+    //        - POST hello/world 
+    // With `restrict` == true and `req` method is GET those won't be matched:
+    //        - GET foo/bar
+    //        - POST foo/bar
+    // FIXME: fix before reopen PR (Drunpy - 2020-07-03)
+    // `restrict` would less implicity if called `restrict_method`
     pub fn route<'b>(&'b self, req: &Request<'_>, restrict: bool) -> Vec<&'b Route> {
         let mut matches = Vec::new();
         for (_method, routes_vec) in self.routes.iter() {
@@ -49,8 +57,8 @@ impl Router {
             }
         }
 
-        trace_!("Routing by method: {}", req);
-        trace_!("All matches by method: {:?}", matches);
+        trace_!("Routing(restrict: {}): {}", &restrict, req);
+        trace_!("All matches: {:?}", matches);
         matches
     }
 
