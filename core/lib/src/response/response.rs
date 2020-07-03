@@ -228,6 +228,20 @@ impl<'r> ResponseBuilder<'r> {
         self
     }
 
+    /// Sets the finish-on-shutdown flag.
+    /// 
+    /// If this response is set to finish on shutdown, then Rocket will wait
+    /// until the body is completely served. Otherwise, the client may
+    /// experience a partially-completed download.
+    /// 
+    /// The finish-on-shutdown flag defaults to `false`, but is set to `true`
+    /// for some default responders, such as File.
+    #[inline(always)]
+    pub fn finish_on_shutdown(&mut self, finish_on_shutdown: bool) -> &mut ResponseBuilder<'r> {
+        self.response.set_finish_on_shutdown(finish_on_shutdown);
+        self
+    }
+
     /// Sets the status of the `Response` being built to a custom status
     /// constructed from the `code` and `reason` phrase.
     ///
@@ -591,6 +605,7 @@ pub struct Response<'r> {
     status: Option<Status>,
     headers: HeaderMap<'r>,
     body: Option<ResponseBody<'r>>,
+    finish_on_shutdown: bool,
 }
 
 impl<'r> Response<'r> {
@@ -617,6 +632,7 @@ impl<'r> Response<'r> {
             status: None,
             headers: HeaderMap::new(),
             body: None,
+            finish_on_shutdown: false,
         }
     }
 
@@ -649,6 +665,32 @@ impl<'r> Response<'r> {
     #[inline(always)]
     pub fn build_from(other: Response<'r>) -> ResponseBuilder<'r> {
         ResponseBuilder::new(other)
+    }
+
+    /// Returns the finish-on-shutdown flag.
+    /// 
+    /// If this response is set to finish on shutdown, then Rocket will wait
+    /// until the body is completely served. Otherwise, the client may
+    /// experience a partially-completed download.
+    /// 
+    /// The finish-on-shutdown flag defaults to `false`, but is set to `true`
+    /// for some default responders, such as File.
+    #[inline(always)]
+    pub fn finish_on_shutdown(&self) -> bool {
+        self.finish_on_shutdown
+    }
+
+    /// Sets the finish-on-shutdown flag.
+    /// 
+    /// If this response is set to finish on shutdown, then Rocket will wait
+    /// until the body is completely served. Otherwise, the client may
+    /// experience a partially-completed download.
+    /// 
+    /// The finish-on-shutdown flag defaults to `false`, but is set to `true`
+    /// for some default responders, such as File.
+    #[inline(always)]
+    pub fn set_finish_on_shutdown(&mut self, finish_on_shutdown: bool) {
+        self.finish_on_shutdown = finish_on_shutdown;
     }
 
     /// Returns the status of `self`.

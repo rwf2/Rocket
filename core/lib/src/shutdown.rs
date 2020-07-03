@@ -1,5 +1,5 @@
 use crate::request::{FromRequest, Outcome, Request};
-use tokio::sync::mpsc;
+use tokio::sync::broadcast;
 
 /// A `ShutdownHandle` can be used to instruct a Rocket server to gracefully
 /// shut down. Once a server shutdown has been requested manually by calling
@@ -36,17 +36,17 @@ use tokio::sync::mpsc;
 /// }
 /// ```
 #[derive(Debug, Clone)]
-pub struct ShutdownHandle(pub(crate) mpsc::Sender<()>);
+pub struct ShutdownHandle(pub(crate) broadcast::Sender<()>);
 
 impl ShutdownHandle {
     /// Notify Rocket to shut down gracefully. This function returns
     /// immediately; pending requests will continue to run until completion
     /// before the actual shutdown occurs.
     #[inline]
-    pub fn shutdown(mut self) {
+    pub fn shutdown(self) {
         // Intentionally ignore any error, as the only scenarios this can happen
         // is sending too many shutdown requests or we're already shut down.
-        let _ = self.0.try_send(());
+        let _ = self.0.send(());
         info!("Server shutdown requested, waiting for all pending requests to finish.");
     }
 }

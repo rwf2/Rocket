@@ -7,7 +7,7 @@ use std::collections::HashMap;
 use futures::future::FutureExt;
 use futures::stream::StreamExt;
 use futures::future::{Future, BoxFuture};
-use tokio::sync::{mpsc, oneshot};
+use tokio::sync::{broadcast, oneshot};
 use ref_cast::RefCast;
 
 use yansi::Paint;
@@ -42,7 +42,6 @@ pub struct Rocket {
     pub(crate) managed_state: Container,
     fairings: Fairings,
     shutdown_handle: ShutdownHandle,
-    shutdown_receiver: Option<mpsc::Receiver<()>>,
 }
 
 /// An operation that occurs prior to launching a Rocket instance.
@@ -110,6 +109,7 @@ impl Rocket {
 
     // Create a "dummy" instance of `Rocket` to use while mem-swapping `self`.
     fn dummy() -> Rocket {
+        let (tx, _) = broadcast::channel(1);
         Rocket {
             manifest: vec![],
             config: Config::development(),
@@ -118,8 +118,7 @@ impl Rocket {
             catchers: HashMap::new(),
             managed_state: Container::new(),
             fairings: Fairings::new(),
-            shutdown_handle: ShutdownHandle(mpsc::channel(1).0),
-            shutdown_receiver: None,
+            shutdown_handle: ShutdownHandle(tx),
         }
     }
 
@@ -226,13 +225,36 @@ impl Rocket {
         response: Response<'_>,
         tx: oneshot::Sender<hyper::Response<hyper::Body>>,
     ) {
+        let finish_on_shutdown = response.finish_on_shutdown();
         let result = self.write_response(response, tx);
-        match result.await {
-            Ok(()) => {
-                info_!("{}", Paint::green("Response succeeded."));
+        if finish_on_shutdown {
+            match result.await {
+                Ok(()) => {
+                    info_!("{}", Paint::green("Response succeeded."));
+                }
+                Err(e) => {
+                    error_!("Failed to write response: {:?}.", e);
+                }
             }
-            Err(e) => {
-                error_!("Failed to write response: {:?}.", e);
+        } else {
+            let mut recv = self.shutdown_handle.0.subscribe();
+            tokio::select!{
+                result = result => {
+                    match result {
+                        Ok(()) => {
+                            info_!("{}", Paint::green("Response succeeded."));
+                        }
+                        Err(e) => {
+                            error_!("Failed to write response: {:?}.", e);
+                        }
+                    }
+                }
+                // The error returned by `recv()` is discarded here.
+                // This is fine, because the only case where it returns that error is
+                // if the sender is dropped, which would indicate shutdown anyway.
+                _ = recv.recv() => {
+                    info_!("{}", Paint::red("Response cancelled for shutdown."));
+                }
             }
         }
     }
@@ -497,8 +519,7 @@ impl Rocket {
         // listener.set_keepalive(timeout);
 
         // We need to get this before moving `self` into an `Arc`.
-        let mut shutdown_receiver = self.shutdown_receiver
-            .take().expect("shutdown receiver has already been used");
+        let mut shutdown_receiver = self.shutdown_handle.0.subscribe();
 
         let rocket = Arc::new(self);
         let service = hyper::make_service_fn(move |connection: &<L as Listener>::Connection| {
@@ -523,7 +544,9 @@ impl Rocket {
         hyper::Server::builder(Incoming::from_listener(listener))
             .executor(TokioExecutor)
             .serve(service)
-            .with_graceful_shutdown(async move { shutdown_receiver.recv().await; })
+            // Discarding the error is fine, because it indicates that the sender has been dropped.
+            // If the sender is dropped, then the Rocket is dropped, and that means we're shutting down.
+            .with_graceful_shutdown(async move { let _ = shutdown_receiver.recv().await; })
             .await
             .map_err(|e| crate::error::Error::Run(Box::new(e)))
     }
@@ -626,7 +649,7 @@ impl Rocket {
         }
 
         let managed_state = Container::new();
-        let (shutdown_sender, shutdown_receiver) = mpsc::channel(1);
+        let (shutdown_sender, _) = broadcast::channel(1);
         let shutdown_handle = ShutdownHandle(shutdown_sender);
         managed_state.set(ShutdownHandleManaged(shutdown_handle.clone()));
 
@@ -637,7 +660,6 @@ impl Rocket {
             default_catchers: catcher::defaults::get(),
             catchers: catcher::defaults::get(),
             fairings: Fairings::new(),
-            shutdown_receiver: Some(shutdown_receiver),
         }
     }
 
