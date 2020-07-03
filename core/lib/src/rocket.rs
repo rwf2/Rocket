@@ -60,6 +60,9 @@ enum PreLaunchOp {
 #[repr(transparent)]
 pub struct Cargo(Rocket);
 
+// A token returned to force the execution of one method before another.
+pub(crate) struct Token;
+
 impl Rocket {
     #[inline]
     fn _mount(&mut self, base: Origin<'static>, routes: Vec<Route>) {
@@ -132,29 +135,24 @@ impl Rocket {
     // requiring only a single `await` at the call site. After completion,
     // `self.pending` will be empty and `self.manifest` will reflect all pending
     // changes.
-    //
-    // Note that this returns a boxed future, because `_attach()` calls this
-    // function again creating a cycle.
-    fn actualize_manifest(&mut self) -> BoxFuture<'_, ()> {
-        Box::pin(async move {
-            // Note: attach fairings may add more ops to the `manifest`! We
-            // process them as a stack to maintain proper ordering.
-            let mut manifest = mem::replace(&mut self.manifest, vec![]);
-            while !manifest.is_empty() {
-                trace_!("[MANIEST PROGRESS]: {:?}", manifest);
-                match manifest.remove(0) {
-                    PreLaunchOp::Manage(_, callback) => callback(&mut self.managed_state),
-                    PreLaunchOp::Mount(base, routes) => self._mount(base, routes),
-                    PreLaunchOp::Register(catchers) => self._register(catchers),
-                    PreLaunchOp::Attach(fairing) => {
-                        let rocket = mem::replace(self, Rocket::dummy());
-                        *self = rocket._attach(fairing).await;
-                        self.manifest.append(&mut manifest);
-                        manifest = mem::replace(&mut self.manifest, vec![]);
-                    }
+    async fn actualize_manifest(&mut self) {
+        // Note: attach fairings may add more ops to the `manifest`! We
+        // process them as a stack to maintain proper ordering.
+        let mut manifest = mem::replace(&mut self.manifest, vec![]);
+        while !manifest.is_empty() {
+            trace_!("[MANIEST PROGRESS]: {:?}", manifest);
+            match manifest.remove(0) {
+                PreLaunchOp::Manage(_, callback) => callback(&mut self.managed_state),
+                PreLaunchOp::Mount(base, routes) => self._mount(base, routes),
+                PreLaunchOp::Register(catchers) => self._register(catchers),
+                PreLaunchOp::Attach(fairing) => {
+                    let rocket = mem::replace(self, Rocket::dummy());
+                    *self = rocket._attach(fairing).await;
+                    self.manifest.append(&mut manifest);
+                    manifest = mem::replace(&mut self.manifest, vec![]);
                 }
             }
-        })
+        }
     }
 
     pub(crate) async fn into_cargo(mut self) -> Cargo {
@@ -175,11 +173,11 @@ impl Rocket {
 // converts Hyper types into Rocket types, then calls the `dispatch` function,
 // which knows nothing about Hyper. Because responding depends on the
 // `HyperResponse` type, this function does the actual response processing.
-fn hyper_service_fn(
+async fn hyper_service_fn(
     rocket: Arc<Rocket>,
     h_addr: std::net::SocketAddr,
     hyp_req: hyper::Request<hyper::Body>,
-) -> impl Future<Output = Result<hyper::Response<hyper::Body>, io::Error>> {
+) -> Result<hyper::Response<hyper::Body>, io::Error> {
     // This future must return a hyper::Response, but that's not easy
     // because the response body might borrow from the request. Instead,
     // we do the body writing in another future that will send us
@@ -210,13 +208,12 @@ fn hyper_service_fn(
         let data = Data::from_hyp(h_body).await;
 
         // Dispatch the request to get a response, then write that response out.
-        let r = rocket.dispatch(&mut req, data).await;
+        let token = rocket.preprocess_request(&mut req, &data).await;
+        let r = rocket.dispatch(token, &mut req, data).await;
         rocket.issue_response(r, tx).await;
     });
 
-    async move {
-        rx.await.map_err(|e| io::Error::new(io::ErrorKind::Other, e))
-    }
+    rx.await.map_err(|e| io::Error::new(io::ErrorKind::Other, e))
 }
 
 impl Rocket {
@@ -294,9 +291,14 @@ impl Rocket {
     /// Preprocess the request for Rocket things. Currently, this means:
     ///
     ///   * Rewriting the method in the request if _method form field exists.
+    ///   * Run the request fairings.
     ///
     /// Keep this in-sync with derive_form when preprocessing form fields.
-    fn preprocess_request(&self, req: &mut Request<'_>, data: &Data) {
+    pub(crate) async fn preprocess_request(
+        &self,
+        req: &mut Request<'_>,
+        data: &Data
+    ) -> Token {
         // Check if this is a form and if the form contains the special _method
         // field which we use to reinterpret the request's method.
         let data_len = data.peek().len();
@@ -311,10 +313,15 @@ impl Rocket {
                     .next();
 
                 if let Some(Ok(method)) = method {
-                    req.set_method(method);
+                    req._set_method(method);
                 }
             }
         }
+
+        // Run request fairings.
+        self.fairings.handle_request(req, data).await;
+
+        Token
     }
 
     /// Route the request and process the outcome to eventually get a response.
@@ -380,8 +387,9 @@ impl Rocket {
                 // Dispatch the request to the handler.
                 let outcome = route.handler.handle(request, data).await;
 
-                // Check if the request processing completed (Some) or if the request needs
-                // to be forwarded. If it does, continue the loop (None) to try again.
+                // Check if the request processing completed (Some) or if the
+                // request needs to be forwarded. If it does, continue the loop
+                // (None) to try again.
                 info_!("{} {}", Paint::default("Outcome:").bold(), outcome);
                 match outcome {
                     o@Outcome::Success(_) | o@Outcome::Failure(_) => return o,
@@ -395,42 +403,35 @@ impl Rocket {
     }
 
     #[inline]
-    pub(crate) fn dispatch<'s, 'r: 's>(
+    pub(crate) async fn dispatch<'s, 'r: 's>(
         &'s self,
-        request: &'r mut Request<'s>,
+        _token: Token,
+        request: &'r Request<'s>,
         data: Data
-    ) -> impl Future<Output = Response<'r>> + 's {
-        async move {
-            info!("{}:", request);
+    ) -> Response<'r> {
+        info!("{}:", request);
 
-            // Do a bit of preprocessing before routing.
-            self.preprocess_request(request, &data);
+        // Remember if the request is `HEAD` for later body stripping.
+        let was_head_request = request.method() == Method::Head;
 
-            // Run the request fairings.
-            self.fairings.handle_request(request, &data).await;
+        // Route the request and run the user's handlers.
+        let mut response = self.route_and_process(request, data).await;
 
-            // Remember if the request is `HEAD` for later body stripping.
-            let was_head_request = request.method() == Method::Head;
-
-            // Route the request and run the user's handlers.
-            let mut response = self.route_and_process(request, data).await;
-
-            // Add a default 'Server' header if it isn't already there.
-            // TODO: If removing Hyper, write out `Date` header too.
-            if !response.headers().contains("Server") {
-                response.set_header(Header::new("Server", "Rocket"));
-            }
-
-            // Run the response fairings.
-            self.fairings.handle_response(request, &mut response).await;
-
-            // Strip the body if this is a `HEAD` request.
-            if was_head_request {
-                response.strip_body();
-            }
-
-            response
+        // Add a default 'Server' header if it isn't already there.
+        // TODO: If removing Hyper, write out `Date` header too.
+        if !response.headers().contains("Server") {
+            response.set_header(Header::new("Server", "Rocket"));
         }
+
+        // Run the response fairings.
+        self.fairings.handle_response(request, &mut response).await;
+
+        // Strip the body if this is a `HEAD` request.
+        if was_head_request {
+            response.strip_body();
+        }
+
+        response
     }
 
     // Finds the error catcher for the status `status` and executes it for the

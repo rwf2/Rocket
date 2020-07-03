@@ -42,7 +42,7 @@ struct_client! { [
 ]
 pub struct Client {
     cargo: Cargo,
-    pub(crate) cookies: Option<RwLock<CookieJar>>,
+    pub(in super) cookies: Option<RwLock<CookieJar>>,
 }
 }
 

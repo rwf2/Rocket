@@ -100,8 +100,8 @@ impl<'r> Request<'r> {
         uri: Origin<'s>
     ) -> Request<'r> {
         let mut request = Request {
+            uri,
             method: Atomic::new(method),
-            uri: uri,
             headers: HeaderMap::new(),
             remote: None,
             state: RequestState {

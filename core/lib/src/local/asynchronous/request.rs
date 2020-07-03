@@ -65,33 +65,26 @@ impl<'c> LocalRequest<'c> {
         &mut self.data
     }
 
-    // This method should _never_ be publicly exposed!
-    #[inline(always)]
-    fn long_lived_request<'a>(&mut self) -> &'a mut Request<'c> {
-        // FIXME: Whatever. I'll kill this.
-        unsafe { &mut *(&mut self.request as *mut _) }
-    }
-
     // Performs the actual dispatch.
-    // TODO.async: @jebrosen suspects there might be actual UB in here after all,
-    //             and now we just went and mixed threads into it
     async fn _dispatch(mut self) -> LocalResponse<'c> {
         // First, validate the URI, returning an error response (generated from
         // an error catcher) immediately if it's invalid.
+        let rocket = self.client.rocket();
         if let Ok(uri) = Origin::parse(&self.uri) {
             self.request.set_uri(uri.into_owned());
         } else {
             error!("Malformed request URI: {}", self.uri);
-            let res = self.client.rocket()
-                .handle_error(Status::BadRequest, self.long_lived_request());
-
-            return LocalResponse { _request: self.request, inner: res.await };
+            return LocalResponse::new(self.request, move |req| {
+                rocket.handle_error(Status::BadRequest, req)
+            }).await
         }
 
         // Actually dispatch the request.
-        let response = self.client.rocket()
-            .dispatch(self.long_lived_request(), Data::local(self.data))
-            .await;
+        let data = Data::local(self.data);
+        let token = rocket.preprocess_request(&mut self.request, &data).await;
+        let response = LocalResponse::new(self.request, move |request| {
+            rocket.dispatch(token, request, data)
+        }).await;
 
         // If the client is tracking cookies, updates the internal cookie jar
         // with the changes reflected by `response`.
@@ -110,7 +103,7 @@ impl<'c> LocalRequest<'c> {
             }
         }
 
-        LocalResponse { _request: self.request, inner: response }
+        response
     }
 }
 
