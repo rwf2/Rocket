@@ -74,7 +74,7 @@ pub fn database_attr(attr: TokenStream, input: TokenStream) -> Result<TokenStrea
 
     let generated_types = quote_spanned! { span =>
         /// The request guard type.
-        #vis struct #guard_type(#databases::ConnectionPool<#conn_type>);
+        #vis struct #guard_type(#databases::ConnectionPool<Self, #conn_type>);
     };
 
     Ok(quote! {
@@ -84,14 +84,14 @@ pub fn database_attr(attr: TokenStream, input: TokenStream) -> Result<TokenStrea
             /// Returns a fairing that initializes the associated database
             /// connection pool.
             pub fn fairing() -> impl ::rocket::fairing::Fairing {
-                <#databases::ConnectionPool<#conn_type>>::fairing(#fairing_name, #name)
+                <#databases::ConnectionPool<Self, #conn_type>>::fairing(#fairing_name, #name)
             }
 
             /// Retrieves a connection of type `Self` from the `rocket`
             /// instance. Returns `Some` as long as `Self::fairing()` has been
             /// attached.
             pub fn get_one(cargo: &::rocket::Cargo) -> Option<Self> {
-                <#databases::ConnectionPool<#conn_type>>::get_one(cargo).map(Self)
+                <#databases::ConnectionPool<Self, #conn_type>>::get_one(cargo).map(Self)
             }
 
             /// Runs the provided closure on a blocking threadpool. The closure
@@ -112,7 +112,7 @@ pub fn database_attr(attr: TokenStream, input: TokenStream) -> Result<TokenStrea
             type Error = ();
 
             async fn from_request(request: &'a #request::Request<'r>) -> #request::Outcome<Self, ()> {
-                <#databases::ConnectionPool<#conn_type>>::from_request(request).await.map(Self)
+                <#databases::ConnectionPool<Self, #conn_type>>::from_request(request).await.map(Self)
             }
         }
     }.into())

@@ -403,7 +403,7 @@ pub extern crate diesel;
 
 use std::collections::BTreeMap;
 use std::fmt::{self, Display, Formatter};
-use std::marker::{Send, Sized};
+use std::marker::PhantomData;
 use std::sync::Arc;
 
 use rocket::config::{self, Value};
@@ -847,12 +847,13 @@ impl Poolable for memcache::Client {
 ///
 /// This type is implemented here instead of in generated code to ensure all
 /// types are properly checked.
-pub struct ConnectionPool<C: Poolable> {
+pub struct ConnectionPool<K, C: Poolable> {
     pool: r2d2::Pool<C::Manager>,
     semaphore: Arc<Semaphore>,
+    _marker: PhantomData<fn() -> K>,
 }
 
-impl<C: Poolable> ConnectionPool<C> {
+impl<K: 'static, C: Poolable> ConnectionPool<K, C> {
     pub fn fairing(fairing_name: &'static str, config_name: &'static str) -> impl rocket::fairing::Fairing {
         rocket::fairing::AdHoc::on_attach(fairing_name, move |mut rocket| async move {
             let config = database_config(config_name, rocket.config().await);
@@ -860,9 +861,10 @@ impl<C: Poolable> ConnectionPool<C> {
 
             match pool {
                 Ok((size, Ok(p))) => {
-                    let managed = ConnectionPool::<C> {
+                    let managed = ConnectionPool::<K, C> {
                         pool: p,
                         semaphore: Arc::new(Semaphore::new(size as usize)),
+                        _marker: PhantomData,
                     };
                     Ok(rocket.manage(managed))
                 },
@@ -886,6 +888,7 @@ impl<C: Poolable> ConnectionPool<C> {
         cargo.state::<Self>().map(|c| Self {
             pool: c.pool.clone(),
             semaphore: c.semaphore.clone(),
+            _marker: PhantomData,
         })
     }
 
@@ -906,7 +909,7 @@ impl<C: Poolable> ConnectionPool<C> {
 }
 
 #[::rocket::async_trait]
-impl<'a, 'r, C: Poolable> rocket::request::FromRequest<'a, 'r> for ConnectionPool<C> {
+impl<'a, 'r, K: 'static, C: Poolable> rocket::request::FromRequest<'a, 'r> for ConnectionPool<K, C> {
     type Error = ();
 
     async fn from_request(request: &'a rocket::request::Request<'r>) -> rocket::request::Outcome<Self, ()> {
@@ -914,6 +917,7 @@ impl<'a, 'r, C: Poolable> rocket::request::FromRequest<'a, 'r> for ConnectionPoo
         rocket::Outcome::Success(Self {
             pool: inner.pool.clone(),
             semaphore: inner.semaphore.clone(),
+            _marker: PhantomData,
         })
     }
 }

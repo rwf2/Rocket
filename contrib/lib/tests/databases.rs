@@ -22,18 +22,23 @@ mod rusqlite_integration_test {
     #[database("test_db")]
     struct SqliteDb(pub rusqlite::Connection);
 
+    // Test to ensure that multiple databases of the same type can be used
+    #[database("test_db_2")]
+    struct SqliteDb2(pub rusqlite::Connection);
+
     #[rocket::async_test]
     async fn test_db() {
         let mut test_db: BTreeMap<String, Value> = BTreeMap::new();
         let mut test_db_opts: BTreeMap<String, Value> = BTreeMap::new();
         test_db_opts.insert("url".into(), Value::String(":memory:".into()));
-        test_db.insert("test_db".into(), Value::Table(test_db_opts));
+        test_db.insert("test_db".into(), Value::Table(test_db_opts.clone()));
+        test_db.insert("test_db_2".into(), Value::Table(test_db_opts));
         let config = Config::build(Environment::Development)
             .extra("databases", Value::Table(test_db))
             .finalize()
             .unwrap();
 
-        let mut rocket = rocket::custom(config).attach(SqliteDb::fairing());
+        let mut rocket = rocket::custom(config).attach(SqliteDb::fairing()).attach(SqliteDb2::fairing());
         let conn = SqliteDb::get_one(rocket.inspect().await).expect("unable to get connection");
 
         // Rusqlite's `transaction()` method takes `&mut self`; this tests that
