@@ -1018,6 +1018,11 @@ impl<'r> Response<'r> {
     /// [DEFAULT_CHUNK_SIZE](::response::DEFAULT_CHUNK_SIZE). Use
     /// [set_chunked_body](#method.set_chunked_body) for custom chunk sizes.
     ///
+    /// Normally, data will be buffered and sent only in complete
+    /// chunks.  If you need timely transmission of available data,
+    /// rather than buffering, use the `WouldBlock` technique
+    /// described in [Stream](::response::Stream).
+    ///
     /// # Example
     ///
     /// ```rust

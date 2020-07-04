@@ -29,6 +29,24 @@ impl<T: Read> Stream<T> {
     /// # #[allow(unused_variables)]
     /// let response = Stream::chunked(io::stdin(), 10);
     /// ```
+    ///
+    /// # Buffering and blocking
+    ///
+    /// Normally, data will be buffered and sent only in complete
+    /// `chunk_size` chunks.  If the `reader` needs data sent so far
+    /// to be transmitted in a timely fashion (e.g. it is responding
+    /// to a Server-Side Events (JavaScript `EventSource`) request, it
+    /// should return an [io::Error](std::io::Error) of kind
+    /// `WouldBlock` (which should not normally occur), after
+    /// returning a collection of data.  This will cause a flush of
+    /// data seen so far, rather than being treated as an error.
+    ///
+    /// Note that long-running responses may easily exhaust Rocket's
+    /// thread pool, so consider increasing the number of threads.
+    /// If doing SSE, also note the 'maximum open connections' browser
+    /// limitation which is described in the
+    /// [EventSource documentation](https://developer.mozilla.org/en-US/docs/Web/API/EventSource)
+    /// on the Mozilla Developer Network.
     pub fn chunked(reader: T, chunk_size: u64) -> Stream<T> {
         Stream(reader, chunk_size)
     }

@@ -159,9 +159,12 @@ impl Rocket {
                 let mut buffer = vec![0; chunk_size as usize];
                 let mut stream = hyp_res.start()?;
                 loop {
-                    match body.read_max(&mut buffer)? {
-                        0 => break,
-                        n => stream.write_all(&buffer[..n])?,
+                    match body.read_max_wfs(&mut buffer)? {
+                        (0, _) => break,
+                        (n, f) => {
+                            stream.write_all(&buffer[..n])?;
+                            if f { stream.flush()? }
+                        },
                     }
                 }
 
