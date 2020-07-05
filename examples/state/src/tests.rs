@@ -1,28 +1,28 @@
-use rocket::local::asynchronous::Client;
+use rocket::local::blocking::Client;
 use rocket::http::Status;
 
-async fn register_hit(client: &Client) {
-    let response = client.get("/").dispatch().await;
+fn register_hit(client: &Client) {
+    let response = client.get("/").dispatch();
     assert_eq!(response.status(), Status::Ok);
 }
 
-async fn get_count(client: &Client) -> usize {
-    let response = client.get("/count").dispatch().await;
-    response.into_string().await.and_then(|s| s.parse().ok()).unwrap()
+fn get_count(client: &Client) -> usize {
+    let response = client.get("/count").dispatch();
+    response.into_string().and_then(|s| s.parse().ok()).unwrap()
 }
 
-#[rocket::async_test]
-async fn test_count() {
-    let client = Client::new(super::rocket()).await.unwrap();
+#[test]
+fn test_count() {
+    let client = Client::new(super::rocket()).unwrap();
 
     // Count should start at 0.
-    assert_eq!(get_count(&client).await, 0);
+    assert_eq!(get_count(&client), 0);
 
-    for _ in 0..99 { register_hit(&client).await; }
-    assert_eq!(get_count(&client).await, 99);
+    for _ in 0..99 { register_hit(&client); }
+    assert_eq!(get_count(&client), 99);
 
-    register_hit(&client).await;
-    assert_eq!(get_count(&client).await, 100);
+    register_hit(&client);
+    assert_eq!(get_count(&client), 100);
 }
 
 #[rocket::async_test]

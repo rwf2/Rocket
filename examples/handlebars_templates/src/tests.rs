@@ -1,20 +1,20 @@
 use super::{rocket, TemplateContext};
 
-use rocket::local::asynchronous::Client;
+use rocket::local::blocking::Client;
 use rocket::http::Method::*;
 use rocket::http::Status;
 use rocket_contrib::templates::Template;
 
 macro_rules! dispatch {
     ($method:expr, $path:expr, |$client:ident, $response:ident| $body:expr) => ({
-        let $client = Client::new(rocket()).await.unwrap();
-        let $response = $client.req($method, $path).dispatch().await;
+        let $client = Client::new(rocket()).unwrap();
+        let $response = $client.req($method, $path).dispatch();
         $body
     })
 }
 
-#[rocket::async_test]
-async fn test_root() {
+#[test]
+fn test_root() {
     // Check that the redirect works.
     for method in &[Get, Head] {
         dispatch!(*method, "/", |client, response| {
@@ -34,13 +34,13 @@ async fn test_root() {
             let expected = Template::show(client.cargo(), "error/404", &map).unwrap();
 
             assert_eq!(response.status(), Status::NotFound);
-            assert_eq!(response.into_string().await, Some(expected));
+            assert_eq!(response.into_string(), Some(expected));
         });
     }
 }
 
-#[rocket::async_test]
-async fn test_name() {
+#[test]
+fn test_name() {
     // Check that the /hello/<name> route works.
     dispatch!(Get, "/hello/Jack%20Daniels", |client, response| {
         let context = TemplateContext {
@@ -52,12 +52,12 @@ async fn test_name() {
 
         let expected = Template::show(client.cargo(), "index", &context).unwrap();
         assert_eq!(response.status(), Status::Ok);
-        assert_eq!(response.into_string().await, Some(expected));
+        assert_eq!(response.into_string(), Some(expected));
     });
 }
 
-#[rocket::async_test]
-async fn test_404() {
+#[test]
+fn test_404() {
     // Check that the error catcher works.
     dispatch!(Get, "/hello/", |client, response| {
         let mut map = std::collections::HashMap::new();
@@ -65,6 +65,6 @@ async fn test_404() {
 
         let expected = Template::show(client.cargo(), "error/404", &map).unwrap();
         assert_eq!(response.status(), Status::NotFound);
-        assert_eq!(response.into_string().await, Some(expected));
+        assert_eq!(response.into_string(), Some(expected));
     });
 }

@@ -15,14 +15,25 @@ fn rocket() -> rocket::Rocket {
 #[cfg(test)]
 mod test {
     use super::rocket;
-    use rocket::local::asynchronous::Client;
     use rocket::http::Status;
 
     #[rocket::async_test]
-    async fn test_hello() {
+    async fn test_hello_async() {
+        use rocket::local::asynchronous::Client;
+
         let client = Client::new(rocket()).await.unwrap();
         let response = client.get("/").dispatch().await;
         assert_eq!(response.status(), Status::Ok);
         assert_eq!(response.into_string().await, Some("Hello, world!".into()));
+    }
+
+    #[test]
+    fn test_hello_blocking() {
+        use rocket::local::blocking::Client;
+
+        let client = Client::new(rocket()).unwrap();
+        let response = client.get("/").dispatch();
+        assert_eq!(response.status(), Status::Ok);
+        assert_eq!(response.into_string(), Some("Hello, world!".into()));
     }
 }

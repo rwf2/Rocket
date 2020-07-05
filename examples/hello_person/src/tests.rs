@@ -1,34 +1,34 @@
-use rocket::local::asynchronous::Client;
+use rocket::local::blocking::Client;
 use rocket::http::Status;
 
-async fn test(uri: String, expected: String) {
-    let client = Client::new(super::rocket()).await.unwrap();
-    assert_eq!(client.get(&uri).dispatch().await.into_string().await, Some(expected));
+fn test(uri: String, expected: String) {
+    let client = Client::new(super::rocket()).unwrap();
+    assert_eq!(client.get(&uri).dispatch().into_string(), Some(expected));
 }
 
-async fn test_404(uri: &'static str) {
-    let client = Client::new(super::rocket()).await.unwrap();
-    assert_eq!(client.get(uri).dispatch().await.status(), Status::NotFound);
+fn test_404(uri: &'static str) {
+    let client = Client::new(super::rocket()).unwrap();
+    assert_eq!(client.get(uri).dispatch().status(), Status::NotFound);
 }
 
-#[rocket::async_test]
-async fn test_hello() {
+#[test]
+fn test_hello() {
     for &(name, age) in &[("Mike", 22), ("Michael", 80), ("A", 0), ("a", 127)] {
         test(format!("/hello/{}/{}", name, age),
-            format!("Hello, {} year old named {}!", age, name)).await;
+            format!("Hello, {} year old named {}!", age, name));
     }
 }
 
-#[rocket::async_test]
-async fn test_failing_hello() {
-    test_404("/hello/Mike/1000").await;
-    test_404("/hello/Mike/-129").await;
-    test_404("/hello/Mike/-1").await;
+#[test]
+fn test_failing_hello() {
+    test_404("/hello/Mike/1000");
+    test_404("/hello/Mike/-129");
+    test_404("/hello/Mike/-1");
 }
 
-#[rocket::async_test]
-async fn test_hi() {
+#[test]
+fn test_hi() {
     for name in &["Mike", "A", "123", "hi", "c"] {
-        test(format!("/hello/{}", name), name.to_string()).await;
+        test(format!("/hello/{}", name), name.to_string());
     }
 }

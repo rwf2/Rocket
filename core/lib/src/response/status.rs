@@ -42,7 +42,7 @@ impl<'r, R> Created<R> {
     ///
     /// ```rust
     /// # #![feature(proc_macro_hygiene)]
-    /// # use rocket::{get, routes, local::asynchronous::Client};
+    /// # use rocket::{get, routes, local::blocking::Client};
     /// use rocket::response::status;
     ///
     /// #[get("/")]
@@ -50,15 +50,13 @@ impl<'r, R> Created<R> {
     ///     status::Created::new("http://myservice.com/resource.json")
     /// }
     ///
-    /// # rocket::async_test(async move {
     /// # let rocket = rocket::ignite().mount("/", routes![create]);
-    /// # let client = Client::new(rocket).await.unwrap();
-    /// let response = client.get("/").dispatch().await;
+    /// # let client = Client::new(rocket).unwrap();
+    /// let response = client.get("/").dispatch();
     ///
     /// let loc = response.headers().get_one("Location");
     /// assert_eq!(loc, Some("http://myservice.com/resource.json"));
     /// assert!(response.body().is_none());
-    /// });
     /// ```
     pub fn new<L: Into<Cow<'static, str>>>(location: L) -> Self {
         Created(location.into(), None, None)
@@ -73,7 +71,7 @@ impl<'r, R> Created<R> {
     ///
     /// ```rust
     /// # #![feature(proc_macro_hygiene)]
-    /// # use rocket::{get, routes, local::asynchronous::Client};
+    /// # use rocket::{get, routes, local::blocking::Client};
     /// use rocket::response::status;
     ///
     /// #[get("/")]
@@ -82,10 +80,9 @@ impl<'r, R> Created<R> {
     ///         .body("{ 'resource': 'Hello, world!' }")
     /// }
     ///
-    /// # rocket::async_test(async move {
     /// # let rocket = rocket::ignite().mount("/", routes![create]);
-    /// # let client = Client::new(rocket).await.unwrap();
-    /// let response = client.get("/").dispatch().await;
+    /// # let client = Client::new(rocket).unwrap();
+    /// let response = client.get("/").dispatch();
     ///
     /// let loc = response.headers().get_one("Location");
     /// assert_eq!(loc, Some("http://myservice.com/resource.json"));
@@ -93,9 +90,8 @@ impl<'r, R> Created<R> {
     /// let etag = response.headers().get_one("ETag");
     /// assert_eq!(etag, None);
     ///
-    /// let body = response.into_string().await;
+    /// let body = response.into_string();
     /// assert_eq!(body.unwrap(), "{ 'resource': 'Hello, world!' }");
-    /// # });
     /// ```
     pub fn body(mut self, responder: R) -> Self {
         self.1 = Some(responder);
@@ -109,7 +105,7 @@ impl<'r, R> Created<R> {
     ///
     /// ```rust
     /// # #![feature(proc_macro_hygiene)]
-    /// # use rocket::{get, routes, local::asynchronous::Client};
+    /// # use rocket::{get, routes, local::blocking::Client};
     /// use rocket::response::status;
     ///
     /// #[get("/")]
@@ -118,10 +114,9 @@ impl<'r, R> Created<R> {
     ///         .tagged_body("{ 'resource': 'Hello, world!' }")
     /// }
     ///
-    /// # rocket::async_test(async move {
     /// # let rocket = rocket::ignite().mount("/", routes![create]);
-    /// # let client = Client::new(rocket).await.unwrap();
-    /// let response = client.get("/").dispatch().await;
+    /// # let client = Client::new(rocket).unwrap();
+    /// let response = client.get("/").dispatch();
     ///
     /// let loc = response.headers().get_one("Location");
     /// assert_eq!(loc, Some("http://myservice.com/resource.json"));
@@ -129,9 +124,8 @@ impl<'r, R> Created<R> {
     /// let etag = response.headers().get_one("ETag");
     /// assert_eq!(etag, Some(r#""13046220615156895040""#));
     ///
-    /// let body = response.into_string().await;
+    /// let body = response.into_string();
     /// assert_eq!(body.unwrap(), "{ 'resource': 'Hello, world!' }");
-    /// # });
     /// ```
     pub fn tagged_body(mut self, responder: R) -> Self where R: Hash {
         let mut hasher = &mut DefaultHasher::default();

@@ -29,29 +29,29 @@ fn rocket() -> rocket::Rocket {
 
 #[cfg(test)]
 mod test {
-    use rocket::local::asynchronous::Client;
+    use rocket::local::blocking::Client;
     use rocket::http::Header;
 
-    async fn test_header_count<'h>(headers: Vec<Header<'static>>) {
-        let client = Client::new(super::rocket()).await.unwrap();
+    fn test_header_count<'h>(headers: Vec<Header<'static>>) {
+        let client = Client::new(super::rocket()).unwrap();
         let mut req = client.get("/");
         for header in headers.iter().cloned() {
             req.add_header(header);
         }
 
-        let response = req.dispatch().await;
+        let response = req.dispatch();
         let expect = format!("Your request contained {} headers!", headers.len());
-        assert_eq!(response.into_string().await, Some(expect));
+        assert_eq!(response.into_string(), Some(expect));
     }
 
-    #[rocket::async_test]
-    async fn test_n_headers() {
+    #[test]
+    fn test_n_headers() {
         for i in 0..50 {
             let headers = (0..i)
                 .map(|n| Header::new(n.to_string(), n.to_string()))
                 .collect();
 
-            test_header_count(headers).await;
+            test_header_count(headers);
         }
     }
 }

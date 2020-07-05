@@ -1,14 +1,12 @@
 use super::*;
-use rocket::local::asynchronous::Client;
+use rocket::local::blocking::Client;
 use rocket::http::{ContentType, Status};
 
 fn test(uri: &str, content_type: ContentType, status: Status, body: String) {
-    rocket::async_test(async move {
-        let client = Client::new(rocket()).await.unwrap();
-        let response = client.get(uri).header(content_type).dispatch().await;
-        assert_eq!(response.status(), status);
-        assert_eq!(response.into_string().await, Some(body));
-    })
+    let client = Client::new(rocket()).unwrap();
+    let response = client.get(uri).header(content_type).dispatch();
+    assert_eq!(response.status(), status);
+    assert_eq!(response.into_string(), Some(body));
 }
 
 #[test]
@@ -30,9 +28,9 @@ fn test_echo() {
     test(&uri, ContentType::Plain, Status::Ok, "echo this text".into());
 }
 
-#[rocket::async_test]
-async fn test_upload() {
-    let client = Client::new(rocket()).await.unwrap();
+#[test]
+fn test_upload() {
+    let client = Client::new(rocket()).unwrap();
     let expected_body = "Lorem ipsum dolor sit amet, consectetur adipiscing elit, \
                          sed do eiusmod tempor incididunt ut labore et dolore \
                          magna aliqua".to_string();
@@ -41,14 +39,14 @@ async fn test_upload() {
     let response = client.post("/upload")
         .header(ContentType::Plain)
         .body(&expected_body)
-        .dispatch().await;
+        .dispatch();
 
     assert_eq!(response.status(), Status::Ok);
 
     // Ensure we get back the same body.
-    let response = client.get("/upload").dispatch().await;
+    let response = client.get("/upload").dispatch();
     assert_eq!(response.status(), Status::Ok);
-    assert_eq!(response.into_string().await, Some(expected_body));
+    assert_eq!(response.into_string(), Some(expected_body));
 }
 
 #[test]

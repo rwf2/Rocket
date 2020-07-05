@@ -33,7 +33,7 @@ instance. Usage is straightforward:
   4. Dispatch the request to retrieve the response.
 
     ```rust
-    let response = req.dispatch().await;
+    let response = req.dispatch();
     ```
 
 [`local`]: @api/rocket/local/
@@ -71,12 +71,12 @@ These methods are typically used in combination with the `assert_eq!` or
 ```rust
 let rocket = rocket::ignite();
 let client = Client::new(rocket).expect("valid rocket instance");
-let mut response = client.get("/").dispatch().await;
+let mut response = client.get("/").dispatch();
 
 assert_eq!(response.status(), Status::Ok);
 assert_eq!(response.content_type(), Some(ContentType::Plain));
 assert!(response.headers().get_one("X-Special").is_some());
-assert_eq!(response.into_string().await, Some("Expected Body.".into()));
+assert_eq!(response.into_string(), Some("Expected Body.".into()));
 ```
 
 ## Testing "Hello, world!"
@@ -108,11 +108,11 @@ First, we'll create a `test` module with the proper imports:
 #[cfg(test)]
 mod test {
     use super::rocket;
-    use rocket::local::asynchronous::Client;
+    use rocket::local::blocking::Client;
     use rocket::http::Status;
 
-    #[rocket::async_test]
-    async fn hello_world() {
+    #[test]
+    fn hello_world() {
         ...
     }
 }
@@ -127,12 +127,6 @@ You can also move the body of the `test` module into its own file, say
 
 ### Testing
 
-First, note the `#[rocket::async_test]` attribute. Rust does not support `async
-fn` for tests, so an asynchronous runtime needs to be set up. In most
-applications this is done by `launch()`, but we are deliberately not calling
-that in tests! Instead, we use `#[rocket::async_test]`, which runs the test
-inside a runtime.
-
 To test our "Hello, world!" application, we create a `Client` for our
 `Rocket` instance. It's okay to use methods like `expect` and `unwrap` during
 testing: we _want_ our tests to panic when something goes wrong.
@@ -145,7 +139,7 @@ Then, we create a new `GET /` request and dispatch it, getting back our
 application's response:
 
 ```rust
-let mut response = client.get("/").dispatch().await;
+let mut response = client.get("/").dispatch();
 ```
 
 Finally, we ensure that the response contains the information we expect it to.
@@ -158,7 +152,7 @@ We do this by checking the `Response` object directly:
 
 ```rust
 assert_eq!(response.status(), Status::Ok);
-assert_eq!(response.into_string().await, Some("Hello, world!".into()));
+assert_eq!(response.into_string(), Some("Hello, world!".into()));
 ```
 
 That's it! Altogether, this looks like:
@@ -167,15 +161,15 @@ That's it! Altogether, this looks like:
 #[cfg(test)]
 mod test {
     use super::rocket;
-    use rocket::local::asynchronous::Client;
+    use rocket::local::blocking::Client;
     use rocket::http::Status;
 
-    #[rocket::async_test]
-    async fn hello_world() {
+    #[test]
+    fn hello_world() {
         let client = Client::new(rocket()).expect("valid rocket instance");
-        let mut response = client.get("/").dispatch().await;
+        let mut response = client.get("/").dispatch();
         assert_eq!(response.status(), Status::Ok);
-        assert_eq!(response.into_string().await, Some("Hello, world!".into()));
+        assert_eq!(response.into_string(), Some("Hello, world!".into()));
     }
 }
 ```

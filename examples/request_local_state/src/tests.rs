@@ -1,18 +1,18 @@
 use std::sync::atomic::Ordering;
 
 use super::{rocket, Atomics};
-use rocket::local::asynchronous::Client;
+use rocket::local::blocking::Client;
 
-#[rocket::async_test]
-async fn test() {
-    let client = Client::new(rocket()).await.unwrap();
-    client.get("/sync").dispatch().await;
+#[test]
+fn test() {
+    let client = Client::new(rocket()).unwrap();
+    client.get("/sync").dispatch();
 
     let atomics = client.cargo().state::<Atomics>().unwrap();
     assert_eq!(atomics.uncached.load(Ordering::Relaxed), 2);
     assert_eq!(atomics.cached.load(Ordering::Relaxed), 1);
 
-    client.get("/async").dispatch().await;
+    client.get("/async").dispatch();
 
     let atomics = client.cargo().state::<Atomics>().unwrap();
     assert_eq!(atomics.uncached.load(Ordering::Relaxed), 4);

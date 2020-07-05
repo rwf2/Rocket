@@ -1,15 +1,15 @@
-use rocket::local::asynchronous::Client;
+use rocket::local::blocking::Client;
 use rocket::http::Status;
 
-async fn client() -> Client {
+fn client() -> Client {
     let rocket = rocket::ignite().mount("/", routes![super::root, super::login]);
-    Client::new(rocket).await.unwrap()
+    Client::new(rocket).unwrap()
 }
 
-#[rocket::async_test]
-async fn test_root() {
-    let client = client().await;
-    let response = client.get("/").dispatch().await;
+#[test]
+fn test_root() {
+    let client = client();
+    let response = client.get("/").dispatch();
 
     assert!(response.body().is_none());
     assert_eq!(response.status(), Status::SeeOther);
@@ -22,9 +22,9 @@ async fn test_root() {
     }
 }
 
-#[rocket::async_test]
-async fn test_login() {
-    let client = client().await;
-    let r = client.get("/login").dispatch().await;
-    assert_eq!(r.into_string().await, Some("Hi! Please log in before continuing.".into()));
+#[test]
+fn test_login() {
+    let client = client();
+    let r = client.get("/login").dispatch();
+    assert_eq!(r.into_string(), Some("Hi! Please log in before continuing.".into()));
 }

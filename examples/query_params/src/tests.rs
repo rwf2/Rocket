@@ -1,77 +1,77 @@
 use super::rocket;
-use rocket::local::asynchronous::Client;
+use rocket::local::blocking::Client;
 use rocket::http::Status;
 
 macro_rules! run_test {
     ($query:expr, |$response:ident| $body:expr) => ({
-        let client = Client::new(rocket()).await.unwrap();
+        let client = Client::new(rocket()).unwrap();
         #[allow(unused_mut)]
-        let mut $response = client.get(format!("/hello{}", $query)).dispatch().await;
+        let mut $response = client.get(format!("/hello{}", $query)).dispatch();
         $body
     })
 }
 
-#[rocket::async_test]
-async fn age_and_name_params() {
+#[test]
+fn age_and_name_params() {
     run_test!("?age=10&name=john", |response| {
-        assert_eq!(response.into_string().await,
+        assert_eq!(response.into_string(),
             Some("Hello, 10 year old named john!".into()));
     });
 
     run_test!("?age=20&name=john", |response| {
-        assert_eq!(response.into_string().await,
+        assert_eq!(response.into_string(),
             Some("20 years old? Hi, john!".into()));
     });
 }
 
-#[rocket::async_test]
-async fn age_param_only() {
+#[test]
+fn age_param_only() {
     run_test!("?age=10", |response| {
-        assert_eq!(response.into_string().await,
+        assert_eq!(response.into_string(),
             Some("We're gonna need a name, and only a name.".into()));
     });
 
     run_test!("?age=20", |response| {
-        assert_eq!(response.into_string().await,
+        assert_eq!(response.into_string(),
             Some("We're gonna need a name, and only a name.".into()));
     });
 }
 
-#[rocket::async_test]
-async fn name_param_only() {
+#[test]
+fn name_param_only() {
     run_test!("?name=John", |response| {
-        assert_eq!(response.into_string().await, Some("Hello John!".into()));
+        assert_eq!(response.into_string(), Some("Hello John!".into()));
     });
 }
 
-#[rocket::async_test]
-async fn no_params() {
+#[test]
+fn no_params() {
     run_test!("", |response| {
-        assert_eq!(response.into_string().await,
+        assert_eq!(response.into_string(),
             Some("We're gonna need a name, and only a name.".into()));
     });
 
     run_test!("?", |response| {
-        assert_eq!(response.into_string().await,
+        assert_eq!(response.into_string(),
             Some("We're gonna need a name, and only a name.".into()));
     });
 }
 
-#[rocket::async_test]
-async fn extra_params() {
+#[test]
+fn extra_params() {
     run_test!("?age=20&name=Bob&extra", |response| {
-        assert_eq!(response.into_string().await,
+        assert_eq!(response.into_string(),
             Some("20 years old? Hi, Bob!".into()));
     });
 
     run_test!("?age=30&name=Bob&extra", |response| {
-        assert_eq!(response.into_string().await,
+        assert_eq!(response.into_string(),
             Some("We're gonna need a name, and only a name.".into()));
     });
 }
 
-#[rocket::async_test]
-async fn wrong_path() {
+#[test]
+fn wrong_path() {
     run_test!("/other?age=20&name=Bob", |response| {
         assert_eq!(response.status(), Status::NotFound);
     });
