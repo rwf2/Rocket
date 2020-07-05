@@ -176,9 +176,9 @@
 //!
 //! For a usage example, see [`LocalResponse`] or [`async` `LocalResponse`].
 //!
-//! [`into_string()`]: [`LocalResponse`]: blocking::LocalResponse::into_string()
+//! [`into_string()`]: blocking::LocalResponse::into_string()
 //! [`async` `into_string()`]: asynchronous::LocalResponse::into_string()
-//! [`into_bytes()`]: [`LocalResponse`]: blocking::LocalResponse::into_bytes()
+//! [`into_bytes()`]: blocking::LocalResponse::into_bytes()
 //! [`async` `into_bytes()`]: asynchronous::LocalResponse::into_bytes()
 
 #[macro_use] mod client;

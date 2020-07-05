@@ -14,7 +14,7 @@ use crate::error::LaunchError;
 ///
 /// ## Multithreaded Syncronization Pitfalls
 ///
-/// Unlike its [`blocking`](super::blocking) variant, this `async` `Client`
+/// Unlike its [`blocking`](crate::local::blocking) variant, this `async` `Client`
 /// implements `Sync`. However, using it in a multithreaded environment while
 /// tracking cookies can result in surprising, non-deterministic behavior. This
 /// is because while cookie modifications are serialized, the exact ordering
