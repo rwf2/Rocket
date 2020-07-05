@@ -47,6 +47,6 @@ mod rusqlite_integration_test {
             let tx = conn.transaction().unwrap();
             let _: i32 = tx.query_row("SELECT 1", &[] as &[&dyn ToSql], |row| row.get(0)).expect("get row");
             tx.commit().expect("committed transaction");
-        }).await;
+        }).await.unwrap();
     }
 }

@@ -70,6 +70,7 @@ pub fn database_attr(attr: TokenStream, input: TokenStream) -> Result<TokenStrea
 
     // A few useful paths.
     let databases = quote_spanned!(span => ::rocket_contrib::databases);
+    let r2d2 = quote_spanned!(span => #databases::r2d2);
     let request = quote!(::rocket::request);
 
     let generated_types = quote_spanned! { span =>
@@ -98,7 +99,7 @@ pub fn database_attr(attr: TokenStream, input: TokenStream) -> Result<TokenStrea
             /// will be passed an `&mut r2d2::PooledConnection`, and `.await`ing
             /// this function will provide whatever value is returned from the
             /// closure.
-            pub async fn run<F, R>(&self, f: F) -> R
+            pub async fn run<F, R>(&self, f: F) -> Result<R, #r2d2::Error>
             where
                 F: FnOnce(&mut #conn_type) -> R + Send + 'static,
                 R: Send + 'static,

@@ -854,6 +854,7 @@ pub struct ConnectionPool<K, C: Poolable> {
 }
 
 impl<K: 'static, C: Poolable> ConnectionPool<K, C> {
+    #[inline]
     pub fn fairing(fairing_name: &'static str, config_name: &'static str) -> impl rocket::fairing::Fairing {
         rocket::fairing::AdHoc::on_attach(fairing_name, move |mut rocket| async move {
             let config = database_config(config_name, rocket.config().await);
@@ -884,6 +885,7 @@ impl<K: 'static, C: Poolable> ConnectionPool<K, C> {
         })
     }
 
+    #[inline]
     pub fn get_one(cargo: &::rocket::Cargo) -> Option<Self> {
         cargo.state::<Self>().map(|c| Self {
             pool: c.pool.clone(),
@@ -892,7 +894,8 @@ impl<K: 'static, C: Poolable> ConnectionPool<K, C> {
         })
     }
 
-    pub async fn run<F, R>(&self, f: F) -> R
+    #[inline]
+    pub async fn run<F, R>(&self, f: F) -> Result<R, r2d2::Error>
     where
         F: FnOnce(&mut C) -> R + Send + 'static,
         R: Send + 'static,
@@ -900,9 +903,7 @@ impl<K: 'static, C: Poolable> ConnectionPool<K, C> {
         let _permit = self.semaphore.acquire().await;
         let pool = self.pool.clone();
         let ret = tokio::task::spawn_blocking(move || {
-            let mut conn = pool.get().expect("TODO");
-            let ret = f(&mut *conn);
-            ret
+            pool.get().map(|mut c| f(&mut *c))
         }).await.expect("failed to spawn a blocking task to use a pooled connection");
         ret
     }
@@ -912,6 +913,7 @@ impl<K: 'static, C: Poolable> ConnectionPool<K, C> {
 impl<'a, 'r, K: 'static, C: Poolable> rocket::request::FromRequest<'a, 'r> for ConnectionPool<K, C> {
     type Error = ();
 
+    #[inline]
     async fn from_request(request: &'a rocket::request::Request<'r>) -> rocket::request::Outcome<Self, ()> {
         let inner = ::rocket::try_outcome!(request.guard::<::rocket::State<'_, Self>>().await);
         rocket::Outcome::Success(Self {
