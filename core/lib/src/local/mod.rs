@@ -5,81 +5,33 @@
 //! and integration test Rocket applications by crafting requests, dispatching
 //! them, and verifying the response.
 //!
-//! # Usage
+//! # Async. vs. Blocking
 //!
-//! This module contains two variants of the local API: [`asynchronous`] and
-//! [`blocking`]. The primary difference between the two is in usage: the
-//! `asynchronous` API requires an asynchronous test entry point such as
-//! `#[rocket::async_test]`, while the `blocking` API can be used with
-//! `#[test]`. Additionally, several methods in the `asynchronous` API are
-//! `async` and must therefore be `await`ed.
+//! This module contains two variants, in its two submodules, of the same local
+//! API: [`asynchronous`], and [`blocking`]. As their names imply, the
+//! `asynchronous` API is `async`, returning a `Future` for operations that
+//! would otherwise block, while `blocking` blocks for the same operations.
 //!
-//! Both APIs include a [`Client`] structure that is used to create
-//! [`LocalRequest`] structures that can be dispatched against a given
-//! [`Rocket`](crate::Rocket) instance. Usage is straightforward:
+//! Unless your request handling requires concurrency to make progress, or
+//! you're making use of a `Client` in an environment that necessitates or would
+//! benefit from concurrency, you should use the `blocking` set of APIs due
+//! their ease-of-use. If your request handling _does_ require concurrency to
+//! make progress, for instance by having one handler `await` a response
+//! generated from a request to another handler, use the `asynchronous` set of
+//! APIs.
 //!
-//!   1. Construct a `Rocket` instance that represents the application.
-//!
-//!      ```rust
-//!      let rocket = rocket::ignite();
-//!      # let _ = rocket;
-//!      ```
-//!
-//!   2. Construct a `Client` using the `Rocket` instance.
-//!
-//!      ```rust
-//!      # use rocket::local::asynchronous::Client;
-//!      # let rocket = rocket::ignite();
-//!      # rocket::async_test(async {
-//!      let client = Client::new(rocket).await.expect("valid rocket instance");
-//!      # let _ = client;
-//!      # });
-//!      ```
-//!
-//!   3. Construct requests using the `Client` instance.
-//!
-//!      ```rust
-//!      # use rocket::local::asynchronous::Client;
-//!      # let rocket = rocket::ignite();
-//!      # rocket::async_test(async {
-//!      # let client = Client::new(rocket).await.unwrap();
-//!      let req = client.get("/");
-//!      # let _ = req;
-//!      # });
-//!      ```
-//!
-//!   3. Dispatch the request to retrieve the response.
-//!
-//!      ```rust
-//!      # use rocket::local::asynchronous::Client;
-//!      # let rocket = rocket::ignite();
-//!      # rocket::async_test(async {
-//!      # let client = Client::new(rocket).await.unwrap();
-//!      # let req = client.get("/");
-//!      let response = req.dispatch().await;
-//!      # let _ = response;
-//!      # });
-//!      ```
-//!
-//! All together and in idiomatic fashion, this might look like:
-//!
-//! ```rust
-//! use rocket::local::asynchronous::Client;
-//!
-//! # rocket::async_test(async {
-//! let client = Client::new(rocket::ignite()).await.expect("valid rocket");
-//! let response = client.post("/")
-//!     .body("Hello, world!")
-//!     .dispatch().await;
-//! # let _ = response;
-//! # });
-//! ```
+//! Both APIs include a `Client` structure that is used to create `LocalRequest`
+//! structures that can be dispatched against a given [`Rocket`](crate::Rocket)
+//! instance to yield a `LocalResponse` structure. The APIs are identical except
+//! in that the `asynchronous` APIs return `Future`s for otherwise blocking
+//! operations.
 //!
 //! # Unit/Integration Testing
 //!
-//! This module can be used to test a Rocket application by constructing
-//! requests via `Client` and validating the resulting response. As an example,
-//! consider the following complete "Hello, world!" application, with testing.
+//! This module is primarily intended to be used to test a Rocket application by
+//! constructing requests via `Client`, dispatching them, and validating the
+//! resulting response. As a complete example, consider the following "Hello,
+//! world!" application, with testing.
 //!
 //! ```rust
 //! #![feature(proc_macro_hygiene)]
@@ -91,27 +43,143 @@
 //!     "Hello, world!"
 //! }
 //!
-//! # fn main() {  }
+//! # /*
+//! #[launch]
+//! # */
+//! fn rocket() -> rocket::Rocket {
+//!     rocket::ignite().mount("/", routes![hello])
+//! }
+//!
 //! #[cfg(test)]
 //! mod test {
-//!     use super::{rocket, hello};
-//!     use rocket::local::asynchronous::Client;
-//!
-//!     #[rocket::async_test]
-//!     fn test_hello_world() {
+//!     // Using the preferred `blocking` API.
+//!     #[test]
+//!     fn test_hello_world_blocking() {
 //!         // Construct a client to use for dispatching requests.
-//!         let rocket = rocket::ignite().mount("/", routes![hello]);
-//!         let client = Client::new(rocket).expect("valid rocket instance");
+//!         use rocket::local::blocking::Client;
+//!         let client = Client::new(super::rocket())
+//!             .expect("valid `Rocket`");
 //!
 //!         // Dispatch a request to 'GET /' and validate the response.
-//!         let mut response = client.get("/").dispatch().await;
-//!         assert_eq!(response.into_string().await, Some("Hello, world!".into()));
+//!         let response = client.get("/").dispatch();
+//!         assert_eq!(response.into_string().unwrap(), "Hello, world!");
+//!     }
+//!
+//!     // Using the `asynchronous` API.
+//!     #[rocket::async_test]
+//!     async fn test_hello_world_async() {
+//!         // Construct a client to use for dispatching requests.
+//!         use rocket::local::asynchronous::Client;
+//!         let client = Client::new(super::rocket()).await
+//!             .expect("valid `Rocket`");
+//!
+//!         // Dispatch a request to 'GET /' and validate the response.
+//!         let response = client.get("/").dispatch().await;
+//!         assert_eq!(response.into_string().await.unwrap(), "Hello, world!");
 //!     }
 //! }
 //! ```
 //!
+//! For more details on testing, see the [testing guide].
+//!
+//! [testing guide]: https://rocket.rs/v0.5/guide/testing/
 //! [`Client`]: crate::local::asynchronous::Client
-//! [`LocalRequest`]: crate::local::asynchronous::LocalRequest
+//!
+//! # `Client`
+//!
+//! A `Client`, either [`blocking::Client`] or [`asynchronous::Client`],
+//! referred to as simply [`Client`] and [`async` `Client`], respectively,
+//! constructs requests for local dispatching.
+//!
+//! **Usage**
+//!
+//! A `Client` is constructed via the [`new()`] ([`async` `new()`]) or
+//! [`untracked()`] ([`async` `untracked()`]) methods from an already
+//! constructed `Rocket` instance. Once a value of `Client` has been
+//! constructed, [`get()`], [`put()`], [`post()`], and so on ([`async` `get()`],
+//! [`async` `put()`], [`async` `post()`]) can be called to create a
+//! [`LocalRequest`] ([`async` `LocalRequest`]) for dispatching.
+//!
+//! **Cookie Tracking**
+//!
+//! A `Client` constructed using `new()` propagates cookie changes made by
+//! responses to previously dispatched requests. In other words, if a previously
+//! dispatched request resulted in a response that adds a cookie, any future
+//! requests will contain that cookie. Similarly, cookies removed by a response
+//! won't be propagated further.
+//!
+//! This is typically the desired mode of operation for a `Client` as it removes
+//! the burden of manually tracking cookies. Under some circumstances, however,
+//! disabling this tracking may be desired. In these cases, use the
+//! `untracked()` constructor to create a `Client` that _will not_ track
+//! cookies.
+//!
+//! [`Client`]: blocking::Client
+//! [`async` `Client`]: asynchronous::Client
+//! [`LocalRequest`]: blocking::LocalRequest
+//! [`async` `LocalRequest`]: asynchronous::LocalRequest
+//!
+//! [`new()`]: blocking::Client::new()
+//! [`untracked()`]: blocking::Client::untracked()
+//! [`async` `new()`]: asynchronous::Client::new()
+//! [`async` `untracked()`]: asynchronous::Client::untracked()
+//!
+//! [`get()`]: blocking::Client::get()
+//! [`put()`]: blocking::Client::put()
+//! [`post()`]: blocking::Client::post()
+//! [`async` `get()`]: asynchronous::Client::get()
+//! [`async` `put()`]: asynchronous::Client::put()
+//! [`async` `post()`]: asynchronous::Client::post()
+//!
+//! **Example**
+//!
+//! For a usage example, see [`Client`] or [`async` `Client`].
+//!
+//! # `LocalRequest`
+//!
+//! A [`LocalRequest`] ([`async` `LocalRequest`]) is constructed via a `Client`.
+//! Once obtained, headers, cookies, including private cookies, the remote IP
+//! address, and the request body can all be set via methods on the
+//! `LocalRequest` structure.
+//!
+//! **Dispatching**
+//!
+//! A `LocalRequest` is dispatched by calling [`dispatch()`] ([`async`
+//! `dispatch()`]). The `LocalRequest` is consumed and a [`LocalResponse`]
+//! ([`async` `LocalResponse`]) is returned.
+//!
+//! Note that `LocalRequest` implements [`Clone`]. As such, if the same request
+//! needs to be dispatched multiple times, the request can first be cloned and
+//! then dispatched: `request.clone().dispatch()`.
+//!
+//! **Example**
+//!
+//! For a usage example, see [`LocalRequest`] or [`async` `LocalRequest`].
+//!
+//! [`LocalResponse`]: blocking::LocalResponse
+//! [`async` `LocalResponse`]: asynchronous::LocalResponse
+//! [`dispatch()`]: blocking::LocalRequest::dispatch()
+//! [`async` `dispatch()`]: asynchronous::LocalRequest::dispatch()
+//!
+//! # `LocalResponse`
+//!
+//! The result of `dispatch()`ing a `LocalRequest` is a [`LocalResponse`]
+//! ([`async` `LocalResponse`]). A `LocalResponse` can be queried for response
+//! metadata, including the HTTP status, headers, and cookies, via its getter
+//! methods. Additionally, the body of the response can be read into a string
+//! ([`into_string()`] or [`async` `into_string()`]) or a vector
+//! ([`into_bytes()`] or [`async` `into_bytes()`]).
+//!
+//! The response body must also be read directly using standard I/O mechanisms:
+//! the `blocking` `LocalResponse` implements `Read` while the `async`
+//! `LocalResponse` implements `AsyncRead`.
+//!
+//! For a usage example, see [`LocalResponse`] or [`async` `LocalResponse`].
+//!
+//! [`into_string()`]: [`LocalResponse`]: blocking::LocalResponse::into_string()
+//! [`async` `into_string()`]: asynchronous::LocalResponse::into_string()
+//! [`into_bytes()`]: [`LocalResponse`]: blocking::LocalResponse::into_bytes()
+//! [`async` `into_bytes()`]: asynchronous::LocalResponse::into_bytes()
 
 #[macro_use] mod client;
 #[macro_use] mod request;

@@ -4,11 +4,14 @@ use crate::{Request, http::Method, local::asynchronous};
 
 use super::{Client, LocalResponse};
 
-struct_request! { [
+/// A `blocking` local request as returned by [`Client`](super::Client).
+///
+/// For details, see [the top-level documentation](../index.html#localrequest).
+///
 /// ## Example
 ///
-/// The following snippet uses the available builder methods to construct a
-/// `POST` request to `/` with a JSON body:
+/// The following snippet uses the available builder methods to construct and
+/// dispatch a `POST` request to `/` with a JSON body:
 ///
 /// ```rust
 /// use rocket::local::blocking::{Client, LocalRequest};
@@ -20,13 +23,13 @@ struct_request! { [
 ///     .remote("127.0.0.1:8000".parse().unwrap())
 ///     .cookie(Cookie::new("name", "value"))
 ///     .body(r#"{ "value": 42 }"#);
+///
+/// let response = req.dispatch();
 /// ```
-]
 #[derive(Clone)]
 pub struct LocalRequest<'c> {
     inner: asynchronous::LocalRequest<'c>,
     client: &'c Client,
-}
 }
 
 impl<'c> LocalRequest<'c> {
@@ -58,6 +61,13 @@ impl<'c> LocalRequest<'c> {
         let inner = self.client.block_on(self.inner.dispatch());
         LocalResponse { inner, client: self.client }
     }
+
+    pub_request_impl!("# use rocket::local::blocking::Client;
+        use rocket::local::blocking::LocalRequest;");
 }
 
-impl_request!("use rocket::local::blocking::Client;" LocalRequest);
+impl std::fmt::Debug for LocalRequest<'_> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        self._request().fmt(f)
+    }
+}

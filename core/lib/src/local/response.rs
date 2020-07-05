@@ -1,74 +1,89 @@
-macro_rules! struct_response {
-    ($item:item) =>
-{
-    /// A structure representing a response from dispatching a local request.
-    ///
-    /// This structure is a thin wrapper around [`Response`]. It implements no
-    /// methods of its own; all functionality is exposed via the [`Deref`]
-    /// implementation with a target of `Response`. In other words, when
-    /// invoking methods, a `LocalResponse` can be treated exactly as if it were
-    /// a (read-only) `Response`.
-    ///
-    /// [`Deref`]: std::ops::Deref
-    $item
-}}
-
-macro_rules! impl_response {
-    ($import:literal $(@$prefix:tt $suffix:tt)? $name:ident) =>
-{
-    impl<'c> $name<'c> {
-        /// Consumes `self` reads its body into a string. If `self` doesn't have
-        /// a body, reading fails, or string conversion (for non-UTF-8 bodies)
-        /// fails, returns `None`.
+macro_rules! getter_method {
+    ($doc_prelude:literal, $desc:literal, $f:ident -> $r:ty) => (
+        getter_method!(@$doc_prelude, $f, $desc, $r,
+            concat!("let ", stringify!($f), " = response.", stringify!($f), "();"));
+    );
+    (@$doc_prelude:literal, $f:ident, $desc:expr, $r:ty, $use_it:expr) => (
+        /// Returns the
+        #[doc = $desc]
+        /// of `self`.
         ///
         /// # Example
         ///
-        /// ```rust,ignore
-        #[doc = $import]
+        /// ```rust
+        #[doc = $doc_prelude]
         ///
-        /// # Client::_test(|client| {
-        /// let client: Client = client;
-        /// let response = client.get("/").body("Hello!").dispatch();
-        /// assert_eq!(response.into_string().unwrap(), "Hello!");
-        /// # })
+        /// # Client::_test(|_, _, response| {
+        /// let response: LocalResponse = response;
+        #[doc = $use_it]
+        /// # });
         /// ```
         #[inline(always)]
-        pub $($prefix)? fn into_string(self) -> Option<String> {
-            self._into_string() $(.$suffix)?
+        pub fn $f(&self) -> $r {
+            self._response().$f()
         }
+    )
+}
 
-        /// Consumes `self` and reads its body into a `Vec` of `u8` bytes. If
-        /// `self` doesn't have a body or reading fails returns `None`. Note
-        /// that `self`'s `body` is consumed after a call to this method.
-        ///
-        /// # Example
-        ///
-        /// ```rust,ignore
-        #[doc = $import]
-        ///
-        /// # Client::_test(|client| {
-        /// let client: Client = client;
-        /// let response = client.get("/").body("Hello!").dispatch();
-        /// assert_eq!(response.into_bytes().unwrap(), "Hello!".as_bytes());
-        /// # })
-        /// ```
-        #[inline(always)]
-        pub $($prefix)? fn into_bytes(self) -> Option<Vec<u8>> {
-            self._into_bytes() $(.$suffix)?
-        }
+macro_rules! pub_response_impl {
+    ($doc_prelude:literal $($prefix:tt $suffix:tt)?) =>
+{
+    getter_method!($doc_prelude, "HTTP status",
+        status -> crate::http::Status);
+
+    getter_method!($doc_prelude, "Content-Type, if a valid one is set,",
+        content_type -> Option<crate::http::ContentType>);
+
+    getter_method!($doc_prelude, "HTTP headers",
+        headers -> &crate::http::HeaderMap<'_>);
+
+    getter_method!($doc_prelude, "HTTP cookies as set in the `Set-Cookie` header",
+        cookies -> Vec<crate::http::Cookie<'_>>);
+
+    getter_method!($doc_prelude, "response body, if there is one,",
+        body -> Option<&crate::response::ResponseBody<'_>>);
+
+    /// Consumes `self` and reads the entirety of its body into a string. If
+    /// `self` doesn't have a body, reading fails, or string conversion (for
+    /// non-UTF-8 bodies) fails, returns `None`.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    #[doc = $doc_prelude]
+    ///
+    /// # Client::_test(|_, _, response| {
+    /// let response: LocalResponse = response;
+    /// let string = response.into_string();
+    /// # });
+    /// ```
+    #[inline(always)]
+    pub $($prefix)? fn into_string(self) -> Option<String> {
+        self._into_string() $(.$suffix)?
     }
 
-    impl std::fmt::Debug for LocalResponse<'_> {
-        fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-            self._response().fmt(f)
-        }
+    /// Consumes `self` and reads the entirety of its body into a `Vec` of `u8`
+    /// bytes. If `self` doesn't have a body or reading fails, returns `None`.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    #[doc = $doc_prelude]
+    ///
+    /// # Client::_test(|_, _, response| {
+    /// let response: LocalResponse = response;
+    /// let bytes = response.into_bytes();
+    /// # });
+    /// ```
+    #[inline(always)]
+    pub $($prefix)? fn into_bytes(self) -> Option<Vec<u8>> {
+        self._into_bytes() $(.$suffix)?
     }
 
-    impl<'c> std::ops::Deref for LocalResponse<'c> {
-        type Target = Response<'c>;
-
-        fn deref(&self) -> &Response<'c> {
-            self._response()
-        }
+    #[cfg(test)]
+    #[allow(dead_code)]
+    fn _ensure_impls_exist() {
+        fn is_debug<T: std::fmt::Debug>() {}
+        is_debug::<Self>();
     }
 }}

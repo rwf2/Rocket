@@ -1,16 +1,20 @@
 use std::borrow::Cow;
 use std::cell::RefCell;
+
 use crate::error::LaunchError;
 use crate::http::Method;
-use crate::local::{asynchronous, blocking::LocalRequest};
+use crate::local::{asynchronous, blocking::{LocalRequest, LocalResponse}};
 use crate::rocket::{Rocket, Cargo};
 
-struct_client! { [
+/// A `blocking` client to construct and dispatch local requests.
+///
+/// For details, see [the top-level documentation](../index.html#client). For
+/// the `async` version, see [`asynchronous::Client`].
 ///
 /// ## Example
 ///
 /// The following snippet creates a `Client` from a `Rocket` instance and
-/// dispatches a local request to `POST /` with a body of `Hello, world!`.
+/// dispatches a local `POST /` request with a body of `Hello, world!`.
 ///
 /// ```rust
 /// use rocket::local::blocking::Client;
@@ -21,11 +25,9 @@ struct_client! { [
 ///     .body("Hello, world!")
 ///     .dispatch();
 /// ```
-]
 pub struct Client {
     pub(crate) inner: asynchronous::Client,
     runtime: RefCell<tokio::runtime::Runtime>,
-}
 }
 
 impl Client {
@@ -41,12 +43,16 @@ impl Client {
         Ok(Self { inner, runtime: RefCell::new(runtime) })
     }
 
+    // WARNING: This is unstable! Do not use this method outside of Rocket!
     #[doc(hidden)]
-    /// WARNING: This is unstable! Do not use this method outside of Rocket!
-    pub fn _test<T, F: FnOnce(Self) -> T + Send>(f: F) -> T {
+    pub fn _test<T, F>(f: F) -> T
+        where F: FnOnce(&Self, LocalRequest<'_>, LocalResponse<'_>) -> T + Send
+    {
         let rocket = crate::ignite();
         let client = Client::new(rocket).expect("valid rocket");
-        f(client)
+        let request = client.get("/");
+        let response = request.clone().dispatch();
+        f(&client, request, response)
     }
 
     #[inline(always)]
@@ -71,23 +77,13 @@ impl Client {
     {
         LocalRequest::new(self, method, uri.into())
     }
-}
 
-impl_client!("use rocket::local::blocking::Client;" Client);
+    // Generates the public API methods, which call the private methods above.
+    pub_client_impl!("use rocket::local::blocking::Client;");
+}
 
 #[cfg(doctest)]
 mod doctest {
-    /// ```no_run
-    /// // Just to ensure we get the path/form right in the following tests.
-    /// use rocket::local::blocking::Client;
-    ///
-    /// fn test<T>() {};
-    /// test::<Client>();
-    ///
-    /// fn is_send<T: Send>() {};
-    /// is_send::<Client>();
-    /// ```
-    ///
     /// ```compile_fail
     /// use rocket::local::blocking::Client;
     ///
@@ -95,5 +91,5 @@ mod doctest {
     /// not_sync::<Client>();
     /// ```
     #[allow(dead_code)]
-    fn test_not_sync_or_send() {}
+    fn test_not_sync() {}
 }

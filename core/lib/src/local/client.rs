@@ -1,41 +1,3 @@
-macro_rules! struct_client {
-    ([$(#[$attr:meta])*] $item:item) =>
-{
-    /// A structure to construct requests for local dispatching.
-    ///
-    /// # Usage
-    ///
-    /// A `Client` is constructed via the [`new()`] or [`untracked()`] methods from
-    /// an already constructed `Rocket` instance. Once a value of `Client` has been
-    /// constructed, the [`LocalRequest`] constructor methods ([`get()`], [`put()`],
-    /// [`post()`], and so on) can be used to create a `LocalRequest` for
-    /// dispatching.
-    ///
-    /// See the [top-level documentation](crate::local) for more usage information.
-    ///
-    /// ## Cookie Tracking
-    ///
-    /// A `Client` constructed using [`new()`] propagates cookie changes made by
-    /// responses to previously dispatched requests. In other words, if a previously
-    /// dispatched request resulted in a response that adds a cookie, any future
-    /// requests will contain that cookie. Similarly, cookies removed by a response
-    /// won't be propagated further.
-    ///
-    /// This is typically the desired mode of operation for a `Client` as it removes
-    /// the burden of manually tracking cookies. Under some circumstances, however,
-    /// disabling this tracking may be desired. In these cases, use the
-    /// [`untracked()`](Client::untracked()) constructor to create a `Client` that
-    /// _will not_ track cookies.
-    $(#[$attr])*
-    ///
-    /// [`new()`]: #method.new
-    /// [`untracked()`]: #method.untracked
-    /// [`get()`]: #method.get
-    /// [`put()`]: #method.put
-    /// [`post()`]: #method.post
-    $item
-}}
-
 macro_rules! req_method {
     ($import:literal, $NAME:literal, $f:ident, $method:expr) => (
         req_method!(@
@@ -62,8 +24,8 @@ macro_rules! req_method {
         /// ```rust,no_run
         #[doc = $import]
         ///
-        /// # Client::_test(|client| {
-        /// let client: Client = client;
+        /// # Client::_test(|client, _, _| {
+        /// let client: &Client = client;
         #[doc = $use_it]
         /// # });
         /// ```
@@ -76,137 +38,142 @@ macro_rules! req_method {
     )
 }
 
-macro_rules! impl_client {
-    ($import:literal $(@$prefix:tt $suffix:tt)? $name:ident) =>
+macro_rules! pub_client_impl {
+    ($import:literal $(@$prefix:tt $suffix:tt)?) =>
 {
-    impl $name {
-        /// Construct a new `Client` from an instance of `Rocket` with cookie
-        /// tracking.
-        ///
-        /// # Cookie Tracking
-        ///
-        /// By default, a `Client` propagates cookie changes made by responses
-        /// to previously dispatched requests. In other words, if a previously
-        /// dispatched request resulted in a response that adds a cookie, any
-        /// future requests will contain the new cookies. Similarly, cookies
-        /// removed by a response won't be propagated further.
-        ///
-        /// This is typically the desired mode of operation for a `Client` as it
-        /// removes the burden of manually tracking cookies. Under some
-        /// circumstances, however, disabling this tracking may be desired. The
-        /// [`untracked()`](Client::untracked()) method creates a `Client` that
-        /// _will not_ track cookies.
-        ///
-        /// # Errors
-        ///
-        /// If launching the `Rocket` instance would fail, excepting network errors,
-        /// the `LaunchError` is returned.
-        ///
-        /// ```rust,no_run
-        #[doc = $import]
-        ///
-        /// let rocket = rocket::ignite();
-        /// let client = Client::new(rocket);
-        /// ```
-        #[inline(always)]
-        pub $($prefix)? fn new(rocket: Rocket) -> Result<Self, LaunchError> {
-            Self::_new(rocket, true) $(.$suffix)?
-        }
+    /// Construct a new `Client` from an instance of `Rocket` with cookie
+    /// tracking.
+    ///
+    /// # Cookie Tracking
+    ///
+    /// By default, a `Client` propagates cookie changes made by responses
+    /// to previously dispatched requests. In other words, if a previously
+    /// dispatched request resulted in a response that adds a cookie, any
+    /// future requests will contain the new cookies. Similarly, cookies
+    /// removed by a response won't be propagated further.
+    ///
+    /// This is typically the desired mode of operation for a `Client` as it
+    /// removes the burden of manually tracking cookies. Under some
+    /// circumstances, however, disabling this tracking may be desired. The
+    /// [`untracked()`](Client::untracked()) method creates a `Client` that
+    /// _will not_ track cookies.
+    ///
+    /// # Errors
+    ///
+    /// If launching the `Rocket` instance would fail, excepting network errors,
+    /// the `LaunchError` is returned.
+    ///
+    /// ```rust,no_run
+    #[doc = $import]
+    ///
+    /// let rocket = rocket::ignite();
+    /// let client = Client::new(rocket);
+    /// ```
+    #[inline(always)]
+    pub $($prefix)? fn new(rocket: Rocket) -> Result<Self, LaunchError> {
+        Self::_new(rocket, true) $(.$suffix)?
+    }
 
-        /// Construct a new `Client` from an instance of `Rocket` _without_
-        /// cookie tracking.
-        ///
-        /// # Cookie Tracking
-        ///
-        /// Unlike the [`new()`](Client::new()) constructor, a `Client` returned
-        /// from this method _does not_ automatically propagate cookie changes.
-        ///
-        /// # Errors
-        ///
-        /// If launching the `Rocket` instance would fail, excepting network
-        /// errors, the `LaunchError` is returned.
-        ///
-        /// ```rust,no_run
-        #[doc = $import]
-        ///
-        /// let rocket = rocket::ignite();
-        /// let client = Client::untracked(rocket);
-        /// ```
-        pub $($prefix)? fn untracked(rocket: Rocket) -> Result<Self, LaunchError> {
-            Self::_new(rocket, true) $(.$suffix)?
-        }
+    /// Construct a new `Client` from an instance of `Rocket` _without_
+    /// cookie tracking.
+    ///
+    /// # Cookie Tracking
+    ///
+    /// Unlike the [`new()`](Client::new()) constructor, a `Client` returned
+    /// from this method _does not_ automatically propagate cookie changes.
+    ///
+    /// # Errors
+    ///
+    /// If launching the `Rocket` instance would fail, excepting network
+    /// errors, the `LaunchError` is returned.
+    ///
+    /// ```rust,no_run
+    #[doc = $import]
+    ///
+    /// let rocket = rocket::ignite();
+    /// let client = Client::untracked(rocket);
+    /// ```
+    pub $($prefix)? fn untracked(rocket: Rocket) -> Result<Self, LaunchError> {
+        Self::_new(rocket, true) $(.$suffix)?
+    }
 
-        /// Returns a reference to the `Rocket` this client is creating requests
-        /// for.
-        ///
-        /// # Example
-        ///
-        /// ```rust,no_run
-        #[doc = $import]
-        ///
-        /// # Client::_test(|client| {
-        /// let client: Client = client;
-        /// let rocket = client.rocket();
-        /// # });
-        /// ```
-        #[inline(always)]
-        pub fn rocket(&self) -> &Rocket {
-            &*self._cargo()
-        }
+    /// Returns a reference to the `Rocket` this client is creating requests
+    /// for.
+    ///
+    /// # Example
+    ///
+    /// ```rust,no_run
+    #[doc = $import]
+    ///
+    /// # Client::_test(|client, _, _| {
+    /// let client: &Client = client;
+    /// let rocket = client.rocket();
+    /// # });
+    /// ```
+    #[inline(always)]
+    pub fn rocket(&self) -> &Rocket {
+        &*self._cargo()
+    }
 
-        /// Returns a reference to the `Cargo` of the `Rocket` this client is
-        /// creating requests for.
-        ///
-        /// # Example
-        ///
-        /// ```rust
-        #[doc = $import]
-        ///
-        /// # Client::_test(|client| {
-        /// let client: Client = client;
-        /// let cargo = client.cargo();
-        /// # });
-        /// ```
-        #[inline(always)]
-        pub fn cargo(&self) -> &Cargo {
-            self._cargo()
-        }
+    /// Returns a reference to the `Cargo` of the `Rocket` this client is
+    /// creating requests for.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    #[doc = $import]
+    ///
+    /// # Client::_test(|client, _, _| {
+    /// let client: &Client = client;
+    /// let cargo = client.cargo();
+    /// # });
+    /// ```
+    #[inline(always)]
+    pub fn cargo(&self) -> &Cargo {
+        self._cargo()
+    }
 
-        req_method!($import, "GET", get, Method::Get);
-        req_method!($import, "PUT", put, Method::Put);
-        req_method!($import, "POST", post, Method::Post);
-        req_method!($import, "DELETE", delete, Method::Delete);
-        req_method!($import, "OPTIONS", options, Method::Options);
-        req_method!($import, "HEAD", head, Method::Head);
-        req_method!($import, "PATCH", patch, Method::Patch);
+    req_method!($import, "GET", get, Method::Get);
+    req_method!($import, "PUT", put, Method::Put);
+    req_method!($import, "POST", post, Method::Post);
+    req_method!($import, "DELETE", delete, Method::Delete);
+    req_method!($import, "OPTIONS", options, Method::Options);
+    req_method!($import, "HEAD", head, Method::Head);
+    req_method!($import, "PATCH", patch, Method::Patch);
 
-        /// Create a local `GET` request to the URI `uri`.
-        ///
-        /// When dispatched, the request will be served by the instance of
-        /// Rocket within `self`. The request is not dispatched automatically.
-        /// To actually dispatch the request, call [`LocalRequest::dispatch()`]
-        /// on the returned request.
-        ///
-        /// # Example
-        ///
-        /// ```rust,no_run
-        #[doc = $import]
-        /// use rocket::http::Method;
-        ///
-        /// # Client::_test(|client| {
-        /// let client: Client = client;
-        /// client.req(Method::Get, "/hello");
-        /// # });
-        /// ```
-        #[inline(always)]
-        pub fn req<'c, 'u: 'c, U>(
-            &'c self,
-            method: Method,
-            uri: U
-        ) -> LocalRequest<'c>
-            where U: Into<Cow<'u, str>>
-        {
-            self._req(method, uri)
-        }
+    /// Create a local `GET` request to the URI `uri`.
+    ///
+    /// When dispatched, the request will be served by the instance of
+    /// Rocket within `self`. The request is not dispatched automatically.
+    /// To actually dispatch the request, call [`LocalRequest::dispatch()`]
+    /// on the returned request.
+    ///
+    /// # Example
+    ///
+    /// ```rust,no_run
+    #[doc = $import]
+    /// use rocket::http::Method;
+    ///
+    /// # Client::_test(|client, _, _| {
+    /// let client: &Client = client;
+    /// client.req(Method::Get, "/hello");
+    /// # });
+    /// ```
+    #[inline(always)]
+    pub fn req<'c, 'u: 'c, U>(
+        &'c self,
+        method: Method,
+        uri: U
+    ) -> LocalRequest<'c>
+        where U: Into<Cow<'u, str>>
+    {
+        self._req(method, uri)
+    }
+
+    #[cfg(test)]
+    #[allow(dead_code)]
+    fn _ensure_impls_exist() {
+        fn is_send<T: Send>() {}
+        is_send::<Self>();
     }
 }}
