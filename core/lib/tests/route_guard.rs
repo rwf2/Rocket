@@ -13,23 +13,23 @@ fn files(route: &Route, path: PathBuf) -> String {
 
 mod route_guard_tests {
     use super::*;
-    use rocket::local::asynchronous::Client;
+    use rocket::local::blocking::Client;
 
-    async fn assert_path(client: &Client, path: &str) {
-        let res = client.get(path).dispatch().await;
-        assert_eq!(res.into_string().await, Some(path.into()));
+    fn assert_path(client: &Client, path: &str) {
+        let res = client.get(path).dispatch();
+        assert_eq!(res.into_string(), Some(path.into()));
     }
 
-    #[rocket::async_test]
-    async fn check_mount_path() {
+    #[test]
+    fn check_mount_path() {
         let rocket = rocket::ignite()
             .mount("/first", routes![files])
             .mount("/second", routes![files]);
 
-        let client = Client::new(rocket).await.unwrap();
-        assert_path(&client, "/first/some/path").await;
-        assert_path(&client, "/second/some/path").await;
-        assert_path(&client, "/first/second/b/c").await;
-        assert_path(&client, "/second/a/b/c").await;
+        let client = Client::new(rocket).unwrap();
+        assert_path(&client, "/first/some/path");
+        assert_path(&client, "/second/some/path");
+        assert_path(&client, "/first/second/b/c");
+        assert_path(&client, "/second/a/b/c");
     }
 }

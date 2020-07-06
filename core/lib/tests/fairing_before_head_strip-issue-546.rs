@@ -22,12 +22,12 @@ mod fairing_before_head_strip {
 
     use rocket::fairing::AdHoc;
     use rocket::http::Method;
-    use rocket::local::asynchronous::Client;
+    use rocket::local::blocking::Client;
     use rocket::http::Status;
     use rocket::State;
 
-    #[rocket::async_test]
-    async fn not_auto_handled() {
+    #[test]
+    fn not_auto_handled() {
         let rocket = rocket::ignite()
             .mount("/", routes![head])
             .attach(AdHoc::on_request("Check HEAD", |req, _| {
@@ -42,14 +42,14 @@ mod fairing_before_head_strip {
                 })
             }));
 
-        let client = Client::new(rocket).await.unwrap();
-        let response = client.head("/").dispatch().await;
+        let client = Client::new(rocket).unwrap();
+        let response = client.head("/").dispatch();
         assert_eq!(response.status(), Status::Ok);
         assert!(response.body().is_none());
     }
 
-    #[rocket::async_test]
-    async fn auto_handled() {
+    #[test]
+    fn auto_handled() {
         #[derive(Default)]
         struct Counter(AtomicUsize);
 
@@ -73,8 +73,8 @@ mod fairing_before_head_strip {
                 })
             }));
 
-        let client = Client::new(rocket).await.unwrap();
-        let response = client.head("/").dispatch().await;
+        let client = Client::new(rocket).unwrap();
+        let response = client.head("/").dispatch();
         assert_eq!(response.status(), Status::Ok);
         assert!(response.body().is_none());
     }

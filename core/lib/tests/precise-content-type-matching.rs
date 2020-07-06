@@ -26,7 +26,7 @@ mod tests {
     use super::*;
 
     use rocket::Rocket;
-    use rocket::local::asynchronous::Client;
+    use rocket::local::blocking::Client;
     use rocket::http::{Status, ContentType};
 
     fn rocket() -> Rocket {
@@ -37,16 +37,16 @@ mod tests {
 
     macro_rules! check_dispatch {
         ($mount:expr, $ct:expr, $body:expr) => (
-            let client = Client::new(rocket()).await.unwrap();
+            let client = Client::new(rocket()).unwrap();
             let mut req = client.post($mount);
             let ct: Option<ContentType> = $ct;
             if let Some(ct) = ct {
                 req.add_header(ct);
             }
 
-            let response = req.dispatch().await;
+            let response = req.dispatch();
             let status = response.status();
-            let body_str = response.into_string().await;
+            let body_str = response.into_string();
             let body: Option<&'static str> = $body;
             match body {
                 Some(string) => assert_eq!(body_str, Some(string.to_string())),
@@ -55,15 +55,15 @@ mod tests {
         )
     }
 
-    #[rocket::async_test]
-    async fn exact_match_or_forward() {
+    #[test]
+    fn exact_match_or_forward() {
         check_dispatch!("/first", Some(ContentType::JSON), Some("specified"));
         check_dispatch!("/first", None, Some("unspecified"));
         check_dispatch!("/first", Some(ContentType::HTML), Some("unspecified"));
     }
 
-    #[rocket::async_test]
-    async fn exact_match_or_none() {
+    #[test]
+    fn exact_match_or_none() {
         check_dispatch!("/second", Some(ContentType::JSON), Some("specified_json"));
         check_dispatch!("/second", Some(ContentType::HTML), Some("specified_html"));
         check_dispatch!("/second", Some(ContentType::CSV), None);

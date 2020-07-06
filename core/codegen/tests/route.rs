@@ -11,7 +11,7 @@ use std::path::PathBuf;
 
 use rocket::{Request, Outcome::*};
 use rocket::http::ext::Normalize;
-use rocket::local::asynchronous::Client;
+use rocket::local::blocking::Client;
 use rocket::data::{self, Data, FromDataSimple};
 use rocket::request::Form;
 use rocket::http::{Status, RawStr, ContentType};
@@ -79,13 +79,13 @@ fn post2(
 fn test_unused_params(_unused_param: String, _unused_query: String, _unused_data: Data) {
 }
 
-#[rocket::async_test]
-async fn test_full_route() {
+#[test]
+fn test_full_route() {
     let rocket = rocket::ignite()
         .mount("/1", routes![post1])
         .mount("/2", routes![post2]);
 
-    let client = Client::new(rocket).await.unwrap();
+    let client = Client::new(rocket).unwrap();
 
     let a = "A%20A";
     let name = "Bob%20McDonald";
@@ -99,30 +99,30 @@ async fn test_full_route() {
     let uri = format!("{}{}", path_part, query_part);
     let expected_uri = format!("{}?sky=blue&sky={}&{}", path_part, sky, query);
 
-    let response = client.post(&uri).body(simple).dispatch().await;
+    let response = client.post(&uri).body(simple).dispatch();
     assert_eq!(response.status(), Status::NotFound);
 
-    let response = client.post(format!("/1{}", uri)).body(simple).dispatch().await;
+    let response = client.post(format!("/1{}", uri)).body(simple).dispatch();
     assert_eq!(response.status(), Status::NotFound);
 
     let response = client
         .post(format!("/1{}", uri))
         .header(ContentType::JSON)
         .body(simple)
-        .dispatch().await;
+        .dispatch();
 
-    assert_eq!(response.into_string().await.unwrap(), format!("({}, {}, {}, {}, {}, {}) ({})",
+    assert_eq!(response.into_string().unwrap(), format!("({}, {}, {}, {}, {}, {}) ({})",
             sky, name, "A A", "inside", path, simple, expected_uri));
 
-    let response = client.post(format!("/2{}", uri)).body(simple).dispatch().await;
+    let response = client.post(format!("/2{}", uri)).body(simple).dispatch();
     assert_eq!(response.status(), Status::NotFound);
 
     let response = client
         .post(format!("/2{}", uri))
         .header(ContentType::JSON)
         .body(simple)
-        .dispatch().await;
+        .dispatch();
 
-    assert_eq!(response.into_string().await.unwrap(), format!("({}, {}, {}, {}, {}, {}) ({})",
+    assert_eq!(response.into_string().unwrap(), format!("({}, {}, {}, {}, {}, {}) ({})",
             sky, name, "A A", "inside", path, simple, expected_uri));
 }

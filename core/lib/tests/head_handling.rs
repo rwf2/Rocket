@@ -23,38 +23,38 @@ mod head_handling_tests {
     use super::*;
 
     use rocket::Route;
-    use rocket::local::asynchronous::Client;
+    use rocket::local::blocking::Client;
     use rocket::http::{Status, ContentType};
 
     fn routes() -> Vec<Route> {
         routes![index, empty, other]
     }
 
-    #[rocket::async_test]
-    async fn auto_head() {
-        let client = Client::new(rocket::ignite().mount("/", routes())).await.unwrap();
-        let response = client.head("/").dispatch().await;
+    #[test]
+    fn auto_head() {
+        let client = Client::new(rocket::ignite().mount("/", routes())).unwrap();
+        let response = client.head("/").dispatch();
 
         let content_type: Vec<_> = response.headers().get("Content-Type").collect();
         assert_eq!(content_type, vec![ContentType::Plain.to_string()]);
         assert_eq!(response.status(), Status::Ok);
         assert_eq!(response.body().unwrap().known_size(), Some(13));
-        assert!(response.into_bytes().await.unwrap().is_empty());
+        assert!(response.into_bytes().unwrap().is_empty());
 
-        let response = client.head("/empty").dispatch().await;
+        let response = client.head("/empty").dispatch();
         assert_eq!(response.status(), Status::NoContent);
-        assert!(response.into_bytes().await.is_none());
+        assert!(response.into_bytes().is_none());
     }
 
-    #[rocket::async_test]
-    async fn user_head() {
-        let client = Client::new(rocket::ignite().mount("/", routes())).await.unwrap();
-        let response = client.head("/other").dispatch().await;
+    #[test]
+    fn user_head() {
+        let client = Client::new(rocket::ignite().mount("/", routes())).unwrap();
+        let response = client.head("/other").dispatch();
 
         let content_type: Vec<_> = response.headers().get("Content-Type").collect();
         assert_eq!(content_type, vec![ContentType::JSON.to_string()]);
         assert_eq!(response.status(), Status::Ok);
         assert_eq!(response.body().unwrap().known_size(), Some(17));
-        assert!(response.into_bytes().await.unwrap().is_empty());
+        assert!(response.into_bytes().unwrap().is_empty());
     }
 }

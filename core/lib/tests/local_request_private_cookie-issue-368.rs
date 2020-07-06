@@ -18,29 +18,29 @@ mod private_cookie_test {
 
     mod tests {
         use super::*;
-        use rocket::local::asynchronous::Client;
+        use rocket::local::blocking::Client;
         use rocket::http::Cookie;
         use rocket::http::Status;
 
-        #[rocket::async_test]
-        async fn private_cookie_is_returned() {
+        #[test]
+        fn private_cookie_is_returned() {
             let rocket = rocket::ignite().mount("/", routes![return_private_cookie]);
 
-            let client = Client::new(rocket).await.unwrap();
+            let client = Client::new(rocket).unwrap();
             let req = client.get("/").private_cookie(Cookie::new("cookie_name", "cookie_value"));
-            let response = req.dispatch().await;
+            let response = req.dispatch();
 
             assert_eq!(response.headers().get_one("Set-Cookie"), None);
-            assert_eq!(response.into_string().await, Some("cookie_value".into()));
+            assert_eq!(response.into_string(), Some("cookie_value".into()));
         }
 
-        #[rocket::async_test]
-        async fn regular_cookie_is_not_returned() {
+        #[test]
+        fn regular_cookie_is_not_returned() {
             let rocket = rocket::ignite().mount("/", routes![return_private_cookie]);
 
-            let client = Client::new(rocket).await.unwrap();
+            let client = Client::new(rocket).unwrap();
             let req = client.get("/").cookie(Cookie::new("cookie_name", "cookie_value"));
-            let response = req.dispatch().await;
+            let response = req.dispatch();
 
             assert_eq!(response.status(), Status::NotFound);
         }

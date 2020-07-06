@@ -31,14 +31,14 @@ fn dual(user: String, path: Segments<'_>) -> String {
 
 mod tests {
     use super::*;
-    use rocket::local::asynchronous::Client;
+    use rocket::local::blocking::Client;
 
-    #[rocket::async_test]
-    async fn segments_works() {
+    #[test]
+    fn segments_works() {
         let rocket = rocket::ignite()
             .mount("/", routes![test, two, one_two, none, dual])
             .mount("/point", routes![test, two, one_two, dual]);
-        let client = Client::new(rocket).await.unwrap();
+        let client = Client::new(rocket).unwrap();
 
         // We construct a path that matches each of the routes above. We ensure the
         // prefix is stripped, confirming that dynamic segments are working.
@@ -47,8 +47,8 @@ mod tests {
                         "/static", "/point/static"]
         {
             let path = "this/is/the/path/we/want";
-            let response = client.get(format!("{}/{}", prefix, path)).dispatch().await;
-            assert_eq!(response.into_string().await, Some(path.into()));
+            let response = client.get(format!("{}/{}", prefix, path)).dispatch();
+            assert_eq!(response.into_string(), Some(path.into()));
         }
     }
 }

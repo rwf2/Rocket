@@ -17,7 +17,7 @@ fn index(form: Form<Simple>) -> String {
 mod limits_tests {
     use rocket;
     use rocket::config::{Environment, Config, Limits};
-    use rocket::local::asynchronous::Client;
+    use rocket::local::blocking::Client;
     use rocket::http::{Status, ContentType};
 
     fn rocket_with_forms_limit(limit: u64) -> rocket::Rocket {
@@ -28,47 +28,47 @@ mod limits_tests {
         rocket::custom(config).mount("/", routes![super::index])
     }
 
-    #[rocket::async_test]
-    async fn large_enough() {
-        let client = Client::new(rocket_with_forms_limit(128)).await.unwrap();
+    #[test]
+    fn large_enough() {
+        let client = Client::new(rocket_with_forms_limit(128)).unwrap();
         let response = client.post("/")
             .body("value=Hello+world")
             .header(ContentType::Form)
-            .dispatch().await;
+            .dispatch();
 
-        assert_eq!(response.into_string().await, Some("Hello world".into()));
+        assert_eq!(response.into_string(), Some("Hello world".into()));
     }
 
-    #[rocket::async_test]
-    async fn just_large_enough() {
-        let client = Client::new(rocket_with_forms_limit(17)).await.unwrap();
+    #[test]
+    fn just_large_enough() {
+        let client = Client::new(rocket_with_forms_limit(17)).unwrap();
         let response = client.post("/")
             .body("value=Hello+world")
             .header(ContentType::Form)
-            .dispatch().await;
+            .dispatch();
 
-        assert_eq!(response.into_string().await, Some("Hello world".into()));
+        assert_eq!(response.into_string(), Some("Hello world".into()));
     }
 
-    #[rocket::async_test]
-    async fn much_too_small() {
-        let client = Client::new(rocket_with_forms_limit(4)).await.unwrap();
+    #[test]
+    fn much_too_small() {
+        let client = Client::new(rocket_with_forms_limit(4)).unwrap();
         let response = client.post("/")
             .body("value=Hello+world")
             .header(ContentType::Form)
-            .dispatch().await;
+            .dispatch();
 
         assert_eq!(response.status(), Status::UnprocessableEntity);
     }
 
-    #[rocket::async_test]
-    async fn contracted() {
-        let client = Client::new(rocket_with_forms_limit(10)).await.unwrap();
+    #[test]
+    fn contracted() {
+        let client = Client::new(rocket_with_forms_limit(10)).unwrap();
         let response = client.post("/")
             .body("value=Hello+world")
             .header(ContentType::Form)
-            .dispatch().await;
+            .dispatch();
 
-        assert_eq!(response.into_string().await, Some("Hell".into()));
+        assert_eq!(response.into_string(), Some("Hell".into()));
     }
 }

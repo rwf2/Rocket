@@ -3,7 +3,7 @@
 #[macro_use] extern crate rocket;
 
 use rocket::{Request, Data, Outcome::*};
-use rocket::local::asynchronous::Client;
+use rocket::local::blocking::Client;
 use rocket::request::Form;
 use rocket::data::{self, FromDataSimple};
 use rocket::http::{RawStr, ContentType, Status};
@@ -41,21 +41,21 @@ fn form(form: Form<Inner<'_>>) -> String { form.field.url_decode_lossy() }
 #[post("/s", data = "<simple>")]
 fn simple(simple: Simple) -> String { simple.0 }
 
-#[rocket::async_test]
-async fn test_data() {
+#[test]
+fn test_data() {
     let rocket = rocket::ignite().mount("/", routes![form, simple]);
-    let client = Client::new(rocket).await.unwrap();
+    let client = Client::new(rocket).unwrap();
 
     let response = client.post("/f")
         .header(ContentType::Form)
         .body("field=this%20is%20here")
-        .dispatch().await;
+        .dispatch();
 
-    assert_eq!(response.into_string().await.unwrap(), "this is here");
+    assert_eq!(response.into_string().unwrap(), "this is here");
 
-    let response = client.post("/s").body("this is here").dispatch().await;
-    assert_eq!(response.into_string().await.unwrap(), "this is here");
+    let response = client.post("/s").body("this is here").dispatch();
+    assert_eq!(response.into_string().unwrap(), "this is here");
 
-    let response = client.post("/s").body("this%20is%20here").dispatch().await;
-    assert_eq!(response.into_string().await.unwrap(), "this%20is%20here");
+    let response = client.post("/s").body("this%20is%20here").dispatch();
+    assert_eq!(response.into_string().unwrap(), "this%20is%20here");
 }

@@ -11,13 +11,13 @@ fn not_found() -> Redirect {
 
 mod tests {
     use super::*;
-    use rocket::local::asynchronous::Client;
+    use rocket::local::blocking::Client;
     use rocket::http::Status;
 
-    #[rocket::async_test]
-    async fn error_catcher_redirect() {
-        let client = Client::new(rocket::ignite().register(catchers![not_found])).await.unwrap();
-        let response = client.get("/unknown").dispatch().await;
+    #[test]
+    fn error_catcher_redirect() {
+        let client = Client::new(rocket::ignite().register(catchers![not_found])).unwrap();
+        let response = client.get("/unknown").dispatch();
         println!("Response:\n{:?}", response);
 
         let location: Vec<_> = response.headers().get("location").collect();

@@ -2,7 +2,7 @@
 
 #[macro_use] extern crate rocket;
 
-use rocket::local::asynchronous::Client;
+use rocket::local::blocking::Client;
 
 // Test that manual/auto ranking works as expected.
 
@@ -18,22 +18,22 @@ fn get2(_number: u32) -> &'static str { "2" }
 #[get("/<_number>", rank = 3)]
 fn get3(_number: u64) -> &'static str { "3" }
 
-#[rocket::async_test]
-async fn test_ranking() {
+#[test]
+fn test_ranking() {
     let rocket = rocket::ignite().mount("/", routes![get0, get1, get2, get3]);
-    let client = Client::new(rocket).await.unwrap();
+    let client = Client::new(rocket).unwrap();
 
-    let response = client.get("/0").dispatch().await;
-    assert_eq!(response.into_string().await.unwrap(), "0");
+    let response = client.get("/0").dispatch();
+    assert_eq!(response.into_string().unwrap(), "0");
 
-    let response = client.get(format!("/{}", 1 << 8)).dispatch().await;
-    assert_eq!(response.into_string().await.unwrap(), "1");
+    let response = client.get(format!("/{}", 1 << 8)).dispatch();
+    assert_eq!(response.into_string().unwrap(), "1");
 
-    let response = client.get(format!("/{}", 1 << 16)).dispatch().await;
-    assert_eq!(response.into_string().await.unwrap(), "2");
+    let response = client.get(format!("/{}", 1 << 16)).dispatch();
+    assert_eq!(response.into_string().unwrap(), "2");
 
-    let response = client.get(format!("/{}", 1u64 << 32)).dispatch().await;
-    assert_eq!(response.into_string().await.unwrap(), "3");
+    let response = client.get(format!("/{}", 1u64 << 32)).dispatch();
+    assert_eq!(response.into_string().unwrap(), "3");
 }
 
 // Test a collision due to same auto rank.
@@ -41,12 +41,12 @@ async fn test_ranking() {
 #[get("/<_n>")]
 fn get0b(_n: u8) {  }
 
-#[rocket::async_test]
-async fn test_rank_collision() {
+#[test]
+fn test_rank_collision() {
     use rocket::error::LaunchErrorKind;
 
     let rocket = rocket::ignite().mount("/", routes![get0, get0b]);
-    let client_result = Client::new(rocket).await;
+    let client_result = Client::new(rocket);
     match client_result.as_ref().map_err(|e| e.kind()) {
         Err(LaunchErrorKind::Collision(..)) => { /* o.k. */ },
         Ok(_) => panic!("client succeeded unexpectedly"),

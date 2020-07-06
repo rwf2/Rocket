@@ -17,27 +17,27 @@ fn bug(form_data: Form<FormData>) -> &'static str {
 
 mod tests {
     use super::*;
-    use rocket::local::asynchronous::Client;
+    use rocket::local::blocking::Client;
     use rocket::http::{Status, ContentType};
 
-    #[rocket::async_test]
-    async fn method_eval() {
-        let client = Client::new(rocket::ignite().mount("/", routes![bug])).await.unwrap();
+    #[test]
+    fn method_eval() {
+        let client = Client::new(rocket::ignite().mount("/", routes![bug])).unwrap();
         let response = client.post("/")
             .header(ContentType::Form)
             .body("_method=patch&form_data=Form+data")
-            .dispatch().await;
+            .dispatch();
 
-        assert_eq!(response.into_string().await, Some("OK".into()));
+        assert_eq!(response.into_string(), Some("OK".into()));
     }
 
-    #[rocket::async_test]
-    async fn get_passes_through() {
-        let client = Client::new(rocket::ignite().mount("/", routes![bug])).await.unwrap();
+    #[test]
+    fn get_passes_through() {
+        let client = Client::new(rocket::ignite().mount("/", routes![bug])).unwrap();
         let response = client.get("/")
             .header(ContentType::Form)
             .body("_method=patch&form_data=Form+data")
-            .dispatch().await;
+            .dispatch();
 
         assert_eq!(response.status(), Status::NotFound);
     }

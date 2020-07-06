@@ -7,7 +7,7 @@ extern crate rocket;
 #[cfg(feature = "helmet")]
 mod helmet_tests {
     use rocket::http::{Status, uri::Uri};
-    use rocket::local::asynchronous::{Client, LocalResponse};
+    use rocket::local::blocking::{Client, LocalResponse};
 
     use rocket_contrib::helmet::*;
     use time::Duration;
@@ -34,15 +34,15 @@ mod helmet_tests {
     macro_rules! dispatch {
         ($helmet:expr, $closure:expr) => {{
             let rocket = rocket::ignite().mount("/", routes![hello]).attach($helmet);
-            let client = Client::new(rocket).await.unwrap();
-            let response = client.get("/").dispatch().await;
+            let client = Client::new(rocket).unwrap();
+            let response = client.get("/").dispatch();
             assert_eq!(response.status(), Status::Ok);
             $closure(response)
         }}
     }
 
-    #[rocket::async_test]
-    async fn default_headers_test() {
+    #[test]
+    fn default_headers_test() {
         dispatch!(SpaceHelmet::default(), |response: LocalResponse<'_>| {
             assert_header!(response, "X-XSS-Protection", "1");
             assert_header!(response, "X-Frame-Options", "SAMEORIGIN");
@@ -50,8 +50,8 @@ mod helmet_tests {
         })
     }
 
-    #[rocket::async_test]
-    async fn disable_headers_test() {
+    #[test]
+    fn disable_headers_test() {
         let helmet = SpaceHelmet::default().disable::<XssFilter>();
         dispatch!(helmet, |response: LocalResponse<'_>| {
             assert_header!(response, "X-Frame-Options", "SAMEORIGIN");
@@ -84,8 +84,8 @@ mod helmet_tests {
         });
     }
 
-    #[rocket::async_test]
-    async fn additional_headers_test() {
+    #[test]
+    fn additional_headers_test() {
         let helmet = SpaceHelmet::default()
             .enable(Hsts::default())
             .enable(ExpectCt::default())
@@ -108,8 +108,8 @@ mod helmet_tests {
         })
     }
 
-    #[rocket::async_test]
-    async fn uri_test() {
+    #[test]
+    fn uri_test() {
         let allow_uri = Uri::parse("https://www.google.com").unwrap();
         let report_uri = Uri::parse("https://www.google.com").unwrap();
         let enforce_uri = Uri::parse("https://www.google.com").unwrap();
