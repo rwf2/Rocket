@@ -2,6 +2,7 @@ use std::{io, mem};
 use std::cmp::min;
 use std::sync::Arc;
 use std::collections::HashMap;
+use std::time::Duration;
 
 #[allow(unused_imports)]
 use futures::future::FutureExt;
@@ -230,35 +231,35 @@ impl Rocket {
         tx: oneshot::Sender<hyper::Response<hyper::Body>>,
         mut shutdown_receiver: broadcast::Receiver<()>,
     ) {
-        let finish_on_shutdown = response.finish_on_shutdown();
+        let wait_on_shutdown = response.wait_on_shutdown();
         let result = self.write_response(response, tx);
-        if finish_on_shutdown {
-            match result.await {
-                Ok(()) => {
-                    info_!("{}", Paint::green("Response succeeded."));
-                }
-                Err(e) => {
-                    error_!("Failed to write response: {:?}.", e);
-                }
-            }
+        let mut shutdown_receiver = if wait_on_shutdown != Duration::from_millis(0) {
+            let (tx, rx) = broadcast::channel(1);
+            tokio::spawn(async move {
+                let _ = shutdown_receiver.recv().await;
+                tokio::time::delay_for(wait_on_shutdown).await;
+                tx.send(());
+            });
+            rx
         } else {
-            tokio::select!{
-                result = result => {
-                    match result {
-                        Ok(()) => {
-                            info_!("{}", Paint::green("Response succeeded."));
-                        }
-                        Err(e) => {
-                            error_!("Failed to write response: {:?}.", e);
-                        }
+            shutdown_receiver
+        };
+        tokio::select!{
+            result = result => {
+                match result {
+                    Ok(()) => {
+                        info_!("{}", Paint::green("Response succeeded."));
+                    }
+                    Err(e) => {
+                        error_!("Failed to write response: {:?}.", e);
                     }
                 }
-                // The error returned by `recv()` is discarded here.
-                // This is fine, because the only case where it returns that error is
-                // if the sender is dropped, which would indicate shutdown anyway.
-                _ = shutdown_receiver.recv() => {
-                    info_!("{}", Paint::red("Response cancelled for shutdown."));
-                }
+            }
+            // The error returned by `recv()` is discarded here.
+            // This is fine, because the only case where it returns that error is
+            // if the sender is dropped, which would indicate shutdown anyway.
+            _ = shutdown_receiver.recv() => {
+                info_!("{}", Paint::red("Response cancelled for shutdown."));
             }
         }
     }

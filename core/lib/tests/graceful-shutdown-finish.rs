@@ -8,6 +8,7 @@ use tokio::io::AsyncRead;
 
 use std::pin::Pin;
 use std::task::{Poll, Context};
+use std::time::Duration;
 
 struct AsyncReader(bool);
 
@@ -32,7 +33,7 @@ fn test(shutdown: ShutdownHandle) -> Response<'static> {
     shutdown.shutdown();
     Response::build()
     .chunked_body(AsyncReader(false), 512)
-    .finish_on_shutdown(true)
+    .wait_on_shutdown(Duration::from_millis(u64::MAX))
     .finalize()
 }
 
