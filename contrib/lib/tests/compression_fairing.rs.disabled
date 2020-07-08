@@ -10,7 +10,7 @@ mod compression_fairing_tests {
     use rocket::http::hyper::header::{ContentEncoding, Encoding};
     use rocket::http::Status;
     use rocket::http::{ContentType, Header};
-    use rocket::local::asynchronous::Client;
+    use rocket::local::blocking::Client;
     use rocket::response::{Content, Response};
     use rocket_contrib::compression::Compression;
 

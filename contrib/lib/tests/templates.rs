@@ -42,7 +42,7 @@ mod templates_tests {
         use super::*;
         use std::collections::HashMap;
         use rocket::http::Status;
-        use rocket::local::asynchronous::Client;
+        use rocket::local::blocking::Client;
 
         const UNESCAPED_EXPECTED: &'static str
             = "\nh_start\ntitle: _test_\nh_end\n\n\n<script />\n\nfoot\n";
@@ -66,20 +66,20 @@ mod templates_tests {
             assert_eq!(template, Some(ESCAPED_EXPECTED.into()));
         }
 
-        #[rocket::async_test]
-        async fn test_template_metadata_with_tera() {
-            let client = Client::new(rocket()).await.unwrap();
+        #[test]
+        fn test_template_metadata_with_tera() {
+            let client = Client::new(rocket()).unwrap();
 
-            let response = client.get("/tera/txt_test").dispatch().await;
+            let response = client.get("/tera/txt_test").dispatch();
             assert_eq!(response.status(), Status::Ok);
 
-            let response = client.get("/tera/html_test").dispatch().await;
+            let response = client.get("/tera/html_test").dispatch();
             assert_eq!(response.status(), Status::Ok);
 
-            let response = client.get("/tera/not_existing").dispatch().await;
+            let response = client.get("/tera/not_existing").dispatch();
             assert_eq!(response.status(), Status::NotFound);
 
-            let response = client.get("/hbs/txt_test").dispatch().await;
+            let response = client.get("/hbs/txt_test").dispatch();
             assert_eq!(response.status(), Status::NotFound);
         }
     }
@@ -89,7 +89,7 @@ mod templates_tests {
         use super::*;
         use std::collections::HashMap;
         use rocket::http::Status;
-        use rocket::local::asynchronous::Client;
+        use rocket::local::blocking::Client;
 
         const EXPECTED: &'static str
             = "Hello _test_!\n\n<main> &lt;script /&gt; hi </main>\nDone.\n\n";
@@ -107,28 +107,28 @@ mod templates_tests {
             assert_eq!(template, Some(EXPECTED.into()));
         }
 
-        #[rocket::async_test]
-        async fn test_template_metadata_with_handlebars() {
-            let client = Client::new(rocket()).await.unwrap();
+        #[test]
+        fn test_template_metadata_with_handlebars() {
+            let client = Client::new(rocket()).unwrap();
 
-            let response = client.get("/hbs/test").dispatch().await;
+            let response = client.get("/hbs/test").dispatch();
             assert_eq!(response.status(), Status::Ok);
 
-            let response = client.get("/hbs/not_existing").dispatch().await;
+            let response = client.get("/hbs/not_existing").dispatch();
             assert_eq!(response.status(), Status::NotFound);
 
-            let response = client.get("/tera/test").dispatch().await;
+            let response = client.get("/tera/test").dispatch();
             assert_eq!(response.status(), Status::NotFound);
         }
 
-        #[rocket::async_test]
+        #[test]
         #[cfg(debug_assertions)]
-        async fn test_template_reload() {
+        fn test_template_reload() {
             use std::fs::File;
             use std::io::Write;
             use std::time::Duration;
 
-            use rocket::local::asynchronous::Client;
+            use rocket::local::blocking::Client;
 
             const RELOAD_TEMPLATE: &str = "hbs/reload";
             const INITIAL_TEXT: &str = "initial";
@@ -146,8 +146,8 @@ mod templates_tests {
             write_file(&reload_path, INITIAL_TEXT);
 
             // set up the client. if we can't reload templates, then just quit
-            let client = Client::new(rocket()).await.unwrap();
-            let res = client.get("/is_reloading").dispatch().await;
+            let client = Client::new(rocket()).unwrap();
+            let res = client.get("/is_reloading").dispatch();
             if res.status() != Status::Ok {
                 return;
             }
@@ -161,7 +161,7 @@ mod templates_tests {
 
             for _ in 0..6 {
                 // dispatch any request to trigger a template reload
-                client.get("/").dispatch().await;
+                client.get("/").dispatch();
 
                 // if the new content is correct, we are done
                 let new_rendered = Template::show(client.cargo(), RELOAD_TEMPLATE, ());
@@ -171,7 +171,7 @@ mod templates_tests {
                 }
 
                 // otherwise, retry a few times, waiting 250ms in between
-                tokio::time::delay_for(Duration::from_millis(250)).await;
+                std::thread::sleep(Duration::from_millis(250));
             }
 
             panic!("failed to reload modified template in 1.5s");
