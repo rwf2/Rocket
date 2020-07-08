@@ -177,6 +177,20 @@ mod test {
 The tests can be run with `cargo test`. You can find the full source code to
 [this example on GitHub](@example/testing).
 
+## Asynchronous Testing
+
+You may have noticed the use of a "`blocking`" API in these examples, even
+though `Rocket` is an `async` web framework. In most situations, the `blocking`
+testing API is easier to use. Sometimes, you may need the more flexible
+`asynchronous` API: for example, a test of two routes that communicate directly
+over a channel. The blocking testing API is not capable of dispatching multiple
+simultaneous requests simultaneously, but the `asynchronous` testing API can.
+For more information, see the [`rocket::local::asynchronous`] module
+documentation and the asynchronous version of [the `testing` example]:
+
+[`rocket::local::asynchronous`]: @api/rocket/local/asynchronous/index.html
+[the `testing` example]: @example/testing/src/main.rs
+
 ## Codegen Debug
 
 It can be useful to inspect the code that Rocket's code generation is emitting,
