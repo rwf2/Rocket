@@ -181,16 +181,17 @@ The tests can be run with `cargo test`. You can find the full source code to
 
 You may have noticed the use of a "`blocking`" API in these examples, even
 though `Rocket` is an `async` web framework. In most situations, the `blocking`
-testing API is easier to use. When concurrent execution of two or more requests
-is required for the server to make progress, you will need the more flexible
-`asynchronous` API; the `blocking` API is not capable of dispatching multiple
-requests simultaneously. For more information, see the [`rocket::local`] and
-[`rocket::local::asynchronous`] documentation as well as the asynchronous
-version of [the `testing` example].
+testing API is easier to use and should be preferred. However, when concurrent
+execution of two or more requests is required for the server to make progress,
+you will need the more flexible `asynchronous` API; the `blocking` API is not
+capable of dispatching multiple requests simultaneously. While synthetic, the
+[`async_required` `testing` example] uses an `async` barrier to demonstrate such
+a case. For more information, see the [`rocket::local`] and
+[`rocket::local::asynchronous`] documentation.
 
 [`rocket::local`]: @api/rocket/local/index.html
 [`rocket::local::asynchronous`]: @api/rocket/local/asynchronous/index.html
-[the `testing` example]: @example/testing/src/main.rs
+[`async_required` `testing` example]: @example/testing/src/async_required.rs
 
 ## Codegen Debug
 
