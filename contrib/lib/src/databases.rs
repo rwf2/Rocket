@@ -84,9 +84,9 @@
 //! # type Result<T> = std::result::Result<T, ()>;
 //! #
 //! #[get("/logs/<id>")]
-//! fn get_logs(conn: LogsDbConn, id: usize) -> Result<Logs> {
+//! async fn get_logs(conn: LogsDbConn, id: usize) -> Result<Logs> {
 //! # /*
-//!     Logs::by_id(&*conn, id)
+//!     conn.run(|c| Logs::by_id(c, id)).await
 //! # */
 //! # Ok(())
 //! }
@@ -222,11 +222,9 @@
 //! ```
 //!
 //! The macro generates a [`FromRequest`] implementation for the decorated type,
-//! allowing the type to be used as a request guard. This implementation
-//! retrieves a connection from the database pool or fails with a
-//! `Status::ServiceUnavailable` if no connections are available. The macro also
-//! generates an implementation of the [`Deref`](std::ops::Deref) trait with
-//! the internal `Poolable` type as the target.
+//! allowing the type to be used as a request guard. This implementation always
+//! succeeds; database availability is not actually checked until `run()` is
+//! called.
 //!
 //! The macro will also generate two inherent methods on the decorated type:
 //!
@@ -235,11 +233,10 @@
 //!      Returns a fairing that initializes the associated database connection
 //!      pool.
 //!
-//!   * `fn get_one(&Cargo) -> Option<Self>`
+//!   * `fn async get_one(&Cargo) -> Option<Self>`
 //!
-//!     Retrieves a connection from the configured pool. Returns `Some` as long
-//!     as `Self::fairing()` has been attached and there is at least one
-//!     connection in the pool.
+//!     Retrieves a connection wrapper from the configured pool. Returns `Some`
+//!     as long as `Self::fairing()` has been attached.
 //!
 //! The fairing returned from the generated `fairing()` method _must_ be
 //! attached for the request guard implementation to succeed. Putting the pieces
@@ -280,8 +277,8 @@
 //!
 //! ## Handlers
 //!
-//! Finally, simply use your type as a request guard in a handler to retrieve a
-//! connection to a given database:
+//! Finally, use your type as a request guard in a handler to retrieve a
+//! connection wrapper for the database:
 //!
 //! ```rust
 //! # #[macro_use] extern crate rocket;
@@ -300,8 +297,7 @@
 //! # }
 //! ```
 //!
-//! The generated `Deref` implementation allows easy access to the inner
-//! connection type:
+//! A connection can be retrieved and used with the `run()` method:
 //!
 //! ```rust
 //! # #[macro_use] extern crate rocket;
@@ -320,8 +316,8 @@
 //! }
 //!
 //! #[get("/")]
-//! fn my_handler(conn: MyDatabase) -> Data {
-//!     load_from_db(&*conn)
+//! async fn my_handler(mut conn: MyDatabase) -> Data {
+//!     conn.run(|c| load_from_db(c)).await
 //! }
 //! # }
 //! ```
@@ -389,9 +385,12 @@ pub use tokio::task::spawn_blocking;
 pub extern crate diesel;
 
 use std::fmt::{self, Display, Formatter};
-use std::marker::{Send, Sized};
+use std::marker::PhantomData;
+use std::sync::Arc;
 
 use rocket::config::{self, Value};
+
+use rocket::tokio::sync::{OwnedSemaphorePermit, Semaphore};
 
 use self::r2d2::ManageConnection;
 
@@ -688,7 +687,7 @@ pub trait Poolable: Send + Sized + 'static {
     type Manager: ManageConnection<Connection=Self>;
     /// The associated error type in the event that constructing the connection
     /// manager and/or the connection pool fails.
-    type Error;
+    type Error: std::fmt::Debug;
 
     /// Creates an `r2d2` connection pool for `Manager::Connection`, returning
     /// the pool on success.
@@ -777,6 +776,127 @@ impl Poolable for memcache::Client {
     fn pool(config: DatabaseConfig<'_>) -> Result<r2d2::Pool<Self::Manager>, Self::Error> {
         let manager = r2d2_memcache::MemcacheConnectionManager::new(config.url);
         r2d2::Pool::builder().max_size(config.pool_size).build(manager).map_err(DbError::PoolError)
+    }
+}
+
+#[doc(hidden)]
+/// Unstable internal details of generated code for the #[database] attribute.
+///
+/// This type is implemented here instead of in generated code to ensure all
+/// types are properly checked.
+pub struct ConnectionPool<K, C: Poolable> {
+    pool: r2d2::Pool<C::Manager>,
+    semaphore: Arc<Semaphore>,
+    _marker: PhantomData<fn() -> K>,
+}
+
+#[doc(hidden)]
+/// Unstable internal details of generated code for the #[database] attribute.
+///
+/// This type is implemented here instead of in generated code to ensure all
+/// types are properly checked.
+pub struct Connection<K, C: Poolable> {
+    connection: Option<r2d2::PooledConnection<C::Manager>>,
+    _permit: Option<OwnedSemaphorePermit>,
+    _marker: PhantomData<fn() -> K>,
+}
+
+impl<K: 'static, C: Poolable> ConnectionPool<K, C> {
+    #[inline]
+    pub fn fairing(fairing_name: &'static str, config_name: &'static str) -> impl rocket::fairing::Fairing {
+        rocket::fairing::AdHoc::on_attach(fairing_name, move |mut rocket| async move {
+            let config = database_config(config_name, rocket.config().await);
+            let pool = config.map(|c| (c.pool_size, C::pool(c)));
+
+            match pool {
+                Ok((size, Ok(p))) => {
+                    let managed = ConnectionPool::<K, C> {
+                        pool: p,
+                        semaphore: Arc::new(Semaphore::new(size as usize)),
+                        _marker: PhantomData,
+                    };
+                    Ok(rocket.manage(managed))
+                },
+                Err(config_error) => {
+                    ::rocket::logger::error(
+                        &format!("Database configuration failure: '{}'", config_name));
+                    ::rocket::logger::error_(&format!("{}", config_error));
+                    Err(rocket)
+                },
+                Ok((_, Err(pool_error))) => {
+                    ::rocket::logger::error(
+                        &format!("Failed to initialize pool for '{}'", config_name));
+                    ::rocket::logger::error_(&format!("{:?}", pool_error));
+                    Err(rocket)
+                },
+            }
+        })
+    }
+
+    async fn get(&self) -> Result<Connection<K, C>, ()> {
+        let permit = self.semaphore.clone().acquire_owned().await;
+        let pool = self.pool.clone();
+        match spawn_blocking(move || pool.get()).await.unwrap() {
+            Ok(c) => {
+                Ok(Connection {
+                    connection: Some(c),
+                    _permit: Some(permit),
+                    _marker: PhantomData,
+                })
+            }
+            Err(e) => {
+                error_!("Failed to get a database connection: {}", e);
+                Err(())
+            }
+        }
+    }
+
+    #[inline]
+    pub async fn get_one(cargo: &::rocket::Cargo) -> Option<Connection<K, C>> {
+        cargo.state::<Self>()?.get().await.ok()
+    }
+}
+
+impl<K, C: Poolable> Connection<K, C> {
+    #[inline]
+    pub async fn run<F, R>(&mut self, f: F) -> R
+    where
+        F: FnOnce(&mut C) -> R + Send + 'static,
+        R: Send + 'static,
+    {
+        let mut conn = self.connection.take()
+            .expect("Connection unexpectedly missing. Was run() called without being awaited?");
+
+        let (value, conn) = tokio::task::spawn_blocking(move || {
+            let value = f(&mut conn);
+            (value, conn)
+        }).await.expect("failed to spawn a blocking task to use a pooled connection");
+
+        self.connection = Some(conn);
+        value
+    }
+}
+
+impl<K, C: Poolable> Drop for Connection<K, C> {
+    fn drop(&mut self) {
+        if let Some(conn) = self.connection.take() {
+            tokio::task::spawn_blocking(|| drop(conn));
+        }
+    }
+}
+
+#[::rocket::async_trait]
+impl<'a, 'r, K: 'static, C: Poolable> rocket::request::FromRequest<'a, 'r> for Connection<K, C> {
+    type Error = ();
+
+    #[inline]
+    async fn from_request(request: &'a rocket::request::Request<'r>) -> rocket::request::Outcome<Self, ()> {
+        let inner = ::rocket::try_outcome!(request.guard::<::rocket::State<'_, ConnectionPool<K, C>>>().await);
+
+        match inner.get().await {
+            Ok(c) => rocket::Outcome::Success(c),
+            Err(()) => rocket::Outcome::Failure((rocket::http::Status::ServiceUnavailable, ())),
+        }
     }
 }
 

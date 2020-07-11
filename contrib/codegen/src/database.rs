@@ -64,23 +64,16 @@ pub fn database_attr(attr: TokenStream, input: TokenStream) -> Result<TokenStrea
     let name = &invocation.db_name;
     let guard_type = &invocation.type_name;
     let vis = &invocation.visibility;
-    let pool_type = Ident::new(&format!("{}Pool", guard_type), guard_type.span());
     let fairing_name = format!("'{}' Database Pool", name);
     let span = conn_type.span().into();
 
     // A few useful paths.
     let databases = quote_spanned!(span => ::rocket_contrib::databases);
-    let Poolable = quote_spanned!(span => #databases::Poolable);
-    let r2d2 = quote_spanned!(span => #databases::r2d2);
-    let spawn_blocking = quote_spanned!(span => #databases::spawn_blocking);
     let request = quote!(::rocket::request);
 
     let generated_types = quote_spanned! { span =>
         /// The request guard type.
-        #vis struct #guard_type(pub #r2d2::PooledConnection<<#conn_type as #Poolable>::Manager>);
-
-        /// The pool type.
-        #vis struct #pool_type(#r2d2::Pool<<#conn_type as #Poolable>::Manager>);
+        #vis struct #guard_type(#databases::Connection<Self, #conn_type>);
     };
 
     Ok(quote! {
@@ -90,53 +83,26 @@ pub fn database_attr(attr: TokenStream, input: TokenStream) -> Result<TokenStrea
             /// Returns a fairing that initializes the associated database
             /// connection pool.
             pub fn fairing() -> impl ::rocket::fairing::Fairing {
-                use #databases::Poolable;
-
-                ::rocket::fairing::AdHoc::on_attach(#fairing_name, |mut rocket| async {
-                    let pool = #databases::database_config(#name, rocket.config().await)
-                        .map(<#conn_type>::pool);
-
-                    match pool {
-                        Ok(Ok(p)) => Ok(rocket.manage(#pool_type(p))),
-                        Err(config_error) => {
-                            ::rocket::logger::error(
-                                &format!("Database configuration failure: '{}'", #name));
-                            ::rocket::logger::error_(&format!("{}", config_error));
-                            Err(rocket)
-                        },
-                        Ok(Err(pool_error)) => {
-                            ::rocket::logger::error(
-                                &format!("Failed to initialize pool for '{}'", #name));
-                            ::rocket::logger::error_(&format!("{:?}", pool_error));
-                            Err(rocket)
-                        },
-                    }
-                })
+                <#databases::ConnectionPool<Self, #conn_type>>::fairing(#fairing_name, #name)
             }
 
             /// Retrieves a connection of type `Self` from the `rocket`
             /// instance. Returns `Some` as long as `Self::fairing()` has been
-            /// attached and there is at least one connection in the pool.
-            pub fn get_one(cargo: &::rocket::Cargo) -> Option<Self> {
-                cargo.state::<#pool_type>()
-                    .and_then(|pool| pool.0.get().ok())
-                    .map(#guard_type)
+            /// attached.
+            pub async fn get_one(cargo: &::rocket::Cargo) -> Option<Self> {
+                <#databases::ConnectionPool<Self, #conn_type>>::get_one(cargo).await.map(Self)
             }
-        }
 
-        impl ::std::ops::Deref for #guard_type {
-            type Target = #conn_type;
-
-            #[inline(always)]
-            fn deref(&self) -> &Self::Target {
-                &self.0
-            }
-        }
-
-        impl ::std::ops::DerefMut for #guard_type {
-            #[inline(always)]
-            fn deref_mut(&mut self) -> &mut Self::Target {
-                &mut self.0
+            /// Runs the provided closure on a blocking threadpool. The closure
+            /// will be passed an `&mut r2d2::PooledConnection`, and `.await`ing
+            /// this function will provide whatever value is returned from the
+            /// closure.
+            pub async fn run<F, R>(&mut self, f: F) -> R
+            where
+                F: FnOnce(&mut #conn_type) -> R + Send + 'static,
+                R: Send + 'static,
+            {
+                self.0.run(f).await
             }
         }
 
@@ -145,20 +111,8 @@ pub fn database_attr(attr: TokenStream, input: TokenStream) -> Result<TokenStrea
             type Error = ();
 
             async fn from_request(request: &'a #request::Request<'r>) -> #request::Outcome<Self, ()> {
-                use ::rocket::http::Status;
-
-                let guard = request.guard::<::rocket::State<'_, #pool_type>>();
-                let pool = ::rocket::try_outcome!(guard.await).0.clone();
-
-                #spawn_blocking(move || {
-                    match pool.get() {
-                        Ok(conn) => #request::Outcome::Success(#guard_type(conn)),
-                        Err(_) => #request::Outcome::Failure((Status::ServiceUnavailable, ())),
-                    }
-                }).await.expect("failed to spawn a blocking task to get a pooled connection")
+                <#databases::Connection<Self, #conn_type>>::from_request(request).await.map(Self)
             }
         }
-
-        // TODO.async: What about spawn_blocking on drop?
     }.into())
 }
