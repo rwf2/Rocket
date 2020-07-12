@@ -77,7 +77,7 @@ not just the world, we can declare a route like so:
 # #[macro_use] extern crate rocket;
 # fn main() {}
 
-# use rocket::http::RawStr;
+use rocket::http::RawStr;
 
 #[get("/hello/<name>")]
 fn hello(name: &RawStr) -> String {
