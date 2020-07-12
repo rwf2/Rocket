@@ -536,7 +536,7 @@ following three routes, each leading to an administrative control panel at
 # type AdminUser = rocket::http::Method;
 # type User = rocket::http::Method;
 
-use rocket::response::{Flash, Redirect};
+use rocket::response::Redirect;
 
 #[get("/login")]
 fn login() -> Template { /* .. */ }
