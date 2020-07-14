@@ -236,13 +236,13 @@ Presently, Rocket provides built-in support for the following databases:
 | Sqlite   | [Diesel]              | `1`       | [`diesel::SqliteConnection`]   | `diesel_sqlite_pool`   |
 | Sqlite   | [`Rusqlite`]          | `0.23`    | [`rusqlite::Connection`]       | `sqlite_pool`          |
 | Neo4j    | [`rusted_cypher`]     | `1`       | [`rusted_cypher::GraphClient`] | `cypher_pool`          |
-| Redis    | [`redis-rs`]          | `0.13`    | [`redis::Connection`]          | `redis_pool`           |
+| Redis    | [`redis-rs`]          | `0.15`    | [`redis::Connection`]          | `redis_pool`           |
 | MongoDB  | [`mongodb`]           | `0.3.12`  | [`mongodb::db::Database`]      | `mongodb_pool`         |
 | Memcache | [`memcache`]          | `0.14`    | [`memcache::Client`]           | `memcache_pool`        |
 
 [`r2d2`]: https://crates.io/crates/r2d2
 [Diesel]: https://diesel.rs
-[`redis::Connection`]: https://docs.rs/redis/0.13.0/redis/struct.Connection.html
+[`redis::Connection`]: https://docs.rs/redis/0.15.0/redis/struct.Connection.html
 [`rusted_cypher::GraphClient`]: https://docs.rs/rusted_cypher/1.1.0/rusted_cypher/graph/struct.GraphClient.html
 [`rusqlite::Connection`]: https://docs.rs/rusqlite/0.23.0/rusqlite/struct.Connection.html
 [`diesel::SqliteConnection`]: http://docs.diesel.rs/diesel/prelude/struct.SqliteConnection.html
