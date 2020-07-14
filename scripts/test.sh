@@ -75,7 +75,6 @@ if [ "$1" = "--contrib" ]; then
     postgres_pool
     mysql_pool
     sqlite_pool
-    cypher_pool
     redis_pool
     mongodb_pool
     memcache_pool

@@ -345,14 +345,12 @@
 //! | Postgres | [Rust-Postgres]       | `0.17`    | [`postgres::Client`]           | `postgres_pool`        |
 //! | Sqlite   | [Diesel]              | `1`       | [`diesel::SqliteConnection`]   | `diesel_sqlite_pool`   |
 //! | Sqlite   | [`Rusqlite`]          | `0.23`    | [`rusqlite::Connection`]       | `sqlite_pool`          |
-//! | Neo4j    | [`rusted_cypher`]     | `1`       | [`rusted_cypher::GraphClient`] | `cypher_pool`          |
 //! | Redis    | [`redis-rs`]          | `0.15`    | [`redis::Connection`]          | `redis_pool`           |
 //! | MongoDB  | [`mongodb`]           | `0.3.12`  | [`mongodb::db::Database`]      | `mongodb_pool`         |
 //! | Memcache | [`memcache`]          | `0.14`    | [`memcache::Client`]           | `memcache_pool`        |
 //!
 //! [Diesel]: https://diesel.rs
 //! [`redis::Connection`]: https://docs.rs/redis/0.15.0/redis/struct.Connection.html
-//! [`rusted_cypher::GraphClient`]: https://docs.rs/rusted_cypher/1.1.0/rusted_cypher/graph/struct.GraphClient.html
 //! [`rusqlite::Connection`]: https://docs.rs/rusqlite/0.23.0/rusqlite/struct.Connection.html
 //! [`diesel::SqliteConnection`]: http://docs.diesel.rs/diesel/prelude/struct.SqliteConnection.html
 //! [`postgres::Client`]: https://docs.rs/postgres/0.17/postgres/struct.Client.html
@@ -360,7 +358,6 @@
 //! [`mysql::Conn`]: https://docs.rs/mysql/18/mysql/struct.Conn.html
 //! [`diesel::MysqlConnection`]: http://docs.diesel.rs/diesel/mysql/struct.MysqlConnection.html
 //! [`redis-rs`]: https://github.com/mitsuhiko/redis-rs
-//! [`rusted_cypher`]: https://github.com/livioribeiro/rusted-cypher
 //! [`Rusqlite`]: https://github.com/jgallagher/rusqlite
 //! [Rust-Postgres]: https://github.com/sfackler/rust-postgres
 //! [`rust-mysql-simple`]: https://github.com/blackbeam/rust-mysql-simple
@@ -415,9 +412,6 @@ use self::r2d2::ManageConnection;
 
 #[cfg(feature = "sqlite_pool")] pub extern crate rusqlite;
 #[cfg(feature = "sqlite_pool")] pub extern crate r2d2_sqlite;
-
-#[cfg(feature = "cypher_pool")] pub extern crate rusted_cypher;
-#[cfg(feature = "cypher_pool")] pub extern crate r2d2_cypher;
 
 #[cfg(feature = "redis_pool")] pub extern crate redis;
 #[cfg(feature = "redis_pool")] pub extern crate r2d2_redis;
@@ -626,7 +620,6 @@ impl<'a> Display for ConfigError {
 ///   * `postgres::Connection`
 ///   * `mysql::Conn`
 ///   * `rusqlite::Connection`
-///   * `rusted_cypher::GraphClient`
 ///   * `redis::Connection`
 ///
 /// # Implementation Guide
@@ -786,17 +779,6 @@ impl Poolable for rusqlite::Connection {
     fn pool(config: DatabaseConfig<'_>) -> Result<r2d2::Pool<Self::Manager>, Self::Error> {
         let manager = r2d2_sqlite::SqliteConnectionManager::file(config.url);
 
-        r2d2::Pool::builder().max_size(config.pool_size).build(manager)
-    }
-}
-
-#[cfg(feature = "cypher_pool")]
-impl Poolable for rusted_cypher::GraphClient {
-    type Manager = r2d2_cypher::CypherConnectionManager;
-    type Error = r2d2::Error;
-
-    fn pool(config: DatabaseConfig<'_>) -> Result<r2d2::Pool<Self::Manager>, Self::Error> {
-        let manager = r2d2_cypher::CypherConnectionManager { url: config.url.to_string() };
         r2d2::Pool::builder().max_size(config.pool_size).build(manager)
     }
 }
