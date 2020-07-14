@@ -36,7 +36,6 @@ postgres_pool = ["databases", "postgres", "r2d2_postgres"]
 mysql_pool = ["databases", "mysql", "r2d2_mysql"]
 sqlite_pool = ["databases", "rusqlite", "r2d2_sqlite"]
 redis_pool = ["databases", "redis", "r2d2_redis"]
-mongodb_pool = ["databases", "mongodb", "r2d2-mongodb"]
 memcache_pool = ["databases", "memcache", "r2d2-memcache"]
 
 [dependencies]
@@ -71,8 +70,6 @@ rusqlite = { version = "0.23", optional = true }
 r2d2_sqlite = { version = "0.16", optional = true }
 redis = { version = "0.15", optional = true }
 r2d2_redis = { version = "0.13", optional = true }
-mongodb = { version = "0.3.12", optional = true }
-r2d2-mongodb = { version = "0.2.0", optional = true }
 memcache = { version = "0.14", optional = true }
 r2d2-memcache = { version = "0.5", optional = true }
 

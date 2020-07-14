@@ -346,7 +346,6 @@
 //! | Sqlite   | [Diesel]              | `1`       | [`diesel::SqliteConnection`]   | `diesel_sqlite_pool`   |
 //! | Sqlite   | [`Rusqlite`]          | `0.23`    | [`rusqlite::Connection`]       | `sqlite_pool`          |
 //! | Redis    | [`redis-rs`]          | `0.15`    | [`redis::Connection`]          | `redis_pool`           |
-//! | MongoDB  | [`mongodb`]           | `0.3.12`  | [`mongodb::db::Database`]      | `mongodb_pool`         |
 //! | Memcache | [`memcache`]          | `0.14`    | [`memcache::Client`]           | `memcache_pool`        |
 //!
 //! [Diesel]: https://diesel.rs
@@ -362,8 +361,6 @@
 //! [Rust-Postgres]: https://github.com/sfackler/rust-postgres
 //! [`rust-mysql-simple`]: https://github.com/blackbeam/rust-mysql-simple
 //! [`diesel::PgConnection`]: http://docs.diesel.rs/diesel/pg/struct.PgConnection.html
-//! [`mongodb`]: https://github.com/mongodb-labs/mongo-rust-driver-prototype
-//! [`mongodb::db::Database`]: https://docs.rs/mongodb/0.3.12/mongodb/db/type.Database.html
 //! [`memcache`]: https://github.com/aisk/rust-memcache
 //! [`memcache::Client`]: https://docs.rs/memcache/0.14/memcache/struct.Client.html
 //!
@@ -415,9 +412,6 @@ use self::r2d2::ManageConnection;
 
 #[cfg(feature = "redis_pool")] pub extern crate redis;
 #[cfg(feature = "redis_pool")] pub extern crate r2d2_redis;
-
-#[cfg(feature = "mongodb_pool")] pub extern crate mongodb;
-#[cfg(feature = "mongodb_pool")] pub extern crate r2d2_mongodb;
 
 #[cfg(feature = "memcache_pool")] pub extern crate memcache;
 #[cfg(feature = "memcache_pool")] pub extern crate r2d2_memcache;
@@ -792,17 +786,6 @@ impl Poolable for redis::Connection {
         let manager = r2d2_redis::RedisConnectionManager::new(config.url).map_err(DbError::Custom)?;
         r2d2::Pool::builder().max_size(config.pool_size).build(manager)
             .map_err(DbError::PoolError)
-    }
-}
-
-#[cfg(feature = "mongodb_pool")]
-impl Poolable for mongodb::db::Database {
-    type Manager = r2d2_mongodb::MongodbConnectionManager;
-    type Error = DbError<mongodb::Error>;
-
-    fn pool(config: DatabaseConfig<'_>) -> Result<r2d2::Pool<Self::Manager>, Self::Error> {
-        let manager = r2d2_mongodb::MongodbConnectionManager::new_with_uri(config.url).map_err(DbError::Custom)?;
-        r2d2::Pool::builder().max_size(config.pool_size).build(manager).map_err(DbError::PoolError)
     }
 }
 

@@ -76,7 +76,6 @@ if [ "$1" = "--contrib" ]; then
     mysql_pool
     sqlite_pool
     redis_pool
-    mongodb_pool
     memcache_pool
     brotli_compression
     gzip_compression

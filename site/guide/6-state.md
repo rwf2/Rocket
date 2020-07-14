@@ -236,7 +236,6 @@ Presently, Rocket provides built-in support for the following databases:
 | Sqlite   | [Diesel]              | `1`       | [`diesel::SqliteConnection`]   | `diesel_sqlite_pool`   |
 | Sqlite   | [`Rusqlite`]          | `0.23`    | [`rusqlite::Connection`]       | `sqlite_pool`          |
 | Redis    | [`redis-rs`]          | `0.15`    | [`redis::Connection`]          | `redis_pool`           |
-| MongoDB  | [`mongodb`]           | `0.3.12`  | [`mongodb::db::Database`]      | `mongodb_pool`         |
 | Memcache | [`memcache`]          | `0.14`    | [`memcache::Client`]           | `memcache_pool`        |
 
 [`r2d2`]: https://crates.io/crates/r2d2
@@ -253,8 +252,6 @@ Presently, Rocket provides built-in support for the following databases:
 [Rust-Postgres]: https://github.com/sfackler/rust-postgres
 [`rust-mysql-simple`]: https://github.com/blackbeam/rust-mysql-simple
 [`diesel::PgConnection`]: http://docs.diesel.rs/diesel/pg/struct.PgConnection.html
-[`mongodb`]: https://github.com/mongodb-labs/mongo-rust-driver-prototype
-[`mongodb::db::Database`]: https://docs.rs/mongodb/0.3.12/mongodb/db/type.Database.html
 [`memcache`]: https://github.com/aisk/rust-memcache
 [`memcache::Client`]: https://docs.rs/memcache/0.14/memcache/struct.Client.html
 
