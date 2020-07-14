@@ -68,8 +68,8 @@ r2d2 = { version = "0.8", optional = true }
 r2d2_postgres = { version = "0.16", optional = true }
 mysql = { version = "18.0", optional = true }
 r2d2_mysql = { version = "18.0", optional = true }
-rusqlite = { version = "0.16.0", optional = true }
-r2d2_sqlite = { version = "0.8", optional = true }
+rusqlite = { version = "0.23", optional = true }
+r2d2_sqlite = { version = "0.16", optional = true }
 rusted_cypher = { version = "1", optional = true }
 r2d2_cypher = { version = "0.4", optional = true }
 redis = { version = "0.13", optional = true }
