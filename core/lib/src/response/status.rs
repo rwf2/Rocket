@@ -413,6 +413,18 @@ impl<'r, 'o: 'r, R: Responder<'r, 'o>> Responder<'r, 'o> for Conflict<R> {
     }
 }
 
+#[derive(Debug, Clone, PartialEq)]
+pub struct NotModified;
+
+/// Sets the status code of the response to 304 Not Modified.
+impl<'r, 'o: 'r> Responder<'r, 'o> for NotModified {
+    fn respond_to(self, _req: &'r Request<'_>) -> response::Result<'o> {
+        Response::build()
+            .status(Status::NotModified)
+            .ok()
+    }
+}
+
 /// Creates a response with the given status code and underlying responder.
 ///
 /// # Example

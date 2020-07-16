@@ -1,4 +1,4 @@
-use std::io;
+use std::{fs, io};
 use std::path::{Path, PathBuf};
 use std::ops::{Deref, DerefMut};
 
@@ -7,6 +7,17 @@ use tokio::fs::File;
 use crate::request::Request;
 use crate::response::{self, Responder};
 use crate::http::ContentType;
+use std::time::SystemTime;
+use time::{PrimitiveDateTime, OffsetDateTime};
+
+// The spec for this header/format is described here
+// https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Last-Modified#Syntax
+// Last-Modified: <day-name>, <day> <month> <year> <hour>:<minute>:<second> GMT
+// Example: Last-Modified: Sat, 03 Oct 2015 21:28:00 GMT
+
+// Format codes can be found here. They are not compatible with libc strftime.
+// https://docs.rs/time/0.2.16/src/time/lib.rs.html#94-127
+const TIME_FORMAT: &'static str = "%a, %d %b %Y %H:%M:%S GMT";
 
 /// A file with an associated name; responds with the Content-Type based on the
 /// file extension.
@@ -84,14 +95,40 @@ impl NamedFile {
 /// the response according to the file's extension if the extension is
 /// recognized. See [`ContentType::from_extension()`] for more information. If
 /// you would like to stream a file with a different Content-Type than that
-/// implied by its extension, use a [`File`] directly.
+/// implied by its extension, use a [`File`] directly. On supported platforms, this
+/// will set or override the Last-Modified and header in the response according to the
+/// file's modified date on disk and respond with 304 Not Modified to conditional
+/// requests. See [`fs::Metadata::modified`] for more information on supported
+/// platforms.
 impl<'r> Responder<'r, 'static> for NamedFile {
     fn respond_to(self, req: &'r Request<'_>) -> response::Result<'static> {
+        // using the file handle `self.1` is too much trouble here, tokio's `File::metadata` method
+        // is async, so is into_std, and try_into_std gives you a `io::Result<std::fs::File>`
+        let file_mod_time = fs::metadata(self.0.as_path()).ok()
+            .and_then(|metadata| metadata.modified().ok())
+            .and_then(|modified| modified.duration_since(SystemTime::UNIX_EPOCH).ok())
+            .map(|duration| OffsetDateTime::from_unix_timestamp(duration.as_secs() as i64));
+
+        // if file_mod_time is < this date, we don't need to re-send the file.
+        let cutoff = req.headers().get_one("If-Modified-Since")
+            .and_then(|header| PrimitiveDateTime::parse(header, TIME_FORMAT).ok())
+            .map(|dt| dt.assume_utc());
+
+        if let Some((date, cutoff)) = file_mod_time.zip(cutoff) {
+            if date <= cutoff {
+                return response::status::NotModified.respond_to(req);
+            }
+        }
+
         let mut response = self.1.respond_to(req)?;
         if let Some(ext) = self.0.extension() {
             if let Some(ct) = ContentType::from_extension(&ext.to_string_lossy()) {
                 response.set_header(ct);
             }
+        }
+
+        if let Some(time) = file_mod_time {
+            response.set_raw_header("Last-Modified", time.format(TIME_FORMAT));
         }
 
         Ok(response)
