@@ -1,6 +1,5 @@
 #[macro_use] extern crate rocket;
 #[macro_use] extern crate rocket_contrib;
-#[macro_use] extern crate serde_derive;
 
 #[cfg(test)] mod tests;
 
@@ -9,6 +8,8 @@ use std::collections::HashMap;
 
 use rocket::State;
 use rocket_contrib::json::{Json, JsonValue};
+
+use serde::{Serialize, Deserialize};
 
 // The type to represent the ID of a message.
 type ID = usize;

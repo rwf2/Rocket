@@ -2,7 +2,6 @@
 #[macro_use] extern crate diesel;
 #[macro_use] extern crate diesel_migrations;
 #[macro_use] extern crate log;
-#[macro_use] extern crate serde_derive;
 #[macro_use] extern crate rocket_contrib;
 
 mod task;
@@ -25,7 +24,7 @@ embed_migrations!();
 #[database("sqlite_database")]
 pub struct DbConn(SqliteConnection);
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, serde::Serialize)]
 struct Context<'a> {
     msg: Option<(&'a str, &'a str)>,
     tasks: Vec<Task>

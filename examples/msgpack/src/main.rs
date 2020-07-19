@@ -1,9 +1,10 @@
 #[macro_use] extern crate rocket;
-#[macro_use] extern crate serde_derive;
 
 #[cfg(test)] mod tests;
 
 use rocket_contrib::msgpack::MsgPack;
+
+use serde::{Serialize, Deserialize};
 
 #[derive(Serialize, Deserialize)]
 struct Message<'r> {

@@ -1,5 +1,4 @@
 #[macro_use] extern crate rocket;
-#[macro_use] extern crate serde_derive;
 
 #[cfg(test)] mod tests;
 
@@ -9,6 +8,8 @@ use tokio::io::AsyncReadExt;
 
 use rocket::{Request, data::Data};
 use rocket::response::{Debug, content::{Json, Html}};
+
+use serde::{Serialize, Deserialize};
 
 // NOTE: This example explicitly uses the `Json` type from `response::content`
 // for demonstration purposes. In a real application, _always_ prefer to use
