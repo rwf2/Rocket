@@ -70,10 +70,9 @@ fn json() -> content::Json<&'static str> {
 
 ### Errors
 
-Responders may fail; they need not _always_ generate a response. Instead, they
-can return an `Err` with a given status code. When this happens, Rocket forwards
-the request to the [error catcher](../requests/#error-catchers) for the
-given status code.
+Responders may fail instead of generating a response by returning an `Err` with
+a status code. When this happens, Rocket forwards the request to the [error
+catcher](../requests/#error-catchers) for that status code.
 
 If an error catcher has been registered for the given status code, Rocket will
 invoke it. The catcher creates and returns a response to the client. If no error
