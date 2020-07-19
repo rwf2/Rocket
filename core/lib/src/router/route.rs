@@ -87,11 +87,11 @@ impl Route {
     /// # Ranking
     ///
     /// The route's rank is set so that routes with static paths (no dynamic
-    /// parameters) are ranked higher than routes with dynamic paths, routes
-    /// with query strings with static segments are ranked higher than routes
-    /// with fully dynamic queries, and routes with queries are ranked higher
-    /// than routes without queries. This default ranking is summarized by the
-    /// table below:
+    /// parameters) have lower ranks (higher precedence) than routes with
+    /// dynamic paths, routes with query strings with static segments have lower
+    /// ranks than routes with fully dynamic queries, and routes with queries
+    /// have lower ranks than routes without queries. This default ranking is
+    /// summarized by the table below:
     ///
     /// | static path | query         | rank |
     /// |-------------|---------------|------|
