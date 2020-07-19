@@ -126,7 +126,7 @@ impl std::ops::BitOr for Options {
 ///
 /// # Example
 ///
-/// To serve files from the `/static` local file system directory at the
+/// To serve files from the `/static` directory on the local file system at the
 /// `/public` path, allowing `index.html` files to be used to respond to
 /// requests for a directory (the default), you might write the following:
 ///
@@ -142,16 +142,16 @@ impl std::ops::BitOr for Options {
 /// ```
 ///
 /// With this, requests for files at `/public/<path..>` will be handled by
-/// returning the contents of `./static/<path..>`. Requests for _directories_ at
+/// returning the contents of `/static/<path..>`. Requests for _directories_ at
 /// `/public/<directory>` will be handled by returning the contents of
-/// `./static/<directory>/index.html`.
+/// `/static/<directory>/index.html`.
 ///
-/// If your static files are stored relative to your crate and your project is
-/// managed by Cargo, you should either use a relative path and ensure that your
-/// server is started in the crate's root directory or use the
-/// `CARGO_MANIFEST_DIR` to create an absolute path relative to your crate root.
-/// For example, to serve files in the `static` subdirectory of your crate at
-/// `/`, you might write:
+/// `/static` is an absolute path. If your static files are stored relative to
+/// your crate and your project is managed by Cargo, you should either use a
+/// relative path and ensure that your server is started in the crate's root
+/// directory or use the `CARGO_MANIFEST_DIR` to create an absolute path
+/// relative to your crate root.  For example, to serve files in the `static`
+/// subdirectory of your crate at `/`, you might write:
 ///
 /// ```rust,no_run
 /// # extern crate rocket;
