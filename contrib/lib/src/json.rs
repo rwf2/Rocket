@@ -40,7 +40,7 @@ pub use serde_json::{json_internal, json_internal_vec};
 /// If you're receiving JSON data, simply add a `data` parameter to your route
 /// arguments and ensure the type of the parameter is a `Json<T>`, where `T` is
 /// some type you'd like to parse from JSON. `T` must implement [`Deserialize`]
-/// or from [`serde`]. The data is parsed from the HTTP request body.
+/// from [`serde`]. The data is parsed from the HTTP request body.
 ///
 /// ```rust
 /// # #[macro_use] extern crate rocket;
