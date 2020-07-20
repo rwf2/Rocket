@@ -40,7 +40,7 @@ fn index() -> &'static str {
           accepts raw data in the body of the request and responds with a URL of
           a page containing the body's content
 
-          EXMAPLE: curl --data-binary @file.txt http://localhost:8000
+          EXAMPLE: curl --data-binary @file.txt http://localhost:8000
 
       GET /<id>
 

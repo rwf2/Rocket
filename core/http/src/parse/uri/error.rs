@@ -9,7 +9,7 @@ use crate::ext::IntoOwned;
 /// Error emitted on URI parse failure.
 ///
 /// Internally, the type includes information about where the parse error
-/// occured (the error's context) and information about what went wrong.
+/// occurred (the error's context) and information about what went wrong.
 /// Externally, this information can be retrieved (in textual form) through its
 /// `Display` implementation. In other words, by printing a value of this type.
 #[derive(Debug)]

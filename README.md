@@ -59,7 +59,7 @@ the [Kiwi IRC client] or a client of your own.
 ### Nightly
 
 Rocket requires a nightly version of Rust as it makes heavy use of syntax
-extensions. This means that the first two unwieldly lines in the introductory
+extensions. This means that the first two unwieldy lines in the introductory
 example above are required.
 
 ### Core, Codegen, and Contrib

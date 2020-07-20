@@ -150,7 +150,7 @@ impl<'q> Iterator for Query<'q> {
 /// `FromForm` (as in the previous example) will suffice. For special cases
 /// however, an implementation of `FromQuery` may be warranted.
 ///
-/// Consider a contrived scheme where we expect to recieve one query key, `key`,
+/// Consider a contrived scheme where we expect to receive one query key, `key`,
 /// three times and wish to take the middle value. For instance, consider the
 /// query:
 ///

@@ -297,7 +297,7 @@ with the correct ID:
 # in the project root
 cargo run
 
-# in a seperate terminal
+# in a separate terminal
 echo "Hello, world." | curl --data-binary @- http://localhost:8000
 # => http://localhost:8000/eGs
 

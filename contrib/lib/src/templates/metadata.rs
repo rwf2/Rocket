@@ -4,7 +4,7 @@ use rocket::request::{self, FromRequest};
 
 use crate::templates::ContextManager;
 
-/// Request guard for dynamiclly querying template metadata.
+/// Request guard for dynamically querying template metadata.
 ///
 /// # Usage
 ///

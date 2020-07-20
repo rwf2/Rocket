@@ -135,7 +135,7 @@ pub enum Referrer {
     StrictOrigin,
 
     /// Send full URL for same-origin requests. For cross-origin requests, only
-    /// send origin part of URL if protocl security level remains the same e.g.
+    /// send origin part of URL if protocol security level remains the same e.g.
     /// HTTPS to HTTPS.
     StrictOriginWhenCrossOrigin,
 

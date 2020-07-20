@@ -15,7 +15,7 @@ use rocket::request::Form;
 use rocket::http::{Status, RawStr, ContentType};
 use rocket::tokio::io::AsyncReadExt;
 
-// Use all of the code generation avaiable at once.
+// Use all of the code generation available at once.
 
 #[derive(FromForm, UriDisplayQuery)]
 struct Inner<'r> {

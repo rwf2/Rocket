@@ -651,7 +651,7 @@ pub fn derive_from_form(input: TokenStream) -> TokenStream {
 /// The attribute accepts two key/value pairs: `status` and `content_type`. The
 /// value of `status` must be an unsigned integer representing a valid status
 /// code. The [`Response`] produced from the generated implementation will have
-/// its status overriden to this value.
+/// its status overridden to this value.
 ///
 /// The value of `content_type` must be a valid media-type in `top/sub` form or
 /// `shorthand` form. Examples include:
@@ -665,7 +665,7 @@ pub fn derive_from_form(input: TokenStream) -> TokenStream {
 ///
 /// See [`ContentType::parse_flexible()`] for a full list of available
 /// shorthands. The [`Response`] produced from the generated implementation will
-/// have its content-type overriden to this value.
+/// have its content-type overridden to this value.
 ///
 /// [`Responder`]: ../rocket/response/trait.Responder.html
 /// [`Response`]: ../rocket/struct.Response.html
@@ -702,7 +702,7 @@ pub fn derive_responder(input: TokenStream) -> TokenStream {
 ///
 /// The derive generates an implementation of the [`UriDisplay<Query>`] trait.
 /// The implementation calls [`Formatter::write_named_value()`] for every named
-/// field, using the field's name (unless overriden, explained next) as the
+/// field, using the field's name (unless overridden, explained next) as the
 /// `name` parameter, and [`Formatter::write_value()`] for every unnamed field
 /// in the order the fields are declared.
 ///

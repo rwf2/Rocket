@@ -199,7 +199,7 @@ fn explode_query<'a, I: Iterator<Item = (&'a Ident, &'a Type, &'a ArgExpr)>>(
     Some(quote!(#uri_mod::UriArgumentsKind::Dynamic(&[#(#dyn_exprs),*])))
 }
 
-// Returns an Origin URI with the mount point and route path concatinated. The
+// Returns an Origin URI with the mount point and route path contaminated. The
 // query string is mangled by replacing single dynamic parameters in query parts
 // (`<param>`) with `param=<param>`.
 fn build_origin(internal: &InternalUriParams) -> Origin<'static> {

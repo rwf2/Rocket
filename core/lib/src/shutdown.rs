@@ -30,7 +30,7 @@ use tokio::sync::mpsc;
 ///         .launch()
 ///         .await;
 ///
-///     // If the server shut down (by visting `/shutdown`), `result` is `Ok`.
+///     // If the server shut down (by visiting `/shutdown`), `result` is `Ok`.
 ///     result.expect("server failed unexpectedly");
 /// }
 /// ```

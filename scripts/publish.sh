@@ -18,7 +18,7 @@ function restore_dev_dependencies() {
 }
 
 if ! [ -z "$(git status --porcelain)" ]; then
-  echo "There are uncommited changes! Aborting."
+  echo "There are uncommitted changes! Aborting."
   exit 1
 fi
 

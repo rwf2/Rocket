@@ -161,7 +161,7 @@
 //!
 //! The retrivial of configuration parameters usually occurs at launch time via
 //! a [launch fairing](crate::fairing::Fairing). If information about the
-//! configuraiton is needed later in the program, an attach fairing can be used
+//! configuration is needed later in the program, an attach fairing can be used
 //! to store the information as managed state. As an example of the latter,
 //! consider the following short program which reads the `token` configuration
 //! parameter and stores the value or a default in a `Token` managed state

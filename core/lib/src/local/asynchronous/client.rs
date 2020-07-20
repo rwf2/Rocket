@@ -12,7 +12,7 @@ use crate::error::LaunchError;
 /// For the `blocking` version, see
 /// [`blocking::Client`](crate::local::blocking::Client).
 ///
-/// ## Multithreaded Syncronization Pitfalls
+/// ## Multithreaded Synchronization Pitfalls
 ///
 /// Unlike its [`blocking`](crate::local::blocking) variant, this `async` `Client`
 /// implements `Sync`. However, using it in a multithreaded environment while
