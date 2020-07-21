@@ -44,11 +44,12 @@ where
 {
     let filter_str = match level {
         LoggingLevel::Critical => "warn,rocket::launch=info,hyper=off,rustls=off",
-        LoggingLevel::Normal => "info,hyper=off,rustls=off"
-        LoggingLevel::Debug => "trace"
+        LoggingLevel::Normal => "info,hyper=off,rustls=off",
+        LoggingLevel::Debug => "trace",
         LoggingLevel::Off => "off",
-    }
-    tracing_subscriber::env_filter::EnvFilter::try_from(filter_str)
+    };
+    
+    tracing_subscriber::filter::EnvFilter::try_new(filter_str)
         .expect("filter string must parse")
 }
 
