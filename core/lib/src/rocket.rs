@@ -67,20 +67,17 @@ pub(crate) struct Token;
 impl Rocket {
     #[inline]
     fn _mount(&mut self, base: Origin<'static>, routes: Vec<Route>) {
-        info!("{}{} {}{}",
-              Paint::emoji("🛰  "),
-              Paint::magenta("Mounting"),
-              Paint::blue(&base),
-              Paint::magenta(":"));
+        let span = tracing::info_span!("Mounting", "{}: {}", Paint::blue(&base), Paint::emoji("🛰"));
+        let _e = span.enter();
 
         for mut route in routes {
             let path = route.uri.clone();
             if let Err(e) = route.set_uri(base.clone(), path) {
-                error_!("{}", e);
+                error!("{}", e);
                 panic!("Invalid route URI.");
             }
 
-            info_!("{}", route);
+            tracing::info!(%route);
             self.router.add(route);
         }
     }
