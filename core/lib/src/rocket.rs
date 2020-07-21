@@ -628,18 +628,18 @@ impl Rocket {
         tracing::info!(limits = %&config.limits);
 
         match config.keep_alive {
-            Some(v) => launch_info_!("keep-alive: {}", Paint::default(format!("{}s", v)).bold()),
-            None => launch_info_!("keep-alive: {}", Paint::default("disabled").bold()),
+            Some(v) => tracing::info!(keep_alive = %Paint::default(format!("{}s", v)).bold()),
+            None => tracing::info!(keep_alive = %Paint::default("disabled").bold()),
         }
 
         let tls_configured = config.tls.is_some();
         if tls_configured && cfg!(feature = "tls") {
-            launch_info_!("tls: {}", Paint::default("enabled").bold());
+            tracing::info!(tls = %Paint::default("enabled").bold());
         } else if tls_configured {
-            error_!("tls: {}", Paint::default("disabled").bold());
-            error_!("tls is configured, but the tls feature is disabled");
+            tracing::error!(tls = %Paint::default("disabled").bold());
+            tracing::error!("tls is configured, but the tls feature is disabled");
         } else {
-            launch_info_!("tls: {}", Paint::default("disabled").bold());
+            tracing::info!(tls = %Paint::default("disabled").bold());
         }
 
         if config.secret_key.is_generated() && config.environment.is_prod() {
