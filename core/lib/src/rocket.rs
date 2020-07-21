@@ -612,18 +612,20 @@ impl Rocket {
 
     #[inline]
     fn configured(config: Config) -> Rocket {
-        if logger::try_init(config.log_level, false) {
-            // Temporary weaken log level for launch info.
-            logger::push_max_level(logger::LoggingLevel::Normal);
-        }
+        crate::trace::try_init(config.log_level);
+        // if logger::try_init(config.log_level, false) {
+        //     // Temporary weaken log level for launch info.
+        //     logger::push_max_level(logger::LoggingLevel::Normal);
+        // }
+        let span = tracing::info_span!("Configured", "for {} {}", config.environment, Paint::emoji("🔧 "));
+        let _e = span.enter();
 
-        launch_info!("{}Configured for {}.", Paint::emoji("🔧 "), config.environment);
-        launch_info_!("address: {}", Paint::default(&config.address).bold());
-        launch_info_!("port: {}", Paint::default(&config.port).bold());
-        launch_info_!("log: {}", Paint::default(config.log_level).bold());
-        launch_info_!("workers: {}", Paint::default(config.workers).bold());
-        launch_info_!("secret key: {}", Paint::default(&config.secret_key).bold());
-        launch_info_!("limits: {}", Paint::default(&config.limits).bold());
+        tracing::info!(address = %&config.address);
+        tracing::info!(port = %&config.port);
+        tracing::info!(log = %&config.log_level);
+        tracing::info!(workers = %&config.workers);
+        tracing::info!(secret_key = %&config.secret_key);
+        tracing::info!(limits = %&config.limits);
 
         match config.keep_alive {
             Some(v) => launch_info_!("keep-alive: {}", Paint::default(format!("{}s", v)).bold()),

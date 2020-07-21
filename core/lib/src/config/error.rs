@@ -76,7 +76,7 @@ impl ConfigError {
                 error!("{} is not a known configuration environment",
                        Paint::default(format!("[{}]", name)).bold());
                 info_!("in {}", Paint::default(filename.display()).bold());
-                info_!("valid environments are: {}", Paint::default(valid_entries).bold());
+                info_!("valid environments are: {}", Paint::default(&valid_entries).bold());
             }
             BadEnv(ref name) => {
                 error!("{} is not a valid ROCKET_ENV value", Paint::default(name).bold());

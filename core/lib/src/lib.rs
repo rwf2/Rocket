@@ -106,6 +106,7 @@ pub mod handler;
 pub mod fairing;
 pub mod error;
 pub mod shutdown;
+pub mod trace;
 
 // Reexport of HTTP everything.
 pub mod http {

@@ -88,7 +88,7 @@ impl Fairings {
                 .collect::<Vec<_>>()
                 .join(", ");
 
-            info_!("{} {}: {}", Paint::default(num).bold(), kind, Paint::default(names).bold());
+            info_!("{} {}: {}", Paint::default(num).bold(), kind, Paint::default(&names).bold());
         }
     }
 

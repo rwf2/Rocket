@@ -45,6 +45,16 @@ atomic = "0.4"
 version = "0.2.9"
 features = ["fs", "io-std", "io-util", "rt-threaded", "sync", "signal", "macros"]
 
+[dependencies.tracing]
+version = "0.1.15"
+default-features = false
+features = ["log", "std"]
+
+[dependencies.tracing-subscriber]
+version = "0.2"
+default-features = false
+features = ["fmt", "env-filter", "smallvec"]
+
 [build-dependencies]
 yansi = "0.5"
 version_check = "0.9.1"
