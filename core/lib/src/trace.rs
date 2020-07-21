@@ -31,8 +31,25 @@ pub(crate) fn try_init(level: LoggingLevel) -> bool {
         Paint::disable();
     }
 
-    tracing::subscriber::set_global_default(tracing_subscriber::registry().with(logging_layer()))
+    tracing::subscriber::set_global_default(tracing_subscriber::registry()
+        .with(logging_layer())
+        .with(filter_layer(level))
+    )
         .is_ok()
+}
+
+pub fn filter_layer<S>(level: LoggingLevel) -> impl Layer<S> 
+where
+    S: tracing::Subscriber,
+{
+    let filter_str = match level {
+        LoggingLevel::Critical => "warn,rocket::launch=info,hyper=off,rustls=off",
+        LoggingLevel::Normal => "info,hyper=off,rustls=off"
+        LoggingLevel::Debug => "trace"
+        LoggingLevel::Off => "off",
+    }
+    tracing_subscriber::env_filter::EnvFilter::try_from(filter_str)
+        .expect("filter string must parse")
 }
 
 pub fn logging_layer<S>() -> impl Layer<S>
@@ -46,7 +63,7 @@ where
         if name == "message" {
             write!(writer, "{:?}", Paint::default(value).bold())
         } else {
-            write!(writer, "{}: {:?}", Paint::default(field).bold(), value)
+            write!(writer, "{}: {:?}", field, Paint::default(value).bold())
         }
     })
     .delimited(", ")
@@ -84,7 +101,7 @@ where
                         with_meta(
                             writer,
                             span.metadata(),
-                            format_args!("{}, {}", Paint::default(span.name()).bold(), fields.fields),
+                            format_args!("{} {}", span.name(), fields.fields),
                         )?;
                     } else {
                         with_meta(writer, span.metadata(), Paint::default(span.name()).bold())?;
@@ -111,7 +128,7 @@ where
             if name == "message" {
                 write!(writer, "{:?}", Paint::default(value).bold())
             } else {
-                write!(writer, "{}: {:?}", Paint::default(field).bold(), value)
+                write!(writer, "{}: {:?}", field, Paint::default(value).bold())
             }
         })
         .delimited(", ")
