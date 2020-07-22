@@ -93,10 +93,10 @@ pub fn database_attr(attr: TokenStream, input: TokenStream) -> Result<TokenStrea
                 <#databases::ConnectionPool<Self, #conn_type>>::get_one(cargo).await.map(Self)
             }
 
-            /// Runs the provided closure on a blocking threadpool. The closure
-            /// will be passed an `&mut r2d2::PooledConnection`, and `.await`ing
-            /// this function will provide whatever value is returned from the
-            /// closure.
+            /// Runs the provided closure on a thread from a threadpool. The
+            /// closure will be passed an `&mut r2d2::PooledConnection`.
+            /// `.await`ing the return value of this function yields the value
+            /// returned by the closure.
             pub async fn run<F, R>(&mut self, f: F) -> R
             where
                 F: FnOnce(&mut #conn_type) -> R + Send + 'static,

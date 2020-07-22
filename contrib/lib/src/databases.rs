@@ -222,9 +222,9 @@
 //! ```
 //!
 //! The macro generates a [`FromRequest`] implementation for the decorated type,
-//! allowing the type to be used as a request guard. This implementation always
-//! succeeds; database availability is not actually checked until `run()` is
-//! called.
+//! allowing the type to be used as a request guard. This implementation
+//! retrieves a connection from the database pool or fails with a
+//! `Status::ServiceUnavailable` if connecting to the database times out.
 //!
 //! The macro will also generate two inherent methods on the decorated type:
 //!
@@ -233,7 +233,7 @@
 //!      Returns a fairing that initializes the associated database connection
 //!      pool.
 //!
-//!   * `fn async get_one(&Cargo) -> Option<Self>`
+//!   * `async fn get_one(&Cargo) -> Option<Self>`
 //!
 //!     Retrieves a connection wrapper from the configured pool. Returns `Some`
 //!     as long as `Self::fairing()` has been attached.

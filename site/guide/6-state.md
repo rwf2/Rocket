@@ -330,10 +330,10 @@ async fn get_logs(conn: LogsDbConn, id: usize) -> Logs {
 
 ! note
 
-  The database engines supported by `#[database]` are *synchronous*, and
-  normally block the thread of execution. The `run()` function automatically
-  uses `tokio::spawn_blocking` so that database access does not interfere with
-  other in-flight requests. See [Cooperative
+  The database engines supported by `#[database]` are *synchronous*. Normally,
+  using such a database would block the thread of execution. To prevent this,
+  the `run()` function automatically uses a thread pool so that database access
+  does not interfere with other in-flight requests. See [Cooperative
   Multitasking](../overview/#cooperative-multitasking) for more information on
   why this is necessary.
 
