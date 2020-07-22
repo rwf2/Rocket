@@ -322,6 +322,37 @@
 //! # }
 //! ```
 //!
+//! `run()` takes the connection by value. To make multiple calls to run,
+//! obtain a second connection first with `clone()`:
+//!
+//! ```rust
+//! # #[macro_use] extern crate rocket;
+//! # #[macro_use] extern crate rocket_contrib;
+//! #
+//! # #[cfg(feature = "diesel_sqlite_pool")]
+//! # mod test {
+//! # use rocket_contrib::databases::diesel;
+//! # type Data = ();
+//! #[database("my_db")]
+//! struct MyDatabase(diesel::SqliteConnection);
+//!
+//! fn load_from_db(conn: &diesel::SqliteConnection) -> Data {
+//!     // Do something with connection, return some data.
+//!     # ()
+//! }
+//!
+//! #[get("/")]
+//! async fn my_handler(mut conn: MyDatabase) -> Data {
+//!     let cloned = conn.clone().await.expect("");
+//!     cloned.run(|c| load_from_db(c)).await;
+//!
+//!     // Do something else
+//!     conn.run(|c| load_from_db(c)).await;
+//! }
+//! # }
+//! ```
+//!
+//!
 //! # Database Support
 //!
 //! Built-in support is provided for many popular databases and drivers. Support
@@ -799,6 +830,7 @@ pub struct ConnectionPool<K, C: Poolable> {
 /// types are properly checked.
 #[doc(hidden)]
 pub struct Connection<K, C: Poolable> {
+    pool: ConnectionPool<K, C>,
     connection: Option<r2d2::PooledConnection<C::Manager>>,
     _permit: Option<OwnedSemaphorePermit>,
     _marker: PhantomData<fn() -> K>,
@@ -842,6 +874,7 @@ impl<K: 'static, C: Poolable> ConnectionPool<K, C> {
         match spawn_blocking(move || pool.get()).await.unwrap() {
             Ok(c) => {
                 Ok(Connection {
+                    pool: self.clone(),
                     connection: Some(c),
                     _permit: Some(permit),
                     _marker: PhantomData,
@@ -866,22 +899,37 @@ impl<K: 'static, C: Poolable> ConnectionPool<K, C> {
     }
 }
 
-impl<K, C: Poolable> Connection<K, C> {
+impl<K, C: Poolable> Clone for ConnectionPool<K, C> {
+    fn clone(&self) -> Self {
+        Self {
+            pool: self.pool.clone(),
+            semaphore: self.semaphore.clone(),
+            _marker: PhantomData,
+        }
+    }
+}
+
+impl<K: 'static, C: Poolable> Connection<K, C> {
     #[inline]
-    pub async fn run<F, R>(&mut self, f: F) -> R
+    pub async fn run<F, R>(self, f: F) -> R
         where F: FnOnce(&mut C) -> R + Send + 'static,
               R: Send + 'static,
     {
-        let mut conn = self.connection.take()
-            .expect("Connection unexpectedly missing. Was run() called without being awaited?");
+        tokio::task::spawn_blocking(move || {
+            // 'self' contains a semaphore permit that should be held throughout
+            // this entire spawned task. Explicitly move it, so that a
+            // refactoring won't accidentally release the permit too early.
+            let mut this: Self = self;
 
-        let (value, conn) = tokio::task::spawn_blocking(move || {
-            let value = f(&mut conn);
-            (value, conn)
-        }).await.expect("failed to spawn a blocking task to use a pooled connection");
+            let mut conn = this.connection.take()
+                .expect("internal invariant broken: self.connection is Some");
+            f(&mut conn)
+        }).await.expect("failed to spawn a blocking task to use a pooled connection")
+    }
 
-        self.connection = Some(conn);
-        value
+    #[inline]
+    pub async fn clone(&mut self) -> Result<Self, ()> {
+        self.pool.get().await
     }
 }
 

@@ -38,7 +38,7 @@ mod rusqlite_integration_test {
             .unwrap();
 
         let mut rocket = rocket::custom(config).attach(SqliteDb::fairing()).attach(SqliteDb2::fairing());
-        let mut conn = SqliteDb::get_one(rocket.inspect().await).await.expect("unable to get connection");
+        let conn = SqliteDb::get_one(rocket.inspect().await).await.expect("unable to get connection");
 
         // Rusqlite's `transaction()` method takes `&mut self`; this tests that
         // the &mut method can be called inside the closure passed to `run()`.
