@@ -389,6 +389,7 @@ use std::marker::PhantomData;
 use std::sync::Arc;
 
 use rocket::config::{self, Value};
+use rocket::fairing::{AdHoc, Fairing};
 
 use rocket::tokio::sync::{OwnedSemaphorePermit, Semaphore};
 
@@ -779,22 +780,22 @@ impl Poolable for memcache::Client {
     }
 }
 
-#[doc(hidden)]
 /// Unstable internal details of generated code for the #[database] attribute.
 ///
 /// This type is implemented here instead of in generated code to ensure all
 /// types are properly checked.
+#[doc(hidden)]
 pub struct ConnectionPool<K, C: Poolable> {
     pool: r2d2::Pool<C::Manager>,
     semaphore: Arc<Semaphore>,
     _marker: PhantomData<fn() -> K>,
 }
 
-#[doc(hidden)]
 /// Unstable internal details of generated code for the #[database] attribute.
 ///
 /// This type is implemented here instead of in generated code to ensure all
 /// types are properly checked.
+#[doc(hidden)]
 pub struct Connection<K, C: Poolable> {
     connection: Option<r2d2::PooledConnection<C::Manager>>,
     _permit: Option<OwnedSemaphorePermit>,
@@ -803,30 +804,30 @@ pub struct Connection<K, C: Poolable> {
 
 impl<K: 'static, C: Poolable> ConnectionPool<K, C> {
     #[inline]
-    pub fn fairing(fairing_name: &'static str, config_name: &'static str) -> impl rocket::fairing::Fairing {
-        rocket::fairing::AdHoc::on_attach(fairing_name, move |mut rocket| async move {
+    pub fn fairing(fairing_name: &'static str, config_name: &'static str) -> impl Fairing {
+        AdHoc::on_attach(fairing_name, move |mut rocket| async move {
             let config = database_config(config_name, rocket.config().await);
             let pool = config.map(|c| (c.pool_size, C::pool(c)));
 
             match pool {
-                Ok((size, Ok(p))) => {
+                Ok((size, Ok(pool))) => {
                     let managed = ConnectionPool::<K, C> {
-                        pool: p,
+                        pool,
                         semaphore: Arc::new(Semaphore::new(size as usize)),
                         _marker: PhantomData,
                     };
                     Ok(rocket.manage(managed))
                 },
                 Err(config_error) => {
-                    ::rocket::logger::error(
+                    rocket::logger::error(
                         &format!("Database configuration failure: '{}'", config_name));
-                    ::rocket::logger::error_(&format!("{}", config_error));
+                    rocket::logger::error_(&config_error.to_string());
                     Err(rocket)
                 },
                 Ok((_, Err(pool_error))) => {
-                    ::rocket::logger::error(
+                    rocket::logger::error(
                         &format!("Failed to initialize pool for '{}'", config_name));
-                    ::rocket::logger::error_(&format!("{:?}", pool_error));
+                    rocket::logger::error_(&format!("{:?}", pool_error));
                     Err(rocket)
                 },
             }
@@ -852,7 +853,7 @@ impl<K: 'static, C: Poolable> ConnectionPool<K, C> {
     }
 
     #[inline]
-    pub async fn get_one(cargo: &::rocket::Cargo) -> Option<Connection<K, C>> {
+    pub async fn get_one(cargo: &rocket::Cargo) -> Option<Connection<K, C>> {
         cargo.state::<Self>()?.get().await.ok()
     }
 }
@@ -860,9 +861,8 @@ impl<K: 'static, C: Poolable> ConnectionPool<K, C> {
 impl<K, C: Poolable> Connection<K, C> {
     #[inline]
     pub async fn run<F, R>(&mut self, f: F) -> R
-    where
-        F: FnOnce(&mut C) -> R + Send + 'static,
-        R: Send + 'static,
+        where F: FnOnce(&mut C) -> R + Send + 'static,
+              R: Send + 'static,
     {
         let mut conn = self.connection.take()
             .expect("Connection unexpectedly missing. Was run() called without being awaited?");
@@ -885,13 +885,13 @@ impl<K, C: Poolable> Drop for Connection<K, C> {
     }
 }
 
-#[::rocket::async_trait]
+#[rocket::async_trait]
 impl<'a, 'r, K: 'static, C: Poolable> rocket::request::FromRequest<'a, 'r> for Connection<K, C> {
     type Error = ();
 
     #[inline]
     async fn from_request(request: &'a rocket::request::Request<'r>) -> rocket::request::Outcome<Self, ()> {
-        let inner = ::rocket::try_outcome!(request.guard::<::rocket::State<'_, ConnectionPool<K, C>>>().await);
+        let inner = rocket::try_outcome!(request.guard::<rocket::State<'_, ConnectionPool<K, C>>>().await);
 
         match inner.get().await {
             Ok(c) => rocket::Outcome::Success(c),
