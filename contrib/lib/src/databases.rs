@@ -390,6 +390,8 @@ use std::sync::Arc;
 
 use rocket::config::{self, Value};
 use rocket::fairing::{AdHoc, Fairing};
+use rocket::http::Status;
+use rocket::request::Outcome;
 
 use rocket::tokio::sync::{OwnedSemaphorePermit, Semaphore};
 
@@ -854,7 +856,13 @@ impl<K: 'static, C: Poolable> ConnectionPool<K, C> {
 
     #[inline]
     pub async fn get_one(cargo: &rocket::Cargo) -> Option<Connection<K, C>> {
-        cargo.state::<Self>()?.get().await.ok()
+        match cargo.state::<Self>() {
+            Some(pool) => pool.get().await.ok(),
+            None => {
+                error_!("Database fairing was not attached for {}", std::any::type_name::<K>());
+                None
+            }
+        }
     }
 }
 
@@ -890,12 +898,18 @@ impl<'a, 'r, K: 'static, C: Poolable> rocket::request::FromRequest<'a, 'r> for C
     type Error = ();
 
     #[inline]
-    async fn from_request(request: &'a rocket::request::Request<'r>) -> rocket::request::Outcome<Self, ()> {
-        let inner = rocket::try_outcome!(request.guard::<rocket::State<'_, ConnectionPool<K, C>>>().await);
-
-        match inner.get().await {
-            Ok(c) => rocket::Outcome::Success(c),
-            Err(()) => rocket::Outcome::Failure((rocket::http::Status::ServiceUnavailable, ())),
+    async fn from_request(request: &'a rocket::request::Request<'r>) -> Outcome<Self, ()> {
+        match request.managed_state::<ConnectionPool<K, C>>() {
+            Some(inner) => {
+                match inner.get().await {
+                    Ok(c) => Outcome::Success(c),
+                    Err(()) => Outcome::Failure((Status::ServiceUnavailable, ())),
+                }
+            }
+            None => {
+                error_!("Database fairing was not attached for {}", std::any::type_name::<K>());
+                Outcome::Failure((Status::InternalServerError, ()))
+            }
         }
     }
 }
