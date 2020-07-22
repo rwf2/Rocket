@@ -68,7 +68,7 @@ pub(crate) struct Token;
 impl Rocket {
     #[inline]
     fn _mount(&mut self, base: Origin<'static>, routes: Vec<Route>) {
-        let span = tracing::info_span!("Mounting", "{}: {}", Paint::blue(&base), Paint::emoji("🛰"));
+        let span = tracing::info_span!("mounting", at = %Paint::blue(&base), "{} Mounting", Paint::emoji("🛰 "),);
         let _e = span.enter();
 
         for mut route in routes {
@@ -85,13 +85,14 @@ impl Rocket {
 
     #[inline]
     fn _register(&mut self, catchers: Vec<Catcher>) {
-        info!("{}{}", Paint::emoji("👾 "), Paint::magenta("Catchers:"));
+        let span = tracing::info_span!("catchers", "{}{}", Paint::emoji("👾 "), Paint::magenta("Catchers:"));
+        let _e = span.enter();
 
         for c in catchers {
             if self.catchers.get(&c.code).map_or(false, |e| !e.is_default) {
-                info_!("{} {}", c, Paint::yellow("(warning: duplicate catcher!)"));
+                info!("{} {}", c, Paint::yellow("(warning: duplicate catcher!)"));
             } else {
-                info_!("{}", c);
+                info!("{}", c);
             }
 
             self.catchers.insert(c.code, c);
@@ -210,7 +211,7 @@ async fn hyper_service_fn(
         let token = rocket.preprocess_request(&mut req, &data).await;
         let r = rocket.dispatch(token, &mut req, data).await;
         rocket.issue_response(r, tx).await;
-    }).instrument(tracing::info_span!("Request", from = %h_addr));
+    }.instrument(tracing::info_span!("connection", from = %h_addr, "Incoming")));
 
     rx.await.map_err(|e| io::Error::new(io::ErrorKind::Other, e))
 }
@@ -616,7 +617,7 @@ impl Rocket {
         //     // Temporary weaken log level for launch info.
         //     logger::push_max_level(logger::LoggingLevel::Normal);
         // }
-        let span = tracing::info_span!("Configured", "for {} {}", config.environment, Paint::emoji("🔧 "));
+        let span = tracing::info_span!("configured", "{}Configured for {}", Paint::emoji("🔧 "), config.environment,);
         let _e = span.enter();
 
         tracing::info!(address = %&config.address);
@@ -646,7 +647,7 @@ impl Rocket {
         }
 
         for (name, value) in config.extras() {
-            launch_info_!("{} {}: {}",
+            tracing::info!("{} {}: {}",
                           Paint::yellow("[extra]"), name,
                           Paint::default(LoggedValue(value)).bold());
         }
@@ -722,12 +723,12 @@ impl Rocket {
     pub fn mount<R: Into<Vec<Route>>>(mut self, base: &str, routes: R) -> Self {
         let base_uri = Origin::parse_owned(base.to_string())
             .unwrap_or_else(|e| {
-                error_!("Invalid origin URI '{}' used as mount point.", base);
+                error!("Invalid origin URI '{}' used as mount point.", base);
                 panic!("Error: {}", e);
             });
 
         if base_uri.query().is_some() {
-            error_!("Mount point '{}' contains query string.", base);
+            error!("Mount point '{}' contains query string.", base);
             panic!("Invalid mount point.");
         }
 

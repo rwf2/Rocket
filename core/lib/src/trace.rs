@@ -5,14 +5,13 @@ use tracing_subscriber::{
         format::{self, FormatEvent, FormatFields},
         FmtContext, FormattedFields,
     },
-    layer::{Context, Layer},
+    layer::Layer,
     prelude::*,
     registry::LookupSpan,
 };
 
 use std::env;
 use std::fmt::{self, Write};
-use std::str::FromStr;
 use std::sync::atomic::{AtomicU64, Ordering::{Acquire, Release}};
 
 use yansi::Paint;
@@ -48,7 +47,7 @@ where
         LoggingLevel::Debug => "trace",
         LoggingLevel::Off => "off",
     };
-    
+
     tracing_subscriber::filter::EnvFilter::try_new(filter_str)
         .expect("filter string must parse")
 }
@@ -102,7 +101,7 @@ where
                         with_meta(
                             writer,
                             span.metadata(),
-                            format_args!("{} {}", span.name(), fields.fields),
+                            &fields.fields,
                         )?;
                     } else {
                         with_meta(writer, span.metadata(), Paint::default(span.name()).bold())?;
