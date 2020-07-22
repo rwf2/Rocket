@@ -64,6 +64,7 @@ type ParseError = <self::uuid_crate::Uuid as FromStr>::Err;
 ///     format!("User ID: {}", id)
 /// }
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize), serde(transparent))]
 pub struct Uuid(uuid_crate::Uuid);
 
 impl Uuid {
@@ -182,5 +183,17 @@ mod test {
     fn test_from_param_invalid() {
         let uuid_str = "c1aa1e3b-9614-4895-9ebd-705255fa5bc2p";
         Uuid::from_param(uuid_str.into()).unwrap();
+    }
+
+    #[test]
+    fn test_ser_de() {
+        // The main reason for this test is to test that UUID only serializes as
+        // a string token, not anything else. Like a Struct with a named field...
+        use serde_test::{Token, assert_tokens, Configure};
+        let uuid: Uuid = "c1aa1e3b-9614-4895-9ebd-705255fa5bc2".parse().unwrap();
+
+        assert_tokens(&uuid.readable(), &[
+            Token::Str("c1aa1e3b-9614-4895-9ebd-705255fa5bc2"),
+        ]);
     }
 }
