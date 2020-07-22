@@ -46,12 +46,12 @@ Rocket is extensively documented:
 
 The official community support channels are [`#rocket:mozilla.org`] on Matrix
 and the bridged [`#rocket`] IRC channel on Freenode at `chat.freenode.net`. We
-recommend joining us on [Matrix via Riot]. If your prefer IRC, you can join via
-the [Kiwi IRC client] or a client of your own.
+recommend joining us on [Matrix via Element]. If your prefer IRC, you can join
+via the [Kiwi IRC client] or a client of your own.
 
 [`#rocket:mozilla.org`]: https://chat.mozilla.org/#/room/#rocket:mozilla.org
 [`#rocket`]: https://kiwiirc.com/client/chat.freenode.net/#rocket
-[Matrix via Riot]: https://chat.mozilla.org/#/room/#rocket:mozilla.org
+[Matrix via Element]: https://chat.mozilla.org/#/room/#rocket:mozilla.org
 [Kiwi IRC Client]: https://kiwiirc.com/client/chat.freenode.net/#rocket
 
 ## Examples
