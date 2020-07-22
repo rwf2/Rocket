@@ -55,6 +55,11 @@ version = "0.2"
 default-features = false
 features = ["fmt", "env-filter", "smallvec"]
 
+[dependencies.tracing-futures]
+version = "0.2"
+default-features = false
+features = ["std-future"]
+
 [build-dependencies]
 yansi = "0.5"
 version_check = "0.9.1"

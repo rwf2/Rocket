@@ -26,6 +26,7 @@ use crate::fairing::{Fairing, Fairings};
 use crate::logger::PaintExt;
 use crate::ext::AsyncReadExt;
 use crate::shutdown::{ShutdownHandle, ShutdownHandleManaged};
+use tracing_futures::Instrument;
 
 use crate::http::{Method, Status, Header};
 use crate::http::private::{Listener, Connection, Incoming};
@@ -209,7 +210,7 @@ async fn hyper_service_fn(
         let token = rocket.preprocess_request(&mut req, &data).await;
         let r = rocket.dispatch(token, &mut req, data).await;
         rocket.issue_response(r, tx).await;
-    });
+    }).instrument(tracing::info_span!("Request", from = %h_addr));
 
     rx.await.map_err(|e| io::Error::new(io::ErrorKind::Other, e))
 }
@@ -410,29 +411,30 @@ impl Rocket {
         request: &'r Request<'s>,
         data: Data
     ) -> Response<'r> {
-        info!("{}:", request);
+        async move {
+            // Remember if the request is `HEAD` for later body stripping.
+            let was_head_request = request.method() == Method::Head;
 
-        // Remember if the request is `HEAD` for later body stripping.
-        let was_head_request = request.method() == Method::Head;
+            // Route the request and run the user's handlers.
+            let mut response = self.route_and_process(request, data).await;
 
-        // Route the request and run the user's handlers.
-        let mut response = self.route_and_process(request, data).await;
+            // Add a default 'Server' header if it isn't already there.
+            // TODO: If removing Hyper, write out `Date` header too.
+            if !response.headers().contains("Server") {
+                response.set_header(Header::new("Server", "Rocket"));
+            }
 
-        // Add a default 'Server' header if it isn't already there.
-        // TODO: If removing Hyper, write out `Date` header too.
-        if !response.headers().contains("Server") {
-            response.set_header(Header::new("Server", "Rocket"));
-        }
+            // Run the response fairings.
+            self.fairings.handle_response(request, &mut response).await;
 
-        // Run the response fairings.
-        self.fairings.handle_response(request, &mut response).await;
+            // Strip the body if this is a `HEAD` request.
+            if was_head_request {
+                response.strip_body();
+            }
 
-        // Strip the body if this is a `HEAD` request.
-        if was_head_request {
-            response.strip_body();
-        }
-
-        response
+            response
+        }.instrument(tracing::info_span!("request", "{}", request))
+         .await
     }
 
     // Finds the error catcher for the status `status` and executes it for the
@@ -525,7 +527,7 @@ impl Rocket {
             where Fut: Future + Send + 'static, Fut::Output: Send
         {
             fn execute(&self, fut: Fut) {
-                tokio::spawn(fut);
+                tokio::spawn(fut.in_current_span());
             }
         }
 
