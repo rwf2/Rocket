@@ -211,7 +211,7 @@ async fn hyper_service_fn(
         let token = rocket.preprocess_request(&mut req, &data).await;
         let r = rocket.dispatch(token, &mut req, data).await;
         rocket.issue_response(r, tx).await;
-    }.instrument(tracing::info_span!("connection", from = %h_addr, "Incoming")));
+    }.instrument(tracing::info_span!("connection", from = %h_addr, "{}Connection", Paint::emoji("📡 "))));
 
     rx.await.map_err(|e| io::Error::new(io::ErrorKind::Other, e))
 }
