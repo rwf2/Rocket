@@ -26,7 +26,7 @@ impl Fairing for Counter {
         }
     }
 
-    async fn on_request<'a>(&'a self, request: &'a mut Request<'_>, _: &'a Data) {
+    async fn on_request(&self, request: &mut Request<'_>, _: &Data) {
         if request.method() == Method::Get {
             self.get.fetch_add(1, Ordering::Relaxed);
         } else if request.method() == Method::Post {
@@ -34,7 +34,7 @@ impl Fairing for Counter {
         }
     }
 
-    async fn on_response<'a>(&'a self, req: &'a Request<'_>, res: &'a mut Response<'_>) {
+    async fn on_response(&self, req: &Request<'_>, res: &mut Response<'_>) {
         if res.status() != Status::NotFound {
             return
         }
