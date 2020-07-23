@@ -96,13 +96,16 @@ where
                     if seen {
                         write!(writer, "    {} ", Paint::default("=>").bold())?;
                     }
+                    let meta = span.metadata();
                     let exts = span.extensions();
                     if let Some(fields) = exts.get::<FormattedFields<N>>() {
-                        with_meta(
-                            writer,
-                            span.metadata(),
-                            &fields.fields,
-                        )?;
+                        // If the span has a human-readable message, print that
+                        // instead of the span's name (so that we can get nice emojis).
+                        if meta.fields().iter().any(|field| field.name() == "message") {
+                            with_meta(writer, meta, &fields.fields)?;
+                        } else {
+                            with_meta(writer, meta, format_args!("{} {}", Paint::default(span.name()).bold(), &fields.fields))?;
+                        }
                     } else {
                         with_meta(writer, span.metadata(), Paint::default(span.name()).bold())?;
                     }
