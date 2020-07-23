@@ -140,7 +140,7 @@ impl Rocket {
         // process them as a stack to maintain proper ordering.
         let mut manifest = mem::replace(&mut self.manifest, vec![]);
         while !manifest.is_empty() {
-            trace_!("[MANIEST PROGRESS]: {:?}", manifest);
+            trace!("[MANIEST PROGRESS]: {:?}", manifest);
             match manifest.remove(0) {
                 PreLaunchOp::Manage(_, callback) => callback(&mut self.managed_state),
                 PreLaunchOp::Mount(base, routes) => self._mount(base, routes),
@@ -226,10 +226,10 @@ impl Rocket {
         let result = self.write_response(response, tx);
         match result.await {
             Ok(()) => {
-                info_!("{}", Paint::green("Response succeeded."));
+                info!("{}", Paint::green("Response succeeded."));
             }
             Err(e) => {
-                error_!("Failed to write response: {:?}.", e);
+                error!("Failed to write response: {:?}.", e);
             }
         }
     }

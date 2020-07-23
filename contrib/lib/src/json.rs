@@ -151,7 +151,7 @@ impl<'a, T: Deserialize<'a>> FromTransformedData<'a> for Json<T> {
             match serde_json::from_str(&string) {
                 Ok(v) => Success(Json(v)),
                 Err(e) => {
-                    error_!("Couldn't parse JSON body: {:?}", e);
+                    error!("Couldn't parse JSON body: {:?}", e);
                     if e.is_data() {
                         Failure((Status::UnprocessableEntity, JsonError::Parse(string, e)))
                     } else {
@@ -170,7 +170,7 @@ impl<'r, T: Serialize> Responder<'r, 'static> for Json<T> {
     fn respond_to(self, req: &'r Request<'_>) -> response::Result<'static> {
         let string = serde_json::to_string(&self.0)
             .map_err(|e| {
-                error_!("JSON failed to serialize: {:?}", e);
+                error!("JSON failed to serialize: {:?}", e);
                 Status::InternalServerError
             })?;
 

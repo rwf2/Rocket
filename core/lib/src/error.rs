@@ -203,18 +203,19 @@ impl Drop for LaunchError {
                 panic!("{}", e);
             }
             LaunchErrorKind::Collision(ref collisions) => {
-                error!("Rocket failed to launch due to the following routing collisions:");
+                let span = error_span!("collisions", "Rocket failed to launch due to the following routing collisions:");
+                let _e = span.enter();
                 for &(ref a, ref b) in collisions {
-                    info_!("{} {} {}", a, Paint::red("collides with").italic(), b)
+                    info!("{} {} {}", a, Paint::red("collides with").italic(), b)
                 }
 
-                info_!("Note: Collisions can usually be resolved by ranking routes.");
+                info!("Note: Collisions can usually be resolved by ranking routes.");
                 panic!("route collisions detected");
             }
             LaunchErrorKind::FailedFairings(ref failures) => {
                 error!("Rocket failed to launch due to failing fairings:");
                 for fairing in failures {
-                    info_!("{}", fairing);
+                    info!("{}", fairing);
                 }
 
                 panic!("launch fairing failure");
