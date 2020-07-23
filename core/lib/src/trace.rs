@@ -61,9 +61,9 @@ where
         // We'll format the field name and value separated with a colon.
         let name = field.name();
         if name == "message" {
-            write!(writer, "{:?}", Paint::default(value).bold())
+            write!(writer, "{:?}", Paint::new(value).bold())
         } else {
-            write!(writer, "{}: {:?}", field, Paint::default(value).bold())
+            write!(writer, "{}: {:?}", field, Paint::new(value).bold())
         }
     })
     .delimited(", ")
@@ -129,9 +129,9 @@ where
             // We'll format the field name and value separated with a colon.
             let name = field.name();
             if name == "message" {
-                write!(writer, "{:?}", Paint::default(value).bold())
+                write!(writer, "{:?}", Paint::new(value).bold())
             } else {
-                write!(writer, "{}: {:?}", field, Paint::default(value).bold())
+                write!(writer, "{}: {:?}", field, Paint::new(value).bold())
             }
         })
         .delimited(", ")
@@ -169,7 +169,7 @@ fn with_meta(
                     f,
                     "{}\n    {} {}:{}",
                     self.f,
-                    Paint::default("-->").bold(),
+                    Paint::new("-->").bold(),
                     file,
                     line
                 ),
@@ -177,7 +177,7 @@ fn with_meta(
                     f,
                     "{}\n    {} {}",
                     self.f,
-                    Paint::default("-->").bold(),
+                    Paint::new("-->").bold(),
                     file,
                 ),
                 _ => write!(f,  "{}", self.f),
