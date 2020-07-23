@@ -104,10 +104,10 @@ where
                         if meta.fields().iter().any(|field| field.name() == "message") {
                             with_meta(writer, meta, &fields.fields)?;
                         } else {
-                            with_meta(writer, meta, format_args!("{} {}", Paint::default(span.name()).bold(), &fields.fields))?;
+                            with_meta(writer, meta, format_args!("{} {}", span.name(), &fields.fields))?;
                         }
                     } else {
-                        with_meta(writer, span.metadata(), Paint::default(span.name()).bold())?;
+                        with_meta(writer, span.metadata(), span.name())?;
                     }
                     seen = true;
                     Ok(())
@@ -156,9 +156,38 @@ fn with_meta(
     meta: &tracing::Metadata<'_>,
     f: impl fmt::Display,
 ) -> fmt::Result {
+ 
+    struct WithFile<'a, F> {
+        meta: &'a tracing::Metadata<'a>,
+        f: F,
+    }
+
+    impl<F: fmt::Display> fmt::Display for WithFile<'_, F> {
+        fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+            match (self.meta.file(), self.meta.line()) {
+                (Some(file), Some(line)) => write!(
+                    f,
+                    "{}\n    {} {}:{}",
+                    self.f,
+                    Paint::default("-->").bold(),
+                    file,
+                    line
+                ),
+                (Some(file), None) => write!(
+                    f,
+                    "{}\n    {} {}",
+                    self.f,
+                    Paint::default("-->").bold(),
+                    file,
+                ),
+                _ => write!(f,  "{}", self.f),
+            }
+        }
+    }
+
+
     match *meta.level() {
         tracing::Level::INFO => writeln!(writer, "{}", Paint::blue(f).wrap()),
-        tracing::Level::TRACE => writeln!(writer, "{}", Paint::magenta(f).wrap()),
         tracing::Level::ERROR => writeln!(
             writer,
             "{} {}",
@@ -171,24 +200,8 @@ fn with_meta(
             Paint::yellow("Warning:").bold(),
             Paint::yellow(f).wrap()
         ),
-        tracing::Level::DEBUG => match (meta.file(), meta.line()) {
-            (Some(file), Some(line)) => writeln!(
-                writer,
-                "{}\n    {} {}:{}",
-                f,
-                Paint::blue("-->").bold(),
-                Paint::blue(file),
-                Paint::blue(line)
-            ),
-            (Some(file), None) => writeln!(
-                writer,
-                "{}\n    {} {}",
-                f,
-                Paint::blue("-->").bold(),
-                Paint::blue(file),
-            ),
-            _ => writeln!(writer, "{}", f),
-        },
+        tracing::Level::TRACE => writeln!(writer, "{}", Paint::magenta(WithFile { meta, f }).wrap()),
+        tracing::Level::DEBUG => writeln!(writer, "{}", Paint::blue(WithFile { meta, f }).wrap()),
     }
 }
 
