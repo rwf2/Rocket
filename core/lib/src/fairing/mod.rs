@@ -47,14 +47,14 @@
 //! of other `Fairings` are not jeopardized. For instance, unless it is made
 //! abundantly clear, a fairing should not rewrite every request.
 
-use crate::{Cargo, Rocket, Request, Response, Data};
+use crate::{Cargo, Data, Request, Response, Rocket};
 
-mod fairings;
 mod ad_hoc;
+mod fairings;
 mod info_kind;
 
-pub(crate) use self::fairings::Fairings;
 pub use self::ad_hoc::AdHoc;
+pub(crate) use self::fairings::Fairings;
 pub use self::info_kind::{Info, Kind};
 
 // We might imagine that a request fairing returns an `Outcome`. If it returns
@@ -414,7 +414,9 @@ pub trait Fairing: Send + Sync + 'static {
     /// ## Default Implementation
     ///
     /// The default implementation of this method simply returns `Ok(rocket)`.
-    async fn on_attach(&self, rocket: Rocket) -> Result<Rocket, Rocket> { Ok(rocket) }
+    async fn on_attach(&self, rocket: Rocket) -> Result<Rocket, Rocket> {
+        Ok(rocket)
+    }
 
     /// The launch callback.
     ///
@@ -452,11 +454,6 @@ pub trait Fairing: Send + Sync + 'static {
     /// ## Default Implementation
     ///
     /// The default implementation of this method does nothing.
-    ///
-    /// ## Lifetimes
-    ///
-    /// `on_response` has a single lifetime `'r`. This lifetime allows `res`
-    /// to borrow data from the `req`.
     #[allow(unused_variables)]
     async fn on_response<'r>(&self, req: &'r Request<'_>, res: &mut Response<'r>) {}
 }
