@@ -177,7 +177,7 @@ impl Fairing for Counter {
         };
     }
 
-    async fn on_response(&self, request: &Request<'_>, response: &mut Response<'_>) {
+    async fn on_response<'r>(&self, request: &'r Request<'_>, response: &mut Response<'r>) {
         // Don't change a successful user's response, ever.
         if response.status() != Status::NotFound {
             return

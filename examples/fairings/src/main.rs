@@ -34,7 +34,7 @@ impl Fairing for Counter {
         }
     }
 
-    async fn on_response(&self, req: &Request<'_>, res: &mut Response<'_>) {
+    async fn on_response<'r>(&self, req: &'r Request<'_>, res: &mut Response<'r>) {
         if res.status() != Status::NotFound {
             return
         }

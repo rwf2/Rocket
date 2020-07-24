@@ -66,7 +66,7 @@ impl Fairings {
     }
 
     #[inline(always)]
-    pub async fn handle_response<'r>(&self, request: &Request<'r>, response: &mut Response<'r>) {
+    pub async fn handle_response<'r>(&self, request: &'r Request<'_>, response: &mut Response<'r>) {
         for &i in &self.response {
             self.all_fairings[i].on_response(request, response).await;
         }

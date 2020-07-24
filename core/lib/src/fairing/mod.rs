@@ -222,7 +222,7 @@ pub use self::info_kind::{Info, Kind};
 ///         # unimplemented!()
 ///     }
 ///
-///     async fn on_response(&self, req: &Request<'_>, res: &mut Response<'_>) {
+///     async fn on_response<'r>(&self, req: &'r Request<'_>, res: &mut Response<'r>) {
 ///         /* ... */
 ///         # unimplemented!()
 ///     }
@@ -274,7 +274,7 @@ pub use self::info_kind::{Info, Kind};
 ///         }
 ///     }
 ///
-///     async fn on_response(&self, req: &Request<'_>, res: &mut Response<'_>) {
+///     async fn on_response<'r>(&self, req: &'r Request<'_>, res: &mut Response<'r>) {
 ///         // Don't change a successful user's response, ever.
 ///         if res.status() != Status::NotFound {
 ///             return
@@ -338,7 +338,7 @@ pub use self::info_kind::{Info, Kind};
 ///
 ///     /// Adds a header to the response indicating how long the server took to
 ///     /// process the request.
-///     async fn on_response(&self, req: &Request<'_>, res: &mut Response<'_>) {
+///     async fn on_response<'r>(&self, req: &'r Request<'_>, res: &mut Response<'r>) {
 ///         let start_time = req.local_cache(|| TimerStart(None));
 ///         if let Some(Ok(duration)) = start_time.0.map(|st| st.elapsed()) {
 ///             let ms = duration.as_secs() * 1000 + duration.subsec_millis() as u64;
@@ -452,8 +452,13 @@ pub trait Fairing: Send + Sync + 'static {
     /// ## Default Implementation
     ///
     /// The default implementation of this method does nothing.
+    ///
+    /// ## Lifetimes
+    ///
+    /// `on_response` has a single lifetime `'r`. This lifetime allows `res`
+    /// to borrow data from the `req`.
     #[allow(unused_variables)]
-    async fn on_response(&self, req: &Request<'_>, res: &mut Response<'_>) {}
+    async fn on_response<'r>(&self, req: &'r Request<'_>, res: &mut Response<'r>) {}
 }
 
 #[crate::async_trait]
@@ -479,7 +484,7 @@ impl<T: Fairing> Fairing for std::sync::Arc<T> {
     }
 
     #[inline]
-    async fn on_response(&self, req: &Request<'_>, res: &mut Response<'_>) {
+    async fn on_response<'r>(&self, req: &'r Request<'_>, res: &mut Response<'r>) {
         (self as &T).on_response(req, res).await;
     }
 }
