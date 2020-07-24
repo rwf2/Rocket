@@ -4,9 +4,9 @@ error[E0277]: the trait bound `Unknown: rocket_contrib::databases::Poolable` is 
 7   | struct A(Unknown);
     |          ^^^^^^^ the trait `rocket_contrib::databases::Poolable` is not implemented for `Unknown`
     |
-   ::: $WORKSPACE/contrib/lib/src/databases.rs:798:29
+   ::: $WORKSPACE/contrib/lib/src/databases.rs:832:29
     |
-798 | pub struct Connection<K, C: Poolable> {
+832 | pub struct Connection<K, C: Poolable> {
     |                             -------- required by this bound in `rocket_contrib::databases::Connection`
 
 error[E0277]: the trait bound `std::vec::Vec<i32>: rocket_contrib::databases::Poolable` is not satisfied
@@ -15,7 +15,7 @@ error[E0277]: the trait bound `std::vec::Vec<i32>: rocket_contrib::databases::Po
 10  | struct B(Vec<i32>);
     |          ^^^^^^^^ the trait `rocket_contrib::databases::Poolable` is not implemented for `std::vec::Vec<i32>`
     |
-   ::: $WORKSPACE/contrib/lib/src/databases.rs:798:29
+   ::: $WORKSPACE/contrib/lib/src/databases.rs:832:29
     |
-798 | pub struct Connection<K, C: Poolable> {
+832 | pub struct Connection<K, C: Poolable> {
     |                             -------- required by this bound in `rocket_contrib::databases::Connection`
