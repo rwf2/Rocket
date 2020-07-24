@@ -871,7 +871,16 @@ impl<K: 'static, C: Poolable> ConnectionPool<K, C> {
     async fn get(&self) -> Result<Connection<K, C>, ()> {
         let permit = self.semaphore.clone().acquire_owned().await;
         let pool = self.pool.clone();
-        match spawn_blocking(move || pool.get()).await.unwrap() {
+
+        let result = match spawn_blocking(move || pool.get()).await {
+            Ok(c) => c,
+            Err(e) => match e.try_into_panic() {
+                Ok(panic) => std::panic::resume_unwind(panic),
+                Err(_) => unreachable!("spawn_blocking tasks are never canceled"),
+            }
+        };
+
+        match result {
             Ok(c) => {
                 Ok(Connection {
                     pool: self.clone(),
@@ -915,7 +924,7 @@ impl<K: 'static, C: Poolable> Connection<K, C> {
         where F: FnOnce(&mut C) -> R + Send + 'static,
               R: Send + 'static,
     {
-        tokio::task::spawn_blocking(move || {
+        let spawn_result = tokio::task::spawn_blocking(move || {
             // 'self' contains a semaphore permit that should be held throughout
             // this entire spawned task. Explicitly move it, so that a
             // refactoring won't accidentally release the permit too early.
@@ -923,8 +932,20 @@ impl<K: 'static, C: Poolable> Connection<K, C> {
 
             let mut conn = this.connection.take()
                 .expect("internal invariant broken: self.connection is Some");
+
             f(&mut conn)
-        }).await.expect("failed to spawn a blocking task to use a pooled connection")
+        }).await;
+
+        // Propagate any panics upwards.
+        //
+        // TODO: If we like this, extract + dedupe with above copy
+        match spawn_result {
+            Ok(val) => val,
+            Err(e) => match e.try_into_panic() {
+                Ok(panic) => std::panic::resume_unwind(panic),
+                Err(_) => unreachable!("spawn_blocking tasks are never canceled"),
+            }
+        }
     }
 
     #[inline]
