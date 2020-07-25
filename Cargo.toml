@@ -43,7 +43,3 @@ members = [
   "examples/fairings",
   "examples/hello_2018",
 ]
-
-[patch.crates-io]
-tracing-subscriber = { git = "https://github.com/tokio-rs/tracing", rev = "ccdd7a26d406711947802510ffdc6db99a680f8b"}
-tracing-core = { git = "https://github.com/tokio-rs/tracing", rev = "ccdd7a26d406711947802510ffdc6db99a680f8b"}

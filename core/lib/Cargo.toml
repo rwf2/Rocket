@@ -51,7 +51,7 @@ default-features = false
 features = ["log", "std"]
 
 [dependencies.tracing-subscriber]
-version = "0.2"
+version = "0.2.9"
 default-features = false
 features = ["fmt", "env-filter", "smallvec"]
 
