@@ -167,6 +167,11 @@ mod test {
         assert!(unranked_route_collisions(&["/a/<a..>", "/a/<a..>"]));
         assert!(unranked_route_collisions(&["/a/b/<a..>", "/a/<a..>"]));
         assert!(unranked_route_collisions(&["/a/b/c/d", "/a/<a..>"]));
+        assert!(unranked_route_collisions(&["/<_>", "/<_>"]));
+        assert!(unranked_route_collisions(&["/a/<_>", "/a/b"]));
+        assert!(unranked_route_collisions(&["/a/<_>", "/a/<b>"]));
+        assert!(unranked_route_collisions(&["/<_..>", "/a/b"]));
+        assert!(unranked_route_collisions(&["/<_..>", "/<_>"]));
     }
 
     #[test]
@@ -183,6 +188,11 @@ mod test {
         assert!(unranked_route_collisions(&["/a/<a..>/", "/a/bd/e/"]));
         assert!(unranked_route_collisions(&["/a/<a..>//", "/a/b//c//d/e/"]));
         assert!(unranked_route_collisions(&["/a//<a..>//", "/a/b//c//d/e/"]));
+        assert!(unranked_route_collisions(&["///<_>", "/<_>"]));
+        assert!(unranked_route_collisions(&["/a/<_>", "///a//b"]));
+        assert!(unranked_route_collisions(&["//a///<_>", "/a//<b>"]));
+        assert!(unranked_route_collisions(&["//<_..>", "/a/b"]));
+        assert!(unranked_route_collisions(&["//<_..>", "/<_>"]));
     }
 
     #[test]
@@ -205,6 +215,10 @@ mod test {
         assert!(!unranked_route_collisions(&["/a/b/c/d", "/a/b/c/<d>/e"]));
         assert!(!unranked_route_collisions(&["/a/d/<b..>", "/a/b/c"]));
         assert!(!unranked_route_collisions(&["/a/d/<b..>", "/a/d"]));
+        assert!(!unranked_route_collisions(&["/<_>", "/"]));
+        assert!(!unranked_route_collisions(&["/a/<_>", "/a"]));
+        assert!(!unranked_route_collisions(&["/a/<_..>", "/a"]));
+        assert!(!unranked_route_collisions(&["/a/<_..>", "/<_>"]));
     }
 
     #[test]
