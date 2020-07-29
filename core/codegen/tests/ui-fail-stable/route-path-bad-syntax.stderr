@@ -52,7 +52,7 @@ error: invalid path URI: expected EOF but found # at index 3
 28 | #[get("/!@#$%^&*()")]
    |       ^^^^^^^^^^^^^
 
-error: component contains invalid URI characters
+error: segment contains invalid URI characters
   --- note: components cannot contain reserved characters
   --- help: reserved characters include: '%', '+', '&', etc.
   --> $DIR/route-path-bad-syntax.rs:31:7
@@ -60,7 +60,7 @@ error: component contains invalid URI characters
 31 | #[get("/a%20b")]
    |       ^^^^^^^^
 
-error: component contains invalid URI characters
+error: segment contains invalid URI characters
   --- note: components cannot contain reserved characters
   --- help: reserved characters include: '%', '+', '&', etc.
   --> $DIR/route-path-bad-syntax.rs:34:7
@@ -68,7 +68,7 @@ error: component contains invalid URI characters
 34 | #[get("/a?a%20b")]
    |       ^^^^^^^^^^
 
-error: component contains invalid URI characters
+error: segment contains invalid URI characters
   --- note: components cannot contain reserved characters
   --- help: reserved characters include: '%', '+', '&', etc.
   --> $DIR/route-path-bad-syntax.rs:37:7
@@ -192,12 +192,12 @@ error: `test ` is not a valid identifier
 83 | #[get("/", data = "<test >")]
    |                   ^^^^^^^^^
 
-error: parameters must be named
-  --- help: use a name such as `_guard` or `_param`
-  --> $DIR/route-path-bad-syntax.rs:88:7
+error: handler arguments cannot be ignored
+  --- help: all handler arguments must be of the form: `ident: Type`
+  --> $DIR/route-path-bad-syntax.rs:89:7
    |
-88 | #[get("/<_>")]
-   |       ^^^^^^
+89 | fn k0(_: usize) {}
+   |       ^
 
 error: parameter names cannot be empty
   --> $DIR/route-path-bad-syntax.rs:93:7

@@ -3,7 +3,8 @@ use std::fmt::Display;
 use devise::{syn, Result, ext::SpanDiagnosticExt};
 
 use crate::http::{uri::{Origin, Path, Query}, ext::IntoOwned};
-use crate::http::route::{RouteSegment, Kind, Source};
+use crate::http::route::{RouteSegment, Kind};
+use crate::attribute::segments::Source;
 
 use crate::syn::{Expr, Ident, Type, spanned::Spanned};
 use crate::http_codegen::Optional;

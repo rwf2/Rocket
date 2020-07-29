@@ -66,23 +66,23 @@ fn parse_route(attr: RouteAttribute, function: syn::ItemFn) -> Result<Route> {
         }
     }
 
-    // Collect all of the dynamic segments in an `IndexSet`, checking for dups.
+    // Collect non-wild dynamic segments in an `IndexSet`, checking for dups.
     let mut segments: IndexSet<Segment> = IndexSet::new();
-    fn dup_check<I>(set: &mut IndexSet<Segment>, iter: I, diags: &mut Diagnostics)
-        where I: Iterator<Item = Segment>
+    fn dup_check<'a, I>(set: &mut IndexSet<Segment>, iter: I, diags: &mut Diagnostics)
+        where I: Iterator<Item = &'a Segment>
     {
-        for segment in iter.filter(|s| s.kind != Kind::Static) {
+        for segment in iter.filter(|s| s.is_dynamic()) {
             let span = segment.span;
-            if let Some(previous) = set.replace(segment) {
+            if let Some(previous) = set.replace(segment.clone()) {
                 diags.push(span.error(format!("duplicate parameter: `{}`", previous.name))
                     .span_note(previous.span, "previous parameter with the same name here"))
             }
         }
     }
 
-    dup_check(&mut segments, attr.path.path.iter().cloned(), &mut diags);
-    attr.path.query.as_ref().map(|q| dup_check(&mut segments, q.iter().cloned(), &mut diags));
-    dup_check(&mut segments, attr.data.clone().map(|s| s.value.0).into_iter(), &mut diags);
+    dup_check(&mut segments, attr.path.path.iter().filter(|s| !s.is_wild()), &mut diags);
+    attr.path.query.as_ref().map(|q| dup_check(&mut segments, q.iter(), &mut diags));
+    dup_check(&mut segments, attr.data.as_ref().map(|s| &s.value.0).into_iter(), &mut diags);
 
     // Check the validity of function arguments.
     let mut inputs = vec![];

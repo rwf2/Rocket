@@ -76,6 +76,7 @@ impl Rocket {
         for mut route in routes {
             let path = route.uri.clone();
             if let Err(e) = route.set_uri(base.clone(), path) {
+                error_!("Route `{}` has a malformed URI.", route);
                 error_!("{}", e);
                 panic!("Invalid route URI.");
             }

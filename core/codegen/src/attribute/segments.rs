@@ -3,11 +3,11 @@ use std::hash::{Hash, Hasher};
 use devise::{syn, Diagnostic, ext::SpanDiagnosticExt};
 use crate::proc_macro2::Span;
 
-use crate::http::uri::{UriPart, Path};
+use crate::http::uri::{self, UriPart};
 use crate::http::route::RouteSegment;
 use crate::proc_macro_ext::{Diagnostics, StringLit, PResult, DResult};
 
-pub use crate::http::route::{Error, Kind, Source};
+pub use crate::http::route::{Error, Kind};
 
 #[derive(Debug, Clone)]
 pub struct Segment {
@@ -16,6 +16,14 @@ pub struct Segment {
     pub source: Source,
     pub name: String,
     pub index: Option<usize>,
+}
+
+#[derive(Debug, PartialEq, Eq, Copy, Clone)]
+pub enum Source {
+    Path,
+    Query,
+    Data,
+    Unknown,
 }
 
 impl Segment {
@@ -28,6 +36,17 @@ impl Segment {
 
         let (kind, index) = (segment.kind, segment.index);
         Segment { span, kind, source, index, name: segment.name.into_owned() }
+    }
+
+    pub fn is_wild(&self) -> bool {
+        self.name == "_"
+    }
+
+    pub fn is_dynamic(&self) -> bool {
+        match self.kind {
+            Kind::Static => false,
+            Kind::Single | Kind::Multi => true,
+        }
     }
 }
 
@@ -80,35 +99,33 @@ fn into_diagnostic(
 ) -> Diagnostic {
     let seg_span = subspan(segment, source, span);
     match error {
-        Error::Empty => {
-            seg_span.error("parameter names cannot be empty")
-        }
-        Error::Ident(name) => {
-            seg_span.error(format!("`{}` is not a valid identifier", name))
+        Error::Empty => seg_span.error(error.to_string()),
+        Error::Ident(_) => {
+            seg_span.error(error.to_string())
                 .help("parameter names must be valid identifiers")
         }
         Error::Ignored => {
-            seg_span.error("parameters must be named")
+            seg_span.error(error.to_string())
                 .help("use a name such as `_guard` or `_param`")
         }
         Error::MissingClose => {
-            seg_span.error("parameter is missing a closing bracket")
+            seg_span.error(error.to_string())
                 .help(format!("did you mean '{}>'?", segment))
         }
         Error::Malformed => {
-            seg_span.error("malformed parameter or identifier")
+            seg_span.error(error.to_string())
                 .help("parameters must be of the form '<param>'")
                 .help("identifiers cannot contain '<' or '>'")
         }
         Error::Uri => {
-            seg_span.error("component contains invalid URI characters")
+            seg_span.error(error.to_string())
                 .note("components cannot contain reserved characters")
                 .help("reserved characters include: '%', '+', '&', etc.")
         }
         Error::Trailing(multi) => {
             let multi_span = subspan(multi, source, span);
             trailspan(segment, source, span)
-                .error("unexpected trailing text after a '..' param")
+                .error(error.to_string())
                 .help("a multi-segment param must be the final component")
                 .span_note(multi_span, "multi-segment param is here")
         }
@@ -116,7 +133,7 @@ fn into_diagnostic(
 }
 
 pub fn parse_data_segment(segment: &str, span: Span) -> PResult<Segment> {
-    <RouteSegment<'_, Path>>::parse_one(segment)
+    <RouteSegment<'_, uri::Query>>::parse_one(segment)
         .map(|segment| {
             let mut seg = Segment::from(segment, span);
             seg.source = Source::Data;
@@ -134,14 +151,17 @@ pub fn parse_segments<P: UriPart>(
     let mut diags = Diagnostics::new();
 
     for result in <RouteSegment<'_, P>>::parse_many(string) {
-        if let Err((segment_string, error)) = result {
-            diags.push(into_diagnostic(segment_string, string, span, &error));
-            if let Error::Trailing(..) = error {
-                break;
+        match result {
+            Ok(segment) => {
+                let seg_span = subspan(&segment.string, string, span);
+                segments.push(Segment::from(segment, seg_span));
+            },
+            Err((segment_string, error)) => {
+                diags.push(into_diagnostic(segment_string, string, span, &error));
+                if let Error::Trailing(..) = error {
+                    break;
+                }
             }
-        } else if let Ok(segment) = result {
-            let seg_span = subspan(&segment.string, string, span);
-            segments.push(Segment::from(segment, seg_span));
         }
     }
 
