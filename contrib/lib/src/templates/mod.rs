@@ -248,7 +248,7 @@ impl Template {
     /// }
     /// ```
     pub fn fairing() -> impl Fairing {
-        Template::custom(|_| {})
+        Template::custom(|_| Ok(()))
     }
 
     /// Returns a fairing that initializes and maintains templating state.
@@ -256,6 +256,10 @@ impl Template {
     /// Unlike [`Template::fairing()`], this method allows you to configure
     /// templating engines via the parameter `f`. Note that only the enabled
     /// templating engines will be accessible from the `Engines` type.
+    ///
+    /// If `f` returns an error during initialization, it will cancel the
+    /// launch. If `f` returns an error during template reloading (in debug
+    /// mode), then the newly-reloaded templates are discarded.
     ///
     /// # Example
     ///
@@ -270,13 +274,14 @@ impl Template {
     ///         // ...
     ///         .attach(Template::custom(|engines| {
     ///             // engines.handlebars.register_helper ...
+    ///             Ok(())
     ///         }))
     ///         // ...
     ///     # ;
     /// }
     /// ```
     pub fn custom<F>(f: F) -> impl Fairing
-        where F: Fn(&mut Engines) + Send + Sync + 'static
+        where F: Fn(&mut Engines) -> Result<(), Box<dyn std::error::Error + Send + Sync>> + Send + Sync + 'static
     {
         TemplateFairing { custom_callback: Box::new(f) }
     }

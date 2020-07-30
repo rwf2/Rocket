@@ -89,7 +89,9 @@ mod context {
         /// have been changes since the last reload, all templates are
         /// reinitialized from disk and the user's customization callback is run
         /// again.
-        pub fn reload_if_needed<F: Fn(&mut Engines)>(&self, custom_callback: F) {
+        pub fn reload_if_needed<F>(&self, custom_callback: F)
+            where F: Fn(&mut Engines) -> Result<(), Box<dyn std::error::Error + Send + Sync>>
+        {
             self.watcher.as_ref().map(|w| {
                 let rx_lock = w.lock().expect("receive queue lock");
                 let mut changed = false;
@@ -101,8 +103,14 @@ mod context {
                     info_!("Change detected: reloading templates.");
                     let mut ctxt = self.context_mut();
                     if let Some(mut new_ctxt) = Context::initialize(ctxt.root.clone()) {
-                        custom_callback(&mut new_ctxt.engines);
-                        *ctxt = new_ctxt;
+                        match custom_callback(&mut new_ctxt.engines) {
+                            Ok(()) => *ctxt = new_ctxt,
+                            Err(e) => {
+                                warn_!("The template customization callback returned an error:");
+                                warn_!("{}", e);
+                                warn_!("The previous templates will remain active.");
+                            }
+                        }
                     } else {
                         warn_!("An error occurred while reloading templates.");
                         warn_!("The previous templates will remain active.");
@@ -121,7 +129,7 @@ pub struct TemplateFairing {
     /// The user-provided customization callback, allowing the use of
     /// functionality specific to individual template engines. In debug mode,
     /// this callback might be run multiple times as templates are reloaded.
-    pub custom_callback: Box<dyn Fn(&mut Engines) + Send + Sync + 'static>,
+    pub custom_callback: Box<dyn Fn(&mut Engines) -> Result<(), Box<dyn std::error::Error + Send + Sync>> + Send + Sync + 'static>,
 }
 
 #[rocket::async_trait]
@@ -165,8 +173,14 @@ impl Fairing for TemplateFairing {
 
         match Context::initialize(template_root) {
             Some(mut ctxt) => {
-                (self.custom_callback)(&mut ctxt.engines);
-                Ok(rocket.manage(ContextManager::new(ctxt)))
+                match (self.custom_callback)(&mut ctxt.engines) {
+                    Ok(()) => Ok(rocket.manage(ContextManager::new(ctxt))),
+                    Err(e) => {
+                        error_!("The template customization callback returned an error:");
+                        error_!("{}", e);
+                        Err(rocket)
+                    }
+                }
             }
             None => Err(rocket),
         }

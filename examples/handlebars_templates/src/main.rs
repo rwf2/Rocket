@@ -72,5 +72,6 @@ fn rocket() -> rocket::Rocket {
         .register(catchers![not_found])
         .attach(Template::custom(|engines| {
             engines.handlebars.register_helper("wow", Box::new(wow_helper));
+            Ok(())
         }))
 }
