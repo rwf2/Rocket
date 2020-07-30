@@ -67,11 +67,17 @@ fn wow_helper(
 
 #[launch]
 fn rocket() -> rocket::Rocket {
+    let should_fail = std::sync::atomic::AtomicBool::new(false);
     rocket::ignite()
         .mount("/", routes![index, hello, about])
         .register(catchers![not_found])
-        .attach(Template::custom(|engines| {
-            engines.handlebars.register_helper("wow", Box::new(wow_helper));
-            Ok(())
+        .attach(Template::custom(move |engines| {
+            if !should_fail.load(std::sync::atomic::Ordering::Acquire) {
+                engines.handlebars.register_helper("wow", Box::new(wow_helper));
+                should_fail.store(true, std::sync::atomic::Ordering::Release);
+                Ok(())
+            } else {
+                Err("Something happened".into())
+            }
         }))
 }
