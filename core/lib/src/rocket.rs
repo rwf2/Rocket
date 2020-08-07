@@ -331,8 +331,6 @@ impl Rocket {
                     continue
                 } 
                 
-                // FIXME: fix before reopen PR (Drunpy - 2020-07-03)
-                // Not sure if this check is right here... shouldn't be inside the router?
                 else if &route.method != &request.method() {
                     return Outcome::Failure(Status::MethodNotAllowed);
                 } 
