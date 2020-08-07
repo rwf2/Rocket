@@ -4,9 +4,11 @@ use std::borrow::Cow;
 use std::ops::{Index, Range};
 use std::fmt::{self, Debug};
 
-use pear::{Input, Length};
+use pear::input::Length;
 
 use crate::ext::IntoOwned;
+
+pub use pear::input::Extent;
 
 pub type IndexedString = Indexed<'static, str>;
 pub type IndexedStr<'a> = Indexed<'a, str>;
@@ -36,9 +38,15 @@ pub enum Indexed<'a, T: ?Sized + ToOwned> {
     Concrete(Cow<'a, T>)
 }
 
-impl<'a, T: ?Sized + ToOwned + 'a, C: Into<Cow<'a, T>>> From<C> for Indexed<'a, T> {
+impl<A, T: ?Sized + ToOwned> From<Extent<A>> for Indexed<'_, T> {
+    fn from(e: Extent<A>) -> Self {
+        Indexed::Indexed(e.start, e.end)
+    }
+}
+
+impl<'a, T: ?Sized + ToOwned + 'a> From<Cow<'a, T>> for Indexed<'a, T> {
     #[inline(always)]
-    fn from(value: C) -> Indexed<'a, T> {
+    fn from(value: Cow<'a, T>) -> Indexed<'a, T> {
         Indexed::Concrete(value.into())
     }
 }
@@ -213,130 +221,3 @@ impl<'a, T: ?Sized + Length + ToOwned + 'a> Length for Indexed<'a, T> {
         }
     }
 }
-
-#[derive(Debug)]
-pub struct IndexedInput<'a, T: ?Sized> {
-    source: &'a T,
-    current: &'a T
-}
-
-impl<'a, T: ?Sized + 'a> IndexedInput<'a, T> {
-    #[inline(always)]
-    pub fn source(&self) -> &T {
-        self.source
-    }
-}
-
-impl<'a, T: ToOwned + ?Sized + 'a> IndexedInput<'a, T> {
-    #[inline(always)]
-    pub fn cow_source(&self) -> Cow<'a, T> {
-        Cow::Borrowed(self.source)
-    }
-}
-
-impl IndexedInput<'_, [u8]> {
-    pub fn backtrack(&mut self, n: usize) -> pear::Result<(), Self> {
-        let source_addr = self.source.as_ptr() as usize;
-        let current_addr = self.current.as_ptr() as usize;
-        if current_addr > n && (current_addr - n) >= source_addr {
-            let forward = (current_addr - n) - source_addr;
-            self.current = &self.source[forward..];
-            Ok(())
-        } else {
-            let diag = format!("({}, {:x} in {:x})", n, current_addr, source_addr);
-            Err(pear_error!([backtrack; self] "internal error: {}", diag))
-        }
-    }
-
-    pub fn len(&self) -> usize {
-        self.source.len()
-    }
-}
-
-macro_rules! impl_indexed_input {
-    ($T:ty, token = $token:ty) => (
-        impl<'a> From<&'a $T> for IndexedInput<'a, $T> {
-            #[inline(always)]
-            fn from(source: &'a $T) -> Self {
-                IndexedInput { source: source, current: source }
-            }
-        }
-
-        impl<'a> Input for IndexedInput<'a, $T> {
-            type Token = $token;
-            type InSlice = &'a $T;
-            type Slice = Indexed<'static, $T>;
-            type Many = Indexed<'static, $T>;
-            type Context = Context;
-
-            #[inline(always)]
-            fn peek(&mut self) -> Option<Self::Token> {
-                self.current.peek()
-            }
-
-            #[inline(always)]
-            fn peek_slice(&mut self, slice: Self::InSlice) -> Option<Self::Slice> {
-                self.current.peek_slice(slice)
-                    .map(|slice| unsafe {
-                        Indexed::unchecked_from(slice, self.source)
-                    })
-            }
-
-            #[inline(always)]
-            fn skip_many<F>(&mut self, cond: F) -> usize
-                where F: FnMut(Self::Token) -> bool
-            {
-                self.current.skip_many(cond)
-            }
-
-            #[inline(always)]
-            fn take_many<F>(&mut self, cond: F) -> Self::Many
-                where F: FnMut(Self::Token) -> bool
-            {
-                let many = self.current.take_many(cond);
-                unsafe { Indexed::unchecked_from(many, self.source) }
-            }
-
-            #[inline(always)]
-            fn advance(&mut self, count: usize) {
-                self.current.advance(count)
-            }
-
-            #[inline(always)]
-            fn is_empty(&mut self) -> bool {
-                self.current.is_empty()
-            }
-
-            fn context(&mut self) -> Option<Context> {
-                let offset = self.source.len() - self.current.len();
-                let bytes: &[u8] = self.current.as_ref();
-                let string = String::from_utf8(bytes.into()).ok()?;
-                Some(Context { offset, string })
-            }
-        }
-    )
-}
-
-#[derive(Debug, PartialEq, Eq, Clone, Hash)]
-pub struct Context {
-    pub offset: usize,
-    pub string: String
-}
-
-impl std::fmt::Display for Context {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        const LIMIT: usize = 7;
-        write!(f, "[{}:]", self.offset)?;
-
-        if self.string.len() > LIMIT {
-            write!(f, " {}..", &self.string[..LIMIT])
-        } else if !self.string.is_empty() {
-            write!(f, " {}", &self.string)
-        } else {
-            Ok(())
-        }
-    }
-}
-
-impl_indexed_input!([u8], token = u8);
-impl_indexed_input!(str, token = char);

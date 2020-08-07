@@ -1,55 +1,132 @@
-use std::io::{self, Read, Cursor, Chain};
-use std::net::Shutdown;
+use std::pin::Pin;
+use std::task::{Context, Poll};
+use std::path::Path;
+use std::io::{self, Cursor};
 
-use super::data::BodyReader;
-use crate::http::hyper::net::NetworkStream;
-use crate::http::hyper::h1::HttpReader;
+use tokio::io::{AsyncRead, AsyncWrite, AsyncReadExt, Take};
 
-//                          |-- peek buf --|
-pub type InnerStream = Chain<Cursor<Vec<u8>>, BodyReader>;
+use crate::ext::AsyncReadBody;
 
 /// Raw data stream of a request body.
 ///
 /// This stream can only be obtained by calling
-/// [`Data::open()`](crate::data::Data::open()). The stream contains all of the data
-/// in the body of the request. It exposes no methods directly. Instead, it must
-/// be used as an opaque [`Read`] structure.
-pub struct DataStream(pub(crate) InnerStream);
+/// [`Data::open()`](crate::data::Data::open()). The stream contains all of the
+/// data in the body of the request. It exposes no methods directly. Instead, it
+/// must be used as an opaque [`AsyncRead`] structure.
+pub struct DataStream {
+    pub(crate) buffer: Take<Cursor<Vec<u8>>>,
+    pub(crate) stream: Take<AsyncReadBody>
+}
 
-// TODO: Have a `BufRead` impl for `DataStream`. At the moment, this isn't
-// possible since Hyper's `HttpReader` doesn't implement `BufRead`.
-impl Read for DataStream {
+impl DataStream {
+    /// A helper method to write the body of the request to any `AsyncWrite`
+    /// type.
+    ///
+    /// This method is identical to `tokio::io::copy(&mut self, &mut writer)`.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use std::io;
+    /// use rocket::data::{Data, ToByteUnit};
+    ///
+    /// async fn handler(mut data: Data) -> io::Result<String> {
+    ///     // write all of the data to stdout
+    ///     let written = data.open(512.kibibytes()).stream_to(tokio::io::stdout()).await?;
+    ///     Ok(format!("Wrote {} bytes.", written))
+    /// }
+    /// ```
     #[inline(always)]
-    fn read(&mut self, buf: &mut [u8]) -> io::Result<usize> {
-        trace_!("DataStream::read()");
-        self.0.read(buf)
+    pub async fn stream_to<W>(mut self, mut writer: W) -> io::Result<u64>
+        where W: AsyncWrite + Unpin
+    {
+        tokio::io::copy(&mut self, &mut writer).await
+    }
+
+    /// A helper method to write the body of the request to a file at the path
+    /// determined by `path`.
+    ///
+    /// This method is identical to `self.stream_to(&mut
+    /// File::create(path).await?)`.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use std::io;
+    /// use rocket::data::{Data, ToByteUnit};
+    ///
+    /// async fn handler(mut data: Data) -> io::Result<String> {
+    ///     let written = data.open(1.megabytes()).stream_to_file("/static/file").await?;
+    ///     Ok(format!("Wrote {} bytes to /static/file", written))
+    /// }
+    /// ```
+    #[inline(always)]
+    pub async fn stream_to_file<P: AsRef<Path>>(self, path: P) -> io::Result<u64> {
+        let mut file = tokio::fs::File::create(path).await?;
+        self.stream_to(&mut file).await
+    }
+
+    /// A helper method to write the body of the request to a `String`.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use std::io;
+    /// use rocket::data::{Data, ToByteUnit};
+    ///
+    /// async fn handler(data: Data) -> io::Result<String> {
+    ///     data.open(10.bytes()).stream_to_string().await
+    /// }
+    /// ```
+    pub async fn stream_to_string(mut self) -> io::Result<String> {
+        let buf_len = self.buffer.get_ref().get_ref().len();
+        let max_from_buf = std::cmp::min(buf_len, self.buffer.limit() as usize);
+        let capacity = std::cmp::min(max_from_buf, 1024);
+        let mut string = String::with_capacity(capacity);
+        self.read_to_string(&mut string).await?;
+        Ok(string)
+    }
+
+    /// A helper method to write the body of the request to a `Vec<u8>`.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use std::io;
+    /// use rocket::data::{Data, ToByteUnit};
+    ///
+    /// async fn handler(data: Data) -> io::Result<Vec<u8>> {
+    ///     data.open(4.kibibytes()).stream_to_vec().await
+    /// }
+    /// ```
+    pub async fn stream_to_vec(mut self) -> io::Result<Vec<u8>> {
+        let buf_len = self.buffer.get_ref().get_ref().len();
+        let max_from_buf = std::cmp::min(buf_len, self.buffer.limit() as usize);
+        let capacity = std::cmp::min(max_from_buf, 1024);
+        let mut vec = Vec::with_capacity(capacity);
+        self.read_to_end(&mut vec).await?;
+        Ok(vec)
     }
 }
 
-pub fn kill_stream(stream: &mut BodyReader) {
-    // Only do the expensive reading if we're not sure we're done.
-    use self::HttpReader::*;
-    match *stream {
-        SizedReader(_, n) | ChunkedReader(_, Some(n)) if n > 0 => { /* continue */ },
-        _ => return
-    };
+// TODO.async: Consider implementing `AsyncBufRead`.
 
-    // Take <= 1k from the stream. If there might be more data, force close.
-    const FLUSH_LEN: u64 = 1024;
-    match io::copy(&mut stream.take(FLUSH_LEN), &mut io::sink()) {
-        Ok(FLUSH_LEN) | Err(_) => {
-            warn_!("Data left unread. Force closing network stream.");
-            let (_, network) = stream.get_mut().get_mut();
-            if let Err(e) = network.close(Shutdown::Read) {
-                error_!("Failed to close network stream: {:?}", e);
+impl AsyncRead for DataStream {
+    #[inline(always)]
+    fn poll_read(
+        mut self: Pin<&mut Self>,
+        cx: &mut Context<'_>,
+        buf: &mut [u8]
+    ) -> Poll<io::Result<usize>> {
+        if self.buffer.limit() > 0 {
+            trace_!("DataStream::buffer_read()");
+            match Pin::new(&mut self.buffer).poll_read(cx, buf) {
+                Poll::Ready(Ok(0)) => { /* fall through */ },
+                poll => return poll,
             }
         }
-        Ok(n) => debug!("flushed {} unread bytes", n)
-    }
-}
 
-impl Drop for DataStream {
-    fn drop(&mut self) {
-        kill_stream(&mut self.0.get_mut().1);
+        trace_!("DataStream::stream_read()");
+        Pin::new(&mut self.stream).poll_read(cx, buf)
     }
 }

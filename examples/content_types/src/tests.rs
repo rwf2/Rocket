@@ -1,18 +1,14 @@
 use super::Person;
 use rocket::http::{Accept, ContentType, Header, MediaType, Method, Status};
-use rocket::local::Client;
+use rocket::local::blocking::Client;
 
 fn test<H>(method: Method, uri: &str, header: H, status: Status, body: String)
     where H: Into<Header<'static>>
 {
-    let rocket = rocket::ignite()
-        .mount("/hello", routes![super::get_hello, super::post_hello])
-        .register(catchers![super::not_found]);
-
-    let client = Client::new(rocket).unwrap();
-    let mut response = client.req(method, uri).header(header).dispatch();
+    let client = Client::new(super::rocket()).unwrap();
+    let response = client.req(method, uri).header(header).dispatch();
     assert_eq!(response.status(), status);
-    assert_eq!(response.body_string(), Some(body));
+    assert_eq!(response.into_string(), Some(body));
 }
 
 #[test]

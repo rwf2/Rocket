@@ -13,7 +13,6 @@ use crate::request::FormItems;
 /// validation.
 ///
 /// ```rust
-/// # #![feature(proc_macro_hygiene)]
 /// # #![allow(deprecated, dead_code, unused_attributes)]
 /// # #[macro_use] extern crate rocket;
 /// #[derive(FromForm)]
@@ -30,7 +29,6 @@ use crate::request::FormItems;
 /// data via the `data` parameter and `Form` type.
 ///
 /// ```rust
-/// # #![feature(proc_macro_hygiene)]
 /// # #![allow(deprecated, dead_code, unused_attributes)]
 /// # #[macro_use] extern crate rocket;
 /// # use rocket::request::Form;
@@ -93,7 +91,7 @@ use crate::request::FormItems;
 /// ```
 pub trait FromForm<'f>: Sized {
     /// The associated error to be returned when parsing fails.
-    type Error;
+    type Error: Send;
 
     /// Parses an instance of `Self` from the iterator of form items `it`.
     ///

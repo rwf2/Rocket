@@ -37,7 +37,6 @@
 //!      of the template file minus the last two extensions, from a handler.
 //!
 //!      ```rust
-//!      # #![feature(proc_macro_hygiene)]
 //!      # #[macro_use] extern crate rocket;
 //!      # #[macro_use] extern crate rocket_contrib;
 //!      # fn context() {  }
@@ -111,6 +110,10 @@
 //! template reloading is disabled to improve performance and cannot be enabled.
 //!
 //! [`Serialize`]: serde::Serialize
+//! [`Template`]: crate::templates::Template
+//! [`Template::fairing()`]: crate::templates::Template::fairing()
+//! [`Template::custom()`]: crate::templates::Template::custom()
+//! [`Template::render()`]: crate::templates::Template::render()
 
 #[cfg(feature = "tera_templates")] pub extern crate tera;
 #[cfg(feature = "tera_templates")] mod tera_templates;
@@ -137,7 +140,7 @@ use serde_json::{Value, to_value};
 use std::borrow::Cow;
 use std::path::PathBuf;
 
-use rocket::{Rocket, State};
+use rocket::Cargo;
 use rocket::request::Request;
 use rocket::fairing::Fairing;
 use rocket::response::{self, Content, Responder};
@@ -180,7 +183,6 @@ const DEFAULT_TEMPLATE_DIR: &str = "templates";
 /// returned from a request handler directly:
 ///
 /// ```rust
-/// # #![feature(proc_macro_hygiene)]
 /// # #[macro_use] extern crate rocket;
 /// # #[macro_use] extern crate rocket_contrib;
 /// # fn context() {  }
@@ -324,7 +326,7 @@ impl Template {
     /// use std::collections::HashMap;
     ///
     /// use rocket_contrib::templates::Template;
-    /// use rocket::local::Client;
+    /// use rocket::local::blocking::Client;
     ///
     /// fn main() {
     ///     let rocket = rocket::ignite().attach(Template::fairing());
@@ -335,14 +337,14 @@ impl Template {
     ///
     ///     # context.insert("test", "test");
     ///     # #[allow(unused_variables)]
-    ///     let template = Template::show(client.rocket(), "index", context);
+    ///     let template = Template::show(client.cargo(), "index", context);
     /// }
     /// ```
     #[inline]
-    pub fn show<S, C>(rocket: &Rocket, name: S, context: C) -> Option<String>
+    pub fn show<S, C>(cargo: &Cargo, name: S, context: C) -> Option<String>
         where S: Into<Cow<'static, str>>, C: Serialize
     {
-        let ctxt = rocket.state::<ContextManager>().map(ContextManager::context).or_else(|| {
+        let ctxt = cargo.state::<ContextManager>().map(ContextManager::context).or_else(|| {
             warn!("Uninitialized template context: missing fairing.");
             info!("To use templates, you must attach `Template::fairing()`.");
             info!("See the `Template` documentation for more information.");
@@ -383,16 +385,19 @@ impl Template {
 /// Returns a response with the Content-Type derived from the template's
 /// extension and a fixed-size body containing the rendered template. If
 /// rendering fails, an `Err` of `Status::InternalServerError` is returned.
-impl Responder<'static> for Template {
-    fn respond_to(self, req: &Request<'_>) -> response::Result<'static> {
-        let ctxt = req.guard::<State<'_, ContextManager>>().succeeded().ok_or_else(|| {
-            error_!("Uninitialized template context: missing fairing.");
-            info_!("To use templates, you must attach `Template::fairing()`.");
-            info_!("See the `Template` documentation for more information.");
-            Status::InternalServerError
-        })?.inner().context();
+impl<'r> Responder<'r, 'static> for Template {
+    fn respond_to(self, req: &'r Request<'_>) -> response::Result<'static> {
+        let (render, content_type) = {
+            let ctxt = req.managed_state::<ContextManager>().ok_or_else(|| {
+                error_!("Uninitialized template context: missing fairing.");
+                info_!("To use templates, you must attach `Template::fairing()`.");
+                info_!("See the `Template` documentation for more information.");
+                Status::InternalServerError
+            })?.context();
 
-        let (render, content_type) = self.finalize(&ctxt)?;
+            self.finalize(&ctxt)?
+        };
+
         Content(content_type, render).respond_to(req)
     }
 }

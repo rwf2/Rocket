@@ -1,0 +1,5 @@
+error: checking for warnings!
+  --> $DIR/route-warnings.rs:25:5
+   |
+25 |     compile_error!("checking for warnings!")
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

@@ -1,5 +1,3 @@
-#![feature(proc_macro_hygiene)]
-
 #[macro_use] extern crate rocket;
 
 use std::path::{Path, PathBuf};
@@ -13,11 +11,11 @@ fn files(route: &Route, path: PathBuf) -> String {
 
 mod route_guard_tests {
     use super::*;
-    use rocket::local::Client;
+    use rocket::local::blocking::Client;
 
     fn assert_path(client: &Client, path: &str) {
-        let mut res = client.get(path).dispatch();
-        assert_eq!(res.body_string(), Some(path.into()));
+        let res = client.get(path).dispatch();
+        assert_eq!(res.into_string(), Some(path.into()));
     }
 
     #[test]

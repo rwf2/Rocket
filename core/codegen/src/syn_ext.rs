@@ -1,11 +1,6 @@
 //! Extensions to `syn` types.
 
 use devise::syn;
-use proc_macro::Diagnostic;
-
-pub fn syn_to_diag(error: syn::parse::Error) -> Diagnostic {
-    error.span().unstable().error(error.to_string())
-}
 
 pub trait IdentExt {
     fn prepend(&self, string: &str) -> syn::Ident;
@@ -32,5 +27,18 @@ impl ReturnTypeExt for syn::ReturnType {
             syn::ReturnType::Default => None,
             syn::ReturnType::Type(_, ty) => Some(ty),
         }
+    }
+}
+
+pub trait TokenStreamExt {
+    fn respanned(&self, span: crate::proc_macro2::Span) -> Self;
+}
+
+impl TokenStreamExt for crate::proc_macro2::TokenStream {
+    fn respanned(&self, span: crate::proc_macro2::Span) -> Self {
+        self.clone().into_iter().map(|mut token| {
+            token.set_span(span);
+            token
+        }).collect()
     }
 }

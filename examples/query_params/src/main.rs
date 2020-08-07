@@ -1,5 +1,3 @@
-#![feature(proc_macro_hygiene)]
-
 #[macro_use] extern crate rocket;
 
 #[cfg(test)] mod tests;
@@ -32,10 +30,7 @@ fn hello_20(person: LenientForm<Person>) -> String {
     format!("20 years old? Hi, {}!", person.name)
 }
 
+#[launch]
 fn rocket() -> rocket::Rocket {
     rocket::ignite().mount("/", routes![hello, hello_20])
-}
-
-fn main() {
-    rocket().launch();
 }

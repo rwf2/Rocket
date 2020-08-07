@@ -1,5 +1,3 @@
-#![feature(proc_macro_hygiene)]
-
 #[macro_use] extern crate rocket;
 
 use rocket::request::{self, Request, FromRequest};
@@ -8,10 +6,11 @@ use rocket::outcome::Outcome::*;
 #[derive(Debug)]
 struct HeaderCount(usize);
 
+#[rocket::async_trait]
 impl<'a, 'r> FromRequest<'a, 'r> for HeaderCount {
     type Error = std::convert::Infallible;
 
-    fn from_request(request: &'a Request<'r>) -> request::Outcome<Self, Self::Error> {
+    async fn from_request(request: &'a Request<'r>) -> request::Outcome<Self, Self::Error> {
         Success(HeaderCount(request.headers().len()))
     }
 }
@@ -21,17 +20,14 @@ fn header_count(header_count: HeaderCount) -> String {
     format!("Your request contained {} headers!", header_count.0)
 }
 
+#[launch]
 fn rocket() -> rocket::Rocket {
     rocket::ignite().mount("/", routes![header_count])
 }
 
-fn main() {
-    rocket().launch();
-}
-
 #[cfg(test)]
 mod test {
-    use rocket::local::Client;
+    use rocket::local::blocking::Client;
     use rocket::http::Header;
 
     fn test_header_count<'h>(headers: Vec<Header<'static>>) {
@@ -41,9 +37,9 @@ mod test {
             req.add_header(header);
         }
 
-        let mut response = req.dispatch();
+        let response = req.dispatch();
         let expect = format!("Your request contained {} headers!", headers.len());
-        assert_eq!(response.body_string(), Some(expect));
+        assert_eq!(response.into_string(), Some(expect));
     }
 
     #[test]

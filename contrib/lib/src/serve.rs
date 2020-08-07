@@ -1,6 +1,6 @@
 //! Custom handler and options for static file serving.
 //!
-//! See the [`StaticFiles`] type for further details.
+//! See the [`StaticFiles`](crate::serve::StaticFiles) type for further details.
 //!
 //! # Enabling
 //!
@@ -20,6 +20,44 @@ use rocket::{Request, Data, Route};
 use rocket::http::{Method, uri::Segments, ext::IntoOwned};
 use rocket::handler::{Handler, Outcome};
 use rocket::response::{NamedFile, Redirect};
+
+/// Generates a crate-relative version of `$path`.
+///
+/// This macro is primarily intended for use with [`StaticFiles`] to serve files
+/// from a path relative to the crate root. The macro accepts one parameter,
+/// `$path`, an absolute or relative path. It returns a path (an `&'static str`)
+/// prefixed with the path to the crate root. Use `Path::new()` to retrieve an
+/// `&'static Path`.
+///
+/// See the [relative paths `StaticFiles`
+/// documentation](`StaticFiles`#relative-paths) for an example.
+///
+/// # Example
+///
+/// ```rust
+/// use rocket_contrib::serve::{StaticFiles, crate_relative};
+///
+/// let manual = concat!(env!("CARGO_MANIFEST_DIR"), "/static");
+/// let automatic = crate_relative!("static");
+/// assert_eq!(manual, automatic);
+///
+/// use std::path::Path;
+///
+/// let manual = Path::new(env!("CARGO_MANIFEST_DIR")).join("static");
+/// let automatic_1 = Path::new(crate_relative!("static"));
+/// let automatic_2 = Path::new(crate_relative!("/static"));
+/// assert_eq!(manual, automatic_1);
+/// assert_eq!(automatic_1, automatic_2);
+/// ```
+#[macro_export]
+macro_rules! crate_relative {
+    ($path:expr) => {
+        concat!(env!("CARGO_MANIFEST_DIR"), "/", $path)
+    };
+}
+
+#[doc(inline)]
+pub use crate_relative;
 
 /// A bitset representing configurable options for the [`StaticFiles`] handler.
 ///
@@ -126,47 +164,42 @@ impl std::ops::BitOr for Options {
 ///
 /// # Example
 ///
-/// To serve files from the `/static` local file system directory at the
+/// To serve files from the `/static` directory on the local file system at the
 /// `/public` path, allowing `index.html` files to be used to respond to
 /// requests for a directory (the default), you might write the following:
 ///
-/// ```rust
-/// # extern crate rocket;
+/// ```rust,no_run
+/// # #[macro_use] extern crate rocket;
 /// # extern crate rocket_contrib;
 /// use rocket_contrib::serve::StaticFiles;
 ///
-/// fn main() {
-/// # if false {
-///     rocket::ignite()
-///         .mount("/public", StaticFiles::from("/static"))
-///         .launch();
-/// # }
+/// #[launch]
+/// fn rocket() -> rocket::Rocket {
+///     rocket::ignite().mount("/public", StaticFiles::from("/static"))
 /// }
 /// ```
 ///
 /// With this, requests for files at `/public/<path..>` will be handled by
-/// returning the contents of `./static/<path..>`. Requests for _directories_ at
+/// returning the contents of `/static/<path..>`. Requests for _directories_ at
 /// `/public/<directory>` will be handled by returning the contents of
-/// `./static/<directory>/index.html`.
+/// `/static/<directory>/index.html`.
 ///
-/// If your static files are stored relative to your crate and your project is
-/// managed by Cargo, you should either use a relative path and ensure that your
-/// server is started in the crate's root directory or use the
-/// `CARGO_MANIFEST_DIR` to create an absolute path relative to your crate root.
-/// For example, to serve files in the `static` subdirectory of your crate at
-/// `/`, you might write:
+/// ## Relative Paths
 ///
-/// ```rust
-/// # extern crate rocket;
+/// In the example above, `/static` is an absolute path. If your static files
+/// are stored relative to your crate and your project is managed by Cargo, use
+/// the [`crate_relative!`] macro to obtain a path that is relative to your
+/// crate's root. For example, to serve files in the `static` subdirectory of
+/// your crate at `/`, you might write:
+///
+/// ```rust,no_run
+/// # #[macro_use] extern crate rocket;
 /// # extern crate rocket_contrib;
-/// use rocket_contrib::serve::StaticFiles;
+/// use rocket_contrib::serve::{StaticFiles, crate_relative};
 ///
-/// fn main() {
-/// # if false {
-///     rocket::ignite()
-///         .mount("/", StaticFiles::from(concat!(env!("CARGO_MANIFEST_DIR"), "/static")))
-///         .launch();
-/// # }
+/// #[launch]
+/// fn rocket() -> rocket::Rocket {
+///     rocket::ignite().mount("/", StaticFiles::from(crate_relative!("/static")))
 /// }
 /// ```
 #[derive(Clone)]
@@ -186,38 +219,36 @@ impl StaticFiles {
     /// [`StaticFiles::new()`]. To choose a different rank for generated routes,
     /// use [`StaticFiles::rank()`].
     ///
+    /// # Panics
+    ///
+    /// Panics if `path` does not exist or is not a directory.
+    ///
     /// # Example
     ///
     /// Serve the static files in the `/www/public` local directory on path
     /// `/static`.
     ///
-    /// ```rust
-    /// # extern crate rocket;
+    /// ```rust,no_run
+    /// # #[macro_use] extern crate rocket;
     /// # extern crate rocket_contrib;
     /// use rocket_contrib::serve::StaticFiles;
     ///
-    /// fn main() {
-    /// # if false {
-    ///     rocket::ignite()
-    ///         .mount("/static", StaticFiles::from("/www/public"))
-    ///         .launch();
-    /// # }
+    /// #[launch]
+    /// fn rocket() -> rocket::Rocket {
+    ///     rocket::ignite().mount("/static", StaticFiles::from("/www/public"))
     /// }
     /// ```
     ///
     /// Exactly as before, but set the rank for generated routes to `30`.
     ///
-    /// ```rust
-    /// # extern crate rocket;
+    /// ```rust,no_run
+    /// # #[macro_use] extern crate rocket;
     /// # extern crate rocket_contrib;
     /// use rocket_contrib::serve::StaticFiles;
     ///
-    /// fn main() {
-    /// # if false {
-    ///     rocket::ignite()
-    ///         .mount("/static", StaticFiles::from("/www/public").rank(30))
-    ///         .launch();
-    /// # }
+    /// #[launch]
+    /// fn rocket() -> rocket::Rocket {
+    ///     rocket::ignite().mount("/static", StaticFiles::from("/www/public").rank(30))
     /// }
     /// ```
     pub fn from<P: AsRef<Path>>(path: P) -> Self {
@@ -228,6 +259,10 @@ impl StaticFiles {
     /// `path` with `options` enabled. By default, the handler's routes have a
     /// rank of `10`. To choose a different rank, use [`StaticFiles::rank()`].
     ///
+    /// # Panics
+    ///
+    /// Panics if `path` does not exist or is not a directory.
+    ///
     /// # Example
     ///
     /// Serve the static files in the `/www/public` local directory on path
@@ -235,30 +270,37 @@ impl StaticFiles {
     /// the same files on `/pub` with a route rank of -1 while also serving
     /// index files and dot files.
     ///
-    /// ```rust
-    /// # extern crate rocket;
+    /// ```rust,no_run
+    /// # #[macro_use] extern crate rocket;
     /// # extern crate rocket_contrib;
     /// use rocket_contrib::serve::{StaticFiles, Options};
     ///
-    /// fn main() {
-    /// # if false {
+    /// #[launch]
+    /// fn rocket() -> rocket::Rocket {
     ///     let options = Options::Index | Options::DotFiles;
     ///     rocket::ignite()
     ///         .mount("/static", StaticFiles::from("/www/public"))
     ///         .mount("/pub", StaticFiles::new("/www/public", options).rank(-1))
-    ///         .launch();
-    /// # }
     /// }
     /// ```
     pub fn new<P: AsRef<Path>>(path: P, options: Options) -> Self {
-        StaticFiles { root: path.as_ref().into(), options, rank: Self::DEFAULT_RANK }
+        use rocket::yansi::Paint;
+
+        let path = path.as_ref();
+        if !path.is_dir() {
+            error!("`StaticFiles` supplied with invalid path");
+            info_!("'{}' is not a directory", Paint::white(path.display()));
+            panic!("refusing to continue due to invalid static files path");
+        }
+
+        StaticFiles { root: path.into(), options, rank: Self::DEFAULT_RANK }
     }
 
     /// Sets the rank for generated routes to `rank`.
     ///
     /// # Example
     ///
-    /// ```rust
+    /// ```rust,no_run
     /// # extern crate rocket_contrib;
     /// use rocket_contrib::serve::{StaticFiles, Options};
     ///
@@ -289,31 +331,34 @@ impl Into<Vec<Route>> for StaticFiles {
     }
 }
 
+async fn handle_dir<'r, P>(opt: Options, r: &'r Request<'_>, d: Data, p: P) -> Outcome<'r>
+    where P: AsRef<Path>
+{
+    if opt.contains(Options::NormalizeDirs) && !r.uri().path().ends_with('/') {
+        let new_path = r.uri().map_path(|p| p.to_owned() + "/")
+            .expect("adding a trailing slash to a known good path results in a valid path")
+            .into_owned();
+
+        return Outcome::from_or_forward(r, d, Redirect::permanent(new_path));
+    }
+
+    if !opt.contains(Options::Index) {
+        return Outcome::forward(d);
+    }
+
+    let file = NamedFile::open(p.as_ref().join("index.html")).await.ok();
+    Outcome::from_or_forward(r, d, file)
+}
+
+#[rocket::async_trait]
 impl Handler for StaticFiles {
-    fn handle<'r>(&self, req: &'r Request<'_>, data: Data) -> Outcome<'r> {
-        fn handle_dir<'r>(opt: Options, r: &'r Request<'_>, d: Data, path: &Path) -> Outcome<'r> {
-            if opt.contains(Options::NormalizeDirs) && !r.uri().path().ends_with('/') {
-                let new_path = r.uri().map_path(|p| p.to_owned() + "/")
-                    .expect("adding a trailing slash to a known good path results in a valid path")
-                    .into_owned();
-
-                return Outcome::from_or_forward(r, d, Redirect::permanent(new_path));
-            }
-
-            if !opt.contains(Options::Index) {
-                return Outcome::forward(d);
-            }
-
-            let file = NamedFile::open(path.join("index.html")).ok();
-            Outcome::from_or_forward(r, d, file)
-        }
-
+    async fn handle<'r, 's: 'r>(&'s self, req: &'r Request<'_>, data: Data) -> Outcome<'r> {
         // If this is not the route with segments, handle it only if the user
         // requested a handling of index files.
         let current_route = req.route().expect("route while handling");
         let is_segments_route = current_route.uri.path().ends_with(">");
         if !is_segments_route {
-            return handle_dir(self.options, req, data, &self.root);
+            return handle_dir(self.options, req, data, &self.root).await;
         }
 
         // Otherwise, we're handling segments. Get the segments as a `PathBuf`,
@@ -324,10 +369,10 @@ impl Handler for StaticFiles {
             .and_then(|segments| segments.into_path_buf(allow_dotfiles).ok())
             .map(|path| self.root.join(path));
 
-        match &path {
-            Some(path) if path.is_dir() => handle_dir(self.options, req, data, path),
-            Some(path) => Outcome::from_or_forward(req, data, NamedFile::open(path).ok()),
-            None => Outcome::forward(data)
+        match path {
+            Some(p) if p.is_dir() => handle_dir(self.options, req, data, p).await,
+            Some(p) => Outcome::from_or_forward(req, data, NamedFile::open(p).await.ok()),
+            None => Outcome::forward(data),
         }
     }
 }

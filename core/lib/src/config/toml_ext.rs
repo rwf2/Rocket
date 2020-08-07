@@ -3,17 +3,20 @@ use std::result::Result as StdResult;
 
 use crate::config::Value;
 
-use pear::{Result, parser, switch};
+use pear::macros::{parse, parser, switch};
 use pear::parsers::*;
 use pear::combinators::*;
 
+type Input<'a> = pear::input::Pear<&'a str>;
+type Result<'a, T> = pear::input::Result<T, Input<'a>>;
+
 #[inline(always)]
-pub fn is_whitespace(byte: char) -> bool {
-    byte == ' ' || byte == '\t'
+pub fn is_whitespace(&byte: &char) -> bool {
+    byte.is_ascii_whitespace()
 }
 
 #[inline(always)]
-fn is_not_separator(byte: char) -> bool {
+fn is_not_separator(&byte: &char) -> bool {
     match byte {
         ',' | '{' | '}' | '[' | ']' => false,
         _ => true
@@ -22,36 +25,33 @@ fn is_not_separator(byte: char) -> bool {
 
 // FIXME: Be more permissive here?
 #[inline(always)]
-fn is_ident_char(byte: char) -> bool {
-    match byte {
-        '0'..='9' | 'A'..='Z' | 'a'..='z' | '_' | '-' => true,
-        _ => false
-    }
+fn is_ident_char(&byte: &char) -> bool {
+    byte.is_ascii_alphanumeric() || byte == '_' || byte == '-'
 }
 
 #[parser]
-fn array<'a>(input: &mut &'a str) -> Result<Value, &'a str> {
-    Value::Array(collection('[', value, ',', ']')?)
+fn array<'a>(input: &mut Input<'a>) -> Result<'a, Value> {
+    Value::Array(delimited_collect('[', value, ',', ']')?)
 }
 
 #[parser]
-fn key<'a>(input: &mut &'a str) -> Result<String, &'a str> {
+fn key<'a>(input: &mut Input<'a>) -> Result<'a, String> {
     take_some_while(is_ident_char)?.to_string()
 }
 
 #[parser]
-fn key_value<'a>(input: &mut &'a str) -> Result<(String, Value), &'a str> {
+fn key_value<'a>(input: &mut Input<'a>) -> Result<'a, (String, Value)> {
     let key = (surrounded(key, is_whitespace)?, eat('=')?).0.to_string();
     (key, surrounded(value, is_whitespace)?)
 }
 
 #[parser]
-fn table<'a>(input: &mut &'a str) -> Result<Value, &'a str> {
-    Value::Table(collection('{', key_value, ',', '}')?)
+fn table<'a>(input: &mut Input<'a>) -> Result<'a, Value> {
+    Value::Table(delimited_collect('{', key_value, ',', '}')?)
 }
 
 #[parser]
-fn value<'a>(input: &mut &'a str) -> Result<Value, &'a str> {
+fn value<'a>(input: &mut Input<'a>) -> Result<'a, Value> {
     skip_while(is_whitespace)?;
     let val = switch! {
         eat_slice("true") => Value::Boolean(true),
@@ -75,8 +75,8 @@ fn value<'a>(input: &mut &'a str) -> Result<Value, &'a str> {
     val
 }
 
-pub fn parse_simple_toml_value(mut input: &str) -> StdResult<Value, String> {
-    parse!(value: &mut input).map_err(|e| e.to_string())
+pub fn parse_simple_toml_value(input: &str) -> StdResult<Value, String> {
+    parse!(value: input).map_err(|e| e.to_string())
 }
 
 /// A simple wrapper over a `Value` reference with a custom implementation of
@@ -106,7 +106,8 @@ impl fmt::Display for LoggedValue<'_> {
 
 #[cfg(test)]
 mod test {
-    use std::collections::BTreeMap;
+    use toml::map::Map;
+
     use super::parse_simple_toml_value;
     use super::Value::{self, *};
 
@@ -134,16 +135,16 @@ mod test {
         assert_parse!("[1, 2, 3]", vec![1, 2, 3].into());
         assert_parse!("[1.32, 2]", Array(vec![1.32.into(), 2.into()]));
 
-        assert_parse!("{}", Table(BTreeMap::new()));
+        assert_parse!("{}", Table(Map::new()));
 
         assert_parse!("{a=b}", Table({
-            let mut map = BTreeMap::new();
+            let mut map = Map::new();
             map.insert("a".into(), "b".into());
             map
         }));
 
         assert_parse!("{v=1, on=true,pi=3.14}", Table({
-            let mut map = BTreeMap::new();
+            let mut map = Map::new();
             map.insert("v".into(), 1.into());
             map.insert("on".into(), true.into());
             map.insert("pi".into(), 3.14.into());
@@ -151,7 +152,7 @@ mod test {
         }));
 
         assert_parse!("{v=[1, 2, 3], v2=[a, \"b\"], on=true,pi=3.14}", Table({
-            let mut map = BTreeMap::new();
+            let mut map = Map::new();
             map.insert("v".into(), vec![1, 2, 3].into());
             map.insert("v2".into(), vec!["a", "b"].into());
             map.insert("on".into(), true.into());
@@ -160,7 +161,7 @@ mod test {
         }));
 
         assert_parse!("{v=[[1], [2, 3], [4,5]]}", Table({
-            let mut map = BTreeMap::new();
+            let mut map = Map::new();
             let first: Value = vec![1].into();
             let second: Value = vec![2, 3].into();
             let third: Value = vec![4, 5].into();

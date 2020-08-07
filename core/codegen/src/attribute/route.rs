@@ -1,17 +1,18 @@
+use std::sync::atomic::{AtomicUsize, Ordering};
 use std::collections::hash_map::DefaultHasher;
 use std::hash::{Hash, Hasher};
 
-use proc_macro::{TokenStream, Span};
-use crate::proc_macro2::TokenStream as TokenStream2;
-use devise::{syn, Spanned, SpanWrapped, Result, FromMeta, ext::TypeExt};
+use devise::{syn, Spanned, SpanWrapped, Result, FromMeta, Diagnostic};
+use devise::ext::{SpanDiagnosticExt, TypeExt};
 use indexmap::IndexSet;
 
 use crate::proc_macro_ext::{Diagnostics, StringLit};
-use crate::syn_ext::{syn_to_diag, IdentExt};
-use self::syn::{Attribute, parse::Parser};
-
+use crate::syn_ext::IdentExt;
+use crate::proc_macro2::{TokenStream, Span};
 use crate::http_codegen::{Method, MediaType, RoutePath, DataSegment, Optional};
 use crate::attribute::segments::{Source, Kind, Segment};
+use crate::syn::{Attribute, parse::Parser};
+
 use crate::{ROUTE_FN_PREFIX, ROUTE_STRUCT_PREFIX, URI_MACRO_PREFIX, ROCKET_PARAM_PREFIX};
 
 /// The raw, parsed `#[route]` attribute.
@@ -38,9 +39,9 @@ struct MethodRouteAttribute {
 /// This structure represents the parsed `route` attribute and associated items.
 #[derive(Debug)]
 struct Route {
-    /// The status associated with the code in the `#[route(code)]` attribute.
+    /// The attribute: `#[get(path, ...)]`.
     attribute: RouteAttribute,
-    /// The function that was decorated with the `route` attribute.
+    /// The function the attribute decorated, i.e, the handler.
     function: syn::ItemFn,
     /// The non-static parameters declared in the route segments.
     segments: IndexSet<Segment>,
@@ -58,9 +59,10 @@ fn parse_route(attr: RouteAttribute, function: syn::ItemFn) -> Result<Route> {
     if let Some(ref data) = attr.data {
         if !attr.method.0.supports_payload() {
             let msg = format!("'{}' does not typically support payloads", attr.method.0);
+            // FIXME(diag: warning)
             data.full_span.warning("`data` used with non-payload-supporting method")
                 .span_note(attr.method.span, msg)
-                .emit()
+                .emit_as_item_tokens();
         }
     }
 
@@ -113,11 +115,7 @@ fn parse_route(attr: RouteAttribute, function: syn::ItemFn) -> Result<Route> {
     }
 
     // Check that all of the declared parameters are function inputs.
-    let span = match function.sig.inputs.is_empty() {
-        false => function.sig.inputs.span(),
-        true => function.span()
-    };
-
+    let span = function.sig.paren_token.span;
     for missing in segments.difference(&fn_segments) {
         diags.push(missing.span.error("unused dynamic parameter")
             .span_note(span, format!("expected argument named `{}` here", missing.name)))
@@ -126,10 +124,10 @@ fn parse_route(attr: RouteAttribute, function: syn::ItemFn) -> Result<Route> {
     diags.head_err_or(Route { attribute: attr, function, inputs, segments })
 }
 
-fn param_expr(seg: &Segment, ident: &syn::Ident, ty: &syn::Type) -> TokenStream2 {
+fn param_expr(seg: &Segment, ident: &syn::Ident, ty: &syn::Type) -> TokenStream {
     define_vars_and_mods!(req, data, error, log, request, _None, _Some, _Ok, _Err, Outcome);
     let i = seg.index.expect("dynamic parameters must be indexed");
-    let span = ident.span().unstable().join(ty.span()).unwrap().into();
+    let span = ident.span().join(ty.span()).unwrap_or_else(|| ty.span());
     let name = ident.to_string();
 
     // All dynamic parameter should be found if this function is being called;
@@ -174,11 +172,11 @@ fn param_expr(seg: &Segment, ident: &syn::Ident, ty: &syn::Type) -> TokenStream2
     }
 }
 
-fn data_expr(ident: &syn::Ident, ty: &syn::Type) -> TokenStream2 {
-    define_vars_and_mods!(req, data, FromData, Outcome, Transform);
-    let span = ident.span().unstable().join(ty.span()).unwrap().into();
+fn data_expr(ident: &syn::Ident, ty: &syn::Type) -> TokenStream {
+    define_vars_and_mods!(req, data, FromTransformedData, Outcome, Transform);
+    let span = ident.span().join(ty.span()).unwrap_or_else(|| ty.span());
     quote_spanned! { span =>
-        let __transform = <#ty as #FromData>::transform(#req, #data);
+        let __transform = <#ty as #FromTransformedData>::transform(#req, #data).await;
 
         #[allow(unreachable_patterns, unreachable_code)]
         let __outcome = match __transform {
@@ -195,7 +193,7 @@ fn data_expr(ident: &syn::Ident, ty: &syn::Type) -> TokenStream2 {
         };
 
         #[allow(non_snake_case, unreachable_patterns, unreachable_code)]
-        let #ident: #ty = match <#ty as #FromData>::from_data(#req, __outcome) {
+        let #ident: #ty = match <#ty as #FromTransformedData>::from_data(#req, __outcome).await {
             #Outcome::Success(__d) => __d,
             #Outcome::Forward(__d) => return #Outcome::Forward(__d),
             #Outcome::Failure((__c, _)) => return #Outcome::Failure(__c),
@@ -203,7 +201,7 @@ fn data_expr(ident: &syn::Ident, ty: &syn::Type) -> TokenStream2 {
     }
 }
 
-fn query_exprs(route: &Route) -> Option<TokenStream2> {
+fn query_exprs(route: &Route) -> Option<TokenStream> {
     define_vars_and_mods!(_None, _Some, _Ok, _Err, _Option);
     define_vars_and_mods!(data, trail, log, request, req, Outcome, SmallVec, Query);
     let query_segments = route.attribute.path.query.as_ref()?;
@@ -216,7 +214,7 @@ fn query_exprs(route: &Route) -> Option<TokenStream2> {
                 .map(|(_, rocket_ident, ty)| (rocket_ident, ty))
                 .unwrap();
 
-            let span = ident.span().unstable().join(ty.span()).unwrap();
+            let span = ident.span().join(ty.span()).unwrap_or_else(|| ty.span());
             (Some(ident), Some(ty), span.into())
         } else {
             (None, None, segment.span.into())
@@ -308,12 +306,12 @@ fn query_exprs(route: &Route) -> Option<TokenStream2> {
     })
 }
 
-fn request_guard_expr(ident: &syn::Ident, ty: &syn::Type) -> TokenStream2 {
+fn request_guard_expr(ident: &syn::Ident, ty: &syn::Type) -> TokenStream {
     define_vars_and_mods!(req, data, request, Outcome);
-    let span = ident.span().unstable().join(ty.span()).unwrap().into();
+    let span = ident.span().join(ty.span()).unwrap_or_else(|| ty.span());
     quote_spanned! { span =>
         #[allow(non_snake_case, unreachable_patterns, unreachable_code)]
-        let #ident: #ty = match <#ty as #request::FromRequest>::from_request(#req) {
+        let #ident: #ty = match <#ty as #request::FromRequest>::from_request(#req).await {
             #Outcome::Success(__v) => __v,
             #Outcome::Forward(_) => return #Outcome::Forward(#data),
             #Outcome::Failure((__c, _)) => return #Outcome::Failure(__c),
@@ -321,7 +319,10 @@ fn request_guard_expr(ident: &syn::Ident, ty: &syn::Type) -> TokenStream2 {
     }
 }
 
-fn generate_internal_uri_macro(route: &Route) -> TokenStream2 {
+fn generate_internal_uri_macro(route: &Route) -> TokenStream {
+    // Keep a global counter (+ thread ID later) to generate unique ids.
+    static COUNTER: AtomicUsize = AtomicUsize::new(0);
+
     let dynamic_args = route.segments.iter()
         .filter(|seg| seg.source == Source::Path || seg.source == Source::Query)
         .filter(|seg| seg.kind != Kind::Static)
@@ -330,18 +331,17 @@ fn generate_internal_uri_macro(route: &Route) -> TokenStream2 {
         .map(|(ident, _, ty)| quote!(#ident: #ty));
 
     let mut hasher = DefaultHasher::new();
-    let route_span = route.function.span();
-    route_span.source_file().path().hash(&mut hasher);
-    let line_column = route_span.start();
-    line_column.line.hash(&mut hasher);
-    line_column.column.hash(&mut hasher);
+    route.function.sig.ident.hash(&mut hasher);
+    route.attribute.path.origin.0.path().hash(&mut hasher);
+    std::process::id().hash(&mut hasher);
+    std::thread::current().id().hash(&mut hasher);
+    COUNTER.fetch_add(1, Ordering::AcqRel).hash(&mut hasher);
 
-    let mut generated_macro_name = route.function.sig.ident.prepend(URI_MACRO_PREFIX);
-    generated_macro_name.set_span(Span::call_site().into());
+    let generated_macro_name = route.function.sig.ident.prepend(URI_MACRO_PREFIX);
     let inner_generated_macro_name = generated_macro_name.append(&hasher.finish().to_string());
     let route_uri = route.attribute.path.origin.0.to_string();
 
-    quote! {
+    quote_spanned! { Span::call_site() =>
         #[doc(hidden)]
         #[macro_export]
         macro_rules! #inner_generated_macro_name {
@@ -357,7 +357,7 @@ fn generate_internal_uri_macro(route: &Route) -> TokenStream2 {
     }
 }
 
-fn generate_respond_expr(route: &Route) -> TokenStream2 {
+fn generate_respond_expr(route: &Route) -> TokenStream {
     let ret_span = match route.function.sig.output {
         syn::ReturnType::Default => route.function.sig.ident.span(),
         syn::ReturnType::Type(_, ref ty) => ty.span().into()
@@ -369,8 +369,13 @@ fn generate_respond_expr(route: &Route) -> TokenStream2 {
     let parameter_names = route.inputs.iter()
         .map(|(_, rocket_ident, _)| rocket_ident);
 
+    let _await = route.function.sig.asyncness.map(|a| quote_spanned!(a.span().into() => .await));
+    let responder_stmt = quote_spanned! { ret_span =>
+        let ___responder = #user_handler_fn_name(#(#parameter_names),*) #_await;
+    };
+
     quote_spanned! { ret_span =>
-        let ___responder = #user_handler_fn_name(#(#parameter_names),*);
+        #responder_stmt
         #handler::Outcome::from(#req, ___responder)
     }
 }
@@ -403,7 +408,7 @@ fn codegen_route(route: Route) -> Result<TokenStream> {
     }
 
     // Gather everything we need.
-    define_vars_and_mods!(req, data, handler, Request, Data, StaticRouteInfo);
+    define_vars_and_mods!(req, data, _Box, Request, Data, StaticRouteInfo, HandlerFuture);
     let (vis, user_handler_fn) = (&route.function.vis, &route.function);
     let user_handler_fn_name = &user_handler_fn.sig.ident;
     let generated_fn_name = user_handler_fn_name.prepend(ROUTE_FN_PREFIX);
@@ -424,12 +429,14 @@ fn codegen_route(route: Route) -> Result<TokenStream> {
         #vis fn #generated_fn_name<'_b>(
             #req: &'_b #Request,
             #data: #Data
-        ) -> #handler::Outcome<'_b> {
-            #(#req_guard_definitions)*
-            #(#parameter_definitions)*
-            #data_stmt
+        ) -> #HandlerFuture<'_b> {
+            #_Box::pin(async move {
+                #(#req_guard_definitions)*
+                #(#parameter_definitions)*
+                #data_stmt
 
-            #generated_respond_expr
+                #generated_respond_expr
+            })
         }
 
         /// Rocket code generated wrapping URI macro.
@@ -450,12 +457,13 @@ fn codegen_route(route: Route) -> Result<TokenStream> {
     }.into())
 }
 
-fn complete_route(args: TokenStream2, input: TokenStream) -> Result<TokenStream> {
-    let function: syn::ItemFn = syn::parse(input).map_err(syn_to_diag)
+fn complete_route(args: TokenStream, input: TokenStream) -> Result<TokenStream> {
+    let function: syn::ItemFn = syn::parse2(input)
+        .map_err(|e| Diagnostic::from(e))
         .map_err(|diag| diag.help("`#[route]` can only be used on functions"))?;
 
     let full_attr = quote!(#[route(#args)]);
-    let attrs = Attribute::parse_outer.parse2(full_attr).map_err(syn_to_diag)?;
+    let attrs = Attribute::parse_outer.parse2(full_attr)?;
     let attribute = match RouteAttribute::from_attrs("route", &attrs) {
         Some(result) => result?,
         None => return Err(Span::call_site().error("internal error: bad attribute"))
@@ -466,7 +474,7 @@ fn complete_route(args: TokenStream2, input: TokenStream) -> Result<TokenStream>
 
 fn incomplete_route(
     method: crate::http::Method,
-    args: TokenStream2,
+    args: TokenStream,
     input: TokenStream
 ) -> Result<TokenStream> {
     let method_str = method.to_string().to_lowercase();
@@ -476,11 +484,12 @@ fn incomplete_route(
 
     let method_ident = syn::Ident::new(&method_str, method_span.into());
 
-    let function: syn::ItemFn = syn::parse(input).map_err(syn_to_diag)
+    let function: syn::ItemFn = syn::parse2(input)
+        .map_err(|e| Diagnostic::from(e))
         .map_err(|d| d.help(format!("#[{}] can only be used on functions", method_str)))?;
 
     let full_attr = quote!(#[#method_ident(#args)]);
-    let attrs = Attribute::parse_outer.parse2(full_attr).map_err(syn_to_diag)?;
+    let attrs = Attribute::parse_outer.parse2(full_attr)?;
     let method_attribute = match MethodRouteAttribute::from_attrs(&method_str, &attrs) {
         Some(result) => result?,
         None => return Err(Span::call_site().error("internal error: bad attribute"))
@@ -501,13 +510,13 @@ fn incomplete_route(
 
 pub fn route_attribute<M: Into<Option<crate::http::Method>>>(
     method: M,
-    args: TokenStream,
-    input: TokenStream
+    args: proc_macro::TokenStream,
+    input: proc_macro::TokenStream
 ) -> TokenStream {
     let result = match method.into() {
-        Some(method) => incomplete_route(method, args.into(), input),
-        None => complete_route(args.into(), input)
+        Some(method) => incomplete_route(method, args.into(), input.into()),
+        None => complete_route(args.into(), input.into())
     };
 
-    result.unwrap_or_else(|diag| { diag.emit(); TokenStream::new() })
+    result.unwrap_or_else(|diag| diag.emit_as_item_tokens())
 }

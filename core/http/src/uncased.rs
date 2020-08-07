@@ -10,6 +10,8 @@ use std::cmp::Ordering;
 use std::hash::{Hash, Hasher};
 use std::fmt;
 
+use ref_cast::RefCast;
+
 /// A reference to an uncased (case-preserving) ASCII string. This is typically
 /// created from an `&str` as follows:
 ///
@@ -19,8 +21,8 @@ use std::fmt;
 ///
 /// let ascii_ref: &UncasedStr = "Hello, world!".into();
 /// ```
-#[repr(C)]
-#[derive(Debug)]
+#[derive(Debug, RefCast)]
+#[repr(transparent)]
 pub struct UncasedStr(str);
 
 impl UncasedStr {
@@ -39,10 +41,7 @@ impl UncasedStr {
     /// ```
     #[inline(always)]
     pub fn new(string: &str) -> &UncasedStr {
-        // This is simply a `newtype`-like transformation. The `repr(C)` ensures
-        // that this is safe and correct. Note this exact pattern appears often
-        // in the standard library.
-        unsafe { &*(string as *const str as *const UncasedStr) }
+        UncasedStr::ref_cast(string)
     }
 
     /// Returns `self` as an `&str`.
@@ -62,7 +61,8 @@ impl UncasedStr {
         &self.0
     }
 
-    /// Converts a `Box<UncasedStr>` into an `Uncased` without copying or allocating.
+    /// Converts a `Box<UncasedStr>` into an `Uncased` without copying or
+    /// allocating.
     ///
     /// # Example
     ///
@@ -76,9 +76,8 @@ impl UncasedStr {
     /// ```
     #[inline(always)]
     pub fn into_uncased(self: Box<UncasedStr>) -> Uncased<'static> {
-        // This is the inverse of a `newtype`-like transformation. The `repr(C)`
-        // ensures that this is safe and correct. Note this exact pattern
-        // appears often in the standard library.
+        // This is the inverse of a `newtype`-like transformation. The
+        // `repr(transparent)` ensures that this is safe and correct.
         unsafe {
             let raw_str = Box::into_raw(self) as *mut str;
             Uncased::from(Box::from_raw(raw_str).into_string())

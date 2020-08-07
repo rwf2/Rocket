@@ -1,33 +1,26 @@
-#![feature(proc_macro_hygiene)]
-
 #[macro_use] extern crate rocket;
 
 #[cfg(test)] mod tests;
 
 use rocket::response::{content, Stream};
 
-use std::io::{repeat, Repeat, Read, Take};
-use std::fs::File;
-
-type LimitedRepeat = Take<Repeat>;
+use tokio::fs::File;
+use tokio::io::{repeat, AsyncRead, AsyncReadExt};
 
 // Generate this file using: head -c BYTES /dev/random > big_file.dat
 const FILENAME: &str = "big_file.dat";
 
 #[get("/")]
-fn root() -> content::Plain<Stream<LimitedRepeat>> {
+fn root() -> content::Plain<Stream<impl AsyncRead>> {
     content::Plain(Stream::from(repeat('a' as u8).take(25000)))
 }
 
 #[get("/big_file")]
-fn file() -> Option<Stream<File>> {
-    File::open(FILENAME).map(|file| Stream::from(file)).ok()
+async fn file() -> Option<Stream<File>> {
+    File::open(FILENAME).await.map(Stream::from).ok()
 }
 
+#[launch]
 fn rocket() -> rocket::Rocket {
     rocket::ignite().mount("/", routes![root, file])
-}
-
-fn main() {
-    rocket().launch();
 }

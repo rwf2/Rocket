@@ -22,7 +22,7 @@ pub enum FormParseError<'f> {
     Missing(&'f RawStr),
 }
 
-/// Error returned by the [`FromData`](crate::data::FromData) implementations of
+/// Error returned by the [`FromTransformedData`](crate::data::FromTransformedData) implementations of
 /// [`Form`](crate::request::Form) and [`LenientForm`](crate::request::LenientForm).
 #[derive(Debug)]
 pub enum FormDataError<'f, E> {
@@ -37,20 +37,19 @@ pub enum FormDataError<'f, E> {
     Parse(E, &'f str)
 }
 
-/// Alias to the type of form errors returned by the [`FromData`]
+/// Alias to the type of form errors returned by the [`FromTransformedData`]
 /// implementations of [`Form<T>`] where the [`FromForm`] implementation for `T`
 /// was derived.
 ///
 /// This alias is particularly useful when "catching" form errors in routes.
 ///
-/// [`FromData`]: crate::data::FromData
+/// [`FromTransformedData`]: crate::data::FromTransformedData
 /// [`Form<T>`]: crate::request::Form
 /// [`FromForm`]: crate::request::FromForm
 ///
 /// # Example
 ///
 /// ```rust
-/// # #![feature(proc_macro_hygiene)]
 /// # #[macro_use] extern crate rocket;
 /// use rocket::request::{Form, FormError, FormDataError};
 ///

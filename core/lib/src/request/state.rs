@@ -1,6 +1,6 @@
 use std::ops::Deref;
 
-use crate::Rocket;
+use crate::rocket::Cargo;
 use crate::request::{self, FromRequest, Request};
 use crate::outcome::Outcome;
 use crate::http::Status;
@@ -10,10 +10,11 @@ use crate::http::Status;
 /// This type can be used as a request guard to retrieve the state Rocket is
 /// managing for some type `T`. This allows for the sharing of state across any
 /// number of handlers. A value for the given type must previously have been
-/// registered to be managed by Rocket via
-/// [`Rocket::manage()`]. The type being managed must be
-/// thread safe and sendable across thread boundaries. In other words, it must
-/// implement [`Send`] + [`Sync`] + `'static`.
+/// registered to be managed by Rocket via [`Rocket::manage()`]. The type being
+/// managed must be thread safe and sendable across thread boundaries. In other
+/// words, it must implement [`Send`] + [`Sync`] + `'static`.
+///
+/// [`Rocket::manage()`]: crate::Rocket::manage()
 ///
 /// # Example
 ///
@@ -21,8 +22,7 @@ use crate::http::Status;
 /// like to initialize at start-up and later access it in several handlers. The
 /// following example does just this:
 ///
-/// ```rust
-/// # #![feature(proc_macro_hygiene)]
+/// ```rust,no_run
 /// # #[macro_use] extern crate rocket;
 /// use rocket::State;
 ///
@@ -42,17 +42,11 @@ use crate::http::Status;
 ///     state.inner().user_val.as_str()
 /// }
 ///
-/// fn main() {
-///     let config = MyConfig {
-///         user_val: "user input".to_string()
-///     };
-///
-/// # if false { // We don't actually want to launch the server in an example.
+/// #[launch]
+/// fn rocket() -> rocket::Rocket {
 ///     rocket::ignite()
 ///         .mount("/", routes![index, raw_config_value])
-///         .manage(config)
-///         .launch();
-/// # }
+///         .manage(MyConfig { user_val: "user input".to_string() })
 /// }
 /// ```
 ///
@@ -70,11 +64,12 @@ use crate::http::Status;
 /// # struct MyConfig{ user_val: String };
 /// struct Item(String);
 ///
-/// impl FromRequest<'_, '_> for Item {
+/// #[rocket::async_trait]
+/// impl<'a, 'r> FromRequest<'a, 'r> for Item {
 ///     type Error = ();
 ///
-///     fn from_request(request: &Request<'_>) -> request::Outcome<Item, ()> {
-///         request.guard::<State<MyConfig>>()
+///     async fn from_request(request: &'a Request<'r>) -> request::Outcome<Item, ()> {
+///         request.guard::<State<MyConfig>>().await
 ///             .map(|my_config| Item(my_config.user_val.clone()))
 ///     }
 /// }
@@ -87,7 +82,6 @@ use crate::http::Status;
 /// [`State::from()`] static method:
 ///
 /// ```rust
-/// # #![feature(proc_macro_hygiene)]
 /// # #[macro_use] extern crate rocket;
 /// use rocket::State;
 ///
@@ -98,9 +92,11 @@ use crate::http::Status;
 ///     state.0.to_string()
 /// }
 ///
-/// let rocket = rocket::ignite().manage(MyManagedState(127));
-/// let state = State::from(&rocket).expect("managing `MyManagedState`");
+/// # rocket::async_test(async {
+/// let mut rocket = rocket::ignite().manage(MyManagedState(127));
+/// let state = State::from(rocket.inspect().await).expect("managing `MyManagedState`");
 /// assert_eq!(handler(state), "127");
+/// # });
 /// ```
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct State<'r, T: Send + Sync + 'static>(&'r T);
@@ -151,25 +147,29 @@ impl<'r, T: Send + Sync + 'static> State<'r, T> {
     /// #[derive(Debug, PartialEq)]
     /// struct Unmanaged(usize);
     ///
-    /// let rocket = rocket::ignite().manage(Managed(7));
+    /// # rocket::async_test(async {
+    /// let mut rocket = rocket::ignite().manage(Managed(7));
+    /// let cargo = rocket.inspect().await;
     ///
-    /// let state: Option<State<Managed>> = State::from(&rocket);
+    /// let state: Option<State<Managed>> = State::from(cargo);
     /// assert_eq!(state.map(|s| s.inner()), Some(&Managed(7)));
     ///
-    /// let state: Option<State<Unmanaged>> = State::from(&rocket);
+    /// let state: Option<State<Unmanaged>> = State::from(cargo);
     /// assert_eq!(state, None);
+    /// # });
     /// ```
     #[inline(always)]
-    pub fn from(rocket: &'r Rocket) -> Option<Self> {
-        rocket.state.try_get::<T>().map(State)
+    pub fn from(rocket: &'r Cargo) -> Option<Self> {
+        rocket.state().map(State)
     }
 }
 
-impl<'r, T: Send + Sync + 'static> FromRequest<'_, 'r> for State<'r, T> {
+#[crate::async_trait]
+impl<'a, 'r, T: Send + Sync + 'static> FromRequest<'a, 'r> for State<'r, T> {
     type Error = ();
 
     #[inline(always)]
-    fn from_request(req: &Request<'r>) -> request::Outcome<State<'r, T>, ()> {
+    async fn from_request(req: &'a Request<'r>) -> request::Outcome<State<'r, T>, ()> {
         match req.state.managed.try_get::<T>() {
             Some(state) => Outcome::Success(State(state)),
             None => {

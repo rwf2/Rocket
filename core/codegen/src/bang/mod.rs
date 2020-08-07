@@ -1,9 +1,9 @@
-use proc_macro::TokenStream;
-use crate::proc_macro2::TokenStream as TokenStream2;
+use devise::Result;
 
-use devise::{syn, Spanned, Result};
-use self::syn::{Path, punctuated::Punctuated, parse::Parser, token::Comma};
-use crate::syn_ext::{IdentExt, syn_to_diag};
+use crate::syn_ext::IdentExt;
+use crate::syn::{Path, punctuated::Punctuated, parse::Parser, Token};
+use crate::syn::spanned::Spanned;
+use crate::proc_macro2::TokenStream;
 use crate::{ROUTE_STRUCT_PREFIX, CATCH_STRUCT_PREFIX};
 
 mod uri;
@@ -17,13 +17,11 @@ pub fn prefix_last_segment(path: &mut Path, prefix: &str) {
 
 fn _prefixed_vec(
     prefix: &str,
-    input: TokenStream,
-    ty: &TokenStream2
-) -> Result<TokenStream2> {
+    input: proc_macro::TokenStream,
+    ty: &TokenStream
+) -> Result<TokenStream> {
     // Parse a comma-separated list of paths.
-    let mut paths = <Punctuated<Path, Comma>>::parse_terminated
-        .parse(input)
-        .map_err(syn_to_diag)?;
+    let mut paths = <Punctuated<Path, Token![,]>>::parse_terminated.parse(input)?;
 
     // Prefix the last segment in each path with `prefix`.
     paths.iter_mut().for_each(|p| prefix_last_segment(p, prefix));
@@ -35,39 +33,47 @@ fn _prefixed_vec(
     Ok(quote!(vec![#(#prefixed_mapped_paths),*]))
 }
 
-fn prefixed_vec(prefix: &str, input: TokenStream, ty: TokenStream2) -> TokenStream {
-    let vec = _prefixed_vec(prefix, input, &ty)
-        .map_err(|diag| diag.emit())
-        .unwrap_or_else(|_| quote!(vec![]));
-
-    quote!({
-        let __vector: Vec<#ty> = #vec;
-        __vector
-    }).into()
+fn prefixed_vec(
+    prefix: &str,
+    input: proc_macro::TokenStream,
+    ty: TokenStream
+) -> TokenStream {
+    define_vars_and_mods!(_Vec);
+    _prefixed_vec(prefix, input, &ty)
+        .map(|vec| quote!({
+            let __vector: #_Vec<#ty> = #vec;
+            __vector
+        }))
+        .unwrap_or_else(|diag| {
+            let diag_tokens = diag.emit_as_expr_tokens();
+            quote!({
+                #diag_tokens
+                let __vec: #_Vec<#ty> = vec![];
+                __vec
+            })
+        })
 }
 
-pub fn routes_macro(input: TokenStream) -> TokenStream {
+pub fn routes_macro(input: proc_macro::TokenStream) -> TokenStream {
     prefixed_vec(ROUTE_STRUCT_PREFIX, input, quote!(::rocket::Route))
 }
 
-pub fn catchers_macro(input: TokenStream) -> TokenStream {
+pub fn catchers_macro(input: proc_macro::TokenStream) -> TokenStream {
     prefixed_vec(CATCH_STRUCT_PREFIX, input, quote!(::rocket::Catcher))
 }
 
-pub fn uri_macro(input: TokenStream) -> TokenStream {
-    uri::_uri_macro(input)
-        .map_err(|diag| diag.emit())
-        .unwrap_or_else(|_| quote!(()).into())
+pub fn uri_macro(input: proc_macro::TokenStream) -> TokenStream {
+    uri::_uri_macro(input.into())
+        .unwrap_or_else(|diag| diag.emit_as_expr_tokens())
 }
 
-pub fn uri_internal_macro(input: TokenStream) -> TokenStream {
-    uri::_uri_internal_macro(input)
-        .map_err(|diag| diag.emit())
-        .unwrap_or_else(|_| quote!(()).into())
+pub fn uri_internal_macro(input: proc_macro::TokenStream) -> TokenStream {
+    let tokens = uri::_uri_internal_macro(input.into())
+        .unwrap_or_else(|diag| diag.emit_as_expr_tokens());
+    tokens
 }
 
-pub fn guide_tests_internal(input: TokenStream) -> TokenStream {
+pub fn guide_tests_internal(input: proc_macro::TokenStream) -> TokenStream {
     test_guide::_macro(input)
-        .map_err(|diag| diag.emit())
-        .unwrap_or_else(|_| quote!(()).into())
+        .unwrap_or_else(|diag| diag.emit_as_item_tokens())
 }

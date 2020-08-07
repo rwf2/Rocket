@@ -1,5 +1,3 @@
-#![feature(proc_macro_hygiene)]
-
 #[macro_use] extern crate rocket;
 
 #[cfg(test)] mod tests;
@@ -21,10 +19,11 @@ struct Login {
 #[derive(Debug)]
 struct User(usize);
 
+#[rocket::async_trait]
 impl<'a, 'r> FromRequest<'a, 'r> for User {
     type Error = std::convert::Infallible;
 
-    fn from_request(request: &'a Request<'r>) -> request::Outcome<User, Self::Error> {
+    async fn from_request(request: &'a Request<'r>) -> request::Outcome<User, Self::Error> {
         request.cookies()
             .get_private("user_id")
             .and_then(|cookie| cookie.value().parse().ok())
@@ -79,12 +78,9 @@ fn index() -> Redirect {
     Redirect::to(uri!(login_page))
 }
 
+#[launch]
 fn rocket() -> rocket::Rocket {
     rocket::ignite()
         .attach(Template::fairing())
         .mount("/", routes![index, user_index, login, logout, login_user, login_page])
-}
-
-fn main() {
-    rocket().launch();
 }

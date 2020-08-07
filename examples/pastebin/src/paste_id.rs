@@ -35,11 +35,7 @@ impl<'a> fmt::Display for PasteID<'a> {
 
 /// Returns `true` if `id` is a valid paste ID and `false` otherwise.
 fn valid_id(id: &str) -> bool {
-    id.chars().all(|c| {
-        (c >= 'a' && c <= 'z')
-            || (c >= 'A' && c <= 'Z')
-            || (c >= '0' && c <= '9')
-    })
+    id.chars().all(|c| c.is_ascii_alphanumeric())
 }
 
 /// Returns an instance of `PasteID` if the path segment is a valid ID.

@@ -38,7 +38,6 @@ use crate::ext::IntoCollection;
 /// use rocket::http::ContentType;
 /// use rocket::response::Response;
 ///
-/// # #[allow(unused_variables)]
 /// let response = Response::build().header(ContentType::HTML).finalize();
 /// ```
 #[derive(Debug, Clone, PartialEq, Hash)]

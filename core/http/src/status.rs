@@ -154,7 +154,7 @@ impl Status {
     /// assert_eq!(custom.to_string(), "299 Somewhat Successful".to_string());
     /// ```
     #[inline(always)]
-    pub fn new(code: u16, reason: &'static str) -> Status {
+    pub const fn new(code: u16, reason: &'static str) -> Status {
         Status { code, reason }
     }
 
@@ -184,7 +184,7 @@ impl Status {
     /// let custom = Status::new(600, "Bizarre");
     /// assert_eq!(custom.class(), StatusClass::Unknown);
     /// ```
-    pub fn class(&self) -> StatusClass {
+    pub fn class(self) -> StatusClass {
         match self.code / 100 {
             1 => StatusClass::Informational,
             2 => StatusClass::Success,

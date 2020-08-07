@@ -50,8 +50,6 @@
 //! In your application's source code, one-time:
 //!
 //! ```rust
-//! #![feature(proc_macro_hygiene)]
-//!
 //! #[macro_use] extern crate rocket;
 //! #[macro_use] extern crate rocket_contrib;
 //!
@@ -62,10 +60,9 @@
 //! #[database("sqlite_logs")]
 //! struct LogsDbConn(diesel::SqliteConnection);
 //!
-//! fn main() {
-//!     rocket::ignite()
-//!        .attach(LogsDbConn::fairing())
-//!        .launch();
+//! #[launch]
+//! fn rocket() -> rocket::Rocket {
+//!     rocket::ignite().attach(LogsDbConn::fairing())
 //! }
 //! # } fn main() {}
 //! ```
@@ -73,8 +70,6 @@
 //! Whenever a connection to the database is needed:
 //!
 //! ```rust
-//! # #![feature(proc_macro_hygiene)]
-//! #
 //! # #[macro_use] extern crate rocket;
 //! # #[macro_use] extern crate rocket_contrib;
 //! #
@@ -143,14 +138,15 @@
 //! The example below does just this:
 //!
 //! ```rust
-//! extern crate rocket;
+//! #[macro_use] extern crate rocket;
 //!
 //! # #[cfg(feature = "diesel_sqlite_pool")]
 //! # mod test {
 //! use std::collections::HashMap;
 //! use rocket::config::{Config, Environment, Value};
 //!
-//! fn main() {
+//! #[launch]
+//! fn rocket() -> rocket::Rocket {
 //!     let mut database_config = HashMap::new();
 //!     let mut databases = HashMap::new();
 //!
@@ -164,7 +160,7 @@
 //!         .finalize()
 //!         .unwrap();
 //!
-//!     rocket::custom(config).launch();
+//!     rocket::custom(config)
 //! }
 //! # } fn main() {}
 //! ```
@@ -239,7 +235,7 @@
 //!      Returns a fairing that initializes the associated database connection
 //!      pool.
 //!
-//!   * `fn get_one(&Rocket) -> Option<Self>`
+//!   * `fn get_one(&Cargo) -> Option<Self>`
 //!
 //!     Retrieves a connection from the configured pool. Returns `Some` as long
 //!     as `Self::fairing()` has been attached and there is at least one
@@ -250,7 +246,7 @@
 //! together, a use of the `#[database]` attribute looks as follows:
 //!
 //! ```rust
-//! # extern crate rocket;
+//! # #[macro_use] extern crate rocket;
 //! # #[macro_use] extern crate rocket_contrib;
 //! #
 //! # #[cfg(feature = "diesel_sqlite_pool")]
@@ -263,7 +259,8 @@
 //! #[database("my_db")]
 //! struct MyDatabase(diesel::SqliteConnection);
 //!
-//! fn main() {
+//! #[launch]
+//! fn rocket() -> rocket::Rocket {
 //! #     let mut db_config = HashMap::new();
 //! #     let mut databases = HashMap::new();
 //! #
@@ -276,9 +273,7 @@
 //! #         .finalize()
 //! #         .unwrap();
 //! #
-//!     rocket::custom(config)
-//!         .attach(MyDatabase::fairing())
-//!         .launch();
+//!     rocket::custom(config).attach(MyDatabase::fairing())
 //! }
 //! # } fn main() {}
 //! ```
@@ -289,8 +284,6 @@
 //! connection to a given database:
 //!
 //! ```rust
-//! # #![feature(proc_macro_hygiene)]
-//! #
 //! # #[macro_use] extern crate rocket;
 //! # #[macro_use] extern crate rocket_contrib;
 //! #
@@ -311,8 +304,6 @@
 //! connection type:
 //!
 //! ```rust
-//! # #![feature(proc_macro_hygiene)]
-//! #
 //! # #[macro_use] extern crate rocket;
 //! # #[macro_use] extern crate rocket_contrib;
 //! #
@@ -349,33 +340,24 @@
 //! | Kind     | Driver                | Version   | `Poolable` Type                | Feature                |
 //! |----------|-----------------------|-----------|--------------------------------|------------------------|
 //! | MySQL    | [Diesel]              | `1`       | [`diesel::MysqlConnection`]    | `diesel_mysql_pool`    |
-//! | MySQL    | [`rust-mysql-simple`] | `17`      | [`mysql::Conn`]                | `mysql_pool`           |
+//! | MySQL    | [`rust-mysql-simple`] | `18`      | [`mysql::Conn`]                | `mysql_pool`           |
 //! | Postgres | [Diesel]              | `1`       | [`diesel::PgConnection`]       | `diesel_postgres_pool` |
 //! | Postgres | [Rust-Postgres]       | `0.17`    | [`postgres::Client`]           | `postgres_pool`        |
 //! | Sqlite   | [Diesel]              | `1`       | [`diesel::SqliteConnection`]   | `diesel_sqlite_pool`   |
-//! | Sqlite   | [`Rusqlite`]          | `0.16`    | [`rusqlite::Connection`]       | `sqlite_pool`          |
-//! | Neo4j    | [`rusted_cypher`]     | `1`       | [`rusted_cypher::GraphClient`] | `cypher_pool`          |
-//! | Redis    | [`redis-rs`]          | `0.13`    | [`redis::Connection`]          | `redis_pool`           |
-//! | MongoDB  | [`mongodb`]           | `0.3.12`  | [`mongodb::db::Database`]      | `mongodb_pool`         |
+//! | Sqlite   | [`Rusqlite`]          | `0.23`    | [`rusqlite::Connection`]       | `sqlite_pool`          |
 //! | Memcache | [`memcache`]          | `0.14`    | [`memcache::Client`]           | `memcache_pool`        |
 //!
 //! [Diesel]: https://diesel.rs
-//! [`redis::Connection`]: https://docs.rs/redis/0.13.0/redis/struct.Connection.html
-//! [`rusted_cypher::GraphClient`]: https://docs.rs/rusted_cypher/1.1.0/rusted_cypher/graph/struct.GraphClient.html
-//! [`rusqlite::Connection`]: https://docs.rs/rusqlite/0.16.0/rusqlite/struct.Connection.html
+//! [`rusqlite::Connection`]: https://docs.rs/rusqlite/0.23.0/rusqlite/struct.Connection.html
 //! [`diesel::SqliteConnection`]: http://docs.diesel.rs/diesel/prelude/struct.SqliteConnection.html
 //! [`postgres::Client`]: https://docs.rs/postgres/0.17/postgres/struct.Client.html
 //! [`diesel::PgConnection`]: http://docs.diesel.rs/diesel/pg/struct.PgConnection.html
-//! [`mysql::Conn`]: https://docs.rs/mysql/17/mysql/struct.Conn.html
+//! [`mysql::Conn`]: https://docs.rs/mysql/18/mysql/struct.Conn.html
 //! [`diesel::MysqlConnection`]: http://docs.diesel.rs/diesel/mysql/struct.MysqlConnection.html
-//! [`redis-rs`]: https://github.com/mitsuhiko/redis-rs
-//! [`rusted_cypher`]: https://github.com/livioribeiro/rusted-cypher
 //! [`Rusqlite`]: https://github.com/jgallagher/rusqlite
 //! [Rust-Postgres]: https://github.com/sfackler/rust-postgres
 //! [`rust-mysql-simple`]: https://github.com/blackbeam/rust-mysql-simple
 //! [`diesel::PgConnection`]: http://docs.diesel.rs/diesel/pg/struct.PgConnection.html
-//! [`mongodb`]: https://github.com/mongodb-labs/mongo-rust-driver-prototype
-//! [`mongodb::db::Database`]: https://docs.rs/mongodb/0.3.12/mongodb/db/type.Database.html
 //! [`memcache`]: https://github.com/aisk/rust-memcache
 //! [`memcache::Client`]: https://docs.rs/memcache/0.14/memcache/struct.Client.html
 //!
@@ -394,15 +376,18 @@
 //!
 //! [`FromRequest`]: rocket::request::FromRequest
 //! [request guards]: rocket::request::FromRequest
+//! [`Poolable`]: crate::databases::Poolable
 
 pub extern crate r2d2;
+
+#[doc(hidden)]
+pub use tokio::task::spawn_blocking;
 
 #[cfg(any(feature = "diesel_sqlite_pool",
           feature = "diesel_postgres_pool",
           feature = "diesel_mysql_pool"))]
 pub extern crate diesel;
 
-use std::collections::BTreeMap;
 use std::fmt::{self, Display, Formatter};
 use std::marker::{Send, Sized};
 
@@ -420,15 +405,6 @@ use self::r2d2::ManageConnection;
 
 #[cfg(feature = "sqlite_pool")] pub extern crate rusqlite;
 #[cfg(feature = "sqlite_pool")] pub extern crate r2d2_sqlite;
-
-#[cfg(feature = "cypher_pool")] pub extern crate rusted_cypher;
-#[cfg(feature = "cypher_pool")] pub extern crate r2d2_cypher;
-
-#[cfg(feature = "redis_pool")] pub extern crate redis;
-#[cfg(feature = "redis_pool")] pub extern crate r2d2_redis;
-
-#[cfg(feature = "mongodb_pool")] pub extern crate mongodb;
-#[cfg(feature = "mongodb_pool")] pub extern crate r2d2_mongodb;
 
 #[cfg(feature = "memcache_pool")] pub extern crate memcache;
 #[cfg(feature = "memcache_pool")] pub extern crate r2d2_memcache;
@@ -467,7 +443,7 @@ pub struct DatabaseConfig<'a> {
     pub pool_size: u32,
     /// Any extra options that are included in the configuration, **excluding**
     /// the url and pool_size.
-    pub extras: BTreeMap<String, Value>,
+    pub extras: rocket::config::Map<String, Value>,
 }
 
 /// A wrapper around `r2d2::Error`s or a custom database error type.
@@ -544,16 +520,17 @@ pub enum ConfigError {
 /// #     .extra("databases", databases)
 /// #     .expect("custom config okay");
 /// #
-/// # rocket::custom(config).attach(AdHoc::on_attach("Testing", |rocket| {
+/// # rocket::custom(config).attach(AdHoc::on_attach("Testing", |mut rocket| async {
 /// # {
-/// let config = database_config("my_db", rocket.config()).unwrap();
+/// let rocket_config = rocket.config().await;
+/// let config = database_config("my_db", rocket_config).unwrap();
 /// assert_eq!(config.url, "db/db.sqlite");
 /// assert_eq!(config.pool_size, 25);
 ///
-/// let other_config = database_config("my_other_db", rocket.config()).unwrap();
+/// let other_config = database_config("my_other_db", rocket_config).unwrap();
 /// assert_eq!(other_config.url, "mysql://root:root@localhost/database");
 ///
-/// let error = database_config("invalid_db", rocket.config()).unwrap_err();
+/// let error = database_config("invalid_db", rocket_config).unwrap_err();
 /// assert_eq!(error, ConfigError::MissingKey);
 /// # }
 /// #
@@ -630,8 +607,6 @@ impl<'a> Display for ConfigError {
 ///   * `postgres::Connection`
 ///   * `mysql::Conn`
 ///   * `rusqlite::Connection`
-///   * `rusted_cypher::GraphClient`
-///   * `redis::Connection`
 ///
 /// # Implementation Guide
 ///
@@ -791,40 +766,6 @@ impl Poolable for rusqlite::Connection {
         let manager = r2d2_sqlite::SqliteConnectionManager::file(config.url);
 
         r2d2::Pool::builder().max_size(config.pool_size).build(manager)
-    }
-}
-
-#[cfg(feature = "cypher_pool")]
-impl Poolable for rusted_cypher::GraphClient {
-    type Manager = r2d2_cypher::CypherConnectionManager;
-    type Error = r2d2::Error;
-
-    fn pool(config: DatabaseConfig<'_>) -> Result<r2d2::Pool<Self::Manager>, Self::Error> {
-        let manager = r2d2_cypher::CypherConnectionManager { url: config.url.to_string() };
-        r2d2::Pool::builder().max_size(config.pool_size).build(manager)
-    }
-}
-
-#[cfg(feature = "redis_pool")]
-impl Poolable for redis::Connection {
-    type Manager = r2d2_redis::RedisConnectionManager;
-    type Error = DbError<redis::RedisError>;
-
-    fn pool(config: DatabaseConfig<'_>) -> Result<r2d2::Pool<Self::Manager>, Self::Error> {
-        let manager = r2d2_redis::RedisConnectionManager::new(config.url).map_err(DbError::Custom)?;
-        r2d2::Pool::builder().max_size(config.pool_size).build(manager)
-            .map_err(DbError::PoolError)
-    }
-}
-
-#[cfg(feature = "mongodb_pool")]
-impl Poolable for mongodb::db::Database {
-    type Manager = r2d2_mongodb::MongodbConnectionManager;
-    type Error = DbError<mongodb::Error>;
-
-    fn pool(config: DatabaseConfig<'_>) -> Result<r2d2::Pool<Self::Manager>, Self::Error> {
-        let manager = r2d2_mongodb::MongodbConnectionManager::new_with_uri(config.url).map_err(DbError::Custom)?;
-        r2d2::Pool::builder().max_size(config.pool_size).build(manager).map_err(DbError::PoolError)
     }
 }
 

@@ -1,8 +1,8 @@
-use quote::ToTokens;
-use proc_macro::TokenStream;
-use devise::{*, ext::TypeExt};
-use devise::proc_macro2::TokenStream as TokenStream2;
 
+use quote::ToTokens;
+use devise::{*, ext::{TypeExt, SpanDiagnosticExt}};
+
+use crate::proc_macro2::TokenStream;
 use crate::http_codegen::{ContentType, Status};
 
 #[derive(Default, FromMeta)]
@@ -16,11 +16,11 @@ struct FieldAttr {
     ignore: bool,
 }
 
-pub fn derive_responder(input: TokenStream) -> TokenStream {
-    DeriveGenerator::build_for(input, quote!(impl<'__r> ::rocket::response::Responder<'__r>))
+pub fn derive_responder(input: proc_macro::TokenStream) -> TokenStream {
+    DeriveGenerator::build_for(input, quote!(impl<'__r, '__o: '__r> ::rocket::response::Responder<'__r, '__o>))
         .generic_support(GenericSupport::Lifetime)
         .data_support(DataSupport::Struct | DataSupport::Enum)
-        .replace_generic(0, 0)
+        .replace_generic(1, 0)
         .validate_generics(|_, generics| match generics.lifetimes().count() > 1 {
             true => Err(generics.span().error("only one lifetime is supported")),
             false => Ok(())
@@ -32,18 +32,18 @@ pub fn derive_responder(input: TokenStream) -> TokenStream {
         .function(|_, inner| quote! {
             fn respond_to(
                 self,
-                __req: &::rocket::Request
-            ) -> ::rocket::response::Result<'__r> {
+                __req: &'__r ::rocket::request::Request
+            ) -> ::rocket::response::Result<'__o> {
                 #inner
             }
         })
         .try_map_fields(|_, fields| {
             define_vars_and_mods!(_Ok);
-            fn set_header_tokens<T: ToTokens + Spanned>(item: T) -> TokenStream2 {
+            fn set_header_tokens<T: ToTokens + Spanned>(item: T) -> TokenStream {
                 quote_spanned!(item.span().into() => __res.set_header(#item);)
             }
 
-            let attr = ItemAttr::from_attrs("response", fields.parent_attrs())
+            let attr = ItemAttr::from_attrs("response", fields.parent.attrs())
                 .unwrap_or_else(|| Ok(Default::default()))?;
 
             let responder = fields.iter().next().map(|f| {
@@ -78,5 +78,5 @@ pub fn derive_responder(input: TokenStream) -> TokenStream {
                 #_Ok(__res)
             })
         })
-        .to_tokens()
+        .to_tokens2()
 }

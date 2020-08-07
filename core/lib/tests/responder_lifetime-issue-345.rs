@@ -1,10 +1,9 @@
-#![feature(proc_macro_hygiene)]
 #![allow(dead_code)] // This test is only here so that we can ensure it compiles.
 
 #[macro_use] extern crate rocket;
 
-use rocket::State;
-use rocket::response::{self, Responder};
+use rocket::{Request, State};
+use rocket::response::{Responder, Result};
 
 struct SomeState;
 
@@ -13,9 +12,9 @@ pub struct CustomResponder<'r, R> {
     state: &'r SomeState,
 }
 
-impl<'r, R: Responder<'r>> Responder<'r> for CustomResponder<'r, R> {
-    fn respond_to(self, _: &rocket::Request) -> response::Result<'r> {
-        unimplemented!()
+impl<'r, 'o: 'r, R: Responder<'r, 'o>> Responder<'r, 'o> for CustomResponder<'r, R> {
+    fn respond_to(self, req: &'r Request<'_>) -> Result<'o> {
+        self.responder.respond_to(req)
     }
 }
 

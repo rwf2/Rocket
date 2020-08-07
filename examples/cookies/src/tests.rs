@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use super::rocket;
-use rocket::local::Client;
+use rocket::local::blocking::Client;
 use rocket::http::*;
 use rocket_contrib::templates::Template;
 
@@ -24,13 +24,13 @@ fn test_submit() {
 fn test_body(optional_cookie: Option<Cookie<'static>>, expected_body: String) {
     // Attach a cookie if one is given.
     let client = Client::new(rocket()).unwrap();
-    let mut response = match optional_cookie {
+    let response = match optional_cookie {
         Some(cookie) => client.get("/").cookie(cookie).dispatch(),
         None => client.get("/").dispatch(),
     };
 
     assert_eq!(response.status(), Status::Ok);
-    assert_eq!(response.body_string(), Some(expected_body));
+    assert_eq!(response.into_string(), Some(expected_body));
 }
 
 #[test]
@@ -39,11 +39,11 @@ fn test_index() {
 
     // Render the template with an empty context.
     let mut context: HashMap<&str, &str> = HashMap::new();
-    let template = Template::show(client.rocket(), "index", &context).unwrap();
+    let template = Template::show(client.cargo(), "index", &context).unwrap();
     test_body(None, template);
 
     // Render the template with a context that contains the message.
     context.insert("message", "Hello from Rocket!");
-    let template = Template::show(client.rocket(), "index", &context).unwrap();
+    let template = Template::show(client.cargo(), "index", &context).unwrap();
     test_body(Some(Cookie::new("message", "Hello from Rocket!")), template);
 }

@@ -1,5 +1,3 @@
-#![feature(proc_macro_hygiene)]
-
 #[macro_use] extern crate rocket;
 
 #[cfg(test)]
@@ -26,6 +24,7 @@ fn login() -> &'static str {
     "Hi! That user doesn't exist. Maybe you need to log in?"
 }
 
-fn main() {
-    rocket::ignite().mount("/", routes![root, user, login]).launch();
+#[launch]
+fn rocket() -> rocket::Rocket {
+    rocket::ignite().mount("/", routes![root, user, login])
 }

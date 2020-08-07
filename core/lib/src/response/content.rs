@@ -23,8 +23,8 @@
 //! ```
 
 use crate::request::Request;
-use crate::response::{Response, Responder};
-use crate::http::{Status, ContentType};
+use crate::response::{self, Response, Responder};
+use crate::http::ContentType;
 
 /// Sets the Content-Type of a `Responder` to a chosen value.
 ///
@@ -46,9 +46,8 @@ pub struct Content<R>(pub ContentType, pub R);
 
 /// Overrides the Content-Type of the response to the wrapped `ContentType` then
 /// delegates the remainder of the response to the wrapped responder.
-impl<'r, R: Responder<'r>> Responder<'r> for Content<R> {
-    #[inline(always)]
-    fn respond_to(self, req: &Request<'_>) -> Result<Response<'r>, Status> {
+impl<'r, 'o: 'r, R: Responder<'r, 'o>> Responder<'r, 'o> for Content<R> {
+    fn respond_to(self, req: &'r Request<'_>) -> response::Result<'o> {
         Response::build()
             .merge(self.1.respond_to(req)?)
             .header(self.0)
@@ -71,8 +70,8 @@ macro_rules! ctrs {
 
             /// Sets the Content-Type of the response then delegates the
             /// remainder of the response to the wrapped responder.
-            impl<'r, R: Responder<'r>> Responder<'r> for $name<R> {
-                fn respond_to(self, req: &Request<'_>) -> Result<Response<'r>, Status> {
+            impl<'r, 'o: 'r, R: Responder<'r, 'o>> Responder<'r, 'o> for $name<R> {
+                fn respond_to(self, req: &'r Request<'_>) -> response::Result<'o> {
                     Content(ContentType::$ct, self.0).respond_to(req)
                 }
             }

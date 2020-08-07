@@ -1,10 +1,10 @@
-use rocket::{Request, State, Outcome};
+use rocket::{Request, State};
 use rocket::http::Status;
 use rocket::request::{self, FromRequest};
 
 use crate::templates::ContextManager;
 
-/// Request guard for dynamiclly querying template metadata.
+/// Request guard for dynamically querying template metadata.
 ///
 /// # Usage
 ///
@@ -12,7 +12,6 @@ use crate::templates::ContextManager;
 /// used as a request guard in any request handler.
 ///
 /// ```rust
-/// # #![feature(proc_macro_hygiene)]
 /// # #[macro_use] extern crate rocket;
 /// # #[macro_use] extern crate rocket_contrib;
 /// use rocket_contrib::templates::{Template, Metadata};
@@ -46,7 +45,6 @@ impl Metadata<'_> {
     /// # Example
     ///
     /// ```rust
-    /// # #![feature(proc_macro_hygiene)]
     /// # #[macro_use] extern crate rocket;
     /// # extern crate rocket_contrib;
     /// #
@@ -67,7 +65,6 @@ impl Metadata<'_> {
     /// # Example
     ///
     /// ```rust
-    /// # #![feature(proc_macro_hygiene)]
     /// # #[macro_use] extern crate rocket;
     /// # extern crate rocket_contrib;
     /// #
@@ -87,18 +84,19 @@ impl Metadata<'_> {
 /// Retrieves the template metadata. If a template fairing hasn't been attached,
 /// an error is printed and an empty `Err` with status `InternalServerError`
 /// (`500`) is returned.
-impl<'a> FromRequest<'a, '_> for Metadata<'a> {
+#[rocket::async_trait]
+impl<'a, 'r> FromRequest<'a, 'r> for Metadata<'a> {
     type Error = ();
 
-    fn from_request(request: &'a Request<'_>) -> request::Outcome<Self, ()> {
-        request.guard::<State<'_, ContextManager>>()
+    async fn from_request(request: &'a Request<'r>) -> request::Outcome<Self, ()> {
+        request.guard::<State<'_, ContextManager>>().await
             .succeeded()
-            .and_then(|cm| Some(Outcome::Success(Metadata(cm.inner()))))
+            .and_then(|cm| Some(request::Outcome::Success(Metadata(cm.inner()))))
             .unwrap_or_else(|| {
                 error_!("Uninitialized template context: missing fairing.");
                 info_!("To use templates, you must attach `Template::fairing()`.");
                 info_!("See the `Template` documentation for more information.");
-                Outcome::Failure((Status::InternalServerError, ()))
+                request::Outcome::Failure((Status::InternalServerError, ()))
             })
     }
 }

@@ -59,7 +59,7 @@ use rocket::response::content;
 
 #[get("/")]
 fn json() -> content::Json<&'static str> {
-    content::Json("{ 'hi': 'world' }")
+    content::Json("{ \"hi\": \"world\" }")
 }
 ```
 
@@ -70,10 +70,9 @@ fn json() -> content::Json<&'static str> {
 
 ### Errors
 
-Responders may fail; they need not _always_ generate a response. Instead, they
-can return an `Err` with a given status code. When this happens, Rocket forwards
-the request to the [error catcher](../requests/#error-catchers) for the
-given status code.
+Responders may fail instead of generating a response by returning an `Err` with
+a status code. When this happens, Rocket forwards the request to the [error
+catcher](../requests/#error-catchers) for that status code.
 
 If an error catcher has been registered for the given status code, Rocket will
 invoke it. The catcher creates and returns a response to the client. If no error
@@ -185,14 +184,15 @@ use rocket::response::{self, Response, Responder};
 use rocket::http::ContentType;
 
 # struct String(std::string::String);
-impl<'a> Responder<'a> for String {
-    fn respond_to(self, _: &Request) -> response::Result<'a> {
+#[rocket::async_trait]
+impl<'r> Responder<'r, 'static> for String {
+    fn respond_to(self, _: &'r Request<'_>) -> response::Result<'static> {
         Response::build()
             .header(ContentType::Plain)
             # /*
-            .sized_body(Cursor::new(self))
+            .sized_body(self.len(), Cursor::new(self))
             # */
-            # .sized_body(Cursor::new(self.0))
+            # .sized_body(self.0.len(), Cursor::new(self.0))
             .ok()
     }
 }
@@ -230,8 +230,8 @@ found and a `404` when a file is not found in just 4, idiomatic lines:
 use rocket::response::NamedFile;
 
 #[get("/<file..>")]
-fn files(file: PathBuf) -> Option<NamedFile> {
-    NamedFile::open(Path::new("static/").join(file)).ok()
+async fn files(file: PathBuf) -> Option<NamedFile> {
+    NamedFile::open(Path::new("static/").join(file)).await.ok()
 }
 ```
 
@@ -256,9 +256,9 @@ use rocket::response::NamedFile;
 use rocket::response::status::NotFound;
 
 #[get("/<file..>")]
-fn files(file: PathBuf) -> Result<NamedFile, NotFound<String>> {
+async fn files(file: PathBuf) -> Result<NamedFile, NotFound<String>> {
     let path = Path::new("static/").join(file);
-    NamedFile::open(&path).map_err(|e| NotFound(e.to_string()))
+    NamedFile::open(&path).await.map_err(|e| NotFound(e.to_string()))
 }
 ```
 
@@ -299,21 +299,24 @@ library. Among these are:
 The `Stream` type deserves special attention. When a large amount of data needs
 to be sent to the client, it is better to stream the data to the client to avoid
 consuming large amounts of memory. Rocket provides the [`Stream`] type, making
-this easy. The `Stream` type can be created from any `Read` type. For example,
-to stream from a local Unix stream, we might write:
+this easy. The `Stream` type can be created from any `AsyncRead` type. For
+example, to stream from a local Unix stream, we might write:
 
 ```rust
 # #[macro_use] extern crate rocket;
 # fn main() {}
 
-# #[cfg(unix)]
 # mod test {
-use std::os::unix::net::UnixStream;
+use std::net::SocketAddr;
+
 use rocket::response::{Stream, Debug};
 
+use rocket::tokio::net::TcpStream;
+
 #[get("/stream")]
-fn stream() -> Result<Stream<UnixStream>, Debug<std::io::Error>> {
-    Ok(UnixStream::connect("/path/to/my/socket").map(Stream::from)?)
+async fn stream() -> Result<Stream<TcpStream>, Debug<std::io::Error>> {
+    let addr = SocketAddr::from(([127, 0, 0, 1], 9999));
+    Ok(TcpStream::connect(addr).await.map(Stream::from)?)
 }
 # }
 ```
@@ -392,7 +395,6 @@ fairings. To attach the template fairing, simply call
 `.attach(Template::fairing())` on an instance of `Rocket` as follows:
 
 ```rust
-# #![feature(proc_macro_hygiene)]
 # #[macro_use] extern crate rocket;
 
 # use rocket_contrib::templates::Template;
@@ -463,7 +465,6 @@ fn person(name: String, age: Option<u8>) { /* .. */ }
 URIs to `person` can be created as follows:
 
 ```rust
-# #![feature(proc_macro_hygiene)]
 # #[macro_use] extern crate rocket;
 
 # #[get("/person/<name>?<age>")]
@@ -530,7 +531,6 @@ in the query part of a URI, derive using [`UriDisplayQuery`].
 As an example, consider the following form structure and route:
 
 ```rust
-# #![feature(proc_macro_hygiene)]
 # #[macro_use] extern crate rocket;
 # fn main() {}
 
@@ -552,7 +552,6 @@ automatically generated, allowing for URIs to `add_user` to be generated using
 `uri!`:
 
 ```rust
-# #![feature(proc_macro_hygiene)]
 # #[macro_use] extern crate rocket;
 
 # use rocket::http::RawStr;
@@ -626,7 +625,6 @@ Conversions _nest_. For instance, a value of type `T` can be supplied when a
 value of type `Option<Form<T>>` is expected:
 
 ```rust
-# #![feature(proc_macro_hygiene)]
 # #[macro_use] extern crate rocket;
 
 # use rocket::http::RawStr;

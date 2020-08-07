@@ -50,14 +50,11 @@ And finally, create a skeleton Rocket application to work off of in
 `src/main.rs`:
 
 ```rust
-#![feature(proc_macro_hygiene)]
-
 #[macro_use] extern crate rocket;
 
-fn main() {
-    # if false {
-    rocket::ignite().launch();
-    # }
+#[launch]
+fn rocket() -> rocket::Rocket {
+    rocket::ignite()
 }
 ```
 
@@ -109,14 +106,12 @@ Remember that routes first need to be mounted before Rocket dispatches requests
 to them. To mount the `index` route, modify the main function so that it reads:
 
 ```rust
-# #![feature(proc_macro_hygiene)]
 # #[macro_use] extern crate rocket;
 # #[get("/")] fn index() { }
 
-fn main() {
-    # if false {
-    rocket::ignite().mount("/", routes![index]).launch();
-    # }
+#[launch]
+fn rocket() -> rocket::Rocket {
+    rocket::ignite().mount("/", routes![index])
 }
 ```
 
@@ -215,11 +210,9 @@ mkdir upload
 For the `upload` route, we'll need to `use` a few items:
 
 ```rust
-use std::io;
-use std::path::Path;
-
 use rocket::Data;
 use rocket::http::RawStr;
+use rocket::response::Debug;
 ```
 
 The [Data](@api/rocket/data/struct.Data.html) structure is key
@@ -267,36 +260,33 @@ Here's our version (in `src/main.rs`):
 #     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result { Ok(()) }
 # }
 
-use std::path::Path;
-
-use rocket::Data;
 use rocket::response::Debug;
+use rocket::data::{Data, ToByteUnit};
 
 #[post("/", data = "<paste>")]
-fn upload(paste: Data) -> Result<String, Debug<std::io::Error>> {
+async fn upload(paste: Data) -> Result<String, Debug<std::io::Error>> {
     let id = PasteId::new(3);
     let filename = format!("upload/{id}", id = id);
     let url = format!("{host}/{id}\n", host = "http://localhost:8000", id = id);
 
-    // Write the paste out to the file and return the URL.
-    paste.stream_to_file(Path::new(&filename))?;
+    // Write the paste out, limited to 128KiB, and return the URL.
+    paste.open(128.kibibytes()).stream_to_file(filename).await?;
     Ok(url)
 }
 ```
 
-Ensure that the route is mounted at the root path:
+Note the [`kibibytes()`] method call: this method comes from the [`ToByteUnit`]
+extension trait. Ensure that the route is mounted at the root path:
 
 ```rust
-# #![feature(proc_macro_hygiene)]
 # #[macro_use] extern crate rocket;
 
 # #[get("/")] fn index() {}
 # #[post("/")] fn upload() {}
 
-fn main() {
-    # if false {
-    rocket::ignite().mount("/", routes![index, upload]).launch();
-    # }
+#[launch]
+fn rocket() -> rocket::Rocket {
+    rocket::ignite().mount("/", routes![index, upload])
 }
 ```
 
@@ -308,7 +298,7 @@ with the correct ID:
 # in the project root
 cargo run
 
-# in a seperate terminal
+# in a separate terminal
 echo "Hello, world." | curl --data-binary @- http://localhost:8000
 # => http://localhost:8000/eGs
 
@@ -320,6 +310,9 @@ cat upload/* # ensure that contents are correct
 
 Note that since we haven't created a `GET /<id>` route, visiting the returned URL
 will result in a **404**. We'll fix that now.
+
+[`kibibytes()`]: @api/rocket/data/trait.ToByteUnit.html#tymethod.kibibytes
+[`ToByteUnit`]: @api/rocket/data/trait.ToByteUnit.html
 
 ## Retrieving Pastes
 
@@ -337,30 +330,28 @@ paste doesn't exist.
 ```rust
 # #[macro_use] extern crate rocket;
 
-use std::fs::File;
 use rocket::http::RawStr;
+use rocket::tokio::fs::File;
 
 #[get("/<id>")]
-fn retrieve(id: &RawStr) -> Option<File> {
+async fn retrieve(id: &RawStr) -> Option<File> {
     let filename = format!("upload/{id}", id = id);
-    File::open(&filename).ok()
+    File::open(&filename).await.ok()
 }
 ```
 
 Make sure that the route is mounted at the root path:
 
 ```rust
-# #![feature(proc_macro_hygiene)]
 # #[macro_use] extern crate rocket;
 
 # #[get("/")] fn index() {}
 # #[post("/")] fn upload() {}
 # #[get("/<id>")] fn retrieve(id: String) {}
 
-fn main() {
-    # if false {
-    rocket::ignite().mount("/", routes![index, upload, retrieve]).launch();
-    # }
+#[launch]
+fn rocket() -> rocket::Rocket {
+    rocket::ignite().mount("/", routes![index, upload, retrieve])
 }
 ```
 
@@ -423,14 +414,14 @@ the `retrieve` route, preventing attacks on the `retrieve` route:
 ```rust
 # #[macro_use] extern crate rocket;
 
-# use std::fs::File;
+# use rocket::tokio::fs::File;
 
 # type PasteId = usize;
 
 #[get("/<id>")]
-fn retrieve(id: PasteId) -> Option<File> {
+async fn retrieve(id: PasteId) -> Option<File> {
     let filename = format!("upload/{id}", id = id);
-    File::open(&filename).ok()
+    File::open(&filename).await.ok()
 }
 ```
 
@@ -456,9 +447,9 @@ through some of them to get a better feel for Rocket. Here are some ideas:
     the two `POST /` routes should be called.
   * Support **deletion** of pastes by adding a new `DELETE /<id>` route. Use
     `PasteId` to validate `<id>`.
-  * **Limit the upload** to a maximum size. If the upload exceeds that size,
-    return a **206** partial status code. Otherwise, return a **201** created
-    status code.
+  * Indicate **partial uploads** with a **206** partial status code. If the user
+    uploads a paste that meets or exceeds the allowed limit, return a **206**
+    partial status code. Otherwise, return a **201** created status code.
   * Set the `Content-Type` of the return value in `upload` and `retrieve` to
     `text/plain`.
   * **Return a unique "key"** after each upload and require that the key is

@@ -958,7 +958,7 @@ applications.
   * **The [`Responder`] trait has changed.**
 
     `Responder::respond(self)` was removed in favor of
-    `Responder::respond_to(self, &Request)`. Responders may dynamically adjust
+    `Responder::respond_to(self, &'r Request)`. Responders may dynamically adjust
     their response based on the incoming request.
 
   * **`Outcome::of(Responder)` was removed while `Outcome::from(&Request,

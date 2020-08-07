@@ -1,10 +1,8 @@
-#![feature(proc_macro_hygiene)]
-
 #![recursion_limit="256"]
 
 #![doc(html_root_url = "https://api.rocket.rs/v0.5")]
-#![doc(html_favicon_url = "https://rocket.rs/v0.5/images/favicon.ico")]
-#![doc(html_logo_url = "https://rocket.rs/v0.5/images/logo-boxed.png")]
+#![doc(html_favicon_url = "https://rocket.rs/images/favicon.ico")]
+#![doc(html_logo_url = "https://rocket.rs/images/logo-boxed.png")]
 
 #![warn(rust_2018_idioms)]
 
@@ -47,8 +45,6 @@
 //! Then, add the following to the top of your `main.rs` file:
 //!
 //! ```rust
-//! #![feature(proc_macro_hygiene)]
-//!
 //! #[macro_use] extern crate rocket;
 //! # #[get("/")] fn hello() { }
 //! # fn main() { rocket::ignite().mount("/", routes![hello]); }
@@ -57,9 +53,7 @@
 //! See the [guide](https://rocket.rs/v0.5/guide) for more information on how to
 //! write Rocket applications. Here's a simple example to get you started:
 //!
-//! ```rust
-//! #![feature(proc_macro_hygiene)]
-//!
+//! ```rust,no_run
 //! #[macro_use] extern crate rocket;
 //!
 //! #[get("/")]
@@ -67,10 +61,9 @@
 //!     "Hello, world!"
 //! }
 //!
-//! fn main() {
-//! # if false { // We don't actually want to launch the server in an example.
-//!     rocket::ignite().mount("/", routes![hello]).launch();
-//! # }
+//! #[launch]
+//! fn rocket() -> rocket::Rocket {
+//!     rocket::ignite().mount("/", routes![hello])
 //! }
 //! ```
 //!
@@ -94,9 +87,14 @@
 
 #[allow(unused_imports)] #[macro_use] extern crate rocket_codegen;
 pub use rocket_codegen::*;
+pub use async_trait::*;
 
 #[macro_use] extern crate log;
-#[macro_use] extern crate pear;
+
+#[doc(hidden)]
+pub use yansi;
+pub use futures;
+pub use tokio;
 
 #[doc(hidden)] #[macro_use] pub mod logger;
 #[macro_use] pub mod outcome;
@@ -108,6 +106,7 @@ pub mod data;
 pub mod handler;
 pub mod fairing;
 pub mod error;
+pub mod catcher;
 
 // Reexport of HTTP everything.
 pub mod http {
@@ -120,22 +119,21 @@ pub mod http {
     pub use rocket_http::*;
 }
 
+mod shutdown;
 mod router;
 mod rocket;
 mod codegen;
-mod catcher;
 mod ext;
 
 #[doc(inline)] pub use crate::response::Response;
-#[doc(inline)] pub use crate::handler::{Handler, ErrorHandler};
-#[doc(hidden)] pub use crate::codegen::{StaticRouteInfo, StaticCatchInfo};
-#[doc(inline)] pub use crate::outcome::Outcome;
+#[doc(hidden)] pub use crate::codegen::{StaticRouteInfo, StaticCatcherInfo};
 #[doc(inline)] pub use crate::data::Data;
 #[doc(inline)] pub use crate::config::Config;
+#[doc(inline)] pub use crate::catcher::Catcher;
 pub use crate::router::Route;
 pub use crate::request::{Request, State};
-pub use crate::catcher::Catcher;
-pub use crate::rocket::Rocket;
+pub use crate::rocket::{Cargo, Rocket};
+pub use crate::shutdown::Shutdown;
 
 /// Alias to [`Rocket::ignite()`] Creates a new instance of `Rocket`.
 pub fn ignite() -> Rocket {
@@ -144,6 +142,29 @@ pub fn ignite() -> Rocket {
 
 /// Alias to [`Rocket::custom()`]. Creates a new instance of `Rocket` with a
 /// custom configuration.
-pub fn custom(config: config::Config) -> Rocket {
+pub fn custom(config: Config) -> Rocket {
     Rocket::custom(config)
+}
+
+// TODO.async: More thoughtful plan for async tests
+/// WARNING: This is unstable! Do not use this method outside of Rocket!
+#[doc(hidden)]
+pub fn async_test<R>(fut: impl std::future::Future<Output = R> + Send) -> R {
+    tokio::runtime::Builder::new()
+        .basic_scheduler()
+        .enable_all()
+        .build()
+        .expect("create tokio runtime")
+        .block_on(fut)
+}
+
+/// WARNING: This is unstable! Do not use this method outside of Rocket!
+#[doc(hidden)]
+pub fn async_main<R>(fut: impl std::future::Future<Output = R> + Send) -> R {
+    tokio::runtime::Builder::new()
+        .threaded_scheduler()
+        .enable_all()
+        .build()
+        .expect("create tokio runtime")
+        .block_on(fut)
 }

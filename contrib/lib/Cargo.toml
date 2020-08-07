@@ -14,12 +14,12 @@ edition = "2018"
 [features]
 # Internal use only.
 templates = ["serde", "serde_json", "glob", "notify"]
-databases = ["r2d2", "rocket_contrib_codegen/database_attribute"]
+databases = ["r2d2", "tokio/blocking", "tokio/rt-threaded", "rocket_contrib_codegen/database_attribute"]
 
 # User-facing features.
 default = ["json", "serve"]
-json = ["serde", "serde_json"]
-msgpack = ["serde", "rmp-serde"]
+json = ["serde", "serde_json", "tokio/io-util"]
+msgpack = ["serde", "rmp-serde", "tokio/io-util"]
 tera_templates = ["tera", "templates"]
 handlebars_templates = ["handlebars", "templates"]
 helmet = ["time"]
@@ -35,13 +35,11 @@ diesel_mysql_pool = ["databases", "diesel/mysql", "diesel/r2d2"]
 postgres_pool = ["databases", "postgres", "r2d2_postgres"]
 mysql_pool = ["databases", "mysql", "r2d2_mysql"]
 sqlite_pool = ["databases", "rusqlite", "r2d2_sqlite"]
-cypher_pool = ["databases", "rusted_cypher", "r2d2_cypher"]
-redis_pool = ["databases", "redis", "r2d2_redis"]
-mongodb_pool = ["databases", "mongodb", "r2d2-mongodb"]
 memcache_pool = ["databases", "memcache", "r2d2-memcache"]
 
 [dependencies]
 # Global dependencies.
+tokio = { version = "0.2.0", optional = true }
 rocket_contrib_codegen = { version = "0.5.0-dev", path = "../codegen", optional = true }
 rocket = { version = "0.5.0-dev", path = "../../core/lib/", default-features = false }
 log = "0.4"
@@ -65,16 +63,10 @@ diesel = { version = "1.0", default-features = false, optional = true }
 postgres = { version = "0.17", optional = true }
 r2d2 = { version = "0.8", optional = true }
 r2d2_postgres = { version = "0.16", optional = true }
-mysql = { version = "17.0", optional = true }
-r2d2_mysql = { version = "17.0", optional = true }
-rusqlite = { version = "0.16.0", optional = true }
-r2d2_sqlite = { version = "0.8", optional = true }
-rusted_cypher = { version = "1", optional = true }
-r2d2_cypher = { version = "0.4", optional = true }
-redis = { version = "0.13", optional = true }
-r2d2_redis = { version = "0.12", optional = true }
-mongodb = { version = "0.3.12", optional = true }
-r2d2-mongodb = { version = "0.2.0", optional = true }
+mysql = { version = "18.0", optional = true }
+r2d2_mysql = { version = "18.0", optional = true }
+rusqlite = { version = "0.23", optional = true }
+r2d2_sqlite = { version = "0.16", optional = true }
 memcache = { version = "0.14", optional = true }
 r2d2-memcache = { version = "0.5", optional = true }
 

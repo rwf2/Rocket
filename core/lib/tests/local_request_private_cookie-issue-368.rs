@@ -1,5 +1,3 @@
-#![feature(proc_macro_hygiene)]
-
 #[macro_use]
 #[cfg(feature = "private-cookies")]
 extern crate rocket;
@@ -18,7 +16,7 @@ mod private_cookie_test {
 
     mod tests {
         use super::*;
-        use rocket::local::Client;
+        use rocket::local::blocking::Client;
         use rocket::http::Cookie;
         use rocket::http::Status;
 
@@ -28,10 +26,10 @@ mod private_cookie_test {
 
             let client = Client::new(rocket).unwrap();
             let req = client.get("/").private_cookie(Cookie::new("cookie_name", "cookie_value"));
-            let mut response = req.dispatch();
+            let response = req.dispatch();
 
-            assert_eq!(response.body_string(), Some("cookie_value".into()));
             assert_eq!(response.headers().get_one("Set-Cookie"), None);
+            assert_eq!(response.into_string(), Some("cookie_value".into()));
         }
 
         #[test]

@@ -189,7 +189,6 @@ The following code will:
   3. Retrieve the parameter in an `assets` route via the `State` guard.
 
 ```rust
-# #![feature(proc_macro_hygiene)]
 # #[macro_use] extern crate rocket;
 
 use std::path::{Path, PathBuf};
@@ -201,24 +200,22 @@ use rocket::fairing::AdHoc;
 struct AssetsDir(String);
 
 #[get("/<asset..>")]
-fn assets(asset: PathBuf, assets_dir: State<AssetsDir>) -> Option<NamedFile> {
-    NamedFile::open(Path::new(&assets_dir.0).join(asset)).ok()
+async fn assets(asset: PathBuf, assets_dir: State<'_, AssetsDir>) -> Option<NamedFile> {
+    NamedFile::open(Path::new(&assets_dir.0).join(asset)).await.ok()
 }
 
-fn main() {
-    # if false {
+#[launch]
+fn rocket() -> rocket::Rocket {
     rocket::ignite()
         .mount("/", routes![assets])
-        .attach(AdHoc::on_attach("Assets Config", |rocket| {
-            let assets_dir = rocket.config()
+        .attach(AdHoc::on_attach("Assets Config", |mut rocket| async {
+            let assets_dir = rocket.config().await
                 .get_str("assets_dir")
                 .unwrap_or("assets/")
                 .to_string();
 
             Ok(rocket.manage(AssetsDir(assets_dir)))
         }))
-        .launch();
-    # }
 }
 ```
 
@@ -258,7 +255,6 @@ In addition to using environment variables or a config file, Rocket can also be
 configured using the [`rocket::custom()`] method and [`ConfigBuilder`]:
 
 ```rust
-# #![feature(proc_macro_hygiene)]
 # #[macro_use] extern crate rocket;
 
 use rocket::config::{Config, Environment};
@@ -275,7 +271,8 @@ let config = Config::build(Environment::Staging)
 # /*
 rocket::custom(config)
     .mount("/", routes![/* .. */])
-    .launch();
+    .launch()
+    .await;
 # */
 ```
 

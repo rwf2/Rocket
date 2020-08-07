@@ -12,7 +12,7 @@ use std::collections::hash_map::DefaultHasher;
 use std::borrow::Cow;
 
 use crate::request::Request;
-use crate::response::{Responder, Response};
+use crate::response::{self, Responder, Response};
 use crate::http::Status;
 
 /// Sets the status of the response to 201 (Created).
@@ -41,8 +41,7 @@ impl<'r, R> Created<R> {
     /// # Example
     ///
     /// ```rust
-    /// # #![feature(proc_macro_hygiene)]
-    /// # use rocket::{get, routes, local::Client};
+    /// # use rocket::{get, routes, local::blocking::Client};
     /// use rocket::response::status;
     ///
     /// #[get("/")]
@@ -52,7 +51,7 @@ impl<'r, R> Created<R> {
     ///
     /// # let rocket = rocket::ignite().mount("/", routes![create]);
     /// # let client = Client::new(rocket).unwrap();
-    /// let mut response = client.get("/").dispatch();
+    /// let response = client.get("/").dispatch();
     ///
     /// let loc = response.headers().get_one("Location");
     /// assert_eq!(loc, Some("http://myservice.com/resource.json"));
@@ -70,8 +69,7 @@ impl<'r, R> Created<R> {
     /// # Example
     ///
     /// ```rust
-    /// # #![feature(proc_macro_hygiene)]
-    /// # use rocket::{get, routes, local::Client};
+    /// # use rocket::{get, routes, local::blocking::Client};
     /// use rocket::response::status;
     ///
     /// #[get("/")]
@@ -82,20 +80,18 @@ impl<'r, R> Created<R> {
     ///
     /// # let rocket = rocket::ignite().mount("/", routes![create]);
     /// # let client = Client::new(rocket).unwrap();
-    /// let mut response = client.get("/").dispatch();
-    ///
-    /// let body = response.body_string();
-    /// assert_eq!(body.unwrap(), "{ 'resource': 'Hello, world!' }");
+    /// let response = client.get("/").dispatch();
     ///
     /// let loc = response.headers().get_one("Location");
     /// assert_eq!(loc, Some("http://myservice.com/resource.json"));
     ///
     /// let etag = response.headers().get_one("ETag");
     /// assert_eq!(etag, None);
+    ///
+    /// let body = response.into_string();
+    /// assert_eq!(body.unwrap(), "{ 'resource': 'Hello, world!' }");
     /// ```
-    pub fn body(mut self, responder: R) -> Self
-        where R: Responder<'r>
-    {
+    pub fn body(mut self, responder: R) -> Self {
         self.1 = Some(responder);
         self
     }
@@ -106,8 +102,7 @@ impl<'r, R> Created<R> {
     /// # Example
     ///
     /// ```rust
-    /// # #![feature(proc_macro_hygiene)]
-    /// # use rocket::{get, routes, local::Client};
+    /// # use rocket::{get, routes, local::blocking::Client};
     /// use rocket::response::status;
     ///
     /// #[get("/")]
@@ -118,20 +113,18 @@ impl<'r, R> Created<R> {
     ///
     /// # let rocket = rocket::ignite().mount("/", routes![create]);
     /// # let client = Client::new(rocket).unwrap();
-    /// let mut response = client.get("/").dispatch();
-    ///
-    /// let body = response.body_string();
-    /// assert_eq!(body.unwrap(), "{ 'resource': 'Hello, world!' }");
+    /// let response = client.get("/").dispatch();
     ///
     /// let loc = response.headers().get_one("Location");
     /// assert_eq!(loc, Some("http://myservice.com/resource.json"));
     ///
     /// let etag = response.headers().get_one("ETag");
     /// assert_eq!(etag, Some(r#""13046220615156895040""#));
+    ///
+    /// let body = response.into_string();
+    /// assert_eq!(body.unwrap(), "{ 'resource': 'Hello, world!' }");
     /// ```
-    pub fn tagged_body(mut self, responder: R) -> Self
-        where R: Responder<'r> + Hash
-    {
+    pub fn tagged_body(mut self, responder: R) -> Self where R: Hash {
         let mut hasher = &mut DefaultHasher::default();
         responder.hash(&mut hasher);
         let hash = hasher.finish();
@@ -154,20 +147,20 @@ impl<'r, R> Created<R> {
 /// the response with the `Responder`, the `ETag` header is set conditionally if
 /// a hashable `Responder` is provided via [`Created::tagged_body()`]. The `ETag`
 /// header is set to a hash value of the responder.
-impl<'r, R: Responder<'r>> Responder<'r> for Created<R> {
-    fn respond_to(self, req: &Request<'_>) -> Result<Response<'r>, Status> {
-       let mut response = Response::build();
-       if let Some(responder) = self.1 {
-           response.merge(responder.respond_to(req)?);
-       }
+impl<'r, 'o: 'r, R: Responder<'r, 'o>> Responder<'r, 'o> for Created<R> {
+    fn respond_to(self, req: &'r Request<'_>) -> response::Result<'o> {
+        let mut response = Response::build();
+        if let Some(responder) = self.1 {
+            response.merge(responder.respond_to(req)?);
+        }
 
-       if let Some(hash) = self.2 {
-           response.raw_header("ETag", format!(r#""{}""#, hash));
-       }
+        if let Some(hash) = self.2 {
+            response.raw_header("ETag", format!(r#""{}""#, hash));
+        }
 
-       response.status(Status::Created)
-           .raw_header("Location", self.0)
-           .ok()
+        response.status(Status::Created)
+            .raw_header("Location", self.0)
+            .ok()
     }
 }
 
@@ -200,8 +193,8 @@ pub struct Accepted<R>(pub Option<R>);
 
 /// Sets the status code of the response to 202 Accepted. If the responder is
 /// `Some`, it is used to finalize the response.
-impl<'r, R: Responder<'r>> Responder<'r> for Accepted<R> {
-    fn respond_to(self, req: &Request<'_>) -> Result<Response<'r>, Status> {
+impl<'r, 'o: 'r, R: Responder<'r, 'o>> Responder<'r, 'o> for Accepted<R> {
+    fn respond_to(self, req: &'r Request<'_>) -> response::Result<'o> {
         let mut build = Response::build();
         if let Some(responder) = self.0 {
             build.merge(responder.respond_to(req)?);
@@ -229,10 +222,9 @@ impl<'r, R: Responder<'r>> Responder<'r> for Accepted<R> {
 pub struct NoContent;
 
 /// Sets the status code of the response to 204 No Content.
-impl<'r> Responder<'r> for NoContent {
-    fn respond_to(self, _: &Request<'_>) -> Result<Response<'r>, Status> {
-        let mut build = Response::build();
-        build.status(Status::NoContent).ok()
+impl<'r> Responder<'r, 'static> for NoContent {
+    fn respond_to(self, _: &'r Request<'_>) -> response::Result<'static> {
+        Response::build().status(Status::NoContent).ok()
     }
 }
 
@@ -265,8 +257,8 @@ pub struct BadRequest<R>(pub Option<R>);
 
 /// Sets the status code of the response to 400 Bad Request. If the responder is
 /// `Some`, it is used to finalize the response.
-impl<'r, R: Responder<'r>> Responder<'r> for BadRequest<R> {
-    fn respond_to(self, req: &Request<'_>) -> Result<Response<'r>, Status> {
+impl<'r, 'o: 'r, R: Responder<'r, 'o>> Responder<'r, 'o> for BadRequest<R> {
+    fn respond_to(self, req: &'r Request<'_>) -> response::Result<'o> {
         let mut build = Response::build();
         if let Some(responder) = self.0 {
             build.merge(responder.respond_to(req)?);
@@ -305,8 +297,8 @@ pub struct Unauthorized<R>(pub Option<R>);
 
 /// Sets the status code of the response to 401 Unauthorized. If the responder is
 /// `Some`, it is used to finalize the response.
-impl<'r, R: Responder<'r>> Responder<'r> for Unauthorized<R> {
-    fn respond_to(self, req: &Request<'_>) -> Result<Response<'r>, Status> {
+impl<'r, 'o: 'r, R: Responder<'r, 'o>> Responder<'r, 'o> for Unauthorized<R> {
+    fn respond_to(self, req: &'r Request<'_>) -> response::Result<'o> {
         let mut build = Response::build();
         if let Some(responder) = self.0 {
             build.merge(responder.respond_to(req)?);
@@ -345,8 +337,8 @@ pub struct Forbidden<R>(pub Option<R>);
 
 /// Sets the status code of the response to 403 Forbidden. If the responder is
 /// `Some`, it is used to finalize the response.
-impl<'r, R: Responder<'r>> Responder<'r> for Forbidden<R> {
-    fn respond_to(self, req: &Request<'_>) -> Result<Response<'r>, Status> {
+impl<'r, 'o: 'r, R: Responder<'r, 'o>> Responder<'r, 'o> for Forbidden<R> {
+    fn respond_to(self, req: &'r Request<'_>) -> response::Result<'o> {
         let mut build = Response::build();
         if let Some(responder) = self.0 {
             build.merge(responder.respond_to(req)?);
@@ -372,8 +364,8 @@ impl<'r, R: Responder<'r>> Responder<'r> for Forbidden<R> {
 pub struct NotFound<R>(pub R);
 
 /// Sets the status code of the response to 404 Not Found.
-impl<'r, R: Responder<'r>> Responder<'r> for NotFound<R> {
-    fn respond_to(self, req: &Request<'_>) -> Result<Response<'r>, Status> {
+impl<'r, 'o: 'r, R: Responder<'r, 'o>> Responder<'r, 'o> for NotFound<R> {
+    fn respond_to(self, req: &'r Request<'_>) -> response::Result<'o> {
         Response::build_from(self.0.respond_to(req)?)
             .status(Status::NotFound)
             .ok()
@@ -410,8 +402,8 @@ pub struct Conflict<R>(pub Option<R>);
 
 /// Sets the status code of the response to 409 Conflict. If the responder is
 /// `Some`, it is used to finalize the response.
-impl<'r, R: Responder<'r>> Responder<'r> for Conflict<R> {
-    fn respond_to(self, req: &Request<'_>) -> Result<Response<'r>, Status> {
+impl<'r, 'o: 'r, R: Responder<'r, 'o>> Responder<'r, 'o> for Conflict<R> {
+    fn respond_to(self, req: &'r Request<'_>) -> response::Result<'o> {
         let mut build = Response::build();
         if let Some(responder) = self.0 {
             build.merge(responder.respond_to(req)?);
@@ -437,8 +429,8 @@ pub struct Custom<R>(pub Status, pub R);
 
 /// Sets the status code of the response and then delegates the remainder of the
 /// response to the wrapped responder.
-impl<'r, R: Responder<'r>> Responder<'r> for Custom<R> {
-    fn respond_to(self, req: &Request<'_>) -> Result<Response<'r>, Status> {
+impl<'r, 'o: 'r, R: Responder<'r, 'o>> Responder<'r, 'o> for Custom<R> {
+    fn respond_to(self, req: &'r Request<'_>) -> response::Result<'o> {
         Response::build_from(self.1.respond_to(req)?)
             .status(self.0)
             .ok()

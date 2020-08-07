@@ -1,4 +1,3 @@
 // This example's illustration is the Rocket.toml file.
-fn main() {
-    rocket::ignite().launch();
-}
+#[rocket::launch]
+fn rocket() -> rocket::Rocket { rocket::ignite() }

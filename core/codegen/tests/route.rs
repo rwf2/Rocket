@@ -1,5 +1,3 @@
-#![feature(proc_macro_hygiene)]
-
 // Rocket sometimes generates mangled identifiers that activate the
 // non_snake_case lint. We deny the lint in this test to ensure that
 // code generation uses #[allow(non_snake_case)] in the appropriate places.
@@ -9,14 +7,13 @@
 
 use std::path::PathBuf;
 
-use rocket::{Request, Outcome::*};
 use rocket::http::ext::Normalize;
-use rocket::local::Client;
-use rocket::data::{self, Data, FromDataSimple};
-use rocket::request::Form;
+use rocket::local::blocking::Client;
+use rocket::data::{self, Data, FromData, ToByteUnit};
+use rocket::request::{Request, Form};
 use rocket::http::{Status, RawStr, ContentType};
 
-// Use all of the code generation avaiable at once.
+// Use all of the code generation available at once.
 
 #[derive(FromForm, UriDisplayQuery)]
 struct Inner<'r> {
@@ -25,14 +22,13 @@ struct Inner<'r> {
 
 struct Simple(String);
 
-impl FromDataSimple for Simple {
+#[async_trait]
+impl FromData for Simple {
     type Error = ();
 
-    fn from_data(_: &Request<'_>, data: Data) -> data::Outcome<Self, ()> {
-        use std::io::Read;
-        let mut string = String::new();
-        data.open().take(64).read_to_string(&mut string).unwrap();
-        Success(Simple(string))
+    async fn from_data(_: &Request<'_>, data: Data) -> data::Outcome<Self, ()> {
+        let string = data.open(64.bytes()).stream_to_string().await.unwrap();
+        data::Outcome::Success(Simple(string))
     }
 }
 
@@ -101,24 +97,24 @@ fn test_full_route() {
     let response = client.post(format!("/1{}", uri)).body(simple).dispatch();
     assert_eq!(response.status(), Status::NotFound);
 
-    let mut response = client
+    let response = client
         .post(format!("/1{}", uri))
         .header(ContentType::JSON)
         .body(simple)
         .dispatch();
 
-    assert_eq!(response.body_string().unwrap(), format!("({}, {}, {}, {}, {}, {}) ({})",
+    assert_eq!(response.into_string().unwrap(), format!("({}, {}, {}, {}, {}, {}) ({})",
             sky, name, "A A", "inside", path, simple, expected_uri));
 
     let response = client.post(format!("/2{}", uri)).body(simple).dispatch();
     assert_eq!(response.status(), Status::NotFound);
 
-    let mut response = client
+    let response = client
         .post(format!("/2{}", uri))
         .header(ContentType::JSON)
         .body(simple)
         .dispatch();
 
-    assert_eq!(response.body_string().unwrap(), format!("({}, {}, {}, {}, {}, {}) ({})",
+    assert_eq!(response.into_string().unwrap(), format!("({}, {}, {}, {}, {}, {}) ({})",
             sky, name, "A A", "inside", path, simple, expected_uri));
 }

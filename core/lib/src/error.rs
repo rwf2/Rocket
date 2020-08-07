@@ -5,8 +5,29 @@ use std::sync::atomic::{Ordering, AtomicBool};
 
 use yansi::Paint;
 
-use crate::http::hyper;
 use crate::router::Route;
+
+/// An error that occurs when running a Rocket server.
+///
+/// Errors can happen immediately upon launch ([`LaunchError`])
+/// or more rarely during the server's execution.
+#[derive(Debug)]
+pub enum Error {
+    Launch(LaunchError),
+    Run(Box<dyn std::error::Error + Send + Sync>),
+}
+
+impl fmt::Display for Error {
+    #[inline]
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Error::Launch(e) => write!(f, "Rocket failed to launch: {}", e),
+            Error::Run(e) => write!(f, "error while running server: {}", e),
+        }
+    }
+}
+
+impl std::error::Error for Error { }
 
 /// The kind of launch error that occurred.
 ///
@@ -14,20 +35,17 @@ use crate::router::Route;
 /// this is represented by the `Io` variant. A launch error may also occur
 /// because of ill-defined routes that lead to collisions or because a fairing
 /// encountered an error; these are represented by the `Collision` and
-/// `FailedFairing` variants, respectively. The `Unknown` variant captures all
-/// other kinds of launch errors.
+/// `FailedFairing` variants, respectively.
 #[derive(Debug)]
 pub enum LaunchErrorKind {
     /// Binding to the provided address/port failed.
-    Bind(hyper::Error),
+    Bind(io::Error),
     /// An I/O error occurred during launch.
     Io(io::Error),
     /// Route collisions were detected.
     Collision(Vec<(Route, Route)>),
     /// A launch fairing reported an error.
     FailedFairings(Vec<&'static str>),
-    /// An otherwise uncategorized error occurred during launch.
-    Unknown(Box<dyn std::error::Error + Send + Sync>)
 }
 
 /// An error that occurs during launch.
@@ -45,28 +63,39 @@ pub enum LaunchErrorKind {
 /// The following snippet illustrates this:
 ///
 /// ```rust
-/// # if false {
-/// let error = rocket::ignite().launch();
+/// use rocket::error::Error;
 ///
-/// // This line is only reached if launching failed. This "inspects" the error.
-/// println!("Launch failed! Error: {}", error);
+/// # let _ = async {
+/// if let Err(error) = rocket::ignite().launch().await {
+///     match error {
+///         Error::Launch(error) => {
+///             // This case is only reached if launching failed. This println "inspects" the error.
+///             println!("Launch failed! Error: {}", error);
 ///
-/// // This call to drop (explicit here for demonstration) will do nothing.
-/// drop(error);
-/// # }
+///             // This call to drop (explicit here for demonstration) will do nothing.
+///             drop(error);
+///         }
+///         Error::Run(error) => {
+///             // This case is reached if launching succeeds, but the server had a fatal error later
+///             println!("Server failed! Error: {}", error);
+///         }
+///     }
+/// }
+///
+/// # };
 /// ```
 ///
 /// When a value of this type panics, the corresponding error message is pretty
 /// printed to the console. The following illustrates this:
 ///
 /// ```rust
-/// # if false {
-/// let error = rocket::ignite().launch();
+/// # let _ = async {
+/// let error = rocket::ignite().launch().await;
 ///
 /// // This call to drop (explicit here for demonstration) will result in
 /// // `error` being pretty-printed to the console along with a `panic!`.
 /// drop(error);
-/// # }
+/// # };
 /// ```
 ///
 /// # Usage
@@ -106,27 +135,20 @@ impl LaunchError {
     /// # Example
     ///
     /// ```rust
-    /// # if false {
-    /// let error = rocket::ignite().launch();
-    ///
-    /// // This line is only reached if launch failed.
-    /// let error_kind = error.kind();
-    /// # }
+    /// use rocket::error::Error;
+    /// # let _ = async {
+    /// if let Err(error) = rocket::ignite().launch().await {
+    ///     match error {
+    ///         Error::Launch(err) => println!("Found a launch error: {}", err.kind()),
+    ///         Error::Run(err) => println!("Error at runtime"),
+    ///     }
+    /// }
+    /// # };
     /// ```
     #[inline]
     pub fn kind(&self) -> &LaunchErrorKind {
         self.mark_handled();
         &self.kind
-    }
-}
-
-impl From<hyper::Error> for LaunchError {
-    #[inline]
-    fn from(error: hyper::Error) -> LaunchError {
-        match error {
-            hyper::Error::Io(e) => LaunchError::new(LaunchErrorKind::Io(e)),
-            e => LaunchError::new(LaunchErrorKind::Unknown(Box::new(e)))
-        }
     }
 }
 
@@ -145,7 +167,6 @@ impl fmt::Display for LaunchErrorKind {
             LaunchErrorKind::Io(ref e) => write!(f, "I/O error: {}", e),
             LaunchErrorKind::Collision(_) => write!(f, "route collisions detected"),
             LaunchErrorKind::FailedFairings(_) => write!(f, "a launch fairing failed"),
-            LaunchErrorKind::Unknown(ref e) => write!(f, "unknown error: {}", e)
         }
     }
 }
@@ -163,20 +184,6 @@ impl fmt::Display for LaunchError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         self.mark_handled();
         write!(f, "{}", self.kind())
-    }
-}
-
-impl std::error::Error for LaunchError {
-    #[inline]
-    fn description(&self) -> &str {
-        self.mark_handled();
-        match *self.kind() {
-            LaunchErrorKind::Bind(_) => "failed to bind to given address/port",
-            LaunchErrorKind::Io(_) => "an I/O error occurred during launch",
-            LaunchErrorKind::Collision(_) => "route collisions were detected",
-            LaunchErrorKind::FailedFairings(_) => "a launch fairing reported an error",
-            LaunchErrorKind::Unknown(_) => "an unknown error occurred during launch"
-        }
     }
 }
 
@@ -211,10 +218,6 @@ impl Drop for LaunchError {
                 }
 
                 panic!("launch fairing failure");
-            }
-            LaunchErrorKind::Unknown(ref e) => {
-                error!("Rocket failed to launch due to an unknown error.");
-                panic!("{}", e);
             }
         }
     }

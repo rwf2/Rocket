@@ -1,12 +1,12 @@
 use super::*;
-use rocket::local::Client;
+use rocket::local::blocking::Client;
 use rocket::http::{ContentType, Status};
 
 fn test(uri: &str, content_type: ContentType, status: Status, body: String) {
     let client = Client::new(rocket()).unwrap();
-    let mut response = client.get(uri).header(content_type).dispatch();
+    let response = client.get(uri).header(content_type).dispatch();
     assert_eq!(response.status(), status);
-    assert_eq!(response.body_string(), Some(body));
+    assert_eq!(response.into_string(), Some(body));
 }
 
 #[test]
@@ -44,9 +44,9 @@ fn test_upload() {
     assert_eq!(response.status(), Status::Ok);
 
     // Ensure we get back the same body.
-    let mut response = client.get("/upload").dispatch();
+    let response = client.get("/upload").dispatch();
     assert_eq!(response.status(), Status::Ok);
-    assert_eq!(response.body_string(), Some(expected_body));
+    assert_eq!(response.into_string(), Some(expected_body));
 }
 
 #[test]

@@ -22,18 +22,32 @@ pub enum MediaParams {
     Dynamic(SmallVec<[(IndexedString, IndexedString); 2]>)
 }
 
-impl pear::parsers::Collection for MediaParams {
-    type Item = (IndexedString, IndexedString);
-
-    fn new() -> Self {
+impl Default for MediaParams {
+    fn default() -> Self {
         MediaParams::Dynamic(SmallVec::new())
     }
+}
 
-    fn add(&mut self, item: Self::Item) {
-        match *self {
+impl Extend<(IndexedString, IndexedString)> for MediaParams {
+    fn extend<T: IntoIterator<Item = (IndexedString, IndexedString)>>(&mut self, iter: T) {
+        match self {
             MediaParams::Static(..) => panic!("can't add to static collection!"),
-            MediaParams::Dynamic(ref mut v) => v.push(item)
+            MediaParams::Dynamic(ref mut v) => v.extend(iter)
         }
+    }
+}
+
+impl PartialEq for MediaParams {
+    fn eq(&self, other: &MediaParams) -> bool {
+        #[inline(always)]
+        fn inner_types(params: &MediaParams) -> &[(IndexedString, IndexedString)] {
+            match *params {
+                MediaParams::Static(params) => params,
+                MediaParams::Dynamic(ref vec) => vec,
+            }
+        }
+
+        inner_types(self) == inner_types(other)
     }
 }
 

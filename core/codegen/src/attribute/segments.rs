@@ -1,7 +1,7 @@
 use std::hash::{Hash, Hasher};
 
-use devise::syn;
-use proc_macro::{Span, Diagnostic};
+use devise::{syn, Diagnostic, ext::SpanDiagnosticExt};
+use crate::proc_macro2::Span;
 
 use crate::http::uri::{UriPart, Path};
 use crate::http::route::RouteSegment;
@@ -36,7 +36,7 @@ impl From<&syn::Ident> for Segment {
         Segment {
             kind: Kind::Static,
             source: Source::Unknown,
-            span: ident.span().unstable(),
+            span: ident.span(),
             name: ident.to_string(),
             index: None,
         }

@@ -1,15 +1,15 @@
 use std::fs::{self, File};
 use std::io::prelude::*;
 
-use rocket::local::Client;
+use rocket::local::blocking::Client;
 
 #[test]
 fn test_root() {
     let client = Client::new(super::rocket()).unwrap();
-    let mut res = client.get("/").dispatch();
+    let res = client.get("/").dispatch();
 
     // Check that we have exactly 25,000 'a'.
-    let res_str = res.body_string().unwrap();
+    let res_str = res.into_string().unwrap();
     assert_eq!(res_str.len(), 25000);
     for byte in res_str.as_bytes() {
         assert_eq!(*byte, b'a');
@@ -25,8 +25,8 @@ fn test_file() {
 
     // Get the big file contents, hopefully.
     let client = Client::new(super::rocket()).unwrap();
-    let mut res = client.get("/big_file").dispatch();
-    assert_eq!(res.body_string(), Some(CONTENTS.into()));
+    let res = client.get("/big_file").dispatch();
+    assert_eq!(res.into_string(), Some(CONTENTS.into()));
 
     // Delete the 'big_file'.
     fs::remove_file(super::FILENAME).expect("remove big_file");

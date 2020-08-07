@@ -49,15 +49,16 @@ example, the following snippet attached two fairings, `req_fairing` and
 `res_fairing`, to a new Rocket instance:
 
 ```rust
-# let req_fairing = rocket::fairing::AdHoc::on_request("example", |_, _| {});
-# let res_fairing = rocket::fairing::AdHoc::on_response("example", |_, _| {});
+# use rocket::launch;
+#[launch]
+fn rocket() -> rocket::Rocket {
+    # let req_fairing = rocket::fairing::AdHoc::on_request("example", |_, _| Box::pin(async {}));
+    # let res_fairing = rocket::fairing::AdHoc::on_response("example", |_, _| Box::pin(async {}));
 
-# if false {
-rocket::ignite()
-    .attach(req_fairing)
-    .attach(res_fairing)
-    .launch();
-# }
+    rocket::ignite()
+        .attach(req_fairing)
+        .attach(res_fairing)
+}
 ```
 
 [`attach`]: @api/rocket/struct.Rocket.html#method.attach
@@ -157,6 +158,7 @@ struct Counter {
     post: AtomicUsize,
 }
 
+#[rocket::async_trait]
 impl Fairing for Counter {
     // This is a request and response fairing named "GET/POST Counter".
     fn info(&self) -> Info {
@@ -167,7 +169,7 @@ impl Fairing for Counter {
     }
 
     // Increment the counter for `GET` and `POST` requests.
-    fn on_request(&self, request: &mut Request, _: &Data) {
+    async fn on_request(&self, request: &mut Request<'_>, _: &Data) {
         match request.method() {
             Method::Get => self.get.fetch_add(1, Ordering::Relaxed),
             Method::Post => self.post.fetch_add(1, Ordering::Relaxed),
@@ -175,7 +177,7 @@ impl Fairing for Counter {
         };
     }
 
-    fn on_response(&self, request: &Request, response: &mut Response) {
+    async fn on_response<'r>(&self, request: &'r Request<'_>, response: &mut Response<'r>) {
         // Don't change a successful user's response, ever.
         if response.status() != Status::NotFound {
             return
@@ -189,7 +191,7 @@ impl Fairing for Counter {
 
             response.set_status(Status::Ok);
             response.set_header(ContentType::Plain);
-            response.set_sized_body(Cursor::new(body));
+            response.set_sized_body(body.len(), Cursor::new(body));
         }
     }
 }
@@ -220,9 +222,9 @@ rocket::ignite()
     .attach(AdHoc::on_launch("Launch Printer", |_| {
         println!("Rocket is about to launch! Exciting! Here we go...");
     }))
-    .attach(AdHoc::on_request("Put Rewriter", |req, _| {
+    .attach(AdHoc::on_request("Put Rewriter", |req, _| Box::pin(async move {
         req.set_method(Method::Put);
-    }));
+    })));
 ```
 
 [`AdHoc`]: @api/rocket/fairing/struct.AdHoc.html

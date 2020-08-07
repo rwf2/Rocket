@@ -1,5 +1,3 @@
-#![feature(proc_macro_hygiene)]
-
 use rocket;
 
 use rocket::{get, routes};
@@ -45,14 +43,14 @@ fn number(params: Form<ThingForm>) -> DerivedResponder {
 
 #[test]
 fn test_derive_reexports() {
-    use rocket::local::Client;
+    use rocket::local::blocking::Client;
 
     let rocket = rocket::ignite().mount("/", routes![index, number]);
     let client = Client::new(rocket).unwrap();
 
-    let mut response = client.get("/").dispatch();
-    assert_eq!(response.body_string().unwrap(), "hello");
+    let response = client.get("/").dispatch();
+    assert_eq!(response.into_string().unwrap(), "hello");
 
-    let mut response = client.get("/?thing=b").dispatch();
-    assert_eq!(response.body_string().unwrap(), "b");
+    let response = client.get("/?thing=b").dispatch();
+    assert_eq!(response.into_string().unwrap(), "b");
 }

@@ -1,5 +1,3 @@
-#![feature(proc_macro_hygiene)]
-
 #[macro_use] extern crate rocket;
 
 const RESPONSE_STRING: &'static str = "This is the body. Hello, world!";
@@ -22,7 +20,7 @@ mod fairing_before_head_strip {
 
     use rocket::fairing::AdHoc;
     use rocket::http::Method;
-    use rocket::local::Client;
+    use rocket::local::blocking::Client;
     use rocket::http::Status;
     use rocket::State;
 
@@ -31,15 +29,19 @@ mod fairing_before_head_strip {
         let rocket = rocket::ignite()
             .mount("/", routes![head])
             .attach(AdHoc::on_request("Check HEAD", |req, _| {
-                assert_eq!(req.method(), Method::Head);
+                Box::pin(async move {
+                    assert_eq!(req.method(), Method::Head);
+                })
             }))
             .attach(AdHoc::on_response("Check HEAD 2", |req, res| {
-                assert_eq!(req.method(), Method::Head);
-                assert_eq!(res.body_string(), Some(RESPONSE_STRING.into()));
+                Box::pin(async move {
+                    assert_eq!(req.method(), Method::Head);
+                    assert_eq!(res.body_string().await, Some(RESPONSE_STRING.into()));
+                })
             }));
 
         let client = Client::new(rocket).unwrap();
-        let mut response = client.head("/").dispatch();
+        let response = client.head("/").dispatch();
         assert_eq!(response.status(), Status::Ok);
         assert!(response.body().is_none());
     }
@@ -54,19 +56,23 @@ mod fairing_before_head_strip {
             .mount("/", routes![auto])
             .manage(counter)
             .attach(AdHoc::on_request("Check HEAD + Count", |req, _| {
-                assert_eq!(req.method(), Method::Head);
+                Box::pin(async move {
+                    assert_eq!(req.method(), Method::Head);
 
-                // This should be called exactly once.
-                let c = req.guard::<State<Counter>>().unwrap();
-                assert_eq!(c.0.fetch_add(1, Ordering::SeqCst), 0);
+                    // This should be called exactly once.
+                    let c = req.guard::<State<Counter>>().await.unwrap();
+                    assert_eq!(c.0.fetch_add(1, Ordering::SeqCst), 0);
+                })
             }))
             .attach(AdHoc::on_response("Check GET", |req, res| {
-                assert_eq!(req.method(), Method::Get);
-                assert_eq!(res.body_string(), Some(RESPONSE_STRING.into()));
+                Box::pin(async move {
+                    assert_eq!(req.method(), Method::Get);
+                    assert_eq!(res.body_string().await, Some(RESPONSE_STRING.into()));
+                })
             }));
 
         let client = Client::new(rocket).unwrap();
-        let mut response = client.head("/").dispatch();
+        let response = client.head("/").dispatch();
         assert_eq!(response.status(), Status::Ok);
         assert!(response.body().is_none());
     }

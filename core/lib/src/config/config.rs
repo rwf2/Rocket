@@ -7,6 +7,7 @@ use std::fmt;
 use crate::config::Environment::*;
 use crate::config::{Result, ConfigBuilder, Environment, ConfigError, LoggingLevel};
 use crate::config::{FullConfig, Table, Value, Array, Datetime};
+use crate::data::Limits;
 use crate::http::private::Key;
 
 use super::custom_values::*;
@@ -51,7 +52,7 @@ pub struct Config {
     pub(crate) secret_key: SecretKey,
     /// TLS configuration.
     pub(crate) tls: Option<TlsConfig>,
-    /// Streaming read size limits.
+    /// Streaming data limits.
     pub limits: Limits,
     /// Extra parameters that aren't part of Rocket's core config.
     pub extras: HashMap<String, Value>,
@@ -96,10 +97,8 @@ impl Config {
     /// # Example
     ///
     /// ```rust
-    /// use rocket::config::Config;
-    ///
     /// # if false {
-    /// let config = Config::read().unwrap();
+    /// let config = rocket::Config::read().unwrap();
     /// # }
     /// ```
     pub fn read() -> Result<Config> {
@@ -115,10 +114,8 @@ impl Config {
     /// # Example
     ///
     /// ```rust
-    /// use rocket::config::Config;
-    ///
     /// # if false {
-    /// let config = Config::read_from("/var/my-config.toml").unwrap();
+    /// let config = rocket::Config::read_from("/var/my-config.toml").unwrap();
     /// # }
     /// ```
     pub fn read_from<P: AsRef<Path>>(path: P) -> Result<Config> {
@@ -185,9 +182,7 @@ impl Config {
     /// # Example
     ///
     /// ```rust
-    /// use rocket::config::Config;
-    ///
-    /// let mut my_config = Config::active().unwrap();
+    /// let mut my_config = rocket::Config::active().unwrap();
     /// my_config.set_port(1001);
     /// ```
     pub fn active() -> Result<Config> {
@@ -453,9 +448,7 @@ impl Config {
     /// # Example
     ///
     /// ```rust
-    /// use rocket::config::Config;
-    ///
-    /// let mut config = Config::development();
+    /// let mut config = rocket::Config::development();
     ///
     /// // Set keep-alive timeout to 10 seconds.
     /// config.set_keep_alive(10);
@@ -537,10 +530,10 @@ impl Config {
     /// # Example
     ///
     /// ```rust
-    /// use rocket::config::{Config, Limits};
+    /// use rocket::data::{Limits, ToByteUnit};
     ///
-    /// let mut config = Config::development();
-    /// config.set_limits(Limits::default().limit("json", 4 * (1 << 20)));
+    /// let mut config = rocket::Config::development();
+    /// config.set_limits(Limits::default().limit("json", 4.mebibytes()));
     /// ```
     #[inline]
     pub fn set_limits(&mut self, limits: Limits) {
@@ -563,30 +556,28 @@ impl Config {
     /// # Example
     ///
     /// ```rust
-    /// use rocket::config::Config;
-    ///
     /// # use rocket::config::ConfigError;
     /// # fn config_test() -> Result<(), ConfigError> {
-    /// let mut config = Config::development();
+    /// let mut config = rocket::Config::development();
     /// config.set_tls("/etc/ssl/my_certs.pem", "/etc/ssl/priv.key")?;
     /// # Ok(())
     /// # }
     /// ```
     #[cfg(feature = "tls")]
     pub fn set_tls(&mut self, certs_path: &str, key_path: &str) -> Result<()> {
-        use crate::http::tls::util::{self, Error};
+        use crate::http::tls::{load_certs, load_private_key, Error};
 
         let pem_err = "malformed PEM file";
 
         // Load the certificates.
-        let certs = util::load_certs(self.root_relative(certs_path))
+        let certs = load_certs(self.root_relative(certs_path))
             .map_err(|e| match e {
                 Error::Io(e) => ConfigError::Io(e, "tls.certs"),
                 _ => self.bad_type("tls", pem_err, "a valid certificates file")
             })?;
 
         // And now the private key.
-        let key = util::load_private_key(self.root_relative(key_path))
+        let key = load_private_key(self.root_relative(key_path))
             .map_err(|e| match e {
                 Error::Io(e) => ConfigError::Io(e, "tls.key"),
                 _ => self.bad_type("tls", pem_err, "a valid private key file")

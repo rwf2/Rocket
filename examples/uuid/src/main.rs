@@ -1,10 +1,10 @@
-#![feature(proc_macro_hygiene)]
-
 #[macro_use] extern crate rocket;
 #[macro_use] extern crate lazy_static;
 
 use std::collections::HashMap;
+
 use rocket_contrib::uuid::Uuid;
+use rocket_contrib::uuid::uuid_crate as uuid;
 
 #[cfg(test)] mod tests;
 
@@ -33,10 +33,7 @@ fn people(id: Uuid) -> Result<String, String> {
         .ok_or_else(|| format!("Person not found for UUID: {}", id))?)
 }
 
+#[launch]
 fn rocket() -> rocket::Rocket {
     rocket::ignite().mount("/", routes![people])
-}
-
-fn main() {
-    rocket().launch();
 }

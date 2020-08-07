@@ -1,9 +1,8 @@
 use super::rocket;
-use rocket::Response;
-use rocket::local::Client;
+use rocket::local::blocking::{Client, LocalResponse};
 use rocket::http::{Status, Cookie, ContentType};
 
-fn user_id_cookie(response: &Response<'_>) -> Option<Cookie<'static>> {
+fn user_id_cookie(response: &LocalResponse<'_>) -> Option<Cookie<'static>> {
     let cookie = response.headers()
         .get("Set-Cookie")
         .filter(|v| v.starts_with("user_id"))
@@ -34,9 +33,9 @@ fn redirect_on_index() {
 fn can_login() {
     let client = Client::new(rocket()).unwrap();
 
-    let mut response = client.get("/login").dispatch();
-    let body = response.body_string().unwrap();
+    let response = client.get("/login").dispatch();
     assert_eq!(response.status(), Status::Ok);
+    let body = response.into_string().unwrap();
     assert!(body.contains("Please login to continue."));
 }
 
@@ -53,9 +52,9 @@ fn login_logout_succeeds() {
     let login_cookie = login(&client, "Sergio", "password").expect("logged in");
 
     // Ensure we're logged in.
-    let mut response = client.get("/").cookie(login_cookie.clone()).dispatch();
-    let body = response.body_string().unwrap();
+    let response = client.get("/").cookie(login_cookie.clone()).dispatch();
     assert_eq!(response.status(), Status::Ok);
+    let body = response.into_string().unwrap();
     assert!(body.contains("Logged in with user ID 1"));
 
     // One more.
@@ -73,9 +72,9 @@ fn login_logout_succeeds() {
     assert_eq!(response.headers().get_one("Location"), Some("/login"));
 
     // The page should show the success message, and no errors.
-    let mut response = client.get("/login").dispatch();
-    let body = response.body_string().unwrap();
+    let response = client.get("/login").dispatch();
     assert_eq!(response.status(), Status::Ok);
+    let body = response.into_string().unwrap();
     assert!(body.contains("Successfully logged out."));
     assert!(!body.contains("Error"));
 }

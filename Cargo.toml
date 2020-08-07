@@ -42,5 +42,4 @@ members = [
   "examples/tls",
   "examples/fairings",
   "examples/hello_2018",
-  "examples/hello_2015",
 ]

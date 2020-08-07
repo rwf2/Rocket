@@ -1,5 +1,3 @@
-#![feature(proc_macro_hygiene)]
-
 #[macro_use] extern crate rocket;
 
 use rocket::http::RawStr;
@@ -16,6 +14,7 @@ fn hi(name: String, age: &RawStr) -> String {
     format!("Hi {}! Your age ({}) is kind of funky.", name, age)
 }
 
-fn main() {
-    rocket::ignite().mount("/", routes![hi, hello]).launch();
+#[launch]
+fn rocket() -> rocket::Rocket {
+    rocket::ignite().mount("/", routes![hi, hello])
 }

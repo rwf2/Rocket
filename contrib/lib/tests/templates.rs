@@ -1,5 +1,3 @@
-#![feature(proc_macro_hygiene)]
-
 #[cfg(feature = "templates")]
 #[macro_use] extern crate rocket;
 
@@ -42,26 +40,27 @@ mod templates_tests {
         use super::*;
         use std::collections::HashMap;
         use rocket::http::Status;
-        use rocket::local::Client;
+        use rocket::local::blocking::Client;
 
         const UNESCAPED_EXPECTED: &'static str
             = "\nh_start\ntitle: _test_\nh_end\n\n\n<script />\n\nfoot\n";
         const ESCAPED_EXPECTED: &'static str
             = "\nh_start\ntitle: _test_\nh_end\n\n\n&lt;script &#x2F;&gt;\n\nfoot\n";
 
-        #[test]
-        fn test_tera_templates() {
-            let rocket = rocket();
+        #[rocket::async_test]
+        async fn test_tera_templates() {
+            let mut rocket = rocket();
+            let cargo = rocket.inspect().await;
             let mut map = HashMap::new();
             map.insert("title", "_test_");
             map.insert("content", "<script />");
 
             // Test with a txt file, which shouldn't escape.
-            let template = Template::show(&rocket, "tera/txt_test", &map);
+            let template = Template::show(cargo, "tera/txt_test", &map);
             assert_eq!(template, Some(UNESCAPED_EXPECTED.into()));
 
             // Now with an HTML file, which should.
-            let template = Template::show(&rocket, "tera/html_test", &map);
+            let template = Template::show(cargo, "tera/html_test", &map);
             assert_eq!(template, Some(ESCAPED_EXPECTED.into()));
         }
 
@@ -88,20 +87,21 @@ mod templates_tests {
         use super::*;
         use std::collections::HashMap;
         use rocket::http::Status;
-        use rocket::local::Client;
+        use rocket::local::blocking::Client;
 
         const EXPECTED: &'static str
             = "Hello _test_!\n\n<main> &lt;script /&gt; hi </main>\nDone.\n\n";
 
-        #[test]
-        fn test_handlebars_templates() {
-            let rocket = rocket();
+        #[rocket::async_test]
+        async fn test_handlebars_templates() {
+            let mut rocket = rocket();
+            let cargo = rocket.inspect().await;
             let mut map = HashMap::new();
             map.insert("title", "_test_");
             map.insert("content", "<script /> hi");
 
             // Test with a txt file, which shouldn't escape.
-            let template = Template::show(&rocket, "hbs/test", &map);
+            let template = Template::show(cargo, "hbs/test", &map);
             assert_eq!(template, Some(EXPECTED.into()));
         }
 
@@ -124,10 +124,9 @@ mod templates_tests {
         fn test_template_reload() {
             use std::fs::File;
             use std::io::Write;
-            use std::thread;
             use std::time::Duration;
 
-            use rocket::local::Client;
+            use rocket::local::blocking::Client;
 
             const RELOAD_TEMPLATE: &str = "hbs/reload";
             const INITIAL_TEXT: &str = "initial";
@@ -152,7 +151,7 @@ mod templates_tests {
             }
 
             // verify that the initial content is correct
-            let initial_rendered = Template::show(client.rocket(), RELOAD_TEMPLATE, ());
+            let initial_rendered = Template::show(client.cargo(), RELOAD_TEMPLATE, ());
             assert_eq!(initial_rendered, Some(INITIAL_TEXT.into()));
 
             // write a change to the file
@@ -163,14 +162,14 @@ mod templates_tests {
                 client.get("/").dispatch();
 
                 // if the new content is correct, we are done
-                let new_rendered = Template::show(client.rocket(), RELOAD_TEMPLATE, ());
+                let new_rendered = Template::show(client.cargo(), RELOAD_TEMPLATE, ());
                 if new_rendered == Some(NEW_TEXT.into()) {
                     write_file(&reload_path, INITIAL_TEXT);
                     return;
                 }
 
                 // otherwise, retry a few times, waiting 250ms in between
-                thread::sleep(Duration::from_millis(250));
+                std::thread::sleep(Duration::from_millis(250));
             }
 
             panic!("failed to reload modified template in 1.5s");

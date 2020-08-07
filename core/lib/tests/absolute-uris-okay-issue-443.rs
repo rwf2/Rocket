@@ -1,5 +1,3 @@
-#![feature(proc_macro_hygiene)]
-
 #[macro_use] extern crate rocket;
 
 use rocket::response::Redirect;
@@ -16,7 +14,7 @@ fn rocket() -> Redirect {
 
 mod test_absolute_uris_okay {
     use super::*;
-    use rocket::local::Client;
+    use rocket::local::blocking::Client;
 
     #[test]
     fn redirect_works() {

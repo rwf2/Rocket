@@ -2,12 +2,12 @@ use std::ops::Deref;
 
 use crate::outcome::Outcome::*;
 use crate::request::{Request, form::{FromForm, FormItems, FormDataError}};
-use crate::data::{Outcome, Transform, Transformed, Data, FromData};
+use crate::data::{Outcome, Transform, Transformed, Data, FromTransformedData, TransformFuture, FromDataFuture};
 use crate::http::{Status, uri::{Query, FromUriParam}};
 
 /// A data guard for parsing [`FromForm`] types strictly.
 ///
-/// This type implements the [`FromData`] trait. It provides a generic means to
+/// This type implements the [`FromTransformedData`] trait. It provides a generic means to
 /// parse arbitrary structures from incoming form data.
 ///
 /// # Strictness
@@ -25,12 +25,11 @@ use crate::http::{Status, uri::{Query, FromUriParam}};
 /// The trait can be automatically derived; see the [`FromForm`] documentation
 /// for more information on deriving or implementing the trait.
 ///
-/// Because `Form` implements `FromData`, it can be used directly as a target of
+/// Because `Form` implements `FromTransformedData`, it can be used directly as a target of
 /// the `data = "<param>"` route parameter as long as its generic type
 /// implements the `FromForm` trait:
 ///
 /// ```rust
-/// # #![feature(proc_macro_hygiene)]
 /// # #[macro_use] extern crate rocket;
 /// use rocket::request::Form;
 /// use rocket::http::RawStr;
@@ -66,7 +65,6 @@ use crate::http::{Status, uri::{Query, FromUriParam}};
 /// A handler that handles a form of this type can similarly by written:
 ///
 /// ```rust
-/// # #![feature(proc_macro_hygiene)]
 /// # #![allow(deprecated, unused_attributes)]
 /// # #[macro_use] extern crate rocket;
 /// # use rocket::request::Form;
@@ -119,7 +117,6 @@ impl<T> Form<T> {
     /// # Example
     ///
     /// ```rust
-    /// # #![feature(proc_macro_hygiene)]
     /// # #[macro_use] extern crate rocket;
     /// use rocket::request::Form;
     ///
@@ -184,34 +181,35 @@ impl<'f, T: FromForm<'f>> Form<T> {
 ///
 /// All relevant warnings and errors are written to the console in Rocket
 /// logging format.
-impl<'f, T: FromForm<'f>> FromData<'f> for Form<T> {
+impl<'f, T: FromForm<'f> + Send + 'f> FromTransformedData<'f> for Form<T> {
     type Error = FormDataError<'f, T::Error>;
     type Owned = String;
     type Borrowed = str;
 
-    fn transform(
-        request: &Request<'_>,
+    fn transform<'r>(
+        request: &'r Request<'_>,
         data: Data
-    ) -> Transform<Outcome<Self::Owned, Self::Error>> {
-        use std::{cmp::min, io::Read};
+    ) -> TransformFuture<'r, Self::Owned, Self::Error> {
+        Box::pin(async move {
+            if !request.content_type().map_or(false, |ct| ct.is_form()) {
+                warn_!("Form data does not have form content type.");
+                return Transform::Borrowed(Forward(data));
+            }
 
-        if !request.content_type().map_or(false, |ct| ct.is_form()) {
-            warn_!("Form data does not have form content type.");
-            return Transform::Borrowed(Forward(data))
-        }
-
-        let limit = request.limits().forms;
-        let mut stream = data.open().take(limit);
-        let mut form_string = String::with_capacity(min(4096, limit) as usize);
-        if let Err(e) = stream.read_to_string(&mut form_string) {
-            return Transform::Borrowed(Failure((Status::InternalServerError, FormDataError::Io(e))))
-        }
-
-        Transform::Borrowed(Success(form_string))
+            match data.open(request.limits().forms).stream_to_string().await {
+                Ok(form_string) => Transform::Borrowed(Success(form_string)),
+                Err(e) => {
+                    let err = (Status::InternalServerError, FormDataError::Io(e));
+                    Transform::Borrowed(Failure(err))
+                }
+            }
+        })
     }
 
-    fn from_data(_: &Request<'_>, o: Transformed<'f, Self>) -> Outcome<Self, Self::Error> {
-        <Form<T>>::from_data(try_outcome!(o.borrowed()), true).map(Form)
+    fn from_data(_: &'f Request<'_>, o: Transformed<'f, Self>) -> FromDataFuture<'f, Self, Self::Error> {
+        Box::pin(futures::future::ready(o.borrowed().and_then(|data| {
+            <Form<T>>::from_data(data, true).map(Form)
+        })))
     }
 }
 

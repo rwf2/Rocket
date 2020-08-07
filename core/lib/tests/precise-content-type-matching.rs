@@ -1,5 +1,3 @@
-#![feature(proc_macro_hygiene)]
-
 #[macro_use] extern crate rocket;
 
 #[post("/", format = "application/json")]
@@ -26,7 +24,7 @@ mod tests {
     use super::*;
 
     use rocket::Rocket;
-    use rocket::local::Client;
+    use rocket::local::blocking::Client;
     use rocket::http::{Status, ContentType};
 
     fn rocket() -> Rocket {
@@ -44,12 +42,13 @@ mod tests {
                 req.add_header(ct);
             }
 
-            let mut response = req.dispatch();
-            let body_str = response.body_string();
+            let response = req.dispatch();
+            let status = response.status();
+            let body_str = response.into_string();
             let body: Option<&'static str> = $body;
             match body {
                 Some(string) => assert_eq!(body_str, Some(string.to_string())),
-                None => assert_eq!(response.status(), Status::NotFound)
+                None => assert_eq!(status, Status::NotFound)
             }
         )
     }

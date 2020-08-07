@@ -42,7 +42,6 @@ type ParseError = <self::uuid_crate::Uuid as FromStr>::Err;
 /// You can use the `Uuid` type directly as a target of a dynamic parameter:
 ///
 /// ```rust
-/// # #![feature(proc_macro_hygiene)]
 /// # #[macro_use] extern crate rocket;
 /// # #[macro_use] extern crate rocket_contrib;
 /// use rocket_contrib::uuid::Uuid;
@@ -56,7 +55,6 @@ type ParseError = <self::uuid_crate::Uuid as FromStr>::Err;
 /// You can also use the `Uuid` as a form value, including in query strings:
 ///
 /// ```rust
-/// # #![feature(proc_macro_hygiene)]
 /// # #[macro_use] extern crate rocket;
 /// # #[macro_use] extern crate rocket_contrib;
 /// use rocket_contrib::uuid::Uuid;

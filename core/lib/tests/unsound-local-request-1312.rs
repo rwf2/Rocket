@@ -1,5 +1,5 @@
 use rocket::http::Header;
-use rocket::local::Client;
+use rocket::local::blocking::Client;
 
 #[test]
 fn test_local_request_clone_soundness() {

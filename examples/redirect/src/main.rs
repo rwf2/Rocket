@@ -1,5 +1,3 @@
-#![feature(proc_macro_hygiene)]
-
 #[macro_use] extern crate rocket;
 
 #[cfg(test)] mod tests;
@@ -16,6 +14,7 @@ fn login() -> &'static str {
     "Hi! Please log in before continuing."
 }
 
-fn main() {
-    rocket::ignite().mount("/", routes![root, login]).launch();
+#[launch]
+fn rocket() -> rocket::Rocket {
+    rocket::ignite().mount("/", routes![root, login])
 }

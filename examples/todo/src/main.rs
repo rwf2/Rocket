@@ -1,10 +1,7 @@
-#![feature(proc_macro_hygiene)]
-
 #[macro_use] extern crate rocket;
 #[macro_use] extern crate diesel;
 #[macro_use] extern crate diesel_migrations;
 #[macro_use] extern crate log;
-#[macro_use] extern crate serde_derive;
 #[macro_use] extern crate rocket_contrib;
 
 mod task;
@@ -14,7 +11,7 @@ use rocket::Rocket;
 use rocket::fairing::AdHoc;
 use rocket::request::{Form, FlashMessage};
 use rocket::response::{Flash, Redirect};
-use rocket_contrib::{templates::Template, serve::StaticFiles};
+use rocket_contrib::{templates::Template, serve::{StaticFiles, crate_relative}};
 use diesel::SqliteConnection;
 
 use crate::task::{Task, Todo};
@@ -27,7 +24,7 @@ embed_migrations!();
 #[database("sqlite_database")]
 pub struct DbConn(SqliteConnection);
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, serde::Serialize)]
 struct Context<'a> {
     msg: Option<(&'a str, &'a str)>,
     tasks: Vec<Task>
@@ -93,8 +90,8 @@ fn index(msg: Option<FlashMessage<'_, '_>>, conn: DbConn) -> Template {
     })
 }
 
-fn run_db_migrations(rocket: Rocket) -> Result<Rocket, Rocket> {
-    let conn = DbConn::get_one(&rocket).expect("database connection");
+async fn run_db_migrations(mut rocket: Rocket) -> Result<Rocket, Rocket> {
+    let conn = DbConn::get_one(rocket.inspect().await).expect("database connection");
     match embedded_migrations::run(&*conn) {
         Ok(()) => Ok(rocket),
         Err(e) => {
@@ -104,16 +101,13 @@ fn run_db_migrations(rocket: Rocket) -> Result<Rocket, Rocket> {
     }
 }
 
+#[launch]
 fn rocket() -> Rocket {
     rocket::ignite()
         .attach(DbConn::fairing())
         .attach(AdHoc::on_attach("Database Migrations", run_db_migrations))
-        .mount("/", StaticFiles::from("static/"))
+        .mount("/", StaticFiles::from(crate_relative!("/static")))
         .mount("/", routes![index])
         .mount("/todo", routes![new, toggle, delete])
         .attach(Template::fairing())
-}
-
-fn main() {
-    rocket().launch();
 }

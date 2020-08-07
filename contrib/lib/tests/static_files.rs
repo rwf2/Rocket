@@ -1,19 +1,15 @@
-#![feature(proc_macro_hygiene)]
-
 #[cfg(feature = "serve")]
 mod static_tests {
     use std::{io::Read, fs::File};
-    use std::path::{Path, PathBuf};
+    use std::path::Path;
 
     use rocket::{self, Rocket, Route};
-    use rocket_contrib::serve::{StaticFiles, Options};
+    use rocket_contrib::serve::{StaticFiles, Options, crate_relative};
     use rocket::http::Status;
-    use rocket::local::Client;
+    use rocket::local::blocking::Client;
 
-    fn static_root() -> PathBuf {
-        Path::new(env!("CARGO_MANIFEST_DIR"))
-            .join("tests")
-            .join("static")
+    fn static_root() -> &'static Path {
+        Path::new(crate_relative!("/tests/static"))
     }
 
     fn rocket() -> Rocket {
@@ -47,7 +43,7 @@ mod static_tests {
 
     fn assert_file(client: &Client, prefix: &str, path: &str, exists: bool) {
         let full_path = format!("/{}/{}", prefix, path);
-        let mut response = client.get(full_path).dispatch();
+        let response = client.get(full_path).dispatch();
         if exists {
             assert_eq!(response.status(), Status::Ok);
 
@@ -59,14 +55,16 @@ mod static_tests {
             let mut file = File::open(path).expect("open file");
             let mut expected_contents = String::new();
             file.read_to_string(&mut expected_contents).expect("read file");
-            assert_eq!(response.body_string(), Some(expected_contents));
+            assert_eq!(response.into_string(), Some(expected_contents));
         } else {
             assert_eq!(response.status(), Status::NotFound);
         }
     }
 
     fn assert_all(client: &Client, prefix: &str, paths: &[&str], exist: bool) {
-        paths.iter().for_each(|path| assert_file(client, prefix, path, exist))
+        for path in paths.iter() {
+            assert_file(client, prefix, path, exist);
+        }
     }
 
     #[test]
@@ -133,13 +131,13 @@ mod static_tests {
         let rocket = rocket().mount("/default", routes![catch_one, catch_two]);
         let client = Client::new(rocket).expect("valid rocket");
 
-        let mut response = client.get("/default/ireallydontexist").dispatch();
+        let response = client.get("/default/ireallydontexist").dispatch();
         assert_eq!(response.status(), Status::Ok);
-        assert_eq!(response.body_string().unwrap(), "ireallydontexist");
+        assert_eq!(response.into_string().unwrap(), "ireallydontexist");
 
-        let mut response = client.get("/default/idont/exist").dispatch();
+        let response = client.get("/default/idont/exist").dispatch();
         assert_eq!(response.status(), Status::Ok);
-        assert_eq!(response.body_string().unwrap(), "idont/exist");
+        assert_eq!(response.into_string().unwrap(), "idont/exist");
 
         assert_all(&client, "both", REGULAR_FILES, true);
         assert_all(&client, "both", HIDDEN_FILES, true);

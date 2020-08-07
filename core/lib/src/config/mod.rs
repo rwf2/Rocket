@@ -157,9 +157,11 @@
 //! can be retrieved via the [`Rocket::config()`](crate::Rocket::config()) method
 //! on `Rocket` and `get_` methods on [`Config`] structure.
 //!
+//! [`Rocket::config()`]: crate::Rocket::config()
+//!
 //! The retrivial of configuration parameters usually occurs at launch time via
 //! a [launch fairing](crate::fairing::Fairing). If information about the
-//! configuraiton is needed later in the program, an attach fairing can be used
+//! configuration is needed later in the program, an attach fairing can be used
 //! to store the information as managed state. As an example of the latter,
 //! consider the following short program which reads the `token` configuration
 //! parameter and stores the value or a default in a `Token` managed state
@@ -172,9 +174,9 @@
 //!
 //! fn main() {
 //!     rocket::ignite()
-//!         .attach(AdHoc::on_attach("Token Config", |rocket| {
+//!         .attach(AdHoc::on_attach("Token Config", |mut rocket| async {
 //!             println!("Adding token managed state from config...");
-//!             let token_val = rocket.config().get_int("token").unwrap_or(-1);
+//!             let token_val = rocket.config().await.get_int("token").unwrap_or(-1);
 //!             Ok(rocket.manage(Token(token_val)))
 //!         }))
 //! # ;
@@ -196,8 +198,7 @@ use std::path::{Path, PathBuf};
 
 use toml;
 
-pub use self::custom_values::Limits;
-pub use toml::value::{Array, Table, Value, Datetime};
+pub use toml::value::{Array, Map, Table, Value, Datetime};
 pub use self::error::ConfigError;
 pub use self::environment::Environment;
 pub use self::config::Config;
@@ -250,12 +251,22 @@ impl FullConfig {
     }
 
     /// Return the default configuration for all environments and marks the
+    /// active environment (from `CONFIG_ENV`) as active. Overrides the defaults
+    /// with values from the `ROCKET_{PARAM}` environment variables. Doesn't
+    /// read any other sources.
+    pub fn env_default() -> Result<FullConfig> {
+        let mut config = Self::active_default_with_path(None)?;
+        config.override_from_env()?;
+        Ok(config)
+    }
+
+    /// Return the default configuration for all environments and marks the
     /// active environment (from `CONFIG_ENV`) as active. This doesn't read
     /// `filename`, nor any other config values from any source; it simply uses
     /// `filename` to set up the config path property in the returned `Config`.
-    pub fn active_default<'a, P: Into<Option<&'a Path>>>(filename: P) -> Result<FullConfig> {
+    fn active_default_with_path(path: Option<&Path>) -> Result<FullConfig> {
         let mut defaults = HashMap::new();
-        if let Some(path) = filename.into() {
+        if let Some(path) = path {
             defaults.insert(Development, Config::default_from(Development, &path)?);
             defaults.insert(Staging, Config::default_from(Staging, &path)?);
             defaults.insert(Production, Config::default_from(Production, &path)?);
@@ -405,7 +416,7 @@ impl FullConfig {
         };
 
         // Create a config with the defaults; set the env to the active one.
-        let mut config = FullConfig::active_default(filename.as_ref())?;
+        let mut config = FullConfig::active_default_with_path(Some(filename.as_ref()))?;
 
         // Store all of the global overrides, if any, for later use.
         let mut global = None;
@@ -450,7 +461,7 @@ mod test {
     use std::env;
     use std::sync::Mutex;
 
-    use super::{FullConfig, ConfigError, ConfigBuilder};
+    use super::{Config, FullConfig, ConfigError, ConfigBuilder};
     use super::{Environment, GLOBAL_ENV_NAME};
     use super::environment::CONFIG_ENV;
     use super::Environment::*;
@@ -483,10 +494,8 @@ mod test {
         );
     }
 
-    fn active_default() -> Result<FullConfig>  {
-        let mut config = FullConfig::active_default(None)?;
-        config.override_from_env()?;
-        Ok(config)
+    fn env_default() -> Result<FullConfig>  {
+        FullConfig::env_default()
     }
 
     fn default_config(env: Environment) -> ConfigBuilder {
@@ -501,25 +510,25 @@ mod test {
         // First, without an environment. Should get development defaults on
         // debug builds and productions defaults on non-debug builds.
         env::remove_var(CONFIG_ENV);
-        #[cfg(debug_assertions)] check_config!(active_default(), default_config(Development));
-        #[cfg(not(debug_assertions))] check_config!(active_default(), default_config(Production));
+        #[cfg(debug_assertions)] check_config!(env_default(), default_config(Development));
+        #[cfg(not(debug_assertions))] check_config!(env_default(), default_config(Production));
 
         // Now with an explicit dev environment.
         for env in &["development", "dev"] {
             env::set_var(CONFIG_ENV, env);
-            check_config!(active_default(), default_config(Development));
+            check_config!(env_default(), default_config(Development));
         }
 
         // Now staging.
         for env in &["stage", "staging"] {
             env::set_var(CONFIG_ENV, env);
-            check_config!(active_default(), default_config(Staging));
+            check_config!(env_default(), default_config(Staging));
         }
 
         // Finally, production.
         for env in &["prod", "production"] {
             env::set_var(CONFIG_ENV, env);
-            check_config!(active_default(), default_config(Production));
+            check_config!(env_default(), default_config(Production));
         }
     }
 
@@ -531,7 +540,7 @@ mod test {
         for env in &["", "p", "pr", "pro", "prodo", " prod", "dev ", "!dev!", "🚀 "] {
             env::set_var(CONFIG_ENV, env);
             let err = ConfigError::BadEnv(env.to_string());
-            assert!(active_default().err().map_or(false, |e| e == err));
+            assert!(env_default().err().map_or(false, |e| e == err));
         }
 
         // Test that a bunch of invalid environment names give the right error.
@@ -1063,19 +1072,6 @@ mod test {
         }
     }
 
-    macro_rules! check_value {
-        ($key:expr, $val:expr, $config:expr) => (
-            match $key {
-                "log" => assert_eq!($config.log_level, $val.parse().unwrap()),
-                "port" => assert_eq!($config.port, $val.parse().unwrap()),
-                "address" => assert_eq!($config.address, $val),
-                "extra_extra" => assert_eq!($config.get_bool($key).unwrap(), true),
-                "workers" => assert_eq!($config.workers, $val.parse().unwrap()),
-                _ => panic!("Unexpected key: {}", $key)
-            }
-        )
-    }
-
     #[test]
     fn test_env_override() {
         // Take the lock so changing the environment doesn't cause races.
@@ -1086,6 +1082,17 @@ mod test {
             ("address", "1.2.3.4"), ("EXTRA_EXTRA", "true"), ("workers", "3")
         ];
 
+        let check_value = |key: &str, val: &str, config: &Config| {
+            match key {
+                "log" => assert_eq!(config.log_level, val.parse().unwrap()),
+                "port" => assert_eq!(config.port, val.parse::<u16>().unwrap()),
+                "address" => assert_eq!(config.address, val),
+                "extra_extra" => assert_eq!(config.get_bool(key).unwrap(), true),
+                "workers" => assert_eq!(config.workers, val.parse::<u16>().unwrap()),
+                _ => panic!("Unexpected key: {}", key)
+            }
+        };
+
         // Check that setting the environment variable actually changes the
         // config for the default active and nonactive environments.
         for &(key, val) in &pairs {
@@ -1094,14 +1101,14 @@ mod test {
             // Check that it overrides the active config.
             for env in &Environment::ALL {
                 env::set_var(CONFIG_ENV, env.to_string());
-                let rconfig = active_default().unwrap();
-                check_value!(&*key.to_lowercase(), val, rconfig.active());
+                let rconfig = env_default().unwrap();
+                check_value(&*key.to_lowercase(), val, rconfig.active());
             }
 
             // And non-active configs.
-            let rconfig = active_default().unwrap();
+            let rconfig = env_default().unwrap();
             for env in &Environment::ALL {
-                check_value!(&*key.to_lowercase(), val, rconfig.get(*env));
+                check_value(&*key.to_lowercase(), val, rconfig.get(*env));
             }
         }
 
@@ -1136,11 +1143,11 @@ mod test {
 
             let mut r = FullConfig::parse(toml, TEST_CONFIG_FILENAME).unwrap();
             r.override_from_env().unwrap();
-            check_value!(&*key.to_lowercase(), val, r.active());
+            check_value(&*key.to_lowercase(), val, r.active());
 
             // And non-active configs.
             for env in &Environment::ALL {
-                check_value!(&*key.to_lowercase(), val, r.get(*env));
+                check_value(&*key.to_lowercase(), val, r.get(*env));
             }
         }
 

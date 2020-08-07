@@ -1,8 +1,6 @@
-#![feature(proc_macro_hygiene)]
-
 #[macro_use] extern crate rocket;
 
-use rocket::local::Client;
+use rocket::local::blocking::Client;
 
 // Test that manual/auto ranking works as expected.
 
@@ -23,17 +21,17 @@ fn test_ranking() {
     let rocket = rocket::ignite().mount("/", routes![get0, get1, get2, get3]);
     let client = Client::new(rocket).unwrap();
 
-    let mut response = client.get("/0").dispatch();
-    assert_eq!(response.body_string().unwrap(), "0");
+    let response = client.get("/0").dispatch();
+    assert_eq!(response.into_string().unwrap(), "0");
 
-    let mut response = client.get(format!("/{}", 1 << 8)).dispatch();
-    assert_eq!(response.body_string().unwrap(), "1");
+    let response = client.get(format!("/{}", 1 << 8)).dispatch();
+    assert_eq!(response.into_string().unwrap(), "1");
 
-    let mut response = client.get(format!("/{}", 1 << 16)).dispatch();
-    assert_eq!(response.body_string().unwrap(), "2");
+    let response = client.get(format!("/{}", 1 << 16)).dispatch();
+    assert_eq!(response.into_string().unwrap(), "2");
 
-    let mut response = client.get(format!("/{}", 1u64 << 32)).dispatch();
-    assert_eq!(response.body_string().unwrap(), "3");
+    let response = client.get(format!("/{}", 1u64 << 32)).dispatch();
+    assert_eq!(response.into_string().unwrap(), "3");
 }
 
 // Test a collision due to same auto rank.

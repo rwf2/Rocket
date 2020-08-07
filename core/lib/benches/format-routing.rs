@@ -1,8 +1,7 @@
-#![feature(test)]
-#![feature(proc_macro_hygiene)]
-
 #[macro_use] extern crate rocket;
+#[macro_use] extern crate bencher;
 
+use rocket::local::blocking::Client;
 use rocket::config::{Environment, Config, LoggingLevel};
 
 #[get("/", format = "application/json")]
@@ -16,39 +15,38 @@ fn rocket() -> rocket::Rocket {
     rocket::custom(config.unwrap()).mount("/", routes![get, post])
 }
 
-mod benches {
-    extern crate test;
+use bencher::Bencher;
+use rocket::http::{Accept, ContentType};
 
-    use super::rocket;
-    use self::test::Bencher;
-    use rocket::local::Client;
-    use rocket::http::{Accept, ContentType};
+fn accept_format(b: &mut Bencher) {
+    let client = Client::new(rocket()).unwrap();
+    let request = client.get("/").header(Accept::JSON);
+    b.iter(|| { request.clone().dispatch(); });
+}
 
-    #[bench]
-    fn accept_format(b: &mut Bencher) {
-        let client = Client::new(rocket()).unwrap();
-        let mut request = client.get("/").header(Accept::JSON);
-        b.iter(|| { request.mut_dispatch(); });
-    }
+fn wrong_accept_format(b: &mut Bencher) {
+    let client = Client::new(rocket()).unwrap();
+    let request = client.get("/").header(Accept::HTML);
+    b.iter(|| { request.clone().dispatch(); });
+}
 
-    #[bench]
-    fn wrong_accept_format(b: &mut Bencher) {
-        let client = Client::new(rocket()).unwrap();
-        let mut request = client.get("/").header(Accept::HTML);
-        b.iter(|| { request.mut_dispatch(); });
-    }
+fn content_type_format(b: &mut Bencher) {
+    let client = Client::new(rocket()).unwrap();
+    let request = client.post("/").header(ContentType::JSON);
+    b.iter(|| { request.clone().dispatch(); });
+}
 
-    #[bench]
-    fn content_type_format(b: &mut Bencher) {
-        let client = Client::new(rocket()).unwrap();
-        let mut request = client.post("/").header(ContentType::JSON);
-        b.iter(|| { request.mut_dispatch(); });
-    }
+fn wrong_content_type_format(b: &mut Bencher) {
+    let client = Client::new(rocket()).unwrap();
+    let request = client.post("/").header(ContentType::Plain);
+    b.iter(|| { request.clone().dispatch(); });
+}
 
-    #[bench]
-    fn wrong_content_type_format(b: &mut Bencher) {
-        let client = Client::new(rocket()).unwrap();
-        let mut request = client.post("/").header(ContentType::Plain);
-        b.iter(|| { request.mut_dispatch(); });
-    }
+benchmark_main!(benches);
+benchmark_group! {
+    benches,
+    accept_format,
+    wrong_accept_format,
+    content_type_format,
+    wrong_content_type_format,
 }

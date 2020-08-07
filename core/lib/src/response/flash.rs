@@ -3,7 +3,7 @@ use std::convert::AsRef;
 use time::Duration;
 
 use crate::outcome::IntoOutcome;
-use crate::response::{Response, Responder};
+use crate::response::{self, Responder};
 use crate::request::{self, Request, FromRequest};
 use crate::http::{Status, Cookie};
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -44,11 +44,10 @@ const FLASH_COOKIE_DELIM: char = ':';
 ///
 /// # Example
 ///
-/// The following complete Rocket application illustrates the use of a `Flash`
-/// message on both the request and response sides.
+/// The following routes illustrate the use of a `Flash` message on both the
+/// request and response sides.
 ///
 /// ```rust
-/// # #![feature(proc_macro_hygiene)]
 /// # #[macro_use] extern crate rocket;
 /// use rocket::response::{Flash, Redirect};
 /// use rocket::request::FlashMessage;
@@ -67,12 +66,6 @@ const FLASH_COOKIE_DELIM: char = ':';
 /// fn index(flash: Option<FlashMessage>) -> String {
 ///     flash.map(|msg| format!("{}: {}", msg.name(), msg.msg()))
 ///          .unwrap_or_else(|| "Welcome!".to_string())
-/// }
-///
-/// fn main() {
-/// # if false { // We don't actually want to launch the server in an example.
-///     rocket::ignite().mount("/", routes![login, index]).launch();
-/// # }
 /// }
 /// ```
 ///
@@ -105,7 +98,7 @@ pub struct Flash<R> {
 /// [`msg()`]: Flash::msg()
 pub type FlashMessage<'a, 'r> = crate::response::Flash<&'a Request<'r>>;
 
-impl<'r, R: Responder<'r>> Flash<R> {
+impl<R> Flash<R> {
     /// Constructs a new `Flash` message with the given `name`, `msg`, and
     /// underlying `responder`.
     ///
@@ -198,8 +191,8 @@ impl<'r, R: Responder<'r>> Flash<R> {
 /// response. In other words, simply sets a cookie and delegates the rest of the
 /// response handling to the wrapped responder. As a result, the `Outcome` of
 /// the response is the `Outcome` of the wrapped `Responder`.
-impl<'r, R: Responder<'r>> Responder<'r> for Flash<R> {
-    fn respond_to(self, req: &Request<'_>) -> Result<Response<'r>, Status> {
+impl<'r, 'o: 'r, R: Responder<'r, 'o>> Responder<'r, 'o> for Flash<R> {
+    fn respond_to(self, req: &'r Request<'_>) -> response::Result<'o> {
         trace_!("Flash: setting message: {}:{}", self.name, self.message);
         req.cookies().add(self.cookie());
         self.inner.respond_to(req)
@@ -245,10 +238,11 @@ impl<'a, 'r> Flash<&'a Request<'r>> {
 ///
 /// The suggested use is through an `Option` and the `FlashMessage` type alias
 /// in `request`: `Option<FlashMessage>`.
+#[crate::async_trait]
 impl<'a, 'r> FromRequest<'a, 'r> for Flash<&'a Request<'r>> {
     type Error = ();
 
-    fn from_request(req: &'a Request<'r>) -> request::Outcome<Self, Self::Error> {
+    async fn from_request(req: &'a Request<'r>) -> request::Outcome<Self, Self::Error> {
         trace_!("Flash: attempting to retrieve message.");
         req.cookies().get(FLASH_COOKIE_NAME).ok_or(()).and_then(|cookie| {
             trace_!("Flash: retrieving message: {:?}", cookie);

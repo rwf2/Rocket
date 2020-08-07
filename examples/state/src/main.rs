@@ -1,5 +1,3 @@
-#![feature(proc_macro_hygiene)]
-
 #[macro_use] extern crate rocket;
 
 #[cfg(test)] mod tests;
@@ -24,12 +22,9 @@ fn count(hit_count: State<'_, HitCount>) -> String {
     hit_count.0.load(Ordering::Relaxed).to_string()
 }
 
+#[launch]
 fn rocket() -> rocket::Rocket {
     rocket::ignite()
         .mount("/", routes![index, count])
         .manage(HitCount(AtomicUsize::new(0)))
-}
-
-fn main() {
-    rocket().launch();
 }

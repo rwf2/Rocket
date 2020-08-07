@@ -17,17 +17,15 @@ use yansi::Paint;
 /// automatically:
 ///
 /// ```rust
-/// # #![feature(proc_macro_hygiene)]
-/// use std::io::{self, Read};
+/// use std::io;
 ///
 /// # use rocket::post;
-/// use rocket::Data;
+/// use rocket::data::{Data, ToByteUnit};
 /// use rocket::response::Debug;
 ///
 /// #[post("/", format = "plain", data = "<data>")]
-/// fn post(data: Data) -> Result<String, Debug<io::Error>> {
-///     let mut name = String::with_capacity(32);
-///     data.open().take(32).read_to_string(&mut name)?;
+/// async fn post(data: Data) -> Result<String, Debug<io::Error>> {
+///     let name = data.open(32.bytes()).stream_to_string().await?;
 ///     Ok(name)
 /// }
 /// ```
@@ -36,7 +34,6 @@ use yansi::Paint;
 /// [`Result::map_err()`]:
 ///
 /// ```rust
-/// # #![feature(proc_macro_hygiene)]
 /// use std::string::FromUtf8Error;
 ///
 /// # use rocket::get;
@@ -61,8 +58,8 @@ impl<E> From<E> for Debug<E> {
     }
 }
 
-impl<'r, E: std::fmt::Debug> Responder<'r> for Debug<E> {
-    fn respond_to(self, _: &Request<'_>) -> response::Result<'r> {
+impl<'r, E: std::fmt::Debug> Responder<'r, 'static> for Debug<E> {
+    fn respond_to(self, _: &'r Request<'_>) -> response::Result<'static> {
         warn_!("Debug: {:?}", Paint::default(self.0));
         warn_!("Debug always responds with {}.", Status::InternalServerError);
         Response::build().status(Status::InternalServerError).ok()

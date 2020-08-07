@@ -16,25 +16,28 @@ edition = "2018"
 
 [features]
 default = []
-tls = ["rustls", "hyper-sync-rustls"]
+tls = ["tokio-rustls"]
 private-cookies = ["cookie/private", "cookie/key-expansion"]
 
 [dependencies]
 smallvec = "1.0"
-percent-encoding = "1"
-hyper = { version = "0.10.13", default-features = false }
+percent-encoding = "2"
+hyper = { version = "0.13.0", default-features = false }
+http = "0.2"
+mime = "0.3.13"
 time = "0.2.11"
 indexmap = "1.0"
-rustls = { version = ">=0.16, <=0.17", optional = true }
 state = "0.4"
+tokio-rustls = { version = "0.14.0", optional = true }
+tokio = { version = "0.2.9", features = ["sync", "tcp", "time"] }
 cookie = { version = "0.14.0", features = ["percent-encode"] }
-pear = "0.1"
 unicode-xid = "0.2"
+log = "0.4"
+ref-cast = "1.0"
 
-[dependencies.hyper-sync-rustls]
-version = ">=0.3.0-rc.6, <=0.3.0-rc.17"
-features = ["server"]
-optional = true
+[dependencies.pear]
+git = "https://github.com/SergioBenitez/Pear.git"
+rev = "4b68055"
 
 [dev-dependencies]
 rocket = { version = "0.5.0-dev", path = "../lib" }

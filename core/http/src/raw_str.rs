@@ -5,6 +5,8 @@ use std::cmp::Ordering;
 use std::str::Utf8Error;
 use std::fmt;
 
+use ref_cast::RefCast;
+
 use crate::uncased::UncasedStr;
 
 /// A reference to a string inside of a raw HTTP message.
@@ -50,7 +52,7 @@ use crate::uncased::UncasedStr;
 /// [`FromParam`]: rocket::request::FromParam
 /// [`FromFormValue`]: rocket::request::FromFormValue
 #[repr(transparent)]
-#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(RefCast, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct RawStr(str);
 
 impl RawStr {
@@ -352,10 +354,7 @@ impl RawStr {
 impl<'a> From<&'a str> for &'a RawStr {
     #[inline(always)]
     fn from(string: &'a str) -> &'a RawStr {
-        // This is simply a `newtype`-like transformation. The `repr(C)` ensures
-        // that this is safe and correct. Note this exact pattern appears often
-        // in the standard library.
-        unsafe { &*(string as *const str as *const RawStr) }
+        RawStr::ref_cast(string)
     }
 }
 

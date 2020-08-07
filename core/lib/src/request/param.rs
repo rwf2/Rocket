@@ -19,7 +19,6 @@ use crate::http::{RawStr, uri::{Segments, SegmentError}};
 /// handler for the dynamic `"/<id>"` path:
 ///
 /// ```rust
-/// # #![feature(proc_macro_hygiene)]
 /// # #[macro_use] extern crate rocket;
 /// #[get("/<id>")]
 /// fn hello(id: usize) -> String {
@@ -54,7 +53,6 @@ use crate::http::{RawStr, uri::{Segments, SegmentError}};
 /// parameter as follows:
 ///
 /// ```rust
-/// # #![feature(proc_macro_hygiene)]
 /// # #[macro_use] extern crate rocket;
 /// # use rocket::http::RawStr;
 /// #[get("/<id>")]
@@ -154,7 +152,7 @@ use crate::http::{RawStr, uri::{Segments, SegmentError}};
 ///             _ => return Err(param)
 ///         };
 ///
-///         if !key.chars().all(|c| (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z')) {
+///         if !key.chars().all(|c| c.is_ascii_alphabetic()) {
 ///             return Err(param);
 ///         }
 ///
@@ -172,7 +170,6 @@ use crate::http::{RawStr, uri::{Segments, SegmentError}};
 /// dynamic path segment:
 ///
 /// ```rust
-/// # #![feature(proc_macro_hygiene)]
 /// # #[macro_use] extern crate rocket;
 /// # use rocket::request::FromParam;
 /// # use rocket::http::RawStr;

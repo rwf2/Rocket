@@ -1,21 +1,22 @@
 use std::borrow::Cow;
 
-use pear::{parser, switch};
+use pear::input::Extent;
+use pear::combinators::{prefixed_series, surrounded};
+use pear::macros::{parser, switch, parse};
 use pear::parsers::*;
 
 use crate::media_type::{MediaType, Source};
 use crate::parse::checkers::{is_whitespace, is_valid_token};
-use crate::parse::IndexedStr;
 
-type Input<'a> = crate::parse::IndexedInput<'a, str>;
-type Result<'a, T> = pear::Result<T, Input<'a>>;
+type Input<'a> = pear::input::Pear<pear::input::Cursor<&'a str>>;
+type Result<'a, T> = pear::input::Result<T, Input<'a>>;
 
 #[parser]
-fn quoted_string<'a>(input: &mut Input<'a>) -> Result<'a, IndexedStr<'a>> {
+fn quoted_string<'a>(input: &mut Input<'a>) -> Result<'a, Extent<&'a str>> {
     eat('"')?;
 
     let mut is_escaped = false;
-    let inner = take_while(|c| {
+    let inner = take_while(|&c| {
         if is_escaped { is_escaped = false; return true; }
         if c == '\\' { is_escaped = true; return true; }
         c != '"'
@@ -26,7 +27,7 @@ fn quoted_string<'a>(input: &mut Input<'a>) -> Result<'a, IndexedStr<'a>> {
 }
 
 #[parser]
-fn media_param<'a>(input: &mut Input<'a>) -> Result<'a, (IndexedStr<'a>, IndexedStr<'a>)> {
+fn media_param<'a>(input: &mut Input<'a>) -> Result<'a, (Extent<&'a str>, Extent<&'a str>)> {
     let key = (take_some_while_until(is_valid_token, '=')?, eat('=')?).0;
     let value = switch! {
         peek('"') => quoted_string()?,
@@ -41,21 +42,24 @@ pub fn media_type<'a>(input: &mut Input<'a>) -> Result<'a, MediaType> {
     let (top, sub, params) = {
         let top = (take_some_while_until(is_valid_token, '/')?, eat('/')?).0;
         let sub = take_some_while_until(is_valid_token, ';')?;
-        let params = series(true, ';', is_whitespace, |i| {
-            media_param(i).map(|(k, v)| (k.coerce_lifetime(), v.coerce_lifetime()))
-        })?;
+        let params = prefixed_series(';', |i| {
+            let param = surrounded(i, media_param, is_whitespace)?;
+            Ok((param.0.into(), param.1.into()))
+        }, ';')?;
 
-        (top.coerce_lifetime(), sub.coerce_lifetime(), params)
+        (top, sub, params)
     };
 
     MediaType {
-        source: Source::Custom(Cow::Owned(input.source().to_string())),
-        top, sub, params
+        params,
+        source: Source::Custom(Cow::Owned(input.start.to_string())),
+        top: top.into(),
+        sub: sub.into(),
     }
 }
 
 pub fn parse_media_type(input: &str) -> Result<'_, MediaType> {
-    parse!(media_type: &mut input.into())
+    parse!(media_type: Input::new(input))
 }
 
 #[cfg(test)]

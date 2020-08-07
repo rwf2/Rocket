@@ -1,0 +1,150 @@
+error: attribute can only be applied to `async` functions
+ --> $DIR/async-entry.rs:6:5
+  |
+6 |     #[rocket::main]
+  |     ^^^^^^^^^^^^^^^
+  |
+  = note: this error originates in an attribute macro (in Nightly builds, run with -Z macro-backtrace for more info)
+
+error: [note] this function must be `async`
+ --> $DIR/async-entry.rs:7:5
+  |
+7 |     fn foo() { }
+  |     ^^
+
+error: attribute can only be applied to `async` functions
+  --> $DIR/async-entry.rs:18:5
+   |
+18 |     #[rocket::main]
+   |     ^^^^^^^^^^^^^^^
+   |
+   = note: this error originates in an attribute macro (in Nightly builds, run with -Z macro-backtrace for more info)
+
+error: [note] this function must be `async`
+  --> $DIR/async-entry.rs:19:5
+   |
+19 |     fn main() {
+   |     ^^
+
+error: attribute cannot be applied to `main` function
+  --- note: this attribute generates a `main` function
+  --> $DIR/async-entry.rs:51:5
+   |
+51 |     #[rocket::launch]
+   |     ^^^^^^^^^^^^^^^^^
+   |
+   = note: this error originates in an attribute macro (in Nightly builds, run with -Z macro-backtrace for more info)
+
+error: [note] this function cannot be `main`
+  --> $DIR/async-entry.rs:52:8
+   |
+52 |     fn main() -> rocket::Rocket {
+   |        ^^^^
+
+error: attribute can only be applied to functions that return a value
+  --> $DIR/async-entry.rs:58:5
+   |
+58 |     #[rocket::launch]
+   |     ^^^^^^^^^^^^^^^^^
+   |
+   = note: this error originates in an attribute macro (in Nightly builds, run with -Z macro-backtrace for more info)
+
+error: [note] this function must return a value
+  --> $DIR/async-entry.rs:59:5
+   |
+59 |     async fn rocket() {
+   |     ^^^^^
+
+error: attribute can only be applied to functions that return a value
+  --> $DIR/async-entry.rs:66:5
+   |
+66 |     #[rocket::launch]
+   |     ^^^^^^^^^^^^^^^^^
+   |
+   = note: this error originates in an attribute macro (in Nightly builds, run with -Z macro-backtrace for more info)
+
+error: [note] this function must return a value
+  --> $DIR/async-entry.rs:67:5
+   |
+67 |     fn rocket() {
+   |     ^^
+
+error: attribute cannot be applied to `main` function
+  --- note: this attribute generates a `main` function
+  --> $DIR/async-entry.rs:81:5
+   |
+81 |     #[rocket::launch]
+   |     ^^^^^^^^^^^^^^^^^
+   |
+   = note: this error originates in an attribute macro (in Nightly builds, run with -Z macro-backtrace for more info)
+
+error: [note] this function cannot be `main`
+  --> $DIR/async-entry.rs:82:8
+   |
+82 |     fn main() -> &'static str {
+   |        ^^^^
+
+error: attribute cannot be applied to `main` function
+  --- note: this attribute generates a `main` function
+  --> $DIR/async-entry.rs:89:5
+   |
+89 |     #[rocket::launch]
+   |     ^^^^^^^^^^^^^^^^^
+   |
+   = note: this error originates in an attribute macro (in Nightly builds, run with -Z macro-backtrace for more info)
+
+error: [note] this function cannot be `main`
+  --> $DIR/async-entry.rs:90:14
+   |
+90 |     async fn main() -> rocket::Rocket {
+   |              ^^^^
+
+error[E0728]: `await` is only allowed inside `async` functions and blocks
+  --> $DIR/async-entry.rs:75:17
+   |
+74 |     fn rocket() -> rocket::Rocket {
+   |        ------ this is not `async`
+75 |         let _ = rocket::ignite().launch().await;
+   |                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ only allowed inside `async` functions and blocks
+
+error[E0308]: mismatched types
+  --> $DIR/async-entry.rs:37:9
+   |
+37 |         rocket::ignite()
+   |         ^^^^^^^^^^^^^^^^ expected struct `std::string::String`, found struct `rocket::rocket::Rocket`
+
+error[E0308]: mismatched types
+  --> $DIR/async-entry.rs:46:9
+   |
+46 |         "hi".to_string()
+   |         ^^^^^^^^^^^^^^^^ expected struct `rocket::rocket::Rocket`, found struct `std::string::String`
+
+error[E0308]: mismatched types
+  --> $DIR/async-entry.rs:26:21
+   |
+26 |       async fn main() {
+   |                       ^ expected `()` because of default return type
+   |  _____________________|
+   | |
+27 | |         rocket::ignite()
+28 | |     }
+   | |     ^- help: try adding a semicolon: `;`
+   | |_____|
+   |       expected `()`, found struct `rocket::rocket::Rocket`
+
+error[E0308]: mismatched types
+  --> $DIR/async-entry.rs:35:26
+   |
+35 |     async fn rocket() -> String {
+   |                          ^^^^^^
+   |                          |
+   |                          expected struct `rocket::rocket::Rocket`, found struct `std::string::String`
+   |                          expected due to this
+
+error[E0277]: `main` has invalid return type `rocket::rocket::Rocket`
+  --> $DIR/async-entry.rs:96:20
+   |
+96 | async fn main() -> rocket::Rocket {
+   |                    ^^^^^^^^^^^^^^ `main` can only return types that implement `std::process::Termination`
+   |
+   = help: consider using `()`, or a `Result`

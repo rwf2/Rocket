@@ -26,7 +26,7 @@ use crate::uri::{UriPart, Path, Query, UriDisplay, Origin};
 /// struct properly formats series of values for use in URIs. In particular,
 /// this struct applies the following transformations:
 ///
-///   * When **mutliple values** are written, they are separated by `/` for
+///   * When **multiple values** are written, they are separated by `/` for
 ///     `Path` types and `&` for `Query` types.
 ///
 /// Additionally, for `Formatter<Query>`:

@@ -155,7 +155,6 @@ use crate::uri::{self, UriPart, UriDisplay};
 /// With these implementations, the following typechecks:
 ///
 /// ```rust
-/// # #![feature(proc_macro_hygiene)]
 /// # #[macro_use] extern crate rocket;
 /// # use std::fmt;
 /// use rocket::http::RawStr;

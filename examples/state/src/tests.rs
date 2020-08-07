@@ -1,4 +1,4 @@
-use rocket::local::Client;
+use rocket::local::blocking::Client;
 use rocket::http::Status;
 
 fn register_hit(client: &Client) {
@@ -7,8 +7,8 @@ fn register_hit(client: &Client) {
 }
 
 fn get_count(client: &Client) -> usize {
-    let mut response = client.get("/count").dispatch();
-    response.body_string().and_then(|s| s.parse().ok()).unwrap()
+    let response = client.get("/count").dispatch();
+    response.into_string().and_then(|s| s.parse().ok()).unwrap()
 }
 
 #[test]
@@ -25,16 +25,17 @@ fn test_count() {
     assert_eq!(get_count(&client), 100);
 }
 
-#[test]
-fn test_raw_state_count() {
+#[rocket::async_test]
+async fn test_raw_state_count() {
     use rocket::State;
     use super::{count, index};
 
-    let rocket = super::rocket();
+    let mut rocket = super::rocket();
+    let cargo = rocket.inspect().await;
 
-    assert_eq!(count(State::from(&rocket).unwrap()), "0");
-    assert!(index(State::from(&rocket).unwrap()).0.contains("Visits: 1"));
-    assert_eq!(count(State::from(&rocket).unwrap()), "1");
+    assert_eq!(count(State::from(cargo).unwrap()), "0");
+    assert!(index(State::from(cargo).unwrap()).0.contains("Visits: 1"));
+    assert_eq!(count(State::from(cargo).unwrap()), "1");
 }
 
 // Cargo runs each test in parallel on different threads. We use all of these

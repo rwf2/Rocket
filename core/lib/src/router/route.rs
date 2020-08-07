@@ -22,15 +22,17 @@ pub struct Route {
     pub handler: Box<dyn Handler>,
     /// The base mount point of this `Route`.
     pub base: Origin<'static>,
-    /// The uri (in Rocket's route format) that should be matched against. This
-    /// URI already includes the base mount point.
+    /// The path of this `Route` in Rocket's route format.
+    pub(crate) path: Origin<'static>,
+    /// The complete URI (in Rocket's route format) that should be matched
+    /// against. This is `base` + `path`.
     pub uri: Origin<'static>,
     /// The rank of this route. Lower ranks have higher priorities.
     pub rank: isize,
     /// The media type this route matches against, if any.
     pub format: Option<MediaType>,
     /// Cached metadata that aids in routing later.
-    pub(crate) metadata: Metadata
+    pub(crate) metadata: Metadata,
 }
 
 #[derive(Debug, Default, Clone)]
@@ -87,11 +89,11 @@ impl Route {
     /// # Ranking
     ///
     /// The route's rank is set so that routes with static paths (no dynamic
-    /// parameters) are ranked higher than routes with dynamic paths, routes
-    /// with query strings with static segments are ranked higher than routes
-    /// with fully dynamic queries, and routes with queries are ranked higher
-    /// than routes without queries. This default ranking is summarized by the
-    /// table below:
+    /// parameters) have lower ranks (higher precedence) than routes with
+    /// dynamic paths, routes with query strings with static segments have lower
+    /// ranks than routes with fully dynamic queries, and routes with queries
+    /// have lower ranks than routes without queries. This default ranking is
+    /// summarized by the table below:
     ///
     /// | static path | query         | rank |
     /// |-------------|---------------|------|
@@ -108,10 +110,7 @@ impl Route {
     /// use rocket::Route;
     /// use rocket::http::Method;
     /// # use rocket::{Request, Data};
-    /// # use rocket::handler::Outcome;
-    /// # fn handler<'r>(request: &'r Request, _data: Data) -> Outcome<'r> {
-    /// #     Outcome::from(request, "Hello, world!")
-    /// # }
+    /// # use rocket::handler::{dummy as handler, Outcome, HandlerFuture};
     ///
     /// // this is rank -6 (static path, ~static query)
     /// let route = Route::new(Method::Get, "/foo?bar=baz&<zoo>", handler);
@@ -142,7 +141,7 @@ impl Route {
     ///
     /// Panics if `path` is not a valid origin URI or Rocket route URI.
     pub fn new<S, H>(method: Method, path: S, handler: H) -> Route
-        where S: AsRef<str>, H: Handler + 'static
+        where S: AsRef<str>, H: Handler
     {
         let mut route = Route::ranked(0, method, path, handler);
         route.rank = default_rank(&route);
@@ -158,10 +157,7 @@ impl Route {
     /// use rocket::Route;
     /// use rocket::http::Method;
     /// # use rocket::{Request, Data};
-    /// # use rocket::handler::Outcome;
-    /// # fn handler<'r>(request: &'r Request, _data: Data) -> Outcome<'r> {
-    /// #     Outcome::from(request, "Hello, world!")
-    /// # }
+    /// # use rocket::handler::{dummy as handler, Outcome, HandlerFuture};
     ///
     /// // this is a rank 1 route matching requests to `GET /`
     /// let index = Route::ranked(1, Method::Get, "/", handler);
@@ -174,18 +170,20 @@ impl Route {
         where S: AsRef<str>, H: Handler + 'static
     {
         let path = path.as_ref();
-        let uri = Origin::parse_route(path)
+        let route_path = Origin::parse_route(path)
             .unwrap_or_else(|e| panic(path, e))
-            .to_normalized()
+            .into_normalized()
             .into_owned();
 
         let mut route = Route {
+            path: route_path.clone(),
+            uri: route_path,
             name: None,
             format: None,
             base: Origin::dummy(),
             handler: Box::new(handler),
             metadata: Metadata::default(),
-            method, rank, uri
+            method, rank,
         };
 
         route.update_metadata().unwrap_or_else(|e| panic(path, e));
@@ -207,12 +205,7 @@ impl Route {
     /// ```rust
     /// use rocket::Route;
     /// use rocket::http::Method;
-    /// # use rocket::{Request, Data};
-    /// # use rocket::handler::Outcome;
-    /// #
-    /// # fn handler<'r>(request: &'r Request, _data: Data) -> Outcome<'r> {
-    /// #     Outcome::from(request, "Hello, world!")
-    /// # }
+    /// # use rocket::handler::dummy as handler;
     ///
     /// let mut index = Route::new(Method::Get, "/", handler);
     /// assert_eq!(index.base(), "/");
@@ -223,66 +216,74 @@ impl Route {
         self.base.path()
     }
 
-    /// Sets the base mount point of the route to `base` and sets the path to
-    /// `path`. The `path` should _not_ contains the `base` mount point. If
-    /// `base` contains a query, it is ignored. Note that `self.uri` will
-    /// include the new `base` after this method is called.
+    /// Retrieves this route's path.
     ///
-    /// # Errors
+    /// # Example
     ///
-    /// Returns an error if any of the following occur:
+    /// ```rust
+    /// use rocket::Route;
+    /// use rocket::http::Method;
+    /// # use rocket::handler::dummy as handler;
     ///
-    ///   * The base mount point contains dynamic parameters.
-    ///   * The base mount point or path contain encoded characters.
-    ///   * The path is not a valid Rocket route URI.
+    /// let index = Route::new(Method::Get, "/foo/bar?a=1", handler);
+    /// let index = index.map_base(|base| format!("{}{}", "/boo", base)).unwrap();
+    /// assert_eq!(index.uri.path(), "/boo/foo/bar");
+    /// assert_eq!(index.uri.query(), Some("a=1"));
+    /// assert_eq!(index.base(), "/boo");
+    /// assert_eq!(index.path().path(), "/foo/bar");
+    /// assert_eq!(index.path().query(), Some("a=1"));
+    /// ```
+    #[inline]
+    pub fn path(&self) -> &Origin<'_> {
+        &self.path
+    }
+
+    /// Maps the `base` of this route using `mapper`, returning a new `Route`
+    /// with the returned base.
+    ///
+    /// `mapper` is called with the current base. The returned `String` is used
+    /// as the new base if it is a valid URI. If the returned base URI contains
+    /// a query, it is ignored. Returns an if the base produced by `mapper` is
+    /// not a valid origin URI.
     ///
     /// # Example
     ///
     /// ```rust
     /// use rocket::Route;
     /// use rocket::http::{Method, uri::Origin};
-    /// # use rocket::{Request, Data};
-    /// # use rocket::handler::Outcome;
-    /// #
-    /// # fn handler<'r>(request: &'r Request, _data: Data) -> Outcome<'r> {
-    /// #     Outcome::from(request, "Hello, world!")
-    /// # }
+    /// # use rocket::handler::{dummy as handler, Outcome, HandlerFuture};
     ///
-    /// let mut index = Route::new(Method::Get, "/", handler);
+    /// let index = Route::new(Method::Get, "/foo/bar", handler);
     /// assert_eq!(index.base(), "/");
-    /// assert_eq!(index.base.path(), "/");
+    /// assert_eq!(index.path().path(), "/foo/bar");
+    /// assert_eq!(index.uri.path(), "/foo/bar");
     ///
-    /// let new_base = Origin::parse("/greeting").unwrap();
-    /// let new_uri = Origin::parse("/hi").unwrap();
-    /// index.set_uri(new_base, new_uri);
-    /// assert_eq!(index.base(), "/greeting");
-    /// assert_eq!(index.uri.path(), "/greeting/hi");
+    /// let index = index.map_base(|base| format!("{}{}", "/boo", base)).unwrap();
+    /// assert_eq!(index.base(), "/boo");
+    /// assert_eq!(index.path().path(), "/foo/bar");
+    /// assert_eq!(index.uri.path(), "/boo/foo/bar");
     /// ```
-    pub fn set_uri<'a>(
-        &mut self,
-        mut base: Origin<'a>,
-        path: Origin<'a>
-    ) -> Result<(), RouteUriError> {
-        base.clear_query();
-        for segment in <RouteSegment<'_, Path>>::parse(&base) {
-            if segment?.kind != Kind::Static {
-                return Err(RouteUriError::DynamicBase);
-            }
-        }
+    pub fn map_base<'a, F>(mut self, mapper: F) -> Result<Self, RouteUriError>
+        where F: FnOnce(Origin<'static>) -> String
+    {
+        self.base = Origin::parse_owned(mapper(self.base))?.into_normalized();
+        self.base.clear_query();
 
-        let complete_uri = format!("{}/{}", base, path);
-        let uri = Origin::parse_route(&complete_uri)?;
-        self.base = base.to_normalized().into_owned();
-        self.uri = uri.to_normalized().into_owned();
+        let new_uri = format!("{}{}", self.base, self.path);
+        self.uri = Origin::parse_route(&new_uri)?.into_owned().into_normalized();
         self.update_metadata()?;
-
-        Ok(())
+        Ok(self)
     }
 }
 
 impl fmt::Display for Route {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{} {}", Paint::green(&self.method), Paint::blue(&self.uri))?;
+        write!(f, "{} ", Paint::green(&self.method))?;
+        if self.base.path() != "/" {
+            write!(f, "{}", Paint::blue(&self.base).underline())?;
+        }
+
+        write!(f, "{}", Paint::blue(&self.path))?;
 
         if self.rank > 1 {
             write!(f, " [{}]", Paint::default(&self.rank).bold())?;

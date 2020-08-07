@@ -22,7 +22,7 @@ instance. Usage is straightforward:
   2. Construct a `Client` using the `Rocket` instance.
 
      ```rust
-     # use rocket::local::Client;
+     # use rocket::local::blocking::Client;
      # let rocket = rocket::ignite();
      let client = Client::new(rocket).expect("valid rocket instance");
      # let _ = client;
@@ -31,7 +31,7 @@ instance. Usage is straightforward:
   3. Construct requests using the `Client` instance.
 
      ```rust
-     # use rocket::local::Client;
+     # use rocket::local::blocking::Client;
      # let rocket = rocket::ignite();
      # let client = Client::new(rocket).unwrap();
      let req = client.get("/");
@@ -41,7 +41,7 @@ instance. Usage is straightforward:
   4. Dispatch the request to retrieve the response.
 
      ```rust
-     # use rocket::local::Client;
+     # use rocket::local::blocking::Client;
      # let rocket = rocket::ignite();
      # let client = Client::new(rocket).unwrap();
      # let req = client.get("/");
@@ -82,7 +82,6 @@ These methods are typically used in combination with the `assert_eq!` or
 `assert!` macros as follows:
 
 ```rust
-# #![feature(proc_macro_hygiene)]
 # #[macro_use] extern crate rocket;
 
 # use std::io::Cursor;
@@ -94,11 +93,11 @@ These methods are typically used in combination with the `assert_eq!` or
 #     Response::build()
 #         .header(ContentType::Plain)
 #         .header(Header::new("X-Special", ""))
-#         .sized_body(Cursor::new("Expected Body"))
+#         .sized_body("Expected Body".len(), Cursor::new("Expected Body"))
 #         .finalize()
 # }
 
-use rocket::local::Client;
+use rocket::local::blocking::Client;
 use rocket::http::{ContentType, Status};
 
 let rocket = rocket::ignite().mount("/", routes![hello]);
@@ -108,7 +107,7 @@ let mut response = client.get("/").dispatch();
 assert_eq!(response.status(), Status::Ok);
 assert_eq!(response.content_type(), Some(ContentType::Plain));
 assert!(response.headers().get_one("X-Special").is_some());
-assert_eq!(response.body_string(), Some("Expected Body".into()));
+assert_eq!(response.into_string(), Some("Expected Body".into()));
 ```
 
 ## Testing "Hello, world!"
@@ -117,7 +116,6 @@ To solidify an intuition for how Rocket applications are tested, we walk through
 how to test the "Hello, world!" application below:
 
 ```rust
-# #![feature(proc_macro_hygiene)]
 # #[macro_use] extern crate rocket;
 
 #[get("/")]
@@ -125,14 +123,9 @@ fn hello() -> &'static str {
     "Hello, world!"
 }
 
+#[launch]
 fn rocket() -> rocket::Rocket {
     rocket::ignite().mount("/", routes![hello])
-}
-
-fn main() {
-    # if false {
-    rocket().launch();
-    # }
 }
 ```
 
@@ -148,7 +141,7 @@ First, we'll create a `test` module with the proper imports:
 #[cfg(test)]
 mod test {
     use super::rocket;
-    use rocket::local::Client;
+    use rocket::local::blocking::Client;
     use rocket::http::Status;
 
     #[test]
@@ -167,13 +160,13 @@ You can also move the body of the `test` module into its own file, say
 
 ### Testing
 
-To test our "Hello, world!" application, we first create a `Client` for our
+To test our "Hello, world!" application, we create a `Client` for our
 `Rocket` instance. It's okay to use methods like `expect` and `unwrap` during
 testing: we _want_ our tests to panic when something goes wrong.
 
 ```rust
 # fn rocket() -> rocket::Rocket { rocket::ignite() }
-# use rocket::local::Client;
+# use rocket::local::blocking::Client;
 
 let client = Client::new(rocket()).expect("valid rocket instance");
 ```
@@ -183,7 +176,7 @@ application's response:
 
 ```rust
 # fn rocket() -> rocket::Rocket { rocket::ignite() }
-# use rocket::local::Client;
+# use rocket::local::blocking::Client;
 # let client = Client::new(rocket()).expect("valid rocket instance");
 let mut response = client.get("/").dispatch();
 ```
@@ -197,13 +190,12 @@ Here, we want to ensure two things:
 We do this by checking the `Response` object directly:
 
 ```rust
-# #![feature(proc_macro_hygiene)]
 # #[macro_use] extern crate rocket;
 
 # #[get("/")]
 # fn hello() -> &'static str { "Hello, world!" }
 
-# use rocket::local::Client;
+# use rocket::local::blocking::Client;
 use rocket::http::{ContentType, Status};
 #
 # let rocket = rocket::ignite().mount("/", routes![hello]);
@@ -211,13 +203,12 @@ use rocket::http::{ContentType, Status};
 # let mut response = client.get("/").dispatch();
 
 assert_eq!(response.status(), Status::Ok);
-assert_eq!(response.body_string(), Some("Hello, world!".into()));
+assert_eq!(response.into_string(), Some("Hello, world!".into()));
 ```
 
 That's it! Altogether, this looks like:
 
 ```rust
-# #![feature(proc_macro_hygiene)]
 # #[macro_use] extern crate rocket;
 
 #[get("/")]
@@ -234,7 +225,7 @@ fn rocket() -> rocket::Rocket {
 # */
 mod test {
     use super::rocket;
-    use rocket::local::Client;
+    use rocket::local::blocking::Client;
     use rocket::http::Status;
 
     # /*
@@ -244,7 +235,7 @@ mod test {
         let client = Client::new(rocket()).expect("valid rocket instance");
         let mut response = client.get("/").dispatch();
         assert_eq!(response.status(), Status::Ok);
-        assert_eq!(response.body_string(), Some("Hello, world!".into()));
+        assert_eq!(response.into_string(), Some("Hello, world!".into()));
     }
 }
 
@@ -253,6 +244,22 @@ mod test {
 
 The tests can be run with `cargo test`. You can find the full source code to
 [this example on GitHub](@example/testing).
+
+## Asynchronous Testing
+
+You may have noticed the use of a "`blocking`" API in these examples, even
+though `Rocket` is an `async` web framework. In most situations, the `blocking`
+testing API is easier to use and should be preferred. However, when concurrent
+execution of two or more requests is required for the server to make progress,
+you will need the more flexible `asynchronous` API; the `blocking` API is not
+capable of dispatching multiple requests simultaneously. While synthetic, the
+[`async_required` `testing` example] uses an `async` barrier to demonstrate such
+a case. For more information, see the [`rocket::local`] and
+[`rocket::local::asynchronous`] documentation.
+
+[`rocket::local`]: @api/rocket/local/index.html
+[`rocket::local::asynchronous`]: @api/rocket/local/asynchronous/index.html
+[`async_required` `testing` example]: @example/testing/src/async_required.rs
 
 ## Codegen Debug
 

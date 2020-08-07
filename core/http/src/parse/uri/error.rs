@@ -1,45 +1,31 @@
 use std::fmt;
 use std::borrow::Cow;
 
-use pear::{ParseErr, Expected};
-use crate::parse::indexed::Context;
+use pear::error::Expected;
+use pear::input::ParseError;
 use crate::parse::uri::RawInput;
 use crate::ext::IntoOwned;
 
 /// Error emitted on URI parse failure.
 ///
 /// Internally, the type includes information about where the parse error
-/// occured (the error's context) and information about what went wrong.
+/// occurred (the error's context) and information about what went wrong.
 /// Externally, this information can be retrieved (in textual form) through its
 /// `Display` implementation. In other words, by printing a value of this type.
 #[derive(Debug)]
 pub struct Error<'a> {
-    expected: Expected<Or<char, u8>, Cow<'a, str>, String>,
-    context: Option<Context>
+    expected: Expected<u8, Cow<'a, [u8]>>,
+    index: usize,
 }
 
-#[derive(Debug)]
-enum Or<L, R> {
-    A(L),
-    B(R)
-}
-
-impl<'a> Error<'a> {
-    pub(crate) fn from(src: &'a str, pear_error: ParseErr<RawInput<'a>>) -> Error<'a> {
-        let new_expected = pear_error.expected.map(|token| {
-            if token.is_ascii() && !token.is_ascii_control() {
-                Or::A(token as char)
-            } else {
-                Or::B(token)
-            }
-        }, String::from_utf8_lossy, |indexed| {
-            let src = Some(src.as_bytes());
-            String::from_utf8_lossy(indexed.from_source(src)).to_string()
-        });
-
-        Error { expected: new_expected, context: pear_error.context }
+impl<'a> From<ParseError<RawInput<'a>>> for Error<'a> {
+    fn from(inner: ParseError<RawInput<'a>>) -> Self {
+        let expected = inner.error.map(|t| t.into(), |v| v.values.into());
+        Error { expected, index: inner.info.context.start }
     }
+}
 
+impl Error<'_> {
     /// Returns the byte index into the text where the error occurred if it is
     /// known.
     ///
@@ -50,41 +36,27 @@ impl<'a> Error<'a> {
     /// use rocket::http::uri::Origin;
     ///
     /// let err = Origin::parse("/foo bar").unwrap_err();
-    /// assert_eq!(err.index(), Some(4));
+    /// assert_eq!(err.index(), 4);
     /// ```
-    pub fn index(&self) -> Option<usize> {
-        self.context.as_ref().map(|c| c.offset)
-    }
-}
-
-impl fmt::Display for Or<char, u8> {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match *self {
-            Or::A(left) => write!(f, "'{}'", left),
-            Or::B(right) => write!(f, "non-ASCII byte {}", right),
-        }
+    pub fn index(&self) -> usize {
+        self.index
     }
 }
 
 impl fmt::Display for Error<'_> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        // This relies on specialization of the `Display` impl for `Expected`.
-        write!(f, "{}", self.expected)?;
-
-        if let Some(ref context) = self.context {
-            write!(f, " at index {}", context.offset)?;
-        }
-
-        Ok(())
+        write!(f, "{} at index {}", self.expected, self.index)
     }
 }
 
 impl IntoOwned for Error<'_> {
     type Owned = Error<'static>;
 
-    fn into_owned(self) -> Self::Owned {
-        let expected = self.expected.map(|i| i, IntoOwned::into_owned, |i| i);
-        Error { expected, context: self.context }
+    fn into_owned(self) -> Error<'static> {
+        Error {
+            expected: self.expected.map(|t| t, |s| s.into_owned().into()),
+            index: self.index
+        }
     }
 }
 
@@ -101,8 +73,8 @@ mod tests {
 
     #[test]
     fn check_display() {
-        check_err!("a" => "expected token '/' but found 'a' at index 0");
-        check_err!("?" => "expected token '/' but found '?' at index 0");
-        check_err!("这" => "expected token '/' but found non-ASCII byte 232 at index 0");
+        check_err!("a" => "expected token / but found a at index 0");
+        check_err!("?" => "expected token / but found ? at index 0");
+        check_err!("这" => "expected token / but found byte 232 at index 0");
     }
 }

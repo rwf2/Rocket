@@ -34,9 +34,9 @@ use super::CompressionUtils;
 #[derive(Debug)]
 pub struct Compress<R>(pub R);
 
-impl<'r, R: Responder<'r>> Responder<'r> for Compress<R> {
+impl<'r, 'o: 'r, R: Responder<'r, 'o>> Responder<'r, 'o> for Compress<R> {
     #[inline(always)]
-    fn respond_to(self, request: &Request<'_>) -> response::Result<'r> {
+    fn respond_to(self, request: &'r Request<'_>) -> response::Result<'o> {
         let mut response = Response::build()
             .merge(self.0.respond_to(request)?)
             .finalize();

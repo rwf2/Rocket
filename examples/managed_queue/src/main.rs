@@ -1,5 +1,3 @@
-#![feature(proc_macro_hygiene)]
-
 #[macro_use] extern crate rocket;
 
 #[cfg(test)] mod tests;
@@ -19,12 +17,9 @@ fn pop(queue: State<'_, LogChannel>) -> Option<String> {
     queue.0.pop().ok()
 }
 
+#[launch]
 fn rocket() -> rocket::Rocket {
     rocket::ignite()
         .mount("/", routes![push, pop])
         .manage(LogChannel(SegQueue::new()))
-}
-
-fn main() {
-    rocket().launch();
 }

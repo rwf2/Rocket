@@ -1,7 +1,7 @@
 use std::convert::TryInto;
 
 use crate::request::Request;
-use crate::response::{Response, Responder};
+use crate::response::{self, Response, Responder};
 use crate::http::uri::Uri;
 use crate::http::Status;
 
@@ -26,7 +26,6 @@ use crate::http::Status;
 /// a route, _always_ use [`uri!`] to construct a valid [`Origin`]:
 ///
 /// ```rust
-/// # #![feature(proc_macro_hygiene)]
 /// # #[macro_use] extern crate rocket;
 /// use rocket::response::Redirect;
 ///
@@ -147,8 +146,8 @@ impl Redirect {
 /// the `Location` header field. The body of the response is empty. If the URI
 /// value used to create the `Responder` is an invalid URI, an error of
 /// `Status::InternalServerError` is returned.
-impl Responder<'_> for Redirect {
-    fn respond_to(self, _: &Request<'_>) -> Result<Response<'static>, Status> {
+impl<'r> Responder<'r, 'static> for Redirect {
+    fn respond_to(self, _: &'r Request<'_>) -> response::Result<'static> {
         if let Some(uri) = self.1 {
             Response::build()
                 .status(self.0)

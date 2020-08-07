@@ -1,5 +1,3 @@
-#![feature(proc_macro_hygiene)]
-
 #[macro_use]
 #[cfg(feature = "helmet")]
 extern crate rocket;
@@ -7,7 +5,7 @@ extern crate rocket;
 #[cfg(feature = "helmet")]
 mod helmet_tests {
     use rocket::http::{Status, uri::Uri};
-    use rocket::local::{Client, LocalResponse};
+    use rocket::local::blocking::{Client, LocalResponse};
 
     use rocket_contrib::helmet::*;
     use time::Duration;

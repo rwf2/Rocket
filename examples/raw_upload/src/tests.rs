@@ -1,4 +1,4 @@
-use rocket::local::Client;
+use rocket::local::blocking::Client;
 use rocket::http::{Status, ContentType};
 
 use std::env;
@@ -10,8 +10,8 @@ const UPLOAD_CONTENTS: &str = "Hey! I'm going to be uploaded. :D Yay!";
 #[test]
 fn test_index() {
     let client = Client::new(super::rocket()).unwrap();
-    let mut res = client.get("/").dispatch();
-    assert_eq!(res.body_string(), Some(super::index().to_string()));
+    let res = client.get("/").dispatch();
+    assert_eq!(res.into_string(), Some(super::index().to_string()));
 }
 
 #[test]
@@ -22,13 +22,13 @@ fn test_raw_upload() {
 
     // Do the upload. Make sure we get the expected results.
     let client = Client::new(super::rocket()).unwrap();
-    let mut res = client.post("/upload")
+    let res = client.post("/upload")
         .header(ContentType::Plain)
         .body(UPLOAD_CONTENTS)
         .dispatch();
 
     assert_eq!(res.status(), Status::Ok);
-    assert_eq!(res.body_string(), Some(UPLOAD_CONTENTS.len().to_string()));
+    assert_eq!(res.into_string(), Some(UPLOAD_CONTENTS.len().to_string()));
 
     // Ensure we find the body in the /tmp/upload.txt file.
     let mut file_contents = String::new();

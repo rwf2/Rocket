@@ -1,5 +1,3 @@
-#![feature(proc_macro_hygiene)]
-
 #[macro_use] extern crate rocket;
 
 use rocket::request::Form;
@@ -17,18 +15,18 @@ fn bug(form_data: Form<FormData>) -> &'static str {
 
 mod tests {
     use super::*;
-    use rocket::local::Client;
+    use rocket::local::blocking::Client;
     use rocket::http::{Status, ContentType};
 
     #[test]
     fn method_eval() {
         let client = Client::new(rocket::ignite().mount("/", routes![bug])).unwrap();
-        let mut response = client.post("/")
+        let response = client.post("/")
             .header(ContentType::Form)
             .body("_method=patch&form_data=Form+data")
             .dispatch();
 
-        assert_eq!(response.body_string(), Some("OK".into()));
+        assert_eq!(response.into_string(), Some("OK".into()));
     }
 
     #[test]

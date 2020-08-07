@@ -1,20 +1,20 @@
 use super::rocket;
-use rocket::local::Client;
+use rocket::local::blocking::Client;
 use rocket::http::{ContentType, Status};
 
 fn test_login<T>(user: &str, pass: &str, age: &str, status: Status, body: T)
-    where T: Into<Option<&'static str>>
+    where T: Into<Option<&'static str>> + Send
 {
     let client = Client::new(rocket()).unwrap();
     let query = format!("username={}&password={}&age={}", user, pass, age);
-    let mut response = client.post("/login")
+    let response = client.post("/login")
         .header(ContentType::Form)
         .body(&query)
         .dispatch();
 
     assert_eq!(response.status(), status);
     if let Some(expected_str) = body.into() {
-        let body_str = response.body_string();
+        let body_str = response.into_string();
         assert!(body_str.map_or(false, |s| s.contains(expected_str)));
     }
 }

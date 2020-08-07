@@ -1,22 +1,15 @@
-use rocket::local::Client;
+use rocket::local::blocking::Client;
 use rocket::http::Status;
 
-fn client() -> Client {
-    let rocket = rocket::ignite()
-        .mount("/", routes![super::root, super::user, super::login]);
-    Client::new(rocket).unwrap()
-
-}
-
 fn test_200(uri: &str, expected_body: &str) {
-    let client = client();
-    let mut response = client.get(uri).dispatch();
+    let client = Client::new(super::rocket()).unwrap();
+    let response = client.get(uri).dispatch();
     assert_eq!(response.status(), Status::Ok);
-    assert_eq!(response.body_string(), Some(expected_body.to_string()));
+    assert_eq!(response.into_string(), Some(expected_body.to_string()));
 }
 
 fn test_303(uri: &str, expected_location: &str) {
-    let client = client();
+    let client = Client::new(super::rocket()).unwrap();
     let response = client.get(uri).dispatch();
     let location_headers: Vec<_> = response.headers().get("Location").collect();
     assert_eq!(response.status(), Status::SeeOther);

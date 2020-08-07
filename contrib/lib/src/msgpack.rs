@@ -14,13 +14,15 @@
 //! features = ["msgpack"]
 //! ```
 
-use std::io::Read;
 use std::ops::{Deref, DerefMut};
+
+use tokio::io::AsyncReadExt;
 
 use rocket::request::Request;
 use rocket::outcome::Outcome::*;
-use rocket::data::{Outcome, Transform, Transform::*, Transformed, Data, FromData};
-use rocket::response::{self, Responder, content};
+use rocket::data::{Data, ByteUnit, Transform::*, TransformFuture, Transformed};
+use rocket::data::{FromTransformedData, FromDataFuture};
+use rocket::response::{self, content, Responder};
 use rocket::http::Status;
 
 use serde::Serialize;
@@ -28,7 +30,7 @@ use serde::de::Deserialize;
 
 pub use rmp_serde::decode::Error;
 
-/// The `MsgPack` type: implements [`FromData`] and [`Responder`], allowing you
+/// The `MsgPack` type: implements [`FromTransformedData`] and [`Responder`], allowing you
 /// to easily consume and respond with MessagePack data.
 ///
 /// ## Receiving MessagePack
@@ -40,7 +42,6 @@ pub use rmp_serde::decode::Error;
 /// request body.
 ///
 /// ```rust
-/// # #![feature(proc_macro_hygiene)]
 /// # #[macro_use] extern crate rocket;
 /// # extern crate rocket_contrib;
 /// # type User = usize;
@@ -64,7 +65,6 @@ pub use rmp_serde::decode::Error;
 /// response is set to `application/msgpack` automatically.
 ///
 /// ```rust
-/// # #![feature(proc_macro_hygiene)]
 /// # #[macro_use] extern crate rocket;
 /// # extern crate rocket_contrib;
 /// # type User = usize;
@@ -111,53 +111,58 @@ impl<T> MsgPack<T> {
     }
 }
 
-/// Default limit for MessagePack is 1MB.
-const LIMIT: u64 = 1 << 20;
+const DEFAULT_LIMIT: ByteUnit = ByteUnit::Mebibyte(1);
 
-impl<'a, T: Deserialize<'a>> FromData<'a> for MsgPack<T> {
+impl<'a, T: Deserialize<'a>> FromTransformedData<'a> for MsgPack<T> {
     type Error = Error;
     type Owned = Vec<u8>;
     type Borrowed = [u8];
 
-    fn transform(r: &Request<'_>, d: Data) -> Transform<Outcome<Self::Owned, Self::Error>> {
-        let mut buf = Vec::new();
-        let size_limit = r.limits().get("msgpack").unwrap_or(LIMIT);
-        match d.open().take(size_limit).read_to_end(&mut buf) {
-            Ok(_) => Borrowed(Success(buf)),
-            Err(e) => Borrowed(Failure((Status::BadRequest, Error::InvalidDataRead(e))))
-        }
+    fn transform<'r>(r: &'r Request<'_>, d: Data) -> TransformFuture<'r, Self::Owned, Self::Error> {
+        Box::pin(async move {
+            let size_limit = r.limits().get("msgpack").unwrap_or(DEFAULT_LIMIT);
+            let mut buf = Vec::new();
+            let mut reader = d.open(size_limit);
+            match reader.read_to_end(&mut buf).await {
+                Ok(_) => Borrowed(Success(buf)),
+                Err(e) => Borrowed(Failure((Status::BadRequest, Error::InvalidDataRead(e)))),
+            }
+        })
     }
 
-    fn from_data(_: &Request<'_>, o: Transformed<'a, Self>) -> Outcome<Self, Self::Error> {
+    fn from_data(_: &'a Request<'_>, o: Transformed<'a, Self>) -> FromDataFuture<'a, Self, Self::Error> {
         use self::Error::*;
 
-        let buf = try_outcome!(o.borrowed());
-        match rmp_serde::from_slice(&buf) {
-            Ok(val) => Success(MsgPack(val)),
-            Err(e) => {
-                error_!("Couldn't parse MessagePack body: {:?}", e);
-                match e {
-                    TypeMismatch(_) | OutOfRange | LengthMismatch(_) => {
-                        Failure((Status::UnprocessableEntity, e))
+        Box::pin(async move {
+            let buf = try_outcome!(o.borrowed());
+            match rmp_serde::from_slice(&buf) {
+                Ok(val) => Success(MsgPack(val)),
+                Err(e) => {
+                    error_!("Couldn't parse MessagePack body: {:?}", e);
+                    match e {
+                        TypeMismatch(_) | OutOfRange | LengthMismatch(_) => {
+                            Failure((Status::UnprocessableEntity, e))
+                        }
+                        _ => Failure((Status::BadRequest, e)),
                     }
-                    _ => Failure((Status::BadRequest, e))
                 }
             }
-        }
+        })
     }
 }
 
 /// Serializes the wrapped value into MessagePack. Returns a response with
 /// Content-Type `MsgPack` and a fixed-size body with the serialization. If
 /// serialization fails, an `Err` of `Status::InternalServerError` is returned.
-impl<T: Serialize> Responder<'static> for MsgPack<T> {
-    fn respond_to(self, req: &Request<'_>) -> response::Result<'static> {
-        rmp_serde::to_vec(&self.0).map_err(|e| {
-            error_!("MsgPack failed to serialize: {:?}", e);
-            Status::InternalServerError
-        }).and_then(|buf| {
-            content::MsgPack(buf).respond_to(req)
-        })
+impl<'r, T: Serialize> Responder<'r, 'static> for MsgPack<T> {
+    fn respond_to(self, req: &'r Request<'_>) -> response::Result<'static> {
+        let buf = rmp_serde::to_vec(&self.0)
+            .map_err(|e| {
+                error_!("MsgPack failed to serialize: {:?}", e);
+                Status::InternalServerError
+            })?;
+
+        content::MsgPack(buf).respond_to(req)
     }
 }
 

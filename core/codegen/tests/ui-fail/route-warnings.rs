@@ -1,26 +1,26 @@
 // must-compile-successfully
 
-#![feature(proc_macro_hygiene)]
-
 #[macro_use] extern crate rocket;
 
 // Check for unknown media types.
 
-#[get("/", format = "application/x-custom")] //~ WARNING not a known media type
+#[get("/", format = "application/x-custom")]
 fn f0() {}
 
-#[get("/", format = "x-custom/plain")] //~ WARNING not a known media type
+#[get("/", format = "x-custom/plain")]
 fn f1() {}
 
-#[get("/", format = "x-custom/x-custom")] //~ WARNING not a known media type
+#[get("/", format = "x-custom/x-custom")]
 fn f2() {}
 
 // Check if a data argument is used with a usually non-payload bearing method.
 
-#[get("/", data = "<_foo>")] //~ WARNING used with non-payload-supporting method
+#[get("/", data = "<_foo>")]
 fn g0(_foo: rocket::Data) {}
 
-#[head("/", data = "<_foo>")] //~ WARNING used with non-payload-supporting method
+#[head("/", data = "<_foo>")]
 fn g1(_foo: rocket::Data) {}
 
-fn main() {  }
+fn main() {
+    compile_error!("checking for warnings!")
+}

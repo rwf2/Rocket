@@ -1,5 +1,3 @@
-#![feature(proc_macro_hygiene)]
-
 #[macro_use] extern crate rocket;
 
 use rocket::response::Redirect;
@@ -11,7 +9,7 @@ fn not_found() -> Redirect {
 
 mod tests {
     use super::*;
-    use rocket::local::Client;
+    use rocket::local::blocking::Client;
     use rocket::http::Status;
 
     #[test]

@@ -7,3 +7,4 @@ publish = false
 
 [dependencies]
 rocket = { path = "../../core/lib" }
+rocket_contrib = { path = "../../contrib/lib" }

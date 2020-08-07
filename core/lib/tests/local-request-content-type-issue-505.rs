@@ -1,36 +1,28 @@
-#![feature(proc_macro_hygiene)]
-
 #[macro_use] extern crate rocket;
 
-use rocket::Outcome::*;
 use rocket::{Request, Data};
 use rocket::request::{self, FromRequest};
+use rocket::outcome::IntoOutcome;
 
 struct HasContentType;
 
+#[rocket::async_trait]
 impl<'a, 'r> FromRequest<'a, 'r> for HasContentType {
     type Error = ();
 
-    fn from_request(request: &'a Request<'r>) -> request::Outcome<Self, ()> {
-        if request.content_type().is_some() {
-            Success(HasContentType)
-        } else {
-            Forward(())
-        }
+    async fn from_request(req: &'a Request<'r>) -> request::Outcome<Self, ()> {
+        req.content_type().map(|_| HasContentType).or_forward(())
     }
 }
 
-use rocket::data::{self, FromDataSimple};
+use rocket::data::{self, FromData};
 
-impl FromDataSimple for HasContentType {
+#[rocket::async_trait]
+impl FromData for HasContentType {
     type Error = ();
 
-    fn from_data(request: &Request, data: Data) -> data::Outcome<Self, ()> {
-        if request.content_type().is_some() {
-            Success(HasContentType)
-        } else {
-            Forward(data)
-        }
+    async fn from_data(req: &Request<'_>, data: Data) -> data::Outcome<Self, ()> {
+        req.content_type().map(|_| HasContentType).or_forward(data)
     }
 }
 
@@ -53,7 +45,7 @@ mod local_request_content_type_tests {
     use super::*;
 
     use rocket::Rocket;
-    use rocket::local::Client;
+    use rocket::local::blocking::Client;
     use rocket::http::ContentType;
 
     fn rocket() -> Rocket {
@@ -64,29 +56,29 @@ mod local_request_content_type_tests {
     fn has_no_ct() {
         let client = Client::new(rocket()).unwrap();
 
-        let mut req = client.post("/");
-        assert_eq!(req.clone().dispatch().body_string(), Some("Absent".to_string()));
-        assert_eq!(req.mut_dispatch().body_string(), Some("Absent".to_string()));
-        assert_eq!(req.dispatch().body_string(), Some("Absent".to_string()));
+        let req = client.post("/");
+        assert_eq!(req.clone().dispatch().into_string(), Some("Absent".to_string()));
+        assert_eq!(req.clone().dispatch().into_string(), Some("Absent".to_string()));
+        assert_eq!(req.dispatch().into_string(), Some("Absent".to_string()));
 
-        let mut req = client.post("/data");
-        assert_eq!(req.clone().dispatch().body_string(), Some("Data Absent".to_string()));
-        assert_eq!(req.mut_dispatch().body_string(), Some("Data Absent".to_string()));
-        assert_eq!(req.dispatch().body_string(), Some("Data Absent".to_string()));
+        let req = client.post("/data");
+        assert_eq!(req.clone().dispatch().into_string(), Some("Data Absent".to_string()));
+        assert_eq!(req.clone().dispatch().into_string(), Some("Data Absent".to_string()));
+        assert_eq!(req.dispatch().into_string(), Some("Data Absent".to_string()));
     }
 
     #[test]
     fn has_ct() {
         let client = Client::new(rocket()).unwrap();
 
-        let mut req = client.post("/").header(ContentType::JSON);
-        assert_eq!(req.clone().dispatch().body_string(), Some("Present".to_string()));
-        assert_eq!(req.mut_dispatch().body_string(), Some("Present".to_string()));
-        assert_eq!(req.dispatch().body_string(), Some("Present".to_string()));
+        let req = client.post("/").header(ContentType::JSON);
+        assert_eq!(req.clone().dispatch().into_string(), Some("Present".to_string()));
+        assert_eq!(req.clone().dispatch().into_string(), Some("Present".to_string()));
+        assert_eq!(req.dispatch().into_string(), Some("Present".to_string()));
 
-        let mut req = client.post("/data").header(ContentType::JSON);
-        assert_eq!(req.clone().dispatch().body_string(), Some("Data Present".to_string()));
-        assert_eq!(req.mut_dispatch().body_string(), Some("Data Present".to_string()));
-        assert_eq!(req.dispatch().body_string(), Some("Data Present".to_string()));
+        let req = client.post("/data").header(ContentType::JSON);
+        assert_eq!(req.clone().dispatch().into_string(), Some("Data Present".to_string()));
+        assert_eq!(req.clone().dispatch().into_string(), Some("Data Present".to_string()));
+        assert_eq!(req.dispatch().into_string(), Some("Data Present".to_string()));
     }
 }

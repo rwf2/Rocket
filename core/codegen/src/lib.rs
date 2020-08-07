@@ -1,9 +1,8 @@
-#![feature(proc_macro_diagnostic, proc_macro_span)]
 #![recursion_limit="128"]
 
 #![doc(html_root_url = "https://api.rocket.rs/v0.5")]
-#![doc(html_favicon_url = "https://rocket.rs/v0.5/images/favicon.ico")]
-#![doc(html_logo_url = "https://rocket.rs/v0.5/images/logo-boxed.png")]
+#![doc(html_favicon_url = "https://rocket.rs/images/favicon.ico")]
+#![doc(html_logo_url = "https://rocket.rs/images/logo-boxed.png")]
 
 #![warn(rust_2018_idioms)]
 
@@ -29,8 +28,6 @@
 //! crate root:
 //!
 //! ```rust
-//! #![feature(proc_macro_hygiene)]
-//!
 //! #[macro_use] extern crate rocket;
 //! # #[get("/")] fn hello() { }
 //! # fn main() { rocket::ignite().mount("/", routes![hello]); }
@@ -39,7 +36,6 @@
 //! Or, alternatively, selectively import from the top-level scope:
 //!
 //! ```rust
-//! #![feature(proc_macro_hygiene)]
 //! # extern crate rocket;
 //!
 //! use rocket::{get, routes};
@@ -59,7 +55,6 @@
 //! ```
 
 #[macro_use] extern crate quote;
-#[allow(unused_extern_crates)] extern crate proc_macro;
 
 use rocket_http as http;
 
@@ -79,6 +74,7 @@ macro_rules! vars_and_mods {
 
 vars_and_mods! {
     req => __req,
+    status => __status,
     catcher => __catcher,
     data => __data,
     error => __error,
@@ -87,21 +83,27 @@ vars_and_mods! {
     response => rocket::response,
     handler => rocket::handler,
     log => rocket::logger,
-    Outcome => rocket::Outcome,
-    FromData => rocket::data::FromData,
+    Outcome => rocket::outcome::Outcome,
+    FromTransformedData => rocket::data::FromTransformedData,
     Transform => rocket::data::Transform,
     Query => rocket::request::Query,
-    Request => rocket::Request,
+    FromFormValue => rocket::request::FromFormValue,
+    Request => rocket::request::Request,
     Response => rocket::response::Response,
-    Data => rocket::Data,
+    Data => rocket::data::Data,
     StaticRouteInfo => rocket::StaticRouteInfo,
     SmallVec => rocket::http::private::SmallVec,
+    Status => rocket::http::Status,
+    HandlerFuture => rocket::handler::HandlerFuture,
+    ErrorHandlerFuture => rocket::catcher::ErrorHandlerFuture,
     _Option => ::std::option::Option,
     _Result => ::std::result::Result,
     _Some => ::std::option::Option::Some,
     _None => ::std::option::Option::None,
     _Ok => ::std::result::Result::Ok,
     _Err => ::std::result::Result::Err,
+    _Box => ::std::boxed::Box,
+    _Vec => ::std::vec::Vec,
 }
 
 macro_rules! define_vars_and_mods {
@@ -119,7 +121,7 @@ mod syn_ext;
 
 use crate::http::Method;
 use proc_macro::TokenStream;
-use devise::proc_macro2;
+use devise::{proc_macro2, syn};
 
 static ROUTE_STRUCT_PREFIX: &str = "static_rocket_route_info_for_";
 static CATCH_STRUCT_PREFIX: &str = "static_rocket_catch_info_for_";
@@ -130,15 +132,19 @@ static ROCKET_PARAM_PREFIX: &str = "__rocket_param_";
 
 macro_rules! emit {
     ($tokens:expr) => ({
-        let tokens = $tokens;
+        use devise::ext::SpanDiagnosticExt;
+
+        let mut tokens = $tokens;
         if std::env::var_os("ROCKET_CODEGEN_DEBUG").is_some() {
-            proc_macro::Span::call_site()
+            let debug_tokens = proc_macro2::Span::call_site()
                 .note("emitting Rocket code generation debug output")
                 .note(tokens.to_string())
-                .emit()
+                .emit_as_item_tokens();
+
+            tokens.extend(debug_tokens);
         }
 
-        tokens
+        tokens.into()
     })
 }
 
@@ -150,7 +156,6 @@ macro_rules! route_attribute {
         /// functions:
         ///
         /// ```rust
-        /// # #![feature(proc_macro_hygiene)]
         /// # #[macro_use] extern crate rocket;
         /// #
         /// #[get("/")]
@@ -173,7 +178,6 @@ macro_rules! route_attribute {
         /// specified:
         ///
         /// ```rust
-        /// # #![feature(proc_macro_hygiene)]
         /// # #[macro_use] extern crate rocket;
         /// #
         /// #[route(GET, path = "/")]
@@ -234,7 +238,6 @@ macro_rules! route_attribute {
         /// the arguments `foo`, `baz`, `msg`, `rest`, and `form`:
         ///
         /// ```rust
-        /// # #![feature(proc_macro_hygiene)]
         /// # #[macro_use] extern crate rocket;
         /// # use rocket::request::Form;
         /// # use std::path::PathBuf;
@@ -256,7 +259,7 @@ macro_rules! route_attribute {
         /// | path     | `<ident..>` | [`FromSegments`]  |
         /// | query    | `<ident>`   | [`FromFormValue`] |
         /// | query    | `<ident..>` | [`FromQuery`]     |
-        /// | data     | `<ident>`   | [`FromData`]      |
+        /// | data     | `<ident>`   | [`FromTransformedData`]      |
         ///
         /// The type of each function argument that _does not_ have a
         /// corresponding dynamic parameter is required to implement the
@@ -269,7 +272,7 @@ macro_rules! route_attribute {
         /// [`FromSegments`]: ../rocket/request/trait.FromSegments.html
         /// [`FromFormValue`]: ../rocket/request/trait.FromFormValue.html
         /// [`FromQuery`]: ../rocket/request/trait.FromQuery.html
-        /// [`FromData`]: ../rocket/data/trait.FromData.html
+        /// [`FromTransformedData`]: ../rocket/data/trait.FromTransformedData.html
         /// [`FromRequest`]: ../rocket/request/trait.FromRequest.html
         /// [`Route`]: ../rocket/struct.Route.html
         /// [`Responder`]: ../rocket/response/trait.Responder.html
@@ -301,7 +304,7 @@ macro_rules! route_attribute {
         ///
         ///            If a data guard fails, the request is forwarded if the
         ///            [`Outcome`] is `Forward` or failed if the [`Outcome`] is
-        ///            `Failure`. See [`FromData` Outcomes] for further detail.
+        ///            `Failure`. See [`FromTransformedData` Outcomes] for further detail.
         ///
         ///      If all validation succeeds, the decorated function is called.
         ///      The returned value is used to generate a [`Response`] via the
@@ -321,10 +324,10 @@ macro_rules! route_attribute {
         /// [`routes!`]: macro.routes.html
         /// [`uri!`]: macro.uri.html
         /// [`Origin`]: ../rocket/http/uri/struct.Origin.html
-        /// [`Outcome`]: ../rocket/enum.Outcome.html
+        /// [`Outcome`]: ../rocket/outcome/enum.Outcome.html
         /// [`Response`]: ../rocket/struct.Response.html
         /// [`FromRequest` Outcomes]: ../rocket/request/trait.FromRequest.html#outcomes
-        /// [`FromData` Outcomes]: ../rocket/data/trait.FromData.html#outcomes
+        /// [`FromTransformedData` Outcomes]: ../rocket/data/trait.FromTransformedData.html#outcomes
         #[proc_macro_attribute]
         pub fn $name(args: TokenStream, input: TokenStream) -> TokenStream {
             emit!(attribute::route::route_attribute($method, args, input))
@@ -346,14 +349,19 @@ route_attribute!(options => Method::Options);
 /// This attribute can only be applied to free functions:
 ///
 /// ```rust
-/// # #![feature(proc_macro_hygiene)]
 /// # #[macro_use] extern crate rocket;
 /// #
 /// use rocket::Request;
+/// use rocket::http::Status;
 ///
 /// #[catch(404)]
 /// fn not_found(req: &Request) -> String {
 ///     format!("Sorry, {} does not exist.", req.uri())
+/// }
+///
+/// #[catch(default)]
+/// fn default(status: Status, req: &Request) -> String {
+///     format!("{} - {} ({})", status.code, status.reason, req.uri())
 /// }
 /// ```
 ///
@@ -362,19 +370,19 @@ route_attribute!(options => Method::Options);
 /// The grammar for the `#[catch]` attributes is defined as:
 ///
 /// ```text
-/// catch := STATUS
+/// catch := STATUS | 'default'
 ///
 /// STATUS := valid HTTP status code (integer in [200, 599])
 /// ```
 ///
 /// # Typing Requirements
 ///
-/// The decorated function must take exactly zero or one argument. If the
-/// decorated function takes an argument, the argument's type must be
-/// [`&Request`].
+/// The decorated function may take zero, one, or two arguments. It's type
+/// signature must be one of the following, where `R:`[`Responder`]:
 ///
-/// The return type of the decorated function must implement the [`Responder`]
-/// trait.
+///   * `fn() -> R`
+///   * `fn(`[`&Request`]`) -> R`
+///   * `fn(`[`Status`]`, `[`&Request`]`) -> R`
 ///
 /// # Semantics
 ///
@@ -383,16 +391,18 @@ route_attribute!(options => Method::Options);
 ///   1. An [`ErrorHandler`].
 ///
 ///      The generated handler calls the decorated function, passing in the
-///      [`&Request`] value if requested. The returned value is used to generate
-///      a [`Response`] via the type's [`Responder`] implementation.
+///      [`Status`] and [`&Request`] values if requested. The returned value is
+///      used to generate a [`Response`] via the type's [`Responder`]
+///      implementation.
 ///
 ///   2. A static structure used by [`catchers!`] to generate a [`Catcher`].
 ///
-///      The static structure (and resulting [`Catcher`]) is populated
-///      with the name (the function's name) and status code from the
-///      route attribute. The handler is set to the generated handler.
+///      The static structure (and resulting [`Catcher`]) is populated with the
+///      name (the function's name) and status code from the route attribute or
+///      `None` if `default`. The handler is set to the generated handler.
 ///
 /// [`&Request`]: ../rocket/struct.Request.html
+/// [`Status`]: ../rocket/http/struct.Status.html
 /// [`ErrorHandler`]: ../rocket/type.ErrorHandler.html
 /// [`catchers!`]: macro.catchers.html
 /// [`Catcher`]: ../rocket/struct.Catcher.html
@@ -401,6 +411,24 @@ route_attribute!(options => Method::Options);
 #[proc_macro_attribute]
 pub fn catch(args: TokenStream, input: TokenStream) -> TokenStream {
     emit!(attribute::catch::catch_attribute(args, input))
+}
+
+/// FIXME: Document.
+#[proc_macro_attribute]
+pub fn async_test(args: TokenStream, input: TokenStream) -> TokenStream {
+    emit!(attribute::async_entry::async_test_attribute(args, input))
+}
+
+/// FIXME: Document.
+#[proc_macro_attribute]
+pub fn main(args: TokenStream, input: TokenStream) -> TokenStream {
+    emit!(attribute::async_entry::main_attribute(args, input))
+}
+
+/// FIXME: Document.
+#[proc_macro_attribute]
+pub fn launch(args: TokenStream, input: TokenStream) -> TokenStream {
+    emit!(attribute::async_entry::launch_attribute(args, input))
 }
 
 /// Derive for the [`FromFormValue`] trait.
@@ -634,7 +662,7 @@ pub fn derive_from_form(input: TokenStream) -> TokenStream {
 /// The attribute accepts two key/value pairs: `status` and `content_type`. The
 /// value of `status` must be an unsigned integer representing a valid status
 /// code. The [`Response`] produced from the generated implementation will have
-/// its status overriden to this value.
+/// its status overridden to this value.
 ///
 /// The value of `content_type` must be a valid media-type in `top/sub` form or
 /// `shorthand` form. Examples include:
@@ -648,7 +676,7 @@ pub fn derive_from_form(input: TokenStream) -> TokenStream {
 ///
 /// See [`ContentType::parse_flexible()`] for a full list of available
 /// shorthands. The [`Response`] produced from the generated implementation will
-/// have its content-type overriden to this value.
+/// have its content-type overridden to this value.
 ///
 /// [`Responder`]: ../rocket/response/trait.Responder.html
 /// [`Response`]: ../rocket/struct.Response.html
@@ -685,7 +713,7 @@ pub fn derive_responder(input: TokenStream) -> TokenStream {
 ///
 /// The derive generates an implementation of the [`UriDisplay<Query>`] trait.
 /// The implementation calls [`Formatter::write_named_value()`] for every named
-/// field, using the field's name (unless overriden, explained next) as the
+/// field, using the field's name (unless overridden, explained next) as the
 /// `name` parameter, and [`Formatter::write_value()`] for every unnamed field
 /// in the order the fields are declared.
 ///
@@ -758,7 +786,6 @@ pub fn derive_uri_display_path(input: TokenStream) -> TokenStream {
 /// corresponding [`Route`] structures. For example, given the following routes:
 ///
 /// ```rust
-/// # #![feature(proc_macro_hygiene)]
 /// # #[macro_use] extern crate rocket;
 /// #
 /// #[get("/")]
@@ -773,7 +800,6 @@ pub fn derive_uri_display_path(input: TokenStream) -> TokenStream {
 /// The `routes!` macro can be used as:
 ///
 /// ```rust
-/// # #![feature(proc_macro_hygiene)]
 /// # #[macro_use] extern crate rocket;
 /// #
 /// # use rocket::http::Method;
@@ -817,7 +843,6 @@ pub fn routes(input: TokenStream) -> TokenStream {
 /// catchers:
 ///
 /// ```rust
-/// # #![feature(proc_macro_hygiene)]
 /// # #[macro_use] extern crate rocket;
 /// #
 /// #[catch(404)]
@@ -827,27 +852,32 @@ pub fn routes(input: TokenStream) -> TokenStream {
 ///     #[catch(400)]
 ///     pub fn unauthorized() { /* .. */ }
 /// }
+///
+/// #[catch(default)]
+/// fn default_catcher() { /* .. */ }
 /// ```
 ///
 /// The `catchers!` macro can be used as:
 ///
 /// ```rust
-/// # #![feature(proc_macro_hygiene)]
 /// # #[macro_use] extern crate rocket;
 /// #
 /// # #[catch(404)] fn not_found() { /* .. */ }
+/// # #[catch(default)] fn default_catcher() { /* .. */ }
 /// # mod inner {
 /// #     #[catch(400)] pub fn unauthorized() { /* .. */ }
 /// # }
-/// #
-/// let my_catchers = catchers![not_found, inner::unauthorized];
-/// assert_eq!(my_catchers.len(), 2);
+/// let my_catchers = catchers![not_found, inner::unauthorized, default_catcher];
+/// assert_eq!(my_catchers.len(), 3);
 ///
 /// let not_found = &my_catchers[0];
-/// assert_eq!(not_found.code, 404);
+/// assert_eq!(not_found.code, Some(404));
 ///
 /// let unauthorized = &my_catchers[1];
-/// assert_eq!(unauthorized.code, 400);
+/// assert_eq!(unauthorized.code, Some(400));
+///
+/// let default = &my_catchers[2];
+/// assert_eq!(default.code, None);
 /// ```
 ///
 /// The grammar for `catchers!` is defined as:
@@ -864,9 +894,9 @@ pub fn catchers(input: TokenStream) -> TokenStream {
     emit!(bang::catchers_macro(input))
 }
 
-/// Type safe generation of route URIs.
+/// Type-safe, URI-safe generation of an [`Origin`] URI from a route.
 ///
-/// The `uri!` macro creates a type-safe, URL safe URI given a route and values
+/// The `uri!` macro creates a type-safe, URL-safe URI given a route and values
 /// for the route's URI parameters. The inputs to the macro are the path to a
 /// route, a colon, and one argument for each dynamic parameter (parameters in
 /// `<>`) in the route's path and query.
@@ -874,7 +904,6 @@ pub fn catchers(input: TokenStream) -> TokenStream {
 /// For example, for the following route:
 ///
 /// ```rust
-/// # #![feature(proc_macro_hygiene)]
 /// # #[macro_use] extern crate rocket;
 /// #
 /// #[get("/person/<name>?<age>")]
@@ -888,7 +917,6 @@ pub fn catchers(input: TokenStream) -> TokenStream {
 /// A URI can be created as follows:
 ///
 /// ```rust
-/// # #![feature(proc_macro_hygiene)]
 /// # #[macro_use] extern crate rocket;
 /// #
 /// # #[get("/person/<name>?<age>")]

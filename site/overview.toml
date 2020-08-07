@@ -136,22 +136,23 @@ fn not_found() -> T { ... }
 name = "Launching"
 content = '''
 Launching a Rocket application is the funnest part! For Rocket to begin
-dispatching requests to routes, the routes need to be _mounted_. After mounting,
-the application needs to be _launched_. These two steps, usually done in `main`,
-look like:
+dispatching requests to routes, routes need to be _mounted_. After mounting, the
+application needs to be _launched_. These two steps, usually done in a `rocket`
+function, look like:
 
 ```rust
-rocket::ignite()
-   .mount("/base", routes![index, another])
-   .launch();
+#[launch]
+fn rocket() -> Rocket {
+    rocket::ignite().mount("/base", routes![index, another])
+}
 ```
 
 The `mount` call takes a base path and a set of routes via the `routes!` macro.
 The base path (`/base` above) is prepended to the path of every route in the
-list. This effectively namespaces the routes, allowing for easier composition.
-
-The `launch` call starts the server. In development, Rocket prints useful
-information to the console to let you know everything is okay.
+list. This namespaces the routes, allowing for composition. The `#[launch]`
+attribute creates a `main` function that starts the server. In development,
+Rocket prints useful information to the console to let you know everything is
+okay.
 
 ```sh
 🚀  Rocket has launched from http://localhost:8000

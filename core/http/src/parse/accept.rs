@@ -1,22 +1,22 @@
-use pear::parser;
-use pear::parsers::*;
+use pear::macros::{parser, parse_error};
+use pear::combinators::{series, surrounded};
 
 use crate::{Accept, QMediaType};
 use crate::parse::checkers::is_whitespace;
 use crate::parse::media_type::media_type;
 
-type Input<'a> = crate::parse::IndexedInput<'a, str>;
-type Result<'a, T> = pear::Result<T, Input<'a>>;
+type Input<'a> = pear::input::Pear<pear::input::Cursor<&'a str>>;
+type Result<'a, T> = pear::input::Result<T, Input<'a>>;
 
 #[parser]
 fn weighted_media_type<'a>(input: &mut Input<'a>) -> Result<'a, QMediaType> {
     let media_type = media_type()?;
     let weight = match media_type.params().next() {
         Some(("q", value)) if value.len() <= 5 => match value.parse::<f32>().ok() {
-            Some(q) if q > 1. => return Err(pear_error!("q value must be <= 1")),
-            Some(q) if q < 0. => return Err(pear_error!("q value must be > 0")),
+            Some(q) if q > 1. => parse_error!("q value must be <= 1")?,
+            Some(q) if q < 0. => parse_error!("q value must be > 0")?,
             Some(q) => Some(q),
-            None => return Err(pear_error!("invalid media-type weight"))
+            None => parse_error!("invalid media-type weight")?
         },
         _ => None
     };
@@ -26,11 +26,11 @@ fn weighted_media_type<'a>(input: &mut Input<'a>) -> Result<'a, QMediaType> {
 
 #[parser]
 fn accept<'a>(input: &mut Input<'a>) -> Result<'a, Accept> {
-    Accept(series(false, ',', is_whitespace, weighted_media_type)?)
+    Accept(series(|i| surrounded(i, weighted_media_type, is_whitespace), ',')?)
 }
 
 pub fn parse_accept(input: &str) -> Result<'_, Accept> {
-    parse!(accept: &mut input.into())
+    parse!(accept: Input::new(input))
 }
 
 #[cfg(test)]

@@ -1,5 +1,3 @@
-#![feature(proc_macro_hygiene)]
-
 #[macro_use] extern crate rocket;
 
 use rocket::response::Redirect;
@@ -29,7 +27,7 @@ fn rocket() -> rocket::Rocket {
 
 mod tests {
     use super::*;
-    use rocket::local::Client;
+    use rocket::local::blocking::Client;
     use rocket::http::{Status, uri::Uri};
 
     #[test]
@@ -52,8 +50,8 @@ mod tests {
     fn uri_percent_encoding_get() {
         let client = Client::new(rocket()).unwrap();
         let name = Uri::percent_encode(NAME);
-        let mut response = client.get(format!("/hello/{}", name)).dispatch();
+        let response = client.get(format!("/hello/{}", name)).dispatch();
         assert_eq!(response.status(), Status::Ok);
-        assert_eq!(response.body_string().unwrap(), format!("Hello, {}!", NAME));
+        assert_eq!(response.into_string().unwrap(), format!("Hello, {}!", NAME));
     }
 }

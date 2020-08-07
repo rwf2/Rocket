@@ -5,7 +5,7 @@ use std::str::Utf8Error;
 use std::convert::TryFrom;
 
 use crate::ext::IntoOwned;
-use crate::parse::Indexed;
+use crate::parse::Extent;
 use crate::uri::{Origin, Authority, Absolute, Error};
 use crate::uri::encoding::{percent_encode, DEFAULT_ENCODE_SET};
 
@@ -64,9 +64,9 @@ impl<'a> Uri<'a> {
     #[inline]
     pub(crate) unsafe fn raw_absolute(
         source: Cow<'a, [u8]>,
-        scheme: Indexed<'a, [u8]>,
-        path: Indexed<'a, [u8]>,
-        query: Option<Indexed<'a, [u8]>>,
+        scheme: Extent<&'a [u8]>,
+        path: Extent<&'a [u8]>,
+        query: Option<Extent<&'a [u8]>>,
     ) -> Uri<'a> {
         let origin = Origin::raw(source.clone(), path, query);
         Uri::Absolute(Absolute::raw(source.clone(), scheme, None, Some(origin)))
@@ -93,6 +93,20 @@ impl<'a> Uri<'a> {
     pub fn parse(string: &'a str) -> Result<Uri<'a>, Error<'_>> {
         crate::parse::uri::from_str(string)
     }
+
+//    pub fn from_hyp(uri: &'a hyper::Uri) -> Uri<'a> {
+//        match uri.is_absolute() {
+//            true => Uri::Absolute(Absolute::new(
+//                uri.scheme().unwrap(),
+//                match uri.host() {
+//                    Some(host) => Some(Authority::new(None, Host::Raw(host), uri.port())),
+//                    None => None
+//                },
+//                None
+//            )),
+//            false => Uri::Asterisk
+//        }
+//    }
 
     /// Returns the internal instance of `Origin` if `self` is a `Uri::Origin`.
     /// Otherwise, returns `None`.

@@ -1,22 +1,23 @@
-use std::rc::Rc;
-use std::cell::{Cell, RefCell};
+use std::sync::{Arc, RwLock, Mutex};
 use std::net::{IpAddr, SocketAddr};
+use std::future::Future;
 use std::fmt;
 use std::str;
 
 use yansi::Paint;
 use state::{Container, Storage};
+use futures::future::BoxFuture;
+use atomic::Atomic;
 
 use crate::request::{FromParam, FromSegments, FromRequest, Outcome};
 use crate::request::{FromFormValue, FormItems, FormItem};
 
-use crate::rocket::Rocket;
-use crate::router::Route;
-use crate::config::{Config, Limits};
+use crate::{Rocket, Config, Shutdown, Route};
 use crate::http::{hyper, uri::{Origin, Segments}};
 use crate::http::{Method, Header, HeaderMap, Cookies};
 use crate::http::{RawStr, ContentType, Accept, MediaType};
 use crate::http::private::{Indexed, SmallVec, CookieJar};
+use crate::data::Limits;
 
 type Indices = (usize, usize);
 
@@ -26,26 +27,62 @@ type Indices = (usize, usize);
 /// should likely only be used when writing [`FromRequest`] implementations. It
 /// contains all of the information for a given web request except for the body
 /// data. This includes the HTTP method, URI, cookies, headers, and more.
-#[derive(Clone)]
 pub struct Request<'r> {
-    method: Cell<Method>,
+    method: Atomic<Method>,
     uri: Origin<'r>,
     headers: HeaderMap<'r>,
     remote: Option<SocketAddr>,
     pub(crate) state: RequestState<'r>,
 }
 
-#[derive(Clone)]
 pub(crate) struct RequestState<'r> {
     pub config: &'r Config,
     pub managed: &'r Container,
+    pub shutdown: &'r Shutdown,
     pub path_segments: SmallVec<[Indices; 12]>,
     pub query_items: Option<SmallVec<[IndexedFormItem; 6]>>,
-    pub route: Cell<Option<&'r Route>>,
-    pub cookies: RefCell<CookieJar>,
+    pub route: RwLock<Option<&'r Route>>,
+    pub cookies: Mutex<Option<CookieJar>>,
     pub accept: Storage<Option<Accept>>,
     pub content_type: Storage<Option<ContentType>>,
-    pub cache: Rc<Container>,
+    pub cache: Arc<Container>,
+}
+
+impl<'r> Request<'r> {
+    pub(crate) fn clone(&self) -> Self {
+        Request {
+            method: Atomic::new(self.method()),
+            uri: self.uri.clone(),
+            headers: self.headers.clone(),
+            remote: self.remote.clone(),
+            state: self.state.clone(),
+        }
+    }
+}
+
+impl<'r> RequestState<'r> {
+    fn clone(&self) -> RequestState<'r> {
+        let route = self.route.try_read()
+            .map(|r| r.clone())
+            .unwrap_or(None);
+
+        let cookies = self.cookies.try_lock()
+            .map(|j| j.clone())
+            .unwrap_or_else(|_| Some(CookieJar::new()));
+
+        RequestState {
+            config: self.config,
+            managed: self.managed,
+            shutdown: self.shutdown,
+            path_segments: self.path_segments.clone(),
+            query_items: self.query_items.clone(),
+            route: RwLock::new(route),
+            cookies: Mutex::new(cookies),
+            accept: self.accept.clone(),
+            content_type: self.content_type.clone(),
+            cache: self.cache.clone(),
+        }
+    }
 }
 
 #[derive(Clone)]
@@ -64,20 +101,21 @@ impl<'r> Request<'r> {
         uri: Origin<'s>
     ) -> Request<'r> {
         let mut request = Request {
-            method: Cell::new(method),
-            uri: uri,
+            uri,
+            method: Atomic::new(method),
             headers: HeaderMap::new(),
             remote: None,
             state: RequestState {
                 path_segments: SmallVec::new(),
                 query_items: None,
                 config: &rocket.config,
-                managed: &rocket.state,
-                route: Cell::new(None),
-                cookies: RefCell::new(CookieJar::new()),
+                managed: &rocket.managed_state,
+                shutdown: &rocket.shutdown_handle,
+                route: RwLock::new(None),
+                cookies: Mutex::new(Some(CookieJar::new())),
                 accept: Storage::new(),
                 content_type: Storage::new(),
-                cache: Rc::new(Container::new()),
+                cache: Arc::new(Container::new()),
             }
         };
 
@@ -100,7 +138,7 @@ impl<'r> Request<'r> {
     /// ```
     #[inline(always)]
     pub fn method(&self) -> Method {
-        self.method.get()
+        self.method.load(atomic::Ordering::Acquire)
     }
 
     /// Set the method of `self`.
@@ -289,9 +327,17 @@ impl<'r> Request<'r> {
     /// ```
     pub fn cookies(&self) -> Cookies<'_> {
         // FIXME: Can we do better? This is disappointing.
-        match self.state.cookies.try_borrow_mut() {
-            Ok(jar) => Cookies::new(jar, self.state.config.secret_key()),
-            Err(_) => {
+        let mut guard = self.state.cookies.lock().expect("cookies lock");
+        match guard.take() {
+            Some(jar) => {
+                let mutex = &self.state.cookies;
+                let on_drop = move |jar| {
+                    *mutex.lock().expect("cookies lock") = Some(jar);
+                };
+
+                Cookies::new(jar, self.state.config.secret_key(), on_drop)
+            }
+            None => {
                 error_!("Multiple `Cookies` instances are active at once.");
                 info_!("An instance of `Cookies` must be dropped before another \
                        can be retrieved.");
@@ -465,7 +511,7 @@ impl<'r> Request<'r> {
         }
     }
 
-    /// Returns the configured application receive limits.
+    /// Returns the configured application data limits.
     ///
     /// # Example
     ///
@@ -496,7 +542,7 @@ impl<'r> Request<'r> {
     /// # });
     /// ```
     pub fn route(&self) -> Option<&'r Route> {
-        self.state.route.get()
+        *self.state.route.read().unwrap()
     }
 
     /// Invokes the request guard implementation for `T`, returning its outcome.
@@ -526,9 +572,17 @@ impl<'r> Request<'r> {
     /// let pool = request.guard::<State<Pool>>();
     /// # });
     /// ```
-    #[inline(always)]
-    pub fn guard<'a, T: FromRequest<'a, 'r>>(&'a self) -> Outcome<T, T::Error> {
+    pub fn guard<'z, 'a, T>(&'a self) -> BoxFuture<'z, Outcome<T, T::Error>>
+        where T: FromRequest<'a, 'r> + 'z, 'a: 'z, 'r: 'z
+    {
         T::from_request(self)
+    }
+
+    #[inline(always)]
+    pub fn managed_state<T>(&self) -> Option<&'r T>
+        where T: Send + Sync + 'static
+    {
+        self.state.managed.try_get::<T>()
     }
 
     /// Retrieves the cached value for type `T` from the request-local cached
@@ -559,6 +613,39 @@ impl<'r> Request<'r> {
                 self.state.cache.set(f());
                 self.state.cache.get()
             })
+    }
+
+    /// Retrieves the cached value for type `T` from the request-local cached
+    /// state of `self`. If no such value has previously been cached for this
+    /// request, `fut` is `await`ed to produce the value which is subsequently
+    /// returned.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// # use rocket::http::Method;
+    /// # use rocket::Request;
+    /// # type User = ();
+    /// async fn current_user<'r>(request: &Request<'r>) -> User {
+    ///     // Validate request for a given user, load from database, etc.
+    /// }
+    ///
+    /// # Request::example(Method::Get, "/uri", |request| rocket::async_test(async {
+    /// let user = request.local_cache_async(async {
+    ///     current_user(request).await
+    /// }).await;
+    /// # }));
+    pub async fn local_cache_async<'a, T, F>(&'a self, fut: F) -> &'a T
+        where F: Future<Output = T>,
+              T: Send + Sync + 'static
+    {
+        match self.state.cache.try_get() {
+            Some(s) => s,
+            None => {
+                self.state.cache.set(fut.await);
+                self.state.cache.get()
+            }
+        }
     }
 
     /// Retrieves and parses into `T` the 0-indexed `n`th segment from the
@@ -770,72 +857,65 @@ impl<'r> Request<'r> {
     /// was `route`. Use during routing when attempting a given route.
     #[inline(always)]
     pub(crate) fn set_route(&self, route: &'r Route) {
-        self.state.route.set(Some(route));
+        *self.state.route.write().unwrap() = Some(route);
     }
 
     /// Set the method of `self`, even when `self` is a shared reference. Used
     /// during routing to override methods for re-routing.
     #[inline(always)]
     pub(crate) fn _set_method(&self, method: Method) {
-        self.method.set(method);
+        self.method.store(method, atomic::Ordering::Release)
     }
 
     /// Convert from Hyper types into a Rocket Request.
     pub(crate) fn from_hyp(
         rocket: &'r Rocket,
         h_method: hyper::Method,
-        h_headers: hyper::header::Headers,
-        h_uri: hyper::RequestUri,
+        h_headers: hyper::HeaderMap<hyper::HeaderValue>,
+        h_uri: &'r hyper::Uri,
         h_addr: SocketAddr,
     ) -> Result<Request<'r>, String> {
-        // Get a copy of the URI for later use.
-        let uri = match h_uri {
-            hyper::RequestUri::AbsolutePath(s) => s,
+        // Get a copy of the URI (only supports path-and-query) for later use.
+        let uri = match (h_uri.scheme(), h_uri.authority(), h_uri.path_and_query()) {
+            (None, None, Some(paq)) => paq.as_str(),
             _ => return Err(format!("Bad URI: {}", h_uri)),
         };
 
         // Ensure that the method is known. TODO: Allow made-up methods?
         let method = match Method::from_hyp(&h_method) {
             Some(method) => method,
-            None => return Err(format!("Invalid method: {}", h_method))
+            None => return Err(format!("Unknown or invalid method: {}", h_method))
         };
 
         // We need to re-parse the URI since we don't trust Hyper... :(
-        let uri = Origin::parse_owned(uri).map_err(|e| e.to_string())?;
+        let uri = Origin::parse(uri).map_err(|e| e.to_string())?;
 
         // Construct the request object.
         let mut request = Request::new(rocket, method, uri);
         request.set_remote(h_addr);
 
         // Set the request cookies, if they exist.
-        if let Some(cookie_headers) = h_headers.get_raw("Cookie") {
-            let mut cookie_jar = CookieJar::new();
-            for header in cookie_headers {
-                let raw_str = match std::str::from_utf8(header) {
-                    Ok(string) => string,
-                    Err(_) => continue
-                };
+        let mut cookie_jar = CookieJar::new();
+        for header in h_headers.get_all("Cookie") {
+            let raw_str = match std::str::from_utf8(header.as_bytes()) {
+                Ok(string) => string,
+                Err(_) => continue
+            };
 
-                for cookie_str in raw_str.split(';').map(|s| s.trim()) {
-                    if let Some(cookie) = Cookies::parse_cookie(cookie_str) {
-                        cookie_jar.add_original(cookie);
-                    }
+            for cookie_str in raw_str.split(';').map(|s| s.trim()) {
+                if let Some(cookie) = Cookies::parse_cookie(cookie_str) {
+                    cookie_jar.add_original(cookie);
                 }
             }
-
-            request.state.cookies = RefCell::new(cookie_jar);
         }
+        request.state.cookies = Mutex::new(Some(cookie_jar));
 
         // Set the rest of the headers.
-        for hyp in h_headers.iter() {
-            if let Some(header_values) = h_headers.get_raw(hyp.name()) {
-                for value in header_values {
-                    // This is not totally correct since values needn't be UTF8.
-                    let value_str = String::from_utf8_lossy(value).into_owned();
-                    let header = Header::new(hyp.name().to_string(), value_str);
-                    request.add_header(header);
-                }
-            }
+        for (name, value) in h_headers.iter() {
+            // This is not totally correct since values needn't be UTF8.
+            let value_str = String::from_utf8_lossy(value.as_bytes()).into_owned();
+            let header = Header::new(name.to_string(), value_str);
+            request.add_header(header);
         }
 
         Ok(request)

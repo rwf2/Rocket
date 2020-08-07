@@ -1,6 +1,7 @@
 use quote::ToTokens;
-use crate::proc_macro2::TokenStream as TokenStream2;
-use devise::{FromMeta, MetaItem, Result, ext::{Split2, PathExt}};
+use devise::{FromMeta, MetaItem, Result, ext::{Split2, PathExt, SpanDiagnosticExt}};
+
+use crate::proc_macro2::TokenStream;
 use crate::http::{self, ext::IntoOwned};
 use crate::http::uri::{Path, Query};
 use crate::attribute::segments::{parse_segments, parse_data_segment, Segment, Kind};
@@ -53,7 +54,7 @@ impl FromMeta for Status {
 }
 
 impl ToTokens for Status {
-    fn to_tokens(&self, tokens: &mut TokenStream2) {
+    fn to_tokens(&self, tokens: &mut TokenStream) {
         let (code, reason) = (self.0.code, self.0.reason);
         tokens.extend(quote!(rocket::http::Status { code: #code, reason: #reason }));
     }
@@ -68,7 +69,7 @@ impl FromMeta for ContentType {
 }
 
 impl ToTokens for ContentType {
-    fn to_tokens(&self, tokens: &mut TokenStream2) {
+    fn to_tokens(&self, tokens: &mut TokenStream) {
         // Yeah, yeah. (((((i))).kn0w()))
         let media_type = MediaType((self.0).clone().0);
         tokens.extend(quote!(::rocket::http::ContentType(#media_type)));
@@ -81,9 +82,10 @@ impl FromMeta for MediaType {
             .ok_or(meta.value_span().error("invalid or unknown media type"))?;
 
         if !mt.is_known() {
+            // FIXME(diag: warning)
             meta.value_span()
                 .warning(format!("'{}' is not a known media type", mt))
-                .emit();
+                .emit_as_item_tokens();
         }
 
         Ok(MediaType(mt))
@@ -91,7 +93,7 @@ impl FromMeta for MediaType {
 }
 
 impl ToTokens for MediaType {
-    fn to_tokens(&self, tokens: &mut TokenStream2) {
+    fn to_tokens(&self, tokens: &mut TokenStream) {
         use std::iter::repeat;
         let (top, sub) = (self.0.top().as_str(), self.0.sub().as_str());
         let (keys, values) = self.0.params().split2();
@@ -150,7 +152,7 @@ impl FromMeta for Method {
 }
 
 impl ToTokens for Method {
-    fn to_tokens(&self, tokens: &mut TokenStream2) {
+    fn to_tokens(&self, tokens: &mut TokenStream) {
         let method_tokens = match self.0 {
             http::Method::Get => quote!(::rocket::http::Method::Get),
             http::Method::Put => quote!(::rocket::http::Method::Put),
@@ -173,16 +175,13 @@ impl FromMeta for Origin {
 
         let uri = http::uri::Origin::parse_route(&string)
             .map_err(|e| {
-                let span = e.index()
-                    .map(|i| string.subspan(i + 1..))
-                    .unwrap_or(string.span());
-
+                let span = string.subspan(e.index() + 1..);
                 span.error(format!("invalid path URI: {}", e))
                     .help("expected path in origin form: \"/path/<param>\"")
             })?;
 
         if !uri.is_normalized() {
-            let normalized = uri.to_normalized();
+            let normalized = uri.clone().into_normalized();
             return Err(string.span().error("paths cannot contain empty segments")
                 .note(format!("expected '{}', found '{}'", normalized, uri)));
         }
@@ -234,7 +233,7 @@ impl FromMeta for RoutePath {
 }
 
 impl<T: ToTokens> ToTokens for Optional<T> {
-    fn to_tokens(&self, tokens: &mut TokenStream2) {
+    fn to_tokens(&self, tokens: &mut TokenStream) {
         define_vars_and_mods!(_Some, _None);
         let opt_tokens = match self.0 {
             Some(ref val) => quote!(#_Some(#val)),

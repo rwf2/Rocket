@@ -1,12 +1,12 @@
 use std::ops::Deref;
 
 use crate::request::{Request, form::{Form, FormDataError, FromForm}};
-use crate::data::{Data, Transform, Transformed, FromData, Outcome};
+use crate::data::{Data, Transformed, FromTransformedData, TransformFuture, FromDataFuture};
 use crate::http::uri::{Query, FromUriParam};
 
 /// A data guard for parsing [`FromForm`] types leniently.
 ///
-/// This type implements the [`FromData`] trait, and like [`Form`], provides a
+/// This type implements the [`FromTransformedData`] trait, and like [`Form`], provides a
 /// generic means to parse arbitrary structures from incoming form data. Unlike
 /// `Form`, this type uses a _lenient_ parsing strategy: forms that contains a
 /// superset of the expected fields (i.e, extra fields) will parse successfully.
@@ -24,14 +24,13 @@ use crate::http::uri::{Query, FromUriParam};
 /// The usage of a `LenientForm` type is equivalent to that of [`Form`], so we
 /// defer details to its documentation.
 ///
-/// `LenientForm` implements `FromData`, so it can be used directly as a target
+/// `LenientForm` implements `FromTransformedData`, so it can be used directly as a target
 /// of the `data = "<param>"` route parameter. For instance, if some structure
 /// of type `T` implements the `FromForm` trait, an incoming form can be
 /// automatically parsed into the `T` structure with the following route and
 /// handler:
 ///
 /// ```rust
-/// # #![feature(proc_macro_hygiene)]
 /// # #[macro_use] extern crate rocket;
 /// use rocket::request::LenientForm;
 ///
@@ -67,7 +66,6 @@ impl<T> LenientForm<T> {
     /// # Example
     ///
     /// ```rust
-    /// # #![feature(proc_macro_hygiene)]
     /// # #[macro_use] extern crate rocket;
     /// use rocket::request::LenientForm;
     ///
@@ -95,17 +93,19 @@ impl<T> Deref for LenientForm<T> {
     }
 }
 
-impl<'f, T: FromForm<'f>> FromData<'f> for LenientForm<T> {
+impl<'f, T: FromForm<'f> + Send + 'f> FromTransformedData<'f> for LenientForm<T> {
     type Error = FormDataError<'f, T::Error>;
     type Owned = String;
     type Borrowed = str;
 
-    fn transform(r: &Request<'_>, d: Data) -> Transform<Outcome<Self::Owned, Self::Error>> {
+    fn transform<'r>(r: &'r Request<'_>, d: Data) -> TransformFuture<'r, Self::Owned, Self::Error> {
         <Form<T>>::transform(r, d)
     }
 
-    fn from_data(_: &Request<'_>, o: Transformed<'f, Self>) -> Outcome<Self, Self::Error> {
-        <Form<T>>::from_data(try_outcome!(o.borrowed()), false).map(LenientForm)
+    fn from_data(_: &'f Request<'_>, o: Transformed<'f, Self>) -> FromDataFuture<'f, Self, Self::Error> {
+        Box::pin(futures::future::ready(o.borrowed().and_then(|form| {
+            <Form<T>>::from_data(form, false).map(LenientForm)
+        })))
     }
 }
 

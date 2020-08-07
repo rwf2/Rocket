@@ -1,5 +1,3 @@
-#![feature(proc_macro_hygiene)]
-
 #[macro_use] extern crate rocket;
 
 use rocket::request::Request;
@@ -19,7 +17,7 @@ fn index(mut cookies: Cookies) -> &'static str {
 
 mod tests {
     use super::*;
-    use rocket::local::Client;
+    use rocket::local::blocking::Client;
     use rocket::fairing::AdHoc;
 
     #[test]
@@ -27,9 +25,9 @@ mod tests {
         let rocket = rocket::ignite()
             .mount("/", routes![index])
             .register(catchers![not_found])
-            .attach(AdHoc::on_request("Add Fairing Cookie", |req, _| {
+            .attach(AdHoc::on_request("Add Fairing Cookie", |req, _| Box::pin(async move {
                 req.cookies().add(Cookie::new("fairing", "hi"));
-            }));
+            })));
 
         let client = Client::new(rocket).unwrap();
 

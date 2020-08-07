@@ -1,13 +1,9 @@
-#![feature(proc_macro_hygiene)]
-
 #[macro_use] extern crate rocket;
 
-use std::io::Read;
-
-use rocket::{Request, Data, Outcome::*};
-use rocket::local::Client;
+use rocket::{Request, Data};
+use rocket::local::blocking::Client;
 use rocket::request::Form;
-use rocket::data::{self, FromDataSimple};
+use rocket::data::{self, FromData, ToByteUnit};
 use rocket::http::{RawStr, ContentType, Status};
 
 // Test that the data parameters works as expected.
@@ -19,16 +15,15 @@ struct Inner<'r> {
 
 struct Simple(String);
 
-impl FromDataSimple for Simple {
+#[async_trait]
+impl FromData for Simple {
     type Error = ();
 
-    fn from_data(_: &Request<'_>, data: Data) -> data::Outcome<Self, ()> {
-        let mut string = String::new();
-        if let Err(_) = data.open().take(64).read_to_string(&mut string) {
-            return Failure((Status::InternalServerError, ()));
+    async fn from_data(_: &Request<'_>, data: Data) -> data::Outcome<Self, ()> {
+        match data.open(64.bytes()).stream_to_string().await {
+            Ok(string) => data::Outcome::Success(Simple(string)),
+            Err(_) => data::Outcome::Failure((Status::InternalServerError, ())),
         }
-
-        Success(Simple(string))
     }
 }
 
@@ -43,16 +38,16 @@ fn test_data() {
     let rocket = rocket::ignite().mount("/", routes![form, simple]);
     let client = Client::new(rocket).unwrap();
 
-    let mut response = client.post("/f")
+    let response = client.post("/f")
         .header(ContentType::Form)
         .body("field=this%20is%20here")
         .dispatch();
 
-    assert_eq!(response.body_string().unwrap(), "this is here");
+    assert_eq!(response.into_string().unwrap(), "this is here");
 
-    let mut response = client.post("/s").body("this is here").dispatch();
-    assert_eq!(response.body_string().unwrap(), "this is here");
+    let response = client.post("/s").body("this is here").dispatch();
+    assert_eq!(response.into_string().unwrap(), "this is here");
 
-    let mut response = client.post("/s").body("this%20is%20here").dispatch();
-    assert_eq!(response.body_string().unwrap(), "this%20is%20here");
+    let response = client.post("/s").body("this%20is%20here").dispatch();
+    assert_eq!(response.into_string().unwrap(), "this%20is%20here");
 }

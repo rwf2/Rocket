@@ -1,15 +1,15 @@
 use std::fmt::Display;
-use proc_macro::TokenStream;
-use crate::proc_macro2::TokenStream as TokenStream2;
 
-use devise::{syn, Result};
-use devise::syn::{Expr, Ident, Type, spanned::Spanned};
+use devise::{syn, Result, ext::SpanDiagnosticExt};
+
 use crate::http::{uri::{Origin, Path, Query}, ext::IntoOwned};
 use crate::http::route::{RouteSegment, Kind, Source};
 
+use crate::syn::{Expr, Ident, Type, spanned::Spanned};
 use crate::http_codegen::Optional;
-use crate::syn_ext::{IdentExt, syn_to_diag};
+use crate::syn_ext::IdentExt;
 use crate::bang::{prefix_last_segment, uri_parsing::*};
+use crate::proc_macro2::TokenStream;
 
 use crate::URI_MACRO_PREFIX;
 
@@ -24,12 +24,12 @@ macro_rules! p {
 }
 
 pub fn _uri_macro(input: TokenStream) -> Result<TokenStream> {
-    let input2: TokenStream2 = input.clone().into();
-    let mut params = syn::parse::<UriParams>(input).map_err(syn_to_diag)?;
+    let input2: TokenStream = input.clone().into();
+    let mut params = syn::parse2::<UriParams>(input)?;
     prefix_last_segment(&mut params.route_path, URI_MACRO_PREFIX);
 
     let path = &params.route_path;
-    Ok(quote!(#path!(#input2)).into())
+    Ok(quote!(#path!(#input2)))
 }
 
 fn extract_exprs<'a>(internal: &'a InternalUriParams) -> Result<(
@@ -43,8 +43,7 @@ fn extract_exprs<'a>(internal: &'a InternalUriParams) -> Result<(
             let path_param_count = internal.route_uri.path().matches('<').count();
             for expr in exprs.iter().take(path_param_count) {
                 if !expr.as_expr().is_some() {
-                    return Err(expr.span().unstable()
-                               .error("path parameters cannot be ignored"));
+                    return Err(expr.span().error("path parameters cannot be ignored"));
                 }
             }
 
@@ -91,13 +90,13 @@ fn extract_exprs<'a>(internal: &'a InternalUriParams) -> Result<(
 
             if !extra.is_empty() {
                 let (ps, msg) = join(extra.iter());
-                let spans: Vec<_> = extra.iter().map(|ident| ident.span().unstable()).collect();
+                let spans: Vec<_> = extra.iter().map(|ident| ident.span()).collect();
                 diag = diag.span_help(spans, format!("unknown {}: {}", ps, msg));
             }
 
             if !dup.is_empty() {
                 let (ps, msg) = join(dup.iter());
-                let spans: Vec<_> = dup.iter().map(|ident| ident.span().unstable()).collect();
+                let spans: Vec<_> = dup.iter().map(|ident| ident.span()).collect();
                 diag = diag.span_help(spans, format!("duplicate {}: {}", ps, msg));
             }
 
@@ -106,9 +105,9 @@ fn extract_exprs<'a>(internal: &'a InternalUriParams) -> Result<(
     }
 }
 
-fn add_binding(to: &mut Vec<TokenStream2>, ident: &Ident, ty: &Type, expr: &Expr, source: Source) {
+fn add_binding(to: &mut Vec<TokenStream>, ident: &Ident, ty: &Type, expr: &Expr, source: Source) {
     let uri_mod = quote!(rocket::http::uri);
-    let (span, ident_tmp) = (expr.span(), ident.prepend("tmp_"));
+    let (span, ident_tmp) = (expr.span(), ident.prepend("__tmp_"));
     let from_uri_param = if source == Source::Query {
         quote_spanned!(span => #uri_mod::FromUriParam<#uri_mod::Query, _>)
     } else {
@@ -116,6 +115,7 @@ fn add_binding(to: &mut Vec<TokenStream2>, ident: &Ident, ty: &Type, expr: &Expr
     };
 
     to.push(quote_spanned!(span =>
+        #[allow(non_snake_case)]
         let #ident_tmp = #expr;
         let #ident = <#ty as #from_uri_param>::from_uri_param(#ident_tmp);
     ));
@@ -123,9 +123,9 @@ fn add_binding(to: &mut Vec<TokenStream2>, ident: &Ident, ty: &Type, expr: &Expr
 
 fn explode_path<'a, I: Iterator<Item = (&'a Ident, &'a Type, &'a Expr)>>(
     uri: &Origin<'_>,
-    bindings: &mut Vec<TokenStream2>,
+    bindings: &mut Vec<TokenStream>,
     mut items: I
-) -> TokenStream2 {
+) -> TokenStream {
     let (uri_mod, path) = (quote!(rocket::http::uri), uri.path());
     if !path.contains('<') {
         return quote!(#uri_mod::UriArgumentsKind::Static(#path));
@@ -152,9 +152,9 @@ fn explode_path<'a, I: Iterator<Item = (&'a Ident, &'a Type, &'a Expr)>>(
 
 fn explode_query<'a, I: Iterator<Item = (&'a Ident, &'a Type, &'a ArgExpr)>>(
     uri: &Origin<'_>,
-    bindings: &mut Vec<TokenStream2>,
+    bindings: &mut Vec<TokenStream>,
     mut items: I
-) -> Option<TokenStream2> {
+) -> Option<TokenStream> {
     let (uri_mod, query) = (quote!(rocket::http::uri), uri.query()?);
     if !query.contains('<') {
         return Some(quote!(#uri_mod::UriArgumentsKind::Static(#query)));
@@ -199,7 +199,7 @@ fn explode_query<'a, I: Iterator<Item = (&'a Ident, &'a Type, &'a ArgExpr)>>(
     Some(quote!(#uri_mod::UriArgumentsKind::Dynamic(&[#(#dyn_exprs),*])))
 }
 
-// Returns an Origin URI with the mount point and route path concatinated. The
+// Returns an Origin URI with the mount point and route path concatenated. The
 // query string is mangled by replacing single dynamic parameters in query parts
 // (`<param>`) with `param=<param>`.
 fn build_origin(internal: &InternalUriParams) -> Origin<'static> {
@@ -209,12 +209,12 @@ fn build_origin(internal: &InternalUriParams) -> Origin<'static> {
 
     let path = format!("{}/{}", mount_point, internal.route_uri.path());
     let query = internal.route_uri.query();
-    Origin::new(path, query).to_normalized().into_owned()
+    Origin::new(path, query).into_normalized().into_owned()
 }
 
 pub fn _uri_internal_macro(input: TokenStream) -> Result<TokenStream> {
     // Parse the internal invocation and the user's URI param expressions.
-    let internal = syn::parse::<InternalUriParams>(input).map_err(syn_to_diag)?;
+    let internal = syn::parse2::<InternalUriParams>(input)?;
     let (path_params, query_params) = extract_exprs(&internal)?;
 
     let mut bindings = vec![];
@@ -226,5 +226,5 @@ pub fn _uri_internal_macro(input: TokenStream) -> Result<TokenStream> {
      Ok(quote!({
          #(#bindings)*
          #uri_mod::UriArguments { path: #path, query: #query, }.into_origin()
-     }).into())
+     }))
 }

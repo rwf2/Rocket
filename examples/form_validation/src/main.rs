@@ -1,13 +1,12 @@
-#![feature(proc_macro_hygiene)]
-
 #[macro_use] extern crate rocket;
 
-mod files;
 #[cfg(test)] mod tests;
 
 use rocket::response::Redirect;
 use rocket::request::{Form, FromFormValue};
 use rocket::http::RawStr;
+
+use rocket_contrib::serve::{StaticFiles, crate_relative};
 
 #[derive(Debug)]
 struct StrongPassword<'r>(&'r str);
@@ -76,11 +75,9 @@ fn user_page(username: &RawStr) -> String {
     format!("This is {}'s page.", username)
 }
 
+#[launch]
 fn rocket() -> rocket::Rocket {
     rocket::ignite()
-        .mount("/", routes![files::index, files::files, user_page, login])
-}
-
-fn main() {
-    rocket().launch();
+        .mount("/", routes![user_page, login])
+        .mount("/", StaticFiles::from(crate_relative!("/static")))
 }

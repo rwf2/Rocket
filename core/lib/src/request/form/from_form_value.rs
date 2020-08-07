@@ -43,7 +43,6 @@ use crate::http::RawStr;
 /// according to its target type:
 ///
 /// ```rust
-/// # #![feature(proc_macro_hygiene)]
 /// # #[macro_use] extern crate rocket;
 /// # type Size = String;
 /// #[get("/item?<id>&<size>")]

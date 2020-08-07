@@ -1,7 +1,4 @@
-#![feature(proc_macro_hygiene)]
-
 #[macro_use] extern crate rocket;
-#[macro_use] extern crate serde_derive;
 
 #[cfg(test)] mod tests;
 
@@ -9,7 +6,7 @@ use rocket::Request;
 use rocket::response::Redirect;
 use rocket_contrib::templates::{Template, handlebars};
 
-#[derive(Serialize)]
+#[derive(serde::Serialize)]
 struct TemplateContext {
     title: &'static str,
     name: Option<String>,
@@ -68,6 +65,7 @@ fn wow_helper(
     Ok(())
 }
 
+#[launch]
 fn rocket() -> rocket::Rocket {
     rocket::ignite()
         .mount("/", routes![index, hello, about])
@@ -75,8 +73,4 @@ fn rocket() -> rocket::Rocket {
         .attach(Template::custom(|engines| {
             engines.handlebars.register_helper("wow", Box::new(wow_helper));
         }))
-}
-
-fn main() {
-    rocket().launch();
 }

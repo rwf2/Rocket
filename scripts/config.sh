@@ -76,23 +76,27 @@ ALL_PROJECT_DIRS=(
     "${CONTRIB_LIB_ROOT}"
 )
 
+function print_environment() {
+  echo "  ROCKET_VERSION: ${ROCKET_VERSION}"
+  echo "  CURRENT_RELEASE: ${CURRENT_RELEASE}"
+  echo "  PRE_RELEASE: ${PRE_RELEASE}"
+  echo "  VERSION_CODENAME: ${VERSION_CODENAME}"
+  echo "  SCRIPT_DIR: ${SCRIPT_DIR}"
+  echo "  PROJECT_ROOT: ${PROJECT_ROOT}"
+  echo "  CORE_ROOT: ${CORE_ROOT}"
+  echo "  CONTRIB_ROOT: ${CONTRIB_ROOT}"
+  echo "  SITE_ROOT: ${SITE_ROOT}"
+  echo "  CORE_LIB_ROOT: ${CORE_LIB_ROOT}"
+  echo "  CORE_CODEGEN_ROOT: ${CORE_CODEGEN_ROOT}"
+  echo "  CORE_HTTP_ROOT: ${CORE_HTTP_ROOT}"
+  echo "  CONTRIB_LIB_ROOT: ${CONTRIB_LIB_ROOT}"
+  echo "  CONTRIB_CODEGEN_ROOT: ${CONTRIB_CODEGEN_ROOT}"
+  echo "  EXAMPLES_DIR: ${EXAMPLES_DIR}"
+  echo "  DOC_DIR: ${DOC_DIR}"
+  echo "  ALL_PROJECT_DIRS: ${ALL_PROJECT_DIRS[*]}"
+  echo "  date(): $(future_date)"
+}
+
 if [ "${1}" = "-p" ]; then
-  echo "ROCKET_VERSION: ${ROCKET_VERSION}"
-  echo "CURRENT_RELEASE: ${CURRENT_RELEASE}"
-  echo "PRE_RELEASE: ${PRE_RELEASE}"
-  echo "VERSION_CODENAME: ${VERSION_CODENAME}"
-  echo "SCRIPT_DIR: ${SCRIPT_DIR}"
-  echo "PROJECT_ROOT: ${PROJECT_ROOT}"
-  echo "CORE_ROOT: ${CORE_ROOT}"
-  echo "CONTRIB_ROOT: ${CONTRIB_ROOT}"
-  echo "SITE_ROOT: ${SITE_ROOT}"
-  echo "CORE_LIB_ROOT: ${CORE_LIB_ROOT}"
-  echo "CORE_CODEGEN_ROOT: ${CORE_CODEGEN_ROOT}"
-  echo "CORE_HTTP_ROOT: ${CORE_HTTP_ROOT}"
-  echo "CONTRIB_LIB_ROOT: ${CONTRIB_LIB_ROOT}"
-  echo "CONTRIB_CODEGEN_ROOT: ${CONTRIB_CODEGEN_ROOT}"
-  echo "EXAMPLES_DIR: ${EXAMPLES_DIR}"
-  echo "DOC_DIR: ${DOC_DIR}"
-  echo "ALL_PROJECT_DIRS: ${ALL_PROJECT_DIRS[*]}"
-  echo "date(): $(future_date)"
+  print_environment
 fi

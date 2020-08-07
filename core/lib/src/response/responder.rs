@@ -1,8 +1,8 @@
 use std::fs::File;
-use std::io::{Cursor, BufReader};
+use std::io::Cursor;
 
 use crate::http::{Status, ContentType, StatusClass};
-use crate::response::{self, Response, Body};
+use crate::response::{self, Response};
 use crate::request::Request;
 
 /// Trait implemented by types that generate responses for clients.
@@ -11,7 +11,6 @@ use crate::request::Request;
 /// as illustrated below with `T`:
 ///
 /// ```rust
-/// # #![feature(proc_macro_hygiene)]
 /// # #[macro_use] extern crate rocket;
 /// # type T = ();
 /// #
@@ -23,7 +22,8 @@ use crate::request::Request;
 ///
 /// # Return Value
 ///
-/// A `Responder` returns an `Ok(Response)` or an `Err(Status)`:
+/// A `Responder` returns a `Future` whose output type is an `Ok(Response)` or
+/// an `Err(Status)`:
 ///
 ///   * An `Ok` variant means that the `Responder` was successful in generating
 ///     a `Response`. The `Response` will be written out to the client.
@@ -81,14 +81,7 @@ use crate::request::Request;
 ///     the client. Otherwise, an `Err` with status **404 Not Found** is
 ///     returned and a warning is printed to the console.
 ///
-///   * **Result&lt;T, E>** _where_ **E: Debug**
-///
-///     If the `Result` is `Ok`, the wrapped responder is used to respond to the
-///     client. Otherwise, an `Err` with status **500 Internal Server Error** is
-///     returned and the error is printed to the console using the `Debug`
-///     implementation.
-///
-///   * **Result&lt;T, E>** _where_ **E: Debug + Responder**
+///   * **Result&lt;T, E>**
 ///
 ///     If the `Result` is `Ok`, the wrapped `Ok` responder is used to respond
 ///     to the client. If the `Result` is `Err`, the wrapped `Err` responder is
@@ -98,13 +91,6 @@ use crate::request::Request;
 ///
 /// This section describes a few best practices to take into account when
 /// implementing `Responder`.
-///
-/// ## Debug
-///
-/// A type implementing `Responder` should implement the `Debug` trait when
-/// possible. This is because the `Responder` implementation for `Result`
-/// requires its `Err` type to implement `Debug`. Therefore, a type implementing
-/// `Debug` can more easily be composed.
 ///
 /// ## Joining and Merging
 ///
@@ -123,13 +109,21 @@ use crate::request::Request;
 /// regardless of the incoming request. Thus, knowing the type is sufficient to
 /// fully determine its functionality.
 ///
+/// ## Lifetimes
+///
+/// `Responder` has two lifetimes: `Responder<'r, 'o: 'r>`. The first lifetime,
+/// `'r`, refers to the reference to the `&'r Request`, while the second
+/// lifetime refers to the returned `Response<'o>`. The bound `'o: 'r` allows
+/// `'o` to be any lifetime that lives at least as long as the `Request`. In
+/// particular, this includes borrows from the `Request` itself (where `'o` would
+/// be `'r` as in `impl<'r> Responder<'r, 'r>`) as well as `'static` data (where
+/// `'o` would be `'static` as in `impl<'r> Responder<'r, 'static>`).
+///
 /// # Example
 ///
 /// Say that you have a custom type, `Person`:
 ///
 /// ```rust
-///
-/// # #[allow(dead_code)]
 /// struct Person {
 ///     name: String,
 ///     age: u16
@@ -139,11 +133,16 @@ use crate::request::Request;
 /// You'd like to use `Person` as a `Responder` so that you can return a
 /// `Person` directly from a handler:
 ///
-/// ```rust,ignore
+/// ```rust
+/// # #[macro_use] extern crate rocket;
+/// # type Person = String;
 /// #[get("/person/<id>")]
 /// fn person(id: usize) -> Option<Person> {
+///     # /*
 ///     Person::from_id(id)
+///     # */ None
 /// }
+/// # fn main() {}
 /// ```
 ///
 /// You want the `Person` responder to set two header fields: `X-Person-Name`
@@ -152,7 +151,6 @@ use crate::request::Request;
 /// following `Responder` implementation accomplishes this:
 ///
 /// ```rust
-/// # #![feature(proc_macro_hygiene)]
 /// # #[macro_use] extern crate rocket;
 /// #
 /// # #[derive(Debug)]
@@ -164,10 +162,11 @@ use crate::request::Request;
 /// use rocket::response::{self, Response, Responder};
 /// use rocket::http::ContentType;
 ///
-/// impl Responder<'_> for Person {
-///     fn respond_to(self, _: &Request) -> response::Result<'static> {
+/// impl<'r> Responder<'r, 'static> for Person {
+///     fn respond_to(self, _: &'r Request<'_>) -> response::Result<'static> {
+///         let person_string = format!("{}:{}", self.name, self.age);
 ///         Response::build()
-///             .sized_body(Cursor::new(format!("{}:{}", self.name, self.age)))
+///             .sized_body(person_string.len(), Cursor::new(person_string))
 ///             .raw_header("X-Person-Name", self.name)
 ///             .raw_header("X-Person-Age", self.age.to_string())
 ///             .header(ContentType::new("application", "x-person"))
@@ -179,7 +178,7 @@ use crate::request::Request;
 /// # fn person() -> Person { Person { name: "a".to_string(), age: 20 } }
 /// # fn main() {  }
 /// ```
-pub trait Responder<'r> {
+pub trait Responder<'r, 'o: 'r> {
     /// Returns `Ok` if a `Response` could be generated successfully. Otherwise,
     /// returns an `Err` with a failing `Status`.
     ///
@@ -191,86 +190,106 @@ pub trait Responder<'r> {
     /// returned, the error catcher for the given status is retrieved and called
     /// to generate a final error response, which is then written out to the
     /// client.
-    fn respond_to(self, request: &Request<'_>) -> response::Result<'r>;
+    fn respond_to(self, request: &'r Request<'_>) -> response::Result<'o>;
 }
 
 /// Returns a response with Content-Type `text/plain` and a fixed-size body
 /// containing the string `self`. Always returns `Ok`.
-impl<'r> Responder<'r> for &'r str {
-    fn respond_to(self, _: &Request<'_>) -> response::Result<'r> {
+impl<'r, 'o: 'r> Responder<'r, 'o> for &'o str {
+    fn respond_to(self, _: &'r Request<'_>) -> response::Result<'o> {
         Response::build()
             .header(ContentType::Plain)
-            .sized_body(Cursor::new(self))
+            .sized_body(self.len(), Cursor::new(self))
             .ok()
     }
 }
 
 /// Returns a response with Content-Type `text/plain` and a fixed-size body
 /// containing the string `self`. Always returns `Ok`.
-impl Responder<'_> for String {
-    fn respond_to(self, _: &Request<'_>) -> response::Result<'static> {
+impl<'r> Responder<'r, 'static> for String {
+    fn respond_to(self, _: &'r Request<'_>) -> response::Result<'static> {
         Response::build()
             .header(ContentType::Plain)
-            .sized_body(Cursor::new(self))
+            .sized_body(self.len(), Cursor::new(self))
             .ok()
     }
 }
 
 /// Returns a response with Content-Type `application/octet-stream` and a
 /// fixed-size body containing the data in `self`. Always returns `Ok`.
-impl<'r> Responder<'r> for &'r [u8] {
-    fn respond_to(self, _: &Request<'_>) -> response::Result<'r> {
+impl<'r, 'o: 'r> Responder<'r, 'o> for &'o [u8] {
+    fn respond_to(self, _: &'r Request<'_>) -> response::Result<'o> {
         Response::build()
             .header(ContentType::Binary)
-            .sized_body(Cursor::new(self))
+            .sized_body(self.len(), Cursor::new(self))
             .ok()
     }
 }
 
 /// Returns a response with Content-Type `application/octet-stream` and a
 /// fixed-size body containing the data in `self`. Always returns `Ok`.
-impl Responder<'_> for Vec<u8> {
-    fn respond_to(self, _: &Request<'_>) -> response::Result<'static> {
+impl<'r> Responder<'r, 'static> for Vec<u8> {
+    fn respond_to(self, _: &'r Request<'_>) -> response::Result<'static> {
         Response::build()
             .header(ContentType::Binary)
-            .sized_body(Cursor::new(self))
+            .sized_body(self.len(), Cursor::new(self))
             .ok()
     }
 }
 
 /// Returns a response with a sized body for the file. Always returns `Ok`.
-impl Responder<'_> for File {
-    fn respond_to(self, _: &Request<'_>) -> response::Result<'static> {
-        let (metadata, file) = (self.metadata(), BufReader::new(self));
-        match metadata {
-            Ok(md) => Response::build().raw_body(Body::Sized(file, md.len())).ok(),
-            Err(_) => Response::build().streamed_body(file).ok()
-        }
+impl<'r> Responder<'r, 'static> for File {
+    fn respond_to(self, req: &'r Request<'_>) -> response::Result<'static> {
+        tokio::fs::File::from(self).respond_to(req)
+    }
+}
+
+/// Returns a response with a sized body for the file. Always returns `Ok`.
+impl<'r> Responder<'r, 'static> for tokio::fs::File {
+    fn respond_to(self, _: &'r Request<'_>) -> response::Result<'static> {
+        Response::build().sized_body(None, self).ok()
     }
 }
 
 /// Returns an empty, default `Response`. Always returns `Ok`.
-impl Responder<'_> for () {
-    fn respond_to(self, _: &Request<'_>) -> response::Result<'static> {
+impl<'r> Responder<'r, 'static> for () {
+    fn respond_to(self, _: &'r Request<'_>) -> response::Result<'static> {
         Ok(Response::new())
+    }
+}
+
+/// Responds with the inner `Responder` in `Cow`.
+impl<'r, 'o: 'r, R: ?Sized + ToOwned> Responder<'r, 'o> for std::borrow::Cow<'o, R>
+    where &'o R: Responder<'r, 'o> + 'o, <R as ToOwned>::Owned: Responder<'r, 'o> + 'r
+{
+    fn respond_to(self, req: &'r Request<'_>) -> response::Result<'o> {
+        match self {
+            std::borrow::Cow::Borrowed(b) => b.respond_to(req),
+            std::borrow::Cow::Owned(o) => o.respond_to(req),
+        }
     }
 }
 
 /// If `self` is `Some`, responds with the wrapped `Responder`. Otherwise prints
 /// a warning message and returns an `Err` of `Status::NotFound`.
-impl<'r, R: Responder<'r>> Responder<'r> for Option<R> {
-    fn respond_to(self, req: &Request<'_>) -> response::Result<'r> {
-        self.map_or_else(|| {
-            warn_!("Response was `None`.");
-            Err(Status::NotFound)
-        }, |r| r.respond_to(req))
+impl<'r, 'o: 'r, R: Responder<'r, 'o>> Responder<'r, 'o> for Option<R> {
+    fn respond_to(self, req: &'r Request<'_>) -> response::Result<'o> {
+        match self {
+            Some(r) => r.respond_to(req),
+            None => {
+                warn_!("Response was `None`.");
+                Err(Status::NotFound)
+            },
+        }
     }
 }
 
-/// Responds with the wrapped `Responder` in `self`, whether it is `Ok` or
+// Responds with the wrapped `Responder` in `self`, whether it is `Ok` or
 /// `Err`.
-impl<'r, R: Responder<'r>, E: Responder<'r>> Responder<'r> for Result<R, E> {
-    fn respond_to(self, req: &Request<'_>) -> response::Result<'r> {
+impl<'r, 'o: 'r, 't: 'o, 'e: 'o, T, E> Responder<'r, 'o> for Result<T, E>
+    where T: Responder<'r, 't>, E: Responder<'r, 'e>
+{
+    fn respond_to(self, req: &'r Request<'_>) -> response::Result<'o> {
         match self {
             Ok(responder) => responder.respond_to(req),
             Err(responder) => responder.respond_to(req),
@@ -292,8 +311,8 @@ impl<'r, R: Responder<'r>, E: Responder<'r>> Responder<'r> for Result<R, E> {
 /// `100` responds with any empty body and the given status code, and all other
 /// status code emit an error message and forward to the `500` (internal server
 /// error) catcher.
-impl Responder<'_> for Status {
-    fn respond_to(self, _: &Request<'_>) -> response::Result<'static> {
+impl<'r> Responder<'r, 'static> for Status {
+    fn respond_to(self, _: &'r Request<'_>) -> response::Result<'static> {
         match self.class() {
             StatusClass::ClientError | StatusClass::ServerError => Err(self),
             StatusClass::Success if self.code < 206 => {
@@ -304,7 +323,6 @@ impl Responder<'_> for Status {
             }
             _ => {
                 error_!("Invalid status used as responder: {}.", self);
-                warn_!("Fowarding to 500 (Internal Server Error) catcher.");
                 Err(Status::InternalServerError)
             }
         }

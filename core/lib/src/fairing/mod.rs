@@ -21,8 +21,8 @@
 //!
 //! ```rust
 //! # use rocket::fairing::AdHoc;
-//! # let req_fairing = AdHoc::on_request("Request", |_, _| ());
-//! # let res_fairing = AdHoc::on_response("Response", |_, _| ());
+//! # let req_fairing = AdHoc::on_request("Request", |_, _| Box::pin(async move {}));
+//! # let res_fairing = AdHoc::on_response("Response", |_, _| Box::pin(async move {}));
 //! let rocket = rocket::ignite()
 //!     .attach(req_fairing)
 //!     .attach(res_fairing);
@@ -47,7 +47,7 @@
 //! of other `Fairings` are not jeopardized. For instance, unless it is made
 //! abundantly clear, a fairing should not rewrite every request.
 
-use crate::{Rocket, Request, Response, Data};
+use crate::{Cargo, Rocket, Request, Response, Data};
 
 mod fairings;
 mod ad_hoc;
@@ -90,7 +90,7 @@ pub use self::info_kind::{Info, Kind};
 ///
 /// [request guard]: crate::request::FromRequest
 /// [request guards]: crate::request::FromRequest
-/// [data guards]: crate::data::FromData
+/// [data guards]: crate::data::FromTransformedData
 ///
 /// ## Fairing Callbacks
 ///
@@ -136,7 +136,7 @@ pub use self::info_kind::{Info, Kind};
 ///     to the request; these issues are better handled via [request guards] or
 ///     via response callbacks. Any modifications to a request are persisted and
 ///     can potentially alter how a request is routed.
-///=
+///
 ///   * **Response (`on_response`)**
 ///
 ///     A response callback, represented by the [`Fairing::on_response()`]
@@ -190,6 +190,45 @@ pub use self::info_kind::{Info, Kind};
 /// these bounds _do not_ prohibit a `Fairing` from holding state: the state
 /// need simply be thread-safe and statically available or heap allocated.
 ///
+/// ## Async Trait
+///
+/// [`Fairing`] is an _async_ trait. Implementations of `Fairing` must be
+/// decorated with an attribute of `#[rocket::async_trait]`:
+///
+/// ```rust
+/// use rocket::{Cargo, Rocket, Request, Data, Response};
+/// use rocket::fairing::{Fairing, Info, Kind};
+///
+/// # struct MyType;
+/// #[rocket::async_trait]
+/// impl Fairing for MyType {
+///     fn info(&self) -> Info {
+///         /* ... */
+///         # unimplemented!()
+///     }
+///
+///     async fn on_attach(&self, rocket: Rocket) -> Result<Rocket, Rocket> {
+///         /* ... */
+///         # unimplemented!()
+///     }
+///
+///     fn on_launch(&self, cargo: &Cargo) {
+///         /* ... */
+///         # unimplemented!()
+///     }
+///
+///     async fn on_request(&self, req: &mut Request<'_>, data: &Data) {
+///         /* ... */
+///         # unimplemented!()
+///     }
+///
+///     async fn on_response<'r>(&self, req: &'r Request<'_>, res: &mut Response<'r>) {
+///         /* ... */
+///         # unimplemented!()
+///     }
+/// }
+/// ```
+///
 /// ## Example
 ///
 /// Imagine that we want to record the number of `GET` and `POST` requests that
@@ -203,7 +242,9 @@ pub use self::info_kind::{Info, Kind};
 /// path.
 ///
 /// ```rust
+/// use std::future::Future;
 /// use std::io::Cursor;
+/// use std::pin::Pin;
 /// use std::sync::atomic::{AtomicUsize, Ordering};
 ///
 /// use rocket::{Request, Data, Response};
@@ -216,6 +257,7 @@ pub use self::info_kind::{Info, Kind};
 ///     post: AtomicUsize,
 /// }
 ///
+/// #[rocket::async_trait]
 /// impl Fairing for Counter {
 ///     fn info(&self) -> Info {
 ///         Info {
@@ -224,28 +266,28 @@ pub use self::info_kind::{Info, Kind};
 ///         }
 ///     }
 ///
-///     fn on_request(&self, request: &mut Request, _: &Data) {
-///         if request.method() == Method::Get {
+///     async fn on_request(&self, req: &mut Request<'_>, _: &Data) {
+///         if req.method() == Method::Get {
 ///             self.get.fetch_add(1, Ordering::Relaxed);
-///         } else if request.method() == Method::Post {
+///         } else if req.method() == Method::Post {
 ///             self.post.fetch_add(1, Ordering::Relaxed);
 ///         }
 ///     }
 ///
-///     fn on_response(&self, request: &Request, response: &mut Response) {
+///     async fn on_response<'r>(&self, req: &'r Request<'_>, res: &mut Response<'r>) {
 ///         // Don't change a successful user's response, ever.
-///         if response.status() != Status::NotFound {
+///         if res.status() != Status::NotFound {
 ///             return
 ///         }
 ///
-///         if request.method() == Method::Get && request.uri().path() == "/counts" {
+///         if req.method() == Method::Get && req.uri().path() == "/counts" {
 ///             let get_count = self.get.load(Ordering::Relaxed);
 ///             let post_count = self.post.load(Ordering::Relaxed);
 ///
 ///             let body = format!("Get: {}\nPost: {}", get_count, post_count);
-///             response.set_status(Status::Ok);
-///             response.set_header(ContentType::Plain);
-///             response.set_sized_body(Cursor::new(body));
+///             res.set_status(Status::Ok);
+///             res.set_header(ContentType::Plain);
+///             res.set_sized_body(body.len(), Cursor::new(body));
 ///         }
 ///     }
 /// }
@@ -262,8 +304,9 @@ pub use self::info_kind::{Info, Kind};
 /// request guard.
 ///
 /// ```rust
+/// # use std::future::Future;
+/// # use std::pin::Pin;
 /// # use std::time::{Duration, SystemTime};
-/// # use rocket::Outcome;
 /// # use rocket::{Request, Data, Response};
 /// # use rocket::fairing::{Fairing, Info, Kind};
 /// # use rocket::http::Status;
@@ -276,6 +319,7 @@ pub use self::info_kind::{Info, Kind};
 /// #[derive(Copy, Clone)]
 /// struct TimerStart(Option<SystemTime>);
 ///
+/// #[rocket::async_trait]
 /// impl Fairing for RequestTimer {
 ///     fn info(&self) -> Info {
 ///         Info {
@@ -285,7 +329,7 @@ pub use self::info_kind::{Info, Kind};
 ///     }
 ///
 ///     /// Stores the start time of the request in request-local state.
-///     fn on_request(&self, request: &mut Request, _: &Data) {
+///     async fn on_request(&self, request: &mut Request<'_>, _: &Data) {
 ///         // Store a `TimerStart` instead of directly storing a `SystemTime`
 ///         // to ensure that this usage doesn't conflict with anything else
 ///         // that might store a `SystemTime` in request-local cache.
@@ -294,11 +338,11 @@ pub use self::info_kind::{Info, Kind};
 ///
 ///     /// Adds a header to the response indicating how long the server took to
 ///     /// process the request.
-///     fn on_response(&self, request: &Request, response: &mut Response) {
-///         let start_time = request.local_cache(|| TimerStart(None));
+///     async fn on_response<'r>(&self, req: &'r Request<'_>, res: &mut Response<'r>) {
+///         let start_time = req.local_cache(|| TimerStart(None));
 ///         if let Some(Ok(duration)) = start_time.0.map(|st| st.elapsed()) {
 ///             let ms = duration.as_secs() * 1000 + duration.subsec_millis() as u64;
-///             response.set_raw_header("X-Response-Time", format!("{} ms", ms));
+///             res.set_raw_header("X-Response-Time", format!("{} ms", ms));
 ///         }
 ///     }
 /// }
@@ -308,20 +352,21 @@ pub use self::info_kind::{Info, Kind};
 /// pub struct StartTime(pub SystemTime);
 ///
 /// // Allows a route to access the time a request was initiated.
-/// impl FromRequest<'_, '_> for StartTime {
+/// #[rocket::async_trait]
+/// impl<'a, 'r> FromRequest<'a, 'r> for StartTime {
 ///     type Error = ();
 ///
-///     fn from_request(request: &Request<'_>) -> request::Outcome<StartTime, ()> {
+///     async fn from_request(request: &'a Request<'r>) -> request::Outcome<Self, ()> {
 ///         match *request.local_cache(|| TimerStart(None)) {
-///             TimerStart(Some(time)) => Outcome::Success(StartTime(time)),
-///             TimerStart(None) => Outcome::Failure((Status::InternalServerError, ())),
+///             TimerStart(Some(time)) => request::Outcome::Success(StartTime(time)),
+///             TimerStart(None) => request::Outcome::Failure((Status::InternalServerError, ())),
 ///         }
 ///     }
 /// }
 /// ```
 ///
 /// [request-local state]: https://rocket.rs/v0.5/guide/state/#request-local-state
-
+#[crate::async_trait]
 pub trait Fairing: Send + Sync + 'static {
     /// Returns an [`Info`] structure containing the `name` and [`Kind`] of this
     /// fairing. The `name` can be any arbitrary string. `Kind` must be an `or`d
@@ -369,20 +414,20 @@ pub trait Fairing: Send + Sync + 'static {
     /// ## Default Implementation
     ///
     /// The default implementation of this method simply returns `Ok(rocket)`.
-    fn on_attach(&self, rocket: Rocket) -> Result<Rocket, Rocket> { Ok(rocket) }
+    async fn on_attach(&self, rocket: Rocket) -> Result<Rocket, Rocket> { Ok(rocket) }
 
     /// The launch callback.
     ///
     /// This method is called just prior to launching the application if
     /// `Kind::Launch` is in the `kind` field of the `Info` structure for this
-    /// fairing. The `&Rocket` parameter corresponds to the application that
+    /// fairing. The `Cargo` parameter corresponds to the application that
     /// will be launched.
     ///
     /// ## Default Implementation
     ///
     /// The default implementation of this method does nothing.
     #[allow(unused_variables)]
-    fn on_launch(&self, rocket: &Rocket) {}
+    fn on_launch(&self, cargo: &Cargo) {}
 
     /// The request callback.
     ///
@@ -395,7 +440,7 @@ pub trait Fairing: Send + Sync + 'static {
     ///
     /// The default implementation of this method does nothing.
     #[allow(unused_variables)]
-    fn on_request(&self, request: &mut Request<'_>, data: &Data) {}
+    async fn on_request(&self, req: &mut Request<'_>, data: &Data) {}
 
     /// The response callback.
     ///
@@ -408,9 +453,10 @@ pub trait Fairing: Send + Sync + 'static {
     ///
     /// The default implementation of this method does nothing.
     #[allow(unused_variables)]
-    fn on_response(&self, request: &Request<'_>, response: &mut Response<'_>) {}
+    async fn on_response<'r>(&self, req: &'r Request<'_>, res: &mut Response<'r>) {}
 }
 
+#[crate::async_trait]
 impl<T: Fairing> Fairing for std::sync::Arc<T> {
     #[inline]
     fn info(&self) -> Info {
@@ -418,22 +464,22 @@ impl<T: Fairing> Fairing for std::sync::Arc<T> {
     }
 
     #[inline]
-    fn on_attach(&self, rocket: Rocket) -> Result<Rocket, Rocket> {
-        (self as &T).on_attach(rocket)
+    async fn on_attach(&self, rocket: Rocket) -> Result<Rocket, Rocket> {
+        (self as &T).on_attach(rocket).await
     }
 
     #[inline]
-    fn on_launch(&self, rocket: &Rocket) {
-        (self as &T).on_launch(rocket)
+    fn on_launch(&self, cargo: &Cargo) {
+        (self as &T).on_launch(cargo)
     }
 
     #[inline]
-    fn on_request(&self, request: &mut Request<'_>, data: &Data) {
-        (self as &T).on_request(request, data)
+    async fn on_request(&self, req: &mut Request<'_>, data: &Data) {
+        (self as &T).on_request(req, data).await;
     }
 
     #[inline]
-    fn on_response(&self, request: &Request<'_>, response: &mut Response<'_>) {
-        (self as &T).on_response(request, response)
+    async fn on_response<'r>(&self, req: &'r Request<'_>, res: &mut Response<'r>) {
+        (self as &T).on_response(req, res).await;
     }
 }

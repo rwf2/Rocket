@@ -1,5 +1,6 @@
 use proc_macro::TokenStream;
-use devise::{Spanned, Result};
+use devise::{Spanned, Result, ext::SpanDiagnosticExt};
+
 use crate::syn::{DataStruct, Fields, Data, Type, LitStr, DeriveInput, Ident, Visibility};
 
 #[derive(Debug)]
@@ -25,9 +26,7 @@ const NO_GENERIC_STRUCTS: &str = "`database` attribute cannot be applied to stru
 
 fn parse_invocation(attr: TokenStream, input: TokenStream) -> Result<DatabaseInvocation> {
     let attr_stream2 = crate::proc_macro2::TokenStream::from(attr);
-    let attr_span = attr_stream2.span();
-    let string_lit = crate::syn::parse2::<LitStr>(attr_stream2)
-        .map_err(|_| attr_span.error("expected string literal"))?;
+    let string_lit = crate::syn::parse2::<LitStr>(attr_stream2)?;
 
     let input = crate::syn::parse::<DeriveInput>(input).unwrap();
     if !input.generics.params.is_empty() {
@@ -73,6 +72,7 @@ pub fn database_attr(attr: TokenStream, input: TokenStream) -> Result<TokenStrea
     let databases = quote_spanned!(span => ::rocket_contrib::databases);
     let Poolable = quote_spanned!(span => #databases::Poolable);
     let r2d2 = quote_spanned!(span => #databases::r2d2);
+    let spawn_blocking = quote_spanned!(span => #databases::spawn_blocking);
     let request = quote!(::rocket::request);
 
     let generated_types = quote_spanned! { span =>
@@ -92,8 +92,8 @@ pub fn database_attr(attr: TokenStream, input: TokenStream) -> Result<TokenStrea
             pub fn fairing() -> impl ::rocket::fairing::Fairing {
                 use #databases::Poolable;
 
-                ::rocket::fairing::AdHoc::on_attach(#fairing_name, |rocket| {
-                    let pool = #databases::database_config(#name, rocket.config())
+                ::rocket::fairing::AdHoc::on_attach(#fairing_name, |mut rocket| async {
+                    let pool = #databases::database_config(#name, rocket.config().await)
                         .map(<#conn_type>::pool);
 
                     match pool {
@@ -117,8 +117,8 @@ pub fn database_attr(attr: TokenStream, input: TokenStream) -> Result<TokenStrea
             /// Retrieves a connection of type `Self` from the `rocket`
             /// instance. Returns `Some` as long as `Self::fairing()` has been
             /// attached and there is at least one connection in the pool.
-            pub fn get_one(rocket: &::rocket::Rocket) -> Option<Self> {
-                rocket.state::<#pool_type>()
+            pub fn get_one(cargo: &::rocket::Cargo) -> Option<Self> {
+                cargo.state::<#pool_type>()
                     .and_then(|pool| pool.0.get().ok())
                     .map(#guard_type)
             }
@@ -140,18 +140,25 @@ pub fn database_attr(attr: TokenStream, input: TokenStream) -> Result<TokenStrea
             }
         }
 
+        #[::rocket::async_trait]
         impl<'a, 'r> #request::FromRequest<'a, 'r> for #guard_type {
             type Error = ();
 
-            fn from_request(request: &'a #request::Request<'r>) -> #request::Outcome<Self, ()> {
-                use ::rocket::{Outcome, http::Status};
-                let pool = ::rocket::try_outcome!(request.guard::<::rocket::State<#pool_type>>());
+            async fn from_request(request: &'a #request::Request<'r>) -> #request::Outcome<Self, ()> {
+                use ::rocket::http::Status;
 
-                match pool.0.get() {
-                    Ok(conn) => Outcome::Success(#guard_type(conn)),
-                    Err(_) => Outcome::Failure((Status::ServiceUnavailable, ())),
-                }
+                let guard = request.guard::<::rocket::State<'_, #pool_type>>();
+                let pool = ::rocket::try_outcome!(guard.await).0.clone();
+
+                #spawn_blocking(move || {
+                    match pool.get() {
+                        Ok(conn) => #request::Outcome::Success(#guard_type(conn)),
+                        Err(_) => #request::Outcome::Failure((Status::ServiceUnavailable, ())),
+                    }
+                }).await.expect("failed to spawn a blocking task to get a pooled connection")
             }
         }
+
+        // TODO.async: What about spawn_blocking on drop?
     }.into())
 }
