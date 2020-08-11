@@ -90,7 +90,7 @@ mod templates_tests {
         use rocket::local::blocking::Client;
 
         const EXPECTED: &'static str
-            = "Hello _testtrace::\n\n<main> &lt;script /&gt; hi </main>\nDone.\n\n";
+            = "Hello _test_!\n\n<main> &lt;script /&gt; hi </main>\nDone.\n\n";
 
         #[rocket::async_test]
         async fn test_handlebars_templates() {
