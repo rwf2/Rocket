@@ -18,16 +18,16 @@ pub struct DataStream(pub(crate) Vec<u8>, pub(crate) AsyncReadBody);
 impl AsyncRead for DataStream {
     #[inline(always)]
     fn poll_read(mut self: Pin<&mut Self>, cx: &mut Context<'_>, buf: &mut [u8]) -> Poll<Result<usize, std::io::Error>> {
-        trace_!("DataStream::poll_read()");
+        trace!("DataStream::poll_read()");
         if self.0.len() > 0 {
             let count = std::cmp::min(buf.len(), self.0.len());
-            trace_!("Reading peeked {} into dest {} = {} bytes", self.0.len(), buf.len(), count);
+            trace!("Reading peeked {} into dest {} = {} bytes", self.0.len(), buf.len(), count);
             let next = self.0.split_off(count);
             (&mut buf[..count]).copy_from_slice(&self.0[..]);
             self.0 = next;
             Poll::Ready(Ok(count))
         } else {
-            trace_!("Delegating to remaining stream");
+            trace!("Delegating to remaining stream");
             Pin::new(&mut self.1).poll_read(cx, buf)
         }
     }

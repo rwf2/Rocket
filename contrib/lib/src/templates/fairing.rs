@@ -61,8 +61,8 @@ mod context {
                 Ok(watcher) => Some(Mutex::new((watcher, rx))),
                 Err(e) => {
                     warn!("Failed to enable live template reloading: {}", e);
-                    debug_!("Reload error: {:?}", e);
-                    warn_!("Live template reloading is unavailable.");
+                    debug!("Reload error: {:?}", e);
+                    warn!("Live template reloading is unavailable.");
                     None
                 }
             };
@@ -98,14 +98,14 @@ mod context {
                 }
 
                 if changed {
-                    info_!("Change detected: reloading templates.");
+                    info!("Change detected: reloading templates.");
                     let mut ctxt = self.context_mut();
                     if let Some(mut new_ctxt) = Context::initialize(ctxt.root.clone()) {
                         custom_callback(&mut new_ctxt.engines);
                         *ctxt = new_ctxt;
                     } else {
-                        warn_!("An error occurred while reloading templates.");
-                        warn_!("The previous templates will remain active.");
+                        warn!("An error occurred while reloading templates.");
+                        warn!("The previous templates will remain active.");
                     };
                 }
             });
@@ -159,7 +159,7 @@ impl Fairing for TemplateFairing {
             Err(ConfigError::Missing(_)) => { /* ignore missing */ }
             Err(e) => {
                 e.pretty_print();
-                warn_!("Using default templates directory '{:?}'", template_root);
+                warn!("Using default templates directory '{:?}'", template_root);
             }
         };
 

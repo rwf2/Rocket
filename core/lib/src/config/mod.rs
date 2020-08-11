@@ -204,12 +204,12 @@ pub use self::error::ConfigError;
 pub use self::environment::Environment;
 pub use self::config::Config;
 pub use self::builder::ConfigBuilder;
-pub use crate::logger::LoggingLevel;
+pub use crate::trace::LoggingLevel;
 pub(crate) use self::toml_ext::LoggedValue;
 
 use self::Environment::*;
 use self::environment::CONFIG_ENV;
-use crate::logger::COLORS_ENV;
+use crate::trace::COLORS_ENV;
 use self::toml_ext::parse_simple_toml_value;
 use crate::http::uncased::uncased_eq;
 
@@ -468,7 +468,7 @@ mod test {
     use super::Environment::*;
     use super::Result;
 
-    use crate::logger::LoggingLevel;
+    use crate::trace::LoggingLevel;
 
     const TEST_CONFIG_FILENAME: &'static str = "/tmp/testing/Rocket.toml";
 

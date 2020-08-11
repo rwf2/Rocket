@@ -13,7 +13,7 @@ use ref_cast::RefCast;
 use yansi::Paint;
 use state::Container;
 
-use crate::{logger, handler};
+use crate::{trace, handler};
 use crate::config::{Config, FullConfig, ConfigError, LoggedValue};
 use crate::request::{Request, FormItems};
 use crate::data::Data;
@@ -23,7 +23,7 @@ use crate::catcher::{self, Catcher};
 use crate::outcome::Outcome;
 use crate::error::{LaunchError, LaunchErrorKind};
 use crate::fairing::{Fairing, Fairings};
-use crate::logger::PaintExt;
+use crate::trace::PaintExt;
 use crate::ext::AsyncReadExt;
 use crate::shutdown::{ShutdownHandle, ShutdownHandleManaged};
 use tracing_futures::Instrument;
@@ -336,7 +336,7 @@ impl Rocket {
                 Outcome::Forward(data) => {
                     // There was no matching route. Autohandle `HEAD` requests.
                     if request.method() == Method::Head {
-                        info_!("Autohandling {} request.", Paint::default("HEAD").bold());
+                        info!("Autohandling {} request.", Paint::default("HEAD").bold());
 
                         // Dispatch the request again with Method `GET`.
                         request._set_method(Method::Get);
@@ -384,7 +384,7 @@ impl Rocket {
             let matches = self.router.route(request);
             for route in matches {
                 // Retrieve and set the requests parameters.
-                info_!("Matched: {}", route);
+                info!("Matched: {}", route);
                 request.set_route(route);
 
                 // Dispatch the request to the handler.
@@ -393,14 +393,14 @@ impl Rocket {
                 // Check if the request processing completed (Some) or if the
                 // request needs to be forwarded. If it does, continue the loop
                 // (None) to try again.
-                info_!("{} {}", Paint::default("Outcome:").bold(), outcome);
+                info!("{} {}", Paint::default("Outcome:").bold(), outcome);
                 match outcome {
                     o@Outcome::Success(_) | o@Outcome::Failure(_) => return o,
                     Outcome::Forward(unused_data) => data = unused_data,
                 }
             }
 
-            error_!("No matching routes for {}.", request);
+            error!("No matching routes for {}.", request);
             Outcome::Forward(data)
         }
     }
@@ -449,7 +449,7 @@ impl Rocket {
         req: &'r Request<'s>
     ) -> impl Future<Output = Response<'r>> + 's {
         async move {
-            warn_!("Responding with {} catcher.", Paint::red(&status));
+            warn!("Responding with {} catcher.", Paint::red(&status));
 
             // For now, we reset the delta state to prevent any modifications
             // from earlier, unsuccessful paths from being reflected in error
@@ -458,7 +458,7 @@ impl Rocket {
 
             // Try to get the active catcher but fallback to user's 500 catcher.
             let catcher = self.catchers.get(&status.code).unwrap_or_else(|| {
-                error_!("No catcher found for {}. Using 500 catcher.", status);
+                error!("No catcher found for {}. Using 500 catcher.", status);
                 self.catchers.get(&500).expect("500 catcher.")
             });
 
@@ -466,8 +466,8 @@ impl Rocket {
             match catcher.handle(req).await {
                 Ok(r) => return r,
                 Err(err_status) => {
-                    error_!("Catcher failed with status: {}!", err_status);
-                    warn_!("Using default 500 error catcher.");
+                    error!("Catcher failed with status: {}!", err_status);
+                    warn!("Using default 500 error catcher.");
                     let default = self.default_catchers.get(&500).expect("Default 500");
                     default.handle(req).await.expect("Default 500 response.")
                 }
@@ -492,14 +492,12 @@ impl Rocket {
         self.fairings.pretty_print_counts();
         self.fairings.handle_launch(self.cargo());
 
-        launch_info!("{}{} {}{}",
+        trace::info!( target: "launch",
+                     "{}{} {}{}",
                      Paint::emoji("🚀 "),
                      Paint::default("Rocket has launched from").bold(),
                      Paint::default(proto).bold().underline(),
                      Paint::default(&full_addr).bold().underline());
-
-        // Restore the log level back to what it originally was.
-        logger::pop_max_level();
 
         // Set the keep-alive.
         // TODO.async: implement keep-alive in Listener
@@ -575,7 +573,7 @@ impl Rocket {
             })
             .map(Rocket::configured)
             .unwrap_or_else(|e: ConfigError| {
-                logger::init(logger::LoggingLevel::Debug);
+                let _ = trace::try_init(trace::LoggingLevel::Debug);
                 e.pretty_print();
                 std::process::exit(1)
             })
@@ -613,10 +611,6 @@ impl Rocket {
     #[inline]
     fn configured(config: Config) -> Rocket {
         crate::trace::try_init(config.log_level);
-        // if logger::try_init(config.log_level, false) {
-        //     // Temporary weaken log level for launch info.
-        //     logger::push_max_level(logger::LoggingLevel::Normal);
-        // }
         let span = tracing::info_span!("configured", "{}Configured for {}", Paint::emoji("🔧 "), config.environment,);
         let _e = span.enter();
 
@@ -1021,7 +1015,7 @@ impl Rocket {
             Either::Left((Err(err), server)) => {
                 // Error setting up ctrl-c signal. Let the user know.
                 warn!("Failed to enable `ctrl+c` graceful signal shutdown.");
-                info_!("Error: {}", err);
+                info!("Error: {}", err);
                 server.await
             }
             // Server shut down before Ctrl-C; return the result.

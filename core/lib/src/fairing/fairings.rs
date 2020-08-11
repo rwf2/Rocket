@@ -1,6 +1,6 @@
 use crate::{Cargo, Rocket, Request, Response, Data};
 use crate::fairing::{Fairing, Kind};
-use crate::logger::PaintExt;
+use crate::trace::PaintExt;
 
 use yansi::Paint;
 
@@ -88,7 +88,7 @@ impl Fairings {
                 .collect::<Vec<_>>()
                 .join(", ");
 
-            info_!("{} {}: {}", Paint::default(num).bold(), kind, Paint::default(&names).bold());
+            info!("{} {}: {}", Paint::default(num).bold(), kind, Paint::default(&names).bold());
         }
     }
 

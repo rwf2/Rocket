@@ -267,7 +267,7 @@ impl<'r> Request<'r> {
             .get_one("X-Real-IP")
             .and_then(|ip| {
                 ip.parse()
-                    .map_err(|_| warn_!("'X-Real-IP' header is malformed: {}", ip))
+                    .map_err(|_| warn!("'X-Real-IP' header is malformed: {}", ip))
                     .ok()
             })
     }
@@ -336,10 +336,10 @@ impl<'r> Request<'r> {
                 Cookies::new(jar, self.state.config.secret_key(), on_drop)
             }
             None => {
-                error_!("Multiple `Cookies` instances are active at once.");
-                info_!("An instance of `Cookies` must be dropped before another \
+                error!("Multiple `Cookies` instances are active at once.");
+                info!("An instance of `Cookies` must be dropped before another \
                        can be retrieved.");
-                warn_!("The retrieved `Cookies` instance will be empty.");
+                warn!("The retrieved `Cookies` instance will be empty.");
                 Cookies::empty()
             }
         }

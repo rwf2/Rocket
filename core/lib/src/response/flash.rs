@@ -193,7 +193,7 @@ impl<R> Flash<R> {
 /// the response is the `Outcome` of the wrapped `Responder`.
 impl<'r, 'o: 'r, R: Responder<'r, 'o>> Responder<'r, 'o> for Flash<R> {
     fn respond_to(self, req: &'r Request<'_>) -> response::Result<'o> {
-        trace_!("Flash: setting message: {}:{}", self.name, self.message);
+        trace!("Flash: setting message: {}:{}", self.name, self.message);
         req.cookies().add(self.cookie());
         self.inner.respond_to(req)
     }
@@ -243,9 +243,9 @@ impl<'a, 'r> FromRequest<'a, 'r> for Flash<&'a Request<'r>> {
     type Error = ();
 
     async fn from_request(req: &'a Request<'r>) -> request::Outcome<Self, Self::Error> {
-        trace_!("Flash: attempting to retrieve message.");
+        trace!("Flash: attempting to retrieve message.");
         req.cookies().get(FLASH_COOKIE_NAME).ok_or(()).and_then(|cookie| {
-            trace_!("Flash: retrieving message: {:?}", cookie);
+            trace!("Flash: retrieving message: {:?}", cookie);
 
             // Parse the flash message.
             let content = cookie.value();

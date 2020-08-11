@@ -174,7 +174,6 @@
 //! [honeycomb.io]: https://crates.io/crates/tracing-honeycomb
 //! [timing]: https://crates.io/crates/tracing-timing
 //! [flame]: https://crates.io/crates/tracing-flame
-use crate::logger::{LoggingLevel, COLORS_ENV};
 use tracing_subscriber::{
     field,
     fmt::{
@@ -189,6 +188,7 @@ use tracing_subscriber::{
 use std::env;
 use std::fmt::{self, Write};
 use std::sync::atomic::{AtomicU64, Ordering::{Acquire, Release}};
+use std::str::FromStr;
 
 use yansi::Paint;
 
@@ -200,25 +200,46 @@ pub mod prelude {
     pub use tracing_futures::Instrument as _;
 }
 
-pub(crate) fn try_init(level: LoggingLevel) -> bool {
-    if level == LoggingLevel::Off {
-        return false;
-    }
+/// Defines the different levels for log messages.
+#[derive(PartialEq, Eq, Debug, Clone, Copy)]
+pub enum LoggingLevel {
+    /// Only shows errors, warnings, and launch information.
+    Critical,
+    /// Shows everything except debug and trace information.
+    Normal,
+    /// Shows everything.
+    Debug,
+    /// Shows nothing.
+    Off,
+}
 
-    if !atty::is(atty::Stream::Stdout)
-        || (cfg!(windows) && !Paint::enable_windows_ascii())
-        || env::var_os(COLORS_ENV)
-            .map(|v| v == "0" || v == "off")
-            .unwrap_or(false)
-    {
-        Paint::disable();
-    }
+impl FromStr for LoggingLevel {
+    type Err = &'static str;
 
-    tracing::subscriber::set_global_default(tracing_subscriber::registry()
-        .with(logging_layer())
-        .with(filter_layer(level))
-    )
-        .is_ok()
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let level = match s {
+            "critical" => LoggingLevel::Critical,
+            "normal" => LoggingLevel::Normal,
+            "debug" => LoggingLevel::Debug,
+            "off" => LoggingLevel::Off,
+            _ => return Err("a log level (off, debug, normal, critical)"),
+        };
+
+        Ok(level)
+    }
+}
+
+impl fmt::Display for LoggingLevel {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let string = match *self {
+            LoggingLevel::Critical => "critical",
+            LoggingLevel::Normal => "normal",
+            LoggingLevel::Debug => "debug",
+            LoggingLevel::Off => "off",
+        };
+
+        write!(f, "{}", string)
+    }
 }
 
 /// Returns a Rocket filtering [`Layer`] based on the provided logging level.
@@ -317,6 +338,45 @@ where
         .fmt_fields(field_format)
         .event_format(EventFormat { last_id: AtomicU64::new(0) })
 }
+
+pub(crate) const COLORS_ENV: &str = "ROCKET_CLI_COLORS";
+
+pub(crate) fn try_init(level: LoggingLevel) -> bool {
+    if level == LoggingLevel::Off {
+        return false;
+    }
+
+    if !atty::is(atty::Stream::Stdout)
+        || (cfg!(windows) && !Paint::enable_windows_ascii())
+        || env::var_os(COLORS_ENV)
+            .map(|v| v == "0" || v == "off")
+            .unwrap_or(false)
+    {
+        Paint::disable();
+    }
+
+    tracing::subscriber::set_global_default(tracing_subscriber::registry()
+        .with(logging_layer())
+        .with(filter_layer(level))
+    )
+        .is_ok()
+}
+
+pub(crate) trait PaintExt {
+    fn emoji(item: &str) -> Paint<&str>;
+}
+
+impl PaintExt for Paint<&str> {
+    /// Paint::masked(), but hidden on Windows due to broken output. See #1122.
+    fn emoji(item: &str) -> Paint<&str> {
+        if cfg!(windows) {
+            Paint::masked("")
+        } else {
+            Paint::masked(item)
+        }
+    }
+}
+
 
 struct EventFormat {
     last_id: AtomicU64,

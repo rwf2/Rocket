@@ -176,7 +176,7 @@ impl Data {
     // bytes can be read from `stream`.
     #[inline(always)]
     pub(crate) async fn new(body: hyper::Body) -> Data {
-        trace_!("Data::new({:?})", body);
+        trace!("Data::new({:?})", body);
 
         let mut stream = AsyncReadBody::from(body);
 
@@ -184,7 +184,7 @@ impl Data {
 
         let eof = match stream.read_max(&mut peek_buf[..]).await {
             Ok(n) => {
-                trace_!("Filled peek buf with {} bytes.", n);
+                trace!("Filled peek buf with {} bytes.", n);
 
                 // TODO.async: This has not gone away, and I don't entirely
                 // understand what's happening here
@@ -197,14 +197,14 @@ impl Data {
                 n < PEEK_BYTES
             }
             Err(e) => {
-                error_!("Failed to read into peek buffer: {:?}.", e);
+                error!("Failed to read into peek buffer: {:?}.", e);
                 // Likewise here as above.
                 peek_buf.truncate(0);
                 false
             }
         };
 
-        trace_!("Peek bytes: {}/{} bytes.", peek_buf.len(), PEEK_BYTES);
+        trace!("Peek bytes: {}/{} bytes.", peek_buf.len(), PEEK_BYTES);
         Data { buffer: peek_buf, stream, is_complete: eof }
     }
 

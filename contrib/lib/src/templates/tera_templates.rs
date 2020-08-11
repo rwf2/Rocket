@@ -25,7 +25,7 @@ impl Engine for Tera {
 
             let mut error = Some(&e as &dyn Error);
             while let Some(err) = error {
-                info_!("{}", err);
+                info!("{}", err);
                 error = err.source();
             }
 
@@ -37,14 +37,14 @@ impl Engine for Tera {
 
     fn render<C: Serialize>(&self, name: &str, context: C) -> Option<String> {
         if self.get_template(name).is_err() {
-            error_!("Tera template '{}' does not exist.", name);
+            error!("Tera template '{}' does not exist.", name);
             return None;
         };
 
         let tera_ctx = match Context::from_serialize(context) {
             Ok(ctx) => ctx,
             Err(_) => {
-                error_!(
+                error!(
                     "Error generating context when rendering Tera template '{}'.",
                     name
                 );
@@ -55,11 +55,11 @@ impl Engine for Tera {
         match Tera::render(self, name, &tera_ctx) {
             Ok(string) => Some(string),
             Err(e) => {
-                error_!("Error rendering Tera template '{}'.", name);
+                error!("Error rendering Tera template '{}'.", name);
 
                 let mut error = Some(&e as &dyn Error);
                 while let Some(err) = error {
-                    error_!("{}", err);
+                    error!("{}", err);
                     error = err.source();
                 }
 

@@ -156,14 +156,14 @@ impl<'f, T: FromForm<'f>> Form<T> {
         let mut items = FormItems::from(form_str);
         let result = T::from_form(&mut items, strict);
         if !items.exhaust() {
-            error_!("The request's form string was malformed.");
+            error!("The request's form string was malformed.");
             return Failure((Status::BadRequest, Malformed(form_str)));
         }
 
         match result {
             Ok(v) => Success(v),
             Err(e) => {
-                error_!("The incoming form failed to parse.");
+                error!("The incoming form failed to parse.");
                 Failure((Status::UnprocessableEntity, Parse(e, form_str)))
             }
         }
@@ -196,7 +196,7 @@ impl<'f, T: FromForm<'f> + Send + 'f> FromTransformedData<'f> for Form<T> {
             use std::cmp::min;
 
             if !request.content_type().map_or(false, |ct| ct.is_form()) {
-                warn_!("Form data does not have form content type.");
+                warn!("Form data does not have form content type.");
                 return Transform::Borrowed(Forward(data));
             }
 

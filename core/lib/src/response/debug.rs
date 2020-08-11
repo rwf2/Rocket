@@ -63,8 +63,8 @@ impl<E> From<E> for Debug<E> {
 
 impl<'r, E: std::fmt::Debug> Responder<'r, 'static> for Debug<E> {
     fn respond_to(self, _: &'r Request<'_>) -> response::Result<'static> {
-        warn_!("Debug: {:?}", Paint::default(&self.0));
-        warn_!(
+        warn!("Debug: {:?}", Paint::default(&self.0));
+        warn!(
             "Debug always responds with {}.",
             Status::InternalServerError
         );

@@ -101,15 +101,15 @@ pub fn database_attr(attr: TokenStream, input: TokenStream) -> Result<TokenStrea
                     match pool {
                         Ok(Ok(p)) => Ok(rocket.manage(#pool_type(p))),
                         Err(config_error) => {
-                            ::rocket::logger::error(
+                            ::rocket::trace::error(
                                 &format!("Database configuration failure: '{}'", #name));
-                            ::rocket::logger::error_(&format!("{}", config_error));
+                            ::rocket::trace::error_(&format!("{}", config_error));
                             Err(rocket)
                         },
                         Ok(Err(pool_error)) => {
-                            ::rocket::logger::error(
+                            ::rocket::trace::error(
                                 &format!("Failed to initialize pool for '{}'", #name));
-                            ::rocket::logger::error_(&format!("{:?}", pool_error));
+                            ::rocket::trace::error_(&format!("{:?}", pool_error));
                             Err(rocket)
                         },
                     }
