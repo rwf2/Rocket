@@ -1,3 +1,179 @@
+//! Tracing, telemetry, and logging.
+//!
+//! Rocket provides support for application-level diagnostics using
+//! the [`tracing`] crate. `tracing` provides a _facade layer_ for scoped,
+//! structured, application-level diagnostics. This means that diagnostic data
+//! from Rocket applications, from Rocket itself, and from any dependencies that
+//! use the [`tracing`] or [`log`] crates, can be emitted in a machine-readable
+//! format and consumed in a wide variety of ways, including structured logging,
+//! distributed tracing, and performance profiling.
+//!
+//! This module re-exports core components of the `tracing` API for use in
+//! Rocket applications, and provides Rocket-specific APIs for use with
+//! `tracing`.
+//!
+//! # Using Tracing
+//!
+//! Tracing's data model is based around two core concepts: [_spans_][spans] and
+//! [_events_][events]. A span represents a _period of time_, with a beginning and
+//! an end, during which a program was executing in a particular context or
+//! performing a unit of work. An event represents a _momentary_ occurance
+//! within a trace, comparable to a single log line.
+//!
+//! Spans and events are recorded using macros, the basics of which are likely
+//! familiar to users of the [`log`] crate. The [`trace!`], [`debug!`],
+//! [`info!`], [`warn!`], and [`error!`] macros record an event at a priority
+//! level ranging from extremely verbose diagnostic information (`trace!`) to
+//! high-priority warnings (`error!`). For example:
+//!
+//! ```
+//! use rocket::trace;
+//!
+//! trace::trace!("Apollo 13 presently at 177,861 nautical miles away.");
+//! trace::debug!("Velocity now reading 3,263 feet per second.");
+//! trace::info!("13, we'd like you to stir up your cryo tanks.");
+//! trace::warn!("Houston, we've got a Main Bus B undervolt.");
+//! trace::error!("Houston, we are venting something out into space!");
+//! ```
+//!
+//! An event consists of one or more key-value pairs, called _fields_, and/or a
+//! textual, human-readable _message_. For example, this will record an event
+//! at the `info` level, with two fields, named `answer` and `question`:
+//! 
+//! ```
+//! # use rocket::trace;
+//! trace::info!(answer = 42, question = "life, the universe, and everything");
+//! ```
+//! The [`tracing` documentation][macros] provides details on how these macros are used.
+//!
+//! Spans may be recorded in a few different ways. Like events, they have a
+//! priority level, and may have one or more fields. In addition, all spans also
+//! have a _name_. The easiest way to record a span is to add the
+//! [`#[tracing::instrument]`][instrument] attribute to a function. For example:
+//!
+//!
+//! ```
+//! use rocket::trace;
+//!
+//! # #[derive(Debug)] struct Planet;
+//! // Calling this function will enter a new span named `jump_to_hyperspace`.
+//! #[trace::instrument]
+//! async fn jump_to_hyperspace(destination: Planet) {
+//!     // This event will be recorded *within* the `jump_to_hyperspace` span.
+//!     tracing::debug!("preparing to jump to hyperspace...");
+//! 
+//!    // ...
+//! }
+//! ```
+//! This will automatically create a span with the same name as the instrumented
+//! function, and all the arguments to that function recorded as fields.
+//! Additional arguments to `#[instrument]` allow customizing the span further.
+//! See the [`tracing` crate's documentation](instrument) for details.
+//!
+//! In addition, spans may be created manually using the [`trace_span!`],
+//! [`debug_span!`], [`info_span!`], [`warn_span!`], and [`error_span!`] macros.
+//! Again, the [`tracing` documentation][macros] provides further details on how
+//! to use these macros.
+//!
+//! # Customization
+//!
+//! Spans and events are recorded by a `tracing` component called a
+//! [`Subscriber`], which implements a particular way of collecting and
+//! recording trace data. By default, Rocket provides its own `Subscriber`
+//! implementation, which logs events to the console. This `Subscriber` will be
+//! installed when [`rocket::ignite`] is called.
+//!
+//! To override the default `Subscriber` with another implementation, simply
+//! [set it as the default][default] prior to calling `rocket::ignite`. For
+//! example:
+//! ```
+//! # type MySubscriber = tracing_subscriber::registry::Registry;
+//! #[rocket::launch]
+//! fn rocket() -> rocket::Rocket {
+//!     let subscriber = MySubscriber::default();
+//!     tracing::subscriber::set_global_default(subscriber)
+//!         .expect("the global default subscriber should not have been set");
+//!
+//!     rocket::ignite()
+//!         // ...
+//! }
+//! ```
+//!
+//! Since `tracing` data is structured and machine-readable, it may be collected
+//! in a variety of ways. The `tracing` community provides [several crates] for
+//! logging in several commonly-used formats, emitting distributed tracing data
+//! to collectors like [OpenTelemetry] and [honeycomb.io], and for
+//! [multiple][timing] [forms][flame] of performance profiling.
+//!
+//! The [`tracing-subscriber`] crate provides an abstraction for building
+//! a `Subscriber` by composing multiple [`Layer`]s which implement different
+//! ways of collecting traces. This allows applications to record the same trace
+//! data in multiple ways.
+//!
+//! In addition to providing a default subscriber out of the box, Rocket also
+//! exposes its default logging and filtering behavior as `Layer`s. This means
+//! that users who would like to combine the default logging layer with layers
+//! from other crates may do so. For example:
+//!
+//! ```rust
+//! # use tracing_subscriber::Layer;
+//! # #[derive(Default)] struct SomeLayer;
+//! # impl<S: tracing::Subscriber + 'static> Layer<S> for SomeLayer {}
+//! # #[derive(Default)] struct SomeOtherLayer;
+//! # impl<S: tracing::Subscriber + 'static> Layer<S> for SomeOtherLayer {}
+//! #[rocket::launch]
+//! fn rocket() -> rocket::Rocket {
+//!     use rocket::trace::prelude::*;
+//!
+//!     let config = rocket::Config::read()
+//!         .expect("failed to read config!");
+//!
+//!     // Configure our trace subscriber...
+//!     tracing_subscriber::registry()
+//!         // Add Rocket's default log formatter.
+//!         .with(rocket::trace::logging_layer())
+//!         // Add a custom layer...
+//!         .with(SomeLayer::default())
+//!         // ...and another custom layer.
+//!         .with(SomeOtherLayer::default())
+//!         // Filter what traces are enabled based on the Rocket config.
+//!         .with(rocket::filter_layer(config.log_level))
+//!         // Set our subscriber as the default.
+//!         .init();
+//!
+//!     rocket::custom(config)
+//!         // ...
+//! }
+//! ```
+//!
+//! [`tracing`]: https://docs.rs/tracing
+//! [`log`]: https://docs.rs/log/
+//! [spans]: https://docs.rs/tracing/latest/tracing/#spans
+//! [events]: https://docs.rs/tracing/latest/tracing/#events
+//! [`span!`]: https://docs.rs/tracing/latest/tracing/macro.span.html
+//! [`event!`]: https://docs.rs/tracing/latest/tracing/macro.event.html
+//! [`trace!`]: https://docs.rs/tracing/latest/tracing/macro.trace.html
+//! [`debug!`]: https://docs.rs/tracing/latest/tracing/macro.debug.html
+//! [`info!`]: https://docs.rs/tracing/latest/tracing/macro.info.html
+//! [`warn!`]: https://docs.rs/tracing/latest/tracing/macro.warn.html
+//! [`error!`]: https://docs.rs/tracing/latest/tracing/macro.error.html
+//! [macros]: https://docs.rs/tracing/latest/tracing/index.html#using-the-macros
+//! [instrument]: https://docs.rs/tracing/latest/tracing/attr.instrument.html
+//! [`trace_span!`]: https://docs.rs/tracing/latest/tracing/macro.trace_span.html
+//! [`debug_span!`]: https://docs.rs/tracing/latest/tracing/macro.debug_span.html
+//! [`info_span!`]: https://docs.rs/tracing/latest/tracing/macro.info_span.html
+//! [`warn_span!`]: https://docs.rs/tracing/latest/tracing/macro.warn_span.html
+//! [`error_span!`]: https://docs.rs/tracing/latest/tracing/macro.error_span.html
+//! [`rocket::ignite`]: crate::ignite
+//! [default]: https://docs.rs/tracing/latest/tracing/#in-executables
+//! [`Subscriber`]: https://docs.rs/tracing/latest/tracing/trait.Subscriber.html
+//! [several crates]: https://github.com/tokio-rs/tracing#related-crates
+//! [`tracing-subscriber`]: https://docs.rs/tracing-subscriber/
+//! [`Layer`]: https://docs.rs/tracing-subscriber/latest/tracing_subscriber/layer/trait.Layer.html
+//! [OpenTelemetry]: https://crates.io/crates/tracing-opentelemetry
+//! [honeycomb.io]: https://crates.io/crates/tracing-honeycomb
+//! [timing]: https://crates.io/crates/tracing-timing
+//! [flame]: https://crates.io/crates/tracing-flame
 use crate::logger::{LoggingLevel, COLORS_ENV};
 use tracing_subscriber::{
     field,
@@ -15,6 +191,14 @@ use std::fmt::{self, Write};
 use std::sync::atomic::{AtomicU64, Ordering::{Acquire, Release}};
 
 use yansi::Paint;
+
+pub use tracing::{trace, debug, info, warn, error, instrument};
+
+/// A prelude for working with `tracing` in Rocket applications.
+pub mod prelude {
+    pub use tracing_subscriber::prelude::*;
+    pub use tracing_futures::Instrument as _;
+}
 
 pub(crate) fn try_init(level: LoggingLevel) -> bool {
     if level == LoggingLevel::Off {
@@ -37,6 +221,36 @@ pub(crate) fn try_init(level: LoggingLevel) -> bool {
         .is_ok()
 }
 
+/// Returns a Rocket filtering [`Layer`] based on the provided logging level.
+///
+/// The returned [`Layer`] can be added to another `tracing` subscriber to 
+/// configure it to filter spans and events based on the logging level
+/// specified in the Rocket config.
+///
+/// For example:
+///
+/// ```
+/// # type MySubscriber = tracing_subscriber::registry::Registry;
+/// #[rocket::launch]
+/// fn rocket() -> rocket::Rocket {
+///     use rocket::trace::prelude::*;
+///
+///     let config = rocket::Config::read()
+///         .expect("failed to read config!");
+///
+///     // Use some `tracing` subscriber from another crate...
+///     MySubscriber::default()
+///         // ...but filter spans and events based on the Rocket
+///         // config file.
+///         .with(rocket::trace::filter_layer(config.log_level))
+///         .init();
+///
+///     rocket::custom(config)
+///         // ...
+/// }
+/// ```
+///
+/// [`Layer`]: https://docs.rs/tracing-subscriber/latest/tracing_subscriber/layer/trait.Layer.html
 pub fn filter_layer<S>(level: LoggingLevel) -> impl Layer<S> 
 where
     S: tracing::Subscriber,
@@ -52,6 +266,37 @@ where
         .expect("filter string must parse")
 }
 
+/// Returns a Rocket-style log formatting layer.
+///
+/// The returned layer can be added to a [`tracing-subscriber`
+/// `Registry`][registry] to add Rocket-style log formatting in addition to
+/// other [`Layer`s] providing different functionality.
+///
+/// For example:
+///
+/// ```
+/// # type MySubscriber = tracing_subscriber::registry::Registry;
+/// #[rocket::launch]
+/// fn rocket() -> rocket::Rocket {
+///     use rocket::trace::prelude::*;
+///
+///     let config = rocket::Config::read()
+///         .expect("failed to read config!");
+///
+///     // Use some `tracing` subscriber from another crate...
+///     MySubscriber::default()
+///         // ...but filter spans and events based on the Rocket
+///         // config file.
+///         .with(rocket::trace::filter_layer(config.log_level))
+///         .init();
+///
+///     rocket::custom(config)
+///         // ...
+/// }
+/// ```
+///
+/// [`Layer`]: https://docs.rs/tracing-subscriber/latest/tracing_subscriber/layer/trait.Layer.html
+/// [`registry`]: https://docs.rs/tracing-subscriber/latest/tracing_subscriber/registry/index.html
 pub fn logging_layer<S>() -> impl Layer<S>
 where
     S: tracing::Subscriber,

@@ -40,15 +40,11 @@ atty = "0.2"
 async-trait = "0.1"
 ref-cast = "1.0"
 atomic = "0.4"
+tracing = "0.1.19"
 
 [dependencies.tokio]
 version = "0.2.9"
 features = ["fs", "io-std", "io-util", "rt-threaded", "sync", "signal", "macros"]
-
-[dependencies.tracing]
-version = "0.1.15"
-default-features = false
-features = ["log", "std"]
 
 [dependencies.tracing-subscriber]
 version = "0.2.9"
