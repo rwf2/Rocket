@@ -22,7 +22,7 @@ fn count(hit_count: State<'_, HitCount>) -> String {
     hit_count.0.load(Ordering::Relaxed).to_string()
 }
 
-#[rocket::launch]
+#[launch]
 fn rocket() -> rocket::Rocket {
     rocket::ignite()
         .mount("/", routes![index, count])

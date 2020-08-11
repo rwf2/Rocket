@@ -4,14 +4,14 @@
 fn simple(id: i32, name: String) -> &'static str { "" }
 
 fn main() {
-    uri!(simple: id = 100, "Hello"); //~ ERROR named and unnamed
-    uri!(simple: "Hello", id = 100); //~ ERROR named and unnamed
-    uri!(simple,); //~ ERROR expected `:`
-    uri!(simple:); //~ ERROR argument list
-    uri!("/mount"); //~ ERROR route path
-    uri!("/mount",); //~ ERROR expected identifier
-    uri!("mount", simple); //~ invalid mount point
-    uri!("/mount/<id>", simple); //~ invalid mount point
-    uri!(); //~ unexpected end of input
-    uri!(simple: id = ); //~ expected expression
+    uri!(simple: id = 100, "Hello");
+    uri!(simple: "Hello", id = 100);
+    uri!(simple,);
+    uri!(simple:);
+    uri!("/mount");
+    uri!("/mount",);
+    uri!("mount", simple);
+    uri!("/mount/<id>", simple);
+    uri!();
+    uri!(simple: id = );
 }

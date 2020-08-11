@@ -78,6 +78,18 @@ necessary when building more interesting applications. The
 [Requests](../requests) chapter, which follows this one, has further details on
 routing and error handling.
 
+! note: We prefer `#[macro_use]`, but you may prefer explicit imports.
+
+  Throughout this guide and the majority of Rocket's documentation, we import
+  `rocket` explicitly with `#[macro_use]` even though the Rust 2018 edition
+  makes explicitly importing crates optional. However, explicitly importing with
+  `#[macro_use]` imports macros globally, allowing you to use Rocket's macros
+  anywhere in your application without importing them explicitly.
+
+  You may instead prefer to import macros explicitly or refer to them with
+  absolute paths: `use rocket::get;` or `#[rocket::get]`. The [`hello_2018`
+  example](@example/hello_2018) showcases this alternative.
+
 ## Mounting
 
 Before Rocket can dispatch requests to a route, the route needs to be _mounted_:
@@ -155,7 +167,7 @@ requests via the `launch` method. The method starts up the server and waits for
 incoming requests. When a request arrives, Rocket finds the matching route and
 dispatches the request to the route's handler.
 
-We typically use `#[rocket::launch]`, which generates a `main` function.
+We typically use `#[launch]`, which generates a `main` function.
 Our complete _Hello, world!_ application thus looks like:
 
 ```rust
@@ -166,7 +178,7 @@ fn world() -> &'static str {
     "Hello, world!"
 }
 
-#[rocket::launch]
+#[launch]
 fn rocket() -> rocket::Rocket {
     rocket::ignite().mount("/hello", routes![world])
 }
@@ -230,7 +242,7 @@ You can find async-ready libraries on [crates.io](https://crates.io) with the
 ! note
 
   Rocket 0.5 uses the tokio (0.2) runtime. The runtime is started for you if you
-  use `#[rocket::launch]` or `#[rocket::main]`, but you can still `launch()` a
+  use `#[launch]` or `#[rocket::main]`, but you can still `launch()` a
   rocket instance on a custom-built `Runtime`.
 
 ### Cooperative Multitasking
@@ -251,13 +263,16 @@ stalls, or sometimes even deadlocks can occur.
 
   ```rust
   # #[macro_use] extern crate rocket;
+  use std::io;
   use rocket::tokio::task::spawn_blocking;
+  use rocket::response::Debug;
 
   #[get("/blocking_task")]
-  async fn blocking_task() -> Vec<u8> {
-      // In a real application, we would use rocket::response::NamedFile
-      spawn_blocking(|| {
-          std::fs::read("data.txt").expect("failed to read file")
-      }).await.unwrap()
+  async fn blocking_task() -> Result<Vec<u8>, Debug<io::Error>> {
+      // In a real app, we'd use rocket::response::NamedFile or tokio::fs::File.
+      let io_result = spawn_blocking(|| std::fs::read("data.txt")).await
+        .map_err(|join_err| io::Error::new(io::ErrorKind::Interrupted, join_err))?;
+
+      Ok(io_result?)
   }
   ```

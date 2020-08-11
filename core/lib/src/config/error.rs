@@ -165,7 +165,7 @@ impl Error for ConfigError {
             NotFound => "config file was not found",
             IoError => "there was an I/O error while reading the config file",
             RandFailure => "randomness could not be retrieved from the OS",
-            Io(..) => "an I/O error occured while setting a configuration parameter",
+            Io(..) => "an I/O error occurred while setting a configuration parameter",
             BadFilePath(..) => "the config file path is invalid",
             BadEntry(..) => "an environment specified as `[environment]` is invalid",
             BadEnv(..) => "the environment specified in `ROCKET_ENV` is invalid",

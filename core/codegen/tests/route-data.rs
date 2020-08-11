@@ -1,11 +1,10 @@
 #[macro_use] extern crate rocket;
 
-use rocket::{Request, Data, Outcome::*};
+use rocket::{Request, Data};
 use rocket::local::blocking::Client;
 use rocket::request::Form;
-use rocket::data::{self, FromData};
+use rocket::data::{self, FromData, ToByteUnit};
 use rocket::http::{RawStr, ContentType, Status};
-use rocket::tokio::io::AsyncReadExt;
 
 // Test that the data parameters works as expected.
 
@@ -21,13 +20,10 @@ impl FromData for Simple {
     type Error = ();
 
     async fn from_data(_: &Request<'_>, data: Data) -> data::Outcome<Self, ()> {
-        let mut string = String::new();
-        let mut stream = data.open().take(64);
-        if let Err(_) = stream.read_to_string(&mut string).await {
-            return Failure((Status::InternalServerError, ()));
+        match data.open(64.bytes()).stream_to_string().await {
+            Ok(string) => data::Outcome::Success(Simple(string)),
+            Err(_) => data::Outcome::Failure((Status::InternalServerError, ())),
         }
-
-        Success(Simple(string))
     }
 }
 

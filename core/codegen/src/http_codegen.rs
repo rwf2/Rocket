@@ -85,7 +85,7 @@ impl FromMeta for MediaType {
             // FIXME(diag: warning)
             meta.value_span()
                 .warning(format!("'{}' is not a known media type", mt))
-                .emit_as_tokens();
+                .emit_as_item_tokens();
         }
 
         Ok(MediaType(mt))
@@ -175,16 +175,13 @@ impl FromMeta for Origin {
 
         let uri = http::uri::Origin::parse_route(&string)
             .map_err(|e| {
-                let span = e.index()
-                    .map(|i| string.subspan(i + 1..))
-                    .unwrap_or(string.span());
-
+                let span = string.subspan(e.index() + 1..);
                 span.error(format!("invalid path URI: {}", e))
                     .help("expected path in origin form: \"/path/<param>\"")
             })?;
 
         if !uri.is_normalized() {
-            let normalized = uri.to_normalized();
+            let normalized = uri.clone().into_normalized();
             return Err(string.span().error("paths cannot contain empty segments")
                 .note(format!("expected '{}', found '{}'", normalized, uri)));
         }

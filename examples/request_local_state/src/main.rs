@@ -76,7 +76,7 @@ async fn r_async(_g1: Guard3, _g2: Guard4) {
     // This exists only to run the request guards.
 }
 
-#[rocket::launch]
+#[launch]
 fn rocket() -> rocket::Rocket {
     rocket::ignite()
         .manage(Atomics::default())

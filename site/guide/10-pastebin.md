@@ -52,7 +52,7 @@ And finally, create a skeleton Rocket application to work off of in
 ```rust
 #[macro_use] extern crate rocket;
 
-#[rocket::launch]
+#[launch]
 fn rocket() -> rocket::Rocket {
     rocket::ignite()
 }
@@ -109,7 +109,7 @@ to them. To mount the `index` route, modify the main function so that it reads:
 # #[macro_use] extern crate rocket;
 # #[get("/")] fn index() { }
 
-#[rocket::launch]
+#[launch]
 fn rocket() -> rocket::Rocket {
     rocket::ignite().mount("/", routes![index])
 }
@@ -260,8 +260,8 @@ Here's our version (in `src/main.rs`):
 #     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result { Ok(()) }
 # }
 
-use rocket::Data;
 use rocket::response::Debug;
+use rocket::data::{Data, ToByteUnit};
 
 #[post("/", data = "<paste>")]
 async fn upload(paste: Data) -> Result<String, Debug<std::io::Error>> {
@@ -269,13 +269,14 @@ async fn upload(paste: Data) -> Result<String, Debug<std::io::Error>> {
     let filename = format!("upload/{id}", id = id);
     let url = format!("{host}/{id}\n", host = "http://localhost:8000", id = id);
 
-    // Write the paste out to the file and return the URL.
-    paste.stream_to_file(filename).await?;
+    // Write the paste out, limited to 128KiB, and return the URL.
+    paste.open(128.kibibytes()).stream_to_file(filename).await?;
     Ok(url)
 }
 ```
 
-Ensure that the route is mounted at the root path:
+Note the [`kibibytes()`] method call: this method comes from the [`ToByteUnit`]
+extension trait. Ensure that the route is mounted at the root path:
 
 ```rust
 # #[macro_use] extern crate rocket;
@@ -283,7 +284,7 @@ Ensure that the route is mounted at the root path:
 # #[get("/")] fn index() {}
 # #[post("/")] fn upload() {}
 
-#[rocket::launch]
+#[launch]
 fn rocket() -> rocket::Rocket {
     rocket::ignite().mount("/", routes![index, upload])
 }
@@ -297,7 +298,7 @@ with the correct ID:
 # in the project root
 cargo run
 
-# in a seperate terminal
+# in a separate terminal
 echo "Hello, world." | curl --data-binary @- http://localhost:8000
 # => http://localhost:8000/eGs
 
@@ -309,6 +310,9 @@ cat upload/* # ensure that contents are correct
 
 Note that since we haven't created a `GET /<id>` route, visiting the returned URL
 will result in a **404**. We'll fix that now.
+
+[`kibibytes()`]: @api/rocket/data/trait.ToByteUnit.html#tymethod.kibibytes
+[`ToByteUnit`]: @api/rocket/data/trait.ToByteUnit.html
 
 ## Retrieving Pastes
 
@@ -345,7 +349,7 @@ Make sure that the route is mounted at the root path:
 # #[post("/")] fn upload() {}
 # #[get("/<id>")] fn retrieve(id: String) {}
 
-#[rocket::launch]
+#[launch]
 fn rocket() -> rocket::Rocket {
     rocket::ignite().mount("/", routes![index, upload, retrieve])
 }
@@ -443,9 +447,9 @@ through some of them to get a better feel for Rocket. Here are some ideas:
     the two `POST /` routes should be called.
   * Support **deletion** of pastes by adding a new `DELETE /<id>` route. Use
     `PasteId` to validate `<id>`.
-  * **Limit the upload** to a maximum size. If the upload exceeds that size,
-    return a **206** partial status code. Otherwise, return a **201** created
-    status code.
+  * Indicate **partial uploads** with a **206** partial status code. If the user
+    uploads a paste that meets or exceeds the allowed limit, return a **206**
+    partial status code. Otherwise, return a **201** created status code.
   * Set the `Content-Type` of the return value in `upload` and `retrieve` to
     `text/plain`.
   * **Return a unique "key"** after each upload and require that the key is

@@ -26,9 +26,7 @@ const NO_GENERIC_STRUCTS: &str = "`database` attribute cannot be applied to stru
 
 fn parse_invocation(attr: TokenStream, input: TokenStream) -> Result<DatabaseInvocation> {
     let attr_stream2 = crate::proc_macro2::TokenStream::from(attr);
-    let attr_span = attr_stream2.span();
-    let string_lit = crate::syn::parse2::<LitStr>(attr_stream2)
-        .map_err(|_| attr_span.error("expected string literal"))?;
+    let string_lit = crate::syn::parse2::<LitStr>(attr_stream2)?;
 
     let input = crate::syn::parse::<DeriveInput>(input).unwrap();
     if !input.generics.params.is_empty() {
@@ -147,15 +145,15 @@ pub fn database_attr(attr: TokenStream, input: TokenStream) -> Result<TokenStrea
             type Error = ();
 
             async fn from_request(request: &'a #request::Request<'r>) -> #request::Outcome<Self, ()> {
-                use ::rocket::{Outcome, http::Status};
+                use ::rocket::http::Status;
 
                 let guard = request.guard::<::rocket::State<'_, #pool_type>>();
                 let pool = ::rocket::try_outcome!(guard.await).0.clone();
 
                 #spawn_blocking(move || {
                     match pool.get() {
-                        Ok(conn) => Outcome::Success(#guard_type(conn)),
-                        Err(_) => Outcome::Failure((Status::ServiceUnavailable, ())),
+                        Ok(conn) => #request::Outcome::Success(#guard_type(conn)),
+                        Err(_) => #request::Outcome::Failure((Status::ServiceUnavailable, ())),
                     }
                 }).await.expect("failed to spawn a blocking task to get a pooled connection")
             }

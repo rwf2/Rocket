@@ -1,40 +1,33 @@
 # Getting Started
 
 Let's create and run our first Rocket application. We'll ensure we have a
-compatible version of Rust, create a new Cargo project that depends on Rocket,
-and then run the application.
+compatible Rust toolchain installed, create a new Cargo project that depends on
+Rocket, and then run the application.
 
 ## Installing Rust
 
-Rocket makes abundant use of Rust's syntax extensions and other advanced,
-unstable features. Because of this, we'll need to use a nightly version of Rust.
-If you already have a working installation of the latest Rust nightly, feel free
-to skip to the next section.
+Rocket makes use of the latest Rust features. Because of this, we'll need a
+recent release of Rust to run Rocket applications. If you already have a working
+installation of the latest Rust compiler, feel free to skip to the next section.
 
-To install a nightly version of Rust, we recommend using `rustup`. Install
+To install the latst version of Rust, we recommend using `rustup`. Install
 `rustup` by following the instructions on [its website](https://rustup.rs/).
-Once `rustup` is installed, configure Rust nightly as your default toolchain by
-running the command:
+Once `rustup` is installed, ensure the latest toolchain is installled by running
+the command:
 
 ```sh
-rustup default nightly
+rustup default stable
 ```
 
-If you prefer, once we setup a project directory in the following section, you
-can use per-directory overrides to use the nightly version _only_ for your
-Rocket project by running the following command in the directory:
+! note: You may prefer to develop using the _nightly_ channel.
 
-```sh
-rustup override set nightly
-```
+  The nightly Rust toolchain enables certain improved developer experiences,
+  such as better compile-time diagnostics, when developing with Rocket. You may
+  choose to develop on the nightly channel to take advantage of these improved
+  experiences. Note that all Rocket features are available across all Rust
+  channels.
 
-! warning: Rocket requires the _latest_ version of Rust nightly.
-
-  If your Rocket application suddenly stops building, ensure you're using the
-  latest version of Rust nightly and Rocket by updating your toolchain and
-  dependencies with:
-
-  `rustup update && cargo update`
+  To set the nightly toolchain as your default, run `rustup default nightly`.
 
 ## Hello, world!
 
@@ -64,7 +57,7 @@ fn index() -> &'static str {
     "Hello, world!"
 }
 
-#[rocket::launch]
+#[launch]
 fn rocket() -> rocket::Rocket {
     rocket::ignite().mount("/", routes![index])
 }
@@ -96,5 +89,4 @@ Visit `http://localhost:8000` to see your first Rocket application in action!
 
   You can disable colors and emoji by setting the `ROCKET_CLI_COLORS`
   environment variable to `0` or `off` when running a Rocket binary:
-
-  `ROCKET_CLI_COLORS=off cargo run`
+  `ROCKET_CLI_COLORS=off cargo run`.

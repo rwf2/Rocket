@@ -17,7 +17,7 @@ fn pop(queue: State<'_, LogChannel>) -> Option<String> {
     queue.0.pop().ok()
 }
 
-#[rocket::launch]
+#[launch]
 fn rocket() -> rocket::Rocket {
     rocket::ignite()
         .mount("/", routes![push, pop])

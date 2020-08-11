@@ -1,44 +1,67 @@
-use std::future::Future;
-
-use crate::response;
-use crate::handler::ErrorHandler;
-use crate::codegen::StaticCatchInfo;
-use crate::request::Request;
+//! Types and traits for error catchers, error handlers, and their return
+//! values.
 
 use std::fmt;
-use yansi::Color::*;
+
+use crate::response::Response;
+use crate::codegen::StaticCatcherInfo;
+use crate::request::Request;
+
+use futures::future::BoxFuture;
+use yansi::Paint;
+
+/// Type alias for the return value of an [`ErrorHandler`]. For now, identical
+/// to [`response::Result`](crate::response::Result).
+pub type Result<'r> = std::result::Result<Response<'r>, crate::http::Status>;
+
+/// Type alias for the unwieldy [`ErrorHandler::handle()`] return type.
+pub type ErrorHandlerFuture<'r> = BoxFuture<'r, Result<'r>>;
 
 /// An error catching route.
 ///
-/// Catchers are routes that run when errors occur. They correspond directly
-/// with the HTTP error status code they will be handling and are registered
-/// with Rocket via [`Rocket::register()`](crate::Rocket::register()). For example,
-/// to handle "404 not found" errors, a catcher for the "404" status code is
-/// registered.
+/// # Overview
 ///
-/// Because error handlers are only called when all routes are exhausted, they
-/// should not fail nor forward. If an error catcher fails, the user will
-/// receive no response. If an error catcher forwards, Rocket will respond with
-/// an internal server error.
+/// Catchers are routes that run when errors are produced by the application.
+/// They consist of an [`ErrorHandler`] and an optional status code to match
+/// against arising errors. Errors arise from the the following sources:
 ///
-/// # Built-In Catchers
+///   * A failing guard.
+///   * A failing responder.
+///   * Routing failure.
 ///
-/// Rocket has many built-in, pre-registered default catchers. In particular,
-/// Rocket has catchers for all of the following status codes: 400, 401, 402,
-/// 403, 404, 405, 406, 407, 408, 409, 410, 411, 412, 413, 414, 415, 416, 417,
-/// 418, 421, 426, 428, 429, 431, 451, 500, 501, 503, and 510. As such, catchers
-/// only need to be registered if an error needs to be handled in a custom
-/// fashion.
+/// Each failure is paired with a status code. Guards and responders indicate
+/// the status code themselves via their `Err` return value while a routing
+/// failure is always a `404`. Rocket invokes the error handler for the catcher
+/// with the error's status code.
+///
+/// ## Default Catchers
+///
+/// If no catcher for a given status code exists, the _default_ catcher is
+/// called. A _default_ catcher is a `Catcher` with a `code` of `None`. There is
+/// at-most one default catcher.
+///
+/// ## Error Handler Restrictions
+///
+/// Because error handlers are a last resort, they should not fail to produce a
+/// response. If an error handler _does_ fail, Rocket invokes its default `500`
+/// error catcher. Error handlers cannot forward.
+///
+/// # Built-In Default Catcher
+///
+/// Rocket's built-in default catcher can handle all errors. It produces HTML or
+/// JSON, depending on the value of the `Accept` header. As such, catchers only
+/// need to be registered if an error needs to be handled in a custom fashion.
 ///
 /// # Code Generation
 ///
-/// Catchers should rarely be used directly. Instead, they are typically
-/// declared using the `catch` decorator, as follows:
+/// Catchers should rarely be constructed or used directly. Instead, they are
+/// typically generated via the [`catch`] attribute, as follows:
 ///
 /// ```rust,no_run
 /// #[macro_use] extern crate rocket;
 ///
 /// use rocket::Request;
+/// use rocket::http::Status;
 ///
 /// #[catch(500)]
 /// fn internal_error() -> &'static str {
@@ -50,74 +73,204 @@ use yansi::Color::*;
 ///     format!("I couldn't find '{}'. Try something else?", req.uri())
 /// }
 ///
-/// #[rocket::launch]
+/// #[catch(default)]
+/// fn default(status: Status, req: &Request) -> String {
+///     format!("{} - {} ({})", status.code, status.reason, req.uri())
+/// }
+///
+/// #[launch]
 /// fn rocket() -> rocket::Rocket {
-///     rocket::ignite().register(catchers![internal_error, not_found])
+///     rocket::ignite().register(catchers![internal_error, not_found, default])
 /// }
 /// ```
 ///
-/// A function decorated with `catch` must take exactly zero or one arguments.
-/// If the catcher takes an argument, it must be of type [`&Request`](Request).
+/// A function decorated with `#[catch]` may take zero, one, or two arguments.
+/// It's type signature must be one of the following, where `R:`[`Responder`]:
+///
+///   * `fn() -> R`
+///   * `fn(`[`&Request`]`) -> R`
+///   * `fn(`[`Status`]`, `[`&Request`]`) -> R`
+///
+/// See the [`catch`] documentation for full details.
+///
+/// [`catch`]: rocket_codegen::catch
+/// [`Responder`]: crate::response::Responder
+/// [`&Request`]: crate::request::Request
+/// [`Status`]: crate::http::Status
+#[derive(Clone)]
 pub struct Catcher {
-    /// The HTTP status code to match against.
-    pub code: u16,
-    /// The catcher's associated handler.
-    pub handler: ErrorHandler,
-    pub(crate) is_default: bool,
+    /// The HTTP status code to match against if this route is not `default`.
+    pub code: Option<u16>,
+
+    /// The catcher's associated error handler.
+    pub handler: Box<dyn ErrorHandler>,
 }
 
 impl Catcher {
-    /// Creates a catcher for the given status code using the given error
-    /// handler. This should only be used when routing manually.
+    /// Creates a catcher for the given status code, or a default catcher if
+    /// `code` is `None`, using the given error handler. This should only be
+    /// used when routing manually.
     ///
     /// # Examples
     ///
     /// ```rust
-    /// # #![allow(unused_variables)]
-    /// use rocket::{Catcher, Request};
-    /// use rocket::handler::CatcherFuture;
-    /// use rocket::response::{Result, Responder};
-    /// use rocket::response::status::Custom;
+    /// use rocket::request::Request;
+    /// use rocket::catcher::{Catcher, ErrorHandlerFuture};
+    /// use rocket::response::{Result, Responder, status::Custom};
     /// use rocket::http::Status;
     ///
-    /// fn handle_404<'r>(req: &'r Request) -> CatcherFuture<'r> {
-    ///    let res = Custom(Status::NotFound, format!("404: {}", req.uri()));
+    /// fn handle_404<'r>(status: Status, req: &'r Request<'_>) -> ErrorHandlerFuture<'r> {
+    ///    let res = Custom(status, format!("404: {}", req.uri()));
     ///    Box::pin(async move { res.respond_to(req) })
     /// }
     ///
-    /// fn handle_500<'r>(req: &'r Request) -> CatcherFuture<'r> {
+    /// fn handle_500<'r>(_: Status, req: &'r Request<'_>) -> ErrorHandlerFuture<'r> {
     ///     Box::pin(async move{ "Whoops, we messed up!".respond_to(req) })
+    /// }
+    ///
+    /// fn handle_default<'r>(status: Status, req: &'r Request<'_>) -> ErrorHandlerFuture<'r> {
+    ///    let res = Custom(status, format!("{}: {}", status, req.uri()));
+    ///    Box::pin(async move { res.respond_to(req) })
     /// }
     ///
     /// let not_found_catcher = Catcher::new(404, handle_404);
     /// let internal_server_error_catcher = Catcher::new(500, handle_500);
+    /// let default_error_catcher = Catcher::new(None, handle_default);
     /// ```
     #[inline(always)]
-    pub fn new(code: u16, handler: ErrorHandler) -> Catcher {
-        Catcher { code, handler, is_default: false }
+    pub fn new<C, H>(code: C, handler: H) -> Catcher
+        where C: Into<Option<u16>>, H: ErrorHandler
+    {
+        Catcher { code: code.into(), handler: Box::new(handler) }
     }
+}
 
-    #[inline(always)]
-    pub(crate) fn handle<'r>(&self, req: &'r Request<'_>) -> impl Future<Output = response::Result<'r>> {
-        (self.handler)(req)
+impl Default for Catcher {
+    fn default() -> Self {
+        fn async_default<'r>(status: Status, request: &'r Request<'_>) -> ErrorHandlerFuture<'r> {
+            Box::pin(async move { default(status, request) })
+        }
+
+        Catcher { code: None, handler: Box::new(async_default) }
     }
+}
 
+/// Trait implemented by types that can handle errors.
+///
+/// This trait is exactly like [`Handler`](crate::handler::Handler) except it
+/// handles error instead of requests. We defer to its documentation.
+///
+/// ## Async Trait
+///
+/// This is an _async_ trait. Implementations must be decorated
+/// [`#[rocket::async_trait]`](crate::async_trait).
+///
+/// # Example
+///
+/// Say you'd like to write a handler that changes its functionality based on a
+/// `Kind` enum value that the user provides. Such a handler might be written
+/// and used as follows:
+///
+/// ```rust,no_run
+/// use rocket::{Request, Catcher};
+/// use rocket::catcher::{self, ErrorHandler};
+/// use rocket::response::{Response, Responder};
+/// use rocket::http::Status;
+///
+/// #[derive(Copy, Clone)]
+/// enum Kind {
+///     Simple,
+///     Intermediate,
+///     Complex,
+/// }
+///
+/// #[derive(Clone)]
+/// struct CustomHandler(Kind);
+///
+/// #[rocket::async_trait]
+/// impl ErrorHandler for CustomHandler {
+///     async fn handle<'r, 's: 'r>(
+///     &'s self,
+///     status: Status,
+///     req: &'r Request<'_>
+/// ) -> catcher::Result<'r> {
+///         let inner = match self.0 {
+///             Kind::Simple => "simple".respond_to(req)?,
+///             Kind::Intermediate => "intermediate".respond_to(req)?,
+///             Kind::Complex => "complex".respond_to(req)?,
+///         };
+///
+///         Response::build_from(inner).status(status).ok()
+///     }
+/// }
+///
+/// impl CustomHandler {
+///     /// Returns a `default` catcher that uses `CustomHandler`.
+///     fn default(kind: Kind) -> Vec<Catcher> {
+///         vec![Catcher::new(None, CustomHandler(kind))]
+///     }
+///
+///     /// Returns a catcher for code `status` that uses `CustomHandler`.
+///     fn catch(status: Status, kind: Kind) -> Vec<Catcher> {
+///         vec![Catcher::new(status.code, CustomHandler(kind))]
+///     }
+/// }
+///
+/// #[rocket::launch]
+/// fn rocket() -> rocket::Rocket {
+///     rocket::ignite()
+///         // to handle only `404`
+///         .register(CustomHandler::catch(Status::NotFound, Kind::Simple))
+///         // or to register as the default
+///         .register(CustomHandler::default(Kind::Simple))
+/// }
+/// ```
+///
+/// Note the following:
+///
+///   1. `CustomHandler` implements `Clone`. This is required so that
+///      `CustomHandler` implements `Cloneable` automatically. The `Cloneable`
+///      trait serves no other purpose but to ensure that every `ErrorHandler`
+///      can be cloned, allowing `Catcher`s to be cloned.
+///   2. `CustomHandler`'s methods return `Vec<Route>`, allowing for use
+///      directly as the parameter to `rocket.register()`.
+///   3. Unlike static-function-based handlers, this custom handler can make use
+///      of internal state.
+#[crate::async_trait]
+pub trait ErrorHandler: Cloneable + Send + Sync + 'static {
+    /// Called by Rocket when an error with `status` for a given `Request`
+    /// should be handled by this handler.
+    ///
+    /// Error handlers _should not_ fail and thus _should_ always return `Ok`.
+    /// Nevertheless, failure is allowed, both for convenience and necessity. If
+    /// an error handler fails, Rocket's default `500` catcher is invoked. If it
+    /// succeeds, the returned `Response` is used to respond to the client.
+    async fn handle<'r, 's: 'r>(&'s self, status: Status, req: &'r Request<'_>) -> Result<'r>;
+}
+
+#[crate::async_trait]
+impl<F: Clone + Sync + Send + 'static> ErrorHandler for F
+    where for<'x> F: Fn(Status, &'x Request<'_>) -> ErrorHandlerFuture<'x>
+{
     #[inline(always)]
-    fn new_default(code: u16, handler: ErrorHandler) -> Catcher {
-        Catcher { code, handler, is_default: true, }
+    async fn handle<'r, 's: 'r>(&'s self, status: Status, req: &'r Request<'_>) -> Result<'r> {
+        self(status, req).await
     }
 }
 
 #[doc(hidden)]
-impl<'a> From<&'a StaticCatchInfo> for Catcher {
-    fn from(info: &'a StaticCatchInfo) -> Catcher {
+impl<'a> From<&'a StaticCatcherInfo> for Catcher {
+    fn from(info: &'a StaticCatcherInfo) -> Catcher {
         Catcher::new(info.code, info.handler)
     }
 }
 
 impl fmt::Display for Catcher {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", Blue.paint(&self.code))
+        match self.code {
+            Some(code) => write!(f, "{}", Paint::blue(code)),
+            None => write!(f, "{}", Paint::blue("default"))
+        }
     }
 }
 
@@ -125,23 +278,22 @@ impl fmt::Debug for Catcher {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("Catcher")
             .field("code", &self.code)
-            .field("default", &self.is_default)
             .finish()
     }
 }
 
-macro_rules! error_page_template {
-    ($code:expr, $name:expr, $description:expr) => (
+macro_rules! html_error_template {
+    ($code:expr, $reason:expr, $description:expr) => (
         concat!(r#"
             <!DOCTYPE html>
             <html lang="en">
             <head>
                 <meta charset="utf-8">
-                <title>"#, $code, " ", $name, r#"</title>
+                <title>"#, $code, " ", $reason, r#"</title>
             </head>
             <body align="center">
                 <div role="main" align="center">
-                    <h1>"#, $code, ": ", $name, r#"</h1>
+                    <h1>"#, $code, ": ", $reason, r#"</h1>
                     <p>"#, $description, r#"</p>
                     <hr />
                 </div>
@@ -155,98 +307,136 @@ macro_rules! error_page_template {
     )
 }
 
-macro_rules! default_catchers {
-    ($($code:expr, $name:expr, $description:expr, $fn_name:ident),+) => (
-        let mut map = HashMap::new();
-
-        $(
-            fn $fn_name<'r>(req: &'r Request<'_>) -> crate::handler::CatcherFuture<'r> {
-                let status = Status::from_code($code).unwrap();
-                let html = content::Html(error_page_template!($code, $name, $description));
-                Box::pin(async move { status::Custom(status, html).respond_to(req) })
-            }
-
-            map.insert($code, Catcher::new_default($code, $fn_name));
-        )+
-
-        map
+macro_rules! json_error_template {
+    ($code:expr, $reason:expr, $description:expr) => (
+        concat!(
+r#"{
+  "error": {
+    "code": "#, $code, r#",
+    "reason": ""#, $reason, r#"",
+    "description": ""#, $description, r#""
+  }
+}"#
+        )
     )
 }
 
-pub mod defaults {
-    use super::Catcher;
+// This is unfortunate, but the `{`, `}` above make it unusable for `format!`.
+macro_rules! json_error_fmt_template {
+    ($code:expr, $reason:expr, $description:expr) => (
+        concat!(
+r#"{{
+  "error": {{
+    "code": "#, $code, r#",
+    "reason": ""#, $reason, r#"",
+    "description": ""#, $description, r#""
+  }}
+}}"#
+        )
+    )
+}
 
-    use std::collections::HashMap;
+macro_rules! default_catcher_fn {
+    ($($code:expr, $reason:expr, $description:expr),+) => (
+        use std::borrow::Cow;
+        use crate::http::Status;
+        use crate::response::{content, status, Responder};
 
-    use crate::request::Request;
-    use crate::response::{content, status, Responder};
-    use crate::http::Status;
+        pub(crate) fn default<'r>(status: Status, req: &'r Request<'_>) -> Result<'r> {
+            if req.accept().map(|a| a.preferred().is_json()).unwrap_or(false) {
+                let json: Cow<'_, str> = match status.code {
+                    $($code => json_error_template!($code, $reason, $description).into(),)*
+                    code => format!(json_error_fmt_template!("{}", "Unknown Error",
+                            "An unknown error has occurred."), code).into()
+                };
 
-    pub fn get() -> HashMap<u16, Catcher> {
-        default_catchers! {
-            400, "Bad Request", "The request could not be understood by the server due
-                to malformed syntax.", handle_400,
-            401, "Unauthorized", "The request requires user authentication.",
-                handle_401,
-            402, "Payment Required", "The request could not be processed due to lack of
-                payment.", handle_402,
-            403, "Forbidden", "The server refused to authorize the request.", handle_403,
-            404, "Not Found", "The requested resource could not be found.", handle_404,
-            405, "Method Not Allowed", "The request method is not supported for the
-                requested resource.", handle_405,
-            406, "Not Acceptable", "The requested resource is capable of generating
-                only content not acceptable according to the Accept headers sent in the
-                request.", handle_406,
-            407, "Proxy Authentication Required", "Authentication with the proxy is
-                required.", handle_407,
-            408, "Request Timeout", "The server timed out waiting for the
-                request.", handle_408,
-            409, "Conflict", "The request could not be processed because of a conflict
-                in the request.", handle_409,
-            410, "Gone", "The resource requested is no longer available and will not be
-                available again.", handle_410,
-            411, "Length Required", "The request did not specify the length of its
-                content, which is required by the requested resource.", handle_411,
-            412, "Precondition Failed", "The server does not meet one of the
-                preconditions specified in the request.", handle_412,
-            413, "Payload Too Large", "The request is larger than the server is
-                willing or able to process.", handle_413,
-            414, "URI Too Long", "The URI provided was too long for the server to
-                process.", handle_414,
-            415, "Unsupported Media Type", "The request entity has a media type which
-                the server or resource does not support.", handle_415,
-            416, "Range Not Satisfiable", "The portion of the requested file cannot be
-                supplied by the server.", handle_416,
-            417, "Expectation Failed", "The server cannot meet the requirements of the
-                Expect request-header field.", handle_417,
-            418, "I'm a teapot", "I was requested to brew coffee, and I am a
-                teapot.", handle_418,
-            421, "Misdirected Request", "The server cannot produce a response for this
-                request.", handle_421,
-            422, "Unprocessable Entity", "The request was well-formed but was unable to
-                be followed due to semantic errors.", handle_422,
-            426, "Upgrade Required", "Switching to the protocol in the Upgrade header
-                field is required.", handle_426,
-            428, "Precondition Required", "The server requires the request to be
-               conditional.", handle_428,
-            429, "Too Many Requests", "Too many requests have been received
-                recently.", handle_429,
-            431, "Request Header Fields Too Large", "The server is unwilling to process
-                the request because either an individual header field, or all
-                the header fields collectively, are too large.", handle_431,
-            451, "Unavailable For Legal Reasons", "The requested resource is
-                unavailable due to a legal demand to deny access to this
-                resource.", handle_451,
-            500, "Internal Server Error", "The server encountered an internal error
-                while processing this request.", handle_500,
-            501, "Not Implemented", "The server either does not recognize the request
-                method, or it lacks the ability to fulfill the request.", handle_501,
-            503, "Service Unavailable", "The server is currently unavailable.",
-                handle_503,
-            504, "Gateway Timeout", "The server did not receive a timely
-                response from an upstream server.", handle_504,
-            510, "Not Extended", "Further extensions to the request are required for
-                the server to fulfill it.", handle_510
+                status::Custom(status, content::Json(json)).respond_to(req)
+            } else {
+                let html: Cow<'_, str> = match status.code {
+                    $($code => html_error_template!($code, $reason, $description).into(),)*
+                    code => format!(html_error_template!("{}", "Unknown Error",
+                            "An unknown error has occurred."), code, code).into(),
+                };
+
+                status::Custom(status, content::Html(html)).respond_to(req)
+            }
         }
+    )
+}
+
+default_catcher_fn! {
+    400, "Bad Request", "The request could not be understood by the server due \
+        to malformed syntax.",
+    401, "Unauthorized", "The request requires user authentication.",
+    402, "Payment Required", "The request could not be processed due to lack of payment.",
+    403, "Forbidden", "The server refused to authorize the request.",
+    404, "Not Found", "The requested resource could not be found.",
+    405, "Method Not Allowed", "The request method is not supported for the requested resource.",
+    406, "Not Acceptable", "The requested resource is capable of generating only content not \
+        acceptable according to the Accept headers sent in the request.",
+    407, "Proxy Authentication Required", "Authentication with the proxy is required.",
+    408, "Request Timeout", "The server timed out waiting for the request.",
+    409, "Conflict", "The request could not be processed because of a conflict in the request.",
+    410, "Gone", "The resource requested is no longer available and will not be available again.",
+    411, "Length Required", "The request did not specify the length of its content, which is \
+        required by the requested resource.",
+    412, "Precondition Failed", "The server does not meet one of the \
+        preconditions specified in the request.",
+    413, "Payload Too Large", "The request is larger than the server is \
+        willing or able to process.",
+    414, "URI Too Long", "The URI provided was too long for the server to process.",
+    415, "Unsupported Media Type", "The request entity has a media type which \
+        the server or resource does not support.",
+    416, "Range Not Satisfiable", "The portion of the requested file cannot be \
+        supplied by the server.",
+    417, "Expectation Failed", "The server cannot meet the requirements of the \
+        Expect request-header field.",
+    418, "I'm a teapot", "I was requested to brew coffee, and I am a teapot.",
+    421, "Misdirected Request", "The server cannot produce a response for this request.",
+    422, "Unprocessable Entity", "The request was well-formed but was unable to \
+        be followed due to semantic errors.",
+    426, "Upgrade Required", "Switching to the protocol in the Upgrade header field is required.",
+    428, "Precondition Required", "The server requires the request to be conditional.",
+    429, "Too Many Requests", "Too many requests have been received recently.",
+    431, "Request Header Fields Too Large", "The server is unwilling to process \
+        the request because either an individual header field, or all the header \
+        fields collectively, are too large.",
+    451, "Unavailable For Legal Reasons", "The requested resource is unavailable \
+        due to a legal demand to deny access to this resource.",
+    500, "Internal Server Error", "The server encountered an internal error while \
+        processing this request.",
+    501, "Not Implemented", "The server either does not recognize the request \
+        method, or it lacks the ability to fulfill the request.",
+    503, "Service Unavailable", "The server is currently unavailable.",
+    504, "Gateway Timeout", "The server did not receive a timely response from an upstream server.",
+    510, "Not Extended", "Further extensions to the request are required for \
+        the server to fulfill it."
+}
+
+// `Cloneable` implementation below.
+
+mod private {
+    pub trait Sealed {}
+    impl<T: super::ErrorHandler + Clone> Sealed for T {}
+}
+
+/// Unfortunate but necessary hack to be able to clone a `Box<ErrorHandler>`.
+///
+/// This trait cannot be implemented by any type. Instead, all types that
+/// implement `Clone` and `Handler` automatically implement `Cloneable`.
+pub trait Cloneable: private::Sealed {
+    #[doc(hidden)]
+    fn clone_handler(&self) -> Box<dyn ErrorHandler>;
+}
+
+impl<T: ErrorHandler + Clone> Cloneable for T {
+    fn clone_handler(&self) -> Box<dyn ErrorHandler> {
+        Box::new(self.clone())
+    }
+}
+
+impl Clone for Box<dyn ErrorHandler> {
+    fn clone(&self) -> Box<dyn ErrorHandler> {
+        self.clone_handler()
     }
 }

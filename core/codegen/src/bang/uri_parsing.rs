@@ -192,7 +192,7 @@ impl Parse for InternalUriParams {
         // Validation should always succeed since this macro can only be called
         // if the route attribute succeeded, implying a valid route URI.
         let route_uri = Origin::parse_route(&route_uri_str.value())
-            .map(|o| o.to_normalized().into_owned())
+            .map(|o| o.into_normalized().into_owned())
             .map_err(|_| input.error("internal error: invalid route URI"))?;
 
         let content;

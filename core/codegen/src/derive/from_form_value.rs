@@ -12,18 +12,17 @@ pub fn derive_from_form_value(input: proc_macro::TokenStream) -> TokenStream {
     DeriveGenerator::build_for(input, quote!(impl<'__v> ::rocket::request::FromFormValue<'__v>))
         .generic_support(GenericSupport::None)
         .data_support(DataSupport::Enum)
-        .validate_enum(|generator, data| {
+        .validate_enum(|_, data| {
             // This derive only works for variants that are nullary.
             for variant in data.variants() {
                 if !variant.fields().is_empty() {
-                    return Err(variant.span().error("variants cannot have fields"));
+                    return Err(variant.fields().span().error("variants cannot have fields"));
                 }
             }
 
             // Emit a warning if the enum is empty.
             if data.variants.is_empty() {
-                return Err(generator.input.span()
-                    .error("enum must have at least one field"));
+                return Err(data.brace_token.span.error("enum must have at least one field"));
             }
 
             Ok(())

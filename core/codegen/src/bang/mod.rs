@@ -45,7 +45,7 @@ fn prefixed_vec(
             __vector
         }))
         .unwrap_or_else(|diag| {
-            let diag_tokens = diag.emit_as_tokens();
+            let diag_tokens = diag.emit_as_expr_tokens();
             quote!({
                 #diag_tokens
                 let __vec: #_Vec<#ty> = vec![];
@@ -64,15 +64,16 @@ pub fn catchers_macro(input: proc_macro::TokenStream) -> TokenStream {
 
 pub fn uri_macro(input: proc_macro::TokenStream) -> TokenStream {
     uri::_uri_macro(input.into())
-        .unwrap_or_else(|diag| diag.emit_as_tokens())
+        .unwrap_or_else(|diag| diag.emit_as_expr_tokens())
 }
 
 pub fn uri_internal_macro(input: proc_macro::TokenStream) -> TokenStream {
-    uri::_uri_internal_macro(input.into())
-        .unwrap_or_else(|diag| diag.emit_as_tokens())
+    let tokens = uri::_uri_internal_macro(input.into())
+        .unwrap_or_else(|diag| diag.emit_as_expr_tokens());
+    tokens
 }
 
 pub fn guide_tests_internal(input: proc_macro::TokenStream) -> TokenStream {
     test_guide::_macro(input)
-        .unwrap_or_else(|diag| diag.emit_as_tokens())
+        .unwrap_or_else(|diag| diag.emit_as_item_tokens())
 }

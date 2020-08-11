@@ -10,10 +10,11 @@ use crate::http::Status;
 /// This type can be used as a request guard to retrieve the state Rocket is
 /// managing for some type `T`. This allows for the sharing of state across any
 /// number of handlers. A value for the given type must previously have been
-/// registered to be managed by Rocket via
-/// [`Rocket::manage()`]. The type being managed must be
-/// thread safe and sendable across thread boundaries. In other words, it must
-/// implement [`Send`] + [`Sync`] + `'static`.
+/// registered to be managed by Rocket via [`Rocket::manage()`]. The type being
+/// managed must be thread safe and sendable across thread boundaries. In other
+/// words, it must implement [`Send`] + [`Sync`] + `'static`.
+///
+/// [`Rocket::manage()`]: crate::Rocket::manage()
 ///
 /// # Example
 ///
@@ -41,7 +42,7 @@ use crate::http::Status;
 ///     state.inner().user_val.as_str()
 /// }
 ///
-/// #[rocket::launch]
+/// #[launch]
 /// fn rocket() -> rocket::Rocket {
 ///     rocket::ignite()
 ///         .mount("/", routes![index, raw_config_value])

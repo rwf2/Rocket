@@ -156,28 +156,28 @@ mod tests {
     use crate::rocket::Rocket;
     use crate::config::Config;
     use crate::request::Request;
-    use crate::router::{dummy_handler, route::Route};
-    use crate::http::{Method, MediaType, ContentType, Accept};
+    use crate::router::route::Route;
+    use crate::http::{Method, Method::*, MediaType, ContentType, Accept};
     use crate::http::uri::Origin;
-    use crate::http::Method::*;
+    use crate::handler::dummy;
 
     type SimpleRoute = (Method, &'static str);
 
     fn m_collide(a: SimpleRoute, b: SimpleRoute) -> bool {
-        let route_a = Route::new(a.0, a.1, dummy_handler);
-        route_a.collides_with(&Route::new(b.0, b.1, dummy_handler))
+        let route_a = Route::new(a.0, a.1, dummy);
+        route_a.collides_with(&Route::new(b.0, b.1, dummy))
     }
 
     fn unranked_collide(a: &'static str, b: &'static str) -> bool {
-        let route_a = Route::ranked(0, Get, a, dummy_handler);
-        let route_b = Route::ranked(0, Get, b, dummy_handler);
+        let route_a = Route::ranked(0, Get, a, dummy);
+        let route_b = Route::ranked(0, Get, b, dummy);
         eprintln!("Checking {} against {}.", route_a, route_b);
         route_a.collides_with(&route_b)
     }
 
     fn s_s_collide(a: &'static str, b: &'static str) -> bool {
-        let a = Route::new(Get, a, dummy_handler);
-        let b = Route::new(Get, b, dummy_handler);
+        let a = Route::new(Get, a, dummy);
+        let b = Route::new(Get, b, dummy);
         paths_collide(&a, &b)
     }
 
@@ -343,12 +343,12 @@ mod tests {
     fn r_mt_mt_collide<S1, S2>(m: Method, mt1: S1, mt2: S2) -> bool
         where S1: Into<Option<&'static str>>, S2: Into<Option<&'static str>>
     {
-        let mut route_a = Route::new(m, "/", dummy_handler);
+        let mut route_a = Route::new(m, "/", dummy);
         if let Some(mt_str) = mt1.into() {
             route_a.format = Some(mt_str.parse::<MediaType>().unwrap());
         }
 
-        let mut route_b = Route::new(m, "/", dummy_handler);
+        let mut route_b = Route::new(m, "/", dummy);
         if let Some(mt_str) = mt2.into() {
             route_b.format = Some(mt_str.parse::<MediaType>().unwrap());
         }
@@ -411,7 +411,7 @@ mod tests {
             }
         }
 
-        let mut route = Route::new(m, "/", dummy_handler);
+        let mut route = Route::new(m, "/", dummy);
         if let Some(mt_str) = mt2.into() {
             route.format = Some(mt_str.parse::<MediaType>().unwrap());
         }
@@ -470,7 +470,7 @@ mod tests {
     fn req_route_path_match(a: &'static str, b: &'static str) -> bool {
         let rocket = Rocket::custom(Config::development());
         let req = Request::new(&rocket, Get, Origin::parse(a).expect("valid URI"));
-        let route = Route::ranked(0, Get, b.to_string(), dummy_handler);
+        let route = Route::ranked(0, Get, b.to_string(), dummy);
         route.matches(&req)
     }
 

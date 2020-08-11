@@ -49,7 +49,8 @@ example, the following snippet attached two fairings, `req_fairing` and
 `res_fairing`, to a new Rocket instance:
 
 ```rust
-#[rocket::launch]
+# use rocket::launch;
+#[launch]
 fn rocket() -> rocket::Rocket {
     # let req_fairing = rocket::fairing::AdHoc::on_request("example", |_, _| Box::pin(async {}));
     # let res_fairing = rocket::fairing::AdHoc::on_response("example", |_, _| Box::pin(async {}));
@@ -168,7 +169,7 @@ impl Fairing for Counter {
     }
 
     // Increment the counter for `GET` and `POST` requests.
-    async fn on_request<'a>(&'a self, request: &'a mut Request<'_>, _: &'a Data) {
+    async fn on_request(&self, request: &mut Request<'_>, _: &Data) {
         match request.method() {
             Method::Get => self.get.fetch_add(1, Ordering::Relaxed),
             Method::Post => self.post.fetch_add(1, Ordering::Relaxed),
@@ -176,7 +177,7 @@ impl Fairing for Counter {
         };
     }
 
-    async fn on_response<'a>(&'a self, request: &'a Request<'_>, response: &'a mut Response<'_>) {
+    async fn on_response<'r>(&self, request: &'r Request<'_>, response: &mut Response<'r>) {
         // Don't change a successful user's response, ever.
         if response.status() != Status::NotFound {
             return

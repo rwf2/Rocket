@@ -217,12 +217,12 @@ pub use self::info_kind::{Info, Kind};
 ///         # unimplemented!()
 ///     }
 ///
-///     async fn on_request<'a>(&'a self, req: &'a mut Request<'_>, data: &'a Data) {
+///     async fn on_request(&self, req: &mut Request<'_>, data: &Data) {
 ///         /* ... */
 ///         # unimplemented!()
 ///     }
 ///
-///     async fn on_response<'a>(&'a self, req: &'a Request<'_>, res: &'a mut Response<'_>) {
+///     async fn on_response<'r>(&self, req: &'r Request<'_>, res: &mut Response<'r>) {
 ///         /* ... */
 ///         # unimplemented!()
 ///     }
@@ -266,7 +266,7 @@ pub use self::info_kind::{Info, Kind};
 ///         }
 ///     }
 ///
-///     async fn on_request<'a>(&'a self, req: &'a mut Request<'_>, _: &'a Data) {
+///     async fn on_request(&self, req: &mut Request<'_>, _: &Data) {
 ///         if req.method() == Method::Get {
 ///             self.get.fetch_add(1, Ordering::Relaxed);
 ///         } else if req.method() == Method::Post {
@@ -274,7 +274,7 @@ pub use self::info_kind::{Info, Kind};
 ///         }
 ///     }
 ///
-///     async fn on_response<'a>(&'a self, req: &'a Request<'_>, res: &'a mut Response<'_>) {
+///     async fn on_response<'r>(&self, req: &'r Request<'_>, res: &mut Response<'r>) {
 ///         // Don't change a successful user's response, ever.
 ///         if res.status() != Status::NotFound {
 ///             return
@@ -307,7 +307,6 @@ pub use self::info_kind::{Info, Kind};
 /// # use std::future::Future;
 /// # use std::pin::Pin;
 /// # use std::time::{Duration, SystemTime};
-/// # use rocket::Outcome;
 /// # use rocket::{Request, Data, Response};
 /// # use rocket::fairing::{Fairing, Info, Kind};
 /// # use rocket::http::Status;
@@ -330,7 +329,7 @@ pub use self::info_kind::{Info, Kind};
 ///     }
 ///
 ///     /// Stores the start time of the request in request-local state.
-///     async fn on_request<'a>(&'a self, request: &'a mut Request<'_>, _: &'a Data) {
+///     async fn on_request(&self, request: &mut Request<'_>, _: &Data) {
 ///         // Store a `TimerStart` instead of directly storing a `SystemTime`
 ///         // to ensure that this usage doesn't conflict with anything else
 ///         // that might store a `SystemTime` in request-local cache.
@@ -339,7 +338,7 @@ pub use self::info_kind::{Info, Kind};
 ///
 ///     /// Adds a header to the response indicating how long the server took to
 ///     /// process the request.
-///     async fn on_response<'a>(&'a self, req: &'a Request<'_>, res: &'a mut Response<'_>) {
+///     async fn on_response<'r>(&self, req: &'r Request<'_>, res: &mut Response<'r>) {
 ///         let start_time = req.local_cache(|| TimerStart(None));
 ///         if let Some(Ok(duration)) = start_time.0.map(|st| st.elapsed()) {
 ///             let ms = duration.as_secs() * 1000 + duration.subsec_millis() as u64;
@@ -359,8 +358,8 @@ pub use self::info_kind::{Info, Kind};
 ///
 ///     async fn from_request(request: &'a Request<'r>) -> request::Outcome<Self, ()> {
 ///         match *request.local_cache(|| TimerStart(None)) {
-///             TimerStart(Some(time)) => Outcome::Success(StartTime(time)),
-///             TimerStart(None) => Outcome::Failure((Status::InternalServerError, ())),
+///             TimerStart(Some(time)) => request::Outcome::Success(StartTime(time)),
+///             TimerStart(None) => request::Outcome::Failure((Status::InternalServerError, ())),
 ///         }
 ///     }
 /// }
@@ -441,7 +440,7 @@ pub trait Fairing: Send + Sync + 'static {
     ///
     /// The default implementation of this method does nothing.
     #[allow(unused_variables)]
-    async fn on_request<'a>(&'a self, req: &'a mut Request<'_>, data: &'a Data) {}
+    async fn on_request(&self, req: &mut Request<'_>, data: &Data) {}
 
     /// The response callback.
     ///
@@ -454,7 +453,7 @@ pub trait Fairing: Send + Sync + 'static {
     ///
     /// The default implementation of this method does nothing.
     #[allow(unused_variables)]
-    async fn on_response<'a>(&'a self, req: &'a Request<'_>, res: &'a mut Response<'_>) {}
+    async fn on_response<'r>(&self, req: &'r Request<'_>, res: &mut Response<'r>) {}
 }
 
 #[crate::async_trait]
@@ -475,12 +474,12 @@ impl<T: Fairing> Fairing for std::sync::Arc<T> {
     }
 
     #[inline]
-    async fn on_request<'a>(&'a self, req: &'a mut Request<'_>, data: &'a Data) {
+    async fn on_request(&self, req: &mut Request<'_>, data: &Data) {
         (self as &T).on_request(req, data).await;
     }
 
     #[inline]
-    async fn on_response<'a>(&'a self, req: &'a Request<'_>, res: &'a mut Response<'_>) {
+    async fn on_response<'r>(&self, req: &'r Request<'_>, res: &mut Response<'r>) {
         (self as &T).on_response(req, res).await;
     }
 }

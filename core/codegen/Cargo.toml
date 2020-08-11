@@ -9,7 +9,6 @@ repository = "https://github.com/SergioBenitez/Rocket"
 readme = "../../README.md"
 keywords = ["rocket", "web", "framework", "code", "generation"]
 license = "MIT OR Apache-2.0"
-build = "build.rs"
 edition = "2018"
 
 [lib]
@@ -19,13 +18,10 @@ proc-macro = true
 indexmap = "1.0"
 quote = "1.0"
 rocket_http = { version = "0.5.0-dev", path = "../http/" }
-devise = { git = "https://github.com/SergioBenitez/Devise.git", rev = "17f647e" }
+devise = { git = "https://github.com/SergioBenitez/Devise.git", rev = "1e42a2691" }
 glob = "0.3"
-
-[build-dependencies]
-yansi = "0.5"
-version_check = "0.9.1"
 
 [dev-dependencies]
 rocket = { version = "0.5.0-dev", path = "../lib" }
-compiletest_rs = "0.5"
+version_check = "0.9"
+trybuild = "1.0"

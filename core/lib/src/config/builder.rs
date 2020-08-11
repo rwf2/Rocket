@@ -1,7 +1,8 @@
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 
-use crate::config::{Result, Config, Value, Environment, Limits, LoggingLevel};
+use crate::config::{Result, Config, Value, Environment, LoggingLevel};
+use crate::data::Limits;
 
 /// Structure following the builder pattern for building `Config` structures.
 #[derive(Clone)]
@@ -189,10 +190,11 @@ impl ConfigBuilder {
     /// # Example
     ///
     /// ```rust
-    /// use rocket::config::{Config, Environment, Limits};
+    /// use rocket::config::{Config, Environment};
+    /// use rocket::data::{Limits, ToByteUnit};
     ///
     /// let mut config = Config::build(Environment::Staging)
-    ///     .limits(Limits::new().limit("json", 5 * (1 << 20)))
+    ///     .limits(Limits::new().limit("json", 5.mebibytes()))
     ///     .unwrap();
     /// ```
     pub fn limits(mut self, limits: Limits) -> Self {

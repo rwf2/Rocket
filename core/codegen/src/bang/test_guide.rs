@@ -7,21 +7,17 @@ use devise::proc_macro2::TokenStream;
 
 pub fn _macro(input: proc_macro::TokenStream) -> devise::Result<TokenStream> {
     let root_glob = syn::parse::<LitStr>(input.into())?;
-    let modules = entry_to_modules(&root_glob)
+    let tests = entry_to_tests(&root_glob)
         .map_err(|e| root_glob.span().error(format!("failed to read: {}", e)))?;
 
-    Ok(quote_spanned!(root_glob.span() =>
-        #[allow(dead_code)]
-        #[allow(non_camel_case_types)]
-        mod test_site_guide { #(#modules)* }
-    ).into())
+    Ok(quote!(#(#tests)*))
 }
 
-fn entry_to_modules(root_glob: &LitStr) -> Result<Vec<TokenStream>, Box<dyn Error>> {
+fn entry_to_tests(root_glob: &LitStr) -> Result<Vec<TokenStream>, Box<dyn Error>> {
     let manifest_dir = std::env::var("CARGO_MANIFEST_DIR").expect("MANIFEST_DIR");
     let full_glob = Path::new(&manifest_dir).join(&root_glob.value()).display().to_string();
 
-    let mut modules = vec![];
+    let mut tests = vec![];
     for path in glob::glob(&full_glob).map_err(Box::new)? {
         let path = path.map_err(Box::new)?;
         let name = path.file_name()
@@ -32,11 +28,8 @@ fn entry_to_modules(root_glob: &LitStr) -> Result<Vec<TokenStream>, Box<dyn Erro
 
         let ident = Ident::new(&name, root_glob.span());
         let full_path = Path::new(&manifest_dir).join(&path).display().to_string();
-        modules.push(quote_spanned!(root_glob.span() =>
-            #[doc(include = #full_path)]
-            struct #ident;
-        ))
+        tests.push(quote_spanned!(root_glob.span() => doc_comment::doctest!(#full_path, #ident);))
     }
 
-    Ok(modules)
+    Ok(tests)
 }

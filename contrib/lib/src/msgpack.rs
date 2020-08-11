@@ -20,9 +20,10 @@ use tokio::io::AsyncReadExt;
 
 use rocket::request::Request;
 use rocket::outcome::Outcome::*;
-use rocket::data::{Data, FromTransformedData, FromDataFuture, Transform::*, TransformFuture, Transformed};
-use rocket::http::Status;
+use rocket::data::{Data, ByteUnit, Transform::*, TransformFuture, Transformed};
+use rocket::data::{FromTransformedData, FromDataFuture};
 use rocket::response::{self, content, Responder};
+use rocket::http::Status;
 
 use serde::Serialize;
 use serde::de::Deserialize;
@@ -110,8 +111,7 @@ impl<T> MsgPack<T> {
     }
 }
 
-/// Default limit for MessagePack is 1MB.
-const LIMIT: u64 = 1 << 20;
+const DEFAULT_LIMIT: ByteUnit = ByteUnit::Mebibyte(1);
 
 impl<'a, T: Deserialize<'a>> FromTransformedData<'a> for MsgPack<T> {
     type Error = Error;
@@ -120,9 +120,9 @@ impl<'a, T: Deserialize<'a>> FromTransformedData<'a> for MsgPack<T> {
 
     fn transform<'r>(r: &'r Request<'_>, d: Data) -> TransformFuture<'r, Self::Owned, Self::Error> {
         Box::pin(async move {
-            let size_limit = r.limits().get("msgpack").unwrap_or(LIMIT);
+            let size_limit = r.limits().get("msgpack").unwrap_or(DEFAULT_LIMIT);
             let mut buf = Vec::new();
-            let mut reader = d.open().take(size_limit);
+            let mut reader = d.open(size_limit);
             match reader.read_to_end(&mut buf).await {
                 Ok(_) => Borrowed(Success(buf)),
                 Err(e) => Borrowed(Failure((Status::BadRequest, Error::InvalidDataRead(e)))),

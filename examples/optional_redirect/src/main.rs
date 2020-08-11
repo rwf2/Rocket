@@ -24,7 +24,7 @@ fn login() -> &'static str {
     "Hi! That user doesn't exist. Maybe you need to log in?"
 }
 
-#[rocket::launch]
+#[launch]
 fn rocket() -> rocket::Rocket {
     rocket::ignite().mount("/", routes![root, user, login])
 }

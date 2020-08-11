@@ -2,131 +2,104 @@
 
 // Check that route paths are absolute and normalized.
 
-#[get("a")] //~ ERROR invalid path URI
-//~^ HELP expected
+#[get("a")]
 fn f0() {}
 
-#[get("")] //~ ERROR invalid path URI
-//~^ HELP expected
+#[get("")]
 fn f1() {}
 
-#[get("a/b/c")] //~ ERROR invalid path URI
-//~^ HELP expected
+#[get("a/b/c")]
 fn f2() {}
 
-#[get("/a///b")] //~ ERROR empty segments
-//~^ NOTE expected
+#[get("/a///b")]
 fn f3() {}
 
-#[get("/?bat&&")] //~ ERROR empty segments
+#[get("/?bat&&")]
 fn f4() {}
 
-#[get("/?bat&&")] //~ ERROR empty segments
+#[get("/?bat&&")]
 fn f5() {}
 
-#[get("/a/b//")] //~ ERROR empty segments
-//~^ NOTE expected
+#[get("/a/b//")]
 fn f6() {}
 
 // Check that paths contain only valid URI characters
 
-#[get("/!@#$%^&*()")] //~ ERROR invalid path URI
-//~^ HELP origin form
+#[get("/!@#$%^&*()")]
 fn g1() {}
 
-#[get("/a%20b")] //~ ERROR invalid URI characters
-//~^ NOTE cannot contain reserved
-//~^^ HELP reserved characters include
+#[get("/a%20b")]
 fn g2() {}
 
-#[get("/a?a%20b")] //~ ERROR invalid URI characters
-//~^ NOTE cannot contain reserved
-//~^^ HELP reserved characters include
+#[get("/a?a%20b")]
 fn g3() {}
 
-#[get("/a?a+b")] //~ ERROR invalid URI characters
-//~^ NOTE cannot contain reserved
-//~^^ HELP reserved characters include
+#[get("/a?a+b")]
 fn g4() {}
 
 // Check that all declared parameters are accounted for
 
-#[get("/<name>")] //~ ERROR unused dynamic parameter
-fn h0(_name: usize) {} //~ NOTE expected argument named `name` here
+#[get("/<name>")]
+fn h0(_name: usize) {}
 
-#[get("/a?<r>")] //~ ERROR unused dynamic parameter
-fn h1() {} //~ NOTE expected argument named `r` here
+#[get("/a?<r>")]
+fn h1() {}
 
-#[post("/a", data = "<test>")] //~ ERROR unused dynamic parameter
-fn h2() {} //~ NOTE expected argument named `test` here
+#[post("/a", data = "<test>")]
+fn h2() {}
 
-#[get("/<_r>")] //~ ERROR unused dynamic parameter
-fn h3() {} //~ NOTE expected argument named `_r` here
+#[get("/<_r>")]
+fn h3() {}
 
-#[get("/<_r>/<b>")] //~ ERROR unused dynamic parameter
-//~^ ERROR unused dynamic parameter
-fn h4() {} //~ NOTE expected argument named `_r` here
-//~^ NOTE expected argument named `b` here
+#[get("/<_r>/<b>")]
+fn h4() {}
+
 
 // Check dynamic parameters are valid idents
 
-#[get("/<foo_.>")] //~ ERROR `foo_.` is not a valid identifier
-//~^ HELP must be valid
+#[get("/<foo_.>")]
 fn i0() {}
 
-#[get("/<foo*>")] //~ ERROR `foo*` is not a valid identifier
-//~^ HELP must be valid
+#[get("/<foo*>")]
 fn i1() {}
 
-#[get("/<!>")] //~ ERROR `!` is not a valid identifier
-//~^ HELP must be valid
+#[get("/<!>")]
 fn i2() {}
 
-#[get("/<name>:<id>")] //~ ERROR `name>:<id` is not a valid identifier
-//~^ HELP must be valid
+#[get("/<name>:<id>")]
 fn i3() {}
 
 // Check that a data parameter is exactly `<param>`
 
-#[get("/", data = "foo")] //~ ERROR malformed parameter
-//~^ HELP must be of the form
+#[get("/", data = "foo")]
 fn j0() {}
 
-#[get("/", data = "<foo..>")] //~ ERROR malformed parameter
-//~^ HELP must be of the form
+#[get("/", data = "<foo..>")]
 fn j1() {}
 
-#[get("/", data = "<foo")] //~ ERROR missing a closing bracket
-//~^ HELP did you mean
+#[get("/", data = "<foo")]
 fn j2() {}
 
-#[get("/", data = "<test >")] //~ ERROR `test ` is not a valid identifier
-//~^ HELP must be valid
+#[get("/", data = "<test >")]
 fn j3() {}
 
 // Check that all identifiers are named
 
-#[get("/<_>")] //~ ERROR must be named
-fn k0(_: usize) {} //~^ HELP use a name such as
+#[get("/<_>")]
+fn k0(_: usize) {}
 
 // Check that strange dynamic syntax is caught.
 
-#[get("/<>")] //~ ERROR cannot be empty
+#[get("/<>")]
 fn m0() {}
 
-#[get("/<id><")] //~ ERROR malformed parameter
-//~^ HELP must be of the form
-//~^^ HELP identifiers cannot contain
+#[get("/<id><")]
 fn m1() {}
 
-#[get("/<<<<id><")] //~ ERROR malformed parameter
-//~^ HELP must be of the form
-//~^^ HELP identifiers cannot contain
+#[get("/<<<<id><")]
 fn m2() {}
 
-#[get("/<>name><")] //~ ERROR malformed parameter
-//~^ HELP must be of the form
-//~^^ HELP identifiers cannot contain
+#[get("/<>name><")]
 fn m3() {}
 
 fn main() {  }

@@ -258,6 +258,18 @@ impl<'r> Responder<'r, 'static> for () {
     }
 }
 
+/// Responds with the inner `Responder` in `Cow`.
+impl<'r, 'o: 'r, R: ?Sized + ToOwned> Responder<'r, 'o> for std::borrow::Cow<'o, R>
+    where &'o R: Responder<'r, 'o> + 'o, <R as ToOwned>::Owned: Responder<'r, 'o> + 'r
+{
+    fn respond_to(self, req: &'r Request<'_>) -> response::Result<'o> {
+        match self {
+            std::borrow::Cow::Borrowed(b) => b.respond_to(req),
+            std::borrow::Cow::Owned(o) => o.respond_to(req),
+        }
+    }
+}
+
 /// If `self` is `Some`, responds with the wrapped `Responder`. Otherwise prints
 /// a warning message and returns an `Err` of `Status::NotFound`.
 impl<'r, 'o: 'r, R: Responder<'r, 'o>> Responder<'r, 'o> for Option<R> {
@@ -311,7 +323,6 @@ impl<'r> Responder<'r, 'static> for Status {
             }
             _ => {
                 error!("Invalid status used as responder: {}.", self);
-                warn!("Fowarding to 500 (Internal Server Error) catcher.");
                 Err(Status::InternalServerError)
             }
         }

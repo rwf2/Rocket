@@ -75,7 +75,7 @@ impl<'c> LocalResponse<'c> {
         //      We have no methods that return an `&Request`. However, we must
         //      also ensure that `Response` doesn't leak any such references. To
         //      do so, we don't expose the `Response` directly in any way;
-        //      otherwise, methods like `.headers()` could, in conjuction with
+        //      otherwise, methods like `.headers()` could, in conjunction with
         //      particular crafted `Responder`s, potentially be used to obtain a
         //      reference to contents of `Request`. All methods, instead, return
         //      references bounded by `self`. This is easily verified by nothing

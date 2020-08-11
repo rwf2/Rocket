@@ -1,5 +1,5 @@
-#![cfg_attr(test, feature(test))]
 #[macro_use] extern crate rocket;
+#[macro_use] extern crate bencher;
 
 use rocket::config::{Environment, Config, LoggingLevel};
 
@@ -28,48 +28,43 @@ fn rocket() -> rocket::Rocket {
         .mount("/", routes![post, post2, post3])
 }
 
-#[allow(unused_must_use)]
-mod benches {
-    extern crate test;
+use bencher::Bencher;
+use rocket::local::blocking::Client;
+use rocket::http::{Accept, ContentType};
 
-    use super::rocket;
-    use self::test::Bencher;
-    use rocket::local::blocking::Client;
-    use rocket::http::{Accept, ContentType};
+fn accept_format(b: &mut Bencher) {
+    let client = Client::new(rocket()).unwrap();
+    let requests = vec![
+        client.get("/").header(Accept::JSON),
+        client.get("/").header(Accept::HTML),
+        client.get("/").header(Accept::Plain),
+    ];
 
-    fn client(_rocket: rocket::Rocket) -> Option<Client> {
-        unimplemented!("waiting for sync-client");
-    }
+    b.iter(|| {
+        for request in &requests {
+            request.clone().dispatch();
+        }
+    });
+}
 
-    #[bench]
-    fn accept_format(b: &mut Bencher) {
-        let client = client(rocket()).unwrap();
-        let requests = vec![
-            client.get("/").header(Accept::JSON),
-            client.get("/").header(Accept::HTML),
-            client.get("/").header(Accept::Plain),
-        ];
+fn content_type_format(b: &mut Bencher) {
+    let client = Client::new(rocket()).unwrap();
+    let requests = vec![
+        client.post("/").header(ContentType::JSON),
+        client.post("/").header(ContentType::HTML),
+        client.post("/").header(ContentType::Plain),
+    ];
 
-        b.iter(|| {
-            for request in &requests {
-                request.clone().dispatch();
-            }
-        });
-    }
+    b.iter(|| {
+        for request in &requests {
+            request.clone().dispatch();
+        }
+    });
+}
 
-    #[bench]
-    fn content_type_format(b: &mut Bencher) {
-        let client = client(rocket()).unwrap();
-        let requests = vec![
-            client.post("/").header(ContentType::JSON),
-            client.post("/").header(ContentType::HTML),
-            client.post("/").header(ContentType::Plain),
-        ];
-
-        b.iter(|| {
-            for request in &requests {
-                request.clone().dispatch();
-            }
-        });
-    }
+benchmark_main!(benches);
+benchmark_group! {
+    benches,
+    accept_format,
+    content_type_format,
 }

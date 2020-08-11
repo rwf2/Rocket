@@ -88,17 +88,17 @@ pub enum AcceptParams {
     Dynamic(SmallVec<[QMediaType; 1]>)
 }
 
-impl pear::parsers::Collection for AcceptParams {
-    type Item = QMediaType;
-
-    fn new() -> Self {
+impl Default for AcceptParams {
+    fn default() -> Self {
         AcceptParams::Dynamic(SmallVec::new())
     }
+}
 
-    fn add(&mut self, item: Self::Item) {
-        match *self {
+impl Extend<QMediaType> for AcceptParams {
+    fn extend<T: IntoIterator<Item = QMediaType>>(&mut self, iter: T) {
+        match self {
             AcceptParams::Static(..) => panic!("can't add to static collection!"),
-            AcceptParams::Dynamic(ref mut v) => v.push(item)
+            AcceptParams::Dynamic(ref mut v) => v.extend(iter)
         }
     }
 }

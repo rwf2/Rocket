@@ -3,7 +3,7 @@ name = "rocket"
 version = "0.5.0-dev"
 authors = ["Sergio Benitez <sb@sergio.bz>"]
 description = """
-Web framework for nightly with a focus on ease-of-use, expressibility, and speed.
+Web framework with a focus on usability, security, extensibility, and speed.
 """
 documentation = "https://api.rocket.rs/v0.5/rocket/"
 homepage = "https://rocket.rs"
@@ -29,18 +29,22 @@ rocket_http = { version = "0.5.0-dev", path = "../http" }
 futures = "0.3.0"
 yansi = "0.5"
 log = { version = "0.4", features = ["std"] }
-toml = "0.4.7"
+toml = "0.5"
 num_cpus = "1.0"
 state = "0.4.1"
 time = "0.2.11"
 memchr = "2" # TODO: Use pear instead.
 binascii = "0.1"
-pear = "0.1"
 atty = "0.2"
 async-trait = "0.1"
 ref-cast = "1.0"
 atomic = "0.4"
 tracing = "0.1.19"
+ubyte = "0.9.1"
+
+[dependencies.pear]
+git = "https://github.com/SergioBenitez/Pear.git"
+rev = "4b68055"
 
 [dependencies.tokio]
 version = "0.2.9"
@@ -61,5 +65,18 @@ yansi = "0.5"
 version_check = "0.9.1"
 
 [dev-dependencies]
+bencher = "0.1"
 # TODO: Find a way to not depend on this.
 lazy_static = "1.0"
+
+[[bench]]
+name = "format-routing"
+harness = false
+
+[[bench]]
+name = "ranked-routing"
+harness = false
+
+[[bench]]
+name = "simple-routing"
+harness = false

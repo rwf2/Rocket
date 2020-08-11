@@ -5,7 +5,7 @@ mod paste_id;
 
 use std::io;
 
-use rocket::Data;
+use rocket::data::{Data, ToByteUnit};
 use rocket::response::{content::Plain, Debug};
 use rocket::tokio::fs::File;
 
@@ -20,7 +20,7 @@ async fn upload(paste: Data) -> Result<String, Debug<io::Error>> {
     let filename = format!("upload/{id}", id = id);
     let url = format!("{host}/{id}\n", host = HOST, id = id);
 
-    paste.stream_to_file(filename).await?;
+    paste.open(128.kibibytes()).stream_to_file(filename).await?;
     Ok(url)
 }
 
@@ -40,7 +40,7 @@ fn index() -> &'static str {
           accepts raw data in the body of the request and responds with a URL of
           a page containing the body's content
 
-          EXMAPLE: curl --data-binary @file.txt http://localhost:8000
+          EXAMPLE: curl --data-binary @file.txt http://localhost:8000
 
       GET /<id>
 
@@ -48,7 +48,7 @@ fn index() -> &'static str {
     "
 }
 
-#[rocket::launch]
+#[launch]
 fn rocket() -> rocket::Rocket {
     rocket::ignite().mount("/", routes![index, upload, retrieve])
 }

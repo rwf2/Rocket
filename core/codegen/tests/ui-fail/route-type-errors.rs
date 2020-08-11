@@ -3,29 +3,24 @@
 struct Q;
 
 #[get("/<foo>")]
-fn f0(foo: Q) {} //~ ERROR FromParam
+fn f0(foo: Q) {}
 
 #[get("/<foo..>")]
-fn f1(foo: Q) {} //~ ERROR FromSegments
+fn f1(foo: Q) {}
 
 #[get("/?<foo>")]
-fn f2(foo: Q) {} //~ ERROR FromFormValue
+fn f2(foo: Q) {}
 
 #[get("/?<foo..>")]
-fn f3(foo: Q) {} //~ ERROR FromQuery
+fn f3(foo: Q) {}
 
 #[post("/", data = "<foo>")]
-fn f4(foo: Q) {} //~ ERROR FromData
+fn f4(foo: Q) {}
 
 #[get("/<foo>")]
 fn f5(a: Q, foo: Q) {}
-//~^ ERROR FromParam
-//~^^ ERROR FromRequest
 
 #[get("/<foo>/other/<bar>/<good>/okay")]
 fn f6(a: Q, foo: Q, good: usize, bar: Q) {}
-//~^ ERROR FromParam
-//~^^ ERROR FromParam
-//~^^^ ERROR FromRequest
 
 fn main() {  }

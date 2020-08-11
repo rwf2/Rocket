@@ -212,13 +212,13 @@ impl Fairing for AdHoc {
         }
     }
 
-    async fn on_request<'a>(&'a self, req: &'a mut Request<'_>, data: &'a Data) {
+    async fn on_request(&self, req: &mut Request<'_>, data: &Data) {
         if let AdHocKind::Request(ref callback) = self.kind {
             callback(req, data).await;
         }
     }
 
-    async fn on_response<'a>(&'a self, req: &'a Request<'_>, res: &'a mut Response<'_>) {
+    async fn on_response<'r>(&self, req: &'r Request<'_>, res: &mut Response<'r>) {
         if let AdHocKind::Response(ref callback) = self.kind {
             callback(req, res).await;
         }

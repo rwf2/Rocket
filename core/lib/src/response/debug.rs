@@ -19,16 +19,13 @@ use yansi::Paint;
 /// ```rust
 /// use std::io;
 ///
-/// use tokio::io::AsyncReadExt;
-///
 /// # use rocket::post;
-/// use rocket::Data;
+/// use rocket::data::{Data, ToByteUnit};
 /// use rocket::response::Debug;
 ///
 /// #[post("/", format = "plain", data = "<data>")]
 /// async fn post(data: Data) -> Result<String, Debug<io::Error>> {
-///     let mut name = String::with_capacity(32);
-///     data.open().take(32).read_to_string(&mut name).await?;
+///     let name = data.open(32.bytes()).stream_to_string().await?;
 ///     Ok(name)
 /// }
 /// ```

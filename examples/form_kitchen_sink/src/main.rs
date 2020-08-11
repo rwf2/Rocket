@@ -3,7 +3,7 @@
 use rocket::request::{Form, FormError, FormDataError};
 use rocket::http::RawStr;
 
-use rocket_contrib::serve::StaticFiles;
+use rocket_contrib::serve::{StaticFiles, crate_relative};
 
 #[cfg(test)] mod tests;
 
@@ -35,7 +35,9 @@ fn sink(sink: Result<Form<FormInput<'_>>, FormError<'_>>) -> String {
     }
 }
 
-#[rocket::launch]
+#[launch]
 fn rocket() -> rocket::Rocket {
-    rocket::ignite().mount("/", routes![sink]).mount("/", StaticFiles::from("static/"))
+    rocket::ignite()
+        .mount("/", routes![sink])
+        .mount("/", StaticFiles::from(crate_relative!("/static")))
 }

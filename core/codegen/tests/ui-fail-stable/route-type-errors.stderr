@@ -1,0 +1,67 @@
+error[E0277]: the trait bound `Q: rocket::request::FromParam<'_>` is not satisfied
+ --> $DIR/route-type-errors.rs:6:12
+  |
+6 | fn f0(foo: Q) {}
+  |            ^ the trait `rocket::request::FromParam<'_>` is not implemented for `Q`
+
+error[E0277]: the trait bound `Q: rocket::request::FromSegments<'_>` is not satisfied
+ --> $DIR/route-type-errors.rs:9:12
+  |
+9 | fn f1(foo: Q) {}
+  |            ^ the trait `rocket::request::FromSegments<'_>` is not implemented for `Q`
+
+error[E0277]: the trait bound `Q: rocket::request::FromFormValue<'_>` is not satisfied
+  --> $DIR/route-type-errors.rs:12:12
+   |
+12 | fn f2(foo: Q) {}
+   |            ^ the trait `rocket::request::FromFormValue<'_>` is not implemented for `Q`
+
+error[E0277]: the trait bound `Q: rocket::request::FromFormValue<'_>` is not satisfied
+  --> $DIR/route-type-errors.rs:12:7
+   |
+12 | fn f2(foo: Q) {}
+   |       ^^^^^^ the trait `rocket::request::FromFormValue<'_>` is not implemented for `Q`
+
+error[E0277]: the trait bound `Q: rocket::request::FromQuery<'_>` is not satisfied
+  --> $DIR/route-type-errors.rs:15:12
+   |
+15 | fn f3(foo: Q) {}
+   |            ^ the trait `rocket::request::FromQuery<'_>` is not implemented for `Q`
+
+error[E0277]: the trait bound `Q: rocket::data::FromData` is not satisfied
+  --> $DIR/route-type-errors.rs:18:12
+   |
+18 | fn f4(foo: Q) {}
+   |            ^ the trait `rocket::data::FromData` is not implemented for `Q`
+   |
+   = note: required because of the requirements on the impl of `rocket::data::FromTransformedData<'_>` for `Q`
+
+error[E0277]: the trait bound `Q: rocket::request::FromRequest<'_, '_>` is not satisfied
+  --> $DIR/route-type-errors.rs:21:10
+   |
+21 | fn f5(a: Q, foo: Q) {}
+   |          ^ the trait `rocket::request::FromRequest<'_, '_>` is not implemented for `Q`
+
+error[E0277]: the trait bound `Q: rocket::request::FromParam<'_>` is not satisfied
+  --> $DIR/route-type-errors.rs:21:18
+   |
+21 | fn f5(a: Q, foo: Q) {}
+   |                  ^ the trait `rocket::request::FromParam<'_>` is not implemented for `Q`
+
+error[E0277]: the trait bound `Q: rocket::request::FromRequest<'_, '_>` is not satisfied
+  --> $DIR/route-type-errors.rs:24:10
+   |
+24 | fn f6(a: Q, foo: Q, good: usize, bar: Q) {}
+   |          ^ the trait `rocket::request::FromRequest<'_, '_>` is not implemented for `Q`
+
+error[E0277]: the trait bound `Q: rocket::request::FromParam<'_>` is not satisfied
+  --> $DIR/route-type-errors.rs:24:18
+   |
+24 | fn f6(a: Q, foo: Q, good: usize, bar: Q) {}
+   |                  ^ the trait `rocket::request::FromParam<'_>` is not implemented for `Q`
+
+error[E0277]: the trait bound `Q: rocket::request::FromParam<'_>` is not satisfied
+  --> $DIR/route-type-errors.rs:24:39
+   |
+24 | fn f6(a: Q, foo: Q, good: usize, bar: Q) {}
+   |                                       ^ the trait `rocket::request::FromParam<'_>` is not implemented for `Q`

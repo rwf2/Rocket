@@ -14,7 +14,7 @@ fn login() -> &'static str {
     "Hi! Please log in before continuing."
 }
 
-#[rocket::launch]
+#[launch]
 fn rocket() -> rocket::Rocket {
     rocket::ignite().mount("/", routes![root, login])
 }

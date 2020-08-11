@@ -77,7 +77,7 @@ not just the world, we can declare a route like so:
 # #[macro_use] extern crate rocket;
 # fn main() {}
 
-# use rocket::http::RawStr;
+use rocket::http::RawStr;
 
 #[get("/hello/<name>")]
 fn hello(name: &RawStr) -> String {
@@ -221,7 +221,7 @@ fn user_int(id: isize) { /* ... */ }
 #[get("/user/<id>", rank = 3)]
 fn user_str(id: &RawStr) { /* ... */ }
 
-#[rocket::launch]
+#[launch]
 fn rocket() -> rocket::Rocket {
     rocket::ignite().mount("/", routes![user, user_int, user_str])
 }
@@ -536,7 +536,7 @@ following three routes, each leading to an administrative control panel at
 # type AdminUser = rocket::http::Method;
 # type User = rocket::http::Method;
 
-use rocket::response::{Flash, Redirect};
+use rocket::response::Redirect;
 
 #[get("/login")]
 fn login() -> Template { /* .. */ }
@@ -1037,36 +1037,39 @@ The only condition is that the generic type in `Json` implements the
 
 Sometimes you just want to handle incoming data directly. For example, you might
 want to stream the incoming data out to a file. Rocket makes this as simple as
-possible via the [`Data`](@api/rocket/data/struct.Data.html)
-type:
+possible via the [`Data`](@api/rocket/data/struct.Data.html) type:
 
 ```rust
 # #[macro_use] extern crate rocket;
 # fn main() {}
 
-use rocket::Data;
+use rocket::data::{Data, ToByteUnit};
 use rocket::response::Debug;
 
 #[post("/upload", format = "plain", data = "<data>")]
 async fn upload(data: Data) -> Result<String, Debug<std::io::Error>> {
-    Ok(data.stream_to_file("/tmp/upload.txt").await.map(|n| n.to_string())?)
+    let bytes_written = data.open(128.kibibytes())
+        .stream_to_file("/tmp/upload.txt")
+        .await?;
+
+    Ok(bytes_written.to_string())
 }
 ```
 
 The route above accepts any `POST` request to the `/upload` path with
-`Content-Type: text/plain`  The incoming data is streamed out to
-`tmp/upload.txt`, and the number of bytes written is returned as a plain text
-response if the upload succeeds. If the upload fails, an error response is
-returned. The handler above is complete. It really is that simple! See the
-[GitHub example code](@example/raw_upload) for the full crate.
+`Content-Type: text/plain`  At most 128KiB (`128 << 10` bytes) of the incoming
+data are streamed out to `tmp/upload.txt`, and the number of bytes written is
+returned as a plain text response if the upload succeeds. If the upload fails,
+an error response is returned. The handler above is complete. It really is that
+simple! See the [GitHub example code](@example/raw_upload) for the full crate.
 
-! warning: You should _always_ set limits when reading incoming data.
+! note: Rocket requires setting limits when reading incoming data.
 
-  To prevent DoS attacks, you should limit the amount of data you're willing to
-  accept. The [`take()`] reader adapter makes doing this easy:
-  `data.open().take(LIMIT)`.
-
-  [`take()`]: https://doc.rust-lang.org/std/io/trait.Read.html#method.take
+  To aid in preventing DoS attacks, Rocket requires you to specify, as a
+  [`ByteUnit`](@api/rocket/data/struct.ByteUnit.html), the amount of data you're
+  willing to accept from the client when `open`ing a data stream. The
+  [`ToByteUnit`](@api/rocket/data/trait.ToByteUnit.html) trait makes specifying
+  such a value as idiomatic as `128.kibibytes()`.
 
 ## Async Routes
 
@@ -1088,27 +1091,26 @@ function, so we must `await` it.
 
 ## Error Catchers
 
-Routing may fail for a variety of reasons. These include:
+Application processing is fallible. Errors arise from the following sources:
 
-  * A guard fails.
-  * A handler returns a [`Responder`](../responses/#responder) that fails.
-  * No routes matched.
+  * A failing guard.
+  * A failing responder.
+  * A routing failure.
 
-If any of these conditions occur, Rocket returns an error to the client. To do
-so, Rocket invokes the _catcher_ corresponding to the error's status code.
+If any of these occur, Rocket returns an error to the client. To generate the
+error, Rocket invokes the _catcher_ corresponding to the error's status code.
 Catchers are similar to routes except in that:
 
   1. Catchers are only invoked on error conditions.
   2. Catchers are declared with the `catch` attribute.
   3. Catchers are _registered_ with [`register()`] instead of [`mount()`].
   4. Any modifications to cookies are cleared before a catcher is invoked.
-  5. Error catchers cannot invoke guards of any sort.
+  5. Error catchers cannot invoke guards.
+  6. Error catchers should not fail to produce a response.
 
-Rocket provides default catchers for all of the standard HTTP error codes. To
-override a default catcher, or declare a catcher for a custom status code, use
-the [`catch`] attribute, which takes a single integer corresponding to the HTTP
-status code to catch. For instance, to declare a catcher for `404 Not Found`
-errors, you'd write:
+To declare a catcher for a given status code, use the [`catch`] attribute, which
+takes a single integer corresponding to the HTTP status code to catch. For
+instance, to declare a catcher for `404 Not Found` errors, you'd write:
 
 ```rust
 # #[macro_use] extern crate rocket;
@@ -1120,8 +1122,10 @@ use rocket::Request;
 fn not_found(req: &Request) { /* .. */ }
 ```
 
-As with routes, the return type (here `T`) must implement `Responder`. A
-concrete implementation may look like:
+Catchers may take zero, one, or two arguments. If the catcher takes one
+argument, it must be of type [`&Request`]. It it takes two, they must be of type
+[`Status`] and [`&Request`], in that order. As with routes, the return type must
+implement `Responder`. A concrete implementation may look like:
 
 ```rust
 # #[macro_use] extern crate rocket;
@@ -1152,12 +1156,38 @@ fn main() {
 }
 ```
 
-Unlike route request handlers, catchers take exactly zero or one parameter. If
-the catcher takes a parameter, it must be of type [`&Request`]. The [error
-catcher example](@example/errors) on GitHub illustrates their use in full.
+### Default Catchers
+
+If no catcher for a given status code has been registered, Rocket calls the
+_default_ catcher. Rocket provides a default catcher for all applications
+automatically, so providing one is usually unnecessary. Rocket's built-in
+default catcher can handle all errors. It produces HTML or JSON, depending on
+the value of the `Accept` header. As such, a default catcher, or catchers in
+general, only need to be registered if an error needs to be handled in a custom
+fashion.
+
+Declaring a default catcher is done with `#[catch(default)]`:
+
+```rust
+# #[macro_use] extern crate rocket;
+# fn main() {}
+
+use rocket::Request;
+use rocket::http::Status;
+
+#[catch(default)]
+fn default_catcher(status: Status, request: &Request) { /* .. */ }
+```
+
+It must similarly be registered with [`register()`].
+
+The [error catcher example](@example/errors) illustrates their use in full,
+while the [`Catcher`] API documentation provides further details.
 
 [`catch`]: @api/rocket/attr.catch.html
 [`register()`]: @api/rocket/struct.Rocket.html#method.register
 [`mount()`]: @api/rocket/struct.Rocket.html#method.mount
 [`catchers!`]: @api/rocket/macro.catchers.html
 [`&Request`]: @api/rocket/struct.Request.html
+[`Status`]: @api/rocket/http/struct.Status.html
+[`Catcher`]: @api/rocket/catcher/struct.Catcher.html

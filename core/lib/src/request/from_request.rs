@@ -189,9 +189,8 @@ impl<S, E> IntoOutcome<S, (Status, E), ()> for Result<S, E> {
 /// ```rust
 /// # #[macro_use] extern crate rocket;
 /// #
-/// use rocket::Outcome;
 /// use rocket::http::Status;
-/// use rocket::request::{self, Request, FromRequest};
+/// use rocket::request::{self, Outcome, Request, FromRequest};
 ///
 /// struct ApiKey(String);
 ///
@@ -211,7 +210,7 @@ impl<S, E> IntoOutcome<S, (Status, E), ()> for Result<S, E> {
 /// impl<'a, 'r> FromRequest<'a, 'r> for ApiKey {
 ///     type Error = ApiKeyError;
 ///
-///     async fn from_request(req: &'a Request<'r>) -> request::Outcome<Self, Self::Error> {
+///     async fn from_request(req: &'a Request<'r>) -> Outcome<Self, Self::Error> {
 ///         let keys: Vec<_> = req.headers().get("x-api-key").collect();
 ///         match keys.len() {
 ///             0 => Outcome::Failure((Status::BadRequest, ApiKeyError::Missing)),
@@ -244,8 +243,8 @@ impl<S, E> IntoOutcome<S, (Status, E), ()> for Result<S, E> {
 /// ```rust
 /// # #[macro_use] extern crate rocket;
 /// # #[cfg(feature = "private-cookies")] mod inner {
-/// # use rocket::outcome::{IntoOutcome, Outcome};
-/// # use rocket::request::{self, FromRequest, Request};
+/// # use rocket::outcome::IntoOutcome;
+/// # use rocket::request::{self, Outcome, FromRequest, Request};
 /// # struct User { id: String, is_admin: bool }
 /// # struct Database;
 /// # impl Database {
@@ -256,7 +255,7 @@ impl<S, E> IntoOutcome<S, (Status, E), ()> for Result<S, E> {
 /// # #[rocket::async_trait]
 /// # impl<'a, 'r> FromRequest<'a, 'r> for Database {
 /// #     type Error = ();
-/// #     async fn from_request(request: &'a Request<'r>) -> request::Outcome<Database, ()> {
+/// #     async fn from_request(request: &'a Request<'r>) -> Outcome<Database, ()> {
 /// #         Outcome::Success(Database)
 /// #     }
 /// # }
@@ -267,7 +266,7 @@ impl<S, E> IntoOutcome<S, (Status, E), ()> for Result<S, E> {
 /// impl<'a, 'r> FromRequest<'a, 'r> for User {
 ///     type Error = ();
 ///
-///     async fn from_request(request: &'a Request<'r>) -> request::Outcome<User, ()> {
+///     async fn from_request(request: &'a Request<'r>) -> Outcome<User, ()> {
 ///         let db = try_outcome!(request.guard::<Database>().await);
 ///         request.cookies()
 ///             .get_private("user_id")
@@ -281,7 +280,7 @@ impl<S, E> IntoOutcome<S, (Status, E), ()> for Result<S, E> {
 /// impl<'a, 'r> FromRequest<'a, 'r> for Admin {
 ///     type Error = ();
 ///
-///     async fn from_request(request: &'a Request<'r>) -> request::Outcome<Admin, ()> {
+///     async fn from_request(request: &'a Request<'r>) -> Outcome<Admin, ()> {
 ///         // This will unconditionally query the database!
 ///         let user = try_outcome!(request.guard::<User>().await);
 ///         if user.is_admin {
@@ -308,8 +307,8 @@ impl<S, E> IntoOutcome<S, (Status, E), ()> for Result<S, E> {
 /// ```rust
 /// # #[macro_use] extern crate rocket;
 /// # #[cfg(feature = "private-cookies")] mod inner {
-/// # use rocket::outcome::{IntoOutcome, Outcome};
-/// # use rocket::request::{self, FromRequest, Request};
+/// # use rocket::outcome::IntoOutcome;
+/// # use rocket::request::{self, Outcome, FromRequest, Request};
 /// # struct User { id: String, is_admin: bool }
 /// # struct Database;
 /// # impl Database {
@@ -320,7 +319,7 @@ impl<S, E> IntoOutcome<S, (Status, E), ()> for Result<S, E> {
 /// # #[rocket::async_trait]
 /// # impl<'a, 'r> FromRequest<'a, 'r> for Database {
 /// #     type Error = ();
-/// #     async fn from_request(request: &'a Request<'r>) -> request::Outcome<Database, ()> {
+/// #     async fn from_request(request: &'a Request<'r>) -> Outcome<Database, ()> {
 /// #         Outcome::Success(Database)
 /// #     }
 /// # }
@@ -331,7 +330,7 @@ impl<S, E> IntoOutcome<S, (Status, E), ()> for Result<S, E> {
 /// impl<'a, 'r> FromRequest<'a, 'r> for &'a User {
 ///     type Error = std::convert::Infallible;
 ///
-///     async fn from_request(request: &'a Request<'r>) -> request::Outcome<Self, Self::Error> {
+///     async fn from_request(request: &'a Request<'r>) -> Outcome<Self, Self::Error> {
 ///         // This closure will execute at most once per request, regardless of
 ///         // the number of times the `User` guard is executed.
 ///         let user_result = request.local_cache_async(async {
@@ -350,7 +349,7 @@ impl<S, E> IntoOutcome<S, (Status, E), ()> for Result<S, E> {
 /// impl<'a, 'r> FromRequest<'a, 'r> for Admin<'a> {
 ///     type Error = std::convert::Infallible;
 ///
-///     async fn from_request(request: &'a Request<'r>) -> request::Outcome<Self, Self::Error> {
+///     async fn from_request(request: &'a Request<'r>) -> Outcome<Self, Self::Error> {
 ///         let user = try_outcome!(request.guard::<&User>().await);
 ///         if user.is_admin {
 ///             Outcome::Success(Admin { user })

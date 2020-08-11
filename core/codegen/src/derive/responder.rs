@@ -43,7 +43,7 @@ pub fn derive_responder(input: proc_macro::TokenStream) -> TokenStream {
                 quote_spanned!(item.span().into() => __res.set_header(#item);)
             }
 
-            let attr = ItemAttr::from_attrs("response", fields.parent_attrs())
+            let attr = ItemAttr::from_attrs("response", fields.parent.attrs())
                 .unwrap_or_else(|| Ok(Default::default()))?;
 
             let responder = fields.iter().next().map(|f| {

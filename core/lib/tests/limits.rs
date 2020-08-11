@@ -14,13 +14,14 @@ fn index(form: Form<Simple>) -> String {
 
 mod limits_tests {
     use rocket;
-    use rocket::config::{Environment, Config, Limits};
+    use rocket::config::{Environment, Config};
     use rocket::local::blocking::Client;
     use rocket::http::{Status, ContentType};
+    use rocket::data::Limits;
 
     fn rocket_with_forms_limit(limit: u64) -> rocket::Rocket {
         let config = Config::build(Environment::Development)
-            .limits(Limits::default().limit("forms", limit))
+            .limits(Limits::default().limit("forms", limit.into()))
             .unwrap();
 
         rocket::custom(config).mount("/", routes![super::index])

@@ -7,7 +7,7 @@ fn hello() -> &'static str {
     "Hello, world!"
 }
 
-#[rocket::launch]
+#[launch]
 fn rocket() -> rocket::Rocket {
     rocket::ignite().mount("/", routes![hello])
 }

@@ -1,14 +1,14 @@
 #[macro_use] extern crate rocket;
-#[macro_use] extern crate serde_derive;
 
 #[cfg(test)] mod tests;
 
 use std::io;
 
-use tokio::io::AsyncReadExt;
-
-use rocket::{Request, data::Data};
+use rocket::request::Request;
+use rocket::data::{Data, ToByteUnit};
 use rocket::response::{Debug, content::{Json, Html}};
+
+use serde::{Serialize, Deserialize};
 
 // NOTE: This example explicitly uses the `Json` type from `response::content`
 // for demonstration purposes. In a real application, _always_ prefer to use
@@ -27,7 +27,7 @@ struct Person {
 #[get("/<name>/<age>", format = "json")]
 fn get_hello(name: String, age: u8) -> Json<String> {
     // NOTE: In a real application, we'd use `rocket_contrib::json::Json`.
-    let person = Person { name: name, age: age, };
+    let person = Person { name, age };
     Json(serde_json::to_string(&person).unwrap())
 }
 
@@ -39,10 +39,8 @@ fn get_hello(name: String, age: u8) -> Json<String> {
 // use `contrib::Json` to automatically serialize a type into JSON.
 #[post("/<age>", format = "plain", data = "<name_data>")]
 async fn post_hello(age: u8, name_data: Data) -> Result<Json<String>, Debug<io::Error>> {
-    let mut name = String::with_capacity(32);
-    let mut stream = name_data.open().take(32);
-    stream.read_to_string(&mut name).await?;
-    let person = Person { name: name, age: age, };
+    let name = name_data.open(64.bytes()).stream_to_string().await?;
+    let person = Person { name, age };
     // NOTE: In a real application, we'd use `rocket_contrib::json::Json`.
     Ok(Json(serde_json::to_string(&person).expect("valid JSON")))
 }
@@ -61,7 +59,7 @@ fn not_found(request: &Request<'_>) -> Html<String> {
     Html(html)
 }
 
-#[rocket::launch]
+#[launch]
 fn rocket() -> rocket::Rocket {
     rocket::ignite()
         .mount("/hello", routes![get_hello, post_hello])

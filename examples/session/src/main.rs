@@ -78,7 +78,7 @@ fn index() -> Redirect {
     Redirect::to(uri!(login_page))
 }
 
-#[rocket::launch]
+#[launch]
 fn rocket() -> rocket::Rocket {
     rocket::ignite()
         .attach(Template::fairing())

@@ -1,5 +1,4 @@
 use std::{io, mem};
-use std::cmp::min;
 use std::sync::Arc;
 use std::collections::HashMap;
 
@@ -17,16 +16,16 @@ use crate::{trace, handler};
 use crate::config::{Config, FullConfig, ConfigError, LoggedValue};
 use crate::request::{Request, FormItems};
 use crate::data::Data;
+use crate::catcher::Catcher;
 use crate::response::{Body, Response};
 use crate::router::{Router, Route};
-use crate::catcher::{self, Catcher};
 use crate::outcome::Outcome;
 use crate::error::{LaunchError, LaunchErrorKind};
 use crate::fairing::{Fairing, Fairings};
 use crate::trace::PaintExt;
 use crate::ext::AsyncReadExt;
-use crate::shutdown::{ShutdownHandle, ShutdownHandleManaged};
 use tracing_futures::Instrument;
+use crate::shutdown::Shutdown;
 
 use crate::http::{Method, Status, Header};
 use crate::http::private::{Listener, Connection, Incoming};
@@ -36,15 +35,15 @@ use crate::http::uri::Origin;
 /// The main `Rocket` type: used to mount routes and catchers and launch the
 /// application.
 pub struct Rocket {
-    manifest: Vec<PreLaunchOp>,
     pub(crate) config: Config,
-    router: Router,
-    default_catchers: HashMap<u16, Catcher>,
-    catchers: HashMap<u16, Catcher>,
     pub(crate) managed_state: Container,
+    manifest: Vec<PreLaunchOp>,
+    router: Router,
+    default_catcher: Option<Catcher>,
+    catchers: HashMap<u16, Catcher>,
     fairings: Fairings,
-    shutdown_handle: ShutdownHandle,
     shutdown_receiver: Option<mpsc::Receiver<()>>,
+    pub(crate) shutdown_handle: Shutdown,
 }
 
 /// An operation that occurs prior to launching a Rocket instance.
@@ -71,12 +70,14 @@ impl Rocket {
         let span = tracing::info_span!("mounting", at = %Paint::blue(&base), "{} Mounting", Paint::emoji("🛰 "),);
         let _e = span.enter();
 
-        for mut route in routes {
-            let path = route.uri.clone();
-            if let Err(e) = route.set_uri(base.clone(), path) {
-                error!("{}", e);
-                panic!("Invalid route URI.");
-            }
+        for route in routes {
+            let old_route = route.clone();
+            let route = route.map_base(|old| format!("{}{}", base, old))
+                .unwrap_or_else(|e| {
+                    let span = tracing::error_span!("malformed_uri", "Route `{}` has a malformed URI.", old_route);
+                    error!(parent: &span, "{}", e);
+                    panic!("Invalid route URI.");
+                });
 
             tracing::info!(%route);
             self.router.add(route);
@@ -88,14 +89,17 @@ impl Rocket {
         let span = tracing::info_span!("catchers", "{}{}", Paint::emoji("👾 "), Paint::magenta("Catchers:"));
         let _e = span.enter();
 
-        for c in catchers {
-            if self.catchers.get(&c.code).map_or(false, |e| !e.is_default) {
-                info!("{} {}", c, Paint::yellow("(warning: duplicate catcher!)"));
-            } else {
-                info!("{}", c);
-            }
+        for catcher in catchers {
+            info!("{}", catcher);
 
-            self.catchers.insert(c.code, c);
+            let existing = match catcher.code {
+                Some(code) => self.catchers.insert(code, catcher),
+                None => self.default_catcher.replace(catcher)
+            };
+
+            if let Some(existing) = existing {
+                warn_!("Replacing existing '{}' catcher.", existing);
+            }
         }
     }
 
@@ -117,11 +121,11 @@ impl Rocket {
             manifest: vec![],
             config: Config::development(),
             router: Router::new(),
-            default_catchers: HashMap::new(),
+            default_catcher: None,
             catchers: HashMap::new(),
             managed_state: Container::new(),
             fairings: Fairings::new(),
-            shutdown_handle: ShutdownHandle(mpsc::channel(1).0),
+            shutdown_handle: Shutdown(mpsc::channel(1).0),
             shutdown_receiver: None,
         }
     }
@@ -205,10 +209,10 @@ async fn hyper_service_fn(
         };
 
         // Retrieve the data from the hyper body.
-        let data = Data::from_hyp(h_body).await;
+        let mut data = Data::from_hyp(h_body).await;
 
         // Dispatch the request to get a response, then write that response out.
-        let token = rocket.preprocess_request(&mut req, &data).await;
+        let token = rocket.preprocess_request(&mut req, &mut data).await;
         let r = rocket.dispatch(token, &mut req, data).await;
         rocket.issue_response(r, tx).await;
     }.instrument(tracing::info_span!("connection", from = %h_addr, "{}Connection", Paint::emoji("📡 "))));
@@ -297,16 +301,16 @@ impl Rocket {
     pub(crate) async fn preprocess_request(
         &self,
         req: &mut Request<'_>,
-        data: &Data
+        data: &mut Data
     ) -> Token {
         // Check if this is a form and if the form contains the special _method
         // field which we use to reinterpret the request's method.
-        let data_len = data.peek().len();
         let (min_len, max_len) = ("_method=get".len(), "_method=delete".len());
+        let peek_buffer = data.peek(max_len).await;
         let is_form = req.content_type().map_or(false, |ct| ct.is_form());
 
-        if is_form && req.method() == Method::Post && data_len >= min_len {
-            if let Ok(form) = std::str::from_utf8(&data.peek()[..min(data_len, max_len)]) {
+        if is_form && req.method() == Method::Post && peek_buffer.len() >= min_len {
+            if let Ok(form) = std::str::from_utf8(peek_buffer) {
                 let method: Option<Result<Method, _>> = FormItems::from(form)
                     .filter(|item| item.key.as_str() == "_method")
                     .map(|item| item.value.parse())
@@ -449,30 +453,35 @@ impl Rocket {
         req: &'r Request<'s>
     ) -> impl Future<Output = Response<'r>> + 's {
         async move {
-            warn!("Responding with {} catcher.", Paint::red(&status));
-
+            tracing::warn_span!("Responding...");
             // For now, we reset the delta state to prevent any modifications
             // from earlier, unsuccessful paths from being reflected in error
             // response. We may wish to relax this in the future.
             req.cookies().reset_delta();
 
             // Try to get the active catcher but fallback to user's 500 catcher.
-            let catcher = self.catchers.get(&status.code).unwrap_or_else(|| {
-                error!("No catcher found for {}. Using 500 catcher.", status);
-                self.catchers.get(&500).expect("500 catcher.")
-            });
+            let code = Paint::red(status.code);
+            let response = if let Some(catcher) = self.catchers.get(&status.code) {
+                catcher.handler.handle(status, req).await
+            } else if let Some(ref default) =  self.default_catcher {
+                warn!("No {} catcher found. Using default catcher.", code);
+                default.handler.handle(status, req).await
+            } else {
+                warn!("No {} or default catcher found. Using Rocket default catcher.", code);
+                crate::catcher::default(status, req)
+            };
 
-            // Dispatch to the user's catcher. If it fails, use the default 500.
-            match catcher.handle(req).await {
-                Ok(r) => return r,
+            // Dispatch to the catcher. If it fails, use the Rocket default 500.
+            match response {
+                Ok(r) => r,
                 Err(err_status) => {
-                    error!("Catcher failed with status: {}!", err_status);
-                    warn!("Using default 500 error catcher.");
-                    let default = self.default_catchers.get(&500).expect("Default 500");
-                    default.handle(req).await.expect("Default 500 response.")
+                    error!("Catcher unexpectedly failed with {}.", err_status);
+                    warn!("Using Rocket's default 500 error catcher.");
+                    let default = crate::catcher::default(Status::InternalServerError, req);
+                    default.expect("Rocket has default 500 response")
                 }
             }
-        }
+        }.instrument(tracing::warn_span!("handle_error", "Responding with {} catcher.", Paint::red(&status)))
     }
 
     // TODO.async: Solidify the Listener APIs and make this function public
@@ -648,15 +657,14 @@ impl Rocket {
 
         let managed_state = Container::new();
         let (shutdown_sender, shutdown_receiver) = mpsc::channel(1);
-        let shutdown_handle = ShutdownHandle(shutdown_sender);
-        managed_state.set(ShutdownHandleManaged(shutdown_handle.clone()));
 
         Rocket {
-            config, managed_state, shutdown_handle,
+            config, managed_state,
+            shutdown_handle: Shutdown(shutdown_sender),
             manifest: vec![],
             router: Router::new(),
-            default_catchers: catcher::defaults::get(),
-            catchers: catcher::defaults::get(),
+            default_catcher: None,
+            catchers: HashMap::new(),
             fairings: Fairings::new(),
             shutdown_receiver: Some(shutdown_receiver),
         }
@@ -689,7 +697,7 @@ impl Rocket {
     ///     "Hello!"
     /// }
     ///
-    /// #[rocket::launch]
+    /// #[launch]
     /// fn rocket() -> rocket::Rocket {
     ///     rocket::ignite().mount("/hello", routes![hi])
     /// }
@@ -717,7 +725,7 @@ impl Rocket {
     pub fn mount<R: Into<Vec<Route>>>(mut self, base: &str, routes: R) -> Self {
         let base_uri = Origin::parse_owned(base.to_string())
             .unwrap_or_else(|e| {
-                error!("Invalid origin URI '{}' used as mount point.", base);
+                error!("Invalid mount point URI: {}.", Paint::white(base));
                 panic!("Error: {}", e);
             });
 
@@ -748,7 +756,7 @@ impl Rocket {
     ///     format!("I couldn't find '{}'. Try something else?", req.uri())
     /// }
     ///
-    /// #[rocket::launch]
+    /// #[launch]
     /// fn rocket() -> rocket::Rocket {
     ///     rocket::ignite().register(catchers![internal_error, not_found])
     /// }
@@ -786,7 +794,7 @@ impl Rocket {
     ///     format!("The stateful value is: {}", state.0)
     /// }
     ///
-    /// #[rocket::launch]
+    /// #[launch]
     /// fn rocket() -> rocket::Rocket {
     ///     rocket::ignite()
     ///         .mount("/", routes![index])
@@ -817,7 +825,7 @@ impl Rocket {
     /// use rocket::Rocket;
     /// use rocket::fairing::AdHoc;
     ///
-    /// #[rocket::launch]
+    /// #[launch]
     /// fn rocket() -> rocket::Rocket {
     ///     rocket::ignite()
     ///         .attach(AdHoc::on_launch("Launch Message", |_| {
@@ -892,9 +900,8 @@ impl Rocket {
         self.inspect().await.config()
     }
 
-    /// Returns a [`ShutdownHandle`], which can be used to gracefully terminate
-    /// the instance of Rocket. In routes, you should use the [`ShutdownHandle`]
-    /// request guard.
+    /// Returns a handle which can be used to gracefully terminate this instance
+    /// of Rocket. In routes, use the [`Shutdown`] request guard.
     ///
     /// # Example
     ///
@@ -903,7 +910,7 @@ impl Rocket {
     /// #
     /// # rocket::async_test(async {
     /// let mut rocket = rocket::ignite();
-    /// let handle = rocket.inspect().await.shutdown_handle();
+    /// let handle = rocket.inspect().await.shutdown();
     ///
     /// # if false {
     /// thread::spawn(move || {
@@ -918,7 +925,7 @@ impl Rocket {
     /// # });
     /// ```
     #[inline(always)]
-    pub fn shutdown_handle(&self) -> ShutdownHandle {
+    pub fn shutdown(&self) -> Shutdown {
         self.shutdown_handle.clone()
     }
 
@@ -939,16 +946,17 @@ impl Rocket {
 
     /// Returns a `Future` that drives the server, listening for and dispatching
     /// requests to mounted routes and catchers. The `Future` completes when the
-    /// server is shut down via a [`ShutdownHandle`], encounters a fatal error,
-    /// or if the the `ctrlc` configuration option is set, when `Ctrl+C` is
-    /// pressed.
+    /// server is shut down via [`Shutdown`], encounters a fatal error, or if
+    /// the the `ctrlc` configuration option is set, when `Ctrl+C` is pressed.
     ///
     /// # Error
     ///
     /// If there is a problem starting the application, an [`Error`] is
-    /// returned. Note that a value of type `Error` panics if dropped
-    /// without first being inspected. See the [`Error`] documentation for
-    /// more information.
+    /// returned. Note that a value of type `Error` panics if dropped without
+    /// first being inspected. See the [`Error`] documentation for more
+    /// information.
+    ///
+    /// [`Error`]: crate::error::Error
     ///
     /// # Example
     ///
@@ -1122,7 +1130,7 @@ impl Cargo {
     /// use rocket::Rocket;
     /// use rocket::fairing::AdHoc;
     ///
-    /// #[rocket::launch]
+    /// #[launch]
     /// fn rocket() -> rocket::Rocket {
     ///     rocket::ignite()
     ///         .attach(AdHoc::on_launch("Config Printer", |cargo| {

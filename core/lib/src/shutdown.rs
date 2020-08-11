@@ -1,13 +1,12 @@
 use crate::request::{FromRequest, Outcome, Request};
 use tokio::sync::mpsc;
 
-/// A `ShutdownHandle` can be used to instruct a Rocket server to gracefully
-/// shut down. Once a server shutdown has been requested manually by calling
-/// [`ShutdownHandle::shutdown()`] or automatically by `Ctrl-C` being pressed
-/// (if enabled), Rocket will finish handling any pending requests and return to
-/// the caller of [`Rocket::serve()`] or [`Rocket::launch()`].
+/// A request guard to gracefully shutdown a Rocket server.
 ///
-/// [`Rocket::serve()`]: crate::Rocket::serve()
+/// A server shutdown is manually requested by calling [`Shutdown::shutdown()`]
+/// or, if enabled, by pressing `Ctrl-C`. Rocket will finish handling any
+/// pending requests and return `Ok()` to the caller of [`Rocket::launch()`].
+///
 /// [`Rocket::launch()`]: crate::Rocket::launch()
 ///
 /// # Example
@@ -15,10 +14,10 @@ use tokio::sync::mpsc;
 /// ```rust,no_run
 /// # #[macro_use] extern crate rocket;
 /// #
-/// use rocket::shutdown::ShutdownHandle;
+/// use rocket::Shutdown;
 ///
 /// #[get("/shutdown")]
-/// fn shutdown(handle: ShutdownHandle) -> &'static str {
+/// fn shutdown(handle: Shutdown) -> &'static str {
 ///     handle.shutdown();
 ///     "Shutting down..."
 /// }
@@ -30,14 +29,14 @@ use tokio::sync::mpsc;
 ///         .launch()
 ///         .await;
 ///
-///     // If the server shut down (by visting `/shutdown`), `result` is `Ok`.
+///     // If the server shut down (by visiting `/shutdown`), `result` is `Ok`.
 ///     result.expect("server failed unexpectedly");
 /// }
 /// ```
 #[derive(Debug, Clone)]
-pub struct ShutdownHandle(pub(crate) mpsc::Sender<()>);
+pub struct Shutdown(pub(crate) mpsc::Sender<()>);
 
-impl ShutdownHandle {
+impl Shutdown {
     /// Notify Rocket to shut down gracefully. This function returns
     /// immediately; pending requests will continue to run until completion
     /// before the actual shutdown occurs.
@@ -51,14 +50,11 @@ impl ShutdownHandle {
 }
 
 #[crate::async_trait]
-impl<'a, 'r> FromRequest<'a, 'r> for ShutdownHandle {
+impl<'a, 'r> FromRequest<'a, 'r> for Shutdown {
     type Error = std::convert::Infallible;
 
     #[inline]
     async fn from_request(request: &'a Request<'r>) -> Outcome<Self, Self::Error> {
-        Outcome::Success(request.state.managed.get::<ShutdownHandleManaged>().0.clone())
+        Outcome::Success(request.state.shutdown.clone())
     }
 }
-
-// Use this type in managed state to avoid placing `ShutdownHandle` in it.
-pub(crate) struct ShutdownHandleManaged(pub ShutdownHandle);

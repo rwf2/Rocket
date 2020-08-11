@@ -1,34 +1,21 @@
 //! Ensures Rocket isn't compiled with an incompatible version of Rust.
 
-use yansi::{Paint, Color::{Red, Yellow, Blue}};
+use yansi::{Paint, Color::{Red, Yellow}};
 
-// Specifies the minimum nightly version needed to compile Rocket.
-
-const MIN_DATE: &'static str = "2020-05-20";
-const MIN_VERSION: &'static str = "1.45.0-nightly";
+const MIN_VERSION: &'static str = "1.45.0";
 
 macro_rules! err {
-    ($version:expr, $date:expr, $msg:expr) => (
+    ($version:expr, $msg:expr) => (
         eprintln!("{} {}", Red.paint("Error:").bold(), Paint::new($msg).bold());
-        eprintln!("Installed version: {}", Yellow.paint(format!("{} ({})", $version, $date)));
-        eprintln!("Minimum required:  {}", Yellow.paint(format!("{} ({})", MIN_VERSION, MIN_DATE)));
+        eprintln!("Installed version: {}", Yellow.paint(format!("{}", $version)));
+        eprintln!("Minimum required:  {}", Yellow.paint(format!("{}", MIN_VERSION)));
     )
 }
 
 fn main() {
-    if let Some((version, channel, date)) = version_check::triple() {
-        if !channel.supports_features() {
-            err!(version, date, "Rocket (core) requires a 'dev' or 'nightly' version of rustc.");
-
-            eprint!("{}", Blue.paint("See the getting started guide ("));
-            eprint!("https://rocket.rs/v0.5/guide/getting-started/");
-            eprintln!("{}", Blue.paint(") for more information."));
-
-            panic!("Aborting compilation due to incompatible compiler.")
-        }
-
-        if !version.at_least(MIN_VERSION) || !date.at_least(MIN_DATE) {
-            err!(version, date, "Rocket (core) requires a more recent version of rustc.");
+    if let Some(version) = version_check::Version::read() {
+        if !version.at_least(MIN_VERSION) {
+            err!(version, "Rocket requires a more recent version of rustc.");
             panic!("Aborting compilation due to incompatible compiler.")
         }
     } else {

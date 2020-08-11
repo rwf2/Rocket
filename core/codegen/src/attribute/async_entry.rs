@@ -18,9 +18,11 @@ impl EntryAttr for Main {
     fn function(f: &syn::ItemFn, block: &syn::Block) -> Result<TokenStream> {
         let (attrs, vis, mut sig) = (&f.attrs, &f.vis, f.sig.clone());
         if sig.ident != "main" {
-            return Err(Span::call_site()
+            // FIXME(diag): warning!
+            Span::call_site()
                 .warning("attribute is typically applied to `main` function")
-                .span_note(sig.span(), "this function is not `main`"));
+                .span_note(sig.ident.span(), "this function is not `main`")
+                .emit_as_item_tokens();
         }
 
         sig.asyncness = None;
@@ -54,7 +56,7 @@ impl EntryAttr for Launch {
             return Err(Span::call_site()
                 .error("attribute cannot be applied to `main` function")
                 .note("this attribute generates a `main` function")
-                .span_note(f.sig.span(), "this function cannot be `main`"));
+                .span_note(f.sig.ident.span(), "this function cannot be `main`"));
         }
 
         let ty = match &f.sig.output {
@@ -118,7 +120,7 @@ macro_rules! async_entry {
     ($name:ident, $kind:ty, $default:expr) => (
         pub fn $name(a: proc_macro::TokenStream, i: proc_macro::TokenStream) -> TokenStream {
             _async_entry::<$kind>(a, i).unwrap_or_else(|d| {
-                let d = d.emit_as_tokens();
+                let d = d.emit_as_item_tokens();
                 let default = $default;
                 quote!(#d #default)
             })

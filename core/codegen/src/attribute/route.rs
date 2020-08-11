@@ -62,7 +62,7 @@ fn parse_route(attr: RouteAttribute, function: syn::ItemFn) -> Result<Route> {
             // FIXME(diag: warning)
             data.full_span.warning("`data` used with non-payload-supporting method")
                 .span_note(attr.method.span, msg)
-                .emit_as_tokens();
+                .emit_as_item_tokens();
         }
     }
 
@@ -115,11 +115,7 @@ fn parse_route(attr: RouteAttribute, function: syn::ItemFn) -> Result<Route> {
     }
 
     // Check that all of the declared parameters are function inputs.
-    let span = match function.sig.inputs.is_empty() {
-        false => function.sig.inputs.span(),
-        true => function.span()
-    };
-
+    let span = function.sig.paren_token.span;
     for missing in segments.difference(&fn_segments) {
         diags.push(missing.span.error("unused dynamic parameter")
             .span_note(span, format!("expected argument named `{}` here", missing.name)))
@@ -522,5 +518,5 @@ pub fn route_attribute<M: Into<Option<crate::http::Method>>>(
         None => complete_route(args.into(), input.into())
     };
 
-    result.unwrap_or_else(|diag| diag.emit_as_tokens())
+    result.unwrap_or_else(|diag| diag.emit_as_item_tokens())
 }

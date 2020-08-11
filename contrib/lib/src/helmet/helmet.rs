@@ -197,7 +197,7 @@ impl Fairing for SpaceHelmet {
         }
     }
 
-    async fn on_response<'a>(&'a self, _: &'a Request<'_>, res: &'a mut Response<'_>) {
+    async fn on_response<'r>(&self, _: &'r Request<'_>, res: &mut Response<'r>) {
         self.apply(res);
     }
 

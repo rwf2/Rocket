@@ -2,7 +2,7 @@ use std::borrow::Cow;
 use std::fmt::{self, Display};
 
 use crate::ext::IntoOwned;
-use crate::parse::{Indexed, IndexedStr};
+use crate::parse::{Extent, IndexedStr};
 use crate::uri::{Authority, Origin, Error, as_utf8_unchecked};
 
 /// A URI with a scheme, authority, path, and query:
@@ -46,15 +46,14 @@ impl<'a> Absolute<'a> {
     #[inline]
     pub(crate) unsafe fn raw(
         source: Cow<'a, [u8]>,
-        scheme: Indexed<'a, [u8]>,
+        scheme: Extent<&'a [u8]>,
         authority: Option<Authority<'a>>,
         origin: Option<Origin<'a>>,
     ) -> Absolute<'a> {
         Absolute {
+            authority, origin,
             source: Some(as_utf8_unchecked(source)),
-            scheme: scheme.coerce(),
-            authority: authority,
-            origin: origin,
+            scheme: scheme.into(),
         }
     }
 
@@ -65,7 +64,9 @@ impl<'a> Absolute<'a> {
         origin: Option<Origin<'a>>
     ) -> Absolute<'a> {
         Absolute {
-            source: None, scheme: scheme.into(), authority, origin
+            authority, origin,
+            source: None,
+            scheme: Cow::Borrowed(scheme).into(),
         }
     }
 

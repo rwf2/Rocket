@@ -1,10 +1,9 @@
 # Quickstart
 
-Before you can start writing a Rocket application, you'll need a **nightly**
-version of Rust installed. We recommend you use [rustup](https://rustup.rs/) to
-install or configure such a version. If you don't have Rust installed and would
-like extra guidance doing so, see the [getting started](../getting-started)
-section.
+Before you can start writing a Rocket application, you'll need to install the
+Rust toolchain. We recommend using [rustup](https://rustup.rs/). If you don't
+have Rust installed and would like extra guidance doing so, see the [getting
+started](../getting-started) section.
 
 ## Running Examples
 

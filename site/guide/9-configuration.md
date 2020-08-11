@@ -204,7 +204,7 @@ async fn assets(asset: PathBuf, assets_dir: State<'_, AssetsDir>) -> Option<Name
     NamedFile::open(Path::new(&assets_dir.0).join(asset)).await.ok()
 }
 
-#[rocket::launch]
+#[launch]
 fn rocket() -> rocket::Rocket {
     rocket::ignite()
         .mount("/", routes![assets])

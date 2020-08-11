@@ -42,8 +42,10 @@ impl<'c> LocalRequest<'c> {
         method: Method,
         uri: Cow<'c, str>
     ) -> LocalRequest<'c> {
-        // We set a dummy string for now and check the user's URI on dispatch.
-        let request = Request::new(client.rocket(), method, Origin::dummy());
+        // We try to validate the URI now so that the inner `Request` contains a
+        // valid URI. If it doesn't, we set a dummy one.
+        let origin = Origin::parse(&uri).unwrap_or_else(|_| Origin::dummy());
+        let request = Request::new(client.rocket(), method, origin.into_owned());
 
         // Set up any cookies we know about.
         if let Some(ref jar) = client.cookies {
@@ -70,12 +72,11 @@ impl<'c> LocalRequest<'c> {
 
     // Performs the actual dispatch.
     async fn _dispatch(mut self) -> LocalResponse<'c> {
-        // First, validate the URI, returning an error response (generated from
-        // an error catcher) immediately if it's invalid.
+        // First, revalidate the URI, returning an error response (generated
+        // from an error catcher) immediately if it's invalid. If it's valid,
+        // then `request` already contains the correct URI.
         let rocket = self.client.rocket();
-        if let Ok(uri) = Origin::parse(&self.uri) {
-            self.request.set_uri(uri.into_owned());
-        } else {
+        if let Err(_) = Origin::parse(&self.uri) {
             error!("Malformed request URI: {}", self.uri);
             return LocalResponse::new(self.request, move |req| {
                 rocket.handle_error(Status::BadRequest, req)
@@ -83,8 +84,8 @@ impl<'c> LocalRequest<'c> {
         }
 
         // Actually dispatch the request.
-        let data = Data::local(self.data);
-        let token = rocket.preprocess_request(&mut self.request, &data).await;
+        let mut data = Data::local(self.data);
+        let token = rocket.preprocess_request(&mut self.request, &mut data).await;
         let response = LocalResponse::new(self.request, move |request| {
             rocket.dispatch(token, request, data)
         }).await;

@@ -1,7 +1,5 @@
 use std::ops::Deref;
 
-use tokio::io::AsyncReadExt;
-
 use crate::outcome::Outcome::*;
 use crate::request::{Request, form::{FromForm, FormItems, FormDataError}};
 use crate::data::{Outcome, Transform, Transformed, Data, FromTransformedData, TransformFuture, FromDataFuture};
@@ -193,21 +191,18 @@ impl<'f, T: FromForm<'f> + Send + 'f> FromTransformedData<'f> for Form<T> {
         data: Data
     ) -> TransformFuture<'r, Self::Owned, Self::Error> {
         Box::pin(async move {
-            use std::cmp::min;
-
             if !request.content_type().map_or(false, |ct| ct.is_form()) {
                 warn!("Form data does not have form content type.");
                 return Transform::Borrowed(Forward(data));
             }
 
-            let limit = request.limits().forms;
-            let mut stream = data.open().take(limit);
-            let mut form_string = String::with_capacity(min(4096, limit) as usize);
-            if let Err(e) = stream.read_to_string(&mut form_string).await {
-                return Transform::Borrowed(Failure((Status::InternalServerError, FormDataError::Io(e))));
+            match data.open(request.limits().forms).stream_to_string().await {
+                Ok(form_string) => Transform::Borrowed(Success(form_string)),
+                Err(e) => {
+                    let err = (Status::InternalServerError, FormDataError::Io(e));
+                    Transform::Borrowed(Failure(err))
+                }
             }
-
-            Transform::Borrowed(Success(form_string))
         })
     }
 

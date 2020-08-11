@@ -30,7 +30,7 @@ fn hello(db_conn: State<'_, DbConn>) -> Result<String, Debug<Error>>  {
         .map_err(Debug)
 }
 
-#[rocket::launch]
+#[launch]
 fn rocket() -> Rocket {
     // Open a new in-memory SQLite database.
     let conn = Connection::open_in_memory().expect("in memory db");

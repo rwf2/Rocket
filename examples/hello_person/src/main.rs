@@ -12,7 +12,7 @@ fn hi(name: String) -> String {
     name
 }
 
-#[rocket::launch]
+#[launch]
 fn rocket() -> rocket::Rocket {
     rocket::ignite().mount("/", routes![hello, hi])
 }

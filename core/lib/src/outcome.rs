@@ -9,9 +9,9 @@
 //! processing next.
 //!
 //! The `Outcome` type is the return type of many of the core Rocket traits,
-//! including [`FromRequest`](crate::request::FromRequest), [`FromTransformedData`]
-//! [`Responder`]. It is also the return type of request handlers via the
-//! [`Response`](crate::response::Response) type.
+//! including [`FromRequest`](crate::request::FromRequest),
+//! [`FromTransformedData`] [`Responder`]. It is also the return type of request
+//! handlers via the [`Response`](crate::response::Response) type.
 //!
 //! [`FromTransformedData`]: crate::data::FromTransformedData
 //! [`Responder`]: crate::response::Responder
@@ -21,17 +21,20 @@
 //! A successful `Outcome<S, E, F>`, `Success(S)`, is returned from functions
 //! that complete successfully. The meaning of a `Success` outcome depends on
 //! the context. For instance, the `Outcome` of the `from_data` method of the
-//! [`FromTransformedData`] trait will be matched against the type expected by the user.
-//! For example, consider the following handler:
+//! [`FromTransformedData`] trait will be matched against the type expected by
+//! the user. For example, consider the following handler:
 //!
-//! ```rust,ignore
+//! ```rust
+//! # use rocket::post;
+//! # type S = rocket::data::Data;
 //! #[post("/", data = "<my_val>")]
-//! fn hello(my_val: S) -> ... {  }
+//! fn hello(my_val: S) { /* ... */  }
 //! ```
 //!
-//! The [`FromTransformedData`] implementation for the type `S` returns an `Outcome` with a
-//! `Success(S)`. If `from_data` returns a `Success`, the `Success` value will
-//! be unwrapped and the value will be used as the value of `my_val`.
+//! The [`FromTransformedData`] implementation for the type `S` returns an
+//! `Outcome` with a `Success(S)`. If `from_data` returns a `Success`, the
+//! `Success` value will be unwrapped and the value will be used as the value of
+//! `my_val`.
 //!
 //! # Failure
 //!
@@ -45,16 +48,19 @@
 //! or `Option<S>` in request handlers. For example, if a user's handler looks
 //! like:
 //!
-//! ```rust,ignore
+//! ```rust
+//! # use rocket::post;
+//! # type S = rocket::data::Data;
+//! # type E = std::convert::Infallible;
 //! #[post("/", data = "<my_val>")]
-//! fn hello(my_val: Result<S, E>) -> ... {  }
+//! fn hello(my_val: Result<S, E>) { /* ... */ }
 //! ```
 //!
-//! The [`FromTransformedData`] implementation for the type `S` returns an `Outcome` with a
-//! `Success(S)` and `Failure(E)`. If `from_data` returns a `Failure`, the
-//! `Failure` value will be unwrapped and the value will be used as the `Err`
-//! value of `my_val` while a `Success` will be unwrapped and used the `Ok`
-//! value.
+//! The [`FromTransformedData`] implementation for the type `S` returns an
+//! `Outcome` with a `Success(S)` and `Failure(E)`. If `from_data` returns a
+//! `Failure`, the `Failure` value will be unwrapped and the value will be used
+//! as the `Err` value of `my_val` while a `Success` will be unwrapped and used
+//! the `Ok` value.
 //!
 //! # Forward
 //!
@@ -66,19 +72,21 @@
 //! next available request handler. For example, consider the following request
 //! handler:
 //!
-//! ```rust,ignore
+//! ```rust
+//! # use rocket::post;
+//! # type S = rocket::data::Data;
 //! #[post("/", data = "<my_val>")]
-//! fn hello(my_val: S) -> ... {  }
+//! fn hello(my_val: S) { /* ... */ }
 //! ```
 //!
-//! The [`FromTransformedData`] implementation for the type `S` returns an `Outcome` with a
-//! `Success(S)`, `Failure(E)`, and `Forward(F)`. If the `Outcome` is a
-//! `Forward`, the `hello` handler isn't called. Instead, the incoming request
-//! is forwarded, or passed on to, the next matching route, if any. Ultimately,
-//! if there are no non-forwarding routes, forwarded requests are handled by the
-//! 404 catcher. Similar to `Failure`s, users can catch `Forward`s by requesting
-//! a type of `Option<S>`. If an `Outcome` is a `Forward`, the `Option` will be
-//! `None`.
+//! The [`FromTransformedData`] implementation for the type `S` returns an
+//! `Outcome` with a `Success(S)`, `Failure(E)`, and `Forward(F)`. If the
+//! `Outcome` is a `Forward`, the `hello` handler isn't called. Instead, the
+//! incoming request is forwarded, or passed on to, the next matching route, if
+//! any. Ultimately, if there are no non-forwarding routes, forwarded requests
+//! are handled by the 404 catcher. Similar to `Failure`s, users can catch
+//! `Forward`s by requesting a type of `Option<S>`. If an `Outcome` is a
+//! `Forward`, the `Option` will be `None`.
 
 use std::fmt;
 
@@ -618,6 +626,8 @@ impl<'a, S: Send + 'a, E: Send + 'a, F: Send + 'a> Outcome<S, E, F> {
 /// Because of the early return, `try_outcome!` can only be used in methods that
 /// return [`Outcome`].
 ///
+/// [`Outcome`]: crate::outcome::Outcome
+///
 /// ## Example
 ///
 /// ```rust,no_run
@@ -672,6 +682,9 @@ macro_rules! try_outcome {
         },
     });
 }
+
+#[doc(inline)]
+pub use try_outcome;
 
 impl<S, E, F> fmt::Debug for Outcome<S, E, F> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {

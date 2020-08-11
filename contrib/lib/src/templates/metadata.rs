@@ -1,10 +1,10 @@
-use rocket::{Request, State, Outcome};
+use rocket::{Request, State};
 use rocket::http::Status;
 use rocket::request::{self, FromRequest};
 
 use crate::templates::ContextManager;
 
-/// Request guard for dynamiclly querying template metadata.
+/// Request guard for dynamically querying template metadata.
 ///
 /// # Usage
 ///
@@ -91,12 +91,12 @@ impl<'a, 'r> FromRequest<'a, 'r> for Metadata<'a> {
     async fn from_request(request: &'a Request<'r>) -> request::Outcome<Self, ()> {
         request.guard::<State<'_, ContextManager>>().await
             .succeeded()
-            .and_then(|cm| Some(Outcome::Success(Metadata(cm.inner()))))
+            .and_then(|cm| Some(request::Outcome::Success(Metadata(cm.inner()))))
             .unwrap_or_else(|| {
                 error!("Uninitialized template context: missing fairing.");
                 info!("To use templates, you must attach `Template::fairing()`.");
                 info!("See the `Template` documentation for more information.");
-                Outcome::Failure((Status::InternalServerError, ()))
+                request::Outcome::Failure((Status::InternalServerError, ()))
             })
     }
 }

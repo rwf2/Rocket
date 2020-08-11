@@ -26,7 +26,7 @@ impl Fairing for Counter {
         }
     }
 
-    async fn on_request<'a>(&'a self, request: &'a mut Request<'_>, _: &'a Data) {
+    async fn on_request(&self, request: &mut Request<'_>, _: &Data) {
         if request.method() == Method::Get {
             self.get.fetch_add(1, Ordering::Relaxed);
         } else if request.method() == Method::Post {
@@ -34,7 +34,7 @@ impl Fairing for Counter {
         }
     }
 
-    async fn on_response<'a>(&'a self, req: &'a Request<'_>, res: &'a mut Response<'_>) {
+    async fn on_response<'r>(&self, req: &'r Request<'_>, res: &mut Response<'r>) {
         if res.status() != Status::NotFound {
             return
         }
@@ -61,7 +61,7 @@ fn token(token: State<'_, Token>) -> String {
     format!("{}", token.0)
 }
 
-#[rocket::launch]
+#[launch]
 fn rocket() -> rocket::Rocket {
     rocket::ignite()
         .mount("/", routes![hello, token])

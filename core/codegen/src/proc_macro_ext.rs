@@ -30,7 +30,7 @@ impl Diagnostics {
         let mut last = iter.next().expect("Diagnostic::emit_head empty");
         for diag in iter {
             // FIXME(diag: emit, can there be errors here?)
-            last.emit_as_tokens();
+            last.emit_as_item_tokens();
             last = diag;
         }
 

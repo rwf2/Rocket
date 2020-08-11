@@ -61,7 +61,7 @@
 //!     "Hello, world!"
 //! }
 //!
-//! #[rocket::launch]
+//! #[launch]
 //! fn rocket() -> rocket::Rocket {
 //!     rocket::ignite().mount("/", routes![hello])
 //! }
@@ -92,6 +92,8 @@ pub use async_trait::*;
 #[macro_use] extern crate tracing;
 #[macro_use] extern crate pear;
 
+#[doc(hidden)]
+pub use yansi;
 pub use futures;
 pub use tokio;
 
@@ -104,7 +106,7 @@ pub mod data;
 pub mod handler;
 pub mod fairing;
 pub mod error;
-pub mod shutdown;
+pub mod catcher;
 pub mod trace;
 
 // Reexport of HTTP everything.
@@ -118,22 +120,21 @@ pub mod http {
     pub use rocket_http::*;
 }
 
+mod shutdown;
 mod router;
 mod rocket;
 mod codegen;
-mod catcher;
 mod ext;
 
 #[doc(inline)] pub use crate::response::Response;
-#[doc(inline)] pub use crate::handler::{Handler, ErrorHandler};
-#[doc(hidden)] pub use crate::codegen::{StaticRouteInfo, StaticCatchInfo};
-#[doc(inline)] pub use crate::outcome::Outcome;
+#[doc(hidden)] pub use crate::codegen::{StaticRouteInfo, StaticCatcherInfo};
 #[doc(inline)] pub use crate::data::Data;
 #[doc(inline)] pub use crate::config::Config;
+#[doc(inline)] pub use crate::catcher::Catcher;
 pub use crate::router::Route;
 pub use crate::request::{Request, State};
-pub use crate::catcher::Catcher;
 pub use crate::rocket::{Cargo, Rocket};
+pub use crate::shutdown::Shutdown;
 
 /// Alias to [`Rocket::ignite()`] Creates a new instance of `Rocket`.
 pub fn ignite() -> Rocket {
@@ -142,7 +143,7 @@ pub fn ignite() -> Rocket {
 
 /// Alias to [`Rocket::custom()`]. Creates a new instance of `Rocket` with a
 /// custom configuration.
-pub fn custom(config: config::Config) -> Rocket {
+pub fn custom(config: Config) -> Rocket {
     Rocket::custom(config)
 }
 

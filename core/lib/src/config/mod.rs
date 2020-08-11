@@ -161,7 +161,7 @@
 //!
 //! The retrivial of configuration parameters usually occurs at launch time via
 //! a [launch fairing](crate::fairing::Fairing). If information about the
-//! configuraiton is needed later in the program, an attach fairing can be used
+//! configuration is needed later in the program, an attach fairing can be used
 //! to store the information as managed state. As an example of the latter,
 //! consider the following short program which reads the `token` configuration
 //! parameter and stores the value or a default in a `Token` managed state
@@ -198,8 +198,7 @@ use std::path::{Path, PathBuf};
 
 use toml;
 
-pub use self::custom_values::Limits;
-pub use toml::value::{Array, Table, Value, Datetime};
+pub use toml::value::{Array, Map, Table, Value, Datetime};
 pub use self::error::ConfigError;
 pub use self::environment::Environment;
 pub use self::config::Config;

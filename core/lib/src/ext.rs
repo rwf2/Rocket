@@ -2,11 +2,10 @@ use std::io::{self, Cursor};
 use std::pin::Pin;
 use std::task::{Poll, Context};
 
-use futures::{ready, future::BoxFuture, stream::Stream};
-use tokio::io::{AsyncRead, AsyncReadExt as _};
+use futures::{ready, stream::Stream};
+use tokio::io::AsyncRead;
 
-use crate::http::hyper;
-use hyper::{Bytes, HttpBody};
+use crate::http::hyper::{self, Bytes, HttpBody};
 
 pub struct IntoBytesStream<R> {
     inner: R,
@@ -29,6 +28,7 @@ impl<R> Stream for IntoBytesStream<R>
             Poll::Ready(Err(e)) => Poll::Ready(Some(Err(e))),
             Poll::Ready(Ok(n)) if n == 0 => Poll::Ready(None),
             Poll::Ready(Ok(n)) => {
+                // FIXME(perf).
                 let mut next = std::mem::replace(buffer, vec![0; buf_size]);
                 next.truncate(n);
                 Poll::Ready(Some(Ok(Bytes::from(next))))
@@ -37,27 +37,9 @@ impl<R> Stream for IntoBytesStream<R>
     }
 }
 
-pub trait AsyncReadExt: AsyncRead {
-    fn into_bytes_stream(self, buf_size: usize) -> IntoBytesStream<Self> where Self: Sized {
+pub trait AsyncReadExt: AsyncRead + Sized {
+    fn into_bytes_stream(self, buf_size: usize) -> IntoBytesStream<Self> {
         IntoBytesStream { inner: self, buf_size, buffer: vec![0; buf_size] }
-    }
-
-    fn read_max<'a>(&'a mut self, mut buf: &'a mut [u8]) -> BoxFuture<'_, io::Result<usize>>
-        where Self: Send + Unpin
-    {
-        Box::pin(async move {
-            let start_len = buf.len();
-            while !buf.is_empty() {
-                match self.read(buf).await {
-                    Ok(0) => break,
-                    Ok(n) => buf = &mut buf[n..],
-                    Err(ref e) if e.kind() == io::ErrorKind::Interrupted => {}
-                    Err(e) => return Err(e),
-                }
-            }
-
-            Ok(start_len - buf.len())
-        })
     }
 }
 
@@ -65,10 +47,10 @@ impl<T: AsyncRead> AsyncReadExt for T { }
 
 pub struct AsyncReadBody {
     inner: hyper::Body,
-    state: AsyncReadBodyState,
+    state: State,
 }
 
-enum AsyncReadBodyState {
+enum State {
     Pending,
     Partial(Cursor<Bytes>),
     Done,
@@ -76,37 +58,43 @@ enum AsyncReadBodyState {
 
 impl AsyncReadBody {
     pub fn empty() -> Self {
-        Self { inner: hyper::Body::empty(), state: AsyncReadBodyState::Done }
+        Self { inner: hyper::Body::empty(), state: State::Done }
     }
 }
 
 impl From<hyper::Body> for AsyncReadBody {
     fn from(body: hyper::Body) -> Self {
-        Self { inner: body, state: AsyncReadBodyState::Pending }
+        Self { inner: body, state: State::Pending }
     }
 }
 
 impl AsyncRead for AsyncReadBody {
-    fn poll_read(mut self: Pin<&mut Self>, cx: &mut Context<'_>, buf: &mut [u8]) -> Poll<io::Result<usize>> {
+    fn poll_read(
+        mut self: Pin<&mut Self>,
+        cx: &mut Context<'_>,
+        buf: &mut [u8]
+    ) -> Poll<io::Result<usize>> {
         loop {
             match self.state {
-                AsyncReadBodyState::Pending => {
+                State::Pending => {
                     match ready!(Pin::new(&mut self.inner).poll_data(cx)) {
-                        Some(Ok(bytes)) => self.state = AsyncReadBodyState::Partial(Cursor::new(bytes)),
-                        Some(Err(e)) => return Poll::Ready(Err(io::Error::new(io::ErrorKind::Other, e))),
-                        None => self.state = AsyncReadBodyState::Done,
+                        Some(Ok(bytes)) => {
+                            self.state = State::Partial(Cursor::new(bytes));
+                        }
+                        Some(Err(e)) => {
+                            let error = io::Error::new(io::ErrorKind::Other, e);
+                            return Poll::Ready(Err(error));
+                        }
+                        None => self.state = State::Done,
                     }
                 },
-                AsyncReadBodyState::Partial(ref mut cursor) => {
+                State::Partial(ref mut cursor) => {
                     match ready!(Pin::new(cursor).poll_read(cx, buf)) {
-                        Ok(n) if n == 0 => {
-                            self.state = AsyncReadBodyState::Pending;
-                        }
-                        Ok(n) => return Poll::Ready(Ok(n)),
-                        Err(e) => return Poll::Ready(Err(e)),
+                        Ok(n) if n == 0 => self.state = State::Pending,
+                        result => return Poll::Ready(result),
                     }
                 }
-                AsyncReadBodyState::Done => return Poll::Ready(Ok(0)),
+                State::Done => return Poll::Ready(Ok(0)),
             }
         }
     }

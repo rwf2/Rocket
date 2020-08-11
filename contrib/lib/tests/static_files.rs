@@ -1,17 +1,15 @@
 #[cfg(feature = "serve")]
 mod static_tests {
     use std::{io::Read, fs::File};
-    use std::path::{Path, PathBuf};
+    use std::path::Path;
 
     use rocket::{self, Rocket, Route};
-    use rocket_contrib::serve::{StaticFiles, Options};
+    use rocket_contrib::serve::{StaticFiles, Options, crate_relative};
     use rocket::http::Status;
     use rocket::local::blocking::Client;
 
-    fn static_root() -> PathBuf {
-        Path::new(env!("CARGO_MANIFEST_DIR"))
-            .join("tests")
-            .join("static")
+    fn static_root() -> &'static Path {
+        Path::new(crate_relative!("/tests/static"))
     }
 
     fn rocket() -> Rocket {

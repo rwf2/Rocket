@@ -1,8 +1,8 @@
-use devise::{syn, Spanned, Result, FromMeta, Diagnostic};
 use devise::ext::SpanDiagnosticExt;
+use devise::{syn, MetaItem, Spanned, Result, FromMeta, Diagnostic};
 
+use crate::http_codegen::{self, Optional};
 use crate::proc_macro2::{TokenStream, Span};
-use crate::http_codegen::Status;
 use crate::syn_ext::{IdentExt, ReturnTypeExt, TokenStreamExt};
 use self::syn::{Attribute, parse::Parser};
 use crate::{CATCH_FN_PREFIX, CATCH_STRUCT_PREFIX};
@@ -11,13 +11,35 @@ use crate::{CATCH_FN_PREFIX, CATCH_STRUCT_PREFIX};
 #[derive(Debug, FromMeta)]
 struct CatchAttribute {
     #[meta(naked)]
-    status: Status
+    status: CatcherCode
 }
 
-/// This structure represents the parsed `catch` attribute an associated items.
+/// `Some` if there's a code, `None` if it's `default`.
+#[derive(Debug)]
+struct CatcherCode(Option<http_codegen::Status>);
+
+impl FromMeta for CatcherCode {
+    fn from_meta(m: MetaItem<'_>) -> Result<Self> {
+        if usize::from_meta(m).is_ok() {
+            let status = http_codegen::Status::from_meta(m)?;
+            Ok(CatcherCode(Some(status)))
+        } else if let MetaItem::Path(path) = m {
+            if path.is_ident("default") {
+                Ok(CatcherCode(None))
+            } else {
+                Err(m.span().error(format!("expected `default`")))
+            }
+        } else {
+            let msg = format!("expected integer or identifier, found {}", m.description());
+            Err(m.span().error(msg))
+        }
+    }
+}
+
+/// This structure represents the parsed `catch` attribute and associated items.
 struct CatchParams {
     /// The status associated with the code in the `#[catch(code)]` attribute.
-    status: Status,
+    status: Option<http_codegen::Status>,
     /// The function that was decorated with the `catch` attribute.
     function: syn::ItemFn,
 }
@@ -33,13 +55,14 @@ fn parse_params(
     let full_attr = quote!(#[catch(#args)]);
     let attrs = Attribute::parse_outer.parse2(full_attr)?;
     let attribute = match CatchAttribute::from_attrs("catch", &attrs) {
-        Some(result) => result.map_err(|d| {
-            d.help("`#[catch]` expects a single status integer, e.g.: #[catch(404)]")
+        Some(result) => result.map_err(|diag| {
+            diag.help("`#[catch]` expects a status code int or `default`: \
+                        `#[catch(404)]` or `#[catch(default)]`")
         })?,
         None => return Err(Span::call_site().error("internal error: bad attribute"))
     };
 
-    Ok(CatchParams { status: attribute.status, function })
+    Ok(CatchParams { status: attribute.status.0, function })
 }
 
 pub fn _catch(
@@ -54,56 +77,41 @@ pub fn _catch(
     let user_catcher_fn_name = catch.function.sig.ident.clone();
     let generated_struct_name = user_catcher_fn_name.prepend(CATCH_STRUCT_PREFIX);
     let generated_fn_name = user_catcher_fn_name.prepend(CATCH_FN_PREFIX);
-    let (vis, status) = (&catch.function.vis, &catch.status);
-    let status_code = status.0.code;
+    let (vis, catcher_status) = (&catch.function.vis, &catch.status);
+    let status_code = Optional(catcher_status.as_ref().map(|s| s.0.code));
 
     // Variables names we'll use and reuse.
     define_vars_and_mods!(catch.function.span().into() =>
-        req, _Box, Request, Response, CatcherFuture);
+        req, status, _Box, Request, Response, ErrorHandlerFuture, Status);
 
     // Determine the number of parameters that will be passed in.
-    if catch.function.sig.inputs.len() > 1 {
-        return Err(catch.function.sig.inputs.span()
-            .error("invalid number of arguments: must be zero or one")
-            .help("catchers may optionally take an argument of type `&Request`"));
+    if catch.function.sig.inputs.len() > 2 {
+        return Err(catch.function.sig.paren_token.span
+            .error("invalid number of arguments: must be zero, one, or two")
+            .help("catchers optionally take `&Request` or `Status, &Request`"));
     }
-
-    // TODO: It would be nice if this worked! Alas, either there is a rustc bug
-    // that prevents this from working (error on `Output` type of `Future`), or
-    // this simply isn't possible with `async fn`.
-    // // Typecheck the catcher function if it has arguments.
-    // user_catcher_fn_name.set_span(catch.function.sig.inputs.span().into());
-    // let user_catcher_fn_call = catch.function.sig.inputs.first()
-    //     .map(|arg| {
-    //         let ty = quote!(fn(&#Request) -> _).respanned(Span::call_site().into());
-    //         let req = req.respanned(arg.span().into());
-    //         quote!({
-    //             let #user_catcher_fn_name: #ty = #user_catcher_fn_name;
-    //             #user_catcher_fn_name(#req)
-    //         })
-    //     })
-    //     .unwrap_or_else(|| quote!(#user_catcher_fn_name()));
-    //
-    // let catcher_response = quote_spanned!(return_type_span => {
-    //     let ___responder = #user_catcher_fn_call #dot_await;
-    //     ::rocket::response::Responder::respond_to(___responder, #req)?
-    // });
 
     // This ensures that "Responder not implemented" points to the return type.
     let return_type_span = catch.function.sig.output.ty()
         .map(|ty| ty.span().into())
         .unwrap_or(Span::call_site().into());
 
-    // Set the `req` span to that of the arg for a correct `Wrong type` span.
-    let input = catch.function.sig.inputs.first()
-        .map(|arg| req.respanned(arg.span().into()));
+    // Set the `req` and `status` spans to that of their respective function
+    // arguments for a more correct `wrong type` error span. `rev` to be cute.
+    let codegen_args = &[&req, &status];
+    let inputs = catch.function.sig.inputs.iter().rev()
+        .zip(codegen_args.into_iter())
+        .map(|(fn_arg, codegen_arg)| match fn_arg {
+            syn::FnArg::Receiver(_) => codegen_arg.respanned(fn_arg.span()),
+            syn::FnArg::Typed(a) => codegen_arg.respanned(a.ty.span())
+        }).rev();
 
     // We append `.await` to the function call if this is `async`.
     let dot_await = catch.function.sig.asyncness
         .map(|a| quote_spanned!(a.span().into() => .await));
 
     let catcher_response = quote_spanned!(return_type_span => {
-        let ___responder = #user_catcher_fn_name(#input) #dot_await;
+        let ___responder = #user_catcher_fn_name(#(#inputs),*) #dot_await;
         ::rocket::response::Responder::respond_to(___responder, #req)?
     });
 
@@ -113,7 +121,10 @@ pub fn _catch(
 
         /// Rocket code generated wrapping catch function.
         #[doc(hidden)]
-        #vis fn #generated_fn_name<'_b>(#req: &'_b #Request) -> #CatcherFuture<'_b> {
+        #vis fn #generated_fn_name<'_b>(
+            #status: #Status,
+            #req: &'_b #Request
+        ) -> #ErrorHandlerFuture<'_b> {
             #_Box::pin(async move {
                 let __response = #catcher_response;
                 #Response::build()
@@ -126,8 +137,8 @@ pub fn _catch(
         /// Rocket code generated static catcher info.
         #[doc(hidden)]
         #[allow(non_upper_case_globals)]
-        #vis static #generated_struct_name: ::rocket::StaticCatchInfo =
-            ::rocket::StaticCatchInfo {
+        #vis static #generated_struct_name: ::rocket::StaticCatcherInfo =
+            ::rocket::StaticCatcherInfo {
                 code: #status_code,
                 handler: #generated_fn_name,
             };
@@ -138,5 +149,5 @@ pub fn catch_attribute(
     args: proc_macro::TokenStream,
     input: proc_macro::TokenStream
 ) -> TokenStream {
-    _catch(args, input).unwrap_or_else(|d| d.emit_as_tokens())
+    _catch(args, input).unwrap_or_else(|d| d.emit_as_item_tokens())
 }

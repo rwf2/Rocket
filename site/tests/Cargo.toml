@@ -5,8 +5,9 @@ workspace = "../../"
 edition = "2018"
 publish = false
 
-[dependencies]
+[dev-dependencies]
 rocket = { path = "../../core/lib" }
+doc-comment = "0.3"
 rocket_contrib = { path = "../../contrib/lib", features = ["json", "tera_templates", "diesel_sqlite_pool"] }
 serde = { version = "1.0", features = ["derive"] }
 rand = "0.7"

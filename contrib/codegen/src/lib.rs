@@ -42,5 +42,5 @@ use proc_macro::TokenStream;
 #[proc_macro_attribute]
 pub fn database(attr: TokenStream, input: TokenStream) -> TokenStream {
     crate::database::database_attr(attr, input)
-        .unwrap_or_else(|diag| diag.emit_as_tokens().into())
+        .unwrap_or_else(|diag| diag.emit_as_item_tokens().into())
 }

@@ -32,7 +32,7 @@ fn index(cookies: Cookies<'_>) -> Template {
     Template::render("index", &context)
 }
 
-#[rocket::launch]
+#[launch]
 fn rocket() -> rocket::Rocket {
     rocket::ignite().mount("/", routes![submit, index]).attach(Template::fairing())
 }

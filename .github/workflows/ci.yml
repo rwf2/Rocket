@@ -1,0 +1,83 @@
+name: CI
+
+on: [push, pull_request]
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  test:
+    name: "${{ matrix.os.name }} ${{ matrix.test.name }} (${{ matrix.toolchain }})"
+
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - { name: Linux, distro: ubuntu-latest }
+          - { name: Windows, distro: windows-latest }
+          - { name: macOS, distro: macOS-latest }
+        test:
+          - { name: Debug, flag: }
+          - { name: Contrib, flag: "--contrib" }
+        toolchain: [stable]
+        allow-failures: [false]
+        include:
+          - toolchain: stable
+            os: { name: Linux, distro: ubuntu-latest }
+            test: { name: Core, flag: "--core" }
+            allow-failures: false
+          - toolchain: stable
+            os: { name: Linux, distro: ubuntu-latest }
+            test: { name: Release, flag: "--release" }
+            allow-failures: false
+          - toolchain: nightly
+            os: { name: Linux, distro: ubuntu-latest }
+            test: { name: Debug, flag: }
+            allow-failures: true
+          - toolchain: nightly
+            os: { name: Linux, distro: ubuntu-latest }
+            test: { name: Contrib, flag: "--contrib" }
+            allow-failures: true
+
+    continue-on-error: ${{ matrix.allow-failures }}
+
+    runs-on: ${{ matrix.os.distro }}
+
+    steps:
+      - name: Checkout Sources
+        uses: actions/checkout@v2
+
+      - name: Install Native Dependencies (macOS)
+        if: matrix.os.name == 'macOS'
+        run: |
+            brew install mysql-client libpq sqlite coreutils
+            echo "::add-path::/usr/local/opt/mysql-client/bin"
+
+      # vcpkg --triplet x64-windows install libmysql libpq sqlite3 openssl
+      # + vcpkg/installed/vcpkg (in particular, the status file)
+      - name: Install Native Dependencies (Windows)
+        if: matrix.os.name == 'Windows'
+        run: |
+          curl -fsS -o vcpkg.7z https://rocket.rs/static/vcpkg-2019-07-05.7z
+          7z x vcpkg.7z -y -bb0
+          xcopy .\vcpkg $env:VCPKG_INSTALLATION_ROOT /s /e /h /y /q
+          vcpkg integrate install
+          echo "::set-env name=VCPKGRS_DYNAMIC::1"
+          echo "::set-env name=VCPKG_ROOT::$env:VCPKG_INSTALLATION_ROOT"
+          echo "::add-path::$env:VCPKG_INSTALLATION_ROOT\installed\x64-windows\lib"
+
+      - name: Install Native Dependencies (Linux)
+        if: matrix.os.name == 'Linux'
+        run: |
+          sudo apt-get install -y libmariadb-client-lgpl-dev-compat libpq-dev libsqlite3-dev
+
+      - name: Install Rust
+        uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: ${{ matrix.toolchain }}
+          override: true
+
+      - name: Run Tests
+        run: ./scripts/test.sh ${{ matrix.test.flag }}
+        shell: bash

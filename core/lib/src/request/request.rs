@@ -12,13 +12,12 @@ use atomic::Atomic;
 use crate::request::{FromParam, FromSegments, FromRequest, Outcome};
 use crate::request::{FromFormValue, FormItems, FormItem};
 
-use crate::rocket::Rocket;
-use crate::router::Route;
-use crate::config::{Config, Limits};
+use crate::{Rocket, Config, Shutdown, Route};
 use crate::http::{hyper, uri::{Origin, Segments}};
 use crate::http::{Method, Header, HeaderMap, Cookies};
 use crate::http::{RawStr, ContentType, Accept, MediaType};
 use crate::http::private::{Indexed, SmallVec, CookieJar};
+use crate::data::Limits;
 
 type Indices = (usize, usize);
 
@@ -39,6 +38,7 @@ pub struct Request<'r> {
 pub(crate) struct RequestState<'r> {
     pub config: &'r Config,
     pub managed: &'r Container,
+    pub shutdown: &'r Shutdown,
     pub path_segments: SmallVec<[Indices; 12]>,
     pub query_items: Option<SmallVec<[IndexedFormItem; 6]>>,
     pub route: RwLock<Option<&'r Route>>,
@@ -73,6 +73,7 @@ impl<'r> RequestState<'r> {
         RequestState {
             config: self.config,
             managed: self.managed,
+            shutdown: self.shutdown,
             path_segments: self.path_segments.clone(),
             query_items: self.query_items.clone(),
             route: RwLock::new(route),
@@ -109,6 +110,7 @@ impl<'r> Request<'r> {
                 query_items: None,
                 config: &rocket.config,
                 managed: &rocket.managed_state,
+                shutdown: &rocket.shutdown_handle,
                 route: RwLock::new(None),
                 cookies: Mutex::new(Some(CookieJar::new())),
                 accept: Storage::new(),
@@ -509,7 +511,7 @@ impl<'r> Request<'r> {
         }
     }
 
-    /// Returns the configured application receive limits.
+    /// Returns the configured application data limits.
     ///
     /// # Example
     ///

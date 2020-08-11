@@ -1,23 +1,20 @@
-use std::future::Future;
-use std::io;
-use std::path::Path;
-
-use tokio::io::AsyncWrite;
-
-use super::data_stream::DataStream;
+use std::io::Cursor;
 
 use crate::http::hyper;
-use crate::ext::{AsyncReadExt, AsyncReadBody};
+use crate::ext::AsyncReadBody;
+use crate::tokio::io::AsyncReadExt;
+use crate::data::data_stream::DataStream;
+use crate::data::ByteUnit;
 
 /// The number of bytes to read into the "peek" buffer.
-const PEEK_BYTES: usize = 512;
+pub const PEEK_BYTES: usize = 512;
 
 /// Type representing the data in the body of an incoming request.
 ///
 /// This type is the only means by which the body of a request can be retrieved.
 /// This type is not usually used directly. Instead, types that implement
-/// [`FromTransformedData`](crate::data::FromTransformedData) are used via code generation by
-/// specifying the `data = "<var>"` route parameter as follows:
+/// [`FromTransformedData`](crate::data::FromTransformedData) are used via code
+/// generation by specifying the `data = "<var>"` route parameter as follows:
 ///
 /// ```rust
 /// # #[macro_use] extern crate rocket;
@@ -27,8 +24,9 @@ const PEEK_BYTES: usize = 512;
 /// # fn main() { }
 /// ```
 ///
-/// Above, `DataGuard` can be any type that implements `FromTransformedData`. Note that
-/// `Data` itself implements `FromTransformedData`.
+/// Above, `DataGuard` can be any type that implements `FromTransformedData` (or
+/// equivalently, `FromData`). Note that `Data` itself implements
+/// `FromTransformedData`.
 ///
 /// # Reading Data
 ///
@@ -50,162 +48,14 @@ pub struct Data {
 }
 
 impl Data {
-    /// Returns the raw data stream.
-    ///
-    /// The stream contains all of the data in the body of the request,
-    /// including that in the `peek` buffer. The method consumes the `Data`
-    /// instance. This ensures that a `Data` type _always_ represents _all_ of
-    /// the data in a request.
-    ///
-    /// # Example
-    ///
-    /// ```rust
-    /// use rocket::Data;
-    ///
-    /// fn handler(data: Data) {
-    ///     let stream = data.open();
-    /// }
-    /// ```
-    pub fn open(mut self) -> DataStream {
-        let buffer = std::mem::replace(&mut self.buffer, vec![]);
-        let stream = std::mem::replace(&mut self.stream, AsyncReadBody::empty());
-        DataStream(buffer, stream)
-    }
-
-    pub(crate) fn from_hyp(body: hyper::Body) -> impl Future<Output = Data> {
+    pub(crate) async fn from_hyp(body: hyper::Body) -> Data {
         // TODO.async: This used to also set the read timeout to 5 seconds.
         // Such a short read timeout is likely no longer necessary, but some
         // kind of idle timeout should be implemented.
 
-        Data::new(body)
-    }
-
-    /// Retrieve the `peek` buffer.
-    ///
-    /// The peek buffer contains at most 512 bytes of the body of the request.
-    /// The actual size of the returned buffer varies by web request. The
-    /// [`peek_complete`](#method.peek_complete) method can be used to determine
-    /// if this buffer contains _all_ of the data in the body of the request.
-    ///
-    /// # Example
-    ///
-    /// ```rust
-    /// use rocket::Data;
-    ///
-    /// fn handler(data: Data) {
-    ///     let peek = data.peek();
-    /// }
-    /// ```
-    #[inline(always)]
-    pub fn peek(&self) -> &[u8] {
-        if self.buffer.len() > PEEK_BYTES {
-            &self.buffer[..PEEK_BYTES]
-        } else {
-            &self.buffer
-        }
-    }
-
-    /// Returns true if the `peek` buffer contains all of the data in the body
-    /// of the request. Returns `false` if it does not or if it is not known if
-    /// it does.
-    ///
-    /// # Example
-    ///
-    /// ```rust
-    /// use rocket::Data;
-    ///
-    /// fn handler(data: Data) {
-    ///     if data.peek_complete() {
-    ///         println!("All of the data: {:?}", data.peek());
-    ///     }
-    /// }
-    /// ```
-    #[inline(always)]
-    pub fn peek_complete(&self) -> bool {
-        self.is_complete
-    }
-
-    /// A helper method to write the body of the request to any `AsyncWrite` type.
-    ///
-    /// This method is identical to `tokio::io::copy(&mut data.open(), &mut writer)`.
-    ///
-    /// # Example
-    ///
-    /// ```rust
-    /// use std::io;
-    /// use rocket::Data;
-    ///
-    /// async fn handler(mut data: Data) -> io::Result<String> {
-    ///     // write all of the data to stdout
-    ///     let written = data.stream_to(tokio::io::stdout()).await?;
-    ///     Ok(format!("Wrote {} bytes.", written))
-    /// }
-    /// ```
-    #[inline(always)]
-    pub async fn stream_to<W: AsyncWrite + Unpin>(self, mut writer: W) -> io::Result<u64> {
-        let mut stream = self.open();
-        tokio::io::copy(&mut stream, &mut writer).await
-    }
-
-    /// A helper method to write the body of the request to a file at the path
-    /// determined by `path`.
-    ///
-    /// This method is identical to
-    /// `tokio::io::copy(&mut self.open(), &mut File::create(path).await?)`.
-    ///
-    /// # Example
-    ///
-    /// ```rust
-    /// use std::io;
-    /// use rocket::Data;
-    ///
-    /// async fn handler(mut data: Data) -> io::Result<String> {
-    ///     let written = data.stream_to_file("/static/file").await?;
-    ///     Ok(format!("Wrote {} bytes to /static/file", written))
-    /// }
-    /// ```
-    #[inline(always)]
-    pub async fn stream_to_file<P: AsRef<Path>>(self, path: P) -> io::Result<u64> {
-        let mut file = tokio::fs::File::create(path).await?;
-        self.stream_to(&mut file).await
-    }
-
-    // Creates a new data object with an internal buffer `buf`, where the cursor
-    // in the buffer is at `pos` and the buffer has `cap` valid bytes. Thus, the
-    // bytes `vec[pos..cap]` are buffered and unread. The remainder of the data
-    // bytes can be read from `stream`.
-    #[inline(always)]
-    pub(crate) async fn new(body: hyper::Body) -> Data {
-        trace!("Data::new({:?})", body);
-
-        let mut stream = AsyncReadBody::from(body);
-
-        let mut peek_buf = vec![0; PEEK_BYTES];
-
-        let eof = match stream.read_max(&mut peek_buf[..]).await {
-            Ok(n) => {
-                trace!("Filled peek buf with {} bytes.", n);
-
-                // TODO.async: This has not gone away, and I don't entirely
-                // understand what's happening here
-
-                // We can use `set_len` here instead of `truncate`, but we'll
-                // take the performance hit to avoid `unsafe`. All of this code
-                // should go away when we migrate away from hyper 0.10.x.
-
-                peek_buf.truncate(n);
-                n < PEEK_BYTES
-            }
-            Err(e) => {
-                error!("Failed to read into peek buffer: {:?}.", e);
-                // Likewise here as above.
-                peek_buf.truncate(0);
-                false
-            }
-        };
-
-        trace!("Peek bytes: {}/{} bytes.", peek_buf.len(), PEEK_BYTES);
-        Data { buffer: peek_buf, stream, is_complete: eof }
+        let stream = AsyncReadBody::from(body);
+        let buffer = Vec::with_capacity(PEEK_BYTES / 8);
+        Data { buffer, stream, is_complete: false }
     }
 
     /// This creates a `data` object from a local data source `data`.
@@ -217,10 +67,101 @@ impl Data {
             is_complete: true,
         }
     }
-}
 
-impl std::borrow::Borrow<()> for Data {
-    fn borrow(&self) -> &() {
-        &()
+    /// Returns the raw data stream, limited to `limit` bytes.
+    ///
+    /// The stream contains all of the data in the body of the request,
+    /// including that in the `peek` buffer. The method consumes the `Data`
+    /// instance. This ensures that a `Data` type _always_ represents _all_ of
+    /// the data in a request.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use rocket::data::{Data, ToByteUnit};
+    ///
+    /// # const SIZE_LIMIT: u64 = 2 << 20; // 2MiB
+    /// fn handler(data: Data) {
+    ///     let stream = data.open(2.mebibytes());
+    /// }
+    /// ```
+    pub fn open(self, limit: ByteUnit) -> DataStream {
+        let buffer_limit = std::cmp::min(self.buffer.len().into(), limit);
+        let stream_limit = limit - buffer_limit;
+        let buffer = Cursor::new(self.buffer).take(buffer_limit.into());
+        let stream = self.stream.take(stream_limit.into());
+        DataStream { buffer, stream }
+    }
+
+    /// Retrieve at most `num` bytes from the `peek` buffer without consuming
+    /// `self`.
+    ///
+    /// The peek buffer contains at most 512 bytes of the body of the request.
+    /// The actual size of the returned buffer is the `max` of the request's
+    /// body, `num` and `512`. The [`peek_complete`](#method.peek_complete)
+    /// method can be used to determine if this buffer contains _all_ of the
+    /// data in the body of the request.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use rocket::request::Request;
+    /// use rocket::data::{self, Data, FromData};
+    /// # struct MyType;
+    /// # type MyError = String;
+    ///
+    /// #[rocket::async_trait]
+    /// impl FromData for MyType {
+    ///     type Error = MyError;
+    ///
+    ///     async fn from_data(req: &Request<'_>, mut data: Data) -> data::Outcome<Self, MyError> {
+    ///         if data.peek(10).await != b"hi" {
+    ///             return data::Outcome::Forward(data)
+    ///         }
+    ///
+    ///         /* .. */
+    ///         # unimplemented!()
+    ///     }
+    /// }
+    /// ```
+    pub async fn peek(&mut self, num: usize) -> &[u8] {
+        let num = std::cmp::min(PEEK_BYTES, num);
+        let mut len = self.buffer.len();
+        if len >= num {
+            return &self.buffer[..num];
+        }
+
+        while len < num {
+            match self.stream.read_buf(&mut self.buffer).await {
+                Ok(0) => { self.is_complete = true; break },
+                Ok(n) => len += n,
+                Err(e) => {
+                    error_!("Failed to read into peek buffer: {:?}.", e);
+                    break;
+                }
+            }
+        }
+
+        &self.buffer[..std::cmp::min(len, num)]
+    }
+
+    /// Returns true if the `peek` buffer contains all of the data in the body
+    /// of the request. Returns `false` if it does not or if it is not known if
+    /// it does.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use rocket::data::Data;
+    ///
+    /// async fn handler(mut data: Data) {
+    ///     if data.peek_complete() {
+    ///         println!("All of the data: {:?}", data.peek(512).await);
+    ///     }
+    /// }
+    /// ```
+    #[inline(always)]
+    pub fn peek_complete(&self) -> bool {
+        self.is_complete
     }
 }

@@ -2,7 +2,7 @@
 
 #[cfg(test)] mod tests;
 
-use rocket_contrib::serve::StaticFiles;
+use rocket_contrib::serve::{StaticFiles, crate_relative};
 
 // If we wanted or needed to serve files manually, we'd use `NamedFile`. Always
 // prefer to use `StaticFiles`!
@@ -19,5 +19,5 @@ mod manual {
 fn rocket() -> rocket::Rocket {
     rocket::ignite()
         .mount("/", routes![manual::icon])
-        .mount("/", StaticFiles::from("static"))
+        .mount("/", StaticFiles::from(crate_relative!("/static")))
 }

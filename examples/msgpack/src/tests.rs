@@ -2,6 +2,8 @@ use crate::rocket;
 use rocket::local::blocking::Client;
 use rocket::http::{Status, ContentType};
 
+use serde::{Serialize, Deserialize};
+
 #[derive(Serialize, Deserialize)]
 struct Message {
     id: usize,

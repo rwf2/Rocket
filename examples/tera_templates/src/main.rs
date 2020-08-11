@@ -1,5 +1,4 @@
 #[macro_use] extern crate rocket;
-#[macro_use] extern crate serde_derive;
 
 #[cfg(test)] mod tests;
 
@@ -9,7 +8,7 @@ use rocket::Request;
 use rocket::response::Redirect;
 use rocket_contrib::templates::Template;
 
-#[derive(Serialize)]
+#[derive(serde::Serialize)]
 struct TemplateContext {
     name: String,
     items: Vec<&'static str>
@@ -33,7 +32,7 @@ fn not_found(req: &Request<'_>) -> Template {
     Template::render("error/404", &map)
 }
 
-#[rocket::launch]
+#[launch]
 fn rocket() -> rocket::Rocket {
     rocket::ignite()
         .mount("/", routes![index, get])

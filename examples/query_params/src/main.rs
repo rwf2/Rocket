@@ -30,7 +30,7 @@ fn hello_20(person: LenientForm<Person>) -> String {
     format!("20 years old? Hi, {}!", person.name)
 }
 
-#[rocket::launch]
+#[launch]
 fn rocket() -> rocket::Rocket {
     rocket::ignite().mount("/", routes![hello, hello_20])
 }
