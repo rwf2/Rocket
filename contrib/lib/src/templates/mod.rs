@@ -345,9 +345,9 @@ impl Template {
         where S: Into<Cow<'static, str>>, C: Serialize
     {
         let ctxt = cargo.state::<ContextManager>().map(ContextManager::context).or_else(|| {
-            warn!("Uninitialized template context: missing fairing.");
-            info!("To use templates, you must attach `Template::fairing()`.");
-            info!("See the `Template` documentation for more information.");
+            let span = warn_span!("Uninitialized template context: missing fairing.");
+            info!(parent: &span, "To use templates, you must attach `Template::fairing()`.");
+            info!(parent: &span, "See the `Template` documentation for more information.");
             None
         })?;
 
@@ -362,9 +362,9 @@ impl Template {
         let name = &*self.name;
         let info = ctxt.templates.get(name).ok_or_else(|| {
             let ts: Vec<_> = ctxt.templates.keys().map(|s| s.as_str()).collect();
-            error!("Template '{}' does not exist.", name);
-            info!("Known templates: {}", ts.join(","));
-            info!("Searched in '{:?}'.", ctxt.root);
+            let span = error_span!("Template does not exist.", template = %name);
+            info!(parent: &span, "Known templates: {}", ts.join(","));
+            info!(parent: &span, "Searched in '{:?}'.", ctxt.root);
             Status::InternalServerError
         })?;
 
@@ -374,7 +374,7 @@ impl Template {
         })?;
 
         let string = ctxt.engines.render(name, &info, value).ok_or_else(|| {
-            error!("Template '{}' failed to render.", name);
+            error!(template = %name, "Template failed to render.");
             Status::InternalServerError
         })?;
 
@@ -389,9 +389,9 @@ impl<'r> Responder<'r, 'static> for Template {
     fn respond_to(self, req: &'r Request<'_>) -> response::Result<'static> {
         let (render, content_type) = {
             let ctxt = req.managed_state::<ContextManager>().ok_or_else(|| {
-                error!("Uninitialized template context: missing fairing.");
-                info!("To use templates, you must attach `Template::fairing()`.");
-                info!("See the `Template` documentation for more information.");
+                let span = error_span!("Uninitialized template context: missing fairing.");
+                info!(parent: &span, "To use templates, you must attach `Template::fairing()`.");
+                info!(parent: &span, "See the `Template` documentation for more information.");
                 Status::InternalServerError
             })?.context();
 

@@ -93,9 +93,9 @@ impl<'a, 'r> FromRequest<'a, 'r> for Metadata<'a> {
             .succeeded()
             .and_then(|cm| Some(request::Outcome::Success(Metadata(cm.inner()))))
             .unwrap_or_else(|| {
-                error!("Uninitialized template context: missing fairing.");
-                info!("To use templates, you must attach `Template::fairing()`.");
-                info!("See the `Template` documentation for more information.");
+                let span = error_span!("Uninitialized template context: missing fairing.");
+                info!(parent: &span, "To use templates, you must attach `Template::fairing()`.");
+                info!(parent: &span, "See the `Template` documentation for more information.");
                 request::Outcome::Failure((Status::InternalServerError, ()))
             })
     }

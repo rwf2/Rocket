@@ -338,10 +338,11 @@ impl<'r> Request<'r> {
                 Cookies::new(jar, self.state.config.secret_key(), on_drop)
             }
             None => {
-                error!("Multiple `Cookies` instances are active at once.");
-                info!("An instance of `Cookies` must be dropped before another \
-                       can be retrieved.");
-                warn!("The retrieved `Cookies` instance will be empty.");
+                let span = error_span!("Multiple `Cookies` instances are active at once.");
+                info!(parent: &span,
+                      "An instance of `Cookies` must be dropped before another \
+                      can be retrieved.");
+                warn!(parent: &span, "The retrieved `Cookies` instance will be empty.");
                 Cookies::empty()
             }
         }

@@ -59,10 +59,10 @@ mod context {
 
             let watcher = match watcher {
                 Ok(watcher) => Some(Mutex::new((watcher, rx))),
-                Err(e) => {
-                    warn!("Failed to enable live template reloading: {}", e);
-                    debug!("Reload error: {:?}", e);
-                    warn!("Live template reloading is unavailable.");
+                Err(error) => {
+                    let span = warn_span!("Failed to enable live template reloading", %error);
+                    debug!(parent: &span, reload_error = ?error);
+                    warn!(parent: &span, "Live template reloading is unavailable.");
                     None
                 }
             };
@@ -98,11 +98,13 @@ mod context {
                 }
 
                 if changed {
-                    info!("Change detected: reloading templates.");
+                    let span = info_span!("Change detected: reloading templates.");
+                    let _entered = span.enter();
                     let mut ctxt = self.context_mut();
                     if let Some(mut new_ctxt) = Context::initialize(ctxt.root.clone()) {
                         custom_callback(&mut new_ctxt.engines);
                         *ctxt = new_ctxt;
+                        info!("reloaded!");
                     } else {
                         warn!("An error occurred while reloading templates.");
                         warn!("The previous templates will remain active.");

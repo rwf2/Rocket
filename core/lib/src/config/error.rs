@@ -63,47 +63,51 @@ impl ConfigError {
             IoError => error!("failed reading the config file: IO error"),
             RandFailure => error!("failed to read randomness from the OS"),
             Io(ref error, param) => {
-                error!("I/O error while setting {}:", Paint::default(param).bold());
-                info!("{}", error);
+                let span = error_span!("I/O error while setting param",
+                                       param = %Paint::default(param).bold());
+                info!(parent: &span, error = %error);
             }
             BadFilePath(ref path, reason) => {
-                error!("configuration file path {} is invalid",
-                    Paint::default(path.display()).bold());
-                info!("{}", reason);
+                let span = error_span!("configuration file path is invalid",
+                                       path = %Paint::default(path.display()).bold());
+                info!(parent: &span, reason = %reason);
             }
             BadEntry(ref name, ref filename) => {
                 let valid_entries = format!("{}, global", valid_envs);
-                error!("{} is not a known configuration environment",
-                       Paint::default(format!("[{}]", name)).bold());
-                info!("in {}", Paint::default(filename.display()).bold());
-                info!("valid environments are: {}", Paint::default(&valid_entries).bold());
+                let span = error_span!("Not a known configuration environment",
+                                       environment = %Paint::default(name).bold());
+                info!(parent: &span, "in {}", Paint::default(filename.display()).bold());
+                info!(parent: &span, "valid environments are: {}", Paint::default(&valid_entries).bold());
             }
             BadEnv(ref name) => {
-                error!("{} is not a valid ROCKET_ENV value", Paint::default(name).bold());
-                info!("valid environments are: {}", Paint::default(valid_envs).bold());
+                let span = error_span!("Not a valid ROCKET_ENV value",
+                                       value = %Paint::default(name).bold());
+                info!(parent: &span, "valid environments are: {}", Paint::default(valid_envs).bold());
             }
             BadType(ref name, expected, actual, ref filename) => {
-                error!("{} key could not be parsed", Paint::default(name).bold());
+                let span = error_span!("bad_type", "{} key could not be parsed", Paint::default(name).bold());
                 if let Some(filename) = filename {
-                    info!("in {}", Paint::default(filename.display()).bold());
+                    info!(parent: &span, "in {}", Paint::default(filename.display()).bold());
                 }
 
-                info!("expected value to be {}, but found {}",
-                       Paint::default(expected).bold(), Paint::default(actual).bold());
+                info!(parent: &span,
+                      "expected value to be {}, but found {}",
+                      Paint::default(expected).bold(), Paint::default(actual).bold());
             }
             ParseError(_, ref filename, ref desc, line_col) => {
-                error!("config file failed to parse due to invalid TOML");
-                info!("{}", desc);
-                info!("in {}", Paint::default(filename.display()).bold());
+                let span = error_span!("config file failed to parse due to invalid TOML");
+                info!(parent: &span, "{}", desc);
+                info!(parent: &span, "in {}", Paint::default(filename.display()).bold());
                 if let Some((line, col)) = line_col {
-                    info!("at line {}, column {}",
-                           Paint::default(line + 1).bold(), Paint::default(col + 1).bold());
+                    info!(parent: &span,
+                          line = %Paint::default(line + 1).bold(),
+                          column = %Paint::default(col + 1).bold());
                 }
             }
             BadEnvVal(ref key, ref value, ref error) => {
-                error!("environment variable {} could not be parsed",
-                   Paint::default(format!("ROCKET_{}={}", key.to_uppercase(), value)).bold());
-                info!("{}", error);
+                let span = error_span!("environment variable could not be parsed",
+                                       variable = %Paint::default(format!("ROCKET_{}={}", key.to_uppercase(), value)).bold());
+                info!(parent: &span, error = %error);
             }
             UnknownKey(ref key) => {
                 error!("the configuration key {} is unknown and disallowed in \

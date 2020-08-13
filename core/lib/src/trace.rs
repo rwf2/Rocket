@@ -192,7 +192,10 @@ use std::str::FromStr;
 
 use yansi::Paint;
 
-pub use tracing::{trace, debug, info, warn, error, instrument};
+pub use tracing::{
+    trace, debug, info, warn, error, trace_span, debug_span, warn_span,
+    error_span, instrument,
+};
 
 /// A prelude for working with `tracing` in Rocket applications.
 pub mod prelude {
