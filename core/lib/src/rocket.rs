@@ -98,7 +98,7 @@ impl Rocket {
             };
 
             if let Some(existing) = existing {
-                warn_!("Replacing existing '{}' catcher.", existing);
+                warn!("Replacing existing '{}' catcher.", existing);
             }
         }
     }
