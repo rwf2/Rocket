@@ -120,7 +120,7 @@ impl AsyncRead for DataStream {
     ) -> Poll<io::Result<usize>> {
         let span = tracing::trace_span!("DataStream::poll_read()");
         let _e = span.enter();
-      
+
         if self.buffer.limit() > 0 {
             trace!("DataStream::buffer_read()");
             match Pin::new(&mut self.buffer).poll_read(cx, buf) {

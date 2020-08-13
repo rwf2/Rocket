@@ -136,7 +136,7 @@ impl Data {
                 Ok(0) => { self.is_complete = true; break },
                 Ok(n) => len += n,
                 Err(e) => {
-                    error_!("Failed to read into peek buffer: {:?}.", e);
+                    error!("Failed to read into peek buffer: {:?}.", e);
                     break;
                 }
             }
