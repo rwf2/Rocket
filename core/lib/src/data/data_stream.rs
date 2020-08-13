@@ -118,7 +118,7 @@ impl AsyncRead for DataStream {
         cx: &mut Context<'_>,
         buf: &mut [u8]
     ) -> Poll<io::Result<usize>> {
-        let span = tracing::trace_span!("DataStream::poll_read()");
+        let span = trace_span!("DataStream::poll_read()");
         let _e = span.enter();
 
         if self.buffer.limit() > 0 {

@@ -67,26 +67,26 @@ pub(crate) struct Token;
 impl Rocket {
     #[inline]
     fn _mount(&mut self, base: Origin<'static>, routes: Vec<Route>) {
-        let span = tracing::info_span!("mounting", at = %Paint::blue(&base), "{} Mounting", Paint::emoji("🛰 "),);
+        let span = info_span!("mounting", at = %Paint::blue(&base), "{} Mounting", Paint::emoji("🛰 "),);
         let _e = span.enter();
 
         for route in routes {
             let old_route = route.clone();
             let route = route.map_base(|old| format!("{}{}", base, old))
                 .unwrap_or_else(|e| {
-                    let span = tracing::error_span!("malformed_uri", "Route `{}` has a malformed URI.", old_route);
+                    let span = error_span!("malformed_uri", "Route `{}` has a malformed URI.", old_route);
                     error!(parent: &span, "{}", e);
                     panic!("Invalid route URI.");
                 });
 
-            tracing::info!(%route);
+            info!(%route);
             self.router.add(route);
         }
     }
 
     #[inline]
     fn _register(&mut self, catchers: Vec<Catcher>) {
-        let span = tracing::info_span!("catchers", "{}{}", Paint::emoji("👾 "), Paint::magenta("Catchers:"));
+        let span = info_span!("catchers", "{}{}", Paint::emoji("👾 "), Paint::magenta("Catchers:"));
         let _e = span.enter();
 
         for catcher in catchers {
@@ -215,7 +215,7 @@ async fn hyper_service_fn(
         let token = rocket.preprocess_request(&mut req, &mut data).await;
         let r = rocket.dispatch(token, &mut req, data).await;
         rocket.issue_response(r, tx).await;
-    }.instrument(tracing::info_span!("connection", from = %h_addr, "{}Connection", Paint::emoji("📡 "))));
+    }.instrument(info_span!("connection", from = %h_addr, "{}Connection", Paint::emoji("📡 "))));
 
     rx.await.map_err(|e| io::Error::new(io::ErrorKind::Other, e))
 }
@@ -438,7 +438,7 @@ impl Rocket {
             }
 
             response
-        }.instrument(tracing::info_span!("request", "{}", request))
+        }.instrument(info_span!("request", "{}", request))
          .await
     }
 
@@ -453,7 +453,7 @@ impl Rocket {
         req: &'r Request<'s>
     ) -> impl Future<Output = Response<'r>> + 's {
         async move {
-            tracing::warn_span!("Responding...");
+            warn!("Responding...");
             // For now, we reset the delta state to prevent any modifications
             // from earlier, unsuccessful paths from being reflected in error
             // response. We may wish to relax this in the future.
@@ -481,7 +481,7 @@ impl Rocket {
                     default.expect("Rocket has default 500 response")
                 }
             }
-        }.instrument(tracing::warn_span!("handle_error", "Responding with {} catcher.", Paint::red(&status)))
+        }.instrument(warn_span!("handle_error", "Responding with {} catcher.", Paint::red(&status)))
     }
 
     // TODO.async: Solidify the Listener APIs and make this function public
@@ -620,29 +620,29 @@ impl Rocket {
     #[inline]
     fn configured(config: Config) -> Rocket {
         crate::trace::try_init(config.log_level);
-        let span = tracing::info_span!("configured", "{}Configured for {}", Paint::emoji("🔧 "), config.environment,);
+        let span = info_span!("configured", "{}Configured for {}", Paint::emoji("🔧 "), config.environment,);
         let _e = span.enter();
 
-        tracing::info!(address = %&config.address);
-        tracing::info!(port = %&config.port);
-        tracing::info!(log = %&config.log_level);
-        tracing::info!(workers = %&config.workers);
-        tracing::info!(secret_key = %&config.secret_key);
-        tracing::info!(limits = %&config.limits);
+        info!(address = %&config.address);
+        info!(port = %&config.port);
+        info!(log = %&config.log_level);
+        info!(workers = %&config.workers);
+        info!(secret_key = %&config.secret_key);
+        info!(limits = %&config.limits);
 
         match config.keep_alive {
-            Some(v) => tracing::info!(keep_alive = %Paint::default(format!("{}s", v)).bold()),
-            None => tracing::info!(keep_alive = %Paint::default("disabled").bold()),
+            Some(v) => info!(keep_alive = %Paint::default(format!("{}s", v)).bold()),
+            None => info!(keep_alive = %Paint::default("disabled").bold()),
         }
 
         let tls_configured = config.tls.is_some();
         if tls_configured && cfg!(feature = "tls") {
-            tracing::info!(tls = %Paint::default("enabled").bold());
+            info!(tls = %Paint::default("enabled").bold());
         } else if tls_configured {
-            tracing::error!(tls = %Paint::default("disabled").bold());
-            tracing::error!("tls is configured, but the tls feature is disabled");
+            error!(tls = %Paint::default("disabled").bold());
+            error!("tls is configured, but the tls feature is disabled");
         } else {
-            tracing::info!(tls = %Paint::default("disabled").bold());
+            info!(tls = %Paint::default("disabled").bold());
         }
 
         if config.secret_key.is_generated() && config.environment.is_prod() {
@@ -650,9 +650,9 @@ impl Rocket {
         }
 
         for (name, value) in config.extras() {
-            tracing::info!("{} {}: {}",
-                          Paint::yellow("[extra]"), name,
-                          Paint::default(LoggedValue(value)).bold());
+            info!("{} {}: {}",
+                  Paint::yellow("[extra]"), name,
+                  Paint::default(LoggedValue(value)).bold());
         }
 
         let managed_state = Container::new();
