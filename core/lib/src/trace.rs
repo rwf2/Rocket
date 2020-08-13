@@ -39,7 +39,7 @@
 //! An event consists of one or more key-value pairs, called _fields_, and/or a
 //! textual, human-readable _message_. For example, this will record an event
 //! at the `info` level, with two fields, named `answer` and `question`:
-//! 
+//!
 //! ```
 //! # use rocket::trace;
 //! trace::info!(answer = 42, question = "life, the universe, and everything");
@@ -61,7 +61,7 @@
 //! async fn jump_to_hyperspace(destination: Planet) {
 //!     // This event will be recorded *within* the `jump_to_hyperspace` span.
 //!     tracing::debug!("preparing to jump to hyperspace...");
-//! 
+//!
 //!    // ...
 //! }
 //! ```
@@ -244,7 +244,7 @@ impl fmt::Display for LoggingLevel {
 
 /// Returns a Rocket filtering [`Layer`] based on the provided logging level.
 ///
-/// The returned [`Layer`] can be added to another `tracing` subscriber to 
+/// The returned [`Layer`] can be added to another `tracing` subscriber to
 /// configure it to filter spans and events based on the logging level
 /// specified in the Rocket config.
 ///
@@ -272,7 +272,7 @@ impl fmt::Display for LoggingLevel {
 /// ```
 ///
 /// [`Layer`]: https://docs.rs/tracing-subscriber/latest/tracing_subscriber/layer/trait.Layer.html
-pub fn filter_layer<S>(level: LoggingLevel) -> impl Layer<S> 
+pub fn filter_layer<S>(level: LoggingLevel) -> impl Layer<S>
 where
     S: tracing::Subscriber,
 {
@@ -421,7 +421,7 @@ where
                 seen = true;
             }
             Some(id)
-        } else { 
+        } else {
             None
         };
 
@@ -461,7 +461,7 @@ fn with_meta(
     meta: &tracing::Metadata<'_>,
     f: impl fmt::Display,
 ) -> fmt::Result {
- 
+
     struct WithFile<'a, F> {
         meta: &'a tracing::Metadata<'a>,
         f: F,
