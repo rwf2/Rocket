@@ -133,7 +133,7 @@ pub fn _catch(
                     .status(#status)
                     .merge(__response)
                     .ok()
-            }.instrument(#log::warn_span!(#generated_span_name, status = %#status)))
+            }.instrument(#log::info_span!(#generated_span_name, status = %#status)))
         }
 
         /// Rocket code generated static catcher info.
