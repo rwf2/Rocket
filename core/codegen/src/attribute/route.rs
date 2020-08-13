@@ -128,19 +128,19 @@ fn param_expr(seg: &Segment, ident: &syn::Ident, ty: &syn::Type) -> TokenStream 
     define_vars_and_mods!(req, data, error, log, request, _None, _Some, _Ok, _Err, Outcome);
     let i = seg.index.expect("dynamic parameters must be indexed");
     let span = ident.span().join(ty.span()).unwrap_or_else(|| ty.span());
-    let name = ident.to_string();
 
     // All dynamic parameter should be found if this function is being called;
     // that's the point of statically checking the URI parameters.
     let internal_error = quote!({
-        #log::error("Internal invariant error: expected dynamic parameter not found.");
-        #log::error("Please report this error to the Rocket issue tracker.");
+        #log::error!("Internal invariant error: expected dynamic parameter not found.");
+        #log::error!("Please report this error to the Rocket issue tracker.");
         #Outcome::Forward(#data)
     });
 
     // Returned when a dynamic parameter fails to parse.
+    let field_name = syn::Ident::new(&seg.name, seg.span);
     let parse_error = quote!({
-        #log::warn_(&format!("Failed to parse '{}': {:?}", #name, #error));
+        #log::warn!(#field_name = %#error, "Failed to parse dynamic parameter");
         #Outcome::Forward(#data)
     });
 
@@ -231,7 +231,7 @@ fn query_exprs(route: &Route) -> Option<TokenStream> {
             },
             Kind::Static => quote!()
         };
-
+        let field_name = syn::Ident::new(name, segment.span);
         let matcher = match segment.kind {
             Kind::Single => quote_spanned! { span =>
                 (_, #name, __v) => {
@@ -239,7 +239,7 @@ fn query_exprs(route: &Route) -> Option<TokenStream> {
                     let __v = match <#ty as #request::FromFormValue>::from_form_value(__v) {
                         #_Ok(__v) => __v,
                         #_Err(__e) => {
-                            #log::warn_(&format!("Failed to parse '{}': {:?}", #name, __e));
+                            #log::warn!(#field_name = ?__e, "Failed to parse");
                             return #Outcome::Forward(#data);
                         }
                     };
@@ -261,7 +261,7 @@ fn query_exprs(route: &Route) -> Option<TokenStream> {
                 let #ident = match #ident.or_else(<#ty as #request::FromFormValue>::default) {
                     #_Some(__v) => __v,
                     #_None => {
-                        #log::warn_(&format!("Missing required query parameter '{}'.", #name));
+                        #log::warn!(parameter = %#name, "Missing required query parameter");
                         return #Outcome::Forward(#data);
                     }
                 };
@@ -271,7 +271,7 @@ fn query_exprs(route: &Route) -> Option<TokenStream> {
                 let #ident = match <#ty as #request::FromQuery>::from_query(#Query(&#trail)) {
                     #_Ok(__v) => __v,
                     #_Err(__e) => {
-                        #log::warn_(&format!("Failed to parse '{}': {:?}", #name, __e));
+                        #log::warn!(#field_name = ?__e, "Failed to parse");
                         return #Outcome::Forward(#data);
                     }
                 };
