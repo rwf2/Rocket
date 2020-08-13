@@ -408,13 +408,14 @@ fn codegen_route(route: Route) -> Result<TokenStream> {
     }
 
     // Gather everything we need.
-    define_vars_and_mods!(req, data, _Box, Request, Data, StaticRouteInfo, HandlerFuture);
+    define_vars_and_mods!(req, log, data, _Box, Request, Data, StaticRouteInfo, HandlerFuture);
     let (vis, user_handler_fn) = (&route.function.vis, &route.function);
     let user_handler_fn_name = &user_handler_fn.sig.ident;
     let generated_fn_name = user_handler_fn_name.prepend(ROUTE_FN_PREFIX);
     let generated_struct_name = user_handler_fn_name.prepend(ROUTE_STRUCT_PREFIX);
     let generated_internal_uri_macro = generate_internal_uri_macro(&route);
     let generated_respond_expr = generate_respond_expr(&route);
+    let generated_span_name = user_handler_fn_name.to_string();
 
     let method = route.attribute.method;
     let path = route.attribute.path.origin.0.to_string();
@@ -430,13 +431,14 @@ fn codegen_route(route: Route) -> Result<TokenStream> {
             #req: &'_b #Request,
             #data: #Data
         ) -> #HandlerFuture<'_b> {
+            use #log::Instrument as _;
             #_Box::pin(async move {
                 #(#req_guard_definitions)*
                 #(#parameter_definitions)*
                 #data_stmt
 
                 #generated_respond_expr
-            })
+            }.instrument(#log::info_span!(#generated_span_name)))
         }
 
         /// Rocket code generated wrapping URI macro.

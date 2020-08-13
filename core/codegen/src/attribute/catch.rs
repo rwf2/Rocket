@@ -77,12 +77,13 @@ pub fn _catch(
     let user_catcher_fn_name = catch.function.sig.ident.clone();
     let generated_struct_name = user_catcher_fn_name.prepend(CATCH_STRUCT_PREFIX);
     let generated_fn_name = user_catcher_fn_name.prepend(CATCH_FN_PREFIX);
+    let generated_span_name = user_catcher_fn_name.to_string();
     let (vis, catcher_status) = (&catch.function.vis, &catch.status);
     let status_code = Optional(catcher_status.as_ref().map(|s| s.0.code));
 
     // Variables names we'll use and reuse.
     define_vars_and_mods!(catch.function.span().into() =>
-        req, status, _Box, Request, Response, ErrorHandlerFuture, Status);
+        req, status, log, _Box, Request, Response, ErrorHandlerFuture, Status);
 
     // Determine the number of parameters that will be passed in.
     if catch.function.sig.inputs.len() > 2 {
@@ -125,13 +126,14 @@ pub fn _catch(
             #status: #Status,
             #req: &'_b #Request
         ) -> #ErrorHandlerFuture<'_b> {
+            use #log::Instrument as _;
             #_Box::pin(async move {
                 let __response = #catcher_response;
                 #Response::build()
                     .status(#status)
                     .merge(__response)
                     .ok()
-            })
+            }.instrument(#log::warn_span!(#generated_span_name, status = %#status)))
         }
 
         /// Rocket code generated static catcher info.

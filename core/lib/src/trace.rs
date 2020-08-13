@@ -48,16 +48,29 @@
 //!
 //! Spans may be recorded in a few different ways. Like events, they have a
 //! priority level, and may have one or more fields. In addition, all spans also
-//! have a _name_. The easiest way to record a span is to add the
-//! [`#[tracing::instrument]`][instrument] attribute to a function. For example:
+//! have a _name_.
 //!
+//! Rocket's code generation will automatically generate spans for route and
+//! catcher functions, so any events emitted within those functions or functions
+//! they call will be annotated with the name of the handler or catcher
+//! function. For example:
+//! ```
+//! #[get("/hello-world")]
+//! fn hello_world() -> String {
+//!     // This event will occur within a span named `hello_world`.
+//!     rocket::trace::info!("saying hello!");
+//!
+//!     "Hello world".to_string()
+//! }
+//! ```
+//! Spans may be added to other functions, as well. The easiest way to
+//! do this is to add the [`#[rocket::trace::instrument]`][instrument] attribute
+//! to that function. For example:
 //!
 //! ```
-//! use rocket::trace;
-//!
 //! # #[derive(Debug)] struct Planet;
 //! // Calling this function will enter a new span named `jump_to_hyperspace`.
-//! #[trace::instrument]
+//! #[rocket::trace::instrument]
 //! async fn jump_to_hyperspace(destination: Planet) {
 //!     // This event will be recorded *within* the `jump_to_hyperspace` span.
 //!     tracing::debug!("preparing to jump to hyperspace...");
@@ -193,14 +206,16 @@ use std::str::FromStr;
 use yansi::Paint;
 
 pub use tracing::{
-    trace, debug, info, warn, error, trace_span, debug_span, warn_span,
-    error_span, instrument,
+    trace, debug, info, warn, error, trace_span, debug_span, info_span,
+    warn_span, error_span, instrument,
 };
+
+pub use tracing_futures::Instrument;
 
 /// A prelude for working with `tracing` in Rocket applications.
 pub mod prelude {
     pub use tracing_subscriber::prelude::*;
-    pub use tracing_futures::Instrument as _;
+    pub use super::Instrument as _;
 }
 
 /// Defines the different levels for log messages.
