@@ -427,10 +427,10 @@ where
                         if meta.fields().iter().any(|field| field.name() == "message") {
                             with_meta(writer, meta, &fields.fields)?;
                         } else {
-                            with_meta(writer, meta, format_args!("{} {}", span.name(), &fields.fields))?;
+                            with_meta(writer, meta, format_args!("{} {}", Paint::new(span.name()).bold(), &fields.fields))?;
                         }
                     } else {
-                        with_meta(writer, span.metadata(), span.name())?;
+                        with_meta(writer, span.metadata(),  Paint::new(span.name()).bold())?;
                     }
                     seen = true;
                     Ok(())
