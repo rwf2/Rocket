@@ -438,7 +438,12 @@ fn codegen_route(route: Route) -> Result<TokenStream> {
                 #data_stmt
 
                 #generated_respond_expr
-            }.instrument(#log::info_span!(#generated_span_name)))
+            }.instrument(#log::info_span!(
+                #generated_span_name,
+                method = %#method,
+                path = #path,
+                "Route: {}", #generated_span_name
+            )))
         }
 
         /// Rocket code generated wrapping URI macro.
