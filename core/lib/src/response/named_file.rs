@@ -9,9 +9,9 @@ use crate::response::{self, Responder};
 use crate::http::ContentType;
 
 /// A file with an associated name; responds with the Content-Type based on the
-/// file extension.
+/// file extension or with a default, if set.
 #[derive(Debug)]
-pub struct NamedFile(PathBuf, File);
+pub struct NamedFile(PathBuf, File, Option<ContentType>);
 
 impl NamedFile {
     /// Attempts to open a file in read-only mode.
@@ -38,7 +38,7 @@ impl NamedFile {
         // all of those `seek`s to determine the file size. But, what happens if
         // the file gets changed between now and then?
         let file = File::open(path.as_ref()).await?;
-        Ok(NamedFile(path.as_ref().to_path_buf(), file))
+        Ok(NamedFile(path.as_ref().to_path_buf(), file, None))
     }
 
     /// Retrieve the underlying `File`.
@@ -78,6 +78,31 @@ impl NamedFile {
     pub fn path(&self) -> &Path {
         self.0.as_path()
     }
+
+    /// Sets the default content type for the file
+    ///
+    /// If the file does not have an extension, the content type will
+    /// be set to this value. If no default is set and the file does not
+    /// have an extension, no content-type header will be sent.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// # use std::io;
+    /// use rocket::response::NamedFile;
+    /// use rocket::http::ContentType;
+    ///
+    /// # #[allow(head_code)]
+    /// # async fn demo_default_type() -> io::Result<()> {
+    /// let mut file = NamedFile::open("foo.text").await?;
+    /// file.default_type(ContentType::Plain);
+    /// # Ok(())
+    /// # }
+    /// ```
+    pub fn default_type(&mut self, content_type: ContentType) -> &mut Self {
+        self.2 = Some(content_type);
+        self
+    }
 }
 
 /// Streams the named file to the client. Sets or overrides the Content-Type in
@@ -91,7 +116,11 @@ impl<'r> Responder<'r, 'static> for NamedFile {
         if let Some(ext) = self.0.extension() {
             if let Some(ct) = ContentType::from_extension(&ext.to_string_lossy()) {
                 response.set_header(ct);
+            } else if let Some(ct) = self.2 {
+                response.set_header(ct);
             }
+        } else if let Some(ct) = self.2 {
+            response.set_header(ct);
         }
 
         Ok(response)

@@ -17,7 +17,7 @@
 use std::path::{PathBuf, Path};
 
 use rocket::{Request, Data, Route};
-use rocket::http::{Method, uri::Segments, ext::IntoOwned};
+use rocket::http::{ContentType, Method, uri::Segments, ext::IntoOwned};
 use rocket::handler::{Handler, Outcome};
 use rocket::response::{NamedFile, Redirect};
 
@@ -207,6 +207,7 @@ pub struct StaticFiles {
     root: PathBuf,
     options: Options,
     rank: isize,
+    content_type: Option<ContentType>,
 }
 
 impl StaticFiles {
@@ -293,7 +294,7 @@ impl StaticFiles {
             panic!("refusing to continue due to invalid static files path");
         }
 
-        StaticFiles { root: path.into(), options, rank: Self::DEFAULT_RANK }
+        StaticFiles { root: path.into(), options, rank: Self::DEFAULT_RANK, content_type: None }
     }
 
     /// Sets the rank for generated routes to `rank`.
@@ -314,6 +315,15 @@ impl StaticFiles {
         self.rank = rank;
         self
     }
+
+    /// Sets the default content type
+    ///
+    /// If a file does not have an extension, this value will be used
+    /// for the content-type header
+    pub fn default_type(mut self, content_type: ContentType) -> Self {
+        self.content_type = Some(content_type);
+        self
+    }
 }
 
 impl Into<Vec<Route>> for StaticFiles {
@@ -331,7 +341,7 @@ impl Into<Vec<Route>> for StaticFiles {
     }
 }
 
-async fn handle_dir<'r, P>(opt: Options, r: &'r Request<'_>, d: Data, p: P) -> Outcome<'r>
+async fn handle_dir<'r, P>(opt: Options, r: &'r Request<'_>, d: Data, p: P, content_type: Option<&ContentType>) -> Outcome<'r>
     where P: AsRef<Path>
 {
     if opt.contains(Options::NormalizeDirs) && !r.uri().path().ends_with('/') {
@@ -346,7 +356,13 @@ async fn handle_dir<'r, P>(opt: Options, r: &'r Request<'_>, d: Data, p: P) -> O
         return Outcome::forward(d);
     }
 
-    let file = NamedFile::open(p.as_ref().join("index.html")).await.ok();
+    let file = {
+        let mut file = NamedFile::open(p.as_ref().join("index.html")).await.ok();
+        if let (Some(ref mut file), Some(content_type)) = (file.as_mut(), content_type) {
+            file.default_type(content_type.clone());
+        }
+        file
+    };
     Outcome::from_or_forward(r, d, file)
 }
 
@@ -358,7 +374,7 @@ impl Handler for StaticFiles {
         let current_route = req.route().expect("route while handling");
         let is_segments_route = current_route.uri.path().ends_with(">");
         if !is_segments_route {
-            return handle_dir(self.options, req, data, &self.root).await;
+            return handle_dir(self.options, req, data, &self.root, self.content_type.as_ref()).await;
         }
 
         // Otherwise, we're handling segments. Get the segments as a `PathBuf`,
@@ -370,8 +386,18 @@ impl Handler for StaticFiles {
             .map(|path| self.root.join(path));
 
         match path {
-            Some(p) if p.is_dir() => handle_dir(self.options, req, data, p).await,
-            Some(p) => Outcome::from_or_forward(req, data, NamedFile::open(p).await.ok()),
+            Some(p) if p.is_dir() => handle_dir(self.options, req, data, p, self.content_type.as_ref()).await,
+            Some(p) => {
+                let file = {
+                    let mut file = NamedFile::open(p).await.ok();
+                    if let (Some(ref mut file), Some(content_type)) = (file.as_mut(), self.content_type.as_ref()) {
+                        println!("setting default content-type");
+                        file.default_type(content_type.clone());
+                    }
+                    file
+                };
+                Outcome::from_or_forward(req, data, file)
+            },
             None => Outcome::forward(data),
         }
     }

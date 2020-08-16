@@ -5,7 +5,7 @@ mod static_tests {
 
     use rocket::{self, Rocket, Route};
     use rocket_contrib::serve::{StaticFiles, Options, crate_relative};
-    use rocket::http::Status;
+    use rocket::http::{ContentType, Status};
     use rocket::local::blocking::Client;
 
     fn static_root() -> &'static Path {
@@ -22,6 +22,8 @@ mod static_tests {
             .mount("/both", StaticFiles::new(&root, Options::DotFiles | Options::Index))
             .mount("/redir", StaticFiles::new(&root, Options::NormalizeDirs))
             .mount("/redir_index", StaticFiles::new(&root, Options::NormalizeDirs | Options::Index))
+            .mount("/no_extension_no_default", StaticFiles::new(&root, Options::None))
+            .mount("/no_extension_with_default", StaticFiles::new(&root, Options::None).default_type(ContentType::Plain))
     }
 
     static REGULAR_FILES: &[&str] = &[
@@ -188,5 +190,18 @@ mod static_tests {
         let response = client.get("/redir_index").dispatch();
         assert_eq!(response.status(), Status::PermanentRedirect);
         assert_eq!(response.headers().get("Location").next(), Some("/redir_index/"));
+    }
+
+    #[test]
+    fn test_default_content_type() {
+        let client = Client::new(rocket()).expect("valid rocket");
+
+        let response = client.get("/no_extension_no_default/inner/goodbye").dispatch();
+        assert_eq!(response.headers().get("Content-Type").next(), None);
+
+        let response = client.get("/no_extension_with_default/inner/goodbye").dispatch();
+        let mut content_types = response.headers().get("Content-Type");
+        assert_eq!(content_types.next(), Some("text/plain; charset=utf-8"));
+        assert_eq!(content_types.next(), None);
     }
 }
