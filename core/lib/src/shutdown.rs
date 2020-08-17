@@ -50,6 +50,23 @@ impl Shutdown {
         let _ = self.0.send(());
         info!("Server shutdown requested, waiting for all pending requests to finish.");
     }
+    /// Wait until shutdown starts.
+    ///
+    /// This function will usually be combined with `futures::select!()`
+    /// so that the responder can short-circuit a long-running operation.
+    ///
+    /// ```rust,no_run
+    /// use futures::{future, select};
+    /// #[get("/shutdown")]
+    /// async fn wait_for_shutdown(handle: Shutdown) -> &'static str {
+    ///     let shutdown_future = handle.wait();
+    ///     let long_running_operation = future::pending::<()>();
+    ///     let result = select! {
+    ///         _ = shutdown_future => "shutting down...",
+    ///         _ = long_running_operation => "complete ok",
+    ///     }.await
+    /// }
+    /// ```
     pub async fn wait(self) {
         // This uses four events:
         //
