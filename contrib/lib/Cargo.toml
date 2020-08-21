@@ -10,6 +10,7 @@ readme = "../../README.md"
 keywords = ["rocket", "web", "framework", "contrib", "contributed"]
 license = "MIT OR Apache-2.0"
 edition = "2018"
+include = ["src/**/*"]
 
 [features]
 # Internal use only.

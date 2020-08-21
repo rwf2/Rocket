@@ -14,6 +14,7 @@ license = "MIT OR Apache-2.0"
 build = "build.rs"
 categories = ["web-programming::http-server"]
 edition = "2018"
+include = ["src/**/*", "build.rs"]
 
 [package.metadata.docs.rs]
 all-features = true
