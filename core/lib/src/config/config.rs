@@ -60,6 +60,8 @@ pub struct Config {
     pub(crate) config_file_path: Option<PathBuf>,
     /// The path root-relative files will be rooted from.
     pub(crate) root_path: Option<PathBuf>,
+    /// Default duraion to hold open a connection on shutting down.
+    pub wait_on_shutdown: u32,
 }
 
 macro_rules! config_from_raw {
@@ -283,6 +285,7 @@ impl Config {
                     extras: HashMap::new(),
                     config_file_path: None,
                     root_path: None,
+                    wait_on_shutdown: 0,
                 }
             }
             Staging => {
@@ -299,6 +302,7 @@ impl Config {
                     extras: HashMap::new(),
                     config_file_path: None,
                     root_path: None,
+                    wait_on_shutdown: 1,
                 }
             }
             Production => {
@@ -315,6 +319,7 @@ impl Config {
                     extras: HashMap::new(),
                     config_file_path: None,
                     root_path: None,
+                    wait_on_shutdown: 1,
                 }
             }
         })
@@ -358,6 +363,7 @@ impl Config {
             secret_key => (str, set_secret_key, id),
             tls => (tls_config, set_raw_tls, id),
             limits => (limits, set_limits, ok),
+            wait_on_shutdown => (u32, set_wait_on_shutdown, ok),
             | _ => {
                 self.extras.insert(name.into(), val.clone());
                 Ok(())
@@ -424,6 +430,22 @@ impl Config {
     #[inline]
     pub fn set_port(&mut self, port: u16) {
         self.port = port;
+    }
+
+    /// Sets the amount of time to wait for a response to finish on graceful shutdown (in seconds).
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use rocket::config::{Config, Environment};
+    ///
+    /// let mut config = Config::new(Environment::Staging);
+    /// config.set_wait_on_shutdown(2);
+    /// assert_eq!(config.wait_on_shutdown, 2);
+    /// ```
+    #[inline]
+    pub fn set_wait_on_shutdown(&mut self, wait_on_shutdown: u32) {
+        self.wait_on_shutdown = wait_on_shutdown;
     }
 
     /// Sets the number of `workers` in `self` to `workers`.
@@ -972,6 +994,7 @@ impl fmt::Debug for Config {
         s.field("workers", &self.workers);
         s.field("keep_alive", &self.keep_alive);
         s.field("log_level", &self.log_level);
+        s.field("wait_on_shutdown", &self.wait_on_shutdown);
 
         for (key, value) in self.extras() {
             s.field(key, &value);

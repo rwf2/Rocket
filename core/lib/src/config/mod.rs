@@ -31,18 +31,19 @@
 //! not used by Rocket itself but can be used by external libraries. The
 //! standard configuration parameters are:
 //!
-//! | name       | type           | description                                                 | examples                   |
-//! |------------|----------------|-------------------------------------------------------------|----------------------------|
-//! | address    | string         | ip address or host to listen on                             | `"localhost"`, `"1.2.3.4"` |
-//! | port       | integer        | port number to listen on                                    | `8000`, `80`               |
-//! | keep_alive | integer        | keep-alive timeout in seconds                               | `0` (disable), `10`        |
-//! | workers    | integer        | number of concurrent thread workers                         | `36`, `512`                |
-//! | log        | string         | max log level: `"off"`, `"normal"`, `"debug"`, `"critical"` | `"off"`, `"normal"`        |
-//! | secret_key | 256-bit base64 | secret key for private cookies                              | `"8Xui8SI..."` (44 chars)  |
-//! | tls        | table          | tls config table with two keys (`certs`, `key`)             | _see below_                |
-//! | tls.certs  | string         | path to certificate chain in PEM format                     | `"private/cert.pem"`       |
-//! | tls.key    | string         | path to private key for `tls.certs` in PEM format           | `"private/key.pem"`        |
-//! | limits     | table          | map from data type (string) to data limit (integer: bytes)  | `{ forms = 65536 }`        |
+//! | name             | type           | description                                                 | examples                   |
+//! |------------------|----------------|-------------------------------------------------------------|----------------------------|
+//! | address          | string         | ip address or host to listen on                             | `"localhost"`, `"1.2.3.4"` |
+//! | port             | integer        | port number to listen on                                    | `8000`, `80`               |
+//! | keep_alive       | integer        | keep-alive timeout in seconds                               | `0` (disable), `10`        |
+//! | wait_on_shutdown | integer        | timeout in seconds when stopping the server                 | `0` (disable), `10`        |
+//! | workers          | integer        | number of concurrent thread workers                         | `36`, `512`                |
+//! | log              | string         | max log level: `"off"`, `"normal"`, `"debug"`, `"critical"` | `"off"`, `"normal"`        |
+//! | secret_key       | 256-bit base64 | secret key for private cookies                              | `"8Xui8SI..."` (44 chars)  |
+//! | tls              | table          | tls config table with two keys (`certs`, `key`)             | _see below_                |
+//! | tls.certs        | string         | path to certificate chain in PEM format                     | `"private/cert.pem"`       |
+//! | tls.key          | string         | path to private key for `tls.certs` in PEM format           | `"private/key.pem"`        |
+//! | limits           | table          | map from data type (string) to data limit (integer: bytes)  | `{ forms = 65536 }`        |
 //!
 //! ### Rocket.toml
 //!

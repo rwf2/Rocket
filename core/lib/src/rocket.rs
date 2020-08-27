@@ -3,6 +3,7 @@ use std::sync::Arc;
 use std::sync::atomic::AtomicBool;
 use std::collections::HashMap;
 use std::time::Duration;
+use std::cmp::min;
 
 #[allow(unused_imports)]
 use futures::future::FutureExt;
@@ -236,9 +237,11 @@ impl Rocket {
         tx: oneshot::Sender<hyper::Response<hyper::Body>>,
         mut shutdown_receiver: broadcast::Receiver<()>,
     ) {
-        let wait_on_shutdown = response.wait_on_shutdown();
-        let result = self.write_response(response, tx);
-        let mut shutdown_receiver = if wait_on_shutdown != Duration::from_millis(0) {
+        let wait_on_shutdown = {
+            let wait_on_shutdown = response.wait_on_shutdown();
+            min(wait_on_shutdown, Duration::from_millis((self.config.wait_on_shutdown as u64) * 1_000))
+        };
+        let mut shutdown_receiver = {
             let (tx, rx) = broadcast::channel(1);
             tokio::spawn(async move {
                 let _ = shutdown_receiver.recv().await;
@@ -246,11 +249,9 @@ impl Rocket {
                 tx.send(()).expect("there should always be at least one shutdown listener");
             });
             rx
-        } else {
-            shutdown_receiver
         };
         tokio::select!{
-            result = result => {
+            result = self.write_response(response, tx) => {
                 match result {
                     Ok(()) => {
                         info_!("{}", Paint::green("Response succeeded."));
