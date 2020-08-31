@@ -90,7 +90,7 @@ mod context {
         /// reinitialized from disk and the user's customization callback is run
         /// again.
         pub fn reload_if_needed<F>(&self, custom_callback: F)
-            where F: Fn(&mut Engines) -> Result<(), Box<dyn std::error::Error + Send + Sync>>
+            where F: Fn(&mut Engines) -> Result<(), Box<dyn std::error::Error>>
         {
             self.watcher.as_ref().map(|w| {
                 let rx_lock = w.lock().expect("receive queue lock");
@@ -129,7 +129,7 @@ pub struct TemplateFairing {
     /// The user-provided customization callback, allowing the use of
     /// functionality specific to individual template engines. In debug mode,
     /// this callback might be run multiple times as templates are reloaded.
-    pub custom_callback: Box<dyn Fn(&mut Engines) -> Result<(), Box<dyn std::error::Error + Send + Sync>> + Send + Sync + 'static>,
+    pub custom_callback: Box<dyn Fn(&mut Engines) -> Result<(), Box<dyn std::error::Error>> + Send + Sync + 'static>,
 }
 
 #[rocket::async_trait]

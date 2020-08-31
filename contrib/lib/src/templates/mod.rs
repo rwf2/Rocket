@@ -281,7 +281,7 @@ impl Template {
     /// }
     /// ```
     pub fn custom<F>(f: F) -> impl Fairing
-        where F: Fn(&mut Engines) -> Result<(), Box<dyn std::error::Error + Send + Sync>> + Send + Sync + 'static
+        where F: Fn(&mut Engines) -> Result<(), Box<dyn std::error::Error>> + Send + Sync + 'static
     {
         TemplateFairing { custom_callback: Box::new(f) }
     }
