@@ -615,7 +615,7 @@ impl Config {
     ///
     /// Certificates are read from `ca_path`. The certificate chain must be
     /// in X.509 PEM format.
-    /// 
+    ///
     /// # Errors
     ///
     /// If reading either the certificates fails, an error of variant `Io` is returned.
