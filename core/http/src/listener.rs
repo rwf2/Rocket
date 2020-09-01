@@ -30,9 +30,6 @@ pub trait Listener {
 /// A 'Connection' represents an open connection to a client
 pub trait Connection: AsyncRead + AsyncWrite {
     fn remote_addr(&self) -> Option<SocketAddr>;
-
-    #[config(tls)]
-    fn peer_certificates(&self) -> Option<Vec<Certificate>>;
 }
 
 /// This is a genericized version of hyper's AddrIncoming that is intended to be
