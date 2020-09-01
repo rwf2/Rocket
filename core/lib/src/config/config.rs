@@ -626,7 +626,7 @@ impl Config {
     /// # use rocket::config::ConfigError;
     /// # fn config_test() -> Result<(), ConfigError> {
     /// let mut config = rocket::Config::development();
-    /// config.set_mtls("/etc/ssl/my_certs.pem")?;
+    /// config.set_mtls("/etc/ssl/certs/GlobalSign_Root_CA.pem", true)?;
     /// # Ok(())
     /// # }
     /// ```
