@@ -648,7 +648,7 @@ impl Config {
     #[doc(hidden)]
     #[cfg(not(feature = "tls"))]
     pub fn set_mtls(&mut self, _: &str, _: bool) -> Result<()> {
-        self.tls = Some(MutualTlsConfig);
+        self.mtls = Some(MutualTlsConfig);
         Ok(())
     }
 
