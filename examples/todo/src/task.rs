@@ -13,6 +13,8 @@ mod schema {
 use self::schema::tasks;
 use self::schema::tasks::dsl::{tasks as all_tasks, completed as task_completed};
 
+use crate::DbConn;
+
 #[table_name="tasks"]
 #[derive(serde::Serialize, Queryable, Insertable, Debug, Clone)]
 pub struct Task {
@@ -27,32 +29,38 @@ pub struct Todo {
 }
 
 impl Task {
-    pub fn all(conn: &SqliteConnection) -> QueryResult<Vec<Task>> {
-        all_tasks.order(tasks::id.desc()).load::<Task>(conn)
+    pub async fn all(conn: DbConn) -> QueryResult<Vec<Task>> {
+        conn.run(|c| {
+            all_tasks.order(tasks::id.desc()).load::<Task>(c)
+        }).await
     }
 
     /// Returns the number of affected rows: 1.
-    pub fn insert(todo: Todo, conn: &SqliteConnection) -> QueryResult<usize> {
-        let t = Task { id: None, description: todo.description, completed: false };
-        diesel::insert_into(tasks::table).values(&t).execute(conn)
+    pub async fn insert(todo: Todo, conn: DbConn) -> QueryResult<usize> {
+        conn.run(|c| {
+            let t = Task { id: None, description: todo.description, completed: false };
+            diesel::insert_into(tasks::table).values(&t).execute(c)
+        }).await
     }
 
     /// Returns the number of affected rows: 1.
-    pub fn toggle_with_id(id: i32, conn: &SqliteConnection) -> QueryResult<usize> {
-        let task = all_tasks.find(id).get_result::<Task>(conn)?;
-        let new_status = !task.completed;
-        let updated_task = diesel::update(all_tasks.find(id));
-        updated_task.set(task_completed.eq(new_status)).execute(conn)
+    pub async fn toggle_with_id(id: i32, conn: DbConn) -> QueryResult<usize> {
+        conn.run(move |c| {
+            let task = all_tasks.find(id).get_result::<Task>(c)?;
+            let new_status = !task.completed;
+            let updated_task = diesel::update(all_tasks.find(id));
+            updated_task.set(task_completed.eq(new_status)).execute(c)
+        }).await
     }
 
     /// Returns the number of affected rows: 1.
-    pub fn delete_with_id(id: i32, conn: &SqliteConnection) -> QueryResult<usize> {
-        diesel::delete(all_tasks.find(id)).execute(conn)
+    pub async fn delete_with_id(id: i32, conn: DbConn) -> QueryResult<usize> {
+        conn.run(move |c| diesel::delete(all_tasks.find(id)).execute(c)).await
     }
 
     /// Returns the number of affected rows.
     #[cfg(test)]
-    pub fn delete_all(conn: &SqliteConnection) -> QueryResult<usize> {
-        diesel::delete(all_tasks).execute(conn)
+    pub async fn delete_all(conn: DbConn) -> QueryResult<usize> {
+        conn.run(|c| diesel::delete(all_tasks).execute(c)).await
     }
 }

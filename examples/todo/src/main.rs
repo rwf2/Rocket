@@ -31,15 +31,15 @@ struct Context {
 }
 
 impl Context {
-    pub fn err(conn: &SqliteConnection, msg: String) -> Context {
+    pub async fn err(conn: DbConn, msg: String) -> Context {
         Context {
             msg: Some(("error".to_string(), msg)),
-            tasks: Task::all(conn).unwrap_or_default()
+            tasks: Task::all(conn).await.unwrap_or_default()
         }
     }
 
-    pub fn raw(conn: &SqliteConnection, msg: Option<(String, String)>) -> Context {
-        match Task::all(conn) {
+    pub async fn raw(conn: DbConn, msg: Option<(String, String)>) -> Context {
+        match Task::all(conn).await {
             Ok(tasks) => Context { msg, tasks },
             Err(e) => {
                 error_!("DB Task::all() error: {}", e);
@@ -54,52 +54,47 @@ impl Context {
 
 #[post("/", data = "<todo_form>")]
 async fn new(todo_form: Form<Todo>, conn: DbConn) -> Flash<Redirect> {
-    conn.run(|c| {
-        let todo = todo_form.into_inner();
-        if todo.description.is_empty() {
-            Flash::error(Redirect::to("/"), "Description cannot be empty.")
-        } else if let Err(e) = Task::insert(todo, c) {
-            error_!("DB insertion error: {}", e);
-            Flash::error(Redirect::to("/"), "Todo could not be inserted due an internal error.")
-        } else {
-            Flash::success(Redirect::to("/"), "Todo successfully added.")
-        }
-    }).await
+    let todo = todo_form.into_inner();
+    if todo.description.is_empty() {
+        Flash::error(Redirect::to("/"), "Description cannot be empty.")
+    } else if let Err(e) = Task::insert(todo, conn).await {
+        error_!("DB insertion error: {}", e);
+        Flash::error(Redirect::to("/"), "Todo could not be inserted due an internal error.")
+    } else {
+        Flash::success(Redirect::to("/"), "Todo successfully added.")
+    }
 }
 
 #[put("/<id>")]
-async fn toggle(id: i32, conn: DbConn) -> Result<Redirect, Template> {
-    conn.run(move |c| {
-        Task::toggle_with_id(id, c)
-            .map(|_| Redirect::to("/"))
-            .map_err(|e| {
-                error_!("DB toggle({}) error: {}", id, e);
-                Template::render("index", Context::err(c, "Failed to toggle task.".to_string()))
-            })
-    }).await
+async fn toggle(id: i32, mut conn: DbConn) -> Result<Redirect, Template> {
+    // TODO
+    let conn2 = conn.clone().await.unwrap();
+    match Task::toggle_with_id(id, conn).await {
+        Ok(_) => Ok(Redirect::to("/")),
+        Err(e) => {
+            error_!("DB toggle({}) error: {}", id, e);
+            Err(Template::render("index", Context::err(conn2, "Failed to toggle task.".to_string()).await))
+        }
+    }
 }
 
 #[delete("/<id>")]
-async fn delete(id: i32, conn: DbConn) -> Result<Flash<Redirect>, Template> {
-    conn.run(move |c| {
-        Task::delete_with_id(id, c)
-            .map(|_| Flash::success(Redirect::to("/"), "Todo was deleted."))
-            .map_err(|e| {
-                error_!("DB deletion({}) error: {}", id, e);
-                Template::render("index", Context::err(c, "Failed to delete task.".to_string()))
-            })
-    }).await
+async fn delete(id: i32, mut conn: DbConn) -> Result<Flash<Redirect>, Template> {
+    // TODO
+    let conn2 = conn.clone().await.unwrap();
+    match Task::delete_with_id(id, conn).await {
+        Ok(_) => Ok(Flash::success(Redirect::to("/"), "Todo was deleted.")),
+        Err(e) => {
+            error_!("DB deletion({}) error: {}", id, e);
+            Err(Template::render("index", Context::err(conn2, "Failed to delete task.".to_string()).await))
+        }
+    }
 }
 
 #[get("/")]
 async fn index(msg: Option<FlashMessage<'_, '_>>, conn: DbConn) -> Template {
     let msg = msg.map(|m| (m.name().to_string(), m.msg().to_string()));
-    conn.run(|c| {
-        Template::render("index", match msg {
-            Some(msg) => Context::raw(c, Some(msg)),
-            None => Context::raw(c, None),
-        })
-    }).await
+    Template::render("index", Context::raw(conn, msg).await)
 }
 
 async fn run_db_migrations(mut rocket: Rocket) -> Result<Rocket, Rocket> {
