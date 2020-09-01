@@ -96,6 +96,13 @@ use crate::uri::{self, UriPart, UriDisplay};
 ///   * `&str` to `PathBuf`
 ///   * `PathBuf` to `&Path`
 ///
+/// The following types have _identity_ implementations _only in [`Query`]_:
+///
+///   * `Option<T>` where `T` is one of:
+///     * `String`, `i8`, `i16`, `i32`, `i64`, `i128`, `isize`, `u8`, `u16`,
+///       `u32`, `u64`, `u128`, `usize`, `f32`, `f64`, `bool`, `IpAddr`,
+///       `Ipv4Addr`, `Ipv6Addr`
+///
 /// See [Foreign Impls](#foreign-impls) for all provided implementations.
 ///
 /// # Implementing
@@ -190,6 +197,7 @@ use crate::uri::{self, UriPart, UriDisplay};
 /// [`UriDisplay`]: crate::uri::UriDisplay
 /// [`FromUriParam::Target`]: crate::uri::FromUriParam::Target
 /// [`Path`]: crate::uri::Path
+/// [`Query`]: crate::uri::Query
 pub trait FromUriParam<P: UriPart, T> {
     /// The resulting type of this conversion.
     type Target: UriDisplay<P>;
@@ -315,6 +323,18 @@ impl_from_uri_param_identity!([uri::Path] PathBuf);
 impl_conversion_ref! {
     [uri::Path] ('a) &'a Path => PathBuf,
     [uri::Path] ('a) PathBuf => &'a Path
+}
+
+macro_rules! impl_from_uri_param_option_identity {
+    ($($T:ty),*) => ($( impl_conversion_ref!([uri::Query] Option<$T> => Option<$T>); )*);
+}
+
+impl_from_uri_param_option_identity! {
+    String,
+    i8, i16, i32, i64, i128, isize,
+    u8, u16, u32, u64, u128, usize,
+    f32, f64, bool,
+    IpAddr, Ipv4Addr, Ipv6Addr
 }
 
 /// A no cost conversion allowing an `&str` to be used in place of a `PathBuf`.

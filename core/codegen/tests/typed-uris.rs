@@ -365,6 +365,12 @@ fn optionals(
     rest: Option<Form<Third<'_>>>
 ) { }
 
+#[post("/<foo>?<bar>")]
+fn optionals2(
+    foo: String,
+    bar: Option<usize>
+){ }
+
 #[test]
 fn test_optional_uri_parameters() {
     assert_uri_eq! {
@@ -409,5 +415,13 @@ fn test_optional_uri_parameters() {
             q1 = _,
             rest = _,
         ) => "/10/hi%20there",
+
+        uri!(optionals2: "a", Some(1)) => "/a?bar=1",
+        uri!(optionals2: "a", &Some(1)) => "/a?bar=1",
+        uri!(optionals2: "a", &mut Some(1)) => "/a?bar=1",
+
+        uri!(optionals2: "a", None) => "/a?",
+        uri!(optionals2: "a", &None) => "/a?",
+        uri!(optionals2: "a", &mut None) => "/a?",
     }
 }
