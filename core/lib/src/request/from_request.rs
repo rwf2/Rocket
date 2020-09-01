@@ -10,6 +10,9 @@ use crate::outcome::Outcome::*;
 
 use crate::http::{Status, ContentType, Accept, Method, CookieJar, uri::Origin};
 
+#[cfg(feature = "tls")]
+use crate::http::tls::MutualTlsUser;
+
 /// Type alias for the `Outcome` of a `FromRequest` conversion.
 pub type Outcome<S, E> = outcome::Outcome<S, (Status, E), ()>;
 
@@ -482,5 +485,25 @@ impl<'a, 'r, T: FromRequest<'a, 'r> + 'a> FromRequest<'a, 'r> for Option<T> {
             Success(val) => Success(Some(val)),
             Failure(_) | Forward(_) => Success(None),
         }).boxed()
+    }
+}
+
+#[cfg(feature = "tls")]
+#[crate::async_trait]
+impl <'a, 'r> FromRequest<'a, 'r> for MutualTlsUser {
+    type Error = ();
+
+    async fn from_request(request: &'a Request<'r>) -> Outcome<Self, Self::Error> {
+        // Verify the client's common name against the provided certificates
+        // Fail if we can't get the common name or no certificates match.
+
+        if let Some(certs) = request.get_peer_certificates() {
+            // validate the cert against the ca_certs
+
+            Success(MutualTlsUser::new("local"))
+        }
+        else {
+            Forward(())
+        }
     }
 }

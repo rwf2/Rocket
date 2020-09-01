@@ -10,3 +10,4 @@ key = "private/key.pem"
 
 [global.mtls]
 ca = "private/ca_cert.pem"
+required = true

@@ -14,7 +14,7 @@ fn hello_world() {
 
 #[test]
 fn client_cert() {
-    let rocket = rocket::ignite().mount("/", routes![super::hello]);
+    let rocket = rocket::ignite().mount("/", routes![super::hello, super::hello2]);
 
     // Open client's certificate
     let cert_file = OpenOptions::new()
@@ -36,10 +36,10 @@ fn client_cert() {
 
     // Dispatch message with client's certificate and address
     let mut response = client
-        .get("/")
+        .get("/mtls")
         .certificate(cert[0].clone())
         .remote(socket)
         .dispatch();
 
-    assert_eq!(response.into_string(), Some("Hello, world!".into()));
+    assert_eq!(response.into_string(), Some("Hello, MTLS world, localhost!".into()));
 }
