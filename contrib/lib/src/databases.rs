@@ -881,10 +881,22 @@ impl<K: 'static, C: Poolable> ConnectionPool<K, C> {
     }
 
     async fn get(&self) -> Result<Connection<K, C>, ()> {
-        let permit = self.semaphore.clone().acquire_owned().await;
+        // TODO: timeout duration
+        let permit = match tokio::time::timeout(
+            self.pool.connection_timeout(),
+            self.semaphore.clone().acquire_owned()
+        ).await {
+            Ok(p) => p,
+            Err(_) => {
+                error_!("Failed to get a database connection within the timeout.");
+                return Err(());
+            }
+        };
+
         let pool = self.pool.clone();
 
-        match run_blocking(move || pool.get()).await {
+        // TODO: timeout duration
+        match run_blocking(move || pool.get_timeout(std::time::Duration::from_secs(0))).await {
             Ok(c) => {
                 Ok(Connection {
                     pool: self.clone(),
