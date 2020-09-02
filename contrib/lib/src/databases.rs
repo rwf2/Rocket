@@ -407,9 +407,6 @@
 
 pub extern crate r2d2;
 
-#[doc(hidden)]
-pub use tokio::task::spawn_blocking;
-
 #[cfg(any(feature = "diesel_sqlite_pool",
           feature = "diesel_postgres_pool",
           feature = "diesel_mysql_pool"))]
@@ -836,6 +833,21 @@ pub struct Connection<K, C: Poolable> {
     _marker: PhantomData<fn() -> K>,
 }
 
+// A wrapper around spawn_blocking that propagates panics to the calling code
+async fn run_blocking<F, R>(job: F) -> R
+where
+    F: FnOnce() -> R + Send + 'static,
+    R: Send + 'static,
+{
+    match tokio::task::spawn_blocking(job).await {
+        Ok(ret) => ret,
+        Err(e) => match e.try_into_panic() {
+            Ok(panic) => std::panic::resume_unwind(panic),
+            Err(_) => unreachable!("spawn_blocking tasks are never canceled"),
+        }
+    }
+}
+
 impl<K: 'static, C: Poolable> ConnectionPool<K, C> {
     #[inline]
     pub fn fairing(fairing_name: &'static str, config_name: &'static str) -> impl Fairing {
@@ -872,15 +884,7 @@ impl<K: 'static, C: Poolable> ConnectionPool<K, C> {
         let permit = self.semaphore.clone().acquire_owned().await;
         let pool = self.pool.clone();
 
-        let result = match spawn_blocking(move || pool.get()).await {
-            Ok(c) => c,
-            Err(e) => match e.try_into_panic() {
-                Ok(panic) => std::panic::resume_unwind(panic),
-                Err(_) => unreachable!("spawn_blocking tasks are never canceled"),
-            }
-        };
-
-        match result {
+        match run_blocking(move || pool.get()).await {
             Ok(c) => {
                 Ok(Connection {
                     pool: self.clone(),
@@ -924,7 +928,7 @@ impl<K: 'static, C: Poolable> Connection<K, C> {
         where F: FnOnce(&mut C) -> R + Send + 'static,
               R: Send + 'static,
     {
-        let spawn_result = tokio::task::spawn_blocking(move || {
+        run_blocking(move || {
             // 'self' contains a semaphore permit that should be held throughout
             // this entire spawned task. Explicitly move it, so that a
             // refactoring won't accidentally release the permit too early.
@@ -934,18 +938,7 @@ impl<K: 'static, C: Poolable> Connection<K, C> {
                 .expect("internal invariant broken: self.connection is Some");
 
             f(&mut conn)
-        }).await;
-
-        // Propagate any panics upwards.
-        //
-        // TODO: If we like this, extract + dedupe with above copy
-        match spawn_result {
-            Ok(val) => val,
-            Err(e) => match e.try_into_panic() {
-                Ok(panic) => std::panic::resume_unwind(panic),
-                Err(_) => unreachable!("spawn_blocking tasks are never canceled"),
-            }
-        }
+        }).await
     }
 
     #[inline]
