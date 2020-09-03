@@ -97,7 +97,7 @@ pub fn database_attr(attr: TokenStream, input: TokenStream) -> Result<TokenStrea
             /// closure will be passed an `&mut r2d2::PooledConnection`.
             /// `.await`ing the return value of this function yields the value
             /// returned by the closure.
-            pub async fn run<F, R>(self, f: F) -> R
+            pub async fn run<F, R>(&self, f: F) -> R
             where
                 F: FnOnce(&mut #conn_type) -> R + Send + 'static,
                 R: Send + 'static,
@@ -105,10 +105,10 @@ pub fn database_attr(attr: TokenStream, input: TokenStream) -> Result<TokenStrea
                 self.0.run(f).await
             }
 
-            /// Asynchronously acquires another connection from the connection pool.
-            pub async fn clone(&mut self) -> ::std::result::Result<Self, ()> {
-                self.0.clone().await.map(Self)
-            }
+            // /// Asynchronously acquires another connection from the connection pool.
+            // pub async fn clone(&mut self) -> ::std::result::Result<Self, ()> {
+            //     self.0.clone().await.map(Self)
+            // }
         }
 
         #[::rocket::async_trait]

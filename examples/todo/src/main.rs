@@ -7,6 +7,8 @@
 mod task;
 #[cfg(test)] mod tests;
 
+use std::fmt::Display;
+
 use rocket::Rocket;
 use rocket::fairing::AdHoc;
 use rocket::request::{Form, FlashMessage};
@@ -31,20 +33,20 @@ struct Context {
 }
 
 impl Context {
-    pub async fn err(conn: DbConn, msg: String) -> Context {
+    pub async fn err<M: Display>(conn: &DbConn, msg: M) -> Context {
         Context {
-            msg: Some(("error".to_string(), msg)),
+            msg: Some(("error".into(), msg.to_string())),
             tasks: Task::all(conn).await.unwrap_or_default()
         }
     }
 
-    pub async fn raw(conn: DbConn, msg: Option<(String, String)>) -> Context {
+    pub async fn raw(conn: &DbConn, msg: Option<(String, String)>) -> Context {
         match Task::all(conn).await {
             Ok(tasks) => Context { msg, tasks },
             Err(e) => {
                 error_!("DB Task::all() error: {}", e);
                 Context {
-                    msg: Some(("error".to_string(), "Couldn't access the task database.".to_string())),
+                    msg: Some(("error".into(), "Fail to access database.".into())),
                     tasks: vec![]
                 }
             }
@@ -57,7 +59,7 @@ async fn new(todo_form: Form<Todo>, conn: DbConn) -> Flash<Redirect> {
     let todo = todo_form.into_inner();
     if todo.description.is_empty() {
         Flash::error(Redirect::to("/"), "Description cannot be empty.")
-    } else if let Err(e) = Task::insert(todo, conn).await {
+    } else if let Err(e) = Task::insert(todo, &conn).await {
         error_!("DB insertion error: {}", e);
         Flash::error(Redirect::to("/"), "Todo could not be inserted due an internal error.")
     } else {
@@ -66,27 +68,23 @@ async fn new(todo_form: Form<Todo>, conn: DbConn) -> Flash<Redirect> {
 }
 
 #[put("/<id>")]
-async fn toggle(id: i32, mut conn: DbConn) -> Result<Redirect, Template> {
-    // TODO
-    let conn2 = conn.clone().await.unwrap();
-    match Task::toggle_with_id(id, conn).await {
+async fn toggle(id: i32, conn: DbConn) -> Result<Redirect, Template> {
+    match Task::toggle_with_id(id, &conn).await {
         Ok(_) => Ok(Redirect::to("/")),
         Err(e) => {
             error_!("DB toggle({}) error: {}", id, e);
-            Err(Template::render("index", Context::err(conn2, "Failed to toggle task.".to_string()).await))
+            Err(Template::render("index", Context::err(&conn, "Failed to toggle task.").await))
         }
     }
 }
 
 #[delete("/<id>")]
-async fn delete(id: i32, mut conn: DbConn) -> Result<Flash<Redirect>, Template> {
-    // TODO
-    let conn2 = conn.clone().await.unwrap();
-    match Task::delete_with_id(id, conn).await {
+async fn delete(id: i32, conn: DbConn) -> Result<Flash<Redirect>, Template> {
+    match Task::delete_with_id(id, &conn).await {
         Ok(_) => Ok(Flash::success(Redirect::to("/"), "Todo was deleted.")),
         Err(e) => {
             error_!("DB deletion({}) error: {}", id, e);
-            Err(Template::render("index", Context::err(conn2, "Failed to delete task.".to_string()).await))
+            Err(Template::render("index", Context::err(&conn, "Failed to delete task.").await))
         }
     }
 }
@@ -94,20 +92,19 @@ async fn delete(id: i32, mut conn: DbConn) -> Result<Flash<Redirect>, Template> 
 #[get("/")]
 async fn index(msg: Option<FlashMessage<'_, '_>>, conn: DbConn) -> Template {
     let msg = msg.map(|m| (m.name().to_string(), m.msg().to_string()));
-    Template::render("index", Context::raw(conn, msg).await)
+    Template::render("index", Context::raw(&conn, msg).await)
 }
 
 async fn run_db_migrations(mut rocket: Rocket) -> Result<Rocket, Rocket> {
-    let conn = DbConn::get_one(rocket.inspect().await).await.expect("database connection");
-    conn.run(|c| {
-        match embedded_migrations::run(c) {
+    DbConn::get_one(rocket.inspect().await).await
+        .expect("database connection")
+        .run(|c| match embedded_migrations::run(c) {
             Ok(()) => Ok(rocket),
             Err(e) => {
                 error!("Failed to run database migrations: {:?}", e);
                 Err(rocket)
             }
-        }
-    }).await
+        }).await
 }
 
 #[launch]
