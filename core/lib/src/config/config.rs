@@ -52,6 +52,8 @@ pub struct Config {
     pub(crate) secret_key: SecretKey,
     /// TLS configuration.
     pub(crate) tls: Option<TlsConfig>,
+    /// Mutual TLS configuration.
+    pub(crate) mtls: Option<MutualTlsConfig>,
     /// Streaming data limits.
     pub limits: Limits,
     /// Extra parameters that aren't part of Rocket's core config.
@@ -279,6 +281,7 @@ impl Config {
                     log_level: LoggingLevel::Normal,
                     secret_key: key,
                     tls: None,
+                    mtls: None,
                     limits: Limits::default(),
                     extras: HashMap::new(),
                     config_file_path: None,
@@ -295,6 +298,7 @@ impl Config {
                     log_level: LoggingLevel::Normal,
                     secret_key: key,
                     tls: None,
+                    mtls: None,
                     limits: Limits::default(),
                     extras: HashMap::new(),
                     config_file_path: None,
@@ -311,6 +315,7 @@ impl Config {
                     log_level: LoggingLevel::Critical,
                     secret_key: key,
                     tls: None,
+                    mtls: None,
                     limits: Limits::default(),
                     extras: HashMap::new(),
                     config_file_path: None,
@@ -347,6 +352,7 @@ impl Config {
     ///   * **log**: String
     ///   * **secret_key**: String (256-bit base64 or base16)
     ///   * **tls**: Table (`certs` (path as String), `key` (path as String))
+    ///   * **ca_path**: String
     pub(crate) fn set_raw(&mut self, name: &str, val: &Value) -> Result<()> {
         let (id, ok) = (|val| val, |_| Ok(()));
         config_from_raw!(self, name, val,
@@ -357,6 +363,7 @@ impl Config {
             log => (log_level, set_log_level, ok),
             secret_key => (str, set_secret_key, id),
             tls => (tls_config, set_raw_tls, id),
+            mtls => (mtls_config, set_raw_mtls, id),
             limits => (limits, set_limits, ok),
             | _ => {
                 self.extras.insert(name.into(), val.clone());
@@ -603,6 +610,58 @@ impl Config {
         #[cfg(test)]
         { Ok(()) }
     }
+
+    /// Sets the Mutual TLS configuration in `self`.
+    ///
+    /// Certificates are read from `ca_path`. The certificate chain must be
+    /// in X.509 PEM format.
+    /// 
+    /// # Errors
+    ///
+    /// If reading either the certificates fails, an error of variant `Io` is returned.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// # use rocket::config::ConfigError;
+    /// # fn config_test() -> Result<(), ConfigError> {
+    /// let mut config = rocket::Config::development();
+    /// config.set_mtls("/etc/ssl/my_certs.pem")?;
+    /// # Ok(())
+    /// # }
+    /// ```
+    #[cfg(feature = "tls")]
+    pub fn set_mtls(&mut self, ca_path: &str, required: bool) -> Result<()> {
+        use crate::http::tls::{load_ca_certs, Error};
+        let pem_err = "malformed PEM file";
+
+        let ca = load_ca_certs(self.root_relative(ca_path))
+            .map_err(|e| match e {
+                Error::Io(e) => ConfigError::Io(e, "mtls.ca"),
+                _ => self.bad_type("mtls", pem_err, "a valid ca root file")
+            })?;
+
+        self.mtls = Some(MutualTlsConfig { ca, required });
+        Ok(())
+    }
+
+    #[doc(hidden)]
+    #[cfg(not(feature = "tls"))]
+    pub fn set_mtls(&mut self, _: &str, _: bool) -> Result<()> {
+        self.tls = Some(MutaulTlsConfig);
+        Ok(())
+    }
+
+    #[inline(always)]
+    fn set_raw_mtls(&mut self, _paths: (&str, bool)) -> Result<()> {
+        #[cfg(not(test))]
+        { self.set_mtls(_paths.0, _paths.1) }
+
+        // During unit testing, we don't want to actually read certs/keys.
+        #[cfg(test)]
+        { Ok(()) }
+    }
+
 
     /// Sets the extras for `self` to be the key/value pairs in `extras`.
     /// encoded string.

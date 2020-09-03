@@ -650,6 +650,16 @@ impl Rocket {
             launch_info_!("tls: {}", Paint::default("disabled").bold());
         }
 
+        let mtls_configured = config.mtls.is_some();
+        if mtls_configured && cfg!(feature = "tls") {
+            launch_info_!("mtls: {}", Paint::default("enabled").bold());
+        } else if mtls_configured {
+            error_!("mtls: {}", Paint::default("disabled").bold());
+            error_!("mtls is configured, but the tls feature is disabled");
+        } else {
+            launch_info_!("mtls: {}", Paint::default("disabled").bold());
+        }
+
         if config.secret_key.is_generated() && config.environment.is_prod() {
             warn!("environment is 'production' but no `secret_key` is configured");
         }
@@ -1009,7 +1019,10 @@ impl Rocket {
 
             #[cfg(feature = "tls")] {
                 if let Some(tls) = self.config.tls.clone() {
-                    listen_on!(crate::http::tls::bind_tls(addr, tls.certs, tls.key).await).boxed()
+                    use crate::http::tls::empty_ca_certs;
+                    let ca = if self.config.mtls.is_some() { self.config.mtls.clone().unwrap().ca } else { empty_ca_certs() };
+                    let required = if self.config.mtls.is_some() { self.config.mtls.clone().unwrap().required } else { false };
+                    listen_on!(crate::http::tls::bind_tls(addr, tls.certs, tls.key, ca, required).await).boxed()
                 } else {
                     listen_on!(crate::http::private::bind_tcp(addr).await).boxed()
                 }

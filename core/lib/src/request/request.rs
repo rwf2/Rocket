@@ -17,6 +17,8 @@ use crate::http::{hyper, uri::{Origin, Segments}};
 use crate::http::{Method, Header, HeaderMap};
 use crate::http::{RawStr, ContentType, Accept, MediaType, CookieJar, Cookie};
 use crate::http::private::{Indexed, SmallVec};
+#[cfg(feature = "tls")]
+use crate::http::tls::Certificate;
 use crate::data::Limits;
 
 /// The type of an incoming web request.
@@ -31,6 +33,8 @@ pub struct Request<'r> {
     headers: HeaderMap<'r>,
     remote: Option<SocketAddr>,
     pub(crate) state: RequestState<'r>,
+    #[cfg(feature = "tls")]
+    peer_certs: Option<Vec<Certificate>>,
 }
 
 pub(crate) struct RequestState<'r> {
@@ -54,6 +58,8 @@ impl Request<'_> {
             headers: self.headers.clone(),
             remote: self.remote.clone(),
             state: self.state.clone(),
+            #[cfg(feature = "tls")]
+            peer_certs: self.peer_certs.clone(),
         }
     }
 }
@@ -99,7 +105,9 @@ impl<'r> Request<'r> {
                 accept: Storage::new(),
                 content_type: Storage::new(),
                 cache: Arc::new(Container::new()),
-            }
+            },
+            #[cfg(feature = "tls")]
+            peer_certs: None,
         };
 
         request.update_cached_uri_info();
@@ -882,6 +890,18 @@ impl<'r> Request<'r> {
         }
 
         Ok(request)
+    }
+
+    /// Set the peer certificates
+    #[cfg(feature = "tls")]
+    pub(crate) fn set_peer_certificates(&mut self, certs: Vec<Certificate>) {
+        self.peer_certs = Some(certs);
+    }
+
+    /// Get the peer certificates
+    #[cfg(feature = "tls")]
+    pub(crate) fn get_peer_certificates(&self) -> Option<Vec<Certificate>> {
+        self.peer_certs.clone()
     }
 }
 

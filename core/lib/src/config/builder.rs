@@ -23,6 +23,8 @@ pub struct ConfigBuilder {
     pub secret_key: Option<String>,
     /// TLS configuration (path to certificates file, path to private key file).
     pub tls: Option<(String, String)>,
+    /// MTLS configuration, path to root certificates file.
+    pub mtls: Option<(String, bool)>,
     /// Size limits.
     pub limits: Limits,
     /// Any extra parameters that aren't part of Rocket's config.
@@ -61,6 +63,7 @@ impl ConfigBuilder {
             log_level: config.log_level,
             secret_key: None,
             tls: None,
+            mtls: None,
             limits: config.limits,
             extras: config.extras,
             root: None,
@@ -226,6 +229,30 @@ impl ConfigBuilder {
         self
     }
 
+    /// Sets the TLS configuration in the configuration being built.
+    ///
+    /// Certificates are read from `certs_path`. The certificate chain must be
+    /// in X.509 PEM format. The private key is read from `key_path`. The
+    /// private key must be an RSA key in either PKCS#1 or PKCS#8 PEM format.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use rocket::config::{Config, Environment};
+    ///
+    /// let mut config = Config::build(Environment::Staging)
+    ///     .tls("/path/to/certs.pem", "/path/to/key.pem")
+    /// # ; /*
+    ///     .unwrap();
+    /// # */
+    /// ```
+    pub fn mtls<C>(mut self, ca: C, required: bool) -> Self
+        where C: Into<String>
+    {
+        self.mtls = Some((ca.into(), required));
+        self
+    }
+
     /// Sets the `environment` in the configuration being built.
     ///
     /// # Example
@@ -330,6 +357,10 @@ impl ConfigBuilder {
 
         if let Some((certs_path, key_path)) = self.tls {
             config.set_tls(&certs_path, &key_path)?;
+        }
+
+        if let Some((ca_path, required)) = self.mtls {
+            config.set_mtls(&ca_path, required)?;
         }
 
         if let Some(key) = self.secret_key {

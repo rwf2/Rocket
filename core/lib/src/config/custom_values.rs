@@ -1,6 +1,6 @@
 use std::fmt;
 
-#[cfg(feature = "tls")] use crate::http::tls::{Certificate, PrivateKey};
+#[cfg(feature = "tls")] use crate::http::tls::{Certificate, PrivateKey, RootCertStore};
 
 use crate::http::private::cookie::Key;
 use crate::config::{Result, Config, Value, ConfigError, LoggingLevel};
@@ -56,8 +56,26 @@ pub struct TlsConfig {
 #[derive(Clone)]
 pub struct TlsConfig;
 
+#[cfg(feature = "tls")]
+#[derive(Clone)]
+pub struct MutualTlsConfig {
+    pub ca: RootCertStore,
+    pub required: bool,
+}
+
+#[cfg(not(feature = "tls"))]
+#[derive(Clone)]
+pub struct MutualTlsConfig;
+
 pub fn str<'a>(conf: &Config, name: &str, v: &'a Value) -> Result<&'a str> {
     v.as_str().ok_or_else(|| conf.bad_type(name, v.type_str(), "a string"))
+}
+
+pub fn bool(conf: &Config, name: &str, value: &Value) -> Result<bool> {
+    match value.as_bool() {
+        Some(x) => Ok(x as bool),
+        _ => Err(conf.bad_type(name, value.type_str(), "a boolean"))
+    }
 }
 
 pub fn u64(conf: &Config, name: &str, value: &Value) -> Result<u64> {
@@ -111,6 +129,31 @@ pub fn tls_config<'v>(conf: &Config,
     } else {
         Err(conf.bad_type(name, "a table with missing entries",
                             "a table with `certs` and `key` entries"))
+    }
+}
+
+pub fn mtls_config<'v>(conf: &Config,
+                               name: &str,
+                               value: &'v Value,
+                               ) -> Result<(&'v str, bool)> {
+    let (mut ca_path, mut required) = (None, false);
+    let table = value.as_table()
+        .ok_or_else(|| conf.bad_type(name, value.type_str(), "a table"))?;
+
+    let env = conf.environment;
+    for (key, value) in table {
+        match key.as_str() {
+            "ca" => ca_path = Some(str(conf, "mtls.ca", value)?),
+            "required" => required = bool(conf,  &format!("limits.{}", key), value)?,
+            _ => return Err(ConfigError::UnknownKey(format!("{}.mtls.{}", env, key)))
+        }
+    }
+
+    if let (Some(ca), ) = (ca_path,) {
+        Ok((ca, required))
+    } else {
+        Err(conf.bad_type(name, "a table with missing entries",
+                            "a table with `ca` entries"))
     }
 }
 

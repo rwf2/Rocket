@@ -4,6 +4,9 @@ use crate::{Request, http::Method, local::asynchronous};
 
 use super::{Client, LocalResponse};
 
+#[cfg(feature = "tls")]
+use crate::http::tls::Certificate;
+
 /// A `blocking` local request as returned by [`Client`](super::Client).
 ///
 /// For details, see [the top-level documentation](../index.html#localrequest).
@@ -60,6 +63,15 @@ impl<'c> LocalRequest<'c> {
     fn _dispatch(self) -> LocalResponse<'c> {
         let inner = self.client.block_on(self.inner.dispatch());
         LocalResponse { inner, client: self.client }
+    }
+
+    /// Add a certificate to this request.
+    #[cfg(feature = "tls")]
+    pub fn certificate(mut self, cert: Certificate) -> Self {
+        let peer_certs = vec![cert];
+        self._request_mut().set_peer_certificates(peer_certs);
+
+        self
     }
 
     pub_request_impl!("# use rocket::local::blocking::Client;

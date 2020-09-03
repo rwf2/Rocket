@@ -7,3 +7,6 @@
 [global.tls]
 certs = "private/cert.pem"
 key = "private/key.pem"
+
+[global.mtls]
+ca = "private/ca_cert.pem"

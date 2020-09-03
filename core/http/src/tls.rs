@@ -13,7 +13,7 @@ use tokio_rustls::{TlsAcceptor, server::TlsStream};
 use tokio_rustls::rustls;
 
 pub use rustls::internal::pemfile;
-pub use rustls::{Certificate, PrivateKey, ServerConfig};
+pub use rustls::{Certificate, PrivateKey, ServerConfig, RootCertStore};
 
 use crate::listener::{Connection, Listener};
 
@@ -67,6 +67,19 @@ pub fn load_private_key<P: AsRef<Path>>(path: P) -> Result<rustls::PrivateKey, E
     }
 }
 
+pub fn empty_ca_certs() -> rustls::RootCertStore {
+    rustls::RootCertStore::empty()
+}
+
+pub fn load_ca_certs<P: AsRef<Path>>(path: P) -> Result<rustls::RootCertStore, Error> {
+    let mut ca = rustls::RootCertStore::empty();
+    let certfile = fs::File::open(path.as_ref()).map_err(|e| Error::Io(e))?;
+    let mut reader = BufReader::new(certfile);
+    ca.add_pem_file(&mut reader).map_err(|_| Error::BadCerts);
+
+    Ok(ca)
+}
+
 pub struct TlsListener {
     listener: TcpListener,
     acceptor: TlsAcceptor,
@@ -116,11 +129,15 @@ impl Listener for TlsListener {
 pub async fn bind_tls(
     address: SocketAddr,
     cert_chain: Vec<Certificate>,
-    key: PrivateKey
+    key: PrivateKey,
+    ca_root: RootCertStore,
+    required: bool,
 ) -> io::Result<TlsListener> {
     let listener = TcpListener::bind(address).await?;
 
-    let client_auth = rustls::NoClientAuth::new();
+    let client_auth = if required
+        { rustls::AllowAnyAuthenticatedClient::new(ca_root) } else
+        { rustls::AllowAnyAnonymousOrAuthenticatedClient::new(ca_root) };
     let mut tls_config = ServerConfig::new(client_auth);
     let cache = rustls::ServerSessionMemoryCache::new(1024);
     tls_config.set_persistence(cache);
@@ -136,5 +153,36 @@ pub async fn bind_tls(
 impl Connection for TlsStream<TcpStream> {
     fn remote_addr(&self) -> Option<SocketAddr> {
         self.get_ref().0.remote_addr()
+    }
+}
+
+#[derive(Debug)]
+pub struct MutualTlsUser {
+    subject_name: String,
+}
+
+impl MutualTlsUser {
+    pub fn new(subject_name: &str) -> MutualTlsUser {
+        // NOTE: `subject_name` is not necessarily the subject name in the certificate,
+        // but it is the name for which the certificate was validated.
+        MutualTlsUser {
+            subject_name: subject_name.to_string()
+        }
+    }
+
+    /// Return the client's subject name.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// # extern crate rocket;
+    /// use rocket::http::tls::MutualTlsUser;
+    ///
+    /// fn handler(mtls: MutualTlsUser) {
+    ///     let subject_name = mtls.subject_name();
+    /// }
+    /// ```
+    pub fn subject_name(&self) -> &str {
+        &self.subject_name
     }
 }
