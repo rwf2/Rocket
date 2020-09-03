@@ -14,6 +14,9 @@ use tokio::io::{AsyncRead, AsyncWrite};
 use tokio::time::Delay;
 use tokio::net::{TcpListener, TcpStream};
 
+#[cfg(feature = "tls")]
+use crate::tls::Certificate;
+
 // TODO.async: 'Listener' and 'Connection' provide common enough functionality
 // that they could be introduced in upstream libraries.
 /// A 'Listener' yields incoming connections
@@ -30,6 +33,9 @@ pub trait Listener {
 /// A 'Connection' represents an open connection to a client
 pub trait Connection: AsyncRead + AsyncWrite {
     fn remote_addr(&self) -> Option<SocketAddr>;
+
+    #[cfg(feature = "tls")]
+    fn peer_certificates(&self) -> Option<Vec<Certificate>>;
 }
 
 /// This is a genericized version of hyper's AddrIncoming that is intended to be
@@ -176,5 +182,10 @@ impl Listener for TcpListener {
 impl Connection for TcpStream {
     fn remote_addr(&self) -> Option<SocketAddr> {
         self.peer_addr().ok()
+    }
+
+    #[cfg(feature = "tls")]
+    fn peer_certificates(&self) -> Option<Vec<Certificate>> {
+        None
     }
 }

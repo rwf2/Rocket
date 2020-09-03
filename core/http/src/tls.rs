@@ -154,13 +154,7 @@ impl Connection for TlsStream<TcpStream> {
     fn remote_addr(&self) -> Option<SocketAddr> {
         self.get_ref().0.remote_addr()
     }
-}
 
-pub trait TlsInfo {
-    fn peer_certificates(&self) -> Option<Vec<Certificate>>;
-}
-
-impl TlsInfo for TlsStream<TcpStream> {
     fn peer_certificates(&self) -> Option<Vec<Certificate>> {
         (self.get_ref().1 as &dyn Session).get_peer_certificates()
     }
