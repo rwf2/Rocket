@@ -184,6 +184,7 @@ impl Rocket {
 async fn hyper_service_fn(
     rocket: Arc<Rocket>,
     h_addr: std::net::SocketAddr,
+    #[cfg(feature = "tls")]
     certs: Option<Vec<Certificate>>,
     hyp_req: hyper::Request<hyper::Body>,
 ) -> Result<hyper::Response<hyper::Body>, io::Error> {
@@ -216,8 +217,11 @@ async fn hyper_service_fn(
         // Retrieve the data from the hyper body.
         let mut data = Data::from_hyp(h_body).await;
 
-        if let Some(peer_certs) = certs {
-            req.set_peer_certificates(peer_certs.to_vec());
+        #[cfg(feature = "tls")]
+        {
+            if let Some(peer_certs) = certs {
+                req.set_peer_certificates(peer_certs.to_vec());
+            }
         }
 
         // Dispatch the request to get a response, then write that response out.
@@ -532,10 +536,11 @@ impl Rocket {
         let service = hyper::make_service_fn(move |connection: &<L as Listener>::Connection| {
             let rocket = rocket.clone();
             let remote_addr = connection.remote_addr().unwrap_or_else(|| ([0, 0, 0, 0], 0).into());
+            #[cfg(feature = "tls")]
             let peer_certs = connection.peer_certificates();
             async move {
                 Ok::<_, std::convert::Infallible>(hyper::service_fn(move |req| {
-                    hyper_service_fn(rocket.clone(), remote_addr, peer_certs.clone(), req)
+                    hyper_service_fn(rocket.clone(), remote_addr, #[cfg(feature = "tls")] peer_certs.clone(), req)
                 }))
             }
         });
