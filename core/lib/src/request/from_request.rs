@@ -1,5 +1,5 @@
 use std::fmt::Debug;
-use std::net::SocketAddr;
+use std::net::{IpAddr, SocketAddr};
 
 use futures::future::BoxFuture;
 
@@ -152,6 +152,13 @@ impl<S, E> IntoOutcome<S, (Status, E), ()> for Result<S, E> {
 ///
 ///     Extracts the [`ContentType`] from the incoming request. If the request
 ///     didn't specify a Content-Type, the request is forwarded.
+///
+///   * **IpAddr**
+///
+///     Extracts the client ip address of the incoming request as a [`IpAddr`].
+///     If the client ip address is not known, the request is forwarded.
+///
+///     _This implementation always returns successfully._
 ///
 ///   * **SocketAddr**
 ///
@@ -437,6 +444,18 @@ impl<'a, 'r> FromRequest<'a, 'r> for &'a ContentType {
     async fn from_request(request: &'a Request<'r>) -> Outcome<Self, Self::Error> {
         match request.content_type() {
             Some(content_type) => Success(content_type),
+            None => Forward(())
+        }
+    }
+}
+
+#[crate::async_trait]
+impl<'a, 'r> FromRequest<'a, 'r> for IpAddr {
+    type Error = std::convert::Infallible;
+
+    async fn from_request(request: &'a Request<'r>) -> Outcome<Self, Self::Error> {
+        match request.client_ip() {
+            Some(addr) => Success(addr),
             None => Forward(())
         }
     }
