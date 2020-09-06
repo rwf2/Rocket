@@ -827,9 +827,8 @@ pub struct ConnectionPool<K, C: Poolable> {
 /// types are properly checked.
 #[doc(hidden)]
 pub struct Connection<K, C: Poolable> {
-    pool: ConnectionPool<K, C>,
     connection: Arc<Mutex<Option<r2d2::PooledConnection<C::Manager>>>>,
-    _permit: Option<OwnedSemaphorePermit>,
+    permit: Option<OwnedSemaphorePermit>,
     _marker: PhantomData<fn() -> K>,
 }
 
@@ -896,9 +895,8 @@ impl<K: 'static, C: Poolable> ConnectionPool<K, C> {
         match run_blocking(move || pool.get_timeout(std::time::Duration::from_secs(0))).await {
             Ok(c) => {
                 Ok(Connection {
-                    pool: self.clone(),
                     connection: Arc::new(Mutex::new(Some(c))),
-                    _permit: Some(permit),
+                    permit: Some(permit),
                     _marker: PhantomData,
                 })
             }
@@ -921,16 +919,6 @@ impl<K: 'static, C: Poolable> ConnectionPool<K, C> {
     }
 }
 
-impl<K, C: Poolable> Clone for ConnectionPool<K, C> {
-    fn clone(&self) -> Self {
-        Self {
-            pool: self.pool.clone(),
-            semaphore: self.semaphore.clone(),
-            _marker: PhantomData,
-        }
-    }
-}
-
 impl<K: 'static, C: Poolable> Connection<K, C> {
     #[inline]
     pub async fn run<F, R>(&self, f: F) -> R
@@ -944,22 +932,21 @@ impl<K: 'static, C: Poolable> Connection<K, C> {
             f(conn)
         }).await
     }
-
-    // #[inline]
-    // pub async fn clone(&mut self) -> Result<Self, ()> {
-    //     self.pool.get().await
-    // }
 }
 
 impl<K, C: Poolable> Drop for Connection<K, C> {
     fn drop(&mut self) {
         let connection = self.connection.clone();
+        let permit = self.permit.take();
         tokio::spawn(async move {
             let mut connection = connection.lock_owned().await;
             tokio::task::spawn_blocking(move || {
                 if let Some(conn) = connection.take() {
-                    drop(conn)
+                    drop(conn);
                 }
+                // NB: Explicitly dropping the permit here so that it's only
+                // released after the connection is.
+                drop(permit);
             })
         });
     }
