@@ -459,7 +459,6 @@ impl FullConfig {
 #[cfg(test)]
 mod test {
     use std::env;
-    use std::sync::Mutex;
 
     use super::{Config, FullConfig, ConfigError, ConfigBuilder};
     use super::{Environment, GLOBAL_ENV_NAME};
@@ -467,14 +466,10 @@ mod test {
     use super::Environment::*;
     use super::Result;
 
+    use serial_test::serial;
     use crate::logger::LoggingLevel;
 
     const TEST_CONFIG_FILENAME: &'static str = "/tmp/testing/Rocket.toml";
-
-    // TODO: It's a shame we have to depend on lazy_static just for this.
-    lazy_static::lazy_static! {
-        static ref ENV_LOCK: Mutex<usize> = Mutex::new(0);
-    }
 
     macro_rules! check_config {
         ($rconfig:expr, $econfig:expr) => (
@@ -503,10 +498,8 @@ mod test {
     }
 
     #[test]
+    #[serial]
     fn test_defaults() {
-        // Take the lock so changing the environment doesn't cause races.
-        let _env_lock = ENV_LOCK.lock().unwrap();
-
         // First, without an environment. Should get development defaults on
         // debug builds and productions defaults on non-debug builds.
         env::remove_var(CONFIG_ENV);
@@ -533,10 +526,8 @@ mod test {
     }
 
     #[test]
+    #[serial]
     fn test_bad_environment_vars() {
-        // Take the lock so changing the environment doesn't cause races.
-        let _env_lock = ENV_LOCK.lock().unwrap();
-
         for env in &["", "p", "pr", "pro", "prodo", " prod", "dev ", "!dev!", "🚀 "] {
             env::set_var(CONFIG_ENV, env);
             let err = ConfigError::BadEnv(env.to_string());
@@ -555,9 +546,8 @@ mod test {
     }
 
     #[test]
+    #[serial]
     fn test_good_full_config_files() {
-        // Take the lock so changing the environment doesn't cause races.
-        let _env_lock = ENV_LOCK.lock().unwrap();
         env::remove_var(CONFIG_ENV);
 
         let config_str = r#"
@@ -606,9 +596,8 @@ mod test {
     }
 
     #[test]
+    #[serial]
     fn test_good_address_values() {
-        // Take the lock so changing the environment doesn't cause races.
-        let _env_lock = ENV_LOCK.lock().unwrap();
         env::set_var(CONFIG_ENV, "dev");
 
         check_config!(FullConfig::parse(r#"
@@ -648,9 +637,8 @@ mod test {
     }
 
     #[test]
+    #[serial]
     fn test_bad_address_values() {
-        // Take the lock so changing the environment doesn't cause races.
-        let _env_lock = ENV_LOCK.lock().unwrap();
         env::remove_var(CONFIG_ENV);
 
         assert!(FullConfig::parse(r#"
@@ -677,9 +665,8 @@ mod test {
     // Only do this test when the tls feature is disabled since the file paths
     // we're supplying don't actually exist.
     #[test]
+    #[serial]
     fn test_good_tls_values() {
-        // Take the lock so changing the environment doesn't cause races.
-        let _env_lock = ENV_LOCK.lock().unwrap();
         env::set_var(CONFIG_ENV, "dev");
 
         assert!(FullConfig::parse(r#"
@@ -706,9 +693,8 @@ mod test {
     }
 
     #[test]
+    #[serial]
     fn test_bad_tls_config() {
-        // Take the lock so changing the environment doesn't cause races.
-        let _env_lock = ENV_LOCK.lock().unwrap();
         env::remove_var(CONFIG_ENV);
 
         assert!(FullConfig::parse(r#"
@@ -733,9 +719,8 @@ mod test {
     }
 
     #[test]
+    #[serial]
     fn test_good_port_values() {
-        // Take the lock so changing the environment doesn't cause races.
-        let _env_lock = ENV_LOCK.lock().unwrap();
         env::set_var(CONFIG_ENV, "stage");
 
         check_config!(FullConfig::parse(r#"
@@ -761,9 +746,8 @@ mod test {
     }
 
     #[test]
+    #[serial]
     fn test_bad_port_values() {
-        // Take the lock so changing the environment doesn't cause races.
-        let _env_lock = ENV_LOCK.lock().unwrap();
         env::remove_var(CONFIG_ENV);
 
         assert!(FullConfig::parse(r#"
@@ -793,9 +777,8 @@ mod test {
     }
 
     #[test]
+    #[serial]
     fn test_good_workers_values() {
-        // Take the lock so changing the environment doesn't cause races.
-        let _env_lock = ENV_LOCK.lock().unwrap();
         env::set_var(CONFIG_ENV, "stage");
 
         check_config!(FullConfig::parse(r#"
@@ -821,9 +804,8 @@ mod test {
     }
 
     #[test]
+    #[serial]
     fn test_bad_workers_values() {
-        // Take the lock so changing the environment doesn't cause races.
-        let _env_lock = ENV_LOCK.lock().unwrap();
         env::remove_var(CONFIG_ENV);
 
         assert!(FullConfig::parse(r#"
@@ -853,9 +835,8 @@ mod test {
     }
 
     #[test]
+    #[serial]
     fn test_good_keep_alives() {
-        // Take the lock so changing the environment doesn't cause races.
-        let _env_lock = ENV_LOCK.lock().unwrap();
         env::set_var(CONFIG_ENV, "stage");
 
         check_config!(FullConfig::parse(r#"
@@ -888,9 +869,8 @@ mod test {
     }
 
     #[test]
+    #[serial]
     fn test_bad_keep_alives() {
-        // Take the lock so changing the environment doesn't cause races.
-        let _env_lock = ENV_LOCK.lock().unwrap();
         env::remove_var(CONFIG_ENV);
 
         assert!(FullConfig::parse(r#"
@@ -915,9 +895,8 @@ mod test {
     }
 
     #[test]
+    #[serial]
     fn test_good_log_levels() {
-        // Take the lock so changing the environment doesn't cause races.
-        let _env_lock = ENV_LOCK.lock().unwrap();
         env::set_var(CONFIG_ENV, "stage");
 
         check_config!(FullConfig::parse(r#"
@@ -951,9 +930,8 @@ mod test {
     }
 
     #[test]
+    #[serial]
     fn test_bad_log_level_values() {
-        // Take the lock so changing the environment doesn't cause races.
-        let _env_lock = ENV_LOCK.lock().unwrap();
         env::remove_var(CONFIG_ENV);
 
         assert!(FullConfig::parse(r#"
@@ -973,9 +951,8 @@ mod test {
     }
 
     #[test]
+    #[serial]
     fn test_good_secret_key() {
-        // Take the lock so changing the environment doesn't cause races.
-        let _env_lock = ENV_LOCK.lock().unwrap();
         env::set_var(CONFIG_ENV, "stage");
 
         check_config!(FullConfig::parse(r#"
@@ -998,9 +975,8 @@ mod test {
     }
 
     #[test]
+    #[serial]
     fn test_bad_secret_key() {
-        // Take the lock so changing the environment doesn't cause races.
-        let _env_lock = ENV_LOCK.lock().unwrap();
         env::remove_var(CONFIG_ENV);
 
         assert!(FullConfig::parse(r#"
@@ -1020,9 +996,8 @@ mod test {
     }
 
     #[test]
+    #[serial]
     fn test_bad_toml() {
-        // Take the lock so changing the environment doesn't cause races.
-        let _env_lock = ENV_LOCK.lock().unwrap();
         env::remove_var(CONFIG_ENV);
 
         assert!(FullConfig::parse(r#"
@@ -1041,10 +1016,8 @@ mod test {
     }
 
     #[test]
+    #[serial]
     fn test_global_overrides() {
-        // Take the lock so changing the environment doesn't cause races.
-        let _env_lock = ENV_LOCK.lock().unwrap();
-
         // Test first that we can override each environment.
         for env in &Environment::ALL {
             env::set_var(CONFIG_ENV, env.to_string());
@@ -1073,10 +1046,8 @@ mod test {
     }
 
     #[test]
+    #[serial]
     fn test_env_override() {
-        // Take the lock so changing the environment doesn't cause races.
-        let _env_lock = ENV_LOCK.lock().unwrap();
-
         let pairs = [
             ("log", "critical"), ("LOG", "debug"), ("PORT", "8110"),
             ("address", "1.2.3.4"), ("EXTRA_EXTRA", "true"), ("workers", "3")

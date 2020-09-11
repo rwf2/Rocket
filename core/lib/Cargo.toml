@@ -60,8 +60,7 @@ version_check = "0.9.1"
 
 [dev-dependencies]
 bencher = "0.1"
-# TODO: Find a way to not depend on this.
-lazy_static = "1.0"
+serial_test = "0.5.0"
 
 [[bench]]
 name = "format-routing"
