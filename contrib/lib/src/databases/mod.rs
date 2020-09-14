@@ -316,7 +316,7 @@
 //! The list below includes all presently supported database adapters and their
 //! corresponding [`Poolable`] type.
 //!
-// Note: Keep this table in sync with site/guite/6-state.md
+// Note: Keep this table in sync with site/guide/6-state.md
 //! | Kind     | Driver                | Version   | `Poolable` Type                | Feature                |
 //! |----------|-----------------------|-----------|--------------------------------|------------------------|
 //! | MySQL    | [Diesel]              | `1`       | [`diesel::MysqlConnection`]    | `diesel_mysql_pool`    |
@@ -325,6 +325,7 @@
 //! | Sqlite   | [Diesel]              | `1`       | [`diesel::SqliteConnection`]   | `diesel_sqlite_pool`   |
 //! | Sqlite   | [`Rusqlite`]          | `0.24`    | [`rusqlite::Connection`]       | `sqlite_pool`          |
 //! | Memcache | [`memcache`]          | `0.15`    | [`memcache::Client`]           | `memcache_pool`        |
+//! | ArangoDB | [`arangors`]          | `0.4`     | [`arangors::Connection`]       | `arango_pool`          |
 //!
 //! [Diesel]: https://diesel.rs
 //! [`rusqlite::Connection`]: https://docs.rs/rusqlite/0.23.0/rusqlite/struct.Connection.html
@@ -337,12 +338,33 @@
 //! [`diesel::PgConnection`]: http://docs.diesel.rs/diesel/pg/struct.PgConnection.html
 //! [`memcache`]: https://github.com/aisk/rust-memcache
 //! [`memcache::Client`]: https://docs.rs/memcache/0.15/memcache/struct.Client.html
+//! [`arangors`]: https://github.com/fMeow/arangors
+//! [`arangors::Connection`]: https://docs.rs/arangors/0.4.3/arangors/connection/index.html
 //!
 //! The above table lists all the supported database adapters in this library.
 //! In order to use particular `Poolable` type that's included in this library,
 //! you must first enable the feature listed in the "Feature" column. The
 //! interior type of your decorated database type should match the type in the
 //! "`Poolable` Type" column.
+//!
+//! ### arango_pool
+//!
+//! The [ArangoDB] adapter and its pool comes with extra configuration, just add
+//! the following config values to your `Rocket.toml`.
+//!
+//! ```toml
+//! [global.databases.mydb]
+//! url = "http://localhost:8529"
+//! username = "root"
+//! password = "super_secret_mega_heavy_secure_password"
+//! use_jwt = true
+//! ```
+//!
+//! The `url` should point to your [ArangoDB] instance. The username and password
+//! are used for authentication when connection to the database. If you add the
+//! `use_jwt = true` value, then the connection gains "super-user" access as
+//! mentioned in the [ArangoDB Docs], if you leave it out, it will default to
+//! `false`.
 //!
 //! ## Extending
 //!
@@ -354,6 +376,8 @@
 //! [`FromRequest`]: rocket::request::FromRequest
 //! [request guards]: rocket::request::FromRequest
 //! [`Poolable`]: crate::databases::Poolable
+//! [ArangoDB]: https://www.arangodb.com
+//! [ArangoDB Docs]: https://www.arangodb.com/docs/3.7/programs-starter-security.html#using-authentication-tokens
 
 pub extern crate r2d2;
 
@@ -372,6 +396,9 @@ pub extern crate diesel;
 
 #[cfg(feature = "memcache_pool")] pub extern crate memcache;
 #[cfg(feature = "memcache_pool")] pub extern crate r2d2_memcache;
+
+#[cfg(feature = "arango_pool")] pub extern crate arangors;
+#[cfg(feature = "arango_pool")] pub extern crate r2d2_arangors;
 
 mod poolable;
 mod config;

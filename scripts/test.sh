@@ -72,6 +72,7 @@ function test_contrib() {
     postgres_pool
     sqlite_pool
     memcache_pool
+    arango_pool
     brotli_compression
     gzip_compression
   )
