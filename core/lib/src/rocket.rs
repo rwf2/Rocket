@@ -1009,7 +1009,7 @@ impl Rocket {
 
             #[cfg(feature = "tls")] {
                 if let Some(tls) = self.config.tls.clone() {
-                    listen_on!(crate::http::tls::bind_tls(addr, tls.certs, tls.key).await).boxed()
+                    listen_on!(crate::http::bind_tls(addr, tls.certs, tls.key).await).boxed()
                 } else {
                     listen_on!(crate::http::private::bind_tcp(addr).await).boxed()
                 }

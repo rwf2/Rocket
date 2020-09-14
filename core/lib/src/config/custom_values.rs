@@ -1,6 +1,5 @@
 use std::fmt;
-
-#[cfg(feature = "tls")] use crate::http::tls::{Certificate, PrivateKey};
+#[cfg(feature = "tls")] use std::path::PathBuf;
 
 use crate::http::private::cookie::Key;
 use crate::config::{Result, Config, Value, ConfigError, LoggingLevel};
@@ -48,8 +47,8 @@ impl fmt::Display for SecretKey {
 #[cfg(feature = "tls")]
 #[derive(Clone)]
 pub struct TlsConfig {
-    pub certs: Vec<Certificate>,
-    pub key: PrivateKey
+    pub certs: PathBuf,
+    pub key: PathBuf
 }
 
 #[cfg(not(feature = "tls"))]

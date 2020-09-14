@@ -20,7 +20,10 @@ pub mod ext;
 
 #[doc(hidden)]
 #[cfg(feature = "tls")]
-pub mod tls;
+mod tls;
+
+#[cfg(feature = "tls")]
+pub use tls::bind_tls;
 
 #[doc(hidden)]
 pub mod route;
