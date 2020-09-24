@@ -782,7 +782,7 @@ fn new(task: Option<Form<Task>>) { /* .. */ }
 
 #### Lenient Parsing
 
-Rocket's `FromForm` parsing is _strict_ by default. In other words, A `Form<T>`
+Rocket's `FromForm` parsing is _strict_ by default. In other words, a `Form<T>`
 will parse successfully from an incoming form only if the form contains the
 exact set of fields in `T`. Said another way, a `Form<T>` will error on missing
 and/or extra fields. For instance, if an incoming form contains the fields "a",
