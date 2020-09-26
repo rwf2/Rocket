@@ -130,6 +130,7 @@ impl<T> Form<T> {
     ///     form.into_inner().field
     /// }
     /// # fn main() { }
+    /// ```
     #[inline(always)]
     pub fn into_inner(self) -> T {
         self.0
