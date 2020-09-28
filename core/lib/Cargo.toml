@@ -20,6 +20,7 @@ all-features = true
 [features]
 default = ["private-cookies"]
 tls = ["rocket_http/tls"]
+sse = []
 private-cookies = ["rocket_http/private-cookies"]
 
 [dependencies]

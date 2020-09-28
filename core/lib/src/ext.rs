@@ -24,12 +24,12 @@ pub trait ReadExt: io::Read + Sized {
         Ok(read_max_internal(self, buf, false)?.0)
     }
 
-    /// Tries to fill buf with data.  Short reads can occur
-    /// for EOF or flush requests.  A flush request occurs
-    /// if the underlying reader returns ErrorKind::Wouldblock
+    /// Tries to fill buf with data.  Short reads can occur for EOF or
+    /// flush requests.  With SSE enabled, a flush request occurs if
+    /// the underlying reader returns ErrorKind::Wouldblock
     fn read_max_wfs(&mut self, buf: &mut [u8])
                     -> io::Result<(usize, bool)> {
-        read_max_internal(self, buf, true)
+        read_max_internal(self, buf, cfg!(feature="sse"))
     }
 }
 

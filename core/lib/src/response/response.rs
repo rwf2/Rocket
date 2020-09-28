@@ -1020,8 +1020,9 @@ impl<'r> Response<'r> {
     ///
     /// Normally, data will be buffered and sent only in complete
     /// chunks.  If you need timely transmission of available data,
-    /// rather than buffering, use the `WouldBlock` technique
-    /// described in [Stream](::response::Stream).
+    /// rather than buffering, enable the `sse` feature and use the
+    /// `WouldBlock` technique described in
+    /// [Stream](::response::Stream).
     ///
     /// # Example
     ///
