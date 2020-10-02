@@ -42,6 +42,8 @@ es.onmessage = function(event) {
     )
 }
 
+const BUF_SIZE : usize = 4096;
+
 type TestCounter = BufReader<TestCounterInner>;
 #[derive(Debug)]
 struct TestCounterInner {
@@ -52,6 +54,10 @@ impl Read for TestCounterInner {
         sleep(Duration::from_millis(500));
         let data = format!("data: {}\n\n", self.next);
         self.next += 1;
+        // `BufReader` won't call us unless its buffer is empty, and
+        // then buf will be the whole of the buffer, ie of size
+        // BUF_SIZE (due to the `with_capacity` call).  So `data` is
+        // definitely going to fit.
         buf[0..data.len()].copy_from_slice(data.as_bytes());
         Ok(buf.len())
     }
@@ -60,7 +66,7 @@ impl Read for TestCounterInner {
 #[get("/updates")]
 fn updates<'x>() -> impl Responder<'x> {
     let tc = TestCounterInner { next: 0 };
-    let tc = BufReader::new(tc);
+    let tc = BufReader::with_capacity(BUF_SIZE, tc);
     let ch = rocket::response::Stream::from(tc);
     let ct = ContentType::parse_flexible("text/event-stream; charset=utf-8").unwrap();
     Content(ct, ch)
