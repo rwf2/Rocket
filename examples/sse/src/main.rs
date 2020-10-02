@@ -5,6 +5,7 @@ extern crate rocket;
 use rocket::http::ContentType;
 use rocket::response::Content;
 use rocket::response::Responder;
+use std::io::BufReader;
 use std::io::Read;
 use std::thread::sleep;
 use std::time::Duration;
@@ -41,7 +42,7 @@ es.onmessage = function(event) {
     )
 }
 
-type TestCounter = std::io::BufReader<TestCounterInner>;
+type TestCounter = BufReader<TestCounterInner>;
 #[derive(Debug)]
 struct TestCounterInner {
     next: usize,
@@ -59,8 +60,8 @@ impl Read for TestCounterInner {
 #[get("/updates")]
 fn updates<'x>() -> impl Responder<'x> {
     let tc = TestCounterInner { next: 0 };
-    let tc = std::io::BufReader::new(tc);
-    let ch = rocket::response::Stream::chunked(tc, 4096);
+    let tc = BufReader::new(tc);
+    let ch = rocket::response::Stream::from(tc);
     let ct = ContentType::parse_flexible("text/event-stream; charset=utf-8").unwrap();
     Content(ct, ch)
 }
