@@ -25,6 +25,7 @@ members = [
   "examples/testing",
   "examples/request_local_state",
   "examples/request_guard",
+  "examples/sse",
   "examples/stream",
   "examples/json",
   "examples/msgpack",
