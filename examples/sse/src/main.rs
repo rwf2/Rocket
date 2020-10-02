@@ -60,7 +60,7 @@ impl Read for TestCounterInner {
 fn updates<'x>() -> impl Responder<'x> {
     let tc = TestCounterInner { next: 0 };
     let tc = std::io::BufReader::new(tc);
-    let ch = rocket::response::Stream::chunked(tc, 1);
+    let ch = rocket::response::Stream::chunked(tc, 4096);
     let ct = ContentType::parse_flexible("text/event-stream; charset=utf-8").unwrap();
     Content(ct, ch)
 }
