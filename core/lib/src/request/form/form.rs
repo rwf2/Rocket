@@ -1,4 +1,4 @@
-use std::ops::Deref;
+use std::ops::{Deref, DerefMut};
 
 use crate::outcome::Outcome::*;
 use crate::request::{Request, form::{FromForm, FormItems, FormDataError}};
@@ -141,6 +141,12 @@ impl<T> Deref for Form<T> {
 
     fn deref(&self) -> &T {
         &self.0
+    }
+}
+
+impl<T> DerefMut for Form<T> {
+    fn deref_mut(&mut self) -> &mut T {
+        &mut self.0
     }
 }
 

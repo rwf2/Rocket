@@ -1,4 +1,4 @@
-use std::ops::Deref;
+use std::ops::{Deref, DerefMut};
 
 use crate::request::{Request, form::{Form, FormDataError, FromForm}};
 use crate::data::{Data, Transformed, FromTransformedData, TransformFuture, FromDataFuture};
@@ -90,6 +90,12 @@ impl<T> Deref for LenientForm<T> {
 
     fn deref(&self) -> &T {
         &self.0
+    }
+}
+
+impl<T> DerefMut for LenientForm<T> {
+    fn deref_mut(&mut self) -> &mut T {
+        &mut self.0
     }
 }
 
