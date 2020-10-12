@@ -43,3 +43,6 @@ members = [
   "examples/fairings",
   "examples/hello_2018",
 ]
+
+[patch.crates-io]
+rustls = { git = 'https://github.com/blaggacao/rustls', branch = "da-implement-ecdsa-keys" }
