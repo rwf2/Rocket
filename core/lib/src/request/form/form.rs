@@ -47,8 +47,8 @@ use crate::http::{Status, uri::{Query, FromUriParam}};
 /// # fn main() {  }
 /// ```
 ///
-/// A type of `Form<T>` automatically dereferences into an `&T`, though you can
-/// also transform a `Form<T>` into a `T` by calling
+/// A type of `Form<T>` automatically dereferences into an `&T` or `&mut T`,
+/// though you can also transform a `Form<T>` into a `T` by calling
 /// [`into_inner()`](Form::into_inner()). Thanks to automatic dereferencing, you
 /// can access fields of `T` transparently through a `Form<T>`, as seen above
 /// with `user_input.value`.
