@@ -47,6 +47,7 @@ pub fn load_private_key<P: AsRef<Path>>(path: P) -> Result<rustls::PrivateKey, E
 
     let private_keys_fn = match first_line.trim_end() {
         "-----BEGIN RSA PRIVATE KEY-----" => pemfile::rsa_private_keys,
+        "-----BEGIN EC PRIVATE KEY-----" => pemfile::ec_private_keys,
         "-----BEGIN PRIVATE KEY-----" => pemfile::pkcs8_private_keys,
         _ => return Err(Error::BadKey),
     };
@@ -60,7 +61,7 @@ pub fn load_private_key<P: AsRef<Path>>(path: P) -> Result<rustls::PrivateKey, E
         })?;
 
     // Ensure we can use the key.
-    if rustls::sign::RSASigningKey::new(&key).is_err() {
+    if rustls::sign::any_supported_type(&key).is_err() {
         Err(Error::BadKey)
     } else {
         Ok(key)
