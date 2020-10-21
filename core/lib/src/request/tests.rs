@@ -1,7 +1,7 @@
 use std::net::{IpAddr, Ipv4Addr, SocketAddr};
 use std::collections::HashMap;
 
-use crate::{Rocket, Request, Config};
+use crate::{Rocket, Request, Config, State};
 use crate::http::hyper;
 
 macro_rules! assert_headers {
@@ -46,4 +46,23 @@ fn test_multiple_headers_merge_into_one_from_hyp() {
     assert_headers!("friend" => ["alice"], "friend" => ["bob"]);
     assert_headers!("friend" => ["alice"], "friend" => ["bob"], "friend" => ["carol"]);
     assert_headers!("friend" => ["alice"], "friend" => ["bob"], "enemy" => ["carol"]);
+}
+
+#[derive(Clone)]
+struct MyConfig {
+    user_val: String
+}
+
+#[tokio::test]
+async fn test_can_clone_state() {
+    let my_config: MyConfig = MyConfig { user_val: "hello".to_string() };
+    
+    // Setup our test State
+    let mut rocket = Rocket::ignite().manage(my_config);
+    let cargo = rocket.inspect().await;
+    let my_state: State<'_, MyConfig> = State::from(cargo).unwrap();
+    
+    // Now check we can clone it
+    let my_clone = my_state.clone();
+    assert_eq!(my_clone.user_val, "hello");
 }
