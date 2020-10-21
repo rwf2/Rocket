@@ -402,23 +402,22 @@ use self::r2d2::ManageConnection;
 /// [global.databases.my_database]
 /// url = "postgres://root:root@localhost/my_database"
 /// pool_size = 10
-/// certs = "sample_cert.pem"
-/// key = "key.pem"
+/// timeout = 5
 /// ```
 ///
-/// The following structure would be generated after calling
-/// [`database_config`]`("my_database", &config)`:
+/// would generate the following struct:
 ///
 /// ```rust,ignore
 /// Config {
-///     url: "dummy_db.sqlite",
+///     url: "postgres://root:root@localhost/my_database",
 ///     pool_size: 10,
-///     extras: {
-///         "certs": String("certs.pem"),
-///         "key": String("key.pem"),
-///     },
+///     timeout: 5
 /// }
 /// ```
+///
+/// If you want to implement your own custom database adapter (or other
+/// database-like struct that can be pooled by `r2d2`) and need some more
+/// configurations options, you need to implement your own config struct.
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
 pub struct Config {
     /// Connection URL specified in the Rocket configuration.
@@ -450,11 +449,40 @@ impl Config {
     /// my_other_db = { url = "mysql://root:root@localhost/database" }
     /// ```
     ///
-    /// The following example uses `database_config` to retrieve the configurations
-    /// for the `my_db` and `my_other_db` databases:
+    /// Which can be extracted like following:
     ///
     /// ```rust
+    /// # #[cfg(feature = "diesel_sqlite_pool")] {
+    /// # use rocket::figment::{value::{Map, Value}, util::map};
+    /// use rocket_contrib::databases::Config;
     ///
+    /// # #[rocket::launch]
+    /// # async fn rocket() -> _ {
+    /// #     let db: Map<_, Value> = map! {
+    /// #         "url" => "db/db.sqlite".into(),
+    /// #         "pool_size" => 25.into()
+    /// #     };
+    /// #     let other_db: Map<_, Value> = map! {
+    /// #         "url" => "mysql://root:root@localhost/database".into()
+    /// #     };
+    /// #
+    /// #     let figment = rocket::Config::figment()
+    /// #         .merge(("databases", map!["my_db" => db]))
+    /// #         .merge(("databases", map!["my_other_db" => other_db]));
+    /// #
+    /// #     let mut rocket = rocket::custom(figment);
+    /// // Access the global config
+    /// let cargo = rocket.inspect().await;
+    /// // Create a db config from the global one
+    /// let db_config = Config::from(cargo, "my_db").expect("my_db config");
+    /// // The same with different error handling
+    /// let other_db_config = match Config::from(cargo, "my_other_db") {
+    ///     Ok(config) => config,
+    ///     Err(err) => panic!("Couldn't read my_other_db config because of error: {:?}", err),
+    /// };
+    /// # rocket
+    /// # }
+    /// # }
     /// ```
     pub fn from(cargo: &rocket::Cargo, db: &str) -> Result<Config, Error> {
         let db_key = format!("databases.{}", db);
@@ -476,6 +504,14 @@ pub enum DbError<T> {
     Custom(T),
     /// The error returned by an r2d2 pool.
     PoolError(r2d2::Error),
+    /// The error returned by `Figment` when a config fails to deserialize.
+    Config(Error),
+}
+
+impl<T> From<Error> for DbError<T> {
+    fn from(error: Error) -> Self {
+        DbError::Config(error)
+    }
 }
 
 /// Trait implemented by `r2d2`-based database adapters.
@@ -544,7 +580,8 @@ pub enum DbError<T> {
 ///     type Manager = foo::ConnectionManager;
 ///     type Error = DbError<foo::Error>;
 ///
-///     fn pool(config: &Config) -> Result<r2d2::Pool<Self::Manager>, Self::Error> {
+///     fn pool(cargo: &rocket::Cargo, name: &str) -> Result<r2d2::Pool<Self::Manager>, Self::Error> {
+///         let config = Config::from(cargo, name)?;
 ///         let manager = foo::ConnectionManager::new(&config.url)
 ///             .map_err(DbError::Custom)?;
 ///
@@ -559,13 +596,9 @@ pub enum DbError<T> {
 /// In this example, `ConnectionManager::new()` method returns a `foo::Error` on
 /// failure. For convenience, the [`DbError`] enum is used to consolidate this
 /// error type and the `r2d2::Error` type that can result from
-/// `r2d2::Pool::builder()`.
+/// `r2d2::Pool::builder()` or `database::Config::from()`.
 ///
-/// In the event that a connection manager isn't fallible (as is the case with
-/// Diesel's r2d2 connection manager, for instance), the associated error type
-/// for the `Poolable` implementation can simply be `r2d2::Error` as this is the
-/// only error that can be result. For more concrete example, consult Rocket's
-/// existing implementations of [`Poolable`].
+/// For more concrete examples, consult Rocket's existing implementations of [`Poolable`].
 pub trait Poolable: Send + Sized + 'static {
     /// The associated connection manager for the given connection type.
     type Manager: ManageConnection<Connection=Self>;
@@ -575,39 +608,45 @@ pub trait Poolable: Send + Sized + 'static {
 
     /// Creates an `r2d2` connection pool for `Manager::Connection`, returning
     /// the pool on success.
-    fn pool(config: &Config) -> Result<r2d2::Pool<Self::Manager>, Self::Error>;
+    fn pool(cargo: &rocket::Cargo, name: &str) -> Result<r2d2::Pool<Self::Manager>, Self::Error>;
 }
 
 #[cfg(feature = "diesel_sqlite_pool")]
 impl Poolable for diesel::SqliteConnection {
     type Manager = diesel::r2d2::ConnectionManager<diesel::SqliteConnection>;
-    type Error = r2d2::Error;
+    type Error = DbError<r2d2::Error>;
 
-    fn pool(config: &Config) -> Result<r2d2::Pool<Self::Manager>, Self::Error> {
+    fn pool(cargo: &rocket::Cargo, name: &str) -> Result<r2d2::Pool<Self::Manager>, Self::Error> {
+        let config = Config::from(cargo, name)?;
         let manager = diesel::r2d2::ConnectionManager::new(&config.url);
         r2d2::Pool::builder().max_size(config.pool_size).build(manager)
+            .map_err(DbError::PoolError)
     }
 }
 
 #[cfg(feature = "diesel_postgres_pool")]
 impl Poolable for diesel::PgConnection {
     type Manager = diesel::r2d2::ConnectionManager<diesel::PgConnection>;
-    type Error = r2d2::Error;
+    type Error = DbError<r2d2::Error>;
 
-    fn pool(config: &Config) -> Result<r2d2::Pool<Self::Manager>, Self::Error> {
+    fn pool(cargo: &rocket::Cargo, name: &str) -> Result<r2d2::Pool<Self::Manager>, Self::Error> {
+        let config = Config::from(cargo, name)?;
         let manager = diesel::r2d2::ConnectionManager::new(&config.url);
         r2d2::Pool::builder().max_size(config.pool_size).build(manager)
+            .map_err(DbError::PoolError)
     }
 }
 
 #[cfg(feature = "diesel_mysql_pool")]
 impl Poolable for diesel::MysqlConnection {
     type Manager = diesel::r2d2::ConnectionManager<diesel::MysqlConnection>;
-    type Error = r2d2::Error;
+    type Error = DbError<r2d2::Error>;
 
-    fn pool(config: &Config) -> Result<r2d2::Pool<Self::Manager>, Self::Error> {
+    fn pool(cargo: &rocket::Cargo, name: &str) -> Result<r2d2::Pool<Self::Manager>, Self::Error> {
+        let config = Config::from(cargo, name)?;
         let manager = diesel::r2d2::ConnectionManager::new(&config.url);
         r2d2::Pool::builder().max_size(config.pool_size).build(manager)
+            .map_err(DbError::PoolError)
     }
 }
 
@@ -617,7 +656,8 @@ impl Poolable for postgres::Client {
     type Manager = r2d2_postgres::PostgresConnectionManager<postgres::tls::NoTls>;
     type Error = DbError<postgres::Error>;
 
-    fn pool(config: &Config) -> Result<r2d2::Pool<Self::Manager>, Self::Error> {
+    fn pool(cargo: &rocket::Cargo, name: &str) -> Result<r2d2::Pool<Self::Manager>, Self::Error> {
+        let config = Config::from(cargo, name)?;
         let manager = r2d2_postgres::PostgresConnectionManager::new(
             config.url.parse().map_err(DbError::Custom)?,
             postgres::tls::NoTls,
@@ -631,23 +671,27 @@ impl Poolable for postgres::Client {
 #[cfg(feature = "mysql_pool")]
 impl Poolable for mysql::Conn {
     type Manager = r2d2_mysql::MysqlConnectionManager;
-    type Error = r2d2::Error;
+    type Error = DbError<r2d2::Error>;
 
-    fn pool(config: &Config) -> Result<r2d2::Pool<Self::Manager>, Self::Error> {
+    fn pool(cargo: &rocket::Cargo, name: &str) -> Result<r2d2::Pool<Self::Manager>, Self::Error> {
+        let config = Config::from(cargo, name)?;
         let opts = mysql::OptsBuilder::from_opts(&config.url);
         let manager = r2d2_mysql::MysqlConnectionManager::new(opts);
         r2d2::Pool::builder().max_size(config.pool_size).build(manager)
+            .map_err(DbError::PoolError)
     }
 }
 
 #[cfg(feature = "sqlite_pool")]
 impl Poolable for rusqlite::Connection {
     type Manager = r2d2_sqlite::SqliteConnectionManager;
-    type Error = r2d2::Error;
+    type Error = DbError<r2d2::Error>;
 
-    fn pool(config: &Config) -> Result<r2d2::Pool<Self::Manager>, Self::Error> {
+    fn pool(cargo: &rocket::Cargo, name: &str) -> Result<r2d2::Pool<Self::Manager>, Self::Error> {
+        let config = Config::from(cargo, name)?;
         let manager = r2d2_sqlite::SqliteConnectionManager::file(&*config.url);
         r2d2::Pool::builder().max_size(config.pool_size).build(manager)
+            .map_err(DbError::PoolError)
     }
 }
 
@@ -656,9 +700,11 @@ impl Poolable for memcache::Client {
     type Manager = r2d2_memcache::MemcacheConnectionManager;
     type Error = DbError<memcache::MemcacheError>;
 
-    fn pool(config: &Config) -> Result<r2d2::Pool<Self::Manager>, Self::Error> {
+    fn pool(cargo: &rocket::Cargo, name: &str) -> Result<r2d2::Pool<Self::Manager>, Self::Error> {
+        let config = Config::from(cargo, name)?;
         let manager = r2d2_memcache::MemcacheConnectionManager::new(&*config.url);
-        r2d2::Pool::builder().max_size(config.pool_size).build(manager).map_err(DbError::PoolError)
+        r2d2::Pool::builder().max_size(config.pool_size).build(manager)
+            .map_err(DbError::PoolError)
     }
 }
 
@@ -712,7 +758,8 @@ async fn run_blocking<F, R>(job: F) -> R
 impl<K: 'static, C: Poolable> ConnectionPool<K, C> {
     pub fn fairing(fairing_name: &'static str, db_name: &'static str) -> impl Fairing {
         AdHoc::on_attach(fairing_name, move |mut rocket| async move {
-            let config = match Config::from(rocket.inspect().await, db_name) {
+            let cargo = rocket.inspect().await;
+            let config = match Config::from(cargo, db_name) {
                 Ok(config) => config,
                 Err(config_error) => {
                     rocket::error!("database configuration error for '{}'", db_name);
@@ -721,7 +768,7 @@ impl<K: 'static, C: Poolable> ConnectionPool<K, C> {
                 }
             };
 
-            match C::pool(&config) {
+            match C::pool(cargo, db_name) {
                 Ok(pool) => {
                     let pool_size = config.pool_size;
                     let managed = ConnectionPool::<K, C> {
