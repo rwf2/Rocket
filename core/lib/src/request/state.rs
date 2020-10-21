@@ -98,7 +98,7 @@ use crate::http::Status;
 /// assert_eq!(handler(state), "127");
 /// # });
 /// ```
-#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
+#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct State<'r, T: Send + Sync + 'static>(&'r T);
 
 impl<'r, T: Send + Sync + 'static> State<'r, T> {
@@ -186,5 +186,11 @@ impl<T: Send + Sync + 'static> Deref for State<'_, T> {
     #[inline(always)]
     fn deref(&self) -> &T {
         self.0
+    }
+}
+
+impl<'r, T: Send + Sync + 'static> Clone for State<'r, T> {
+    fn clone(&self) -> State<'r, T> {
+        State(self.0)
     }
 }

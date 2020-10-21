@@ -1,8 +1,8 @@
-use std::collections::HashMap;
 use std::net::{IpAddr, Ipv4Addr, SocketAddr};
+use std::collections::HashMap;
 
-use crate::http::hyper;
 use crate::{Config, Request, Rocket, State};
+use crate::http::hyper;
 
 macro_rules! assert_headers {
     ($($key:expr => [$($value:expr),+]),+) => ({
@@ -48,7 +48,6 @@ fn test_multiple_headers_merge_into_one_from_hyp() {
     assert_headers!("friend" => ["alice"], "friend" => ["bob"], "enemy" => ["carol"]);
 }
 
-#[derive(Clone)]
 struct MyConfig {
     user_val: String,
 }
