@@ -92,10 +92,21 @@
 //! }
 //! ```
 //!
+//! If the application's config should behave like the configuration of Rocket,
+//! i.e. use the same [`Profile`]s and behaviour, you need to instead merge them as follows:
+//!
+//! ```rust,ignore
+//! let figment = Figment::from(rocket::Config::default())
+//!     .merge(Serialized::defaults(Config::default()))
+//!     .merge(Toml::file(Env::var_or("APP_CONFIG", "App.toml")).nested())
+//!     .merge(Env::prefixed("APP_").global());
+//! ```
+//!
 //! [`rocket::custom()`]: crate::custom()
 //! [`rocket::ignite()`]: crate::ignite()
 //! [`Toml`]: figment::providers::Toml
 //! [`Env`]: figment::providers::Env
+//! [`Profile`]: https://docs.rs/figment/0.9/figment/struct.Profile.html
 
 mod secret_key;
 mod config;

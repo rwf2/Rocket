@@ -340,6 +340,16 @@ Rocket will extract it's configuration from the configured provider. This means
 that if values like `port` and `address` are configured in `Config`, `App.toml`
 or `APP_` environment variables, Rocket will make use of them. The application
 can also extract its configuration, done here via the `Adhoc::config()` fairing.
+If the application's config should behave like the Rocket's config,i.e. use the
+same [`Profile`]s and behaviour, you need to instead merge them like this:
+
+```rust,ignore
+let figment = Figment::from(rocket::Config::default())
+    .merge(Serialized::defaults(Config::default()))
+    .merge(Toml::file(Env::var_or("APP_CONFIG", "App.toml")).nested())
+    .merge(Env::prefixed("APP_").global());
+```
 
 [`rocket::custom()`]: @api/rocket/fn.custom.html
 [`rocket::ignite()`]: @api/rocket/fn.custom.html
+[`Profile`]: @figment/struct.Profile.html
