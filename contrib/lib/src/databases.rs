@@ -748,9 +748,9 @@ async fn run_blocking<F, R>(job: F) -> R
 }
 
 macro_rules! dberr {
-    ($msg:literal, $db_name:expr, $efmt:literal, $error:expr, $rocket:expr) => ({
-        rocket::error!(concat!("database ", $msg, " error for pool named `{}`"), $db_name);
-        error_!($efmt, $error);
+    ($target:literal, $msg:literal, $db_name:expr, $efmt:literal, $error:expr, $rocket:expr) => ({
+        let span = rocket::trace::error_span!($target, "database {} error for pool named `{}`", $msg, $db_name);
+        rocket::trace::error!(parent: &span, $efmt, $error);
         return Err($rocket);
     });
 }
@@ -760,7 +760,7 @@ impl<K: 'static, C: Poolable> ConnectionPool<K, C> {
         AdHoc::on_attach(fairing_name, move |rocket| async move {
             let config = match Config::from(db, &rocket) {
                 Ok(config) => config,
-                Err(e) => dberr!("config", db, "{}", e, rocket),
+                Err(e) => dberr!("config_error", "config", db, "{}", e, rocket),
             };
 
             let pool_size = config.pool_size;
@@ -770,9 +770,9 @@ impl<K: 'static, C: Poolable> ConnectionPool<K, C> {
                     semaphore: Arc::new(Semaphore::new(pool_size as usize)),
                     _marker: PhantomData,
                 })),
-                Err(Error::Config(e)) => dberr!("config", db, "{}", e, rocket),
-                Err(Error::Pool(e)) => dberr!("pool init", db, "{}", e, rocket),
-                Err(Error::Custom(e)) => dberr!("pool manager", db, "{:?}", e, rocket),
+                Err(Error::Config(e)) => dberr!("config_error", "config", db, "{}", e, rocket),
+                Err(Error::Pool(e)) => dberr!("init_error", "pool init", db, "{}", e, rocket),
+                Err(Error::Custom(e)) => dberr!("init_error", "pool manager", db, "{:?}", e, rocket),
             }
         })
     }
@@ -782,7 +782,7 @@ impl<K: 'static, C: Poolable> ConnectionPool<K, C> {
         let permit = match timeout(duration, self.semaphore.clone().acquire_owned()).await {
             Ok(p) => p,
             Err(_) => {
-                error_!("database connection retrieval timed out");
+                error!("database connection retrieval timed out");
                 return Err(());
             }
         };
@@ -795,7 +795,7 @@ impl<K: 'static, C: Poolable> ConnectionPool<K, C> {
                 _marker: PhantomData,
             }),
             Err(e) => {
-                error_!("failed to get a database connection: {}", e);
+                error!("failed to get a database connection: {}", e);
                 Err(())
             }
         }
@@ -858,7 +858,7 @@ impl<'a, 'r, K: 'static, C: Poolable> FromRequest<'a, 'r> for Connection<K, C> {
         match request.managed_state::<ConnectionPool<K, C>>() {
             Some(c) => c.get().await.into_outcome(Status::ServiceUnavailable),
             None => {
-                error_!("Missing database fairing for `{}`", std::any::type_name::<K>());
+                error!("Missing database fairing for `{}`", std::any::type_name::<K>());
                 Outcome::Failure((Status::InternalServerError, ()))
             }
         }

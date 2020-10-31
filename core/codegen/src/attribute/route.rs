@@ -128,19 +128,19 @@ fn param_expr(seg: &Segment, ident: &syn::Ident, ty: &syn::Type) -> TokenStream 
     define_vars_and_mods!(req, data, error, log, request, _None, _Some, _Ok, _Err, Outcome);
     let i = seg.index.expect("dynamic parameters must be indexed");
     let span = ident.span().join(ty.span()).unwrap_or_else(|| ty.span());
-    let name = ident.to_string();
 
     // All dynamic parameter should be found if this function is being called;
     // that's the point of statically checking the URI parameters.
     let internal_error = quote!({
-        #log::error("Internal invariant error: expected dynamic parameter not found.");
-        #log::error("Please report this error to the Rocket issue tracker.");
+        #log::error!("Internal invariant error: expected dynamic parameter not found.");
+        #log::error!("Please report this error to the Rocket issue tracker.");
         #Outcome::Forward(#data)
     });
 
     // Returned when a dynamic parameter fails to parse.
+    let field_name = syn::Ident::new(&seg.name, seg.span);
     let parse_error = quote!({
-        #log::warn_(&format!("Failed to parse '{}': {:?}", #name, #error));
+        #log::warn!(#field_name = ?#error, "Failed to parse dynamic parameter");
         #Outcome::Forward(#data)
     });
 
@@ -231,22 +231,24 @@ fn query_exprs(route: &Route) -> Option<TokenStream> {
             },
             Kind::Static => quote!()
         };
-
         let matcher = match segment.kind {
-            Kind::Single => quote_spanned! { span =>
-                (_, #name, __v) => {
-                    #[allow(unreachable_patterns, unreachable_code)]
-                    let __v = match <#ty as #request::FromFormValue>::from_form_value(__v) {
-                        #_Ok(__v) => __v,
-                        #_Err(__e) => {
-                            #log::warn_(&format!("Failed to parse '{}': {:?}", #name, __e));
-                            return #Outcome::Forward(#data);
-                        }
-                    };
+            Kind::Single => {
+                let field_name = syn::Ident::new(name, segment.span);
+                quote_spanned! { span =>
+                    (_, #name, __v) => {
+                        #[allow(unreachable_patterns, unreachable_code)]
+                        let __v = match <#ty as #request::FromFormValue>::from_form_value(__v) {
+                            #_Ok(__v) => __v,
+                            #_Err(__e) => {
+                                #log::warn!(#field_name = ?__e, "Failed to parse");
+                                return #Outcome::Forward(#data);
+                            }
+                        };
 
-                    #ident = #_Some(__v);
+                        #ident = #_Some(__v);
+                    }
                 }
-            },
+            }
             Kind::Static => quote! {
                 (#name, _, _) => continue,
             },
@@ -261,21 +263,24 @@ fn query_exprs(route: &Route) -> Option<TokenStream> {
                 let #ident = match #ident.or_else(<#ty as #request::FromFormValue>::default) {
                     #_Some(__v) => __v,
                     #_None => {
-                        #log::warn_(&format!("Missing required query parameter '{}'.", #name));
+                        #log::warn!(parameter = %#name, "Missing required query parameter");
                         return #Outcome::Forward(#data);
                     }
                 };
             },
-            Kind::Multi => quote_spanned! { span =>
-                #[allow(non_snake_case)]
-                let #ident = match <#ty as #request::FromQuery>::from_query(#Query(&#trail)) {
-                    #_Ok(__v) => __v,
-                    #_Err(__e) => {
-                        #log::warn_(&format!("Failed to parse '{}': {:?}", #name, __e));
-                        return #Outcome::Forward(#data);
-                    }
-                };
-            },
+            Kind::Multi => {
+                let field_name = syn::Ident::new(name, segment.span);
+                quote_spanned! { span =>
+                    #[allow(non_snake_case)]
+                    let #ident = match <#ty as #request::FromQuery>::from_query(#Query(&#trail)) {
+                        #_Ok(__v) => __v,
+                        #_Err(__e) => {
+                            #log::warn!(#field_name = ?__e, "Failed to parse");
+                            return #Outcome::Forward(#data);
+                        }
+                    };
+                }
+            }
             Kind::Static => quote!()
         };
 
@@ -408,11 +413,12 @@ fn codegen_route(route: Route) -> Result<TokenStream> {
     }
 
     // Gather everything we need.
-    define_vars_and_mods!(req, data, _Box, Request, Data, Route, StaticRouteInfo, HandlerFuture);
+    define_vars_and_mods!(req, log, data, _Box, Request, Data, Route, StaticRouteInfo, HandlerFuture);
     let (vis, user_handler_fn) = (&route.function.vis, &route.function);
     let user_handler_fn_name = &user_handler_fn.sig.ident;
     let generated_internal_uri_macro = generate_internal_uri_macro(&route);
     let generated_respond_expr = generate_respond_expr(&route);
+    let generated_span_name = user_handler_fn_name.to_string();
 
     let method = route.attribute.method;
     let path = route.attribute.path.origin.0.to_string();
@@ -434,13 +440,19 @@ fn codegen_route(route: Route) -> Result<TokenStream> {
                     #req: &'_b #Request,
                     #data: #Data
                 ) -> #HandlerFuture<'_b> {
+                    use #log::Instrument as _;
                     #_Box::pin(async move {
                         #(#req_guard_definitions)*
                         #(#parameter_definitions)*
                         #data_stmt
 
                         #generated_respond_expr
-                    })
+                    }.instrument(#log::info_span!(
+                        #generated_span_name,
+                        method = %#method,
+                        path = #path,
+                        "Route: {}", #generated_span_name
+                    )))
                 }
 
                 #StaticRouteInfo {

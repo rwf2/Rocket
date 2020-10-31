@@ -74,12 +74,13 @@ pub fn _catch(
     // Gather everything we'll need to generate the catcher.
     let user_catcher_fn = &catch.function;
     let user_catcher_fn_name = catch.function.sig.ident.clone();
+    let generated_span_name = user_catcher_fn_name.to_string();
     let (vis, catcher_status) = (&catch.function.vis, &catch.status);
     let status_code = Optional(catcher_status.as_ref().map(|s| s.0.code));
 
     // Variables names we'll use and reuse.
     define_vars_and_mods!(catch.function.span().into() =>
-        req, status, _Box, Request, Response, StaticCatcherInfo, Catcher,
+        req, status, log, _Box, Request, Response, StaticCatcherInfo, Catcher,
         ErrorHandlerFuture, Status);
 
     // Determine the number of parameters that will be passed in.
@@ -129,13 +130,18 @@ pub fn _catch(
                     #status: #Status,
                     #req: &'_b #Request
                 ) -> #ErrorHandlerFuture<'_b> {
+                    use #log::Instrument as _;
                     #_Box::pin(async move {
                         let __response = #catcher_response;
                         #Response::build()
                             .status(#status)
                             .merge(__response)
                             .ok()
-                    })
+                    }.instrument(#log::info_span!(
+                        #generated_span_name,
+                        status = %#status,
+                        "Catcher: {}", #generated_span_name
+                    )))
                 }
 
                 #StaticCatcherInfo {

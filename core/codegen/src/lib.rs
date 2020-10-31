@@ -82,7 +82,7 @@ vars_and_mods! {
     request => rocket::request,
     response => rocket::response,
     handler => rocket::handler,
-    log => rocket::logger,
+    log => rocket::trace,
     Outcome => rocket::outcome::Outcome,
     FromTransformedData => rocket::data::FromTransformedData,
     Transform => rocket::data::Transform,

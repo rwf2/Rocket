@@ -118,15 +118,18 @@ impl AsyncRead for DataStream {
         cx: &mut Context<'_>,
         buf: &mut [u8]
     ) -> Poll<io::Result<usize>> {
+        let span = trace_span!("DataStream::poll_read()");
+        let _e = span.enter();
+
         if self.buffer.limit() > 0 {
-            trace_!("DataStream::buffer_read()");
+            trace!("DataStream::buffer_read()");
             match Pin::new(&mut self.buffer).poll_read(cx, buf) {
                 Poll::Ready(Ok(0)) => { /* fall through */ },
                 poll => return poll,
             }
         }
 
-        trace_!("DataStream::stream_read()");
+        trace!("DataStream::stream_read()");
         Pin::new(&mut self.stream).poll_read(cx, buf)
     }
 }

@@ -138,7 +138,7 @@ impl<'a, T: Deserialize<'a>> FromTransformedData<'a> for MsgPack<T> {
             match rmp_serde::from_slice(&buf) {
                 Ok(val) => Success(MsgPack(val)),
                 Err(e) => {
-                    error_!("Couldn't parse MessagePack body: {:?}", e);
+                    error!("Couldn't parse MessagePack body: {:?}", e);
                     match e {
                         TypeMismatch(_) | OutOfRange | LengthMismatch(_) => {
                             Failure((Status::UnprocessableEntity, e))
@@ -158,7 +158,7 @@ impl<'r, T: Serialize> Responder<'r, 'static> for MsgPack<T> {
     fn respond_to(self, req: &'r Request<'_>) -> response::Result<'static> {
         let buf = rmp_serde::to_vec(&self.0)
             .map_err(|e| {
-                error_!("MsgPack failed to serialize: {:?}", e);
+                error!("MsgPack failed to serialize: {:?}", e);
                 Status::InternalServerError
             })?;
 

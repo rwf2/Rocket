@@ -4,6 +4,7 @@ use std::sync::Arc;
 use futures::stream::StreamExt;
 use futures::future::{Future, BoxFuture};
 use tokio::sync::oneshot;
+use tracing_futures::Instrument;
 use yansi::Paint;
 
 use crate::Rocket;
@@ -13,7 +14,7 @@ use crate::data::Data;
 use crate::response::{Body, Response};
 use crate::outcome::Outcome;
 use crate::error::{Error, ErrorKind};
-use crate::logger::PaintExt;
+use crate::trace::{self, PaintExt};
 use crate::ext::AsyncReadExt;
 
 use crate::http::{Method, Status, Header, hyper};
@@ -67,7 +68,7 @@ async fn hyper_service_fn(
         let token = rocket.preprocess_request(&mut req, &mut data).await;
         let r = rocket.dispatch(token, &mut req, data).await;
         rocket.send_response(r, tx).await;
-    });
+    }.instrument(info_span!("connection", from = %h_addr, "{}Connection", Paint::emoji("📡 "))));
 
     // Receive the response written to `tx` by the task above.
     rx.await.map_err(|e| io::Error::new(io::ErrorKind::Other, e))
@@ -82,8 +83,8 @@ impl Rocket {
         tx: oneshot::Sender<hyper::Response<hyper::Body>>,
     ) {
         match self.make_response(response, tx).await {
-            Ok(()) => info_!("{}", Paint::green("Response succeeded.")),
-            Err(e) => error_!("Failed to write response: {:?}.", e),
+            Ok(()) => info!("{}", Paint::green("Response succeeded.")),
+            Err(e) => error!("Failed to write response: {:?}.", e),
         }
     }
 
@@ -185,29 +186,30 @@ impl Rocket {
         request: &'r Request<'s>,
         data: Data
     ) -> Response<'r> {
-        info!("{}:", request);
+        async move {
+            // Remember if the request is `HEAD` for later body stripping.
+            let was_head_request = request.method() == Method::Head;
 
-        // Remember if the request is `HEAD` for later body stripping.
-        let was_head_request = request.method() == Method::Head;
+            // Route the request and run the user's handlers.
+            let mut response = self.route_and_process(request, data).await;
 
-        // Route the request and run the user's handlers.
-        let mut response = self.route_and_process(request, data).await;
+            // Add a default 'Server' header if it isn't already there.
+            // TODO: If removing Hyper, write out `Date` header too.
+            if !response.headers().contains("Server") {
+                response.set_header(Header::new("Server", "Rocket"));
+            }
 
-        // Add a default 'Server' header if it isn't already there.
-        // TODO: If removing Hyper, write out `Date` header too.
-        if !response.headers().contains("Server") {
-            response.set_header(Header::new("Server", "Rocket"));
-        }
+            // Run the response fairings.
+            self.fairings.handle_response(request, &mut response).await;
 
-        // Run the response fairings.
-        self.fairings.handle_response(request, &mut response).await;
+            // Strip the body if this is a `HEAD` request.
+            if was_head_request {
+                response.strip_body();
+            }
 
-        // Strip the body if this is a `HEAD` request.
-        if was_head_request {
-            response.strip_body();
-        }
-
-        response
+            response
+        }.instrument(info_span!("request", "{}", request))
+         .await
     }
 
     /// Route the request and process the outcome to eventually get a response.
@@ -222,7 +224,7 @@ impl Rocket {
                 Outcome::Forward(data) => {
                     // There was no matching route. Autohandle `HEAD` requests.
                     if request.method() == Method::Head {
-                        info_!("Autohandling {} request.", Paint::default("HEAD").bold());
+                        info!("Autohandling {} request.", Paint::default("HEAD").bold());
 
                         // Dispatch the request again with Method `GET`.
                         request._set_method(Method::Get);
@@ -266,7 +268,7 @@ impl Rocket {
             let matches = self.router.route(request);
             for route in matches {
                 // Retrieve and set the requests parameters.
-                info_!("Matched: {}", route);
+                info!("Matched: {}", route);
                 request.set_route(route);
 
                 // Dispatch the request to the handler.
@@ -275,14 +277,14 @@ impl Rocket {
                 // Check if the request processing completed (Some) or if the
                 // request needs to be forwarded. If it does, continue the loop
                 // (None) to try again.
-                info_!("{} {}", Paint::default("Outcome:").bold(), outcome);
+                info!("{} {}", Paint::default("Outcome:").bold(), outcome);
                 match outcome {
                     o@Outcome::Success(_) | o@Outcome::Failure(_) => return o,
                     Outcome::Forward(unused_data) => data = unused_data,
                 }
             }
 
-            error_!("No matching routes for {}.", request);
+            error!("No matching routes for {}.", request);
             Outcome::Forward(data)
         }
     }
@@ -298,7 +300,7 @@ impl Rocket {
         req: &'r Request<'s>
     ) -> impl Future<Output = Response<'r>> + 's {
         async move {
-            warn_!("Responding with {} catcher.", Paint::red(&status));
+            warn!("Responding...");
 
             // For now, we reset the delta state to prevent any modifications
             // from earlier, unsuccessful paths from being reflected in error
@@ -310,10 +312,10 @@ impl Rocket {
             let response = if let Some(catcher) = self.catchers.get(&status.code) {
                 catcher.handler.handle(status, req).await
             } else if let Some(ref default) =  self.default_catcher {
-                warn_!("No {} catcher found. Using default catcher.", code);
+                warn!("No {} catcher found. Using default catcher.", code);
                 default.handler.handle(status, req).await
             } else {
-                warn_!("No {} or default catcher found. Using Rocket default catcher.", code);
+                warn!("No {} or default catcher found. Using Rocket default catcher.", code);
                 crate::catcher::default(status, req)
             };
 
@@ -321,13 +323,13 @@ impl Rocket {
             match response {
                 Ok(r) => r,
                 Err(err_status) => {
-                    error_!("Catcher unexpectedly failed with {}.", err_status);
-                    warn_!("Using Rocket's default 500 error catcher.");
+                    error!("Catcher unexpectedly failed with {}.", err_status);
+                    warn!("Using Rocket's default 500 error catcher.");
                     let default = crate::catcher::default(Status::InternalServerError, req);
                     default.expect("Rocket has default 500 response")
                 }
             }
-        }
+        }.instrument(warn_span!("handle_error", "Responding with {} catcher.", Paint::red(&status)))
     }
 
     // TODO.async: Solidify the Listener APIs and make this function public
@@ -351,7 +353,8 @@ impl Rocket {
         let proto = self.config.tls.as_ref().map_or("http://", |_| "https://");
         let full_addr = format!("{}:{}", self.config.address, self.config.port);
 
-        launch_info!("{}{} {}{}",
+        trace::info!(target: "launch",
+                     "{}{} {}{}",
                      Paint::emoji("🚀 "),
                      Paint::default("Rocket has launched from").bold(),
                      Paint::default(proto).bold().underline(),
@@ -379,8 +382,19 @@ impl Rocket {
             }
         });
 
-        // NOTE: `hyper` uses `tokio::spawn()` as the default executor.
+        #[derive(Clone)]
+        struct InCurrentSpanExecutor;
+
+        impl<Fut> hyper::Executor<Fut> for InCurrentSpanExecutor
+            where Fut: Future + Send + 'static, Fut::Output: Send
+        {
+            fn execute(&self, fut: Fut) {
+                tokio::spawn(fut.in_current_span());
+            }
+        }
+
         hyper::Server::builder(Incoming::from_listener(listener))
+            .executor(InCurrentSpanExecutor)
             .http1_keepalive(http1_keepalive)
             .http2_keep_alive_interval(http2_keep_alive)
             .serve(service)

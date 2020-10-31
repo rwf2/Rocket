@@ -6,12 +6,12 @@ use figment::Figment;
 use tokio::sync::mpsc;
 use futures::future::FutureExt;
 
-use crate::logger;
+use crate::trace;
 use crate::config::Config;
 use crate::catcher::Catcher;
 use crate::router::{Router, Route};
 use crate::fairing::{Fairing, Fairings};
-use crate::logger::PaintExt;
+use crate::trace::PaintExt;
 use crate::shutdown::Shutdown;
 use crate::http::uri::Origin;
 use crate::error::{Error, ErrorKind};
@@ -82,7 +82,7 @@ impl Rocket {
     #[inline]
     pub fn custom<T: figment::Provider>(provider: T) -> Rocket {
         let (config, figment) = (Config::from(&provider), Figment::from(provider));
-        logger::try_init(config.log_level, config.cli_colors, false);
+        let _ = trace::try_init(config.log_level, config.cli_colors);
         config.pretty_print(figment.profile());
 
         let managed_state = Container::new();
@@ -163,22 +163,19 @@ impl Rocket {
             panic!("Invalid mount point.");
         }
 
-        info!("{}{} {}{}",
-              Paint::emoji("🛰  "),
-              Paint::magenta("Mounting"),
-              Paint::blue(&base_uri),
-              Paint::magenta(":"));
+        let span = info_span!("mounting", at = %Paint::blue(&base), "{} Mounting", Paint::emoji("🛰  "));
+        let _e = span.enter();
 
         for route in routes.into() {
             let old_route = route.clone();
             let route = route.map_base(|old| format!("{}{}", base, old))
                 .unwrap_or_else(|e| {
-                    error_!("Route `{}` has a malformed URI.", old_route);
-                    error_!("{}", e);
+                    let span = error_span!("malformed_uri", "Route `{}` has a malformed URI.", old_route);
+                    error!(parent: &span, "{}", e);
                     panic!("Invalid route URI.");
                 });
 
-            info_!("{}", route);
+            info!(%route);
             self.router.add(route);
         }
 
@@ -210,10 +207,11 @@ impl Rocket {
     /// ```
     #[inline]
     pub fn register(mut self, catchers: Vec<Catcher>) -> Self {
-        info!("{}{}", Paint::emoji("👾 "), Paint::magenta("Catchers:"));
+        let span = info_span!("catchers", "{}{}", Paint::emoji("👾 "), Paint::magenta("Catchers:"));
+        let _e = span.enter();
 
         for catcher in catchers {
-            info_!("{}", catcher);
+            info!("{}", catcher);
 
             let existing = match catcher.code {
                 Some(code) => self.catchers.insert(code, catcher),
@@ -221,7 +219,7 @@ impl Rocket {
             };
 
             if let Some(existing) = existing {
-                warn_!("Replacing existing '{}' catcher.", existing);
+                warn!("Replacing existing '{}' catcher.", existing);
             }
         }
 
@@ -555,7 +553,7 @@ impl Rocket {
             Either::Left((Err(err), server)) => {
                 // Error setting up ctrl-c signal. Let the user know.
                 warn!("Failed to enable `ctrl-c` graceful signal shutdown.");
-                info_!("Error: {}", err);
+                info!("Error: {}", err);
                 server.await
             }
             // Server shut down before Ctrl-C; return the result.

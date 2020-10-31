@@ -39,8 +39,8 @@ impl Router {
                 .collect()
         });
 
-        trace_!("Routing the request: {}", req);
-        trace_!("All matches: {:?}", matches);
+        trace!("Routing the request: {}", req);
+        trace!("All matches: {:?}", matches);
         matches
     }
 

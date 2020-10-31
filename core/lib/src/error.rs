@@ -168,35 +168,36 @@ impl Drop for Error {
 
         match *self.kind() {
             ErrorKind::Bind(ref e) => {
-                error!("Rocket failed to bind network socket to given address/port.");
-                info_!("{}", e);
+                let span = error_span!("bind_error", "Rocket failed to bind network socket to given address/port.");
+                info!(parent: &span, "{}", e);
                 panic!("aborting due to binding o error");
             }
             ErrorKind::Io(ref e) => {
-                error!("Rocket failed to launch due to an I/O error.");
-                info_!("{}", e);
+                let span = error_span!("io_error", "Rocket failed to launch due to an I/O error.");
+                info!(parent: &span, "{}", e);
                 panic!("aborting due to i/o error");
             }
             ErrorKind::Collision(ref collisions) => {
-                error!("Rocket failed to launch due to the following routing collisions:");
+                let span = error_span!("collisions", "Rocket failed to launch due to the following routing collisions:");
+                let _e = span.enter();
                 for &(ref a, ref b) in collisions {
-                    info_!("{} {} {}", a, Paint::red("collides with").italic(), b)
+                    info!("{} {} {}", a, Paint::red("collides with").italic(), b)
                 }
 
-                info_!("Note: Collisions can usually be resolved by ranking routes.");
+                info!(parent: &span, "Note: Collisions can usually be resolved by ranking routes.");
                 panic!("route collisions detected");
             }
             ErrorKind::FailedFairings(ref failures) => {
-                error!("Rocket failed to launch due to failing fairings:");
+                let span = error_span!("fairing_error", "Rocket failed to launch due to failing fairings:");
                 for fairing in failures {
-                    info_!("{}", fairing);
+                    info!(parent: &span, "{}", fairing);
                 }
 
                 panic!("aborting due to launch fairing failure");
             }
             ErrorKind::Runtime(ref err) => {
-                error!("An error occured in the runtime:");
-                info_!("{}", err);
+                let span = error_span!("runtime_error", "An error occured in the runtime:");
+                info!(parent: &span, "{}", err);
                 panic!("aborting due to runtime failure");
             }
         }

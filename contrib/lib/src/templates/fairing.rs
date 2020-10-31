@@ -58,10 +58,10 @@ mod context {
 
             let watcher = match watcher {
                 Ok(watcher) => Some(Mutex::new((watcher, rx))),
-                Err(e) => {
-                    warn!("Failed to enable live template reloading: {}", e);
-                    debug_!("Reload error: {:?}", e);
-                    warn_!("Live template reloading is unavailable.");
+                Err(error) => {
+                    let span = warn_span!("Failed to enable live template reloading", %error);
+                    debug!(parent: &span, reload_error = ?error);
+                    warn!(parent: &span, "Live template reloading is unavailable.");
                     None
                 }
             };
@@ -97,14 +97,16 @@ mod context {
                 }
 
                 if changed {
-                    info_!("Change detected: reloading templates.");
+                    let span = info_span!("Change detected: reloading templates.");
+                    let _entered = span.enter();
                     let mut ctxt = self.context_mut();
                     if let Some(mut new_ctxt) = Context::initialize(ctxt.root.clone()) {
                         custom_callback(&mut new_ctxt.engines);
                         *ctxt = new_ctxt;
+                        info!("reloaded!");
                     } else {
-                        warn_!("An error occurred while reloading templates.");
-                        warn_!("The previous templates will remain active.");
+                        warn!("An error occurred while reloading templates.");
+                        warn!("The previous templates will remain active.");
                     };
                 }
             });
@@ -157,12 +159,12 @@ impl Fairing for TemplateFairing {
         let root = Source::from(&*path);
         match Context::initialize(path) {
             Some(mut ctxt) => {
-                use rocket::{logger::PaintExt, yansi::Paint};
+                use rocket::{trace::PaintExt, yansi::Paint};
                 use crate::templates::Engines;
 
-                info!("{}{}", Paint::emoji("📐 "), Paint::magenta("Templating:"));
-                info_!("directory: {}", Paint::white(root));
-                info_!("engines: {:?}", Paint::white(Engines::ENABLED_EXTENSIONS));
+                let span = info_span!("templating", "{}{}", Paint::emoji("📐 "), Paint::magenta("Templating:"));
+                info!(parent: &span, "directory: {}", Paint::white(&root));
+                info!(parent: &span, "engines: {:?}", Paint::white(Engines::ENABLED_EXTENSIONS));
 
                 (self.custom_callback)(&mut ctxt.engines);
                 Ok(rocket.manage(ContextManager::new(ctxt)))
