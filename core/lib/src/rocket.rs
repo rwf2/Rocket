@@ -169,7 +169,7 @@ impl Rocket {
             let old_route = route.clone();
             let route = route.map_base(|old| format!("{}{}", base, old))
                 .unwrap_or_else(|e| {
-                    let span2 = error_span!(parent: span, "malformed_uri", "Route `{}` has a malformed URI.", old_route);
+                    let span2 = error_span!(parent: span.clone(), "malformed_uri", "Route `{}` has a malformed URI.", old_route);
                     error!(parent: &span2, "{}", e);
                     panic!("Invalid route URI.");
                 });
