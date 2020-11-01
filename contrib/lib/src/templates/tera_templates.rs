@@ -22,11 +22,10 @@ impl Engine for Tera {
         // Finally try to tell Tera about all of the templates.
         if let Err(e) = tera.add_template_files(tera_templates) {
             let span = error_span!("Failed to initialize Tera templating.");
-            let _entered = span.enter();
 
             let mut error = Some(&e as &dyn Error);
             while let Some(err) = error {
-                error!(error = %err);
+                error!(parent: &span, error = %err);
                 error = err.source();
             }
 
@@ -38,9 +37,8 @@ impl Engine for Tera {
 
     fn render<C: Serialize>(&self, name: &str, context: C) -> Option<String> {
         let span = info_span!("Rendering Tera template", template = %name);
-        let _entered = span.enter();
         if self.get_template(name).is_err() {
-            error!("Tera template '{}' does not exist.", name);
+            error!(parent: &span, "Tera template '{}' does not exist.", name);
             return None;
         };
 
@@ -48,6 +46,7 @@ impl Engine for Tera {
             Ok(ctx) => ctx,
             Err(_) => {
                 error!(
+                    parent: &span,
                     "Error generating context when rendering Tera template '{}'.",
                     name
                 );
@@ -59,10 +58,9 @@ impl Engine for Tera {
             Ok(string) => Some(string),
             Err(e) => {
                 let span = error_span!("Error rendering Tera template", template = %name);
-                let _entered = span.enter();
                 let mut error = Some(&e as &dyn Error);
                 while let Some(err) = error {
-                    error!(error = %err);
+                    error!(parent: &span, error = %err);
                     error = err.source();
                 }
 

@@ -98,15 +98,14 @@ mod context {
 
                 if changed {
                     let span = info_span!("Change detected: reloading templates.");
-                    let _entered = span.enter();
                     let mut ctxt = self.context_mut();
                     if let Some(mut new_ctxt) = Context::initialize(ctxt.root.clone()) {
                         custom_callback(&mut new_ctxt.engines);
                         *ctxt = new_ctxt;
-                        info!("reloaded!");
+                        info!(parent: &span, "reloaded!");
                     } else {
-                        warn!("An error occurred while reloading templates.");
-                        warn!("The previous templates will remain active.");
+                        warn!(parent: &span, "An error occurred while reloading templates.");
+                        warn!(parent: &span, "The previous templates will remain active.");
                     };
                 }
             });

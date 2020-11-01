@@ -179,9 +179,8 @@ impl Drop for Error {
             }
             ErrorKind::Collision(ref collisions) => {
                 let span = error_span!("collisions", "Rocket failed to launch due to the following routing collisions:");
-                let _e = span.enter();
                 for &(ref a, ref b) in collisions {
-                    info!("{} {} {}", a, Paint::red("collides with").italic(), b)
+                    info!(parent: &span, "{} {} {}", a, Paint::red("collides with").italic(), b)
                 }
 
                 info!(parent: &span, "Note: Collisions can usually be resolved by ranking routes.");
