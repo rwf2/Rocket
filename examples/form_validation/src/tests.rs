@@ -5,7 +5,7 @@ use rocket::http::{ContentType, Status};
 fn test_login<T>(user: &str, pass: &str, age: &str, status: Status, body: T)
     where T: Into<Option<&'static str>> + Send
 {
-    let client = Client::new(rocket()).unwrap();
+    let client = Client::tracked(rocket()).unwrap();
     let query = format!("username={}&password={}&age={}", user, pass, age);
     let response = client.post("/login")
         .header(ContentType::Form)
@@ -44,7 +44,7 @@ fn test_invalid_age() {
 }
 
 fn check_bad_form(form_str: &str, status: Status) {
-    let client = Client::new(rocket()).unwrap();
+    let client = Client::tracked(rocket()).unwrap();
     let response = client.post("/login")
         .header(ContentType::Form)
         .body(form_str)

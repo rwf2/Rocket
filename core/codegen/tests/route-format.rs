@@ -37,7 +37,7 @@ fn test_formats() {
         .mount("/", routes![json, xml, json_long, msgpack_long, msgpack,
                plain, binary, other]);
 
-    let client = Client::new(rocket).unwrap();
+    let client = Client::tracked(rocket).unwrap();
 
     let response = client.post("/").header(ContentType::JSON).dispatch();
     assert_eq!(response.into_string().unwrap(), "json");
@@ -83,7 +83,7 @@ fn test_custom_formats() {
     let rocket = rocket::ignite()
         .mount("/", routes![get_foo, post_foo, get_bar_baz, put_bar_baz]);
 
-    let client = Client::new(rocket).unwrap();
+    let client = Client::tracked(rocket).unwrap();
 
     let foo_a = Accept::new(&[MediaType::new("application", "foo").into()]);
     let foo_ct = ContentType::new("application", "foo");

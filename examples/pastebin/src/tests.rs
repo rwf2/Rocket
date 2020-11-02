@@ -8,7 +8,7 @@ fn extract_id(from: &str) -> Option<String> {
 
 #[test]
 fn check_index() {
-    let client = Client::new(rocket()).unwrap();
+    let client = Client::tracked(rocket()).unwrap();
 
     // Ensure the index returns what we expect.
     let response = client.get("/").dispatch();
@@ -32,7 +32,7 @@ fn download_paste(client: &Client, id: &str) -> String {
 
 #[test]
 fn pasting() {
-    let client = Client::new(rocket()).unwrap();
+    let client = Client::tracked(rocket()).unwrap();
 
     // Do a trivial upload, just to make sure it works.
     let body_1 = "Hello, world!";

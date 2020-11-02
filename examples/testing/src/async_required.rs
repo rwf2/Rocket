@@ -26,7 +26,7 @@ mod test {
     async fn test_rendezvous() {
         use rocket::local::asynchronous::Client;
 
-        let client = Client::new(rocket()).await.unwrap();
+        let client = Client::tracked(rocket()).await.unwrap();
         let req = client.get("/barrier");
 
         let (r1, r2) = rocket::tokio::join!(req.clone().dispatch(), req.dispatch());

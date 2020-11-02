@@ -35,7 +35,7 @@ mod tests {
 
     macro_rules! check_dispatch {
         ($mount:expr, $ct:expr, $body:expr) => (
-            let client = Client::new(rocket()).unwrap();
+            let client = Client::tracked(rocket()).unwrap();
             let mut req = client.post($mount);
             let ct: Option<ContentType> = $ct;
             if let Some(ct) = ct {

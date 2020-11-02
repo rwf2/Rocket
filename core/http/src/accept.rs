@@ -3,119 +3,11 @@ use std::str::FromStr;
 use std::fmt;
 
 use smallvec::SmallVec;
+use either::Either;
 
 use crate::{Header, MediaType};
 use crate::ext::IntoCollection;
 use crate::parse::parse_accept;
-
-/// A `MediaType` with an associated quality value.
-#[derive(Debug, Clone, PartialEq)]
-pub struct QMediaType(pub MediaType, pub Option<f32>);
-
-impl QMediaType {
-    /// Retrieve the weight of the media type, if there is any.
-    ///
-    /// # Example
-    ///
-    /// ```rust
-    /// # extern crate rocket;
-    /// use rocket::http::{MediaType, QMediaType};
-    ///
-    /// let q_type = QMediaType(MediaType::HTML, Some(0.3));
-    /// assert_eq!(q_type.weight(), Some(0.3));
-    /// ```
-    #[inline(always)]
-    pub fn weight(&self) -> Option<f32> {
-        self.1
-    }
-
-    /// Retrieve the weight of the media type or a given default value.
-    ///
-    /// # Example
-    ///
-    /// ```rust
-    /// # extern crate rocket;
-    /// use rocket::http::{MediaType, QMediaType};
-    ///
-    /// let q_type = QMediaType(MediaType::HTML, Some(0.3));
-    /// assert_eq!(q_type.weight_or(0.9), 0.3);
-    ///
-    /// let q_type = QMediaType(MediaType::HTML, None);
-    /// assert_eq!(q_type.weight_or(0.9), 0.9);
-    /// ```
-    #[inline(always)]
-    pub fn weight_or(&self, default: f32) -> f32 {
-        self.1.unwrap_or(default)
-    }
-
-    /// Borrow the internal `MediaType`.
-    ///
-    /// # Example
-    ///
-    /// ```rust
-    /// # extern crate rocket;
-    /// use rocket::http::{MediaType, QMediaType};
-    ///
-    /// let q_type = QMediaType(MediaType::HTML, Some(0.3));
-    /// assert_eq!(q_type.media_type(), &MediaType::HTML);
-    /// ```
-    #[inline(always)]
-    pub fn media_type(&self) -> &MediaType {
-        &self.0
-    }
-}
-
-impl From<MediaType> for QMediaType {
-    #[inline(always)]
-    fn from(media_type: MediaType) -> QMediaType {
-        QMediaType(media_type, None)
-    }
-}
-
-impl Deref for QMediaType {
-    type Target = MediaType;
-
-    #[inline(always)]
-    fn deref(&self) -> &MediaType {
-        &self.0
-    }
-}
-
-// FIXME: `Static` is needed for `const` items. Need `const SmallVec::new`.
-#[derive(Debug, Clone)]
-pub enum AcceptParams {
-    Static(&'static [QMediaType]),
-    Dynamic(SmallVec<[QMediaType; 1]>)
-}
-
-impl Default for AcceptParams {
-    fn default() -> Self {
-        AcceptParams::Dynamic(SmallVec::new())
-    }
-}
-
-impl Extend<QMediaType> for AcceptParams {
-    fn extend<T: IntoIterator<Item = QMediaType>>(&mut self, iter: T) {
-        match self {
-            AcceptParams::Static(..) => panic!("can't add to static collection!"),
-            AcceptParams::Dynamic(ref mut v) => v.extend(iter)
-        }
-    }
-}
-
-impl PartialEq for AcceptParams {
-    fn eq(&self, other: &AcceptParams) -> bool {
-        #[inline(always)]
-        fn inner_types(params: &AcceptParams) -> &[QMediaType] {
-            match *params {
-                AcceptParams::Static(params) => params,
-                AcceptParams::Dynamic(ref vec) => vec,
-            }
-        }
-
-        inner_types(self) == inner_types(other)
-    }
-}
 
 /// The HTTP Accept header.
 ///
@@ -160,8 +52,19 @@ impl PartialEq for AcceptParams {
 ///
 /// let response = Response::build().header(Accept::JSON).finalize();
 /// ```
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone)]
 pub struct Accept(pub(crate) AcceptParams);
+
+/// A `MediaType` with an associated quality value.
+#[derive(Debug, Clone, PartialEq)]
+pub struct QMediaType(pub MediaType, pub Option<f32>);
+
+// NOTE: `Static` is needed for `const` items. Need `const SmallVec::new`.
+#[derive(Debug, Clone)]
+pub enum AcceptParams {
+    Static(QMediaType),
+    Dynamic(SmallVec<[QMediaType; 1]>)
+}
 
 macro_rules! accept_constructor {
     ($($name:ident ($check:ident): $str:expr, $t:expr,
@@ -173,17 +76,10 @@ macro_rules! accept_constructor {
             #[doc="</i>"]
             #[allow(non_upper_case_globals)]
             pub const $name: Accept = Accept(
-                AcceptParams::Static(&[QMediaType(MediaType::$name, None)])
+                AcceptParams::Static(QMediaType(MediaType::$name, None))
             );
          )+
     };
-}
-
-impl<T: IntoCollection<MediaType>> From<T> for Accept {
-    #[inline(always)]
-    fn from(items: T) -> Accept {
-        Accept(AcceptParams::Dynamic(items.mapped(|item| item.into())))
-    }
 }
 
 impl Accept {
@@ -314,12 +210,10 @@ impl Accept {
     /// ```
     #[inline(always)]
     pub fn iter<'a>(&'a self) -> impl Iterator<Item=&'a QMediaType> + 'a {
-        let slice = match self.0 {
-            AcceptParams::Static(slice) => slice,
-            AcceptParams::Dynamic(ref vec) => &vec[..],
-        };
-
-        slice.iter()
+        match self.0 {
+            AcceptParams::Static(ref val) => Either::Left(Some(val).into_iter()),
+            AcceptParams::Dynamic(ref vec) => Either::Right(vec.iter())
+        }
     }
 
     /// Returns an iterator over all of the (bare) media types in `self`. Media
@@ -349,6 +243,19 @@ impl Accept {
     }
 
     known_media_types!(accept_constructor);
+}
+
+impl<T: IntoCollection<MediaType>> From<T> for Accept {
+    #[inline(always)]
+    fn from(items: T) -> Accept {
+        Accept(AcceptParams::Dynamic(items.mapped(|item| item.into())))
+    }
+}
+
+impl PartialEq for Accept {
+    fn eq(&self, other: &Accept) -> bool {
+        self.iter().eq(other.iter())
+    }
 }
 
 impl fmt::Display for Accept {
@@ -381,6 +288,90 @@ impl Into<Header<'static>> for Accept {
     #[inline(always)]
     fn into(self) -> Header<'static> {
         Header::new("Accept", self.to_string())
+    }
+}
+
+impl QMediaType {
+    /// Retrieve the weight of the media type, if there is any.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// # extern crate rocket;
+    /// use rocket::http::{MediaType, QMediaType};
+    ///
+    /// let q_type = QMediaType(MediaType::HTML, Some(0.3));
+    /// assert_eq!(q_type.weight(), Some(0.3));
+    /// ```
+    #[inline(always)]
+    pub fn weight(&self) -> Option<f32> {
+        self.1
+    }
+
+    /// Retrieve the weight of the media type or a given default value.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// # extern crate rocket;
+    /// use rocket::http::{MediaType, QMediaType};
+    ///
+    /// let q_type = QMediaType(MediaType::HTML, Some(0.3));
+    /// assert_eq!(q_type.weight_or(0.9), 0.3);
+    ///
+    /// let q_type = QMediaType(MediaType::HTML, None);
+    /// assert_eq!(q_type.weight_or(0.9), 0.9);
+    /// ```
+    #[inline(always)]
+    pub fn weight_or(&self, default: f32) -> f32 {
+        self.1.unwrap_or(default)
+    }
+
+    /// Borrow the internal `MediaType`.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// # extern crate rocket;
+    /// use rocket::http::{MediaType, QMediaType};
+    ///
+    /// let q_type = QMediaType(MediaType::HTML, Some(0.3));
+    /// assert_eq!(q_type.media_type(), &MediaType::HTML);
+    /// ```
+    #[inline(always)]
+    pub fn media_type(&self) -> &MediaType {
+        &self.0
+    }
+}
+
+impl From<MediaType> for QMediaType {
+    #[inline(always)]
+    fn from(media_type: MediaType) -> QMediaType {
+        QMediaType(media_type, None)
+    }
+}
+
+impl Deref for QMediaType {
+    type Target = MediaType;
+
+    #[inline(always)]
+    fn deref(&self) -> &MediaType {
+        &self.0
+    }
+}
+
+impl Default for AcceptParams {
+    fn default() -> Self {
+        AcceptParams::Dynamic(SmallVec::new())
+    }
+}
+
+impl Extend<QMediaType> for AcceptParams {
+    fn extend<T: IntoIterator<Item = QMediaType>>(&mut self, iter: T) {
+        match self {
+            AcceptParams::Static(..) => panic!("can't add to static collection!"),
+            AcceptParams::Dynamic(ref mut v) => v.extend(iter)
+        }
     }
 }
 

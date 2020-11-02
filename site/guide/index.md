@@ -2,7 +2,7 @@
 
 Welcome to Rocket!
 
-This is the official guide for Rocket v0.5. It is designed to serve as a
+This is the official guide for Rocket master. It is designed to serve as a
 starting point to writing web applications with Rocket and Rust. The guide is
 also designed to be a reference for experienced Rocket developers. This guide is
 conversational in tone. For purely technical documentation with examples, see

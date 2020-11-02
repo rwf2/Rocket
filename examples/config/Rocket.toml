@@ -2,33 +2,24 @@
 # defaults. We show all of them here explicitly for demonstrative purposes.
 
 [global.limits]
-forms = 32768
-json = 1048576 # this is an extra used by the json contrib module
-msgpack = 1048576 # this is an extra used by the msgpack contrib module
+forms = "64 kB"
+json = "1 MiB"
+msgpack = "2 MiB"
 
-[development]
-address = "localhost"
+[debug]
+address = "127.0.0.1"
 port = 8000
 workers = 1
-keep_alive = 5
-log = "normal"
+keep_alive = 0
+log_level = "normal"
 hi = "Hello!" # this is an unused extra; maybe application specific?
 is_extra = true # this is an unused extra; maybe application specific?
 
-[staging]
-address = "0.0.0.0"
-port = 8000
-workers = 8
-keep_alive = 5
-log = "normal"
-# don't use this key! generate your own and keep it private!
-secret_key = "8Xui8SN4mI+7egV/9dlfYYLGQJeEx4+DwmSQLwDVXJg="
-
-[production]
-address = "0.0.0.0"
+[release]
+address = "127.0.0.1"
 port = 8000
 workers = 12
 keep_alive = 5
-log = "critical"
+log_level = "critical"
 # don't use this key! generate your own and keep it private!
 secret_key = "hPRYyVRiMyxpw5sBB1XeCMN1kFsDCqKvBi2QJxBVHQk="

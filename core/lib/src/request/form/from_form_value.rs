@@ -243,7 +243,24 @@ impl_with_fromstr!(
     f32, f64, isize, i8, i16, i32, i64, i128, usize, u8, u16, u32, u64, u128,
     NonZeroI8, NonZeroI16, NonZeroI32, NonZeroI64, NonZeroI128, NonZeroIsize,
     NonZeroU8, NonZeroU16, NonZeroU32, NonZeroU64, NonZeroU128, NonZeroUsize,
-    IpAddr, Ipv4Addr, Ipv6Addr, SocketAddrV4, SocketAddrV6, SocketAddr
+    Ipv4Addr
+);
+
+macro_rules! impl_with_fromstr_encoded {
+    ($($T:ident),+) => ($(
+        impl<'v> FromFormValue<'v> for $T {
+            type Error = &'v RawStr;
+
+            #[inline(always)]
+            fn from_form_value(v: &'v RawStr) -> Result<Self, Self::Error> {
+                $T::from_str(&v.url_decode().map_err(|_| v)?).map_err(|_| v)
+            }
+        }
+    )+)
+}
+
+impl_with_fromstr_encoded!(
+    IpAddr, Ipv6Addr, SocketAddrV4, SocketAddrV6, SocketAddr
 );
 
 impl<'v, T: FromFormValue<'v>> FromFormValue<'v> for Option<T> {

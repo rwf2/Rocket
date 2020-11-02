@@ -69,7 +69,7 @@ mod static_tests {
 
     #[test]
     fn test_static_no_index() {
-        let client = Client::new(rocket()).expect("valid rocket");
+        let client = Client::tracked(rocket()).expect("valid rocket");
         assert_all(&client, "no_index", REGULAR_FILES, true);
         assert_all(&client, "no_index", HIDDEN_FILES, false);
         assert_all(&client, "no_index", INDEXED_DIRECTORIES, false);
@@ -77,7 +77,7 @@ mod static_tests {
 
     #[test]
     fn test_static_hidden() {
-        let client = Client::new(rocket()).expect("valid rocket");
+        let client = Client::tracked(rocket()).expect("valid rocket");
         assert_all(&client, "dots", REGULAR_FILES, true);
         assert_all(&client, "dots", HIDDEN_FILES, true);
         assert_all(&client, "dots", INDEXED_DIRECTORIES, false);
@@ -85,7 +85,7 @@ mod static_tests {
 
     #[test]
     fn test_static_index() {
-        let client = Client::new(rocket()).expect("valid rocket");
+        let client = Client::tracked(rocket()).expect("valid rocket");
         assert_all(&client, "index", REGULAR_FILES, true);
         assert_all(&client, "index", HIDDEN_FILES, false);
         assert_all(&client, "index", INDEXED_DIRECTORIES, true);
@@ -97,7 +97,7 @@ mod static_tests {
 
     #[test]
     fn test_static_all() {
-        let client = Client::new(rocket()).expect("valid rocket");
+        let client = Client::tracked(rocket()).expect("valid rocket");
         assert_all(&client, "both", REGULAR_FILES, true);
         assert_all(&client, "both", HIDDEN_FILES, true);
         assert_all(&client, "both", INDEXED_DIRECTORIES, true);
@@ -129,7 +129,7 @@ mod static_tests {
         fn catch_two(a: &RawStr, b: &RawStr) -> String { format!("{}/{}", a, b) }
 
         let rocket = rocket().mount("/default", routes![catch_one, catch_two]);
-        let client = Client::new(rocket).expect("valid rocket");
+        let client = Client::tracked(rocket).expect("valid rocket");
 
         let response = client.get("/default/ireallydontexist").dispatch();
         assert_eq!(response.status(), Status::Ok);
@@ -146,7 +146,7 @@ mod static_tests {
 
     #[test]
     fn test_redirection() {
-        let client = Client::new(rocket()).expect("valid rocket");
+        let client = Client::tracked(rocket()).expect("valid rocket");
 
         // Redirection only happens if enabled, and doesn't affect index behaviour.
         let response = client.get("/no_index/inner").dispatch();

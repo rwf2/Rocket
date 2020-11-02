@@ -14,7 +14,7 @@ impl Engine for Handlebars<'static> {
             if let Err(e) = hb.register_template_file(name, path) {
                 let span = error_span!("Error in Handlebars template", template = %name);
                 info!(parent: &span, template.error = %e);
-                info!(parent: &span, template.path = path.to_string_lossy());
+                info!(parent: &span, template.path = %path.to_string_lossy());
                 return None;
             }
         }

@@ -30,7 +30,7 @@ mod head_handling_tests {
 
     #[test]
     fn auto_head() {
-        let client = Client::new(rocket::ignite().mount("/", routes())).unwrap();
+        let client = Client::tracked(rocket::ignite().mount("/", routes())).unwrap();
         let response = client.head("/").dispatch();
 
         let content_type: Vec<_> = response.headers().get("Content-Type").collect();
@@ -46,7 +46,7 @@ mod head_handling_tests {
 
     #[test]
     fn user_head() {
-        let client = Client::new(rocket::ignite().mount("/", routes())).unwrap();
+        let client = Client::tracked(rocket::ignite().mount("/", routes())).unwrap();
         let response = client.head("/other").dispatch();
 
         let content_type: Vec<_> = response.headers().get("Content-Type").collect();

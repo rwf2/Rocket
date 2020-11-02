@@ -4,6 +4,7 @@ use std::{pin::Pin, task::{Context, Poll}};
 
 use tokio::io::AsyncRead;
 
+use crate::http::CookieJar;
 use crate::{Request, Response};
 
 /// An `async` response from a dispatched [`LocalRequest`](super::LocalRequest).
@@ -35,7 +36,7 @@ use crate::{Request, Response};
 ///
 /// # async fn read_body_manually() -> io::Result<()> {
 /// // Dispatch a `GET /` request.
-/// let client = Client::new(rocket()).await.expect("valid rocket");
+/// let client = Client::tracked(rocket()).await.expect("valid rocket");
 /// let mut response = client.get("/").dispatch().await;
 ///
 /// // Check metadata validity.
@@ -55,6 +56,7 @@ use crate::{Request, Response};
 pub struct LocalResponse<'c> {
     _request: Box<Request<'c>>,
     response: Response<'c>,
+    cookies: CookieJar<'c>,
 }
 
 impl<'c> LocalResponse<'c> {
@@ -84,11 +86,15 @@ impl<'c> LocalResponse<'c> {
         //      away as `'_`, ensuring it is not used for any output value.
         let boxed_req = Box::new(req);
         let request: &'c Request<'c> = unsafe { &*(&*boxed_req as *const _) };
+
         async move {
-            LocalResponse {
-                _request: boxed_req,
-                response: f(request).await
+            let response: Response<'c> = f(request).await;
+            let mut cookies = CookieJar::new(&request.state.config.secret_key);
+            for cookie in response.cookies() {
+                cookies.add_original(cookie.into_owned());
             }
+
+            LocalResponse { cookies, _request: boxed_req, response, }
         }
     }
 }
@@ -96,6 +102,10 @@ impl<'c> LocalResponse<'c> {
 impl LocalResponse<'_> {
     pub(crate) fn _response(&self) -> &Response<'_> {
         &self.response
+    }
+
+    pub(crate) fn _cookies(&self) -> &CookieJar<'_> {
+        &self.cookies
     }
 
     pub(crate) async fn _into_string(mut self) -> Option<String> {

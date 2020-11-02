@@ -1,14 +1,10 @@
 #[macro_use] extern crate rocket;
 #[macro_use] extern crate bencher;
 
-use rocket::config::{Environment, Config, LoggingLevel};
 use rocket::http::RawStr;
 
 #[get("/")]
 fn hello_world() -> &'static str { "Hello, world!" }
-
-#[get("/")]
-fn get_index() -> &'static str { "index" }
 
 #[put("/")]
 fn put_index() -> &'static str { "index" }
@@ -29,22 +25,22 @@ fn index_c() -> &'static str { "index" }
 fn index_dyn_a(_a: &RawStr) -> &'static str { "index" }
 
 fn hello_world_rocket() -> rocket::Rocket {
-    let config = Config::build(Environment::Production).log_level(LoggingLevel::Off);
-    rocket::custom(config.unwrap()).mount("/", routes![hello_world])
+    let config = rocket::Config::figment().merge(("log_level", "off"));
+    rocket::custom(config).mount("/", routes![hello_world])
 }
 
 fn rocket() -> rocket::Rocket {
-    let config = Config::build(Environment::Production).log_level(LoggingLevel::Off);
-    rocket::custom(config.unwrap())
-        .mount("/", routes![get_index, put_index, post_index, index_a,
-               index_b, index_c, index_dyn_a])
+    hello_world_rocket()
+        .mount("/", routes![
+            put_index, post_index, index_a, index_b, index_c, index_dyn_a
+        ])
 }
 
 use bencher::Bencher;
 use rocket::local::blocking::Client;
 
 fn bench_hello_world(b: &mut Bencher) {
-    let client = Client::new(hello_world_rocket()).unwrap();
+    let client = Client::tracked(hello_world_rocket()).unwrap();
 
     b.iter(|| {
         client.get("/").dispatch();
@@ -52,7 +48,7 @@ fn bench_hello_world(b: &mut Bencher) {
 }
 
 fn bench_single_get_index(b: &mut Bencher) {
-    let client = Client::new(rocket()).unwrap();
+    let client = Client::tracked(rocket()).unwrap();
 
     b.iter(|| {
         client.get("/").dispatch();
@@ -60,7 +56,7 @@ fn bench_single_get_index(b: &mut Bencher) {
 }
 
 fn bench_get_put_post_index(b: &mut Bencher) {
-    let client = Client::new(rocket()).unwrap();
+    let client = Client::tracked(rocket()).unwrap();
 
     // Hold all of the requests we're going to make during the benchmark.
     let mut requests = vec![];
@@ -76,7 +72,7 @@ fn bench_get_put_post_index(b: &mut Bencher) {
 }
 
 fn bench_dynamic(b: &mut Bencher) {
-    let client = Client::new(rocket()).unwrap();
+    let client = Client::tracked(rocket()).unwrap();
 
     // Hold all of the requests we're going to make during the benchmark.
     let mut requests = vec![];
@@ -92,11 +88,11 @@ fn bench_dynamic(b: &mut Bencher) {
 }
 
 fn bench_simple_routing(b: &mut Bencher) {
-    let client = Client::new(rocket()).unwrap();
+    let client = Client::tracked(rocket()).unwrap();
 
     // Hold all of the requests we're going to make during the benchmark.
     let mut requests = vec![];
-    for route in client.cargo().routes() {
+    for route in client.rocket().routes() {
         let request = client.req(route.method, route.uri.path());
         requests.push(request);
     }

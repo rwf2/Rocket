@@ -1,4 +1,4 @@
-#![doc(html_root_url = "https://api.rocket.rs/v0.5")]
+#![doc(html_root_url = "https://api.rocket.rs/master")]
 #![doc(html_favicon_url = "https://rocket.rs/images/favicon.ico")]
 #![doc(html_logo_url = "https://rocket.rs/images/logo-boxed.png")]
 
@@ -25,7 +25,7 @@
 //! * [${database}_pool](databases) - Database Configuration and Pooling
 //! * [helmet](helmet) - Fairing for Security and Privacy Headers
 //!
-//! The recommend way to include features from this crate via Cargo in your
+//! The recommend way to include features from this crate via Rocket in your
 //! project is by adding a `[dependencies.rocket_contrib]` section to your
 //! `Cargo.toml` file, setting `default-features` to false, and specifying
 //! features manually. For example, to use the JSON module, you would add:

@@ -26,7 +26,7 @@ mod strict_and_lenient_forms_tests {
     const FIELD_VALUE: &str = "just_some_value";
 
     fn client() -> Client {
-        Client::new(rocket::ignite().mount("/", routes![strict, lenient])).unwrap()
+        Client::tracked(rocket::ignite().mount("/", routes![strict, lenient])).unwrap()
     }
 
     #[test]

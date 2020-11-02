@@ -3,7 +3,7 @@ use rocket::http::Status;
 
 fn client() -> Client {
     let rocket = rocket::ignite().mount("/", routes![super::root, super::login]);
-    Client::new(rocket).unwrap()
+    Client::tracked(rocket).unwrap()
 }
 
 #[test]

@@ -317,11 +317,11 @@ impl fmt::Debug for Route {
 }
 
 #[doc(hidden)]
-impl From<&StaticRouteInfo> for Route {
-    fn from(info: &StaticRouteInfo) -> Route {
+impl From<StaticRouteInfo> for Route {
+    fn from(info: StaticRouteInfo) -> Route {
         // This should never panic since `info.path` is statically checked.
         let mut route = Route::new(info.method, info.path, info.handler);
-        route.format = info.format.clone();
+        route.format = info.format;
         route.name = Some(info.name);
         if let Some(rank) = info.rank {
             route.rank = rank;

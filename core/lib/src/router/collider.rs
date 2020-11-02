@@ -401,7 +401,7 @@ mod tests {
     fn req_route_mt_collide<S1, S2>(m: Method, mt1: S1, mt2: S2) -> bool
         where S1: Into<Option<&'static str>>, S2: Into<Option<&'static str>>
     {
-        let rocket = Rocket::custom(Config::development());
+        let rocket = Rocket::custom(Config::default());
         let mut req = Request::new(&rocket, m, Origin::dummy());
         if let Some(mt_str) = mt1.into() {
             if m.supports_payload() {
@@ -468,7 +468,7 @@ mod tests {
     }
 
     fn req_route_path_match(a: &'static str, b: &'static str) -> bool {
-        let rocket = Rocket::custom(Config::development());
+        let rocket = Rocket::custom(Config::default());
         let req = Request::new(&rocket, Get, Origin::parse(a).expect("valid URI"));
         let route = Route::ranked(0, Get, b.to_string(), dummy);
         route.matches(&req)

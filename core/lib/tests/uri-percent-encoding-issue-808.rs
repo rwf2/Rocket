@@ -33,7 +33,7 @@ mod tests {
     #[test]
     fn uri_percent_encoding_redirect() {
         let expected_location = vec!["/hello/John%5B%5D%7C%5C%25@%5E"];
-        let client = Client::new(rocket()).unwrap();
+        let client = Client::tracked(rocket()).unwrap();
 
         let response = client.get("/raw").dispatch();
         let location: Vec<_> = response.headers().get("location").collect();
@@ -48,7 +48,7 @@ mod tests {
 
     #[test]
     fn uri_percent_encoding_get() {
-        let client = Client::new(rocket()).unwrap();
+        let client = Client::tracked(rocket()).unwrap();
         let name = Uri::percent_encode(NAME);
         let response = client.get(format!("/hello/{}", name)).dispatch();
         assert_eq!(response.status(), Status::Ok);

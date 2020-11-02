@@ -1,7 +1,6 @@
 use crate::templates::{DEFAULT_TEMPLATE_DIR, Context, Engines};
 
 use rocket::Rocket;
-use rocket::config::ConfigError;
 use rocket::fairing::{Fairing, Info, Kind};
 
 pub(crate) use self::context::ContextManager;
@@ -99,15 +98,14 @@ mod context {
 
                 if changed {
                     let span = info_span!("Change detected: reloading templates.");
-                    let _entered = span.enter();
                     let mut ctxt = self.context_mut();
                     if let Some(mut new_ctxt) = Context::initialize(ctxt.root.clone()) {
                         custom_callback(&mut new_ctxt.engines);
                         *ctxt = new_ctxt;
-                        info!("reloaded!");
+                        info!(parent: &span, "reloaded!");
                     } else {
-                        warn!("An error occurred while reloading templates.");
-                        warn!("The previous templates will remain active.");
+                        warn!(parent: &span, "An error occurred while reloading templates.");
+                        warn!(parent: &span, "The previous templates will remain active.");
                     };
                 }
             });
@@ -129,23 +127,11 @@ pub struct TemplateFairing {
 #[rocket::async_trait]
 impl Fairing for TemplateFairing {
     fn info(&self) -> Info {
-        // The on_request part of this fairing only applies in debug
-        // mode, so only register it in debug mode.
-        #[cfg(debug_assertions)]
-        let info = Info {
-            name: "Templates",
-            kind: Kind::Attach | Kind::Request,
-        };
+        // on_request only applies in debug mode, so only enable it in debug.
+        #[cfg(debug_assertions)] let kind = Kind::Attach | Kind::Request;
+        #[cfg(not(debug_assertions))] let kind = Kind::Attach;
 
-        // FIXME: We declare two `info` variables here, instead of just one with
-        // `cfg`s on `kind`, due to issue #63 in `async_trait`.
-        #[cfg(not(debug_assertions))]
-        let info = Info {
-            name: "Templates",
-            kind: Kind::Attach,
-        };
-
-        info
+        Info { kind, name: "Templates" }
     }
 
     /// Initializes the template context. Templates will be searched for in the
@@ -153,20 +139,32 @@ impl Fairing for TemplateFairing {
     /// The user's callback, if any was supplied, is called to customize the
     /// template engines. In debug mode, the `ContextManager::new` method
     /// initializes a directory watcher for auto-reloading of templates.
-    async fn on_attach(&self, mut rocket: Rocket) -> Result<Rocket, Rocket> {
-        let config = rocket.config().await;
-        let mut template_root = config.root_relative(DEFAULT_TEMPLATE_DIR);
-        match config.get_str("template_dir") {
-            Ok(dir) => template_root = config.root_relative(dir),
-            Err(ConfigError::Missing(_)) => { /* ignore missing */ }
+    async fn on_attach(&self, rocket: Rocket) -> Result<Rocket, Rocket> {
+        use rocket::figment::{Source, value::magic::RelativePathBuf};
+
+        let configured_dir = rocket.figment()
+            .extract_inner::<RelativePathBuf>("template_dir")
+            .map(|path| path.relative());
+
+        let path = match configured_dir {
+            Ok(dir) => dir,
+            Err(e) if e.missing() => DEFAULT_TEMPLATE_DIR.into(),
             Err(e) => {
-                e.pretty_print();
-                warn!("Using default templates directory '{:?}'", template_root);
+                rocket::config::pretty_print_error(e);
+                return Err(rocket);
             }
         };
 
-        match Context::initialize(template_root) {
+        let root = Source::from(&*path);
+        match Context::initialize(path) {
             Some(mut ctxt) => {
+                use rocket::{trace::PaintExt, yansi::Paint};
+                use crate::templates::Engines;
+
+                let span = info_span!("templating", "{}{}", Paint::emoji("📐 "), Paint::magenta("Templating:"));
+                info!(parent: &span, "directory: {}", Paint::white(&root));
+                info!(parent: &span, "engines: {:?}", Paint::white(Engines::ENABLED_EXTENSIONS));
+
                 (self.custom_callback)(&mut ctxt.engines);
                 Ok(rocket.manage(ContextManager::new(ctxt)))
             }
@@ -175,8 +173,8 @@ impl Fairing for TemplateFairing {
     }
 
     #[cfg(debug_assertions)]
-    async fn on_request(&self, req: &mut rocket::Request<'_>, _data: &rocket::Data) {
-        let cm = req.guard::<rocket::State<'_, ContextManager>>().await
+    async fn on_request(&self, req: &mut rocket::Request<'_>, _data: &mut rocket::Data) {
+        let cm = req.managed_state::<ContextManager>()
             .expect("Template ContextManager registered in on_attach");
 
         cm.reload_if_needed(&*self.custom_callback);

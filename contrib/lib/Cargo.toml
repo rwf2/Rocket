@@ -3,7 +3,7 @@ name = "rocket_contrib"
 version = "0.5.0-dev"
 authors = ["Sergio Benitez <sb@sergio.bz>"]
 description = "Community contributed libraries for the Rocket web framework."
-documentation = "https://api.rocket.rs/v0.5/rocket_contrib/"
+documentation = "https://api.rocket.rs/master/rocket_contrib/"
 homepage = "https://rocket.rs"
 repository = "https://github.com/SergioBenitez/Rocket"
 readme = "../../README.md"
@@ -14,7 +14,10 @@ edition = "2018"
 [features]
 # Internal use only.
 templates = ["serde", "serde_json", "glob", "notify"]
-databases = ["r2d2", "tokio/blocking", "tokio/rt-threaded", "rocket_contrib_codegen/database_attribute"]
+databases = [
+    "serde", "r2d2", "tokio/blocking", "tokio/rt-threaded",
+    "rocket_contrib_codegen/database_attribute"
+]
 
 # User-facing features.
 default = ["json", "serve"]

@@ -1,5 +1,5 @@
 use std::fmt::Debug;
-use std::net::SocketAddr;
+use std::net::{IpAddr, SocketAddr};
 
 use futures::future::BoxFuture;
 
@@ -8,7 +8,7 @@ use crate::request::Request;
 use crate::outcome::{self, IntoOutcome};
 use crate::outcome::Outcome::*;
 
-use crate::http::{Status, ContentType, Accept, Method, Cookies, uri::Origin};
+use crate::http::{Status, ContentType, Accept, Method, CookieJar, uri::Origin};
 
 /// Type alias for the `Outcome` of a `FromRequest` conversion.
 pub type Outcome<S, E> = outcome::Outcome<S, (Status, E), ()>;
@@ -140,10 +140,10 @@ impl<S, E> IntoOutcome<S, (Status, E), ()> for Result<S, E> {
 ///     For information on when an `&Route` is available, see
 ///     [`Request::route()`].
 ///
-///   * **Cookies**
+///   * **&CookieJar**
 ///
-///     Returns a borrow to the [`Cookies`] in the incoming request. Note that
-///     `Cookies` implements internal mutability, so a handle to `Cookies`
+///     Returns a borrow to the [`CookieJar`] in the incoming request. Note that
+///     `CookieJar` implements internal mutability, so a handle to a `CookieJar`
 ///     allows you to get _and_ set cookies in the request.
 ///
 ///     _This implementation always returns successfully._
@@ -152,6 +152,11 @@ impl<S, E> IntoOutcome<S, (Status, E), ()> for Result<S, E> {
 ///
 ///     Extracts the [`ContentType`] from the incoming request. If the request
 ///     didn't specify a Content-Type, the request is forwarded.
+///
+///   * **IpAddr**
+///
+///     Extracts the client ip address of the incoming request as an [`IpAddr`].
+///     If the client's IP address is not known, the request is forwarded.
 ///
 ///   * **SocketAddr**
 ///
@@ -242,7 +247,7 @@ impl<S, E> IntoOutcome<S, (Status, E), ()> for Result<S, E> {
 ///
 /// ```rust
 /// # #[macro_use] extern crate rocket;
-/// # #[cfg(feature = "private-cookies")] mod inner {
+/// # #[cfg(feature = "secrets")] mod wrapper {
 /// # use rocket::outcome::IntoOutcome;
 /// # use rocket::request::{self, Outcome, FromRequest, Request};
 /// # struct User { id: String, is_admin: bool }
@@ -296,7 +301,7 @@ impl<S, E> IntoOutcome<S, (Status, E), ()> for Result<S, E> {
 ///
 /// #[get("/dashboard", rank = 2)]
 /// fn user_dashboard(user: User) { }
-/// # }
+/// # } // end of cfg wrapper
 /// ```
 ///
 /// When a non-admin user is logged in, the database will be queried twice: once
@@ -306,7 +311,7 @@ impl<S, E> IntoOutcome<S, (Status, E), ()> for Result<S, E> {
 ///
 /// ```rust
 /// # #[macro_use] extern crate rocket;
-/// # #[cfg(feature = "private-cookies")] mod inner {
+/// # #[cfg(feature = "secrets")] mod wrapper {
 /// # use rocket::outcome::IntoOutcome;
 /// # use rocket::request::{self, Outcome, FromRequest, Request};
 /// # struct User { id: String, is_admin: bool }
@@ -358,14 +363,13 @@ impl<S, E> IntoOutcome<S, (Status, E), ()> for Result<S, E> {
 ///         }
 ///     }
 /// }
-/// # }
+/// # } // end of cfg wrapper
 /// ```
 ///
 /// Notice that these request guards provide access to *borrowed* data (`&'a
 /// User` and `Admin<'a>`) as the data is now owned by the request's cache.
 ///
-/// [request-local state]: https://rocket.rs/v0.5/guide/state/#request-local-state
-
+/// [request-local state]: https://rocket.rs/master/guide/state/#request-local-state
 #[crate::async_trait]
 pub trait FromRequest<'a, 'r>: Sized {
     /// The associated error to be returned if derivation fails.
@@ -411,7 +415,7 @@ impl<'a, 'r> FromRequest<'a, 'r> for &'r Route {
 }
 
 #[crate::async_trait]
-impl<'a, 'r> FromRequest<'a, 'r> for Cookies<'a> {
+impl<'a, 'r> FromRequest<'a, 'r> for &'a CookieJar<'r> {
     type Error = std::convert::Infallible;
 
     async fn from_request(request: &'a Request<'r>) -> Outcome<Self, Self::Error> {
@@ -438,6 +442,18 @@ impl<'a, 'r> FromRequest<'a, 'r> for &'a ContentType {
     async fn from_request(request: &'a Request<'r>) -> Outcome<Self, Self::Error> {
         match request.content_type() {
             Some(content_type) => Success(content_type),
+            None => Forward(())
+        }
+    }
+}
+
+#[crate::async_trait]
+impl<'a, 'r> FromRequest<'a, 'r> for IpAddr {
+    type Error = std::convert::Infallible;
+
+    async fn from_request(request: &'a Request<'r>) -> Outcome<Self, Self::Error> {
+        match request.client_ip() {
+            Some(addr) => Success(addr),
             None => Forward(())
         }
     }

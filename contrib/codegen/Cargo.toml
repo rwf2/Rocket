@@ -3,7 +3,7 @@ name = "rocket_contrib_codegen"
 version = "0.5.0-dev"
 authors = ["Sergio Benitez <sb@sergio.bz>"]
 description = "Procedural macros for the Rocket contrib libraries."
-documentation = "https://api.rocket.rs/v0.5/rocket_contrib/"
+documentation = "https://api.rocket.rs/master/rocket_contrib/"
 homepage = "https://rocket.rs"
 repository = "https://github.com/SergioBenitez/Rocket"
 readme = "../../README.md"
@@ -19,7 +19,7 @@ proc-macro = true
 
 [dependencies]
 quote = "1.0"
-devise = { git = "https://github.com/SergioBenitez/Devise.git", rev = "1e42a2691" }
+devise = { git = "https://github.com/SergioBenitez/Devise.git", rev = "3648468" }
 
 [dev-dependencies]
 rocket = { version = "0.5.0-dev", path = "../../core/lib" }

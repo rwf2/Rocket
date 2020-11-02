@@ -10,6 +10,9 @@ export PATH=${HOME}/.cargo/bin:${PATH}
 export CARGO_INCREMENTAL=0
 CARGO="cargo"
 
+# We set a `cfg` so that a missing `secret_key` doesn't abort tests.
+export RUSTFLAGS="--cfg rocket_unsafe_secret_key"
+
 # Checks that the versions for Cargo projects $@ all match
 function check_versions_match() {
   local last_version=""
@@ -59,6 +62,7 @@ fi
 echo ":: Preparing. Environment is..."
 print_environment
 echo "  CARGO: $CARGO"
+echo "  RUSTFLAGS: $RUSTFLAGS"
 
 echo ":: Ensuring all crate versions match..."
 check_versions_match "${ALL_PROJECT_DIRS[@]}"
@@ -106,7 +110,7 @@ if [ "$1" = "--contrib" ]; then
   popd > /dev/null 2>&1
 elif [ "$1" = "--core" ]; then
   FEATURES=(
-    private-cookies # this is already tested since it's the default feature
+    secrets
     tls
   )
 
@@ -117,7 +121,6 @@ elif [ "$1" = "--core" ]; then
 
   for feature in "${FEATURES[@]}"; do
     echo ":: Building and testing core [${feature}]..."
-
     $CARGO test --no-default-features --features "${feature}"
   done
 

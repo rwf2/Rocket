@@ -1,18 +1,18 @@
-error[E0277]: the trait bound `usize: rocket::response::Responder<'_, '_>` is not satisfied
+error[E0277]: the trait bound `usize: Responder<'_, '_>` is not satisfied
  --> $DIR/catch_type_errors.rs:6:30
   |
 6 | fn f1(_request: &Request) -> usize {
-  |                              ^^^^^ the trait `rocket::response::Responder<'_, '_>` is not implemented for `usize`
+  |                              ^^^^^ the trait `Responder<'_, '_>` is not implemented for `usize`
   |
-  = note: required by `rocket::response::Responder::respond_to`
+  = note: required by `respond_to`
 
-error[E0277]: the trait bound `bool: rocket::response::Responder<'_, '_>` is not satisfied
+error[E0277]: the trait bound `bool: Responder<'_, '_>` is not satisfied
   --> $DIR/catch_type_errors.rs:11:30
    |
 11 | fn f2(_request: &Request) -> bool {
-   |                              ^^^^ the trait `rocket::response::Responder<'_, '_>` is not implemented for `bool`
+   |                              ^^^^ the trait `Responder<'_, '_>` is not implemented for `bool`
    |
-   = note: required by `rocket::response::Responder::respond_to`
+   = note: required by `respond_to`
 
 error[E0308]: mismatched types
   --> $DIR/catch_type_errors.rs:16:17
@@ -20,18 +20,18 @@ error[E0308]: mismatched types
 16 | fn f3(_request: bool) -> usize {
    |                 ^^^^ expected `bool`, found `&rocket::Request<'_>`
 
-error[E0277]: the trait bound `usize: rocket::response::Responder<'_, '_>` is not satisfied
+error[E0277]: the trait bound `usize: Responder<'_, '_>` is not satisfied
   --> $DIR/catch_type_errors.rs:16:26
    |
 16 | fn f3(_request: bool) -> usize {
-   |                          ^^^^^ the trait `rocket::response::Responder<'_, '_>` is not implemented for `usize`
+   |                          ^^^^^ the trait `Responder<'_, '_>` is not implemented for `usize`
    |
-   = note: required by `rocket::response::Responder::respond_to`
+   = note: required by `respond_to`
 
-error[E0277]: the trait bound `usize: rocket::response::Responder<'_, '_>` is not satisfied
+error[E0277]: the trait bound `usize: Responder<'_, '_>` is not satisfied
   --> $DIR/catch_type_errors.rs:21:12
    |
 21 | fn f4() -> usize {
-   |            ^^^^^ the trait `rocket::response::Responder<'_, '_>` is not implemented for `usize`
+   |            ^^^^^ the trait `Responder<'_, '_>` is not implemented for `usize`
    |
-   = note: required by `rocket::response::Responder::respond_to`
+   = note: required by `respond_to`

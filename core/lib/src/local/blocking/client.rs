@@ -1,10 +1,10 @@
 use std::borrow::Cow;
 use std::cell::RefCell;
 
-use crate::error::LaunchError;
-use crate::http::Method;
+use crate::error::Error;
 use crate::local::{asynchronous, blocking::{LocalRequest, LocalResponse}};
-use crate::rocket::{Rocket, Cargo};
+use crate::rocket::Rocket;
+use crate::http::Method;
 
 /// A `blocking` client to construct and dispatch local requests.
 ///
@@ -20,7 +20,7 @@ use crate::rocket::{Rocket, Cargo};
 /// use rocket::local::blocking::Client;
 ///
 /// let rocket = rocket::ignite();
-/// let client = Client::new(rocket).expect("valid rocket");
+/// let client = Client::tracked(rocket).expect("valid rocket");
 /// let response = client.post("/")
 ///     .body("Hello, world!")
 ///     .dispatch();
@@ -31,7 +31,7 @@ pub struct Client {
 }
 
 impl Client {
-    fn _new(rocket: Rocket, tracked: bool) -> Result<Client, LaunchError> {
+    fn _new(rocket: Rocket, tracked: bool) -> Result<Client, Error> {
         let mut runtime = tokio::runtime::Builder::new()
             .basic_scheduler()
             .enable_all()
@@ -49,7 +49,7 @@ impl Client {
         where F: FnOnce(&Self, LocalRequest<'_>, LocalResponse<'_>) -> T + Send
     {
         let rocket = crate::ignite();
-        let client = Client::new(rocket).expect("valid rocket");
+        let client = Client::untracked(rocket).expect("valid rocket");
         let request = client.get("/");
         let response = request.clone().dispatch();
         f(&client, request, response)
@@ -63,8 +63,15 @@ impl Client {
     }
 
     #[inline(always)]
-    fn _cargo(&self) -> &Cargo {
-        self.inner._cargo()
+    fn _rocket(&self) -> &Rocket {
+        self.inner._rocket()
+    }
+
+    #[inline(always)]
+    pub(crate) fn _with_raw_cookies<F, T>(&self, f: F) -> T
+        where F: FnOnce(&crate::http::private::cookie::CookieJar) -> T
+    {
+        self.inner._with_raw_cookies(f)
     }
 
     #[inline(always)]

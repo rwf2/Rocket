@@ -23,7 +23,7 @@ fn login(client: &Client, user: &str, pass: &str) -> Option<Cookie<'static>> {
 
 #[test]
 fn redirect_on_index() {
-    let client = Client::new(rocket()).unwrap();
+    let client = Client::tracked(rocket()).unwrap();
     let response = client.get("/").dispatch();
     assert_eq!(response.status(), Status::SeeOther);
     assert_eq!(response.headers().get_one("Location"), Some("/login"));
@@ -31,7 +31,7 @@ fn redirect_on_index() {
 
 #[test]
 fn can_login() {
-    let client = Client::new(rocket()).unwrap();
+    let client = Client::tracked(rocket()).unwrap();
 
     let response = client.get("/login").dispatch();
     assert_eq!(response.status(), Status::Ok);
@@ -41,14 +41,14 @@ fn can_login() {
 
 #[test]
 fn login_fails() {
-    let client = Client::new(rocket()).unwrap();
+    let client = Client::tracked(rocket()).unwrap();
     assert!(login(&client, "Seergio", "password").is_none());
     assert!(login(&client, "Sergio", "idontknow").is_none());
 }
 
 #[test]
 fn login_logout_succeeds() {
-    let client = Client::new(rocket()).unwrap();
+    let client = Client::tracked(rocket()).unwrap();
     let login_cookie = login(&client, "Sergio", "password").expect("logged in");
 
     // Ensure we're logged in.

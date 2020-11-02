@@ -36,7 +36,7 @@ fn simple(simple: Simple) -> String { simple.0 }
 #[test]
 fn test_data() {
     let rocket = rocket::ignite().mount("/", routes![form, simple]);
-    let client = Client::new(rocket).unwrap();
+    let client = Client::tracked(rocket).unwrap();
 
     let response = client.post("/f")
         .header(ContentType::Form)

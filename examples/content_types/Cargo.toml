@@ -6,7 +6,6 @@ edition = "2018"
 publish = false
 
 [dependencies]
-tokio = { version = "0.2.0", features = ["io-util"] }
 rocket = { path = "../../core/lib" }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"

@@ -1,58 +1,58 @@
-error[E0277]: the trait bound `BadType: rocket::http::uri::UriDisplay<rocket::http::uri::Query>` is not satisfied
+error[E0277]: the trait bound `BadType: UriDisplay<rocket::http::uri::Query>` is not satisfied
  --> $DIR/uri_display_type_errors.rs:6:13
   |
 6 | struct Bar1(BadType);
-  |             ^^^^^^^ the trait `rocket::http::uri::UriDisplay<rocket::http::uri::Query>` is not implemented for `BadType`
+  |             ^^^^^^^ the trait `UriDisplay<rocket::http::uri::Query>` is not implemented for `BadType`
   |
-  = note: required because of the requirements on the impl of `rocket::http::uri::UriDisplay<rocket::http::uri::Query>` for `&BadType`
+  = note: required because of the requirements on the impl of `UriDisplay<rocket::http::uri::Query>` for `&BadType`
 
-error[E0277]: the trait bound `BadType: rocket::http::uri::UriDisplay<rocket::http::uri::Query>` is not satisfied
+error[E0277]: the trait bound `BadType: UriDisplay<rocket::http::uri::Query>` is not satisfied
   --> $DIR/uri_display_type_errors.rs:10:5
    |
 10 |     field: BadType,
-   |     ^^^^^^^^^^^^^^ the trait `rocket::http::uri::UriDisplay<rocket::http::uri::Query>` is not implemented for `BadType`
+   |     ^^^^^^^^^^^^^^ the trait `UriDisplay<rocket::http::uri::Query>` is not implemented for `BadType`
    |
-   = note: required because of the requirements on the impl of `rocket::http::uri::UriDisplay<rocket::http::uri::Query>` for `&BadType`
+   = note: required because of the requirements on the impl of `UriDisplay<rocket::http::uri::Query>` for `&BadType`
 
-error[E0277]: the trait bound `BadType: rocket::http::uri::UriDisplay<rocket::http::uri::Query>` is not satisfied
+error[E0277]: the trait bound `BadType: UriDisplay<rocket::http::uri::Query>` is not satisfied
   --> $DIR/uri_display_type_errors.rs:16:5
    |
 16 |     bad: BadType,
-   |     ^^^^^^^^^^^^ the trait `rocket::http::uri::UriDisplay<rocket::http::uri::Query>` is not implemented for `BadType`
+   |     ^^^^^^^^^^^^ the trait `UriDisplay<rocket::http::uri::Query>` is not implemented for `BadType`
    |
-   = note: required because of the requirements on the impl of `rocket::http::uri::UriDisplay<rocket::http::uri::Query>` for `&BadType`
+   = note: required because of the requirements on the impl of `UriDisplay<rocket::http::uri::Query>` for `&BadType`
 
-error[E0277]: the trait bound `BadType: rocket::http::uri::UriDisplay<rocket::http::uri::Query>` is not satisfied
+error[E0277]: the trait bound `BadType: UriDisplay<rocket::http::uri::Query>` is not satisfied
   --> $DIR/uri_display_type_errors.rs:21:11
    |
 21 |     Inner(BadType),
-   |           ^^^^^^^ the trait `rocket::http::uri::UriDisplay<rocket::http::uri::Query>` is not implemented for `BadType`
+   |           ^^^^^^^ the trait `UriDisplay<rocket::http::uri::Query>` is not implemented for `BadType`
    |
-   = note: required because of the requirements on the impl of `rocket::http::uri::UriDisplay<rocket::http::uri::Query>` for `&BadType`
-   = note: required because of the requirements on the impl of `rocket::http::uri::UriDisplay<rocket::http::uri::Query>` for `&&BadType`
+   = note: required because of the requirements on the impl of `UriDisplay<rocket::http::uri::Query>` for `&BadType`
+   = note: required because of the requirements on the impl of `UriDisplay<rocket::http::uri::Query>` for `&&BadType`
 
-error[E0277]: the trait bound `BadType: rocket::http::uri::UriDisplay<rocket::http::uri::Query>` is not satisfied
+error[E0277]: the trait bound `BadType: UriDisplay<rocket::http::uri::Query>` is not satisfied
   --> $DIR/uri_display_type_errors.rs:27:9
    |
 27 |         field: BadType,
-   |         ^^^^^^^^^^^^^^ the trait `rocket::http::uri::UriDisplay<rocket::http::uri::Query>` is not implemented for `BadType`
+   |         ^^^^^^^^^^^^^^ the trait `UriDisplay<rocket::http::uri::Query>` is not implemented for `BadType`
    |
-   = note: required because of the requirements on the impl of `rocket::http::uri::UriDisplay<rocket::http::uri::Query>` for `&BadType`
-   = note: required because of the requirements on the impl of `rocket::http::uri::UriDisplay<rocket::http::uri::Query>` for `&&BadType`
+   = note: required because of the requirements on the impl of `UriDisplay<rocket::http::uri::Query>` for `&BadType`
+   = note: required because of the requirements on the impl of `UriDisplay<rocket::http::uri::Query>` for `&&BadType`
 
-error[E0277]: the trait bound `BadType: rocket::http::uri::UriDisplay<rocket::http::uri::Query>` is not satisfied
+error[E0277]: the trait bound `BadType: UriDisplay<rocket::http::uri::Query>` is not satisfied
   --> $DIR/uri_display_type_errors.rs:35:9
    |
 35 |         other: BadType,
-   |         ^^^^^^^^^^^^^^ the trait `rocket::http::uri::UriDisplay<rocket::http::uri::Query>` is not implemented for `BadType`
+   |         ^^^^^^^^^^^^^^ the trait `UriDisplay<rocket::http::uri::Query>` is not implemented for `BadType`
    |
-   = note: required because of the requirements on the impl of `rocket::http::uri::UriDisplay<rocket::http::uri::Query>` for `&BadType`
-   = note: required because of the requirements on the impl of `rocket::http::uri::UriDisplay<rocket::http::uri::Query>` for `&&BadType`
+   = note: required because of the requirements on the impl of `UriDisplay<rocket::http::uri::Query>` for `&BadType`
+   = note: required because of the requirements on the impl of `UriDisplay<rocket::http::uri::Query>` for `&&BadType`
 
-error[E0277]: the trait bound `BadType: rocket::http::uri::UriDisplay<rocket::http::uri::Path>` is not satisfied
+error[E0277]: the trait bound `BadType: UriDisplay<rocket::http::uri::Path>` is not satisfied
   --> $DIR/uri_display_type_errors.rs:40:12
    |
 40 | struct Baz(BadType);
-   |            ^^^^^^^ the trait `rocket::http::uri::UriDisplay<rocket::http::uri::Path>` is not implemented for `BadType`
+   |            ^^^^^^^ the trait `UriDisplay<rocket::http::uri::Path>` is not implemented for `BadType`
    |
-   = note: required because of the requirements on the impl of `rocket::http::uri::UriDisplay<rocket::http::uri::Path>` for `&BadType`
+   = note: required because of the requirements on the impl of `UriDisplay<rocket::http::uri::Path>` for `&BadType`

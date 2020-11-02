@@ -2,12 +2,12 @@ use rocket::local::blocking::Client;
 use rocket::http::Status;
 
 fn test(uri: String, expected: String) {
-    let client = Client::new(super::rocket()).unwrap();
+    let client = Client::tracked(super::rocket()).unwrap();
     assert_eq!(client.get(&uri).dispatch().into_string(), Some(expected));
 }
 
 fn test_404(uri: &'static str) {
-    let client = Client::new(super::rocket()).unwrap();
+    let client = Client::tracked(super::rocket()).unwrap();
     assert_eq!(client.get(uri).dispatch().status(), Status::NotFound);
 }
 

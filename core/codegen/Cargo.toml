@@ -3,7 +3,7 @@ name = "rocket_codegen"
 version = "0.5.0-dev"
 authors = ["Sergio Benitez <sb@sergio.bz>"]
 description = "Procedural macros for the Rocket web framework."
-documentation = "https://api.rocket.rs/v0.5/rocket_codegen/"
+documentation = "https://api.rocket.rs/master/rocket_codegen/"
 homepage = "https://rocket.rs"
 repository = "https://github.com/SergioBenitez/Rocket"
 readme = "../../README.md"
@@ -18,7 +18,7 @@ proc-macro = true
 indexmap = "1.0"
 quote = "1.0"
 rocket_http = { version = "0.5.0-dev", path = "../http/" }
-devise = { git = "https://github.com/SergioBenitez/Devise.git", rev = "1e42a2691" }
+devise = { git = "https://github.com/SergioBenitez/Devise.git", rev = "3648468" }
 glob = "0.3"
 
 [dev-dependencies]

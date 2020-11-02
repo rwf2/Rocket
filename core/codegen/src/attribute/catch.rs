@@ -3,9 +3,8 @@ use devise::{syn, MetaItem, Spanned, Result, FromMeta, Diagnostic};
 
 use crate::http_codegen::{self, Optional};
 use crate::proc_macro2::{TokenStream, Span};
-use crate::syn_ext::{IdentExt, ReturnTypeExt, TokenStreamExt};
+use crate::syn_ext::{ReturnTypeExt, TokenStreamExt};
 use self::syn::{Attribute, parse::Parser};
-use crate::{CATCH_FN_PREFIX, CATCH_STRUCT_PREFIX};
 
 /// The raw, parsed `#[catch(code)]` attribute.
 #[derive(Debug, FromMeta)]
@@ -75,15 +74,14 @@ pub fn _catch(
     // Gather everything we'll need to generate the catcher.
     let user_catcher_fn = &catch.function;
     let user_catcher_fn_name = catch.function.sig.ident.clone();
-    let generated_struct_name = user_catcher_fn_name.prepend(CATCH_STRUCT_PREFIX);
-    let generated_fn_name = user_catcher_fn_name.prepend(CATCH_FN_PREFIX);
     let generated_span_name = user_catcher_fn_name.to_string();
     let (vis, catcher_status) = (&catch.function.vis, &catch.status);
     let status_code = Optional(catcher_status.as_ref().map(|s| s.0.code));
 
     // Variables names we'll use and reuse.
     define_vars_and_mods!(catch.function.span().into() =>
-        req, status, log, _Box, Request, Response, ErrorHandlerFuture, Status);
+        req, status, log, _Box, Request, Response, StaticCatcherInfo, Catcher,
+        ErrorHandlerFuture, Status);
 
     // Determine the number of parameters that will be passed in.
     if catch.function.sig.inputs.len() > 2 {
@@ -120,34 +118,46 @@ pub fn _catch(
     Ok(quote! {
         #user_catcher_fn
 
-        /// Rocket code generated wrapping catch function.
         #[doc(hidden)]
-        #vis fn #generated_fn_name<'_b>(
-            #status: #Status,
-            #req: &'_b #Request
-        ) -> #ErrorHandlerFuture<'_b> {
-            use #log::Instrument as _;
-            #_Box::pin(async move {
-                let __response = #catcher_response;
-                #Response::build()
-                    .status(#status)
-                    .merge(__response)
-                    .ok()
-            }.instrument(#log::info_span!(
-                #generated_span_name,
-                status = %#status,
-                "Catcher: {}", #generated_span_name
-            )))
+        #[allow(non_camel_case_types)]
+        /// Rocket code generated proxy structure.
+        #vis struct #user_catcher_fn_name {  }
+
+        /// Rocket code generated proxy static conversion implementation.
+        impl From<#user_catcher_fn_name> for #StaticCatcherInfo {
+            fn from(_: #user_catcher_fn_name) -> #StaticCatcherInfo {
+                fn monomorphized_function<'_b>(
+                    #status: #Status,
+                    #req: &'_b #Request
+                ) -> #ErrorHandlerFuture<'_b> {
+                    use #log::Instrument as _;
+                    #_Box::pin(async move {
+                        let __response = #catcher_response;
+                        #Response::build()
+                            .status(#status)
+                            .merge(__response)
+                            .ok()
+                    }.instrument(#log::info_span!(
+                        #generated_span_name,
+                        status = %#status,
+                        "Catcher: {}", #generated_span_name
+                    )))
+                }
+
+                #StaticCatcherInfo {
+                    code: #status_code,
+                    handler: monomorphized_function,
+                }
+            }
         }
 
-        /// Rocket code generated static catcher info.
-        #[doc(hidden)]
-        #[allow(non_upper_case_globals)]
-        #vis static #generated_struct_name: ::rocket::StaticCatcherInfo =
-            ::rocket::StaticCatcherInfo {
-                code: #status_code,
-                handler: #generated_fn_name,
-            };
+        /// Rocket code generated proxy conversion implementation.
+        impl From<#user_catcher_fn_name> for #Catcher {
+            #[inline]
+            fn from(_: #user_catcher_fn_name) -> #Catcher {
+                #StaticCatcherInfo::from(#user_catcher_fn_name {}).into()
+            }
+        }
     })
 }
 

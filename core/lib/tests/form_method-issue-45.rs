@@ -20,7 +20,7 @@ mod tests {
 
     #[test]
     fn method_eval() {
-        let client = Client::new(rocket::ignite().mount("/", routes![bug])).unwrap();
+        let client = Client::tracked(rocket::ignite().mount("/", routes![bug])).unwrap();
         let response = client.post("/")
             .header(ContentType::Form)
             .body("_method=patch&form_data=Form+data")
@@ -31,7 +31,7 @@ mod tests {
 
     #[test]
     fn get_passes_through() {
-        let client = Client::new(rocket::ignite().mount("/", routes![bug])).unwrap();
+        let client = Client::tracked(rocket::ignite().mount("/", routes![bug])).unwrap();
         let response = client.get("/")
             .header(ContentType::Form)
             .body("_method=patch&form_data=Form+data")

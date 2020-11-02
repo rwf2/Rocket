@@ -4,7 +4,7 @@
 
 use std::path::PathBuf;
 
-use rocket::http::{RawStr, Cookies};
+use rocket::http::{RawStr, CookieJar};
 use rocket::http::uri::{FromUriParam, Query};
 use rocket::request::Form;
 
@@ -51,13 +51,13 @@ fn simple4_flipped(name: String, id: i32) { }
 fn unused_param(used: i32, _unused: i32) { }
 
 #[post("/<id>")]
-fn guard_1(cookies: Cookies<'_>, id: i32) { }
+fn guard_1(cookies: &CookieJar<'_>, id: i32) { }
 
 #[post("/<id>/<name>")]
-fn guard_2(name: String, cookies: Cookies<'_>, id: i32) { }
+fn guard_2(name: String, cookies: &CookieJar<'_>, id: i32) { }
 
 #[post("/a/<id>/hi/<name>/hey")]
-fn guard_3(id: i32, name: String, cookies: Cookies<'_>) { }
+fn guard_3(id: i32, name: String, cookies: &CookieJar<'_>) { }
 
 #[post("/<id>", data = "<form>")]
 fn no_uri_display_okay(id: i32, form: Form<Second>) { }
@@ -69,7 +69,7 @@ fn complex<'r>(
     query: Form<User<'r>>,
     user: Form<User<'r>>,
     bar: &RawStr,
-    cookies: Cookies<'_>
+    cookies: &CookieJar<'_>
 ) {  }
 
 #[post("/a/<path..>")]
@@ -79,7 +79,7 @@ fn segments(path: PathBuf) { }
 fn param_and_segments(path: PathBuf, id: usize) { }
 
 #[post("/a/<id>/then/<path..>")]
-fn guarded_segments(cookies: Cookies<'_>, path: PathBuf, id: usize) { }
+fn guarded_segments(cookies: &CookieJar<'_>, path: PathBuf, id: usize) { }
 
 macro_rules! assert_uri_eq {
     ($($uri:expr => $expected:expr,)+) => {

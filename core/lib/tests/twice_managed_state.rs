@@ -1,7 +1,7 @@
 struct A;
 
-#[rocket::async_test]
+#[test]
 #[should_panic]
-async fn twice_managed_state() {
-    let _ = rocket::ignite().manage(A).manage(A).inspect().await;
+fn twice_managed_state() {
+    let _ = rocket::ignite().manage(A).manage(A);
 }

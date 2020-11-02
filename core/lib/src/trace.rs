@@ -55,6 +55,7 @@
 //! they call will be annotated with the name of the handler or catcher
 //! function. For example:
 //! ```
+//! # use rocket::get;
 //! #[get("/hello-world")]
 //! fn hello_world() -> String {
 //!     // This event will occur within a span named `hello_world`.
@@ -138,8 +139,8 @@
 //! fn rocket() -> rocket::Rocket {
 //!     use rocket::trace::prelude::*;
 //!
-//!     let config = rocket::Config::read()
-//!         .expect("failed to read config!");
+//!     let figment = rocket::Config::figment();
+//!     let config = rocket::Config::from(&figment);
 //!
 //!     // Configure our trace subscriber...
 //!     tracing_subscriber::registry()
@@ -150,11 +151,11 @@
 //!         // ...and another custom layer.
 //!         .with(SomeOtherLayer::default())
 //!         // Filter what traces are enabled based on the Rocket config.
-//!         .with(rocket::filter_layer(config.log_level))
+//!         .with(rocket::trace::filter_layer(config.log_level))
 //!         // Set our subscriber as the default.
 //!         .init();
 //!
-//!     rocket::custom(config)
+//!     rocket::custom(figment)
 //!         // ...
 //! }
 //! ```
@@ -198,12 +199,12 @@ use tracing_subscriber::{
     registry::LookupSpan,
 };
 
-use std::env;
 use std::fmt::{self, Write};
 use std::sync::atomic::{AtomicU64, Ordering::{Acquire, Release}};
 use std::str::FromStr;
 
 use yansi::Paint;
+use serde::{de, Serialize, Serializer, Deserialize, Deserializer};
 
 pub use tracing::{
     trace, debug, info, warn, error, trace_span, debug_span, info_span,
@@ -218,28 +219,39 @@ pub mod prelude {
     pub use super::Instrument as _;
 }
 
-/// Defines the different levels for log messages.
+/// Defines the maximum level of log messages to show.
 #[derive(PartialEq, Eq, Debug, Clone, Copy)]
-pub enum LoggingLevel {
-    /// Only shows errors, warnings, and launch information.
+pub enum LogLevel {
+    /// Only shows errors and warnings: `"critical"`.
     Critical,
-    /// Shows everything except debug and trace information.
+    /// Shows everything except debug and trace information: `"normal"`.
     Normal,
-    /// Shows everything.
+    /// Shows everything: `"debug"`.
     Debug,
-    /// Shows nothing.
+    /// Shows nothing: "`"off"`".
     Off,
 }
 
-impl FromStr for LoggingLevel {
+impl LogLevel {
+    fn as_str(&self) -> &str {
+        match self {
+            LogLevel::Critical => "critical",
+            LogLevel::Normal => "normal",
+            LogLevel::Debug => "debug",
+            LogLevel::Off => "off",
+        }
+    }
+}
+
+impl FromStr for LogLevel {
     type Err = &'static str;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let level = match s {
-            "critical" => LoggingLevel::Critical,
-            "normal" => LoggingLevel::Normal,
-            "debug" => LoggingLevel::Debug,
-            "off" => LoggingLevel::Off,
+        let level = match &*s.to_ascii_lowercase() {
+            "critical" => LogLevel::Critical,
+            "normal" => LogLevel::Normal,
+            "debug" => LogLevel::Debug,
+            "off" => LogLevel::Off,
             _ => return Err("a log level (off, debug, normal, critical)"),
         };
 
@@ -247,18 +259,28 @@ impl FromStr for LoggingLevel {
     }
 }
 
-impl fmt::Display for LoggingLevel {
+impl fmt::Display for LogLevel {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let string = match *self {
-            LoggingLevel::Critical => "critical",
-            LoggingLevel::Normal => "normal",
-            LoggingLevel::Debug => "debug",
-            LoggingLevel::Off => "off",
-        };
-
-        write!(f, "{}", string)
+        write!(f, "{}", self.as_str())
     }
 }
+
+impl Serialize for LogLevel {
+    fn serialize<S: Serializer>(&self, ser: S) -> Result<S::Ok, S::Error> {
+        ser.serialize_str(self.as_str())
+    }
+}
+
+impl<'de> Deserialize<'de> for LogLevel {
+    fn deserialize<D: Deserializer<'de>>(de: D) -> Result<Self, D::Error> {
+        let string = String::deserialize(de)?;
+        LogLevel::from_str(&string).map_err(|_| de::Error::invalid_value(
+            de::Unexpected::Str(&string),
+            &figment::error::OneOf( &["critical", "normal", "debug", "off"])
+        ))
+    }
+}
+
 
 /// Returns a Rocket filtering [`Layer`] based on the provided logging level.
 ///
@@ -274,8 +296,8 @@ impl fmt::Display for LoggingLevel {
 /// fn rocket() -> rocket::Rocket {
 ///     use rocket::trace::prelude::*;
 ///
-///     let config = rocket::Config::read()
-///         .expect("failed to read config!");
+///     let figment = rocket::Config::figment();
+///     let config = rocket::Config::from(&figment);
 ///
 ///     // Use some `tracing` subscriber from another crate...
 ///     MySubscriber::default()
@@ -284,21 +306,21 @@ impl fmt::Display for LoggingLevel {
 ///         .with(rocket::trace::filter_layer(config.log_level))
 ///         .init();
 ///
-///     rocket::custom(config)
+///     rocket::custom(figment)
 ///         // ...
 /// }
 /// ```
 ///
 /// [`Layer`]: https://docs.rs/tracing-subscriber/latest/tracing_subscriber/layer/trait.Layer.html
-pub fn filter_layer<S>(level: LoggingLevel) -> impl Layer<S>
+pub fn filter_layer<S>(level: LogLevel) -> impl Layer<S>
 where
     S: tracing::Subscriber,
 {
     let filter_str = match level {
-        LoggingLevel::Critical => "warn,rocket::launch=info,hyper=off,rustls=off",
-        LoggingLevel::Normal => "info,hyper=off,rustls=off",
-        LoggingLevel::Debug => "trace",
-        LoggingLevel::Off => "off",
+        LogLevel::Critical => "warn,rocket::launch=info,hyper=off,rustls=off",
+        LogLevel::Normal => "info,hyper=off,rustls=off",
+        LogLevel::Debug => "trace",
+        LogLevel::Off => "off",
     };
 
     tracing_subscriber::filter::EnvFilter::try_new(filter_str)
@@ -319,8 +341,8 @@ where
 /// fn rocket() -> rocket::Rocket {
 ///     use rocket::trace::prelude::*;
 ///
-///     let config = rocket::Config::read()
-///         .expect("failed to read config!");
+///     let figment = rocket::Config::figment();
+///     let config = rocket::Config::from(&figment);
 ///
 ///     // Use some `tracing` subscriber from another crate...
 ///     MySubscriber::default()
@@ -329,7 +351,7 @@ where
 ///         .with(rocket::trace::filter_layer(config.log_level))
 ///         .init();
 ///
-///     rocket::custom(config)
+///     rocket::custom(figment)
 ///         // ...
 /// }
 /// ```
@@ -357,18 +379,14 @@ where
         .event_format(EventFormat { last_id: AtomicU64::new(0) })
 }
 
-pub(crate) const COLORS_ENV: &str = "ROCKET_CLI_COLORS";
-
-pub(crate) fn try_init(level: LoggingLevel) -> bool {
-    if level == LoggingLevel::Off {
+pub(crate) fn try_init(level: LogLevel, colors: bool) -> bool {
+    if level == LogLevel::Off {
         return false;
     }
 
     if !atty::is(atty::Stream::Stdout)
         || (cfg!(windows) && !Paint::enable_windows_ascii())
-        || env::var_os(COLORS_ENV)
-            .map(|v| v == "0" || v == "off")
-            .unwrap_or(false)
+        || !colors
     {
         Paint::disable();
     }
@@ -380,18 +398,15 @@ pub(crate) fn try_init(level: LoggingLevel) -> bool {
         .is_ok()
 }
 
-pub(crate) trait PaintExt {
+pub trait PaintExt {
     fn emoji(item: &str) -> Paint<&str>;
 }
 
 impl PaintExt for Paint<&str> {
     /// Paint::masked(), but hidden on Windows due to broken output. See #1122.
-    fn emoji(item: &str) -> Paint<&str> {
-        if cfg!(windows) {
-            Paint::masked("")
-        } else {
-            Paint::masked(item)
-        }
+    fn emoji(_item: &str) -> Paint<&str> {
+        #[cfg(windows)] { Paint::masked("") }
+        #[cfg(not(windows))] { Paint::masked(_item) }
     }
 }
 

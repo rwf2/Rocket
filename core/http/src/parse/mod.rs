@@ -8,5 +8,4 @@ pub use self::accept::*;
 
 pub mod uri;
 
-// Exposed for codegen.
-#[doc(hidden)] pub use self::indexed::*;
+pub use self::indexed::*;

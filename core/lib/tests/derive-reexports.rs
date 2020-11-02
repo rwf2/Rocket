@@ -46,7 +46,7 @@ fn test_derive_reexports() {
     use rocket::local::blocking::Client;
 
     let rocket = rocket::ignite().mount("/", routes![index, number]);
-    let client = Client::new(rocket).unwrap();
+    let client = Client::tracked(rocket).unwrap();
 
     let response = client.get("/").dispatch();
     assert_eq!(response.into_string().unwrap(), "hello");

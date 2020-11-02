@@ -1,8 +1,9 @@
 #![recursion_limit="256"]
 
-#![doc(html_root_url = "https://api.rocket.rs/v0.5")]
+#![doc(html_root_url = "https://api.rocket.rs/master")]
 #![doc(html_favicon_url = "https://rocket.rs/images/favicon.ico")]
 #![doc(html_logo_url = "https://rocket.rs/images/logo-boxed.png")]
+#![cfg_attr(nightly, feature(doc_cfg))]
 
 #![warn(rust_2018_idioms)]
 
@@ -20,10 +21,10 @@
 //! automatic JSON (de)serialiazation, templating support, static file serving,
 //! and other useful features.
 //!
-//! [overview]: https://rocket.rs/v0.5/overview
-//! [full, detailed guide]: https://rocket.rs/v0.5/guide
-//! [quickstart]: https://rocket.rs/v0.5/guide/quickstart
-//! [getting started]: https://rocket.rs/v0.5/guide/getting-started
+//! [overview]: https://rocket.rs/master/overview
+//! [full, detailed guide]: https://rocket.rs/master/guide
+//! [quickstart]: https://rocket.rs/master/guide/quickstart
+//! [getting started]: https://rocket.rs/master/guide/getting-started
 //!
 //! ## Libraries
 //!
@@ -35,22 +36,14 @@
 //!
 //! ## Usage
 //!
-//! First, depend on `rocket` in `Cargo.toml`:
+//! Depend on `rocket` in `Rocket.toml`:
 //!
 //! ```toml
 //! [dependencies]
 //! rocket = "0.5.0-dev"
 //! ```
 //!
-//! Then, add the following to the top of your `main.rs` file:
-//!
-//! ```rust
-//! #[macro_use] extern crate rocket;
-//! # #[get("/")] fn hello() { }
-//! # fn main() { rocket::ignite().mount("/", routes![hello]); }
-//! ```
-//!
-//! See the [guide](https://rocket.rs/v0.5/guide) for more information on how to
+//! See the [guide](https://rocket.rs/master/guide) for more information on how to
 //! write Rocket applications. Here's a simple example to get you started:
 //!
 //! ```rust,no_run
@@ -62,10 +55,27 @@
 //! }
 //!
 //! #[launch]
-//! fn rocket() -> rocket::Rocket {
+//! fn rocket() -> _ {
 //!     rocket::ignite().mount("/", routes![hello])
 //! }
 //! ```
+//!
+//! ## Features
+//!
+//! There are two optional, disabled-by-default features:
+//!
+//!   * **secrets:** Enables support for [private cookies].
+//!   * **tls:** Enables support for [TLS].
+//!
+//! The features can be enabled in `Rocket.toml`:
+//!
+//! ```toml
+//! [dependencies]
+//! rocket = { version = "0.5.0-dev", features = ["secrets", "tls"] }
+//! ```
+//!
+//! [private cookies]: https://rocket.rs/master/guide/requests/#private-cookies
+//! [TLS]: https://rocket.rs/master/guide/configuration/#tls
 //!
 //! ## Configuration
 //!
@@ -74,7 +84,7 @@
 //! configure Rocket, see the [configuration section] of the guide as well as
 //! the [`config`] module documentation.
 //!
-//! [configuration section]: https://rocket.rs/v0.5/guide/configuration/
+//! [configuration section]: https://rocket.rs/master/guide/configuration/
 //!
 //! ## Testing
 //!
@@ -83,19 +93,21 @@
 //! documentation and the [testing chapter of the guide] include detailed
 //! examples.
 //!
-//! [testing chapter of the guide]: https://rocket.rs/v0.5/guide/testing/#testing
+//! [testing chapter of the guide]: https://rocket.rs/master/guide/testing/#testing
 
 #[allow(unused_imports)] #[macro_use] extern crate rocket_codegen;
 pub use rocket_codegen::*;
 pub use async_trait::*;
 
 #[macro_use] extern crate tracing;
-#[macro_use] extern crate pear;
 
+/// These are public dependencies! Update docs if these are changed, especially
+/// figment's version number in docs.
 #[doc(hidden)]
 pub use yansi;
 pub use futures;
 pub use tokio;
+pub use figment;
 
 #[macro_use] pub mod outcome;
 pub mod local;
@@ -123,6 +135,7 @@ pub mod http {
 mod shutdown;
 mod router;
 mod rocket;
+mod server;
 mod codegen;
 mod ext;
 
@@ -133,7 +146,7 @@ mod ext;
 #[doc(inline)] pub use crate::catcher::Catcher;
 pub use crate::router::Route;
 pub use crate::request::{Request, State};
-pub use crate::rocket::{Cargo, Rocket};
+pub use crate::rocket::Rocket;
 pub use crate::shutdown::Shutdown;
 
 /// Alias to [`Rocket::ignite()`] Creates a new instance of `Rocket`.
@@ -142,9 +155,9 @@ pub fn ignite() -> Rocket {
 }
 
 /// Alias to [`Rocket::custom()`]. Creates a new instance of `Rocket` with a
-/// custom configuration.
-pub fn custom(config: Config) -> Rocket {
-    Rocket::custom(config)
+/// custom configuration provider.
+pub fn custom<T: figment::Provider>(provider: T) -> Rocket {
+    Rocket::custom(provider)
 }
 
 // TODO.async: More thoughtful plan for async tests
@@ -152,7 +165,9 @@ pub fn custom(config: Config) -> Rocket {
 #[doc(hidden)]
 pub fn async_test<R>(fut: impl std::future::Future<Output = R> + Send) -> R {
     tokio::runtime::Builder::new()
-        .basic_scheduler()
+        .threaded_scheduler()
+        .thread_name("rocket-test-worker-thread")
+        .core_threads(1)
         .enable_all()
         .build()
         .expect("create tokio runtime")
@@ -164,6 +179,7 @@ pub fn async_test<R>(fut: impl std::future::Future<Output = R> + Send) -> R {
 pub fn async_main<R>(fut: impl std::future::Future<Output = R> + Send) -> R {
     tokio::runtime::Builder::new()
         .threaded_scheduler()
+        .thread_name("rocket-worker-thread")
         .enable_all()
         .build()
         .expect("create tokio runtime")

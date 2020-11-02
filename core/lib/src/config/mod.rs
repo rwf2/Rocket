@@ -1,1159 +1,390 @@
-//! Application configuration and configuration parameter retrieval.
+//! Server and application configuration.
 //!
-//! This module implements configuration handling for Rocket. It implements the
-//! parsing and interpretation of the `Rocket.toml` config file and
-//! `ROCKET_{PARAM}` environment variables. It also allows libraries to access
-//! user-configured values.
+//! See the [configuration guide] for full details.
 //!
-//! ## Application Configuration
+//! [configuration guide]: https://rocket.rs/master/guide/configuration/
 //!
-//! ### Environments
+//! ## Extracting Configuration Parameters
 //!
-//! Rocket applications are always running in one of three environments:
-//!
-//!   * development _or_ dev
-//!   * staging _or_ stage
-//!   * production _or_ prod
-//!
-//! Each environment can contain different configuration parameters. By default,
-//! Rocket applications run in the **development** environment. The environment
-//! can be changed via the `ROCKET_ENV` environment variable. For example, to
-//! start a Rocket application in the **production** environment:
-//!
-//! ```sh
-//! ROCKET_ENV=production ./target/release/rocket_app
-//! ```
-//!
-//! ### Configuration Parameters
-//!
-//! Each environments consists of several standard configuration parameters as
-//! well as an arbitrary number of _extra_ configuration parameters, which are
-//! not used by Rocket itself but can be used by external libraries. The
-//! standard configuration parameters are:
-//!
-//! | name       | type           | description                                                 | examples                   |
-//! |------------|----------------|-------------------------------------------------------------|----------------------------|
-//! | address    | string         | ip address or host to listen on                             | `"localhost"`, `"1.2.3.4"` |
-//! | port       | integer        | port number to listen on                                    | `8000`, `80`               |
-//! | keep_alive | integer        | keep-alive timeout in seconds                               | `0` (disable), `10`        |
-//! | workers    | integer        | number of concurrent thread workers                         | `36`, `512`                |
-//! | log        | string         | max log level: `"off"`, `"normal"`, `"debug"`, `"critical"` | `"off"`, `"normal"`        |
-//! | secret_key | 256-bit base64 | secret key for private cookies                              | `"8Xui8SI..."` (44 chars)  |
-//! | tls        | table          | tls config table with two keys (`certs`, `key`)             | _see below_                |
-//! | tls.certs  | string         | path to certificate chain in PEM format                     | `"private/cert.pem"`       |
-//! | tls.key    | string         | path to private key for `tls.certs` in PEM format           | `"private/key.pem"`        |
-//! | limits     | table          | map from data type (string) to data limit (integer: bytes)  | `{ forms = 65536 }`        |
-//!
-//! ### Rocket.toml
-//!
-//! `Rocket.toml` is a Rocket application's configuration file. It can
-//! optionally be used to specify the configuration parameters for each
-//! environment. If it is not present, the default configuration parameters or
-//! environment supplied parameters are used.
-//!
-//! The file must be a series of TOML tables, at most one for each environment,
-//! and an optional "global" table, where each table contains key-value pairs
-//! corresponding to configuration parameters for that environment. If a
-//! configuration parameter is missing, the default value is used. The following
-//! is a complete `Rocket.toml` file, where every standard configuration
-//! parameter is specified with the default value:
-//!
-//! ```toml
-//! [development]
-//! address = "localhost"
-//! port = 8000
-//! workers = [number_of_cpus * 2]
-//! keep_alive = 5
-//! log = "normal"
-//! secret_key = [randomly generated at launch]
-//! limits = { forms = 32768 }
-//!
-//! [staging]
-//! address = "0.0.0.0"
-//! port = 8000
-//! workers = [number_of_cpus * 2]
-//! keep_alive = 5
-//! log = "normal"
-//! secret_key = [randomly generated at launch]
-//! limits = { forms = 32768 }
-//!
-//! [production]
-//! address = "0.0.0.0"
-//! port = 8000
-//! workers = [number_of_cpus * 2]
-//! keep_alive = 5
-//! log = "critical"
-//! secret_key = [randomly generated at launch]
-//! limits = { forms = 32768 }
-//! ```
-//!
-//! The `workers` and `secret_key` default parameters are computed by Rocket
-//! automatically; the values above are not valid TOML syntax. When manually
-//! specifying the number of workers, the value should be an integer: `workers =
-//! 10`. When manually specifying the secret key, the value should a 256-bit
-//! base64 encoded string. Such a string can be generated with the `openssl`
-//! command line tool: `openssl rand -base64 32`.
-//!
-//! The "global" pseudo-environment can be used to set and/or override
-//! configuration parameters globally. A parameter defined in a `[global]` table
-//! sets, or overrides if already present, that parameter in every environment.
-//! For example, given the following `Rocket.toml` file, the value of `address`
-//! will be `"1.2.3.4"` in every environment:
-//!
-//! ```toml
-//! [global]
-//! address = "1.2.3.4"
-//!
-//! [development]
-//! address = "localhost"
-//!
-//! [production]
-//! address = "0.0.0.0"
-//! ```
-//!
-//! ### TLS Configuration
-//!
-//! TLS can be enabled by specifying the `tls.key` and `tls.certs` parameters.
-//! Rocket must be compiled with the `tls` feature enabled for the parameters to
-//! take effect. The recommended way to specify the parameters is via the
-//! `global` environment:
-//!
-//! ```toml
-//! [global.tls]
-//! certs = "/path/to/certs.pem"
-//! key = "/path/to/key.pem"
-//! ```
-//!
-//! ### Environment Variables
-//!
-//! All configuration parameters, including extras, can be overridden through
-//! environment variables. To override the configuration parameter `{param}`,
-//! use an environment variable named `ROCKET_{PARAM}`. For instance, to
-//! override the "port" configuration parameter, you can run your application
-//! with:
-//!
-//! ```sh
-//! ROCKET_PORT=3721 ./your_application
-//! ```
-//!
-//! Environment variables take precedence over all other configuration methods:
-//! if the variable is set, it will be used as the value for the parameter.
-//! Variable values are parsed as if they were TOML syntax. As illustration,
-//! consider the following examples:
-//!
-//! ```sh
-//! ROCKET_INTEGER=1
-//! ROCKET_FLOAT=3.14
-//! ROCKET_STRING=Hello
-//! ROCKET_STRING="Hello"
-//! ROCKET_BOOL=true
-//! ROCKET_ARRAY=[1,"b",3.14]
-//! ROCKET_DICT={key="abc",val=123}
-//! ```
-//!
-//! ## Retrieving Configuration Parameters
-//!
-//! Configuration parameters for the currently active configuration environment
-//! can be retrieved via the [`Rocket::config()`](crate::Rocket::config()) method
-//! on `Rocket` and `get_` methods on [`Config`] structure.
-//!
-//! [`Rocket::config()`]: crate::Rocket::config()
-//!
-//! The retrivial of configuration parameters usually occurs at launch time via
-//! a [launch fairing](crate::fairing::Fairing). If information about the
-//! configuration is needed later in the program, an attach fairing can be used
-//! to store the information as managed state. As an example of the latter,
-//! consider the following short program which reads the `token` configuration
-//! parameter and stores the value or a default in a `Token` managed state
-//! value:
+//! Rocket exposes the active [`Figment`] via [`Rocket::figment()`] and
+//! [`Rocket::figment()`]. Any value that implements [`Deserialize`] can be
+//! extracted from the figment:
 //!
 //! ```rust
 //! use rocket::fairing::AdHoc;
 //!
-//! struct Token(i64);
+//! #[derive(serde::Deserialize)]
+//! struct AppConfig {
+//!     id: Option<usize>,
+//!     port: u16,
+//! }
 //!
-//! fn main() {
-//!     rocket::ignite()
-//!         .attach(AdHoc::on_attach("Token Config", |mut rocket| async {
-//!             println!("Adding token managed state from config...");
-//!             let token_val = rocket.config().await.get_int("token").unwrap_or(-1);
-//!             Ok(rocket.manage(Token(token_val)))
-//!         }))
-//! # ;
+//! #[rocket::launch]
+//! fn rocket() -> _ {
+//!     rocket::ignite().attach(AdHoc::config::<AppConfig>())
 //! }
 //! ```
+//!
+//! [`Figment`]: figment::Figment
+//! [`Rocket::figment()`]: crate::Rocket::figment()
+//! [`Rocket::figment()`]: crate::Rocket::figment()
+//! [`Deserialize`]: serde::Deserialize
+//!
+//! ## Custom Providers
+//!
+//! A custom provider can be set via [`rocket::custom()`], which replaces calls to
+//! [`rocket::ignite()`]. The configured provider can be built on top of
+//! [`Config::figment()`], [`Config::default()`], both, or neither. The
+//! [Figment](@figment) documentation has full details on instantiating existing
+//! providers like [`Toml`]() and [`Env`] as well as creating custom providers for
+//! more complex cases.
+//!
+//! Configuration values can be overridden at runtime by merging figment's tuple
+//! providers with Rocket's default provider:
+//!
+//! ```rust
+//! # #[macro_use] extern crate rocket;
+//! use rocket::data::{Limits, ToByteUnit};
+//!
+//! #[launch]
+//! fn rocket() -> _ {
+//!     let figment = rocket::Config::figment()
+//!         .merge(("port", 1111))
+//!         .merge(("limits", Limits::new().limit("json", 2.mebibytes())));
+//!
+//!     rocket::custom(figment).mount("/", routes![/* .. */])
+//! }
+//! ```
+//!
+//! An application that wants to use Rocket's defaults for [`Config`], but not
+//! its configuration sources, while allowing the application to be configured
+//! via an `App.toml` file that uses top-level keys as profiles (`.nested()`)
+//! and `APP_` environment variables as global overrides (`.global()`), can be
+//! structured as follows:
+//!
+//! ```rust
+//! # #[macro_use] extern crate rocket;
+//! use serde::{Serialize, Deserialize};
+//! use figment::{Figment, providers::{Format, Toml, Serialized, Env}};
+//! use rocket::fairing::AdHoc;
+//!
+//! #[derive(Debug, Deserialize, Serialize)]
+//! struct Config {
+//!     app_value: usize,
+//!     /* and so on.. */
+//! }
+//!
+//! impl Default for Config {
+//!     fn default() -> Config {
+//!         Config { app_value: 3, }
+//!     }
+//! }
+//!
+//! #[launch]
+//! fn rocket() -> _ {
+//!     let figment = Figment::from(rocket::Config::default())
+//!         .merge(Serialized::defaults(Config::default()))
+//!         .merge(Toml::file("App.toml").nested())
+//!         .merge(Env::prefixed("APP_").global());
+//!
+//!     rocket::custom(figment)
+//!         .mount("/", routes![/* .. */])
+//!         .attach(AdHoc::config::<Config>())
+//! }
+//! ```
+//!
+//! [`rocket::custom()`]: crate::custom()
+//! [`rocket::ignite()`]: crate::ignite()
+//! [`Toml`]: figment::providers::Toml
+//! [`Env`]: figment::providers::Env
 
-mod error;
-mod environment;
+mod secret_key;
 mod config;
-mod builder;
-mod toml_ext;
-mod custom_values;
+mod tls;
 
-use std::env;
-use std::fs::File;
-use std::collections::HashMap;
-use std::io::Read;
-use std::path::{Path, PathBuf};
+#[doc(hidden)] pub use config::pretty_print_error;
 
-use toml;
-
-pub use toml::value::{Array, Map, Table, Value, Datetime};
-pub use self::error::ConfigError;
-pub use self::environment::Environment;
-pub use self::config::Config;
-pub use self::builder::ConfigBuilder;
-pub use crate::trace::LoggingLevel;
-pub(crate) use self::toml_ext::LoggedValue;
-
-use self::Environment::*;
-use self::environment::CONFIG_ENV;
-use crate::trace::COLORS_ENV;
-use self::toml_ext::parse_simple_toml_value;
-use crate::http::uncased::uncased_eq;
-
-const CONFIG_FILENAME: &str = "Rocket.toml";
-const GLOBAL_ENV_NAME: &str = "global";
-const ENV_VAR_PREFIX: &str = "ROCKET_";
-
-const CODEGEN_DEBUG_ENV: &str = "ROCKET_CODEGEN_DEBUG";
-const CONFIG_FILE_ENV: &str = "ROCKET_CONFIG_FILE";
-const PREHANDLED_VARS: [&str; 4] = [CODEGEN_DEBUG_ENV, CONFIG_FILE_ENV, CONFIG_ENV, COLORS_ENV];
-
-/// Wraps `std::result` with the error type of [`ConfigError`].
-pub type Result<T> = std::result::Result<T, ConfigError>;
-
-/// Stores a "full" config, which is all `Config`s for every environment.
-#[derive(Debug, PartialEq)]
-pub(crate) struct FullConfig {
-    pub active_env: Environment,
-    config: HashMap<Environment, Config>,
-}
-
-impl FullConfig {
-    /// Read the configuration from the `Rocket.toml` file. The file is searched
-    /// for recursively up the tree, starting from the CWD.
-    pub fn read_from(path: &Path) -> Result<FullConfig> {
-        // Try to open the config file for reading.
-        let mut handle = File::open(path).map_err(|_| ConfigError::IoError)?;
-
-        // Read the configure file to a string for parsing.
-        let mut contents = String::new();
-        handle.read_to_string(&mut contents).map_err(|_| ConfigError::IoError)?;
-
-        // Parse the config and return the result.
-        let mut config = FullConfig::parse(contents, path)?;
-
-        // Override any config values with those from the environment.
-        config.override_from_env()?;
-
-        Ok(config)
-    }
-
-    /// Return the default configuration for all environments and marks the
-    /// active environment (from `CONFIG_ENV`) as active. Overrides the defaults
-    /// with values from the `ROCKET_{PARAM}` environment variables. Doesn't
-    /// read any other sources.
-    pub fn env_default() -> Result<FullConfig> {
-        let mut config = Self::active_default_with_path(None)?;
-        config.override_from_env()?;
-        Ok(config)
-    }
-
-    /// Return the default configuration for all environments and marks the
-    /// active environment (from `CONFIG_ENV`) as active. This doesn't read
-    /// `filename`, nor any other config values from any source; it simply uses
-    /// `filename` to set up the config path property in the returned `Config`.
-    fn active_default_with_path(path: Option<&Path>) -> Result<FullConfig> {
-        let mut defaults = HashMap::new();
-        if let Some(path) = path {
-            defaults.insert(Development, Config::default_from(Development, &path)?);
-            defaults.insert(Staging, Config::default_from(Staging, &path)?);
-            defaults.insert(Production, Config::default_from(Production, &path)?);
-        } else {
-            defaults.insert(Development, Config::default(Development)?);
-            defaults.insert(Staging, Config::default(Staging)?);
-            defaults.insert(Production, Config::default(Production)?);
-        }
-
-        Ok(FullConfig {
-            active_env: Environment::active()?,
-            config: defaults,
-        })
-    }
-
-    /// Returns the path to the config file that should be parsed.
-    ///
-    /// If the environment variable `CONFIG_FILE_ENV` is set, that path is
-    /// assumed to be the config file. Assuming such a file exists, that path is
-    /// returned. If the file doesn't exist, an error is returned.
-    ///
-    /// If the variable isn't set, Iteratively search for `CONFIG_FILENAME`
-    /// starting at the current working directory and working up through its
-    /// parents. Returns the path to the discovered file.
-    fn find_config_path() -> Result<PathBuf> {
-        if let Some(path) = env::var_os(CONFIG_FILE_ENV) {
-            let config = Path::new(&path);
-            if config.metadata().map_or(false, |m| m.is_file()) {
-                return Ok(config.into());
-            } else {
-                let msg = "The user-supplied config file does not exist.";
-                return Err(ConfigError::BadFilePath(config.into(), msg));
-            }
-        }
-
-        let cwd = env::current_dir().map_err(|_| ConfigError::NotFound)?;
-        let mut current = cwd.as_path();
-
-        loop {
-            let config = current.join(CONFIG_FILENAME);
-            if config.metadata().map_or(false, |m| m.is_file()) {
-                return Ok(config);
-            }
-
-            match current.parent() {
-                Some(p) => current = p,
-                None => break,
-            }
-        }
-
-        Err(ConfigError::NotFound)
-    }
-
-    #[inline]
-    fn get_mut(&mut self, env: Environment) -> &mut Config {
-        match self.config.get_mut(&env) {
-            Some(config) => config,
-            None => panic!("set(): {} config is missing.", env),
-        }
-    }
-
-    /// Set the configuration for the environment `env` to be the configuration
-    /// derived from the TOML table `kvs`. The environment must already exist in
-    /// `self`, otherwise this function panics. Any existing values are
-    /// overridden by those in `kvs`.
-    fn set_from_table(&mut self, env: Environment, kvs: &Table) -> Result<()> {
-        for (key, value) in kvs {
-            self.get_mut(env).set_raw(key, value)?;
-        }
-
-        Ok(())
-    }
-
-    /// Retrieves the `Config` for the environment `env`.
-    #[cfg(test)]
-    pub fn get(&self, env: Environment) -> &Config {
-        match self.config.get(&env) {
-            Some(config) => config,
-            None => panic!("get(): {} config is missing.", env),
-        }
-    }
-
-    /// Retrieves the `Config` for the active environment.
-    #[cfg(test)]
-    pub fn active(&self) -> &Config {
-        self.get(self.active_env)
-    }
-
-    /// Retrieves the `Config` for the active environment.
-    pub fn take_active(mut self) -> Config {
-        self.config.remove(&self.active_env).expect("missing active config")
-    }
-
-    // Override all environments with values from env variables if present.
-    fn override_from_env(&mut self) -> Result<()> {
-        for (key, val) in env::vars() {
-            if key.len() < ENV_VAR_PREFIX.len() {
-                continue
-            } else if !uncased_eq(&key[..ENV_VAR_PREFIX.len()], ENV_VAR_PREFIX) {
-                continue
-            }
-
-            // Skip environment variables that are handled elsewhere.
-            if PREHANDLED_VARS.iter().any(|var| uncased_eq(&key, var)) {
-                continue
-            }
-
-            // Parse the key and value and try to set the variable for all envs.
-            let key = key[ENV_VAR_PREFIX.len()..].to_lowercase();
-            let toml_val = match parse_simple_toml_value(&val) {
-                Ok(val) => val,
-                Err(e) => return Err(ConfigError::BadEnvVal(key, val, e))
-            };
-
-            for env in &Environment::ALL {
-                match self.get_mut(*env).set_raw(&key, &toml_val) {
-                    Err(ConfigError::BadType(_, exp, actual, _)) => {
-                        let e = format!("expected {}, but found {}", exp, actual);
-                        return Err(ConfigError::BadEnvVal(key, val, e))
-                    }
-                    Err(e) => return Err(e),
-                    Ok(_) => { /* move along */ }
-                }
-            }
-        }
-
-        Ok(())
-    }
-
-    /// Parses the configuration from the Rocket.toml file. Also overrides any
-    /// values there with values from the environment.
-    fn parse<S, P>(src: S, filename: P) -> Result<FullConfig>
-        where S: Into<String>, P: AsRef<Path>
-    {
-        use self::ConfigError::ParseError;
-
-        // Parse the source as TOML, if possible.
-        let src = src.into();
-        let path = filename.as_ref().to_path_buf();
-        let table = match src.parse::<toml::Value>() {
-            Ok(toml::Value::Table(table)) => table,
-            Ok(value) => {
-                let err = format!("expected a table, found {}", value.type_str());
-                return Err(ConfigError::ParseError(src, path, err, Some((1, 1))));
-            }
-            Err(e) => return Err(ParseError(src, path, e.to_string(), e.line_col()))
-        };
-
-        // Create a config with the defaults; set the env to the active one.
-        let mut config = FullConfig::active_default_with_path(Some(filename.as_ref()))?;
-
-        // Store all of the global overrides, if any, for later use.
-        let mut global = None;
-
-        // Parse the values from the TOML file.
-        for (entry, value) in table {
-            // Each environment must be a table.
-            let kv_pairs = match value.as_table() {
-                Some(table) => table,
-                None => return Err(ConfigError::BadType(
-                    entry, "a table", value.type_str(), Some(path.clone())
-                ))
-            };
-
-            // Store the global table for later use and move on.
-            if entry.as_str() == GLOBAL_ENV_NAME {
-                global = Some(kv_pairs.clone());
-                continue;
-            }
-
-            // This is not the global table. Parse the environment name from the
-            // table entry name and then set all of the key/values.
-            match entry.as_str().parse() {
-                Ok(env) => config.set_from_table(env, kv_pairs)?,
-                Err(_) => Err(ConfigError::BadEntry(entry.clone(), path.clone()))?
-            }
-        }
-
-        // Override all of the environments with the global values.
-        if let Some(ref global_kv_pairs) = global {
-            for env in &Environment::ALL {
-                config.set_from_table(*env, global_kv_pairs)?;
-            }
-        }
-
-        Ok(config)
-    }
-}
+pub use config::Config;
+pub use crate::trace::LogLevel;
+pub use secret_key::SecretKey;
+pub use tls::TlsConfig;
 
 #[cfg(test)]
-mod test {
-    use std::env;
-    use std::sync::Mutex;
+mod tests {
+    use std::net::Ipv4Addr;
+    use figment::Figment;
 
-    use super::{Config, FullConfig, ConfigError, ConfigBuilder};
-    use super::{Environment, GLOBAL_ENV_NAME};
-    use super::environment::CONFIG_ENV;
-    use super::Environment::*;
-    use super::Result;
+    use crate::config::{Config, TlsConfig};
+    use crate::trace::LogLevel;
+    use crate::data::{Limits, ToByteUnit};
 
-    use crate::trace::LoggingLevel;
+    #[test]
+    fn test_default_round_trip() {
+        let figment = Figment::from(Config::default());
 
-    const TEST_CONFIG_FILENAME: &'static str = "/tmp/testing/Rocket.toml";
+        assert_eq!(figment.profile(), Config::DEFAULT_PROFILE);
 
-    // TODO: It's a shame we have to depend on lazy_static just for this.
-    lazy_static::lazy_static! {
-        static ref ENV_LOCK: Mutex<usize> = Mutex::new(0);
-    }
+        #[cfg(debug_assertions)]
+        assert_eq!(figment.profile(), Config::DEBUG_PROFILE);
 
-    macro_rules! check_config {
-        ($rconfig:expr, $econfig:expr) => (
-            let expected = $econfig.finalize().unwrap();
-            match $rconfig {
-                Ok(config) => assert_eq!(config.active(), &expected),
-                Err(e) => panic!("Config {} failed: {:?}", stringify!($rconfig), e)
-            }
-        );
+        #[cfg(not(debug_assertions))]
+        assert_eq!(figment.profile(), Config::RELEASE_PROFILE);
 
-        ($env:expr, $rconfig:expr, $econfig:expr) => (
-            let expected = $econfig.finalize().unwrap();
-            match $rconfig {
-                Ok(ref config) => assert_eq!(config.get($env), &expected),
-                Err(ref e) => panic!("Config {} failed: {:?}", stringify!($rconfig), e)
-            }
-        );
-    }
+        let config: Config = figment.extract().unwrap();
+        assert_eq!(config, Config::default());
 
-    fn env_default() -> Result<FullConfig>  {
-        FullConfig::env_default()
-    }
+        #[cfg(debug_assertions)]
+        assert_eq!(config, Config::debug_default());
 
-    fn default_config(env: Environment) -> ConfigBuilder {
-        ConfigBuilder::new(env)
+        #[cfg(not(debug_assertions))]
+        assert_eq!(config, Config::release_default());
+
+        assert_eq!(Config::from(Config::default()), Config::default());
     }
 
     #[test]
-    fn test_defaults() {
-        // Take the lock so changing the environment doesn't cause races.
-        let _env_lock = ENV_LOCK.lock().unwrap();
+    fn test_profile_env() {
+        figment::Jail::expect_with(|jail| {
+            jail.set_env("ROCKET_PROFILE", "debug");
+            let figment = Figment::from(Config::default());
+            assert_eq!(figment.profile(), "debug");
 
-        // First, without an environment. Should get development defaults on
-        // debug builds and productions defaults on non-debug builds.
-        env::remove_var(CONFIG_ENV);
-        #[cfg(debug_assertions)] check_config!(env_default(), default_config(Development));
-        #[cfg(not(debug_assertions))] check_config!(env_default(), default_config(Production));
+            jail.set_env("ROCKET_PROFILE", "release");
+            let figment = Figment::from(Config::default());
+            assert_eq!(figment.profile(), "release");
 
-        // Now with an explicit dev environment.
-        for env in &["development", "dev"] {
-            env::set_var(CONFIG_ENV, env);
-            check_config!(env_default(), default_config(Development));
-        }
+            jail.set_env("ROCKET_PROFILE", "random");
+            let figment = Figment::from(Config::default());
+            assert_eq!(figment.profile(), "random");
 
-        // Now staging.
-        for env in &["stage", "staging"] {
-            env::set_var(CONFIG_ENV, env);
-            check_config!(env_default(), default_config(Staging));
-        }
-
-        // Finally, production.
-        for env in &["prod", "production"] {
-            env::set_var(CONFIG_ENV, env);
-            check_config!(env_default(), default_config(Production));
-        }
+            Ok(())
+        });
     }
 
     #[test]
-    fn test_bad_environment_vars() {
-        // Take the lock so changing the environment doesn't cause races.
-        let _env_lock = ENV_LOCK.lock().unwrap();
+    fn test_toml_file() {
+        figment::Jail::expect_with(|jail| {
+            jail.create_file("Rocket.toml", r#"
+                [default]
+                address = "1.2.3.4"
+                port = 1234
+                workers = 20
+                keep_alive = 10
+                log_level = "off"
+                cli_colors = 0
+            "#)?;
 
-        for env in &["", "p", "pr", "pro", "prodo", " prod", "dev ", "!dev!", "🚀 "] {
-            env::set_var(CONFIG_ENV, env);
-            let err = ConfigError::BadEnv(env.to_string());
-            assert!(env_default().err().map_or(false, |e| e == err));
-        }
+            let config = Config::from(Config::figment());
+            assert_eq!(config, Config {
+                address: Ipv4Addr::new(1, 2, 3, 4).into(),
+                port: 1234,
+                workers: 20,
+                keep_alive: 10,
+                log_level: LogLevel::Off,
+                cli_colors: false,
+                ..Config::default()
+            });
 
-        // Test that a bunch of invalid environment names give the right error.
-        env::remove_var(CONFIG_ENV);
-        for env in &["p", "pr", "pro", "prodo", "bad", "meow", "this", "that"] {
-            let toml_table = format!("[{}]\n", env);
-            let e_str = env.to_string();
-            let err = ConfigError::BadEntry(e_str, TEST_CONFIG_FILENAME.into());
-            assert!(FullConfig::parse(toml_table, TEST_CONFIG_FILENAME)
-                    .err().map_or(false, |e| e == err));
-        }
+            jail.create_file("Rocket.toml", r#"
+                [global]
+                address = "1.2.3.4"
+                port = 1234
+                workers = 20
+                keep_alive = 10
+                log_level = "off"
+                cli_colors = 0
+            "#)?;
+
+            let config = Config::from(Config::figment());
+            assert_eq!(config, Config {
+                address: Ipv4Addr::new(1, 2, 3, 4).into(),
+                port: 1234,
+                workers: 20,
+                keep_alive: 10,
+                log_level: LogLevel::Off,
+                cli_colors: false,
+                ..Config::default()
+            });
+
+            jail.create_file("Rocket.toml", r#"
+                [global]
+                ctrlc = 0
+
+                [global.tls]
+                certs = "/ssl/cert.pem"
+                key = "/ssl/key.pem"
+
+                [global.limits]
+                forms = "1mib"
+                json = "10mib"
+                stream = "50kib"
+            "#)?;
+
+            let config = Config::from(Config::figment());
+            assert_eq!(config, Config {
+                ctrlc: false,
+                tls: Some(TlsConfig::from_paths("/ssl/cert.pem", "/ssl/key.pem")),
+                limits: Limits::default()
+                    .limit("forms", 1.mebibytes())
+                    .limit("json", 10.mebibytes())
+                    .limit("stream", 50.kibibytes()),
+                ..Config::default()
+            });
+
+            jail.create_file("Rocket.toml", r#"
+                [global.tls]
+                certs = "cert.pem"
+                key = "key.pem"
+            "#)?;
+
+            let config = Config::from(Config::figment());
+            assert_eq!(config, Config {
+                tls: Some(TlsConfig::from_paths(
+                    jail.directory().join("cert.pem"), jail.directory().join("key.pem")
+                )),
+                ..Config::default()
+            });
+
+            jail.set_env("ROCKET_CONFIG", "Other.toml");
+            jail.create_file("Other.toml", r#"
+                [default]
+                address = "1.2.3.4"
+                port = 1234
+                workers = 20
+                keep_alive = 10
+                log_level = "off"
+                cli_colors = 0
+            "#)?;
+
+            let config = Config::from(Config::figment());
+            assert_eq!(config, Config {
+                address: Ipv4Addr::new(1, 2, 3, 4).into(),
+                port: 1234,
+                workers: 20,
+                keep_alive: 10,
+                log_level: LogLevel::Off,
+                cli_colors: false,
+                ..Config::default()
+            });
+
+            Ok(())
+        });
     }
 
     #[test]
-    fn test_good_full_config_files() {
-        // Take the lock so changing the environment doesn't cause races.
-        let _env_lock = ENV_LOCK.lock().unwrap();
-        env::remove_var(CONFIG_ENV);
+    fn test_profiles_merge() {
+        figment::Jail::expect_with(|jail| {
+            jail.create_file("Rocket.toml", r#"
+                [default.limits]
+                stream = "50kb"
 
-        let config_str = r#"
-            address = "1.2.3.4"
-            port = 7810
-            workers = 21
-            log = "critical"
-            keep_alive = 0
-            secret_key = "8Xui8SN4mI+7egV/9dlfYYLGQJeEx4+DwmSQLwDVXJg="
-            template_dir = "mine"
-            json = true
-            pi = 3.14
-        "#;
+                [global]
+                limits = { forms = "2kb" }
 
-        let mut expected = default_config(Development)
-            .address("1.2.3.4")
-            .port(7810)
-            .workers(21)
-            .log_level(LoggingLevel::Critical)
-            .keep_alive(0)
-            .secret_key("8Xui8SN4mI+7egV/9dlfYYLGQJeEx4+DwmSQLwDVXJg=")
-            .extra("template_dir", "mine")
-            .extra("json", true)
-            .extra("pi", 3.14);
+                [debug.limits]
+                file = "100kb"
+            "#)?;
 
-        expected.environment = Development;
-        let dev_config = ["[dev]", config_str].join("\n");
-        let parsed = FullConfig::parse(dev_config, TEST_CONFIG_FILENAME);
-        check_config!(Development, parsed, expected.clone());
-        check_config!(Staging, parsed, default_config(Staging));
-        check_config!(Production, parsed, default_config(Production));
+            jail.set_env("ROCKET_PROFILE", "unknown");
+            let config = Config::from(Config::figment());
+            assert_eq!(config, Config {
+                limits: Limits::default()
+                    .limit("stream", 50.kilobytes())
+                    .limit("forms", 2.kilobytes()),
+                ..Config::default()
+            });
 
-        expected.environment = Staging;
-        let stage_config = ["[stage]", config_str].join("\n");
-        let parsed = FullConfig::parse(stage_config, TEST_CONFIG_FILENAME);
-        check_config!(Staging, parsed, expected.clone());
-        check_config!(Development, parsed, default_config(Development));
-        check_config!(Production, parsed, default_config(Production));
+            jail.set_env("ROCKET_PROFILE", "debug");
+            let config = Config::from(Config::figment());
+            assert_eq!(config, Config {
+                limits: Limits::default()
+                    .limit("stream", 50.kilobytes())
+                    .limit("forms", 2.kilobytes())
+                    .limit("file", 100.kilobytes()),
+                ..Config::default()
+            });
 
-        expected.environment = Production;
-        let prod_config = ["[prod]", config_str].join("\n");
-        let parsed = FullConfig::parse(prod_config, TEST_CONFIG_FILENAME);
-        check_config!(Production, parsed, expected);
-        check_config!(Development, parsed, default_config(Development));
-        check_config!(Staging, parsed, default_config(Staging));
+            Ok(())
+        });
     }
 
     #[test]
-    fn test_good_address_values() {
-        // Take the lock so changing the environment doesn't cause races.
-        let _env_lock = ENV_LOCK.lock().unwrap();
-        env::set_var(CONFIG_ENV, "dev");
+    fn test_env_vars_merge() {
+        figment::Jail::expect_with(|jail| {
+            jail.set_env("ROCKET_PORT", 9999);
+            let config = Config::from(Config::figment());
+            assert_eq!(config, Config {
+                port: 9999,
+                ..Config::default()
+            });
 
-        check_config!(FullConfig::parse(r#"
-                          [development]
-                          address = "localhost"
-                      "#.to_string(), TEST_CONFIG_FILENAME), {
-                          default_config(Development).address("localhost")
-                      });
+            jail.set_env("ROCKET_TLS", r#"{certs="certs.pem"}"#);
+            let first_figment = Config::figment();
+            jail.set_env("ROCKET_TLS", r#"{key="key.pem"}"#);
+            let prev_figment = Config::figment().join(&first_figment);
+            let config = Config::from(&prev_figment);
+            assert_eq!(config, Config {
+                port: 9999,
+                tls: Some(TlsConfig::from_paths("certs.pem", "key.pem")),
+                ..Config::default()
+            });
 
-        check_config!(FullConfig::parse(r#"
-                          [development]
-                          address = "127.0.0.1"
-                      "#.to_string(), TEST_CONFIG_FILENAME), {
-                          default_config(Development).address("127.0.0.1")
-                      });
+            jail.set_env("ROCKET_TLS", r#"{certs="new.pem"}"#);
+            let config = Config::from(Config::figment().join(&prev_figment));
+            assert_eq!(config, Config {
+                port: 9999,
+                tls: Some(TlsConfig::from_paths("new.pem", "key.pem")),
+                ..Config::default()
+            });
 
-        check_config!(FullConfig::parse(r#"
-                          [development]
-                          address = "::"
-                      "#.to_string(), TEST_CONFIG_FILENAME), {
-                          default_config(Development).address("::")
-                      });
+            jail.set_env("ROCKET_LIMITS", r#"{stream=100kiB}"#);
+            let config = Config::from(Config::figment().join(&prev_figment));
+            assert_eq!(config, Config {
+                port: 9999,
+                tls: Some(TlsConfig::from_paths("new.pem", "key.pem")),
+                limits: Limits::default().limit("stream", 100.kibibytes()),
+                ..Config::default()
+            });
 
-        check_config!(FullConfig::parse(r#"
-                          [dev]
-                          address = "2001:db8::370:7334"
-                      "#.to_string(), TEST_CONFIG_FILENAME), {
-                          default_config(Development).address("2001:db8::370:7334")
-                      });
-
-        check_config!(FullConfig::parse(r#"
-                          [dev]
-                          address = "0.0.0.0"
-                      "#.to_string(), TEST_CONFIG_FILENAME), {
-                          default_config(Development).address("0.0.0.0")
-                      });
+            Ok(())
+        });
     }
 
     #[test]
-    fn test_bad_address_values() {
-        // Take the lock so changing the environment doesn't cause races.
-        let _env_lock = ENV_LOCK.lock().unwrap();
-        env::remove_var(CONFIG_ENV);
-
-        assert!(FullConfig::parse(r#"
-            [development]
-            address = 0000
-        "#.to_string(), TEST_CONFIG_FILENAME).is_err());
-
-        assert!(FullConfig::parse(r#"
-            [development]
-            address = true
-        "#.to_string(), TEST_CONFIG_FILENAME).is_err());
-
-        assert!(FullConfig::parse(r#"
-            [development]
-            address = "........"
-        "#.to_string(), TEST_CONFIG_FILENAME).is_err());
-
-        assert!(FullConfig::parse(r#"
-            [staging]
-            address = "1.2.3.4:100"
-        "#.to_string(), TEST_CONFIG_FILENAME).is_err());
-    }
-
-    // Only do this test when the tls feature is disabled since the file paths
-    // we're supplying don't actually exist.
-    #[test]
-    fn test_good_tls_values() {
-        // Take the lock so changing the environment doesn't cause races.
-        let _env_lock = ENV_LOCK.lock().unwrap();
-        env::set_var(CONFIG_ENV, "dev");
-
-        assert!(FullConfig::parse(r#"
-            [staging]
-            tls = { certs = "some/path.pem", key = "some/key.pem" }
-        "#.to_string(), TEST_CONFIG_FILENAME).is_ok());
-
-        assert!(FullConfig::parse(r#"
-            [staging.tls]
-            certs = "some/path.pem"
-            key = "some/key.pem"
-        "#.to_string(), TEST_CONFIG_FILENAME).is_ok());
-
-        assert!(FullConfig::parse(r#"
-            [global.tls]
-            certs = "some/path.pem"
-            key = "some/key.pem"
-        "#.to_string(), TEST_CONFIG_FILENAME).is_ok());
-
-        assert!(FullConfig::parse(r#"
-            [global]
-            tls = { certs = "some/path.pem", key = "some/key.pem" }
-        "#.to_string(), TEST_CONFIG_FILENAME).is_ok());
-    }
-
-    #[test]
-    fn test_bad_tls_config() {
-        // Take the lock so changing the environment doesn't cause races.
-        let _env_lock = ENV_LOCK.lock().unwrap();
-        env::remove_var(CONFIG_ENV);
-
-        assert!(FullConfig::parse(r#"
-            [development]
-            tls = "hello"
-        "#.to_string(), TEST_CONFIG_FILENAME).is_err());
-
-        assert!(FullConfig::parse(r#"
-            [development]
-            tls = { certs = "some/path.pem" }
-        "#.to_string(), TEST_CONFIG_FILENAME).is_err());
-
-        assert!(FullConfig::parse(r#"
-            [development]
-            tls = { certs = "some/path.pem", key = "some/key.pem", extra = "bah" }
-        "#.to_string(), TEST_CONFIG_FILENAME).is_err());
-
-        assert!(FullConfig::parse(r#"
-            [staging]
-            tls = { cert = "some/path.pem", key = "some/key.pem" }
-        "#.to_string(), TEST_CONFIG_FILENAME).is_err());
-    }
-
-    #[test]
-    fn test_good_port_values() {
-        // Take the lock so changing the environment doesn't cause races.
-        let _env_lock = ENV_LOCK.lock().unwrap();
-        env::set_var(CONFIG_ENV, "stage");
-
-        check_config!(FullConfig::parse(r#"
-                          [stage]
-                          port = 100
-                      "#.to_string(), TEST_CONFIG_FILENAME), {
-                          default_config(Staging).port(100)
-                      });
-
-        check_config!(FullConfig::parse(r#"
-                          [stage]
-                          port = 6000
-                      "#.to_string(), TEST_CONFIG_FILENAME), {
-                          default_config(Staging).port(6000)
-                      });
-
-        check_config!(FullConfig::parse(r#"
-                          [stage]
-                          port = 65535
-                      "#.to_string(), TEST_CONFIG_FILENAME), {
-                          default_config(Staging).port(65535)
-                      });
-    }
-
-    #[test]
-    fn test_bad_port_values() {
-        // Take the lock so changing the environment doesn't cause races.
-        let _env_lock = ENV_LOCK.lock().unwrap();
-        env::remove_var(CONFIG_ENV);
-
-        assert!(FullConfig::parse(r#"
-            [development]
-            port = true
-        "#.to_string(), TEST_CONFIG_FILENAME).is_err());
-
-        assert!(FullConfig::parse(r#"
-            [production]
-            port = "hello"
-        "#.to_string(), TEST_CONFIG_FILENAME).is_err());
-
-        assert!(FullConfig::parse(r#"
-            [staging]
-            port = -1
-        "#.to_string(), TEST_CONFIG_FILENAME).is_err());
-
-        assert!(FullConfig::parse(r#"
-            [staging]
-            port = 65536
-        "#.to_string(), TEST_CONFIG_FILENAME).is_err());
-
-        assert!(FullConfig::parse(r#"
-            [staging]
-            port = 105836
-        "#.to_string(), TEST_CONFIG_FILENAME).is_err());
-    }
-
-    #[test]
-    fn test_good_workers_values() {
-        // Take the lock so changing the environment doesn't cause races.
-        let _env_lock = ENV_LOCK.lock().unwrap();
-        env::set_var(CONFIG_ENV, "stage");
-
-        check_config!(FullConfig::parse(r#"
-                          [stage]
-                          workers = 1
-                      "#.to_string(), TEST_CONFIG_FILENAME), {
-                          default_config(Staging).workers(1)
-                      });
-
-        check_config!(FullConfig::parse(r#"
-                          [stage]
-                          workers = 300
-                      "#.to_string(), TEST_CONFIG_FILENAME), {
-                          default_config(Staging).workers(300)
-                      });
-
-        check_config!(FullConfig::parse(r#"
-                          [stage]
-                          workers = 65535
-                      "#.to_string(), TEST_CONFIG_FILENAME), {
-                          default_config(Staging).workers(65535)
-                      });
-    }
-
-    #[test]
-    fn test_bad_workers_values() {
-        // Take the lock so changing the environment doesn't cause races.
-        let _env_lock = ENV_LOCK.lock().unwrap();
-        env::remove_var(CONFIG_ENV);
-
-        assert!(FullConfig::parse(r#"
-            [development]
-            workers = true
-        "#.to_string(), TEST_CONFIG_FILENAME).is_err());
-
-        assert!(FullConfig::parse(r#"
-            [production]
-            workers = "hello"
-        "#.to_string(), TEST_CONFIG_FILENAME).is_err());
-
-        assert!(FullConfig::parse(r#"
-            [staging]
-            workers = -1
-        "#.to_string(), TEST_CONFIG_FILENAME).is_err());
-
-        assert!(FullConfig::parse(r#"
-            [staging]
-            workers = 65536
-        "#.to_string(), TEST_CONFIG_FILENAME).is_err());
-
-        assert!(FullConfig::parse(r#"
-            [staging]
-            workers = 105836
-        "#.to_string(), TEST_CONFIG_FILENAME).is_err());
-    }
-
-    #[test]
-    fn test_good_keep_alives() {
-        // Take the lock so changing the environment doesn't cause races.
-        let _env_lock = ENV_LOCK.lock().unwrap();
-        env::set_var(CONFIG_ENV, "stage");
-
-        check_config!(FullConfig::parse(r#"
-                          [stage]
-                          keep_alive = 10
-                      "#.to_string(), TEST_CONFIG_FILENAME), {
-                          default_config(Staging).keep_alive(10)
-                      });
-
-        check_config!(FullConfig::parse(r#"
-                          [stage]
-                          keep_alive = 0
-                      "#.to_string(), TEST_CONFIG_FILENAME), {
-                          default_config(Staging).keep_alive(0)
-                      });
-
-        check_config!(FullConfig::parse(r#"
-                          [stage]
-                          keep_alive = 348
-                      "#.to_string(), TEST_CONFIG_FILENAME), {
-                          default_config(Staging).keep_alive(348)
-                      });
-
-        check_config!(FullConfig::parse(r#"
-                          [stage]
-                          keep_alive = 0
-                      "#.to_string(), TEST_CONFIG_FILENAME), {
-                          default_config(Staging).keep_alive(0)
-                      });
-    }
-
-    #[test]
-    fn test_bad_keep_alives() {
-        // Take the lock so changing the environment doesn't cause races.
-        let _env_lock = ENV_LOCK.lock().unwrap();
-        env::remove_var(CONFIG_ENV);
-
-        assert!(FullConfig::parse(r#"
-            [dev]
-            keep_alive = true
-        "#.to_string(), TEST_CONFIG_FILENAME).is_err());
-
-        assert!(FullConfig::parse(r#"
-            [dev]
-            keep_alive = -10
-        "#.to_string(), TEST_CONFIG_FILENAME).is_err());
-
-        assert!(FullConfig::parse(r#"
-            [dev]
-            keep_alive = "Some(10)"
-        "#.to_string(), TEST_CONFIG_FILENAME).is_err());
-
-        assert!(FullConfig::parse(r#"
-            [dev]
-            keep_alive = 4294967296
-        "#.to_string(), TEST_CONFIG_FILENAME).is_err());
-    }
-
-    #[test]
-    fn test_good_log_levels() {
-        // Take the lock so changing the environment doesn't cause races.
-        let _env_lock = ENV_LOCK.lock().unwrap();
-        env::set_var(CONFIG_ENV, "stage");
-
-        check_config!(FullConfig::parse(r#"
-                          [stage]
-                          log = "normal"
-                      "#.to_string(), TEST_CONFIG_FILENAME), {
-                          default_config(Staging).log_level(LoggingLevel::Normal)
-                      });
-
-
-        check_config!(FullConfig::parse(r#"
-                          [stage]
-                          log = "debug"
-                      "#.to_string(), TEST_CONFIG_FILENAME), {
-                          default_config(Staging).log_level(LoggingLevel::Debug)
-                      });
-
-        check_config!(FullConfig::parse(r#"
-                          [stage]
-                          log = "critical"
-                      "#.to_string(), TEST_CONFIG_FILENAME), {
-                          default_config(Staging).log_level(LoggingLevel::Critical)
-                      });
-
-        check_config!(FullConfig::parse(r#"
-                          [stage]
-                          log = "off"
-                      "#.to_string(), TEST_CONFIG_FILENAME), {
-                          default_config(Staging).log_level(LoggingLevel::Off)
-                      });
-    }
-
-    #[test]
-    fn test_bad_log_level_values() {
-        // Take the lock so changing the environment doesn't cause races.
-        let _env_lock = ENV_LOCK.lock().unwrap();
-        env::remove_var(CONFIG_ENV);
-
-        assert!(FullConfig::parse(r#"
-            [dev]
-            log = false
-        "#.to_string(), TEST_CONFIG_FILENAME).is_err());
-
-        assert!(FullConfig::parse(r#"
-            [development]
-            log = 0
-        "#.to_string(), TEST_CONFIG_FILENAME).is_err());
-
-        assert!(FullConfig::parse(r#"
-            [prod]
-            log = "no"
-        "#.to_string(), TEST_CONFIG_FILENAME).is_err());
-    }
-
-    #[test]
-    fn test_good_secret_key() {
-        // Take the lock so changing the environment doesn't cause races.
-        let _env_lock = ENV_LOCK.lock().unwrap();
-        env::set_var(CONFIG_ENV, "stage");
-
-        check_config!(FullConfig::parse(r#"
-                          [stage]
-                          secret_key = "TpUiXK2d/v5DFxJnWL12suJKPExKR8h9zd/o+E7SU+0="
-                      "#.to_string(), TEST_CONFIG_FILENAME), {
-                          default_config(Staging).secret_key(
-                              "TpUiXK2d/v5DFxJnWL12suJKPExKR8h9zd/o+E7SU+0="
-                          )
-                      });
-
-        check_config!(FullConfig::parse(r#"
-                          [stage]
-                          secret_key = "jTyprDberFUiUFsJ3vcb1XKsYHWNBRvWAnXTlbTgGFU="
-                      "#.to_string(), TEST_CONFIG_FILENAME), {
-                          default_config(Staging).secret_key(
-                              "jTyprDberFUiUFsJ3vcb1XKsYHWNBRvWAnXTlbTgGFU="
-                          )
-                      });
-    }
-
-    #[test]
-    fn test_bad_secret_key() {
-        // Take the lock so changing the environment doesn't cause races.
-        let _env_lock = ENV_LOCK.lock().unwrap();
-        env::remove_var(CONFIG_ENV);
-
-        assert!(FullConfig::parse(r#"
-            [dev]
-            secret_key = true
-        "#.to_string(), TEST_CONFIG_FILENAME).is_err());
-
-        assert!(FullConfig::parse(r#"
-            [dev]
-            secret_key = 1283724897238945234897
-        "#.to_string(), TEST_CONFIG_FILENAME).is_err());
-
-        assert!(FullConfig::parse(r#"
-            [dev]
-            secret_key = "abcv"
-        "#.to_string(), TEST_CONFIG_FILENAME).is_err());
-    }
-
-    #[test]
-    fn test_bad_toml() {
-        // Take the lock so changing the environment doesn't cause races.
-        let _env_lock = ENV_LOCK.lock().unwrap();
-        env::remove_var(CONFIG_ENV);
-
-        assert!(FullConfig::parse(r#"
-            [dev
-        "#.to_string(), TEST_CONFIG_FILENAME).is_err());
-
-        assert!(FullConfig::parse(r#"
-            [dev]
-            1. = 2
-        "#.to_string(), TEST_CONFIG_FILENAME).is_err());
-
-        assert!(FullConfig::parse(r#"
-            [dev]
-            secret_key = "abcv" = other
-        "#.to_string(), TEST_CONFIG_FILENAME).is_err());
-    }
-
-    #[test]
-    fn test_global_overrides() {
-        // Take the lock so changing the environment doesn't cause races.
-        let _env_lock = ENV_LOCK.lock().unwrap();
-
-        // Test first that we can override each environment.
-        for env in &Environment::ALL {
-            env::set_var(CONFIG_ENV, env.to_string());
-
-            check_config!(FullConfig::parse(format!(r#"
-                              [{}]
-                              address = "::1"
-                          "#, GLOBAL_ENV_NAME), TEST_CONFIG_FILENAME), {
-                              default_config(*env).address("::1")
-                          });
-
-            check_config!(FullConfig::parse(format!(r#"
-                              [{}]
-                              database = "mysql"
-                          "#, GLOBAL_ENV_NAME), TEST_CONFIG_FILENAME), {
-                              default_config(*env).extra("database", "mysql")
-                          });
-
-            check_config!(FullConfig::parse(format!(r#"
-                              [{}]
-                              port = 3980
-                          "#, GLOBAL_ENV_NAME), TEST_CONFIG_FILENAME), {
-                              default_config(*env).port(3980)
-                          });
-        }
-    }
-
-    #[test]
-    fn test_env_override() {
-        // Take the lock so changing the environment doesn't cause races.
-        let _env_lock = ENV_LOCK.lock().unwrap();
-
-        let pairs = [
-            ("log", "critical"), ("LOG", "debug"), ("PORT", "8110"),
-            ("address", "1.2.3.4"), ("EXTRA_EXTRA", "true"), ("workers", "3")
-        ];
-
-        let check_value = |key: &str, val: &str, config: &Config| {
-            match key {
-                "log" => assert_eq!(config.log_level, val.parse().unwrap()),
-                "port" => assert_eq!(config.port, val.parse::<u16>().unwrap()),
-                "address" => assert_eq!(config.address, val),
-                "extra_extra" => assert_eq!(config.get_bool(key).unwrap(), true),
-                "workers" => assert_eq!(config.workers, val.parse::<u16>().unwrap()),
-                _ => panic!("Unexpected key: {}", key)
-            }
-        };
-
-        // Check that setting the environment variable actually changes the
-        // config for the default active and nonactive environments.
-        for &(key, val) in &pairs {
-            env::set_var(format!("ROCKET_{}", key), val);
-
-            // Check that it overrides the active config.
-            for env in &Environment::ALL {
-                env::set_var(CONFIG_ENV, env.to_string());
-                let rconfig = env_default().unwrap();
-                check_value(&*key.to_lowercase(), val, rconfig.active());
-            }
-
-            // And non-active configs.
-            let rconfig = env_default().unwrap();
-            for env in &Environment::ALL {
-                check_value(&*key.to_lowercase(), val, rconfig.get(*env));
-            }
-        }
-
-        // Clear the variables so they don't override for the next test.
-        for &(key, _) in &pairs {
-            env::remove_var(format!("ROCKET_{}", key))
-        }
-
-        // Now we build a config file to test that the environment variables
-        // override configurations from files as well.
-        let toml = r#"
-            [dev]
-            address = "1.2.3.4"
-
-            [stage]
-            address = "2.3.4.5"
-
-            [prod]
-            address = "10.1.1.1"
-
-            [global]
-            address = "1.2.3.4"
-            port = 7810
-            workers = 21
-            log = "normal"
-        "#;
-
-        // Check that setting the environment variable actually changes the
-        // config for the default active environments.
-        for &(key, val) in &pairs {
-            env::set_var(format!("ROCKET_{}", key), val);
-
-            let mut r = FullConfig::parse(toml, TEST_CONFIG_FILENAME).unwrap();
-            r.override_from_env().unwrap();
-            check_value(&*key.to_lowercase(), val, r.active());
-
-            // And non-active configs.
-            for env in &Environment::ALL {
-                check_value(&*key.to_lowercase(), val, r.get(*env));
-            }
-        }
-
-        // Clear the variables so they don't override for the next test.
-        for &(key, _) in &pairs {
-            env::remove_var(format!("ROCKET_{}", key))
-        }
+    fn test_precedence() {
+        figment::Jail::expect_with(|jail| {
+            jail.create_file("Rocket.toml", r#"
+                [global.limits]
+                forms = "1mib"
+                stream = "50kb"
+                file = "100kb"
+            "#)?;
+
+            let config = Config::from(Config::figment());
+            assert_eq!(config, Config {
+                limits: Limits::default()
+                    .limit("forms", 1.mebibytes())
+                    .limit("stream", 50.kilobytes())
+                    .limit("file", 100.kilobytes()),
+                ..Config::default()
+            });
+
+            jail.set_env("ROCKET_LIMITS", r#"{stream=3MiB,capture=2MiB}"#);
+            let config = Config::from(Config::figment());
+            assert_eq!(config, Config {
+                limits: Limits::default()
+                    .limit("file", 100.kilobytes())
+                    .limit("forms", 1.mebibytes())
+                    .limit("stream", 3.mebibytes())
+                    .limit("capture", 2.mebibytes()),
+                ..Config::default()
+            });
+
+            jail.set_env("ROCKET_PROFILE", "foo");
+            let val: Result<String, _> = Config::figment().extract_inner("profile");
+            assert!(val.is_err());
+
+            Ok(())
+        });
     }
 }

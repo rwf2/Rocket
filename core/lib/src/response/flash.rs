@@ -1,6 +1,7 @@
 use std::convert::AsRef;
 
 use time::Duration;
+use serde::ser::{Serialize, Serializer, SerializeStruct};
 
 use crate::outcome::IntoOutcome;
 use crate::response::{self, Responder};
@@ -77,8 +78,8 @@ const FLASH_COOKIE_DELIM: char = ':';
 /// receive the standard welcome message.
 #[derive(Debug)]
 pub struct Flash<R> {
-    name: String,
-    message: String,
+    pub name: String,
+    pub message: String,
     consumed: AtomicBool,
     inner: R,
 }
@@ -182,7 +183,6 @@ impl<R> Flash<R> {
 
         Cookie::build(FLASH_COOKIE_NAME, content)
             .max_age(Duration::minutes(5))
-            .path("/")
             .finish()
     }
 }
@@ -215,8 +215,7 @@ impl<'a, 'r> Flash<&'a Request<'r>> {
     fn clear_cookie_if_needed(&self) {
         // Remove the cookie if it hasn't already been removed.
         if !self.consumed.swap(true, Ordering::Relaxed) {
-            let cookie = Cookie::build(FLASH_COOKIE_NAME, "").path("/").finish();
-            self.inner.cookies().remove(cookie);
+            self.inner.cookies().remove(Cookie::named(FLASH_COOKIE_NAME));
         }
     }
 
@@ -259,5 +258,14 @@ impl<'a, 'r> FromRequest<'a, 'r> for Flash<&'a Request<'r>> {
                 _ => Err(())
             }
         }).into_outcome(Status::BadRequest)
+    }
+}
+
+impl<R> Serialize for Flash<R> {
+    fn serialize<S: Serializer>(&self, ser: S) -> Result<S::Ok, S::Error> {
+        let mut flash = ser.serialize_struct("Flash", 2)?;
+        flash.serialize_field("name", &self.name)?;
+        flash.serialize_field("message", &self.message)?;
+        flash.end()
     }
 }

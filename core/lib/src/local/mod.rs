@@ -55,7 +55,7 @@
 //!     fn test_hello_world_blocking() {
 //!         // Construct a client to use for dispatching requests.
 //!         use rocket::local::blocking::Client;
-//!         let client = Client::new(super::rocket())
+//!         let client = Client::tracked(super::rocket())
 //!             .expect("valid `Rocket`");
 //!
 //!         // Dispatch a request to 'GET /' and validate the response.
@@ -68,7 +68,7 @@
 //!     async fn test_hello_world_async() {
 //!         // Construct a client to use for dispatching requests.
 //!         use rocket::local::asynchronous::Client;
-//!         let client = Client::new(super::rocket()).await
+//!         let client = Client::tracked(super::rocket()).await
 //!             .expect("valid `Rocket`");
 //!
 //!         // Dispatch a request to 'GET /' and validate the response.
@@ -80,7 +80,7 @@
 //!
 //! For more details on testing, see the [testing guide].
 //!
-//! [testing guide]: https://rocket.rs/v0.5/guide/testing/
+//! [testing guide]: https://rocket.rs/master/guide/testing/
 //! [`Client`]: crate::local::asynchronous::Client
 //!
 //! # `Client`
@@ -91,7 +91,7 @@
 //!
 //! **Usage**
 //!
-//! A `Client` is constructed via the [`new()`] ([`async` `new()`]) or
+//! A `Client` is constructed via the [`tracked()`] ([`async` `tracked()`]) or
 //! [`untracked()`] ([`async` `untracked()`]) methods from an already
 //! constructed `Rocket` instance. Once a value of `Client` has been
 //! constructed, [`get()`], [`put()`], [`post()`], and so on ([`async` `get()`],
@@ -100,7 +100,7 @@
 //!
 //! **Cookie Tracking**
 //!
-//! A `Client` constructed using `new()` propagates cookie changes made by
+//! A `Client` constructed using `tracked()` propagates cookie changes made by
 //! responses to previously dispatched requests. In other words, if a previously
 //! dispatched request resulted in a response that adds a cookie, any future
 //! requests will contain that cookie. Similarly, cookies removed by a response
@@ -117,9 +117,9 @@
 //! [`LocalRequest`]: blocking::LocalRequest
 //! [`async` `LocalRequest`]: asynchronous::LocalRequest
 //!
-//! [`new()`]: blocking::Client::new()
+//! [`tracked()`]: blocking::Client::tracked()
 //! [`untracked()`]: blocking::Client::untracked()
-//! [`async` `new()`]: asynchronous::Client::new()
+//! [`async` `tracked()`]: asynchronous::Client::tracked()
 //! [`async` `untracked()`]: asynchronous::Client::untracked()
 //!
 //! [`get()`]: blocking::Client::get()

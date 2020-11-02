@@ -1,8 +1,6 @@
 use std::fmt;
 use std::str::FromStr;
 
-use crate::uncased::uncased_eq;
-
 use self::Method::*;
 
 // TODO: Support non-standard methods, here and in codegen.
@@ -100,15 +98,15 @@ impl FromStr for Method {
     // clients don't follow this, so we just do a case-insensitive match here.
     fn from_str(s: &str) -> Result<Method, ()> {
         match s {
-            x if uncased_eq(x, Get.as_str()) => Ok(Get),
-            x if uncased_eq(x, Put.as_str()) => Ok(Put),
-            x if uncased_eq(x, Post.as_str()) => Ok(Post),
-            x if uncased_eq(x, Delete.as_str()) => Ok(Delete),
-            x if uncased_eq(x, Options.as_str()) => Ok(Options),
-            x if uncased_eq(x, Head.as_str()) => Ok(Head),
-            x if uncased_eq(x, Trace.as_str()) => Ok(Trace),
-            x if uncased_eq(x, Connect.as_str()) => Ok(Connect),
-            x if uncased_eq(x, Patch.as_str()) => Ok(Patch),
+            x if uncased::eq(x, Get.as_str()) => Ok(Get),
+            x if uncased::eq(x, Put.as_str()) => Ok(Put),
+            x if uncased::eq(x, Post.as_str()) => Ok(Post),
+            x if uncased::eq(x, Delete.as_str()) => Ok(Delete),
+            x if uncased::eq(x, Options.as_str()) => Ok(Options),
+            x if uncased::eq(x, Head.as_str()) => Ok(Head),
+            x if uncased::eq(x, Trace.as_str()) => Ok(Trace),
+            x if uncased::eq(x, Connect.as_str()) => Ok(Connect),
+            x if uncased::eq(x, Patch.as_str()) => Ok(Patch),
             _ => Err(()),
         }
     }

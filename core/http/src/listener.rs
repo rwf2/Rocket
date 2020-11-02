@@ -10,8 +10,8 @@ use hyper::server::accept::Accept;
 
 use log::{debug, error};
 
-use tokio::io::{AsyncRead, AsyncWrite};
 use tokio::time::Delay;
+use tokio::io::{AsyncRead, AsyncWrite};
 use tokio::net::{TcpListener, TcpStream};
 
 // TODO.async: 'Listener' and 'Connection' provide common enough functionality
@@ -32,10 +32,10 @@ pub trait Connection: AsyncRead + AsyncWrite {
     fn remote_addr(&self) -> Option<SocketAddr>;
 }
 
-/// This is a genericized version of hyper's AddrIncoming that is intended to be
+/// This is a generic version of hyper's AddrIncoming that is intended to be
 /// usable with listeners other than a plain TCP stream, e.g. TLS and/or Unix
-/// sockets. It does this by bridging the `Listener` trait to what hyper wants
-/// (an Accept). This type is internal to Rocket.
+/// sockets. It does so by bridging the `Listener` trait to what hyper wants (an
+/// Accept). This type is internal to Rocket.
 #[must_use = "streams do nothing unless polled"]
 pub struct Incoming<L> {
     listener: L,

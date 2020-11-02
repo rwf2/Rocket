@@ -205,7 +205,6 @@ request-local state to implement request timing.
 [`FromRequest` request-local state]: @api/rocket/request/trait.FromRequest.html#request-local-state
 [`Fairing`]: @api/rocket/fairing/trait.Fairing.html#request-local-state
 
-<!-- TODO.async: rewrite? -->
 ## Databases
 
 Rocket includes built-in, ORM-agnostic support for databases. In particular,
@@ -222,7 +221,7 @@ three simple steps:
 
   1. Configure the databases in `Rocket.toml`.
   2. Associate a request guard type and fairing with each database.
-  3. Use the request guard to retrieve a connection in a handler.
+  3. Use the request guard to retrieve and use a connection in a handler.
 
 Presently, Rocket provides built-in support for the following databases:
 
@@ -301,7 +300,7 @@ fn rocket() -> rocket::Rocket {
 ```
 
 That's it! Whenever a connection to the database is needed, use your type as a
-request guard:
+request guard. The database can be accessed by calling the `run` method:
 
 ```rust
 # #[macro_use] extern crate rocket;
@@ -315,9 +314,9 @@ request guard:
 # type Logs = ();
 
 #[get("/logs/<id>")]
-fn get_logs(conn: LogsDbConn, id: usize) -> Logs {
+async fn get_logs(conn: LogsDbConn, id: usize) -> Logs {
     # /*
-    logs::filter(id.eq(log_id)).load(&*conn)
+    conn.run(|c| logs::filter(id.eq(log_id)).load(c)).await
     # */
 }
 ```
@@ -328,6 +327,15 @@ fn get_logs(conn: LogsDbConn, id: usize) -> Logs {
   specific and not built into Rocket. It also uses [Diesel]'s query-building
   syntax. Rocket does not provide an ORM. It is up to you to decide how to model
   your application's data.
+
+! note
+
+  The database engines supported by `#[database]` are *synchronous*. Normally,
+  using such a database would block the thread of execution. To prevent this,
+  the `run()` function automatically uses a thread pool so that database access
+  does not interfere with other in-flight requests. See [Cooperative
+  Multitasking](../overview/#cooperative-multitasking) for more information on
+  why this is necessary.
 
 If your application uses features of a database engine that are not available
 by default, for example support for `chrono` or `uuid`, you may enable those

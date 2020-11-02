@@ -7,7 +7,6 @@ publish = false
 
 [dependencies]
 rocket = { path = "../../core/lib" }
-lazy_static = "1.0"
 
 [dependencies.rocket_contrib]
 default-features = false

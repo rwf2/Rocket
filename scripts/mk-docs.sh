@@ -19,7 +19,7 @@ fi
 # Generate the rustdocs for all of the crates.
 echo ":::: Generating the docs..."
 pushd "${PROJECT_ROOT}" > /dev/null 2>&1
-RUSTDOCFLAGS="-Z unstable-options --crate-version ${ROCKET_VERSION}" \
+RUSTDOCFLAGS="-Z unstable-options --crate-version ${DOC_VERSION}" \
   cargo doc -p rocket -p rocket_contrib --no-deps --all-features
 popd > /dev/null 2>&1
 

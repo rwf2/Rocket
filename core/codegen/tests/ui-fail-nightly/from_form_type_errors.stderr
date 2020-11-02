@@ -1,11 +1,15 @@
-error[E0277]: the trait bound `Unknown: rocket::request::FromFormValue<'_>` is not satisfied
+error[E0277]: the trait bound `Unknown: FromFormValue<'_>` is not satisfied
  --> $DIR/from_form_type_errors.rs:7:5
   |
 7 |     field: Unknown,
-  |     ^^^^^^^^^^^^^^ the trait `rocket::request::FromFormValue<'_>` is not implemented for `Unknown`
+  |     ^^^^^^^^^^^^^^ the trait `FromFormValue<'_>` is not implemented for `Unknown`
+  |
+  = note: required by `from_form_value`
 
-error[E0277]: the trait bound `Foo<usize>: rocket::request::FromFormValue<'_>` is not satisfied
+error[E0277]: the trait bound `Foo<usize>: FromFormValue<'_>` is not satisfied
   --> $DIR/from_form_type_errors.rs:14:5
    |
 14 |     field: Foo<usize>,
-   |     ^^^^^^^^^^^^^^^^^ the trait `rocket::request::FromFormValue<'_>` is not implemented for `Foo<usize>`
+   |     ^^^^^^^^^^^^^^^^^ the trait `FromFormValue<'_>` is not implemented for `Foo<usize>`
+   |
+   = note: required by `from_form_value`

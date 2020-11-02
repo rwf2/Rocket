@@ -54,7 +54,7 @@ mod local_request_content_type_tests {
 
     #[test]
     fn has_no_ct() {
-        let client = Client::new(rocket()).unwrap();
+        let client = Client::tracked(rocket()).unwrap();
 
         let req = client.post("/");
         assert_eq!(req.clone().dispatch().into_string(), Some("Absent".to_string()));
@@ -69,7 +69,7 @@ mod local_request_content_type_tests {
 
     #[test]
     fn has_ct() {
-        let client = Client::new(rocket()).unwrap();
+        let client = Client::tracked(rocket()).unwrap();
 
         let req = client.post("/").header(ContentType::JSON);
         assert_eq!(req.clone().dispatch().into_string(), Some("Present".to_string()));

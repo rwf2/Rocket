@@ -5,7 +5,7 @@ use rocket::local::blocking::Client;
 fn test<H>(method: Method, uri: &str, header: H, status: Status, body: String)
     where H: Into<Header<'static>>
 {
-    let client = Client::new(super::rocket()).unwrap();
+    let client = Client::tracked(super::rocket()).unwrap();
     let response = client.req(method, uri).header(header).dispatch();
     assert_eq!(response.status(), status);
     assert_eq!(response.into_string(), Some(body));

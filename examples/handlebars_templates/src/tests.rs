@@ -7,7 +7,7 @@ use rocket_contrib::templates::Template;
 
 macro_rules! dispatch {
     ($method:expr, $path:expr, |$client:ident, $response:ident| $body:expr) => ({
-        let $client = Client::new(rocket()).unwrap();
+        let $client = Client::tracked(rocket()).unwrap();
         let $response = $client.req($method, $path).dispatch();
         $body
     })
@@ -31,7 +31,7 @@ fn test_root() {
         dispatch!(*method, "/", |client, response| {
             let mut map = std::collections::HashMap::new();
             map.insert("path", "/");
-            let expected = Template::show(client.cargo(), "error/404", &map).unwrap();
+            let expected = Template::show(client.rocket(), "error/404", &map).unwrap();
 
             assert_eq!(response.status(), Status::NotFound);
             assert_eq!(response.into_string(), Some(expected));
@@ -50,7 +50,7 @@ fn test_name() {
             parent: "layout",
         };
 
-        let expected = Template::show(client.cargo(), "index", &context).unwrap();
+        let expected = Template::show(client.rocket(), "index", &context).unwrap();
         assert_eq!(response.status(), Status::Ok);
         assert_eq!(response.into_string(), Some(expected));
     });
@@ -63,7 +63,7 @@ fn test_404() {
         let mut map = std::collections::HashMap::new();
         map.insert("path", "/hello/");
 
-        let expected = Template::show(client.cargo(), "error/404", &map).unwrap();
+        let expected = Template::show(client.rocket(), "error/404", &map).unwrap();
         assert_eq!(response.status(), Status::NotFound);
         assert_eq!(response.into_string(), Some(expected));
     });

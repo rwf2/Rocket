@@ -1,6 +1,6 @@
 use std::ops::Deref;
 
-use crate::rocket::Cargo;
+use crate::rocket::Rocket;
 use crate::request::{self, FromRequest, Request};
 use crate::outcome::Outcome;
 use crate::http::Status;
@@ -92,11 +92,9 @@ use crate::http::Status;
 ///     state.0.to_string()
 /// }
 ///
-/// # rocket::async_test(async {
 /// let mut rocket = rocket::ignite().manage(MyManagedState(127));
-/// let state = State::from(rocket.inspect().await).expect("managing `MyManagedState`");
+/// let state = State::from(&rocket).expect("managed `MyManagedState`");
 /// assert_eq!(handler(state), "127");
-/// # });
 /// ```
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct State<'r, T: Send + Sync + 'static>(&'r T);
@@ -147,19 +145,16 @@ impl<'r, T: Send + Sync + 'static> State<'r, T> {
     /// #[derive(Debug, PartialEq)]
     /// struct Unmanaged(usize);
     ///
-    /// # rocket::async_test(async {
-    /// let mut rocket = rocket::ignite().manage(Managed(7));
-    /// let cargo = rocket.inspect().await;
+    /// let rocket = rocket::ignite().manage(Managed(7));
     ///
-    /// let state: Option<State<Managed>> = State::from(cargo);
+    /// let state: Option<State<Managed>> = State::from(&rocket);
     /// assert_eq!(state.map(|s| s.inner()), Some(&Managed(7)));
     ///
-    /// let state: Option<State<Unmanaged>> = State::from(cargo);
+    /// let state: Option<State<Unmanaged>> = State::from(&rocket);
     /// assert_eq!(state, None);
-    /// # });
     /// ```
     #[inline(always)]
-    pub fn from(rocket: &'r Cargo) -> Option<Self> {
+    pub fn from(rocket: &'r Rocket) -> Option<Self> {
         rocket.state().map(State)
     }
 }
@@ -186,5 +181,24 @@ impl<T: Send + Sync + 'static> Deref for State<'_, T> {
     #[inline(always)]
     fn deref(&self) -> &T {
         self.0
+    }
+}
+
+impl<T: Send + Sync + 'static> Clone for State<'_, T> {
+    fn clone(&self) -> Self {
+        State(self.0)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    #[test]
+    fn state_is_cloneable() {
+        struct Token(usize);
+
+        let rocket = crate::custom(crate::Config::default()).manage(Token(123));
+        let state = rocket.state::<Token>().unwrap();
+        assert_eq!(state.0, 123);
+        assert_eq!(state.clone().0, 123);
     }
 }

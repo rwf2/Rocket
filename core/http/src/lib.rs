@@ -1,5 +1,7 @@
 #![recursion_limit="512"]
 
+#![cfg_attr(nightly, feature(doc_cfg))]
+
 #![warn(rust_2018_idioms)]
 
 //! Types that map to concepts in HTTP.
@@ -38,19 +40,26 @@ mod raw_str;
 mod parse;
 mod listener;
 
-pub mod uncased;
+/// Case-preserving, ASCII case-insensitive string types.
+///
+/// An _uncased_ string is case-preserving. That is, the string itself contains
+/// cased characters, but comparison (including ordering, equality, and hashing)
+/// is ASCII case-insensitive. **Note:** the `alloc` feature _is_ enabled.
+pub mod uncased {
+    #[doc(inline)] pub use uncased::*;
+}
 
+// Types that we expose for use by core.
 #[doc(hidden)]
 pub mod private {
-    // We need to export these for codegen, but otherwise it's unnecessary.
-    // TODO: Expose a `const fn` from ContentType when possible. (see RFC#1817)
-    // FIXME(rustc): These show up in the rexported module.
     pub use crate::parse::Indexed;
-    pub use crate::media_type::{MediaParams, Source};
     pub use smallvec::{SmallVec, Array};
 
-    // This one we need to expose for core.
-    pub use crate::cookies::{Key, CookieJar};
+    pub mod cookie {
+        pub use cookie::*;
+        pub use crate::cookies::Key;
+    }
+
     pub use crate::listener::{Incoming, Listener, Connection, bind_tcp};
 }
 
@@ -60,6 +69,5 @@ pub use crate::accept::{Accept, QMediaType};
 pub use crate::status::{Status, StatusClass};
 pub use crate::header::{Header, HeaderMap};
 pub use crate::raw_str::RawStr;
-
 pub use crate::media_type::MediaType;
-pub use crate::cookies::{Cookie, SameSite, Cookies};
+pub use crate::cookies::{Cookie, CookieJar, SameSite};

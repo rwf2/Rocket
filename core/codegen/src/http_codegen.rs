@@ -70,8 +70,8 @@ impl FromMeta for ContentType {
 
 impl ToTokens for ContentType {
     fn to_tokens(&self, tokens: &mut TokenStream) {
-        // Yeah, yeah. (((((i))).kn0w()))
-        let media_type = MediaType((self.0).clone().0);
+        let http_media_type = self.0.media_type().clone();
+        let media_type = MediaType(http_media_type);
         tokens.extend(quote!(::rocket::http::ContentType(#media_type)));
     }
 }
@@ -94,27 +94,13 @@ impl FromMeta for MediaType {
 
 impl ToTokens for MediaType {
     fn to_tokens(&self, tokens: &mut TokenStream) {
-        use std::iter::repeat;
         let (top, sub) = (self.0.top().as_str(), self.0.sub().as_str());
         let (keys, values) = self.0.params().split2();
+        let http = quote!(::rocket::http);
 
-        let cow = quote!(::std::borrow::Cow);
-        let (pub_http, http) = (quote!(::rocket::http), quote!(::rocket::http::private));
-        let (http_, http__) = (repeat(&http), repeat(&http));
-        let (cow_, cow__) = (repeat(&cow), repeat(&cow));
-
-        // TODO: Produce less code when possible (for known media types).
-        tokens.extend(quote!(#pub_http::MediaType {
-            source: #http::Source::None,
-            top: #http::Indexed::Concrete(#cow::Borrowed(#top)),
-            sub: #http::Indexed::Concrete(#cow::Borrowed(#sub)),
-            params: #http::MediaParams::Static(&[
-                #((
-                    #http_::Indexed::Concrete(#cow_::Borrowed(#keys)),
-                    #http__::Indexed::Concrete(#cow__::Borrowed(#values))
-                )),*
-            ])
-        }))
+        tokens.extend(quote! {
+            #http::MediaType::const_new(#top, #sub, &[#((#keys, #values)),*])
+        });
     }
 }
 

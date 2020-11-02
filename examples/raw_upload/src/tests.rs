@@ -9,7 +9,7 @@ const UPLOAD_CONTENTS: &str = "Hey! I'm going to be uploaded. :D Yay!";
 
 #[test]
 fn test_index() {
-    let client = Client::new(super::rocket()).unwrap();
+    let client = Client::tracked(super::rocket()).unwrap();
     let res = client.get("/").dispatch();
     assert_eq!(res.into_string(), Some(super::index().to_string()));
 }
@@ -21,7 +21,7 @@ fn test_raw_upload() {
     let _ = fs::remove_file(&upload_file);
 
     // Do the upload. Make sure we get the expected results.
-    let client = Client::new(super::rocket()).unwrap();
+    let client = Client::tracked(super::rocket()).unwrap();
     let res = client.post("/upload")
         .header(ContentType::Plain)
         .body(UPLOAD_CONTENTS)

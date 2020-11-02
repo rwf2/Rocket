@@ -102,10 +102,12 @@ impl Data {
     /// method can be used to determine if this buffer contains _all_ of the
     /// data in the body of the request.
     ///
-    /// # Example
+    /// # Examples
+    ///
+    /// In a data guard:
     ///
     /// ```rust
-    /// use rocket::request::Request;
+    /// use rocket::request::{self, Request, FromRequest};
     /// use rocket::data::{self, Data, FromData};
     /// # struct MyType;
     /// # type MyError = String;
@@ -115,8 +117,35 @@ impl Data {
     ///     type Error = MyError;
     ///
     ///     async fn from_data(req: &Request<'_>, mut data: Data) -> data::Outcome<Self, MyError> {
-    ///         if data.peek(10).await != b"hi" {
+    ///         if data.peek(2).await != b"hi" {
     ///             return data::Outcome::Forward(data)
+    ///         }
+    ///
+    ///         /* .. */
+    ///         # unimplemented!()
+    ///     }
+    /// }
+    /// ```
+    ///
+    /// In a fairing:
+    ///
+    /// ```
+    /// use rocket::{Rocket, Request, Data, Response};
+    /// use rocket::fairing::{Fairing, Info, Kind};
+    /// # struct MyType;
+    ///
+    /// #[rocket::async_trait]
+    /// impl Fairing for MyType {
+    ///     fn info(&self) -> Info {
+    ///         Info {
+    ///             name: "Data Peeker",
+    ///             kind: Kind::Request
+    ///         }
+    ///     }
+    ///
+    ///     async fn on_request(&self, req: &mut Request<'_>, data: &mut Data) {
+    ///         if data.peek(2).await == b"hi" {
+    ///             /* do something; body data starts with `"hi"` */
     ///         }
     ///
     ///         /* .. */

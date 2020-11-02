@@ -9,7 +9,7 @@ use super::rocket;
 fn test_query_file<T> (path: &str, file: T, status: Status)
     where T: Into<Option<&'static str>>
 {
-    let client = Client::new(rocket()).unwrap();
+    let client = Client::tracked(rocket()).unwrap();
     let response = client.get(path).dispatch();
     assert_eq!(response.status(), status);
 

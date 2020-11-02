@@ -2,7 +2,7 @@ use rocket::{self, local::blocking::Client};
 
 #[test]
 fn hello_world() {
-    let client = Client::new(super::rocket()).unwrap();
+    let client = Client::tracked(super::rocket()).unwrap();
     let response = client.get("/").dispatch();
     assert_eq!(response.into_string(), Some("Hello, Rust 2018!".into()));
 }
@@ -35,14 +35,14 @@ mod scoped_uri_tests {
 
     #[test]
     fn test_inner_hello() {
-        let client = Client::new(rocket()).unwrap();
+        let client = Client::tracked(rocket()).unwrap();
         let response = client.get("/").dispatch();
         assert_eq!(response.into_string(), Some("Hello! Try /Rust%202018.".into()));
     }
 
     #[test]
     fn test_hello_name() {
-        let client = Client::new(rocket()).unwrap();
+        let client = Client::tracked(rocket()).unwrap();
         let response = client.get("/Rust%202018").dispatch();
         assert_eq!(response.into_string().unwrap(), "Hello, Rust 2018! This is /Rust%202018.");
     }

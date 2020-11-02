@@ -12,7 +12,7 @@ struct Message {
 
 #[test]
 fn msgpack_get() {
-    let client = Client::new(rocket()).unwrap();
+    let client = Client::tracked(rocket()).unwrap();
     let res = client.get("/message/1").header(ContentType::MsgPack).dispatch();
     assert_eq!(res.status(), Status::Ok);
     assert_eq!(res.content_type(), Some(ContentType::MsgPack));
@@ -25,7 +25,7 @@ fn msgpack_get() {
 #[test]
 fn msgpack_post() {
     // Dispatch request with a message of `[2, "Goodbye, world!"]`.
-    let client = Client::new(rocket()).unwrap();
+    let client = Client::tracked(rocket()).unwrap();
     let res = client.post("/message")
         .header(ContentType::MsgPack)
         .body(&[146, 2, 175, 71, 111, 111, 100, 98, 121, 101, 44, 32, 119, 111, 114, 108, 100, 33])

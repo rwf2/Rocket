@@ -17,7 +17,7 @@ use super::{Client, LocalResponse};
 /// use rocket::local::blocking::{Client, LocalRequest};
 /// use rocket::http::{ContentType, Cookie};
 ///
-/// let client = Client::new(rocket::ignite()).expect("valid rocket");
+/// let client = Client::tracked(rocket::ignite()).expect("valid rocket");
 /// let req = client.post("/")
 ///     .header(ContentType::JSON)
 ///     .remote("127.0.0.1:8000".parse().unwrap())

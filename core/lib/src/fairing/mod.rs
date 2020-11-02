@@ -47,7 +47,7 @@
 //! of other `Fairings` are not jeopardized. For instance, unless it is made
 //! abundantly clear, a fairing should not rewrite every request.
 
-use crate::{Cargo, Rocket, Request, Response, Data};
+use crate::{Rocket, Request, Response, Data};
 
 mod fairings;
 mod ad_hoc;
@@ -196,7 +196,7 @@ pub use self::info_kind::{Info, Kind};
 /// decorated with an attribute of `#[rocket::async_trait]`:
 ///
 /// ```rust
-/// use rocket::{Cargo, Rocket, Request, Data, Response};
+/// use rocket::{Rocket, Request, Data, Response};
 /// use rocket::fairing::{Fairing, Info, Kind};
 ///
 /// # struct MyType;
@@ -212,12 +212,12 @@ pub use self::info_kind::{Info, Kind};
 ///         # unimplemented!()
 ///     }
 ///
-///     fn on_launch(&self, cargo: &Cargo) {
+///     fn on_launch(&self, rocket: &Rocket) {
 ///         /* ... */
 ///         # unimplemented!()
 ///     }
 ///
-///     async fn on_request(&self, req: &mut Request<'_>, data: &Data) {
+///     async fn on_request(&self, req: &mut Request<'_>, data: &mut Data) {
 ///         /* ... */
 ///         # unimplemented!()
 ///     }
@@ -266,7 +266,7 @@ pub use self::info_kind::{Info, Kind};
 ///         }
 ///     }
 ///
-///     async fn on_request(&self, req: &mut Request<'_>, _: &Data) {
+///     async fn on_request(&self, req: &mut Request<'_>, _: &mut Data) {
 ///         if req.method() == Method::Get {
 ///             self.get.fetch_add(1, Ordering::Relaxed);
 ///         } else if req.method() == Method::Post {
@@ -329,7 +329,7 @@ pub use self::info_kind::{Info, Kind};
 ///     }
 ///
 ///     /// Stores the start time of the request in request-local state.
-///     async fn on_request(&self, request: &mut Request<'_>, _: &Data) {
+///     async fn on_request(&self, request: &mut Request<'_>, _: &mut Data) {
 ///         // Store a `TimerStart` instead of directly storing a `SystemTime`
 ///         // to ensure that this usage doesn't conflict with anything else
 ///         // that might store a `SystemTime` in request-local cache.
@@ -365,7 +365,7 @@ pub use self::info_kind::{Info, Kind};
 /// }
 /// ```
 ///
-/// [request-local state]: https://rocket.rs/v0.5/guide/state/#request-local-state
+/// [request-local state]: https://rocket.rs/master/guide/state/#request-local-state
 #[crate::async_trait]
 pub trait Fairing: Send + Sync + 'static {
     /// Returns an [`Info`] structure containing the `name` and [`Kind`] of this
@@ -420,14 +420,14 @@ pub trait Fairing: Send + Sync + 'static {
     ///
     /// This method is called just prior to launching the application if
     /// `Kind::Launch` is in the `kind` field of the `Info` structure for this
-    /// fairing. The `Cargo` parameter corresponds to the application that
+    /// fairing. The `Rocket` parameter corresponds to the application that
     /// will be launched.
     ///
     /// ## Default Implementation
     ///
     /// The default implementation of this method does nothing.
     #[allow(unused_variables)]
-    fn on_launch(&self, cargo: &Cargo) {}
+    fn on_launch(&self, rocket: &Rocket) {}
 
     /// The request callback.
     ///
@@ -440,7 +440,7 @@ pub trait Fairing: Send + Sync + 'static {
     ///
     /// The default implementation of this method does nothing.
     #[allow(unused_variables)]
-    async fn on_request(&self, req: &mut Request<'_>, data: &Data) {}
+    async fn on_request(&self, req: &mut Request<'_>, data: &mut Data) {}
 
     /// The response callback.
     ///
@@ -469,12 +469,12 @@ impl<T: Fairing> Fairing for std::sync::Arc<T> {
     }
 
     #[inline]
-    fn on_launch(&self, cargo: &Cargo) {
-        (self as &T).on_launch(cargo)
+    fn on_launch(&self, rocket: &Rocket) {
+        (self as &T).on_launch(rocket)
     }
 
     #[inline]
-    async fn on_request(&self, req: &mut Request<'_>, data: &Data) {
+    async fn on_request(&self, req: &mut Request<'_>, data: &mut Data) {
         (self as &T).on_request(req, data).await;
     }
 

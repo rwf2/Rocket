@@ -26,7 +26,7 @@ impl Fairing for Counter {
         }
     }
 
-    async fn on_request(&self, request: &mut Request<'_>, _: &Data) {
+    async fn on_request(&self, request: &mut Request<'_>, _: &mut Data) {
         if request.method() == Method::Get {
             self.get.fetch_add(1, Ordering::Relaxed);
         } else if request.method() == Method::Post {
@@ -66,10 +66,12 @@ fn rocket() -> rocket::Rocket {
     rocket::ignite()
         .mount("/", routes![hello, token])
         .attach(Counter::default())
-        .attach(AdHoc::on_attach("Token State", |mut rocket| async {
+        .attach(AdHoc::on_attach("Token State", |rocket| async {
             println!("Adding token managed state...");
-            let token_val = rocket.config().await.get_int("token").unwrap_or(-1);
-            Ok(rocket.manage(Token(token_val)))
+            match rocket.figment().extract_inner("token") {
+                Ok(value) => Ok(rocket.manage(Token(value))),
+                Err(_) => Err(rocket)
+            }
         }))
         .attach(AdHoc::on_launch("Launch Message", |_| {
             println!("Rocket is about to launch!");

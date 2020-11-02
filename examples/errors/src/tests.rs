@@ -3,7 +3,7 @@ use rocket::http::Status;
 
 #[test]
 fn test_hello() {
-    let client = Client::new(super::rocket()).unwrap();
+    let client = Client::tracked(super::rocket()).unwrap();
 
     let (name, age) = ("Arthur", 42);
     let uri = format!("/hello/{}/{}", name, age);
@@ -15,7 +15,7 @@ fn test_hello() {
 
 #[test]
 fn forced_error_and_default_catcher() {
-    let client = Client::new(super::rocket()).unwrap();
+    let client = Client::tracked(super::rocket()).unwrap();
 
     let request = client.get("/404");
     let expected = super::not_found(request.inner());
@@ -44,7 +44,7 @@ fn forced_error_and_default_catcher() {
 
 #[test]
 fn test_hello_invalid_age() {
-    let client = Client::new(super::rocket()).unwrap();
+    let client = Client::tracked(super::rocket()).unwrap();
 
     for &(name, age) in &[("Ford", -129), ("Trillian", 128)] {
         let request = client.get(format!("/hello/{}/{}", name, age));

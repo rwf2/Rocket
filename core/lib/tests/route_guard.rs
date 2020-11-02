@@ -24,7 +24,7 @@ mod route_guard_tests {
             .mount("/first", routes![files])
             .mount("/second", routes![files]);
 
-        let client = Client::new(rocket).unwrap();
+        let client = Client::tracked(rocket).unwrap();
         assert_path(&client, "/first/some/path");
         assert_path(&client, "/second/some/path");
         assert_path(&client, "/first/second/b/c");

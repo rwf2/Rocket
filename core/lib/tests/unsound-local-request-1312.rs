@@ -3,7 +3,7 @@ use rocket::local::blocking::Client;
 
 #[test]
 fn test_local_request_clone_soundness() {
-    let client = Client::new(rocket::ignite()).unwrap();
+    let client = Client::tracked(rocket::ignite()).unwrap();
 
     // creates two LocalRequest instances that shouldn't share the same req
     let r1 = client.get("/").header(Header::new("key", "val1"));

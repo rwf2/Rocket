@@ -1,39 +1,35 @@
 #[macro_use] extern crate rocket;
-#[macro_use] extern crate lazy_static;
 
 use std::collections::HashMap;
 
+use rocket::State;
 use rocket_contrib::uuid::Uuid;
 use rocket_contrib::uuid::uuid_crate as uuid;
 
 #[cfg(test)] mod tests;
 
-lazy_static! {
-    // A small people lookup table for the sake of this example. In a real
-    // application this could be a database lookup. Notice that we use the
-    // uuid::Uuid type here and not the rocket_contrib::uuid::Uuid type.
-    static ref PEOPLE: HashMap<uuid::Uuid, &'static str> = {
-        let mut m = HashMap::new();
-        let lacy_id = uuid::Uuid::parse_str("7f205202-7ba1-4c39-b2fc-3e630722bf9f").unwrap();
-        let bob_id = uuid::Uuid::parse_str("4da34121-bc7d-4fc1-aee6-bf8de0795333").unwrap();
-        let george_id = uuid::Uuid::parse_str("ad962969-4e3d-4de7-ac4a-2d86d6d10839").unwrap();
-        m.insert(lacy_id, "Lacy");
-        m.insert(bob_id, "Bob");
-        m.insert(george_id, "George");
-        m
-    };
-}
+// A small people mapping in managed state for the sake of this example. In a
+// real application this would be a database. Notice that we use the uuid::Uuid
+// type here and not the rocket_contrib::uuid::Uuid type.
+struct People(HashMap<uuid::Uuid, &'static str>);
 
 #[get("/people/<id>")]
-fn people(id: Uuid) -> Result<String, String> {
+fn people(id: Uuid, people: State<People>) -> Result<String, String> {
     // Because Uuid implements the Deref trait, we use Deref coercion to convert
     // rocket_contrib::uuid::Uuid to uuid::Uuid.
-    Ok(PEOPLE.get(&id)
+    Ok(people.0.get(&id)
         .map(|person| format!("We found: {}", person))
         .ok_or_else(|| format!("Person not found for UUID: {}", id))?)
 }
 
 #[launch]
 fn rocket() -> rocket::Rocket {
-    rocket::ignite().mount("/", routes![people])
+    let mut map = HashMap::new();
+    map.insert("7f205202-7ba1-4c39-b2fc-3e630722bf9f".parse().unwrap(), "Lacy");
+    map.insert("4da34121-bc7d-4fc1-aee6-bf8de0795333".parse().unwrap(), "Bob");
+    map.insert("ad962969-4e3d-4de7-ac4a-2d86d6d10839".parse().unwrap(), "George");
+
+    rocket::ignite()
+        .manage(People(map))
+        .mount("/", routes![people])
 }

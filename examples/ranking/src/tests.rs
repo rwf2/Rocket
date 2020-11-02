@@ -1,7 +1,7 @@
 use rocket::local::blocking::Client;
 
 fn test(uri: String, expected: String) {
-    let client = Client::new(super::rocket()).unwrap();
+    let client = Client::tracked(super::rocket()).unwrap();
     let response = client.get(&uri).dispatch();
     assert_eq!(response.into_string(), Some(expected));
 }

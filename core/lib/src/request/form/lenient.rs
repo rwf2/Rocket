@@ -1,4 +1,4 @@
-use std::ops::Deref;
+use std::ops::{Deref, DerefMut};
 
 use crate::request::{Request, form::{Form, FormDataError, FromForm}};
 use crate::data::{Data, Transformed, FromTransformedData, TransformFuture, FromDataFuture};
@@ -93,23 +93,29 @@ impl<T> Deref for LenientForm<T> {
     }
 }
 
-impl<'f, T: FromForm<'f> + Send + 'f> FromTransformedData<'f> for LenientForm<T> {
-    type Error = FormDataError<'f, T::Error>;
+impl<T> DerefMut for LenientForm<T> {
+    fn deref_mut(&mut self) -> &mut T {
+        &mut self.0
+    }
+}
+
+impl<'r, T: FromForm<'r> + Send + 'r> FromTransformedData<'r> for LenientForm<T> {
+    type Error = FormDataError<'r, T::Error>;
     type Owned = String;
     type Borrowed = str;
 
-    fn transform<'r>(r: &'r Request<'_>, d: Data) -> TransformFuture<'r, Self::Owned, Self::Error> {
+    fn transform(r: &'r Request<'_>, d: Data) -> TransformFuture<'r, Self::Owned, Self::Error> {
         <Form<T>>::transform(r, d)
     }
 
-    fn from_data(_: &'f Request<'_>, o: Transformed<'f, Self>) -> FromDataFuture<'f, Self, Self::Error> {
+    fn from_data(_: &'r Request<'_>, o: Transformed<'r, Self>) -> FromDataFuture<'r, Self, Self::Error> {
         Box::pin(futures::future::ready(o.borrowed().and_then(|form| {
             <Form<T>>::from_data(form, false).map(LenientForm)
         })))
     }
 }
 
-impl<'f, A, T: FromUriParam<Query, A> + FromForm<'f>> FromUriParam<Query, A> for LenientForm<T> {
+impl<'r, A, T: FromUriParam<Query, A> + FromForm<'r>> FromUriParam<Query, A> for LenientForm<T> {
     type Target = T::Target;
 
     #[inline(always)]

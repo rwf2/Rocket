@@ -2,7 +2,7 @@ use std::sync::Mutex;
 
 use futures::future::{Future, BoxFuture};
 
-use crate::{Cargo, Rocket, Request, Response, Data};
+use crate::{Rocket, Request, Response, Data};
 use crate::fairing::{Fairing, Kind, Info};
 
 /// A ad-hoc fairing that can be created from a function or closure.
@@ -67,7 +67,7 @@ enum AdHocKind {
         -> BoxFuture<'static, Result<Rocket, Rocket>> + Send + 'static>>>),
 
     /// An ad-hoc **launch** fairing. Called just before Rocket launches.
-    Launch(Mutex<Option<Box<dyn FnOnce(&Cargo) + Send + 'static>>>),
+    Launch(Mutex<Option<Box<dyn FnOnce(&Rocket) + Send + 'static>>>),
 
     /// An ad-hoc **request** fairing. Called when a request is received.
     Request(Box<dyn for<'a> Fn(&'a mut Request<'_>, &'a Data)
@@ -92,14 +92,49 @@ impl AdHoc {
     /// let fairing = AdHoc::on_attach("No-Op", |rocket| async { Ok(rocket) });
     /// ```
     pub fn on_attach<F, Fut>(name: &'static str, f: F) -> AdHoc
-    where
-        F: FnOnce(Rocket) -> Fut + Send + 'static,
-        Fut: Future<Output=Result<Rocket, Rocket>> + Send + 'static,
+        where F: FnOnce(Rocket) -> Fut + Send + 'static,
+              Fut: Future<Output=Result<Rocket, Rocket>> + Send + 'static,
     {
         AdHoc {
             name,
             kind: AdHocKind::Attach(Mutex::new(Some(Box::new(|rocket| Box::pin(f(rocket))))))
         }
+    }
+
+    /// Constructs an `AdHoc` attach fairing that extracts a configuration of
+    /// type `T` from the configured provider and stores it in managed state. If
+    /// extractions fails, pretty-prints the error message and errors the attach
+    /// fairing.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use serde::Deserialize;
+    /// use rocket::fairing::AdHoc;
+    ///
+    /// #[derive(Deserialize)]
+    /// struct Config {
+    ///     field: String,
+    ///     other: usize,
+    ///     /* and so on.. */
+    /// }
+    ///
+    /// let fairing = AdHoc::config::<Config>();
+    /// ```
+    pub fn config<'de, T>() -> AdHoc
+        where T: serde::Deserialize<'de> + Send + Sync + 'static
+    {
+        AdHoc::on_attach(std::any::type_name::<T>(), |rocket| async {
+            let app_config = match rocket.figment().extract::<T>() {
+                Ok(config) => config,
+                Err(e) => {
+                    crate::config::pretty_print_error(e);
+                    return Err(rocket);
+                }
+            };
+
+            Ok(rocket.manage(app_config))
+        })
     }
 
     /// Constructs an `AdHoc` launch fairing named `name`. The function `f` will
@@ -116,7 +151,7 @@ impl AdHoc {
     /// });
     /// ```
     pub fn on_launch<F: Send + 'static>(name: &'static str, f: F) -> AdHoc
-        where F: FnOnce(&Cargo)
+        where F: FnOnce(&Rocket)
     {
         AdHoc { name, kind: AdHocKind::Launch(Mutex::new(Some(Box::new(f)))) }
     }
@@ -204,7 +239,7 @@ impl Fairing for AdHoc {
         }
     }
 
-    fn on_launch(&self, state: &Cargo) {
+    fn on_launch(&self, state: &Rocket) {
         if let AdHocKind::Launch(ref mutex) = self.kind {
             let mut opt = mutex.lock().expect("AdHoc::Launch lock");
             let f = opt.take().expect("internal error: `on_launch` one-call invariant broken");
@@ -212,7 +247,7 @@ impl Fairing for AdHoc {
         }
     }
 
-    async fn on_request(&self, req: &mut Request<'_>, data: &Data) {
+    async fn on_request(&self, req: &mut Request<'_>, data: &mut Data) {
         if let AdHocKind::Request(ref callback) = self.kind {
             callback(req, data).await;
         }

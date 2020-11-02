@@ -5,7 +5,7 @@ use rocket::local::blocking::Client;
 
 #[test]
 fn test_root() {
-    let client = Client::new(super::rocket()).unwrap();
+    let client = Client::tracked(super::rocket()).unwrap();
     let res = client.get("/").dispatch();
 
     // Check that we have exactly 25,000 'a'.
@@ -24,7 +24,7 @@ fn test_file() {
     file.write_all(CONTENTS.as_bytes()).expect("write to big_file");
 
     // Get the big file contents, hopefully.
-    let client = Client::new(super::rocket()).unwrap();
+    let client = Client::tracked(super::rocket()).unwrap();
     let res = client.get("/big_file").dispatch();
     assert_eq!(res.into_string(), Some(CONTENTS.into()));
 

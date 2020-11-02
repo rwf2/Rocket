@@ -35,22 +35,6 @@ function future_date() {
   fi
 }
 
-# Versioning information. These are toggled as versions change.
-CURRENT_RELEASE=false
-PRE_RELEASE=true
-
-# A generated codename for this version. Use the git branch for pre-releases.
-case $PRE_RELEASE in
-  true)
-    VERSION_CODENAME="$(git branch --show-current)"
-    ROCKET_VERSION="${VERSION_CODENAME}-$(future_date)"
-    ;;
-  false)
-    ROCKET_VERSION="0.5.0-dev"
-    VERSION_CODENAME="$(echo "v${ROCKET_VERSION}" | cut -d'.' -f1-2)"
-    ;;
-esac
-
 # Root of workspace-like directories.
 PROJECT_ROOT=$(relative "") || exit $?
 CORE_ROOT=$(relative "core") || exit $?
@@ -68,6 +52,26 @@ CONTRIB_CODEGEN_ROOT=$(relative "contrib/codegen") || exit $?
 EXAMPLES_DIR=$(relative "examples") || exit $?
 DOC_DIR=$(relative "target/doc") || exit $?
 
+# Versioning information. These are changed as versions change.
+VERSION=$(git grep -h "^version" "${CORE_LIB_ROOT}" | head -n 1 | cut -d '"' -f2)
+MAJOR_VERSION=$(echo "${VERSION}" | cut -d'.' -f1-2)
+VIRTUAL_CODENAME="$(git branch --show-current)"
+PHYSICAL_CODENAME="v${MAJOR_VERSION}"
+CURRENT_RELEASE=false
+PRE_RELEASE=true
+
+# A generated codename for this version. Use the git branch for pre-releases.
+case $PRE_RELEASE in
+  true)
+    CODENAME="${VIRTUAL_CODENAME}"
+    DOC_VERSION="${CODENAME}-$(future_date)"
+    ;;
+  false)
+    CODENAME="${PHYSICAL_CODENAME}"
+    DOC_VERSION="${VERSION}"
+    ;;
+esac
+
 ALL_PROJECT_DIRS=(
     "${CORE_HTTP_ROOT}"
     "${CORE_CODEGEN_ROOT}"
@@ -77,10 +81,12 @@ ALL_PROJECT_DIRS=(
 )
 
 function print_environment() {
-  echo "  ROCKET_VERSION: ${ROCKET_VERSION}"
+  echo "  VERSION: ${VERSION}"
+  echo "  MAJOR_VERSION: ${MAJOR_VERSION}"
+  echo "  CODENAME: ${CODENAME}"
+  echo "  DOC_VERSION: ${DOC_VERSION}"
   echo "  CURRENT_RELEASE: ${CURRENT_RELEASE}"
   echo "  PRE_RELEASE: ${PRE_RELEASE}"
-  echo "  VERSION_CODENAME: ${VERSION_CODENAME}"
   echo "  SCRIPT_DIR: ${SCRIPT_DIR}"
   echo "  PROJECT_ROOT: ${PROJECT_ROOT}"
   echo "  CORE_ROOT: ${CORE_ROOT}"

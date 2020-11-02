@@ -6,7 +6,7 @@ mod templates_tests {
     use std::path::{Path, PathBuf};
 
     use rocket::{Rocket, http::RawStr};
-    use rocket::config::{Config, Environment};
+    use rocket::config::Config;
     use rocket_contrib::templates::{Template, Metadata};
 
     #[get("/<engine>/<name>")]
@@ -27,11 +27,8 @@ mod templates_tests {
     }
 
     fn rocket() -> Rocket {
-        let config = Config::build(Environment::Development)
-            .extra("template_dir", template_root().to_str().expect("template directory"))
-            .expect("valid configuration");
-
-        rocket::custom(config).attach(Template::fairing())
+        rocket::custom(Config::figment().merge(("template_dir", template_root())))
+            .attach(Template::fairing())
             .mount("/", routes![template_check, is_reloading])
     }
 
@@ -47,26 +44,25 @@ mod templates_tests {
         const ESCAPED_EXPECTED: &'static str
             = "\nh_start\ntitle: _test_\nh_end\n\n\n&lt;script &#x2F;&gt;\n\nfoot\n";
 
-        #[rocket::async_test]
-        async fn test_tera_templates() {
-            let mut rocket = rocket();
-            let cargo = rocket.inspect().await;
+        #[test]
+        fn test_tera_templates() {
+            let rocket = rocket();
             let mut map = HashMap::new();
             map.insert("title", "_test_");
             map.insert("content", "<script />");
 
             // Test with a txt file, which shouldn't escape.
-            let template = Template::show(cargo, "tera/txt_test", &map);
+            let template = Template::show(&rocket, "tera/txt_test", &map);
             assert_eq!(template, Some(UNESCAPED_EXPECTED.into()));
 
             // Now with an HTML file, which should.
-            let template = Template::show(cargo, "tera/html_test", &map);
+            let template = Template::show(&rocket, "tera/html_test", &map);
             assert_eq!(template, Some(ESCAPED_EXPECTED.into()));
         }
 
         #[test]
         fn test_template_metadata_with_tera() {
-            let client = Client::new(rocket()).unwrap();
+            let client = Client::tracked(rocket()).unwrap();
 
             let response = client.get("/tera/txt_test").dispatch();
             assert_eq!(response.status(), Status::Ok);
@@ -92,22 +88,21 @@ mod templates_tests {
         const EXPECTED: &'static str
             = "Hello _test_!\n\n<main> &lt;script /&gt; hi </main>\nDone.\n\n";
 
-        #[rocket::async_test]
-        async fn test_handlebars_templates() {
-            let mut rocket = rocket();
-            let cargo = rocket.inspect().await;
+        #[test]
+        fn test_handlebars_templates() {
+            let rocket = rocket();
             let mut map = HashMap::new();
             map.insert("title", "_test_");
             map.insert("content", "<script /> hi");
 
             // Test with a txt file, which shouldn't escape.
-            let template = Template::show(cargo, "hbs/test", &map);
+            let template = Template::show(&rocket, "hbs/test", &map);
             assert_eq!(template, Some(EXPECTED.into()));
         }
 
         #[test]
         fn test_template_metadata_with_handlebars() {
-            let client = Client::new(rocket()).unwrap();
+            let client = Client::tracked(rocket()).unwrap();
 
             let response = client.get("/hbs/test").dispatch();
             assert_eq!(response.status(), Status::Ok);
@@ -144,14 +139,14 @@ mod templates_tests {
             write_file(&reload_path, INITIAL_TEXT);
 
             // set up the client. if we can't reload templates, then just quit
-            let client = Client::new(rocket()).unwrap();
+            let client = Client::tracked(rocket()).unwrap();
             let res = client.get("/is_reloading").dispatch();
             if res.status() != Status::Ok {
                 return;
             }
 
             // verify that the initial content is correct
-            let initial_rendered = Template::show(client.cargo(), RELOAD_TEMPLATE, ());
+            let initial_rendered = Template::show(client.rocket(), RELOAD_TEMPLATE, ());
             assert_eq!(initial_rendered, Some(INITIAL_TEXT.into()));
 
             // write a change to the file
@@ -162,7 +157,7 @@ mod templates_tests {
                 client.get("/").dispatch();
 
                 // if the new content is correct, we are done
-                let new_rendered = Template::show(client.cargo(), RELOAD_TEMPLATE, ());
+                let new_rendered = Template::show(client.rocket(), RELOAD_TEMPLATE, ());
                 if new_rendered == Some(NEW_TEXT.into()) {
                     write_file(&reload_path, INITIAL_TEXT);
                     return;

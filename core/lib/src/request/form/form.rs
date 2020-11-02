@@ -1,14 +1,15 @@
-use std::ops::Deref;
+use std::ops::{Deref, DerefMut};
 
 use crate::outcome::Outcome::*;
 use crate::request::{Request, form::{FromForm, FormItems, FormDataError}};
-use crate::data::{Outcome, Transform, Transformed, Data, FromTransformedData, TransformFuture, FromDataFuture};
+use crate::data::{Data, Outcome, Transform, Transformed, ToByteUnit};
+use crate::data::{TransformFuture, FromTransformedData, FromDataFuture};
 use crate::http::{Status, uri::{Query, FromUriParam}};
 
 /// A data guard for parsing [`FromForm`] types strictly.
 ///
-/// This type implements the [`FromTransformedData`] trait. It provides a generic means to
-/// parse arbitrary structures from incoming form data.
+/// This type implements the [`FromTransformedData`] trait. It provides a
+/// generic means to parse arbitrary structures from incoming form data.
 ///
 /// # Strictness
 ///
@@ -47,8 +48,8 @@ use crate::http::{Status, uri::{Query, FromUriParam}};
 /// # fn main() {  }
 /// ```
 ///
-/// A type of `Form<T>` automatically dereferences into an `&T`, though you can
-/// also transform a `Form<T>` into a `T` by calling
+/// A type of `Form<T>` automatically dereferences into an `&T` or `&mut T`,
+/// though you can also transform a `Form<T>` into a `T` by calling
 /// [`into_inner()`](Form::into_inner()). Thanks to automatic dereferencing, you
 /// can access fields of `T` transparently through a `Form<T>`, as seen above
 /// with `user_input.value`.
@@ -130,6 +131,7 @@ impl<T> Form<T> {
     ///     form.into_inner().field
     /// }
     /// # fn main() { }
+    /// ```
     #[inline(always)]
     pub fn into_inner(self) -> T {
         self.0
@@ -141,6 +143,12 @@ impl<T> Deref for Form<T> {
 
     fn deref(&self) -> &T {
         &self.0
+    }
+}
+
+impl<T> DerefMut for Form<T> {
+    fn deref_mut(&mut self) -> &mut T {
+        &mut self.0
     }
 }
 
@@ -181,12 +189,12 @@ impl<'f, T: FromForm<'f>> Form<T> {
 ///
 /// All relevant warnings and errors are written to the console in Rocket
 /// logging format.
-impl<'f, T: FromForm<'f> + Send + 'f> FromTransformedData<'f> for Form<T> {
-    type Error = FormDataError<'f, T::Error>;
+impl<'r, T: FromForm<'r> + Send + 'r> FromTransformedData<'r> for Form<T> {
+    type Error = FormDataError<'r, T::Error>;
     type Owned = String;
     type Borrowed = str;
 
-    fn transform<'r>(
+    fn transform(
         request: &'r Request<'_>,
         data: Data
     ) -> TransformFuture<'r, Self::Owned, Self::Error> {
@@ -196,7 +204,8 @@ impl<'f, T: FromForm<'f> + Send + 'f> FromTransformedData<'f> for Form<T> {
                 return Transform::Borrowed(Forward(data));
             }
 
-            match data.open(request.limits().forms).stream_to_string().await {
+            let limit = request.limits().get("forms").unwrap_or(32.kibibytes());
+            match data.open(limit).stream_to_string().await {
                 Ok(form_string) => Transform::Borrowed(Success(form_string)),
                 Err(e) => {
                     let err = (Status::InternalServerError, FormDataError::Io(e));
@@ -206,14 +215,17 @@ impl<'f, T: FromForm<'f> + Send + 'f> FromTransformedData<'f> for Form<T> {
         })
     }
 
-    fn from_data(_: &'f Request<'_>, o: Transformed<'f, Self>) -> FromDataFuture<'f, Self, Self::Error> {
-        Box::pin(futures::future::ready(o.borrowed().and_then(|data| {
-            <Form<T>>::from_data(data, true).map(Form)
-        })))
+    fn from_data(
+        _: &'r Request<'_>,
+        o: Transformed<'r, Self>
+    ) -> FromDataFuture<'r, Self, Self::Error> {
+        Box::pin(async move {
+            o.borrowed().and_then(|data| <Form<T>>::from_data(data, true).map(Form))
+        })
     }
 }
 
-impl<'f, A, T: FromUriParam<Query, A> + FromForm<'f>> FromUriParam<Query, A> for Form<T> {
+impl<'r, A, T: FromUriParam<Query, A> + FromForm<'r>> FromUriParam<Query, A> for Form<T> {
     type Target = T::Target;
 
     #[inline(always)]

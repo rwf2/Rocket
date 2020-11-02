@@ -731,7 +731,7 @@ impl<'r> Response<'r> {
         self.status = Some(Status::new(code, reason));
     }
 
-    /// Returns a vector of the cookies set in `self` as identified by the
+    /// Returns an iterator over the cookies in `self` as identified by the
     /// `Set-Cookie` header. Malformed cookies are skipped.
     ///
     /// # Example
@@ -742,17 +742,13 @@ impl<'r> Response<'r> {
     ///
     /// let mut response = Response::new();
     /// response.set_header(Cookie::new("hello", "world!"));
-    /// assert_eq!(response.cookies(), vec![Cookie::new("hello", "world!")]);
+    /// let cookies: Vec<_> = response.cookies().collect();
+    /// assert_eq!(cookies, vec![Cookie::new("hello", "world!")]);
     /// ```
-    pub fn cookies(&self) -> Vec<Cookie<'_>> {
-        let mut cookies = vec![];
-        for header in self.headers().get("Set-Cookie") {
-            if let Ok(cookie) = Cookie::parse_encoded(header) {
-                cookies.push(cookie);
-            }
-        }
-
-        cookies
+    pub fn cookies(&self) -> impl Iterator<Item = Cookie<'_>> {
+        self.headers()
+            .get("Set-Cookie")
+            .filter_map(|header| Cookie::parse_encoded(header).ok())
     }
 
     /// Returns a [`HeaderMap`] of all of the headers in `self`.

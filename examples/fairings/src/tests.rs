@@ -3,14 +3,14 @@ use rocket::local::blocking::Client;
 
 #[test]
 fn rewrite_get_put() {
-    let client = Client::new(rocket()).unwrap();
+    let client = Client::tracked(rocket()).unwrap();
     let response = client.get("/").dispatch();
     assert_eq!(response.into_string(), Some("Hello, fairings!".into()));
 }
 
 #[test]
 fn counts() {
-    let client = Client::new(rocket()).unwrap();
+    let client = Client::tracked(rocket()).unwrap();
 
     // Issue 1 GET request.
     client.get("/").dispatch();
@@ -30,7 +30,7 @@ fn counts() {
 
 #[test]
 fn token() {
-    let client = Client::new(rocket()).unwrap();
+    let client = Client::tracked(rocket()).unwrap();
 
     // Ensure the token is '123', which is what we have in `Rocket.toml`.
     let res = client.get("/token").dispatch();

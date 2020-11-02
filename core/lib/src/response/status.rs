@@ -50,7 +50,7 @@ impl<'r, R> Created<R> {
     /// }
     ///
     /// # let rocket = rocket::ignite().mount("/", routes![create]);
-    /// # let client = Client::new(rocket).unwrap();
+    /// # let client = Client::tracked(rocket).unwrap();
     /// let response = client.get("/").dispatch();
     ///
     /// let loc = response.headers().get_one("Location");
@@ -79,7 +79,7 @@ impl<'r, R> Created<R> {
     /// }
     ///
     /// # let rocket = rocket::ignite().mount("/", routes![create]);
-    /// # let client = Client::new(rocket).unwrap();
+    /// # let client = Client::tracked(rocket).unwrap();
     /// let response = client.get("/").dispatch();
     ///
     /// let loc = response.headers().get_one("Location");
@@ -112,7 +112,7 @@ impl<'r, R> Created<R> {
     /// }
     ///
     /// # let rocket = rocket::ignite().mount("/", routes![create]);
-    /// # let client = Client::new(rocket).unwrap();
+    /// # let client = Client::tracked(rocket).unwrap();
     /// let response = client.get("/").dispatch();
     ///
     /// let loc = response.headers().get_one("Location");

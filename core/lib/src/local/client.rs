@@ -41,36 +41,33 @@ macro_rules! req_method {
 macro_rules! pub_client_impl {
     ($import:literal $(@$prefix:tt $suffix:tt)?) =>
 {
-    /// Construct a new `Client` from an instance of `Rocket` with cookie
-    /// tracking.
+    /// Construct a new `Client` from an instance of `Rocket` _with_ cookie
+    /// tracking. This is typically the desired mode of operation for testing.
     ///
     /// # Cookie Tracking
     ///
-    /// By default, a `Client` propagates cookie changes made by responses
-    /// to previously dispatched requests. In other words, if a previously
-    /// dispatched request resulted in a response that adds a cookie, any
-    /// future requests will contain the new cookies. Similarly, cookies
-    /// removed by a response won't be propagated further.
+    /// With cookie tracking enabled, a `Client` propagates cookie changes made
+    /// by responses to previously dispatched requests. In other words,
+    /// succeeding requests reflect changes (additions and removals) made by any
+    /// prior responses.
     ///
-    /// This is typically the desired mode of operation for a `Client` as it
-    /// removes the burden of manually tracking cookies. Under some
-    /// circumstances, however, disabling this tracking may be desired. The
-    /// [`untracked()`](Client::untracked()) method creates a `Client` that
-    /// _will not_ track cookies.
+    /// Cookie tracking requires synchronization between dispatches. **As such,
+    /// cookie tracking _should not_ be enabled if a local client is being used
+    /// to serve requests on multiple threads.**
     ///
     /// # Errors
     ///
     /// If launching the `Rocket` instance would fail, excepting network errors,
-    /// the `LaunchError` is returned.
+    /// the `Error` is returned.
     ///
     /// ```rust,no_run
     #[doc = $import]
     ///
     /// let rocket = rocket::ignite();
-    /// let client = Client::new(rocket);
+    /// let client = Client::tracked(rocket);
     /// ```
     #[inline(always)]
-    pub $($prefix)? fn new(rocket: Rocket) -> Result<Self, LaunchError> {
+    pub $($prefix)? fn tracked(rocket: Rocket) -> Result<Self, Error> {
         Self::_new(rocket, true) $(.$suffix)?
     }
 
@@ -79,13 +76,14 @@ macro_rules! pub_client_impl {
     ///
     /// # Cookie Tracking
     ///
-    /// Unlike the [`new()`](Client::new()) constructor, a `Client` returned
-    /// from this method _does not_ automatically propagate cookie changes.
+    /// Unlike the [`tracked()`](Client::tracked()) constructor, a `Client`
+    /// returned from this method _does not_ automatically propagate cookie
+    /// changes and thus requires no synchronization between dispatches.
     ///
     /// # Errors
     ///
     /// If launching the `Rocket` instance would fail, excepting network
-    /// errors, the `LaunchError` is returned.
+    /// errors, the `Error` is returned.
     ///
     /// ```rust,no_run
     #[doc = $import]
@@ -93,8 +91,17 @@ macro_rules! pub_client_impl {
     /// let rocket = rocket::ignite();
     /// let client = Client::untracked(rocket);
     /// ```
-    pub $($prefix)? fn untracked(rocket: Rocket) -> Result<Self, LaunchError> {
-        Self::_new(rocket, true) $(.$suffix)?
+    pub $($prefix)? fn untracked(rocket: Rocket) -> Result<Self, Error> {
+        Self::_new(rocket, false) $(.$suffix)?
+    }
+
+    /// Deprecated alias to [`Client::tracked()`].
+    #[deprecated(
+        since = "0.5",
+        note = "choose between `Client::untracked()` and `Client::tracked()`"
+    )]
+    pub $($prefix)? fn new(rocket: Rocket) -> Result<Self, Error> {
+        Self::tracked(rocket) $(.$suffix)?
     }
 
     /// Returns a reference to the `Rocket` this client is creating requests
@@ -112,11 +119,15 @@ macro_rules! pub_client_impl {
     /// ```
     #[inline(always)]
     pub fn rocket(&self) -> &Rocket {
-        &*self._cargo()
+        &*self._rocket()
     }
 
-    /// Returns a reference to the `Cargo` of the `Rocket` this client is
-    /// creating requests for.
+    /// Returns a cookie jar containing all of the cookies this client is
+    /// currently tracking.
+    ///
+    /// If cookie tracking is disabled, the returned jar will always be empty.
+    /// Otherwise, it will contains all of the cookies collected from responses
+    /// to requests dispatched by this client that have not expired.
     ///
     /// # Example
     ///
@@ -125,12 +136,14 @@ macro_rules! pub_client_impl {
     ///
     /// # Client::_test(|client, _, _| {
     /// let client: &Client = client;
-    /// let cargo = client.cargo();
+    /// let cookie = client.cookies();
     /// # });
     /// ```
     #[inline(always)]
-    pub fn cargo(&self) -> &Cargo {
-        self._cargo()
+    pub fn cookies(&self) -> crate::http::CookieJar<'_> {
+        let key = &self.rocket().config.secret_key;
+        let jar = self._with_raw_cookies(|jar| jar.clone());
+        crate::http::CookieJar::from(jar, key)
     }
 
     req_method!($import, "GET", get, Method::Get);

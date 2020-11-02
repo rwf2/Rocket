@@ -25,12 +25,30 @@ mod b {
     }
 }
 
+mod b_inferred {
+    #[rocket::launch]
+    async fn main2() -> _ { rocket::ignite() }
+
+    async fn use_it() {
+        let rocket: rocket::Rocket = main2().await;
+    }
+}
+
 mod c {
     // non-async launch.
     #[rocket::launch]
     fn rocket() -> rocket::Rocket {
         rocket::ignite()
     }
+
+    fn use_it() {
+        let rocket: rocket::Rocket = rocket();
+    }
+}
+
+mod c_inferred {
+    #[rocket::launch]
+    fn rocket() -> _ { rocket::ignite() }
 
     fn use_it() {
         let rocket: rocket::Rocket = rocket();

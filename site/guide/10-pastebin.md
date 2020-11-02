@@ -414,12 +414,13 @@ the `retrieve` route, preventing attacks on the `retrieve` route:
 ```rust
 # #[macro_use] extern crate rocket;
 
+# use std::borrow::Cow;
 # use rocket::tokio::fs::File;
 
-# type PasteId = usize;
+# type PasteId<'a> = Cow<'a, str>;
 
 #[get("/<id>")]
-async fn retrieve(id: PasteId) -> Option<File> {
+async fn retrieve(id: PasteId<'_>) -> Option<File> {
     let filename = format!("upload/{id}", id = id);
     File::open(&filename).await.ok()
 }

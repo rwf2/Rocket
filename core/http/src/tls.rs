@@ -1,70 +1,49 @@
-use std::fs;
+use std::io;
 use std::future::Future;
-use std::io::{self, BufReader};
 use std::net::SocketAddr;
-use std::path::Path;
 use std::pin::Pin;
 use std::sync::Arc;
 use std::task::{Context, Poll};
 
+use rustls::internal::pemfile;
+use rustls::{Certificate, PrivateKey, ServerConfig};
 use tokio::net::{TcpListener, TcpStream};
-
-use tokio_rustls::{TlsAcceptor, server::TlsStream};
+use tokio_rustls::{TlsAcceptor, Accept, server::TlsStream};
 use tokio_rustls::rustls;
-
-pub use rustls::internal::pemfile;
-pub use rustls::{Certificate, PrivateKey, ServerConfig};
 
 use crate::listener::{Connection, Listener};
 
-#[derive(Debug)]
-pub enum Error {
-    Io(io::Error),
-    BadCerts,
-    BadKeyCount,
-    BadKey,
+fn load_certs(reader: &mut dyn io::BufRead) -> io::Result<Vec<Certificate>> {
+    pemfile::certs(reader)
+        .map_err(|_| io::Error::new(io::ErrorKind::Other, "invalid certificate"))
 }
 
-// TODO.async: consider using async fs operations
-pub fn load_certs<P: AsRef<Path>>(path: P) -> Result<Vec<rustls::Certificate>, Error> {
-    let certfile = fs::File::open(path.as_ref()).map_err(|e| Error::Io(e))?;
-    let mut reader = BufReader::new(certfile);
-    pemfile::certs(&mut reader).map_err(|_| Error::BadCerts)
-}
-
-pub fn load_private_key<P: AsRef<Path>>(path: P) -> Result<rustls::PrivateKey, Error> {
-    use std::io::Seek;
-    use std::io::BufRead;
-
-    let keyfile = fs::File::open(path.as_ref()).map_err(Error::Io)?;
-    let mut reader = BufReader::new(keyfile);
+fn load_private_key(reader: &mut dyn io::BufRead) -> io::Result<PrivateKey> {
+    use std::io::{Cursor, Error, Read, ErrorKind::Other};
 
     // "rsa" (PKCS1) PEM files have a different first-line header than PKCS8
     // PEM files, use that to determine the parse function to use.
     let mut first_line = String::new();
-    reader.read_line(&mut first_line).map_err(Error::Io)?;
-    reader.seek(io::SeekFrom::Start(0)).map_err(Error::Io)?;
+    reader.read_line(&mut first_line)?;
 
     let private_keys_fn = match first_line.trim_end() {
         "-----BEGIN RSA PRIVATE KEY-----" => pemfile::rsa_private_keys,
         "-----BEGIN PRIVATE KEY-----" => pemfile::pkcs8_private_keys,
-        _ => return Err(Error::BadKey),
+        _ => return Err(Error::new(Other, "invalid key header"))
     };
 
-    let key = private_keys_fn(&mut reader)
-        .map_err(|_| Error::BadKey)
+    let key = private_keys_fn(&mut Cursor::new(first_line).chain(reader))
+        .map_err(|_| Error::new(Other, "invalid key file"))
         .and_then(|mut keys| match keys.len() {
-            0 => Err(Error::BadKey),
+            0 => Err(Error::new(Other, "no valid keys found; is the file malformed?")),
             1 => Ok(keys.remove(0)),
-            _ => Err(Error::BadKeyCount),
+            n => Err(Error::new(Other, format!("expected 1 key, found {}", n))),
         })?;
 
     // Ensure we can use the key.
-    if rustls::sign::RSASigningKey::new(&key).is_err() {
-        Err(Error::BadKey)
-    } else {
-        Ok(key)
-    }
+    rustls::sign::RSASigningKey::new(&key)
+        .map_err(|_| Error::new(Other, "key parsed but is unusable"))
+        .map(|_| key)
 }
 
 pub struct TlsListener {
@@ -75,7 +54,7 @@ pub struct TlsListener {
 
 enum TlsListenerState {
     Listening,
-    Accepting(Pin<Box<dyn Future<Output=Result<TlsStream<TcpStream>, io::Error>> + Send>>),
+    Accepting(Accept<TcpStream>),
 }
 
 impl Listener for TlsListener {
@@ -85,22 +64,21 @@ impl Listener for TlsListener {
         self.listener.local_addr().ok()
     }
 
-    fn poll_accept(&mut self, cx: &mut Context<'_>) -> Poll<Result<Self::Connection, io::Error>> {
+    fn poll_accept(&mut self, cx: &mut Context<'_>) -> Poll<io::Result<Self::Connection>> {
         loop {
-            match &mut self.state {
+            match self.state {
                 TlsListenerState::Listening => {
                     match self.listener.poll_accept(cx) {
                         Poll::Pending => return Poll::Pending,
+                        Poll::Ready(Err(e)) => return Poll::Ready(Err(e)),
                         Poll::Ready(Ok((stream, _addr))) => {
-                            self.state = TlsListenerState::Accepting(Box::pin(self.acceptor.accept(stream)));
-                        }
-                        Poll::Ready(Err(e)) => {
-                            return Poll::Ready(Err(e));
+                            let fut = self.acceptor.accept(stream);
+                            self.state = TlsListenerState::Accepting(fut);
                         }
                     }
                 }
-                TlsListenerState::Accepting(fut) => {
-                    match fut.as_mut().poll(cx) {
+                TlsListenerState::Accepting(ref mut fut) => {
+                    match Pin::new(fut).poll(cx) {
                         Poll::Pending => return Poll::Pending,
                         Poll::Ready(result) => {
                             self.state = TlsListenerState::Listening;
@@ -113,11 +91,21 @@ impl Listener for TlsListener {
     }
 }
 
-pub async fn bind_tls(
+pub async fn bind_tls<C: io::BufRead + Send, K: io::BufRead + Send>(
     address: SocketAddr,
-    cert_chain: Vec<Certificate>,
-    key: PrivateKey
+    mut cert_chain: C,
+    mut private_key: K,
 ) -> io::Result<TlsListener> {
+    let cert_chain = load_certs(&mut cert_chain).map_err(|e| {
+        let msg = format!("malformed TLS certificate chain: {}", e);
+        io::Error::new(e.kind(), msg)
+    })?;
+
+    let key = load_private_key(&mut private_key).map_err(|e| {
+        let msg = format!("malformed TLS private key: {}", e);
+        io::Error::new(e.kind(), msg)
+    })?;
+
     let listener = TcpListener::bind(address).await?;
 
     let client_auth = rustls::NoClientAuth::new();

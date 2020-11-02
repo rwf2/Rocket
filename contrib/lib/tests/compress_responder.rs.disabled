@@ -66,7 +66,7 @@ mod compress_responder_tests {
 
     #[test]
     fn test_prioritizes_brotli() {
-        let client = Client::new(rocket()).expect("valid rocket instance");
+        let client = Client::tracked(rocket()).expect("valid rocket instance");
         let mut response = client
             .get("/")
             .header(Header::new("Accept-Encoding", "deflate, gzip, br"))
@@ -90,7 +90,7 @@ mod compress_responder_tests {
 
     #[test]
     fn test_br_font() {
-        let client = Client::new(rocket()).expect("valid rocket instance");
+        let client = Client::tracked(rocket()).expect("valid rocket instance");
         let mut response = client
             .get("/font")
             .header(Header::new("Accept-Encoding", "deflate, gzip, br"))
@@ -114,7 +114,7 @@ mod compress_responder_tests {
 
     #[test]
     fn test_fallback_gzip() {
-        let client = Client::new(rocket()).expect("valid rocket instance");
+        let client = Client::tracked(rocket()).expect("valid rocket instance");
         let mut response = client
             .get("/")
             .header(Header::new("Accept-Encoding", "deflate, gzip"))
@@ -137,7 +137,7 @@ mod compress_responder_tests {
 
     #[test]
     fn test_does_not_recompress() {
-        let client = Client::new(rocket()).expect("valid rocket instance");
+        let client = Client::tracked(rocket()).expect("valid rocket instance");
         let mut response = client
             .get("/already_encoded")
             .header(Header::new("Accept-Encoding", "deflate, gzip, br"))
@@ -160,7 +160,7 @@ mod compress_responder_tests {
 
     #[test]
     fn test_does_not_compress_explicit_identity() {
-        let client = Client::new(rocket()).expect("valid rocket instance");
+        let client = Client::tracked(rocket()).expect("valid rocket instance");
         let mut response = client
             .get("/identity")
             .header(Header::new("Accept-Encoding", "deflate, gzip, br"))
@@ -178,7 +178,7 @@ mod compress_responder_tests {
 
     #[test]
     fn test_ignore_exceptions() {
-        let client = Client::new(rocket()).expect("valid rocket instance");
+        let client = Client::tracked(rocket()).expect("valid rocket instance");
         let mut response = client
             .get("/image")
             .header(Header::new("Accept-Encoding", "deflate, gzip, br"))
@@ -202,7 +202,7 @@ mod compress_responder_tests {
 
     #[test]
     fn test_ignores_unimplemented_encodings() {
-        let client = Client::new(rocket()).expect("valid rocket instance");
+        let client = Client::tracked(rocket()).expect("valid rocket instance");
         let mut response = client
             .get("/")
             .header(Header::new("Accept-Encoding", "deflate"))
@@ -220,7 +220,7 @@ mod compress_responder_tests {
 
     #[test]
     fn test_respects_identity_only() {
-        let client = Client::new(rocket()).expect("valid rocket instance");
+        let client = Client::tracked(rocket()).expect("valid rocket instance");
         let mut response = client
             .get("/")
             .header(Header::new("Accept-Encoding", "identity"))

@@ -1,7 +1,7 @@
 use std::io;
 use tokio::io::AsyncReadExt;
 
-use crate::{Response, local::asynchronous};
+use crate::{Response, local::asynchronous, http::CookieJar};
 
 use super::Client;
 
@@ -33,7 +33,7 @@ use super::Client;
 ///
 /// # fn read_body_manually() -> io::Result<()> {
 /// // Dispatch a `GET /` request.
-/// let client = Client::new(rocket()).expect("valid rocket");
+/// let client = Client::tracked(rocket()).expect("valid rocket");
 /// let mut response = client.get("/").dispatch();
 ///
 /// // Check metadata validity.
@@ -58,6 +58,10 @@ pub struct LocalResponse<'c> {
 impl LocalResponse<'_> {
     fn _response(&self) -> &Response<'_> {
         &self.inner._response()
+    }
+
+    pub(crate) fn _cookies(&self) -> &CookieJar<'_> {
+        self.inner._cookies()
     }
 
     fn _into_string(self) -> Option<String> {

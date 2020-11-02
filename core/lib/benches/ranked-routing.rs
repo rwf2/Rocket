@@ -1,8 +1,6 @@
 #[macro_use] extern crate rocket;
 #[macro_use] extern crate bencher;
 
-use rocket::config::{Environment, Config, LoggingLevel};
-
 #[get("/", format = "application/json", rank = 1)]
 fn get() -> &'static str { "json" }
 
@@ -22,8 +20,7 @@ fn post2() -> &'static str { "html" }
 fn post3() -> &'static str { "plain" }
 
 fn rocket() -> rocket::Rocket {
-    let config = Config::build(Environment::Production).log_level(LoggingLevel::Off);
-    rocket::custom(config.unwrap())
+    rocket::custom(rocket::Config::figment().merge(("log_level", "off")))
         .mount("/", routes![get, get2, get3])
         .mount("/", routes![post, post2, post3])
 }
@@ -33,7 +30,7 @@ use rocket::local::blocking::Client;
 use rocket::http::{Accept, ContentType};
 
 fn accept_format(b: &mut Bencher) {
-    let client = Client::new(rocket()).unwrap();
+    let client = Client::tracked(rocket()).unwrap();
     let requests = vec![
         client.get("/").header(Accept::JSON),
         client.get("/").header(Accept::HTML),
@@ -48,7 +45,7 @@ fn accept_format(b: &mut Bencher) {
 }
 
 fn content_type_format(b: &mut Bencher) {
-    let client = Client::new(rocket()).unwrap();
+    let client = Client::tracked(rocket()).unwrap();
     let requests = vec![
         client.post("/").header(ContentType::JSON),
         client.post("/").header(ContentType::HTML),

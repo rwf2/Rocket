@@ -112,11 +112,13 @@ API documentation is built with `./scripts/mk-docs.sh`. The resulting assets are
 uploaded to [api.rocket.rs](https://api.rocket.rs/).
 
 Documentation for a released version `${x}` can be found at
-`https://api.rocket.rs/v${x}`. For instance, the documentation for `0.4` can be
-found at https://api.rocket.rs/v0.4. Documentation for unreleased versions in
-branch `${branch}` be found at `https://api.rocket.rs/${branch}`. For instance,
-the documentation for the `master` branch can be found at
-https://api.rocket.rs/master. Documentation for unreleased branches is updated
+`https://api.rocket.rs/v${x}` and `https://rocket.rs/v${x}`. For instance, the
+documentation for `0.4` can be found at https://api.rocket.rs/v0.4 and
+https://rocket.rs/v0.4. Documentation for unreleased versions in branch
+`${branch}` be found at `https://api.rocket.rs/${branch}` and
+`https://rocket.rs/${branch}`. For instance, the documentation for the `master`
+branch can be found at https://api.rocket.rs/master and
+https://rocket.rs/master. Documentation for unreleased branches is updated
 periodically.
 
 ## Contributing

@@ -34,7 +34,7 @@ foo!("/hello/<name>", name);
 #[test]
 fn test_reexpansion() {
     let rocket = rocket::ignite().mount("/", routes![easy, hard, hi]);
-    let client = Client::new(rocket).unwrap();
+    let client = Client::tracked(rocket).unwrap();
 
     let response = client.get("/easy/327").dispatch();
     assert_eq!(response.into_string().unwrap(), "easy id: 327");
@@ -60,7 +60,7 @@ index!(i32);
 #[test]
 fn test_index() {
     let rocket = rocket::ignite().mount("/", routes![index]).manage(100i32);
-    let client = Client::new(rocket).unwrap();
+    let client = Client::tracked(rocket).unwrap();
 
     let response = client.get("/").dispatch();
     assert_eq!(response.into_string().unwrap(), "Thing: 100");

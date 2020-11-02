@@ -6,7 +6,7 @@ edition = "2018"
 publish = false
 
 [dependencies]
-rocket = { path = "../../core/lib", features = ["private-cookies"] }
+rocket = { path = "../../core/lib", features = ["secrets"] }
 
 [dependencies.rocket_contrib]
 path = "../../contrib/lib"

@@ -3,7 +3,7 @@ use rocket::local::blocking::Client;
 use rocket::http::{ContentType, Status};
 
 fn test(uri: &str, content_type: ContentType, status: Status, body: String) {
-    let client = Client::new(rocket()).unwrap();
+    let client = Client::tracked(rocket()).unwrap();
     let response = client.get(uri).header(content_type).dispatch();
     assert_eq!(response.status(), status);
     assert_eq!(response.into_string(), Some(body));
@@ -30,7 +30,7 @@ fn test_echo() {
 
 #[test]
 fn test_upload() {
-    let client = Client::new(rocket()).unwrap();
+    let client = Client::tracked(rocket()).unwrap();
     let expected_body = "Lorem ipsum dolor sit amet, consectetur adipiscing elit, \
                          sed do eiusmod tempor incididunt ut labore et dolore \
                          magna aliqua".to_string();

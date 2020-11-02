@@ -13,7 +13,7 @@ fn get_count(client: &Client) -> usize {
 
 #[test]
 fn test_count() {
-    let client = Client::new(super::rocket()).unwrap();
+    let client = Client::tracked(super::rocket()).unwrap();
 
     // Count should start at 0.
     assert_eq!(get_count(&client), 0);
@@ -25,17 +25,15 @@ fn test_count() {
     assert_eq!(get_count(&client), 100);
 }
 
-#[rocket::async_test]
-async fn test_raw_state_count() {
+#[test]
+fn test_raw_state_count() {
     use rocket::State;
     use super::{count, index};
 
-    let mut rocket = super::rocket();
-    let cargo = rocket.inspect().await;
-
-    assert_eq!(count(State::from(cargo).unwrap()), "0");
-    assert!(index(State::from(cargo).unwrap()).0.contains("Visits: 1"));
-    assert_eq!(count(State::from(cargo).unwrap()), "1");
+    let rocket = super::rocket();
+    assert_eq!(count(State::from(&rocket).unwrap()), "0");
+    assert!(index(State::from(&rocket).unwrap()).0.contains("Visits: 1"));
+    assert_eq!(count(State::from(&rocket).unwrap()), "1");
 }
 
 // Cargo runs each test in parallel on different threads. We use all of these

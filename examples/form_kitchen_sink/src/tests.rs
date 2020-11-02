@@ -42,7 +42,7 @@ macro_rules! assert_valid_raw_form {
 
 #[test]
 fn test_good_forms() {
-    let client = Client::new(rocket()).unwrap();
+    let client = Client::tracked(rocket()).unwrap();
     let mut input = FormInput {
         checkbox: true,
         number: 310,
@@ -121,7 +121,7 @@ macro_rules! assert_invalid_raw_form {
 
 #[test]
 fn check_semantically_invalid_forms() {
-    let client = Client::new(rocket()).unwrap();
+    let client = Client::tracked(rocket()).unwrap();
     let mut form_vals = ["true", "1", "a", "hi", "hey", "b"];
 
     form_vals[0] = "not true";
@@ -177,7 +177,7 @@ fn check_semantically_invalid_forms() {
 
 #[test]
 fn check_structurally_invalid_forms() {
-    let client = Client::new(rocket()).unwrap();
+    let client = Client::tracked(rocket()).unwrap();
     assert_invalid_raw_form!(&client, "==&&&&&&==");
     assert_invalid_raw_form!(&client, "a&=b");
     assert_invalid_raw_form!(&client, "=");
@@ -185,7 +185,7 @@ fn check_structurally_invalid_forms() {
 
 #[test]
 fn check_bad_utf8() {
-    let client = Client::new(rocket()).unwrap();
+    let client = Client::tracked(rocket()).unwrap();
     unsafe {
         let bad_str = std::str::from_utf8_unchecked(b"a=\xff");
         assert_form_eq!(&client, bad_str, "Form input was invalid UTF-8.".into());

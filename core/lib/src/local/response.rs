@@ -37,8 +37,22 @@ macro_rules! pub_response_impl {
     getter_method!($doc_prelude, "HTTP headers",
         headers -> &crate::http::HeaderMap<'_>);
 
-    getter_method!($doc_prelude, "HTTP cookies as set in the `Set-Cookie` header",
-        cookies -> Vec<crate::http::Cookie<'_>>);
+    /// Return a cookie jar containing the HTTP cookies in the response.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    #[doc = $doc_prelude]
+    ///
+    /// # Client::_test(|_, _, response| {
+    /// let response: LocalResponse = response;
+    /// let string = response.cookies();
+    /// # });
+    /// ```
+    #[inline(always)]
+    pub fn cookies(&self) -> &crate::http::CookieJar<'_> {
+        self._cookies()
+    }
 
     getter_method!($doc_prelude, "response body, if there is one,",
         body -> Option<&crate::response::ResponseBody<'_>>);

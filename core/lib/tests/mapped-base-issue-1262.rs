@@ -30,7 +30,7 @@ mod mapped_base_tests {
 
     #[test]
     fn only_prefix() {
-        let client = Client::new(super::rocket()).unwrap();
+        let client = Client::tracked(super::rocket()).unwrap();
 
         let response = client.get("/a/b/3").dispatch();
         assert_eq!(response.into_string().unwrap(), "3");
@@ -44,7 +44,7 @@ mod mapped_base_tests {
 
     #[test]
     fn prefix_and_base() {
-        let client = Client::new(super::rocket()).unwrap();
+        let client = Client::tracked(super::rocket()).unwrap();
 
         let response = client.get("/foo/a/b/23").dispatch();
         assert_eq!(response.into_string().unwrap(), "23");

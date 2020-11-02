@@ -1,4 +1,4 @@
-use std::sync::{Arc, RwLock, Mutex};
+use std::sync::Arc;
 use std::net::{IpAddr, SocketAddr};
 use std::future::Future;
 use std::fmt;
@@ -7,19 +7,17 @@ use std::str;
 use yansi::Paint;
 use state::{Container, Storage};
 use futures::future::BoxFuture;
-use atomic::Atomic;
+use atomic::{Atomic, Ordering};
 
 use crate::request::{FromParam, FromSegments, FromRequest, Outcome};
 use crate::request::{FromFormValue, FormItems, FormItem};
 
 use crate::{Rocket, Config, Shutdown, Route};
 use crate::http::{hyper, uri::{Origin, Segments}};
-use crate::http::{Method, Header, HeaderMap, Cookies};
-use crate::http::{RawStr, ContentType, Accept, MediaType};
-use crate::http::private::{Indexed, SmallVec, CookieJar};
+use crate::http::{Method, Header, HeaderMap};
+use crate::http::{RawStr, ContentType, Accept, MediaType, CookieJar, Cookie};
+use crate::http::private::{Indexed, SmallVec};
 use crate::data::Limits;
-
-type Indices = (usize, usize);
 
 /// The type of an incoming web request.
 ///
@@ -41,14 +39,14 @@ pub(crate) struct RequestState<'r> {
     pub shutdown: &'r Shutdown,
     pub path_segments: SmallVec<[Indices; 12]>,
     pub query_items: Option<SmallVec<[IndexedFormItem; 6]>>,
-    pub route: RwLock<Option<&'r Route>>,
-    pub cookies: Mutex<Option<CookieJar>>,
+    pub route: Atomic<Option<&'r Route>>,
+    pub cookies: CookieJar<'r>,
     pub accept: Storage<Option<Accept>>,
     pub content_type: Storage<Option<ContentType>>,
     pub cache: Arc<Container>,
 }
 
-impl<'r> Request<'r> {
+impl Request<'_> {
     pub(crate) fn clone(&self) -> Self {
         Request {
             method: Atomic::new(self.method()),
@@ -60,36 +58,21 @@ impl<'r> Request<'r> {
     }
 }
 
-impl<'r> RequestState<'r> {
-    fn clone(&self) -> RequestState<'r> {
-        let route = self.route.try_read()
-            .map(|r| r.clone())
-            .unwrap_or(None);
-
-        let cookies = self.cookies.try_lock()
-            .map(|j| j.clone())
-            .unwrap_or_else(|_| Some(CookieJar::new()));
-
+impl RequestState<'_> {
+    fn clone(&self) -> Self {
         RequestState {
             config: self.config,
             managed: self.managed,
             shutdown: self.shutdown,
             path_segments: self.path_segments.clone(),
             query_items: self.query_items.clone(),
-            route: RwLock::new(route),
-            cookies: Mutex::new(cookies),
+            route: Atomic::new(self.route.load(Ordering::Acquire)),
+            cookies: self.cookies.clone(),
             accept: self.accept.clone(),
             content_type: self.content_type.clone(),
             cache: self.cache.clone(),
         }
     }
-}
-
-#[derive(Clone)]
-pub(crate) struct IndexedFormItem {
-    raw: Indices,
-    key: Indices,
-    value: Indices
 }
 
 impl<'r> Request<'r> {
@@ -111,8 +94,8 @@ impl<'r> Request<'r> {
                 config: &rocket.config,
                 managed: &rocket.managed_state,
                 shutdown: &rocket.shutdown_handle,
-                route: RwLock::new(None),
-                cookies: Mutex::new(Some(CookieJar::new())),
+                route: Atomic::new(None),
+                cookies: CookieJar::new(&rocket.config.secret_key),
                 accept: Storage::new(),
                 content_type: Storage::new(),
                 cache: Arc::new(Container::new()),
@@ -138,7 +121,7 @@ impl<'r> Request<'r> {
     /// ```
     #[inline(always)]
     pub fn method(&self) -> Method {
-        self.method.load(atomic::Ordering::Acquire)
+        self.method.load(Ordering::Acquire)
     }
 
     /// Set the method of `self`.
@@ -308,8 +291,8 @@ impl<'r> Request<'r> {
 
     /// Returns a wrapped borrow to the cookies in `self`.
     ///
-    /// [`Cookies`] implements internal mutability, so this method allows you to
-    /// get _and_ add/remove cookies in `self`.
+    /// [`CookieJar`] implements internal mutability, so this method allows you
+    /// to get _and_ add/remove cookies in `self`.
     ///
     /// # Example
     ///
@@ -325,27 +308,8 @@ impl<'r> Request<'r> {
     /// request.cookies().add(Cookie::new("ans", format!("life: {}", 38 + 4)));
     /// # });
     /// ```
-    pub fn cookies(&self) -> Cookies<'_> {
-        // FIXME: Can we do better? This is disappointing.
-        let mut guard = self.state.cookies.lock().expect("cookies lock");
-        match guard.take() {
-            Some(jar) => {
-                let mutex = &self.state.cookies;
-                let on_drop = move |jar| {
-                    *mutex.lock().expect("cookies lock") = Some(jar);
-                };
-
-                Cookies::new(jar, self.state.config.secret_key(), on_drop)
-            }
-            None => {
-                let span = error_span!("Multiple `Cookies` instances are active at once.");
-                info!(parent: &span,
-                      "An instance of `Cookies` must be dropped before another \
-                      can be retrieved.");
-                warn!(parent: &span, "The retrieved `Cookies` instance will be empty.");
-                Cookies::empty()
-            }
-        }
+    pub fn cookies(&self) -> &CookieJar<'r> {
+        &self.state.cookies
     }
 
     /// Returns a [`HeaderMap`] of all of the headers in `self`.
@@ -543,7 +507,7 @@ impl<'r> Request<'r> {
     /// # });
     /// ```
     pub fn route(&self) -> Option<&'r Route> {
-        *self.state.route.read().unwrap()
+        self.state.route.load(Ordering::Acquire)
     }
 
     /// Invokes the request guard implementation for `T`, returning its outcome.
@@ -780,12 +744,12 @@ impl<'r> Request<'r> {
 }
 
 // All of these methods only exist for internal, including codegen, purposes.
-// They _are not_ part of the stable API.
+// They _are not_ part of the stable API. Please, don't use these.
 #[doc(hidden)]
 impl<'r> Request<'r> {
     // Only used by doc-tests! Needs to be `pub` because doc-test are external.
     pub fn example<F: Fn(&mut Request<'_>)>(method: Method, uri: &str, f: F) {
-        let rocket = Rocket::custom(Config::development());
+        let rocket = Rocket::custom(Config::default());
         let uri = Origin::parse(uri).expect("invalid URI in example");
         let mut request = Request::new(&rocket, method, uri);
         f(&mut request);
@@ -858,14 +822,18 @@ impl<'r> Request<'r> {
     /// was `route`. Use during routing when attempting a given route.
     #[inline(always)]
     pub(crate) fn set_route(&self, route: &'r Route) {
-        *self.state.route.write().unwrap() = Some(route);
+        self.state.route.store(Some(route), Ordering::Release)
     }
 
     /// Set the method of `self`, even when `self` is a shared reference. Used
     /// during routing to override methods for re-routing.
     #[inline(always)]
     pub(crate) fn _set_method(&self, method: Method) {
-        self.method.store(method, atomic::Ordering::Release)
+        self.method.store(method, Ordering::Release)
+    }
+
+    pub(crate) fn cookies_mut(&mut self) -> &mut CookieJar<'r> {
+        &mut self.state.cookies
     }
 
     /// Convert from Hyper types into a Rocket Request.
@@ -896,7 +864,6 @@ impl<'r> Request<'r> {
         request.set_remote(h_addr);
 
         // Set the request cookies, if they exist.
-        let mut cookie_jar = CookieJar::new();
         for header in h_headers.get_all("Cookie") {
             let raw_str = match std::str::from_utf8(header.as_bytes()) {
                 Ok(string) => string,
@@ -904,12 +871,11 @@ impl<'r> Request<'r> {
             };
 
             for cookie_str in raw_str.split(';').map(|s| s.trim()) {
-                if let Some(cookie) = Cookies::parse_cookie(cookie_str) {
-                    cookie_jar.add_original(cookie);
+                if let Ok(cookie) = Cookie::parse_encoded(cookie_str) {
+                    request.state.cookies.add_original(cookie.into_owned());
                 }
             }
         }
-        request.state.cookies = Mutex::new(Some(cookie_jar));
 
         // Set the rest of the headers.
         for (name, value) in h_headers.iter() {
@@ -930,6 +896,7 @@ impl fmt::Debug for Request<'_> {
             .field("uri", &self.uri)
             .field("headers", &self.headers())
             .field("remote", &self.remote())
+            .field("cookies", &self.cookies())
             .finish()
     }
 }
@@ -949,6 +916,15 @@ impl fmt::Display for Request<'_> {
 
         Ok(())
     }
+}
+
+type Indices = (usize, usize);
+
+#[derive(Clone)]
+pub(crate) struct IndexedFormItem {
+    raw: Indices,
+    key: Indices,
+    value: Indices
 }
 
 impl IndexedFormItem {

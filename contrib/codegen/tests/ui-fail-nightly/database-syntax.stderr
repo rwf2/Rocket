@@ -1,4 +1,4 @@
-error: unexpected end of input, expected literal
+error: unexpected end of input, expected string literal
  --> $DIR/database-syntax.rs:6:1
   |
 6 | #[database]

@@ -259,8 +259,9 @@ impl<F: Clone + Sync + Send + 'static> ErrorHandler for F
 }
 
 #[doc(hidden)]
-impl<'a> From<&'a StaticCatcherInfo> for Catcher {
-    fn from(info: &'a StaticCatcherInfo) -> Catcher {
+impl From<StaticCatcherInfo> for Catcher {
+    #[inline]
+    fn from(info: StaticCatcherInfo) -> Catcher {
         Catcher::new(info.code, info.handler)
     }
 }
