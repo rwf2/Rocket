@@ -466,23 +466,11 @@ where
             write!(writer, "    {} ", Paint::default("=>").bold())?;
         }
 
-        // xxx(eliza): workaround
-        let fmt = format::debug_fn(|writer, field, value| {
-            // We'll format the field name and value separated with a colon.
-            let name = field.name();
-            if name == "message" {
-                write!(writer, "{:?}", Paint::new(value).bold())
-            } else {
-                write!(writer, "{}: {:?}", field, Paint::new(value).bold())
-            }
-        })
-        .delimited(", ")
-        .display_messages();
         with_meta(
             writer,
             event.metadata(),
-            &FmtVisitor {
-                fmt: &fmt,
+            DisplayFields {
+                fmt: cx,
                 records: event,
             },
         )?;
@@ -490,6 +478,22 @@ where
             self.last_id.store(id.into_u64(), Release);
         }
     Ok(())
+    }
+}
+
+
+struct DisplayFields<'a, F, R> {
+    fmt: &'a F,
+    records: &'a R,
+}
+
+impl<F, R> fmt::Display for DisplayFields<'_, F, R>
+where
+    F: for<'writer> FormatFields<'writer>,
+    R: tracing_subscriber::field::RecordFields,
+{
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        self.fmt.format_fields(f, self.fields)
     }
 }
 
@@ -544,20 +548,5 @@ fn with_meta(
         ),
         tracing::Level::TRACE => writeln!(writer, "{}", Paint::magenta(WithFile { meta, f }).wrap()),
         tracing::Level::DEBUG => writeln!(writer, "{}", Paint::blue(WithFile { meta, f }).wrap()),
-    }
-}
-
-struct FmtVisitor<'a, F, R> {
-    fmt: &'a F,
-    records: R,
-}
-
-impl<F, R> fmt::Display for FmtVisitor<'_, F, R>
-where
-    F: for<'w> FormatFields<'w>,
-    R: field::RecordFields,
-{
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        self.fmt.format_fields(f, &self.records)
     }
 }
