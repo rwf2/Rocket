@@ -51,7 +51,7 @@ version = "0.2.9"
 features = ["fs", "io-std", "io-util", "rt-threaded", "sync", "signal", "macros"]
 
 [dependencies.tracing-subscriber]
-version = "0.2.9"
+version = "0.2.14"
 default-features = false
 features = ["fmt", "env-filter", "smallvec"]
 

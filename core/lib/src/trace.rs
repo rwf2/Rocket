@@ -376,6 +376,10 @@ where
     .display_messages();
     tracing_subscriber::fmt::layer()
         .fmt_fields(field_format)
+        // Configure the formatter to use `print!` rather than
+        // `stdout().write_str(...)`, so that logs are captured by libtest's test
+        // capturing.
+        .with_test_writer()
         .event_format(EventFormat { last_id: AtomicU64::new(0) })
 }
 
