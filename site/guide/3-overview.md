@@ -158,21 +158,21 @@ Suppose these functions are declared:
 ```rust
 #[get("/hello")]
 fn world() -> &'static str {
-	"hello, world!"
+    "hello, world!"
 }
 
 #[get("/hi")]
 fn japan() -> &'static str {
-	"hi, japan!"
+    "hi, japan!"
 }
 ```
 
 We could mount each route as follows:
 ```rust
 fn main() {
-	rocket::ignite()
-		.mount("/hello", routes![world])
-		.mount("/hi", routes![japan]);
+    rocket::ignite()
+        .mount("/hello", routes![world])
+        .mount("/hi", routes![japan]);
 }
 ```
 
