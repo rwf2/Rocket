@@ -150,6 +150,32 @@ is to refer to the route using a namespaced path instead:
 rocket::ignite().mount("/hello", routes![hello, other::world]);
 ```
 
+### Mounting Multiple Paths
+
+In case multiple routes are required, each route needs to be properly mounted.
+
+Suppose these functions are declared:
+```rust
+#[get("/hello")]
+fn world() -> &'static str {
+	"hello, world!"
+}
+
+#[get("/hi")]
+fn japan() -> &'static str {
+	"hi, japan!"
+}
+```
+
+We could mount each route as follows:
+```rust
+fn main() {
+	rocket::ignite()
+		.mount("/hello", routes![world])
+		.mount("/hi", routes![japan]);
+}
+```
+
 ## Launching
 
 Now that Rocket knows about the route, you can tell Rocket to start accepting
