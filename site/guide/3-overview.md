@@ -150,7 +150,7 @@ is to refer to the route using a namespaced path instead:
 rocket::ignite().mount("/hello", routes![hello, other::world]);
 ```
 
-### Mounting Multiple Paths
+### Mounting Multiple Routes
 
 In case multiple routes are required, each route needs to be properly mounted.
 
