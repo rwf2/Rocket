@@ -189,7 +189,6 @@
 //! [timing]: https://crates.io/crates/tracing-timing
 //! [flame]: https://crates.io/crates/tracing-flame
 use tracing_subscriber::{
-    field,
     fmt::{
         format::{self, FormatEvent, FormatFields},
         FmtContext, FormattedFields,
@@ -212,6 +211,7 @@ pub use tracing::{
 };
 
 pub use tracing_futures::Instrument;
+pub use tracing_subscriber::registry;
 
 /// A prelude for working with `tracing` in Rocket applications.
 pub mod prelude {
@@ -395,6 +395,17 @@ pub(crate) fn try_init(level: LogLevel, colors: bool) -> bool {
         Paint::disable();
     }
 
+    // Try to enable a `log` compatibility layer to collect logs from
+    // dependencies using the `log` crate as `tracing` diagnostics.
+    #[cfg(feature = "log")]
+    if try_init_log(level).is_err() {
+        // We failed to set the default `log` logger. This means that the user
+        // has already set a `log` logger. In that case, don't try to set up a
+        // `tracing` subscriber as well --- instead, Rocket's `tracing` events
+        // will be recorded as `log` records.
+        return false;
+    }
+
     tracing::subscriber::set_global_default(tracing_subscriber::registry()
         .with(logging_layer())
         .with(filter_layer(level))
@@ -423,6 +434,7 @@ impl<S, N> FormatEvent<S, N> for EventFormat
 where
     S: tracing::Subscriber + for<'a> LookupSpan<'a>,
     N: for<'a> FormatFields<'a> + 'static,
+    for<'a> FmtContext<'a, S, N>: FormatFields<'a>,
 {
     fn format_event(
         &self,
@@ -471,7 +483,7 @@ where
             event.metadata(),
             DisplayFields {
                 fmt: cx,
-                records: event,
+                event,
             },
         )?;
         if let Some(id) = id {
@@ -484,16 +496,16 @@ where
 
 struct DisplayFields<'a, F, R> {
     fmt: &'a F,
-    records: &'a R,
+    event: &'a R,
 }
 
-impl<F, R> fmt::Display for DisplayFields<'_, F, R>
+impl<'a, F, R> fmt::Display for DisplayFields<'a, F, R>
 where
     F: for<'writer> FormatFields<'writer>,
     R: tracing_subscriber::field::RecordFields,
 {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        self.fmt.format_fields(f, self.fields)
+        self.fmt.format_fields(f, self.event)
     }
 }
 
@@ -549,4 +561,30 @@ fn with_meta(
         tracing::Level::TRACE => writeln!(writer, "{}", Paint::magenta(WithFile { meta, f }).wrap()),
         tracing::Level::DEBUG => writeln!(writer, "{}", Paint::blue(WithFile { meta, f }).wrap()),
     }
+}
+
+/// Set up `tracing`/`log` compatibility.
+#[cfg(feature = "log")]
+fn try_init_log(filter: LogLevel) -> Result<(), impl std::error::Error> {
+    use log_crate::LevelFilter;
+
+    let builder = tracing_log::LogTracer::builder()
+        // Hyper and Rocket both use `tracing`. If `tracing`'s `log` feature
+        // is enabled and the `tracing` macros in Hyper and Rocket also emit
+        // `log` records, ignore them, because the native `tracing` events
+        // will already be collected.
+        .ignore_all(vec!["rocket", "hyper", "tracing::span"]);
+    let builder = match filter {
+        LogLevel::Critical => builder
+            .ignore_crate("rustls")
+            // Set the max level for all `log` records to Warn. Rocket's
+            // `launch` events will be collected by the native `tracing`
+            // subscriber, so we don't need to allow `log` records at Info
+            // in order to see them.
+            .with_max_level(LevelFilter::Warn),
+        LogLevel::Normal => builder.ignore_crate("rustls").with_max_level(LevelFilter::Info),
+        LogLevel::Debug => builder.with_max_level(LevelFilter::Trace),
+        LogLevel::Off => return Ok(()),
+    };
+    builder.init()
 }

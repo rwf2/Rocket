@@ -19,16 +19,16 @@ edition = "2018"
 all-features = true
 
 [features]
-default = []
+default = ["log"]
 tls = ["rocket_http/tls"]
 secrets = ["rocket_http/private-cookies"]
+log = ["log_crate", "tracing/log", "tracing-subscriber/tracing-log", "tracing-log"]
 
 [dependencies]
 rocket_codegen = { version = "0.5.0-dev", path = "../codegen" }
 rocket_http = { version = "0.5.0-dev", path = "../http" }
 futures = "0.3.0"
 yansi = "0.5"
-log = { version = "0.4", features = ["std"] }
 num_cpus = "1.0"
 state = "0.4.1"
 time = "0.2.11"
@@ -45,13 +45,15 @@ figment = { version = "0.9.2", features = ["toml", "env"] }
 rand = "0.7"
 either = "1"
 tracing = "0.1.19"
+tracing-log = { version = "0.1", optional = true }
+log_crate = { package = "log", version = "0.4", optional = true }
 
 [dependencies.tokio]
 version = "0.2.9"
 features = ["fs", "io-std", "io-util", "rt-threaded", "sync", "signal", "macros"]
 
 [dependencies.tracing-subscriber]
-version = "0.2.14"
+version = "0.2.15"
 default-features = false
 features = ["fmt", "env-filter", "smallvec"]
 
