@@ -156,6 +156,9 @@ In case multiple routes are required, each route needs to be properly mounted.
 
 Suppose these functions are declared:
 ```rust
+# #![feature(proc_macro_hygiene, decl_macro)]
+# #[macro_use] extern crate rocket;
+
 #[get("/hello")]
 fn world() -> &'static str {
     "hello, world!"
@@ -169,6 +172,19 @@ fn japan() -> &'static str {
 
 We could mount each route as follows:
 ```rust
+# #![feature(proc_macro_hygiene, decl_macro)]
+# #[macro_use] extern crate rocket;
+
+# #[get("/hello")]
+# fn world() -> &'static str {
+#     "hello, world!"
+# }
+
+# #[get("/hi")]
+# fn japan() -> &'static str {
+#     "hi, japan!"
+# }
+
 fn main() {
     rocket::ignite()
         .mount("/hello", routes![world])
