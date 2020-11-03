@@ -159,12 +159,12 @@ Suppose these functions are declared:
 # #![feature(proc_macro_hygiene, decl_macro)]
 # #[macro_use] extern crate rocket;
 
-#[get("/hello")]
+#[get("/")]
 fn world() -> &'static str {
     "hello, world!"
 }
 
-#[get("/hi")]
+#[get("/")]
 fn japan() -> &'static str {
     "hi, japan!"
 }
@@ -175,12 +175,12 @@ We could mount each route as follows:
 # #![feature(proc_macro_hygiene, decl_macro)]
 # #[macro_use] extern crate rocket;
 
-# #[get("/hello")]
+# #[get("/")]
 # fn world() -> &'static str {
 #     "hello, world!"
 # }
 
-# #[get("/hi")]
+# #[get("/")]
 # fn japan() -> &'static str {
 #     "hi, japan!"
 # }
