@@ -42,4 +42,6 @@ members = [
   "examples/tls",
   "examples/fairings",
   "examples/hello_2018",
+  "examples/trace_env_logger",
+  "examples/trace_subscriber",
 ]
