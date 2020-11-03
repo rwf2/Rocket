@@ -36,7 +36,7 @@ impl Segment {
         };
 
         let (kind, index) = (segment.kind, segment.index);
-        Segment { span, kind, source, index, name: NameSource::from(segment.name.to_string()) }
+        Segment { span, kind, source, index, name: NameSource::new(&segment.name, span) }
     }
 
     pub fn is_wild(&self) -> bool {

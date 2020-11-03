@@ -24,7 +24,8 @@ fn test_raw_ident() {
     let rocket = rocket::ignite()
         .mount("/", routes![get, swap])
         .register(catchers![catch]);
-    let client = Client::new(rocket).unwrap();
+
+    let client = Client::untracked(rocket).unwrap();
 
     let response = client.get("/example?type=1").dispatch();
     assert_eq!(response.into_string().unwrap(), "example is 1");

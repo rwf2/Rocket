@@ -62,7 +62,6 @@ pub fn derive_uri_display_query(input: proc_macro::TokenStream) -> TokenStream {
                     .unwrap_or_else(|| Ok(ident.clone().into()))?;
 
                 let name = name_source.name();
-
                 quote_spanned!(span => f.write_named_value(#name, &#accessor)?;)
             } else {
                 quote_spanned!(span => f.write_value(&#accessor)?;)

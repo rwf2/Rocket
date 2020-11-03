@@ -74,7 +74,7 @@ fn parse_route(attr: RouteAttribute, function: syn::ItemFn) -> Result<Route> {
         for segment in iter.filter(|s| s.is_dynamic()) {
             let span = segment.span;
             if let Some(previous) = set.replace(segment.clone()) {
-                diags.push(span.error(format!("duplicate parameter: `{}`", previous.name.name()))
+                diags.push(span.error(format!("duplicate parameter: `{}`", previous.name))
                     .span_note(previous.span, "previous parameter with the same name here"))
             }
         }
@@ -118,7 +118,7 @@ fn parse_route(attr: RouteAttribute, function: syn::ItemFn) -> Result<Route> {
     let span = function.sig.paren_token.span;
     for missing in segments.difference(&fn_segments) {
         diags.push(missing.span.error("unused dynamic parameter")
-            .span_note(span, format!("expected argument named `{}` here", missing.name.name())))
+            .span_note(span, format!("expected argument named `{}` here", missing.name)))
     }
 
     diags.head_err_or(Route { attribute: attr, function, inputs, segments })
@@ -207,7 +207,6 @@ fn query_exprs(route: &Route) -> Option<TokenStream> {
     let query_segments = route.attribute.path.query.as_ref()?;
     let (mut decls, mut matchers, mut builders) = (vec![], vec![], vec![]);
     for segment in query_segments {
-        let name = segment.name.name();
         let (ident, ty, span) = if segment.kind != Kind::Static {
             let (ident, ty) = route.inputs.iter()
                 .find(|(name, _, _)| name == &segment.name)
@@ -232,6 +231,7 @@ fn query_exprs(route: &Route) -> Option<TokenStream> {
             Kind::Static => quote!()
         };
 
+        let name = segment.name.name();
         let matcher = match segment.kind {
             Kind::Single => quote_spanned! { span =>
                 (_, #name, __v) => {
@@ -327,8 +327,9 @@ fn generate_internal_uri_macro(route: &Route) -> TokenStream {
         .filter(|seg| seg.source == Source::Path || seg.source == Source::Query)
         .filter(|seg| seg.kind != Kind::Static)
         .map(|seg| &seg.name)
-        .map(|name| route.inputs.iter().find(|(name2, ..)| name2 == name).unwrap())
-        .map(|(name, _, ty)| { let id = name.ident().unwrap(); quote!(#id: #ty) });
+        .map(|seg_name| route.inputs.iter().find(|(in_name, ..)| in_name == seg_name).unwrap())
+        .map(|(name, _, ty)| (name.ident(), ty))
+        .map(|(ident, ty)| quote!(#ident: #ty));
 
     let mut hasher = DefaultHasher::new();
     route.function.sig.ident.hash(&mut hasher);
@@ -386,7 +387,7 @@ fn codegen_route(route: Route) -> Result<TokenStream> {
     let mut req_guard_definitions = vec![];
     let mut parameter_definitions = vec![];
     for (name, rocket_ident, ty) in &route.inputs {
-        let fn_segment: Segment = name.ident().unwrap().into();
+        let fn_segment: Segment = name.ident().into();
         match route.segments.get(&fn_segment) {
             Some(seg) if seg.source == Source::Path => {
                 parameter_definitions.push(param_expr(seg, rocket_ident, &ty));

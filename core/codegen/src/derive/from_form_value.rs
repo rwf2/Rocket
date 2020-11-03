@@ -48,7 +48,7 @@ pub fn derive_from_form_value(input: proc_macro::TokenStream) -> TokenStream {
 
             let variant_str = variant_name_source.name();
 
-            let builder = variant.builder(|_| unreachable!());
+            let builder = variant.builder(|_| unreachable!("no fields"));
             Ok(quote! {
                 if uncased == #variant_str {
                     return #_Ok(#builder);

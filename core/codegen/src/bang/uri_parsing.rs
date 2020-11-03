@@ -231,9 +231,9 @@ impl InternalUriParams {
                 let (mut extra, mut dup) = (vec![], vec![]);
                 for (name, expr) in args.named().unwrap() {
                     match params.get_mut(name) {
-                        Some(ref entry) if entry.is_some() => dup.push(name.ident().unwrap()),
+                        Some(ref entry) if entry.is_some() => dup.push(name.ident()),
                         Some(entry) => *entry = Some(expr),
-                        None => extra.push(name.ident().unwrap()),
+                        None => extra.push(name.ident()),
                     }
                 }
 
@@ -339,7 +339,10 @@ impl ToTokens for Arg {
     fn to_tokens(&self, tokens: &mut TokenStream) {
         match self {
             Arg::Unnamed(e) => e.to_tokens(tokens),
-            Arg::Named(name, eq, expr) => { let id = name.ident().unwrap(); tokens.extend(quote!(#id #eq #expr)) },
+            Arg::Named(name, eq, expr) => {
+                let ident = name.ident();
+                tokens.extend(quote!(#ident #eq #expr))
+            }
         }
     }
 }

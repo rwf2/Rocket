@@ -44,9 +44,9 @@ impl TokenStreamExt for crate::proc_macro2::TokenStream {
     }
 }
 
-/// Represents the source of a name; usually either a string or an Ident. It is
-/// normally constructed using FromMeta, From<String>, or From<Ident> depending
-/// on the source.
+/// Represents the source of a name read by codegen, which may or may not be a
+/// valid identifier: this usually either a string or an Ident. A `NameSource`
+/// is typically constructed indirectly via FromMeta, or From<Ident>.
 ///
 /// NameSource implements Hash, PartialEq, and Eq, and additionally PartialEq<S>
 /// for all types `S: AsStr<str>`. These implementations all compare the value
@@ -58,24 +58,34 @@ pub struct NameSource {
 }
 
 impl NameSource {
-    /// Returns the name as a string. Notably, if this NameSource was
-    /// constructed from an Ident this method returns a name *without* an `r#`
-    /// prefix.
+    /// Creates a new `NameSource` from the string `name` and span `span`. If
+    /// `name` is a valid ident, the ident is stored as well.
+    pub fn new<S: AsRef<str>>(name: S, span: crate::proc_macro2::Span) -> Self {
+        let name = name.as_ref();
+        syn::parse_str::<Ident>(name)
+            .map(|mut ident| { ident.set_span(span); ident })
+            .map(|ident| NameSource::from(ident))
+            .unwrap_or_else(|_| NameSource { name: name.into(), ident: None })
+    }
+
+    /// Returns the name as a string. Notably, if `self` was constructed from an
+    /// Ident this method returns a name *without* an `r#` prefix.
     pub fn name(&self) -> &str {
         &self.name
     }
 
-    /// Returns the Ident this NameSource was originally constructed from,
-    /// if applicable.
-    pub fn ident(&self) -> Option<&Ident> {
-        self.ident.as_ref()
+    /// Returns the Ident corresponding to `self`, if any, otherwise panics. If
+    /// `self` was constructed from an `Ident`, this never panics. Otherwise,
+    /// panics if the string `self` was constructed from was not a valid ident.
+    pub fn ident(&self) -> &Ident {
+        self.ident.as_ref().expect("ident from namesource")
     }
 }
 
 impl devise::FromMeta for NameSource {
     fn from_meta(meta: devise::MetaItem<'_>) -> devise::Result<Self> {
         if let syn::Lit::Str(s) = meta.lit()? {
-            return Ok(Self { name: s.value(), ident: None });
+            return Ok(NameSource::new(s.value(), s.span()));
         }
 
         Err(meta.value_span().error("invalid value: expected string literal"))
@@ -84,25 +94,13 @@ impl devise::FromMeta for NameSource {
 
 impl From<Ident> for NameSource {
     fn from(ident: Ident) -> Self {
-        Self {
-            name: ident.unraw().to_string(),
-            ident: Some(ident),
-        }
-    }
-}
-
-impl From<String> for NameSource {
-    fn from(string: String) -> Self {
-        Self {
-            name: string,
-            ident: None,
-        }
+        Self { name: ident.unraw().to_string(), ident: Some(ident), }
     }
 }
 
 impl std::hash::Hash for NameSource {
     fn hash<H: std::hash::Hasher>(&self, hasher: &mut H) {
-        self.name.hash(hasher)
+        self.name().hash(hasher)
     }
 }
 

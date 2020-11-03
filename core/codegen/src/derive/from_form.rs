@@ -87,10 +87,10 @@ pub fn derive_from_form(input: proc_macro::TokenStream) -> TokenStream {
             define_vars_and_mods!(_None, _Some, _Ok, _Err);
             let (constructors, matchers, builders) = fields.iter().map(|field| {
                 let (ident, span) = (&field.ident, field.span());
-                let default_name_source = NameSource::from(ident.clone().expect("named"));
-                let name_source = Form::from_attrs("form", &field.attrs)
+                let default_name = NameSource::from(ident.clone().expect("named"));
+                let name = Form::from_attrs("form", &field.attrs)
                     .map(|result| result.map(|form| form.field.name))
-                    .unwrap_or_else(|| Ok(default_name_source))?;
+                    .unwrap_or_else(|| Ok(default_name))?;
 
                 let ty = field.ty.with_stripped_lifetimes();
                 let ty = quote_spanned! {
@@ -99,7 +99,7 @@ pub fn derive_from_form(input: proc_macro::TokenStream) -> TokenStream {
 
                 let constructor = quote_spanned!(span => let mut #ident = #_None;);
 
-                let name = name_source.name();
+                let name = name.name();
                 let matcher = quote_spanned! { span =>
                     #name => { #ident = #_Some(#ty::from_form_value(__v)
                                 .map_err(|_| #form_error::BadValue(__k, __v))?); },
