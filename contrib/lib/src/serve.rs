@@ -288,9 +288,10 @@ impl StaticFiles {
 
         let path = path.as_ref();
         if !path.is_dir() {
-            let span = error_span!("`StaticFiles` supplied with invalid path");
-            info!(parent: &span, %path =  Paint::white(path.display(), "Path is not a directory"));
-            panic!("refusing to continue due to invalid static files path");
+            error_span!("`StaticFiles` supplied with invalid path").in_scope(|| {   
+                info!(path = %Paint::white(path.display()), "Path is not a directory");
+                panic!("refusing to continue due to invalid static files path");
+            });
         }
 
         StaticFiles { root: path.into(), options, rank: Self::DEFAULT_RANK }
