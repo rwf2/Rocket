@@ -168,14 +168,16 @@ impl Drop for Error {
 
         match *self.kind() {
             ErrorKind::Bind(ref error) => {
-                let span = error_span!("bind_error", "Rocket failed to bind network socket to given address/port.");
-                info!(parent: &span, %error);
-                panic!("aborting due to binding o error");
+                error_span!("bind_error", "Rocket failed to bind network socket to given address/port.").in_scope(|| { 
+                    info!(%error);
+                    panic!("aborting due to binding o error");
+                });
             }
             ErrorKind::Io(ref error) => {
-                let span = error_span!("io_error", "Rocket failed to launch due to an I/O error.");
-                info!(parent: &span, %error);
-                panic!("aborting due to i/o error");
+                error_span!("io_error", "Rocket failed to launch due to an I/O error.").in_scope(|| {
+                    info!(%error);
+                    panic!("aborting due to i/o error");
+                });
             }
             ErrorKind::Collision(ref collisions) => {
                 let span = error_span!("collisions", "Rocket failed to launch due to the following routing collisions:");
@@ -189,6 +191,7 @@ impl Drop for Error {
             }
             ErrorKind::FailedFairings(ref failures) => {
                 let span = error_span!("fairing_error", "Rocket failed to launch due to failing fairings:");
+                let _enter = span.enter();
                 for fairing in failures {
                     info!(%fairing);
                 }
@@ -196,9 +199,10 @@ impl Drop for Error {
                 panic!("aborting due to launch fairing failure");
             }
             ErrorKind::Runtime(ref error) => {
-                let span = error_span!("runtime_error", "An error occured in the runtime:");
-                info!(%error);
-                panic!("aborting due to runtime failure");
+                error_span!("runtime_error", "An error occured in the runtime:").in_scope(|| {
+                    info!(%error);
+                    panic!("aborting due to runtime failure");
+                });
             }
         }
     }

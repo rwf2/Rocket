@@ -170,8 +170,7 @@ impl Rocket {
             let old_route = route.clone();
             let route = route.map_base(|old| format!("{}{}", base, old))
                 .unwrap_or_else(|error| {
-                    let span = error_span!("malformed_uri", route = %old_route, "Route has a malformed URI.");
-                    error!(parent: &span, %error);
+                    error!(route = %old_route, %error, "Route has a malformed URI.");
                     panic!("Invalid route URI.");
                 });
 
@@ -552,8 +551,7 @@ impl Rocket {
             }
             Either::Left((Err(error), server)) => {
                 // Error setting up ctrl-c signal. Let the user know.
-                let span = warn_span!("graceful_shutdown_error", "Failed to enable `ctrl-c` graceful signal shutdown.");
-                info!(parent: &span, %error);
+                warn!(%error, "Failed to enable `ctrl-c` graceful signal shutdown.");
                 server.await
             }
             // Server shut down before Ctrl-C; return the result.
