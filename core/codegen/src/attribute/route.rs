@@ -138,7 +138,7 @@ fn param_expr(seg: &Segment, ident: &syn::Ident, ty: &syn::Type) -> TokenStream 
     });
 
     // Returned when a dynamic parameter fails to parse.
-    let field_name = syn::Ident::new(&seg.name, seg.span);
+    let field_name = seg.name.ident();
     let parse_error = quote!({
         #log::warn!(#field_name = ?#error, "Failed to parse dynamic parameter");
         #Outcome::Forward(#data)
