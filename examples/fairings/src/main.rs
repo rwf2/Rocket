@@ -6,6 +6,7 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 use rocket::{Request, State, Data, Response};
 use rocket::fairing::{AdHoc, Fairing, Info, Kind};
 use rocket::http::{Method, ContentType, Status};
+use rocket::trace::info;
 
 struct Token(i64);
 
@@ -67,20 +68,20 @@ fn rocket() -> rocket::Rocket {
         .mount("/", routes![hello, token])
         .attach(Counter::default())
         .attach(AdHoc::on_attach("Token State", |rocket| async {
-            println!("Adding token managed state...");
+            info!("Adding token managed state...");
             match rocket.figment().extract_inner("token") {
                 Ok(value) => Ok(rocket.manage(Token(value))),
                 Err(_) => Err(rocket)
             }
         }))
         .attach(AdHoc::on_launch("Launch Message", |_| {
-            println!("Rocket is about to launch!");
+            info!("Rocket is about to launch!");
         }))
         .attach(AdHoc::on_request("PUT Rewriter", |req, _| {
             Box::pin(async move {
-                println!("    => Incoming request: {}", req);
+                info!("Incoming request: {}", req);
                 if req.uri().path() == "/" {
-                    println!("    => Changing method to `PUT`.");
+                    info!("Changing method to `PUT`.");
                     req.set_method(Method::Put);
                 }
             })
@@ -88,7 +89,7 @@ fn rocket() -> rocket::Rocket {
         .attach(AdHoc::on_response("Response Rewriter", |req, res| {
             Box::pin(async move {
                 if req.uri().path() == "/" {
-                    println!("    => Rewriting response body.");
+                    info!("Rewriting response body.");
                     res.set_sized_body(None, Cursor::new("Hello, fairings!"));
                 }
             })
