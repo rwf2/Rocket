@@ -1,10 +1,11 @@
 use std::io;
 use std::sync::Arc;
+use std::task::{Context, Poll};
 
 use futures::stream::StreamExt;
 use futures::future::{Future, BoxFuture};
 use tokio::sync::oneshot;
-use tracing_futures::Instrument;
+use tracing::instrument::{Instrument, Instrumented};
 use yansi::Paint;
 
 use crate::Rocket;
@@ -50,7 +51,7 @@ async fn hyper_service_fn(
         let mut req = match req_res {
             Ok(req) => req,
             Err(e) => {
-                error!("Bad incoming request: {}", e);
+                error!(error = %e, "Bad incoming request");
                 // TODO: We don't have a request to pass in, so we just
                 // fabricate one. This is weird. We should let the user know
                 // that we failed to parse a request (by invoking some special
@@ -61,14 +62,20 @@ async fn hyper_service_fn(
             }
         };
 
-        // Retrieve the data from the hyper body.
-        let mut data = Data::from_hyp(h_body).await;
+        let span = info_span!("request", "{}", req);
+        async {
+            // Retrieve the data from the hyper body.
+            let mut data = Data::from_hyp(h_body).await;
 
-        // Dispatch the request to get a response, then write that response out.
-        let token = rocket.preprocess_request(&mut req, &mut data).await;
-        let r = rocket.dispatch(token, &mut req, data).await;
-        rocket.send_response(r, tx).await;
-    }.instrument(info_span!("connection", from = %h_addr, "{}Connection", Paint::emoji("📡 "))));
+            // Dispatch the request to get a response, then write that response out.
+            let token = rocket.preprocess_request(&mut req, &mut data).await;
+            let r = rocket.dispatch(token, &mut req, data).await;
+            rocket.send_response(r, tx).await;
+        }
+            .instrument(span)
+            .await
+
+    }.in_current_span());
 
     // Receive the response written to `tx` by the task above.
     rx.await.map_err(|e| io::Error::new(io::ErrorKind::Other, e))
@@ -186,30 +193,27 @@ impl Rocket {
         request: &'r Request<'s>,
         data: Data
     ) -> Response<'r> {
-        async move {
-            // Remember if the request is `HEAD` for later body stripping.
-            let was_head_request = request.method() == Method::Head;
+        // Remember if the request is `HEAD` for later body stripping.
+        let was_head_request = request.method() == Method::Head;
 
-            // Route the request and run the user's handlers.
-            let mut response = self.route_and_process(request, data).await;
+        // Route the request and run the user's handlers.
+        let mut response = self.route_and_process(request, data).await;
 
-            // Add a default 'Server' header if it isn't already there.
-            // TODO: If removing Hyper, write out `Date` header too.
-            if !response.headers().contains("Server") {
-                response.set_header(Header::new("Server", "Rocket"));
-            }
+        // Add a default 'Server' header if it isn't already there.
+        // TODO: If removing Hyper, write out `Date` header too.
+        if !response.headers().contains("Server") {
+            response.set_header(Header::new("Server", "Rocket"));
+        }
 
-            // Run the response fairings.
-            self.fairings.handle_response(request, &mut response).await;
+        // Run the response fairings.
+        self.fairings.handle_response(request, &mut response).await;
 
-            // Strip the body if this is a `HEAD` request.
-            if was_head_request {
-                response.strip_body();
-            }
+        // Strip the body if this is a `HEAD` request.
+        if was_head_request {
+            response.strip_body();
+        }
 
-            response
-        }.instrument(info_span!("request", "{}", request))
-         .await
+        response
     }
 
     /// Route the request and process the outcome to eventually get a response.
@@ -375,10 +379,16 @@ impl Rocket {
         let service = hyper::make_service_fn(move |conn: &<L as Listener>::Connection| {
             let rocket = rocket.clone();
             let remote = conn.remote_addr().unwrap_or_else(|| ([0, 0, 0, 0], 0).into());
+            let span = info_span!("connection", from = %remote, "{}Connection", Paint::emoji("📡 "));
             async move {
-                Ok::<_, std::convert::Infallible>(hyper::service_fn(move |req| {
+                let service = hyper::service_fn(move |req| {
                     hyper_service_fn(rocket.clone(), remote, req)
-                }))
+                });
+                let service = InstrumentedService {
+                    span,
+                    service,
+                };
+                Ok::<_, std::convert::Infallible>(service)
             }
         });
 
@@ -401,5 +411,25 @@ impl Rocket {
             .with_graceful_shutdown(async move { shutdown_receiver.recv().await; })
             .await
             .map_err(|e| Error::new(ErrorKind::Runtime(Box::new(e))))
+    }
+}
+
+struct InstrumentedService<S> {
+    span: tracing::Span,
+    service: S
+}
+
+impl<S: hyper::Service<R>, R> hyper::Service<R> for InstrumentedService<S> {
+    type Response = S::Response;
+    type Future = Instrumented<S::Future>;
+    type Error = S::Error;
+
+    fn poll_ready(&mut self, cx: &mut Context<'_>) -> Poll<Result<(), Self::Error>> {
+        let _e = self.span.enter();
+        self.service.poll_ready(cx)
+    }
+
+    fn call(&mut self, request: R) -> Self::Future {
+        self.service.call(request).instrument(self.span.clone())
     }
 }
