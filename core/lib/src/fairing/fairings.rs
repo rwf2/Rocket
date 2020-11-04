@@ -94,7 +94,8 @@ impl Fairings {
 
     pub fn pretty_print_counts(&self) {
         if !self.all_fairings.is_empty() {
-            info!("{}{}:", Paint::emoji("📡 "), Paint::magenta("Fairings"));
+            let span = info_span!("fairings", "{}{}:", Paint::emoji("📡 "), Paint::magenta("Fairings"));
+            let _e = span.enter();
             self.info_for("launch", &self.launch);
             self.info_for("request", &self.request);
             self.info_for("response", &self.response);
