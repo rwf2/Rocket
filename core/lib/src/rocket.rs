@@ -6,12 +6,11 @@ use figment::Figment;
 use tokio::sync::mpsc;
 use futures::future::FutureExt;
 
-use crate::trace;
+use crate::trace::{self, PaintExt, prelude::*};
 use crate::config::Config;
 use crate::catcher::Catcher;
 use crate::router::{Router, Route};
 use crate::fairing::{Fairing, Fairings};
-use crate::trace::PaintExt;
 use crate::shutdown::Shutdown;
 use crate::http::uri::Origin;
 use crate::error::{Error, ErrorKind};
@@ -296,7 +295,7 @@ impl Rocket {
             let mut fairings = std::mem::replace(&mut self.fairings, Fairings::new());
             let rocket = fairings.attach(fairing, self).await;
             (rocket, fairings)
-        };
+        }.in_current_span();
 
         // TODO: Reuse a single thread to run all attach fairings.
         let (rocket, mut fairings) = match tokio::runtime::Handle::try_current() {

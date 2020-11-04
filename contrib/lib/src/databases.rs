@@ -377,6 +377,7 @@ use rocket::http::Status;
 
 use rocket::tokio::sync::{OwnedSemaphorePermit, Semaphore, Mutex};
 use rocket::tokio::time::timeout;
+use rocket::trace::prelude::*;
 
 use self::r2d2::ManageConnection;
 
@@ -738,6 +739,11 @@ pub struct Connection<K, C: Poolable> {
 async fn run_blocking<F, R>(job: F) -> R
     where F: FnOnce() -> R + Send + 'static, R: Send + 'static,
 {
+    let span = tracing::Span::current();
+    let job = move || {
+        let _enter = span.enter();
+        job()
+    };
     match tokio::task::spawn_blocking(job).await {
         Ok(ret) => ret,
         Err(e) => match e.try_into_panic() {
@@ -836,7 +842,9 @@ impl<K, C: Poolable> Drop for Connection<K, C> {
         let permit = self.permit.take();
         tokio::spawn(async move {
             let mut connection = connection.lock_owned().await;
+            let span = tracing::Span::current();
             tokio::task::spawn_blocking(move || {
+                let _e = span.enter();
                 if let Some(conn) = connection.take() {
                     drop(conn);
                 }
@@ -845,7 +853,7 @@ impl<K, C: Poolable> Drop for Connection<K, C> {
                 // released after the connection is.
                 drop(permit);
             })
-        });
+        }.in_current_span());
     }
 }
 
