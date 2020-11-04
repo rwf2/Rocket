@@ -211,7 +211,7 @@ pub use tracing::{
 };
 
 pub use tracing_futures::Instrument;
-pub use tracing_subscriber::registry;
+pub use tracing_subscriber::{registry, EnvFilter as Filter};
 
 /// A prelude for working with `tracing` in Rocket applications.
 pub mod prelude {
@@ -288,7 +288,12 @@ impl<'de> Deserialize<'de> for LogLevel {
 /// configure it to filter spans and events based on the logging level
 /// specified in the Rocket config.
 ///
-/// For example:
+/// Additional [filtering directives][dirs] may be added to the returned filter
+/// layer in order to enable or disable specific targets.
+///
+/// # Examples
+///
+/// Using Rocket's filtering with a custom `tracing` subscriber:
 ///
 /// ```
 /// # type MySubscriber = tracing_subscriber::registry::Registry;
@@ -311,11 +316,37 @@ impl<'de> Deserialize<'de> for LogLevel {
 /// }
 /// ```
 ///
+/// Adding additional directives to Rocket's default filter:
+///
+/// ```
+/// #[rocket::launch]
+/// fn rocket() -> rocket::Rocket {
+///     use rocket::trace::prelude::*;
+///
+///     let figment = rocket::Config::figment();
+///     let config = rocket::Config::from(&figment);
+///
+///     // Use Rocket's default filter for the configured log level...
+///     let trace_filter = rocket::trace::filter_layer(config.log_level)
+///         // ...but always enable the `DEBUG` level for `my_crate`.
+///         .add_directive("my_crate=debug".parse().unwrap())
+///
+///     // Build a custom `tracing` subscriber...
+///     rocket::trace::registry()
+///         // ...using the default Rocket log formatter...
+///         .with(rocket::trace::logging_layer())
+///         // ...but replacing the default filter with our customized one.
+///         .with(trace_filter)
+///         .init();
+///
+///     rocket::custom(figment)
+///         // ...
+/// }
+/// ```
+///
 /// [`Layer`]: https://docs.rs/tracing-subscriber/latest/tracing_subscriber/layer/trait.Layer.html
-pub fn filter_layer<S>(level: LogLevel) -> impl Layer<S>
-where
-    S: tracing::Subscriber,
-{
+/// [dirs]: https://docs.rs/tracing-subscriber/latest/tracing_subscriber/filter/struct.EnvFilter.html#directives
+pub fn filter_layer(level: LogLevel) -> Filter {
     let filter_str = match level {
         LogLevel::Critical => "warn,rocket::launch=info,hyper=off,rustls=off",
         LogLevel::Normal => "info,hyper=off,rustls=off",
