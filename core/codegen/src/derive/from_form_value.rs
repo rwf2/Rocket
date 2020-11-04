@@ -1,10 +1,11 @@
 use devise::{*, ext::SpanDiagnosticExt};
 
 use crate::proc_macro2::TokenStream;
+use crate::syn_ext::NameSource;
 
 #[derive(FromMeta)]
 struct Form {
-    value: String,
+    value: NameSource,
 }
 
 pub fn derive_from_form_value(input: proc_macro::TokenStream) -> TokenStream {
@@ -41,11 +42,13 @@ pub fn derive_from_form_value(input: proc_macro::TokenStream) -> TokenStream {
         .try_map_enum(null_enum_mapper)
         .try_map_variant(|_, variant| {
             define_vars_and_mods!(_Ok);
-            let variant_str = Form::from_attrs("form", &variant.attrs)
-                .unwrap_or_else(|| Ok(Form { value: variant.ident.to_string() }))?
+            let variant_name_source = Form::from_attrs("form", &variant.attrs)
+                .unwrap_or_else(|| Ok(Form { value: variant.ident.clone().into() }))?
                 .value;
 
-            let builder = variant.builder(|_| unreachable!());
+            let variant_str = variant_name_source.name();
+
+            let builder = variant.builder(|_| unreachable!("no fields"));
             Ok(quote! {
                 if uncased == #variant_str {
                     return #_Ok(#builder);

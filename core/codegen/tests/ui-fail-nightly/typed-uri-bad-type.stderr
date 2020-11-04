@@ -149,3 +149,27 @@ error[E0277]: the trait bound `S: FromUriParam<rocket::http::uri::Query, _>` is 
    |                          ^ the trait `FromUriParam<rocket::http::uri::Query, _>` is not implemented for `S`
    |
    = note: required by `from_uri_param`
+
+error[E0277]: the trait bound `std::option::Option<i32>: FromUriParam<rocket::http::uri::Query, {integer}>` is not satisfied
+  --> $DIR/typed-uri-bad-type.rs:69:28
+   |
+69 |     uri!(optionals_q: id = 10, name = "Bob".to_string());
+   |                            ^^ the trait `FromUriParam<rocket::http::uri::Query, {integer}>` is not implemented for `std::option::Option<i32>`
+   |
+   = help: the following implementations were found:
+             <std::option::Option<T> as FromUriParam<rocket::http::uri::Path, A>>
+             <std::option::Option<T> as FromUriParam<rocket::http::uri::Query, std::option::Option<A>>>
+             <std::option::Option<T> as FromUriParam<rocket::http::uri::Query, std::result::Result<A, E>>>
+   = note: required by `from_uri_param`
+
+error[E0277]: the trait bound `std::result::Result<std::string::String, &RawStr>: FromUriParam<rocket::http::uri::Query, std::string::String>` is not satisfied
+  --> $DIR/typed-uri-bad-type.rs:69:39
+   |
+69 |     uri!(optionals_q: id = 10, name = "Bob".to_string());
+   |                                       ^^^^^^^^^^^^^^^^^ the trait `FromUriParam<rocket::http::uri::Query, std::string::String>` is not implemented for `std::result::Result<std::string::String, &RawStr>`
+   |
+   = help: the following implementations were found:
+             <std::result::Result<T, E> as FromUriParam<rocket::http::uri::Path, A>>
+             <std::result::Result<T, E> as FromUriParam<rocket::http::uri::Query, std::option::Option<A>>>
+             <std::result::Result<T, E> as FromUriParam<rocket::http::uri::Query, std::result::Result<A, E>>>
+   = note: required by `from_uri_param`

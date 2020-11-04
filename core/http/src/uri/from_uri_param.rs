@@ -15,9 +15,8 @@ use crate::uri::{self, UriPart, UriDisplay};
 ///
 /// In the rare case that `UriDisplay` is implemented manually, this trait, too,
 /// must be implemented explicitly. In the majority of cases, implementation can
-/// be automated. Rocket provides the [`impl_from_uri_param_identity`] macro to
-/// generate the _identity_ implementations automatically. For a type `T`, these
-/// are:
+/// be automated. Rocket provides [`impl_from_uri_param_identity`] to generate
+/// the _identity_ implementations automatically. For a type `T`, these are:
 ///
 ///   * `impl<P: UriPart> FromUriParam<P, T> for T`
 ///   * `impl<'x, P: UriPart> FromUriParam<P, &'x T> for T`
@@ -31,9 +30,9 @@ use crate::uri::{self, UriPart, UriDisplay};
 ///
 /// This trait is invoked once per expression passed into a [`uri!`] invocation.
 /// In particular, for a route URI parameter of type `T` and a user-supplied
-/// expression of type `S`, `<T as FromUriParam<S>>::from_uri_param` is
-/// invoked. The returned value is used in place of the user's value and
-/// rendered using its [`UriDisplay`] implementation.
+/// expression `e` of type `S`, `<T as FromUriParam<S>>::from_uri_param(e)` is
+/// invoked. The returned value of type `T::Target` is used in place of the
+/// user's value and rendered using its [`UriDisplay`] implementation.
 ///
 /// This trait allows types that differ from the route URI parameter's types to
 /// be used in their place at no cost. For instance, the following
@@ -75,26 +74,36 @@ use crate::uri::{self, UriPart, UriDisplay};
 ///      `u32`, `u64`, `u128`, `usize`, `f32`, `f64`, `bool`, `IpAddr`,
 ///      `Ipv4Addr`, `Ipv6Addr`, `&str`, `&RawStr`, `Cow<str>`
 ///
-/// The following conversions are implemented, allowing a value of the type on
-/// the left to be used when a type on the right is expected by a route:
+/// The following types have _identity_ implementations _only in [`Path`]_:
+///
+///   * `&Path`, `PathBuf`
+///
+/// The following types have _identity_ implementations _only in [`Query`]_:
+///
+///   * `Option<T>`, `Result<T, E>`
+///
+/// The following conversions are implemented for both paths and queries,
+/// allowing a value of the type on the left to be used when a type on the right
+/// is expected by a route:
 ///
 ///   * `&str` to `String`
 ///   * `&str` to `RawStr`
 ///   * `String` to `&str`
 ///   * `String` to `RawStr`
-///   * `T` to `Option<T>`
-///   * `T` to `Result<T, E>`
 ///   * `T` to `Form<T>`
-///
-/// The following types have _identity_ implementations _only in [`Path`]_:
-///
-///   * `&Path`, `PathBuf`
 ///
 /// The following conversions are implemented _only in [`Path`]_:
 ///
 ///   * `&str` to `&Path`
 ///   * `&str` to `PathBuf`
 ///   * `PathBuf` to `&Path`
+///   * `T` to `Option<T>`
+///   * `T` to `Result<T, E>`
+///
+/// The following conversions are implemented _only in [`Query`]_:
+///
+///   * `Option<T>` to `Result<T, E>` (for any `E`)
+///   * `Result<T, E>` to `Option<T>` (for any `E`)
 ///
 /// See [Foreign Impls](#foreign-impls) for all provided implementations.
 ///
@@ -233,7 +242,7 @@ macro_rules! impl_conversion_ref {
 ///
 /// For a type `T`, the _identity_ implementations of `FromUriParam` are:
 ///
-///   * `impl UriPart> FromUriParam<P, T> for T`
+///   * `impl<P: UriPart> FromUriParam<P, T> for T`
 ///   * `impl<'x> FromUriParam<P, &'x T> for T`
 ///   * `impl<'x> FromUriParam<P, &'x mut T> for T`
 ///
@@ -338,7 +347,7 @@ impl<'a, 'b> FromUriParam<uri::Path, &'a &'b str> for PathBuf {
 }
 
 /// A no cost conversion allowing any `T` to be used in place of an `Option<T>`.
-impl<P: UriPart, A, T: FromUriParam<P, A>> FromUriParam<P, A> for Option<T> {
+impl<A, T: FromUriParam<uri::Path, A>> FromUriParam<uri::Path, A> for Option<T> {
     type Target = T::Target;
 
     #[inline(always)]
@@ -348,11 +357,47 @@ impl<P: UriPart, A, T: FromUriParam<P, A>> FromUriParam<P, A> for Option<T> {
 }
 
 /// A no cost conversion allowing `T` to be used in place of an `Result<T, E>`.
-impl<P: UriPart, A, E, T: FromUriParam<P, A>> FromUriParam<P, A> for Result<T, E> {
+impl<A, E, T: FromUriParam<uri::Path, A>> FromUriParam<uri::Path, A> for Result<T, E> {
     type Target = T::Target;
 
     #[inline(always)]
     fn from_uri_param(param: A) -> Self::Target {
         T::from_uri_param(param)
+    }
+}
+
+impl<A, T: FromUriParam<uri::Query, A>> FromUriParam<uri::Query, Option<A>> for Option<T> {
+    type Target = Option<T::Target>;
+
+    #[inline(always)]
+    fn from_uri_param(param: Option<A>) -> Self::Target {
+        param.map(|a| T::from_uri_param(a))
+    }
+}
+
+impl<A, E, T: FromUriParam<uri::Query, A>> FromUriParam<uri::Query, Option<A>> for Result<T, E> {
+    type Target = Option<T::Target>;
+
+    #[inline(always)]
+    fn from_uri_param(param: Option<A>) -> Self::Target {
+        param.map(|a| T::from_uri_param(a))
+    }
+}
+
+impl<A, E, T: FromUriParam<uri::Query, A>> FromUriParam<uri::Query, Result<A, E>> for Result<T, E> {
+    type Target = Result<T::Target, E>;
+
+    #[inline(always)]
+    fn from_uri_param(param: Result<A, E>) -> Self::Target {
+        param.map(|a| T::from_uri_param(a))
+    }
+}
+
+impl<A, E, T: FromUriParam<uri::Query, A>> FromUriParam<uri::Query, Result<A, E>> for Option<T> {
+    type Target = Result<T::Target, E>;
+
+    #[inline(always)]
+    fn from_uri_param(param: Result<A, E>) -> Self::Target {
+        param.map(|a| T::from_uri_param(a))
     }
 }

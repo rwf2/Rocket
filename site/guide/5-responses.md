@@ -458,8 +458,8 @@ For example, given the following route:
 # #[macro_use] extern crate rocket;
 # fn main() {}
 
-#[get("/person/<name>?<age>")]
-fn person(name: String, age: Option<u8>) { /* .. */ }
+#[get("/<id>/<name>?<age>")]
+fn person(id: Option<usize>, name: String, age: Option<u8>) { /* .. */ }
 ```
 
 URIs to `person` can be created as follows:
@@ -467,49 +467,49 @@ URIs to `person` can be created as follows:
 ```rust
 # #[macro_use] extern crate rocket;
 
-# #[get("/person/<name>?<age>")]
-# fn person(name: String, age: Option<u8>) { /* .. */ }
+# #[get("/<id>/<name>?<age>")]
+# fn person(id: Option<usize>, name: String, age: Option<u8>) { /* .. */ }
 
 // with unnamed parameters, in route path declaration order
-let mike = uri!(person: "Mike Smith", 28);
-assert_eq!(mike.to_string(), "/person/Mike%20Smith?age=28");
+let mike = uri!(person: 101, "Mike Smith", Some(28));
+assert_eq!(mike.to_string(), "/101/Mike%20Smith?age=28");
 
 // with named parameters, order irrelevant
-let mike = uri!(person: name = "Mike", age = 28);
-let mike = uri!(person: age = 28, name = "Mike");
-assert_eq!(mike.to_string(), "/person/Mike?age=28");
+let mike = uri!(person: name = "Mike", id = 101, age = Some(28));
+assert_eq!(mike.to_string(), "/101/Mike?age=28");
+let mike = uri!(person: id = 101, age = Some(28), name = "Mike");
+assert_eq!(mike.to_string(), "/101/Mike?age=28");
 
 // with a specific mount-point
-let mike = uri!("/api", person: name = "Mike", age = 28);
-assert_eq!(mike.to_string(), "/api/person/Mike?age=28");
+let mike = uri!("/api", person: id = 101, name = "Mike", age = Some(28));
+assert_eq!(mike.to_string(), "/api/101/Mike?age=28");
 
 // with optional (defaultable) query parameters ignored
-let mike = uri!(person: "Mike", _);
-let mike = uri!(person: name = "Mike", age = _);
-assert_eq!(mike.to_string(), "/person/Mike");
+let mike = uri!(person: 101, "Mike", _);
+assert_eq!(mike.to_string(), "/101/Mike");
+let mike = uri!(person: id = 101, name = "Mike", age = _);
+assert_eq!(mike.to_string(), "/101/Mike");
 ```
 
 Rocket informs you of any mismatched parameters at compile-time:
 
 ```rust,ignore
-error: person route uri expects 2 parameters but 1 was supplied
- --> examples/uri/src/main.rs:9:29
+error: `person` route uri expects 3 parameters but 1 was supplied
+ --> examples/uri/main.rs:7:26
   |
-9 |     uri!(person: "Mike Smith");
-  |                  ^^^^^^^^^^^^
+7 |     let x = uri!(person: "Mike Smith");
+  |                          ^^^^^^^^^^^^
   |
-  = note: expected parameters: name: String, age: Option<u8>
+  = note: expected parameters: id: Option <usize>, name: String, age: Option <u8>
 ```
 
 Rocket also informs you of any type errors at compile-time:
 
 ```rust,ignore
-error: the trait bound u8: FromUriParam<Query, &str> is not satisfied
- --> examples/uri/src/main.rs:9:35
+ --> examples/uri/src/main.rs:7:31
   |
-9 |     uri!(person: age = "10", name = "Mike");
-  |                        ^^^^ FromUriParam<Query, &str> is not implemented for u8
-  |
+7 |     let x = uri!(person: id = "10", name = "Mike Smith", age = Some(10));
+  |                               ^^^^ `FromUriParam<Path, &str>` is not implemented for `usize`
 ```
 
 We recommend that you use `uri!` exclusively when constructing URIs to your
@@ -590,6 +590,25 @@ _not_ valid in the path part. By differentiating in the type system, both of
 these conditions can be enforced appropriately through distinct implementations
 of `FromUriParam<Path>` and `FromUriParam<Query>`.
 
+This division has an effect on how the `uri!` macro can be invoked. In query
+parts, for a route type of `Option<T>`, you _must_ supply a type of `Option`,
+`Result`, or an ignored `_` to the `uri!` invocation. By contrast, you _cannot_
+supply such a type in the path part. This ensures that a valid URI is _always_
+generated.
+
+```rust
+# #[macro_use] extern crate rocket;
+
+# #[get("/<id>/<name>?<age>")]
+# fn person(id: Option<usize>, name: String, age: Option<u8>) { /* .. */ }
+
+/// Note that `id` is `Option<usize>` in the route, but `id` in `uri!` _cannot_
+/// be an `Option`. `age`, on the other hand, _must_ be an `Option` (or `Result`
+/// or `_`) as its in the query part and is allowed to be ignored.
+let mike = uri!(person: id = 101, name = "Mike", age = Some(28));
+assert_eq!(mike.to_string(), "/101/Mike?age=28");
+```
+
 ### Conversions
 
 [`FromUriParam`] is used to perform a conversion for each value passed to `uri!`
@@ -612,16 +631,21 @@ impl<'a, P: UriPart> FromUriParam<P, &'a str> for String {
 
 Other conversions to be aware of are:
 
+  * `&T` to `T`
+  * `&mut T` to `T`
   * `&str` to `RawStr`
   * `String` to `&str`
   * `String` to `RawStr`
-  * `T` to `Option<T>`
-  * `T` to `Result<T, E>`
-  * `T` to `Form<T>`
   * `&str` to `&Path`
   * `&str` to `PathBuf`
+  * `T` to `Form<T>`
 
-Conversions _nest_. For instance, a value of type `T` can be supplied when a
+The following conversions only apply to path parts:
+
+  * `T` to `Option<T>`
+  * `T` to `Result<T, E>`
+
+Conversions _nest_. For instance, a value of type `&T` can be supplied when a
 value of type `Option<Form<T>>` is expected:
 
 ```rust
@@ -636,7 +660,8 @@ value of type `Option<Form<T>>` is expected:
 #[get("/person/<id>?<details..>")]
 fn person(id: usize, details: Option<Form<UserDetails>>) { /* .. */ }
 
-uri!(person: id = 100, details = UserDetails { age: Some(20), nickname: "Bob".into() });
+let details = UserDetails { age: Some(20), nickname: "Bob".into() };
+uri!(person: id = 100, details = Some(&details) );
 ```
 
 See the [`FromUriParam`] documentation for further details.

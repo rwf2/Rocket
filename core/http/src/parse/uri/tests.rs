@@ -37,6 +37,19 @@ macro_rules! assert_no_parse {
     ($($from:expr),+,) => (assert_no_parse!($($from),+))
 }
 
+macro_rules! assert_parse {
+    ($($from:expr),+) => (
+        $(
+            if let Err(e) = from_str($from) {
+                println!("{:?} failed to parse", $from);
+                panic!("{}", e);
+            }
+        )+
+    );
+
+    ($($from:expr),+,) => (assert_parse!($($from),+))
+}
+
 macro_rules! assert_displays_eq {
     ($($string:expr),+) => (
         $(
@@ -90,6 +103,25 @@ fn bad_parses() {
 }
 
 #[test]
+fn test_parse_issue_924_samples() {
+    assert_parse!("/path?param={value}",
+        "/path/?param={value}",
+        "/some/path/?param={forgot-to-replace-placeholder}",
+        "/path?param={value}&onemore={value}",
+        "/some/path/?tags=[]", "/some/path/?tags=[rocket,is,perfect]",
+        "/some/path/?tags=[rocket|is\\perfect^`]&users={arenot}",
+        "/rocket/@user/",
+        "/rocket/@user/?tags=[rocket,%F0%9F%98%8B]",
+        "/rocket/?username=@sergio&tags=[rocket,%F0%9F%98%8B]",
+        "/rocket/?Key+With+Spaces=value+too",
+        "/rocket/?Key+With+\'",
+        "/rocket/?query=%3E5",
+    );
+
+    assert_no_parse!("/rocket/?query=>5", "/?#foo");
+}
+
+#[test]
 fn single_byte() {
     assert_parse_eq!(
         "*" => Uri::Asterisk,
@@ -116,6 +148,7 @@ fn origin() {
         "/hi%20there?a=b&c=d" => uri_origin("/hi%20there", Some("a=b&c=d")),
         "/c/d/fa/b/c?abc" => uri_origin("/c/d/fa/b/c", Some("abc")),
         "/xn--ls8h?emoji=poop" => uri_origin("/xn--ls8h", Some("emoji=poop")),
+        "/?t=[rocket|is\\here^`]&{ok}" => uri_origin("/", Some("t=[rocket|is\\here^`]&{ok}")),
     );
 }
 

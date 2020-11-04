@@ -65,3 +65,17 @@ fn from_form_value_renames() {
     assert_parse!(":book", ":BOOK", ":bOOk", ":booK" => Foo::Book);
     assert_no_parse!("book", "bar" => Foo);
 }
+
+#[test]
+fn from_form_value_raw() {
+    #[allow(non_camel_case_types)]
+    #[derive(Debug, FromFormValue)]
+    enum Keyword {
+        r#type,
+        this,
+    }
+
+    assert_parse!("type", "tYpE" => Keyword::r#type);
+    assert_parse!("this" => Keyword::this);
+    assert_no_parse!("r#type" => Keyword);
+}

@@ -28,10 +28,21 @@ use crate::uri::encoding::{percent_encode, DEFAULT_ENCODE_SET};
 /// ## Parsing
 ///
 /// The `Uri` type implements a full, zero-allocation, zero-copy [RFC 7230]
-/// compliant parser. To parse an `&str` into a `Uri`, use the [`Uri::parse()`]
-/// method. Alternatively, you may also use the `TryFrom<&str>` and
-/// `TryFrom<String>` trait implementation. To inspect the parsed type, match on
-/// the resulting `enum` and use the methods of the internal structure.
+/// compliant "request target" parser with limited liberties for real-world
+/// deviations. In particular, the parser deviates as follows:
+///
+///   * It accepts `%` characters without two trailing hex-digits unless it is
+///     the only character in the URI.
+///
+///   * It accepts the following additional unencoded characters in query parts,
+///     to match real-world browser behavior:
+///
+///     `{`, `}`, `[`,  `]`, `\`,  `^`,  <code>&#96;</code>, `|`
+///
+/// To parse an `&str` into a `Uri`, use [`Uri::parse()`]. Alternatively, you
+/// may also use the `TryFrom<&str>` and `TryFrom<String>` trait implementation.
+/// To inspect the parsed type, match on the resulting `enum` and use the
+/// methods of the internal structure.
 ///
 /// [RFC 7230]: https://tools.ietf.org/html/rfc7230
 ///

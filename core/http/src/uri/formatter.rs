@@ -458,7 +458,10 @@ impl UriArguments<'_> {
                     }
                 }
 
-                Some(string.into())
+                match string.is_empty() {
+                    false => Some(string.into()),
+                    true => None,
+                }
             }
         });
 

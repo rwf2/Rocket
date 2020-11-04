@@ -343,7 +343,9 @@ impl<'a> Origin<'a> {
     #[inline]
     pub fn map_path<F: FnOnce(&str) -> String>(&self, f: F) -> Option<Self> {
         let path = f(self.path());
-        if !path.starts_with('/') || !path.bytes().all(|b| crate::parse::uri::is_pchar(&b)) {
+        if !path.starts_with('/')
+            || !path.bytes().all(|b| crate::parse::uri::tables::is_pchar(&b))
+        {
             return None;
         }
 

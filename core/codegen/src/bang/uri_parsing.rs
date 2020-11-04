@@ -8,6 +8,7 @@ use crate::syn::punctuated::Punctuated;
 
 use crate::http::{uri::Origin, ext::IntoOwned};
 use crate::proc_macro2::{TokenStream, Span};
+use crate::syn_ext::NameSource;
 
 // TODO(diag): Use 'Diagnostic' in place of syn::Error.
 
@@ -20,7 +21,7 @@ pub enum ArgExpr {
 #[derive(Debug)]
 pub enum Arg {
     Unnamed(ArgExpr),
-    Named(Ident, Token![=], ArgExpr),
+    Named(NameSource, Token![=], ArgExpr),
 }
 
 #[derive(Debug)]
@@ -51,7 +52,7 @@ pub enum Validation<'a> {
     // Number expected, what we actually got.
     Unnamed(usize, usize),
     // (Missing, Extra, Duplicate)
-    Named(Vec<&'a Ident>, Vec<&'a Ident>, Vec<&'a Ident>),
+    Named(Vec<NameSource>, Vec<&'a Ident>, Vec<&'a Ident>),
     // Everything is okay; here are the expressions in the route decl order.
     Ok(Vec<&'a ArgExpr>)
 }
@@ -94,7 +95,7 @@ impl Parse for Arg {
             let ident = input.parse::<Ident>()?;
             let eq_token = input.parse::<Token![=]>()?;
             let expr = input.parse::<ArgExpr>()?;
-            Ok(Arg::Named(ident, eq_token, expr))
+            Ok(Arg::Named(ident.into(), eq_token, expr))
         } else {
             let expr = input.parse::<ArgExpr>()?;
             Ok(Arg::Unnamed(expr))
@@ -223,16 +224,16 @@ impl InternalUriParams {
                 else { Validation::Ok(args.unnamed().unwrap().collect()) }
             },
             Args::Named(_) => {
-                let mut params: IndexMap<&Ident, Option<&ArgExpr>> = self.fn_args.iter()
-                    .map(|FnArg { ident, .. }| (ident, None))
+                let mut params: IndexMap<NameSource, Option<&ArgExpr>> = self.fn_args.iter()
+                    .map(|FnArg { ident, .. }| (ident.clone().into(), None))
                     .collect();
 
                 let (mut extra, mut dup) = (vec![], vec![]);
-                for (ident, expr) in args.named().unwrap() {
-                    match params.get_mut(ident) {
-                        Some(ref entry) if entry.is_some() => dup.push(ident),
+                for (name, expr) in args.named().unwrap() {
+                    match params.get_mut(name) {
+                        Some(ref entry) if entry.is_some() => dup.push(name.ident()),
                         Some(entry) => *entry = Some(expr),
-                        None => extra.push(ident),
+                        None => extra.push(name.ident()),
                     }
                 }
 
@@ -279,9 +280,9 @@ impl Arg {
         }
     }
 
-    fn named(&self) -> (&Ident, &ArgExpr) {
+    fn named(&self) -> (&NameSource, &ArgExpr) {
         match self {
-            Arg::Named(ident, _, expr) => (ident, expr),
+            Arg::Named(name, _, expr) => (name, expr),
             _ => panic!("Called Arg::named() on an Arg::Unnamed!"),
         }
     }
@@ -294,7 +295,7 @@ impl Args {
         }
     }
 
-    fn named(&self) -> Option<impl Iterator<Item = (&Ident, &ArgExpr)>> {
+    fn named(&self) -> Option<impl Iterator<Item = (&NameSource, &ArgExpr)>> {
         match self {
             Args::Named(args) => Some(args.iter().map(|arg| arg.named())),
             _ => None
@@ -338,7 +339,10 @@ impl ToTokens for Arg {
     fn to_tokens(&self, tokens: &mut TokenStream) {
         match self {
             Arg::Unnamed(e) => e.to_tokens(tokens),
-            Arg::Named(ident, eq, expr) => tokens.extend(quote!(#ident #eq #expr)),
+            Arg::Named(name, eq, expr) => {
+                let ident = name.ident();
+                tokens.extend(quote!(#ident #eq #expr))
+            }
         }
     }
 }

@@ -75,16 +75,18 @@ use crate::uri::{Uri, UriPart, Path, Query, Formatter};
 /// # fn get_item(id: i32, track: Option<String>) { /* .. */ }
 /// #
 /// // With unnamed parameters.
-/// uri!(get_item: 100, "inbound");
+/// uri!(get_item: 100, Some("inbound"));
 ///
 /// // With named parameters.
-/// uri!(get_item: id = 100, track = "inbound");
-/// uri!(get_item: track = "inbound", id = 100);
+/// uri!(get_item: id = 100, track = Some("inbound"));
+/// uri!(get_item: track = Some("inbound"), id = 100);
 ///
 /// // Ignoring `track`.
 /// uri!(get_item: 100, _);
+/// uri!(get_item: 100, None as Option<String>);
 /// uri!(get_item: id = 100, track = _);
 /// uri!(get_item: track = _, id = 100);
+/// uri!(get_item: id = 100, track = None as Option<&str>);
 /// ```
 ///
 /// After verifying parameters and their types, Rocket will generate code
@@ -440,8 +442,8 @@ impl<T: UriDisplay<Query>, E> UriDisplay<Query> for Result<T, E> {
 /// uri!(get_item: id = 100, track = _);
 ///
 /// // Provide a value for `track`.
-/// uri!(get_item: 100, 4);
-/// uri!(get_item: id = 100, track = 4);
+/// uri!(get_item: 100, Some(4));
+/// uri!(get_item: id = 100, track = Some(4));
 /// ```
 ///
 /// # Implementations
@@ -514,16 +516,16 @@ mod uri_display_tests {
         assert_display!(<Path, Option<&str>> &"hi there", "hi%20there");
         assert_display!(<Path, Option<isize>> &10, "10");
         assert_display!(<Path, Option<u8>> &10, "10");
-        assert_display!(<Query, Option<&str>> &"hi there", "hi%20there");
-        assert_display!(<Query, Option<isize>> &10, "10");
-        assert_display!(<Query, Option<u8>> &10, "10");
+        assert_display!(<Query, Option<&str>> Some(&"hi there"), "hi%20there");
+        assert_display!(<Query, Option<isize>> Some(&10), "10");
+        assert_display!(<Query, Option<u8>> Some(&10), "10");
 
         assert_display!(<Path, Result<&str, usize>> &"hi there", "hi%20there");
         assert_display!(<Path, Result<isize, &str>> &10, "10");
         assert_display!(<Path, Result<u8, String>> &10, "10");
-        assert_display!(<Query, Result<&str, usize>> &"hi there", "hi%20there");
-        assert_display!(<Query, Result<isize, &str>> &10, "10");
-        assert_display!(<Query, Result<u8, String>> &10, "10");
+        assert_display!(<Query, Result<&str, usize>> Ok(&"hi there"), "hi%20there");
+        assert_display!(<Query, Result<isize, &str>> Ok(&10), "10");
+        assert_display!(<Query, Result<u8, String>> Ok(&10), "10");
     }
 
     #[test]
@@ -562,11 +564,11 @@ mod uri_display_tests {
 
     #[test]
     fn uri_display_encoding_wrapped() {
-        assert_display!(<Query, Option<Wrapper<&str>>> &"hi there", "hi%20there");
-        assert_display!(<Query, Option<Wrapper<&str>>> "hi there", "hi%20there");
+        assert_display!(<Query, Option<Wrapper<&str>>> Some(&"hi there"), "hi%20there");
+        assert_display!(<Query, Option<Wrapper<&str>>> Some("hi there"), "hi%20there");
 
-        assert_display!(<Query, Option<Wrapper<isize>>> 10, "10");
-        assert_display!(<Query, Option<Wrapper<usize>>> 18, "18");
+        assert_display!(<Query, Option<Wrapper<isize>>> Some(10), "10");
+        assert_display!(<Query, Option<Wrapper<usize>>> Some(18), "18");
         assert_display!(<Path, Option<Wrapper<usize>>> 238, "238");
 
         assert_display!(<Path, Result<Option<Wrapper<usize>>, usize>> 238, "238");

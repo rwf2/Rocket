@@ -7,7 +7,7 @@ use devise::ext::{SpanDiagnosticExt, TypeExt};
 use indexmap::IndexSet;
 
 use crate::proc_macro_ext::{Diagnostics, StringLit};
-use crate::syn_ext::IdentExt;
+use crate::syn_ext::{IdentExt, NameSource};
 use crate::proc_macro2::{TokenStream, Span};
 use crate::http_codegen::{Method, MediaType, RoutePath, DataSegment, Optional};
 use crate::attribute::segments::{Source, Kind, Segment};
@@ -45,10 +45,10 @@ struct Route {
     function: syn::ItemFn,
     /// The non-static parameters declared in the route segments.
     segments: IndexSet<Segment>,
-    /// The parsed inputs to the user's function. The first ident is the ident
-    /// as the user wrote it, while the second ident is the identifier that
-    /// should be used during code generation, the `rocket_ident`.
-    inputs: Vec<(syn::Ident, syn::Ident, syn::Type)>,
+    /// The parsed inputs to the user's function. The name is the param as the
+    /// user wrote it, while the ident is the identifier that should be used
+    /// during code generation, the `rocket_ident`.
+    inputs: Vec<(NameSource, syn::Ident, syn::Type)>,
 }
 
 fn parse_route(attr: RouteAttribute, function: syn::ItemFn) -> Result<Route> {
@@ -110,7 +110,7 @@ fn parse_route(attr: RouteAttribute, function: syn::ItemFn) -> Result<Route> {
         };
 
         let rocket_ident = ident.prepend(ROCKET_PARAM_PREFIX);
-        inputs.push((ident.clone(), rocket_ident, ty.with_stripped_lifetimes()));
+        inputs.push((ident.clone().into(), rocket_ident, ty.with_stripped_lifetimes()));
         fn_segments.insert(ident.into());
     }
 
@@ -207,10 +207,9 @@ fn query_exprs(route: &Route) -> Option<TokenStream> {
     let query_segments = route.attribute.path.query.as_ref()?;
     let (mut decls, mut matchers, mut builders) = (vec![], vec![], vec![]);
     for segment in query_segments {
-        let name = &segment.name;
         let (ident, ty, span) = if segment.kind != Kind::Static {
             let (ident, ty) = route.inputs.iter()
-                .find(|(ident, _, _)| ident == &segment.name)
+                .find(|(name, _, _)| name == &segment.name)
                 .map(|(_, rocket_ident, ty)| (rocket_ident, ty))
                 .unwrap();
 
@@ -231,6 +230,8 @@ fn query_exprs(route: &Route) -> Option<TokenStream> {
             },
             Kind::Static => quote!()
         };
+
+        let name = segment.name.name();
         let matcher = match segment.kind {
             Kind::Single => {
                 let field_name = syn::Ident::new(name, segment.span);
@@ -332,8 +333,9 @@ fn generate_internal_uri_macro(route: &Route) -> TokenStream {
         .filter(|seg| seg.source == Source::Path || seg.source == Source::Query)
         .filter(|seg| seg.kind != Kind::Static)
         .map(|seg| &seg.name)
-        .map(|name| route.inputs.iter().find(|(ident, ..)| ident == name).unwrap())
-        .map(|(ident, _, ty)| quote!(#ident: #ty));
+        .map(|seg_name| route.inputs.iter().find(|(in_name, ..)| in_name == seg_name).unwrap())
+        .map(|(name, _, ty)| (name.ident(), ty))
+        .map(|(ident, ty)| quote!(#ident: #ty));
 
     let mut hasher = DefaultHasher::new();
     route.function.sig.ident.hash(&mut hasher);
@@ -390,8 +392,8 @@ fn codegen_route(route: Route) -> Result<TokenStream> {
     let mut data_stmt = None;
     let mut req_guard_definitions = vec![];
     let mut parameter_definitions = vec![];
-    for (ident, rocket_ident, ty) in &route.inputs {
-        let fn_segment: Segment = ident.into();
+    for (name, rocket_ident, ty) in &route.inputs {
+        let fn_segment: Segment = name.ident().into();
         match route.segments.get(&fn_segment) {
             Some(seg) if seg.source == Source::Path => {
                 parameter_definitions.push(param_expr(seg, rocket_ident, &ty));

@@ -6,6 +6,7 @@ use crate::proc_macro2::Span;
 use crate::http::uri::{self, UriPart};
 use crate::http::route::RouteSegment;
 use crate::proc_macro_ext::{Diagnostics, StringLit, PResult, DResult};
+use crate::syn_ext::NameSource;
 
 pub use crate::http::route::{Error, Kind};
 
@@ -14,7 +15,7 @@ pub struct Segment {
     pub span: Span,
     pub kind: Kind,
     pub source: Source,
-    pub name: String,
+    pub name: NameSource,
     pub index: Option<usize>,
 }
 
@@ -35,7 +36,7 @@ impl Segment {
         };
 
         let (kind, index) = (segment.kind, segment.index);
-        Segment { span, kind, source, index, name: segment.name.into_owned() }
+        Segment { span, kind, source, index, name: NameSource::new(&segment.name, span) }
     }
 
     pub fn is_wild(&self) -> bool {
@@ -56,7 +57,7 @@ impl From<&syn::Ident> for Segment {
             kind: Kind::Static,
             source: Source::Unknown,
             span: ident.span(),
-            name: ident.to_string(),
+            name: ident.clone().into(),
             index: None,
         }
     }

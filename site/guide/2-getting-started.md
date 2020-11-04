@@ -69,18 +69,20 @@ of the guide. In short, it creates an `index` route, _mounts_ the route at the
 run`. You should see the following:
 
 ```sh
-🔧  Configured for development.
-    => address: localhost
+> cargo run
+🔧 Configured for debug.
+    => address: 127.0.0.1
     => port: 8000
-    => log: normal
-    => workers: [logical cores * 2]
-    => secret key: generated
+    => workers: 64
+    => log level: normal
+    => secret key: [zero]
     => limits: forms = 32KiB
+    => cli colors: true
     => keep-alive: 5s
     => tls: disabled
-🛰  Mounting '/':
+🛰  Mounting /:
     => GET / (index)
-🚀  Rocket has launched from http://localhost:8000
+🚀 Rocket has launched from http://127.0.0.1:8000
 ```
 
 Visit `http://localhost:8000` to see your first Rocket application in action!

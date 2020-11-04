@@ -32,6 +32,23 @@ mod templates_tests {
             .mount("/", routes![template_check, is_reloading])
     }
 
+    #[test]
+    fn test_callback_error() {
+        use rocket::{local::blocking::Client, error::ErrorKind::FailedFairings};
+
+        let rocket = rocket::ignite().attach(Template::try_custom(|_| {
+            Err("error reloading templates!".into())
+        }));
+
+        match Client::untracked(rocket) {
+            Err(e) => match e.kind() {
+                FailedFairings(failures) => assert_eq!(failures[0], "Templates"),
+                _ => panic!("Wrong kind of launch error"),
+            }
+            _ => panic!("Wrong kind of error"),
+        }
+    }
+
     #[cfg(feature = "tera_templates")]
     mod tera_tests {
         use super::*;

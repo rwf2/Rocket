@@ -367,41 +367,64 @@ fn optionals(
 
 #[test]
 fn test_optional_uri_parameters() {
+    let mut some_10 = Some(10);
+    let mut third = Third { one: "hi there".into(), two: "a b".into() };
     assert_uri_eq! {
         uri!(optionals:
             foo = 10,
             bar = &"hi there",
-            q1 = 10,
-            rest = Third { one: "hi there".into(), two: "a b".into() }
+            q1 = Some(10),
+            rest = Some(Third { one: "hi there".into(), two: "a b".into() })
         ) => "/10/hi%20there?q1=10&one=hi%20there&two=a%20b",
 
         uri!(optionals:
             foo = &10,
             bar = &"hi there",
-            q1 = &10,
-            rest = &Third { one: "hi there".into(), two: "a b".into() }
+            q1 = Some(&10),
+            rest = Some(&third)
         ) => "/10/hi%20there?q1=10&one=hi%20there&two=a%20b",
 
         uri!(optionals:
             foo = &mut 10,
             bar = &mut "hi there",
-            q1 = &mut 10,
-            rest = &mut Third { one: "hi there".into(), two: "a b".into() }
+            q1 = some_10.as_mut(),
+            rest = Some(&mut third)
         ) => "/10/hi%20there?q1=10&one=hi%20there&two=a%20b",
 
         uri!(optionals:
             foo = 10,
             bar = &"hi there",
             q1 = _,
-            rest = Third { one: "hi there".into(), two: "a b".into() }
+            rest = Some(Third { one: "hi there".into(), two: "a b".into() })
         ) => "/10/hi%20there?one=hi%20there&two=a%20b",
 
         uri!(optionals:
             foo = 10,
             bar = &"hi there",
-            q1 = 10,
+            q1 = Some(10),
             rest = _
         ) => "/10/hi%20there?q1=10",
+
+        uri!(optionals:
+            foo = 10,
+            bar = &"hi there",
+            q1 = Err("foo".into()) as Result<usize, &RawStr>,
+            rest = _
+        ) => "/10/hi%20there",
+
+        uri!(optionals:
+            foo = 10,
+            bar = &"hi there",
+            q1 = None as Option<usize>,
+            rest = _
+        ) => "/10/hi%20there",
+
+        uri!(optionals:
+            foo = 10,
+            bar = &"hi there",
+            q1 = _,
+            rest = None as Option<Third<'_>>,
+        ) => "/10/hi%20there",
 
         uri!(optionals:
             foo = 10,

@@ -1,6 +1,6 @@
 mod parser;
 mod error;
-mod tables;
+pub(crate) mod tables;
 
 #[cfg(test)] mod tests;
 
@@ -8,7 +8,6 @@ use crate::uri::{Uri, Origin, Absolute, Authority};
 
 use self::parser::{uri, origin, authority_only, absolute_only, rocket_route_origin};
 
-pub use self::tables::{is_pchar, PATH_SET};
 pub use self::error::Error;
 
 type RawInput<'a> = pear::input::Pear<pear::input::Cursor<&'a [u8]>>;

@@ -317,3 +317,14 @@ fn form_errors() {
     let form: Result<WhoopsForm, _> = strict("complete=true");
     assert_eq!(form, Err(FormParseError::Missing("other".into())));
 }
+
+#[derive(Debug, PartialEq, FromForm)]
+struct RawIdentForm {
+    r#type: String,
+}
+
+#[test]
+fn raw_ident_form() {
+    let form: Result<RawIdentForm, _> = strict("type=a");
+    assert_eq!(form, Ok(RawIdentForm { r#type: "a".into() }));
+}

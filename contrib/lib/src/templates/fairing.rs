@@ -1,9 +1,13 @@
+use std::error::Error;
+
 use crate::templates::{DEFAULT_TEMPLATE_DIR, Context, Engines};
 
 use rocket::Rocket;
 use rocket::fairing::{Fairing, Info, Kind};
 
 pub(crate) use self::context::ContextManager;
+
+type Callback = Box<dyn Fn(&mut Engines) -> Result<(), Box<dyn Error>>+ Send + Sync + 'static>;
 
 #[cfg(not(debug_assertions))]
 mod context {
@@ -37,7 +41,7 @@ mod context {
 
     use notify::{raw_watcher, RawEvent, RecommendedWatcher, RecursiveMode, Watcher};
 
-    use crate::templates::{Context, Engines};
+    use super::{Callback, Context};
 
     /// Wraps a Context. With `cfg(debug_assertions)` active, this structure
     /// additionally provides a method to reload the context at runtime.
@@ -88,7 +92,7 @@ mod context {
         /// have been changes since the last reload, all templates are
         /// reinitialized from disk and the user's customization callback is run
         /// again.
-        pub fn reload_if_needed<F: Fn(&mut Engines)>(&self, custom_callback: F) {
+        pub fn reload_if_needed(&self, callback: &Callback) {
             self.watcher.as_ref().map(|w| {
                 let rx_lock = w.lock().expect("receive queue lock");
                 let mut changed = false;
@@ -98,14 +102,22 @@ mod context {
 
                 if changed {
                     let span = info_span!("Change detected: reloading templates.");
+                    let _entered = span.enter();
                     let mut ctxt = self.context_mut();
                     if let Some(mut new_ctxt) = Context::initialize(ctxt.root.clone()) {
-                        custom_callback(&mut new_ctxt.engines);
-                        *ctxt = new_ctxt;
-                        info!(parent: &span, "reloaded!");
+                        match callback(&mut new_ctxt.engines) {
+                            Ok(()) => {
+                                *ctxt = new_ctxt;
+                                debug!("reloaded!");
+                            }
+                            Err(error) => {
+                                warn!(%error, "The template customization callback returned an error");
+                                warn!("The existing templates will remain active.");
+                            }
+                        }
                     } else {
-                        warn!(parent: &span, "An error occurred while reloading templates.");
-                        warn!(parent: &span, "The previous templates will remain active.");
+                        warn!("An error occurred while reloading templates.");
+                        warn!("The existing templates will remain active.");
                     };
                 }
             });
@@ -121,7 +133,7 @@ pub struct TemplateFairing {
     /// The user-provided customization callback, allowing the use of
     /// functionality specific to individual template engines. In debug mode,
     /// this callback might be run multiple times as templates are reloaded.
-    pub custom_callback: Box<dyn Fn(&mut Engines) + Send + Sync + 'static>,
+    pub callback: Callback,
 }
 
 #[rocket::async_trait]
@@ -162,11 +174,18 @@ impl Fairing for TemplateFairing {
                 use crate::templates::Engines;
 
                 let span = info_span!("templating", "{}{}", Paint::emoji("📐 "), Paint::magenta("Templating:"));
-                info!(parent: &span, "directory: {}", Paint::white(&root));
-                info!(parent: &span, "engines: {:?}", Paint::white(Engines::ENABLED_EXTENSIONS));
-
-                (self.custom_callback)(&mut ctxt.engines);
-                Ok(rocket.manage(ContextManager::new(ctxt)))
+                let _enter = span.enter();
+                match (self.callback)(&mut ctxt.engines) {
+                    Ok(()) => {
+                        info!(directory = %Paint::white(&root));
+                        info!(engines = ?Paint::white(Engines::ENABLED_EXTENSIONS));
+                        Ok(rocket.manage(ContextManager::new(ctxt)))
+                    }
+                    Err(error) => {
+                        error!(%error, "The template customization callback returned an error");
+                        Err(rocket)
+                    }
+                }
             }
             None => Err(rocket),
         }
@@ -177,6 +196,6 @@ impl Fairing for TemplateFairing {
         let cm = req.managed_state::<ContextManager>()
             .expect("Template ContextManager registered in on_attach");
 
-        cm.reload_if_needed(&*self.custom_callback);
+        cm.reload_if_needed(&self.callback);
     }
 }

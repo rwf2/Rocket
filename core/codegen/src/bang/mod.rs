@@ -45,9 +45,18 @@ pub fn uri_macro(input: proc_macro::TokenStream) -> TokenStream {
 }
 
 pub fn uri_internal_macro(input: proc_macro::TokenStream) -> TokenStream {
-    let tokens = uri::_uri_internal_macro(input.into())
-        .unwrap_or_else(|diag| diag.emit_as_expr_tokens());
-    tokens
+    // FIXME: Ideally we would generate an `Origin::dummy()` so that we don't
+    // assist in propoagate further errors. Alas, we can't set the span to the
+    // invocation of `uri!` without access to `span.parent()`, and
+    // `Span::call_site()` here points to the `#[route]`, immediate caller,
+    // generate a rather confusing error message when there's a type-mismatch.
+    // uri::_uri_internal_macro(input.into())
+    //     .unwrap_or_else(|diag| diag.emit_as_expr_tokens_or(quote_spanned! { span =>
+    //         rocket::http::uri::Origin::dummy()
+    //     }))
+
+    uri::_uri_internal_macro(input.into())
+        .unwrap_or_else(|diag| diag.emit_as_expr_tokens())
 }
 
 pub fn guide_tests_internal(input: proc_macro::TokenStream) -> TokenStream {

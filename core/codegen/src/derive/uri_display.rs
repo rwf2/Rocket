@@ -57,10 +57,11 @@ pub fn derive_uri_display_query(input: proc_macro::TokenStream) -> TokenStream {
             let span = field.span().into();
             let accessor = field.accessor();
             let tokens = if let Some(ref ident) = field.ident {
-                let name = Form::from_attrs("form", &field.attrs)
+                let name_source = Form::from_attrs("form", &field.attrs)
                     .map(|result| result.map(|form| form.field.name))
-                    .unwrap_or_else(|| Ok(ident.to_string()))?;
+                    .unwrap_or_else(|| Ok(ident.clone().into()))?;
 
+                let name = name_source.name();
                 quote_spanned!(span => f.write_named_value(#name, &#accessor)?;)
             } else {
                 quote_spanned!(span => f.write_value(&#accessor)?;)

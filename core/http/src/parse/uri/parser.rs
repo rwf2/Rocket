@@ -3,7 +3,7 @@ use pear::input::{Extent, Rewind};
 use pear::macros::{parser, switch, parse_current_marker, parse_error, parse_try};
 
 use crate::uri::{Uri, Origin, Authority, Absolute, Host};
-use crate::parse::uri::tables::{is_reg_name_char, is_pchar, is_pchar_or_rchar};
+use crate::parse::uri::tables::{is_reg_name_char, is_pchar, is_qchar, is_rchar};
 use crate::parse::uri::RawInput;
 
 type Result<'a, T> = pear::input::Result<T, RawInput<'a>>;
@@ -15,12 +15,14 @@ pub fn uri<'a>(input: &mut RawInput<'a>) -> Result<'a, Uri<'a>> {
         1 => switch! {
             eat(b'*') => Uri::Asterisk,
             eat(b'/') => Uri::Origin(Origin::new::<_, &str>("/", None)),
+            eat(b'%') => parse_error!("'%' is not a valid URI")?,
             _ => unsafe {
                 // the `is_reg_name_char` guarantees ASCII
                 let host = Host::Raw(take_n_if(1, is_reg_name_char)?);
                 Uri::Authority(Authority::raw(input.start.into(), None, host, None))
             }
         },
+        // NOTE: We accept '%' even when it isn't followed by two hex digits.
         _ => switch! {
             peek(b'/') => Uri::Origin(origin()?),
             _ => absolute_or_authority()?
@@ -30,30 +32,31 @@ pub fn uri<'a>(input: &mut RawInput<'a>) -> Result<'a, Uri<'a>> {
 
 #[parser]
 pub fn origin<'a>(input: &mut RawInput<'a>) -> Result<'a, Origin<'a>> {
-    (peek(b'/')?, path_and_query(is_pchar)?).1
+    (peek(b'/')?, path_and_query(is_pchar, is_qchar)?).1
 }
 
 #[parser]
 pub fn rocket_route_origin<'a>(input: &mut RawInput<'a>) -> Result<'a, Origin<'a>> {
-    (peek(b'/')?, path_and_query(is_pchar_or_rchar)?).1
+    fn is_pchar_or_rchar(c: &u8) -> bool { is_pchar(c) || is_rchar(c) }
+    fn is_qchar_or_rchar(c: &u8) -> bool { is_qchar(c) || is_rchar(c) }
+    (peek(b'/')?, path_and_query(is_pchar_or_rchar, is_qchar_or_rchar)?).1
 }
 
 #[parser]
-fn path_and_query<'a, F>(input: &mut RawInput<'a>, is_good_char: F) -> Result<'a, Origin<'a>>
-    where F: Fn(&u8) -> bool + Copy
+fn path_and_query<'a, F, Q>(
+    input: &mut RawInput<'a>,
+    is_path_char: F,
+    is_query_char: Q
+) -> Result<'a, Origin<'a>>
+    where F: Fn(&u8) -> bool + Copy, Q: Fn(&u8) -> bool + Copy
 {
-    let path = take_while(is_good_char)?;
-    // FIXME: this works on nightly but not stable! `Span` issues?
-    // let query = parse_try!(eat(b'?') => take_while(|c| is_good_char(c) || *c == b'?')?);
-    let query = switch! {
-        eat(b'?') => Some(take_while(|c| is_good_char(c) || *c == b'?')?),
-        _ => None
-    };
+    let path = take_while(is_path_char)?;
+    let query = parse_try!(eat(b'?') => take_while(is_query_char)?);
 
     if path.is_empty() && query.is_none() {
         parse_error!("expected path or query, found neither")?
     } else {
-        // We know the string is ASCII because of the `is_good_char` checks above.
+        // We know the string is ASCII because of the `is_char` checks above.
         Ok(unsafe {Origin::raw(input.start.into(), path.into(), query.map(|q| q.into())) })
     }
 }
@@ -115,10 +118,10 @@ fn absolute<'a>(
                 }
             };
 
-            let path_and_query = parse_try!(path_and_query(is_pchar));
+            let path_and_query = parse_try!(path_and_query(is_pchar, is_qchar));
             (Some(authority), path_and_query)
         },
-        eat(b':') => (None, Some(path_and_query(is_pchar)?)),
+        eat(b':') => (None, Some(path_and_query(is_pchar, is_qchar)?)),
         _ => parse_error!("expected ':' but none was found")?
     };
 

@@ -102,32 +102,50 @@ Before Rocket can dispatch requests to a route, the route needs to be _mounted_:
 #     "hello, world!"
 # }
 
-fn main() {
-    rocket::ignite().mount("/hello", routes![world]);
-}
+rocket::ignite().mount("/hello", routes![world]);
 ```
 
 The `mount` method takes as input:
 
-   1. A _base_ path to namespace a list of routes under, here, `"/hello"`.
+   1. A _base_ path to namespace a list of routes under, here, `/hello`.
    2. A list of routes via the `routes!` macro: here, `routes![world]`, with
       multiple routes: `routes![a, b, c]`.
 
 This creates a new `Rocket` instance via the `ignite` function and mounts the
-`world` route to the `"/hello"` path, making Rocket aware of the route. `GET`
-requests to `"/hello/world"` will be directed to the `world` function.
+`world` route to the `/hello` base path, making Rocket aware of the route.
+`GET` requests to `/hello/world` will be directed to the `world` function.
+
+The `mount` method, like all other builder methods on `Rocket`, can be chained
+any number of times, and routes can be reused by mount points:
+
+```rust
+# #[macro_use] extern crate rocket;
+
+# #[get("/world")]
+# fn world() -> &'static str {
+#     "hello, world!"
+# }
+
+rocket::ignite()
+    .mount("/hello", routes![world])
+    .mount("/hi", routes![world]);
+```
+
+By mounting `world` to both `/hello` and `/hi`, requests to `"/hello/world"`
+_and_ `"/hi/world"` will be directed to the `world` function.
 
 ! note: In many cases, the base path will simply be `"/"`.
 
 ## Launching
 
-Now that Rocket knows about the route, you can tell Rocket to start accepting
-requests via the `launch` method. The method starts up the server and waits for
-incoming requests. When a request arrives, Rocket finds the matching route and
-dispatches the request to the route's handler.
+Rocket begins serving requests after being _launched_, which starts a
+multi-threaded asynchronous server and dispatches requests to matching routes as
+they arrive.
 
-We typically use `#[launch]`, which generates a `main` function.
-Our complete _Hello, world!_ application thus looks like:
+There are two mechnisms by which a `Rocket` can be launched. The first and
+preferred approach is via the `#[launch]` route attribute, which generates a
+`main` function that sets up an async runtime and starts the server. With
+`#[launch]`, our complete _Hello, world!_ application looks like:
 
 ```rust
 #[macro_use] extern crate rocket;
@@ -143,41 +161,78 @@ fn rocket() -> rocket::Rocket {
 }
 ```
 
-We've imported the `rocket` crate and all of its macros into our namespace via
-`#[macro_use] extern crate rocket`. Finally, we call the `launch` method in the
-`main` function.
-
 Running the application, the console shows:
 
 ```sh
-🔧  Configured for development.
-    => address: localhost
+> cargo run
+🔧 Configured for debug.
+    => address: 127.0.0.1
     => port: 8000
-    => log: normal
-    => workers: [logical cores * 2]
-    => secret key: generated
+    => workers: 64
+    => log level: normal
+    => secret key: [zero]
     => limits: forms = 32KiB
+    => cli colors: true
     => keep-alive: 5s
     => tls: disabled
-🛰  Mounting '/hello':
+🛰  Mounting /hello:
     => GET /hello/world (world)
-🚀  Rocket has launched from http://localhost:8000
+🚀 Rocket has launched from http://127.0.0.1:8000
 ```
 
-If we visit `localhost:8000/hello/world`, we see `Hello, world!`, exactly as we
-expected.
+! tip: You can also return `_` from a `#[launch]` function!
 
-A version of this example's complete crate, ready to `cargo run`, can be found
-on [GitHub](@example/hello_world). You can find dozens of other complete
-examples, spanning all of Rocket's features, in the [GitHub examples
-directory](@example/).
+  If you find it more pleasing, `#[launch]` can infer the return type of
+  `Rocket` for you by using `_` as the return type:
+
+  `
+  #[launch] fn rocket() -> _ { /* ... */ }
+  `
+
+If we visit `http://127.0.0.1:8000/hello/world`, we see `Hello, world!`, exactly
+as we expected.
+
+! note: This and other examples are on GitHub.
+
+  A version of this example's complete crate, ready to `cargo run`, can be found
+  on [GitHub](@example/hello_world). You can find dozens of other complete
+  examples, spanning all of Rocket's features, in the [GitHub examples
+  directory](@example/).
+
+The second approach uses the `#[rocket::main]` route attribute.
+`#[rocket::main]` _also_ generates a `main` function that sets up an async
+runtime but unlike `#[launch]`, allows _you_ to start the server:
+
+```rust,no_run
+# #[macro_use] extern crate rocket;
+#
+# #[get("/world")]
+# fn world() -> &'static str {
+#     "Hello, world!"
+# }
+
+#[rocket::main]
+async fn main() {
+    rocket::ignite()
+        .mount("/hello", routes![world])
+        .launch()
+        .await;
+}
+```
+
+`#[rocket::main]` is useful when a handle to the `Future` returned by `launch()`
+is desired, or when the return value of [`launch()`] is to be inspected. The
+[errors example] for instance, inspects the return value.
+
+[`launch()`]: @api/rocket/struct.Rocket.html#method.launch
+[errors example]: @example/errors
 
 ## Futures and Async
 
-Rocket uses Rust `Future`s for concurrency. Asynchronous programming with
+Rocket uses Rust [`Future`]s for concurrency. Asynchronous programming with
 `Future`s and `async/await` allows route handlers to perform wait-heavy I/O such
-as filesystem and network access while still allowing other requests to be
-processed.  For an overview of Rust `Future`s, see [Asynchronous Programming in
+as filesystem and network access while still allowing other requests to be make
+progress. For an overview of Rust `Future`s, see [Asynchronous Programming in
 Rust](https://rust-lang.github.io/async-book/).
 
 In general, you should prefer to use async-ready libraries instead of
@@ -185,53 +240,59 @@ synchronous equivalents inside Rocket applications.
 
 `async` appears in several places in Rocket:
 
-* [Routes](../requests) and [Error Catchers](../requests#error-catchers) can be
-  `async fn`s. Inside an `async fn`, you can `.await` `Future`s from Rocket or
-  other libraries
-* Several of Rocket's traits, such as [`FromData`](../requests#body-data) and
-  [`FromRequest`](../requests#request-guards), have methods that return
-  `Future`s.
-* `Data` and `DataStream` (incoming request data) and `Response` and `Body`
-  (outgoing response data) are based on `tokio::io::AsyncRead` instead of
+* [Routes] and [Error Catchers] can be `async fn`s. Inside an `async fn`, you
+  can `.await` `Future`s from Rocket or other libraries.
+* Several of Rocket's traits, such as [`FromData`] and [`FromRequest`], have
+  methods that return `Future`s.
+* [`Data`] and [`DataStream`], incoming request data, and `Response` and `Body`,
+  outgoing response data, are based on `tokio::io::AsyncRead` instead of
   `std::io::Read`.
 
 You can find async-ready libraries on [crates.io](https://crates.io) with the
 `async` tag.
 
+[`Future`]: @std/future/trait.Future.html
+[`Data`]: @api/rocket/struct.Data.html
+[`DataStream`]: @api/rocket/data/struct.DataStream.html
+[Routes]: ../requests
+[Error Catchers]: ../requests#error-catchers
+[`FromData`]: ../requests#body-data
+[`FromRequest`]: ../requests#request-guards
+
 ! note
 
-  Rocket master uses the tokio (0.2) runtime. The runtime is started for you if
-  you use `#[launch]` or `#[rocket::main]`, but you can still `launch()` a
-  rocket instance on a custom-built `Runtime`.
+  Rocket master uses the tokio runtime. The runtime is started for you if you
+  use `#[launch]` or `#[rocket::main]`, but you can still `launch()` a Rocket
+  instance on a custom-built runtime by not using _either_ attribute.
 
-### Cooperative Multitasking
+### Multitasking
 
 Rust's `Future`s are a form of *cooperative multitasking*. In general, `Future`s
-and `async fn`s should only `.await` on other operations and never block.  Some
-common examples of blocking include locking mutexes, joining threads, or using
-non-`async` library functions (including those in `std`) that perform I/O.
+and `async fn`s should only `.await` on operations and never block.  Some common
+examples of blocking include locking non-`async` mutexes, joining threads, or
+using non-`async` library functions (including those in `std`) that perform I/O.
 
 If a `Future` or `async fn` blocks the thread, inefficient resource usage,
 stalls, or sometimes even deadlocks can occur.
 
-! note
+Sometimes there is no good `async` alternative for a library or operation. If
+necessary, you can convert a synchronous operation to an async one with
+[`tokio::task::spawn_blocking`]:
 
-  Sometimes there is no good async alternative for a library or operation. If
-  necessary, you can convert a synchronous operation to an async one with
-  `tokio::task::spawn_blocking`:
+```rust
+# #[macro_use] extern crate rocket;
+use std::io;
+use rocket::tokio::task::spawn_blocking;
+use rocket::response::Debug;
 
-  ```rust
-  # #[macro_use] extern crate rocket;
-  use std::io;
-  use rocket::tokio::task::spawn_blocking;
-  use rocket::response::Debug;
+#[get("/blocking_task")]
+async fn blocking_task() -> Result<Vec<u8>, Debug<io::Error>> {
+    // In a real app, use rocket::response::NamedFile or tokio::fs::File.
+    let vec = spawn_blocking(|| std::fs::read("data.txt")).await
+        .map_err(|e| io::Error::new(io::ErrorKind::Interrupted, e))??;
 
-  #[get("/blocking_task")]
-  async fn blocking_task() -> Result<Vec<u8>, Debug<io::Error>> {
-      // In a real app, we'd use rocket::response::NamedFile or tokio::fs::File.
-      let io_result = spawn_blocking(|| std::fs::read("data.txt")).await
-        .map_err(|join_err| io::Error::new(io::ErrorKind::Interrupted, join_err))?;
+    Ok(vec)
+}
+```
 
-      Ok(io_result?)
-  }
-  ```
+[`tokio::task::spawn_blocking`]: @tokio/task/fn.spawn_blocking.html

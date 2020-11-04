@@ -922,24 +922,34 @@ pub fn catchers(input: TokenStream) -> TokenStream {
 /// # fn person(name: String, age: Option<u8>) { }
 /// #
 /// // with unnamed parameters, in route path declaration order
-/// let mike = uri!(person: "Mike Smith", 28);
+/// let mike = uri!(person: "Mike Smith", Some(28));
 /// assert_eq!(mike.to_string(), "/person/Mike%20Smith?age=28");
 ///
 /// // with named parameters, order irrelevant
-/// let mike = uri!(person: name = "Mike", age = 28);
-/// let mike = uri!(person: age = 28, name = "Mike");
+/// let mike = uri!(person: name = "Mike", age = Some(28));
+/// let mike = uri!(person: age = Some(28), name = "Mike");
 /// assert_eq!(mike.to_string(), "/person/Mike?age=28");
 ///
 /// // with a specific mount-point
-/// let mike = uri!("/api", person: name = "Mike", age = 28);
+/// let mike = uri!("/api", person: name = "Mike", age = Some(28));
 /// assert_eq!(mike.to_string(), "/api/person/Mike?age=28");
 ///
 /// // with unnamed values ignored
 /// let mike = uri!(person: "Mike", _);
 /// assert_eq!(mike.to_string(), "/person/Mike");
 ///
+/// // with unnamed values, explicitly `None`.
+/// let option: Option<u8> = None;
+/// let mike = uri!(person: "Mike", option);
+/// assert_eq!(mike.to_string(), "/person/Mike");
+///
 /// // with named values ignored
 /// let mike = uri!(person: name = "Mike", age = _);
+/// assert_eq!(mike.to_string(), "/person/Mike");
+///
+/// // with named values, explicitly `None`
+/// let option: Option<u8> = None;
+/// let mike = uri!(person: name = "Mike", age = option);
 /// assert_eq!(mike.to_string(), "/person/Mike");
 /// ```
 ///

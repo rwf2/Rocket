@@ -4,7 +4,7 @@ use std::borrow::Cow;
 use percent_encoding::{AsciiSet, utf8_percent_encode};
 
 use crate::uri::{UriPart, Path, Query};
-use crate::parse::uri::PATH_SET;
+use crate::parse::uri::tables::PATH_CHARS;
 
 #[derive(Clone, Copy)]
 #[allow(non_camel_case_types)]
@@ -12,6 +12,24 @@ pub struct UNSAFE_ENCODE_SET<P: UriPart>(PhantomData<P>);
 pub trait EncodeSet {
     const SET: AsciiSet;
 }
+
+const fn set_from_table(table: &'static [u8; 256]) -> AsciiSet {
+    const ASCII_RANGE_LEN: u8 = 0x80;
+
+    let mut set = percent_encoding::CONTROLS.add(0);
+    let mut i: u8 = 0;
+    while i < ASCII_RANGE_LEN {
+        if table[i as usize] == 0 {
+            set = set.add(i);
+        }
+
+        i += 1;
+    }
+
+    set
+}
+
+const PATH_SET: AsciiSet = set_from_table(&PATH_CHARS);
 
 impl<P: UriPart> Default for UNSAFE_ENCODE_SET<P> {
     #[inline(always)]

@@ -1,6 +1,7 @@
 use devise::{*, ext::{TypeExt, Split3, SpanDiagnosticExt}};
 
 use crate::proc_macro2::{Span, TokenStream};
+use crate::syn_ext::NameSource;
 
 #[derive(FromMeta)]
 pub struct Form {
@@ -9,7 +10,7 @@ pub struct Form {
 
 pub struct FormField {
     pub span: Span,
-    pub name: String
+    pub name: NameSource,
 }
 
 fn is_valid_field_name(s: &str) -> bool {
@@ -25,12 +26,12 @@ fn is_valid_field_name(s: &str) -> bool {
 
 impl FromMeta for FormField {
     fn from_meta(meta: MetaItem<'_>) -> Result<Self> {
-        let string = String::from_meta(meta)?;
-        if !is_valid_field_name(&string) {
+        let name = NameSource::from_meta(meta)?;
+        if !is_valid_field_name(name.name()) {
             return Err(meta.value_span().error("invalid form field name"));
         }
 
-        Ok(FormField { span: meta.value_span(), name: string })
+        Ok(FormField { span: meta.value_span(), name })
     }
 }
 
@@ -44,7 +45,7 @@ fn validate_struct(_: &DeriveGenerator, data: Struct<'_>) -> Result<()> {
         let id = field.ident.as_ref().expect("named field");
         let field = match Form::from_attrs("form", &field.attrs) {
             Some(result) => result?.field,
-            None => FormField { span: Spanned::span(&id), name: id.to_string() }
+            None => FormField { span: Spanned::span(&id), name: id.clone().into() }
         };
 
         if let Some(span) = names.get(&field.name) {
@@ -86,7 +87,7 @@ pub fn derive_from_form(input: proc_macro::TokenStream) -> TokenStream {
             define_vars_and_mods!(_None, _Some, _Ok, _Err);
             let (constructors, matchers, builders) = fields.iter().map(|field| {
                 let (ident, span) = (&field.ident, field.span());
-                let default_name = ident.as_ref().expect("named").to_string();
+                let default_name = NameSource::from(ident.clone().expect("named"));
                 let name = Form::from_attrs("form", &field.attrs)
                     .map(|result| result.map(|form| form.field.name))
                     .unwrap_or_else(|| Ok(default_name))?;
@@ -98,6 +99,7 @@ pub fn derive_from_form(input: proc_macro::TokenStream) -> TokenStream {
 
                 let constructor = quote_spanned!(span => let mut #ident = #_None;);
 
+                let name = name.name();
                 let matcher = quote_spanned! { span =>
                     #name => { #ident = #_Some(#ty::from_form_value(__v)
                                 .map_err(|_| #form_error::BadValue(__k, __v))?); },
