@@ -12,9 +12,10 @@ impl Engine for Handlebars<'static> {
         for &(name, info) in templates {
             let path = &info.path;
             if let Err(e) = hb.register_template_file(name, path) {
-                let span = error_span!("Error in Handlebars template", template = %name);
-                info!(parent: &span, template.error = %e);
-                info!(parent: &span, template.path = %path.to_string_lossy());
+                let span = error_span!("template_error", template = %name, "Error in Handlebars template",);
+                let _enter = span.enter();
+                info!(template.error = %e);
+                info!(template.path = %path.to_string_lossy());
                 return None;
             }
         }

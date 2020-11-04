@@ -167,36 +167,37 @@ impl Drop for Error {
         }
 
         match *self.kind() {
-            ErrorKind::Bind(ref e) => {
+            ErrorKind::Bind(ref error) => {
                 let span = error_span!("bind_error", "Rocket failed to bind network socket to given address/port.");
-                info!(parent: &span, "{}", e);
+                info!(parent: &span, %error);
                 panic!("aborting due to binding o error");
             }
-            ErrorKind::Io(ref e) => {
+            ErrorKind::Io(ref error) => {
                 let span = error_span!("io_error", "Rocket failed to launch due to an I/O error.");
-                info!(parent: &span, "{}", e);
+                info!(parent: &span, %error);
                 panic!("aborting due to i/o error");
             }
             ErrorKind::Collision(ref collisions) => {
                 let span = error_span!("collisions", "Rocket failed to launch due to the following routing collisions:");
+                let _enter = span.enter();
                 for &(ref a, ref b) in collisions {
-                    info!(parent: &span, "{} {} {}", a, Paint::red("collides with").italic(), b);
+                    info!("{} {} {}", a, Paint::red("collides with").italic(), b);
                 }
 
-                info!(parent: &span, "Note: Collisions can usually be resolved by ranking routes.");
+                info!("Note: Collisions can usually be resolved by ranking routes.");
                 panic!("route collisions detected");
             }
             ErrorKind::FailedFairings(ref failures) => {
                 let span = error_span!("fairing_error", "Rocket failed to launch due to failing fairings:");
                 for fairing in failures {
-                    info!(parent: &span, "{}", fairing);
+                    info!(%fairing);
                 }
 
                 panic!("aborting due to launch fairing failure");
             }
-            ErrorKind::Runtime(ref err) => {
+            ErrorKind::Runtime(ref error) => {
                 let span = error_span!("runtime_error", "An error occured in the runtime:");
-                info!(parent: &span, "{}", err);
+                info!(%error);
                 panic!("aborting due to runtime failure");
             }
         }

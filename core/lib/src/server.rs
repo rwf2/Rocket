@@ -84,7 +84,7 @@ impl Rocket {
     ) {
         match self.make_response(response, tx).await {
             Ok(()) => info!("{}", Paint::green("Response succeeded.")),
-            Err(e) => error!("Failed to write response: {:?}.", e),
+            Err(error) => error!(%error, "Failed to write response"),
         }
     }
 
@@ -268,7 +268,7 @@ impl Rocket {
             let matches = self.router.route(request);
             for route in matches {
                 // Retrieve and set the requests parameters.
-                info!("Matched: {}", route);
+                info!(matched = %route);
                 request.set_route(route);
 
                 // Dispatch the request to the handler.

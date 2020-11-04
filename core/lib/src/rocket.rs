@@ -153,24 +153,25 @@ impl Rocket {
     #[inline]
     pub fn mount<R: Into<Vec<Route>>>(mut self, base: &str, routes: R) -> Self {
         let span = info_span!("mounting", at = %Paint::blue(&base), "{} Mounting", Paint::emoji("🛰  "));
+        let _e = span.enter();
 
         let base_uri = Origin::parse_owned(base.to_string())
             .unwrap_or_else(|e| {
-                error!(parent: &span, "Invalid mount point URI: {}.", Paint::white(base));
+                error!(uri = %Paint::white(base), "Invalid mount point URI");
                 panic!("Error: {}", e);
             });
 
         if base_uri.query().is_some() {
-            error!(parent: &span, "Mount point '{}' contains query string.", base);
+            error!("Mount point '{}' contains query string.", base);
             panic!("Invalid mount point.");
         }
 
         for route in routes.into() {
             let old_route = route.clone();
             let route = route.map_base(|old| format!("{}{}", base, old))
-                .unwrap_or_else(|e| {
-                    let span2 = error_span!(parent: span.clone(), "malformed_uri", "Route `{}` has a malformed URI.", old_route);
-                    error!(parent: &span2, "{}", e);
+                .unwrap_or_else(|error| {
+                    let span = error_span!("malformed_uri", route = %old_route, "Route has a malformed URI.");
+                    error!(parent: &span, %error);
                     panic!("Invalid route URI.");
                 });
 
@@ -207,9 +208,10 @@ impl Rocket {
     #[inline]
     pub fn register(mut self, catchers: Vec<Catcher>) -> Self {
         let span = info_span!("catchers", "{}{}", Paint::emoji("👾 "), Paint::magenta("Catchers:"));
+        let _enter = span.enter();
 
         for catcher in catchers {
-            info!(parent: &span, "{}", catcher);
+            info!(%catcher);
 
             let existing = match catcher.code {
                 Some(code) => self.catchers.insert(code, catcher),
@@ -217,7 +219,7 @@ impl Rocket {
             };
 
             if let Some(existing) = existing {
-                warn!(parent: &span, "Replacing existing '{}' catcher.", existing);
+                warn!("Replacing existing '{}' catcher.", existing);
             }
         }
 
@@ -548,10 +550,10 @@ impl Rocket {
                 shutdown_handle.shutdown();
                 server.await
             }
-            Either::Left((Err(err), server)) => {
+            Either::Left((Err(error), server)) => {
                 // Error setting up ctrl-c signal. Let the user know.
                 let span = warn_span!("graceful_shutdown_error", "Failed to enable `ctrl-c` graceful signal shutdown.");
-                info!(parent: &span, "Error: {}", err);
+                info!(parent: &span, %error);
                 server.await
             }
             // Server shut down before Ctrl-C; return the result.
