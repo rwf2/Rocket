@@ -168,7 +168,7 @@ impl Drop for Error {
 
         match *self.kind() {
             ErrorKind::Bind(ref error) => {
-                error_span!("bind_error", "Rocket failed to bind network socket to given address/port.").in_scope(|| { 
+                error_span!("bind_error", "Rocket failed to bind network socket to given address/port.").in_scope(|| {
                     info!(%error);
                     panic!("aborting due to binding o error");
                 });

@@ -379,7 +379,7 @@ impl Template {
         let ctxt = rocket.state::<ContextManager>().map(ContextManager::context).or_else(|| {
             warn_span!("missing_fairing", "Uninitialized template context: missing fairing.").in_scope(|| {
                 info!("To use templates, you must attach `Template::fairing()`.");
-                info!("See the `Template` documentation for more information."); 
+                info!("See the `Template` documentation for more information.");
             });
             None
         })?;

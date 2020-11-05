@@ -288,7 +288,7 @@ impl StaticFiles {
 
         let path = path.as_ref();
         if !path.is_dir() {
-            error_span!("`StaticFiles` supplied with invalid path").in_scope(|| {   
+            error_span!("`StaticFiles` supplied with invalid path").in_scope(|| {
                 info!(path = %Paint::white(path.display()), "Path is not a directory");
                 panic!("refusing to continue due to invalid static files path");
             });
