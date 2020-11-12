@@ -137,10 +137,10 @@ fn param_expr(seg: &Segment, ident: &syn::Ident, ty: &syn::Type) -> TokenStream 
         #Outcome::Forward(#data)
     });
 
+    let name = seg.name.name();
     // Returned when a dynamic parameter fails to parse.
-    let field_name = seg.name.ident();
     let parse_error = quote!({
-        #log::warn!(#field_name = ?#error, "Failed to parse dynamic parameter");
+        #log::warn!(parameter = #name, error = ?#error, "Failed to parse dynamic parameter");
         #Outcome::Forward(#data)
     });
 
@@ -234,14 +234,13 @@ fn query_exprs(route: &Route) -> Option<TokenStream> {
         let name = segment.name.name();
         let matcher = match segment.kind {
             Kind::Single => {
-                let field_name = syn::Ident::new(name, segment.span);
                 quote_spanned! { span =>
                     (_, #name, __v) => {
                         #[allow(unreachable_patterns, unreachable_code)]
                         let __v = match <#ty as #request::FromFormValue>::from_form_value(__v) {
                             #_Ok(__v) => __v,
                             #_Err(__e) => {
-                                #log::warn!(#field_name = ?__e, "Failed to parse");
+                                #log::warn!(parameter = %#name, error = ?__e, "Failed to parse");
                                 return #Outcome::Forward(#data);
                             }
                         };
@@ -269,19 +268,16 @@ fn query_exprs(route: &Route) -> Option<TokenStream> {
                     }
                 };
             },
-            Kind::Multi => {
-                let field_name = syn::Ident::new(name, segment.span);
-                quote_spanned! { span =>
-                    #[allow(non_snake_case)]
-                    let #ident = match <#ty as #request::FromQuery>::from_query(#Query(&#trail)) {
-                        #_Ok(__v) => __v,
-                        #_Err(__e) => {
-                            #log::warn!(#field_name = ?__e, "Failed to parse");
-                            return #Outcome::Forward(#data);
-                        }
-                    };
-                }
-            }
+            Kind::Multi => quote_spanned! { span =>
+                #[allow(non_snake_case)]
+                let #ident = match <#ty as #request::FromQuery>::from_query(#Query(&#trail)) {
+                    #_Ok(__v) => __v,
+                    #_Err(__e) => {
+                        #log::warn!(parameter = %#name, error = ?__e, "Failed to parse");
+                        return #Outcome::Forward(#data);
+                    }
+                };
+            },
             Kind::Static => quote!()
         };
 
