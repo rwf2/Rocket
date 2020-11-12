@@ -47,17 +47,19 @@ fn upload<'r>(req: &'r Request, data: Data) -> HandlerFuture<'r> {
             return Outcome::failure(Status::BadRequest);
         }
 
-        let file = File::create(env::temp_dir().join("upload.txt")).await;
-        if let Ok(file) = file {
-            if let Ok(n) = data.open(2.mebibytes()).stream_to(file).await {
-                return Outcome::from(req, format!("OK: {} bytes uploaded.", n));
-            }
+        match File::create(env::temp_dir().join("upload.txt")).await {
+            Ok(file) => {
+                if let Ok(n) = data.open(2.mebibytes()).stream_to(file).await {
+                    return Outcome::from(req, format!("OK: {} bytes uploaded.", n));
+                }
 
-            info!("Failed copying.");
-            Outcome::failure(Status::InternalServerError)
-        } else {
-            info!("Couldn't open file: {:?}", file.unwrap_err());
-            Outcome::failure(Status::InternalServerError)
+                info!("Failed copying.");
+                Outcome::failure(Status::InternalServerError)
+            }
+            Err(error) => {
+                info!("Couldn't open file, {:?}", error);
+                Outcome::failure(Status::InternalServerError)
+            }
         }
     })
 }
