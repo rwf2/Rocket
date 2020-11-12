@@ -329,7 +329,7 @@ impl<'de> Deserialize<'de> for LogLevel {
 ///     // Use Rocket's default filter for the configured log level...
 ///     let trace_filter = rocket::trace::filter_layer(config.log_level)
 ///         // ...but always enable the `DEBUG` level for `my_crate`.
-///         .add_directive("my_crate=debug".parse().unwrap())
+///         .add_directive("my_crate=debug".parse().unwrap());
 ///
 ///     // Build a custom `tracing` subscriber...
 ///     rocket::trace::registry()
