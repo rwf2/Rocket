@@ -480,6 +480,18 @@ where
         let mut depth = 0;
 
         let prev_depth = self.last_depth.load(Acquire);
+
+        // FIXME: explain or replace this
+        fn hash_id(id: tracing::Id) -> u16 {
+            let id = id.into_u64();
+            let [z, y, x, w, v, u, t, s] = id.to_le_bytes();
+
+            (z as u16) ^ (y as u16) ^
+                (x as u16) ^ (w as u16) ^
+                (v as u16) << 8 ^ (u as u16) << 8 ^
+                (t as u16) << 8 ^ (s as u16) << 8
+        }
+
         cx.visit_spans(|span| {
             let is_root = root_id.is_none();
             if is_root {
@@ -500,7 +512,11 @@ where
                     // If the span has a human-readable message, print that
                     // instead of the span's name (so that we can get nice emojis).
                     if meta.fields().iter().any(|field| field.name() == "message") {
-                        with_meta(writer, meta, &fields.fields)?;
+                        if span.name() == "request" {
+                            with_meta(writer, meta, format_args!("[{:x}] {}", hash_id(span.id()), &fields.fields))?;
+                        } else {
+                            with_meta(writer, meta, &fields.fields)?;
+                        }
                     } else {
                         with_meta(writer, meta, format_args!("{} {}", Paint::new(span.name()).bold(), &fields.fields))?;
                     }
