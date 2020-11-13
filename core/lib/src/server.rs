@@ -379,15 +379,10 @@ impl Rocket {
         let service = hyper::make_service_fn(move |conn: &<L as Listener>::Connection| {
             let rocket = rocket.clone();
             let remote = conn.remote_addr().unwrap_or_else(|| ([0, 0, 0, 0], 0).into());
-            let span = info_span!("connection", from = %remote, "{}Connection", Paint::emoji("📡 "));
             async move {
                 let service = hyper::service_fn(move |req| {
                     hyper_service_fn(rocket.clone(), remote, req)
                 });
-                let service = InstrumentedService {
-                    span,
-                    service,
-                };
                 Ok::<_, std::convert::Infallible>(service)
             }
         });
