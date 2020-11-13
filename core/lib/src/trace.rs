@@ -199,7 +199,7 @@ use tracing_subscriber::{
 };
 
 use std::fmt::{self, Write};
-use std::sync::atomic::{AtomicU64, Ordering::{Acquire, Release}};
+use std::sync::atomic::{AtomicU16, AtomicU64, Ordering::{Acquire, Release}};
 use std::str::FromStr;
 
 use yansi::Paint;
@@ -348,7 +348,7 @@ impl<'de> Deserialize<'de> for LogLevel {
 /// [dirs]: https://docs.rs/tracing-subscriber/latest/tracing_subscriber/filter/struct.EnvFilter.html#directives
 pub fn filter_layer(level: LogLevel) -> Filter {
     let filter_str = match level {
-        LogLevel::Critical => "warn,rocket::launch=info,hyper=off,rustls=off",
+        LogLevel::Critical => "warn,hyper=off,rustls=off",
         LogLevel::Normal => "info,hyper=off,rustls=off",
         LogLevel::Debug => "trace",
         LogLevel::Off => "off",
@@ -411,7 +411,7 @@ where
         // `stdout().write_str(...)`, so that logs are captured by libtest's test
         // capturing.
         .with_test_writer()
-        .event_format(EventFormat { last_id: AtomicU64::new(0) })
+        .event_format(EventFormat { last_id: AtomicU64::new(0), last_depth: AtomicU16::new(0) })
 }
 
 pub(crate) fn try_init(level: LogLevel, colors: bool) -> bool {
@@ -459,6 +459,7 @@ impl PaintExt for Paint<&str> {
 
 struct EventFormat {
     last_id: AtomicU64,
+    last_depth: AtomicU16,
 }
 
 impl<S, N> FormatEvent<S, N> for EventFormat
@@ -473,40 +474,47 @@ where
         writer: &mut dyn fmt::Write,
         event: &tracing::Event<'_>,
     ) -> fmt::Result {
-        let mut seen = false;
-        let id = if let Some(span) = cx.lookup_current() {
-            let id = span.id();
-            if id.into_u64() != self.last_id.load(Acquire) {
-                cx.visit_spans(|span| {
-                    if seen {
-                        write!(writer, "    {} ", Paint::default("=>").bold())?;
-                    }
-                    let meta = span.metadata();
-                    let exts = span.extensions();
-                    if let Some(fields) = exts.get::<FormattedFields<N>>() {
-                        // If the span has a human-readable message, print that
-                        // instead of the span's name (so that we can get nice emojis).
-                        if meta.fields().iter().any(|field| field.name() == "message") {
-                            with_meta(writer, meta, &fields.fields)?;
-                        } else {
-                            with_meta(writer, meta, format_args!("{} {}", Paint::new(span.name()).bold(), &fields.fields))?;
-                        }
-                    } else {
-                        with_meta(writer, span.metadata(),  Paint::new(span.name()).bold())?;
-                    }
-                    seen = true;
-                    Ok(())
-                })?;
-            } else {
-                seen = true;
-            }
-            Some(id)
-        } else {
-            None
-        };
+        let mut indent = String::new();
+        let mut root_id = None;
+        let mut root_changed = false;
+        let mut depth = 0;
 
-        if seen {
-            write!(writer, "    {} ", Paint::default("=>").bold())?;
+        let prev_depth = self.last_depth.load(Acquire);
+        cx.visit_spans(|span| {
+            let is_root = root_id.is_none();
+            if is_root {
+                root_id = Some(span.id());
+                if span.id().into_u64() != self.last_id.load(Acquire) {
+                    root_changed = true;
+                }
+            }
+            depth += 1;
+
+            if root_changed || depth > prev_depth {
+                if !indent.is_empty() {
+                    write!(writer, "{}{} ", indent, Paint::default("=>").bold())?;
+                }
+                let meta = span.metadata();
+                let exts = span.extensions();
+                if let Some(fields) = exts.get::<FormattedFields<N>>() {
+                    // If the span has a human-readable message, print that
+                    // instead of the span's name (so that we can get nice emojis).
+                    if meta.fields().iter().any(|field| field.name() == "message") {
+                        with_meta(writer, meta, &fields.fields)?;
+                    } else {
+                        with_meta(writer, meta, format_args!("{} {}", Paint::new(span.name()).bold(), &fields.fields))?;
+                    }
+                } else {
+                    with_meta(writer, span.metadata(),  Paint::new(span.name()).bold())?;
+                }
+            }
+
+            indent.push_str("    ");
+            Ok(())
+        })?;
+
+        if !indent.is_empty() {
+            write!(writer, "{}{} ", indent, Paint::default("=>").bold())?;
         }
 
         with_meta(
@@ -517,10 +525,11 @@ where
                 event,
             },
         )?;
-        if let Some(id) = id {
-            self.last_id.store(id.into_u64(), Release);
+        if root_changed {
+            self.last_id.store(root_id.unwrap().into_u64(), Release);
         }
-    Ok(())
+        self.last_depth.store(depth, Release);
+        Ok(())
     }
 }
 
