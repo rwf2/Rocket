@@ -533,9 +533,18 @@ where
             write!(writer, "{}{} ", indent, Paint::default("=>").bold())?;
         }
 
+        // If the `log` compatibility feature is enabled, normalize metadata
+        // from `log` records that's emitted as fields.
+        #[cfg(feature = "log")]
+        let normalized_meta = tracing_log::NormalizeEvent::normalized_metadata(event);
+        #[cfg(feature = "log")]
+        let event_meta = normalized_meta.as_ref().unwrap_or_else(|| event.metadata());
+        #[cfg(not(feature = "log"))]
+        let event_meta = event.metadata();
+
         with_meta(
             writer,
-            event.metadata(),
+            event_meta,
             DisplayFields {
                 fmt: cx,
                 event,
