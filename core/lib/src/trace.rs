@@ -416,6 +416,7 @@ where
 
 pub(crate) fn try_init(level: LogLevel, colors: bool) -> bool {
     if level == LogLevel::Off {
+        Paint::disable();
         return false;
     }
 
@@ -434,14 +435,23 @@ pub(crate) fn try_init(level: LogLevel, colors: bool) -> bool {
         // has already set a `log` logger. In that case, don't try to set up a
         // `tracing` subscriber as well --- instead, Rocket's `tracing` events
         // will be recorded as `log` records.
+        Paint::disable();
         return false;
     }
 
-    tracing::subscriber::set_global_default(tracing_subscriber::registry()
+    let success = tracing::subscriber::set_global_default(tracing_subscriber::registry()
         .with(logging_layer())
         .with(filter_layer(level))
     )
-        .is_ok()
+        .is_ok();
+
+    if !success {
+        // Something else already registered a tracing subscriber;
+        // don't assume we can use Paint.
+        Paint::disable();
+    }
+
+    success
 }
 
 pub trait PaintExt {
