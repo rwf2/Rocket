@@ -224,6 +224,9 @@ pub mod prelude {
 pub enum LogLevel {
     /// Only shows errors and warnings: `"critical"`.
     Critical,
+    /// Shows errors, warnings, and some informational messages that are likely
+    /// to be relevant when troubleshooting (such as configuration).
+    Support,
     /// Shows everything except debug and trace information: `"normal"`.
     Normal,
     /// Shows everything: `"debug"`.
@@ -236,6 +239,7 @@ impl LogLevel {
     fn as_str(&self) -> &str {
         match self {
             LogLevel::Critical => "critical",
+            LogLevel::Support => "support",
             LogLevel::Normal => "normal",
             LogLevel::Debug => "debug",
             LogLevel::Off => "off",
@@ -249,10 +253,11 @@ impl FromStr for LogLevel {
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let level = match &*s.to_ascii_lowercase() {
             "critical" => LogLevel::Critical,
+            "support" => LogLevel::Support,
             "normal" => LogLevel::Normal,
             "debug" => LogLevel::Debug,
             "off" => LogLevel::Off,
-            _ => return Err("a log level (off, debug, normal, critical)"),
+            _ => return Err("a log level (off, debug, normal, support, critical)"),
         };
 
         Ok(level)
@@ -349,6 +354,7 @@ impl<'de> Deserialize<'de> for LogLevel {
 pub fn filter_layer(level: LogLevel) -> Filter {
     let filter_str = match level {
         LogLevel::Critical => "warn,hyper=off,rustls=off",
+        LogLevel::Support => "warn,rocket::support=info,hyper=off,rustls=off",
         LogLevel::Normal => "info,hyper=off,rustls=off",
         LogLevel::Debug => "trace",
         LogLevel::Off => "off",
@@ -650,7 +656,7 @@ fn try_init_log(filter: LogLevel) -> Result<(), impl std::error::Error> {
         // will already be collected.
         .ignore_all(vec!["rocket", "hyper", "tracing::span"]);
     let builder = match filter {
-        LogLevel::Critical => builder
+        LogLevel::Critical | LogLevel::Support => builder
             .ignore_crate("rustls")
             // Set the max level for all `log` records to Warn. Rocket's
             // `launch` events will be collected by the native `tracing`

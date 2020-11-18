@@ -275,16 +275,16 @@ impl Config {
     pub(crate) fn pretty_print(&self, profile: &Profile) {
         use crate::trace::PaintExt;
 
-        let span = info_span!("configured", "{}Configured for {}", Paint::emoji("🔧 "), profile);
+        let span = info_span!(target: "rocket::support", "configured", "{}Configured for {}", Paint::emoji("🔧 "), profile);
         let _e = span.enter();
 
-        info!(address = %&self.address);
-        info!(port = %&self.port);
-        info!(workers = %self.workers);
-        info!(log_level = %self.log_level);
-        info!(secret_key = ?&self.secret_key);
-        info!(limits = %&self.limits);
-        info!(cli_colors = %&self.cli_colors);
+        info!(target: "rocket::support", address = %&self.address);
+        info!(target: "rocket::support", port = %&self.port);
+        info!(target: "rocket::support", workers = %self.workers);
+        info!(target: "rocket::support", log_level = %self.log_level);
+        info!(target: "rocket::support", secret_key = ?&self.secret_key);
+        info!(target: "rocket::support", limits = %&self.limits);
+        info!(target: "rocket::support", cli_colors = %&self.cli_colors);
 
         let ka = self.keep_alive;
         if ka > 0 {
