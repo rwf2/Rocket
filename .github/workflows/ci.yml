@@ -51,7 +51,7 @@ jobs:
         if: matrix.os.name == 'macOS'
         run: |
             brew install mysql-client libpq sqlite coreutils
-            echo "::add-path::/usr/local/opt/mysql-client/bin"
+            echo "/usr/local/opt/mysql-client/bin" >> "$GITHUB_PATH"
 
       # vcpkg --triplet x64-windows install libmysql libpq sqlite3 openssl
       # + vcpkg/installed/vcpkg (in particular, the status file)
@@ -62,9 +62,9 @@ jobs:
           7z x vcpkg.7z -y -bb0
           xcopy .\vcpkg $env:VCPKG_INSTALLATION_ROOT /s /e /h /y /q
           vcpkg integrate install
-          echo "::set-env name=VCPKGRS_DYNAMIC::1"
-          echo "::set-env name=VCPKG_ROOT::$env:VCPKG_INSTALLATION_ROOT"
-          echo "::add-path::$env:VCPKG_INSTALLATION_ROOT\installed\x64-windows\lib"
+          echo "VCPKGRS_DYNAMIC=1" >> "$env:GITHUB_ENV"
+          echo "VCPKG_ROOT=$env:VCPKG_INSTALLATION_ROOT" >> "$env:GITHUB_ENV"
+          echo "$env:VCPKG_INSTALLATION_ROOT\installed\x64-windows\lib" >> "$env:GITHUB_PATH"
 
       - name: Install Native Dependencies (Linux)
         if: matrix.os.name == 'Linux'
