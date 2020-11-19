@@ -151,33 +151,32 @@ impl Rocket {
     /// ```
     #[inline]
     pub fn mount<R: Into<Vec<Route>>>(mut self, base: &str, routes: R) -> Self {
-        let span = info_span!("mounting", at = %Paint::blue(&base), "{} Mounting", Paint::emoji("🛰  "));
-        let _e = span.enter();
-
-        let base_uri = Origin::parse_owned(base.to_string())
-            .unwrap_or_else(|e| {
-                error!(uri = %Paint::white(base), "Invalid mount point URI");
-                panic!("Error: {}", e);
-            });
-
-        if base_uri.query().is_some() {
-            error!("Mount point '{}' contains query string.", base);
-            panic!("Invalid mount point.");
-        }
-
-        for route in routes.into() {
-            let old_route = route.clone();
-            let route = route.map_base(|old| format!("{}{}", base, old))
-                .unwrap_or_else(|error| {
-                    error!(route = %old_route, %error, "Route has a malformed URI.");
-                    panic!("Invalid route URI.");
+        info_span!("mounting", at = %Paint::blue(&base), "{} Mounting", Paint::emoji("🛰  ")).in_scope(|| {
+            let base_uri = Origin::parse_owned(base.to_string())
+                .unwrap_or_else(|e| {
+                    error!(uri = %Paint::white(base), "Invalid mount point URI");
+                    panic!("Error: {}", e);
                 });
 
-            info!(%route);
-            self.router.add(route);
-        }
+            if base_uri.query().is_some() {
+                error!("Mount point '{}' contains query string.", base);
+                panic!("Invalid mount point.");
+            }
 
-        self
+            for route in routes.into() {
+                let old_route = route.clone();
+                let route = route.map_base(|old| format!("{}{}", base, old))
+                    .unwrap_or_else(|error| {
+                        error!(route = %old_route, %error, "Route has a malformed URI.");
+                        panic!("Invalid route URI.");
+                    });
+
+                info!(%route);
+                self.router.add(route);
+            }
+
+            self
+        })
     }
 
     /// Registers all of the catchers in the supplied vector.
@@ -205,23 +204,22 @@ impl Rocket {
     /// ```
     #[inline]
     pub fn register(mut self, catchers: Vec<Catcher>) -> Self {
-        let span = info_span!("catchers", "{}{}", Paint::emoji("👾 "), Paint::magenta("Catchers:"));
-        let _enter = span.enter();
+        info_span!("catchers", "{}{}", Paint::emoji("👾 "), Paint::magenta("Catchers:")).in_scope(|| {
+            for catcher in catchers {
+                info!(%catcher);
 
-        for catcher in catchers {
-            info!(%catcher);
+                let existing = match catcher.code {
+                    Some(code) => self.catchers.insert(code, catcher),
+                    None => self.default_catcher.replace(catcher)
+                };
 
-            let existing = match catcher.code {
-                Some(code) => self.catchers.insert(code, catcher),
-                None => self.default_catcher.replace(catcher)
-            };
-
-            if let Some(existing) = existing {
-                warn!("Replacing existing '{}' catcher.", existing);
+                if let Some(existing) = existing {
+                    warn!("Replacing existing '{}' catcher.", existing);
+                }
             }
-        }
 
-        self
+            self
+        })
     }
 
     /// Add `state` to the state managed by this instance of Rocket.

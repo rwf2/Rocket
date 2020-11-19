@@ -740,11 +740,7 @@ async fn run_blocking<F, R>(job: F) -> R
     where F: FnOnce() -> R + Send + 'static, R: Send + 'static,
 {
     let span = tracing::Span::current();
-    let job = move || {
-        let _enter = span.enter();
-        job()
-    };
-    match tokio::task::spawn_blocking(job).await {
+    match tokio::task::spawn_blocking(move || span.in_scope(|| job())).await {
         Ok(ret) => ret,
         Err(e) => match e.try_into_panic() {
             Ok(panic) => std::panic::resume_unwind(panic),
@@ -755,8 +751,9 @@ async fn run_blocking<F, R>(job: F) -> R
 
 macro_rules! dberr {
     ($target:literal, $msg:literal, $db_name:expr, $efmt:literal, $error:expr, $rocket:expr) => ({
-        let span = rocket::trace::error_span!($target, "database {} error for pool named `{}`", $msg, $db_name);
-        rocket::trace::error!(parent: &span, $efmt, $error);
+        rocket::trace::error_span!($target, "database {} error for pool named `{}`", $msg, $db_name).in_scope(|| {
+            rocket::trace::error!($efmt, $error);
+        });
         return Err($rocket);
     });
 }
@@ -843,8 +840,7 @@ impl<K, C: Poolable> Drop for Connection<K, C> {
         tokio::spawn(async move {
             let mut connection = connection.lock_owned().await;
             let span = tracing::Span::current();
-            tokio::task::spawn_blocking(move || {
-                let _e = span.enter();
+            tokio::task::spawn_blocking(move || span.in_scope(|| {
                 if let Some(conn) = connection.take() {
                     drop(conn);
                 }
@@ -852,7 +848,7 @@ impl<K, C: Poolable> Drop for Connection<K, C> {
                 // Explicitly dropping the permit here so that it's only
                 // released after the connection is.
                 drop(permit);
-            })
+            }));
         }.in_current_span());
     }
 }

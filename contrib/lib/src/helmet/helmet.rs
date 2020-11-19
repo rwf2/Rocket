@@ -171,11 +171,10 @@ impl SpaceHelmet {
         for policy in self.policies.values() {
             let name = policy.name();
             if response.headers().contains(name.as_str()) {
-                let span = warn_span!(
+                warn_span!(
                     "Space Helmet: response contains already contains this header",
                     header = %name,
-                );
-                warn!(parent: &span, "Refusing to overwrite existing header.");
+                ).in_scope(|| warn!("Refusing to overwrite existing header."));
                 continue
             }
 
@@ -209,9 +208,10 @@ impl Fairing for SpaceHelmet {
             && rocket.figment().profile() != rocket::Config::DEBUG_PROFILE
             && !self.is_enabled::<Hsts>()
         {
-            let span = warn_span!("Space Helmet: deploying with TLS without enabling HSTS.");
-            warn!(parent: &span, "Enabling default HSTS policy.");
-            info!(parent: &span, "To disable this warning, configure an HSTS policy.");
+            warn_span!("Space Helmet: deploying with TLS without enabling HSTS.").in_scope(|| {
+                warn!("Enabling default HSTS policy.");
+                info!("To disable this warning, configure an HSTS policy.");
+            });
             self.force_hsts.store(true, Ordering::Relaxed);
         }
     }

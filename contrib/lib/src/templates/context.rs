@@ -28,11 +28,11 @@ impl Context {
             for path in glob::glob(glob_path).unwrap().filter_map(Result::ok) {
                 let (name, data_type_str) = split_path(&root, &path);
                 if let Some(info) = templates.get(&*name) {
-                    let span = warn_span!("invalid_template_path", "Template name '{}' does not have a unique path.", name);
-                    let _enter = span.enter();
-                    info!(path = ?info.path, "Existing");
-                    info!(path = ?path, "Additiona");
-                    warn!("Using existing path for template '{}'.", name);
+                    warn_span!("invalid_template_path", "Template name '{}' does not have a unique path.", name).in_scope(|| {
+                        info!(path = ?info.path, "Existing");
+                        info!(path = ?path, "Additiona");
+                        warn!("Using existing path for template '{}'.", name);
+                    });
                     continue;
                 }
 

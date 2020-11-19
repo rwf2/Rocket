@@ -63,9 +63,10 @@ mod context {
             let watcher = match watcher {
                 Ok(watcher) => Some(Mutex::new((watcher, rx))),
                 Err(error) => {
-                    let span = warn_span!("Failed to enable live template reloading", %error);
-                    debug!(parent: &span, reload_error = ?error);
-                    warn!(parent: &span, "Live template reloading is unavailable.");
+                    warn_span!("Failed to enable live template reloading", %error).in_scope(|| {
+                        debug!(reload_error = ?error);
+                        warn!("Live template reloading is unavailable.");
+                    });
                     None
                 }
             };
@@ -101,24 +102,24 @@ mod context {
                 }
 
                 if changed {
-                    let span = info_span!("Change detected: reloading templates.");
-                    let _entered = span.enter();
-                    let mut ctxt = self.context_mut();
-                    if let Some(mut new_ctxt) = Context::initialize(ctxt.root.clone()) {
-                        match callback(&mut new_ctxt.engines) {
-                            Ok(()) => {
-                                *ctxt = new_ctxt;
-                                debug!("reloaded!");
+                    info_span!("Change detected: reloading templates.").in_scope(|| {
+                        let mut ctxt = self.context_mut();
+                        if let Some(mut new_ctxt) = Context::initialize(ctxt.root.clone()) {
+                            match callback(&mut new_ctxt.engines) {
+                                Ok(()) => {
+                                    *ctxt = new_ctxt;
+                                    debug!("reloaded!");
+                                }
+                                Err(error) => {
+                                    warn!(%error, "The template customization callback returned an error");
+                                    warn!("The existing templates will remain active.");
+                                }
                             }
-                            Err(error) => {
-                                warn!(%error, "The template customization callback returned an error");
-                                warn!("The existing templates will remain active.");
-                            }
-                        }
-                    } else {
-                        warn!("An error occurred while reloading templates.");
-                        warn!("The existing templates will remain active.");
-                    };
+                        } else {
+                            warn!("An error occurred while reloading templates.");
+                            warn!("The existing templates will remain active.");
+                        };
+                    });
                 }
             });
         }
@@ -173,19 +174,19 @@ impl Fairing for TemplateFairing {
                 use rocket::{trace::PaintExt, yansi::Paint};
                 use crate::templates::Engines;
 
-                let span = info_span!("templating", "{}{}", Paint::emoji("📐 "), Paint::magenta("Templating:"));
-                let _enter = span.enter();
-                match (self.callback)(&mut ctxt.engines) {
-                    Ok(()) => {
-                        info!(directory = %Paint::white(&root));
-                        info!(engines = ?Paint::white(Engines::ENABLED_EXTENSIONS));
-                        Ok(rocket.manage(ContextManager::new(ctxt)))
+                info_span!("templating", "{}{}", Paint::emoji("📐 "), Paint::magenta("Templating:")).in_scope(|| {
+                    match (self.callback)(&mut ctxt.engines) {
+                        Ok(()) => {
+                            info!(directory = %Paint::white(&root));
+                            info!(engines = ?Paint::white(Engines::ENABLED_EXTENSIONS));
+                            Ok(rocket.manage(ContextManager::new(ctxt)))
+                        }
+                        Err(error) => {
+                            error!(%error, "The template customization callback returned an error");
+                            Err(rocket)
+                        }
                     }
-                    Err(error) => {
-                        error!(%error, "The template customization callback returned an error");
-                        Err(rocket)
-                    }
-                }
+                })
             }
             None => Err(rocket),
         }

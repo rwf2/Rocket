@@ -21,13 +21,13 @@ impl Engine for Tera {
 
         // Finally try to tell Tera about all of the templates.
         if let Err(e) = tera.add_template_files(tera_templates) {
-            let span = error_span!("Failed to initialize Tera templating.");
-
-            let mut error = Some(&e as &dyn Error);
-            while let Some(err) = error {
-                error!(parent: &span, error = %err);
-                error = err.source();
-            }
+            error_span!("Failed to initialize Tera templating.").in_scope(|| {
+                let mut error = Some(&e as &dyn Error);
+                while let Some(err) = error {
+                    error!(error = %err);
+                    error = err.source();
+                }
+            });
 
             None
         } else {
@@ -36,36 +36,37 @@ impl Engine for Tera {
     }
 
     fn render<C: Serialize>(&self, name: &str, context: C) -> Option<String> {
-        let span = info_span!("Rendering Tera template", template = %name);
-        if self.get_template(name).is_err() {
-            error!(parent: &span, "Tera template '{}' does not exist.", name);
-            return None;
-        };
-
-        let tera_ctx = match Context::from_serialize(context) {
-            Ok(ctx) => ctx,
-            Err(_) => {
-                error!(
-                    parent: &span,
-                    "Error generating context when rendering Tera template '{}'.",
-                    name,
-                );
+        info_span!("Rendering Tera template", template = %name).in_scope(|| {
+            if self.get_template(name).is_err() {
+                error!("Tera template '{}' does not exist.", name);
                 return None;
-            }
-        };
+            };
 
-        match Tera::render(self, name, &tera_ctx) {
-            Ok(string) => Some(string),
-            Err(e) => {
-                let span = error_span!("Error rendering Tera template", template = %name);
-                let mut error = Some(&e as &dyn Error);
-                while let Some(err) = error {
-                    error!(parent: &span, error = %err);
-                    error = err.source();
+            let tera_ctx = match Context::from_serialize(context) {
+                Ok(ctx) => ctx,
+                Err(_) => {
+                    error!(
+                        "Error generating context when rendering Tera template '{}'.",
+                        name,
+                    );
+                    return None;
                 }
+            };
 
-                None
+            match Tera::render(self, name, &tera_ctx) {
+                Ok(string) => Some(string),
+                Err(e) => {
+                    error_span!("Error rendering Tera template", template = %name).in_scope(|| {
+                        let mut error = Some(&e as &dyn Error);
+                        while let Some(err) = error {
+                            error!(error = %err);
+                            error = err.source();
+                        }
+                    });
+
+                    None
+                }
             }
-        }
+        })
     }
 }

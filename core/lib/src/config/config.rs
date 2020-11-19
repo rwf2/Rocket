@@ -219,10 +219,11 @@ impl Config {
         let figment = Figment::from(&provider);
         for (key, replacement) in Self::DEPRECATED_KEYS {
             if figment.find_value(key).is_ok() {
-                let span = warn_span!("deprecated_key", "found value for deprecated config key {}", Paint::white(key));
-                if let Some(new_key) = replacement {
-                    info!(parent: &span, "key has been by replaced by {}", Paint::white(new_key));
-                }
+                warn_span!("deprecated_key", "found value for deprecated config key {}", Paint::white(key)).in_scope(|| {
+                    if let Some(new_key) = replacement {
+                        info!("key has been by replaced by {}", Paint::white(new_key));
+                    }
+                });
             }
         }
 
@@ -236,13 +237,15 @@ impl Config {
             if config.secret_key.is_zero() {
                 if figment.profile() != Self::DEBUG_PROFILE {
                     crate::trace::try_init(LogLevel::Debug, true);
-                    let span = error_span!("secrets enabled in `release` without `secret_key`");
-                    info!(parent: &span, "disable `secrets` feature or configure a `secret_key`");
-                    panic!("aborting due to configuration error(s)")
+                    error_span!("secrets enabled in `release` without `secret_key`").in_scope(|| {
+                        info!("disable `secrets` feature or configure a `secret_key`");
+                        panic!("aborting due to configuration error(s)")
+                    });
                 } else {
-                    let span = warn_span!("secrets enabled in `debug` without `secret_key`");
-                    info!(parent: &span, "disable `secrets` feature or configure a `secret_key`");
-                    info!(parent: &span, "this becomes a hard error in `release`");
+                    warn_span!("secrets enabled in `debug` without `secret_key`").in_scope(|| {
+                        info!("disable `secrets` feature or configure a `secret_key`");
+                        info!("this becomes a hard error in `release`");
+                    });
                 }
 
                 // in debug, generate a key for a bit more security
@@ -275,28 +278,27 @@ impl Config {
     pub(crate) fn pretty_print(&self, profile: &Profile) {
         use crate::trace::PaintExt;
 
-        let span = info_span!(target: "rocket::support", "configured", "{}Configured for {}", Paint::emoji("🔧 "), profile);
-        let _e = span.enter();
+        info_span!(target: "rocket::support", "configured", "{}Configured for {}", Paint::emoji("🔧 "), profile).in_scope(|| {
+            info!(target: "rocket::support", address = %&self.address);
+            info!(target: "rocket::support", port = %&self.port);
+            info!(target: "rocket::support", workers = %self.workers);
+            info!(target: "rocket::support", log_level = %self.log_level);
+            info!(target: "rocket::support", secret_key = ?&self.secret_key);
+            info!(target: "rocket::support", limits = %&self.limits);
+            info!(target: "rocket::support", cli_colors = %&self.cli_colors);
 
-        info!(target: "rocket::support", address = %&self.address);
-        info!(target: "rocket::support", port = %&self.port);
-        info!(target: "rocket::support", workers = %self.workers);
-        info!(target: "rocket::support", log_level = %self.log_level);
-        info!(target: "rocket::support", secret_key = ?&self.secret_key);
-        info!(target: "rocket::support", limits = %&self.limits);
-        info!(target: "rocket::support", cli_colors = %&self.cli_colors);
+            let ka = self.keep_alive;
+            if ka > 0 {
+                info!(target: "rocket::support", keep_alive = %Paint::default(format!("{}s", ka)).bold());
+            } else {
+                info!(target: "rocket::support", keep_alive = %Paint::default("disabled").bold());
+            }
 
-        let ka = self.keep_alive;
-        if ka > 0 {
-            info!(keep_alive = %Paint::default(format!("{}s", ka)).bold());
-        } else {
-            info!(keep_alive = %Paint::default("disabled").bold());
-        }
-
-        match self.tls_enabled() {
-            true => info!(tls = %Paint::default("enabled").bold()),
-            false => info!(tls = %Paint::default("disabled").bold()),
-        }
+            match self.tls_enabled() {
+                true => info!(target: "rocket::support", tls = %Paint::default("enabled").bold()),
+                false => info!(target: "rocket::support", tls = %Paint::default("disabled").bold()),
+            }
+        });
     }
 }
 
@@ -320,19 +322,19 @@ pub fn pretty_print_error(error: figment::Error) {
     crate::trace::try_init(LogLevel::Debug, true);
 
     for e in error {
-        let span = error_span!("config_error", "{}", e.kind);
-
-        if let (Some(ref profile), Some(ref md)) = (&e.profile, &e.metadata) {
-            if !e.path.is_empty() {
-                let key = md.interpolate(profile, &e.path);
-                info!(parent: &span, key = %Paint::white(&key));
+        error_span!("config_error", "{}", e.kind).in_scope(|| {
+            if let (Some(ref profile), Some(ref md)) = (&e.profile, &e.metadata) {
+                if !e.path.is_empty() {
+                    let key = md.interpolate(profile, &e.path);
+                    info!(key = %Paint::white(&key));
+                }
             }
-        }
 
-        if let Some(ref md) = e.metadata {
-            if let Some(ref source) = md.source {
-                info!(parent: &span, "in {} {}", Paint::white(source), md.name);
+            if let Some(ref md) = e.metadata {
+                if let Some(ref source) = md.source {
+                    info!("in {} {}", Paint::white(source), md.name);
+                }
             }
-        }
+        });
     }
 }

@@ -170,39 +170,38 @@ impl Drop for Error {
             ErrorKind::Bind(ref error) => {
                 error_span!("bind_error", "Rocket failed to bind network socket to given address/port.").in_scope(|| {
                     info!(%error);
-                    panic!("aborting due to binding o error");
                 });
+                panic!("aborting due to binding o error");
             }
             ErrorKind::Io(ref error) => {
                 error_span!("io_error", "Rocket failed to launch due to an I/O error.").in_scope(|| {
                     info!(%error);
-                    panic!("aborting due to i/o error");
                 });
+                panic!("aborting due to i/o error");
             }
             ErrorKind::Collision(ref collisions) => {
-                let span = error_span!("collisions", "Rocket failed to launch due to the following routing collisions:");
-                let _enter = span.enter();
-                for &(ref a, ref b) in collisions {
-                    info!("{} {} {}", a, Paint::red("collides with").italic(), b);
-                }
+                error_span!("collisions", "Rocket failed to launch due to the following routing collisions:").in_scope(|| {
+                    for &(ref a, ref b) in collisions {
+                        info!("{} {} {}", a, Paint::red("collides with").italic(), b);
+                    }
 
-                info!("Note: Collisions can usually be resolved by ranking routes.");
+                    info!("Note: Collisions can usually be resolved by ranking routes.");
+                });
                 panic!("route collisions detected");
             }
             ErrorKind::FailedFairings(ref failures) => {
-                let span = error_span!("fairing_error", "Rocket failed to launch due to failing fairings:");
-                let _enter = span.enter();
-                for fairing in failures {
-                    info!(%fairing);
-                }
-
+                error_span!("fairing_error", "Rocket failed to launch due to failing fairings:").in_scope(|| {
+                    for fairing in failures {
+                        info!(%fairing);
+                    }
+                });
                 panic!("aborting due to launch fairing failure");
             }
             ErrorKind::Runtime(ref error) => {
                 error_span!("runtime_error", "An error occured in the runtime:").in_scope(|| {
                     info!(%error);
-                    panic!("aborting due to runtime failure");
                 });
+                panic!("aborting due to runtime failure");
             }
         }
     }
