@@ -225,7 +225,7 @@ pub enum LogLevel {
     /// Only shows errors and warnings: `"critical"`.
     Critical,
     /// Shows errors, warnings, and some informational messages that are likely
-    /// to be relevant when troubleshooting (such as configuration).
+    /// to be relevant when troubleshooting such as configuration: `"support"`.
     Support,
     /// Shows everything except debug and trace information: `"normal"`.
     Normal,
