@@ -411,6 +411,10 @@ where
     })
     .delimited(", ")
     .display_messages();
+
+    #[cfg(feature = "log")]
+    let field_format = skip_log::SkipLogFields(field_format);
+
     tracing_subscriber::fmt::layer()
         .fmt_fields(field_format)
         // Configure the formatter to use `print!` rather than
@@ -668,4 +672,63 @@ fn try_init_log(filter: LogLevel) -> Result<(), impl std::error::Error> {
         LogLevel::Off => return Ok(()),
     };
     builder.init()
+}
+
+#[cfg(feature = "log")]
+mod skip_log {
+    use tracing::field::Field;
+    use tracing_subscriber::field::{MakeVisitor, RecordFields, Visit, VisitFmt, VisitOutput};
+
+    use super::*;
+
+    // This struct along with SkipLogVisitor suppress the output of any fields
+    // whose names start with "log."; it's used under cfg(feature="log") to clean
+    // up the output. This complements NormalizeEvent, which converts log fields
+    // into event metadata but does not remove the fields it used.
+    pub(crate) struct SkipLogFields<V>(pub V);
+
+    impl<'a, V: MakeVisitor<&'a mut (dyn Write + 'a)>> MakeVisitor<&'a mut (dyn Write + 'a)> for SkipLogFields<V> {
+        type Visitor = SkipLogFields<V::Visitor>;
+
+        fn make_visitor(&self, target: &'a mut dyn Write) -> Self::Visitor {
+            SkipLogFields(self.0.make_visitor(target))
+        }
+    }
+
+    macro_rules! forward_record_fns {
+        ($($fn_name:ident ( $type:ty ) ),*) => {
+            $(
+                fn $fn_name (&mut self, field: &Field, value: $type) {
+                    if field.name().starts_with("log.") { return; }
+                    self.0.$fn_name(field, value)
+                }
+            )*
+        };
+    }
+
+    impl<V: Visit> Visit for SkipLogFields<V> {
+        forward_record_fns!(
+            record_debug(&dyn std::fmt::Debug),
+            record_i64(i64),
+            record_u64(u64),
+            record_str(&str),
+            record_bool(bool)
+        );
+    }
+
+    impl<V: VisitFmt> VisitFmt for SkipLogFields<V> {
+        fn writer(&mut self) -> &mut dyn Write {
+            self.0.writer()
+        }
+    }
+
+    impl<V: VisitOutput<O>, O> VisitOutput<O> for SkipLogFields<V> {
+        fn visit<R>(self, fields: &R) -> O where R: RecordFields, Self: Sized {
+            self.0.visit(fields)
+        }
+
+        fn finish(self) -> O {
+            self.0.finish()
+        }
+    }
 }
