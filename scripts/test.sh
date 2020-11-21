@@ -112,6 +112,7 @@ elif [ "$1" = "--core" ]; then
   FEATURES=(
     secrets
     tls
+    log
   )
 
   pushd "${CORE_LIB_ROOT}" > /dev/null 2>&1
