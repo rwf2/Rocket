@@ -239,7 +239,7 @@ will be routed as follows:
   2. The `user_int` route matches next. If `<id>` is a signed integer,
      `user_int` is called. Otherwise, the request is forwarded.
 
-  3. The `user_str` route matches last. Since `<id>` is a always string, the
+  3. The `user_str` route matches last. Since `<id>` is always a string, the
      route always matches. The `user_str` handler is called.
 
 ! note: A route's rank appears in **[brackets]** during launch.
