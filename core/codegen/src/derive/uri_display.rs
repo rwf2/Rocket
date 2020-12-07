@@ -54,7 +54,7 @@ pub fn derive_uri_display_query(input: proc_macro::TokenStream) -> TokenStream {
             }
         })
         .try_map_field(|_, field| {
-            let span = field.span().into();
+            let span = field.span();
             let accessor = field.accessor();
             let tokens = if let Some(ref ident) = field.ident {
                 let name_source = Form::from_attrs("form", &field.attrs)
@@ -104,7 +104,7 @@ pub fn derive_uri_display_query(input: proc_macro::TokenStream) -> TokenStream {
         })
         .to_tokens();
 
-    let i = input.clone();
+    let i = input;
     let gen_trait = quote!(impl<'__r> #FromUriParam<#Query, &'__r mut Self>);
     let UriDisplay = quote!(::rocket::http::uri::UriDisplay<#Query>);
     let from_mut = DeriveGenerator::build_for(i, gen_trait)
@@ -122,7 +122,7 @@ pub fn derive_uri_display_query(input: proc_macro::TokenStream) -> TokenStream {
     ts.extend(TokenStream::from(from_self));
     ts.extend(TokenStream::from(from_ref));
     ts.extend(TokenStream::from(from_mut));
-    ts.into()
+    ts
 }
 
 #[allow(non_snake_case)]
@@ -147,7 +147,7 @@ pub fn derive_uri_display_path(input: proc_macro::TokenStream) -> TokenStream {
             }
         })
         .map_field(|_, field| {
-            let span = field.span().into();
+            let span = field.span();
             let accessor = field.accessor();
             quote_spanned!(span => f.write_value(&#accessor)?;)
         })
@@ -172,7 +172,7 @@ pub fn derive_uri_display_path(input: proc_macro::TokenStream) -> TokenStream {
         })
         .to_tokens();
 
-    let i = input.clone();
+    let i = input;
     let gen_trait = quote!(impl<'__r> #FromUriParam<#Path, &'__r Self>);
     let UriDisplay = quote!(::rocket::http::uri::UriDisplay<#Path>);
     let from_ref = DeriveGenerator::build_for(i, gen_trait)
@@ -189,5 +189,5 @@ pub fn derive_uri_display_path(input: proc_macro::TokenStream) -> TokenStream {
     let mut ts = TokenStream::from(uri_display);
     ts.extend(TokenStream::from(from_self));
     ts.extend(TokenStream::from(from_ref));
-    ts.into()
+    ts
 }

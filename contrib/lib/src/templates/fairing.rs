@@ -93,10 +93,10 @@ mod context {
         /// reinitialized from disk and the user's customization callback is run
         /// again.
         pub fn reload_if_needed(&self, callback: &Callback) {
-            self.watcher.as_ref().map(|w| {
+            if let Some(w) = &self.watcher {
                 let rx_lock = w.lock().expect("receive queue lock");
                 let mut changed = false;
-                while let Ok(_) = rx_lock.1.try_recv() {
+                while rx_lock.1.try_recv().is_ok() {
                     changed = true;
                 }
 
@@ -117,7 +117,7 @@ mod context {
                         warn_!("The existing templates will remain active.");
                     };
                 }
-            });
+            }
         }
     }
 }

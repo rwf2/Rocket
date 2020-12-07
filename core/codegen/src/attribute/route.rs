@@ -81,7 +81,9 @@ fn parse_route(attr: RouteAttribute, function: syn::ItemFn) -> Result<Route> {
     }
 
     dup_check(&mut segments, attr.path.path.iter().filter(|s| !s.is_wild()), &mut diags);
-    attr.path.query.as_ref().map(|q| dup_check(&mut segments, q.iter(), &mut diags));
+    if let Some(q) = &attr.path.query {
+        dup_check(&mut segments, q.iter(), &mut diags);
+    }
     dup_check(&mut segments, attr.data.as_ref().map(|s| &s.value.0).into_iter(), &mut diags);
 
     // Check the validity of function arguments.
@@ -214,9 +216,9 @@ fn query_exprs(route: &Route) -> Option<TokenStream> {
                 .unwrap();
 
             let span = ident.span().join(ty.span()).unwrap_or_else(|| ty.span());
-            (Some(ident), Some(ty), span.into())
+            (Some(ident), Some(ty), span)
         } else {
-            (None, None, segment.span.into())
+            (None, None, segment.span)
         };
 
         let decl = match segment.kind {
@@ -361,7 +363,7 @@ fn generate_internal_uri_macro(route: &Route) -> TokenStream {
 fn generate_respond_expr(route: &Route) -> TokenStream {
     let ret_span = match route.function.sig.output {
         syn::ReturnType::Default => route.function.sig.ident.span(),
-        syn::ReturnType::Type(_, ref ty) => ty.span().into()
+        syn::ReturnType::Type(_, ref ty) => ty.span()
     };
 
     define_vars_and_mods!(req);
@@ -370,7 +372,7 @@ fn generate_respond_expr(route: &Route) -> TokenStream {
     let parameter_names = route.inputs.iter()
         .map(|(_, rocket_ident, _)| rocket_ident);
 
-    let _await = route.function.sig.asyncness.map(|a| quote_spanned!(a.span().into() => .await));
+    let _await = route.function.sig.asyncness.map(|a| quote_spanned!(a.span() => .await));
     let responder_stmt = quote_spanned! { ret_span =>
         let ___responder = #user_handler_fn_name(#(#parameter_names),*) #_await;
     };
@@ -465,12 +467,12 @@ fn codegen_route(route: Route) -> Result<TokenStream> {
 
         /// Rocket code generated wrapping URI macro.
         #generated_internal_uri_macro
-    }.into())
+    })
 }
 
 fn complete_route(args: TokenStream, input: TokenStream) -> Result<TokenStream> {
     let function: syn::ItemFn = syn::parse2(input)
-        .map_err(|e| Diagnostic::from(e))
+        .map_err(Diagnostic::from)
         .map_err(|diag| diag.help("`#[route]` can only be used on functions"))?;
 
     let full_attr = quote!(#[route(#args)]);
@@ -493,10 +495,10 @@ fn incomplete_route(
     let method_span = StringLit::new(format!("#[{}]", method), Span::call_site())
         .subspan(2..2 + method_str.len());
 
-    let method_ident = syn::Ident::new(&method_str, method_span.into());
+    let method_ident = syn::Ident::new(&method_str, method_span);
 
     let function: syn::ItemFn = syn::parse2(input)
-        .map_err(|e| Diagnostic::from(e))
+        .map_err(Diagnostic::from)
         .map_err(|d| d.help(format!("#[{}] can only be used on functions", method_str)))?;
 
     let full_attr = quote!(#[#method_ident(#args)]);

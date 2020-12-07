@@ -204,7 +204,7 @@ impl<'r, T: FromForm<'r> + Send + 'r> FromTransformedData<'r> for Form<T> {
                 return Transform::Borrowed(Forward(data));
             }
 
-            let limit = request.limits().get("forms").unwrap_or(32.kibibytes());
+            let limit = request.limits().get("forms").unwrap_or_else(|| 32.kibibytes());
             match data.open(limit).stream_to_string().await {
                 Ok(form_string) => Transform::Borrowed(Success(form_string)),
                 Err(e) => {

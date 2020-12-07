@@ -356,7 +356,7 @@ impl Handler for StaticFiles {
         // If this is not the route with segments, handle it only if the user
         // requested a handling of index files.
         let current_route = req.route().expect("route while handling");
-        let is_segments_route = current_route.uri.path().ends_with(">");
+        let is_segments_route = current_route.uri.path().ends_with('>');
         if !is_segments_route {
             return handle_dir(self.options, req, data, &self.root).await;
         }

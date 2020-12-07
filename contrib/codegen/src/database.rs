@@ -50,7 +50,7 @@ fn parse_invocation(attr: TokenStream, input: TokenStream) -> Result<DatabaseInv
         type_name: input.ident,
         visibility: input.vis,
         db_name: string_lit.value(),
-        structure: structure,
+        structure,
         connection_type: inner_type,
     })
 }
@@ -65,7 +65,7 @@ pub fn database_attr(attr: TokenStream, input: TokenStream) -> Result<TokenStrea
     let guard_type = &invocation.type_name;
     let vis = &invocation.visibility;
     let fairing_name = format!("'{}' Database Pool", name);
-    let span = conn_type.span().into();
+    let span = conn_type.span();
 
     // A few useful paths.
     let databases = quote_spanned!(span => ::rocket_contrib::databases);

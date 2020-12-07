@@ -233,7 +233,7 @@ impl Config {
                 }
 
                 // in debug, generate a key for a bit more security
-                config.secret_key = SecretKey::generate().unwrap_or(SecretKey::zero());
+                config.secret_key = SecretKey::generate().unwrap_or_else(SecretKey::zero);
             }
         }
 

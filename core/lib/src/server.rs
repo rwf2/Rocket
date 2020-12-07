@@ -65,7 +65,7 @@ async fn hyper_service_fn(
 
         // Dispatch the request to get a response, then write that response out.
         let token = rocket.preprocess_request(&mut req, &mut data).await;
-        let r = rocket.dispatch(token, &mut req, data).await;
+        let r = rocket.dispatch(token, &req, data).await;
         rocket.send_response(r, tx).await;
     });
 
@@ -256,35 +256,33 @@ impl Rocket {
     /// additional routes to try (forward). The corresponding outcome for each
     /// condition is returned.
     #[inline]
-    fn route<'s, 'r: 's>(
+    async fn route<'s, 'r: 's>(
         &'s self,
         request: &'r Request<'s>,
         mut data: Data,
-    ) -> impl Future<Output = handler::Outcome<'r>> + 's {
-        async move {
-            // Go through the list of matching routes until we fail or succeed.
-            let matches = self.router.route(request);
-            for route in matches {
-                // Retrieve and set the requests parameters.
-                info_!("Matched: {}", route);
-                request.set_route(route);
+    ) -> handler::Outcome<'r> {
+        // Go through the list of matching routes until we fail or succeed.
+        let matches = self.router.route(request);
+        for route in matches {
+            // Retrieve and set the requests parameters.
+            info_!("Matched: {}", route);
+            request.set_route(route);
 
-                // Dispatch the request to the handler.
-                let outcome = route.handler.handle(request, data).await;
+            // Dispatch the request to the handler.
+            let outcome = route.handler.handle(request, data).await;
 
-                // Check if the request processing completed (Some) or if the
-                // request needs to be forwarded. If it does, continue the loop
-                // (None) to try again.
-                info_!("{} {}", Paint::default("Outcome:").bold(), outcome);
-                match outcome {
-                    o@Outcome::Success(_) | o@Outcome::Failure(_) => return o,
-                    Outcome::Forward(unused_data) => data = unused_data,
-                }
+            // Check if the request processing completed (Some) or if the
+            // request needs to be forwarded. If it does, continue the loop
+            // (None) to try again.
+            info_!("{} {}", Paint::default("Outcome:").bold(), outcome);
+            match outcome {
+                o@Outcome::Success(_) | o@Outcome::Failure(_) => return o,
+                Outcome::Forward(unused_data) => data = unused_data,
             }
-
-            error_!("No matching routes for {}.", request);
-            Outcome::Forward(data)
         }
+
+        error_!("No matching routes for {}.", request);
+        Outcome::Forward(data)
     }
 
     // Finds the error catcher for the status `status` and executes it for the
@@ -292,40 +290,38 @@ impl Rocket {
     // catcher is called. If the catcher fails to return a good response, the
     // 500 catcher is executed. If there is no registered catcher for `status`,
     // the default catcher is used.
-    pub(crate) fn handle_error<'s, 'r: 's>(
+    pub(crate) async fn handle_error<'s, 'r: 's>(
         &'s self,
         status: Status,
-        req: &'r Request<'s>
-    ) -> impl Future<Output = Response<'r>> + 's {
-        async move {
-            warn_!("Responding with {} catcher.", Paint::red(&status));
+        req: &'r Request<'s>,
+    ) -> Response<'r> {
+        warn_!("Responding with {} catcher.", Paint::red(&status));
 
-            // For now, we reset the delta state to prevent any modifications
-            // from earlier, unsuccessful paths from being reflected in error
-            // response. We may wish to relax this in the future.
-            req.cookies().reset_delta();
+        // For now, we reset the delta state to prevent any modifications
+        // from earlier, unsuccessful paths from being reflected in error
+        // response. We may wish to relax this in the future.
+        req.cookies().reset_delta();
 
-            // Try to get the active catcher but fallback to user's 500 catcher.
-            let code = Paint::red(status.code);
-            let response = if let Some(catcher) = self.catchers.get(&status.code) {
-                catcher.handler.handle(status, req).await
-            } else if let Some(ref default) =  self.default_catcher {
-                warn_!("No {} catcher found. Using default catcher.", code);
-                default.handler.handle(status, req).await
-            } else {
-                warn_!("No {} or default catcher found. Using Rocket default catcher.", code);
-                crate::catcher::default(status, req)
-            };
+        // Try to get the active catcher but fallback to user's 500 catcher.
+        let code = Paint::red(status.code);
+        let response = if let Some(catcher) = self.catchers.get(&status.code) {
+            catcher.handler.handle(status, req).await
+        } else if let Some(ref default) =  self.default_catcher {
+            warn_!("No {} catcher found. Using default catcher.", code);
+            default.handler.handle(status, req).await
+        } else {
+            warn_!("No {} or default catcher found. Using Rocket default catcher.", code);
+            crate::catcher::default(status, req)
+        };
 
-            // Dispatch to the catcher. If it fails, use the Rocket default 500.
-            match response {
-                Ok(r) => r,
-                Err(err_status) => {
-                    error_!("Catcher unexpectedly failed with {}.", err_status);
-                    warn_!("Using Rocket's default 500 error catcher.");
-                    let default = crate::catcher::default(Status::InternalServerError, req);
-                    default.expect("Rocket has default 500 response")
-                }
+        // Dispatch to the catcher. If it fails, use the Rocket default 500.
+        match response {
+            Ok(r) => r,
+            Err(err_status) => {
+                error_!("Catcher unexpectedly failed with {}.", err_status);
+                warn_!("Using Rocket's default 500 error catcher.");
+                let default = crate::catcher::default(Status::InternalServerError, req);
+                default.expect("Rocket has default 500 response")
             }
         }
     }

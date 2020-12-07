@@ -3,7 +3,6 @@
 use std::fmt;
 use std::str::FromStr;
 
-use log;
 use yansi::Paint;
 use serde::{de, Serialize, Serializer, Deserialize, Deserializer};
 
@@ -124,10 +123,8 @@ impl log::Log for RocketLogger {
 
         // In Rocket, we abuse targets with suffix "_" to indicate indentation.
         let is_launch = record.target().starts_with("launch");
-        if record.target().ends_with('_') {
-            if configged_level != LogLevel::Critical || is_launch {
-                print!("    {} ", Paint::default("=>").bold());
-            }
+        if record.target().ends_with('_') && (configged_level != LogLevel::Critical || is_launch) {
+            print!("    {} ", Paint::default("=>").bold());
         }
 
         match record.level() {

@@ -12,7 +12,7 @@ const FILENAME: &str = "big_file.dat";
 
 #[get("/")]
 fn root() -> content::Plain<Stream<impl AsyncRead>> {
-    content::Plain(Stream::from(repeat('a' as u8).take(25000)))
+    content::Plain(Stream::from(repeat(b'a').take(25000)))
 }
 
 #[get("/big_file")]

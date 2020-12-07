@@ -28,7 +28,7 @@ struct FormInput<'r> {
 fn sink(sink: Result<Form<FormInput<'_>>, FormError<'_>>) -> String {
     match sink {
         Ok(form) => format!("{:?}", &*form),
-        Err(FormDataError::Io(_)) => format!("Form input was invalid UTF-8."),
+        Err(FormDataError::Io(_)) => "Form input was invalid UTF-8.".to_string(),
         Err(FormDataError::Malformed(f)) | Err(FormDataError::Parse(_, f)) => {
             format!("Invalid form input: {}", f)
         }

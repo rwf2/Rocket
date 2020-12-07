@@ -815,7 +815,7 @@ impl<K: 'static, C: Poolable> ConnectionPool<K, C> {
 
     #[inline]
     pub async fn get_pool(rocket: &rocket::Rocket) -> Option<Self> {
-        rocket.state::<Self>().map(|pool| pool.clone())
+        rocket.state::<Self>().cloned()
     }
 }
 
@@ -848,7 +848,7 @@ impl<K, C: Poolable> Drop for Connection<K, C> {
                 // Explicitly dropping the permit here so that it's only
                 // released after the connection is.
                 drop(permit);
-            })
+            });
         });
     }
 }

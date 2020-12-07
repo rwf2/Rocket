@@ -215,10 +215,7 @@ impl<S, E, F> Outcome<S, E, F> {
     /// ```
     #[inline]
     pub fn is_success(&self) -> bool {
-        match *self {
-            Success(_) => true,
-            _ => false
-        }
+        matches!(self, Success(_))
     }
 
     /// Return true if this `Outcome` is a `Failure`.
@@ -240,10 +237,7 @@ impl<S, E, F> Outcome<S, E, F> {
     /// ```
     #[inline]
     pub fn is_failure(&self) -> bool {
-        match *self {
-            Failure(_) => true,
-            _ => false
-        }
+        matches!(self, Failure(_))
     }
 
     /// Return true if this `Outcome` is a `Forward`.
@@ -265,10 +259,7 @@ impl<S, E, F> Outcome<S, E, F> {
     /// ```
     #[inline]
     pub fn is_forward(&self) -> bool {
-        match *self {
-            Forward(_) => true,
-            _ => false
-        }
+        matches!(self, Forward(_))
     }
 
     /// Converts from `Outcome<S, E, F>` to `Option<S>`.

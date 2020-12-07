@@ -64,7 +64,7 @@ impl NameSource {
         let name = name.as_ref();
         syn::parse_str::<Ident>(name)
             .map(|mut ident| { ident.set_span(span); ident })
-            .map(|ident| NameSource::from(ident))
+            .map(NameSource::from)
             .unwrap_or_else(|_| NameSource { name: name.into(), ident: None })
     }
 

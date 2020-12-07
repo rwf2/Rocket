@@ -69,8 +69,8 @@ impl TlsConfig {
     /// ```
     pub fn from_bytes(certs: &[u8], key: &[u8]) -> Self {
         TlsConfig {
-            certs: Either::Right(certs.to_vec().into()),
-            key: Either::Right(key.to_vec().into())
+            certs: Either::Right(certs.to_vec()),
+            key: Either::Right(key.to_vec())
         }
     }
 

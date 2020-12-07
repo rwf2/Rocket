@@ -21,7 +21,7 @@ fn is_valid_field_name(s: &str) -> bool {
 
     // We allow all visible ASCII characters except '&', '=', and '?' since we
     // use those as control characters for parsing.
-    s.chars().all(|c| (c >= ' ' && c <= '~') && c != '&' && c != '=' && c != '?')
+    s.chars().all(|c| (' '..='~').contains(&c) && c != '&' && c != '=' && c != '?')
 }
 
 impl FromMeta for FormField {

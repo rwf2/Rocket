@@ -26,7 +26,7 @@ impl FromMeta for CatcherCode {
             if path.is_ident("default") {
                 Ok(CatcherCode(None))
             } else {
-                Err(m.span().error(format!("expected `default`")))
+                Err(m.span().error("expected `default`"))
             }
         } else {
             let msg = format!("expected integer or identifier, found {}", m.description());
@@ -78,7 +78,7 @@ pub fn _catch(
     let status_code = Optional(catcher_status.as_ref().map(|s| s.0.code));
 
     // Variables names we'll use and reuse.
-    define_vars_and_mods!(catch.function.span().into() =>
+    define_vars_and_mods!(catch.function.span() =>
         req, status, _Box, Request, Response, StaticCatcherInfo, Catcher,
         ErrorHandlerFuture, Status);
 
@@ -91,14 +91,14 @@ pub fn _catch(
 
     // This ensures that "Responder not implemented" points to the return type.
     let return_type_span = catch.function.sig.output.ty()
-        .map(|ty| ty.span().into())
-        .unwrap_or(Span::call_site().into());
+        .map(|ty| ty.span())
+        .unwrap_or_else(Span::call_site);
 
     // Set the `req` and `status` spans to that of their respective function
     // arguments for a more correct `wrong type` error span. `rev` to be cute.
     let codegen_args = &[&req, &status];
     let inputs = catch.function.sig.inputs.iter().rev()
-        .zip(codegen_args.into_iter())
+        .zip(codegen_args)
         .map(|(fn_arg, codegen_arg)| match fn_arg {
             syn::FnArg::Receiver(_) => codegen_arg.respanned(fn_arg.span()),
             syn::FnArg::Typed(a) => codegen_arg.respanned(a.ty.span())
@@ -106,7 +106,7 @@ pub fn _catch(
 
     // We append `.await` to the function call if this is `async`.
     let dot_await = catch.function.sig.asyncness
-        .map(|a| quote_spanned!(a.span().into() => .await));
+        .map(|a| quote_spanned!(a.span() => .await));
 
     let catcher_response = quote_spanned!(return_type_span => {
         let ___responder = #user_catcher_fn_name(#(#inputs),*) #dot_await;

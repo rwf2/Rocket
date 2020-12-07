@@ -263,7 +263,7 @@ impl Route {
     /// assert_eq!(index.path().path(), "/foo/bar");
     /// assert_eq!(index.uri.path(), "/boo/foo/bar");
     /// ```
-    pub fn map_base<'a, F>(mut self, mapper: F) -> Result<Self, RouteUriError>
+    pub fn map_base<F>(mut self, mapper: F) -> Result<Self, RouteUriError>
         where F: FnOnce(Origin<'static>) -> String
     {
         self.base = Origin::parse_owned(mapper(self.base))?.into_normalized();

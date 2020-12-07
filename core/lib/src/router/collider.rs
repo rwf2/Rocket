@@ -54,10 +54,8 @@ fn paths_collide(route: &Route, other: &Route) -> bool {
             return true;
         }
 
-        if seg_a.kind == Kind::Static && seg_b.kind == Kind::Static {
-            if seg_a.string != seg_b.string {
-                return false;
-            }
+        if seg_a.kind == Kind::Static && seg_b.kind == Kind::Static && seg_a.string != seg_b.string {
+            return false;
         }
     }
 

@@ -26,7 +26,7 @@ impl EntryAttr for Main {
         }
 
         sig.asyncness = None;
-        Ok(quote_spanned!(block.span().into() => #(#attrs)* #vis #sig {
+        Ok(quote_spanned!(block.span() => #(#attrs)* #vis #sig {
             ::rocket::async_main(async move #block)
         }))
     }
@@ -40,7 +40,7 @@ impl EntryAttr for Test {
     fn function(f: &mut syn::ItemFn) -> Result<TokenStream> {
         let (attrs, vis, block, sig) = (&f.attrs, &f.vis, &f.block, &mut f.sig);
         sig.asyncness = None;
-        Ok(quote_spanned!(block.span().into() => #(#attrs)* #[test] #vis #sig {
+        Ok(quote_spanned!(block.span() => #(#attrs)* #[test] #vis #sig {
             ::rocket::async_test(async move #block)
         }))
     }
@@ -75,7 +75,7 @@ impl EntryAttr for Launch {
         };
 
         let block = &f.block;
-        let rocket = quote_spanned!(ty.span().into() => {
+        let rocket = quote_spanned!(ty.span() => {
             let ___rocket: #ty = #block;
             let ___rocket: ::rocket::Rocket = ___rocket;
             ___rocket
@@ -86,7 +86,7 @@ impl EntryAttr for Launch {
         sig.output = syn::ReturnType::Default;
         sig.asyncness = None;
 
-        Ok(quote_spanned!(block.span().into() =>
+        Ok(quote_spanned!(block.span() =>
             #[allow(dead_code)] #f
 
             #vis #sig {
@@ -121,7 +121,7 @@ fn _async_entry<A: EntryAttr>(
     input: proc_macro::TokenStream
 ) -> Result<TokenStream> {
     let mut function = parse_input::<A>(input)?;
-    A::function(&mut function).map(|t| t.into())
+    A::function(&mut function)
 }
 
 macro_rules! async_entry {

@@ -146,16 +146,16 @@ impl Accept {
         let mut all = self.iter();
         let mut preferred = all.next().unwrap_or(&ANY);
         for media_type in all {
-            if media_type.weight().is_none() && preferred.weight().is_some() {
+            if
                 // Media types without a `q` parameter are preferred.
-                preferred = media_type;
-            } else if media_type.weight_or(0.0) > preferred.weight_or(1.0) {
+                media_type.weight().is_none() && preferred.weight().is_some()
                 // Prefer media types with a greater weight, but if one doesn't
                 // have a weight, prefer the one we already have.
-                preferred = media_type;
-            } else if media_type.specificity() > preferred.specificity() {
+                || media_type.weight_or(0.0) > preferred.weight_or(1.0)
                 // Prefer more specific media types over less specific ones. IE:
                 // text/html over application/*.
+                || media_type.specificity() > preferred.specificity()
+            {
                 preferred = media_type;
             } else if media_type == preferred {
                 // Finally, all other things being equal, prefer a media type
@@ -209,7 +209,7 @@ impl Accept {
     /// assert_eq!(iter.next(), None);
     /// ```
     #[inline(always)]
-    pub fn iter<'a>(&'a self) -> impl Iterator<Item=&'a QMediaType> + 'a {
+    pub fn iter(&self) -> impl Iterator<Item=&QMediaType> {
         match self.0 {
             AcceptParams::Static(ref val) => Either::Left(Some(val).into_iter()),
             AcceptParams::Dynamic(ref vec) => Either::Right(vec.iter())
@@ -238,7 +238,7 @@ impl Accept {
     /// assert_eq!(iter.next(), None);
     /// ```
     #[inline(always)]
-    pub fn media_types<'a>(&'a self) -> impl Iterator<Item=&'a MediaType> + 'a {
+    pub fn media_types(&self) -> impl Iterator<Item=&MediaType> {
         self.iter().map(|weighted_mt| weighted_mt.media_type())
     }
 

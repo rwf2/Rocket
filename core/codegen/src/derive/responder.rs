@@ -26,7 +26,7 @@ pub fn derive_responder(input: proc_macro::TokenStream) -> TokenStream {
             false => Ok(())
         })
         .validate_fields(|_, fields| match fields.is_empty() {
-            true => return Err(fields.span().error("need at least one field")),
+            true => Err(fields.span().error("need at least one field")),
             false => Ok(())
         })
         .function(|_, inner| quote! {
@@ -40,7 +40,7 @@ pub fn derive_responder(input: proc_macro::TokenStream) -> TokenStream {
         .try_map_fields(|_, fields| {
             define_vars_and_mods!(_Ok);
             fn set_header_tokens<T: ToTokens + Spanned>(item: T) -> TokenStream {
-                quote_spanned!(item.span().into() => __res.set_header(#item);)
+                quote_spanned!(item.span() => __res.set_header(#item);)
             }
 
             let attr = ItemAttr::from_attrs("response", fields.parent.attrs())
@@ -48,7 +48,7 @@ pub fn derive_responder(input: proc_macro::TokenStream) -> TokenStream {
 
             let responder = fields.iter().next().map(|f| {
                 let (accessor, ty) = (f.accessor(), f.ty.with_stripped_lifetimes());
-                quote_spanned! { f.span().into() =>
+                quote_spanned! { f.span() =>
                    let mut __res = <#ty as ::rocket::response::Responder>::respond_to(
                        #accessor, __req
                    )?;
@@ -67,7 +67,7 @@ pub fn derive_responder(input: proc_macro::TokenStream) -> TokenStream {
 
             let content_type = attr.content_type.map(set_header_tokens);
             let status = attr.status.map(|status| {
-                quote_spanned!(status.span().into() => __res.set_status(#status);)
+                quote_spanned!(status.span() => __res.set_status(#status);)
             });
 
             Ok(quote! {

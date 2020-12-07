@@ -24,7 +24,7 @@ impl Router {
 
     pub fn add(&mut self, route: Route) {
         let selector = route.method;
-        let entries = self.routes.entry(selector).or_insert_with(|| vec![]);
+        let entries = self.routes.entry(selector).or_insert_with(Vec::new);
         let i = entries.binary_search_by_key(&route.rank, |r| r.rank)
             .unwrap_or_else(|i| i);
 

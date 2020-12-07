@@ -52,7 +52,7 @@ impl Request<'_> {
             method: Atomic::new(self.method()),
             uri: self.uri.clone(),
             headers: self.headers.clone(),
-            remote: self.remote.clone(),
+            remote: self.remote,
             state: self.state.clone(),
         }
     }
@@ -747,10 +747,8 @@ impl<'r> Request<'r> {
             if self.content_type().is_none() || replace {
                 self.state.content_type = Storage::new();
             }
-        } else if name == "Accept" {
-            if self.accept().is_none() || replace {
-                self.state.accept = Storage::new();
-            }
+        } else if name == "Accept" && (self.accept().is_none() || replace) {
+            self.state.accept = Storage::new();
         }
     }
 

@@ -14,7 +14,7 @@ struct Message<'r> {
 
 #[get("/<id>", format = "msgpack")]
 fn get(id: usize) -> MsgPack<Message<'static>> {
-    MsgPack(Message { id: id, contents: "Hello, world!", })
+    MsgPack(Message { id, contents: "Hello, world!", })
 }
 
 #[post("/", data = "<data>", format = "msgpack")]

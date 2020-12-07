@@ -91,7 +91,7 @@ impl<'a, 'r> FromRequest<'a, 'r> for Metadata<'a> {
     async fn from_request(request: &'a Request<'r>) -> request::Outcome<Self, ()> {
         request.guard::<State<'_, ContextManager>>().await
             .succeeded()
-            .and_then(|cm| Some(request::Outcome::Success(Metadata(cm.inner()))))
+            .map(|cm| request::Outcome::Success(Metadata(cm.inner())))
             .unwrap_or_else(|| {
                 error_!("Uninitialized template context: missing fairing.");
                 info_!("To use templates, you must attach `Template::fairing()`.");

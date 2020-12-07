@@ -23,7 +23,7 @@ fn hi<'r>(req: &'r Request, _: Data) -> HandlerFuture<'r> {
 fn name<'a>(req: &'a Request, _: Data) -> HandlerFuture<'a> {
     let param = req.get_param::<&'a RawStr>(0)
         .and_then(|res| res.ok())
-        .unwrap_or("unnamed".into());
+        .unwrap_or_else(|| "unnamed".into());
 
     Outcome::from(req, param.as_str()).pin()
 }
@@ -76,7 +76,7 @@ struct CustomHandler {
 }
 
 impl CustomHandler {
-    fn new(data: &'static str) -> Vec<Route> {
+    fn new_route(data: &'static str) -> Vec<Route> {
         vec![Route::new(Get, "/<id>", Self { data })]
     }
 }
@@ -110,6 +110,6 @@ fn rocket() -> rocket::Rocket {
         .mount("/upload", vec![get_upload, post_upload])
         .mount("/hello", vec![name.clone()])
         .mount("/hi", vec![name])
-        .mount("/custom", CustomHandler::new("some data here"))
+        .mount("/custom", CustomHandler::new_route("some data here"))
         .register(vec![not_found_catcher])
 }

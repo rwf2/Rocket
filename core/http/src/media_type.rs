@@ -496,7 +496,7 @@ impl MediaType {
     /// assert_eq!(png.params().count(), 0);
     /// ```
     #[inline]
-    pub fn params<'a>(&'a self) -> impl Iterator<Item=(&'a str, &'a str)> + 'a {
+    pub fn params(&self) -> impl Iterator<Item=(&str, &str)> {
         match self.params {
             MediaParams::Static(ref slice) => Either::Left(slice.iter().cloned()),
             MediaParams::Dynamic(ref vec) => {

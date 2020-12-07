@@ -77,7 +77,7 @@ impl<'c> LocalRequest<'c> {
         // from an error catcher) immediately if it's invalid. If it's valid,
         // then `request` already contains the correct URI.
         let rocket = self.client.rocket();
-        if let Err(_) = Origin::parse(&self.uri) {
+        if Origin::parse(&self.uri).is_err() {
             error!("Malformed request URI: {}", self.uri);
             return LocalResponse::new(self.request, move |req| {
                 rocket.handle_error(Status::BadRequest, req)
