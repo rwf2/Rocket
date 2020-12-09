@@ -102,7 +102,7 @@ use crate::http::RawStr;
 /// assert_eq!(items.next(), None);
 /// assert!(items.completed());
 /// ```
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum FormItems<'f> {
     #[doc(hidden)]
     Raw {
