@@ -602,11 +602,9 @@ impl<'r, T: FromTransformedData<'r> + 'r> FromTransformedData<'r> for Option<T> 
     }
 }
 
-#[cfg(debug_assertions)]
 use crate::data::ByteUnit;
 
 #[crate::async_trait]
-#[cfg(debug_assertions)]
 impl FromData for String {
     type Error = std::io::Error;
 
@@ -620,7 +618,6 @@ impl FromData for String {
 }
 
 #[crate::async_trait]
-#[cfg(debug_assertions)]
 impl FromData for Vec<u8> {
     type Error = std::io::Error;
 
