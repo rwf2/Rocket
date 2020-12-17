@@ -342,14 +342,14 @@ impl Rocket {
         // Freeze managed state for synchronization-free accesses later.
         self.managed_state.freeze();
 
-        // Run the launch fairings.
-        self.fairings.pretty_print_counts();
-        self.fairings.handle_launch(&self);
-
         // Determine the address and port we actually bound to.
         self.config.port = listener.local_addr().map(|a| a.port()).unwrap_or(0);
         let proto = self.config.tls.as_ref().map_or("http://", |_| "https://");
         let full_addr = format!("{}:{}", self.config.address, self.config.port);
+
+        // Run the launch fairings.
+        self.fairings.pretty_print_counts();
+        self.fairings.handle_launch(&self);
 
         launch_info!("{}{} {}{}",
                      Paint::emoji("🚀 "),
