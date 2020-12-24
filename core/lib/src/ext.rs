@@ -3,7 +3,7 @@ use std::pin::Pin;
 use std::task::{Poll, Context};
 
 use futures::{ready, stream::Stream};
-use tokio::io::AsyncRead;
+use tokio::io::{AsyncRead, ReadBuf};
 
 use crate::http::hyper::{self, Bytes, HttpBody};
 
@@ -23,11 +23,13 @@ impl<R> Stream for IntoBytesStream<R>
 
         let Self { ref mut inner, ref mut buffer, buf_size } = *self;
 
-        match Pin::new(inner).poll_read(cx, &mut buffer[..]) {
+        let mut buf = ReadBuf::new(&mut buffer[..]);
+        match Pin::new(inner).poll_read(cx, &mut buf) {
             Poll::Pending => Poll::Pending,
             Poll::Ready(Err(e)) => Poll::Ready(Some(Err(e))),
-            Poll::Ready(Ok(n)) if n == 0 => Poll::Ready(None),
-            Poll::Ready(Ok(n)) => {
+            Poll::Ready(Ok(())) if buf.filled().is_empty() => Poll::Ready(None),
+            Poll::Ready(Ok(())) => {
+                let n = buf.filled().len();
                 // FIXME(perf).
                 let mut next = std::mem::replace(buffer, vec![0; buf_size]);
                 next.truncate(n);
@@ -72,8 +74,8 @@ impl AsyncRead for AsyncReadBody {
     fn poll_read(
         mut self: Pin<&mut Self>,
         cx: &mut Context<'_>,
-        buf: &mut [u8]
-    ) -> Poll<io::Result<usize>> {
+        buf: &mut ReadBuf<'_>,
+    ) -> Poll<io::Result<()>> {
         loop {
             match self.state {
                 State::Pending => {
@@ -90,11 +92,11 @@ impl AsyncRead for AsyncReadBody {
                 },
                 State::Partial(ref mut cursor) => {
                     match ready!(Pin::new(cursor).poll_read(cx, buf)) {
-                        Ok(n) if n == 0 => self.state = State::Pending,
+                        Ok(()) if buf.filled().is_empty() => self.state = State::Pending,
                         result => return Poll::Ready(result),
                     }
                 }
-                State::Done => return Poll::Ready(Ok(0)),
+                State::Done => return Poll::Ready(Ok(())),
             }
         }
     }

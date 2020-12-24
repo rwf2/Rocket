@@ -305,7 +305,8 @@ impl Rocket {
         let (rocket, mut fairings) = match tokio::runtime::Handle::try_current() {
             Ok(handle) => {
                 std::thread::spawn(move || {
-                    handle.block_on(future)
+                    let _e = handle.enter();
+                    futures::executor::block_on(future)
                 }).join().unwrap()
             }
             Err(_) => {

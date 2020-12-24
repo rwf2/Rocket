@@ -15,7 +15,7 @@ edition = "2018"
 # Internal use only.
 templates = ["serde", "serde_json", "glob", "notify"]
 databases = [
-    "serde", "r2d2", "tokio/blocking", "tokio/rt-threaded",
+    "serde", "r2d2", "tokio/rt", "tokio/rt-multi-thread",
     "rocket_contrib_codegen/database_attribute"
 ]
 
@@ -42,7 +42,7 @@ memcache_pool = ["databases", "memcache", "r2d2-memcache"]
 
 [dependencies]
 # Global dependencies.
-tokio = { version = "0.2.0", optional = true }
+tokio = { version = "1.0", optional = true }
 rocket_contrib_codegen = { version = "0.5.0-dev", path = "../codegen", optional = true }
 rocket = { version = "0.5.0-dev", path = "../../core/lib/", default-features = false }
 log = "0.4"

@@ -22,14 +22,14 @@ private-cookies = ["cookie/private", "cookie/key-expansion"]
 [dependencies]
 smallvec = "1.0"
 percent-encoding = "2"
-hyper = { version = "0.13.0", default-features = false, features = ["runtime"] }
+hyper = { version = "0.14", default-features = false, features = ["http1", "http2", "runtime", "server", "stream"] }
 http = "0.2"
 mime = "0.3.13"
 time = "0.2.11"
 indexmap = { version = "1.5.2", features = ["std"] }
 state = "0.4"
-tokio-rustls = { version = "0.14.0", optional = true }
-tokio = { version = "0.2.9", features = ["sync", "tcp", "time"] }
+tokio-rustls = { version = "0.22.0", optional = true }
+tokio = { version = "1.0", features = ["net", "sync", "time"] }
 unicode-xid = "0.2"
 log = "0.4"
 ref-cast = "1.0"
@@ -37,6 +37,7 @@ uncased = "0.9"
 parking_lot = "0.11"
 either = "1"
 pear = "0.2"
+pin-project-lite = "0.2"
 
 [dependencies.cookie]
 git = "https://github.com/SergioBenitez/cookie-rs.git"
