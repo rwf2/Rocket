@@ -431,6 +431,7 @@ fn codegen_route(route: Route) -> Result<TokenStream> {
         /// Rocket code generated proxy static conversion implementation.
         impl From<#user_handler_fn_name> for #StaticRouteInfo {
             fn from(_: #user_handler_fn_name) -> #StaticRouteInfo {
+                #[allow(clippy::unit_arg)]
                 fn monomorphized_function<'_b>(
                     #req: &'_b #Request,
                     #data: #Data
