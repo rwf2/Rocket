@@ -263,10 +263,11 @@ impl Rocket {
     ) -> impl Future<Output = handler::Outcome<'r>> + 's {
         async move {
             // Go through the list of matching routes until we fail or succeed.
-            let matches = self.router.route(request);
-            for route in matches {
+            let method_matches = self.router.route(request, true);
+            for route in method_matches {
                 // Retrieve and set the requests parameters.
                 info_!("Matched: {}", route);
+
                 request.set_route(route);
 
                 // Dispatch the request to the handler.
@@ -283,7 +284,25 @@ impl Rocket {
             }
 
             error_!("No matching routes for {}.", request);
-            Outcome::Forward(data)
+
+            // Find if a similar route exists
+            let match_any = self.router.route(request, false);
+
+            if match_any.len() > 0 {
+                info_!("{}", Paint::yellow("A similar route exists: ").bold());
+                for route in match_any {
+                    info_!(" - {}", Paint::yellow(&route).bold());
+                    // Must pass HEAD requests foward
+                    if &request.method() == &Method::Head {
+                        continue;
+                    }
+                    if &request.method() != &route.method {
+                        return Outcome::Failure(Status::MethodNotAllowed);
+                    }
+                }
+            }
+
+            Outcome::forward(data)
         }
     }
 

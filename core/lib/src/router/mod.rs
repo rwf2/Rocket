@@ -17,6 +17,7 @@ pub struct Router {
     routes: HashMap<Selector, Vec<Route>>,
 }
 
+
 impl Router {
     pub fn new() -> Router {
         Router { routes: HashMap::new() }
@@ -31,15 +32,26 @@ impl Router {
         entries.insert(i, route);
     }
 
-    pub fn route<'b>(&'b self, req: &Request<'_>) -> Vec<&'b Route> {
-        // Note that routes are presorted by rank on each `add`.
-        let matches = self.routes.get(&req.method()).map_or(vec![], |routes| {
-            routes.iter()
-                .filter(|r| r.matches(req))
-                .collect()
-        });
+    // Param `restrict` will restrict the route matching by the http method of `req`
+    // With `restrict` == false and `req` method == GET both will be matched:
+    //        - GET hello/world   <-
+    //        - POST hello/world  <-
+    // With `restrict` == true and `req` method == GET only the first one will be matched:
+    //        - GET foo/bar  <-
+    //        - POST foo/bar
+    pub fn route<'b>(&'b self, req: &Request<'_>, restrict: bool) -> Vec<&'b Route> {
+        let mut matches = Vec::new();
+        for (_method, routes_vec) in self.routes.iter() {
+            for _route in routes_vec {
+                if _route.matches_by_method(req) {
+                    matches.push(_route);
+                } else if !restrict && _route.match_any(req){
+                    matches.push(_route);
+                }
+            }
+        }
 
-        trace_!("Routing the request: {}", req);
+        trace_!("Routing(restrict: {}): {}", &restrict, req);
         trace_!("All matches: {:?}", matches);
         matches
     }
@@ -245,7 +257,7 @@ mod test {
     fn route<'a>(router: &'a Router, method: Method, uri: &str) -> Option<&'a Route> {
         let rocket = Rocket::custom(Config::default());
         let request = Request::new(&rocket, method, Origin::parse(uri).unwrap());
-        let matches = router.route(&request);
+        let matches = router.route(&request, false);
         if matches.len() > 0 {
             Some(matches[0])
         } else {
@@ -256,7 +268,7 @@ mod test {
     fn matches<'a>(router: &'a Router, method: Method, uri: &str) -> Vec<&'a Route> {
         let rocket = Rocket::custom(Config::default());
         let request = Request::new(&rocket, method, Origin::parse(uri).unwrap());
-        router.route(&request)
+        router.route(&request, false)
     }
 
     #[test]
@@ -294,9 +306,9 @@ mod test {
     #[test]
     fn test_err_routing() {
         let router = router_with_routes(&["/hello"]);
-        assert!(route(&router, Put, "/hello").is_none());
-        assert!(route(&router, Post, "/hello").is_none());
-        assert!(route(&router, Options, "/hello").is_none());
+        assert!(route(&router, Put, "/hello").is_some());
+        assert!(route(&router, Post, "/hello").is_some());
+        assert!(route(&router, Options, "/hello").is_some());
         assert!(route(&router, Get, "/hell").is_none());
         assert!(route(&router, Get, "/hi").is_none());
         assert!(route(&router, Get, "/hello/there").is_none());
@@ -304,20 +316,19 @@ mod test {
         assert!(route(&router, Get, "/hillo").is_none());
 
         let router = router_with_routes(&["/<a>"]);
-        assert!(route(&router, Put, "/hello").is_none());
-        assert!(route(&router, Post, "/hello").is_none());
-        assert!(route(&router, Options, "/hello").is_none());
+        assert!(route(&router, Put, "/hello").is_some());
+        assert!(route(&router, Post, "/hello").is_some());
+        assert!(route(&router, Options, "/hello").is_some());
         assert!(route(&router, Get, "/hello/there").is_none());
         assert!(route(&router, Get, "/hello/i").is_none());
 
         let router = router_with_routes(&["/<a>/<b>"]);
+        assert!(route(&router, Put, "/a/b").is_some());
+        assert!(route(&router, Put, "/hello/hi").is_some());
         assert!(route(&router, Get, "/a/b/c").is_none());
         assert!(route(&router, Get, "/a").is_none());
         assert!(route(&router, Get, "/a/").is_none());
         assert!(route(&router, Get, "/a/b/c/d").is_none());
-        assert!(route(&router, Put, "/hello/hi").is_none());
-        assert!(route(&router, Put, "/a/b").is_none());
-        assert!(route(&router, Put, "/a/b").is_none());
     }
 
     macro_rules! assert_ranked_routes {

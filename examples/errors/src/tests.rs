@@ -46,7 +46,7 @@ fn forced_error_and_default_catcher() {
 fn test_hello_invalid_age() {
     let client = Client::tracked(super::rocket()).unwrap();
 
-    for &(name, age) in &[("Ford", -129), ("Trillian", 128)] {
+    for &(name, age) in &[("Ford", "s"), ("Trillian", "f")] {
         let request = client.get(format!("/hello/{}/{}", name, age));
         let expected = super::not_found(request.inner());
         let response = request.dispatch();

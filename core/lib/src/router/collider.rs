@@ -25,7 +25,7 @@ impl Route {
             && formats_collide(self, other)
     }
 
-    /// Determines if this route matches against the given request. This means
+    /// Determines if this route matches against the given request if . This means
     /// that:
     ///
     ///   * The route's method matches that of the incoming request.
@@ -38,12 +38,19 @@ impl Route {
     ///     request query string, though in any position.
     ///     - If no query in route, requests with/without queries match.
     #[doc(hidden)]
-    pub fn matches(&self, req: &Request<'_>) -> bool {
+    pub fn matches_by_method(&self, req: &Request<'_>) -> bool {
         self.method == req.method()
             && paths_match(self, req)
-            && queries_match(self, req)
+            && queries_match(self, req) 
             && formats_match(self, req)
     }
+
+    /// Match agoinst any method.
+    #[doc(hidden)]
+    pub fn match_any(&self, req: &Request<'_>) -> bool {
+        paths_match(self, req) && queries_match(self, req) && formats_match(self, req)
+    }
+
 }
 
 fn paths_collide(route: &Route, other: &Route) -> bool {
@@ -416,7 +423,7 @@ mod tests {
             route.format = Some(mt_str.parse::<MediaType>().unwrap());
         }
 
-        route.matches(&req)
+        route.matches_by_method(&req)
     }
 
     #[test]
@@ -471,7 +478,7 @@ mod tests {
         let rocket = Rocket::custom(Config::default());
         let req = Request::new(&rocket, Get, Origin::parse(a).expect("valid URI"));
         let route = Route::ranked(0, Get, b.to_string(), dummy);
-        route.matches(&req)
+        route.matches_by_method(&req)
     }
 
     #[test]
