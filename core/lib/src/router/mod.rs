@@ -51,7 +51,7 @@ impl Router {
             }
         }
 
-        trace_!("Routing(restrict: {}): {}", &restrict, req);
+        trace_!("Routing(restrict: {}): {}", restrict, req);
         trace_!("All matches: {:?}", matches);
         matches
     }

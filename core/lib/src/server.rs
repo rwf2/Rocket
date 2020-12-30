@@ -288,17 +288,13 @@ impl Rocket {
             // Find if a similar route exists
             let match_any = self.router.route(request, false);
 
-            if match_any.len() > 0 {
-                info_!("{}", Paint::yellow("A similar route exists: ").bold());
-                for route in match_any {
+            for route in match_any {
+                if &request.method() != &Method::Head   // Must pass HEAD requests foward
+                    && &request.method() != &route.method
+                {
+                    info_!("{}", Paint::yellow("A similar route exists: ").bold());
                     info_!(" - {}", Paint::yellow(&route).bold());
-                    // Must pass HEAD requests foward
-                    if &request.method() == &Method::Head {
-                        continue;
-                    }
-                    if &request.method() != &route.method {
-                        return Outcome::Failure(Status::MethodNotAllowed);
-                    }
+                    return Outcome::Failure(Status::MethodNotAllowed);
                 }
             }
 

@@ -25,7 +25,7 @@ impl Route {
             && formats_collide(self, other)
     }
 
-    /// Determines if this route matches against the given request if . This means
+    /// Determines if this route matches against the given request. This means
     /// that:
     ///
     ///   * The route's method matches that of the incoming request.
@@ -41,11 +41,11 @@ impl Route {
     pub fn matches_by_method(&self, req: &Request<'_>) -> bool {
         self.method == req.method()
             && paths_match(self, req)
-            && queries_match(self, req) 
+            && queries_match(self, req)
             && formats_match(self, req)
     }
 
-    /// Match agoinst any method.
+    /// Match against any method.
     #[doc(hidden)]
     pub fn match_any(&self, req: &Request<'_>) -> bool {
         paths_match(self, req) && queries_match(self, req) && formats_match(self, req)
