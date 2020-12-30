@@ -30,12 +30,10 @@ fn test_root() {
         dispatch!(*method, "/", |client, response| {
             let mut map = std::collections::HashMap::new();
             map.insert("path", "/");
-            //let expected = Template::show(client.cargo(), "error/405", &map).unwrap();
+            let expected = Template::show(client.rocket(), "error/405", &map).unwrap();
 
             assert_eq!(response.status(), Status::MethodNotAllowed);
-            // FIND A MATCHING TEMPLATE TO HTTP 405 HERE
-            //assert_eq!(response.into_string(), Some(expected));
-            //assert_eq!(response.status(), Status::MethodNotAllowed);
+            assert_eq!(response.into_string(), Some(expected));
         });
     }
 }

@@ -32,10 +32,17 @@ fn not_found(req: &Request<'_>) -> Template {
     Template::render("error/404", &map)
 }
 
+#[catch(405)]
+fn method_not_allowed(req: &Request<'_>) -> Template {
+    let mut map = HashMap::new();
+    map.insert("path", req.uri().path());
+    Template::render("error/405", &map)
+}
+
 #[launch]
 fn rocket() -> rocket::Rocket {
     rocket::ignite()
         .mount("/", routes![index, get])
         .attach(Template::fairing())
-        .register(catchers![not_found])
+        .register(catchers![not_found, method_not_allowed])
 }

@@ -47,6 +47,13 @@ fn not_found(req: &Request<'_>) -> Template {
     Template::render("error/404", &map)
 }
 
+#[catch(405)]
+fn method_not_allowed(req: &Request<'_>) -> Template {
+    let mut map = std::collections::HashMap::new();
+    map.insert("path", req.uri().path());
+    Template::render("error/405", &map)
+}
+
 use self::handlebars::{Helper, Handlebars, Context, RenderContext, Output, HelperResult, JsonRender};
 
 fn wow_helper(
@@ -69,7 +76,7 @@ fn wow_helper(
 fn rocket() -> rocket::Rocket {
     rocket::ignite()
         .mount("/", routes![index, hello, about])
-        .register(catchers![not_found])
+        .register(catchers![not_found, method_not_allowed])
         .attach(Template::custom(|engines| {
             engines.handlebars.register_helper("wow", Box::new(wow_helper));
         }))
