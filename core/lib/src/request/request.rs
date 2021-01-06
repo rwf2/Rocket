@@ -574,6 +574,12 @@ impl<'r> Request<'r> {
             })
     }
 
+    pub fn local_cache_get<T>(&self) -> Option<&T>
+    where T: Send + Sync + 'static
+    {
+        self.state.cache.try_get()
+    }
+
     /// Retrieves the cached value for type `T` from the request-local cached
     /// state of `self`. If no such value has previously been cached for this
     /// request, `fut` is `await`ed to produce the value which is subsequently
