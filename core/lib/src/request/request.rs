@@ -580,6 +580,12 @@ impl<'r> Request<'r> {
         self.state.cache.try_get()
     }
 
+    pub fn local_cache_set<T>(&self, d: T)
+    where T: Send + Sync + 'static
+    {
+        self.state.cache.set(d);
+    }
+
     /// Retrieves the cached value for type `T` from the request-local cached
     /// state of `self`. If no such value has previously been cached for this
     /// request, `fut` is `await`ed to produce the value which is subsequently
