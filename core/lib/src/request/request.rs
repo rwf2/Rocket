@@ -574,12 +574,39 @@ impl<'r> Request<'r> {
             })
     }
 
+    /// Retrieves the cached value for type `T` from the request-local cached
+    /// state of `self`. If no such value has previously been cached for this
+    /// request, `None` is returned.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// async fn on_response<'r>(&self, req: &'r Request<'_>, res: &mut Response<'r>) {
+    ///     if let Some(session) = req.local_cache_get::<Session>() {
+    ///         debug!("{:?}", session);
+    ///         res.set_header(Cookie::new("rocket-session", String::from(&session.id)));
+    ///     }
+    /// }
+    /// ```
     pub fn local_cache_get<T>(&self) -> Option<&T>
     where T: Send + Sync + 'static
     {
         self.state.cache.try_get()
     }
 
+    /// Sets the given value to the request-local cached
+    /// state of `self`.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// async fn on_request(&self, req: &mut Request<'_>, _data: &mut Data) {
+    ///    if let Some(session_cookie) = req.cookies().get("rocket-session") {
+    ///       let session_id = session_cookie.value().to_string();
+    ///       req.local_cache_set(session_id);
+    ///    }
+    /// }
+    /// ```
     pub fn local_cache_set<T>(&self, d: T)
     where T: Send + Sync + 'static
     {
