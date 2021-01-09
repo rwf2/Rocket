@@ -70,8 +70,8 @@ mysql = { version = "18.0", optional = true }
 r2d2_mysql = { version = "18.0", optional = true }
 rusqlite = { version = "0.23", optional = true }
 r2d2_sqlite = { version = "0.16", optional = true }
-memcache = { version = "0.14", optional = true }
-r2d2-memcache = { version = "0.5", optional = true }
+memcache = { version = "0.15", optional = true }
+r2d2-memcache = { version = "0.6", optional = true }
 
 # SpaceHelmet dependencies
 time = { version = "0.2.9", optional = true }
