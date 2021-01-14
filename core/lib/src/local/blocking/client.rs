@@ -32,8 +32,7 @@ pub struct Client {
 
 impl Client {
     fn _new(rocket: Rocket, tracked: bool) -> Result<Client, Error> {
-        let mut runtime = tokio::runtime::Builder::new()
-            .basic_scheduler()
+        let runtime = tokio::runtime::Builder::new_current_thread()
             .enable_all()
             .build()
             .expect("create tokio runtime");

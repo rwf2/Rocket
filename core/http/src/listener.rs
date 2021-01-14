@@ -10,7 +10,7 @@ use hyper::server::accept::Accept;
 
 use log::{debug, error};
 
-use tokio::time::Delay;
+use tokio::time::Sleep;
 use tokio::io::{AsyncRead, AsyncWrite};
 use tokio::net::{TcpListener, TcpStream};
 
@@ -32,15 +32,18 @@ pub trait Connection: AsyncRead + AsyncWrite {
     fn remote_addr(&self) -> Option<SocketAddr>;
 }
 
-/// This is a generic version of hyper's AddrIncoming that is intended to be
-/// usable with listeners other than a plain TCP stream, e.g. TLS and/or Unix
-/// sockets. It does so by bridging the `Listener` trait to what hyper wants (an
-/// Accept). This type is internal to Rocket.
-#[must_use = "streams do nothing unless polled"]
-pub struct Incoming<L> {
-    listener: L,
-    sleep_on_errors: Option<Duration>,
-    pending_error_delay: Option<Delay>,
+pin_project_lite::pin_project! {
+    /// This is a generic version of hyper's AddrIncoming that is intended to be
+    /// usable with listeners other than a plain TCP stream, e.g. TLS and/or Unix
+    /// sockets. It does so by bridging the `Listener` trait to what hyper wants (an
+    /// Accept). This type is internal to Rocket.
+    #[must_use = "streams do nothing unless polled"]
+    pub struct Incoming<L> {
+        listener: L,
+        sleep_on_errors: Option<Duration>,
+        #[pin]
+        pending_error_delay: Option<Sleep>,
+    }
 }
 
 impl<L: Listener> Incoming<L> {
@@ -72,18 +75,19 @@ impl<L: Listener> Incoming<L> {
         self.sleep_on_errors = val;
     }
 
-    fn poll_next(&mut self, cx: &mut Context<'_>) -> Poll<io::Result<L::Connection>> {
-        // Check if a previous delay is active that was set by IO errors.
-        if let Some(ref mut delay) = self.pending_error_delay {
-            match Pin::new(delay).poll(cx) {
-                Poll::Ready(()) => {}
-                Poll::Pending => return Poll::Pending,
-            }
-        }
-        self.pending_error_delay = None;
-
+    fn poll_next(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<io::Result<L::Connection>> {
+        let mut me = self.project();
         loop {
-            match self.listener.poll_accept(cx) {
+            // Check if a previous sleep timer is active that was set by IO errors.
+            if let Some(delay) = me.pending_error_delay.as_mut().as_pin_mut() {
+                match delay.poll(cx) {
+                    Poll::Ready(()) => {}
+                    Poll::Pending => return Poll::Pending,
+                }
+            }
+            me.pending_error_delay.set(None);
+
+            match me.listener.poll_accept(cx) {
                 Poll::Ready(Ok(stream)) => {
                     return Poll::Ready(Ok(stream));
                 },
@@ -96,22 +100,11 @@ impl<L: Listener> Incoming<L> {
                         continue;
                     }
 
-                    if let Some(duration) = self.sleep_on_errors {
+                    if let Some(duration) = me.sleep_on_errors {
                         error!("accept error: {}", e);
 
                         // Sleep for the specified duration
-                        let mut error_delay = tokio::time::delay_for(duration);
-
-                        match Pin::new(&mut error_delay).poll(cx) {
-                            Poll::Ready(()) => {
-                                // Wow, it's been a second already? Ok then...
-                                continue
-                            },
-                            Poll::Pending => {
-                                self.pending_error_delay = Some(error_delay);
-                                return Poll::Pending;
-                            },
-                        }
+                        me.pending_error_delay.set(Some(tokio::time::sleep(*duration)));
                     } else {
                         return Poll::Ready(Err(e));
                     }
@@ -126,7 +119,7 @@ impl<L: Listener + Unpin> Accept for Incoming<L> {
     type Error = io::Error;
 
     fn poll_accept(
-        mut self: Pin<&mut Self>,
+        self: Pin<&mut Self>,
         cx: &mut Context<'_>
     ) -> Poll<Option<io::Result<Self::Conn>>> {
         self.poll_next(cx).map(Some)
@@ -169,7 +162,7 @@ impl Listener for TcpListener {
     }
 
     fn poll_accept(&mut self, cx: &mut Context<'_>) -> Poll<io::Result<Self::Connection>> {
-        self.poll_accept(cx).map_ok(|(stream, _addr)| stream)
+        (*self).poll_accept(cx).map_ok(|(stream, _addr)| stream)
     }
 }
 

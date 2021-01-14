@@ -4,10 +4,10 @@
 //! These types will, with certainty, be removed with time, but they reside here
 //! while necessary.
 
-#[doc(hidden)] pub use hyper::{Body, Request, Response, Server};
+#[doc(hidden)] pub use hyper::{Body, Error, Request, Response};
 #[doc(hidden)] pub use hyper::body::{Bytes, HttpBody, Sender as BodySender};
-#[doc(hidden)] pub use hyper::error::Error;
 #[doc(hidden)] pub use hyper::rt::Executor;
+#[doc(hidden)] pub use hyper::server::Server;
 #[doc(hidden)] pub use hyper::service::{make_service_fn, service_fn, Service};
 
 #[doc(hidden)] pub use http::header::HeaderMap;

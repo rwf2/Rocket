@@ -2,7 +2,7 @@ use std::io;
 use std::future::Future;
 use std::{pin::Pin, task::{Context, Poll}};
 
-use tokio::io::AsyncRead;
+use tokio::io::{AsyncRead, ReadBuf};
 
 use crate::http::CookieJar;
 use crate::{Request, Response};
@@ -125,11 +125,11 @@ impl AsyncRead for LocalResponse<'_> {
     fn poll_read(
         mut self: Pin<&mut Self>,
         cx: &mut Context<'_>,
-        buf: &mut [u8]
-    ) -> Poll<io::Result<usize>> {
+        buf: &mut ReadBuf<'_>,
+    ) -> Poll<io::Result<()>> {
         let body = match self.response.body_mut() {
             Some(body) => body,
-            _ => return Poll::Ready(Ok(0))
+            _ => return Poll::Ready(Ok(()))
         };
 
         Pin::new(body.as_reader()).poll_read(cx, buf)

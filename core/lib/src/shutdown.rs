@@ -41,7 +41,7 @@ impl Shutdown {
     /// immediately; pending requests will continue to run until completion
     /// before the actual shutdown occurs.
     #[inline]
-    pub fn shutdown(mut self) {
+    pub fn shutdown(self) {
         // Intentionally ignore any error, as the only scenarios this can happen
         // is sending too many shutdown requests or we're already shut down.
         let _ = self.0.try_send(());

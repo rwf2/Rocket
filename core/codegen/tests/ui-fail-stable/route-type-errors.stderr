@@ -3,30 +3,43 @@ error[E0277]: the trait bound `Q: FromParam<'_>` is not satisfied
   |
 6 | fn f0(foo: Q) {}
   |            ^ the trait `FromParam<'_>` is not implemented for `Q`
+  |
+  = note: required by `from_param`
 
 error[E0277]: the trait bound `Q: FromSegments<'_>` is not satisfied
  --> $DIR/route-type-errors.rs:9:12
   |
 9 | fn f1(foo: Q) {}
   |            ^ the trait `FromSegments<'_>` is not implemented for `Q`
+  |
+  = note: required by `from_segments`
 
 error[E0277]: the trait bound `Q: FromFormValue<'_>` is not satisfied
   --> $DIR/route-type-errors.rs:12:12
    |
 12 | fn f2(foo: Q) {}
    |            ^ the trait `FromFormValue<'_>` is not implemented for `Q`
+   |
+   = note: required by `from_form_value`
 
 error[E0277]: the trait bound `Q: FromFormValue<'_>` is not satisfied
-  --> $DIR/route-type-errors.rs:12:7
-   |
-12 | fn f2(foo: Q) {}
-   |       ^^^^^^ the trait `FromFormValue<'_>` is not implemented for `Q`
+   --> $DIR/route-type-errors.rs:12:7
+    |
+12  | fn f2(foo: Q) {}
+    |       ^^^^^^ the trait `FromFormValue<'_>` is not implemented for `Q`
+    |
+   ::: $WORKSPACE/core/lib/src/request/form/from_form_value.rs
+    |
+    | pub trait FromFormValue<'v>: Sized {
+    | ---------------------------------- required by this bound in `FromFormValue`
 
 error[E0277]: the trait bound `Q: FromQuery<'_>` is not satisfied
   --> $DIR/route-type-errors.rs:15:12
    |
 15 | fn f3(foo: Q) {}
    |            ^ the trait `FromQuery<'_>` is not implemented for `Q`
+   |
+   = note: required by `from_query`
 
 error[E0277]: the trait bound `Q: FromData` is not satisfied
   --> $DIR/route-type-errors.rs:18:12
@@ -37,31 +50,47 @@ error[E0277]: the trait bound `Q: FromData` is not satisfied
    = note: required because of the requirements on the impl of `FromTransformedData<'_>` for `Q`
 
 error[E0277]: the trait bound `Q: FromRequest<'_, '_>` is not satisfied
-  --> $DIR/route-type-errors.rs:21:10
-   |
-21 | fn f5(a: Q, foo: Q) {}
-   |          ^ the trait `FromRequest<'_, '_>` is not implemented for `Q`
+   --> $DIR/route-type-errors.rs:21:10
+    |
+21  | fn f5(a: Q, foo: Q) {}
+    |          ^ the trait `FromRequest<'_, '_>` is not implemented for `Q`
+    |
+   ::: $WORKSPACE/core/lib/src/request/from_request.rs
+    |
+    | #[crate::async_trait]
+    | --------------------- required by this bound in `from_request`
 
 error[E0277]: the trait bound `Q: FromParam<'_>` is not satisfied
   --> $DIR/route-type-errors.rs:21:18
    |
 21 | fn f5(a: Q, foo: Q) {}
    |                  ^ the trait `FromParam<'_>` is not implemented for `Q`
+   |
+   = note: required by `from_param`
 
 error[E0277]: the trait bound `Q: FromRequest<'_, '_>` is not satisfied
-  --> $DIR/route-type-errors.rs:24:10
-   |
-24 | fn f6(a: Q, foo: Q, good: usize, bar: Q) {}
-   |          ^ the trait `FromRequest<'_, '_>` is not implemented for `Q`
+   --> $DIR/route-type-errors.rs:24:10
+    |
+24  | fn f6(a: Q, foo: Q, good: usize, bar: Q) {}
+    |          ^ the trait `FromRequest<'_, '_>` is not implemented for `Q`
+    |
+   ::: $WORKSPACE/core/lib/src/request/from_request.rs
+    |
+    | #[crate::async_trait]
+    | --------------------- required by this bound in `from_request`
 
 error[E0277]: the trait bound `Q: FromParam<'_>` is not satisfied
   --> $DIR/route-type-errors.rs:24:18
    |
 24 | fn f6(a: Q, foo: Q, good: usize, bar: Q) {}
    |                  ^ the trait `FromParam<'_>` is not implemented for `Q`
+   |
+   = note: required by `from_param`
 
 error[E0277]: the trait bound `Q: FromParam<'_>` is not satisfied
   --> $DIR/route-type-errors.rs:24:39
    |
 24 | fn f6(a: Q, foo: Q, good: usize, bar: Q) {}
    |                                       ^ the trait `FromParam<'_>` is not implemented for `Q`
+   |
+   = note: required by `from_param`

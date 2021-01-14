@@ -46,8 +46,8 @@ rand = "0.7"
 either = "1"
 
 [dependencies.tokio]
-version = "0.2.9"
-features = ["fs", "io-std", "io-util", "rt-threaded", "sync", "signal", "macros"]
+version = "1.0"
+features = ["fs", "io-std", "io-util", "rt-multi-thread", "sync", "signal", "macros"]
 
 [build-dependencies]
 yansi = "0.5"

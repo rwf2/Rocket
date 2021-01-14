@@ -278,7 +278,7 @@ fn check_complex() {
 #[test]
 fn check_location_promotion() {
     struct S1(String);
-    struct S2 { name: String };
+    struct S2 { name: String }
 
     let s1 = S1("Bob".into());
     let s2 = S2 { name: "Bob".into() };

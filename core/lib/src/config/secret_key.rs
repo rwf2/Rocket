@@ -27,7 +27,10 @@ enum Kind {
 /// let figment = Figment::from(rocket::Config::default())
 ///     .merge(("secret_key", "hPRYyVRiMyxpw5sBB1XeCMN1kFsDCqKvBi2QJxBVHQk="));
 ///
+/// # #[cfg(feature = "secrets")]
 /// assert!(!rocket::Config::from(figment).secret_key.is_zero());
+/// # #[cfg(not(feature = "secrets"))]
+/// # assert!(rocket::Config::from(figment).secret_key.is_zero());
 ///
 /// let figment = Figment::from(rocket::Config::default())
 ///     .merge(("secret_key", vec![0u8; 64]));
@@ -42,16 +45,16 @@ enum Kind {
 ///
 /// [private cookies]: https://rocket.rs/master/guide/requests/#private-cookies
 /// [configuration guide]: https://rocket.rs/master/guide/configuration/#secret-key
-#[derive(PartialEq, Clone)]
+#[derive(Clone)]
 pub struct SecretKey {
     key: Key,
-    kind: Kind,
+    provided: bool,
 }
 
 impl SecretKey {
     /// Returns a secret key that is all zeroes.
     pub(crate) fn zero() -> SecretKey {
-        SecretKey { key: Key::from(&[0; 64]), kind: Kind::Zero }
+        SecretKey { key: Key::from(&[0; 64]), provided: false }
     }
 
     /// Creates a `SecretKey` from a 512-bit `master` key. For security,
@@ -70,12 +73,7 @@ impl SecretKey {
     /// let key = SecretKey::from(&master);
     /// ```
     pub fn from(master: &[u8]) -> SecretKey {
-        let kind = match master.iter().all(|&b| b == 0) {
-            true => Kind::Zero,
-            false => Kind::Provided
-        };
-
-        SecretKey { key: Key::from(master), kind }
+        SecretKey { key: Key::from(master), provided: true }
     }
 
     /// Derives a `SecretKey` from 256 bits of cryptographically random
@@ -94,7 +92,7 @@ impl SecretKey {
     /// let key = SecretKey::derive_from(&material);
     /// ```
     pub fn derive_from(material: &[u8]) -> SecretKey {
-        SecretKey { key: Key::derive_from(material), kind: Kind::Provided }
+        SecretKey { key: Key::derive_from(material), provided: true }
     }
 
     /// Attempts to generate a `SecretKey` from randomness retrieved from the
@@ -108,7 +106,7 @@ impl SecretKey {
     /// let key = SecretKey::generate();
     /// ```
     pub fn generate() -> Option<SecretKey> {
-        Some(SecretKey { key: Key::try_generate()?, kind: Kind::Generated })
+        Some(SecretKey { key: Key::try_generate()?, provided: false })
     }
 
     /// Returns `true` if `self` is the `0`-key.
@@ -123,7 +121,7 @@ impl SecretKey {
     /// assert!(key.is_zero());
     /// ```
     pub fn is_zero(&self) -> bool {
-        self.kind == Kind::Zero
+        self == &Self::zero()
     }
 
     /// Returns `true` if `self` was not automatically generated and is not zero.
@@ -142,7 +140,7 @@ impl SecretKey {
     /// assert!(!key.is_provided());
     /// ```
     pub fn is_provided(&self) -> bool {
-        self.kind == Kind::Provided
+        self.provided && !self.is_zero()
     }
 }
 
@@ -152,6 +150,13 @@ impl Deref for SecretKey {
 
     fn deref(&self) -> &Self::Target {
         &self.key
+    }
+}
+
+impl PartialEq for SecretKey {
+    fn eq(&self, other: &Self) -> bool {
+        // `Key::partial_eq()` is a constant-time op.
+        self.key == other.key
     }
 }
 
@@ -228,10 +233,13 @@ impl<'de> Deserialize<'de> for SecretKey {
 
 impl fmt::Debug for SecretKey {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self.kind {
-            Kind::Zero => f.write_str("[zero]"),
-            Kind::Generated => f.write_str("[generated]"),
-            Kind::Provided => f.write_str("[provided]"),
+        if self.is_zero() {
+            f.write_str("[zero]")
+        } else {
+            match self.provided {
+                true => f.write_str("[provided]"),
+                false => f.write_str("[generated]"),
+            }
         }
     }
 }

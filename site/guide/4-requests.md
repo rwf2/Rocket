@@ -999,16 +999,16 @@ Rocket makes it easy to use `async/await` in routes.
 
 ```rust
 # #[macro_use] extern crate rocket;
-use rocket::tokio::time::{delay_for, Duration};
+use rocket::tokio::time::{sleep, Duration};
 #[get("/delay/<seconds>")]
 async fn delay(seconds: u64) -> String {
-    delay_for(Duration::from_secs(seconds)).await;
+    sleep(Duration::from_secs(seconds)).await;
     format!("Waited for {} seconds", seconds)
 }
 ```
 
 First, notice that the route function is an `async fn`. This enables
-the use of `await` inside the handler. `delay_for` is an asynchronous
+the use of `await` inside the handler. `sleep` is an asynchronous
 function, so we must `await` it.
 
 ## Error Catchers

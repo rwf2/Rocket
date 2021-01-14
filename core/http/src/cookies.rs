@@ -24,6 +24,10 @@ mod key {
         pub fn derive_from(_: &[u8]) -> Self { Key }
         pub fn generate() -> Self { Key }
         pub fn try_generate() -> Option<Self> { Some(Key) }
+        pub fn master(&self) -> &[u8] {
+            static ZERO: &'static [u8; 64] = &[0; 64];
+            &ZERO[..]
+        }
     }
 
     impl PartialEq for Key {

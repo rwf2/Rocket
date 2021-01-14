@@ -7,4 +7,3 @@ publish = false
 
 [dependencies]
 rocket = { path = "../../core/lib" }
-tokio = { version = "0.2.0", features = ["fs", "io-util"] }

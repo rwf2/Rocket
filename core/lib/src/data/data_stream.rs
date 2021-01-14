@@ -3,7 +3,7 @@ use std::task::{Context, Poll};
 use std::path::Path;
 use std::io::{self, Cursor};
 
-use tokio::io::{AsyncRead, AsyncWrite, AsyncReadExt, Take};
+use tokio::io::{AsyncRead, AsyncWrite, AsyncReadExt, ReadBuf, Take};
 
 use crate::ext::AsyncReadBody;
 
@@ -116,12 +116,12 @@ impl AsyncRead for DataStream {
     fn poll_read(
         mut self: Pin<&mut Self>,
         cx: &mut Context<'_>,
-        buf: &mut [u8]
-    ) -> Poll<io::Result<usize>> {
+        buf: &mut ReadBuf<'_>,
+    ) -> Poll<io::Result<()>> {
         if self.buffer.limit() > 0 {
             trace_!("DataStream::buffer_read()");
             match Pin::new(&mut self.buffer).poll_read(cx, buf) {
-                Poll::Ready(Ok(0)) => { /* fall through */ },
+                Poll::Ready(Ok(())) if buf.filled().is_empty() => { /* fall through */ },
                 poll => return poll,
             }
         }
