@@ -180,7 +180,7 @@ macro_rules! pub_request_impl {
     /// let request: LocalRequest = request;
     /// let req = request
     ///     .header(ContentType::JSON)
-    ///     .body(r#"{ "key": "value", "array": [1, 2, 3], }"#);
+    ///     .body(r#"{ "key": "value", "array": [1, 2, 3] }"#);
     /// # });
     /// ```
     #[inline]
@@ -207,7 +207,7 @@ macro_rules! pub_request_impl {
     /// # Client::_test(|_, request, _| {
     /// let request: LocalRequest = request;
     /// let mut request = request.header(ContentType::JSON);
-    /// request.set_body(r#"{ "key": "value", "array": [1, 2, 3], }"#);
+    /// request.set_body(r#"{ "key": "value", "array": [1, 2, 3] }"#);
     /// # });
     /// ```
     #[inline]
