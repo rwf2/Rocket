@@ -239,15 +239,15 @@ Presently, Rocket provides built-in support for the following databases:
 [`r2d2`]: https://crates.io/crates/r2d2
 [Diesel]: https://diesel.rs
 [`rusqlite::Connection`]: https://docs.rs/rusqlite/0.23.0/rusqlite/struct.Connection.html
-[`diesel::SqliteConnection`]: http://docs.diesel.rs/diesel/prelude/struct.SqliteConnection.html
+[`diesel::SqliteConnection`]: https://docs.diesel.rs/diesel/prelude/struct.SqliteConnection.html
 [`postgres::Client`]: https://docs.rs/postgres/0.17/postgres/struct.Client.html
-[`diesel::PgConnection`]: http://docs.diesel.rs/diesel/pg/struct.PgConnection.html
+[`diesel::PgConnection`]: https://docs.diesel.rs/diesel/pg/struct.PgConnection.html
 [`mysql::Conn`]: https://docs.rs/mysql/18/mysql/struct.Conn.html
-[`diesel::MysqlConnection`]: http://docs.diesel.rs/diesel/mysql/struct.MysqlConnection.html
+[`diesel::MysqlConnection`]: https://docs.diesel.rs/diesel/mysql/struct.MysqlConnection.html
 [`Rusqlite`]: https://github.com/jgallagher/rusqlite
 [Rust-Postgres]: https://github.com/sfackler/rust-postgres
 [`rust-mysql-simple`]: https://github.com/blackbeam/rust-mysql-simple
-[`diesel::PgConnection`]: http://docs.diesel.rs/diesel/pg/struct.PgConnection.html
+[`diesel::PgConnection`]: https://docs.diesel.rs/diesel/pg/struct.PgConnection.html
 [`memcache`]: https://github.com/aisk/rust-memcache
 [`memcache::Client`]: https://docs.rs/memcache/0.15/memcache/struct.Client.html
 

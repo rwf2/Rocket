@@ -1,10 +1,10 @@
 # Introduction
 
 Rocket is a web framework for Rust. If you'd like, you can think of Rocket as
-being a more flexible, friendly medley of [Rails](http://rubyonrails.org),
-[Flask](http://flask.pocoo.org/),
-[Bottle](http://bottlepy.org/docs/dev/index.html), and
-[Yesod](http://www.yesodweb.com/). We prefer to think of Rocket as something
+being a more flexible, friendly medley of [Rails](https://rubyonrails.org/),
+[Flask](https://flask.palletsprojects.com/),
+[Bottle](https://bottlepy.org/docs/dev/index.html), and
+[Yesod](https://www.yesodweb.com/). We prefer to think of Rocket as something
 new. Rocket aims to be fast, easy, and flexible while offering guaranteed safety
 and security where it can. Importantly, Rocket also aims to be _fun_, and it
 accomplishes this by ensuring that you write as little code as needed to
