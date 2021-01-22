@@ -237,8 +237,8 @@ async fn files(file: PathBuf) -> Option<NamedFile> {
 
 ### `Result`
 
-`Result` is a _wrapping_ responder: a `Result<T, E>` can only be returned when
-`T` implements `Responder` and `E` implements `Responder`.
+`Result` is another _wrapping_ responder: a `Result<T, E>` can only be returned
+when `T` implements `Responder` and `E` implements `Responder`.
 
 The wrapped `Responder` in `Ok` or `Err`, whichever it might be, is used to
 respond to the client. This means that the responder can be chosen dynamically
