@@ -237,15 +237,15 @@ async fn files(file: PathBuf) -> Option<NamedFile> {
 
 ### `Result`
 
-`Result` is a special kind of wrapping responder: its functionality depends on
-whether the error type `E` implements `Responder`.
+`Result` is a _wrapping_ responder: a `Result<T, E>` can only be returned when
+`T` implements `Responder` and `E` implements `Responder`. 
 
-When the error type `E` implements `Responder`, the wrapped `Responder` in `Ok`
-or `Err`, whichever it might be, is used to respond to the client. This means
-that the responder can be chosen dynamically at run-time, and two different
-kinds of responses can be used depending on the circumstances. Revisiting our
-file server, for instance, we might wish to provide more feedback to the user
-when a file isn't found. We might do this as follows:
+The wrapped `Responder` in `Ok` or `Err`, whichever it might be, is used to
+respond to the client. This means that the responder can be chosen dynamically
+at run-time, and two different kinds of responses can be used depending on the
+circumstances. Revisiting our file server, for instance, we might wish to
+provide more feedback to the user when a file isn't found. We might do this as
+follows:
 
 ```rust
 # #[macro_use] extern crate rocket;
@@ -261,10 +261,6 @@ async fn files(file: PathBuf) -> Result<NamedFile, NotFound<String>> {
     NamedFile::open(&path).await.map_err(|e| NotFound(e.to_string()))
 }
 ```
-
-If the error type `E` _does not_ implement `Responder`, then the error is simply
-logged to the console, using its `Debug` implementation, and a `500` error is
-returned to the client.
 
 ## Rocket Responders
 
