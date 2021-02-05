@@ -20,7 +20,7 @@ tls = ["tokio-rustls"]
 private-cookies = ["cookie/private", "cookie/key-expansion"]
 
 [dependencies]
-smallvec = "1.0"
+smallvec = "1.6.1"
 percent-encoding = "2"
 hyper = { version = "0.14", default-features = false, features = ["http1", "http2", "runtime", "server", "stream"] }
 http = "0.2"
