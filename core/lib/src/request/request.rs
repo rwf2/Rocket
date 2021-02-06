@@ -19,6 +19,8 @@ use crate::http::{ContentType, Accept, MediaType, CookieJar, Cookie};
 use crate::http::uncased::UncasedStr;
 use crate::data::Limits;
 
+#[cfg(feature = "tls")]
+use crate::http::private::tls::ClientCertificate;
 /// The type of an incoming web request.
 ///
 /// This should be used sparingly in Rocket applications. In particular, it
@@ -32,6 +34,8 @@ pub struct Request<'r> {
     headers: HeaderMap<'r>,
     remote: Option<SocketAddr>,
     pub(crate) state: RequestState<'r>,
+    #[cfg(feature = "tls")]
+    peer_certs: Option<(ClientCertificate, Vec<ClientCertificate>)>,
 }
 
 pub(crate) struct RequestState<'r> {
@@ -52,6 +56,8 @@ impl Request<'_> {
             headers: self.headers.clone(),
             remote: self.remote,
             state: self.state.clone(),
+            #[cfg(feature = "tls")]
+            peer_certs: self.peer_certs.clone(),
         }
     }
 }
@@ -90,7 +96,9 @@ impl<'r> Request<'r> {
                 accept: Storage::new(),
                 content_type: Storage::new(),
                 cache: Arc::new(<Container![Send + Sync]>::new()),
-            }
+            },
+            #[cfg(feature = "tls")]
+            peer_certs: None,
         }
     }
 
@@ -1005,6 +1013,24 @@ impl<'r> Request<'r> {
         }
 
         Ok(request)
+    }
+
+    /// Set the peer certificates
+    #[cfg(feature = "tls")]
+    pub(crate) fn set_peer_certificates(
+        &mut self,
+        end_entity: ClientCertificate,
+        chain: Vec<ClientCertificate>
+    ) {
+        self.peer_certs = Some((end_entity, chain));
+    }
+
+    /// Get the peer certificates
+    #[cfg(feature = "tls")]
+    pub(crate) fn get_peer_certificates(
+        &self
+    ) -> Option<(&ClientCertificate, &[ClientCertificate])> {
+        self.peer_certs.as_ref().map(|(ee, chain)| ((ee, chain.as_slice())))
     }
 }
 

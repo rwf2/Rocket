@@ -124,7 +124,7 @@ mod secret_key;
 pub use config::Config;
 pub use crate::log::LogLevel;
 pub use shutdown::Shutdown;
-pub use tls::{TlsConfig, CipherSuite};
+pub use tls::{CipherSuite, MutualTlsConfig, TlsConfig};
 pub use ident::Ident;
 
 #[cfg(feature = "secrets")]

@@ -13,6 +13,9 @@ use tokio::time::Sleep;
 use tokio::io::{AsyncRead, AsyncWrite};
 use tokio::net::{TcpListener, TcpStream};
 
+#[cfg(feature = "tls")]
+use crate::private::tls::ClientCertificate;
+
 // TODO.async: 'Listener' and 'Connection' provide common enough functionality
 // that they could be introduced in upstream libraries.
 /// A 'Listener' yields incoming connections
@@ -34,6 +37,11 @@ pub trait Listener {
 pub trait Connection: AsyncRead + AsyncWrite {
     /// The remote address, i.e. the client's socket address.
     fn remote_addr(&self) -> Option<SocketAddr>;
+
+    /// Certificate chain presented by the client.
+    /// First is client certificate, others are trust chain.
+    #[cfg(feature = "tls")]
+    fn peer_certificates(&self) -> Option<(ClientCertificate, Vec<ClientCertificate>)>;
 }
 
 pin_project_lite::pin_project! {
@@ -186,5 +194,10 @@ impl Listener for TcpListener {
 impl Connection for TcpStream {
     fn remote_addr(&self) -> Option<SocketAddr> {
         self.peer_addr().ok()
+    }
+
+    #[cfg(feature = "tls")]
+    fn peer_certificates(&self) -> Option<(ClientCertificate, Vec<ClientCertificate>)> {
+        None
     }
 }

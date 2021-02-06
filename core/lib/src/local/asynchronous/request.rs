@@ -7,6 +7,9 @@ use crate::http::uri::Origin;
 
 use super::{Client, LocalResponse};
 
+#[cfg(feature = "tls")]
+use crate::http::tls::ClientCertificate;
+
 /// An `async` local request as returned by [`Client`](super::Client).
 ///
 /// For details, see [the top-level documentation](../index.html#localrequest).

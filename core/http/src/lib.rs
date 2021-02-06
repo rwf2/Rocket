@@ -51,6 +51,12 @@ pub mod private {
     pub use cookie;
 }
 
+#[cfg(feature = "tls")]
+pub mod tls {
+    //! TLS types
+    pub use super::private::tls::{ClientCertificate, ClientTls};
+}
+
 pub use crate::method::Method;
 pub use crate::status::{Status, StatusClass};
 pub use crate::raw_str::{RawStr, RawStrBuf};

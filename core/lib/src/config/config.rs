@@ -6,7 +6,7 @@ use figment::value::{Map, Dict, magic::RelativePathBuf};
 use serde::{Deserialize, Serialize};
 use yansi::Paint;
 
-use crate::config::{TlsConfig, LogLevel, Shutdown, Ident};
+use crate::config::{TlsConfig, LogLevel, MutualTlsConfig, Shutdown, Ident};
 use crate::request::{self, Request, FromRequest};
 use crate::data::Limits;
 
@@ -73,6 +73,10 @@ pub struct Config {
     pub limits: Limits,
     /// The TLS configuration, if any. **(default: `None`)**
     pub tls: Option<TlsConfig>,
+    /// Mutual TLS configuration, if any.
+    /// Ignored if `tls` is None.
+    /// **(default: `None`)**
+    pub mutual_tls: Option<MutualTlsConfig>,
     /// How, if at all, to identify the server via the `Server` header.
     /// **(default: `"Rocket"`)**
     pub ident: Ident,
@@ -165,6 +169,7 @@ impl Config {
             keep_alive: 5,
             limits: Limits::default(),
             tls: None,
+            mutual_tls: None,
             ident: Ident::default(),
             #[cfg(feature = "secrets")]
             secret_key: SecretKey::zero(),
@@ -325,10 +330,17 @@ impl Config {
         }
 
         launch_info_!("limits: {}", Paint::default(&self.limits).bold());
-        match self.tls_enabled() {
-            true => launch_info_!("tls: {}", Paint::default("enabled").bold()),
-            false => launch_info_!("tls: {}", Paint::default("disabled").bold()),
-        }
+
+        let tls_status = match self.tls_enabled() {
+            true => match self.mutual_tls.as_ref().map(|mtls| mtls.required) {
+                Some(true) => "enabled with required client authentication",
+                Some(false) => "enabled with optional client authentication",
+                None => "enabled",
+            },
+            false => "disabled",
+        };
+
+        launch_info_!("tls: {}", Paint::default(tls_status).bold());
 
         #[cfg(feature = "secrets")] {
             launch_info_!("secret key: {:?}", Paint::default(&self.secret_key).bold());

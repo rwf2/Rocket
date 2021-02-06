@@ -306,6 +306,30 @@ macro_rules! pub_request_impl {
         *self._body_mut() = body.as_ref().into();
     }
 
+
+    /// Add a client certificate to this request.
+    /// Please note that this certificate will not be verified again
+    /// any CA configured in Rocket configuration.
+    #[cfg(feature = "tls")]
+    pub fn client_certificate(mut self, cert: ClientCertificate) -> Self {
+        self._request_mut().set_peer_certificates(cert, Vec::new());
+
+        self
+    }
+
+    /// Add a client certificate to this request.
+    /// Please note that this certificate will not be verified again
+    /// any CA configured in Rocket configuration.
+    #[cfg(feature = "tls")]
+    pub fn client_certificate_with_chain(mut self,
+        cert: ClientCertificate,
+        chain: Vec<ClientCertificate>
+    ) -> Self {
+        self._request_mut().set_peer_certificates(cert, chain);
+
+        self
+    }
+
     /// Dispatches the request, returning the response.
     ///
     /// This method consumes `self` and is the preferred mechanism for

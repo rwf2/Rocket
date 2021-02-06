@@ -11,6 +11,8 @@ use futures::stream::Stream;
 use futures::future::{self, Future, FutureExt};
 
 use crate::http::hyper::Bytes;
+#[cfg(feature = "tls")]
+use crate::http::tls::ClientCertificate;
 
 pin_project! {
     pub struct ReaderStream<R> {
@@ -298,6 +300,11 @@ use crate::http::private::{Listener, Connection};
 impl<F: Future, C: Connection> Connection for CancellableIo<F, C> {
     fn remote_addr(&self) -> Option<std::net::SocketAddr> {
         self.io.remote_addr()
+    }
+
+    #[cfg(feature = "tls")]
+    fn peer_certificates(&self) -> Option<(ClientCertificate, Vec<ClientCertificate>)> {
+        self.io.peer_certificates()
     }
 }
 
