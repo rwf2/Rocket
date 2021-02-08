@@ -1,0 +1,3 @@
+# rustfmt produces badly formatted code so it is
+# disabled
+ignore = ["/"]
