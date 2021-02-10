@@ -56,6 +56,7 @@ version_check = "0.9.1"
 [dev-dependencies]
 bencher = "0.1"
 figment = { version = "0.10", features = ["test"] }
+language-tags = { version=">=0.2, <0.3" }
 
 [[bench]]
 name = "format-routing"
