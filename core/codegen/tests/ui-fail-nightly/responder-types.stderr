@@ -6,15 +6,18 @@ error[E0277]: the trait bound `u8: Responder<'_, '_>` is not satisfied
   |
   = note: required by `respond_to`
 
-error[E0277]: the trait bound `Header<'_>: From<u8>` is not satisfied
+error[E0277]: the trait bound `Header<'_>: std::convert::From<u8>` is not satisfied
   --> $DIR/responder-types.rs:11:5
    |
 11 |     other: u8,
-   |     ^^^^^^^^^ the trait `From<u8>` is not implemented for `Header<'_>`
+   |     ^^^^^^^^^ the trait `std::convert::From<u8>` is not implemented for `Header<'_>`
    |
    = help: the following implementations were found:
-             <Header<'static> as From<&Cookie<'_>>>
-             <Header<'static> as From<Cookie<'_>>>
+             <Header<'static> as std::convert::From<&rocket::http::Cookie<'_>>>
+             <Header<'static> as std::convert::From<AcceptCharset>>
+             <Header<'static> as std::convert::From<AcceptEncoding>>
+             <Header<'static> as std::convert::From<AcceptLanguage>>
+           and 55 others
    = note: required because of the requirements on the impl of `Into<Header<'_>>` for `u8`
 
 error[E0277]: the trait bound `u8: Responder<'_, '_>` is not satisfied
@@ -25,26 +28,32 @@ error[E0277]: the trait bound `u8: Responder<'_, '_>` is not satisfied
    |
    = note: required by `respond_to`
 
-error[E0277]: the trait bound `Header<'_>: From<u8>` is not satisfied
+error[E0277]: the trait bound `Header<'_>: std::convert::From<u8>` is not satisfied
   --> $DIR/responder-types.rs:17:5
    |
 17 |     other: u8,
-   |     ^^^^^^^^^ the trait `From<u8>` is not implemented for `Header<'_>`
+   |     ^^^^^^^^^ the trait `std::convert::From<u8>` is not implemented for `Header<'_>`
    |
    = help: the following implementations were found:
-             <Header<'static> as From<&Cookie<'_>>>
-             <Header<'static> as From<Cookie<'_>>>
+             <Header<'static> as std::convert::From<&rocket::http::Cookie<'_>>>
+             <Header<'static> as std::convert::From<AcceptCharset>>
+             <Header<'static> as std::convert::From<AcceptEncoding>>
+             <Header<'static> as std::convert::From<AcceptLanguage>>
+           and 55 others
    = note: required because of the requirements on the impl of `Into<Header<'_>>` for `u8`
 
-error[E0277]: the trait bound `Header<'_>: From<std::string::String>` is not satisfied
+error[E0277]: the trait bound `Header<'_>: std::convert::From<std::string::String>` is not satisfied
   --> $DIR/responder-types.rs:24:5
    |
 24 |     then: String,
-   |     ^^^^^^^^^^^^ the trait `From<std::string::String>` is not implemented for `Header<'_>`
+   |     ^^^^^^^^^^^^ the trait `std::convert::From<std::string::String>` is not implemented for `Header<'_>`
    |
    = help: the following implementations were found:
-             <Header<'static> as From<&Cookie<'_>>>
-             <Header<'static> as From<Cookie<'_>>>
+             <Header<'static> as std::convert::From<&rocket::http::Cookie<'_>>>
+             <Header<'static> as std::convert::From<AcceptCharset>>
+             <Header<'static> as std::convert::From<AcceptEncoding>>
+             <Header<'static> as std::convert::From<AcceptLanguage>>
+           and 55 others
    = note: required because of the requirements on the impl of `Into<Header<'_>>` for `std::string::String`
 
 error[E0277]: the trait bound `usize: Responder<'_, '_>` is not satisfied
@@ -53,4 +62,4 @@ error[E0277]: the trait bound `usize: Responder<'_, '_>` is not satisfied
 28 | fn foo() -> usize { 0 }
    |             ^^^^^ the trait `Responder<'_, '_>` is not implemented for `usize`
    |
-   = note: required by `handler::<impl rocket::outcome::Outcome<rocket::Response<'o>, Status, rocket::Data>>::from`
+   = note: required by `handler::<impl Outcome<rocket::Response<'o>, Status, rocket::Data>>::from`
