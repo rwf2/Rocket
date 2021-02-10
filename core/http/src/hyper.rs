@@ -118,7 +118,7 @@ pub mod header {
 mod tests {
     use crate::header::HeaderMap;
     use super::header::HyperxHeaderTrait; // Needed for Accept::header_name() below?!?!
-    
+
     #[test]
     fn add_typed_header() {
         use super::header::{Accept, QualityItem, q, qitem};
