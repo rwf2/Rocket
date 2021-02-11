@@ -480,7 +480,7 @@ macro_rules! from_typed_headers {
                     match $name::parse_header(& Raw::from(vv)) {
                         Ok(v) => Success(v),
                         Err(_) => Forward(())
-                    } 
+                    }
                 }
             }
         }
@@ -506,7 +506,7 @@ macro_rules! from_generic_typed_headers {
                     match $name::parse_header(& Raw::from(vv)) {
                         Ok(v) => Success(v),
                         Err(_) => Forward(())
-                    } 
+                    }
                 }
             }
         }
