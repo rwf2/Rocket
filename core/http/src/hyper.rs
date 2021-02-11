@@ -23,7 +23,8 @@
 pub mod header {
     use super::super::header::Header;
     pub use hyperx::header::Header as HyperxHeaderTrait;
-
+    pub use hyperx::header::Raw;
+    
     macro_rules! import_http_headers {
         ($($name:ident),*) => ($(
             pub use http::header::$name as $name;

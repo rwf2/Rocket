@@ -2,6 +2,8 @@ use std::fmt::Debug;
 use std::net::{IpAddr, SocketAddr};
 
 use futures::future::BoxFuture;
+use crate::http::hyper::header::HyperxHeaderTrait;
+use crate::http::hyper::header::Raw;
 
 use crate::router::Route;
 use crate::request::Request;
@@ -458,6 +460,95 @@ impl<'a, 'r> FromRequest<'a, 'r> for IpAddr {
         }
     }
 }
+
+
+macro_rules! from_typed_headers {
+    ($($name:ident),*) => ($(
+        #[crate::async_trait]
+        impl<'a, 'r> FromRequest<'a, 'r> for $name {
+
+            type Error = std::convert::Infallible;
+
+            async fn from_request(request: &'a Request<'r>) ->
+                Outcome<Self, Self::Error> {
+                let headers = request.headers().get($name::header_name());
+                let vv : Vec<Vec<u8>> = headers.map(
+                    |s| Vec::from(s.as_bytes())).collect();
+                if vv.is_empty() {
+                    Forward(())
+                } else {
+                    match $name::parse_header(& Raw::from(vv)) {
+                        Ok(v) => Success(v),
+                        Err(_) => Forward(())
+                    } 
+                }
+            }
+        }
+    )*)
+}
+
+macro_rules! from_generic_typed_headers {
+    ($($name:ident<$bound:ident>),*) => ($(
+
+        #[crate::async_trait]
+        impl<'a, 'r, T: 'static + $bound> FromRequest<'a, 'r> for $name<T> {
+
+            type Error = std::convert::Infallible;
+
+            async fn from_request(request: &'a Request<'r>) ->
+                Outcome<Self, Self::Error> {
+                let headers = request.headers().get($name::<T>::header_name());
+                let vv : Vec<Vec<u8>> = headers.map(
+                    |s| Vec::from(s.as_bytes())).collect();
+                if vv.is_empty() {
+                    Forward(())
+                } else {
+                    match $name::parse_header(& Raw::from(vv)) {
+                        Ok(v) => Success(v),
+                        Err(_) => Forward(())
+                    } 
+                }
+            }
+        }
+    )*)
+}
+
+use crate::http::hyper::header::{
+    Accept as AcceptHX, AcceptCharset, AcceptEncoding, AcceptLanguage,
+    AcceptRanges, AccessControlAllowCredentials, AccessControlAllowHeaders,
+    AccessControlAllowMethods, AccessControlAllowOrigin,
+    AccessControlExposeHeaders, AccessControlMaxAge,
+    AccessControlRequestHeaders, AccessControlRequestMethod, Allow,
+    CacheControl, Connection, ContentDisposition, ContentEncoding,
+    ContentLanguage, ContentLength, ContentLocation, ContentRange,
+    ContentType as ContentTypeHX, Cookie as CookieHX, Date, ETag, Expires,
+    Expect, From, Host, IfMatch, IfModifiedSince, IfNoneMatch,
+    IfUnmodifiedSince, IfRange, LastEventId, LastModified, Link, Location,
+    Origin as OriginHX, Pragma, Prefer, PreferenceApplied,
+    Range, Referer, ReferrerPolicy, RetryAfter, Server, SetCookie,
+    StrictTransportSecurity, Te, TransferEncoding, Upgrade, UserAgent,
+    Vary, Warning, Authorization, ProxyAuthorization, Scheme};
+
+from_typed_headers! {
+    AcceptHX, AcceptCharset, AcceptEncoding, AcceptLanguage, AcceptRanges,
+    AccessControlAllowCredentials, AccessControlAllowHeaders,
+    AccessControlAllowMethods, AccessControlAllowOrigin,
+    AccessControlExposeHeaders, AccessControlMaxAge,
+    AccessControlRequestHeaders, AccessControlRequestMethod, Allow,
+    CacheControl, Connection, ContentDisposition, ContentEncoding,
+    ContentLanguage, ContentLength, ContentLocation, ContentRange,
+    ContentTypeHX, CookieHX, Date, ETag, Expires, Expect, From, Host, IfMatch,
+    IfModifiedSince, IfNoneMatch, IfUnmodifiedSince, IfRange, LastEventId,
+    LastModified, Link, Location, OriginHX, Pragma, Prefer, PreferenceApplied,
+    Range, Referer, ReferrerPolicy, RetryAfter, Server, SetCookie,
+    StrictTransportSecurity, Te, TransferEncoding, Upgrade, UserAgent, Vary,
+    Warning
+}
+from_generic_typed_headers! {
+    Authorization<Scheme>,
+    ProxyAuthorization<Scheme>
+}
+
 
 #[crate::async_trait]
 impl<'a, 'r> FromRequest<'a, 'r> for SocketAddr {
