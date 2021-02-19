@@ -10,7 +10,7 @@ Rocket makes use of the latest Rust features. Because of this, we'll need a
 recent release of Rust to run Rocket applications. If you already have a working
 installation of the latest Rust compiler, feel free to skip to the next section.
 
-To install the latst version of Rust, we recommend using `rustup`. Install
+To install the latest version of Rust, we recommend using `rustup`. Install
 `rustup` by following the instructions on [its website](https://rustup.rs/).
 Once `rustup` is installed, ensure the latest toolchain is installled by running
 the command:
