@@ -74,7 +74,7 @@ pub use serde_json::{json_internal, json_internal_vec};
 /// fn user(id: usize) -> Json<User> {
 ///     let user_from_id = User::from(id);
 ///     /* ... */
-///     Json(user_from_id)
+///     user_from_id.into()
 /// }
 /// ```
 ///
@@ -187,6 +187,12 @@ impl<T> DerefMut for Json<T> {
     #[inline(always)]
     fn deref_mut(&mut self) -> &mut T {
         &mut self.0
+    }
+}
+
+impl<T: Serialize> From<T> for Json<T> {
+    fn from(t: T) -> Self {
+        Json(t)
     }
 }
 
