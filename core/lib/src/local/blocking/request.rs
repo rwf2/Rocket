@@ -39,7 +39,7 @@ impl<'c> LocalRequest<'c> {
         method: Method,
         uri: Cow<'c, str>
     ) -> LocalRequest<'c> {
-        let inner = asynchronous::LocalRequest::new(&client.inner, method, uri);
+        let inner = asynchronous::LocalRequest::new(client.inner(), method, uri);
         Self { inner, client }
     }
 

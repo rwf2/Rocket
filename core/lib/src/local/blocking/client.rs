@@ -26,7 +26,7 @@ use crate::http::Method;
 ///     .dispatch();
 /// ```
 pub struct Client {
-    pub(crate) inner: asynchronous::Client,
+    pub(crate) inner: Option<asynchronous::Client>,
     runtime: RefCell<tokio::runtime::Runtime>,
 }
 
@@ -38,7 +38,7 @@ impl Client {
             .expect("create tokio runtime");
 
         // Initialize the Rocket instance
-        let inner = runtime.block_on(asynchronous::Client::_new(rocket, tracked))?;
+        let inner = Some(runtime.block_on(asynchronous::Client::_new(rocket, tracked))?);
         Ok(Self { inner, runtime: RefCell::new(runtime) })
     }
 
@@ -55,6 +55,11 @@ impl Client {
     }
 
     #[inline(always)]
+    pub(crate) fn inner(&self) -> &asynchronous::Client {
+        self.inner.as_ref().expect("internal invariant broken: self.inner is Some")
+    }
+
+    #[inline(always)]
     pub(crate) fn block_on<F, R>(&self, fut: F) -> R
         where F: std::future::Future<Output=R>,
     {
@@ -63,14 +68,14 @@ impl Client {
 
     #[inline(always)]
     fn _rocket(&self) -> &Rocket {
-        self.inner._rocket()
+        self.inner()._rocket()
     }
 
     #[inline(always)]
     pub(crate) fn _with_raw_cookies<F, T>(&self, f: F) -> T
         where F: FnOnce(&crate::http::private::cookie::CookieJar) -> T
     {
-        self.inner._with_raw_cookies(f)
+        self.inner()._with_raw_cookies(f)
     }
 
     #[inline(always)]
@@ -86,6 +91,13 @@ impl Client {
 
     // Generates the public API methods, which call the private methods above.
     pub_client_impl!("use rocket::local::blocking::Client;");
+}
+
+impl Drop for Client {
+    fn drop(&mut self) {
+        let client = self.inner.take();
+        self.block_on(async { drop(client) });
+    }
 }
 
 #[cfg(doctest)]
