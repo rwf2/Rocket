@@ -432,7 +432,7 @@ fn codegen_route(route: Route) -> Result<TokenStream> {
         impl From<#user_handler_fn_name> for #StaticRouteInfo {
             fn from(_: #user_handler_fn_name) -> #StaticRouteInfo {
                 fn monomorphized_function<'_b>(
-                    #req: &'_b #Request,
+                    #req: &'_b #Request<'_>,
                     #data: #Data
                 ) -> #HandlerFuture<'_b> {
                     #_Box::pin(async move {

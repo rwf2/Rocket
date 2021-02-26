@@ -127,7 +127,7 @@ pub fn _catch(
             fn from(_: #user_catcher_fn_name) -> #StaticCatcherInfo {
                 fn monomorphized_function<'_b>(
                     #status: #Status,
-                    #req: &'_b #Request
+                    #req: &'_b #Request<'_>
                 ) -> #ErrorHandlerFuture<'_b> {
                     #_Box::pin(async move {
                         let __response = #catcher_response;
