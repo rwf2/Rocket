@@ -60,15 +60,15 @@ code = '''
   }
 '''
 text = '''
-  This is a **complete Rocket application**. It does exactly what you would
-  expect. If you were to visit **http://localhost:8000/hello/John/58**, you’d
-  see:
+	Bu bir **tamamlanmış Rocket uygulaması**dır. Tam olarak düşündüğünüz şeyi yapar.
+	Eğer **http://localhost:8000/hello/Mehmet/18** adresini ziyaret ederseniz şunu
+	görürdünüz:
 
-  <span class="callout">Hello, 58 year old named John!</span>
+  <span class="callout">Merhaba, 18 yaşındaki Mehmet!</span>
 
-  If someone visits a path with an `<age>` that isn’t a `u8`, Rocket doesn’t
-  blindly call `hello`. Instead, it tries other matching routes or returns a
-  **404**.
+	Eğer birisi bu adrese, adresteki `<yas>` parametresini `u8` tipinde girmezse,
+	Rocket körü körüne `merhaba`'yı çağırmaz. Onun yerine, uygun bir rota bulmaya
+	çalışır, bulamazsa bir **404** gönderir.
 '''
 
 [[sections]]
