@@ -11,32 +11,32 @@ date = "Oct 21, 2020"
 ###############################################################################
 
 [[top_features]]
-title = "Type Safe"
-text = "From request to response Rocket ensures that your types mean something."
+title = "Tip Güvenli"
+text = "Rocket, istek ve yanıtların veri türlerinin doğruluğunu garantiler."
 image = "helmet"
-button = "Learn More"
+button = "Daha Fazlasını Öğrenin"
 url = "overview/#how-rocket-works"
 
 [[top_features]]
 title = "Boilerplate Free"
-text = "Spend your time writing code that really matters, and let Rocket generate the rest."
+text = "Zamanınızı gerçekten önemli kodu yazmakla geçirin ve müsaade edin, Rocket geriye kalanı halletsin."
 image = "robot-free"
-button = "See Examples"
+button = "Örnekleri Bakın"
 url = "overview/#anatomy-of-a-rocket-application"
 
 [[top_features]]
-title = "Easy To Use"
-text = "Simple, intuitive APIs make Rocket approachable, no matter your background."
+title = "Kullanımı Kolay"
+text = "Basit, sezgisel API'ler için Rocket mükemmel bir tercihtir."
 image = "sun"
-button = "Get Started"
+button = "Kullanmaya Başlayın"
 url = "guide"
 margin = 2
 
 [[top_features]]
-title = "Extensible"
-text = "Create your own first-class primitives that any Rocket application can use."
+title = "Esnek"
+text = "Herhangi bir Rocket uygulamasının kullanabileceği size özgü birinci sınıf ilkel (primitif) veri türlerinizi oluşturun."
 image = "telescope"
-button = "See How"
+button = "Nasıl Olduğunu Görün"
 url = "overview/#anatomy-of-a-rocket-application"
 margin = 9
 
