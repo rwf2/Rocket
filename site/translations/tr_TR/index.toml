@@ -49,7 +49,7 @@ title = "Merhaba, Rocket!"
 code = '''
   #[macro_use] extern crate rocket;
 
-  #[get("/hello/<isim>/<yas>")]
+  #[get("/merhaba/<isim>/<yas>")]
   fn merhaba(isim: String, yas: u8) -> String {
       format!("Merhaba, {} yaşındaki {}!", yas, isim)
   }
@@ -61,7 +61,7 @@ code = '''
 '''
 text = '''
 	Bu bir **tamamlanmış Rocket uygulaması**dır. Tam olarak düşündüğünüz şeyi yapar.
-	Eğer **http://localhost:8000/hello/Mehmet/18** adresini ziyaret ederseniz şunu
+	Eğer **http://localhost:8000/merhaba/Mehmet/18** adresini ziyaret ederseniz şunu
 	görürdünüz:
 
   <span class="callout">Merhaba, 18 yaşındaki Mehmet!</span>
