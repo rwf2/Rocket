@@ -45,7 +45,7 @@ margin = 9
 ###############################################################################
 
 [[sections]]
-title = "Hello, Rocket!"
+title = "Merhaba, Rocket!"
 code = '''
   #[macro_use] extern crate rocket;
 
