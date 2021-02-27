@@ -1,0 +1,202 @@
+###############################################################################
+# Release info: displayed between bars in the header
+###############################################################################
+
+[release]
+version = "0.5.0-dev"
+date = "Oct 21, 2020"
+
+###############################################################################
+# Top features: displayed in the header under the introductory text.
+###############################################################################
+
+[[top_features]]
+title = "Type Safe"
+text = "From request to response Rocket ensures that your types mean something."
+image = "helmet"
+button = "Learn More"
+url = "overview/#how-rocket-works"
+
+[[top_features]]
+title = "Boilerplate Free"
+text = "Spend your time writing code that really matters, and let Rocket generate the rest."
+image = "robot-free"
+button = "See Examples"
+url = "overview/#anatomy-of-a-rocket-application"
+
+[[top_features]]
+title = "Easy To Use"
+text = "Simple, intuitive APIs make Rocket approachable, no matter your background."
+image = "sun"
+button = "Get Started"
+url = "guide"
+margin = 2
+
+[[top_features]]
+title = "Extensible"
+text = "Create your own first-class primitives that any Rocket application can use."
+image = "telescope"
+button = "See How"
+url = "overview/#anatomy-of-a-rocket-application"
+margin = 9
+
+###############################################################################
+# Sections: make sure there are an odd number so colors work out.
+###############################################################################
+
+[[sections]]
+title = "Hello, Rocket!"
+code = '''
+  #[macro_use] extern crate rocket;
+
+  #[get("/hello/<name>/<age>")]
+  fn hello(name: String, age: u8) -> String {
+      format!("Hello, {} year old named {}!", age, name)
+  }
+
+  #[launch]
+  fn rocket() -> rocket::Rocket {
+      rocket::ignite().mount("/", routes![hello])
+  }
+'''
+text = '''
+  This is a **complete Rocket application**. It does exactly what you would
+  expect. If you were to visit **http://localhost:8000/hello/John/58**, you’d
+  see:
+
+  <span class="callout">Hello, 58 year old named John!</span>
+
+  If someone visits a path with an `<age>` that isn’t a `u8`, Rocket doesn’t
+  blindly call `hello`. Instead, it tries other matching routes or returns a
+  **404**.
+'''
+
+[[sections]]
+title = "Forms? Check!"
+code = '''
+  #[derive(FromForm)]
+  struct Task {
+     description: String,
+     completed: bool
+  }
+
+  #[post("/", data = "<task>")]
+  fn new(task: Form<Task>) -> Flash<Redirect> {
+      if task.description.is_empty() {
+          Flash::error(Redirect::to("/"), "Cannot be empty.")
+      } else {
+          Flash::success(Redirect::to("/"), "Task added.")
+      }
+  }
+'''
+text = '''
+  Handling forms **is simple and easy**. Simply derive `FromForm` for your
+  structure and let Rocket know which parameter to use. Rocket **parses and
+  validates** the form request, creates the structure, and calls your function.
+
+  Bad form request? Rocket doesn’t call your function! What if you want to know
+  if the form was bad? Simple! Change the type of `task` to `Option` or
+  `Result`!
+'''
+
+[[sections]]
+title = "JSON, out of the box."
+code = '''
+  #[derive(Serialize, Deserialize)]
+  struct Message {
+     contents: String,
+  }
+
+  #[put("/<id>", data = "<msg>")]
+  fn update(db: &Db, id: Id, msg: Json<Message>) -> JsonValue {
+      if db.contains_key(&id) {
+          db.insert(id, &msg.contents);
+          json!({ "status": "ok" })
+      } else {
+          json!({ "status": "error" })
+      }
+  }
+'''
+text = '''
+  Rocket has first-class support for JSON, right out of the box. Simply derive
+  `Deserialize` or `Serialize` to receive or return JSON, respectively.
+
+  Like other important features, JSON works through Rocket’s `FromData` trait,
+  Rocket’s approach to deriving types from body data. It works like this:
+  specify a `data` route parameter of any type that implements `FromData`. A
+  value of that type will then be created automatically from the incoming
+  request body. Best of all, you can implement `FromData` for your types!
+'''
+
+###############################################################################
+# Buttom features: displayed above the footer.
+###############################################################################
+
+[[bottom_features]]
+title = 'Templating'
+text = "Rocket makes templating a breeze with built-in templating support."
+image = 'templating-icon'
+url = 'guide/responses/#templates'
+button = 'Learn More'
+color = 'blue'
+
+[[bottom_features]]
+title = 'Cookies'
+text = "View, add, or remove cookies, with or without encryption, without hassle."
+image = 'cookies-icon'
+url = 'guide/requests/#cookies'
+button = 'Learn More'
+color = 'purple'
+margin = -6
+
+[[bottom_features]]
+title = 'Streams'
+text = "Rocket streams all incoming and outgoing data, so size isn't a concern."
+image = 'streams-icon'
+url = 'guide/requests/#streaming'
+button = 'Learn More'
+color = 'red'
+margin = -29
+
+[[bottom_features]]
+title = 'Config Environments'
+text = "Configure your application your way for development, staging, and production."
+image = 'config-icon'
+url = 'guide/configuration/#environment'
+button = 'Learn More'
+color = 'yellow'
+margin = -3
+
+[[bottom_features]]
+title = 'Testing Library'
+text = "Unit test your applications with ease using the built-in testing library."
+image = 'testing-icon'
+url = 'guide/testing#testing'
+button = 'Learn More'
+color = 'orange'
+
+[[bottom_features]]
+title = 'Typed URIs'
+text = "Rocket typechecks route URIs for you so you never mistype a URI again."
+image = 'ship-icon'
+url = 'guide/responses/#typed-uris'
+button = 'Learn More'
+color = 'green'
+margin = -20
+
+# [[bottom_features]]
+# title = 'Query Strings'
+# text = "Handling query strings and parameters is type-safe and easy in Rocket."
+# image = 'query-icon'
+# url = 'guide/requests/#query-strings'
+# button = 'Learn More'
+# color = 'red'
+# margin = -3
+
+# [[bottom_features]]
+# title = 'Private Cookies'
+# text = "Safe, secure, private cookies are built-in so your users can stay safe."
+# image = 'sessions-icon'
+# url = 'guide/requests/#private-cookies'
+# button = 'Learn More'
+# color = 'purple'
