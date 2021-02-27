@@ -18,7 +18,7 @@ button = "Daha Fazlasını Öğrenin"
 url = "overview/#how-rocket-works"
 
 [[top_features]]
-title = "Boilerplate Free"
+title = "Basmakalıpsız"
 text = "Zamanınızı gerçekten önemli kodu yazmakla geçirin ve müsaade edin, Rocket geriye kalanı halletsin."
 image = "robot-free"
 button = "Örnekleri Bakın"
