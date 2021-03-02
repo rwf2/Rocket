@@ -3,15 +3,14 @@
 ###############################################################################
 
 [[panels]]
-name = "Routing"
+name = "Yönlendirme(Routing)"
 checked = true
 content = '''
 Rocket'ın ana görevi, gelen istekleri(request) uygulamanızın belirlediği yolları kullanarak ilgili birime yöneltir.
-Routes are declared using Rocket's _route_ attributes. The attribute describes the requests that match the
-route. The attribute is placed on top of a function that is the request handler
-for that route.
+Yollar Rocket'ın _route_ özelliğiyle(attribute/komut) belirlenir. Bu özellik iligli yol ile uyuşan requestleri belirler. 
+The attribute is placed on top of a function that is the request handler for that route. Özellik
 
-As an example, consider the simple route below:
+Örnek olarak aşağıdaki basit örneğe bakabilirsiniz:
 
 ```rust
 #[get("/")]
