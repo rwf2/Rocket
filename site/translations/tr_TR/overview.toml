@@ -6,9 +6,8 @@
 name = "Routing"
 checked = true
 content = '''
-Rocket's main task is to route incoming requests to the appropriate request
-handler using your application's declared routes. Routes are declared using
-Rocket's _route_ attributes. The attribute describes the requests that match the
+Rocket'ın ana görevi, gelen istekleri(request) uygulamanızın belirlediği yolları kullanarak ilgili birime yöneltir.
+Routes are declared using Rocket's _route_ attributes. The attribute describes the requests that match the
 route. The attribute is placed on top of a function that is the request handler
 for that route.
 
