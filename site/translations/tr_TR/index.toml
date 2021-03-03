@@ -119,14 +119,16 @@ code = '''
   }
 '''
 text = '''
-  Rocket has first-class support for JSON, right out of the box. Simply derive
-  `Deserialize` or `Serialize` to receive or return JSON, respectively.
+	Rocket, 1. sınıf JSON desteği ile birlikte geliyor. Basitçe, JSON biçiminde
+	veri almak veya döndürmek için sırasıyla, `Deserialize` ya da `Serialize`'dan
+	türetin.
 
-  Like other important features, JSON works through Rocket’s `FromData` trait,
-  Rocket’s approach to deriving types from body data. It works like this:
-  specify a `data` route parameter of any type that implements `FromData`. A
-  value of that type will then be created automatically from the incoming
-  request body. Best of all, you can implement `FromData` for your types!
+	Diğer önemli özellikler gibi JSON, Rocket'ın gövde verilerinden (body data)
+	veri tipi türetme yaklaşımı olan `FromData` özelliğiyle (trait) çalışır.
+	Buna benzer bir şekilde çalışır: `FromData` özelliğini uygulayan herhangi bir
+	veri türünde/tipinde bir `data` rota parametresi belirtilir ve o veri tipindeki
+	değer gelen gövde verisinden otomatik yeniden oluşturulacaktır. Hepsinden iyisi,
+	türleriniz için `FormData` özelliğini uygulayabilirsiniz.
 '''
 
 ###############################################################################
