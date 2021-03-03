@@ -72,7 +72,7 @@ text = '''
 '''
 
 [[sections]]
-title = "Forms? Check!"
+title = "Formlar? Kontrol!"
 code = '''
   #[derive(FromForm)]
   struct Task {
@@ -90,13 +90,14 @@ code = '''
   }
 '''
 text = '''
-  Handling forms **is simple and easy**. Simply derive `FromForm` for your
-  structure and let Rocket know which parameter to use. Rocket **parses and
-  validates** the form request, creates the structure, and calls your function.
+	Formları işlemek (form handling), **basit ve kolay**. Basitçe veri türünüzü
+	`FromForm`'dan türetin ve bırakın Rocket hangi parametreyi kullanacağını bulsun,
+	bilsin. Rocket, form isteğinizi **dönüştürür ve doğrular**, uygun yapıyı oluşturur,
+	fonksiyonunuzu çağırır.
 
-  Bad form request? Rocket doesn’t call your function! What if you want to know
-  if the form was bad? Simple! Change the type of `task` to `Option` or
-  `Result`!
+	Uygunsuz form istekleri? Rocket fonksiyonunuzu çağırmaz! Ya formun isteğinizin
+	uygunsuz olduğunu bilmek isterseniz? Oldukça basit! `task` veri türünü `Option`
+	ya da `Result` olarak değiştirin.
 '''
 
 [[sections]]
