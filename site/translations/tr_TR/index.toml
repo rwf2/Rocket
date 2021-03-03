@@ -101,7 +101,7 @@ text = '''
 '''
 
 [[sections]]
-title = "JSON, out of the box."
+title = "Yerleşik JSON"
 code = '''
   #[derive(Serialize, Deserialize)]
   struct Mesaj {
