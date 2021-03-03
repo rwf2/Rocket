@@ -136,54 +136,54 @@ text = '''
 ###############################################################################
 
 [[bottom_features]]
-title = 'Templating'
-text = "Rocket makes templating a breeze with built-in templating support."
+title = 'Şablonlama (Templating)'
+text = "Rocket, yerleşik şablon desteği ile şablonlamayı çocuk oyuncağı haline getirir."
 image = 'templating-icon'
 url = 'guide/responses/#templates'
-button = 'Learn More'
+button = 'Daha fazla öğren'
 color = 'blue'
 
 [[bottom_features]]
-title = 'Cookies'
-text = "View, add, or remove cookies, with or without encryption, without hassle."
+title = 'Çerezler'
+text = "Şifreli veya şifresiz çerezleri, sorunsuz bir şekilde görüntüleyin, ekleyin veya kaldırın."
 image = 'cookies-icon'
 url = 'guide/requests/#cookies'
-button = 'Learn More'
+button = 'Daha fazla öğren'
 color = 'purple'
 margin = -6
 
 [[bottom_features]]
-title = 'Streams'
-text = "Rocket streams all incoming and outgoing data, so size isn't a concern."
+title = 'Yayınlar (Streams)'
+text = "Rocket, gelen ve giden verileri yayınlar (streams), yani boyut sizin için artık bir sorun değil."
 image = 'streams-icon'
 url = 'guide/requests/#streaming'
-button = 'Learn More'
+button = 'Daha fazla öğren'
 color = 'red'
 margin = -29
 
 [[bottom_features]]
-title = 'Config Environments'
-text = "Configure your application your way for development, staging, and production."
+title = 'Yapılandırma (Config) Ortamları'
+text = "Uygulamanızı geliştirme, hazırlık ve üretim için kendi yönteminizle yapılandırın."
 image = 'config-icon'
 url = 'guide/configuration/#environment'
-button = 'Learn More'
+button = 'Daha fazla öğren'
 color = 'yellow'
 margin = -3
 
 [[bottom_features]]
-title = 'Testing Library'
-text = "Unit test your applications with ease using the built-in testing library."
+title = 'Test Kütüphanesi'
+text = "Uygulamanızı yerleşik birim testi kütüphanesi ile kolayca birim test edin (unit testing)."
 image = 'testing-icon'
 url = 'guide/testing#testing'
-button = 'Learn More'
+button = 'Daha fazla öğren'
 color = 'orange'
 
 [[bottom_features]]
-title = 'Typed URIs'
-text = "Rocket typechecks route URIs for you so you never mistype a URI again."
+title = 'Tipli (Typed) URIler'
+text = "Rocket, rota URI'ların veri tiplerini sizin için kontrol eder, böylece bir daha yanlış URI yazmazsınız."
 image = 'ship-icon'
 url = 'guide/responses/#typed-uris'
-button = 'Learn More'
+button = 'Daha fazla öğren'
 color = 'green'
 margin = -20
 
