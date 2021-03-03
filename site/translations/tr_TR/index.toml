@@ -104,17 +104,17 @@ text = '''
 title = "JSON, out of the box."
 code = '''
   #[derive(Serialize, Deserialize)]
-  struct Message {
-     contents: String,
+  struct Mesaj {
+     icerik: String,
   }
 
-  #[put("/<id>", data = "<msg>")]
-  fn update(db: &Db, id: Id, msg: Json<Message>) -> JsonValue {
+  #[put("/<id>", data = "<msj>")]
+  fn guncelle(db: &Db, id: Id, msj: Json<Mesaj>) -> JsonValue {
       if db.contains_key(&id) {
-          db.insert(id, &msg.contents);
-          json!({ "status": "ok" })
+          db.insert(id, &msj.icerik);
+          json!({ "durum": "hazır" })
       } else {
-          json!({ "status": "error" })
+          json!({ "durum": "hata" })
       }
   }
 '''
