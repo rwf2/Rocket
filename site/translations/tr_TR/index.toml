@@ -75,17 +75,17 @@ text = '''
 title = "Formlar? Kontrol!"
 code = '''
   #[derive(FromForm)]
-  struct Task {
-     description: String,
-     completed: bool
+  struct Gorev {
+     aciklama: String,
+     tamamlandi: bool
   }
 
-  #[post("/", data = "<task>")]
-  fn new(task: Form<Task>) -> Flash<Redirect> {
-      if task.description.is_empty() {
-          Flash::error(Redirect::to("/"), "Cannot be empty.")
+  #[post("/", data = "<gorev>")]
+  fn yeni(gorev: Form<Task>) -> Flash<Redirect> {
+      if gorev.aciklama.is_empty() {
+          Flash::error(Redirect::to("/"), "Boş bırakılamaz.")
       } else {
-          Flash::success(Redirect::to("/"), "Task added.")
+          Flash::success(Redirect::to("/"), "Görev eklendi.")
       }
   }
 '''
