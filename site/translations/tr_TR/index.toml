@@ -119,16 +119,16 @@ code = '''
   }
 '''
 text = '''
-	Rocket, 1. sınıf JSON desteği ile birlikte geliyor. Basitçe, JSON biçiminde
-	veri almak veya döndürmek için sırasıyla, `Deserialize` ya da `Serialize`'dan
-	türetin.
+	Rocket, 1. sınıf JSON desteği ile birlikte gelir. Basitçe, JSON biçiminde
+	veri almak veya döndürmek için sırasıyla, veri tipinizi `Deserialize` ya da
+	`Serialize`'dan türetin.
 
 	Diğer önemli özellikler gibi JSON, Rocket'ın gövde verilerinden (body data)
-	veri tipi türetme yaklaşımı olan `FromData` özelliğiyle (trait) çalışır.
-	Buna benzer bir şekilde çalışır: `FromData` özelliğini uygulayan herhangi bir
-	veri türünde/tipinde bir `data` rota parametresi belirtilir ve o veri tipindeki
-	değer gelen gövde verisinden otomatik yeniden oluşturulacaktır. Hepsinden iyisi,
-	türleriniz için `FormData` özelliğini uygulayabilirsiniz.
+	veri tipi türetme yaklaşımı olan `FromData` özelliğiyle (trait) çalışır. 
+	Bu özellik şu şekilde çalışmaktadır: bir rota parametresi olan `data`, `FromData`
+	özelliğini uygulayan herhangi bir veri tipinde olmak zorundadır; gelen gövde
+	verisi, belirtilen veri tipine otomatik olarak dönüştürülecektir. Hepsinden
+	iyisi, türlerinize `FromData` özelliğini uygulayabilmenizdir.
 '''
 
 ###############################################################################
