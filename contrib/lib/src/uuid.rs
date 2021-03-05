@@ -14,11 +14,13 @@
 //! features = ["uuid"]
 //! ```
 
-pub extern crate uuid as uuid_crate;
+pub extern crate _uuid as uuid_crate;
 
 use std::fmt;
 use std::str::FromStr;
 use std::ops::Deref;
+
+use serde::{Deserialize, Serialize};
 
 use rocket::request::FromParam;
 use rocket::form::{self, FromFormField, ValueField};
@@ -63,8 +65,8 @@ type ParseError = <self::uuid_crate::Uuid as FromStr>::Err;
 /// fn user(id: Uuid) -> String {
 ///     format!("User ID: {}", id)
 /// }
-#[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Debug)]
-#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize), serde(transparent))]
+#[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Debug, Serialize, Deserialize)]
+#[serde(transparent)]
 pub struct Uuid(uuid_crate::Uuid);
 
 impl Uuid {
