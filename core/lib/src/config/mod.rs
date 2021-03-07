@@ -121,7 +121,8 @@ mod secret_key;
 
 pub use config::Config;
 pub use crate::logger::LogLevel;
-pub use tls::TlsConfig;
+
+pub use tls::{TlsConfig, V12Ciphers, V13Ciphers};
 
 #[cfg(feature = "secrets")]
 #[cfg_attr(nightly, doc(cfg(feature = "secrets")))]
@@ -133,7 +134,7 @@ mod tests {
     use figment::{Figment, Profile};
     use pretty_assertions::assert_eq;
 
-    use crate::config::{Config, TlsConfig};
+    use crate::config::{Config, TlsConfig, V12Ciphers, V13Ciphers};
     use crate::logger::LogLevel;
     use crate::data::{Limits, ToByteUnit};
 
@@ -222,6 +223,9 @@ mod tests {
                 [global.tls]
                 certs = "/ssl/cert.pem"
                 key = "/ssl/key.pem"
+                prefer_server_ciphers_order = true
+                v12_ciphers = ["EcdheRsaWithAes128GcmSha256"]
+                v13_ciphers = ["Aes128GcmSha256"]
 
                 [global.limits]
                 forms = "1mib"
@@ -232,7 +236,8 @@ mod tests {
             let config = Config::from(Config::figment());
             assert_eq!(config, Config {
                 ctrlc: false,
-                tls: Some(TlsConfig::from_paths("/ssl/cert.pem", "/ssl/key.pem")),
+                tls: Some(TlsConfig::from_paths("/ssl/cert.pem", "/ssl/key.pem", true,
+                vec![V12Ciphers::EcdheRsaWithAes128GcmSha256], vec![V13Ciphers::Aes128GcmSha256])),
                 limits: Limits::default()
                     .limit("forms", 1.mebibytes())
                     .limit("json", 10.mebibytes())
@@ -244,12 +249,16 @@ mod tests {
                 [global.tls]
                 certs = "cert.pem"
                 key = "key.pem"
+                prefer_server_ciphers_order = true
+                v12_ciphers = []
+                v13_ciphers = ["Aes128GcmSha256"]
             "#)?;
 
             let config = Config::from(Config::figment());
             assert_eq!(config, Config {
                 tls: Some(TlsConfig::from_paths(
-                    jail.directory().join("cert.pem"), jail.directory().join("key.pem")
+                    jail.directory().join("cert.pem"), jail.directory().join("key.pem"),
+                    true, vec![], vec![V13Ciphers::Aes128GcmSha256]
                 )),
                 ..Config::default()
             });
@@ -332,11 +341,21 @@ mod tests {
             jail.set_env("ROCKET_TLS", r#"{certs="certs.pem"}"#);
             let first_figment = Config::figment();
             jail.set_env("ROCKET_TLS", r#"{key="key.pem"}"#);
-            let prev_figment = Config::figment().join(&first_figment);
+            let second_figment = Config::figment();
+            jail.set_env("ROCKET_TLS", r#"{prefer_server_ciphers_order=true}"#);
+            let third_figment = Config::figment();
+            jail.set_env("ROCKET_TLS", r#"{v12_ciphers=[]}"#);
+            let fourth_figment = Config::figment();
+            jail.set_env("ROCKET_TLS", r#"{v13_ciphers=["Aes128GcmSha256"]}"#);
+
+            let prev_figment = Config::figment().join(&first_figment)
+            .join(&second_figment).join(&third_figment).join(&fourth_figment);
+
             let config = Config::from(&prev_figment);
             assert_eq!(config, Config {
                 port: 9999,
-                tls: Some(TlsConfig::from_paths("certs.pem", "key.pem")),
+                tls: Some(TlsConfig::from_paths("certs.pem", "key.pem",
+                true, vec![], vec![V13Ciphers::Aes128GcmSha256])),
                 ..Config::default()
             });
 
@@ -344,7 +363,8 @@ mod tests {
             let config = Config::from(Config::figment().join(&prev_figment));
             assert_eq!(config, Config {
                 port: 9999,
-                tls: Some(TlsConfig::from_paths("new.pem", "key.pem")),
+                tls: Some(TlsConfig::from_paths("new.pem", "key.pem",
+                 true, vec![], vec![V13Ciphers::Aes128GcmSha256])),
                 ..Config::default()
             });
 
@@ -352,7 +372,8 @@ mod tests {
             let config = Config::from(Config::figment().join(&prev_figment));
             assert_eq!(config, Config {
                 port: 9999,
-                tls: Some(TlsConfig::from_paths("new.pem", "key.pem")),
+                tls: Some(TlsConfig::from_paths("new.pem", "key.pem",
+                true, vec![], vec![V13Ciphers::Aes128GcmSha256])),
                 limits: Limits::default().limit("stream", 100.kibibytes()),
                 ..Config::default()
             });
@@ -394,6 +415,66 @@ mod tests {
             jail.set_env("ROCKET_PROFILE", "foo");
             let val: Result<String, _> = Config::figment().extract_inner("profile");
             assert!(val.is_err());
+
+            Ok(())
+        });
+    }
+
+    #[test]
+    #[cfg(feature = "tls")]
+    #[should_panic]
+    fn test_err_on_repeated_v12_ciphers() {
+        figment::Jail::expect_with(|jail| {
+            jail.create_file("Rocket.toml", r#"
+            [global.tls]
+            certs = "cert.pem"
+            key = "key.pem"
+            prefer_server_ciphers_order = true
+            v12_ciphers = ["EcdheRsaWithAes128GcmSha256", "EcdheRsaWithAes128GcmSha256"]
+            v13_ciphers = []
+        "#)?;
+
+            let _ = Config::from(Config::figment());
+
+            Ok(())
+        });
+    }
+
+    #[test]
+    #[cfg(feature = "tls")]
+    #[should_panic]
+    fn test_err_on_repeated_v13_ciphers() {
+        figment::Jail::expect_with(|jail| {
+            jail.create_file("Rocket.toml", r#"
+            [global.tls]
+            certs = "cert.pem"
+            key = "key.pem"
+            prefer_server_ciphers_order = true
+            v12_ciphers = []
+            v13_ciphers = ["Aes128GcmSha256", "Aes128GcmSha256"]
+        "#)?;
+
+            let _ = Config::from(Config::figment());
+
+            Ok(())
+        });
+    }
+
+    #[test]
+    #[cfg(feature = "tls")]
+    #[should_panic]
+    fn test_err_on_empty_v12_and_v13_ciphers() {
+        figment::Jail::expect_with(|jail| {
+            jail.create_file("Rocket.toml", r#"
+            [global.tls]
+            certs = "cert.pem"
+            key = "key.pem"
+            prefer_server_ciphers_order = true
+            v12_ciphers = []
+            v13_ciphers = []
+        "#)?;
+
+            let _ = Config::from(Config::figment());
 
             Ok(())
         });

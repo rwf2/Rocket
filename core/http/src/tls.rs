@@ -5,6 +5,8 @@ use std::pin::Pin;
 use std::sync::Arc;
 use std::task::{Context, Poll};
 
+pub use rustls::{ProtocolVersion, SupportedCipherSuite, ciphersuite};
+
 use rustls::internal::pemfile;
 use rustls::{Certificate, PrivateKey, ServerConfig};
 use tokio::net::{TcpListener, TcpStream};
@@ -95,6 +97,9 @@ pub async fn bind_tls<C: io::BufRead + Send, K: io::BufRead + Send>(
     address: SocketAddr,
     mut cert_chain: C,
     mut private_key: K,
+    ciphersuites: Vec<&'static SupportedCipherSuite>,
+    versions: Vec<ProtocolVersion>,
+    prefer_server_ciphers_order: bool,
 ) -> io::Result<TlsListener> {
     let cert_chain = load_certs(&mut cert_chain).map_err(|e| {
         let msg = format!("malformed TLS certificate chain: {}", e);
@@ -110,6 +115,9 @@ pub async fn bind_tls<C: io::BufRead + Send, K: io::BufRead + Send>(
 
     let client_auth = rustls::NoClientAuth::new();
     let mut tls_config = ServerConfig::new(client_auth);
+    tls_config.ciphersuites = ciphersuites;
+    tls_config.versions = versions;
+    tls_config.ignore_client_order = prefer_server_ciphers_order;
     let cache = rustls::ServerSessionMemoryCache::new(1024);
     tls_config.set_persistence(cache);
     tls_config.ticketer = rustls::Ticketer::new();

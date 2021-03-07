@@ -17,21 +17,26 @@ is configured with. This means that no matter which configuration provider
 Rocket is asked to use, it must be able to read the following configuration
 values:
 
-| key            | kind            | description                                     | debug/release default |
-|----------------|-----------------|-------------------------------------------------|-----------------------|
-| `address`      | `IpAddr`        | IP address to serve on                          | `127.0.0.1`           |
-| `port`         | `u16`           | Port to serve on.                               | `8000`                |
-| `workers`      | `usize`         | Number of threads to use for executing futures. | cpu core count        |
-| `keep_alive`   | `u32`           | Keep-alive timeout seconds; disabled when `0`.  | `5`                   |
-| `log_level`    | `LogLevel`      | Max level to log. (off/normal/debug/critical)   | `normal`/`critical`   |
-| `cli_colors`   | `bool`          | Whether to use colors and emoji when logging.   | `true`                |
-| `secret_key`   | `SecretKey`     | Secret key for signing and encrypting values.   | `None`                |
-| `tls`          | `TlsConfig`     | TLS configuration, if any.                      | `None`                |
-| `tls.key`      | `&[u8]`/`&Path` | Path/bytes to DER-encoded ASN.1 PKCS#1/#8 key.  |                       |
-| `tls.certs`    | `&[u8]`/`&Path` | Path/bytes to DER-encoded X.509 TLS cert chain. |                       |
-| `limits`       | `Limits`        | Streaming read size limits.                     | [`Limits::default()`] |
-| `limits.$name` | `&str`/`uint`   | Read limit for `$name`.                         | forms = "32KiB"       |
-| `ctrlc`        | `bool`          | Whether `ctrl-c` initiates a server shutdown.   | `true`                |
+| key                               | kind            | description                                     | debug/release default |
+|-----------------------------------|-----------------|-------------------------------------------------|-----------------------|
+| `address`                         | `IpAddr`        | IP address to serve on                          | `127.0.0.1`           |
+| `port`                            | `u16`           | Port to serve on.                               | `8000`                |
+| `workers`                         | `usize`         | Number of threads to use for executing futures. | cpu core count        |
+| `keep_alive`                      | `u32`           | Keep-alive timeout seconds; disabled when `0`.  | `5`                   |
+| `log_level`                       | `LogLevel`      | Max level to log. (off/normal/debug/critical)   | `normal`/`critical`   |
+| `cli_colors`                      | `bool`          | Whether to use colors and emoji when logging.   | `true`                |
+| `secret_key`                      | `SecretKey`     | Secret key for signing and encrypting values.   | `None`                |
+| `tls`                             | `TlsConfig`     | TLS configuration, if any.                      | `None`                |
+| `tls.key`                         | `&[u8]`/`&Path` | Path/bytes to DER-encoded ASN.1 PKCS#1/#8 key.  |                       |
+| `tls.certs`                       | `&[u8]`/`&Path` | Path/bytes to DER-encoded X.509 TLS cert chain. |                       |
+| `tls.prefer_server_ciphers_order` | `bool`          | Ignore the client order and choose the top      |                       |
+|                                   |                 | ciphersuite in `v12_ciphers` and `v13_ciphers`  |                       |
+|                                   |                 | which is supported by the client.               |                       |
+| `tls.v12_ciphers`                 | `[V12Ciphers]`  | Ordered list of accepted TLS1.2 cipher suites.  |                       |
+| `tls.v13_ciphers`                 | `[V13Ciphers]`  | Ordered list of accepted TLS1.3 cipher suites.  |                       |
+| `limits`                          | `Limits`        | Streaming read size limits.                     | [`Limits::default()`] |
+| `limits.$name`                    | `&str`/`uint`   | Read limit for `$name`.                         | forms = "32KiB"       |
+| `ctrlc`                           | `bool`          | Whether `ctrl-c` initiates a server shutdown.   | `true`                |
 
 ### Profiles
 
@@ -101,11 +106,26 @@ rocket = { version = "0.5.0-dev", features = ["tls"] }
 ```
 
 TLS is configured through the `tls` configuration parameter. The value of `tls`
-is a dictionary with two keys: `certs` and `key`, described in the table above.
-Each key's value may be either a path to a file or raw bytes corresponding to
+is a dictionary with five keys: `certs`, `key`, `prefer_server_ciphers_order`,
+`v12_ciphers`, `v13_ciphers`, described in the table above.
+`certs` and `key`'s value may be either a path to a file or raw bytes corresponding to
 the expected value. When a path is configured in a file source, such as
 `Rocket.toml`, relative paths are interpreted as being relative to the source
 file's directory.
+
+If `prefer_server_ciphers_order` is set to true then client's ciphersuite order is ignored
+and the top ciphersuite in `v12_ciphers` and `v13_ciphers` which is supported by the client
+is chosen. Note in that case that `v13_ciphers` are prioritized over `v12_ciphers`.
+Otherwise prefer client order.
+
+`v12_ciphers` and `v13_ciphers` contains ordered list of ciphers accepted by the server
+for TLS 1.2 and TLS 1.3 respectively.
+
+`v12_ciphers` support the following ciphers: `EcdheEcdsaWithChacha20Poly1305Sha256`,
+`EcdheRsaWithChacha20Poly1305Sha256`,`EcdheEcdsaWithAes256GcmSha384`,
+`EcdheEcdsaWithAes128GcmSha256`, `EcdheRsaWithAes256GcmSha384`, and `EcdheRsaWithAes128GcmSha256`.
+
+`v13_ciphers` support the following ciphers: `Chacha20Poly1305Sha256`, `Aes256GcmSha384` and `Aes128GcmSha256`.
 
 ! warning: Rocket's built-in TLS implements only TLS 1.2 and 1.3. As such, it
   may not be suitable for production use.

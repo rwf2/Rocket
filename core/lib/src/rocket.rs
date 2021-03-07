@@ -615,11 +615,47 @@ impl Rocket {
 
         #[cfg(feature = "tls")]
         let server = {
-            use crate::http::private::tls::bind_tls;
+            use crate::http::private::tls::{bind_tls, ProtocolVersion, ciphersuite};
 
             if let Some(tls_config) = &self.config.tls {
                 let (certs, key) = tls_config.to_readers().map_err(ErrorKind::Io)?;
-                let l = bind_tls(addr, certs, key).await.map_err(ErrorKind::Bind)?;
+
+                let ciphersuites: Vec<_> = tls_config.v13_ciphers.iter().map(|c| {
+                    use crate::config::V13Ciphers::*;
+
+                    match c {
+                        Chacha20Poly1305Sha256 => &ciphersuite::TLS13_CHACHA20_POLY1305_SHA256,
+                        Aes256GcmSha384 => &ciphersuite::TLS13_AES_256_GCM_SHA384,
+                        Aes128GcmSha256 => &ciphersuite::TLS13_AES_128_GCM_SHA256,
+                    }
+                }).chain(tls_config.v12_ciphers.iter().map(|c| {
+                    use crate::config::V12Ciphers::*;
+
+                    match c {
+                        EcdheEcdsaWithChacha20Poly1305Sha256 => &ciphersuite::TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305_SHA256,
+                        EcdheRsaWithChacha20Poly1305Sha256 => &ciphersuite::TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305_SHA256,
+                        EcdheEcdsaWithAes256GcmSha384 => &ciphersuite::TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384,
+                        EcdheEcdsaWithAes128GcmSha256 => &ciphersuite::TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256,
+                        EcdheRsaWithAes256GcmSha384 => &ciphersuite::TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,
+                        EcdheRsaWithAes128GcmSha256 => &ciphersuite::TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,
+                    }
+                })).collect();
+
+                if ciphersuites.is_empty() {
+                    unreachable!("Ensuring that ciphersuites is non-empty happens at configure time");
+                }
+
+                let mut versions = vec![];
+
+                if !tls_config.v12_ciphers.is_empty() {
+                    versions.push(ProtocolVersion::TLSv1_2);
+                }
+
+                if !tls_config.v13_ciphers.is_empty() {
+                    versions.push(ProtocolVersion::TLSv1_3);
+                }
+
+                let l = bind_tls(addr, certs, key, ciphersuites, versions, tls_config.prefer_server_ciphers_order).await.map_err(ErrorKind::Bind)?;
                 self.listen_on(l).boxed()
             } else {
                 let l = bind_tcp(addr).await.map_err(ErrorKind::Bind)?;
