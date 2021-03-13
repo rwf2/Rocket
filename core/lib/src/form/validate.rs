@@ -231,6 +231,9 @@ pub fn neq<'v, A, B>(a: &A, b: B) -> Result<'v, ()>
 ///
 /// [`form::Result<'_, T>`]: crate::form::Result
 pub trait Len<L> {
+    /// Check if the value is empty in constant time.
+    fn is_empty(&self) -> bool;
+
     /// The length of the value.
     fn len(&self) -> L;
 
@@ -244,6 +247,7 @@ pub trait Len<L> {
 macro_rules! impl_len {
     (<$($gen:ident),*> $T:ty => $L:ty) => (
         impl <$($gen),*> Len<$L> for $T {
+            fn is_empty(&self) -> bool { self.is_empty() }
             fn len(&self) -> $L { self.len() }
             fn len_into_u64(len: $L) -> u64 { len as u64 }
             fn zero_len() -> $L { 0 }
@@ -259,24 +263,28 @@ impl_len!(<K, V> std::collections::HashMap<K, V> => usize);
 impl_len!(<K, V> std::collections::BTreeMap<K, V> => usize);
 
 impl Len<ByteUnit> for TempFile<'_> {
+    fn is_empty(&self) -> bool { self.is_empty() }
     fn len(&self) -> ByteUnit { self.len().into() }
     fn len_into_u64(len: ByteUnit) -> u64 { len.into() }
     fn zero_len() -> ByteUnit { ByteUnit::from(0) }
 }
 
 impl<L, T: Len<L> + ?Sized> Len<L> for &T {
+    fn is_empty(&self) -> bool { <T as Len<L>>::is_empty(self) }
     fn len(&self) -> L { <T as Len<L>>::len(self) }
     fn len_into_u64(len: L) -> u64 { T::len_into_u64(len) }
     fn zero_len() -> L { T::zero_len() }
 }
 
 impl<L, T: Len<L>> Len<L> for Option<T> {
+    fn is_empty(&self) -> bool { self.as_ref().is_empty() }
     fn len(&self) -> L { self.as_ref().map(|v| v.len()).unwrap_or_else(T::zero_len) }
     fn len_into_u64(len: L) -> u64 { T::len_into_u64(len) }
     fn zero_len() -> L { T::zero_len() }
 }
 
 impl<L, T: Len<L>> Len<L> for Result<'_, T> {
+    fn is_empty(&self) -> bool { self.as_ref().ok().is_empty() }
     fn len(&self) -> L { self.as_ref().ok().len() }
     fn len_into_u64(len: L) -> u64 { T::len_into_u64(len) }
     fn zero_len() -> L { T::zero_len() }
@@ -472,7 +480,7 @@ pub fn verbose_contains<'v, V, I>(value: V, item: I) -> Result<'v, ()>
     where V: Contains<I>, I: Debug + Copy
 {
     if !value.contains(item) {
-        return Err(Error::validation(format!("value must contain {:?}", item)).into())
+        return Err(Error::validation(format!("value must contain {:?}", item)).into());
     }
 
     Ok(())

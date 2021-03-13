@@ -161,6 +161,11 @@ pub struct QuerySegments<'o> {
 }
 
 impl<'o> QuerySegments<'o> {
+    /// Check if there are no query segments left.
+    pub fn is_empty(&self) -> bool {
+        self.len() == 0
+    }
+
     /// Returns the number of query segments left.
     pub fn len(&self) -> usize {
         let max_pos = std::cmp::min(self.pos, self.segments.len());

@@ -535,82 +535,34 @@ impl<'h> HeaderMap<'h> {
     /// use rocket::http::{HeaderMap, Header};
     ///
     /// // The headers we'll be storing.
-    /// let all_headers = vec![
-    ///     Header::new("X-Custom", "value_1"),
-    ///     Header::new("X-Other", "other"),
-    ///     Header::new("X-Third", "third"),
+    /// let mut all_headers = vec![
+    ///     Header::new("X-Custom", "First"),
+    ///     Header::new("X-Other", "Value_1"),
+    ///     Header::new("X-Other", "Value_2"),
+    ///     Header::new("X-Other", "Value_3"),
+    ///     Header::new("X-Third", "Third"),
     /// ];
     ///
     /// // Create a map, store all of the headers.
     /// let mut map = HeaderMap::new();
-    /// for header in all_headers {
-    ///     map.add(header)
+    /// for header in all_headers.iter() {
+    ///     map.add(header.clone())
     /// }
     ///
-    /// // Ensure there are three headers via the iterator.
-    /// assert_eq!(map.iter().count(), 3);
+    /// // Use the iterator to make sure it returns as much elements as the initial vector.
+    /// assert_eq!(map.iter().count(), all_headers.len(), "iter returned extra values");
     ///
-    /// // Actually iterate through them.
+    /// // iter did not consume the map, we can iterate over again.
     /// for header in map.iter() {
-    ///     match header.name().as_str() {
-    ///         "X-Custom" => assert_eq!(header.value(), "value_1"),
-    ///         "X-Other" => assert_eq!(header.value(), "other"),
-    ///         "X-Third" => assert_eq!(header.value(), "third"),
-    ///         _ => unreachable!("there are only three headers")
-    ///     }
+    ///     let index = all_headers.iter().position(|x| *x == header)
+    ///                            .expect(format!("into_iter returned an extra {:?}", header).as_str());
+    ///     all_headers.swap_remove(index);
     /// }
     /// ```
     pub fn iter(&self) -> impl Iterator<Item=Header<'_>> {
         self.headers.iter().flat_map(|(key, values)| {
             values.iter().map(move |val| {
                 Header::new(key.as_str(), &**val)
-            })
-        })
-    }
-
-    /// Consumes `self` and returns an iterator over all of the `Header`s stored
-    /// in the map. Header names are returned in no specific order, but all
-    /// values for a given header name are grouped together, and values are in
-    /// FIFO order.
-    ///
-    /// # Example
-    ///
-    /// ```rust
-    /// # extern crate rocket;
-    /// use rocket::http::{HeaderMap, Header};
-    ///
-    /// // The headers we'll be storing.
-    /// let all_headers = vec![
-    ///     Header::new("X-Custom", "value_1"),
-    ///     Header::new("X-Other", "other"),
-    ///     Header::new("X-Third", "third"),
-    /// ];
-    ///
-    /// // Create a map, store all of the headers.
-    /// let mut map = HeaderMap::new();
-    /// for header in all_headers {
-    ///     map.add(header)
-    /// }
-    ///
-    /// // Ensure there are three headers via the iterator.
-    /// assert_eq!(map.iter().count(), 3);
-    ///
-    /// // Actually iterate through them.
-    /// for header in map.into_iter() {
-    ///     match header.name().as_str() {
-    ///         "X-Custom" => assert_eq!(header.value(), "value_1"),
-    ///         "X-Other" => assert_eq!(header.value(), "other"),
-    ///         "X-Third" => assert_eq!(header.value(), "third"),
-    ///         _ => unreachable!("there are only three headers")
-    ///     }
-    /// }
-    /// ```
-    // TODO: Implement IntoIterator.
-    #[inline(always)]
-    pub fn into_iter(self) -> impl Iterator<Item=Header<'h>> {
-        self.headers.into_iter().flat_map(|(name, value)| {
-            value.into_iter().map(move |value| {
-                Header { name: name.clone(), value }
             })
         })
     }
@@ -636,6 +588,78 @@ impl From<cookie::Cookie<'_>> for Header<'static> {
 impl From<&cookie::Cookie<'_>> for Header<'static> {
     fn from(cookie: &cookie::Cookie<'_>) -> Header<'static> {
         Header::new("Set-Cookie", cookie.encoded().to_string())
+    }
+}
+
+pub struct HeaderMapIterator<'h>
+{
+    header_itr: indexmap::map::IntoIter<uncased::Uncased<'h>, Vec<Cow<'h, str>>>,
+    current: Option<(Uncased<'h>, std::vec::IntoIter<Cow<'h, str>>)>,
+}
+
+impl<'h> Iterator for HeaderMapIterator<'h>
+{
+    type Item = Header<'h>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if let Some((name, vec_iter)) = &mut self.current {
+            if let Some(value) = vec_iter.next() {
+                return Some(Header { name: name.clone(), value: value.clone() });
+            }
+        }
+        if let Some((name, values)) = self.header_itr.next() {
+            self.current = Some((name.clone(), values.into_iter()));
+            return self.next();
+        }
+        None
+    }
+}
+impl<'h> IntoIterator for HeaderMap<'h>
+{
+    type Item = Header<'h>;
+    type IntoIter = HeaderMapIterator<'h>;
+
+    /// Consumes `self` and returns an iterator over all of the `Header`s stored
+    /// in the map. Header names are returned in no specific order, but all
+    /// values for a given header name are grouped together, and values are in
+    /// FIFO order.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// # extern crate rocket;
+    /// use rocket::http::{HeaderMap, Header};
+    ///
+    /// // The headers we'll be storing.
+    /// let mut all_headers = vec![
+    ///     Header::new("X-Custom", "First"),
+    ///     Header::new("X-Other", "Value_1"),
+    ///     Header::new("X-Other", "Value_2"),
+    ///     Header::new("X-Other", "Value_3"),
+    ///     Header::new("X-Third", "Third"),
+    /// ];
+    ///
+    /// // Create a map, store all of the headers.
+    /// let mut map = HeaderMap::new();
+    /// for header in all_headers.iter() {
+    ///     map.add(header.clone())
+    /// }
+    ///
+    /// // Actually iterate through them (into_iter is the default iterator) :
+    /// for header in map {
+    ///     let index = all_headers.iter().position(|x| *x == header)
+    ///                            .expect(format!("into_iter returned an extra {:?}", header).as_str());
+    ///     all_headers.swap_remove(index);
+    /// }
+    ///
+    /// if let Some(header) = all_headers.first() {
+    ///     panic!("into_iter forgot the {:?}", header);
+    /// }
+    /// ```
+    #[inline(always)]
+    fn into_iter(self) -> Self::IntoIter {
+        HeaderMapIterator{header_itr: self.headers.into_iter(),
+                          current: None}
     }
 }
 

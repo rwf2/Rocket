@@ -313,6 +313,27 @@ impl<'v> TempFile<'v> {
         Ok(())
     }
 
+    /// Returns true if the file is empty.
+    ///
+    /// This method does not perform any system calls.
+    ///
+    /// ```rust
+    /// # #[macro_use] extern crate rocket;
+    /// use rocket::data::TempFile;
+    ///
+    /// #[post("/", data = "<file>")]
+    /// fn handler(file: TempFile<'_>) {
+    ///     assert_eq!(file.is_empty(), true)
+    /// }
+    /// ```
+    pub fn is_empty(&self) -> bool {
+        match self {
+            TempFile::File { len, .. } => *len == 0,
+            TempFile::Buffered { content } => content.is_empty(),
+        }
+    }
+
+
     /// Returns the size, in bytes, of the file.
     ///
     /// This method does not perform any system calls.
