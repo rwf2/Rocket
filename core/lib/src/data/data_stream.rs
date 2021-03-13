@@ -59,7 +59,7 @@ enum State {
 /// The kinds of streams we accept as `Data`.
 enum StreamKind {
     Body(hyper::Body),
-    Multipart(multer::Field)
+    Multipart(Box<multer::Field>)
 }
 
 impl DataStream {
@@ -240,7 +240,7 @@ impl From<hyper::Body> for StreamReader {
 
 impl From<multer::Field> for StreamReader {
     fn from(field: multer::Field) -> Self {
-        Self { inner: StreamKind::Multipart(field), state: State::Pending }
+        Self { inner: StreamKind::Multipart(Box::new(field)), state: State::Pending }
     }
 }
 

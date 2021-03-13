@@ -27,7 +27,7 @@ mod responder;
 mod redirect;
 mod named_file;
 mod stream;
-mod response;
+mod response_impl;
 mod debug;
 
 pub(crate) mod flash;
@@ -37,8 +37,8 @@ pub mod status;
 
 #[doc(hidden)] pub use rocket_codegen::Responder;
 
-pub use self::response::DEFAULT_CHUNK_SIZE;
-pub use self::response::{Response, ResponseBody, ResponseBuilder, Body};
+pub use self::response_impl::DEFAULT_CHUNK_SIZE;
+pub use self::response_impl::{Response, ResponseBody, ResponseBuilder, Body};
 pub use self::responder::Responder;
 pub use self::redirect::Redirect;
 pub use self::flash::Flash;

@@ -1,6 +1,6 @@
 //! Types for URIs and traits for rendering URI components.
 
-mod uri;
+mod uri_impl;
 mod uri_display;
 mod formatter;
 mod from_uri_param;
@@ -13,7 +13,7 @@ pub(crate) mod encoding;
 
 pub use crate::parse::uri::Error;
 
-pub use self::uri::*;
+pub use self::uri_impl::*;
 pub use self::authority::*;
 pub use self::origin::*;
 pub use self::absolute::*;

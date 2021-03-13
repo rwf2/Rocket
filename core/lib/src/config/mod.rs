@@ -111,15 +111,15 @@
 //! [`Toml`]: figment::providers::Toml
 //! [`Env`]: figment::providers::Env
 
-mod config;
+mod config_impl;
 mod tls;
 
 #[cfg(feature = "secrets")]
 mod secret_key;
 
-#[doc(hidden)] pub use config::pretty_print_error;
+#[doc(hidden)] pub use config_impl::pretty_print_error;
 
-pub use config::Config;
+pub use config_impl::Config;
 pub use crate::logger::LogLevel;
 pub use tls::TlsConfig;
 

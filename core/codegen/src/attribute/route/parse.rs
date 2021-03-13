@@ -109,7 +109,7 @@ impl Route {
         }
 
         let param = param.take_dynamic().expect("dynamic() => take_dynamic()");
-        Route::upgrade_dynamic(param, args).map(Parameter::Guard)
+        Route::upgrade_dynamic(param, args).map(|gard| Parameter::Guard(Box::new(gard)))
     }
 
     pub fn upgrade_dynamic(param: Dynamic, args: &Arguments) -> Result<Guard> {

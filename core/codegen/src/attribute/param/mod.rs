@@ -11,7 +11,7 @@ pub enum Parameter {
     Static(Name),
     Ignored(Dynamic),
     Dynamic(Dynamic),
-    Guard(Guard),
+    Guard(Box<Guard>),
 }
 
 #[derive(Debug, Clone)]

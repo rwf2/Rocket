@@ -99,7 +99,7 @@ async fn hyper_service_fn(
 
         // Dispatch the request to get a response, then write that response out.
         let token = rocket.preprocess_request(&mut req, &mut data).await;
-        let r = rocket.dispatch(token, &mut req, data).await;
+        let r = rocket.dispatch(token, &req, data).await;
         rocket.send_response(r, tx).await;
     });
 

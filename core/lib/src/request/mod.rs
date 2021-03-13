@@ -1,13 +1,13 @@
 //! Types and traits for request parsing and handling.
 
-mod request;
+mod request_impl;
 mod from_param;
 mod from_request;
 
 #[cfg(test)]
 mod tests;
 
-pub use self::request::Request;
+pub use self::request_impl::Request;
 pub use self::from_request::{FromRequest, Outcome};
 pub use self::from_param::{FromParam, FromSegments};
 

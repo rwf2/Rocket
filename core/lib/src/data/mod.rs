@@ -2,13 +2,13 @@
 
 #[macro_use]
 mod capped;
-mod data;
+mod data_impl;
 mod data_stream;
 mod from_data;
 mod limits;
 mod temp_file;
 
-pub use self::data::Data;
+pub use self::data_impl::Data;
 pub use self::data_stream::DataStream;
 pub use self::from_data::{FromData, Outcome};
 pub use self::limits::Limits;
