@@ -36,7 +36,7 @@ impl EntryAttr for Launch {
         };
 
         let block = &f.block;
-        let rocket = quote_spanned!(ty.span().into() => {
+        let rocket = quote_spanned!(ty.span() => {
             let ___rocket: #ty = #block;
             let ___rocket: ::rocket::Rocket<::rocket::Build> = ___rocket;
             ___rocket
@@ -47,7 +47,7 @@ impl EntryAttr for Launch {
         sig.output = syn::ReturnType::Default;
         sig.asyncness = None;
 
-        Ok(quote_spanned!(block.span().into() =>
+        Ok(quote_spanned!(block.span() =>
             #[allow(dead_code)] #f
 
             #vis #sig {

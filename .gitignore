@@ -29,3 +29,6 @@ scripts/redirect.html
 
 # Uploads in pastebin example.
 examples/pastebin/upload/*
+
+# IDE files
+.idea/

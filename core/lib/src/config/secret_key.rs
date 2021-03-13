@@ -211,7 +211,7 @@ impl<'de> Deserialize<'de> for SecretKey {
                 let bytes = match val.len() {
                     44 | 88 => b64decode(val.as_bytes(), &mut buf).map_err(|_| e(val))?,
                     64 => hex2bin(val.as_bytes(), &mut buf).map_err(|_| e(val))?,
-                    n => Err(E::invalid_length(n, &"44 or 88 for base64, 64 for hex"))?
+                    n => return Err(E::invalid_length(n, &"44 or 88 for base64, 64 for hex"))
                 };
 
                 self.visit_bytes(bytes)

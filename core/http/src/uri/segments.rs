@@ -108,7 +108,7 @@ impl<'o> Segments<'o> {
     /// additional checks.
     pub fn to_path_buf(&self, allow_dotfiles: bool) -> Result<PathBuf, PathError> {
         let mut buf = PathBuf::new();
-        for segment in self.clone() {
+        for segment in *self {
             if segment == ".." {
                 buf.pop();
             } else if !allow_dotfiles && segment.starts_with('.') {

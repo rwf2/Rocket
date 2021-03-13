@@ -35,7 +35,7 @@ fn _async_entry<A: EntryAttr>(
             .span_note(function.sig.span(), "this function must take no arguments"));
     }
 
-    A::function(&mut function).map(|t| t.into())
+    A::function(&mut function)
 }
 
 macro_rules! async_entry {

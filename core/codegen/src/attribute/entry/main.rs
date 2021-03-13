@@ -21,7 +21,7 @@ impl EntryAttr for Main {
         }
 
         sig.asyncness = None;
-        Ok(quote_spanned!(block.span().into() => #(#attrs)* #vis #sig {
+        Ok(quote_spanned!(block.span() => #(#attrs)* #vis #sig {
             ::rocket::async_main(async move #block)
         }))
     }

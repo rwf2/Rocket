@@ -279,7 +279,7 @@ impl VisitMut for ValidationMutator<'_> {
             }
         }
 
-        return syn::visit_mut::visit_expr_mut(self, i);
+        syn::visit_mut::visit_expr_mut(self, i)
     }
 }
 
@@ -308,7 +308,7 @@ pub fn validators<'v>(
         .map(move |(mut expr, _)| {
             let field_span = field.ident().span()
                 .join(field.ty.span())
-                .unwrap_or(field.ty.span());
+                .unwrap_or_else(|| field.ty.span());
 
             let field_ident = field.ident().clone().with_span(field_span);
             let mut v = ValidationMutator { parent, local, field: &field_ident, visited: false };

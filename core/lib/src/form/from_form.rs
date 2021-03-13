@@ -574,10 +574,7 @@ impl<'v, T: FromForm<'v>> VecContext<'v, T> {
 
     fn context(&mut self, name: &NameView<'v>) -> &mut T::Context {
         let this_key = name.key();
-        let keys_match = match (self.last_key, this_key) {
-            (Some(k1), Some(k2)) if k1 == k2 => true,
-            _ => false
-        };
+        let keys_match = matches!((self.last_key, this_key), (Some(k1), Some(k2)) if k1 == k2);
 
         if !keys_match {
             self.shift();
@@ -615,7 +612,7 @@ impl<'v, T: FromForm<'v> + 'v> FromForm<'v> for Vec<T> {
         this.shift();
         match this.errors.is_empty() {
             true => Ok(this.items),
-            false => Err(this.errors)?,
+            false => Err(this.errors),
         }
     }
 }
@@ -885,11 +882,11 @@ impl<'v, A: FromForm<'v>, B: FromForm<'v>> FromForm<'v> for (A, B) {
     fn finalize(mut ctxt: Self::Context) -> Result<'v, Self> {
         match (A::finalize(ctxt.left), B::finalize(ctxt.right)) {
             (Ok(key), Ok(val)) if ctxt.errors.is_empty() => Ok((key, val)),
-            (Ok(_), Ok(_)) => Err(ctxt.errors)?,
+            (Ok(_), Ok(_)) => Err(ctxt.errors),
             (left, right) => {
                 if let Err(e) = left { ctxt.errors.extend(e); }
                 if let Err(e) = right { ctxt.errors.extend(e); }
-                Err(ctxt.errors)?
+                Err(ctxt.errors)
             }
         }
     }

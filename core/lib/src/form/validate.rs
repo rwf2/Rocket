@@ -78,6 +78,9 @@
 //! }
 //! ```
 
+// The use of Result<()> in this file is part of the public API, fixing it will break everyone's code.
+#![allow(clippy::result_unit_err)]
+
 use std::borrow::Cow;
 use std::convert::TryInto;
 use std::ops::{RangeBounds, Bound};
@@ -167,7 +170,7 @@ pub fn eq<'v, A, B>(a: &A, b: B) -> Result<'v, ()>
     where A: PartialEq<B>
 {
     if a != &b {
-        Err(Error::validation("value does not match expected value"))?
+        return Err(Error::validation("value does not match expected value").into());
     }
 
     Ok(())
@@ -207,7 +210,7 @@ pub fn neq<'v, A, B>(a: &A, b: B) -> Result<'v, ()>
     where A: PartialEq<B>
 {
     if a == &b {
-        Err(Error::validation("value is equal to an invalid value"))?
+        return Err(Error::validation("value is equal to an invalid value").into());
     }
 
     Ok(())
@@ -268,7 +271,7 @@ impl<L, T: Len<L> + ?Sized> Len<L> for &T {
 }
 
 impl<L, T: Len<L>> Len<L> for Option<T> {
-    fn len(&self) -> L { self.as_ref().map(|v| v.len()).unwrap_or(T::zero_len()) }
+    fn len(&self) -> L { self.as_ref().map(|v| v.len()).unwrap_or_else(T::zero_len) }
     fn len_into_u64(len: L) -> u64 { T::len_into_u64(len) }
     fn zero_len() -> L { T::zero_len() }
 }
@@ -330,7 +333,7 @@ pub fn len<'v, V, L, R>(value: V, range: R) -> Result<'v, ()>
             Bound::Unbounded => None,
         };
 
-        Err((start, end))?
+        return Err((start, end).into());
     }
 
     Ok(())
@@ -432,7 +435,7 @@ pub fn contains<'v, V, I>(value: V, item: I) -> Result<'v, ()>
     where V: Contains<I>
 {
     if !value.contains(item) {
-        Err(Error::validation("value does not contain expected item"))?
+        return Err(Error::validation("value does not contain expected item").into());
     }
 
     Ok(())
@@ -469,7 +472,7 @@ pub fn verbose_contains<'v, V, I>(value: V, item: I) -> Result<'v, ()>
     where V: Contains<I>, I: Debug + Copy
 {
     if !value.contains(item) {
-        Err(Error::validation(format!("value must contain {:?}", item)))?
+        return Err(Error::validation(format!("value must contain {:?}", item)).into())
     }
 
     Ok(())
@@ -509,7 +512,7 @@ pub fn omits<'v, V, I>(value: V, item: I) -> Result<'v, ()>
     where V: Contains<I>
 {
     if value.contains(item) {
-        Err(Error::validation("value contains a disallowed item"))?
+        return Err(Error::validation("value contains a disallowed item").into());
     }
 
     Ok(())
@@ -548,7 +551,7 @@ pub fn verbose_omits<'v, V, I>(value: V, item: I) -> Result<'v, ()>
     where V: Contains<I>, I: Copy + Debug
 {
     if value.contains(item) {
-        Err(Error::validation(format!("value cannot contain {:?}", item)))?
+        return Err(Error::validation(format!("value cannot contain {:?}", item)).into());
     }
 
     Ok(())
@@ -596,7 +599,7 @@ pub fn range<'v, V, R>(value: &V, range: R) -> Result<'v, ()>
     };
 
 
-    Err((start, end))?
+    Err((start, end).into())
 }
 
 /// Contains one of validator: succeeds when a value contains at least one item
@@ -643,7 +646,7 @@ pub fn one_of<'v, V, I, R>(value: V, items: R) -> Result<'v, ()>
         .map(|item| format!("{:?}", item).into())
         .collect();
 
-    Err(choices)?
+    Err(choices.into())
 }
 
 /// File type validator: succeeds when a [`TempFile`] has the Content-Type
@@ -687,5 +690,5 @@ pub fn ext<'v>(file: &TempFile<'_>, r#type: ContentType) -> Result<'v, ()> {
         (None, None) => format!("file type must be {}", r#type),
     };
 
-    Err(Error::validation(msg))?
+    Err(Error::validation(msg).into())
 }

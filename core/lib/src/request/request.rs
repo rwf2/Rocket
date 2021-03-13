@@ -48,7 +48,7 @@ impl Request<'_> {
             method: Atomic::new(self.method()),
             uri: self.uri.clone(),
             headers: self.headers.clone(),
-            remote: self.remote.clone(),
+            remote: self.remote,
             state: self.state.clone(),
         }
     }
@@ -752,9 +752,8 @@ impl<'r> Request<'r> {
     pub fn query_value<'a, T>(&'a self, name: &str) -> Option<form::Result<'a, T>>
         where T: FromForm<'a>
     {
-        if self.query_fields().find(|f| f.name == name).is_none() {
-            return None;
-        }
+        // No need to continue if the name is not found.
+        self.query_fields().find(|f| f.name == name)?;
 
         let mut ctxt = T::init(form::Options::Lenient);
 
@@ -776,10 +775,8 @@ impl<'r> Request<'r> {
             if self.content_type().is_none() || replace {
                 self.state.content_type = Storage::new();
             }
-        } else if name == "Accept" {
-            if self.accept().is_none() || replace {
-                self.state.accept = Storage::new();
-            }
+        } else if name == "Accept" && (self.accept().is_none() || replace) {
+            self.state.accept = Storage::new();
         }
     }
 

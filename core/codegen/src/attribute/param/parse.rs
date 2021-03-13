@@ -185,9 +185,9 @@ impl devise::FromMeta for Dynamic {
         let param = Dynamic::parse::<uri::Path>(&string, span)?;
 
         if param.is_wild() {
-            return Err(Error::new(&string, span, ErrorKind::Ignored).into());
+            Err(Error::new(&string, span, ErrorKind::Ignored).into())
         } else if param.trailing {
-            return Err(Error::new(&string, span, ErrorKind::NoTrailing).into());
+            Err(Error::new(&string, span, ErrorKind::NoTrailing).into())
         } else {
             Ok(param)
         }

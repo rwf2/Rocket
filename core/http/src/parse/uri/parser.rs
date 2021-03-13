@@ -50,7 +50,7 @@ fn path_and_query<'a, F, Q>(
         parse_error!("expected path or query, found neither")?
     } else {
         // We know the string is ASCII because of the `is_char` checks above.
-        Ok(unsafe { Origin::raw(input.start.into(), path.into(), query.map(|q| q.into())) })
+        Ok(unsafe { Origin::raw(input.start.into(), path, query) })
     }
 }
 

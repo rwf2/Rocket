@@ -112,7 +112,7 @@ impl Parse for Arg {
 }
 
 fn err<T, S: AsRef<str>>(span: Span, s: S) -> parse::Result<T> {
-    Err(parse::Error::new(span.into(), s.as_ref()))
+    Err(parse::Error::new(span, s.as_ref()))
 }
 
 impl Parse for UriParams {
@@ -326,10 +326,7 @@ impl UriParams {
 
 impl Arg {
     fn is_named(&self) -> bool {
-        match *self {
-            Arg::Named(..) => true,
-            _ => false
-        }
+        matches!(*self, Arg::Named(..))
     }
 
     fn unnamed(&self) -> &ArgExpr {

@@ -85,7 +85,7 @@ impl FromMeta for RouteUri {
                     .and_then(|q| q.find("&&"))
                     .map(|i| origin.path().len() + 1 + i))
                 .map(|i| string.subspan((1 + i)..(1 + i + 2)))
-                .unwrap_or(string.span());
+                .unwrap_or_else(|| string.span());
 
             return Err(span.error("route URIs cannot contain empty segments")
                 .note(format!("expected \"{}\", found \"{}\"", normalized, origin)));
@@ -104,7 +104,7 @@ impl FromMeta for RouteUri {
 
 impl Route {
     pub fn upgrade_param(param: Parameter, args: &Arguments) -> Result<Parameter> {
-        if !param.dynamic().is_some() {
+        if param.dynamic().is_none() {
             return Ok(param);
         }
 
@@ -161,14 +161,14 @@ impl Route {
         let (source, span) = (attr.uri.path(), attr.uri.path_span);
         let path_params = Parameter::parse_many::<uri::Path>(source.as_str(), span)
             .map(|p| Route::upgrade_param(p?, &arguments))
-            .filter_map(|p| p.map_err(|e| diags.push(e.into())).ok())
+            .filter_map(|p| p.map_err(|e| diags.push(e)).ok())
             .collect::<Vec<_>>();
 
         // Parse and collect the query parameters.
         let query_params = match (attr.uri.query(), attr.uri.query_span) {
             (Some(r), Some(span)) => Parameter::parse_many::<uri::Query>(r.as_str(), span)
                 .map(|p| Route::upgrade_param(p?, &arguments))
-                .filter_map(|p| p.map_err(|e| diags.push(e.into())).ok())
+                .filter_map(|p| p.map_err(|e| diags.push(e)).ok())
                 .collect::<Vec<_>>(),
             _ => vec![]
         };
@@ -176,7 +176,7 @@ impl Route {
         // Remove the `SpanWrapped` layer and upgrade to a guard.
         let data_guard = attr.data.clone()
             .map(|p| Route::upgrade_dynamic(p.value, &arguments))
-            .and_then(|p| p.map_err(|e| diags.push(e.into())).ok());
+            .and_then(|p| p.map_err(|e| diags.push(e)).ok());
 
         // Collect all of the declared dynamic route parameters.
         let all_dyn_params = path_params.iter().filter_map(|p| p.dynamic())

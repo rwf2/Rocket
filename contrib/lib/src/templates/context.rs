@@ -57,7 +57,7 @@ impl Context {
         }
 
         Engines::init(&templates)
-            .map(|engines| Context { root: root.into(), templates, engines } )
+            .map(|engines| Context { root, templates, engines } )
     }
 }
 

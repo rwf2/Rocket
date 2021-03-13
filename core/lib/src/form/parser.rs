@@ -53,7 +53,7 @@ impl<'r, 'i> Parser<'r, 'i> {
         let limit = req.limits().get("form").unwrap_or(Limits::FORM);
         let string = data.open(limit).into_string().await?;
         if !string.is_complete() {
-            Err((None, Some(limit.as_u64())))?
+            return Err((None, Some(limit.as_u64())).into());
         }
 
         Ok(Parser::RawStr(RawStrParser {
@@ -212,7 +212,7 @@ impl Buffer {
         }
     }
 
-    pub fn push_one<'a, S: Into<String>>(&'a self, string: S) -> &'a str {
+    pub fn push_one<S: Into<String>>(&self, string: S) -> &str {
         // SAFETY:
         //   * Aliasing: We retrieve a mutable reference to the last slot (via
         //     `push()`) and then return said reference as immutable; these

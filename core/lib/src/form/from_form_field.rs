@@ -163,7 +163,7 @@ pub trait FromFormField<'v>: Send + Sized {
     /// The default implementation returns an error of
     /// [`ValueField::unexpected()`].
     fn from_value(field: ValueField<'v>) -> Result<'v, Self> {
-        Err(field.unexpected())?
+        Err(field.unexpected().into())
     }
 
     /// Parse a value of `T` from a form data field.
@@ -171,7 +171,7 @@ pub trait FromFormField<'v>: Send + Sized {
     /// The default implementation returns an error of
     /// [`DataField::unexpected()`].
     async fn from_data(field: DataField<'v, '_>) -> Result<'v, Self> {
-        Err(field.unexpected())?
+        Err(field.unexpected().into())
     }
 
     /// Returns a default value, if any exists, to be used during lenient
@@ -275,9 +275,9 @@ impl<'v> FromFormField<'v> for Capped<&'v str> {
 
         match <Capped<&'v str> as FromData>::from_data(f.request, f.data).await {
             Outcome::Success(p) => Ok(p),
-            Outcome::Failure((_, e)) => Err(e)?,
+            Outcome::Failure((_, e)) => Err(e.into()),
             Outcome::Forward(..) => {
-                Err(Error::from(ErrorKind::Unexpected).with_entity(Entity::DataField))?
+                Err(Error::from(ErrorKind::Unexpected).with_entity(Entity::DataField).into())
             }
         }
     }
@@ -296,9 +296,9 @@ impl<'v> FromFormField<'v> for Capped<String> {
 
         match <Capped<String> as FromData>::from_data(f.request, f.data).await {
             Outcome::Success(p) => Ok(p),
-            Outcome::Failure((_, e)) => Err(e)?,
+            Outcome::Failure((_, e)) => Err(e.into()),
             Outcome::Forward(..) => {
-                Err(Error::from(ErrorKind::Unexpected).with_entity(Entity::DataField))?
+                Err(Error::from(ErrorKind::Unexpected).with_entity(Entity::DataField).into())
             }
         }
     }

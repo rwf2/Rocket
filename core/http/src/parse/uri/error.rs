@@ -20,7 +20,7 @@ pub struct Error<'a> {
 
 impl<'a> From<ParseError<RawInput<'a>>> for Error<'a> {
     fn from(inner: ParseError<RawInput<'a>>) -> Self {
-        let expected = inner.error.map(|t| t.into(), |v| v.values.into());
+        let expected = inner.error.map(|t| t, |v| v.values.into());
         Error { expected, index: inner.info.context.start }
     }
 }

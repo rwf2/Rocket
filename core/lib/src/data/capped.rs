@@ -225,7 +225,7 @@ macro_rules! impl_strict_from_form_field_from_capped {
                 if capped.is_complete() {
                     Ok(capped.value)
                 } else {
-                    Err((None, Some(capped.n.written)))?
+                    Err((None, Some(capped.n.written)).into())
                 }
             }
 
@@ -235,7 +235,7 @@ macro_rules! impl_strict_from_form_field_from_capped {
                 if capped.is_complete() {
                     Ok(capped.value)
                 } else {
-                    Err((None, Some(capped.n.written)))?
+                    Err((None, Some(capped.n.written)).into())
                 }
             }
         }

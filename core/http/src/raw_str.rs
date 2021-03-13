@@ -902,7 +902,7 @@ macro_rules! impl_partial {
     )
 }
 
-impl_partial!(RawStr : &RawStr);
+// impl_partial!(RawStr : &RawStr); -> Using the default implementation to match Hash's default implementation
 impl_partial!(&RawStr : RawStr);
 
 impl_partial!(str : RawStr);

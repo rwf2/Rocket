@@ -49,7 +49,7 @@ impl<A, T: ?Sized + ToOwned> From<Extent<A>> for Indexed<'_, T> {
 impl<'a, T: ?Sized + ToOwned + 'a> From<Cow<'a, T>> for Indexed<'a, T> {
     #[inline(always)]
     fn from(value: Cow<'a, T>) -> Indexed<'a, T> {
-        Indexed::Concrete(value.into())
+        Indexed::Concrete(value)
     }
 }
 

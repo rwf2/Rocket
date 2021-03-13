@@ -65,7 +65,7 @@ pub fn derive_uri_display_query(input: proc_macro::TokenStream) -> TokenStream {
                 })
             })
             .try_field_map(|_, field| {
-                let span = field.span().into();
+                let span = field.span();
                 let accessor = field.accessor();
                 let tokens = if field.ident.is_some() {
                     let name = field.first_field_name()?;
@@ -86,13 +86,13 @@ pub fn derive_uri_display_query(input: proc_macro::TokenStream) -> TokenStream {
 
     let from_self = from_uri_param::<Query>(input.clone(), quote!(Self));
     let from_ref = from_uri_param::<Query>(input.clone(), quote!(&'__r Self));
-    let from_mut = from_uri_param::<Query>(input.clone(), quote!(&'__r mut Self));
+    let from_mut = from_uri_param::<Query>(input, quote!(&'__r mut Self));
 
-    let mut ts = TokenStream::from(uri_display);
-    ts.extend(TokenStream::from(from_self));
-    ts.extend(TokenStream::from(from_ref));
-    ts.extend(TokenStream::from(from_mut));
-    ts.into()
+    let mut ts = uri_display;
+    ts.extend(from_self);
+    ts.extend(from_ref);
+    ts.extend(from_mut);
+    ts
 }
 
 #[allow(non_snake_case)]
@@ -132,13 +132,13 @@ pub fn derive_uri_display_path(input: proc_macro::TokenStream) -> TokenStream {
 
     let from_self = from_uri_param::<Path>(input.clone(), quote!(Self));
     let from_ref = from_uri_param::<Path>(input.clone(), quote!(&'__r Self));
-    let from_mut = from_uri_param::<Path>(input.clone(), quote!(&'__r mut Self));
+    let from_mut = from_uri_param::<Path>(input, quote!(&'__r mut Self));
 
-    let mut ts = TokenStream::from(uri_display);
-    ts.extend(TokenStream::from(from_self));
-    ts.extend(TokenStream::from(from_ref));
-    ts.extend(TokenStream::from(from_mut));
-    ts.into()
+    let mut ts = uri_display;
+    ts.extend(from_self);
+    ts.extend(from_ref);
+    ts.extend(from_mut);
+    ts
 }
 
 fn from_uri_param<P: uri::UriPart>(input: proc_macro::TokenStream, ty: TokenStream) -> TokenStream {

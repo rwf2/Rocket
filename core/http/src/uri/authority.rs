@@ -65,7 +65,7 @@ impl<'a> Authority<'a> {
             source: Some(as_utf8_unchecked(source)),
             user_info: user_info.map(IndexedStr::from),
             host: host.map_inner(IndexedStr::from),
-            port: port
+            port
         }
     }
 
@@ -209,10 +209,7 @@ impl<T> Host<T> {
 
     #[inline]
     fn is_bracketed(&self) -> bool {
-        match *self {
-            Host::Bracketed(_) => true,
-            _ => false
-        }
+        matches!(*self, Host::Bracketed(_))
     }
 
     #[inline]

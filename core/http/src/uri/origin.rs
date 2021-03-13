@@ -160,7 +160,7 @@ fn decode_to_indexed_str<P: UriPart>(
         Cow::Borrowed(b) if indexed.is_indexed() => {
             let indexed = IndexedStr::checked_from(b, source.as_str());
             debug_assert!(indexed.is_some());
-            indexed.unwrap_or(IndexedStr::from(Cow::Borrowed("")))
+            indexed.unwrap_or_else(|| IndexedStr::from(Cow::Borrowed("")))
         }
         cow => IndexedStr::from(Cow::Owned(cow.into_owned())),
     }
