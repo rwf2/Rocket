@@ -82,7 +82,7 @@ impl<'v> Context<'v> {
         self.status
     }
 
-    pub(crate) fn push_error(&mut self, e: Error<'v>) {
+    pub fn push_error(&mut self, e: Error<'v>) {
         self.status = std::cmp::max(self.status, e.status());
         match e.name {
             Some(ref name) => match self.errors.get_mut(name) {
@@ -93,7 +93,7 @@ impl<'v> Context<'v> {
         }
     }
 
-    pub(crate) fn push_errors(&mut self, errors: Errors<'v>) {
+    pub fn push_errors(&mut self, errors: Errors<'v>) {
         errors.into_iter().for_each(|e| self.push_error(e))
     }
 }
