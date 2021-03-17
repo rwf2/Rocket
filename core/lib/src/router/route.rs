@@ -1,4 +1,4 @@
-use std::fmt::{self, Display};
+use std::fmt;
 use std::convert::From;
 use std::borrow::Cow;
 
@@ -6,12 +6,8 @@ use yansi::Paint;
 
 use crate::codegen::StaticRouteInfo;
 use crate::handler::Handler;
-use crate::http::{Method, MediaType};
-use crate::error::RouteUriError;
-use crate::http::ext::IntoOwned;
-use crate::http::uri::Origin;
-use crate::router::Segment;
-use crate::form::ValueField;
+use crate::http::{uri, Method, MediaType};
+use crate::router::RouteUri;
 
 /// A route: a method, its handler, path, rank, and format/media type.
 #[derive(Clone)]
@@ -22,48 +18,12 @@ pub struct Route {
     pub method: Method,
     /// The function that should be called when the route matches.
     pub handler: Box<dyn Handler>,
-    /// The base mount point of this `Route`.
-    pub base: Origin<'static>,
-    /// The path of this `Route` in Rocket's route format.
-    pub(crate) path: Origin<'static>,
-    /// The complete URI (in Rocket's route format) that should be matched
-    /// against. This is `base` + `path`.
-    pub uri: Origin<'static>,
+    /// The route URI.
+    pub uri: RouteUri<'static>,
     /// The rank of this route. Lower ranks have higher priorities.
     pub rank: isize,
     /// The media type this route matches against, if any.
     pub format: Option<MediaType>,
-    /// Cached metadata that aids in routing later.
-    pub(crate) metadata: Metadata,
-}
-
-#[derive(Debug, Default, Clone)]
-pub(crate) struct Metadata {
-    pub path_segs: Vec<Segment>,
-    pub query_segs: Vec<Segment>,
-    pub static_query_fields: Vec<(String, String)>,
-    pub static_path: bool,
-    pub wild_path: bool,
-    pub trailing_path: bool,
-    pub wild_query: bool,
-}
-
-#[inline(always)]
-fn default_rank(route: &Route) -> isize {
-    let static_path = route.metadata.static_path;
-    let wild_query = route.uri.query().map(|_| route.metadata.wild_query);
-    match (static_path, wild_query) {
-        (true, Some(false)) => -6,   // static path, partly static query
-        (true, Some(true)) => -5,    // static path, fully dynamic query
-        (true, None) => -4,          // static path, no query
-        (false, Some(false)) => -3,  // dynamic path, partly static query
-        (false, Some(true)) => -2,   // dynamic path, fully dynamic query
-        (false, None) => -1,         // dynamic path, no query
-    }
-}
-
-fn panic<U: Display, E: Display, T>(uri: U, e: E) -> T {
-    panic!("invalid URI '{}' used to construct route: {}", uri, e)
 }
 
 impl Route {
@@ -124,12 +84,8 @@ impl Route {
     /// # Panics
     ///
     /// Panics if `path` is not a valid origin URI or Rocket route URI.
-    pub fn new<S, H>(method: Method, path: S, handler: H) -> Route
-        where S: AsRef<str>, H: Handler
-    {
-        let mut route = Route::ranked(0, method, path, handler);
-        route.rank = default_rank(&route);
-        route
+    pub fn new<H: Handler>(method: Method, uri: &str, handler: H) -> Route {
+        Route::ranked(None, method, uri, handler)
     }
 
     /// Creates a new route with the given rank, method, path, and handler with
@@ -150,108 +106,27 @@ impl Route {
     /// # Panics
     ///
     /// Panics if `path` is not a valid origin URI or Rocket route URI.
-    pub fn ranked<S, H>(rank: isize, method: Method, path: S, handler: H) -> Route
-        where S: AsRef<str>, H: Handler + 'static
+    pub fn ranked<H, R>(rank: R, method: Method, uri: &str, handler: H) -> Route
+        where H: Handler + 'static, R: Into<Option<isize>>,
     {
-        let path = path.as_ref();
-        let route_path = Origin::parse_route(path)
-            .unwrap_or_else(|e| panic(path, e))
-            .into_normalized()
-            .into_owned();
-
-        let mut route = Route {
-            path: route_path.clone(),
-            uri: route_path,
+        let uri = RouteUri::new("/", uri);
+        let rank = rank.into().unwrap_or_else(|| uri.default_rank());
+        Route {
             name: None,
             format: None,
-            base: Origin::dummy(),
             handler: Box::new(handler),
-            metadata: Metadata::default(),
-            method, rank,
-        };
-
-        route.update_metadata();
-        route
-    }
-
-    fn metadata(&self) -> Metadata {
-        let path_segs = self.uri.raw_path_segments()
-            .map(Segment::from)
-            .collect::<Vec<_>>();
-
-        let query_segs = self.uri.raw_query_segments()
-            .map(Segment::from)
-            .collect::<Vec<_>>();
-
-        Metadata {
-            static_path: path_segs.iter().all(|s| !s.dynamic),
-            wild_path: path_segs.iter().all(|s| s.dynamic)
-                && path_segs.last().map_or(false, |p| p.trailing),
-            trailing_path: path_segs.last().map_or(false, |p| p.trailing),
-            wild_query: query_segs.iter().all(|s| s.dynamic),
-            static_query_fields: query_segs.iter().filter(|s| !s.dynamic)
-                .map(|s| ValueField::parse(&s.value))
-                .map(|f| (f.name.source().to_string(), f.value.to_string()))
-                .collect(),
-            path_segs,
-            query_segs,
+            rank, uri, method,
         }
     }
 
-    /// Updates the cached routing metadata. MUST be called whenver the route's
-    /// URI is set or changes.
-    fn update_metadata(&mut self) {
-        self.metadata = self.metadata();
-    }
-
-    /// Retrieves the path of the base mount point of this route as an `&str`.
-    ///
-    /// # Example
-    ///
-    /// ```rust
-    /// use rocket::Route;
-    /// use rocket::http::Method;
-    /// # use rocket::handler::dummy as handler;
-    ///
-    /// let mut index = Route::new(Method::Get, "/", handler);
-    /// assert_eq!(index.base(), "/");
-    /// assert_eq!(index.base.path(), "/");
-    /// ```
-    #[inline]
-    pub fn base(&self) -> &str {
-        // This is ~ok as the route path is assumed to be percent decoded.
-        self.base.path().as_str()
-    }
-
-    /// Retrieves this route's path.
-    ///
-    /// # Example
-    ///
-    /// ```rust
-    /// use rocket::Route;
-    /// use rocket::http::Method;
-    /// # use rocket::handler::dummy as handler;
-    ///
-    /// let index = Route::new(Method::Get, "/foo/bar?a=1", handler);
-    /// let index = index.map_base(|base| format!("{}{}", "/boo", base)).unwrap();
-    /// assert_eq!(index.uri.path(), "/boo/foo/bar");
-    /// assert_eq!(index.uri.query().unwrap(), "a=1");
-    /// assert_eq!(index.base(), "/boo");
-    /// assert_eq!(index.path().path(), "/foo/bar");
-    /// assert_eq!(index.path().query().unwrap(), "a=1");
-    /// ```
-    #[inline]
-    pub fn path(&self) -> &Origin<'_> {
-        &self.path
-    }
 
     /// Maps the `base` of this route using `mapper`, returning a new `Route`
     /// with the returned base.
     ///
     /// `mapper` is called with the current base. The returned `String` is used
     /// as the new base if it is a valid URI. If the returned base URI contains
-    /// a query, it is ignored. Returns an if the base produced by `mapper` is
-    /// not a valid origin URI.
+    /// a query, it is ignored. Returns an error if the base produced by
+    /// `mapper` is not a valid origin URI.
     ///
     /// # Example
     ///
@@ -270,15 +145,11 @@ impl Route {
     /// assert_eq!(index.path().path(), "/foo/bar");
     /// assert_eq!(index.uri.path(), "/boo/foo/bar");
     /// ```
-    pub fn map_base<'a, F>(mut self, mapper: F) -> Result<Self, RouteUriError>
-        where F: FnOnce(Origin<'static>) -> String
+    pub fn map_base<'a, F>(mut self, mapper: F) -> Result<Self, uri::Error<'static>>
+        where F: FnOnce(uri::Origin<'a>) -> String
     {
-        self.base = Origin::parse_owned(mapper(self.base))?.into_normalized();
-        self.base.clear_query();
-
-        let new_uri = format!("{}{}", self.base, self.path);
-        self.uri = Origin::parse_route(&new_uri)?.into_owned().into_normalized();
-        self.update_metadata();
+        let base = mapper(self.uri.base);
+        self.uri = RouteUri::try_new(&base, &self.uri.unmounted_origin.to_string())?;
         Ok(self)
     }
 }
@@ -290,11 +161,11 @@ impl fmt::Display for Route {
         }
 
         write!(f, "{} ", Paint::green(&self.method))?;
-        if self.base.path() != "/" {
-            write!(f, "{}", Paint::blue(&self.base).underline())?;
+        if self.uri.base() != "/" {
+            write!(f, "{}", Paint::blue(self.uri.base()).underline())?;
         }
 
-        write!(f, "{}", Paint::blue(&self.path))?;
+        write!(f, "{}", Paint::blue(&self.uri.unmounted_origin))?;
 
         if self.rank > 1 {
             write!(f, " [{}]", Paint::default(&self.rank).bold())?;
@@ -313,11 +184,9 @@ impl fmt::Debug for Route {
         f.debug_struct("Route")
             .field("name", &self.name)
             .field("method", &self.method)
-            .field("base", &self.base)
             .field("uri", &self.uri)
             .field("rank", &self.rank)
             .field("format", &self.format)
-            .field("metadata", &self.metadata)
             .finish()
     }
 }

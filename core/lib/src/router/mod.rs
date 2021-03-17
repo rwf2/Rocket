@@ -1,6 +1,7 @@
 mod collider;
 mod route;
 mod segment;
+mod uri;
 
 use std::collections::HashMap;
 
@@ -10,6 +11,7 @@ use crate::handler::dummy;
 
 pub use self::route::Route;
 pub use self::segment::Segment;
+pub use self::uri::RouteUri;
 
 // type Selector = (Method, usize);
 type Selector = Method;
@@ -108,7 +110,7 @@ mod test {
     fn router_with_routes(routes: &[&'static str]) -> Router {
         let mut router = Router::new();
         for route in routes {
-            let route = Route::new(Get, route.to_string(), dummy);
+            let route = Route::new(Get, route, dummy);
             router.add(route);
         }
 
@@ -118,7 +120,7 @@ mod test {
     fn router_with_ranked_routes(routes: &[(isize, &'static str)]) -> Router {
         let mut router = Router::new();
         for &(rank, route) in routes {
-            let route = Route::ranked(rank, Get, route.to_string(), dummy);
+            let route = Route::ranked(rank, Get, route, dummy);
             router.add(route);
         }
 
@@ -128,7 +130,7 @@ mod test {
     fn router_with_rankless_routes(routes: &[&'static str]) -> Router {
         let mut router = Router::new();
         for route in routes {
-            let route = Route::ranked(0, Get, route.to_string(), dummy);
+            let route = Route::ranked(0, Get, route, dummy);
             router.add(route);
         }
 
@@ -300,9 +302,9 @@ mod test {
         assert!(route(&router, Get, "/jdlk/asdij").is_some());
 
         let mut router = Router::new();
-        router.add(Route::new(Put, "/hello".to_string(), dummy));
-        router.add(Route::new(Post, "/hello".to_string(), dummy));
-        router.add(Route::new(Delete, "/hello".to_string(), dummy));
+        router.add(Route::new(Put, "/hello", dummy));
+        router.add(Route::new(Post, "/hello", dummy));
+        router.add(Route::new(Delete, "/hello", dummy));
         assert!(route(&router, Put, "/hello").is_some());
         assert!(route(&router, Post, "/hello").is_some());
         assert!(route(&router, Delete, "/hello").is_some());

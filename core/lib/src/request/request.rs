@@ -792,7 +792,7 @@ impl<'r> Request<'r> {
     #[inline]
     pub fn routed_segments(&self, n: RangeFrom<usize>) -> Segments<'_> {
         let mount_segments = self.route()
-            .map(|r| r.base.path_segments().len())
+            .map(|r| r.uri.metadata.base_segs.len())
             .unwrap_or(0);
 
         self.uri().path_segments().skip(mount_segments + n.start)

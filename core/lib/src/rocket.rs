@@ -222,16 +222,16 @@ impl Rocket {
               Paint::magenta(":"));
 
         for route in routes.into() {
-            let old_route = route.clone();
-            let route = route.map_base(|old| format!("{}{}", base, old))
+            let mounted_route = route.clone()
+                .map_base(|old| format!("{}{}", base, old))
                 .unwrap_or_else(|e| {
-                    error_!("Route `{}` has a malformed URI.", old_route);
+                    error_!("Route `{}` has a malformed URI.", route);
                     error_!("{}", e);
                     panic!("Invalid route URI.");
                 });
 
-            info_!("{}", route);
-            self.router.add(route);
+            info_!("{}", mounted_route);
+            self.router.add(mounted_route);
         }
 
         self

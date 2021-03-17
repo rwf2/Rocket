@@ -46,12 +46,12 @@ impl Route {
 }
 
 fn paths_collide(route: &Route, other: &Route) -> bool {
-    if route.metadata.wild_path || other.metadata.wild_path {
+    if route.uri.metadata.wild_path || other.uri.metadata.wild_path {
         return true;
     }
 
-    let a_segments = &route.metadata.path_segs;
-    let b_segments = &other.metadata.path_segs;
+    let a_segments = &route.uri.metadata.path_segs;
+    let b_segments = &other.uri.metadata.path_segs;
     for (seg_a, seg_b) in a_segments.iter().zip(b_segments.iter()) {
         if seg_a.trailing || seg_b.trailing {
             return true;
@@ -70,13 +70,13 @@ fn paths_collide(route: &Route, other: &Route) -> bool {
 }
 
 fn paths_match(route: &Route, req: &Request<'_>) -> bool {
-    let route_segments = &route.metadata.path_segs;
+    let route_segments = &route.uri.metadata.path_segs;
     let req_segments = req.routed_segments(0..);
     if route_segments.len() > req_segments.len() + 1 {
         return false;
     }
 
-    if route.metadata.wild_path {
+    if route.uri.metadata.wild_path {
         return true;
     }
 
@@ -95,11 +95,11 @@ fn paths_match(route: &Route, req: &Request<'_>) -> bool {
 }
 
 fn queries_match(route: &Route, req: &Request<'_>) -> bool {
-    if route.metadata.wild_query {
+    if route.uri.metadata.wild_query {
         return true;
     }
 
-    let route_query_fields = route.metadata.static_query_fields.iter()
+    let route_query_fields = route.uri.metadata.static_query_fields.iter()
         .map(|(k, v)| (k.as_str(), v.as_str()));
 
     for route_seg in route_query_fields {
@@ -482,7 +482,7 @@ mod tests {
     fn req_route_path_match(a: &'static str, b: &'static str) -> bool {
         let rocket = Rocket::custom(Config::default());
         let req = Request::new(&rocket, Get, Origin::parse(a).expect("valid URI"));
-        let route = Route::ranked(0, Get, b.to_string(), dummy);
+        let route = Route::ranked(0, Get, b, dummy);
         route.matches(&req)
     }
 

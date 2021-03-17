@@ -6,7 +6,7 @@ use rocket::Route;
 
 #[get("/<path..>")]
 fn files(route: &Route, path: PathBuf) -> String {
-    Path::new(route.base()).join(path).normalized_str().to_string()
+    Path::new(route.uri.base()).join(path).normalized_str().to_string()
 }
 
 mod route_guard_tests {

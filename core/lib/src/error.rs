@@ -212,30 +212,3 @@ impl Drop for Error {
         }
     }
 }
-
-use crate::http::uri;
-use crate::http::ext::IntoOwned;
-
-/// Error returned by [`Route::map_base()`] on invalid URIs.
-#[derive(Debug)]
-pub enum RouteUriError {
-    /// The route URI is not a valid URI.
-    Uri(uri::Error<'static>),
-    /// The base (mount point) contains dynamic segments.
-    DynamicBase,
-}
-
-impl<'a> From<uri::Error<'a>> for RouteUriError {
-    fn from(error: uri::Error<'a>) -> Self {
-        RouteUriError::Uri(error.into_owned())
-    }
-}
-
-impl fmt::Display for RouteUriError {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            RouteUriError::DynamicBase => write!(f, "Mount point contains dynamic parameters."),
-            RouteUriError::Uri(error) => write!(f, "Malformed URI: {}", error)
-        }
-    }
-}
