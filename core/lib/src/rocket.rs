@@ -433,7 +433,7 @@ impl Rocket {
     ///         .mount("/hi", routes![hello]);
     ///
     ///     for route in rocket.routes() {
-    ///         match route.base() {
+    ///         match route.uri.base() {
     ///             "/" => assert_eq!(route.uri.path(), "/hello"),
     ///             "/hi" => assert_eq!(route.uri.path(), "/hi/hello"),
     ///             _ => unreachable!("only /hello, /hi/hello are expected")

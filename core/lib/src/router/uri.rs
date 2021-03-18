@@ -43,7 +43,10 @@ pub(crate) struct Metadata {
 type Result<T> = std::result::Result<T, uri::Error<'static>>;
 
 impl<'a> RouteUri<'a> {
-    /// Create a new `RouteUri`. Don't panic.
+    /// Create a new `RouteUri`.
+    ///
+    /// This is a fallible variant of [`RouteUri::new`] which returns an `Err`
+    /// if `base` or `uri` cannot be parsed as [`Origin`]s.
     pub(crate) fn try_new(base: &str, uri: &str) -> Result<RouteUri<'static>> {
         let mut base = Origin::parse(base)
             .map_err(|e| e.into_owned())?
@@ -68,9 +71,11 @@ impl<'a> RouteUri<'a> {
         Ok(RouteUri { source, unmounted_origin, base, origin, metadata })
     }
 
-    /// Create a new `RouteUri`. Panic.
+    /// Create a new `RouteUri`.
+    ///
+    /// Panics if  `base` or `uri` cannot be parsed as `Origin`s.
     pub(crate) fn new(base: &str, uri: &str) -> RouteUri<'static> {
-        Self::try_new(base, uri).expect("FIXME MSG")
+        Self::try_new(base, uri).expect("Expected valid URIs")
     }
 
     /// The path of the base mount point of this route URI as an `&str`.
@@ -78,15 +83,14 @@ impl<'a> RouteUri<'a> {
     /// # Example
     ///
     /// ```rust
-    /// use rocket::RouteUri;
+    /// use rocket::Route;
+    /// use rocket::http::Method;
+    /// # use rocket::handler::{dummy as handler, Outcome, HandlerFuture};
     ///
-    /// let index = RouteUri::new("/foo/bar?a=1");
+    /// let index = Route::new(Method::Get, "/foo/bar?a=1", handler);
+    /// assert_eq!(index.uri.base(), "/");
     /// let index = index.map_base(|base| format!("{}{}", "/boo", base)).unwrap();
-    /// assert_eq!(index.uri(), "/boo/foo/bar");
-    /// assert_eq!(index.base(), "/boo");
-    /// assert_eq!(index.path(), "/foo/bar");
-    /// assert_eq!(index.query().unwrap(), "a=1");
-    /// assert_eq!(index.as_str(), "/boo/foo/bar?a=1");
+    /// assert_eq!(index.uri.base(), "/boo");
     /// ```
     #[inline(always)]
     pub fn base(&self) -> &str {
@@ -98,15 +102,14 @@ impl<'a> RouteUri<'a> {
     /// # Example
     ///
     /// ```rust
-    /// use rocket::RouteUri;
+    /// use rocket::Route;
+    /// use rocket::http::Method;
+    /// # use rocket::handler::{dummy as handler, Outcome, HandlerFuture};
     ///
-    /// let index = RouteUri::new("/foo/bar?a=1");
+    /// let index = Route::new(Method::Get, "/foo/bar?a=1", handler);
+    /// assert_eq!(index.uri.path(), "/foo/bar");
     /// let index = index.map_base(|base| format!("{}{}", "/boo", base)).unwrap();
-    /// assert_eq!(index.uri(), "/boo/foo/bar");
-    /// assert_eq!(index.base(), "/boo");
-    /// assert_eq!(index.path(), "/foo/bar");
-    /// assert_eq!(index.query().unwrap(), "a=1");
-    /// assert_eq!(index.as_str(), "/boo/foo/bar?a=1");
+    /// assert_eq!(index.uri.path(), "/boo/foo/bar");
     /// ```
     #[inline(always)]
     pub fn path(&self) -> &str {
@@ -118,15 +121,14 @@ impl<'a> RouteUri<'a> {
     /// # Example
     ///
     /// ```rust
-    /// use rocket::RouteUri;
+    /// use rocket::Route;
+    /// use rocket::http::Method;
+    /// # use rocket::handler::{dummy as handler, Outcome, HandlerFuture};
     ///
-    /// let index = RouteUri::new("/foo/bar?a=1");
+    /// let index = Route::new(Method::Get, "/foo/bar?a=1", handler);
+    /// assert_eq!(index.uri.query(), Some("a=1"));
     /// let index = index.map_base(|base| format!("{}{}", "/boo", base)).unwrap();
-    /// assert_eq!(index.uri(), "/boo/foo/bar");
-    /// assert_eq!(index.base(), "/boo");
-    /// assert_eq!(index.path(), "/foo/bar");
-    /// assert_eq!(index.query().unwrap(), "a=1");
-    /// assert_eq!(index.as_str(), "/boo/foo/bar?a=1");
+    /// assert_eq!(index.uri.query(), Some("a=1"));
     /// ```
     #[inline(always)]
     pub fn query(&self) -> Option<&str> {
@@ -138,15 +140,14 @@ impl<'a> RouteUri<'a> {
     /// # Example
     ///
     /// ```rust
-    /// use rocket::RouteUri;
+    /// use rocket::Route;
+    /// use rocket::http::Method;
+    /// # use rocket::handler::{dummy as handler, Outcome, HandlerFuture};
     ///
-    /// let index = RouteUri::new("/foo/bar?a=1");
+    /// let index = Route::new(Method::Get, "/foo/bar?a=1", handler);
+    /// assert_eq!(index.uri.as_str(), "/foo/bar?a=1");
     /// let index = index.map_base(|base| format!("{}{}", "/boo", base)).unwrap();
-    /// assert_eq!(index.uri(), "/boo/foo/bar");
-    /// assert_eq!(index.base(), "/boo");
-    /// assert_eq!(index.path(), "/foo/bar");
-    /// assert_eq!(index.query().unwrap(), "a=1");
-    /// assert_eq!(index.as_str(), "/boo/foo/bar?a=1");
+    /// assert_eq!(index.uri.as_str(), "/boo/foo/bar?a=1");
     /// ```
     #[inline(always)]
     pub fn as_str(&self) -> &str {
@@ -154,10 +155,31 @@ impl<'a> RouteUri<'a> {
     }
 
     #[inline(always)]
+
+    /// The full URI as an [`&Origin`][`crate::http::uri::Origin`].
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use rocket::Route;
+    /// use rocket::http::{Method, uri::Origin};
+    /// # use rocket::handler::{dummy as handler, Outcome, HandlerFuture};
+    ///
+    /// let index = Route::new(Method::Get, "/foo/bar?a=1", handler);
+    /// assert_eq!(index.uri.as_origin(), &Origin::parse("/foo/bar?a=1").unwrap());
+    /// let index = index.map_base(|base| format!("{}{}", "/boo", base)).unwrap();
+    /// assert_eq!(index.uri.as_origin(), &Origin::parse("/boo/foo/bar?a=1").unwrap());
+    /// ```
     pub fn as_origin(&self) -> &Origin<'a> {
         &self.origin
     }
 
+
+    /// Get the default rank of a route with this URI.
+    ///
+    /// The route's default rank is determined based on the presence or absence
+    /// of static and dynamic paths and queries. See the documentation for
+    /// [`Route::new`][`crate::Route::new`] for a table summarizing the exact default ranks.
     pub fn default_rank(&self) -> isize {
         let static_path = self.metadata.static_path;
         let wild_query = self.query().map(|_| self.metadata.wild_query);

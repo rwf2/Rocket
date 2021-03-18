@@ -136,13 +136,13 @@ impl Route {
     /// # use rocket::handler::{dummy as handler, Outcome, HandlerFuture};
     ///
     /// let index = Route::new(Method::Get, "/foo/bar", handler);
-    /// assert_eq!(index.base(), "/");
-    /// assert_eq!(index.path().path(), "/foo/bar");
+    /// assert_eq!(index.uri.base(), "/");
+    /// assert_eq!(index.uri.unmounted_origin.path(), "/foo/bar");
     /// assert_eq!(index.uri.path(), "/foo/bar");
     ///
     /// let index = index.map_base(|base| format!("{}{}", "/boo", base)).unwrap();
-    /// assert_eq!(index.base(), "/boo");
-    /// assert_eq!(index.path().path(), "/foo/bar");
+    /// assert_eq!(index.uri.base(), "/boo");
+    /// assert_eq!(index.uri.unmounted_origin.path(), "/foo/bar");
     /// assert_eq!(index.uri.path(), "/boo/foo/bar");
     /// ```
     pub fn map_base<'a, F>(mut self, mapper: F) -> Result<Self, uri::Error<'static>>
