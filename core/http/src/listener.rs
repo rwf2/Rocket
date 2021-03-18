@@ -1,6 +1,7 @@
 use std::fmt;
 use std::future::Future;
 use std::io;
+use std::io::ErrorKind::{ConnectionRefused, ConnectionAborted, ConnectionReset };
 use std::net::SocketAddr;
 use std::pin::Pin;
 use std::task::{Context, Poll};
@@ -143,9 +144,7 @@ impl<L: Listener + Unpin> Accept for Incoming<L> {
 /// The delay is useful to handle resource exhaustion errors like ENFILE
 /// and EMFILE. Otherwise, could enter into tight loop.
 fn is_connection_error(e: &io::Error) -> bool {
-    matches!(e.kind(), io::ErrorKind::ConnectionRefused |
-                       io::ErrorKind::ConnectionAborted |
-                       io::ErrorKind::ConnectionReset)
+    matches!(e.kind(), ConnectionRefused | ConnectionAborted | ConnectionReset)
 }
 
 impl<L: fmt::Debug> fmt::Debug for Incoming<L> {

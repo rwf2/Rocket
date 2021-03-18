@@ -1,9 +1,7 @@
 /// Form guard options.
 ///
 /// See [`Form#leniency`](crate::form::Form#leniency) for details.
-#[non_exhaustive] // TODO Remove when more than one option is available.
-                  // This attribute was added to avoid Clippy's "needless_update" warning inside
-                  // the function strict::init.
+#[non_exhaustive]
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub struct Options {
     /// Whether parsing should be strict (no extra parameters) or not.

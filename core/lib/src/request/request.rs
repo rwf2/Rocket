@@ -748,12 +748,14 @@ impl<'r> Request<'r> {
     /// let dog = req.query_value::<Dog>("dog");
     /// assert_eq!(dog.unwrap().unwrap(), Dog { name: "Max Fido", age: 3 });
     /// ```
+    #[allow(clippy::question_mark)]
     #[inline]
     pub fn query_value<'a, T>(&'a self, name: &str) -> Option<form::Result<'a, T>>
         where T: FromForm<'a>
     {
-        // No need to continue if the name is not found.
-        self.query_fields().find(|f| f.name == name)?;
+        if self.query_fields().find(|f| f.name == name).is_none() {
+            return None;
+        }
 
         let mut ctxt = T::init(form::Options::Lenient);
 

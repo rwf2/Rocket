@@ -214,6 +214,7 @@ macro_rules! impl_strict_from_form_field_from_capped {
         use $crate::form::{FromFormField, ValueField, DataField, Result};
         use $crate::data::Capped;
 
+        #[allow(clippy::try_err)]
         #[crate::async_trait]
         impl<'v> FromFormField<'v> for $T {
             fn default() -> Option<Self> {
@@ -225,7 +226,7 @@ macro_rules! impl_strict_from_form_field_from_capped {
                 if capped.is_complete() {
                     Ok(capped.value)
                 } else {
-                    Err((None, Some(capped.n.written)).into())
+                    Err((None, Some(capped.n.written)))?
                 }
             }
 
@@ -235,7 +236,7 @@ macro_rules! impl_strict_from_form_field_from_capped {
                 if capped.is_complete() {
                     Ok(capped.value)
                 } else {
-                    Err((None, Some(capped.n.written)).into())
+                    Err((None, Some(capped.n.written)))?
                 }
             }
         }

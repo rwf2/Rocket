@@ -572,14 +572,18 @@ impl<'v, T: FromForm<'v>> VecContext<'v, T> {
         }
     }
 
+    #[allow(clippy::match_like_matches_macro)]
     fn context(&mut self, name: &NameView<'v>) -> &mut T::Context {
         let this_key = name.key();
-        let keys_match = matches!((self.last_key, this_key), (Some(k1), Some(k2)) if k1 == k2);
+        let keys_match = match (self.last_key, this_key) {
+            (Some(k1), Some(k2)) if k1 == k2 => true,
+            _ => false
+        };
 
         if !keys_match {
-            self.shift();
-            self.current = Some(T::init(self.opts));
-        }
+                self.shift();
+                self.current = Some(T::init(self.opts));
+            }
 
         self.last_key = name.key();
         self.current.as_mut().expect("must have current if last == index")

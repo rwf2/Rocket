@@ -57,9 +57,10 @@ enum State {
 }
 
 /// The kinds of streams we accept as `Data`.
+#[allow(clippy::large_enum_variant)]
 enum StreamKind {
     Body(hyper::Body),
-    Multipart(Box<multer::Field>)
+    Multipart(multer::Field)
 }
 
 impl DataStream {
@@ -240,7 +241,7 @@ impl From<hyper::Body> for StreamReader {
 
 impl From<multer::Field> for StreamReader {
     fn from(field: multer::Field) -> Self {
-        Self { inner: StreamKind::Multipart(Box::new(field)), state: State::Pending }
+        Self { inner: StreamKind::Multipart(field), state: State::Pending }
     }
 }
 

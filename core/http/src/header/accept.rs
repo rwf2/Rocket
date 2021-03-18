@@ -139,6 +139,7 @@ impl Accept {
     /// let accept = Accept::new(media_types);
     /// assert_eq!(accept.preferred().media_type(), &MediaType::HTML);
     /// ```
+    #[allow(clippy::if_same_then_else)]
     pub fn preferred(&self) -> &QMediaType {
         static ANY: QMediaType = QMediaType(MediaType::Any, None);
 
@@ -146,22 +147,24 @@ impl Accept {
         let mut all = self.iter();
         let mut preferred = all.next().unwrap_or(&ANY);
         for media_type in all {
-            // Media types without a `q` parameter are preferred.
-            let prefer_no_q_parameter = media_type.weight().is_none() && preferred.weight().is_some();
-            // Prefer media types with a greater weight, but if one doesn't
-            // have a weight, prefer the one we already have.
-            let prefer_greatest_or_no_weight= media_type.weight_or(0.0) > preferred.weight_or(1.0);
-            // Prefer more specific media types over less specific ones. IE:
-            // text/html over application/*.
-            let prefer_specific_over_general = media_type.specificity() > preferred.specificity();
-            // Finally, all other things being equal, prefer a media type
-            // with more parameters over one with fewer. IE: text/html; a=b
-            // over text/html.
-            let prefer_more_parameters= media_type == preferred && media_type.params().count() > preferred.params().count();
-
-            if prefer_no_q_parameter || prefer_greatest_or_no_weight ||
-                prefer_specific_over_general || prefer_more_parameters {
+            if media_type.weight().is_none() && preferred.weight().is_some() {
+                // Media types without a `q` parameter are preferred.
                 preferred = media_type;
+            } else if media_type.weight_or(0.0) > preferred.weight_or(1.0) {
+                // Prefer media types with a greater weight, but if one doesn't
+                // have a weight, prefer the one we already have.
+                preferred = media_type;
+            } else if media_type.specificity() > preferred.specificity() {
+                // Prefer more specific media types over less specific ones. IE:
+                // text/html over application/*.
+                preferred = media_type;
+            } else if media_type == preferred {
+                // Finally, all other things being equal, prefer a media type
+                // with more parameters over one with fewer. IE: text/html; a=b
+                // over text/html.
+                if media_type.params().count() > preferred.params().count() {
+                    preferred = media_type;
+                }
             }
         }
 

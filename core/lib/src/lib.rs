@@ -7,6 +7,8 @@
 
 #![warn(rust_2018_idioms)]
 
+#![allow(clippy::module_inception)]
+
 //! # Rocket - Core API Documentation
 //!
 //! Hello, and welcome to the core Rocket API documentation!

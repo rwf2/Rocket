@@ -179,15 +179,16 @@ impl From<Error<'_>> for Diagnostic {
 }
 
 impl devise::FromMeta for Dynamic {
+    #[allow(clippy::try_err)]
     fn from_meta(meta: &devise::MetaItem) -> devise::Result<Self> {
         let string = StringLit::from_meta(meta)?;
         let span = string.subspan(1..string.len() + 1);
         let param = Dynamic::parse::<uri::Path>(&string, span)?;
 
         if param.is_wild() {
-            Err(Error::new(&string, span, ErrorKind::Ignored).into())
+            Err(Error::new(&string, span, ErrorKind::Ignored))?
         } else if param.trailing {
-            Err(Error::new(&string, span, ErrorKind::NoTrailing).into())
+            Err(Error::new(&string, span, ErrorKind::NoTrailing))?
         } else {
             Ok(param)
         }

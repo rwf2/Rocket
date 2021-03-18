@@ -793,6 +793,7 @@ impl<'a> From<multer::Error> for Error<'a> {
 }
 
 impl fmt::Display for ErrorKind<'_> {
+    #[allow(clippy::match_ref_pats)]
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             ErrorKind::InvalidLength { min, max } => {
@@ -805,9 +806,9 @@ impl fmt::Display for ErrorKind<'_> {
                 }
             }
             ErrorKind::InvalidChoice { choices } => {
-                match *choices.as_ref() {
-                    [] => write!(f, "invalid choice")?,
-                    [ref choice] => write!(f, "expected {}", choice)?,
+                match choices.as_ref() {
+                    &[] => write!(f, "invalid choice")?,
+                    &[ref choice] => write!(f, "expected {}", choice)?,
                     _ => {
                         write!(f, "expected one of ")?;
                         for (i, choice) in choices.iter().enumerate() {

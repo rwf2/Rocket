@@ -1,3 +1,5 @@
+#![allow(clippy::module_inception)]
+
 #![recursion_limit="512"]
 
 #![warn(rust_2018_idioms)]

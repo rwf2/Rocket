@@ -6,12 +6,13 @@ use std::hash::Hash;
 use crate::syn;
 use crate::name::Name;
 
+#[allow(clippy::large_enum_variant)]
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum Parameter {
     Static(Name),
     Ignored(Dynamic),
     Dynamic(Dynamic),
-    Guard(Box<Guard>),
+    Guard(Guard),
 }
 
 #[derive(Debug, Clone)]

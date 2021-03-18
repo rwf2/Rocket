@@ -20,9 +20,10 @@ pub struct Method(pub http::Method);
 pub struct Optional<T>(pub Option<T>);
 
 impl FromMeta for Status {
+    #[allow(clippy::manual_range_contains)]
     fn from_meta(meta: &MetaItem) -> Result<Self> {
         let num = usize::from_meta(meta)?;
-        if !(100..600).contains(&num) {
+        if num < 100 || num >= 600 {
             return Err(meta.value_span().error("status must be in range [100, 599]"));
         }
 

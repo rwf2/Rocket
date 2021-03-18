@@ -535,28 +535,29 @@ impl<'h> HeaderMap<'h> {
     /// use rocket::http::{HeaderMap, Header};
     ///
     /// // The headers we'll be storing.
-    /// let mut all_headers = vec![
-    ///     Header::new("X-Custom", "First"),
-    ///     Header::new("X-Other", "Value_1"),
-    ///     Header::new("X-Other", "Value_2"),
-    ///     Header::new("X-Other", "Value_3"),
-    ///     Header::new("X-Third", "Third"),
+    /// let all_headers = vec![
+    ///     Header::new("X-Custom", "value_1"),
+    ///     Header::new("X-Other", "other"),
+    ///     Header::new("X-Third", "third"),
     /// ];
     ///
     /// // Create a map, store all of the headers.
     /// let mut map = HeaderMap::new();
-    /// for header in all_headers.iter() {
-    ///     map.add(header.clone())
+    /// for header in all_headers {
+    ///     map.add(header)
     /// }
     ///
-    /// // Use the iterator to make sure it returns as much elements as the initial vector.
-    /// assert_eq!(map.iter().count(), all_headers.len(), "iter returned extra values");
+    /// // Ensure there are three headers via the iterator.
+    /// assert_eq!(map.iter().count(), 3);
     ///
-    /// // iter did not consume the map, we can iterate over again.
+    /// // Actually iterate through them.
     /// for header in map.iter() {
-    ///     let index = all_headers.iter().position(|x| *x == header)
-    ///                            .expect(format!("into_iter returned an extra {:?}", header).as_str());
-    ///     all_headers.swap_remove(index);
+    ///     match header.name().as_str() {
+    ///         "X-Custom" => assert_eq!(header.value(), "value_1"),
+    ///         "X-Other" => assert_eq!(header.value(), "other"),
+    ///         "X-Third" => assert_eq!(header.value(), "third"),
+    ///         _ => unreachable!("there are only three headers")
+    ///     }
     /// }
     /// ```
     pub fn iter(&self) -> impl Iterator<Item=Header<'_>> {
@@ -566,58 +567,6 @@ impl<'h> HeaderMap<'h> {
             })
         })
     }
-
-    /// Consumes `self` and returns an iterator over all of the headers stored
-    /// in the map in the way they are stored. This is a low-level mechanism and
-    /// should likely not be used.
-    /// WARNING: This is unstable! Do not use this method outside of Rocket!
-    #[doc(hidden)]
-    #[inline]
-    pub fn into_iter_raw(self)
-            -> impl Iterator<Item=(Uncased<'h>, Vec<Cow<'h, str>>)> {
-        self.headers.into_iter()
-    }
-}
-
-impl From<cookie::Cookie<'_>> for Header<'static> {
-    fn from(cookie: cookie::Cookie<'_>) -> Header<'static> {
-        Header::new("Set-Cookie", cookie.encoded().to_string())
-    }
-}
-
-impl From<&cookie::Cookie<'_>> for Header<'static> {
-    fn from(cookie: &cookie::Cookie<'_>) -> Header<'static> {
-        Header::new("Set-Cookie", cookie.encoded().to_string())
-    }
-}
-
-pub struct HeaderMapIterator<'h>
-{
-    header_itr: indexmap::map::IntoIter<uncased::Uncased<'h>, Vec<Cow<'h, str>>>,
-    current: Option<(Uncased<'h>, std::vec::IntoIter<Cow<'h, str>>)>,
-}
-
-impl<'h> Iterator for HeaderMapIterator<'h>
-{
-    type Item = Header<'h>;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        if let Some((name, vec_iter)) = &mut self.current {
-            if let Some(value) = vec_iter.next() {
-                return Some(Header { name: name.clone(), value: value.clone() });
-            }
-        }
-        if let Some((name, values)) = self.header_itr.next() {
-            self.current = Some((name.clone(), values.into_iter()));
-            return self.next();
-        }
-        None
-    }
-}
-impl<'h> IntoIterator for HeaderMap<'h>
-{
-    type Item = Header<'h>;
-    type IntoIter = HeaderMapIterator<'h>;
 
     /// Consumes `self` and returns an iterator over all of the `Header`s stored
     /// in the map. Header names are returned in no specific order, but all
@@ -631,35 +580,63 @@ impl<'h> IntoIterator for HeaderMap<'h>
     /// use rocket::http::{HeaderMap, Header};
     ///
     /// // The headers we'll be storing.
-    /// let mut all_headers = vec![
-    ///     Header::new("X-Custom", "First"),
-    ///     Header::new("X-Other", "Value_1"),
-    ///     Header::new("X-Other", "Value_2"),
-    ///     Header::new("X-Other", "Value_3"),
-    ///     Header::new("X-Third", "Third"),
+    /// let all_headers = vec![
+    ///     Header::new("X-Custom", "value_1"),
+    ///     Header::new("X-Other", "other"),
+    ///     Header::new("X-Third", "third"),
     /// ];
     ///
     /// // Create a map, store all of the headers.
     /// let mut map = HeaderMap::new();
-    /// for header in all_headers.iter() {
-    ///     map.add(header.clone())
+    /// for header in all_headers {
+    ///     map.add(header)
     /// }
     ///
-    /// // Actually iterate through them (into_iter is the default iterator) :
-    /// for header in map {
-    ///     let index = all_headers.iter().position(|x| *x == header)
-    ///                            .expect(format!("into_iter returned an extra {:?}", header).as_str());
-    ///     all_headers.swap_remove(index);
-    /// }
+    /// // Ensure there are three headers via the iterator.
+    /// assert_eq!(map.iter().count(), 3);
     ///
-    /// if let Some(header) = all_headers.first() {
-    ///     panic!("into_iter forgot the {:?}", header);
+    /// // Actually iterate through them.
+    /// for header in map.into_iter() {
+    ///     match header.name().as_str() {
+    ///         "X-Custom" => assert_eq!(header.value(), "value_1"),
+    ///         "X-Other" => assert_eq!(header.value(), "other"),
+    ///         "X-Third" => assert_eq!(header.value(), "third"),
+    ///         _ => unreachable!("there are only three headers")
+    ///     }
     /// }
     /// ```
+    // TODO: Implement IntoIterator.
+    #[allow(clippy::should_implement_trait)]
     #[inline(always)]
-    fn into_iter(self) -> Self::IntoIter {
-        HeaderMapIterator{header_itr: self.headers.into_iter(),
-                          current: None}
+    pub fn into_iter(self) -> impl Iterator<Item=Header<'h>> {
+        self.headers.into_iter().flat_map(|(name, value)| {
+            value.into_iter().map(move |value| {
+                Header { name: name.clone(), value }
+            })
+        })
+    }
+
+    /// Consumes `self` and returns an iterator over all of the headers stored
+    /// in the map in the way they are stored. This is a low-level mechanism and
+    /// should likely not be used.
+    /// WARNING: This is unstable! Do not use this method outside of Rocket!
+    #[doc(hidden)]
+    #[inline]
+    pub fn into_iter_raw(self)
+                         -> impl Iterator<Item=(Uncased<'h>, Vec<Cow<'h, str>>)> {
+        self.headers.into_iter()
+    }
+}
+
+impl From<cookie::Cookie<'_>> for Header<'static> {
+    fn from(cookie: cookie::Cookie<'_>) -> Header<'static> {
+        Header::new("Set-Cookie", cookie.encoded().to_string())
+    }
+}
+
+impl From<&cookie::Cookie<'_>> for Header<'static> {
+    fn from(cookie: &cookie::Cookie<'_>) -> Header<'static> {
+        Header::new("Set-Cookie", cookie.encoded().to_string())
     }
 }
 
