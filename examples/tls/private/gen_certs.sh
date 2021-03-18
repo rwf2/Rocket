@@ -1,12 +1,20 @@
 #! /bin/bash
 
-# Should use gen_ca.sh first to generate the CA.
-
-# To generate certificates of specific private key type, pass any of the following arguements:
-# 'ed25519', 'rsa_sha256', 'ecdsa_nistp256_sha256' or 'ecdsa_nistp384_sha384'
+# Usage:
+#   ./gen_certs.sh [cert-kind]
 #
-# If no argument is passed all supported certificates types will be generated.
+# [cert-kind]:
+#   ed25519
+#   rsa_sha256
+#   ecdsa_nistp256_sha256
+#   ecdsa_nistp384_sha384
 #
+# Generate a certificate of the [cert-kind] key type, or if no cert-kind is
+# specified, all of the certificates.
+#
+# Examples:
+#   ./gen_certs.sh ed25519
+#   ./gen_certs.sh rsa_sha256
 
 # TODO: `rustls` (really, `webpki`) doesn't currently use the CN in the subject
 # to check if a certificate is valid for a server name sent via SNI. It's not
@@ -14,56 +22,82 @@
 # with a DNS name, or if it simply hasn't been implemented yet. See
 # https://bugzilla.mozilla.org/show_bug.cgi?id=552346 for a bit more info.
 
+CA_SUBJECT="/C=US/ST=CA/O=Rocket CA/CN=Rocket Root CA"
 SUBJECT="/C=US/ST=CA/O=Rocket/CN=localhost"
 ALT="DNS:localhost"
 
-function gen_rsa_sha256() {
-    openssl req -newkey rsa:4096 -nodes -sha256 -keyout rsa_sha256_key.pem -subj "${SUBJECT}" -out server.csr
-    openssl x509 -req -sha256 -extfile <(printf "subjectAltName=${ALT}") -days 3650 \
-        -CA ca_cert.pem -CAkey ca_key.pem -CAcreateserial \
-        -in server.csr -out rsa_sha256_cert.pem
+function gen_ca() {
+  openssl genrsa -out ca_key.pem 4096
+  openssl req -new -x509 -days 3650 -key ca_key.pem \
+    -subj "${CA_SUBJECT}" -out ca_cert.pem
+}
 
-    rm ca_cert.srl server.csr
+function gen_ca_if_non_existent() {
+  if ! [ -f ./ca_cert.pem ]; then gen_ca; fi
+}
+
+function gen_rsa_sha256() {
+  gen_ca_if_non_existent
+
+  openssl req -newkey rsa:4096 -nodes -sha256 -keyout rsa_sha256_key.pem \
+    -subj "${SUBJECT}" -out server.csr
+
+  openssl x509 -req -sha256 -extfile <(printf "subjectAltName=${ALT}") -days 3650 \
+    -CA ca_cert.pem -CAkey ca_key.pem -CAcreateserial \
+    -in server.csr -out rsa_sha256_cert.pem
+
+  rm ca_cert.srl server.csr
 }
 
 function gen_ed25519() {
-    openssl genpkey -algorithm ED25519 > ed25519_key.pem
+  gen_ca_if_non_existent
 
-    openssl req -new -key ed25519_key.pem -subj "${SUBJECT}" -out server.csr
-    openssl x509 -req -extfile <(printf "subjectAltName=${ALT}") -days 3650 \
-        -CA ca_cert.pem -CAkey ca_key.pem -CAcreateserial \
-        -in server.csr -out ed25519_cert.pem
+  openssl genpkey -algorithm ED25519 > ed25519_key.pem
 
-    rm ca_cert.srl server.csr
+  openssl req -new -key ed25519_key.pem -subj "${SUBJECT}" -out server.csr
+  openssl x509 -req -extfile <(printf "subjectAltName=${ALT}") -days 3650 \
+    -CA ca_cert.pem -CAkey ca_key.pem -CAcreateserial \
+    -in server.csr -out ed25519_cert.pem
+
+  rm ca_cert.srl server.csr
 }
 
 function gen_ecdsa_nistp256_sha256() {
-    openssl ecparam -out ecdsa_nistp256_sha256_key.pem -name prime256v1 -genkey
+  gen_ca_if_non_existent
 
-    # Convert to pkcs8 format supported by rustls
-    openssl pkcs8 -topk8 -nocrypt -in ecdsa_nistp256_sha256_key.pem -out ecdsa_nistp256_sha256_key_pkcs8.pem
+  openssl ecparam -out ecdsa_nistp256_sha256_key.pem -name prime256v1 -genkey
 
-    openssl req -new -nodes -sha256 -key ecdsa_nistp256_sha256_key_pkcs8.pem -subj "${SUBJECT}" -out server.csr
-    openssl x509 -req -sha256 -extfile <(printf "subjectAltName=${ALT}") -days 3650 \
-        -CA ca_cert.pem -CAkey ca_key.pem -CAcreateserial \
-        -in server.csr -out ecdsa_nistp256_sha256_cert.pem
+  # Convert to pkcs8 format supported by rustls
+  openssl pkcs8 -topk8 -nocrypt -in ecdsa_nistp256_sha256_key.pem \
+    -out ecdsa_nistp256_sha256_key_pkcs8.pem
 
-    rm ca_cert.srl server.csr ecdsa_nistp256_sha256_key.pem
+  openssl req -new -nodes -sha256 -key ecdsa_nistp256_sha256_key_pkcs8.pem \
+    -subj "${SUBJECT}" -out server.csr
+
+  openssl x509 -req -sha256 -extfile <(printf "subjectAltName=${ALT}") -days 3650 \
+    -CA ca_cert.pem -CAkey ca_key.pem -CAcreateserial \
+    -in server.csr -out ecdsa_nistp256_sha256_cert.pem
+
+  rm ca_cert.srl server.csr ecdsa_nistp256_sha256_key.pem
 }
 
-
 function gen_ecdsa_nistp384_sha384() {
-    openssl ecparam -out ecdsa_nistp384_sha384_key.pem -name secp384r1 -genkey
+  gen_ca_if_non_existent
 
-    # Convert to pkcs8 format supported by rustls
-    openssl pkcs8 -topk8 -nocrypt -in ecdsa_nistp384_sha384_key.pem -out ecdsa_nistp384_sha384_key_pkcs8.pem
+  openssl ecparam -out ecdsa_nistp384_sha384_key.pem -name secp384r1 -genkey
 
-    openssl req -new -nodes -sha384 -key ecdsa_nistp384_sha384_key_pkcs8.pem -subj "${SUBJECT}" -out server.csr
-    openssl x509 -req -sha384 -extfile <(printf "subjectAltName=${ALT}") -days 3650 \
-        -CA ca_cert.pem -CAkey ca_key.pem -CAcreateserial \
-        -in server.csr -out ecdsa_nistp384_sha384_cert.pem
+  # Convert to pkcs8 format supported by rustls
+  openssl pkcs8 -topk8 -nocrypt -in ecdsa_nistp384_sha384_key.pem \
+    -out ecdsa_nistp384_sha384_key_pkcs8.pem
 
-    rm ca_cert.srl server.csr ecdsa_nistp384_sha384_key.pem
+  openssl req -new -nodes -sha384 -key ecdsa_nistp384_sha384_key_pkcs8.pem \
+    -subj "${SUBJECT}" -out server.csr
+
+  openssl x509 -req -sha384 -extfile <(printf "subjectAltName=${ALT}") -days 3650 \
+    -CA ca_cert.pem -CAkey ca_key.pem -CAcreateserial \
+    -in server.csr -out ecdsa_nistp384_sha384_cert.pem
+
+  rm ca_cert.srl server.csr ecdsa_nistp384_sha384_key.pem
 }
 
 case $1 in
