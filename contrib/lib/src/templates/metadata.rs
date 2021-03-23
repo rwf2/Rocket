@@ -79,6 +79,25 @@ impl Metadata<'_> {
     pub fn reloading(&self) -> bool {
         self.0.is_reloading()
     }
+
+    /// Forcibly reload all templates.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// # #[macro_use] extern crate rocket;
+    /// # extern crate rocket_contrib;
+    /// #
+    /// use rocket_contrib::templates::Metadata;
+    ///
+    /// #[get("/")]
+    /// fn handler(metadata: Metadata) {
+    ///     metadata.reload_templates();
+    /// }
+    /// ```
+    pub fn reloading(&self) -> bool {
+        self.0.reload_templates()
+    }
 }
 
 /// Retrieves the template metadata. If a template fairing hasn't been attached,

@@ -30,6 +30,11 @@ mod context {
         pub fn is_reloading(&self) -> bool {
             false
         }
+
+        pub fn reload_templates(&self) {
+            let root = self.context().root.clone();
+            self.0 = Context::initialize(&root).unwrap();
+        }
     }
 }
 
@@ -79,6 +84,11 @@ mod context {
 
         pub fn is_reloading(&self) -> bool {
             self.watcher.is_some()
+        }
+
+        pub fn reload_templates(&self) {
+            let root = self.context().root.clone();
+            *self.context_mut() = Context::initialize(&root).unwrap();
         }
 
         fn context_mut(&self) -> impl DerefMut<Target=Context> + '_ {
