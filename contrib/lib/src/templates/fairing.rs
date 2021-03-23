@@ -11,20 +11,21 @@ type Callback = Box<dyn Fn(&mut Engines) -> Result<(), Box<dyn Error>>+ Send + S
 
 #[cfg(not(debug_assertions))]
 mod context {
-    use std::ops::Deref;
+    use std::ops::{Deref, DerefMut};
     use crate::templates::Context;
+    use std::sync::RwLock;
 
     /// Wraps a Context. With `cfg(debug_assertions)` active, this structure
     /// additionally provides a method to reload the context at runtime.
-    pub(crate) struct ContextManager(Context);
+    pub(crate) struct ContextManager(RwLock<Context>);
 
     impl ContextManager {
         pub fn new(ctxt: Context) -> ContextManager {
-            ContextManager(ctxt)
+            ContextManager(RwLock::new(ctxt))
         }
 
-        pub fn context<'a>(&'a self) -> impl Deref<Target=Context> + 'a {
-            &self.0
+        pub fn context(&self) -> impl Deref<Target=Context> + '_ {
+            self.0.read().unwrap()
         }
 
         pub fn is_reloading(&self) -> bool {
@@ -33,7 +34,11 @@ mod context {
 
         pub fn reload_templates(&self) {
             let root = self.context().root.clone();
-            self.0 = Context::initialize(&root).unwrap();
+            *self.context_mut() = Context::initialize(&root).unwrap();
+        }
+
+        fn context_mut(&self) -> impl DerefMut<Target=Context> + '_ {
+            self.0.write().unwrap()
         }
     }
 }
