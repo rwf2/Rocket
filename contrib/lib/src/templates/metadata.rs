@@ -95,8 +95,8 @@ impl Metadata<'_> {
     ///     metadata.reload_templates();
     /// }
     /// ```
-    pub fn reloading(&self) -> bool {
-        self.0.reload_templates()
+    pub fn reload_templates(&self) {
+        self.0.reload_templates();
     }
 }
 
