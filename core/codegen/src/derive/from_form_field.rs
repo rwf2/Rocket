@@ -8,7 +8,7 @@ pub fn derive_from_form_field(input: proc_macro::TokenStream) -> TokenStream {
     DeriveGenerator::build_for(input, quote!(impl<'__v> #_form::FromFormField<'__v>))
         .support(Support::Enum)
         .validator(ValidatorBuild::new()
-            // We only accepts C-like enums with at least one variant.
+            // We only accept C-like enums with at least one variant.
             .fields_validate(|_, fields| {
                 if !fields.is_empty() {
                     return Err(fields.span().error("variants cannot have fields"));

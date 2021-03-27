@@ -13,10 +13,11 @@ pub enum FieldName {
     Uncased(Name),
 }
 
-#[derive(FromMeta)]
+#[derive(Debug, FromMeta)]
 pub struct FieldAttr {
     pub name: Option<FieldName>,
     pub validate: Option<SpanWrapped<syn::Expr>>,
+    pub default: Option<SpanWrapped<syn::Expr>>,
 }
 
 impl FieldAttr {
@@ -322,7 +323,41 @@ pub fn validators<'v>(
             })).unwrap()
         });
 
-        Ok(exprs)
+    Ok(exprs)
+}
+
+pub fn defaults<'v>(
+    field: Field<'v>,
+) -> Result<syn::Expr> {
+    let ty = &field.inner.ty;
+    let expr = FieldAttr::from_attrs(FieldAttr::NAME, &field.attrs)?
+        .into_iter()
+        .map(|a| a.default)
+        .flat_map(move |expr| {
+            let field_span = field.ident().span()
+                .join(field.ty.span())
+                .unwrap_or(field.ty.span());
+
+            expr.map(|expr| {
+                let span = expr.key_span.unwrap_or(field_span);
+                define_spanned_export!(span => _form);
+                syn::parse2(quote_spanned!(span => {
+                    {
+                        let __default: Option<#ty> = Some({ #expr }.into());
+                        __default
+                    }
+                })).unwrap()
+            })
+            
+        })
+        .next()
+        .unwrap_or_else(|| {
+            syn::parse2(quote!({
+                { None }
+            })).unwrap()
+        });
+
+    Ok(expr)
 }
 
 pub fn first_duplicate<K: Spanned, V: PartialEq + Spanned>(

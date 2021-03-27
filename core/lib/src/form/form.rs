@@ -56,6 +56,23 @@ use crate::form::prelude::*;
 /// can access fields of `T` transparently through a `Form<T>`, as seen above
 /// with `user_input.value`.
 ///
+/// ### Defaults
+/// When deriving a `FromForm` implementation it is possible to provide a
+/// default that is then used when no value is provided. For a form field of
+/// type `T`, the provided default can be any expression of type `U` such that
+/// `U` implements `Into<T>`.
+/// 
+/// ```rust
+/// # #[macro_use] extern crate rocket;
+/// use rocket::form::Form;
+///
+/// #[derive(FromForm)]
+/// struct UserInput<'r> {
+///     #[field(default = "anonymous")]
+///     value: &'r str
+/// }
+/// ```
+///
 /// ## Data Limits
 ///
 /// The total amount of data accepted by the `Form` data guard is limited by the
