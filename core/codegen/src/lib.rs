@@ -203,7 +203,7 @@ macro_rules! route_attribute {
         /// | path     | `<ident>`   | [`FromParam`]     |
         /// | path     | `<ident..>` | [`FromSegments`]  |
         /// | query    | `<ident>`   | [`FromForm`]      |
-        /// | query    | `<ident..>` | [`FromFrom`]      |
+        /// | query    | `<ident..>` | [`FromForm`]      |
         /// | data     | `<ident>`   | [`FromData`]      |
         ///
         /// The type of each function argument that _does not_ have a
