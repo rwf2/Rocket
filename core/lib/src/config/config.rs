@@ -296,15 +296,15 @@ impl Config {
 
         let ka = self.keep_alive;
         if ka > 0 {
-            info!(target: "rocket::support", keep_alive = %Paint::default(format!("{}s", ka)).bold());
+            info!(target: "rocket::support", keep_alive = %format!("{}s", ka));
         } else {
-            info!(target: "rocket::support", keep_alive = %Paint::default("disabled").bold());
+            info!(target: "rocket::support", keep_alive = %"disabled");
         }
 
         info!(target: "rocket::support", limits = %&self.limits);
         match self.tls_enabled() {
-            true => info!(target: "rocket::support", tls = %Paint::default("enabled").bold()),
-            false => info!(target: "rocket::support", tls = %Paint::default("disabled").bold()),
+            true => info!(target: "rocket::support", tls = %"enabled"),
+            false => info!(target: "rocket::support", tls = %"disabled"),
         }
 
         #[cfg(feature = "secrets")] {

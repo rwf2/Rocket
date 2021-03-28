@@ -406,7 +406,7 @@ where
         if name == "message" {
             write!(writer, "{:?}", Paint::new(value).bold())
         } else {
-            write!(writer, "{}: {:?}", field, Paint::new(value).bold())
+            write!(writer, "{}: {:?}", field, Paint::default(value).bold())
         }
     })
     .delimited(", ")
