@@ -182,7 +182,7 @@ impl<'r, 'i> MultipartParser<'r, 'i> {
                 content_type,
                 request: self.request,
                 name: NameView::new(name),
-                file_name: file_name.and_then(sanitize),
+                file_name: file_name.and_then(|name| Some(FileName::new(name))),
                 data: Data::from(field),
             })
         } else {
@@ -202,23 +202,6 @@ impl<'r, 'i> MultipartParser<'r, 'i> {
 
         Some(Ok(field))
     }
-}
-
-fn sanitize(file_name: &str) -> Option<&str> {
-    let file_name = std::path::Path::new(file_name)
-        .file_name()
-        .and_then(|n| n.to_str())
-        .map(|n| n.find('.').map(|i| n.split_at(i).0).unwrap_or(n))?;
-
-    if file_name.is_empty()
-        || file_name.starts_with(|c| c == '.' || c == '*')
-        || file_name.ends_with(|c| c == ':' || c == '>' || c == '<')
-        || file_name.contains(|c| c == '/' || c == '\\')
-    {
-        return None
-    }
-
-    Some(file_name)
 }
 
 impl Buffer {

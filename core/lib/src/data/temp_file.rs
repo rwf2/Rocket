@@ -335,7 +335,7 @@ impl<'v> FromFormField<'v> for Capped<TempFile<'v>> {
     async fn from_data(
         f: DataField<'v, '_>
     ) -> Result<Self, Errors<'v>> {
-        Ok(TempFile::from(f.request, f.data, f.file_name, Some(f.content_type)).await?)
+        Ok(TempFile::from(f.request, f.data, f.file_name.and_then(|f| f.name()), Some(f.content_type)).await?)
     }
 }
 

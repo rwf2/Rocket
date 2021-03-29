@@ -16,6 +16,62 @@ pub struct ValueField<'r> {
     pub value: &'r str,
 }
 
+
+/// A file name found in a multipart field
+pub struct FileName<'r> {
+    raw_name: &'r str
+}
+
+impl<'r> FileName<'r> {
+    pub(crate) fn new(raw_name: &'r str) -> FileName<'r> {
+        FileName {
+            raw_name
+        }
+    }
+
+    /// The form field's sanitized file name.
+    ///
+    /// ## Santization
+    ///
+    /// A "sanitized" file name is a non-empty string, stripped of its file
+    /// exntesion, which does not contain any path delimiters (`/` or `\`), is
+    /// not a hidden (`.`) or `*`-prefixed name, and does not contain special
+    /// characters (`:`, `>`, or `<`). If the submitted file name matches any of
+    /// these properties or none was submitted, the return value will be `None`.
+    pub fn name(&self) -> Option<&'r str> {
+        fn sanitize(file_name: &str) -> Option<&str> {
+            let file_name = std::path::Path::new(file_name)
+                .file_name()
+                .and_then(|n| n.to_str())
+                .map(|n| n.find('.').map(|i| n.split_at(i).0).unwrap_or(n))?;
+
+            if file_name.is_empty()
+                || file_name.starts_with(|c| c == '.' || c == '*')
+                || file_name.ends_with(|c| c == ':' || c == '>' || c == '<')
+                || file_name.contains(|c| c == '/' || c == '\\')
+            {
+                return None
+            }
+
+            Some(file_name)
+        }
+
+        sanitize(self.raw_name)
+    }
+
+    /// The raw file name. The client can send arbitrary text here.
+    /// In almost every case, use name() instead, which returns a safe sanitized file name.
+    /// Only use this if the server is not publicly accessible and
+    /// you can trust the client to send correct data **and** you really need the orinal file name.
+    /// Don't rely on the file extension to figure out the type of data.
+    ///
+    /// Note: This function requires the "trusted_client" feature to be enabled.
+    #[cfg(feature = "trusted_client")]
+    pub fn raw_name(&self) -> &'r str {
+        self.raw_name
+    }
+}
+
 /// A multipart form field with an underlying data stream.
 ///
 /// Rocket preprocesses all form fields into either [`ValueField`]s or
@@ -25,16 +81,8 @@ pub struct ValueField<'r> {
 pub struct DataField<'r, 'i> {
     /// The (decoded) name of the form field.
     pub name: NameView<'r>,
-    /// The form field's sanitized file name.
-    ///
-    /// ## Santization
-    ///
-    /// A "sanitized" file name is a non-empty string, stripped of its file
-    /// exntesion, which does not contain any path delimiters (`/` or `\`), is
-    /// not a hidden (`.`) or `*`-prefixed name, and does not contain special
-    /// characters (`:`, `>`, or `<`). If the submitted file name matches any of
-    /// these properties or none was submitted, `file_name` will be `None`.
-    pub file_name: Option<&'r str>,
+    /// The form fields's file name.
+    pub file_name: Option<FileName<'r>>,
     /// The form field's Content-Type, as submitted, which may or may not
     /// reflect on `data`.
     pub content_type: ContentType,
