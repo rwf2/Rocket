@@ -6,6 +6,7 @@ members = [
   "error-handling",
   "fairings",
   "forms",
+  "crud",
   "hello",
   "manual-routing",
   "responders",

@@ -1,0 +1,9 @@
+{% import "macros" as m %}
+{% extends "layout" %}
+
+{% block content %}
+  <h1>Edit User</h1>
+
+  {% include "_form" %}
+
+{% endblock %}

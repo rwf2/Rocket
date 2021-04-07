@@ -1,0 +1,63 @@
+{% macro value_for(name) %}
+    {%- if name in values -%}
+        {{- values | get(key=name) | first -}}
+    {%- endif -%}
+{% endmacro %}
+
+{% macro errors_for(name) %}
+    {%- if name in errors -%}
+        {% set field_errors = errors | get(key=name) %}
+        {% for error in field_errors %}
+            <p class="text-error is-marginless">{{ error.msg }}</p>
+        {% endfor %}
+    {%- endif -%}
+{% endmacro %}
+
+{% macro input(type, label, name, value="") %}
+    <label for="{{ name }}">{{ label }}</label>
+    <input type="{{ type }}"
+           name="{{ name }}"
+           id="{{ name }}"
+           value='{{ self::value_for(name=name) }}'
+           {% if name in errors %} class="error" {% endif %}
+    />
+
+    {{ self::errors_for(name=name) }}
+{% endmacro input %}
+
+{% macro checkbox(name, label, value="yes") %}
+    <label {% if name in errors %} class="bd-error" {% endif %}>
+    <input type="checkbox" name="{{ name }}" value={{ value }}
+    {% if name in values %}
+        {% set field_values = values | get(key=name) %}
+        {% if field_values is containing(value) %}
+            checked
+        {% endif %}
+    {% endif %}
+    >
+        {{ label }}
+    </label>
+{% endmacro input %}
+
+{% macro textarea(label, name, placeholder="", max=250) %}
+    <label for="{{ name }}">{{ label }}</label>
+    <textarea placeholder="{{ placeholder }}"
+        name="{{ name }}" id="{{ name }}" rows="8" cols="40"
+        {% if name in errors %} class="error" {% endif %}
+    >
+        {{- self::value_for(name=name) -}}
+    </textarea>
+
+    {{ self::errors_for(name=name) }}
+{% endmacro input %}
+
+{% macro select(label, name, options) %}
+    <label for="{{ name }}">{{ label }}</label>
+    <select name="{{ name }}" id="{{ name }}">
+        {% for value in options %}
+            <option value="{{ value }}"
+                {% if self::value_for(name=name) == value %} selected {% endif %}
+            >{{ value }}</option>
+        {% endfor %}
+    </select>
+{% endmacro input %}
