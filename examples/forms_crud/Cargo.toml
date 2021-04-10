@@ -8,3 +8,4 @@ publish = false
 [dependencies]
 rocket = { path = "../../core/lib" }
 rocket_contrib = { path = "../../contrib/lib", features = ["tera_templates"] }
+serde = "1"

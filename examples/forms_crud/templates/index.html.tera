@@ -4,8 +4,11 @@
   <h1>Basic CRUD</h1>
 
   <ul>
-  {% for user in users %}
-    <li>{{ user.username}} - <a href="/users/{{ user.id }}/edit">edit</a></li>
+  {% for id, user in users %}
+    <li>
+      <strong>{{ user.username}}</strong>
+      ({{ user.roles | join(sep=", ") }})
+      - <a href="/users/{{ id }}/edit">edit</a></li>
   {% else %}
     <li>There are no user</li>
   {% endfor %}

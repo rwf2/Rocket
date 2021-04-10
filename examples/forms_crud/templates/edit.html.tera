@@ -2,7 +2,7 @@
 {% extends "layout" %}
 
 {% block content %}
-  <h1>Edit User</h1>
+  <h1>Editing User: {{ user.username }}</h1>
 
   {% include "_form" %}
 
