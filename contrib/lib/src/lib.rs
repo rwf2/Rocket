@@ -46,10 +46,11 @@
 #[cfg(feature="json")] #[macro_use] pub mod json;
 #[cfg(feature="serve")] pub mod serve;
 #[cfg(feature="msgpack")] pub mod msgpack;
+#[cfg(feature="xml")] pub mod xml;
 #[cfg(feature="templates")] pub mod templates;
 #[cfg(feature="uuid")] pub mod uuid;
 #[cfg(feature="databases")] pub mod databases;
-#[cfg(feature = "helmet")] pub mod helmet;
+#[cfg(feature="helmet")] pub mod helmet;
 // TODO.async: Migrate compression, reenable this, tests, and add to docs.
 //#[cfg(any(feature="brotli_compression", feature="gzip_compression"))] pub mod compression;
 
