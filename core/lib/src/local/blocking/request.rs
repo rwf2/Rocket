@@ -4,7 +4,7 @@ use std::convert::TryInto;
 use crate::{Request, http::Method, local::asynchronous};
 use crate::http::uri::Origin;
 
-use super::{Client, LocalResponse};
+use super::{Client, LocalResponse, super::form::LocalForm};
 
 /// A `blocking` local request as returned by [`Client`](super::Client).
 ///
@@ -62,8 +62,16 @@ impl<'c> LocalRequest<'c> {
         LocalResponse { inner, client: self.client }
     }
 
+    fn _form(mut self, form: impl Into<LocalForm>) -> LocalRequest<'c> {
+        let form = form.into();
+        *self._body_mut() = form.body_data();
+        self._request_mut().add_header(form.content_type());
+        self
+    }
+
     pub_request_impl!("# use rocket::local::blocking::Client;\n\
-        use rocket::local::blocking::LocalRequest;");
+        use rocket::local::blocking::LocalRequest;\n\
+        # use rocket::local::form::LocalForm;");
 }
 
 impl std::fmt::Debug for LocalRequest<'_> {

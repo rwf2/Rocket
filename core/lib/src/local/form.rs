@@ -1,14 +1,18 @@
-use crate::form::{name::NameBuf, ValueField};
+use crate::{
+    form::{name::NameBuf, ValueField},
+    http::uri::Uri,
+};
 use rocket_http::{ContentType, RawStr};
 
 pub struct LocalForm(Vec<LocalField>);
 
+#[derive(Debug, PartialEq)]
 pub enum LocalField {
     Value(NameBuf<'static>, String),
     Data(
         NameBuf<'static>,
         Option<&'static str>,
-        Option<ContentType>,
+        ContentType,
         Vec<u8>,
     ),
 }
@@ -64,7 +68,7 @@ impl LocalForm {
         self.0.push(LocalField::Data(
             NameBuf::from("file"),
             file_name.into(),
-            Some(ct),
+            ct,
             data.as_ref().into(),
         ));
         self
@@ -78,7 +82,7 @@ impl LocalForm {
         self.0.push(LocalField::Data(
             NameBuf::from("file"),
             None,
-            Some(ct),
+            ct,
             data.as_ref().into(),
         ));
         self
@@ -86,12 +90,10 @@ impl LocalForm {
 
     /// The full content-type for this form.
     pub fn content_type(&self) -> ContentType {
-        if self
-            .0
-            .iter()
-            .any(|field| matches!(field, LocalField::Data(..)))
-        {
-            return ContentType::FormData;
+        if self.contains_data_field() {
+            return "multipart/form-data; boundary=X-BOUNDARY"
+                .parse::<ContentType>()
+                .unwrap();
         }
 
         ContentType::Form
@@ -99,12 +101,123 @@ impl LocalForm {
 
     /// The full body data for this form.
     pub fn body_data(&self) -> Vec<u8> {
-        todo!()
+        if self.contains_data_field() {
+            self.format_multipart()
+        } else {
+            self.format_simple()
+        }
+    }
+
+    fn contains_data_field(&self) -> bool {
+        self
+            .0
+            .iter()
+            .any(|field| matches!(field, LocalField::Data(..)))
+    }
+
+    fn format_simple(&self) -> Vec<u8> {
+        self.0.iter().fold(Vec::new(), |mut acc, field| {
+            match field {
+                LocalField::Value(name, value) => {
+                    acc.push(format!("{}={}", Uri::percent_encode(&format!("{}", name)), Uri::percent_encode(value)));
+                    return acc
+                },
+                _ => acc,
+            }
+        }).join("&").as_bytes().to_vec()
+    }
+
+    fn format_multipart(&self) -> Vec<u8> {
+        self.0.iter().fold(Vec::new(), |mut acc, field| {
+            match field {
+                LocalField::Value(name, value) => {
+                    acc.push("--X-BOUNDARY".to_string());
+                    acc.push(format!("Content-Disposition: form-data; name=\"{}\"", name));
+                    acc.push("".to_string());
+                    acc.push(format!("{}", value));
+                },
+                LocalField::Data(name, file_name, content_type, data) => {
+                    acc.push("--X-BOUNDARY".to_string());
+                    acc.push(format!("Content-Disposition: form-data; name=\"{}\"; filename=\"{}\"", name, file_name.unwrap_or("")));
+                    acc.push(format!("Content-Type: {}", content_type));
+                    acc.push("".to_string());
+                    acc.push(format!("{}", String::from_utf8_lossy(data)));
+                    acc.push("--X-BOUNDARY--".to_string());
+                    acc.push("".to_string());
+                },
+            }
+
+            return acc
+        }).join("\r\n").as_bytes().to_vec()
     }
 }
 
 impl<F: Into<ValueField<'static>>, I: Iterator<Item = F>> From<I> for LocalForm {
     fn from(fields: I) -> Self {
         LocalForm::new().fields(fields)
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    fn test_content_type() {
+        let form = LocalForm::new()
+            .field("name[]", "john doe");
+        assert_eq!(ContentType::Form, form.content_type());
+
+        let form = form.file("foo.txt", ContentType::Plain, "123");
+        assert_eq!(ContentType::FormData, form.content_type());
+    }
+
+    #[test]
+    fn test_body_data() {
+        let simple_body = "field=value&is%20it=a%20cat%3F";
+        let form = LocalForm::new()
+            .field("field", "value")
+            .field("is it", "a cat?");
+
+        assert_eq!(simple_body, String::from_utf8_lossy(&form.body_data()));
+
+        let multipart_body = &[
+            "--X-BOUNDARY",
+            r#"Content-Disposition: form-data; name="names[]""#,
+            "",
+            "abcd",
+            "--X-BOUNDARY",
+            r#"Content-Disposition: form-data; name="names[]""#,
+            "",
+            "123",
+            "--X-BOUNDARY",
+            r#"Content-Disposition: form-data; name="file"; filename="foo.txt""#,
+            "Content-Type: text/plain; charset=utf-8",
+            "",
+            "hi there",
+            "--X-BOUNDARY--",
+            "",
+        ].join("\r\n");
+        let form = LocalForm::new()
+            .field("names[]", "abcd")
+            .field("names[]", "123")
+            .file("foo.txt", ContentType::Plain, "hi there");
+
+        assert_eq!(multipart_body.as_str(), String::from_utf8_lossy(&form.body_data()));
+    }
+
+    #[test]
+    fn test_from_iterator() {
+        let expected_form = LocalForm::new()
+            .field("field", "value")
+            .field("is it", "a cat?");
+
+        let actual_form: LocalForm = [("field", "value"), ("is it", "a cat?")].iter().into();
+
+        expected_form.0.iter().zip(
+            actual_form.0.iter()
+        ).for_each(|(expected, actual)| {
+            assert_eq!(expected, actual);
+        })
     }
 }

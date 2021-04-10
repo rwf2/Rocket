@@ -5,7 +5,7 @@ use crate::{Request, Data};
 use crate::http::{Status, Method};
 use crate::http::uri::Origin;
 
-use super::{Client, LocalResponse};
+use super::{Client, LocalResponse, super::form::LocalForm};
 
 /// An `async` local request as returned by [`Client`](super::Client).
 ///
@@ -120,8 +120,16 @@ impl<'c> LocalRequest<'c> {
         response
     }
 
+    fn _form(mut self, form: impl Into<LocalForm>) -> LocalRequest<'c> {
+        let form = form.into();
+        self.data = form.body_data();
+        self.add_header(form.content_type());
+        self
+    }
+
     pub_request_impl!("# use rocket::local::asynchronous::Client;\n\
-        use rocket::local::asynchronous::LocalRequest;" async await);
+        use rocket::local::asynchronous::LocalRequest;\n\
+        # use rocket::local::form::LocalForm;" async await);
 }
 
 impl<'c> Clone for LocalRequest<'c> {
