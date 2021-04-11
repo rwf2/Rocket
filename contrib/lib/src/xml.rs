@@ -26,7 +26,6 @@ use rocket::form::prelude as form;
 use serde::Serialize;
 use serde::de::DeserializeOwned;
 
-#[doc(hidden)]
 pub use quick_xml::DeError as Error;
 use quick_xml::Error as XmlError;
 

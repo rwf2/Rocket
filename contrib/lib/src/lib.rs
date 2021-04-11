@@ -19,6 +19,7 @@
 //! * [json*](type@json) - JSON (de)serialization
 //! * [serve*](serve) - Static File Serving
 //! * [msgpack](msgpack) - MessagePack (de)serialization
+//! * [xml](type@xml) - XML (de)serialization
 //! * [handlebars_templates](templates) - Handlebars Templating
 //! * [tera_templates](templates) - Tera Templating
 //! * [uuid](uuid) - UUID (de)serialization
