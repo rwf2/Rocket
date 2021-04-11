@@ -14,20 +14,108 @@
 //! features = ["xml"]
 //! ```
 
-use rocket::data::{ByteUnit, FromData, Outcome};
-use rocket::response::{self, Responder, content};
-use rocket::request::Request;
-use rocket::http::Status;
-use rocket::{Data, form};
-pub use quick_xml::DeError as Error;
-use quick_xml::Error as XmlError;
 use std::io;
-
-use serde::{Serialize, Serializer};
-use serde::de::{Deserialize, DeserializeOwned, Deserializer};
 use std::ops::{Deref, DerefMut};
 
-// TODO Struct docs
+use rocket::request::Request;
+use rocket::data::{ByteUnit, Data, FromData, Outcome};
+use rocket::response::{self, Responder, content};
+use rocket::http::Status;
+use rocket::form::prelude as form;
+
+use serde::Serialize;
+use serde::de::DeserializeOwned;
+
+#[doc(hidden)]
+pub use quick_xml::DeError as Error;
+use quick_xml::Error as XmlError;
+
+/// The XML data guard: easily consume and respond with XML.
+///
+/// ## Receiving XML
+///
+/// `Xml` is both a data guard and a form guard.
+///
+/// ### Data Guard
+///
+/// To parse request body data as XML , add a `data` route argument with a
+/// target type of `Xml<T>`, where `T` is some type you'd like to parse from
+/// XML. `T` must implement [`serde::Deserialize`].
+///
+/// ```rust
+/// # #[macro_use] extern crate rocket;
+/// # extern crate rocket_contrib;
+/// # type User = usize;
+/// use rocket_contrib::xml::Xml;
+///
+/// #[post("/user", format = "xml", data = "<user>")]
+/// fn new_user(user: Xml<User>) {
+///     /* ... */
+/// }
+/// ```
+///
+/// You don't _need_ to use `format = "xml"`, but it _may_ be what you want.
+/// Using `format = xml` means that any request that doesn't specify
+/// "text/xml" as its `Content-Type` header value will not be routed to
+/// the handler.
+///
+/// ### Form Guard
+///
+/// `Xml<T>`, as a form guard, accepts value and data fields and parses the
+/// data as a `T`. Simple use `Xml<T>`:
+///
+/// ```rust
+/// # #[macro_use] extern crate rocket;
+/// # extern crate rocket_contrib;
+/// # type Metadata = usize;
+/// use rocket::form::{Form, FromForm};
+/// use rocket_contrib::xml::Xml;
+///
+/// #[derive(FromForm)]
+/// struct User<'r> {
+///     name: &'r str,
+///     metadata: Xml<Metadata>
+/// }
+///
+/// #[post("/user", data = "<form>")]
+/// fn new_user(form: Form<User<'_>>) {
+///     /* ... */
+/// }
+/// ```
+///
+/// ## Sending JSON
+///
+/// If you're responding with XML data, return a `Xml<T>` type, where `T`
+/// implements [`Serialize`] from [`serde`]. The content type of the response is
+/// set to `text/xml` automatically.
+///
+/// ```rust
+/// # #[macro_use] extern crate rocket;
+/// # extern crate rocket_contrib;
+/// # type User = usize;
+/// use rocket_contrib::xml::Xml;
+///
+/// #[get("/users/<id>")]
+/// fn user(id: usize) -> Xml<User> {
+///     let user_from_id = User::from(id);
+///     /* ... */
+///     Xml(user_from_id)
+/// }
+/// ```
+///
+/// ## Incoming Data Limits
+///
+/// The default size limit for incoming XML data is 1MiB. Setting a limit
+/// protects your application from denial of service (DoS) attacks and from
+/// resource exhaustion through high memory consumption. The limit can be
+/// increased by setting the `limits.xml` configuration parameter. For
+/// instance, to increase the JSON limit to 5MiB for all environments, you may
+/// add the following to your `Rocket.toml`:
+///
+/// ```toml
+/// [global.limits]
+/// xml = 5242880
+/// ```
 #[derive(Debug)]
 pub struct Xml<T>(pub T);
 
@@ -97,6 +185,19 @@ impl<'r, T: Serialize> Responder<'r, 'static> for Xml<T> {
             })?;
 
         content::Xml(string).respond_to(req)
+    }
+}
+
+#[rocket::async_trait]
+impl<'v, T: DeserializeOwned + Send> form::FromFormField<'v> for Xml<T> {
+    fn from_value(field: form::ValueField<'v>) -> Result<Self, form::Errors<'v>> {
+        Self::from_str(field.value)
+            .map_err(|e| form::Error::custom(e).into())
+    }
+
+    async fn from_data(f: form::DataField<'v, '_>) -> Result<Self, form::Errors<'v>> {
+        Self::from_req_data(f.request, f.data).await
+            .map_err(|e| form::Error::custom(e).into())
     }
 }
 
