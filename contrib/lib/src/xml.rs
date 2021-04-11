@@ -83,7 +83,7 @@ use quick_xml::Error as XmlError;
 /// }
 /// ```
 ///
-/// ## Sending JSON
+/// ## Sending XML
 ///
 /// If you're responding with XML data, return a `Xml<T>` type, where `T`
 /// implements [`Serialize`] from [`serde`]. The content type of the response is
@@ -109,7 +109,7 @@ use quick_xml::Error as XmlError;
 /// protects your application from denial of service (DoS) attacks and from
 /// resource exhaustion through high memory consumption. The limit can be
 /// increased by setting the `limits.xml` configuration parameter. For
-/// instance, to increase the JSON limit to 5MiB for all environments, you may
+/// instance, to increase the XML limit to 5MiB for all environments, you may
 /// add the following to your `Rocket.toml`:
 ///
 /// ```toml
@@ -139,7 +139,6 @@ impl<T> Xml<T> {
 
 impl<'r, T: DeserializeOwned> Xml<T> {
     fn from_str(s: &'r str) -> Result<Self, Error> {
-        // TODO: Should the error handling here be improved? Different Error type?
         quick_xml::de::from_str(s).map(Xml)
     }
 
@@ -149,7 +148,9 @@ impl<'r, T: DeserializeOwned> Xml<T> {
             Ok(s) if s.is_complete() => s.into_inner(),
             Ok(_) => {
                 let eof = io::ErrorKind::UnexpectedEof;
-                return Err(Error::Xml(XmlError::Io(io::Error::new(eof, "data limit exceeded"))));
+                return Err(
+                    Error::Xml(XmlError::Io(io::Error::new(eof, "data limit exceeded")))
+                );
             },
             Err(e) => return Err(Error::Xml(XmlError::Io(e))),
         };
@@ -191,12 +192,12 @@ impl<'r, T: Serialize> Responder<'r, 'static> for Xml<T> {
 #[rocket::async_trait]
 impl<'v, T: DeserializeOwned + Send> form::FromFormField<'v> for Xml<T> {
     fn from_value(field: form::ValueField<'v>) -> Result<Self, form::Errors<'v>> {
-        Self::from_str(field.value)
-            .map_err(|e| form::Error::custom(e).into())
+        Self::from_str(field.value).map_err(|e| form::Error::custom(e).into())
     }
 
     async fn from_data(f: form::DataField<'v, '_>) -> Result<Self, form::Errors<'v>> {
-        Self::from_req_data(f.request, f.data).await
+        Self::from_req_data(f.request, f.data)
+            .await
             .map_err(|e| form::Error::custom(e).into())
     }
 }
