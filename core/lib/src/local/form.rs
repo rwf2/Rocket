@@ -4,20 +4,40 @@ use crate::{
 };
 use rocket_http::{ContentType, RawStr};
 
-pub struct LocalForm(Vec<LocalField>);
+/// A struct that can be used to easily create simple and multipart form data
+/// for testing purposes.
+///
+/// ## Example
+///
+/// The following snippet creates a request with a form submission:
+///
+/// ```rust,no_run
+/// use rocket::local::form::LocalForm;
+/// use rocket::local::blocking::{Client, LocalRequest};
+/// use rocket::http::{ContentType};
+///
+/// let client = Client::tracked(rocket::ignite()).expect("valid rocket");
+/// let req = client.post("/")
+///     .form(LocalForm::new()
+///             .field("field", "value")
+///             .file("foo.txt", ContentType::Plain, "hi there!"));
+///
+/// let response = req.dispatch();
+/// ```
+pub struct LocalForm<'v>(Vec<LocalField<'v>>);
 
 #[derive(Debug, PartialEq)]
-pub enum LocalField {
-    Value(NameBuf<'static>, String),
+pub(crate) enum LocalField<'v> {
+    Value(NameBuf<'v>, String),
     Data(
-        NameBuf<'static>,
-        Option<&'static str>,
+        NameBuf<'v>,
+        Option<&'v str>,
         ContentType,
         Vec<u8>,
     ),
 }
 
-impl LocalForm {
+impl<'v> LocalForm<'v> {
     pub fn new() -> Self {
         Self(Vec::new())
     }
@@ -25,7 +45,7 @@ impl LocalForm {
     /// A percent-decoded `name` and `value`.
     pub fn field<N, V>(mut self, name: N, value: V) -> Self
     where
-        N: Into<NameBuf<'static>>,
+        N: Into<NameBuf<'v>>,
         V: AsRef<str>,
     {
         self.0
@@ -37,7 +57,7 @@ impl LocalForm {
     pub fn fields<I, F>(mut self, fields: I) -> Self
     where
         I: Iterator<Item = F>,
-        F: Into<ValueField<'static>>,
+        F: Into<ValueField<'v>>,
     {
         fields.for_each(|field| {
             let field = field.into();
@@ -50,7 +70,7 @@ impl LocalForm {
     }
 
     /// A percent-encoded `name` and `value`.
-    pub fn raw_field(mut self, name: &'static RawStr, value: &'static RawStr) -> Self {
+    pub fn raw_field(mut self, name: &'v RawStr, value: &'v RawStr) -> Self {
         let decoded_name = name.percent_decode_lossy().into_owned();
         let value = value.percent_decode_lossy().into_owned();
         self.0
@@ -62,7 +82,7 @@ impl LocalForm {
     /// file contents `data`.
     pub fn file<N, V>(mut self, file_name: N, ct: ContentType, data: V) -> Self
     where
-        N: Into<Option<&'static str>>,
+        N: Into<Option<&'v str>>,
         V: AsRef<[u8]>,
     {
         self.0.push(LocalField::Data(
@@ -128,7 +148,7 @@ impl LocalForm {
     }
 
     fn format_multipart(&self) -> Vec<u8> {
-        self.0.iter().fold(Vec::new(), |mut acc, field| {
+        let mut body = self.0.iter().fold(Vec::new(), |mut acc, field| {
             match field {
                 LocalField::Value(name, value) => {
                     acc.push("--X-BOUNDARY".to_string());
@@ -142,19 +162,13 @@ impl LocalForm {
                     acc.push(format!("Content-Type: {}", content_type));
                     acc.push("".to_string());
                     acc.push(format!("{}", String::from_utf8_lossy(data)));
-                    acc.push("--X-BOUNDARY--".to_string());
-                    acc.push("".to_string());
                 },
             }
-
             return acc
-        }).join("\r\n").as_bytes().to_vec()
-    }
-}
-
-impl<F: Into<ValueField<'static>>, I: Iterator<Item = F>> From<I> for LocalForm {
-    fn from(fields: I) -> Self {
-        LocalForm::new().fields(fields)
+        });
+        body.push("--X-BOUNDARY--".to_string());
+        body.push("".to_string());
+        body.join("\r\n").as_bytes().to_vec()
     }
 }
 
@@ -204,20 +218,5 @@ mod test {
             .file("foo.txt", ContentType::Plain, "hi there");
 
         assert_eq!(multipart_body.as_str(), String::from_utf8_lossy(&form.body_data()));
-    }
-
-    #[test]
-    fn test_from_iterator() {
-        let expected_form = LocalForm::new()
-            .field("field", "value")
-            .field("is it", "a cat?");
-
-        let actual_form: LocalForm = [("field", "value"), ("is it", "a cat?")].iter().into();
-
-        expected_form.0.iter().zip(
-            actual_form.0.iter()
-        ).for_each(|(expected, actual)| {
-            assert_eq!(expected, actual);
-        })
     }
 }

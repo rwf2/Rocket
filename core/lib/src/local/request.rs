@@ -323,7 +323,7 @@ macro_rules! pub_request_impl {
     /// ```
     pub fn form(
         self,
-        form: LocalForm,
+        form: impl Into<LocalForm<'c>>,
     ) -> LocalRequest<'c>
     {
         self._form(form)

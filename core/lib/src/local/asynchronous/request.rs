@@ -120,7 +120,7 @@ impl<'c> LocalRequest<'c> {
         response
     }
 
-    fn _form(mut self, form: impl Into<LocalForm>) -> LocalRequest<'c> {
+    fn _form(mut self, form: impl Into<LocalForm<'c>>) -> LocalRequest<'c> {
         let form = form.into();
         self.data = form.body_data();
         self.add_header(form.content_type());
