@@ -16,5 +16,5 @@ fn hi(name: &str) -> &str {
 #[launch]
 fn rocket() -> _ {
     env_logger::init();
-    rocket::ignite().mount("/", routes![hello, hi])
+    rocket::build().mount("/", routes![hello, hi])
 }
