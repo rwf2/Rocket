@@ -18,7 +18,6 @@ pub fn _catch(
     // Gather everything we'll need to generate the catcher.
     let user_catcher_fn = &catch.function;
     let user_catcher_fn_name = &catch.function.sig.ident;
-    let generated_span_name = user_catcher_fn_name.to_string();
     let vis = &catch.function.vis;
     let status_code = Optional(catch.status.map(|s| s.code));
 
@@ -77,9 +76,9 @@ pub fn _catch(
                             .merge(__response)
                             .ok()
                     }.instrument(#_trace::info_span!(
-                        #generated_span_name,
+                        stringify!(#user_catcher_fn_name),
                         status = %#__status,
-                        "Catcher: {}", #generated_span_name
+                        "Catcher: {}", stringify!(#user_catcher_fn_name)
                     )))
                 }
 

@@ -246,7 +246,6 @@ fn codegen_route(route: Route) -> Result<TokenStream> {
     let handler_fn_name = &handler_fn.sig.ident;
     let internal_uri_macro = internal_uri_macro_decl(&route);
     let responder_outcome = responder_outcome_expr(&route);
-    let generated_span_name = handler_fn_name.to_string();
 
     let method = route.attr.method;
     let path = route.attr.uri.to_string();
@@ -278,10 +277,10 @@ fn codegen_route(route: Route) -> Result<TokenStream> {
 
                         #responder_outcome
                     }.instrument(#_trace::info_span!(
-                        #generated_span_name,
+                        stringify!(#handler_fn_name),
                         method = %#method,
                         path = #path,
-                        "Route: {}", #generated_span_name
+                        "Route: {}", stringify!(#handler_fn_name)
                     )))
                 }
 
