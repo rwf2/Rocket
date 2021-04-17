@@ -325,6 +325,7 @@ pub fn validators<'v>(
         Ok(exprs)
 }
 
+#[allow(clippy::type_complexity)]
 pub fn first_duplicate<K: Spanned, V: PartialEq + Spanned>(
     keys: impl Iterator<Item = K> + Clone,
     values: impl Fn(&K) -> Result<Vec<V>>,
@@ -339,8 +340,8 @@ pub fn first_duplicate<K: Spanned, V: PartialEq + Spanned>(
     let key = |k| key_map.iter().find(|(i, _)| k < *i).expect("k < *i");
 
     for (i, a) in all_values.iter().enumerate() {
-        let rest = all_values.iter().enumerate().skip(i + 1);
-        if let Some((j, b)) = rest.filter(|(_, b)| *b == a).next() {
+        let mut rest = all_values.iter().enumerate().skip(i + 1);
+        if let Some((j, b)) = rest.find(|(_, b)| *b == a) {
             let (a_i, key_a) = key(i);
             let (b_i, key_b) = key(j);
 

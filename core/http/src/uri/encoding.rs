@@ -1,3 +1,4 @@
+#![allow(clippy::upper_case_acronyms)]
 use std::marker::PhantomData;
 use std::borrow::Cow;
 

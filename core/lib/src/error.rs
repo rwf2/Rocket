@@ -71,6 +71,7 @@ pub struct Error {
 /// `FailedFairing` variants, respectively.
 #[derive(Debug)]
 #[non_exhaustive]
+#[allow(clippy::large_enum_variant)]
 pub enum ErrorKind {
     /// Binding to the provided address/port failed.
     Bind(io::Error),

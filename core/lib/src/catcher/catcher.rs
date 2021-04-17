@@ -154,6 +154,7 @@ impl Catcher {
     /// Panics if `code` is not in the HTTP status code error range `[400,
     /// 600)`.
     #[inline(always)]
+    #[allow(clippy::manual_range_contains)]
     pub fn new<S, H>(code: S, handler: H) -> Catcher
         where S: Into<Option<u16>>, H: Handler
     {

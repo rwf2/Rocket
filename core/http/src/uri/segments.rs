@@ -77,7 +77,7 @@ impl<'o> Segments<'o> {
 
     /// Returns `true` if `self` is a prefix of `other`.
     #[inline]
-    pub fn prefix_of<'b>(self, other: Segments<'b>) -> bool {
+    pub fn prefix_of(self, other: Segments<'_>) -> bool {
         if self.len() > other.len() {
             return false;
         }

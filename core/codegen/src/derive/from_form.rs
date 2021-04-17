@@ -53,7 +53,7 @@ fn context_type(input: Input<'_>) -> (TokenStream, Option<syn::WhereClause>) {
     (quote_spanned!(span => FromFormGeneratedContext #ty_gen), where_clause.cloned())
 }
 
-
+#[allow(clippy::redundant_closure)]
 pub fn derive_from_form(input: proc_macro::TokenStream) -> TokenStream {
     DeriveGenerator::build_for(input, quote!(impl<'__f> #_form::FromForm<'__f>))
         // NOTE: If support is widened, fix `FieldExt::ident()` `expect()`.

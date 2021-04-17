@@ -51,6 +51,7 @@ impl<F: ?Sized> Once<F> {
     }
 }
 
+#[allow(clippy::type_complexity)]
 enum AdHocKind {
     /// An ad-hoc **ignite** fairing. Called during ignition.
     Ignite(Once<dyn FnOnce(Rocket<Build>) -> BoxFuture<'static, Result> + Send + 'static>),

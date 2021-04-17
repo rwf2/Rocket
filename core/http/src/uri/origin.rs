@@ -117,7 +117,7 @@ impl Eq for Origin<'_> { }
 impl PartialEq<str> for Origin<'_> {
     fn eq(&self, other: &str) -> bool {
         let (path, query) = RawStr::new(other).split_at_byte(b'?');
-        self.path() == path && self.query().unwrap_or("".into()) == query
+        self.path() == path && self.query().unwrap_or_else(|| "".into()) == query
     }
 }
 

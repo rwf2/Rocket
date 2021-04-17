@@ -286,6 +286,7 @@ fn sentinels_expr(route: &Route) -> TokenStream {
     quote!(::std::vec![#(#sentinel),*])
 }
 
+#[allow(clippy::unnecessary_wraps)]
 fn codegen_route(route: Route) -> Result<TokenStream> {
     use crate::exports::*;
 

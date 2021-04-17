@@ -3,7 +3,6 @@
 use std::fmt;
 use std::str::FromStr;
 
-use log;
 use yansi::Paint;
 use serde::{de, Serialize, Serializer, Deserialize, Deserializer};
 
