@@ -57,7 +57,7 @@ instance. Usage is straightforward:
 ## Validating Responses
 
 A `dispatch` of a `LocalRequest` returns a [`LocalResponse`] which can be
-inspected for validaty. During testing, the response is usually validated
+inspected for validity. During testing, the response is usually validated
 against expected properties. These includes things like the response HTTP
 status, the inclusion of headers, and expected body data.
 
