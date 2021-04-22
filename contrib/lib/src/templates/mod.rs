@@ -134,6 +134,7 @@ use serde::Serialize;
 use serde_json::{Value, to_value};
 
 use std::borrow::Cow;
+use std::collections::HashMap;
 use std::path::PathBuf;
 use std::error::Error;
 
@@ -335,6 +336,26 @@ impl Template {
         where S: Into<Cow<'static, str>>, C: Serialize
     {
         Template { name: name.into(), value: to_value(context).ok() }
+    }
+
+    /// Render the template named `name` without any context.
+    ///
+    /// # Example
+    ///
+    ///
+    /// ```rust
+    /// use rocket_contrib::templates::Template;
+    ///
+    /// # #[allow(unused_variables)]
+    /// let template = Template::render_without_context("index");
+    /// ```
+    #[inline]
+    pub fn render_without_context<S>(name: S) -> Template
+    where
+        S: Into<Cow<'static, str>>,
+    {
+        let context: HashMap<&str, &str> = HashMap::new();
+        render("index", &context)
     }
 
     /// Render the template named `name` with the context `context` into a
