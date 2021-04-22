@@ -355,7 +355,7 @@ impl Template {
         S: Into<Cow<'static, str>>,
     {
         let context: HashMap<&str, &str> = HashMap::new();
-        render("index", &context)
+        Template::render(name, &context)
     }
 
     /// Render the template named `name` with the context `context` into a
