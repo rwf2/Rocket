@@ -197,7 +197,7 @@ const DEFAULT_TEMPLATE_DIR: &str = "templates";
 /// You may use the [`Template::custom()`] method to construct a fairing with
 /// customized templating engines. Among other things, this method allows you to
 /// register template helpers and register templates from strings.
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Template {
     name: Cow<'static, str>,
     value: Option<Value>
