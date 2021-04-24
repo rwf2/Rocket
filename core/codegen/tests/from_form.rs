@@ -564,6 +564,7 @@ fn test_nested_multi() {
     });
 }
 
+<<<<<<< HEAD
 #[test]
 fn test_multipart() {
     use rocket::http::ContentType;
@@ -611,4 +612,89 @@ fn test_multipart() {
         .dispatch();
 
     assert!(response.status().class().is_success());
+=======
+// fn test_multipart() {
+//     use std::{io, path::Path};
+//
+//     use crate::*;
+//     use crate::http::ContentType;
+//     use crate::local::blocking::Client;
+//     use crate::{data::TempFile, form::Errors};
+//
+//     #[derive(FromForm)]
+//     struct MyForm {
+//         names: Vec<String>,
+//         file: String,
+//     }
+//
+//     #[post("/", data = "<form>")]
+//     async fn form(mut form: Form<MyForm>) -> io::Result<&'static str> {
+//         let path = Path::new("/tmp").join(form.file_name().unwrap_or("upload"));
+//         form.persist(path).await?;
+//         println!("result: {:?}", form);
+//         Ok("hi")
+//     }
+//
+//     let client = Client::debug_with(routes![form]).unwrap();
+//     let ct = "multipart/form-data; boundary=X-BOUNDARY"
+//         .parse::<ContentType>()
+//         .unwrap();
+//
+//     let body = &[
+//         // "--X-BOUNDARY",
+//         // r#"Content-Disposition: form-data; name="names[]""#,
+//         // "",
+//         // "abcd",
+//         // "--X-BOUNDARY",
+//         // r#"Content-Disposition: form-data; name="names[]""#,
+//         // "",
+//         // "123",
+//         "--X-BOUNDARY",
+//         r#"Content-Disposition: form-data; name="file"; filename="foo.txt""#,
+//         "Content-Type: text/plain",
+//         "",
+//         "hi there",
+//         "--X-BOUNDARY--",
+//         "",
+//     ].join("\r\n");
+//
+//     let response = client.post("/")
+//         .header(ct)
+//         .body(body)
+//         .dispatch();
+//
+//     let string = response.into_string().unwrap();
+//     println!("String: {}", string);
+//     panic!(string);
+// }
+
+#[test]
+fn test_defaults() {
+    #[derive(FromForm, PartialEq, Debug)]
+    struct FormWithDefaults {
+        #[field(default = 100)]
+        field1: i32,
+        field2: i32,
+
+        #[field(default = true)]
+        field3: bool,
+        #[field(default = false)]
+        field4: bool,
+        field5: bool,
+    }
+
+    let form_string = &["field1=101", "field2=102"].join("&");
+
+    let form: Option<FormWithDefaults> = lenient(&form_string).ok();
+    assert_eq!(form, Some(FormWithDefaults {
+        field1: 101,
+        field2: 102,
+        field3: true,
+        field4: false,
+        field5: false,
+    }));
+    let form: Option<FormWithDefaults> = strict(&form_string).ok();
+    assert!(form.is_none());
+
+>>>>>>> 6681f074 (update grammar, enforce single default, added failing and succeeding tests, update FromForm docs, update FromForm guide, fixed CI errors)
 }

@@ -230,7 +230,18 @@ pub fn derive_from_form(input: proc_macro::TokenStream) -> TokenStream {
             .try_field_map(|_, f| {
                 let (ident, ty, name_view) = (f.ident(), f.stripped_ty(), f.name_view()?);
                 let validator = validators(f, &ident, true)?;
-                let default = defaults(f)?;
+                let user_default = default(f)?;
+                let fallback = match user_default {
+                    Some(expr) => quote_spanned! { ty.span() =>
+                        #expr
+                            .or_else(|| <#ty as #_form::FromForm<'__f>>::default(_opts))
+                            .ok_or_else(|| #_form::ErrorKind::Missing.into())
+                    },
+                    None => quote_spanned! { ty.span() =>
+                        <#ty as #_form::FromForm<'__f>>::default(_opts)
+                            .ok_or_else(|| #_form::ErrorKind::Missing.into())
+                    },
+                };
                 let _err = _Err;
                 Ok(quote_spanned! { ty.span() => {
                     let _name = #name_view;
@@ -238,9 +249,7 @@ pub fn derive_from_form(input: proc_macro::TokenStream) -> TokenStream {
                     __c.#ident
                         .map(<#ty as #_form::FromForm<'__f>>::finalize)
                         .unwrap_or_else(|| {
-                            #default
-                                .or_else(|| <#ty as #_form::FromForm<'__f>>::default(_opts))
-                                .ok_or_else(|| #_form::ErrorKind::Missing.into())
+                            #fallback
                         })
                         .and_then(|#ident| {
                             let mut _es = #_form::Errors::new();

@@ -61,7 +61,7 @@ use crate::form::prelude::*;
 /// default that is then used when no value is provided. For a form field of
 /// type `T`, the provided default can be any expression of type `U` such that
 /// `U` implements `Into<T>`.
-/// 
+///
 /// ```rust
 /// # #[macro_use] extern crate rocket;
 /// use rocket::form::Form;

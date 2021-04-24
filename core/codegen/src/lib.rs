@@ -556,8 +556,10 @@ pub fn derive_from_form_field(input: TokenStream) -> TokenStream {
 ///     #[field(name = "renamed_field")]
 ///     #[field(name = uncased("RenamedField"))]
 ///     other: &'r str,
-///     #[field(validate = range(1..))]
+///     #[field(validate = range(1..), default = 3)]
 ///     r#type: usize,
+///     #[field(default = true)]
+///     is_nice: bool,
 /// }
 /// ```
 ///
@@ -574,11 +576,13 @@ pub fn derive_from_form_field(input: TokenStream) -> TokenStream {
 /// The derive accepts one field attribute: `field`, with the following syntax:
 ///
 /// ```text
-/// field := name? validate*
+/// field := name? default? validate*
 ///
 /// name := 'name' '=' name_val
 /// name_val :=  '"' FIELD_NAME '"'
 ///          | 'uncased(' '"' FIELD_NAME '"' ')
+///
+/// default := 'default' '=' EXPR
 ///
 /// validate := 'validate' '=' EXPR
 ///

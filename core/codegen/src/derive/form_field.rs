@@ -326,11 +326,10 @@ pub fn validators<'v>(
     Ok(exprs)
 }
 
-pub fn defaults<'v>(
+pub fn default<'v>(
     field: Field<'v>,
-) -> Result<syn::Expr> {
-    let ty = &field.inner.ty;
-    let expr = FieldAttr::from_attrs(FieldAttr::NAME, &field.attrs)?
+) -> Result<Option<syn::Expr>> {
+    let mut exprs = FieldAttr::from_attrs(FieldAttr::NAME, &field.attrs)?
         .into_iter()
         .map(|a| a.default)
         .flat_map(move |expr| {
@@ -342,22 +341,23 @@ pub fn defaults<'v>(
                 let span = expr.key_span.unwrap_or(field_span);
                 define_spanned_export!(span => _form);
                 syn::parse2(quote_spanned!(span => {
-                    {
-                        let __default: Option<#ty> = Some({ #expr }.into());
-                        __default
-                    }
+                    let __default: Option<_> = { #expr }.into();
+                    __default
                 })).unwrap()
             })
-            
-        })
-        .next()
-        .unwrap_or_else(|| {
-            syn::parse2(quote!({
-                { None }
-            })).unwrap()
         });
+    let first = exprs.next();
+    if first.is_none() {
+        return Ok(None);
+    }
+    let second: Option<syn::Expr> = exprs.next();
+    if let Some(expr) = second {
+        return Err(expr.span()
+            .error("unexpected second default")
+            .note("only one default is allowed in this context"));
+    }
 
-    Ok(expr)
+    Ok(first)
 }
 
 pub fn first_duplicate<K: Spanned, V: PartialEq + Spanned>(
