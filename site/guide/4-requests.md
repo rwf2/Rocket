@@ -904,7 +904,7 @@ expression.
 Any function in the [`form::validate`] module can be called, and other fields of
 the form can be passed in by using `self.$field` where `$field` is the name of
 the field in the structure. You can also apply more than one validation to a
-fiel by using multiple attributes. For example, the following form validates
+field by using multiple attributes. For example, the following form validates
 that the value of the field `confirm` is equal to the value of the field `value`
 and that it doesn't contain `no`:
 
