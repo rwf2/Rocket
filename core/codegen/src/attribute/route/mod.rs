@@ -336,9 +336,9 @@ fn codegen_route(route: Route) -> Result<TokenStream> {
         #vis struct #handler_fn_name {  }
 
         /// Rocket code generated proxy static conversion implementation.
-        impl From<#handler_fn_name> for #_route::StaticInfo {
+        impl #handler_fn_name { 
             #[allow(non_snake_case, unreachable_patterns, unreachable_code)]
-            fn from(_: #handler_fn_name) -> #_route::StaticInfo {
+            fn into_info(self) -> #_route::StaticInfo {
                 fn monomorphized_function<'_b>(
                     #__req: &'_b #Request<'_>,
                     #__data: #Data
@@ -363,13 +363,8 @@ fn codegen_route(route: Route) -> Result<TokenStream> {
                     sentinels: #sentinels,
                 }
             }
-        }
-
-        /// Rocket code generated proxy conversion implementation.
-        impl From<#handler_fn_name> for #Route {
-            #[inline]
-            fn from(_: #handler_fn_name) -> #Route {
-                #_route::StaticInfo::from(#handler_fn_name {}).into()
+            pub fn into(self) -> #Route {
+                self.into_info().into()
             }
         }
 
