@@ -336,7 +336,7 @@ fn codegen_route(route: Route) -> Result<TokenStream> {
         #vis struct #handler_fn_name {  }
 
         /// Rocket code generated proxy static conversion implementation.
-        impl #handler_fn_name { 
+        impl #handler_fn_name {
             #[allow(non_snake_case, unreachable_patterns, unreachable_code)]
             fn into_info(self) -> #_route::StaticInfo {
                 fn monomorphized_function<'_b>(
