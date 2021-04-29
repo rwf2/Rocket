@@ -296,6 +296,25 @@ fn sentinels_expr(route: &Route) -> TokenStream {
     quote!(::std::vec![#(#sentinel),*])
 }
 
+fn schemas_expr(route: &Route) -> TokenStream {
+    let ret_ty = match route.handler.sig.output {
+        syn::ReturnType::Default => None,
+        syn::ReturnType::Type(_, ref ty) => Some(ty.with_stripped_lifetimes())
+    };
+
+    let eligible_types = route.guards()
+        .map(|guard| &guard.ty)
+        .chain(ret_ty.as_ref().into_iter());
+
+    let schema = eligible_types.map(|ty| {
+        define_spanned_export!(ty.span() => _doc);
+
+        quote_spanned!(ty.span() => #_doc::resolve_doc!(#ty))
+    });
+
+    quote!(::std::vec![#(#schema),*])
+}
+
 fn codegen_route(route: Route) -> Result<TokenStream> {
     use crate::exports::*;
 
@@ -305,8 +324,9 @@ fn codegen_route(route: Route) -> Result<TokenStream> {
     let query_guards = query_decls(&route);
     let data_guard = route.data_guard.as_ref().map(data_guard_decl);
 
-    // Extract the sentinels from the route.
+    // Extract the sentinels and schemas from the route.
     let sentinels = sentinels_expr(&route);
+    let schemas = schemas_expr(&route);
 
     // Gather info about the function.
     let (vis, handler_fn) = (&route.handler.vis, &route.handler);
@@ -318,6 +338,9 @@ fn codegen_route(route: Route) -> Result<TokenStream> {
     let uri = route.attr.uri.to_string();
     let rank = Optional(route.attr.rank);
     let format = Optional(route.attr.format.as_ref());
+
+    // Get the doc comment
+    let docstring = &route.docstring;
 
     Ok(quote! {
         #handler_fn
@@ -353,6 +376,8 @@ fn codegen_route(route: Route) -> Result<TokenStream> {
                     format: #format,
                     rank: #rank,
                     sentinels: #sentinels,
+                    schemas: #schemas,
+                    docstring: #docstring,
                 }
             }
 
