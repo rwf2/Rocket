@@ -165,34 +165,12 @@ struct Validate3 {
 
 #[derive(FromForm)]
 struct Default0 {
-    #[field(default = "wrong type")]
+    #[field(default = "no conversion")]
     first: i32,
 }
 
 #[derive(FromForm)]
 struct Default1 {
-    #[field(default = < 3)]
-    first: bool,
-}
-
-#[derive(FromForm)]
-struct Default2 {
-    #[field(default = < 3)]
-    first: bool,
-}
-
-struct NotCopy {}
-
-static NOT_COPY: NotCopy = NotCopy {};
-
-#[derive(FromForm)]
-struct Default3 {
-    #[field(default = NOT_COPY)]
-    first: NotCopy,
-}
-
-#[derive(FromForm)]
-struct Default4 {
     #[field(default = 1, default = 2)]
     double_default: i32,
 }

@@ -13,7 +13,7 @@ pub enum FieldName {
     Uncased(Name),
 }
 
-#[derive(Debug, FromMeta)]
+#[derive(FromMeta)]
 pub struct FieldAttr {
     pub name: Option<FieldName>,
     pub validate: Option<SpanWrapped<syn::Expr>>,
@@ -326,35 +326,40 @@ pub fn validators<'v>(
     Ok(exprs)
 }
 
-pub fn default<'v>(
-    field: Field<'v>,
-) -> Result<Option<syn::Expr>> {
+pub fn default<'v>(field: Field<'v>) -> Result<Option<syn::Expr>> {
     let mut exprs = FieldAttr::from_attrs(FieldAttr::NAME, &field.attrs)?
         .into_iter()
-        .map(|a| a.default)
-        .flat_map(move |expr| {
-            let field_span = field.ident().span()
-                .join(field.ty.span())
-                .unwrap_or(field.ty.span());
-
-            expr.map(|expr| {
-                let span = expr.key_span.unwrap_or(field_span);
-                define_spanned_export!(span => _form);
-                syn::parse2(quote_spanned!(span => {
-                    let __default: Option<_> = { #expr }.into();
-                    __default
-                })).unwrap()
-            })
+        .filter_map(|a| a.default)
+        .map(move |expr| {
+            use syn::{Expr, Lit, ExprLit};
+            // As a result of calling `#expr.into()`, type inference fails for
+            // two common expressions: integer literals and the bare `None`. As
+            // a result, we cheat: if the syntax matches either of these two
+            // conditions, we provide the field type as a hint.
+            let is_int_lit = matches!(*expr, Expr::Lit(ExprLit { lit: Lit::Int(_), .. }));
+            let is_none = matches!(*expr, Expr::Path(ref e) if e.path.is_ident("None"));
+            let ty = field.stripped_ty();
+            let ty_hint = (is_int_lit || is_none)
+                .then(|| quote!(#ty))
+                .unwrap_or_else(|| quote!(_));
+            let opt_expr = if is_none {
+                quote_spanned!(expr.span => None)
+            } else if is_int_lit {
+                quote_spanned!(expr.span => Some(#expr))
+            } else {
+                quote_spanned!(expr.span => Some({ #expr }.into()))
+            };
+            syn::parse2(quote_spanned!(expr.span => {
+                let __default: Option<#ty_hint> = #opt_expr;
+                __default
+            })).unwrap()
         });
-    let first = exprs.next();
-    if first.is_none() {
-        return Ok(None);
-    }
-    let second: Option<syn::Expr> = exprs.next();
-    if let Some(expr) = second {
+
+    let first: Option<syn::Expr> = exprs.next();
+    if let Some(expr) = exprs.next() {
         return Err(expr.span()
-            .error("unexpected second default")
-            .note("only one default is allowed in this context"));
+            .error("duplicate `default` form field attribute")
+            .help("form fields can have at most one `default`"));
     }
 
     Ok(first)

@@ -363,6 +363,19 @@ note: error occurred while deriving `FromForm`
     |          ^^^^^^^^
     = note: this error originates in the derive macro `FromForm` (in Nightly builds, run with -Z macro-backtrace for more info)
 
+error: duplicate attribute parameter: default
+   --> $DIR/from_form.rs:174:26
+    |
+174 |     #[field(default = 1, default = 2)]
+    |                          ^^^^^^^^^^^
+    |
+note: error occurred while deriving `FromForm`
+   --> $DIR/from_form.rs:172:10
+    |
+172 | #[derive(FromForm)]
+    |          ^^^^^^^^
+    = note: this error originates in the derive macro `FromForm` (in Nightly builds, run with -Z macro-backtrace for more info)
+
 error[E0425]: cannot find function `unknown` in this scope
    --> $DIR/from_form.rs:150:24
     |
@@ -403,3 +416,17 @@ error[E0308]: mismatched types
     |
 162 |     #[field(validate = ext("hello"))]
     |                            ^^^^^^^ expected struct `ContentType`, found `&str`
+
+error[E0277]: the trait bound `i32: From<&str>` is not satisfied
+   --> $DIR/from_form.rs:168:23
+    |
+168 |     #[field(default = "no conversion")]
+    |                       ^^^^^^^^^^^^^^^ the trait `From<&str>` is not implemented for `i32`
+    |
+    = help: the following implementations were found:
+              <i32 as From<NonZeroI32>>
+              <i32 as From<bool>>
+              <i32 as From<i16>>
+              <i32 as From<i8>>
+            and 5 others
+    = note: required because of the requirements on the impl of `Into<i32>` for `&str`

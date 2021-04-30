@@ -1,4 +1,6 @@
-use rocket::form::{Form, Strict, FromForm, FromFormField, Errors};
+use std::{collections::{BTreeMap, HashMap}, net::{IpAddr, SocketAddr}, num::NonZeroI32};
+
+use rocket::form::{self, Form, Strict, FromForm, FromFormField, Errors};
 
 fn strict<'f, T: FromForm<'f>>(string: &'f str) -> Result<T, Errors<'f>> {
     Form::<Strict<T>>::parse(string).map(|s| s.into_inner())
@@ -564,7 +566,6 @@ fn test_nested_multi() {
     });
 }
 
-<<<<<<< HEAD
 #[test]
 fn test_multipart() {
     use rocket::http::ContentType;
@@ -612,89 +613,243 @@ fn test_multipart() {
         .dispatch();
 
     assert!(response.status().class().is_success());
-=======
-// fn test_multipart() {
-//     use std::{io, path::Path};
-//
-//     use crate::*;
-//     use crate::http::ContentType;
-//     use crate::local::blocking::Client;
-//     use crate::{data::TempFile, form::Errors};
-//
-//     #[derive(FromForm)]
-//     struct MyForm {
-//         names: Vec<String>,
-//         file: String,
-//     }
-//
-//     #[post("/", data = "<form>")]
-//     async fn form(mut form: Form<MyForm>) -> io::Result<&'static str> {
-//         let path = Path::new("/tmp").join(form.file_name().unwrap_or("upload"));
-//         form.persist(path).await?;
-//         println!("result: {:?}", form);
-//         Ok("hi")
-//     }
-//
-//     let client = Client::debug_with(routes![form]).unwrap();
-//     let ct = "multipart/form-data; boundary=X-BOUNDARY"
-//         .parse::<ContentType>()
-//         .unwrap();
-//
-//     let body = &[
-//         // "--X-BOUNDARY",
-//         // r#"Content-Disposition: form-data; name="names[]""#,
-//         // "",
-//         // "abcd",
-//         // "--X-BOUNDARY",
-//         // r#"Content-Disposition: form-data; name="names[]""#,
-//         // "",
-//         // "123",
-//         "--X-BOUNDARY",
-//         r#"Content-Disposition: form-data; name="file"; filename="foo.txt""#,
-//         "Content-Type: text/plain",
-//         "",
-//         "hi there",
-//         "--X-BOUNDARY--",
-//         "",
-//     ].join("\r\n");
-//
-//     let response = client.post("/")
-//         .header(ct)
-//         .body(body)
-//         .dispatch();
-//
-//     let string = response.into_string().unwrap();
-//     println!("String: {}", string);
-//     panic!(string);
-// }
+}
+
+fn test_hashmap() -> HashMap<&'static str, &'static str> {
+    let mut map = HashMap::new();
+    map.insert("key", "value");
+    map
+}
+
+fn test_btreemap() -> BTreeMap<&'static str, &'static str> {
+    let mut map = BTreeMap::new();
+    map.insert("key", "value");
+    map
+}
+
+mod default_macro_tests {
+    #![allow(dead_code)]
+
+    #[derive(rocket::FromForm)]
+    struct Form1 {
+        #[field(default = 10)]
+        field: i8,
+    }
+
+    #[derive(rocket::FromForm)]
+    struct Form2 {
+        #[field(default = 10)]
+        field: u8,
+    }
+
+    #[derive(rocket::FromForm)]
+    struct Form3 {
+        #[field(default = 10)]
+        field: usize,
+    }
+
+    #[derive(rocket::FromForm)]
+    struct Form4 {
+        #[field(default = 10)]
+        field: usize,
+    }
+
+    #[derive(rocket::FromForm)]
+    struct Form5 {
+        #[field(default = None)]
+        field: usize,
+    }
+
+    #[derive(rocket::FromForm)]
+    struct Form6 {
+        #[field(default = None)]
+        field: usize,
+    }
+
+    #[derive(rocket::FromForm)]
+    struct Form7 {
+        #[field(default = None)]
+        field: String,
+    }
+
+    #[derive(rocket::FromForm)]
+    struct Form8<'a> {
+        #[field(default = None)]
+        field: &'a str,
+    }
+
+    // #[derive(rocket::FromForm)]
+    // struct Form9<'a> {
+    //     #[field(default = None)]
+    //     field: Cow<'a, str>,
+    // }
+
+    #[derive(rocket::FromForm)]
+    struct Form10 {
+        #[field(default = "string")]
+        field: String,
+    }
+
+    #[derive(rocket::FromForm)]
+    struct Form11<'a> {
+        #[field(default = "string")]
+        field: &'a str,
+    }
+
+    // #[derive(rocket::FromForm)]
+    // struct Form12 {
+    //     #[field(default = "string")]
+    //     field: Cow<'static, str>,
+    // }
+
+    // #[derive(rocket::FromForm)]
+    // struct Form13<'a> {
+    //     #[field(default = "string".to_string())]
+    //     field: Cow<'a, str>,
+    // }
+
+    #[derive(rocket::FromForm)]
+    struct Form14 {
+        #[field(default = 'a')]
+        field: String,
+    }
+
+    #[derive(rocket::FromForm)]
+    struct Form15 {
+        #[field(default = 10 + 2)]
+        field: u8,
+    }
+    #[derive(rocket::FromForm)]
+    struct Form16 {
+        #[field(default = 10 + 2)]
+        field: i8,
+    }
+
+    #[derive(rocket::FromForm)]
+    struct Form17 {
+        #[field(default = 10 + 2)]
+        field: i64,
+    }
+
+    #[derive(rocket::FromForm)]
+    struct Form18 {
+        #[field(default = 10 + 2usize)]
+        field: usize,
+    }
+
+    #[derive(rocket::FromForm)]
+    struct Form19 {
+        #[field(default = 10 + 2usize)]
+        field: usize,
+    }
+}
 
 #[test]
 fn test_defaults() {
     #[derive(FromForm, PartialEq, Debug)]
-    struct FormWithDefaults {
+    struct FormWithDefaults<'a> {
         #[field(default = 100)]
-        field1: i32,
-        field2: i32,
+        field1: usize,
+        field2: i128,
 
         #[field(default = true)]
         field3: bool,
         #[field(default = false)]
         field4: bool,
         field5: bool,
+
+        #[field(default = Some(true))]
+        opt: Option<bool>,
+        #[field(default = Ok("hello".to_string()))]
+        res: form::Result<'a, String>,
+        #[field(default = vec![1, 2, 3])]
+        vec_num: Vec<usize>,
+        #[field(default = vec!["wow", "a", "string", "nice"])]
+        vec_str: Vec<&'a str>,
+        #[field(default = test_hashmap())]
+        hashmap: HashMap<&'a str, &'a str>,
+        #[field(default = test_btreemap())]
+        btreemap: BTreeMap<&'a str, &'a str>,
+        #[field(default = false)]
+        boolean: bool,
+        #[field(default = 3)]
+        unsigned: usize,
+        #[field(default = NonZeroI32::new(3).unwrap())]
+        nonzero: NonZeroI32,
+        #[field(default = 3.0)]
+        float: f64,
+        #[field(default = "wow")]
+        str_ref: &'a str,
+        #[field(default = "wowie")]
+        string: String,
+        #[field(default = [192u8, 168, 1, 0])]
+        ip: IpAddr,
+        #[field(default = ([192u8, 168, 1, 0], 20))]
+        addr: SocketAddr,
+        #[field(default = time::date!(2021-05-27))]
+        date: time::Date,
+        #[field(default = time::time!(01:15:00))]
+        time: time::Time,
+        #[field(default = time::PrimitiveDateTime::new(
+            time::date!(2021-05-27),
+            time::time!(01:15:00),
+        ))]
+        datetime: time::PrimitiveDateTime,
     }
 
     let form_string = &["field1=101", "field2=102"].join("&");
 
-    let form: Option<FormWithDefaults> = lenient(&form_string).ok();
-    assert_eq!(form, Some(FormWithDefaults {
+    let form1: Option<FormWithDefaults> = lenient(&form_string).ok();
+    assert_eq!(form1, Some(FormWithDefaults {
         field1: 101,
         field2: 102,
         field3: true,
         field4: false,
         field5: false,
+        opt: Some(true),
+        res: Ok("hello".to_string()),
+        vec_num: vec![1, 2, 3],
+        vec_str: vec!["wow", "a", "string", "nice"],
+        hashmap: test_hashmap(),
+        btreemap: test_btreemap(),
+        boolean: false,
+        unsigned: 3,
+        nonzero: NonZeroI32::new(3).unwrap(),
+        float: 3.0,
+        str_ref: "wow",
+        string: "wowie".to_string(),
+        ip: [192u8, 168, 1, 0].into(),
+        addr: ([192u8, 168, 1, 0], 20).into(),
+        date: time::date!(2021-05-27),
+        time: time::time!(01:15:00),
+        datetime: time::PrimitiveDateTime::new(time::date!(2021-05-27), time::time!(01:15:00)),
     }));
-    let form: Option<FormWithDefaults> = strict(&form_string).ok();
-    assert!(form.is_none());
+    let form2: Option<FormWithDefaults> = strict(&form_string).ok();
+    assert!(form2.is_none());
 
->>>>>>> 6681f074 (update grammar, enforce single default, added failing and succeeding tests, update FromForm docs, update FromForm guide, fixed CI errors)
+    let form_string = &[
+        "field1=101",
+        "field2=102",
+        "field3=true",
+        "field5=true"
+    ].join("&");
+
+    let form3: Option<FormWithDefaults> = lenient(&form_string).ok();
+    assert_eq!(form3, Some(FormWithDefaults {
+        field1: 101,
+        field2: 102,
+        field3: true,
+        field4: false,
+        field5: true,
+        ..form1.unwrap() // cannot fail due to assertio and keeps test more concise
+    }));
+    let form4: Option<FormWithDefaults> = strict(&form_string).ok();
+    assert_eq!(form4, Some(FormWithDefaults {
+        field1: 101,
+        field2: 102,
+        field3: true,
+        field4: false,
+        field5: true,
+        ..form3.unwrap() // cannot fail due to assertio and keeps test more concise
+    }));
 }

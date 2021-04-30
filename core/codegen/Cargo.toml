@@ -28,3 +28,4 @@ glob = "0.3"
 rocket = { version = "0.5.0-dev", path = "../lib", features = ["json"] }
 version_check = "0.9"
 trybuild = "1.0"
+time = "0.2.11"
