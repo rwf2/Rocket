@@ -146,6 +146,7 @@ use rocket::http::{ContentType, Status};
 const DEFAULT_TEMPLATE_DIR: &str = "templates";
 
 /// Responder that renders a dynamic template.
+/// Note that this only contains metadata, not the actual rendered template.
 ///
 /// # Usage
 ///
