@@ -316,6 +316,7 @@ macro_rules! pub_request_impl {
     ///
     /// ```rust
     #[doc = $import]
+    /// # use rocket::local::form::LocalForm;
     /// # Client::_test(|client, _, _| {
     /// let client: &Client = client;
     /// let rocket = client.rocket();
@@ -326,7 +327,7 @@ macro_rules! pub_request_impl {
         form: impl Into<LocalForm<'c>>,
     ) -> LocalRequest<'c>
     {
-        self._form(form)
+        self._form(form.into())
     }
 
     /// Dispatches the request, returning the response.

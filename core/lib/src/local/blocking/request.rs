@@ -62,16 +62,13 @@ impl<'c> LocalRequest<'c> {
         LocalResponse { inner, client: self.client }
     }
 
-    fn _form(mut self, form: impl Into<LocalForm<'c>>) -> LocalRequest<'c> {
-        let form = form.into();
-        *self._body_mut() = form.body_data();
-        self._request_mut().add_header(form.content_type());
+    fn _form(mut self, form: LocalForm<'c>) -> LocalRequest<'c> {
+        self.inner = self.inner._form(form);
         self
     }
 
     pub_request_impl!("# use rocket::local::blocking::Client;\n\
-        use rocket::local::blocking::LocalRequest;\n\
-        # use rocket::local::form::LocalForm;");
+        use rocket::local::blocking::LocalRequest;");
 }
 
 impl std::fmt::Debug for LocalRequest<'_> {

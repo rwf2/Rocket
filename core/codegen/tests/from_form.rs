@@ -1,5 +1,4 @@
 use rocket::form::{Form, Strict, FromForm, FromFormField, Errors};
-use rocket::local::form::LocalForm;
 
 fn strict<'f, T: FromForm<'f>>(string: &'f str) -> Result<T, Errors<'f>> {
     Form::<Strict<T>>::parse(string).map(|s| s.into_inner())
@@ -584,12 +583,31 @@ fn test_multipart() {
     }
 
     let client = Client::debug_with(rocket::routes![form]).unwrap();
+    let ct = "multipart/form-data; boundary=X-BOUNDARY"
+        .parse::<ContentType>()
+        .unwrap();
+
+    let body = &[
+        "--X-BOUNDARY",
+        r#"Content-Disposition: form-data; name="names[]""#,
+        "",
+        "abcd",
+        "--X-BOUNDARY",
+        r#"Content-Disposition: form-data; name="names[]""#,
+        "",
+        "123",
+        "--X-BOUNDARY",
+        r#"Content-Disposition: form-data; name="file"; filename="foo.txt""#,
+        "Content-Type: text/plain",
+        "",
+        "hi there",
+        "--X-BOUNDARY--",
+        "",
+    ].join("\r\n");
+
     let response = client.post("/")
-        .form(LocalForm::new()
-            .field("names[]", "abcd")
-            .field("names[]", "123")
-            .file("foo.txt", ContentType::Plain, "hi there")
-        )
+        .header(ct)
+        .body(body)
         .dispatch();
 
     assert!(response.status().class().is_success());

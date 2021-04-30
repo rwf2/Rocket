@@ -120,16 +120,14 @@ impl<'c> LocalRequest<'c> {
         response
     }
 
-    fn _form(mut self, form: impl Into<LocalForm<'c>>) -> LocalRequest<'c> {
-        let form = form.into();
+    pub(crate) fn _form(mut self, form: LocalForm<'c>) -> LocalRequest<'c> {
         self.data = form.body_data();
-        self.add_header(form.content_type());
+        self.request.replace_header(form.content_type());
         self
     }
 
     pub_request_impl!("# use rocket::local::asynchronous::Client;\n\
-        use rocket::local::asynchronous::LocalRequest;\n\
-        # use rocket::local::form::LocalForm;" async await);
+        use rocket::local::asynchronous::LocalRequest;" async await);
 }
 
 impl<'c> Clone for LocalRequest<'c> {
