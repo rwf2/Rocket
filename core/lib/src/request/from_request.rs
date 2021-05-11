@@ -247,7 +247,7 @@ impl<S, E> IntoOutcome<S, (Status, E), ()> for Result<S, E> {
 /// ```rust
 /// # #[macro_use] extern crate rocket;
 /// # #[cfg(feature = "secrets")] mod wrapper {
-/// # use rocket::outcome::IntoOutcome;
+/// # use rocket::outcome::{IntoOutcome, try_outcome};
 /// # use rocket::request::{self, Outcome, FromRequest, Request};
 /// # struct User { id: String, is_admin: bool }
 /// # struct Database;
@@ -311,7 +311,7 @@ impl<S, E> IntoOutcome<S, (Status, E), ()> for Result<S, E> {
 /// ```rust
 /// # #[macro_use] extern crate rocket;
 /// # #[cfg(feature = "secrets")] mod wrapper {
-/// # use rocket::outcome::IntoOutcome;
+/// # use rocket::outcome::{IntoOutcome, try_outcome};
 /// # use rocket::request::{self, Outcome, FromRequest, Request};
 /// # struct User { id: String, is_admin: bool }
 /// # struct Database;

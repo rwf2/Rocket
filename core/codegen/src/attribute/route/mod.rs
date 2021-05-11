@@ -1,5 +1,7 @@
 mod parse;
 
+use std::hash::Hash;
+
 use proc_macro2::{TokenStream, Span};
 use devise::{Spanned, SpanWrapped, Result, FromMeta, Diagnostic};
 use devise::ext::TypeExt as _;
@@ -8,9 +10,9 @@ use crate::{proc_macro2, syn};
 use crate::proc_macro_ext::StringLit;
 use crate::syn_ext::{IdentExt, TypeExt as _};
 use crate::http_codegen::{Method, Optional};
-
 use crate::attribute::param::Guard;
-use parse::{Route, Attribute, MethodAttribute};
+
+use self::parse::{Route, Attribute, MethodAttribute};
 
 impl Route {
     pub fn guards(&self) -> impl Iterator<Item = &Guard> {
@@ -193,30 +195,20 @@ fn data_guard_decl(guard: &Guard) -> TokenStream {
 }
 
 fn internal_uri_macro_decl(route: &Route) -> TokenStream {
-    use std::sync::atomic::{AtomicUsize, Ordering};
-    use std::collections::hash_map::DefaultHasher;
-    use std::hash::{Hash, Hasher};
-
-    // Keep a global counter (+ thread ID later) to generate unique ids.
-    static COUNTER: AtomicUsize = AtomicUsize::new(0);
-
     // FIXME: Is this the right order? Does order matter?
     let uri_args = route.param_guards()
         .chain(route.query_guards())
         .map(|guard| (&guard.fn_ident, &guard.ty))
         .map(|(ident, ty)| quote!(#ident: #ty));
 
-    // Generate entropy based on the route's metadata.
-    let mut hasher = DefaultHasher::new();
-    route.handler.sig.ident.hash(&mut hasher);
-    route.attr.uri.path().hash(&mut hasher);
-    route.attr.uri.query().hash(&mut hasher);
-    std::process::id().hash(&mut hasher);
-    std::thread::current().id().hash(&mut hasher);
-    COUNTER.fetch_add(1, Ordering::AcqRel).hash(&mut hasher);
-
+    // Generate a unique macro name based on the route's metadata.
     let macro_name = route.handler.sig.ident.prepend(crate::URI_MACRO_PREFIX);
-    let inner_macro_name = macro_name.append(&hasher.finish().to_string());
+    let inner_macro_name = macro_name.uniqueify_with(|mut hasher| {
+        route.handler.sig.ident.hash(&mut hasher);
+        route.attr.uri.path().hash(&mut hasher);
+        route.attr.uri.query().hash(&mut hasher)
+    });
+
     let route_uri = route.attr.uri.to_string();
 
     quote_spanned! { Span::call_site() =>
@@ -335,7 +327,7 @@ fn codegen_route(route: Route) -> Result<TokenStream> {
         /// Rocket code generated proxy structure.
         #vis struct #handler_fn_name {  }
 
-        /// Rocket code generated proxy static conversion implementation.
+        /// Rocket code generated proxy static conversion implementations.
         impl #handler_fn_name {
             #[allow(non_snake_case, unreachable_patterns, unreachable_code)]
             fn into_info(self) -> #_route::StaticInfo {
@@ -363,7 +355,8 @@ fn codegen_route(route: Route) -> Result<TokenStream> {
                     sentinels: #sentinels,
                 }
             }
-            pub fn into(self) -> #Route {
+            #[doc(hidden)]
+            pub fn into_route(self) -> #Route {
                 self.into_info().into()
             }
         }

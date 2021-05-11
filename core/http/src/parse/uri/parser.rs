@@ -141,9 +141,12 @@ pub fn absolute_only<'a>(input: &mut RawInput<'a>) -> Result<'a, Absolute<'a>> {
 }
 
 #[parser]
-fn absolute_or_authority<'a>(
-    input: &mut RawInput<'a>,
-) -> Result<'a, Uri<'a>> {
+fn absolute_or_authority<'a>(input: &mut RawInput<'a>) -> Result<'a, Uri<'a>> {
+    // If the URI begins with `:`, it must follow with a `port`.
+    switch! {
+        peek(b':') => return Ok(Uri::Authority(authority(None)?)),
+    }
+
     let start = parse_current_marker!();
     let left = take_while(is_reg_name_char)?;
     let mark_at_left = parse_current_marker!();

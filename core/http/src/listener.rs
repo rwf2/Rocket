@@ -24,7 +24,10 @@ pub trait Listener {
     fn local_addr(&self) -> Option<SocketAddr>;
 
     /// Try to accept an incoming Connection if ready
-    fn poll_accept(&mut self, cx: &mut Context<'_>) -> Poll<io::Result<Self::Connection>>;
+    fn poll_accept(
+        self: Pin<&mut Self>,
+        cx: &mut Context<'_>
+    ) -> Poll<io::Result<Self::Connection>>;
 }
 
 /// A 'Connection' represents an open connection to a client
@@ -40,16 +43,17 @@ pin_project_lite::pin_project! {
     /// Accept). This type is internal to Rocket.
     #[must_use = "streams do nothing unless polled"]
     pub struct Incoming<L> {
-        listener: L,
         sleep_on_errors: Option<Duration>,
         #[pin]
         pending_error_delay: Option<Sleep>,
+        #[pin]
+        listener: L,
     }
 }
 
 impl<L: Listener> Incoming<L> {
     /// Construct an `Incoming` from an existing `Listener`.
-    pub fn from_listener(listener: L) -> Self {
+    pub fn new(listener: L) -> Self {
         Self {
             listener,
             sleep_on_errors: Some(Duration::from_millis(250)),
@@ -96,7 +100,7 @@ impl<L: Listener> Incoming<L> {
 
             me.pending_error_delay.set(None);
 
-            match me.listener.poll_accept(cx) {
+            match me.listener.as_mut().poll_accept(cx) {
                 Poll::Ready(Ok(stream)) => {
                     return Poll::Ready(Ok(stream));
                 },
@@ -123,7 +127,7 @@ impl<L: Listener> Incoming<L> {
     }
 }
 
-impl<L: Listener + Unpin> Accept for Incoming<L> {
+impl<L: Listener> Accept for Incoming<L> {
     type Conn = L::Connection;
     type Error = io::Error;
 
@@ -171,7 +175,10 @@ impl Listener for TcpListener {
         self.local_addr().ok()
     }
 
-    fn poll_accept(&mut self, cx: &mut Context<'_>) -> Poll<io::Result<Self::Connection>> {
+    fn poll_accept(
+        self: Pin<&mut Self>,
+        cx: &mut Context<'_>
+    ) -> Poll<io::Result<Self::Connection>> {
         (*self).poll_accept(cx).map_ok(|(stream, _addr)| stream)
     }
 }

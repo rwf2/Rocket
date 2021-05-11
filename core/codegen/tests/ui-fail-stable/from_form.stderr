@@ -399,11 +399,11 @@ error[E0308]: mismatched types
    --> $DIR/from_form.rs:144:24
     |
 144 |     #[field(validate = 123)]
-    |             --------   ^^^ expected enum `std::result::Result`, found integer
+    |             --------   ^^^ expected enum `Result`, found integer
     |             |
     |             expected due to this
     |
-    = note: expected enum `std::result::Result<(), Errors<'_>>`
+    = note: expected enum `Result<(), Errors<'_>>`
                found type `{integer}`
 
 error[E0308]: mismatched types

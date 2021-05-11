@@ -21,19 +21,19 @@ struct Post {
 }
 
 #[post("/", data = "<post>")]
-async fn create(db: State<'_, Db>, post: Json<Post>) -> Result<Created<Json<Post>>> {
+async fn create(db: &State<Db>, post: Json<Post>) -> Result<Created<Json<Post>>> {
     // There is no support for `RETURNING`.
     sqlx::query!("INSERT INTO posts (title, text) VALUES (?, ?)", post.title, post.text)
-        .execute(&*db)
+        .execute(&**db)
         .await?;
 
     Ok(Created::new("/").body(post))
 }
 
 #[get("/")]
-async fn list(db: State<'_, Db>) -> Result<Json<Vec<i64>>> {
+async fn list(db: &State<Db>) -> Result<Json<Vec<i64>>> {
     let ids = sqlx::query!("SELECT id FROM posts")
-        .fetch(&*db)
+        .fetch(&**db)
         .map_ok(|record| record.id)
         .try_collect::<Vec<_>>()
         .await?;
@@ -42,26 +42,26 @@ async fn list(db: State<'_, Db>) -> Result<Json<Vec<i64>>> {
 }
 
 #[get("/<id>")]
-async fn read(db: State<'_, Db>, id: i64) -> Option<Json<Post>> {
+async fn read(db: &State<Db>, id: i64) -> Option<Json<Post>> {
     sqlx::query!("SELECT id, title, text FROM posts WHERE id = ?", id)
-        .fetch_one(&*db)
+        .fetch_one(&**db)
         .map_ok(|r| Json(Post { id: Some(r.id), title: r.title, text: r.text }))
         .await
         .ok()
 }
 
 #[delete("/<id>")]
-async fn delete(db: State<'_, Db>, id: i64) -> Result<Option<()>> {
+async fn delete(db: &State<Db>, id: i64) -> Result<Option<()>> {
     let result = sqlx::query!("DELETE FROM posts WHERE id = ?", id)
-        .execute(&*db)
+        .execute(&**db)
         .await?;
 
     Ok((result.rows_affected() == 1).then(|| ()))
 }
 
 #[delete("/")]
-async fn destroy(db: State<'_, Db>) -> Result<()> {
-    sqlx::query!("DELETE FROM posts").execute(&*db).await?;
+async fn destroy(db: &State<Db>) -> Result<()> {
+    sqlx::query!("DELETE FROM posts").execute(&**db).await?;
 
     Ok(())
 }

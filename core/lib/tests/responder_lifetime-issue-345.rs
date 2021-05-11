@@ -19,11 +19,11 @@ impl<'r, 'o: 'r, R: Responder<'r, 'o>> Responder<'r, 'o> for CustomResponder<'r,
 }
 
 #[get("/unit_state")]
-fn unit_state(state: State<SomeState>) -> CustomResponder<()> {
-    CustomResponder { responder: (), state: state.inner() }
+fn unit_state(state: &State<SomeState>) -> CustomResponder<()> {
+    CustomResponder { responder: (), state: &*state }
 }
 
 #[get("/string_state")]
-fn string_state(state: State<SomeState>) -> CustomResponder<String> {
-    CustomResponder { responder: "".to_string(), state: state.inner() }
+fn string_state(state: &State<SomeState>) -> CustomResponder<String> {
+    CustomResponder { responder: "".to_string(), state: &*state }
 }

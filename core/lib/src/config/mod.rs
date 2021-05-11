@@ -113,6 +113,7 @@
 
 mod config;
 mod tls;
+mod shutdown;
 
 #[cfg(feature = "secrets")]
 mod secret_key;
@@ -121,11 +122,16 @@ mod secret_key;
 
 pub use config::Config;
 pub use crate::log::LogLevel;
+pub use shutdown::Shutdown;
 pub use tls::TlsConfig;
 
 #[cfg(feature = "secrets")]
 #[cfg_attr(nightly, doc(cfg(feature = "secrets")))]
 pub use secret_key::SecretKey;
+
+#[cfg(unix)]
+#[cfg_attr(nightly, doc(cfg(unix)))]
+pub use shutdown::Sig;
 
 #[cfg(test)]
 mod tests {
@@ -133,7 +139,7 @@ mod tests {
     use figment::{Figment, Profile};
     use pretty_assertions::assert_eq;
 
-    use crate::config::{Config, TlsConfig};
+    use crate::config::{Config, TlsConfig, Shutdown};
     use crate::log::LogLevel;
     use crate::data::{Limits, ToByteUnit};
 
@@ -217,7 +223,7 @@ mod tests {
 
             jail.create_file("Rocket.toml", r#"
                 [global]
-                ctrlc = 0
+                shutdown.ctrlc = 0
 
                 [global.tls]
                 certs = "/ssl/cert.pem"
@@ -231,7 +237,7 @@ mod tests {
 
             let config = Config::from(Config::figment());
             assert_eq!(config, Config {
-                ctrlc: false,
+                shutdown: Shutdown { ctrlc: false, ..Default::default() },
                 tls: Some(TlsConfig::from_paths("/ssl/cert.pem", "/ssl/key.pem")),
                 limits: Limits::default()
                     .limit("forms", 1.mebibytes())

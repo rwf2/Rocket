@@ -45,6 +45,10 @@ indexmap = { version = "1.0", features = ["serde-1"] }
 tempfile = "3"
 async-trait = "0.1.43"
 
+[dependencies.async-stream]
+git = "https://github.com/SergioBenitez/async-stream.git"
+rev = "c46ada9"
+
 [dependencies.state]
 git = "https://github.com/SergioBenitez/state.git"
 rev = "8f94dc"

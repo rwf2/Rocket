@@ -25,37 +25,37 @@ async fn responder_foo() {
     let local_req = client.get("/");
     let req = local_req.inner();
 
-    let mut response = Foo::First("hello".into())
+    let mut r = Foo::First("hello".into())
         .respond_to(req)
         .expect("response okay");
 
-    assert_eq!(response.status(), Status::Ok);
-    assert_eq!(response.content_type(), Some(ContentType::Plain));
-    assert_eq!(response.body_string().await, Some("hello".into()));
+    assert_eq!(r.status(), Status::Ok);
+    assert_eq!(r.content_type(), Some(ContentType::Plain));
+    assert_eq!(r.body_mut().to_string().await.unwrap(), "hello");
 
-    let mut response = Foo::Second("just a test".into())
+    let mut r = Foo::Second("just a test".into())
         .respond_to(req)
         .expect("response okay");
 
-    assert_eq!(response.status(), Status::InternalServerError);
-    assert_eq!(response.content_type(), Some(ContentType::Binary));
-    assert_eq!(response.body_string().await, Some("just a test".into()));
+    assert_eq!(r.status(), Status::InternalServerError);
+    assert_eq!(r.content_type(), Some(ContentType::Binary));
+    assert_eq!(r.body_mut().to_string().await.unwrap(), "just a test");
 
-    let mut response = Foo::Third { responder: "well, hi", ct: ContentType::JSON }
+    let mut r = Foo::Third { responder: "well, hi", ct: ContentType::JSON }
         .respond_to(req)
         .expect("response okay");
 
-    assert_eq!(response.status(), Status::NotFound);
-    assert_eq!(response.content_type(), Some(ContentType::HTML));
-    assert_eq!(response.body_string().await, Some("well, hi".into()));
+    assert_eq!(r.status(), Status::NotFound);
+    assert_eq!(r.content_type(), Some(ContentType::HTML));
+    assert_eq!(r.body_mut().to_string().await.unwrap(), "well, hi");
 
-    let mut response = Foo::Fourth { string: "goodbye", ct: ContentType::JSON }
+    let mut r = Foo::Fourth { string: "goodbye", ct: ContentType::JSON }
         .respond_to(req)
         .expect("response okay");
 
-    assert_eq!(response.status(), Status::raw(105));
-    assert_eq!(response.content_type(), Some(ContentType::JSON));
-    assert_eq!(response.body_string().await, Some("goodbye".into()));
+    assert_eq!(r.status().code, 105);
+    assert_eq!(r.content_type(), Some(ContentType::JSON));
+    assert_eq!(r.body_mut().to_string().await.unwrap(), "goodbye");
 }
 
 #[derive(Responder)]
@@ -74,17 +74,17 @@ async fn responder_bar() {
     let local_req = client.get("/");
     let req = local_req.inner();
 
-    let mut response = Bar {
+    let mut r = Bar {
         responder: Foo::Second("foo foo".into()),
         other: ContentType::HTML,
         third: Cookie::new("cookie", "here!"),
         _yet_another: "uh..hi?".into()
     }.respond_to(req).expect("response okay");
 
-    assert_eq!(response.status(), Status::InternalServerError);
-    assert_eq!(response.content_type(), Some(ContentType::Plain));
-    assert_eq!(response.body_string().await, Some("foo foo".into()));
-    assert_eq!(response.headers().get_one("Set-Cookie"), Some("cookie=here!"));
+    assert_eq!(r.status(), Status::InternalServerError);
+    assert_eq!(r.content_type(), Some(ContentType::Plain));
+    assert_eq!(r.body_mut().to_string().await.unwrap(), "foo foo");
+    assert_eq!(r.headers().get_one("Set-Cookie"), Some("cookie=here!"));
 }
 
 #[derive(Responder)]
@@ -99,11 +99,11 @@ async fn responder_baz() {
     let local_req = client.get("/");
     let req = local_req.inner();
 
-    let mut response = Baz { responder: "just a custom" }
+    let mut r = Baz { responder: "just a custom" }
         .respond_to(req)
         .expect("response okay");
 
-    assert_eq!(response.status(), Status::Ok);
-    assert_eq!(response.content_type(), Some(ContentType::new("application", "x-custom")));
-    assert_eq!(response.body_string().await, Some("just a custom".into()));
+    assert_eq!(r.status(), Status::Ok);
+    assert_eq!(r.content_type(), Some(ContentType::new("application", "x-custom")));
+    assert_eq!(r.body_mut().to_string().await.unwrap(), "just a custom");
 }

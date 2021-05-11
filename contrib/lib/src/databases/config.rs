@@ -54,7 +54,7 @@ impl Config {
     /// # use rocket::figment::{Figment, providers::{Format, Toml}};
     /// // Assume that these are the contents of `Rocket.toml`:
     /// # let toml = Toml::string(r#"
-    /// [global.databases]
+    /// [default.databases]
     /// my_db = { url = "db/db.sqlite", pool_size = 25 }
     /// my_other_db = { url = "mysql://root:root@localhost/database" }
     /// # "#).nested();

@@ -40,7 +40,7 @@ use crate::{Request, Response};
 ///
 /// // Check metadata validity.
 /// assert_eq!(response.status(), Status::Ok);
-/// assert_eq!(response.body().unwrap().known_size(), Some(13));
+/// assert_eq!(response.body().preset_size(), Some(13));
 ///
 /// // Read 10 bytes of the body. Note: in reality, we'd use `into_string()`.
 /// let mut buffer = [0; 10];
@@ -107,12 +107,12 @@ impl LocalResponse<'_> {
         &self.cookies
     }
 
-    pub(crate) async fn _into_string(mut self) -> Option<String> {
-        self.response.body_string().await
+    pub(crate) async fn _into_string(mut self) -> io::Result<String> {
+        self.response.body_mut().to_string().await
     }
 
-    pub(crate) async fn _into_bytes(mut self) -> Option<Vec<u8>> {
-        self.response.body_bytes().await
+    pub(crate) async fn _into_bytes(mut self) -> io::Result<Vec<u8>> {
+        self.response.body_mut().to_bytes().await
     }
 
     // Generates the public API methods, which call the private methods above.
@@ -126,12 +126,7 @@ impl AsyncRead for LocalResponse<'_> {
         cx: &mut Context<'_>,
         buf: &mut ReadBuf<'_>,
     ) -> Poll<io::Result<()>> {
-        let body = match self.response.body_mut() {
-            Some(body) => body,
-            _ => return Poll::Ready(Ok(()))
-        };
-
-        Pin::new(body.as_reader()).poll_read(cx, buf)
+        Pin::new(self.response.body_mut()).poll_read(cx, buf)
     }
 }
 

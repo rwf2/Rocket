@@ -16,7 +16,7 @@ The process for using managed state is simple:
 
   1. Call `manage` on the `Rocket` instance corresponding to your application
      with the initial value of the state.
-  2. Add a `State<T>` type to any request handler, where `T` is the type of the
+  2. Add a `&State<T>` type to any request handler, where `T` is the type of the
      value passed into `manage`.
 
 ! note: All managed state must be thread-safe.
@@ -63,10 +63,10 @@ rocket::build()
 ### Retrieving State
 
 State that is being managed by Rocket can be retrieved via the
-[`State`](@api/rocket/struct.State.html) type: a [request
-guard](../requests/#request-guards) for managed state. To use the request
-guard, add a `State<T>` type to any request handler, where `T` is the type of
-the managed state. For example, we can retrieve and respond with the current
+[`&State`](@api/rocket/struct.State.html) type: a [request
+guard](../requests/#request-guards) for managed state. To use the request guard,
+add a `&State<T>` type to any request handler, where `T` is the type of the
+managed state. For example, we can retrieve and respond with the current
 `HitCount` in a `count` route as follows:
 
 ```rust
@@ -79,13 +79,13 @@ the managed state. For example, we can retrieve and respond with the current
 use rocket::State;
 
 #[get("/count")]
-fn count(hit_count: State<HitCount>) -> String {
+fn count(hit_count: &State<HitCount>) -> String {
     let current_count = hit_count.count.load(Ordering::Relaxed);
     format!("Number of visits: {}", current_count)
 }
 ```
 
-You can retrieve more than one `State` type in a single route as well:
+You can retrieve more than one `&State` type in a single route as well:
 
 ```rust
 # #[macro_use] extern crate rocket;
@@ -96,51 +96,60 @@ You can retrieve more than one `State` type in a single route as well:
 # use rocket::State;
 
 #[get("/state")]
-fn state(hit_count: State<HitCount>, config: State<Config>) { /* .. */ }
+fn state(hit_count: &State<HitCount>, config: &State<Config>) { /* .. */ }
 ```
 
 ! warning
 
-  If you request a `State<T>` for a `T` that is not `managed`, Rocket won't call
-  the offending route. Instead, Rocket will log an error message and return a
-  **500** error to the client.
+  If you request a `&State<T>` for a `T` that is not `managed`, Rocket will
+  refuse to start your application. This prevents what would have been an
+  unmanaged state runtime error. Unmanaged state is detected at runtime through
+  [_sentinels_](@api/rocket/trait.Sentinel.html), so there are limitations. If a
+  limitation is hit, Rocket still won't call an the offending route. Instead,
+  Rocket will log an error message and return a **500** error to the client.
 
 You can find a complete example using the `HitCount` structure in the [state
 example on GitHub](@example/state) and learn more about the [`manage`
 method](@api/rocket/struct.Rocket.html#method.manage) and [`State`
 type](@api/rocket/struct.State.html) in the API docs.
 
-### Within Guards
+# Within Guards
 
-It can also be useful to retrieve managed state from a `FromRequest`
-implementation. To do so, simply invoke `State<T>` as a guard using the
-[`Request::guard()`] method.
+Because `State` is itself a request guard, managed state can be retrieved from
+another request guard's implementation using either [`Request::guard()`] or
+[`Rocket::state()`]. In the following code example, the `Item` request guard
+retrieves `MyConfig` from managed state using both methods:
 
 ```rust
-# #[macro_use] extern crate rocket;
-# fn main() {}
-
 use rocket::State;
 use rocket::request::{self, Request, FromRequest};
-# use std::sync::atomic::{AtomicUsize, Ordering};
+use rocket::outcome::IntoOutcome;
 
-# struct T;
-# struct HitCount { count: AtomicUsize }
-# type ErrorType = ();
+# struct MyConfig { user_val: String };
+struct Item<'r>(&'r str);
+
 #[rocket::async_trait]
-impl<'r> FromRequest<'r> for T {
-    type Error = ErrorType;
+impl<'r> FromRequest<'r> for Item<'r> {
+    type Error = ();
 
-    async fn from_request(req: &'r Request<'_>) -> request::Outcome<T, Self::Error> {
-        let hit_count_state = try_outcome!(req.guard::<State<HitCount>>().await);
-        let current_count = hit_count_state.count.load(Ordering::Relaxed);
-        /* ... */
-        # request::Outcome::Success(T)
+    async fn from_request(request: &'r Request<'_>) -> request::Outcome<Self, ()> {
+        // Using `State` as a request guard. Use `inner()` to get an `'r`.
+        let outcome = request.guard::<&State<MyConfig>>().await
+            .map(|my_config| Item(&my_config.user_val));
+
+        // Or alternatively, using `Rocket::state()`:
+        let outcome = request.rocket().state::<MyConfig>()
+            .map(|my_config| Item(&my_config.user_val))
+            .or_forward(());
+
+        outcome
     }
 }
 ```
 
+
 [`Request::guard()`]: @api/rocket/struct.Request.html#method.guard
+[`Rocket::state()`]: @api/rocket/struct.Rocket.html#method.state
 
 ## Request-Local State
 

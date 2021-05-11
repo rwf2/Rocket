@@ -7,7 +7,7 @@ use figment::value::{Map, Dict};
 use serde::{Deserialize, Serialize};
 use yansi::Paint;
 
-use crate::config::{TlsConfig, LogLevel};
+use crate::config::{TlsConfig, LogLevel, Shutdown};
 use crate::request::{self, Request, FromRequest};
 use crate::data::Limits;
 
@@ -82,17 +82,16 @@ pub struct Config {
     #[cfg_attr(nightly, doc(cfg(feature = "secrets")))]
     #[serde(serialize_with = "SecretKey::serialize_zero")]
     pub secret_key: SecretKey,
-    /// The directory to store temporary files in. **(default:
-    /// [`std::env::temp_dir`]).
+    /// Directory to store temporary files in. **(default:
+    /// [`std::env::temp_dir()`])**
     pub temp_dir: PathBuf,
     /// Max level to log. **(default: _debug_ `normal` / _release_ `critical`)**
     pub log_level: LogLevel,
+    /// Graceful shutdown configuration. **(default: [`Shutdown::default()`])**
+    pub shutdown: Shutdown,
     /// Whether to use colors and emoji when logging. **(default: `true`)**
     #[serde(deserialize_with = "figment::util::bool_from_str_or_int")]
     pub cli_colors: bool,
-    /// Whether `ctrl-c` initiates a server shutdown. **(default: `true`)**
-    #[serde(deserialize_with = "figment::util::bool_from_str_or_int")]
-    pub ctrlc: bool,
 }
 
 impl Default for Config {
@@ -152,7 +151,7 @@ impl Config {
             temp_dir: std::env::temp_dir(),
             log_level: LogLevel::Normal,
             cli_colors: true,
-            ctrlc: true,
+            shutdown: Shutdown::default(),
         }
     }
 
@@ -318,6 +317,7 @@ impl Config {
         launch_info_!("temp dir: {}", Paint::default(&self.temp_dir.display()).bold());
         launch_info_!("log level: {}", Paint::default(self.log_level).bold());
         launch_info_!("cli colors: {}", Paint::default(&self.cli_colors).bold());
+        launch_info_!("shutdown: {}", Paint::default(&self.shutdown).bold());
 
         // Check for now depreacted config values.
         for (key, replacement) in Self::DEPRECATED_KEYS {
@@ -339,7 +339,7 @@ impl Config {
                 warn!("found set deprecated profile `{}`", Paint::white(profile));
 
                 if let Some(new_profile) = replacement {
-                    launch_info_!("profile has been by replaced by `{}`", Paint::white(new_profile));
+                    launch_info_!("profile was replaced by `{}`", Paint::white(new_profile));
                 } else {
                     launch_info_!("profile `{}` has no special meaning", profile);
                 }
@@ -398,8 +398,8 @@ impl Config {
     /// The stringy parameter name for setting/extracting [`Config::log_level`].
     pub const LOG_LEVEL: &'static str = "log_level";
 
-    /// The stringy parameter name for setting/extracting [`Config::ctrlc`].
-    pub const CTRLC: &'static str = "ctrlc";
+    /// The stringy parameter name for setting/extracting [`Config::shutdown`].
+    pub const SHUTDOWN: &'static str = "shutdown";
 }
 
 impl Provider for Config {

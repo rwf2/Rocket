@@ -26,26 +26,26 @@
 mod responder;
 mod redirect;
 mod named_file;
-mod stream;
 mod response;
 mod debug;
+mod body;
 
 pub(crate) mod flash;
 
 pub mod content;
 pub mod status;
+pub mod stream;
 
-#[doc(hidden)] pub use rocket_codegen::Responder;
+#[doc(hidden)]
+pub use rocket_codegen::Responder;
 
-pub use self::response::DEFAULT_CHUNK_SIZE;
-pub use self::response::{Response, ResponseBody, ResponseBuilder, Body};
+pub use self::response::{Response, Builder};
+pub use self::body::Body;
 pub use self::responder::Responder;
 pub use self::redirect::Redirect;
 pub use self::flash::Flash;
 pub use self::named_file::NamedFile;
-pub use self::stream::Stream;
 pub use self::debug::Debug;
-#[doc(inline)] pub use self::content::Content;
 
 /// Type alias for the `Result` of a [`Responder::respond_to()`] call.
 pub type Result<'r> = std::result::Result<Response<'r>, crate::http::Status>;

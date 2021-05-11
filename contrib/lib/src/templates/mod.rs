@@ -140,7 +140,7 @@ use std::error::Error;
 use rocket::{Rocket, Orbit, Ignite, Sentinel};
 use rocket::request::Request;
 use rocket::fairing::Fairing;
-use rocket::response::{self, Content, Responder};
+use rocket::response::{self, Responder};
 use rocket::http::{ContentType, Status};
 
 const DEFAULT_TEMPLATE_DIR: &str = "templates";
@@ -430,7 +430,7 @@ impl<'r> Responder<'r, 'static> for Template {
             self.finalize(&ctxt)?
         };
 
-        Content(content_type, render).respond_to(req)
+        (content_type, render).respond_to(req)
     }
 }
 

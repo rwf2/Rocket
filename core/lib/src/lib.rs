@@ -4,6 +4,7 @@
 #![doc(html_favicon_url = "https://rocket.rs/images/favicon.ico")]
 #![doc(html_logo_url = "https://rocket.rs/images/logo-boxed.png")]
 #![cfg_attr(nightly, feature(doc_cfg))]
+#![cfg_attr(nightly, feature(decl_macro))]
 
 #![warn(rust_2018_idioms)]
 
@@ -101,17 +102,10 @@
 //!
 //! [testing chapter of the guide]: https://rocket.rs/master/guide/testing/#testing
 
-#[macro_use]
-#[allow(unused_imports)]
-extern crate rocket_codegen;
-
-pub use rocket_codegen::*;
-pub use async_trait::*;
-
 /// These are public dependencies! Update docs if these are changed, especially
 /// figment's version number in docs.
-#[doc(hidden)]
-pub use yansi;
+#[doc(hidden)] pub use yansi;
+#[doc(hidden)] pub use async_stream;
 pub use futures;
 pub use tokio;
 pub use figment;
@@ -145,6 +139,8 @@ pub mod http {
     pub use crate::cookies::*;
 }
 
+/// TODO: We need a futures mod or something.
+mod trip_wire;
 mod shutdown;
 mod server;
 mod ext;
@@ -163,6 +159,7 @@ mod phase;
 #[doc(inline)] pub use phase::{Phase, Build, Ignite, Orbit};
 #[doc(inline)] pub use error::Error;
 #[doc(inline)] pub use sentinel::Sentinel;
+#[doc(inline)] pub use rocket_codegen::*;
 pub use crate::rocket::Rocket;
 pub use crate::request::Request;
 pub use crate::shutdown::Shutdown;
@@ -180,9 +177,38 @@ pub fn custom<T: figment::Provider>(provider: T) -> Rocket<Build> {
     Rocket::custom(provider)
 }
 
+/// Retrofits support for `async fn` in trait impls and declarations.
+///
+/// Any trait declaration or trait `impl` decorated with `#[async_trait]` is
+/// retrofitted with support for `async fn`s:
+///
+/// ```rust
+/// # use rocket::*;
+/// #[async_trait]
+/// trait MyAsyncTrait {
+///     async fn do_async_work();
+/// }
+///
+/// #[async_trait]
+/// impl MyAsyncTrait for () {
+///     async fn do_async_work() { /* .. */ }
+/// }
+/// ```
+///
+/// All `impl`s for a trait declared with `#[async_trait]` must themselves be
+/// decorated with `#[async_trait]`. Many of Rocket's traits, such as
+/// [`FromRequest`](crate::request::FromRequest) and
+/// [`Fairing`](crate::fairing::Fairing) are `async`. As such, implementations
+/// of said traits must be decorated with `#[async_trait]`. See the individual
+/// trait docs for trait-specific details.
+///
+/// For more details on `#[async_trait]`, see [`async_trait`](mod@async_trait).
+#[doc(inline)]
+pub use async_trait::async_trait;
+
 /// WARNING: This is unstable! Do not use this method outside of Rocket!
 #[doc(hidden)]
-pub fn async_test<R>(fut: impl std::future::Future<Output = R> + Send) -> R {
+pub fn async_test<R>(fut: impl std::future::Future<Output = R>) -> R {
     tokio::runtime::Builder::new_multi_thread()
         .thread_name("rocket-test-worker-thread")
         .worker_threads(1)

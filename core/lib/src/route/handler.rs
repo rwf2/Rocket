@@ -103,8 +103,8 @@ pub type BoxFuture<'r, T = Outcome<'r>> = futures::future::BoxFuture<'r, T>;
 /// use rocket::State;
 ///
 /// #[get("/")]
-/// fn custom_handler(state: State<Kind>) -> &'static str {
-///     match *state {
+/// fn custom_handler(state: &State<Kind>) -> &'static str {
+///     match state.inner() {
 ///         Kind::Simple => "simple",
 ///         Kind::Intermediate => "intermediate",
 ///         Kind::Complex => "complex",

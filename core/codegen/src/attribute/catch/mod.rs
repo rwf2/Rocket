@@ -61,9 +61,9 @@ pub fn _catch(
         /// Rocket code generated proxy structure.
         #vis struct #user_catcher_fn_name {  }
 
-        /// Rocket code generated proxy static conversion implementation.
-        impl From<#user_catcher_fn_name> for #_catcher::StaticInfo {
-            fn from(_: #user_catcher_fn_name) -> #_catcher::StaticInfo {
+        /// Rocket code generated proxy static conversion implementations.
+        impl #user_catcher_fn_name {
+            fn into_info(self) -> #_catcher::StaticInfo {
                 fn monomorphized_function<'_b>(
                     #__status: #Status,
                     #__req: &'_b #Request<'_>
@@ -83,13 +83,10 @@ pub fn _catch(
                     handler: monomorphized_function,
                 }
             }
-        }
 
-        /// Rocket code generated proxy conversion implementation.
-        impl From<#user_catcher_fn_name> for #Catcher {
-            #[inline]
-            fn from(_: #user_catcher_fn_name) -> #Catcher {
-                #_catcher::StaticInfo::from(#user_catcher_fn_name {}).into()
+            #[doc(hidden)]
+            pub fn into_catcher(self) -> #Catcher {
+                self.into_info().into()
             }
         }
     })

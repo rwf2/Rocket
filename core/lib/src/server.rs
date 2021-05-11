@@ -6,12 +6,11 @@ use futures::future::{self, FutureExt, Future, TryFutureExt, BoxFuture};
 use tokio::sync::oneshot;
 use yansi::Paint;
 
-use crate::{Rocket, Orbit, Request, Data, route};
+use crate::{Rocket, Orbit, Request, Response, Data, route};
 use crate::form::Form;
-use crate::response::{Response, Body};
 use crate::outcome::Outcome;
 use crate::error::{Error, ErrorKind};
-use crate::ext::AsyncReadExt;
+use crate::ext::{AsyncReadExt, CancellableListener, CancellableIo};
 
 use crate::http::{Method, Status, Header, hyper};
 use crate::http::private::{Listener, Connection, Incoming};
@@ -117,7 +116,7 @@ impl Rocket<Orbit> {
     ) {
         match self.make_response(response, tx).await {
             Ok(()) => info_!("{}", Paint::green("Response succeeded.")),
-            Err(e) => error_!("Failed to write response: {:?}.", e),
+            Err(e) => error_!("Failed to write response: {}.", e),
         }
     }
 
@@ -147,31 +146,20 @@ impl Rocket<Orbit> {
             })
         };
 
-        match response.body_mut() {
-            None => {
-                hyp_res = hyp_res.header(hyper::header::CONTENT_LENGTH, 0);
-                send_response(hyp_res, hyper::Body::empty())?;
-            }
-            Some(body) => {
-                if let Some(s) = body.size().await {
-                    hyp_res = hyp_res.header(hyper::header::CONTENT_LENGTH, s);
-                }
+        let body = response.body_mut();
+        if let Some(n) = body.size().await {
+            hyp_res = hyp_res.header(hyper::header::CONTENT_LENGTH, n);
+        }
 
-                let chunk_size = match *body {
-                    Body::Chunked(_, chunk_size) => chunk_size as usize,
-                    Body::Sized(_, _) => crate::response::DEFAULT_CHUNK_SIZE,
-                };
+        let max_chunk_size = body.max_chunk_size();
+        let (mut sender, hyp_body) = hyper::Body::channel();
+        send_response(hyp_res, hyp_body)?;
 
-                let (mut sender, hyp_body) = hyper::Body::channel();
-                send_response(hyp_res, hyp_body)?;
-
-                let mut stream = body.as_reader().into_bytes_stream(chunk_size);
-                while let Some(next) = stream.next().await {
-                    sender.send_data(next?).await
-                        .map_err(|e| io::Error::new(io::ErrorKind::Other, e))?;
-                }
-            }
-        };
+        let mut stream = body.into_bytes_stream(max_chunk_size);
+        while let Some(next) = stream.next().await {
+            sender.send_data(next?).await
+                .map_err(|e| io::Error::new(io::ErrorKind::Other, e))?;
+        }
 
         Ok(())
     }
@@ -404,8 +392,7 @@ impl Rocket<Orbit> {
 
     // TODO.async: Solidify the Listener APIs and make this function public
     pub(crate) async fn http_server<L>(self, listener: L) -> Result<(), Error>
-        where L: Listener + Send + Unpin + 'static,
-              <L as Listener>::Connection: Send + Unpin + 'static
+        where L: Listener + Send, <L as Listener>::Connection: Send + Unpin + 'static
     {
         // Determine keep-alives.
         let http1_keepalive = self.config.keep_alive != 0;
@@ -414,15 +401,17 @@ impl Rocket<Orbit> {
             n => Some(std::time::Duration::from_secs(n as u64))
         };
 
-        // Get the shutdown handle (to initiate) and signal (when initiated).
-        let shutdown_handle = self.shutdown.clone();
-        let shutdown_signal = match self.config.ctrlc {
-            true => tokio::signal::ctrl_c().boxed(),
-            false => future::pending().boxed(),
-        };
+        // Set up cancellable I/O from the given listener. Shutdown occurs when
+        // `Shutdown` (`TripWire`) resolves. This can occur directly through a
+        // notification or indirectly through an external signal which, when
+        // received, results in triggering the notify.
+        let shutdown = self.shutdown();
+        let external_shutdown = self.config.shutdown.collective_signal();
+        let grace = self.config.shutdown.grace as u64;
+        let mercy = self.config.shutdown.mercy as u64;
 
         let rocket = Arc::new(self);
-        let service = hyper::make_service_fn(move |conn: &<L as Listener>::Connection| {
+        let service_fn = move |conn: &CancellableIo<_, L::Connection>| {
             let rocket = rocket.clone();
             let remote = conn.remote_addr().unwrap_or_else(|| ([0, 0, 0, 0], 0).into());
             async move {
@@ -430,33 +419,26 @@ impl Rocket<Orbit> {
                     hyper_service_fn(rocket.clone(), remote, req)
                 }))
             }
-        });
+        };
 
         // NOTE: `hyper` uses `tokio::spawn()` as the default executor.
-        let shutdown_receiver = shutdown_handle.clone();
-        let server = hyper::Server::builder(Incoming::from_listener(listener))
+        let listener = CancellableListener::new(shutdown.clone(), listener, grace, mercy);
+        let server = hyper::Server::builder(Incoming::new(listener))
             .http1_keepalive(http1_keepalive)
             .http2_keep_alive_interval(http2_keep_alive)
-            .serve(service)
-            .with_graceful_shutdown(async move { shutdown_receiver.notified().await; })
+            .serve(hyper::make_service_fn(service_fn))
+            .with_graceful_shutdown(shutdown.clone())
             .map_err(|e| Error::new(ErrorKind::Runtime(Box::new(e))));
 
-        tokio::pin!(server);
-
-        let selecter = future::select(shutdown_signal, server);
+        tokio::pin!(server, external_shutdown);
+        let selecter = future::select(external_shutdown, server);
         match selecter.await {
-            future::Either::Left((Ok(()), server)) => {
-                // Ctrl-was pressed. Signal shutdown, wait for the server.
-                shutdown_handle.notify_one();
+            future::Either::Left((_, server)) => {
+                // External signal received. Request shutdown, wait for server.
+                shutdown.notify();
                 server.await
             }
-            future::Either::Left((Err(err), server)) => {
-                // Error setting up ctrl-c signal. Let the user know.
-                warn!("Failed to enable `ctrl-c` graceful signal shutdown.");
-                info_!("Error: {}", err);
-                server.await
-            }
-            // Server shut down before Ctrl-C; return the result.
+            // Internal shutdown or server error. Return the result.
             future::Either::Right((result, _)) => result,
         }
     }

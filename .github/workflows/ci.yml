@@ -58,7 +58,8 @@ jobs:
       - name: Install Native Dependencies (Linux)
         if: matrix.platform.name == 'Linux'
         run: |
-          sudo apt-get install -y libmariadb-client-lgpl-dev-compat libpq-dev libsqlite3-dev
+          sudo apt-get update
+          sudo apt-get install -y libmysqlclient-dev libpq-dev libsqlite3-dev
 
       - name: Install Rust
         uses: actions-rs/toolchain@v1

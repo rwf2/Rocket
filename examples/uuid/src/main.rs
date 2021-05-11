@@ -15,7 +15,7 @@ use rocket_contrib::uuid::extern_uuid;
 struct People(HashMap<extern_uuid::Uuid, &'static str>);
 
 #[get("/people/<id>")]
-fn people(id: Uuid, people: State<People>) -> Result<String, String> {
+fn people(id: Uuid, people: &State<People>) -> Result<String, String> {
     // Because Uuid implements the Deref trait, we use Deref coercion to convert
     // rocket_contrib::uuid::Uuid to uuid::Uuid.
     Ok(people.0.get(&id)

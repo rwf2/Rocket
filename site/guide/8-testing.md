@@ -86,14 +86,20 @@ These methods are typically used in combination with the `assert_eq!` or
 # use std::io::Cursor;
 # use rocket::Response;
 # use rocket::http::Header;
-
+#
+# #[derive(Responder)]
+# #[response(content_type = "text")]
+# struct Custom {
+#     body: &'static str,
+#     header: Header<'static>,
+# }
+#
 # #[get("/")]
-# fn hello() -> Response<'static> {
-#     Response::build()
-#         .header(ContentType::Plain)
-#         .header(Header::new("X-Special", ""))
-#         .sized_body("Expected Body".len(), Cursor::new("Expected Body"))
-#         .finalize()
+# fn hello() -> Custom {
+#     Custom {
+#         body: "Expected Body",
+#         header: Header::new("X-Special", ""),
+#     }
 # }
 
 # use rocket::local::blocking::Client;
@@ -106,7 +112,7 @@ let mut response = client.get("/").dispatch();
 assert_eq!(response.status(), Status::Ok);
 assert_eq!(response.content_type(), Some(ContentType::Plain));
 assert!(response.headers().get_one("X-Special").is_some());
-assert_eq!(response.into_string(), Some("Expected Body".into()));
+assert_eq!(response.into_string().unwrap(), "Expected Body");
 ```
 
 ## Testing "Hello, world!"

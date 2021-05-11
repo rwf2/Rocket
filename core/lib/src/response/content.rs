@@ -8,6 +8,21 @@
 //! the Content-Type of a type that doesn't set it itself or for overriding one
 //! that does.
 //!
+//! The [`Custom`] type allows responding with _any_ `Content-Type`. As a
+//! convenience, `(ContentType, R)` where `R: Responder` is _also_ a
+//! `Responder`, identical to `Custom`.
+//!
+//! ```rust
+//! # use rocket::get;
+//! use rocket::http::ContentType;
+//!
+//! #[get("/")]
+//! fn index() -> (ContentType, &'static str) {
+//!     (ContentType::HTML, "Is this HTML? <p>Sure, why not!</p>")
+//! }
+//! ```
+
+//!
 //! # Example
 //!
 //! The following snippet creates an `Html` content response for a string.
@@ -35,18 +50,18 @@ use crate::http::ContentType;
 /// Set the Content-Type of a string to PDF.
 ///
 /// ```rust
-/// use rocket::response::content::Content;
+/// use rocket::response::content::Custom;
 /// use rocket::http::ContentType;
 ///
 /// # #[allow(unused_variables)]
-/// let response = Content(ContentType::PDF, "Hi.");
+/// let response = Custom(ContentType::PDF, "Hi.");
 /// ```
 #[derive(Debug, Clone, PartialEq)]
-pub struct Content<R>(pub ContentType, pub R);
+pub struct Custom<R>(pub ContentType, pub R);
 
 /// Overrides the Content-Type of the response to the wrapped `ContentType` then
 /// delegates the remainder of the response to the wrapped responder.
-impl<'r, 'o: 'r, R: Responder<'r, 'o>> Responder<'r, 'o> for Content<R> {
+impl<'r, 'o: 'r, R: Responder<'r, 'o>> Responder<'r, 'o> for Custom<R> {
     fn respond_to(self, req: &'r Request<'_>) -> response::Result<'o> {
         Response::build()
             .merge(self.1.respond_to(req)?)
@@ -72,7 +87,7 @@ macro_rules! ctrs {
             /// remainder of the response to the wrapped responder.
             impl<'r, 'o: 'r, R: Responder<'r, 'o>> Responder<'r, 'o> for $name<R> {
                 fn respond_to(self, req: &'r Request<'_>) -> response::Result<'o> {
-                    Content(ContentType::$ct, self.0).respond_to(req)
+                    Custom(ContentType::$ct, self.0).respond_to(req)
                 }
             }
         )+
@@ -88,4 +103,11 @@ ctrs! {
     Plain: Plain, "plain text", "text/plain",
     Css: CSS, "CSS", "text/css",
     JavaScript: JavaScript, "JavaScript", "application/javascript"
+}
+
+impl<'r, 'o: 'r, R: Responder<'r, 'o>> Responder<'r, 'o> for (ContentType, R) {
+    #[inline(always)]
+    fn respond_to(self, request: &'r Request<'_>) -> response::Result<'o> {
+        Custom(self.0, self.1).respond_to(request)
+    }
 }

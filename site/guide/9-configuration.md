@@ -253,7 +253,7 @@ Because it is common to store configuration in managed state, Rocket provides an
 use rocket::{State, fairing::AdHoc};
 
 #[get("/custom")]
-fn custom(config: State<'_, Config>) -> String {
+fn custom(config: &State<Config>) -> String {
     config.custom.get(0).cloned().unwrap_or("default".into())
 }
 

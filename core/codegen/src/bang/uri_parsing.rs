@@ -239,7 +239,14 @@ impl Parse for InternalUriParams {
             None => vec![]
         };
 
-        Ok(InternalUriParams { route_uri, mount_params, path_params, query_params, fn_args, uri_params })
+        Ok(InternalUriParams {
+            route_uri,
+            mount_params,
+            path_params,
+            query_params,
+            fn_args,
+            uri_params
+        })
     }
 }
 

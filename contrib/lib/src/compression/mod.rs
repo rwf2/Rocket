@@ -81,7 +81,11 @@ impl CompressionUtils {
         }
     }
 
-    fn compress_response(request: &Request<'_>, response: &mut Response<'_>, exclusions: &[MediaType]) {
+    fn compress_response(
+        request: &Request<'_>,
+        response: &mut Response<'_>,
+        exclusions: &[MediaType]
+    ) {
         if CompressionUtils::already_encoded(response) {
             return;
         }
@@ -124,7 +128,8 @@ impl CompressionUtils {
             #[cfg(feature = "gzip_compression")]
             {
                 if let Some(plain) = response.take_body() {
-                    let compressor = GzEncoder::new(plain.into_inner(), flate2::Compression::default());
+                    let compressor =
+                        GzEncoder::new(plain.into_inner(), flate2::Compression::default());
 
                     CompressionUtils::set_body_and_encoding(response, compressor, Encoding::Gzip);
                 }

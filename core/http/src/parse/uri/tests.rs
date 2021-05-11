@@ -99,7 +99,18 @@ fn test_assert_no_parse() {
 
 #[test]
 fn bad_parses() {
-    assert_no_parse!("://z7:77777777777777777777777777777`77777777777");
+    assert_no_parse! {
+        "://z7:77777777777777777777777777777`77777777777",
+
+        // from #1621
+        "://@example.com/test",
+        "://example.com:/test",
+        "://@example.com:/test",
+        "://example.com/test?",
+        "://example.com:/test?",
+        "://@example.com/test?",
+        "://@example.com:/test?"
+    };
 }
 
 #[test]

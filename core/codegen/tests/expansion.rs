@@ -49,8 +49,8 @@ fn test_reexpansion() {
 macro_rules! index {
     ($type:ty) => {
         #[get("/")]
-        fn index(thing: rocket::State<$type>) -> String {
-            format!("Thing: {}", *thing)
+        fn index(thing: &rocket::State<$type>) -> String {
+            format!("Thing: {}", thing)
         }
     }
 }

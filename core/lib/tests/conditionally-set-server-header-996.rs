@@ -1,13 +1,13 @@
 #[macro_use] extern crate rocket;
 
-use rocket::Response;
 use rocket::http::Header;
 
+#[derive(Responder)]
+struct HeaderOnly((), Header<'static>);
+
 #[get("/do_not_overwrite")]
-fn do_not_overwrite() -> Response<'static> {
-    Response::build()
-        .header(Header::new("Server", "Test"))
-        .finalize()
+fn do_not_overwrite() -> HeaderOnly {
+    HeaderOnly((), Header::new("Server", "Test"))
 }
 
 #[get("/use_default")]

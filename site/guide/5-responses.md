@@ -287,35 +287,62 @@ library. Among these are:
 [`Stream`]: @api/rocket/response/struct.Stream.html
 [`Flash`]: @api/rocket/response/struct.Flash.html
 [`MsgPack`]: @api/rocket_contrib/msgpack/struct.MsgPack.html
+[`rocket_contrib`]: @api/rocket_contrib/
 
-### Streaming
+### Async Streams
 
-The `Stream` type deserves special attention. When a large amount of data needs
-to be sent to the client, it is better to stream the data to the client to avoid
-consuming large amounts of memory. Rocket provides the [`Stream`] type, making
-this easy. The `Stream` type can be created from any `AsyncRead` type. For
-example, to stream from a local Unix stream, we might write:
+The [`stream`] responders allow serving potentially infinite async [`Stream`]s.
+A stream can be created from any async `Stream` or `AsyncRead` type, or via
+generator syntax using the [`stream!`] macro and its typed equivalents.
+
+The simplest version creates a [`ReaderStream`] from a single `AsyncRead` type.
+For example, to stream from a TCP connection, we might write:
 
 ```rust
-# #[macro_use] extern crate rocket;
-# fn main() {}
-
-# mod test {
+# use rocket::*;
+use std::io;
 use std::net::SocketAddr;
 
-use rocket::response::{Stream, Debug};
-
 use rocket::tokio::net::TcpStream;
+use rocket::response::stream::ReaderStream;
 
 #[get("/stream")]
-async fn stream() -> Result<Stream<TcpStream>, Debug<std::io::Error>> {
+async fn stream() -> io::Result<ReaderStream![TcpStream]> {
     let addr = SocketAddr::from(([127, 0, 0, 1], 9999));
-    Ok(TcpStream::connect(addr).await.map(Stream::from)?)
+    let stream = TcpStream::connect(addr).await?;
+    Ok(ReaderStream::one(stream))
 }
-# }
 ```
 
-[`rocket_contrib`]: @api/rocket_contrib/
+Streams can also be created using generator syntax. The following example
+returns an infinite [`TextStream`] that produces one `"hello"` every second:
+
+```rust
+# use rocket::get;
+use rocket::tokio::time::{self, Duration};
+use rocket::response::stream::TextStream;
+
+/// Produce an infinite series of `"hello"`s, one per second.
+#[get("/infinite-hellos")]
+fn hello() -> TextStream![&'static str] {
+    TextStream! {
+        let mut interval = time::interval(Duration::from_secs(1));
+        loop {
+            yield "hello";
+            interval.tick().await;
+        }
+    }
+}
+```
+
+See the [`stream`] docs for full details on creating streams including notes on
+how to detect and handle graceful shutdown requests.
+
+[`stream`]: @api/rocket/response/stream/index.html
+[`stream!`]: @api/rocket/response/stream/macro.stream.html
+[`Stream`]: https://docs.rs/futures/0.3/futures/stream/trait.Stream.html
+[`ReaderStream`]: @api/rocket/response/stream/struct.ReaderStream.html
+[`TextStream`]: @api/rocket/response/stream/struct.TextStream.html
 
 ### JSON
 

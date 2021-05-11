@@ -30,20 +30,27 @@ function check_versions_match() {
   done
 }
 
-# Ensures there are no tabs in any file.
-function ensure_tab_free() {
+function check_style() {
+  # Ensure there are no tabs in any file.
   local tab=$(printf '\t')
-  local matches=$(git grep -E -I "${tab}" "${PROJECT_ROOT}" | grep -v 'LICENSE')
+  local matches=$(git grep -E -I -n "${tab}" "${PROJECT_ROOT}" | grep -v 'LICENSE')
   if ! [ -z "${matches}" ]; then
     echo "Tab characters were found in the following:"
     echo "${matches}"
     exit 1
   fi
-}
 
-# Ensures there are no files with trailing whitespace.
-function ensure_trailing_whitespace_free() {
-  local matches=$(git grep -E -I "\s+$" "${PROJECT_ROOT}" | grep -v -F '.stderr:')
+  # Ensure non-comment lines are under 100 characters.
+  local n=100
+  local matches=$(git grep -P -I -n "(?=^..{$n,}$)(?!^\s*\/\/[\/!].*$).*" '*.rs')
+  if ! [ -z "${matches}" ]; then
+    echo "Lines longer than $n characters were found in the following:"
+    echo "${matches}"
+    exit 1
+  fi
+
+  # Ensure there's no trailing whitespace.
+  local matches=$(git grep -E -I -n "\s+$" "${PROJECT_ROOT}" | grep -v -F '.stderr:')
   if ! [ -z "${matches}" ]; then
     echo "Trailing whitespace was found in the following:"
     echo "${matches}"
@@ -148,11 +155,8 @@ echo "  EXTRA FLAGS: $@"
 echo ":: Ensuring all crate versions match..."
 check_versions_match "${ALL_PROJECT_DIRS[@]}"
 
-echo ":: Checking for tabs..."
-ensure_tab_free
-
-echo ":: Checking for trailing whitespace..."
-ensure_trailing_whitespace_free
+echo ":: Ensuring minimum style requirements are met..."
+check_style
 
 echo ":: Updating dependencies..."
 if ! $CARGO update ; then

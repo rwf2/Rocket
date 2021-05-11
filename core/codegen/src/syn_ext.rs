@@ -1,6 +1,7 @@
 //! Extensions to `syn` types.
 
 use std::ops::Deref;
+use std::hash::{Hash, Hasher};
 
 use crate::syn::{self, Ident, ext::IdentExt as _, visit::Visit};
 use crate::proc_macro2::Span;
@@ -10,6 +11,7 @@ pub trait IdentExt {
     fn append(&self, string: &str) -> syn::Ident;
     fn with_span(self, span: Span) -> syn::Ident;
     fn rocketized(&self) -> syn::Ident;
+    fn uniqueify_with<F: FnMut(&mut dyn Hasher)>(&self, f: F) -> syn::Ident;
 }
 
 pub trait ReturnTypeExt {
@@ -60,6 +62,23 @@ impl IdentExt for syn::Ident {
 
     fn rocketized(&self) -> syn::Ident {
         self.prepend(crate::ROCKET_IDENT_PREFIX)
+    }
+
+    fn uniqueify_with<F: FnMut(&mut dyn Hasher)>(&self, mut f: F) -> syn::Ident {
+        use std::sync::atomic::{AtomicUsize, Ordering};
+        use std::collections::hash_map::DefaultHasher;
+
+        // Keep a global counter (+ thread ID later) to generate unique ids.
+        static COUNTER: AtomicUsize = AtomicUsize::new(0);
+
+        let mut hasher = DefaultHasher::new();
+        self.hash(&mut hasher);
+        std::process::id().hash(&mut hasher);
+        std::thread::current().id().hash(&mut hasher);
+        COUNTER.fetch_add(1, Ordering::AcqRel).hash(&mut hasher);
+        f(&mut hasher);
+
+        self.append(&format!("_{}", hasher.finish()))
     }
 }
 
@@ -137,7 +156,7 @@ impl TypeExt for syn::Type {
                         self.0 = false;
                         return;
                     }
-                    ImplTrait(_) | Infer(_) => {
+                    ImplTrait(_) | Infer(_) | Macro(_) => {
                         self.0 = false;
                         return;
                     }

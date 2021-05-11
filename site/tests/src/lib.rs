@@ -22,8 +22,13 @@ macro_rules! bmap {
 #[macro_export]
 macro_rules! assert_form_parses {
     ($T:ty, $form:expr => $value:expr) => (
-        let v = rocket::form::Form::<$T>::parse($form).unwrap();
-        assert_eq!(v, $value, "{}", $form);
+        match rocket::form::Form::<$T>::parse($form) {
+            Ok(v) => assert_eq!(v, $value, "{}", $form),
+            Err(e) => {
+                eprintln!("form failed to parse\n> form: {:?}\n> error: {:?}", $form, e);
+                panic!("form parse failure");
+            }
+        }
     );
 
     ($T:ty, $($form:expr => $value:expr),+ $(,)?) => (

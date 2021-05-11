@@ -4,7 +4,7 @@
 #![doc(html_favicon_url = "https://rocket.rs/images/favicon.ico")]
 #![doc(html_logo_url = "https://rocket.rs/images/logo-boxed.png")]
 
-#![warn(rust_2018_idioms)]
+#![warn(rust_2018_idioms, missing_docs)]
 
 //! # Rocket - Code Generation
 //!
@@ -303,7 +303,7 @@ route_attribute!(options => Method::Options);
 ///
 /// #[catch(default)]
 /// fn default(status: Status, req: &Request) -> String {
-///     format!("{} - {} ({})", status.code, status.reason, req.uri())
+///     format!("{} ({})", status, req.uri())
 /// }
 /// ```
 ///
@@ -355,16 +355,122 @@ pub fn catch(args: TokenStream, input: TokenStream) -> TokenStream {
     emit!(attribute::catch::catch_attribute(args, input))
 }
 
+/// Retrofits supports for `async fn` in unit tests.
+///
+/// Simply decorate a test `async fn` with `#[async_test]` instead of `#[test]`:
+///
+/// ```rust
+/// # #[macro_use] extern crate rocket;
+/// #[cfg(test)]
+/// mod tests {
+///     #[async_test]
+///     async fn test() {
+///         /* .. */
+///     }
+/// }
+/// ```
+///
+/// The attribute rewrites the function to execute inside of a Rocket-compatible
+/// async runtime.
 #[proc_macro_attribute]
 pub fn async_test(args: TokenStream, input: TokenStream) -> TokenStream {
     emit!(attribute::entry::async_test_attribute(args, input))
 }
 
+/// Retrofits `async fn` support in `main` functions.
+///
+/// A `main` `async fn` function decorated with `#[rocket::main]` is transformed
+/// into a regular `main` function that internally initalizes a Rocket-specific
+/// tokio runtime and runs the attributed `async fn` inside of it:
+///
+/// ```rust,no_run
+/// #[rocket::main]
+/// async fn main() -> Result<(), rocket::Error> {
+///     rocket::build()
+///         .ignite().await?
+///         .launch().await
+/// }
+/// ```
+///
+/// It should be used only when inspection of an ignited instance of `Rocket` is
+/// required, or when the return value of `launch()` is to be inspected:
+///
+/// ```rust,no_run
+/// #[rocket::main]
+/// async fn main() -> Result<(), rocket::Error> {
+///     let rocket = rocket::build().ignite().await?;
+///     println!("Hello, Rocket: {:?}", rocket);
+///
+///     let result = rocket.launch().await;
+///     println!("The server shutdown: {:?}", result);
+///
+///     result
+/// }
+/// ```
+///
+/// For all other cases, use [`#[launch]`](launch) instead.
+///
+/// The function attributed with `#[rocket::main]` _must_ be `async` and _must_
+/// be called `main`. Violation of either results in a compile-time error.
 #[proc_macro_attribute]
 pub fn main(args: TokenStream, input: TokenStream) -> TokenStream {
     emit!(attribute::entry::main_attribute(args, input))
 }
 
+/// Generates a `main` function that launches a returned `Rocket<Build>`.
+///
+/// When applied to a function that returns a `Rocket<Build>` instance,
+/// `#[launch]` automatically initializes an `async` runtime and
+/// launches the function's returned instance:
+///
+/// ```rust,no_run
+/// # use rocket::launch;
+/// use rocket::{Rocket, Build};
+///
+/// #[launch]
+/// fn rocket() -> Rocket<Build> {
+///     rocket::build()
+/// }
+/// ```
+///
+/// This generates code equivalent to the following:
+///
+/// ```rust,no_run
+/// # use rocket::{Rocket, Build};
+/// # fn rocket() -> Rocket<Build> {
+/// #     rocket::build()
+/// # }
+/// #
+/// #[rocket::main]
+/// async fn main() {
+///     // Recall that an uninspected `Error` will cause a pretty-printed panic,
+///     // so rest assured failures do not go undetected when using `#[launch]`.
+///     let _ = rocket().launch().await;
+/// }
+/// ```
+///
+/// To avoid needing to import _any_ items in the common case, the `launch`
+/// attribute will infer a return type written as `_` as `Rocket<Build>`:
+///
+/// ```rust,no_run
+/// # use rocket::launch;
+/// #[launch]
+/// fn rocket() -> _ {
+///     rocket::build()
+/// }
+/// ```
+///
+/// The attributed function may be `async`:
+///
+/// ```rust,no_run
+/// # use rocket::launch;
+/// # async fn some_async_work() {}
+/// #[launch]
+/// async fn rocket() -> _ {
+///     some_async_work().await;
+///     rocket::build()
+/// }
+/// ```
 #[proc_macro_attribute]
 pub fn launch(args: TokenStream, input: TokenStream) -> TokenStream {
     emit!(attribute::entry::launch_attribute(args, input))
@@ -1053,12 +1159,21 @@ pub fn uri(input: TokenStream) -> TokenStream {
 
 #[doc(hidden)]
 #[proc_macro]
+/// Internal macro: `rocket_internal_uri!`.
 pub fn rocket_internal_uri(input: TokenStream) -> TokenStream {
     emit!(bang::uri_internal_macro(input))
 }
 
 #[doc(hidden)]
 #[proc_macro]
+/// Private Rocket internal macro: `internal_guide_tests!`.
 pub fn internal_guide_tests(input: TokenStream) -> TokenStream {
     emit!(bang::guide_tests_internal(input))
+}
+
+#[doc(hidden)]
+#[proc_macro]
+/// Private Rocket internal macro: `export!`.
+pub fn export(input: TokenStream) -> TokenStream {
+    emit!(bang::export_internal(input))
 }

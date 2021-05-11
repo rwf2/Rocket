@@ -1,4 +1,4 @@
-use rocket::{Request, State, Rocket, Ignite, Sentinel};
+use rocket::{Request, Rocket, Ignite, Sentinel};
 use rocket::http::Status;
 use rocket::request::{self, FromRequest};
 
@@ -103,9 +103,8 @@ impl<'r> FromRequest<'r> for Metadata<'r> {
     type Error = ();
 
     async fn from_request(request: &'r Request<'_>) -> request::Outcome<Self, ()> {
-        request.guard::<State<'_, ContextManager>>().await
-            .succeeded()
-            .and_then(|cm| Some(request::Outcome::Success(Metadata(cm.inner()))))
+        request.rocket().state::<ContextManager>()
+            .map(|cm| request::Outcome::Success(Metadata(cm)))
             .unwrap_or_else(|| {
                 error_!("Uninitialized template context: missing fairing.");
                 info_!("To use templates, you must attach `Template::fairing()`.");

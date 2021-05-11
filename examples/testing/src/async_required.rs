@@ -3,7 +3,7 @@ use rocket::fairing::AdHoc;
 use rocket::tokio::sync::Barrier;
 
 #[get("/barrier")]
-async fn rendezvous(barrier: State<'_, Barrier>) -> &'static str {
+async fn rendezvous(barrier: &State<Barrier>) -> &'static str {
     println!("Waiting for second task...");
     barrier.wait().await;
     "Rendezvous reached."

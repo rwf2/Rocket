@@ -64,7 +64,10 @@ impl Listener for TlsListener {
         self.listener.local_addr().ok()
     }
 
-    fn poll_accept(&mut self, cx: &mut Context<'_>) -> Poll<io::Result<Self::Connection>> {
+    fn poll_accept(
+        mut self: Pin<&mut Self>,
+        cx: &mut Context<'_>
+    ) -> Poll<io::Result<Self::Connection>> {
         loop {
             match self.state {
                 TlsListenerState::Listening => {

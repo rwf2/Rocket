@@ -7,7 +7,7 @@ use rocket::fairing::AdHoc;
 struct HitCount(AtomicUsize);
 
 #[get("/")]
-fn index(hit_count: State<'_, HitCount>) -> content::Html<String> {
+fn index(hit_count: &State<HitCount>) -> content::Html<String> {
     let count = hit_count.0.fetch_add(1, Ordering::Relaxed) + 1;
     content::Html(format!("Your visit is recorded!<br /><br />Visits: {}", count))
 }

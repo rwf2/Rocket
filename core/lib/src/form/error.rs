@@ -59,14 +59,18 @@ pub struct Errors<'v>(Vec<Error<'v>>);
 
 /// A form error, potentially tied to a specific form field.
 ///
-/// An `Error` is returned by [`FromForm`], [`FromFormField`], and
-/// [`validate`](crate::form::validate) procedures, typically as a collection of
-/// [`Errors`]. It potentially identifies a specific field that triggered the
-/// error via [`Error::name`] and the field's value via [`Error::value`].
+/// An `Error` is returned by [`FromForm`], [`FromFormField`], and [`validate`]
+/// procedures, typically as a collection of [`Errors`]. It potentially
+/// identifies a specific field that triggered the error via [`Error::name`] and
+/// the field's value via [`Error::value`].
 ///
 /// An `Error` can occur because of a field's value that failed to parse or
 /// because other parts of a field or form were malformed; the [`Error::entity`]
 /// identifies the part of the form that resulted in the error.
+///
+/// [`FromForm`]: crate::form::FromForm
+/// [`FromFormField`]: crate::form::FromFormField
+/// [`validate`]: crate::form::validate
 ///
 /// # Contructing
 ///

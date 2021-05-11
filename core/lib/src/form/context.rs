@@ -6,9 +6,14 @@ use crate::http::Status;
 
 /// An infallible form guard that records form fields while parsing any form
 /// type.
+///
+/// See the [forms guide](https://rocket.rs/master/guide/requests/#context) for
+/// usage details.
 #[derive(Debug)]
 pub struct Contextual<'v, T> {
+    /// The value, if it could be successfully parsed.
     pub value: Option<T>,
+    /// The context containig all received fields, values, and errors.
     pub context: Context<'v>
 }
 
@@ -100,25 +105,6 @@ impl<'f> From<Errors<'f>> for Context<'f> {
         context
     }
 }
-
-// impl<'v, T> From<Errors<'v>> for Contextual<'v, T> {
-//     fn from(e: Errors<'v>) -> Self {
-//         Contextual { value: None, context: Context::from(e) }
-//     }
-// }
-
-// #[crate::async_trait]
-// impl<'r, T: FromForm<'r>> FromData<'r> for Contextual<'r, T> {
-//     type Error = std::convert::Infallible;
-//
-//     async fn from_data(req: &'r Request<'_>, data: Data) -> Outcome<Self, Self::Error> {
-//         match Form::<Contextual<'r, T>>::from_data(req, data).await {
-//             Outcome::Success(form) => Outcome::Success(form.into_inner()),
-//             Outcome::Failure((_, e)) => Outcome::Success(Contextual::from(e)),
-//             Outcome::Forward(d) => Outcome::Forward(d)
-//         }
-//     }
-// }
 
 #[crate::async_trait]
 impl<'v, T: FromForm<'v>> FromForm<'v> for Contextual<'v, T> {

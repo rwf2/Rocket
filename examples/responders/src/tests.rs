@@ -1,21 +1,10 @@
 use rocket::local::blocking::Client;
 use rocket::http::Status;
 
+/****************************** `File` Responder ******************************/
+
 // We use a lock to synchronize between tests so FS operations don't race.
 static FS_LOCK: parking_lot::Mutex<()> = parking_lot::const_mutex(());
-
-/***************************** `Stream` Responder *****************************/
-
-#[test]
-fn test_many_as() {
-    let client = Client::tracked(super::rocket()).unwrap();
-    let res = client.get(uri!(super::many_as)).dispatch();
-
-    // Check that we have exactly 25,000 'a's.
-    let bytes = res.into_bytes().unwrap();
-    assert_eq!(bytes.len(), 25000);
-    assert!(bytes.iter().all(|b| *b == b'a'));
-}
 
 #[test]
 fn test_file() {
@@ -37,6 +26,53 @@ fn test_file() {
     // Delete it.
     let response = client.delete(uri!(super::delete)).dispatch();
     assert_eq!(response.status(), Status::Ok);
+}
+
+/***************************** `Stream` Responder *****************************/
+
+#[test]
+fn test_many_his() {
+    let client = Client::tracked(super::rocket()).unwrap();
+    let res = client.get(uri!(super::many_his)).dispatch();
+
+    // Check that we have exactly 100 `hi`s.
+    let bytes = res.into_bytes().unwrap();
+    assert_eq!(bytes.len(), 200);
+    assert!(bytes.chunks(2).all(|b| b == b"hi"));
+}
+
+#[async_test]
+async fn test_one_hi_per_second() {
+    use rocket::local::asynchronous::Client;
+    use rocket::tokio::time::{self, Instant, Duration};
+    use rocket::tokio::{self, select};
+
+    // Listen for 1 second at 1 `hi` per 250ms, see if we get ~4 `hi`'s, then
+    // send a shutdown() signal, meaning we should get a `goodbye`.
+    let client = Client::tracked(super::rocket()).await.unwrap();
+    let response = client.get(uri!(super::one_hi_per_ms: 250)).dispatch().await;
+    let response = response.into_string();
+    let timer = time::sleep(Duration::from_secs(1));
+
+    tokio::pin!(timer, response);
+    let start = Instant::now();
+    let response = loop {
+        select! {
+            _ = &mut timer => {
+                client.rocket().shutdown().notify();
+                timer.as_mut().reset(Instant::now() + Duration::from_millis(100));
+                if start.elapsed() > Duration::from_secs(2) {
+                    panic!("responder did not terminate with shutdown");
+                }
+            }
+            response = &mut response => break response.unwrap(),
+        }
+    };
+
+    match &*response {
+        "hihihigoodbye" | "hihihihigoodbye" | "hihihihihigoodbye" => { /* ok */ },
+        s => panic!("unexpected response from infinite responder: {}", s)
+    }
 }
 
 /***************************** `Redirect` Responder ***************************/

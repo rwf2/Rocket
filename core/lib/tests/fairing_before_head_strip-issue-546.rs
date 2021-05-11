@@ -17,12 +17,11 @@ fn auto() -> &'static str {
 mod fairing_before_head_strip {
     use super::*;
     use std::sync::atomic::{AtomicUsize, Ordering};
+    use std::io::Cursor;
 
     use rocket::fairing::AdHoc;
-    use rocket::http::Method;
     use rocket::local::blocking::Client;
-    use rocket::http::Status;
-    use rocket::State;
+    use rocket::http::{Method, Status};
 
     #[test]
     fn not_auto_handled() {
@@ -36,14 +35,16 @@ mod fairing_before_head_strip {
             .attach(AdHoc::on_response("Check HEAD 2", |req, res| {
                 Box::pin(async move {
                     assert_eq!(req.method(), Method::Head);
-                    assert_eq!(res.body_string().await, Some(RESPONSE_STRING.into()));
+                    let body_bytes = res.body_mut().to_bytes().await.unwrap();
+                    assert_eq!(body_bytes, RESPONSE_STRING.as_bytes());
+                    res.set_sized_body(body_bytes.len(), Cursor::new(body_bytes));
                 })
             }));
 
         let client = Client::debug(rocket).unwrap();
         let response = client.head("/").dispatch();
         assert_eq!(response.status(), Status::Ok);
-        assert!(response.body().is_none());
+        assert!(response.into_string().unwrap_or_default().is_empty());
     }
 
     #[test]
@@ -60,20 +61,22 @@ mod fairing_before_head_strip {
                     assert_eq!(req.method(), Method::Head);
 
                     // This should be called exactly once.
-                    let c = req.guard::<State<Counter>>().await.unwrap();
+                    let c = req.rocket().state::<Counter>().unwrap();
                     assert_eq!(c.0.fetch_add(1, Ordering::SeqCst), 0);
                 })
             }))
             .attach(AdHoc::on_response("Check GET", |req, res| {
                 Box::pin(async move {
                     assert_eq!(req.method(), Method::Get);
-                    assert_eq!(res.body_string().await, Some(RESPONSE_STRING.into()));
+                    let body_bytes = res.body_mut().to_bytes().await.unwrap();
+                    assert_eq!(body_bytes, RESPONSE_STRING.as_bytes());
+                    res.set_sized_body(body_bytes.len(), Cursor::new(body_bytes));
                 })
             }));
 
         let client = Client::debug(rocket).unwrap();
         let response = client.head("/").dispatch();
         assert_eq!(response.status(), Status::Ok);
-        assert!(response.body().is_none());
+        assert!(response.into_string().unwrap_or_default().is_empty());
     }
 }

@@ -1,7 +1,7 @@
 use crate::http::{RawStr, Status};
 use crate::request::{Request, local_cache};
 use crate::data::{Data, Limits};
-use crate::outcome::{self, IntoOutcome, Outcome::*};
+use crate::outcome::{self, IntoOutcome, try_outcome, Outcome::*};
 
 /// Type alias for the `Outcome` of [`FromData`].
 ///

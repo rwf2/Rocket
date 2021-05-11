@@ -1,6 +1,7 @@
 use std::ops::{Deref, DerefMut};
 
-use crate::request::Request;
+use crate::Request;
+use crate::outcome::try_outcome;
 use crate::data::{Data, FromData, Outcome};
 use crate::http::{RawStr, ext::IntoOwned};
 use crate::form::parser::{Parser, RawStrParser, Buffer};

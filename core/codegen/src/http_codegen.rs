@@ -26,14 +26,14 @@ impl FromMeta for Status {
             return Err(meta.value_span().error("status must be in range [100, 599]"));
         }
 
-        Ok(Status(http::Status::raw(num as u16)))
+        Ok(Status(http::Status::new(num as u16)))
     }
 }
 
 impl ToTokens for Status {
     fn to_tokens(&self, tokens: &mut TokenStream) {
-        let (code, reason) = (self.0.code, self.0.reason);
-        tokens.extend(quote!(rocket::http::Status { code: #code, reason: #reason }));
+        let code = self.0.code;
+        tokens.extend(quote!(rocket::http::Status { code: #code }));
     }
 }
 

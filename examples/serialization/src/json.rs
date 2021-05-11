@@ -11,7 +11,7 @@ type Id = usize;
 
 // We're going to store all of the messages here. No need for a DB.
 type MessageList = Mutex<Vec<String>>;
-type Messages<'r> = State<'r, MessageList>;
+type Messages<'r> = &'r State<MessageList>;
 
 #[derive(Serialize, Deserialize)]
 struct Message<'r> {

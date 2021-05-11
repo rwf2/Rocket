@@ -130,6 +130,8 @@ fn test_full_route() {
 }
 
 mod scopes {
+    #![allow(dead_code)]
+
     mod other {
         #[get("/world")]
         pub fn world() -> &'static str {
@@ -145,7 +147,7 @@ mod scopes {
     use other::world;
 
     fn _rocket() -> rocket::Rocket<rocket::Build> {
-        rocket::build().mount("/", rocket::routes![hello, world])
+        rocket::build().mount("/", rocket::routes![hello, world, other::world])
     }
 }
 

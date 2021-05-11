@@ -6,12 +6,12 @@ struct Tx(flume::Sender<String>);
 struct Rx(flume::Receiver<String>);
 
 #[put("/push?<event>")]
-fn push(event: String, tx: State<'_, Tx>) -> Result<(), Status> {
+fn push(event: String, tx: &State<Tx>) -> Result<(), Status> {
     tx.0.try_send(event).map_err(|_| Status::ServiceUnavailable)
 }
 
 #[get("/pop")]
-fn pop(rx: State<'_, Rx>) -> Option<String> {
+fn pop(rx: &State<Rx>) -> Option<String> {
     rx.0.try_recv().ok()
 }
 

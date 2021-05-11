@@ -88,51 +88,75 @@ use rocket_http::ContentType;
 
 use crate::{data::TempFile, form::{Result, Error}};
 
-/// A helper macro for custom validation error messages.
-///
-/// The macro works identically to [`std::format!`] except it does not allocate
-/// when the expression is a string literal. It returns a function (a closure)
-/// that takes one parameter and evaluates to an `Err` of validation [`Error`]
-/// with the formatted message. While useful in other contexts, it is designed
-/// to be chained to validation results via `.or_else()` and `.and_then()`.
-///
-/// Note that the macro never needs to be imported when used with a `FromForm`
-/// derive; all items in [`form::validate`](crate::form::validate) are already
-/// in scope.
-///
-/// # Example
-///
-/// ```rust
-/// use rocket::form::FromForm;
-///
-/// #[derive(FromForm)]
-/// struct Person<'r> {
-///     #[field(validate = len(3..).or_else(msg!("that's a short name...")))]
-///     name: &'r str,
-///     #[field(validate = contains('f').and_then(msg!("please, no `f`!")))]
-///     non_f_name: &'r str,
-/// }
-/// ```
-///
-/// See the [top-level docs](crate::form::validate) for more examples.
-#[macro_export]
-macro_rules! msg {
-    ($e:expr) => (
-        |_| {
-            Err($crate::form::Errors::from($crate::form::Error::validation($e)))
-                as $crate::form::Result<()>
-        }
-    );
-    ($($arg:tt)*) => (
-        |_| {
-            Err($crate::form::Errors::from($crate::form::Error::validation(format!($($arg)*))))
-                as $crate::form::Result<()>
-        }
-    );
+crate::export! {
+    /// A helper macro for custom validation error messages.
+    ///
+    /// The macro works similar to [`std::format!`]. It generates a form
+    /// [`Validation`] error message. While useful in other contexts, it is
+    /// designed to be chained to validation results in derived `FromForm`
+    /// `#[field]` attributes via `.or_else()` and `.and_then()`.
+    ///
+    /// [`Validation`]: crate::form::error::ErrorKind::Validation
+    /// [`form::validate`]: crate::form::validate
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use rocket::form::FromForm;
+    ///
+    /// #[derive(FromForm)]
+    /// struct Person<'r> {
+    ///     #[field(validate = len(3..).or_else(msg!("that's a short name...")))]
+    ///     name: &'r str,
+    ///     #[field(validate = contains('f').and_then(msg!("please, no `f`!")))]
+    ///     non_f_name: &'r str,
+    /// }
+    /// ```
+    ///
+    /// _**Note:** this macro _never_ needs to be imported when used with a
+    /// `FromForm` derive; all items in [`form::validate`] are automatically in
+    /// scope in `FromForm` derive attributes._
+    ///
+    /// See the [top-level docs](crate::form::validate) for more examples.
+    ///
+    /// # Syntax
+    ///
+    /// The macro has the following "signatures":
+    ///
+    /// ## Variant 1
+    ///
+    /// ```rust
+    /// # use rocket::form;
+    /// # trait Expr {}
+    /// fn msg<'a, T, P, E: Expr>(expr: E) -> impl Fn(P) -> form::Result<'a, T>
+    /// # { |_| unimplemented!() }
+    /// ```
+    ///
+    /// Takes any expression and returns a function that takes any argument type
+    /// and evaluates to a [`form::Result`](crate::form::Result) with an `Ok` of
+    /// any type. The `Result` is guaranteed to be an `Err` of kind
+    /// [`Validation`] with `expr` as the message.
+    ///
+    /// ## Variant 2
+    ///
+    /// ```
+    /// # use rocket::form;
+    /// # trait Format {}
+    /// # trait Args {}
+    /// fn msg<'a, T, P, A: Args>(fmt: &str, args: A) -> impl Fn(P) -> form::Result<'a, T>
+    /// # { |_| unimplemented!() }
+    /// ```
+    ///
+    /// Invokes the first variant as `msg!(format!(fmt, args))`.
+    macro_rules! msg {
+        ($e:expr) => (|_| {
+            Err($crate::form::Errors::from(
+                    $crate::form::Error::validation($e)
+            )) as $crate::form::Result<()>
+        });
+        ($($arg:tt)*) => ($crate::form::validate::msg!(format!($($arg)*)));
+    }
 }
-
-#[doc(inline)]
-pub use msg;
 
 /// Equality validator: succeeds exactly when `a` == `b`, using [`PartialEq`].
 ///
@@ -168,6 +192,43 @@ pub fn eq<'v, A, B>(a: &A, b: B) -> Result<'v, ()>
 {
     if a != &b {
         Err(Error::validation("value does not match expected value"))?
+    }
+
+    Ok(())
+}
+
+/// Debug equality validator: like [`eq()`] but mentions `b` in the error
+/// message.
+///
+/// The is identical to [`eq()`] except that `b` must be `Debug` and the error
+/// message is as follows, where `$b` is the [`Debug`] representation of `b`:
+///
+/// ```text
+/// value must be $b
+/// ```
+///
+/// # Example
+///
+/// ```rust
+/// use rocket::form::{FromForm, FromFormField};
+///
+/// #[derive(PartialEq, Debug, Clone, Copy, FromFormField)]
+/// enum Pet { Cat, Dog }
+///
+/// #[derive(FromForm)]
+/// struct Foo {
+///     number: usize,
+///     #[field(validate = dbg_eq(self.number))]
+///     confirm_num: usize,
+///     #[field(validate = dbg_eq(Pet::Dog))]
+///     best_pet: Pet,
+/// }
+/// ```
+pub fn dbg_eq<'v, A, B>(a: &A, b: B) -> Result<'v, ()>
+    where A: PartialEq<B>, B: Debug
+{
+    if a != &b {
+        Err(Error::validation(format!("value must be {:?}", b)))?
     }
 
     Ok(())
@@ -438,7 +499,7 @@ pub fn contains<'v, V, I>(value: V, item: I) -> Result<'v, ()>
     Ok(())
 }
 
-/// Verbose contains validator: like `contains` but mentions `item` in the
+/// Debug contains validator: like [`contains()`] but mentions `item` in the
 /// error message.
 ///
 /// The is identical to [`contains()`] except that `item` must be `Debug + Copy`
@@ -460,12 +521,12 @@ pub fn contains<'v, V, I>(value: V, item: I) -> Result<'v, ()>
 /// #[derive(FromForm)]
 /// struct Foo {
 ///     best_pet: Pet,
-///     #[field(validate = verbose_contains(Pet::Dog))]
-///     #[field(validate = verbose_contains(&self.best_pet))]
+///     #[field(validate = dbg_contains(Pet::Dog))]
+///     #[field(validate = dbg_contains(&self.best_pet))]
 ///     pets: Vec<Pet>,
 /// }
 /// ```
-pub fn verbose_contains<'v, V, I>(value: V, item: I) -> Result<'v, ()>
+pub fn dbg_contains<'v, V, I>(value: V, item: I) -> Result<'v, ()>
     where V: Contains<I>, I: Debug + Copy
 {
     if !value.contains(item) {
@@ -515,7 +576,7 @@ pub fn omits<'v, V, I>(value: V, item: I) -> Result<'v, ()>
     Ok(())
 }
 
-/// Verbose omits validator: like `omits` but mentions `item` in the error
+/// Debug omits validator: like [`omits()`] but mentions `item` in the error
 /// message.
 ///
 /// The is identical to [`omits()`] except that `item` must be `Debug + Copy`
@@ -536,15 +597,15 @@ pub fn omits<'v, V, I>(value: V, item: I) -> Result<'v, ()>
 ///
 /// #[derive(FromForm)]
 /// struct Foo<'r> {
-///     #[field(validate = verbose_omits(Pet::Cat))]
+///     #[field(validate = dbg_omits(Pet::Cat))]
 ///     pets: Vec<Pet>,
-///     #[field(validate = verbose_omits('@'))]
+///     #[field(validate = dbg_omits('@'))]
 ///     not_email: &'r str,
-///     #[field(validate = verbose_omits("@gmail.com"))]
+///     #[field(validate = dbg_omits("@gmail.com"))]
 ///     non_gmail_email: &'r str,
 /// }
 /// ```
-pub fn verbose_omits<'v, V, I>(value: V, item: I) -> Result<'v, ()>
+pub fn dbg_omits<'v, V, I>(value: V, item: I) -> Result<'v, ()>
     where V: Contains<I>, I: Copy + Debug
 {
     if value.contains(item) {

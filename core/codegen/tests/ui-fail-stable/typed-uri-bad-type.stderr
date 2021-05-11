@@ -55,11 +55,11 @@ error[E0277]: the trait bound `i32: FromUriParam<rocket::http::uri::Path, std::o
    = note: required because of the requirements on the impl of `FromUriParam<rocket::http::uri::Path, std::option::Option<{integer}>>` for `std::option::Option<i32>`
    = note: required by `from_uri_param`
 
-error[E0277]: the trait bound `std::string::String: FromUriParam<rocket::http::uri::Path, std::result::Result<_, _>>` is not satisfied
+error[E0277]: the trait bound `std::string::String: FromUriParam<rocket::http::uri::Path, Result<_, _>>` is not satisfied
   --> $DIR/typed-uri-bad-type.rs:56:43
    |
 56 |     uri!(optionals: id = Some(10), name = Ok("bob".into()));
-   |                                           ^^ the trait `FromUriParam<rocket::http::uri::Path, std::result::Result<_, _>>` is not implemented for `std::string::String`
+   |                                           ^^ the trait `FromUriParam<rocket::http::uri::Path, Result<_, _>>` is not implemented for `std::string::String`
    |
    = help: the following implementations were found:
              <std::string::String as FromUriParam<P, &'a str>>
@@ -67,7 +67,7 @@ error[E0277]: the trait bound `std::string::String: FromUriParam<rocket::http::u
              <std::string::String as FromUriParam<P, &'x mut &'a str>>
              <std::string::String as FromUriParam<P, &'x mut std::string::String>>
            and 2 others
-   = note: required because of the requirements on the impl of `FromUriParam<rocket::http::uri::Path, std::result::Result<_, _>>` for `std::result::Result<std::string::String, &str>`
+   = note: required because of the requirements on the impl of `FromUriParam<rocket::http::uri::Path, Result<_, _>>` for `Result<std::string::String, &str>`
    = note: required by `from_uri_param`
 
 error[E0277]: the trait bound `isize: FromUriParam<rocket::http::uri::Query, &str>` is not satisfied

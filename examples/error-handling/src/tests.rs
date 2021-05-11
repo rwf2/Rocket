@@ -30,9 +30,9 @@ fn forced_error() {
     assert_eq!(response.into_string().unwrap(), expected.1);
 
     let request = client.get("/533");
-    let expected = super::default_catcher(Status::raw(533), request.inner());
+    let expected = super::default_catcher(Status::new(533), request.inner());
     let response = request.dispatch();
-    assert_eq!(response.status(), Status::raw(533));
+    assert_eq!(response.status(), Status::new(533));
     assert_eq!(response.into_string().unwrap(), expected.1);
 
     let request = client.get("/700");

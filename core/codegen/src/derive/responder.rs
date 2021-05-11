@@ -17,7 +17,8 @@ struct FieldAttr {
 }
 
 pub fn derive_responder(input: proc_macro::TokenStream) -> TokenStream {
-    DeriveGenerator::build_for(input, quote!(impl<'__r, '__o: '__r> ::rocket::response::Responder<'__r, '__o>))
+    let impl_tokens = quote!(impl<'__r, '__o: '__r> ::rocket::response::Responder<'__r, '__o>);
+    DeriveGenerator::build_for(input, impl_tokens)
         .support(Support::Struct | Support::Enum | Support::Lifetime | Support::Type)
         .replace_generic(1, 0)
         .type_bound(quote!(::rocket::response::Responder<'__r, '__o>))

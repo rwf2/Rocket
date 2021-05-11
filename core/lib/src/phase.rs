@@ -1,10 +1,7 @@
-use std::sync::Arc;
-
 use state::Container;
 use figment::Figment;
-use tokio::sync::Notify;
 
-use crate::{Route, Catcher, Config, Rocket};
+use crate::{Catcher, Config, Rocket, Route, Shutdown};
 use crate::router::Router;
 use crate::fairing::Fairings;
 
@@ -100,7 +97,7 @@ phases! {
         pub(crate) figment: Figment,
         pub(crate) config: Config,
         pub(crate) state: Container![Send + Sync],
-        pub(crate) shutdown: Arc<Notify>,
+        pub(crate) shutdown: Shutdown,
     }
 
     /// The final launch [`Phase`].
@@ -113,6 +110,6 @@ phases! {
         pub(crate) figment: Figment,
         pub(crate) config: Config,
         pub(crate) state: Container![Send + Sync],
-        pub(crate) shutdown: Arc<Notify>,
+        pub(crate) shutdown: Shutdown,
     }
 }

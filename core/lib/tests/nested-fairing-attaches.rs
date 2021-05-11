@@ -13,7 +13,7 @@ struct Counter {
 }
 
 #[get("/")]
-fn index(counter: State<'_, Counter>) -> String {
+fn index(counter: &State<Counter>) -> String {
     let attaches = counter.attach.load(Ordering::Relaxed);
     let gets = counter.get.load(Ordering::Acquire);
     format!("{}, {}", attaches, gets)
@@ -29,8 +29,7 @@ fn rocket() -> Rocket<Build> {
                 .attach(AdHoc::on_request("Inner", |req, _| {
                     Box::pin(async move {
                         if req.method() == Method::Get {
-                            let counter = req.guard::<State<'_, Counter>>()
-                                .await.unwrap();
+                            let counter = req.rocket().state::<Counter>().unwrap();
                             counter.get.fetch_add(1, Ordering::Release);
                         }
                     })

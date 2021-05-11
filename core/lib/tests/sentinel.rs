@@ -1,10 +1,10 @@
 use rocket::{*, error::ErrorKind::SentinelAborts};
 
 #[get("/two")]
-fn two_states(_one: State<u32>, _two: State<String>) {}
+fn two_states(_one: &State<u32>, _two: &State<String>) {}
 
 #[get("/one")]
-fn one_state(_three: State<u8>) {}
+fn one_state(_three: &State<u8>) {}
 
 #[async_test]
 async fn state_sentinel_works() {

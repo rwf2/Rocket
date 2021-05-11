@@ -9,8 +9,6 @@
 //! responders; when they do, the responder finalizes the response by writing
 //! out additional headers and, importantly, the body of the response.
 //!
-//!
-//!
 //! The [`Custom`] type allows responding with _any_ `Status` but _does not_
 //! ensure that all of the required headers are present. As a convenience,
 //! `(Status, R)` where `R: Responder` is _also_ a `Responder`, identical to

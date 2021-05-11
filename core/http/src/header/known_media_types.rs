@@ -2,8 +2,10 @@ macro_rules! known_media_types {
     ($cont:ident) => ($cont! {
         Any (is_any): "any media type", "*", "*",
         Binary (is_binary): "binary data", "application", "octet-stream",
+        Bytes (is_bytes): "binary data", "application", "octet-stream",
         HTML (is_html): "HTML", "text", "html" ; "charset" => "utf-8",
         Plain (is_plain): "plain text", "text", "plain" ; "charset" => "utf-8",
+        Text (is_text): "plain text", "text", "plain" ; "charset" => "utf-8",
         JSON (is_json): "JSON", "application", "json",
         MsgPack (is_msgpack): "MsgPack", "application", "msgpack",
         Form (is_form): "forms", "application", "x-www-form-urlencoded",
@@ -95,8 +97,10 @@ macro_rules! known_shorthands {
     ($cont:ident) => ($cont! {
         "any" => Any,
         "binary" => Binary,
+        "bytes" => Bytes,
         "html" => HTML,
         "plain" => Plain,
+        "text" => Text,
         "json" => JSON,
         "msgpack" => MsgPack,
         "form" => Form,

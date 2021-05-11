@@ -2,41 +2,64 @@
 
 #[cfg(test)] mod tests;
 
-/***************************** `Stream` Responder *****************************/
+/****************** `Result`, `Option` `NameFile` Responder *******************/
 
 use std::{io, env};
 
-use rocket::tokio::fs::{self, File};
-use rocket::tokio::io::{repeat, AsyncRead, AsyncReadExt};
-use rocket::response::{content, Stream};
+use rocket::tokio::fs;
+
 use rocket::data::{Capped, TempFile};
+use rocket::response::NamedFile;
 
 // Upload your `big_file.dat` by POSTing it to /upload.
 // try `curl --data-binary @file.txt http://127.0.0.1:8000/stream/file`
 const FILENAME: &str = "big_file.dat";
 
-#[get("/stream/a")]
-fn many_as() -> content::Plain<Stream<impl AsyncRead>> {
-    content::Plain(Stream::from(repeat('a' as u8).take(25000)))
-}
-
-#[get("/stream/file")]
-async fn file() -> Option<Stream<File>> {
-    // NOTE: Rocket _always_ streams data from an `AsyncRead`, even when
-    // `Stream` isn't used. By using `Stream`, however, the data is sent using
-    // chunked-encoding in HTTP 1.1. DATA frames are sent in HTTP/2.
-    File::open(env::temp_dir().join(FILENAME)).await.map(Stream::from).ok()
-}
-
-#[post("/stream/file", data = "<file>")]
+// This is a *raw* file upload, _not_ a multipart upload!
+#[post("/file", data = "<file>")]
 async fn upload(mut file: Capped<TempFile<'_>>) -> io::Result<String> {
     file.persist_to(env::temp_dir().join(FILENAME)).await?;
     Ok(format!("{} bytes at {}", file.n.written, file.path().unwrap().display()))
 }
 
-#[delete("/stream/file")]
+#[get("/file")]
+async fn file() -> Option<NamedFile> {
+    NamedFile::open(env::temp_dir().join(FILENAME)).await.ok()
+}
+
+#[delete("/file")]
 async fn delete() -> Option<()> {
     fs::remove_file(env::temp_dir().join(FILENAME)).await.ok()
+}
+
+/***************************** `Stream` Responder *****************************/
+
+use rocket::tokio::select;
+use rocket::tokio::time::{self, Duration};
+use rocket::futures::stream::{repeat, StreamExt};
+
+use rocket::Shutdown;
+use rocket::response::stream::TextStream;
+
+#[get("/stream/hi")]
+fn many_his() -> TextStream![&'static str] {
+    TextStream(repeat("hi").take(100))
+}
+
+#[get("/stream/hi/<n>")]
+fn one_hi_per_ms(mut shutdown: Shutdown, n: u8) -> TextStream![&'static str] {
+    TextStream! {
+        let mut interval = time::interval(Duration::from_millis(n as u64));
+        loop {
+            select! {
+                _ = interval.tick() => yield "hi",
+                _ = &mut shutdown => {
+                    yield "goodbye";
+                    break;
+                }
+            };
+        }
+    }
 }
 
 /***************************** `Redirect` Responder ***************************/
@@ -64,6 +87,7 @@ fn maybe_redir(name: &str) -> Result<&'static str, Redirect> {
 /***************************** `content` Responders ***************************/
 
 use rocket::Request;
+use rocket::response::content;
 
 // NOTE: This example explicitly uses the `Json` type from `response::content`
 // for demonstration purposes. In a real application, _always_ prefer to use
@@ -119,7 +143,6 @@ fn json_or_msgpack(kind: &str) -> Either<Json<&'static str>, MsgPack<&'static [u
 
 use std::borrow::Cow;
 
-use rocket::response::NamedFile;
 use rocket::response::content::Html;
 
 #[derive(Responder)]
@@ -154,7 +177,7 @@ async fn custom(kind: Option<Kind>) -> StoredData {
 #[launch]
 fn rocket() -> _ {
     rocket::build()
-        .mount("/", routes![many_as, file, upload, delete])
+        .mount("/", routes![many_his, one_hi_per_ms, file, upload, delete])
         .mount("/", routes![redir_root, redir_login, maybe_redir])
         .mount("/", routes![xml, json, json_or_msgpack])
         .mount("/", routes![custom])

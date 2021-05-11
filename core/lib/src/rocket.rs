@@ -1,15 +1,14 @@
 use std::fmt;
 use std::ops::{Deref, DerefMut};
 use std::convert::TryInto;
-use std::sync::Arc;
 
 use yansi::Paint;
 use either::Either;
-use tokio::sync::Notify;
 use figment::{Figment, Provider};
 
-use crate::{Route, Catcher, Config, Shutdown, sentinel};
+use crate::{Catcher, Config, Route, Shutdown, sentinel};
 use crate::router::Router;
+use crate::trip_wire::TripWire;
 use crate::fairing::{Fairing, Fairings};
 use crate::phase::{Phase, Build, Building, Ignite, Igniting, Orbit, Orbiting};
 use crate::phase::{Stateful, StateRef, State};
@@ -55,7 +54,8 @@ use crate::log::PaintExt;
 /// To launch an instance of `Rocket`, it _must_ progress through all three
 /// phases. To progress into the ignite or launch phases, a tokio `async`
 /// runtime is required. The [`#[main]`](crate::main) attribute initializes a
-/// Rocket-specific tokio runtime and runs attributed async code inside of it:
+/// Rocket-specific tokio runtime and runs the attributed `async fn` inside of
+/// it:
 ///
 /// ```rust,no_run
 /// #[rocket::main]
@@ -366,13 +366,13 @@ impl Rocket<Build> {
     /// struct MyString(String);
     ///
     /// #[get("/int")]
-    /// fn int(state: State<'_, MyInt>) -> String {
+    /// fn int(state: &State<MyInt>) -> String {
     ///     format!("The stateful int is: {}", state.0)
     /// }
     ///
     /// #[get("/string")]
-    /// fn string<'r>(state: State<'r, MyString>) -> &'r str {
-    ///     &state.inner().0
+    /// fn string(state: &State<MyString>) -> &str {
+    ///     &state.0
     /// }
     ///
     /// #[launch]
@@ -505,7 +505,7 @@ impl Rocket<Build> {
         // Ignite the rocket.
         let rocket: Rocket<Ignite> = Rocket(Igniting {
             router, config,
-            shutdown: Arc::new(Notify::new()),
+            shutdown: Shutdown(TripWire::new()),
             figment: self.0.figment,
             fairings: self.0.fairings,
             state: self.0.state,
@@ -553,18 +553,14 @@ impl Rocket<Ignite> {
         &self.config
     }
 
-    /// Returns a handle which can be used to notify this instance of Rocket to
-    /// stop serving connections, resolving the future returned by
-    /// [`Rocket::launch()`]. If [`Shutdown::notify()`] is called _before_ the
-    /// instance is launched, it will be immediately shutdown after liftoff.
+    /// Returns a handle which can be used to trigger a shutdown and detect a
+    /// triggered shutdown.
     ///
-    /// # Caveats
-    ///
-    /// Due to [bugs](https://github.com/hyperium/hyper/issues/1885) in Rocket's
-    /// upstream HTTP library, graceful shutdown currently works by stopping new
-    /// connections from arriving without stopping in-process connections from
-    /// sending or receiving. As a result, shutdown will stall if a response is
-    /// infinite or if a client stalls a connection.
+    /// A completed graceful shutdown resolves the future returned by
+    /// [`Rocket::launch()`]. If [`Shutdown::notify()`] is called _before_ an
+    /// instance is launched, it will be immediately shutdown after liftoff. See
+    /// [`Shutdown`] and [`config::Shutdown`](crate::config::Shutdown) for
+    /// details on graceful shutdown.
     ///
     /// # Example
     ///
@@ -590,7 +586,7 @@ impl Rocket<Ignite> {
     /// }
     /// ```
     pub fn shutdown(&self) -> Shutdown {
-        Shutdown(self.shutdown.clone())
+        self.shutdown.clone()
     }
 
     fn into_orbit(self) -> Rocket<Orbit> {
@@ -650,17 +646,13 @@ impl Rocket<Orbit> {
         &self.config
     }
 
-    /// Returns a handle which can be used to notify this instance of Rocket to
-    /// stop serving connections, resolving the future returned by
-    /// [`Rocket::launch()`].
+    /// Returns a handle which can be used to trigger a shutdown and detect a
+    /// triggered shutdown.
     ///
-    /// # Caveats
-    ///
-    /// Due to [bugs](https://github.com/hyperium/hyper/issues/1885) in Rocket's
-    /// upstream HTTP library, graceful shutdown currently works by stopping new
-    /// connections from arriving without stopping in-process connections from
-    /// sending or receiving. As a result, shutdown will stall if a response is
-    /// infinite or if a client stalls a connection.
+    /// A completed graceful shutdown resolves the future returned by
+    /// [`Rocket::launch()`]. See [`Shutdown`] and
+    /// [`config::Shutdown`](crate::config::Shutdown) for details on graceful
+    /// shutdown.
     ///
     /// # Example
     ///
@@ -682,7 +674,7 @@ impl Rocket<Orbit> {
     /// }
     /// ```
     pub fn shutdown(&self) -> Shutdown {
-        Shutdown(self.shutdown.clone())
+        self.shutdown.clone()
     }
 }
 
@@ -817,8 +809,7 @@ impl<P: Phase> Rocket<P> {
     ///
     /// The `Future` resolves as an `Ok` if any of the following occur:
     ///
-    ///   * the server is shutdown via [`Shutdown::notify()`].
-    ///   * if the `ctrlc` config option is `true`, when `Ctrl+C` is pressed.
+    ///   * graceful shutdown via [`Shutdown::notify()`] completes.
     ///
     /// The `Future` does not resolve otherwise.
     ///

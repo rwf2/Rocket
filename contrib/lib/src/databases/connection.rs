@@ -71,23 +71,25 @@ macro_rules! dberr {
 impl<K: 'static, C: Poolable> ConnectionPool<K, C> {
     pub fn fairing(fairing_name: &'static str, db: &'static str) -> impl Fairing {
         AdHoc::try_on_ignite(fairing_name, move |rocket| async move {
-            let config = match Config::from(db, &rocket) {
-                Ok(config) => config,
-                Err(e) => dberr!("config", db, "{}", e, rocket),
-            };
+            run_blocking(move || {
+                let config = match Config::from(db, &rocket) {
+                    Ok(config) => config,
+                    Err(e) => dberr!("config", db, "{}", e, rocket),
+                };
 
-            let pool_size = config.pool_size;
-            match C::pool(db, &rocket) {
-                Ok(pool) => Ok(rocket.manage(ConnectionPool::<K, C> {
-                    config,
-                    pool: Some(pool),
-                    semaphore: Arc::new(Semaphore::new(pool_size as usize)),
-                    _marker: PhantomData,
-                })),
-                Err(Error::Config(e)) => dberr!("config", db, "{}", e, rocket),
-                Err(Error::Pool(e)) => dberr!("pool init", db, "{}", e, rocket),
-                Err(Error::Custom(e)) => dberr!("pool manager", db, "{:?}", e, rocket),
-            }
+                let pool_size = config.pool_size;
+                match C::pool(db, &rocket) {
+                    Ok(pool) => Ok(rocket.manage(ConnectionPool::<K, C> {
+                        config,
+                        pool: Some(pool),
+                        semaphore: Arc::new(Semaphore::new(pool_size as usize)),
+                        _marker: PhantomData,
+                    })),
+                    Err(Error::Config(e)) => dberr!("config", db, "{}", e, rocket),
+                    Err(Error::Pool(e)) => dberr!("pool init", db, "{}", e, rocket),
+                    Err(Error::Custom(e)) => dberr!("pool manager", db, "{:?}", e, rocket),
+                }
+            }).await
         })
     }
 
@@ -158,7 +160,10 @@ impl<K: 'static, C: Poolable> Connection<K, C> {
         run_blocking(move || {
             // And then re-enter the runtime to wait on the async mutex, but in
             // a blocking fashion.
-            let mut connection = tokio::runtime::Handle::current().block_on(async { connection.lock_owned().await });
+            let mut connection = tokio::runtime::Handle::current().block_on(async {
+                connection.lock_owned().await
+            });
+
             let conn = connection.as_mut()
                 .expect("internal invariant broken: self.connection is Some");
             f(conn)
@@ -173,7 +178,10 @@ impl<K, C: Poolable> Drop for Connection<K, C> {
 
         // See same motivation above for this arrangement of spawn_blocking/block_on
         tokio::task::spawn_blocking(move || {
-            let mut connection = tokio::runtime::Handle::current().block_on(async { connection.lock_owned().await });
+            let mut connection = tokio::runtime::Handle::current().block_on(async {
+                connection.lock_owned().await
+            });
+
             if let Some(conn) = connection.take() {
                 drop(conn);
             }
