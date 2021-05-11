@@ -355,6 +355,7 @@ fn codegen_route(route: Route) -> Result<TokenStream> {
                     sentinels: #sentinels,
                 }
             }
+
             #[doc(hidden)]
             pub fn into_route(self) -> #Route {
                 self.into_info().into()
