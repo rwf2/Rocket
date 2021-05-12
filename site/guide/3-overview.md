@@ -281,7 +281,7 @@ First, notice that the route function is an `async fn`. This enables the use of
 `await` inside the handler. `sleep` is an asynchronous function, so we must
 `await` it.
 
-### Multitasking
+### Cooperative Multitasking
 
 Rust's `Future`s are a form of *cooperative multitasking*. In general, `Future`s
 and `async fn`s should only `.await` on operations and never block.  Some common
