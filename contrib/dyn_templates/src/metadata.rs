@@ -14,13 +14,12 @@ use crate::context::ContextManager;
 /// ```rust
 /// # #[macro_use] extern crate rocket;
 /// # #[macro_use] extern crate rocket_dyn_templates;
-/// use rocket_dyn_templates::{Template, Metadata};
+/// use rocket_dyn_templates::{Template, Metadata, context};
 ///
 /// #[get("/")]
 /// fn homepage(metadata: Metadata) -> Template {
-///     # use std::collections::HashMap;
-///     # let context: HashMap<String, String> = HashMap::new();
 ///     // Conditionally render a template if it's available.
+///     # let context = ();
 ///     if metadata.contains_template("some-template") {
 ///         Template::render("some-template", &context)
 ///     } else {

@@ -441,6 +441,24 @@ a template and a context to render the template with. The context can be any
 type that implements `Serialize` and serializes into an `Object` value, such as
 structs, `HashMaps`, and others.
 
+You can also use [`context!`] to create ad-hoc templating contexts without
+defining a new type:
+
+```rust
+# #[macro_use] extern crate rocket;
+# #[macro_use] extern crate rocket_dyn_templates;
+# fn main() {}
+
+use rocket_dyn_templates::Template;
+
+#[get("/")]
+fn index() -> Template {
+    Template::render("index", context! {
+        foo: 123,
+    })
+}
+```
+
 For a template to be renderable, it must first be registered. The `Template`
 fairing automatically registers all discoverable templates when attached. The
 [Fairings](../fairings) sections of the guide provides more information on
@@ -471,6 +489,8 @@ used.
   For a template file named `index.html.tera`, call `render("index")` and use
   the name `"index"` in templates, i.e, `{% extends "index" %}` or `{% extends
   "base" %}` for `base.html.tera`.
+
+[`context`]: @api/rocket_dyn_templates/macro.context.html
 
 ### Live Reloading
 

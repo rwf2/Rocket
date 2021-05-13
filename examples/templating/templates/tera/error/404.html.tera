@@ -6,6 +6,6 @@
   </head>
   <body>
     <h1>404: Hey! There's nothing here.</h1>
-    The page at {{ path }} does not exist!
+    The page at {{ uri }} does not exist!
   </body>
 </html>

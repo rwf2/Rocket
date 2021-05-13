@@ -1,9 +1,7 @@
-use std::collections::HashMap;
-
 use rocket::form::Form;
 use rocket::response::Redirect;
 use rocket::http::{Cookie, CookieJar};
-use rocket_dyn_templates::Template;
+use rocket_dyn_templates::{Template, context};
 
 #[macro_export]
 macro_rules! message_uri {
@@ -21,12 +19,10 @@ fn submit(cookies: &CookieJar<'_>, message: Form<&str>) -> Redirect {
 #[get("/")]
 fn index(cookies: &CookieJar<'_>) -> Template {
     let cookie = cookies.get("message");
-    let mut context = HashMap::new();
-    if let Some(ref cookie) = cookie {
-        context.insert("message", cookie.value());
-    }
 
-    Template::render("message", &context)
+    Template::render("message", context! {
+        message: cookie.map(|c| c.value()),
+    })
 }
 
 pub fn routes() -> Vec<rocket::Route> {
