@@ -4,7 +4,9 @@ use std::path::{Path, PathBuf};
 
 use rocket::{Rocket, Build};
 use rocket::config::Config;
-use rocket_dyn_templates::{Template, Metadata};
+use rocket::figment::value::Value;
+use rocket::serde::{Serialize, Deserialize};
+use rocket_dyn_templates::{Template, Metadata, context};
 
 #[get("/<engine>/<name>")]
 fn template_check(md: Metadata<'_>, engine: &str, name: &str) -> Option<()> {
@@ -96,6 +98,109 @@ fn test_sentinel() {
     }
 
     Client::debug_with(routes![always_ok_sentinel]).expect("no sentinel abort");
+}
+
+#[test]
+fn test_context_macro() {
+    macro_rules! assert_same_object {
+        ($ctx:expr, $obj:expr $(,)?) => {{
+            let ser_ctx = Value::serialize(&$ctx).unwrap();
+            let deser_ctx = ser_ctx.deserialize().unwrap();
+            assert_eq!($obj, deser_ctx);
+        }};
+    }
+
+    {
+        #[derive(Deserialize, PartialEq, Debug)]
+        #[serde(crate = "rocket::serde")]
+        struct Empty { }
+
+        assert_same_object!(context! { }, Empty { });
+    }
+
+    {
+        #[derive(Deserialize, PartialEq, Debug)]
+        #[serde(crate = "rocket::serde")]
+        struct Object {
+            a: u32,
+            b: String,
+        }
+
+        let a = 93;
+        let b = "Hello".to_string();
+
+        fn make_context() -> impl Serialize {
+            let b = "Hello".to_string();
+
+            context! { a: 93, b: b }
+        }
+
+        assert_same_object!(
+            make_context(),
+            Object { a, b },
+        );
+    }
+
+    {
+        #[derive(Deserialize, PartialEq, Debug)]
+        #[serde(crate = "rocket::serde")]
+        struct Outer {
+            s: String,
+            inner: Inner,
+        }
+
+        #[derive(Deserialize, PartialEq, Debug)]
+        #[serde(crate = "rocket::serde")]
+        struct Inner {
+            center: Center,
+        }
+
+        #[derive(Deserialize, PartialEq, Debug)]
+        #[serde(crate = "rocket::serde")]
+        struct Center {
+            value_a: bool,
+            value_b: u8,
+        }
+
+        let a = true;
+        let value_b = 123;
+        let outer_string = String::from("abc 123");
+
+        assert_same_object!(
+            context! {
+                s: &outer_string,
+                inner: context! {
+                    center: context! {
+                        value_a: a,
+                        value_b,
+                    },
+                },
+            },
+            Outer {
+                s: outer_string,
+                inner: Inner {
+                    center: Center {
+                        value_a: a,
+                        value_b,
+                    },
+                },
+            },
+        );
+    }
+
+    {
+        #[derive(Deserialize, PartialEq, Debug)]
+        #[serde(crate = "rocket::serde")]
+        struct Object {
+            a: String,
+        }
+
+        let owned = String::from("foo");
+        let ctx = context! { a: &owned };
+        assert_same_object!(ctx, Object { a: "foo".into() });
+        drop(ctx);
+        drop(owned);
+    }
 }
 
 #[cfg(feature = "tera")]

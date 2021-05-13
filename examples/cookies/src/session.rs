@@ -1,12 +1,10 @@
-use std::collections::HashMap;
-
 use rocket::outcome::IntoOutcome;
 use rocket::request::{self, FlashMessage, FromRequest, Request};
 use rocket::response::{Redirect, Flash};
 use rocket::http::{Cookie, CookieJar};
 use rocket::form::Form;
 
-use rocket_dyn_templates::Template;
+use rocket_dyn_templates::{Template, context};
 
 #[derive(FromForm)]
 struct Login<'r> {
@@ -39,9 +37,9 @@ pub use session_uri as uri;
 
 #[get("/")]
 fn index(user: User) -> Template {
-    let mut context = HashMap::new();
-    context.insert("user_id", user.0);
-    Template::render("session", &context)
+    Template::render("session", context! {
+        user_id: user.0,
+    })
 }
 
 #[get("/", rank = 2)]
