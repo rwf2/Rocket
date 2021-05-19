@@ -81,7 +81,7 @@
 //! `None`.
 
 use std::fmt;
-use std::ops::Try;
+use std::ops::{ControlFlow, FromResidual, Try};
 
 use yansi::{Paint, Color};
 
@@ -604,26 +604,38 @@ impl<S, E, F> Outcome<S, E, F> {
 }
 
 impl<S, E, F> Try for Outcome<S, E, F> {
-    type Ok = S;
-    type Error = Result<F, E>;
+    type Output = S;
+    type Residual = Outcome<!, E, F>;
 
-    fn into_result(self) -> Result<Self::Ok, Self::Error> {
+    fn branch(self) -> ControlFlow<Self::Residual, Self::Output> {
         match self {
-            Success(val) => Ok(val),
-            Forward(val) => Err(Ok(val)),
-            Failure(val) => Err(Err(val)),
+            Success(val) => ControlFlow::Continue(val),
+            Forward(val) => ControlFlow::Break(Forward(val)),
+            Failure(val) => ControlFlow::Break(Failure(val)),
         }
     }
 
-    fn from_error(val: Self::Error) -> Self {
-        match val {
-            Ok(val) => Forward(val),
-            Err(val) => Failure(val),
-        }
-    }
-
-    fn from_ok(val: Self::Ok) -> Self {
+    fn from_output(val: Self::Output) -> Self {
         Success(val)
+    }
+}
+
+impl<S, E1, E2: From<E1>, F1, F2: From<F1>> FromResidual<Outcome<!, E1, F1>> for Outcome<S, E2, F2> {
+    fn from_residual(r: Outcome<!, E1, F1>) -> Self {
+        match r {
+            Outcome::Success(never) => match never {},
+            Outcome::Forward(x) => Outcome::Forward(x.into()),
+            Outcome::Failure(y) => Outcome::Failure(y.into()),
+        }
+    }
+}
+
+impl<S, E1, E2: From<E1>, F> FromResidual<Result<std::convert::Infallible, E1>> for Outcome<S, E2, F> {
+    fn from_residual(r: Result<std::convert::Infallible, E1>) -> Self {
+        match r {
+            Ok(never) => match never {},
+            Err(e) => Outcome::Failure(e.into()),
+        }
     }
 }
 
