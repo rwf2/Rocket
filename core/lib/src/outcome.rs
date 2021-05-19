@@ -657,6 +657,26 @@ impl<S, E, F> fmt::Display for Outcome<S, E, F> {
 mod test {
     use super::Outcome::{self, *};
 
+    macro_rules! fake_try {
+        ($e:block) => {
+            (||{
+                std::ops::Try::from_output($e)
+            })()
+        }
+    }
+
+    #[test]
+    fn outcome_try_trait() {
+        let r: Outcome<u16, String, f64> = fake_try! {{ 3 }};
+        assert_eq!(r, Success(3));
+        let r: Outcome<u16, String, f64> = fake_try! {{ Success::<_, &'static str, f32>(3)? }};
+        assert_eq!(r, Success(3));
+        let r: Outcome<u16, String, f64> = fake_try! {{ Failure::<u64, _, f32>("oops")?; 7 }};
+        assert_eq!(r, Failure(String::from("oops")));
+        let r: Outcome<u16, String, f64> = fake_try! {{ Forward::<u64, &'static str, _>(1234.5_f32)?; 7 }};
+        assert_eq!(r, Forward(1234.5));
+    }
+
     #[test]
     fn can_use_question_mark_on_result_in_function_returning_outcome() {
         fn demo() -> Outcome<i128, String, f32> {
