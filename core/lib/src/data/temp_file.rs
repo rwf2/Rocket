@@ -1,5 +1,7 @@
 use std::{io, mem};
 use std::path::{PathBuf, Path};
+use std::pin::Pin;
+use std::task::Poll;
 
 use crate::http::{ContentType, Status};
 use crate::data::{FromData, Data, Capped, N, Limits};
@@ -7,8 +9,9 @@ use crate::form::{FromFormField, ValueField, DataField, error::Errors, name::Fil
 use crate::outcome::IntoOutcome;
 use crate::request::Request;
 
+use futures::task::Context;
 use tokio::fs::{self, File};
-use tokio::io::AsyncWriteExt;
+use tokio::io::{AsyncRead, AsyncWriteExt, ReadBuf};
 use tempfile::{NamedTempFile, TempPath};
 use either::Either;
 
@@ -113,6 +116,17 @@ pub enum TempFile<'v> {
 }
 
 impl<'v> TempFile<'v> {
+    pub async fn read(&self) -> Result<TempFileRead<'v>, std::io::Error> {
+        match self {
+            TempFile::File { path, .. } => {
+                Ok(TempFileRead::File(tokio::fs::File::open(path).await?))
+            }
+            TempFile::Buffered { content } => Ok(TempFileRead::Buffered(std::io::Cursor::new(
+                content.as_bytes(),
+            ))),
+        }
+    }
+
     /// Persists the temporary file, moving it to `path`. If a file exists at
     /// the target path, `self` will atomically replace it. `self.path()` is
     /// updated to `path`.
@@ -467,6 +481,45 @@ impl<'v> TempFile<'v> {
         };
 
         Ok(Capped::new(temp_file, n))
+    }
+}
+
+#[derive(Debug)]
+pub enum TempFileRead<'v> {
+    #[doc(hidden)]
+    File(tokio::fs::File),
+    #[doc(hidden)]
+    Buffered(std::io::Cursor<&'v [u8]>),
+    #[doc(hidden)]
+    BufferedOwned(std::io::Cursor<Vec<u8>>),
+}
+
+impl<'v> TempFileRead<'v> {
+    pub fn into_owned(self) -> TempFileRead<'static> {
+        match self {
+            TempFileRead::File(file) => TempFileRead::File(file),
+            TempFileRead::Buffered(cursor) => {
+                let pos = cursor.position() as usize;
+                TempFileRead::BufferedOwned(std::io::Cursor::new(
+                    cursor.into_inner()[pos..].to_vec(),
+                ))
+            }
+            TempFileRead::BufferedOwned(cursor) => TempFileRead::BufferedOwned(cursor),
+        }
+    }
+}
+
+impl<'v> AsyncRead for TempFileRead<'v> {
+    fn poll_read(
+        self: Pin<&mut Self>,
+        cx: &mut Context<'_>,
+        buf: &mut ReadBuf<'_>,
+    ) -> Poll<io::Result<()>> {
+        match self.get_mut() {
+            Self::File(file) => Pin::new(file).poll_read(cx, buf),
+            Self::Buffered(cursor) => Pin::new(cursor).poll_read(cx, buf),
+            Self::BufferedOwned(cursor) => Pin::new(cursor).poll_read(cx, buf),
+        }
     }
 }
 
