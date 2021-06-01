@@ -1,3 +1,8 @@
+//! Local form testing utilities.
+//!
+//! This module contains `LocalForm` for use when testing form handling in
+//! Rocket.
+
 use std::io::Write;
 use std::borrow::Cow;
 use std::ops::Deref;
@@ -14,11 +19,18 @@ use crate::http::uri::fmt::{UriDisplay, Query};
 /// The following snippet creates a request with a form submission:
 ///
 /// ```rust
+/// # use rocket::launch;
 /// use rocket::local::form::LocalForm;
 /// use rocket::local::blocking::{Client, LocalRequest};
 /// use rocket::http::{ContentType};
 ///
-/// let client = Client::tracked(rocket::ignite()).expect("valid rocket");
+/// #[launch]
+/// fn rocket() -> _ {
+///     rocket::build()
+///     #    .configure(rocket::Config::debug_default())
+/// }
+///
+/// let client = Client::tracked(rocket()).expect("valid `Rocket`");
 /// let req = client.post("/")
 ///     .form(LocalForm::new()
 ///             .field("field", "value")
@@ -41,6 +53,7 @@ pub(crate) enum LocalField<'v> {
 }
 
 impl<'v> LocalForm<'v> {
+    /// Creates a new `LocalForm` that can have fields and values added to.
     pub fn new() -> Self {
         Self(Vec::new())
     }
