@@ -5,7 +5,7 @@
     <title>Tera Demo - {{ title }}</title>
   </head>
   <body>
-    <a href="/tera/hello/Unknown">Hello</a> | <a href="/tera/about">About</a>
+    {% include "tera/nav" %}
 
     {% block content %}{% endblock content %}
 
