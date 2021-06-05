@@ -165,7 +165,7 @@ macro_rules! route_attribute {
         /// MEDIA_TYPE := valid HTTP media type or known shorthand
         ///
         /// INTEGER := unsigned integer, as defined by Rust
-        /// IDENT := valid identifier, as defined by Rust, except `_`
+        /// IDENT := valid identifier, as defined by Rust
         /// ```
         ///
         /// The generic route attribute is defined as:
@@ -176,10 +176,11 @@ macro_rules! route_attribute {
         ///
         /// # Typing Requirements
         ///
-        /// Every identifier that appears in a dynamic parameter (`SINGLE_PARAM`
-        /// or `TRAILING_PARAM`) must appear as an argument to the function. For
-        /// example, the following route requires the decorated function to have
-        /// the arguments `foo`, `baz`, `msg`, `rest`, and `form`:
+        /// Every identifier, except for `_`, that appears in a dynamic
+        /// parameter (`SINGLE_PARAM` or `TRAILING_PARAM`) must appear as an
+        /// argument to the function. For example, the following route requires
+        /// the decorated function to have the arguments `foo`, `baz`, `msg`,
+        /// `rest`, and `form`:
         ///
         /// ```rust
         /// # #[macro_use] extern crate rocket;
@@ -208,6 +209,9 @@ macro_rules! route_attribute {
         /// The type of each function argument that _does not_ have a
         /// corresponding dynamic parameter is required to implement the
         /// [`FromRequest`] trait.
+        ///
+        /// A route argument declared a `_` must _not_ appear in the function
+        /// argument list and has no typing requirements.
         ///
         /// The return type of the decorated function must implement the
         /// [`Responder`] trait.

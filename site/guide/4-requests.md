@@ -161,9 +161,39 @@ async fn files(file: PathBuf) -> Option<NamedFile> {
 [`FileServer`]: @api/rocket/fs/struct.FileServer.html
 [`FromSegments`]: @api/rocket/request/trait.FromSegments.html
 
+### Ignored Segments
+
+A component of a route can be fully ignored by using `<_>`, and multiple
+components can be ignored by using `<_..>`. In other words, the wildcard name
+`_` is a dynamic parameter name that ignores that dynamic parameter. An ignored
+parameter must not appear in the function argument list. A segment declared as
+`<_>` matches anything in a single segment while segments declared as `<_..>`
+match any number of segments with no conditions.
+
+As an example, the `foo_bar` route below matches any `GET` request with a
+3-segment URI that starts with `/foo/` and ends with `/bar`. The `everything`
+route below matches _every_ GET request.
+
+```rust
+# #[macro_use] extern crate rocket;
+
+#[get("/foo/<_>/bar")]
+fn foo_bar() -> &'static str {
+    "Foo _____ bar!"
+}
+
+#[get("/<_..>")]
+fn everything() -> &'static str {
+    "Hey, you're here."
+}
+
+# // Ensure there are no collisions.
+# rocket_guide_tests::client(routes![foo_bar, everything]);
+```
+
 ## Forwarding
 
-Let's take a closer look at the route attribute and signature pair from a
+Let's take a closer look at this route attribute and signature pair from a
 previous example:
 
 ```rust
@@ -247,6 +277,7 @@ queries: the _more_ static a route's path and query are, the higher its
 precedence.
 
 There are three "colors" to paths and queries:
+
   1. `static`, meaning all components are static
   2. `partial`, meaning at least one component is dynamic
   3. `wild`, meaning all components are dynamic
@@ -269,7 +300,25 @@ and wild paths. This results in the following default ranking table:
 | wild       | wild        | -2           |
 | wild       | none        | -1           |
 
-Recall that _lower_ ranks have _higher_ precedence.
+Recall that _lower_ ranks have _higher_ precedence. As an example, consider this
+application from before:
+
+```rust
+# #[macro_use] extern crate rocket;
+
+#[get("/foo/<_>/bar")]
+fn foo_bar() { }
+
+#[get("/<_..>")]
+fn everything() { }
+
+# // Ensure there are no collisions.
+# rocket_guide_tests::client(routes![foo_bar, everything]);
+```
+
+Default ranking ensures that `foo_bar`, with a "partial" path color, has higher
+precedence than `everything` with a "wild" path color. This default ranking
+prevents what would have otherwise been a routing collision.
 
 ## Request Guards
 
