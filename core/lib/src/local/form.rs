@@ -83,7 +83,7 @@ impl<'v> LocalForm<'v> {
     pub fn raw_field(
         mut self,
         name: impl Into<Cow<'v, RawStr>>,
-        value: impl Into<Cow<'v, RawStr>>
+        value: impl Into<Cow<'v, RawStr>>,
     ) -> Self {
         let name = name.into();
         let value = value.into();
@@ -141,10 +141,7 @@ impl<'v> LocalForm<'v> {
             self.format_simple()
         };
 
-        match result {
-            Ok(buf) => buf,
-            Err(_) => vec![],
-        }
+        result.unwrap_or(Vec::new())
     }
 
     fn add_field<N, V>(&mut self, name: N, value: V)
@@ -223,7 +220,7 @@ impl<'v> LocalForm<'v> {
                         &mut buf,
                         "Content-Disposition: form-data; name=\"{}\"; filename=\"{}\"\r\n",
                         name,
-                        file_name.unwrap_or("")
+                        file_name.unwrap_or(""),
                     )?;
                     write!(&mut buf, "Content-Type: {}\r\n", content_type)?;
                     write!(&mut buf, "\r\n")?;
