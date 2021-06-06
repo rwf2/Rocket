@@ -117,6 +117,7 @@ pub async fn bind_tls<C: io::BufRead + Send, K: io::BufRead + Send>(
     tls_config.set_persistence(cache);
     tls_config.ticketer = rustls::Ticketer::new();
     tls_config.set_single_cert(cert_chain, key).expect("invalid key");
+    tls_config.set_protocols(&[b"h2".to_vec(), b"http/1.1".to_vec()]);
 
     let acceptor = TlsAcceptor::from(Arc::new(tls_config));
     let state = TlsListenerState::Listening;
