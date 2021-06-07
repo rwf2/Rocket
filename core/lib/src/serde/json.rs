@@ -35,9 +35,6 @@ use crate::form::prelude as form;
 
 use serde::{Serialize, Deserialize};
 
-#[doc(inline)]
-pub use serde_json::{from_str, from_slice};
-
 #[doc(hidden)]
 pub use serde_json;
 
@@ -252,42 +249,6 @@ impl<'v, T: Deserialize<'v> + Send> form::FromFormField<'v> for Json<T> {
     }
 }
 
-/// An arbitrary JSON value.
-///
-/// This structure wraps `serde`'s [`Value`] type. Importantly, unlike `Value`,
-/// this type implements [`Responder`], allowing a value of this type to be
-/// returned directly from a handler.
-///
-/// [`Value`]: serde_json::value
-/// [`Responder`]: crate::response::Responder
-///
-/// # `Responder`
-///
-/// The `Responder` implementation for `Value` serializes the represented
-/// value into a JSON string and sets the string as the body of a fixed-sized
-/// response with a `Content-Type` of `application/json`.
-///
-/// # Usage
-///
-/// A value of this type is constructed via the [`json!`](json) macro. The macro
-/// and this type are typically used to construct JSON values in an ad-hoc
-/// fashion during request handling. This looks something like:
-///
-/// ```rust
-/// # #[macro_use] extern crate rocket;
-/// use rocket::serde::json::{json, Value};
-///
-/// #[get("/json")]
-/// fn get_json() -> Value {
-///     json!({
-///         "id": 83,
-///         "values": [1, 2, 3, 4]
-///     })
-/// }
-/// ```
-#[doc(inline)]
-pub use serde_json::Value;
-
 /// Serializes the value into JSON. Returns a response with Content-Type JSON
 /// and a fixed-size body with the serialized value.
 impl<'r> Responder<'r, 'static> for Value {
@@ -379,4 +340,154 @@ crate::export! {
     macro_rules! json {
         ($($json:tt)+) => ($crate::serde::json::serde_json::json!($($json)*));
     }
+}
+
+/// An arbitrary JSON value as returned by [`json!`].
+///
+/// # `Responder`
+///
+/// `Value` is a `Responder` that serializes the represented value into a JSON
+/// string and sets the string as the body of a fixed-sized response with a
+/// `Content-Type` of `application/json`.
+///
+/// # Usage
+///
+/// A value of this type is returned by [`json!`]. The macro and this type are
+/// typically used to construct JSON values in an ad-hoc fashion during request
+/// handling. This looks something like:
+///
+/// ```rust
+/// # #[macro_use] extern crate rocket;
+/// use rocket::serde::json::{json, Value};
+///
+/// #[get("/json")]
+/// fn get_json() -> Value {
+///     json!({
+///         "id": 83,
+///         "values": [1, 2, 3, 4]
+///     })
+/// }
+/// ```
+#[doc(inline)]
+pub use serde_json::Value;
+
+/// Deserialize an instance of type `T` from bytes of JSON text.
+///
+/// # Example
+///
+/// ```
+/// use rocket::serde::{Deserialize, json};
+///
+/// #[derive(Debug, PartialEq, Deserialize)]
+/// #[serde(crate = "rocket::serde")]
+/// struct Data<'r> {
+///     framework: &'r str,
+///     stars: usize,
+/// }
+///
+/// let bytes = br#"
+///     {
+///         "framework": "Rocket",
+///         "stars": 5
+///     }
+/// "#;
+///
+/// let data: Data = json::from_slice(bytes).unwrap();
+/// assert_eq!(data, Data { framework: "Rocket", stars: 5, });
+/// ```
+///
+/// # Errors
+///
+/// This conversion can fail if the structure of the input does not match the
+/// structure expected by `T`, for example if `T` is a struct type but the input
+/// contains something other than a JSON map. It can also fail if the structure
+/// is correct but `T`'s implementation of `Deserialize` decides that something
+/// is wrong with the data, for example required struct fields are missing from
+/// the JSON map or some number is too big to fit in the expected primitive
+/// type.
+#[inline(always)]
+pub fn from_slice<'a, T>(v: &'a [u8]) -> Result<T, serde_json::error::Error>
+    where T: Deserialize<'a>,
+{
+    serde_json::from_slice(v)
+}
+
+/// Deserialize an instance of type `T` from a string of JSON text.
+///
+/// # Example
+///
+/// ```
+/// use rocket::serde::{Deserialize, json};
+///
+/// #[derive(Debug, PartialEq, Deserialize)]
+/// #[serde(crate = "rocket::serde")]
+/// struct Data<'r> {
+///     framework: &'r str,
+///     stars: usize,
+/// }
+///
+/// let string = r#"
+///     {
+///         "framework": "Rocket",
+///         "stars": 5
+///     }
+/// "#;
+///
+/// let data: Data = json::from_str(string).unwrap();
+/// assert_eq!(data, Data { framework: "Rocket", stars: 5, });
+/// ```
+///
+/// # Errors
+///
+/// This conversion can fail if the structure of the input does not match the
+/// structure expected by `T`, for example if `T` is a struct type but the input
+/// contains something other than a JSON map. It can also fail if the structure
+/// is correct but `T`'s implementation of `Deserialize` decides that something
+/// is wrong with the data, for example required struct fields are missing from
+/// the JSON map or some number is too big to fit in the expected primitive
+/// type.
+#[inline(always)]
+pub fn from_str<'a, T>(v: &'a str) -> Result<T, serde_json::error::Error>
+    where T: Deserialize<'a>,
+{
+    serde_json::from_str(v)
+}
+
+/// Interpret a [`Value`] as an instance of type `T`.
+///
+/// # Example
+///
+/// ```
+/// use rocket::serde::{Deserialize, json};
+///
+/// #[derive(Debug, PartialEq, Deserialize)]
+/// #[serde(crate = "rocket::serde")]
+/// struct Data {
+///     framework: String ,
+///     stars: usize,
+/// }
+///
+/// let value = json::json!({
+///     "framework": "Rocket",
+///     "stars": 5
+/// });
+///
+/// let data: Data = json::from_value(value).unwrap();
+/// assert_eq!(data, Data { framework: "Rocket".into(), stars: 5, });
+/// ```
+///
+/// # Errors
+///
+/// This conversion can fail if the structure of the input does not match the
+/// structure expected by `T`, for example if `T` is a struct type but the input
+/// contains something other than a JSON map. It can also fail if the structure
+/// is correct but `T`'s implementation of `Deserialize` decides that something
+/// is wrong with the data, for example required struct fields are missing from
+/// the JSON map or some number is too big to fit in the expected primitive
+/// type.
+#[inline(always)]
+pub fn from_value<T>(v: Value) -> Result<T, serde_json::error::Error>
+    where T: crate::serde::DeserializeOwned
+{
+    serde_json::from_value(v)
 }

@@ -363,6 +363,71 @@ note: error occurred while deriving `FromForm`
     |          ^^^^^^^^
     = note: this error originates in the derive macro `FromForm` (in Nightly builds, run with -Z macro-backtrace for more info)
 
+error: duplicate attribute parameter: default
+   --> $DIR/from_form.rs:174:26
+    |
+174 |     #[field(default = 1, default = 2)]
+    |                          ^^^^^^^^^^^
+    |
+note: error occurred while deriving `FromForm`
+   --> $DIR/from_form.rs:172:10
+    |
+172 | #[derive(FromForm)]
+    |          ^^^^^^^^
+    = note: this error originates in the derive macro `FromForm` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+error: duplicate default field expression
+   --> $DIR/from_form.rs:181:23
+    |
+181 |     #[field(default = 2)]
+    |                       ^
+    |
+    = help: at most one `default` or `default_with` is allowed
+note: error occurred while deriving `FromForm`
+   --> $DIR/from_form.rs:178:10
+    |
+178 | #[derive(FromForm)]
+    |          ^^^^^^^^
+    = note: this error originates in the derive macro `FromForm` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+error: duplicate default expressions
+   --> $DIR/from_form.rs:187:23
+    |
+187 |     #[field(default = 1, default_with = None)]
+    |                       ^
+    |
+    = help: only one of `default` or `default_with` must be used
+note: other default expression is here
+   --> $DIR/from_form.rs:187:41
+    |
+187 |     #[field(default = 1, default_with = None)]
+    |                                         ^^^^
+note: error occurred while deriving `FromForm`
+   --> $DIR/from_form.rs:185:10
+    |
+185 | #[derive(FromForm)]
+    |          ^^^^^^^^
+    = note: this error originates in the derive macro `FromForm` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+error: duplicate default expressions
+   --> $DIR/from_form.rs:194:23
+    |
+194 |     #[field(default = 1)]
+    |                       ^
+    |
+    = help: only one of `default` or `default_with` must be used
+note: other default expression is here
+   --> $DIR/from_form.rs:193:28
+    |
+193 |     #[field(default_with = None)]
+    |                            ^^^^
+note: error occurred while deriving `FromForm`
+   --> $DIR/from_form.rs:191:10
+    |
+191 | #[derive(FromForm)]
+    |          ^^^^^^^^
+    = note: this error originates in the derive macro `FromForm` (in Nightly builds, run with -Z macro-backtrace for more info)
+
 error[E0425]: cannot find function `unknown` in this scope
    --> $DIR/from_form.rs:150:24
     |
@@ -403,3 +468,30 @@ error[E0308]: mismatched types
     |
 162 |     #[field(validate = ext("hello"))]
     |                            ^^^^^^^ expected struct `ContentType`, found `&str`
+
+error[E0277]: the trait bound `i32: From<&str>` is not satisfied
+   --> $DIR/from_form.rs:168:23
+    |
+168 |     #[field(default = "no conversion")]
+    |                       ^^^^^^^^^^^^^^^ the trait `From<&str>` is not implemented for `i32`
+    |
+    = help: the following implementations were found:
+              <i32 as From<NonZeroI32>>
+              <i32 as From<bool>>
+              <i32 as From<i16>>
+              <i32 as From<i8>>
+            and 5 others
+    = note: required because of the requirements on the impl of `Into<i32>` for `&str`
+
+error[E0308]: mismatched types
+   --> $DIR/from_form.rs:200:33
+    |
+200 |     #[field(default_with = Some("hi"))]
+    |                                 ^^^^ expected struct `std::string::String`, found `&str`
+    |
+help: try using a conversion method
+    |
+200 |     #[field(default_with = Some("hi".to_string()))]
+    |                                 ^^^^^^^^^^^^^^^^
+200 |     #[field(default_with = Some("hi".to_string()))]
+    |                                 ^^^^^^^^^^^^^^^^

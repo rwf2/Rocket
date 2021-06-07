@@ -720,19 +720,19 @@ mod sse_tests {
         use futures::future::ready;
         use futures::stream::{once, iter, StreamExt};
 
-        // Set a heartbeat interval of 200ms. Send nothing for 500ms. We should
-        // get 2 or 3 heartbeats, the latter if one is sent eagerly.
-        let raw = stream!(time::sleep(Duration::from_millis(500)).await;)
+        const HEARTBEAT: &str = ":\n\n";
+
+        // Set a heartbeat interval of 250ms. Send nothing for 600ms. We should
+        // get 2 or 3 heartbeats, the latter if one is sent eagerly. Maybe 4.
+        let raw = stream!(time::sleep(Duration::from_millis(600)).await;)
             .map(|_| unreachable!());
 
         let string = EventStream::from(raw)
-            .heartbeat(Duration::from_millis(200))
+            .heartbeat(Duration::from_millis(250))
             .into_string();
 
-        match string.as_str() {
-            ":\n\n:\n\n" | ":\n\n:\n\n:\n\n" => { /* ok */ },
-            s => panic!("unexpected heartbeat response: {:?}", s)
-        }
+        let heartbeats = string.matches(HEARTBEAT).count();
+        assert!(heartbeats >= 2 && heartbeats <= 4, "got {} beat(s)", heartbeats);
 
         let stream = EventStream! {
             time::sleep(Duration::from_millis(200)).await;
@@ -742,10 +742,10 @@ mod sse_tests {
         };
 
         let string = stream.heartbeat(Duration::from_millis(300)).into_string();
-        match string.as_str() {
-            ":\n\ndata:foo\n\n:\n\ndata:bar\n\n" | "data:foo\n\n:\n\ndata:bar\n\n" => { /* ok */ },
-            s => panic!("unexpected heartbeat response: {:?}", s)
-        }
+        let heartbeats = string.matches(HEARTBEAT).count();
+        assert!(heartbeats >= 1 && heartbeats <= 3, "got {} beat(s)", heartbeats);
+        assert!(string.contains("data:foo\n\n"));
+        assert!(string.contains("data:bar\n\n"));
 
         // We shouldn't send a heartbeat if a message is immediately available.
         let stream = EventStream::from(once(ready(Event::data("hello"))));
@@ -755,9 +755,9 @@ mod sse_tests {
         // It's okay if we do it with two, though.
         let stream = EventStream::from(iter(vec![Event::data("a"), Event::data("b")]));
         let string = stream.heartbeat(Duration::from_secs(1)).into_string();
-        match string.as_str() {
-            "data:a\n\n:\n\ndata:b\n\n" | "data:a\n\ndata:b\n\n" => { /* ok */ },
-            s => panic!("unexpected heartbeat response: {:?}", s)
-        }
+        let heartbeats = string.matches(HEARTBEAT).count();
+        assert!(heartbeats <= 1);
+        assert!(string.contains("data:a\n\n"));
+        assert!(string.contains("data:b\n\n"));
     }
 }

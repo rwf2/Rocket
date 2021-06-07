@@ -549,15 +549,16 @@ pub fn derive_from_form_field(input: TokenStream) -> TokenStream {
 ///
 /// ```rust
 /// # #[macro_use] extern crate rocket;
-/// #
 /// #[derive(FromForm)]
 /// struct MyStruct<'r> {
 ///     field: usize,
 ///     #[field(name = "renamed_field")]
 ///     #[field(name = uncased("RenamedField"))]
 ///     other: &'r str,
-///     #[field(validate = range(1..))]
+///     #[field(validate = range(1..), default = 3)]
 ///     r#type: usize,
+///     #[field(default = None)]
+///     is_nice: bool,
 /// }
 /// ```
 ///
@@ -567,33 +568,37 @@ pub fn derive_from_form_field(input: TokenStream) -> TokenStream {
 /// implementation parses a form whose field names match the field names of the
 /// structure on which the derive was applied. Each field's value is parsed with
 /// the [`FromForm`] implementation of the field's type. The `FromForm`
-/// implementation succeeds only when all of the field parses succeed or return
-/// a default. Errors are collected into a [`form::Errors`] and return if
+/// implementation succeeds only when all fields parse successfully or return a
+/// default. Errors are collected into a [`form::Errors`] and returned if
 /// non-empty after parsing all fields.
 ///
 /// The derive accepts one field attribute: `field`, with the following syntax:
 ///
 /// ```text
-/// field := name? validate*
+/// field := name? default? validate*
 ///
-/// name := 'name' '=' name_val
+/// name := 'name' '=' name_val ','?
 /// name_val :=  '"' FIELD_NAME '"'
 ///          | 'uncased(' '"' FIELD_NAME '"' ')
 ///
-/// validate := 'validate' '=' EXPR
+/// default := 'default' '=' EXPR ','?
+///          | 'default_with' '=' EXPR ','?
+///
+/// validate := 'validate' '=' EXPR ','?
 ///
 /// FIELD_NAME := valid field name, according to the HTML5 spec
 /// EXPR := valid expression, as defined by Rust
 /// ```
 ///
-/// The attribute can be applied any number of times on a field. When applied,
-/// the attribute looks as follows:
+/// The attribute can be applied any number of times on a field as long as at
+/// most _one_ of `default` or `default_with` is present per field:
 ///
 /// ```rust
 /// # #[macro_use] extern crate rocket;
-/// #
 /// #[derive(FromForm)]
 /// struct MyStruct {
+///     #[field(name = uncased("number"))]
+///     #[field(default = 42)]
 ///     field: usize,
 ///     #[field(name = "renamed_field")]
 ///     #[field(name = uncased("anotherName"))]
@@ -611,12 +616,42 @@ pub fn derive_from_form_field(input: TokenStream) -> TokenStream {
 /// case-preserving. When more than one `name` attribute is applied, the field
 /// will match against _any_ of the names.
 ///
-/// **`validate`**
+/// **`validate = expr`**
 ///
-/// The validation expression will be run if the field type parses successfully.
-/// The expression must return a value of type `Result<(), form::Errors>`. On
-/// `Err`, the errors are added to the thus-far collected errors. If more than
-/// one `validate` attribute is applied, _all_ validations are run.
+/// The validation `expr` is run if the field type parses successfully. The
+/// expression must return a value of type `Result<(), form::Errors>`. On `Err`,
+/// the errors are added to the thus-far collected errors. If more than one
+/// `validate` attribute is applied, _all_ validations are run.
+///
+/// **`default = expr`**
+///
+/// If `expr` is not literally `None`, the parameter sets the default value of
+/// the field to be `expr.into()`. If `expr` _is_ `None`, the parameter _unsets_
+/// the default value of the field, if any. The expression is only evaluated if
+/// the attributed field is missing in the incoming form.
+///
+/// Except when `expr` is `None`, `expr` must be of type `T: Into<F>` where `F`
+/// is the field's type.
+///
+/// **`default_with = expr`**
+///
+/// The parameter sets the default value of the field to be exactly `expr` which
+/// must be of type `Option<F>` where `F` is the field's type. If the expression
+/// evaluates to `None`, there is no default. Otherwise the value wrapped in
+/// `Some` is used. The expression is only evaluated if the attributed field is
+/// missing in the incoming form.
+///
+/// ```rust
+/// # #[macro_use] extern crate rocket;
+/// use std::num::NonZeroUsize;
+///
+/// #[derive(FromForm)]
+/// struct MyForm {
+///     // `NonZeroUsize::new()` return an `Option<NonZeroUsize>`.
+///     #[field(default_with = NonZeroUsize::new(42))]
+///     num: NonZeroUsize,
+/// }
+/// ```
 ///
 /// [`FromForm`]: rocket::form::FromForm
 /// [`form::Errors`]: rocket::form::Errors

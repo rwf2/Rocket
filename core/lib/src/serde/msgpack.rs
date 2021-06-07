@@ -231,3 +231,40 @@ impl<T> DerefMut for MsgPack<T> {
         &mut self.0
     }
 }
+
+/// Deserialize an instance of type `T` from MessagePack encoded bytes.
+///
+/// Deserialization is performed in a zero-copy manner whenever possible.
+///
+/// # Example
+///
+/// ```
+/// use rocket::serde::{Deserialize, msgpack};
+///
+/// #[derive(Debug, PartialEq, Deserialize)]
+/// #[serde(crate = "rocket::serde")]
+/// struct Data<'r> {
+///     framework: &'r str,
+///     stars: usize,
+/// }
+///
+/// let bytes = &[
+///     130, 169, 102, 114, 97, 109, 101, 119, 111, 114, 107, 166, 82, 111,
+///     99, 107, 101, 116, 165, 115, 116, 97, 114, 115, 5
+/// ];
+///
+/// let data: Data = msgpack::from_slice(bytes).unwrap();
+/// assert_eq!(data, Data { framework: "Rocket", stars: 5, });
+/// ```
+///
+/// # Errors
+///
+/// Deserialization fails if `v` does not represent a valid MessagePack encoding
+/// of any instance of `T` or if `T`'s `Deserialize` implementation fails
+/// otherwise.
+#[inline(always)]
+pub fn from_slice<'a, T>(v: &'a [u8]) -> Result<T, Error>
+    where T: Deserialize<'a>,
+{
+    rmp_serde::from_read_ref(v)
+}

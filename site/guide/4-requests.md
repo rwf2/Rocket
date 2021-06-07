@@ -810,8 +810,35 @@ struct MyForm<'v> {
 # rocket_guide_tests::assert_form_parses_ok!(MyForm, "");
 ```
 
+The default can be overridden or unset using the `#[field(default = expr)` field
+attribute. If `expr` is not literally `None`, the parameter sets the default
+value of the field to be `expr.into()`. If `expr` _is_ `None`, the parameter
+_unsets_ the default value of the field, if any.
+
+```rust
+# use rocket::form::FromForm;
+
+#[derive(FromForm)]
+struct MyForm {
+    // Set the default value to be `"hello"`.
+    //
+    // Note how an `&str` is automatically converted into a `String`.
+    #[field(default = "hello")]
+    greeting: String,
+    // Remove the default value of `false`, requiring all parses of `MyForm`
+    // to contain an `is_friendly` field.
+    #[field(default = None)]
+    is_friendly: bool,
+}
+```
+
+See the [`FromForm` derive] documentation for full details on the `default`
+attribute parameter as well documentation on the more expressive `default_with`
+parameter option.
+
 [`Errors<'_>`]: @api/rocket/form/struct.Errors.html
 [`form::Result`]: @api/rocket/form/type.Result.html
+[`FromForm` derive]: @api/rocket/derive.FromForm.html
 
 ### Field Renaming
 

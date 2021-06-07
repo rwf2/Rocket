@@ -129,6 +129,10 @@ impl log::Log for RocketLogger {
     }
 }
 
+pub(crate) fn init_default() -> bool {
+    crate::log::init(&crate::Config::debug_default())
+}
+
 pub(crate) fn init(config: &crate::Config) -> bool {
     static HAS_ROCKET_LOGGER: AtomicBool = AtomicBool::new(false);
 

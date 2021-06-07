@@ -234,3 +234,68 @@ fn inner_sentinels_detected() {
     #[get("/")] fn either_route4() -> Either<(), ()> { todo!() }
     Client::debug_with(routes![either_route4]).expect("no sentinel error");
 }
+
+#[async_test]
+async fn known_macro_sentinel_works() {
+    use rocket::response::stream::{TextStream, ByteStream, ReaderStream};
+    use rocket::local::asynchronous::Client;
+    use rocket::tokio::io::AsyncRead;
+
+    #[derive(Responder)]
+    struct TextSentinel(&'static str);
+
+    impl Sentinel for TextSentinel {
+        fn abort(_: &Rocket<Ignite>) -> bool {
+            true
+        }
+    }
+
+    impl AsRef<str> for TextSentinel {
+        fn as_ref(&self) -> &str {
+            self.0
+        }
+    }
+
+    impl AsRef<[u8]> for TextSentinel {
+        fn as_ref(&self) -> &[u8] {
+            self.0.as_bytes()
+        }
+    }
+
+    impl AsyncRead for TextSentinel {
+        fn poll_read(
+            self: std::pin::Pin<&mut Self>,
+            _: &mut futures::task::Context<'_>,
+            _: &mut tokio::io::ReadBuf<'_>,
+        ) -> futures::task::Poll<std::io::Result<()>> {
+            futures::task::Poll::Ready(Ok(()))
+        }
+    }
+
+    #[get("/text")]
+    fn text() -> TextStream![TextSentinel] {
+        TextStream!(yield TextSentinel("hi");)
+    }
+
+    #[get("/bytes")]
+    fn byte() -> ByteStream![TextSentinel] {
+        ByteStream!(yield TextSentinel("hi");)
+    }
+
+    #[get("/reader")]
+    fn reader() -> ReaderStream![TextSentinel] {
+        ReaderStream!(yield TextSentinel("hi");)
+    }
+
+    macro_rules! UnknownStream {
+        ($t:ty) => (ReaderStream![$t])
+    }
+
+    #[get("/ignore")]
+    fn ignore() -> UnknownStream![TextSentinel] {
+        ReaderStream!(yield TextSentinel("hi");)
+    }
+
+    let err = Client::debug_with(routes![text, byte, reader, ignore]).await.unwrap_err();
+    assert!(matches!(err.kind(), SentinelAborts(vec) if vec.len() == 3));
+}

@@ -619,6 +619,7 @@ impl<'r> Request<'r> {
     ///     current_user(&request).await
     /// }).await;
     /// # })
+    /// ```
     #[inline]
     pub async fn local_cache_async<'a, T, F>(&'a self, fut: F) -> &'a T
         where F: Future<Output = T>,
@@ -633,8 +634,8 @@ impl<'r> Request<'r> {
         }
     }
 
-    /// Retrieves and parses into `T` the 0-indexed no`n`th non-empty segment
-    /// from the _routed_ request, that is, the `n`th segment _after_ the mount
+    /// Retrieves and parses into `T` the 0-indexed `n`th non-empty segment from
+    /// the _routed_ request, that is, the `n`th segment _after_ the mount
     /// point. If the request has not been routed, then this is simply the `n`th
     /// non-empty request URI segment.
     ///

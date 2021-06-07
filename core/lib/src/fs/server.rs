@@ -107,6 +107,7 @@ impl FileServer {
     ///     rocket::build().mount("/static", FileServer::from("/www/public").rank(30))
     /// }
     /// ```
+    #[track_caller]
     pub fn from<P: AsRef<Path>>(path: P) -> Self {
         FileServer::new(path, Options::default())
     }
@@ -138,14 +139,16 @@ impl FileServer {
     ///         .mount("/pub", FileServer::new("/www/public", options).rank(-1))
     /// }
     /// ```
+    #[track_caller]
     pub fn new<P: AsRef<Path>>(path: P, options: Options) -> Self {
         use crate::yansi::Paint;
 
         let path = path.as_ref();
         if !path.is_dir() {
-            error!("`FileServer` supplied with invalid path");
-            info_!("'{}' is not a directory", Paint::white(path.display()));
-            panic!("refusing to continue due to invalid static files path");
+            let path = path.display();
+            error!("FileServer path '{}' is not a directory.", Paint::white(path));
+            warn_!("Aborting early to prevent inevitable handler failure.");
+            panic!("bad FileServer path: refusing to continue");
         }
 
         FileServer { root: path.into(), options, rank: Self::DEFAULT_RANK }

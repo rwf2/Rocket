@@ -2,9 +2,12 @@
 
 use std::ops::Deref;
 use std::hash::{Hash, Hasher};
+use std::borrow::Cow;
 
 use syn::{self, Ident, ext::IdentExt as _, visit::Visit};
 use proc_macro2::{Span, TokenStream};
+use devise::ext::PathExt;
+use rocket_http::ext::IntoOwned;
 
 pub trait IdentExt {
     fn prepend(&self, string: &str) -> syn::Ident;
@@ -29,8 +32,8 @@ pub trait FnArgExt {
 
 #[derive(Debug)]
 pub struct Child<'a> {
-    pub parent: Option<&'a syn::Type>,
-    pub ty: &'a syn::Type,
+    pub parent: Option<Cow<'a, syn::Type>>,
+    pub ty: Cow<'a, syn::Type>,
 }
 
 impl Deref for Child<'_> {
@@ -41,8 +44,20 @@ impl Deref for Child<'_> {
     }
 }
 
+impl IntoOwned for Child<'_> {
+    type Owned = Child<'static>;
+
+    fn into_owned(self) -> Self::Owned {
+        Child {
+            parent: self.parent.into_owned(),
+            ty: Cow::Owned(self.ty.into_owned()),
+        }
+    }
+}
+
 pub trait TypeExt {
     fn unfold(&self) -> Vec<Child<'_>>;
+    fn unfold_with_known_macros(&self, known_macros: &[&str]) -> Vec<Child<'_>>;
     fn is_concrete(&self, generic_ident: &[&Ident]) -> bool;
 }
 
@@ -122,24 +137,58 @@ impl FnArgExt for syn::FnArg {
     }
 }
 
+fn known_macro_inner_ty(t: &syn::TypeMacro, known: &[&str]) -> Option<syn::Type> {
+    if !known.iter().any(|k| t.mac.path.last_ident().map_or(false, |i| i == k)) {
+        return None;
+    }
+
+    syn::parse2(t.mac.tokens.clone()).ok()
+}
+
 impl TypeExt for syn::Type {
     fn unfold(&self) -> Vec<Child<'_>> {
-        #[derive(Default)]
-        struct Visitor<'a> {
-            parents: Vec<&'a syn::Type>,
+        self.unfold_with_known_macros(&[])
+    }
+
+    fn unfold_with_known_macros<'a>(&'a self, known_macros: &[&str]) -> Vec<Child<'a>> {
+        struct Visitor<'a, 'm> {
+            parents: Vec<Cow<'a, syn::Type>>,
             children: Vec<Child<'a>>,
+            known_macros: &'m [&'m str],
         }
 
-        impl<'a> Visit<'a> for Visitor<'a> {
+        impl<'m> Visitor<'_, 'm> {
+            fn new(known_macros: &'m [&'m str]) -> Self {
+                Visitor { parents: vec![], children: vec![], known_macros }
+            }
+        }
+
+        impl<'a> Visit<'a> for Visitor<'a, '_> {
             fn visit_type(&mut self, ty: &'a syn::Type) {
-                self.children.push(Child { parent: self.parents.last().cloned(), ty });
-                self.parents.push(ty);
+                let parent = self.parents.last().cloned();
+
+                if let syn::Type::Macro(t) = ty {
+                    if let Some(inner_ty) = known_macro_inner_ty(t, self.known_macros) {
+                        let mut visitor = Visitor::new(self.known_macros);
+                        if let Some(parent) = parent.clone().into_owned() {
+                            visitor.parents.push(parent);
+                        }
+
+                        visitor.visit_type(&inner_ty);
+                        let mut children = visitor.children.into_owned();
+                        self.children.append(&mut children);
+                        return;
+                    }
+                }
+
+                self.children.push(Child { parent, ty: Cow::Borrowed(ty) });
+                self.parents.push(Cow::Borrowed(ty));
                 syn::visit::visit_type(self, ty);
                 self.parents.pop();
             }
         }
 
-        let mut visitor = Visitor::default();
+        let mut visitor = Visitor::new(known_macros);
         visitor.visit_type(self);
         visitor.children
     }

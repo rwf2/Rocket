@@ -49,24 +49,57 @@ fn new(id: usize) -> status::Accepted<String> {
 
 Similarly, the types in the [`content` module](@api/rocket/response/content/)
 can be used to override the Content-Type of a response. For instance, to set the
-Content-Type of `&'static str` to JSON, you can use the [`content::Json`] type
-as follows:
+Content-Type of `&'static str` to JSON, as well as setting the status code to an
+arbitrary one like `418 I'm a teapot`, combine [`content::Json`] with
+[`status::Custom`]:
 
 ```rust
 # #[macro_use] extern crate rocket;
-# fn main() {}
-use rocket::response::content;
+use rocket::http::Status;
+use rocket::response::{content, status};
 
 #[get("/")]
-fn json() -> content::Json<&'static str> {
-    content::Json("{ \"hi\": \"world\" }")
+fn json() -> status::Custom<content::Json<&'static str>> {
+    status::Custom(Status::ImATeapot, content::Json("{ \"hi\": \"world\" }"))
 }
 ```
 
-! warning: This is _not_ the same as the [`Json`] in [`serde`]!
+! warning: This is _not_ the same as [`serde::json::Json`]!
+
+The built-in `(Status, R)` and `(ContentType, R)` responders, where `R:
+Responder`, are short-hands for the `status::Custom` and `content::Custom`
+responders:
+
+```rust
+# #[macro_use] extern crate rocket;
+use rocket::http::{Status, ContentType};
+
+#[get("/")]
+fn json() -> (Status, (ContentType, &'static str)) {
+    (Status::ImATeapot, (ContentType::JSON, "{ \"hi\": \"world\" }"))
+}
+```
+
+For pithy reusability, it is advisable to derive a [custom responder]:
+
+```rust
+# #[macro_use] extern crate rocket;
+
+#[derive(Responder)]
+#[response(status = 418, content_type = "json")]
+struct RawTeapotJson(&'static str);
+
+#[get("/")]
+fn json() -> RawTeapotJson {
+    RawTeapotJson("{ \"hi\": \"world\" }")
+}
+```
 
 [`Accepted`]: @api/rocket/response/status/struct.Accepted.html
 [`content::Json`]: @api/rocket/response/content/struct.Json.html
+[`status::Custom`]: @api/rocket/response/status/struct.Custom.html
+[`serde::json::Json`]: @api/rocket/serde/json/struct.Json.html
+[custom responder]: #custom-responders
 
 ### Errors
 

@@ -1,4 +1,8 @@
-use rocket::form::{Form, Strict, FromForm, FromFormField, Errors};
+use std::net::{IpAddr, SocketAddr};
+use std::collections::{BTreeMap, HashMap};
+use pretty_assertions::assert_eq;
+
+use rocket::form::{self, Form, Strict, FromForm, FromFormField, Errors};
 
 fn strict<'f, T: FromForm<'f>>(string: &'f str) -> Result<T, Errors<'f>> {
     Form::<Strict<T>>::parse(string).map(|s| s.into_inner())
@@ -611,4 +615,230 @@ fn test_multipart() {
         .dispatch();
 
     assert!(response.status().class().is_success());
+}
+
+#[test]
+fn test_default_removed() {
+    #[derive(FromForm, PartialEq, Debug)]
+    struct FormNoDefault {
+        #[field(default = None)]
+        field1: bool,
+        #[field(default = None)]
+        field2: Option<usize>,
+        #[field(default = None)]
+        field3: Option<Option<usize>>,
+        #[field(default_with = None)]
+        field4: bool,
+    }
+
+    let form_string = &["field1=false", "field2=10", "field3=23", "field4"].join("&");
+    let form1: Option<FormNoDefault> = lenient(&form_string).ok();
+    assert_eq!(form1, Some(FormNoDefault {
+        field1: false,
+        field2: Some(10),
+        field3: Some(Some(23)),
+        field4: true,
+    }));
+
+    let form_string = &["field1=true", "field2=10", "field3=23", "field4"].join("&");
+    let form1: Option<FormNoDefault> = lenient(&form_string).ok();
+    assert_eq!(form1, Some(FormNoDefault {
+        field1: true,
+        field2: Some(10),
+        field3: Some(Some(23)),
+        field4: true,
+    }));
+
+    // Field 1 missing.
+    let form_string = &["field2=20", "field3=10", "field4"].join("&");
+    assert!(lenient::<FormNoDefault>(&form_string).is_err());
+
+    // Field 2 missing.
+    let form_string = &["field1=true", "field3=10", "field4"].join("&");
+    assert!(lenient::<FormNoDefault>(&form_string).is_err());
+
+    // Field 3 missing.
+    let form_string = &["field1=true", "field2=10", "field4=false"].join("&");
+    assert!(lenient::<FormNoDefault>(&form_string).is_err());
+
+    // Field 4 missing.
+    let form_string = &["field1=true", "field2=10", "field3=23"].join("&");
+    assert!(lenient::<FormNoDefault>(&form_string).is_err());
+}
+
+#[test]
+fn test_defaults() {
+    fn test_hashmap() -> HashMap<&'static str, &'static str> {
+        let mut map = HashMap::new();
+        map.insert("key", "value");
+        map
+    }
+
+    fn test_btreemap() -> BTreeMap<&'static str, &'static str> {
+        let mut map = BTreeMap::new();
+        map.insert("key", "value");
+        map
+    }
+
+    #[derive(FromForm, PartialEq, Debug)]
+    struct FormWithDefaults<'a> {
+        field2: i128,
+        field5: bool,
+
+        #[field(default = 100)]
+        field1: usize,
+        #[field(default = true)]
+        field3: bool,
+        #[field(default = false)]
+        field4: bool,
+        #[field(default = 254 + 1)]
+        field6: u8,
+        #[field(default = Some(true))]
+        opt1: Option<bool>,
+        #[field(default = false)]
+        opt2: Option<bool>,
+        #[field(default = Ok("hello".into()))]
+        res: form::Result<'a, String>,
+        #[field(default = Ok("hello"))]
+        res2: form::Result<'a, &'a str>,
+        #[field(default = vec![1, 2, 3])]
+        vec_num: Vec<usize>,
+        #[field(default = vec!["wow", "a", "string", "nice"])]
+        vec_str: Vec<&'a str>,
+        #[field(default = test_hashmap())]
+        hashmap: HashMap<&'a str, &'a str>,
+        #[field(default = test_btreemap())]
+        btreemap: BTreeMap<&'a str, &'a str>,
+        #[field(default_with = Some(false))]
+        boolean: bool,
+        #[field(default_with = (|| Some(777))())]
+        unsigned: usize,
+        #[field(default = std::num::NonZeroI32::new(3).unwrap())]
+        nonzero: std::num::NonZeroI32,
+        #[field(default_with = std::num::NonZeroI32::new(9001))]
+        nonzero2: std::num::NonZeroI32,
+        #[field(default = 3.0)]
+        float: f64,
+        #[field(default = "wow")]
+        str_ref: &'a str,
+        #[field(default = "wowie")]
+        string: String,
+        #[field(default = [192u8, 168, 1, 0])]
+        ip: IpAddr,
+        #[field(default = ([192u8, 168, 1, 0], 20))]
+        addr: SocketAddr,
+        #[field(default = time::date!(2021-05-27))]
+        date: time::Date,
+        #[field(default = time::time!(01:15:00))]
+        time: time::Time,
+        #[field(default = time::PrimitiveDateTime::new(
+            time::date!(2021-05-27),
+            time::time!(01:15:00),
+        ))]
+        datetime: time::PrimitiveDateTime,
+    }
+
+    // `field2` has no default.
+    assert!(lenient::<FormWithDefaults>("").is_err());
+
+    // every other field should.
+    let form_string = &["field2=102"].join("&");
+    let form1: Option<FormWithDefaults> = lenient(&form_string).ok();
+    assert_eq!(form1, Some(FormWithDefaults {
+        field1: 100,
+        field2: 102,
+        field3: true,
+        field4: false,
+        field5: false,
+        field6: 255,
+        opt1: Some(true),
+        opt2: Some(false),
+        res: Ok("hello".into()),
+        res2: Ok("hello"),
+        vec_num: vec![1, 2, 3],
+        vec_str: vec!["wow", "a", "string", "nice"],
+        hashmap: test_hashmap(),
+        btreemap: test_btreemap(),
+        boolean: false,
+        unsigned: 777,
+        nonzero: std::num::NonZeroI32::new(3).unwrap(),
+        nonzero2: std::num::NonZeroI32::new(9001).unwrap(),
+        float: 3.0,
+        str_ref: "wow",
+        string: "wowie".to_string(),
+        ip: [192u8, 168, 1, 0].into(),
+        addr: ([192u8, 168, 1, 0], 20).into(),
+        date: time::date!(2021-05-27),
+        time: time::time!(01:15:00),
+        datetime: time::PrimitiveDateTime::new(time::date!(2021-05-27), time::time!(01:15:00)),
+    }));
+
+    let form2: Option<FormWithDefaults> = strict(&form_string).ok();
+    assert!(form2.is_none());
+
+    // Ensure actual form field values take precendence.
+    let form_string = &["field1=101", "field2=102", "field3=true", "field5=true"].join("&");
+    let form3: Option<FormWithDefaults> = lenient(&form_string).ok();
+    assert_eq!(form3, Some(FormWithDefaults {
+        field1: 101,
+        field2: 102,
+        field3: true,
+        field4: false,
+        field5: true,
+        ..form1.unwrap()
+    }));
+
+    // And that strict parsing still works.
+    let form4: Option<FormWithDefaults> = strict(&form_string).ok();
+    assert_eq!(form4, Some(FormWithDefaults {
+        field1: 101,
+        field2: 102,
+        field3: true,
+        field4: false,
+        field5: true,
+        ..form3.unwrap()
+    }));
+}
+
+#[test]
+fn test_lazy_default() {
+    use std::sync::atomic::{AtomicUsize, Ordering};
+
+    static VAL: AtomicUsize = AtomicUsize::new(40);
+
+    fn f() -> usize {
+        VAL.fetch_add(1, Ordering::Relaxed)
+    }
+
+    fn opt_f() -> Option<usize> {
+        Some(f())
+    }
+
+    #[derive(Debug, PartialEq, FromForm)]
+    struct MyForm {
+        #[field(default = f())]
+        missing0: usize,
+        #[field(default = VAL.load(Ordering::Relaxed))]
+        missing1: usize,
+        #[field(default_with = opt_f())]
+        missing2: usize,
+        #[field(default_with = opt_f())]
+        a: usize,
+        #[field(default = f())]
+        b: usize,
+        #[field(default = VAL.load(Ordering::Relaxed))]
+        missing3: usize,
+    }
+
+    // Ensure actual form field values take precendence.
+    let form_string = &["a=100", "b=300"].join("&");
+    let form3: Option<MyForm> = lenient(&form_string).ok();
+    assert_eq!(form3, Some(MyForm {
+        missing0: 40,
+        missing1: 41,
+        missing2: 41,
+        a: 100,
+        b: 300,
+        missing3: 42
+    }));
 }

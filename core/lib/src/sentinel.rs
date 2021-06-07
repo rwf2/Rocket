@@ -114,32 +114,35 @@ use crate::{Rocket, Ignite};
 /// A type, whether embedded or not, is queried if it is a `Sentinel` _and_ none
 /// of its parent types are sentinels. Said a different way, if every _directly_
 /// eligible type is viewed as the root of an acyclic graph with edges between a
-/// type and its type parameters, the _first_ `Sentinel` in each graph, in
-/// breadth-first order, is queried:
+/// type and its type parameters, the _first_ `Sentinel` in breadth-first order
+/// is queried:
 ///
 /// ```text
-///   Option<&State<String>>           Either<Foo, Inner<Bar>>
-///            |                              /         \
-///      &State<String>                      Foo     Inner<Bar>
-///            |                                        |
-///       State<String>                                 Bar
-///            |
-///          String
+/// 1.     Option<&State<String>>        Either<Foo, Inner<Bar>>
+///                 |                           /         \
+/// 2.        &State<String>                   Foo     Inner<Bar>
+///                 |                                     |
+/// 3.         State<String>                              Bar
+///                 |
+/// 4.            String
 /// ```
 ///
-/// Neither `Option` nor `Either` are sentinels, so they won't be queried. In
-/// the next level, `&State` is a `Sentinel`, so it _is_ queried. If `Foo` is a
-/// sentinel, it is queried as well. If `Inner` is a sentinel, it is queried,
-/// and traversal stops without considering `Bar`. If `Inner` is _not_ a
-/// `Sentinel`, `Bar` is considered and queried if it is a sentinel.
+/// In each graph above, types are queried from top to bottom, level 1 to 4.
+/// Querying continues down paths where the parents were _not_ sentinels. For
+/// example, if `Option` is a sentinel but `Either` is not, then querying stops
+/// for the left subgraph (`Option`) but continues for the right subgraph
+/// `Either`.
 ///
 /// # Limitations
 ///
 /// Because Rocket must know which `Sentinel` implementation to query based on
-/// its _written_ type, only explicitly written, resolved, concrete types are
-/// eligible to be sentinels. Most application will only work with such types,
-/// but occasionally an existential `impl Trait` may find its way into return
-/// types:
+/// its _written_ type, generally only explicitly written, resolved, concrete
+/// types are eligible to be sentinels. A typical application will only work
+/// with such types, but there are several common cases to be aware of.
+///
+/// ## `impl Trait`
+///
+/// Occasionally an existential `impl Trait` may find its way into return types:
 ///
 /// ```rust
 /// # use rocket::*;
@@ -162,8 +165,10 @@ use crate::{Rocket, Ignite};
 /// it is not possible to name the underlying concrete type of an `impl Trait`
 /// at compile-time and thus not possible to determine if it implements
 /// `Sentinel`. As such, existentials _are not_ eligible to be sentinels.
-/// However, this limitation applies per embedding, so the inner, directly named
-/// `AnotherSentinel` type continues to be eligible to be a sentinel.
+///
+/// That being said, this limitation only applies _per embedding_: types
+/// embedded inside of an `impl Trait` _are_ eligible. As such, in the example
+/// above, the named `AnotherSentinel` type continues to be eligible.
 ///
 /// When possible, prefer to name all types:
 ///
@@ -181,11 +186,10 @@ use crate::{Rocket, Ignite};
 ///
 /// ## Aliases
 ///
-/// Embedded discovery of sentinels is syntactic in nature: an embedded sentinel
-/// is only discovered if its named in the type. As such, embedded sentinels
-/// made opaque by a type alias will fail to be considered. In the example
-/// below, only `Result<Foo, Bar>` will be considered, while the embedded `Foo`
-/// and `Bar` will not.
+/// _Embedded_ sentinels made opaque by a type alias will fail to be considered;
+/// the aliased type itself _is_ considered. In the example below, only
+/// `Result<Foo, Bar>` will be considered, while the embedded `Foo` and `Bar`
+/// will not.
 ///
 /// ```rust
 /// # use rocket::get;
@@ -230,16 +234,23 @@ use crate::{Rocket, Ignite};
 /// sentinel, the macro actually expands to `&'_ rocket::Config`, which is _not_
 /// the `State` sentinel.
 ///
-/// You should prefer not to use type macros, or if necessary, restrict your use
-/// to those that always expand to types without sentinels.
+/// Because Rocket knows the exact syntax expected by type macros that it
+/// exports, such as the [typed stream] macros, discovery in these macros works
+/// as expected. You should prefer not to use type macros aside from those
+/// exported by Rocket, or if necessary, restrict your use to those that always
+/// expand to types without sentinels.
+///
+/// [typed stream]: crate::response::stream
 ///
 /// # Custom Sentinels
 ///
 /// Any type can implement `Sentinel`, and the implementation can arbitrarily
-/// inspect the passed in instance of `Rocket`. For illustration, consider the
+/// inspect an ignited instance of `Rocket`. For illustration, consider the
 /// following implementation of `Sentinel` for a custom `Responder` which
-/// requires state for a type `T` to be managed as well as catcher for status
-/// code `400` at base `/`:
+/// requires:
+///
+///   * state for a type `T` to be managed
+///   * a catcher for status code `400` at base `/`
 ///
 /// ```rust
 /// use rocket::{Rocket, Ignite, Sentinel};
@@ -262,7 +273,8 @@ use crate::{Rocket, Ignite};
 /// ```
 ///
 /// If a `MyResponder` is returned by any mounted route, its `abort()` method
-/// will be invoked, and launch will be aborted if the method returns `true`.
+/// will be invoked. If the required conditions aren't met, signaled by
+/// returning `true` from `abort()`, Rocket aborts launch.
 pub trait Sentinel {
     /// Returns `true` if launch should be aborted and `false` otherwise.
     fn abort(rocket: &Rocket<Ignite>) -> bool;
