@@ -776,7 +776,7 @@ fn test_defaults() {
     let form2: Option<FormWithDefaults> = strict(&form_string).ok();
     assert!(form2.is_none());
 
-    // Ensure actual form field values take precendence.
+    // Ensure actual form field values take precedence.
     let form_string = &["field1=101", "field2=102", "field3=true", "field5=true"].join("&");
     let form3: Option<FormWithDefaults> = lenient(&form_string).ok();
     assert_eq!(form3, Some(FormWithDefaults {
@@ -830,7 +830,7 @@ fn test_lazy_default() {
         missing3: usize,
     }
 
-    // Ensure actual form field values take precendence.
+    // Ensure actual form field values take precedence.
     let form_string = &["a=100", "b=300"].join("&");
     let form3: Option<MyForm> = lenient(&form_string).ok();
     assert_eq!(form3, Some(MyForm {

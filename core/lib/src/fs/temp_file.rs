@@ -26,7 +26,7 @@ use either::Either;
 /// attempt is made not to delete temporary files in use, _detection_ of when a
 /// temporary file is being used is unreliable. As a result, a time-of-check to
 /// time-of-use race condition from the creation of a `TempFile` to the
-/// persistance of the `TempFile` may occur. Specifically, the following
+/// persistence of the `TempFile` may occur. Specifically, the following
 /// sequence may occur:
 ///
 /// 1. A `TempFile` is created at random path `foo`.

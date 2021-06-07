@@ -999,7 +999,7 @@ struct Password<'r> {
 In reality, the expression after `validate =` can be _any_ expression as long as
 it evaluates to a value of type `Result<(), Errors<'_>>` (aliased by
 [`form::Result`]), where an `Ok` value means that validation was successful while
-an `Err` of [`Errors<'_>`] indicates the error(s) that occured. For instance, if
+an `Err` of [`Errors<'_>`] indicates the error(s) that occurred. For instance, if
 you wanted to implement an ad-hoc Luhn validator for credit-card-like numbers,
 you might write:
 

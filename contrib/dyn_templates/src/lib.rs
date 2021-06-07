@@ -49,7 +49,7 @@
 //!
 //! Templates that are _not_ discovered by Rocket, such as those registered
 //! directly via [`Template::custom()`], are _not_ renamed. Use the name with
-//! which the template was orginally registered.
+//! which the template was originally registered.
 //!
 //! ## Content Type
 //!

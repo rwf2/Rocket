@@ -75,7 +75,7 @@ use crate::http::uncased::AsUncased;
 ///
 /// Most type inherit their strategy on [`FromForm::init()`], but some types
 /// like `Option` override the requested strategy. The strategy can also be
-/// overwritted manually, per-field or per-value, by using the [`Strict`] or
+/// overwritten manually, per-field or per-value, by using the [`Strict`] or
 /// [`Lenient`] form guard:
 ///
 /// ```rust

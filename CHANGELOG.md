@@ -150,7 +150,7 @@
 ## Core
 
   * Replaced use of `FnBox` with `Box<dyn FnOnce>`.
-  * Removed the stablized feature gates `try_from` and `transpose_result`.
+  * Removed the stable feature gates `try_from` and `transpose_result`.
   * Derive macros are reexported alongside their respective traits.
   * Minimum required `rustc` is `1.35.0-nightly (2019-04-05)`.
 
@@ -903,7 +903,7 @@ This release includes the following new features:
   * `&Route` is now a request guard.
   * The base mount path of a [`Route`] can be retrieved via `Route::base` or
     `Route::base()`.
-  * [`Cookies`] supports _private_ (authenticated encryption) cookies, encryped
+  * [`Cookies`] supports _private_ (authenticated encryption) cookies, encrypted
     with the `secret_key` config key.
   * `Config::{development, staging, production}` constructors were added for
     [`Config`].
@@ -1062,7 +1062,7 @@ applications.
 
   * **[`ContentType::from_extension()`] returns an `Option<ContentType>`.**
 
-    For the old behvavior, use `.unwrap_or(ContentType::Any)`.
+    For the old behavior, use `.unwrap_or(ContentType::Any)`.
 
   * **The `IntoValue` config trait was removed in favor of `Into<Value>`.**
 
@@ -1095,7 +1095,7 @@ applications.
 
 In addition to new features, Rocket saw the following improvements:
 
-  * "Rocket" is now capatilized in the `Server` HTTP header.
+  * "Rocket" is now capitalized in the `Server` HTTP header.
   * The generic parameter of `rocket_contrib::Json` defaults to `json::Value`.
   * The trailing '...' in the launch message was removed.
   * The launch message prints regardless of the config environment.
@@ -1475,7 +1475,7 @@ now implements its own `Request` and `Response` types.
 
   * `ContentType` uses associated constants instead of static methods.
   * `StatusCode` removed in favor of new `Status` type.
-  * `Response` type alias superceded by `Response` type.
+  * `Response` type alias superseded by `Response` type.
   * `Responder::respond` no longer takes in hyper type.
   * `Responder::respond` returns `Response`, takes `self` by move.
   * `Handler` returns `Outcome` instead of `Response` type alias.

@@ -796,7 +796,7 @@ pub enum Feature {
     /// The "interest-cohort" feature.
     InterestCohort,
 
-    // Expiremental.
+    // Experimental.
 
     /// The "conversion-measurement" feature.
     ConversionMeasurement,

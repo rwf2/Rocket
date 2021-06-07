@@ -139,7 +139,7 @@ enum State {
     Mercy(Pin<Box<Sleep>>),
     /// We failed to shutdown and are force-closing the connection.
     Terminated,
-    /// We successfuly shutdown the connection.
+    /// We successfully shutdown the connection.
     Inactive,
 }
 

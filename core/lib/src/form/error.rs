@@ -31,7 +31,7 @@ use crate::data::ByteUnit;
 /// let errors_for_foo = errors.iter().filter(|e| e.is_for("foo.bar"));
 /// ```
 ///
-/// ## Contructing
+/// ## Contracting
 ///
 /// An `Errors` can be constructed from anything that an `Error` can be
 /// constructed from. This includes [`Error`], [`ErrorKind`], and all of the
@@ -72,7 +72,7 @@ pub struct Errors<'v>(Vec<Error<'v>>);
 /// [`FromFormField`]: crate::form::FromFormField
 /// [`validate`]: crate::form::validate
 ///
-/// # Contructing
+/// # Contracting
 ///
 /// An `Error` can be constructed via [`Error::validation()`],
 /// [`Error::custom()`], or anything that an [`ErrorKind`] can be constructed
@@ -103,7 +103,7 @@ pub struct Errors<'v>(Vec<Error<'v>>);
 /// automatically.
 ///
 /// When constructed from an `ErrorKind`, the entity is set to
-/// [`Entity::default_for()`] by default. Ocassionally, the error's `entity` may
+/// [`Entity::default_for()`] by default. Occasionally, the error's `entity` may
 /// need to be set manually. Return what would be useful to the end-consumer.
 ///
 /// # Matching Errors to Fields
@@ -136,13 +136,13 @@ pub struct Error<'v> {
     pub name: Option<NameBuf<'v>>,
     /// The field's value, if it is known.
     pub value: Option<Cow<'v, str>>,
-    /// The kind of error that occured.
+    /// The kind of error that occurred.
     pub kind: ErrorKind<'v>,
     /// The entitiy that caused the error.
     pub entity: Entity,
 }
 
-/// The kind of form error that occured.
+/// The kind of form error that occurred.
 ///
 /// ## Constructing
 ///

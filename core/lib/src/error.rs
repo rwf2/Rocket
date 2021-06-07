@@ -213,7 +213,7 @@ impl Drop for Error {
                 panic!("aborting due to fairing failure(s)");
             }
             ErrorKind::Runtime(ref err) => {
-                error!("An error occured in the runtime:");
+                error!("An error occurred in the runtime:");
                 info_!("{}", err);
                 panic!("aborting due to runtime failure");
             }

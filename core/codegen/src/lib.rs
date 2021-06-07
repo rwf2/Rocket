@@ -383,7 +383,7 @@ pub fn async_test(args: TokenStream, input: TokenStream) -> TokenStream {
 /// Retrofits `async fn` support in `main` functions.
 ///
 /// A `main` `async fn` function decorated with `#[rocket::main]` is transformed
-/// into a regular `main` function that internally initalizes a Rocket-specific
+/// into a regular `main` function that internally initializes a Rocket-specific
 /// tokio runtime and runs the attributed `async fn` inside of it:
 ///
 /// ```rust,no_run

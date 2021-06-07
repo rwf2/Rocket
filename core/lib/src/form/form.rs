@@ -155,7 +155,7 @@ impl<'r, T: FromForm<'r>> Form<T> {
     /// Leniently parses a `T` from a **percent-decoded**
     /// `x-www-form-urlencoded` form string. Specifically, this method
     /// implements [§5.1 of the WHATWG URL Living Standard] with the exception
-    /// of steps 3.4 and 3.5, which are assumed to already be relfected in
+    /// of steps 3.4 and 3.5, which are assumed to already be reflected in
     /// `string`, and then parses the fields as `T`.
     ///
     /// [§5.1 of the WHATWG URL Living Standard]: https://url.spec.whatwg.org/#application/x-www-form-urlencoded

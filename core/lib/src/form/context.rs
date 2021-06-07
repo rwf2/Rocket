@@ -114,7 +114,7 @@ impl<'v> Context<'v> {
     /// `name`.
     ///
     /// The type of `name` may be `&Name`, `&str`, or `&RawStr`. Lookup is
-    /// case-sensitive but key-seperator (`.` or `[]`) insensitive.
+    /// case-sensitive but key-separator (`.` or `[]`) insensitive.
     ///
     /// # Example
     ///
@@ -137,7 +137,7 @@ impl<'v> Context<'v> {
     /// `name`.
     ///
     /// The type of `name` may be `&Name`, `&str`, or `&RawStr`. Lookup is
-    /// case-sensitive but key-seperator (`.` or `[]`) insensitive.
+    /// case-sensitive but key-separator (`.` or `[]`) insensitive.
     ///
     /// # Example
     ///
@@ -202,7 +202,7 @@ impl<'v> Context<'v> {
     /// their children: `a.b`'s errors apply to `a.b.c`, `a.b.d` and so on but
     /// not `a.c`.
     ///
-    /// Lookup is case-sensitive but key-seperator (`.` or `[]`) insensitive.
+    /// Lookup is case-sensitive but key-separator (`.` or `[]`) insensitive.
     ///
     /// # Example
     ///
@@ -250,7 +250,7 @@ impl<'v> Context<'v> {
     /// errors associated with its chilren. Use [`Context::field_errors()`] in
     /// almost all cases.
     ///
-    /// Lookup is case-sensitive but key-seperator (`.` or `[]`) insensitive.
+    /// Lookup is case-sensitive but key-separator (`.` or `[]`) insensitive.
     ///
     /// # Example
     ///
