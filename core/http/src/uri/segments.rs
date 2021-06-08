@@ -11,7 +11,7 @@ use crate::uri::error::PathError;
 /// [`Path::segments()`]: crate::uri::Path::segments()
 /// [`Query::segments()`]: crate::uri::Query::segments()
 ///
-/// ### Examples
+/// # Example
 ///
 /// ```rust
 /// # extern crate rocket;
@@ -32,7 +32,7 @@ use crate::uri::error::PathError;
 /// # assert_eq!(uri.path().segments().count(), 4);
 /// # assert_eq!(uri.path().segments().next(), Some("a z"));
 /// ```
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone)]
 pub struct Segments<'a, P: Part> {
     pub(super) source: &'a RawStr,
     pub(super) segments: &'a [P::Raw],
@@ -276,7 +276,6 @@ macro_rules! impl_iterator {
                 self.len()
             }
         }
-
     )
 }
 
