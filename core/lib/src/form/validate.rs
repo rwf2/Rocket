@@ -329,7 +329,7 @@ impl<L, T: Len<L> + ?Sized> Len<L> for &T {
 }
 
 impl<L, T: Len<L>> Len<L> for Option<T> {
-    fn len(&self) -> L { self.as_ref().map(|v| v.len()).unwrap_or(T::zero_len()) }
+    fn len(&self) -> L { self.as_ref().map(|v| v.len()).unwrap_or_else(T::zero_len) }
     fn len_into_u64(len: L) -> u64 { T::len_into_u64(len) }
     fn zero_len() -> L { T::zero_len() }
 }

@@ -84,7 +84,7 @@ impl Fairings {
                 .collect();
 
             // Reverse the dup indices so `remove` is stable given shifts.
-            dups.sort(); dups.dedup(); dups.reverse();
+            dups.sort_unstable(); dups.dedup(); dups.reverse();
             for i in dups {
                 remove(i, &mut self.ignite);
                 remove(i, &mut self.liftoff);

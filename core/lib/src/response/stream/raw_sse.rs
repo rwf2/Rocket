@@ -177,7 +177,7 @@ fn skip<T: AsRef<[u8]> + Unpin>(buf: &mut Take<Cursor<T>>) {
                 buf.get_mut().set_position(pos + 1);
             }
         }
-        _ => return,
+        _ => {}
     }
 }
 

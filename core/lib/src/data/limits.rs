@@ -203,7 +203,7 @@ impl Limits {
         let name = name.into();
         match self.limits.binary_search_by(|(k, _)| k.cmp(&name)) {
             Ok(i) => self.limits[i].1 = limit,
-            Err(i) => self.limits.insert(i, (name.into(), limit))
+            Err(i) => self.limits.insert(i, (name, limit))
         }
 
         self

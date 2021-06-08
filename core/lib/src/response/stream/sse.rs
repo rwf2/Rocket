@@ -323,7 +323,7 @@ impl Event {
             Some(RawLinedEvent::raw("")),
         ];
 
-        stream::iter(array::IntoIter::new(events)).filter_map(|v| ready(v))
+        stream::iter(array::IntoIter::new(events)).filter_map(ready)
     }
 }
 

@@ -47,7 +47,7 @@ impl Request<'_> {
             method: Atomic::new(self.method()),
             uri: self.uri.clone(),
             headers: self.headers.clone(),
-            remote: self.remote.clone(),
+            remote: self.remote,
             state: self.state.clone(),
         }
     }
@@ -837,12 +837,12 @@ impl<'r> Request<'r> {
     ) -> Result<Request<'r>, Error<'r>> {
         // Ensure that the method is known. TODO: Allow made-up methods?
         let method = Method::from_hyp(&hyper.method)
-            .ok_or_else(|| Error::BadMethod(&hyper.method))?;
+            .ok_or(Error::BadMethod(&hyper.method))?;
 
         // In debug, make sure we agree with Hyper. Otherwise, cross our fingers
         // and trust that it only gives us valid URIs like it's supposed to.
         // TODO: Keep around not just the path/query, but the rest, if there?
-        let uri = hyper.uri.path_and_query().ok_or_else(|| Error::InvalidUri(&hyper.uri))?;
+        let uri = hyper.uri.path_and_query().ok_or(Error::InvalidUri(&hyper.uri))?;
         debug_assert!(Origin::parse(uri.as_str()).is_ok());
         let uri = Origin::new(uri.path(), uri.query().map(Cow::Borrowed));
 

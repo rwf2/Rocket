@@ -719,7 +719,9 @@ impl<'v> Error<'v> {
             | Multipart(FieldSizeExceeded { .. })
             | Multipart(StreamSizeExceeded { .. }) => Status::PayloadTooLarge,
             Unknown => Status::InternalServerError,
-            Io(_) | _ if self.entity == Entity::Form => Status::BadRequest,
+            // FIXME: is this intended behavior?
+            Io(_) => Status::BadRequest,
+            _ if self.entity == Entity::Form => Status::BadRequest,
             _ => Status::UnprocessableEntity
         }
     }
@@ -812,9 +814,9 @@ impl fmt::Display for ErrorKind<'_> {
                 }
             }
             ErrorKind::InvalidChoice { choices } => {
-                match choices.as_ref() {
-                    &[] => write!(f, "invalid choice")?,
-                    &[ref choice] => write!(f, "expected {}", choice)?,
+                match *choices.as_ref() {
+                    [] => write!(f, "invalid choice")?,
+                    [ref choice] => write!(f, "expected {}", choice)?,
                     _ => {
                         write!(f, "expected one of ")?;
                         for (i, choice) in choices.iter().enumerate() {
