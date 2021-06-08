@@ -158,7 +158,7 @@ impl Accept {
                 // Prefer more specific media types over less specific ones. IE:
                 // text/html over application/*.
                 preferred = media_type;
-            } else if media_type == preferred {
+            } else if media_type != preferred {
                 // Finally, all other things being equal, prefer a media type
                 // with more parameters over one with fewer. IE: text/html; a=b
                 // over text/html.
@@ -210,7 +210,7 @@ impl Accept {
     /// assert_eq!(iter.next(), None);
     /// ```
     #[inline(always)]
-    pub fn iter<'a>(&'a self) -> impl Iterator<Item=&'a QMediaType> + 'a {
+    pub fn iter(&self) -> impl Iterator<Item=&'_ QMediaType> + '_ {
         match self.0 {
             AcceptParams::Static(ref val) => Either::Left(Some(val).into_iter()),
             AcceptParams::Dynamic(ref vec) => Either::Right(vec.iter())
@@ -239,7 +239,7 @@ impl Accept {
     /// assert_eq!(iter.next(), None);
     /// ```
     #[inline(always)]
-    pub fn media_types<'a>(&'a self) -> impl Iterator<Item=&'a MediaType> + 'a {
+    pub fn media_types(&self) -> impl Iterator<Item=&'_ MediaType> + '_ {
         self.iter().map(|weighted_mt| weighted_mt.media_type())
     }
 
@@ -285,10 +285,10 @@ impl FromStr for Accept {
 
 /// Creates a new `Header` with name `Accept` and the value set to the HTTP
 /// rendering of this `Accept` header.
-impl Into<Header<'static>> for Accept {
+impl From<Accept> for Header<'static> {
     #[inline(always)]
-    fn into(self) -> Header<'static> {
-        Header::new("Accept", self.to_string())
+    fn from(val: Accept) -> Self {
+        Header::new("Accept", val.to_string())
     }
 }
 

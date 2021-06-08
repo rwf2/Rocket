@@ -52,7 +52,7 @@ pub fn asterisk<'a>(input: &mut RawInput<'a>) -> Result<'a, Asterisk> {
 #[parser]
 pub fn origin<'a>(input: &mut RawInput<'a>) -> Result<'a, Origin<'a>> {
     let (_, path, query) = (peek(b'/')?, path()?, query()?);
-    unsafe { Origin::raw(input.start.into(), path.into(), query) }
+    unsafe { Origin::raw(input.start.into(), path, query) }
 }
 
 #[parser]

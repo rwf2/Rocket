@@ -259,15 +259,15 @@ impl<'a> CookieJar<'a> {
     /// ```
     pub fn get_pending(&self, name: &str) -> Option<Cookie<'static>> {
         let ops = self.ops.lock();
-        for op in ops.iter().rev().filter(|op| op.cookie().name() == name) {
-            match op {
-                Op::Add(c, _) => return Some(c.clone()),
-                Op::Remove(_, _) => return None,
+        let last_op = ops.iter().rev().find(|op| op.cookie().name() == name);
+        match last_op {
+            Some(Op::Add(c, _)) => Some(c.clone()),
+            Some(Op::Remove(_, _)) => None,
+            None => {
+                drop(ops);
+                self.get(name).cloned()
             }
         }
-
-        drop(ops);
-        self.get(name).map(|c| c.clone())
     }
 
     /// Retrives the _original or pending_ `Cookie` inside this collection with

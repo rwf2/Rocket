@@ -159,7 +159,7 @@ impl Catcher {
     {
         let code = code.into();
         if let Some(code) = code {
-            assert!(code >= 400 && code < 600);
+            assert!((400..600).contains(&code));
         }
 
         Catcher {
