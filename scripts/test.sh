@@ -56,6 +56,14 @@ function check_style() {
     echo "${matches}"
     exit 1
   fi
+
+  local pattern='tail -n 1 % | grep -q "^$" && echo %'
+  local matches=$(git grep -z -Il '' | xargs -0 -P 16 -I % sh -c "${pattern}")
+  if ! [ -z "${matches}" ]; then
+    echo "Trailing new line(s) found in the following:"
+    echo "${matches}"
+    exit 1
+  fi
 }
 
 function indir() {

@@ -246,4 +246,3 @@ impl Poolable for memcache::Client {
         Ok(r2d2::Pool::builder().max_size(config.pool_size).build(manager)?)
     }
 }
-

@@ -126,4 +126,3 @@ pub fn bench_bitwarden_routes(c: &mut Criterion) {
         }
     }));
 }
-
