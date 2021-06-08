@@ -147,24 +147,8 @@ impl Accept {
         let mut all = self.iter();
         let mut preferred = all.next().unwrap_or(&ANY);
         for media_type in all {
-            if media_type.weight().is_none() && preferred.weight().is_some() {
-                // Media types without a `q` parameter are preferred.
+            if media_type.better_than(preferred) {
                 preferred = media_type;
-            } else if media_type.weight_or(0.0) > preferred.weight_or(1.0) {
-                // Prefer media types with a greater weight, but if one doesn't
-                // have a weight, prefer the one we already have.
-                preferred = media_type;
-            } else if media_type.specificity() > preferred.specificity() {
-                // Prefer more specific media types over less specific ones. IE:
-                // text/html over application/*.
-                preferred = media_type;
-            } else if media_type != preferred {
-                // Finally, all other things being equal, prefer a media type
-                // with more parameters over one with fewer. IE: text/html; a=b
-                // over text/html.
-                if media_type.params().count() > preferred.params().count() {
-                    preferred = media_type;
-                }
             }
         }
 
@@ -343,6 +327,33 @@ impl QMediaType {
     pub fn media_type(&self) -> &MediaType {
         &self.0
     }
+
+    // this is not impl Ord because we depend on argument order
+    pub(crate) fn better_than(&self, other: &QMediaType) -> bool {
+        // Check `q` parameter:
+        // 1. Media types without a `q` parameter are preferred.
+        // 2. Prefer media types with a greater weight, but if one doesn't
+        // have a weight, prefer the one we already have.
+        match (self.weight(), other.weight()) {
+            (Some(sw), Some(ow)) if (sw - ow).abs() < 0.0001 =>
+                return sw > ow,
+            (Some(_), None) => return false,
+            (None, Some(_)) => return true,
+            _ => {}
+        };
+        if self.weight().is_none() && other.weight().is_none() {
+            return false;
+        }
+        // Prefer more specific media types over less specific ones. IE:
+        // text/html over application/*.
+        if self.specificity() != other.specificity() {
+            return self.specificity() > other.specificity();
+        }
+        // Finally, all other things being equal, prefer a media type
+        // with more parameters over one with fewer. IE: text/html; a=b
+        // over text/html.
+        self.params().count() > other.params().count()
+    }
 }
 
 impl From<MediaType> for QMediaType {
@@ -380,47 +391,48 @@ impl Extend<QMediaType> for AcceptParams {
 mod test {
     use crate::{Accept, MediaType};
 
-    macro_rules! assert_preference {
-        ($string:expr, $expect:expr) => (
-            let accept: Accept = $string.parse().expect("accept string parse");
-            let expected: MediaType = $expect.parse().expect("media type parse");
-            let preferred = accept.preferred();
-            assert_eq!(preferred.media_type().to_string(), expected.to_string());
-        )
+    fn assert_preference(string: &str, expect: &str) {
+        let accept: Accept = string.parse().expect("accept string parse");
+        let expected: MediaType = expect.parse().expect("media type parse");
+        let preferred = accept.preferred();
+        let actual = preferred.media_type();
+        if *actual != expected {
+            panic!("mismatch for {}: expected {}, got {}", string, expected, actual)
+        }
     }
 
     #[test]
     fn test_preferred() {
-        assert_preference!("text/*", "text/*");
-        assert_preference!("text/*, text/html", "text/html");
-        assert_preference!("text/*; q=0.1, text/html", "text/html");
-        assert_preference!("text/*; q=1, text/html", "text/html");
-        assert_preference!("text/html, text/*", "text/html");
-        assert_preference!("text/*, text/html", "text/html");
-        assert_preference!("text/html, text/*; q=1", "text/html");
-        assert_preference!("text/html; q=1, text/html", "text/html");
-        assert_preference!("text/html, text/*; q=0.1", "text/html");
+        assert_preference("text/*", "text/*");
+        assert_preference("text/*, text/html", "text/html");
+        assert_preference("text/*; q=0.1, text/html", "text/html");
+        assert_preference("text/*; q=1, text/html", "text/html");
+        assert_preference("text/html, text/*", "text/html");
+        assert_preference("text/*, text/html", "text/html");
+        assert_preference("text/html, text/*; q=1", "text/html");
+        assert_preference("text/html; q=1, text/html", "text/html");
+        assert_preference("text/html, text/*; q=0.1", "text/html");
 
-        assert_preference!("text/html, application/json", "text/html");
-        assert_preference!("text/html, application/json; q=1", "text/html");
-        assert_preference!("application/json; q=1, text/html", "text/html");
+        assert_preference("text/html, application/json", "text/html");
+        assert_preference("text/html, application/json; q=1", "text/html");
+        assert_preference("application/json; q=1, text/html", "text/html");
 
-        assert_preference!("text/*, application/json", "application/json");
-        assert_preference!("*/*, text/*", "text/*");
-        assert_preference!("*/*, text/*, text/plain", "text/plain");
+        assert_preference("text/*, application/json", "application/json");
+        assert_preference("*/*, text/*", "text/*");
+        assert_preference("*/*, text/*, text/plain", "text/plain");
 
-        assert_preference!("a/b; q=0.1, a/b; q=0.2", "a/b; q=0.2");
-        assert_preference!("a/b; q=0.1, b/c; q=0.2", "b/c; q=0.2");
-        assert_preference!("a/b; q=0.5, b/c; q=0.2", "a/b; q=0.5");
+        assert_preference("a/b; q=0.1, a/b; q=0.2", "a/b; q=0.2");
+        assert_preference("a/b; q=0.1, b/c; q=0.2", "b/c; q=0.2");
+        assert_preference("a/b; q=0.5, b/c; q=0.2", "a/b; q=0.5");
 
-        assert_preference!("a/b; q=0.5, b/c; q=0.2, c/d", "c/d");
-        assert_preference!("a/b; q=0.5; v=1, a/b", "a/b");
+        assert_preference("a/b; q=0.5, b/c; q=0.2, c/d", "c/d");
+        assert_preference("a/b; q=0.5; v=1, a/b", "a/b");
 
-        assert_preference!("a/b; v=1, a/b; v=1; c=2", "a/b; v=1; c=2");
-        assert_preference!("a/b; v=1; c=2, a/b; v=1", "a/b; v=1; c=2");
-        assert_preference!("a/b; q=0.5; v=1, a/b; q=0.5; v=1; c=2",
+        assert_preference("a/b; v=1, a/b; v=1; c=2", "a/b; v=1; c=2");
+        assert_preference("a/b; v=1; c=2, a/b; v=1", "a/b; v=1; c=2");
+        assert_preference("a/b; q=0.5; v=1, a/b; q=0.5; v=1; c=2",
             "a/b; q=0.5; v=1; c=2");
-        assert_preference!("a/b; q=0.6; v=1, a/b; q=0.5; v=1; c=2",
+        assert_preference("a/b; q=0.6; v=1, a/b; q=0.5; v=1; c=2",
             "a/b; q=0.6; v=1");
     }
 }

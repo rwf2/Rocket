@@ -283,7 +283,7 @@ impl VisitMut for ValidationMutator<'_> {
             }
         }
 
-        return syn::visit_mut::visit_expr_mut(self, i);
+        syn::visit_mut::visit_expr_mut(self, i);
     }
 }
 
@@ -312,7 +312,7 @@ pub fn validators<'v>(
         .map(move |(mut expr, _)| {
             let field_span = field.ident().span()
                 .join(field.ty.span())
-                .unwrap_or(field.ty.span());
+                .unwrap_or_else(|| field.ty.span());
 
             let field = &field.ident().clone().with_span(field_span);
             let mut v = ValidationMutator { parent, local, field, visited: false };
@@ -346,7 +346,7 @@ fn default_expr(expr: &syn::Expr) -> TokenStream {
     }
 }
 
-pub fn default<'v>(field: Field<'v>) -> Result<Option<TokenStream>> {
+pub fn default(field: Field<'_>) -> Result<Option<TokenStream>> {
     let attrs = FieldAttr::from_attrs(FieldAttr::NAME, &field.attrs)?;
 
     // Expressions in `default = `, except for `None`, are wrapped in `Some()`.
@@ -372,10 +372,10 @@ pub fn default<'v>(field: Field<'v>) -> Result<Option<TokenStream>> {
     let ty = field.stripped_ty();
     match (default, default_with) {
         (Some(e1), Some(e2)) => {
-            return Err(e1.span()
+            Err(e1.span()
                 .error("duplicate default expressions")
                 .help("only one of `default` or `default_with` must be used")
-                .span_note(e2.span(), "other default expression is here"));
+                .span_note(e2.span(), "other default expression is here"))
         },
         (Some(e), None) | (None, Some(e)) => {
             Ok(Some(quote_spanned!(e.span() => {
@@ -401,8 +401,8 @@ pub fn first_duplicate<K: Spanned, V: PartialEq + Spanned>(
     let key = |k| key_map.iter().find(|(i, _)| k < *i).expect("k < *i");
 
     for (i, a) in all_values.iter().enumerate() {
-        let rest = all_values.iter().enumerate().skip(i + 1);
-        if let Some((j, b)) = rest.filter(|(_, b)| *b == a).next() {
+        let mut rest = all_values.iter().enumerate().skip(i + 1);
+        if let Some((j, b)) = rest.find(|(_, b)| *b == a) {
             let (a_i, key_a) = key(i);
             let (b_i, key_b) = key(j);
 

@@ -92,7 +92,7 @@ impl<'a> Reference<'a> {
         Reference {
             source: Some(as_utf8_unchecked(source)),
             scheme: scheme.map(|s| s.into()),
-            authority: authority.map(|s| s.into()),
+            authority,
             path: Data::raw(path),
             query: query.map(Data::raw),
             fragment: fragment.map(|f| f.into()),

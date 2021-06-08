@@ -154,7 +154,7 @@ impl<'a> Segments<'a, Path> {
     /// assert!(b.path().segments().skip(1).prefix_of(a.path().segments()));
     /// ```
     #[inline]
-    pub fn prefix_of<'b>(self, other: Segments<'b, Path>) -> bool {
+    pub fn prefix_of(self, other: Segments<'_, Path>) -> bool {
         if self.len() > other.len() {
             return false;
         }
