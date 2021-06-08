@@ -17,7 +17,7 @@ error[E0277]: the trait bound `Header<'_>: From<u8>` is not satisfied
              <Header<'static> as From<&ExpectCt>>
              <Header<'static> as From<&Frame>>
              <Header<'static> as From<&Hsts>>
-           and 7 others
+           and 8 others
    = note: required because of the requirements on the impl of `Into<Header<'_>>` for `u8`
 
 error[E0277]: the trait bound `u8: Responder<'_, '_>` is not satisfied
@@ -39,7 +39,7 @@ error[E0277]: the trait bound `Header<'_>: From<u8>` is not satisfied
              <Header<'static> as From<&ExpectCt>>
              <Header<'static> as From<&Frame>>
              <Header<'static> as From<&Hsts>>
-           and 7 others
+           and 8 others
    = note: required because of the requirements on the impl of `Into<Header<'_>>` for `u8`
 
 error[E0277]: the trait bound `Header<'_>: From<std::string::String>` is not satisfied
@@ -53,7 +53,7 @@ error[E0277]: the trait bound `Header<'_>: From<std::string::String>` is not sat
              <Header<'static> as From<&ExpectCt>>
              <Header<'static> as From<&Frame>>
              <Header<'static> as From<&Hsts>>
-           and 7 others
+           and 8 others
    = note: required because of the requirements on the impl of `Into<Header<'_>>` for `std::string::String`
 
 error[E0277]: the trait bound `usize: Responder<'_, '_>` is not satisfied
