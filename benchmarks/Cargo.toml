@@ -6,7 +6,11 @@ publish = false
 
 [workspace]
 
-[dependencies]
+[[bench]]
+name = "main"
+path = "src/bench.rs"
+harness = false
+
+[dev-dependencies]
 rocket = { path = "../core/lib/" }
 criterion = "0.3"
-criterion-macro = "0.3"

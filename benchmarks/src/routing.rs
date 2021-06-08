@@ -1,6 +1,6 @@
 use std::collections::hash_set::HashSet;
 
-use criterion::Criterion;
+use criterion::{criterion_group, Criterion};
 
 use rocket::{route, config, Request, Data, Route, Config};
 use rocket::http::{Method, RawStr, ContentType, Accept, Status};
@@ -84,6 +84,7 @@ fn client(routes: Vec<Route>) -> Client {
         cli_colors: false,
         shutdown: config::Shutdown {
             ctrlc: false,
+            #[cfg(unix)]
             signals: HashSet::new(),
             ..Default::default()
         },
@@ -99,7 +100,6 @@ fn client(routes: Vec<Route>) -> Client {
     }
 }
 
-#[criterion]
 pub fn bench_rust_lang_routes(c: &mut Criterion) {
     let table = include_str!("../static/rust-lang.routes");
     let routes = parse_routes_table(table);
@@ -113,7 +113,6 @@ pub fn bench_rust_lang_routes(c: &mut Criterion) {
     }));
 }
 
-#[criterion]
 pub fn bench_bitwarden_routes(c: &mut Criterion) {
     let table = include_str!("../static/bitwarden_rs.routes");
     let routes = parse_routes_table(table);
@@ -126,3 +125,5 @@ pub fn bench_bitwarden_routes(c: &mut Criterion) {
         }
     }));
 }
+
+criterion_group!(routing, bench_rust_lang_routes, bench_bitwarden_routes);
