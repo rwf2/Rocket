@@ -40,15 +40,12 @@ pin-project-lite = "0.2"
 memchr = "2"
 stable-pattern = "0.1"
 cookie = { version = "0.15", features = ["percent-encode"] }
+state = "0.5.1"
 
 [dependencies.hyper]
 version = "0.14.5"
 default-features = false
 features = ["http1", "http2", "runtime", "server", "stream"]
-
-[dependencies.state]
-git = "https://github.com/SergioBenitez/state.git"
-rev = "8f94dc"
 
 [dependencies._serde]
 package = "serde"

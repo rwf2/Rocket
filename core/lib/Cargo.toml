@@ -56,10 +56,7 @@ async-trait = "0.1.43"
 async-stream = "0.3.2"
 multer = { version = "2", features = ["tokio-io"] }
 tokio-stream = { version = "0.1.6", features = ["signal", "time"] }
-
-[dependencies.state]
-git = "https://github.com/SergioBenitez/state.git"
-rev = "8f94dc"
+state = "0.5.1"
 
 [dependencies.rocket_codegen]
 version = "0.5.0-dev"
