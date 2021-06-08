@@ -37,7 +37,7 @@ pub struct Asterisk(pub http::uri::Asterisk, pub Span);
 impl FromMeta for Status {
     fn from_meta(meta: &MetaItem) -> Result<Self> {
         let num = usize::from_meta(meta)?;
-        if num < 100 || num >= 600 {
+        if !(100..600).contains(&num) {
             return Err(meta.value_span().error("status must be in range [100, 599]"));
         }
 
@@ -56,7 +56,7 @@ impl FromMeta for ContentType {
     fn from_meta(meta: &MetaItem) -> Result<Self> {
         http::ContentType::parse_flexible(&String::from_meta(meta)?)
             .map(ContentType)
-            .ok_or(meta.value_span().error("invalid or unknown content type"))
+            .ok_or_else(|| meta.value_span().error("invalid or unknown content type"))
     }
 }
 
@@ -71,7 +71,7 @@ impl ToTokens for ContentType {
 impl FromMeta for MediaType {
     fn from_meta(meta: &MetaItem) -> Result<Self> {
         let mt = http::MediaType::parse_flexible(&String::from_meta(meta)?)
-            .ok_or(meta.value_span().error("invalid or unknown media type"))?;
+            .ok_or_else(|| meta.value_span().error("invalid or unknown media type"))?;
 
         if !mt.is_known() {
             // FIXME(diag: warning)

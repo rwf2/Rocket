@@ -6,7 +6,7 @@ use devise::ext::SpanDiagnosticExt;
 use proc_macro2::TokenStream;
 
 pub fn _macro(input: proc_macro::TokenStream) -> devise::Result<TokenStream> {
-    let root_glob = syn::parse::<LitStr>(input.into())?;
+    let root_glob = syn::parse::<LitStr>(input)?;
     let tests = entry_to_tests(&root_glob)
         .map_err(|e| root_glob.span().error(format!("failed to read: {}", e)))?;
 
@@ -24,7 +24,7 @@ fn entry_to_tests(root_glob: &LitStr) -> Result<Vec<TokenStream>, Box<dyn Error>
             .and_then(|f| f.to_str())
             .map(|name| name.trim_matches(|c| char::is_numeric(c) || c == '-')
                 .replace(|c| c == '-' || c == '.', "_"))
-            .ok_or_else(|| "invalid file name")?;
+            .ok_or("invalid file name")?;
 
         let ident = Ident::new(&name.to_lowercase(), root_glob.span());
         let full_path = Path::new(&manifest_dir).join(&path).display().to_string();
