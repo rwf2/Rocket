@@ -188,6 +188,7 @@ impl fmt::Display for Sig {
 ///         grace: 10,
 ///         mercy: 5,
 ///         force: true,
+///         ..Default::default()
 ///     },
 ///     ..Config::default()
 /// };
@@ -236,7 +237,24 @@ pub struct Shutdown {
     /// cooperate.
     ///
     /// **default: `true`**
+    #[serde(deserialize_with = "figment::util::bool_from_str_or_int")]
     pub force: bool,
+    /// PRIVATE: This structure may grow (but never change otherwise) in a
+    /// non-breaking release. As such, constructing this structure should
+    /// _always_ be done using a public constructor or update syntax:
+    ///
+    /// ```rust
+    /// use rocket::config::Shutdown;
+    ///
+    /// let config = Shutdown {
+    ///     grace: 5,
+    ///     mercy: 10,
+    ///     ..Default::default()
+    /// };
+    /// ```
+    #[doc(hidden)]
+    #[serde(skip)]
+    pub __non_exhaustive: (),
 }
 
 impl fmt::Display for Shutdown {
@@ -266,6 +284,7 @@ impl Default for Shutdown {
             grace: 2,
             mercy: 3,
             force: true,
+            __non_exhaustive: (),
         }
     }
 }

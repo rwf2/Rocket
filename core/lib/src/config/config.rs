@@ -92,6 +92,22 @@ pub struct Config {
     /// Whether to use colors and emoji when logging. **(default: `true`)**
     #[serde(deserialize_with = "figment::util::bool_from_str_or_int")]
     pub cli_colors: bool,
+    /// PRIVATE: This structure may grow (but never change otherwise) in a
+    /// non-breaking release. As such, constructing this structure should
+    /// _always_ be done using a public constructor or update syntax:
+    ///
+    /// ```rust
+    /// use rocket::Config;
+    ///
+    /// let config = Config {
+    ///     port: 1024,
+    ///     keep_alive: 10,
+    ///     ..Default::default()
+    /// };
+    /// ```
+    #[doc(hidden)]
+    #[serde(skip)]
+    pub __non_exhaustive: (),
 }
 
 impl Default for Config {
@@ -150,8 +166,9 @@ impl Config {
             secret_key: SecretKey::zero(),
             temp_dir: std::env::temp_dir(),
             log_level: LogLevel::Normal,
-            cli_colors: true,
             shutdown: Shutdown::default(),
+            cli_colors: true,
+            __non_exhaustive: (),
         }
     }
 
