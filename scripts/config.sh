@@ -41,6 +41,7 @@ CORE_ROOT=$(relative "core") || exit $?
 CONTRIB_ROOT=$(relative "contrib") || exit $?
 SITE_ROOT=$(relative "site") || exit $?
 BENCHMARKS_ROOT=$(relative "benchmarks") || exit $?
+FUZZ_ROOT=$(relative "core/lib/fuzz") || exit $?
 
 # Root of project-like directories.
 CORE_LIB_ROOT=$(relative "core/lib") || exit $?

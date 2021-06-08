@@ -58,6 +58,12 @@ function check_style() {
   fi
 }
 
+function indir() {
+  local dir="${1}"
+  shift
+  pushd "${dir}" > /dev/null 2>&1 ; $@ ; popd > /dev/null 2>&1
+}
+
 function test_contrib() {
   SYNC_DB_POOLS_FEATURES=(
     diesel_postgres_pool
@@ -93,48 +99,44 @@ function test_core() {
     uuid
   )
 
-  pushd "${CORE_LIB_ROOT}" > /dev/null 2>&1
-    echo ":: Building and testing core [no features]..."
-    $CARGO test --no-default-features $@
+  echo ":: Building and testing core [no features]..."
+  indir "${CORE_LIB_ROOT}" $CARGO test --no-default-features $@
 
-    for feature in "${FEATURES[@]}"; do
-      echo ":: Building and testing core [${feature}]..."
-      $CARGO test --no-default-features --features "${feature}" $@
-    done
-  popd > /dev/null 2>&1
+  for feature in "${FEATURES[@]}"; do
+    echo ":: Building and testing core [${feature}]..."
+    indir "${CORE_LIB_ROOT}" $CARGO test --no-default-features --features "${feature}" $@
+  done
 }
 
 function test_examples() {
+  # Cargo compiles Rocket once with the `secrets` feature enabled, so when run
+  # in production, we need a secret key or tests will fail needlessly. We test
+  # in core that secret key failing/not failing works as expected, but here we
+  # provide a valid secret_key so tests don't fail.
   echo ":: Building and testing examples..."
-
-  pushd "${EXAMPLES_DIR}" > /dev/null 2>&1
-    # Rust compiles Rocket once with the `secrets` feature enabled, so when run
-    # in production, we need a secret key or tests will fail needlessly. We
-    # test in core that secret key failing/not failing works as expected.
-    ROCKET_SECRET_KEY="itlYmFR2vYKrOmFhupMIn/hyB6lYCCTXz4yaQX89XVg=" \
-      $CARGO test --all $@
-  popd > /dev/null 2>&1
-}
+  ROCKET_SECRET_KEY="itlYmFR2vYKrOmFhupMIn/hyB6lYCCTXz4yaQX89XVg=" \
+    indir "${EXAMPLES_DIR}" $CARGO test --all $@
+  }
 
 function test_default() {
   echo ":: Building and testing core libraries..."
+  indir "${PROJECT_ROOT}" $CARGO test --all --all-features $@
 
-  pushd "${PROJECT_ROOT}" > /dev/null 2>&1
-    $CARGO test --all --all-features $@
-  popd > /dev/null 2>&1
+  echo ":: Checking benchmarks..."
+  indir "${BENCHMARKS_ROOT}" $CARGO check --benches --all-features $@
+
+  echo ":: Checking fuzzers..."
+  indir "${FUZZ_ROOT}" $CARGO check --all --all-features $@
 }
 
 function run_benchmarks() {
   echo ":: Running benchmarks..."
-
-  pushd "${BENCHMARKS_ROOT}" > /dev/null 2>&1
-    $CARGO bench $@
-  popd > /dev/null 2>&1
+  indir "${BENCHMARKS_ROOT}" $CARGO bench $@
 }
 
 if [[ $1 == +* ]]; then
-    CARGO="$CARGO $1"
-    shift
+  CARGO="$CARGO $1"
+  shift
 fi
 
 # The kind of test we'll be running.
@@ -142,8 +144,8 @@ TEST_KIND="default"
 KINDS=("contrib" "benchmarks" "core" "examples" "default" "all")
 
 if [[ " ${KINDS[@]} " =~ " ${1#"--"} " ]]; then
-    TEST_KIND=${1#"--"}
-    shift
+  TEST_KIND=${1#"--"}
+  shift
 fi
 
 echo ":: Preparing. Environment is..."
