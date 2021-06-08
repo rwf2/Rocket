@@ -2,10 +2,10 @@ use rocket::{Rocket, Build};
 use rocket::{fairing::AdHoc, http::ContentType, local::blocking::Client};
 
 #[rocket::post("/", data = "<_data>", format = "json")]
-fn index(_data: rocket::Data) -> &'static str { "json" }
+fn index(_data: rocket::Data<'_>) -> &'static str { "json" }
 
 #[rocket::post("/", data = "<_data>", rank = 2)]
-fn other_index(_data: rocket::Data) -> &'static str { "other" }
+fn other_index(_data: rocket::Data<'_>) -> &'static str { "other" }
 
 fn rocket() -> Rocket<Build> {
     rocket::build()

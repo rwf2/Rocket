@@ -184,7 +184,7 @@ impl Into<Vec<Route>> for FileServer {
 
 #[crate::async_trait]
 impl Handler for FileServer {
-    async fn handle<'r>(&self, req: &'r Request<'_>, data: Data) -> Outcome<'r> {
+    async fn handle<'r>(&self, req: &'r Request<'_>, data: Data<'r>) -> Outcome<'r> {
         use crate::http::uri::fmt::Path;
 
         // Get the segments as a `PathBuf`, allowing dotfiles requested.

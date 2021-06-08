@@ -39,14 +39,14 @@ use crate::data::{Capped, N};
 ///
 /// [`DataStream::stream_to(&mut vec)`]: DataStream::stream_to()
 /// [`DataStream::stream_to(&mut file)`]: DataStream::stream_to()
-pub struct DataStream {
-    pub(crate) chain: Take<Chain<Cursor<Vec<u8>>, StreamReader>>,
+pub struct DataStream<'r> {
+    pub(crate) chain: Take<Chain<Cursor<Vec<u8>>, StreamReader<'r>>>,
 }
 
 /// An adapter: turns a `T: Stream` (in `StreamKind`) into a `tokio::AsyncRead`.
-pub struct StreamReader {
+pub struct StreamReader<'r> {
     state: State,
-    inner: StreamKind,
+    inner: StreamKind<'r>,
 }
 
 /// The current state of `StreamReader` `AsyncRead` adapter.
@@ -57,13 +57,14 @@ enum State {
 }
 
 /// The kinds of streams we accept as `Data`.
-enum StreamKind {
-    Body(hyper::Body),
-    Multipart(multer::Field<'static>)
+enum StreamKind<'r> {
+    Empty,
+    Body(&'r mut hyper::Body),
+    Multipart(multer::Field<'r>)
 }
 
-impl DataStream {
-    pub(crate) fn new(buf: Vec<u8>, stream: StreamReader, limit: u64) -> Self {
+impl<'r> DataStream<'r> {
+    pub(crate) fn new(buf: Vec<u8>, stream: StreamReader<'r>, limit: u64) -> Self {
         let chain = Chain::new(Cursor::new(buf), stream).take(limit);
         Self { chain }
     }
@@ -71,7 +72,7 @@ impl DataStream {
     /// Whether a previous read exhausted the set limit _and then some_.
     async fn limit_exceeded(&mut self) -> io::Result<bool> {
         #[cold]
-        async fn _limit_exceeded(stream: &mut DataStream) -> io::Result<bool> {
+        async fn _limit_exceeded(stream: &mut DataStream<'_>) -> io::Result<bool> {
             stream.chain.set_limit(1);
             let mut buf = [0u8; 1];
             Ok(stream.read(&mut buf).await? != 0)
@@ -87,7 +88,7 @@ impl DataStream {
     /// ```rust
     /// use rocket::data::{Data, ToByteUnit};
     ///
-    /// async fn f(data: Data) {
+    /// async fn f(data: Data<'_>) {
     ///     let definitely_have_n_bytes = data.open(1.kibibytes()).hint();
     /// }
     /// ```
@@ -111,7 +112,7 @@ impl DataStream {
     /// use std::io;
     /// use rocket::data::{Data, ToByteUnit};
     ///
-    /// async fn data_guard(mut data: Data) -> io::Result<String> {
+    /// async fn data_guard(mut data: Data<'_>) -> io::Result<String> {
     ///     // write all of the data to stdout
     ///     let written = data.open(512.kibibytes())
     ///         .stream_to(tokio::io::stdout()).await?;
@@ -136,7 +137,7 @@ impl DataStream {
     /// use std::io;
     /// use rocket::data::{Data, ToByteUnit};
     ///
-    /// async fn data_guard(mut data: Data) -> io::Result<String> {
+    /// async fn data_guard(mut data: Data<'_>) -> io::Result<String> {
     ///     // write all of the data to stdout
     ///     let written = data.open(512.kibibytes())
     ///         .stream_precise_to(tokio::io::stdout()).await?;
@@ -159,7 +160,7 @@ impl DataStream {
     /// use std::io;
     /// use rocket::data::{Data, ToByteUnit};
     ///
-    /// async fn data_guard(data: Data) -> io::Result<Vec<u8>> {
+    /// async fn data_guard(data: Data<'_>) -> io::Result<Vec<u8>> {
     ///     let bytes = data.open(4.kibibytes()).into_bytes().await?;
     ///     if !bytes.is_complete() {
     ///         println!("there are bytes remaining in the stream");
@@ -182,7 +183,7 @@ impl DataStream {
     /// use std::io;
     /// use rocket::data::{Data, ToByteUnit};
     ///
-    /// async fn data_guard(data: Data) -> io::Result<String> {
+    /// async fn data_guard(data: Data<'_>) -> io::Result<String> {
     ///     let string = data.open(10.bytes()).into_string().await?;
     ///     if !string.is_complete() {
     ///         println!("there are bytes remaining in the stream");
@@ -208,7 +209,7 @@ impl DataStream {
     /// use std::io;
     /// use rocket::data::{Data, ToByteUnit};
     ///
-    /// async fn data_guard(mut data: Data) -> io::Result<String> {
+    /// async fn data_guard(mut data: Data<'_>) -> io::Result<String> {
     ///     let file = data.open(1.megabytes()).into_file("/static/file").await?;
     ///     if !file.is_complete() {
     ///         println!("there are bytes remaining in the stream");
@@ -226,25 +227,25 @@ impl DataStream {
 
 // TODO.async: Consider implementing `AsyncBufRead`.
 
-impl StreamReader {
+impl StreamReader<'_> {
     pub fn empty() -> Self {
-        Self { inner: StreamKind::Body(hyper::Body::empty()), state: State::Done }
+        Self { inner: StreamKind::Empty, state: State::Done }
     }
 }
 
-impl From<hyper::Body> for StreamReader {
-    fn from(body: hyper::Body) -> Self {
+impl<'r> From<&'r mut hyper::Body> for StreamReader<'r> {
+    fn from(body: &'r mut hyper::Body) -> Self {
         Self { inner: StreamKind::Body(body), state: State::Pending }
     }
 }
 
-impl From<multer::Field<'static>> for StreamReader {
-    fn from(field: multer::Field<'static>) -> Self {
+impl<'r> From<multer::Field<'r>> for StreamReader<'r> {
+    fn from(field: multer::Field<'r>) -> Self {
         Self { inner: StreamKind::Multipart(field), state: State::Pending }
     }
 }
 
-impl AsyncRead for DataStream {
+impl AsyncRead for DataStream<'_> {
     #[inline(always)]
     fn poll_read(
         mut self: Pin<&mut Self>,
@@ -255,7 +256,7 @@ impl AsyncRead for DataStream {
     }
 }
 
-impl Stream for StreamKind {
+impl Stream for StreamKind<'_> {
     type Item = io::Result<hyper::Bytes>;
 
     fn poll_next(
@@ -267,6 +268,7 @@ impl Stream for StreamKind {
                 .map_err_ext(|e| io::Error::new(io::ErrorKind::Other, e)),
             StreamKind::Multipart(mp) => Pin::new(mp).poll_next(cx)
                 .map_err_ext(|e| io::Error::new(io::ErrorKind::Other, e)),
+            StreamKind::Empty => Poll::Ready(None),
         }
     }
 
@@ -274,11 +276,12 @@ impl Stream for StreamKind {
         match self {
             StreamKind::Body(body) => body.size_hint(),
             StreamKind::Multipart(mp) => mp.size_hint(),
+            StreamKind::Empty => (0, Some(0)),
         }
     }
 }
 
-impl AsyncRead for StreamReader {
+impl AsyncRead for StreamReader<'_> {
     fn poll_read(
         mut self: Pin<&mut Self>,
         cx: &mut Context<'_>,

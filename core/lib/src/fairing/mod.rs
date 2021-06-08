@@ -237,7 +237,7 @@ pub type Result<T = Rocket<Build>, E = Rocket<Build>> = std::result::Result<T, E
 ///         # unimplemented!()
 ///     }
 ///
-///     async fn on_request(&self, req: &mut Request<'_>, data: &mut Data) {
+///     async fn on_request(&self, req: &mut Request<'_>, data: &mut Data<'_>) {
 ///         /* ... */
 ///         # unimplemented!()
 ///     }
@@ -286,7 +286,7 @@ pub type Result<T = Rocket<Build>, E = Rocket<Build>> = std::result::Result<T, E
 ///         }
 ///     }
 ///
-///     async fn on_request(&self, req: &mut Request<'_>, _: &mut Data) {
+///     async fn on_request(&self, req: &mut Request<'_>, _: &mut Data<'_>) {
 ///         if req.method() == Method::Get {
 ///             self.get.fetch_add(1, Ordering::Relaxed);
 ///         } else if req.method() == Method::Post {
@@ -349,7 +349,7 @@ pub type Result<T = Rocket<Build>, E = Rocket<Build>> = std::result::Result<T, E
 ///     }
 ///
 ///     /// Stores the start time of the request in request-local state.
-///     async fn on_request(&self, request: &mut Request<'_>, _: &mut Data) {
+///     async fn on_request(&self, request: &mut Request<'_>, _: &mut Data<'_>) {
 ///         // Store a `TimerStart` instead of directly storing a `SystemTime`
 ///         // to ensure that this usage doesn't conflict with anything else
 ///         // that might store a `SystemTime` in request-local cache.
@@ -457,7 +457,7 @@ pub trait Fairing: Send + Sync + Any + 'static {
     /// ## Default Implementation
     ///
     /// The default implementation of this method does nothing.
-    async fn on_request(&self, _req: &mut Request<'_>, _data: &mut Data) {}
+    async fn on_request(&self, _req: &mut Request<'_>, _data: &mut Data<'_>) {}
 
     /// The response callback.
     ///
@@ -490,7 +490,7 @@ impl<T: Fairing> Fairing for std::sync::Arc<T> {
     }
 
     #[inline]
-    async fn on_request(&self, req: &mut Request<'_>, data: &mut Data) {
+    async fn on_request(&self, req: &mut Request<'_>, data: &mut Data<'_>) {
         (self as &T).on_request(req, data).await
     }
 

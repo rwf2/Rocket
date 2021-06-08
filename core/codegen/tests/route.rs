@@ -26,7 +26,7 @@ struct Simple(String);
 impl<'r> FromData<'r> for Simple {
     type Error = std::io::Error;
 
-    async fn from_data(req: &'r Request<'_>, data: Data) -> data::Outcome<Self, Self::Error> {
+    async fn from_data(req: &'r Request<'_>, data: Data<'r>) -> data::Outcome<'r, Self> {
         String::from_data(req, data).await.map(Simple)
     }
 }
@@ -78,7 +78,7 @@ fn post2(
 
 #[allow(dead_code)]
 #[post("/<_unused_param>?<_unused_query>", data="<_unused_data>")]
-fn test_unused_params(_unused_param: String, _unused_query: String, _unused_data: Data) {
+fn test_unused_params(_unused_param: String, _unused_query: String, _unused_data: Data<'_>) {
 }
 
 #[test]

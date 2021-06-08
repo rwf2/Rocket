@@ -3,7 +3,7 @@ use std::path::{PathBuf, Path};
 
 use crate::Request;
 use crate::http::{ContentType, Status};
-use crate::data::{FromData, Data, Capped, N, Limits};
+use crate::data::{self, FromData, Data, Capped, N, Limits};
 use crate::form::{FromFormField, ValueField, DataField, error::Errors};
 use crate::outcome::IntoOutcome;
 use crate::fs::FileName;
@@ -441,7 +441,7 @@ impl<'v> TempFile<'v> {
 
     async fn from<'a>(
         req: &Request<'_>,
-        data: Data,
+        data: Data<'_>,
         file_name: Option<&'a FileName>,
         content_type: Option<ContentType>,
     ) -> io::Result<Capped<TempFile<'a>>> {
@@ -489,10 +489,7 @@ impl<'v> FromFormField<'v> for Capped<TempFile<'v>> {
 impl<'r> FromData<'r> for Capped<TempFile<'_>> {
     type Error = io::Error;
 
-    async fn from_data(
-        req: &'r crate::Request<'_>,
-        data: crate::Data
-    ) -> crate::data::Outcome<Self, Self::Error> {
+    async fn from_data(req: &'r Request<'_>, data: Data<'r>) -> data::Outcome<'r, Self> {
         use yansi::Paint;
 
         let has_form = |ty: &ContentType| ty.is_form_data() || ty.is_form();

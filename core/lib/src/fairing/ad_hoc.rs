@@ -59,7 +59,7 @@ enum AdHocKind {
     Liftoff(Once<dyn for<'a> FnOnce(&'a Rocket<Orbit>) -> BoxFuture<'a, ()> + Send + 'static>),
 
     /// An ad-hoc **request** fairing. Called when a request is received.
-    Request(Box<dyn for<'a> Fn(&'a mut Request<'_>, &'a Data)
+    Request(Box<dyn for<'a> Fn(&'a mut Request<'_>, &'a Data<'_>)
         -> BoxFuture<'a, ()> + Send + Sync + 'static>),
 
     /// An ad-hoc **response** fairing. Called when a response is ready to be
@@ -150,7 +150,7 @@ impl AdHoc {
     /// });
     /// ```
     pub fn on_request<F: Send + Sync + 'static>(name: &'static str, f: F) -> AdHoc
-        where F: for<'a> Fn(&'a mut Request<'_>, &'a Data) -> BoxFuture<'a, ()>
+        where F: for<'a> Fn(&'a mut Request<'_>, &'a Data<'_>) -> BoxFuture<'a, ()>
     {
         AdHoc { name, kind: AdHocKind::Request(Box::new(f)) }
     }
@@ -247,7 +247,7 @@ impl Fairing for AdHoc {
         }
     }
 
-    async fn on_request(&self, req: &mut Request<'_>, data: &mut Data) {
+    async fn on_request(&self, req: &mut Request<'_>, data: &mut Data<'_>) {
         if let AdHocKind::Request(ref f) = self.kind {
             f(req, data).await
         }

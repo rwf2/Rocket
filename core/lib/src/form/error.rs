@@ -804,11 +804,19 @@ impl fmt::Display for ErrorKind<'_> {
         match self {
             ErrorKind::InvalidLength { min, max } => {
                 match (min, max) {
-                    (None, None) => write!(f, "unexpected or incomplete")?,
-                    (None, Some(k)) => write!(f, "length cannot exceed {}", k)?,
-                    (Some(1), None) => write!(f, "value cannot be empty")?,
-                    (Some(k), None) => write!(f, "length must be at least {}", k)?,
-                    (Some(i), Some(j)) => write!(f, "length must be between {} and {}", i, j)?,
+                    (None, None) => write!(f, "invalid length: incomplete")?,
+                    (None, Some(k)) if *k < 1024 => write!(f, "length cannot exceed {}", k)?,
+                    (None, Some(k)) => write!(f, "size must not exceed {}", ByteUnit::from(*k))?,
+                    (Some(1), None) => write!(f, "cannot be empty")?,
+                    (Some(k), None) if *k < 1024 => write!(f, "expected at least {}", k)?,
+                    (Some(k), None) => write!(f, "size must be at least {}", ByteUnit::from(*k))?,
+                    (Some(i), Some(j)) if *i < 1024 && *j < 1024 => {
+                        write!(f, "length must be between {} and {}", i, j)?;
+                    }
+                    (Some(i), Some(j)) => {
+                        let (i, j) = (ByteUnit::from(*i), ByteUnit::from(*j));
+                        write!(f, "size must be between {} and {}", i, j)?;
+                    }
                 }
             }
             ErrorKind::InvalidChoice { choices } => {

@@ -6,7 +6,7 @@ use rocket::{route, config, Request, Data, Route, Config};
 use rocket::http::{Method, RawStr, ContentType, Accept, Status};
 use rocket::local::blocking::{Client, LocalRequest};
 
-fn dummy_handler<'r>(req: &'r Request, _: Data) -> route::BoxFuture<'r> {
+fn dummy_handler<'r>(req: &'r Request, _: Data<'r>) -> route::BoxFuture<'r> {
     route::Outcome::from(req, ()).pin()
 }
 

@@ -598,7 +598,7 @@ As an example, consider the following route:
 # #[macro_use] extern crate rocket;
 # fn main() {}
 
-# type User = rocket::data::Data;
+# type User = String;
 
 #[post("/user", format = "application/json", data = "<user>")]
 fn new_user(user: User) { /* ... */ }
@@ -647,7 +647,7 @@ trait. It looks like this, where `T` is assumed to implement `FromData`:
 ```rust
 # #[macro_use] extern crate rocket;
 
-# type T = rocket::data::Data;
+# type T = String;
 
 #[post("/", data = "<input>")]
 fn new(input: T) { /* .. */ }
@@ -715,7 +715,7 @@ use rocket::tokio;
 use rocket::data::{Data, ToByteUnit};
 
 #[post("/debug", data = "<data>")]
-async fn debug(data: Data) -> std::io::Result<()> {
+async fn debug(data: Data<'_>) -> std::io::Result<()> {
     // Stream at most 512KiB all of the body data to stdout.
     data.open(512.kibibytes())
         .stream_to(tokio::io::stdout())

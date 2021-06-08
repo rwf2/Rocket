@@ -339,7 +339,7 @@ pub struct StaticInfo {
     /// The route's format, if any.
     pub format: Option<MediaType>,
     /// The route's handler, i.e, the annotated function.
-    pub handler: for<'r> fn(&'r crate::Request<'_>, crate::Data) -> BoxFuture<'r>,
+    pub handler: for<'r> fn(&'r crate::Request<'_>, crate::Data<'r>) -> BoxFuture<'r>,
     /// The route's rank, if any.
     pub rank: Option<isize>,
     /// Route-derived sentinels, if any.

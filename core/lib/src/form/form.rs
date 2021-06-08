@@ -299,7 +299,7 @@ impl<T> DerefMut for Form<T> {
 impl<'r, T: FromForm<'r>> FromData<'r> for Form<T> {
     type Error = Errors<'r>;
 
-    async fn from_data(req: &'r Request<'_>, data: Data) -> Outcome<Self, Self::Error> {
+    async fn from_data(req: &'r Request<'_>, data: Data<'r>) -> Outcome<'r, Self> {
         use either::Either;
 
         let mut parser = try_outcome!(Parser::new(req, data).await);

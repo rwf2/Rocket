@@ -38,7 +38,7 @@ error[E0277]: the trait bound `Q: FromData<'_>` is not satisfied
     |
    ::: $WORKSPACE/core/lib/src/data/from_data.rs
     |
-    |     async fn from_data(req: &'r Request<'_>, data: Data) -> Outcome<Self, Self::Error>;
+    |     async fn from_data(req: &'r Request<'_>, data: Data<'r>) -> Outcome<'r, Self>;
     |                                         -- required by this bound in `rocket::data::FromData::from_data`
 
 error[E0277]: the trait bound `Q: FromRequest<'_>` is not satisfied

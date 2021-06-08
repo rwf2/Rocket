@@ -290,7 +290,7 @@ impl Rocket<Build> {
     /// use rocket::{Request, Route, Data, route};
     /// use rocket::http::Method;
     ///
-    /// fn hi<'r>(req: &'r Request, _: Data) -> route::BoxFuture<'r> {
+    /// fn hi<'r>(req: &'r Request, _: Data<'r>) -> route::BoxFuture<'r> {
     ///     route::Outcome::from(req, "Hello!").pin()
     /// }
     ///

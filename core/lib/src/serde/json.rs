@@ -158,7 +158,7 @@ impl<'r, T: Deserialize<'r>> Json<T> {
         serde_json::from_str(s).map(Json).map_err(|e| Error::Parse(s, e))
     }
 
-    async fn from_data(req: &'r Request<'_>, data: Data) -> Result<Self, Error<'r>> {
+    async fn from_data(req: &'r Request<'_>, data: Data<'r>) -> Result<Self, Error<'r>> {
         let limit = req.limits().get("json").unwrap_or(Limits::JSON);
         let string = match data.open(limit).into_string().await {
             Ok(s) if s.is_complete() => s.into_inner(),
@@ -177,7 +177,7 @@ impl<'r, T: Deserialize<'r>> Json<T> {
 impl<'r, T: Deserialize<'r>> FromData<'r> for Json<T> {
     type Error = Error<'r>;
 
-    async fn from_data(req: &'r Request<'_>, data: Data) -> Outcome<Self, Self::Error> {
+    async fn from_data(req: &'r Request<'_>, data: Data<'r>) -> Outcome<'r, Self> {
         match Self::from_data(req, data).await {
             Ok(value) => Outcome::Success(value),
             Err(Error::Io(e)) if e.kind() == io::ErrorKind::UnexpectedEof => {

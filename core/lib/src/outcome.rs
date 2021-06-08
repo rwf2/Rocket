@@ -26,7 +26,7 @@
 //!
 //! ```rust
 //! # use rocket::post;
-//! # type S = rocket::data::Data;
+//! # type S = String;
 //! #[post("/", data = "<my_val>")]
 //! fn hello(my_val: S) { /* ... */  }
 //! ```
@@ -49,7 +49,7 @@
 //!
 //! ```rust
 //! # use rocket::post;
-//! # type S = rocket::data::Data;
+//! # type S = Option<String>;
 //! # type E = std::convert::Infallible;
 //! #[post("/", data = "<my_val>")]
 //! fn hello(my_val: Result<S, E>) { /* ... */ }
@@ -73,7 +73,7 @@
 //!
 //! ```rust
 //! # use rocket::post;
-//! # type S = rocket::data::Data;
+//! # type S = String;
 //! #[post("/", data = "<my_val>")]
 //! fn hello(my_val: S) { /* ... */ }
 //! ```

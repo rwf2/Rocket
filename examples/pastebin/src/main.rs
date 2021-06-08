@@ -17,7 +17,7 @@ const HOST: Absolute<'static> = uri!("http://localhost:8000");
 const ID_LENGTH: usize = 3;
 
 #[post("/", data = "<paste>")]
-async fn upload(paste: Data) -> io::Result<String> {
+async fn upload(paste: Data<'_>) -> io::Result<String> {
     let id = PasteId::new(ID_LENGTH);
     paste.open(128.kibibytes()).into_file(id.file_path()).await?;
     Ok(uri!(HOST, retrieve(id)).to_string())

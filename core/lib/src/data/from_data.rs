@@ -5,15 +5,16 @@ use crate::outcome::{self, IntoOutcome, try_outcome, Outcome::*};
 
 /// Type alias for the `Outcome` of [`FromData`].
 ///
-/// [`FromData`]: crate::data::FromData
-pub type Outcome<S, E> = outcome::Outcome<S, (Status, E), Data>;
+/// [`FromData`]: crTte::data::FromData
+pub type Outcome<'r, T, E = <T as FromData<'r>>::Error>
+    = outcome::Outcome<T, (Status, E), Data<'r>>;
 
-impl<S, E> IntoOutcome<S, (Status, E), Data> for Result<S, E> {
+impl<'r, S, E> IntoOutcome<S, (Status, E), Data<'r>> for Result<S, E> {
     type Failure = Status;
-    type Forward = Data;
+    type Forward = Data<'r>;
 
     #[inline]
-    fn into_outcome(self, status: Status) -> Outcome<S, E> {
+    fn into_outcome(self, status: Status) -> Outcome<'r, S, E> {
         match self {
             Ok(val) => Success(val),
             Err(err) => Failure((status, err))
@@ -21,7 +22,7 @@ impl<S, E> IntoOutcome<S, (Status, E), Data> for Result<S, E> {
     }
 
     #[inline]
-    fn or_forward(self, data: Data) -> Outcome<S, E> {
+    fn or_forward(self, data: Data<'r>) -> Outcome<'r, S, E> {
         match self {
             Ok(val) => Success(val),
             Err(_) => Forward(data)
@@ -41,7 +42,7 @@ impl<S, E> IntoOutcome<S, (Status, E), Data> for Result<S, E> {
 ///
 /// ```rust
 /// # #[macro_use] extern crate rocket;
-/// # type DataGuard = rocket::data::Data;
+/// # type DataGuard = String;
 /// #[post("/submit", data = "<var>")]
 /// fn submit(var: DataGuard) { /* ... */ }
 /// ```
@@ -66,7 +67,7 @@ impl<S, E> IntoOutcome<S, (Status, E), Data> for Result<S, E> {
 /// impl<'r> FromData<'r> for MyType {
 ///     type Error = MyError;
 ///
-///     async fn from_data(req: &'r Request<'_>, data: Data) -> data::Outcome<Self, MyError> {
+///     async fn from_data(req: &'r Request<'_>, data: Data<'r>) -> data::Outcome<'r, Self> {
 ///         /* .. */
 ///         # unimplemented!()
 ///     }
@@ -122,7 +123,7 @@ impl<S, E> IntoOutcome<S, (Status, E), Data> for Result<S, E> {
 /// impl<'r> FromData<'r> for Person<'r> {
 ///     type Error = Error;
 ///
-///     async fn from_data(req: &'r Request<'_>, data: Data) -> data::Outcome<Self, Error> {
+///     async fn from_data(req: &'r Request<'_>, data: Data<'r>) -> data::Outcome<'r, Self> {
 ///         use Error::*;
 ///         use rocket::outcome::Outcome::*;
 ///
@@ -190,7 +191,7 @@ pub trait FromData<'r>: Sized {
     /// If validation and parsing succeeds, an outcome of `Success` is returned.
     /// If the data is not appropriate given the type of `Self`, `Forward` is
     /// returned. If parsing fails, `Failure` is returned.
-    async fn from_data(req: &'r Request<'_>, data: Data) -> Outcome<Self, Self::Error>;
+    async fn from_data(req: &'r Request<'_>, data: Data<'r>) -> Outcome<'r, Self>;
 }
 
 use crate::data::Capped;
@@ -199,7 +200,7 @@ use crate::data::Capped;
 impl<'r> FromData<'r> for Capped<String> {
     type Error = std::io::Error;
 
-    async fn from_data(req: &'r Request<'_>, data: Data) -> Outcome<Self, Self::Error> {
+    async fn from_data(req: &'r Request<'_>, data: Data<'r>) -> Outcome<'r, Self> {
         let limit = req.limits().get("string").unwrap_or(Limits::STRING);
         data.open(limit).into_string().await.into_outcome(Status::BadRequest)
     }
@@ -211,7 +212,7 @@ impl_strict_from_data_from_capped!(String);
 impl<'r> FromData<'r> for Capped<&'r str> {
     type Error = std::io::Error;
 
-    async fn from_data(req: &'r Request<'_>, data: Data) -> Outcome<Self, Self::Error> {
+    async fn from_data(req: &'r Request<'_>, data: Data<'r>) -> Outcome<'r, Self> {
         let capped = try_outcome!(<Capped<String>>::from_data(req, data).await);
         let string = capped.map(|s| local_cache!(req, s).as_str());
         Success(string)
@@ -224,7 +225,7 @@ impl_strict_from_data_from_capped!(&'r str);
 impl<'r> FromData<'r> for Capped<&'r RawStr> {
     type Error = std::io::Error;
 
-    async fn from_data(req: &'r Request<'_>, data: Data) -> Outcome<Self, Self::Error> {
+    async fn from_data(req: &'r Request<'_>, data: Data<'r>) -> Outcome<'r, Self> {
         let capped = try_outcome!(<Capped<String>>::from_data(req, data).await);
         let raw = capped.map(|s| RawStr::new(local_cache!(req, s)));
         Success(raw)
@@ -237,7 +238,7 @@ impl_strict_from_data_from_capped!(&'r RawStr);
 impl<'r> FromData<'r> for Capped<std::borrow::Cow<'_, str>> {
     type Error = std::io::Error;
 
-    async fn from_data(req: &'r Request<'_>, data: Data) -> Outcome<Self, Self::Error> {
+    async fn from_data(req: &'r Request<'_>, data: Data<'r>) -> Outcome<'r, Self> {
         let capped = try_outcome!(<Capped<String>>::from_data(req, data).await);
         Success(capped.map(|s| s.into()))
     }
@@ -249,7 +250,7 @@ impl_strict_from_data_from_capped!(std::borrow::Cow<'_, str>);
 impl<'r> FromData<'r> for Capped<&'r [u8]> {
     type Error = std::io::Error;
 
-    async fn from_data(req: &'r Request<'_>, data: Data) -> Outcome<Self, Self::Error> {
+    async fn from_data(req: &'r Request<'_>, data: Data<'r>) -> Outcome<'r, Self> {
         let capped = try_outcome!(<Capped<Vec<u8>>>::from_data(req, data).await);
         let raw = capped.map(|b| local_cache!(req, b).as_slice());
         Success(raw)
@@ -262,7 +263,7 @@ impl_strict_from_data_from_capped!(&'r [u8]);
 impl<'r> FromData<'r> for Capped<Vec<u8>> {
     type Error = std::io::Error;
 
-    async fn from_data(req: &'r Request<'_>, data: Data) -> Outcome<Self, Self::Error> {
+    async fn from_data(req: &'r Request<'_>, data: Data<'r>) -> Outcome<'r, Self> {
         let limit = req.limits().get("bytes").unwrap_or(Limits::BYTES);
         data.open(limit).into_bytes().await.into_outcome(Status::BadRequest)
     }
@@ -271,10 +272,10 @@ impl<'r> FromData<'r> for Capped<Vec<u8>> {
 impl_strict_from_data_from_capped!(Vec<u8>);
 
 #[crate::async_trait]
-impl<'r> FromData<'r> for Data {
+impl<'r> FromData<'r> for Data<'r> {
     type Error = std::convert::Infallible;
 
-    async fn from_data(_: &'r Request<'_>, data: Data) -> Outcome<Self, Self::Error> {
+    async fn from_data(_: &'r Request<'_>, data: Data<'r>) -> Outcome<'r, Self> {
         Success(data)
     }
 }
@@ -283,10 +284,7 @@ impl<'r> FromData<'r> for Data {
 impl<'r, T: FromData<'r> + 'r> FromData<'r> for Result<T, T::Error> {
     type Error = std::convert::Infallible;
 
-    async fn from_data(
-        req: &'r Request<'_>,
-        data: Data
-    ) -> Outcome<Result<T, <T as FromData<'r>>::Error>, Self::Error> {
+    async fn from_data(req: &'r Request<'_>, data: Data<'r>) -> Outcome<'r, Self> {
         match T::from_data(req, data).await {
             Success(v) => Success(Ok(v)),
             Failure((_, e)) => Success(Err(e)),
@@ -299,7 +297,7 @@ impl<'r, T: FromData<'r> + 'r> FromData<'r> for Result<T, T::Error> {
 impl<'r, T: FromData<'r>> FromData<'r> for Option<T> {
     type Error = std::convert::Infallible;
 
-    async fn from_data(req: &'r Request<'_>, data: Data) -> Outcome<Self, Self::Error> {
+    async fn from_data(req: &'r Request<'_>, data: Data<'r>) -> Outcome<'r, Self> {
         match T::from_data(req, data).await {
             Success(v) => Success(Some(v)),
             Failure(..) | Forward(..) => Success(None),

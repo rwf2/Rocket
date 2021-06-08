@@ -64,10 +64,10 @@ pub fn _catch(
         /// Rocket code generated proxy static conversion implementations.
         impl #user_catcher_fn_name {
             fn into_info(self) -> #_catcher::StaticInfo {
-                fn monomorphized_function<'_b>(
+                fn monomorphized_function<'__r>(
                     #__status: #Status,
-                    #__req: &'_b #Request<'_>
-                ) -> #_catcher::BoxFuture<'_b> {
+                    #__req: &'__r #Request<'_>
+                ) -> #_catcher::BoxFuture<'__r> {
                     #_Box::pin(async move {
                         let __response = #catcher_response;
                         #Response::build()

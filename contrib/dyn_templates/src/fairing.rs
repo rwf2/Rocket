@@ -65,7 +65,7 @@ impl Fairing for TemplateFairing {
     }
 
     #[cfg(debug_assertions)]
-    async fn on_request(&self, req: &mut rocket::Request<'_>, _data: &mut rocket::Data) {
+    async fn on_request(&self, req: &mut rocket::Request<'_>, _data: &mut rocket::Data<'_>) {
         let cm = req.rocket().state::<ContextManager>()
             .expect("Template ContextManager registered in on_ignite");
 

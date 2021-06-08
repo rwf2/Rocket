@@ -33,7 +33,7 @@ pub struct DataField<'r, 'i> {
     /// The request in which the form field was submitted.
     pub request: &'r Request<'i>,
     /// The raw data stream.
-    pub data: Data,
+    pub data: Data<'r>,
 }
 
 impl<'v> ValueField<'v> {

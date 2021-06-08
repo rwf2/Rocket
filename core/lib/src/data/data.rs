@@ -15,7 +15,7 @@ pub const PEEK_BYTES: usize = 512;
 ///
 /// ```rust
 /// # #[macro_use] extern crate rocket;
-/// # type DataGuard = rocket::data::Data;
+/// # type DataGuard = String;
 /// #[post("/submit", data = "<var>")]
 /// fn submit(var: DataGuard) { /* ... */ }
 /// # fn main() { }
@@ -37,15 +37,15 @@ pub const PEEK_BYTES: usize = 512;
 /// The `peek` method returns a slice containing at most 512 bytes of buffered
 /// body data. This enables partially or fully reading from a `Data` object
 /// without consuming the `Data` object.
-pub struct Data {
+pub struct Data<'r> {
     buffer: Vec<u8>,
     is_complete: bool,
-    stream: StreamReader,
+    stream: StreamReader<'r>,
 }
 
-impl Data {
+impl<'r> Data<'r> {
     /// Create a `Data` from a recognized `stream`.
-    pub(crate) fn from<S: Into<StreamReader>>(stream: S) -> Data {
+    pub(crate) fn from<S: Into<StreamReader<'r>>>(stream: S) -> Data<'r> {
         // TODO.async: This used to also set the read timeout to 5 seconds.
         // Such a short read timeout is likely no longer necessary, but some
         // kind of idle timeout should be implemented.
@@ -57,7 +57,7 @@ impl Data {
 
     /// This creates a `data` object from a local data source `data`.
     #[inline]
-    pub(crate) fn local(data: Vec<u8>) -> Data {
+    pub(crate) fn local(data: Vec<u8>) -> Data<'r> {
         Data {
             buffer: data,
             stream: StreamReader::empty(),
@@ -78,11 +78,11 @@ impl Data {
     /// use rocket::data::{Data, ToByteUnit};
     ///
     /// # const SIZE_LIMIT: u64 = 2 << 20; // 2MiB
-    /// fn handler(data: Data) {
+    /// fn handler(data: Data<'_>) {
     ///     let stream = data.open(2.mebibytes());
     /// }
     /// ```
-    pub fn open(self, limit: ByteUnit) -> DataStream {
+    pub fn open(self, limit: ByteUnit) -> DataStream<'r> {
         DataStream::new(self.buffer, self.stream, limit.into())
     }
 
@@ -101,7 +101,7 @@ impl Data {
     ///
     /// ```rust
     /// use rocket::request::{self, Request, FromRequest};
-    /// use rocket::data::{self, Data, FromData};
+    /// use rocket::data::{Data, FromData, Outcome};
     /// # struct MyType;
     /// # type MyError = String;
     ///
@@ -109,12 +109,9 @@ impl Data {
     /// impl<'r> FromData<'r> for MyType {
     ///     type Error = MyError;
     ///
-    ///     async fn from_data(
-    ///         req: &'r Request<'_>,
-    ///         mut data: Data
-    ///     ) -> data::Outcome<Self, Self::Error> {
+    ///     async fn from_data(r: &'r Request<'_>, mut data: Data<'r>) -> Outcome<'r, Self> {
     ///         if data.peek(2).await != b"hi" {
-    ///             return data::Outcome::Forward(data)
+    ///             return Outcome::Forward(data)
     ///         }
     ///
     ///         /* .. */
@@ -139,7 +136,7 @@ impl Data {
     ///         }
     ///     }
     ///
-    ///     async fn on_request(&self, req: &mut Request<'_>, data: &mut Data) {
+    ///     async fn on_request(&self, req: &mut Request<'_>, data: &mut Data<'_>) {
     ///         if data.peek(2).await == b"hi" {
     ///             /* do something; body data starts with `"hi"` */
     ///         }
@@ -179,7 +176,7 @@ impl Data {
     /// ```rust
     /// use rocket::data::Data;
     ///
-    /// async fn handler(mut data: Data) {
+    /// async fn handler(mut data: Data<'_>) {
     ///     if data.peek_complete() {
     ///         println!("All of the data: {:?}", data.peek(512).await);
     ///     }

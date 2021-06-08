@@ -73,7 +73,7 @@ async fn hyper_service_fn(
 
     tokio::spawn(async move {
         // Convert a Hyper request into a Rocket request.
-        let (h_parts, h_body) = hyp_req.into_parts();
+        let (h_parts, mut h_body) = hyp_req.into_parts();
         let mut req = match Request::from_hyp(&rocket, &h_parts, addr) {
             Ok(req) => req,
             Err(e) => {
@@ -89,7 +89,7 @@ async fn hyper_service_fn(
         };
 
         // Retrieve the data from the hyper body.
-        let mut data = Data::from(h_body);
+        let mut data = Data::from(&mut h_body);
 
         // Dispatch the request to get a response, then write that response out.
         let token = rocket.preprocess_request(&mut req, &mut data).await;
@@ -168,7 +168,7 @@ impl Rocket<Orbit> {
     pub(crate) async fn preprocess_request(
         &self,
         req: &mut Request<'_>,
-        data: &mut Data
+        data: &mut Data<'_>
     ) -> RequestToken {
         // Check if this is a form and if the form contains the special _method
         // field which we use to reinterpret the request's method.
@@ -198,7 +198,7 @@ impl Rocket<Orbit> {
         &'s self,
         _token: RequestToken,
         request: &'r Request<'s>,
-        data: Data
+        data: Data<'r>
     ) -> Response<'r> {
         info!("{}:", request);
 
@@ -228,7 +228,7 @@ impl Rocket<Orbit> {
     async fn route_and_process<'s, 'r: 's>(
         &'s self,
         request: &'r Request<'s>,
-        data: Data
+        data: Data<'r>
     ) -> Response<'r> {
         let mut response = match self.route(request, data).await {
             Outcome::Success(response) => response,
@@ -266,7 +266,7 @@ impl Rocket<Orbit> {
     async fn route<'s, 'r: 's>(
         &'s self,
         request: &'r Request<'s>,
-        mut data: Data,
+        mut data: Data<'r>,
     ) -> route::Outcome<'r> {
         // Go through the list of matching routes until we fail or succeed.
         for route in self.router.route(request) {

@@ -146,7 +146,7 @@ impl<'r, T: Deserialize<'r>> MsgPack<T> {
         rmp_serde::from_slice(buf).map(MsgPack)
     }
 
-    async fn from_data(req: &'r Request<'_>, data: Data) -> Result<Self, Error> {
+    async fn from_data(req: &'r Request<'_>, data: Data<'r>) -> Result<Self, Error> {
         let limit = req.limits().get("msgpack").unwrap_or(Limits::MESSAGE_PACK);
         let bytes = match data.open(limit).into_bytes().await {
             Ok(buf) if buf.is_complete() => buf.into_inner(),
@@ -165,7 +165,7 @@ impl<'r, T: Deserialize<'r>> MsgPack<T> {
 impl<'r, T: Deserialize<'r>> FromData<'r> for MsgPack<T> {
     type Error = Error;
 
-    async fn from_data(req: &'r Request<'_>, data: Data) -> Outcome<Self, Self::Error> {
+    async fn from_data(req: &'r Request<'_>, data: Data<'r>) -> Outcome<'r, Self> {
         match Self::from_data(req, data).await {
             Ok(value) => Outcome::Success(value),
             Err(Error::InvalidDataRead(e)) if e.kind() == io::ErrorKind::UnexpectedEof => {

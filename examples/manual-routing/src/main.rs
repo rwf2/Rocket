@@ -10,15 +10,15 @@ use rocket::response::{Responder, status::Custom};
 use rocket::outcome::{try_outcome, IntoOutcome};
 use rocket::tokio::fs::File;
 
-fn forward<'r>(_req: &'r Request, data: Data) -> route::BoxFuture<'r> {
+fn forward<'r>(_req: &'r Request, data: Data<'r>) -> route::BoxFuture<'r> {
     Box::pin(async move { route::Outcome::forward(data) })
 }
 
-fn hi<'r>(req: &'r Request, _: Data) -> route::BoxFuture<'r> {
+fn hi<'r>(req: &'r Request, _: Data<'r>) -> route::BoxFuture<'r> {
     route::Outcome::from(req, "Hello!").pin()
 }
 
-fn name<'a>(req: &'a Request, _: Data) -> route::BoxFuture<'a> {
+fn name<'a>(req: &'a Request, _: Data<'r>) -> route::BoxFuture<'a> {
     let param = req.param::<&'a str>(0)
         .and_then(|res| res.ok())
         .unwrap_or("unnamed".into());
@@ -26,7 +26,7 @@ fn name<'a>(req: &'a Request, _: Data) -> route::BoxFuture<'a> {
     route::Outcome::from(req, param).pin()
 }
 
-fn echo_url<'r>(req: &'r Request, _: Data) -> route::BoxFuture<'r> {
+fn echo_url<'r>(req: &'r Request, _: Data<'r>) -> route::BoxFuture<'r> {
     let param_outcome = req.param::<&str>(1)
         .and_then(|res| res.ok())
         .into_outcome(Status::BadRequest);
@@ -36,7 +36,7 @@ fn echo_url<'r>(req: &'r Request, _: Data) -> route::BoxFuture<'r> {
     })
 }
 
-fn upload<'r>(req: &'r Request, data: Data) -> route::BoxFuture<'r> {
+fn upload<'r>(req: &'r Request, data: Data<'r>) -> route::BoxFuture<'r> {
     Box::pin(async move {
         if !req.content_type().map_or(false, |ct| ct.is_plain()) {
             println!("    => Content-Type of upload must be text/plain. Ignoring.");
@@ -58,7 +58,7 @@ fn upload<'r>(req: &'r Request, data: Data) -> route::BoxFuture<'r> {
     })
 }
 
-fn get_upload<'r>(req: &'r Request, _: Data) -> route::BoxFuture<'r> {
+fn get_upload<'r>(req: &'r Request, _: Data<'r>) -> route::BoxFuture<'r> {
     route::Outcome::from(req, std::fs::File::open(env::temp_dir().join("upload.txt")).ok()).pin()
 }
 
@@ -80,7 +80,7 @@ impl CustomHandler {
 
 #[rocket::async_trait]
 impl route::Handler for CustomHandler {
-    async fn handle<'r>(&self, req: &'r Request<'_>, data: Data) -> route::Outcome<'r> {
+    async fn handle<'r>(&self, req: &'r Request<'_>, data: Data<'r>) -> route::Outcome<'r> {
         let self_data = self.data;
         let id = req.param::<&str>(0)
             .and_then(|res| res.ok())

@@ -93,7 +93,7 @@ use crate::http::uncased::Uncased;
 /// use rocket::data::{Data, Limits, ToByteUnit};
 ///
 /// #[post("/echo", data = "<data>")]
-/// async fn echo(data: Data, limits: &Limits) -> io::Result<String> {
+/// async fn echo(data: Data<'_>, limits: &Limits) -> io::Result<String> {
 ///     let limit = limits.get("data").unwrap_or(1.mebibytes());
 ///     Ok(data.open(limit).into_string().await?.value)
 /// }
@@ -112,7 +112,7 @@ use crate::http::uncased::Uncased;
 /// impl<'r> FromData<'r> for MyType {
 ///     type Error = MyError;
 ///
-///     async fn from_data(req: &'r Request<'_>, data: Data) -> data::Outcome<Self, MyError> {
+///     async fn from_data(req: &'r Request<'_>, data: Data<'r>) -> data::Outcome<'r, Self> {
 ///         let limit = req.limits().get("my-data-type");
 ///         /* .. */
 ///         # unimplemented!()

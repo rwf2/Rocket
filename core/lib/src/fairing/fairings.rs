@@ -140,7 +140,7 @@ impl Fairings {
     }
 
     #[inline(always)]
-    pub async fn handle_request(&self, req: &mut Request<'_>, data: &mut Data) {
+    pub async fn handle_request(&self, req: &mut Request<'_>, data: &mut Data<'_>) {
         for fairing in iter!(self.request) {
             fairing.on_request(req, data).await
         }

@@ -171,7 +171,7 @@ impl Fairing for Counter {
     }
 
     // Increment the counter for `GET` and `POST` requests.
-    async fn on_request(&self, request: &mut Request<'_>, _: &mut Data) {
+    async fn on_request(&self, request: &mut Request<'_>, _: &mut Data<'_>) {
         match request.method() {
             Method::Get => self.get.fetch_add(1, Ordering::Relaxed),
             Method::Post => self.post.fetch_add(1, Ordering::Relaxed),

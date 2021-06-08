@@ -331,10 +331,10 @@ fn codegen_route(route: Route) -> Result<TokenStream> {
         impl #handler_fn_name {
             #[allow(non_snake_case, unreachable_patterns, unreachable_code)]
             fn into_info(self) -> #_route::StaticInfo {
-                fn monomorphized_function<'_b>(
-                    #__req: &'_b #Request<'_>,
-                    #__data: #Data
-                ) -> #_route::BoxFuture<'_b> {
+                fn monomorphized_function<'__r>(
+                    #__req: &'__r #Request<'_>,
+                    #__data: #Data<'__r>
+                ) -> #_route::BoxFuture<'__r> {
                     #_Box::pin(async move {
                         #(#request_guards)*
                         #(#param_guards)*
