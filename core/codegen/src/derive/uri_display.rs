@@ -63,7 +63,7 @@ pub fn derive_uri_display_query(input: proc_macro::TokenStream) -> TokenStream {
                 })
             })
             .try_field_map(|_, field| {
-                let span = field.span().into();
+                let span = field.span();
                 let accessor = field.accessor();
                 let tokens = if field.ident.is_some() {
                     let name = field.first_field_name()?;
