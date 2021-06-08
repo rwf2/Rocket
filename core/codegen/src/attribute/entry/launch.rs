@@ -51,7 +51,7 @@ impl EntryAttr for Launch {
             #[allow(dead_code)] #f
 
             #vis #sig {
-                ::rocket::async_main(async move { let _ = #rocket.launch().await; })
+                ::rocket::async_main(async move { let _res = #rocket.launch().await; })
             }
         ))
     }

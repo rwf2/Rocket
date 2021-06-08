@@ -63,7 +63,7 @@ struct Submit<'v> {
 }
 
 #[get("/")]
-fn index<'r>() -> Template {
+fn index() -> Template {
     Template::render("index", &Context::default())
 }
 

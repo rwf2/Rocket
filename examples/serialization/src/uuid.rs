@@ -9,9 +9,9 @@ struct People(HashMap<Uuid, &'static str>);
 
 #[get("/people/<id>")]
 fn people(id: Uuid, people: &State<People>) -> Result<String, String> {
-    Ok(people.0.get(&id)
+    people.0.get(&id)
         .map(|person| format!("We found: {}", person))
-        .ok_or_else(|| format!("Missing person for UUID: {}", id))?)
+        .ok_or_else(|| format!("Missing person for UUID: {}", id))
 }
 
 pub fn stage() -> rocket::fairing::AdHoc {

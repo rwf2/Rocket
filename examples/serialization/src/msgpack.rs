@@ -13,7 +13,7 @@ fn get(id: usize) -> MsgPack<Message<'static>> {
 }
 
 #[post("/", data = "<data>", format = "msgpack")]
-fn echo<'r>(data: MsgPack<Message<'r>>) -> &'r str {
+fn echo(data: MsgPack<Message<'_>>) -> &str {
     data.message
 }
 

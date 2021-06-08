@@ -12,8 +12,8 @@ fn fields_map<F>(fields: Fields<'_>, map_f: F) -> Result<TokenStream>
     for field in fields.iter() {
         let (ident, ty) = (field.ident(), field.stripped_ty());
         let field_context = quote_spanned!(ty.span() => {
-            let _o = __c.__opts;
-            __c.#ident.get_or_insert_with(|| <#ty as #_form::FromForm<'__f>>::init(_o))
+            let __o = __c.__opts;
+            __c.#ident.get_or_insert_with(|| <#ty as #_form::FromForm<'__f>>::init(__o))
         });
 
         let field_names = field.field_names()?;
@@ -32,7 +32,7 @@ fn fields_map<F>(fields: Fields<'_>, map_f: F) -> Result<TokenStream>
 
         match __f.name.key_lossy().as_str() {
             #(#matchers,)*
-            _k if _k == "_method" || !__c.__opts.strict => { /* ok */ },
+            __k if __k == "_method" || !__c.__opts.strict => { /* ok */ },
             _ => __c.__errors.push(__f.unexpected()),
         }
     })
@@ -205,7 +205,7 @@ pub fn derive_from_form(input: proc_macro::TokenStream) -> TokenStream {
                 Ok(quote_spanned! { fields.span() =>
                     #(let #ident = match #finalize_field {
                         #_ok(#ident) => #_some(#ident),
-                        #_err(_e) => { __c.__errors.extend(_e); #_none }
+                        #_err(__e) => { __c.__errors.extend(__e); #_none }
                     };)*
 
                     if !__c.__errors.is_empty() {
@@ -215,8 +215,8 @@ pub fn derive_from_form(input: proc_macro::TokenStream) -> TokenStream {
                     let #o = Self { #(#ident: #ident.unwrap()),* };
 
                     #(
-                        if let #_err(_e) = #validate {
-                            __c.__errors.extend(_e.with_name(#name_view));
+                        if let #_err(__e) = #validate {
+                            __c.__errors.extend(__e.with_name(#name_view));
                         }
                     )*
 
@@ -240,24 +240,19 @@ pub fn derive_from_form(input: proc_macro::TokenStream) -> TokenStream {
                     let __name = #name_view;
                     let __opts = __c.__opts;
                     __c.#ident
-                        .map(<#ty as #_form::FromForm<'__f>>::finalize)
-                        .unwrap_or_else(|| {
-                            #default.ok_or_else(|| #_form::ErrorKind::Missing.into())
-                        })
+                        .map_or_else(
+                            || #default.ok_or_else(|| #_form::ErrorKind::Missing.into()),
+                            <#ty as #_form::FromForm<'__f>>::finalize
+                        )
                         .and_then(|#ident| {
                             let mut __es = #_form::Errors::new();
                             #(if let #_err(__e) = #validator { __es.extend(__e); })*
-
-                            match __es.is_empty() {
-                                true => #_Ok(#ident),
-                                false => #_Err(__es)
-                            }
+                            __es.is_empty().then(|| #ident).ok_or(__es)
                         })
                         .map_err(|__e| __e.with_name(__name))
-                        .map_err(|__e| match __e.is_empty() {
-                            true => #_form::ErrorKind::Unknown.into(),
-                            false => __e,
-                        })
+                        .map_err(|__e| __e.is_empty()
+                            .then(|| #_form::ErrorKind::Unknown.into())
+                            .unwrap_or(__e))
                 }})
             })
         )

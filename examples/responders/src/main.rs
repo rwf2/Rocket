@@ -49,7 +49,7 @@ fn many_his() -> TextStream![&'static str] {
 #[get("/stream/hi/<n>")]
 fn one_hi_per_ms(mut shutdown: Shutdown, n: u8) -> TextStream![&'static str] {
     TextStream! {
-        let mut interval = time::interval(Duration::from_millis(n as u64));
+        let mut interval = time::interval(Duration::from_millis(n.into()));
         loop {
             select! {
                 _ = interval.tick() => yield "hi",

@@ -5,7 +5,7 @@ use std::env;
 
 use rocket::{Request, Route, Catcher, route, catcher};
 use rocket::data::{Data, ToByteUnit};
-use rocket::http::{Status, Method::*};
+use rocket::http::{Status, Method::{Get, Post}};
 use rocket::response::{Responder, status::Custom};
 use rocket::outcome::{try_outcome, IntoOutcome};
 use rocket::tokio::fs::File;
@@ -18,17 +18,17 @@ fn hi<'r>(req: &'r Request, _: Data<'r>) -> route::BoxFuture<'r> {
     route::Outcome::from(req, "Hello!").pin()
 }
 
-fn name<'a>(req: &'a Request, _: Data<'r>) -> route::BoxFuture<'a> {
-    let param = req.param::<&'a str>(0)
-        .and_then(|res| res.ok())
-        .unwrap_or("unnamed".into());
+fn name<'r>(req: &'r Request, _: Data<'r>) -> route::BoxFuture<'r> {
+    let param = req.param::<&'r str>(0)
+        .and_then(Result::ok)
+        .unwrap_or("unnamed");
 
     route::Outcome::from(req, param).pin()
 }
 
 fn echo_url<'r>(req: &'r Request, _: Data<'r>) -> route::BoxFuture<'r> {
     let param_outcome = req.param::<&str>(1)
-        .and_then(|res| res.ok())
+        .and_then(Result::ok)
         .into_outcome(Status::BadRequest);
 
     Box::pin(async move {
@@ -63,8 +63,8 @@ fn get_upload<'r>(req: &'r Request, _: Data<'r>) -> route::BoxFuture<'r> {
 }
 
 fn not_found_handler<'r>(_: Status, req: &'r Request) -> catcher::BoxFuture<'r> {
-    let res = Custom(Status::NotFound, format!("Couldn't find: {}", req.uri()));
-    Box::pin(async move { res.respond_to(req) })
+    let responder = Custom(Status::NotFound, format!("Couldn't find: {}", req.uri()));
+    Box::pin(async move { responder.respond_to(req) })
 }
 
 #[derive(Clone)]
@@ -83,7 +83,7 @@ impl route::Handler for CustomHandler {
     async fn handle<'r>(&self, req: &'r Request<'_>, data: Data<'r>) -> route::Outcome<'r> {
         let self_data = self.data;
         let id = req.param::<&str>(0)
-            .and_then(|res| res.ok())
+            .and_then(Result::ok)
             .or_forward(data);
 
         route::Outcome::from(req, format!("{} - {}", self_data, try_outcome!(id)))

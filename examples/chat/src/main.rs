@@ -46,7 +46,7 @@ async fn events(queue: &State<Sender<Message>>, mut end: Shutdown) -> EventStrea
 #[post("/message", data = "<form>")]
 fn post(form: Form<Message>, queue: &State<Sender<Message>>) {
     // A send 'fails' if there are no active subscribers. That's okay.
-    let _ = queue.send(form.into_inner());
+    let _res = queue.send(form.into_inner());
 }
 
 #[launch]

@@ -23,13 +23,13 @@ type Result<T, E = Debug<rusqlite::Error>> = std::result::Result<T, E>;
 
 #[post("/", data = "<post>")]
 async fn create(db: Db, post: Json<Post>) -> Result<Created<Json<Post>>> {
-    let qpost = post.clone();
+    let item = post.clone();
     db.run(move |conn| {
         conn.execute("INSERT INTO posts (title, text) VALUES (?1, ?2)",
-            params![qpost.title, qpost.text])
+            params![item.title, item.text])
     }).await?;
 
-    Ok(Created::new("/").body(Json(post.into_inner())))
+    Ok(Created::new("/").body(post))
 }
 
 #[get("/")]
