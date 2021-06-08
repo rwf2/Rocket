@@ -335,15 +335,12 @@ impl QMediaType {
         // 2. Prefer media types with a greater weight, but if one doesn't
         // have a weight, prefer the one we already have.
         match (self.weight(), other.weight()) {
-            (Some(sw), Some(ow)) if (sw - ow).abs() < 0.0001 =>
+            (Some(sw), Some(ow)) if (sw - ow).abs() > 0.0001 =>
                 return sw > ow,
             (Some(_), None) => return false,
             (None, Some(_)) => return true,
             _ => {}
         };
-        if self.weight().is_none() && other.weight().is_none() {
-            return false;
-        }
         // Prefer more specific media types over less specific ones. IE:
         // text/html over application/*.
         if self.specificity() != other.specificity() {
