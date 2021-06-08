@@ -21,7 +21,7 @@ pub fn derive_uri_display_query(input: proc_macro::TokenStream) -> TokenStream {
         .validator(ValidatorBuild::new()
             .enum_validate(|_, data| {
                 if data.variants().count() == 0 {
-                    return Err(data.brace_token.span.error(NO_EMPTY_ENUMS));
+                    Err(data.brace_token.span.error(NO_EMPTY_ENUMS))
                 } else {
                     Ok(())
                 }
@@ -84,13 +84,13 @@ pub fn derive_uri_display_query(input: proc_macro::TokenStream) -> TokenStream {
 
     let from_self = from_uri_param::<fmt::Query>(input.clone(), quote!(Self));
     let from_ref = from_uri_param::<fmt::Query>(input.clone(), quote!(&'__r Self));
-    let from_mut = from_uri_param::<fmt::Query>(input.clone(), quote!(&'__r mut Self));
+    let from_mut = from_uri_param::<fmt::Query>(input, quote!(&'__r mut Self));
 
-    let mut ts = TokenStream::from(uri_display);
-    ts.extend(TokenStream::from(from_self));
-    ts.extend(TokenStream::from(from_ref));
-    ts.extend(TokenStream::from(from_mut));
-    ts.into()
+    let mut ts = uri_display;
+    ts.extend(from_self);
+    ts.extend(from_ref);
+    ts.extend(from_mut);
+    ts
 }
 
 #[allow(non_snake_case)]
@@ -128,13 +128,13 @@ pub fn derive_uri_display_path(input: proc_macro::TokenStream) -> TokenStream {
 
     let from_self = from_uri_param::<fmt::Path>(input.clone(), quote!(Self));
     let from_ref = from_uri_param::<fmt::Path>(input.clone(), quote!(&'__r Self));
-    let from_mut = from_uri_param::<fmt::Path>(input.clone(), quote!(&'__r mut Self));
+    let from_mut = from_uri_param::<fmt::Path>(input, quote!(&'__r mut Self));
 
-    let mut ts = TokenStream::from(uri_display);
-    ts.extend(TokenStream::from(from_self));
-    ts.extend(TokenStream::from(from_ref));
-    ts.extend(TokenStream::from(from_mut));
-    ts.into()
+    let mut ts = uri_display;
+    ts.extend(from_self);
+    ts.extend(from_ref);
+    ts.extend(from_mut);
+    ts
 }
 
 fn from_uri_param<P: fmt::Part>(input: proc_macro::TokenStream, ty: TokenStream) -> TokenStream {

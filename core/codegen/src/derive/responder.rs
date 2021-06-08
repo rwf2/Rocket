@@ -49,7 +49,7 @@ pub fn derive_responder(input: proc_macro::TokenStream) -> TokenStream {
                 false => Ok(())
             })
             .fields_validate(|_, fields| match fields.is_empty() {
-                true => return Err(fields.span().error("need at least one field")),
+                true => Err(fields.span().error("need at least one field")),
                 false => Ok(())
             })
         )
