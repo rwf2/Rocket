@@ -699,20 +699,20 @@ mod sse_tests {
         use futures::stream::iter;
 
         let stream = EventStream::from(iter(vec![Event::data("foo")]));
-        assert_eq!(stream.into_string(), "data:foo\n\n");
+        assert_eq!(stream.into_string().replace(":\n\n", ""), "data:foo\n\n");
 
         let stream = EventStream::from(iter(vec![Event::data("a"), Event::data("b")]));
-        assert_eq!(stream.into_string(), "data:a\n\ndata:b\n\n");
+        assert_eq!(stream.into_string().replace(":\n\n", ""), "data:a\n\ndata:b\n\n");
 
         let stream = EventStream::from(iter(vec![
-                Event::data("a\n"),
+                Event::data("a\nb"),
                 Event::data("b"),
                 Event::data("c\n\nd"),
                 Event::data("e"),
         ]));
 
-        assert_eq!(stream.into_string(),
-            "data:a\ndata:\n\ndata:b\n\ndata:c\ndata:\ndata:d\n\ndata:e\n\n");
+        assert_eq!(stream.into_string().replace(":\n\n", ""),
+            "data:a\ndata:b\n\ndata:b\n\ndata:c\ndata:\ndata:d\n\ndata:e\n\n");
     }
 
     #[test]
