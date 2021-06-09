@@ -65,7 +65,7 @@ PRE_RELEASE=true
 case $PRE_RELEASE in
   true)
     CODENAME="${VIRTUAL_CODENAME}"
-    DOC_VERSION="${CODENAME}-$(future_date)"
+    DOC_VERSION="${VERSION}-$(future_date)"
     ;;
   false)
     CODENAME="${PHYSICAL_CODENAME}"
