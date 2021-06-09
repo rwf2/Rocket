@@ -27,8 +27,8 @@ diesel = { version = "1.0", default-features = false, optional = true }
 postgres = { version = "0.19", optional = true }
 r2d2_postgres = { version = "0.18", optional = true }
 
-rusqlite = { version = "0.24", optional = true }
-r2d2_sqlite = { version = "0.17", optional = true }
+rusqlite = { version = "0.25", optional = true }
+r2d2_sqlite = { version = "0.18", optional = true }
 
 memcache = { version = "0.15", optional = true }
 r2d2-memcache = { version = "0.6", optional = true }
