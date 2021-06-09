@@ -88,8 +88,8 @@ ALL_CRATE_ROOTS=(
     "${CORE_HTTP_ROOT}"
     "${CORE_CODEGEN_ROOT}"
     "${CORE_LIB_ROOT}"
-    "${CONTRIB_ROOT}/sync_db_pools/lib"
     "${CONTRIB_ROOT}/sync_db_pools/codegen"
+    "${CONTRIB_ROOT}/sync_db_pools/lib"
     "${CONTRIB_ROOT}/dyn_templates"
 )
 
