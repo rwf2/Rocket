@@ -122,6 +122,7 @@ function test_examples() {
   # in core that secret key failing/not failing works as expected, but here we
   # provide a valid secret_key so tests don't fail.
   echo ":: Building and testing examples..."
+  indir "${EXAMPLES_DIR}" $CARGO update
   ROCKET_SECRET_KEY="itlYmFR2vYKrOmFhupMIn/hyB6lYCCTXz4yaQX89XVg=" \
     indir "${EXAMPLES_DIR}" $CARGO test --all $@
   }
@@ -131,14 +132,17 @@ function test_default() {
   indir "${PROJECT_ROOT}" $CARGO test --all --all-features $@
 
   echo ":: Checking benchmarks..."
+  indir "${BENCHMARKS_ROOT}" $CARGO update
   indir "${BENCHMARKS_ROOT}" $CARGO check --benches --all-features $@
 
   echo ":: Checking fuzzers..."
+  indir "${FUZZ_ROOT}" $CARGO update
   indir "${FUZZ_ROOT}" $CARGO check --all --all-features $@
 }
 
 function run_benchmarks() {
   echo ":: Running benchmarks..."
+  indir "${BENCHMARKS_ROOT}" $CARGO update
   indir "${BENCHMARKS_ROOT}" $CARGO bench $@
 }
 
