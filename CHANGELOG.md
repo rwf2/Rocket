@@ -384,7 +384,7 @@ In addition to new features and major improvements, Rocket saw the following imp
 
   * The `serde` dependency was introduced (`1.0`).
   * The `futures` dependency was introduced (`0.3`).
-  * The `state` dependency was updated to `TODO: unreleased`.
+  * The `state` dependency was updated to `0.5`.
   * The `time` dependency was updated to `0.2`.
   * The `binascii` dependency was introduced (`0.1`).
   * The `ref-cast` dependency was introduced (`1.0`).
