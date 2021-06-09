@@ -161,8 +161,11 @@ print_environment
 echo "  CARGO: $CARGO"
 echo "  EXTRA FLAGS: $@"
 
-echo ":: Ensuring all crate versions match..."
-check_versions_match "${ALL_PROJECT_DIRS[@]}"
+echo ":: Ensuring core crate versions match..."
+check_versions_match "${CORE_CRATE_ROOTS[@]}"
+
+echo ":: Ensuring contrib sync_db_pools versions match..."
+check_versions_match "${CONTRIB_SYNC_DB_POOLS_CRATE_ROOTS[@]}"
 
 echo ":: Ensuring minimum style requirements are met..."
 check_style

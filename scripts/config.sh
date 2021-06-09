@@ -73,14 +73,23 @@ case $PRE_RELEASE in
     ;;
 esac
 
-ALL_PROJECT_DIRS=(
+CORE_CRATE_ROOTS=(
     "${CORE_HTTP_ROOT}"
     "${CORE_CODEGEN_ROOT}"
     "${CORE_LIB_ROOT}"
 )
 
-CONTRIB_LIB_DIRS=(
-    "${CONTRIB_ROOT}/sync_db_pools"
+CONTRIB_SYNC_DB_POOLS_CRATE_ROOTS=(
+    "${CONTRIB_ROOT}/sync_db_pools/lib"
+    "${CONTRIB_ROOT}/sync_db_pools/codegen"
+)
+
+ALL_CRATE_ROOTS=(
+    "${CORE_HTTP_ROOT}"
+    "${CORE_CODEGEN_ROOT}"
+    "${CORE_LIB_ROOT}"
+    "${CONTRIB_ROOT}/sync_db_pools/lib"
+    "${CONTRIB_ROOT}/sync_db_pools/codegen"
     "${CONTRIB_ROOT}/dyn_templates"
 )
 
@@ -103,8 +112,7 @@ function print_environment() {
   echo "  GUIDE_TESTS_ROOT: ${GUIDE_TESTS_ROOT}"
   echo "  EXAMPLES_DIR: ${EXAMPLES_DIR}"
   echo "  DOC_DIR: ${DOC_DIR}"
-  echo "  ALL_PROJECT_DIRS: ${ALL_PROJECT_DIRS[*]}"
-  echo "  CONTRIB_LIB_DIRS: ${CONTRIB_LIB_DIRS[*]}"
+  echo "  ALL_CRATE_ROOTS: ${ALL_CRATE_ROOTS[*]}"
   echo "  date(): $(future_date)"
 }
 

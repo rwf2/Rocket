@@ -34,9 +34,11 @@ memcache = { version = "0.15", optional = true }
 r2d2-memcache = { version = "0.6", optional = true }
 
 [dependencies.rocket_sync_db_pools_codegen]
+version = "0.1.0-dev"
 path = "../codegen"
 
 [dependencies.rocket]
+version = "0.5.0-dev"
 path = "../../../core/lib"
 default-features = false
 
