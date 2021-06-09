@@ -18,8 +18,8 @@ edition = "2018"
 default = []
 tls = ["tokio-rustls"]
 private-cookies = ["cookie/private", "cookie/key-expansion"]
-serde = ["uncased/with-serde-alloc", "_serde"]
-uuid = ["_uuid"]
+serde = ["uncased/with-serde-alloc", "serde_"]
+uuid = ["uuid_"]
 
 [dependencies]
 smallvec = "1.0"
@@ -47,14 +47,14 @@ version = "0.14.9"
 default-features = false
 features = ["http1", "http2", "runtime", "server", "stream"]
 
-[dependencies._serde]
+[dependencies.serde_]
 package = "serde"
 version = "1.0"
 optional = true
 default-features = false
 features = ["std"]
 
-[dependencies._uuid]
+[dependencies.uuid_]
 package = "uuid"
 version = "0.8"
 optional = true

@@ -409,8 +409,8 @@ impl<T: UriDisplay<Query>, E> UriDisplay<Query> for Result<T, E> {
     }
 }
 
-#[cfg(feature = "uuid")] impl_with_display!(_uuid::Uuid);
-#[cfg(feature = "uuid")] crate::impl_from_uri_param_identity!(_uuid::Uuid);
+#[cfg(feature = "uuid")] impl_with_display!(uuid_::Uuid);
+#[cfg(feature = "uuid")] crate::impl_from_uri_param_identity!(uuid_::Uuid);
 
 // And finally, the `Ignorable` trait, which has sugar of `_` in the `uri!`
 // macro, which expands to a typecheck.

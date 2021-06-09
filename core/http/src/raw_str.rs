@@ -853,7 +853,7 @@ impl RawStr {
 
 #[cfg(feature = "serde")]
 mod serde {
-    use _serde::{ser, de, Serialize, Deserialize};
+    use serde_::{ser, de, Serialize, Deserialize};
 
     use super::*;
 

@@ -52,18 +52,18 @@ use crate::parse::{Extent, IndexedStr};
 ///
 /// ```rust
 /// # #[cfg(feature = "serde")] mod serde {
-/// # use _serde as serde;
+/// # use serde_ as serde;
 /// use serde::{Serialize, Deserialize};
 /// use rocket::http::uri::Reference;
 ///
 /// #[derive(Deserialize, Serialize)]
-/// # #[serde(crate = "_serde")]
+/// # #[serde(crate = "serde_")]
 /// struct UriOwned {
 ///     uri: Reference<'static>,
 /// }
 ///
 /// #[derive(Deserialize, Serialize)]
-/// # #[serde(crate = "_serde")]
+/// # #[serde(crate = "serde_")]
 /// struct UriBorrowed<'a> {
 ///     uri: Reference<'a>,
 /// }

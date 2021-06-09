@@ -27,18 +27,18 @@ use crate::uri::{as_utf8_unchecked, error::Error};
 ///
 /// ```rust
 /// # #[cfg(feature = "serde")] mod serde {
-/// # use _serde as serde;
+/// # use serde_ as serde;
 /// use serde::{Serialize, Deserialize};
 /// use rocket::http::uri::Authority;
 ///
 /// #[derive(Deserialize, Serialize)]
-/// # #[serde(crate = "_serde")]
+/// # #[serde(crate = "serde_")]
 /// struct UriOwned {
 ///     uri: Authority<'static>,
 /// }
 ///
 /// #[derive(Deserialize, Serialize)]
-/// # #[serde(crate = "_serde")]
+/// # #[serde(crate = "serde_")]
 /// struct UriBorrowed<'a> {
 ///     uri: Authority<'a>,
 /// }

@@ -12,8 +12,8 @@ license = "MIT OR Apache-2.0"
 edition = "2018"
 
 [features]
-tera = ["_tera"]
-handlebars = ["_handlebars"]
+tera = ["tera_"]
+handlebars = ["handlebars_"]
 
 [dependencies]
 serde = "1.0"
@@ -27,12 +27,12 @@ version = "0.5.0-dev"
 path = "../../core/lib"
 default-features = false
 
-[dependencies._tera]
+[dependencies.tera_]
 package = "tera"
 version = "1.10.0"
 optional = true
 
-[dependencies._handlebars]
+[dependencies.handlebars_]
 package = "handlebars"
 version = "3.0"
 optional = true

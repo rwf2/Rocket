@@ -92,18 +92,18 @@ use crate::{RawStr, RawStrBuf};
 ///
 /// ```rust
 /// # #[cfg(feature = "serde")] mod serde {
-/// # use _serde as serde;
+/// # use serde_ as serde;
 /// use serde::{Serialize, Deserialize};
 /// use rocket::http::uri::Origin;
 ///
 /// #[derive(Deserialize, Serialize)]
-/// # #[serde(crate = "_serde")]
+/// # #[serde(crate = "serde_")]
 /// struct UriOwned {
 ///     uri: Origin<'static>,
 /// }
 ///
 /// #[derive(Deserialize, Serialize)]
-/// # #[serde(crate = "_serde")]
+/// # #[serde(crate = "serde_")]
 /// struct UriBorrowed<'a> {
 ///     uri: Origin<'a>,
 /// }

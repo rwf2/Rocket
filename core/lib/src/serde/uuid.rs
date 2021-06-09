@@ -95,13 +95,13 @@ use crate::form::{self, FromFormField, ValueField};
 /// # }
 /// ```
 ///
-pub use _uuid::Uuid;
+pub use uuid_::Uuid;
 
-pub use _uuid::{Builder, Variant, Version};
+pub use uuid_::{Builder, Variant, Version};
 
 /// Type alias for the error returned on [`FromParam`] or [`FromFormField`]
 /// failure.
-pub type Error = <_uuid::Uuid as std::str::FromStr>::Err;
+pub type Error = <uuid_::Uuid as std::str::FromStr>::Err;
 
 impl<'a> FromParam<'a> for Uuid {
     type Error = Error;

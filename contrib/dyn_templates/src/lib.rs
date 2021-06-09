@@ -142,7 +142,7 @@ compile_error!("at least one of \"tera\" or \"handlebars\" features must be enab
 /// The tera templating engine library, reexported.
 #[doc(inline)]
 #[cfg(feature = "tera")]
-pub use _tera as tera;
+pub use tera_ as tera;
 
 #[cfg(feature = "tera")]
 mod tera_templates;
@@ -150,7 +150,7 @@ mod tera_templates;
 /// The handlebars templating engine library, reexported.
 #[doc(inline)]
 #[cfg(feature = "handlebars")]
-pub use _handlebars as handlebars;
+pub use handlebars_ as handlebars;
 
 #[cfg(feature = "handlebars")]
 mod handlebars_templates;

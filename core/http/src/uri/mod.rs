@@ -8,8 +8,8 @@ macro_rules! impl_serde {
             use std::marker::PhantomData;
             use super::*;
 
-            use _serde::ser::{Serialize, Serializer};
-            use _serde::de::{Deserialize, Deserializer, Error, Visitor};
+            use serde_::ser::{Serialize, Serializer};
+            use serde_::de::{Deserialize, Deserializer, Error, Visitor};
 
             impl<'a> Serialize for $T {
                 fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
