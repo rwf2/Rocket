@@ -31,7 +31,7 @@ use crate::data::ByteUnit;
 /// let errors_for_foo = errors.iter().filter(|e| e.is_for("foo.bar"));
 /// ```
 ///
-/// ## Contracting
+/// ## Constructing
 ///
 /// An `Errors` can be constructed from anything that an `Error` can be
 /// constructed from. This includes [`Error`], [`ErrorKind`], and all of the
@@ -72,7 +72,7 @@ pub struct Errors<'v>(Vec<Error<'v>>);
 /// [`FromFormField`]: crate::form::FromFormField
 /// [`validate`]: crate::form::validate
 ///
-/// # Contracting
+/// # Constructing
 ///
 /// An `Error` can be constructed via [`Error::validation()`],
 /// [`Error::custom()`], or anything that an [`ErrorKind`] can be constructed
