@@ -58,7 +58,7 @@ selected profile doesn't contain a requested values, while values in the
 [`Config::figment()`]: @api/rocket/struct.Config.html#method.figment
 [`Toml`]: @figment/providers/struct.Toml.html
 [`Json`]: @figment/providers/struct.Json.html
-[`Figment`]: @api/rocket/struct.Figment.html
+[`Figment`]: @figment/struct.Figment.html
 [`Deserialize`]: @api/rocket/serde/trait.Deserialize.html
 [`LogLevel`]: @api/rocket/config/enum.LogLevel.html
 [`Limits`]: @api/rocket/data/struct.Limits.html

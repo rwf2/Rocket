@@ -56,7 +56,7 @@ use crate::response::stream::ReaderStream;
 pub struct TextStream<S>(pub S);
 
 impl<S> From<S> for TextStream<S> {
-    /// Creates a `TextStream` from any [`S: Stream`](Stream).
+    /// Creates a `TextStream` from any `S: Stream`.
     fn from(stream: S) -> Self {
         TextStream(stream)
     }

@@ -22,9 +22,8 @@ use crate::uri::fmt::{self, Part};
 ///   * `impl<'x, P: Part> FromUriParam<P, &'x T> for T`
 ///   * `impl<'x, P: Part> FromUriParam<P, &'x mut T> for T`
 ///
-/// See [`impl_from_uri_param_identity`] for usage details.
-///
-/// [`impl_from_uri_param_identity`]: ../macro.impl_from_uri_param_identity.html
+/// See [`impl_from_uri_param_identity!`](crate::impl_from_uri_param_identity!)
+/// for usage details.
 ///
 /// # Code Generation
 ///

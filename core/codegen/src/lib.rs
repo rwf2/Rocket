@@ -249,7 +249,7 @@ macro_rules! route_attribute {
         ///
         ///            If a data guard fails, the request is forwarded if the
         ///            [`Outcome`] is `Forward` or failed if the [`Outcome`] is
-        ///            `Failure`. See [`FromData` Outcomes] for further detail.
+        ///            `Failure`. See [`FromData`] for further detail.
         ///
         ///      If all validation succeeds, the decorated function is called.
         ///      The returned value is used to generate a [`Response`] via the
@@ -265,14 +265,13 @@ macro_rules! route_attribute {
         ///   3. A macro used by [`uri!`] to type-check and generate an
         ///      [`Origin`].
         ///
-        /// [`Handler`]: rocket::route::Handler
+        /// [`Handler`]: ../rocket/route/trait.Handler.html
         /// [`routes!`]: macro.routes.html
         /// [`uri!`]: macro.uri.html
-        /// [`Origin`]: rocket::http::uri::Origin
-        /// [`Outcome`]: rocket::outcome::Outcome
-        /// [`Response`]: rocket::Response
-        /// [`FromRequest` Outcomes]: rocket::request::FromRequest#outcomes
-        /// [`FromData` Outcomes]: rocket::data::FromData#outcomes
+        /// [`Origin`]: ../rocket/http/uri/struct.Origin.html
+        /// [`Outcome`]: ../rocket/outcome/enum.Outcome.html
+        /// [`Response`]: ../rocket/struct.Response.html
+        /// [`FromRequest` Outcomes]: ../rocket/request/trait.FromRequest.html#outcomes
         #[proc_macro_attribute]
         pub fn $name(args: TokenStream, input: TokenStream) -> TokenStream {
             emit!(attribute::route::route_attribute($method, args, input))
@@ -346,13 +345,13 @@ route_attribute!(options => Method::Options);
 ///      name (the function's name) and status code from the route attribute or
 ///      `None` if `default`. The handler is set to the generated handler.
 ///
-/// [`&Request`]: rocket::Request
-/// [`Status`]: rocket::http::Status
-/// [`Handler`]: rocket::catcher::Handler
+/// [`&Request`]: ../rocket/struct.Request.html
+/// [`Status`]: ../rocket/http/struct.Status.html
+/// [`Handler`]: ../rocket/catcher/trait.Handler.html
 /// [`catchers!`]: macro.catchers.html
-/// [`Catcher`]: rocket::Catcher
-/// [`Response`]: rocket::Response
-/// [`Responder`]: rocket::Responder
+/// [`Catcher`]: ../rocket/struct.Catcher.html
+/// [`Response`]: ../rocket/struct.Response.html
+/// [`Responder`]: ../rocket/response/trait.Responder.html
 #[proc_macro_attribute]
 pub fn catch(args: TokenStream, input: TokenStream) -> TokenStream {
     emit!(attribute::catch::catch_attribute(args, input))
@@ -540,8 +539,7 @@ pub fn launch(args: TokenStream, input: TokenStream) -> TokenStream {
 /// variant. In the example above, the the strings `"fourth"`, `"FOUrth"`,
 /// `"fiFTH"` and so on would parse as `MyValue::Third`.
 ///
-/// [`FromFormField`]: rocket::form::FromFormField
-/// [`FromFormField::Error`]: rocket::form::FromFormField::Error
+/// [`FromFormField`]: ../rocket/form/trait.FromFormField.html
 #[proc_macro_derive(FromFormField, attributes(field))]
 pub fn derive_from_form_field(input: TokenStream) -> TokenStream {
     emit!(derive::from_form_field::derive_from_form_field(input))
@@ -941,9 +939,9 @@ pub fn derive_responder(input: TokenStream) -> TokenStream {
 /// the example above, the variant `Kind::String` will render with a value of
 /// `str`.
 ///
-/// [`UriDisplay<Query>`]: ../rocket/http/uri/trait.UriDisplay.html
-/// [`Formatter::write_named_value()`]: ../rocket/http/uri/struct.Formatter.html#method.write_named_value
-/// [`Formatter::write_value()`]: ../rocket/http/uri/struct.Formatter.html#method.write_value
+/// [`UriDisplay<Query>`]: ../rocket/http/uri/fmt/trait.UriDisplay.html
+/// [`Formatter::write_named_value()`]: ../rocket/http/uri/fmt/struct.Formatter.html#method.write_named_value
+/// [`Formatter::write_value()`]: ../rocket/http/uri/fmt/struct.Formatter.html#method.write_value
 #[proc_macro_derive(UriDisplayQuery, attributes(field))]
 pub fn derive_uri_display_query(input: TokenStream) -> TokenStream {
     emit!(derive::uri_display::derive_uri_display_query(input))
@@ -968,8 +966,8 @@ pub fn derive_uri_display_query(input: TokenStream) -> TokenStream {
 /// The derive generates an implementation of the [`UriDisplay<Path>`] trait.
 /// The implementation calls [`Formatter::write_value()`] for the field.
 ///
-/// [`UriDisplay<Path>`]: ../rocket/http/uri/trait.UriDisplay.html
-/// [`Formatter::write_value()`]: ../rocket/http/uri/struct.Formatter.html#method.write_value
+/// [`UriDisplay<Path>`]: ../rocket/http/uri/fmt/trait.UriDisplay.html
+/// [`Formatter::write_value()`]: ../rocket/http/uri/fmt/struct.Formatter.html#method.write_value
 #[proc_macro_derive(UriDisplayPath)]
 pub fn derive_uri_display_path(input: TokenStream) -> TokenStream {
     emit!(derive::uri_display::derive_uri_display_path(input))
@@ -1376,9 +1374,9 @@ pub fn catchers(input: TokenStream) -> TokenStream {
 /// [`Authority`]: ../rocket/http/uri/struct.Authority.html
 /// [`Absolute`]: ../rocket/http/uri/struct.Absolute.html
 /// [`Reference`]: ../rocket/http/uri/struct.Reference.html
-/// [`FromUriParam`]: ../rocket/http/uri/trait.FromUriParam.html
-/// [`UriDisplay`]: ../rocket/http/uri/trait.UriDisplay.html
-/// [`Ignorable`]: ../rocket/http/uri/trait.Ignorable.html
+/// [`FromUriParam`]: ../rocket/http/uri/fmt/trait.FromUriParam.html
+/// [`UriDisplay`]: ../rocket/http/uri/fmt/trait.UriDisplay.html
+/// [`Ignorable`]: ../rocket/http/uri/fmt/trait.Ignorable.html
 #[proc_macro]
 pub fn uri(input: TokenStream) -> TokenStream {
     emit!(bang::uri_macro(input))

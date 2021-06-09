@@ -55,7 +55,7 @@ use crate::response::stream::ReaderStream;
 pub struct ByteStream<S>(pub S);
 
 impl<S> From<S> for ByteStream<S> {
-    /// Creates a `ByteStream` from any [`S: Stream`](Stream).
+    /// Creates a `ByteStream` from any `S: Stream`.
     fn from(stream: S) -> Self {
         ByteStream(stream)
     }

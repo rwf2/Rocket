@@ -68,7 +68,7 @@ fn login(user_form: Form<UserLogin>) -> String {
 ```
 
 The `login` route above says that it expects `data` of type `Form<UserLogin>` in
-the `user_form` parameter. The [Form](@api/rocket/request/struct.Form.html) type
+the `user_form` parameter. The [Form](@api/rocket/form/struct.Form.html) type
 is a built-in Rocket type that knows how to parse web forms into structures.
 Rocket will automatically attempt to parse the request body into the `Form` and
 call the `login` handler if parsing succeeds. Other built-in `FromData` types

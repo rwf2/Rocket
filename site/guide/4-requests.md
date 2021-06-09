@@ -699,7 +699,7 @@ async fn upload(mut file: TempFile<'_>) -> std::io::Result<()> {
 }
 ```
 
-[`TempFile`]: @api/rocket/fs/struct.TempFile.html
+[`TempFile`]: @api/rocket/fs/enum.TempFile.html
 
 ### Streaming
 

@@ -203,8 +203,8 @@ use crate::uri::fmt::{Part, Path, Query, Formatter};
 /// details.
 ///
 /// [`Ignorable`]: crate::uri::fmt::Ignorable
-/// [`UriDisplay<Path>`]: ../../derive.UriDisplayPath.html
-/// [`UriDisplay<Query>`]: ../../derive.UriDisplayQuery.html
+/// [`UriDisplay<Path>`]: ../../../derive.UriDisplayPath.html
+/// [`UriDisplay<Query>`]: ../../../derive.UriDisplayQuery.html
 ///
 /// # Implementing
 ///

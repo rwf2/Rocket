@@ -150,19 +150,19 @@ color = 'purple'
 margin = -6
 
 [[bottom_features]]
-title = 'Streams'
-text = "Rocket streams all incoming and outgoing data, so size isn't a concern."
+title = 'Async Streams'
+text = "Create and return potentially infinite async streams of data with ease."
 image = 'streams-icon'
-url = 'guide/requests/#streaming'
+url = 'guide/responses/#async-streams'
 button = 'Learn More'
 color = 'red'
 margin = -29
 
 [[bottom_features]]
-title = 'Config Environments'
-text = "Configure your application your way for development, staging, and production."
+title = 'Config Profiles'
+text = "Configure your application your way for debug, release, or anything else!"
 image = 'config-icon'
-url = 'guide/configuration/#environment'
+url = 'guide/configuration/#profiles'
 button = 'Learn More'
 color = 'yellow'
 margin = -3

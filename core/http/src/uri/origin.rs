@@ -400,7 +400,7 @@ impl<'a> Origin<'a> {
 
     /// Returns `true` if `self` is normalized. Otherwise, returns `false`.
     ///
-    /// See [Normalization](#normalization) for more information on what it
+    /// See [Normalization](Self#normalization) for more information on what it
     /// means for an origin URI to be normalized. Note that `uri!()` always
     /// normalizes static input.
     ///

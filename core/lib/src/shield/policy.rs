@@ -780,8 +780,8 @@ pub enum Feature {
     Usb,
     /// The "web-share" feature.
     WebShare,
-    /// The "xr-spatial-tracking<sup>[2](#fn2)</sup>" feature.
-    XrSpatialtracking,
+    /// The "xr-spatial-tracking" feature.
+    XrSpatialTracking,
 
     // Proposed.
 
@@ -856,7 +856,7 @@ impl Feature {
             SyncXhr => "sync-xhr",
             Usb => "usb",
             WebShare => "web-share",
-            XrSpatialtracking => "xr-spatial-tracking<sup>[2](#fn2)</sup>",
+            XrSpatialTracking => "xr-spatial-tracking",
 
             ClipboardRead => "clipboard-read",
             ClipboardWrite => "clipboard-write",

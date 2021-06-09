@@ -300,11 +300,10 @@ async fn files(file: PathBuf) -> Result<NamedFile, NotFound<String>> {
 Some of Rocket's best features are implemented through responders. Among these
 are:
 
-  * [`Content`] - Used to override the Content-Type of a response.
   * [`NamedFile`] - Streams a file to the client; automatically sets the
     Content-Type based on the file's extension.
   * [`Redirect`] - Redirects the client to a different URI.
-  * [`Stream`] - Streams a response to a client from an arbitrary `Read`er type.
+  * [`content`] - Contains types that override the Content-Type a response.
   * [`status`] - Contains types that override the status code of a response.
   * [`Flash`] - Sets a "flash" cookie that is removed when accessed.
   * [`Json`] - Automatically serializes values into JSON.
@@ -312,20 +311,22 @@ are:
   * [`Template`] - Renders a dynamic template using handlebars or Tera.
 
 [`status`]: @api/rocket/response/status/
+[`content`]: @api/rocket/response/content/
 [`response`]: @api/rocket/response/
-[`NamedFile`]: @api/rocket/response/struct.NamedFile.html
-[`Content`]: @api/rocket/response/struct.Content.html
+[`NamedFile`]: @api/rocket/fs/struct.NamedFile.html
 [`Redirect`]: @api/rocket/response/struct.Redirect.html
-[`Stream`]: @api/rocket/response/struct.Stream.html
 [`Flash`]: @api/rocket/response/struct.Flash.html
 [`MsgPack`]: @api/rocket/serde/msgpack/struct.MsgPack.html
 [`Template`]: @api/rocket_dyn_templates/struct.Template.html
 
 ### Async Streams
 
-The [`stream`] responders allow serving potentially infinite async [`Stream`]s.
+The [`stream`] responders allow serving potentially infinite [async `Stream`]s.
 A stream can be created from any async `Stream` or `AsyncRead` type, or via
-generator syntax using the [`stream!`] macro and its typed equivalents.
+generator syntax using the [`stream!`] macro and its typed equivalents. Streams
+are the building blocks for unidirectional real-time communication. For
+instance, the [`chat` example] uses an [`EventStream`] to implement a real-time,
+multi-room chat application using Server-Sent Events (SSE).
 
 The simplest version creates a [`ReaderStream`] from a single `AsyncRead` type.
 For example, to stream from a TCP connection, we might write:
@@ -372,9 +373,11 @@ how to detect and handle graceful shutdown requests.
 
 [`stream`]: @api/rocket/response/stream/index.html
 [`stream!`]: @api/rocket/response/stream/macro.stream.html
-[`Stream`]: https://docs.rs/futures/0.3/futures/stream/trait.Stream.html
+[async `Stream`]: https://docs.rs/futures/0.3/futures/stream/trait.Stream.html
 [`ReaderStream`]: @api/rocket/response/stream/struct.ReaderStream.html
 [`TextStream`]: @api/rocket/response/stream/struct.TextStream.html
+[`EventStream`]: @api/rocket/response/stream/struct.EventStream.html
+[`chat` example]: @example/chat
 
 ### JSON
 
@@ -482,7 +485,7 @@ including how to customize a template engine to add custom helpers and filters.
 The [templating example](@example/templating) uses both Tera and Handlebars
 templating to implement the same application.
 
-[configurable]: ../configuration/#extras
+[configurable]: ../configuration
 
 ## Typed URIs
 
@@ -713,14 +716,14 @@ uri!(person(id = 100, details = "a/b/c"));
 See the [`FromUriParam`] documentation for further details.
 
 [`Origin`]: @api/rocket/http/uri/struct.Origin.html
-[`Part`]: @api/rocket/http/uri/trait.Part.html
+[`Part`]: @api/rocket/http/uri/fmt/trait.Part.html
 [`Uri`]: @api/rocket/http/uri/enum.Uri.html
 [`Redirect::to()`]: @api/rocket/response/struct.Redirect.html#method.to
 [`uri!`]: @api/rocket/macro.uri.html
-[`UriDisplay`]: @api/rocket/http/uri/trait.UriDisplay.html
-[`FromUriParam`]: @api/rocket/http/uri/trait.FromUriParam.html
-[`Path`]: @api/rocket/http/uri/enum.Path.html
-[`Query`]: @api/rocket/http/uri/enum.Query.html
-[`Ignorable`]: @api/rocket/http/uri/trait.Ignorable.html
+[`UriDisplay`]: @api/rocket/http/uri/fmt/trait.UriDisplay.html
+[`FromUriParam`]: @api/rocket/http/uri/fmt/trait.FromUriParam.html
+[`Path`]: @api/rocket/http/uri/fmt/enum.Path.html
+[`Query`]: @api/rocket/http/uri/fmt/enum.Query.html
+[`Ignorable`]: @api/rocket/http/uri/fmt/trait.Ignorable.html
 [`UriDisplayPath`]: @api/rocket/derive.UriDisplayPath.html
 [`UriDisplayQuery`]: @api/rocket/derive.UriDisplayQuery.html
