@@ -1,5 +1,21 @@
 [[articles]]
 title = """
+  Rocket v0.5 Release Candidate
+"""
+slug = "2021-06-09-version-0.5-rc.1"
+author = "Sergio Benitez"
+author_url = "https://sergio.bz"
+date = "June 09, 2021"
+snippet = """
+Rocket `0.5.0-rc.1`, a release candidate for Rocket v0.5, is now available.
+
+This release actualizes over _two years_ of development, bringing Rocket to Rust
+stable and `async` to Rocket. Every facet, from core request handling to error
+messages, has been subjected to Rocket's exacting standards.
+"""
+
+[[articles]]
+title = """
   Rocket v0.4: Typed URIs, Database Support, Revamped Queries, & More!
 """
 slug = "2018-12-08-version-0.4"
