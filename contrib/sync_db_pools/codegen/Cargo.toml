@@ -14,7 +14,7 @@ proc-macro = true
 
 [dependencies]
 quote = "1.0"
-devise = { git = "https://github.com/SergioBenitez/Devise.git", rev = "f2431b" }
+devise = "0.3"
 
 [dev-dependencies]
 version_check = "0.9"
