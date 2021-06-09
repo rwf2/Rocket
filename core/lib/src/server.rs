@@ -421,6 +421,7 @@ impl Rocket<Orbit> {
         let listener = CancellableListener::new(shutdown.clone(), listener, grace, mercy);
         let server = hyper::Server::builder(Incoming::new(listener))
             .http1_keepalive(http1_keepalive)
+            .http1_preserve_header_case(true)
             .http2_keep_alive_interval(http2_keep_alive)
             .serve(hyper::make_service_fn(service_fn))
             .with_graceful_shutdown(shutdown.clone())
