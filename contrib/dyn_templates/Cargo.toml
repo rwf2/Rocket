@@ -1,9 +1,9 @@
 [package]
 name = "rocket_dyn_templates"
-version = "0.1.0-dev"
+version = "0.1.0-rc.1"
 authors = ["Sergio Benitez <sb@sergio.bz>"]
 description = "Dynamic templating engine integration for Rocket."
-documentation = "https://api.rocket.rs/master/rocket_dyn_templates/"
+documentation = "https://api.rocket.rs/v0.5-rc/rocket_dyn_templates/"
 homepage = "https://rocket.rs"
 repository = "https://github.com/SergioBenitez/Rocket/contrib/dyn_templates"
 readme = "README.md"
@@ -23,7 +23,7 @@ notify = "4.0.6"
 normpath = "0.3"
 
 [dependencies.rocket]
-version = "0.5.0-dev"
+version = "0.5.0-rc.1"
 path = "../../core/lib"
 default-features = false
 

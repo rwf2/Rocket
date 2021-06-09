@@ -527,7 +527,7 @@ feature:
 
 ```toml
 ## in Cargo.toml
-rocket = { version = "0.5.0-dev", features = ["secrets"] }
+rocket = { version = "0.5.0-rc.1", features = ["secrets"] }
 ```
 
 The API for retrieving, adding, and removing private cookies is identical except

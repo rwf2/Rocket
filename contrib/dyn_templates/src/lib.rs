@@ -12,7 +12,7 @@
 //!
 //!      ```toml
 //!      [dependencies.rocket_dyn_templates]
-//!      version = "0.1.0-dev"
+//!      version = "0.1.0-rc.1"
 //!      features = ["handlebars", "tera"]
 //!      ```
 //!
@@ -67,7 +67,7 @@
 //! template directory is configured via the `template_dir` configuration
 //! parameter and defaults to `templates/`. The path set in `template_dir` is
 //! relative to the Rocket configuration file. See the [configuration
-//! chapter](https://rocket.rs/master/guide/configuration) of the guide for more
+//! chapter](https://rocket.rs/v0.5-rc/guide/configuration) of the guide for more
 //! information on configuration.
 //!
 //! The corresponding templating engine used for a given template is based on a
@@ -130,7 +130,7 @@
 //!
 //! [`Serialize`]: serde::Serialize
 
-#![doc(html_root_url = "https://api.rocket.rs/master/rocket_dyn_templates")]
+#![doc(html_root_url = "https://api.rocket.rs/v0.5-rc/rocket_dyn_templates")]
 #![doc(html_favicon_url = "https://rocket.rs/images/favicon.ico")]
 #![doc(html_logo_url = "https://rocket.rs/images/logo-boxed.png")]
 

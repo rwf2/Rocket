@@ -12,7 +12,7 @@ use crate::form::prelude::*;
 /// This type implements the [`FromData`] trait. It provides a generic means to
 /// parse arbitrary structures from incoming form data.
 ///
-/// See the [forms guide](https://rocket.rs/master/guide/requests#forms) for
+/// See the [forms guide](https://rocket.rs/v0.5-rc/guide/requests#forms) for
 /// general form support documentation.
 ///
 /// # Leniency

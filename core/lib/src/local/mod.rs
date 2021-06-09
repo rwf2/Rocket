@@ -80,7 +80,7 @@
 //!
 //! For more details on testing, see the [testing guide].
 //!
-//! [testing guide]: https://rocket.rs/master/guide/testing/
+//! [testing guide]: https://rocket.rs/v0.5-rc/guide/testing/
 //! [`Client`]: crate::local::asynchronous::Client
 //!
 //! # `Client`

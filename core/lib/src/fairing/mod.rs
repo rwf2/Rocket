@@ -385,7 +385,7 @@ pub type Result<T = Rocket<Build>, E = Rocket<Build>> = std::result::Result<T, E
 /// }
 /// ```
 ///
-/// [request-local state]: https://rocket.rs/master/guide/state/#request-local-state
+/// [request-local state]: https://rocket.rs/v0.5-rc/guide/state/#request-local-state
 #[crate::async_trait]
 pub trait Fairing: Send + Sync + Any + 'static {
     /// Returns an [`Info`] structure containing the `name` and [`Kind`] of this

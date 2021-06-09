@@ -40,7 +40,7 @@ use crate::http::Status;
 /// `Context` serializes as a map, so it can be rendered in templates that
 /// require `Serialize` types. See the [forms guide] for further usage details.
 ///
-/// [forms guide]: https://rocket.rs/master/guide/requests/#context
+/// [forms guide]: https://rocket.rs/v0.5-rc/guide/requests/#context
 #[derive(Debug)]
 pub struct Contextual<'v, T> {
     /// The value, if it was successfully parsed, or `None` otherwise.

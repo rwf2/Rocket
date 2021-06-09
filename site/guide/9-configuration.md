@@ -224,7 +224,7 @@ the `"tls"` feature:
 
 ```toml
 [dependencies]
-rocket = { version = "0.5.0-dev", features = ["tls"] }
+rocket = { version = "0.5.0-rc.1", features = ["tls"] }
 ```
 
 TLS is configured through the `tls` configuration parameter. The value of `tls`

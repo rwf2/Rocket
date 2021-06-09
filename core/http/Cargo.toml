@@ -1,11 +1,11 @@
 [package]
 name = "rocket_http"
-version = "0.5.0-dev"
+version = "0.5.0-rc.1"
 authors = ["Sergio Benitez <sb@sergio.bz>"]
 description = """
 Types, traits, and parsers for HTTP requests, responses, and headers.
 """
-documentation = "https://api.rocket.rs/master/rocket_http/"
+documentation = "https://api.rocket.rs/v0.5-rc/rocket_http/"
 homepage = "https://rocket.rs"
 repository = "https://github.com/SergioBenitez/Rocket"
 readme = "../../README.md"
@@ -61,4 +61,4 @@ optional = true
 default-features = false
 
 [dev-dependencies]
-rocket = { version = "0.5.0-dev", path = "../lib" }
+rocket = { version = "0.5.0-rc.1", path = "../lib" }

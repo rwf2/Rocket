@@ -2,7 +2,7 @@
 //!
 //! See the [configuration guide] for full details.
 //!
-//! [configuration guide]: https://rocket.rs/master/guide/configuration/
+//! [configuration guide]: https://rocket.rs/v0.5-rc/guide/configuration/
 //!
 //! ## Extracting Configuration Parameters
 //!

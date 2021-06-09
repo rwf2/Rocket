@@ -4,7 +4,7 @@
 //! security and privacy headers into all outgoing responses. It takes some
 //! inspiration from [helmetjs], a similar piece of middleware for [express].
 //!
-//! [fairing]: https://rocket.rs/master/guide/fairings/
+//! [fairing]: https://rocket.rs/v0.5-rc/guide/fairings/
 //! [helmetjs]: https://helmetjs.github.io/
 //! [express]: https://expressjs.com
 //!

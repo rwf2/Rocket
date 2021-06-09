@@ -3,7 +3,7 @@
 [crates.io]: https://img.shields.io/crates/v/rocket_dyn_templates.svg
 [crate]: https://crates.io/crates/rocket_dyn_templates
 [docs.svg]: https://img.shields.io/badge/web-master-red.svg?style=flat&label=docs&colorB=d33847
-[crate docs]: https://api.rocket.rs/master/rocket_dyn_templates
+[crate docs]: https://api.rocket.rs/v0.5-rc/rocket_dyn_templates
 [ci.svg]: https://github.com/SergioBenitez/Rocket/workflows/CI/badge.svg
 [ci]: https://github.com/SergioBenitez/Rocket/actions
 
@@ -22,7 +22,7 @@ supports [Handlebars] and [Tera].
 
      ```toml
      [dependencies.rocket_dyn_templates]
-     version = "0.1.0-dev"
+     version = "0.1.0-rc.1"
      features = ["handlebars", "tera"]
      ```
 
