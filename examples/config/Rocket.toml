@@ -10,6 +10,7 @@ msgpack = "2 MiB"
 [default]
 key = "a default app-key"
 extra = false
+ident = "Rocket"
 
 [debug]
 address = "127.0.0.1"

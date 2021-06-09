@@ -210,8 +210,10 @@ impl Rocket<Orbit> {
 
         // Add a default 'Server' header if it isn't already there.
         // TODO: If removing Hyper, write out `Date` header too.
-        if !response.headers().contains("Server") {
-            response.set_header(Header::new("Server", "Rocket"));
+        if let Some(ident) = request.rocket().config.ident.as_str() {
+            if !response.headers().contains("Server") {
+                response.set_header(Header::new("Server", ident));
+            }
         }
 
         // Run the response fairings.

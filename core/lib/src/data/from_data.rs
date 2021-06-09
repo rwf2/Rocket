@@ -5,7 +5,7 @@ use crate::outcome::{self, IntoOutcome, try_outcome, Outcome::*};
 
 /// Type alias for the `Outcome` of [`FromData`].
 ///
-/// [`FromData`]: crTte::data::FromData
+/// [`FromData`]: crate::data::FromData
 pub type Outcome<'r, T, E = <T as FromData<'r>>::Error>
     = outcome::Outcome<T, (Status, E), Data<'r>>;
 

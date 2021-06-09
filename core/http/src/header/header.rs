@@ -54,6 +54,74 @@ impl<'h> Header<'h> {
         }
     }
 
+    /// Returns `true` if `val` is a valid header value.
+    ///
+    /// If `allow_empty` is `true`, this function returns `true` for empty
+    /// values. Otherwise, this function returns `false` for empty values.
+    ///
+    /// This implements a simple (i.e, correct but not particularly performant)
+    /// header "field-content" checker as defined in RFC 7230 without support
+    /// for obsolete (`obs-`) syntax:
+    ///
+    ///   field-value    = *(field-content)
+    ///   field-content  = field-vchar [ 1*( SP / HTAB ) field-vchar ]
+    ///   field-vchar    = VCHAR
+    ///   VCHAR          = %x21-7E ; visible (printing) characters
+    ///
+    /// Note that this is a generic checker. Specific headers may have stricter
+    /// requirements. For example, the `Server` header does not allow delimiters
+    /// in its values.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// # extern crate rocket;
+    /// use rocket::http::Header;
+    ///
+    /// assert!(!Header::is_valid_value("", false));
+    /// assert!(!Header::is_valid_value(" " , false));
+    /// assert!(!Header::is_valid_value(" hi", false));
+    /// assert!(!Header::is_valid_value("a\nbc", false));
+    /// assert!(!Header::is_valid_value("\nbc", false));
+    /// assert!(!Header::is_valid_value("\n", false));
+    /// assert!(!Header::is_valid_value("\t", false));
+    /// assert!(!Header::is_valid_value("\r", false));
+    /// assert!(!Header::is_valid_value("a\nb\nc", false));
+    /// assert!(!Header::is_valid_value("a\rb\rc", false));
+    ///
+    /// assert!(Header::is_valid_value("", true));
+    /// assert!(Header::is_valid_value("a", false));
+    /// assert!(Header::is_valid_value("a", true));
+    /// assert!(Header::is_valid_value("abc", false));
+    /// assert!(Header::is_valid_value("abc", true));
+    /// assert!(Header::is_valid_value("a b c", false));
+    /// assert!(Header::is_valid_value("a b c", true));
+    /// ```
+    #[doc(hidden)]
+    pub const fn is_valid_value(val: &str, allow_empty: bool) -> bool {
+        const fn is_valid_start(b: &u8) -> bool {
+            b.is_ascii_graphic()
+        }
+
+        const fn is_valid_continue(b: &u8) -> bool {
+            is_valid_start(b) || *b == b' ' || *b == b'\t'
+        }
+
+        let mut i = 0;
+        let bytes = val.as_bytes();
+        while i < bytes.len() {
+            match i {
+                0 if !is_valid_start(&bytes[i]) => return false,
+                _ if i > 0 && !is_valid_continue(&bytes[i]) => return false,
+                _ => { /* ok */ }
+            };
+
+            i += 1;
+        }
+
+        allow_empty || i > 0
+    }
+
     /// Returns the name of this header.
     ///
     /// # Example

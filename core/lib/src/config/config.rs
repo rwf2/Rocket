@@ -7,7 +7,7 @@ use figment::value::{Map, Dict};
 use serde::{Deserialize, Serialize};
 use yansi::Paint;
 
-use crate::config::{TlsConfig, LogLevel, Shutdown};
+use crate::config::{TlsConfig, LogLevel, Shutdown, Ident};
 use crate::request::{self, Request, FromRequest};
 use crate::data::Limits;
 
@@ -74,6 +74,9 @@ pub struct Config {
     pub limits: Limits,
     /// The TLS configuration, if any. **(default: `None`)**
     pub tls: Option<TlsConfig>,
+    /// How, if at all, to identify the server via the `Server` header.
+    /// **(default: `"Rocket"`)**
+    pub ident: Ident,
     /// The secret key for signing and encrypting. **(default: `0`)**
     ///
     /// **Note:** This field _always_ serializes as a 256-bit array of `0`s to
@@ -129,7 +132,6 @@ impl Default for Config {
 }
 
 impl Config {
-
     const DEPRECATED_KEYS: &'static [(&'static str, Option<&'static str>)] = &[
         ("env", Some(Self::PROFILE)), ("log", Some(Self::LOG_LEVEL)),
     ];
@@ -162,6 +164,7 @@ impl Config {
             keep_alive: 5,
             limits: Limits::default(),
             tls: None,
+            ident: Ident::default(),
             #[cfg(feature = "secrets")]
             secret_key: SecretKey::zero(),
             temp_dir: std::env::temp_dir(),
@@ -308,6 +311,7 @@ impl Config {
         launch_info_!("address: {}", Paint::default(&self.address).bold());
         launch_info_!("port: {}", Paint::default(&self.port).bold());
         launch_info_!("workers: {}", Paint::default(self.workers).bold());
+        launch_info_!("ident: {}", Paint::default(&self.ident).bold());
 
         let ka = self.keep_alive;
         if ka > 0 {

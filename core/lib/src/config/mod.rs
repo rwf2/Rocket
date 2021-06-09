@@ -111,6 +111,8 @@
 //! [`Toml`]: figment::providers::Toml
 //! [`Env`]: figment::providers::Env
 
+#[macro_use]
+mod ident;
 mod config;
 mod tls;
 mod shutdown;
@@ -124,6 +126,7 @@ pub use config::Config;
 pub use crate::log::LogLevel;
 pub use shutdown::Shutdown;
 pub use tls::TlsConfig;
+pub use ident::Ident;
 
 #[cfg(feature = "secrets")]
 #[cfg_attr(nightly, doc(cfg(feature = "secrets")))]
@@ -139,9 +142,19 @@ mod tests {
     use figment::{Figment, Profile};
     use pretty_assertions::assert_eq;
 
-    use crate::config::{Config, TlsConfig, Shutdown};
+    use crate::config::{Config, TlsConfig, Shutdown, Ident};
     use crate::log::LogLevel;
     use crate::data::{Limits, ToByteUnit};
+
+    #[test]
+    fn test_figment_is_default() {
+        figment::Jail::expect_with(|_| {
+            let mut default: Config = Config::figment().extract().unwrap();
+            default.profile = Config::default().profile;
+            assert_eq!(default, Config::default());
+            Ok(())
+        });
+    }
 
     #[test]
     fn test_default_round_trip() {
@@ -182,6 +195,7 @@ mod tests {
             jail.create_file("Rocket.toml", r#"
                 [default]
                 address = "1.2.3.4"
+                ident = "Something Cool"
                 port = 1234
                 workers = 20
                 keep_alive = 10
@@ -194,6 +208,7 @@ mod tests {
                 address: Ipv4Addr::new(1, 2, 3, 4).into(),
                 port: 1234,
                 workers: 20,
+                ident: ident!("Something Cool"),
                 keep_alive: 10,
                 log_level: LogLevel::Off,
                 cli_colors: false,
@@ -203,6 +218,7 @@ mod tests {
             jail.create_file("Rocket.toml", r#"
                 [global]
                 address = "1.2.3.4"
+                ident = "Something Else Cool"
                 port = 1234
                 workers = 20
                 keep_alive = 10
@@ -215,6 +231,7 @@ mod tests {
                 address: Ipv4Addr::new(1, 2, 3, 4).into(),
                 port: 1234,
                 workers: 20,
+                ident: ident!("Something Else Cool"),
                 keep_alive: 10,
                 log_level: LogLevel::Off,
                 cli_colors: false,
@@ -224,6 +241,7 @@ mod tests {
             jail.create_file("Rocket.toml", r#"
                 [global]
                 shutdown.ctrlc = 0
+                ident = false
 
                 [global.tls]
                 certs = "/ssl/cert.pem"
@@ -238,6 +256,7 @@ mod tests {
             let config = Config::from(Config::figment());
             assert_eq!(config, Config {
                 shutdown: Shutdown { ctrlc: false, ..Default::default() },
+                ident: Ident::none(),
                 tls: Some(TlsConfig::from_paths("/ssl/cert.pem", "/ssl/key.pem")),
                 limits: Limits::default()
                     .limit("forms", 1.mebibytes())
@@ -360,6 +379,16 @@ mod tests {
                 port: 9999,
                 tls: Some(TlsConfig::from_paths("new.pem", "key.pem")),
                 limits: Limits::default().limit("stream", 100.kibibytes()),
+                ..Config::default()
+            });
+
+            jail.set_env("ROCKET_IDENT", false);
+            let config = Config::from(Config::figment().join(&prev_figment));
+            assert_eq!(config, Config {
+                port: 9999,
+                tls: Some(TlsConfig::from_paths("new.pem", "key.pem")),
+                limits: Limits::default().limit("stream", 100.kibibytes()),
+                ident: Ident::none(),
                 ..Config::default()
             });
 

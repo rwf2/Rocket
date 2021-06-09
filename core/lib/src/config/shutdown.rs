@@ -137,7 +137,7 @@ impl fmt::Display for Sig {
 ///
 /// ```rust
 /// # use rocket::figment::{Figment, providers::{Format, Toml}};
-/// use rocket::{Rocket, Config};
+/// use rocket::Config;
 ///
 /// // If these are the contents of `Rocket.toml`...
 /// # let toml = Toml::string(r#"
@@ -169,8 +169,7 @@ impl fmt::Display for Sig {
 ///
 /// ```rust
 /// # use rocket::figment::{Figment, providers::{Format, Toml}};
-/// use rocket::{Rocket, Config};
-/// use rocket::config::Shutdown;
+/// use rocket::config::{Config, Shutdown};
 ///
 /// #[cfg(unix)]
 /// use rocket::config::Sig;

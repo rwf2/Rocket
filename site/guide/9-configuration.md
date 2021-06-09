@@ -17,21 +17,23 @@ is configured with. This means that no matter which configuration provider
 Rocket is asked to use, it must be able to read the following configuration
 values:
 
-| key            | kind            | description                                     | debug/release default |
-|----------------|-----------------|-------------------------------------------------|-----------------------|
-| `address`      | `IpAddr`        | IP address to serve on                          | `127.0.0.1`           |
-| `port`         | `u16`           | Port to serve on.                               | `8000`                |
-| `workers`      | `usize`         | Number of threads to use for executing futures. | cpu core count        |
-| `keep_alive`   | `u32`           | Keep-alive timeout seconds; disabled when `0`.  | `5`                   |
-| `log_level`    | `LogLevel`      | Max level to log. (off/normal/debug/critical)   | `normal`/`critical`   |
-| `cli_colors`   | `bool`          | Whether to use colors and emoji when logging.   | `true`                |
-| `secret_key`   | `SecretKey`     | Secret key for signing and encrypting values.   | `None`                |
-| `tls`          | `TlsConfig`     | TLS configuration, if any.                      | `None`                |
-| `tls.key`      | `&[u8]`/`&Path` | Path/bytes to DER-encoded ASN.1 PKCS#1/#8 key.  |                       |
-| `tls.certs`    | `&[u8]`/`&Path` | Path/bytes to DER-encoded X.509 TLS cert chain. |                       |
-| `limits`       | `Limits`        | Streaming read size limits.                     | [`Limits::default()`] |
-| `limits.$name` | `&str`/`uint`   | Read limit for `$name`.                         | forms = "32KiB"       |
-| `ctrlc`        | `bool`          | Whether `ctrl-c` initiates a server shutdown.   | `true`                |
+| key            | kind              | description                                     | debug/release default   |
+|----------------|-------------------|-------------------------------------------------|-------------------------|
+| `address`      | `IpAddr`          | IP address to serve on                          | `127.0.0.1`             |
+| `port`         | `u16`             | Port to serve on.                               | `8000`                  |
+| `workers`      | `usize`           | Number of threads to use for executing futures. | cpu core count          |
+| `ident`        | `string`, `false` | If and how to identify via the `Server` header. | `"Rocket"`              |
+| `keep_alive`   | `u32`             | Keep-alive timeout seconds; disabled when `0`.  | `5`                     |
+| `log_level`    | [`LogLevel`]      | Max level to log. (off/normal/debug/critical)   | `normal`/`critical`     |
+| `cli_colors`   | `bool`            | Whether to use colors and emoji when logging.   | `true`                  |
+| `secret_key`   | [`SecretKey`]     | Secret key for signing and encrypting values.   | `None`                  |
+| `tls`          | [`TlsConfig`]     | TLS configuration, if any.                      | `None`                  |
+| `tls.key`      | `&[u8]`/`&Path`   | Path/bytes to DER-encoded ASN.1 PKCS#1/#8 key.  |                         |
+| `tls.certs`    | `&[u8]`/`&Path`   | Path/bytes to DER-encoded X.509 TLS cert chain. |                         |
+| `limits`       | [`Limits`]        | Streaming read size limits.                     | [`Limits::default()`]   |
+| `limits.$name` | `&str`/`uint`     | Read limit for `$name`.                         | forms = "32KiB"         |
+| `ctrlc`        | `bool`            | Whether `ctrl-c` initiates a server shutdown.   | `true`                  |
+| `shutdown`     | [`Shutdown`]      | Graceful shutdown configuration.                | [`Shutdown::default()`] |
 
 ### Profiles
 
@@ -58,13 +60,139 @@ selected profile doesn't contain a requested values, while values in the
 [`Json`]: @figment/providers/struct.Json.html
 [`Figment`]: @api/rocket/struct.Figment.html
 [`Deserialize`]: @api/rocket/serde/trait.Deserialize.html
+[`LogLevel`]: @api/rocket/config/enum.LogLevel.html
+[`Limits`]: @api/rocket/data/struct.Limits.html
 [`Limits::default()`]: @api/rocket/data/struct.Limits.html#impl-Default
+[`SecretKey`]: @api/rocket/config/struct.SecretKey.html
+[`TlsConfig`]: @api/rocket/config/struct.TlsConfig.html
+[`Shutdown`]: @api/rocket/config/struct.Shutdown.html
+[`Shutdown::default()`]: @api/rocket/config/struct.Shutdown.html#fields
+
+## Default Provider
+
+Rocket's default configuration provider is [`Config::figment()`]; this is the
+provider that's used when calling [`rocket::build()`].
+
+The default figment merges, at a per-key level, and reads from the following
+sources, in ascending priority order:
+
+  1. [`Config::default()`] - which provides default values for all parameters.
+  2. `Rocket.toml` _or_ TOML file path in `ROCKET_CONFIG` environment variable.
+  3. `ROCKET_` prefixed environment variables.
+
+The selected profile is the value of the `ROCKET_PROFILE` environment variable,
+or if it is not set, "debug" when compiled in debug mode and "release" when
+compiled in release mode.
+
+As a result, without any effort, Rocket's server can be configured via a
+`Rocket.toml` file and/or via environment variables, the latter of which take
+precedence over the former. Note that neither the file nor any environment
+variables need to be present as [`Config::default()`] is a complete
+configuration source.
+
+[`Config::default()`]: @api/rocket/struct.Config.html#method.default
+
+### Rocket.toml
+
+Rocket searches for `Rocket.toml` or the filename in a `ROCKET_CONFIG`
+environment variable starting at the current working directory. If it is not
+found, the parent directory, its parent, and so on, are searched until the file
+is found or the root is reached. If the path set in `ROCKET_CONFIG` is absolute,
+no such search occurs and the set path is used directly.
+
+The file is assumed to be _nested_, so each top-level key declares a profile and
+its values the value for the profile. The following is an example of what such a
+file might look like:
+
+```toml
+## defaults for _all_ profiles
+[default]
+address = "0.0.0.0"
+limits = { forms = "64 kB", json = "1 MiB" }
+
+## set only when compiled in debug mode, i.e, `cargo build`
+[debug]
+port = 8000
+## only the `json` key from `default` will be overridden; `forms` will remain
+limits = { json = "10MiB" }
+
+## set only when the `nyc` profile is selected
+[nyc]
+port = 9001
+
+## set only when compiled in release mode, i.e, `cargo build --release`
+## don't use this secret_key! generate your own and keep it private!
+[release]
+port = 9999
+secret_key = "hPRYyVRiMyxpw5sBB1XeCMN1kFsDCqKvBi2QJxBVHQk="
+```
+
+The following is a `Rocket.toml` file with all configuration options set for
+demonstratation purposes. You **do not** and _should not_ set a value for
+configuration options needlessly, preferring to use the default value when
+sensible.
+
+```toml
+[default]
+address = "127.0.0.1"
+port = 8000
+workers = 16
+keep_alive = 5
+ident = "Rocket"
+log_level = "normal"
+temp_dir = "/tmp"
+cli_colors = true
+## NOTE: Don't (!) use this key! Generate your own!
+secret_key = "hPRYyVRiMyxpw5sBB1XeCMN1kFsDCqKvBi2QJxBVHQk="
+
+[default.limits]
+forms = "64 kB"
+json = "1 MiB"
+msgpack = "2 MiB"
+"file/jpg" = "5 MiB"
+
+[default.tls]
+certs = "path/to/cert-chain.pem"
+key = "path/to/key.pem"
+
+[default.shutdown]
+ctrlc = true
+signals = ["term", "hup"]
+grace = 5
+mercy = 5
+```
+
+### Environment Variables
+
+Rocket reads all environment variable names prefixed with `ROCKET_` using the
+string after the `_` as the name of a configuration value as the value of the
+parameter as the value itself. Environment variables take precedence over values
+in `Rocket.toml`. Values are parsed as loose form of TOML syntax. Consider the
+following examples:
+
+```sh
+ROCKET_FLOAT=3.14
+ROCKET_ARRAY=[1,"b",3.14]
+ROCKET_STRING=Hello
+ROCKET_STRING="Hello There"
+
+ROCKET_KEEP_ALIVE=1
+ROCKET_IDENT=Rocket
+ROCKET_IDENT="Hello Rocket"
+ROCKET_IDENT=false
+ROCKET_TLS={certs="abc",key="foo/bar"}
+ROCKET_LIMITS={forms="64 KiB"}
+```
 
 ### Secret Key
 
 The `secret_key` parameter configures a cryptographic key to use when encrypting
 application values. In particular, the key is used to encrypt [private cookies],
 which are available only when the `secrets` crate feature is enabled.
+
+Generating a string suitable for use as a `secret_key` configuration value is
+usually done through tools like `openssl`. Using `openssl`, a 256-bit base64 key
+can be generated with the command `openssl rand -base64 32`.
 
 When compiled in debug mode, a fresh key is generated automatically. In release
 mode, Rocket requires you to set a secret key if the `secrets` feature is
@@ -106,8 +234,8 @@ the expected value. When a path is configured in a file source, such as
 `Rocket.toml`, relative paths are interpreted as being relative to the source
 file's directory.
 
-! warning: Rocket's built-in TLS implements only TLS 1.2 and 1.3. As such, it
-  may not be suitable for production use.
+! warning: Rocket's built-in TLS implements only TLS 1.2 and 1.3. It may not be
+  suitable for production use.
 
 ### Workers
 
@@ -119,83 +247,6 @@ than those provided by [`Config::figment()`], detailed below. In other words,
 only the values set by the `ROCKET_WORKERS` environment variable or in the
 `workers` property of `Rocket.toml` will be considered - all other `workers`
 values are ignored.
-
-## Default Provider
-
-Rocket's default configuration provider is [`Config::figment()`]; this is the
-provider that's used when calling [`rocket::build()`].
-
-The default figment merges, at a per-key level, and reads from the following
-sources, in ascending priority order:
-
-  1. [`Config::default()`] - which provides default values for all parameters.
-  2. `Rocket.toml` _or_ TOML file path in `ROCKET_CONFIG` environment variable.
-  3. `ROCKET_` prefixed environment variables.
-
-The selected profile is the value of the `ROCKET_PROFILE` environment variable,
-or if it is not set, "debug" when compiled in debug mode and "release" when
-compiled in release mode.
-
-As a result, without any effort, Rocket's server can be configured via a
-`Rocket.toml` file and/or via environment variables, the latter of which take
-precedence over the former. Note that neither the file nor any environment
-variables need to be present as [`Config::default()`] is a complete
-configuration source.
-
-[`Config::default()`]: @api/rocket/struct.Config.html#method.default
-
-### Rocket.toml
-
-Rocket searches for `Rocket.toml` or the filename in a `ROCKET_CONFIG`
-environment variable starting at the current working directory. If it is not
-found, the parent directory, its parent, and so on, are searched until the file
-is found or the root is reached. If the path set in `ROCKET_CONFIG` is absolute,
-no such search occurs, and the set path is used directly.
-
-The file is assumed to be _nested_, so each top-level key declares a profile and
-its values the value for the profile. The following is an example of what such a
-file might look like:
-
-```toml
-## defaults for _all_ profiles
-[default]
-address = "0.0.0.0"
-limits = { forms = "64 kB", json = "1 MiB" }
-
-## set only when compiled in debug mode, i.e, `cargo build`
-[debug]
-port = 8000
-## only the `json` key from `default` will be overridden; `forms` will remain
-limits = { json = "10MiB" }
-
-## set only when the `nyc` profile is selected
-[nyc]
-port = 9001
-
-## set only when compiled in release mode, i.e, `cargo build --release`
-## don't use this secret_key! generate your own and keep it private!
-[release]
-port = 9999
-secret_key = "hPRYyVRiMyxpw5sBB1XeCMN1kFsDCqKvBi2QJxBVHQk="
-```
-
-### Environment Variables
-
-Rocket reads all environment variable names prefixed with `ROCKET_` using the
-string after the `_` as the name of a configuration value as the value of the
-parameter as the value itself. Environment variables take precedence over values
-in `Rocket.toml`. Values are parsed as loose form of TOML syntax. Consider the
-following examples:
-
-```sh
-ROCKET_INTEGER=1
-ROCKET_FLOAT=3.14
-ROCKET_STRING=Hello
-ROCKET_STRING="Hello"
-ROCKET_BOOL=true
-ROCKET_ARRAY=[1,"b",3.14]
-ROCKET_DICT={key="abc",val=123}
-```
 
 ## Extracting Values
 
