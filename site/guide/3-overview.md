@@ -213,7 +213,8 @@ async fn main() {
     rocket::build()
         .mount("/hello", routes![world])
         .launch()
-        .await;
+        .await
+        .unwrap();
 }
 ```
 
