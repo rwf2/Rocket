@@ -1,5 +1,4 @@
 use std::borrow::Cow;
-use std::convert::TryFrom;
 
 use crate::ext::IntoOwned;
 use crate::parse::{Extent, IndexedStr};
@@ -95,20 +94,6 @@ pub struct Absolute<'a> {
     pub(crate) authority: Option<Authority<'a>>,
     pub(crate) path: Data<'a, fmt::Path>,
     pub(crate) query: Option<Data<'a, fmt::Query>>,
-}
-
-impl IntoOwned for Absolute<'_> {
-    type Owned = Absolute<'static>;
-
-    fn into_owned(self) -> Self::Owned {
-        Absolute {
-            source: self.source.into_owned(),
-            scheme: self.scheme.into_owned(),
-            authority: self.authority.into_owned(),
-            path: self.path.into_owned(),
-            query: self.query.into_owned(),
-        }
-    }
 }
 
 impl<'a> Absolute<'a> {
@@ -480,30 +465,9 @@ impl<'a> Absolute<'a> {
     }
 }
 
-impl<'a> TryFrom<&'a String> for Absolute<'a> {
-    type Error = Error<'a>;
+impl_serde!(Absolute<'a>, "an absolute-form URI");
 
-    fn try_from(value: &'a String) -> Result<Self, Self::Error> {
-        Absolute::parse(value.as_str())
-    }
-}
-
-impl<'a> TryFrom<&'a str> for Absolute<'a> {
-    type Error = Error<'a>;
-
-    fn try_from(value: &'a str) -> Result<Self, Self::Error> {
-        Absolute::parse(value)
-    }
-}
-
-impl<'a, 'b> PartialEq<Absolute<'b>> for Absolute<'a> {
-    fn eq(&self, other: &Absolute<'b>) -> bool {
-        self.scheme() == other.scheme()
-            && self.authority() == other.authority()
-            && self.path() == other.path()
-            && self.query() == other.query()
-    }
-}
+impl_traits!(Absolute, scheme, authority, path, query);
 
 impl std::fmt::Display for Absolute<'_> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -520,5 +484,3 @@ impl std::fmt::Display for Absolute<'_> {
         Ok(())
     }
 }
-
-impl_serde!(Absolute<'a>, "an absolute-form URI");

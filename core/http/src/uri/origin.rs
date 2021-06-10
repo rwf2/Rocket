@@ -1,6 +1,4 @@
 use std::borrow::Cow;
-use std::convert::TryFrom;
-use std::hash::Hash;
 
 use crate::ext::IntoOwned;
 use crate::parse::{Extent, IndexedStr, uri::tables::is_pchar};
@@ -114,52 +112,6 @@ pub struct Origin<'a> {
     pub(crate) source: Option<Cow<'a, str>>,
     pub(crate) path: Data<'a, fmt::Path>,
     pub(crate) query: Option<Data<'a, fmt::Query>>,
-}
-
-impl Hash for Origin<'_> {
-    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
-        self.path().hash(state);
-        self.query().hash(state);
-    }
-}
-
-impl<'a, 'b> PartialEq<Origin<'b>> for Origin<'a> {
-    fn eq(&self, other: &Origin<'b>) -> bool {
-        self.path() == other.path() && self.query() == other.query()
-    }
-}
-
-impl Eq for Origin<'_> { }
-
-impl PartialEq<str> for Origin<'_> {
-    fn eq(&self, other: &str) -> bool {
-        let (path, query) = RawStr::new(other).split_at_byte(b'?');
-        self.path() == path && self.query().map_or("", |q| q.as_str()) == query
-    }
-}
-
-impl PartialEq<&str> for Origin<'_> {
-    fn eq(&self, other: &&str) -> bool {
-        self.eq(*other)
-    }
-}
-
-impl PartialEq<Origin<'_>> for str {
-    fn eq(&self, other: &Origin<'_>) -> bool {
-        other.eq(self)
-    }
-}
-
-impl IntoOwned for Origin<'_> {
-    type Owned = Origin<'static>;
-
-    fn into_owned(self) -> Origin<'static> {
-        Origin {
-            source: self.source.into_owned(),
-            path: self.path.into_owned(),
-            query: self.query.into_owned(),
-        }
-    }
 }
 
 impl<'a> Origin<'a> {
@@ -474,30 +426,9 @@ impl<'a> Origin<'a> {
     }
 }
 
-impl TryFrom<String> for Origin<'static> {
-    type Error = Error<'static>;
+impl_serde!(Origin<'a>, "an origin-form URI");
 
-    fn try_from(value: String) -> Result<Self, Self::Error> {
-        Origin::parse_owned(value)
-    }
-}
-
-// Because inference doesn't take `&String` to `&str`.
-impl<'a> TryFrom<&'a String> for Origin<'a> {
-    type Error = Error<'a>;
-
-    fn try_from(value: &'a String) -> Result<Self, Self::Error> {
-        Origin::parse(value.as_str())
-    }
-}
-
-impl<'a> TryFrom<&'a str> for Origin<'a> {
-    type Error = Error<'a>;
-
-    fn try_from(value: &'a str) -> Result<Self, Self::Error> {
-        Origin::parse(value)
-    }
-}
+impl_traits!(Origin, path, query);
 
 impl std::fmt::Display for Origin<'_> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -509,8 +440,6 @@ impl std::fmt::Display for Origin<'_> {
         Ok(())
     }
 }
-
-impl_serde!(Origin<'a>, "an origin-form URI");
 
 #[cfg(test)]
 mod tests {

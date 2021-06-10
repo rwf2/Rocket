@@ -1,4 +1,4 @@
-use std::{borrow::Cow, convert::TryFrom};
+use std::borrow::Cow;
 
 use crate::RawStr;
 use crate::ext::IntoOwned;
@@ -427,30 +427,9 @@ impl<'a> Reference<'a> {
     }
 }
 
-impl PartialEq<Reference<'_>> for Reference<'_> {
-    fn eq(&self, other: &Reference<'_>) -> bool {
-        self.scheme() == other.scheme()
-            && self.authority() == other.authority()
-            && self.path() == other.path()
-            && self.query() == other.query()
-            && self.fragment() == other.fragment()
-    }
-}
+impl_traits!(Reference, authority, scheme, path, query, fragment);
 
-impl IntoOwned for Reference<'_> {
-    type Owned = Reference<'static>;
-
-    fn into_owned(self) -> Self::Owned {
-        Reference {
-            source: self.source.into_owned(),
-            scheme: self.scheme.into_owned(),
-            authority: self.authority.into_owned(),
-            path: self.path.into_owned(),
-            query: self.query.into_owned(),
-            fragment: self.fragment.into_owned(),
-        }
-    }
-}
+impl_serde!(Reference<'a>, "a URI-reference");
 
 impl<'a> From<Absolute<'a>> for Reference<'a> {
     fn from(absolute: Absolute<'a>) -> Self {
@@ -507,31 +486,6 @@ impl From<Asterisk> for Reference<'_> {
     }
 }
 
-impl<'a> TryFrom<&'a str> for Reference<'a> {
-    type Error = Error<'a>;
-
-    fn try_from(value: &'a str) -> Result<Self, Self::Error> {
-        Reference::parse(value)
-    }
-}
-
-impl TryFrom<String> for Reference<'static> {
-    type Error = Error<'static>;
-
-    fn try_from(value: String) -> Result<Self, Self::Error> {
-        Reference::parse_owned(value)
-    }
-}
-
-// Because inference doesn't take `&String` to `&str`.
-impl<'a> TryFrom<&'a String> for Reference<'a> {
-    type Error = Error<'a>;
-
-    fn try_from(value: &'a String) -> Result<Self, Self::Error> {
-        Reference::parse(value.as_str())
-    }
-}
-
 impl std::fmt::Display for Reference<'_> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         if let Some(scheme) = self.scheme() {
@@ -555,5 +509,3 @@ impl std::fmt::Display for Reference<'_> {
         Ok(())
     }
 }
-
-impl_serde!(Reference<'a>, "a URI-reference");

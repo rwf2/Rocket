@@ -343,3 +343,121 @@ impl_uri_from!(Authority<'a>);
 impl_uri_from!(Absolute<'a>);
 impl_uri_from!(Reference<'a>);
 impl_uri_from!(Asterisk);
+
+/// Implements Serialize and Deserialize for any 'URI' looking type.
+macro_rules! impl_serde {
+    ($T:ty, $expected:literal) => {
+        #[cfg(feature = "serde")]
+        mod serde {
+            use std::fmt;
+            use std::marker::PhantomData;
+            use super::*;
+
+            use serde_::ser::{Serialize, Serializer};
+            use serde_::de::{Deserialize, Deserializer, Error, Visitor};
+
+            impl<'a> Serialize for $T {
+                fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+                    serializer.serialize_str(&self.to_string())
+                }
+            }
+
+            struct DeVisitor<'a>(PhantomData<&'a $T>);
+
+            impl<'de, 'a> Visitor<'de> for DeVisitor<'a> {
+                type Value = $T;
+
+                fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+                    write!(formatter, $expected)
+                }
+
+                fn visit_str<E: Error>(self, v: &str) -> Result<Self::Value, E> {
+                    <$T>::parse_owned(v.to_string()).map_err(Error::custom)
+                }
+
+                fn visit_string<E: Error>(self, v: String) -> Result<Self::Value, E> {
+                    <$T>::parse_owned(v).map_err(Error::custom)
+                }
+            }
+
+            impl<'a, 'de> Deserialize<'de> for $T {
+                fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+                    deserializer.deserialize_str(DeVisitor(PhantomData))
+                }
+            }
+        }
+    };
+}
+
+/// Implements PartialEq, Eq, Hash, TryFrom, and IntoOwned for a URI.
+macro_rules! impl_traits {
+    ($T:ident, $($field:ident),* $(,)?) => {
+        impl std::convert::TryFrom<String> for $T<'static> {
+            type Error = Error<'static>;
+
+            fn try_from(value: String) -> Result<Self, Self::Error> {
+                $T::parse_owned(value)
+            }
+        }
+
+        // Because inference doesn't take `&String` to `&str`.
+        impl<'a> std::convert::TryFrom<&'a String> for $T<'a> {
+            type Error = Error<'a>;
+
+            fn try_from(value: &'a String) -> Result<Self, Self::Error> {
+                $T::parse(value.as_str())
+            }
+        }
+
+        impl<'a> std::convert::TryFrom<&'a str> for $T<'a> {
+            type Error = Error<'a>;
+
+            fn try_from(value: &'a str) -> Result<Self, Self::Error> {
+                $T::parse(value)
+            }
+        }
+
+        impl<'a, 'b> PartialEq<$T<'b>> for $T<'a> {
+            fn eq(&self, other: &$T<'b>) -> bool {
+                true $(&& self.$field() == other.$field())*
+            }
+        }
+
+        impl PartialEq<str> for $T<'_> {
+            fn eq(&self, string: &str) -> bool {
+                $T::parse(string).map_or(false, |v| &v == self)
+            }
+        }
+
+        impl PartialEq<&str> for $T<'_> {
+            fn eq(&self, other: &&str) -> bool {
+                self.eq(*other)
+            }
+        }
+
+        impl PartialEq<$T<'_>> for str {
+            fn eq(&self, other: &$T<'_>) -> bool {
+                other.eq(self)
+            }
+        }
+
+        impl Eq for $T<'_> { }
+
+        impl std::hash::Hash for $T<'_> {
+            fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+                $(self.$field().hash(state);)*
+            }
+        }
+
+        impl crate::ext::IntoOwned for $T<'_> {
+            type Owned = $T<'static>;
+
+            fn into_owned(self) -> $T<'static> {
+                $T {
+                    source: self.source.into_owned(),
+                    $($field: self.$field.into_owned()),*
+                }
+            }
+        }
+    }
+}

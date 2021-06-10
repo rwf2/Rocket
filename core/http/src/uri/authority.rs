@@ -1,5 +1,4 @@
 use std::fmt::{self, Display};
-use std::convert::TryFrom;
 use std::borrow::Cow;
 
 use crate::ext::IntoOwned;
@@ -50,19 +49,6 @@ pub struct Authority<'a> {
     user_info: Option<IndexedStr<'a>>,
     host: IndexedStr<'a>,
     port: Option<u16>,
-}
-
-impl IntoOwned for Authority<'_> {
-    type Owned = Authority<'static>;
-
-    fn into_owned(self) -> Authority<'static> {
-        Authority {
-            source: self.source.into_owned(),
-            user_info: self.user_info.into_owned(),
-            host: self.host.into_owned(),
-            port: self.port
-        }
-    }
 }
 
 impl<'a> Authority<'a> {
@@ -225,13 +211,9 @@ impl<'a> Authority<'a> {
     }
 }
 
-impl<'b> PartialEq<Authority<'b>> for Authority<'_> {
-    fn eq(&self, other: &Authority<'b>) -> bool {
-        self.user_info() == other.user_info()
-            && self.host() == other.host()
-            && self.port() == other.port()
-    }
-}
+impl_serde!(Authority<'a>, "an authority-form URI");
+
+impl_traits!(Authority, user_info, host, port);
 
 impl Display for Authority<'_> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -247,22 +229,3 @@ impl Display for Authority<'_> {
         Ok(())
     }
 }
-
-// Because inference doesn't take `&String` to `&str`.
-impl<'a> TryFrom<&'a String> for Authority<'a> {
-    type Error = Error<'a>;
-
-    fn try_from(value: &'a String) -> Result<Self, Self::Error> {
-        Authority::parse(value.as_str())
-    }
-}
-
-impl<'a> TryFrom<&'a str> for Authority<'a> {
-    type Error = Error<'a>;
-
-    fn try_from(value: &'a str) -> Result<Self, Self::Error> {
-        Authority::parse(value)
-    }
-}
-
-impl_serde!(Authority<'a>, "an authority-form URI");
