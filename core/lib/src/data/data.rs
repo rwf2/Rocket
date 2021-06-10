@@ -90,7 +90,7 @@ impl<'r> Data<'r> {
     /// `self`.
     ///
     /// The peek buffer contains at most 512 bytes of the body of the request.
-    /// The actual size of the returned buffer is the `max` of the request's
+    /// The actual size of the returned buffer is the `min` of the request's
     /// body, `num` and `512`. The [`peek_complete`](#method.peek_complete)
     /// method can be used to determine if this buffer contains _all_ of the
     /// data in the body of the request.
