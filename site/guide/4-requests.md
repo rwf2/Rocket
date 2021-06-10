@@ -58,7 +58,7 @@ your application explicitly handles.
 
 ### Reinterpreting
 
-Because HTML forms can only be directly submitted as `GET` or `POST` requests,
+Because web browsers only support submitting HTML forms as `GET` or `POST` requests,
 Rocket _reinterprets_ request methods under certain conditions. If a `POST`
 request contains a body of `Content-Type: application/x-www-form-urlencoded` and
 the form's **first** field has the name `_method` and a valid HTTP method name
