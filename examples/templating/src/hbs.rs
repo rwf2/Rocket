@@ -62,6 +62,6 @@ pub fn customize(hbs: &mut Handlebars) {
         </section>
 
         {{/inline}}
-        {{~> (parent)~}}
+        {{> (lookup this "parent")}}
     "#).expect("valid HBS template");
 }
