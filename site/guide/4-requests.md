@@ -678,9 +678,7 @@ struct Task<'r> {
 fn new(task: Json<Task<'_>>) { /* .. */ }
 ```
 
-See the [JSON example] on GitHub for a complete example.
-
-[JSON example]: @example/json
+See the [JSON example](@example/serialization/src/json.rs) on GitHub for a complete example.
 
 ### Temporary Files
 
