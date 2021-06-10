@@ -141,7 +141,7 @@ Rocket begins serving requests after being _launched_, which starts a
 multi-threaded asynchronous server and dispatches requests to matching routes as
 they arrive.
 
-There are two mechnisms by which a `Rocket` can be launched. The first and
+There are two mechanisms by which a `Rocket` can be launched. The first and
 preferred approach is via the `#[launch]` route attribute, which generates a
 `main` function that sets up an async runtime and starts the server. With
 `#[launch]`, our complete _Hello, world!_ application looks like:
