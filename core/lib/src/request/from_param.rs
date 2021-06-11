@@ -193,7 +193,7 @@ impl<'a> FromParam<'a> for &'a str {
 }
 
 impl<'a> FromParam<'a> for String {
-    type Error = &'a str;
+    type Error = std::convert::Infallible;
 
     #[inline(always)]
     fn from_param(param: &'a str) -> Result<String, Self::Error> {
