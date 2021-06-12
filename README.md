@@ -4,7 +4,7 @@
 [![Rocket Homepage](https://img.shields.io/badge/web-rocket.rs-red.svg?style=flat&label=https&colorB=d33847)](https://rocket.rs)
 [![Current Crates.io Version](https://img.shields.io/crates/v/rocket.svg)](https://crates.io/crates/rocket)
 [![Matrix: #rocket:mozilla.org](https://img.shields.io/badge/style-%23rocket:mozilla.org-blue.svg?style=flat&label=[m])](https://chat.mozilla.org/#/room/#rocket:mozilla.org)
-[![IRC: #rocket on chat.freenode.net](https://img.shields.io/badge/style-%23rocket-blue.svg?style=flat&label=freenode)](https://kiwiirc.com/client/chat.freenode.net/#rocket)
+[![IRC: #rocket on irc.libera.chat](https://img.shields.io/badge/style-%23rocket-blue.svg?style=flat&label=Libera.Chat)](https://kiwiirc.com/client/irc.libera.chat/#rocket)
 
 Rocket is an async web framework for Rust with a focus on usability, security,
 extensibility, and speed.
@@ -45,14 +45,14 @@ Rocket is extensively documented:
 [API Documentation]: https://api.rocket.rs/rocket/
 
 The official community support channels are [`#rocket:mozilla.org`] on Matrix
-and the bridged [`#rocket`] IRC channel on Freenode at `chat.freenode.net`. We
+and the bridged [`#rocket`] IRC channel on Libera.Chat at `irc.libera.chat`. We
 recommend joining us on [Matrix via Element]. If your prefer IRC, you can join
 via the [Kiwi IRC client] or a client of your own.
 
 [`#rocket:mozilla.org`]: https://chat.mozilla.org/#/room/#rocket:mozilla.org
-[`#rocket`]: https://kiwiirc.com/client/chat.freenode.net/#rocket
+[`#rocket`]: https://kiwiirc.com/client/irc.libera.chat/#rocket
 [Matrix via Element]: https://chat.mozilla.org/#/room/#rocket:mozilla.org
-[Kiwi IRC Client]: https://kiwiirc.com/client/chat.freenode.net/#rocket
+[Kiwi IRC Client]: https://kiwiirc.com/client/irc.libera.chat/#rocket
 
 ## Examples
 
