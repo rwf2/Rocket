@@ -689,7 +689,7 @@ In addition to new features and major improvements, Rocket saw the following imp
 ## Infrastructure
 
   * CI was moved from Travis to Azure Pipelines; Windows support is tested.
-  * Rocket's chat moved to [Matrix] and [Freenode].
+  * Rocket's chat moved to [Matrix] and Freenode.
 
 [`Debug`]: https://api.rocket.rs/v0.4/rocket/response/struct.Debug.html
 [`NoContent`]: https://api.rocket.rs/v0.4/rocket/response/status/struct.NoContent.html
@@ -697,7 +697,6 @@ In addition to new features and major improvements, Rocket saw the following imp
 [`Forbidden`]: https://api.rocket.rs/v0.4/rocket/response/status/struct.Forbidden.html
 [`Conflict`]: https://api.rocket.rs/v0.4/rocket/response/status/struct.Conflict.html
 [Matrix]: https://chat.mozilla.org/#/room/#rocket:mozilla.org
-[Freenode]: https://kiwiirc.com/client/chat.freenode.net/#rocket
 
 # Version 0.4.2 (Jun 28, 2019)
 
