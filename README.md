@@ -4,7 +4,7 @@
 [![Rocket Homepage](https://img.shields.io/badge/web-rocket.rs-red.svg?style=flat&label=https&colorB=d33847)](https://rocket.rs)
 [![Current Crates.io Version](https://img.shields.io/crates/v/rocket.svg)](https://crates.io/crates/rocket)
 [![Matrix: #rocket:mozilla.org](https://img.shields.io/badge/style-%23rocket:mozilla.org-blue.svg?style=flat&label=[m])](https://chat.mozilla.org/#/room/#rocket:mozilla.org)
-[![IRC: #rocket on irc.libera.chat](https://img.shields.io/badge/style-%23rocket-blue.svg?style=flat&label=freenode)](https://kiwiirc.com/client/irc.libera.chat/#rocket)
+[![IRC: #rocket on irc.libera.chat](https://img.shields.io/badge/style-%23rocket-blue.svg?style=flat&label=Libera.Chat)](https://kiwiirc.com/client/irc.libera.chat/#rocket)
 
 Rocket is an async web framework for Rust with a focus on usability, security,
 extensibility, and speed.

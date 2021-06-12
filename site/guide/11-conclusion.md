@@ -9,7 +9,7 @@ we're happy to take the best ideas. If you have something in mind, please
 
 If you find yourself having trouble developing Rocket applications, you can get
 help via chat at [`#rocket:mozilla.org`] on Matrix or the bridged [`#rocket`]
-IRC channel on Freenode at `irc.libera.chat`. We recommend joining us on
+IRC channel on Libera.Chat at `irc.libera.chat`. We recommend joining us on
 [Matrix via Element]. If you prefer IRC, you can join via the [Kiwi IRC client]
 or a client of your own.
 
