@@ -1794,15 +1794,17 @@ fn hello(name: &str, color: Vec<Color>, person: Person<'_>, other: Option<usize>
 }
 
 // A request with these query segments matches as above.
-# rocket_guide_tests::client(routes![hello]).get("/?\
+# let status = rocket_guide_tests::client(routes![hello]).get("/?\
+name=George&\
 color=red&\
 color=green&\
 person.pet.name=Fi+Fo+Alex&\
 color=green&\
-person.pet.age=1\
+person.pet.age=1&\
 color=blue&\
 extra=yes\
-# ").dispatch();
+# ").dispatch().status();
+# assert_eq!(status, rocket::http::Status::Ok);
 ```
 
 Note that, like forms, parsing is field-ordering insensitive and lenient by
@@ -1834,11 +1836,13 @@ fn user(id: usize, user: User<'_>) {
 }
 
 // A request with these query segments matches as above.
-# rocket_guide_tests::client(routes![user]).get("/?\
+# let status = rocket_guide_tests::client(routes![user]).get("/?\
+hello&\
 name=Bob+Smith&\
-id=1337\
+id=1337&\
 active=yes\
-# ").dispatch();
+# ").dispatch().status();
+# assert_eq!(status, rocket::http::Status::Ok);
 ```
 
 ## Error Catchers
