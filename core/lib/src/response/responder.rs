@@ -1,5 +1,6 @@
 use std::fs::File;
 use std::io::Cursor;
+use std::sync::Arc;
 
 use crate::http::{Status, ContentType, StatusClass};
 use crate::response::{self, Response};
@@ -319,6 +320,37 @@ impl<'r> Responder<'r, 'static> for String {
     }
 }
 
+#[repr(transparent)]
+struct DerefRef<T>(T);
+
+impl<T: std::ops::Deref> AsRef<[u8]> for DerefRef<T> where T::Target: AsRef<[u8]> {
+    fn as_ref(&self) -> &[u8] {
+        self.0.deref().as_ref()
+    }
+}
+
+/// Returns a response with Content-Type `text/plain` and a fixed-size body
+/// containing the string `self`. Always returns `Ok`.
+impl<'r> Responder<'r, 'static> for Arc<str> {
+    fn respond_to(self, _: &'r Request<'_>) -> response::Result<'static> {
+        Response::build()
+            .header(ContentType::Plain)
+            .sized_body(self.len(), Cursor::new(DerefRef(self)))
+            .ok()
+    }
+}
+
+/// Returns a response with Content-Type `text/plain` and a fixed-size body
+/// containing the string `self`. Always returns `Ok`.
+impl<'r> Responder<'r, 'static> for Box<str> {
+    fn respond_to(self, _: &'r Request<'_>) -> response::Result<'static> {
+        Response::build()
+            .header(ContentType::Plain)
+            .sized_body(self.len(), Cursor::new(DerefRef(self)))
+            .ok()
+    }
+}
+
 /// Returns a response with Content-Type `application/octet-stream` and a
 /// fixed-size body containing the data in `self`. Always returns `Ok`.
 impl<'r, 'o: 'r> Responder<'r, 'o> for &'o [u8] {
@@ -333,6 +365,28 @@ impl<'r, 'o: 'r> Responder<'r, 'o> for &'o [u8] {
 /// Returns a response with Content-Type `application/octet-stream` and a
 /// fixed-size body containing the data in `self`. Always returns `Ok`.
 impl<'r> Responder<'r, 'static> for Vec<u8> {
+    fn respond_to(self, _: &'r Request<'_>) -> response::Result<'static> {
+        Response::build()
+            .header(ContentType::Binary)
+            .sized_body(self.len(), Cursor::new(self))
+            .ok()
+    }
+}
+
+/// Returns a response with Content-Type `application/octet-stream` and a
+/// fixed-size body containing the data in `self`. Always returns `Ok`.
+impl<'r> Responder<'r, 'static> for Arc<[u8]> {
+    fn respond_to(self, _: &'r Request<'_>) -> response::Result<'static> {
+        Response::build()
+            .header(ContentType::Binary)
+            .sized_body(self.len(), Cursor::new(self))
+            .ok()
+    }
+}
+
+/// Returns a response with Content-Type `application/octet-stream` and a
+/// fixed-size body containing the data in `self`. Always returns `Ok`.
+impl<'r> Responder<'r, 'static> for Box<[u8]> {
     fn respond_to(self, _: &'r Request<'_>) -> response::Result<'static> {
         Response::build()
             .header(ContentType::Binary)
