@@ -175,6 +175,11 @@ impl crate::Pool for sqlx::MySqlPool {
     type GetError = sqlx::Error;
 
     async fn initialize(config: Self::Config) -> std::result::Result<Self, Self::InitError> {
+        use sqlx::ConnectOptions;
+
+        let mut opts = config.url.parse::<sqlx::mysql::MySqlConnectOptions>()
+            .map_err(crate::Error::Db)?;
+        opts.disable_statement_logging();
         sqlx::Pool::connect(&config.url).await.map_err(crate::Error::Db)
     }
 
@@ -192,7 +197,12 @@ impl crate::Pool for sqlx::PgPool {
     type GetError = sqlx::Error;
 
     async fn initialize(config: Self::Config) -> std::result::Result<Self, Self::InitError> {
-        sqlx::Pool::connect(&config.url).await.map_err(crate::Error::Db)
+        use sqlx::ConnectOptions;
+
+        let mut opts = config.url.parse::<sqlx::postgres::PgConnectOptions>()
+            .map_err(crate::Error::Db)?;
+        opts.disable_statement_logging();
+        sqlx::Pool::connect_with(opts).await.map_err(crate::Error::Db)
     }
 
     async fn get(&self) -> std::result::Result<Self::Connection, Self::GetError> {
@@ -209,7 +219,14 @@ impl crate::Pool for sqlx::SqlitePool {
     type GetError = sqlx::Error;
 
     async fn initialize(config: Self::Config) -> std::result::Result<Self, Self::InitError> {
-        sqlx::Pool::connect(&config.url).await.map_err(crate::Error::Db)
+        use sqlx::ConnectOptions;
+
+        let mut opts = config.url.parse::<sqlx::sqlite::SqliteConnectOptions>()
+            .map_err(crate::Error::Db)?
+            .create_if_missing(true);
+        opts.disable_statement_logging();
+
+        sqlx::Pool::connect_with(opts).await.map_err(crate::Error::Db)
     }
 
     async fn get(&self) -> std::result::Result<Self::Connection, Self::GetError> {

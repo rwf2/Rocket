@@ -7,7 +7,6 @@ use rocket_db_pools::{sqlx, Database};
 
 use futures::stream::TryStreamExt;
 use futures::future::TryFutureExt;
-use sqlx::ConnectOptions;
 
 #[derive(rocket_db_pools::Database)]
 #[database(name = "sqlx")]
@@ -73,13 +72,6 @@ async fn destroy(mut db: Connection) -> Result<()> {
 }
 
 async fn init_db(rocket: Rocket<Build>) -> fairing::Result {
-    // TODO: Set these somewhere
-    // let mut opts = sqlx::sqlite::SqliteConnectOptions::new()
-    //     .filename(&config.url)
-    //     .create_if_missing(true);
-
-    // opts.disable_statement_logging();
-
     match rocket.state::<Db>() {
         Some(db) => {
             if let Err(e) = sqlx::migrate!("db/sqlx/migrations").run(db.pool()).await {
