@@ -78,7 +78,7 @@ events is described below:
   * **Ignite (`on_ignite`)**
 
     An ignite callback is called during [ignition] An ignite callback can
-    arbitrarily modify the `Rocket` instance being build. They are are commonly
+    arbitrarily modify the `Rocket` instance being built. They are commonly
     used to parse and validate configuration values, aborting on bad
     configurations, and inserting the parsed value into managed state for later
     retrieval.
