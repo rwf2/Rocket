@@ -685,7 +685,7 @@ See the [JSON example] on GitHub for a complete example.
 ### Temporary Files
 
 The [`TempFile`] data guard streams data directly to a temporary file which can
-the be persisted. It makes accepting file uploads trivial:
+then be persisted. It makes accepting file uploads trivial:
 
 ```rust
 # #[macro_use] extern crate rocket;
