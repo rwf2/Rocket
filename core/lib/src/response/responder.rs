@@ -22,6 +22,8 @@ use crate::request::Request;
 ///
 /// # Return Value
 ///
+/// A `Responder` returns an `Ok(Response)` or an `Err(Status)`:
+///
 ///   * An `Ok` variant means that the `Responder` was successful in generating
 ///     a `Response`. The `Response` will be written out to the client.
 ///
