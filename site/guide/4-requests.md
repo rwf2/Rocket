@@ -211,7 +211,7 @@ there are no remaining routes to try. When there are no remaining routes, a
 customizable **404 error** is returned.
 
 Routes are attempted in increasing _rank_ order. Rocket chooses a default
-ranking from -6 to -1, detailed in the next section, but a route's rank can also
+ranking from -12 to -1, detailed in the next section, but a route's rank can also
 be manually set with the `rank` attribute. To illustrate, consider the following
 routes:
 
