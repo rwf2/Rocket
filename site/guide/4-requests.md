@@ -781,6 +781,7 @@ fn new(task: Option<Form<Task<'_>>>) { /* .. */ }
 
 [`Form`]: @api/rocket/form/struct.Form.html
 [`FromForm`]: @api/rocket/form/trait.FromForm.html
+[`FromFormField`]: @api/rocket/form/trait.FromFormField.html
 
 ### Parsing Strategy
 
