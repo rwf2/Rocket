@@ -392,7 +392,7 @@ fn rocket() -> _ {
 }
 ```
 
-Rocket will extract it's configuration from the configured provider. This means
+Rocket will extract its configuration from the configured provider. This means
 that if values like `port` and `address` are configured in `Config`, `App.toml`
 or `APP_` environment variables, Rocket will make use of them. The application
 can also extract its configuration, done here via the `Adhoc::config()` fairing.

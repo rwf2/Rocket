@@ -58,7 +58,7 @@ your application explicitly handles.
 
 ### Reinterpreting
 
-Because HTML forms can only be directly submitted as `GET` or `POST` requests,
+Because web browsers only support submitting HTML forms as `GET` or `POST` requests,
 Rocket _reinterprets_ request methods under certain conditions. If a `POST`
 request contains a body of `Content-Type: application/x-www-form-urlencoded` and
 the form's **first** field has the name `_method` and a valid HTTP method name
@@ -678,14 +678,12 @@ struct Task<'r> {
 fn new(task: Json<Task<'_>>) { /* .. */ }
 ```
 
-See the [JSON example] on GitHub for a complete example.
-
-[JSON example]: @example/json
+See the [JSON example](@example/serialization/src/json.rs) on GitHub for a complete example.
 
 ### Temporary Files
 
 The [`TempFile`] data guard streams data directly to a temporary file which can
-the be persisted. It makes accepting file uploads trivial:
+then be persisted. It makes accepting file uploads trivial:
 
 ```rust
 # #[macro_use] extern crate rocket;
