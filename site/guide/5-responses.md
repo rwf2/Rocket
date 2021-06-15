@@ -649,8 +649,8 @@ generated.
 ```rust
 # #[macro_use] extern crate rocket;
 
-# #[get("/<id>/<name>?<age>")]
-# fn person(id: Option<usize>, name: &str, age: Option<u8>) { /* .. */ }
+#[get("/<id>/<name>?<age>")]
+fn person(id: Option<usize>, name: &str, age: Option<u8>) { /* .. */ }
 
 /// Note that `id` is `Option<usize>` in the route, but `id` in `uri!` _cannot_
 /// be an `Option`. `age`, on the other hand, _must_ be an `Option` (or `Result`
