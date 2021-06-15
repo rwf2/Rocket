@@ -1735,7 +1735,7 @@ fn hello(name: &str, color: Vec<Color>, person: Person<'_>, other: Option<usize>
 
 // A request with these query segments matches as above.
 # rocket_guide_tests::client(routes![hello]).get("/?\
-color=reg&\
+color=red&\
 color=green&\
 person.pet.name=Fi+Fo+Alex&\
 color=green&\
