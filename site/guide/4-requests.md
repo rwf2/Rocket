@@ -211,7 +211,7 @@ there are no remaining routes to try. When there are no remaining routes, a
 customizable **404 error** is returned.
 
 Routes are attempted in increasing _rank_ order. Rocket chooses a default
-ranking from -6 to -1, detailed in the next section, but a route's rank can also
+ranking from -12 to -1, detailed in the next section, but a route's rank can also
 be manually set with the `rank` attribute. To illustrate, consider the following
 routes:
 
@@ -781,6 +781,7 @@ fn new(task: Option<Form<Task<'_>>>) { /* .. */ }
 
 [`Form`]: @api/rocket/form/struct.Form.html
 [`FromForm`]: @api/rocket/form/trait.FromForm.html
+[`FromFormField`]: @api/rocket/form/trait.FromFormField.html
 
 ### Parsing Strategy
 
@@ -1734,7 +1735,7 @@ fn hello(name: &str, color: Vec<Color>, person: Person<'_>, other: Option<usize>
 
 // A request with these query segments matches as above.
 # rocket_guide_tests::client(routes![hello]).get("/?\
-color=reg&\
+color=red&\
 color=green&\
 person.pet.name=Fi+Fo+Alex&\
 color=green&\
