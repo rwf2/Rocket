@@ -41,6 +41,11 @@ use proc_macro::TokenStream;
 ///
 ///     Retrieves a connection wrapper from the configured pool. Returns `Some`
 ///     as long as `Self::fairing()` has been attached.
+//!
+//!   * `async fn run<R: Send + Static>(&self, impl FnOnce(&mut Db) -> R) -> R`
+//!
+//!     Asynchronously runs the specified function returning its result of type `R`
+//!     using the instance of the connection where `Db` is the underlying `Poolable` type.
 ///
 /// [`FromRequest`]: rocket::request::FromRequest
 #[proc_macro_attribute]
