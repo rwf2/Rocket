@@ -152,6 +152,7 @@ impl Accept {
             }*/
             if media_type.weight().is_none() && preferred.weight().is_some() {
                 // Media types without a `q` parameter are preferred.
+                preferred = media_type;
             } else if media_type.weight_or(0.0) > preferred.weight_or(1.0) {
                 // Prefer media types with a greater weight, but if one doesn't
                 // have a weight, prefer the one we already have.
