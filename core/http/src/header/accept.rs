@@ -147,9 +147,6 @@ impl Accept {
         let mut all = self.iter();
         let mut preferred = all.next().unwrap_or(&ANY);
         for media_type in all {
-            /*if media_type.better_than(preferred) {
-                preferred = media_type;
-            }*/
             if media_type.weight().is_none() && preferred.weight().is_some() {
                 // Media types without a `q` parameter are preferred.
                 preferred = media_type;
