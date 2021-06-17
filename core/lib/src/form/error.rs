@@ -719,7 +719,6 @@ impl<'v> Error<'v> {
             | Multipart(FieldSizeExceeded { .. })
             | Multipart(StreamSizeExceeded { .. }) => Status::PayloadTooLarge,
             Unknown => Status::InternalServerError,
-            // FIXME: is this intended behavior?
             Io(_) => Status::BadRequest,
             _ if self.entity == Entity::Form => Status::BadRequest,
             _ => Status::UnprocessableEntity
