@@ -14,8 +14,8 @@ fn main() {
             panic!("Aborting compilation due to incompatible compiler.")
         }
     } else {
-        println!("cargo:warning={}", "Rocket was unable to check rustc compiler compatibility.");
-        println!("cargo:warning={}", "Build may fail due to incompatible rustc version.");
+        println!("cargo:warning=Rocket was unable to check rustc compiler compatibility.");
+        println!("cargo:warning=Build may fail due to incompatible rustc version.");
     }
 
     if let Some(true) = version_check::is_feature_flaggable() {
