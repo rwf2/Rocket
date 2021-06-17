@@ -215,8 +215,8 @@ error[E0277]: the trait bound `T: Responder<'_, '_>` is not satisfied
    = note: required by `respond_to`
 help: consider further restricting this bound
    |
-57 | #[response(bound = "T: std::fmt::Display" + Responder<'_, '_>)]
-   |                                           ^^^^^^^^^^^^^^^^^^^
+57 | #[response(bound = "T: std::fmt::Display" + rocket::response::Responder<'_, '_>)]
+   |                                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 error[E0277]: the trait bound `T: Responder<'_, '_>` is not satisfied
   --> $DIR/responder.rs:62:19
@@ -227,5 +227,5 @@ error[E0277]: the trait bound `T: Responder<'_, '_>` is not satisfied
    = note: required by `respond_to`
 help: consider further restricting this bound
    |
-61 | #[response(bound = "T: std::fmt::Display" + Responder<'_, '_>)]
-   |                                           ^^^^^^^^^^^^^^^^^^^
+61 | #[response(bound = "T: std::fmt::Display" + rocket::response::Responder<'_, '_>)]
+   |                                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
