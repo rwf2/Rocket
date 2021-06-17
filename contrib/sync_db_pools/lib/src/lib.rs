@@ -199,7 +199,7 @@
 //!     Retrieves a connection wrapper from the configured pool. Returns `Some`
 //!     as long as `Self::fairing()` has been attached.
 //!
-//!   * `async fn run<R: Send + Static>(&self, impl FnOnce(&mut Db) -> R) -> R`
+//!   * `async fn run<R: Send + 'static>(&self, impl FnOnce(&mut Db) -> R + Send + 'static) -> R`
 //!
 //!     Asynchronously runs the specified function returning its result of type `R`
 //!     using the instance of the connection where `Db` is the underlying `Poolable` type.
