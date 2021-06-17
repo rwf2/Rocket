@@ -267,7 +267,7 @@ impl<'a> CookieJar<'a> {
         }
 
         drop(ops);
-        self.get(name).map(|c| c.clone())
+        self.get(name).cloned()
     }
 
     /// Retrives the _original or pending_ `Cookie` inside this collection with
