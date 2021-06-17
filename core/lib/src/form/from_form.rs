@@ -794,8 +794,8 @@ impl<'v, K, V> FromForm<'v> for BTreeMap<K, V>
 impl<'v, T: FromForm<'v>> FromForm<'v> for Option<T> {
     type Context = <T as FromForm<'v>>::Context;
 
-    fn init(opts: Options) -> Self::Context {
-        T::init(Options { strict: true, ..opts })
+    fn init(_opts: Options) -> Self::Context {
+        T::init(Options { strict: true })
     }
 
     fn push_value(ctxt: &mut Self::Context, field: ValueField<'v>) {
