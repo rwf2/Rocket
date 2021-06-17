@@ -187,7 +187,7 @@
 //! retrieves a connection from the database pool or fails with a
 //! `Status::ServiceUnavailable` if connecting to the database times out.
 //!
-//! The macro also generates two inherent methods on the decorated type:
+//! The macro also generates three inherent methods on the decorated type:
 //!
 //!   * `fn fairing() -> impl Fairing`
 //!
