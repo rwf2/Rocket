@@ -160,6 +160,8 @@ We **strongly** advise all application authors to review this list carefully.
     * The concept of "environments" is replaced with "profiles".
     * `ROCKET_ENV` is superseded by `ROCKET_PROFILE`.
     * `ROCKET_LOG` is superseded by `ROCKET_LOG_LEVEL`.
+    * `ROCKET_ADDRESS` only accepts IP addresses; it no longer automatically resolves hostnames
+      including `localhost`.
     * Profile names can now be arbitrarily chosen. The `dev`, `stage`, and `prod` profiles carry no
       special meaning.
     * The `debug` and `release` profiles are the default profiles for the debug and release
@@ -201,6 +203,8 @@ We **strongly** advise all application authors to review this list carefully.
 
   * In `#[route(GET, path = "...")]`, `path` is now `uri`: `#[route(GET, uri = "...")]`.
   * Multi-segment paths (`/<p..>`) now match _zero_ or more segments.
+  * Functions decorated with `#[route]`, `#[get]`, `#[post]`, etc. now generate a struct
+    with the same name as the function. This conflicts with any module that had the same name.
   * A route URI like (`/<a>/<p..>`) now collides with (`/<a>`), requires a `rank` to resolve.
   * All catcher related types and traits moved to [`rocket::catcher`].
   * All route related types and traits moved to [`rocket::route`].
