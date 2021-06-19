@@ -16,8 +16,6 @@ tera = ["tera_"]
 handlebars = ["handlebars_"]
 
 [dependencies]
-serde = "1.0"
-serde_json = "1.0.26"
 glob = "0.3"
 notify = "4.0.6"
 normpath = "0.3"

@@ -126,6 +126,21 @@ mod tera_tests {
         assert_eq!(template, Some(ESCAPED_EXPECTED.into()));
     }
 
+    // u128 is not supported. enable when it is.
+    // #[test]
+    // fn test_tera_u128() {
+    //     const EXPECTED: &'static str
+    //         = "\nh_start\ntitle: 123\nh_end\n\n\n1208925819614629174706176\n\nfoot\n";
+    //
+    //     let client = Client::debug(rocket()).unwrap();
+    //     let mut map = HashMap::new();
+    //     map.insert("title", 123);
+    //     map.insert("number", 1u128 << 80);
+    //
+    //     let template = Template::show(client.rocket(), "tera/txt_test", &map);
+    //     assert_eq!(template, Some(EXPECTED.into()));
+    // }
+
     #[test]
     fn test_template_metadata_with_tera() {
         let client = Client::debug(rocket()).unwrap();
@@ -151,11 +166,11 @@ mod handlebars_tests {
     use rocket::http::Status;
     use rocket::local::blocking::Client;
 
-    const EXPECTED: &'static str
-        = "Hello _test_!\n\n<main> &lt;script /&gt; hi </main>\nDone.\n\n";
-
     #[test]
     fn test_handlebars_templates() {
+        const EXPECTED: &'static str
+            = "Hello _test_!\n\n<main> &lt;script /&gt; hi </main>\nDone.\n\n";
+
         let client = Client::debug(rocket()).unwrap();
         let mut map = HashMap::new();
         map.insert("title", "_test_");
@@ -165,6 +180,21 @@ mod handlebars_tests {
         let template = Template::show(client.rocket(), "hbs/test", &map);
         assert_eq!(template, Some(EXPECTED.into()));
     }
+
+    // u128 is not supported. enable when it is.
+    // #[test]
+    // fn test_handlebars_u128() {
+    //     const EXPECTED: &'static str
+    //         = "Hello 123!\n\n<main> 1208925819614629174706176 </main>\nDone.\n\n";
+    //
+    //     let client = Client::debug(rocket()).unwrap();
+    //     let mut map = HashMap::new();
+    //     map.insert("title", 123);
+    //     map.insert("number", 1u128 << 80);
+    //
+    //     let template = Template::show(client.rocket(), "hbs/test", &map);
+    //     assert_eq!(template, Some(EXPECTED.into()));
+    // }
 
     #[test]
     fn test_template_metadata_with_handlebars() {

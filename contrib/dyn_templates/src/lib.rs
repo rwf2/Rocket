@@ -118,8 +118,8 @@
 //!
 //! Templates are rendered with the `render` method. The method takes in the
 //! name of a template and a context to render the template with. The context
-//! can be any type that implements [`Serialize`] from [`serde`] and would
-//! serialize to an `Object` value.
+//! can be any type that implements [`Serialize`] and would serialize to an
+//! `Object` value.
 //!
 //! ## Automatic Reloading
 //!
@@ -127,8 +127,6 @@
 //! will be automatically reloaded from disk if any changes have been made to
 //! the templates directory since the previous request. In release builds,
 //! template reloading is disabled to improve performance and cannot be enabled.
-//!
-//! [`Serialize`]: serde::Serialize
 
 #![doc(html_root_url = "https://api.rocket.rs/v0.5-rc/rocket_dyn_templates")]
 #![doc(html_favicon_url = "https://rocket.rs/images/favicon.ico")]
@@ -166,18 +164,16 @@ pub use self::metadata::Metadata;
 use self::fairing::TemplateFairing;
 use self::context::{Context, ContextManager};
 
-use serde::Serialize;
-use serde_json::{Value, to_value};
-
 use std::borrow::Cow;
 use std::path::PathBuf;
-use std::error::Error;
 
 use rocket::{Rocket, Orbit, Ignite, Sentinel};
 use rocket::request::Request;
 use rocket::fairing::Fairing;
 use rocket::response::{self, Responder};
 use rocket::http::{ContentType, Status};
+use rocket::figment::{value::Value, error::Error};
+use rocket::serde::Serialize;
 
 const DEFAULT_TEMPLATE_DIR: &str = "templates";
 
@@ -191,7 +187,7 @@ const DEFAULT_TEMPLATE_DIR: &str = "templates";
 #[derive(Debug)]
 pub struct Template {
     name: Cow<'static, str>,
-    value: Option<Value>
+    value: Result<Value, Error>
 }
 
 #[derive(Debug)]
@@ -299,7 +295,7 @@ impl Template {
     /// }
     /// ```
     pub fn try_custom<F: Send + Sync + 'static>(f: F) -> impl Fairing
-        where F: Fn(&mut Engines) -> Result<(), Box<dyn Error>>
+        where F: Fn(&mut Engines) -> Result<(), Box<dyn std::error::Error>>
     {
         TemplateFairing { callback: Box::new(f) }
     }
@@ -325,7 +321,7 @@ impl Template {
     pub fn render<S, C>(name: S, context: C) -> Template
         where S: Into<Cow<'static, str>>, C: Serialize
     {
-        Template { name: name.into(), value: to_value(context).ok() }
+        Template { name: name.into(), value: Value::serialize(context) }
     }
 
     /// Render the template named `name` with the context `context` into a
@@ -386,13 +382,13 @@ impl Template {
         let info = ctxt.templates.get(name).ok_or_else(|| {
             let ts: Vec<_> = ctxt.templates.keys().map(|s| s.as_str()).collect();
             error_!("Template '{}' does not exist.", name);
-            info_!("Known templates: {}", ts.join(", "));
+            info_!("Known templates: {}.", ts.join(", "));
             info_!("Searched in {:?}.", ctxt.root);
             Status::InternalServerError
         })?;
 
-        let value = self.value.ok_or_else(|| {
-            error_!("The provided template context failed to serialize.");
+        let value = self.value.map_err(|e| {
+            error_!("Template context failed to serialize: {}.", e);
             Status::InternalServerError
         })?;
 

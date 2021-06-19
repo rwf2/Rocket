@@ -1,6 +1,6 @@
 use std::path::Path;
 
-use serde::Serialize;
+use rocket::serde::Serialize;
 
 use crate::engine::Engine;
 pub use crate::handlebars::Handlebars;
@@ -29,12 +29,8 @@ impl Engine for Handlebars<'static> {
             return None;
         }
 
-        match Handlebars::render(self, name, &context) {
-            Ok(string) => Some(string),
-            Err(e) => {
-                error_!("Error rendering Handlebars template '{}': {}", name, e);
-                None
-            }
-        }
+        Handlebars::render(self, name, &context)
+            .map_err(|e| error_!("Handlebars: {}", e))
+            .ok()
     }
 }
