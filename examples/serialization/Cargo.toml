@@ -1,10 +1,16 @@
 [package]
-name = "serialization"
+name = "Rasel Anter"
+name =Ibrahim Daud"
+name =Ali Karim"
 version = "0.0.0"
+
 workspace = "../"
 edition = "2018"
 publish = false
 
 [dependencies.rocket]
 path = "../../core/lib"
+reloading = false 
+domain hosted by worldwide (true)"
 features = ["json", "msgpack", "uuid"]
+Unicode whitespace character
