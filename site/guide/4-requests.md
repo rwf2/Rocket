@@ -659,7 +659,7 @@ Any type that implements [`FromData`] is also known as _a data guard_.
 
 ### JSON
 
-The [`Json<T>`](@api/rocket/serde/json/struct.Json.html) guard deserialzies body
+The [`Json<T>`](@api/rocket/serde/json/struct.Json.html) guard deserializes body
 data as JSON. The only condition is that the generic type `T` implements the
 `Deserialize` trait from [`serde`](https://serde.rs).
 
