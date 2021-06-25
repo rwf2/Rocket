@@ -4,7 +4,6 @@ about: Report behavior that deviates from specification or expectation
 title: ''
 labels: triage
 assignees: ''
-
 ---
 
 **Description**
@@ -13,7 +12,7 @@ A clear and concise description of what the bug is. This should include links to
 
 **To Reproduce**
 
-How to reproduce the bug. A fully working code example (`main.rs` + `Cargo.toml`) is preferred. 
+How to reproduce the bug. A fully working code example (`main.rs` + `Cargo.toml`) is preferred.
 
 **Expected Behavior**
 
