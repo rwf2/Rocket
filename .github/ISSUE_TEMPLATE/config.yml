@@ -1,0 +1,5 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Question
+    url: https://github.com/SergioBenitez/Rocket/discussions
+    about: Please ask questions or raise indefinite concerns on Dicussions
