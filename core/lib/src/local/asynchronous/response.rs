@@ -179,6 +179,8 @@ impl LocalResponse<'_> {
             }
         }
 
+        drop(tx);
+        
         reader.await.ok()
     }
 
