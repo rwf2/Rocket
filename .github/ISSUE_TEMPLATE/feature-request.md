@@ -25,3 +25,7 @@ If you have an idea for a solution, propose it with a clear and concise descript
 **Alternatives Considered**
 
 A clear and concise description of any alternative solutions or features you've considered.
+
+**Additional Context**
+
+Add any other context here, for example, descriptions of elegant solutions in other software.
