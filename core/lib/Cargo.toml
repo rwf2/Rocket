@@ -46,7 +46,7 @@ atomic = "0.5"
 parking_lot = "0.11"
 ubyte = {version = "0.10", features = ["serde"] }
 serde = { version = "1.0", features = ["derive"] }
-figment = { version = "0.10.4", features = ["toml", "env"] }
+figment = { version = "0.10.6", features = ["toml", "env"] }
 rand = "0.8"
 either = "1"
 pin-project-lite = "0.2"

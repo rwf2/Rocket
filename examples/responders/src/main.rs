@@ -6,10 +6,10 @@
 
 use std::{io, env};
 
-use rocket::tokio::fs;
-
+use rocket::Config;
 use rocket::data::Capped;
 use rocket::fs::{NamedFile, TempFile};
+use rocket::tokio::fs;
 
 // Upload your `big_file.dat` by POSTing it to /upload.
 // try `curl --data-binary @file.txt http://127.0.0.1:8000/stream/file`
@@ -17,19 +17,19 @@ const FILENAME: &str = "big_file.dat";
 
 // This is a *raw* file upload, _not_ a multipart upload!
 #[post("/file", data = "<file>")]
-async fn upload(mut file: Capped<TempFile<'_>>) -> io::Result<String> {
-    file.persist_to(env::temp_dir().join(FILENAME)).await?;
+async fn upload(mut file: Capped<TempFile<'_>>, config: &Config) -> io::Result<String> {
+    file.persist_to(config.temp_dir.relative().join(FILENAME)).await?;
     Ok(format!("{} bytes at {}", file.n.written, file.path().unwrap().display()))
 }
 
 #[get("/file")]
-async fn file() -> Option<NamedFile> {
-    NamedFile::open(env::temp_dir().join(FILENAME)).await.ok()
+async fn file(config: &Config) -> Option<NamedFile> {
+    NamedFile::open(config.temp_dir.relative().join(FILENAME)).await.ok()
 }
 
 #[delete("/file")]
-async fn delete() -> Option<()> {
-    fs::remove_file(env::temp_dir().join(FILENAME)).await.ok()
+async fn delete(config: &Config) -> Option<()> {
+    fs::remove_file(config.temp_dir.relative().join(FILENAME)).await.ok()
 }
 
 /***************************** `Stream` Responder *****************************/

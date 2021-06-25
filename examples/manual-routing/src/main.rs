@@ -1,8 +1,6 @@
 #[cfg(test)]
 mod tests;
 
-use std::env;
-
 use rocket::{Request, Route, Catcher, route, catcher};
 use rocket::data::{Data, ToByteUnit};
 use rocket::http::{Status, Method::{Get, Post}};
@@ -43,7 +41,8 @@ fn upload<'r>(req: &'r Request, data: Data<'r>) -> route::BoxFuture<'r> {
             return route::Outcome::failure(Status::BadRequest);
         }
 
-        let file = File::create(env::temp_dir().join("upload.txt")).await;
+        let path = req.rocket().config().temp_dir.relative().join("upload.txt");
+        let file = File::create(path).await;
         if let Ok(file) = file {
             if let Ok(n) = data.open(2.mebibytes()).stream_to(file).await {
                 return route::Outcome::from(req, format!("OK: {} bytes uploaded.", n));
@@ -59,7 +58,8 @@ fn upload<'r>(req: &'r Request, data: Data<'r>) -> route::BoxFuture<'r> {
 }
 
 fn get_upload<'r>(req: &'r Request, _: Data<'r>) -> route::BoxFuture<'r> {
-    route::Outcome::from(req, std::fs::File::open(env::temp_dir().join("upload.txt")).ok()).pin()
+    let path = req.rocket().config().temp_dir.relative().join("upload.txt");
+    route::Outcome::from(req, std::fs::File::open(path).ok()).pin()
 }
 
 fn not_found_handler<'r>(_: Status, req: &'r Request) -> catcher::BoxFuture<'r> {

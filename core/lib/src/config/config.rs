@@ -1,9 +1,8 @@
-use std::path::PathBuf;
 use std::net::{IpAddr, Ipv4Addr};
 
 use figment::{Figment, Profile, Provider, Metadata, error::Result};
 use figment::providers::{Serialized, Env, Toml, Format};
-use figment::value::{Map, Dict};
+use figment::value::{Map, Dict, magic::RelativePathBuf};
 use serde::{Deserialize, Serialize};
 use yansi::Paint;
 
@@ -87,7 +86,8 @@ pub struct Config {
     pub secret_key: SecretKey,
     /// Directory to store temporary files in. **(default:
     /// [`std::env::temp_dir()`])**
-    pub temp_dir: PathBuf,
+    #[serde(serialize_with = "RelativePathBuf::serialize_relative")]
+    pub temp_dir: RelativePathBuf,
     /// Max level to log. **(default: _debug_ `normal` / _release_ `critical`)**
     pub log_level: LogLevel,
     /// Graceful shutdown configuration. **(default: [`Shutdown::default()`])**
@@ -167,7 +167,7 @@ impl Config {
             ident: Ident::default(),
             #[cfg(feature = "secrets")]
             secret_key: SecretKey::zero(),
-            temp_dir: std::env::temp_dir(),
+            temp_dir: std::env::temp_dir().into(),
             log_level: LogLevel::Normal,
             shutdown: Shutdown::default(),
             cli_colors: true,
@@ -335,7 +335,7 @@ impl Config {
             }
         }
 
-        launch_info_!("temp dir: {}", Paint::default(&self.temp_dir.display()).bold());
+        launch_info_!("temp dir: {}", Paint::default(&self.temp_dir.relative().display()).bold());
         launch_info_!("log level: {}", Paint::default(self.log_level).bold());
         launch_info_!("cli colors: {}", Paint::default(&self.cli_colors).bold());
         launch_info_!("shutdown: {}", Paint::default(&self.shutdown).bold());
@@ -369,6 +369,7 @@ impl Config {
     }
 }
 
+/// Associated constants for default profiles.
 impl Config {
     /// The default debug profile: `debug`.
     pub const DEBUG_PROFILE: Profile = Profile::const_new("debug");
@@ -386,6 +387,7 @@ impl Config {
 
 }
 
+/// Associated constants for stringy versions of configuration parameters.
 impl Config {
     /// The stringy parameter name for setting/extracting [`Config::profile`].
     ///
@@ -421,6 +423,9 @@ impl Config {
 
     /// The stringy parameter name for setting/extracting [`Config::shutdown`].
     pub const SHUTDOWN: &'static str = "shutdown";
+
+    /// The stringy parameter name for setting/extracting [`Config::cli_colors`].
+    pub const CLI_COLORS: &'static str = "cli_colors";
 }
 
 impl Provider for Config {
