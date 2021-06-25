@@ -1,12 +1,12 @@
 ---
 name: Feature Request
-about: Suggest an idea for this project
+about: Propose a change that introduces new functionality
 title: ''
 labels: request
 assignees: ''
 ---
 
-**Is your feature request related to a problem? Please describe.**
+**Is your feature request motivated by a concrete problem? Please describe.**
 
 A clear and concise description of what the problem is. Examples:
 
