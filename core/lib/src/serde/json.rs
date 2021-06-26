@@ -24,15 +24,14 @@
 //! [`json()`]: crate::local::blocking::LocalRequest::json()
 //! [`into_json()`]: crate::local::blocking::LocalResponse::into_json()
 
-use std::io;
+use std::{io, fmt, error};
 use std::ops::{Deref, DerefMut};
 
 use crate::request::{Request, local_cache};
 use crate::data::{Limits, Data, FromData, Outcome};
 use crate::response::{self, Responder, content};
-use crate::http::Status;
+use crate::http::{uri, Status};
 use crate::form::prelude as form;
-use crate::http::uri::fmt;
 
 use serde::{Serialize, Deserialize};
 
@@ -138,6 +137,24 @@ pub enum Error<'a> {
     Parse(&'a str, serde_json::error::Error),
 }
 
+impl<'a> fmt::Display for Error<'a> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::Io(err) => write!(f, "i/o error: {}", err),
+            Self::Parse(_, err) => write!(f, "parse error: {}", err),
+        }
+    }
+}
+
+impl<'a> error::Error for Error<'a> {
+    fn source(&self) -> Option<&(dyn error::Error + 'static)> {
+        match self {
+            Self::Io(err) => Some(err),
+            Self::Parse(_, err) => Some(err),
+        }
+    }
+}
+
 impl<T> Json<T> {
     /// Consumes the JSON wrapper and returns the wrapped item.
     ///
@@ -208,9 +225,9 @@ impl<'r, T: Serialize> Responder<'r, 'static> for Json<T> {
     }
 }
 
-impl<T: Serialize> fmt::UriDisplay<fmt::Query> for Json<T> {
-    fn fmt(&self, f: &mut fmt::Formatter<'_, fmt::Query>) -> std::fmt::Result {
-        let string = to_string(&self.0).map_err(|_| std::fmt::Error)?;
+impl<T: Serialize> uri::fmt::UriDisplay<uri::fmt::Query> for Json<T> {
+    fn fmt(&self, f: &mut uri::fmt::Formatter<'_, uri::fmt::Query>) -> fmt::Result {
+        let string = to_string(&self.0).map_err(|_| fmt::Error)?;
         f.write_value(&string)
     }
 }
