@@ -83,7 +83,7 @@ use std::convert::TryInto;
 use std::ops::{RangeBounds, Bound};
 use std::fmt::Debug;
 
-use crate::data::ByteUnit;
+use crate::data::{ByteUnit, Capped};
 use rocket_http::ContentType;
 
 use crate::{fs::TempFile, form::{Result, Error}};
@@ -330,6 +330,12 @@ impl<L, T: Len<L> + ?Sized> Len<L> for &T {
 
 impl<L, T: Len<L>> Len<L> for Option<T> {
     fn len(&self) -> L { self.as_ref().map(|v| v.len()).unwrap_or(T::zero_len()) }
+    fn len_into_u64(len: L) -> u64 { T::len_into_u64(len) }
+    fn zero_len() -> L { T::zero_len() }
+}
+
+impl<L, T: Len<L>> Len<L> for Capped<T> {
+    fn len(&self) -> L { self.value.len() }
     fn len_into_u64(len: L) -> u64 { T::len_into_u64(len) }
     fn zero_len() -> L { T::zero_len() }
 }
@@ -801,6 +807,10 @@ pub fn ext<'v>(file: &TempFile<'_>, r#type: ContentType) -> Result<'v, ()> {
 /// #[derive(PartialEq, FromFormField)]
 /// enum Pet { Cat, Dog }
 ///
+/// fn is_dog(p: &Pet) -> bool {
+///     matches!(p, Pet::Dog)
+/// }
+///
 /// #[derive(FromForm)]
 /// struct Foo {
 ///     // These are equivalent. Prefer the former.
@@ -809,10 +819,14 @@ pub fn ext<'v>(file: &TempFile<'_>, r#type: ContentType) -> Result<'v, ()> {
 ///     pets: Vec<Pet>,
 ///     // These are equivalent. Prefer the former.
 ///     #[field(validate = eq(Pet::Dog))]
-///     #[field(validate = with(|p| *p == Pet::Dog, "expected a dog"))]
+///     #[field(validate = with(|p| matches!(p, Pet::Dog), "expected a dog"))]
+///     #[field(validate = with(|p| is_dog(p), "expected a dog"))]
+///   # #[field(validate = with(|p| is_dog(&self.dog), "expected a dog"))]
+///     #[field(validate = with(is_dog, "expected a dog"))]
 ///     dog: Pet,
 ///     // These are equivalent. Prefer the former.
 ///     #[field(validate = contains(&self.dog))]
+///   # #[field(validate = with(|p| is_dog(&self.dog), "expected a dog"))]
 ///     #[field(validate = with(|pets| pets.iter().any(|p| p == &self.dog), "missing dog"))]
 ///     one_dog_please: Vec<Pet>,
 /// }
