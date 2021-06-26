@@ -92,6 +92,65 @@
 //! The expansions are identical for `ReaderStream` and `ByteStream`, with
 //! `TextStream` replaced with `ReaderStream` and `ByteStream`, respectively.
 //!
+//! ## Borrowing
+//!
+//! A stream can _yield_ borrowed values with no extra effort:
+//!
+//! ```rust
+//! # use rocket::get;
+//! use rocket::State;
+//! use rocket::response::stream::TextStream;
+//!
+//! /// Produce a single string borrowed from the request.
+//! #[get("/infinite-hellos")]
+//! fn hello(string: &State<String>) -> TextStream![&str] {
+//!     TextStream! {
+//!         yield string.as_str();
+//!     }
+//! }
+//! ```
+//!
+//! If the stream _contains_ a borrowed value or uses one internally, Rust
+//! requires this fact be explicit with a lifetime annotation:
+//!
+//! ```rust
+//! # use rocket::get;
+//! use rocket::State;
+//! use rocket::response::stream::TextStream;
+//!
+//! #[get("/")]
+//! fn borrow1(ctxt: &State<bool>) -> TextStream![&'static str + '_] {
+//!     TextStream! {
+//!         // By using `ctxt` in the stream, the borrow is moved into it. Thus,
+//!         // the stream object contains a borrow, prompting the '_ annotation.
+//!         if *ctxt.inner() {
+//!             yield "hello";
+//!         }
+//!     }
+//! }
+//!
+//! // Just as before but yielding an owned yield value.
+//! #[get("/")]
+//! fn borrow2(ctxt: &State<bool>) -> TextStream![String + '_] {
+//!     TextStream! {
+//!         if *ctxt.inner() {
+//!             yield "hello".to_string();
+//!         }
+//!     }
+//! }
+//!
+//! // As before but _also_ return a borrowed value. Without it, Rust gives:
+//! // - lifetime `'r` is missing in item created through this procedural macro
+//! #[get("/")]
+//! fn borrow3<'r>(ctxt: &'r State<bool>, s: &'r State<String>) -> TextStream![&'r str + 'r] {
+//!     TextStream! {
+//!         if *ctxt.inner() {
+//!             yield s.as_str();
+//!         }
+//!     }
+//! }
+//! ```
+//!
 //! # Graceful Shutdown
 //!
 //! Infinite responders, like the one defined in `hello` above, will prolong

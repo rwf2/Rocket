@@ -6,7 +6,7 @@ use std::borrow::Cow;
 
 use syn::{self, Ident, ext::IdentExt as _, visit::Visit};
 use proc_macro2::{Span, TokenStream};
-use devise::ext::PathExt;
+use devise::ext::{PathExt, TypeExt as _};
 use rocket_http::ext::IntoOwned;
 
 pub trait IdentExt {
@@ -55,9 +55,11 @@ impl IntoOwned for Child<'_> {
     }
 }
 
+type MacTyMapFn = fn(&TokenStream) -> Option<syn::Type>;
+
 pub trait TypeExt {
     fn unfold(&self) -> Vec<Child<'_>>;
-    fn unfold_with_known_macros(&self, known_macros: &[&str]) -> Vec<Child<'_>>;
+    fn unfold_with_ty_macros(&self, names: &[&str], mapper: MacTyMapFn) -> Vec<Child<'_>>;
     fn is_concrete(&self, generic_ident: &[&Ident]) -> bool;
 }
 
@@ -137,29 +139,32 @@ impl FnArgExt for syn::FnArg {
     }
 }
 
-fn known_macro_inner_ty(t: &syn::TypeMacro, known: &[&str]) -> Option<syn::Type> {
-    if !known.iter().any(|k| t.mac.path.last_ident().map_or(false, |i| i == k)) {
+fn macro_inner_ty(t: &syn::TypeMacro, names: &[&str], m: MacTyMapFn) -> Option<syn::Type> {
+    if !names.iter().any(|k| t.mac.path.last_ident().map_or(false, |i| i == k)) {
         return None;
     }
 
-    syn::parse2(t.mac.tokens.clone()).ok()
+    let mut ty = m(&t.mac.tokens)?;
+    ty.strip_lifetimes();
+    Some(ty)
 }
 
 impl TypeExt for syn::Type {
     fn unfold(&self) -> Vec<Child<'_>> {
-        self.unfold_with_known_macros(&[])
+        self.unfold_with_ty_macros(&[], |_| None)
     }
 
-    fn unfold_with_known_macros<'a>(&'a self, known_macros: &[&str]) -> Vec<Child<'a>> {
+    fn unfold_with_ty_macros(&self, names: &[&str], mapper: MacTyMapFn) -> Vec<Child<'_>> {
         struct Visitor<'a, 'm> {
             parents: Vec<Cow<'a, syn::Type>>,
             children: Vec<Child<'a>>,
-            known_macros: &'m [&'m str],
+            names: &'m [&'m str],
+            mapper: MacTyMapFn,
         }
 
         impl<'m> Visitor<'_, 'm> {
-            fn new(known_macros: &'m [&'m str]) -> Self {
-                Visitor { parents: vec![], children: vec![], known_macros }
+            fn new(names: &'m [&'m str], mapper: MacTyMapFn) -> Self {
+                Visitor { parents: vec![], children: vec![], names, mapper }
             }
         }
 
@@ -168,8 +173,8 @@ impl TypeExt for syn::Type {
                 let parent = self.parents.last().cloned();
 
                 if let syn::Type::Macro(t) = ty {
-                    if let Some(inner_ty) = known_macro_inner_ty(t, self.known_macros) {
-                        let mut visitor = Visitor::new(self.known_macros);
+                    if let Some(inner_ty) = macro_inner_ty(t, self.names, self.mapper) {
+                        let mut visitor = Visitor::new(self.names, self.mapper);
                         if let Some(parent) = parent.clone().into_owned() {
                             visitor.parents.push(parent);
                         }
@@ -188,7 +193,7 @@ impl TypeExt for syn::Type {
             }
         }
 
-        let mut visitor = Visitor::new(known_macros);
+        let mut visitor = Visitor::new(names, mapper);
         visitor.visit_type(self);
         visitor.children
     }

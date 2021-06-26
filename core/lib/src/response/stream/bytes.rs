@@ -75,6 +75,9 @@ impl<'r, S: Stream> Responder<'r, 'r> for ByteStream<S>
 crate::export! {
     /// Type and stream expression macro for [`struct@ByteStream`].
     ///
+    /// See [`stream!`](crate::response::stream::stream) for the syntax
+    /// supported by this macro.
+    ///
     /// See [`struct@ByteStream`] and the [module level
     /// docs](crate::response::stream#typed-streams) for usage details.
     macro_rules! ByteStream {

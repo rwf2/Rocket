@@ -196,6 +196,9 @@ impl<S: Stream + fmt::Debug> fmt::Debug for ReaderStream<S>
 crate::export! {
     /// Type and stream expression macro for [`struct@ReaderStream`].
     ///
+    /// See [`stream!`](crate::response::stream::stream) for the syntax
+    /// supported by this macro.
+    ///
     /// See [`struct@ReaderStream`] and the [module level
     /// docs](crate::response::stream#typed-streams) for usage details.
     macro_rules! ReaderStream {

@@ -85,6 +85,9 @@ impl<'r, S: Stream> Responder<'r, 'r> for TextStream<S>
 crate::export! {
     /// Type and stream expression macro for [`struct@TextStream`].
     ///
+    /// See [`stream!`](crate::response::stream::stream) for the syntax
+    /// supported by this macro.
+    ///
     /// See [`struct@TextStream`] and the [module level
     /// docs](crate::response::stream#typed-streams) for usage details.
     macro_rules! TextStream {

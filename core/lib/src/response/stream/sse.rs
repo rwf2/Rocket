@@ -122,10 +122,24 @@ pub struct Event {
 }
 
 impl Event {
-    /// Creates an empty `Event` with no fields. This is hidden so we never
-    /// generate an `Event` with nothing.
-    fn empty() -> Self {
+    // We hide this since we never want to construct an `Event` with nothing.
+    fn new() -> Self {
         Event { comment: None, retry: None, id: None, event: None, data: None, }
+    }
+
+    /// Creates a new `Event` with an empty data field.
+    ///
+    /// This is exactly equivalent to `Event::data("")`.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use rocket::response::stream::Event;
+    ///
+    /// let event = Event::empty();
+    /// ```
+    pub fn empty() -> Self {
+        Event::data("")
     }
 
     /// Creates a new `Event` with a data field of `data` serialized as JSON.
@@ -174,7 +188,7 @@ impl Event {
     /// let event = Event::data("Hello, SSE!");
     /// ```
     pub fn data<T: Into<Cow<'static, str>>>(data: T) -> Self {
-        Self { data: Some(data.into()), ..Event::empty() }
+        Self { data: Some(data.into()), ..Event::new() }
     }
 
     /// Creates a new comment `Event`.
@@ -192,7 +206,7 @@ impl Event {
     /// let event = Event::comment("bet you'll never see me!");
     /// ```
     pub fn comment<T: Into<Cow<'static, str>>>(data: T) -> Self {
-        Self { comment: Some(data.into()), ..Event::empty() }
+        Self { comment: Some(data.into()), ..Event::new() }
     }
 
     /// Creates a new retry `Event`.
@@ -206,7 +220,7 @@ impl Event {
     /// let event = Event::retry(Duration::from_millis(250));
     /// ```
     pub fn retry(period: Duration) -> Self {
-        Self { retry: Some(period), ..Event::empty() }
+        Self { retry: Some(period), ..Event::new() }
     }
 
     /// Sets the value of the 'event' (event type) field.
@@ -396,6 +410,31 @@ impl Event {
 /// terminate an otherwise infinite stream, see [graceful
 /// shutdown](crate::response::stream#graceful-shutdown).
 ///
+/// # Borrowing
+///
+/// If an `EventStream` contains a borrow, the extended type syntax
+/// `EventStream![Event + '_]` must be used:
+///
+/// ```rust
+/// # use rocket::get;
+/// use rocket::State;
+/// use rocket::response::stream::{Event, EventStream};
+///
+/// #[get("/events")]
+/// fn events(ctxt: &State<bool>) -> EventStream![Event + '_] {
+///     EventStream! {
+///         // By using `ctxt` in the stream, the borrow is moved into it. Thus,
+///         // the stream object contains a borrow, prompting the '_ annotation.
+///         if *ctxt.inner() {
+///             yield Event::data("hi");
+///         }
+///     }
+/// }
+/// ```
+///
+/// See [`stream#borrowing`](crate::response::stream#borrowing) for further
+/// details on borrowing in streams.
+///
 /// # Pitfalls
 ///
 /// Server-Sent Events are a rather simple mechanism, though there are some
@@ -444,9 +483,8 @@ pub struct EventStream<S> {
 
 impl<S: Stream<Item = Event>> EventStream<S> {
     /// Sets a "ping" interval for this `EventStream` to avoid connection
-    /// timeouts when no data is being transferred. The default `interval` for a
-    /// newly created `EventStream` is `None`, which disables this
-    /// functionality.
+    /// timeouts when no data is being transferred. The default `interval` is 30
+    /// seconds.
     ///
     /// The ping is implemented by sending an empty comment to the client every
     /// `interval` seconds.
@@ -540,6 +578,11 @@ impl<'r, S: Stream<Item = Event> + Send + 'r> Responder<'r, 'r> for EventStream<
 
 crate::export! {
     /// Type and stream expression macro for [`struct@EventStream`].
+    ///
+    /// See [`stream!`](crate::response::stream::stream) for the syntax
+    /// supported by this macro. In addition to that syntax, this macro can also
+    /// be called with no arguments, `EventStream![]`, as shorthand for
+    /// `EventStream![Event]`.
     ///
     /// See [`struct@EventStream`] and the [module level
     /// docs](crate::response::stream#typed-streams) for usage details.

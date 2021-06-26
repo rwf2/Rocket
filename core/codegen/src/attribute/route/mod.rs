@@ -274,11 +274,22 @@ fn sentinels_expr(route: &Route) -> TokenStream {
     //      * returns `true` for the parent, and so the type has a parent, and
     //      the theorem holds.
     //    3. these are all the cases. QED.
-    const TYPE_MACROS: &[&str] = &["ReaderStream", "TextStream", "ByteStream", "EventStream"];
+
+    const TY_MACS: &[&str] = &["ReaderStream", "TextStream", "ByteStream", "EventStream"];
+
+    fn ty_mac_mapper(tokens: &TokenStream) -> Option<syn::Type> {
+        use crate::bang::typed_stream::Input;
+
+        match syn::parse2(tokens.clone()).ok()? {
+            Input::Type(ty, ..) => Some(ty),
+            Input::Tokens(..) => None
+        }
+    }
+
     let eligible_types = route.guards()
         .map(|guard| &guard.ty)
         .chain(ret_ty.as_ref().into_iter())
-        .flat_map(|ty| ty.unfold_with_known_macros(TYPE_MACROS))
+        .flat_map(|ty| ty.unfold_with_ty_macros(TY_MACS, ty_mac_mapper))
         .filter(|ty| ty.is_concrete(&generic_idents))
         .map(|child| (child.parent, child.ty));
 
