@@ -60,7 +60,7 @@ use crate::http::uncased::AsUncased;
 ///
 /// [`Form`]: crate::form::Form
 /// [`FromForm`]: crate::form::FromForm
-/// [`FromForm` derive]: ../derive.FromForm.html
+/// [`FromForm` derive]: derive@crate::FromForm
 /// [FromFormField]: crate::form::FromFormField
 /// [`shift()`ed]: NameView::shift()
 /// [`key()`]: NameView::key()
