@@ -243,11 +243,12 @@ impl ValidationMutator<'_> {
 
 impl VisitMut for ValidationMutator<'_> {
     fn visit_expr_call_mut(&mut self, call: &mut syn::ExprCall) {
-        syn::visit_mut::visit_expr_call_mut(self, call);
-
         // Only modify the first call we see.
-        if self.visited { return; }
+        if self.visited {
+            return syn::visit_mut::visit_expr_call_mut(self, call);
+        }
 
+        self.visited = true;
         let (parent, field) = (self.parent, self.field);
         let form_field = match self.local {
             true => syn::parse2(quote_spanned!(field.span() => &#field)).unwrap(),
@@ -258,7 +259,7 @@ impl VisitMut for ValidationMutator<'_> {
         };
 
         call.args.insert(0, form_field);
-        self.visited = true;
+        syn::visit_mut::visit_expr_call_mut(self, call);
     }
 
     fn visit_ident_mut(&mut self, i: &mut syn::Ident) {
