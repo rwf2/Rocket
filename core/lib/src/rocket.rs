@@ -504,8 +504,8 @@ impl Rocket<Build> {
         // Log everything we know: config, routes, catchers, fairings.
         // TODO: Store/print managed state type names?
         config.pretty_print(self.figment());
-        log_items("🛰  ", "Routes", self.routes(), |r| &r.uri.base, |r| &r.uri);
-        log_items("👾 ", "Catchers", self.catchers(), |c| &c.base, |c| &c.base);
+        log_items("📬 ", "Routes", self.routes(), |r| &r.uri.base, |r| &r.uri);
+        log_items("🥅 ", "Catchers", self.catchers(), |c| &c.base, |c| &c.base);
         self.fairings.pretty_print();
 
         // Ignite the rocket.
