@@ -24,7 +24,7 @@
 //! [`json()`]: crate::local::blocking::LocalRequest::json()
 //! [`into_json()`]: crate::local::blocking::LocalResponse::into_json()
 
-use std::io;
+use std::{io, fmt, error};
 use std::ops::{Deref, DerefMut};
 
 use crate::request::{Request, local_cache};
@@ -135,6 +135,24 @@ pub enum Error<'a> {
     /// received from the user, while the `Error` in `.1` is the deserialization
     /// error from `serde`.
     Parse(&'a str, serde_json::error::Error),
+}
+
+impl<'a> fmt::Display for Error<'a> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::Io(err) => write!(f, "Json error caused by io: {}", err),
+            Self::Parse(_, err) => write!(f, "Json error caused by invalid json: {}", err),
+        }
+    }
+}
+
+impl<'a> error::Error for Error<'a> {
+    fn source(&self) -> Option<&(dyn error::Error + 'static)> {
+        match self {
+            Self::Io(err) => Some(err),
+            Self::Parse(_, err) => Some(err),
+        }
+    }
 }
 
 impl<T> Json<T> {
