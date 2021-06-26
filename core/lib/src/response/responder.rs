@@ -7,29 +7,47 @@ use crate::request::Request;
 
 /// Trait implemented by types that generate responses for clients.
 ///
-/// Types that implement this trait can be used as the return type of a handler,
-/// as illustrated below with `T`:
+/// Any type that implements `Responder` can be used as the return type of a
+/// handler:
 ///
 /// ```rust
 /// # #[macro_use] extern crate rocket;
 /// # type T = ();
 /// #
+/// // This works for any `T` that implements `Responder`.
 /// #[get("/")]
 /// fn index() -> T { /* ... */ }
 /// ```
 ///
-/// In this example, `T` can be any type, as long as it implements `Responder`.
+/// # Deriving
 ///
-/// # Return Value
+/// This trait can, and largely _should_, be automatically derived. The derive
+/// can handle all simple cases and most complex cases, too. When deriving
+/// `Responder`, the first field of the annotated structure (or of each variant
+/// if an `enum`) is used to generate a response while the remaining fields are
+/// used as response headers:
 ///
-/// A `Responder` returns an `Ok(Response)` or an `Err(Status)`:
+/// ```rust
+/// # #[macro_use] extern crate rocket;
+/// # #[cfg(feature = "json")] mod _main {
+/// # type Template = String;
+/// use rocket::http::ContentType;
+/// use rocket::serde::{Serialize, json::Json};
 ///
-///   * An `Ok` variant means that the `Responder` was successful in generating
-///     a `Response`. The `Response` will be written out to the client.
+/// #[derive(Responder)]
+/// #[response(bound = "T: Serialize")]
+/// enum Error<T> {
+///     #[response(status = 400)]
+///     Unauthorized(Json<T>),
+///     #[response(status = 404)]
+///     NotFound(Template, ContentType),
+/// }
+/// # }
+/// ```
 ///
-///   * An `Err` variant means that the `Responder` could not or did not
-///     generate a `Response`. The contained `Status` will be used to find the
-///     relevant error catcher which then generates an error response.
+/// For full details on deriving `Responder`, see the [`Responder` derive].
+///
+/// [`Responder` derive]: derive@crate::Responder
 ///
 /// # Provided Implementations
 ///
@@ -86,37 +104,97 @@ use crate::request::Request;
 ///     to the client. If the `Result` is `Err`, the wrapped `Err` responder is
 ///     used to respond to the client.
 ///
+/// # Return Value
+///
+/// A `Responder` returns a `Future` whose output type is a `Result<Response,
+/// Status>`.
+///
+///   * An `Ok(Response)` indicates success. The `Response` will be written out
+///     to the client.
+///
+///   * An `Err(Status)` indicates failure. The error catcher for `Status` will
+///     be invoked to generate a response.
+///
 /// # Implementation Tips
 ///
 /// This section describes a few best practices to take into account when
 /// implementing `Responder`.
 ///
-/// ## Joining and Merging
+/// 1. Avoid Manual Implementations
 ///
-/// When chaining/wrapping other `Responder`s, use the
-/// [`merge()`](Response::merge()) or [`join()`](Response::join()) methods on
-/// the `Response` or `ResponseBuilder` struct. Ensure that you document the
-/// merging or joining behavior appropriately.
+///    The [`Responder` derive] is a powerful mechanism that eliminates the need
+///    to implement `Responder` in almost all cases. We encourage you to explore
+///    using the derive _before_ attempting to implement `Responder` directly.
+///    It allows you to leverage existing `Responder` implementations through
+///    composition, decreasing the opportunity for mistakes or performance
+///    degradation.
 ///
-/// ## Inspecting Requests
+/// 2. Joining and Merging
 ///
-/// A `Responder` has access to the request it is responding to. Even so, you
-/// should avoid using the `Request` value as much as possible. This is because
-/// using the `Request` object makes your responder _impure_, and so the use of
-/// the type as a `Responder` has less intrinsic meaning associated with it. If
-/// the `Responder` were pure, however, it would always respond in the same manner,
-/// regardless of the incoming request. Thus, knowing the type is sufficient to
-/// fully determine its functionality.
+///    When chaining/wrapping other `Responder`s, start with
+///    [`Response::build_from()`] and/or use the [`merge()`](Response::merge())
+///    or [`join()`](Response::join()) methods on the `Response` or
+///    `ResponseBuilder` struct. Ensure that you document merging or joining
+///    behavior appropriatse.
+///
+/// 3. Inspecting Requests
+///
+///    While tempting, a `Responder` that varies its functionality based on the
+///    incoming request sacrifices its functionality being understood based
+///    purely on its type. By implication, gleaming the functionality of a
+///    _handler_ from its type signature also becomes more difficult. You should
+///    avoid varying responses based on the `Request` value as much as possible.
 ///
 /// ## Lifetimes
 ///
-/// `Responder` has two lifetimes: `Responder<'r, 'o: 'r>`. The first lifetime,
-/// `'r`, refers to the reference to the `&'r Request`, while the second
-/// lifetime refers to the returned `Response<'o>`. The bound `'o: 'r` allows
-/// `'o` to be any lifetime that lives at least as long as the `Request`. In
-/// particular, this includes borrows from the `Request` itself (where `'o` would
-/// be `'r` as in `impl<'r> Responder<'r, 'r>`) as well as `'static` data (where
-/// `'o` would be `'static` as in `impl<'r> Responder<'r, 'static>`).
+/// `Responder` has two lifetimes: `Responder<'r, 'o: 'r>`.
+///
+///   * `'r` bounds the reference to the `&'r Request`.
+///
+///   * `'o` bounds the returned `Response<'o>` to values that live at least as
+///     long as the request.
+///
+///     This includes borrows from the `Request` itself (where `'o` would be
+///     `'r` as in `impl<'r> Responder<'r, 'r>`) as well as `'static` data
+///     (where `'o` would be `'static` as in `impl<'r> Responder<'r, 'static>`).
+///
+/// In practice, you are likely choosing between four signatures:
+///
+/// ```rust
+/// # use rocket::request::Request;
+/// # use rocket::response::{self, Responder};
+/// # struct A;
+/// // If the response contains no borrowed data.
+/// impl<'r> Responder<'r, 'static> for A {
+///     fn respond_to(self, _: &'r Request<'_>) -> response::Result<'static> {
+///         todo!()
+///     }
+/// }
+///
+/// # struct B<'r>(&'r str);
+/// // If the response borrows from the request.
+/// impl<'r> Responder<'r, 'r> for B<'r> {
+///     fn respond_to(self, _: &'r Request<'_>) -> response::Result<'r> {
+///         todo!()
+///     }
+/// }
+///
+/// # struct C;
+/// // If the response is or wraps a borrow that may outlive the request.
+/// impl<'r, 'o: 'r> Responder<'r, 'o> for &'o C {
+///     fn respond_to(self, _: &'r Request<'_>) -> response::Result<'o> {
+///         todo!()
+///     }
+/// }
+///
+/// # struct D<R>(R);
+/// // If the response wraps an existing responder.
+/// impl<'r, 'o: 'r, R: Responder<'r, 'o>> Responder<'r, 'o> for D<R> {
+///     fn respond_to(self, _: &'r Request<'_>) -> response::Result<'o> {
+///         todo!()
+///     }
+/// }
+/// ```
 ///
 /// # Example
 ///
@@ -162,10 +240,9 @@ use crate::request::Request;
 /// use rocket::http::ContentType;
 ///
 /// impl<'r> Responder<'r, 'static> for Person {
-///     fn respond_to(self, _: &'r Request<'_>) -> response::Result<'static> {
-///         let person_string = format!("{}:{}", self.name, self.age);
-///         Response::build()
-///             .sized_body(person_string.len(), Cursor::new(person_string))
+///     fn respond_to(self, req: &'r Request<'_>) -> response::Result<'static> {
+///         let string = format!("{}:{}", self.name, self.age);
+///         Response::build_from(string.respond_to(req)?)
 ///             .raw_header("X-Person-Name", self.name)
 ///             .raw_header("X-Person-Age", self.age.to_string())
 ///             .header(ContentType::new("application", "x-person"))
@@ -176,6 +253,35 @@ use crate::request::Request;
 /// # #[get("/person")]
 /// # fn person() -> Person { Person { name: "a".to_string(), age: 20 } }
 /// # fn main() {  }
+/// ```
+///
+/// Note that the implementation could have instead been derived if structured
+/// in a slightly different manner:
+///
+/// ```rust
+/// use rocket::http::Header;
+/// use rocket::response::Responder;
+///
+/// #[derive(Responder)]
+/// #[response(content_type = "application/x-person")]
+/// struct Person {
+///     text: String,
+///     name: Header<'static>,
+///     age: Header<'static>,
+/// }
+///
+/// impl Person {
+///     fn new(name: &str, age: usize) -> Person {
+///         Person {
+///             text: format!("{}:{}", name, age),
+///             name: Header::new("X-Person-Name", name.to_string()),
+///             age: Header::new("X-Person-Age", age.to_string())
+///         }
+///     }
+/// }
+/// #
+/// # #[rocket::get("/person")]
+/// # fn person() -> Person { Person::new("Bob", 29) }
 /// ```
 pub trait Responder<'r, 'o: 'r> {
     /// Returns `Ok` if a `Response` could be generated successfully. Otherwise,
