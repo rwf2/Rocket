@@ -1,6 +1,6 @@
+use rocket::figment::{self, Figment, providers::Serialized};
 use rocket::serde::{Deserialize, Serialize};
-
-use crate::Error;
+use rocket::{Build, Rocket};
 
 /// A base `Config` for any `Pool` type.
 ///
@@ -18,7 +18,8 @@ use crate::Error;
 /// # use rocket_db_pools::Config;
 /// Config {
 ///     url: "postgres://root:root@localhost/my_database".into(),
-///     pool_size: Some(10),
+///     pool_size: 10,
+///     timeout: 5,
 /// };
 /// ```
 ///
@@ -31,18 +32,33 @@ use crate::Error;
 pub struct Config {
     /// Connection URL specified in the Rocket configuration.
     pub url: String,
-    /// Requested pool size. Defaults to the number of Rocket workers * 4.
-    pub pool_size: Option<i64>,
-    // TODO: timeout?
+    /// Initial pool size. Defaults to the number of Rocket workers * 4.
+    pub pool_size: u32,
+    /// How long to wait, in seconds, for a new connection before timing out.
+    /// Defaults to `5`.
+    // FIXME: Use `time`.
+    pub timeout: u8,
 }
 
 impl Config {
-    /// Returns the requested pool size, or `default`
-    pub fn pool_size_or_default<E>(&self, default: i64) -> Result<usize, Error<E>> {
-        use std::convert::TryInto;
-        match self.pool_size.unwrap_or(default).try_into() {
-            Ok(p) => Ok(p),
-            Err(_) => Err(Error::config("pool_size was outside the valid range")),
+    pub fn from(db_name: &str, rocket: &Rocket<Build>) -> Result<Self, figment::Error> {
+        Self::figment(db_name, rocket).extract::<Self>()
+    }
+
+    pub fn figment(db_name: &str, rocket: &Rocket<Build>) -> Figment {
+        let db_key = format!("databases.{}", db_name);
+        let default_pool_size = rocket.figment()
+            .extract_inner::<u32>(rocket::Config::WORKERS)
+            .map(|workers| workers * 4)
+            .ok();
+
+        let figment = Figment::from(rocket.figment())
+            .focus(&db_key)
+            .join(Serialized::default("timeout", 5));
+
+        match default_pool_size {
+            Some(pool_size) => figment.join(Serialized::default("pool_size", pool_size)),
+            None => figment
         }
     }
 }

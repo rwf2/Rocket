@@ -1,8 +1,11 @@
 use rocket::fairing::{Info, Kind};
 use rocket::futures::future::BoxFuture;
+use rocket::http::Status;
+use rocket::request::{FromRequest, Outcome, Request};
+use rocket::yansi::Paint;
 use rocket::{Build, Ignite, Rocket, Sentinel};
 
-use crate::Pool;
+use crate::{Error, Pool};
 
 /// Trait implemented to define a database connection pool.
 pub trait Database: Sized + Send + Sync + 'static {
@@ -43,34 +46,30 @@ impl<D: Database> std::ops::DerefMut for Connection<D> {
 }
 
 #[rocket::async_trait]
-impl<'r, D: Database> rocket::request::FromRequest<'r> for Connection<D> {
-    type Error = <D::Pool as Pool>::GetError;
+impl<'r, D: Database> FromRequest<'r> for Connection<D> {
+    type Error = Error<<D::Pool as Pool>::GetError>;
 
-    async fn from_request(
-        req: &'r rocket::Request<'_>,
-    ) -> rocket::request::Outcome<Self, Self::Error> {
-        use rocket::http::Status;
-        use rocket::request::Outcome;
-
+    async fn from_request(req: &'r Request<'_>) -> Outcome<Self, Self::Error> {
         let db: &D = match req.rocket().state() {
             Some(p) => p,
-            _ => panic!(
-                "tried to use database connection pool {}, but its fairing was not attached",
-                D::NAME,
-            ),
+            _ => {
+                let dbtype = Paint::default(std::any::type_name::<D>()).bold();
+                let fairing = Paint::default(format!("{}::fairing()", dbtype)).wrap().bold();
+                error!("requesting `{}` DB connection without attaching `{}`.", dbtype, fairing);
+                info_!("Attach `{}` to use database connection pooling.", fairing);
+                return Outcome::Failure((Status::InternalServerError, Error::UnattachedFairing));
+            }
         };
 
         match db.pool().get().await {
             Ok(conn) => Outcome::Success(Connection(conn)),
-            Err(e) => Outcome::Failure((Status::ServiceUnavailable, e)),
+            Err(e) => Outcome::Failure((Status::ServiceUnavailable, Error::Db(e))),
         }
     }
 }
 
 impl<D: Database> Sentinel for Connection<D> {
     fn abort(rocket: &Rocket<Ignite>) -> bool {
-        use rocket::yansi::Paint;
-
         if rocket.state::<D>().is_none() {
             let dbtype = Paint::default(std::any::type_name::<D>()).bold();
             let fairing = Paint::default(format!("{}::fairing()", dbtype)).wrap().bold();
@@ -84,14 +83,14 @@ impl<D: Database> Sentinel for Connection<D> {
 }
 
 /// The database fairing for pool types created with the `pool!` macro.
-pub struct Fairing<D: Database>(fn(D::Pool) -> D);
+pub struct Fairing<D: Database>(&'static str, fn(D::Pool) -> D);
 
 impl<D: Database> Fairing<D> {
     /// Create a new database fairing with the given constructor.  This
     /// constructor will be called to create an instance of `D` after the pool
     /// is initialized and before it is placed into managed state.
-    pub fn new(ctor: fn(D::Pool) -> D) -> Self {
-        Self(ctor)
+    pub fn new(fairing_name: &'static str, ctor: fn(D::Pool) -> D, ) -> Self {
+        Self(fairing_name, ctor)
     }
 }
 
@@ -99,32 +98,13 @@ impl<D: Database> Fairing<D> {
 impl<D: Database> rocket::fairing::Fairing for Fairing<D> {
     fn info(&self) -> Info {
         Info {
-            name: "rocket_db_pools connection pool",
+            name: self.0,
             kind: Kind::Ignite,
         }
     }
 
     async fn on_ignite(&self, rocket: Rocket<Build>) -> Result<Rocket<Build>, Rocket<Build>> {
-        let db_config = match rocket
-            .figment()
-            .find_value(&format!("databases.{}", D::NAME))
-        {
-            Ok(v) => v,
-            Err(e) => {
-                error!("error getting database configuration: {}", e);
-                return Err(rocket);
-            }
-        };
-
-        let config = match db_config.deserialize() {
-            Ok(c) => c,
-            Err(e) => {
-                error!("error deserializing configuration: {}", e);
-                return Err(rocket);
-            }
-        };
-
-        let pool = match <D::Pool>::initialize(config).await {
+        let pool = match <D::Pool>::initialize(D::NAME, &rocket).await {
             Ok(p) => p,
             Err(e) => {
                 error!("error initializing database connection pool: {}", e);
@@ -132,6 +112,6 @@ impl<D: Database> rocket::fairing::Fairing for Fairing<D> {
             }
         };
 
-        Ok(rocket.manage((self.0)(pool)))
+        Ok(rocket.manage((self.1)(pool)))
     }
 }

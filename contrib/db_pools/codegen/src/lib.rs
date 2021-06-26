@@ -17,20 +17,20 @@ use proc_macro::TokenStream;
 ///
 /// ```ignore
 /// #[derive(Database)]
-/// #[database(name="CONFIG_NAME")]
-/// struct DBNAME(POOL_TYPE);
+/// #[database("database_name")]
+/// struct Db(PoolType);
 /// ```
 ///
-/// `POOL_TYPE` must implement [`Pool`].
+/// `PoolType` must implement [`Pool`].
 ///
 /// This macro generates the following code, implementing the [`Database`] trait
 /// on the struct. Custom implementations of `Database` should usually also
 /// start with roughly this code:
 ///
 /// ```ignore
-/// impl Database for DBNAME {
+/// impl Database for Db {
 ///     const NAME: &'static str = "config_name";
-///     type Pool = POOL_TYPE;
+///     type Pool = PoolType;
 ///     fn fairing() -> Fairing<Self> { Fairing::new(|p| Self(p)) }
 ///     fn pool(&self) -> &Self::Pool { &self.0 }
 /// }
@@ -38,5 +38,4 @@ use proc_macro::TokenStream;
 #[proc_macro_derive(Database, attributes(database))]
 pub fn derive_database(input: TokenStream) -> TokenStream {
     crate::database::derive_database(input)
-        .unwrap_or_else(|diag| diag.emit_as_item_tokens().into())
 }

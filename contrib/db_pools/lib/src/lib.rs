@@ -54,7 +54,7 @@
 //! use rocket_db_pools::{Database, Connection, sqlx};
 //!
 //! #[derive(Database)]
-//! #[database(name = "sqlite_logs")]
+//! #[database("sqlite_logs")]
 //! struct LogsDb(sqlx::SqlitePool);
 //!
 //! type LogsDbConn = Connection<LogsDb>;
@@ -81,7 +81,7 @@
 //! # use rocket_db_pools::{Database, Connection, sqlx};
 //! #
 //! # #[derive(Database)]
-//! # #[database(name = "sqlite_logs")]
+//! # #[database("sqlite_logs")]
 //! # struct LogsDb(sqlx::SqlitePool);
 //! # type LogsDbConn = Connection<LogsDb>;
 //! #
@@ -188,7 +188,7 @@
 //!
 //! Once a database has been configured, the `#[derive(Database)]` macro can be
 //! used to tie a type in your application to a configured database. The derive
-//! accepts a single attribute, `#[database(name = "name")]` that indicates the
+//! accepts a single attribute, `#[database("name")]` that indicates the
 //! name of the database. This corresponds to the database name set as the
 //! database's configuration key.
 //!
@@ -211,7 +211,7 @@
 //! use rocket_db_pools::{Database, sqlx};
 //!
 //! #[derive(Database)]
-//! #[database(name = "my_db")]
+//! #[database("my_db")]
 //! struct MyDatabase(sqlx::SqlitePool);
 //! # }
 //! ```
@@ -220,12 +220,12 @@
 //!
 //! ```rust
 //! # #[macro_use] extern crate rocket_db_pools;
-//! # #[cfg(feature = "deadpool-postgres")]
+//! # #[cfg(feature = "deadpool_postgres")]
 //! # mod test {
 //! use rocket_db_pools::{Database, deadpool_postgres};
 //!
 //! #[derive(Database)]
-//! #[database(name = "my_pg_db")]
+//! #[database("my_pg_db")]
 //! struct MyPgDatabase(deadpool_postgres::Pool);
 //! # }
 //! ```
@@ -243,7 +243,7 @@
 //! use rocket_db_pools::{Database, sqlx};
 //!
 //! #[derive(Database)]
-//! #[database(name = "my_db")]
+//! #[database("my_db")]
 //! struct MyDatabase(sqlx::SqlitePool);
 //!
 //! #[launch]
@@ -272,7 +272,7 @@
 //! use rocket::State;
 //!
 //! #[derive(Database)]
-//! #[database(name = "my_db")]
+//! #[database("my_db")]
 //! struct MyDatabase(sqlx::SqlitePool);
 //!
 //! #[get("/")]
@@ -294,7 +294,7 @@
 //! # use rocket_db_pools::{Database, Connection, sqlx};
 //! # type Data = ();
 //! #[derive(Database)]
-//! #[database(name = "my_db")]
+//! #[database("my_db")]
 //! struct MyDatabase(sqlx::SqlitePool);
 //!
 //! type MyConnection = Connection<MyDatabase>;
@@ -329,8 +329,8 @@
 //! | Sqlite   | [sqlx]                | `0.5`     | [`sqlx::SqlitePool`]           | `sqlx_sqlite`          |
 //! | Mongodb  | [mongodb]             | `2.0.0-beta` | [`mongodb::Client`]         | `mongodb`              |
 //! | MySQL    | [mysql_async]         | `0.27`    | [`mysql_async::Pool`]          | `mysql_async`          |
-//! | Postgres | [deadpool-postgres]   | `0.8`     | [`deadpool_postgres::Pool`]    | `deadpool-postgres`    |
-//! | Redis    | [deadpool-redis]      | `0.8`     | [`deadpool_redis::Pool`]       | `deadpool-redis`       |
+//! | Postgres | [deadpool-postgres]   | `0.8`     | [`deadpool_postgres::Pool`]    | `deadpool_postgres`    |
+//! | Redis    | [deadpool-redis]      | `0.8`     | [`deadpool_redis::Pool`]       | `deadpool_redis`       |
 //!
 //! [sqlx]: https://docs.rs/sqlx/0.5/sqlx/
 //! [deadpool-postgres]: https://docs.rs/deadpool-postgres/0.8/deadpool_postgres/
@@ -363,8 +363,8 @@
 #[macro_use]
 pub extern crate rocket;
 
-#[cfg(feature = "deadpool-postgres")] pub use deadpool_postgres;
-#[cfg(feature = "deadpool-redis")] pub use deadpool_redis;
+#[cfg(feature = "deadpool_postgres")] pub use deadpool_postgres;
+#[cfg(feature = "deadpool_redis")] pub use deadpool_redis;
 #[cfg(feature = "mysql_async")] pub use mysql_async;
 #[cfg(feature = "mongodb")] pub use mongodb;
 #[cfg(feature = "sqlx")] pub use sqlx;

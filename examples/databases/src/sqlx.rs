@@ -8,8 +8,8 @@ use rocket_db_pools::{sqlx, Database};
 use futures::stream::TryStreamExt;
 use futures::future::TryFutureExt;
 
-#[derive(rocket_db_pools::Database)]
-#[database(name = "sqlx")]
+#[derive(Database)]
+#[database("sqlx")]
 struct Db(sqlx::SqlitePool);
 
 type Connection = rocket_db_pools::Connection<Db>;

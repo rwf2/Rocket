@@ -1,5 +1,6 @@
-use std::borrow::Cow;
 use std::fmt;
+
+use rocket::figment;
 
 /// A general error type designed for the `Poolable` trait.
 ///
@@ -11,30 +12,30 @@ use std::fmt;
 /// [`Pool::initialize`]: crate::Pool::initialize
 #[derive(Debug)]
 pub enum Error<E> {
-    /// An error in the configuration
-    Config(Cow<'static, str>),
-
     /// A database-specific error occurred
     Db(E),
-}
 
-impl<E> Error<E> {
-    /// Creates a new `Error` corresponding to an error in configuration.
-    ///
-    /// The message should indicate what field was incorrect and what was
-    /// expected instead if applicable.
-    pub fn config(message: impl Into<Cow<'static, str>>) -> Self {
-        Self::Config(message.into())
-    }
+    /// An error occurred in the configuration
+    Figment(figment::Error),
+
+    /// Required fairing was not attached
+    UnattachedFairing,
 }
 
 impl<E: fmt::Display> fmt::Display for Error<E> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Error::Db(e) => e.fmt(f),
-            Error::Config(e) => write!(f, "database connection pool configuration error: {}", e),
+            Error::Figment(e) => write!(f, "bad configuration: {}", e),
+            Error::UnattachedFairing => write!(f, "required database fairing was not attached"),
         }
     }
 }
 
 impl<E: fmt::Debug + fmt::Display> std::error::Error for Error<E> {}
+
+impl<E> From<figment::Error> for Error<E> {
+    fn from(e: figment::Error) -> Self {
+        Self::Figment(e)
+    }
+}

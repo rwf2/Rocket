@@ -10,6 +10,8 @@ license = "MIT OR Apache-2.0"
 edition = "2018"
 
 [features]
+deadpool_postgres = ["deadpool-postgres"]
+deadpool_redis = ["deadpool-redis"]
 sqlx_mysql = ["sqlx", "sqlx/mysql"]
 sqlx_postgres = ["sqlx", "sqlx/postgres"]
 sqlx_sqlite = ["sqlx", "sqlx/sqlite"]

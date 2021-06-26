@@ -39,7 +39,7 @@ use rocket::serde::json::Json;
 use rocket_db_pools::{Database, sqlx};
 
 #[derive(Database)]
-#[database(name = "sqlite_logs")]
+#[database("sqlite_logs")]
 struct LogsDb(sqlx::SqlitePool);
 
 type LogsDbConn = <LogsDb as Database>::Connection;
