@@ -144,11 +144,18 @@ impl FileServer {
         use crate::yansi::Paint;
 
         let path = path.as_ref();
-        if !path.is_dir() {
-            let path = path.display();
-            error!("FileServer path '{}' is not a directory.", Paint::white(path));
-            warn_!("Aborting early to prevent inevitable handler failure.");
-            panic!("bad FileServer path: refusing to continue");
+        if !options.contains(Options::Missing) {
+            if !options.contains(Options::IndexFile) && !path.is_dir() {
+                let path = path.display();
+                error!("FileServer path '{}' is not a directory.", Paint::white(path));
+                warn_!("Aborting early to prevent inevitable handler failure.");
+                panic!("invalid directory: refusing to continue");
+            } else if !path.exists() {
+                let path = path.display();
+                error!("FileServer path '{}' is not a file.", Paint::white(path));
+                warn_!("Aborting early to prevent inevitable handler failure.");
+                panic!("invalid file: refusing to continue");
+            }
         }
 
         FileServer { root: path.into(), options, rank: Self::DEFAULT_RANK }
@@ -177,7 +184,7 @@ impl Into<Vec<Route>> for FileServer {
     fn into(self) -> Vec<Route> {
         let source = figment::Source::File(self.root.clone());
         let mut route = Route::ranked(self.rank, Method::Get, "/<path..>", self);
-        route.name = Some(format!("FileServer: {}/", source).into());
+        route.name = Some(format!("FileServer: {}", source).into());
         vec![route]
     }
 }
@@ -187,8 +194,23 @@ impl Handler for FileServer {
     async fn handle<'r>(&self, req: &'r Request<'_>, data: Data<'r>) -> Outcome<'r> {
         use crate::http::uri::fmt::Path;
 
-        // Get the segments as a `PathBuf`, allowing dotfiles requested.
+        // TODO: Should we reject dotfiles for `self.root` if !DotFiles?
         let options = self.options;
+        if options.contains(Options::IndexFile) && self.root.is_file() {
+            let segments = match req.segments::<Segments<'_, Path>>(0..) {
+                Ok(segments) => segments,
+                Err(never) => match never {},
+            };
+
+            if segments.is_empty() {
+                let file = NamedFile::open(&self.root).await.ok();
+                return Outcome::from_or_forward(req, data, file);
+            } else {
+                return Outcome::forward(data);
+            }
+        }
+
+        // Get the segments as a `PathBuf`, allowing dotfiles requested.
         let allow_dotfiles = options.contains(Options::DotFiles);
         let path = req.segments::<Segments<'_, Path>>(0..).ok()
             .and_then(|segments| segments.to_path_buf(allow_dotfiles).ok())
@@ -225,6 +247,8 @@ impl Handler for FileServer {
 ///   * [`Options::None`] - Return only present, visible files.
 ///   * [`Options::DotFiles`] - In addition to visible files, return dotfiles.
 ///   * [`Options::Index`] - Render `index.html` pages for directory requests.
+///   * [`Options::IndexFile`] - Allow serving a single file as the index.
+///   * [`Options::Missing`] - Don't fail if the path to serve is missing.
 ///   * [`Options::NormalizeDirs`] - Redirect directories without a trailing
 ///     slash to ones with a trailing slash.
 ///
@@ -240,7 +264,7 @@ impl Options {
     ///
     /// This is different than [`Options::default()`](#impl-Default), which
     /// enables `Options::Index`.
-    pub const None: Options = Options(0b0000);
+    pub const None: Options = Options(0);
 
     /// Respond to requests for a directory with the `index.html` file in that
     /// directory, if it exists.
@@ -250,16 +274,16 @@ impl Options {
     /// exists. When disabled, requests to directories will always forward.
     ///
     /// **Enabled by default.**
-    pub const Index: Options = Options(0b0001);
+    pub const Index: Options = Options(1 << 0);
 
-    /// Allow requests to dotfiles.
+    /// Allow serving dotfiles.
     ///
     /// When enabled, [`FileServer`] will respond to requests for files or
     /// directories beginning with `.`. When disabled, any dotfiles will be
     /// treated as missing.
     ///
     /// **Disabled by default.**
-    pub const DotFiles: Options = Options(0b0010);
+    pub const DotFiles: Options = Options(1 << 1);
 
     /// Normalizes directory requests by redirecting requests to directory paths
     /// without a trailing slash to ones with a trailing slash.
@@ -291,7 +315,43 @@ impl Options {
     /// result, the request in the former case will fail. To avoid this,
     /// `NormalizeDirs` will redirect requests to `/foo` to `/foo/` if the file
     /// that would be served is a directory.
-    pub const NormalizeDirs: Options = Options(0b0100);
+    pub const NormalizeDirs: Options = Options(1 << 2);
+
+    /// Allow serving a file instead of a directory.
+    ///
+    /// By default, `FileServer` will error on construction if the path to serve
+    /// does not point to a directory. When this option is enabled, if a path to
+    /// a file is provided, `FileServer` will serve the file as the root of the
+    /// mount path.
+    ///
+    /// # Example
+    ///
+    /// If the file tree looks like:
+    ///
+    /// ```text
+    /// static/
+    /// └── cat.jpeg
+    /// ```
+    ///
+    /// Then `cat.jpeg` can be served at `/cat` with:
+    ///
+    /// ```rust,no_run
+    /// # #[macro_use] extern crate rocket;
+    /// use rocket::fs::{FileServer, Options};
+    ///
+    /// #[launch]
+    /// fn rocket() -> _ {
+    ///     rocket::build()
+    ///         .mount("/cat", FileServer::new("static/cat.jpeg", Options::IndexFile))
+    /// }
+    /// ```
+    pub const IndexFile: Options = Options(1 << 3);
+
+    /// Don't fail if the file or directory to serve is missing.
+    ///
+    /// By default, `FileServer` will error if the path to serve is missing to
+    /// prevent inevitable 404 errors. This option overrides that.
+    pub const Missing: Options = Options(1 << 4);
 
     /// Returns `true` if `self` is a superset of `other`. In other words,
     /// returns `true` if all of the options in `other` are also in `self`.
