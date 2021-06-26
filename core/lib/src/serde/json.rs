@@ -140,8 +140,8 @@ pub enum Error<'a> {
 impl<'a> fmt::Display for Error<'a> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Self::Io(err) => write!(f, "Json error caused by io: {}", err),
-            Self::Parse(_, err) => write!(f, "Json error caused by invalid json: {}", err),
+            Self::Io(err) => write!(f, "i/o error: {}", err),
+            Self::Parse(_, err) => write!(f, "parse error: {}", err),
         }
     }
 }
