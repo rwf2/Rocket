@@ -6,9 +6,8 @@
 //!
 //! ## Extracting Configuration Parameters
 //!
-//! Rocket exposes the active [`Figment`] via [`Rocket::figment()`] and
-//! [`Rocket::figment()`]. Any value that implements [`Deserialize`] can be
-//! extracted from the figment:
+//! Rocket exposes the active [`Figment`] via [`Rocket::figment()`]. Any value
+//! that implements [`Deserialize`] can be extracted from the figment:
 //!
 //! ```rust
 //! use rocket::fairing::AdHoc;

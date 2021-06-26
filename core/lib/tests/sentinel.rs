@@ -3,8 +3,8 @@ use rocket::{*, error::ErrorKind::SentinelAborts};
 #[get("/two")]
 fn two_states(_one: &State<u32>, _two: &State<String>) {}
 
-#[get("/one")]
-fn one_state(_three: &State<u8>) {}
+#[post("/one", data = "<s>")]
+fn one_state<'r>(_three: &'r State<u8>, s: &'r str) -> &'r str { s }
 
 #[async_test]
 async fn state_sentinel_works() {
@@ -242,27 +242,27 @@ async fn known_macro_sentinel_works() {
     use rocket::tokio::io::AsyncRead;
 
     #[derive(Responder)]
-    struct TextSentinel(&'static str);
+    struct TextSentinel<'r>(&'r str);
 
-    impl Sentinel for TextSentinel {
+    impl Sentinel for TextSentinel<'_> {
         fn abort(_: &Rocket<Ignite>) -> bool {
             true
         }
     }
 
-    impl AsRef<str> for TextSentinel {
+    impl AsRef<str> for TextSentinel<'_> {
         fn as_ref(&self) -> &str {
             self.0
         }
     }
 
-    impl AsRef<[u8]> for TextSentinel {
+    impl AsRef<[u8]> for TextSentinel<'_> {
         fn as_ref(&self) -> &[u8] {
             self.0.as_bytes()
         }
     }
 
-    impl AsyncRead for TextSentinel {
+    impl AsyncRead for TextSentinel<'_> {
         fn poll_read(
             self: std::pin::Pin<&mut Self>,
             _: &mut futures::task::Context<'_>,
@@ -273,18 +273,18 @@ async fn known_macro_sentinel_works() {
     }
 
     #[get("/text")]
-    fn text() -> TextStream![TextSentinel] {
+    fn text<'r>() -> TextStream![TextSentinel<'r>] {
         TextStream!(yield TextSentinel("hi");)
     }
 
-    #[get("/bytes")]
-    fn byte() -> ByteStream![TextSentinel] {
-        ByteStream!(yield TextSentinel("hi");)
+    #[get("/<a>")]
+    fn byte(a: &str) -> ByteStream![TextSentinel<'_>] {
+        ByteStream!(yield TextSentinel(a);)
     }
 
-    #[get("/reader")]
-    fn reader() -> ReaderStream![TextSentinel] {
-        ReaderStream!(yield TextSentinel("hi");)
+    #[get("/<_a>/<b>")]
+    fn reader<'a, 'b>(_a: &'a str, b: &'b str) -> ReaderStream![TextSentinel<'b>] {
+        ReaderStream!(yield TextSentinel(b);)
     }
 
     macro_rules! UnknownStream {
@@ -292,7 +292,7 @@ async fn known_macro_sentinel_works() {
     }
 
     #[get("/ignore")]
-    fn ignore() -> UnknownStream![TextSentinel] {
+    fn ignore() -> UnknownStream![TextSentinel<'static>] {
         ReaderStream!(yield TextSentinel("hi");)
     }
 
