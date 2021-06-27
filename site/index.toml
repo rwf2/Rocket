@@ -61,8 +61,7 @@ code = '''
 '''
 text = '''
   This is a **complete Rocket application**. It does exactly what you would
-  expect. If you were to visit **http://localhost:8000/hello/John/58**, you’d
-  see:
+  expect. If you were to visit **/hello/John/58**, you’d see:
 
   <span class="callout">Hello, 58 year old named John!</span>
 
@@ -76,27 +75,26 @@ title = "Forms? Check!"
 code = '''
   #[derive(FromForm)]
   struct Task<'r> {
+     #[field(validate = len(1..))]
      description: &'r str,
      completed: bool
   }
 
   #[post("/", data = "<task>")]
   fn new(task: Form<Task<'_>>) -> Flash<Redirect> {
-      if task.description.is_empty() {
-          Flash::error(Redirect::to(uri!(home)), "Cannot be empty.")
-      } else {
-          Flash::success(Redirect::to(uri!(home)), "Task added.")
-      }
+      Flash::success(Redirect::to(uri!(home)), "Task added.")
   }
 '''
 text = '''
-  Handling forms **is simple and easy**. Simply derive `FromForm` for your
-  structure and let Rocket know which parameter to use. Rocket **parses and
-  validates** the form request, creates the structure, and calls your function.
+  Form handling **is simple, declarative, and complete**: derive
+  [`FromForm`](@api/rocket/derive.FromForm.html) for your structure and set the
+  `data` parameter to a `Form` type. Rocket automatically **parses and
+  validates** the form data into your structure and calls your function.
 
-  Bad form request? Rocket doesn’t call your function! What if you want to know
-  if the form was bad? Simple! Change the type of `task` to `Option` or
-  `Result`!
+  Bad form request? Rocket doesn’t call your function! Need to know what went
+  wrong? Use a `data` parameter of `Result`! Want to rerender the form with user
+  input and errors? Use [`Context`](guide/requests/#context)! File uploads? A
+  breeze with [`TempFile`](@api/rocket/fs/enum.TempFile.html).
 '''
 
 [[sections]]
@@ -108,7 +106,7 @@ code = '''
   }
 
   #[put("/<id>", data = "<msg>")]
-  fn update(db: &Db, id: Id, msg: Json<Message<'_>>) -> JsonValue {
+  fn update(db: &Db, id: Id, msg: Json<Message<'_>>) -> Value {
       if db.contains_key(&id) {
           db.insert(id, msg.contents);
           json!({ "status": "ok" })
@@ -121,11 +119,12 @@ text = '''
   Rocket has first-class support for JSON, right out of the box. Simply derive
   `Deserialize` or `Serialize` to receive or return JSON, respectively.
 
-  Like other important features, JSON works through Rocket’s `FromData` trait,
-  Rocket’s approach to deriving types from body data. It works like this:
-  specify a `data` route parameter of any type that implements `FromData`. A
-  value of that type will then be created automatically from the incoming
-  request body. Best of all, you can implement `FromData` for your types!
+  Look familiar? Forms, JSON, and all kinds of body data types work through
+  Rocket’s [`FromData`](@api/rocket/data/trait.FromData.html) trait, Rocket’s
+  approach to deriving types from body data. A `data` route parameter can be
+  _any_ type that implements `FromData`. A value of that type will be
+  deserialized automatically from the incoming request body. You can even
+  implement `FromData` for your own types!
 '''
 
 ###############################################################################
