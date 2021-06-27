@@ -13,5 +13,5 @@ edition = "2018"
 proc-macro = true
 
 [dependencies]
-devise = { git = "https://github.com/SergioBenitez/Devise.git", rev = "f2431b" }
+devise = "0.3"
 quote = "1"

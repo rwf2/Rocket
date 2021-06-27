@@ -41,7 +41,7 @@ pub fn derive_database(input: TokenStream) -> TokenStream {
                     _ => unreachable!("Support::TupleStruct"),
                 };
 
-                Ok(quote! {
+                Ok(quote_spanned! { struct_.span() =>
                     const NAME: &'static str = #db_name;
                     type Pool = #pool_type;
                     fn fairing() -> #krate::Fairing<Self> {
