@@ -161,11 +161,11 @@ use crate::http::uncased::AsUncased;
 ///     pushed to `K`'s parser and the remaining shifted field is pushed to
 ///     `V`'s parser.
 ///
-///     If the key has two indices (`map[index:k]=value` or
-///     `map[index:v]=value`), the second index must start with `k` or `v`. If
-///     the second index starts with `k`, the shifted field is pushed to `K`'s
-///     parser. If the second index starts with `v`, the shifted field is pushed
-///     to `V`'s parser. If the second index is anything else, an error is
+///     If the key has two indices (`map[k:index]=value` or
+///     `map[v:index]=value`), the first index must start with `k` or `v`. If
+///     the first index starts with `k`, the shifted field is pushed to `K`'s
+///     parser. If the first index starts with `v`, the shifted field is pushed
+///     to `V`'s parser. If the first index is anything else, an error is
 ///     created for the offending form field.
 ///
 ///     Errors are collected as they occur. Finalization finalizes all pairs and
