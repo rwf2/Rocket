@@ -35,7 +35,6 @@ use crate::request::Request;
 /// use rocket::serde::{Serialize, json::Json};
 ///
 /// #[derive(Responder)]
-/// #[response(bound = "T: Serialize")]
 /// enum Error<T> {
 ///     #[response(status = 400)]
 ///     Unauthorized(Json<T>),

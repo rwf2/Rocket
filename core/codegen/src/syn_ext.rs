@@ -30,6 +30,16 @@ pub trait FnArgExt {
     fn wild(&self) -> Option<&syn::PatWild>;
 }
 
+pub trait TypeExt {
+    fn unfold(&self) -> Vec<Child<'_>>;
+    fn unfold_with_ty_macros(&self, names: &[&str], mapper: MacTyMapFn) -> Vec<Child<'_>>;
+    fn is_concrete(&self, generic_ident: &[&Ident]) -> bool;
+}
+
+pub trait GenericsExt {
+    fn type_idents(&self) -> Vec<&Ident>;
+}
+
 #[derive(Debug)]
 pub struct Child<'a> {
     pub parent: Option<Cow<'a, syn::Type>>,
@@ -56,12 +66,6 @@ impl IntoOwned for Child<'_> {
 }
 
 type MacTyMapFn = fn(&TokenStream) -> Option<syn::Type>;
-
-pub trait TypeExt {
-    fn unfold(&self) -> Vec<Child<'_>>;
-    fn unfold_with_ty_macros(&self, names: &[&str], mapper: MacTyMapFn) -> Vec<Child<'_>>;
-    fn is_concrete(&self, generic_ident: &[&Ident]) -> bool;
-}
 
 impl IdentExt for syn::Ident {
     fn prepend(&self, string: &str) -> syn::Ident {
@@ -226,6 +230,12 @@ impl TypeExt for syn::Type {
         let mut visitor = ConcreteVisitor(true, generics);
         visitor.visit_type(self);
         visitor.0
+    }
+}
+
+impl GenericsExt for syn::Generics {
+    fn type_idents(&self) -> Vec<&Ident> {
+        self.type_params().map(|p| &p.ident).collect()
     }
 }
 

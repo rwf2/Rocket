@@ -796,9 +796,15 @@ pub fn derive_from_form(input: TokenStream) -> TokenStream {
 /// # Generics
 ///
 /// The derive accepts any number of type generics and at most one lifetime
-/// generic. If a type generic is present, the generated implementation will
-/// require a bound of `Responder<'r, 'o>` for each generic unless a
-/// `#[response(bound = ...)]` attribute as used:
+/// generic. If a type generic is present and the generic is used in the first
+/// field of a structure, the generated implementation will require a bound of
+/// `Responder<'r, 'o>` for the field type containing the generic. In all other
+/// fields, unless ignores, a bound of `Into<Header<'o>` is added.
+///
+/// For example, for a struct `struct Foo<T, H>(Json<T>, H)`, the derive adds:
+///
+///   * `Json<T>: Responder<'r, 'o>`
+///   * `H: Into<Header<'o>>`
 ///
 /// ```rust
 /// # #[macro_use] extern crate rocket;
@@ -807,21 +813,17 @@ pub fn derive_from_form(input: TokenStream) -> TokenStream {
 /// use rocket::http::ContentType;
 /// use rocket::response::Responder;
 ///
-/// // The bound `T: Responder` will be added to the generated implementation.
+/// // The bound `T: Responder` will be added.
 /// #[derive(Responder)]
 /// #[response(status = 404, content_type = "html")]
 /// struct NotFoundHtml<T>(T);
 ///
-/// // The bound `T: Serialize` will be added to the generated implementation.
-/// // This would fail to compile otherwise.
+/// // The bound `Json<T>: Responder` will be added.
 /// #[derive(Responder)]
-/// #[response(bound = "T: Serialize", status = 404)]
 /// struct NotFoundJson<T>(Json<T>);
 ///
-/// // The bounds `T: Serialize, E: Responder` will be added to the generated
-/// // implementation. This would fail to compile otherwise.
+/// // The bounds `Json<T>: Responder, E: Responder` will be added.
 /// #[derive(Responder)]
-/// #[response(bound = "T: Serialize, E: Responder<'r, 'o>")]
 /// enum MyResult<T, E> {
 ///     Ok(Json<T>),
 ///     #[response(status = 404)]
@@ -829,7 +831,7 @@ pub fn derive_from_form(input: TokenStream) -> TokenStream {
 /// }
 /// ```
 ///
-/// If a lifetime generic is present, it will be replace with `'o` in the
+/// If a lifetime generic is present, it will be replaced with `'o` in the
 /// generated implementation `impl Responder<'r, 'o>`:
 ///
 /// ```rust
