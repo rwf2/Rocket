@@ -32,6 +32,7 @@ use crate::data::{Limits, Data, FromData, Outcome};
 use crate::response::{self, Responder, content};
 use crate::http::Status;
 use crate::form::prelude as form;
+use crate::http::uri::fmt;
 
 use serde::{Serialize, Deserialize};
 
@@ -40,14 +41,33 @@ pub use serde_json;
 
 /// The JSON guard: easily consume and return JSON.
 ///
+/// ## Sending JSON
+///
+/// To respond with serialized JSON data, return a `Json<T>` type, where `T`
+/// implements [`Serialize`] from [`serde`]. The content type of the response is
+/// set to `application/json` automatically.
+///
+/// ```rust
+/// # #[macro_use] extern crate rocket;
+/// # type User = usize;
+/// use rocket::serde::json::Json;
+///
+/// #[get("/users/<id>")]
+/// fn user(id: usize) -> Json<User> {
+///     let user_from_id = User::from(id);
+///     /* ... */
+///     Json(user_from_id)
+/// }
+/// ```
+///
 /// ## Receiving JSON
 ///
 /// `Json` is both a data guard and a form guard.
 ///
 /// ### Data Guard
 ///
-/// To parse request body data as JSON , add a `data` route argument with a
-/// target type of `Json<T>`, where `T` is some type you'd like to parse from
+/// To deserialize request body data as JSON , add a `data` route argument with
+/// a target type of `Json<T>`, where `T` is some type you'd like to parse from
 /// JSON. `T` must implement [`serde::Deserialize`].
 ///
 /// ```rust
@@ -102,26 +122,7 @@ pub use serde_json;
 /// [global.limits]
 /// json = 5242880
 /// ```
-///
-/// ## Sending JSON
-///
-/// If you're responding with JSON data, return a `Json<T>` type, where `T`
-/// implements [`Serialize`] from [`serde`]. The content type of the response is
-/// set to `application/json` automatically.
-///
-/// ```rust
-/// # #[macro_use] extern crate rocket;
-/// # type User = usize;
-/// use rocket::serde::json::Json;
-///
-/// #[get("/users/<id>")]
-/// fn user(id: usize) -> Json<User> {
-///     let user_from_id = User::from(id);
-///     /* ... */
-///     Json(user_from_id)
-/// }
-/// ```
-#[derive(Debug)]
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct Json<T>(pub T);
 
 /// Error returned by the [`Json`] guard when JSON deserialization fails.
@@ -204,6 +205,12 @@ impl<'r, T: Serialize> Responder<'r, 'static> for Json<T> {
             })?;
 
         content::Json(string).respond_to(req)
+    }
+}
+
+impl<T: fmt::UriDisplay<fmt::Query>> fmt::UriDisplay<fmt::Query> for Json<T> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_, fmt::Query>) -> std::fmt::Result {
+        self.0.fmt(f)
     }
 }
 

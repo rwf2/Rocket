@@ -38,7 +38,7 @@ async fn create(db: Db, post: Json<Post>) -> Result<Created<Json<Post>>> {
     let post_value = post.clone();
     db.run(move |conn| {
         diesel::insert_into(posts::table)
-            .values(&post_value)
+            .values(&*post_value)
             .execute(conn)
     }).await?;
 
