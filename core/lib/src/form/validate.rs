@@ -346,6 +346,20 @@ impl<L, T: Len<L>> Len<L> for Result<'_, T> {
     fn zero_len() -> L { T::zero_len() }
 }
 
+#[cfg(feature = "json")]
+impl<L, T: Len<L>> Len<L> for crate::serde::json::Json<T> {
+    fn len(&self) -> L { self.0.len() }
+    fn len_into_u64(len: L) -> u64 { T::len_into_u64(len) }
+    fn zero_len() -> L { T::zero_len() }
+}
+
+#[cfg(feature = "msgpack")]
+impl<L, T: Len<L>> Len<L> for crate::serde::msgpack::MsgPack<T> {
+    fn len(&self) -> L { self.0.len() }
+    fn len_into_u64(len: L) -> u64 { T::len_into_u64(len) }
+    fn zero_len() -> L { T::zero_len() }
+}
+
 /// Length validator: succeeds when the length of a value is within a `range`.
 ///
 /// The value must implement [`Len`]. On failure, returns an [`InvalidLength`]
