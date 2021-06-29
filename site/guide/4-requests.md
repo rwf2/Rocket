@@ -1055,6 +1055,42 @@ If a field's validation doesn't depend on other fields (validation is _local_),
 it is validated prior to those fields that do. For `CreditCard`, `cvv` and
 `expiration` will be validated prior to `number`.
 
+### Wrapping Validators
+
+If a particular validation is applied in more than once place, prefer creating a
+type that encapsulates and represents the validated value. For example, if your
+application often validates `age` fields, consider creating a custom `Age` form
+guard that always applies the validation:
+
+```rust
+# use rocket::form::FromForm;
+
+#[derive(FromForm)]
+#[field(validate = range(18..150))]
+struct Age(u16);
+```
+
+This approach is also useful when a custom validator already exists in some
+other form. For instance, the following example leverages [`try_with`] and an
+existing `FromStr` implementation on a `Token` type to validate a string:
+
+```rust
+# use rocket::form::FromForm;
+
+# impl FromStr for Token<'_> {
+#     type Err = &'static str;
+#     fn from_str(s: &str) -> Result<Self, Self::Err> { todo!() }
+# }
+
+use std::str::FromStr;
+
+#[derive(FromForm)]
+#[field(validate = try_with(|s| Token::from_str(s)))]
+struct Token<'r>(&'r str);
+```
+
+[`try_with`]: rocket/form/validate/fn.try_with.html
+
 ### Collections
 
 Rocket's form support allows your application to express _any_ structure with
