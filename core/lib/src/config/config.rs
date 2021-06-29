@@ -287,7 +287,9 @@ impl Config {
     /// Returns `true` if TLS is enabled.
     ///
     /// TLS is enabled when the `tls` feature is enabled and TLS has been
-    /// configured.
+    /// configured with at least one ciphersuite. Note that without changing
+    /// defaults, all supported ciphersuites are enabled in the recommended
+    /// configuration.
     ///
     /// # Example
     ///
@@ -300,7 +302,8 @@ impl Config {
     /// }
     /// ```
     pub fn tls_enabled(&self) -> bool {
-        cfg!(feature = "tls") && self.tls.is_some()
+        cfg!(feature = "tls") &&
+            self.tls.as_ref().map_or(false, |tls| !tls.ciphers.is_empty())
     }
 
     pub(crate) fn pretty_print(&self, figment: &Figment) {

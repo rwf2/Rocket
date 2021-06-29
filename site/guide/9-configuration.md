@@ -28,8 +28,6 @@ values:
 | `cli_colors`   | `bool`            | Whether to use colors and emoji when logging.   | `true`                  |
 | `secret_key`   | [`SecretKey`]     | Secret key for signing and encrypting values.   | `None`                  |
 | `tls`          | [`TlsConfig`]     | TLS configuration, if any.                      | `None`                  |
-| `tls.key`      | `&[u8]`/`&Path`   | Path/bytes to DER-encoded ASN.1 PKCS#1/#8 key.  |                         |
-| `tls.certs`    | `&[u8]`/`&Path`   | Path/bytes to DER-encoded X.509 TLS cert chain. |                         |
 | `limits`       | [`Limits`]        | Streaming read size limits.                     | [`Limits::default()`]   |
 | `limits.$name` | `&str`/`uint`     | Read limit for `$name`.                         | forms = "32KiB"         |
 | `ctrlc`        | `bool`            | Whether `ctrl-c` initiates a server shutdown.   | `true`                  |
@@ -219,23 +217,76 @@ also choose to have a configure limit via the `limits` parameter. The
 ### TLS
 
 Rocket includes built-in, native support for TLS >= 1.2 (Transport Layer
-Security). In order for TLS support to be enabled, Rocket must be compiled with
-the `"tls"` feature:
+Security). To enable TLS support:
 
-```toml
-[dependencies]
-rocket = { version = "0.5.0-rc.1", features = ["tls"] }
+  1. Enable the `tls` crate feature in `Cargo.toml`:
+
+   ```toml,ignore
+   [dependencies]
+   rocket = { version = "0.5.0-rc.1", features = ["tls"] }
+   ```
+
+  2. Configure a TLS certificate chain and private key via the `tls.key` and
+     `tls.certs` configuration parameters. With the default provider, this can
+     be done via `Rocket.toml` as:
+
+   ```toml,ignore
+   [default.tls]
+   key = "path/to/key.pem"     # Path or bytes to DER-encoded ASN.1 PKCS#1/#8 key.
+   certs = "path/to/certs.pem" # Path or bytes to DER-encoded X.509 TLS cert chain.
+   ```
+
+Next time the server is run, Rocket will report that TLS is enabled during
+ignition:
+
+```text
+🔧 Configured for debug.
+   ...
+   >> tls: enabled
 ```
 
-TLS is configured through the `tls` configuration parameter. The value of `tls`
-is a dictionary with two keys: `certs` and `key`, described in the table above.
-Each key's value may be either a path to a file or raw bytes corresponding to
-the expected value. When a path is configured in a file source, such as
-`Rocket.toml`, relative paths are interpreted as being relative to the source
-file's directory.
+The [TLS example](@example/tls) illustrates a fully configured TLS server.
 
-! warning: Rocket's built-in TLS implements only TLS 1.2 and 1.3. It may not be
+! warning: Rocket's built-in TLS supports only TLS 1.2 and 1.3. This may not be
   suitable for production use.
+
+#### TLS Parameters
+
+The `tls` parameter is expected to be a dictionary with at-most four keys which
+deserialize into the [`TlsConfig`] structure. These are:
+
+| key                          | required  | type                                                  |
+|------------------------------|-----------|-------------------------------------------------------|
+| `key`                        | **_yes_** | Path or bytes to DER-encoded ASN.1 PKCS#1/#8 key.     |
+| `certs`                      | **_yes_** | Path or bytes to DER-encoded X.509 TLS cert chain.    |
+| `ciphers`                    | no        | Array of [`CipherSuite`]s to enable.                  |
+| `prefer_client_cipher_order` | no        | Boolean for whether to [prefer client cipher suites]. |
+
+[`CipherSuite`]: @api/rocket/config/enum.CipherSuite.html
+[prefer client cipher suites]: @api/rocket/config/struct.TlsConfig.html#method.with_preferred_client_cipher_order
+
+When specified via TOML or other serialized formats, each [`CipherSuite`] is
+written as a string representation of the respective variant. For example,
+`CipherSuite::TLS_AES_256_GCM_SHA384` is `"TLS_AES_256_GCM_SHA384"`. In TOML,
+the defaults (with an arbitrary `certs` and `key`) are written:
+
+```toml
+[default.tls]
+certs = "/ssl/cert.pem"
+key = "/ssl/key.pem"
+prefer_client_cipher_order = false
+ciphers = [
+    "TLS_CHACHA20_POLY1305_SHA256",
+    "TLS_AES_256_GCM_SHA384",
+    "TLS_AES_128_GCM_SHA256",
+    "TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305_SHA256",
+    "TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305_SHA256",
+    "TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384",
+    "TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256",
+    "TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384",
+    "TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256",
+]
+```
 
 ### Workers
 
