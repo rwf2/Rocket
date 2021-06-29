@@ -32,6 +32,7 @@ use crate::data::{Limits, Data, FromData, Outcome};
 use crate::response::{self, Responder, content};
 use crate::http::Status;
 use crate::form::prelude as form;
+use crate::http::uri::fmt;
 
 use serde::{Serialize, Deserialize};
 
@@ -40,15 +41,34 @@ pub use rmp_serde::decode::Error;
 
 /// The MessagePack guard: easily consume and return MessagePack.
 ///
+/// ## Sending MessagePack
+///
+/// To respond with serialized MessagePack data, return a `MsgPack<T>` type,
+/// where `T` implements [`Serialize`] from [`serde`]. The content type of the
+/// response is set to `application/msgpack` automatically.
+///
+/// ```rust
+/// # #[macro_use] extern crate rocket;
+/// # type User = usize;
+/// use rocket::serde::msgpack::MsgPack;
+///
+/// #[get("/users/<id>")]
+/// fn user(id: usize) -> MsgPack<User> {
+///     let user_from_id = User::from(id);
+///     /* ... */
+///     MsgPack(user_from_id)
+/// }
+/// ```
+///
 /// ## Receiving MessagePack
 ///
 /// `MsgPack` is both a data guard and a form guard.
 ///
 /// ### Data Guard
 ///
-/// To parse request body data as MessagePack , add a `data` route argument with
-/// a target type of `MsgPack<T>`, where `T` is some type you'd like to parse
-/// from JSON. `T` must implement [`serde::Deserialize`].
+/// To deserialize request body data as MessagePack, add a `data` route
+/// argument with a target type of `MsgPack<T>`, where `T` is some type you'd
+/// like to parse from JSON. `T` must implement [`serde::Deserialize`].
 ///
 /// ```rust
 /// # #[macro_use] extern crate rocket;
@@ -102,26 +122,7 @@ pub use rmp_serde::decode::Error;
 /// [global.limits]
 /// msgpack = 5242880
 /// ```
-///
-/// ## Sending MessagePack
-///
-/// If you're responding with MessagePack data, return a `MsgPack<T>` type,
-/// where `T` implements [`Serialize`] from [`serde`]. The content type of the
-/// response is set to `application/msgpack` automatically.
-///
-/// ```rust
-/// # #[macro_use] extern crate rocket;
-/// # type User = usize;
-/// use rocket::serde::msgpack::MsgPack;
-///
-/// #[get("/users/<id>")]
-/// fn user(id: usize) -> MsgPack<User> {
-///     let user_from_id = User::from(id);
-///     /* ... */
-///     MsgPack(user_from_id)
-/// }
-/// ```
-#[derive(Debug)]
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct MsgPack<T>(pub T);
 
 impl<T> MsgPack<T> {
@@ -207,6 +208,12 @@ impl<'v, T: Deserialize<'v> + Send> form::FromFormField<'v> for MsgPack<T> {
                 _ => form::Error::custom(e).into(),
             }
         })
+    }
+}
+
+impl<T: fmt::UriDisplay<fmt::Query>> fmt::UriDisplay<fmt::Query> for MsgPack<T> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_, fmt::Query>) -> std::fmt::Result {
+        self.0.fmt(f)
     }
 }
 
