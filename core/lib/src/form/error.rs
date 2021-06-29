@@ -161,6 +161,7 @@ pub struct Error<'v> {
 ///   * [`io::Error`] => [`ErrorKind::Io`]
 ///   * `Box<dyn std::error::Error + Send` => [`ErrorKind::Custom`]
 #[derive(Debug)]
+#[non_exhaustive]
 pub enum ErrorKind<'v> {
     /// The value's length, in bytes, was outside the range `[min, max]`.
     InvalidLength {
