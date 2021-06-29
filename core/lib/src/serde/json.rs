@@ -373,6 +373,8 @@ pub use serde_json::Value;
 
 /// Deserialize an instance of type `T` from bytes of JSON text.
 ///
+/// **_Always_ use [`Json`] to deserialize JSON request data.**
+///
 /// # Example
 ///
 /// ```
@@ -406,13 +408,15 @@ pub use serde_json::Value;
 /// the JSON map or some number is too big to fit in the expected primitive
 /// type.
 #[inline(always)]
-pub fn from_slice<'a, T>(v: &'a [u8]) -> Result<T, serde_json::error::Error>
+pub fn from_slice<'a, T>(slice: &'a [u8]) -> Result<T, serde_json::error::Error>
     where T: Deserialize<'a>,
 {
-    serde_json::from_slice(v)
+    serde_json::from_slice(slice)
 }
 
 /// Deserialize an instance of type `T` from a string of JSON text.
+///
+/// **_Always_ use [`Json`] to deserialize JSON request data.**
 ///
 /// # Example
 ///
@@ -447,10 +451,10 @@ pub fn from_slice<'a, T>(v: &'a [u8]) -> Result<T, serde_json::error::Error>
 /// the JSON map or some number is too big to fit in the expected primitive
 /// type.
 #[inline(always)]
-pub fn from_str<'a, T>(v: &'a str) -> Result<T, serde_json::error::Error>
+pub fn from_str<'a, T>(string: &'a str) -> Result<T, serde_json::error::Error>
     where T: Deserialize<'a>,
 {
-    serde_json::from_str(v)
+    serde_json::from_str(string)
 }
 
 /// Interpret a [`Value`] as an instance of type `T`.
@@ -486,8 +490,43 @@ pub fn from_str<'a, T>(v: &'a str) -> Result<T, serde_json::error::Error>
 /// the JSON map or some number is too big to fit in the expected primitive
 /// type.
 #[inline(always)]
-pub fn from_value<T>(v: Value) -> Result<T, serde_json::error::Error>
+pub fn from_value<T>(value: Value) -> Result<T, serde_json::error::Error>
     where T: crate::serde::DeserializeOwned
 {
-    serde_json::from_value(v)
+    serde_json::from_value(value)
+}
+
+/// Convert a `T` into a [`Value`], an opaque value representing JSON data.
+///
+/// # Example
+///
+/// ```
+/// use rocket::serde::{Deserialize, Serialize, json};
+///
+/// #[derive(Deserialize, Serialize)]
+/// #[serde(crate = "rocket::serde")]
+/// struct Data {
+///     framework: String ,
+///     stars: usize,
+/// }
+///
+/// let value = json::json!({
+///     "framework": "Rocket",
+///     "stars": 5
+/// });
+///
+/// let data: Data = json::from_value(value.clone()).unwrap();
+/// let data_value = json::to_value(data).unwrap();
+/// assert_eq!(value, data_value);
+/// ```
+///
+/// # Errors
+///
+/// This conversion fails if `T`’s implementation of `Serialize` decides to fail
+/// or if `T` contains a map with non-string keys.
+#[inline(always)]
+pub fn to_value<T>(item: T) -> Result<Value, serde_json::error::Error>
+    where T: Serialize
+{
+    serde_json::to_value(item)
 }
