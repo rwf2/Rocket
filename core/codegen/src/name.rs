@@ -5,7 +5,7 @@ use proc_macro2::{Span, TokenStream};
 
 /// A "name" read by codegen, which may or may not be an identifier. A `Name` is
 /// typically constructed indirectly via FromMeta, or From<Ident> or directly
-/// from a string via `Name::new()`.
+/// from a string via `Name::new()`. A name is tokenized as a string.
 ///
 /// Some "names" in Rocket include:
 ///   * Dynamic parameter: `name` in `<name>`

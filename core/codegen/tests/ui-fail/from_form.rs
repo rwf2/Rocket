@@ -1,4 +1,4 @@
-#[macro_use] extern crate rocket;
+use rocket::form::FromForm;
 
 #[derive(FromForm)]
 enum Thing { }
@@ -11,6 +11,9 @@ struct Foo2 {  }
 
 #[derive(FromForm)]
 struct Foo3(usize);
+
+#[derive(FromForm)]
+struct Foo4(usize, usize, usize);
 
 #[derive(FromForm)]
 struct NextTodoTask<'f, 'a> {
@@ -199,6 +202,18 @@ struct Default4 {
 struct Default5 {
     #[field(default_with = Some("hi"))]
     no_conversion_from_with: String,
+}
+
+#[derive(FromForm)] // NO ERROR
+struct Another<T> {
+    _foo: T,
+    _bar: T,
+}
+
+#[derive(FromForm)] // NO ERROR
+struct AnotherOne<T> { // NO ERROR
+    _foo: T,
+    _bar: T,
 }
 
 fn main() { }

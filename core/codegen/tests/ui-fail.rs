@@ -5,6 +5,10 @@ fn ui() {
         _ => "ui-fail-stable"
     };
 
+    let glob = std::env::args().last()
+        .map(|arg| format!("*{}*.rs", arg))
+        .unwrap_or_else(|| "*.rs".into());
+
     let t = trybuild::TestCases::new();
-    t.compile_fail(format!("tests/{}/*.rs", path));
+    t.compile_fail(format!("tests/{}/{}", path, glob));
 }

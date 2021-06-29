@@ -12,7 +12,6 @@ const ONLY_ONE_UNNAMED: &str = "tuple structs or variants must have exactly one 
 const EXACTLY_ONE_FIELD: &str = "struct must have exactly one field";
 
 pub fn derive_uri_display_query(input: proc_macro::TokenStream) -> TokenStream {
-
     const URI_DISPLAY: StaticTokens = quote_static!(#_fmt::UriDisplay<#_fmt::Query>);
     const FORMATTER: StaticTokens = quote_static!(#_fmt::Formatter<#_fmt::Query>);
 
@@ -65,8 +64,7 @@ pub fn derive_uri_display_query(input: proc_macro::TokenStream) -> TokenStream {
             .try_field_map(|_, field| {
                 let span = field.span().into();
                 let accessor = field.accessor();
-                let tokens = if field.ident.is_some() {
-                    let name = field.first_field_name()?;
+                let tokens = if let Some(name) = field.first_field_name()? {
                     quote_spanned!(span => f.write_named_value(#name, &#accessor)?;)
                 } else {
                     quote_spanned!(span => f.write_value(&#accessor)?;)

@@ -547,10 +547,12 @@ pub fn derive_from_form_field(input: TokenStream) -> TokenStream {
 
 /// Derive for the [`FromForm`] trait.
 ///
-/// The [`FromForm`] derive can be applied to structures with named fields:
+/// The [`FromForm`] derive can be applied to structures with named or unnamed
+/// fields:
 ///
 /// ```rust
-/// # #[macro_use] extern crate rocket;
+/// use rocket::form::FromForm;
+///
 /// #[derive(FromForm)]
 /// struct MyStruct<'r> {
 ///     field: usize,
@@ -562,19 +564,36 @@ pub fn derive_from_form_field(input: TokenStream) -> TokenStream {
 ///     #[field(default = None)]
 ///     is_nice: bool,
 /// }
+///
+/// #[derive(FromForm)]
+/// #[field(validate = len(6..))]
+/// #[field(validate = neq("password"))]
+/// struct Password<'r>(&'r str);
 /// ```
 ///
-/// Each field's type is required to implement [`FromForm`].
+/// Each field type is required to implement [`FromForm`].
 ///
-/// The derive generates an implementation of the [`FromForm`] trait. The
-/// implementation parses a form whose field names match the field names of the
-/// structure on which the derive was applied. Each field's value is parsed with
-/// the [`FromForm`] implementation of the field's type. The `FromForm`
-/// implementation succeeds only when all fields parse successfully or return a
-/// default. Errors are collected into a [`form::Errors`] and returned if
-/// non-empty after parsing all fields.
+/// The derive generates an implementation of the [`FromForm`] trait.
 ///
-/// The derive accepts one field attribute: `field`, with the following syntax:
+/// **Named Fields**
+///
+/// If the structure has named fields, the implementation parses a form whose
+/// field names match the field names of the structure on which the derive was
+/// applied. Each field's value is parsed with the [`FromForm`] implementation
+/// of the field's type. The `FromForm` implementation succeeds only when all
+/// fields parse successfully or return a default. Errors are collected into a
+/// [`form::Errors`] and returned if non-empty after parsing all fields.
+///
+/// **Unnamed Fields**
+///
+/// If the structure is a tuple struct, it must have exactly one field. The
+/// implementation parses a form exactly when the internal field parses a form
+/// _and_ any `#[field]` validations succeed.
+///
+/// ## Syntax
+///
+/// The derive accepts one field attribute: `field`, and one container
+/// attribute, `form`, with the following syntax:
 ///
 /// ```text
 /// field := name? default? validate*
@@ -592,8 +611,9 @@ pub fn derive_from_form_field(input: TokenStream) -> TokenStream {
 /// EXPR := valid expression, as defined by Rust
 /// ```
 ///
-/// The attribute can be applied any number of times on a field as long as at
-/// most _one_ of `default` or `default_with` is present per field:
+/// `#[field]` can be applied any number of times on a field. `default` and
+/// `default_with` are mutually exclusive: at most _one_ of `default` or
+/// `default_with` can be present per field.
 ///
 /// ```rust
 /// # #[macro_use] extern crate rocket;
@@ -610,54 +630,118 @@ pub fn derive_from_form_field(input: TokenStream) -> TokenStream {
 /// }
 /// ```
 ///
-/// **`name`**
-///
-/// A `name` attribute changes the name to match against when parsing the form
-/// field. The value is either an exact string to match against (`"foo"`), or
-/// `uncased("foo")`, which causes the match to be case-insensitive but
-/// case-preserving. When more than one `name` attribute is applied, the field
-/// will match against _any_ of the names.
-///
-/// **`validate = expr`**
-///
-/// The validation `expr` is run if the field type parses successfully. The
-/// expression must return a value of type `Result<(), form::Errors>`. On `Err`,
-/// the errors are added to the thus-far collected errors. If more than one
-/// `validate` attribute is applied, _all_ validations are run.
-///
-/// **`default = expr`**
-///
-/// If `expr` is not literally `None`, the parameter sets the default value of
-/// the field to be `expr.into()`. If `expr` _is_ `None`, the parameter _unsets_
-/// the default value of the field, if any. The expression is only evaluated if
-/// the attributed field is missing in the incoming form.
-///
-/// Except when `expr` is `None`, `expr` must be of type `T: Into<F>` where `F`
-/// is the field's type.
-///
-/// **`default_with = expr`**
-///
-/// The parameter sets the default value of the field to be exactly `expr` which
-/// must be of type `Option<F>` where `F` is the field's type. If the expression
-/// evaluates to `None`, there is no default. Otherwise the value wrapped in
-/// `Some` is used. The expression is only evaluated if the attributed field is
-/// missing in the incoming form.
+/// For tuples structs, the `field` attribute can be applied to the structure
+/// itself:
 ///
 /// ```rust
 /// # #[macro_use] extern crate rocket;
-/// use std::num::NonZeroUsize;
-///
 /// #[derive(FromForm)]
-/// struct MyForm {
-///     // `NonZeroUsize::new()` return an `Option<NonZeroUsize>`.
-///     #[field(default_with = NonZeroUsize::new(42))]
-///     num: NonZeroUsize,
-/// }
+/// #[field(default = 42, validate = eq(42))]
+/// struct Meaning(usize);
 /// ```
+///
+/// ## Field Attribute Parameters
+///
+///   * **`name`**
+///
+///     A `name` attribute changes the name to match against when parsing the
+///     form field. The value is either an exact string to match against
+///     (`"foo"`), or `uncased("foo")`, which causes the match to be
+///     case-insensitive but case-preserving. When more than one `name`
+///     attribute is applied, the field will match against _any_ of the names.
+///
+///   * **`validate = expr`**
+///
+///     The validation `expr` is run if the field type parses successfully. The
+///     expression must return a value of type `Result<(), form::Errors>`. On
+///     `Err`, the errors are added to the thus-far collected errors. If more
+///     than one `validate` attribute is applied, _all_ validations are run.
+///
+///   * **`default = expr`**
+///
+///     If `expr` is not literally `None`, the parameter sets the default value
+///     of the field to be `expr.into()`. If `expr` _is_ `None`, the parameter
+///     _unsets_ the default value of the field, if any. The expression is only
+///     evaluated if the attributed field is missing in the incoming form.
+///
+///     Except when `expr` is `None`, `expr` must be of type `T: Into<F>` where
+///     `F` is the field's type.
+///
+///   * **`default_with = expr`**
+///
+///     The parameter sets the default value of the field to be exactly `expr`
+///     which must be of type `Option<F>` where `F` is the field's type. If the
+///     expression evaluates to `None`, there is no default. Otherwise the value
+///     wrapped in `Some` is used. The expression is only evaluated if the
+///     attributed field is missing in the incoming form.
+///
+///     ```rust
+///     # #[macro_use] extern crate rocket;
+///     use std::num::NonZeroUsize;
+///
+///     #[derive(FromForm)]
+///     struct MyForm {
+///         // `NonZeroUsize::new()` return an `Option<NonZeroUsize>`.
+///         #[field(default_with = NonZeroUsize::new(42))]
+///         num: NonZeroUsize,
+///     }
+///     ```
 ///
 /// [`FromForm`]: rocket::form::FromForm
 /// [`form::Errors`]: rocket::form::Errors
-#[proc_macro_derive(FromForm, attributes(field))]
+///
+/// # Generics
+///
+/// The derive accepts any number of type generics and at most one lifetime
+/// generic. If a type generic is present, the generated implementation will
+/// require a bound of `FromForm<'r>` for the field type containing the generic.
+/// For example, for a struct `struct Foo<T>(Json<T>)`, the bound `Json<T>:
+/// FromForm<'r>` will be added to the generated implementation.
+///
+/// ```rust
+/// use rocket::form::FromForm;
+/// use rocket::serde::json::Json;
+///
+/// // The bounds `A: FromForm<'r>`, `B: FromForm<'r>` will be required.
+/// #[derive(FromForm)]
+/// struct FancyForm<A, B> {
+///     first: A,
+///     second: B,
+/// };
+///
+/// // The bound `Json<T>: FromForm<'r>` will be required.
+/// #[derive(FromForm)]
+/// struct JsonToken<T> {
+///     token: Json<T>,
+///     id: usize,
+/// }
+/// ```
+///
+/// If a lifetime generic is present, it is replaced with `'r` in the
+/// generated implementation `impl FromForm<'r>`:
+///
+/// ```rust
+/// # #[macro_use] extern crate rocket;
+/// // Generates `impl<'r> FromForm<'r> for MyWrapper<'r>`.
+/// #[derive(FromForm)]
+/// struct MyWrapper<'a>(&'a str);
+/// ```
+///
+/// Both type generics and one lifetime generic may be used:
+///
+/// ```rust
+/// use rocket::form::{self, FromForm};
+///
+/// // The bound `form::Result<'r, T>: FromForm<'r>` will be required.
+/// #[derive(FromForm)]
+/// struct SomeResult<'o, T>(form::Result<'o, T>);
+/// ```
+///
+/// The special bounds on `Json` and `Result` are required due to incomplete and
+/// incorrect support for lifetime generics in `async` blocks in Rust. See
+/// [rust-lang/#64552](https://github.com/rust-lang/rust/issues/64552) for
+/// further details.
+#[proc_macro_derive(FromForm, attributes(form, field))]
 pub fn derive_from_form(input: TokenStream) -> TokenStream {
     emit!(derive::from_form::derive_from_form(input))
 }

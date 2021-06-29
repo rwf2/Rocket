@@ -841,3 +841,41 @@ pub fn with<'v, V, F, M>(value: V, f: F, msg: M) -> Result<'v, ()>
 
     Ok(())
 }
+
+/// _Try_ With validator: succeeds when an arbitrary function or closure does.
+///
+/// Along with [`with`], this is the most generic validator. It succeeds
+/// excactly when `f` returns `Ok` and fails otherwise.
+///
+/// On failure, returns a validation error with the message in the `Err`
+/// variant converted into a string.
+///
+/// # Example
+///
+/// Assuming `Token` has a `from_str` method:
+///
+/// ```rust
+/// # use rocket::form::FromForm;
+/// # impl FromStr for Token<'_> {
+/// #     type Err = &'static str;
+/// #     fn from_str(s: &str) -> Result<Self, Self::Err> { todo!() }
+/// # }
+/// use std::str::FromStr;
+///
+/// #[derive(FromForm)]
+/// #[field(validate = try_with(|s| Token::from_str(s)))]
+/// struct Token<'r>(&'r str);
+///
+/// #[derive(FromForm)]
+/// #[field(validate = try_with(|s| s.parse::<Token>()))]
+/// struct Token2<'r>(&'r str);
+/// ```
+pub fn try_with<'v, V, F, T, E>(value: V, f: F) -> Result<'v, ()>
+    where F: FnOnce(V) -> std::result::Result<T, E>,
+          E: std::fmt::Display
+{
+    match f(value) {
+        Ok(_) => Ok(()),
+        Err(e) => Err(Error::validation(e.to_string()).into())
+    }
+}
