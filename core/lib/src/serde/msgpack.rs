@@ -236,6 +236,8 @@ impl<T> DerefMut for MsgPack<T> {
 ///
 /// Deserialization is performed in a zero-copy manner whenever possible.
 ///
+/// **_Always_ use [`MsgPack`] to deserialize MessagePack request data.**
+///
 /// # Example
 ///
 /// ```
@@ -267,4 +269,76 @@ pub fn from_slice<'a, T>(v: &'a [u8]) -> Result<T, Error>
     where T: Deserialize<'a>,
 {
     rmp_serde::from_read_ref(v)
+}
+
+/// Serialize a `T` into a MessagePack byte vector with compact representation.
+///
+/// The compact representation represents structs as arrays.
+///
+/// **_Always_ use [`MsgPack`] to serialize MessagePack response data.**
+///
+/// # Example
+///
+/// ```
+/// use rocket::serde::{Deserialize, Serialize, msgpack};
+///
+/// #[derive(Deserialize, Serialize)]
+/// #[serde(crate = "rocket::serde")]
+/// struct Data<'r> {
+///     framework: &'r str,
+///     stars: usize,
+/// }
+///
+/// let bytes = &[146, 166, 82, 111, 99, 107, 101, 116, 5];
+/// let data: Data = msgpack::from_slice(bytes).unwrap();
+/// let byte_vec = msgpack::to_compact_vec(&data).unwrap();
+/// assert_eq!(bytes, &byte_vec[..]);
+/// ```
+///
+/// # Errors
+///
+/// Serialization fails if `T`'s `Serialize` implementation fails.
+#[inline(always)]
+pub fn to_compact_vec<T>(value: &T) -> Result<Vec<u8>, rmp_serde::encode::Error>
+    where T: Serialize + ?Sized
+{
+    rmp_serde::to_vec(value)
+}
+
+/// Serialize a `T` into a MessagePack byte vector with named representation.
+///
+/// The named representation represents structs as maps with field names.
+///
+/// **_Always_ use [`MsgPack`] to serialize MessagePack response data.**
+///
+/// # Example
+///
+/// ```
+/// use rocket::serde::{Deserialize, Serialize, msgpack};
+///
+/// #[derive(Deserialize, Serialize)]
+/// #[serde(crate = "rocket::serde")]
+/// struct Data<'r> {
+///     framework: &'r str,
+///     stars: usize,
+/// }
+///
+/// let bytes = &[
+///     130, 169, 102, 114, 97, 109, 101, 119, 111, 114, 107, 166, 82, 111,
+///     99, 107, 101, 116, 165, 115, 116, 97, 114, 115, 5
+/// ];
+///
+/// let data: Data = msgpack::from_slice(bytes).unwrap();
+/// let byte_vec = msgpack::to_vec(&data).unwrap();
+/// assert_eq!(bytes, &byte_vec[..]);
+/// ```
+///
+/// # Errors
+///
+/// Serialization fails if `T`'s `Serialize` implementation fails.
+#[inline(always)]
+pub fn to_vec<T>(value: &T) -> Result<Vec<u8>, rmp_serde::encode::Error>
+    where T: Serialize + ?Sized
+{
+    rmp_serde::to_vec_named(value)
 }
