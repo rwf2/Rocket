@@ -260,10 +260,10 @@ deserialize into the [`TlsConfig`] structure. These are:
 | `key`                        | **_yes_** | Path or bytes to DER-encoded ASN.1 PKCS#1/#8 key.     |
 | `certs`                      | **_yes_** | Path or bytes to DER-encoded X.509 TLS cert chain.    |
 | `ciphers`                    | no        | Array of [`CipherSuite`]s to enable.                  |
-| `prefer_client_cipher_order` | no        | Boolean for whether to [prefer client cipher suites]. |
+| `prefer_server_cipher_order` | no        | Boolean for whether to [prefer server cipher suites]. |
 
 [`CipherSuite`]: @api/rocket/config/enum.CipherSuite.html
-[prefer client cipher suites]: @api/rocket/config/struct.TlsConfig.html#method.with_preferred_client_cipher_order
+[prefer server cipher suites]: @api/rocket/config/struct.TlsConfig.html#method.with_preferred_server_cipher_order
 
 When specified via TOML or other serialized formats, each [`CipherSuite`] is
 written as a string representation of the respective variant. For example,
@@ -274,7 +274,7 @@ the defaults (with an arbitrary `certs` and `key`) are written:
 [default.tls]
 certs = "/ssl/cert.pem"
 key = "/ssl/key.pem"
-prefer_client_cipher_order = false
+prefer_server_cipher_order = false
 ciphers = [
     "TLS_CHACHA20_POLY1305_SHA256",
     "TLS_AES_256_GCM_SHA384",

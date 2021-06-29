@@ -372,7 +372,11 @@ impl Rocket<Orbit> {
             use crate::http::private::tls::bind_tls;
 
             let (certs, key) = config.to_readers().map_err(ErrorKind::Io)?;
-            let l = bind_tls(addr, certs, key).await.map_err(ErrorKind::Bind)?;
+            let ciphers = config.rustls_ciphers();
+            let server_order = config.prefer_server_cipher_order;
+            let l = bind_tls(addr, certs, key, ciphers, server_order).await
+                .map_err(ErrorKind::Bind)?;
+
             addr = l.local_addr().unwrap_or(addr);
             self.config.address = addr.ip();
             self.config.port = addr.port();

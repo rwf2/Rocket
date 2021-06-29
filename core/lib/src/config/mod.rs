@@ -283,7 +283,7 @@ mod tests {
                 [global.tls]
                 certs = "cert.pem"
                 key = "key.pem"
-                prefer_client_cipher_order = true
+                prefer_server_cipher_order = true
                 ciphers = [
                     "TLS_CHACHA20_POLY1305_SHA256",
                     "TLS_AES_256_GCM_SHA384",
@@ -299,7 +299,7 @@ mod tests {
             let key_path = jail.directory().join("key.pem");
             assert_eq!(config, Config {
                 tls: Some(TlsConfig::from_paths(cert_path, key_path)
-                         .with_preferred_client_cipher_order(true)
+                         .with_preferred_server_cipher_order(true)
                          .with_ciphers([
                              CipherSuite::TLS_CHACHA20_POLY1305_SHA256,
                              CipherSuite::TLS_AES_256_GCM_SHA384,

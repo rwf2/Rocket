@@ -20,11 +20,11 @@ use indexmap::IndexSet;
 ///     most to least. It is not required and defaults to
 ///     [`CipherSuite::DEFAULT_SET`], the recommended setting.
 ///
-///   * `prefer_client_cipher_order`
+///   * `prefer_server_cipher_order`
 ///
-///     A boolean that indicates whether the server should regard the client's
-///     ciphersuite preferences over its own. The default and recommended value
-///     is `false`.
+///     A boolean that indicates whether the server should regard its own
+///     ciphersuite preferences over the client's. The default and recommended
+///     value is `false`.
 ///
 /// The following example illustrates manual configuration:
 ///
@@ -40,11 +40,13 @@ use indexmap::IndexSet;
 /// let tls_config = config.tls.as_ref().unwrap();
 /// assert!(tls_config.certs().is_left());
 /// assert!(tls_config.key().is_right());
+/// assert_eq!(tls_config.ciphers().count(), 9);
+/// assert!(!tls_config.prefer_server_cipher_order());
 ///
 /// // From a serialized `TlsConfig`.
 /// let tls_config = TlsConfig::from_paths("/ssl/certs.pem", "/ssl/key.pem")
 ///     .with_ciphers(CipherSuite::TLS_V13_SET)
-///     .with_preferred_client_cipher_order(true);
+///     .with_preferred_server_cipher_order(true);
 ///
 /// let figment = rocket::Config::figment()
 ///     .merge(("tls", tls_config));
@@ -52,9 +54,10 @@ use indexmap::IndexSet;
 /// let config = rocket::Config::from(figment);
 /// let tls_config = config.tls.as_ref().unwrap();
 /// assert_eq!(tls_config.ciphers().count(), 3);
-/// assert!(tls_config.prefer_client_cipher_order());
+/// assert!(tls_config.prefer_server_cipher_order());
 /// ```
 #[derive(PartialEq, Debug, Clone, Deserialize, Serialize)]
+#[serde(deny_unknown_fields)]
 pub struct TlsConfig {
     /// Path or raw bytes for the DER-encoded X.509 TLS certificate chain.
     pub(crate) certs: Either<RelativePathBuf, Vec<u8>>,
@@ -64,9 +67,9 @@ pub struct TlsConfig {
     /// List of TLS cipher suites in server-preferred order.
     #[serde(default = "CipherSuite::default_set")]
     pub(crate) ciphers: IndexSet<CipherSuite>,
-    /// Whether to prefer the client's cipher suite order over the server's.
+    /// Whether to prefer the server's cipher suite order over the client's.
     #[serde(default)]
-    pub(crate) prefer_client_cipher_order: bool,
+    pub(crate) prefer_server_cipher_order: bool,
 }
 
 /// A supported TLS cipher suite.
@@ -157,7 +160,7 @@ impl TlsConfig {
             certs: Either::Left(certs.as_ref().to_path_buf().into()),
             key: Either::Left(key.as_ref().to_path_buf().into()),
             ciphers: CipherSuite::default_set(),
-            prefer_client_cipher_order: false,
+            prefer_server_cipher_order: Default::default(),
         }
     }
 
@@ -180,7 +183,7 @@ impl TlsConfig {
             certs: Either::Right(certs.to_vec().into()),
             key: Either::Right(key.to_vec().into()),
             ciphers: CipherSuite::default_set(),
-            prefer_client_cipher_order: false,
+            prefer_server_cipher_order: Default::default(),
         }
     }
 
@@ -250,19 +253,19 @@ impl TlsConfig {
         self
     }
 
-    /// Whether to prefer the client's cipher suite order (`true`) to the
-    /// server's or not (`false`). The default prefer's the server's order
-    /// (`false`).
+    /// Whether to prefer the server's cipher suite order and ignore the
+    /// client's preferences (`true`) or choose the first supported ciphersuite
+    /// in the client's preference list (`false`). The default prefer's the
+    /// client's order (`false`).
     ///
     /// During TLS cipher suite negotiation, the client presents a set of
     /// supported ciphers in its preferred order. From this list, the server
     /// chooses one cipher suite. By default, the server chooses the first
-    /// cipher in order of its own preference that the client also supports,
-    /// ignoring the client's preferences.
+    /// cipher it supports from the list.
     ///
-    /// By setting `prefer_client_order` to `true`, the server instead chooses
-    /// the first cipher in the _client's_ preferred order that _it_ supports,
-    /// ignoring its own preferences.
+    /// By setting `prefer_server_order` to `true`, the server instead chooses
+    /// the first ciphersuite in it prefers that the client also supports,
+    /// ignoring the client's preferences.
     ///
     /// # Example
     ///
@@ -273,10 +276,10 @@ impl TlsConfig {
     /// # let key_buf = &[];
     /// let tls_config = TlsConfig::from_bytes(certs_buf, key_buf)
     ///     .with_ciphers(CipherSuite::TLS_V13_SET)
-    ///     .with_preferred_client_cipher_order(true);
+    ///     .with_preferred_server_cipher_order(true);
     /// ```
-    pub fn with_preferred_client_cipher_order(mut self, prefer_client_order: bool) -> Self {
-        self.prefer_client_cipher_order = prefer_client_order;
+    pub fn with_preferred_server_cipher_order(mut self, prefer_server_order: bool) -> Self {
+        self.prefer_server_cipher_order = prefer_server_order;
         self
     }
 
@@ -353,7 +356,7 @@ impl TlsConfig {
         self.ciphers.iter().copied()
     }
 
-    /// Whether the client's cipher suite ordering is preferred or not.
+    /// Whether the server's cipher suite ordering is preferred or not.
     ///
     /// # Example
     ///
@@ -364,43 +367,72 @@ impl TlsConfig {
     /// # let key_buf = &[];
     /// // The default prefers the server's order.
     /// let tls_config = TlsConfig::from_bytes(certs_buf, key_buf);
-    /// assert!(!tls_config.prefer_client_cipher_order());
+    /// assert!(!tls_config.prefer_server_cipher_order());
     ///
     /// // Which can be overriden with the eponymous builder method.
     /// let tls_config = TlsConfig::from_bytes(certs_buf, key_buf)
-    ///     .with_preferred_client_cipher_order(true);
+    ///     .with_preferred_server_cipher_order(true);
     ///
-    /// assert!(tls_config.prefer_client_cipher_order());
+    /// assert!(tls_config.prefer_server_cipher_order());
     /// ```
-    pub fn prefer_client_cipher_order(&self) -> bool {
-        self.prefer_client_cipher_order
+    pub fn prefer_server_cipher_order(&self) -> bool {
+        self.prefer_server_cipher_order
     }
 }
 
 #[cfg(feature = "tls")]
-type Reader = Box<dyn std::io::BufRead + Sync + Send>;
+mod with_tls_feature {
+    use crate::http::private::tls::rustls::SupportedCipherSuite as RustlsCipher;
+    use crate::http::private::tls::rustls::ciphersuite as rustls;
 
-#[cfg(feature = "tls")]
-impl TlsConfig {
-    pub(crate) fn to_readers(&self) -> std::io::Result<(Reader, Reader)> {
-        use std::{io::{self, Error}, fs};
-        use yansi::Paint;
+    use super::*;
 
-        fn to_reader(value: &Either<RelativePathBuf, Vec<u8>>) -> io::Result<Reader> {
-            match value {
-                Either::Left(path) => {
-                    let path = path.relative();
-                    let file = fs::File::open(&path).map_err(move |e| {
-                        Error::new(e.kind(), format!("error reading TLS file `{}`: {}",
-                                Paint::white(figment::Source::File(path)), e))
-                    })?;
+    type Reader = Box<dyn std::io::BufRead + Sync + Send>;
 
-                    Ok(Box::new(io::BufReader::new(file)))
+    impl TlsConfig {
+        pub(crate) fn to_readers(&self) -> std::io::Result<(Reader, Reader)> {
+            use std::{io::{self, Error}, fs};
+            use yansi::Paint;
+
+            fn to_reader(value: &Either<RelativePathBuf, Vec<u8>>) -> io::Result<Reader> {
+                match value {
+                    Either::Left(path) => {
+                        let path = path.relative();
+                        let file = fs::File::open(&path).map_err(move |e| {
+                            Error::new(e.kind(), format!("error reading TLS file `{}`: {}",
+                                    Paint::white(figment::Source::File(path)), e))
+                        })?;
+
+                        Ok(Box::new(io::BufReader::new(file)))
+                    }
+                    Either::Right(vec) => Ok(Box::new(io::Cursor::new(vec.clone()))),
                 }
-                Either::Right(vec) => Ok(Box::new(io::Cursor::new(vec.clone()))),
             }
+
+            Ok((to_reader(&self.certs)?, to_reader(&self.key)?))
         }
 
-        Ok((to_reader(&self.certs)?, to_reader(&self.key)?))
+        pub(crate) fn rustls_ciphers(&self) -> impl Iterator<Item = &'static RustlsCipher> + '_ {
+            self.ciphers().map(|ciphersuite| match ciphersuite {
+                CipherSuite::TLS_CHACHA20_POLY1305_SHA256 =>
+                    &rustls::TLS13_CHACHA20_POLY1305_SHA256,
+                CipherSuite::TLS_AES_256_GCM_SHA384 =>
+                    &rustls::TLS13_AES_256_GCM_SHA384,
+                CipherSuite::TLS_AES_128_GCM_SHA256 =>
+                    &rustls::TLS13_AES_128_GCM_SHA256,
+                CipherSuite::TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305_SHA256 =>
+                    &rustls::TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305_SHA256,
+                CipherSuite::TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305_SHA256 =>
+                    &rustls::TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305_SHA256,
+                CipherSuite::TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384 =>
+                    &rustls::TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384,
+                CipherSuite::TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256 =>
+                    &rustls::TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256,
+                CipherSuite::TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384 =>
+                    &rustls::TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,
+                CipherSuite::TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256 =>
+                    &rustls::TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,
+            })
+        }
     }
 }

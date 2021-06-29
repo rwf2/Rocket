@@ -5,11 +5,12 @@ use std::pin::Pin;
 use std::sync::Arc;
 use std::task::{Context, Poll};
 
+pub use tokio_rustls::rustls;
+
 use rustls::internal::pemfile;
-use rustls::{Certificate, PrivateKey, ServerConfig};
-use tokio::net::{TcpListener, TcpStream};
+use rustls::{Certificate, PrivateKey, ServerConfig, SupportedCipherSuite};
 use tokio_rustls::{TlsAcceptor, Accept, server::TlsStream};
-use tokio_rustls::rustls;
+use tokio::net::{TcpListener, TcpStream};
 
 use crate::listener::{Connection, Listener};
 
@@ -94,10 +95,12 @@ impl Listener for TlsListener {
     }
 }
 
-pub async fn bind_tls<C: io::BufRead + Send, K: io::BufRead + Send>(
+pub async fn bind_tls(
     address: SocketAddr,
-    mut cert_chain: C,
-    mut private_key: K,
+    mut cert_chain: impl io::BufRead + Send,
+    mut private_key: impl io::BufRead + Send,
+    ciphersuites: impl Iterator<Item = &'static SupportedCipherSuite>,
+    prefer_server_order: bool,
 ) -> io::Result<TlsListener> {
     let cert_chain = load_certs(&mut cert_chain).map_err(|e| {
         let msg = format!("malformed TLS certificate chain: {}", e);
@@ -116,6 +119,8 @@ pub async fn bind_tls<C: io::BufRead + Send, K: io::BufRead + Send>(
     let cache = rustls::ServerSessionMemoryCache::new(1024);
     tls_config.set_persistence(cache);
     tls_config.ticketer = rustls::Ticketer::new();
+    tls_config.ciphersuites = ciphersuites.collect();
+    tls_config.ignore_client_order = prefer_server_order;
     tls_config.set_single_cert(cert_chain, key).expect("invalid key");
     tls_config.set_protocols(&[b"h2".to_vec(), b"http/1.1".to_vec()]);
 
