@@ -208,9 +208,10 @@ impl<'r, T: Serialize> Responder<'r, 'static> for Json<T> {
     }
 }
 
-impl<T: fmt::UriDisplay<fmt::Query>> fmt::UriDisplay<fmt::Query> for Json<T> {
+impl<T: Serialize> fmt::UriDisplay<fmt::Query> for Json<T> {
     fn fmt(&self, f: &mut fmt::Formatter<'_, fmt::Query>) -> std::fmt::Result {
-        self.0.fmt(f)
+        let string = to_string(&self.0).map_err(|_| std::fmt::Error)?;
+        f.write_value(&string)
     }
 }
 

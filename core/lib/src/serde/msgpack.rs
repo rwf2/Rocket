@@ -32,7 +32,7 @@ use crate::data::{Limits, Data, FromData, Outcome};
 use crate::response::{self, Responder, content};
 use crate::http::Status;
 use crate::form::prelude as form;
-use crate::http::uri::fmt;
+// use crate::http::uri::fmt;
 
 use serde::{Serialize, Deserialize};
 
@@ -200,6 +200,9 @@ impl<'r, T: Serialize> Responder<'r, 'static> for MsgPack<T> {
 
 #[crate::async_trait]
 impl<'v, T: Deserialize<'v> + Send> form::FromFormField<'v> for MsgPack<T> {
+    // TODO: To implement `from_value`, we need to the raw string so we can
+    // decode it into bytes as opposed to a string as it won't be UTF-8.
+
     async fn from_data(f: form::DataField<'v, '_>) -> Result<Self, form::Errors<'v>> {
         Self::from_data(f.request, f.data).await.map_err(|e| {
             match e {
@@ -211,11 +214,13 @@ impl<'v, T: Deserialize<'v> + Send> form::FromFormField<'v> for MsgPack<T> {
     }
 }
 
-impl<T: fmt::UriDisplay<fmt::Query>> fmt::UriDisplay<fmt::Query> for MsgPack<T> {
-    fn fmt(&self, f: &mut fmt::Formatter<'_, fmt::Query>) -> std::fmt::Result {
-        self.0.fmt(f)
-    }
-}
+// impl<T: Serialize> fmt::UriDisplay<fmt::Query> for MsgPack<T> {
+//     fn fmt(&self, f: &mut fmt::Formatter<'_, fmt::Query>) -> std::fmt::Result {
+//         let bytes = to_vec(&self.0).map_err(|_| std::fmt::Error)?;
+//         let encoded = crate::http::RawStr::percent_encode_bytes(&bytes);
+//         f.write_value(encoded.as_str())
+//     }
+// }
 
 impl<T> From<T> for MsgPack<T> {
     fn from(value: T) -> Self {
