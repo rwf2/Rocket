@@ -17,45 +17,42 @@ struct FieldAttr {
     ignore: bool,
 }
 
-fn generic_bounds_tokens(input: Input<'_>) -> Result<TokenStream> {
-    MapperBuild::new()
-        .try_enum_map(|m, e| mapper::enum_null(m, e))
-        .try_fields_map(|_, fields| {
-            let generic_idents = fields.parent.input().generics().type_idents();
-            let lifetime = |ty: &syn::Type| syn::Lifetime::new("'o", ty.span());
-            let mut types = fields.iter()
-                .map(|f| (f, &f.field.inner.ty))
-                .map(|(f, ty)| (f, ty.with_replaced_lifetimes(lifetime(ty))));
-
-            let mut bounds = vec![];
-            if let Some((_, ty)) = types.next() {
-                if !ty.is_concrete(&generic_idents) {
-                    bounds.push(quote_spanned!(ty.span() => #ty: #_response::Responder<'r, 'o>));
-                }
-            }
-
-            for (f, ty) in types {
-                let attr = FieldAttr::one_from_attrs("response", &f.attrs)?.unwrap_or_default();
-                if ty.is_concrete(&generic_idents) || attr.ignore {
-                    continue;
-                }
-
-                bounds.push(quote_spanned! { ty.span() =>
-                    #ty: ::std::convert::Into<#_http::Header<'o>>
-                });
-            }
-
-            Ok(quote!(#(#bounds,)*))
-        })
-        .map_input(input)
-}
-
 pub fn derive_responder(input: proc_macro::TokenStream) -> TokenStream {
     let impl_tokens = quote!(impl<'r, 'o: 'r> #_response::Responder<'r, 'o>);
     DeriveGenerator::build_for(input, impl_tokens)
         .support(Support::Struct | Support::Enum | Support::Lifetime | Support::Type)
         .replace_generic(1, 0)
-        .type_bound_mapper(MapperBuild::new().try_input_map(|_, i| generic_bounds_tokens(i)))
+        .type_bound_mapper(MapperBuild::new()
+            .try_enum_map(|m, e| mapper::enum_null(m, e))
+            .try_fields_map(|_, fields| {
+                let generic_idents = fields.parent.input().generics().type_idents();
+                let lifetime = |ty: &syn::Type| syn::Lifetime::new("'o", ty.span());
+                let mut types = fields.iter()
+                    .map(|f| (f, &f.field.inner.ty))
+                    .map(|(f, ty)| (f, ty.with_replaced_lifetimes(lifetime(ty))));
+
+                let mut bounds = vec![];
+                if let Some((_, ty)) = types.next() {
+                    if !ty.is_concrete(&generic_idents) {
+                        let span = ty.span();
+                        bounds.push(quote_spanned!(span => #ty: #_response::Responder<'r, 'o>));
+                    }
+                }
+
+                for (f, ty) in types {
+                    let attr = FieldAttr::one_from_attrs("response", &f.attrs)?.unwrap_or_default();
+                    if ty.is_concrete(&generic_idents) || attr.ignore {
+                        continue;
+                    }
+
+                    bounds.push(quote_spanned! { ty.span() =>
+                        #ty: ::std::convert::Into<#_http::Header<'o>>
+                    });
+                }
+
+                Ok(quote!(#(#bounds,)*))
+            })
+        )
         .validator(ValidatorBuild::new()
             .input_validate(|_, i| match i.generics().lifetimes().count() > 1 {
                 true => Err(i.generics().span().error("only one lifetime is supported")),
