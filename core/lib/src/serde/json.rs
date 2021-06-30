@@ -464,6 +464,82 @@ pub fn from_str<'a, T>(string: &'a str) -> Result<T, serde_json::error::Error>
     serde_json::from_str(string)
 }
 
+/// Serialize a `T` into a JSON string with compact representation.
+///
+/// **_Always_ use [`Json`] to serialize JSON response data.**
+///
+/// # Example
+///
+/// ```
+/// use rocket::serde::{Deserialize, Serialize, json};
+///
+/// #[derive(Debug, PartialEq, Deserialize, Serialize)]
+/// #[serde(crate = "rocket::serde")]
+/// struct Data<'r> {
+///     framework: &'r str,
+///     stars: usize,
+/// }
+///
+/// let data = Data {
+///     framework: "Rocket",
+///     stars: 5,
+/// };
+///
+/// let string = json::to_string(&data).unwrap();
+/// let data: Data = json::from_str(&string).unwrap();
+/// assert_eq!(data, Data { framework: "Rocket", stars: 5, });
+/// ```
+///
+/// # Errors
+///
+/// Serialization fails if `T`'s `Serialize` implementation fails or if `T`
+/// contains a map with non-string keys.
+#[inline(always)]
+pub fn to_string<T>(value: &T) -> Result<String, serde_json::error::Error>
+    where T: Serialize
+{
+    serde_json::to_string(value)
+}
+
+/// Serialize a `T` into a JSON string with "pretty" formatted representation.
+///
+/// **_Always_ use [`Json`] to serialize JSON response data.**
+///
+/// # Example
+///
+/// ```
+/// use rocket::serde::{Deserialize, Serialize, json};
+///
+/// #[derive(Debug, PartialEq, Deserialize, Serialize)]
+/// #[serde(crate = "rocket::serde")]
+/// struct Data<'r> {
+///     framework: &'r str,
+///     stars: usize,
+/// }
+///
+/// let data = Data {
+///     framework: "Rocket",
+///     stars: 5,
+/// };
+///
+/// let string = json::to_pretty_string(&data).unwrap();
+/// # let compact = json::to_string(&data).unwrap();
+/// # assert_ne!(compact, string);
+/// let data: Data = json::from_str(&string).unwrap();
+/// assert_eq!(data, Data { framework: "Rocket", stars: 5, });
+/// ```
+///
+/// # Errors
+///
+/// Serialization fails if `T`'s `Serialize` implementation fails or if `T`
+/// contains a map with non-string keys.
+#[inline(always)]
+pub fn to_pretty_string<T>(value: &T) -> Result<String, serde_json::error::Error>
+    where T: Serialize
+{
+    serde_json::to_string_pretty(value)
+}
+
 /// Interpret a [`Value`] as an instance of type `T`.
 ///
 /// # Example
