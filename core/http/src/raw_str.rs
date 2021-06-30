@@ -6,7 +6,7 @@ use std::fmt;
 
 use ref_cast::RefCast;
 use stable_pattern::{Pattern, Searcher, ReverseSearcher, Split, SplitInternal};
-use crate::uri::fmt::{percent_encode, DEFAULT_ENCODE_SET};
+use crate::uri::fmt::{DEFAULT_ENCODE_SET, percent_encode, percent_encode_bytes};
 
 use crate::uncased::UncasedStr;
 
@@ -255,7 +255,7 @@ impl RawStr {
     /// # extern crate rocket;
     /// use rocket::http::RawStr;
     ///
-    /// // Note: Rocket should never hand you a bad `&RawStr`.
+    /// // NOTE: Rocket will never hand you a bad `&RawStr`.
     /// let bad_str = unsafe { std::str::from_utf8_unchecked(b"a=\xff") };
     /// let bad_raw_str = RawStr::new(bad_str);
     /// assert!(bad_raw_str.percent_decode().is_err());
@@ -263,6 +263,23 @@ impl RawStr {
     #[inline(always)]
     pub fn percent_encode(&self) -> Cow<'_, RawStr> {
         Self::from_cow_str(percent_encode::<DEFAULT_ENCODE_SET>(self))
+    }
+
+    /// Returns a percent-encoded version of `bytes`.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// # extern crate rocket;
+    /// use rocket::http::RawStr;
+    ///
+    /// // Note: Rocket should never hand you a bad `&RawStr`.
+    /// let bytes = &[93, 12, 0, 13, 1];
+    /// let encoded = RawStr::percent_encode_bytes(&bytes[..]);
+    /// ```
+    #[inline(always)]
+    pub fn percent_encode_bytes(bytes: &[u8]) -> Cow<'_, RawStr> {
+        Self::from_cow_str(percent_encode_bytes::<DEFAULT_ENCODE_SET>(bytes))
     }
 
     /// Returns a URL-decoded version of the string. This is identical to
@@ -934,10 +951,11 @@ impl_partial!(&&str : RawStr);
 
 impl_partial!(Cow<'_, str> : RawStr);
 impl_partial!(Cow<'_, str> : &RawStr);
-impl_partial!(Cow<'_, RawStr> : RawStr as &RawStr);
-impl_partial!(Cow<'_, RawStr> : &RawStr as &RawStr);
 impl_partial!(RawStr : Cow<'_, str>);
 impl_partial!(&RawStr : Cow<'_, str>);
+
+impl_partial!(Cow<'_, RawStr> : RawStr as &RawStr);
+impl_partial!(Cow<'_, RawStr> : &RawStr as &RawStr);
 impl_partial!(RawStr : Cow<'_, RawStr> as &RawStr);
 impl_partial!(&RawStr : Cow<'_, RawStr> as &RawStr);
 
