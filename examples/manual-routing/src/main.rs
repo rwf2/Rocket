@@ -73,7 +73,7 @@ struct CustomHandler {
 }
 
 impl CustomHandler {
-    fn new(data: &'static str) -> Vec<Route> {
+    fn routes(data: &'static str) -> Vec<Route> {
         vec![Route::new(Get, "/<id>", Self { data })]
     }
 }
@@ -107,6 +107,6 @@ fn rocket() -> _ {
         .mount("/upload", vec![get_upload, post_upload])
         .mount("/hello", vec![name.clone()])
         .mount("/hi", vec![name])
-        .mount("/custom", CustomHandler::new("some data here"))
+        .mount("/custom", CustomHandler::routes("some data here"))
         .register("/", vec![not_found_catcher])
 }

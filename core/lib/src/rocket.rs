@@ -488,7 +488,7 @@ impl Rocket<Build> {
 
             if config.secret_key.is_zero() {
                 config.secret_key = crate::config::SecretKey::generate()
-                    .unwrap_or(crate::config::SecretKey::zero());
+                    .unwrap_or_else(crate::config::SecretKey::zero);
             }
         };
 

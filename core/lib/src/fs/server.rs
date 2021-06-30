@@ -180,10 +180,10 @@ impl FileServer {
     }
 }
 
-impl Into<Vec<Route>> for FileServer {
-    fn into(self) -> Vec<Route> {
-        let source = figment::Source::File(self.root.clone());
-        let mut route = Route::ranked(self.rank, Method::Get, "/<path..>", self);
+impl From<FileServer> for Vec<Route> {
+    fn from(server: FileServer) -> Self {
+        let source = figment::Source::File(server.root.clone());
+        let mut route = Route::ranked(server.rank, Method::Get, "/<path..>", server);
         route.name = Some(format!("FileServer: {}", source).into());
         vec![route]
     }

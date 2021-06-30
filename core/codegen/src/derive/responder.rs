@@ -59,7 +59,7 @@ pub fn derive_responder(input: proc_macro::TokenStream) -> TokenStream {
                 false => Ok(())
             })
             .fields_validate(|_, fields| match fields.is_empty() {
-                true => return Err(fields.span().error("need at least one field")),
+                true => Err(fields.span().error("need at least one field")),
                 false => Ok(())
             })
         )
@@ -71,7 +71,7 @@ pub fn derive_responder(input: proc_macro::TokenStream) -> TokenStream {
             })
             .try_fields_map(|_, fields| {
                 fn set_header_tokens<T: ToTokens + Spanned>(item: T) -> TokenStream {
-                    quote_spanned!(item.span().into() => __res.set_header(#item);)
+                    quote_spanned!(item.span() => __res.set_header(#item);)
                 }
 
                 let attr = ItemAttr::one_from_attrs("response", fields.parent.attrs())?
@@ -98,7 +98,7 @@ pub fn derive_responder(input: proc_macro::TokenStream) -> TokenStream {
 
                 let content_type = attr.content_type.map(set_header_tokens);
                 let status = attr.status.map(|status| {
-                    quote_spanned!(status.span().into() => __res.set_status(#status);)
+                    quote_spanned!(status.span() => __res.set_status(#status);)
                 });
 
                 Ok(quote! {

@@ -210,7 +210,7 @@ impl Accept {
     /// assert_eq!(iter.next(), None);
     /// ```
     #[inline(always)]
-    pub fn iter<'a>(&'a self) -> impl Iterator<Item=&'a QMediaType> + 'a {
+    pub fn iter(&self) -> impl Iterator<Item=&'_ QMediaType> + '_ {
         match self.0 {
             AcceptParams::Static(ref val) => Either::Left(Some(val).into_iter()),
             AcceptParams::Dynamic(ref vec) => Either::Right(vec.iter())
@@ -239,7 +239,7 @@ impl Accept {
     /// assert_eq!(iter.next(), None);
     /// ```
     #[inline(always)]
-    pub fn media_types<'a>(&'a self) -> impl Iterator<Item=&'a MediaType> + 'a {
+    pub fn media_types(&self) -> impl Iterator<Item=&'_ MediaType> + '_ {
         self.iter().map(|weighted_mt| weighted_mt.media_type())
     }
 
@@ -285,10 +285,10 @@ impl FromStr for Accept {
 
 /// Creates a new `Header` with name `Accept` and the value set to the HTTP
 /// rendering of this `Accept` header.
-impl Into<Header<'static>> for Accept {
+impl From<Accept> for Header<'static> {
     #[inline(always)]
-    fn into(self) -> Header<'static> {
-        Header::new("Accept", self.to_string())
+    fn from(val: Accept) -> Self {
+        Header::new("Accept", val.to_string())
     }
 }
 
@@ -380,47 +380,47 @@ impl Extend<QMediaType> for AcceptParams {
 mod test {
     use crate::{Accept, MediaType};
 
-    macro_rules! assert_preference {
-        ($string:expr, $expect:expr) => (
-            let accept: Accept = $string.parse().expect("accept string parse");
-            let expected: MediaType = $expect.parse().expect("media type parse");
-            let preferred = accept.preferred();
-            assert_eq!(preferred.media_type().to_string(), expected.to_string());
-        )
+    #[track_caller]
+    fn assert_preference(string: &str, expect: &str) {
+        let accept: Accept = string.parse().expect("accept string parse");
+        let expected: MediaType = expect.parse().expect("media type parse");
+        let preferred = accept.preferred();
+        let actual = preferred.media_type();
+        if *actual != expected {
+            panic!("mismatch for {}: expected {}, got {}", string, expected, actual)
+        }
     }
 
     #[test]
     fn test_preferred() {
-        assert_preference!("text/*", "text/*");
-        assert_preference!("text/*, text/html", "text/html");
-        assert_preference!("text/*; q=0.1, text/html", "text/html");
-        assert_preference!("text/*; q=1, text/html", "text/html");
-        assert_preference!("text/html, text/*", "text/html");
-        assert_preference!("text/*, text/html", "text/html");
-        assert_preference!("text/html, text/*; q=1", "text/html");
-        assert_preference!("text/html; q=1, text/html", "text/html");
-        assert_preference!("text/html, text/*; q=0.1", "text/html");
+        assert_preference("text/*", "text/*");
+        assert_preference("text/*, text/html", "text/html");
+        assert_preference("text/*; q=0.1, text/html", "text/html");
+        assert_preference("text/*; q=1, text/html", "text/html");
+        assert_preference("text/html, text/*", "text/html");
+        assert_preference("text/*, text/html", "text/html");
+        assert_preference("text/html, text/*; q=1", "text/html");
+        assert_preference("text/html; q=1, text/html", "text/html");
+        assert_preference("text/html, text/*; q=0.1", "text/html");
 
-        assert_preference!("text/html, application/json", "text/html");
-        assert_preference!("text/html, application/json; q=1", "text/html");
-        assert_preference!("application/json; q=1, text/html", "text/html");
+        assert_preference("text/html, application/json", "text/html");
+        assert_preference("text/html, application/json; q=1", "text/html");
+        assert_preference("application/json; q=1, text/html", "text/html");
 
-        assert_preference!("text/*, application/json", "application/json");
-        assert_preference!("*/*, text/*", "text/*");
-        assert_preference!("*/*, text/*, text/plain", "text/plain");
+        assert_preference("text/*, application/json", "application/json");
+        assert_preference("*/*, text/*", "text/*");
+        assert_preference("*/*, text/*, text/plain", "text/plain");
 
-        assert_preference!("a/b; q=0.1, a/b; q=0.2", "a/b; q=0.2");
-        assert_preference!("a/b; q=0.1, b/c; q=0.2", "b/c; q=0.2");
-        assert_preference!("a/b; q=0.5, b/c; q=0.2", "a/b; q=0.5");
+        assert_preference("a/b; q=0.1, a/b; q=0.2", "a/b; q=0.2");
+        assert_preference("a/b; q=0.1, b/c; q=0.2", "b/c; q=0.2");
+        assert_preference("a/b; q=0.5, b/c; q=0.2", "a/b; q=0.5");
 
-        assert_preference!("a/b; q=0.5, b/c; q=0.2, c/d", "c/d");
-        assert_preference!("a/b; q=0.5; v=1, a/b", "a/b");
+        assert_preference("a/b; q=0.5, b/c; q=0.2, c/d", "c/d");
+        assert_preference("a/b; q=0.5; v=1, a/b", "a/b");
 
-        assert_preference!("a/b; v=1, a/b; v=1; c=2", "a/b; v=1; c=2");
-        assert_preference!("a/b; v=1; c=2, a/b; v=1", "a/b; v=1; c=2");
-        assert_preference!("a/b; q=0.5; v=1, a/b; q=0.5; v=1; c=2",
-            "a/b; q=0.5; v=1; c=2");
-        assert_preference!("a/b; q=0.6; v=1, a/b; q=0.5; v=1; c=2",
-            "a/b; q=0.6; v=1");
+        assert_preference("a/b; v=1, a/b; v=1; c=2", "a/b; v=1; c=2");
+        assert_preference("a/b; v=1; c=2, a/b; v=1", "a/b; v=1; c=2");
+        assert_preference("a/b; q=0.5; v=1, a/b; q=0.5; v=1; c=2", "a/b; q=0.5; v=1; c=2");
+        assert_preference("a/b; q=0.6; v=1, a/b; q=0.5; v=1; c=2", "a/b; q=0.6; v=1");
     }
 }

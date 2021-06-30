@@ -323,7 +323,7 @@ impl<'a> Origin<'a> {
         where F: FnOnce(&'s RawStr) -> P, P: Into<RawStrBuf> + 's
     {
         let path = f(self.path().raw()).into();
-        if !path.starts_with('/') || !path.as_bytes().iter().all(|b| is_pchar(&b)) {
+        if !path.starts_with('/') || !path.as_bytes().iter().all(is_pchar) {
             return None;
         }
 

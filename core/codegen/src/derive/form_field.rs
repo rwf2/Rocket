@@ -301,7 +301,7 @@ impl VisitMut for ValidationMutator<'_> {
             }
         }
 
-        return syn::visit_mut::visit_expr_mut(self, i);
+        syn::visit_mut::visit_expr_mut(self, i);
     }
 }
 
@@ -385,10 +385,10 @@ pub fn default<'v>(field: Field<'v>) -> Result<Option<TokenStream>> {
     let ty = field.stripped_ty();
     match (default, default_with) {
         (Some(e1), Some(e2)) => {
-            return Err(e1.span()
+            Err(e1.span()
                 .error("duplicate default expressions")
                 .help("only one of `default` or `default_with` must be used")
-                .span_note(e2.span(), "other default expression is here"));
+                .span_note(e2.span(), "other default expression is here"))
         },
         (Some(e), None) | (None, Some(e)) => {
             Ok(Some(quote_spanned!(e.span() => {
@@ -420,8 +420,8 @@ pub fn first_duplicate<K: Spanned, V: PartialEq + Spanned>(
     let key = |k| key_map.iter().find(|(i, _)| k < *i).expect("k < *i");
 
     for (i, a) in all_values.iter().enumerate() {
-        let rest = all_values.iter().enumerate().skip(i + 1);
-        if let Some((j, b)) = rest.filter(|(_, b)| *b == a).next() {
+        let mut rest = all_values.iter().enumerate().skip(i + 1);
+        if let Some((j, b)) = rest.find(|(_, b)| *b == a) {
             let (a_i, key_a) = key(i);
             let (b_i, key_b) = key(j);
 

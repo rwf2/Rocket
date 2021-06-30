@@ -267,7 +267,7 @@ impl<'a> CookieJar<'a> {
         }
 
         drop(ops);
-        self.get(name).map(|c| c.clone())
+        self.get(name).cloned()
     }
 
     /// Retrives the _original or pending_ `Cookie` inside this collection with
@@ -448,7 +448,7 @@ impl<'a> CookieJar<'a> {
     /// TODO: This could be faster by just returning the cookies directly via
     /// an ordered hash-set of sorts.
     pub(crate) fn take_delta_jar(&self) -> cookie::CookieJar {
-        let ops = std::mem::replace(&mut *self.ops.lock(), Vec::new());
+        let ops = std::mem::take(&mut *self.ops.lock());
         let mut jar = cookie::CookieJar::new();
 
         for op in ops {

@@ -279,7 +279,7 @@ impl Rocket<Orbit> {
 
             let name = route.name.as_deref();
             let outcome = handle(name, || route.handler.handle(request, data)).await
-                .unwrap_or_else(|| Outcome::Failure(Status::InternalServerError));
+                .unwrap_or(Outcome::Failure(Status::InternalServerError));
 
             // Check if the request processing completed (Some) or if the
             // request needs to be forwarded. If it does, continue the loop

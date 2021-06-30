@@ -216,7 +216,7 @@ impl Buffer {
         }
     }
 
-    pub fn push_one<'a, S: Into<String>>(&'a self, string: S) -> &'a str {
+    pub fn push_one<S: Into<String>>(&self, string: S) -> &str {
         // SAFETY:
         //   * Aliasing: We retrieve a mutable reference to the last slot (via
         //     `push()`) and then return said reference as immutable; these

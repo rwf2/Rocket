@@ -132,7 +132,7 @@ impl<'r> Body<'r> {
     }
 
     pub(crate) fn strip(&mut self) {
-        let body = std::mem::replace(self, Body::default());
+        let body = std::mem::take(self);
         *self = match body.inner {
             Inner::Seekable(b) | Inner::Phantom(b) => Body {
                 size: body.size,
@@ -322,7 +322,7 @@ impl<'r> Body<'r> {
     /// ```
     #[inline(always)]
     pub fn take(&mut self) -> Self {
-        std::mem::replace(self, Body::default())
+        std::mem::take(self)
     }
 
     /// Reads all of `self` into a vector of bytes, consuming the contents.

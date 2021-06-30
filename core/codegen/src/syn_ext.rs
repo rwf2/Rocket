@@ -212,15 +212,12 @@ impl TypeExt for syn::Type {
                 match ty {
                     Path(t) if self.1.iter().any(|i| t.path.is_ident(*i)) => {
                         self.0 = false;
-                        return;
                     }
                     ImplTrait(_) | Infer(_) | Macro(_) => {
                         self.0 = false;
-                        return;
                     }
                     BareFn(_) | Never(_) => {
                         self.0 = true;
-                        return;
                     },
                     _ => syn::visit::visit_type(self, ty),
                 }

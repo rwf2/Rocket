@@ -59,7 +59,7 @@ fn decode_to_indexed_str<P: fmt::Part>(
         Cow::Borrowed(b) if indexed.is_indexed() => {
             let indexed = IndexedStr::checked_from(b, source.as_str());
             debug_assert!(indexed.is_some());
-            indexed.unwrap_or(IndexedStr::from(Cow::Borrowed("")))
+            indexed.unwrap_or_else(|| IndexedStr::from(Cow::Borrowed("")))
         }
         cow => IndexedStr::from(Cow::Owned(cow.into_owned())),
     }
@@ -77,7 +77,7 @@ impl<'a> Path<'a> {
     /// assert_eq!(uri.path().raw(), "/foo%20bar%2dbaz");
     /// ```
     pub fn raw(&self) -> &'a RawStr {
-        self.data.value.from_cow_source(&self.source).into()
+        self.data.value.from_cow_source(self.source).into()
     }
 
     /// Returns the raw, undecoded path value as an `&str`.
@@ -103,7 +103,7 @@ impl<'a> Path<'a> {
     }
 
     /// Normalizes `self`. If `absolute`, a starting  `/` is required.
-    pub(crate) fn to_normalized(&self, absolute: bool) -> Data<'static, fmt::Path> {
+    pub(crate) fn to_normalized(self, absolute: bool) -> Data<'static, fmt::Path> {
         let mut path = String::with_capacity(self.raw().len());
         let absolute = absolute || self.raw().starts_with('/');
         for (i, seg) in self.raw_segments().filter(|s| !s.is_empty()).enumerate() {
@@ -199,7 +199,7 @@ impl<'a> Query<'a> {
     /// assert_eq!(uri.query().unwrap().raw(), "baz+bar");
     /// ```
     pub fn raw(&self) -> &'a RawStr {
-        self.data.value.from_cow_source(&self.source).into()
+        self.data.value.from_cow_source(self.source).into()
     }
 
     /// Returns the raw, undecoded query value as an `&str`.
@@ -222,7 +222,7 @@ impl<'a> Query<'a> {
     }
 
     /// Normalizes `self`.
-    pub(crate) fn to_normalized(&self) -> Option<Data<'static, fmt::Query>> {
+    pub(crate) fn to_normalized(self) -> Option<Data<'static, fmt::Query>> {
         let mut query = String::with_capacity(self.raw().len());
         for (i, seg) in self.raw_segments().filter(|s| !s.is_empty()).enumerate() {
             if i != 0 { query.push('&'); }

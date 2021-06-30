@@ -350,7 +350,7 @@ impl<A, T: FromUriParam<fmt::Query, A>> FromUriParam<fmt::Query, Option<A>> for 
 
     #[inline(always)]
     fn from_uri_param(param: Option<A>) -> Self::Target {
-        param.map(|a| T::from_uri_param(a))
+        param.map(T::from_uri_param)
     }
 }
 
@@ -359,7 +359,7 @@ impl<A, E, T: FromUriParam<fmt::Query, A>> FromUriParam<fmt::Query, Option<A>> f
 
     #[inline(always)]
     fn from_uri_param(param: Option<A>) -> Self::Target {
-        param.map(|a| T::from_uri_param(a))
+        param.map(T::from_uri_param)
     }
 }
 
@@ -368,7 +368,7 @@ impl<A, E, T: FromUriParam<fmt::Query, A>> FromUriParam<fmt::Query, Result<A, E>
 
     #[inline(always)]
     fn from_uri_param(param: Result<A, E>) -> Self::Target {
-        param.map(|a| T::from_uri_param(a))
+        param.map(T::from_uri_param)
     }
 }
 
@@ -377,6 +377,6 @@ impl<A, E, T: FromUriParam<fmt::Query, A>> FromUriParam<fmt::Query, Result<A, E>
 
     #[inline(always)]
     fn from_uri_param(param: Result<A, E>) -> Self::Target {
-        param.map(|a| T::from_uri_param(a))
+        param.map(T::from_uri_param)
     }
 }

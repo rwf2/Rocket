@@ -228,7 +228,7 @@ fn internal_uri_macro_decl(route: &Route) -> TokenStream {
 fn responder_outcome_expr(route: &Route) -> TokenStream {
     let ret_span = match route.handler.sig.output {
         syn::ReturnType::Default => route.handler.sig.ident.span(),
-        syn::ReturnType::Type(_, ref ty) => ty.span().into()
+        syn::ReturnType::Type(_, ref ty) => ty.span()
     };
 
     let user_handler_fn_name = &route.handler.sig.ident;
@@ -236,7 +236,7 @@ fn responder_outcome_expr(route: &Route) -> TokenStream {
         .map(|(ident, _)| ident.rocketized());
 
     let _await = route.handler.sig.asyncness
-        .map(|a| quote_spanned!(a.span().into() => .await));
+        .map(|a| quote_spanned!(a.span() => .await));
 
     define_spanned_export!(ret_span => __req, _route);
     quote_spanned! { ret_span =>
@@ -375,12 +375,12 @@ fn codegen_route(route: Route) -> Result<TokenStream> {
 
         /// Rocket code generated wrapping URI macro.
         #internal_uri_macro
-    }.into())
+    })
 }
 
 fn complete_route(args: TokenStream, input: TokenStream) -> Result<TokenStream> {
     let function: syn::ItemFn = syn::parse2(input)
-        .map_err(|e| Diagnostic::from(e))
+        .map_err(Diagnostic::from)
         .map_err(|diag| diag.help("`#[route]` can only be used on functions"))?;
 
     let attr_tokens = quote!(route(#args));
@@ -398,10 +398,10 @@ fn incomplete_route(
     let method_span = StringLit::new(format!("#[{}]", method), Span::call_site())
         .subspan(2..2 + method_str.len());
 
-    let method_ident = syn::Ident::new(&method_str, method_span.into());
+    let method_ident = syn::Ident::new(&method_str, method_span);
 
     let function: syn::ItemFn = syn::parse2(input)
-        .map_err(|e| Diagnostic::from(e))
+        .map_err(Diagnostic::from)
         .map_err(|d| d.help(format!("#[{}] can only be used on functions", method_str)))?;
 
     let full_attr = quote!(#method_ident(#args));

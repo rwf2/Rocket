@@ -60,7 +60,7 @@ impl Client {
     ) -> Result<Client, Error> {
         let rocket = rocket.local_launch().await?;
         let cookies = RwLock::new(cookie::CookieJar::new());
-        Ok(Client { rocket, tracked, cookies })
+        Ok(Client { rocket, cookies, tracked })
     }
 
     // WARNING: This is unstable! Do not use this method outside of Rocket!

@@ -114,7 +114,7 @@ impl RawStr {
     /// let cow_raw = RawStr::from_cow_str(cow_str);
     /// assert_eq!(cow_raw.as_str(), "hello!");
     /// ```
-    pub fn from_cow_str<'a>(cow: Cow<'a, str>) -> Cow<'a, RawStr> {
+    pub fn from_cow_str(cow: Cow<'_, str>) -> Cow<'_, RawStr> {
         match cow {
             Cow::Borrowed(b) => Cow::Borrowed(b.into()),
             Cow::Owned(b) => Cow::Owned(b.into()),
@@ -136,7 +136,7 @@ impl RawStr {
     /// let cow_str = RawStr::into_cow_str(cow_raw);
     /// assert_eq!(&*cow_str, "hello!");
     /// ```
-    pub fn into_cow_str<'a>(cow: Cow<'a, RawStr>) -> Cow<'a, str> {
+    pub fn into_cow_str(cow: Cow<'_, RawStr>) -> Cow<'_, str> {
         match cow {
             Cow::Borrowed(b) => Cow::Borrowed(b.as_str()),
             Cow::Owned(b) => Cow::Owned(b.into_string()),
