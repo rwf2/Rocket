@@ -107,12 +107,14 @@ function test_core() {
     uuid
   )
 
-  echo ":: Building and testing core [no features]..."
-  indir "${CORE_LIB_ROOT}" $CARGO test --no-default-features $@
+  echo ":: Building and checking core [no features]..."
+  RUSTDOCFLAGS="-Zunstable-options --no-run" \
+    indir "${CORE_LIB_ROOT}" $CARGO test --no-default-features $@
 
   for feature in "${FEATURES[@]}"; do
-    echo ":: Building and testing core [${feature}]..."
-    indir "${CORE_LIB_ROOT}" $CARGO test --no-default-features --features "${feature}" $@
+    echo ":: Building and checking core [${feature}]..."
+    RUSTDOCFLAGS="-Zunstable-options --no-run" \
+      indir "${CORE_LIB_ROOT}" $CARGO test --no-default-features --features "${feature}" $@
   done
 }
 
