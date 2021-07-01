@@ -10,6 +10,19 @@ macro_rules! assert_uri_display_query {
     )
 }
 
+macro_rules! assert_query_form_roundtrip {
+    ($T:ty, $v:expr) => ({
+        use rocket::form::{Form, Strict};
+        use rocket::http::RawStr;
+
+        let v = $v;
+        let string = format!("{}", &v as &dyn UriDisplay<Query>);
+        let raw = RawStr::new(&string);
+        let value = Form::<Strict<$T>>::parse_encoded(raw).map(|s| s.into_inner());
+        assert_eq!(value.expect("form parse"), v);
+    })
+}
+
 macro_rules! assert_query_value_roundtrip {
     ($T:ty, $v:expr) => ({
         use rocket::form::{Form, Strict};
@@ -213,12 +226,12 @@ fn uri_display_path() {
 fn uri_display_serde() {
     use rocket::serde::json::Json;
 
-    #[derive(Debug, PartialEq, Clone, UriDisplayQuery, Deserialize, Serialize)]
+    #[derive(Debug, PartialEq, Clone, FromForm, UriDisplayQuery, Deserialize, Serialize)]
     #[serde(crate = "rocket::serde")]
     struct Bam {
         foo: String,
         bar: Option<usize>,
-        baz: Result<String, usize>,
+        baz: bool,
     }
 
     #[derive(Debug, PartialEq, FromForm, UriDisplayQuery)]
@@ -227,10 +240,38 @@ fn uri_display_serde() {
     let bam = Bam {
         foo: "hi[]=there.baz !?".into(),
         bar: None,
-        baz: Ok("what is baz, anyway?".into()),
+        baz: true,
     };
 
+    assert_query_form_roundtrip!(Bam, bam.clone());
+
     assert_query_value_roundtrip!(JsonFoo, JsonFoo(Json(bam.clone())));
+
+    // FIXME: https://github.com/rust-lang/rust/issues/86706
+    #[allow(private_in_public)]
+    #[derive(Debug, PartialEq, Clone, FromForm, UriDisplayQuery)]
+    struct Q<T>(Json<T>);
+
+    #[derive(Debug, PartialEq, Clone, FromForm, UriDisplayQuery)]
+    pub struct Generic<A, B> {
+        a: Q<A>,
+        b: Q<B>,
+        c: Q<A>,
+    }
+
+    assert_query_form_roundtrip!(Generic<usize, String>, Generic {
+        a: Q(Json(133)),
+        b: Q(Json("hello, world#rocket!".into())),
+        c: Q(Json(40486)),
+    });
+
+    #[derive(Debug, PartialEq, Clone, FromForm, UriDisplayQuery)]
+    // This is here to ensure we don't warn, which we can't test with trybuild.
+    pub struct GenericBorrow<'a, A: ?Sized, B: 'a> {
+        a: Q<&'a A>,
+        b: Q<B>,
+        c: Q<&'a A>,
+    }
 
     // TODO: This requires `MsgPack` to parse from value form fields.
     //

@@ -26,6 +26,7 @@ fn generic_bounds_mapper(bound: StaticTokens) -> MapperBuild {
 
             let bounds = fields.iter()
                 .filter(|f| !f.ty.is_concrete(&generic_idents))
+                .map(|f| &f.field.inner.ty)
                 .map(move |ty| quote_spanned!(ty.span() => #ty: #bound));
 
             Ok(quote!(#(#bounds,)*))
