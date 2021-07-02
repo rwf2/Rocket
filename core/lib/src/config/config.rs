@@ -134,10 +134,11 @@ impl Default for Config {
 impl Config {
     const DEPRECATED_KEYS: &'static [(&'static str, Option<&'static str>)] = &[
         ("env", Some(Self::PROFILE)), ("log", Some(Self::LOG_LEVEL)),
+        ("read_timeout", None), ("write_timeout", None),
     ];
 
     const DEPRECATED_PROFILES: &'static [(&'static str, Option<&'static str>)] = &[
-        ("dev", Some("debug")), ("prod", Some("release")),
+        ("dev", Some("debug")), ("prod", Some("release")), ("stag", None)
     ];
 
     /// Returns the default configuration for the `debug` profile, _irrespective
@@ -353,6 +354,8 @@ impl Config {
 
                 if let Some(new_key) = replacement {
                     launch_info_!("key has been by replaced by `{}`", Paint::white(new_key));
+                } else {
+                    launch_info_!("key has no special meaning");
                 }
             }
         }
