@@ -13,12 +13,10 @@ use rustls::internal::pemfile;
 use rustls::{Certificate, PrivateKey, ServerConfig, Session, SupportedCipherSuite};
 use tokio::net::{TcpListener, TcpStream};
 use tokio_rustls::{TlsAcceptor, Accept, server::TlsStream};
-use tokio::net::{TcpListener, TcpStream};
 
 
 use crate::listener::{Connection, Listener};
 
-pub use rustls::Certificate;
 #[cfg(feature = "tls")]
 pub use parse::{CertificateFields, CertificateParseError};
 
@@ -145,7 +143,7 @@ pub async fn bind_tls(
                 io::Error::new(e.kind(), msg)
             })?;
 
-            if required {
+            if client_auth_required {
                 rustls::AllowAnyAuthenticatedClient::new(roots)
             } else {
                 // TODO: in this case request with missing certificate is accepted,

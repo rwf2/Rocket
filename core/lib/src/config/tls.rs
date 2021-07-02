@@ -467,7 +467,7 @@ mod with_tls_feature {
 
     type Reader = Box<dyn std::io::BufRead + Sync + Send>;
 
-    fn to_reader(value: &Either<RelativePathBuf, Vec<u8>>) -> io::Result<Reader> {
+    fn to_reader(value: &Either<RelativePathBuf, Vec<u8>>) -> std::io::Result<Reader> {
         use std::{io::{self, Error}, fs};
         use yansi::Paint;
         match value {
