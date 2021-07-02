@@ -467,7 +467,7 @@ impl Sentinel for Template {
 /// #[get("/<foo>")]
 /// fn render_index(foo: u64) -> Template {
 ///     Template::render("index", context! {
-///         // Note that shorthand field syntax is supports.
+///         // Note that shorthand field syntax is supported.
 ///         // This is equivalent to `foo: foo,`
 ///         foo,
 ///         bar: "Hello world",
