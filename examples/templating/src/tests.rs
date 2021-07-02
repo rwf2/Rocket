@@ -44,7 +44,7 @@ fn test_404(base: &str) {
 
         let response = client.get(&path).dispatch();
         assert_eq!(response.status(), Status::NotFound);
-        let response = dbg!(response.into_string().unwrap());
+        let response = response.into_string().unwrap();
 
         assert!(response.contains(base));
         assert! {
