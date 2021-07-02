@@ -342,6 +342,7 @@ use std::num::{
     NonZeroUsize, NonZeroU8, NonZeroU16, NonZeroU32, NonZeroU64, NonZeroU128,
 };
 
+// Keep in-sync with the 'FromUriParam' impls.
 impl_with_display! {
     i8, i16, i32, i64, i128, isize,
     u8, u16, u32, u64, u128, usize,
@@ -367,6 +368,7 @@ macro_rules! impl_with_string {
 
 use std::net::{SocketAddr, SocketAddrV4, SocketAddrV6};
 
+// Keep in-sync with the 'FromUriParam' impls.
 impl_with_string! {
     time::Date => |d| d.format("%F"),
     time::PrimitiveDateTime => |d| d.format("%FT%T"),
@@ -377,7 +379,7 @@ impl_with_string! {
 }
 
 // These are second level implementations: they all defer to an existing
-// implementation.
+// implementation. Keep in-sync with `FromUriParam` impls.
 
 /// Percent-encodes the raw string. Defers to `str`.
 impl<P: Part> UriDisplay<P> for String {

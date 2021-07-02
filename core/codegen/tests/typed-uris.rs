@@ -537,3 +537,37 @@ fn test_simple_ignored() {
         uri!(ignore_with_q3(&mut 5, "boo", "hi b", "ho")) => "/hi/5/foo/boo?hi=hi%20b&hey=ho",
     }
 }
+
+#[test]
+fn test_maps() {
+    use std::collections::{HashMap, BTreeMap};
+    use rocket::figment::util::map;
+
+    #[get("/?<bar>")] fn hmap(mut bar: HashMap<String, usize>) {
+        let _ = uri!(bmap(&bar));
+        let _ = uri!(bmap(&mut bar));
+        let _ = uri!(bmap(bar));
+    }
+
+    assert_uri_eq! {
+        uri!(hmap(map!["foo" => 10])) => "/?bar.k:0=foo&bar.v:0=10",
+        uri!(hmap(map!["foo".to_string() => 10])) => "/?bar.k:0=foo&bar.v:0=10",
+        uri!(hmap(&map!["foo".to_string() => 10])) => "/?bar.k:0=foo&bar.v:0=10",
+        uri!(hmap(&mut map!["foo".to_string() => 10])) => "/?bar.k:0=foo&bar.v:0=10",
+        uri!(hmap(&map!["foo" => 10])) => "/?bar.k:0=foo&bar.v:0=10",
+    }
+
+    #[get("/?<bar>")] fn bmap(mut bar: BTreeMap<&str, usize>) {
+        let _ = uri!(hmap(&bar));
+        let _ = uri!(hmap(&mut bar));
+        let _ = uri!(hmap(bar));
+    }
+
+    assert_uri_eq! {
+        uri!(bmap(map!["foo" => 10])) => "/?bar.k:0=foo&bar.v:0=10",
+        uri!(bmap(map!["foo".to_string() => 10])) => "/?bar.k:0=foo&bar.v:0=10",
+        uri!(bmap(&map!["foo".to_string() => 10])) => "/?bar.k:0=foo&bar.v:0=10",
+        uri!(bmap(&mut map!["foo".to_string() => 10])) => "/?bar.k:0=foo&bar.v:0=10",
+        uri!(bmap(&map!["foo" => 10])) => "/?bar.k:0=foo&bar.v:0=10",
+    }
+}

@@ -1,3 +1,4 @@
+use std::collections::{BTreeMap, HashMap};
 use std::path::{Path, PathBuf};
 
 use crate::uri::fmt::UriDisplay;
@@ -191,25 +192,28 @@ pub trait FromUriParam<P: Part, T> {
     fn from_uri_param(param: T) -> Self::Target;
 }
 
-use std::{borrow::Cow, net::{IpAddr, Ipv4Addr, Ipv6Addr}};
-
 #[doc(hidden)]
 #[macro_export(local_inner_macros)]
 macro_rules! impl_conversion_ref {
-    ($(($($l:tt)+) $A:ty => $B:ty),*) => ( impl_conversion_ref!(@_ $(($($l)+,) $A => $B),*); );
-    ($($A:ty => $B:ty),*) => ( impl_conversion_ref!(@_ $(() $A => $B),*); );
+    ($(($($l:tt)+) $A:ty => $B:ty),* $(,)?) => (
+        impl_conversion_ref!(@_ $(($($l)+,) $A => $B),*);
+    );
 
-    (@_ $(($($l:tt)*) $A:ty => $B:ty),*) => ($(
+    ($($A:ty => $B:ty),* $(,)?) => (
+        impl_conversion_ref!(@_ $(() $A => $B),*);
+    );
+
+    (@_ $(($($l:tt)*) $A:ty => $B:ty),* $(,)?) => ($(
         impl_conversion_ref!([P] ($($l)* P: $crate::uri::fmt::Part) $A => $B);
     )*);
 
-    ($([$P:ty] ($($l:tt)*) $A:ty => $B:ty),*) => ($(
+    ($([$P:ty] ($($l:tt)*) $A:ty => $B:ty),* $(,)?) => ($(
         impl_conversion_ref!(@_ [$P] ($($l)*) $A => $B);
         impl_conversion_ref!(@_ [$P] ('x, $($l)*) &'x $A => $B);
         impl_conversion_ref!(@_ [$P] ('x, $($l)*) &'x mut $A => $B);
     )*);
 
-    ($([$P:ty] $A:ty => $B:ty),*) => ( impl_conversion_ref!($([$P] () $A => $B),*););
+    ($([$P:ty] $A:ty => $B:ty),* $(,)?) => ( impl_conversion_ref!($([$P] () $A => $B),*););
 
     (@_ [$P:ty] ($($l:tt)*) $A:ty => $B:ty) => (
         impl<$($l)*> $crate::uri::fmt::FromUriParam<$P, $A> for $B {
@@ -272,18 +276,28 @@ macro_rules! impl_conversion_ref {
 /// [`Query`]: crate::uri::fmt::Query
 #[macro_export(local_inner_macros)]
 macro_rules! impl_from_uri_param_identity {
-    ($(($($l:tt)*) $T:ty),*) => ($( impl_conversion_ref!(($($l)*) $T => $T); )*);
-    ($([$P:ty] ($($l:tt)*) $T:ty),*) => ($( impl_conversion_ref!([$P] ($($l)*) $T => $T); )*);
-    ($([$P:ty] $T:ty),*) => ($( impl_conversion_ref!([$P] $T => $T); )*);
-    ($($T:ty),*) => ($( impl_conversion_ref!($T => $T); )*);
+    ($(($($l:tt)*) $T:ty),* $(,)?) => ($( impl_conversion_ref!(($($l)*) $T => $T); )*);
+    ($([$P:ty] ($($l:tt)*) $T:ty),* $(,)?) => ($( impl_conversion_ref!([$P] ($($l)*) $T => $T); )*);
+    ($([$P:ty] $T:ty),* $(,)?) => ($( impl_conversion_ref!([$P] $T => $T); )*);
+    ($($T:ty),* $(,)?) => ($( impl_conversion_ref!($T => $T); )*);
 }
+
+use std::borrow::Cow;
+use std::net::{IpAddr, Ipv4Addr, Ipv6Addr, SocketAddr, SocketAddrV4, SocketAddrV6};
+use std::num::{
+    NonZeroIsize, NonZeroI8, NonZeroI16, NonZeroI32, NonZeroI64, NonZeroI128,
+    NonZeroUsize, NonZeroU8, NonZeroU16, NonZeroU32, NonZeroU64, NonZeroU128,
+};
 
 impl_from_uri_param_identity! {
     String,
     i8, i16, i32, i64, i128, isize,
     u8, u16, u32, u64, u128, usize,
     f32, f64, bool,
-    IpAddr, Ipv4Addr, Ipv6Addr
+    IpAddr, Ipv4Addr, Ipv6Addr, SocketAddr, SocketAddrV4, SocketAddrV6,
+    NonZeroIsize, NonZeroI8, NonZeroI16, NonZeroI32, NonZeroI64, NonZeroI128,
+    NonZeroUsize, NonZeroU8, NonZeroU16, NonZeroU32, NonZeroU64, NonZeroU128,
+    time::Date, time::Time, time::PrimitiveDateTime,
 }
 
 impl_from_uri_param_identity! {
@@ -380,3 +394,48 @@ impl<A, E, T: FromUriParam<fmt::Query, A>> FromUriParam<fmt::Query, Result<A, E>
         param.map(T::from_uri_param)
     }
 }
+
+macro_rules! impl_map_conversion {
+    ($From:ident => $To:ident) => (
+        impl<K, V, A, B> FromUriParam<fmt::Query, $From<A, B>> for $To<K, V>
+            where A: UriDisplay<fmt::Query>, K: FromUriParam<fmt::Query, A>,
+                  B: UriDisplay<fmt::Query>, V: FromUriParam<fmt::Query, B>
+        {
+            type Target = $From<A, B>;
+
+            #[inline(always)]
+            fn from_uri_param(param: $From<A, B>) -> Self::Target {
+                param
+            }
+        }
+    );
+
+    (& $([$mut:tt])? $From:ident => $To:ident) => (
+        impl<'a, K, V, A, B> FromUriParam<fmt::Query, &'a $($mut)? $From<A, B>> for $To<K, V>
+            where A: UriDisplay<fmt::Query>, K: FromUriParam<fmt::Query, A>,
+                  B: UriDisplay<fmt::Query>, V: FromUriParam<fmt::Query, B>
+        {
+            type Target = &'a $From<A, B>;
+
+            #[inline(always)]
+            fn from_uri_param(param: &'a $($mut)? $From<A, B>) -> Self::Target {
+                param
+            }
+        }
+    );
+}
+
+impl_map_conversion!(HashMap => HashMap);
+impl_map_conversion!(HashMap => BTreeMap);
+impl_map_conversion!(BTreeMap => BTreeMap);
+impl_map_conversion!(BTreeMap => HashMap);
+
+impl_map_conversion!(&HashMap => HashMap);
+impl_map_conversion!(&HashMap => BTreeMap);
+impl_map_conversion!(&BTreeMap => BTreeMap);
+impl_map_conversion!(&BTreeMap => HashMap);
+
+impl_map_conversion!(&[mut] HashMap => HashMap);
+impl_map_conversion!(&[mut] HashMap => BTreeMap);
+impl_map_conversion!(&[mut] BTreeMap => BTreeMap);
+impl_map_conversion!(&[mut] BTreeMap => HashMap);
