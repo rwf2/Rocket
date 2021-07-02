@@ -382,7 +382,7 @@ impl Rocket<Orbit> {
             let (certs, key) = config.to_readers().map_err(ErrorKind::Io)?;
             let ciphers = config.rustls_ciphers();
             let server_order = config.prefer_server_cipher_order;
-            
+
             let (ca, mutual_required) = if let Some(conf) = self.config.mutual_tls.as_ref() {
                 (
                     Some(conf.to_reader().map_err(ErrorKind::Io)?),
@@ -393,12 +393,12 @@ impl Rocket<Orbit> {
             };
 
 
-            let l = bind_tls(addr, 
-                certs, 
-                key, 
-                ciphers, 
-                server_order, 
-                ca, 
+            let l = bind_tls(addr,
+                certs,
+                key,
+                ciphers,
+                server_order,
+                ca,
                 mutual_required)
                 .await
                 .map_err(ErrorKind::Bind)?;
