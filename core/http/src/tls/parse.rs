@@ -43,12 +43,6 @@ fn parse(crt: &[u8]) -> Result<CertificateFields, ErrorKind> {
     })
 }
 
-/*fn parse_attr_type_and_val(av: &AttributeTypeAndValue) -> Result<String, CertificateParseError> {
-
-}*/
-
-
-
 impl ClientCertificate {
     /// Parses several fields presented client certificate.
     ///
