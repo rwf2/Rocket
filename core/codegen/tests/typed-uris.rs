@@ -571,3 +571,38 @@ fn test_maps() {
         uri!(bmap(&map!["foo" => 10])) => "/?bar.k:0=foo&bar.v:0=10",
     }
 }
+
+#[test]
+fn test_json() {
+    use rocket::serde::{Serialize, Deserialize, json::Json};
+
+    #[derive(Serialize, Deserialize, Copy, Clone)]
+    #[serde(crate = "rocket::serde")]
+    struct Inner<T> {
+        foo: Option<T>
+    }
+
+    #[get("/?<json>")] fn foo(json: Json<Inner<usize>>) { }
+
+    let mut inner = Inner { foo: Some(10) };
+    assert_uri_eq! {
+        uri!(foo(inner)) => "/?json=%7B%22foo%22:10%7D",
+        uri!(foo(&inner)) => "/?json=%7B%22foo%22:10%7D",
+        uri!(foo(&mut inner)) => "/?json=%7B%22foo%22:10%7D",
+        uri!(foo(Json(inner))) => "/?json=%7B%22foo%22:10%7D",
+        uri!(foo(&Json(inner))) => "/?json=%7B%22foo%22:10%7D",
+        uri!(foo(&mut Json(inner))) => "/?json=%7B%22foo%22:10%7D",
+    }
+
+    #[get("/?<json>")] fn bar(json: Json<Inner<Inner<&str>>>) { }
+
+    let mut inner = Inner { foo: Some(Inner { foo: Some("hi") }) };
+    assert_uri_eq! {
+        uri!(bar(inner)) => "/?json=%7B%22foo%22:%7B%22foo%22:%22hi%22%7D%7D",
+        uri!(bar(&inner)) => "/?json=%7B%22foo%22:%7B%22foo%22:%22hi%22%7D%7D",
+        uri!(bar(&mut inner)) => "/?json=%7B%22foo%22:%7B%22foo%22:%22hi%22%7D%7D",
+        uri!(bar(Json(inner))) => "/?json=%7B%22foo%22:%7B%22foo%22:%22hi%22%7D%7D",
+        uri!(bar(&Json(inner))) => "/?json=%7B%22foo%22:%7B%22foo%22:%22hi%22%7D%7D",
+        uri!(bar(&mut Json(inner))) => "/?json=%7B%22foo%22:%7B%22foo%22:%22hi%22%7D%7D",
+    }
+}

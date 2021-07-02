@@ -30,8 +30,9 @@ use std::ops::{Deref, DerefMut};
 use crate::request::{Request, local_cache};
 use crate::data::{Limits, Data, FromData, Outcome};
 use crate::response::{self, Responder, content};
-use crate::http::{uri, Status};
 use crate::form::prelude as form;
+use crate::http::uri::fmt::{UriDisplay, FromUriParam, Query, Formatter as UriFormatter};
+use crate::http::Status;
 
 use serde::{Serialize, Deserialize};
 
@@ -121,6 +122,7 @@ pub use serde_json;
 /// [global.limits]
 /// json = 5242880
 /// ```
+#[repr(transparent)]
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct Json<T>(pub T);
 
@@ -225,12 +227,31 @@ impl<'r, T: Serialize> Responder<'r, 'static> for Json<T> {
     }
 }
 
-impl<T: Serialize> uri::fmt::UriDisplay<uri::fmt::Query> for Json<T> {
-    fn fmt(&self, f: &mut uri::fmt::Formatter<'_, uri::fmt::Query>) -> fmt::Result {
+impl<T: Serialize> UriDisplay<Query> for Json<T> {
+    fn fmt(&self, f: &mut UriFormatter<'_, Query>) -> fmt::Result {
         let string = to_string(&self.0).map_err(|_| fmt::Error)?;
         f.write_value(&string)
     }
 }
+
+macro_rules! impl_from_uri_param_from_inner_type {
+    ($($lt:lifetime)?, $T:ty) => (
+        impl<$($lt,)? T: Serialize> FromUriParam<Query, $T> for Json<T> {
+            type Target = Json<$T>;
+
+            #[inline(always)]
+            fn from_uri_param(param: $T) -> Self::Target {
+                Json(param)
+            }
+        }
+    )
+}
+
+impl_from_uri_param_from_inner_type!(, T);
+impl_from_uri_param_from_inner_type!('a, &'a T);
+impl_from_uri_param_from_inner_type!('a, &'a mut T);
+
+crate::http::impl_from_uri_param_identity!([Query] (T: Serialize) Json<T>);
 
 impl<T> From<T> for Json<T> {
     fn from(value: T) -> Self {
