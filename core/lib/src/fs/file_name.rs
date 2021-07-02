@@ -195,7 +195,7 @@ impl FileName {
     /// The raw, unsanitized, potentially unsafe file name. Prefer to use
     /// [`FileName::as_str()`], always.
     ///
-    /// # Danger
+    /// # ⚠️ DANGER ⚠️
     ///
     /// This method returns the file name exactly as it was specified by the
     /// client. You should **_not_** use this name _unless_ you require the
