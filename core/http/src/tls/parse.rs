@@ -7,7 +7,7 @@ enum ErrorKind {
     #[error("failed to parse x509")]
     X509(#[from] nom::Err<X509Error>),
     #[error("data is not utf-8")]
-    Utf8(#[from] X509Error)
+    Utf8(#[from] X509Error),
 }
 
 
@@ -29,7 +29,7 @@ fn parse(crt: &[u8]) -> Result<CertificateFields, ErrorKind> {
     let mut common_names = Vec::new();
     let mut organisation_units = Vec::new();
 
-    let subject= crt.subject();
+    let subject = crt.subject();
     for cn in subject.iter_common_name() {
         common_names.push(cn.as_str()?.to_string());
     }
@@ -39,7 +39,7 @@ fn parse(crt: &[u8]) -> Result<CertificateFields, ErrorKind> {
 
     Ok(CertificateFields {
         common_names,
-        organisation_units
+        organisation_units,
     })
 }
 
