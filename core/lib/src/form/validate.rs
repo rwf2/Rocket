@@ -83,7 +83,7 @@ use std::convert::TryInto;
 use std::ops::{RangeBounds, Bound};
 use std::fmt::Debug;
 
-use crate::data::ByteUnit;
+use crate::data::{ByteUnit, Capped};
 use rocket_http::ContentType;
 
 use crate::{fs::TempFile, form::{Result, Error}};
@@ -329,13 +329,33 @@ impl<L, T: Len<L> + ?Sized> Len<L> for &T {
 }
 
 impl<L, T: Len<L>> Len<L> for Option<T> {
-    fn len(&self) -> L { self.as_ref().map(|v| v.len()).unwrap_or(T::zero_len()) }
+    fn len(&self) -> L { self.as_ref().map(|v| v.len()).unwrap_or_else(T::zero_len) }
+    fn len_into_u64(len: L) -> u64 { T::len_into_u64(len) }
+    fn zero_len() -> L { T::zero_len() }
+}
+
+impl<L, T: Len<L>> Len<L> for Capped<T> {
+    fn len(&self) -> L { self.value.len() }
     fn len_into_u64(len: L) -> u64 { T::len_into_u64(len) }
     fn zero_len() -> L { T::zero_len() }
 }
 
 impl<L, T: Len<L>> Len<L> for Result<'_, T> {
     fn len(&self) -> L { self.as_ref().ok().len() }
+    fn len_into_u64(len: L) -> u64 { T::len_into_u64(len) }
+    fn zero_len() -> L { T::zero_len() }
+}
+
+#[cfg(feature = "json")]
+impl<L, T: Len<L>> Len<L> for crate::serde::json::Json<T> {
+    fn len(&self) -> L { self.0.len() }
+    fn len_into_u64(len: L) -> u64 { T::len_into_u64(len) }
+    fn zero_len() -> L { T::zero_len() }
+}
+
+#[cfg(feature = "msgpack")]
+impl<L, T: Len<L>> Len<L> for crate::serde::msgpack::MsgPack<T> {
+    fn len(&self) -> L { self.0.len() }
     fn len_into_u64(len: L) -> u64 { T::len_into_u64(len) }
     fn zero_len() -> L { T::zero_len() }
 }
@@ -801,6 +821,10 @@ pub fn ext<'v>(file: &TempFile<'_>, r#type: ContentType) -> Result<'v, ()> {
 /// #[derive(PartialEq, FromFormField)]
 /// enum Pet { Cat, Dog }
 ///
+/// fn is_dog(p: &Pet) -> bool {
+///     matches!(p, Pet::Dog)
+/// }
+///
 /// #[derive(FromForm)]
 /// struct Foo {
 ///     // These are equivalent. Prefer the former.
@@ -809,10 +833,14 @@ pub fn ext<'v>(file: &TempFile<'_>, r#type: ContentType) -> Result<'v, ()> {
 ///     pets: Vec<Pet>,
 ///     // These are equivalent. Prefer the former.
 ///     #[field(validate = eq(Pet::Dog))]
-///     #[field(validate = with(|p| *p == Pet::Dog, "expected a dog"))]
+///     #[field(validate = with(|p| matches!(p, Pet::Dog), "expected a dog"))]
+///     #[field(validate = with(|p| is_dog(p), "expected a dog"))]
+///   # #[field(validate = with(|p| is_dog(&self.dog), "expected a dog"))]
+///     #[field(validate = with(is_dog, "expected a dog"))]
 ///     dog: Pet,
 ///     // These are equivalent. Prefer the former.
 ///     #[field(validate = contains(&self.dog))]
+///   # #[field(validate = with(|p| is_dog(&self.dog), "expected a dog"))]
 ///     #[field(validate = with(|pets| pets.iter().any(|p| p == &self.dog), "missing dog"))]
 ///     one_dog_please: Vec<Pet>,
 /// }
@@ -826,4 +854,42 @@ pub fn with<'v, V, F, M>(value: V, f: F, msg: M) -> Result<'v, ()>
     }
 
     Ok(())
+}
+
+/// _Try_ With validator: succeeds when an arbitrary function or closure does.
+///
+/// Along with [`with`], this is the most generic validator. It succeeds
+/// excactly when `f` returns `Ok` and fails otherwise.
+///
+/// On failure, returns a validation error with the message in the `Err`
+/// variant converted into a string.
+///
+/// # Example
+///
+/// Assuming `Token` has a `from_str` method:
+///
+/// ```rust
+/// # use rocket::form::FromForm;
+/// # impl FromStr for Token<'_> {
+/// #     type Err = &'static str;
+/// #     fn from_str(s: &str) -> Result<Self, Self::Err> { todo!() }
+/// # }
+/// use std::str::FromStr;
+///
+/// #[derive(FromForm)]
+/// #[field(validate = try_with(|s| Token::from_str(s)))]
+/// struct Token<'r>(&'r str);
+///
+/// #[derive(FromForm)]
+/// #[field(validate = try_with(|s| s.parse::<Token>()))]
+/// struct Token2<'r>(&'r str);
+/// ```
+pub fn try_with<'v, V, F, T, E>(value: V, f: F) -> Result<'v, ()>
+    where F: FnOnce(V) -> std::result::Result<T, E>,
+          E: std::fmt::Display
+{
+    match f(value) {
+        Ok(_) => Ok(()),
+        Err(e) => Err(Error::validation(e.to_string()).into())
+    }
 }

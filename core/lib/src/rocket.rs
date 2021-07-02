@@ -182,7 +182,7 @@ impl Rocket<Build> {
     /// let config = Config {
     ///     port: 7777,
     ///     address: Ipv4Addr::new(18, 127, 0, 1).into(),
-    ///     temp_dir: PathBuf::from("/tmp/config-example"),
+    ///     temp_dir: "/tmp/config-example".into(),
     ///     ..Config::debug_default()
     /// };
     ///
@@ -190,7 +190,7 @@ impl Rocket<Build> {
     /// let rocket = rocket::custom(&config).ignite().await?;
     /// assert_eq!(rocket.config().port, 7777);
     /// assert_eq!(rocket.config().address, Ipv4Addr::new(18, 127, 0, 1));
-    /// assert_eq!(rocket.config().temp_dir, Path::new("/tmp/config-example"));
+    /// assert_eq!(rocket.config().temp_dir.relative(), Path::new("/tmp/config-example"));
     ///
     /// // Create a new figment which modifies _some_ keys the existing figment:
     /// let figment = rocket.figment().clone()
@@ -203,7 +203,7 @@ impl Rocket<Build> {
     ///
     /// assert_eq!(rocket.config().port, 8888);
     /// assert_eq!(rocket.config().address, Ipv4Addr::new(171, 64, 200, 10));
-    /// assert_eq!(rocket.config().temp_dir, Path::new("/tmp/config-example"));
+    /// assert_eq!(rocket.config().temp_dir.relative(), Path::new("/tmp/config-example"));
     /// # Ok(())
     /// # });
     /// ```
@@ -488,7 +488,7 @@ impl Rocket<Build> {
 
             if config.secret_key.is_zero() {
                 config.secret_key = crate::config::SecretKey::generate()
-                    .unwrap_or(crate::config::SecretKey::zero());
+                    .unwrap_or_else(crate::config::SecretKey::zero);
             }
         };
 
@@ -504,8 +504,8 @@ impl Rocket<Build> {
         // Log everything we know: config, routes, catchers, fairings.
         // TODO: Store/print managed state type names?
         config.pretty_print(self.figment());
-        log_items("🛰  ", "Routes", self.routes(), |r| &r.uri.base, |r| &r.uri);
-        log_items("👾 ", "Catchers", self.catchers(), |c| &c.base, |c| &c.base);
+        log_items("📬 ", "Routes", self.routes(), |r| &r.uri.base, |r| &r.uri);
+        log_items("🥅 ", "Catchers", self.catchers(), |c| &c.base, |c| &c.base);
         self.fairings.pretty_print();
 
         // Ignite the rocket.

@@ -28,7 +28,7 @@ pub fn prefix_last_segment(path: &mut syn::Path, prefix: &str) {
 }
 
 pub fn _uri_macro(input: TokenStream) -> Result<TokenStream> {
-    let input2: TokenStream = input.clone().into();
+    let input2: TokenStream = input.clone();
     match syn::parse2::<UriMacro>(input)? {
         UriMacro::Routed(ref mut mac) => {
             prefix_last_segment(&mut mac.route.path, URI_MACRO_PREFIX);
@@ -39,10 +39,10 @@ pub fn _uri_macro(input: TokenStream) -> Result<TokenStream> {
     }
 }
 
-fn extract_exprs<'a>(internal: &'a InternalUriParams) -> Result<(
-        impl Iterator<Item = &'a Expr>,                // path exprs
-        impl Iterator<Item = &'a ArgExpr>,             // query exprs
-        impl Iterator<Item = (&'a Ident, &'a Type)>,   // types for both path || query
+fn extract_exprs(internal: &InternalUriParams) -> Result<(
+        impl Iterator<Item = &Expr>,             // path exprs
+        impl Iterator<Item = &ArgExpr>,          // query exprs
+        impl Iterator<Item = (&Ident, &Type)>,   // types for both path || query
     )>
 {
     let route_name = &internal.uri_mac.route.path;
@@ -51,7 +51,7 @@ fn extract_exprs<'a>(internal: &'a InternalUriParams) -> Result<(
             let path_params = internal.dynamic_path_params();
             let path_param_count = path_params.clone().count();
             for expr in exprs.iter().take(path_param_count) {
-                if !expr.as_expr().is_some() {
+                if expr.as_expr().is_none() {
                     return Err(expr.span().error("path parameters cannot be ignored"));
                 }
             }

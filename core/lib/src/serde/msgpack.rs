@@ -32,6 +32,7 @@ use crate::data::{Limits, Data, FromData, Outcome};
 use crate::response::{self, Responder, content};
 use crate::http::Status;
 use crate::form::prelude as form;
+// use crate::http::uri::fmt;
 
 use serde::{Serialize, Deserialize};
 
@@ -40,15 +41,34 @@ pub use rmp_serde::decode::Error;
 
 /// The MessagePack guard: easily consume and return MessagePack.
 ///
+/// ## Sending MessagePack
+///
+/// To respond with serialized MessagePack data, return a `MsgPack<T>` type,
+/// where `T` implements [`Serialize`] from [`serde`]. The content type of the
+/// response is set to `application/msgpack` automatically.
+///
+/// ```rust
+/// # #[macro_use] extern crate rocket;
+/// # type User = usize;
+/// use rocket::serde::msgpack::MsgPack;
+///
+/// #[get("/users/<id>")]
+/// fn user(id: usize) -> MsgPack<User> {
+///     let user_from_id = User::from(id);
+///     /* ... */
+///     MsgPack(user_from_id)
+/// }
+/// ```
+///
 /// ## Receiving MessagePack
 ///
 /// `MsgPack` is both a data guard and a form guard.
 ///
 /// ### Data Guard
 ///
-/// To parse request body data as MessagePack , add a `data` route argument with
-/// a target type of `MsgPack<T>`, where `T` is some type you'd like to parse
-/// from JSON. `T` must implement [`serde::Deserialize`].
+/// To deserialize request body data as MessagePack, add a `data` route
+/// argument with a target type of `MsgPack<T>`, where `T` is some type you'd
+/// like to parse from JSON. `T` must implement [`serde::Deserialize`].
 ///
 /// ```rust
 /// # #[macro_use] extern crate rocket;
@@ -102,26 +122,7 @@ pub use rmp_serde::decode::Error;
 /// [global.limits]
 /// msgpack = 5242880
 /// ```
-///
-/// ## Sending MessagePack
-///
-/// If you're responding with MessagePack data, return a `MsgPack<T>` type,
-/// where `T` implements [`Serialize`] from [`serde`]. The content type of the
-/// response is set to `application/msgpack` automatically.
-///
-/// ```rust
-/// # #[macro_use] extern crate rocket;
-/// # type User = usize;
-/// use rocket::serde::msgpack::MsgPack;
-///
-/// #[get("/users/<id>")]
-/// fn user(id: usize) -> MsgPack<User> {
-///     let user_from_id = User::from(id);
-///     /* ... */
-///     MsgPack(user_from_id)
-/// }
-/// ```
-#[derive(Debug)]
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct MsgPack<T>(pub T);
 
 impl<T> MsgPack<T> {
@@ -199,6 +200,9 @@ impl<'r, T: Serialize> Responder<'r, 'static> for MsgPack<T> {
 
 #[crate::async_trait]
 impl<'v, T: Deserialize<'v> + Send> form::FromFormField<'v> for MsgPack<T> {
+    // TODO: To implement `from_value`, we need to the raw string so we can
+    // decode it into bytes as opposed to a string as it won't be UTF-8.
+
     async fn from_data(f: form::DataField<'v, '_>) -> Result<Self, form::Errors<'v>> {
         Self::from_data(f.request, f.data).await.map_err(|e| {
             match e {
@@ -209,6 +213,14 @@ impl<'v, T: Deserialize<'v> + Send> form::FromFormField<'v> for MsgPack<T> {
         })
     }
 }
+
+// impl<T: Serialize> fmt::UriDisplay<fmt::Query> for MsgPack<T> {
+//     fn fmt(&self, f: &mut fmt::Formatter<'_, fmt::Query>) -> std::fmt::Result {
+//         let bytes = to_vec(&self.0).map_err(|_| std::fmt::Error)?;
+//         let encoded = crate::http::RawStr::percent_encode_bytes(&bytes);
+//         f.write_value(encoded.as_str())
+//     }
+// }
 
 impl<T> From<T> for MsgPack<T> {
     fn from(value: T) -> Self {
@@ -235,6 +247,8 @@ impl<T> DerefMut for MsgPack<T> {
 /// Deserialize an instance of type `T` from MessagePack encoded bytes.
 ///
 /// Deserialization is performed in a zero-copy manner whenever possible.
+///
+/// **_Always_ use [`MsgPack`] to deserialize MessagePack request data.**
 ///
 /// # Example
 ///
@@ -267,4 +281,76 @@ pub fn from_slice<'a, T>(v: &'a [u8]) -> Result<T, Error>
     where T: Deserialize<'a>,
 {
     rmp_serde::from_read_ref(v)
+}
+
+/// Serialize a `T` into a MessagePack byte vector with compact representation.
+///
+/// The compact representation represents structs as arrays.
+///
+/// **_Always_ use [`MsgPack`] to serialize MessagePack response data.**
+///
+/// # Example
+///
+/// ```
+/// use rocket::serde::{Deserialize, Serialize, msgpack};
+///
+/// #[derive(Deserialize, Serialize)]
+/// #[serde(crate = "rocket::serde")]
+/// struct Data<'r> {
+///     framework: &'r str,
+///     stars: usize,
+/// }
+///
+/// let bytes = &[146, 166, 82, 111, 99, 107, 101, 116, 5];
+/// let data: Data = msgpack::from_slice(bytes).unwrap();
+/// let byte_vec = msgpack::to_compact_vec(&data).unwrap();
+/// assert_eq!(bytes, &byte_vec[..]);
+/// ```
+///
+/// # Errors
+///
+/// Serialization fails if `T`'s `Serialize` implementation fails.
+#[inline(always)]
+pub fn to_compact_vec<T>(value: &T) -> Result<Vec<u8>, rmp_serde::encode::Error>
+    where T: Serialize + ?Sized
+{
+    rmp_serde::to_vec(value)
+}
+
+/// Serialize a `T` into a MessagePack byte vector with named representation.
+///
+/// The named representation represents structs as maps with field names.
+///
+/// **_Always_ use [`MsgPack`] to serialize MessagePack response data.**
+///
+/// # Example
+///
+/// ```
+/// use rocket::serde::{Deserialize, Serialize, msgpack};
+///
+/// #[derive(Deserialize, Serialize)]
+/// #[serde(crate = "rocket::serde")]
+/// struct Data<'r> {
+///     framework: &'r str,
+///     stars: usize,
+/// }
+///
+/// let bytes = &[
+///     130, 169, 102, 114, 97, 109, 101, 119, 111, 114, 107, 166, 82, 111,
+///     99, 107, 101, 116, 165, 115, 116, 97, 114, 115, 5
+/// ];
+///
+/// let data: Data = msgpack::from_slice(bytes).unwrap();
+/// let byte_vec = msgpack::to_vec(&data).unwrap();
+/// assert_eq!(bytes, &byte_vec[..]);
+/// ```
+///
+/// # Errors
+///
+/// Serialization fails if `T`'s `Serialize` implementation fails.
+#[inline(always)]
+pub fn to_vec<T>(value: &T) -> Result<Vec<u8>, rmp_serde::encode::Error>
+    where T: Serialize + ?Sized
+{
+    rmp_serde::to_vec_named(value)
 }

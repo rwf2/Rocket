@@ -137,6 +137,27 @@ We **strongly** advise all application authors to review this list carefully.
   * [`CookieJar`] `get()`s do not return cookies added during request handling. See
     [`CookieJar`#pending].
 
+### Contrib Graduation
+
+  * The `rocket_contrib` crate has been deprecated and should no longer be used.
+  * Several features previously in `rocket_contrib` were merged into `rocket` itself:
+    * `json`, `msgpack`, and `uuid` are now [features of `rocket`].
+    * Moved `rocket_contrib::json` to [`rocket::serde::json`].
+    * Moved `rocket_contrib::msgpack` to [`rocket::serde::msgpack`].
+    * Moved `rocket_contrib::uuid` to [`rocket::serde::uuid`].
+    * Moved `rocket_contrib::helmet` to [`rocket::shield`]. [`Shield`] is enabled by default.
+    * Moved `rocket_contrib::serve` to [`rocket::fs`], `StaticFiles` to [`rocket::fs::FileServer`].
+    * Removed the now unnecessary `Uuid` and `JsonValue` wrapper types.
+    * Removed headers in `Shield` that are no longer respected by browsers.
+  * The remaining features from `rocket_contrib` are now provided by separate crates:
+    * Replaced `rocket_contrib::templates` with [`rocket_dyn_templates`].
+    * Replaced `rocket_contrib::databases` with [`rocket_sync_db_pools`].
+    * These crates are versioned and released independently of `rocket`.
+    * `rocket_contrib::databases::DbError` is now `rocket_sync_db_pools::Error`.
+    * Removed `redis`, `mongodb`, and `mysql` integrations which have upstream `async` drivers.
+    * The [`#[database]`](https://api.rocket.rs/v0.5-rc/rocket_sync_db_pools/attr.database.html)
+      attribute generates an [`async run()`] method instead of `Deref` implementations.
+
 ### General
 
   * [`Rocket`] is now generic over a [phase] marker:
@@ -160,6 +181,7 @@ We **strongly** advise all application authors to review this list carefully.
     * The concept of "environments" is replaced with "profiles".
     * `ROCKET_ENV` is superseded by `ROCKET_PROFILE`.
     * `ROCKET_LOG` is superseded by `ROCKET_LOG_LEVEL`.
+    * `ROCKET_ADDRESS` accepts only IP addresses, no longer resolves hostnames like `localhost`.
     * Profile names can now be arbitrarily chosen. The `dev`, `stage`, and `prod` profiles carry no
       special meaning.
     * The `debug` and `release` profiles are the default profiles for the debug and release
@@ -201,6 +223,7 @@ We **strongly** advise all application authors to review this list carefully.
 
   * In `#[route(GET, path = "...")]`, `path` is now `uri`: `#[route(GET, uri = "...")]`.
   * Multi-segment paths (`/<p..>`) now match _zero_ or more segments.
+  * Codegen improvements preclude identically named routes and modules in the same namespace.
   * A route URI like (`/<a>/<p..>`) now collides with (`/<a>`), requires a `rank` to resolve.
   * All catcher related types and traits moved to [`rocket::catcher`].
   * All route related types and traits moved to [`rocket::route`].
@@ -257,27 +280,6 @@ We **strongly** advise all application authors to review this list carefully.
   * Removed inaccurate "chunked body" types and variants.
   * Removed `Responder` `impl` for `Response`. Prefer custom responders with `#[derive(Responder)]`.
   * Removed the unused reason phrase from `Status`.
-
-### Contrib Graduation
-
-  * The `rocket_contrib` crate has been deprecated and should no longer be used.
-  * Several features previously in `rocket_contrib` were merged into `rocket` itself:
-    * `json`, `msgpack`, and `uuid` are now features of `rocket`.
-    * Moved `rocket_contrib::json` to [`rocket::serde::json`].
-    * Moved `rocket_contrib::msgpack` to [`rocket::serde::msgpack`].
-    * Moved `rocket_contrib::uuid` to [`rocket::serde::uuid`].
-    * Moved `rocket_contrib::helmet` to [`rocket::shield`]. [`Shield`] is enabled by default.
-    * Moved `rocket_contrib::serve` to [`rocket::fs`], `StaticFiles` to [`rocket::fs::FileServer`].
-    * Removed the now unnecessary `Uuid` and `JsonValue` wrapper types.
-    * Removed headers in `Shield` that are no longer respected by browsers.
-  * The remaining features from `rocket_contrib` are now provided by separate crates:
-    * Replaced `rocket_contrib::templates` with [`rocket_dyn_templates`].
-    * Replaced `rocket_contrib::databases` with [`rocket_sync_db_pools`].
-    * These crates are versioned and released independently of `rocket`.
-    * `rocket_contrib::databases::DbError` is now `rocket_sync_db_pools::Error`.
-    * Removed `redis`, `mongodb`, and `mysql` integrations which have upstream `async` drivers.
-    * The [`#[database]`](https://api.rocket.rs/v0.5-rc/rocket_sync_db_pools/attr.database.html)
-      attribute generates an [`async run()`] method instead of `Deref` implementations.
 
 ## General Improvements
 
@@ -428,6 +430,7 @@ In addition to new features and major improvements, Rocket saw the following imp
   * Added support to `test.sh` for extra flags to be passed on to `cargo`.
   * Migrated CI to Github Actions.
 
+[features of `rocket`]: https://api.rocket.rs/v0.5-rc/rocket/#features
 [`async`/`await`]: https://rocket.rs/v0.5-rc/guide/overview/#async-routes
 [compilation on Rust's stable]: https://rocket.rs/v0.5-rc/guide/getting-started/#installing-rust
 [Feature-complete forms support]: https://rocket.rs/v0.5-rc/guide/requests/#forms

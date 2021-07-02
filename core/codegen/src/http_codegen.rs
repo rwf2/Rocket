@@ -56,7 +56,7 @@ impl FromMeta for ContentType {
     fn from_meta(meta: &MetaItem) -> Result<Self> {
         http::ContentType::parse_flexible(&String::from_meta(meta)?)
             .map(ContentType)
-            .ok_or(meta.value_span().error("invalid or unknown content type"))
+            .ok_or_else(|| meta.value_span().error("invalid or unknown content type"))
     }
 }
 
@@ -71,7 +71,7 @@ impl ToTokens for ContentType {
 impl FromMeta for MediaType {
     fn from_meta(meta: &MetaItem) -> Result<Self> {
         let mt = http::MediaType::parse_flexible(&String::from_meta(meta)?)
-            .ok_or(meta.value_span().error("invalid or unknown media type"))?;
+            .ok_or_else(|| meta.value_span().error("invalid or unknown media type"))?;
 
         if !mt.is_known() {
             // FIXME(diag: warning)

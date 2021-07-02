@@ -100,7 +100,7 @@ use crate::{Rocket, Ignite};
 /// The directly eligible sentinel types, guard and responders, are:
 ///
 ///   * `Option<&State<String>>`
-///   * `Either<Foo, INner<Bar>>`
+///   * `Either<Foo, Inner<Bar>>`
 ///
 /// In addition, all embedded types are _also_ eligble. These are:
 ///

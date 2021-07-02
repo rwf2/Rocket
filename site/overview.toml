@@ -21,60 +21,61 @@ fn index() -> &'static str {
 }
 ```
 
-This route, named `index`, will match against incoming HTTP `GET` requests to
-the `/` path, the index. The request handler returns a string. Rocket will use
-the string as the body of a fully formed HTTP response.
+This `index` route matches any incoming HTTP `GET` request to `/`, the index.
+The handler returns a `String`. Rocket automatically converts the string into a
+well-formed HTTP response that includes the appropriate `Content-Type` and body
+encoding metadata.
 '''
 
 [[panels]]
 name = "Dynamic Params"
 content = '''
-Rocket allows you to interpret segments of a request path dynamically. To
-illustrate, let's use the following route:
+Rocket automatically parses dynamic data in path segments into any desired type.
+To illustrate, let's use the following route:
 
 ```rust
 #[get("/hello/<name>/<age>")]
-fn hello(name: String, age: u8) -> String {
+fn hello(name: &str, age: u8) -> String {
     format!("Hello, {} year old named {}!", age, name)
 }
 ```
 
-The `hello` route above matches two dynamic path segments declared inside
-brackets in the path: `<name>` and `<age>`. _Dynamic_ means that the segment can
-be _any_ value the end-user desires.
+This `hello` route has two dynamic parameters, identified with angle brackets,
+declared in the route URI: `<name>` and `<age>`. Rocket maps each parameter to
+an identically named function argument: `name: &str` and `age: u8`. The dynamic
+data in the incoming request is parsed automatically into a value of the
+argument's type. The route is called only when parsing succeeds.
 
-Each dynamic parameter (`name` and `age`) must have a type, here `&str` and
-`u8`, respectively. Rocket will attempt to parse the string in the parameter's
-position in the path into that type. The route will only be called if parsing
-succeeds. To parse the string, Rocket uses the
-[FromParam](@api/rocket/request/trait.FromParam.html) trait,
-which you can implement for your own types!
+Parsing is directed by the
+[`FromParam`](@api/rocket/request/trait.FromParam.html) trait. Rocket implements
+`FromParam` for many standard types, including both `&str` and `u8`. You can
+implement it for your own types, too!
 '''
 
 [[panels]]
 name = "Handling Data"
 content = '''
-Request body data is handled in a special way in Rocket: via the
-[FromData](@api/rocket/data/trait.FromData.html) trait. Any type that implements
-`FromData` can be derived from incoming body data. To tell Rocket that you're
-expecting request body data, the `data` route argument is used with the name of
-the parameter in the request handler:
+Rocket can automatically parse body data, too!
 
 ```rust
-#[post("/login", data = "<user_form>")]
-fn login(user_form: Form<UserLogin>) -> String {
-   format!("Hello, {}!", user_form.name)
+#[post("/login", data = "<login>")]
+fn login(login: Form<UserLogin>) -> String {
+    format!("Hello, {}!", login.name)
 }
 ```
 
-The `login` route above says that it expects `data` of type `Form<UserLogin>` in
-the `user_form` parameter. The [Form](@api/rocket/form/struct.Form.html) type
-is a built-in Rocket type that knows how to parse web forms into structures.
-Rocket will automatically attempt to parse the request body into the `Form` and
-call the `login` handler if parsing succeeds. Other built-in `FromData` types
-include [`Data`](@api/rocket/struct.Data.html),
+The dynamic parameter declared in the `data` route attribute parameter again
+maps to a function argument. Here, `login` maps to `login: Form<UserLogin>`.
+Parsing is again trait-directed, this time by the
+[`FromData`](@api/rocket/data/trait.FromData.html) trait.
+
+The [`Form`](@api/rocket/form/struct.Form.html) type is Rocket's [robust form
+data parser](@guide/requests/#forms). It automatically parses the request body into the internal type,
+here `UserLogin`. Other built-in `FromData` types include
+[`Data`](@api/rocket/struct.Data.html),
 [`Json`](@api/rocket/serde/json/struct.Json.html), and
-[`Flash`](@api/rocket/response/struct.Flash.html).
+[`MsgPack`](@api/rocket/serde/msgpack/struct.MsgPack.html). As always, you can
+implement `FromData` for your own types, too!
 '''
 
 [[panels]]
@@ -107,7 +108,7 @@ invariants through types.
 name = "Responders"
 content = '''
 The return type of a request handler can be any type that implements
-[Responder](@api/rocket/response/trait.Responder.html):
+[`Responder`](@api/rocket/response/trait.Responder.html):
 
 ```rust
 #[get("/")]
@@ -117,9 +118,9 @@ fn route() -> T { ... }
 Above, T must implement `Responder`. Rocket implements `Responder` for many of
 the standard library types including `&str`, `String`, `File`, `Option`, and
 `Result`. Rocket also implements custom responders such as
-[Redirect](@api/rocket/response/struct.Redirect.html),
-[Flash](@api/rocket/response/struct.Flash.html), and
-[Template](@api/rocket_dyn_templates/struct.Template.html).
+[`Redirect`](@api/rocket/response/struct.Redirect.html),
+[`Flash`](@api/rocket/response/struct.Flash.html), and
+[`Template`](@api/rocket_dyn_templates/struct.Template.html).
 
 The task of a `Responder` is to generate a
 [`Response`](@api/rocket/response/struct.Response.html), if possible.
@@ -135,10 +136,9 @@ fn not_found() -> T { ... }
 [[panels]]
 name = "Launching"
 content = '''
-Launching a Rocket application is the funnest part! For Rocket to begin
-dispatching requests to routes, routes need to be _mounted_. After mounting, the
-application needs to be _launched_. These two steps, usually done in a `rocket`
-function, look like:
+Finally, we get to launch our application! Rocket begins dispatching requests to
+routes after they've been _mounted_ and the application has been _launched_.
+These two steps, usually wrtten in a `rocket` function, look like:
 
 ```rust
 #[launch]
@@ -147,15 +147,14 @@ fn rocket() -> _ {
 }
 ```
 
-The `mount` call takes a base path and a set of routes via the `routes!` macro.
-The base path (`/base` above) is prepended to the path of every route in the
-list. This namespaces the routes, allowing for composition. The `#[launch]`
-attribute creates a `main` function that starts the server. In development,
-Rocket prints useful information to the console to let you know everything is
-okay.
+The `mount` call takes a _base_ and a set of routes via the `routes!` macro. The
+base path (`/base` above) is prepended to the path of every route in the list,
+effectively namespacing the routes. `#[launch]` creates a `main` function that
+starts the server. In development, Rocket prints useful information to the
+console to let you know everything is okay.
 
 ```sh
-🚀  Rocket has launched from http://localhost:8000
+🚀 Rocket has launched from http://127.0.0.1:8000
 ```
 '''
 

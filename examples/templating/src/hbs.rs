@@ -1,20 +1,9 @@
 use rocket::Request;
 use rocket::response::Redirect;
-use rocket::serde::Serialize;
 
-use rocket_dyn_templates::{Template, handlebars};
+use rocket_dyn_templates::{Template, handlebars, context};
 
 use self::handlebars::{Handlebars, JsonRender};
-
-#[derive(Serialize)]
-#[serde(crate = "rocket::serde")]
-struct TemplateContext<'r> {
-    title: &'r str,
-    name: Option<&'r str>,
-    items: Vec<&'r str>,
-    // This special key tells handlebars which template is the parent.
-    parent: &'static str,
-}
 
 #[get("/")]
 pub fn index() -> Redirect {
@@ -23,27 +12,28 @@ pub fn index() -> Redirect {
 
 #[get("/hello/<name>")]
 pub fn hello(name: &str) -> Template {
-    Template::render("hbs/index", &TemplateContext {
+    Template::render("hbs/index", context! {
         title: "Hello",
         name: Some(name),
         items: vec!["One", "Two", "Three"],
+        // This special key tells handlebars which template is the parent.
         parent: "hbs/layout",
     })
 }
 
 #[get("/about")]
 pub fn about() -> Template {
-    let mut map = std::collections::HashMap::new();
-    map.insert("title", "About");
-    map.insert("parent", "hbs/layout");
-    Template::render("hbs/about.html", &map)
+    Template::render("hbs/about.html", context! {
+        title: "About",
+        parent: "hbs/layout",
+    })
 }
 
 #[catch(404)]
 pub fn not_found(req: &Request<'_>) -> Template {
-    let mut map = std::collections::HashMap::new();
-    map.insert("path", req.uri().path().raw());
-    Template::render("hbs/error/404", &map)
+    Template::render("hbs/error/404", context! {
+        uri: req.uri()
+    })
 }
 
 fn wow_helper(

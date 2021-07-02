@@ -187,7 +187,7 @@
 //! retrieves a connection from the database pool or fails with a
 //! `Status::ServiceUnavailable` if connecting to the database times out.
 //!
-//! The macro also generates two inherent methods on the decorated type:
+//! The macro also generates three inherent methods on the decorated type:
 //!
 //!   * `fn fairing() -> impl Fairing`
 //!
@@ -198,6 +198,12 @@
 //!
 //!     Retrieves a connection wrapper from the configured pool. Returns `Some`
 //!     as long as `Self::fairing()` has been attached.
+//!
+//!   * `async fn run<R: Send + 'static>(&self, impl FnOnce(&mut Db) -> R + Send + 'static) -> R`
+//!
+//!     Runs the specified function or closure, providing it access to the
+//!     underlying database connection (`&mut Db`). Returns the value returned
+//!     by the function or closure.
 //!
 //! The attribute can only be applied to unit-like structs with one type. The
 //! internal type of the structure must implement [`Poolable`].

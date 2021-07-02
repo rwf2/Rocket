@@ -1,3 +1,5 @@
+use std::time::Duration;
+
 use r2d2::ManageConnection;
 use rocket::{Rocket, Build};
 
@@ -63,6 +65,7 @@ use crate::{Config, Error};
 /// #          fn has_broken(&self, _: &mut Connection) -> bool { panic!() }
 /// #     }
 /// # }
+/// use std::time::Duration;
 /// use rocket::{Rocket, Build};
 /// use rocket_sync_db_pools::{r2d2, Error, Config, Poolable, PoolResult};
 ///
@@ -73,7 +76,10 @@ use crate::{Config, Error};
 ///     fn pool(db_name: &str, rocket: &Rocket<Build>) -> PoolResult<Self> {
 ///         let config = Config::from(db_name, rocket)?;
 ///         let manager = foo::ConnectionManager::new(&config.url).map_err(Error::Custom)?;
-///         Ok(r2d2::Pool::builder().max_size(config.pool_size).build(manager)?)
+///         Ok(r2d2::Pool::builder()
+///             .max_size(config.pool_size)
+///             .connection_timeout(Duration::from_secs(config.timeout as u64))
+///             .build(manager)?)
 ///     }
 /// }
 /// ```
@@ -136,6 +142,7 @@ impl Poolable for diesel::SqliteConnection {
         let pool = Pool::builder()
             .connection_customizer(Box::new(Customizer))
             .max_size(config.pool_size)
+            .connection_timeout(Duration::from_secs(config.timeout as u64))
             .build(manager)?;
 
         Ok(pool)
@@ -150,7 +157,12 @@ impl Poolable for diesel::PgConnection {
     fn pool(db_name: &str, rocket: &Rocket<Build>) -> PoolResult<Self> {
         let config = Config::from(db_name, rocket)?;
         let manager = diesel::r2d2::ConnectionManager::new(&config.url);
-        Ok(r2d2::Pool::builder().max_size(config.pool_size).build(manager)?)
+        let pool = r2d2::Pool::builder()
+            .max_size(config.pool_size)
+            .connection_timeout(Duration::from_secs(config.timeout as u64))
+            .build(manager)?;
+
+        Ok(pool)
     }
 }
 
@@ -162,7 +174,12 @@ impl Poolable for diesel::MysqlConnection {
     fn pool(db_name: &str, rocket: &Rocket<Build>) -> PoolResult<Self> {
         let config = Config::from(db_name, rocket)?;
         let manager = diesel::r2d2::ConnectionManager::new(&config.url);
-        Ok(r2d2::Pool::builder().max_size(config.pool_size).build(manager)?)
+        let pool = r2d2::Pool::builder()
+            .max_size(config.pool_size)
+            .connection_timeout(Duration::from_secs(config.timeout as u64))
+            .build(manager)?;
+
+        Ok(pool)
     }
 }
 
@@ -176,7 +193,12 @@ impl Poolable for postgres::Client {
         let config = Config::from(db_name, rocket)?;
         let url = config.url.parse().map_err(Error::Custom)?;
         let manager = r2d2_postgres::PostgresConnectionManager::new(url, postgres::tls::NoTls);
-        Ok(r2d2::Pool::builder().max_size(config.pool_size).build(manager)?)
+        let pool = r2d2::Pool::builder()
+            .max_size(config.pool_size)
+            .connection_timeout(Duration::from_secs(config.timeout as u64))
+            .build(manager)?;
+
+        Ok(pool)
     }
 }
 
@@ -230,7 +252,12 @@ impl Poolable for rusqlite::Connection {
         let manager = r2d2_sqlite::SqliteConnectionManager::file(&*config.url)
             .with_flags(flags);
 
-        Ok(r2d2::Pool::builder().max_size(config.pool_size).build(manager)?)
+        let pool = r2d2::Pool::builder()
+            .max_size(config.pool_size)
+            .connection_timeout(Duration::from_secs(config.timeout as u64))
+            .build(manager)?;
+
+        Ok(pool)
     }
 }
 
@@ -243,6 +270,11 @@ impl Poolable for memcache::Client {
     fn pool(db_name: &str, rocket: &Rocket<Build>) -> PoolResult<Self> {
         let config = Config::from(db_name, rocket)?;
         let manager = r2d2_memcache::MemcacheConnectionManager::new(&*config.url);
-        Ok(r2d2::Pool::builder().max_size(config.pool_size).build(manager)?)
+        let pool = r2d2::Pool::builder()
+            .max_size(config.pool_size)
+            .connection_timeout(Duration::from_secs(config.timeout as u64))
+            .build(manager)?;
+
+        Ok(pool)
     }
 }

@@ -19,7 +19,7 @@ struct Thing4<'a, 'b>(&'a str, &'b str);
 struct Thing5<T>(T); // NO ERROR
 
 #[derive(Responder)]
-struct Thing6<T, E>(T, E); // NO ERROR
+struct Thing6<T, E>(T, E);
 
 #[derive(Responder)]
 #[response(content_type = "")]
@@ -48,25 +48,5 @@ struct Thing12(());
 #[derive(Responder)]
 #[response(status = 404, content_type = 120)]
 struct Thing13(());
-
-#[derive(Responder)]
-#[response(bound = 10)]
-struct Thing14(());
-
-#[derive(Responder)]
-#[response(bound = "T: std::fmt::Display")]
-struct Thing15<T>(T);
-
-#[derive(Responder)]
-#[response(bound = "T: std::fmt::Display")]
-struct Thing16<T>(T);
-
-#[derive(Responder)]
-#[response(bound = "ponies are cool")]
-struct Thing17<T>(T);
-
-#[derive(Responder)]
-#[response(bound = "T: ROCKETS + ARE COOLER")]
-struct Thing18<T>(T);
 
 fn main() {}

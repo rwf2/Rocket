@@ -138,7 +138,7 @@ impl<K: 'static, C: Poolable> ConnectionPool<K, C> {
 
     #[inline]
     pub async fn get_pool<P: Phase>(rocket: &Rocket<P>) -> Option<Self> {
-        rocket.state::<Self>().map(|pool| pool.clone())
+        rocket.state::<Self>().cloned()
     }
 }
 

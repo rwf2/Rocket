@@ -156,9 +156,9 @@ impl Default for Referrer {
     }
 }
 
-impl Into<Header<'static>> for &Referrer {
-    fn into(self) -> Header<'static> {
-        let policy_string = match self {
+impl From<&Referrer> for Header<'static> {
+    fn from(referrer: &Referrer) -> Self {
+        let policy_string = match referrer {
             Referrer::NoReferrer => "no-referrer",
             Referrer::NoReferrerWhenDowngrade => "no-referrer-when-downgrade",
             Referrer::Origin => "origin",
@@ -217,9 +217,9 @@ impl Default for ExpectCt {
     }
 }
 
-impl Into<Header<'static>> for &ExpectCt {
-    fn into(self) -> Header<'static> {
-        let policy_string =  match self {
+impl From<&ExpectCt> for Header<'static> {
+    fn from(expect: &ExpectCt) -> Self {
+        let policy_string =  match expect {
             ExpectCt::Enforce(age) => format!("max-age={}, enforce", age.whole_seconds()),
             ExpectCt::Report(age, uri) => {
                 format!(r#"max-age={}, report-uri="{}""#, age.whole_seconds(), uri)
@@ -251,8 +251,8 @@ impl Default for NoSniff {
     }
 }
 
-impl Into<Header<'static>> for &NoSniff {
-    fn into(self) -> Header<'static> {
+impl From<&NoSniff> for Header<'static> {
+    fn from(_: &NoSniff) -> Self {
         Header::new(NoSniff::NAME, "nosniff")
     }
 }
@@ -301,9 +301,9 @@ impl Default for Hsts {
     }
 }
 
-impl Into<Header<'static>> for &Hsts {
-    fn into(self) -> Header<'static> {
-        if self == &Hsts::default() {
+impl From<&Hsts> for Header<'static> {
+    fn from(hsts: &Hsts) -> Self {
+        if hsts == &Hsts::default() {
             static DEFAULT: Header<'static> = Header {
                 name: Uncased::from_borrowed(Hsts::NAME),
                 value: Cow::Borrowed("max-age=31536000")
@@ -312,7 +312,7 @@ impl Into<Header<'static>> for &Hsts {
             return DEFAULT.clone();
         }
 
-        let policy_string = match self {
+        let policy_string = match hsts {
             Hsts::Enable(age) => format!("max-age={}", age.whole_seconds()),
             Hsts::IncludeSubDomains(age) => {
                 format!("max-age={}; includeSubDomains", age.whole_seconds())
@@ -353,9 +353,9 @@ impl Default for Frame {
     }
 }
 
-impl Into<Header<'static>> for &Frame {
-    fn into(self) -> Header<'static> {
-        let policy_string: &'static str = match self {
+impl From<&Frame> for Header<'static> {
+    fn from(frame: &Frame) -> Self {
+        let policy_string: &'static str = match frame {
             Frame::Deny => "DENY",
             Frame::SameOrigin => "SAMEORIGIN",
         };
@@ -389,9 +389,9 @@ impl Default for XssFilter {
     }
 }
 
-impl Into<Header<'static>> for &XssFilter {
-    fn into(self) -> Header<'static> {
-        let policy_string: &'static str = match self {
+impl From<&XssFilter> for Header<'static> {
+    fn from(filter: &XssFilter) -> Self {
+        let policy_string: &'static str = match filter {
             XssFilter::Disable => "0",
             XssFilter::Enable => "1",
             XssFilter::EnableBlock => "1; mode=block",
@@ -423,9 +423,9 @@ impl Default for Prefetch {
     }
 }
 
-impl Into<Header<'static>> for &Prefetch {
-    fn into(self) -> Header<'static> {
-        let policy_string = match self {
+impl From<&Prefetch> for Header<'static> {
+    fn from(prefetch: &Prefetch) -> Self {
+        let policy_string = match prefetch {
             Prefetch::On => "on",
             Prefetch::Off => "off",
         };
@@ -645,9 +645,9 @@ impl Permission {
     }
 }
 
-impl Into<Header<'static>> for &Permission {
-    fn into(self) -> Header<'static> {
-        if self == &Permission::default() {
+impl From<&Permission> for Header<'static> {
+    fn from(perm: &Permission) -> Self {
+        if perm == &Permission::default() {
             static DEFAULT: Header<'static> = Header {
                 name: Uncased::from_borrowed(Permission::NAME),
                 value: Cow::Borrowed("interest-cohort=()")
@@ -656,7 +656,7 @@ impl Into<Header<'static>> for &Permission {
             return DEFAULT.clone();
         }
 
-        let value = self.0.iter()
+        let value = perm.0.iter()
             .map(|(feature, allow)| {
                 let list = allow.as_ref()
                     .into_iter()

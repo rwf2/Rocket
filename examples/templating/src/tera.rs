@@ -1,18 +1,7 @@
-use std::collections::HashMap;
-
 use rocket::Request;
 use rocket::response::Redirect;
-use rocket::serde::Serialize;
 
-use rocket_dyn_templates::{Template, tera::Tera};
-
-#[derive(Serialize)]
-#[serde(crate = "rocket::serde")]
-struct TemplateContext<'r> {
-    title: &'r str,
-    name: Option<&'r str>,
-    items: Vec<&'r str>
-}
+use rocket_dyn_templates::{Template, tera::Tera, context};
 
 #[get("/")]
 pub fn index() -> Redirect {
@@ -21,7 +10,7 @@ pub fn index() -> Redirect {
 
 #[get("/hello/<name>")]
 pub fn hello(name: &str) -> Template {
-    Template::render("tera/index", &TemplateContext {
+    Template::render("tera/index", context! {
         title: "Hello",
         name: Some(name),
         items: vec!["One", "Two", "Three"],
@@ -30,16 +19,16 @@ pub fn hello(name: &str) -> Template {
 
 #[get("/about")]
 pub fn about() -> Template {
-    let mut map = HashMap::new();
-    map.insert("title", "About");
-    Template::render("tera/about.html", &map)
+    Template::render("tera/about.html", context! {
+        title: "About",
+    })
 }
 
 #[catch(404)]
 pub fn not_found(req: &Request<'_>) -> Template {
-    let mut map = HashMap::new();
-    map.insert("path", req.uri().path().raw());
-    Template::render("tera/error/404", &map)
+    Template::render("tera/error/404", context! {
+        uri: req.uri()
+    })
 }
 
 pub fn customize(tera: &mut Tera) {

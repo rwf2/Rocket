@@ -136,6 +136,22 @@ impl<B: 'static + ToOwned + ?Sized> IntoOwned for Cow<'_, B> {
     }
 }
 
+macro_rules! impl_into_owned_self {
+    ($($T:ty),*) => ($(
+        impl IntoOwned for $T {
+            type Owned = Self;
+
+            #[inline(always)]
+            fn into_owned(self) -> <Self as IntoOwned>::Owned {
+                self
+            }
+        }
+    )*)
+}
+
+impl_into_owned_self!(u8, u16, u32, u64, usize);
+impl_into_owned_self!(i8, i16, i32, i64, isize);
+
 use std::path::Path;
 
 // Outside of http, this is used by a test.

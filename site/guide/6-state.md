@@ -113,7 +113,7 @@ example on GitHub](@example/state) and learn more about the [`manage`
 method](@api/rocket/struct.Rocket.html#method.manage) and [`State`
 type](@api/rocket/struct.State.html) in the API docs.
 
-# Within Guards
+### Within Guards
 
 Because `State` is itself a request guard, managed state can be retrieved from
 another request guard's implementation using either [`Request::guard()`] or

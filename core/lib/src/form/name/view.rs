@@ -154,7 +154,7 @@ impl<'v> NameView<'v> {
     /// assert_eq!(view.key(), None);
     /// ```
     pub fn shift(&mut self) {
-        const START_DELIMS: &'static [char] = &['.', '['];
+        const START_DELIMS: &[char] = &['.', '['];
 
         let string = &self.name[self.end..];
         let bytes = string.as_bytes();

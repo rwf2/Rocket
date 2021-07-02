@@ -427,7 +427,7 @@ struct Third<'r> {
 #[post("/<foo>/<bar>?<q1>&<rest..>")]
 fn optionals(
     foo: Option<usize>,
-    bar: Result<String, &'_ str>,
+    bar: Option<String>,
     q1: Result<usize, Errors<'_>>,
     rest: Option<Third<'_>>
 ) { }

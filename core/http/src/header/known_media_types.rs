@@ -45,6 +45,7 @@ macro_rules! known_media_types {
         ZIP (is_zip): "ZIP archive", "application", "zip",
         EventStream (is_event_stream): "SSE stream", "text", "event-stream",
         SEP2 (is_sep2): "Smart Energy Profile 2.0", "application", "sep+xml",
+        Markdown (is_markdown): "markdown text", "text", "markdown" ; "charset" => "utf-8",
     })
 }
 
@@ -92,6 +93,8 @@ macro_rules! known_extensions {
         "tiff" => TIFF,
         "mov" => MOV,
         "zip" => ZIP,
+        "md" => Markdown,
+        "markdown" => Markdown,
     })
 }
 
@@ -111,5 +114,7 @@ macro_rules! known_shorthands {
         "multipart" => FormData,
         "xml" => XML,
         "pdf" => PDF,
+        "markdown" => Markdown,
+        "md" => Markdown,
     })
 }

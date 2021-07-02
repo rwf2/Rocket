@@ -181,6 +181,21 @@ fn skip<T: AsRef<[u8]> + Unpin>(buf: &mut Take<Cursor<T>>) {
     }
 }
 
+
+macro_rules! dbg_assert_ready {
+    ($e:expr) => ({
+        let poll = $e;
+        debug_assert!(poll.is_ready());
+        ::futures::ready!(poll)
+    })
+}
+
+// NOTE: The correctness of this implementation depends on the types of `name`
+// and `value` having `AsyncRead` implementations that always return `Ready`.
+// Otherwise, we may return `Pending` after having written data to `buf` which
+// violates the contract. This can happen because even after a successful
+// partial or full read of `name`, we loop back to a `ready!(name.poll())` if
+// `buf` was not completely filled. So, we return `Pending` if that poll does.
 impl AsyncRead for RawLinedEvent {
     fn poll_read(
         mut self: Pin<&mut Self>,
@@ -196,7 +211,7 @@ impl AsyncRead for RawLinedEvent {
 
             match self.state {
                 State::Name => {
-                    futures::ready!(Pin::new(&mut self.name).poll_read(cx, buf))?;
+                    dbg_assert_ready!(Pin::new(&mut self.name).poll_read(cx, buf))?;
                     if !self.name.has_remaining() {
                         self.name.set_position(0);
                         self.state = State::Colon;
@@ -208,7 +223,7 @@ impl AsyncRead for RawLinedEvent {
                     self.state = State::Value;
                 }
                 State::Value => {
-                    futures::ready!(Pin::new(&mut self.value).poll_read(cx, buf))?;
+                    dbg_assert_ready!(Pin::new(&mut self.value).poll_read(cx, buf))?;
                     if self.value.limit() == 0 {
                         self.state = State::NewLine;
                     }

@@ -2,7 +2,11 @@ use std::net::{IpAddr, SocketAddr};
 use std::collections::{BTreeMap, HashMap};
 use pretty_assertions::assert_eq;
 
+use rocket::UriDisplayQuery;
+use rocket::http::uri::fmt::{UriDisplay, Query};
 use rocket::form::{self, Form, Strict, FromForm, FromFormField, Errors};
+use rocket::form::error::{ErrorKind, Entity};
+use rocket::serde::json::Json;
 
 fn strict<'f, T: FromForm<'f>>(string: &'f str) -> Result<T, Errors<'f>> {
     Form::<Strict<T>>::parse(string).map(|s| s.into_inner())
@@ -12,7 +16,7 @@ fn lenient<'f, T: FromForm<'f>>(string: &'f str) -> Result<T, Errors<'f>> {
     Form::<T>::parse(string)
 }
 
-fn strict_encoded<T: 'static>(string: &'static str) -> Result<T, Errors<'static>>
+fn strict_encoded<T: 'static>(string: &str) -> Result<T, Errors<'static>>
     where for<'a> T: FromForm<'a>
 {
     Form::<Strict<T>>::parse_encoded(string.into()).map(|s| s.into_inner())
@@ -331,8 +335,6 @@ fn generics() {
 
 #[test]
 fn form_errors() {
-    use rocket::form::error::{ErrorKind, Entity};
-
     #[derive(Debug, PartialEq, FromForm)]
     struct WhoopsForm {
         complete: bool,
@@ -671,16 +673,19 @@ fn test_defaults() {
     fn test_hashmap() -> HashMap<&'static str, &'static str> {
         let mut map = HashMap::new();
         map.insert("key", "value");
+        map.insert("one-more", "good-value");
         map
     }
 
-    fn test_btreemap() -> BTreeMap<&'static str, &'static str> {
+    fn test_btreemap() -> BTreeMap<Vec<usize>, &'static str> {
         let mut map = BTreeMap::new();
-        map.insert("key", "value");
+        map.insert(vec![], "empty");
+        map.insert(vec![1, 2], "one-and-two");
+        map.insert(vec![3, 7, 9], "prime");
         map
     }
 
-    #[derive(FromForm, PartialEq, Debug)]
+    #[derive(FromForm, UriDisplayQuery, PartialEq, Debug)]
     struct FormWithDefaults<'a> {
         field2: i128,
         field5: bool,
@@ -708,7 +713,7 @@ fn test_defaults() {
         #[field(default = test_hashmap())]
         hashmap: HashMap<&'a str, &'a str>,
         #[field(default = test_btreemap())]
-        btreemap: BTreeMap<&'a str, &'a str>,
+        btreemap: BTreeMap<Vec<usize>, &'a str>,
         #[field(default_with = Some(false))]
         boolean: bool,
         #[field(default_with = (|| Some(777))())]
@@ -789,15 +794,39 @@ fn test_defaults() {
     }));
 
     // And that strict parsing still works.
-    let form4: Option<FormWithDefaults> = strict(&form_string).ok();
-    assert_eq!(form4, Some(FormWithDefaults {
-        field1: 101,
-        field2: 102,
-        field3: true,
-        field4: false,
-        field5: true,
-        ..form3.unwrap()
+    let form = form3.unwrap();
+    let form_string = format!("{}", &form as &dyn UriDisplay<Query>);
+    let form4: form::Result<'_, FormWithDefaults> = strict(&form_string);
+    assert_eq!(form4, Ok(form));
+
+    #[derive(FromForm, UriDisplayQuery, PartialEq, Debug)]
+    struct OwnedFormWithDefaults {
+        #[field(default = {
+            let mut map = BTreeMap::new();
+            map.insert(vec![], "empty!/!? neat".into());
+            map.insert(vec![1, 2], "one/ and+two".into());
+            map.insert(vec![3, 7, 9], "prime numbers".into());
+            map
+        })]
+        btreemap: BTreeMap<Vec<usize>, String>,
+    }
+
+    // And that strict parsing still works even when encoded.
+    let form5: Option<OwnedFormWithDefaults> = lenient("").ok();
+    assert_eq!(form5, Some(OwnedFormWithDefaults {
+        btreemap: {
+            let mut map = BTreeMap::new();
+            map.insert(vec![3, 7, 9], "prime numbers".into());
+            map.insert(vec![1, 2], "one/ and+two".into());
+            map.insert(vec![], "empty!/!? neat".into());
+            map
+        }
     }));
+
+    let form = form5.unwrap();
+    let form_string = format!("{}", &form as &dyn UriDisplay<Query>);
+    let form6: form::Result<'_, OwnedFormWithDefaults> = strict_encoded(&form_string);
+    assert_eq!(form6, Ok(form));
 }
 
 #[test]
@@ -842,3 +871,65 @@ fn test_lazy_default() {
         missing3: 42
     }));
 }
+
+#[derive(Debug, PartialEq, FromForm, UriDisplayQuery)]
+#[field(validate = len(3..), default = "some default hello")]
+struct Token<'r>(&'r str);
+
+#[derive(Debug, PartialEq, FromForm, UriDisplayQuery)]
+#[field(validate = try_with(|s| s.parse::<usize>()), default = "123456")]
+struct TokenOwned(String);
+
+#[test]
+fn wrapper_works() {
+    let form: Option<Token> = lenient("").ok();
+    assert_eq!(form, Some(Token("some default hello")));
+
+    let form: Option<TokenOwned> = lenient("").ok();
+    assert_eq!(form, Some(TokenOwned("123456".into())));
+
+    let errors = strict::<Token>("").unwrap_err();
+    assert!(errors.iter().any(|e| matches!(e.kind, ErrorKind::Missing)));
+
+    let form: Option<Token> = lenient("=hi there").ok();
+    assert_eq!(form, Some(Token("hi there")));
+
+    let form: Option<TokenOwned> = strict_encoded("=2318").ok();
+    assert_eq!(form, Some(TokenOwned("2318".into())));
+
+    let errors = lenient::<Token>("=hi").unwrap_err();
+    assert!(errors.iter().any(|e| matches!(e.kind, ErrorKind::InvalidLength { .. })));
+
+    let errors = lenient::<TokenOwned>("=hellothere").unwrap_err();
+    assert!(errors.iter().any(|e| matches!(e.kind, ErrorKind::Validation { .. })));
+}
+
+#[derive(Debug, PartialEq, FromForm, UriDisplayQuery)]
+struct JsonToken<T>(Json<T>);
+
+#[test]
+fn json_wrapper_works() {
+    let form: JsonToken<String> = lenient("=\"hello\"").unwrap();
+    assert_eq!(form, JsonToken(Json("hello".into())));
+
+    let form: JsonToken<usize> = lenient("=10").unwrap();
+    assert_eq!(form, JsonToken(Json(10)));
+
+    let form: JsonToken<()> = lenient("=null").unwrap();
+    assert_eq!(form, JsonToken(Json(())));
+
+    let form: JsonToken<Vec<usize>> = lenient("=[1, 4, 3, 9]").unwrap();
+    assert_eq!(form, JsonToken(Json(vec![1, 4, 3, 9])));
+
+    let string = String::from("=\"foo bar\"");
+    let form: JsonToken<&str> = lenient(&string).unwrap();
+    assert_eq!(form, JsonToken(Json("foo bar")));
+}
+
+// FIXME: https://github.com/rust-lang/rust/issues/86706
+#[allow(private_in_public)]
+struct Q<T>(T);
+
+// This is here to ensure we don't warn, which we can't test with trybuild.
+#[derive(FromForm)]
+pub struct JsonTokenBad<T>(Q<T>);

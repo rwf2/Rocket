@@ -1,12 +1,26 @@
 #[macro_use] extern crate rocket;
 
 use rocket::http::uri::fmt::{UriDisplay, Query, Path};
+use rocket::serde::{Serialize, Deserialize};
 
 macro_rules! assert_uri_display_query {
-    ($v:expr, $s:expr) => (
+    ($v:expr, $expected:expr) => (
         let uri_string = format!("{}", &$v as &dyn UriDisplay<Query>);
-        assert_eq!(uri_string, $s);
+        assert_eq!(uri_string, $expected);
     )
+}
+
+macro_rules! assert_query_value_roundtrip {
+    ($T:ty, $v:expr) => ({
+        use rocket::form::{Form, Strict};
+        use rocket::http::RawStr;
+
+        let v = $v;
+        let string = format!("={}", &v as &dyn UriDisplay<Query>);
+        let raw = RawStr::new(&string);
+        let value = Form::<Strict<$T>>::parse_encoded(raw).map(|s| s.into_inner());
+        assert_eq!(value.expect("form parse"), v);
+    })
 }
 
 #[derive(UriDisplayQuery, Clone)]
@@ -193,4 +207,37 @@ fn uri_display_path() {
     assert_uri_display_path!(BamP(12), "12");
     assert_uri_display_path!(BamP(BazP(&100)), "100");
     assert_uri_display_path!(BopP(FooP("bop foo")), "bop%20foo");
+}
+
+#[test]
+fn uri_display_serde() {
+    use rocket::serde::json::Json;
+
+    #[derive(Debug, PartialEq, Clone, UriDisplayQuery, Deserialize, Serialize)]
+    #[serde(crate = "rocket::serde")]
+    struct Bam {
+        foo: String,
+        bar: Option<usize>,
+        baz: Result<String, usize>,
+    }
+
+    #[derive(Debug, PartialEq, FromForm, UriDisplayQuery)]
+    struct JsonFoo(Json<Bam>);
+
+    let bam = Bam {
+        foo: "hi[]=there.baz !?".into(),
+        bar: None,
+        baz: Ok("what is baz, anyway?".into()),
+    };
+
+    assert_query_value_roundtrip!(JsonFoo, JsonFoo(Json(bam.clone())));
+
+    // TODO: This requires `MsgPack` to parse from value form fields.
+    //
+    // use rocket::serde::msgpack::MsgPack;
+    //
+    // #[derive(Debug, PartialEq, FromForm, UriDisplayQuery)]
+    // struct MsgPackFoo(MsgPack<Bam>);
+    //
+    // assert_query_value_roundtrip!(MsgPackFoo, MsgPackFoo(MsgPack(bam)));
 }

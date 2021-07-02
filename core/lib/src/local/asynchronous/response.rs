@@ -167,8 +167,8 @@ impl LocalResponse<'_> {
         });
 
         loop {
-            let mut buf = Vec::with_capacity(1024);
             // TODO: Try to fill as much as the buffer before send it off?
+            let mut buf = Vec::with_capacity(1024);
             match self.read_buf(&mut buf).await {
                 Ok(n) if n == 0 => break,
                 Ok(_) => tx.send(Ok(buf)).await.ok()?,
@@ -178,6 +178,9 @@ impl LocalResponse<'_> {
                 }
             }
         }
+
+        // NOTE: We _must_ drop tx now to prevent a deadlock!
+        drop(tx);
 
         reader.await.ok()
     }

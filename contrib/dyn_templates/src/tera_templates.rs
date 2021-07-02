@@ -1,7 +1,7 @@
 use std::path::Path;
 use std::error::Error;
 
-use serde::Serialize;
+use rocket::serde::Serialize;
 
 use crate::engine::Engine;
 
@@ -42,16 +42,9 @@ impl Engine for Tera {
             return None;
         };
 
-        let tera_ctx = match Context::from_serialize(context) {
-            Ok(ctx) => ctx,
-            Err(_) => {
-                error_!(
-                    "Error generating context when rendering Tera template '{}'.",
-                    name
-                );
-                return None;
-            }
-        };
+        let tera_ctx = Context::from_serialize(context)
+            .map_err(|e| error_!("Tera context error: {}.", e))
+            .ok()?;
 
         match Tera::render(self, name, &tera_ctx) {
             Ok(string) => Some(string),

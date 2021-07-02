@@ -1,7 +1,7 @@
 use std::path::Path;
 use std::collections::HashMap;
 
-use serde::Serialize;
+use rocket::serde::Serialize;
 
 use crate::TemplateInfo;
 

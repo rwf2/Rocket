@@ -3,9 +3,30 @@ use std::str::FromStr;
 
 use self::Method::*;
 
-// TODO: Support non-standard methods, here and in codegen.
+// TODO: Support non-standard methods, here and in codegen?
 
 /// Representation of HTTP methods.
+///
+/// # (De)serialization
+///
+/// `Method` is both `Serialize` and `Deserialize`, represented as an
+/// [uncased](crate::uncased) string. For example, [`Method::Get`] serializes to
+/// `"GET"` and deserializes from any casing of `"GET"` including `"get"`,
+/// `"GeT"`, and `"GET"`.
+///
+/// ```rust
+/// # #[cfg(feature = "serde")] mod serde {
+/// # use serde_ as serde;
+/// use serde::{Serialize, Deserialize};
+/// use rocket::http::Method;
+///
+/// #[derive(Deserialize, Serialize)]
+/// # #[serde(crate = "serde_")]
+/// struct Foo {
+///     method: Method,
+/// }
+/// # }
+/// ```
 #[derive(Clone, Copy, PartialEq, Eq, Hash, Debug)]
 pub enum Method {
     /// The `GET` variant.
@@ -125,5 +146,40 @@ impl fmt::Display for Method {
     #[inline(always)]
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         self.as_str().fmt(f)
+    }
+}
+
+#[cfg(feature = "serde")]
+mod serde {
+    use std::fmt;
+    use super::*;
+
+    use serde_::ser::{Serialize, Serializer};
+    use serde_::de::{Deserialize, Deserializer, Error, Visitor, Unexpected};
+
+    impl<'a> Serialize for Method {
+        fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+            serializer.serialize_str(self.as_str())
+        }
+    }
+
+    struct DeVisitor;
+
+    impl<'de> Visitor<'de> for DeVisitor {
+        type Value = Method;
+
+        fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+            write!(formatter, "valid HTTP method string")
+        }
+
+        fn visit_str<E: Error>(self, v: &str) -> Result<Self::Value, E> {
+            Method::from_str(v).map_err(|_| E::invalid_value(Unexpected::Str(v), &self))
+        }
+    }
+
+    impl<'de> Deserialize<'de> for Method {
+        fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+            deserializer.deserialize_str(DeVisitor)
+        }
     }
 }

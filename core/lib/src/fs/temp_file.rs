@@ -45,7 +45,7 @@ use either::Either;
 ///
 /// | Name               | Default             | Description                             |
 /// |--------------------|---------------------|-----------------------------------------|
-/// | `temp_dir`         | [`env::temp_dir()`] | Directory files are temporarily stored. |
+/// | `temp_dir`         | [`env::temp_dir()`] | Directory for temporary file storage.   |
 /// | `limits.file`      | 1MiB                | Default limit for all file extensions.  |
 /// | `limits.file/$ext` | _N/A_               | Limit for files with extension `$ext`.  |
 ///
@@ -451,7 +451,7 @@ impl<'v> TempFile<'v> {
             .or_else(|| req.limits().get("file"))
             .unwrap_or(Limits::FILE);
 
-        let temp_dir = req.rocket().config().temp_dir.clone();
+        let temp_dir = req.rocket().config().temp_dir.relative();
         let file = tokio::task::spawn_blocking(move || {
             NamedTempFile::new_in(temp_dir)
         }).await.map_err(|_| {
@@ -495,8 +495,8 @@ impl<'r> FromData<'r> for Capped<TempFile<'_>> {
         let has_form = |ty: &ContentType| ty.is_form_data() || ty.is_form();
         if req.content_type().map_or(false, has_form) {
             let (tf, form) = (Paint::white("TempFile<'_>"), Paint::white("Form<TempFile<'_>>"));
-            warn!("Request contains a form that will not be processed.");
-            info_!("Bare `{}` data guard writes raw, unprocessed stream to disk.", tf);
+            warn_!("Request contains a form that will not be processed.");
+            info_!("Bare `{}` data guard writes raw, unprocessed streams to disk.", tf);
             info_!("Did you mean to use `{}` instead?", form);
         }
 

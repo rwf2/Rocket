@@ -154,7 +154,7 @@ impl FileName {
         let file_name = std::path::Path::new(&self.0)
             .file_name()
             .and_then(|n| n.to_str())
-            .and_then(|n| n.split(bad_char).filter(|s| !s.is_empty()).next())?;
+            .and_then(|n| n.split(bad_char).find(|s| !s.is_empty()))?;
 
         // At this point, `file_name` can't contain `bad_chars` because of
         // `.split()`, but it can be empty or reserved.

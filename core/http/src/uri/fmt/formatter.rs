@@ -215,10 +215,8 @@ impl<'i, P: Part> Formatter<'i, P> {
 
             if P::KIND == Kind::Query && !self.prefixes.is_empty() {
                 for (i, prefix) in self.prefixes.iter().enumerate() {
+                    if i != 0 { self.inner.write_char('.')? }
                     self.inner.write_str(prefix)?;
-                    if i < self.prefixes.len() - 1 {
-                        self.inner.write_str(".")?;
-                    }
                 }
 
                 self.inner.write_str("=")?;

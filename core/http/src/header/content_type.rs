@@ -382,13 +382,13 @@ impl fmt::Display for ContentType {
 
 /// Creates a new `Header` with name `Content-Type` and the value set to the
 /// HTTP rendering of this Content-Type.
-impl Into<Header<'static>> for ContentType {
+impl From<ContentType> for Header<'static> {
     #[inline(always)]
-    fn into(self) -> Header<'static> {
-        if let Some(src) = self.known_source() {
+    fn from(content_type: ContentType) -> Self {
+        if let Some(src) = content_type.known_source() {
             Header::new("Content-Type", src)
         } else {
-            Header::new("Content-Type", self.to_string())
+            Header::new("Content-Type", content_type.to_string())
         }
     }
 }

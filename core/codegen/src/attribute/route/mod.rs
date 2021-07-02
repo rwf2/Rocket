@@ -100,7 +100,7 @@ fn query_decls(route: &Route) -> Option<TokenStream> {
         )*
 
         if !__e.is_empty() {
-            #_log::warn_!("query string failed to match declared route");
+            #_log::warn_!("Query string failed to match route declaration.");
             for _err in __e { #_log::warn_!("{}", _err); }
             return #Outcome::Forward(#__data);
         }
@@ -119,11 +119,11 @@ fn request_guard_decl(guard: &Guard) -> TokenStream {
         let #ident: #ty = match <#ty as #FromRequest>::from_request(#__req).await {
             #Outcome::Success(__v) => __v,
             #Outcome::Forward(_) => {
-                #_log::warn_!("`{}` request guard is forwarding.", stringify!(#ty));
+                #_log::warn_!("Request guard `{}` is forwarding.", stringify!(#ty));
                 return #Outcome::Forward(#__data);
             },
             #Outcome::Failure((__c, __e)) => {
-                #_log::warn_!("`{}` request guard failed: {:?}.", stringify!(#ty), __e);
+                #_log::warn_!("Request guard `{}` failed: {:?}.", stringify!(#ty), __e);
                 return #Outcome::Failure(__c);
             }
         };
@@ -139,7 +139,7 @@ fn param_guard_decl(guard: &Guard) -> TokenStream {
 
     // Returned when a dynamic parameter fails to parse.
     let parse_error = quote!({
-        #_log::warn_!("`{}: {}` param guard parsed forwarding with error {:?}",
+        #_log::warn_!("Parameter guard `{}: {}` is forwarding: {:?}.",
             #name, stringify!(#ty), __error);
 
         #Outcome::Forward(#__data)
@@ -182,11 +182,11 @@ fn data_guard_decl(guard: &Guard) -> TokenStream {
         let #ident: #ty = match <#ty as #FromData>::from_data(#__req, #__data).await {
             #Outcome::Success(__d) => __d,
             #Outcome::Forward(__d) => {
-                #_log::warn_!("`{}` data guard is forwarding.", stringify!(#ty));
+                #_log::warn_!("Data guard `{}` is forwarding.", stringify!(#ty));
                 return #Outcome::Forward(__d);
             }
             #Outcome::Failure((__c, __e)) => {
-                #_log::warn_!("`{}` data guard failed: {:?}.", stringify!(#ty), __e);
+                #_log::warn_!("Data guard `{}` failed: {:?}.", stringify!(#ty), __e);
                 return #Outcome::Failure(__c);
             }
         };
@@ -228,7 +228,7 @@ fn internal_uri_macro_decl(route: &Route) -> TokenStream {
 fn responder_outcome_expr(route: &Route) -> TokenStream {
     let ret_span = match route.handler.sig.output {
         syn::ReturnType::Default => route.handler.sig.ident.span(),
-        syn::ReturnType::Type(_, ref ty) => ty.span().into()
+        syn::ReturnType::Type(_, ref ty) => ty.span()
     };
 
     let user_handler_fn_name = &route.handler.sig.ident;
@@ -236,7 +236,7 @@ fn responder_outcome_expr(route: &Route) -> TokenStream {
         .map(|(ident, _)| ident.rocketized());
 
     let _await = route.handler.sig.asyncness
-        .map(|a| quote_spanned!(a.span().into() => .await));
+        .map(|a| quote_spanned!(a.span() => .await));
 
     define_spanned_export!(ret_span => __req, _route);
     quote_spanned! { ret_span =>
@@ -274,11 +274,22 @@ fn sentinels_expr(route: &Route) -> TokenStream {
     //      * returns `true` for the parent, and so the type has a parent, and
     //      the theorem holds.
     //    3. these are all the cases. QED.
-    const TYPE_MACROS: &[&str] = &["ReaderStream", "TextStream", "ByteStream", "EventStream"];
+
+    const TY_MACS: &[&str] = &["ReaderStream", "TextStream", "ByteStream", "EventStream"];
+
+    fn ty_mac_mapper(tokens: &TokenStream) -> Option<syn::Type> {
+        use crate::bang::typed_stream::Input;
+
+        match syn::parse2(tokens.clone()).ok()? {
+            Input::Type(ty, ..) => Some(ty),
+            Input::Tokens(..) => None
+        }
+    }
+
     let eligible_types = route.guards()
         .map(|guard| &guard.ty)
         .chain(ret_ty.as_ref().into_iter())
-        .flat_map(|ty| ty.unfold_with_known_macros(TYPE_MACROS))
+        .flat_map(|ty| ty.unfold_with_ty_macros(TY_MACS, ty_mac_mapper))
         .filter(|ty| ty.is_concrete(&generic_idents))
         .map(|child| (child.parent, child.ty));
 
@@ -364,12 +375,12 @@ fn codegen_route(route: Route) -> Result<TokenStream> {
 
         /// Rocket code generated wrapping URI macro.
         #internal_uri_macro
-    }.into())
+    })
 }
 
 fn complete_route(args: TokenStream, input: TokenStream) -> Result<TokenStream> {
     let function: syn::ItemFn = syn::parse2(input)
-        .map_err(|e| Diagnostic::from(e))
+        .map_err(Diagnostic::from)
         .map_err(|diag| diag.help("`#[route]` can only be used on functions"))?;
 
     let attr_tokens = quote!(route(#args));
@@ -387,10 +398,10 @@ fn incomplete_route(
     let method_span = StringLit::new(format!("#[{}]", method), Span::call_site())
         .subspan(2..2 + method_str.len());
 
-    let method_ident = syn::Ident::new(&method_str, method_span.into());
+    let method_ident = syn::Ident::new(&method_str, method_span);
 
     let function: syn::ItemFn = syn::parse2(input)
-        .map_err(|e| Diagnostic::from(e))
+        .map_err(Diagnostic::from)
         .map_err(|d| d.help(format!("#[{}] can only be used on functions", method_str)))?;
 
     let full_attr = quote!(#method_ident(#args));

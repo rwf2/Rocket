@@ -127,7 +127,7 @@ pub struct FnArg {
 }
 
 fn err<T, S: AsRef<str>>(span: Span, s: S) -> parse::Result<T> {
-    Err(parse::Error::new(span.into(), s.as_ref()))
+    Err(parse::Error::new(span, s.as_ref()))
 }
 
 impl Parse for ArgExpr {
@@ -261,7 +261,7 @@ impl Parse for UriMacro {
 
             stream.is_empty()
                 .then(|| Ok((None, cursor)))
-                .unwrap_or_else(|| Ok((Some(stream), cursor)))
+                .unwrap_or(Ok((Some(stream), cursor)))
         }
 
         let mut args = vec![];
@@ -276,7 +276,7 @@ impl Parse for UriMacro {
             1 => UriMacro::unary.parse2(next()),
             2 => UriMacro::binary(next(), next()),
             3 => UriMacro::ternary(next(), next(), next()),
-            n => err(iter.skip(3).next().unwrap().span(),
+            n => err(iter.nth(3).unwrap().span(),
                 format!("expected 1, 2, or 3 arguments, found {}", n))
         }
     }
@@ -479,7 +479,7 @@ fn uri_err<T>(lit: &StringLit, error: Error<'_>) -> parse::Result<T> {
 
 impl UriExpr {
     fn parse_prefix(input: ParseStream<'_>) -> syn::Result<Option<Self>> {
-        if let Ok(_) = input.parse::<Token![_]>() {
+        if input.parse::<Token![_]>().is_ok() {
             return Ok(None);
         }
 
@@ -490,7 +490,7 @@ impl UriExpr {
         let lit = input.parse::<StringLit>()?;
         let uri = Uri::parse::<Origin<'_>>(&lit)
             .or_else(|e| Uri::parse::<Absolute<'_>>(&lit).map_err(|e2| (e, e2)))
-            .map_err(|(e1, e2)| lit.starts_with('/').then(|| e1).unwrap_or_else(|| e2))
+            .map_err(|(e1, e2)| lit.starts_with('/').then(|| e1).unwrap_or(e2))
             .or_else(|e| uri_err(&lit, e))?;
 
         if matches!(&uri, Uri::Origin(o) if o.query().is_some())
@@ -503,7 +503,7 @@ impl UriExpr {
     }
 
     fn parse_suffix(input: ParseStream<'_>) -> syn::Result<Option<Self>> {
-        if let Ok(_) = input.parse::<Token![_]>() {
+        if input.parse::<Token![_]>().is_ok() {
             return Ok(None);
         }
 

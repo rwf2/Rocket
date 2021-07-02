@@ -24,13 +24,13 @@
 //! [`json()`]: crate::local::blocking::LocalRequest::json()
 //! [`into_json()`]: crate::local::blocking::LocalResponse::into_json()
 
-use std::io;
+use std::{io, fmt, error};
 use std::ops::{Deref, DerefMut};
 
 use crate::request::{Request, local_cache};
 use crate::data::{Limits, Data, FromData, Outcome};
 use crate::response::{self, Responder, content};
-use crate::http::Status;
+use crate::http::{uri, Status};
 use crate::form::prelude as form;
 
 use serde::{Serialize, Deserialize};
@@ -40,14 +40,33 @@ pub use serde_json;
 
 /// The JSON guard: easily consume and return JSON.
 ///
+/// ## Sending JSON
+///
+/// To respond with serialized JSON data, return a `Json<T>` type, where `T`
+/// implements [`Serialize`] from [`serde`]. The content type of the response is
+/// set to `application/json` automatically.
+///
+/// ```rust
+/// # #[macro_use] extern crate rocket;
+/// # type User = usize;
+/// use rocket::serde::json::Json;
+///
+/// #[get("/users/<id>")]
+/// fn user(id: usize) -> Json<User> {
+///     let user_from_id = User::from(id);
+///     /* ... */
+///     Json(user_from_id)
+/// }
+/// ```
+///
 /// ## Receiving JSON
 ///
 /// `Json` is both a data guard and a form guard.
 ///
 /// ### Data Guard
 ///
-/// To parse request body data as JSON , add a `data` route argument with a
-/// target type of `Json<T>`, where `T` is some type you'd like to parse from
+/// To deserialize request body data as JSON , add a `data` route argument with
+/// a target type of `Json<T>`, where `T` is some type you'd like to parse from
 /// JSON. `T` must implement [`serde::Deserialize`].
 ///
 /// ```rust
@@ -102,26 +121,7 @@ pub use serde_json;
 /// [global.limits]
 /// json = 5242880
 /// ```
-///
-/// ## Sending JSON
-///
-/// If you're responding with JSON data, return a `Json<T>` type, where `T`
-/// implements [`Serialize`] from [`serde`]. The content type of the response is
-/// set to `application/json` automatically.
-///
-/// ```rust
-/// # #[macro_use] extern crate rocket;
-/// # type User = usize;
-/// use rocket::serde::json::Json;
-///
-/// #[get("/users/<id>")]
-/// fn user(id: usize) -> Json<User> {
-///     let user_from_id = User::from(id);
-///     /* ... */
-///     Json(user_from_id)
-/// }
-/// ```
-#[derive(Debug)]
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct Json<T>(pub T);
 
 /// Error returned by the [`Json`] guard when JSON deserialization fails.
@@ -135,6 +135,24 @@ pub enum Error<'a> {
     /// received from the user, while the `Error` in `.1` is the deserialization
     /// error from `serde`.
     Parse(&'a str, serde_json::error::Error),
+}
+
+impl<'a> fmt::Display for Error<'a> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::Io(err) => write!(f, "i/o error: {}", err),
+            Self::Parse(_, err) => write!(f, "parse error: {}", err),
+        }
+    }
+}
+
+impl<'a> error::Error for Error<'a> {
+    fn source(&self) -> Option<&(dyn error::Error + 'static)> {
+        match self {
+            Self::Io(err) => Some(err),
+            Self::Parse(_, err) => Some(err),
+        }
+    }
 }
 
 impl<T> Json<T> {
@@ -204,6 +222,13 @@ impl<'r, T: Serialize> Responder<'r, 'static> for Json<T> {
             })?;
 
         content::Json(string).respond_to(req)
+    }
+}
+
+impl<T: Serialize> uri::fmt::UriDisplay<uri::fmt::Query> for Json<T> {
+    fn fmt(&self, f: &mut uri::fmt::Formatter<'_, uri::fmt::Query>) -> fmt::Result {
+        let string = to_string(&self.0).map_err(|_| fmt::Error)?;
+        f.write_value(&string)
     }
 }
 
@@ -373,6 +398,8 @@ pub use serde_json::Value;
 
 /// Deserialize an instance of type `T` from bytes of JSON text.
 ///
+/// **_Always_ use [`Json`] to deserialize JSON request data.**
+///
 /// # Example
 ///
 /// ```
@@ -406,13 +433,15 @@ pub use serde_json::Value;
 /// the JSON map or some number is too big to fit in the expected primitive
 /// type.
 #[inline(always)]
-pub fn from_slice<'a, T>(v: &'a [u8]) -> Result<T, serde_json::error::Error>
+pub fn from_slice<'a, T>(slice: &'a [u8]) -> Result<T, serde_json::error::Error>
     where T: Deserialize<'a>,
 {
-    serde_json::from_slice(v)
+    serde_json::from_slice(slice)
 }
 
 /// Deserialize an instance of type `T` from a string of JSON text.
+///
+/// **_Always_ use [`Json`] to deserialize JSON request data.**
 ///
 /// # Example
 ///
@@ -447,10 +476,86 @@ pub fn from_slice<'a, T>(v: &'a [u8]) -> Result<T, serde_json::error::Error>
 /// the JSON map or some number is too big to fit in the expected primitive
 /// type.
 #[inline(always)]
-pub fn from_str<'a, T>(v: &'a str) -> Result<T, serde_json::error::Error>
+pub fn from_str<'a, T>(string: &'a str) -> Result<T, serde_json::error::Error>
     where T: Deserialize<'a>,
 {
-    serde_json::from_str(v)
+    serde_json::from_str(string)
+}
+
+/// Serialize a `T` into a JSON string with compact representation.
+///
+/// **_Always_ use [`Json`] to serialize JSON response data.**
+///
+/// # Example
+///
+/// ```
+/// use rocket::serde::{Deserialize, Serialize, json};
+///
+/// #[derive(Debug, PartialEq, Deserialize, Serialize)]
+/// #[serde(crate = "rocket::serde")]
+/// struct Data<'r> {
+///     framework: &'r str,
+///     stars: usize,
+/// }
+///
+/// let data = Data {
+///     framework: "Rocket",
+///     stars: 5,
+/// };
+///
+/// let string = json::to_string(&data).unwrap();
+/// let data: Data = json::from_str(&string).unwrap();
+/// assert_eq!(data, Data { framework: "Rocket", stars: 5, });
+/// ```
+///
+/// # Errors
+///
+/// Serialization fails if `T`'s `Serialize` implementation fails or if `T`
+/// contains a map with non-string keys.
+#[inline(always)]
+pub fn to_string<T>(value: &T) -> Result<String, serde_json::error::Error>
+    where T: Serialize
+{
+    serde_json::to_string(value)
+}
+
+/// Serialize a `T` into a JSON string with "pretty" formatted representation.
+///
+/// **_Always_ use [`Json`] to serialize JSON response data.**
+///
+/// # Example
+///
+/// ```
+/// use rocket::serde::{Deserialize, Serialize, json};
+///
+/// #[derive(Debug, PartialEq, Deserialize, Serialize)]
+/// #[serde(crate = "rocket::serde")]
+/// struct Data<'r> {
+///     framework: &'r str,
+///     stars: usize,
+/// }
+///
+/// let data = Data {
+///     framework: "Rocket",
+///     stars: 5,
+/// };
+///
+/// let string = json::to_pretty_string(&data).unwrap();
+/// # let compact = json::to_string(&data).unwrap();
+/// # assert_ne!(compact, string);
+/// let data: Data = json::from_str(&string).unwrap();
+/// assert_eq!(data, Data { framework: "Rocket", stars: 5, });
+/// ```
+///
+/// # Errors
+///
+/// Serialization fails if `T`'s `Serialize` implementation fails or if `T`
+/// contains a map with non-string keys.
+#[inline(always)]
+pub fn to_pretty_string<T>(value: &T) -> Result<String, serde_json::error::Error>
+    where T: Serialize
+{
+    serde_json::to_string_pretty(value)
 }
 
 /// Interpret a [`Value`] as an instance of type `T`.
@@ -486,8 +591,43 @@ pub fn from_str<'a, T>(v: &'a str) -> Result<T, serde_json::error::Error>
 /// the JSON map or some number is too big to fit in the expected primitive
 /// type.
 #[inline(always)]
-pub fn from_value<T>(v: Value) -> Result<T, serde_json::error::Error>
+pub fn from_value<T>(value: Value) -> Result<T, serde_json::error::Error>
     where T: crate::serde::DeserializeOwned
 {
-    serde_json::from_value(v)
+    serde_json::from_value(value)
+}
+
+/// Convert a `T` into a [`Value`], an opaque value representing JSON data.
+///
+/// # Example
+///
+/// ```
+/// use rocket::serde::{Deserialize, Serialize, json};
+///
+/// #[derive(Deserialize, Serialize)]
+/// #[serde(crate = "rocket::serde")]
+/// struct Data {
+///     framework: String ,
+///     stars: usize,
+/// }
+///
+/// let value = json::json!({
+///     "framework": "Rocket",
+///     "stars": 5
+/// });
+///
+/// let data: Data = json::from_value(value.clone()).unwrap();
+/// let data_value = json::to_value(data).unwrap();
+/// assert_eq!(value, data_value);
+/// ```
+///
+/// # Errors
+///
+/// This conversion fails if `T`’s implementation of `Serialize` decides to fail
+/// or if `T` contains a map with non-string keys.
+#[inline(always)]
+pub fn to_value<T>(item: T) -> Result<Value, serde_json::error::Error>
+    where T: Serialize
+{
+    serde_json::to_value(item)
 }

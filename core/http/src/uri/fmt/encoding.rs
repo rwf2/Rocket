@@ -1,7 +1,7 @@
 use std::marker::PhantomData;
 use std::borrow::Cow;
 
-use percent_encoding::{AsciiSet, utf8_percent_encode};
+use percent_encoding::AsciiSet;
 
 use crate::RawStr;
 use crate::uri::fmt::{Part, Path, Query};
@@ -82,5 +82,9 @@ impl EncodeSet for DEFAULT_ENCODE_SET {
 }
 
 pub fn percent_encode<S: EncodeSet + Default>(string: &RawStr) -> Cow<'_, str> {
-    utf8_percent_encode(string.as_str(), &S::SET).into()
+    percent_encoding::utf8_percent_encode(string.as_str(), &S::SET).into()
+}
+
+pub fn percent_encode_bytes<S: EncodeSet + Default>(bytes: &[u8]) -> Cow<'_, str> {
+    percent_encoding::percent_encode(bytes, &S::SET).into()
 }

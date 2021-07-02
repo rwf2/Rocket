@@ -2,7 +2,8 @@ mod uri;
 mod uri_parsing;
 mod test_guide;
 mod export;
-mod typed_stream;
+
+pub mod typed_stream;
 
 use devise::Result;
 use syn::{Path, punctuated::Punctuated, parse::Parser, Token};
