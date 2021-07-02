@@ -218,7 +218,15 @@ impl ClientCertificate {
         &self.0.0
     }
 
+    /// Creates certificate from DER-serialized representation.
+    ///
+    /// This is intended for use with local client.
+    pub fn from_bytes(der: &[u8]) -> Self {
+        ClientCertificate(Certificate(der.to_vec()))
+    }
+
     /// Generates self-signed certificate with given SANs.
+    ///
     /// This is intended for use with local client.
     pub fn generate<S: AsRef<str>>(subject_alternative_names: &[S]) -> ClientCertificate {
         let sans = subject_alternative_names
@@ -227,7 +235,7 @@ impl ClientCertificate {
             .collect::<Vec<_>>();
         let cert = rcgen::generate_simple_self_signed(sans).unwrap();
         let cert = cert.serialize_der().unwrap();
-        ClientCertificate(Certificate(cert))
+        ClientCertificate::from_bytes(&cert)
     }
 }
 
