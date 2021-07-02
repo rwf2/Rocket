@@ -11,8 +11,8 @@ pub use tokio_rustls::rustls;
 
 use rustls::internal::pemfile;
 use rustls::{Certificate, PrivateKey, ServerConfig, Session, SupportedCipherSuite};
-use tokio::net::{TcpListener, TcpStream};
 use tokio_rustls::{TlsAcceptor, Accept, server::TlsStream};
+use tokio::net::{TcpListener, TcpStream};
 
 
 use crate::listener::{Connection, Listener};
@@ -23,6 +23,12 @@ pub use parse::{CertificateFields, CertificateParseError};
 /// Certificate presented by the client.
 /// This type can hold both end entity certificate and certificate
 /// from the trust chain.
+///
+/// Usually values of this type are created by Rocket as part of
+/// the `ClientTls` request guard. You may wish to use
+/// `parse` method to obtain some standard certificate fields,
+/// or get raw certificate bytes with `data` method and use
+/// X509 parser of your choice.
 #[derive(Debug, Clone)]
 pub struct ClientCertificate(Certificate);
 
@@ -191,6 +197,11 @@ impl Connection for TlsStream<TcpStream> {
 /// This struct contains client certificate itself and
 /// its trust chain. Additionally, several useful certificate fields
 /// are exposed for your convenience.
+///
+/// If instance of this type is retrieved through its `FromRequest`,
+/// all provided information was already validated.
+/// For example, you shouldn't check that presented chain is trusted
+/// by the configured client authority: it is already true.
 #[derive(Debug)]
 pub struct ClientTls {
     /// Client certificate provided by the user
