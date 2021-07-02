@@ -475,15 +475,14 @@ impl Rocket<Build> {
 
         // Extract the configuration; initialize the logger.
         #[allow(unused_mut)]
-        let mut config = self.figment.extract::<Config>().map_err(ErrorKind::Config)?;
+        let mut config = Config::try_from(&self.figment).map_err(ErrorKind::Config)?;
         crate::log::init(&config);
 
         // Check for safely configured secrets.
         #[cfg(feature = "secrets")]
         if !config.secret_key.is_provided() {
-            let profile = self.figment.profile();
-            if profile != Config::DEBUG_PROFILE {
-                return Err(Error::new(ErrorKind::InsecureSecretKey(profile.clone())));
+            if config.profile != Config::DEBUG_PROFILE {
+                return Err(Error::new(ErrorKind::InsecureSecretKey(config.profile.clone())));
             }
 
             if config.secret_key.is_zero() {

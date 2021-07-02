@@ -55,10 +55,10 @@ use crate::config::SecretKey;
 pub struct Config {
     /// The selected profile. **(default: _debug_ `debug` / _release_ `release`)**
     ///
-    /// **Note:** This field is never serialized nor deserialized. When part of
-    /// a `Config` `Provider`, it is emitted as the profile to select on the
-    /// merged-into Figment. When a `Config` is extracted, this field is set to
-    /// the extracting Figment's selected `Profile`.
+    /// **Note:** This field is never serialized nor deserialized. When a
+    /// `Config` is merged into a `Figment` as a `Provider`, this profile is
+    /// selected on the `Figment`. When a `Config` is extracted, this field is
+    /// set to the extracting Figment's selected `Profile`.
     #[serde(skip)]
     pub profile: Profile,
     /// IP address to serve on. **(default: `127.0.0.1`)**
@@ -229,9 +229,9 @@ impl Config {
     /// ```
     pub fn figment() -> Figment {
         Figment::from(Config::default())
-            .select(Profile::from_env_or("ROCKET_PROFILE", Self::DEFAULT_PROFILE))
             .merge(Toml::file(Env::var_or("ROCKET_CONFIG", "Rocket.toml")).nested())
             .merge(Env::prefixed("ROCKET_").ignore(&["PROFILE"]).global())
+            .select(Profile::from_env_or("ROCKET_PROFILE", Self::DEFAULT_PROFILE))
     }
 
     /// Attempts to extract a `Config` from `provider`, returning the result.
@@ -310,7 +310,7 @@ impl Config {
     pub(crate) fn pretty_print(&self, figment: &Figment) {
         use crate::log::PaintExt;
 
-        launch_info!("{}Configured for {}.", Paint::emoji("🔧 "), figment.profile());
+        launch_info!("{}Configured for {}.", Paint::emoji("🔧 "), self.profile);
 
         launch_info_!("address: {}", Paint::default(&self.address).bold());
         launch_info_!("port: {}", Paint::default(&self.port).bold());
