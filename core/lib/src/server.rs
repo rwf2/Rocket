@@ -7,16 +7,14 @@ use tokio::sync::oneshot;
 use futures::stream::StreamExt;
 use futures::future::{self, FutureExt, Future, TryFutureExt, BoxFuture};
 
-use crate::{Rocket, Orbit, Request, Response, Data, route};
+use crate::{route, Rocket, Orbit, Request, Response, Data, Config};
 use crate::form::Form;
 use crate::outcome::Outcome;
 use crate::error::{Error, ErrorKind};
 use crate::ext::{AsyncReadExt, CancellableListener, CancellableIo};
 
-use crate::http::{Method, Status, Header, hyper};
-use crate::http::private::{Listener, Connection, Incoming};
-use crate::http::uri::Origin;
-use crate::http::private::bind_tcp;
+use crate::http::{uri::Origin, hyper, Method, Status, Header};
+use crate::http::private::{bind_tcp, Listener, Connection, Incoming};
 
 // A token returned to force the execution of one method before another.
 pub(crate) struct RequestToken;
@@ -396,6 +394,18 @@ impl Rocket<Orbit> {
     pub(crate) async fn http_server<L>(self, listener: L) -> Result<(), Error>
         where L: Listener + Send, <L as Listener>::Connection: Send + Unpin + 'static
     {
+        // Emit a warning if we're not running inside of Rocket's async runtime.
+        if self.config.profile == Config::DEBUG_PROFILE {
+            tokio::task::spawn_blocking(|| {
+                let this  = std::thread::current();
+                if !this.name().map_or(false, |s| s.starts_with("rocket-worker")) {
+                    warn!("Rocket is executing inside of a custom runtime.");
+                    info_!("Rocket's runtime is enabled via `#[rocket::main]` or `#[launch]`.");
+                    info_!("Forced shutdown is disabled. Runtime settings may be suboptimal.");
+                }
+            });
+        }
+
         // Determine keep-alives.
         let http1_keepalive = self.config.keep_alive != 0;
         let http2_keep_alive = match self.config.keep_alive {
@@ -413,6 +423,23 @@ impl Rocket<Orbit> {
         let grace = self.config.shutdown.grace as u64;
         let mercy = self.config.shutdown.mercy as u64;
 
+        // Start a task that listens for external signals and notifies shutdown.
+        if let Some(mut stream) = sig_stream {
+            let shutdown = shutdown.clone();
+            tokio::spawn(async move {
+                while let Some(sig) = stream.next().await {
+                    if shutdown.0.tripped() {
+                        warn!("Received {}. Shutdown already in progress.", sig);
+                    } else {
+                        warn!("Received {}. Requesting shutdown.", sig);
+                    }
+
+                    shutdown.0.trip();
+                }
+            });
+        }
+
+        // Create the Hyper `Service`.
         let rocket = Arc::new(self);
         let service_fn = move |conn: &CancellableIo<_, L::Connection>| {
             let rocket = rocket.clone();
@@ -434,22 +461,6 @@ impl Rocket<Orbit> {
             .with_graceful_shutdown(shutdown.clone())
             .map_err(|e| Error::new(ErrorKind::Runtime(Box::new(e))));
 
-        // Start a task that listens for external signals and notifies shutdown.
-        if let Some(mut stream) = sig_stream {
-            let shutdown = shutdown.clone();
-            tokio::spawn(async move {
-                while let Some(sig) = stream.next().await {
-                    if shutdown.0.tripped() {
-                        warn!("Received {}. Shutdown already in progress.", sig);
-                    } else {
-                        warn!("Received {}. Requesting shutdown.", sig);
-                    }
-
-                    shutdown.0.trip();
-                }
-            });
-        }
-
         // Wait for a shutdown notification or for the server to somehow fail.
         tokio::pin!(server);
         match future::select(shutdown, server).await {
@@ -458,20 +469,15 @@ impl Rocket<Orbit> {
                 // runtime will block indefinitely when it is dropped. To
                 // subvert, we start a ticking process-exit time bomb here.
                 if force_shutdown {
-                    use std::thread;
-
                     // Only a worker thread will have the specified thread name.
                     tokio::task::spawn_blocking(move || {
-                        let this = thread::current();
-                        let is_rocket_runtime = this.name()
-                            .map_or(false, |s| s.starts_with("rocket-worker"));
-
                         // We only hit our `exit()` if the process doesn't
                         // otherwise exit since this `spawn()` won't block.
-                        thread::spawn(move || {
-                            thread::sleep(Duration::from_secs(grace + mercy));
-                            thread::sleep(Duration::from_millis(500));
-                            if is_rocket_runtime {
+                        let this = std::thread::current();
+                        std::thread::spawn(move || {
+                            std::thread::sleep(Duration::from_secs(grace + mercy));
+                            std::thread::sleep(Duration::from_millis(500));
+                            if this.name().map_or(false, |s| s.starts_with("rocket-worker")) {
                                 error!("Server failed to shutdown cooperatively. Terminating.");
                                 std::process::exit(1);
                             } else {
