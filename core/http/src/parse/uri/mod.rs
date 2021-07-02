@@ -28,6 +28,17 @@ pub fn authority_from_str(s: &str) -> Result<Authority<'_>, Error<'_>> {
 }
 
 #[inline]
+pub fn authority_from_bytes(s: &[u8]) -> Result<Authority<'_>, Error<'_>> {
+    Ok(parse!(authority: RawInput::new(s))?)
+}
+
+#[inline]
+pub fn scheme_from_str(s: &str) -> Result<&str, Error<'_>> {
+    let _validated = parse!(scheme: RawInput::new(s.as_bytes()))?;
+    Ok(s)
+}
+
+#[inline]
 pub fn absolute_from_str(s: &str) -> Result<Absolute<'_>, Error<'_>> {
     Ok(parse!(absolute: RawInput::new(s.as_bytes()))?)
 }

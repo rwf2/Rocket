@@ -426,7 +426,7 @@ impl<'a> Absolute<'a> {
         Absolute::const_new(scheme, authority.into(), path, query.into())
     }
 
-    /// PRIVATE. Used by codegen.
+    /// PRIVATE. Used by codegen and `Host`.
     #[doc(hidden)]
     pub const fn const_new(
         scheme: &'a str,

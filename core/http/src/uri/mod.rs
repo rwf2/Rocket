@@ -9,6 +9,7 @@ mod absolute;
 mod segments;
 mod path_query;
 mod asterisk;
+mod host;
 
 pub mod error;
 pub mod fmt;
@@ -24,3 +25,4 @@ pub use self::segments::*;
 pub use self::reference::*;
 pub use self::path_query::*;
 pub use self::asterisk::*;
+pub use self::host::*;

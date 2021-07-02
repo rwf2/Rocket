@@ -46,7 +46,7 @@ use crate::uri::{as_utf8_unchecked, error::Error};
 #[derive(Debug, Clone)]
 pub struct Authority<'a> {
     pub(crate) source: Option<Cow<'a, str>>,
-    user_info: Option<IndexedStr<'a>>,
+    pub(crate) user_info: Option<IndexedStr<'a>>,
     host: IndexedStr<'a>,
     port: Option<u16>,
 }
@@ -68,7 +68,8 @@ impl<'a> Authority<'a> {
         }
     }
 
-    #[cfg(test)]
+    /// PRIVATE. Used by core.
+    #[doc(hidden)]
     pub fn new(
         user_info: impl Into<Option<&'a str>>,
         host: &'a str,
@@ -166,14 +167,10 @@ impl<'a> Authority<'a> {
 
     /// Returns the host part of the authority URI.
     ///
-    ///
-    /// If the host was provided in brackets (such as for IPv6 addresses), the
-    /// brackets will not be part of the returned string.
-    ///
     /// # Example
+    ///
     /// ```rust
     /// # #[macro_use] extern crate rocket;
-    ///
     /// let uri = uri!("domain.com:123");
     /// assert_eq!(uri.host(), "domain.com");
     ///

@@ -13,9 +13,10 @@ use crate::request::{FromParam, FromSegments, FromRequest, Outcome};
 use crate::form::{self, ValueField, FromForm};
 
 use crate::{Rocket, Route, Orbit};
-use crate::http::{hyper, uri::{Origin, Segments, fmt::Path}, uncased::UncasedStr};
-use crate::http::{Method, Header, HeaderMap};
+use crate::http::uri::{fmt::Path, Origin, Segments, Host, Authority};
+use crate::http::{hyper, Method, Header, HeaderMap};
 use crate::http::{ContentType, Accept, MediaType, CookieJar, Cookie};
+use crate::http::uncased::UncasedStr;
 use crate::data::Limits;
 
 /// The type of an incoming web request.
@@ -27,6 +28,7 @@ use crate::data::Limits;
 pub struct Request<'r> {
     method: Atomic<Method>,
     uri: Origin<'r>,
+    host: Option<Host<'r>>,
     headers: HeaderMap<'r>,
     remote: Option<SocketAddr>,
     pub(crate) state: RequestState<'r>,
@@ -46,6 +48,7 @@ impl Request<'_> {
         Request {
             method: Atomic::new(self.method()),
             uri: self.uri.clone(),
+            host: self.host.clone(),
             headers: self.headers.clone(),
             remote: self.remote,
             state: self.state.clone(),
@@ -76,6 +79,7 @@ impl<'r> Request<'r> {
     ) -> Request<'r> {
         Request {
             uri,
+            host: None,
             method: Atomic::new(method),
             headers: HeaderMap::new(),
             remote: None,
@@ -166,6 +170,119 @@ impl<'r> Request<'r> {
     #[inline(always)]
     pub fn set_uri(&mut self, uri: Origin<'r>) {
         self.uri = uri;
+    }
+
+    /// Returns the [`Host`] identified in the request, if any.
+    ///
+    /// If the request is made via HTTP/1.1 (or earlier), this method returns
+    /// the value in the `HOST` header without the deprecated `user_info`
+    /// component. Otherwise, this method returns the contents of the
+    /// `:authority` pseudo-header request field.
+    ///
+    /// # ⚠️ DANGER ⚠️
+    ///
+    /// Using the user-controlled `host` to construct URLs is a security hazard!
+    /// _Never_ do so without first validating the host against a whitelist. For
+    /// this reason, Rocket disallows constructing host-prefixed URIs with
+    /// [`uri!`]. _Always_ use [`uri!`] to construct URIs.
+    ///
+    /// [`uri!`]: crate::uri!
+    ///
+    /// # Example
+    ///
+    /// Retrieve the raw host, unusable to construct safe URIs:
+    ///
+    /// ```rust
+    /// use rocket::http::uri::Host;
+    /// # use rocket::uri;
+    /// # let c = rocket::local::blocking::Client::debug_with(vec![]).unwrap();
+    /// # let mut req = c.get("/");
+    /// # let request = req.inner_mut();
+    ///
+    /// assert_eq!(request.host(), None);
+    ///
+    /// request.set_host(Host::from(uri!("rocket.rs")));
+    /// let host = request.host().unwrap();
+    /// assert_eq!(host.domain(), "rocket.rs");
+    /// assert_eq!(host.port(), None);
+    ///
+    /// request.set_host(Host::from(uri!("rocket.rs:2392")));
+    /// let host = request.host().unwrap();
+    /// assert_eq!(host.domain(), "rocket.rs");
+    /// assert_eq!(host.port(), Some(2392));
+    /// ```
+    ///
+    /// Retrieve the raw host, check it against a whitelist, and construct a
+    /// URI:
+    ///
+    /// ```rust
+    /// # #[macro_use] extern crate rocket;
+    /// # type Token = String;
+    /// # let c = rocket::local::blocking::Client::debug_with(vec![]).unwrap();
+    /// # let mut req = c.get("/");
+    /// # let request = req.inner_mut();
+    /// use rocket::http::uri::Host;
+    ///
+    /// // A sensitive URI we want to prefix with safe hosts.
+    /// #[get("/token?<secret>")]
+    /// fn token(secret: Token) { /* .. */ }
+    ///
+    /// // Whitelist of known hosts. In a real setting, you might retrieve this
+    /// // list from config at ignite-time using tools like `AdHoc::config()`.
+    /// const WHITELIST: [Host<'static>; 3] = [
+    ///     Host::new(uri!("rocket.rs")),
+    ///     Host::new(uri!("rocket.rs:443")),
+    ///     Host::new(uri!("guide.rocket.rs:443")),
+    /// ];
+    ///
+    /// // A request with a host of "rocket.rs". Note the case-insensitivity.
+    /// request.set_host(Host::from(uri!("ROCKET.rs")));
+    /// let prefix = request.host().and_then(|h| h.to_absolute("https", &WHITELIST));
+    ///
+    /// // `rocket.rs` is in the whitelist, so we'll get back a `Some`.
+    /// assert!(prefix.is_some());
+    /// if let Some(prefix) = prefix {
+    ///     // We can use this prefix to safely construct URIs.
+    ///     let uri = uri!(prefix, token("some-secret-token"));
+    ///     assert_eq!(uri, "https://ROCKET.rs/token?secret=some-secret-token");
+    /// }
+    ///
+    /// // A request with a host of "attacker-controlled.com".
+    /// request.set_host(Host::from(uri!("attacker-controlled.com")));
+    /// let prefix = request.host().and_then(|h| h.to_absolute("https", &WHITELIST));
+    ///
+    /// // `attacker-controlled.come` is _not_ on the whitelist.
+    /// assert!(prefix.is_none());
+    /// assert!(request.host().is_some());
+    /// ```
+    #[inline(always)]
+    pub fn host(&self) -> Option<&Host<'r>> {
+        self.host.as_ref()
+    }
+
+    /// Sets the host of `self` to `host`.
+    ///
+    /// # Example
+    ///
+    /// Set the host to `rocket.rs:443`.
+    ///
+    /// ```rust
+    /// use rocket::http::uri::Host;
+    /// # use rocket::uri;
+    /// # let c = rocket::local::blocking::Client::debug_with(vec![]).unwrap();
+    /// # let mut req = c.get("/");
+    /// # let request = req.inner_mut();
+    ///
+    /// assert_eq!(request.host(), None);
+    ///
+    /// request.set_host(Host::from(uri!("rocket.rs:443")));
+    /// let host = request.host().unwrap();
+    /// assert_eq!(host.domain(), "rocket.rs");
+    /// assert_eq!(host.port(), Some(443));
+    /// ```
+    #[inline(always)]
+    pub fn set_host(&mut self, host: Host<'r>) {
+        self.host = Some(host);
     }
 
     /// Returns the raw address of the remote connection that initiated this
@@ -849,6 +966,14 @@ impl<'r> Request<'r> {
         // Construct the request object.
         let mut request = Request::new(rocket, method, uri);
         request.set_remote(addr);
+
+        // Determine the host. On HTTP < 2, use the `HOST` header. Otherwise,
+        // use the `:authority` pseudo-header which hyper makes part of the URI.
+        request.host = if hyper.version < hyper::Version::HTTP_2 {
+            hyper.headers.get("host").and_then(|h| Host::parse_bytes(h.as_bytes()).ok())
+        } else {
+            hyper.uri.host().map(|h| Host::new(Authority::new(None, h, hyper.uri.port_u16())))
+        };
 
         // Set the request cookies, if they exist.
         for header in hyper.headers.get_all("Cookie") {

@@ -4,7 +4,7 @@
 //! These types will, with certainty, be removed with time, but they reside here
 //! while necessary.
 
-#[doc(hidden)] pub use hyper::{Body, Error, Request, Response};
+#[doc(hidden)] pub use hyper::{Body, Error, Request, Response, Version};
 #[doc(hidden)] pub use hyper::body::{Bytes, HttpBody, Sender as BodySender};
 #[doc(hidden)] pub use hyper::rt::Executor;
 #[doc(hidden)] pub use hyper::server::Server;
