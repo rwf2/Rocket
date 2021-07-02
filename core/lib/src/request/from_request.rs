@@ -5,7 +5,8 @@ use crate::{Request, Route};
 use crate::outcome::{self, IntoOutcome};
 use crate::outcome::Outcome::*;
 
-use crate::http::{Status, ContentType, Accept, Method, CookieJar, uri::Origin};
+use crate::http::{Status, ContentType, Accept, Method, CookieJar};
+use crate::http::uri::{Host, Origin};
 
 /// Type alias for the `Outcome` of a `FromRequest` conversion.
 pub type Outcome<S, E> = outcome::Outcome<S, (Status, E), ()>;
@@ -128,6 +129,10 @@ impl<S, E> IntoOutcome<S, (Status, E), ()> for Result<S, E> {
 ///     Extracts the [`Origin`] URI from the incoming request.
 ///
 ///     _This implementation always returns successfully._
+///
+///   * **&Host**
+///
+///     Extracts the [`Host`] from the incoming request.
 ///
 ///   * **&Route**
 ///
@@ -398,6 +403,18 @@ impl<'r> FromRequest<'r> for &'r Origin<'r> {
 
     async fn from_request(request: &'r Request<'_>) -> Outcome<Self, Self::Error> {
         Success(request.uri())
+    }
+}
+
+#[crate::async_trait]
+impl<'r> FromRequest<'r> for &'r Host<'r> {
+    type Error = std::convert::Infallible;
+
+    async fn from_request(request: &'r Request<'_>) -> Outcome<Self, Self::Error> {
+        match request.host() {
+            Some(host) => Success(host),
+            None => Forward(())
+        }
     }
 }
 
