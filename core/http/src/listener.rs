@@ -32,8 +32,8 @@ pub trait Listener {
 
 /// A 'Connection' represents an open connection to a client
 pub trait Connection: AsyncRead + AsyncWrite {
-    /// The remote address, i.e. the client's socket address.
-    fn remote_addr(&self) -> Option<SocketAddr>;
+    /// The remote address, i.e. the client's socket address, if it is known.
+    fn peer_address(&self) -> Option<SocketAddr>;
 }
 
 pin_project_lite::pin_project! {
@@ -184,7 +184,7 @@ impl Listener for TcpListener {
 }
 
 impl Connection for TcpStream {
-    fn remote_addr(&self) -> Option<SocketAddr> {
+    fn peer_address(&self) -> Option<SocketAddr> {
         self.peer_addr().ok()
     }
 }

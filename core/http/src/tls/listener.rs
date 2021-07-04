@@ -96,7 +96,7 @@ impl Listener for TlsListener {
 }
 
 impl Connection for TlsStream<TcpStream> {
-    fn remote_addr(&self) -> Option<SocketAddr> {
-        self.get_ref().0.remote_addr()
+    fn peer_address(&self) -> Option<SocketAddr> {
+        self.get_ref().0.peer_address()
     }
 }

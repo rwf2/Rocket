@@ -443,7 +443,7 @@ impl Rocket<Orbit> {
         let rocket = Arc::new(self);
         let service_fn = move |conn: &CancellableIo<_, L::Connection>| {
             let rocket = rocket.clone();
-            let remote = conn.remote_addr().unwrap_or_else(|| ([0, 0, 0, 0], 0).into());
+            let remote = conn.peer_address().unwrap_or_else(|| ([0, 0, 0, 0], 0).into());
             async move {
                 Ok::<_, std::convert::Infallible>(hyper::service_fn(move |req| {
                     hyper_service_fn(rocket.clone(), remote, req)

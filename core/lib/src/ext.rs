@@ -296,8 +296,8 @@ impl<F: Future, I: AsyncWrite> AsyncWrite for CancellableIo<F, I> {
 use crate::http::private::{Listener, Connection};
 
 impl<F: Future, C: Connection> Connection for CancellableIo<F, C> {
-    fn remote_addr(&self) -> Option<std::net::SocketAddr> {
-        self.io.remote_addr()
+    fn peer_address(&self) -> Option<std::net::SocketAddr> {
+        self.io.peer_address()
     }
 }
 
