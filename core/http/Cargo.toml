@@ -16,7 +16,7 @@ edition = "2018"
 
 [features]
 default = []
-tls = ["tokio-rustls"]
+tls = ["rustls", "tokio-rustls"]
 private-cookies = ["cookie/private", "cookie/key-expansion"]
 serde = ["uncased/with-serde-alloc", "serde_"]
 uuid = ["uuid_"]
@@ -28,6 +28,7 @@ http = "0.2"
 mime = "0.3.13"
 time = "0.2.11"
 indexmap = { version = "1.5.2", features = ["std"] }
+rustls = { version = "0.19", optional = true }
 tokio-rustls = { version = "0.22.0", optional = true }
 tokio = { version = "1.6.1", features = ["net", "sync", "time"] }
 log = "0.4"

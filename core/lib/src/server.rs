@@ -367,12 +367,12 @@ impl Rocket<Orbit> {
 
         #[cfg(feature = "tls")]
         if let Some(ref config) = self.config.tls {
-            use crate::http::tls::bind_tls;
+            use crate::http::tls::TlsListener;
 
             let (certs, key) = config.to_readers().map_err(ErrorKind::Io)?;
             let ciphers = config.rustls_ciphers();
             let server_order = config.prefer_server_cipher_order;
-            let l = bind_tls(addr, certs, key, ciphers, server_order).await
+            let l = TlsListener::bind(addr, certs, key, ciphers, server_order).await
                 .map_err(ErrorKind::Bind)?;
 
             addr = l.local_addr().unwrap_or(addr);
