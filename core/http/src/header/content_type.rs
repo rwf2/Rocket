@@ -235,39 +235,37 @@ impl ContentType {
 
     known_extensions!(from_extension);
 
-    /// Creates a new `ContentType` with top-level type `top`, subtype `sub`,
-    /// and parameters `ps`. This should _only_ be used to construct uncommon or
-    /// custom content types. Use an associated constant for everything else.
+    /// Sets the parameters `parameters` on `self`.
     ///
     /// # Example
     ///
-    /// Create a custom `application/x-id; id=1` content type:
+    /// Create a custom `application/x-id; id=1` media type:
     ///
     /// ```rust
     /// # extern crate rocket;
     /// use rocket::http::ContentType;
     ///
-    /// let id = ContentType::with_params("application", "x-id", ("id", "1"));
+    /// let id = ContentType::new("application", "x-id").with_params(("id", "1"));
     /// assert_eq!(id.to_string(), "application/x-id; id=1".to_string());
     /// ```
     ///
-    /// Create a custom `text/person; name=bob; weight=175` content type:
+    /// Create a custom `text/person; name=bob; weight=175` media type:
     ///
     /// ```rust
     /// # extern crate rocket;
     /// use rocket::http::ContentType;
     ///
-    /// let params = vec![("name", "bob"), ("ref", "2382")];
-    /// let mt = ContentType::with_params("text", "person", params);
+    /// let mt = ContentType::new("text", "person")
+    ///     .with_params([("name", "bob"), ("ref", "2382")]);
+    ///
     /// assert_eq!(mt.to_string(), "text/person; name=bob; ref=2382".to_string());
     /// ```
-    #[inline]
-    pub fn with_params<T, S, K, V, P>(top: T, sub: S, ps: P) -> ContentType
-        where T: Into<Cow<'static, str>>, S: Into<Cow<'static, str>>,
-              K: Into<Cow<'static, str>>, V: Into<Cow<'static, str>>,
+    pub fn with_params<K, V, P>(self, parameters: P) -> ContentType
+        where K: Into<Cow<'static, str>>,
+              V: Into<Cow<'static, str>>,
               P: IntoCollection<(K, V)>
     {
-        ContentType(MediaType::with_params(top, sub, ps))
+        ContentType(self.0.with_params(parameters))
     }
 
     /// Borrows the inner `MediaType` of `self`.
