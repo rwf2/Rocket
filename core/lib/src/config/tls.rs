@@ -382,8 +382,8 @@ impl TlsConfig {
 
 #[cfg(feature = "tls")]
 mod with_tls_feature {
-    use crate::http::private::tls::rustls::SupportedCipherSuite as RustlsCipher;
-    use crate::http::private::tls::rustls::ciphersuite as rustls;
+    use crate::http::tls::rustls::SupportedCipherSuite as RustlsCipher;
+    use crate::http::tls::rustls::ciphersuite as rustls;
 
     use super::*;
 

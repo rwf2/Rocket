@@ -367,7 +367,7 @@ impl Rocket<Orbit> {
 
         #[cfg(feature = "tls")]
         if let Some(ref config) = self.config.tls {
-            use crate::http::private::tls::bind_tls;
+            use crate::http::tls::bind_tls;
 
             let (certs, key) = config.to_readers().map_err(ErrorKind::Io)?;
             let ciphers = config.rustls_ciphers();
