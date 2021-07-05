@@ -121,23 +121,20 @@ mod tls;
 #[cfg(feature = "secrets")]
 mod secret_key;
 
-#[doc(hidden)] pub use config::pretty_print_error;
-
+#[doc(hidden)]
+pub use config::pretty_print_error;
 pub use config::Config;
 pub use crate::log::LogLevel;
 pub use shutdown::Shutdown;
 pub use ident::Ident;
 
 #[cfg(feature = "tls")]
-#[cfg_attr(nightly, doc(cfg(feature = "tls")))]
 pub use tls::{TlsConfig, CipherSuite};
 
 #[cfg(feature = "secrets")]
-#[cfg_attr(nightly, doc(cfg(feature = "secrets")))]
 pub use secret_key::SecretKey;
 
 #[cfg(unix)]
-#[cfg_attr(nightly, doc(cfg(unix)))]
 pub use shutdown::Sig;
 
 #[cfg(test)]

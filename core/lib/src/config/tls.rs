@@ -57,6 +57,7 @@ use indexmap::IndexSet;
 /// assert!(tls_config.prefer_server_cipher_order());
 /// ```
 #[derive(PartialEq, Debug, Clone, Deserialize, Serialize)]
+#[cfg_attr(nightly, doc(cfg(feature = "tls")))]
 #[serde(deny_unknown_fields)]
 pub struct TlsConfig {
     /// Path or raw bytes for the DER-encoded X.509 TLS certificate chain.
@@ -75,6 +76,7 @@ pub struct TlsConfig {
 /// A supported TLS cipher suite.
 #[allow(non_camel_case_types)]
 #[derive(PartialEq, Eq, Debug, Copy, Clone, Hash, Deserialize, Serialize)]
+#[cfg_attr(nightly, doc(cfg(feature = "tls")))]
 #[non_exhaustive]
 pub enum CipherSuite {
     /// The TLS 1.3 `TLS_CHACHA20_POLY1305_SHA256` cipher suite.

@@ -69,6 +69,7 @@ enum Kind {
 /// [private cookies]: https://rocket.rs/v0.5-rc/guide/requests/#private-cookies
 /// [configuration guide]: https://rocket.rs/v0.5-rc/guide/configuration/#secret-key
 #[derive(Clone)]
+#[cfg_attr(nightly, doc(cfg(feature = "secrets")))]
 pub struct SecretKey {
     pub(crate) key: Key,
     provided: bool,

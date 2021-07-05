@@ -18,6 +18,7 @@ use serde::{Deserialize, Serialize};
 /// [`Sig::Chld`], and so on.
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
+#[cfg_attr(nightly, doc(cfg(unix)))]
 pub enum Sig {
     /// The `SIGALRM` Unix signal.
     Alrm,
