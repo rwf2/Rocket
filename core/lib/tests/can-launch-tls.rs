@@ -1,3 +1,5 @@
+#![cfg(feature = "tls")]
+
 use rocket::fs::relative;
 use rocket::config::{Config, TlsConfig, CipherSuite};
 use rocket::local::asynchronous::Client;

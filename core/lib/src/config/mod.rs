@@ -113,8 +113,10 @@
 #[macro_use]
 mod ident;
 mod config;
-mod tls;
 mod shutdown;
+
+#[cfg(feature = "tls")]
+mod tls;
 
 #[cfg(feature = "secrets")]
 mod secret_key;
@@ -124,8 +126,11 @@ mod secret_key;
 pub use config::Config;
 pub use crate::log::LogLevel;
 pub use shutdown::Shutdown;
-pub use tls::{TlsConfig, CipherSuite};
 pub use ident::Ident;
+
+#[cfg(feature = "tls")]
+#[cfg_attr(nightly, doc(cfg(feature = "tls")))]
+pub use tls::{TlsConfig, CipherSuite};
 
 #[cfg(feature = "secrets")]
 #[cfg_attr(nightly, doc(cfg(feature = "secrets")))]
@@ -141,9 +146,9 @@ mod tests {
     use figment::{Figment, Profile};
     use pretty_assertions::assert_eq;
 
-    use crate::config::{CipherSuite, Config, Ident, Shutdown, TlsConfig};
     use crate::log::LogLevel;
     use crate::data::{Limits, ToByteUnit};
+    use crate::config::Config;
 
     #[test]
     fn test_figment_is_default() {
@@ -237,6 +242,38 @@ mod tests {
                 ..Config::default()
             });
 
+            jail.set_env("ROCKET_CONFIG", "Other.toml");
+            jail.create_file("Other.toml", r#"
+                [default]
+                address = "1.2.3.4"
+                port = 1234
+                workers = 20
+                keep_alive = 10
+                log_level = "off"
+                cli_colors = 0
+            "#)?;
+
+            let config = Config::from(Config::figment());
+            assert_eq!(config, Config {
+                address: Ipv4Addr::new(1, 2, 3, 4).into(),
+                port: 1234,
+                workers: 20,
+                keep_alive: 10,
+                log_level: LogLevel::Off,
+                cli_colors: false,
+                ..Config::default()
+            });
+
+            Ok(())
+        });
+    }
+
+    #[test]
+    #[cfg(feature = "tls")]
+    fn test_tls_config_from_file() {
+        use crate::config::{TlsConfig, CipherSuite, Ident, Shutdown};
+
+        figment::Jail::expect_with(|jail| {
             jail.create_file("Rocket.toml", r#"
                 [global]
                 shutdown.ctrlc = 0
@@ -311,25 +348,77 @@ mod tests {
                 ..Config::default()
             });
 
-            jail.set_env("ROCKET_CONFIG", "Other.toml");
-            jail.create_file("Other.toml", r#"
-                [default]
-                address = "1.2.3.4"
-                port = 1234
-                workers = 20
-                keep_alive = 10
-                log_level = "off"
-                cli_colors = 0
+            jail.create_file("Rocket.toml", r#"
+                [global]
+                shutdown.ctrlc = 0
+                ident = false
+
+                [global.tls]
+                certs = "/ssl/cert.pem"
+                key = "/ssl/key.pem"
+
+                [global.limits]
+                forms = "1mib"
+                json = "10mib"
+                stream = "50kib"
             "#)?;
 
             let config = Config::from(Config::figment());
             assert_eq!(config, Config {
-                address: Ipv4Addr::new(1, 2, 3, 4).into(),
-                port: 1234,
-                workers: 20,
-                keep_alive: 10,
-                log_level: LogLevel::Off,
-                cli_colors: false,
+                shutdown: Shutdown { ctrlc: false, ..Default::default() },
+                ident: Ident::none(),
+                tls: Some(TlsConfig::from_paths("/ssl/cert.pem", "/ssl/key.pem")),
+                limits: Limits::default()
+                    .limit("forms", 1.mebibytes())
+                    .limit("json", 10.mebibytes())
+                    .limit("stream", 50.kibibytes()),
+                ..Config::default()
+            });
+
+            jail.create_file("Rocket.toml", r#"
+                [global.tls]
+                certs = "cert.pem"
+                key = "key.pem"
+            "#)?;
+
+            let config = Config::from(Config::figment());
+            assert_eq!(config, Config {
+                tls: Some(TlsConfig::from_paths(
+                    jail.directory().join("cert.pem"),
+                    jail.directory().join("key.pem")
+                )),
+                ..Config::default()
+            });
+
+            jail.create_file("Rocket.toml", r#"
+                [global.tls]
+                certs = "cert.pem"
+                key = "key.pem"
+                prefer_server_cipher_order = true
+                ciphers = [
+                    "TLS_CHACHA20_POLY1305_SHA256",
+                    "TLS_AES_256_GCM_SHA384",
+                    "TLS_AES_128_GCM_SHA256",
+                    "TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305_SHA256",
+                    "TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384",
+                    "TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256",
+                ]
+            "#)?;
+
+            let config = Config::from(Config::figment());
+            let cert_path = jail.directory().join("cert.pem");
+            let key_path = jail.directory().join("key.pem");
+            assert_eq!(config, Config {
+                tls: Some(TlsConfig::from_paths(cert_path, key_path)
+                         .with_preferred_server_cipher_order(true)
+                         .with_ciphers([
+                             CipherSuite::TLS_CHACHA20_POLY1305_SHA256,
+                             CipherSuite::TLS_AES_256_GCM_SHA384,
+                             CipherSuite::TLS_AES_128_GCM_SHA256,
+                             CipherSuite::TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305_SHA256,
+                             CipherSuite::TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384,
+                             CipherSuite::TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256,
+                         ])),
                 ..Config::default()
             });
 
@@ -377,7 +466,10 @@ mod tests {
     }
 
     #[test]
+    #[cfg(feature = "tls")]
     fn test_env_vars_merge() {
+        use crate::config::{TlsConfig, Ident};
+
         figment::Jail::expect_with(|jail| {
             jail.set_env("ROCKET_PORT", 9999);
             let config = Config::from(Config::figment());

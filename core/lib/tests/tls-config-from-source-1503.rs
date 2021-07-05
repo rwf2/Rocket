@@ -1,3 +1,5 @@
+#![cfg(feature = "tls")]
+
 macro_rules! relative {
     ($path:expr) => {
         std::path::Path::new(concat!(env!("CARGO_MANIFEST_DIR"), "/", $path))
@@ -5,7 +7,7 @@ macro_rules! relative {
 }
 
 #[test]
-fn tls_config_from_soruce() {
+fn tls_config_from_source() {
     use rocket::config::{Config, TlsConfig};
     use rocket::figment::Figment;
 

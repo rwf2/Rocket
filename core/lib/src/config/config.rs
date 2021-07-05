@@ -6,9 +6,12 @@ use figment::value::{Map, Dict, magic::RelativePathBuf};
 use serde::{Deserialize, Serialize};
 use yansi::Paint;
 
-use crate::config::{TlsConfig, LogLevel, Shutdown, Ident};
+use crate::config::{LogLevel, Shutdown, Ident};
 use crate::request::{self, Request, FromRequest};
 use crate::data::Limits;
+
+#[cfg(feature = "tls")]
+use crate::config::TlsConfig;
 
 #[cfg(feature = "secrets")]
 use crate::config::SecretKey;
@@ -71,11 +74,13 @@ pub struct Config {
     pub keep_alive: u32,
     /// Streaming read size limits. **(default: [`Limits::default()`])**
     pub limits: Limits,
-    /// The TLS configuration, if any. **(default: `None`)**
-    pub tls: Option<TlsConfig>,
     /// How, if at all, to identify the server via the `Server` header.
     /// **(default: `"Rocket"`)**
     pub ident: Ident,
+    /// The TLS configuration, if any. **(default: `None`)**
+    #[cfg(feature = "tls")]
+    #[cfg_attr(nightly, doc(cfg(feature = "tls")))]
+    pub tls: Option<TlsConfig>,
     /// The secret key for signing and encrypting. **(default: `0`)**
     ///
     /// **Note:** This field _always_ serializes as a 256-bit array of `0`s to
@@ -164,8 +169,9 @@ impl Config {
             workers: num_cpus::get(),
             keep_alive: 5,
             limits: Limits::default(),
-            tls: None,
             ident: Ident::default(),
+            #[cfg(feature = "tls")]
+            tls: None,
             #[cfg(feature = "secrets")]
             secret_key: SecretKey::zero(),
             temp_dir: std::env::temp_dir().into(),
@@ -303,8 +309,11 @@ impl Config {
     /// }
     /// ```
     pub fn tls_enabled(&self) -> bool {
-        cfg!(feature = "tls") &&
+        #[cfg(feature = "tls")] {
             self.tls.as_ref().map_or(false, |tls| !tls.ciphers.is_empty())
+        }
+
+        #[cfg(not(feature = "tls"))] { false }
     }
 
     pub(crate) fn pretty_print(&self, figment: &Figment) {
