@@ -46,6 +46,9 @@ function gen_rsa_sha256() {
     -CA ca_cert.pem -CAkey ca_key.pem -CAcreateserial \
     -in server.csr -out rsa_sha256_cert.pem
 
+  openssl pkcs12 -export -password pass:rocket \
+    -in rsa_sha256_cert.pem -inkey rsa_sha256_key.pem -out rsa_sha256.p12
+
   rm ca_cert.srl server.csr
 }
 
@@ -55,9 +58,13 @@ function gen_ed25519() {
   openssl genpkey -algorithm ED25519 > ed25519_key.pem
 
   openssl req -new -key ed25519_key.pem -subj "${SUBJECT}" -out server.csr
+
   openssl x509 -req -extfile <(printf "subjectAltName=${ALT}") -days 3650 \
     -CA ca_cert.pem -CAkey ca_key.pem -CAcreateserial \
     -in server.csr -out ed25519_cert.pem
+
+  openssl pkcs12 -export -password pass:rocket \
+    -in ed25519_cert.pem -inkey ed25519_key.pem -out ed25519.p12
 
   rm ca_cert.srl server.csr
 }
@@ -78,6 +85,9 @@ function gen_ecdsa_nistp256_sha256() {
     -CA ca_cert.pem -CAkey ca_key.pem -CAcreateserial \
     -in server.csr -out ecdsa_nistp256_sha256_cert.pem
 
+  openssl pkcs12 -export -password pass:rocket -in ecdsa_nistp256_sha256_cert.pem \
+    -inkey ecdsa_nistp256_sha256_key_pkcs8.pem -out ecdsa_nistp256_sha256.p12
+
   rm ca_cert.srl server.csr ecdsa_nistp256_sha256_key.pem
 }
 
@@ -96,6 +106,9 @@ function gen_ecdsa_nistp384_sha384() {
   openssl x509 -req -sha384 -extfile <(printf "subjectAltName=${ALT}") -days 3650 \
     -CA ca_cert.pem -CAkey ca_key.pem -CAcreateserial \
     -in server.csr -out ecdsa_nistp384_sha384_cert.pem
+
+  openssl pkcs12 -export -password pass:rocket -in ecdsa_nistp384_sha384_cert.pem \
+    -inkey ecdsa_nistp384_sha384_key_pkcs8.pem -out ecdsa_nistp384_sha384.p12
 
   rm ca_cert.srl server.csr ecdsa_nistp384_sha384_key.pem
 }
