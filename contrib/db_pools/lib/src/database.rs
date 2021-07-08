@@ -83,19 +83,19 @@ impl<D: Database> Sentinel for Connection<D> {
 }
 
 /// The database fairing for pool types created with the `pool!` macro.
-pub struct Fairing<D: Database>(&'static str, fn(D::Pool) -> D);
+pub struct Fairing<D: Database>(&'static str, std::marker::PhantomData<fn(D::Pool)>);
 
-impl<D: Database> Fairing<D> {
+impl<D: Database + From<D::Pool>> Fairing<D> {
     /// Create a new database fairing with the given constructor.  This
     /// constructor will be called to create an instance of `D` after the pool
     /// is initialized and before it is placed into managed state.
-    pub fn new(fairing_name: &'static str, ctor: fn(D::Pool) -> D, ) -> Self {
-        Self(fairing_name, ctor)
+    pub fn new(fairing_name: &'static str) -> Self {
+        Self(fairing_name, std::marker::PhantomData)
     }
 }
 
 #[rocket::async_trait]
-impl<D: Database> rocket::fairing::Fairing for Fairing<D> {
+impl<D: Database + From<D::Pool>> rocket::fairing::Fairing for Fairing<D> {
     fn info(&self) -> Info {
         Info {
             name: self.0,
@@ -112,6 +112,8 @@ impl<D: Database> rocket::fairing::Fairing for Fairing<D> {
             }
         };
 
-        Ok(rocket.manage((self.1)(pool)))
+        let db: D = pool.into();
+
+        Ok(rocket.manage(db))
     }
 }

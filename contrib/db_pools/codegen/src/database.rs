@@ -1,7 +1,7 @@
 use proc_macro::TokenStream;
 
 use devise::{DeriveGenerator, FromMeta, MapperBuild, Support, ValidatorBuild};
-use devise::proc_macro2_diagnostics::{SpanDiagnosticExt};
+use devise::proc_macro2_diagnostics::SpanDiagnosticExt;
 use devise::syn::{Fields, spanned::Spanned};
 
 #[derive(Debug, FromMeta)]
@@ -45,9 +45,26 @@ pub fn derive_database(input: TokenStream) -> TokenStream {
                     const NAME: &'static str = #db_name;
                     type Pool = #pool_type;
                     fn fairing() -> #krate::Fairing<Self> {
-                        #krate::Fairing::new(#fairing_name, Self)
+                        #krate::Fairing::new(#fairing_name)
                     }
                     fn pool(&self) -> &Self::Pool { &self.0 }
+                })
+            })
+        )
+        .outer_mapper(MapperBuild::new()
+            .try_struct_map(|_, struct_| {
+                let decorated_type = &struct_.ident;
+                let pool_type = match &struct_.fields {
+                    Fields::Unnamed(f) => &f.unnamed[0].ty,
+                    _ => unreachable!("Support::TupleStruct"),
+                };
+
+                Ok(quote_spanned! { struct_.span() =>
+                    impl From<#pool_type> for #decorated_type {
+                        fn from(pool: #pool_type) -> Self {
+                            Self(pool)
+                        }
+                    }
                 })
             })
         )
