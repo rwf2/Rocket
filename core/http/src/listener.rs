@@ -30,10 +30,31 @@ pub trait Listener {
     ) -> Poll<io::Result<Self::Connection>>;
 }
 
+/// A thin wrapper over raw, DER-encoded X.509 client certificate data.
+#[cfg(not(feature = "tls"))]
+#[derive(Clone, Eq, PartialEq)]
+pub struct RawCertificate(pub Vec<u8>);
+
+/// A thin wrapper over raw, DER-encoded X.509 client certificate data.
+// NOTE: `rustls::Certificate` is exactly isomorphic to `RawCertificate`.
+#[doc(inline)]
+#[cfg(feature = "tls")]
+pub use rustls::Certificate as RawCertificate;
+
 /// A 'Connection' represents an open connection to a client
 pub trait Connection: AsyncRead + AsyncWrite {
     /// The remote address, i.e. the client's socket address, if it is known.
     fn peer_address(&self) -> Option<SocketAddr>;
+
+    /// DER-encoded X.509 certificate chain presented by the client, if any.
+    ///
+    /// The certificate order must be as it appears in the TLS protocol: the
+    /// first certificate relates to the peer, the second certifies the first,
+    /// the third certifies the second, and so on.
+    ///
+    /// Defaults to an empty vector to indicate that no certificates were
+    /// presented.
+    fn peer_certificates(&self) -> Option<Vec<RawCertificate>> { None }
 }
 
 pin_project_lite::pin_project! {
@@ -114,9 +135,8 @@ impl<L: Listener> Incoming<L> {
                     }
 
                     if let Some(duration) = me.sleep_on_errors {
-                        error!("connection accept error: {}", e);
-
                         // Sleep for the specified duration
+                        error!("connection accept error: {}", e);
                         me.pending_error_delay.set(Some(tokio::time::sleep(*duration)));
                     } else {
                         return Poll::Ready(Err(e));

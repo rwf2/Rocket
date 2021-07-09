@@ -17,6 +17,7 @@ edition = "2018"
 [features]
 default = []
 tls = ["rustls", "tokio-rustls"]
+mtls = ["tls", "x509-parser"]
 private-cookies = ["cookie/private", "cookie/key-expansion"]
 serde = ["uncased/with-serde-alloc", "serde_"]
 uuid = ["uuid_"]
@@ -43,6 +44,10 @@ stable-pattern = "0.1"
 cookie = { version = "0.15", features = ["percent-encode"] }
 state = "0.5.1"
 
+[dependencies.x509-parser]
+version = "0.9.2"
+optional = true
+
 [dependencies.hyper]
 version = "0.14.9"
 default-features = false
@@ -62,4 +67,4 @@ optional = true
 default-features = false
 
 [dev-dependencies]
-rocket = { version = "0.5.0-rc.1", path = "../lib" }
+rocket = { version = "0.5.0-rc.1", path = "../lib", features = ["mtls"] }

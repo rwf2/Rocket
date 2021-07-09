@@ -71,6 +71,21 @@ pub struct TlsConfig {
     /// Whether to prefer the server's cipher suite order over the client's.
     #[serde(default)]
     pub(crate) prefer_server_cipher_order: bool,
+    /// Configuration for mutual TLS, if any.
+    #[serde(default)]
+    #[cfg(feature = "mtls")]
+    #[cfg_attr(nightly, doc(cfg(feature = "mtls")))]
+    pub(crate) mutual: Option<MutualTls>,
+}
+
+#[derive(PartialEq, Debug, Clone, Deserialize, Serialize)]
+#[cfg(feature = "mtls")]
+#[cfg_attr(nightly, doc(cfg(feature = "mtls")))]
+pub struct MutualTls {
+    pub(crate) ca_certs: Either<RelativePathBuf, Vec<u8>>,
+    #[serde(default)]
+    #[serde(deserialize_with = "figment::util::bool_from_str_or_int")]
+    pub mandatory: bool,
 }
 
 /// A supported TLS cipher suite.
@@ -144,7 +159,18 @@ impl CipherSuite {
 }
 
 impl TlsConfig {
-    /// Constructs a `TlsConfig` from paths to a `certs` certificate-chain
+    fn default() -> Self {
+        TlsConfig {
+            certs: Either::Right(vec![]),
+            key: Either::Right(vec![]),
+            ciphers: CipherSuite::default_set(),
+            prefer_server_cipher_order: false,
+            #[cfg(feature = "mtls")]
+            mutual: None,
+        }
+    }
+
+    /// Constructs a `TlsConfig` from paths to a `certs` certificate chain
     /// a `key` private-key. This method does no validation; it simply creates a
     /// structure suitable for passing into a [`Config`](crate::Config).
     ///
@@ -161,13 +187,12 @@ impl TlsConfig {
         TlsConfig {
             certs: Either::Left(certs.as_ref().to_path_buf().into()),
             key: Either::Left(key.as_ref().to_path_buf().into()),
-            ciphers: CipherSuite::default_set(),
-            prefer_server_cipher_order: Default::default(),
+            ..TlsConfig::default()
         }
     }
 
     /// Constructs a `TlsConfig` from byte buffers to a `certs`
-    /// certificate-chain a `key` private-key. This method does no validation;
+    /// certificate chain a `key` private-key. This method does no validation;
     /// it simply creates a structure suitable for passing into a
     /// [`Config`](crate::Config).
     ///
@@ -184,8 +209,7 @@ impl TlsConfig {
         TlsConfig {
             certs: Either::Right(certs.to_vec()),
             key: Either::Right(key.to_vec()),
-            ciphers: CipherSuite::default_set(),
-            prefer_server_cipher_order: Default::default(),
+            ..TlsConfig::default()
         }
     }
 
@@ -285,6 +309,26 @@ impl TlsConfig {
         self
     }
 
+    /// Configures mutual TLS. See [`MutualTls`] for details.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use rocket::config::{TlsConfig, MutualTls};
+    ///
+    /// # let certs = &[];
+    /// # let key = &[];
+    /// let mtls_config = MutualTls::from_path("path/to/cert.pem").mandatory(true);
+    /// let tls_config = TlsConfig::from_bytes(certs, key).with_mutual(mtls_config);
+    /// assert!(tls_config.mutual().is_some());
+    /// ```
+    #[cfg(feature = "mtls")]
+    #[cfg_attr(nightly, doc(cfg(feature = "mtls")))]
+    pub fn with_mutual(mut self, config: MutualTls) -> Self {
+        self.mutual = Some(config);
+        self
+    }
+
     /// Returns the value of the `certs` parameter.
     ///
     /// # Example
@@ -380,41 +424,170 @@ impl TlsConfig {
     pub fn prefer_server_cipher_order(&self) -> bool {
         self.prefer_server_cipher_order
     }
+
+    /// Returns the value of the `mutual` parameter.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use std::path::Path;
+    /// use rocket::config::{TlsConfig, MutualTls};
+    ///
+    /// # let certs = &[];
+    /// # let key = &[];
+    /// let mtls_config = MutualTls::from_path("path/to/cert.pem").mandatory(true);
+    /// let tls_config = TlsConfig::from_bytes(certs, key).with_mutual(mtls_config);
+    ///
+    /// let mtls = tls_config.mutual().unwrap();
+    /// assert_eq!(mtls.ca_certs().unwrap_left(), Path::new("path/to/cert.pem"));
+    /// assert!(mtls.mandatory);
+    /// ```
+    #[cfg(feature = "mtls")]
+    #[cfg_attr(nightly, doc(cfg(feature = "mtls")))]
+    pub fn mutual(&self) -> Option<&MutualTls> {
+        self.mutual.as_ref()
+    }
+}
+
+#[cfg(feature = "mtls")]
+impl MutualTls {
+    /// Constructs a `MutualTls` from a path to a PEM file with a certificate
+    /// authority `ca_certs` DER-encoded X.509 TLS certificate chain. This
+    /// method does no validation; it simply creates a structure suitable for
+    /// passing into a [`TlsConfig`].
+    ///
+    /// These certificates will be used to verify client-presented certificates
+    /// in TLS connections.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use rocket::config::MutualTls;
+    ///
+    /// let tls_config = MutualTls::from_path("/ssl/ca_certs.pem");
+    /// ```
+    pub fn from_path<C: AsRef<std::path::Path>>(ca_certs: C) -> Self {
+        MutualTls {
+            ca_certs: Either::Left(ca_certs.as_ref().to_path_buf().into()),
+            mandatory: Default::default()
+        }
+    }
+
+    /// Constructs a `MutualTls` from a byte buffer to a certificate authority
+    /// `ca_certs` DER-encoded X.509 TLS certificate chain. This method does no
+    /// validation; it simply creates a structure suitable for passing into a
+    /// [`TlsConfig`].
+    ///
+    /// These certificates will be used to verify client-presented certificates
+    /// in TLS connections.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use rocket::config::MutualTls;
+    ///
+    /// # let ca_certs_buf = &[];
+    /// let mtls_config = MutualTls::from_bytes(ca_certs_buf);
+    /// ```
+    pub fn from_bytes(ca_certs: &[u8]) -> Self {
+        MutualTls {
+            ca_certs: Either::Right(ca_certs.to_vec()),
+            mandatory: Default::default()
+        }
+    }
+
+    /// Sets whether client authentication is required. Disabled by default.
+    ///
+    /// When `true`, client authentication will be required. TLS connections
+    /// where the client does not present a certificate will be immediately
+    /// terminated. When `false`, the client is not required to present a
+    /// certificate. In either case, if a certificate _is_ presented, it must be
+    /// valid or the connection is terminated.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use rocket::config::MutualTls;
+    ///
+    /// # let ca_certs_buf = &[];
+    /// let mtls_config = MutualTls::from_bytes(ca_certs_buf).mandatory(true);
+    /// ```
+    pub fn mandatory(mut self, mandatory: bool) -> Self {
+        self.mandatory = mandatory;
+        self
+    }
+
+    /// Returns the value of the `ca_certs` parameter.
+    /// # Example
+    ///
+    /// ```rust
+    /// use rocket::config::MutualTls;
+    ///
+    /// # let ca_certs_buf = &[];
+    /// let mtls_config = MutualTls::from_bytes(ca_certs_buf).mandatory(true);
+    /// assert_eq!(mtls_config.ca_certs().unwrap_right(), ca_certs_buf);
+    /// ```
+    pub fn ca_certs(&self) -> either::Either<std::path::PathBuf, &[u8]> {
+        match &self.ca_certs {
+            Either::Left(path) => either::Either::Left(path.relative()),
+            Either::Right(bytes) => either::Either::Right(&bytes),
+        }
+    }
 }
 
 #[cfg(feature = "tls")]
 mod with_tls_feature {
+    use std::fs;
+    use std::io::{self, Error};
+
+    use crate::http::tls::Config;
     use crate::http::tls::rustls::SupportedCipherSuite as RustlsCipher;
     use crate::http::tls::rustls::ciphersuite as rustls;
 
-    use super::*;
+    use yansi::Paint;
+
+    use super::{Either, RelativePathBuf, TlsConfig, CipherSuite};
 
     type Reader = Box<dyn std::io::BufRead + Sync + Send>;
 
-    impl TlsConfig {
-        pub(crate) fn to_readers(&self) -> std::io::Result<(Reader, Reader)> {
-            use std::{io::{self, Error}, fs};
-            use yansi::Paint;
+    fn to_reader(value: &Either<RelativePathBuf, Vec<u8>>) -> io::Result<Reader> {
+        match value {
+            Either::Left(path) => {
+                let path = path.relative();
+                let file = fs::File::open(&path).map_err(move |e| {
+                    Error::new(e.kind(), format!("error reading TLS file `{}`: {}",
+                            Paint::white(figment::Source::File(path)), e))
+                })?;
 
-            fn to_reader(value: &Either<RelativePathBuf, Vec<u8>>) -> io::Result<Reader> {
-                match value {
-                    Either::Left(path) => {
-                        let path = path.relative();
-                        let file = fs::File::open(&path).map_err(move |e| {
-                            Error::new(e.kind(), format!("error reading TLS file `{}`: {}",
-                                    Paint::white(figment::Source::File(path)), e))
-                        })?;
-
-                        Ok(Box::new(io::BufReader::new(file)))
-                    }
-                    Either::Right(vec) => Ok(Box::new(io::Cursor::new(vec.clone()))),
-                }
+                Ok(Box::new(io::BufReader::new(file)))
             }
+            Either::Right(vec) => Ok(Box::new(io::Cursor::new(vec.clone()))),
+        }
+    }
 
-            Ok((to_reader(&self.certs)?, to_reader(&self.key)?))
+    impl TlsConfig {
+        /// This is only called when TLS is enabled.
+        pub(crate) fn to_native_config(&self) -> io::Result<Config<Reader>> {
+            Ok(Config {
+                cert_chain: to_reader(&self.certs)?,
+                private_key: to_reader(&self.key)?,
+                ciphersuites: self.rustls_ciphers().collect(),
+                prefer_server_order: self.prefer_server_cipher_order,
+                #[cfg(not(feature = "mtls"))]
+                mandatory_mtls: false,
+                #[cfg(not(feature = "mtls"))]
+                ca_certs: None,
+                #[cfg(feature = "mtls")]
+                mandatory_mtls: self.mutual.as_ref().map_or(false, |m| m.mandatory),
+                #[cfg(feature = "mtls")]
+                ca_certs: match self.mutual {
+                    Some(ref mtls) => Some(to_reader(&mtls.ca_certs)?),
+                    None => None
+                },
+            })
         }
 
-        pub(crate) fn rustls_ciphers(&self) -> impl Iterator<Item = &'static RustlsCipher> + '_ {
+        fn rustls_ciphers(&self) -> impl Iterator<Item = &'static RustlsCipher> + '_ {
             self.ciphers().map(|ciphersuite| match ciphersuite {
                 CipherSuite::TLS_CHACHA20_POLY1305_SHA256 =>
                     &rustls::TLS13_CHACHA20_POLY1305_SHA256,

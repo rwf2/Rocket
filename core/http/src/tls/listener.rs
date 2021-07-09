@@ -9,8 +9,8 @@ use rustls::{ServerConfig, SupportedCipherSuite};
 use tokio_rustls::{TlsAcceptor, Accept, server::TlsStream};
 use tokio::net::{TcpListener, TcpStream};
 
-use crate::tls::util::{load_certs, load_private_key};
-use crate::listener::{Connection, Listener};
+use crate::tls::util::{load_certs, load_private_key, load_ca_certs};
+use crate::listener::{Connection, Listener, RawCertificate};
 
 /// A TLS listener over TCP.
 pub struct TlsListener {
@@ -24,35 +24,55 @@ enum State {
     Accepting(Accept<TcpStream>),
 }
 
+pub struct Config<R> {
+    pub cert_chain: R,
+    pub private_key: R,
+    pub ciphersuites: Vec<&'static SupportedCipherSuite>,
+    pub prefer_server_order: bool,
+    pub ca_certs: Option<R>,
+    pub mandatory_mtls: bool,
+}
+
 impl TlsListener {
-    pub async fn bind(
-        address: SocketAddr,
-        mut cert_chain: impl io::BufRead + Send,
-        mut private_key: impl io::BufRead + Send,
-        ciphersuites: impl Iterator<Item = &'static SupportedCipherSuite>,
-        prefer_server_order: bool,
-    ) -> io::Result<TlsListener> {
-        let cert_chain = load_certs(&mut cert_chain).map_err(|e| {
+    pub async fn bind<R>(addr: SocketAddr, mut c: Config<R>) -> io::Result<TlsListener>
+        where R: io::BufRead
+    {
+        let cert_chain = load_certs(&mut c.cert_chain).map_err(|e| {
             let msg = format!("malformed TLS certificate chain: {}", e);
             io::Error::new(e.kind(), msg)
         })?;
 
-        let key = load_private_key(&mut private_key).map_err(|e| {
+        let key = load_private_key(&mut c.private_key).map_err(|e| {
             let msg = format!("malformed TLS private key: {}", e);
             io::Error::new(e.kind(), msg)
         })?;
 
-        let client_auth = rustls::NoClientAuth::new();
+        let client_auth = match c.ca_certs {
+            Some(ref mut ca_certs) => {
+                let roots = load_ca_certs(ca_certs).map_err(|e| {
+                    let msg = format!("malformed CA certificate(s): {}", e);
+                    io::Error::new(e.kind(), msg)
+                })?;
+
+                if c.mandatory_mtls {
+                    rustls::AllowAnyAuthenticatedClient::new(roots)
+                } else {
+                    rustls::AllowAnyAnonymousOrAuthenticatedClient::new(roots)
+                }
+            }
+            None => rustls::NoClientAuth::new(),
+        };
+
         let mut tls_config = ServerConfig::new(client_auth);
         let cache = rustls::ServerSessionMemoryCache::new(1024);
         tls_config.set_persistence(cache);
         tls_config.ticketer = rustls::Ticketer::new();
-        tls_config.ciphersuites = ciphersuites.collect();
-        tls_config.ignore_client_order = prefer_server_order;
+        tls_config.ciphersuites = c.ciphersuites;
+        tls_config.ignore_client_order = c.prefer_server_order;
         tls_config.set_single_cert(cert_chain, key).expect("invalid key");
         tls_config.set_protocols(&[b"h2".to_vec(), b"http/1.1".to_vec()]);
 
-        let listener = TcpListener::bind(address).await?;
+        let listener = TcpListener::bind(addr).await?;
         let acceptor = TlsAcceptor::from(Arc::new(tls_config));
         Ok(TlsListener { listener, acceptor, state: State::Listening })
     }
@@ -98,5 +118,11 @@ impl Listener for TlsListener {
 impl Connection for TlsStream<TcpStream> {
     fn peer_address(&self) -> Option<SocketAddr> {
         self.get_ref().0.peer_address()
+    }
+
+    fn peer_certificates(&self) -> Option<Vec<RawCertificate>> {
+        use rustls::Session;
+
+        self.get_ref().1.get_peer_certificates()
     }
 }

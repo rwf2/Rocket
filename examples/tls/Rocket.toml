@@ -9,6 +9,10 @@
 certs = "private/rsa_sha256_cert.pem"
 key = "private/rsa_sha256_key.pem"
 
+[default.tls.mutual]
+ca_certs = "private/ca_cert.pem"
+mandatory = false
+
 [rsa_sha256.tls]
 certs = "private/rsa_sha256_cert.pem"
 key = "private/rsa_sha256_key.pem"

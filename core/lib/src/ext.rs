@@ -2,15 +2,13 @@ use std::{io, time::Duration};
 use std::task::{Poll, Context};
 use std::pin::Pin;
 
-use bytes::BytesMut;
+use bytes::{Bytes, BytesMut};
 use pin_project_lite::pin_project;
 use tokio::io::{AsyncRead, AsyncWrite, ReadBuf};
 use tokio::time::{sleep, Sleep};
 
 use futures::stream::Stream;
 use futures::future::{self, Future, FutureExt};
-
-use crate::http::hyper::Bytes;
 
 pin_project! {
     pub struct ReaderStream<R> {
@@ -293,11 +291,15 @@ impl<F: Future, I: AsyncWrite> AsyncWrite for CancellableIo<F, I> {
     }
 }
 
-use crate::http::private::{Listener, Connection};
+use crate::http::private::{Listener, Connection, RawCertificate};
 
 impl<F: Future, C: Connection> Connection for CancellableIo<F, C> {
     fn peer_address(&self) -> Option<std::net::SocketAddr> {
         self.io.peer_address()
+    }
+
+    fn peer_certificates(&self) -> Option<Vec<RawCertificate>> {
+        self.io.peer_certificates()
     }
 }
 
