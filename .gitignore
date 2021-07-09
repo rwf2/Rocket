@@ -4,10 +4,6 @@
 *.rlib
 *.dll
 
-# Keys
-*.pem
-*.p12
-
 # Executables
 *.exe
 
