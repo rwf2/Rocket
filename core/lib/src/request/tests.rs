@@ -1,4 +1,3 @@
-use std::net::{Ipv4Addr, SocketAddrV4};
 use std::collections::HashMap;
 
 use crate::Request;
@@ -17,9 +16,8 @@ macro_rules! assert_headers {
 
         // Create a valid `Rocket` and convert the hyper req to a Rocket one.
         let client = Client::debug_with(vec![]).unwrap();
-        let addr = SocketAddrV4::new(Ipv4Addr::LOCALHOST, 8000).into();
         let hyper = req.into_parts().0;
-        let req = Request::from_hyp(client.rocket(), &hyper, addr).unwrap();
+        let req = Request::from_hyp(client.rocket(), &hyper, None).unwrap();
 
         // Dispatch the request and check that the headers match.
         let actual_headers = req.headers();

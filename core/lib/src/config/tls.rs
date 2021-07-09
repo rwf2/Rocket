@@ -26,44 +26,63 @@ use indexmap::IndexSet;
 ///     ciphersuite preferences over the client's. The default and recommended
 ///     value is `false`.
 ///
-/// The following example illustrates manual configuration:
+/// Additionally, the `mutual` parameter controls if and how the server
+/// authenticates clients via mutual TLS. It works in concert with the
+/// [`mtls`](crate::mtls) module. See [`MutualTls`] for configuration details.
+///
+/// In `Rocket.toml`, configuration might look like:
+///
+/// ```toml
+/// [default.tls]
+/// certs = "private/rsa_sha256_cert.pem"
+/// key = "private/rsa_sha256_key.pem"
+/// ```
+///
+/// With a custom programmatic configuration, this might look like:
 ///
 /// ```rust
+/// # #[macro_use] extern crate rocket;
 /// use rocket::config::{Config, TlsConfig, CipherSuite};
 ///
-/// // From a manually constructed figment.
-/// let figment = rocket::Config::figment()
+/// #[launch]
+/// fn rocket() -> _ {
+///     let tls_config = TlsConfig::from_paths("/ssl/certs.pem", "/ssl/key.pem")
+///         .with_ciphers(CipherSuite::TLS_V13_SET)
+///         .with_preferred_server_cipher_order(true);
+///
+///     let config = Config {
+///         tls: Some(tls_config),
+///         ..Default::default()
+///     };
+///
+///     rocket::custom(config)
+/// }
+/// ```
+///
+/// Or by creating a custom figment:
+///
+/// ```rust
+/// use rocket::config::Config;
+///
+/// let figment = Config::figment()
 ///     .merge(("tls.certs", "path/to/certs.pem"))
 ///     .merge(("tls.key", vec![0; 32]));
-///
-/// let config = rocket::Config::from(figment);
-/// let tls_config = config.tls.as_ref().unwrap();
-/// assert!(tls_config.certs().is_left());
-/// assert!(tls_config.key().is_right());
-/// assert_eq!(tls_config.ciphers().count(), 9);
-/// assert!(!tls_config.prefer_server_cipher_order());
-///
-/// // From a serialized `TlsConfig`.
-/// let tls_config = TlsConfig::from_paths("/ssl/certs.pem", "/ssl/key.pem")
-///     .with_ciphers(CipherSuite::TLS_V13_SET)
-///     .with_preferred_server_cipher_order(true);
-///
-/// let figment = rocket::Config::figment()
-///     .merge(("tls", tls_config));
-///
-/// let config = rocket::Config::from(figment);
-/// let tls_config = config.tls.as_ref().unwrap();
-/// assert_eq!(tls_config.ciphers().count(), 3);
-/// assert!(tls_config.prefer_server_cipher_order());
+/// #
+/// # let config = rocket::Config::from(figment);
+/// # let tls_config = config.tls.as_ref().unwrap();
+/// # assert!(tls_config.certs().is_left());
+/// # assert!(tls_config.key().is_right());
+/// # assert_eq!(tls_config.ciphers().count(), 9);
+/// # assert!(!tls_config.prefer_server_cipher_order());
 /// ```
 #[derive(PartialEq, Debug, Clone, Deserialize, Serialize)]
 #[cfg_attr(nightly, doc(cfg(feature = "tls")))]
-#[serde(deny_unknown_fields)]
 pub struct TlsConfig {
-    /// Path or raw bytes for the DER-encoded X.509 TLS certificate chain.
+    /// Path to a PEM file with, or raw bytes for, a DER-encoded X.509 TLS
+    /// certificate chain.
     pub(crate) certs: Either<RelativePathBuf, Vec<u8>>,
-    /// Path or raw bytes to DER-encoded ASN.1 key in either PKCS#8 or PKCS#1
-    /// format.
+    /// Path to a PEM file with, or raw bytes for, DER-encoded private key in
+    /// either PKCS#8 or PKCS#1 format.
     pub(crate) key: Either<RelativePathBuf, Vec<u8>>,
     /// List of TLS cipher suites in server-preferred order.
     #[serde(default = "CipherSuite::default_set")]
@@ -78,11 +97,77 @@ pub struct TlsConfig {
     pub(crate) mutual: Option<MutualTls>,
 }
 
+/// Mutual TLS configuration.
+///
+/// Configuration works in concert with the [`mtls`](crate::mtls) module, which
+/// provides a request guard to validate, verify, and retrieve client
+/// certificates in routes.
+///
+/// By default, mutual TLS is disabled and client certificates are not required,
+/// validated or verified. To enable mutual TLS, the `mtls` feature must be
+/// enabled and support configured via two `tls.mutual` parameters:
+///
+///   * `ca_certs`
+///
+///     A required path to a PEM file or raw bytes to a DER-encoded X.509 TLS
+///     certificate chain for the certificate authority to verify client
+///     certificates against. When a path is configured in a file, such as
+///     `Rocket.toml`, relative paths are interpreted as relative to the source
+///     file's directory.
+///
+///   * `mandatory`
+///
+///     An optional boolean that control whether client authentication is
+///     required.
+///
+///     When `true`, client authentication is required. TLS connections where
+///     the client does not present a certificate are immediately terminated.
+///     When `false`, the client is not required to present a certificate. In
+///     either case, if a certificate _is_ presented, it must be valid or the
+///     connection is terminated.
+///
+/// In a `Rocket.toml`, configuration might look like:
+///
+/// ```toml
+/// [default.tls.mutual]
+/// ca_certs = "/ssl/ca_cert.pem"
+/// mandatory = true                # when absent, defaults to false
+/// ```
+///
+/// Programmatically, configuration might look like:
+///
+/// ```rust
+/// # #[macro_use] extern crate rocket;
+/// use rocket::config::{Config, TlsConfig, MutualTls};
+///
+/// #[launch]
+/// fn rocket() -> _ {
+///     let tls_config = TlsConfig::from_paths("/ssl/certs.pem", "/ssl/key.pem")
+///         .with_mutual(MutualTls::from_path("/ssl/ca_cert.pem"));
+///
+///     let config = Config {
+///         tls: Some(tls_config),
+///         ..Default::default()
+///     };
+///
+///     rocket::custom(config)
+/// }
+/// ```
 #[derive(PartialEq, Debug, Clone, Deserialize, Serialize)]
 #[cfg(feature = "mtls")]
 #[cfg_attr(nightly, doc(cfg(feature = "mtls")))]
 pub struct MutualTls {
+    /// Path to a PEM file with, or raw bytes for, DER-encoded Certificate
+    /// Authority certificates which will be used to verify client-presented
+    /// certificates.
+    // TODO: We should support more than one root.
     pub(crate) ca_certs: Either<RelativePathBuf, Vec<u8>>,
+    /// Whether the client is required to present a certificate.
+    ///
+    /// When `true`, the client is required to present a valid certificate to
+    /// proceed with TLS. When `false`, the client is not required to present a
+    /// certificate. In either case, if a certificate _is_ presented, it must be
+    /// valid or the connection is terminated.
     #[serde(default)]
     #[serde(deserialize_with = "figment::util::bool_from_str_or_int")]
     pub mandatory: bool,

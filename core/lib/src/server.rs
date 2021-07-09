@@ -12,6 +12,7 @@ use crate::form::Form;
 use crate::outcome::Outcome;
 use crate::error::{Error, ErrorKind};
 use crate::ext::{AsyncReadExt, CancellableListener, CancellableIo};
+use crate::request::ConnectionMeta;
 
 use crate::http::{uri::Origin, hyper, Method, Status, Header};
 use crate::http::private::{bind_tcp, Listener, Connection, Incoming};
@@ -61,7 +62,7 @@ async fn handle<Fut, T, F>(name: Option<&str>, run: F) -> Option<T>
 // `HyperResponse` type, this function does the actual response processing.
 async fn hyper_service_fn(
     rocket: Arc<Rocket<Orbit>>,
-    addr: std::net::SocketAddr,
+    conn: ConnectionMeta,
     hyp_req: hyper::Request<hyper::Body>,
 ) -> Result<hyper::Response<hyper::Body>, io::Error> {
     // This future must return a hyper::Response, but the response body might
@@ -72,7 +73,7 @@ async fn hyper_service_fn(
     tokio::spawn(async move {
         // Convert a Hyper request into a Rocket request.
         let (h_parts, mut h_body) = hyp_req.into_parts();
-        match Request::from_hyp(&rocket, &h_parts, addr) {
+        match Request::from_hyp(&rocket, &h_parts, Some(conn)) {
             Ok(mut req) => {
                 // Convert into Rocket `Data`, dispatch request, write response.
                 let mut data = Data::from(&mut h_body);
@@ -366,20 +367,18 @@ impl Rocket<Orbit> {
             .map_err(|e| Error::new(ErrorKind::Io(e)))?;
 
         #[cfg(feature = "tls")]
-        if let Some(ref config) = self.config.tls {
-            use crate::http::tls::TlsListener;
+        if self.config.tls_enabled() {
+            if let Some(ref config) = self.config.tls {
+                use crate::http::tls::TlsListener;
 
-            let (certs, key) = config.to_readers().map_err(ErrorKind::Io)?;
-            let ciphers = config.rustls_ciphers();
-            let server_order = config.prefer_server_cipher_order;
-            let l = TlsListener::bind(addr, certs, key, ciphers, server_order).await
-                .map_err(ErrorKind::Bind)?;
-
-            addr = l.local_addr().unwrap_or(addr);
-            self.config.address = addr.ip();
-            self.config.port = addr.port();
-            ready(&mut self).await;
-            return self.http_server(l).await;
+                let conf = config.to_native_config().map_err(ErrorKind::Io)?;
+                let l = TlsListener::bind(addr, conf).await.map_err(ErrorKind::Bind)?;
+                addr = l.local_addr().unwrap_or(addr);
+                self.config.address = addr.ip();
+                self.config.port = addr.port();
+                ready(&mut self).await;
+                return self.http_server(l).await;
+            }
         }
 
         let l = bind_tcp(addr).await.map_err(ErrorKind::Bind)?;
@@ -443,10 +442,14 @@ impl Rocket<Orbit> {
         let rocket = Arc::new(self);
         let service_fn = move |conn: &CancellableIo<_, L::Connection>| {
             let rocket = rocket.clone();
-            let remote = conn.peer_address().unwrap_or_else(|| ([0, 0, 0, 0], 0).into());
+            let connection = ConnectionMeta {
+                remote: conn.peer_address(),
+                client_certificates: conn.peer_certificates().map(Arc::new),
+            };
+
             async move {
-                Ok::<_, std::convert::Infallible>(hyper::service_fn(move |req| {
-                    hyper_service_fn(rocket.clone(), remote, req)
+                Ok::<_, std::convert::Infallible>(hyper::service::service_fn(move |req| {
+                    hyper_service_fn(rocket.clone(), connection.clone(), req)
                 }))
             }
         };
@@ -457,7 +460,7 @@ impl Rocket<Orbit> {
             .http1_keepalive(http1_keepalive)
             .http1_preserve_header_case(true)
             .http2_keep_alive_interval(http2_keep_alive)
-            .serve(hyper::make_service_fn(service_fn))
+            .serve(hyper::service::make_service_fn(service_fn))
             .with_graceful_shutdown(shutdown.clone())
             .map_err(|e| Error::new(ErrorKind::Runtime(Box::new(e))));
 

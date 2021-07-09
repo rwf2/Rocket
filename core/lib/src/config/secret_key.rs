@@ -246,7 +246,7 @@ impl<'de> Deserialize<'de> for SecretKey {
     }
 }
 
-impl fmt::Debug for SecretKey {
+impl fmt::Display for SecretKey {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         if self.is_zero() {
             f.write_str("[zero]")
@@ -256,5 +256,11 @@ impl fmt::Debug for SecretKey {
                 false => f.write_str("[generated]"),
             }
         }
+    }
+}
+
+impl fmt::Debug for SecretKey {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        <Self as fmt::Display>::fmt(self, f)
     }
 }

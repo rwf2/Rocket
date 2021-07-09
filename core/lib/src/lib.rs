@@ -63,6 +63,7 @@
 //! |-----------|---------------------------------------------------------|
 //! | `secrets` | Support for authenticated, encrypted [private cookies]. |
 //! | `tls`     | Support for [TLS] encrypted connections.                |
+//! | `mtls`    | Support for verified clients via [mutual TLS].          |
 //! | `json`    | Support for [JSON (de)serialization].                   |
 //! | `msgpack` | Support for [MessagePack (de)serialization].            |
 //! | `uuid`    | Support for [UUID value parsing and (de)serialization]. |
@@ -79,6 +80,7 @@
 //! [UUID value parsing and (de)serialization]: crate::serde::uuid
 //! [private cookies]: https://rocket.rs/v0.5-rc/guide/requests/#private-cookies
 //! [TLS]: https://rocket.rs/v0.5-rc/guide/configuration/#tls
+//! [mutual TLS]: crate::mtls
 //!
 //! ## Configuration
 //!
@@ -136,6 +138,10 @@ pub mod http {
     #[doc(inline)]
     pub use crate::cookies::*;
 }
+
+#[cfg(feature = "mtls")]
+#[cfg_attr(nightly, doc(cfg(feature = "mtls")))]
+pub mod mtls;
 
 /// TODO: We need a futures mod or something.
 mod trip_wire;

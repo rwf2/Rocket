@@ -236,24 +236,8 @@ Security). To enable TLS support:
    certs = "path/to/certs.pem" # Path or bytes to DER-encoded X.509 TLS cert chain.
    ```
 
-Next time the server is run, Rocket will report that TLS is enabled during
-ignition:
-
-```text
-🔧 Configured for debug.
-   ...
-   >> tls: enabled
-```
-
-The [TLS example](@example/tls) illustrates a fully configured TLS server.
-
-! warning: Rocket's built-in TLS supports only TLS 1.2 and 1.3. This may not be
-  suitable for production use.
-
-#### TLS Parameters
-
-The `tls` parameter is expected to be a dictionary with at-most four keys which
-deserialize into the [`TlsConfig`] structure. These are:
+The `tls` parameter is expected to be a dictionary that deserializes into a
+[`TlsConfig`] structure:
 
 | key                          | required  | type                                                  |
 |------------------------------|-----------|-------------------------------------------------------|
@@ -261,9 +245,11 @@ deserialize into the [`TlsConfig`] structure. These are:
 | `certs`                      | **_yes_** | Path or bytes to DER-encoded X.509 TLS cert chain.    |
 | `ciphers`                    | no        | Array of [`CipherSuite`]s to enable.                  |
 | `prefer_server_cipher_order` | no        | Boolean for whether to [prefer server cipher suites]. |
+| `mutual`                     | no        | A map with [mutual TLS] configuration.                |
 
 [`CipherSuite`]: @api/rocket/config/enum.CipherSuite.html
 [prefer server cipher suites]: @api/rocket/config/struct.TlsConfig.html#method.with_preferred_server_cipher_order
+[mutual TLS]: #mutual-tls
 
 When specified via TOML or other serialized formats, each [`CipherSuite`] is
 written as a string representation of the respective variant. For example,
@@ -288,16 +274,69 @@ ciphers = [
 ]
 ```
 
+### Mutual TLS
+
+Rocket supports mutual TLS client authentication. Configuration works in concert
+with the [`mtls`] module, which provides a request guard to validate, verify,
+and retrieve client certificates in routes.
+
+By default, mutual TLS is disabled and client certificates are not required,
+validated or verified. To enable mutual TLS, the `mtls` feature must be
+enabled and support configured via the `tls.mutual` config parameter:
+
+  1. Enable the `mtls` crate feature in `Cargo.toml`:
+
+   ```toml,ignore
+   [dependencies]
+   rocket = { version = "0.5.0-rc.1", features = ["mtls"] }
+   ```
+
+   This implicitly enables the `tls` feature.
+
+  2. Configure a CA certificate chain via the `tls.mutual.ca_certs`
+     configuration parameter. With the default provider, this can be done via
+     `Rocket.toml` as:
+
+   ```toml,ignore
+   [default.tls.mutual]
+   ca_certs = "path/to/ca_certs.pem" # Path or bytes to DER-encoded X.509 TLS cert chain.
+   mandatory = true                  # when absent, defaults to false
+   ```
+
+The `tls.mutual` parameter is expected to be a dictionary that deserializes into a
+[`MutualTls`] structure:
+
+| key         | required  | type                                                        |
+|-------------|-----------|-------------------------------------------------------------|
+| `ca_certs`  | **_yes_** | Path or bytes to DER-encoded X.509 TLS cert chain.          |
+| `mandatory` | no        | Boolean controlling whether the client _must_ authenticate. |
+
+[`MutualTls`]: @api/rocket/config/struct.MutualTls.html
+[`mtls`]: @api/rocket/mtls/index.html
+
+Rocket reports if TLS and/or mTLS are enabled at launch time:
+
+```text
+🔧 Configured for debug.
+   ...
+   >> tls: enabled w/mtls
+```
+
+The [TLS example](@example/tls) illustrates a fully configured TLS server with
+mutual TLS.
+
+! warning: Rocket's built-in TLS supports only TLS 1.2 and 1.3. This may not be
+  suitable for production use.
+
 ### Workers
 
 The `workers` parameter sets the number of threads used for parallel task
 execution; there is no limit to the number of concurrent tasks. Due to a
 limitation in upstream async executers, unlike other values, the `workers`
 configuration value cannot be reconfigured or be configured from sources other
-than those provided by [`Config::figment()`], detailed below. In other words,
-only the values set by the `ROCKET_WORKERS` environment variable or in the
-`workers` property of `Rocket.toml` will be considered - all other `workers`
-values are ignored.
+than those provided by [`Config::figment()`]. In other words, only the values
+set by the `ROCKET_WORKERS` environment variable or in the `workers` property of
+`Rocket.toml` will be considered - all other `workers` values are ignored.
 
 ## Extracting Values
 

@@ -70,13 +70,17 @@ pub struct Config {
     pub port: u16,
     /// Number of threads to use for executing futures. **(default: `num_cores`)**
     pub workers: usize,
-    /// Keep-alive timeout in seconds; disabled when `0`. **(default: `5`)**
-    pub keep_alive: u32,
-    /// Streaming read size limits. **(default: [`Limits::default()`])**
-    pub limits: Limits,
     /// How, if at all, to identify the server via the `Server` header.
     /// **(default: `"Rocket"`)**
     pub ident: Ident,
+    /// Streaming read size limits. **(default: [`Limits::default()`])**
+    pub limits: Limits,
+    /// Directory to store temporary files in. **(default:
+    /// [`std::env::temp_dir()`])**
+    #[serde(serialize_with = "RelativePathBuf::serialize_relative")]
+    pub temp_dir: RelativePathBuf,
+    /// Keep-alive timeout in seconds; disabled when `0`. **(default: `5`)**
+    pub keep_alive: u32,
     /// The TLS configuration, if any. **(default: `None`)**
     #[cfg(feature = "tls")]
     #[cfg_attr(nightly, doc(cfg(feature = "tls")))]
@@ -89,14 +93,10 @@ pub struct Config {
     #[cfg_attr(nightly, doc(cfg(feature = "secrets")))]
     #[serde(serialize_with = "SecretKey::serialize_zero")]
     pub secret_key: SecretKey,
-    /// Directory to store temporary files in. **(default:
-    /// [`std::env::temp_dir()`])**
-    #[serde(serialize_with = "RelativePathBuf::serialize_relative")]
-    pub temp_dir: RelativePathBuf,
-    /// Max level to log. **(default: _debug_ `normal` / _release_ `critical`)**
-    pub log_level: LogLevel,
     /// Graceful shutdown configuration. **(default: [`Shutdown::default()`])**
     pub shutdown: Shutdown,
+    /// Max level to log. **(default: _debug_ `normal` / _release_ `critical`)**
+    pub log_level: LogLevel,
     /// Whether to use colors and emoji when logging. **(default: `true`)**
     #[serde(deserialize_with = "figment::util::bool_from_str_or_int")]
     pub cli_colors: bool,
@@ -167,16 +167,16 @@ impl Config {
             address: Ipv4Addr::new(127, 0, 0, 1).into(),
             port: 8000,
             workers: num_cpus::get(),
-            keep_alive: 5,
-            limits: Limits::default(),
             ident: Ident::default(),
+            limits: Limits::default(),
+            temp_dir: std::env::temp_dir().into(),
+            keep_alive: 5,
             #[cfg(feature = "tls")]
             tls: None,
             #[cfg(feature = "secrets")]
             secret_key: SecretKey::zero(),
-            temp_dir: std::env::temp_dir().into(),
-            log_level: LogLevel::Normal,
             shutdown: Shutdown::default(),
+            log_level: LogLevel::Normal,
             cli_colors: true,
             __non_exhaustive: (),
         }
@@ -316,31 +316,62 @@ impl Config {
         #[cfg(not(feature = "tls"))] { false }
     }
 
+    /// Returns `true` if mTLS is enabled.
+    ///
+    /// mTLS is enabled when TLS is enabled ([`Config::tls_enabled()`]) _and_
+    /// the `mtls` feature is enabled _and_ mTLS has been configured with a CA
+    /// certificate chain.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// let config = rocket::Config::default();
+    /// if config.mtls_enabled() {
+    ///     println!("mTLS is enabled!");
+    /// } else {
+    ///     println!("mTLS is disabled.");
+    /// }
+    /// ```
+    pub fn mtls_enabled(&self) -> bool {
+        if !self.tls_enabled() {
+            return false;
+        }
+
+        #[cfg(feature = "mtls")] {
+            self.tls.as_ref().map_or(false, |tls| tls.mutual.is_some())
+        }
+
+        #[cfg(not(feature = "mtls"))] { false }
+    }
+
     pub(crate) fn pretty_print(&self, figment: &Figment) {
         use crate::log::PaintExt;
 
-        launch_info!("{}Configured for {}.", Paint::emoji("🔧 "), self.profile);
-
-        launch_info_!("address: {}", Paint::default(&self.address).bold());
-        launch_info_!("port: {}", Paint::default(&self.port).bold());
-        launch_info_!("workers: {}", Paint::default(self.workers).bold());
-        launch_info_!("ident: {}", Paint::default(&self.ident).bold());
-
-        let ka = self.keep_alive;
-        if ka > 0 {
-            launch_info_!("keep-alive: {}", Paint::default(format!("{}s", ka)).bold());
-        } else {
-            launch_info_!("keep-alive: {}", Paint::default("disabled").bold());
+        fn bold<T: std::fmt::Display>(val: T) -> Paint<T> {
+            Paint::default(val).bold()
         }
 
-        launch_info_!("limits: {}", Paint::default(&self.limits).bold());
-        match self.tls_enabled() {
-            true => launch_info_!("tls: {}", Paint::default("enabled").bold()),
-            false => launch_info_!("tls: {}", Paint::default("disabled").bold()),
+        launch_info!("{}Configured for {}.", Paint::emoji("🔧 "), self.profile);
+        launch_info_!("address: {}", bold(&self.address));
+        launch_info_!("port: {}", bold(&self.port));
+        launch_info_!("workers: {}", bold(self.workers));
+        launch_info_!("ident: {}", bold(&self.ident));
+        launch_info_!("limits: {}", bold(&self.limits));
+        launch_info_!("temp dir: {}", bold(&self.temp_dir.relative().display()));
+
+        match self.keep_alive {
+            0 => launch_info_!("keep-alive: {}", bold("disabled")),
+            ka => launch_info_!("keep-alive: {}{}", bold(ka), bold("s")),
+        }
+
+        match (self.tls_enabled(), self.mtls_enabled()) {
+            (true, true) => launch_info_!("tls: {}", bold("enabled w/mtls")),
+            (true, false) => launch_info_!("tls: {} w/o mtls", bold("enabled")),
+            (false, _) => launch_info_!("tls: {}", bold("disabled")),
         }
 
         #[cfg(feature = "secrets")] {
-            launch_info_!("secret key: {:?}", Paint::default(&self.secret_key).bold());
+            launch_info_!("secret key: {}", bold(&self.secret_key));
             if !self.secret_key.is_provided() {
                 warn!("secrets enabled without a stable `secret_key`");
                 launch_info_!("disable `secrets` feature or configure a `secret_key`");
@@ -348,10 +379,9 @@ impl Config {
             }
         }
 
-        launch_info_!("temp dir: {}", Paint::default(&self.temp_dir.relative().display()).bold());
-        launch_info_!("log level: {}", Paint::default(self.log_level).bold());
-        launch_info_!("cli colors: {}", Paint::default(&self.cli_colors).bold());
-        launch_info_!("shutdown: {}", Paint::default(&self.shutdown).bold());
+        launch_info_!("shutdown: {}", bold(&self.shutdown));
+        launch_info_!("log level: {}", bold(self.log_level));
+        launch_info_!("cli colors: {}", bold(&self.cli_colors));
 
         // Check for now depreacted config values.
         for (key, replacement) in Self::DEPRECATED_KEYS {
@@ -399,7 +429,6 @@ impl Config {
     /// The default profile: "debug" on `debug`, "release" on `release`.
     #[cfg(not(debug_assertions))]
     pub const DEFAULT_PROFILE: Profile = Self::RELEASE_PROFILE;
-
 }
 
 /// Associated constants for stringy versions of configuration parameters.

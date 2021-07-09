@@ -131,6 +131,9 @@ pub use ident::Ident;
 #[cfg(feature = "tls")]
 pub use tls::{TlsConfig, CipherSuite};
 
+#[cfg(feature = "mtls")]
+pub use tls::MutualTls;
+
 #[cfg(feature = "secrets")]
 pub use secret_key::SecretKey;
 
@@ -418,6 +421,70 @@ mod tests {
                          ])),
                 ..Config::default()
             });
+
+            Ok(())
+        });
+    }
+
+    #[test]
+    #[cfg(feature = "mtls")]
+    fn test_mtls_config() {
+        use std::path::Path;
+
+        figment::Jail::expect_with(|jail| {
+            jail.create_file("Rocket.toml", r#"
+                [default.tls]
+                certs = "/ssl/cert.pem"
+                key = "/ssl/key.pem"
+            "#)?;
+
+            let config = Config::from(Config::figment());
+            assert!(config.tls.is_some());
+            assert!(config.tls.as_ref().unwrap().mutual.is_none());
+            assert!(config.tls_enabled());
+            assert!(!config.mtls_enabled());
+
+            jail.create_file("Rocket.toml", r#"
+                [default.tls]
+                certs = "/ssl/cert.pem"
+                key = "/ssl/key.pem"
+                mutual = { ca_certs = "/ssl/ca.pem" }
+            "#)?;
+
+            let config = Config::from(Config::figment());
+            assert!(config.tls_enabled());
+            assert!(config.mtls_enabled());
+
+            let mtls = config.tls.as_ref().unwrap().mutual.as_ref().unwrap();
+            assert_eq!(mtls.ca_certs().unwrap_left(), Path::new("/ssl/ca.pem"));
+            assert!(!mtls.mandatory);
+
+            jail.create_file("Rocket.toml", r#"
+                [default.tls]
+                certs = "/ssl/cert.pem"
+                key = "/ssl/key.pem"
+
+                [default.tls.mutual]
+                ca_certs = "/ssl/ca.pem"
+                mandatory = true
+            "#)?;
+
+            let config = Config::from(Config::figment());
+            let mtls = config.tls.as_ref().unwrap().mutual.as_ref().unwrap();
+            assert_eq!(mtls.ca_certs().unwrap_left(), Path::new("/ssl/ca.pem"));
+            assert!(mtls.mandatory);
+
+            jail.create_file("Rocket.toml", r#"
+                [default.tls]
+                certs = "/ssl/cert.pem"
+                key = "/ssl/key.pem"
+                mutual = { ca_certs = "relative/ca.pem" }
+            "#)?;
+
+            let config = Config::from(Config::figment());
+            let mtls = config.tls.as_ref().unwrap().mutual().unwrap();
+            assert_eq!(mtls.ca_certs().unwrap_left(),
+                jail.directory().join("relative/ca.pem"));
 
             Ok(())
         });

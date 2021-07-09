@@ -4,20 +4,8 @@
 //! These types will, with certainty, be removed with time, but they reside here
 //! while necessary.
 
-#[doc(hidden)] pub use hyper::{Body, Error, Request, Response, Version};
-#[doc(hidden)] pub use hyper::body::{Bytes, HttpBody, Sender as BodySender};
-#[doc(hidden)] pub use hyper::rt::Executor;
-#[doc(hidden)] pub use hyper::server::Server;
-#[doc(hidden)] pub use hyper::service::{make_service_fn, service_fn, Service};
-
-#[doc(hidden)] pub use http::header::HeaderMap;
-#[doc(hidden)] pub use http::header::HeaderName as HeaderName;
-#[doc(hidden)] pub use http::header::HeaderValue as HeaderValue;
-#[doc(hidden)] pub use http::method::Method;
-#[doc(hidden)] pub use http::request::Parts as RequestParts;
-#[doc(hidden)] pub use http::response::Builder as ResponseBuilder;
-#[doc(hidden)] pub use http::status::StatusCode;
-#[doc(hidden)] pub use http::uri::{Uri, Parts as UriParts};
+#[doc(hidden)] pub use hyper::*;
+#[doc(hidden)] pub use http::*;
 
 /// Reexported http header types.
 pub mod header {

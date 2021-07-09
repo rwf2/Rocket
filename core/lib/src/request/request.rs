@@ -8,16 +8,16 @@ use state::{Container, Storage};
 use futures::future::BoxFuture;
 use atomic::{Atomic, Ordering};
 
-// use crate::request::{FromParam, FromSegments, FromRequest, Outcome};
+use crate::{Rocket, Route, Orbit};
 use crate::request::{FromParam, FromSegments, FromRequest, Outcome};
 use crate::form::{self, ValueField, FromForm};
+use crate::data::Limits;
 
-use crate::{Rocket, Route, Orbit};
-use crate::http::uri::{fmt::Path, Origin, Segments, Host, Authority};
 use crate::http::{hyper, Method, Header, HeaderMap};
 use crate::http::{ContentType, Accept, MediaType, CookieJar, Cookie};
 use crate::http::uncased::UncasedStr;
-use crate::data::Limits;
+use crate::http::private::RawCertificate;
+use crate::http::uri::{fmt::Path, Origin, Segments, Host, Authority};
 
 /// The type of an incoming web request.
 ///
@@ -28,12 +28,19 @@ use crate::data::Limits;
 pub struct Request<'r> {
     method: Atomic<Method>,
     uri: Origin<'r>,
-    host: Option<Host<'r>>,
     headers: HeaderMap<'r>,
-    remote: Option<SocketAddr>,
+    pub(crate) connection: ConnectionMeta,
     pub(crate) state: RequestState<'r>,
 }
 
+/// Information derived from an incoming connection, if any.
+#[derive(Clone)]
+pub(crate) struct ConnectionMeta {
+    pub remote: Option<SocketAddr>,
+    pub client_certificates: Option<Arc<Vec<RawCertificate>>>,
+}
+
+/// Information derived from the request.
 pub(crate) struct RequestState<'r> {
     pub rocket: &'r Rocket<Orbit>,
     pub route: Atomic<Option<&'r Route>>,
@@ -41,6 +48,7 @@ pub(crate) struct RequestState<'r> {
     pub accept: Storage<Option<Accept>>,
     pub content_type: Storage<Option<ContentType>>,
     pub cache: Arc<Container![Send + Sync]>,
+    pub host: Option<Host<'r>>,
 }
 
 impl Request<'_> {
@@ -48,9 +56,8 @@ impl Request<'_> {
         Request {
             method: Atomic::new(self.method()),
             uri: self.uri.clone(),
-            host: self.host.clone(),
             headers: self.headers.clone(),
-            remote: self.remote,
+            connection: self.connection.clone(),
             state: self.state.clone(),
         }
     }
@@ -65,6 +72,7 @@ impl RequestState<'_> {
             accept: self.accept.clone(),
             content_type: self.content_type.clone(),
             cache: self.cache.clone(),
+            host: self.host.clone(),
         }
     }
 }
@@ -79,10 +87,12 @@ impl<'r> Request<'r> {
     ) -> Request<'r> {
         Request {
             uri,
-            host: None,
             method: Atomic::new(method),
             headers: HeaderMap::new(),
-            remote: None,
+            connection: ConnectionMeta {
+                remote: None,
+                client_certificates: None,
+            },
             state: RequestState {
                 rocket,
                 route: Atomic::new(None),
@@ -90,6 +100,7 @@ impl<'r> Request<'r> {
                 accept: Storage::new(),
                 content_type: Storage::new(),
                 cache: Arc::new(<Container![Send + Sync]>::new()),
+                host: None,
             }
         }
     }
@@ -179,6 +190,10 @@ impl<'r> Request<'r> {
     /// component. Otherwise, this method returns the contents of the
     /// `:authority` pseudo-header request field.
     ///
+    /// Note that this method _only_ reflects the `HOST` header in the _initial_
+    /// request and not any changes made thereafter. To change the value
+    /// returned by this method, use [`Request::set_host()`].
+    ///
     /// # ⚠️ DANGER ⚠️
     ///
     /// Using the user-controlled `host` to construct URLs is a security hazard!
@@ -257,7 +272,7 @@ impl<'r> Request<'r> {
     /// ```
     #[inline(always)]
     pub fn host(&self) -> Option<&Host<'r>> {
-        self.host.as_ref()
+        self.state.host.as_ref()
     }
 
     /// Sets the host of `self` to `host`.
@@ -282,7 +297,7 @@ impl<'r> Request<'r> {
     /// ```
     #[inline(always)]
     pub fn set_host(&mut self, host: Host<'r>) {
-        self.host = Some(host);
+        self.state.host = Some(host);
     }
 
     /// Returns the raw address of the remote connection that initiated this
@@ -314,7 +329,7 @@ impl<'r> Request<'r> {
     /// ```
     #[inline(always)]
     pub fn remote(&self) -> Option<SocketAddr> {
-        self.remote
+        self.connection.remote
     }
 
     /// Sets the remote address of `self` to `address`.
@@ -337,7 +352,7 @@ impl<'r> Request<'r> {
     /// ```
     #[inline(always)]
     pub fn set_remote(&mut self, address: SocketAddr) {
-        self.remote = Some(address);
+        self.connection.remote = Some(address);
     }
 
     /// Returns the IP address in the "X-Real-IP" header of the request if such
@@ -949,8 +964,8 @@ impl<'r> Request<'r> {
     /// Convert from Hyper types into a Rocket Request.
     pub(crate) fn from_hyp(
         rocket: &'r Rocket<Orbit>,
-        hyper: &'r hyper::RequestParts,
-        addr: SocketAddr
+        hyper: &'r hyper::request::Parts,
+        connection: Option<ConnectionMeta>,
     ) -> Result<Request<'r>, Error<'r>> {
         // Ensure that the method is known. TODO: Allow made-up methods?
         let method = Method::from_hyp(&hyper.method)
@@ -965,11 +980,13 @@ impl<'r> Request<'r> {
 
         // Construct the request object.
         let mut request = Request::new(rocket, method, uri);
-        request.set_remote(addr);
+        if let Some(connection) = connection {
+            request.connection = connection;
+        }
 
         // Determine the host. On HTTP < 2, use the `HOST` header. Otherwise,
         // use the `:authority` pseudo-header which hyper makes part of the URI.
-        request.host = if hyper.version < hyper::Version::HTTP_2 {
+        request.state.host = if hyper.version < hyper::Version::HTTP_2 {
             hyper.headers.get("host").and_then(|h| Host::parse_bytes(h.as_bytes()).ok())
         } else {
             hyper.uri.host().map(|h| Host::new(Authority::new(None, h, hyper.uri.port_u16())))

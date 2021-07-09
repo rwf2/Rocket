@@ -102,6 +102,7 @@ function test_core() {
   FEATURES=(
     secrets
     tls
+    mtls
     json
     msgpack
     uuid
