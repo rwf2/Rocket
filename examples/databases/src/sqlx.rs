@@ -3,16 +3,13 @@ use rocket::fairing::{self, AdHoc};
 use rocket::response::status::Created;
 use rocket::serde::{Serialize, Deserialize, json::Json};
 
-use rocket_db_pools::{sqlx, Database};
+use rocket_db_pools::{sqlx, Database, Connection};
 
-use futures::stream::TryStreamExt;
-use futures::future::TryFutureExt;
+use futures::{stream::TryStreamExt, future::TryFutureExt};
 
 #[derive(Database)]
 #[database("sqlx")]
 struct Db(sqlx::SqlitePool);
-
-type Connection = rocket_db_pools::Connection<Db>;
 
 type Result<T, E = rocket::response::Debug<sqlx::Error>> = std::result::Result<T, E>;
 
@@ -26,7 +23,7 @@ struct Post {
 }
 
 #[post("/", data = "<post>")]
-async fn create(mut db: Connection, post: Json<Post>) -> Result<Created<Json<Post>>> {
+async fn create(mut db: Connection<Db>, post: Json<Post>) -> Result<Created<Json<Post>>> {
     // There is no support for `RETURNING`.
     sqlx::query!("INSERT INTO posts (title, text) VALUES (?, ?)", post.title, post.text)
         .execute(&mut *db)
@@ -36,7 +33,7 @@ async fn create(mut db: Connection, post: Json<Post>) -> Result<Created<Json<Pos
 }
 
 #[get("/")]
-async fn list(mut db: Connection) -> Result<Json<Vec<i64>>> {
+async fn list(mut db: Connection<Db>) -> Result<Json<Vec<i64>>> {
     let ids = sqlx::query!("SELECT id FROM posts")
         .fetch(&mut *db)
         .map_ok(|record| record.id)
@@ -47,7 +44,7 @@ async fn list(mut db: Connection) -> Result<Json<Vec<i64>>> {
 }
 
 #[get("/<id>")]
-async fn read(mut db: Connection, id: i64) -> Option<Json<Post>> {
+async fn read(mut db: Connection<Db>, id: i64) -> Option<Json<Post>> {
     sqlx::query!("SELECT id, title, text FROM posts WHERE id = ?", id)
         .fetch_one(&mut *db)
         .map_ok(|r| Json(Post { id: Some(r.id), title: r.title, text: r.text }))
@@ -56,7 +53,7 @@ async fn read(mut db: Connection, id: i64) -> Option<Json<Post>> {
 }
 
 #[delete("/<id>")]
-async fn delete(mut db: Connection, id: i64) -> Result<Option<()>> {
+async fn delete(mut db: Connection<Db>, id: i64) -> Result<Option<()>> {
     let result = sqlx::query!("DELETE FROM posts WHERE id = ?", id)
         .execute(&mut *db)
         .await?;
@@ -65,20 +62,20 @@ async fn delete(mut db: Connection, id: i64) -> Result<Option<()>> {
 }
 
 #[delete("/")]
-async fn destroy(mut db: Connection) -> Result<()> {
+async fn destroy(mut db: Connection<Db>) -> Result<()> {
     sqlx::query!("DELETE FROM posts").execute(&mut *db).await?;
 
     Ok(())
 }
 
-async fn init_db(rocket: Rocket<Build>) -> fairing::Result {
-    match rocket.state::<Db>() {
-        Some(db) => {
-            if let Err(e) = sqlx::migrate!("db/sqlx/migrations").run(db.pool()).await {
+async fn run_migrations(rocket: Rocket<Build>) -> fairing::Result {
+    match Db::fetch(&rocket) {
+        Some(db) => match sqlx::migrate!("db/sqlx/migrations").run(&**db).await {
+            Ok(_) => Ok(rocket),
+            Err(e) => {
                 error!("Failed to initialize SQLx database: {}", e);
-                return Err(rocket);
+                Err(rocket)
             }
-            Ok(rocket)
         }
         None => Err(rocket),
     }
@@ -86,9 +83,8 @@ async fn init_db(rocket: Rocket<Build>) -> fairing::Result {
 
 pub fn stage() -> AdHoc {
     AdHoc::on_ignite("SQLx Stage", |rocket| async {
-        rocket
-            .attach(Db::fairing())
-            .attach(AdHoc::try_on_ignite("SQLx Database", init_db))
+        rocket.attach(Db::init())
+            .attach(AdHoc::try_on_ignite("SQLx Migrations", run_migrations))
             .mount("/sqlx", routes![list, create, read, delete, destroy])
     })
 }

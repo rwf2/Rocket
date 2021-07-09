@@ -74,13 +74,13 @@ function indir() {
 
 function test_contrib() {
   DB_POOLS_FEATURES=(
-    deadpool-postgres
-    deadpool-redis
-    mongodb
-    mysql_async
+    deadpool_postgres
+    deadpool_redis
     sqlx_mysql
     sqlx_postgres
     sqlx_sqlite
+    sqlx_mssql
+    mongodb
   )
 
   SYNC_DB_POOLS_FEATURES=(

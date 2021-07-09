@@ -1,382 +1,238 @@
-//! Traits, utilities, and a macro for easy database connection pooling.
+//! Asynchronous database driver connection pooling integration for Rocket.
 //!
-//! # Overview
+//! # Quickstart
 //!
-//! This crate provides traits, utilities, and a procedural macro for
-//! configuring and accessing database connection pools in Rocket. A _database
-//! connection pool_ is a data structure that maintains active database
-//! connections for later use in the application.
+//! 1. Add `rocket_db_pools` as a dependency with one or more [database driver
+//!    features](#supported-drivers) enabled:
 //!
-//! Databases are individually configured through Rocket's regular configuration
-//! mechanisms. Connecting a Rocket application to a database using this library
-//! occurs in three simple steps:
+//!    ```toml
+//!    [dependencies.rocket_db_pools]
+//!    version = "0.1.0-rc"
+//!    features = ["sqlx_sqlite"]
+//!    ```
 //!
-//!   1. Configure your databases in `Rocket.toml`.
-//!      (see [Configuration](#configuration))
-//!   2. Associate a Database type and fairing with each database.
-//!      (see [Guard Types](#guard-types))
-//!   3. Use the request guard to retrieve a connection in a handler.
-//!      (see [Handlers](#handlers))
+//! 2. Choose a name for your database, here `sqlite_logs`.
+//!    [Configure](#configuration) _at least_ a URL for the database:
 //!
-//! For a list of supported databases, see [Provided Databases](#provided). This
-//! support can be easily extended by implementing the [`Pool`] trait. See
-//! [Extending](#extending) for more.
+//!    ```toml
+//!    [default.databases.sqlite_logs]
+//!    url = "/path/to/database.sqlite"
+//!    ```
 //!
-//! ## Example
+//! 3. [Derive](derive@Database) [`Database`] for a unit type (`Logs` here)
+//!    which wraps the selected driver's [`Pool`] type (see [the driver
+//!    table](#supported-drivers)) and is decorated with `#[database("name")]`.
+//!    Attach `Type::init()` to your application's `Rocket` to initialize the
+//!    database pool:
 //!
-//! Before using this library, the feature corresponding to your database type
-//! in `rocket_db_pools` must be enabled:
+//!    ```rust
+//!    # #[cfg(feature = "sqlx_sqlite")] mod _inner {
+//!    # use rocket::launch;
+//!    use rocket_db_pools::{sqlx, Database};
+//!
+//!    #[derive(Database)]
+//!    #[database("sqlite_logs")]
+//!    struct Logs(sqlx::SqlitePool);
+//!
+//!    #[launch]
+//!    fn rocket() -> _ {
+//!        rocket::build().attach(Logs::init())
+//!    }
+//!    # }
+//!    ```
+//!
+//! 4. Use [`Connection<Type>`](Connection) as a request guard to retrieve an
+//!    active database connection, which dereferences to the native type in the
+//!    [`Connection` deref](#supported-drivers) column.
+//!
+//!    ```rust
+//!    # #[cfg(feature = "sqlx_sqlite")] mod _inner {
+//!    # use rocket::{get, response::Responder};
+//!    # use rocket_db_pools::{sqlx, Database};
+//!    # #[derive(Database)]
+//!    # #[database("sqlite_logs")]
+//!    # struct Logs(sqlx::SqlitePool);
+//!    #
+//!    # #[derive(Responder)]
+//!    # struct Log(String);
+//!    #
+//!    use rocket_db_pools::Connection;
+//!    use rocket_db_pools::sqlx::Row;
+//!
+//!    #[get("/<id>")]
+//!    async fn read(mut db: Connection<Logs>, id: i64) -> Option<Log> {
+//!        sqlx::query("SELECT content FROM logs WHERE id = ?").bind(id)
+//!            .fetch_one(&mut *db).await
+//!            .and_then(|r| Ok(Log(r.try_get(0)?)))
+//!            .ok()
+//!    }
+//!    # }
+//!    ```
+//!
+//!    Alternatively, use a reference to the database type as a request guard to
+//!    retrieve the entire pool, but note that unlike retrieving a `Connection`,
+//!    doing so does _not_ guarantee that a connection is available:
+//!
+//!    ```rust
+//!    # #[cfg(feature = "sqlx_sqlite")] mod _inner {
+//!    # use rocket::{get, response::Responder};
+//!    # use rocket_db_pools::{sqlx, Database};
+//!    # #[derive(Database)]
+//!    # #[database("sqlite_logs")]
+//!    # struct Logs(sqlx::SqlitePool);
+//!    #
+//!    # #[derive(Responder)]
+//!    # struct Log(String);
+//!    #
+//!    use rocket_db_pools::sqlx::Row;
+//!
+//!    #[get("/<id>")]
+//!    async fn read(db: &Logs, id: i64) -> Option<Log> {
+//!        sqlx::query("SELECT content FROM logs WHERE id = ?").bind(id)
+//!            .fetch_one(&db.0).await
+//!            .and_then(|r| Ok(Log(r.try_get(0)?)))
+//!            .ok()
+//!    }
+//!    # }
+//!    ```
+//!
+//! # Supported Drivers
+//!
+//! At present, this crate supports _three_ drivers: [`deadpool`], [`sqlx`],
+//! and [`mongodb`]. Each driver may support multiple databases.
+//!
+//! ## `deadpool` (v0.8)
+//!
+//! | Database | Feature             | [`Pool`] Type               | [`Connection`] Deref                  |
+//! |----------|---------------------|-----------------------------|---------------------------------------|
+//! | Postgres | `deadpool_postgres` | [`deadpool_postgres::Pool`] | [`deadpool_postgres::ClientWrapper`]  |
+//! | Redis    | `deadpool_redis`    | [`deadpool_redis::Pool`]    | [`deadpool_redis::ConnectionWrapper`] |
+//!
+//! ## `sqlx` (v0.5)
+//!
+//! | Database | Feature         | [`Pool`] Type        | [`Connection`] Deref               |
+//! |----------|-----------------|----------------------|------------------------------------|
+//! | Postgres | `sqlx_postgres` | [`sqlx::PgPool`]     | [`sqlx::PoolConnection<Postgres>`] |
+//! | MySQL    | `sqlx_mysql`    | [`sqlx::MySqlPool`]  | [`sqlx::PoolConnection<MySql>`]    |
+//! | SQLite   | `sqlx_sqlite`   | [`sqlx::SqlitePool`] | [`sqlx::PoolConnection<Sqlite>`]   |
+//! | MSSQL    | `sqlx_mssql`    | [`sqlx::MssqlPool`]  | [`sqlx::PoolConnection<Mssql>`]    |
+//!
+//! [`sqlx::PgPool`]: https://docs.rs/sqlx/0.5/sqlx/type.PgPool.html
+//! [`sqlx::MySqlPool`]: https://docs.rs/sqlx/0.5/sqlx/type.MySqlPool.html
+//! [`sqlx::SqlitePool`]: https://docs.rs/sqlx/0.5/sqlx/type.SqlitePool.html
+//! [`sqlx::MssqlPool`]: https://docs.rs/sqlx/0.5/sqlx/type.MssqlPool.html
+//! [`sqlx::PoolConnection<Postgres>`]: https://docs.rs/sqlx/0.5/sqlx/pool/struct.PoolConnection.html
+//! [`sqlx::PoolConnection<MySql>`]: https://docs.rs/sqlx/0.5/sqlx/pool/struct.PoolConnection.html
+//! [`sqlx::PoolConnection<Sqlite>`]: https://docs.rs/sqlx/0.5/sqlx/pool/struct.PoolConnection.html
+//! [`sqlx::PoolConnection<Mssql>`]: https://docs.rs/sqlx/0.5/sqlx/pool/struct.PoolConnection.html
+//!
+//! ## `mongodb` (v1)
+//!
+//! | Database | Feature   | [`Pool`] Type and [`Connection`] Deref |
+//! |----------|-----------|----------------------------------------|
+//! | MongoDB  | `mongodb` | [`mongodb::Client`]                    |
+//!
+//! ## Enabling Additional Driver Features
+//!
+//! Only the minimal features for each driver crate are enabled by
+//! `rocket_db_pools`. To use additional driver functionality exposed via its
+//! crate's features, you'll need to depend on the crate directly with those
+//! features enabled in `Cargo.toml`:
 //!
 //! ```toml
+//! [dependencies.sqlx]
+//! version = "0.5"
+//! default-features = false
+//! features = ["macros", "offline", "migrate"]
+//!
 //! [dependencies.rocket_db_pools]
-//! version = "0.1.0-dev"
+//! version = "0.1.0-rc"
 //! features = ["sqlx_sqlite"]
 //! ```
 //!
-//! See [Provided](#provided) for a list of supported database and their
-//! associated feature name.
+//! # Configuration
 //!
-//! In whichever configuration source you choose, configure a `databases`
-//! dictionary with an internal dictionary for each database, here `sqlite_logs`
-//! in a TOML source:
-//!
-//! ```toml
-//! [default.databases]
-//! sqlite_logs = { url = "/path/to/database.sqlite" }
-//! ```
-//!
-//! In your application's source code, one-time:
-//!
-//! ```rust
-//! # #[macro_use] extern crate rocket;
-//! # #[cfg(feature = "sqlx_sqlite")]
-//! # mod test {
-//! use rocket_db_pools::{Database, Connection, sqlx};
-//!
-//! #[derive(Database)]
-//! #[database("sqlite_logs")]
-//! struct LogsDb(sqlx::SqlitePool);
-//!
-//! type LogsDbConn = Connection<LogsDb>;
-//!
-//! #[launch]
-//! fn rocket() -> _ {
-//!     rocket::build().attach(LogsDb::fairing())
-//! }
-//! # } fn main() {}
-//! ```
-//!
-//! These steps can be repeated as many times as necessary to configure
-//! multiple databases.
-//!
-//! Whenever a connection to the database is needed:
-//!
-//! ```rust
-//! # #[macro_use] extern crate rocket;
-//! # #[macro_use] extern crate rocket_db_pools;
-//! #
-//! # #[cfg(feature = "sqlx_sqlite")]
-//! # mod test {
-//! # use rocket::serde::json::Json;
-//! # use rocket_db_pools::{Database, Connection, sqlx};
-//! #
-//! # #[derive(Database)]
-//! # #[database("sqlite_logs")]
-//! # struct LogsDb(sqlx::SqlitePool);
-//! # type LogsDbConn = Connection<LogsDb>;
-//! #
-//! # type Result<T> = std::result::Result<T, ()>;
-//! #
-//! #[get("/logs/<id>")]
-//! async fn get_logs(conn: LogsDbConn, id: usize) -> Result<Json<Vec<String>>> {
-//! # /*
-//!     let logs = sqlx::query!().await?;
-//!     Ok(Json(logs))
-//! # */
-//! # Ok(Json(vec![]))
-//! }
-//! # } fn main() {}
-//! ```
-//!
-//! # Usage
-//!
-//! ## Configuration
-//!
-//! Databases can be configured as any other values. Using the default
-//! configuration provider, either via `Rocket.toml` or environment variables.
-//! You can also use a custom provider.
-//!
-//! ### `Rocket.toml`
-//!
-//! To configure a database via `Rocket.toml`, add a table for each database
-//! to the `databases` table where the key is a name of your choice. The table
-//! should have a `url` key and, optionally, a `pool_size` key. This looks as
-//! follows:
+//! Configuration for a database named `db_name` is deserialized from a
+//! `databases.db_name` configuration parameter into a [`Config`] structure via
+//! Rocket's [configuration facilities](rocket::config). By default,
+//! configuration can be provided in `Rocket.toml`:
 //!
 //! ```toml
-//! # Option 1:
-//! [global.databases]
-//! sqlite_db = { url = "db.sqlite" }
+//! [default.databases.db_name]
+//! url = "db.sqlite"
 //!
-//! # Option 2:
-//! [global.databases.my_db]
-//! url = "postgres://root:root@localhost/my_db"
-//!
-//! # With a `pool_size` key:
-//! [global.databases]
-//! sqlite_db = { url = "db.sqlite", pool_size = 20 }
+//! # only `url` is required. the rest have defaults and are thus optional
+//! min_connections = 64
+//! max_connections = 1024
+//! connect_timeout = 5
+//! idle_timeout = 120
 //! ```
 //!
-//! Most databases use the default [`Config`] type, for which one key is required:
+//! Or via environment variables:
 //!
-//!   * `url` - the URl to the database
-//!
-//! And one optional key is accepted:
-//!
-//!   * `pool_size` - the size of the pool, i.e., the number of connections to
-//!     pool (defaults to the configured number of workers * 4)
-//!       TODO: currently ignored by most `Pool` implementations.
-//!
-//! Different options may be required or supported by other adapters, according
-//! to the type specified by [`Pool::Config`].
-//!
-//! ### Procedurally
-//!
-//! Databases can also be configured procedurally via `rocket::custom()`.
-//! The example below does just this:
-//!
-//! ```rust
-//! # #[cfg(feature = "sqlx_sqlite")] {
-//! # use rocket::launch;
-//! use rocket::figment::{value::{Map, Value}, util::map};
-//!
-//! #[launch]
-//! fn rocket() -> _ {
-//!     let db: Map<_, Value> = map! {
-//!         "url" => "db.sqlite".into(),
-//!         "pool_size" => 10.into()
-//!     };
-//!
-//!     let figment = rocket::Config::figment()
-//!         .merge(("databases", map!["my_db" => db]));
-//!
-//!     rocket::custom(figment)
-//! }
-//! # rocket();
-//! # }
+//! ```sh
+//! ROCKET_DATABASES='{db_name={url="db.sqlite",idle_timeout=120}}'
 //! ```
 //!
-//! ### Environment Variables
+//! See [`Config`] for details on configuration parameters.
 //!
-//! Lastly, databases can be configured via environment variables by specifying
-//! the `databases` table as detailed in the [Environment Variables
-//! configuration
-//! guide](https://rocket.rs/master/guide/configuration/#environment-variables):
+//! **Note:** `deadpool` drivers do not support and thus ignore the
+//! `min_connections` value.
 //!
-//! ```bash
-//! ROCKET_DATABASES='{my_db={url="db.sqlite"}}'
-//! ```
+//! ## Driver Defaults
 //!
-//! Multiple databases can be specified in the `ROCKET_DATABASES` environment variable
-//! as well by comma separating them:
+//! Some drivers provide configuration defaults different from the underyling
+//! database's defaults. A best-effort attempt is made to document those
+//! differences below:
 //!
-//! ```bash
-//! ROCKET_DATABASES='{my_db={url="db.sqlite"},my_pg_db={url="postgres://root:root@localhost/my_pg_db"}}'
-//! ```
+//! * `sqlx_sqlite`
 //!
-//! ## Database Types
+//!   - foreign keys   : `enabled`
+//!   - journal mode   : `WAL`
+//!   - create-missing :  `enabled`
+//!   - synchronous    : `full` (even when `WAL`)
+//!   - busy timeout   : `connection_timeout`
 //!
-//! Once a database has been configured, the `#[derive(Database)]` macro can be
-//! used to tie a type in your application to a configured database. The derive
-//! accepts a single attribute, `#[database("name")]` that indicates the
-//! name of the database. This corresponds to the database name set as the
-//! database's configuration key.
+//! * `sqlx_postgres`
 //!
-//! The [`Database`] trait provides a method, `fairing()`, which places an
-//! instance of the decorated type in managed state; thus, the database pool can
-//! be accessed with a `&State<DbType>` request guard.
+//!   - sslmode                  : `prefer`
+//!   - statement-cache-capacity : `100`
+//!   - user                     : result of `whoami`
 //!
-//! The [`Connection`] type also implements [`FromRequest`], allowing it to be
-//! used as a request guard. This implementation retrieves a connection from the
-//! database pool or fails with a `Status::ServiceUnavailable` if connecting to
-//! the database fails or times out.
+//! * `sqlx_mysql`
 //!
-//! The derive can only be applied to unit-like structs with one type. The
-//! internal type of the structure must implement [`Pool`].
+//!   - sslmode                  : `PREFERRED`
+//!   - statement-cache-capacity : `100`
 //!
-//! ```rust
-//! # #[macro_use] extern crate rocket_db_pools;
-//! # #[cfg(feature = "sqlx_sqlite")]
-//! # mod test {
-//! use rocket_db_pools::{Database, sqlx};
+//! # Extending
 //!
-//! #[derive(Database)]
-//! #[database("my_db")]
-//! struct MyDatabase(sqlx::SqlitePool);
-//! # }
-//! ```
-//!
-//! Other databases can be used by specifying their respective [`Pool`] type:
-//!
-//! ```rust
-//! # #[macro_use] extern crate rocket_db_pools;
-//! # #[cfg(feature = "deadpool_postgres")]
-//! # mod test {
-//! use rocket_db_pools::{Database, deadpool_postgres};
-//!
-//! #[derive(Database)]
-//! #[database("my_pg_db")]
-//! struct MyPgDatabase(deadpool_postgres::Pool);
-//! # }
-//! ```
-//!
-//! The fairing returned from the `fairing()` method _must_ be attached for the
-//! request guards to succeed. Putting the pieces together, a use of
-//! `#[derive(Database)]` looks as follows:
-//!
-//! ```rust
-//! # #[macro_use] extern crate rocket;
-//! # #[macro_use] extern crate rocket_db_pools;
-//! #
-//! # #[cfg(feature = "sqlx_sqlite")] {
-//! # use rocket::figment::{value::{Map, Value}, util::map};
-//! use rocket_db_pools::{Database, sqlx};
-//!
-//! #[derive(Database)]
-//! #[database("my_db")]
-//! struct MyDatabase(sqlx::SqlitePool);
-//!
-//! #[launch]
-//! fn rocket() -> _ {
-//! #   let db: Map<_, Value> = map![
-//! #        "url" => "db.sqlite".into(), "pool_size" => 10.into()
-//! #   ];
-//! #   let figment = rocket::Config::figment().merge(("databases", map!["my_db" => db]));
-//!     rocket::custom(figment).attach(MyDatabase::fairing())
-//! }
-//! # }
-//! ```
-//!
-//! ## Handlers
-//!
-//! Finally, access your type via `State` in a handler to access
-//! the database connection pool:
-//!
-//! ```rust
-//! # #[macro_use] extern crate rocket;
-//! # #[macro_use] extern crate rocket_db_pools;
-//! #
-//! # #[cfg(feature = "sqlx_sqlite")]
-//! # mod test {
-//! # use rocket_db_pools::{Database, Connection, sqlx};
-//! use rocket::State;
-//!
-//! #[derive(Database)]
-//! #[database("my_db")]
-//! struct MyDatabase(sqlx::SqlitePool);
-//!
-//! #[get("/")]
-//! fn my_handler(conn: &State<MyDatabase>) {
-//!     // ...
-//! }
-//! # }
-//! ```
-//!
-//! Alternatively, access a single connection directly via the `Connection`
-//! request guard:
-//!
-//! ```rust
-//! # #[macro_use] extern crate rocket;
-//! # #[macro_use] extern crate rocket_db_pools;
-//! #
-//! # #[cfg(feature = "sqlx_sqlite")]
-//! # mod test {
-//! # use rocket_db_pools::{Database, Connection, sqlx};
-//! # type Data = ();
-//! #[derive(Database)]
-//! #[database("my_db")]
-//! struct MyDatabase(sqlx::SqlitePool);
-//!
-//! type MyConnection = Connection<MyDatabase>;
-//!
-//! async fn load_from_db(conn: &mut sqlx::SqliteConnection) -> Data {
-//!     // Do something with connection, return some data.
-//!     # ()
-//! }
-//!
-//! #[get("/")]
-//! async fn my_handler(mut conn: MyConnection) -> Data {
-//!     load_from_db(&mut conn).await
-//! }
-//! # }
-//! ```
-//!
-//! # Database Support
-//!
-//! Built-in support is provided for many popular databases and drivers. Support
-//! can be easily extended by [`Pool`] implementations.
-//!
-//! ## Provided
-//!
-//! The list below includes all presently supported database adapters and their
-//! corresponding [`Pool`] type.
-//!
-// Note: Keep this table in sync with site/guite/6-state.md
-//! | Kind     | Driver                | Version   | `Pool` Type                    | Feature                |
-//! |----------|-----------------------|-----------|--------------------------------|------------------------|
-//! | MySQL    | [sqlx]                | `0.5`     | [`sqlx::MySqlPool`]            | `sqlx_mysql`           |
-//! | Postgres | [sqlx]                | `0.5`     | [`sqlx::PgPool`]               | `sqlx_postgres`        |
-//! | Sqlite   | [sqlx]                | `0.5`     | [`sqlx::SqlitePool`]           | `sqlx_sqlite`          |
-//! | Mongodb  | [mongodb]             | `2.0.0-beta` | [`mongodb::Client`]         | `mongodb`              |
-//! | MySQL    | [mysql_async]         | `0.27`    | [`mysql_async::Pool`]          | `mysql_async`          |
-//! | Postgres | [deadpool-postgres]   | `0.8`     | [`deadpool_postgres::Pool`]    | `deadpool_postgres`    |
-//! | Redis    | [deadpool-redis]      | `0.8`     | [`deadpool_redis::Pool`]       | `deadpool_redis`       |
-//!
-//! [sqlx]: https://docs.rs/sqlx/0.5/sqlx/
-//! [deadpool-postgres]: https://docs.rs/deadpool-postgres/0.8/deadpool_postgres/
-//! [deadpool-redis]: https://docs.rs/deadpool-redis/0.8/deadpool_redis/
-//! [mongodb]: https://docs.rs/mongodb/2.0.0-beta/mongodb/index.html
-//! [mysql_async]: https://docs.rs/mysql_async/0.27/mysql_async/
-//!
-//! The above table lists all the supported database adapters in this library.
-//! In order to use particular `Pool` type that's included in this library,
-//! you must first enable the feature listed in the "Feature" column. The
-//! interior type of your decorated database type should match the type in the
-//! "`Pool` Type" column.
-//!
-//! ## Extending
-//!
-//! Extending Rocket's support to your own custom database adapter is as easy as
-//! implementing the [`Pool`] trait. See the documentation for [`Pool`]
-//! for more details on how to implement it.
-//!
-//! [`FromRequest`]: rocket::request::FromRequest
-//! [request guards]: rocket::request::FromRequest
-//! [`Database`]: crate::Database
-//! [`Pool`]: crate::Pool
+//! Any database driver can implement support for this libary by implementing
+//! the [`Pool`] trait.
 
 #![doc(html_root_url = "https://api.rocket.rs/master/rocket_db_pools")]
 #![doc(html_favicon_url = "https://rocket.rs/images/favicon.ico")]
 #![doc(html_logo_url = "https://rocket.rs/images/logo-boxed.png")]
 
-#[doc(hidden)]
-#[macro_use]
-pub extern crate rocket;
+#![deny(missing_docs)]
 
+/// Re-export of the `figment` crate.
+#[doc(inline)]
+pub use rocket::figment;
+
+pub use rocket;
 #[cfg(feature = "deadpool_postgres")] pub use deadpool_postgres;
 #[cfg(feature = "deadpool_redis")] pub use deadpool_redis;
-#[cfg(feature = "mysql_async")] pub use mysql_async;
 #[cfg(feature = "mongodb")] pub use mongodb;
 #[cfg(feature = "sqlx")] pub use sqlx;
 
-mod config;
 mod database;
 mod error;
 mod pool;
+mod config;
 
-pub use self::config::Config;
-pub use self::database::{Connection, Database, Fairing};
+pub use self::database::{Connection, Database, Initializer};
 pub use self::error::Error;
 pub use self::pool::Pool;
+pub use self::config::Config;
 
 pub use rocket_db_pools_codegen::*;

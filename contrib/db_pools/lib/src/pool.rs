@@ -1,61 +1,115 @@
-use rocket::async_trait;
-use rocket::{Build, Rocket};
+use rocket::figment::Figment;
 
-use crate::{Config, Error};
+#[allow(unused_imports)]
+use {std::time::Duration, crate::{Error, Config}};
 
-/// This trait is implemented on connection pool types that can be used with the
-/// [`Database`] derive macro.
+/// Generic [`Database`](crate::Database) driver connection pool trait.
 ///
-/// `Pool` determines how the connection pool is initialized from configuration,
-/// such as a connection string and optional pool size, along with the returned
-/// `Connection` type.
+/// This trait provides a generic interface to various database pooling
+/// implementations in the Rust ecosystem. It can be implemented by anyone, but
+/// this crate provides implementations for common drivers.
 ///
-/// Implementations of this trait should use `async_trait`.
+/// **Implementations of this trait outside of this crate should be rare. You
+/// _do not_ need to implement this trait or understand its specifics to use
+/// this crate.**
 ///
-/// ## Example
+/// ## Async Trait
 ///
-/// ```
-/// use rocket::{Build, Rocket};
+/// [`Pool`] is an _async_ trait. Implementations of `Pool` must be decorated
+/// with an attribute of `#[async_trait]`:
 ///
-/// #[derive(Debug)]
-/// struct Error { /* ... */ }
-/// # impl std::fmt::Display for Error {
-/// #     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-/// #         unimplemented!("example")
-/// #     }
-/// # }
-/// # impl std::error::Error for Error { }
+/// ```rust
+/// # #[macro_use] extern crate rocket;
+/// use rocket::figment::Figment;
+/// use rocket_db_pools::Pool;
 ///
-/// struct Pool { /* ... */ }
-/// struct Connection { /* .. */ }
-///
+/// # struct MyPool;
+/// # type Connection = ();
+/// # type Error = std::convert::Infallible;
 /// #[rocket::async_trait]
-/// impl rocket_db_pools::Pool for Pool {
+/// impl Pool for MyPool {
 ///     type Connection = Connection;
-///     type InitError = Error;
-///     type GetError = Error;
 ///
-///     async fn initialize(db_name: &str, rocket: &Rocket<Build>)
-///         -> Result<Self, rocket_db_pools::Error<Self::InitError>>
-///     {
-///         unimplemented!("example")
+///     type Error = Error;
+///
+///     async fn init(figment: &Figment) -> Result<Self, Self::Error> {
+///         todo!("initialize and return an instance of the pool");
 ///     }
 ///
-///     async fn get(&self) -> Result<Connection, Self::GetError> {
-///         unimplemented!("example")
+///     async fn get(&self) -> Result<Self::Connection, Self::Error> {
+///         todo!("fetch one connection from the pool");
 ///     }
 /// }
 /// ```
-#[async_trait]
+///
+/// ## Implementing
+///
+/// Implementations of `Pool` typically trace the following outline:
+///
+///   1. The `Error` associated type is set to [`Error`].
+///
+///   2. A [`Config`] is [extracted](Figment::extract()) from the `figment`
+///      passed to init.
+///
+///   3. The pool is initialized and returned in `init()`, wrapping
+///      initialization errors in [`Error::Init`].
+///
+///   4. A connection is retrieved in `get()`, wrapping errors in
+///      [`Error::Get`].
+///
+/// Concretely, this looks like:
+///
+/// ```rust
+/// use rocket::figment::Figment;
+/// use rocket_db_pools::{Pool, Config, Error};
+/// #
+/// # type InitError = std::convert::Infallible;
+/// # type GetError = std::convert::Infallible;
+/// # type Connection = ();
+/// #
+/// # struct MyPool(Config);
+/// # impl MyPool {
+/// #    fn new(c: Config) -> Result<Self, InitError> {
+/// #        Ok(Self(c))
+/// #    }
+/// #
+/// #    fn acquire(&self) -> Result<Connection, GetError> {
+/// #        Ok(())
+/// #    }
+/// # }
+///
+/// #[rocket::async_trait]
+/// impl Pool for MyPool {
+///     type Connection = Connection;
+///
+///     type Error = Error<InitError, GetError>;
+///
+///     async fn init(figment: &Figment) -> Result<Self, Self::Error> {
+///         // Extract the config from `figment`.
+///         let config: Config = figment.extract()?;
+///
+///         // Read config values, initialize `MyPool`. Map errors of type
+///         // `InitError` to `Error<InitError, _>` with `Error::Init`.
+///         let pool = MyPool::new(config).map_err(Error::Init)?;
+///
+///         // Return the fully intialized pool.
+///         Ok(pool)
+///     }
+///
+///     async fn get(&self) -> Result<Self::Connection, Self::Error> {
+///         // Get one connection from the pool, here via an `acquire()` method.
+///         // Map errors of type `GetError` to `Error<_, GetError>`.
+///         self.acquire().map_err(Error::Get)
+///     }
+/// }
+/// ```
+#[rocket::async_trait]
 pub trait Pool: Sized + Send + Sync + 'static {
-    /// The type returned by get().
+    /// The connection type managed by this pool, returned by [`Self::get()`].
     type Connection;
 
-    /// The error type returned by `initialize`.
-    type InitError: std::error::Error;
-
-    /// The error type returned by `get`.
-    type GetError: std::error::Error;
+    /// The error type returned by [`Self::init()`] and [`Self::get()`].
+    type Error: std::error::Error;
 
     /// Constructs a pool from a [Value](rocket::figment::value::Value).
     ///
@@ -69,219 +123,136 @@ pub trait Pool: Sized + Send + Sync + 'static {
     /// This method returns an error if the configuration is not compatible, or
     /// if creating a pool failed due to an unavailable database server,
     /// insufficient resources, or another database-specific error.
-    async fn initialize(db_name: &str, rocket: &Rocket<Build>)
-        -> Result<Self, Error<Self::InitError>>;
+    async fn init(figment: &Figment) -> Result<Self, Self::Error>;
 
-    /// Asynchronously gets a connection from the factory or pool.
+    /// Asynchronously retrieves a connection from the factory or pool.
     ///
     /// ## Errors
     ///
     /// This method returns an error if a connection could not be retrieved,
     /// such as a preconfigured timeout elapsing or when the database server is
     /// unavailable.
-    async fn get(&self) -> Result<Self::Connection, Self::GetError>;
+    async fn get(&self) -> Result<Self::Connection, Self::Error>;
 }
 
-#[cfg(feature = "deadpool_postgres")]
-#[async_trait]
-impl Pool for deadpool_postgres::Pool {
-    type Connection = deadpool_postgres::Client;
-    type InitError = deadpool_postgres::tokio_postgres::Error;
-    type GetError = deadpool_postgres::PoolError;
+#[cfg(feature = "deadpool")]
+mod deadpool_postgres {
+    use deadpool::managed::{Manager, Pool, PoolConfig, PoolError, Object};
+    use super::{Duration, Error, Config, Figment};
 
-    async fn initialize(db_name: &str, rocket: &Rocket<Build>)
-        -> std::result::Result<Self, Error<Self::InitError>>
-    {
-        let config = Config::from(db_name, rocket)?;
-        let manager = deadpool_postgres::Manager::new(
-            config.url.parse().map_err(Error::Db)?,
-            // TODO: add TLS support in config
-            deadpool_postgres::tokio_postgres::NoTls,
-        );
-        let mut pool_config = deadpool_postgres::PoolConfig::new(config.pool_size as usize);
-        pool_config.timeouts.wait = Some(std::time::Duration::from_secs(config.timeout.into()));
-
-        Ok(deadpool_postgres::Pool::from_config(manager, pool_config))
+    pub trait DeadManager: Manager + Sized + Send + Sync + 'static {
+        fn new(config: &Config) -> Result<Self, Self::Error>;
     }
 
-    async fn get(&self) -> Result<Self::Connection, Self::GetError> {
-        self.get().await
+    #[cfg(feature = "deadpool_postgres")]
+    impl DeadManager for deadpool_postgres::Manager {
+        fn new(config: &Config) -> Result<Self, Self::Error> {
+            Ok(Self::new(config.url.parse()?, deadpool_postgres::tokio_postgres::NoTls))
+        }
+    }
+
+    #[cfg(feature = "deadpool_redis")]
+    impl DeadManager for deadpool_redis::Manager {
+        fn new(config: &Config) -> Result<Self, Self::Error> {
+            Self::new(config.url.as_str())
+        }
+    }
+
+    #[rocket::async_trait]
+    impl<M: DeadManager, C: From<Object<M>>> crate::Pool for Pool<M, C>
+        where M::Type: Send, C: Send + Sync + 'static, M::Error: std::error::Error
+    {
+        type Error = Error<M::Error, PoolError<M::Error>>;
+
+        type Connection = C;
+
+        async fn init(figment: &Figment) -> Result<Self, Self::Error> {
+            let config: Config = figment.extract()?;
+            let manager = M::new(&config).map_err(Error::Init)?;
+
+            let mut pool = PoolConfig::new(config.max_connections);
+            pool.timeouts.create = Some(Duration::from_secs(config.connect_timeout));
+            pool.timeouts.wait = Some(Duration::from_secs(config.connect_timeout));
+            pool.timeouts.recycle = config.idle_timeout.map(Duration::from_secs);
+            pool.runtime = deadpool::Runtime::Tokio1;
+            Ok(Pool::from_config(manager, pool))
+        }
+
+        async fn get(&self) -> Result<Self::Connection, Self::Error> {
+            self.get().await.map_err(Error::Get)
+        }
     }
 }
 
-#[cfg(feature = "deadpool_redis")]
-#[async_trait]
-impl Pool for deadpool_redis::Pool {
-    type Connection = deadpool_redis::ConnectionWrapper;
-    type InitError = deadpool_redis::redis::RedisError;
-    type GetError = deadpool_redis::PoolError;
+#[cfg(feature = "sqlx")]
+mod sqlx {
+    use sqlx::ConnectOptions;
+    use super::{Duration, Error, Config, Figment};
 
-    async fn initialize(db_name: &str, rocket: &Rocket<Build>)
-        -> std::result::Result<Self, Error<Self::InitError>>
-    {
-        let config = Config::from(db_name, rocket)?;
-        let manager = deadpool_redis::Manager::new(config.url).map_err(Error::Db)?;
+    type Options<D> = <<D as sqlx::Database>::Connection as sqlx::Connection>::Options;
 
-        let mut pool_config = deadpool_redis::PoolConfig::new(config.pool_size as usize);
-        pool_config.timeouts.wait = Some(std::time::Duration::from_secs(config.timeout.into()));
-
-        Ok(deadpool_redis::Pool::from_config(manager, pool_config))
+    // Provide specialized configuration for particular databases.
+    fn specialize(__options: &mut dyn std::any::Any, __config: &Config) {
+        #[cfg(feature = "sqlx_sqlite")]
+        if let Some(o) = __options.downcast_mut::<sqlx::sqlite::SqliteConnectOptions>() {
+            *o = std::mem::take(o)
+                .busy_timeout(Duration::from_secs(__config.connect_timeout))
+                .create_if_missing(true);
+        }
     }
 
-    async fn get(&self) -> Result<Self::Connection, Self::GetError> {
-        self.get().await
+    #[rocket::async_trait]
+    impl<D: sqlx::Database> crate::Pool for sqlx::Pool<D> {
+        type Error = Error<sqlx::Error>;
+
+        type Connection = sqlx::pool::PoolConnection<D>;
+
+        async fn init(figment: &Figment) -> Result<Self, Self::Error> {
+            let config = figment.extract::<Config>()?;
+            let mut opts = config.url.parse::<Options<D>>().map_err(Error::Init)?;
+            opts.disable_statement_logging();
+            specialize(&mut opts, &config);
+
+            sqlx::pool::PoolOptions::new()
+                .max_connections(config.max_connections as u32)
+                .connect_timeout(Duration::from_secs(config.connect_timeout))
+                .idle_timeout(config.idle_timeout.map(Duration::from_secs))
+                .min_connections(config.min_connections.unwrap_or_default())
+                .connect_with(opts)
+                .await
+                .map_err(Error::Init)
+        }
+
+        async fn get(&self) -> Result<Self::Connection, Self::Error> {
+            self.acquire().await.map_err(Error::Get)
+        }
     }
 }
 
 #[cfg(feature = "mongodb")]
-#[async_trait]
-impl Pool for mongodb::Client {
-    type Connection = mongodb::Client;
-    type InitError = mongodb::error::Error;
-    type GetError = std::convert::Infallible;
+mod mongodb {
+    use mongodb::{Client, options::ClientOptions};
+    use super::{Duration, Error, Config, Figment};
 
-    async fn initialize(db_name: &str, rocket: &Rocket<Build>)
-        -> std::result::Result<Self, Error<Self::InitError>>
-    {
-        let config = Config::from(db_name, rocket)?;
-        let mut options = mongodb::options::ClientOptions::parse(&config.url)
-            .await
-            .map_err(Error::Db)?;
-        options.max_pool_size = Some(config.pool_size);
-        options.wait_queue_timeout = Some(std::time::Duration::from_secs(config.timeout.into()));
+    #[rocket::async_trait]
+    impl crate::Pool for Client {
+        type Error = Error<mongodb::error::Error, std::convert::Infallible>;
 
-        mongodb::Client::with_options(options).map_err(Error::Db)
-    }
+        type Connection = Client;
 
-    async fn get(&self) -> Result<Self::Connection, Self::GetError> {
-        Ok(self.clone())
-    }
-}
+        async fn init(figment: &Figment) -> Result<Self, Self::Error> {
+            let config = figment.extract::<Config>()?;
+            let mut opts = ClientOptions::parse(&config.url).await.map_err(Error::Init)?;
+            opts.min_pool_size = config.min_connections;
+            opts.max_pool_size = Some(config.max_connections as u32);
+            opts.max_idle_time = config.idle_timeout.map(Duration::from_secs);
+            opts.wait_queue_timeout = Some(Duration::from_secs(config.connect_timeout));
+            opts.connect_timeout = Some(Duration::from_secs(config.connect_timeout));
+            Client::with_options(opts).map_err(Error::Init)
+        }
 
-#[cfg(feature = "mysql_async")]
-#[async_trait]
-impl Pool for mysql_async::Pool {
-    type Connection = mysql_async::Conn;
-    type InitError = mysql_async::Error;
-    type GetError = mysql_async::Error;
-
-    async fn initialize(db_name: &str, rocket: &Rocket<Build>)
-        -> std::result::Result<Self, Error<Self::InitError>>
-    {
-        use rocket::figment::{self, error::{Actual, Kind}};
-
-        let config = Config::from(db_name, rocket)?;
-        let original_opts = mysql_async::Opts::from_url(&config.url)
-            .map_err(|_| figment::Error::from(Kind::InvalidValue(
-                Actual::Str(config.url.to_string()),
-                "mysql connection string".to_string()
-            )))?;
-
-        let new_pool_opts = original_opts.pool_opts()
-            .clone()
-            .with_constraints(
-                mysql_async::PoolConstraints::new(0, config.pool_size as usize)
-                    .expect("usize can't be < 0")
-            );
-
-        // TODO: timeout
-
-        let opts = mysql_async::OptsBuilder::from_opts(original_opts)
-            .pool_opts(new_pool_opts);
-
-        Ok(mysql_async::Pool::new(opts))
-    }
-
-    async fn get(&self) -> std::result::Result<Self::Connection, Self::GetError> {
-        self.get_conn().await
-    }
-}
-
-#[cfg(feature = "sqlx_mysql")]
-#[async_trait]
-impl Pool for sqlx::MySqlPool {
-    type Connection = sqlx::pool::PoolConnection<sqlx::MySql>;
-    type InitError = sqlx::Error;
-    type GetError = sqlx::Error;
-
-    async fn initialize(db_name: &str, rocket: &Rocket<Build>)
-        -> std::result::Result<Self, Error<Self::InitError>>
-    {
-        use sqlx::ConnectOptions;
-
-        let config = Config::from(db_name, rocket)?;
-        let mut opts = config.url.parse::<sqlx::mysql::MySqlConnectOptions>()
-            .map_err(Error::Db)?;
-        opts.disable_statement_logging();
-        sqlx::pool::PoolOptions::new()
-            .max_connections(config.pool_size)
-            .connect_timeout(std::time::Duration::from_secs(config.timeout.into()))
-            .connect_with(opts)
-            .await
-            .map_err(Error::Db)
-    }
-
-    async fn get(&self) -> std::result::Result<Self::Connection, Self::GetError> {
-        self.acquire().await
-    }
-}
-
-#[cfg(feature = "sqlx_postgres")]
-#[async_trait]
-impl Pool for sqlx::PgPool {
-    type Connection = sqlx::pool::PoolConnection<sqlx::Postgres>;
-    type InitError = sqlx::Error;
-    type GetError = sqlx::Error;
-
-    async fn initialize(db_name: &str, rocket: &Rocket<Build>)
-        -> std::result::Result<Self, Error<Self::InitError>>
-    {
-        use sqlx::ConnectOptions;
-
-        let config = Config::from(db_name, rocket)?;
-        let mut opts = config.url.parse::<sqlx::postgres::PgConnectOptions>()
-            .map_err(Error::Db)?;
-        opts.disable_statement_logging();
-        sqlx::pool::PoolOptions::new()
-            .max_connections(config.pool_size)
-            .connect_timeout(std::time::Duration::from_secs(config.timeout.into()))
-            .connect_with(opts)
-            .await
-            .map_err(Error::Db)
-    }
-
-    async fn get(&self) -> std::result::Result<Self::Connection, Self::GetError> {
-        self.acquire().await
-    }
-}
-
-#[cfg(feature = "sqlx_sqlite")]
-#[async_trait]
-impl Pool for sqlx::SqlitePool {
-    type Connection = sqlx::pool::PoolConnection<sqlx::Sqlite>;
-    type InitError = sqlx::Error;
-    type GetError = sqlx::Error;
-
-    async fn initialize(db_name: &str, rocket: &Rocket<Build>)
-        -> std::result::Result<Self, Error<Self::InitError>>
-    {
-        use sqlx::ConnectOptions;
-
-        let config = Config::from(db_name, rocket)?;
-        let mut opts = config.url.parse::<sqlx::sqlite::SqliteConnectOptions>()
-            .map_err(Error::Db)?
-            .create_if_missing(true);
-        opts.disable_statement_logging();
-
-        dbg!(sqlx::pool::PoolOptions::new()
-            .max_connections(config.pool_size)
-            .connect_timeout(std::time::Duration::from_secs(config.timeout.into())))
-            .connect_with(opts)
-            .await
-            .map_err(Error::Db)
-    }
-
-    async fn get(&self) -> std::result::Result<Self::Connection, Self::GetError> {
-        self.acquire().await
+        async fn get(&self) -> Result<Self::Connection, Self::Error> {
+            Ok(self.clone())
+        }
     }
 }

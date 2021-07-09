@@ -1,64 +1,83 @@
-use rocket::figment::{self, Figment, providers::Serialized};
 use rocket::serde::{Deserialize, Serialize};
-use rocket::{Build, Rocket};
 
-/// A base `Config` for any `Pool` type.
+/// Base configuration for all database drivers.
 ///
-/// For the following configuration:
+/// A dictionary matching this structure is extracted from the active
+/// [`Figment`](crate::figment::Figment), scoped to `databases.name`, where
+/// `name` is the name of the database, by the
+/// [`Initializer`](crate::Initializer) fairing on ignition and used to
+/// configure the relevant database and database pool.
+///
+/// With the default provider, these parameters are typically configured in a
+/// `Rocket.toml` file:
 ///
 /// ```toml
-/// [global.databases.my_database]
-/// url = "postgres://root:root@localhost/my_database"
-/// pool_size = 10
+/// [default.databases.db_name]
+/// url = "/path/to/db.sqlite"
+///
+/// # only `url` is required. `Initializer` provides defaults for the rest.
+/// min_connections = 64
+/// max_connections = 1024
+/// connect_timeout = 5
+/// idle_timeout = 120
 /// ```
 ///
-/// ...the following struct would be passed to [`Pool::initialize()`]:
+/// Alternatively, a custom provider can be used. For example, a custom `Figment`
+/// with a global `databases.name` configuration:
 ///
 /// ```rust
-/// # use rocket_db_pools::Config;
-/// Config {
-///     url: "postgres://root:root@localhost/my_database".into(),
-///     pool_size: 10,
-///     timeout: 5,
-/// };
+/// # use rocket::launch;
+/// #[launch]
+/// fn rocket() -> _ {
+///     let figment = rocket::Config::figment()
+///         .merge(("databases.name", rocket_db_pools::Config {
+///             url: "db:specific@config&url".into(),
+///             min_connections: None,
+///             max_connections: 1024,
+///             connect_timeout: 3,
+///             idle_timeout: None,
+///         }));
+///
+///     rocket::custom(figment)
+/// }
 /// ```
 ///
-/// If you want to implement your own custom database adapter and need some more
-/// configuration options, you may need to define a custom `Config` struct.
-///
-/// [`Pool::initialize()`]: crate::Pool::initialize
+/// For general information on configuration in Rocket, see [`rocket::config`].
+/// For higher-level details on configuring a database, see the [crate-level
+/// docs](crate#configuration).
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
 #[serde(crate = "rocket::serde")]
 pub struct Config {
-    /// Connection URL specified in the Rocket configuration.
+    /// Database-specific connection and configuration URL.
+    ///
+    /// The format of the URL is database specific; consult your database's
+    /// documentation.
     pub url: String,
-    /// Initial pool size. Defaults to the number of Rocket workers * 4.
-    pub pool_size: u32,
-    /// How long to wait, in seconds, for a new connection before timing out.
-    /// Defaults to `5`.
-    // FIXME: Use `time`.
-    pub timeout: u8,
-}
-
-impl Config {
-    pub fn from(db_name: &str, rocket: &Rocket<Build>) -> Result<Self, figment::Error> {
-        Self::figment(db_name, rocket).extract::<Self>()
-    }
-
-    pub fn figment(db_name: &str, rocket: &Rocket<Build>) -> Figment {
-        let db_key = format!("databases.{}", db_name);
-        let default_pool_size = rocket.figment()
-            .extract_inner::<u32>(rocket::Config::WORKERS)
-            .map(|workers| workers * 4)
-            .ok();
-
-        let figment = Figment::from(rocket.figment())
-            .focus(&db_key)
-            .join(Serialized::default("timeout", 5));
-
-        match default_pool_size {
-            Some(pool_size) => figment.join(Serialized::default("pool_size", pool_size)),
-            None => figment
-        }
-    }
+    /// Minimum number of connections to maintain in the pool.
+    ///
+    /// **Note:** `deadpool` drivers do not support and thus ignore this value.
+    ///
+    /// _Default:_ `None`.
+    pub min_connections: Option<u32>,
+    /// Maximum number of connections to maintain in the pool.
+    ///
+    /// _Default:_ `workers * 4`.
+    pub max_connections: usize,
+    /// Number of seconds to wait for a connection before timing out.
+    ///
+    /// If the timeout elapses before a connection can be made or retrieved from
+    /// a pool, an error is returned.
+    ///
+    /// _Default:_ `5`.
+    pub connect_timeout: u64,
+    /// Maximum number of seconds to keep a connection alive for.
+    ///
+    /// After a connection is established, it is maintained in a pool for
+    /// efficient connection retrieval. When an `idle_timeout` is set, that
+    /// connection will be closed after the timeout elapses. If an
+    /// `idle_timeout` is not specified, the behavior is driver specific but
+    /// typically defaults to keeping a connection active indefinitely.
+    ///
+    /// _Default:_ `None`.
+    pub idle_timeout: Option<u64>,
 }

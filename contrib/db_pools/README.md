@@ -3,58 +3,65 @@
 [crates.io]: https://img.shields.io/crates/v/rocket_db_pools.svg
 [crate]: https://crates.io/crates/rocket_db_pools
 [docs.svg]: https://img.shields.io/badge/web-master-red.svg?style=flat&label=docs&colorB=d33847
-[crate docs]: https://api.rocket.rs/master/rocket_db_pools
+[crate docs]: https://api.rocket.rs/v0.5-rc/rocket_db_pools
 [ci.svg]: https://github.com/SergioBenitez/Rocket/workflows/CI/badge.svg
 [ci]: https://github.com/SergioBenitez/Rocket/actions
 
-This crate provides traits, utilities, and a procedural macro for configuring
-and accessing database connection pools in Rocket.
+Asynchronous database driver integration for Rocket. See the [crate docs] for
+full usage details.
 
 ## Usage
 
-First, enable the feature corresponding to your database type:
+1. Add `rocket_db_pools` as a dependency with one or more [database driver
+   features] enabled:
 
-```toml
-[dependencies.rocket_db_pools]
-version = "0.1.0-dev"
-features = ["sqlx_sqlite"]
-```
+   ```toml
+   [dependencies.rocket_db_pools]
+   version = "0.1.0-rc"
+   features = ["sqlx_sqlite"]
+   ```
 
-A full list of supported databases and their associated feature names is
-available in the [crate docs]. In whichever configuration source you choose,
-configure a `databases` dictionary with a key for each database, here
-`sqlite_logs` in a TOML source:
+2. Choose a name for your database, here `sqlite_logs`. [Configure] _at least_ a
+   URL for the database:
 
-```toml
-[default.databases]
-sqlite_logs = { url = "/path/to/database.sqlite" }
-```
+   ```toml
+   [default.databases.sqlite_logs]
+   url = "/path/to/database.sqlite"
+   ```
 
-In your application's source code:
+3. [Derive `Database`] for a unit type (`Logs` here) which
+   wraps the selected driver's [`Pool`] type and is decorated with
+   `#[database("name")]`. Attach `Type::init()` to your application's `Rocket`
+   to initialize the database pool:
 
-```rust
-#[macro_use] extern crate rocket;
-use rocket::serde::json::Json;
+   ```rust
+   use rocket_db_pools::{Database, Connection};
 
-use rocket_db_pools::{Database, sqlx};
+   #[derive(Database)]
+   #[database("sqlite_logs")]
+   struct Logs(sqlx::SqlitePool);
 
-#[derive(Database)]
-#[database("sqlite_logs")]
-struct LogsDb(sqlx::SqlitePool);
+   #[launch]
+   fn rocket() -> _ {
+       rocket::build().attach(Logs::init())
+   }
+   ```
 
-type LogsDbConn = <LogsDb as Database>::Connection;
+4. Use [`Connection<Type>`] as a request guard to retrieve an
+   active database connection:
 
-#[get("/logs/<id>")]
-async fn get_logs(mut db: LogsDbConn, id: usize) -> Result<Json<Vec<String>>> {
-    let logs = sqlx::query!("SELECT text FROM logs;").execute(&mut *db).await?;
+   ```rust
+   #[get("/<id>")]
+   async fn read(mut db: Connection<Logs>, id: i64) -> Result<Log> {
+       sqlx::query!("SELECT content FROM logs WHERE id = ?", id)
+           .fetch_one(&mut *db)
+           .map_ok(|r| Log(r.content))
+           .await
+   }
+   ```
 
-    Ok(Json(logs))
-}
-
-#[launch]
-fn rocket() -> _ {
-    rocket::build().attach(LogsDb::fairing())
-}
-```
-
-See the [crate docs] for full details.
+[database driver features]: https://api.rocket.rs/v0.5-rc/rocket_db_pools/index.html#supported-drivers
+[`Pool`]: https://api.rocket.rs/v0.5-rc/rocket_db_pools/index.html#supported-drivers
+[Configure]: https://api.rocket.rs/v0.5-rc/rocket_db_pools/index.html#configuration
+[Derive `Database`]: https://api.rocket.rs/v0.5-rc/rocket_db_pools/derive.Database.html
+[`Connection<Type>`]: https://api.rocket.rs/v0.5-rc/rocket_db_pools/struct.Connection.html

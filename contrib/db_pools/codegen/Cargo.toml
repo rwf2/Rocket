@@ -1,6 +1,6 @@
 [package]
 name = "rocket_db_pools_codegen"
-version = "0.1.0-dev"
+version = "0.1.0-rc"
 authors = ["Sergio Benitez <sb@sergio.bz>", "Jeb Rosen <jeb@jebrosen.com>"]
 description = "Procedural macros for rocket_db_pools."
 repository = "https://github.com/SergioBenitez/Rocket/contrib/db_pools"
@@ -15,3 +15,7 @@ proc-macro = true
 [dependencies]
 devise = "0.3"
 quote = "1"
+
+[dev-dependencies]
+rocket = { path = "../../../core/lib", default-features = false }
+rocket_db_pools = { path = "../lib", features = ["deadpool_postgres"] }
