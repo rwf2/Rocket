@@ -1,0 +1,109 @@
+error: invalid value: expected string literal
+ --> $DIR/database-syntax.rs:4:12
+  |
+4 | #[database(123)]
+  |            ^^^
+  |
+note: error occurred while deriving `Database`
+ --> $DIR/database-syntax.rs:3:10
+  |
+3 | #[derive(Database)]
+  |          ^^^^^^^^
+  = note: this error originates in the derive macro `Database` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+error: expected key/value `key = value`
+ --> $DIR/database-syntax.rs:8:25
+  |
+8 | #[database("some-name", "another")]
+  |                         ^^^^^^^^^
+  |
+note: error occurred while deriving `Database`
+ --> $DIR/database-syntax.rs:7:10
+  |
+7 | #[derive(Database)]
+  |          ^^^^^^^^
+  = note: this error originates in the derive macro `Database` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+error: unexpected attribute parameter: `name`
+  --> $DIR/database-syntax.rs:12:25
+   |
+12 | #[database("some-name", name = "another")]
+   |                         ^^^^^^^^^^^^^^^^
+   |
+note: error occurred while deriving `Database`
+  --> $DIR/database-syntax.rs:11:10
+   |
+11 | #[derive(Database)]
+   |          ^^^^^^^^
+   = note: this error originates in the derive macro `Database` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+error: enums are not supported
+  --> $DIR/database-syntax.rs:16:1
+   |
+16 | / #[database("foo")]
+17 | | enum D {  }
+   | |___________^
+   |
+note: error occurred while deriving `Database`
+  --> $DIR/database-syntax.rs:15:10
+   |
+15 | #[derive(Database)]
+   |          ^^^^^^^^
+   = note: this error originates in the derive macro `Database` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+error: missing `#[database("name")]` attribute
+  --> $DIR/database-syntax.rs:20:1
+   |
+20 | struct E(deadpool_postgres::Pool);
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   |
+note: error occurred while deriving `Database`
+  --> $DIR/database-syntax.rs:19:10
+   |
+19 | #[derive(Database)]
+   |          ^^^^^^^^
+   = note: this error originates in the derive macro `Database` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+error: struct must have exactly one unnamed field
+  --> $DIR/database-syntax.rs:23:1
+   |
+23 | / #[database("foo")]
+24 | | struct F;
+   | |_________^
+   |
+note: error occurred while deriving `Database`
+  --> $DIR/database-syntax.rs:22:10
+   |
+22 | #[derive(Database)]
+   |          ^^^^^^^^
+   = note: this error originates in the derive macro `Database` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+error: struct must have exactly one unnamed field
+  --> $DIR/database-syntax.rs:27:1
+   |
+27 | / #[database("foo")]
+28 | | struct G(deadpool_postgres::Pool, deadpool_postgres::Pool);
+   | |___________________________________________________________^
+   |
+note: error occurred while deriving `Database`
+  --> $DIR/database-syntax.rs:26:10
+   |
+26 | #[derive(Database)]
+   |          ^^^^^^^^
+   = note: this error originates in the derive macro `Database` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+error: named structs are not supported
+  --> $DIR/database-syntax.rs:31:1
+   |
+31 | / #[database("foo")]
+32 | | struct H {
+33 | |     foo: deadpool_postgres::Pool,
+34 | | }
+   | |_^
+   |
+note: error occurred while deriving `Database`
+  --> $DIR/database-syntax.rs:30:10
+   |
+30 | #[derive(Database)]
+   |          ^^^^^^^^
+   = note: this error originates in the derive macro `Database` (in Nightly builds, run with -Z macro-backtrace for more info)

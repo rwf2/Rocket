@@ -84,6 +84,11 @@ CONTRIB_SYNC_DB_POOLS_CRATE_ROOTS=(
     "${CONTRIB_ROOT}/sync_db_pools/codegen"
 )
 
+CONTRIB_DB_POOLS_CRATE_ROOTS=(
+    "${CONTRIB_ROOT}/db_pools/lib"
+    "${CONTRIB_ROOT}/db_pools/codegen"
+)
+
 ALL_CRATE_ROOTS=(
     "${CORE_HTTP_ROOT}"
     "${CORE_CODEGEN_ROOT}"

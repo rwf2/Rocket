@@ -1,0 +1,21 @@
+error[E0277]: the trait bound `Unknown: Pool` is not satisfied
+  --> $DIR/database-types.rs:7:10
+   |
+7  | struct A(Unknown);
+   |          ^^^^^^^ the trait `Pool` is not implemented for `Unknown`
+   |
+  ::: $WORKSPACE/contrib/db_pools/lib/src/database.rs
+   |
+   |     type Pool: Pool;
+   |                ---- required by this bound in `rocket_db_pools::Database::Pool`
+
+error[E0277]: the trait bound `Vec<i32>: Pool` is not satisfied
+  --> $DIR/database-types.rs:11:10
+   |
+11 | struct B(Vec<i32>);
+   |          ^^^ the trait `Pool` is not implemented for `Vec<i32>`
+   |
+  ::: $WORKSPACE/contrib/db_pools/lib/src/database.rs
+   |
+   |     type Pool: Pool;
+   |                ---- required by this bound in `rocket_db_pools::Database::Pool`

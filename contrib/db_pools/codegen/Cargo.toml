@@ -19,3 +19,5 @@ quote = "1"
 [dev-dependencies]
 rocket = { path = "../../../core/lib", default-features = false }
 rocket_db_pools = { path = "../lib", features = ["deadpool_postgres"] }
+trybuild = "1.0"
+version_check = "0.9"

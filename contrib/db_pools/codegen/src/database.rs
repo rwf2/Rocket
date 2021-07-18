@@ -21,19 +21,23 @@ pub fn derive_database(input: TokenStream) -> TokenStream {
                 if s.fields.len() == 1 {
                     Ok(())
                 } else {
-                    Err(s.fields.span().error(ONE_UNNAMED_FIELD))
+                    Err(s.span().error(ONE_UNNAMED_FIELD))
                 }
             })
         )
         .outer_mapper(MapperBuild::new()
             .struct_map(|_, s| {
-                let decorated_type = &s.ident;
                 let pool_type = match &s.fields {
                     syn::Fields::Unnamed(f) => &f.unnamed[0].ty,
                     _ => unreachable!("Support::TupleStruct"),
                 };
 
-                quote_spanned! { s.span() =>
+                let decorated_type = &s.ident;
+                let db_ty = quote_spanned!(decorated_type.span() =>
+                    <#decorated_type as rocket_db_pools::Database>
+                );
+
+                quote_spanned! { decorated_type.span() =>
                     impl From<#pool_type> for #decorated_type {
                         fn from(pool: #pool_type) -> Self {
                             Self(pool)
@@ -61,7 +65,7 @@ pub fn derive_database(input: TokenStream) -> TokenStream {
                         async fn from_request(
                             req: &'r rocket::request::Request<'_>
                         ) -> rocket::request::Outcome<Self, Self::Error> {
-                            match #decorated_type::fetch(req.rocket()) {
+                            match #db_ty::fetch(req.rocket()) {
                                 Some(db) => rocket::outcome::Outcome::Success(db),
                                 None => rocket::outcome::Outcome::Failure((
                                     rocket::http::Status::InternalServerError, ()))
@@ -71,7 +75,7 @@ pub fn derive_database(input: TokenStream) -> TokenStream {
 
                     impl rocket::Sentinel for &#decorated_type {
                         fn abort(rocket: &rocket::Rocket<rocket::Ignite>) -> bool {
-                            #decorated_type::fetch(rocket).is_none()
+                            #db_ty::fetch(rocket).is_none()
                         }
                     }
                 }
@@ -91,7 +95,7 @@ pub fn derive_database(input: TokenStream) -> TokenStream {
                     _ => unreachable!("Support::TupleStruct"),
                 };
 
-                Ok(quote_spanned! { s.span() =>
+                Ok(quote_spanned! { pool_type.span() =>
                     type Pool = #pool_type;
 
                     const NAME: &'static str = #db_name;

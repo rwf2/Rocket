@@ -189,6 +189,9 @@ check_versions_match "${CORE_CRATE_ROOTS[@]}"
 echo ":: Ensuring contrib sync_db_pools versions match..."
 check_versions_match "${CONTRIB_SYNC_DB_POOLS_CRATE_ROOTS[@]}"
 
+echo ":: Ensuring contrib db_pools versions match..."
+check_versions_match "${CONTRIB_SYNC_DB_POOLS_CRATE_ROOTS[@]}"
+
 echo ":: Ensuring minimum style requirements are met..."
 check_style
 
