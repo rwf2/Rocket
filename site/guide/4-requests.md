@@ -677,7 +677,19 @@ struct Task<'r> {
 fn new(task: Json<Task<'_>>) { /* .. */ }
 ```
 
-See the [JSON example](@example/serialization/src/json.rs) on GitHub for a complete example.
+! note: JSON support requires enabling Rocket's `json` feature flag.
+
+  Rocket intentionally places JSON support, as well support for other data
+  formats and features, behind feature flags. See [the api
+  docs](@api/rocket/#features) for a list of available features. The `json`
+  feature can be enabled in the `Cargo.toml`:
+
+  `
+  rocket = { version = "0.5.0-rc.1", features = ["json"] }
+  `
+
+  See the [JSON example](@example/serialization/src/json.rs) on GitHub for a
+  complete example.
 
 ### Temporary Files
 
