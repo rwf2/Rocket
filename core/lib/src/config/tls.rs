@@ -153,6 +153,9 @@ pub struct TlsConfig {
 ///     rocket::custom(config)
 /// }
 /// ```
+///
+/// Once mTLS is configured, the [`mtls::Certificate`](crate::mtls::Certificate)
+/// request guard can be used to retrieve client certificates in routes.
 #[derive(PartialEq, Debug, Clone, Deserialize, Serialize)]
 #[cfg(feature = "mtls")]
 #[cfg_attr(nightly, doc(cfg(feature = "mtls")))]
