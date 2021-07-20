@@ -50,7 +50,7 @@ fn new(id: usize) -> status::Accepted<String> {
 Similarly, the types in the [`content` module](@api/rocket/response/content/)
 can be used to override the Content-Type of a response. For instance, to set the
 Content-Type of `&'static str` to JSON, as well as setting the status code to an
-arbitrary one like `418 I'm a teapot`, combine [`content::Json`] with
+arbitrary one like `418 I'm a teapot`, combine [`content::RawJson`] with
 [`status::Custom`]:
 
 ```rust
@@ -59,16 +59,16 @@ use rocket::http::Status;
 use rocket::response::{content, status};
 
 #[get("/")]
-fn json() -> status::Custom<content::Json<&'static str>> {
-    status::Custom(Status::ImATeapot, content::Json("{ \"hi\": \"world\" }"))
+fn json() -> status::Custom<content::RawJson<&'static str>> {
+    status::Custom(Status::ImATeapot, content::RawJson("{ \"hi\": \"world\" }"))
 }
 ```
 
 ! warning: This is _not_ the same as [`serde::json::Json`]!
 
 The built-in `(Status, R)` and `(ContentType, R)` responders, where `R:
-Responder`, are short-hands for the `status::Custom` and `content::Custom`
-responders:
+Responder`, also override the `Status` and `Content-Type` of responses,
+respectively:
 
 ```rust
 # #[macro_use] extern crate rocket;

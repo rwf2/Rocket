@@ -7,7 +7,7 @@ use std::io;
 
 use rocket::data::{Data, ToByteUnit};
 use rocket::http::uri::Absolute;
-use rocket::response::content::Plain;
+use rocket::response::content::RawText;
 use rocket::tokio::fs::{self, File};
 
 use crate::paste_id::PasteId;
@@ -24,8 +24,8 @@ async fn upload(paste: Data<'_>) -> io::Result<String> {
 }
 
 #[get("/<id>")]
-async fn retrieve(id: PasteId<'_>) -> Option<Plain<File>> {
-    File::open(id.file_path()).await.map(Plain).ok()
+async fn retrieve(id: PasteId<'_>) -> Option<RawText<File>> {
+    File::open(id.file_path()).await.map(RawText).ok()
 }
 
 #[delete("/<id>")]

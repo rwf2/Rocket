@@ -194,7 +194,7 @@ impl<'r, T: Serialize> Responder<'r, 'static> for MsgPack<T> {
                 Status::InternalServerError
             })?;
 
-        content::MsgPack(buf).respond_to(req)
+        content::RawMsgPack(buf).respond_to(req)
     }
 }
 

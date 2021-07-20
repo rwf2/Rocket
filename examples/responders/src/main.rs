@@ -89,26 +89,26 @@ fn maybe_redir(name: &str) -> Result<&'static str, Redirect> {
 use rocket::Request;
 use rocket::response::content;
 
-// NOTE: This example explicitly uses the `Json` type from `response::content`
-// for demonstration purposes. In a real application, _always_ prefer to use
-// `rocket::serde::json::Json` instead!
+// NOTE: This example explicitly uses the `RawJson` type from
+// `response::content` for demonstration purposes. In a real application,
+// _always_ prefer to use `rocket::serde::json::Json` instead!
 
 // In a `GET` request and all other non-payload supporting request types, the
 // preferred media type in the Accept header is matched against the `format` in
 // the route attribute. Because the client can use non-specific media types like
 // `*/*` in `Accept`, these first two routes would collide without `rank`.
 #[get("/content", format = "xml", rank = 1)]
-fn xml() -> content::Xml<&'static str> {
-    content::Xml("<payload>I'm here</payload>")
+fn xml() -> content::RawXml<&'static str> {
+    content::RawXml("<payload>I'm here</payload>")
 }
 
 #[get("/content", format = "json", rank = 2)]
-fn json() -> content::Json<&'static str> {
-    content::Json(r#"{ "payload": "I'm here" }"#)
+fn json() -> content::RawJson<&'static str> {
+    content::RawJson(r#"{ "payload": "I'm here" }"#)
 }
 
 #[catch(404)]
-fn not_found(request: &Request<'_>) -> content::Html<String> {
+fn not_found(request: &Request<'_>) -> content::RawHtml<String> {
     let html = match request.format() {
         Some(ref mt) if !(mt.is_xml() || mt.is_html()) => {
             format!("<p>'{}' requests are not supported.</p>", mt)
@@ -118,24 +118,24 @@ fn not_found(request: &Request<'_>) -> content::Html<String> {
                  request.uri())
     };
 
-    content::Html(html)
+    content::RawHtml(html)
 }
 
 /******************************* `Either` Responder ***************************/
 
 use rocket::Either;
-use rocket::response::content::{Json, MsgPack};
+use rocket::response::content::{RawJson, RawMsgPack};
 use rocket::http::uncased::AsUncased;
 
 // NOTE: In a real application, we'd use `Json` and `MsgPack` from
 // `rocket::serde`, which perform automatic serialization of responses and
 // automatically set the `Content-Type`.
 #[get("/content/<kind>")]
-fn json_or_msgpack(kind: &str) -> Either<Json<&'static str>, MsgPack<&'static [u8]>> {
+fn json_or_msgpack(kind: &str) -> Either<RawJson<&'static str>, RawMsgPack<&'static [u8]>> {
     if kind.as_uncased() == "msgpack" {
-        Either::Right(MsgPack(&[162, 104, 105]))
+        Either::Right(RawMsgPack(&[162, 104, 105]))
     } else {
-        Either::Left(Json("\"hi\""))
+        Either::Left(RawJson("\"hi\""))
     }
 }
 
@@ -143,7 +143,7 @@ fn json_or_msgpack(kind: &str) -> Either<Json<&'static str>, MsgPack<&'static [u
 
 use std::borrow::Cow;
 
-use rocket::response::content::Html;
+use rocket::response::content::RawHtml;
 
 #[derive(Responder)]
 enum StoredData {
@@ -151,7 +151,7 @@ enum StoredData {
     String(Cow<'static, str>),
     Bytes(Vec<u8>),
     #[response(status = 401)]
-    NotAuthorized(Html<&'static str>),
+    NotAuthorized(RawHtml<&'static str>),
 }
 
 #[derive(FromFormField, UriDisplayQuery)]
@@ -170,7 +170,7 @@ async fn custom(kind: Option<Kind>) -> StoredData {
         },
         Some(Kind::String) => StoredData::String("Hey, I'm some data.".into()),
         Some(Kind::Bytes) => StoredData::Bytes(vec![72, 105]),
-        None => StoredData::NotAuthorized(Html("No no no!"))
+        None => StoredData::NotAuthorized(RawHtml("No no no!"))
     }
 }
 

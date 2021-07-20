@@ -223,7 +223,7 @@ impl<'r, T: Serialize> Responder<'r, 'static> for Json<T> {
                 Status::InternalServerError
             })?;
 
-        content::Json(string).respond_to(req)
+        content::RawJson(string).respond_to(req)
     }
 }
 
@@ -299,7 +299,7 @@ impl<'v, T: Deserialize<'v> + Send> form::FromFormField<'v> for Json<T> {
 /// and a fixed-size body with the serialized value.
 impl<'r> Responder<'r, 'static> for Value {
     fn respond_to(self, req: &'r Request<'_>) -> response::Result<'static> {
-        content::Json(self.to_string()).respond_to(req)
+        content::RawJson(self.to_string()).respond_to(req)
     }
 }
 

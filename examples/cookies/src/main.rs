@@ -5,12 +5,12 @@
 mod session;
 mod message;
 
-use rocket::response::content::Html;
+use rocket::response::content::RawHtml;
 use rocket_dyn_templates::Template;
 
 #[get("/")]
-fn index() -> Html<&'static str> {
-    Html(r#"<a href="message">Set a Message</a> or <a href="session">Use Sessions</a>."#)
+fn index() -> RawHtml<&'static str> {
+    RawHtml(r#"<a href="message">Set a Message</a> or <a href="session">Use Sessions</a>."#)
 }
 
 #[launch]

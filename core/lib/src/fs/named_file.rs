@@ -8,7 +8,8 @@ use crate::request::Request;
 use crate::response::{self, Responder};
 use crate::http::ContentType;
 
-/// A [`Responder`] that sends a file with a Content-Type based on its name.
+/// A [`Responder`] that sends file data with a Content-Type based on its
+/// file extension.
 ///
 /// # Example
 ///
