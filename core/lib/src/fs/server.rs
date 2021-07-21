@@ -118,7 +118,8 @@ impl FileServer {
     ///
     /// # Panics
     ///
-    /// Panics if `path` does not exist or is not a directory.
+    /// If [`Options::Missing`] is not set, panics if `path` does not exist or
+    /// is not a directory. Otherwise does not panic.
     ///
     /// # Example
     ///
