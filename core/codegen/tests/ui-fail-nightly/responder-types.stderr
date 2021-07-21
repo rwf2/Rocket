@@ -1,10 +1,14 @@
 error[E0277]: the trait bound `u8: Responder<'_, '_>` is not satisfied
- --> $DIR/responder-types.rs:5:5
-  |
-5 |     thing: u8,
-  |     ^^^^^^^^^ the trait `Responder<'_, '_>` is not implemented for `u8`
-  |
-  = note: required by `respond_to`
+   --> $DIR/responder-types.rs:5:5
+    |
+5   |     thing: u8,
+    |     ^^^^^^^^^ the trait `Responder<'_, '_>` is not implemented for `u8`
+    |
+note: required by `respond_to`
+   --> $DIR/responder.rs:298:5
+    |
+298 |     fn respond_to(self, request: &'r Request<'_>) -> response::Result<'o>;
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 error[E0277]: the trait bound `Header<'_>: From<u8>` is not satisfied
   --> $DIR/responder-types.rs:11:5
@@ -21,12 +25,16 @@ error[E0277]: the trait bound `Header<'_>: From<u8>` is not satisfied
    = note: required because of the requirements on the impl of `Into<Header<'_>>` for `u8`
 
 error[E0277]: the trait bound `u8: Responder<'_, '_>` is not satisfied
-  --> $DIR/responder-types.rs:16:5
-   |
-16 |     thing: u8,
-   |     ^^^^^^^^^ the trait `Responder<'_, '_>` is not implemented for `u8`
-   |
-   = note: required by `respond_to`
+   --> $DIR/responder-types.rs:16:5
+    |
+16  |     thing: u8,
+    |     ^^^^^^^^^ the trait `Responder<'_, '_>` is not implemented for `u8`
+    |
+note: required by `respond_to`
+   --> $DIR/responder.rs:298:5
+    |
+298 |     fn respond_to(self, request: &'r Request<'_>) -> response::Result<'o>;
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 error[E0277]: the trait bound `Header<'_>: From<u8>` is not satisfied
   --> $DIR/responder-types.rs:17:5
@@ -57,9 +65,13 @@ error[E0277]: the trait bound `Header<'_>: From<std::string::String>` is not sat
    = note: required because of the requirements on the impl of `Into<Header<'_>>` for `std::string::String`
 
 error[E0277]: the trait bound `usize: Responder<'_, '_>` is not satisfied
-  --> $DIR/responder-types.rs:28:13
-   |
-28 | fn foo() -> usize { 0 }
-   |             ^^^^^ the trait `Responder<'_, '_>` is not implemented for `usize`
-   |
-   = note: required by `route::handler::<impl Outcome<rocket::Response<'o>, Status, rocket::Data<'o>>>::from`
+   --> $DIR/responder-types.rs:28:13
+    |
+28  | fn foo() -> usize { 0 }
+    |             ^^^^^ the trait `Responder<'_, '_>` is not implemented for `usize`
+    |
+note: required by `route::handler::<impl Outcome<rocket::Response<'o>, Status, rocket::Data<'o>>>::from`
+   --> $DIR/handler.rs:188:5
+    |
+188 |     pub fn from<R: Responder<'r, 'o>>(req: &'r Request<'_>, responder: R) -> Outcome<'r> {
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

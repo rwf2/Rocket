@@ -1,18 +1,26 @@
 error[E0277]: the trait bound `Q: FromParam<'_>` is not satisfied
- --> $DIR/route-type-errors.rs:6:12
-  |
-6 | fn f0(foo: Q) {}
-  |            ^ the trait `FromParam<'_>` is not implemented for `Q`
-  |
-  = note: required by `from_param`
+   --> $DIR/route-type-errors.rs:6:12
+    |
+6   | fn f0(foo: Q) {}
+    |            ^ the trait `FromParam<'_>` is not implemented for `Q`
+    |
+note: required by `from_param`
+   --> $DIR/from_param.rs:183:5
+    |
+183 |     fn from_param(param: &'a str) -> Result<Self, Self::Error>;
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 error[E0277]: the trait bound `Q: FromSegments<'_>` is not satisfied
- --> $DIR/route-type-errors.rs:9:12
-  |
-9 | fn f1(foo: Q) {}
-  |            ^ the trait `FromSegments<'_>` is not implemented for `Q`
-  |
-  = note: required by `from_segments`
+   --> $DIR/route-type-errors.rs:9:12
+    |
+9   | fn f1(foo: Q) {}
+    |            ^ the trait `FromSegments<'_>` is not implemented for `Q`
+    |
+note: required by `from_segments`
+   --> $DIR/from_param.rs:291:5
+    |
+291 |     fn from_segments(segments: Segments<'r, Path>) -> Result<Self, Self::Error>;
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 error[E0277]: the trait bound `Q: FromFormField<'_>` is not satisfied
   --> $DIR/route-type-errors.rs:12:12
@@ -53,12 +61,16 @@ error[E0277]: the trait bound `Q: FromRequest<'_>` is not satisfied
     |                                                -- required by this bound in `from_request`
 
 error[E0277]: the trait bound `Q: FromParam<'_>` is not satisfied
-  --> $DIR/route-type-errors.rs:21:18
-   |
-21 | fn f5(a: Q, foo: Q) {}
-   |                  ^ the trait `FromParam<'_>` is not implemented for `Q`
-   |
-   = note: required by `from_param`
+   --> $DIR/route-type-errors.rs:21:18
+    |
+21  | fn f5(a: Q, foo: Q) {}
+    |                  ^ the trait `FromParam<'_>` is not implemented for `Q`
+    |
+note: required by `from_param`
+   --> $DIR/from_param.rs:183:5
+    |
+183 |     fn from_param(param: &'a str) -> Result<Self, Self::Error>;
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 error[E0277]: the trait bound `Q: FromRequest<'_>` is not satisfied
    --> $DIR/route-type-errors.rs:24:10
@@ -72,17 +84,25 @@ error[E0277]: the trait bound `Q: FromRequest<'_>` is not satisfied
     |                                                -- required by this bound in `from_request`
 
 error[E0277]: the trait bound `Q: FromParam<'_>` is not satisfied
-  --> $DIR/route-type-errors.rs:24:18
-   |
-24 | fn f6(a: Q, foo: Q, good: usize, bar: Q) {}
-   |                  ^ the trait `FromParam<'_>` is not implemented for `Q`
-   |
-   = note: required by `from_param`
+   --> $DIR/route-type-errors.rs:24:18
+    |
+24  | fn f6(a: Q, foo: Q, good: usize, bar: Q) {}
+    |                  ^ the trait `FromParam<'_>` is not implemented for `Q`
+    |
+note: required by `from_param`
+   --> $DIR/from_param.rs:183:5
+    |
+183 |     fn from_param(param: &'a str) -> Result<Self, Self::Error>;
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 error[E0277]: the trait bound `Q: FromParam<'_>` is not satisfied
-  --> $DIR/route-type-errors.rs:24:39
-   |
-24 | fn f6(a: Q, foo: Q, good: usize, bar: Q) {}
-   |                                       ^ the trait `FromParam<'_>` is not implemented for `Q`
-   |
-   = note: required by `from_param`
+   --> $DIR/route-type-errors.rs:24:39
+    |
+24  | fn f6(a: Q, foo: Q, good: usize, bar: Q) {}
+    |                                       ^ the trait `FromParam<'_>` is not implemented for `Q`
+    |
+note: required by `from_param`
+   --> $DIR/from_param.rs:183:5
+    |
+183 |     fn from_param(param: &'a str) -> Result<Self, Self::Error>;
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
