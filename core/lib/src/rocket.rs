@@ -212,6 +212,7 @@ impl Rocket<Build> {
         self
     }
 
+    #[track_caller]
     fn load<'a, B, T, F, M>(mut self, kind: &str, base: B, items: Vec<T>, m: M, f: F) -> Self
         where B: TryInto<Origin<'a>> + Clone + fmt::Display,
               B::Error: fmt::Display,
@@ -219,13 +220,15 @@ impl Rocket<Build> {
               F: Fn(&mut Self, T),
               T: Clone + fmt::Display,
     {
-        let mut base = base.clone().try_into()
-            .map(|origin| origin.into_owned())
-            .unwrap_or_else(|e| {
+        let mut base = match base.clone().try_into() {
+            Ok(origin) => origin.into_owned(),
+            Err(e) => {
                 error!("invalid {} base: {}", kind, Paint::white(&base));
                 error_!("{}", e);
+                info_!("{} {}", Paint::white("in"), std::panic::Location::caller());
                 panic!("aborting due to {} base error", kind);
-            });
+            }
+        };
 
         if base.query().is_some() {
             warn!("query in {} base '{}' is ignored", kind, Paint::white(&base));
@@ -233,12 +236,15 @@ impl Rocket<Build> {
         }
 
         for unmounted_item in items {
-            let item = m(&base, unmounted_item.clone())
-                .unwrap_or_else(|e| {
+            let item = match m(&base, unmounted_item.clone()) {
+                Ok(item) => item,
+                Err(e) => {
                     error!("malformed URI in {} {}", kind, unmounted_item);
                     error_!("{}", e);
+                    info_!("{} {}", Paint::white("in"), std::panic::Location::caller());
                     panic!("aborting due to invalid {} URI", kind);
-                });
+                }
+            };
 
             f(&mut self, item)
         }
@@ -300,6 +306,7 @@ impl Rocket<Build> {
     ///     rocket::build().mount("/hello", vec![hi_route])
     /// }
     /// ```
+    #[track_caller]
     pub fn mount<'a, B, R>(self, base: B, routes: R) -> Self
         where B: TryInto<Origin<'a>> + Clone + fmt::Display,
               B::Error: fmt::Display,

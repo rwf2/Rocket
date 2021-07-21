@@ -129,6 +129,7 @@ impl<'a> RouteUri<'a> {
     /// Create a new `RouteUri`.
     ///
     /// Panics if  `base` or `uri` cannot be parsed as `Origin`s.
+    #[track_caller]
     pub(crate) fn new(base: &str, uri: &str) -> RouteUri<'static> {
         Self::try_new(base, uri).expect("Expected valid URIs")
     }

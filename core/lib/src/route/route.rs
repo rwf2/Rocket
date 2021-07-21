@@ -213,6 +213,7 @@ impl Route {
     /// assert_eq!(index.method, Method::Get);
     /// assert_eq!(index.uri, "/");
     /// ```
+    #[track_caller]
     pub fn new<H: Handler>(method: Method, uri: &str, handler: H) -> Route {
         Route::ranked(None, method, uri, handler)
     }
@@ -242,6 +243,7 @@ impl Route {
     /// assert_eq!(foo.method, Method::Post);
     /// assert_eq!(foo.uri, "/foo?bar");
     /// ```
+    #[track_caller]
     pub fn ranked<H, R>(rank: R, method: Method, uri: &str, handler: H) -> Route
         where H: Handler + 'static, R: Into<Option<isize>>,
     {
