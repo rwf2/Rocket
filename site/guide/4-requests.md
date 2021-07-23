@@ -680,7 +680,7 @@ fn new(task: Json<Task<'_>>) { /* .. */ }
 
 ! NOTE: JSON support requires the `json` feature flag to be enabled in Rocket
 
-  Rocket has intentionally chosen to place Json support, as well as a few other formats
+  Rocket has intentionally chosen to place JSON support, as well as a few other formats
   behind feature flags.
 
   See the [JSON example](@example/serialization/src/json.rs) on GitHub for a complete example.
