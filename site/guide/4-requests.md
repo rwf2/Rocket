@@ -678,7 +678,7 @@ struct Task<'r> {
 fn new(task: Json<Task<'_>>) { /* .. */ }
 ```
 
-! NOTE: Json support requires the `json` feature flag to be enabled in Rocket
+! NOTE: JSON support requires the `json` feature flag to be enabled in Rocket
 
   Rocket has intentionally chosen to place Json support, as well as a few other formats
   behind feature flags.
