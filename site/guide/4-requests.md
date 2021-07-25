@@ -1704,11 +1704,11 @@ Query strings are URL-encoded forms that appear in the URL of a request. Query
 parameters are declared like path parameters but otherwise handled like regular
 URL-encoded form fields. The table below summarizes the analogy:
 
-| Path Synax  | Query Syntax | Path Type Bound  | Query Type Bound |
-|-------------|--------------|------------------|------------------|
-| `<param>`   | `<param>`    | [`FromParam`]    | [`FromForm`]     |
-| `<param..>` | `<param..>`  | [`FromSegments`] | [`FromForm`]     |
-| `static`    | `static`     | N/A              | N/A              |
+| Path Syntax  | Query Syntax | Path Type Bound  | Query Type Bound |
+|--------------|--------------|------------------|------------------|
+| `<param>`    | `<param>`    | [`FromParam`]    | [`FromForm`]     |
+| `<param..>`  | `<param..>`  | [`FromSegments`] | [`FromForm`]     |
+| `static`     | `static`     | N/A              | N/A              |
 
 Because dynamic parameters are form types, they can be single values,
 collections, nested collections, or anything in between, just like any other
