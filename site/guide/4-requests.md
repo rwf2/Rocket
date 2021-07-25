@@ -681,9 +681,18 @@ fn new(task: Json<Task<'_>>) { /* .. */ }
 ! NOTE: JSON support requires the `json` feature flag to be enabled in Rocket
 
   Rocket has intentionally chosen to place JSON support, as well as a few other formats
-  behind feature flags.
+  and features behind feature flags. See [the api reference](@api/rocket/#features)
+  for a list of available features.
 
-  See the [JSON example](@example/serialization/src/json.rs) on GitHub for a complete example.
+  The `json` feature can be enabled in the `Cargo.toml` as follows.
+
+  ```toml
+  [dependencies]
+  rocket = { version = "0.5.0-rc.1", features = ["json"] }
+  ```
+
+  See the [JSON example](@example/serialization/src/json.rs) on GitHub for a complete
+  example.
 
 ### Temporary Files
 
