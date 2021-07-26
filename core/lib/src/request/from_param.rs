@@ -264,6 +264,9 @@ impl<'a, T: FromParam<'a>> FromParam<'a> for Option<T> {
     }
 }
 
+#[cfg(feature = "mac_address")]
+impl_with_fromstr! { mac_address::MacAddress }
+
 /// Trait to convert _many_ dynamic path segment strings to a concrete value.
 ///
 /// This is the `..` analog to [`FromParam`], and its functionality is identical
