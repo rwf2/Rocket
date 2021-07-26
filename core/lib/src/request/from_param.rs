@@ -75,6 +75,8 @@ use crate::http::uri::{Segments, error::PathError, fmt::Path};
 ///       * `NonZero*` types: **NonZeroI8, NonZeroI16, NonZeroI32, NonZeroI64,
 ///         NonZeroI128, NonZeroIsize, NonZeroU8, NonZeroU16, NonZeroU32,
 ///         NonZeroU64, NonZeroU128, NonZeroUsize**
+///       * `mac_address::MacAddress`: Support for this type requires the
+///         `mac_address` feature to be enabled.
 ///
 ///     A value is parsed successfully if the `from_str` method from the given
 ///     type returns successfully. Otherwise, the raw path segment is returned
