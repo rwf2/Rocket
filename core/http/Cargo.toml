@@ -35,7 +35,6 @@ tokio = { version = "1.6.1", features = ["net", "sync", "time"] }
 log = "0.4"
 ref-cast = "1.0"
 uncased = "0.9.6"
-parking_lot = "0.11"
 either = "1"
 pear = "0.2.3"
 pin-project-lite = "0.2"
