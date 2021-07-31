@@ -31,7 +31,7 @@ use yansi::Paint;
 ///
 /// # Routing
 ///
-/// An error arising from a particular request _matches_ a catcher _iff_:
+/// An error arising from a particular request _matches_ a catcher _if_:
 ///
 ///  * It is a default catcher _or_ has a status code matching the error code.
 ///  * Its base is a prefix of the normalized/decoded request URI path.
