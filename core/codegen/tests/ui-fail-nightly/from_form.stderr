@@ -492,6 +492,6 @@ error[E0308]: mismatched types
 help: try using a conversion method
     |
 203 |     #[field(default_with = Some("hi".to_string()))]
-    |                                 ^^^^^^^^^^^^^^^^
+    |                                     ^^^^^^^^^^^^
 203 |     #[field(default_with = Some("hi".to_string()))]
-    |                                 ^^^^^^^^^^^^^^^^
+    |                                     ^^^^^^^^^^^^
