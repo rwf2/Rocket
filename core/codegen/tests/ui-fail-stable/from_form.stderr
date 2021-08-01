@@ -10,7 +10,7 @@ error: [note] error occurred while deriving `FromForm`
 3 | #[derive(FromForm)]
   |          ^^^^^^^^
   |
-  = note: this error originates in a derive macro (in Nightly builds, run with -Z macro-backtrace for more info)
+  = note: this error originates in the derive macro `FromForm` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: at least one field is required
  --> $DIR/from_form.rs:7:1
@@ -24,7 +24,7 @@ error: [note] error occurred while deriving `FromForm`
 6 | #[derive(FromForm)]
   |          ^^^^^^^^
   |
-  = note: this error originates in a derive macro (in Nightly builds, run with -Z macro-backtrace for more info)
+  = note: this error originates in the derive macro `FromForm` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: at least one field is required
   --> $DIR/from_form.rs:10:13
@@ -38,7 +38,7 @@ error: [note] error occurred while deriving `FromForm`
 9 | #[derive(FromForm)]
   |          ^^^^^^^^
   |
-  = note: this error originates in a derive macro (in Nightly builds, run with -Z macro-backtrace for more info)
+  = note: this error originates in the derive macro `FromForm` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: tuple struct must have exactly one field
   --> $DIR/from_form.rs:16:12
@@ -52,7 +52,7 @@ error: [note] error occurred while deriving `FromForm`
 15 | #[derive(FromForm)]
    |          ^^^^^^^^
    |
-   = note: this error originates in a derive macro (in Nightly builds, run with -Z macro-backtrace for more info)
+   = note: this error originates in the derive macro `FromForm` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: only one lifetime is supported
   --> $DIR/from_form.rs:19:25
@@ -66,7 +66,7 @@ error: [note] error occurred while deriving `FromForm`
 18 | #[derive(FromForm)]
    |          ^^^^^^^^
    |
-   = note: this error originates in a derive macro (in Nightly builds, run with -Z macro-backtrace for more info)
+   = note: this error originates in the derive macro `FromForm` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: invalid form field name
   --- help: field name cannot be `isindex` or contain '&', '=', '?', '.', '[', ']'
@@ -81,7 +81,7 @@ error: [note] error occurred while deriving `FromForm`
 26 | #[derive(FromForm)]
    |          ^^^^^^^^
    |
-   = note: this error originates in a derive macro (in Nightly builds, run with -Z macro-backtrace for more info)
+   = note: this error originates in the derive macro `FromForm` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: field name conflicts with previous name
   --> $DIR/from_form.rs:36:5
@@ -107,7 +107,7 @@ error: [note] error occurred while deriving `FromForm`
 32 | #[derive(FromForm)]
    |          ^^^^^^^^
    |
-   = note: this error originates in a derive macro (in Nightly builds, run with -Z macro-backtrace for more info)
+   = note: this error originates in the derive macro `FromForm` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: field name conflicts with previous name
   --> $DIR/from_form.rs:43:20
@@ -133,7 +133,7 @@ error: [note] error occurred while deriving `FromForm`
 39 | #[derive(FromForm)]
    |          ^^^^^^^^
    |
-   = note: this error originates in a derive macro (in Nightly builds, run with -Z macro-backtrace for more info)
+   = note: this error originates in the derive macro `FromForm` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: field name conflicts with previous name
   --> $DIR/from_form.rs:50:20
@@ -159,7 +159,7 @@ error: [note] error occurred while deriving `FromForm`
 47 | #[derive(FromForm)]
    |          ^^^^^^^^
    |
-   = note: this error originates in a derive macro (in Nightly builds, run with -Z macro-backtrace for more info)
+   = note: this error originates in the derive macro `FromForm` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: unexpected attribute parameter: `field`
   --> $DIR/from_form.rs:56:28
@@ -173,7 +173,7 @@ error: [note] error occurred while deriving `FromForm`
 54 | #[derive(FromForm)]
    |          ^^^^^^^^
    |
-   = note: this error originates in a derive macro (in Nightly builds, run with -Z macro-backtrace for more info)
+   = note: this error originates in the derive macro `FromForm` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: expected list `#[field(..)]`, found bare path "field"
   --> $DIR/from_form.rs:62:7
@@ -187,7 +187,7 @@ error: [note] error occurred while deriving `FromForm`
 60 | #[derive(FromForm)]
    |          ^^^^^^^^
    |
-   = note: this error originates in a derive macro (in Nightly builds, run with -Z macro-backtrace for more info)
+   = note: this error originates in the derive macro `FromForm` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: expected key/value `key = value`
   --> $DIR/from_form.rs:68:13
@@ -201,7 +201,7 @@ error: [note] error occurred while deriving `FromForm`
 66 | #[derive(FromForm)]
    |          ^^^^^^^^
    |
-   = note: this error originates in a derive macro (in Nightly builds, run with -Z macro-backtrace for more info)
+   = note: this error originates in the derive macro `FromForm` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: expected key/value `key = value`
   --> $DIR/from_form.rs:74:13
@@ -215,7 +215,7 @@ error: [note] error occurred while deriving `FromForm`
 72 | #[derive(FromForm)]
    |          ^^^^^^^^
    |
-   = note: this error originates in a derive macro (in Nightly builds, run with -Z macro-backtrace for more info)
+   = note: this error originates in the derive macro `FromForm` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: unexpected attribute parameter: `beep`
   --> $DIR/from_form.rs:80:13
@@ -229,7 +229,7 @@ error: [note] error occurred while deriving `FromForm`
 78 | #[derive(FromForm)]
    |          ^^^^^^^^
    |
-   = note: this error originates in a derive macro (in Nightly builds, run with -Z macro-backtrace for more info)
+   = note: this error originates in the derive macro `FromForm` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: field has conflicting names
   --> $DIR/from_form.rs:86:5
@@ -255,7 +255,7 @@ error: [note] error occurred while deriving `FromForm`
 84 | #[derive(FromForm)]
    |          ^^^^^^^^
    |
-   = note: this error originates in a derive macro (in Nightly builds, run with -Z macro-backtrace for more info)
+   = note: this error originates in the derive macro `FromForm` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: expected list `#[attr(..)]`, found bare boolean literal
   --> $DIR/from_form.rs:93:20
@@ -269,7 +269,7 @@ error: [note] error occurred while deriving `FromForm`
 91 | #[derive(FromForm)]
    |          ^^^^^^^^
    |
-   = note: this error originates in a derive macro (in Nightly builds, run with -Z macro-backtrace for more info)
+   = note: this error originates in the derive macro `FromForm` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: expected expression, found bare path "name"
   --> $DIR/from_form.rs:99:13
@@ -283,7 +283,7 @@ error: [note] error occurred while deriving `FromForm`
 97 | #[derive(FromForm)]
    |          ^^^^^^^^
    |
-   = note: this error originates in a derive macro (in Nightly builds, run with -Z macro-backtrace for more info)
+   = note: this error originates in the derive macro `FromForm` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: expected list `#[attr(..)]`, found bare integer literal
    --> $DIR/from_form.rs:105:20
@@ -297,7 +297,7 @@ error: [note] error occurred while deriving `FromForm`
 103 | #[derive(FromForm)]
     |          ^^^^^^^^
     |
-    = note: this error originates in a derive macro (in Nightly builds, run with -Z macro-backtrace for more info)
+    = note: this error originates in the derive macro `FromForm` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: invalid form field name
   --- help: field name cannot be `isindex` or contain '&', '=', '?', '.', '[', ']'
@@ -312,7 +312,7 @@ error: [note] error occurred while deriving `FromForm`
 109 | #[derive(FromForm)]
     |          ^^^^^^^^
     |
-    = note: this error originates in a derive macro (in Nightly builds, run with -Z macro-backtrace for more info)
+    = note: this error originates in the derive macro `FromForm` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: invalid form field name
   --- help: field name cannot be `isindex` or contain '&', '=', '?', '.', '[', ']'
@@ -327,7 +327,7 @@ error: [note] error occurred while deriving `FromForm`
 115 | #[derive(FromForm)]
     |          ^^^^^^^^
     |
-    = note: this error originates in a derive macro (in Nightly builds, run with -Z macro-backtrace for more info)
+    = note: this error originates in the derive macro `FromForm` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: invalid form field name
   --- help: field name cannot be `isindex` or contain '&', '=', '?', '.', '[', ']'
@@ -342,7 +342,7 @@ error: [note] error occurred while deriving `FromForm`
 121 | #[derive(FromForm)]
     |          ^^^^^^^^
     |
-    = note: this error originates in a derive macro (in Nightly builds, run with -Z macro-backtrace for more info)
+    = note: this error originates in the derive macro `FromForm` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: invalid form field name
   --- help: field name cannot be `isindex` or contain '&', '=', '?', '.', '[', ']'
@@ -357,7 +357,7 @@ error: [note] error occurred while deriving `FromForm`
 127 | #[derive(FromForm)]
     |          ^^^^^^^^
     |
-    = note: this error originates in a derive macro (in Nightly builds, run with -Z macro-backtrace for more info)
+    = note: this error originates in the derive macro `FromForm` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: invalid form field name
   --- help: field name cannot be `isindex` or contain '&', '=', '?', '.', '[', ']'
@@ -372,7 +372,7 @@ error: [note] error occurred while deriving `FromForm`
 133 | #[derive(FromForm)]
     |          ^^^^^^^^
     |
-    = note: this error originates in a derive macro (in Nightly builds, run with -Z macro-backtrace for more info)
+    = note: this error originates in the derive macro `FromForm` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: invalid form field name
   --- help: field name cannot be `isindex` or contain '&', '=', '?', '.', '[', ']'
@@ -387,7 +387,7 @@ error: [note] error occurred while deriving `FromForm`
 139 | #[derive(FromForm)]
     |          ^^^^^^^^
     |
-    = note: this error originates in a derive macro (in Nightly builds, run with -Z macro-backtrace for more info)
+    = note: this error originates in the derive macro `FromForm` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: duplicate attribute parameter: default
    --> $DIR/from_form.rs:177:26
@@ -401,7 +401,7 @@ error: [note] error occurred while deriving `FromForm`
 175 | #[derive(FromForm)]
     |          ^^^^^^^^
     |
-    = note: this error originates in a derive macro (in Nightly builds, run with -Z macro-backtrace for more info)
+    = note: this error originates in the derive macro `FromForm` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: duplicate default field expression
   --- help: at most one `default` or `default_with` is allowed
@@ -416,7 +416,7 @@ error: [note] error occurred while deriving `FromForm`
 181 | #[derive(FromForm)]
     |          ^^^^^^^^
     |
-    = note: this error originates in a derive macro (in Nightly builds, run with -Z macro-backtrace for more info)
+    = note: this error originates in the derive macro `FromForm` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: duplicate default expressions
   --- help: only one of `default` or `default_with` must be used
@@ -437,7 +437,7 @@ error: [note] error occurred while deriving `FromForm`
 188 | #[derive(FromForm)]
     |          ^^^^^^^^
     |
-    = note: this error originates in a derive macro (in Nightly builds, run with -Z macro-backtrace for more info)
+    = note: this error originates in the derive macro `FromForm` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: duplicate default expressions
   --- help: only one of `default` or `default_with` must be used
@@ -458,7 +458,7 @@ error: [note] error occurred while deriving `FromForm`
 194 | #[derive(FromForm)]
     |          ^^^^^^^^
     |
-    = note: this error originates in a derive macro (in Nightly builds, run with -Z macro-backtrace for more info)
+    = note: this error originates in the derive macro `FromForm` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error[E0425]: cannot find function `unknown` in this scope
    --> $DIR/from_form.rs:153:24

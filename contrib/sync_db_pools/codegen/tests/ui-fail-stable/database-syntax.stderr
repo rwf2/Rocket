@@ -4,7 +4,7 @@ error: unexpected end of input, expected string literal
 6 | #[database]
   | ^^^^^^^^^^^
   |
-  = note: this error originates in an attribute macro (in Nightly builds, run with -Z macro-backtrace for more info)
+  = note: this error originates in the attribute macro `database` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: expected string literal
  --> $DIR/database-syntax.rs:9:12

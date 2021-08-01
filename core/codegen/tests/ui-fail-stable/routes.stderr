@@ -16,4 +16,4 @@ error: unexpected end of input, expected identifier
 7 |     let _ = routes![a::];
   |             ^^^^^^^^^^^^
   |
-  = note: this error originates in a macro (in Nightly builds, run with -Z macro-backtrace for more info)
+  = note: this error originates in the macro `routes` (in Nightly builds, run with -Z macro-backtrace for more info)

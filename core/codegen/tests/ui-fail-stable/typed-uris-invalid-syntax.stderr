@@ -88,7 +88,7 @@ error: expected at least 1 argument, found none
 26 |     uri!();
    |     ^^^^^^^
    |
-   = note: this error originates in a macro (in Nightly builds, run with -Z macro-backtrace for more info)
+   = note: this error originates in the macro `uri` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: unexpected token
   --> $DIR/typed-uris-invalid-syntax.rs:27:16

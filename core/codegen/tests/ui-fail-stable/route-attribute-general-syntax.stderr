@@ -4,7 +4,7 @@ error: missing expected parameter: `uri`
 4 | #[get()]
   | ^^^^^^^^
   |
-  = note: this error originates in an attribute macro (in Nightly builds, run with -Z macro-backtrace for more info)
+  = note: this error originates in the attribute macro `get` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: expected `fn`
   --- help: #[get] can only be used on functions

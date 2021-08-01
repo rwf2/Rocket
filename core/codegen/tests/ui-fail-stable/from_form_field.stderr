@@ -10,7 +10,7 @@ error: [note] error occurred while deriving `FromFormField`
 3 | #[derive(FromFormField)]
   |          ^^^^^^^^^^^^^
   |
-  = note: this error originates in a derive macro (in Nightly builds, run with -Z macro-backtrace for more info)
+  = note: this error originates in the derive macro `FromFormField` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: tuple structs are not supported
  --> $DIR/from_form_field.rs:7:1
@@ -24,7 +24,7 @@ error: [note] error occurred while deriving `FromFormField`
 6 | #[derive(FromFormField)]
   |          ^^^^^^^^^^^^^
   |
-  = note: this error originates in a derive macro (in Nightly builds, run with -Z macro-backtrace for more info)
+  = note: this error originates in the derive macro `FromFormField` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: named structs are not supported
   --> $DIR/from_form_field.rs:10:1
@@ -38,7 +38,7 @@ error: [note] error occurred while deriving `FromFormField`
 9 | #[derive(FromFormField)]
   |          ^^^^^^^^^^^^^
   |
-  = note: this error originates in a derive macro (in Nightly builds, run with -Z macro-backtrace for more info)
+  = note: this error originates in the derive macro `FromFormField` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: variants cannot have fields
   --> $DIR/from_form_field.rs:16:6
@@ -52,7 +52,7 @@ error: [note] error occurred while deriving `FromFormField`
 14 | #[derive(FromFormField)]
    |          ^^^^^^^^^^^^^
    |
-   = note: this error originates in a derive macro (in Nightly builds, run with -Z macro-backtrace for more info)
+   = note: this error originates in the derive macro `FromFormField` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: enum must have at least one variant
   --> $DIR/from_form_field.rs:20:1
@@ -66,7 +66,7 @@ error: [note] error occurred while deriving `FromFormField`
 19 | #[derive(FromFormField)]
    |          ^^^^^^^^^^^^^
    |
-   = note: this error originates in a derive macro (in Nightly builds, run with -Z macro-backtrace for more info)
+   = note: this error originates in the derive macro `FromFormField` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: type generics are not supported
   --> $DIR/from_form_field.rs:23:11
@@ -80,7 +80,7 @@ error: [note] error occurred while deriving `FromFormField`
 22 | #[derive(FromFormField)]
    |          ^^^^^^^^^^^^^
    |
-   = note: this error originates in a derive macro (in Nightly builds, run with -Z macro-backtrace for more info)
+   = note: this error originates in the derive macro `FromFormField` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: invalid value: expected string literal
   --> $DIR/from_form_field.rs:29:21
@@ -94,7 +94,7 @@ error: [note] error occurred while deriving `FromFormField`
 27 | #[derive(FromFormField)]
    |          ^^^^^^^^^^^^^
    |
-   = note: this error originates in a derive macro (in Nightly builds, run with -Z macro-backtrace for more info)
+   = note: this error originates in the derive macro `FromFormField` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: expected literal, found bare path "value"
   --> $DIR/from_form_field.rs:35:13
@@ -108,7 +108,7 @@ error: [note] error occurred while deriving `FromFormField`
 33 | #[derive(FromFormField)]
    |          ^^^^^^^^^^^^^
    |
-   = note: this error originates in a derive macro (in Nightly builds, run with -Z macro-backtrace for more info)
+   = note: this error originates in the derive macro `FromFormField` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: variant has conflicting values
   --> $DIR/from_form_field.rs:41:5
@@ -134,7 +134,7 @@ error: [note] error occurred while deriving `FromFormField`
 39 | #[derive(FromFormField)]
    |          ^^^^^^^^^^^^^
    |
-   = note: this error originates in a derive macro (in Nightly builds, run with -Z macro-backtrace for more info)
+   = note: this error originates in the derive macro `FromFormField` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: field value conflicts with previous value
   --> $DIR/from_form_field.rs:50:21
@@ -160,7 +160,7 @@ error: [note] error occurred while deriving `FromFormField`
 46 | #[derive(FromFormField)]
    |          ^^^^^^^^^^^^^
    |
-   = note: this error originates in a derive macro (in Nightly builds, run with -Z macro-backtrace for more info)
+   = note: this error originates in the derive macro `FromFormField` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: field value conflicts with previous value
   --> $DIR/from_form_field.rs:57:21
@@ -186,7 +186,7 @@ error: [note] error occurred while deriving `FromFormField`
 54 | #[derive(FromFormField)]
    |          ^^^^^^^^^^^^^
    |
-   = note: this error originates in a derive macro (in Nightly builds, run with -Z macro-backtrace for more info)
+   = note: this error originates in the derive macro `FromFormField` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: variant has conflicting values
   --> $DIR/from_form_field.rs:80:5
@@ -212,7 +212,7 @@ error: [note] error occurred while deriving `FromFormField`
 78 | #[derive(FromFormField)]
    |          ^^^^^^^^^^^^^
    |
-   = note: this error originates in a derive macro (in Nightly builds, run with -Z macro-backtrace for more info)
+   = note: this error originates in the derive macro `FromFormField` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: field has conflicting names
   --> $DIR/from_form_field.rs:87:5
@@ -238,7 +238,7 @@ error: [note] error occurred while deriving `FromForm`
 85 | #[derive(FromForm)]
    |          ^^^^^^^^
    |
-   = note: this error originates in a derive macro (in Nightly builds, run with -Z macro-backtrace for more info)
+   = note: this error originates in the derive macro `FromForm` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: field name conflicts with previous name
   --> $DIR/from_form_field.rs:96:20
@@ -264,7 +264,7 @@ error: [note] error occurred while deriving `FromForm`
 92 | #[derive(FromForm)]
    |          ^^^^^^^^
    |
-   = note: this error originates in a derive macro (in Nightly builds, run with -Z macro-backtrace for more info)
+   = note: this error originates in the derive macro `FromForm` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: field name conflicts with previous name
    --> $DIR/from_form_field.rs:104:5
@@ -290,7 +290,7 @@ error: [note] error occurred while deriving `FromForm`
 100 | #[derive(FromForm)]
     |          ^^^^^^^^
     |
-    = note: this error originates in a derive macro (in Nightly builds, run with -Z macro-backtrace for more info)
+    = note: this error originates in the derive macro `FromForm` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: field name conflicts with previous name
    --> $DIR/from_form_field.rs:111:5
@@ -316,4 +316,4 @@ error: [note] error occurred while deriving `FromForm`
 107 | #[derive(FromForm)]
     |          ^^^^^^^^
     |
-    = note: this error originates in a derive macro (in Nightly builds, run with -Z macro-backtrace for more info)
+    = note: this error originates in the derive macro `FromForm` (in Nightly builds, run with -Z macro-backtrace for more info)

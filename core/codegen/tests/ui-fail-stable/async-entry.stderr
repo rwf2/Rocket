@@ -4,7 +4,7 @@ error: attribute can only be applied to `async` functions
 4 |     #[rocket::main]
   |     ^^^^^^^^^^^^^^^
   |
-  = note: this error originates in an attribute macro (in Nightly builds, run with -Z macro-backtrace for more info)
+  = note: this error originates in the attribute macro `rocket::main` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: [note] this function must be `async`
  --> $DIR/async-entry.rs:5:5
@@ -18,7 +18,7 @@ error: attribute can only be applied to `async` functions
 16 |     #[rocket::main]
    |     ^^^^^^^^^^^^^^^
    |
-   = note: this error originates in an attribute macro (in Nightly builds, run with -Z macro-backtrace for more info)
+   = note: this error originates in the attribute macro `rocket::main` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: [note] this function must be `async`
   --> $DIR/async-entry.rs:17:5
@@ -33,7 +33,7 @@ error: attribute cannot be applied to `main` function
 49 |     #[rocket::launch]
    |     ^^^^^^^^^^^^^^^^^
    |
-   = note: this error originates in an attribute macro (in Nightly builds, run with -Z macro-backtrace for more info)
+   = note: this error originates in the attribute macro `rocket::launch` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: [note] this function cannot be `main`
   --> $DIR/async-entry.rs:50:8
@@ -47,7 +47,7 @@ error: attribute can only be applied to functions that return a value
 56 |     #[rocket::launch]
    |     ^^^^^^^^^^^^^^^^^
    |
-   = note: this error originates in an attribute macro (in Nightly builds, run with -Z macro-backtrace for more info)
+   = note: this error originates in the attribute macro `rocket::launch` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: [note] this function must return a value
   --> $DIR/async-entry.rs:57:5
@@ -61,7 +61,7 @@ error: attribute can only be applied to functions that return a value
 64 |     #[rocket::launch]
    |     ^^^^^^^^^^^^^^^^^
    |
-   = note: this error originates in an attribute macro (in Nightly builds, run with -Z macro-backtrace for more info)
+   = note: this error originates in the attribute macro `rocket::launch` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: [note] this function must return a value
   --> $DIR/async-entry.rs:65:5
@@ -76,7 +76,7 @@ error: attribute cannot be applied to `main` function
 79 |     #[rocket::launch]
    |     ^^^^^^^^^^^^^^^^^
    |
-   = note: this error originates in an attribute macro (in Nightly builds, run with -Z macro-backtrace for more info)
+   = note: this error originates in the attribute macro `rocket::launch` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: [note] this function cannot be `main`
   --> $DIR/async-entry.rs:80:8
@@ -91,7 +91,7 @@ error: attribute cannot be applied to `main` function
 87 |     #[rocket::launch]
    |     ^^^^^^^^^^^^^^^^^
    |
-   = note: this error originates in an attribute macro (in Nightly builds, run with -Z macro-backtrace for more info)
+   = note: this error originates in the attribute macro `rocket::launch` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: [note] this function cannot be `main`
   --> $DIR/async-entry.rs:88:14

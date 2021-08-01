@@ -10,7 +10,7 @@ error: [note] error occurred while deriving `Database`
 3 | #[derive(Database)]
   |          ^^^^^^^^
   |
-  = note: this error originates in a derive macro (in Nightly builds, run with -Z macro-backtrace for more info)
+  = note: this error originates in the derive macro `Database` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: expected key/value `key = value`
  --> $DIR/database-syntax.rs:8:25
@@ -24,7 +24,7 @@ error: [note] error occurred while deriving `Database`
 7 | #[derive(Database)]
   |          ^^^^^^^^
   |
-  = note: this error originates in a derive macro (in Nightly builds, run with -Z macro-backtrace for more info)
+  = note: this error originates in the derive macro `Database` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: unexpected attribute parameter: `name`
   --> $DIR/database-syntax.rs:12:25
@@ -38,7 +38,7 @@ error: [note] error occurred while deriving `Database`
 11 | #[derive(Database)]
    |          ^^^^^^^^
    |
-   = note: this error originates in a derive macro (in Nightly builds, run with -Z macro-backtrace for more info)
+   = note: this error originates in the derive macro `Database` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: enums are not supported
   --> $DIR/database-syntax.rs:16:1
@@ -52,7 +52,7 @@ error: [note] error occurred while deriving `Database`
 15 | #[derive(Database)]
    |          ^^^^^^^^
    |
-   = note: this error originates in a derive macro (in Nightly builds, run with -Z macro-backtrace for more info)
+   = note: this error originates in the derive macro `Database` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: missing `#[database("name")]` attribute
   --> $DIR/database-syntax.rs:20:1
@@ -66,7 +66,7 @@ error: [note] error occurred while deriving `Database`
 19 | #[derive(Database)]
    |          ^^^^^^^^
    |
-   = note: this error originates in a derive macro (in Nightly builds, run with -Z macro-backtrace for more info)
+   = note: this error originates in the derive macro `Database` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: struct must have exactly one unnamed field
   --> $DIR/database-syntax.rs:23:1
@@ -80,7 +80,7 @@ error: [note] error occurred while deriving `Database`
 22 | #[derive(Database)]
    |          ^^^^^^^^
    |
-   = note: this error originates in a derive macro (in Nightly builds, run with -Z macro-backtrace for more info)
+   = note: this error originates in the derive macro `Database` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: struct must have exactly one unnamed field
   --> $DIR/database-syntax.rs:27:1
@@ -94,7 +94,7 @@ error: [note] error occurred while deriving `Database`
 26 | #[derive(Database)]
    |          ^^^^^^^^
    |
-   = note: this error originates in a derive macro (in Nightly builds, run with -Z macro-backtrace for more info)
+   = note: this error originates in the derive macro `Database` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: named structs are not supported
   --> $DIR/database-syntax.rs:31:1
@@ -108,4 +108,4 @@ error: [note] error occurred while deriving `Database`
 30 | #[derive(Database)]
    |          ^^^^^^^^
    |
-   = note: this error originates in a derive macro (in Nightly builds, run with -Z macro-backtrace for more info)
+   = note: this error originates in the derive macro `Database` (in Nightly builds, run with -Z macro-backtrace for more info)
