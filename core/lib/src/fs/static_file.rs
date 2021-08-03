@@ -391,9 +391,10 @@ impl StaticFile {
         // do range
         if let Some(ref range) = self.range {
             let mut builder = Response::build();
-            let content_range_header = ContentRangeHeaderValue::from(range);
-            let from = content_range_header.from.unwrap();
-            let length = content_range_header.length.unwrap();
+            let from = range.from.unwrap();
+            let to = range.to.unwrap();
+            let length = to - from + 1;
+            let content_range_header: ContentRangeHeaderValue = (from, to, self.len).into();
             builder.header(content_range_header);
             builder.raw_header(header_names::CONTENT_LENGTH, length.to_string());
 

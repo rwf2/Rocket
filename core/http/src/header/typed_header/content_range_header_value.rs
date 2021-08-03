@@ -51,15 +51,6 @@ impl From<(u64, u64)> for ContentRangeHeaderValue {
     }
 }
 
-impl From<&RangeItemHeaderValue> for ContentRangeHeaderValue {
-    fn from(range: &RangeItemHeaderValue) -> Self {
-        let start = range.from.unwrap();
-        let end = range.to.unwrap();
-        let len = end - start + 1;
-        (start, end, len).into()
-    }
-}
-
 impl ToString for ContentRangeHeaderValue {
     fn to_string(&self) -> String {
         let mut s = String::new();
