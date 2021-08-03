@@ -619,7 +619,11 @@ impl Rocket<Ignite> {
             rkt.fairings.handle_liftoff(&rkt).await;
 
             let proto = rkt.config.tls_enabled().then(|| "https").unwrap_or("http");
-            let addr = format!("{}://{}:{}", proto, rkt.config.address, rkt.config.port);
+            let addr = if rkt.config.address.is_ipv4() {
+                format!("{}://{}:{}", proto, rkt.config.address, rkt.config.port)
+            } else {
+                format!("{}://[{}]:{}", proto, rkt.config.address, rkt.config.port)
+            };
             launch_info!("{}{} {}",
                 Paint::emoji("🚀 "),
                 Paint::default("Rocket has launched from").bold(),
