@@ -1,6 +1,7 @@
 use std::fmt;
 use std::ops::{Deref, DerefMut};
 use std::convert::TryInto;
+use std::net::SocketAddr;
 
 use yansi::Paint;
 use either::Either;
@@ -626,7 +627,8 @@ impl Rocket<Ignite> {
             rkt.fairings.handle_liftoff(&rkt).await;
 
             let proto = rkt.config.tls_enabled().then(|| "https").unwrap_or("http");
-            let addr = format!("{}://{}:{}", proto, rkt.config.address, rkt.config.port);
+            let socket_addr = SocketAddr::new(rkt.config.address, rkt.config.port);
+            let addr = format!("{}://{}", proto, socket_addr);
             launch_info!("{}{} {}",
                 Paint::emoji("🚀 "),
                 Paint::default("Rocket has launched from").bold(),
