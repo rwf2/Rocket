@@ -15,7 +15,7 @@ A clear and concise description of existing functionality and why it is insuffic
 
 **Suggested Changes**
 
-If you have a conrete idea for an improvement, propose it with a clear and concise description.
+If you have a concrete idea for an improvement, propose it with a clear and concise description.
 
 **Alternatives Considered**
 

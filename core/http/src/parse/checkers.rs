@@ -5,9 +5,6 @@ pub fn is_whitespace(&byte: &char) -> bool {
 
 #[inline]
 pub fn is_valid_token(&c: &char) -> bool {
-    match c {
-        '0'..='9' | 'A'..='Z' | '^'..='~' | '#'..='\''
-            | '!' | '*' | '+' | '-' | '.'  => true,
-        _ => false
+     matches!(c, '0'..='9' | 'A'..='Z' | '^'..='~' | '#'..='\''
+            | '!' | '*' | '+' | '-' | '.')
     }
-}
