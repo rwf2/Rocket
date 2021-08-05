@@ -10,6 +10,3 @@ members = [
   "contrib/dyn_templates/",
   "site/tests",
 ]
-
-[patch.crates-io]
-cookie = { path = "../cookie-rs" }
