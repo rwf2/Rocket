@@ -6,6 +6,7 @@ use std::num::{
 };
 
 use time::{Date, Time, PrimitiveDateTime};
+use time::macros::format_description;
 
 use crate::data::Capped;
 use crate::http::uncased::AsUncased;
@@ -358,7 +359,7 @@ impl_with_parse!(
 
 impl<'v> FromFormField<'v> for Date {
     fn from_value(field: ValueField<'v>) -> Result<'v, Self> {
-        let date = Self::parse(field.value, "%F")
+        let date = Self::parse(field.value, &format_description!("[year]-[month]-[day]"))
             .map_err(|e| Box::new(e) as Box<dyn std::error::Error + Send>)?;
 
         Ok(date)
@@ -367,8 +368,8 @@ impl<'v> FromFormField<'v> for Date {
 
 impl<'v> FromFormField<'v> for Time {
     fn from_value(field: ValueField<'v>) -> Result<'v, Self> {
-        let time = Self::parse(field.value, "%T")
-            .or_else(|_| Self::parse(field.value, "%R"))
+        let time = Self::parse(field.value, &format_description!("[hour]:[minute]:[second]"))
+            .or_else(|_| Self::parse(field.value, &format_description!("[hour]:[minute]")))
             .map_err(|e| Box::new(e) as Box<dyn std::error::Error + Send>)?;
 
         Ok(time)
@@ -377,9 +378,13 @@ impl<'v> FromFormField<'v> for Time {
 
 impl<'v> FromFormField<'v> for PrimitiveDateTime {
     fn from_value(field: ValueField<'v>) -> Result<'v, Self> {
-        let dt = Self::parse(field.value, "%FT%T")
-            .or_else(|_| Self::parse(field.value, "%FT%R"))
-            .map_err(|e| Box::new(e) as Box<dyn std::error::Error + Send>)?;
+        let dt = Self::parse(
+            field.value,
+            &format_description!("[year]-[month]-[day]T[hour]:[minute]:[second]")
+        ).or_else(|_| Self::parse(
+            field.value,
+            &format_description!("[year]-[month]-[day]T[hour]:[minute]"))
+        ).map_err(|e| Box::new(e) as Box<dyn std::error::Error + Send>)?;
 
         Ok(dt)
     }

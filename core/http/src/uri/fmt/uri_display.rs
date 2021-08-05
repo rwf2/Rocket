@@ -2,6 +2,8 @@ use std::collections::{BTreeMap, HashMap};
 use std::{fmt, path};
 use std::borrow::Cow;
 
+use time::macros::format_description;
+
 use crate::RawStr;
 use crate::uri::fmt::{Part, Path, Query, Formatter};
 
@@ -370,9 +372,15 @@ use std::net::{SocketAddr, SocketAddrV4, SocketAddrV6};
 
 // Keep in-sync with the 'FromUriParam' impls.
 impl_with_string! {
-    time::Date => |d| d.format("%F"),
-    time::PrimitiveDateTime => |d| d.format("%FT%T"),
-    time::Time => |d| d.format("%T"),
+    time::Date => |d| d.format(
+        &format_description!("[year]-[month]-[day]")
+    ).unwrap(),
+    time::PrimitiveDateTime => |d| d.format(
+        &format_description!("[year]-[month]-[day]T[hour]:[minute]:[second]")
+    ).unwrap(),
+    time::Time => |d| d.format(
+        &format_description!("[hour]:[minute]:[second]")
+    ).unwrap(),
     SocketAddr => |s| s.to_string(),
     SocketAddrV4 => |s| s.to_string(),
     SocketAddrV6 => |s| s.to_string(),
