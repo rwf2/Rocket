@@ -8,6 +8,7 @@ use super::{
 ///
 /// The `RangeHeaderValue` provides support for the Range header as defined in
 /// [RFC 2616](https://tools.ietf.org/html/rfc2616)
+#[derive(Clone)]
 pub struct RangeHeaderValue {
     /// The unit from the header.
     pub unit: Vec<char>,

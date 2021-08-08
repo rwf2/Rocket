@@ -1,6 +1,7 @@
 use super::{header_utilities, header_names, Header};
 
 /// Represents a `Content-Range` response HTTP header.
+#[derive(Clone)]
 pub struct ContentRangeHeaderValue {
     /// The start of the range.
     pub from: Option<u64>,

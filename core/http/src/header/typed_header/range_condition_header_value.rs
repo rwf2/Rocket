@@ -5,6 +5,7 @@ use super::{
 use std::result::Result::Ok;
 
 /// Represents an `If-Range` header value which can either be a date/time or an entity-tag value.
+#[derive(Clone)]
 pub enum RangeConditionHeaderValue {
 
     /// A date value used to initialize the new instance.

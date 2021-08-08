@@ -6,7 +6,7 @@ use std::cmp::Ordering;
 use std::fmt::{Debug, Formatter};
 
 /// Represents `DateTimeOffset` in HTTP header.
-#[derive(Eq)]
+#[derive(Eq, Clone)]
 pub struct DateTimeOffset(DateTime<FixedOffset>);
 
 impl DateTimeOffset {

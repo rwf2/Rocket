@@ -7,7 +7,7 @@ use super::http_rule_parser::{self, HttpParseResult};
 
 
 /// Represents an entity-tag (*etag*) header value.
-#[derive(Debug, Eq, PartialEq)]
+#[derive(Debug, Clone , Eq, PartialEq)]
 pub struct EntityTagHeaderValue {
     tag: Vec<char>,
     is_weak: bool
