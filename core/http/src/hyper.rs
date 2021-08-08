@@ -11,7 +11,7 @@
 pub mod header {
     macro_rules! import_http_headers {
         ($($name:ident),*) => ($(
-            pub use http::header::$name as $name;
+            pub use hyper::header::$name as $name;
         )*)
     }
 

@@ -3,6 +3,8 @@ use std::str::FromStr;
 
 use self::Method::*;
 
+use crate::hyper;
+
 // TODO: Support non-standard methods, here and in codegen?
 
 /// Representation of HTTP methods.
@@ -52,17 +54,17 @@ pub enum Method {
 impl Method {
     /// WARNING: This is unstable! Do not use this method outside of Rocket!
     #[doc(hidden)]
-    pub fn from_hyp(method: &http::method::Method) -> Option<Method> {
+    pub fn from_hyp(method: &hyper::Method) -> Option<Method> {
         match *method {
-            http::method::Method::GET => Some(Get),
-            http::method::Method::PUT => Some(Put),
-            http::method::Method::POST => Some(Post),
-            http::method::Method::DELETE => Some(Delete),
-            http::method::Method::OPTIONS => Some(Options),
-            http::method::Method::HEAD => Some(Head),
-            http::method::Method::TRACE => Some(Trace),
-            http::method::Method::CONNECT => Some(Connect),
-            http::method::Method::PATCH => Some(Patch),
+            hyper::Method::GET => Some(Get),
+            hyper::Method::PUT => Some(Put),
+            hyper::Method::POST => Some(Post),
+            hyper::Method::DELETE => Some(Delete),
+            hyper::Method::OPTIONS => Some(Options),
+            hyper::Method::HEAD => Some(Head),
+            hyper::Method::TRACE => Some(Trace),
+            hyper::Method::CONNECT => Some(Connect),
+            hyper::Method::PATCH => Some(Patch),
             _ => None,
         }
     }
