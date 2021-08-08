@@ -101,7 +101,7 @@ Before Rocket can dispatch requests to a route, the route needs to be _mounted_:
 #     "hello, world!"
 # }
 
-rocket::build().mount("/hello", routes![world]);
+rocket::build().mount("/hello", routes![world])
 ```
 
 The `mount` method takes as input:
@@ -127,7 +127,7 @@ any number of times, and routes can be reused by mount points:
 
 rocket::build()
     .mount("/hello", routes![world])
-    .mount("/hi", routes![world]);
+    .mount("/hi", routes![world])
 ```
 
 By mounting `world` to both `/hello` and `/hi`, requests to `"/hello/world"`
