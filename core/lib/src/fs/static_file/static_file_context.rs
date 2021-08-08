@@ -1,65 +1,32 @@
 
-use std::io;
-use std::path::{Path, PathBuf};
-use std::ops::{Deref, DerefMut};
-
 use enum_flags::EnumFlags;
+
 use crate::{
-    http::{ContentType, Status, Method, TypedHeaders},
-    response::{Responder, Builder},
-    {Request, response, Response},
-    tokio::fs::File,
-    tokio::io::{ AsyncSeek}
+    http::{
+        ContentType,
+        Status,
+        Method,
+        TypedHeaders,
+
+        header_names,
+        RangeItemHeaderValue,
+        RangeHeaderValue,
+        RangeConditionHeaderValue,
+        DateTimeOffset,
+        EntityTagHeaderValue,
+        ContentRangeHeaderValue
+    },
+    response::{Builder, Response},
+    {Request, response}
 };
 
-use std::io::{SeekFrom};
 
-
-use crate::http::{
-    header_names,
-    RangeItemHeaderValue,
-    RangeHeaderValue,
-    RangeConditionHeaderValue,
-    DateTimeOffset,
-    EntityTagHeaderValue,
-    ContentRangeHeaderValue};
-
-
-/// A [`Responder`] that sends a file with a Content-Type based on its name.
-///
-/// # Example
-///
-/// A simple static file server mimicking [`FileServer`]:
-///
-/// ```rust
-/// # use rocket::get;
-/// use std::path::{PathBuf, Path};
-///
-/// use rocket::fs::{StaticFile, relative};
-///
-/// #[get("/file/<path..>")]
-/// pub async fn second(path: PathBuf) -> Option<StaticFile> {
-///     let mut path = Path::new(relative!("static")).join(path);
-///     if path.is_dir() {
-///         path.push("index.html");
-///     }
-///
-///     StaticFile::open(path).await.ok()
-/// }
-/// ```
-///
-/// Always prefer to use [`FileServer`] which has more functionality and a
-/// pithier API.
-///
-/// [`FileServer`]: crate::fs::FileServer
-#[derive(Debug)]
-pub struct StaticFile {
-    path: PathBuf,
-    file: File,
-    content_type: Option<ContentType>,
+pub struct StaticFileContext {
     len: u64,
-    last_modified: DateTimeOffset,
+    content_type: Option<ContentType>,
     etag: EntityTagHeaderValue,
+    last_modified: DateTimeOffset,
+
     if_match_state: PreconditionState,
     if_none_match_state: PreconditionState,
     if_modified_since_state: PreconditionState,
@@ -68,135 +35,23 @@ pub struct StaticFile {
     request_type: RequestType
 }
 
-impl StaticFile {
-    /// Attempts to open a file in read-only mode.
-    ///
-    /// # Errors
-    ///
-    /// This function will return an error if path does not already exist. Other
-    /// errors may also be returned according to
-    /// [`OpenOptions::open()`](std::fs::OpenOptions::open()).
-    ///
-    /// # Example
-    ///
-    /// ```rust
-    /// # use rocket::get;
-    /// use rocket::fs::NamedFile;
-    ///
-    /// #[get("/")]
-    /// async fn index() -> Option<NamedFile> {
-    ///     NamedFile::open("index.html").await.ok()
-    /// }
-    /// ```
-    pub async fn open<P: AsRef<Path>>(path: P) -> io::Result<StaticFile> {
-        // FIXME: Grab the file size here and prohibit `seek`ing later (or else
-        // the file's effective size may change), to save on the cost of doing
-        // all of those `seek`s to determine the file size. But, what happens if
-        // the file gets changed between now and then?
-        let path = path.as_ref();
-        let file = File::open(path).await?;
-        let metadata = file.metadata().await?;
-        let len = metadata.len();
-        let modified: DateTimeOffset = metadata.modified().unwrap().into();
-        let etag_hash = modified.timestamp_millis() ^ len as i64;
-        let etag_hash = format!("{:x}", etag_hash);
-        let content_type = path.extension()
-            .map(|ext| ContentType::from_extension(&ext.to_string_lossy()))
-            .unwrap_or_default();
-
-        Ok(StaticFile {
-            path: path.to_path_buf(),
-            file,
-            content_type,
-            len,
-            etag: etag_hash.into(),
-            last_modified: modified,
+impl From<(u64, Option<ContentType>, EntityTagHeaderValue, DateTimeOffset)> for StaticFileContext {
+    fn from((len, content_type, etag, last_modified): (u64, Option<ContentType>, EntityTagHeaderValue, DateTimeOffset)) -> Self {
+        Self {
+            len, content_type, etag, last_modified,
             if_match_state: PreconditionState::Unspecified,
             if_none_match_state: PreconditionState::Unspecified,
             if_modified_since_state: PreconditionState::Unspecified,
             if_unmodified_since_state: PreconditionState::Unspecified,
             range: None,
             request_type: RequestType::Unspecified
-        })
+        }
     }
+}
 
-    /// Retrieve the underlying `File`.
-    ///
-    /// # Example
-    ///
-    /// ```rust
-    /// use rocket::fs::NamedFile;
-    ///
-    /// # async fn f() -> std::io::Result<()> {
-    /// let named_file = NamedFile::open("index.html").await?;
-    /// let file = named_file.file();
-    /// # Ok(())
-    /// # }
-    /// ```
-    #[inline(always)]
-    pub fn file(&self) -> &File {
-        &self.file
-    }
-
-    /// Retrieve a mutable borrow to the underlying `File`.
-    ///
-    /// # Example
-    ///
-    /// ```rust
-    /// use rocket::fs::NamedFile;
-    ///
-    /// # async fn f() -> std::io::Result<()> {
-    /// let mut named_file = NamedFile::open("index.html").await?;
-    /// let file = named_file.file_mut();
-    /// # Ok(())
-    /// # }
-    /// ```
-    #[inline(always)]
-    pub fn file_mut(&mut self) -> &mut File {
-        &mut self.file
-    }
-
-    /// Take the underlying `File`.
-    ///
-    /// # Example
-    ///
-    /// ```rust
-    /// use rocket::fs::NamedFile;
-    ///
-    /// # async fn f() -> std::io::Result<()> {
-    /// let named_file = NamedFile::open("index.html").await?;
-    /// let file = named_file.take_file();
-    /// # Ok(())
-    /// # }
-    /// ```
-    #[inline(always)]
-    pub fn take_file(self) -> File {
-        self.file
-    }
-
-    /// Retrieve the path of this file.
-    ///
-    /// # Examples
-    ///
-    /// ```rust
-    /// use rocket::fs::NamedFile;
-    ///
-    /// # async fn demo_path() -> std::io::Result<()> {
-    /// let file = NamedFile::open("foo.txt").await?;
-    /// assert_eq!(file.path().as_os_str(), "foo.txt");
-    /// # Ok(())
-    /// # }
-    /// ```
-    #[inline(always)]
-    pub fn path(&self) -> &Path {
-        self.path.as_path()
-    }
-
-    fn is_range_request(&self) -> bool {
-        self.request_type.contains(RequestType::IsRange)
-    }
-
-    fn comprehend_request_headers(&mut self, req: &Request<'_>) {
+impl StaticFileContext {
+    /// Comprehend the request headers.
+    pub fn comprehend_request_headers(&mut self, req: &Request<'_>) {
         // ComputeIfMatch
         self.compute_if_match(req);
 
@@ -211,16 +66,49 @@ impl StaticFile {
         self.compute_if_range(req);
     }
 
-    fn get_precondition_state(&self) -> PreconditionState {
+    /// proceed the response
+    pub fn proceed<'r, F: FnOnce((&mut Builder, u64, u64))>(self, req: &'r Request<'_>, send: F) -> response::Result<'static> {
+        use PreconditionState::*;
+        match self.get_precondition_state() {
+            Unspecified | ShouldProcess=> {
+                if req.method() == Method::Head {
+                    Ok(Response::build()
+                        .status(Status::Ok)
+                        .finalize())
+                } else if self.is_range_request() {
+                    self.send_range(req, send)
+                } else {
+                    self.send(req, send)
+                }
+            }
+            NotModified => {
+                Ok(Response::build()
+                    .status(Status::NotModified)
+                    .finalize())
+            }
+            PreconditionFailed => {
+                Ok(Response::build()
+                    .status(Status::PreconditionFailed)
+                    .finalize())
+            }
+        }
+    }
+
+    pub fn get_precondition_state(&self) -> PreconditionState {
         let mut max = PreconditionState::Unspecified;
-        for i in [
+        let precondition_states = [
             self.if_match_state, self.if_none_match_state,
-            self.if_modified_since_state, self.if_unmodified_since_state] {
+            self.if_modified_since_state, self.if_unmodified_since_state];
+        for i in  precondition_states {
             if i > max {
                 max = i;
             }
         }
         max
+    }
+
+    fn is_range_request(&self) -> bool {
+        self.request_type.contains(RequestType::IsRange)
     }
 
     fn compute_if_match(&mut self, req: &Request<'_>) {
@@ -285,12 +173,12 @@ impl StaticFile {
             match if_range_header {
                 RangeConditionHeaderValue::LastModified(last_modified) => {
                     if self.last_modified > last_modified {
-                        self.request_type = self.request_type - RequestType::IsRange;
+                        self.request_type -= RequestType::IsRange;
                     }
                 }
                 RangeConditionHeaderValue::EntityTag(etag) => {
                     if !etag.compare(&self.etag, true) {
-                        self.request_type = self.request_type - RequestType::IsRange;
+                        self.request_type -= RequestType::IsRange;
                     }
                 }
             }
@@ -320,7 +208,7 @@ impl StaticFile {
             return (false, None);
         }
 
-        if raw_range_header.len() > 1 || raw_range_header.get(0).unwrap().find(",").is_some() {
+        if raw_range_header.len() > 1 || raw_range_header.get(0).unwrap().contains(',') {
             // Multiple ranges are not supported.
 
             // The spec allows for multiple ranges but we choose not to support them because the client may request
@@ -355,7 +243,7 @@ impl StaticFile {
         (range.is_some(), range)
     }
 
-    fn apply_response_headers(&mut self, builder: &mut Builder<'_>, status: Status) {
+    fn apply_response_headers(&self, builder: &mut Builder<'_>, status: Status) {
         builder.status(status);
         if status.code < 400 {
 
@@ -379,15 +267,19 @@ impl StaticFile {
         }
     }
 
-    fn send<'r>(self, req: &'r Request<'_>) -> response::Result<'static> {
-        let mut response = self.file.respond_to(req)?;
-        if let Some(ct) = self.content_type {
-            response.set_header(ct);
-        }
-        Ok(response)
+    fn send<'r,  F: FnOnce((&mut Builder, u64, u64))>(self, _req: &'r Request<'_>, send: F) -> response::Result<'static> {
+        let mut builder = Response::build();
+
+        self.apply_response_headers(&mut builder, Status::Ok);
+
+
+        let len = self.len;
+        send((&mut builder, 0, len));
+
+        Ok(builder.finalize())
     }
 
-    fn send_range<'r>(mut self, _req: &'r Request<'_>) -> response::Result<'static> {
+    fn send_range<'r, F: FnOnce((&mut Builder, u64, u64))>(self, _req: &'r Request<'_>, send: F) -> response::Result<'static> {
         // do range
         if let Some(ref range) = self.range {
             let mut builder = Response::build();
@@ -400,13 +292,7 @@ impl StaticFile {
 
             self.apply_response_headers(&mut builder, Status::PartialContent);
 
-            if from > 0 {
-                std::pin::Pin::new(&mut self.file)
-                    .start_seek(SeekFrom::Start(from))
-                    .unwrap();
-            }
-
-            builder.sized_body(length as usize, self.file);
+            send((&mut builder, from, length));
 
             Ok(builder.finalize())
         } else {
@@ -421,63 +307,13 @@ impl StaticFile {
             Ok(builder.finalize())
         }
     }
-}
 
-/// Streams the named file to the client. Sets or overrides the Content-Type in
-/// the response according to the file's extension if the extension is
-/// recognized. See [`ContentType::from_extension()`] for more information. If
-/// you would like to stream a file with a different Content-Type than that
-/// implied by its extension, use a [`File`] directly.
-impl<'r> Responder<'r, 'static> for StaticFile {
-    fn respond_to(mut self, req: &'r Request<'_>) -> response::Result<'static> {
-        use PreconditionState::*;
-        self.comprehend_request_headers(req);
-        match self.get_precondition_state() {
-            Unspecified | ShouldProcess=> {
-                if req.method() == Method::Head {
-                    Ok(Response::build()
-                        .status(Status::Ok)
-                        .finalize())
-                } else{
-                    if self.is_range_request() {
-                        self.send_range(req)
-                    } else {
-                        self.send(req)
-                    }
-                }
-            }
-            NotModified => {
-                Ok(Response::build()
-                        .status(Status::NotModified)
-                        .finalize())
-            }
-            PreconditionFailed => {
-                Ok(Response::build()
-                    .status(Status::PreconditionFailed)
-                    .finalize())
-            }
-        }
-    }
-}
-
-impl Deref for StaticFile {
-    type Target = File;
-
-    fn deref(&self) -> &File {
-        &self.file
-    }
-}
-
-impl DerefMut for StaticFile {
-    fn deref_mut(&mut self) -> &mut File {
-        &mut self.file
-    }
 }
 
 
 #[repr(u8)]
 #[derive(Copy, Clone, Eq, PartialEq, Debug, Ord, PartialOrd)]
-enum PreconditionState
+pub enum PreconditionState
 {
     Unspecified,
     NotModified,
