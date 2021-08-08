@@ -154,6 +154,7 @@ macro_rules! parse_flexible {
         $(* $short - @{"`ContentType::"}! @[$name]! @{"`"} @nl)*
         @nl
     ];
+        ///
         /// For regular parsing, use the
         /// [`ContentType::from_str()`](#impl-FromStr) method.
         ///
