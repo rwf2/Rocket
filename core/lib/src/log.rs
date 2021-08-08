@@ -79,7 +79,7 @@ impl log::Log for RocketLogger {
         let max = log::max_level();
         let from = |path| record.module_path().map_or(false, |m| m.starts_with(path));
         let debug_only = from("hyper") || from("rustls") || from("r2d2");
-        if LogLevel::Debug.to_level_filter() > max && debug_only {
+        if log::LevelFilter::from(LogLevel::Debug) > max && debug_only {
             return;
         }
 
@@ -153,7 +153,18 @@ pub(crate) fn init(config: &crate::Config) {
             Paint::disable();
         }
 
-        log::set_max_level(config.log_level.to_level_filter());
+        log::set_max_level(config.log_level.into());
+    }
+}
+
+impl From<LogLevel> for log::LevelFilter {
+    fn from(level: LogLevel) -> Self {
+        match level {
+            LogLevel::Critical => log::LevelFilter::Warn,
+            LogLevel::Normal => log::LevelFilter::Info,
+            LogLevel::Debug => log::LevelFilter::Trace,
+            LogLevel::Off => log::LevelFilter::Off
+        }
     }
 }
 
@@ -164,15 +175,6 @@ impl LogLevel {
             LogLevel::Normal => "normal",
             LogLevel::Debug => "debug",
             LogLevel::Off => "off",
-        }
-    }
-
-    fn to_level_filter(self) -> log::LevelFilter {
-        match self {
-            LogLevel::Critical => log::LevelFilter::Warn,
-            LogLevel::Normal => log::LevelFilter::Info,
-            LogLevel::Debug => log::LevelFilter::Trace,
-            LogLevel::Off => log::LevelFilter::Off
         }
     }
 }
