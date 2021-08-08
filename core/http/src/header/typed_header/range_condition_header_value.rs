@@ -4,18 +4,27 @@ use super::{
 };
 use std::result::Result::Ok;
 
+/// Represents an `If-Range` header value which can either be a date/time or an entity-tag value.
 pub enum RangeConditionHeaderValue {
+
+    /// A date value used to initialize the new instance.
     LastModified(DateTimeOffset),
+
+    /// An entity tag uniquely representing the requested resource.
     EntityTag(EntityTagHeaderValue)
 }
 
 impl RangeConditionHeaderValue {
+
+    /// Gets the LastModified date from header.
     pub fn last_modified(&self) -> Option<&DateTimeOffset> {
         match self {
             RangeConditionHeaderValue::LastModified(date) => Some(date),
             RangeConditionHeaderValue::EntityTag(_) => None
         }
     }
+
+    /// Gets the `EntityTagHeaderValue` from header.
     pub fn entity_tag(&self) -> Option<&EntityTagHeaderValue> {
         match self {
             RangeConditionHeaderValue::LastModified(_) => None,
@@ -28,7 +37,7 @@ impl TryFrom<Vec<&str>> for RangeConditionHeaderValue {
     type Error = ();
 
     fn try_from(value: Vec<&str>) -> Result<Self, Self::Error> {
-        if value.len() == 0 {
+        if value.is_empty() {
             return Err(());
         }
         let start_index = 0;
@@ -66,14 +75,12 @@ impl TryFrom<Vec<&str>> for RangeConditionHeaderValue {
                 return Err(());
             }
             Ok(Self::EntityTag(entity_tag) )
+        } else if let Ok(date) = DateTimeOffset::try_from(&input[current..]) {
+            // If we got a valid date, then the parser consumed the whole string (incl. trailing whitespaces).
+            // current = input.len();
+            Ok(Self::LastModified(date))
         } else {
-            if let Ok(date) = DateTimeOffset::try_from(&input[current..]){
-                // If we got a valid date, then the parser consumed the whole string (incl. trailing whitespaces).
-                // current = input.len();
-                Ok(Self::LastModified(date) )
-            } else {
-                return Err(());
-            }
+            Err(())
         }
     }
 }
@@ -90,8 +97,7 @@ impl ToString for RangeConditionHeaderValue {
 #[cfg(test)]
 mod tests {
     use super::super::*;
-    use std::time::SystemTime;
-    use chrono::{DateTime, FixedOffset, TimeZone};
+    use chrono::{FixedOffset, TimeZone};
 
     #[test]
     fn test_last_modified(){

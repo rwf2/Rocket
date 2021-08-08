@@ -17,6 +17,8 @@ pub struct RangeHeaderValue {
 }
 
 impl RangeHeaderValue {
+
+    /// Initializes a new struct of `RangeHeaderValue`.
     pub fn new(from: Option<u64>, to: Option<u64>) -> Self {
         let mut v = Self::default();
         v.ranges.push(RangeItemHeaderValue::new(from, to));
@@ -35,7 +37,7 @@ impl TryFrom<Vec<&str>> for RangeHeaderValue {
     type Error = ();
 
     fn try_from(value: Vec<&str>) -> Result<Self, Self::Error> {
-        if value.len() == 0 {
+        if value.is_empty() {
             return Err(());
         }
         let start_index = 0;
@@ -46,8 +48,10 @@ impl TryFrom<Vec<&str>> for RangeHeaderValue {
         if unit_len == 0 {
             return Err(());
         }
-        let mut result = Self::default();
-        result.unit = input[start_index..start_index + unit_len].to_owned();
+        let mut result = Self{
+            unit: input[start_index..start_index + unit_len].to_owned(),
+            ..Self::default()
+        };
         let mut current = start_index + unit_len;
         current += http_rule_parser::get_whitespace_length(&input, current);
         if current == input.len() || input[current] != '=' {

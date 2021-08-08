@@ -1,18 +1,22 @@
 use std::convert::TryFrom;
 
 use chrono::{DateTime, FixedOffset, Utc};
-use std::time::SystemTime;
+use std::time::{SystemTime, Duration};
 use std::cmp::Ordering;
 use std::fmt::{Debug, Formatter};
 
-#[derive(Eq, Ord)]
+/// Represents `DateTimeOffset` in HTTP header.
+#[derive(Eq)]
 pub struct DateTimeOffset(DateTime<FixedOffset>);
 
 impl DateTimeOffset {
+
+    /// Returns the DateTimeOffset corresponding to "now".
     pub fn now() -> Self {
         SystemTime::now().into()
     }
 
+    /// Returns the number of non-leap-milliseconds since January 1, 1970 UTC
     pub fn timestamp_millis(&self) -> i64 {
         self.0.timestamp_millis()
     }
@@ -53,7 +57,7 @@ impl TryFrom<&[char]> for DateTimeOffset {
     fn try_from(chars: &[char]) -> Result<Self, Self::Error> {
         let s: String = chars.iter().collect();
         DateTime::parse_from_rfc2822(s.as_str())
-            .map(|t| Self::from(t))
+            .map(Self::from)
     }
 }
 
@@ -76,6 +80,12 @@ impl From<SystemTime> for DateTimeOffset {
     }
 }
 
+impl From<u64> for DateTimeOffset {
+    fn from(v: u64) -> Self {
+        (SystemTime::UNIX_EPOCH + Duration::from_millis(v)).into()
+    }
+}
+
 impl std::cmp::PartialEq for DateTimeOffset {
     fn eq(&self, other: &Self) -> bool {
         self.0.eq(&other.0)
@@ -85,5 +95,17 @@ impl std::cmp::PartialEq for DateTimeOffset {
 impl std::cmp::PartialOrd for DateTimeOffset {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         self.0.partial_cmp(&other.0)
+    }
+}
+
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test1() {
+        let p = DateTimeOffset::from(1628392450871);
+        assert_eq!("Sun, 08 Aug 2021 03:14:10 GMT", p.to_string());
     }
 }

@@ -1,20 +1,29 @@
-use super::{header_utilities, header_names, RangeItemHeaderValue, Header};
+use super::{header_utilities, header_names, Header};
 
-
+/// Represents a `Content-Range` response HTTP header.
 pub struct ContentRangeHeaderValue {
+    /// The start of the range.
     pub from: Option<u64>,
+
+    /// The end of the range.
     pub to: Option<u64>,
+
+    /// The total size of the document.
     pub length: Option<u64>,
+
+    /// The unit in which ranges are specified.
     pub unit: String,
 }
 
 impl ContentRangeHeaderValue {
+    ///  Gets a value that determines if `length` has been specified.
     pub fn has_length(&self) -> bool {
         self.length.is_some()
     }
 
+    /// Gets a value that determines if `from` and `to` have been specified.
     pub fn has_range(&self) -> bool {
-        self.from.is_some()
+        self.from.is_some() && self.to.is_some()
     }
 }
 
@@ -77,11 +86,11 @@ impl ToString for ContentRangeHeaderValue {
     }
 }
 
-impl<'h> Into<Header<'h>> for ContentRangeHeaderValue {
-    fn into(self) -> Header<'h> {
+impl From<ContentRangeHeaderValue> for Header<'_> {
+    fn from(v: ContentRangeHeaderValue) -> Self {
         Header {
             name: header_names::CONTENT_RANGE.into(),
-            value: self.to_string().into()
+            value: v.to_string().into()
         }
     }
 }

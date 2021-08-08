@@ -1,9 +1,9 @@
 
-use super::{
-    http_rule_parser
-};
-use super::http_rule_parser::HttpParseResult;
 use std::convert::TryFrom;
+use std::collections::hash_map::DefaultHasher;
+use std::hash::{Hash, Hasher};
+
+use super::http_rule_parser::{self, HttpParseResult};
 
 
 /// Represents an entity-tag (*etag*) header value.
@@ -19,9 +19,14 @@ impl EntityTagHeaderValue {
     fn new() -> Self {
         Self { tag: Vec::new(), is_weak: false }
     }
+
+    /// Gets the "any" etag.
     pub fn any() -> Self {
         Self{ tag: vec!['*'], is_weak: false }
     }
+
+    /// Compares against another `EntityTagHeaderValue` to see if they match under
+    /// the RFC specifications (https://tools.ietf.org/html/rfc7232#section-2.3.2).
     pub fn compare(&self, other: &Self, use_strong_comparison: bool) -> bool {
         if use_strong_comparison {
             !self.is_weak && !other.is_weak && self.tag == other.tag
@@ -120,6 +125,15 @@ impl ToString for EntityTagHeaderValue {
     }
 }
 
+impl<T: Hash> From<&T> for EntityTagHeaderValue {
+    fn from(v: &T) -> Self {
+        let mut hasher = DefaultHasher::new();
+        v.hash(&mut hasher);
+        let hash = hasher.finish();
+        format!("{:x}", hash).into()
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -130,5 +144,23 @@ mod tests {
         let etag = EntityTagHeaderValue::from(s);
 
         assert_eq!(r#""123456789""#, etag.to_string().as_str())
+    }
+
+    #[test]
+    pub fn test_from_u8_slice() {
+        let s = [3u8, 4u8, 5u8];
+        let etag = EntityTagHeaderValue::from(&s);
+
+        assert_eq!(r#""dd44f769129bbdb5""#, etag.to_string().as_str());
+        assert_eq!(18, etag.to_string().len());
+    }
+
+    #[test]
+    pub fn test_from_u8_slice1() {
+        let s = [3u8, 4u8, 5u8, 1u8];
+        let etag = EntityTagHeaderValue::from(&s);
+
+        assert_eq!(r#""9d605be779361769""#, etag.to_string().as_str());
+        assert_eq!(18, etag.to_string().len());
     }
 }

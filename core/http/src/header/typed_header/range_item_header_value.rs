@@ -4,14 +4,20 @@ use super::{http_rule_parser, header_utilities};
 /// Represents a byte range in a Range header value.
 #[derive(Default, Clone, Debug)]
 pub struct RangeItemHeaderValue {
+    /// The position at which to start sending data.
     pub from: Option<u64>,
+
+    /// The position at which to stop sending data.
     pub to: Option<u64>
 }
 
 impl RangeItemHeaderValue {
+    /// Initializes a new instance of the `RangeItemHeaderValue`.
     pub fn new(from: Option<u64>, to: Option<u64>) -> Self {
         Self{ from, to }
     }
+
+    /// Normalize the `RangeItemHeaderValue`
     pub fn normalize(&self, len: u64) -> Option<Self> {
         let mut start = self.from;
         let mut end = self.to;
@@ -37,10 +43,11 @@ impl RangeItemHeaderValue {
         }
         Some(Self::new(start, end))
     }
+
     //noinspection RsSelfConvention
     pub(super) fn get_range_item_length(input: &[char], start_index: usize, parsed_value: &mut Self) -> usize {
         // This parser parses number ranges: e.g. '1-2', '1-', '-2'.
-        if input.len() == 0 || input[0] ==' ' || start_index >= input.len() {
+        if input.is_empty() || input[0] ==' ' || start_index >= input.len() {
             return 0;
         }
         // Caller must remove leading whitespaces. If not, we'll return 0.
@@ -102,7 +109,7 @@ impl RangeItemHeaderValue {
     //noinspection RsSelfConvention
     pub(super) fn get_range_item_list_length(input: &[char], start_index: usize, ranges: &mut Vec<Self>) -> usize {
 
-        if input.len() == 0 || start_index >=input.len() {
+        if input.is_empty() || start_index >=input.len() {
             return 0;
         }
         // Empty segments are allowed, so skip all delimiter-only segments (e.g. ", ,").

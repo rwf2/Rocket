@@ -77,11 +77,9 @@ impl<'h> TypedHeaders for HeaderMap<'h> {
 
     fn get_typed_header_value<'a, T>(&'a self, name: &str) -> Option<T> where T: TryFrom<Vec<&'a str>> {
         let header_values: Vec<&str> = self.get(name).collect();
-        let p = T::try_from(header_values)
-            .map(|x| Some(x))
-            .unwrap_or(None);
-
-        p
+        T::try_from(header_values)
+            .map(Some)
+            .unwrap_or(None)
     }
 
     fn get_typed_header_value_list<'a, T>(&'a self, name: &str) -> Vec<T> where T: TryFrom<Vec<&'a str>> {

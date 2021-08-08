@@ -1,3 +1,4 @@
+#![allow(dead_code)]
 
 use lazy_static::*;
 
@@ -13,8 +14,8 @@ pub(super) const MAX_INT32DIGITS: usize = 10;
 lazy_static! {
             static ref TOKEN_CHARS: [bool; 128] = {
                 let mut token_chars = [false; 128];
-                for i in 33..127 {
-                    token_chars[i] = true;
+                for token_char in &mut token_chars[33..127] {
+                    *token_char = true;
                 }
                 token_chars['(' as usize] = false;
                 token_chars[')' as usize] = false;
@@ -78,7 +79,7 @@ pub fn get_number_length(input: &[char], start_index: usize, allow_decimal: bool
 
     while current < input.len() {
         c = input[current];
-        if c >= '0' && c <= '9' {
+        if ('0'..='9').contains(&c) {
             current += 1;
         } else if !have_dot && c == '.' {
             // Note that value "1." is valid.
@@ -156,7 +157,7 @@ fn get_expression_length(
             // We ignore invalid quoted-pairs. Invalid quoted-pairs may mean that it looked like a quoted pair,
             // but we actually have a quoted-string: e.g. "\ü" ('\' followed by a char >127 - quoted-pair only
             // allows ASCII chars after '\'; qdtext allows both '\' and >127 chars).
-            current = current + quoted_pair_length;
+            current += quoted_pair_length;
             continue;
         }
 

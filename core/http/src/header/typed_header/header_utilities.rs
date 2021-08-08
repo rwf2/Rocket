@@ -1,7 +1,7 @@
 use super::http_rule_parser;
 
 
-pub const BYTES_UNIT: &'static str = "bytes";
+pub const BYTES_UNIT: & str = "bytes";
 
 pub fn try_parse_non_negative_int64(value: &[char], result: &mut u64) -> bool {
     *result = 0;
@@ -52,5 +52,5 @@ pub fn get_next_non_empty_or_whitespace_index(input: &[char], start_index: usize
 
         }
     }
-    return current;
+    current
 }
