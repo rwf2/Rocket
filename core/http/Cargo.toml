@@ -26,7 +26,6 @@ uuid = ["uuid_"]
 smallvec = "1.0"
 percent-encoding = "2"
 http = "0.2"
-mime = "0.3.13"
 time = "0.2.11"
 indexmap = { version = "1.5.2", features = ["std"] }
 rustls = { version = "0.19", optional = true }
