@@ -19,7 +19,7 @@ indexmap = "1.0"
 quote = "1.0"
 syn = { version = "1.0.72", features = ["full", "visit", "visit-mut", "extra-traits"] }
 proc-macro2 = "1.0.27"
-devise = "0.3"
+devise = "0.3.1"
 rocket_http = { version = "0.5.0-rc.1", path = "../http/" }
 unicode-xid = "0.2"
 glob = "0.3"

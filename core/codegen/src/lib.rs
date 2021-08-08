@@ -687,8 +687,8 @@ pub fn derive_from_form_field(input: TokenStream) -> TokenStream {
 ///     }
 ///     ```
 ///
-/// [`FromForm`]: rocket::form::FromForm
-/// [`form::Errors`]: rocket::form::Errors
+/// [`FromForm`]: ../rocket/form/trait.FromForm.html
+/// [`form::Errors`]: ../rocket/form/struct.Errors.html
 ///
 /// # Generics
 ///

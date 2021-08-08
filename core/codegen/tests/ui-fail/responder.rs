@@ -49,4 +49,19 @@ struct Thing12(());
 #[response(status = 404, content_type = 120)]
 struct Thing13(());
 
+#[derive(Responder)] // NO ERROR
+enum Error<'r, T> {
+    #[response(status = 400)]
+    Unauthorized(T),
+    #[response(status = 404)]
+    NotFound(rocket::fs::NamedFile),
+    #[response(status = 500)]
+    A(&'r str, rocket::http::ContentType),
+}
+
+#[derive(Responder)] // NO ERROR
+enum Error2<'r, T> {
+    Unauthorized(&'r T),
+}
+
 fn main() {}
