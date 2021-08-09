@@ -882,7 +882,7 @@ struct MyForm<'v> {
 # rocket_guide_tests::assert_form_parses_ok!(MyForm, "");
 ```
 
-The default can be overridden or unset using the `#[field(default = expr)` field
+The default can be overridden or unset using the `#[field(default = expr)]` field
 attribute. If `expr` is not literally `None`, the parameter sets the default
 value of the field to be `expr.into()`. If `expr` _is_ `None`, the parameter
 _unsets_ the default value of the field, if any.
