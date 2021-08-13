@@ -70,9 +70,7 @@ impl ToString for ContentRangeHeaderValue {
         if self.has_range(){
             s.push_str(self.from.unwrap().to_string().as_str());
             s.push('-');
-            if let Some(to) = self.to {
-                s.push_str(to.to_string().as_str());
-            }
+            s.push_str(self.to.unwrap().to_string().as_str());
         } else {
             s.push('*');
         }

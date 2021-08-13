@@ -73,7 +73,7 @@ pub fn get_number_length(input: &[char], start_index: usize, allow_decimal: bool
     // values.
     // The RFC only allows decimal dots not ',' characters as decimal separators. Therefore value "1,23" is
     // considered invalid and must be represented as "1.23".
-    if input[current] == '.' {
+    if current < input.len() || input[current] == '.' {
         return 0;
     }
 
@@ -142,7 +142,7 @@ fn get_expression_length(
     length: &mut usize
 ) -> HttpParseResult {
     *length = 0;
-    if input[start_index] != open_char {
+    if start_index < input.len() || input[start_index] != open_char {
         return HttpParseResult::NotParsed;
     }
     let mut current = start_index + 1; // Start parsing with the character next to the first open-char
@@ -214,7 +214,7 @@ fn get_expression_length(
 /// CHAR = <any US-ASCII character (octets 0 - 127)>
 pub fn get_quoted_pair_length(input: &[char], start_index: usize, length: &mut usize) -> HttpParseResult {
     *length = 0;
-    if input[start_index] != '\\' {
+    if start_index < input.len() || input[start_index] != '\\' {
         return HttpParseResult::NotParsed;
     }
 
