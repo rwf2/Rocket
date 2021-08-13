@@ -16,6 +16,7 @@ use crate::http::uri::{self, Origin};
 use crate::http::ext::IntoOwned;
 use crate::error::{Error, ErrorKind};
 use crate::log::PaintExt;
+use crate::service::RocketService;
 
 /// The application server itself.
 ///
@@ -625,6 +626,19 @@ impl Rocket<Ignite> {
                 Paint::default("Rocket has launched from").bold(),
                 Paint::default(addr).bold().underline());
         })).await
+    }
+
+    /// Converts this Rocket instance into a `RocketService`.
+    /// This method allows you to completely customize transport
+    /// layer (i.e. you have complete freedom in how to listen for requests)
+    /// and server lifecycle.
+    /// See `RocketService` documentation for more details.
+    /// # Limitations
+    /// Since Rocket enforces graceful shutdown at the transport level,
+    /// and you are using custom transport, you will need to implement
+    /// your own graceful shutdown if you want one.
+    pub fn into_service(self) -> RocketService {
+       RocketService::new(self.into_orbit())
     }
 }
 

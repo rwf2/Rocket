@@ -124,6 +124,7 @@ pub mod route;
 pub mod serde;
 pub mod shield;
 pub mod fs;
+pub mod service;
 
 // Reexport of HTTP everything.
 pub mod http {

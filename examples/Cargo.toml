@@ -7,6 +7,7 @@ members = [
   "fairings",
   "forms",
   "hello",
+  "hyper",
   "manual-routing",
   "responders",
   "serialization",
@@ -15,7 +16,7 @@ members = [
   "templating",
   "testing",
   "tls",
-
+  "uds",
   "pastebin",
   "todo",
   "chat",

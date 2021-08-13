@@ -1,0 +1,11 @@
+[package]
+name = "hyper-svc"
+version = "0.0.0"
+workspace = "../"
+edition = "2018"
+publish = false
+
+[dependencies]
+hyper = "0.14.11"
+rocket = { path = "../../core/lib" }
+tokio = { version = "1.10.0", features = ["macros", "rt-multi-thread"] }

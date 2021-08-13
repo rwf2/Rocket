@@ -500,3 +500,67 @@ impl Rocket<Orbit> {
         }
     }
 }
+
+/// Hyper service on top of Rocket.
+/// You can call this service with requests and it will give you back
+/// with response.
+/// # Connection metadata
+/// Some applications wish to examine underlying connection metadata.
+/// Usually Rocket automatically gets this metadata, but with this interface
+/// it is your responsibility to put information into request extensions.
+/// Each extension is optional.
+/// Currently Rocket supports following extensions:
+///  - `std::net::SocketAddr`, containing peer address
+///  - `Arc<Vec<rustls::key::RawCertificate>>`, containing client certificate, followed by trust chain
+#[derive(Clone)]
+pub struct RocketService(Arc<Rocket<Orbit>>);
+
+type SvcReq = hyper::Request<hyper::Body>;
+type SvcRes = hyper::Response<hyper::Body>;
+type SvcFut = futures::future::BoxFuture<'static, std::io::Result<SvcRes>>;
+
+impl RocketService {
+    pub(crate) fn new(r: Rocket<Orbit>) -> Self {
+        RocketService(Arc::new(r))
+    }
+
+    fn _call(&self, mut req: SvcReq) -> SvcFut {
+        let conn_meta = ConnectionMeta {
+            remote: req.extensions_mut().remove(),
+            client_certificates: req.extensions_mut().remove(),
+        };
+        Box::pin(hyper_service_fn(self.0.clone(), conn_meta, req))
+    }
+}
+
+impl hyper::service::Service<SvcReq> for RocketService {
+    type Response = SvcRes;
+
+    type Error = std::io::Error;
+
+    type Future =  SvcFut;
+
+    fn poll_ready(&mut self, _cx: &mut std::task::Context<'_>) -> std::task::Poll<io::Result<()>> {
+        std::task::Poll::Ready(Ok(()))
+    }
+
+    fn call(&mut self, req: SvcReq) -> SvcFut {
+        self._call(req)
+    }
+}
+
+impl<'a> hyper::service::Service<SvcReq> for &'a RocketService {
+    type Response = SvcRes;
+
+    type Error = std::io::Error;
+
+    type Future = SvcFut;
+
+    fn poll_ready(&mut self, _cx: &mut std::task::Context<'_>) -> std::task::Poll<io::Result<()>> {
+        std::task::Poll::Ready(Ok(()))
+    }
+
+    fn call(&mut self, req: SvcReq) -> SvcFut {
+        self._call(req)
+    }
+}
