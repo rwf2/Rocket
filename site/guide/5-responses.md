@@ -407,6 +407,14 @@ The `Json` type serializes the structure into JSON, sets the Content-Type to
 JSON, and emits the serialized data in a fixed-sized body. If serialization
 fails, a **500 - Internal Server Error** is returned.
 
+Please note that the json feature must be enabled, and the `serde` crate must be added to your dependencies in `Cargo.toml`:
+
+```toml
+[dependencies]
+rocket = { version = "0.5.0-rc.1", features = ["json"] }
+serde = { version = "1.0", features = ["derive"] }
+```
+
 The [serialization example] provides further illustration.
 
 [`Json`]: @api/rocket/serde/json/struct.Json.html
