@@ -162,10 +162,11 @@ error[E0277]: the trait bound `S: Ignorable<rocket::http::uri::fmt::Query>` is n
 66  |     uri!(other_q(rest = _, id = 100));
     |                         ^ the trait `Ignorable<rocket::http::uri::fmt::Query>` is not implemented for `S`
     |
-   ::: $WORKSPACE/core/http/src/uri/fmt/uri_display.rs
+note: required by a bound in `assert_ignorable`
+   --> $DIR/uri_display.rs:544:37
     |
-    | pub fn assert_ignorable<P: Part, T: Ignorable<P>>() {  }
-    |                                     ------------ required by this bound in `assert_ignorable`
+544 | pub fn assert_ignorable<P: Part, T: Ignorable<P>>() {  }
+    |                                     ^^^^^^^^^^^^ required by this bound in `assert_ignorable`
 
 error[E0277]: the trait bound `usize: Ignorable<rocket::http::uri::fmt::Query>` is not satisfied
    --> $DIR/typed-uri-bad-type.rs:68:33
@@ -173,10 +174,11 @@ error[E0277]: the trait bound `usize: Ignorable<rocket::http::uri::fmt::Query>` 
 68  |     uri!(other_q(rest = S, id = _));
     |                                 ^ the trait `Ignorable<rocket::http::uri::fmt::Query>` is not implemented for `usize`
     |
-   ::: $WORKSPACE/core/http/src/uri/fmt/uri_display.rs
+note: required by a bound in `assert_ignorable`
+   --> $DIR/uri_display.rs:544:37
     |
-    | pub fn assert_ignorable<P: Part, T: Ignorable<P>>() {  }
-    |                                     ------------ required by this bound in `assert_ignorable`
+544 | pub fn assert_ignorable<P: Part, T: Ignorable<P>>() {  }
+    |                                     ^^^^^^^^^^^^ required by this bound in `assert_ignorable`
 
 error[E0277]: the trait bound `S: FromUriParam<rocket::http::uri::fmt::Query, _>` is not satisfied
    --> $DIR/typed-uri-bad-type.rs:68:25

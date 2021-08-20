@@ -44,10 +44,11 @@ error[E0277]: the trait bound `Q: FromData<'_>` is not satisfied
 18  | fn f4(foo: Q) {}
     |            ^ the trait `FromData<'_>` is not implemented for `Q`
     |
-   ::: $WORKSPACE/core/lib/src/data/from_data.rs
+note: required by a bound in `rocket::data::FromData::from_data`
+   --> $DIR/from_data.rs:194:41
     |
-    |     async fn from_data(req: &'r Request<'_>, data: Data<'r>) -> Outcome<'r, Self>;
-    |                                         -- required by this bound in `rocket::data::FromData::from_data`
+194 |     async fn from_data(req: &'r Request<'_>, data: Data<'r>) -> Outcome<'r, Self>;
+    |                                         ^^ required by this bound in `rocket::data::FromData::from_data`
 
 error[E0277]: the trait bound `Q: FromRequest<'_>` is not satisfied
    --> $DIR/route-type-errors.rs:21:10
@@ -55,10 +56,11 @@ error[E0277]: the trait bound `Q: FromRequest<'_>` is not satisfied
 21  | fn f5(a: Q, foo: Q) {}
     |          ^ the trait `FromRequest<'_>` is not implemented for `Q`
     |
-   ::: $WORKSPACE/core/lib/src/request/from_request.rs
+note: required by a bound in `from_request`
+   --> $DIR/from_request.rs:388:48
     |
-    |     async fn from_request(request: &'r Request<'_>) -> Outcome<Self, Self::Error>;
-    |                                                -- required by this bound in `from_request`
+388 |     async fn from_request(request: &'r Request<'_>) -> Outcome<Self, Self::Error>;
+    |                                                ^^ required by this bound in `from_request`
 
 error[E0277]: the trait bound `Q: FromParam<'_>` is not satisfied
    --> $DIR/route-type-errors.rs:21:18
@@ -78,10 +80,11 @@ error[E0277]: the trait bound `Q: FromRequest<'_>` is not satisfied
 24  | fn f6(a: Q, foo: Q, good: usize, bar: Q) {}
     |          ^ the trait `FromRequest<'_>` is not implemented for `Q`
     |
-   ::: $WORKSPACE/core/lib/src/request/from_request.rs
+note: required by a bound in `from_request`
+   --> $DIR/from_request.rs:388:48
     |
-    |     async fn from_request(request: &'r Request<'_>) -> Outcome<Self, Self::Error>;
-    |                                                -- required by this bound in `from_request`
+388 |     async fn from_request(request: &'r Request<'_>) -> Outcome<Self, Self::Error>;
+    |                                                ^^ required by this bound in `from_request`
 
 error[E0277]: the trait bound `Q: FromParam<'_>` is not satisfied
    --> $DIR/route-type-errors.rs:24:18
