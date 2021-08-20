@@ -7,7 +7,6 @@ publish = false
 
 [dependencies]
 rocket = { path = "../../core/lib" }
-time = "0.2"
 
 [dependencies.rocket_dyn_templates]
 path = "../../contrib/dyn_templates"

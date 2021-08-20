@@ -1,5 +1,6 @@
 use std::net::{IpAddr, SocketAddr};
 use std::collections::{BTreeMap, HashMap};
+
 use pretty_assertions::assert_eq;
 
 use rocket::UriDisplayQuery;
@@ -732,13 +733,13 @@ fn test_defaults() {
         ip: IpAddr,
         #[field(default = ([192u8, 168, 1, 0], 20))]
         addr: SocketAddr,
-        #[field(default = time::date!(2021-05-27))]
+        #[field(default = time::macros::date!(2021-05-27))]
         date: time::Date,
-        #[field(default = time::time!(01:15:00))]
+        #[field(default = time::macros::time!(01:15:00))]
         time: time::Time,
         #[field(default = time::PrimitiveDateTime::new(
-            time::date!(2021-05-27),
-            time::time!(01:15:00),
+            time::macros::date!(2021-05-27),
+            time::macros::time!(01:15:00),
         ))]
         datetime: time::PrimitiveDateTime,
     }
@@ -773,9 +774,12 @@ fn test_defaults() {
         string: "wowie".to_string(),
         ip: [192u8, 168, 1, 0].into(),
         addr: ([192u8, 168, 1, 0], 20).into(),
-        date: time::date!(2021-05-27),
-        time: time::time!(01:15:00),
-        datetime: time::PrimitiveDateTime::new(time::date!(2021-05-27), time::time!(01:15:00)),
+        date: time::macros::date!(2021-05-27),
+        time: time::macros::time!(01:15:00),
+        datetime: time::PrimitiveDateTime::new(
+            time::macros::date!(2021-05-27),
+            time::macros::time!(01:15:00)
+        ),
     }));
 
     let form2: Option<FormWithDefaults> = strict(&form_string).ok();

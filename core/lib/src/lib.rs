@@ -106,6 +106,7 @@
 pub use futures;
 pub use tokio;
 pub use figment;
+pub use time;
 
 #[doc(hidden)]
 #[macro_use] pub mod log;

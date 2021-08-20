@@ -6,6 +6,7 @@ use std::num::{
 };
 
 use time::{Date, Time, PrimitiveDateTime};
+use time::{macros::format_description, format_description::FormatItem};
 
 use crate::data::Capped;
 use crate::http::uncased::AsUncased;
@@ -355,10 +356,19 @@ impl_with_parse!(
     NonZeroUsize, NonZeroU8, NonZeroU16, NonZeroU32, NonZeroU64, NonZeroU128,
     Ipv4Addr, IpAddr, Ipv6Addr, SocketAddrV4, SocketAddrV6, SocketAddr
 );
+//
+// Keep formats in sync with 'FromFormField' impls.
+static DATE_FMT: &[FormatItem<'_>] = format_description!("[year padding:none]-[month]-[day]");
+static TIME_FMT1: &[FormatItem<'_>] = format_description!("[hour padding:none]:[minute]:[second]");
+static TIME_FMT2: &[FormatItem<'_>] = format_description!("[hour padding:none]:[minute]");
+static DATE_TIME_FMT1: &[FormatItem<'_>] =
+    format_description!("[year padding:none]-[month]-[day]T[hour padding:none]:[minute]:[second]");
+static DATE_TIME_FMT2: &[FormatItem<'_>] =
+    format_description!("[year padding:none]-[month]-[day]T[hour padding:none]:[minute]");
 
 impl<'v> FromFormField<'v> for Date {
     fn from_value(field: ValueField<'v>) -> Result<'v, Self> {
-        let date = Self::parse(field.value, "%F")
+        let date = Self::parse(field.value, &DATE_FMT)
             .map_err(|e| Box::new(e) as Box<dyn std::error::Error + Send>)?;
 
         Ok(date)
@@ -367,8 +377,8 @@ impl<'v> FromFormField<'v> for Date {
 
 impl<'v> FromFormField<'v> for Time {
     fn from_value(field: ValueField<'v>) -> Result<'v, Self> {
-        let time = Self::parse(field.value, "%T")
-            .or_else(|_| Self::parse(field.value, "%R"))
+        let time = Self::parse(field.value, &TIME_FMT1)
+            .or_else(|_| Self::parse(field.value, &TIME_FMT2))
             .map_err(|e| Box::new(e) as Box<dyn std::error::Error + Send>)?;
 
         Ok(time)
@@ -377,8 +387,8 @@ impl<'v> FromFormField<'v> for Time {
 
 impl<'v> FromFormField<'v> for PrimitiveDateTime {
     fn from_value(field: ValueField<'v>) -> Result<'v, Self> {
-        let dt = Self::parse(field.value, "%FT%T")
-            .or_else(|_| Self::parse(field.value, "%FT%R"))
+        let dt = Self::parse(field.value, &DATE_TIME_FMT1)
+            .or_else(|_| Self::parse(field.value, &DATE_TIME_FMT2))
             .map_err(|e| Box::new(e) as Box<dyn std::error::Error + Send>)?;
 
         Ok(dt)

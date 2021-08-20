@@ -1,9 +1,9 @@
 #[macro_use] extern crate rocket;
 
+use rocket::time::Date;
 use rocket::http::{Status, ContentType};
 use rocket::form::{Form, Contextual, FromForm, FromFormField, Context};
-use rocket::fs::TempFile;
-use rocket::fs::{FileServer, relative};
+use rocket::fs::{FileServer, TempFile, relative};
 
 use rocket_dyn_templates::Template;
 
@@ -36,7 +36,7 @@ enum Category {
 struct Submission<'v> {
     #[field(validate = len(1..))]
     title: &'v str,
-    date: time::Date,
+    date: Date,
     #[field(validate = len(1..=250))]
     r#abstract: &'v str,
     #[field(validate = ext(ContentType::PDF))]

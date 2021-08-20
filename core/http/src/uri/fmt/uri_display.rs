@@ -2,6 +2,8 @@ use std::collections::{BTreeMap, HashMap};
 use std::{fmt, path};
 use std::borrow::Cow;
 
+use time::{macros::format_description, format_description::FormatItem};
+
 use crate::RawStr;
 use crate::uri::fmt::{Part, Path, Query, Formatter};
 
@@ -354,13 +356,13 @@ impl_with_display! {
 
 macro_rules! impl_with_string {
     ($($T:ty => $f:expr),+ $(,)?) => {$(
-        /// This implementation is identical to a percent-encoded versiono the
+        /// This implementation is identical to a percent-encoded version of the
         /// `Display` implementation.
         impl<P: Part> UriDisplay<P> for $T  {
             #[inline(always)]
             fn fmt(&self, f: &mut Formatter<'_, P>) -> fmt::Result {
-                let func: fn(&$T) -> String = $f;
-                func(self).as_str().fmt(f)
+                let func: fn(&$T) -> Result<String, fmt::Error> = $f;
+                func(self).and_then(|s| s.as_str().fmt(f))
             }
         }
     )+}
@@ -368,14 +370,20 @@ macro_rules! impl_with_string {
 
 use std::net::{SocketAddr, SocketAddrV4, SocketAddrV6};
 
-// Keep in-sync with the 'FromUriParam' impls.
+// Keep formats in sync with 'FromFormField' impls.
+static DATE_FMT: &[FormatItem<'_>] = format_description!("[year padding:none]-[month]-[day]");
+static TIME_FMT: &[FormatItem<'_>] = format_description!("[hour padding:none]:[minute]:[second]");
+static DATE_TIME_FMT: &[FormatItem<'_>] =
+    format_description!("[year padding:none]-[month]-[day]T[hour padding:none]:[minute]:[second]");
+
+// Keep list in sync with the 'FromUriParam' impls.
 impl_with_string! {
-    time::Date => |d| d.format("%F"),
-    time::PrimitiveDateTime => |d| d.format("%FT%T"),
-    time::Time => |d| d.format("%T"),
-    SocketAddr => |s| s.to_string(),
-    SocketAddrV4 => |s| s.to_string(),
-    SocketAddrV6 => |s| s.to_string(),
+    time::Date => |d| d.format(&DATE_FMT).map_err(|_| fmt::Error),
+    time::Time => |d| d.format(&TIME_FMT).map_err(|_| fmt::Error),
+    time::PrimitiveDateTime => |d| d.format(&DATE_TIME_FMT).map_err(|_| fmt::Error),
+    SocketAddr => |a| Ok(a.to_string()),
+    SocketAddrV4 => |a| Ok(a.to_string()),
+    SocketAddrV6 => |a| Ok(a.to_string()),
 }
 
 // These are second level implementations: they all defer to an existing
