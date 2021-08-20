@@ -352,14 +352,14 @@ returns an infinite [`TextStream`] that produces one `"hello"` every second:
 
 ```rust
 # use rocket::get;
-use rocket::tokio::time::{self, Duration};
+use rocket::tokio::time::{Duration, interval};
 use rocket::response::stream::TextStream;
 
 /// Produce an infinite series of `"hello"`s, one per second.
 #[get("/infinite-hellos")]
 fn hello() -> TextStream![&'static str] {
     TextStream! {
-        let mut interval = time::interval(Duration::from_secs(1));
+        let mut interval = interval(Duration::from_secs(1));
         loop {
             yield "hello";
             interval.tick().await;

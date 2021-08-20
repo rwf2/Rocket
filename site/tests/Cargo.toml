@@ -13,7 +13,6 @@ rocket = { path = "../../core/lib", features = ["secrets", "json"] }
 serde = { version = "1.0", features = ["derive"] }
 rand = "0.8"
 figment = { version = "0.10", features = ["toml", "env"] }
-time = "0.2"
 
 [dev-dependencies.rocket_dyn_templates]
 path = "../../contrib/dyn_templates"

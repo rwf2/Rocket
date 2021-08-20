@@ -111,7 +111,7 @@ use rocket::http::{ContentType, Status};
 
 # let rocket = rocket::build().mount("/", routes![hello]);
 # let client = Client::debug(rocket).expect("valid rocket instance");
-let mut response = client.get("/").dispatch();
+let mut response = client.get(uri!(hello)).dispatch();
 
 assert_eq!(response.status(), Status::Ok);
 assert_eq!(response.content_type(), Some(ContentType::Plain));
@@ -187,13 +187,18 @@ Then, we create a new `GET /` request and dispatch it, getting back our
 application's response:
 
 ```rust
+# use rocket::uri;
 # #[rocket::launch]
 # fn rocket() -> _ {
 #     rocket::build().configure(rocket::Config::debug_default())
 # }
+
+# #[rocket::get("/")]
+# fn hello() -> &'static str { "Hello, world!" }
+
 # use rocket::local::blocking::Client;
 # let client = Client::tracked(rocket()).expect("valid rocket instance");
-let mut response = client.get("/").dispatch();
+let mut response = client.get(uri!(hello)).dispatch();
 ```
 
 Finally, we ensure that the response contains the information we expect it to.
@@ -215,7 +220,7 @@ use rocket::http::{ContentType, Status};
 #
 # let rocket = rocket::build().mount("/", routes![hello]);
 # let client = Client::debug(rocket).expect("valid rocket instance");
-# let mut response = client.get("/").dispatch();
+# let mut response = client.get(uri!(hello)).dispatch();
 
 assert_eq!(response.status(), Status::Ok);
 assert_eq!(response.into_string(), Some("Hello, world!".into()));
@@ -256,7 +261,7 @@ mod test {
         let client = Client::tracked(rocket()).expect("valid rocket instance");
         # */
         # let client = Client::debug(rocket()).expect("valid rocket instance");
-        let mut response = client.get("/").dispatch();
+        let mut response = client.get(uri!(super::hello)).dispatch();
         assert_eq!(response.status(), Status::Ok);
         assert_eq!(response.into_string().unwrap(), "Hello, world!");
     }

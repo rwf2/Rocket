@@ -1028,8 +1028,8 @@ you might write:
 
 ```rust
 # #[macro_use] extern crate rocket;
-extern crate time;
 
+use rocket::time::Date;
 use rocket::form::{self, Error};
 
 #[derive(FromForm)]
@@ -1038,10 +1038,10 @@ struct CreditCard {
     number: u64,
     #[field(validate = range(..9999))]
     cvv: u16,
-    expiration: time::Date,
+    expiration: Date,
 }
 
-fn luhn<'v>(number: &u64, cvv: u16, exp: &time::Date) -> form::Result<'v, ()> {
+fn luhn<'v>(number: &u64, cvv: u16, exp: &Date) -> form::Result<'v, ()> {
     # let valid = false;
     if !valid {
         Err(Error::validation("invalid credit card number"))?;

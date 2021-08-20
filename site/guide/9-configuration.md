@@ -38,17 +38,16 @@ values:
 Configurations can be arbitrarily namespaced by [`Profile`]s. Rocket's
 [`Config`] and [`Config::figment()`] providers automatically set the
 configuration profile to "debug" when compiled in "debug" mode and "release"
-when compiled in release mode. With the exception of `log_level`, which changes
-from `normal` in debug to `critical` in release, all of the default
-configuration values are the same in all profiles. What's more, all
-configuration values _have_ defaults, so no configuration needs to be supplied
-to get an application going.
+when compiled in release mode, but you can arbitrarily name and set profiles to
+your desire. For example, with the [default provider](#default-provider), you
+can set the selected profile via `ROCKET_PROFILE`. This results in Rocket
+preferring the values in the `ROCKET_PROFILE` profile.
 
 In addition to any profiles you declare, there are two meta-profiles, `default`
 and `global`, which can be used to provide values that apply to _all_ profiles.
 Values provided in a `default` profile are used as fall-back values when the
-selected profile doesn't contain a requested values, while values in the
-`global` profile supplant any values with the same name in any profile.
+selected profile doesn't contain a requested value, while values in the `global`
+profile supplant any values with the same name in any profile.
 
 [`Provider`]: @figment/trait.Provider.html
 [`Profile`]: @figment/struct.Profile.html
@@ -71,22 +70,23 @@ selected profile doesn't contain a requested values, while values in the
 Rocket's default configuration provider is [`Config::figment()`]; this is the
 provider that's used when calling [`rocket::build()`].
 
-The default figment merges, at a per-key level, and reads from the following
-sources, in ascending priority order:
+The default figment reads from and merges, at a per-key level, the following
+sources in ascending priority order:
 
-  1. [`Config::default()`] - which provides default values for all parameters.
+  1. [`Config::default()`], which provides default values for all parameters.
   2. `Rocket.toml` _or_ TOML file path in `ROCKET_CONFIG` environment variable.
   3. `ROCKET_` prefixed environment variables.
 
 The selected profile is the value of the `ROCKET_PROFILE` environment variable,
 or if it is not set, "debug" when compiled in debug mode and "release" when
-compiled in release mode.
+compiled in release mode. With the exception of `log_level`, which changes from
+`normal` in debug to `critical` in release, all of the default configuration
+values are the same in all profiles. What's more, all configuration values
+_have_ defaults, so no configuration is needed to get started.
 
-As a result, without any effort, Rocket's server can be configured via a
-`Rocket.toml` file and/or via environment variables, the latter of which take
-precedence over the former. Note that neither the file nor any environment
-variables need to be present as [`Config::default()`] is a complete
-configuration source.
+As a result of `Config::figment()`, without any effort, Rocket can be configured
+via a `Rocket.toml` file and/or via environment variables, the latter of which
+take precedence over the former.
 
 [`Config::default()`]: @api/rocket/struct.Config.html#method.default
 
@@ -421,7 +421,7 @@ more complex cases.
   crate. As such, you may need to import crates directly:
 
   `
-  figment = { version = "0.9", features = ["env", "toml", "json"] }
+  figment = { version = "0.10", features = ["env", "toml", "json"] }
   `
 
 As a first example, we override configuration values at runtime by merging

@@ -30,6 +30,8 @@ aspect of Rocket. The sections are:
      Rocket.
    - **[Conclusion](conclusion/):** concludes the guide and discusses next steps
      for learning.
+   - **[FAQ](faq/):** answers to frequently asked questions about Rocket and
+     using it.
 
 ## Getting Help
 
