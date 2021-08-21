@@ -75,37 +75,39 @@ fn query_decls(route: &Route) -> Option<TokenStream> {
 
     #[allow(non_snake_case)]
     Some(quote! {
-        let mut __e = #_form::Errors::new();
-        #(let mut #ident = #init_expr;)*
+        let (#(#ident),*) = {
+            let mut __e = #_form::Errors::new();
+            #(let mut #ident = #init_expr;)*
 
-        for _f in #__req.query_fields() {
-            let _raw = (_f.name.source().as_str(), _f.value);
-            let _key = _f.name.key_lossy().as_str();
-            match (_raw, _key) {
-                // Skip static parameters so <param..> doesn't see them.
-                #(((#raw_name, #raw_value), _) => { /* skip */ },)*
-                #((_, #matcher) => #push_expr,)*
-                _ => { /* in case we have no trailing, ignore all else */ },
+            for _f in #__req.query_fields() {
+                let _raw = (_f.name.source().as_str(), _f.value);
+                let _key = _f.name.key_lossy().as_str();
+                match (_raw, _key) {
+                    // Skip static parameters so <param..> doesn't see them.
+                    #(((#raw_name, #raw_value), _) => { /* skip */ },)*
+                    #((_, #matcher) => #push_expr,)*
+                    _ => { /* in case we have no trailing, ignore all else */ },
+                }
             }
-        }
 
-        #(
-            let #ident = match #finalize_expr {
-                #_Ok(_v) => #_Some(_v),
-                #_Err(_err) => {
-                    __e.extend(_err.with_name(#_form::NameView::new(#name)));
-                    #_None
-                },
-            };
-        )*
+            #(
+                let #ident = match #finalize_expr {
+                    #_Ok(_v) => #_Some(_v),
+                    #_Err(_err) => {
+                        __e.extend(_err.with_name(#_form::NameView::new(#name)));
+                        #_None
+                    },
+                };
+            )*
 
-        if !__e.is_empty() {
-            #_log::warn_!("Query string failed to match route declaration.");
-            for _err in __e { #_log::warn_!("{}", _err); }
-            return #Outcome::Forward(#__data);
-        }
+            if !__e.is_empty() {
+                #_log::warn_!("Query string failed to match route declaration.");
+                for _err in __e { #_log::warn_!("{}", _err); }
+                return #Outcome::Forward(#__data);
+            }
 
-        #(let #ident = #ident.unwrap();)*
+            (#(#ident.unwrap()),*)
+        };
     })
 }
 

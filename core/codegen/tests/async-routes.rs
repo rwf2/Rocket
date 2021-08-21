@@ -12,6 +12,12 @@ async fn hello(_origin: &Origin<'_>) -> &'static str {
     "Hello, world!"
 }
 
+#[get("/repeated_query?<sort>")]
+async fn repeated_query(sort: Vec<&str>) -> &str {
+    noop().await;
+    sort[0]
+}
+
 #[catch(404)]
 async fn not_found(req: &Request<'_>) -> String {
     noop().await;
