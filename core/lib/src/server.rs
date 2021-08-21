@@ -72,8 +72,8 @@ async fn hyper_service_fn(
 
     tokio::spawn(async move {
         // Convert a Hyper request into a Rocket request.
-        let (h_parts, mut h_body) = hyp_req.into_parts();
-        match Request::from_hyp(&rocket, &h_parts, Some(conn)) {
+        let (mut h_parts, mut h_body) = hyp_req.into_parts();
+        match Request::from_hyp(&rocket, &mut h_parts, Some(conn)) {
             Ok(mut req) => {
                 // Convert into Rocket `Data`, dispatch request, write response.
                 let mut data = Data::from(&mut h_body);

@@ -964,9 +964,11 @@ impl<'r> Request<'r> {
     /// Convert from Hyper types into a Rocket Request.
     pub(crate) fn from_hyp(
         rocket: &'r Rocket<Orbit>,
-        hyper: &'r hyper::request::Parts,
+        hyper: &'r mut hyper::request::Parts,
         connection: Option<ConnectionMeta>,
     ) -> Result<Request<'r>, Error<'r>> {
+        let extensions = std::mem::take(&mut hyper.extensions);
+
         // Ensure that the method is known. TODO: Allow made-up methods?
         let method = Method::from_hyp(&hyper.method)
             .ok_or(Error::BadMethod(&hyper.method))?;
@@ -1020,6 +1022,8 @@ impl<'r> Request<'r> {
 
             request.add_header(Header::new(name.as_str(), value));
         }
+
+        request.local_cache(|| extensions);
 
         Ok(request)
     }
