@@ -1,9 +1,0 @@
-[default.databases.rusqlite]
-url = "file:rusqlite?mode=memory&cache=shared"
-
-[default.databases.sqlx]
-url = "db/sqlx/db.sqlite"
-
-[default.databases.diesel]
-url = "db/diesel/db.sqlite"
-timeout = 10

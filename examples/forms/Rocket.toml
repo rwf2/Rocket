@@ -1,3 +1,0 @@
-[default]
-limits.data-form = "2MiB"
-template_dir = "templates/"
