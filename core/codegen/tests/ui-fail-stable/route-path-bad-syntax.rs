@@ -1,1 +1,0 @@
-../ui-fail/route-path-bad-syntax.rs

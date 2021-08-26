@@ -1,1 +1,0 @@
-../ui-fail/typed-uris-invalid-syntax.rs

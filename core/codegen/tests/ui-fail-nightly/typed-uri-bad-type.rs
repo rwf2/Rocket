@@ -1,1 +1,0 @@
-../ui-fail/typed-uri-bad-type.rs
