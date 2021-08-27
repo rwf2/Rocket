@@ -3,17 +3,7 @@ use rocket::response::Redirect;
 
 use rocket_dyn_templates::{Template, handlebars, context};
 
-use serde::Serialize;
-
 use self::handlebars::{Handlebars, JsonRender};
-
-#[derive(Serialize)]
-#[serde(crate = "rocket::serde")]
-struct TemplateContext<'r> {
-    title: &'r str,
-    name: Option<&'r str>,
-    items: Vec<&'r str>,
-}
 
 #[get("/")]
 pub fn index() -> Redirect {
