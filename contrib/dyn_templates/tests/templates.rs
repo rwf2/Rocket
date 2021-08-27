@@ -274,7 +274,7 @@ mod handlebars_tests {
     #[test]
     fn test_handlebars_templates() {
         const EXPECTED: &'static str
-            = "Hello _test_!\n\n<main> &lt;script /&gt; hi </main>\nDone.\n\n";
+            = "Hello _test_!\n<main> &lt;script /&gt; hi </main>\nDone.\n";
 
         let client = Client::debug(rocket()).unwrap();
         let mut map = HashMap::new();
