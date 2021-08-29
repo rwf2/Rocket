@@ -14,6 +14,8 @@ aspect of Rocket. The sections are:
    - **[Introduction](introduction/):** introduces Rocket and its philosophy.
    - **[Quickstart](quickstart/):** presents the minimal steps necessary to
       run your first Rocket application.
+   - **[Upgrading from v0.4](upgrading-from-0.4/):** a migration guide from v0.4
+     to v0.5.
    - **[Getting Started](getting-started/):** a gentle introduction to getting
      your first Rocket application running.
    - **[Overview](overview/):** describes the core concepts of Rocket.
@@ -38,7 +40,8 @@ aspect of Rocket. The sections are:
 The official community support channels are [`#rocket:mozilla.org`] on Matrix
 and the bridged [`#rocket`] IRC channel on Libera.Chat at `irc.libera.chat`. We
 recommend joining us on [Matrix via Element]. If you prefer IRC, you can join
-via the [Kiwi IRC client] or a client of your own.
+via the [Kiwi IRC client] or a client of your own. The [FAQ](../faq/) also
+provides answers to commonly asked questions.
 
 [`#rocket:mozilla.org`]: https://chat.mozilla.org/#/room/#rocket:mozilla.org
 [`#rocket`]: https://kiwiirc.com/client/irc.libera.chat/#rocket

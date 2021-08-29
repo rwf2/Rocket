@@ -17,34 +17,35 @@ Is Rocket a monolithic framework like Rails? Or is it more like Flask?
 
 Neither!
 
-Rocket's core is small yet complete when it comes to security and correctness.
-It mainly consists of:
+Rocket's core is small yet complete with respect to security and correctness. It
+mainly consists of:
 
   * Guard traits like [`FromRequest`] and [`FromData`].
-  * Derive macros for all commonly used traits.
+  * Derive macros for all common traits.
   * Attribute macros for routing.
   * Thorough compile and launch-time checking.
-  * Optional features to enable functionality like TLS, secrets, and so on.
   * Zero-copy parsers and validators for common formats like multipart and SSE.
   * Syntax sugar extensions for features like async streams and traits.
+  * Optional features for functionality like TLS, secrets, and so on.
 
 The goal is for functionality like templating, sessions, ORMs, and so on to be
-implemented entirely outside of Rocket and yet feel first-class. Indeed, crates
-like [`rocket_dyn_templates`] and [`rocket_db_pools`] do just this.
+implemented entirely outside of Rocket while maintaining a first-class feel and
+experience. Indeed, crates like [`rocket_dyn_templates`] and [`rocket_db_pools`]
+do just this. As a result, Rocket is neither "bare-bones" nor is it a kitchen
+sink for all possible features.
 
-As a result, Rocket is neither "bare-bones" nor is it a kitchen sink for all
-possible features. Unlike other frameworks in the Rust ecosystem, Rocket makes
-it its mission to help you avoid security and correctness blunders
-out-of-the-box. It does this by including, out-of-the-box:
+Unlike other frameworks, Rocket makes it its mission to help you avoid security
+and correctness blunders. It does this by including, out-of-the-box:
 
-  * A flexible, type-based configuration system.
-  * Security and privacy headers by default.
-  * Zero-Copy RFC compliant URI parsers.
-  * Safe, typed URIs with compile-time checking.
-  * Thorough compile-time and launch-time checking of routes.
-  * A complete testing framework with sync and `async` variants.
+  * A flexible, type-based [configuration](../configuration/) system.
+  * [Security and privacy headers](@api/rocket/shield/) by default.
+  * Zero-Copy RFC compliant [URI parsers](@api/rocket/http/uri).
+  * Safe, [typed URIs](@api/rocket/macro.uri.html) with compile-time checking.
+  * [Compile-time and launch-time route checking](@api/rocket/attr.route.html).
+  * A [testing framework](@api/rocket/local) with sync and `async` variants.
   * Safe, exclusive access to fully decoded HTTP values.
-  * Mandatory data limits to prevent trivial DoS attacks.
+  * Mandatory [data limits](@api/rocket/data/struct.Limits.html) to prevent
+    trivial DoS attacks.
 
 Of course, this functionality comes at a compile-time cost (but notably, _not_
 at a runtime cost), impacting Rocket's clean build-time. For comparison, here's
@@ -104,13 +105,15 @@ Can I use Rocket in production? Should I? It's only v0.x!
 <div class="content">
 
 We **enthusiastically** recommend using Rocket in production, with the following
-caveats:
+non-exhaustive list of caveats:
 
   1. Run Rocket behind a reverse proxy like HAProxy or in a production load
      balancing environment. Rocket (Hyper) doesn't employ any defenses against
-     DDoS attacks or certain DoS attacks.
+     DDoS attacks or certain DoS attacks which can be mitigated by an external
+     service.
 
-  2. Use a TLS termination proxy for zero-downtown certificate rotation.
+  2. Use a TLS termination proxy (perhaps from 1.) for zero-downtown certificate
+     rotation.
 
   3. Properly configure your databases and database pools, especially with
      respect to the pool size.
@@ -157,8 +160,8 @@ So what about benchmarks? Well, benchmarking is _hard_, and besides often being
 conducted incorrectly, often appear to say more than they do. So, when you see a
 benchmark for "Hello, world!", you should know that the benchmark's relevance
 doesn't extend far beyond "Hello, world!" servers and the specific way the
-measurement was taken. In other words, they provide only a baseline truth that
-is hard to extrapolate to real-world use-cases, _your_ use-case.
+measurement was taken. In other words, it provides a baseline truth that is hard
+to extrapolate to real-world use-cases, _your_ use-case.
 
 Nevertheless, here are some things you can consider as _generally_ true about
 Rocket applications:
@@ -228,7 +231,8 @@ Rocket represents an ecosystem-wide effort to create a web framework that
 enables writing web applications with unparalleled security, performance, and
 usability. From design to implementation to documentation, Rocket is carefully
 crafted to ensure the greatest productivity and reliability with the fewest
-surprises. Our goal is to make Rocket the obvious choice across _all_ languages.
+surprises. Our goal is to make Rocket a compelling choice across _all_
+languages.
 
 Accomplishing this takes time, and our efforts extend to the entire ecosystem.
 For example, work for Rocket v0.5 included:
@@ -314,7 +318,7 @@ For a quick example on how to handle file uploads, see [multipart forms].
 
 File uploads are transmitted by the browser as [multipart] form submissions,
 which Rocket handles natively as a [`DataField`]. The [`TempFile`] form guard
-can accept a `DataField` and stream the data to disk to then be persisted.
+can accept a `DataField` and stream the data to disk for persistence.
 </div>
 </details>
 
@@ -339,8 +343,8 @@ converted into useful typed values _before_ being processed. Allowing a
 Instead, Rocket's handlers work through _guards_, reified as traits, which
 validate and extract parts of a request as needed. Rocket automatically invokes
 these guards for you, so custom guards are write-once-use-everywhere. Rocket
-won't invoke handlers that depend on guards that fail. This way, handlers only
-deal with fully validated, typed, secure values.
+won't invoke a handler with failing guards. This way, handlers only deal with
+fully validated, typed, secure values.
 
 Rocket provides all of the guard implementations you would expect
 out-of-the-box, and you can implement your own, too. See the following:
@@ -375,18 +379,17 @@ reasons. The rest are set by a type's [`Responder`] implementation.
 
 **Status**
 
-Rocket automatically sets a Status header for all responses. If the `Responder`
-doesn't explicitly set a status, it defaults to `200`. Responders like
-`Option<T>`, however, _do_ set the status. See the [`Responder`] docs for
-details, and the [`status`] module for details on setting a custom Status or
-overriding an existing one.
+Rocket automatically sets a `Status` header for all responses. If a `Responder`
+doesn't explicitly set a status, it defaults to `200`. Some responders, like
+`Option<T>`, do set a status. See [`Responder`] and the [`status`] module for
+details on setting a custom `Status` or overriding an existing one.
 
 **Content-Type**
 
-Rocket automatically sets a Content-Type header for most types it implements
+Rocket automatically sets a `Content-Type` header for types it implements
 `Responder` for, so in the common case, there's nothing to do. This includes
 types like `&str`, `&[u8]`, `NamedFile`, and so on. The [`content`] module docs
-have details on setting a custom Content-Type or overriding an existing one.
+details setting a custom `Content-Type` or overriding an existing one.
 
 **Everything Else**
 
@@ -424,9 +427,10 @@ A `HeaderType` won't exist for custom headers, but you can define your own type.
 As long as it implements `Into<Header>` for Rocket's [`Header`], the type can be
 used as a field in derived struct.
 
-You can always implement `Responder` directly. Make sure to leverage existing
-responders in your implementation. For example, _don't_ serialize JSON manually.
-Instead, use the existing [`Json`] responder, like in the example below:
+Alternatively, you can always implement `Responder` directly. Make sure to
+leverage existing responders in your implementation. For example, _don't_
+serialize JSON manually. Instead, use the existing [`Json`] responder, like in
+the example below:
 
 ```rust
 # #[derive(rocket::serde::Serialize)]
@@ -554,10 +558,7 @@ How do I make Rocket a _part_ of my application as opposed to the whole thing?
 </summary>
 <div class="content">
 
-If you're developing an application where an HTTP server is a _part_ of the
-application instead of being the entire thing, use the `#[main]` attribute and
-manually call [`launch()`]:
-
+Use the `#[main]` attribute and manually call [`launch()`]:
 
 ```rust,no_run
 #[rocket::main]
@@ -624,23 +625,29 @@ error[E0277]: the trait bound `Foo: Responder<'_, '_>` is not satisfied
   = note: required by `respond_to`
 ```
 
-...then you're almost certainly depending on libraries which depend on different
-versions of `rocket`. A common mistake is to depend on a `contrib` library from
-git while also depending on a `crates.io` version of Rocket or vice-versa:
+...then you're almost certainly depending, perhaps transitively, on _two
+different versions_ of a single library. For example, you may be depending on
+`rocket` which depends on `time 0.3` while also depending directly on `time
+0.2`. Or you may depending on `rocket` from `crates.io` while depending on a
+library that depends on `rocket` from `git`. A common instance of this mistake
+is to depend on a `contrib` library from git while also depending on a
+`crates.io` version of Rocket or vice-versa:
 
 ```toml
 rocket = "0.5.0-rc.1"
 rocket_db_pools = { git = "https://github.com/SergioBenitez/Rocket.git" }
 ```
 
-This is _never_ correct. In Rust, types from two different versions of a library
-or from different providers (like `git` vs. `crates.io`) are _always_ considered
-distinct, even if they have the same name. Therefore, even if a type implements
-a trait from one library, it _does not_ implement the trait from the other
-library (since it is considered to be a _different_, _distinct_ library). In
-other words, you can _never_ mix two different published versions of Rocket, a
-published version and a `git` version, or two instances from different `git`
-revisions.
+This is _never_ correct. If libraries or applications interact via types from a
+common library, those libraries or applications _must_ specify the _same_
+version of that common library. This is because in Rust, types from two
+different versions of a library or from different providers (like `git` vs.
+`crates.io`) are _always_ considered distinct, even if they have the same name.
+Therefore, even if a type implements a trait from one library, it _does not_
+implement the trait from the other library (since it is considered to be a
+_different_, _distinct_ library). In other words, you can _never_ mix two
+different published versions of Rocket, a published version and a `git` version,
+or two instances from different `git` revisions.
 
 </div>
 </details>

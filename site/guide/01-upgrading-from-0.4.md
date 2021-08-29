@@ -1,18 +1,27 @@
 # Upgrading
 
-Rocket v0.5 bring many new features and improvements over Rocket v0.4. Along
-with new features, Rocket v0.5 also includes many changes that improve the
-overall usability, stability, and security of the framework and applications
-written in it. While the Rust compiler can guide you through many of these
-changes, others require special attention. The intent of this guide is to guide
-you through these changes and more, migrating your Rocket application to 0.5 and
-reaping the benefits of new features and improvements.
+Rocket v0.5 bring many new features and improvements over Rocket v0.4. Rocket
+v0.5 also includes many changes that improve the overall usability, stability,
+and security of the framework and applications written in it. While the Rust
+compiler can guide you through many of these changes, others require special
+attention. The intent of this guide is to guide you through these changes and
+more, migrating your Rocket application to 0.5 and reaping the benefits of new
+features and improvements.
 
 This guide is _not_ intended to replace, but instead complement, a reading of
 the [CHANGELOG]. The [CHANGELOG] should be considered required reading for all
 developers wishing to migrate their applications to Rocket v0.5.
 
 [CHANGELOG]: @github/CHANGELOG.md
+
+! note Don't panic!
+
+  Simply upgrading Rocket's version string to the `0.5` series will result in
+  _many_ `rustc` compiler errors. But don't let this phase you! The vast
+  majority of changes are simple renames and `#[async_trait]` attributions which
+  manifest in a cascading of errors. As such, resolving _one_ top-level issue,
+  typically requiring minimal, trivial changes, often resolves _many_ errors in
+  one go.
 
 ## Crate Organization
 
@@ -55,18 +64,16 @@ to `Cargo.toml`:
 + rocket_dyn_templates = { version = "0.1.0-rc.1", features = ["tera"] }
 ```
 
-! note: `rocket_dyn_templates` _does not_ follow in version lock-step with
-  the `rocket` crate.
+! note: `rocket_dyn_templates` (and co.) _does not_ follow in version lock-step
+with the `rocket` crate.
 
   This is intentional. The crate depends on many external dependencies which may
   evolve at a different pace than Rocket itself. Allowing their versions to
   diverge enables keeping dependencies up-to-date without breaking `rocket`
   itself.
 
-All features previously present in `rocket_contrib` are available elsewhere. The
-[contrib graduation] section of the CHANGELOG contains full details on the
-changes.
-
+All features previously in `rocket_contrib` are available. Consult the [contrib
+graduation] section of the CHANGELOG for full details.
 
 [`rocket_dyn_templates`]: @api/rocket_dyn_templates
 [`rocket_sync_db_pools`]: @api/rocket_sync_db_pools
@@ -101,7 +108,7 @@ If you prefer to use Rust's stable release channel, you can switch to it using
 
 ```sh
 ## switch globally
-rustup default nightly
+rustup default stable
 
 ## switch locally
 rustup override set stable
@@ -110,9 +117,8 @@ rustup override set stable
 Using the stable release channel ensures that _no_ breakages will occur when
 upgrading your Rust compiler or Rocket. That being said, Rocket continues to
 take advantage of features only present in the nightly channel. As a result, the
-development experience will continue to be better on nightly for the forseeable
-future. For example, compiler diagnostics on `nightly` are more detailed and
-accurate:
+development experience will be superior on nightly for the forseeable future.
+For example, compiler diagnostics on `nightly` are more detailed and accurate:
 
 <details>
 <summary>Example Diagnostic on Nightly</summary>
@@ -179,7 +185,7 @@ The new asynchronous core requires an async runtime to run. The new
 [`launch`] and [`main`] attributes simplify starting a runtime suitable for
 running Rocket applications. You should use [`launch`] whenever possible.
 
-At the same time, the `rocket::ignite()` function has been renamed to
+Additionally, the `rocket::ignite()` function has been renamed to
 [`rocket::build()`]; calls to the function or method should be replaced
 accordingly. Together, these two changes result in the following diff to what
 was previously the `main` function:
@@ -204,18 +210,19 @@ Rocket v0.5 takes advantage of the latest developments in async I/O in Rust by
 migrating to a fully asynchronous core powered by [`tokio`]. Specifically,
 _every_ request is handled by an asynchronous task which internally calls one or
 more request handlers. Asynchronous tasks are multiplexed on a [configurable
-number of worker threads]. Though there is no limit on the number of tasks that
-can run concurrently, at most `worker` tasks can be run in parallel.
+number of worker threads]. Though there is no limit to the number of tasks that
+can run concurrently, at most `worker` tasks can run in parallel.
 
-The runtime can switch between tasks in a single worker thread _iff_ an `await`
-point in reached. In other words, context switching is _cooperative_, _not_
-preemptive. This _iff_ is critical: if an `await` point is _not_ reached, no
-task switching can occur. As such, it is important that `await` points occur
-periodically in a task so that tasks waiting to be scheduled are not starved.
+The runtime can switch between tasks in a single worker thread _iff_ <small>(_if
+and only if_)</small> an `await` point in reached. In other words, context
+switching is _cooperative_, _not_ preemptive. This _iff_ is critical: if an
+`await` point is _not_ reached, no task switching can occur. As such, it is
+important that `await` points occur periodically in a task so that tasks waiting
+to be scheduled are not starved.
 
-In general, when working with `async` APIs, await points will occur naturally.
-However, an application written for synchronous I/O, like all Rocket
-applications prior to 0.4, must take great care to convert all synchronous,
+In general, when working with `async` APIs, await points occur naturally.
+However, an application written for synchronous I/O, including all Rocket
+applications prior to v0.5, must take great care to convert all synchronous,
 blocking I/O, to `async` I/O. This is because, as the name implies, blocking I/O
 blocks a thread from making progress until the I/O result is available, meaning
 that no tasks can be scheduled on the waiting thread, wasting valuable resources
@@ -234,8 +241,8 @@ Common sources of blocking I/O and their `async` replacements include:
 Unfortunately, the Rust compiler provides no support for identifying blocking
 I/O via lints or compile-time checks: it is up to you to scan your application
 for sources of blocking I/O and replace them with their `async` counterpart. If
-no such counterpart exists, you must execute the I/O in its own thread by using
-[`rocket::tokio::task::spawn_blocking`].
+no such counterpart exists, you should execute the relevant I/O in its own
+thread by using [`rocket::tokio::task::spawn_blocking`].
 
 All of Rocket's I/O APIs have been updated to be `async`-safe.
 This results in requiring `.await` calls for common APIs like [`NamedFile`]. To
@@ -250,6 +257,11 @@ async fn index() -> Option<NamedFile> {
     NamedFile::open("index.html").await.ok()
 }
 ```
+
+! warning: Non-`async` routes are _also_ executed on the `async` runtime.
+
+  A route that _isn't_ declared as `async` is _still_ executed on the `async`
+  runtime. As a result, it should not execute blocking I/O.
 
 <details>
 <summary>See a diff of the changes from v0.4.</summary>
@@ -343,7 +355,7 @@ of truth for trait and method signatures.
 
 ## Configuration
 
-Rocket's configuration system has been entirely revamped for 0.5. The
+Rocket's configuration system has been entirely revamped for v0.5. The
 [configuration](../configuration) section of the guide contains a full
 walkthrough of the new system while the [general changes] section of the
 CHANGELOG contains further details on configuration changes. We call out the
@@ -366,7 +378,7 @@ detected.
 The new system deals with "profiles" where there were previously "environments".
 As opposed to environments, profiles:
 
-  * Can be arbitrarily named, and any number can exist.
+  * Can be arbitrarily named and any number can exist.
   * Match Rust profiles in naming: `debug` and `release` are the default
     profiles for the respective Rust compilation profile.
   * Are programmatically selectable and configurable.
@@ -449,7 +461,7 @@ Rocket v0.5 brings several major changes that affect routing:
 Default route ranking now takes into account partially dynamic paths, increasing
 the range of default ranks from `[-6, -1]` to `[-12, -1]`. The net effect is
 that fewer routes collide by default, requiring less manual ranking. For
-example, the following two routes collide in 0.4 but not in 0.5:
+example, the following two routes collide in v0.4 but not in v0.5:
 
 ```rust
 # use rocket::get;
@@ -479,7 +491,7 @@ fn everything() { }
 For smaller applications, you may find that _all_ manual ranks can be removed.
 Larger applications may still require ranks to resolve ambiguities.
 
-### Kleen Multi-Segments
+### Kleene Multi-Segments
 
 The multi-segment route parameter `<foo..>` now matches _zero or more_ segments,
 a change from the previous _one_ or more segments. The implication is two-fold:
@@ -587,10 +599,12 @@ Rocket v0.5 introduces entirely revamped [forms] with support for:
   * [Ad-Hoc validation.](../requests#ad-hoc-validation)
 
 Additionally, the [`FromForm` derive] has been substantially improved so that
-nearly all custom implementations of `FromForm` or (the now defunct)
-`FromFormValue` can be derived. Altogether, this means that any external crate
-dependency for form handling and most custom `FromForm` or `FromFormValue`
-implementations are unnecessary and should be removed.
+nearly all custom implementations of `FromForm` or [`FromFormField`], which
+replaces `FromFormValue` from v0.4, can be derived. Altogether, this means that
+any external crate dependency for form handling and most custom `FromForm` or
+`FromFormValue` implementations are unnecessary and should be removed.
+
+[`FromFormField`]: @api/rocket/form/trait.FromFormField.html
 
 ### Multipart
 
@@ -800,7 +814,8 @@ fn stream(n: Option<u64>) -> EventStream![] {
 
 If you run into any issues upgrading, we encourage you to ask questions via
 [GitHub discussions] or via chat at [`#rocket:mozilla.org`] on Matrix or the
-bridged [`#rocket`] IRC channel at `irc.libera.chat`.
+bridged [`#rocket`] IRC channel at `irc.libera.chat`. The [FAQ](../faq/) also
+provides answers to commonly asked questions.
 
 [GitHub discussions]: https://github.com/SergioBenitez/Rocket/discussions
 [`#rocket:mozilla.org`]: https://chat.mozilla.org/#/room/#rocket:mozilla.org
