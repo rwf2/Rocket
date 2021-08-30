@@ -214,6 +214,37 @@ impl<D: Database> Initializer<D> {
     }
 }
 
+impl<D: Database> Connection<D> {
+    /// Returns the internal connection value. See the [`Connection` Deref
+    /// column](crate#supported-drivers) for the expected type of this value.
+    ///
+    /// Note that `Connection<D>` derefs to the internal connection type, so
+    /// using this method is likely unnecessary. See [deref](Connection#deref)
+    /// for examples.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// # #[cfg(feature = "sqlx_sqlite")] mod _inner {
+    /// # use rocket::get;
+    /// # type Pool = rocket_db_pools::sqlx::SqlitePool;
+    /// use rocket_db_pools::{Database, Connection};
+    ///
+    /// #[derive(Database)]
+    /// #[database("db")]
+    /// struct Db(Pool);
+    ///
+    /// #[get("/")]
+    /// async fn db_op(db: Connection<Db>) {
+    ///     let inner = db.into_inner();
+    /// }
+    /// # }
+    /// ```
+    pub fn into_inner(self) -> <D::Pool as Pool>::Connection {
+        self.0
+    }
+}
+
 #[rocket::async_trait]
 impl<D: Database> Fairing for Initializer<D> {
     fn info(&self) -> Info {
