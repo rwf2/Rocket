@@ -101,7 +101,7 @@ If you prefer to use Rust's stable release channel, you can switch to it using
 
 ```sh
 ## switch globally
-rustup default nightly
+rustup default stable
 
 ## switch locally
 rustup override set stable
