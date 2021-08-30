@@ -330,6 +330,13 @@ fn codegen_route(route: Route) -> Result<TokenStream> {
     let rank = Optional(route.attr.rank);
     let format = Optional(route.attr.format.as_ref());
 
+    let route_name = match &route.attr.name {
+        Some(name) => quote! { #name },
+        None => {
+            quote! { stringify!(#handler_fn_name) }
+        }
+    };
+
     Ok(quote! {
         #handler_fn
 
@@ -357,7 +364,7 @@ fn codegen_route(route: Route) -> Result<TokenStream> {
                 }
 
                 #_route::StaticInfo {
-                    name: stringify!(#handler_fn_name),
+                    name: #route_name,
                     method: #method,
                     uri: #uri,
                     handler: monomorphized_function,

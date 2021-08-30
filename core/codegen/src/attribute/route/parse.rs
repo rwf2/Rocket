@@ -47,6 +47,7 @@ pub struct Attribute {
     pub data: Option<SpanWrapped<Dynamic>>,
     pub format: Option<MediaType>,
     pub rank: Option<isize>,
+    pub name: Option<String>,
 }
 
 /// The parsed `#[method(..)]` (e.g, `get`, `put`, etc.) attribute.
@@ -57,6 +58,7 @@ pub struct MethodAttribute {
     pub data: Option<SpanWrapped<Dynamic>>,
     pub format: Option<MediaType>,
     pub rank: Option<isize>,
+    pub name: Option<String>,
 }
 
 #[derive(Debug)]
