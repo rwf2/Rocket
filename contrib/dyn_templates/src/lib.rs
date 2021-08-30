@@ -77,10 +77,10 @@
 //! | Engine       | Version | Extension |
 //! |--------------|---------|-----------|
 //! | [Tera]       | 1       | `.tera`   |
-//! | [Handlebars] | 3       | `.hbs`    |
+//! | [Handlebars] | 4       | `.hbs`    |
 //!
 //! [Tera]: https://docs.rs/crate/tera/1
-//! [Handlebars]: https://docs.rs/crate/handlebars/3
+//! [Handlebars]: https://docs.rs/crate/handlebars/4
 //!
 //! Any file that ends with one of these extension will be discovered and
 //! rendered with the corresponding templating engine. The _name_ of the
