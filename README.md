@@ -32,17 +32,17 @@ route won't get called, resulting in a 404 error.
 
 Rocket is extensively documented:
 
-  * [Overview]: A brief look at what makes Rocket special.
-  * [Quickstart]: How to get started as quickly as possible.
-  * [Getting Started]: How to start your first Rocket project.
-  * [Guide]: A detailed guide and reference to Rocket.
-  * [API Documentation]: The "rustdocs".
+- [Overview]: A brief look at what makes Rocket special.
+- [Quickstart]: How to get started as quickly as possible.
+- [Getting Started]: How to start your first Rocket project.
+- [Guide]: A detailed guide and reference to Rocket.
+- [API Documentation]: The "rustdocs".
 
-[Quickstart]: https://rocket.rs/guide/quickstart
-[Getting Started]: https://rocket.rs/guide/getting-started
-[Overview]: https://rocket.rs/overview/
-[Guide]: https://rocket.rs/guide/
-[API Documentation]: https://api.rocket.rs/rocket/
+[quickstart]: https://rocket.rs/guide/quickstart
+[getting started]: https://rocket.rs/guide/getting-started
+[overview]: https://rocket.rs/overview/
+[guide]: https://rocket.rs/guide/
+[api documentation]: https://api.rocket.rs/rocket/
 
 The official community support channels are [`#rocket:mozilla.org`] on Matrix
 and the bridged [`#rocket`] IRC channel on Libera.Chat at `irc.libera.chat`. We
@@ -51,8 +51,8 @@ via the [Kiwi IRC client] or a client of your own.
 
 [`#rocket:mozilla.org`]: https://chat.mozilla.org/#/room/#rocket:mozilla.org
 [`#rocket`]: https://kiwiirc.com/client/irc.libera.chat/#rocket
-[Matrix via Element]: https://chat.mozilla.org/#/room/#rocket:mozilla.org
-[Kiwi IRC Client]: https://kiwiirc.com/client/irc.libera.chat/#rocket
+[matrix via element]: https://chat.mozilla.org/#/room/#rocket:mozilla.org
+[kiwi irc client]: https://kiwiirc.com/client/irc.libera.chat/#rocket
 
 ## Examples
 
@@ -73,17 +73,17 @@ The `core` directory contains the three core libraries: `lib`, `codegen`, and
 `http` published as `rocket`, `rocket_codegen` and `rocket_http`, respectively.
 The latter two are implementations details and are reexported from `rocket`.
 
-### Testing
+## Testing
 
 Rocket's complete test suite can be run with `./scripts/test.sh` from the root
 of the source tree. The script builds and tests all libraries and examples in
 all configurations. It accepts the following flags:
 
-  * `--examples`: tests all examples in `examples/`
-  * `--contrib`: tests each `contrib` library and feature individually
-  * `--core`: tests each `core/lib` feature individually
-  * `--benchmarks`: runs all benchmarks
-  * `--all`: runs all tests in all configurations
+- `--examples`: tests all examples in `examples/`
+- `--contrib`: tests each `contrib` library and feature individually
+- `--core`: tests each `core/lib` feature individually
+- `--benchmarks`: runs all benchmarks
+- `--all`: runs all tests in all configurations
 
 Additionally, a `+${toolchain}` flag, where `${toolchain}` is a valid `rustup`
 toolchain string, can be passed as the first parameter. The flag is forwarded to
@@ -92,7 +92,7 @@ toolchain string, can be passed as the first parameter. The flag is forwarded to
 To test crates individually, simply run `cargo test --all-features` in the
 crate's directory.
 
-### Codegen Testing
+## Codegen Testing
 
 Code generation diagnostics are tested using [`trybuild`]; tests can be found in
 the `codegen/tests/ui-fail` directories of respective `codegen` crates. Each
@@ -103,19 +103,19 @@ suite with `TRYBUILD=overwrite` and inspect the `diff` of `.std*` files.
 
 [`trybuild`]: https://docs.rs/trybuild/1
 
-## Documentation
+## API documentation
 
 API documentation is built with `./scripts/mk-docs.sh`. The resulting assets are
 uploaded to [api.rocket.rs](https://api.rocket.rs/).
 
 Documentation for a released version `${x}` can be found at
 `https://api.rocket.rs/v${x}` and `https://rocket.rs/v${x}`. For instance, the
-documentation for `0.4` can be found at https://api.rocket.rs/v0.4 and
-https://rocket.rs/v0.4. Documentation for unreleased versions in branch
+documentation for `0.4` can be found at <https://api.rocket.rs/v0.4> and
+<https://rocket.rs/v0.4>. Documentation for unreleased versions in branch
 `${branch}` be found at `https://api.rocket.rs/${branch}` and
 `https://rocket.rs/${branch}`. For instance, the documentation for the `master`
-branch can be found at https://api.rocket.rs/master and
-https://rocket.rs/master. Documentation for unreleased branches is updated
+branch can be found at <https://api.rocket.rs/master> and
+<https://rocket.rs/master>. Documentation for unreleased branches is updated
 periodically.
 
 ## Contributing
@@ -123,10 +123,10 @@ periodically.
 Contributions are absolutely, positively welcome and encouraged! Contributions
 come in many forms. You could:
 
-  1. Submit a feature request or bug report as an [issue].
-  2. Ask for improved documentation as an [issue].
-  3. Comment on [issues that require feedback].
-  4. Contribute code via [pull requests].
+1. Submit a feature request or bug report as an [issue].
+2. Ask for improved documentation as an [issue].
+3. Comment on [issues that require feedback].
+4. Contribute code via [pull requests].
 
 [issue]: https://github.com/SergioBenitez/Rocket/issues
 [issues that require feedback]: https://github.com/SergioBenitez/Rocket/issues?q=is%3Aissue+is%3Aopen+label%3A%22feedback+wanted%22
@@ -135,17 +135,17 @@ come in many forms. You could:
 We aim to keep Rocket's code quality at the highest level. This means that any
 code you contribute must be:
 
-  * **Commented:** Complex and non-obvious functionality must be properly
-    commented.
-  * **Documented:** Public items _must_ have doc comments with examples, if
-    applicable.
-  * **Styled:** Your code's style should match the existing and surrounding code
-    style.
-  * **Simple:** Your code should accomplish its task as simply and
-     idiomatically as possible.
-  * **Tested:** You must write (and pass) convincing tests for any new
-    functionality.
-  * **Focused:** Your code should do what it's supposed to and nothing more.
+- **Commented:** Complex and non-obvious functionality must be properly
+  commented.
+- **Documented:** Public items _must_ have doc comments with examples, if
+  applicable.
+- **Styled:** Your code's style should match the existing and surrounding code
+  style.
+- **Simple:** Your code should accomplish its task as simply and
+  idiomatically as possible.
+- **Tested:** You must write (and pass) convincing tests for any new
+  functionality.
+- **Focused:** Your code should do what it's supposed to and nothing more.
 
 All pull requests are code reviewed and tested by the CI. Note that unless you
 explicitly state otherwise, any contribution intentionally submitted for
@@ -156,7 +156,7 @@ Apache License, Version 2.0, without any additional terms or conditions.
 
 Rocket is licensed under either of the following, at your option:
 
- * Apache License, Version 2.0, ([LICENSE-APACHE](LICENSE-APACHE) or https://www.apache.org/licenses/LICENSE-2.0)
- * MIT License ([LICENSE-MIT](LICENSE-MIT) or https://opensource.org/licenses/MIT)
+- Apache License, Version 2.0, ([LICENSE-APACHE](LICENSE-APACHE) or <https://www.apache.org/licenses/LICENSE-2.0>)
+- MIT License ([LICENSE-MIT](LICENSE-MIT) or <https://opensource.org/licenses/MIT>)
 
 The Rocket website source is licensed under [separate terms](site#license).
