@@ -7,7 +7,7 @@ use crate::{Route, Catcher};
 use crate::router::Collide;
 
 #[derive(Debug, Default)]
-pub(crate) struct Router {
+pub struct Router {
     routes: HashMap<Method, Vec<Route>>,
     catchers: HashMap<Option<u16>, Vec<Catcher>>,
 }

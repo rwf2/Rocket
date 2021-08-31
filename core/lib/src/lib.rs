@@ -159,6 +159,7 @@ mod phase;
 #[doc(inline)] pub use crate::config::Config;
 #[doc(inline)] pub use crate::catcher::Catcher;
 #[doc(inline)] pub use crate::route::Route;
+#[doc(inline)] pub use crate::router::Router;
 #[doc(hidden)] pub use either::Either;
 #[doc(inline)] pub use phase::{Phase, Build, Ignite, Orbit};
 #[doc(inline)] pub use error::Error;
