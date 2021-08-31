@@ -422,6 +422,7 @@ fn incomplete_route(
         data: method_attribute.data,
         format: method_attribute.format,
         rank: method_attribute.rank,
+        name: method_attribute.name,
     };
 
     codegen_route(Route::from(attribute, function)?)
