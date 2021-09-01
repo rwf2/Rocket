@@ -73,7 +73,7 @@ The `core` directory contains the three core libraries: `lib`, `codegen`, and
 `http` published as `rocket`, `rocket_codegen` and `rocket_http`, respectively.
 The latter two are implementations details and are reexported from `rocket`.
 
-## Testing
+### Testing
 
 Rocket's complete test suite can be run with `./scripts/test.sh` from the root
 of the source tree. The script builds and tests all libraries and examples in
@@ -92,7 +92,7 @@ toolchain string, can be passed as the first parameter. The flag is forwarded to
 To test crates individually, simply run `cargo test --all-features` in the
 crate's directory.
 
-## Codegen Testing
+### Codegen Testing
 
 Code generation diagnostics are tested using [`trybuild`]; tests can be found in
 the `codegen/tests/ui-fail` directories of respective `codegen` crates. Each
