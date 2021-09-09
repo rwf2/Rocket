@@ -29,7 +29,7 @@ values:
 | `secret_key`   | [`SecretKey`]     | Secret key for signing and encrypting values.   | `None`                  |
 | `tls`          | [`TlsConfig`]     | TLS configuration, if any.                      | `None`                  |
 | `limits`       | [`Limits`]        | Streaming read size limits.                     | [`Limits::default()`]   |
-| `limits.$name` | `&str`/`uint`     | Read limit for `$name`.                         | forms = "32KiB"         |
+| `limits.$name` | `&str`/`uint`     | Read limit for `$name`.                         | form = "32KiB"         |
 | `ctrlc`        | `bool`            | Whether `ctrl-c` initiates a server shutdown.   | `true`                  |
 | `shutdown`     | [`Shutdown`]      | Graceful shutdown configuration.                | [`Shutdown::default()`] |
 
@@ -106,12 +106,12 @@ file might look like:
 ## defaults for _all_ profiles
 [default]
 address = "0.0.0.0"
-limits = { forms = "64 kB", json = "1 MiB" }
+limits = { form = "64 kB", json = "1 MiB" }
 
 ## set only when compiled in debug mode, i.e, `cargo build`
 [debug]
 port = 8000
-## only the `json` key from `default` will be overridden; `forms` will remain
+## only the `json` key from `default` will be overridden; `form` will remain
 limits = { json = "10MiB" }
 
 ## set only when the `nyc` profile is selected
@@ -144,7 +144,7 @@ cli_colors = true
 secret_key = "hPRYyVRiMyxpw5sBB1XeCMN1kFsDCqKvBi2QJxBVHQk="
 
 [default.limits]
-forms = "64 kB"
+form = "64 kB"
 json = "1 MiB"
 msgpack = "2 MiB"
 "file/jpg" = "5 MiB"
@@ -179,7 +179,7 @@ ROCKET_IDENT=Rocket
 ROCKET_IDENT="Hello Rocket"
 ROCKET_IDENT=false
 ROCKET_TLS={certs="abc",key="foo/bar"}
-ROCKET_LIMITS={forms="64 KiB"}
+ROCKET_LIMITS={form="64 KiB"}
 ```
 
 ### Secret Key
