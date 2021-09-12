@@ -48,7 +48,6 @@ parking_lot = "0.11"
 ubyte = {version = "0.10", features = ["serde"] }
 serde = { version = "1.0", features = ["derive"] }
 figment = { version = "0.10.6", features = ["toml", "env"] }
-rand = "0.8"
 either = "1"
 pin-project-lite = "0.2"
 indexmap = { version = "1.0", features = ["serde-1", "std"] }

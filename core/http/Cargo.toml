@@ -63,6 +63,3 @@ package = "uuid"
 version = "0.8"
 optional = true
 default-features = false
-
-[dev-dependencies]
-rocket = { version = "0.5.0-rc.1", path = "../lib", features = ["mtls"] }
