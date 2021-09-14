@@ -17,7 +17,7 @@ As an example, consider the simple route below:
 ```rust
 #[get("/")]
 fn index() -> &'static str {
-   "Hello, world!"
+    "Hello, world!"
 }
 ```
 
@@ -175,7 +175,7 @@ customizable **404** error is returned.
 ```rust
 #[post("/user", data = "<new_user>")]
 fn new_user(admin: AdminUser, new_user: Form<User>) -> T {
-   ...
+    ...
 }
 ```
 
