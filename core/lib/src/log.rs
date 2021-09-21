@@ -32,8 +32,8 @@ define_log_macro!(warn, warn_);
 define_log_macro!(info, info_);
 define_log_macro!(debug, debug_);
 define_log_macro!(trace, trace_);
-define_log_macro!(launch_info: warn, "rocket::launch", $);
-define_log_macro!(launch_info_: warn, "rocket::launch_", $);
+define_log_macro!(launch_info: info, "rocket::launch", $);
+define_log_macro!(launch_info_: info, "rocket::launch_", $);
 
 #[derive(Debug)]
 struct RocketLogger;
