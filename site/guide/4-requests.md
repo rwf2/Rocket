@@ -149,7 +149,7 @@ async fn files(file: PathBuf) -> Option<NamedFile> {
 }
 ```
 
-[path traversal attacks]: https://www.owasp.org/index.php/Path_Traversal
+[path traversal attacks]: https://owasp.org/www-community/attacks/Path_Traversal
 
 ! tip: Rocket makes it even _easier_ to serve static files!
 
