@@ -338,4 +338,26 @@ macro_rules! pub_request_impl {
         fn is_deref_mut_req<'a, T: std::ops::DerefMut<Target = Request<'a>>>() {}
         is_deref_mut_req::<Self>();
     }
+
+    #[doc = $import]
+    /// use rocket::local::blocking::Client;
+    ///
+    /// let client = Client::tracked(super::rocket()).unwrap();
+    /// let response = client
+    ///     .get("/")
+    ///     .identity("private/rsa_sha256_cert.pem".into())
+    ///      .dispatch();
+    /// # });
+    /// ```
+    #[cfg(feature = "mtls")]
+    #[cfg_attr(nightly, doc(cfg(feature = "mtls")))]
+    pub fn identity(mut self, cert_path: String) -> Self {
+        let cert_file = std::fs::File::open(cert_path).expect("Valid client certificate path");
+        let mut reader = std::io::BufReader::new(cert_file);
+        self._request_mut().connection.client_certificates = Some(crate::http::tls::rustls::internal::pemfile::certs(&mut reader)
+            .map_err(|_| std::io::Error::new(std::io::ErrorKind::Other, "invalid certificate"))
+            .map(std::sync::Arc::new)
+            .expect("Valid certs"));
+        self
+    }
 }}
