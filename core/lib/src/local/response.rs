@@ -121,6 +121,7 @@ macro_rules! pub_response_impl {
     /// use rocket::serde::Deserialize;
     ///
     /// #[derive(Deserialize)]
+    /// #[serde(crate = "rocket::serde")]
     /// struct Task {
     ///     id: usize,
     ///     complete: bool,
@@ -157,6 +158,7 @@ macro_rules! pub_response_impl {
     /// use rocket::serde::Deserialize;
     ///
     /// #[derive(Deserialize)]
+    /// #[serde(crate = "rocket::serde")]
     /// struct Task {
     ///     id: usize,
     ///     complete: bool,

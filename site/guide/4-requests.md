@@ -669,6 +669,7 @@ data as JSON. The only condition is that the generic type `T` implements the
 use rocket::serde::{Deserialize, json::Json};
 
 #[derive(Deserialize)]
+#[serde(crate = "rocket::serde")]
 struct Task<'r> {
     description: &'r str,
     complete: bool

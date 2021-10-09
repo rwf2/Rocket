@@ -231,6 +231,7 @@ macro_rules! pub_request_impl {
     /// use rocket::http::ContentType;
     ///
     /// #[derive(Serialize)]
+    /// #[serde(crate = "rocket::serde")]
     /// struct Task {
     ///     id: usize,
     ///     complete: bool,
@@ -265,6 +266,7 @@ macro_rules! pub_request_impl {
     /// use rocket::http::ContentType;
     ///
     /// #[derive(Serialize)]
+    /// #[serde(crate = "rocket::serde")]
     /// struct Task {
     ///     id: usize,
     ///     complete: bool,
