@@ -194,7 +194,7 @@ impl<'a> CookieJar<'a> {
     /// Returns a reference to the _original_ `Cookie` inside this container
     /// with the name `name`. If no such cookie exists, returns `None`.
     ///
-    /// **Note:** This method _does not_ obverse changes made via additions and
+    /// **Note:** This method _does not_ observe changes made via additions and
     /// removals to the cookie jar. To observe those changes, use
     /// [`CookieJar::get_pending()`].
     ///
@@ -213,12 +213,12 @@ impl<'a> CookieJar<'a> {
         self.jar.get(name)
     }
 
-    /// Retrives the _original_ `Cookie` inside this collection with the name
+    /// Retrieves the _original_ `Cookie` inside this collection with the name
     /// `name` and authenticates and decrypts the cookie's value. If the cookie
     /// cannot be found, or the cookie fails to authenticate or decrypt, `None`
     /// is returned.
     ///
-    /// **Note:** This method _does not_ obverse changes made via additions and
+    /// **Note:** This method _does not_ observe changes made via additions and
     /// removals to the cookie jar. To observe those changes, use
     /// [`CookieJar::get_pending()`].
     ///
@@ -397,7 +397,7 @@ impl<'a> CookieJar<'a> {
     /// Returns an iterator over all of the _original_ cookies present in this
     /// collection.
     ///
-    /// **Note:** This method _does not_ obverse changes made via additions and
+    /// **Note:** This method _does not_ observe changes made via additions and
     /// removals to the cookie jar.
     ///
     /// # Example
