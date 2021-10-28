@@ -520,6 +520,7 @@ macro_rules! context {
     ($($key:ident $(: $value:expr)?),*$(,)?) => {{
         use $crate::serde::ser::{Serialize, Serializer, SerializeMap};
         use ::std::fmt::{Debug, Formatter};
+        use ::std::result::Result;
 
         #[allow(non_camel_case_types)]
         struct ContextMacroCtxObject<$($key: Serialize),*> {
