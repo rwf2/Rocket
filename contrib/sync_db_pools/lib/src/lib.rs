@@ -316,7 +316,7 @@
 //! The list below includes all presently supported database adapters and their
 //! corresponding [`Poolable`] type.
 //!
-// Note: Keep this table in sync with site/guite/6-state.md
+// Note: Keep this table in sync with site/guide/6-state.md
 //! | Kind     | Driver                | Version   | `Poolable` Type                | Feature                |
 //! |----------|-----------------------|-----------|--------------------------------|------------------------|
 //! | MySQL    | [Diesel]              | `1`       | [`diesel::MysqlConnection`]    | `diesel_mysql_pool`    |

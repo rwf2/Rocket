@@ -42,6 +42,10 @@ use proc_macro::TokenStream;
 ///     Retrieves a connection wrapper from the configured pool. Returns `Some`
 ///     as long as `Self::fairing()` has been attached.
 ///
+///   * `async fn get_pool(&self) -> r2d2::Pool`
+///
+///     Retrieves a cloned reference to the inner connection pool.
+///
 ///   * `async fn run<R: Send + 'static>(&self, impl FnOnce(&mut Db) -> R + Send + 'static) -> R`
 ///
 ///     Runs the specified function or closure, providing it access to the

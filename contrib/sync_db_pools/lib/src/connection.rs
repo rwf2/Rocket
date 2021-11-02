@@ -42,6 +42,7 @@ impl<K, C: Poolable> Clone for ConnectionPool<K, C> {
 /// types are properly checked.
 #[doc(hidden)]
 pub struct Connection<K, C: Poolable> {
+    pool: r2d2::Pool<C::Manager>,
     connection: Arc<Mutex<Option<r2d2::PooledConnection<C::Manager>>>>,
     permit: Option<OwnedSemaphorePermit>,
     _marker: PhantomData<fn() -> K>,
@@ -106,8 +107,10 @@ impl<K: 'static, C: Poolable> ConnectionPool<K, C> {
         let pool = self.pool.as_ref().cloned()
             .expect("internal invariant broken: self.pool is Some");
 
+        let pool_clone = pool.clone();
         match run_blocking(move || pool.get_timeout(duration)).await {
             Ok(c) => Ok(Connection {
+                pool: pool_clone,
                 connection: Arc::new(Mutex::new(Some(c))),
                 permit: Some(permit),
                 _marker: PhantomData,
@@ -168,6 +171,11 @@ impl<K: 'static, C: Poolable> Connection<K, C> {
                 .expect("internal invariant broken: self.connection is Some");
             f(conn)
         }).await
+    }
+
+    #[inline]
+    pub fn get_pool(&self) -> r2d2::Pool<C::Manager> {
+        self.pool.clone()
     }
 }
 

@@ -108,6 +108,11 @@ pub fn database_attr(attr: TokenStream, input: TokenStream) -> Result<TokenStrea
             {
                 self.0.run(__f).await
             }
+
+            /// Retrieves a copy of the inner connection pool.
+            pub fn get_pool(&self) -> #root::r2d2::Pool<<#conn_type as #root::Poolable>::Manager> {
+                self.0.get_pool()
+            }
         }
 
         #[#rocket::async_trait]
