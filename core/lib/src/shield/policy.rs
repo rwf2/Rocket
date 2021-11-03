@@ -93,7 +93,6 @@ macro_rules! impl_policy {
 }
 
 // Keep this in-sync with the top-level module docs.
-impl_policy!(XssFilter, "X-XSS-Protection");
 impl_policy!(NoSniff, "X-Content-Type-Options");
 impl_policy!(Frame, "X-Frame-Options");
 impl_policy!(Hsts, "Strict-Transport-Security");
@@ -361,43 +360,6 @@ impl From<&Frame> for Header<'static> {
         };
 
         Header::new(Frame::NAME, policy_string)
-    }
-}
-
-/// The [X-XSS-Protection] header: filters some forms of reflected [XSS]
-/// attacks. Modern browsers do not support or enforce this header.
-///
-/// [X-XSS-Protection]: https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/X-XSS-Protection
-/// [XSS]: https://developer.mozilla.org/en-US/docs/Glossary/Cross-site_scripting
-pub enum XssFilter {
-    /// Disables XSS filtering.
-    Disable,
-
-    /// Enables XSS filtering. If XSS is detected, the browser will sanitize
-    /// before rendering the page (_Shield default_).
-    Enable,
-
-    /// Enables XSS filtering. If XSS is detected, the browser will not
-    /// render the page.
-    EnableBlock,
-}
-
-/// Defaults to [`XssFilter::Enable`].
-impl Default for XssFilter {
-    fn default() -> XssFilter {
-        XssFilter::Enable
-    }
-}
-
-impl From<&XssFilter> for Header<'static> {
-    fn from(filter: &XssFilter) -> Self {
-        let policy_string: &'static str = match filter {
-            XssFilter::Disable => "0",
-            XssFilter::Enable => "1",
-            XssFilter::EnableBlock => "1; mode=block",
-        };
-
-        Header::new(XssFilter::NAME, policy_string)
     }
 }
 

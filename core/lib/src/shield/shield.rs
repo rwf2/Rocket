@@ -23,20 +23,20 @@ use crate::shield::*;
 ///
 /// ```rust
 /// use rocket::shield::Shield;
-/// use rocket::shield::{XssFilter, ExpectCt};
+/// use rocket::shield::{ExpectCt, NoSniff};
 ///
 /// // A `Shield` with the default headers:
 /// let shield = Shield::default();
 ///
-/// // A `Shield` with the default headers minus `XssFilter`:
-/// let shield = Shield::default().disable::<XssFilter>();
+/// // A `Shield` with the default headers minus `NoSniff`:
+/// let shield = Shield::default().disable::<NoSniff>();
 ///
 /// // A `Shield` with the default headers plus `ExpectCt`.
 /// let shield = Shield::default().enable(ExpectCt::default());
 ///
-/// // A `Shield` with only `XssFilter` and `ExpectCt`.
-/// let shield = Shield::default()
-///     .enable(XssFilter::default())
+/// // A `Shield` with only `NoSniff` and `ExpectCt`.
+/// let shield = Shield::new()
+///     .enable(NoSniff::default())
 ///     .enable(ExpectCt::default());
 /// ```
 ///

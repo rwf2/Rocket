@@ -12,7 +12,6 @@
 //!
 //! | HTTP Header                 | Description                            | Policy         | Default? |
 //! | --------------------------- | -------------------------------------- | -------------- | -------- |
-//! | [X-XSS-Protection]          | Prevents some reflected XSS attacks.   | [`XssFilter`]  | ✗        |
 //! | [X-Content-Type-Options]    | Prevents client sniffing of MIME type. | [`NoSniff`]    | ✔        |
 //! | [X-Frame-Options]           | Prevents [clickjacking].               | [`Frame`]      | ✔        |
 //! | [Strict-Transport-Security] | Enforces strict use of HTTPS.          | [`Hsts`]       | ?        |
@@ -24,7 +23,6 @@
 //! <small>? If TLS is enabled in a non-debug profile, HSTS is automatically
 //! enabled with its default policy and a warning is logged at liftoff.</small>
 //!
-//! [X-XSS-Protection]: https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/X-XSS-Protection
 //! [X-Content-Type-Options]: https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/X-Content-Type-Options
 //! [X-Frame-Options]: https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/X-Frame-Options
 //! [Strict-Transport-Security]: https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Strict-Transport-Security
@@ -34,7 +32,6 @@
 //! [clickjacking]: https://en.wikipedia.org/wiki/Clickjacking
 //! [Permissions-Policy]: https://github.com/w3c/webappsec-permissions-policy/blob/a45df7b237e2a85e1909d7f226ca4eb4ce5095ba/permissions-policy-explainer.md
 //!
-//! [`XssFilter`]: self::XssFilter
 //! [`NoSniff`]: self::NoSniff
 //! [`Frame`]: self::Frame
 //! [`Hsts`]: self::Hsts
