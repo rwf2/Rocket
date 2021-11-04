@@ -228,7 +228,7 @@ is desired, or when the return value of [`launch()`] is to be inspected. The
 
 Rocket uses Rust [`Future`]s for concurrency. Asynchronous programming with
 `Future`s and `async/await` allows route handlers to perform wait-heavy I/O such
-as filesystem and network access while still allowing other requests to be make
+as filesystem and network access while still allowing other requests to make
 progress. For an overview of Rust `Future`s, see [Asynchronous Programming in
 Rust](https://rust-lang.github.io/async-book/).
 
