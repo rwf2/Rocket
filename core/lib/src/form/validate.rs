@@ -71,7 +71,7 @@
 //! fn luhn<'v>(number: &u64, cvv: u16, exp: &time::Date) -> form::Result<'v, ()> {
 //!     # let valid = false;
 //!     if !valid {
-//!         Err(Error::validation("invalid credit card number"))?;
+//!         return Err(Error::validation("invalid credit card number"))?;
 //!     }
 //!
 //!     Ok(())
