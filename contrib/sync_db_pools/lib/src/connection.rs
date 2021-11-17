@@ -2,7 +2,7 @@ use std::marker::PhantomData;
 use std::sync::Arc;
 
 use rocket::{Phase, Rocket, Ignite, Sentinel};
-use rocket::fairing::{AdHoc, Fairing};
+use rocket::fairing::{AdHoc, Fairing, HasFairings};
 use rocket::request::{Request, Outcome, FromRequest};
 use rocket::outcome::IntoOutcome;
 use rocket::http::Status;
@@ -120,7 +120,7 @@ impl<K: 'static, C: Poolable> ConnectionPool<K, C> {
     }
 
     #[inline]
-    pub async fn get_one<P: Phase>(rocket: &Rocket<P>) -> Option<Connection<K, C>> {
+    pub async fn get_one<P: HasFairings>(rocket: &Rocket<P>) -> Option<Connection<K, C>> {
         match rocket.state::<Self>() {
             Some(pool) => match pool.get().await.ok() {
                 Some(conn) => Some(conn),

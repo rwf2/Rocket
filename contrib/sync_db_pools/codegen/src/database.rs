@@ -92,7 +92,7 @@ pub fn database_attr(attr: TokenStream, input: TokenStream) -> Result<TokenStrea
             /// instance. Returns `Some` as long as `Self::fairing()` has been
             /// attached.
             pub async fn get_one<P>(__rocket: &#rocket::Rocket<P>) -> Option<Self>
-                where P: #rocket::Phase,
+                where P: #rocket::fairing::HasFairings,
             {
                 <#pool>::get_one(&__rocket).await.map(Self)
             }

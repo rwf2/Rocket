@@ -1,10 +1,22 @@
 use std::collections::HashSet;
 
-use crate::{Rocket, Request, Response, Data, Build, Orbit};
+use crate::{Rocket, Request, Response, Data, Build, Orbit, Ignite};
 use crate::fairing::{Fairing, Info, Kind};
 use crate::log::PaintExt;
 
 use yansi::Paint;
+
+mod private {
+    pub trait Sealed{}
+}
+
+pub trait HasFairings: private::Sealed {}
+
+impl private::Sealed for Rocket<Orbit> {}
+impl HasFairings for Rocket<Orbit> {}
+
+impl private::Sealed for Rocket<Ignite>{}
+impl HasFairings for Rocket<Ignite> {}
 
 #[derive(Default)]
 pub struct Fairings {

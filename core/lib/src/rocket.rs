@@ -10,7 +10,7 @@ use figment::{Figment, Provider};
 use crate::{Catcher, Config, Route, Shutdown, sentinel, shield::Shield};
 use crate::router::Router;
 use crate::trip_wire::TripWire;
-use crate::fairing::{Fairing, Fairings};
+use crate::fairing::{Fairing, Fairings, HasFairings};
 use crate::phase::{Phase, Build, Building, Ignite, Igniting, Orbit, Orbiting};
 use crate::phase::{Stateful, StateRef, State};
 use crate::http::uri::{self, Origin};
@@ -637,6 +637,28 @@ impl Rocket<Ignite> {
     }
 }
 
+impl<P> Rocket<P> where P: HasFairings {
+    /// Returns `Some` of the managed state value for the type `T` if it is
+    /// being managed by `self`. Otherwise, returns `None`.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// #[derive(PartialEq, Debug)]
+    /// struct MyState(&'static str);
+    ///
+    /// let rocket = rocket::build().manage(MyState("hello!"));
+    /// assert_eq!(rocket.state::<MyState>().unwrap(), &MyState("hello!"));
+    /// ```
+    pub fn state<T: Send + Sync + 'static>(&self) -> Option<&T> {
+        match self.0.as_state_ref() {
+            StateRef::Build(p) => p.state.try_get(),
+            StateRef::Ignite(p) => p.state.try_get(),
+            StateRef::Orbit(p) => p.state.try_get(),
+        }
+    }
+}
+
 impl Rocket<Orbit> {
     /// Returns the finalized, active configuration. This is guaranteed to
     /// remain stable after [`Rocket::ignite()`], through ignition and into
@@ -752,26 +774,6 @@ impl<P: Phase> Rocket<P> {
             StateRef::Build(p) => Either::Left(p.catchers.iter()),
             StateRef::Ignite(p) => Either::Right(p.router.catchers()),
             StateRef::Orbit(p) => Either::Right(p.router.catchers()),
-        }
-    }
-
-    /// Returns `Some` of the managed state value for the type `T` if it is
-    /// being managed by `self`. Otherwise, returns `None`.
-    ///
-    /// # Example
-    ///
-    /// ```rust
-    /// #[derive(PartialEq, Debug)]
-    /// struct MyState(&'static str);
-    ///
-    /// let rocket = rocket::build().manage(MyState("hello!"));
-    /// assert_eq!(rocket.state::<MyState>().unwrap(), &MyState("hello!"));
-    /// ```
-    pub fn state<T: Send + Sync + 'static>(&self) -> Option<&T> {
-        match self.0.as_state_ref() {
-            StateRef::Build(p) => p.state.try_get(),
-            StateRef::Ignite(p) => p.state.try_get(),
-            StateRef::Orbit(p) => p.state.try_get(),
         }
     }
 
