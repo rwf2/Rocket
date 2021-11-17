@@ -368,8 +368,7 @@ impl Template {
     ///     let client = Client::untracked(rocket).expect("valid rocket");
     ///
     ///     // Create a `context`. Here, just an empty `HashMap`.
-    ///     let mut context = HashMap::new();
-    ///     # context.insert("test", "test");
+    ///     let context: HashMap<&str, &str> = HashMap::new();
     ///     let template = Template::show(client.rocket(), "index", context);
     /// }
     /// ```

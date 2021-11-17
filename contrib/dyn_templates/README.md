@@ -44,6 +44,7 @@ supports [Handlebars] and [Tera].
 
      #[get("/")]
      fn index() -> Template {
+         let context: HashMap<&str, &str> = HashMap::new();
          Template::render("template-name", &context)
      }
      ```
