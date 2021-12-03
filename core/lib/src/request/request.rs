@@ -730,6 +730,35 @@ impl<'r> Request<'r> {
             })
     }
 
+    /// Attempts to retrieve the global state for type `T`.
+    ///
+    /// Returns `Some` if the state has previously been [set](#method.set).
+    /// Otherwise returns `None`.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// # let c = rocket::local::blocking::Client::debug_with(vec![]).unwrap();
+    /// # let request = c.get("/");
+    /// // The first read returns None
+    /// let value: &str = request.try_local_cache();
+    /// assert_eq!(value, None);
+    /// // The first store into local cache for a given type wins.
+    /// let value = request.local_cache(|| "hello");
+    /// assert_eq!(value, Some("hello"));
+    /// assert_eq!(*request.local_cache(|| "hello"), "hello");
+    ///
+    /// // The following return the cached, previously stored value for the type.
+    /// assert_eq!(*request.local_cache(|| "goodbye"), "hello");
+    /// ```
+    #[inline]
+    pub fn try_local_cache<T>(&self) -> Option<&T>
+    where
+        T: Send + Sync + 'static,
+    {
+        self.state.cache.try_get()
+    }
+
     /// Retrieves the cached value for type `T` from the request-local cached
     /// state of `self`. If no such value has previously been cached for this
     /// request, `fut` is `await`ed to produce the value which is subsequently
