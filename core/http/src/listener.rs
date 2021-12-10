@@ -11,7 +11,10 @@ use hyper::server::accept::Accept;
 
 use tokio::time::Sleep;
 use tokio::io::{AsyncRead, AsyncWrite};
-use tokio::net::{TcpListener, TcpStream, UnixListener};
+use tokio::net::{TcpListener, TcpStream};
+
+#[cfg(unix)]
+use tokio::net::UnixListener;
 
 // TODO.async: 'Listener' and 'Connection' provide common enough functionality
 // that they could be introduced in upstream libraries.

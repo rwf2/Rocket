@@ -661,7 +661,7 @@ impl Rocket<Ignite> {
         }
 
         #[cfg(not(unix))]
-        self.into_orbit().default_tcp_http_server(|rkt| Box::pin(async move {
+        orbit.default_tcp_http_server(|rkt| Box::pin(async move {
             rkt.fairings.handle_liftoff(&rkt).await;
 
             let proto = rkt.config.tls_enabled().then(|| "https").unwrap_or("http");
