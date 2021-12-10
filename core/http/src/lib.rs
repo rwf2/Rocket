@@ -42,6 +42,8 @@ pub mod uncased {
 #[doc(hidden)]
 #[path = "."]
 pub mod private {
+    #[cfg(unix)]
+    pub use crate::listener::bind_unix;
     pub use crate::parse::Indexed;
     pub use smallvec::{SmallVec, Array};
     pub use crate::listener::{bind_tcp, Incoming, Listener, Connection, RawCertificate};

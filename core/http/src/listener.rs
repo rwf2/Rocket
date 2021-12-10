@@ -11,7 +11,7 @@ use hyper::server::accept::Accept;
 
 use tokio::time::Sleep;
 use tokio::io::{AsyncRead, AsyncWrite};
-use tokio::net::{TcpListener, TcpStream};
+use tokio::net::{TcpListener, TcpStream, UnixListener};
 
 // TODO.async: 'Listener' and 'Connection' provide common enough functionality
 // that they could be introduced in upstream libraries.
@@ -186,6 +186,13 @@ impl<L: fmt::Debug> fmt::Debug for Incoming<L> {
 /// Binds a TCP listener to `address` and returns it.
 pub async fn bind_tcp(address: SocketAddr) -> io::Result<TcpListener> {
     Ok(TcpListener::bind(address).await?)
+}
+
+#[cfg(unix)]
+/// Binds to a Unix Domain Socket at `address` and returns it, removing existing sockets.
+pub async fn bind_unix(address: String) -> io::Result<UnixListener> {
+    std::fs::remove_file(&address)?;
+    Ok(UnixListener::bind(address)?)
 }
 
 impl Listener for TcpListener {

@@ -17,6 +17,9 @@ use crate::request::ConnectionMeta;
 use crate::http::{uri::Origin, hyper, Method, Status, Header};
 use crate::http::private::{bind_tcp, Listener, Connection, Incoming};
 
+#[cfg(unix)]
+use crate::http::private::bind_unix;
+
 // A token returned to force the execution of one method before another.
 pub(crate) struct RequestToken;
 
@@ -385,6 +388,18 @@ impl Rocket<Orbit> {
         addr = l.local_addr().unwrap_or(addr);
         self.config.address = addr.ip();
         self.config.port = addr.port();
+        ready(&mut self).await;
+        self.http_server(l).await
+    }
+
+    #[cfg(unix)]
+    pub(crate) async fn default_unix_http_server<C>(mut self, ready: C) -> Result<(), Error>
+    where
+        C: for<'a> Fn(&'a Self) -> BoxFuture<'a, ()>,
+    {
+        // Determine the address we're going to serve on.
+        let addr = &self.config.unix_address;
+        let l = bind_unix(addr.clone()).await.map_err(ErrorKind::Bind)?;
         ready(&mut self).await;
         self.http_server(l).await
     }

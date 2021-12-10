@@ -68,6 +68,12 @@ pub struct Config {
     pub address: IpAddr,
     /// Port to serve on. **(default: `8000`)**
     pub port: u16,
+    #[cfg(target_family = "unix")]
+    /// The Unix address to listen on. **(default: `/tmp/rocket.sock`)**
+    pub unix_address: String,
+    #[cfg(target_family = "unix")]
+    /// Whether to use Unix sockets
+    pub unix: bool,
     /// Number of threads to use for executing futures. **(default: `num_cores`)**
     pub workers: usize,
     /// How, if at all, to identify the server via the `Server` header.
@@ -165,6 +171,10 @@ impl Config {
         Config {
             profile: Self::DEBUG_PROFILE,
             address: Ipv4Addr::new(127, 0, 0, 1).into(),
+            #[cfg(unix)]
+            unix_address: "/tmp/rocket.sock".to_string(),
+            #[cfg(unix)]
+            unix: false,
             port: 8000,
             workers: num_cpus::get(),
             ident: Ident::default(),

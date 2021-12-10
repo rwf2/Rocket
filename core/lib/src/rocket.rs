@@ -623,6 +623,44 @@ impl Rocket<Ignite> {
     }
 
     async fn _launch(self) -> Result<(), Error> {
+        let orbit = self.into_orbit();
+        #[cfg(unix)]
+        if !orbit.config.unix {
+            orbit
+                .default_tcp_http_server(|rkt| {
+                    Box::pin(async move {
+                        rkt.fairings.handle_liftoff(&rkt).await;
+
+                        let proto = rkt.config.tls_enabled().then(|| "https").unwrap_or("http");
+                        let socket_addr = SocketAddr::new(rkt.config.address, rkt.config.port);
+                        let addr = format!("{}://{}", proto, socket_addr);
+                        launch_info!(
+                            "{}{} {}",
+                            Paint::emoji("🚀 "),
+                            Paint::default("Rocket has launched from").bold(),
+                            Paint::default(addr).bold().underline()
+                        );
+                    })
+                })
+                .await
+        } else {
+            orbit
+                .default_unix_http_server(|rkt| {
+                    Box::pin(async move {
+                        rkt.fairings.handle_liftoff(&rkt).await;
+                        let addr = format!("udp://{}", rkt.config.unix_address);
+                        launch_info!(
+                            "{}{} {}",
+                            Paint::emoji("🚀 "),
+                            Paint::default("Rocket has launched from").bold(),
+                            Paint::default(addr).bold().underline()
+                        );
+                    })
+                })
+                .await
+        }
+
+        #[cfg(not(unix))]
         self.into_orbit().default_tcp_http_server(|rkt| Box::pin(async move {
             rkt.fairings.handle_liftoff(&rkt).await;
 
