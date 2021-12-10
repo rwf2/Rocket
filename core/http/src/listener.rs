@@ -191,7 +191,10 @@ pub async fn bind_tcp(address: SocketAddr) -> io::Result<TcpListener> {
 #[cfg(unix)]
 /// Binds to a Unix Domain Socket at `address` and returns it, removing existing sockets.
 pub async fn bind_unix(address: String) -> io::Result<UnixListener> {
-    std::fs::remove_file(&address)?;
+    let address = std::path::Path::new(&address);
+    if address.is_file() {
+        std::fs::remove_file(address)?;
+    }
     Ok(UnixListener::bind(address)?)
 }
 

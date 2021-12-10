@@ -28,6 +28,8 @@ mod status;
 mod raw_str;
 mod parse;
 mod listener;
+#[cfg(unix)]
+mod unix;
 
 /// Case-preserving, ASCII case-insensitive string types.
 ///

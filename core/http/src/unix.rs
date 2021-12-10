@@ -9,7 +9,7 @@ impl Listener for UnixListener {
     type Connection = UnixStream;
 
     fn local_addr(&self) -> Option<SocketAddr> {
-        Some("0.0.0.0:0".parse().unwrap())
+        Some("0.0.0.0:0".parse().ok()?)
     }
 
     fn poll_accept(
@@ -22,6 +22,6 @@ impl Listener for UnixListener {
 
 impl Connection for UnixStream {
     fn peer_address(&self) -> Option<SocketAddr> {
-        Some("0.0.0.0:0".parse().unwrap())
+        Some("0.0.0.0:0".parse().ok()?)
     }
 }
