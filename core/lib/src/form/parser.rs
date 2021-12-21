@@ -7,7 +7,7 @@ use either::Either;
 use crate::request::{Request, local_cache};
 use crate::data::{Data, Limits, Outcome};
 use crate::form::prelude::*;
-use crate::http::RawStr;
+use crate::http::{RawStr, Status};
 
 type Result<'r, T> = std::result::Result<T, Error<'r>>;
 
@@ -43,7 +43,7 @@ impl<'r, 'i> Parser<'r, 'i> {
         let parser = match req.content_type() {
             Some(c) if c.is_form() => Self::from_form(req, data).await,
             Some(c) if c.is_form_data() => Self::from_multipart(req, data).await,
-            _ => return Outcome::Forward(data),
+            _ => return Outcome::Forward((data, Status::NotFound)),
         };
 
         match parser {

@@ -234,7 +234,7 @@ impl Rocket<Orbit> {
     ) -> Response<'r> {
         let mut response = match self.route(request, data).await {
             Outcome::Success(response) => response,
-            Outcome::Forward(data) if request.method() == Method::Head => {
+            Outcome::Forward((data, _)) if request.method() == Method::Head => {
                 info_!("Autohandling {} request.", Paint::default("HEAD").bold());
 
                 // Dispatch the request again with Method `GET`.
@@ -242,10 +242,10 @@ impl Rocket<Orbit> {
                 match self.route(request, data).await {
                     Outcome::Success(response) => response,
                     Outcome::Failure(status) => self.handle_error(status, request).await,
-                    Outcome::Forward(_) => self.handle_error(Status::NotFound, request).await,
+                    Outcome::Forward((_, error)) => self.handle_error(error, request).await,
                 }
             }
-            Outcome::Forward(_) => self.handle_error(Status::NotFound, request).await,
+            Outcome::Forward((_, error)) => self.handle_error(error, request).await,
             Outcome::Failure(status) => self.handle_error(status, request).await,
         };
 
@@ -270,6 +270,8 @@ impl Rocket<Orbit> {
         request: &'r Request<'s>,
         mut data: Data<'r>,
     ) -> route::Outcome<'r> {
+        let mut error = Status::NotFound;
+
         // Go through the list of matching routes until we fail or succeed.
         for route in self.router.route(request) {
             // Retrieve and set the requests parameters.
@@ -286,12 +288,15 @@ impl Rocket<Orbit> {
             info_!("{} {}", Paint::default("Outcome:").bold(), outcome);
             match outcome {
                 o@Outcome::Success(_) | o@Outcome::Failure(_) => return o,
-                Outcome::Forward(unused_data) => data = unused_data,
+                Outcome::Forward((unused_data, unused_error)) => {
+                    data = unused_data;
+                    error = unused_error;
+                }
             }
         }
 
         error_!("No matching routes for {}.", request);
-        Outcome::Forward(data)
+        Outcome::Forward((data, error))
     }
 
     /// Invokes the handler with `req` for catcher with status `status`.

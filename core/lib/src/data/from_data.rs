@@ -7,11 +7,11 @@ use crate::outcome::{self, IntoOutcome, try_outcome, Outcome::*};
 ///
 /// [`FromData`]: crate::data::FromData
 pub type Outcome<'r, T, E = <T as FromData<'r>>::Error>
-    = outcome::Outcome<T, (Status, E), Data<'r>>;
+    = outcome::Outcome<T, (Status, E), (Data<'r>, Status)>;
 
-impl<'r, S, E> IntoOutcome<S, (Status, E), Data<'r>> for Result<S, E> {
+impl<'r, S, E> IntoOutcome<S, (Status, E), (Data<'r>, Status)> for Result<S, E> {
     type Failure = Status;
-    type Forward = Data<'r>;
+    type Forward = (Data<'r>, Status);
 
     #[inline]
     fn into_outcome(self, status: Status) -> Outcome<'r, S, E> {
@@ -22,10 +22,10 @@ impl<'r, S, E> IntoOutcome<S, (Status, E), Data<'r>> for Result<S, E> {
     }
 
     #[inline]
-    fn or_forward(self, data: Data<'r>) -> Outcome<'r, S, E> {
+    fn or_forward(self, (data, error): (Data<'r>, Status)) -> Outcome<'r, S, E> {
         match self {
             Ok(val) => Success(val),
-            Err(_) => Forward(data)
+            Err(_) => Forward((data, error))
         }
     }
 }

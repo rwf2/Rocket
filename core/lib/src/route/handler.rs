@@ -4,7 +4,7 @@ use crate::http::Status;
 
 /// Type alias for the return type of a [`Route`](crate::Route)'s
 /// [`Handler::handle()`].
-pub type Outcome<'r> = crate::outcome::Outcome<Response<'r>, Status, Data<'r>>;
+pub type Outcome<'r> = crate::outcome::Outcome<Response<'r>, Status, (Data<'r>, Status)>;
 
 /// Type alias for the return type of a _raw_ [`Route`](crate::Route)'s
 /// [`Handler`].
@@ -239,7 +239,7 @@ impl<'r, 'o: 'r> Outcome<'o> {
     {
         match responder.respond_to(req) {
             Ok(response) => Outcome::Success(response),
-            Err(_) => Outcome::Forward(data)
+            Err(_) => Outcome::Forward((data, Status::NotFound))
         }
     }
 
@@ -279,7 +279,7 @@ impl<'r, 'o: 'r> Outcome<'o> {
     /// ```
     #[inline(always)]
     pub fn forward(data: Data<'r>) -> Outcome<'r> {
-        Outcome::Forward(data)
+        Outcome::Forward((data, Status::NotFound))
     }
 }
 
