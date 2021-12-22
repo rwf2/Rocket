@@ -264,7 +264,7 @@ impl<'r, 'o: 'r> Outcome<'o> {
     }
 
     /// Return an `Outcome` of `Forward` with the data `data`. This is
-    /// equivalent to `Outcome::Forward(data)`.
+    /// equivalent to `Outcome::Forward((data, Status::NotFound))`.
     ///
     /// This method exists to be used during manual routing.
     ///
