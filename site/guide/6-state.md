@@ -124,6 +124,7 @@ retrieves `MyConfig` from managed state using both methods:
 use rocket::State;
 use rocket::request::{self, Request, FromRequest};
 use rocket::outcome::IntoOutcome;
+use rocket::http::Status;
 
 # struct MyConfig { user_val: String };
 struct Item<'r>(&'r str);
@@ -140,7 +141,7 @@ impl<'r> FromRequest<'r> for Item<'r> {
         // Or alternatively, using `Rocket::state()`:
         let outcome = request.rocket().state::<MyConfig>()
             .map(|my_config| Item(&my_config.user_val))
-            .or_forward(());
+            .or_forward(Status::NotFound);
 
         outcome
     }

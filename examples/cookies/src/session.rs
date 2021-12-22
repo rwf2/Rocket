@@ -1,7 +1,7 @@
 use rocket::outcome::IntoOutcome;
 use rocket::request::{self, FlashMessage, FromRequest, Request};
 use rocket::response::{Redirect, Flash};
-use rocket::http::{Cookie, CookieJar};
+use rocket::http::{Cookie, CookieJar, Status};
 use rocket::form::Form;
 
 use rocket_dyn_templates::{Template, context};
@@ -24,7 +24,7 @@ impl<'r> FromRequest<'r> for User {
             .get_private("user_id")
             .and_then(|cookie| cookie.value().parse().ok())
             .map(User)
-            .or_forward(())
+            .or_forward(Status::NotFound)
     }
 }
 

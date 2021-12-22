@@ -254,6 +254,7 @@ impl<S, E> IntoOutcome<S, (Status, E), Status> for Result<S, E> {
 /// # #[cfg(feature = "secrets")] mod wrapper {
 /// # use rocket::outcome::{IntoOutcome, try_outcome};
 /// # use rocket::request::{self, Outcome, FromRequest, Request};
+/// # use rocket::http::Status;
 /// # struct User { id: String, is_admin: bool }
 /// # struct Database;
 /// # impl Database {
@@ -281,7 +282,7 @@ impl<S, E> IntoOutcome<S, (Status, E), Status> for Result<S, E> {
 ///             .get_private("user_id")
 ///             .and_then(|cookie| cookie.value().parse().ok())
 ///             .and_then(|id| db.get_user(id).ok())
-///             .or_forward(())
+///             .or_forward(Status::NotFound)
 ///     }
 /// }
 ///
@@ -295,7 +296,7 @@ impl<S, E> IntoOutcome<S, (Status, E), Status> for Result<S, E> {
 ///         if user.is_admin {
 ///             Outcome::Success(Admin { user })
 ///         } else {
-///             Outcome::Forward(())
+///             Outcome::Forward(Status::NotFound)
 ///         }
 ///     }
 /// }
@@ -318,6 +319,7 @@ impl<S, E> IntoOutcome<S, (Status, E), Status> for Result<S, E> {
 /// # #[cfg(feature = "secrets")] mod wrapper {
 /// # use rocket::outcome::{IntoOutcome, try_outcome};
 /// # use rocket::request::{self, Outcome, FromRequest, Request};
+/// # use rocket::http::Status;
 /// # struct User { id: String, is_admin: bool }
 /// # struct Database;
 /// # impl Database {
@@ -350,7 +352,7 @@ impl<S, E> IntoOutcome<S, (Status, E), Status> for Result<S, E> {
 ///                 .and_then(|id| db.get_user(id).ok())
 ///         }).await;
 ///
-///         user_result.as_ref().or_forward(())
+///         user_result.as_ref().or_forward(Status::NotFound)
 ///     }
 /// }
 ///
@@ -363,7 +365,7 @@ impl<S, E> IntoOutcome<S, (Status, E), Status> for Result<S, E> {
 ///         if user.is_admin {
 ///             Outcome::Success(Admin { user })
 ///         } else {
-///             Outcome::Forward(())
+///             Outcome::Forward(Status::NotFound)
 ///         }
 ///     }
 /// }

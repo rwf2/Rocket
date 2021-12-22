@@ -3,6 +3,7 @@
 use rocket::{Request, Data};
 use rocket::request::{self, FromRequest};
 use rocket::outcome::IntoOutcome;
+use rocket::http::Status;
 
 struct HasContentType;
 
@@ -11,7 +12,7 @@ impl<'r> FromRequest<'r> for HasContentType {
     type Error = ();
 
     async fn from_request(req: &'r Request<'_>) -> request::Outcome<Self, ()> {
-        req.content_type().map(|_| HasContentType).or_forward(())
+        req.content_type().map(|_| HasContentType).or_forward(Status::NotFound)
     }
 }
 
@@ -22,7 +23,7 @@ impl<'r> FromData<'r> for HasContentType {
     type Error = ();
 
     async fn from_data(req: &'r Request<'_>, data: Data<'r>) -> data::Outcome<'r, Self> {
-        req.content_type().map(|_| HasContentType).or_forward(data)
+        req.content_type().map(|_| HasContentType).or_forward((data, Status::NotFound))
     }
 }
 

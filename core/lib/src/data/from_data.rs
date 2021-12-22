@@ -130,7 +130,7 @@ impl<'r, S, E> IntoOutcome<S, (Status, E), (Data<'r>, Status)> for Result<S, E> 
 ///         // Ensure the content type is correct before opening the data.
 ///         let person_ct = ContentType::new("application", "x-person");
 ///         if req.content_type() != Some(&person_ct) {
-///             return Forward(data);
+///             return Forward((data, Status::NotFound));
 ///         }
 ///
 ///         // Use a configured limit with name 'person' or fallback to default.

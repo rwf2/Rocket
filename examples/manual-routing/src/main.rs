@@ -84,7 +84,7 @@ impl route::Handler for CustomHandler {
         let self_data = self.data;
         let id = req.param::<&str>(0)
             .and_then(Result::ok)
-            .or_forward(data);
+            .or_forward((data, Status::NotFound));
 
         route::Outcome::from(req, format!("{} - {}", self_data, try_outcome!(id)))
     }

@@ -119,7 +119,7 @@ pub use self::cookie::{Cookie, SameSite, Iter};
 ///             .get_private("user_id")
 ///             .and_then(|c| c.value().parse().ok())
 ///             .map(|id| User(id))
-///             .or_forward(())
+///             .or_forward(Status::NotFound)
 ///     }
 /// }
 /// # }
