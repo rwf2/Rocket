@@ -317,7 +317,7 @@ impl From<&Hsts> for Header<'static> {
             Hsts::IncludeSubDomains(age) => {
                 format!("max-age={}; includeSubDomains", age.whole_seconds())
             }
-            Hsts::Preload(age) => format!("max-age={}; preload", age.whole_seconds()),
+            Hsts::Preload(age) => format!("max-age={}; includeSubDomains; preload", age.whole_seconds()),
         };
 
         Header::new(Hsts::NAME, policy_string)
