@@ -286,12 +286,24 @@ pub enum Hsts {
 
     /// Google maintains an [HSTS preload service] that can be used to prevent
     /// the browser from ever connecting to your site over an insecure
-    /// connection. Read more at [MDN]. Don't enable this before you have
-    /// registered your site.
+    /// connection. Read more at [MDN]. This will need to be enabled before
+    /// registering your site.
+    ///
+    /// A flag is available to include (iff true) the `includeSubDomains`
+    /// directive. The directive is necessary to join and stay on Google's
+    /// preload list. Furthermore, a `max-age` (specified by the Duration
+    /// parameter) of at least 31536000 seconds (1 year) is necessary to
+    /// be added and maintain presence on Google's preload list. This `preload`
+    /// directive need only be present on the base domain. The `preload`
+    /// directive is not an official spec. Be careful when using a lengthy
+    /// `max-age`, `includeSubDomains`, and/or `preload`. HSTS mistakes are
+    /// are difficult to fix. Starting with a small `max-age` and checking for
+    /// errors in deployment is recommended.
+    /// 
     ///
     /// [HSTS preload service]: https://hstspreload.org/
     /// [MDN]: https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Strict-Transport-Security#Preloading_Strict_Transport_Security
-    Preload(Duration),
+    Preload(Duration, bool),
 }
 
 /// Defaults to `Hsts::Enable(Duration::days(365))`.
@@ -317,7 +329,8 @@ impl From<&Hsts> for Header<'static> {
             Hsts::IncludeSubDomains(age) => {
                 format!("max-age={}; includeSubDomains", age.whole_seconds())
             }
-            Hsts::Preload(age) => format!("max-age={}; includeSubDomains; preload", age.whole_seconds()),
+            Hsts::Preload(age, false) => format!("max-age={}; preload", age.whole_seconds()),
+            Hsts::Preload(age, true) => format!("max-age={}; includeSubDomains; preload", age.whole_seconds()),
         };
 
         Header::new(Hsts::NAME, policy_string)
