@@ -1,6 +1,7 @@
 //! Rocket's logging infrastructure.
 
 use std::fmt;
+use std::io::{self, Write};
 use std::str::FromStr;
 use std::sync::atomic::{AtomicBool, Ordering};
 
@@ -72,6 +73,14 @@ impl log::Log for RocketLogger {
     fn log(&self, record: &log::Record<'_>) {
         // Print nothing if this level isn't enabled and this isn't launch info.
         if !self.enabled(record.metadata()) {
+            return;
+        }
+
+        // Also check for stdout or else print will panic
+        // (SergioBenitez/Rocket/issues/2019)
+        // It is not quite perfect to test with writing nothing, but there are
+        // no other checks which catches available redirects and pipes.
+        if io::stdout().write(b"").is_err() {
             return;
         }
 
