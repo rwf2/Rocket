@@ -290,7 +290,9 @@ impl<'a> CookieJar<'a> {
     #[cfg_attr(nightly, doc(cfg(feature = "secrets")))]
     pub fn get_private_pending(&self, name: &str) -> Option<Cookie<'static>> {
         let cookie = self.get_pending(name)?;
-        self.jar.private(&self.config.secret_key.key).decrypt(cookie)
+        // no operation on cookie occured, which happens before server responses
+        // so no decryption required and possible
+        Some(cookie)
     }
 
     /// Adds `cookie` to this collection.
