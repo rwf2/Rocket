@@ -3,7 +3,7 @@
 use yansi::{Paint, Color::{Red, Yellow}};
 
 fn main() {
-    const MIN_VERSION: &str = "1.46.0";
+    const MIN_VERSION: &str = "1.51.0";
 
     if let Some(version) = version_check::Version::read() {
         if !version.at_least(MIN_VERSION) {
