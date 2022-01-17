@@ -19,9 +19,8 @@ pub use self::cookie::{Cookie, SameSite, Iter};
 /// Changes to a `CookieJar` are _not_ visible via the normal [`get()`] and
 /// [`get_private()`] methods. This is typically the desired effect as a
 /// `CookieJar` always reflects the cookies in an incoming request. In cases
-/// where this is not desired, the [`get_pending()`] and
-/// [`get_private_pending()`] methods are available, which always return the
-/// latest changes.
+/// where this is not desired, the [`get_pending()`] method is available, which
+/// always returns the latest changes.
 ///
 /// ```rust
 /// # #[macro_use] extern crate rocket;
@@ -61,16 +60,14 @@ pub use self::cookie::{Cookie, SameSite, Iter};
 /// A type of `&CookieJar` can be retrieved via its `FromRequest` implementation
 /// as a request guard or via the [`Request::cookies()`] method. Individual
 /// cookies can be retrieved via the [`get()`] and [`get_private()`] methods.
-/// Pending changes can be observed via the [`get_pending()`] and
-/// [`get_private_pending()`] methods. Cookies can be added or removed via the
-/// [`add()`], [`add_private()`], [`remove()`], and [`remove_private()`]
-/// methods.
+/// Pending changes can be observed via the [`get_pending()`] method. Cookies
+/// can be added or removed via the [`add()`], [`add_private()`], [`remove()`],
+/// and [`remove_private()`] methods.
 ///
 /// [`Request::cookies()`]: crate::Request::cookies()
 /// [`get()`]: #method.get
 /// [`get_private()`]: #method.get_private
 /// [`get_pending()`]: #method.get_pending
-/// [`get_private_pending()`]: #method.get_private_pending
 /// [`add()`]: #method.add
 /// [`add_private()`]: #method.add_private
 /// [`remove()`]: #method.remove
@@ -223,7 +220,7 @@ impl<'a> CookieJar<'a> {
     ///
     /// **Note:** This method _does not_ obverse changes made via additions and
     /// removals to the cookie jar. To observe those changes, use
-    /// [`CookieJar::get_private_pending()`].
+    /// [`CookieJar::get_pending()`].
     ///
     /// # Example
     ///
@@ -243,8 +240,12 @@ impl<'a> CookieJar<'a> {
     }
 
     /// Returns a reference to the _original or pending_ `Cookie` inside this
-    /// container with the name `name`. If no such cookie exists, returns
-    /// `None`.
+    /// container with the name `name`, irrespective of whether the cookie was
+    /// private or not. If no such cookie exists, returns `None`.
+    ///
+    /// This _does not_ return cookies sent by the client in a request. To
+    /// retrieve usch cookies, using [`CookieJar::get()`] or
+    /// [`CookieJar::get_private()`].
     ///
     /// # Example
     ///
@@ -268,29 +269,6 @@ impl<'a> CookieJar<'a> {
 
         drop(ops);
         self.get(name).cloned()
-    }
-
-    /// Retrives the _original or pending_ `Cookie` inside this collection with
-    /// the name `name` and authenticates and decrypts the cookie's value. If
-    /// the cookie cannot be found, or the cookie fails to authenticate or
-    /// decrypt, `None` is returned.
-    ///
-    /// # Example
-    ///
-    /// ```rust
-    /// # #[macro_use] extern crate rocket;
-    /// use rocket::http::{Cookie, CookieJar};
-    ///
-    /// #[get("/")]
-    /// fn handler(jar: &CookieJar<'_>) {
-    ///     let pending_cookie = jar.get_private_pending("name");
-    /// }
-    /// ```
-    #[cfg(feature = "secrets")]
-    #[cfg_attr(nightly, doc(cfg(feature = "secrets")))]
-    pub fn get_private_pending(&self, name: &str) -> Option<Cookie<'static>> {
-        let cookie = self.get_pending(name)?;
-        self.jar.private(&self.config.secret_key.key).decrypt(cookie)
     }
 
     /// Adds `cookie` to this collection.

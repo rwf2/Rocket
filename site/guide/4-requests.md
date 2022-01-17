@@ -531,9 +531,9 @@ rocket = { version = "0.5.0-rc.1", features = ["secrets"] }
 ```
 
 The API for retrieving, adding, and removing private cookies is identical except
-methods are suffixed with `_private`. These methods are: [`get_private`],
-[`get_private_pending`], [`add_private`], and [`remove_private`]. An example of
-their usage is below:
+that most methods are suffixed with `_private`. These methods are:
+[`get_private`], [`get_pending`], [`add_private`], and [`remove_private`]. An
+example of their usage is below:
 
 ```rust
 # #[macro_use] extern crate rocket;
@@ -576,7 +576,6 @@ For more information on configuration, see the [Configuration](../configuration)
 section of the guide.
 
 [`get_private`]: @api/rocket/http/struct.CookieJar.html#method.get_private
-[`get_private_pending`]: @api/rocket/http/struct.CookieJar.html#method.get_private_pending
 [`add_private`]: @api/rocket/http/struct.CookieJar.html#method.add_private
 [`remove_private`]: @api/rocket/http/struct.CookieJar.html#method.remove_private
 
