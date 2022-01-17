@@ -11,6 +11,10 @@ keywords = ["rocket", "web", "framework", "code", "generation"]
 license = "MIT OR Apache-2.0"
 edition = "2018"
 
+[package.metadata]
+# minimum supported rust version 1.51.0 because of cargo resolver in dependency crate time
+msrv = "1.51.0"
+
 [lib]
 proc-macro = true
 
