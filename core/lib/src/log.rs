@@ -35,6 +35,16 @@ define_log_macro!(trace, trace_);
 define_log_macro!(launch_info: info, "rocket::launch", $);
 define_log_macro!(launch_info_: info, "rocket::launch_", $);
 
+// `print!` panics when stdout isn't available, but this macro doesn't.
+// See SergioBenitez/Rocket#2019 and rust-lang/rust#46016 for more.
+macro_rules! write_out {
+    ($($arg:tt)*) => ({
+        use std::io::{Write, stdout, stderr};
+
+        let _ = write!(stdout(), $($arg)*).or_else(|e| write!(stderr(), "{}", e));
+    })
+}
+
 #[derive(Debug)]
 struct RocketLogger;
 
@@ -86,7 +96,7 @@ impl log::Log for RocketLogger {
         // In Rocket, we abuse targets with suffix "_" to indicate indentation.
         let indented = record.target().ends_with('_');
         if indented {
-            print!("   {} ", Paint::default(">>").bold());
+            write_out!("   {} ", Paint::default(">>").bold());
         }
 
         // Downgrade a physical launch `warn` to logical `info`.
@@ -96,30 +106,30 @@ impl log::Log for RocketLogger {
 
         match level {
             log::Level::Error if !indented => {
-                println!("{} {}",
-                         Paint::red("Error:").bold(),
-                         Paint::red(record.args()).wrap())
+                write_out!("{} {}\n",
+                    Paint::red("Error:").bold(),
+                    Paint::red(record.args()).wrap());
             }
             log::Level::Warn if !indented => {
-                println!("{} {}",
-                         Paint::yellow("Warning:").bold(),
-                         Paint::yellow(record.args()).wrap())
+                write_out!("{} {}\n",
+                    Paint::yellow("Warning:").bold(),
+                    Paint::yellow(record.args()).wrap());
             }
-            log::Level::Info => println!("{}", Paint::blue(record.args()).wrap()),
-            log::Level::Trace => println!("{}", Paint::magenta(record.args()).wrap()),
-            log::Level::Warn => println!("{}", Paint::yellow(record.args()).wrap()),
-            log::Level::Error => println!("{}", Paint::red(record.args()).wrap()),
+            log::Level::Info => write_out!("{}\n", Paint::blue(record.args()).wrap()),
+            log::Level::Trace => write_out!("{}\n", Paint::magenta(record.args()).wrap()),
+            log::Level::Warn => write_out!("{}\n", Paint::yellow(record.args()).wrap()),
+            log::Level::Error => write_out!("{}\n", Paint::red(record.args()).wrap()),
             log::Level::Debug => {
-                print!("\n{} ", Paint::blue("-->").bold());
+                write_out!("\n{} ", Paint::blue("-->").bold());
                 if let Some(file) = record.file() {
-                    print!("{}", Paint::blue(file));
+                    write_out!("{}", Paint::blue(file));
                 }
 
                 if let Some(line) = record.line() {
-                    println!(":{}", Paint::blue(line));
+                    write_out!(":{}\n", Paint::blue(line));
                 }
 
-                println!("\t{}", record.args());
+                write_out!("\t{}\n", record.args());
             }
         }
     }
