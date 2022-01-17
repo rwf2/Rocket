@@ -15,6 +15,10 @@ build = "build.rs"
 categories = ["web-programming::http-server"]
 edition = "2018"
 
+[package.metadata]
+# minimum supported rust version 1.51.0 because of dependencies multer -> spin
+msrv = "1.51.0"
+
 [package.metadata.docs.rs]
 all-features = true
 
