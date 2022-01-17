@@ -39,7 +39,7 @@ pear = "0.2.3"
 pin-project-lite = "0.2"
 memchr = "2"
 stable-pattern = "0.1"
-cookie = { version = "0.16.0", features = ["secure", "percent-encode"] }
+cookie = { version = "0.16.0", features = ["percent-encode", "secure"] }
 state = "0.5.1"
 
 [dependencies.x509-parser]
