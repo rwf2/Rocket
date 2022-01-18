@@ -1,5 +1,5 @@
 error[E0277]: the trait bound `u8: Responder<'_, '_>` is not satisfied
- --> $DIR/responder-types.rs:5:5
+ --> tests/ui-fail-stable/responder-types.rs:5:5
   |
 5 |     thing: u8,
   |     ^^^^^ the trait `Responder<'_, '_>` is not implemented for `u8`
@@ -7,7 +7,7 @@ error[E0277]: the trait bound `u8: Responder<'_, '_>` is not satisfied
   = note: required by `respond_to`
 
 error[E0277]: the trait bound `Header<'_>: From<u8>` is not satisfied
-  --> $DIR/responder-types.rs:11:5
+  --> tests/ui-fail-stable/responder-types.rs:11:5
    |
 11 |     other: u8,
    |     ^^^^^ the trait `From<u8>` is not implemented for `Header<'_>`
@@ -21,7 +21,7 @@ error[E0277]: the trait bound `Header<'_>: From<u8>` is not satisfied
    = note: required because of the requirements on the impl of `Into<Header<'_>>` for `u8`
 
 error[E0277]: the trait bound `u8: Responder<'_, '_>` is not satisfied
-  --> $DIR/responder-types.rs:16:5
+  --> tests/ui-fail-stable/responder-types.rs:16:5
    |
 16 |     thing: u8,
    |     ^^^^^ the trait `Responder<'_, '_>` is not implemented for `u8`
@@ -29,7 +29,7 @@ error[E0277]: the trait bound `u8: Responder<'_, '_>` is not satisfied
    = note: required by `respond_to`
 
 error[E0277]: the trait bound `Header<'_>: From<u8>` is not satisfied
-  --> $DIR/responder-types.rs:17:5
+  --> tests/ui-fail-stable/responder-types.rs:17:5
    |
 17 |     other: u8,
    |     ^^^^^ the trait `From<u8>` is not implemented for `Header<'_>`
@@ -43,7 +43,7 @@ error[E0277]: the trait bound `Header<'_>: From<u8>` is not satisfied
    = note: required because of the requirements on the impl of `Into<Header<'_>>` for `u8`
 
 error[E0277]: the trait bound `Header<'_>: From<std::string::String>` is not satisfied
-  --> $DIR/responder-types.rs:24:5
+  --> tests/ui-fail-stable/responder-types.rs:24:5
    |
 24 |     then: String,
    |     ^^^^ the trait `From<std::string::String>` is not implemented for `Header<'_>`
@@ -57,7 +57,7 @@ error[E0277]: the trait bound `Header<'_>: From<std::string::String>` is not sat
    = note: required because of the requirements on the impl of `Into<Header<'_>>` for `std::string::String`
 
 error[E0277]: the trait bound `usize: Responder<'_, '_>` is not satisfied
-  --> $DIR/responder-types.rs:28:13
+  --> tests/ui-fail-stable/responder-types.rs:28:13
    |
 28 | fn foo() -> usize { 0 }
    |             ^^^^^ the trait `Responder<'_, '_>` is not implemented for `usize`

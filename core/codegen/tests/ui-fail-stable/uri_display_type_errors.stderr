@@ -1,5 +1,5 @@
 error[E0277]: the trait bound `BadType: UriDisplay<rocket::http::uri::fmt::Query>` is not satisfied
- --> $DIR/uri_display_type_errors.rs:6:13
+ --> tests/ui-fail-stable/uri_display_type_errors.rs:6:13
   |
 6 | struct Bar1(BadType);
   |             ^^^^^^^ the trait `UriDisplay<rocket::http::uri::fmt::Query>` is not implemented for `BadType`
@@ -7,7 +7,7 @@ error[E0277]: the trait bound `BadType: UriDisplay<rocket::http::uri::fmt::Query
   = note: required because of the requirements on the impl of `UriDisplay<rocket::http::uri::fmt::Query>` for `&BadType`
 
 error[E0277]: the trait bound `BadType: UriDisplay<rocket::http::uri::fmt::Query>` is not satisfied
-  --> $DIR/uri_display_type_errors.rs:10:5
+  --> tests/ui-fail-stable/uri_display_type_errors.rs:10:5
    |
 10 |     field: BadType,
    |     ^^^^^ the trait `UriDisplay<rocket::http::uri::fmt::Query>` is not implemented for `BadType`
@@ -15,7 +15,7 @@ error[E0277]: the trait bound `BadType: UriDisplay<rocket::http::uri::fmt::Query
    = note: required because of the requirements on the impl of `UriDisplay<rocket::http::uri::fmt::Query>` for `&BadType`
 
 error[E0277]: the trait bound `BadType: UriDisplay<rocket::http::uri::fmt::Query>` is not satisfied
-  --> $DIR/uri_display_type_errors.rs:16:5
+  --> tests/ui-fail-stable/uri_display_type_errors.rs:16:5
    |
 16 |     bad: BadType,
    |     ^^^ the trait `UriDisplay<rocket::http::uri::fmt::Query>` is not implemented for `BadType`
@@ -23,7 +23,7 @@ error[E0277]: the trait bound `BadType: UriDisplay<rocket::http::uri::fmt::Query
    = note: required because of the requirements on the impl of `UriDisplay<rocket::http::uri::fmt::Query>` for `&BadType`
 
 error[E0277]: the trait bound `BadType: UriDisplay<rocket::http::uri::fmt::Query>` is not satisfied
-  --> $DIR/uri_display_type_errors.rs:21:11
+  --> tests/ui-fail-stable/uri_display_type_errors.rs:21:11
    |
 21 |     Inner(BadType),
    |           ^^^^^^^ the trait `UriDisplay<rocket::http::uri::fmt::Query>` is not implemented for `BadType`
@@ -33,7 +33,7 @@ error[E0277]: the trait bound `BadType: UriDisplay<rocket::http::uri::fmt::Query
    = note: required because of the requirements on the impl of `UriDisplay<rocket::http::uri::fmt::Query>` for `&&BadType`
 
 error[E0277]: the trait bound `BadType: UriDisplay<rocket::http::uri::fmt::Query>` is not satisfied
-  --> $DIR/uri_display_type_errors.rs:27:9
+  --> tests/ui-fail-stable/uri_display_type_errors.rs:27:9
    |
 27 |         field: BadType,
    |         ^^^^^ the trait `UriDisplay<rocket::http::uri::fmt::Query>` is not implemented for `BadType`
@@ -43,7 +43,7 @@ error[E0277]: the trait bound `BadType: UriDisplay<rocket::http::uri::fmt::Query
    = note: required because of the requirements on the impl of `UriDisplay<rocket::http::uri::fmt::Query>` for `&&BadType`
 
 error[E0277]: the trait bound `BadType: UriDisplay<rocket::http::uri::fmt::Query>` is not satisfied
-  --> $DIR/uri_display_type_errors.rs:35:9
+  --> tests/ui-fail-stable/uri_display_type_errors.rs:35:9
    |
 35 |         other: BadType,
    |         ^^^^^ the trait `UriDisplay<rocket::http::uri::fmt::Query>` is not implemented for `BadType`
@@ -53,7 +53,7 @@ error[E0277]: the trait bound `BadType: UriDisplay<rocket::http::uri::fmt::Query
    = note: required because of the requirements on the impl of `UriDisplay<rocket::http::uri::fmt::Query>` for `&&BadType`
 
 error[E0277]: the trait bound `BadType: UriDisplay<rocket::http::uri::fmt::Path>` is not satisfied
-  --> $DIR/uri_display_type_errors.rs:40:12
+  --> tests/ui-fail-stable/uri_display_type_errors.rs:40:12
    |
 40 | struct Baz(BadType);
    |            ^^^^^^^ the trait `UriDisplay<rocket::http::uri::fmt::Path>` is not implemented for `BadType`
