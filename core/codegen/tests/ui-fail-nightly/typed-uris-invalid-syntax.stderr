@@ -1,151 +1,151 @@
 error: expected identifier
-  --> $DIR/typed-uris-invalid-syntax.rs:10:28
+  --> tests/ui-fail-nightly/typed-uris-invalid-syntax.rs:10:28
    |
 10 |     uri!(simple: id = 100, "Hello");
    |                            ^^^^^^^
 
 error: named and unnamed parameters cannot be mixed
-  --> $DIR/typed-uris-invalid-syntax.rs:11:17
+  --> tests/ui-fail-nightly/typed-uris-invalid-syntax.rs:11:17
    |
 11 |     uri!(simple(id = 100, "Hello"));
    |                 ^^^^^^^^^^^^^^^^^
 
 error: named and unnamed parameters cannot be mixed
-  --> $DIR/typed-uris-invalid-syntax.rs:12:17
+  --> tests/ui-fail-nightly/typed-uris-invalid-syntax.rs:12:17
    |
 12 |     uri!(simple("Hello", id = 100));
    |                 ^^^^^^^^^^^^^^^^^
 
 error: unexpected token
-  --> $DIR/typed-uris-invalid-syntax.rs:14:16
+  --> tests/ui-fail-nightly/typed-uris-invalid-syntax.rs:14:16
    |
 14 |     uri!(simple:);
    |                ^
 
 error: invalid URI: unexpected EOF: expected token ':' at index 5
-  --> $DIR/typed-uris-invalid-syntax.rs:16:16
+  --> tests/ui-fail-nightly/typed-uris-invalid-syntax.rs:16:16
    |
 16 |     uri!("mount", simple);
    |                ^
 
 error: invalid URI: unexpected EOF: expected token ':' at index 5
-  --> $DIR/typed-uris-invalid-syntax.rs:17:16
+  --> tests/ui-fail-nightly/typed-uris-invalid-syntax.rs:17:16
    |
 17 |     uri!("mount", simple, "http://");
    |                ^
 
 error: URI suffix must contain only query and/or fragment
-  --> $DIR/typed-uris-invalid-syntax.rs:18:28
+  --> tests/ui-fail-nightly/typed-uris-invalid-syntax.rs:18:28
    |
 18 |     uri!("/mount", simple, "http://");
    |                            ^^^^^^^^^
 
 error: expected 1, 2, or 3 arguments, found 4
-  --> $DIR/typed-uris-invalid-syntax.rs:19:36
+  --> tests/ui-fail-nightly/typed-uris-invalid-syntax.rs:19:36
    |
 19 |     uri!("/mount", simple, "#foo", "?foo");
    |                                    ^^^^^^
 
 error: invalid URI: unexpected EOF: expected token ':' at index 5
-  --> $DIR/typed-uris-invalid-syntax.rs:20:16
+  --> tests/ui-fail-nightly/typed-uris-invalid-syntax.rs:20:16
    |
 20 |     uri!("mount", simple(10, "hi"), "http://");
    |                ^
 
 error: URI suffix must contain only query and/or fragment
-  --> $DIR/typed-uris-invalid-syntax.rs:21:38
+  --> tests/ui-fail-nightly/typed-uris-invalid-syntax.rs:21:38
    |
 21 |     uri!("/mount", simple(10, "hi"), "http://");
    |                                      ^^^^^^^^^
 
 error: URI prefix cannot contain query part
-  --> $DIR/typed-uris-invalid-syntax.rs:22:10
+  --> tests/ui-fail-nightly/typed-uris-invalid-syntax.rs:22:10
    |
 22 |     uri!("/mount?foo", simple(10, "hi"), "foo/bar?foo#bar");
    |          ^^^^^^^^^^^^
 
 error: URI suffix must contain only query and/or fragment
-  --> $DIR/typed-uris-invalid-syntax.rs:23:38
+  --> tests/ui-fail-nightly/typed-uris-invalid-syntax.rs:23:38
    |
 23 |     uri!("/mount", simple(10, "hi"), "a/b");
    |                                      ^^^^^
 
 error: expected 1, 2, or 3 arguments, found 4
-  --> $DIR/typed-uris-invalid-syntax.rs:24:46
+  --> tests/ui-fail-nightly/typed-uris-invalid-syntax.rs:24:46
    |
 24 |     uri!("/mount", simple(10, "hi"), "#foo", "?foo");
    |                                              ^^^^^^
 
 error: invalid URI: unexpected token '<' at index 7
-  --> $DIR/typed-uris-invalid-syntax.rs:25:18
+  --> tests/ui-fail-nightly/typed-uris-invalid-syntax.rs:25:18
    |
 25 |     uri!("/mount/<id>", simple);
    |                  ^
 
 error: expected at least 1 argument, found none
-  --> $DIR/typed-uris-invalid-syntax.rs:26:5
+  --> tests/ui-fail-nightly/typed-uris-invalid-syntax.rs:26:5
    |
 26 |     uri!();
-   |     ^^^^^^^
+   |     ^^^^^^
    |
    = note: this error originates in the macro `uri` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: unexpected token
-  --> $DIR/typed-uris-invalid-syntax.rs:27:16
+  --> tests/ui-fail-nightly/typed-uris-invalid-syntax.rs:27:16
    |
 27 |     uri!(simple: id = );
    |                ^
 
 error: unexpected end of input, expected expression
-  --> $DIR/typed-uris-invalid-syntax.rs:28:22
+  --> tests/ui-fail-nightly/typed-uris-invalid-syntax.rs:28:22
    |
 28 |     uri!(simple(id = ));
    |                      ^
 
 error: invalid URI: unexpected EOF: expected some token at index 0
-  --> $DIR/typed-uris-invalid-syntax.rs:29:11
+  --> tests/ui-fail-nightly/typed-uris-invalid-syntax.rs:29:11
    |
 29 |     uri!("*", simple(10), "hi");
    |           ^
 
 error: URI suffix must contain only query and/or fragment
-  --> $DIR/typed-uris-invalid-syntax.rs:30:40
+  --> tests/ui-fail-nightly/typed-uris-invalid-syntax.rs:30:40
    |
 30 |     uri!("some.host:8088", simple(10), "hi");
    |                                        ^^^^
 
 error: expected identifier
-  --> $DIR/typed-uris-invalid-syntax.rs:33:18
+  --> tests/ui-fail-nightly/typed-uris-invalid-syntax.rs:33:18
    |
 33 |     uri!("/foo", "bar");
    |                  ^^^^^
 
 error: unexpected token
-  --> $DIR/typed-uris-invalid-syntax.rs:34:17
+  --> tests/ui-fail-nightly/typed-uris-invalid-syntax.rs:34:17
    |
 34 |     uri!("/foo" ("bar"));
    |                 ^^^^^^^
 
 error: URI prefix cannot contain query part
-  --> $DIR/typed-uris-invalid-syntax.rs:35:10
+  --> tests/ui-fail-nightly/typed-uris-invalid-syntax.rs:35:10
    |
 35 |     uri!("ftp:?", index);
    |          ^^^^^^^
 
 error: URI suffix must contain only query and/or fragment
-  --> $DIR/typed-uris-invalid-syntax.rs:36:25
+  --> tests/ui-fail-nightly/typed-uris-invalid-syntax.rs:36:25
    |
 36 |     uri!("ftp:", index, "foo#bar");
    |                         ^^^^^^^^^
 
 error: URI suffix must contain only query and/or fragment
-  --> $DIR/typed-uris-invalid-syntax.rs:37:25
+  --> tests/ui-fail-nightly/typed-uris-invalid-syntax.rs:37:25
    |
 37 |     uri!("ftp:", index, "foo?bar");
    |                         ^^^^^^^^^
 
 error: route expects 2 parameters but 0 were supplied
-  --> $DIR/typed-uris-invalid-syntax.rs:13:10
+  --> tests/ui-fail-nightly/typed-uris-invalid-syntax.rs:13:10
    |
 13 |     uri!(simple,);
    |          ^^^^^^

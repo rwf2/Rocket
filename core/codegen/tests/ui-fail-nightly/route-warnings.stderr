@@ -1,49 +1,49 @@
 warning: 'application/x-custom' is not a known media type
- --> $DIR/route-warnings.rs:7:21
+ --> tests/ui-fail-nightly/route-warnings.rs:7:21
   |
 7 | #[get("/", format = "application/x-custom")]
   |                     ^^^^^^^^^^^^^^^^^^^^^^
 
 warning: 'x-custom/plain' is not a known media type
-  --> $DIR/route-warnings.rs:10:21
+  --> tests/ui-fail-nightly/route-warnings.rs:10:21
    |
 10 | #[get("/", format = "x-custom/plain")]
    |                     ^^^^^^^^^^^^^^^^
 
 warning: 'x-custom/x-custom' is not a known media type
-  --> $DIR/route-warnings.rs:13:21
+  --> tests/ui-fail-nightly/route-warnings.rs:13:21
    |
 13 | #[get("/", format = "x-custom/x-custom")]
    |                     ^^^^^^^^^^^^^^^^^^^
 
 warning: `data` used with non-payload-supporting method
-  --> $DIR/route-warnings.rs:18:12
+  --> tests/ui-fail-nightly/route-warnings.rs:18:12
    |
 18 | #[get("/", data = "<_foo>")]
    |            ^^^^^^^^^^^^^^^
    |
 note: 'GET' does not typically support payloads
-  --> $DIR/route-warnings.rs:18:3
+  --> tests/ui-fail-nightly/route-warnings.rs:18:3
    |
 18 | #[get("/", data = "<_foo>")]
    |   ^^^
    = note: this warning originates in the attribute macro `get` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 warning: `data` used with non-payload-supporting method
-  --> $DIR/route-warnings.rs:21:13
+  --> tests/ui-fail-nightly/route-warnings.rs:21:13
    |
 21 | #[head("/", data = "<_foo>")]
    |             ^^^^^^^^^^^^^^^
    |
 note: 'HEAD' does not typically support payloads
-  --> $DIR/route-warnings.rs:21:3
+  --> tests/ui-fail-nightly/route-warnings.rs:21:3
    |
 21 | #[head("/", data = "<_foo>")]
    |   ^^^^
    = note: this warning originates in the attribute macro `head` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: checking for warnings!
-  --> $DIR/route-warnings.rs:25:5
+  --> tests/ui-fail-nightly/route-warnings.rs:25:5
    |
 25 |     compile_error!("checking for warnings!")
    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

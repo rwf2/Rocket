@@ -1,5 +1,5 @@
 error: invalid route URI: expected token '/' but found 'a' at index 0
- --> $DIR/route-path-bad-syntax.rs:5:8
+ --> tests/ui-fail-nightly/route-path-bad-syntax.rs:5:8
   |
 5 | #[get("a")]
   |        ^
@@ -7,7 +7,7 @@ error: invalid route URI: expected token '/' but found 'a' at index 0
   = help: expected URI in origin form: "/path/<param>"
 
 error: invalid route URI: unexpected EOF: expected token '/' at index 0
- --> $DIR/route-path-bad-syntax.rs:8:8
+ --> tests/ui-fail-nightly/route-path-bad-syntax.rs:8:8
   |
 8 | #[get("")]
   |        ^
@@ -15,7 +15,7 @@ error: invalid route URI: unexpected EOF: expected token '/' at index 0
   = help: expected URI in origin form: "/path/<param>"
 
 error: invalid route URI: expected token '/' but found 'a' at index 0
-  --> $DIR/route-path-bad-syntax.rs:11:8
+  --> tests/ui-fail-nightly/route-path-bad-syntax.rs:11:8
    |
 11 | #[get("a/b/c")]
    |        ^
@@ -23,7 +23,7 @@ error: invalid route URI: expected token '/' but found 'a' at index 0
    = help: expected URI in origin form: "/path/<param>"
 
 error: route URIs cannot contain empty segments
-  --> $DIR/route-path-bad-syntax.rs:14:10
+  --> tests/ui-fail-nightly/route-path-bad-syntax.rs:14:10
    |
 14 | #[get("/a///b")]
    |          ^^
@@ -31,7 +31,7 @@ error: route URIs cannot contain empty segments
    = note: expected "/a/b", found "/a///b"
 
 error: route URIs cannot contain empty segments
-  --> $DIR/route-path-bad-syntax.rs:17:13
+  --> tests/ui-fail-nightly/route-path-bad-syntax.rs:17:13
    |
 17 | #[get("/?bat&&")]
    |             ^^
@@ -39,7 +39,7 @@ error: route URIs cannot contain empty segments
    = note: expected "/?bat", found "/?bat&&"
 
 error: route URIs cannot contain empty segments
-  --> $DIR/route-path-bad-syntax.rs:20:13
+  --> tests/ui-fail-nightly/route-path-bad-syntax.rs:20:13
    |
 20 | #[get("/?bat&&")]
    |             ^^
@@ -47,7 +47,7 @@ error: route URIs cannot contain empty segments
    = note: expected "/?bat", found "/?bat&&"
 
 error: route URIs cannot contain empty segments
-  --> $DIR/route-path-bad-syntax.rs:23:12
+  --> tests/ui-fail-nightly/route-path-bad-syntax.rs:23:12
    |
 23 | #[get("/a/b//")]
    |            ^^
@@ -55,79 +55,79 @@ error: route URIs cannot contain empty segments
    = note: expected "/a/b", found "/a/b//"
 
 error: unused parameter
-  --> $DIR/route-path-bad-syntax.rs:42:10
+  --> tests/ui-fail-nightly/route-path-bad-syntax.rs:42:10
    |
 42 | #[get("/<name>")]
    |          ^^^^
    |
 note: expected argument named `name` here
-  --> $DIR/route-path-bad-syntax.rs:43:6
+  --> tests/ui-fail-nightly/route-path-bad-syntax.rs:43:6
    |
 43 | fn h0(_name: usize) {}
    |      ^^^^^^^^^^^^^^
 
 error: unused parameter
-  --> $DIR/route-path-bad-syntax.rs:45:12
+  --> tests/ui-fail-nightly/route-path-bad-syntax.rs:45:12
    |
 45 | #[get("/a?<r>")]
    |            ^
    |
 note: expected argument named `r` here
-  --> $DIR/route-path-bad-syntax.rs:46:6
+  --> tests/ui-fail-nightly/route-path-bad-syntax.rs:46:6
    |
 46 | fn h1() {}
    |      ^^
 
 error: unused parameter
-  --> $DIR/route-path-bad-syntax.rs:48:23
+  --> tests/ui-fail-nightly/route-path-bad-syntax.rs:48:23
    |
 48 | #[post("/a", data = "<test>")]
    |                       ^^^^
    |
 note: expected argument named `test` here
-  --> $DIR/route-path-bad-syntax.rs:49:6
+  --> tests/ui-fail-nightly/route-path-bad-syntax.rs:49:6
    |
 49 | fn h2() {}
    |      ^^
 
 error: unused parameter
-  --> $DIR/route-path-bad-syntax.rs:51:10
+  --> tests/ui-fail-nightly/route-path-bad-syntax.rs:51:10
    |
 51 | #[get("/<_r>")]
    |          ^^
    |
 note: expected argument named `_r` here
-  --> $DIR/route-path-bad-syntax.rs:52:6
+  --> tests/ui-fail-nightly/route-path-bad-syntax.rs:52:6
    |
 52 | fn h3() {}
    |      ^^
 
 error: unused parameter
-  --> $DIR/route-path-bad-syntax.rs:54:10
+  --> tests/ui-fail-nightly/route-path-bad-syntax.rs:54:10
    |
 54 | #[get("/<_r>/<b>")]
    |          ^^
    |
 note: expected argument named `_r` here
-  --> $DIR/route-path-bad-syntax.rs:55:6
+  --> tests/ui-fail-nightly/route-path-bad-syntax.rs:55:6
    |
 55 | fn h4() {}
    |      ^^
 
 error: unused parameter
-  --> $DIR/route-path-bad-syntax.rs:54:15
+  --> tests/ui-fail-nightly/route-path-bad-syntax.rs:54:15
    |
 54 | #[get("/<_r>/<b>")]
    |               ^
    |
 note: expected argument named `b` here
-  --> $DIR/route-path-bad-syntax.rs:55:6
+  --> tests/ui-fail-nightly/route-path-bad-syntax.rs:55:6
    |
 55 | fn h4() {}
    |      ^^
 
 error: invalid identifier: `foo_.`
-  --> $DIR/route-path-bad-syntax.rs:60:10
+  --> tests/ui-fail-nightly/route-path-bad-syntax.rs:60:10
    |
 60 | #[get("/<foo_.>")]
    |          ^^^^^
@@ -136,7 +136,7 @@ error: invalid identifier: `foo_.`
    = help: did you mean `<foo_>`?
 
 error: invalid identifier: `foo*`
-  --> $DIR/route-path-bad-syntax.rs:63:10
+  --> tests/ui-fail-nightly/route-path-bad-syntax.rs:63:10
    |
 63 | #[get("/<foo*>")]
    |          ^^^^
@@ -145,7 +145,7 @@ error: invalid identifier: `foo*`
    = help: did you mean `<foo>`?
 
 error: invalid identifier: `!`
-  --> $DIR/route-path-bad-syntax.rs:66:10
+  --> tests/ui-fail-nightly/route-path-bad-syntax.rs:66:10
    |
 66 | #[get("/<!>")]
    |          ^
@@ -154,7 +154,7 @@ error: invalid identifier: `!`
    = help: did you mean `<param>`?
 
 error: invalid identifier: `name>:<id`
-  --> $DIR/route-path-bad-syntax.rs:69:10
+  --> tests/ui-fail-nightly/route-path-bad-syntax.rs:69:10
    |
 69 | #[get("/<name>:<id>")]
    |          ^^^^^^^^^
@@ -163,7 +163,7 @@ error: invalid identifier: `name>:<id`
    = help: did you mean `<nameid>`?
 
 error: unexpected static parameter
-  --> $DIR/route-path-bad-syntax.rs:74:20
+  --> tests/ui-fail-nightly/route-path-bad-syntax.rs:74:20
    |
 74 | #[get("/", data = "foo")]
    |                    ^^^
@@ -171,7 +171,7 @@ error: unexpected static parameter
    = help: parameter must be dynamic: `<foo>`
 
 error: parameter cannot be trailing
-  --> $DIR/route-path-bad-syntax.rs:77:20
+  --> tests/ui-fail-nightly/route-path-bad-syntax.rs:77:20
    |
 77 | #[get("/", data = "<foo..>")]
    |                    ^^^^^^^
@@ -179,7 +179,7 @@ error: parameter cannot be trailing
    = help: did you mean `<foo>`?
 
 warning: `segment` starts with `<` but does not end with `>`
-  --> $DIR/route-path-bad-syntax.rs:80:20
+  --> tests/ui-fail-nightly/route-path-bad-syntax.rs:80:20
    |
 80 | #[get("/", data = "<foo")]
    |                    ^^^^
@@ -187,7 +187,7 @@ warning: `segment` starts with `<` but does not end with `>`
    = help: perhaps you meant the dynamic parameter `<foo>`?
 
 error: unexpected static parameter
-  --> $DIR/route-path-bad-syntax.rs:80:20
+  --> tests/ui-fail-nightly/route-path-bad-syntax.rs:80:20
    |
 80 | #[get("/", data = "<foo")]
    |                    ^^^^
@@ -195,7 +195,7 @@ error: unexpected static parameter
    = help: parameter must be dynamic: `<foo>`
 
 error: invalid identifier: `test `
-  --> $DIR/route-path-bad-syntax.rs:83:21
+  --> tests/ui-fail-nightly/route-path-bad-syntax.rs:83:21
    |
 83 | #[get("/", data = "<test >")]
    |                     ^^^^^
@@ -204,7 +204,7 @@ error: invalid identifier: `test `
    = help: did you mean `<test>`?
 
 error: handler arguments must be named
-  --> $DIR/route-path-bad-syntax.rs:89:7
+  --> tests/ui-fail-nightly/route-path-bad-syntax.rs:89:7
    |
 89 | fn k0(_: usize) {}
    |       ^^^^^^^^
@@ -212,13 +212,13 @@ error: handler arguments must be named
    = help: to name an ignored handler argument, use `_name`
 
 error: parameters cannot be empty
-  --> $DIR/route-path-bad-syntax.rs:93:9
+  --> tests/ui-fail-nightly/route-path-bad-syntax.rs:93:9
    |
 93 | #[get("/<>")]
    |         ^^
 
 warning: `segment` starts with `<` but does not end with `>`
-  --> $DIR/route-path-bad-syntax.rs:96:9
+  --> tests/ui-fail-nightly/route-path-bad-syntax.rs:96:9
    |
 96 | #[get("/<id><")]
    |         ^^^^^
@@ -226,7 +226,7 @@ warning: `segment` starts with `<` but does not end with `>`
    = help: perhaps you meant the dynamic parameter `<id>`?
 
 warning: `segment` starts with `<` but does not end with `>`
-  --> $DIR/route-path-bad-syntax.rs:99:9
+  --> tests/ui-fail-nightly/route-path-bad-syntax.rs:99:9
    |
 99 | #[get("/<<<<id><")]
    |         ^^^^^^^^
@@ -234,7 +234,7 @@ warning: `segment` starts with `<` but does not end with `>`
    = help: perhaps you meant the dynamic parameter `<id>`?
 
 warning: `segment` starts with `<` but does not end with `>`
-   --> $DIR/route-path-bad-syntax.rs:102:9
+   --> tests/ui-fail-nightly/route-path-bad-syntax.rs:102:9
     |
 102 | #[get("/<>name><")]
     |         ^^^^^^^^

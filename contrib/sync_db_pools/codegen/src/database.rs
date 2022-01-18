@@ -12,6 +12,7 @@ struct DatabaseInvocation {
     /// The database name as passed in via #[database('database name')].
     db_name: String,
     /// The entire structure that the `database` attribute was called on.
+    #[allow(dead_code)]
     structure: DataStruct,
     /// The type inside the structure: struct MyDb(ThisType).
     connection_type: Type,
