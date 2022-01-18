@@ -54,6 +54,8 @@ EXAMPLES_DIR=$(relative "examples") || exit $?
 DOC_DIR=$(relative "target/doc") || exit $?
 
 # Versioning information. These are changed as versions change.
+CARGO_VERSION="$(cargo --version)"
+RUSTC_VERSION="$(rustc --version)"
 VERSION=$(git grep -h "^version" "${CORE_LIB_ROOT}" | head -n 1 | cut -d '"' -f2)
 MAJOR_VERSION=$(echo "${VERSION}" | cut -d'.' -f1-2)
 VIRTUAL_CODENAME="$(git branch --show-current)"
@@ -99,7 +101,9 @@ ALL_CRATE_ROOTS=(
 )
 
 function print_environment() {
-  echo "  VERSION: ${VERSION}"
+  echo "  CARGO VERSION: ${CARGO_VERSION}"
+  echo "  RUSTC VERSION: ${RUSTC_VERSION}"
+  echo "  ROCKET VERSION: ${VERSION}"
   echo "  MAJOR_VERSION: ${MAJOR_VERSION}"
   echo "  CODENAME: ${CODENAME}"
   echo "  DOC_VERSION: ${DOC_VERSION}"
