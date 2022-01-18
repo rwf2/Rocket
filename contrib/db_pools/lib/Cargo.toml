@@ -9,6 +9,11 @@ keywords = ["rocket", "framework", "database", "pools"]
 license = "MIT OR Apache-2.0"
 edition = "2018"
 
+[package.metadata]
+# minimum supported rust version 1.53.0 because of
+# error[E0391]: cycle detected when computing the supertraits of `database::Database`
+msrv = 1.53.0
+
 [package.metadata.docs.rs]
 all-features = true
 
