@@ -16,8 +16,10 @@ categories = ["web-programming::http-server"]
 edition = "2018"
 
 [package.metadata]
-# minimum supported rust version 1.51.0 because of dependencies multer -> spin
-msrv = "1.51.0"
+# minimum supported rust version 1.53.0 because of 
+# TlsConfig::with_ciphers() based on crate indexmap needs IntoIterator impls
+# on arrays of any length from 1.53.0
+msrv = "1.53.0"
 
 [package.metadata.docs.rs]
 all-features = true
