@@ -85,6 +85,6 @@ pub fn stage() -> AdHoc {
     AdHoc::on_ignite("SQLx Stage", |rocket| async {
         rocket.attach(Db::init())
             .attach(AdHoc::try_on_ignite("SQLx Migrations", run_migrations))
-            .mount("/sqlx", routes![list, create, read, delete, destroy])
+            .mount("/", routes![list, create, read, delete, destroy])
     })
 }
