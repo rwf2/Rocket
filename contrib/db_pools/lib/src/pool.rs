@@ -264,3 +264,29 @@ mod mongodb {
         }
     }
 }
+
+#[cfg(feature = "diesel_postgres")]
+mod diesel_postgres {
+    use super::{Config, Error, Figment};
+    use diesel_async::AsyncConnection;
+
+    #[rocket::async_trait]
+    impl crate::Pool for crate::FakePool {
+        type Error = Error<diesel::ConnectionError>;
+
+        type Connection = diesel_async::AsyncPgConnection;
+
+        async fn init(figment: &Figment) -> Result<Self, Self::Error> {
+            // we are a fake pool, we do not pool, there is nothing to do, haha
+
+            let config: Config = figment.extract()?;
+            Ok(Self(config.url))
+        }
+
+        async fn get(&self) -> Result<Self::Connection, Self::Error> {
+            Self::Connection::establish(&self.0)
+                .await
+                .map_err(Error::Get)
+        }
+    }
+}

@@ -22,7 +22,14 @@ sqlx_postgres = ["sqlx", "sqlx/postgres"]
 sqlx_sqlite = ["sqlx", "sqlx/sqlite"]
 sqlx_mssql = ["sqlx", "sqlx/mssql"]
 sqlx_macros = ["sqlx/macros"]
+# diesel features
+# diesel_mysql = ["diesel", "diesel-async", "diesel-async/mysql"]  # wont compile
+diesel_postgres = ["diesel", "diesel-async", "diesel-async/postgres"]
+
 # implicit features: mongodb
+
+# testing
+default = ["diesel_postgres"]
 
 [dependencies.rocket]
 path = "../../../core/lib"
@@ -61,6 +68,18 @@ optional = true
 version = "0.5"
 default-features = false
 features = ["runtime-tokio-rustls"]
+optional = true
+
+[dependencies.diesel]
+git = "https://github.com/diesel-rs/diesel"
+rev = "37ec18f46ced2d6e9197414156fdb705d7a61426"  # same as diesel-async
+default-features = false
+optional = true
+
+[dependencies.diesel-async]
+git = "https://github.com/ThouCheese/diesel_async"
+version = "0.1"
+default-features = false
 optional = true
 
 [dev-dependencies.rocket]
