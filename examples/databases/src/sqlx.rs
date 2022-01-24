@@ -20,12 +20,13 @@ struct Post {
     id: Option<i64>,
     title: String,
     text: String,
+    view_count: i64,
 }
 
 #[post("/", data = "<post>")]
 async fn create(mut db: Connection<Db>, post: Json<Post>) -> Result<Created<Json<Post>>> {
     // There is no support for `RETURNING`.
-    sqlx::query!("INSERT INTO posts (title, text) VALUES (?, ?)", post.title, post.text)
+    sqlx::query!("INSERT INTO posts (title, text, view_count) VALUES (?, ?, ?)", post.title, post.text, post.view_count)
         .execute(&mut *db)
         .await?;
 
@@ -45,9 +46,9 @@ async fn list(mut db: Connection<Db>) -> Result<Json<Vec<i64>>> {
 
 #[get("/<id>")]
 async fn read(mut db: Connection<Db>, id: i64) -> Option<Json<Post>> {
-    sqlx::query!("SELECT id, title, text FROM posts WHERE id = ?", id)
+    sqlx::query!("SELECT id, title, text, viewCount FROM posts WHERE id = ?", id)
         .fetch_one(&mut *db)
-        .map_ok(|r| Json(Post { id: Some(r.id), title: r.title, text: r.text }))
+        .map_ok(|r| Json(Post { id: Some(r.id), title: r.title, text: r.text, view_count: r.view_count }))
         .await
         .ok()
 }
