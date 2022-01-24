@@ -46,7 +46,7 @@ async fn list(mut db: Connection<Db>) -> Result<Json<Vec<i64>>> {
 
 #[get("/<id>")]
 async fn read(mut db: Connection<Db>, id: i64) -> Option<Json<Post>> {
-    sqlx::query!("SELECT id, title, text, viewCount FROM posts WHERE id = ?", id)
+    sqlx::query!("SELECT id, title, text, view_count FROM posts WHERE id = ?", id)
         .fetch_one(&mut *db)
         .map_ok(|r| Json(Post { id: Some(r.id), title: r.title, text: r.text, view_count: r.view_count }))
         .await
