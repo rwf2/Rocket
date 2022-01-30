@@ -36,7 +36,7 @@ impl<'r, S, E> IntoOutcome<S, (Status, E), Data<'r>> for Result<S, E> {
 ///
 /// A data guard is a guard that operates on a request's body data. Data guards
 /// validate and parse request body data via implementations of `FromData`. In
-/// other words, a type is a data guard _iff_ it implements `FromData`.
+/// other words, a type is a data guard _[iff](https://en.wikipedia.org/wiki/If_and_only_if)_ it implements `FromData`.
 ///
 /// Data guards are the target of the `data` route attribute parameter:
 ///
