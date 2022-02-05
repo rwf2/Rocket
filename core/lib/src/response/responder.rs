@@ -442,7 +442,7 @@ impl<'r, 'o: 'r, R: Responder<'r, 'o>> Responder<'r, 'o> for Option<R> {
     }
 }
 
-// Responds with the wrapped `Responder` in `self`, whether it is `Ok` or
+/// Responds with the wrapped `Responder` in `self`, whether it is `Ok` or
 /// `Err`.
 impl<'r, 'o: 'r, 't: 'o, 'e: 'o, T, E> Responder<'r, 'o> for Result<T, E>
     where T: Responder<'r, 't>, E: Responder<'r, 'e>
@@ -455,7 +455,7 @@ impl<'r, 'o: 'r, 't: 'o, 'e: 'o, T, E> Responder<'r, 'o> for Result<T, E>
     }
 }
 
-// Responds with the wrapped `Responder` in `self`, whether it is `Left` or
+/// Responds with the wrapped `Responder` in `self`, whether it is `Left` or
 /// `Right`.
 impl<'r, 'o: 'r, 't: 'o, 'e: 'o, T, E> Responder<'r, 'o> for crate::Either<T, E>
     where T: Responder<'r, 't>, E: Responder<'r, 'e>
