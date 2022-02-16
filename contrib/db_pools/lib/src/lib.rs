@@ -101,7 +101,7 @@
 //! At present, this crate supports _three_ drivers: [`deadpool`], [`sqlx`],
 //! and [`mongodb`]. Each driver may support multiple databases.
 //!
-//! ## `deadpool` (v0.8)
+//! ## `deadpool` (v0.9)
 //!
 //! | Database | Feature             | [`Pool`] Type               | [`Connection`] Deref                  |
 //! |----------|---------------------|-----------------------------|---------------------------------------|

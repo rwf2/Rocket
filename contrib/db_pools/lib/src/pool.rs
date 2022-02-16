@@ -137,7 +137,7 @@ pub trait Pool: Sized + Send + Sync + 'static {
 
 #[cfg(feature = "deadpool")]
 mod deadpool_postgres {
-    use deadpool::managed::{Manager, Pool, PoolConfig, PoolError, Object};
+    use deadpool::{managed::{Manager, Pool, PoolError, Object, BuildError}, Runtime};
     use super::{Duration, Error, Config, Figment};
 
     pub trait DeadManager: Manager + Sized + Send + Sync + 'static {
@@ -162,20 +162,22 @@ mod deadpool_postgres {
     impl<M: DeadManager, C: From<Object<M>>> crate::Pool for Pool<M, C>
         where M::Type: Send, C: Send + Sync + 'static, M::Error: std::error::Error
     {
-        type Error = Error<M::Error, PoolError<M::Error>>;
+        type Error = Error<BuildError<M::Error>, PoolError<M::Error>>;
 
         type Connection = C;
 
         async fn init(figment: &Figment) -> Result<Self, Self::Error> {
             let config: Config = figment.extract()?;
-            let manager = M::new(&config).map_err(Error::Init)?;
+            let manager = M::new(&config).map_err(|e| Error::Init(BuildError::Backend(e)))?;
 
-            let mut pool = PoolConfig::new(config.max_connections);
-            pool.timeouts.create = Some(Duration::from_secs(config.connect_timeout));
-            pool.timeouts.wait = Some(Duration::from_secs(config.connect_timeout));
-            pool.timeouts.recycle = config.idle_timeout.map(Duration::from_secs);
-            pool.runtime = deadpool::Runtime::Tokio1;
-            Ok(Pool::from_config(manager, pool))
+            Pool::builder(manager)
+                .max_size(config.max_connections)
+                .wait_timeout(Some(Duration::from_secs(config.connect_timeout)))
+                .create_timeout(Some(Duration::from_secs(config.connect_timeout)))
+                .recycle_timeout(config.idle_timeout.map(Duration::from_secs))
+                .runtime(Runtime::Tokio1)
+                .build()
+                .map_err(Error::Init)
         }
 
         async fn get(&self) -> Result<Self::Connection, Self::Error> {

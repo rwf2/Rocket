@@ -34,19 +34,19 @@ path = "../codegen"
 version = "0.1.0-rc"
 
 [dependencies.deadpool]
-version = "0.8"
+version = "0.9"
 default-features = false
 features = ["rt_tokio_1", "managed"]
 optional = true
 
 [dependencies.deadpool-postgres]
-version = "0.9"
+version = "0.10"
 default-features = false
 features = ["rt_tokio_1"]
 optional = true
 
 [dependencies.deadpool-redis]
-version = "0.8.1"
+version = "0.10"
 default-features = false
 features = ["rt_tokio_1"]
 optional = true
