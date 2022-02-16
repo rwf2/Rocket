@@ -30,7 +30,7 @@ uuid = ["uuid_", "rocket_http/uuid"]
 [dependencies]
 # Serialization dependencies.
 serde_json = { version = "1.0.26", optional = true }
-rmp-serde = { version = "0.15.0", optional = true }
+rmp-serde = { version = "1", optional = true }
 uuid_ = { package = "uuid", version = "0.8", optional = true, features = ["serde"] }
 
 # Non-optional, core dependencies from here on out.
@@ -44,7 +44,7 @@ binascii = "0.1"
 atty = "0.2"
 ref-cast = "1.0"
 atomic = "0.5"
-parking_lot = "0.11"
+parking_lot = "0.12"
 ubyte = {version = "0.10", features = ["serde"] }
 serde = { version = "1.0", features = ["derive"] }
 figment = { version = "0.10.6", features = ["toml", "env"] }
@@ -73,7 +73,7 @@ version = "1.6.1"
 features = ["fs", "io-std", "io-util", "rt-multi-thread", "sync", "signal", "macros"]
 
 [dependencies.tokio-util]
-version = "0.6"
+version = "0.7"
 default-features = false
 features = ["io"]
 
@@ -86,4 +86,4 @@ version_check = "0.9.1"
 
 [dev-dependencies]
 figment = { version = "0.10", features = ["test"] }
-pretty_assertions = "0.7"
+pretty_assertions = "1"
