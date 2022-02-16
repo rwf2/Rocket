@@ -52,7 +52,7 @@ features = ["rt_tokio_1"]
 optional = true
 
 [dependencies.mongodb]
-version = "1"
+version = "2"
 default-features = false
 features = ["tokio-runtime"]
 optional = true

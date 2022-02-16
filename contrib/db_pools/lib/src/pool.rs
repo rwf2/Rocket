@@ -256,8 +256,8 @@ mod mongodb {
             opts.min_pool_size = config.min_connections;
             opts.max_pool_size = Some(config.max_connections as u32);
             opts.max_idle_time = config.idle_timeout.map(Duration::from_secs);
-            opts.wait_queue_timeout = Some(Duration::from_secs(config.connect_timeout));
             opts.connect_timeout = Some(Duration::from_secs(config.connect_timeout));
+            opts.server_selection_timeout = Some(Duration::from_secs(config.connect_timeout));
             Client::with_options(opts).map_err(Error::Init)
         }
 

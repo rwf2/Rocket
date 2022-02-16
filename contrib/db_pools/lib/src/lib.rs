@@ -126,7 +126,7 @@
 //! [`sqlx::PoolConnection<Sqlite>`]: https://docs.rs/sqlx/0.5/sqlx/pool/struct.PoolConnection.html
 //! [`sqlx::PoolConnection<Mssql>`]: https://docs.rs/sqlx/0.5/sqlx/pool/struct.PoolConnection.html
 //!
-//! ## `mongodb` (v1)
+//! ## `mongodb` (v2)
 //!
 //! | Database | Feature   | [`Pool`] Type and [`Connection`] Deref |
 //! |----------|-----------|----------------------------------------|
