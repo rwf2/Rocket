@@ -83,8 +83,6 @@ pub(crate) struct Metadata {
     pub base_segs: Vec<Segment>,
     /// Segments in the path, including base.
     pub path_segs: Vec<Segment>,
-    /// Segments in the query.
-    pub query_segs: Vec<Segment>,
     /// `(name, value)` of the query segments that are static.
     pub static_query_fields: Vec<(String, String)>,
     /// The "color" of the route path.
@@ -288,8 +286,8 @@ impl Metadata {
         let trailing_path = path_segs.last().map_or(false, |p| p.trailing);
 
         Metadata {
-            base_segs, path_segs, query_segs, static_query_fields,
-            path_color, query_color, trailing_path,
+            base_segs, path_segs, static_query_fields, path_color, query_color,
+            trailing_path,
         }
     }
 }

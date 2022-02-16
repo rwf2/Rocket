@@ -1,11 +1,11 @@
 error: expected identifier
-  --> $DIR/typed-uris-bad-params.rs:63:18
+  --> tests/ui-fail-nightly/typed-uris-bad-params.rs:63:18
    |
 63 |     uri!(ignored(_ = 10));
    |                  ^
 
 error: route expects 1 parameter but 2 were supplied
-  --> $DIR/typed-uris-bad-params.rs:69:18
+  --> tests/ui-fail-nightly/typed-uris-bad-params.rs:69:18
    |
 69 |     uri!(ignored(10, "10"));
    |                  ^^^^^^^^
@@ -13,7 +13,7 @@ error: route expects 1 parameter but 2 were supplied
    = note: route `ignored` has uri "/<_>"
 
 error: expected unnamed arguments due to ignored parameters
-  --> $DIR/typed-uris-bad-params.rs:67:18
+  --> tests/ui-fail-nightly/typed-uris-bad-params.rs:67:18
    |
 67 |     uri!(ignored(num = 10));
    |                  ^^^^^^^^
@@ -21,7 +21,7 @@ error: expected unnamed arguments due to ignored parameters
    = note: uri for route `ignored` ignores path parameters: "/<_>"
 
 error: route expects 1 parameter but 2 were supplied
-  --> $DIR/typed-uris-bad-params.rs:65:18
+  --> tests/ui-fail-nightly/typed-uris-bad-params.rs:65:18
    |
 65 |     uri!(ignored(10, 20));
    |                  ^^^^^^
@@ -29,25 +29,25 @@ error: route expects 1 parameter but 2 were supplied
    = note: route `ignored` has uri "/<_>"
 
 error: path parameters cannot be ignored
-  --> $DIR/typed-uris-bad-params.rs:61:18
+  --> tests/ui-fail-nightly/typed-uris-bad-params.rs:61:18
    |
 61 |     uri!(ignored(_));
    |                  ^
 
 error: path parameters cannot be ignored
-  --> $DIR/typed-uris-bad-params.rs:59:36
+  --> tests/ui-fail-nightly/typed-uris-bad-params.rs:59:36
    |
 59 |     uri!(optionals(id = 10, name = _));
    |                                    ^
 
 error: path parameters cannot be ignored
-  --> $DIR/typed-uris-bad-params.rs:57:25
+  --> tests/ui-fail-nightly/typed-uris-bad-params.rs:57:25
    |
 57 |     uri!(optionals(id = _, name = "bob".into()));
    |                         ^
 
 error: invalid parameters for `has_two` route uri
-  --> $DIR/typed-uris-bad-params.rs:55:18
+  --> tests/ui-fail-nightly/typed-uris-bad-params.rs:55:18
    |
 55 |     uri!(has_two(id = 100, cookies = "hi"));
    |                  ^^^^^^^^^^^^^^^^^^^^^^^^
@@ -55,13 +55,13 @@ error: invalid parameters for `has_two` route uri
    = note: uri parameters are: id: i32, name: String
    = help: missing parameter: `name`
 help: unknown parameter: `cookies`
-  --> $DIR/typed-uris-bad-params.rs:55:28
+  --> tests/ui-fail-nightly/typed-uris-bad-params.rs:55:28
    |
 55 |     uri!(has_two(id = 100, cookies = "hi"));
    |                            ^^^^^^^
 
 error: invalid parameters for `has_two` route uri
-  --> $DIR/typed-uris-bad-params.rs:53:18
+  --> tests/ui-fail-nightly/typed-uris-bad-params.rs:53:18
    |
 53 |     uri!(has_two(cookies = "hi", id = 100, id = 10, id = 10));
    |                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -69,18 +69,18 @@ error: invalid parameters for `has_two` route uri
    = note: uri parameters are: id: i32, name: String
    = help: missing parameter: `name`
 help: unknown parameter: `cookies`
-  --> $DIR/typed-uris-bad-params.rs:53:18
+  --> tests/ui-fail-nightly/typed-uris-bad-params.rs:53:18
    |
 53 |     uri!(has_two(cookies = "hi", id = 100, id = 10, id = 10));
    |                  ^^^^^^^
 help: duplicate parameter: `id`
-  --> $DIR/typed-uris-bad-params.rs:53:44
+  --> tests/ui-fail-nightly/typed-uris-bad-params.rs:53:44
    |
 53 |     uri!(has_two(cookies = "hi", id = 100, id = 10, id = 10));
    |                                            ^^       ^^
 
 error: invalid parameters for `has_two` route uri
-  --> $DIR/typed-uris-bad-params.rs:51:18
+  --> tests/ui-fail-nightly/typed-uris-bad-params.rs:51:18
    |
 51 |     uri!(has_two(name = "hi"));
    |                  ^^^^^^^^^^^
@@ -89,7 +89,7 @@ error: invalid parameters for `has_two` route uri
    = help: missing parameter: `id`
 
 error: invalid parameters for `has_two` route uri
-  --> $DIR/typed-uris-bad-params.rs:49:18
+  --> tests/ui-fail-nightly/typed-uris-bad-params.rs:49:18
    |
 49 |     uri!(has_two(id = 100, id = 100, ));
    |                  ^^^^^^^^^^^^^^^^^^^
@@ -97,39 +97,39 @@ error: invalid parameters for `has_two` route uri
    = note: uri parameters are: id: i32, name: String
    = help: missing parameter: `name`
 help: duplicate parameter: `id`
-  --> $DIR/typed-uris-bad-params.rs:49:28
+  --> tests/ui-fail-nightly/typed-uris-bad-params.rs:49:28
    |
 49 |     uri!(has_two(id = 100, id = 100, ));
    |                            ^^
 
 error: invalid parameters for `has_one_guarded` route uri
-  --> $DIR/typed-uris-bad-params.rs:47:26
+  --> tests/ui-fail-nightly/typed-uris-bad-params.rs:47:26
    |
 47 |     uri!(has_one_guarded(id = 100, cookies = "hi"));
    |                          ^^^^^^^^^^^^^^^^^^^^^^^^
    |
    = note: uri parameters are: id: i32
 help: unknown parameter: `cookies`
-  --> $DIR/typed-uris-bad-params.rs:47:36
+  --> tests/ui-fail-nightly/typed-uris-bad-params.rs:47:36
    |
 47 |     uri!(has_one_guarded(id = 100, cookies = "hi"));
    |                                    ^^^^^^^
 
 error: invalid parameters for `has_one_guarded` route uri
-  --> $DIR/typed-uris-bad-params.rs:45:26
+  --> tests/ui-fail-nightly/typed-uris-bad-params.rs:45:26
    |
 45 |     uri!(has_one_guarded(cookies = "hi", id = 100));
    |                          ^^^^^^^^^^^^^^^^^^^^^^^^
    |
    = note: uri parameters are: id: i32
 help: unknown parameter: `cookies`
-  --> $DIR/typed-uris-bad-params.rs:45:26
+  --> tests/ui-fail-nightly/typed-uris-bad-params.rs:45:26
    |
 45 |     uri!(has_one_guarded(cookies = "hi", id = 100));
    |                          ^^^^^^^
 
 error: invalid parameters for `has_one` route uri
-  --> $DIR/typed-uris-bad-params.rs:43:18
+  --> tests/ui-fail-nightly/typed-uris-bad-params.rs:43:18
    |
 43 |     uri!(has_one(name = "hi"));
    |                  ^^^^^^^^^^^
@@ -137,96 +137,96 @@ error: invalid parameters for `has_one` route uri
    = note: uri parameters are: id: i32
    = help: missing parameter: `id`
 help: unknown parameter: `name`
-  --> $DIR/typed-uris-bad-params.rs:43:18
+  --> tests/ui-fail-nightly/typed-uris-bad-params.rs:43:18
    |
 43 |     uri!(has_one(name = "hi"));
    |                  ^^^^
 
 error: invalid parameters for `has_one` route uri
-  --> $DIR/typed-uris-bad-params.rs:41:18
+  --> tests/ui-fail-nightly/typed-uris-bad-params.rs:41:18
    |
 41 |     uri!(has_one(id = 100, id = 100, ));
    |                  ^^^^^^^^^^^^^^^^^^^
    |
    = note: uri parameters are: id: i32
 help: duplicate parameter: `id`
-  --> $DIR/typed-uris-bad-params.rs:41:28
+  --> tests/ui-fail-nightly/typed-uris-bad-params.rs:41:28
    |
 41 |     uri!(has_one(id = 100, id = 100, ));
    |                            ^^
 
 error: invalid parameters for `has_one` route uri
-  --> $DIR/typed-uris-bad-params.rs:39:18
+  --> tests/ui-fail-nightly/typed-uris-bad-params.rs:39:18
    |
 39 |     uri!(has_one(id = 100, id = 100));
    |                  ^^^^^^^^^^^^^^^^^^
    |
    = note: uri parameters are: id: i32
 help: duplicate parameter: `id`
-  --> $DIR/typed-uris-bad-params.rs:39:28
+  --> tests/ui-fail-nightly/typed-uris-bad-params.rs:39:28
    |
 39 |     uri!(has_one(id = 100, id = 100));
    |                            ^^
 
 error: invalid parameters for `has_one` route uri
-  --> $DIR/typed-uris-bad-params.rs:37:18
+  --> tests/ui-fail-nightly/typed-uris-bad-params.rs:37:18
    |
 37 |     uri!(has_one(name = 100, age = 50, id = 100, id = 50));
    |                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
    |
    = note: uri parameters are: id: i32
 help: unknown parameters: `name`, `age`
-  --> $DIR/typed-uris-bad-params.rs:37:18
+  --> tests/ui-fail-nightly/typed-uris-bad-params.rs:37:18
    |
 37 |     uri!(has_one(name = 100, age = 50, id = 100, id = 50));
    |                  ^^^^        ^^^
 help: duplicate parameter: `id`
-  --> $DIR/typed-uris-bad-params.rs:37:50
+  --> tests/ui-fail-nightly/typed-uris-bad-params.rs:37:50
    |
 37 |     uri!(has_one(name = 100, age = 50, id = 100, id = 50));
    |                                                  ^^
 
 error: invalid parameters for `has_one` route uri
-  --> $DIR/typed-uris-bad-params.rs:35:18
+  --> tests/ui-fail-nightly/typed-uris-bad-params.rs:35:18
    |
 35 |     uri!(has_one(name = 100, age = 50, id = 100));
    |                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
    |
    = note: uri parameters are: id: i32
 help: unknown parameters: `name`, `age`
-  --> $DIR/typed-uris-bad-params.rs:35:18
+  --> tests/ui-fail-nightly/typed-uris-bad-params.rs:35:18
    |
 35 |     uri!(has_one(name = 100, age = 50, id = 100));
    |                  ^^^^        ^^^
 
 error: invalid parameters for `has_one` route uri
-  --> $DIR/typed-uris-bad-params.rs:33:18
+  --> tests/ui-fail-nightly/typed-uris-bad-params.rs:33:18
    |
 33 |     uri!(has_one(name = 100, id = 100));
    |                  ^^^^^^^^^^^^^^^^^^^^
    |
    = note: uri parameters are: id: i32
 help: unknown parameter: `name`
-  --> $DIR/typed-uris-bad-params.rs:33:18
+  --> tests/ui-fail-nightly/typed-uris-bad-params.rs:33:18
    |
 33 |     uri!(has_one(name = 100, id = 100));
    |                  ^^^^
 
 error: invalid parameters for `has_one` route uri
-  --> $DIR/typed-uris-bad-params.rs:31:18
+  --> tests/ui-fail-nightly/typed-uris-bad-params.rs:31:18
    |
 31 |     uri!(has_one(id = 100, name = "hi"));
    |                  ^^^^^^^^^^^^^^^^^^^^^
    |
    = note: uri parameters are: id: i32
 help: unknown parameter: `name`
-  --> $DIR/typed-uris-bad-params.rs:31:28
+  --> tests/ui-fail-nightly/typed-uris-bad-params.rs:31:28
    |
 31 |     uri!(has_one(id = 100, name = "hi"));
    |                            ^^^^
 
 error: route expects 2 parameters but 1 was supplied
-  --> $DIR/typed-uris-bad-params.rs:29:18
+  --> tests/ui-fail-nightly/typed-uris-bad-params.rs:29:18
    |
 29 |     uri!(has_two(10));
    |                  ^^
@@ -234,7 +234,7 @@ error: route expects 2 parameters but 1 was supplied
    = note: route `has_two` has uri "/<id>?<name>"
 
 error: route expects 2 parameters but 3 were supplied
-  --> $DIR/typed-uris-bad-params.rs:28:18
+  --> tests/ui-fail-nightly/typed-uris-bad-params.rs:28:18
    |
 28 |     uri!(has_two(10, "hi", "there"));
    |                  ^^^^^^^^^^^^^^^^^
@@ -242,7 +242,7 @@ error: route expects 2 parameters but 3 were supplied
    = note: route `has_two` has uri "/<id>?<name>"
 
 error: route expects 1 parameter but 2 were supplied
-  --> $DIR/typed-uris-bad-params.rs:26:26
+  --> tests/ui-fail-nightly/typed-uris-bad-params.rs:26:26
    |
 26 |     uri!(has_one_guarded("hi", 100));
    |                          ^^^^^^^^^
@@ -250,7 +250,7 @@ error: route expects 1 parameter but 2 were supplied
    = note: route `has_one_guarded` has uri "/<id>"
 
 error: route expects 1 parameter but 2 were supplied
-  --> $DIR/typed-uris-bad-params.rs:25:18
+  --> tests/ui-fail-nightly/typed-uris-bad-params.rs:25:18
    |
 25 |     uri!(has_one("Hello", 23, ));
    |                  ^^^^^^^^^^^^
@@ -258,7 +258,7 @@ error: route expects 1 parameter but 2 were supplied
    = note: route `has_one` has uri "/<id>"
 
 error: route expects 1 parameter but 2 were supplied
-  --> $DIR/typed-uris-bad-params.rs:24:18
+  --> tests/ui-fail-nightly/typed-uris-bad-params.rs:24:18
    |
 24 |     uri!(has_one(1, 23));
    |                  ^^^^^
@@ -266,7 +266,7 @@ error: route expects 1 parameter but 2 were supplied
    = note: route `has_one` has uri "/<id>"
 
 error: route expects 1 parameter but 0 were supplied
-  --> $DIR/typed-uris-bad-params.rs:22:10
+  --> tests/ui-fail-nightly/typed-uris-bad-params.rs:22:10
    |
 22 |     uri!(has_one());
    |          ^^^^^^^
@@ -274,7 +274,7 @@ error: route expects 1 parameter but 0 were supplied
    = note: route `has_one` has uri "/<id>"
 
 error: route expects 1 parameter but 0 were supplied
-  --> $DIR/typed-uris-bad-params.rs:21:10
+  --> tests/ui-fail-nightly/typed-uris-bad-params.rs:21:10
    |
 21 |     uri!(has_one);
    |          ^^^^^^^
@@ -282,7 +282,7 @@ error: route expects 1 parameter but 0 were supplied
    = note: route `has_one` has uri "/<id>"
 
 error[E0271]: type mismatch resolving `<std::string::String as FromParam<'_>>::Error == &str`
-  --> $DIR/typed-uris-bad-params.rs:15:37
+  --> tests/ui-fail-nightly/typed-uris-bad-params.rs:15:37
    |
 15 | fn optionals(id: Option<i32>, name: Result<String, &str>) {  }
    |                                     ^^^^^^^^^^^^^^^^^^^^ expected enum `Infallible`, found `&str`

@@ -1,7 +1,7 @@
 use proc_macro::TokenStream;
 use devise::{Spanned, Result, ext::SpanDiagnosticExt};
 
-use crate::syn::{DataStruct, Fields, Data, Type, LitStr, DeriveInput, Ident, Visibility};
+use crate::syn::{Fields, Data, Type, LitStr, DeriveInput, Ident, Visibility};
 
 #[derive(Debug)]
 struct DatabaseInvocation {
@@ -11,8 +11,6 @@ struct DatabaseInvocation {
     visibility: Visibility,
     /// The database name as passed in via #[database('database name')].
     db_name: String,
-    /// The entire structure that the `database` attribute was called on.
-    structure: DataStruct,
     /// The type inside the structure: struct MyDb(ThisType).
     connection_type: Type,
 }
@@ -47,7 +45,6 @@ fn parse_invocation(attr: TokenStream, input: TokenStream) -> Result<DatabaseInv
     };
 
     Ok(DatabaseInvocation {
-        structure,
         type_name: input.ident,
         visibility: input.vis,
         db_name: string_lit.value(),

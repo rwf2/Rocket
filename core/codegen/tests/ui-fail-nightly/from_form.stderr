@@ -1,222 +1,222 @@
 error: enums are not supported
- --> $DIR/from_form.rs:4:1
+ --> tests/ui-fail-nightly/from_form.rs:4:1
   |
 4 | enum Thing { }
   | ^^^^^^^^^^^^^^
   |
 note: error occurred while deriving `FromForm`
- --> $DIR/from_form.rs:3:10
+ --> tests/ui-fail-nightly/from_form.rs:3:10
   |
 3 | #[derive(FromForm)]
   |          ^^^^^^^^
   = note: this error originates in the derive macro `FromForm` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: at least one field is required
- --> $DIR/from_form.rs:7:1
+ --> tests/ui-fail-nightly/from_form.rs:7:1
   |
 7 | struct Foo1;
   | ^^^^^^^^^^^^
   |
 note: error occurred while deriving `FromForm`
- --> $DIR/from_form.rs:6:10
+ --> tests/ui-fail-nightly/from_form.rs:6:10
   |
 6 | #[derive(FromForm)]
   |          ^^^^^^^^
   = note: this error originates in the derive macro `FromForm` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: at least one field is required
-  --> $DIR/from_form.rs:10:13
+  --> tests/ui-fail-nightly/from_form.rs:10:13
    |
 10 | struct Foo2 {  }
    |             ^^^^
    |
 note: error occurred while deriving `FromForm`
-  --> $DIR/from_form.rs:9:10
+  --> tests/ui-fail-nightly/from_form.rs:9:10
    |
 9  | #[derive(FromForm)]
    |          ^^^^^^^^
    = note: this error originates in the derive macro `FromForm` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: tuple struct must have exactly one field
-  --> $DIR/from_form.rs:16:12
+  --> tests/ui-fail-nightly/from_form.rs:16:12
    |
 16 | struct Foo4(usize, usize, usize);
    |            ^^^^^^^^^^^^^^^^^^^^^
    |
 note: error occurred while deriving `FromForm`
-  --> $DIR/from_form.rs:15:10
+  --> tests/ui-fail-nightly/from_form.rs:15:10
    |
 15 | #[derive(FromForm)]
    |          ^^^^^^^^
    = note: this error originates in the derive macro `FromForm` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: only one lifetime is supported
-  --> $DIR/from_form.rs:19:25
+  --> tests/ui-fail-nightly/from_form.rs:19:25
    |
 19 | struct NextTodoTask<'f, 'a> {
    |                         ^^
    |
 note: error occurred while deriving `FromForm`
-  --> $DIR/from_form.rs:18:10
+  --> tests/ui-fail-nightly/from_form.rs:18:10
    |
 18 | #[derive(FromForm)]
    |          ^^^^^^^^
    = note: this error originates in the derive macro `FromForm` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: invalid form field name
-  --> $DIR/from_form.rs:28:20
+  --> tests/ui-fail-nightly/from_form.rs:28:20
    |
 28 |     #[field(name = "isindex")]
    |                    ^^^^^^^^^
    |
    = help: field name cannot be `isindex` or contain '&', '=', '?', '.', '[', ']'
 note: error occurred while deriving `FromForm`
-  --> $DIR/from_form.rs:26:10
+  --> tests/ui-fail-nightly/from_form.rs:26:10
    |
 26 | #[derive(FromForm)]
    |          ^^^^^^^^
    = note: this error originates in the derive macro `FromForm` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: field name conflicts with previous name
-  --> $DIR/from_form.rs:36:5
+  --> tests/ui-fail-nightly/from_form.rs:36:5
    |
 36 |     foo: usize,
    |     ^^^
    |
 help: declared in this field
-  --> $DIR/from_form.rs:36:5
+  --> tests/ui-fail-nightly/from_form.rs:36:5
    |
 36 |     foo: usize,
    |     ^^^^^^^^^^
 note: previous field with conflicting name
-  --> $DIR/from_form.rs:34:5
+  --> tests/ui-fail-nightly/from_form.rs:34:5
    |
 34 | /     #[field(name = "foo")]
 35 | |     field: String,
    | |_________________^
 note: error occurred while deriving `FromForm`
-  --> $DIR/from_form.rs:32:10
+  --> tests/ui-fail-nightly/from_form.rs:32:10
    |
 32 | #[derive(FromForm)]
    |          ^^^^^^^^
    = note: this error originates in the derive macro `FromForm` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: field name conflicts with previous name
-  --> $DIR/from_form.rs:43:20
+  --> tests/ui-fail-nightly/from_form.rs:43:20
    |
 43 |     #[field(name = "hello")]
    |                    ^^^^^^^
    |
 help: declared in this field
-  --> $DIR/from_form.rs:43:5
+  --> tests/ui-fail-nightly/from_form.rs:43:5
    |
 43 | /     #[field(name = "hello")]
 44 | |     other: String,
    | |_________________^
 note: previous field with conflicting name
-  --> $DIR/from_form.rs:41:5
+  --> tests/ui-fail-nightly/from_form.rs:41:5
    |
 41 | /     #[field(name = "hello")]
 42 | |     first: String,
    | |_________________^
 note: error occurred while deriving `FromForm`
-  --> $DIR/from_form.rs:39:10
+  --> tests/ui-fail-nightly/from_form.rs:39:10
    |
 39 | #[derive(FromForm)]
    |          ^^^^^^^^
    = note: this error originates in the derive macro `FromForm` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: field name conflicts with previous name
-  --> $DIR/from_form.rs:50:20
+  --> tests/ui-fail-nightly/from_form.rs:50:20
    |
 50 |     #[field(name = "first")]
    |                    ^^^^^^^
    |
 help: declared in this field
-  --> $DIR/from_form.rs:50:5
+  --> tests/ui-fail-nightly/from_form.rs:50:5
    |
 50 | /     #[field(name = "first")]
 51 | |     other: String,
    | |_________________^
 note: previous field with conflicting name
-  --> $DIR/from_form.rs:49:5
+  --> tests/ui-fail-nightly/from_form.rs:49:5
    |
 49 |     first: String,
    |     ^^^^^^^^^^^^^
 note: error occurred while deriving `FromForm`
-  --> $DIR/from_form.rs:47:10
+  --> tests/ui-fail-nightly/from_form.rs:47:10
    |
 47 | #[derive(FromForm)]
    |          ^^^^^^^^
    = note: this error originates in the derive macro `FromForm` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: unexpected attribute parameter: `field`
-  --> $DIR/from_form.rs:56:28
+  --> tests/ui-fail-nightly/from_form.rs:56:28
    |
 56 |     #[field(name = "blah", field = "bloo")]
    |                            ^^^^^^^^^^^^^^
    |
 note: error occurred while deriving `FromForm`
-  --> $DIR/from_form.rs:54:10
+  --> tests/ui-fail-nightly/from_form.rs:54:10
    |
 54 | #[derive(FromForm)]
    |          ^^^^^^^^
    = note: this error originates in the derive macro `FromForm` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: expected list `#[field(..)]`, found bare path "field"
-  --> $DIR/from_form.rs:62:7
+  --> tests/ui-fail-nightly/from_form.rs:62:7
    |
 62 |     #[field]
    |       ^^^^^
    |
 note: error occurred while deriving `FromForm`
-  --> $DIR/from_form.rs:60:10
+  --> tests/ui-fail-nightly/from_form.rs:60:10
    |
 60 | #[derive(FromForm)]
    |          ^^^^^^^^
    = note: this error originates in the derive macro `FromForm` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: expected key/value `key = value`
-  --> $DIR/from_form.rs:68:13
+  --> tests/ui-fail-nightly/from_form.rs:68:13
    |
 68 |     #[field("blah")]
    |             ^^^^^^
    |
 note: error occurred while deriving `FromForm`
-  --> $DIR/from_form.rs:66:10
+  --> tests/ui-fail-nightly/from_form.rs:66:10
    |
 66 | #[derive(FromForm)]
    |          ^^^^^^^^
    = note: this error originates in the derive macro `FromForm` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: expected key/value `key = value`
-  --> $DIR/from_form.rs:74:13
+  --> tests/ui-fail-nightly/from_form.rs:74:13
    |
 74 |     #[field(123)]
    |             ^^^
    |
 note: error occurred while deriving `FromForm`
-  --> $DIR/from_form.rs:72:10
+  --> tests/ui-fail-nightly/from_form.rs:72:10
    |
 72 | #[derive(FromForm)]
    |          ^^^^^^^^
    = note: this error originates in the derive macro `FromForm` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: unexpected attribute parameter: `beep`
-  --> $DIR/from_form.rs:80:13
+  --> tests/ui-fail-nightly/from_form.rs:80:13
    |
 80 |     #[field(beep = "bop")]
    |             ^^^^^^^^^^^^
    |
 note: error occurred while deriving `FromForm`
-  --> $DIR/from_form.rs:78:10
+  --> tests/ui-fail-nightly/from_form.rs:78:10
    |
 78 | #[derive(FromForm)]
    |          ^^^^^^^^
    = note: this error originates in the derive macro `FromForm` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: field has conflicting names
-  --> $DIR/from_form.rs:86:5
+  --> tests/ui-fail-nightly/from_form.rs:86:5
    |
 86 | /     #[field(name = "blah")]
 87 | |     #[field(name = "blah")]
@@ -224,218 +224,218 @@ error: field has conflicting names
    | |____________________^
    |
 note: this field name...
-  --> $DIR/from_form.rs:86:20
+  --> tests/ui-fail-nightly/from_form.rs:86:20
    |
 86 |     #[field(name = "blah")]
    |                    ^^^^^^
 note: ...conflicts with this field name
-  --> $DIR/from_form.rs:87:20
+  --> tests/ui-fail-nightly/from_form.rs:87:20
    |
 87 |     #[field(name = "blah")]
    |                    ^^^^^^
 note: error occurred while deriving `FromForm`
-  --> $DIR/from_form.rs:84:10
+  --> tests/ui-fail-nightly/from_form.rs:84:10
    |
 84 | #[derive(FromForm)]
    |          ^^^^^^^^
    = note: this error originates in the derive macro `FromForm` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: expected list `#[attr(..)]`, found bare boolean literal
-  --> $DIR/from_form.rs:93:20
+  --> tests/ui-fail-nightly/from_form.rs:93:20
    |
 93 |     #[field(name = true)]
    |                    ^^^^
    |
 note: error occurred while deriving `FromForm`
-  --> $DIR/from_form.rs:91:10
+  --> tests/ui-fail-nightly/from_form.rs:91:10
    |
 91 | #[derive(FromForm)]
    |          ^^^^^^^^
    = note: this error originates in the derive macro `FromForm` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: expected expression, found bare path "name"
-  --> $DIR/from_form.rs:99:13
+  --> tests/ui-fail-nightly/from_form.rs:99:13
    |
 99 |     #[field(name)]
    |             ^^^^
    |
 note: error occurred while deriving `FromForm`
-  --> $DIR/from_form.rs:97:10
+  --> tests/ui-fail-nightly/from_form.rs:97:10
    |
 97 | #[derive(FromForm)]
    |          ^^^^^^^^
    = note: this error originates in the derive macro `FromForm` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: expected list `#[attr(..)]`, found bare integer literal
-   --> $DIR/from_form.rs:105:20
+   --> tests/ui-fail-nightly/from_form.rs:105:20
     |
 105 |     #[field(name = 123)]
     |                    ^^^
     |
 note: error occurred while deriving `FromForm`
-   --> $DIR/from_form.rs:103:10
+   --> tests/ui-fail-nightly/from_form.rs:103:10
     |
 103 | #[derive(FromForm)]
     |          ^^^^^^^^
     = note: this error originates in the derive macro `FromForm` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: invalid form field name
-   --> $DIR/from_form.rs:111:20
+   --> tests/ui-fail-nightly/from_form.rs:111:20
     |
 111 |     #[field(name = "hello&world")]
     |                    ^^^^^^^^^^^^^
     |
     = help: field name cannot be `isindex` or contain '&', '=', '?', '.', '[', ']'
 note: error occurred while deriving `FromForm`
-   --> $DIR/from_form.rs:109:10
+   --> tests/ui-fail-nightly/from_form.rs:109:10
     |
 109 | #[derive(FromForm)]
     |          ^^^^^^^^
     = note: this error originates in the derive macro `FromForm` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: invalid form field name
-   --> $DIR/from_form.rs:117:20
+   --> tests/ui-fail-nightly/from_form.rs:117:20
     |
 117 |     #[field(name = "!@#$%^&*()_")]
     |                    ^^^^^^^^^^^^^
     |
     = help: field name cannot be `isindex` or contain '&', '=', '?', '.', '[', ']'
 note: error occurred while deriving `FromForm`
-   --> $DIR/from_form.rs:115:10
+   --> tests/ui-fail-nightly/from_form.rs:115:10
     |
 115 | #[derive(FromForm)]
     |          ^^^^^^^^
     = note: this error originates in the derive macro `FromForm` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: invalid form field name
-   --> $DIR/from_form.rs:123:20
+   --> tests/ui-fail-nightly/from_form.rs:123:20
     |
 123 |     #[field(name = "?")]
     |                    ^^^
     |
     = help: field name cannot be `isindex` or contain '&', '=', '?', '.', '[', ']'
 note: error occurred while deriving `FromForm`
-   --> $DIR/from_form.rs:121:10
+   --> tests/ui-fail-nightly/from_form.rs:121:10
     |
 121 | #[derive(FromForm)]
     |          ^^^^^^^^
     = note: this error originates in the derive macro `FromForm` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: invalid form field name
-   --> $DIR/from_form.rs:129:20
+   --> tests/ui-fail-nightly/from_form.rs:129:20
     |
 129 |     #[field(name = "")]
     |                    ^^
     |
     = help: field name cannot be `isindex` or contain '&', '=', '?', '.', '[', ']'
 note: error occurred while deriving `FromForm`
-   --> $DIR/from_form.rs:127:10
+   --> tests/ui-fail-nightly/from_form.rs:127:10
     |
 127 | #[derive(FromForm)]
     |          ^^^^^^^^
     = note: this error originates in the derive macro `FromForm` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: invalid form field name
-   --> $DIR/from_form.rs:135:20
+   --> tests/ui-fail-nightly/from_form.rs:135:20
     |
 135 |     #[field(name = "a&b")]
     |                    ^^^^^
     |
     = help: field name cannot be `isindex` or contain '&', '=', '?', '.', '[', ']'
 note: error occurred while deriving `FromForm`
-   --> $DIR/from_form.rs:133:10
+   --> tests/ui-fail-nightly/from_form.rs:133:10
     |
 133 | #[derive(FromForm)]
     |          ^^^^^^^^
     = note: this error originates in the derive macro `FromForm` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: invalid form field name
-   --> $DIR/from_form.rs:141:20
+   --> tests/ui-fail-nightly/from_form.rs:141:20
     |
 141 |     #[field(name = "a=")]
     |                    ^^^^
     |
     = help: field name cannot be `isindex` or contain '&', '=', '?', '.', '[', ']'
 note: error occurred while deriving `FromForm`
-   --> $DIR/from_form.rs:139:10
+   --> tests/ui-fail-nightly/from_form.rs:139:10
     |
 139 | #[derive(FromForm)]
     |          ^^^^^^^^
     = note: this error originates in the derive macro `FromForm` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: duplicate attribute parameter: default
-   --> $DIR/from_form.rs:177:26
+   --> tests/ui-fail-nightly/from_form.rs:177:26
     |
 177 |     #[field(default = 1, default = 2)]
     |                          ^^^^^^^^^^^
     |
 note: error occurred while deriving `FromForm`
-   --> $DIR/from_form.rs:175:10
+   --> tests/ui-fail-nightly/from_form.rs:175:10
     |
 175 | #[derive(FromForm)]
     |          ^^^^^^^^
     = note: this error originates in the derive macro `FromForm` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: duplicate default field expression
-   --> $DIR/from_form.rs:184:23
+   --> tests/ui-fail-nightly/from_form.rs:184:23
     |
 184 |     #[field(default = 2)]
     |                       ^
     |
     = help: at most one `default` or `default_with` is allowed
 note: error occurred while deriving `FromForm`
-   --> $DIR/from_form.rs:181:10
+   --> tests/ui-fail-nightly/from_form.rs:181:10
     |
 181 | #[derive(FromForm)]
     |          ^^^^^^^^
     = note: this error originates in the derive macro `FromForm` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: duplicate default expressions
-   --> $DIR/from_form.rs:190:23
+   --> tests/ui-fail-nightly/from_form.rs:190:23
     |
 190 |     #[field(default = 1, default_with = None)]
     |                       ^
     |
     = help: only one of `default` or `default_with` must be used
 note: other default expression is here
-   --> $DIR/from_form.rs:190:41
+   --> tests/ui-fail-nightly/from_form.rs:190:41
     |
 190 |     #[field(default = 1, default_with = None)]
     |                                         ^^^^
 note: error occurred while deriving `FromForm`
-   --> $DIR/from_form.rs:188:10
+   --> tests/ui-fail-nightly/from_form.rs:188:10
     |
 188 | #[derive(FromForm)]
     |          ^^^^^^^^
     = note: this error originates in the derive macro `FromForm` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: duplicate default expressions
-   --> $DIR/from_form.rs:197:23
+   --> tests/ui-fail-nightly/from_form.rs:197:23
     |
 197 |     #[field(default = 1)]
     |                       ^
     |
     = help: only one of `default` or `default_with` must be used
 note: other default expression is here
-   --> $DIR/from_form.rs:196:28
+   --> tests/ui-fail-nightly/from_form.rs:196:28
     |
 196 |     #[field(default_with = None)]
     |                            ^^^^
 note: error occurred while deriving `FromForm`
-   --> $DIR/from_form.rs:194:10
+   --> tests/ui-fail-nightly/from_form.rs:194:10
     |
 194 | #[derive(FromForm)]
     |          ^^^^^^^^
     = note: this error originates in the derive macro `FromForm` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error[E0425]: cannot find function `unknown` in this scope
-   --> $DIR/from_form.rs:153:24
+   --> tests/ui-fail-nightly/from_form.rs:153:24
     |
 153 |     #[field(validate = unknown())]
     |                        ^^^^^^^ not found in this scope
 
 error[E0308]: mismatched types
-   --> $DIR/from_form.rs:147:24
+   --> tests/ui-fail-nightly/from_form.rs:147:24
     |
 147 |     #[field(validate = 123)]
     |             --------   ^^^ expected enum `Result`, found integer
@@ -446,7 +446,7 @@ error[E0308]: mismatched types
                found type `{integer}`
 
 error[E0308]: mismatched types
-   --> $DIR/from_form.rs:160:12
+   --> tests/ui-fail-nightly/from_form.rs:160:12
     |
 160 |     first: String,
     |            ^^^^^^ expected enum `TempFile`, found struct `std::string::String`
@@ -455,7 +455,7 @@ error[E0308]: mismatched types
                found reference `&std::string::String`
 
 error[E0308]: mismatched types
-   --> $DIR/from_form.rs:166:12
+   --> tests/ui-fail-nightly/from_form.rs:166:12
     |
 166 |     first: String,
     |            ^^^^^^ expected enum `TempFile`, found struct `std::string::String`
@@ -464,13 +464,13 @@ error[E0308]: mismatched types
                found reference `&std::string::String`
 
 error[E0308]: mismatched types
-   --> $DIR/from_form.rs:165:28
+   --> tests/ui-fail-nightly/from_form.rs:165:28
     |
 165 |     #[field(validate = ext("hello"))]
     |                            ^^^^^^^ expected struct `ContentType`, found `&str`
 
 error[E0277]: the trait bound `i32: From<&str>` is not satisfied
-   --> $DIR/from_form.rs:171:23
+   --> tests/ui-fail-nightly/from_form.rs:171:23
     |
 171 |     #[field(default = "no conversion")]
     |                       ^^^^^^^^^^^^^^^ the trait `From<&str>` is not implemented for `i32`
@@ -480,11 +480,11 @@ error[E0277]: the trait bound `i32: From<&str>` is not satisfied
               <i32 as From<bool>>
               <i32 as From<i16>>
               <i32 as From<i8>>
-            and 5 others
+            and 88 others
     = note: required because of the requirements on the impl of `Into<i32>` for `&str`
 
 error[E0308]: mismatched types
-   --> $DIR/from_form.rs:203:33
+   --> tests/ui-fail-nightly/from_form.rs:203:33
     |
 203 |     #[field(default_with = Some("hi"))]
     |                                 ^^^^ expected struct `std::string::String`, found `&str`

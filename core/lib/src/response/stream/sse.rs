@@ -1,3 +1,6 @@
+// Temporarily allow `IntoIter::into_iter()` before Rust 2021 transition.
+#![allow(deprecated)]
+
 use std::array;
 use std::borrow::Cow;
 

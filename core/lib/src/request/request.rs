@@ -37,6 +37,7 @@ pub struct Request<'r> {
 #[derive(Clone)]
 pub(crate) struct ConnectionMeta {
     pub remote: Option<SocketAddr>,
+    #[cfg_attr(not(feature = "mtls"), allow(dead_code))]
     pub client_certificates: Option<Arc<Vec<RawCertificate>>>,
 }
 
