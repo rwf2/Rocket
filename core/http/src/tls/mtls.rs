@@ -30,16 +30,16 @@ pub mod x509 {
     pub use x509_parser::x509::*;
     pub use x509_parser::der_parser::der;
     pub use x509_parser::der_parser::ber;
+    pub use x509_parser::traits::*;
 }
 
 use std::fmt;
 use std::ops::Deref;
-use std::collections::HashMap;
 use std::num::NonZeroUsize;
 
 use ref_cast::RefCast;
 use x509_parser::nom;
-use x509::{ParsedExtension, X509Name, X509Certificate, TbsCertificate, X509Error};
+use x509::{ParsedExtension, X509Name, X509Certificate, TbsCertificate, X509Error, FromDer};
 use oid::OID_X509_EXT_SUBJECT_ALT_NAME as SUBJECT_ALT_NAME;
 
 use crate::listener::RawCertificate;
@@ -201,8 +201,9 @@ impl<'a> Certificate<'a> {
             return Err(Error::Trailing(left.len()));
         }
 
+        // Ensure we have a subject or a subjectAlt.
         if x509.subject().as_raw().is_empty() {
-            if let Some(ext) = x509.extensions().get(&SUBJECT_ALT_NAME) {
+            if let Some(ext) = x509.extensions().iter().find(|e| e.oid == SUBJECT_ALT_NAME) {
                 if !matches!(ext.parsed_extension(), ParsedExtension::SubjectAlternativeName(..)) {
                     return Err(Error::NoSubject);
                 } else if !ext.critical {
@@ -308,7 +309,7 @@ impl<'a> Certificate<'a> {
         Name::ref_cast(&self.inner().issuer)
     }
 
-    /// Returns a map of the extensions in the X.509 certificate.
+    /// Returns a slice of the extensions in the X.509 certificate.
     ///
     /// # Example
     ///
@@ -319,8 +320,8 @@ impl<'a> Certificate<'a> {
     ///
     /// #[get("/auth")]
     /// fn auth(cert: Certificate<'_>) {
-    ///     let subject_alt = cert.extensions()
-    ///         .get(&oid::OID_X509_EXT_SUBJECT_ALT_NAME)
+    ///     let subject_alt = cert.extensions().iter()
+    ///         .find(|e| e.oid == oid::OID_X509_EXT_SUBJECT_ALT_NAME)
     ///         .and_then(|e| match e.parsed_extension() {
     ///             x509::ParsedExtension::SubjectAlternativeName(s) => Some(s),
     ///             _ => None
@@ -335,8 +336,8 @@ impl<'a> Certificate<'a> {
     ///     }
     /// }
     /// ```
-    pub fn extensions(&self) -> &HashMap<oid::Oid<'a>, x509::X509Extension<'a>> {
-        &self.inner().extensions
+    pub fn extensions(&self) -> &[x509::X509Extension<'a>] {
+        &self.inner().extensions()
     }
 
     /// Checks if the certificate has the serial number `number`.
