@@ -1,7 +1,7 @@
 pub mod oid {
     //! Lower-level OID types re-exported from
-    //! [`oid_registry`](https://docs.rs/oid-registry/0.1) and
-    //! [`der-parser`](https://docs.rs/der-parser/5).
+    //! [`oid_registry`](https://docs.rs/oid-registry/0.4) and
+    //! [`der-parser`](https://docs.rs/der-parser/7).
 
     pub use x509_parser::oid_registry::*;
     pub use x509_parser::der_parser::oid::*;
@@ -16,7 +16,7 @@ pub mod bigint {
 
 pub mod x509 {
     //! Lower-level X.509 types re-exported from
-    //! [`x509_parser`](https://docs.rs/x509-parser/0.9).
+    //! [`x509_parser`](https://docs.rs/x509-parser/0.13).
     //!
     //! Lack of documentation is directly inherited from the source crate.
     //! Prefer to use Rocket's wrappers when possible.
@@ -75,11 +75,8 @@ pub enum Error {
     NoSubject,
     /// There is no subject and the subjectAlt is not marked as critical.
     NonCriticalSubjectAlt,
-    // FIXME: Waiting on https://github.com/rusticata/x509-parser/pull/92.
-    // Parse(X509Error),
     /// An error occurred while parsing the certificate.
-    #[doc(hidden)]
-    Parse(String),
+    Parse(X509Error),
     /// The certificate parsed partially but is incomplete.
     ///
     /// If `Some(n)`, then `n` more bytes were expected. Otherwise, the number
@@ -523,7 +520,7 @@ impl From<nom::Err<X509Error>> for Error {
         match e {
             nom::Err::Incomplete(nom::Needed::Unknown) => Error::Incomplete(None),
             nom::Err::Incomplete(nom::Needed::Size(n)) => Error::Incomplete(Some(n)),
-            nom::Err::Error(e) | nom::Err::Failure(e) => Error::Parse(e.to_string()),
+            nom::Err::Error(e) | nom::Err::Failure(e) => Error::Parse(e),
         }
     }
 }
