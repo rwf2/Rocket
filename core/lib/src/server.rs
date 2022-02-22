@@ -444,7 +444,7 @@ impl Rocket<Orbit> {
             let rocket = rocket.clone();
             let connection = ConnectionMeta {
                 remote: conn.peer_address(),
-                client_certificates: conn.peer_certificates().map(Arc::new),
+                client_certificates: conn.peer_certificates().map(|certs| Arc::new(certs.to_vec())),
             };
 
             async move {

@@ -1,6 +1,6 @@
 use std::io::{self, Cursor, Read};
 
-use rustls::{internal::pemfile, Certificate, PrivateKey, RootCertStore};
+use rustls::{Certificate, PrivateKey, RootCertStore};
 
 fn err(message: impl Into<std::borrow::Cow<'static, str>>) -> io::Error {
     io::Error::new(io::ErrorKind::Other, message.into())
@@ -8,7 +8,8 @@ fn err(message: impl Into<std::borrow::Cow<'static, str>>) -> io::Error {
 
 /// Loads certificates from `reader`.
 pub fn load_certs(reader: &mut dyn io::BufRead) -> io::Result<Vec<Certificate>> {
-    pemfile::certs(reader).map_err(|_| err("invalid certificate"))
+    let certs = rustls_pemfile::certs(reader).map_err(|_| err("invalid certificate"))?;
+    Ok(certs.into_iter().map(Certificate).collect())
 }
 
 /// Load and decode the private key  from `reader`.
@@ -19,8 +20,8 @@ pub fn load_private_key(reader: &mut dyn io::BufRead) -> io::Result<PrivateKey> 
     reader.read_line(&mut first_line)?;
 
     let private_keys_fn = match first_line.trim_end() {
-        "-----BEGIN RSA PRIVATE KEY-----" => pemfile::rsa_private_keys,
-        "-----BEGIN PRIVATE KEY-----" => pemfile::pkcs8_private_keys,
+        "-----BEGIN RSA PRIVATE KEY-----" => rustls_pemfile::rsa_private_keys,
+        "-----BEGIN PRIVATE KEY-----" => rustls_pemfile::pkcs8_private_keys,
         _ => return Err(err("invalid key header"))
     };
 
@@ -28,7 +29,7 @@ pub fn load_private_key(reader: &mut dyn io::BufRead) -> io::Result<PrivateKey> 
         .map_err(|_| err("invalid key file"))
         .and_then(|mut keys| match keys.len() {
             0 => Err(err("no valid keys found; is the file malformed?")),
-            1 => Ok(keys.remove(0)),
+            1 => Ok(PrivateKey(keys.remove(0))),
             n => Err(err(format!("expected 1 key, found {}", n))),
         })?;
 
@@ -41,9 +42,8 @@ pub fn load_private_key(reader: &mut dyn io::BufRead) -> io::Result<PrivateKey> 
 /// Load and decode CA certificates from `reader`.
 pub fn load_ca_certs(reader: &mut dyn io::BufRead) -> io::Result<RootCertStore> {
     let mut roots = rustls::RootCertStore::empty();
-    let (_, e) = roots.add_pem_file(reader).map_err(|_| err("PEM format error"))?;
-    if e != 0 {
-        return Err(err("validity checks failed"));
+    for cert in load_certs(reader)? {
+        roots.add(&cert).map_err(|e| err(format!("CA cert error: {}", e)))?;
     }
 
     Ok(roots)

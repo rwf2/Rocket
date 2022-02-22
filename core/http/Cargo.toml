@@ -16,7 +16,7 @@ edition = "2018"
 
 [features]
 default = []
-tls = ["rustls", "tokio-rustls"]
+tls = ["rustls", "tokio-rustls", "rustls-pemfile"]
 mtls = ["tls", "x509-parser"]
 private-cookies = ["cookie/private", "cookie/key-expansion"]
 serde = ["uncased/with-serde-alloc", "serde_"]
@@ -28,8 +28,9 @@ percent-encoding = "2"
 http = "0.2"
 time = { version = "0.3", features = ["formatting", "macros"] }
 indexmap = { version = "1.5.2", features = ["std"] }
-rustls = { version = "0.19", optional = true }
-tokio-rustls = { version = "0.22.0", optional = true }
+rustls = { version = "0.20", optional = true }
+tokio-rustls = { version = "0.23.0", optional = true }
+rustls-pemfile = { version = "0.3", optional = true }
 tokio = { version = "1.6.1", features = ["net", "sync", "time"] }
 log = "0.4"
 ref-cast = "1.0"

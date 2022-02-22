@@ -54,7 +54,7 @@ pub trait Connection: AsyncRead + AsyncWrite {
     ///
     /// Defaults to an empty vector to indicate that no certificates were
     /// presented.
-    fn peer_certificates(&self) -> Option<Vec<RawCertificate>> { None }
+    fn peer_certificates(&self) -> Option<&[RawCertificate]> { None }
 }
 
 pin_project_lite::pin_project! {
