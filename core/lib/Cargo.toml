@@ -19,9 +19,10 @@ edition = "2018"
 all-features = true
 
 [features]
-default = []
+default = ["http2"]
 tls = ["rocket_http/tls"]
 mtls = ["rocket_http/mtls", "tls"]
+http2 = ["rocket_http/http2"]
 secrets = ["rocket_http/private-cookies"]
 json = ["serde_json", "tokio/io-util"]
 msgpack = ["rmp-serde", "tokio/io-util"]

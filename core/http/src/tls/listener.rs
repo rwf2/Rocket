@@ -64,7 +64,12 @@ impl TlsListener {
             .map_err(|e| io::Error::new(io::ErrorKind::Other, format!("bad TLS config: {}", e)))?;
 
         tls_config.ignore_client_order = c.prefer_server_order;
-        tls_config.alpn_protocols = vec![b"h2".to_vec(), b"http/1.1".to_vec()];
+
+        tls_config.alpn_protocols = vec![b"http/1.1".to_vec()];
+        if cfg!(feature = "http2") {
+            tls_config.alpn_protocols.insert(0, b"h2".to_vec());
+        }
+
         tls_config.session_storage = ServerSessionMemoryCache::new(1024);
         tls_config.ticketer = rustls::Ticketer::new()
             .map_err(|e| io::Error::new(io::ErrorKind::Other, format!("bad TLS ticketer: {}", e)))?;

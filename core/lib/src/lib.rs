@@ -56,23 +56,31 @@
 //!
 //! ## Features
 //!
-//! To avoid compiling unused dependencies, Rocket gates certain features, all
-//! of which are disabled by default:
+//! To avoid compiling unused dependencies, Rocket gates certain features. With
+//! the exception of `http2`, all are disabled by default:
 //!
 //! | Feature   | Description                                             |
 //! |-----------|---------------------------------------------------------|
 //! | `secrets` | Support for authenticated, encrypted [private cookies]. |
 //! | `tls`     | Support for [TLS] encrypted connections.                |
 //! | `mtls`    | Support for verified clients via [mutual TLS].          |
+//! | `http2`   | Support for HTTP/2 (enabled by default).                |
 //! | `json`    | Support for [JSON (de)serialization].                   |
 //! | `msgpack` | Support for [MessagePack (de)serialization].            |
 //! | `uuid`    | Support for [UUID value parsing and (de)serialization]. |
 //!
-//! Features can be selectively enabled in `Cargo.toml`:
+//! Disabled features can be selectively enabled in `Cargo.toml`:
 //!
 //! ```toml
 //! [dependencies]
 //! rocket = { version = "0.5.0-rc.1", features = ["secrets", "tls", "json"] }
+//! ```
+//!
+//! Conversely, HTTP/2 can be disabled:
+//!
+//! ```toml
+//! [dependencies]
+//! rocket = { version = "0.5.0-rc.1", default-features = false }
 //! ```
 //!
 //! [JSON (de)serialization]: crate::serde::json
