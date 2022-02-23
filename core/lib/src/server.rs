@@ -405,13 +405,6 @@ impl Rocket<Orbit> {
             });
         }
 
-        // Determine keep-alives.
-        let http1_keepalive = self.config.keep_alive != 0;
-        let http2_keep_alive = match self.config.keep_alive {
-            0 => None,
-            n => Some(Duration::from_secs(n as u64))
-        };
-
         // Set up cancellable I/O from the given listener. Shutdown occurs when
         // `Shutdown` (`TripWire`) resolves. This can occur directly through a
         // notification or indirectly through an external signal which, when
@@ -438,6 +431,9 @@ impl Rocket<Orbit> {
             });
         }
 
+        // Save the keep-alive value for later use; we're about to move `self`.
+        let keep_alive = self.config.keep_alive;
+
         // Create the Hyper `Service`.
         let rocket = Arc::new(self);
         let service_fn = move |conn: &CancellableIo<_, L::Connection>| {
@@ -456,10 +452,17 @@ impl Rocket<Orbit> {
 
         // NOTE: `hyper` uses `tokio::spawn()` as the default executor.
         let listener = CancellableListener::new(shutdown.clone(), listener, grace, mercy);
-        let server = hyper::Server::builder(Incoming::new(listener))
-            .http1_keepalive(http1_keepalive)
+        let builder = hyper::Server::builder(Incoming::new(listener));
+
+        #[cfg(feature = "http2")]
+        let builder = builder.http2_keep_alive_interval(match keep_alive {
+            0 => None,
+            n => Some(Duration::from_secs(n as u64))
+        });
+
+        let server = builder
+            .http1_keepalive(keep_alive != 0)
             .http1_preserve_header_case(true)
-            .http2_keep_alive_interval(http2_keep_alive)
             .serve(hyper::service::make_service_fn(service_fn))
             .with_graceful_shutdown(shutdown.clone())
             .map_err(|e| Error::new(ErrorKind::Runtime(Box::new(e))));

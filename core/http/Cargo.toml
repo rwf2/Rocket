@@ -18,6 +18,7 @@ edition = "2018"
 default = []
 tls = ["rustls", "tokio-rustls", "rustls-pemfile"]
 mtls = ["tls", "x509-parser"]
+http2 = ["hyper/http2"]
 private-cookies = ["cookie/private", "cookie/key-expansion"]
 serde = ["uncased/with-serde-alloc", "serde_"]
 uuid = ["uuid_"]
@@ -50,7 +51,7 @@ optional = true
 [dependencies.hyper]
 version = "0.14.9"
 default-features = false
-features = ["http1", "http2", "runtime", "server", "stream"]
+features = ["http1", "runtime", "server", "stream"]
 
 [dependencies.serde_]
 package = "serde"
