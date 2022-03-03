@@ -26,17 +26,16 @@
 //!
 //!      ```rust
 //!      # #[macro_use] extern crate rocket;
-//!      use rocket_dyn_templates::Template;
+//!      use rocket_dyn_templates::{Template, context};
+//!
+//!      #[get("/")]
+//!      fn index() -> Template {
+//!          Template::render("template-name", context! { field: "value" })
+//!      }
 //!
 //!      #[launch]
 //!      fn rocket() -> _ {
 //!          rocket::build().attach(Template::fairing())
-//!      }
-//!
-//!      #[get("/")]
-//!      fn index() -> Template {
-//!          # let context = ();
-//!          Template::render("template-name", &context)
 //!      }
 //!      ```
 //!
