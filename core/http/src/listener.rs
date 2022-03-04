@@ -12,7 +12,7 @@ use hyper::server::accept::Accept;
 
 use tokio::time::Sleep;
 use tokio::io::{AsyncRead, AsyncWrite};
-use tokio::net::{TcpListener, TcpStream};
+use tokio::net::{TcpListener, TcpStream, UnixListener, UnixStream};
 
 use crate::bindable::BindableAddr;
 
@@ -207,5 +207,31 @@ impl Listener for TcpListener {
 impl Connection for TcpStream {
     fn peer_address(&self) -> Option<BindableAddr> {
         self.peer_addr().ok().map(BindableAddr::Tcp)
+    }
+}
+
+/// Binds a Unix socket listener to `path` and returns it.
+pub fn bind_unix(path: PathBuf) -> io::Result<UnixListener> {
+    UnixListener::bind(path)
+}
+
+impl Listener for UnixListener {
+    type Connection = UnixStream;
+
+    fn local_addr(&self) -> Option<BindableAddr> {
+       self.local_addr().ok().and_then(|addr| addr.as_pathname().map(|path| BindableAddr::Unix(path.to_owned())))
+    }
+
+    fn poll_accept(
+        self: Pin<&mut Self>,
+        cx: &mut Context<'_>
+    ) -> Poll<io::Result<Self::Connection>> {
+        (*self).poll_accept(cx).map_ok(|(stream, _addr)| stream)
+    }
+}
+
+impl Connection for UnixStream {
+    fn peer_address(&self) -> Option<BindableAddr> {
+       self.peer_addr().ok().and_then(|addr| addr.as_pathname().map(|path| BindableAddr::Unix(path.to_owned())))
     }
 }
