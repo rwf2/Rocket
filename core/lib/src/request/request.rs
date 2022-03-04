@@ -1,7 +1,7 @@
 use std::fmt;
 use std::ops::RangeFrom;
 use std::{future::Future, borrow::Cow, sync::Arc};
-use std::net::{IpAddr, SocketAddr};
+use std::net::IpAddr;
 
 use yansi::Paint;
 use state::{Container, Storage};
@@ -13,6 +13,7 @@ use crate::request::{FromParam, FromSegments, FromRequest, Outcome};
 use crate::form::{self, ValueField, FromForm};
 use crate::data::Limits;
 
+use crate::http::bindable::BindableAddr;
 use crate::http::{hyper, Method, Header, HeaderMap};
 use crate::http::{ContentType, Accept, MediaType, CookieJar, Cookie};
 use crate::http::uncased::UncasedStr;
@@ -36,7 +37,7 @@ pub struct Request<'r> {
 /// Information derived from an incoming connection, if any.
 #[derive(Clone)]
 pub(crate) struct ConnectionMeta {
-    pub remote: Option<SocketAddr>,
+    pub remote: Option<BindableAddr>,
     #[cfg_attr(not(feature = "mtls"), allow(dead_code))]
     pub client_certificates: Option<Arc<Vec<RawCertificate>>>,
 }
@@ -329,8 +330,8 @@ impl<'r> Request<'r> {
     /// assert_eq!(request.remote(), Some(localhost));
     /// ```
     #[inline(always)]
-    pub fn remote(&self) -> Option<SocketAddr> {
-        self.connection.remote
+    pub fn remote(&self) -> Option<&BindableAddr> {
+        self.connection.remote.as_ref()
     }
 
     /// Sets the remote address of `self` to `address`.
@@ -352,7 +353,7 @@ impl<'r> Request<'r> {
     /// assert_eq!(request.remote(), Some(localhost));
     /// ```
     #[inline(always)]
-    pub fn set_remote(&mut self, address: SocketAddr) {
+    pub fn set_remote(&mut self, address: BindableAddr) {
         self.connection.remote = Some(address);
     }
 
@@ -411,7 +412,7 @@ impl<'r> Request<'r> {
     /// ```
     #[inline]
     pub fn client_ip(&self) -> Option<IpAddr> {
-        self.real_ip().or_else(|| self.remote().map(|r| r.ip()))
+        self.real_ip().or_else(|| self.remote().and_then(|r| r.ip()))
     }
 
     /// Returns a wrapped borrow to the cookies in `self`.

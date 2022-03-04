@@ -127,6 +127,7 @@ pub use config::Config;
 pub use crate::log::LogLevel;
 pub use shutdown::Shutdown;
 pub use ident::Ident;
+pub use crate::http::bindable::BindableAddr;
 
 #[cfg(feature = "tls")]
 pub use tls::{TlsConfig, CipherSuite};

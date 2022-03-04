@@ -10,6 +10,8 @@ use tokio::time::{sleep, Sleep};
 use futures::stream::Stream;
 use futures::future::{self, Future, FutureExt};
 
+use crate::http::bindable::BindableAddr;
+
 pin_project! {
     pub struct ReaderStream<R> {
         #[pin]
@@ -294,7 +296,7 @@ impl<F: Future, I: AsyncWrite> AsyncWrite for CancellableIo<F, I> {
 use crate::http::private::{Listener, Connection, RawCertificate};
 
 impl<F: Future, C: Connection> Connection for CancellableIo<F, C> {
-    fn peer_address(&self) -> Option<std::net::SocketAddr> {
+    fn peer_address(&self) -> Option<BindableAddr> {
         self.io.peer_address()
     }
 
@@ -323,7 +325,7 @@ impl<F, L> CancellableListener<F, L> {
 impl<L: Listener, F: Future + Clone> Listener for CancellableListener<F, L> {
     type Connection = CancellableIo<F, L::Connection>;
 
-    fn local_addr(&self) -> Option<std::net::SocketAddr> {
+    fn local_addr(&self) -> Option<BindableAddr> {
         self.listener.local_addr()
     }
 

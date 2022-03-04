@@ -355,6 +355,19 @@ impl Rocket<Orbit> {
         crate::catcher::default_handler(Status::InternalServerError, req)
     }
 
+    pub(crate) async fn default_server_for_address<C>(self, ready: C) -> Result<(), Error>
+        where C: for<'a> Fn(&'a Self) -> BoxFuture<'a, ()>
+    {
+        use crate::http::bindable::BindableAddr;
+
+        match &self.config.address {
+            BindableAddr::Tcp(addr) => todo!("TCP server for address {:?}", addr),
+            BindableAddr::Udp(addr) => todo!("UDP server for address {:?}", addr),
+            BindableAddr::Unix(path) => todo!("Unix socket server for path {:?}", path),
+        }
+    }
+
+    /*
     pub(crate) async fn default_tcp_http_server<C>(mut self, ready: C) -> Result<(), Error>
         where C: for<'a> Fn(&'a Self) -> BoxFuture<'a, ()>
     {
@@ -388,6 +401,7 @@ impl Rocket<Orbit> {
         ready(&mut self).await;
         self.http_server(l).await
     }
+    */
 
     // TODO.async: Solidify the Listener APIs and make this function public
     pub(crate) async fn http_server<L>(self, listener: L) -> Result<(), Error>

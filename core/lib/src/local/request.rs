@@ -113,7 +113,7 @@ macro_rules! pub_request_impl {
     /// # });
     /// ```
     #[inline]
-    pub fn remote(mut self, address: std::net::SocketAddr) -> Self {
+    pub fn remote(mut self, address: $crate::http::bindable::BindableAddr) -> Self {
         self.set_remote(address);
         self
     }

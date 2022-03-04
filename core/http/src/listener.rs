@@ -1,4 +1,5 @@
 use std::fmt;
+use std::path::PathBuf;
 use std::future::Future;
 use std::io;
 use std::net::SocketAddr;
@@ -13,6 +14,8 @@ use tokio::time::Sleep;
 use tokio::io::{AsyncRead, AsyncWrite};
 use tokio::net::{TcpListener, TcpStream};
 
+use crate::bindable::BindableAddr;
+
 // TODO.async: 'Listener' and 'Connection' provide common enough functionality
 // that they could be introduced in upstream libraries.
 /// A 'Listener' yields incoming connections
@@ -21,7 +24,7 @@ pub trait Listener {
     type Connection: Connection;
 
     /// Return the actual address this listener bound to.
-    fn local_addr(&self) -> Option<SocketAddr>;
+    fn local_addr(&self) -> Option<BindableAddr>;
 
     /// Try to accept an incoming Connection if ready
     fn poll_accept(
@@ -44,7 +47,7 @@ pub use rustls::Certificate as RawCertificate;
 /// A 'Connection' represents an open connection to a client
 pub trait Connection: AsyncRead + AsyncWrite {
     /// The remote address, i.e. the client's socket address, if it is known.
-    fn peer_address(&self) -> Option<SocketAddr>;
+    fn peer_address(&self) -> Option<BindableAddr>;
 
     /// DER-encoded X.509 certificate chain presented by the client, if any.
     ///
@@ -189,8 +192,8 @@ pub async fn bind_tcp(address: SocketAddr) -> io::Result<TcpListener> {
 impl Listener for TcpListener {
     type Connection = TcpStream;
 
-    fn local_addr(&self) -> Option<SocketAddr> {
-        self.local_addr().ok()
+    fn local_addr(&self) -> Option<BindableAddr> {
+        self.local_addr().ok().map(BindableAddr::Tcp)
     }
 
     fn poll_accept(
@@ -202,7 +205,7 @@ impl Listener for TcpListener {
 }
 
 impl Connection for TcpStream {
-    fn peer_address(&self) -> Option<SocketAddr> {
-        self.peer_addr().ok()
+    fn peer_address(&self) -> Option<BindableAddr> {
+        self.peer_addr().ok().map(BindableAddr::Tcp)
     }
 }

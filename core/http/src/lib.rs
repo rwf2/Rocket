@@ -14,6 +14,7 @@
 #[macro_use]
 extern crate pear;
 
+pub mod bindable;
 pub mod hyper;
 pub mod uri;
 pub mod ext;

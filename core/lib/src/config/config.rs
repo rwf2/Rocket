@@ -1,4 +1,4 @@
-use std::net::{IpAddr, Ipv4Addr};
+use std::net::SocketAddr;
 
 use figment::{Figment, Profile, Provider, Metadata, error::Result};
 use figment::providers::{Serialized, Env, Toml, Format};
@@ -15,6 +15,8 @@ use crate::config::TlsConfig;
 
 #[cfg(feature = "secrets")]
 use crate::config::SecretKey;
+
+use crate::http::bindable::BindableAddr;
 
 /// Rocket server configuration.
 ///
@@ -64,10 +66,9 @@ pub struct Config {
     /// set to the extracting Figment's selected `Profile`.
     #[serde(skip)]
     pub profile: Profile,
-    /// IP address to serve on. **(default: `127.0.0.1`)**
-    pub address: IpAddr,
-    /// Port to serve on. **(default: `8000`)**
-    pub port: u16,
+    /// The address to listen on for HTTP requests. **(default: `"tcp://localhost:8000"`)**
+    #[serde(flatten)]
+    pub address: BindableAddr,
     /// Number of threads to use for executing futures. **(default: `num_cores`)**
     pub workers: usize,
     /// How, if at all, to identify the server via the `Server` header.
@@ -162,10 +163,10 @@ impl Config {
     /// let config = Config::debug_default();
     /// ```
     pub fn debug_default() -> Config {
+        use std::net::{SocketAddrV4, Ipv4Addr};
         Config {
             profile: Self::DEBUG_PROFILE,
-            address: Ipv4Addr::new(127, 0, 0, 1).into(),
-            port: 8000,
+            address: BindableAddr::Tcp(SocketAddr::V4(SocketAddrV4::new(Ipv4Addr::LOCALHOST, 8000))),
             workers: num_cpus::get(),
             ident: Ident::default(),
             limits: Limits::default(),
@@ -353,7 +354,6 @@ impl Config {
 
         launch_info!("{}Configured for {}.", Paint::emoji("🔧 "), self.profile);
         launch_info_!("address: {}", bold(&self.address));
-        launch_info_!("port: {}", bold(&self.port));
         launch_info_!("workers: {}", bold(self.workers));
         launch_info_!("ident: {}", bold(&self.ident));
         launch_info_!("limits: {}", bold(&self.limits));
