@@ -15,7 +15,7 @@ use crate::ext::{AsyncReadExt, CancellableListener, CancellableIo};
 use crate::request::ConnectionMeta;
 
 use crate::http::{uri::Origin, hyper, Method, Status, Header};
-use crate::http::private::{bind_tcp, Listener, Connection, Incoming};
+use crate::http::private::{bind_tcp, bind_unix, Listener, Connection, Incoming};
 
 // A token returned to force the execution of one method before another.
 pub(crate) struct RequestToken;
@@ -355,15 +355,27 @@ impl Rocket<Orbit> {
         crate::catcher::default_handler(Status::InternalServerError, req)
     }
 
-    pub(crate) async fn default_server_for_address<C>(self, ready: C) -> Result<(), Error>
+    pub(crate) async fn default_server_for_address<C>(mut self, ready: C) -> Result<(), Error>
         where C: for<'a> Fn(&'a Self) -> BoxFuture<'a, ()>
     {
         use crate::http::bindable::BindableAddr;
 
+        if self.config.tls_enabled() {
+            todo!("TLS support");
+        }
+
         match &self.config.address {
-            BindableAddr::Tcp(addr) => todo!("TCP server for address {:?}", addr),
+            BindableAddr::Tcp(addr) => {
+                let l = bind_tcp(addr.clone()).await.map_err(ErrorKind::Bind)?;
+                ready(&mut self).await;
+                self.http_server(l).await
+            },
             BindableAddr::Udp(addr) => todo!("UDP server for address {:?}", addr),
-            BindableAddr::Unix(path) => todo!("Unix socket server for path {:?}", path),
+            BindableAddr::Unix(path) => {
+                let l = bind_unix(&path).map_err(ErrorKind::Bind)?;
+                ready(&mut self).await;
+                self.http_server(l).await
+            },
         }
     }
 
