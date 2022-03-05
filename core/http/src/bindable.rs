@@ -35,6 +35,13 @@ impl BindableAddr {
             _ => None,
         }
     }
+    /// The port, if the inner address type has one
+    pub fn port(&self) -> Option<u16> {
+        match self {
+            Self::Tcp(addr) | Self::Udp(addr) => Some(addr.port()),
+            _ => None,
+        }
+    }
 }
 
 impl Display for BindableAddr {

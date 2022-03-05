@@ -143,7 +143,8 @@ pub use shutdown::Sig;
 
 #[cfg(test)]
 mod tests {
-    use std::net::Ipv4Addr;
+    use crate::http::bindable::BindableAddr;
+    use std::net::{Ipv4Addr, SocketAddr};
     use figment::{Figment, Profile};
     use pretty_assertions::assert_eq;
 
@@ -199,9 +200,8 @@ mod tests {
         figment::Jail::expect_with(|jail| {
             jail.create_file("Rocket.toml", r#"
                 [default]
-                address = "1.2.3.4"
+                address = "tcp://1.2.3.4:1234"
                 ident = "Something Cool"
-                port = 1234
                 workers = 20
                 keep_alive = 10
                 log_level = "off"
@@ -210,8 +210,7 @@ mod tests {
 
             let config = Config::from(Config::figment());
             assert_eq!(config, Config {
-                address: Ipv4Addr::new(1, 2, 3, 4).into(),
-                port: 1234,
+                address: BindableAddr::Tcp(SocketAddr::new(Ipv4Addr::new(1, 2, 3, 4).into(), 1234)),
                 workers: 20,
                 ident: ident!("Something Cool"),
                 keep_alive: 10,
@@ -222,9 +221,8 @@ mod tests {
 
             jail.create_file("Rocket.toml", r#"
                 [global]
-                address = "1.2.3.4"
+                address = "tcp://1.2.3.4:1234"
                 ident = "Something Else Cool"
-                port = 1234
                 workers = 20
                 keep_alive = 10
                 log_level = "off"
@@ -233,8 +231,7 @@ mod tests {
 
             let config = Config::from(Config::figment());
             assert_eq!(config, Config {
-                address: Ipv4Addr::new(1, 2, 3, 4).into(),
-                port: 1234,
+                address: BindableAddr::Tcp(SocketAddr::new(Ipv4Addr::new(1, 2, 3, 4).into(), 1234)),
                 workers: 20,
                 ident: ident!("Something Else Cool"),
                 keep_alive: 10,
@@ -246,8 +243,7 @@ mod tests {
             jail.set_env("ROCKET_CONFIG", "Other.toml");
             jail.create_file("Other.toml", r#"
                 [default]
-                address = "1.2.3.4"
-                port = 1234
+                address = "tcp://1.2.3.4:1234"
                 workers = 20
                 keep_alive = 10
                 log_level = "off"
@@ -256,8 +252,7 @@ mod tests {
 
             let config = Config::from(Config::figment());
             assert_eq!(config, Config {
-                address: Ipv4Addr::new(1, 2, 3, 4).into(),
-                port: 1234,
+                address: BindableAddr::Tcp(SocketAddr::new(Ipv4Addr::new(1, 2, 3, 4).into(), 1234)),
                 workers: 20,
                 keep_alive: 10,
                 log_level: LogLevel::Off,
@@ -536,10 +531,10 @@ mod tests {
         use crate::config::{TlsConfig, Ident};
 
         figment::Jail::expect_with(|jail| {
-            jail.set_env("ROCKET_PORT", 9999);
+            jail.set_env("ROCKET_ADDRESS", "tcp://127.0.0.1:9999");
             let config = Config::from(Config::figment());
             assert_eq!(config, Config {
-                port: 9999,
+                address: BindableAddr::Tcp(SocketAddr::new(Ipv4Addr::new(127, 0, 0, 1).into(), 9999)),
                 ..Config::default()
             });
 
@@ -549,7 +544,7 @@ mod tests {
             let prev_figment = Config::figment().join(&first_figment);
             let config = Config::from(&prev_figment);
             assert_eq!(config, Config {
-                port: 9999,
+                address: BindableAddr::Tcp(SocketAddr::new(Ipv4Addr::new(127, 0, 0, 1).into(), 9999)),
                 tls: Some(TlsConfig::from_paths("certs.pem", "key.pem")),
                 ..Config::default()
             });
@@ -557,7 +552,7 @@ mod tests {
             jail.set_env("ROCKET_TLS", r#"{certs="new.pem"}"#);
             let config = Config::from(Config::figment().join(&prev_figment));
             assert_eq!(config, Config {
-                port: 9999,
+                address: BindableAddr::Tcp(SocketAddr::new(Ipv4Addr::new(127, 0, 0, 1).into(), 9999)),
                 tls: Some(TlsConfig::from_paths("new.pem", "key.pem")),
                 ..Config::default()
             });
@@ -565,7 +560,7 @@ mod tests {
             jail.set_env("ROCKET_LIMITS", r#"{stream=100kiB}"#);
             let config = Config::from(Config::figment().join(&prev_figment));
             assert_eq!(config, Config {
-                port: 9999,
+                address: BindableAddr::Tcp(SocketAddr::new(Ipv4Addr::new(127, 0, 0, 1).into(), 9999)),
                 tls: Some(TlsConfig::from_paths("new.pem", "key.pem")),
                 limits: Limits::default().limit("stream", 100.kibibytes()),
                 ..Config::default()
@@ -574,7 +569,7 @@ mod tests {
             jail.set_env("ROCKET_IDENT", false);
             let config = Config::from(Config::figment().join(&prev_figment));
             assert_eq!(config, Config {
-                port: 9999,
+                address: BindableAddr::Tcp(SocketAddr::new(Ipv4Addr::new(127, 0, 0, 1).into(), 9999)),
                 tls: Some(TlsConfig::from_paths("new.pem", "key.pem")),
                 limits: Limits::default().limit("stream", 100.kibibytes()),
                 ident: Ident::none(),
