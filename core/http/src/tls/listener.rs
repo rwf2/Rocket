@@ -78,7 +78,7 @@ impl<L: Listener> TlsListener<L> {
 impl<C, L> Listener for TlsListener<L>
 where
     C: Connection + Unpin,
-    L: Listener<Connection = C>,
+    L: Listener<Connection = C> + Unpin,
 {
     type Connection = TlsStream<<L as Listener>::Connection>;
 
@@ -93,11 +93,11 @@ where
         loop {
             match self.state {
                 State::Listening => {
-                    match self.listener.poll_accept(cx) {
+                    match Pin::new(&mut self.listener).poll_accept(cx) {
                         Poll::Pending => return Poll::Pending,
                         Poll::Ready(Err(e)) => return Poll::Ready(Err(e)),
-                        Poll::Ready(Ok((stream, _addr))) => {
-                            let fut = self.acceptor.accept(stream);
+                        Poll::Ready(Ok(connection)) => {
+                            let fut = self.acceptor.accept(connection);
                             self.state = State::Accepting(fut);
                         }
                     }
