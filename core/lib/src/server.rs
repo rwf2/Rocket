@@ -15,6 +15,8 @@ use crate::ext::{AsyncReadExt, CancellableListener, CancellableIo};
 use crate::request::ConnectionMeta;
 
 use crate::http::{uri::Origin, hyper, Method, Status, Header};
+#[cfg(feature = "tls")]
+use crate::http::tls::TlsListener;
 use crate::http::private::{bind_tcp, bind_unix, Listener, Connection, Incoming};
 
 // A token returned to force the execution of one method before another.
@@ -360,60 +362,57 @@ impl Rocket<Orbit> {
     {
         use crate::http::bindable::BindableAddr;
 
-        if self.config.tls_enabled() {
-            todo!("TLS support");
+        // If TLS is enabled, we have to try to add TLS and run the server with it if it succeeded.
+        // Otherwise we just run the server as normal.
+        #[cfg(feature = "tls")]
+        macro_rules! tls_then_run {
+            ($l:ident) => {
+                match self.maybe_add_tls($l).await? {
+                    Ok(l) => {
+                        ready(&mut self).await;
+                        self.http_server(l).await
+                    }
+                    Err(l) => {
+                        ready(&mut self).await;
+                        self.http_server(l).await
+                    }
+                }
+            }
+        }
+        #[cfg(not(feature = "tls"))]
+        macro_rules! tls_then_run {
+            ($l:ident) => {
+                {
+                    ready(&mut self).await;
+                    self.http_server($l).await
+                }
+            }
         }
 
         match &self.config.address {
             BindableAddr::Tcp(addr) => {
                 let l = bind_tcp(addr.clone()).await.map_err(ErrorKind::Bind)?;
-                ready(&mut self).await;
-                self.http_server(l).await
+                tls_then_run!(l)
             },
             BindableAddr::Udp(addr) => todo!("UDP server for address {:?}", addr),
             BindableAddr::Unix(path) => {
                 let l = bind_unix(&path).map_err(ErrorKind::Bind)?;
-                ready(&mut self).await;
-                self.http_server(l).await
+                tls_then_run!(l)
             },
         }
     }
 
-    /*
-    pub(crate) async fn default_tcp_http_server<C>(mut self, ready: C) -> Result<(), Error>
-        where C: for<'a> Fn(&'a Self) -> BoxFuture<'a, ()>
-    {
-        use std::net::ToSocketAddrs;
-
-        // Determine the address we're going to serve on.
-        let addr = format!("{}:{}", self.config.address, self.config.port);
-        let mut addr = addr.to_socket_addrs()
-            .map(|mut addrs| addrs.next().expect(">= 1 socket addr"))
-            .map_err(|e| Error::new(ErrorKind::Io(e)))?;
-
-        #[cfg(feature = "tls")]
+    #[cfg(feature = "tls")]
+    async fn maybe_add_tls<T>(&self, raw: T) -> Result<Result<TlsListener<T>, T>, Error> {
         if self.config.tls_enabled() {
             if let Some(ref config) = self.config.tls {
-                use crate::http::tls::TlsListener;
-
-                let conf = config.to_native_config().map_err(ErrorKind::Io)?;
-                let l = TlsListener::bind(addr, conf).await.map_err(ErrorKind::Bind)?;
-                addr = l.local_addr().unwrap_or(addr);
-                self.config.address = addr.ip();
-                self.config.port = addr.port();
-                ready(&mut self).await;
-                return self.http_server(l).await;
+                let config = config.to_native_config().map_err(ErrorKind::Io)?;
+                let l = TlsListener::bind(todo!(), config).await.map_err(ErrorKind::Bind)?;
+                return Ok(l);
             }
         }
-
-        let l = bind_tcp(addr).await.map_err(ErrorKind::Bind)?;
-        addr = l.local_addr().unwrap_or(addr);
-        self.config.address = addr.ip();
-        self.config.port = addr.port();
-        ready(&mut self).await;
-        self.http_server(l).await
+        return Err(raw);
     }
-    */
 
     // TODO.async: Solidify the Listener APIs and make this function public
     pub(crate) async fn http_server<L>(self, listener: L) -> Result<(), Error>
