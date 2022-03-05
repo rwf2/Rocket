@@ -1,5 +1,5 @@
 use std::fmt;
-use std::path::PathBuf;
+use std::path::Path;
 use std::future::Future;
 use std::io;
 use std::net::SocketAddr;
@@ -211,7 +211,7 @@ impl Connection for TcpStream {
 }
 
 /// Binds a Unix socket listener to `path` and returns it.
-pub fn bind_unix(path: PathBuf) -> io::Result<UnixListener> {
+pub fn bind_unix(path: &Path) -> io::Result<UnixListener> {
     UnixListener::bind(path)
 }
 
