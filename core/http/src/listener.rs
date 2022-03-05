@@ -210,16 +210,40 @@ impl Connection for TcpStream {
     }
 }
 
-/// Binds a Unix socket listener to `path` and returns it.
-pub fn bind_unix(path: &Path) -> io::Result<UnixListener> {
-    UnixListener::bind(path)
+#[repr(transparent)]
+pub struct UnixListenerWrapper(UnixListener);
+
+impl std::ops::Deref for UnixListenerWrapper {
+    type Target = UnixListener;
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+impl std::ops::DerefMut for UnixListenerWrapper {
+    fn deref_mut(&mut self) -> &mut UnixListener {
+        &mut self.0
+    }
+}
+impl Drop for UnixListenerWrapper {
+    fn drop(&mut self) {
+        if let Ok(addr) = self.0.local_addr() {
+            if let Some(path) = addr.as_pathname() {
+                let _ = std::fs::remove_file(path);
+            }
+        }
+    }
 }
 
-impl Listener for UnixListener {
+/// Binds a Unix socket listener to `path` and returns it.
+pub fn bind_unix(path: &Path) -> io::Result<UnixListenerWrapper> {
+    UnixListener::bind(path).map(UnixListenerWrapper)
+}
+
+impl Listener for UnixListenerWrapper {
     type Connection = UnixStream;
 
     fn local_addr(&self) -> Option<BindableAddr> {
-       self.local_addr().ok().and_then(|addr| addr.as_pathname().map(|path| BindableAddr::Unix(path.to_owned())))
+       self.0.local_addr().ok().and_then(|addr| addr.as_pathname().map(|path| BindableAddr::Unix(path.to_owned())))
     }
 
     fn poll_accept(
