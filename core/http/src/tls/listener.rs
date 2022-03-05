@@ -13,15 +13,15 @@ use crate::listener::{Connection, Listener, RawCertificate};
 use crate::http::bindable::BindableAddr;
 
 /// A TLS listener over TCP.
-pub struct TlsListener {
-    listener: TcpListener,
+pub struct TlsListener<L: Listener> {
+    listener: L,
     acceptor: TlsAcceptor,
-    state: State,
+    state: State<<L as Listener>::Connection>,
 }
 
-enum State {
+enum State<C: Connection> {
     Listening,
-    Accepting(Accept<TcpStream>),
+    Accepting(Accept<C>),
 }
 
 pub struct Config<R> {
@@ -33,8 +33,8 @@ pub struct Config<R> {
     pub mandatory_mtls: bool,
 }
 
-impl TlsListener {
-    pub async fn bind<R>(addr: SocketAddr, mut c: Config<R>) -> io::Result<TlsListener>
+impl<L: Listener> TlsListener<L> {
+    pub async fn bind<R>(listener: L, mut c: Config<R>) -> io::Result<Self>
         where R: io::BufRead
     {
         use rustls::server::{AllowAnyAuthenticatedClient, AllowAnyAnonymousOrAuthenticatedClient};
@@ -70,17 +70,20 @@ impl TlsListener {
         tls_config.ticketer = rustls::Ticketer::new()
             .map_err(|e| io::Error::new(io::ErrorKind::Other, format!("bad TLS ticketer: {}", e)))?;
 
-        let listener = TcpListener::bind(addr).await?;
         let acceptor = TlsAcceptor::from(Arc::new(tls_config));
-        Ok(TlsListener { listener, acceptor, state: State::Listening })
+        Ok(TlsListener { listener, acceptor, state: State::<<L as Listener>::Connection>::Listening })
     }
 }
 
-impl Listener for TlsListener {
-    type Connection = TlsStream<TcpStream>;
+impl<C, L> Listener for TlsListener<L>
+where
+    C: Connection + Unpin,
+    L: Listener<Connection = C>,
+{
+    type Connection = TlsStream<<L as Listener>::Connection>;
 
     fn local_addr(&self) -> Option<BindableAddr> {
-        self.listener.local_addr().ok().map(BindableAddr::Tcp)
+        self.listener.local_addr()
     }
 
     fn poll_accept(
@@ -113,7 +116,7 @@ impl Listener for TlsListener {
     }
 }
 
-impl Connection for TlsStream<TcpStream> {
+impl<C: Connection + Unpin> Connection for TlsStream<C> {
     fn peer_address(&self) -> Option<BindableAddr> {
         self.get_ref().0.peer_address()
     }
