@@ -2,11 +2,9 @@ use std::io;
 use std::pin::Pin;
 use std::sync::Arc;
 use std::task::{Context, Poll};
-use std::net::SocketAddr;
 use std::future::Future;
 
 use tokio_rustls::{TlsAcceptor, Accept, server::TlsStream};
-use tokio::net::{TcpListener, TcpStream};
 
 use crate::tls::util::{load_certs, load_private_key, load_ca_certs};
 use crate::listener::{Connection, Listener, RawCertificate};
