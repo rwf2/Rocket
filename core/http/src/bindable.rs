@@ -113,9 +113,9 @@ impl<'de> Deserialize<'de> for BindableAddr {
         match Self::from_str(&addr) {
             Err(FromStrError::RequiresPort(addr)) => {
                 if let Some(port) = port {
-                    let converted = SocketAddr::new(addr, port);
+                    let converted = Self::Tcp(SocketAddr::new(addr, port));
                     log::warn!("Raw addresses are deprecated. Please use a protocol address in the `address` config field and remove `port`. Here is the value to use for `address`: {:?}", converted.to_string());
-                    Ok(Self::Tcp(converted))
+                    Ok(converted)
                 } else {
                     Err(de::Error::custom("No port provided with raw address"))
                 }
