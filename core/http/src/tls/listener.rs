@@ -10,7 +10,7 @@ use tokio::net::{TcpListener, TcpStream};
 
 use crate::tls::util::{load_certs, load_private_key, load_ca_certs};
 use crate::listener::{Connection, Listener, RawCertificate};
-use crate::http::bindable::BindableAddr;
+use crate::bindable::BindableAddr;
 
 /// A TLS listener over TCP.
 pub struct TlsListener<L: Listener> {
