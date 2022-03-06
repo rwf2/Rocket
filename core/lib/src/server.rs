@@ -403,7 +403,11 @@ impl Rocket<Orbit> {
     }
 
     #[cfg(feature = "tls")]
-    async fn maybe_add_tls<C: Connection + Unpin, T: Listener<Connection = C> + Unpin>(&self, raw: T) -> Result<Result<TlsListener<T>, T>, Error> {
+    async fn maybe_add_tls<C, L>(&self, raw: L) -> Result<Result<TlsListener<L>, L>, Error>
+    where
+        C: Connection + Unpin,
+        L: Listener<Connection = C> + Unpin
+    {
         if self.config.tls_enabled() {
             if let Some(ref config) = self.config.tls {
                 let config = config.to_native_config().map_err(ErrorKind::Io)?;

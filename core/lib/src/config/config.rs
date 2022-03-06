@@ -166,7 +166,9 @@ impl Config {
         use std::net::{SocketAddrV4, Ipv4Addr};
         Config {
             profile: Self::DEBUG_PROFILE,
-            address: BindableAddr::Tcp(SocketAddr::V4(SocketAddrV4::new(Ipv4Addr::LOCALHOST, 8000))),
+            address: BindableAddr::Tcp(
+                SocketAddr::V4(SocketAddrV4::new(Ipv4Addr::LOCALHOST, 8000))
+            ),
             workers: num_cpus::get(),
             ident: Ident::default(),
             limits: Limits::default(),

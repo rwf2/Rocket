@@ -47,7 +47,12 @@ impl BindableAddr {
 impl Display for BindableAddr {
     fn fmt(&self, formatter: &mut Formatter<'_>) -> fmt::Result {
         match self {
-            Self::Tcp(addr) | Self::Udp(addr) => write!(formatter, "{}://{}", self.protocol_name(), addr),
+            Self::Tcp(addr) | Self::Udp(addr) => write!(
+                formatter,
+                "{}://{}",
+                self.protocol_name(),
+                addr
+            ),
             Self::Unix(path) => write!(formatter, "{}://{}", self.protocol_name(), path.display()),
         }
     }
@@ -68,7 +73,11 @@ impl Display for FromStrError {
     fn fmt(&self, formatter: &mut Formatter<'_>) -> fmt::Result {
         match self {
             Self::UnknownProtocol(unknown) => write!(formatter, "unknown protocol {:?}", unknown),
-            Self::RequiresPort(addr) => write!(formatter, "raw IP address {:?} requires a port", addr),
+            Self::RequiresPort(addr) => write!(
+                formatter,
+                "raw IP address {:?} requires a port",
+                addr
+            ),
             Self::Ip(err) => write!(formatter, "invalid IP: {}", err),
         }
     }
@@ -121,7 +130,12 @@ impl<'de> Deserialize<'de> for BindableAddr {
             Err(FromStrError::RequiresPort(addr)) => {
                 if let Some(port) = port {
                     let converted = Self::Tcp(SocketAddr::new(addr, port));
-                    log::warn!("Raw addresses are deprecated. Please use a protocol address in the `address` config field and remove `port`. Here is the value to use for `address`: {:?}", converted.to_string());
+                    log::warn!(
+                        "Raw addresses are deprecated. Please use a protocol address in the `addre\
+                        ss` config field and remove `port`. Here is the value to use for `address`\
+                        : {:?}",
+                        converted.to_string()
+                    );
                     Ok(converted)
                 } else {
                     Err(de::Error::custom("No port provided with raw address"))
@@ -129,7 +143,8 @@ impl<'de> Deserialize<'de> for BindableAddr {
             },
             other => {
                 if port.is_some() {
-                    log::warn!("`port` config field is ignored when `address` is a protocol address. Please remove it.");
+                    log::warn!("`port` config field is ignored when `address` is a protocol addres\
+                    s. Please remove it.");
                 }
                 other.map_err(de::Error::custom)
             },

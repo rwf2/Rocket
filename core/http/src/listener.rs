@@ -243,7 +243,13 @@ impl Listener for UnixListenerWrapper {
     type Connection = UnixStream;
 
     fn local_addr(&self) -> Option<BindableAddr> {
-       self.0.local_addr().ok().and_then(|addr| addr.as_pathname().map(|path| BindableAddr::Unix(path.to_owned())))
+       self.0
+        .local_addr()
+        .ok()
+        .and_then(|addr| addr
+            .as_pathname()
+            .map(|path| BindableAddr::Unix(path.to_owned()))
+        )
     }
 
     fn poll_accept(
@@ -256,6 +262,12 @@ impl Listener for UnixListenerWrapper {
 
 impl Connection for UnixStream {
     fn peer_address(&self) -> Option<BindableAddr> {
-       self.peer_addr().ok().and_then(|addr| addr.as_pathname().map(|path| BindableAddr::Unix(path.to_owned())))
+       self
+        .peer_addr()
+        .ok()
+        .and_then(|addr| addr
+            .as_pathname()
+            .map(|path| BindableAddr::Unix(path.to_owned()))
+        )
     }
 }

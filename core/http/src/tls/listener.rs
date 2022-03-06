@@ -69,7 +69,11 @@ impl<L: Listener> TlsListener<L> {
             .map_err(|e| io::Error::new(io::ErrorKind::Other, format!("bad TLS ticketer: {}", e)))?;
 
         let acceptor = TlsAcceptor::from(Arc::new(tls_config));
-        Ok(TlsListener { listener, acceptor, state: State::<<L as Listener>::Connection>::Listening })
+        Ok(TlsListener {
+            listener,
+            acceptor,
+            state: State::<<L as Listener>::Connection>::Listening,
+        })
     }
 }
 
