@@ -21,5 +21,5 @@ async fn on_ignite_fairing_can_inspect_port() {
     }));
 
     rocket::tokio::spawn(rocket.launch());
-    assert_ne!(rx.await.unwrap(), Some(0));
+    assert_eq!(rx.await.unwrap(), Some(0));
 }
