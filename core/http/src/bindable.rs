@@ -16,6 +16,7 @@ pub enum BindableAddr {
     /// Listen on an address and port with the UDP protocol
     Udp(SocketAddr),
     /// Listen on a Unix socket
+    #[cfg(unix)]
     Unix(PathBuf),
 }
 
@@ -25,6 +26,7 @@ impl BindableAddr {
         match self {
             Self::Tcp(_) => "tcp",
             Self::Udp(_) => "udp",
+            #[cfg(unix)]
             Self::Unix(_) => "unix",
         }
     }
@@ -53,6 +55,7 @@ impl Display for BindableAddr {
                 self.protocol_name(),
                 addr
             ),
+            #[cfg(unix)]
             Self::Unix(path) => write!(formatter, "{}://{}", self.protocol_name(), path.display()),
         }
     }
@@ -72,7 +75,12 @@ pub enum FromStrError {
 impl Display for FromStrError {
     fn fmt(&self, formatter: &mut Formatter<'_>) -> fmt::Result {
         match self {
-            Self::UnknownProtocol(unknown) => write!(formatter, "unknown protocol {:?}", unknown),
+            Self::UnknownProtocol(unknown) => {
+                write!(formatter, "unknown protocol {:?}", unknown);
+                if cfg!(not(unix)) {
+                    write!(formatter, " (note that \"unix\" protocol is only available on Unix platforms)");
+                }
+            },
             Self::RequiresPort(addr) => write!(
                 formatter,
                 "raw IP address {:?} requires a port",
@@ -97,6 +105,7 @@ impl FromStr for BindableAddr {
             Ok(match protocol_name {
                 "tcp" => Self::Tcp(SocketAddr::from_str(data)?),
                 "udp" => Self::Udp(SocketAddr::from_str(data)?),
+                #[cfg(unix)]
                 "unix" => Self::Unix(PathBuf::from(data)),
                 unknown => return Err(Self::Err::UnknownProtocol(unknown.to_string())),
             })

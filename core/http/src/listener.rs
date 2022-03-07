@@ -1,5 +1,4 @@
 use std::fmt;
-use std::path::Path;
 use std::future::Future;
 use std::io;
 use std::net::SocketAddr;
@@ -12,7 +11,7 @@ use hyper::server::accept::Accept;
 
 use tokio::time::Sleep;
 use tokio::io::{AsyncRead, AsyncWrite};
-use tokio::net::{TcpListener, TcpStream, UnixListener, UnixStream};
+use tokio::net::{TcpListener, TcpStream};
 
 use crate::bindable::BindableAddr;
 
@@ -210,6 +209,17 @@ impl Connection for TcpStream {
     }
 }
 
+#[cfg(unix)]
+mod unix {
+
+use super::{Connection, Listener};
+use crate::bindable::BindableAddr;
+use std::io;
+use std::path::Path;
+use std::pin::Pin;
+use std::task::{Context, Poll};
+use tokio::net::{UnixListener, UnixStream};
+
 #[repr(transparent)]
 pub struct UnixListenerWrapper(UnixListener);
 
@@ -271,3 +281,8 @@ impl Connection for UnixStream {
         )
     }
 }
+
+}
+
+#[cfg(unix)]
+pub use unix::{UnixListenerWrapper, bind_unix};
