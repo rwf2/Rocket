@@ -253,7 +253,7 @@ impl Listener for UnixListenerWrapper {
     type Connection = UnixStream;
 
     fn local_addr(&self) -> Option<BindableAddr> {
-       self.0
+        self.0
         .local_addr()
         .ok()
         .and_then(|addr| addr
@@ -272,7 +272,7 @@ impl Listener for UnixListenerWrapper {
 
 impl Connection for UnixStream {
     fn peer_address(&self) -> Option<BindableAddr> {
-       self
+        self
         .peer_addr()
         .ok()
         .and_then(|addr| addr
