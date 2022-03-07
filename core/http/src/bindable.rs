@@ -13,8 +13,6 @@ use std::str::FromStr;
 pub enum BindableAddr {
     /// Listen on an address and port with the TCP protocol
     Tcp(SocketAddr),
-    /// Listen on an address and port with the UDP protocol
-    Udp(SocketAddr),
     /// Listen on a Unix socket
     #[cfg(unix)]
     Unix(PathBuf),
@@ -25,7 +23,6 @@ impl BindableAddr {
     pub fn protocol_name(&self) -> &'static str {
         match self {
             Self::Tcp(_) => "tcp",
-            Self::Udp(_) => "udp",
             #[cfg(unix)]
             Self::Unix(_) => "unix",
         }
@@ -33,14 +30,14 @@ impl BindableAddr {
     /// The IP address, if the inner address type has one
     pub fn ip(&self) -> Option<IpAddr> {
         match self {
-            Self::Tcp(addr) | Self::Udp(addr) => Some(addr.ip()),
+            Self::Tcp(addr) => Some(addr.ip()),
             _ => None,
         }
     }
     /// The port, if the inner address type has one
     pub fn port(&self) -> Option<u16> {
         match self {
-            Self::Tcp(addr) | Self::Udp(addr) => Some(addr.port()),
+            Self::Tcp(addr) => Some(addr.port()),
             _ => None,
         }
     }
@@ -49,7 +46,7 @@ impl BindableAddr {
 impl Display for BindableAddr {
     fn fmt(&self, formatter: &mut Formatter<'_>) -> fmt::Result {
         match self {
-            Self::Tcp(addr) | Self::Udp(addr) => write!(
+            Self::Tcp(addr) => write!(
                 formatter,
                 "{}://{}",
                 self.protocol_name(),
@@ -106,7 +103,6 @@ impl FromStr for BindableAddr {
         if let Some((protocol_name, data)) = s.split_once("://") {
             Ok(match protocol_name {
                 "tcp" => Self::Tcp(SocketAddr::from_str(data)?),
-                "udp" => Self::Udp(SocketAddr::from_str(data)?),
                 #[cfg(unix)]
                 "unix" => Self::Unix(PathBuf::from(data)),
                 unknown => return Err(Self::Err::UnknownProtocol(unknown.to_string())),

@@ -394,7 +394,6 @@ impl Rocket<Orbit> {
                 let l = bind_tcp(addr.clone()).await.map_err(ErrorKind::Bind)?;
                 tls_then_run!(l)
             },
-            BindableAddr::Udp(addr) => todo!("UDP server for address {:?}", addr),
             #[cfg(unix)]
             BindableAddr::Unix(path) => {
                 let l = bind_unix(&path).map_err(ErrorKind::Bind)?;
