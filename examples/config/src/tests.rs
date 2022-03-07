@@ -9,7 +9,7 @@ async fn test_config(profile: &str) {
         "debug" => {
             assert_eq!(config.address, BindableAddr::Tcp(
                 SocketAddr::new(std::net::Ipv4Addr::LOCALHOST.into(), 8000)
-            );
+            ));
             assert_eq!(config.workers, 1);
             assert_eq!(config.keep_alive, 0);
             assert_eq!(config.log_level, LogLevel::Normal);
@@ -17,7 +17,7 @@ async fn test_config(profile: &str) {
         "release" => {
             assert_eq!(config.address, BindableAddr::Tcp(
                 SocketAddr::new(std::net::Ipv4Addr::LOCALHOST.into(), 8000)
-            );
+            ));
             assert_eq!(config.workers, 12);
             assert_eq!(config.keep_alive, 5);
             assert_eq!(config.log_level, LogLevel::Critical);
