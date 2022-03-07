@@ -78,7 +78,8 @@ impl Display for FromStrError {
             Self::UnknownProtocol(unknown) => {
                 write!(formatter, "unknown protocol {:?}", unknown);
                 if cfg!(not(unix)) {
-                    write!(formatter, " (note that \"unix\" protocol is only available on Unix platforms)");
+                    write!(formatter, " (note that \"unix\" protocol is only available on Unix pla\
+                    tforms)");
                 }
             },
             Self::RequiresPort(addr) => write!(
