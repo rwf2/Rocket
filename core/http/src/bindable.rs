@@ -76,11 +76,12 @@ impl Display for FromStrError {
     fn fmt(&self, formatter: &mut Formatter<'_>) -> fmt::Result {
         match self {
             Self::UnknownProtocol(unknown) => {
-                write!(formatter, "unknown protocol {:?}", unknown);
+                write!(formatter, "unknown protocol {:?}", unknown)?;
                 if cfg!(not(unix)) {
                     write!(formatter, " (note that \"unix\" protocol is only available on Unix pla\
-                    tforms)");
+                    tforms)")?;
                 }
+                Ok(())
             },
             Self::RequiresPort(addr) => write!(
                 formatter,
