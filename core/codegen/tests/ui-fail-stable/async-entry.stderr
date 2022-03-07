@@ -100,12 +100,12 @@ error: [note] this function cannot be `main`
    |              ^^^^
 
 error[E0728]: `await` is only allowed inside `async` functions and blocks
-  --> tests/ui-fail-stable/async-entry.rs:73:17
+  --> tests/ui-fail-stable/async-entry.rs:73:41
    |
 72 |     fn rocket() -> _ {
    |        ------ this is not `async`
 73 |         let _ = rocket::build().launch().await;
-   |                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ only allowed inside `async` functions and blocks
+   |                                         ^^^^^^ only allowed inside `async` functions and blocks
 
 error[E0308]: mismatched types
   --> tests/ui-fail-stable/async-entry.rs:35:9
