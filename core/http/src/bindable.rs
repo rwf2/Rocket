@@ -14,7 +14,6 @@ pub enum BindableAddr {
     /// Listen on an address and port with the TCP protocol
     Tcp(SocketAddr),
     /// Listen on a Unix socket
-    #[cfg(unix)]
     Unix(PathBuf),
 }
 
@@ -23,7 +22,6 @@ impl BindableAddr {
     pub fn protocol_name(&self) -> &'static str {
         match self {
             Self::Tcp(_) => "tcp",
-            #[cfg(unix)]
             Self::Unix(_) => "unix",
         }
     }
@@ -52,7 +50,6 @@ impl Display for BindableAddr {
                 self.protocol_name(),
                 addr
             ),
-            #[cfg(unix)]
             Self::Unix(path) => write!(formatter, "{}://{}", self.protocol_name(), path.display()),
         }
     }
@@ -103,7 +100,6 @@ impl FromStr for BindableAddr {
         if let Some((protocol_name, data)) = s.split_once("://") {
             Ok(match protocol_name {
                 "tcp" => Self::Tcp(SocketAddr::from_str(data)?),
-                #[cfg(unix)]
                 "unix" => Self::Unix(PathBuf::from(data)),
                 unknown => return Err(Self::Err::UnknownProtocol(unknown.to_string())),
             })

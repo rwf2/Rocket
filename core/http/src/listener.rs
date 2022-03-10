@@ -210,7 +210,7 @@ impl Connection for TcpStream {
 }
 
 #[cfg(unix)]
-mod unix {
+mod platform {
 
 use super::{Connection, Listener};
 use crate::bindable::BindableAddr;
@@ -284,5 +284,134 @@ impl Connection for UnixStream {
 
 }
 
-#[cfg(unix)]
-pub use unix::{UnixListenerWrapper, bind_unix};
+#[cfg(windows)]
+mod platform {
+
+use super::{Connection, Listener};
+use crate::bindable::BindableAddr;
+use std::io;
+use std::path::Path;
+use std::pin::Pin;
+use std::task::{Context, Poll};
+use tokio::io::{AsyncRead, AsyncWrite, ReadBuf};
+use uds_windows::{UnixListener as SyncListener, UnixStream as SyncStream};
+
+/// Binds a Unix socket listener to `path` and returns it.
+pub fn bind_unix(path: &Path) -> io::Result<UnixListenerWrapper> {
+    SyncListener::bind(path).and_then(UnixListenerWrapper::new)
+}
+
+#[repr(transparent)]
+pub struct UnixListenerWrapper(SyncListener);
+
+impl UnixListenerWrapper {
+    pub fn new(inner: SyncListener) -> io::Result<Self> {
+        inner.set_nonblocking(true)?;
+        Ok(Self(inner))
+    }
+}
+
+fn map_would_block<T>(inner: io::Result<T>) -> Poll<io::Result<T>> {
+    match inner {
+        Err(err) if err.kind() == io::ErrorKind::WouldBlock => Poll::Pending,
+        other_result => Poll::Ready(other_result),
+    }
+}
+
+impl Listener for UnixListenerWrapper {
+    type Connection = UnixStreamWrapper;
+
+    fn local_addr(&self) -> Option<BindableAddr> {
+        self.0
+        .local_addr()
+        .ok()
+        .and_then(|addr| addr
+            .as_pathname()
+            .map(|path| BindableAddr::Unix(path.to_owned()))
+        )
+    }
+
+    fn poll_accept(
+        self: Pin<&mut Self>,
+        _cx: &mut Context<'_>
+    ) -> Poll<io::Result<Self::Connection>> {
+        map_would_block(self.0.accept().and_then(|(stream, _addr)| UnixStreamWrapper::new(stream)))
+    }
+}
+
+pub struct UnixStreamWrapper(SyncStream);
+
+impl UnixStreamWrapper {
+    pub fn new(inner: SyncStream) -> io::Result<Self> {
+        inner.set_nonblocking(true)?;
+        Ok(Self(inner))
+    }
+}
+
+impl AsyncRead for UnixStreamWrapper {
+    fn poll_read(
+        mut self: Pin<&mut Self>,
+        _cx: &mut Context<'_>,
+        buf: &mut ReadBuf<'_>
+    ) -> Poll<io::Result<()>> {
+        use std::io::Read as _;
+        // SAFETY: u8 is valid for all bit patterns
+        // this code is unstable in stdlib as MaybeUninit::slice_assume_init_mut
+        match self.0.read(unsafe { &mut *(buf.unfilled_mut() as *mut [_] as *mut [u8]) }) {
+            Ok(amount_read) => {
+                buf.advance(amount_read);
+                Poll::Ready(Ok(()))
+            },
+            Err(err) if err.kind() == io::ErrorKind::WouldBlock => Poll::Pending,
+            Err(other_err) => Poll::Ready(Err(other_err)),
+        }
+    }
+}
+
+impl AsyncWrite for UnixStreamWrapper {
+    fn poll_write(
+        mut self: Pin<&mut Self>,
+        _cx: &mut Context<'_>,
+        buf: &[u8]
+    ) -> Poll<io::Result<usize>> {
+        use std::io::Write as _;
+        map_would_block(self.0.write(buf))
+    }
+    fn poll_flush(
+        mut self: Pin<&mut Self>,
+        _cx: &mut Context<'_>
+    ) -> Poll<io::Result<()>> {
+        use std::io::Write as _;
+        map_would_block(self.0.flush())
+    }
+    fn poll_shutdown(
+        self: Pin<&mut Self>,
+        _cx: &mut Context<'_>
+    ) -> Poll<io::Result<()>> {
+        map_would_block(self.0.shutdown(std::net::Shutdown::Both))
+    }
+    fn poll_write_vectored(
+        mut self: Pin<&mut Self>,
+        _cx: &mut Context<'_>,
+        buffers: &[std::io::IoSlice<'_>]
+    ) -> Poll<io::Result<usize>> {
+        use std::io::Write as _;
+        map_would_block(self.0.write_vectored(buffers))
+    }
+}
+
+impl Connection for UnixStreamWrapper {
+    fn peer_address(&self) -> Option<BindableAddr> {
+        self.0
+        .peer_addr()
+        .ok()
+        .and_then(|addr| addr
+            .as_pathname()
+            .map(|path| BindableAddr::Unix(path.to_owned()))
+        )
+    }
+}
+
+}
+
+pub use platform::bind_unix;
