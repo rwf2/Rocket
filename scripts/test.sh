@@ -118,6 +118,7 @@ function test_core() {
     secrets
     tls
     mtls
+    http2
     json
     msgpack
     uuid
