@@ -683,4 +683,70 @@ mod tests {
             Ok(())
         });
     }
+
+    #[test]
+    fn test_new_address_tcp_basic() {
+        use std::net::{Ipv4Addr, SocketAddr};
+        figment::Jail::expect_with(|jail| {
+            jail.create_file("Rocket.toml", r#"
+                [default]
+                address = "tcp://127.0.0.1:8000"
+            "#)?;
+            assert_eq!(Config::from(Config::figment()).address, BindableAddr::Tcp(SocketAddr::new(Ipv4Addr::new(127, 0, 0, 1).into(), 8000)));
+            Ok(())
+        });
+    }
+
+    #[test]
+    fn test_new_address_tcp_invalid() {
+        figment::Jail::expect_with(|jail| {
+            jail.create_file("Rocket.toml", r#"
+                [default]
+                address = "tcp://foo-bar-baz"
+            "#)?;
+            assert!(Config::try_from(Config::figment()).is_err());
+            Ok(())
+        });
+    }
+
+    #[test]
+    fn test_new_address_unix_basic() {
+        use std::path::PathBuf;
+        figment::Jail::expect_with(|jail| {
+            jail.create_file("Rocket.toml", r#"
+                [default]
+                address = "unix:///path/to/socket.sock"
+            "#)?;
+            assert_eq!(Config::from(Config::figment()).address, BindableAddr::Unix(PathBuf::from("/path/to/socket.sock")));
+            Ok(())
+        });
+    }
+
+    #[test]
+    fn test_new_address_warning_old() {
+        use std::net::{Ipv4Addr, SocketAddr};
+        figment::Jail::expect_with(|jail| {
+            jail.create_file("Rocket.toml", r##"
+                [default]
+                address = "127.0.0.1"
+                port = 8000
+            "##)?;
+            assert_eq!(Config::from(Config::figment()).address, BindableAddr::Tcp(SocketAddr::new(Ipv4Addr::new(127, 0, 0, 1).into(), 8000)));
+            Ok(())
+        });
+    }
+
+    #[test]
+    fn test_new_address_warning_new_with_port() {
+        use std::net::{Ipv4Addr, SocketAddr};
+        figment::Jail::expect_with(|jail| {
+            jail.create_file("Rocket.toml", r##"
+                [default]
+                address = "tcp://127.0.0.1:8000"
+                port = 9000
+            "##)?;
+            assert_eq!(Config::from(Config::figment()).address, BindableAddr::Tcp(SocketAddr::new(Ipv4Addr::new(127, 0, 0, 1).into(), 8000)));
+            Ok(())
+        });
+    }
 }
