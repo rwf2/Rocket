@@ -389,9 +389,12 @@ impl Rocket<Orbit> {
             }
         }
 
-        match &self.config.address {
-            BindableAddr::Tcp(addr) => {
+        match &mut self.config.address {
+            BindableAddr::Tcp(ref mut addr) => {
                 let l = bind_tcp(addr.clone()).await.map_err(ErrorKind::Bind)?;
+                if let Ok(new_addr) = l.local_addr() {
+                    *addr = new_addr;
+                }
                 tls_then_run!(l)
             },
             #[cfg(unix)]
