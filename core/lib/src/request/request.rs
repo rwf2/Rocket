@@ -318,6 +318,7 @@ impl<'r> Request<'r> {
     /// # Example
     ///
     /// ```rust
+    /// use rocket::config::BindableAddr;
     /// use std::net::{SocketAddrV4, Ipv4Addr};
     /// # let c = rocket::local::blocking::Client::debug_with(vec![]).unwrap();
     /// # let mut req = c.get("/");
@@ -325,9 +326,9 @@ impl<'r> Request<'r> {
     ///
     /// assert_eq!(request.remote(), None);
     ///
-    /// let localhost = SocketAddrV4::new(Ipv4Addr::LOCALHOST, 8000).into();
-    /// request.set_remote(localhost);
-    /// assert_eq!(request.remote(), Some(localhost));
+    /// let localhost: BindableAddr = "tcp://127.0.0.1:8000".parse().unwrap();
+    /// request.set_remote(localhost.clone());
+    /// assert_eq!(request.remote(), Some(&localhost));
     /// ```
     #[inline(always)]
     pub fn remote(&self) -> Option<&BindableAddr> {
@@ -338,19 +339,19 @@ impl<'r> Request<'r> {
     ///
     /// # Example
     ///
-    /// Set the remote address to be 127.0.0.1:8000:
+    /// Set the remote address to be tcp://127.0.0.1:8000:
     ///
     /// ```rust
-    /// use std::net::{SocketAddrV4, Ipv4Addr};
+    /// use rocket::config::BindableAddr;
     /// # let c = rocket::local::blocking::Client::debug_with(vec![]).unwrap();
     /// # let mut req = c.get("/");
     /// # let request = req.inner_mut();
     ///
     /// assert_eq!(request.remote(), None);
     ///
-    /// let localhost = SocketAddrV4::new(Ipv4Addr::LOCALHOST, 8000).into();
-    /// request.set_remote(localhost);
-    /// assert_eq!(request.remote(), Some(localhost));
+    /// let localhost: BindableAddr = "tcp://127.0.0.1:8000".parse().unwrap();
+    /// request.set_remote(localhost.clone());
+    /// assert_eq!(request.remote(), Some(&localhost));
     /// ```
     #[inline(always)]
     pub fn set_remote(&mut self, address: BindableAddr) {
@@ -403,7 +404,7 @@ impl<'r> Request<'r> {
     /// assert!(request.client_ip().is_none());
     ///
     /// // add a remote address; this is done by Rocket automatically
-    /// request.set_remote("127.0.0.1:8000".parse().unwrap());
+    /// request.set_remote("tcp://127.0.0.1:8000".parse().unwrap());
     /// assert_eq!(request.client_ip(), Some("127.0.0.1".parse().unwrap()));
     ///
     /// // now with an X-Real-IP header

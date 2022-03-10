@@ -22,7 +22,7 @@ use super::{Client, LocalResponse};
 /// let client = Client::tracked(rocket::build()).expect("valid rocket");
 /// let req = client.post("/")
 ///     .header(ContentType::JSON)
-///     .remote("127.0.0.1:8000".parse().unwrap())
+///     .remote("tcp://127.0.0.1:8000".parse().unwrap())
 ///     .cookie(Cookie::new("name", "value"))
 ///     .body(r#"{ "value": 42 }"#);
 ///

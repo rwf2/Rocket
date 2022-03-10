@@ -19,8 +19,7 @@ values:
 
 | key            | kind              | description                                     | debug/release default   |
 |----------------|-------------------|-------------------------------------------------|-------------------------|
-| `address`      | `IpAddr`          | IP address to serve on                          | `127.0.0.1`             |
-| `port`         | `u16`             | Port to serve on.                               | `8000`                  |
+| `address`      | `BindableAddr`    | Protocol to serve on                            | `tcp://127.0.0.1:8000`  |
 | `workers`      | `usize`           | Number of threads to use for executing futures. | cpu core count          |
 | `ident`        | `string`, `false` | If and how to identify via the `Server` header. | `"Rocket"`              |
 | `keep_alive`   | `u32`             | Keep-alive timeout seconds; disabled when `0`.  | `5`                     |
@@ -32,6 +31,10 @@ values:
 | `limits.$name` | `&str`/`uint`     | Read limit for `$name`.                         | form = "32KiB"         |
 | `ctrlc`        | `bool`            | Whether `ctrl-c` initiates a server shutdown.   | `true`                  |
 | `shutdown`     | [`Shutdown`]      | Graceful shutdown configuration.                | [`Shutdown::default()`] |
+
+#### `BindableAddr`
+
+A bindable address can currently be a TCP address (argument: IP and port) or Unix socket (argument: path). A TCP address is specified in the format `"tcp://address:port"`, using square brackets for IPv6, and a Unix socket is specified in the format `"unix:///path/to/socket"`.
 
 ### Profiles
 
@@ -105,23 +108,23 @@ file might look like:
 ```toml
 ## defaults for _all_ profiles
 [default]
-address = "0.0.0.0"
+address = "tcp://0.0.0.0:8000"
 limits = { form = "64 kB", json = "1 MiB" }
 
 ## set only when compiled in debug mode, i.e, `cargo build`
 [debug]
-port = 8000
+address = "tcp://127.0.0.1:8000"
 ## only the `json` key from `default` will be overridden; `form` will remain
 limits = { json = "10MiB" }
 
 ## set only when the `nyc` profile is selected
 [nyc]
-port = 9001
+workers = 4
 
 ## set only when compiled in release mode, i.e, `cargo build --release`
 ## don't use this secret_key! generate your own and keep it private!
 [release]
-port = 9999
+address = "unix:///run/nginx-socks/my.website.rocks.sock"
 secret_key = "hPRYyVRiMyxpw5sBB1XeCMN1kFsDCqKvBi2QJxBVHQk="
 ```
 
@@ -132,8 +135,7 @@ sensible.
 
 ```toml
 [default]
-address = "127.0.0.1"
-port = 8000
+address = "tcp://127.0.0.1:8000"
 workers = 16
 keep_alive = 5
 ident = "Rocket"
@@ -435,7 +437,7 @@ use rocket::data::{Limits, ToByteUnit};
 #[launch]
 fn rocket() -> _ {
     let figment = rocket::Config::figment()
-        .merge(("port", 1111))
+        .merge(("workers", 8))
         .merge(("limits", Limits::new().limit("json", 2.mebibytes())));
 
     rocket::custom(figment).mount("/", routes![/* .. */])
@@ -483,9 +485,10 @@ fn rocket() -> _ {
 ```
 
 Rocket will extract its configuration from the configured provider. This means
-that if values like `port` and `address` are configured in `Config`, `App.toml`
-or `APP_` environment variables, Rocket will make use of them. The application
-can also extract its configuration, done here via the `Adhoc::config()` fairing.
+that if values like `workers` and `address` are configured in `Config`,
+`App.toml` or `APP_` environment variables, Rocket will make use of them. The
+application can also extract its configuration, done here via the
+`Adhoc::config()` fairing.
 
 [`rocket::custom()`]: @api/rocket/fn.custom.html
 [`rocket::build()`]: @api/rocket/fn.custom.html

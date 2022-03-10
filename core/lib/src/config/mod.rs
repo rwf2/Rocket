@@ -59,7 +59,7 @@
 //! #[launch]
 //! fn rocket() -> _ {
 //!     let figment = rocket::Config::figment()
-//!         .merge(("port", 1111))
+//!         .merge(("workers", 20))
 //!         .merge(("limits", Limits::new().limit("json", 2.mebibytes())));
 //!
 //!     rocket::custom(figment).mount("/", routes![/* .. */])

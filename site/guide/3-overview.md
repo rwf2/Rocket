@@ -165,8 +165,7 @@ Running the application, the console shows:
 ```sh
 > cargo run
 🔧 Configured for debug.
-   >> address: 127.0.0.1
-   >> port: 8000
+   >> address: tcp://127.0.0.1:8000
    >> workers: [..]
    >> keep-alive: 5s
    >> limits: [..]
@@ -176,7 +175,7 @@ Running the application, the console shows:
    >> cli colors: true
 🛰  Routes:
    >> (world) GET /hello/world
-🚀 Rocket has launched from http://127.0.0.1:8000
+🚀 Rocket has launched from http://tcp://127.0.0.1:8000
 ```
 
 ! tip: `#[launch]` infers the return type!

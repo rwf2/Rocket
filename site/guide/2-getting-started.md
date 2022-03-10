@@ -84,8 +84,7 @@ run`. You should see the following:
 ```sh
 > cargo run
 🔧 Configured for debug.
-   >> address: 127.0.0.1
-   >> port: 8000
+   >> address: tcp://127.0.0.1:8000
    >> workers: [..]
    >> keep-alive: 5s
    >> limits: [..]
@@ -95,7 +94,7 @@ run`. You should see the following:
    >> cli colors: true
 🛰  Routes:
    >> (index) GET /
-🚀 Rocket has launched from http://127.0.0.1:8000
+🚀 Rocket has launched from http://tcp://127.0.0.1:8000
 ```
 
 Visit `http://localhost:8000` to see your first Rocket application in action!

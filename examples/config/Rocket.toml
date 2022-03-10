@@ -13,15 +13,13 @@ extra = false
 ident = "Rocket"
 
 [debug]
-address = "127.0.0.1"
-port = 8000
+address = "tcp://127.0.0.1:8000"
 workers = 1
 keep_alive = 0
 log_level = "normal"
 
 [release]
-address = "127.0.0.1"
-port = 8000
+address = "tcp://127.0.0.1:8000"
 workers = 12
 keep_alive = 5
 log_level = "critical"

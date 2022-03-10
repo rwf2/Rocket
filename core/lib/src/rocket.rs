@@ -168,41 +168,38 @@ impl Rocket<Build> {
     /// A [`Figment`] generated from the current `provider` can _always_ be
     /// retrieved via [`Rocket::figment()`]. However, because the provider can
     /// be changed at any point prior to ignition, a [`Config`] can only be
-    /// retrieved in the ignite or orbit phases, or by manually extracing one
+    /// retrieved in the ignite or orbit phases, or by manually extracting one
     /// from a particular figment.
     ///
     /// # Example
     ///
     /// ```rust
     /// use rocket::Config;
-    /// # use std::net::Ipv4Addr;
+    /// use rocket::config::BindableAddr;
+    /// # use std::net::{Ipv4Addr, SocketAddr};
     /// # use std::path::{Path, PathBuf};
     /// # type Result = std::result::Result<(), rocket::Error>;
     ///
     /// let config = Config {
-    ///     port: 7777,
-    ///     address: Ipv4Addr::new(18, 127, 0, 1).into(),
+    ///     address: BindableAddr::Tcp(SocketAddr::new(Ipv4Addr::new(18, 127, 0, 1).into(), 7777)),
     ///     temp_dir: "/tmp/config-example".into(),
     ///     ..Config::debug_default()
     /// };
     ///
     /// # let _: Result = rocket::async_test(async move {
     /// let rocket = rocket::custom(&config).ignite().await?;
-    /// assert_eq!(rocket.config().port, 7777);
-    /// assert_eq!(rocket.config().address, Ipv4Addr::new(18, 127, 0, 1));
+    /// assert_eq!(rocket.config().address, BindableAddr::Tcp(SocketAddr::new(Ipv4Addr::new(18, 127, 0, 1).into(), 7777)));
     /// assert_eq!(rocket.config().temp_dir.relative(), Path::new("/tmp/config-example"));
     ///
     /// // Create a new figment which modifies _some_ keys the existing figment:
     /// let figment = rocket.figment().clone()
-    ///     .merge((Config::PORT, 8888))
-    ///     .merge((Config::ADDRESS, "171.64.200.10"));
+    ///     .merge((Config::ADDRESS, "tcp://171.64.200.10:8888"));
     ///
     /// let rocket = rocket::custom(&config)
     ///     .configure(figment)
     ///     .ignite().await?;
     ///
-    /// assert_eq!(rocket.config().port, 8888);
-    /// assert_eq!(rocket.config().address, Ipv4Addr::new(171, 64, 200, 10));
+    /// assert_eq!(rocket.config().address, BindableAddr::Tcp(SocketAddr::new(Ipv4Addr::new(171, 64, 200, 10).into(), 8888)));
     /// assert_eq!(rocket.config().temp_dir.relative(), Path::new("/tmp/config-example"));
     /// # Ok(())
     /// # });

@@ -109,7 +109,7 @@ pub struct Config {
     /// use rocket::Config;
     ///
     /// let config = Config {
-    ///     port: 1024,
+    ///     workers: 20,
     ///     keep_alive: 10,
     ///     ..Default::default()
     /// };
@@ -443,9 +443,6 @@ impl Config {
 
     /// The stringy parameter name for setting/extracting [`Config::address`].
     pub const ADDRESS: &'static str = "address";
-
-    /// The stringy parameter name for setting/extracting [`Config::port`].
-    pub const PORT: &'static str = "port";
 
     /// The stringy parameter name for setting/extracting [`Config::workers`].
     pub const WORKERS: &'static str = "workers";

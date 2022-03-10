@@ -101,14 +101,14 @@ macro_rules! pub_request_impl {
     ///
     /// # Examples
     ///
-    /// Set the remote address to "8.8.8.8:80":
+    /// Set the remote address to "tcp://8.8.8.8:80":
     ///
     /// ```rust
     #[doc = $import]
     ///
     /// # Client::_test(|_, request, _| {
     /// let request: LocalRequest = request;
-    /// let address = "8.8.8.8:80".parse().unwrap();
+    /// let address = "tcp://8.8.8.8:80".parse().unwrap();
     /// let req = request.remote(address);
     /// # });
     /// ```

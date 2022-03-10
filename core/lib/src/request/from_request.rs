@@ -166,9 +166,9 @@ impl<S, E> IntoOutcome<S, (Status, E), ()> for Result<S, E> {
 ///     Extracts the client ip address of the incoming request as an [`IpAddr`].
 ///     If the client's IP address is not known, the request is forwarded.
 ///
-///   * **SocketAddr**
+///   * **BindableAddr**
 ///
-///     Extracts the remote address of the incoming request as a [`SocketAddr`].
+///     Extracts the remote address of the incoming request as a [`BindableAddr`].
 ///     If the remote address is not known, the request is forwarded.
 ///
 ///     _This implementation always returns successfully._
