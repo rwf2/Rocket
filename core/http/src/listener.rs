@@ -311,6 +311,16 @@ impl UnixListenerWrapper {
     }
 }
 
+impl Drop for UnixListenerWrapper {
+    fn drop(&mut self) {
+        if let Ok(addr) = self.0.local_addr() {
+            if let Some(path) = addr.as_pathname() {
+                let _ = std::fs::remove_file(path);
+            }
+        }
+    }
+}
+
 fn map_would_block<T>(inner: io::Result<T>) -> Poll<io::Result<T>> {
     match inner {
         Err(err) if err.kind() == io::ErrorKind::WouldBlock => Poll::Pending,
