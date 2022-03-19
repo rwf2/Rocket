@@ -7,7 +7,7 @@ repository = "https://github.com/SergioBenitez/Rocket/contrib/db_pools"
 readme = "../README.md"
 keywords = ["rocket", "framework", "database", "pools"]
 license = "MIT OR Apache-2.0"
-edition = "2018"
+edition = "2021"
 
 [lib]
 proc-macro = true
