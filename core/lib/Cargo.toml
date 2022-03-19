@@ -13,7 +13,8 @@ keywords = ["rocket", "web", "framework", "server"]
 license = "MIT OR Apache-2.0"
 build = "build.rs"
 categories = ["web-programming::http-server"]
-edition = "2018"
+edition = "2021"
+rust-version = "1.56"
 
 [package.metadata.docs.rs]
 all-features = true
@@ -82,7 +83,6 @@ features = ["io"]
 version = "1.0"
 
 [build-dependencies]
-yansi = "0.5"
 version_check = "0.9.1"
 
 [dev-dependencies]

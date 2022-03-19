@@ -9,7 +9,8 @@ repository = "https://github.com/SergioBenitez/Rocket"
 readme = "../../README.md"
 keywords = ["rocket", "web", "framework", "code", "generation"]
 license = "MIT OR Apache-2.0"
-edition = "2018"
+edition = "2021"
+rust-version = "1.56"
 
 [lib]
 proc-macro = true

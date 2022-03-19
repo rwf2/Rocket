@@ -7,7 +7,8 @@ repository = "https://github.com/SergioBenitez/Rocket/tree/v0.5-rc/contrib/sync_
 readme = "../README.md"
 keywords = ["rocket", "framework", "database", "pools"]
 license = "MIT OR Apache-2.0"
-edition = "2018"
+edition = "2021"
+rust-version = "1.56"
 
 [features]
 diesel_sqlite_pool = ["diesel/sqlite", "diesel/r2d2"]
