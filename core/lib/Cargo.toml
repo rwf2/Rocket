@@ -82,7 +82,6 @@ features = ["io"]
 version = "1.0"
 
 [build-dependencies]
-yansi = "0.5"
 version_check = "0.9.1"
 
 [dev-dependencies]
