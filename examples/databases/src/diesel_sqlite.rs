@@ -10,7 +10,7 @@ use self::diesel::prelude::*;
 #[database("diesel")]
 struct Db(diesel::SqliteConnection);
 
-type Result<T, E = Debug<diesel::result::Error>> = std::result::Result<T, E>;
+type DieselResult<T, E = Debug<diesel::result::Error>> = std::result::Result<T, E>;
 
 #[derive(Debug, Clone, Deserialize, Serialize, Queryable, Insertable)]
 #[serde(crate = "rocket::serde")]
@@ -34,7 +34,7 @@ table! {
 }
 
 #[post("/", data = "<post>")]
-async fn create(db: Db, post: Json<Post>) -> Result<Created<Json<Post>>> {
+async fn create(db: Db, post: Json<Post>) -> DieselResult<Created<Json<Post>>> {
     let post_value = post.clone();
     db.run(move |conn| {
         diesel::insert_into(posts::table)
@@ -46,7 +46,7 @@ async fn create(db: Db, post: Json<Post>) -> Result<Created<Json<Post>>> {
 }
 
 #[get("/")]
-async fn list(db: Db) -> Result<Json<Vec<Option<i32>>>> {
+async fn list(db: Db) -> DieselResult<Json<Vec<Option<i32>>>> {
     let ids: Vec<Option<i32>> = db.run(move |conn| {
         posts::table
             .select(posts::id)
@@ -66,7 +66,7 @@ async fn read(db: Db, id: i32) -> Option<Json<Post>> {
 }
 
 #[delete("/<id>")]
-async fn delete(db: Db, id: i32) -> Result<Option<()>> {
+async fn delete(db: Db, id: i32) -> DieselResult<Option<()>> {
     let affected = db.run(move |conn| {
         diesel::delete(posts::table)
             .filter(posts::id.eq(id))
@@ -77,7 +77,7 @@ async fn delete(db: Db, id: i32) -> Result<Option<()>> {
 }
 
 #[delete("/")]
-async fn destroy(db: Db) -> Result<()> {
+async fn destroy(db: Db) -> DieselResult<()> {
     db.run(move |conn| diesel::delete(posts::table).execute(conn)).await?;
 
     Ok(())
