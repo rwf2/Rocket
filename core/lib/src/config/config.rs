@@ -358,6 +358,7 @@ impl Config {
         launch_info_!("ident: {}", bold(&self.ident));
         launch_info_!("limits: {}", bold(&self.limits));
         launch_info_!("temp dir: {}", bold(&self.temp_dir.relative().display()));
+        launch_info_!("http/2: {}", bold(cfg!(feature = "http2")));
 
         match self.keep_alive {
             0 => launch_info_!("keep-alive: {}", bold("disabled")),

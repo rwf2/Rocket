@@ -1,53 +1,37 @@
 error[E0277]: the trait bound `usize: Responder<'_, '_>` is not satisfied
-   --> $DIR/catch_type_errors.rs:6:30
-    |
-6   | fn f1(_request: &Request) -> usize {
-    |                              ^^^^^ the trait `Responder<'_, '_>` is not implemented for `usize`
-    |
-note: required by `respond_to`
-   --> $DIR/responder.rs:298:5
-    |
-298 |     fn respond_to(self, request: &'r Request<'_>) -> response::Result<'o>;
-    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+ --> tests/ui-fail-nightly/catch_type_errors.rs:6:30
+  |
+5 | #[catch(404)]
+  | ------------- required by a bound introduced by this call
+6 | fn f1(_request: &Request) -> usize {
+  |                              ^^^^^ the trait `Responder<'_, '_>` is not implemented for `usize`
 
 error[E0277]: the trait bound `bool: Responder<'_, '_>` is not satisfied
-   --> $DIR/catch_type_errors.rs:11:30
-    |
-11  | fn f2(_request: &Request) -> bool {
-    |                              ^^^^ the trait `Responder<'_, '_>` is not implemented for `bool`
-    |
-note: required by `respond_to`
-   --> $DIR/responder.rs:298:5
-    |
-298 |     fn respond_to(self, request: &'r Request<'_>) -> response::Result<'o>;
-    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  --> tests/ui-fail-nightly/catch_type_errors.rs:11:30
+   |
+10 | #[catch(404)]
+   | ------------- required by a bound introduced by this call
+11 | fn f2(_request: &Request) -> bool {
+   |                              ^^^^ the trait `Responder<'_, '_>` is not implemented for `bool`
 
 error[E0308]: mismatched types
-  --> $DIR/catch_type_errors.rs:16:17
+  --> tests/ui-fail-nightly/catch_type_errors.rs:16:17
    |
 16 | fn f3(_request: bool) -> usize {
    |                 ^^^^ expected `bool`, found `&rocket::Request<'_>`
 
 error[E0277]: the trait bound `usize: Responder<'_, '_>` is not satisfied
-   --> $DIR/catch_type_errors.rs:16:26
-    |
-16  | fn f3(_request: bool) -> usize {
-    |                          ^^^^^ the trait `Responder<'_, '_>` is not implemented for `usize`
-    |
-note: required by `respond_to`
-   --> $DIR/responder.rs:298:5
-    |
-298 |     fn respond_to(self, request: &'r Request<'_>) -> response::Result<'o>;
-    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  --> tests/ui-fail-nightly/catch_type_errors.rs:16:26
+   |
+15 | #[catch(404)]
+   | ------------- required by a bound introduced by this call
+16 | fn f3(_request: bool) -> usize {
+   |                          ^^^^^ the trait `Responder<'_, '_>` is not implemented for `usize`
 
 error[E0277]: the trait bound `usize: Responder<'_, '_>` is not satisfied
-   --> $DIR/catch_type_errors.rs:21:12
-    |
-21  | fn f4() -> usize {
-    |            ^^^^^ the trait `Responder<'_, '_>` is not implemented for `usize`
-    |
-note: required by `respond_to`
-   --> $DIR/responder.rs:298:5
-    |
-298 |     fn respond_to(self, request: &'r Request<'_>) -> response::Result<'o>;
-    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  --> tests/ui-fail-nightly/catch_type_errors.rs:21:12
+   |
+20 | #[catch(404)]
+   | ------------- required by a bound introduced by this call
+21 | fn f4() -> usize {
+   |            ^^^^^ the trait `Responder<'_, '_>` is not implemented for `usize`

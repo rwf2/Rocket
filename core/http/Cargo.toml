@@ -16,8 +16,9 @@ edition = "2018"
 
 [features]
 default = []
-tls = ["rustls", "tokio-rustls"]
+tls = ["rustls", "tokio-rustls", "rustls-pemfile"]
 mtls = ["tls", "x509-parser"]
+http2 = ["hyper/http2"]
 private-cookies = ["cookie/private", "cookie/key-expansion"]
 serde = ["uncased/with-serde-alloc", "serde_"]
 uuid = ["uuid_"]
@@ -28,8 +29,9 @@ percent-encoding = "2"
 http = "0.2"
 time = { version = "0.3", features = ["formatting", "macros"] }
 indexmap = { version = "1.5.2", features = ["std"] }
-rustls = { version = "0.19", optional = true }
-tokio-rustls = { version = "0.22.0", optional = true }
+rustls = { version = "0.20", optional = true }
+tokio-rustls = { version = "0.23.0", optional = true }
+rustls-pemfile = { version = "0.3", optional = true }
 tokio = { version = "1.6.1", features = ["net", "sync", "time"] }
 log = "0.4"
 ref-cast = "1.0"
@@ -39,17 +41,17 @@ pear = "0.2.3"
 pin-project-lite = "0.2"
 memchr = "2"
 stable-pattern = "0.1"
-cookie = { version = "0.16.0-rc.1", features = ["percent-encode"] }
+cookie = { version = "0.16.0", features = ["percent-encode", "secure"] }
 state = "0.5.1"
 
 [dependencies.x509-parser]
-version = "0.9.2"
+version = "0.13"
 optional = true
 
 [dependencies.hyper]
 version = "0.14.9"
 default-features = false
-features = ["http1", "http2", "runtime", "server", "stream"]
+features = ["http1", "runtime", "server", "stream"]
 
 [dependencies.serde_]
 package = "serde"

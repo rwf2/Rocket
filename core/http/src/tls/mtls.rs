@@ -1,7 +1,7 @@
 pub mod oid {
     //! Lower-level OID types re-exported from
-    //! [`oid_registry`](https://docs.rs/oid-registry/0.1) and
-    //! [`der-parser`](https://docs.rs/der-parser/5).
+    //! [`oid_registry`](https://docs.rs/oid-registry/0.4) and
+    //! [`der-parser`](https://docs.rs/der-parser/7).
 
     pub use x509_parser::oid_registry::*;
     pub use x509_parser::der_parser::oid::*;
@@ -16,7 +16,7 @@ pub mod bigint {
 
 pub mod x509 {
     //! Lower-level X.509 types re-exported from
-    //! [`x509_parser`](https://docs.rs/x509-parser/0.9).
+    //! [`x509_parser`](https://docs.rs/x509-parser/0.13).
     //!
     //! Lack of documentation is directly inherited from the source crate.
     //! Prefer to use Rocket's wrappers when possible.
@@ -30,16 +30,16 @@ pub mod x509 {
     pub use x509_parser::x509::*;
     pub use x509_parser::der_parser::der;
     pub use x509_parser::der_parser::ber;
+    pub use x509_parser::traits::*;
 }
 
 use std::fmt;
 use std::ops::Deref;
-use std::collections::HashMap;
 use std::num::NonZeroUsize;
 
 use ref_cast::RefCast;
 use x509_parser::nom;
-use x509::{ParsedExtension, X509Name, X509Certificate, TbsCertificate, X509Error};
+use x509::{ParsedExtension, X509Name, X509Certificate, TbsCertificate, X509Error, FromDer};
 use oid::OID_X509_EXT_SUBJECT_ALT_NAME as SUBJECT_ALT_NAME;
 
 use crate::listener::RawCertificate;
@@ -75,11 +75,8 @@ pub enum Error {
     NoSubject,
     /// There is no subject and the subjectAlt is not marked as critical.
     NonCriticalSubjectAlt,
-    // FIXME: Waiting on https://github.com/rusticata/x509-parser/pull/92.
-    // Parse(X509Error),
     /// An error occurred while parsing the certificate.
-    #[doc(hidden)]
-    Parse(String),
+    Parse(X509Error),
     /// The certificate parsed partially but is incomplete.
     ///
     /// If `Some(n)`, then `n` more bytes were expected. Otherwise, the number
@@ -201,8 +198,9 @@ impl<'a> Certificate<'a> {
             return Err(Error::Trailing(left.len()));
         }
 
+        // Ensure we have a subject or a subjectAlt.
         if x509.subject().as_raw().is_empty() {
-            if let Some(ext) = x509.extensions().get(&SUBJECT_ALT_NAME) {
+            if let Some(ext) = x509.extensions().iter().find(|e| e.oid == SUBJECT_ALT_NAME) {
                 if !matches!(ext.parsed_extension(), ParsedExtension::SubjectAlternativeName(..)) {
                     return Err(Error::NoSubject);
                 } else if !ext.critical {
@@ -308,7 +306,7 @@ impl<'a> Certificate<'a> {
         Name::ref_cast(&self.inner().issuer)
     }
 
-    /// Returns a map of the extensions in the X.509 certificate.
+    /// Returns a slice of the extensions in the X.509 certificate.
     ///
     /// # Example
     ///
@@ -319,8 +317,8 @@ impl<'a> Certificate<'a> {
     ///
     /// #[get("/auth")]
     /// fn auth(cert: Certificate<'_>) {
-    ///     let subject_alt = cert.extensions()
-    ///         .get(&oid::OID_X509_EXT_SUBJECT_ALT_NAME)
+    ///     let subject_alt = cert.extensions().iter()
+    ///         .find(|e| e.oid == oid::OID_X509_EXT_SUBJECT_ALT_NAME)
     ///         .and_then(|e| match e.parsed_extension() {
     ///             x509::ParsedExtension::SubjectAlternativeName(s) => Some(s),
     ///             _ => None
@@ -335,8 +333,8 @@ impl<'a> Certificate<'a> {
     ///     }
     /// }
     /// ```
-    pub fn extensions(&self) -> &HashMap<oid::Oid<'a>, x509::X509Extension<'a>> {
-        &self.inner().extensions
+    pub fn extensions(&self) -> &[x509::X509Extension<'a>] {
+        &self.inner().extensions()
     }
 
     /// Checks if the certificate has the serial number `number`.
@@ -522,7 +520,7 @@ impl From<nom::Err<X509Error>> for Error {
         match e {
             nom::Err::Incomplete(nom::Needed::Unknown) => Error::Incomplete(None),
             nom::Err::Incomplete(nom::Needed::Size(n)) => Error::Incomplete(Some(n)),
-            nom::Err::Error(e) | nom::Err::Failure(e) => Error::Parse(e.to_string()),
+            nom::Err::Error(e) | nom::Err::Failure(e) => Error::Parse(e),
         }
     }
 }

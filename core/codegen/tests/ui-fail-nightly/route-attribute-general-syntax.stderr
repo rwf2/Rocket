@@ -1,5 +1,5 @@
 error: missing expected parameter: `uri`
- --> $DIR/route-attribute-general-syntax.rs:4:1
+ --> tests/ui-fail-nightly/route-attribute-general-syntax.rs:4:1
   |
 4 | #[get()]
   | ^^^^^^^^
@@ -7,7 +7,7 @@ error: missing expected parameter: `uri`
   = note: this error originates in the attribute macro `get` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: expected `fn`
- --> $DIR/route-attribute-general-syntax.rs:9:1
+ --> tests/ui-fail-nightly/route-attribute-general-syntax.rs:9:1
   |
 9 | struct S;
   | ^^^^^^
@@ -15,7 +15,7 @@ error: expected `fn`
   = help: #[get] can only be used on functions
 
 error: expected `fn`
-  --> $DIR/route-attribute-general-syntax.rs:12:1
+  --> tests/ui-fail-nightly/route-attribute-general-syntax.rs:12:1
    |
 12 | enum A {  }
    | ^^^^
@@ -23,7 +23,7 @@ error: expected `fn`
    = help: #[get] can only be used on functions
 
 error: expected `fn`
-  --> $DIR/route-attribute-general-syntax.rs:15:1
+  --> tests/ui-fail-nightly/route-attribute-general-syntax.rs:15:1
    |
 15 | trait Foo {  }
    | ^^^^^
@@ -31,7 +31,7 @@ error: expected `fn`
    = help: #[get] can only be used on functions
 
 error: expected `fn`
-  --> $DIR/route-attribute-general-syntax.rs:18:1
+  --> tests/ui-fail-nightly/route-attribute-general-syntax.rs:18:1
    |
 18 | impl S {  }
    | ^^^^
@@ -39,37 +39,37 @@ error: expected `fn`
    = help: #[get] can only be used on functions
 
 error: expected key/value `key = value`
-  --> $DIR/route-attribute-general-syntax.rs:21:12
+  --> tests/ui-fail-nightly/route-attribute-general-syntax.rs:21:12
    |
 21 | #[get("/", 123)]
    |            ^^^
 
 error: expected key/value `key = value`
-  --> $DIR/route-attribute-general-syntax.rs:24:12
+  --> tests/ui-fail-nightly/route-attribute-general-syntax.rs:24:12
    |
 24 | #[get("/", "/")]
    |            ^^^
 
 error: unexpected keyed parameter: expected literal or identifier
-  --> $DIR/route-attribute-general-syntax.rs:27:7
+  --> tests/ui-fail-nightly/route-attribute-general-syntax.rs:27:7
    |
 27 | #[get(data = "<foo>", "/")]
    |       ^^^^^^^^^^^^^^
 
 error: unexpected attribute parameter: `unknown`
-  --> $DIR/route-attribute-general-syntax.rs:30:12
+  --> tests/ui-fail-nightly/route-attribute-general-syntax.rs:30:12
    |
 30 | #[get("/", unknown = "foo")]
    |            ^^^^^^^^^^^^^^^
 
 error: expected key/value `key = value`
-  --> $DIR/route-attribute-general-syntax.rs:33:12
+  --> tests/ui-fail-nightly/route-attribute-general-syntax.rs:33:12
    |
 33 | #[get("/", ...)]
    |            ^^^
 
 error: handler arguments must be named
-  --> $DIR/route-attribute-general-syntax.rs:39:7
+  --> tests/ui-fail-nightly/route-attribute-general-syntax.rs:39:7
    |
 39 | fn c1(_: usize) {}
    |       ^^^^^^^^
@@ -77,103 +77,103 @@ error: handler arguments must be named
    = help: to name an ignored handler argument, use `_name`
 
 error: invalid value: expected string literal
-  --> $DIR/route-attribute-general-syntax.rs:43:7
+  --> tests/ui-fail-nightly/route-attribute-general-syntax.rs:43:7
    |
 43 | #[get(100)]
    |       ^^^
 
 error: invalid value: expected string literal
-  --> $DIR/route-attribute-general-syntax.rs:46:7
+  --> tests/ui-fail-nightly/route-attribute-general-syntax.rs:46:7
    |
 46 | #[get('/')]
    |       ^^^
 
 error: invalid value: expected integer literal
-  --> $DIR/route-attribute-general-syntax.rs:49:19
+  --> tests/ui-fail-nightly/route-attribute-general-syntax.rs:49:19
    |
 49 | #[get("/", rank = "1")]
    |                   ^^^
 
 error: invalid value: expected integer literal
-  --> $DIR/route-attribute-general-syntax.rs:52:19
+  --> tests/ui-fail-nightly/route-attribute-general-syntax.rs:52:19
    |
 52 | #[get("/", rank = '1')]
    |                   ^^^
 
 error: invalid or unknown media type
-  --> $DIR/route-attribute-general-syntax.rs:57:21
+  --> tests/ui-fail-nightly/route-attribute-general-syntax.rs:57:21
    |
 57 | #[get("/", format = "applicationx-custom")]
    |                     ^^^^^^^^^^^^^^^^^^^^^
 
 error: invalid or unknown media type
-  --> $DIR/route-attribute-general-syntax.rs:60:21
+  --> tests/ui-fail-nightly/route-attribute-general-syntax.rs:60:21
    |
 60 | #[get("/", format = "")]
    |                     ^^
 
 error: invalid or unknown media type
-  --> $DIR/route-attribute-general-syntax.rs:63:21
+  --> tests/ui-fail-nightly/route-attribute-general-syntax.rs:63:21
    |
 63 | #[get("/", format = "//")]
    |                     ^^^^
 
 error: invalid or unknown media type
-  --> $DIR/route-attribute-general-syntax.rs:66:21
+  --> tests/ui-fail-nightly/route-attribute-general-syntax.rs:66:21
    |
 66 | #[get("/", format = "/")]
    |                     ^^^
 
 error: invalid or unknown media type
-  --> $DIR/route-attribute-general-syntax.rs:69:21
+  --> tests/ui-fail-nightly/route-attribute-general-syntax.rs:69:21
    |
 69 | #[get("/", format = "a/")]
    |                     ^^^^
 
 error: invalid or unknown media type
-  --> $DIR/route-attribute-general-syntax.rs:72:21
+  --> tests/ui-fail-nightly/route-attribute-general-syntax.rs:72:21
    |
 72 | #[get("/", format = "/a")]
    |                     ^^^^
 
 error: invalid or unknown media type
-  --> $DIR/route-attribute-general-syntax.rs:75:21
+  --> tests/ui-fail-nightly/route-attribute-general-syntax.rs:75:21
    |
 75 | #[get("/", format = "/a/")]
    |                     ^^^^^
 
 error: invalid or unknown media type
-  --> $DIR/route-attribute-general-syntax.rs:78:21
+  --> tests/ui-fail-nightly/route-attribute-general-syntax.rs:78:21
    |
 78 | #[get("/", format = "a/b/")]
    |                     ^^^^^^
 
 error: invalid or unknown media type
-  --> $DIR/route-attribute-general-syntax.rs:81:21
+  --> tests/ui-fail-nightly/route-attribute-general-syntax.rs:81:21
    |
 81 | #[get("/", format = "unknown")]
    |                     ^^^^^^^^^
 
 error: invalid value: expected string literal
-  --> $DIR/route-attribute-general-syntax.rs:84:21
+  --> tests/ui-fail-nightly/route-attribute-general-syntax.rs:84:21
    |
 84 | #[get("/", format = 12)]
    |                     ^^
 
 error: invalid value: expected string literal
-  --> $DIR/route-attribute-general-syntax.rs:87:21
+  --> tests/ui-fail-nightly/route-attribute-general-syntax.rs:87:21
    |
 87 | #[get("/", format = 'j')]
    |                     ^^^
 
 error: invalid or unknown media type
-  --> $DIR/route-attribute-general-syntax.rs:90:21
+  --> tests/ui-fail-nightly/route-attribute-general-syntax.rs:90:21
    |
 90 | #[get("/", format = "text//foo")]
    |                     ^^^^^^^^^^^
 
 error: invalid HTTP method for route handlers
-  --> $DIR/route-attribute-general-syntax.rs:95:9
+  --> tests/ui-fail-nightly/route-attribute-general-syntax.rs:95:9
    |
 95 | #[route(CONNECT, "/")]
    |         ^^^^^^^
@@ -181,7 +181,7 @@ error: invalid HTTP method for route handlers
    = help: method must be one of: `GET`, `PUT`, `POST`, `DELETE`, `HEAD`, `PATCH`, `OPTIONS`
 
 error: invalid HTTP method
-  --> $DIR/route-attribute-general-syntax.rs:98:9
+  --> tests/ui-fail-nightly/route-attribute-general-syntax.rs:98:9
    |
 98 | #[route(FIX, "/")]
    |         ^^^
@@ -189,7 +189,7 @@ error: invalid HTTP method
    = help: method must be one of: `GET`, `PUT`, `POST`, `DELETE`, `HEAD`, `PATCH`, `OPTIONS`
 
 error: expected identifier, found string literal
-   --> $DIR/route-attribute-general-syntax.rs:101:9
+   --> tests/ui-fail-nightly/route-attribute-general-syntax.rs:101:9
     |
 101 | #[route("hi", "/")]
     |         ^^^^
@@ -197,7 +197,7 @@ error: expected identifier, found string literal
     = help: method must be one of: `GET`, `PUT`, `POST`, `DELETE`, `HEAD`, `PATCH`, `OPTIONS`
 
 error: expected identifier, found string literal
-   --> $DIR/route-attribute-general-syntax.rs:104:9
+   --> tests/ui-fail-nightly/route-attribute-general-syntax.rs:104:9
     |
 104 | #[route("GET", "/")]
     |         ^^^^^
@@ -205,7 +205,7 @@ error: expected identifier, found string literal
     = help: method must be one of: `GET`, `PUT`, `POST`, `DELETE`, `HEAD`, `PATCH`, `OPTIONS`
 
 error: expected identifier, found integer literal
-   --> $DIR/route-attribute-general-syntax.rs:107:9
+   --> tests/ui-fail-nightly/route-attribute-general-syntax.rs:107:9
     |
 107 | #[route(120, "/")]
     |         ^^^

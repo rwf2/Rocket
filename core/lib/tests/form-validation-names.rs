@@ -4,6 +4,7 @@ use rocket::form::{Form, FromForm};
 use rocket::form::error::{Error, Errors, ErrorKind};
 
 #[derive(Debug, FromForm)]
+#[allow(dead_code)]
 struct Cat<'v> {
     #[field(validate = len(5..))]
     name: &'v str,
@@ -12,12 +13,14 @@ struct Cat<'v> {
 }
 
 #[derive(Debug, FromForm)]
+#[allow(dead_code)]
 struct Dog<'v> {
     #[field(validate = len(5..))]
     name: &'v str,
 }
 
 #[derive(Debug, FromForm)]
+#[allow(dead_code)]
 struct Person<'v> {
     kitty: Cat<'v>,
     #[field(validate = len(1..))]

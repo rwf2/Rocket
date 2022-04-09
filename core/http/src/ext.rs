@@ -1,5 +1,8 @@
 //! Extension traits implemented by several HTTP types.
 
+// Temporarily allow `IntoIter::into_iter()` before Rust 2021 transition.
+#![allow(deprecated)]
+
 use smallvec::{Array, SmallVec};
 use state::Storage;
 

@@ -8,9 +8,7 @@ use crate::http::uri::fmt::{Query, FromUriParam};
 /// This type implements the [`FromForm`] trait and thus can be used as a
 /// generic parameter to the [`Form`] data guard: `Form<Lenient<T>>`, where `T`
 /// implements `FromForm`. Unlike using `Form` directly, this type uses a
-/// _lenient_ parsing strategy: forms that contains a superset of the expected
-/// fields (i.e, extra fields) will fail to parse and defaults will not be use
-/// for missing fields.
+/// _lenient_ parsing strategy.
 ///
 /// # Lenient Parsing
 ///
@@ -35,6 +33,8 @@ use crate::http::uri::fmt::{Query, FromUriParam};
 ///
 /// #[derive(FromForm)]
 /// struct UserInput {
+///     // Parses as `Some(false)` when `lenient_inner_option` isn't present.
+///     // Without `Lenient`, this would otherwise parse as `None`.
 ///     lenient_inner_option: Option<Lenient<bool>>,
 /// }
 /// ```

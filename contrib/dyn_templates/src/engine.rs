@@ -60,7 +60,7 @@ pub struct Engines {
     pub tera: Tera,
     /// The Handlebars templating engine. This field is only available when the
     /// `handlebars_templates` feature is enabled. When calling methods on the
-    /// `Tera` instance, ensure you use types imported from
+    /// `Handlebars` instance, ensure you use types imported from
     /// `rocket_dyn_templates::handlebars` to avoid version mismatches.
     #[cfg(feature = "handlebars")]
     pub handlebars: Handlebars<'static>,

@@ -11,7 +11,7 @@ diesel = { version = "1.3", features = ["sqlite", "r2d2"] }
 diesel_migrations = "1.3"
 
 [dev-dependencies]
-parking_lot = "0.11"
+parking_lot = "0.12"
 rand = "0.8"
 
 [dependencies.rocket_sync_db_pools]

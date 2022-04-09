@@ -1,29 +1,17 @@
 error[E0277]: the trait bound `Q: FromParam<'_>` is not satisfied
-   --> $DIR/route-type-errors.rs:6:12
-    |
-6   | fn f0(foo: Q) {}
-    |            ^ the trait `FromParam<'_>` is not implemented for `Q`
-    |
-note: required by `from_param`
-   --> $DIR/from_param.rs:183:5
-    |
-183 |     fn from_param(param: &'a str) -> Result<Self, Self::Error>;
-    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+ --> tests/ui-fail-nightly/route-type-errors.rs:6:12
+  |
+6 | fn f0(foo: Q) {}
+  |            ^ the trait `FromParam<'_>` is not implemented for `Q`
 
 error[E0277]: the trait bound `Q: FromSegments<'_>` is not satisfied
-   --> $DIR/route-type-errors.rs:9:12
-    |
-9   | fn f1(foo: Q) {}
-    |            ^ the trait `FromSegments<'_>` is not implemented for `Q`
-    |
-note: required by `from_segments`
-   --> $DIR/from_param.rs:291:5
-    |
-291 |     fn from_segments(segments: Segments<'r, Path>) -> Result<Self, Self::Error>;
-    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+ --> tests/ui-fail-nightly/route-type-errors.rs:9:12
+  |
+9 | fn f1(foo: Q) {}
+  |            ^ the trait `FromSegments<'_>` is not implemented for `Q`
 
 error[E0277]: the trait bound `Q: FromFormField<'_>` is not satisfied
-  --> $DIR/route-type-errors.rs:12:12
+  --> tests/ui-fail-nightly/route-type-errors.rs:12:12
    |
 12 | fn f2(foo: Q) {}
    |            ^ the trait `FromFormField<'_>` is not implemented for `Q`
@@ -31,7 +19,7 @@ error[E0277]: the trait bound `Q: FromFormField<'_>` is not satisfied
    = note: required because of the requirements on the impl of `FromForm<'_>` for `Q`
 
 error[E0277]: the trait bound `Q: FromFormField<'_>` is not satisfied
-  --> $DIR/route-type-errors.rs:15:12
+  --> tests/ui-fail-nightly/route-type-errors.rs:15:12
    |
 15 | fn f3(foo: Q) {}
    |            ^ the trait `FromFormField<'_>` is not implemented for `Q`
@@ -39,73 +27,37 @@ error[E0277]: the trait bound `Q: FromFormField<'_>` is not satisfied
    = note: required because of the requirements on the impl of `FromForm<'_>` for `Q`
 
 error[E0277]: the trait bound `Q: FromData<'_>` is not satisfied
-   --> $DIR/route-type-errors.rs:18:12
-    |
-18  | fn f4(foo: Q) {}
-    |            ^ the trait `FromData<'_>` is not implemented for `Q`
-    |
-note: required by a bound in `rocket::data::FromData::from_data`
-   --> $DIR/from_data.rs:194:41
-    |
-194 |     async fn from_data(req: &'r Request<'_>, data: Data<'r>) -> Outcome<'r, Self>;
-    |                                         ^^ required by this bound in `rocket::data::FromData::from_data`
+  --> tests/ui-fail-nightly/route-type-errors.rs:18:12
+   |
+18 | fn f4(foo: Q) {}
+   |            ^ the trait `FromData<'_>` is not implemented for `Q`
 
 error[E0277]: the trait bound `Q: FromRequest<'_>` is not satisfied
-   --> $DIR/route-type-errors.rs:21:10
-    |
-21  | fn f5(a: Q, foo: Q) {}
-    |          ^ the trait `FromRequest<'_>` is not implemented for `Q`
-    |
-note: required by a bound in `from_request`
-   --> $DIR/from_request.rs:388:48
-    |
-388 |     async fn from_request(request: &'r Request<'_>) -> Outcome<Self, Self::Error>;
-    |                                                ^^ required by this bound in `from_request`
+  --> tests/ui-fail-nightly/route-type-errors.rs:21:10
+   |
+21 | fn f5(a: Q, foo: Q) {}
+   |          ^ the trait `FromRequest<'_>` is not implemented for `Q`
 
 error[E0277]: the trait bound `Q: FromParam<'_>` is not satisfied
-   --> $DIR/route-type-errors.rs:21:18
-    |
-21  | fn f5(a: Q, foo: Q) {}
-    |                  ^ the trait `FromParam<'_>` is not implemented for `Q`
-    |
-note: required by `from_param`
-   --> $DIR/from_param.rs:183:5
-    |
-183 |     fn from_param(param: &'a str) -> Result<Self, Self::Error>;
-    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  --> tests/ui-fail-nightly/route-type-errors.rs:21:18
+   |
+21 | fn f5(a: Q, foo: Q) {}
+   |                  ^ the trait `FromParam<'_>` is not implemented for `Q`
 
 error[E0277]: the trait bound `Q: FromRequest<'_>` is not satisfied
-   --> $DIR/route-type-errors.rs:24:10
-    |
-24  | fn f6(a: Q, foo: Q, good: usize, bar: Q) {}
-    |          ^ the trait `FromRequest<'_>` is not implemented for `Q`
-    |
-note: required by a bound in `from_request`
-   --> $DIR/from_request.rs:388:48
-    |
-388 |     async fn from_request(request: &'r Request<'_>) -> Outcome<Self, Self::Error>;
-    |                                                ^^ required by this bound in `from_request`
+  --> tests/ui-fail-nightly/route-type-errors.rs:24:10
+   |
+24 | fn f6(a: Q, foo: Q, good: usize, bar: Q) {}
+   |          ^ the trait `FromRequest<'_>` is not implemented for `Q`
 
 error[E0277]: the trait bound `Q: FromParam<'_>` is not satisfied
-   --> $DIR/route-type-errors.rs:24:18
-    |
-24  | fn f6(a: Q, foo: Q, good: usize, bar: Q) {}
-    |                  ^ the trait `FromParam<'_>` is not implemented for `Q`
-    |
-note: required by `from_param`
-   --> $DIR/from_param.rs:183:5
-    |
-183 |     fn from_param(param: &'a str) -> Result<Self, Self::Error>;
-    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  --> tests/ui-fail-nightly/route-type-errors.rs:24:18
+   |
+24 | fn f6(a: Q, foo: Q, good: usize, bar: Q) {}
+   |                  ^ the trait `FromParam<'_>` is not implemented for `Q`
 
 error[E0277]: the trait bound `Q: FromParam<'_>` is not satisfied
-   --> $DIR/route-type-errors.rs:24:39
-    |
-24  | fn f6(a: Q, foo: Q, good: usize, bar: Q) {}
-    |                                       ^ the trait `FromParam<'_>` is not implemented for `Q`
-    |
-note: required by `from_param`
-   --> $DIR/from_param.rs:183:5
-    |
-183 |     fn from_param(param: &'a str) -> Result<Self, Self::Error>;
-    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  --> tests/ui-fail-nightly/route-type-errors.rs:24:39
+   |
+24 | fn f6(a: Q, foo: Q, good: usize, bar: Q) {}
+   |                                       ^ the trait `FromParam<'_>` is not implemented for `Q`

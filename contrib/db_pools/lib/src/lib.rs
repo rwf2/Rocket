@@ -101,7 +101,7 @@
 //! At present, this crate supports _three_ drivers: [`deadpool`], [`sqlx`],
 //! and [`mongodb`]. Each driver may support multiple databases.
 //!
-//! ## `deadpool` (v0.8)
+//! ## `deadpool` (v0.9)
 //!
 //! | Database | Feature             | [`Pool`] Type               | [`Connection`] Deref                  |
 //! |----------|---------------------|-----------------------------|---------------------------------------|
@@ -126,7 +126,7 @@
 //! [`sqlx::PoolConnection<Sqlite>`]: https://docs.rs/sqlx/0.5/sqlx/pool/struct.PoolConnection.html
 //! [`sqlx::PoolConnection<Mssql>`]: https://docs.rs/sqlx/0.5/sqlx/pool/struct.PoolConnection.html
 //!
-//! ## `mongodb` (v1)
+//! ## `mongodb` (v2)
 //!
 //! | Database | Feature   | [`Pool`] Type and [`Connection`] Deref |
 //! |----------|-----------|----------------------------------------|

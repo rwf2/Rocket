@@ -1,5 +1,5 @@
 error: parameter must be named
- --> $DIR/bad-ignored-segments.rs:6:12
+ --> tests/ui-fail-nightly/bad-ignored-segments.rs:6:12
   |
 6 | #[get("/c?<_>")]
   |            ^
@@ -7,7 +7,7 @@ error: parameter must be named
   = help: use a name such as `_guard` or `_param`
 
 error: parameter must be named
- --> $DIR/bad-ignored-segments.rs:9:22
+ --> tests/ui-fail-nightly/bad-ignored-segments.rs:9:22
   |
 9 | #[post("/d", data = "<_>")]
   |                      ^^^

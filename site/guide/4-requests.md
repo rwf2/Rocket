@@ -149,7 +149,7 @@ async fn files(file: PathBuf) -> Option<NamedFile> {
 }
 ```
 
-[path traversal attacks]: https://www.owasp.org/index.php/Path_Traversal
+[path traversal attacks]: https://owasp.org/www-community/attacks/Path_Traversal
 
 ! tip: Rocket makes it even _easier_ to serve static files!
 
@@ -531,9 +531,9 @@ rocket = { version = "0.5.0-rc.1", features = ["secrets"] }
 ```
 
 The API for retrieving, adding, and removing private cookies is identical except
-methods are suffixed with `_private`. These methods are: [`get_private`],
-[`get_private_pending`], [`add_private`], and [`remove_private`]. An example of
-their usage is below:
+that most methods are suffixed with `_private`. These methods are:
+[`get_private`], [`get_pending`], [`add_private`], and [`remove_private`]. An
+example of their usage is below:
 
 ```rust
 # #[macro_use] extern crate rocket;
@@ -576,7 +576,6 @@ For more information on configuration, see the [Configuration](../configuration)
 section of the guide.
 
 [`get_private`]: @api/rocket/http/struct.CookieJar.html#method.get_private
-[`get_private_pending`]: @api/rocket/http/struct.CookieJar.html#method.get_private_pending
 [`add_private`]: @api/rocket/http/struct.CookieJar.html#method.add_private
 [`remove_private`]: @api/rocket/http/struct.CookieJar.html#method.remove_private
 
@@ -678,7 +677,19 @@ struct Task<'r> {
 fn new(task: Json<Task<'_>>) { /* .. */ }
 ```
 
-See the [JSON example](@example/serialization/src/json.rs) on GitHub for a complete example.
+! note: JSON support requires enabling Rocket's `json` feature flag.
+
+  Rocket intentionally places JSON support, as well support for other data
+  formats and features, behind feature flags. See [the api
+  docs](@api/rocket/#features) for a list of available features. The `json`
+  feature can be enabled in the `Cargo.toml`:
+
+  `
+  rocket = { version = "0.5.0-rc.1", features = ["json"] }
+  `
+
+  See the [JSON example](@example/serialization/src/json.rs) on GitHub for a
+  complete example.
 
 ### Temporary Files
 

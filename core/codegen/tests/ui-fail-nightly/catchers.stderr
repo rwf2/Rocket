@@ -1,17 +1,17 @@
 error: expected `,`
- --> $DIR/catchers.rs:4:25
+ --> tests/ui-fail-nightly/catchers.rs:4:25
   |
 4 |     let _ = catchers![a b];
   |                         ^
 
 error: expected identifier
- --> $DIR/catchers.rs:6:26
+ --> tests/ui-fail-nightly/catchers.rs:6:26
   |
 6 |     let _ = catchers![a::, ];
   |                          ^
 
 error: unexpected end of input, expected identifier
- --> $DIR/catchers.rs:7:13
+ --> tests/ui-fail-nightly/catchers.rs:7:13
   |
 7 |     let _ = catchers![a::];
   |             ^^^^^^^^^^^^^^

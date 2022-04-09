@@ -1,5 +1,5 @@
 error: expected `fn`
- --> $DIR/catch.rs:6:1
+ --> tests/ui-fail-nightly/catch.rs:6:1
   |
 6 | struct Catcher(String);
   | ^^^^^^
@@ -7,7 +7,7 @@ error: expected `fn`
   = help: `#[catch]` can only be used on functions
 
 error: expected `fn`
- --> $DIR/catch.rs:9:7
+ --> tests/ui-fail-nightly/catch.rs:9:7
   |
 9 | const CATCH: &str = "Catcher";
   |       ^^^^^
@@ -15,7 +15,7 @@ error: expected `fn`
   = help: `#[catch]` can only be used on functions
 
 error: expected integer or `default`, found string literal
-  --> $DIR/catch.rs:11:9
+  --> tests/ui-fail-nightly/catch.rs:11:9
    |
 11 | #[catch("404")]
    |         ^^^^^
@@ -23,7 +23,7 @@ error: expected integer or `default`, found string literal
    = help: `#[catch]` expects a status code int or `default`: `#[catch(404)]` or `#[catch(default)]`
 
 error: unexpected keyed parameter: expected literal or identifier
-  --> $DIR/catch.rs:14:9
+  --> tests/ui-fail-nightly/catch.rs:14:9
    |
 14 | #[catch(code = "404")]
    |         ^^^^^^^^^^^^
@@ -31,7 +31,7 @@ error: unexpected keyed parameter: expected literal or identifier
    = help: `#[catch]` expects a status code int or `default`: `#[catch(404)]` or `#[catch(default)]`
 
 error: unexpected keyed parameter: expected literal or identifier
-  --> $DIR/catch.rs:17:9
+  --> tests/ui-fail-nightly/catch.rs:17:9
    |
 17 | #[catch(code = 404)]
    |         ^^^^^^^^^^
@@ -39,7 +39,7 @@ error: unexpected keyed parameter: expected literal or identifier
    = help: `#[catch]` expects a status code int or `default`: `#[catch(404)]` or `#[catch(default)]`
 
 error: status must be in range [100, 599]
-  --> $DIR/catch.rs:20:9
+  --> tests/ui-fail-nightly/catch.rs:20:9
    |
 20 | #[catch(99)]
    |         ^^
@@ -47,7 +47,7 @@ error: status must be in range [100, 599]
    = help: `#[catch]` expects a status code int or `default`: `#[catch(404)]` or `#[catch(default)]`
 
 error: status must be in range [100, 599]
-  --> $DIR/catch.rs:23:9
+  --> tests/ui-fail-nightly/catch.rs:23:9
    |
 23 | #[catch(600)]
    |         ^^^
@@ -55,7 +55,7 @@ error: status must be in range [100, 599]
    = help: `#[catch]` expects a status code int or `default`: `#[catch(404)]` or `#[catch(default)]`
 
 error: unexpected attribute parameter: `message`
-  --> $DIR/catch.rs:26:14
+  --> tests/ui-fail-nightly/catch.rs:26:14
    |
 26 | #[catch(400, message = "foo")]
    |              ^^^^^^^^^^^^^^^
@@ -63,13 +63,13 @@ error: unexpected attribute parameter: `message`
    = help: `#[catch]` expects a status code int or `default`: `#[catch(404)]` or `#[catch(default)]`
 
 error[E0308]: mismatched types
-  --> $DIR/catch.rs:30:17
+  --> tests/ui-fail-nightly/catch.rs:30:17
    |
 30 | fn f3(_request: &Request, other: bool) { }
    |                 ^^^^^^^^ expected `&rocket::Request<'_>`, found struct `Status`
 
 error[E0308]: mismatched types
-  --> $DIR/catch.rs:30:34
+  --> tests/ui-fail-nightly/catch.rs:30:34
    |
 30 | fn f3(_request: &Request, other: bool) { }
    |                                  ^^^^ expected `bool`, found `&rocket::Request<'_>`
