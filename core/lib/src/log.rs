@@ -35,14 +35,29 @@ define_log_macro!(trace, trace_);
 define_log_macro!(launch_info: info, "rocket::launch", $);
 define_log_macro!(launch_info_: info, "rocket::launch_", $);
 
-// `print!` panics when stdout isn't available, but this macro doesn't.
-// See SergioBenitez/Rocket#2019 and rust-lang/rust#46016 for more.
+// `print!` panics when stdout isn't available, but this macro doesn't. See
+// SergioBenitez/Rocket#2019 and rust-lang/rust#46016 for more.
+//
+// Unfortunately, `libtest` captures output by replacing a special sink that
+// `print!`, and _only_ `print!`, writes to. Using `write!` directly bypasses
+// this sink. As a result, using this better implementation for logging means
+// that test log output isn't captured, muddying `cargo test` output.
+//
+// As a compromise, we only use this better implementation when we're not
+// compiled with `debug_assertions` or running tests, so at least tests run in
+// debug-mode won't spew output. NOTE: `cfg(test)` alone isn't sufficient: the
+// crate is compiled normally for integration tests.
+#[cfg(not(any(debug_assertions, test, doctest)))]
 macro_rules! write_out {
     ($($arg:tt)*) => ({
         use std::io::{Write, stdout, stderr};
-
         let _ = write!(stdout(), $($arg)*).or_else(|e| write!(stderr(), "{}", e));
     })
+}
+
+#[cfg(any(debug_assertions, test, doctest))]
+macro_rules! write_out {
+    ($($arg:tt)*) => (print!($($arg)*))
 }
 
 #[derive(Debug)]
