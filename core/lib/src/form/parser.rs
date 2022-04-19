@@ -1,32 +1,24 @@
-use std::cell::UnsafeCell;
-
 use multer::Multipart;
-use parking_lot::{RawMutex, lock_api::RawMutex as _};
 use either::Either;
 
-use crate::request::{Request, local_cache};
+use crate::request::{Request, local_cache_once};
 use crate::data::{Data, Limits, Outcome};
-use crate::form::prelude::*;
+use crate::form::{SharedStack, prelude::*};
 use crate::http::RawStr;
 
 type Result<'r, T> = std::result::Result<T, Error<'r>>;
 
 type Field<'r, 'i> = Either<ValueField<'r>, DataField<'r, 'i>>;
 
-pub struct Buffer {
-    strings: UnsafeCell<Vec<String>>,
-    mutex: RawMutex,
-}
-
 pub struct MultipartParser<'r, 'i> {
     request: &'r Request<'i>,
-    buffer: &'r Buffer,
+    buffer: &'r SharedStack<String>,
     source: Multipart<'r>,
     done: bool,
 }
 
 pub struct RawStrParser<'r> {
-    buffer: &'r Buffer,
+    buffer: &'r SharedStack<String>,
     source: &'r RawStr,
 }
 
@@ -60,8 +52,8 @@ impl<'r, 'i> Parser<'r, 'i> {
         }
 
         Ok(Parser::RawStr(RawStrParser {
-            buffer: local_cache!(req, Buffer::new()),
-            source: RawStr::new(local_cache!(req, string.into_inner())),
+            buffer: local_cache_once!(req, SharedStack::new()),
+            source: RawStr::new(local_cache_once!(req, string.into_inner())),
         }))
     }
 
@@ -77,7 +69,7 @@ impl<'r, 'i> Parser<'r, 'i> {
 
         Ok(Parser::Multipart(MultipartParser {
             request: req,
-            buffer: local_cache!(req, Buffer::new()),
+            buffer: local_cache_once!(req, SharedStack::new()),
             source: Multipart::with_reader(data.open(form_limit), boundary),
             done: false,
         }))
@@ -92,7 +84,7 @@ impl<'r, 'i> Parser<'r, 'i> {
 }
 
 impl<'r> RawStrParser<'r> {
-    pub fn new(buffer: &'r Buffer, source: &'r RawStr) -> Self {
+    pub fn new(buffer: &'r SharedStack<String>, source: &'r RawStr) -> Self {
         RawStrParser { buffer, source }
     }
 }
@@ -119,8 +111,8 @@ impl<'r> Iterator for RawStrParser<'r> {
         trace_!("url-encoded field: {:?}", (name, value));
         let name_val = match (name.url_decode_lossy(), value.url_decode_lossy()) {
             (Borrowed(name), Borrowed(val)) => (name, val),
-            (Borrowed(name), Owned(v)) => (name, self.buffer.push_one(v)),
-            (Owned(name), Borrowed(val)) => (self.buffer.push_one(name), val),
+            (Borrowed(name), Owned(v)) => (name, self.buffer.push(v)),
+            (Owned(name), Borrowed(val)) => (self.buffer.push(name), val),
             (Owned(mut name), Owned(val)) => {
                 let len = name.len();
                 name.push_str(&val);
@@ -138,14 +130,14 @@ mod raw_str_parse_tests {
 
     #[test]
     fn test_skips_empty() {
-        let buffer = super::Buffer::new();
+        let buffer = super::SharedStack::new();
         let fields: Vec<_> = super::RawStrParser::new(&buffer, "a&b=c&&&c".into()).collect();
         assert_eq!(fields, &[Field::parse("a"), Field::parse("b=c"), Field::parse("c")]);
     }
 
     #[test]
     fn test_decodes() {
-        let buffer = super::Buffer::new();
+        let buffer = super::SharedStack::new();
         let fields: Vec<_> = super::RawStrParser::new(&buffer, "a+b=c%20d&%26".into()).collect();
         assert_eq!(fields, &[Field::parse("a b=c d"), Field::parse("&")]);
     }
@@ -174,8 +166,8 @@ impl<'r, 'i> MultipartParser<'r, 'i> {
         let field = if let Some(content_type) = content_type {
             let (name, file_name) = match (field.name(), field.file_name()) {
                 (None, None) => ("", None),
-                (None, Some(file_name)) => ("", Some(self.buffer.push_one(file_name))),
-                (Some(name), None) => (self.buffer.push_one(name), None),
+                (None, Some(file_name)) => ("", Some(self.buffer.push(file_name))),
+                (Some(name), None) => (self.buffer.push(name), None),
                 (Some(a), Some(b)) => {
                     let (field_name, file_name) = self.buffer.push_two(a, b);
                     (field_name, Some(file_name))
@@ -207,60 +199,3 @@ impl<'r, 'i> MultipartParser<'r, 'i> {
         Some(Ok(field))
     }
 }
-
-impl Buffer {
-    pub fn new() -> Self {
-        Buffer {
-            strings: UnsafeCell::new(vec![]),
-            mutex: RawMutex::INIT,
-        }
-    }
-
-    pub fn push_one<S: Into<String>>(&self, string: S) -> &str {
-        // SAFETY:
-        //   * Aliasing: We retrieve a mutable reference to the last slot (via
-        //     `push()`) and then return said reference as immutable; these
-        //     occur in serial, so they don't alias. This method accesses a
-        //     unique slot each call: the last slot, subsequently replaced by
-        //     `push()` each next call. No other method accesses the internal
-        //     buffer directly. Thus, the outstanding reference to the last slot
-        //     is never accessed again mutably, preserving aliasing guarantees.
-        //   * Liveness: The returned reference is to a `String`; we must ensure
-        //     that the `String` is never dropped while `self` lives. This is
-        //     guaranteed by returning a reference with the same lifetime as
-        //     `self`, so `self` can't be dropped while the string is live, and
-        //     by never removing elements from the internal `Vec` thus not
-        //     dropping `String` itself: `push()` is the only mutating operation
-        //     called on `Vec`, which preserves all previous elements; the
-        //     stability of `String` itself means that the returned address
-        //     remains valid even after internal realloc of `Vec`.
-        //   * Thread-Safety: Parallel calls to `push_one` without exclusion
-        //     would result in a race to `vec.push()`; `RawMutex` ensures that
-        //     this doesn't occur.
-        unsafe {
-            self.mutex.lock();
-            let vec: &mut Vec<String> = &mut *self.strings.get();
-            vec.push(string.into());
-            let last = vec.last().expect("push() => non-empty");
-            self.mutex.unlock();
-            last
-        }
-    }
-
-    pub fn push_split(&self, string: String, len: usize) -> (&str, &str) {
-        let buffered = self.push_one(string);
-        let a = &buffered[..len];
-        let b = &buffered[len..];
-        (a, b)
-    }
-
-    pub fn push_two<'a>(&'a self, a: &str, b: &str) -> (&'a str, &'a str) {
-        let mut buffer = String::new();
-        buffer.push_str(a);
-        buffer.push_str(b);
-
-        self.push_split(buffer, a.len())
-    }
-}
-
-unsafe impl Sync for Buffer {}

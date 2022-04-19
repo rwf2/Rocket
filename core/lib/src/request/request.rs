@@ -703,9 +703,10 @@ impl<'r> Request<'r> {
     /// Different values of the same type _cannot_ be cached without using a
     /// proxy, wrapper type. To avoid the need to write these manually, or for
     /// libraries wishing to store values of public types, use the
-    /// [`local_cache!`](crate::request::local_cache) macro to generate a
-    /// locally anonymous wrapper type, store, and retrieve the wrapped value
-    /// from request-local cache.
+    /// [`local_cache!`](crate::request::local_cache) or
+    /// [`local_cache_once!`](crate::request::local_cache_once) macros to
+    /// generate a locally anonymous wrapper type, store, and retrieve the
+    /// wrapped value from request-local cache.
     ///
     /// # Example
     ///

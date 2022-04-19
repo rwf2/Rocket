@@ -4,7 +4,7 @@ use crate::Request;
 use crate::outcome::try_outcome;
 use crate::data::{Data, FromData, Outcome};
 use crate::http::{RawStr, ext::IntoOwned};
-use crate::form::parser::{Parser, RawStrParser, Buffer};
+use crate::form::{SharedStack, parser::{Parser, RawStrParser}};
 use crate::form::prelude::*;
 
 /// A data guard for [`FromForm`] types.
@@ -244,7 +244,7 @@ impl<T: for<'a> FromForm<'a> + 'static> Form<T> {
     /// assert_eq!(pet.wags, true);
     /// ```
     pub fn parse_encoded(string: &RawStr) -> Result<'static, T> {
-        let buffer = Buffer::new();
+        let buffer = SharedStack::new();
         let mut ctxt = T::init(Options::Lenient);
         for field in RawStrParser::new(&buffer, string) {
             T::push_value(&mut ctxt, field)
