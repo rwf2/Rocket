@@ -14,6 +14,7 @@ license = "MIT OR Apache-2.0"
 build = "build.rs"
 categories = ["web-programming::http-server"]
 edition = "2021"
+rust-version = "1.56"
 
 [package.metadata.docs.rs]
 all-features = true

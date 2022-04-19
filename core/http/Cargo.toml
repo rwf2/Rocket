@@ -13,6 +13,7 @@ keywords = ["rocket", "web", "framework", "http"]
 license = "MIT OR Apache-2.0"
 categories = ["web-programming"]
 edition = "2021"
+rust-version = "1.56"
 
 [features]
 default = []
