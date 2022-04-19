@@ -672,9 +672,9 @@ generated.
 #[get("/<id>/<name>?<age>")]
 fn person(id: Option<usize>, name: &str, age: Option<u8>) { /* .. */ }
 
-/// Note that `id` is `Option<usize>` in the route, but `id` in `uri!` _cannot_
-/// be an `Option`. `age`, on the other hand, _must_ be an `Option` (or `Result`
-/// or `_`) as its in the query part and is allowed to be ignored.
+// Note that `id` is `Option<usize>` in the route, but `id` in `uri!` _cannot_
+// be an `Option`. `age`, on the other hand, _must_ be an `Option` (or `Result`
+// or `_`) as its in the query part and is allowed to be ignored.
 let mike = uri!(person(id = 101, name = "Mike", age = Some(28)));
 assert_eq!(mike.to_string(), "/101/Mike?age=28");
 ```
