@@ -1,6 +1,5 @@
 use std::fmt;
 use std::cell::RefCell;
-use std::convert::TryInto;
 
 use crate::{Rocket, Phase, Orbit, Error};
 use crate::local::{asynchronous, blocking::{LocalRequest, LocalResponse}};

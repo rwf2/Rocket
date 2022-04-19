@@ -1,5 +1,4 @@
 use std::fmt;
-use std::convert::TryInto;
 
 use parking_lot::RwLock;
 
