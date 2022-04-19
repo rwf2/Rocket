@@ -5,6 +5,17 @@ error[E0277]: the trait bound `usize: Responder<'_, '_>` is not satisfied
   | ------------- required by a bound introduced by this call
 6 | fn f1(_request: &Request) -> usize {
   |                              ^^^^^ the trait `Responder<'_, '_>` is not implemented for `usize`
+  |
+  = help: the following other types implement trait `Responder<'r, 'o>`:
+            <&'o [u8] as Responder<'r, 'o>>
+            <&'o str as Responder<'r, 'o>>
+            <() as Responder<'r, 'static>>
+            <(ContentType, R) as Responder<'r, 'o>>
+            <(Status, R) as Responder<'r, 'o>>
+            <Accepted<R> as Responder<'r, 'o>>
+            <Arc<[u8]> as Responder<'r, 'static>>
+            <Arc<str> as Responder<'r, 'static>>
+          and 39 others
 
 error[E0277]: the trait bound `bool: Responder<'_, '_>` is not satisfied
   --> tests/ui-fail-nightly/catch_type_errors.rs:11:30
@@ -13,12 +24,31 @@ error[E0277]: the trait bound `bool: Responder<'_, '_>` is not satisfied
    | ------------- required by a bound introduced by this call
 11 | fn f2(_request: &Request) -> bool {
    |                              ^^^^ the trait `Responder<'_, '_>` is not implemented for `bool`
+   |
+   = help: the following other types implement trait `Responder<'r, 'o>`:
+             <&'o [u8] as Responder<'r, 'o>>
+             <&'o str as Responder<'r, 'o>>
+             <() as Responder<'r, 'static>>
+             <(ContentType, R) as Responder<'r, 'o>>
+             <(Status, R) as Responder<'r, 'o>>
+             <Accepted<R> as Responder<'r, 'o>>
+             <Arc<[u8]> as Responder<'r, 'static>>
+             <Arc<str> as Responder<'r, 'static>>
+           and 39 others
 
 error[E0308]: mismatched types
   --> tests/ui-fail-nightly/catch_type_errors.rs:16:17
    |
 16 | fn f3(_request: bool) -> usize {
-   |                 ^^^^ expected `bool`, found `&rocket::Request<'_>`
+   |    --           ^^^^ expected `bool`, found `&rocket::Request<'_>`
+   |    |
+   |    arguments to this function are incorrect
+   |
+note: function defined here
+  --> tests/ui-fail-nightly/catch_type_errors.rs:16:4
+   |
+16 | fn f3(_request: bool) -> usize {
+   |    ^^-
 
 error[E0277]: the trait bound `usize: Responder<'_, '_>` is not satisfied
   --> tests/ui-fail-nightly/catch_type_errors.rs:16:26
@@ -27,6 +57,17 @@ error[E0277]: the trait bound `usize: Responder<'_, '_>` is not satisfied
    | ------------- required by a bound introduced by this call
 16 | fn f3(_request: bool) -> usize {
    |                          ^^^^^ the trait `Responder<'_, '_>` is not implemented for `usize`
+   |
+   = help: the following other types implement trait `Responder<'r, 'o>`:
+             <&'o [u8] as Responder<'r, 'o>>
+             <&'o str as Responder<'r, 'o>>
+             <() as Responder<'r, 'static>>
+             <(ContentType, R) as Responder<'r, 'o>>
+             <(Status, R) as Responder<'r, 'o>>
+             <Accepted<R> as Responder<'r, 'o>>
+             <Arc<[u8]> as Responder<'r, 'static>>
+             <Arc<str> as Responder<'r, 'static>>
+           and 39 others
 
 error[E0277]: the trait bound `usize: Responder<'_, '_>` is not satisfied
   --> tests/ui-fail-nightly/catch_type_errors.rs:21:12
@@ -35,3 +76,14 @@ error[E0277]: the trait bound `usize: Responder<'_, '_>` is not satisfied
    | ------------- required by a bound introduced by this call
 21 | fn f4() -> usize {
    |            ^^^^^ the trait `Responder<'_, '_>` is not implemented for `usize`
+   |
+   = help: the following other types implement trait `Responder<'r, 'o>`:
+             <&'o [u8] as Responder<'r, 'o>>
+             <&'o str as Responder<'r, 'o>>
+             <() as Responder<'r, 'static>>
+             <(ContentType, R) as Responder<'r, 'o>>
+             <(Status, R) as Responder<'r, 'o>>
+             <Accepted<R> as Responder<'r, 'o>>
+             <Arc<[u8]> as Responder<'r, 'static>>
+             <Arc<str> as Responder<'r, 'static>>
+           and 39 others

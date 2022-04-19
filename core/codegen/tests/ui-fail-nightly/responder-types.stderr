@@ -3,6 +3,17 @@ error[E0277]: the trait bound `u8: Responder<'_, '_>` is not satisfied
   |
 5 |     thing: u8,
   |     ^^^^^^^^^ the trait `Responder<'_, '_>` is not implemented for `u8`
+  |
+  = help: the following other types implement trait `Responder<'r, 'o>`:
+            <&'o [u8] as Responder<'r, 'o>>
+            <&'o str as Responder<'r, 'o>>
+            <() as Responder<'r, 'static>>
+            <(ContentType, R) as Responder<'r, 'o>>
+            <(Status, R) as Responder<'r, 'o>>
+            <Accepted<R> as Responder<'r, 'o>>
+            <Arc<[u8]> as Responder<'r, 'static>>
+            <Arc<str> as Responder<'r, 'static>>
+          and 43 others
 
 error[E0277]: the trait bound `Header<'_>: From<u8>` is not satisfied
    --> tests/ui-fail-nightly/responder-types.rs:11:5
@@ -10,12 +21,16 @@ error[E0277]: the trait bound `Header<'_>: From<u8>` is not satisfied
 11  |     other: u8,
     |     ^^^^^^^^^ the trait `From<u8>` is not implemented for `Header<'_>`
     |
-    = help: the following implementations were found:
+    = help: the following other types implement trait `From<T>`:
               <Header<'static> as From<&Cookie<'_>>>
               <Header<'static> as From<&ExpectCt>>
               <Header<'static> as From<&Frame>>
               <Header<'static> as From<&Hsts>>
-            and 8 others
+              <Header<'static> as From<&NoSniff>>
+              <Header<'static> as From<&Permission>>
+              <Header<'static> as From<&Prefetch>>
+              <Header<'static> as From<&Referrer>>
+            and 4 others
     = note: required because of the requirements on the impl of `Into<Header<'_>>` for `u8`
 note: required by a bound in `rocket::Response::<'r>::set_header`
    --> $WORKSPACE/core/lib/src/response/response.rs
@@ -28,6 +43,17 @@ error[E0277]: the trait bound `u8: Responder<'_, '_>` is not satisfied
    |
 16 |     thing: u8,
    |     ^^^^^^^^^ the trait `Responder<'_, '_>` is not implemented for `u8`
+   |
+   = help: the following other types implement trait `Responder<'r, 'o>`:
+             <&'o [u8] as Responder<'r, 'o>>
+             <&'o str as Responder<'r, 'o>>
+             <() as Responder<'r, 'static>>
+             <(ContentType, R) as Responder<'r, 'o>>
+             <(Status, R) as Responder<'r, 'o>>
+             <Accepted<R> as Responder<'r, 'o>>
+             <Arc<[u8]> as Responder<'r, 'static>>
+             <Arc<str> as Responder<'r, 'static>>
+           and 43 others
 
 error[E0277]: the trait bound `Header<'_>: From<u8>` is not satisfied
    --> tests/ui-fail-nightly/responder-types.rs:17:5
@@ -35,12 +61,16 @@ error[E0277]: the trait bound `Header<'_>: From<u8>` is not satisfied
 17  |     other: u8,
     |     ^^^^^^^^^ the trait `From<u8>` is not implemented for `Header<'_>`
     |
-    = help: the following implementations were found:
+    = help: the following other types implement trait `From<T>`:
               <Header<'static> as From<&Cookie<'_>>>
               <Header<'static> as From<&ExpectCt>>
               <Header<'static> as From<&Frame>>
               <Header<'static> as From<&Hsts>>
-            and 8 others
+              <Header<'static> as From<&NoSniff>>
+              <Header<'static> as From<&Permission>>
+              <Header<'static> as From<&Prefetch>>
+              <Header<'static> as From<&Referrer>>
+            and 4 others
     = note: required because of the requirements on the impl of `Into<Header<'_>>` for `u8`
 note: required by a bound in `rocket::Response::<'r>::set_header`
    --> $WORKSPACE/core/lib/src/response/response.rs
@@ -54,12 +84,16 @@ error[E0277]: the trait bound `Header<'_>: From<std::string::String>` is not sat
 24  |     then: String,
     |     ^^^^^^^^^^^^ the trait `From<std::string::String>` is not implemented for `Header<'_>`
     |
-    = help: the following implementations were found:
+    = help: the following other types implement trait `From<T>`:
               <Header<'static> as From<&Cookie<'_>>>
               <Header<'static> as From<&ExpectCt>>
               <Header<'static> as From<&Frame>>
               <Header<'static> as From<&Hsts>>
-            and 8 others
+              <Header<'static> as From<&NoSniff>>
+              <Header<'static> as From<&Permission>>
+              <Header<'static> as From<&Prefetch>>
+              <Header<'static> as From<&Referrer>>
+            and 4 others
     = note: required because of the requirements on the impl of `Into<Header<'_>>` for `std::string::String`
 note: required by a bound in `rocket::Response::<'r>::set_header`
    --> $WORKSPACE/core/lib/src/response/response.rs
@@ -73,6 +107,16 @@ error[E0277]: the trait bound `usize: Responder<'_, '_>` is not satisfied
 28  | fn foo() -> usize { 0 }
     |             ^^^^^ the trait `Responder<'_, '_>` is not implemented for `usize`
     |
+    = help: the following other types implement trait `Responder<'r, 'o>`:
+              <&'o [u8] as Responder<'r, 'o>>
+              <&'o str as Responder<'r, 'o>>
+              <() as Responder<'r, 'static>>
+              <(ContentType, R) as Responder<'r, 'o>>
+              <(Status, R) as Responder<'r, 'o>>
+              <Accepted<R> as Responder<'r, 'o>>
+              <Arc<[u8]> as Responder<'r, 'static>>
+              <Arc<str> as Responder<'r, 'static>>
+            and 43 others
 note: required by a bound in `route::handler::<impl Outcome<rocket::Response<'o>, Status, rocket::Data<'o>>>::from`
    --> $WORKSPACE/core/lib/src/route/handler.rs
     |
