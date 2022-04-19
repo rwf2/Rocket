@@ -1,5 +1,4 @@
 use std::fmt;
-use std::convert::TryInto;
 
 use crate::{Request, http::Method, local::asynchronous};
 use crate::http::uri::Origin;

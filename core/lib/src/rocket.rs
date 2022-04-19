@@ -1,6 +1,5 @@
 use std::fmt;
 use std::ops::{Deref, DerefMut};
-use std::convert::TryInto;
 use std::net::SocketAddr;
 
 use yansi::Paint;

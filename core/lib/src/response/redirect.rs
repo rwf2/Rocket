@@ -1,5 +1,3 @@
-use std::convert::TryInto;
-
 use crate::request::Request;
 use crate::response::{self, Response, Responder};
 use crate::http::uri::Reference;

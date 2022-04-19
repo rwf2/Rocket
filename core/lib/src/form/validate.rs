@@ -79,7 +79,6 @@
 //! ```
 
 use std::borrow::Cow;
-use std::convert::TryInto;
 use std::ops::{RangeBounds, Bound};
 use std::fmt::Debug;
 
