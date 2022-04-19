@@ -215,12 +215,10 @@ impl<'a> Segments<'a, Path> {
                 return Err(PathError::BadEnd('<'))
             } else if segment.contains('/') {
                 return Err(PathError::BadChar('/'))
-            } else if cfg!(windows) {
-                if segment.contains('\\') {
-                    return Err(PathError::BadChar('\\'))
-                } else if segment.contains(':') {
-                    return Err(PathError::BadChar(':'))
-                }
+            } else if cfg!(windows) && segment.contains('\\') {
+                return Err(PathError::BadChar('\\'))
+            } else if cfg!(windows) && segment.contains(':') {
+                return Err(PathError::BadChar(':'))
             } else {
                 buf.push(&*segment)
             }
