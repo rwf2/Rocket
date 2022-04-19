@@ -107,6 +107,7 @@ use crate::log::PaintExt;
 ///     rocket::build()
 /// }
 /// ```
+#[must_use]
 pub struct Rocket<P: Phase>(pub(crate) P::State);
 
 impl Rocket<Build> {
