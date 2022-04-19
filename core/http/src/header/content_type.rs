@@ -40,7 +40,7 @@ use crate::ext::IntoCollection;
 ///
 /// let response = Response::build().header(ContentType::HTML).finalize();
 /// ```
-#[derive(Debug, Clone, PartialEq, Hash)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct ContentType(pub MediaType);
 
 macro_rules! content_types {

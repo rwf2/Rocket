@@ -467,13 +467,15 @@ impl MediaType {
 
     /// Compares `self` with `other` and returns `true` if `self` and `other`
     /// are exactly equal to each other, including with respect to their
-    /// parameters.
+    /// parameters and their order.
     ///
     /// This is different from the `PartialEq` implementation in that it
-    /// considers parameters. If `PartialEq` returns false, this function is
-    /// guaranteed to return false. Similarly, if this function returns `true`,
-    /// `PartialEq` is guaranteed to return true. However, if `PartialEq`
-    /// returns `true`, this function may or may not return `true`.
+    /// considers parameters. In particular, `Eq` implies `PartialEq` but
+    /// `PartialEq` does not imply `Eq`. That is, if `PartialEq` returns false,
+    /// this function is guaranteed to return false. Similarly, if `exact_eq`
+    /// returns `true`, `PartialEq` is guaranteed to return true. However, if
+    /// `PartialEq` returns `true`, `exact_eq` function may or may not return
+    /// `true`.
     ///
     /// # Example
     ///
@@ -572,16 +574,13 @@ impl PartialEq for MediaType {
     }
 }
 
+impl Eq for MediaType {  }
+
 impl Hash for MediaType {
     #[inline]
     fn hash<H: Hasher>(&self, state: &mut H) {
         self.top().hash(state);
         self.sub().hash(state);
-
-        for (key, val) in self.params() {
-            key.hash(state);
-            val.hash(state);
-        }
     }
 }
 
