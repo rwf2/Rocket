@@ -1,7 +1,3 @@
-// Temporarily allow `IntoIter::into_iter()` before Rust 2021 transition.
-#![allow(deprecated)]
-
-use std::array;
 use std::borrow::Cow;
 
 use tokio::io::AsyncRead;
@@ -340,7 +336,7 @@ impl Event {
             Some(RawLinedEvent::raw("")),
         ];
 
-        stream::iter(array::IntoIter::new(events)).filter_map(ready)
+        stream::iter(events).filter_map(ready)
     }
 }
 
