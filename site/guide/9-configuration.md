@@ -327,11 +327,26 @@ Rocket reports if TLS and/or mTLS are enabled at launch time:
    >> tls: enabled w/mtls
 ```
 
+Once mutual TLS is properly enabled, the [`mtls::Certificate`] request guard can
+be used to retrieve validated, verified client certificates:
+
+```rust
+# #[macro_use] extern crate rocket;
+use rocket::mtls::Certificate;
+
+#[get("/auth")]
+fn auth(cert: Certificate<'_>) {
+    // This handler only runs when a valid certificate was presented.
+}
+```
+
 The [TLS example](@example/tls) illustrates a fully configured TLS server with
 mutual TLS.
 
 ! warning: Rocket's built-in TLS supports only TLS 1.2 and 1.3. This may not be
   suitable for production use.
+
+[`mtls::Certificate`]: @api/rocket/mtls/struct.Certificate.html
 
 ### Workers
 

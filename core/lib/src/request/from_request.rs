@@ -132,7 +132,8 @@ impl<S, E> IntoOutcome<S, (Status, E), ()> for Result<S, E> {
 ///
 ///   * **&Host**
 ///
-///     Extracts the [`Host`] from the incoming request.
+///     Extracts the [`Host`] from the incoming request, if it exists. See
+///     [`Request::host()`] for details.
 ///
 ///   * **&Route**
 ///
