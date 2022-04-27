@@ -509,10 +509,10 @@ error[E0277]: the trait bound `i32: From<&str>` is not satisfied
     |
     = help: the following implementations were found:
               <i32 as From<NonZeroI32>>
+              <i32 as From<SignalKind>>
               <i32 as From<bool>>
               <i32 as From<i16>>
-              <i32 as From<i8>>
-            and 88 others
+            and 89 others
     = note: required because of the requirements on the impl of `Into<i32>` for `&str`
 
 error[E0308]: mismatched types
