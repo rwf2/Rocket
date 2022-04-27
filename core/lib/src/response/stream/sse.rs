@@ -524,7 +524,7 @@ impl<S: Stream<Item = Event>> EventStream<S> {
 
         self.heartbeat
             .map(|beat| IntervalStream::new(interval(beat)))
-            .map(|stream| stream.map(|_| RawLinedEvent::raw(":\n")))
+            .map(|stream| stream.map(|_| RawLinedEvent::raw(":")))
     }
 
     fn into_stream(self) -> impl Stream<Item = RawLinedEvent> {
@@ -762,7 +762,7 @@ mod sse_tests {
         use futures::future::ready;
         use futures::stream::{once, iter, StreamExt};
 
-        const HEARTBEAT: &str = ":\n\n";
+        const HEARTBEAT: &str = ":\n";
 
         // Set a heartbeat interval of 250ms. Send nothing for 600ms. We should
         // get 2 or 3 heartbeats, the latter if one is sent eagerly. Maybe 4.

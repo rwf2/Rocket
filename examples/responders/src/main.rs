@@ -39,7 +39,7 @@ use rocket::tokio::time::{self, Duration};
 use rocket::futures::stream::{repeat, StreamExt};
 
 use rocket::Shutdown;
-use rocket::response::stream::TextStream;
+use rocket::response::stream::{TextStream, EventStream, Event};
 
 #[get("/stream/hi")]
 fn many_his() -> TextStream![&'static str] {
@@ -60,6 +60,42 @@ fn one_hi_per_ms(mut shutdown: Shutdown, n: u8) -> TextStream![&'static str] {
             };
         }
     }
+}
+
+#[get("/progress", rank = 2)]
+fn progress_page() -> RawHtml<&'static str> {
+    RawHtml(r#"
+          <script type="text/javascript">
+            const evtSource = new EventSource("progress");
+            evtSource.addEventListener("progress", (event) => {
+                const el = document.getElementById("prog");
+                el.textContent = event.data + "%";
+            });
+            evtSource.addEventListener("done", (_) => {
+                const el = document.getElementById("prog");
+                el.textContent = "done";
+                evtSource.close()
+            });
+        </script>
+
+        <p id="prog"></p>
+    "#)
+}
+
+#[get("/progress", format = "text/event-stream", rank = 1)]
+fn progress_stream() -> EventStream![] {
+    let stream = EventStream! {
+        let mut interval = time::interval(Duration::from_secs(1));
+
+        for count in 0..100 {
+            interval.tick().await;
+            yield Event::data(count.to_string()).event("progress");
+        }
+
+        yield Event::data("").event("done");
+    };
+
+    stream.heartbeat(Duration::from_secs(3))
 }
 
 /***************************** `Redirect` Responder ***************************/
@@ -178,6 +214,7 @@ async fn custom(kind: Option<Kind>) -> StoredData {
 fn rocket() -> _ {
     rocket::build()
         .mount("/", routes![many_his, one_hi_per_ms, file, upload, delete])
+        .mount("/", routes![progress_stream, progress_page])
         .mount("/", routes![redir_root, redir_login, maybe_redir])
         .mount("/", routes![xml, json, json_or_msgpack])
         .mount("/", routes![custom])
