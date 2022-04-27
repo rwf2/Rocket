@@ -64,7 +64,7 @@
 //!
 //! # Extra Features
 //!
-//! The [`uuid`](https://docs.rs/uuid/0.8) crate exposes extra `v{n}` features
+//! The [`uuid`](https://docs.rs/uuid/1) crate exposes extra `v{n}` features
 //! for generating UUIDs which are not enabled by Rocket. To enable these
 //! features, depend on `uuid` directly. The extra functionality can be accessed
 //! via both `rocket::serde::uuid::Uuid` or the direct `uuid::Uuid`; the types
@@ -72,36 +72,18 @@
 //!
 //! ```toml
 //! [dependencies.uuid]
-//! version = "0.8"
+//! version = "1"
 //! features = ["v1", "v4"]
 //! ```
 
 use crate::request::FromParam;
 use crate::form::{self, FromFormField, ValueField};
 
-/// A Universally Unique Identifier (UUID).
+/// Error returned on [`FromParam`] or [`FromFormField`] failure.
 ///
-/// # Examples
-///
-/// To parse a UUID and print it as a urn:
-///
-/// ```rust
-/// use rocket::serde::uuid::{Uuid, Error};
-///
-/// # fn f() -> Result<(), Error> {
-/// let uuid = Uuid::parse_str("936DA01F9ABD4d9d80C702AF85C822A8")?;
-/// println!("{}", uuid.to_urn());
-/// # Ok(())
-/// # }
-/// ```
-///
-pub use uuid_::Uuid;
+pub use uuid_::Error;
 
-pub use uuid_::{Builder, Variant, Version};
-
-/// Type alias for the error returned on [`FromParam`] or [`FromFormField`]
-/// failure.
-pub type Error = <uuid_::Uuid as std::str::FromStr>::Err;
+pub use uuid_::{Uuid, Builder, Variant, Version, Bytes, uuid, fmt};
 
 impl<'a> FromParam<'a> for Uuid {
     type Error = Error;
@@ -128,14 +110,13 @@ mod test {
     #[test]
     fn test_from_param() {
         let uuid_str = "c1aa1e3b-9614-4895-9ebd-705255fa5bc2";
-        let uuid_wrapper = Uuid::from_param(uuid_str.into()).unwrap();
-        assert_eq!(uuid_str, uuid_wrapper.to_string())
+        let uuid = Uuid::from_param(uuid_str).unwrap();
+        assert_eq!(uuid_str, uuid.to_string());
     }
 
     #[test]
-    #[should_panic(expected = "InvalidLength")]
     fn test_from_param_invalid() {
         let uuid_str = "c1aa1e3b-9614-4895-9ebd-705255fa5bc2p";
-        Uuid::from_param(uuid_str.into()).unwrap();
+        assert!(Uuid::from_param(uuid_str).is_err());
     }
 }
