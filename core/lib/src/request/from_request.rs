@@ -110,7 +110,7 @@ impl<S, E> IntoOutcome<S, (Status, E), ()> for Result<S, E> {
 /// * **Forward**
 ///
 ///   If the `Outcome` is [`Forward`], the request will be forwarded to the next
-///   matching request. Note that users can request an `Option<S>` to catch
+///   matching route. Note that users can request an `Option<S>` to catch
 ///   `Forward`s.
 ///
 /// # Provided Implementations
