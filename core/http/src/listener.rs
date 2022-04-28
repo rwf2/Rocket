@@ -46,6 +46,11 @@ pub trait Connection: AsyncRead + AsyncWrite {
     /// The remote address, i.e. the client's socket address, if it is known.
     fn peer_address(&self) -> Option<SocketAddr>;
 
+    /// Requests that the connection not delay reading or writing data as much
+    /// as possible. For connections backed by TCP, this corresponds to setting
+    /// `TCP_NODELAY`.
+    fn enable_nodelay(&self) -> io::Result<()>;
+
     /// DER-encoded X.509 certificate chain presented by the client, if any.
     ///
     /// The certificate order must be as it appears in the TLS protocol: the
@@ -65,6 +70,7 @@ pin_project_lite::pin_project! {
     #[must_use = "streams do nothing unless polled"]
     pub struct Incoming<L> {
         sleep_on_errors: Option<Duration>,
+        nodelay: bool,
         #[pin]
         pending_error_delay: Option<Sleep>,
         #[pin]
@@ -79,10 +85,11 @@ impl<L: Listener> Incoming<L> {
             listener,
             sleep_on_errors: Some(Duration::from_millis(250)),
             pending_error_delay: None,
+            nodelay: false,
         }
     }
 
-    /// Set whether to sleep on accept errors.
+    /// Set whether and how long to sleep on accept errors.
     ///
     /// A possible scenario is that the process has hit the max open files
     /// allowed, and so trying to accept a new connection will fail with
@@ -97,8 +104,16 @@ impl<L: Listener> Incoming<L> {
     /// this option to `None` will allow that.
     ///
     /// Default is 1 second.
-    pub fn set_sleep_on_errors(&mut self, val: Option<Duration>) {
+    pub fn sleep_on_errors(mut self, val: Option<Duration>) -> Self {
         self.sleep_on_errors = val;
+        self
+    }
+
+    /// Set whether to request no delay on all incoming connections. The default
+    /// is `false`. See [`Connection::enable_nodelay()`] for details.
+    pub fn nodelay(mut self, nodelay: bool) -> Self {
+        self.nodelay = nodelay;
+        self
     }
 
     fn poll_next(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<io::Result<L::Connection>> {
@@ -123,6 +138,10 @@ impl<L: Listener> Incoming<L> {
 
             match me.listener.as_mut().poll_accept(cx) {
                 Poll::Ready(Ok(stream)) => {
+                    if *me.nodelay {
+                        let _ = stream.enable_nodelay();
+                    }
+
                     return Poll::Ready(Ok(stream));
                 },
                 Poll::Pending => return Poll::Pending,
@@ -204,5 +223,9 @@ impl Listener for TcpListener {
 impl Connection for TcpStream {
     fn peer_address(&self) -> Option<SocketAddr> {
         self.peer_addr().ok()
+    }
+
+    fn enable_nodelay(&self) -> io::Result<()> {
+        self.set_nodelay(true)
     }
 }

@@ -125,4 +125,8 @@ impl Connection for TlsStream<TcpStream> {
     fn peer_certificates(&self) -> Option<&[RawCertificate]> {
         self.get_ref().1.peer_certificates()
     }
+
+    fn enable_nodelay(&self) -> io::Result<()> {
+        self.get_ref().0.enable_nodelay()
+    }
 }

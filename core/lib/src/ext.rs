@@ -301,6 +301,10 @@ impl<F: Future, C: Connection> Connection for CancellableIo<F, C> {
     fn peer_certificates(&self) -> Option<&[RawCertificate]> {
         self.io.peer_certificates()
     }
+
+    fn enable_nodelay(&self) -> io::Result<()> {
+        self.io.enable_nodelay()
+    }
 }
 
 pin_project! {

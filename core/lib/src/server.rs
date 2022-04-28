@@ -452,7 +452,7 @@ impl Rocket<Orbit> {
 
         // NOTE: `hyper` uses `tokio::spawn()` as the default executor.
         let listener = CancellableListener::new(shutdown.clone(), listener, grace, mercy);
-        let builder = hyper::Server::builder(Incoming::new(listener));
+        let builder = hyper::Server::builder(Incoming::new(listener).nodelay(true));
 
         #[cfg(feature = "http2")]
         let builder = builder.http2_keep_alive_interval(match keep_alive {
