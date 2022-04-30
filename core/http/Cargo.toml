@@ -44,6 +44,7 @@ memchr = "2"
 stable-pattern = "0.1"
 cookie = { version = "0.16.0", features = ["percent-encode", "secure"] }
 state = "0.5.1"
+futures = { version = "0.3", default-features = false }
 
 [dependencies.x509-parser]
 version = "0.13"

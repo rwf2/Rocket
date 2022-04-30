@@ -44,7 +44,7 @@ pub mod uncased {
 pub mod private {
     pub use crate::parse::Indexed;
     pub use smallvec::{SmallVec, Array};
-    pub use crate::listener::{bind_tcp, Incoming, Listener, Connection, RawCertificate};
+    pub use crate::listener::{TcpListener, Incoming, Listener, Connection, RawCertificate};
     pub use cookie;
 }
 

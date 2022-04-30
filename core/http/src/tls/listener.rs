@@ -5,6 +5,7 @@ use std::task::{Context, Poll};
 use std::net::SocketAddr;
 use std::future::Future;
 
+use futures::ready;
 use tokio_rustls::{TlsAcceptor, Accept, server::TlsStream};
 use tokio::net::{TcpListener, TcpStream};
 
@@ -20,7 +21,7 @@ pub struct TlsListener {
 
 enum State {
     Listening,
-    Accepting(Accept<TcpStream>),
+    Accepting(Accept<TcpStream>, SocketAddr),
 }
 
 pub struct Config<R> {
@@ -92,23 +93,25 @@ impl Listener for TlsListener {
         cx: &mut Context<'_>
     ) -> Poll<io::Result<Self::Connection>> {
         loop {
-            match self.state {
+            match &mut self.state {
                 State::Listening => {
-                    match self.listener.poll_accept(cx) {
-                        Poll::Pending => return Poll::Pending,
-                        Poll::Ready(Err(e)) => return Poll::Ready(Err(e)),
-                        Poll::Ready(Ok((stream, _addr))) => {
-                            let fut = self.acceptor.accept(stream);
-                            self.state = State::Accepting(fut);
+                    match ready!(self.listener.poll_accept(cx)) {
+                        Err(e) => return Poll::Ready(Err(e)),
+                        Ok((stream, addr)) => {
+                            let accept = self.acceptor.accept(stream);
+                            self.state = State::Accepting(accept, addr);
                         }
                     }
                 }
-                State::Accepting(ref mut fut) => {
-                    match Pin::new(fut).poll(cx) {
-                        Poll::Pending => return Poll::Pending,
-                        Poll::Ready(result) => {
+                State::Accepting(accept, addr) => {
+                    match ready!(Pin::new(accept).poll(cx)) {
+                        Ok(stream) => {
                             self.state = State::Listening;
-                            return Poll::Ready(result);
+                            return Poll::Ready(Ok(stream));
+                        },
+                        Err(e) => {
+                            log::warn!("TLS accept {} failure: {}", addr, e);
+                            self.state = State::Listening;
                         }
                     }
                 }

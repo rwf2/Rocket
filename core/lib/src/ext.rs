@@ -135,10 +135,6 @@ enum State {
     /// Grace period elapsed. Shutdown the connection, waiting for the timer
     /// until we force close.
     Mercy(Pin<Box<Sleep>>),
-    /// We failed to shutdown and are force-closing the connection.
-    Terminated,
-    /// We successfully shutdown the connection.
-    Inactive,
 }
 
 pin_project! {
@@ -146,7 +142,7 @@ pin_project! {
     #[must_use = "futures do nothing unless polled"]
     pub struct CancellableIo<F, I> {
         #[pin]
-        io: I,
+        io: Option<I>,
         #[pin]
         trigger: future::Fuse<F>,
         state: State,
@@ -158,82 +154,60 @@ pin_project! {
 impl<F: Future, I: AsyncWrite> CancellableIo<F, I> {
     pub fn new(trigger: F, io: I, grace: Duration, mercy: Duration) -> Self {
         CancellableIo {
-            io, grace, mercy,
+            grace, mercy,
+            io: Some(io),
             trigger: trigger.fuse(),
-            state: State::Active
+            state: State::Active,
         }
     }
 
-    /// Returns `Ok(true)` if connection processing should continue.
+    pub fn io(&self) -> Option<&I> {
+        self.io.as_ref()
+    }
+
+    /// Run `do_io` while connection processing should continue.
     fn poll_trigger_then<T>(
-        self: Pin<&mut Self>,
+        mut self: Pin<&mut Self>,
         cx: &mut Context<'_>,
-        io: impl FnOnce(Pin<&mut I>, &mut Context<'_>) -> Poll<io::Result<T>>,
+        do_io: impl FnOnce(Pin<&mut I>, &mut Context<'_>) -> Poll<io::Result<T>>,
     ) -> Poll<io::Result<T>> {
-        let mut me = self.project();
-
-        // CORRECTNESS: _EVERY_ branch must reset `state`! If `state` is
-        // unchanged in a branch, that branch _must_ `break`! No `return`!
-        let mut state = std::mem::replace(me.state, State::Active);
-        let result = loop {
-            match state {
-                State::Active => {
-                    if me.trigger.as_mut().poll(cx).is_ready() {
-                        state = State::Grace(Box::pin(sleep(*me.grace)));
-                    } else {
-                        state = State::Active;
-                        break io(me.io, cx);
-                    }
-                }
-                State::Grace(mut sleep) => {
-                    if sleep.as_mut().poll(cx).is_ready() {
-                        if let Some(deadline) = sleep.deadline().checked_add(*me.mercy) {
-                            sleep.as_mut().reset(deadline);
-                            state = State::Mercy(sleep);
-                        } else {
-                            state = State::Terminated;
-                        }
-                    } else {
-                        state = State::Grace(sleep);
-                        break io(me.io, cx);
-                    }
-                },
-                State::Mercy(mut sleep) => {
-                    if sleep.as_mut().poll(cx).is_ready() {
-                        state = State::Terminated;
-                        continue;
-                    }
-
-                    match me.io.as_mut().poll_shutdown(cx) {
-                        Poll::Ready(Err(e)) => {
-                            state = State::Terminated;
-                            break Poll::Ready(Err(e));
-                        }
-                        Poll::Ready(Ok(())) => {
-                            state = State::Inactive;
-                            break Poll::Ready(Err(gone()));
-                        }
-                        Poll::Pending => {
-                            state = State::Mercy(sleep);
-                            break Poll::Pending;
-                        }
-                    }
-                },
-                State::Terminated => {
-                    // Just in case, as a last ditch effort. Ignore pending.
-                    state = State::Terminated;
-                    let _ = me.io.as_mut().poll_shutdown(cx);
-                    break Poll::Ready(Err(time_out()));
-                },
-                State::Inactive => {
-                    state = State::Inactive;
-                    break Poll::Ready(Err(gone()));
-                }
-            }
+        let mut me = self.as_mut().project();
+        let io = match me.io.as_pin_mut() {
+            Some(io) => io,
+            None => return Poll::Ready(Err(gone())),
         };
 
-        *me.state = state;
-        result
+        loop {
+            match me.state {
+                State::Active => {
+                    if me.trigger.as_mut().poll(cx).is_ready() {
+                        *me.state = State::Grace(Box::pin(sleep(*me.grace)));
+                    } else {
+                        return do_io(io, cx);
+                    }
+                }
+                State::Grace(timer) => {
+                    if timer.as_mut().poll(cx).is_ready() {
+                        *me.state = State::Mercy(Box::pin(sleep(*me.mercy)));
+                    } else {
+                        return do_io(io, cx);
+                    }
+                }
+                State::Mercy(timer) => {
+                    if timer.as_mut().poll(cx).is_ready() {
+                        self.project().io.set(None);
+                        return Poll::Ready(Err(time_out()));
+                    } else {
+                        let result = futures::ready!(io.poll_shutdown(cx));
+                        self.project().io.set(None);
+                        return match result {
+                            Err(e) => Poll::Ready(Err(e)),
+                            Ok(()) => Poll::Ready(Err(gone()))
+                        };
+                    }
+                },
+            }
+        }
     }
 }
 
@@ -287,7 +261,7 @@ impl<F: Future, I: AsyncWrite> AsyncWrite for CancellableIo<F, I> {
     }
 
     fn is_write_vectored(&self) -> bool {
-        self.io.is_write_vectored()
+        self.io().map(|io| io.is_write_vectored()).unwrap_or(false)
     }
 }
 
@@ -295,15 +269,18 @@ use crate::http::private::{Listener, Connection, RawCertificate};
 
 impl<F: Future, C: Connection> Connection for CancellableIo<F, C> {
     fn peer_address(&self) -> Option<std::net::SocketAddr> {
-        self.io.peer_address()
+        self.io().and_then(|io| io.peer_address())
     }
 
     fn peer_certificates(&self) -> Option<&[RawCertificate]> {
-        self.io.peer_certificates()
+        self.io().and_then(|io| io.peer_certificates())
     }
 
     fn enable_nodelay(&self) -> io::Result<()> {
-        self.io.enable_nodelay()
+        match self.io() {
+            Some(io) => io.enable_nodelay(),
+            None => Ok(())
+        }
     }
 }
 

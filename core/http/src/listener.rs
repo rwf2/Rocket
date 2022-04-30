@@ -6,12 +6,20 @@ use std::pin::Pin;
 use std::task::{Context, Poll};
 use std::time::Duration;
 
-use log::{debug, error};
+use log::warn;
 use hyper::server::accept::Accept;
 
 use tokio::time::Sleep;
 use tokio::io::{AsyncRead, AsyncWrite};
-use tokio::net::{TcpListener, TcpStream};
+use tokio::net::TcpStream;
+
+pub use tokio::net::TcpListener;
+
+/// A thin wrapper over raw, DER-encoded X.509 client certificate data.
+// NOTE: `rustls::Certificate` is exactly isomorphic to `RawCertificate`.
+#[doc(inline)]
+#[cfg(feature = "tls")]
+pub use rustls::Certificate as RawCertificate;
 
 // TODO.async: 'Listener' and 'Connection' provide common enough functionality
 // that they could be introduced in upstream libraries.
@@ -23,23 +31,13 @@ pub trait Listener {
     /// Return the actual address this listener bound to.
     fn local_addr(&self) -> Option<SocketAddr>;
 
-    /// Try to accept an incoming Connection if ready
+    /// Try to accept an incoming Connection if ready. This should only return
+    /// an `Err` when a fatal problem occurs as Hyper kills the server on `Err`.
     fn poll_accept(
         self: Pin<&mut Self>,
         cx: &mut Context<'_>
     ) -> Poll<io::Result<Self::Connection>>;
 }
-
-/// A thin wrapper over raw, DER-encoded X.509 client certificate data.
-#[cfg(not(feature = "tls"))]
-#[derive(Clone, Eq, PartialEq)]
-pub struct RawCertificate(pub Vec<u8>);
-
-/// A thin wrapper over raw, DER-encoded X.509 client certificate data.
-// NOTE: `rustls::Certificate` is exactly isomorphic to `RawCertificate`.
-#[doc(inline)]
-#[cfg(feature = "tls")]
-pub use rustls::Certificate as RawCertificate;
 
 /// A 'Connection' represents an open connection to a client
 pub trait Connection: AsyncRead + AsyncWrite {
@@ -61,6 +59,11 @@ pub trait Connection: AsyncRead + AsyncWrite {
     /// presented.
     fn peer_certificates(&self) -> Option<&[RawCertificate]> { None }
 }
+
+/// A thin wrapper over raw, DER-encoded X.509 client certificate data.
+#[cfg(not(feature = "tls"))]
+#[derive(Clone, Eq, PartialEq)]
+pub struct RawCertificate(pub Vec<u8>);
 
 pin_project_lite::pin_project! {
     /// This is a generic version of hyper's AddrIncoming that is intended to be
@@ -116,47 +119,46 @@ impl<L: Listener> Incoming<L> {
         self
     }
 
-    fn poll_next(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<io::Result<L::Connection>> {
-        let mut me = self.project();
-        let mut optimistic_retry = true;
+    fn poll_accept_next(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<io::Result<L::Connection>> {
+        /// This function defines per-connection errors: errors that affect only
+        /// a single connection. Since the error affects only one connection, we
+        /// can attempt to `accept()` another connection immediately. All other
+        /// errors will incur a delay before the next `accept()` is performed.
+        /// The delay is useful to handle resource exhaustion errors like ENFILE
+        /// and EMFILE. Otherwise, could enter into tight loop.
+        fn is_connection_error(e: &io::Error) -> bool {
+            matches!(e.kind(),
+            | io::ErrorKind::ConnectionRefused
+            | io::ErrorKind::ConnectionAborted
+            | io::ErrorKind::ConnectionReset)
+        }
+
+        let mut this = self.project();
         loop {
-            // Check if a previous sleep timer is active that was set by IO errors.
-            if let Some(delay) = me.pending_error_delay.as_mut().as_pin_mut() {
-                if optimistic_retry {
-                    error!("optimistically retrying now");
-                    optimistic_retry = false;
-                } else {
-                    error!("retrying in {:?}", me.sleep_on_errors);
-                    match delay.poll(cx) {
-                        Poll::Ready(()) => {}
-                        Poll::Pending => return Poll::Pending,
-                    }
-                }
+            // Check if a previous sleep timer is active, set on I/O errors.
+            if let Some(delay) = this.pending_error_delay.as_mut().as_pin_mut() {
+                futures::ready!(delay.poll(cx));
             }
 
-            me.pending_error_delay.set(None);
+            this.pending_error_delay.set(None);
 
-            match me.listener.as_mut().poll_accept(cx) {
-                Poll::Ready(Ok(stream)) => {
-                    if *me.nodelay {
-                        let _ = stream.enable_nodelay();
+            match futures::ready!(this.listener.as_mut().poll_accept(cx)) {
+                Ok(stream) => {
+                    if *this.nodelay {
+                        if let Err(e) = stream.enable_nodelay() {
+                            warn!("failed to enable NODELAY: {}", e);
+                        }
                     }
 
                     return Poll::Ready(Ok(stream));
                 },
-                Poll::Pending => return Poll::Pending,
-                Poll::Ready(Err(e)) => {
-                    // Connection errors can be ignored directly, continue by
-                    // accepting the next request.
+                Err(e) => {
                     if is_connection_error(&e) {
-                        debug!("accepted connection already errored: {}", e);
-                        continue;
-                    }
-
-                    if let Some(duration) = me.sleep_on_errors {
-                        // Sleep for the specified duration
-                        error!("connection accept error: {}", e);
-                        me.pending_error_delay.set(Some(tokio::time::sleep(*duration)));
+                        warn!("single connection accept error {}; accepting next now", e);
+                    } else if let Some(duration) = this.sleep_on_errors {
+                        // We might be able to recover. Try again in a bit.
+                        warn!("accept error {}; recovery attempt in {}ms", e, duration.as_millis());
+                        this.pending_error_delay.set(Some(tokio::time::sleep(*duration)));
                     } else {
                         return Poll::Ready(Err(e));
                     }
@@ -174,23 +176,9 @@ impl<L: Listener> Accept for Incoming<L> {
         self: Pin<&mut Self>,
         cx: &mut Context<'_>
     ) -> Poll<Option<io::Result<Self::Conn>>> {
-        self.poll_next(cx).map(Some)
+        self.poll_accept_next(cx).map(Some)
     }
 }
-
-/// This function defines errors that are per-connection. Which basically
-/// means that if we get this error from `accept()` system call it means
-/// next connection might be ready to be accepted.
-///
-/// All other errors will incur a delay before next `accept()` is performed.
-/// The delay is useful to handle resource exhaustion errors like ENFILE
-/// and EMFILE. Otherwise, could enter into tight loop.
-fn is_connection_error(e: &io::Error) -> bool {
-    matches!(e.kind(),
-        io::ErrorKind::ConnectionRefused |
-        io::ErrorKind::ConnectionAborted |
-        io::ErrorKind::ConnectionReset)
-    }
 
 impl<L: fmt::Debug> fmt::Debug for Incoming<L> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -198,11 +186,6 @@ impl<L: fmt::Debug> fmt::Debug for Incoming<L> {
             .field("listener", &self.listener)
             .finish()
     }
-}
-
-/// Binds a TCP listener to `address` and returns it.
-pub async fn bind_tcp(address: SocketAddr) -> io::Result<TcpListener> {
-    Ok(TcpListener::bind(address).await?)
 }
 
 impl Listener for TcpListener {
