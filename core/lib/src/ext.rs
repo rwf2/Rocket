@@ -265,14 +265,14 @@ impl<F: Future, I: AsyncWrite> AsyncWrite for CancellableIo<F, I> {
     }
 }
 
-use crate::http::private::{Listener, Connection, RawCertificate};
+use crate::http::private::{Listener, Connection, Certificates};
 
 impl<F: Future, C: Connection> Connection for CancellableIo<F, C> {
     fn peer_address(&self) -> Option<std::net::SocketAddr> {
         self.io().and_then(|io| io.peer_address())
     }
 
-    fn peer_certificates(&self) -> Option<&[RawCertificate]> {
+    fn peer_certificates(&self) -> Option<Certificates> {
         self.io().and_then(|io| io.peer_certificates())
     }
 

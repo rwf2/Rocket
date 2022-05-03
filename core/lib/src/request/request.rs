@@ -16,7 +16,7 @@ use crate::data::Limits;
 use crate::http::{hyper, Method, Header, HeaderMap};
 use crate::http::{ContentType, Accept, MediaType, CookieJar, Cookie};
 use crate::http::uncased::UncasedStr;
-use crate::http::private::RawCertificate;
+use crate::http::private::Certificates;
 use crate::http::uri::{fmt::Path, Origin, Segments, Host, Authority};
 
 /// The type of an incoming web request.
@@ -38,7 +38,7 @@ pub struct Request<'r> {
 pub(crate) struct ConnectionMeta {
     pub remote: Option<SocketAddr>,
     #[cfg_attr(not(feature = "mtls"), allow(dead_code))]
-    pub client_certificates: Option<Arc<Vec<RawCertificate>>>,
+    pub client_certificates: Option<Certificates>,
 }
 
 /// Information derived from the request.

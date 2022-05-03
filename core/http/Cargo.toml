@@ -31,7 +31,7 @@ http = "0.2"
 time = { version = "0.3", features = ["formatting", "macros"] }
 indexmap = { version = "1.5.2", features = ["std"] }
 rustls = { version = "0.20", optional = true }
-tokio-rustls = { version = "0.23.0", optional = true }
+# tokio-rustls = { version = "0.23.0", optional = true }
 rustls-pemfile = { version = "1", optional = true }
 tokio = { version = "1.6.1", features = ["net", "sync", "time"] }
 log = "0.4"
@@ -43,8 +43,13 @@ pin-project-lite = "0.2"
 memchr = "2"
 stable-pattern = "0.1"
 cookie = { version = "0.16.0", features = ["percent-encode", "secure"] }
-state = "0.5.1"
+state = "0.5.3"
 futures = { version = "0.3", default-features = false }
+
+[dependencies.tokio-rustls]
+git = "https://github.com/SergioBenitez/tokio-tls/"
+branch = "stream-from-accept"
+optional = true
 
 [dependencies.x509-parser]
 version = "0.13"

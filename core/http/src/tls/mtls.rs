@@ -42,49 +42,11 @@ use x509_parser::nom;
 use x509::{ParsedExtension, X509Name, X509Certificate, TbsCertificate, X509Error, FromDer};
 use oid::OID_X509_EXT_SUBJECT_ALT_NAME as SUBJECT_ALT_NAME;
 
-use crate::listener::RawCertificate;
+use crate::listener::CertificateData;
 
 /// A type alias for [`Result`](std::result::Result) with the error type set to
 /// [`Error`].
 pub type Result<T, E = Error> = std::result::Result<T, E>;
-
-/// An error returned by the [`Certificate`] request guard.
-///
-/// To retrieve this error in a handler, use an `mtls::Result<Certificate>`
-/// guard type:
-///
-/// ```rust
-/// # extern crate rocket;
-/// # use rocket::get;
-/// use rocket::mtls::{self, Certificate};
-///
-/// #[get("/auth")]
-/// fn auth(cert: mtls::Result<Certificate<'_>>) {
-///     match cert {
-///         Ok(cert) => { /* do something with the client cert */ },
-///         Err(e) => { /* do something with the error */ },
-///     }
-/// }
-/// ```
-#[derive(Debug, Clone)]
-#[non_exhaustive]
-pub enum Error {
-    /// The certificate chain presented by the client had no certificates.
-    Empty,
-    /// The certificate contained neither a subject nor a subjectAlt extension.
-    NoSubject,
-    /// There is no subject and the subjectAlt is not marked as critical.
-    NonCriticalSubjectAlt,
-    /// An error occurred while parsing the certificate.
-    Parse(X509Error),
-    /// The certificate parsed partially but is incomplete.
-    ///
-    /// If `Some(n)`, then `n` more bytes were expected. Otherwise, the number
-    /// of expected bytes is unknown.
-    Incomplete(Option<NonZeroUsize>),
-    /// The certificate contained `.0` bytes of trailing data.
-    Trailing(usize),
-}
 
 /// A request guard for validated, verified client certificates.
 ///
@@ -191,6 +153,44 @@ pub struct Certificate<'a>(X509Certificate<'a>);
 #[derive(Debug, PartialEq, RefCast)]
 pub struct Name<'a>(X509Name<'a>);
 
+/// An error returned by the [`Certificate`] request guard.
+///
+/// To retrieve this error in a handler, use an `mtls::Result<Certificate>`
+/// guard type:
+///
+/// ```rust
+/// # extern crate rocket;
+/// # use rocket::get;
+/// use rocket::mtls::{self, Certificate};
+///
+/// #[get("/auth")]
+/// fn auth(cert: mtls::Result<Certificate<'_>>) {
+///     match cert {
+///         Ok(cert) => { /* do something with the client cert */ },
+///         Err(e) => { /* do something with the error */ },
+///     }
+/// }
+/// ```
+#[derive(Debug, Clone)]
+#[non_exhaustive]
+pub enum Error {
+    /// The certificate chain presented by the client had no certificates.
+    Empty,
+    /// The certificate contained neither a subject nor a subjectAlt extension.
+    NoSubject,
+    /// There is no subject and the subjectAlt is not marked as critical.
+    NonCriticalSubjectAlt,
+    /// An error occurred while parsing the certificate.
+    Parse(X509Error),
+    /// The certificate parsed partially but is incomplete.
+    ///
+    /// If `Some(n)`, then `n` more bytes were expected. Otherwise, the number
+    /// of expected bytes is unknown.
+    Incomplete(Option<NonZeroUsize>),
+    /// The certificate contained `.0` bytes of trailing data.
+    Trailing(usize),
+}
+
 impl<'a> Certificate<'a> {
     fn parse_one(raw: &[u8]) -> Result<X509Certificate<'_>> {
         let (left, x509) = X509Certificate::from_der(raw)?;
@@ -221,7 +221,7 @@ impl<'a> Certificate<'a> {
 
     /// PRIVATE: For internal Rocket use only!
     #[doc(hidden)]
-    pub fn parse(chain: &[RawCertificate]) -> Result<Certificate<'_>> {
+    pub fn parse(chain: &[CertificateData]) -> Result<Certificate<'_>> {
         match chain.first() {
             Some(cert) => Certificate::parse_one(&cert.0).map(Certificate),
             None => Err(Error::Empty)

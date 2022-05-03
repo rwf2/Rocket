@@ -5,21 +5,45 @@ use std::net::SocketAddr;
 use std::pin::Pin;
 use std::task::{Context, Poll};
 use std::time::Duration;
+use std::sync::Arc;
 
 use log::warn;
-use hyper::server::accept::Accept;
-
 use tokio::time::Sleep;
 use tokio::io::{AsyncRead, AsyncWrite};
 use tokio::net::TcpStream;
+use hyper::server::accept::Accept;
+use state::Storage;
 
 pub use tokio::net::TcpListener;
 
 /// A thin wrapper over raw, DER-encoded X.509 client certificate data.
-// NOTE: `rustls::Certificate` is exactly isomorphic to `RawCertificate`.
+// NOTE: `rustls::Certificate` is exactly isomorphic to `CertificateData`.
 #[doc(inline)]
 #[cfg(feature = "tls")]
-pub use rustls::Certificate as RawCertificate;
+pub use rustls::Certificate as CertificateData;
+
+/// A thin wrapper over raw, DER-encoded X.509 client certificate data.
+#[cfg(not(feature = "tls"))]
+#[derive(Clone, Eq, Hash, Ord, PartialEq, PartialOrd)]
+pub struct CertificateData(pub Vec<u8>);
+
+/// A collection of raw certificate data.
+#[derive(Clone, Default)]
+pub struct Certificates(Arc<Storage<Vec<CertificateData>>>);
+
+impl Certificates {
+    /// Set the the raw certificate chain data. Only the first call actually
+    /// sets the data; the remaining do nothing.
+    #[cfg(feature = "tls")]
+    pub(crate) fn set(&self, data: Vec<CertificateData>) {
+        self.0.set(data);
+    }
+
+    /// Returns the raw certificate chain data, if any is available.
+    pub fn chain_data(&self) -> Option<&[CertificateData]> {
+        self.0.try_get().map(|v| v.as_slice())
+    }
+}
 
 // TODO.async: 'Listener' and 'Connection' provide common enough functionality
 // that they could be introduced in upstream libraries.
@@ -57,13 +81,8 @@ pub trait Connection: AsyncRead + AsyncWrite {
     ///
     /// Defaults to an empty vector to indicate that no certificates were
     /// presented.
-    fn peer_certificates(&self) -> Option<&[RawCertificate]> { None }
+    fn peer_certificates(&self) -> Option<Certificates> { None }
 }
-
-/// A thin wrapper over raw, DER-encoded X.509 client certificate data.
-#[cfg(not(feature = "tls"))]
-#[derive(Clone, Eq, PartialEq)]
-pub struct RawCertificate(pub Vec<u8>);
 
 pin_project_lite::pin_project! {
     /// This is a generic version of hyper's AddrIncoming that is intended to be
@@ -119,7 +138,10 @@ impl<L: Listener> Incoming<L> {
         self
     }
 
-    fn poll_accept_next(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<io::Result<L::Connection>> {
+    fn poll_accept_next(
+        self: Pin<&mut Self>,
+        cx: &mut Context<'_>
+    ) -> Poll<io::Result<L::Connection>> {
         /// This function defines per-connection errors: errors that affect only
         /// a single connection. Since the error affects only one connection, we
         /// can attempt to `accept()` another connection immediately. All other
@@ -172,6 +194,7 @@ impl<L: Listener> Accept for Incoming<L> {
     type Conn = L::Connection;
     type Error = io::Error;
 
+    #[inline]
     fn poll_accept(
         self: Pin<&mut Self>,
         cx: &mut Context<'_>
@@ -191,10 +214,12 @@ impl<L: fmt::Debug> fmt::Debug for Incoming<L> {
 impl Listener for TcpListener {
     type Connection = TcpStream;
 
+    #[inline]
     fn local_addr(&self) -> Option<SocketAddr> {
         self.local_addr().ok()
     }
 
+    #[inline]
     fn poll_accept(
         self: Pin<&mut Self>,
         cx: &mut Context<'_>
@@ -204,10 +229,12 @@ impl Listener for TcpListener {
 }
 
 impl Connection for TcpStream {
+    #[inline]
     fn peer_address(&self) -> Option<SocketAddr> {
         self.peer_addr().ok()
     }
 
+    #[inline]
     fn enable_nodelay(&self) -> io::Result<()> {
         self.set_nodelay(true)
     }
