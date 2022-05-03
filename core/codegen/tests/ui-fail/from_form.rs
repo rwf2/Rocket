@@ -168,8 +168,8 @@ struct Validate3 {
 
 #[derive(FromForm)]
 struct Default0 {
-    #[field(default = "no conversion")]
-    first: usize,
+    #[field(default = 123)]
+    first: String,
 }
 
 #[derive(FromForm)]
@@ -202,6 +202,12 @@ struct Default4 {
 struct Default5 {
     #[field(default_with = Some("hi"))]
     no_conversion_from_with: String,
+}
+
+#[derive(FromForm)]
+struct Default6 {
+    #[field(default = "no conversion")]
+    first: bool,
 }
 
 #[derive(FromForm)] // NO ERROR

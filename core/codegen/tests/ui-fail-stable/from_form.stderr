@@ -501,19 +501,18 @@ error[E0308]: mismatched types
 165 |     #[field(validate = ext("hello"))]
     |                            ^^^^^^^ expected struct `ContentType`, found `&str`
 
-error[E0277]: the trait bound `usize: From<&str>` is not satisfied
+error[E0308]: mismatched types
    --> tests/ui-fail-stable/from_form.rs:171:23
     |
-171 |     #[field(default = "no conversion")]
-    |                       ^^^^^^^^^^^^^^^ the trait `From<&str>` is not implemented for `usize`
+171 |     #[field(default = 123)]
+    |                       ^^^ expected struct `std::string::String`, found integer
     |
-    = help: the following implementations were found:
-              <usize as From<NonZeroUsize>>
-              <usize as From<bool>>
-              <usize as From<mio::token::Token>>
-              <usize as From<runtime::thread_pool::idle::State>>
-            and 89 others
-    = note: required because of the requirements on the impl of `Into<usize>` for `&str`
+help: try using a conversion method
+    |
+171 |     #[field(default = 123.to_string())]
+    |                          ++++++++++++
+171 |     #[field(default = 123.to_string())]
+    |                          ++++++++++++
 
 error[E0308]: mismatched types
    --> tests/ui-fail-stable/from_form.rs:203:33
@@ -527,3 +526,13 @@ help: try using a conversion method
     |                                     ++++++++++++
 203 |     #[field(default_with = Some("hi".to_string()))]
     |                                     ++++++++++++
+
+error[E0277]: the trait bound `bool: From<&str>` is not satisfied
+   --> tests/ui-fail-stable/from_form.rs:209:23
+    |
+209 |     #[field(default = "no conversion")]
+    |                       ^^^^^^^^^^^^^^^ the trait `From<&str>` is not implemented for `bool`
+    |
+    = help: the following implementations were found:
+              <bool as From<subtle::Choice>>
+    = note: required because of the requirements on the impl of `Into<bool>` for `&str`
