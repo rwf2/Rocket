@@ -501,19 +501,19 @@ error[E0308]: mismatched types
 165 |     #[field(validate = ext("hello"))]
     |                            ^^^^^^^ expected struct `ContentType`, found `&str`
 
-error[E0277]: the trait bound `i32: From<&str>` is not satisfied
+error[E0277]: the trait bound `usize: From<&str>` is not satisfied
    --> tests/ui-fail-stable/from_form.rs:171:23
     |
 171 |     #[field(default = "no conversion")]
-    |                       ^^^^^^^^^^^^^^^ the trait `From<&str>` is not implemented for `i32`
+    |                       ^^^^^^^^^^^^^^^ the trait `From<&str>` is not implemented for `usize`
     |
     = help: the following implementations were found:
-              <i32 as From<NonZeroI32>>
-              <i32 as From<SignalKind>>
-              <i32 as From<bool>>
-              <i32 as From<i16>>
+              <usize as From<NonZeroUsize>>
+              <usize as From<bool>>
+              <usize as From<mio::token::Token>>
+              <usize as From<runtime::thread_pool::idle::State>>
             and 89 others
-    = note: required because of the requirements on the impl of `Into<i32>` for `&str`
+    = note: required because of the requirements on the impl of `Into<usize>` for `&str`
 
 error[E0308]: mismatched types
    --> tests/ui-fail-stable/from_form.rs:203:33

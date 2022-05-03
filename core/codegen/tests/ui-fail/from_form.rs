@@ -169,7 +169,7 @@ struct Validate3 {
 #[derive(FromForm)]
 struct Default0 {
     #[field(default = "no conversion")]
-    first: i32,
+    first: usize,
 }
 
 #[derive(FromForm)]
