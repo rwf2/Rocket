@@ -58,7 +58,11 @@ const USER_INFO_CHARS: [u8; 256] = char_table(&[
 ]);
 
 pub const PATH_CHARS: [u8; 256] = char_table(&[
-    &REG_NAME_CHARS, &[b':', b'@', b'/']
+    &REG_NAME_CHARS, &[b':', b'@', b'/'],
+
+    // NOTE: these are _not_ accepted in RFC 7230/3986. However, browsers
+    // routinely send these unencoded, so allow them to support the real-world.
+    &[b'[',  b']'],
 ]);
 
 const QUERY_CHARS: [u8; 256] = char_table(&[
@@ -71,6 +75,9 @@ const QUERY_CHARS: [u8; 256] = char_table(&[
 
 #[inline(always)]
 pub const fn is_pchar(&c: &u8) -> bool { PATH_CHARS[c as usize] != 0 }
+
+#[inline(always)]
+pub const fn is_host_char(c: &u8) -> bool { is_pchar(c) && *c != b'[' && *c != b']' }
 
 #[inline(always)]
 pub const fn is_scheme_char(&c: &u8) -> bool { SCHEME_CHAR[c as usize] != 0 }
