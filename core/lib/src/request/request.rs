@@ -973,14 +973,22 @@ impl<'r> Request<'r> {
         let method = Method::from_hyp(&hyper.method)
             .ok_or(Error::BadMethod(&hyper.method))?;
 
-        // In debug, make sure we agree with Hyper. Otherwise, cross our fingers
-        // and trust that it only gives us valid URIs like it's supposed to.
         // TODO: Keep around not just the path/query, but the rest, if there?
         let uri = hyper.uri.path_and_query().ok_or(Error::InvalidUri(&hyper.uri))?;
-        debug_assert!(Origin::parse(uri.as_str()).is_ok());
-        let uri = Origin::new(uri.path(), uri.query().map(Cow::Borrowed));
+
+        // In debug, make sure we agree with Hyper that the URI is valid. If we
+        // disagree, print a warning but continue anyway seeing as if this is a
+        // security issue with Hyper, there isn't much we can do.
+        #[cfg(debug_assertions)]
+        if Origin::parse(uri.as_str()).is_err() {
+            warn!("Hyper/Rocket URI validity discord: {:?}", uri.as_str());
+            info_!("Hyper believes the URI is valid while Rocket disagrees.");
+            info_!("This is likely a Hyper bug with potential security implications.");
+            warn_!("Please report this warning to Rocket's GitHub issue tracker.");
+        }
 
         // Construct the request object.
+        let uri = Origin::new(uri.path(), uri.query().map(Cow::Borrowed));
         let mut request = Request::new(rocket, method, uri);
         if let Some(connection) = connection {
             request.connection = connection;
