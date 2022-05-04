@@ -21,91 +21,111 @@ use crate::log::PaintExt;
 ///
 /// # Phases
 ///
-/// An instance of `Rocket` represents a web server and its state. It progresses
-/// through three statically-enforced phases into orbit: build, ignite, orbit.
+/// A `Rocket` instance represents a web server and its state. It progresses
+/// through three statically-enforced phases: build, ignite, orbit.
 ///
-/// ## Build
+/// * **Build**: _application and server configuration_
 ///
-/// All application and server configuration occurs during the [`Build`] phase.
-/// This includes setting configuration options, mounting/registering
-/// routes/catchers, managing state, and attaching fairings. This is the _only_
-/// phase in which an instance can be modified. To finalize changes, an instance
-/// is ignited via [`Rocket::ignite()`], progressing it into the _ignite_ phase,
-/// or directly launched into orbit with [`Rocket::launch()`] which progress the
-/// instance through ignite into orbit.
+///   This phase enables:
 ///
-/// ## Ignite
+///     * setting configuration options
+///     * mounting/registering routes/catchers
+///     * managing state
+///     * attaching fairings
 ///
-/// An instance in the [`Ignite`] phase is in its final configuration, available
-/// via [`Rocket::config()`]. Barring user-supplied iterior mutation,
-/// application state is guaranteed to remain unchanged beyond this point. An
-/// instance in the ignite phase can be launched into orbit to serve requests
-/// via [`Rocket::launch()`].
+///   This is the _only_ phase in which an instance can be modified. To finalize
+///   changes, an instance is ignited via [`Rocket::ignite()`], progressing it
+///   into the _ignite_ phase, or directly launched into orbit with
+///   [`Rocket::launch()`] which progress the instance through ignite into
+///   orbit.
 ///
-/// ## Orbit
+/// * **Ignite**: _verification and finalization of configuration_
 ///
-/// An instance in the [`Orbit`] phase represents a _running_ application,
-/// actively serving requests.
+///   An instance in the [`Ignite`] phase is in its final configuration,
+///   available via [`Rocket::config()`]. Barring user-supplied iterior
+///   mutation, application state is guaranteed to remain unchanged beyond this
+///   point. An instance in the ignite phase can be launched into orbit to serve
+///   requests via [`Rocket::launch()`].
+///
+/// * **Orbit**: _a running web server_
+///
+///   An instance in the [`Orbit`] phase represents a _running_ application,
+///   actively serving requests.
 ///
 /// # Launching
 ///
-/// ## Manual Launching
+/// To launch a `Rocket` application, the suggested approach is to return an
+/// instance of `Rocket<Build>` from a function named `rocket` marked with the
+/// [`#[launch]`](crate::launch) attribute:
 ///
-/// To launch an instance of `Rocket`, it _must_ progress through all three
-/// phases. To progress into the ignite or launch phases, a tokio `async`
-/// runtime is required. The [`#[main]`](crate::main) attribute initializes a
-/// Rocket-specific tokio runtime and runs the attributed `async fn` inside of
-/// it:
+///   ```rust,no_run
+///   # use rocket::launch;
+///   #[launch]
+///   fn rocket() -> _ {
+///       rocket::build()
+///   }
+///   ```
 ///
-/// ```rust,no_run
-/// #[rocket::main]
-/// async fn main() -> Result<(), rocket::Error> {
-///     rocket::build()
-///         .ignite().await?
-///         .launch().await
-/// }
-/// ```
+/// This generates a `main` funcion with an `async` runtime that runs the
+/// returned `Rocket` instance.
 ///
-/// Note that [`Rocket::launch()`] automatically progresses an instance of
-/// `Rocket` from any phase into orbit:
+/// * **Manual Launching**
 ///
-/// ```rust,no_run
-/// #[rocket::main]
-/// async fn main() -> Result<(), rocket::Error> {
-///     rocket::build().launch().await
-/// }
-/// ```
+///   To launch an instance of `Rocket`, it _must_ progress through all three
+///   phases. To progress into the ignite or launch phases, a tokio `async`
+///   runtime is required. The [`#[main]`](crate::main) attribute initializes a
+///   Rocket-specific tokio runtime and runs the attributed `async fn` inside of
+///   it:
 ///
-/// ## Automatic Launching
+///   ```rust,no_run
+///   #[rocket::main]
+///   async fn main() -> Result<(), rocket::Error> {
+///       rocket::build()
+///           .ignite().await?
+///           .launch().await
+///   }
+///   ```
 ///
-/// Manually progressing an instance of Rocket though its phases is only
-/// necessary when either an instance's finalized state is to be inspected (in
-/// the _ignite_ phase) or the instance is expected to deorbit due to
-/// [`Rocket::shutdown()`]. In the more common case when neither is required,
-/// the [`#[launch]`](crate::launch) attribute can be used. When applied to a
-/// function that returns a `Rocket<Build>`, it automatically initializes an
-/// `async` runtime and launches the function's returned instance:
+///   Note that [`Rocket::launch()`] automatically progresses an instance of
+///   `Rocket` from any phase into orbit:
 ///
-/// ```rust,no_run
-/// # use rocket::launch;
-/// use rocket::{Rocket, Build};
+///   ```rust,no_run
+///   #[rocket::main]
+///   async fn main() -> Result<(), rocket::Error> {
+///       rocket::build().launch().await
+///   }
+///   ```
 ///
-/// #[launch]
-/// fn rocket() -> Rocket<Build> {
-///     rocket::build()
-/// }
-/// ```
+/// * **Automatic Launching**
 ///
-/// To avoid needing to import _any_ items in the common case, the `launch`
-/// attribute will infer a return type written as `_` as `Rocket<Build>`:
+///   Manually progressing an instance of Rocket though its phases is only
+///   necessary when either an instance's finalized state is to be inspected (in
+///   the _ignite_ phase) or the instance is expected to deorbit due to
+///   [`Rocket::shutdown()`]. In the more common case when neither is required,
+///   the [`#[launch]`](crate::launch) attribute can be used. When applied to a
+///   function that returns a `Rocket<Build>`, it automatically initializes an
+///   `async` runtime and launches the function's returned instance:
 ///
-/// ```rust,no_run
-/// # use rocket::launch;
-/// #[launch]
-/// fn rocket() -> _ {
-///     rocket::build()
-/// }
-/// ```
+///   ```rust,no_run
+///   # use rocket::launch;
+///   use rocket::{Rocket, Build};
+///
+///   #[launch]
+///   fn rocket() -> Rocket<Build> {
+///       rocket::build()
+///   }
+///   ```
+///
+///   To avoid needing to import _any_ items in the common case, the `launch`
+///   attribute will infer a return type written as `_` as `Rocket<Build>`:
+///
+///   ```rust,no_run
+///   # use rocket::launch;
+///   #[launch]
+///   fn rocket() -> _ {
+///       rocket::build()
+///   }
+///   ```
 #[must_use]
 pub struct Rocket<P: Phase>(pub(crate) P::State);
 
