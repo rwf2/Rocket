@@ -10,7 +10,6 @@ rocket = { path = "../../core/lib", features = ["secrets"] }
 
 [dev-dependencies]
 rocket = { path = "../../core/lib", features = ["secrets", "json"] }
-serde = { version = "1.0", features = ["derive"] }
 rand = "0.8"
 figment = { version = "0.10", features = ["toml", "env"] }
 

@@ -354,6 +354,7 @@ fn rocket() -> _ {
     let figment = rocket.figment();
 
     #[derive(Deserialize)]
+    #[serde(crate = "rocket::serde")]
     struct Config {
         port: u16,
         custom: Vec<String>,
@@ -382,6 +383,7 @@ Because it is common to store configuration in managed state, Rocket provides an
 # #[macro_use] extern crate rocket;
 # use rocket::serde::Deserialize;
 # #[derive(Deserialize)]
+# #[serde(crate = "rocket::serde")]
 # struct Config {
 #     port: u16,
 #     custom: Vec<String>,
@@ -457,6 +459,7 @@ use rocket::fairing::AdHoc;
 use figment::{Figment, Profile, providers::{Format, Toml, Serialized, Env}};
 
 #[derive(Debug, Deserialize, Serialize)]
+#[serde(crate = "rocket::serde")]
 struct Config {
     app_value: usize,
     /* and so on.. */

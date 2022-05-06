@@ -395,6 +395,7 @@ write:
 use rocket::serde::{Serialize, json::Json};
 
 #[derive(Serialize)]
+#[serde(crate = "rocket::serde")]
 struct Task { /* .. */ }
 
 #[get("/todo")]
