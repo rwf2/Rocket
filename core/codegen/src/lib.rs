@@ -388,14 +388,16 @@ pub fn async_test(args: TokenStream, input: TokenStream) -> TokenStream {
 /// ```rust,no_run
 /// #[rocket::main]
 /// async fn main() -> Result<(), rocket::Error> {
-///     rocket::build()
+///     let _rocket = rocket::build()
 ///         .ignite().await?
-///         .launch().await
+///         .launch().await?;
+///
+///     Ok(())
 /// }
 /// ```
 ///
-/// It should be used only when inspection of an ignited instance of `Rocket` is
-/// required, or when the return value of `launch()` is to be inspected:
+/// It should be used only when the return values of `ignite()` or `launch()`
+/// are to be inspected:
 ///
 /// ```rust,no_run
 /// #[rocket::main]
@@ -403,10 +405,10 @@ pub fn async_test(args: TokenStream, input: TokenStream) -> TokenStream {
 ///     let rocket = rocket::build().ignite().await?;
 ///     println!("Hello, Rocket: {:?}", rocket);
 ///
-///     let result = rocket.launch().await;
-///     println!("The server shutdown: {:?}", result);
+///     let rocket = rocket.launch().await?;
+///     println!("Welcome back, Rocket: {:?}", rocket);
 ///
-///     result
+///     Ok(())
 /// }
 /// ```
 ///

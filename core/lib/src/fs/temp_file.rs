@@ -8,6 +8,7 @@ use crate::form::{FromFormField, ValueField, DataField, error::Errors};
 use crate::outcome::IntoOutcome;
 use crate::fs::FileName;
 
+use tokio::task;
 use tokio::fs::{self, File};
 use tokio::io::AsyncWriteExt;
 use tempfile::{NamedTempFile, TempPath};
@@ -171,8 +172,7 @@ impl<'v> TempFile<'v> {
                 let path = mem::replace(either, Either::Right(new_path.clone()));
                 match path {
                     Either::Left(temp) => {
-                        let result = tokio::task::spawn_blocking(move || temp.persist(new_path))
-                            .await
+                        let result = task::spawn_blocking(move || temp.persist(new_path)).await
                             .map_err(|_| io::Error::new(io::ErrorKind::BrokenPipe, "spawn_block"))?;
 
                         if let Err(e) = result {
@@ -242,8 +242,7 @@ impl<'v> TempFile<'v> {
                 let old_path = mem::replace(either, Either::Right(either.to_path_buf()));
                 match old_path {
                     Either::Left(temp) => {
-                        let result = tokio::task::spawn_blocking(move || temp.keep())
-                            .await
+                        let result = task::spawn_blocking(move || temp.keep()).await
                             .map_err(|_| io::Error::new(io::ErrorKind::BrokenPipe, "spawn_block"))?;
 
                         if let Err(e) = result {
@@ -452,15 +451,13 @@ impl<'v> TempFile<'v> {
             .unwrap_or(Limits::FILE);
 
         let temp_dir = req.rocket().config().temp_dir.relative();
-        let file = tokio::task::spawn_blocking(move || {
-            NamedTempFile::new_in(temp_dir)
-        }).await.map_err(|_| {
-            io::Error::new(io::ErrorKind::BrokenPipe, "spawn_block panic")
-        })??;
-
+        let file = task::spawn_blocking(move || NamedTempFile::new_in(temp_dir)).await;
+        let file = file.map_err(|_| io::Error::new(io::ErrorKind::Other, "spawn_block panic"))??;
         let (file, temp_path) = file.into_parts();
+
         let mut file = File::from_std(file);
-        let n = data.open(limit).stream_to(tokio::io::BufWriter::new(&mut file)).await?;
+        let fut = data.open(limit).stream_to(tokio::io::BufWriter::new(&mut file));
+        let n = fut.await?;
         let temp_file = TempFile::File {
             content_type, file_name,
             path: Either::Left(temp_path),

@@ -141,8 +141,20 @@ pub mod http {
     //! This module exports types that map to HTTP concepts or to the underlying
     //! HTTP library when needed.
 
-    #[doc(inline)]
+    #[doc(hidden)]
     pub use rocket_http::*;
+
+    /// Re-exported hyper HTTP library types.
+    ///
+    /// All types that are re-exported from Hyper reside inside of this module.
+    /// These types will, with certainty, be removed with time, but they reside here
+    /// while necessary.
+    pub mod hyper {
+        #[doc(hidden)]
+        pub use rocket_http::hyper::*;
+
+        pub use rocket_http::hyper::header;
+    }
 
     #[doc(inline)]
     pub use crate::cookies::*;
@@ -221,29 +233,36 @@ pub use async_trait::async_trait;
 
 /// WARNING: This is unstable! Do not use this method outside of Rocket!
 #[doc(hidden)]
-pub fn async_test<R>(fut: impl std::future::Future<Output = R>) -> R {
-    tokio::runtime::Builder::new_multi_thread()
-        // NOTE: graceful shutdown depends on the "rocket-worker" prefix.
-        .thread_name("rocket-worker-test-thread")
-        .worker_threads(1)
+pub fn async_run<F, R>(fut: F, workers: usize, force_end: bool, name: &str) -> R
+    where F: std::future::Future<Output = R>
+{
+    let runtime = tokio::runtime::Builder::new_multi_thread()
+        .thread_name(name)
+        .worker_threads(workers)
         .enable_all()
         .build()
-        .expect("create tokio runtime")
-        .block_on(fut)
+        .expect("create tokio runtime");
+
+    let result = runtime.block_on(fut);
+    if force_end {
+        runtime.shutdown_timeout(std::time::Duration::from_millis(500));
+    }
+
+    result
+}
+
+/// WARNING: This is unstable! Do not use this method outside of Rocket!
+#[doc(hidden)]
+pub fn async_test<R>(fut: impl std::future::Future<Output = R>) -> R {
+    async_run(fut, 1, true, "rocket-worker-test-thread")
 }
 
 /// WARNING: This is unstable! Do not use this method outside of Rocket!
 #[doc(hidden)]
 pub fn async_main<R>(fut: impl std::future::Future<Output = R> + Send) -> R {
-    // FIXME: The `workers` value won't reflect swaps of `Rocket` in attach
+    // FIXME: These config values won't reflect swaps of `Rocket` in attach
     // fairings with different config values, or values from non-Rocket configs.
     // See tokio-rs/tokio#3329 for a necessary solution in `tokio`.
-    tokio::runtime::Builder::new_multi_thread()
-        .worker_threads(Config::from(Config::figment()).workers)
-        // NOTE: graceful shutdown depends on the "rocket-worker" prefix.
-        .thread_name("rocket-worker-thread")
-        .enable_all()
-        .build()
-        .expect("create tokio runtime")
-        .block_on(fut)
+    let config = Config::from(Config::figment());
+    async_run(fut, config.workers, config.shutdown.force, "rocket-worker-thread")
 }

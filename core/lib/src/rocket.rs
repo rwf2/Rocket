@@ -80,9 +80,11 @@ use crate::log::PaintExt;
 ///   ```rust,no_run
 ///   #[rocket::main]
 ///   async fn main() -> Result<(), rocket::Error> {
-///       rocket::build()
+///       let _rocket = rocket::build()
 ///           .ignite().await?
-///           .launch().await
+///           .launch().await?;
+///
+///       Ok(())
 ///   }
 ///   ```
 ///
@@ -92,7 +94,8 @@ use crate::log::PaintExt;
 ///   ```rust,no_run
 ///   #[rocket::main]
 ///   async fn main() -> Result<(), rocket::Error> {
-///       rocket::build().launch().await
+///       let _rocket = rocket::build().launch().await?;
+///       Ok(())
 ///   }
 ///   ```
 ///
@@ -642,22 +645,36 @@ impl Rocket<Ignite> {
         rocket
     }
 
-    async fn _launch(self) -> Result<(), Error> {
-        self.into_orbit().default_tcp_http_server(|rkt| Box::pin(async move {
-            rkt.fairings.handle_liftoff(&rkt).await;
+    async fn _launch(self) -> Result<Rocket<Ignite>, Error> {
+        self.into_orbit()
+            .default_tcp_http_server(|rkt| Box::pin(async move {
+                rkt.fairings.handle_liftoff(&rkt).await;
 
-            let proto = rkt.config.tls_enabled().then(|| "https").unwrap_or("http");
-            let socket_addr = SocketAddr::new(rkt.config.address, rkt.config.port);
-            let addr = format!("{}://{}", proto, socket_addr);
-            launch_info!("{}{} {}",
-                Paint::emoji("🚀 "),
-                Paint::default("Rocket has launched from").bold(),
-                Paint::default(addr).bold().underline());
-        })).await
+                let proto = rkt.config.tls_enabled().then(|| "https").unwrap_or("http");
+                let socket_addr = SocketAddr::new(rkt.config.address, rkt.config.port);
+                let addr = format!("{}://{}", proto, socket_addr);
+                launch_info!("{}{} {}",
+                    Paint::emoji("🚀 "),
+                    Paint::default("Rocket has launched from").bold(),
+                    Paint::default(addr).bold().underline());
+            }))
+            .await
+            .map(|rocket| rocket.into_ignite())
     }
 }
 
 impl Rocket<Orbit> {
+    fn into_ignite(self) -> Rocket<Ignite> {
+        Rocket(Igniting {
+            router: self.0.router,
+            fairings: self.0.fairings,
+            figment: self.0.figment,
+            config: self.0.config,
+            state: self.0.state,
+            shutdown: self.0.shutdown,
+        })
+    }
+
     /// Returns the finalized, active configuration. This is guaranteed to
     /// remain stable after [`Rocket::ignite()`], through ignition and into
     /// orbit.
@@ -845,14 +862,16 @@ impl<P: Phase> Rocket<P> {
     ///
     ///   * graceful shutdown via [`Shutdown::notify()`] completes.
     ///
+    /// The returned value on `Ok(())` is previously running instance.
+    ///
     /// The `Future` does not resolve otherwise.
     ///
     /// # Error
     ///
-    /// If there is a problem starting the application, an [`Error`] is
-    /// returned. Note that a value of type `Error` panics if dropped without
-    /// first being inspected. See the [`Error`] documentation for more
-    /// information.
+    /// If there is a problem starting the application or the application fails
+    /// unexpectedly while running, an [`Error`] is returned. Note that a value
+    /// of type `Error` panics if dropped without first being inspected. See the
+    /// [`Error`] documentation for more information.
     ///
     /// # Example
     ///
@@ -865,11 +884,11 @@ impl<P: Phase> Rocket<P> {
     ///     println!("Rocket: deorbit.");
     /// }
     /// ```
-    pub async fn launch(self) -> Result<(), Error> {
+    pub async fn launch(self) -> Result<Rocket<Ignite>, Error> {
         match self.0.into_state() {
             State::Build(s) => Rocket::from(s).ignite().await?._launch().await,
             State::Ignite(s) => Rocket::from(s)._launch().await,
-            State::Orbit(_) => Ok(())
+            State::Orbit(s) => Ok(Rocket::from(s).into_ignite())
         }
     }
 }

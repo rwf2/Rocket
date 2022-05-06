@@ -21,7 +21,7 @@ values:
 |----------------|-------------------|-------------------------------------------------|-------------------------|
 | `address`      | `IpAddr`          | IP address to serve on                          | `127.0.0.1`             |
 | `port`         | `u16`             | Port to serve on.                               | `8000`                  |
-| `workers`      | `usize`           | Number of threads to use for executing futures. | cpu core count          |
+| `workers`*     | `usize`           | Number of threads to use for executing futures. | cpu core count          |
 | `ident`        | `string`, `false` | If and how to identify via the `Server` header. | `"Rocket"`              |
 | `keep_alive`   | `u32`             | Keep-alive timeout seconds; disabled when `0`.  | `5`                     |
 | `log_level`    | [`LogLevel`]      | Max level to log. (off/normal/debug/critical)   | `normal`/`critical`     |
@@ -31,7 +31,10 @@ values:
 | `limits`       | [`Limits`]        | Streaming read size limits.                     | [`Limits::default()`]   |
 | `limits.$name` | `&str`/`uint`     | Read limit for `$name`.                         | form = "32KiB"         |
 | `ctrlc`        | `bool`            | Whether `ctrl-c` initiates a server shutdown.   | `true`                  |
-| `shutdown`     | [`Shutdown`]      | Graceful shutdown configuration.                | [`Shutdown::default()`] |
+| `shutdown`*    | [`Shutdown`]      | Graceful shutdown configuration.                | [`Shutdown::default()`] |
+
+<small>* Note: the `workers` and `shutdown.force` configuration parameters are
+only read from the [default provider](#default_provider).</small>
 
 ### Profiles
 
@@ -181,6 +184,8 @@ ROCKET_IDENT=false
 ROCKET_TLS={certs="abc",key="foo/bar"}
 ROCKET_LIMITS={form="64 KiB"}
 ```
+
+## Configuration Parameters
 
 ### Secret Key
 
