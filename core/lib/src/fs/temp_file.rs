@@ -451,7 +451,8 @@ impl<'v> TempFile<'v> {
             .unwrap_or(Limits::FILE);
 
         let temp_dir = req.rocket().config().temp_dir.relative();
-        let file = task::spawn_blocking(move || NamedTempFile::new_in(temp_dir)).await;
+        let file = task::spawn_blocking(move || NamedTempFile::new_in(temp_dir));
+        let file = file.await;
         let file = file.map_err(|_| io::Error::new(io::ErrorKind::Other, "spawn_block panic"))??;
         let (file, temp_path) = file.into_parts();
 

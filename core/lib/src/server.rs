@@ -502,10 +502,15 @@ impl Rocket<Orbit> {
             biased;
 
             _ = shutdown => {
+                // Run shutdown fairings. We compute `sleep()` for grace periods
+                // beforehand to ensure we don't add shutdown fairing completion
+                // time, which is arbitrary, to these periods.
                 info!("Shutdown requested. Waiting for pending I/O...");
                 let grace_timer = sleep(Duration::from_secs(grace));
                 let mercy_timer = sleep(Duration::from_secs(grace + mercy));
                 let shutdown_timer = sleep(Duration::from_secs(grace + mercy + 1));
+                rocket.fairings.handle_shutdown(&*rocket).await;
+
                 tokio::pin!(grace_timer, mercy_timer, shutdown_timer);
                 tokio::select! {
                     biased;

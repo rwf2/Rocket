@@ -95,6 +95,29 @@ macro_rules! pub_client_impl {
         Self::_new(rocket, false) $(.$suffix)?
     }
 
+    /// Terminates `Client` by initiating a graceful shutdown via
+    /// [`Shutdown::notify()`] and running shutdown fairings.
+    ///
+    /// This method _must_ be called on a `Client` if graceful shutdown is
+    /// required for testing as `Drop` _does not_ signal `Shutdown` nor run
+    /// shutdown fairings. Returns the instance of `Rocket` being managed by
+    /// this client after all shutdown fairings run to completion.
+    ///
+    /// [`Shutdown::notify()`]: crate::Shutdown::notify()
+    ///
+    /// ```rust,no_run
+    #[doc = $import]
+    ///
+    /// # fn f(client: Client) {
+    /// let client: Client = client;
+    /// let rocket = client.terminate();
+    /// # }
+    /// ```
+    #[inline(always)]
+    pub $($prefix)? fn terminate(self) -> Rocket<Ignite> {
+        Self::_terminate(self) $(.$suffix)?
+    }
+
     #[doc(hidden)]
     pub $($prefix)? fn debug_with(routes: Vec<crate::Route>) -> Result<Self, Error> {
         let rocket = crate::custom(crate::Config::debug_default());

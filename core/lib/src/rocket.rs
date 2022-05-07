@@ -664,7 +664,7 @@ impl Rocket<Ignite> {
 }
 
 impl Rocket<Orbit> {
-    fn into_ignite(self) -> Rocket<Ignite> {
+    pub(crate) fn into_ignite(self) -> Rocket<Ignite> {
         Rocket(Igniting {
             router: self.0.router,
             fairings: self.0.fairings,
