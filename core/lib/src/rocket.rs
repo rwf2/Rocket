@@ -99,6 +99,10 @@ use crate::log::PaintExt;
 ///   }
 ///   ```
 ///
+///   For extreme and rare cases in which [`#[main]`](crate::main) imposes
+///   obstinate restrictions, use [`rocket::execute()`](crate::execute()) to
+///   execute Rocket's `launch()` future.
+///
 /// * **Automatic Launching**
 ///
 ///   Manually progressing an instance of Rocket though its phases is only
