@@ -157,11 +157,11 @@ runtime performance. _**This is false.**_ Rocket's usability derives largely
 from compile-time checks with _zero_ bearing on runtime performance.
 
 So what about benchmarks? Well, benchmarking is _hard_, and besides often being
-conducted incorrectly, often appear to say more than they do. So, when you see a
-benchmark for "Hello, world!", you should know that the benchmark's relevance
-doesn't extend far beyond "Hello, world!" servers and the specific way the
-measurement was taken. In other words, it provides a baseline truth that is hard
-to extrapolate to real-world use-cases, _your_ use-case.
+conducted incorrectly<em>*</em>, often appear to say more than they do. So, when
+you see a benchmark for "Hello, world!", you should know that the benchmark's
+relevance doesn't extend far beyond those specific "Hello, world!" servers and
+the specific way the measurement was taken. In other words, it provides _some_
+baseline that is hard to extrapolate to real-world use-cases, _your_ use-case.
 
 Nevertheless, here are some things you can consider as _generally_ true about
 Rocket applications:
@@ -170,10 +170,10 @@ Rocket applications:
     languages like Python or Ruby.
   * They'll perform much better than those written in VM or JIT languages like
     JavaScript or Java.
-  * They'll perform a bit better than those written in compiled but GC'd
-    languages like Go.
-  * They'll perform competitively with those written in compiled, non-GC'd
-    languages like Rust or C.
+  * They'll perform a bit better than those written in compiled-to-native but
+    GC'd languages like Go.
+  * They'll perform competitively with those written in compiled-to-native,
+    non-GC'd languages like Rust or C.
 
 Again, we emphasize _generally_ true. It is trivial to write a Rocket
 application that is slower than a similar Python application.
@@ -183,6 +183,9 @@ it enables your _application itself_ to perform well. Rocket takes great care to
 enable your application to perform as little work as possible through
 unique-to-Rocket features like [managed state], [request-local state], and
 zero-copy parsing and deserialization.
+
+<small>* A common mistake is to pit against Rocket's "Hello, world!" without
+normalizing for response size, especially security headers.</small>
 
 </div>
 </details>
@@ -200,7 +203,6 @@ What are some examples of "big" apps written in Rocket?
 Here are some notable projects and websites in Rocket we're aware of:
 
   * [Vaultwarden] - A BitWarden Server
-  * [Conduit] - A Matrix Homeserver
   * [Rust-Lang.org] - Rust Language Website
   * [Plume] - Federated Blogging Engine
   * [Hagrid] - OpenPGP KeyServer ([keys.openpgp.org](https://keys.openpgp.org/))
@@ -214,7 +216,7 @@ you'd like to see here!
 [Rust-Lang.org]: https://www.rust-lang.org/
 [Plume]: https://github.com/Plume-org/Plume
 [Hagrid]: https://gitlab.com/hagrid-keyserver/hagrid/
-[SourceGraph Syntax Highlighter]: https://github.com/sourcegraph/syntect_server
+[SourceGraph Syntax Highlighter]: https://github.com/sourcegraph/sourcegraph/tree/main/docker-images/syntax-highlighter
 [Let us know]: https://github.com/SergioBenitez/Rocket/discussions/categories/show-and-tell
 
 </div>
@@ -314,11 +316,14 @@ How do I handle file uploads? What is this "multipart" in my stream?
 </summary>
 <div class="content">
 
-For a quick example on how to handle file uploads, see [multipart forms].
+For a quick example on how to handle file uploads, see [multipart forms]. The
+gist is: use `Form<TempFile>` as a data guard.
 
-File uploads are transmitted by the browser as [multipart] form submissions,
-which Rocket handles natively as a [`DataField`]. The [`TempFile`] form guard
-can accept a `DataField` and stream the data to disk for persistence.
+File uploads are encoded and transmitted by the browser as [multipart] forms.
+The raw stream, as seen by [`Data`] for example, thus contains the necessary
+metadata to encode the form. Rocket's [`Form`] data guard can parse these form
+submissions into any type that implements [`FromForm`]. This includes types like
+[`TempFile`] which streams the decoded data to disk for persistence.
 </div>
 </details>
 
@@ -326,6 +331,10 @@ can accept a `DataField` and stream the data to disk for persistence.
 [multipart forms]: ../requests/#multipart
 [`DataField`]: @api/rocket/form/struct.DataField.html
 [`TempFile`]: @api/rocket/fs/enum.TempFile.html
+[`DataField`]: @api/rocket/data/struct.Data.html
+[`Form`]: @api/rocket/form/struct.Form.html
+[`FromForm`]: @api/rocket/form/trait.FromForm.html
+[`Data`]: @api/rocket/struct.Data.html
 
 <details id="raw-request">
 <summary>
@@ -375,7 +384,7 @@ That depends on the header!
 
 Any "transport" headers (`Content-Length`, `Transfer-Encoding`, etc.) are
 automatically set by Rocket and cannot be directly overridden for correctness
-reasons. The rest are set by a type's [`Responder`] implementation.
+reasons. The rest are set by a route's [`Responder`].
 
 **Status**
 
