@@ -1,7 +1,8 @@
 #[macro_use] extern crate rocket;
 
+#[cfg(test)]
+mod tests;
 mod paste_id;
-#[cfg(test)] mod tests;
 
 use std::io;
 
@@ -12,8 +13,8 @@ use rocket::tokio::fs::{self, File};
 
 use crate::paste_id::PasteId;
 
+// In a real application, these would be retrieved dynamically from a config.
 const HOST: Absolute<'static> = uri!("http://localhost:8000");
-
 const ID_LENGTH: usize = 3;
 
 #[post("/", data = "<paste>")]
@@ -53,6 +54,5 @@ fn index() -> &'static str {
 
 #[launch]
 fn rocket() -> _ {
-    rocket::build()
-        .mount("/", routes![index, upload, delete, retrieve])
+    rocket::build().mount("/", routes![index, upload, delete, retrieve])
 }
