@@ -214,7 +214,7 @@ Before we continue, we'll need to make a few design decisions.
     mod paste_id;
     # */ mod paste_id { pub struct PasteId; }
 
-    use crate::paste_id::PasteId;
+    use paste_id::PasteId;
     ```
 
     You'll notice that our code to generate paste IDs uses the `rand` crate, so

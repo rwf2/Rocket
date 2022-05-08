@@ -11,7 +11,7 @@ use rocket::http::uri::Absolute;
 use rocket::response::content::RawText;
 use rocket::tokio::fs::{self, File};
 
-use crate::paste_id::PasteId;
+use paste_id::PasteId;
 
 // In a real application, these would be retrieved dynamically from a config.
 const HOST: Absolute<'static> = uri!("http://localhost:8000");
