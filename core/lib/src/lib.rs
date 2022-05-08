@@ -141,7 +141,7 @@ pub mod http {
     //! This module exports types that map to HTTP concepts or to the underlying
     //! HTTP library when needed.
 
-    #[doc(hidden)]
+    #[doc(inline)]
     pub use rocket_http::*;
 
     /// Re-exported hyper HTTP library types.
