@@ -1,5 +1,22 @@
 [[articles]]
 title = """
+  Rocket's 2nd v0.5 Release Candidate
+"""
+slug = "2022-05-09-version-0.5-rc.2"
+author = "Sergio Benitez"
+author_url = "https://sergio.bz"
+date = "May 09, 2022"
+snippet = """
+Rocket `0.5.0-rc.2`, a release candidate for Rocket v0.5, is now available.
+
+This release builds on the previous release candidate and brings further
+features, improvements, and fixes to Rocket. As before, this is an opportunity
+to discover issues with Rocket v0.5 and its documentation before its general
+release.
+"""
+
+[[articles]]
+title = """
   Rocket v0.5 Release Candidate
 """
 slug = "2021-06-09-version-0.5-rc.1"

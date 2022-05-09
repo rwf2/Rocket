@@ -1,6 +1,6 @@
 [package]
 name = "rocket_guide_tests"
-version = "0.5.0-rc.1"
+version = "0.5.0-rc.2"
 workspace = "../../"
 edition = "2021"
 publish = false
@@ -9,7 +9,7 @@ publish = false
 rocket = { path = "../../core/lib", features = ["secrets"] }
 
 [dev-dependencies]
-rocket = { path = "../../core/lib", features = ["secrets", "json"] }
+rocket = { path = "../../core/lib", features = ["secrets", "json", "mtls"] }
 rand = "0.8"
 figment = { version = "0.10", features = ["toml", "env"] }
 
@@ -17,6 +17,6 @@ figment = { version = "0.10", features = ["toml", "env"] }
 path = "../../contrib/dyn_templates"
 features = ["tera"]
 
-[dev-dependencies.rocket_sync_db_pools]
-path = "../../contrib/sync_db_pools/lib"
-features = ["diesel_sqlite_pool"]
+[dev-dependencies.rocket_db_pools]
+path = "../../contrib/db_pools/lib"
+features = ["sqlx_sqlite"]

@@ -1,6 +1,6 @@
 [package]
 name = "rocket_db_pools_codegen"
-version = "0.1.0-rc"
+version = "0.1.0-rc.2"
 authors = ["Sergio Benitez <sb@sergio.bz>", "Jeb Rosen <jeb@jebrosen.com>"]
 description = "Procedural macros for rocket_db_pools."
 repository = "https://github.com/SergioBenitez/Rocket/contrib/db_pools"
