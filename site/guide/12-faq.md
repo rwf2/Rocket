@@ -54,13 +54,14 @@ looks like:
 
 | Framework            | Dependencies | Build Time |
 |----------------------|--------------|------------|
-| Rocket 0.5-rc.2      | 148          | 44s        |
-| Actix-Web 4.0-beta.8 | 175          | 47s        |
-| Tide 0.16            | 209          | 34s        |
-| Warp 0.3             | 148          | 37s        |
+| Rocket 0.5-rc.2      | 175          | 50s        |
+| Actix-Web 4.0.1      | 155          | 40s        |
+| Tide 0.16            | 202          | 37s        |
+| Warp 0.3.2           | 132          | 30s        |
+| Axum 0.5.4           | 81           | 18s        |
 
 <small>· Measurements taken on a MacBookPro15,1 Intel Core i9 @ 2.9GHZ, macOS
-11.2.1, Rust 1.53 stable. Best of 3.</small><br />
+12.1, Rust 1.60 stable. Best of 3.</small><br />
 <small>· Rocket includes features like multipart parsing and static file
 serving that would require additional deps in other frameworks.</small>
 
