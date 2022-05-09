@@ -95,6 +95,8 @@ ALL_CRATE_ROOTS=(
     "${CORE_LIB_ROOT}"
     "${CONTRIB_ROOT}/sync_db_pools/codegen"
     "${CONTRIB_ROOT}/sync_db_pools/lib"
+    "${CONTRIB_ROOT}/db_pools/codegen"
+    "${CONTRIB_ROOT}/db_pools/lib"
     "${CONTRIB_ROOT}/dyn_templates"
 )
 
