@@ -102,6 +102,8 @@ function print_environment() {
   echo "  VERSION: ${VERSION}"
   echo "  MAJOR_VERSION: ${MAJOR_VERSION}"
   echo "  CODENAME: ${CODENAME}"
+  echo "  PHYSICAL_CODENAME: ${PHYSICAL_CODENAME}"
+  echo "  VIRTUAL_CODENAME: ${VIRTUAL_CODENAME}"
   echo "  DOC_VERSION: ${DOC_VERSION}"
   echo "  CURRENT_RELEASE: ${CURRENT_RELEASE}"
   echo "  PRE_RELEASE: ${PRE_RELEASE}"
