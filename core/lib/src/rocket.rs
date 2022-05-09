@@ -42,7 +42,7 @@ use crate::log::PaintExt;
 /// * **Ignite**: _verification and finalization of configuration_
 ///
 ///   An instance in the [`Ignite`] phase is in its final configuration,
-///   available via [`Rocket::config()`]. Barring user-supplied iterior
+///   available via [`Rocket::config()`]. Barring user-supplied interior
 ///   mutation, application state is guaranteed to remain unchanged beyond this
 ///   point. An instance in the ignite phase can be launched into orbit to serve
 ///   requests via [`Rocket::launch()`].
