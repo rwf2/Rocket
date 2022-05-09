@@ -34,7 +34,7 @@ values:
 | `shutdown`*    | [`Shutdown`]      | Graceful shutdown configuration.                | [`Shutdown::default()`] |
 
 <small>* Note: the `workers` and `shutdown.force` configuration parameters are
-only read from the [default provider](#default_provider).</small>
+only read from the [default provider](#default-provider).</small>
 
 ### Profiles
 
