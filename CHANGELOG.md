@@ -1,11 +1,11 @@
-# Version 0.5.0-rc.2 (May 9, 2022)
+# Version 0.5.0-rc.2 (May 09, 2022)
 
 ## Major Features and Improvements
 
   * Introduced [`rocket_db_pools`] for asynchronous database pooling.
   * Introduced support for [mutual TLS] and client [`Certificate`]s.
   * Added a [`local_cache_once!`] macro for request-local storage.
-  * Added a [v0.4 to v0.5 migration guide] and [FAQ] the Rocket's website.
+  * Added a [v0.4 to v0.5 migration guide] and [FAQ] to Rocket's website.
   * Introduced [shutdown fairings].
 
 ## Breaking Changes
