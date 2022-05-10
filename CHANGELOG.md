@@ -15,6 +15,7 @@
   * [`MediaType::with_params()`] and [`ContentType::with_params()`] are now builder methods.
   * Content-Type [`content`] responder type names are now prefixed with `Raw`.
   * The `content::Plain` responder is now called `content::RawText`.
+  * The `content::Custom<T>` responder was removed in favor of [`(ContentType, T)`].
   * TLS config structs are now only available when the `tls` feature is enabled.
   * Removed `CookieJar::get_private_pending()` in favor of [`CookieJar::get_pending()`].
   * The [`local_cache!`] macro accepts fewer types. Use [`local_cache_once!`] as appropriate.
@@ -67,6 +68,7 @@
 
   * Rocket now uses the 2021 edition of Rust.
 
+[`(ContentType, T)`]: https://api.rocket.rs/v0.5-rc/rocket/response/content/index.html#usage
 [v0.4 to v0.5 migration guide]: https://rocket.rs/v0.5-rc/guide/upgrading-from-0.4/
 [FAQ]: https://rocket.rs/v0.5-rc/guide/faq/
 [`Rocket::launch()`]: https://api.rocket.rs/v0.5-rc/rocket/struct.Rocket.html#method.launch
