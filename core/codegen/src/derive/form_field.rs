@@ -351,7 +351,11 @@ fn default_expr(expr: &syn::Expr) -> TokenStream {
     } else if matches!(expr, Expr::Lit(ExprLit { lit: Lit::Int(_), .. })) {
         quote_spanned!(expr.span() => Some(#expr))
     } else {
-        quote_spanned!(expr.span() => Some({ #expr }.into()))
+        quote_spanned!(expr.span() =>
+            // works around https://github.com/rust-lang/rust-clippy/issues/7845
+            #[allow(clippy::useless_conversion)]
+            Some({ #expr }.into())
+        )
     }
 }
 
@@ -392,12 +396,11 @@ pub fn default<'v>(field: Field<'v>) -> Result<Option<TokenStream>> {
         },
         (Some(e), None) | (None, Some(e)) => {
             Ok(Some(quote_spanned!(e.span() => {
-                let __default: Option<#ty>;
-                if __opts.strict {
-                    __default = None;
+                let __default: Option<#ty> = if __opts.strict {
+                    None
                 } else {
-                    __default = #e;
-                }
+                    #e
+                };
 
                 __default
             })))
