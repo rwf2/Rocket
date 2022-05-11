@@ -392,12 +392,11 @@ pub fn default<'v>(field: Field<'v>) -> Result<Option<TokenStream>> {
         },
         (Some(e), None) | (None, Some(e)) => {
             Ok(Some(quote_spanned!(e.span() => {
-                let __default: Option<#ty>;
-                if __opts.strict {
-                    __default = None;
+                let __default: Option<#ty> = if __opts.strict {
+                    None
                 } else {
-                    __default = #e;
-                }
+                    #e
+                };
 
                 __default
             })))
