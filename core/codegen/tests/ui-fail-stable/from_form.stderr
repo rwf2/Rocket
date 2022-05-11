@@ -533,6 +533,4 @@ error[E0277]: the trait bound `bool: From<&str>` is not satisfied
 209 |     #[field(default = "no conversion")]
     |                       ^^^^^^^^^^^^^^^ the trait `From<&str>` is not implemented for `bool`
     |
-    = help: the following implementations were found:
-              <bool as From<subtle::Choice>>
     = note: required because of the requirements on the impl of `Into<bool>` for `&str`
