@@ -101,14 +101,15 @@ pub type Result<T = Rocket<Build>, E = Rocket<Build>> = std::result::Result<T, E
 ///
 /// ## Fairing Callbacks
 ///
-/// There are four kinds of fairing callbacks: launch, liftoff, request, and
-/// response. A fairing can request any combination of these callbacks through
-/// the `kind` field of the [`Info`] structure returned from the `info` method.
-/// Rocket will only invoke the callbacks identified in the fairing's [`Kind`].
+/// There are five kinds of fairing callbacks: launch, liftoff, request,
+/// response, and shutdown. A fairing can request any combination of these
+/// callbacks through the `kind` field of the [`Info`] structure returned from
+/// the `info` method. Rocket will only invoke the callbacks identified in the
+/// fairing's [`Kind`].
 ///
-/// The four callback kinds are as follows:
+/// The callback kinds are as follows:
 ///
-///   * **Ignite (`on_ignite`)**
+///   * **<a name="ignite">Ignite</a> (`on_ignite`)**
 ///
 ///     An ignite callback, represented by the [`Fairing::on_ignite()`] method,
 ///     is called just prior to liftoff, during ignition. The state of the
@@ -126,15 +127,20 @@ pub type Result<T = Rocket<Build>, E = Rocket<Build>> = std::result::Result<T, E
 ///     ignite fairing returns `Err`, launch will be aborted. All ignite
 ///     fairings are executed even if one or more signal a failure.
 ///
-///   * **Liftoff (`on_liftoff`)**
+///   * **<a name="liftoff">Liftoff</a> (`on_liftoff`)**
 ///
 ///     A liftoff callback, represented by the [`Fairing::on_liftoff()`] method,
 ///     is called immediately after a Rocket application has launched. At this
 ///     point, Rocket has opened a socket for listening but has not yet begun
 ///     accepting connections. A liftoff callback can inspect the `Rocket`
-///     instance that has launched but not otherwise gracefully abort launch.
+///     instance that has launched and even schedule a shutdown using
+///     [`Shutdown::notify()`](crate::Shutdown::notify()) via
+///     [`Rocket::shutdown()`].
 ///
-///   * **Request (`on_request`)**
+///     Liftoff fairings are run concurrently; resolution of all fairings is
+///     awaited before resuming request serving.
+///
+///   * **<a name="request">Request</a> (`on_request`)**
 ///
 ///     A request callback, represented by the [`Fairing::on_request()`] method,
 ///     is called just after a request is received, immediately after
@@ -147,7 +153,7 @@ pub type Result<T = Rocket<Build>, E = Rocket<Build>> = std::result::Result<T, E
 ///     via response callbacks. Any modifications to a request are persisted and
 ///     can potentially alter how a request is routed.
 ///
-///   * **Response (`on_response`)**
+///   * **<a name="response">Response</a> (`on_response`)**
 ///
 ///     A response callback, represented by the [`Fairing::on_response()`]
 ///     method, is called when a response is ready to be sent to the client. At
@@ -161,6 +167,33 @@ pub type Result<T = Rocket<Build>, E = Rocket<Build>> = std::result::Result<T, E
 ///     `HEAD` requests to `GET` if there is no matching `HEAD` handler for that
 ///     request. Additionally, Rocket will automatically strip the body for
 ///     `HEAD` requests _after_ response fairings have run.
+///
+///   * **<a name="shutdown">Shutdown</a> (`on_shutdown`)**
+///
+///     A shutdown callback, represented by the [`Fairing::on_shutdown()`]
+///     method, is called when [shutdown is triggered]. At this point, graceful
+///     shutdown has commenced but not completed; no new requests are accepted
+///     but the application may still be actively serving existing requests.
+///
+///     Rocket guarantees, however, that all requests are completed or aborted
+///     once [grace and mercy periods] have expired. This implies that a
+///     shutdown fairing that (asynchronously) sleeps for `grace + mercy + ε`
+///     seconds before executing any logic will execute said logic after all
+///     requests have been processed or aborted. Note that such fairings may
+///     wish to operate using the `Ok` return value of [`Rocket::launch()`]
+///     instead.
+///
+///     All registered shutdown fairings are run concurrently; resolution of all
+///     fairings is awaited before resuming shutdown. Shutdown fairings do not
+///     affect grace and mercy periods. In other words, any time consumed by
+///     shutdown fairings is not added to grace and mercy periods.
+///
+///     ***Note: Shutdown fairings are only run during testing if the `Client`
+///     is terminated using [`Client::terminate()`].***
+///
+///     [shutdown is triggered]: crate::config::Shutdown#triggers
+///     [grace and mercy periods]: crate::config::Shutdown#summary
+///     [`Client::terminate()`]: crate::local::blocking::Client::terminate()
 ///
 /// # Singletons
 ///
@@ -243,6 +276,11 @@ pub type Result<T = Rocket<Build>, E = Rocket<Build>> = std::result::Result<T, E
 ///     }
 ///
 ///     async fn on_response<'r>(&self, req: &'r Request<'_>, res: &mut Response<'r>) {
+///         /* ... */
+///         # unimplemented!()
+///     }
+///
+///     async fn on_shutdown(&self, rocket: &Rocket<Orbit>) {
 ///         /* ... */
 ///         # unimplemented!()
 ///     }
@@ -426,6 +464,8 @@ pub trait Fairing: Send + Sync + Any + 'static {
     /// The ignite callback. Returns `Ok` if ignition should proceed and `Err`
     /// if ignition and launch should be aborted.
     ///
+    /// See [Fairing Callbacks](#ignite) for complete semantics.
+    ///
     /// This method is called during ignition and if `Kind::Ignite` is in the
     /// `kind` field of the `Info` structure for this fairing. The `rocket`
     /// parameter is the `Rocket` instance that is currently being built for
@@ -438,6 +478,8 @@ pub trait Fairing: Send + Sync + Any + 'static {
 
     /// The liftoff callback.
     ///
+    /// See [Fairing Callbacks](#liftoff) for complete semantics.
+    ///
     /// This method is called just after launching the application if
     /// `Kind::Liftoff` is in the `kind` field of the `Info` structure for this
     /// fairing. The `Rocket` parameter corresponds to the lauched application.
@@ -448,6 +490,8 @@ pub trait Fairing: Send + Sync + Any + 'static {
     async fn on_liftoff(&self, _rocket: &Rocket<Orbit>) { }
 
     /// The request callback.
+    ///
+    /// See [Fairing Callbacks](#request) for complete semantics.
     ///
     /// This method is called when a new request is received if `Kind::Request`
     /// is in the `kind` field of the `Info` structure for this fairing. The
@@ -461,6 +505,8 @@ pub trait Fairing: Send + Sync + Any + 'static {
 
     /// The response callback.
     ///
+    /// See [Fairing Callbacks](#response) for complete semantics.
+    ///
     /// This method is called when a response is ready to be issued to a client
     /// if `Kind::Response` is in the `kind` field of the `Info` structure for
     /// this fairing. The `&Request` parameter is the request that was routed,
@@ -470,6 +516,21 @@ pub trait Fairing: Send + Sync + Any + 'static {
     ///
     /// The default implementation of this method does nothing.
     async fn on_response<'r>(&self, _req: &'r Request<'_>, _res: &mut Response<'r>) {}
+
+    /// The shutdown callback.
+    ///
+    /// See [Fairing Callbacks](#shutdown) for complete semantics.
+    ///
+    /// This method is called when [shutdown is triggered] if `Kind::Shutdown`
+    /// is in the `kind` field of the `Info` structure for this fairing. The
+    /// `Rocket` parameter corresponds to the running application.
+    ///
+    /// [shutdown is triggered]: crate::config::Shutdown#triggers
+    ///
+    /// ## Default Implementation
+    ///
+    /// The default implementation of this method does nothing.
+    async fn on_shutdown(&self, _rocket: &Rocket<Orbit>) { }
 }
 
 #[crate::async_trait]
@@ -497,5 +558,10 @@ impl<T: Fairing> Fairing for std::sync::Arc<T> {
     #[inline]
     async fn on_response<'r>(&self, req: &'r Request<'_>, res: &mut Response<'r>) {
         (self as &T).on_response(req, res).await
+    }
+
+    #[inline]
+    async fn on_shutdown(&self, rocket: &Rocket<Orbit>) {
+        (self as &T).on_shutdown(rocket).await
     }
 }

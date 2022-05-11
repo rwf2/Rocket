@@ -8,6 +8,7 @@ source "${SCRIPT_DIR}/config.sh"
 # Add Cargo to PATH.
 export PATH=${HOME}/.cargo/bin:${PATH}
 export CARGO_INCREMENTAL=0
+export RUSTC_BOOTSTRAP=1
 CARGO="cargo"
 
 # Checks that the versions for Cargo projects $@ all match

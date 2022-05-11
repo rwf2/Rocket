@@ -29,6 +29,7 @@ fn entry_to_tests(root_glob: &LitStr) -> Result<Vec<TokenStream>, Box<dyn Error>
         let ident = Ident::new(&name.to_lowercase(), root_glob.span());
         let full_path = Path::new(&manifest_dir).join(&path).display().to_string();
         tests.push(quote_spanned!(root_glob.span() =>
+            #[allow(unused_doc_comments)]
             mod #ident {
                 macro_rules! doc_comment { ($x:expr) => (#[doc = $x] extern {}); }
                 doc_comment!(include_str!(#full_path));

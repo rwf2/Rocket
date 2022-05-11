@@ -9,7 +9,7 @@
 //!
 //! ```toml
 //! [dependencies.rocket]
-//! version = "0.5.0-rc.1"
+//! version = "0.5.0-rc.2"
 //! features = ["msgpack"]
 //! ```
 //!
@@ -280,7 +280,7 @@ impl<T> DerefMut for MsgPack<T> {
 pub fn from_slice<'a, T>(v: &'a [u8]) -> Result<T, Error>
     where T: Deserialize<'a>,
 {
-    rmp_serde::from_read_ref(v)
+    rmp_serde::from_slice(v)
 }
 
 /// Serialize a `T` into a MessagePack byte vector with compact representation.

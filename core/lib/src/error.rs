@@ -1,16 +1,18 @@
 //! Types representing various errors that can occur in a Rocket application.
 
 use std::{io, fmt};
-use std::sync::atomic::{Ordering, AtomicBool};
+use std::sync::{Arc, atomic::{Ordering, AtomicBool}};
+use std::error::Error as StdError;
 
 use yansi::Paint;
 use figment::Profile;
 
+use crate::{Rocket, Orbit};
+
 /// An error that occurs during launch.
 ///
-/// An `Error` is returned by [`launch()`](crate::Rocket::launch()) when
-/// launching an application fails or, more rarely, when the runtime fails after
-/// lauching.
+/// An `Error` is returned by [`launch()`](Rocket::launch()) when launching an
+/// application fails or, more rarely, when the runtime fails after lauching.
 ///
 /// # Panics
 ///
@@ -76,8 +78,6 @@ pub enum ErrorKind {
     Bind(io::Error),
     /// An I/O error occurred during launch.
     Io(io::Error),
-    /// An I/O error occurred in the runtime.
-    Runtime(Box<dyn std::error::Error + Send + Sync>),
     /// A valid [`Config`](crate::Config) could not be extracted from the
     /// configured figment.
     Config(figment::Error),
@@ -89,6 +89,13 @@ pub enum ErrorKind {
     SentinelAborts(Vec<crate::sentinel::Sentry>),
     /// The configuration profile is not debug but not secret key is configured.
     InsecureSecretKey(Profile),
+    /// Shutdown failed.
+    Shutdown(
+        /// The instance of Rocket that failed to shutdown.
+        Arc<Rocket<Orbit>>,
+        /// The error that occurred during shutdown, if any.
+        Option<Box<dyn StdError + Send + Sync>>
+    ),
 }
 
 impl From<ErrorKind> for Error {
@@ -101,6 +108,14 @@ impl Error {
     #[inline(always)]
     pub(crate) fn new(kind: ErrorKind) -> Error {
         Error { handled: AtomicBool::new(false), kind }
+    }
+
+    #[inline(always)]
+    pub(crate) fn shutdown<E>(rocket: Arc<Rocket<Orbit>>, error: E) -> Error
+        where E: Into<Option<crate::http::hyper::Error>>
+    {
+        let error = error.into().map(|e| Box::new(e) as Box<dyn StdError + Sync + Send>);
+        Error::new(ErrorKind::Shutdown(rocket, error))
     }
 
     #[inline(always)]
@@ -146,10 +161,11 @@ impl fmt::Display for ErrorKind {
             ErrorKind::Io(e) => write!(f, "I/O error: {}", e),
             ErrorKind::Collisions(_) => "collisions detected".fmt(f),
             ErrorKind::FailedFairings(_) => "launch fairing(s) failed".fmt(f),
-            ErrorKind::Runtime(e) => write!(f, "runtime error: {}", e),
             ErrorKind::InsecureSecretKey(_) => "insecure secret key config".fmt(f),
             ErrorKind::Config(_) => "failed to extract configuration".fmt(f),
             ErrorKind::SentinelAborts(_) => "sentinel(s) aborted".fmt(f),
+            ErrorKind::Shutdown(_, Some(e)) => write!(f, "shutdown failed: {}", e),
+            ErrorKind::Shutdown(_, None) => "shutdown failed".fmt(f),
         }
     }
 }
@@ -212,11 +228,6 @@ impl Drop for Error {
 
                 panic!("aborting due to fairing failure(s)");
             }
-            ErrorKind::Runtime(ref err) => {
-                error!("An error occurred in the runtime:");
-                info_!("{}", err);
-                panic!("aborting due to runtime failure");
-            }
             ErrorKind::InsecureSecretKey(profile) => {
                 error!("secrets enabled in non-debug without `secret_key`");
                 info_!("selected profile: {}", Paint::default(profile).bold());
@@ -236,6 +247,14 @@ impl Drop for Error {
                 }
 
                 panic!("aborting due to sentinel-triggered abort(s)");
+            }
+            ErrorKind::Shutdown(_, error) => {
+                error!("Rocket failed to shutdown gracefully.");
+                if let Some(e) = error {
+                    info_!("{}", e);
+                }
+
+                panic!("aborting due to failed shutdown");
             }
         }
     }

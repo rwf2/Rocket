@@ -17,7 +17,7 @@ full usage details.
 
    ```toml
    [dependencies.rocket_db_pools]
-   version = "0.1.0-rc"
+   version = "0.1.0-rc.2"
    features = ["sqlx_sqlite"]
    ```
 

@@ -244,7 +244,7 @@ impl<'a> CookieJar<'a> {
     /// private or not. If no such cookie exists, returns `None`.
     ///
     /// This _does not_ return cookies sent by the client in a request. To
-    /// retrieve usch cookies, using [`CookieJar::get()`] or
+    /// retrieve such cookies, using [`CookieJar::get()`] or
     /// [`CookieJar::get_private()`].
     ///
     /// # Example

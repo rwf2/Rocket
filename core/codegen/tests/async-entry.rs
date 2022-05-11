@@ -72,9 +72,9 @@ mod e {
 mod f {
     // main with async, is async, with termination return.
     #[rocket::main]
-    async fn main() -> Result<(), String> {
-        let result = rocket::build().launch().await;
-        result.map_err(|e| e.to_string())
+    async fn main() -> Result<(), rocket::Error> {
+        let _: rocket::Rocket<rocket::Ignite> = rocket::build().launch().await?;
+        Ok(())
     }
 }
 
@@ -90,5 +90,6 @@ mod g {
 #[rocket::main]
 async fn main() -> Result<(), String> {
     let result = rocket::build().launch().await;
-    result.map_err(|e| e.to_string())
+    let _: rocket::Rocket<rocket::Ignite> = result.map_err(|e| e.to_string())?;
+    Ok(())
 }

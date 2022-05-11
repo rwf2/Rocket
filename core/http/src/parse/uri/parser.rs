@@ -146,7 +146,7 @@ fn host<'a>(
     input: &mut RawInput<'a>,
 ) -> Result<'a, Extent<&'a [u8]>> {
     switch! {
-        peek(b'[') => enclosed(b'[', is_pchar, b']')?,
+        peek(b'[') => enclosed(b'[', is_host_char, b']')?,
         _ => take_while(is_reg_name_char)?
     }
 }

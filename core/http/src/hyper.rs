@@ -4,10 +4,11 @@
 //! These types will, with certainty, be removed with time, but they reside here
 //! while necessary.
 
-#[doc(hidden)] pub use hyper::*;
-#[doc(hidden)] pub use http::*;
+pub use hyper::{Method, Error, Body, Uri, Version, Request, Response};
+pub use hyper::{body, server, service};
+pub use http::{HeaderValue, request, uri};
 
-/// Reexported http header types.
+/// Reexported Hyper HTTP header types.
 pub mod header {
     macro_rules! import_http_headers {
         ($($name:ident),*) => ($(

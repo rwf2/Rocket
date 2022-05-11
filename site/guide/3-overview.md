@@ -209,10 +209,12 @@ runtime but unlike `#[launch]`, allows _you_ to start the server:
 
 #[rocket::main]
 async fn main() -> Result<(), rocket::Error> {
-    rocket::build()
+    let _rocket = rocket::build()
         .mount("/hello", routes![world])
         .launch()
-        .await
+        .await?;
+
+    Ok(())
 }
 ```
 

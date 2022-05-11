@@ -18,9 +18,9 @@ Rocket is asked to use, it must be able to read the following configuration
 values:
 
 | key            | kind              | description                                     | debug/release default   |
-|----------------|-------------------|-------------------------------------------------|-------------------------|
+| -------------- | ----------------- | ----------------------------------------------- | ----------------------- |
 | `address`      | `BindableAddr`    | Protocol to serve on                            | `tcp://127.0.0.1:8000`  |
-| `workers`      | `usize`           | Number of threads to use for executing futures. | cpu core count          |
+| `workers`\*    | `usize`           | Number of threads to use for executing futures. | cpu core count          |
 | `ident`        | `string`, `false` | If and how to identify via the `Server` header. | `"Rocket"`              |
 | `keep_alive`   | `u32`             | Keep-alive timeout seconds; disabled when `0`.  | `5`                     |
 | `log_level`    | [`LogLevel`]      | Max level to log. (off/normal/debug/critical)   | `normal`/`critical`     |
@@ -28,9 +28,12 @@ values:
 | `secret_key`   | [`SecretKey`]     | Secret key for signing and encrypting values.   | `None`                  |
 | `tls`          | [`TlsConfig`]     | TLS configuration, if any.                      | `None`                  |
 | `limits`       | [`Limits`]        | Streaming read size limits.                     | [`Limits::default()`]   |
-| `limits.$name` | `&str`/`uint`     | Read limit for `$name`.                         | form = "32KiB"         |
+| `limits.$name` | `&str`/`uint`     | Read limit for `$name`.                         | form = "32KiB"          |
 | `ctrlc`        | `bool`            | Whether `ctrl-c` initiates a server shutdown.   | `true`                  |
-| `shutdown`     | [`Shutdown`]      | Graceful shutdown configuration.                | [`Shutdown::default()`] |
+| `shutdown`\*   | [`Shutdown`]      | Graceful shutdown configuration.                | [`Shutdown::default()`] |
+
+<small>\* Note: the `workers` and `shutdown.force` configuration parameters are
+only read from the [default provider](#default-provider).</small>
 
 #### `BindableAddr`
 
@@ -52,21 +55,21 @@ Values provided in a `default` profile are used as fall-back values when the
 selected profile doesn't contain a requested value, while values in the `global`
 profile supplant any values with the same name in any profile.
 
-[`Provider`]: @figment/trait.Provider.html
-[`Profile`]: @figment/struct.Profile.html
-[`Config`]: @api/rocket/struct.Config.html
-[`Config::figment()`]: @api/rocket/struct.Config.html#method.figment
-[`Toml`]: @figment/providers/struct.Toml.html
-[`Json`]: @figment/providers/struct.Json.html
-[`Figment`]: @figment/struct.Figment.html
-[`Deserialize`]: @api/rocket/serde/trait.Deserialize.html
-[`LogLevel`]: @api/rocket/config/enum.LogLevel.html
-[`Limits`]: @api/rocket/data/struct.Limits.html
-[`Limits::default()`]: @api/rocket/data/struct.Limits.html#impl-Default
-[`SecretKey`]: @api/rocket/config/struct.SecretKey.html
-[`TlsConfig`]: @api/rocket/config/struct.TlsConfig.html
-[`Shutdown`]: @api/rocket/config/struct.Shutdown.html
-[`Shutdown::default()`]: @api/rocket/config/struct.Shutdown.html#fields
+[`provider`]: @figment/trait.Provider.html
+[`profile`]: @figment/struct.Profile.html
+[`config`]: @api/rocket/struct.Config.html
+[`config::figment()`]: @api/rocket/struct.Config.html#method.figment
+[`toml`]: @figment/providers/struct.Toml.html
+[`json`]: @figment/providers/struct.Json.html
+[`figment`]: @figment/struct.Figment.html
+[`deserialize`]: @api/rocket/serde/trait.Deserialize.html
+[`loglevel`]: @api/rocket/config/enum.LogLevel.html
+[`limits`]: @api/rocket/data/struct.Limits.html
+[`limits::default()`]: @api/rocket/data/struct.Limits.html#impl-Default
+[`secretkey`]: @api/rocket/config/struct.SecretKey.html
+[`tlsconfig`]: @api/rocket/config/struct.TlsConfig.html
+[`shutdown`]: @api/rocket/config/struct.Shutdown.html
+[`shutdown::default()`]: @api/rocket/config/struct.Shutdown.html#fields
 
 ## Default Provider
 
@@ -76,9 +79,9 @@ provider that's used when calling [`rocket::build()`].
 The default figment reads from and merges, at a per-key level, the following
 sources in ascending priority order:
 
-  1. [`Config::default()`], which provides default values for all parameters.
-  2. `Rocket.toml` _or_ TOML file path in `ROCKET_CONFIG` environment variable.
-  3. `ROCKET_` prefixed environment variables.
+1. [`Config::default()`], which provides default values for all parameters.
+2. `Rocket.toml` _or_ TOML file path in `ROCKET_CONFIG` environment variable.
+3. `ROCKET_` prefixed environment variables.
 
 The selected profile is the value of the `ROCKET_PROFILE` environment variable,
 or if it is not set, "debug" when compiled in debug mode and "release" when
@@ -91,7 +94,7 @@ As a result of `Config::figment()`, without any effort, Rocket can be configured
 via a `Rocket.toml` file and/or via environment variables, the latter of which
 take precedence over the former.
 
-[`Config::default()`]: @api/rocket/struct.Config.html#method.default
+[`config::default()`]: @api/rocket/struct.Config.html#method.default
 
 ### Rocket.toml
 
@@ -184,6 +187,8 @@ ROCKET_TLS={certs="abc",key="foo/bar"}
 ROCKET_LIMITS={form="64 KiB"}
 ```
 
+## Configuration Parameters
+
 ### Secret Key
 
 The `secret_key` parameter configures a cryptographic key to use when encrypting
@@ -221,37 +226,37 @@ also choose to have a configure limit via the `limits` parameter. The
 Rocket includes built-in, native support for TLS >= 1.2 (Transport Layer
 Security). To enable TLS support:
 
-  1. Enable the `tls` crate feature in `Cargo.toml`:
+1. Enable the `tls` crate feature in `Cargo.toml`:
 
-   ```toml,ignore
-   [dependencies]
-   rocket = { version = "0.5.0-rc.1", features = ["tls"] }
-   ```
+```toml,ignore
+[dependencies]
+rocket = { version = "0.5.0-rc.2", features = ["tls"] }
+```
 
-  2. Configure a TLS certificate chain and private key via the `tls.key` and
-     `tls.certs` configuration parameters. With the default provider, this can
-     be done via `Rocket.toml` as:
+2. Configure a TLS certificate chain and private key via the `tls.key` and
+   `tls.certs` configuration parameters. With the default provider, this can
+   be done via `Rocket.toml` as:
 
-   ```toml,ignore
-   [default.tls]
-   key = "path/to/key.pem"     # Path or bytes to DER-encoded ASN.1 PKCS#1/#8 key.
-   certs = "path/to/certs.pem" # Path or bytes to DER-encoded X.509 TLS cert chain.
-   ```
+```toml,ignore
+[default.tls]
+key = "path/to/key.pem"     # Path or bytes to DER-encoded ASN.1 PKCS#1/#8 key.
+certs = "path/to/certs.pem" # Path or bytes to DER-encoded X.509 TLS cert chain.
+```
 
 The `tls` parameter is expected to be a dictionary that deserializes into a
 [`TlsConfig`] structure:
 
 | key                          | required  | type                                                  |
-|------------------------------|-----------|-------------------------------------------------------|
+| ---------------------------- | --------- | ----------------------------------------------------- |
 | `key`                        | **_yes_** | Path or bytes to DER-encoded ASN.1 PKCS#1/#8 key.     |
 | `certs`                      | **_yes_** | Path or bytes to DER-encoded X.509 TLS cert chain.    |
 | `ciphers`                    | no        | Array of [`CipherSuite`]s to enable.                  |
 | `prefer_server_cipher_order` | no        | Boolean for whether to [prefer server cipher suites]. |
 | `mutual`                     | no        | A map with [mutual TLS] configuration.                |
 
-[`CipherSuite`]: @api/rocket/config/enum.CipherSuite.html
+[`ciphersuite`]: @api/rocket/config/enum.CipherSuite.html
 [prefer server cipher suites]: @api/rocket/config/struct.TlsConfig.html#method.with_preferred_server_cipher_order
-[mutual TLS]: #mutual-tls
+[mutual tls]: #mutual-tls
 
 When specified via TOML or other serialized formats, each [`CipherSuite`] is
 written as a string representation of the respective variant. For example,
@@ -286,34 +291,34 @@ By default, mutual TLS is disabled and client certificates are not required,
 validated or verified. To enable mutual TLS, the `mtls` feature must be
 enabled and support configured via the `tls.mutual` config parameter:
 
-  1. Enable the `mtls` crate feature in `Cargo.toml`:
+1. Enable the `mtls` crate feature in `Cargo.toml`:
 
-   ```toml,ignore
-   [dependencies]
-   rocket = { version = "0.5.0-rc.1", features = ["mtls"] }
-   ```
+```toml,ignore
+[dependencies]
+rocket = { version = "0.5.0-rc.2", features = ["mtls"] }
+```
 
-   This implicitly enables the `tls` feature.
+This implicitly enables the `tls` feature.
 
-  2. Configure a CA certificate chain via the `tls.mutual.ca_certs`
-     configuration parameter. With the default provider, this can be done via
-     `Rocket.toml` as:
+2. Configure a CA certificate chain via the `tls.mutual.ca_certs`
+   configuration parameter. With the default provider, this can be done via
+   `Rocket.toml` as:
 
-   ```toml,ignore
-   [default.tls.mutual]
-   ca_certs = "path/to/ca_certs.pem" # Path or bytes to DER-encoded X.509 TLS cert chain.
-   mandatory = true                  # when absent, defaults to false
-   ```
+```toml,ignore
+[default.tls.mutual]
+ca_certs = "path/to/ca_certs.pem" # Path or bytes to DER-encoded X.509 TLS cert chain.
+mandatory = true                  # when absent, defaults to false
+```
 
 The `tls.mutual` parameter is expected to be a dictionary that deserializes into a
 [`MutualTls`] structure:
 
 | key         | required  | type                                                        |
-|-------------|-----------|-------------------------------------------------------------|
+| ----------- | --------- | ----------------------------------------------------------- |
 | `ca_certs`  | **_yes_** | Path or bytes to DER-encoded X.509 TLS cert chain.          |
 | `mandatory` | no        | Boolean controlling whether the client _must_ authenticate. |
 
-[`MutualTls`]: @api/rocket/config/struct.MutualTls.html
+[`mutualtls`]: @api/rocket/config/struct.MutualTls.html
 [`mtls`]: @api/rocket/mtls/index.html
 
 Rocket reports if TLS and/or mTLS are enabled at launch time:
@@ -324,11 +329,26 @@ Rocket reports if TLS and/or mTLS are enabled at launch time:
    >> tls: enabled w/mtls
 ```
 
+Once mutual TLS is properly enabled, the [`mtls::Certificate`] request guard can
+be used to retrieve validated, verified client certificates:
+
+```rust
+# #[macro_use] extern crate rocket;
+use rocket::mtls::Certificate;
+
+#[get("/auth")]
+fn auth(cert: Certificate<'_>) {
+    // This handler only runs when a valid certificate was presented.
+}
+```
+
 The [TLS example](@example/tls) illustrates a fully configured TLS server with
 mutual TLS.
 
 ! warning: Rocket's built-in TLS supports only TLS 1.2 and 1.3. This may not be
-  suitable for production use.
+suitable for production use.
+
+[`mtls::certificate`]: @api/rocket/mtls/struct.Certificate.html
 
 ### Workers
 
@@ -356,6 +376,7 @@ fn rocket() -> _ {
     let figment = rocket.figment();
 
     #[derive(Deserialize)]
+    #[serde(crate = "rocket::serde")]
     struct Config {
         port: u16,
         custom: Vec<String>,
@@ -377,13 +398,13 @@ Rocket's configuration sources directly. The next section describes how you can
 customize configuration sources by supplying your own `Provider`.
 
 Because it is common to store configuration in managed state, Rocket provides an
-`AdHoc` fairing that 1) extracts a configuration from the configured provider,
-2) pretty prints any errors, and 3) stores the value in managed state:
+`AdHoc` fairing that 1) extracts a configuration from the configured provider, 2) pretty prints any errors, and 3) stores the value in managed state:
 
 ```rust
 # #[macro_use] extern crate rocket;
 # use rocket::serde::Deserialize;
 # #[derive(Deserialize)]
+# #[serde(crate = "rocket::serde")]
 # struct Config {
 #     port: u16,
 #     custom: Vec<String>,
@@ -404,7 +425,7 @@ fn rocket() -> _ {
 }
 ```
 
-[`Rocket::figment()`]: @api/rocket/struct.Rocket.html#method.figment
+[`rocket::figment()`]: @api/rocket/struct.Rocket.html#method.figment
 
 ## Custom Providers
 
@@ -417,14 +438,12 @@ more complex cases.
 
 ! note: You may need to depend on `figment` and `serde` directly.
 
-  Rocket reexports `figment` and `serde` from its crate root, so you can refer
-  to `figment` types via `rocket::figment` and `serde` types via
-  `rocket::serde`. However, Rocket does not enable all features from either
-  crate. As such, you may need to import crates directly:
+Rocket reexports `figment` and `serde` from its crate root, so you can refer
+to `figment` types via `rocket::figment` and `serde` types via
+`rocket::serde`. However, Rocket does not enable all features from either
+crate. As such, you may need to import crates directly:
 
-  `
-  figment = { version = "0.10", features = ["env", "toml", "json"] }
-  `
+` figment = { version = "0.10", features = ["env", "toml", "json"] } `
 
 As a first example, we override configuration values at runtime by merging
 figment's tuple providers with Rocket's default provider:
@@ -459,6 +478,7 @@ use rocket::fairing::AdHoc;
 use figment::{Figment, Profile, providers::{Format, Toml, Serialized, Env}};
 
 #[derive(Debug, Deserialize, Serialize)]
+#[serde(crate = "rocket::serde")]
 struct Config {
     app_value: usize,
     /* and so on.. */

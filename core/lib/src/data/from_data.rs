@@ -214,7 +214,7 @@ impl<'r> FromData<'r> for Capped<&'r str> {
 
     async fn from_data(req: &'r Request<'_>, data: Data<'r>) -> Outcome<'r, Self> {
         let capped = try_outcome!(<Capped<String>>::from_data(req, data).await);
-        let string = capped.map(|s| local_cache!(req, s).as_str());
+        let string = capped.map(|s| local_cache!(req, s));
         Success(string)
     }
 }
@@ -252,7 +252,7 @@ impl<'r> FromData<'r> for Capped<&'r [u8]> {
 
     async fn from_data(req: &'r Request<'_>, data: Data<'r>) -> Outcome<'r, Self> {
         let capped = try_outcome!(<Capped<Vec<u8>>>::from_data(req, data).await);
-        let raw = capped.map(|b| local_cache!(req, b).as_slice());
+        let raw = capped.map(|b| local_cache!(req, b));
         Success(raw)
     }
 }

@@ -19,6 +19,7 @@ impl<'r> FromRequest<'r> for Certificate<'r> {
 
     async fn from_request(req: &'r Request<'_>) -> Outcome<Self, Self::Error> {
         let certs = try_outcome!(req.connection.client_certificates.as_ref().or_forward(()));
-        Certificate::parse(certs).into_outcome(Status::Unauthorized)
+        let data = try_outcome!(certs.chain_data().or_forward(()));
+        Certificate::parse(data).into_outcome(Status::Unauthorized)
     }
 }

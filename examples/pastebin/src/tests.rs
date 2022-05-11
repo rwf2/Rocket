@@ -1,6 +1,7 @@
 use super::{rocket, index, PasteId};
 use rocket::local::blocking::Client;
 use rocket::http::{Status, ContentType};
+use rocket::request::FromParam;
 
 fn extract_id(from: &str) -> Option<String> {
     from.rfind('/').map(|i| &from[(i + 1)..]).map(|s| s.trim_end().to_string())
@@ -25,6 +26,7 @@ fn upload_paste(client: &Client, body: &str) -> String {
 }
 
 fn download_paste(client: &Client, id: &str) -> Option<String> {
+    let id = PasteId::from_param(id).expect("valid ID");
     let response = client.get(uri!(super::retrieve(id))).dispatch();
     if response.status().class().is_success() {
         Some(response.into_string().unwrap())
@@ -34,6 +36,7 @@ fn download_paste(client: &Client, id: &str) -> Option<String> {
 }
 
 fn delete_paste(client: &Client, id: &str) {
+    let id = PasteId::from_param(id).expect("valid ID");
     let response = client.delete(uri!(super::delete(id))).dispatch();
     assert_eq!(response.status(), Status::Ok);
 }

@@ -66,6 +66,9 @@ enum AdHocKind {
     /// sent to a client.
     Response(Box<dyn for<'r, 'b> Fn(&'r Request<'_>, &'b mut Response<'r>)
         -> BoxFuture<'b, ()> + Send + Sync + 'static>),
+
+    /// An ad-hoc **shutdown** fairing. Called on shutdown.
+    Shutdown(Once<dyn for<'a> FnOnce(&'a Rocket<Orbit>) -> BoxFuture<'a, ()> + Send + 'static>),
 }
 
 impl AdHoc {
@@ -181,6 +184,27 @@ impl AdHoc {
         AdHoc { name, kind: AdHocKind::Response(Box::new(f)) }
     }
 
+    /// Constructs an `AdHoc` shutdown fairing named `name`. The function `f`
+    /// will be called by Rocket when [shutdown is triggered].
+    ///
+    /// [shutdown is triggered]: crate::config::Shutdown#triggers
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use rocket::fairing::AdHoc;
+    ///
+    /// // A fairing that prints a message just before launching.
+    /// let fairing = AdHoc::on_shutdown("Bye!", |_| Box::pin(async move {
+    ///     println!("Rocket is on its way back!");
+    /// }));
+    /// ```
+    pub fn on_shutdown<F: Send + Sync + 'static>(name: &'static str, f: F) -> AdHoc
+        where F: for<'a> FnOnce(&'a Rocket<Orbit>) -> BoxFuture<'a, ()>
+    {
+        AdHoc { name, kind: AdHocKind::Shutdown(Once::new(Box::new(f))) }
+    }
+
     /// Constructs an `AdHoc` launch fairing that extracts a configuration of
     /// type `T` from the configured provider and stores it in managed state. If
     /// extractions fails, pretty-prints the error message and aborts launch.
@@ -229,6 +253,7 @@ impl Fairing for AdHoc {
             AdHocKind::Liftoff(_) => Kind::Liftoff,
             AdHocKind::Request(_) => Kind::Request,
             AdHocKind::Response(_) => Kind::Response,
+            AdHocKind::Shutdown(_) => Kind::Shutdown,
         };
 
         Info { name: self.name, kind }
@@ -256,6 +281,12 @@ impl Fairing for AdHoc {
     async fn on_response<'r>(&self, req: &'r Request<'_>, res: &mut Response<'r>) {
         if let AdHocKind::Response(ref f) = self.kind {
             f(req, res).await
+        }
+    }
+
+    async fn on_shutdown(&self, rocket: &Rocket<Orbit>) {
+        if let AdHocKind::Shutdown(ref f) = self.kind {
+            (f.take())(rocket).await
         }
     }
 }

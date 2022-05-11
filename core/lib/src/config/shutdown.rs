@@ -110,15 +110,14 @@ impl fmt::Display for Sig {
 ///
 /// If tasks are _still_ executing after both periods _and_ a Rocket configured
 /// async runtime is in use, Rocket waits an unspecified amount of time (not to
-/// exceed 1s) and forcefully exits the current process with an exit code of
-/// `1`. This guarantees that the server process terminates, prohibiting
-/// uncooperative, runaway I/O from preventing shutdown altogether.
+/// exceed 1s) and forcefully terminates the asynchronous runtime. This
+/// guarantees that the server process terminates, prohibiting uncooperative,
+/// runaway I/O from preventing shutdown altogether.
 ///
 /// A "Rocket configured runtime" is one started by the `#[rocket::main]` and
-/// `#[launch]` attributes. Rocket _never_ forcefully terminates a server that
-/// is running inside of a custom runtime. A server that creates its own async
-/// runtime must take care to terminate itself if tasks it spawns fail to
-/// cooperate.
+/// `#[launch]` attributes. Rocket _never_ forcefully terminates a custom
+/// runtime. A server that creates its own async runtime must take care to
+/// terminate itself if tasks it spawns fail to cooperate.
 ///
 /// Under normal circumstances, forced termination should never occur. No use of
 /// "normal" cooperative I/O (that is, via `.await` or `task::spawn()`) should
@@ -228,13 +227,15 @@ pub struct Shutdown {
     ///
     /// **default: `3`**
     pub mercy: u32,
-    /// Whether to force termination of a process that refuses to cooperatively
-    /// shutdown.
+    /// Whether to force termination of an async runtime that refuses to
+    /// cooperatively shutdown.
     ///
-    /// Rocket _never_ forcefully terminates a server that is running inside of
-    /// a custom runtime irrespective of this value. A server that creates its
-    /// own async runtime must take care to terminate itself if it fails to
-    /// cooperate.
+    /// Rocket _never_ forcefully terminates a custom runtime, irrespective of
+    /// this value. A server that creates its own async runtime must take care
+    /// to terminate itself if it fails to cooperate.
+    ///
+    /// _**Note:** Rocket only reads this value from sources in the [default
+    /// provider](crate::Config::figment())._
     ///
     /// **default: `true`**
     #[serde(deserialize_with = "figment::util::bool_from_str_or_int")]

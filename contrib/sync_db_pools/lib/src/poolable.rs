@@ -60,7 +60,7 @@ use crate::{Config, Error};
 /// #     impl self::r2d2::ManageConnection for ConnectionManager {
 /// #          type Connection = Connection;
 /// #          type Error = Error;
-/// #          fn connect(&self) -> Result<Connection> { panic!(()) }
+/// #          fn connect(&self) -> Result<Connection> { panic!() }
 /// #          fn is_valid(&self, _: &mut Connection) -> Result<()> { panic!() }
 /// #          fn has_broken(&self, _: &mut Connection) -> bool { panic!() }
 /// #     }

@@ -1,9 +1,8 @@
 use std::fmt;
-use std::convert::TryInto;
 
 use parking_lot::RwLock;
 
-use crate::{Rocket, Phase, Orbit, Error};
+use crate::{Rocket, Phase, Orbit, Ignite, Error};
 use crate::local::asynchronous::{LocalRequest, LocalResponse};
 use crate::http::{Method, uri::Origin, private::cookie};
 
@@ -64,6 +63,7 @@ impl Client {
     }
 
     // WARNING: This is unstable! Do not use this method outside of Rocket!
+    // This is used by the `Client` doctests.
     #[doc(hidden)]
     pub fn _test<T, F>(f: F) -> T
         where F: FnOnce(&Self, LocalRequest<'_>, LocalResponse<'_>) -> T + Send
@@ -100,6 +100,13 @@ impl Client {
         where U: TryInto<Origin<'u>> + fmt::Display
     {
         LocalRequest::new(self, method, uri)
+    }
+
+    pub(crate) async fn _terminate(self) -> Rocket<Ignite> {
+        let rocket = self.rocket;
+        rocket.shutdown().notify();
+        rocket.fairings.handle_shutdown(&rocket).await;
+        rocket.into_ignite()
     }
 
     // Generates the public API methods, which call the private methods above.

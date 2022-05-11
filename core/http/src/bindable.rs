@@ -1,15 +1,21 @@
 //! Exports `BindableAddr` to offer generic operations over addresses that can be bound to.
 
-use serde_::de::{Deserializer, self};
+#[cfg(feature = "serde")]
+use serde_::de::{self, Deserializer};
+#[cfg(feature = "serde")]
 use serde_::{Deserialize, Serialize};
-use std::fmt::{Display, Formatter, self};
-use std::net::{SocketAddr, IpAddr, AddrParseError};
+use std::fmt::{self, Display, Formatter};
+use std::net::{AddrParseError, IpAddr, SocketAddr};
 use std::path::PathBuf;
 use std::str::FromStr;
 
 /// All types of addresses that can be used for the server
-#[derive(PartialEq, Clone, Debug, Serialize)]
-#[serde(crate = "serde_", into = "SerdeHelper")]
+#[derive(PartialEq, Clone, Debug)]
+#[cfg_attr(
+    feature = "serde",
+    derive(Serialize),
+    serde(crate = "serde_", into = "SerdeHelper")
+)]
 pub enum BindableAddr {
     /// Listen on an address and port with the TCP protocol
     Tcp(SocketAddr),
@@ -44,12 +50,7 @@ impl BindableAddr {
 impl Display for BindableAddr {
     fn fmt(&self, formatter: &mut Formatter<'_>) -> fmt::Result {
         match self {
-            Self::Tcp(addr) => write!(
-                formatter,
-                "{}://{}",
-                self.protocol_name(),
-                addr
-            ),
+            Self::Tcp(addr) => write!(formatter, "{}://{}", self.protocol_name(), addr),
             Self::Unix(path) => write!(formatter, "{}://{}", self.protocol_name(), path.display()),
         }
     }
@@ -72,16 +73,17 @@ impl Display for FromStrError {
             Self::UnknownProtocol(unknown) => {
                 write!(formatter, "unknown protocol {:?}", unknown)?;
                 if cfg!(not(unix)) {
-                    write!(formatter, " (note that \"unix\" protocol is only available on Unix pla\
-                    tforms)")?;
+                    write!(
+                        formatter,
+                        " (note that \"unix\" protocol is only available on Unix pla\
+                    tforms)"
+                    )?;
                 }
                 Ok(())
-            },
-            Self::RequiresPort(addr) => write!(
-                formatter,
-                "raw IP address {:?} requires a port",
-                addr
-            ),
+            }
+            Self::RequiresPort(addr) => {
+                write!(formatter, "raw IP address {:?} requires a port", addr)
+            }
             Self::Ip(err) => write!(formatter, "invalid IP: {}", err),
         }
     }
@@ -109,6 +111,7 @@ impl FromStr for BindableAddr {
     }
 }
 
+#[cfg(feature = "serde")]
 #[derive(Serialize, Deserialize)]
 #[serde(crate = "serde_")]
 struct SerdeHelper {
@@ -116,19 +119,27 @@ struct SerdeHelper {
     #[serde(skip_serializing_if = "Option::is_none")]
     port: Option<u16>,
 }
+#[cfg(feature = "serde")]
 impl From<BindableAddr> for SerdeHelper {
     fn from(addr: BindableAddr) -> Self {
-        Self { address: addr.to_string(), port: None }
+        Self {
+            address: addr.to_string(),
+            port: None,
+        }
     }
 }
 
+#[cfg(feature = "serde")]
 impl<'de> Deserialize<'de> for BindableAddr {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
         D: Deserializer<'de>,
         D::Error: de::Error,
     {
-        let SerdeHelper { address: addr, port } = SerdeHelper::deserialize(deserializer)?;
+        let SerdeHelper {
+            address: addr,
+            port,
+        } = SerdeHelper::deserialize(deserializer)?;
         match Self::from_str(&addr) {
             Err(FromStrError::RequiresPort(addr)) => {
                 if let Some(port) = port {
@@ -143,14 +154,16 @@ impl<'de> Deserialize<'de> for BindableAddr {
                 } else {
                     Err(de::Error::custom("No port provided with raw address"))
                 }
-            },
+            }
             other => {
                 if port.is_some() {
-                    log::warn!("`port` config field is ignored when `address` is a protocol addres\
-                    s. Please remove it.");
+                    log::warn!(
+                        "`port` config field is ignored when `address` is a protocol addres\
+                    s. Please remove it."
+                    );
                 }
                 other.map_err(de::Error::custom)
-            },
+            }
         }
     }
 }

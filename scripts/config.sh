@@ -58,7 +58,7 @@ VERSION=$(git grep -h "^version" "${CORE_LIB_ROOT}" | head -n 1 | cut -d '"' -f2
 MAJOR_VERSION=$(echo "${VERSION}" | cut -d'.' -f1-2)
 VIRTUAL_CODENAME="$(git branch --show-current)"
 PHYSICAL_CODENAME="v${MAJOR_VERSION}"
-CURRENT_RELEASE=true
+CURRENT_RELEASE=false
 PRE_RELEASE=true
 
 # A generated codename for this version. Use the git branch for pre-releases.
@@ -95,6 +95,8 @@ ALL_CRATE_ROOTS=(
     "${CORE_LIB_ROOT}"
     "${CONTRIB_ROOT}/sync_db_pools/codegen"
     "${CONTRIB_ROOT}/sync_db_pools/lib"
+    "${CONTRIB_ROOT}/db_pools/codegen"
+    "${CONTRIB_ROOT}/db_pools/lib"
     "${CONTRIB_ROOT}/dyn_templates"
 )
 
@@ -102,6 +104,8 @@ function print_environment() {
   echo "  VERSION: ${VERSION}"
   echo "  MAJOR_VERSION: ${MAJOR_VERSION}"
   echo "  CODENAME: ${CODENAME}"
+  echo "  PHYSICAL_CODENAME: ${PHYSICAL_CODENAME}"
+  echo "  VIRTUAL_CODENAME: ${VIRTUAL_CODENAME}"
   echo "  DOC_VERSION: ${DOC_VERSION}"
   echo "  CURRENT_RELEASE: ${CURRENT_RELEASE}"
   echo "  PRE_RELEASE: ${PRE_RELEASE}"

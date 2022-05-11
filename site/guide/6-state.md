@@ -216,147 +216,108 @@ request-local state to implement request timing.
 
 ## Databases
 
-Rocket includes built-in, ORM-agnostic support for databases. In particular,
-Rocket provides a procedural macro that allows you to easily connect your Rocket
-application to databases through connection pools. A _database connection pool_
-is a data structure that maintains active database connections for later use in
-the application. This implementation of connection pooling support is based on
-[`r2d2`] and exposes connections through request guards. Databases are
-individually configured through Rocket's regular configuration mechanisms: a
-`Rocket.toml` file, environment variables, or procedurally.
+Rocket includes built-in, ORM-agnostic support for databases via
+[`rocket_db_pools`]. The library simplifies accessing one or more databases via
+connection pools: data structures that maintain active database connections for
+use in the application. Database configuration occurs via Rocket's regular
+[configuration](../configuration) mechanisms.
 
-Connecting your Rocket application to a database using this library occurs in
-three simple steps:
+Connecting your Rocket application to a database using `rocket_db_pools` happens
+in three simple steps:
 
-  1. Configure the databases in `Rocket.toml`.
-  2. Associate a request guard type and fairing with each database.
-  3. Use the request guard to retrieve and use a connection in a handler.
+1. Choose your database(s) from the [supported database driver list]. Add
+   `rocket_db_pools` as a dependency in `Cargo.toml` with respective database
+   driver feature(s) enabled:
 
-Presently, Rocket provides built-in support for the following databases:
+   ```toml
+   [dependencies.rocket_db_pools]
+   version = "0.1.0-rc.2"
+   features = ["sqlx_sqlite"]
+   ```
 
-<!-- Note: Keep this table in sync with contrib/sync_db_pools/src/lib.rs -->
-| Kind     | Driver                | Version   | `Poolable` Type                | Feature                |
-|----------|-----------------------|-----------|--------------------------------|------------------------|
-| MySQL    | [Diesel]              | `1`       | [`diesel::MysqlConnection`]    | `diesel_mysql_pool`    |
-| Postgres | [Diesel]              | `1`       | [`diesel::PgConnection`]       | `diesel_postgres_pool` |
-| Postgres | [Rust-Postgres]       | `0.19`    | [`postgres::Client`]           | `postgres_pool`        |
-| Sqlite   | [Diesel]              | `1`       | [`diesel::SqliteConnection`]   | `diesel_sqlite_pool`   |
-| Sqlite   | [`Rusqlite`]          | `0.24`    | [`rusqlite::Connection`]       | `sqlite_pool`          |
-| Memcache | [`memcache`]          | `0.15`    | [`memcache::Client`]           | `memcache_pool`        |
+2. Choose a name for your database, here `sqlite_logs`. [Configure]  _at least_
+   a URL for the database under `databases.$name` (here, in `Rocket.toml`),
+   where `$name` is your choice of database name:
 
-[`r2d2`]: https://crates.io/crates/r2d2
-[Diesel]: https://diesel.rs
-[`rusqlite::Connection`]: https://docs.rs/rusqlite/0.23.0/rusqlite/struct.Connection.html
-[`diesel::SqliteConnection`]: https://docs.diesel.rs/diesel/prelude/struct.SqliteConnection.html
-[`postgres::Client`]: https://docs.rs/postgres/0.19/postgres/struct.Client.html
-[`diesel::PgConnection`]: https://docs.diesel.rs/diesel/pg/struct.PgConnection.html
-[`diesel::MysqlConnection`]: https://docs.diesel.rs/diesel/mysql/struct.MysqlConnection.html
-[`Rusqlite`]: https://github.com/jgallagher/rusqlite
-[Rust-Postgres]: https://github.com/sfackler/rust-postgres
-[`diesel::PgConnection`]: https://docs.diesel.rs/diesel/pg/struct.PgConnection.html
-[`memcache`]: https://github.com/aisk/rust-memcache
-[`memcache::Client`]: https://docs.rs/memcache/0.15/memcache/struct.Client.html
+   ```toml
+   [default.databases.sqlite_logs]
+   url = "/path/to/database.sqlite"
+   ```
 
-### Usage
+3. [Derive `Database`] for a unit `Type` (`Logs` here) which wraps the selected
+   driver's `Pool` type from the [supported database driver list]. Decorated the
+   struct with `#[database("$name")]` with the `$name` from `2.`. Attach
+   `$Type::init()` to your application's `Rocket` to initialize the database
+   pool and use [`Connection<$Type>`] as a request guard to retrieve an active
+   database connection:
 
-To connect your Rocket application to a given database, first identify the
-"Kind" and "Driver" in the table that matches your environment. The feature
-corresponding to your database type must be enabled. This is the feature
-identified in the "Feature" column. For instance, for Diesel-based SQLite
-databases, you'd write in `Cargo.toml`:
+   ```rust
+   #[macro_use] extern crate rocket;
+
+   use rocket_db_pools::{Database, Connection};
+   use rocket_db_pools::sqlx::{self, Row};
+
+   #[derive(Database)]
+   #[database("sqlite_logs")]
+   struct Logs(sqlx::SqlitePool);
+
+   #[get("/<id>")]
+   async fn read(mut db: Connection<Logs>, id: i64) -> Option<String> {
+       sqlx::query("SELECT content FROM logs WHERE id = ?").bind(id)
+           .fetch_one(&mut *db).await
+           .and_then(|r| Ok(r.try_get(0)?))
+           .ok()
+   }
+
+   #[launch]
+   fn rocket() -> _ {
+       rocket::build().attach(Logs::init()).mount("/", routes![read])
+   }
+   ```
+
+For complete usage details, see [`rocket_db_pools`].
+
+[`rocket_db_pools`]: @api/rocket_db_pools/index.html
+[supported database driver list]: @api/rocket_db_pools/index.html#supported-drivers
+[database driver features]: @api/rocket_db_pools/index.html#supported-drivers
+[`Pool`]: @api/rocket_db_pools/index.html#supported-drivers
+[Configure]: @api/rocket_db_pools/index.html#configuration
+[Derive `Database`]: @api/rocket_db_pools/derive.Database.html
+[`Connection<$Type>`]: @api/rocket_db_pools/struct.Connection.html
+
+### Driver Features
+
+Only the minimal features for each driver crate are enabled by
+`rocket_db_pools`. To use additional driver functionality exposed via its
+crate's features, you'll need to depend on the crate directly with those
+features enabled in `Cargo.toml`:
 
 ```toml
-[dependencies.rocket_sync_db_pools]
-version = "0.1.0-rc.1"
+[dependencies.sqlx]
+version = "0.5"
 default-features = false
-features = ["diesel_sqlite_pool"]
+features = ["macros", "offline", "migrate"]
+
+[dependencies.rocket_db_pools]
+version = "0.1.0-rc.2"
+features = ["sqlx_sqlite"]
 ```
 
-Then, in `Rocket.toml` or the equivalent via environment variables, configure
-the URL for the database in the `databases` table:
+### Synchronous ORMs
 
-```toml
-[global.databases]
-sqlite_logs = { url = "/path/to/database.sqlite" }
-```
-
-In your application's source code, create a unit-like struct with one internal
-type. This type should be the type listed in the "`Poolable` Type" column. Then
-decorate the type with the `#[database]` attribute, providing the name of the
-database that you configured in the previous step as the only parameter. You
-will need to either add `#[macro_use] extern crate rocket_sync_db_pools` to the
-crate root or have a `use rocket_sync_db_pools::database` in scope, otherwise
-the `database` attribute will not be available. Finally, attach the fairing
-returned by `YourType::fairing()`, which was generated by the `#[database]`
-attribute:
-
-```rust
-# #[macro_use] extern crate rocket;
-
-use rocket_sync_db_pools::{diesel, database};
-
-#[database("sqlite_logs")]
-struct LogsDbConn(diesel::SqliteConnection);
-
-#[launch]
-fn rocket() -> _ {
-    rocket::build().attach(LogsDbConn::fairing())
-}
-```
-
-That's it! Whenever a connection to the database is needed, use your type as a
-request guard. The database can be accessed by calling the `run` method:
-
-```rust
-# #[macro_use] extern crate rocket;
-# fn main() {}
-
-# use rocket_sync_db_pools::{diesel, database};
-
-# #[database("sqlite_logs")]
-# struct LogsDbConn(diesel::SqliteConnection);
-# type Logs = ();
-
-#[get("/logs/<id>")]
-async fn get_logs(conn: LogsDbConn, id: usize) -> Logs {
-    # /*
-    conn.run(|c| logs::filter(id.eq(log_id)).load(c)).await
-    # */
-}
-```
-
-! note The above examples uses [Diesel] with some fictional `Logs` type.
-
-  The example above contains the use of a `Logs` type that is application
-  specific and not built into Rocket. It also uses [Diesel]'s query-building
-  syntax. Rocket does not provide an ORM. It is up to you to decide how to model
-  your application's data.
-
-<!---->
-
-! note: Rocket wraps synchronous databases in an `async` API.
-
-  The database engines supported by `#[database]` are *synchronous*. Normally,
-  using such a database would block the thread of execution. To prevent this,
-  the `run()` function automatically uses a thread pool so that database access
-  does not interfere with other in-flight requests. See
-  [Multitasking](../overview/#multitasking) for more information on why this is
-  necessary.
-
-If your application uses features of a database engine that are not available
-by default, for example support for `chrono` or `uuid`, you may enable those
-features by adding them in `Cargo.toml` like so:
-
-```toml
-[dependencies]
-postgres = { version = "0.15", features = ["with-chrono"] }
-```
-
-For more on Rocket's sanctioned database support, see the
-[`rocket_sync_db_pools`] library documentation. For examples of CRUD-like "blog"
-JSON APIs backed by a SQLite database driven by each of `sqlx`, `diesel`, and
-`rusqlite` with migrations run automatically for the former two drivers and
-Rocket's database support use for the latter two drivers, see the [databases
-example](@example/databases).
+While [`rocket_db_pools`] provides support for `async` ORMs and should thus be
+the preferred solution, Rocket also provides support for synchronous, blocking
+ORMs like [Diesel] via the [`rocket_sync_db_pools`] library, which you may wish
+to explore. Usage is similar, but not identical, to `rocket_db_pools`. See the
+crate docs for complete usage details.
 
 [`rocket_sync_db_pools`]: @api/rocket_sync_db_pools/index.html
+[diesel]: https://diesel.rs/
+
+### Examples
+
+For examples of CRUD-like "blog" JSON APIs backed by a SQLite database driven by
+each of `sqlx`, `diesel`, and `rusqlite`, with migrations run automatically for
+the former two drivers, see the [databases example](@example/databases). The
+`sqlx` example uses `rocket_db_pools` while the `diesel` and `rusqlite` examples
+use `rocket_sync_db_pools`.

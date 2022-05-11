@@ -1,6 +1,6 @@
 [package]
 name = "rocket_dyn_templates"
-version = "0.1.0-rc.1"
+version = "0.1.0-rc.2"
 authors = ["Sergio Benitez <sb@sergio.bz>"]
 description = "Dynamic templating engine integration for Rocket."
 documentation = "https://api.rocket.rs/v0.5-rc/rocket_dyn_templates/"
@@ -9,7 +9,8 @@ repository = "https://github.com/SergioBenitez/Rocket/tree/master/contrib/dyn_te
 readme = "README.md"
 keywords = ["rocket", "framework", "templates", "templating", "engine"]
 license = "MIT OR Apache-2.0"
-edition = "2018"
+edition = "2021"
+rust-version = "1.56"
 
 [features]
 tera = ["tera_"]
@@ -21,7 +22,7 @@ notify = "4.0.6"
 normpath = "0.3"
 
 [dependencies.rocket]
-version = "0.5.0-rc.1"
+version = "0.5.0-rc.2"
 path = "../../core/lib"
 default-features = false
 

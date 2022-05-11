@@ -22,7 +22,7 @@ pub fn load_private_key(reader: &mut dyn io::BufRead) -> io::Result<PrivateKey> 
     let private_keys_fn = match first_line.trim_end() {
         "-----BEGIN RSA PRIVATE KEY-----" => rustls_pemfile::rsa_private_keys,
         "-----BEGIN PRIVATE KEY-----" => rustls_pemfile::pkcs8_private_keys,
-        _ => return Err(err("invalid key header"))
+        _ => return Err(err("invalid key header; supported formats are: RSA, PKCS8"))
     };
 
     let key = private_keys_fn(&mut Cursor::new(first_line).chain(reader))

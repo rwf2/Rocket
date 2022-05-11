@@ -17,7 +17,7 @@ use crate::http::bindable::BindableAddr;
 use crate::http::{hyper, Method, Header, HeaderMap};
 use crate::http::{ContentType, Accept, MediaType, CookieJar, Cookie};
 use crate::http::uncased::UncasedStr;
-use crate::http::private::RawCertificate;
+use crate::http::private::Certificates;
 use crate::http::uri::{fmt::Path, Origin, Segments, Host, Authority};
 
 /// The type of an incoming web request.
@@ -39,7 +39,7 @@ pub struct Request<'r> {
 pub(crate) struct ConnectionMeta {
     pub remote: Option<BindableAddr>,
     #[cfg_attr(not(feature = "mtls"), allow(dead_code))]
-    pub client_certificates: Option<Arc<Vec<RawCertificate>>>,
+    pub client_certificates: Option<Certificates>,
 }
 
 /// Information derived from the request.
@@ -705,9 +705,10 @@ impl<'r> Request<'r> {
     /// Different values of the same type _cannot_ be cached without using a
     /// proxy, wrapper type. To avoid the need to write these manually, or for
     /// libraries wishing to store values of public types, use the
-    /// [`local_cache!`](crate::request::local_cache) macro to generate a
-    /// locally anonymous wrapper type, store, and retrieve the wrapped value
-    /// from request-local cache.
+    /// [`local_cache!`](crate::request::local_cache) or
+    /// [`local_cache_once!`](crate::request::local_cache_once) macros to
+    /// generate a locally anonymous wrapper type, store, and retrieve the
+    /// wrapped value from request-local cache.
     ///
     /// # Example
     ///
@@ -974,14 +975,22 @@ impl<'r> Request<'r> {
         let method = Method::from_hyp(&hyper.method)
             .ok_or(Error::BadMethod(&hyper.method))?;
 
-        // In debug, make sure we agree with Hyper. Otherwise, cross our fingers
-        // and trust that it only gives us valid URIs like it's supposed to.
         // TODO: Keep around not just the path/query, but the rest, if there?
         let uri = hyper.uri.path_and_query().ok_or(Error::InvalidUri(&hyper.uri))?;
-        debug_assert!(Origin::parse(uri.as_str()).is_ok());
-        let uri = Origin::new(uri.path(), uri.query().map(Cow::Borrowed));
+
+        // In debug, make sure we agree with Hyper that the URI is valid. If we
+        // disagree, print a warning but continue anyway seeing as if this is a
+        // security issue with Hyper, there isn't much we can do.
+        #[cfg(debug_assertions)]
+        if Origin::parse(uri.as_str()).is_err() {
+            warn!("Hyper/Rocket URI validity discord: {:?}", uri.as_str());
+            info_!("Hyper believes the URI is valid while Rocket disagrees.");
+            info_!("This is likely a Hyper bug with potential security implications.");
+            warn_!("Please report this warning to Rocket's GitHub issue tracker.");
+        }
 
         // Construct the request object.
+        let uri = Origin::new(uri.path(), uri.query().map(Cow::Borrowed));
         let mut request = Request::new(rocket, method, uri);
         if let Some(connection) = connection {
             request.connection = connection;

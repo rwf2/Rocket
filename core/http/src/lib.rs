@@ -1,5 +1,4 @@
-#![recursion_limit="512"]
-
+#![recursion_limit = "512"]
 #![warn(rust_2018_idioms)]
 #![warn(missing_docs)]
 
@@ -15,20 +14,20 @@
 extern crate pear;
 
 pub mod bindable;
+pub mod ext;
 pub mod hyper;
 pub mod uri;
-pub mod ext;
 
 #[macro_use]
 mod docify;
 
 #[macro_use]
 mod header;
-mod method;
-mod status;
-mod raw_str;
-mod parse;
 mod listener;
+mod method;
+mod parse;
+mod raw_str;
+mod status;
 
 /// Case-preserving, ASCII case-insensitive string types.
 ///
@@ -36,24 +35,27 @@ mod listener;
 /// cased characters, but comparison (including ordering, equality, and hashing)
 /// is ASCII case-insensitive. **Note:** the `alloc` feature _is_ enabled.
 pub mod uncased {
-    #[doc(inline)] pub use uncased::*;
+    #[doc(inline)]
+    pub use uncased::*;
 }
 
 // Types that we expose for use _only_ by core. Please don't use this.
 #[doc(hidden)]
 #[path = "."]
 pub mod private {
+    pub use crate::listener::{
+        bind_tcp, bind_unix, Certificates, Connection, Incoming, Listener, TcpListener,
+    };
     pub use crate::parse::Indexed;
-    pub use smallvec::{SmallVec, Array};
-    pub use crate::listener::{bind_tcp, bind_unix, Incoming, Listener, Connection, RawCertificate};
     pub use cookie;
+    pub use smallvec::{Array, SmallVec};
 }
 
 #[doc(hidden)]
 #[cfg(feature = "tls")]
 pub mod tls;
 
-pub use crate::method::Method;
-pub use crate::status::{Status, StatusClass};
-pub use crate::raw_str::{RawStr, RawStrBuf};
 pub use crate::header::*;
+pub use crate::method::Method;
+pub use crate::raw_str::{RawStr, RawStrBuf};
+pub use crate::status::{Status, StatusClass};

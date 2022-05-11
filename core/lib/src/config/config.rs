@@ -60,16 +60,19 @@ use crate::http::bindable::BindableAddr;
 pub struct Config {
     /// The selected profile. **(default: _debug_ `debug` / _release_ `release`)**
     ///
-    /// **Note:** This field is never serialized nor deserialized. When a
+    /// _**Note:** This field is never serialized nor deserialized. When a
     /// `Config` is merged into a `Figment` as a `Provider`, this profile is
     /// selected on the `Figment`. When a `Config` is extracted, this field is
-    /// set to the extracting Figment's selected `Profile`.
+    /// set to the extracting Figment's selected `Profile`._
     #[serde(skip)]
     pub profile: Profile,
     /// The address to listen on for HTTP requests. **(default: `"tcp://localhost:8000"`)**
     #[serde(flatten)]
     pub address: BindableAddr,
     /// Number of threads to use for executing futures. **(default: `num_cores`)**
+    ///
+    /// _**Note:** Rocket only reads this value from sources in the [default
+    /// provider](Config::figment())._
     pub workers: usize,
     /// How, if at all, to identify the server via the `Server` header.
     /// **(default: `"Rocket"`)**
@@ -88,8 +91,8 @@ pub struct Config {
     pub tls: Option<TlsConfig>,
     /// The secret key for signing and encrypting. **(default: `0`)**
     ///
-    /// **Note:** This field _always_ serializes as a 256-bit array of `0`s to
-    /// aid in preventing leakage of the secret key.
+    /// _**Note:** This field _always_ serializes as a 256-bit array of `0`s to
+    /// aid in preventing leakage of the secret key._
     #[cfg(feature = "secrets")]
     #[cfg_attr(nightly, doc(cfg(feature = "secrets")))]
     #[serde(serialize_with = "SecretKey::serialize_zero")]

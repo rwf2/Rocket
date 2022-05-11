@@ -7,7 +7,7 @@
 //!
 //!    ```toml
 //!    [dependencies.rocket_db_pools]
-//!    version = "0.1.0-rc"
+//!    version = "0.1.0-rc.2"
 //!    features = ["sqlx_sqlite"]
 //!    ```
 //!
@@ -106,16 +106,16 @@
 //! | Database | Feature             | [`Pool`] Type               | [`Connection`] Deref                  |
 //! |----------|---------------------|-----------------------------|---------------------------------------|
 //! | Postgres | `deadpool_postgres` | [`deadpool_postgres::Pool`] | [`deadpool_postgres::ClientWrapper`]  |
-//! | Redis    | `deadpool_redis`    | [`deadpool_redis::Pool`]    | [`deadpool_redis::ConnectionWrapper`] |
+//! | Redis    | `deadpool_redis`    | [`deadpool_redis::Pool`]    | [`deadpool_redis::Connection`] |
 //!
 //! ## `sqlx` (v0.5)
 //!
 //! | Database | Feature         | [`Pool`] Type        | [`Connection`] Deref               |
 //! |----------|-----------------|----------------------|------------------------------------|
-//! | Postgres | `sqlx_postgres` | [`sqlx::PgPool`]     | [`sqlx::PoolConnection<Postgres>`] |
-//! | MySQL    | `sqlx_mysql`    | [`sqlx::MySqlPool`]  | [`sqlx::PoolConnection<MySql>`]    |
-//! | SQLite   | `sqlx_sqlite`   | [`sqlx::SqlitePool`] | [`sqlx::PoolConnection<Sqlite>`]   |
-//! | MSSQL    | `sqlx_mssql`    | [`sqlx::MssqlPool`]  | [`sqlx::PoolConnection<Mssql>`]    |
+//! | Postgres | `sqlx_postgres` | [`sqlx::PgPool`]     | [`sqlx::pool::PoolConnection<Postgres>`] |
+//! | MySQL    | `sqlx_mysql`    | [`sqlx::MySqlPool`]  | [`sqlx::pool::PoolConnection<MySql>`]    |
+//! | SQLite   | `sqlx_sqlite`   | [`sqlx::SqlitePool`] | [`sqlx::pool::PoolConnection<Sqlite>`]   |
+//! | MSSQL    | `sqlx_mssql`    | [`sqlx::MssqlPool`]  | [`sqlx::pool::PoolConnection<Mssql>`]    |
 //!
 //! [`sqlx::PgPool`]: https://docs.rs/sqlx/0.5/sqlx/type.PgPool.html
 //! [`sqlx::MySqlPool`]: https://docs.rs/sqlx/0.5/sqlx/type.MySqlPool.html
@@ -146,7 +146,7 @@
 //! features = ["macros", "offline", "migrate"]
 //!
 //! [dependencies.rocket_db_pools]
-//! version = "0.1.0-rc"
+//! version = "0.1.0-rc.2"
 //! features = ["sqlx_sqlite"]
 //! ```
 //!

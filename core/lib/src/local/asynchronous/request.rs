@@ -1,5 +1,4 @@
 use std::fmt;
-use std::convert::TryInto;
 
 use crate::{Request, Data};
 use crate::http::{Status, Method};

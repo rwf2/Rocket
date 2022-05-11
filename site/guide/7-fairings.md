@@ -72,8 +72,8 @@ order in which fairings are attached may be significant.
 
 ### Callbacks
 
-There are four events for which Rocket issues fairing callbacks. Each of these
-events is described below:
+There are five events for which Rocket issues fairing callbacks. Each of these
+events is breifly described below and in details in the [`Fairing`] trait docs:
 
   * **Ignite (`on_ignite`)**
 
@@ -106,7 +106,16 @@ events is described below:
     example, response fairings can also be used to inject headers into all
     outgoing responses.
 
+  * **Shutdown (`on_shutdown`)**
+
+    A shutdown callback is called when [shutdown is triggered]. At this point,
+    graceful shutdown has commenced but not completed; no new requests are
+    accepted but the application may still be actively serving existing
+    requests. All registered shutdown fairings are run concurrently; resolution
+    of all fairings is awaited before resuming shutdown.
+
 [ignition]: @api/rocket/struct.Rocket.html#method.ignite
+[shutdown is triggered]: @api/rocket/config/struct.Shutdown.html#triggers
 
 ## Implementing
 
@@ -115,8 +124,8 @@ Recall that a fairing is any type that implements the [`Fairing`] trait. A
 [`Info`] structure. This structure is used by Rocket to assign a name to the
 fairing and determine the set of callbacks the fairing is registering for. A
 `Fairing` can implement any of the available callbacks: [`on_ignite`],
-[`on_liftoff`], [`on_request`], and [`on_response`]. Each callback has a default
-implementation that does absolutely nothing.
+[`on_liftoff`], [`on_request`], [`on_response`], and [`on_shutdown`]. Each
+callback has a default implementation that does absolutely nothing.
 
 [`Info`]: @api/rocket/fairing/struct.Info.html
 [`info`]: @api/rocket/fairing/trait.Fairing.html#tymethod.info
@@ -124,6 +133,7 @@ implementation that does absolutely nothing.
 [`on_liftoff`]: @api/rocket/fairing/trait.Fairing.html#method.on_liftoff
 [`on_request`]: @api/rocket/fairing/trait.Fairing.html#method.on_request
 [`on_response`]: @api/rocket/fairing/trait.Fairing.html#method.on_response
+[`on_shutdown`]: @api/rocket/fairing/trait.Fairing.html#method.on_shutdown
 
 ### Requirements
 
@@ -204,17 +214,16 @@ documentation](@api/rocket/fairing/trait.Fairing.html#example).
 
 ## Ad-Hoc Fairings
 
-For simple occasions, implementing the `Fairing` trait can be cumbersome. This
-is why Rocket provides the [`AdHoc`] type, which creates a fairing from a simple
+For simpler cases, implementing the `Fairing` trait can be cumbersome. This is
+why Rocket provides the [`AdHoc`] type, which creates a fairing from a simple
 function or closure. Using the `AdHoc` type is easy: simply call the
-`on_ignite`, `on_liftoff`, `on_request`, or `on_response` constructors on
-`AdHoc` to create an `AdHoc` structure from a function or closure.
+`on_ignite`, `on_liftoff`, `on_request`, `on_response`, or `on_shutdown`
+constructors on `AdHoc` to create a fairing from a function or closure.
 
 As an example, the code below creates a `Rocket` instance with two attached
-ad-hoc fairings. The first, a liftoff fairing named "Liftoff Printer", simply
-prints a message indicating that the application has launched. The second named
-"Put Rewriter", a request fairing, rewrites the method of all requests to be
-`PUT`.
+ad-hoc fairings. The first, a liftoff fairing named "Liftoff Printer", prints a
+message indicating that the application has launched. The second named "Put
+Rewriter", a request fairing, rewrites the method of all requests to be `PUT`.
 
 ```rust
 use rocket::fairing::AdHoc;
@@ -226,6 +235,9 @@ rocket::build()
     })))
     .attach(AdHoc::on_request("Put Rewriter", |req, _| Box::pin(async move {
         req.set_method(Method::Put);
+    })))
+    .attach(AdHoc::on_shutdown("Shutdown Printer", |_| Box::pin(async move {
+        println!("...shutdown has commenced!");
     })));
 ```
 

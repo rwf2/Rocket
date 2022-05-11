@@ -184,6 +184,13 @@ impl<'v> NameView<'v> {
 
     /// Returns the key currently viewed by `self` if it is non-empty.
     ///
+    /// ```text
+    ///                 food.bart[bar:foo].blam[0_0][][1000]=some-value
+    /// name            |----------------------------------|
+    /// non-empty key   |--| |--| |-----|  |--| |-|     |--|
+    /// empty key                                  |-|
+    /// ```
+    ///
     /// # Example
     ///
     /// ```rust
@@ -210,6 +217,13 @@ impl<'v> NameView<'v> {
     }
 
     /// Returns the key currently viewed by `self`, even if it is non-empty.
+    ///
+    /// ```text
+    ///                 food.bart[bar:foo].blam[0_0][][1000]=some-value
+    /// name            |----------------------------------|
+    /// non-empty key   |--| |--| |-----|  |--| |-|     |--|
+    /// empty key                                  |-|
+    /// ```
     ///
     /// # Example
     ///

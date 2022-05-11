@@ -143,7 +143,7 @@ fn single_byte() {
         "@" => Authority::new("", "", None),
     );
 
-    assert_no_parse!("[", "]");
+    assert_no_parse!["\\", "^"];
 }
 
 #[test]

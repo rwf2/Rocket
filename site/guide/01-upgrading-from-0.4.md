@@ -39,7 +39,7 @@ private cookies, you _must_ enable the `secrets` feature in `Cargo.toml`:
 
 ```toml
 [dependencies]
-rocket = { version = "0.5.0-rc.1", features = ["secrets"] }
+rocket = { version = "0.5.0-rc.2", features = ["secrets"] }
 ```
 
 ### Contrib Deprecation
@@ -60,8 +60,8 @@ to `Cargo.toml`:
 [dependencies]
 - rocket = "0.4"
 - rocket_contrib = { version = "0.4", features = ["json"], default-features = false }
-+ rocket = { version = "0.5.0-rc.1", features = ["json"] }
-+ rocket_dyn_templates = { version = "0.1.0-rc.1", features = ["tera"] }
++ rocket = { version = "0.5.0-rc.2", features = ["json"] }
++ rocket_dyn_templates = { version = "0.1.0-rc.2", features = ["tera"] }
 ```
 
 ! note: `rocket_dyn_templates` (and co.) _does not_ follow in version lock-step

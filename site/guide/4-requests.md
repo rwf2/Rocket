@@ -527,7 +527,7 @@ feature:
 
 ```toml
 ## in Cargo.toml
-rocket = { version = "0.5.0-rc.1", features = ["secrets"] }
+rocket = { version = "0.5.0-rc.2", features = ["secrets"] }
 ```
 
 The API for retrieving, adding, and removing private cookies is identical except
@@ -668,6 +668,7 @@ data as JSON. The only condition is that the generic type `T` implements the
 use rocket::serde::{Deserialize, json::Json};
 
 #[derive(Deserialize)]
+#[serde(crate = "rocket::serde")]
 struct Task<'r> {
     description: &'r str,
     complete: bool
@@ -677,6 +678,25 @@ struct Task<'r> {
 fn new(task: Json<Task<'_>>) { /* .. */ }
 ```
 
+! warning: Using Rocket's `serde` derive re-exports requires a bit more effort.
+
+  For convenience, Rocket re-exports `serde`'s `Serialize` and `Deserialize`
+  traits and derive macros from `rocket::serde`. However, due to Rust's limited
+  support for derive macro re-exports, using the re-exported derive macros
+  requires annotating structures with `#[serde(crate = "rocket::serde")]`. If
+  you'd like to avoid this extra annotation, you must depend on `serde` directly
+  via your crate's `Cargo.toml`:
+
+  `
+  serde = { version = "1.0", features = ["derive"] }
+  `
+
+  We always use the extra annotation in the guide, but you may prefer the
+  alternative.
+
+See the [JSON example](@example/serialization/src/json.rs) on GitHub for a
+complete example.
+
 ! note: JSON support requires enabling Rocket's `json` feature flag.
 
   Rocket intentionally places JSON support, as well support for other data
@@ -685,11 +705,8 @@ fn new(task: Json<Task<'_>>) { /* .. */ }
   feature can be enabled in the `Cargo.toml`:
 
   `
-  rocket = { version = "0.5.0-rc.1", features = ["json"] }
+  rocket = { version = "0.5.0-rc.2", features = ["json"] }
   `
-
-  See the [JSON example](@example/serialization/src/json.rs) on GitHub for a
-  complete example.
 
 ### Temporary Files
 
