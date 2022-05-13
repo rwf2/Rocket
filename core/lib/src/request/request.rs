@@ -1033,6 +1033,67 @@ impl<'r> Request<'r> {
 
         Ok(request)
     }
+
+    /// Salvage whatever parts of the hyper request are reasonable to salvage.
+    ///
+    /// This should only be sent to the 400 catcher
+    pub(crate) fn from_bad_hyp(
+        rocket: &'r Rocket<Orbit>,
+        hyper: &'r hyper::request::Parts,
+        connection: Option<ConnectionMeta>,
+    ) -> Request<'r> {
+        let method = Method::from_hyp(&hyper.method).unwrap_or(Method::Get);
+
+        // TODO: Keep around not just the path/query, but the rest, if there?
+        // Construct the request object.
+        let uri = hyper.uri.path_and_query()
+            .map(|uri| Origin::new(uri.path(), uri.query().map(Cow::Borrowed)))
+            .unwrap_or(Origin::ROOT);
+
+        let mut request = Request::new(rocket, method, uri);
+        if let Some(connection) = connection {
+            request.connection = connection;
+        }
+
+        // Determine the host. On HTTP < 2, use the `HOST` header. Otherwise,
+        // use the `:authority` pseudo-header which hyper makes part of the URI.
+        request.state.host = if hyper.version < hyper::Version::HTTP_2 {
+            hyper.headers.get("host").and_then(|h| Host::parse_bytes(h.as_bytes()).ok())
+        } else {
+            hyper.uri.host().map(|h| Host::new(Authority::new(None, h, hyper.uri.port_u16())))
+        };
+
+        // Set the request cookies, if they exist.
+        for header in hyper.headers.get_all("Cookie") {
+            let raw_str = match std::str::from_utf8(header.as_bytes()) {
+                Ok(string) => string,
+                Err(_) => continue
+            };
+
+            for cookie_str in raw_str.split(';').map(|s| s.trim()) {
+                if let Ok(cookie) = Cookie::parse_encoded(cookie_str) {
+                    request.state.cookies.add_original(cookie.into_owned());
+                }
+            }
+        }
+
+        // Set the rest of the headers. This is rather unfortunate and slow.
+        for (name, value) in hyper.headers.iter() {
+            // FIXME: This is rather unfortunate. Header values needn't be UTF8.
+            let value = match std::str::from_utf8(value.as_bytes()) {
+                Ok(value) => value,
+                Err(_) => {
+                    warn!("Header '{}' contains invalid UTF-8", name);
+                    warn_!("Rocket only supports UTF-8 header values. Dropping header.");
+                    continue;
+                }
+            };
+
+            request.add_header(Header::new(name.as_str(), value));
+        }
+
+        request
+    }
 }
 
 #[derive(Debug)]
