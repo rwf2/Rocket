@@ -40,13 +40,13 @@ macro_rules! dispatch {
 fn default_shield() {
     let client = Client::debug(rocket::build()).unwrap();
     let response = client.get("/").dispatch();
-    assert_header!(response, "Permissions-Policy", "interest-cohort=()");
+    assert_header!(response, "Permissions-Policy", "browsing-topics=()");
     assert_header!(response, "X-Frame-Options", "SAMEORIGIN");
     assert_header!(response, "X-Content-Type-Options", "nosniff");
 
     let client = Client::debug(rocket::custom(Config::debug_default())).unwrap();
     let response = client.get("/").dispatch();
-    assert_header!(response, "Permissions-Policy", "interest-cohort=()");
+    assert_header!(response, "Permissions-Policy", "browsing-topics=()");
     assert_header!(response, "X-Frame-Options", "SAMEORIGIN");
     assert_header!(response, "X-Content-Type-Options", "nosniff");
 }
@@ -71,7 +71,7 @@ fn shield_singleton() {
 #[test]
 fn default_headers_test() {
     dispatch!(Shield::default(), |response: LocalResponse<'_>| {
-        assert_header!(response, "Permissions-Policy", "interest-cohort=()");
+        assert_header!(response, "Permissions-Policy", "browsing-topics=()");
         assert_header!(response, "X-Frame-Options", "SAMEORIGIN");
         assert_header!(response, "X-Content-Type-Options", "nosniff");
     })
@@ -88,7 +88,7 @@ fn disable_headers_test() {
 
     let shield = Shield::default().disable::<Frame>();
     dispatch!(shield, |response: LocalResponse<'_>| {
-        assert_header!(response, "Permissions-Policy", "interest-cohort=()");
+        assert_header!(response, "Permissions-Policy", "browsing-topics=()");
         assert_header!(response, "X-Content-Type-Options", "nosniff");
         assert_no_header!(response, "X-Frame-Options");
     });
@@ -183,7 +183,7 @@ fn bad_uri_permission_test2() {
 fn permission_test() {
     let shield = Shield::default().enable(Permission::default());
     dispatch!(shield, |response: LocalResponse<'_>| {
-        assert_header!(response, "Permissions-Policy", "interest-cohort=()");
+        assert_header!(response, "Permissions-Policy", "browsing-topics=()");
     });
 
     let shield = Shield::default().enable(Permission::blocked(Feature::Usb));

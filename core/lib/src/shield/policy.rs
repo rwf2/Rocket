@@ -486,7 +486,7 @@ impl From<&Prefetch> for Header<'static> {
 /// # Default
 ///
 /// The default returned via [`Permission::default()`] blocks access to the
-/// `interest-cohort` feature, otherwise known as FLoC, which disables using the
+/// `browsing-topics` feature, the successor of FLoC, which disables using the
 /// current site in ad targeting tracking computations.
 ///
 /// [Permissions-Policy]: https://github.com/w3c/webappsec-permissions-policy/blob/a45df7b237e2a85e1909d7f226ca4eb4ce5095ba/permissions-policy-explainer.md
@@ -494,9 +494,9 @@ impl From<&Prefetch> for Header<'static> {
 pub struct Permission(IndexMap<Feature, Option<SmallVec<[Allow; 1]>>>);
 
 impl Default for Permission {
-    /// The default `Permission` policy blocks access to the `interest-cohort`
-    /// feature, otherwise known as FLoC, which disables using the current site
-    /// in ad targeting tracking computations.
+    /// The default `Permission` policy blocks access to the `browsing-topics`
+    /// feature, the successor of FLoC, which disables using the current site in
+    /// ad targeting tracking computations.
     fn default() -> Self {
         Permission::blocked(Feature::InterestCohort)
     }
@@ -666,7 +666,7 @@ impl From<&Permission> for Header<'static> {
         if perm == &Permission::default() {
             static DEFAULT: Header<'static> = Header {
                 name: Uncased::from_borrowed(Permission::NAME),
-                value: Cow::Borrowed("interest-cohort=()")
+                value: Cow::Borrowed("browsing-topics=()")
             };
 
             return DEFAULT.clone();
@@ -809,7 +809,7 @@ pub enum Feature {
     Gamepad,
     /// The "speaker-selection" feature.
     SpeakerSelection,
-    /// The "interest-cohort" feature.
+    /// The "browsing-topics" feature.
     InterestCohort,
 
     // Experimental.
@@ -878,7 +878,7 @@ impl Feature {
             ClipboardWrite => "clipboard-write",
             Gamepad => "gamepad",
             SpeakerSelection => "speaker-selection",
-            InterestCohort => "interest-cohort",
+            InterestCohort => "browsing-topics",
 
             ConversionMeasurement => "conversion-measurement",
             FocusWithoutUserActivation => "focus-without-user-activation",
