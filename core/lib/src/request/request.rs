@@ -968,27 +968,38 @@ impl<'r> Request<'r> {
         rocket: &'r Rocket<Orbit>,
         hyper: &'r hyper::request::Parts,
         connection: Option<ConnectionMeta>,
-    ) -> Result<Request<'r>, Error<'r>> {
+    ) -> Result<Request<'r>, Request<'r>> {
+        let mut valid = true;
         // Ensure that the method is known. TODO: Allow made-up methods?
-        let method = Method::from_hyp(&hyper.method)
-            .ok_or(Error::BadMethod(&hyper.method))?;
+        let method = if let Some(method) = Method::from_hyp(&hyper.method) {
+            method
+        } else {
+            error_!("Bad Request: {}", Error::BadMethod(&hyper.method));
+            valid = false;
+            Method::Get
+        };
 
         // TODO: Keep around not just the path/query, but the rest, if there?
-        let uri = hyper.uri.path_and_query().ok_or(Error::InvalidUri(&hyper.uri))?;
+        let uri = if let Some(uri) = hyper.uri.path_and_query() {
+            // In debug, make sure we agree with Hyper that the URI is valid. If we
+            // disagree, print a warning but continue anyway seeing as if this is a
+            // security issue with Hyper, there isn't much we can do.
+            #[cfg(debug_assertions)]
+            if Origin::parse(uri.as_str()).is_err() {
+                warn!("Hyper/Rocket URI validity discord: {:?}", uri.as_str());
+                info_!("Hyper believes the URI is valid while Rocket disagrees.");
+                info_!("This is likely a Hyper bug with potential security implications.");
+                warn_!("Please report this warning to Rocket's GitHub issue tracker.");
+            }
 
-        // In debug, make sure we agree with Hyper that the URI is valid. If we
-        // disagree, print a warning but continue anyway seeing as if this is a
-        // security issue with Hyper, there isn't much we can do.
-        #[cfg(debug_assertions)]
-        if Origin::parse(uri.as_str()).is_err() {
-            warn!("Hyper/Rocket URI validity discord: {:?}", uri.as_str());
-            info_!("Hyper believes the URI is valid while Rocket disagrees.");
-            info_!("This is likely a Hyper bug with potential security implications.");
-            warn_!("Please report this warning to Rocket's GitHub issue tracker.");
-        }
+            Origin::new(uri.path(), uri.query().map(Cow::Borrowed))
+        } else {
+            error_!("Bad Request: {}", Error::InvalidUri(&hyper.uri));
+            valid = false;
+            Origin::ROOT
+        };
 
         // Construct the request object.
-        let uri = Origin::new(uri.path(), uri.query().map(Cow::Borrowed));
         let mut request = Request::new(rocket, method, uri);
         if let Some(connection) = connection {
             request.connection = connection;
@@ -1031,68 +1042,11 @@ impl<'r> Request<'r> {
             request.add_header(Header::new(name.as_str(), value));
         }
 
-        Ok(request)
-    }
-
-    /// Salvage whatever parts of the hyper request are reasonable to salvage.
-    ///
-    /// This should only be sent to the 400 catcher
-    pub(crate) fn from_bad_hyp(
-        rocket: &'r Rocket<Orbit>,
-        hyper: &'r hyper::request::Parts,
-        connection: Option<ConnectionMeta>,
-    ) -> Request<'r> {
-        let method = Method::from_hyp(&hyper.method).unwrap_or(Method::Get);
-
-        // TODO: Keep around not just the path/query, but the rest, if there?
-        // Construct the request object.
-        let uri = hyper.uri.path_and_query()
-            .map(|uri| Origin::new(uri.path(), uri.query().map(Cow::Borrowed)))
-            .unwrap_or(Origin::ROOT);
-
-        let mut request = Request::new(rocket, method, uri);
-        if let Some(connection) = connection {
-            request.connection = connection;
-        }
-
-        // Determine the host. On HTTP < 2, use the `HOST` header. Otherwise,
-        // use the `:authority` pseudo-header which hyper makes part of the URI.
-        request.state.host = if hyper.version < hyper::Version::HTTP_2 {
-            hyper.headers.get("host").and_then(|h| Host::parse_bytes(h.as_bytes()).ok())
+        if valid {
+            Ok(request)
         } else {
-            hyper.uri.host().map(|h| Host::new(Authority::new(None, h, hyper.uri.port_u16())))
-        };
-
-        // Set the request cookies, if they exist.
-        for header in hyper.headers.get_all("Cookie") {
-            let raw_str = match std::str::from_utf8(header.as_bytes()) {
-                Ok(string) => string,
-                Err(_) => continue
-            };
-
-            for cookie_str in raw_str.split(';').map(|s| s.trim()) {
-                if let Ok(cookie) = Cookie::parse_encoded(cookie_str) {
-                    request.state.cookies.add_original(cookie.into_owned());
-                }
-            }
+            Err(request)
         }
-
-        // Set the rest of the headers. This is rather unfortunate and slow.
-        for (name, value) in hyper.headers.iter() {
-            // FIXME: This is rather unfortunate. Header values needn't be UTF8.
-            let value = match std::str::from_utf8(value.as_bytes()) {
-                Ok(value) => value,
-                Err(_) => {
-                    warn!("Header '{}' contains invalid UTF-8", name);
-                    warn_!("Rocket only supports UTF-8 header values. Dropping header.");
-                    continue;
-                }
-            };
-
-            request.add_header(Header::new(name.as_str(), value));
-        }
-
-        request
     }
 }
 

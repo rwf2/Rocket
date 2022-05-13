@@ -15,7 +15,7 @@ use crate::error::{Error, ErrorKind};
 use crate::ext::{AsyncReadExt, CancellableListener, CancellableIo};
 use crate::request::ConnectionMeta;
 
-use crate::http::{uri::Origin, hyper, Method, Status, Header};
+use crate::http::{hyper, Method, Status, Header};
 use crate::http::private::{TcpListener, Listener, Connection, Incoming};
 
 // A token returned to force the execution of one method before another.
@@ -82,13 +82,8 @@ async fn hyper_service_fn(
                 let response = rocket.dispatch(token, &mut req, data).await;
                 rocket.send_response(response, tx).await;
             },
-            Err(e) => {
-                // TODO: We don't have a request to pass in, so we fabricate
-                // one. This is weird. Instead, let the user know that we failed
-                // to parse a request (a special handler?).
-                error!("Bad incoming request: {}", e);
-                let dummy = Request::from_bad_hyp(&rocket, &h_parts, Some(conn));
-                let response = rocket.handle_error(Status::BadRequest, &dummy).await;
+            Err(salvaged_req) => {
+                let response = rocket.handle_error(Status::BadRequest, &salvaged_req).await;
                 rocket.send_response(response, tx).await;
             }
         }
