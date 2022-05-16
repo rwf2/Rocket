@@ -17,7 +17,7 @@ macro_rules! assert_headers {
         // Create a valid `Rocket` and convert the hyper req to a Rocket one.
         let client = Client::debug_with(vec![]).unwrap();
         let hyper = req.into_parts().0;
-        let req = Request::from_hyp(client.rocket(), &hyper, None).unwrap();
+        let req = Request::from_hyp_lossy(client.rocket(), &hyper, None);
 
         // Dispatch the request and check that the headers match.
         let actual_headers = req.headers();

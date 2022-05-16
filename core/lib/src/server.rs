@@ -82,7 +82,9 @@ async fn hyper_service_fn(
                 let response = rocket.dispatch(token, &mut req, data).await;
                 rocket.send_response(response, tx).await;
             },
-            Err(salvaged_req) => {
+            Err((e, conn)) => {
+                warn_!("Invalid request: {}", e);
+                let salvaged_req = Request::from_hyp_lossy(&rocket, &h_parts, conn);
                 let response = rocket.handle_error(Status::BadRequest, &salvaged_req).await;
                 rocket.send_response(response, tx).await;
             }
