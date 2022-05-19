@@ -133,7 +133,6 @@ use crate::log::PaintExt;
 ///       rocket::build()
 ///   }
 ///   ```
-#[must_use]
 pub struct Rocket<P: Phase>(pub(crate) P::State);
 
 impl Rocket<Build> {
@@ -152,6 +151,7 @@ impl Rocket<Build> {
     ///     rocket::build()
     /// }
     /// ```
+    #[must_use]
     #[inline(always)]
     pub fn build() -> Self {
         Rocket::custom(Config::figment())
@@ -178,6 +178,7 @@ impl Rocket<Build> {
     ///     rocket::custom(figment)
     /// }
     /// ```
+    #[must_use]
     pub fn custom<T: Provider>(provider: T) -> Self {
         // We initialize the logger here so that logging from fairings and so on
         // are visible; we use the final config to set a max log-level in ignite
@@ -235,6 +236,7 @@ impl Rocket<Build> {
     /// # Ok(())
     /// # });
     /// ```
+    #[must_use]
     pub fn configure<T: Provider>(mut self, provider: T) -> Self {
         self.figment = Figment::from(provider);
         self
@@ -334,6 +336,7 @@ impl Rocket<Build> {
     ///     rocket::build().mount("/hello", vec![hi_route])
     /// }
     /// ```
+    #[must_use]
     #[track_caller]
     pub fn mount<'a, B, R>(self, base: B, routes: R) -> Self
         where B: TryInto<Origin<'a>> + Clone + fmt::Display,
@@ -373,6 +376,7 @@ impl Rocket<Build> {
     ///     rocket::build().register("/", catchers![internal_error, not_found])
     /// }
     /// ```
+    #[must_use]
     pub fn register<'a, B, C>(self, base: B, catchers: C) -> Self
         where B: TryInto<Origin<'a>> + Clone + fmt::Display,
               B::Error: fmt::Display,
@@ -424,6 +428,7 @@ impl Rocket<Build> {
     ///         .mount("/", routes![int, string])
     /// }
     /// ```
+    #[must_use]
     pub fn manage<T>(self, state: T) -> Self
         where T: Send + Sync + 'static
     {
@@ -457,6 +462,7 @@ impl Rocket<Build> {
     ///         })))
     /// }
     /// ```
+    #[must_use]
     pub fn attach<F: Fairing>(mut self, fairing: F) -> Self {
         self.fairings.add(Box::new(fairing));
         self
