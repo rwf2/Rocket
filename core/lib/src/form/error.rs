@@ -947,18 +947,13 @@ impl From<(Option<ByteUnit>, Option<ByteUnit>)> for ErrorKind<'_> {
     }
 }
 
-macro_rules! impl_from_choices {
-    ($($size:literal),*) => ($(
-        impl<'a, 'v: 'a> From<&'static [Cow<'v, str>; $size]> for ErrorKind<'a> {
-            fn from(choices: &'static [Cow<'v, str>; $size]) -> Self {
-                let choices = &choices[..];
-                ErrorKind::InvalidChoice { choices: choices.into() }
-            }
-        }
-    )*)
+impl<'a, 'v: 'a, const N: usize> From<&'static [Cow<'v, str>; N]> for ErrorKind<'a> {
+    fn from(choices: &'static [Cow<'v, str>; N]) -> Self {
+        let choices = &choices[..];
+        ErrorKind::InvalidChoice { choices: choices.into() }
+    }
 }
 
-impl_from_choices!(1, 2, 3, 4, 5, 6, 7, 8);
 
 macro_rules! impl_from_for {
     (<$l:lifetime> $T:ty => $V:ty as $variant:ident) => (
