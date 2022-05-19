@@ -252,3 +252,9 @@ error[E0271]: type mismatch resolving `<std::string::String as FromParam<'_>>::E
    |
 22 | fn optionals(id: Option<i32>, name: Result<String, &str>) {  }
    |                                     ^^^^^^ expected enum `Infallible`, found `&str`
+
+error[E0271]: type mismatch resolving `<std::string::String as FromParam<'_>>::Error == &str`
+  --> tests/ui-fail-stable/typed-uri-bad-type.rs:22:37
+   |
+22 | fn optionals(id: Option<i32>, name: Result<String, &str>) {  }
+   |                                     ^^^^^^ expected `&str`, found enum `Infallible`
