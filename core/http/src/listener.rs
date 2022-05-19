@@ -143,16 +143,17 @@ impl<L: Listener> Incoming<L> {
         cx: &mut Context<'_>
     ) -> Poll<io::Result<L::Connection>> {
         /// This function defines per-connection errors: errors that affect only
-        /// a single connection. Since the error affects only one connection, we
-        /// can attempt to `accept()` another connection immediately. All other
-        /// errors will incur a delay before the next `accept()` is performed.
-        /// The delay is useful to handle resource exhaustion errors like ENFILE
-        /// and EMFILE. Otherwise, could enter into tight loop.
+        /// a single connection's accept() and don't imply anything about the
+        /// success probability of the next accept(). Thus, we can attempt to
+        /// `accept()` another connection immediately. All other errors will
+        /// incur a delay before the next `accept()` is performed. The delay is
+        /// useful to handle resource exhaustion errors like ENFILE and EMFILE.
+        /// Otherwise, could enter into tight loop.
         fn is_connection_error(e: &io::Error) -> bool {
             matches!(e.kind(),
-            | io::ErrorKind::ConnectionRefused
-            | io::ErrorKind::ConnectionAborted
-            | io::ErrorKind::ConnectionReset)
+                | io::ErrorKind::ConnectionRefused
+                | io::ErrorKind::ConnectionAborted
+                | io::ErrorKind::ConnectionReset)
         }
 
         let mut this = self.project();
