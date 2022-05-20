@@ -79,5 +79,5 @@ jobs:
           key: ${{ matrix.test.name }}
 
       - name: Run Tests
-        run: ./scripts/test.sh ${{ matrix.test.flag }}
+        run: ./scripts/test.sh ${{ matrix.test.flag }} -q
         shell: bash
