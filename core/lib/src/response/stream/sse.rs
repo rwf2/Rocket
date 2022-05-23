@@ -777,29 +777,30 @@ mod sse_tests {
         assert!(heartbeats >= 2 && heartbeats <= 4, "got {} beat(s)", heartbeats);
 
         let stream = EventStream! {
-            time::sleep(Duration::from_millis(200)).await;
+            time::sleep(Duration::from_millis(250)).await;
             yield Event::data("foo");
-            time::sleep(Duration::from_millis(200)).await;
+            time::sleep(Duration::from_millis(250)).await;
             yield Event::data("bar");
         };
 
-        let string = stream.heartbeat(Duration::from_millis(300)).into_string();
+        // We expect: foo\n\n [heartbeat] bar\n\n [maybe beartbeat].
+        let string = stream.heartbeat(Duration::from_millis(350)).into_string();
         let heartbeats = string.matches(HEARTBEAT).count();
         assert!(heartbeats >= 1 && heartbeats <= 3, "got {} beat(s)", heartbeats);
-        assert!(string.contains("data:foo\n\n"));
-        assert!(string.contains("data:bar\n\n"));
+        assert!(string.contains("data:foo\n\n"), "string = {:?}", string);
+        assert!(string.contains("data:bar\n\n"), "string = {:?}", string);
 
         // We shouldn't send a heartbeat if a message is immediately available.
         let stream = EventStream::from(once(ready(Event::data("hello"))));
         let string = stream.heartbeat(Duration::from_secs(1)).into_string();
-        assert_eq!(string, "data:hello\n\n");
+        assert_eq!(string, "data:hello\n\n", "string = {:?}", string);
 
         // It's okay if we do it with two, though.
         let stream = EventStream::from(iter(vec![Event::data("a"), Event::data("b")]));
         let string = stream.heartbeat(Duration::from_secs(1)).into_string();
         let heartbeats = string.matches(HEARTBEAT).count();
         assert!(heartbeats <= 1);
-        assert!(string.contains("data:a\n\n"));
-        assert!(string.contains("data:b\n\n"));
+        assert!(string.contains("data:a\n\n"), "string = {:?}", string);
+        assert!(string.contains("data:b\n\n"), "string = {:?}", string);
     }
 }
