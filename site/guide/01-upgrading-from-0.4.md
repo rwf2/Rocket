@@ -298,7 +298,7 @@ use rocket::tokio::task;
 use rocket::response::Debug;
 
 #[get("/")]
-async fn exepensive() -> Result<(), Debug<task::JoinError>> {
+async fn expensive() -> Result<(), Debug<task::JoinError>> {
     let result = task::spawn_blocking(move || {
         // perform the computation
     }).await?;
