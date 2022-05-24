@@ -968,33 +968,47 @@ impl<'r> Request<'r> {
         rocket: &'r Rocket<Orbit>,
         hyper: &'r hyper::request::Parts,
         connection: Option<ConnectionMeta>,
-    ) -> Result<Request<'r>, Error<'r>> {
+    ) -> Result<Request<'r>, BadRequest<'r>> {
+        // Keep track of parsing errors; emit a `BadRequest` if any exist.
+        let mut errors = vec![];
+
         // Ensure that the method is known. TODO: Allow made-up methods?
         let method = Method::from_hyp(&hyper.method)
-            .ok_or(Error::BadMethod(&hyper.method))?;
+            .unwrap_or_else(|| {
+                errors.push(Kind::BadMethod(&hyper.method));
+                Method::Get
+            });
 
         // TODO: Keep around not just the path/query, but the rest, if there?
-        let uri = hyper.uri.path_and_query().ok_or(Error::InvalidUri(&hyper.uri))?;
+        let uri = hyper.uri.path_and_query()
+            .map(|uri| {
+                // In debug, make sure we agree with Hyper about URI validity.
+                // If we disagree, log a warning but continue anyway; if this is
+                // a security issue with Hyper, there isn't much we can do.
+                #[cfg(debug_assertions)]
+                if Origin::parse(uri.as_str()).is_err() {
+                    warn!("Hyper/Rocket URI validity discord: {:?}", uri.as_str());
+                    info_!("Hyper believes the URI is valid while Rocket disagrees.");
+                    info_!("This is likely a Hyper bug with potential security implications.");
+                    warn_!("Please report this warning to Rocket's GitHub issue tracker.");
+                }
 
-        // In debug, make sure we agree with Hyper that the URI is valid. If we
-        // disagree, print a warning but continue anyway seeing as if this is a
-        // security issue with Hyper, there isn't much we can do.
-        #[cfg(debug_assertions)]
-        if Origin::parse(uri.as_str()).is_err() {
-            warn!("Hyper/Rocket URI validity discord: {:?}", uri.as_str());
-            info_!("Hyper believes the URI is valid while Rocket disagrees.");
-            info_!("This is likely a Hyper bug with potential security implications.");
-            warn_!("Please report this warning to Rocket's GitHub issue tracker.");
-        }
+                Origin::new(uri.path(), uri.query().map(Cow::Borrowed))
+            })
+            .unwrap_or_else(|| {
+                errors.push(Kind::InvalidUri(&hyper.uri));
+                Origin::ROOT
+            });
 
-        // Construct the request object.
-        let uri = Origin::new(uri.path(), uri.query().map(Cow::Borrowed));
+        // Construct the request object; fill in metadata and headers next.
         let mut request = Request::new(rocket, method, uri);
+
+        // Set the passed in connection metadata.
         if let Some(connection) = connection {
             request.connection = connection;
         }
 
-        // Determine the host. On HTTP < 2, use the `HOST` header. Otherwise,
+        // Determine + set host. On HTTP < 2, use the `HOST` header. Otherwise,
         // use the `:authority` pseudo-header which hyper makes part of the URI.
         request.state.host = if hyper.version < hyper::Version::HTTP_2 {
             hyper.headers.get("host").and_then(|h| Host::parse_bytes(h.as_bytes()).ok())
@@ -1031,32 +1045,32 @@ impl<'r> Request<'r> {
             request.add_header(Header::new(name.as_str(), value));
         }
 
-        Ok(request)
-    }
-}
-
-#[derive(Debug)]
-pub(crate) enum Error<'r> {
-    InvalidUri(&'r hyper::Uri),
-    UriParse(crate::http::uri::Error<'r>),
-    BadMethod(&'r hyper::Method),
-}
-
-impl fmt::Display for Error<'_> {
-    /// Pretty prints a Request. This is primarily used by Rocket's logging
-    /// infrastructure.
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            Error::InvalidUri(u) => write!(f, "invalid origin URI: {}", u),
-            Error::UriParse(u) => write!(f, "URI `{}` failed to parse as origin", u),
-            Error::BadMethod(m) => write!(f, "invalid or unrecognized method: {}", m),
+        if errors.is_empty() {
+            Ok(request)
+        } else {
+            Err(BadRequest { request, errors })
         }
     }
 }
 
-impl<'r> From<crate::http::uri::Error<'r>> for Error<'r> {
-    fn from(uri_parse: crate::http::uri::Error<'r>) -> Self {
-        Error::UriParse(uri_parse)
+#[derive(Debug)]
+pub(crate) struct BadRequest<'r> {
+    pub request: Request<'r>,
+    pub errors: Vec<Kind<'r>>,
+}
+
+#[derive(Debug)]
+pub(crate) enum Kind<'r> {
+    InvalidUri(&'r hyper::Uri),
+    BadMethod(&'r hyper::Method),
+}
+
+impl fmt::Display for Kind<'_> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Kind::InvalidUri(u) => write!(f, "invalid origin URI: {}", u),
+            Kind::BadMethod(m) => write!(f, "invalid or unrecognized method: {}", m),
+        }
     }
 }
 
@@ -1073,8 +1087,7 @@ impl fmt::Debug for Request<'_> {
 }
 
 impl fmt::Display for Request<'_> {
-    /// Pretty prints a Request. This is primarily used by Rocket's logging
-    /// infrastructure.
+    /// Pretty prints a Request. Primarily used by Rocket's logging.
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{} {}", Paint::green(self.method()), Paint::blue(&self.uri))?;
 
