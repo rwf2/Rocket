@@ -43,5 +43,8 @@ version = "0.5.0-rc.2"
 path = "../../../core/lib"
 default-features = false
 
+[build-dependencies]
+version_check = "0.9.1"
+
 [package.metadata.docs.rs]
 all-features = true

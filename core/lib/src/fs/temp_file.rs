@@ -458,7 +458,8 @@ impl<'v> TempFile<'v> {
 
         let mut file = File::from_std(file);
         let fut = data.open(limit).stream_to(tokio::io::BufWriter::new(&mut file));
-        let n = fut.await?;
+        let n = fut.await;
+        let n = n?;
         let temp_file = TempFile::File {
             content_type, file_name,
             path: Either::Left(temp_path),

@@ -2,8 +2,8 @@
 mod databases_tests {
     use rocket_sync_db_pools::{database, diesel};
 
-    #[database("foo")]
-    struct TempStorage(diesel::SqliteConnection);
+    #[database("example")]
+    struct ExampleDb(diesel::SqliteConnection);
 
     #[database("bar")]
     struct PrimaryDb(diesel::PgConnection);

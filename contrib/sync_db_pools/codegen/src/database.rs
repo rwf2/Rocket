@@ -1,18 +1,20 @@
 use proc_macro::TokenStream;
 use devise::{Spanned, Result, ext::SpanDiagnosticExt};
 
-use crate::syn::{Fields, Data, Type, LitStr, DeriveInput, Ident, Visibility};
+use crate::syn;
 
 #[derive(Debug)]
 struct DatabaseInvocation {
+    /// The attributes on the attributed structure.
+    attrs: Vec<syn::Attribute>,
     /// The name of the structure on which `#[database(..)] struct This(..)` was invoked.
-    type_name: Ident,
+    type_name: syn::Ident,
     /// The visibility of the structure on which `#[database(..)] struct This(..)` was invoked.
-    visibility: Visibility,
+    visibility: syn::Visibility,
     /// The database name as passed in via #[database('database name')].
     db_name: String,
     /// The type inside the structure: struct MyDb(ThisType).
-    connection_type: Type,
+    connection_type: syn::Type,
 }
 
 const EXAMPLE: &str = "example: `struct MyDatabase(diesel::SqliteConnection);`";
@@ -24,20 +26,20 @@ const NO_GENERIC_STRUCTS: &str = "`database` attribute cannot be applied to stru
 
 fn parse_invocation(attr: TokenStream, input: TokenStream) -> Result<DatabaseInvocation> {
     let attr_stream2 = crate::proc_macro2::TokenStream::from(attr);
-    let string_lit = crate::syn::parse2::<LitStr>(attr_stream2)?;
+    let string_lit = crate::syn::parse2::<syn::LitStr>(attr_stream2)?;
 
-    let input = crate::syn::parse::<DeriveInput>(input).unwrap();
+    let input = crate::syn::parse::<syn::DeriveInput>(input).unwrap();
     if !input.generics.params.is_empty() {
         return Err(input.generics.span().error(NO_GENERIC_STRUCTS));
     }
 
     let structure = match input.data {
-        Data::Struct(s) => s,
+        syn::Data::Struct(s) => s,
         _ => return Err(input.span().error(ONLY_ON_STRUCTS_MSG))
     };
 
     let inner_type = match structure.fields {
-        Fields::Unnamed(ref fields) if fields.unnamed.len() == 1 => {
+        syn::Fields::Unnamed(ref fields) if fields.unnamed.len() == 1 => {
             let first = fields.unnamed.first().expect("checked length");
             first.ty.clone()
         }
@@ -45,6 +47,7 @@ fn parse_invocation(attr: TokenStream, input: TokenStream) -> Result<DatabaseInv
     };
 
     Ok(DatabaseInvocation {
+        attrs: input.attrs,
         type_name: input.ident,
         visibility: input.vis,
         db_name: string_lit.value(),
@@ -59,6 +62,7 @@ pub fn database_attr(attr: TokenStream, input: TokenStream) -> Result<TokenStrea
     // Store everything we're going to need to generate code.
     let conn_type = &invocation.connection_type;
     let name = &invocation.db_name;
+    let attrs = &invocation.attrs;
     let guard_type = &invocation.type_name;
     let vis = &invocation.visibility;
     let fairing_name = format!("'{}' Database Pool", name);
@@ -69,7 +73,7 @@ pub fn database_attr(attr: TokenStream, input: TokenStream) -> Result<TokenStrea
     let rocket = quote!(#root::rocket);
 
     let request_guard_type = quote_spanned! { span =>
-        #vis struct #guard_type(#root::Connection<Self, #conn_type>);
+        #(#attrs)* #vis struct #guard_type(#root::Connection<Self, #conn_type>);
     };
 
     let pool = quote_spanned!(span => #root::ConnectionPool<Self, #conn_type>);
@@ -79,31 +83,29 @@ pub fn database_attr(attr: TokenStream, input: TokenStream) -> Result<TokenStrea
         #request_guard_type
 
         impl #guard_type {
-            /// Returns a fairing that initializes the associated database
-            /// connection pool.
+            /// Returns a fairing that initializes the database connection pool.
             pub fn fairing() -> impl #rocket::fairing::Fairing {
                 <#pool>::fairing(#fairing_name, #name)
             }
 
-            /// Retrieves a connection of type `Self` from the `rocket`
-            /// instance. Returns `Some` as long as `Self::fairing()` has been
-            /// attached.
-            pub async fn get_one<P>(__rocket: &#rocket::Rocket<P>) -> Option<Self>
-                where P: #rocket::Phase,
-            {
-                <#pool>::get_one(&__rocket).await.map(Self)
+            /// Returns an opaque type that represents the connection pool
+            /// backing connections of type `Self`.
+            pub fn pool<P: #rocket::Phase>(__rocket: &#rocket::Rocket<P>) -> Option<&#pool> {
+                <#pool>::pool(&__rocket)
             }
 
-            /// Runs the provided closure on a thread from a threadpool. The
-            /// closure will be passed an `&mut r2d2::PooledConnection`.
-            /// `.await`ing the return value of this function yields the value
-            /// returned by the closure.
+            /// Runs the provided function `__f` in an async-safe blocking
+            /// thread.
             pub async fn run<F, R>(&self, __f: F) -> R
-            where
-                F: FnOnce(&mut #conn_type) -> R + Send + 'static,
-                R: Send + 'static,
+                where F: FnOnce(&mut #conn_type) -> R + Send + 'static,
+                      R: Send + 'static,
             {
                 self.0.run(__f).await
+            }
+
+            /// Retrieves a connection of type `Self` from the `rocket` instance.
+            pub async fn get_one<P: #rocket::Phase>(__rocket: &#rocket::Rocket<P>) -> Option<Self> {
+                <#pool>::get_one(&__rocket).await.map(Self)
             }
         }
 
