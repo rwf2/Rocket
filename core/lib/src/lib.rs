@@ -233,12 +233,13 @@ pub use async_trait::async_trait;
 
 /// WARNING: This is unstable! Do not use this method outside of Rocket!
 #[doc(hidden)]
-pub fn async_run<F, R>(fut: F, workers: usize, force_end: bool, name: &str) -> R
+pub fn async_run<F, R>(fut: F, workers: usize, sync: usize, force_end: bool, name: &str) -> R
     where F: std::future::Future<Output = R>
 {
     let runtime = tokio::runtime::Builder::new_multi_thread()
         .thread_name(name)
         .worker_threads(workers)
+        .max_blocking_threads(sync)
         .enable_all()
         .build()
         .expect("create tokio runtime");
@@ -254,7 +255,7 @@ pub fn async_run<F, R>(fut: F, workers: usize, force_end: bool, name: &str) -> R
 /// WARNING: This is unstable! Do not use this method outside of Rocket!
 #[doc(hidden)]
 pub fn async_test<R>(fut: impl std::future::Future<Output = R>) -> R {
-    async_run(fut, 1, true, "rocket-worker-test-thread")
+    async_run(fut, 1, 32, true, "rocket-worker-test-thread")
 }
 
 /// WARNING: This is unstable! Do not use this method outside of Rocket!
@@ -263,8 +264,8 @@ pub fn async_main<R>(fut: impl std::future::Future<Output = R> + Send) -> R {
     // FIXME: These config values won't reflect swaps of `Rocket` in attach
     // fairings with different config values, or values from non-Rocket configs.
     // See tokio-rs/tokio#3329 for a necessary solution in `tokio`.
-    let config = Config::from(Config::figment());
-    async_run(fut, config.workers, config.shutdown.force, "rocket-worker-thread")
+    let c = Config::from(Config::figment());
+    async_run(fut, c.workers, c.max_blocking, c.shutdown.force, "rocket-worker-thread")
 }
 
 /// Executes a `future` to completion on a new tokio-based Rocket async runtime.
