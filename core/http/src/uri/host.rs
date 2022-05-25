@@ -15,8 +15,8 @@ use crate::uri::{Absolute, Authority};
 ///
 /// ```text
 /// some.domain.foo:8088
-/// |-----------| |--|
-///     domain    port
+/// |-------------| |--|
+///      domain     port
 /// ```
 ///
 /// Only the domain part is required. Its value is case-insensitive.
