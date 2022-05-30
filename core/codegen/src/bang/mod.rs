@@ -20,9 +20,9 @@ fn struct_maker_vec(
     // Parse a comma-separated list of paths.
     let paths = <Punctuated<Path, Token![,]>>::parse_terminated.parse(input)?;
     let exprs = paths.iter().map(|path| {
-        let expr = map(quote_spanned!(path.span() => ___struct));
+        let expr = map(quote_spanned!(path.span() => r#struct));
         quote_spanned!(path.span() => {
-            let ___struct = #path {};
+            let r#struct = #path {};
             let ___item: #ty = #expr;
             ___item
         })
