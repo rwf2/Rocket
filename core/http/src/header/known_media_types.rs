@@ -44,6 +44,10 @@ macro_rules! known_media_types {
         MP3 (is_mp3): "MPEG Audio", "audio", "mpeg",
         MP4 (is_mp4): "MPEG4 Video", "video", "mp4",
         ZIP (is_zip): "ZIP archive", "application", "zip",
+        CBZ (is_cbz): "Comic ZIP archive", "application", "vnd.comicbook+zip",
+        CBR (is_cbr): "Comic RAR compressed archive", "application", "vnd.comicbook-rar",
+        RAR (is_rar): "RAR compressed archive", "application", "vnd.rar",
+        EPUB (is_epub): "EPUB", "application", "epub+zip",
         EventStream (is_event_stream): "SSE stream", "text", "event-stream",
         Markdown (is_markdown): "markdown text", "text", "markdown" ; "charset" => "utf-8",
     })
@@ -94,6 +98,10 @@ macro_rules! known_extensions {
         "tiff" => TIFF,
         "mov" => MOV,
         "zip" => ZIP,
+        "cbz" => CBZ,
+        "cbr" => CBR,
+        "rar" => RAR,
+        "epub" => EPUB,
         "md" => Markdown,
         "markdown" => Markdown,
     })
