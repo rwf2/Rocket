@@ -4,7 +4,7 @@
 //!
 //! # Enabling
 //!
-//! This module is only available when the `json` feature is enabled. Enable it
+//! This module is only available when the `msgpack` feature is enabled. Enable it
 //! in `Cargo.toml` as follows:
 //!
 //! ```toml
