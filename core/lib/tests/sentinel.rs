@@ -106,6 +106,44 @@ async fn state_sentinel_works() {
     assert!(result.is_ok());
 }
 
+struct Data;
+
+#[crate::async_trait]
+impl<'r> data::FromData<'r> for Data {
+    type Error = Error;
+    async fn from_data(_: &'r Request<'_>, _: data::Data<'r>) -> data::Outcome<'r, Self> {
+        unimplemented!()
+    }
+}
+
+impl Sentinel for Data {
+    fn abort(rocket: &Rocket<Ignite>) -> bool {
+        rocket.state::<Data>().is_none()
+    }
+}
+
+#[post("/data", data = "<_data>")]
+fn with_data(_data: Data) {}
+
+#[async_test]
+async fn data_sentinel_works() {
+    let err = rocket::build()
+        .configure(Config::debug_default())
+        .mount("/", routes![with_data])
+        .ignite().await
+        .unwrap_err();
+
+    assert!(matches!(err.kind(), SentinelAborts(vec) if vec.len() == 1));
+
+    let result = rocket::build()
+        .configure(Config::debug_default())
+        .mount("/", routes![with_data])
+        .manage(Data)
+        .ignite().await;
+
+    assert!(result.is_ok());
+}
+
 #[test]
 fn inner_sentinels_detected() {
     use rocket::local::blocking::Client;

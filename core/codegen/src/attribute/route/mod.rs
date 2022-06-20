@@ -17,6 +17,7 @@ impl Route {
     pub fn guards(&self) -> impl Iterator<Item = &Guard> {
         self.param_guards()
             .chain(self.query_guards())
+            .chain(self.data_guard.iter())
             .chain(self.request_guards.iter())
     }
 
