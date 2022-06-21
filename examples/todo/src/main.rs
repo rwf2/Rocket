@@ -1,7 +1,6 @@
 #[macro_use] extern crate rocket;
-#[macro_use] extern crate diesel;
-#[macro_use] extern crate diesel_migrations;
 #[macro_use] extern crate rocket_sync_db_pools;
+#[macro_use] extern crate diesel;
 
 #[cfg(test)]
 mod tests;
@@ -93,13 +92,14 @@ async fn index(flash: Option<FlashMessage<'_>>, conn: DbConn) -> Template {
 }
 
 async fn run_migrations(rocket: Rocket<Build>) -> Rocket<Build> {
-    // This macro from `diesel_migrations` defines an `embedded_migrations`
-    // module containing a function named `run`. This allows the example to be
-    // run and tested without any outside setup of the database.
-    embed_migrations!();
+    use diesel_migrations::{embed_migrations, EmbeddedMigrations, MigrationHarness};
 
-    let conn = DbConn::get_one(&rocket).await.expect("database connection");
-    conn.run(|c| embedded_migrations::run(c)).await.expect("can run migrations");
+    const MIGRATIONS: EmbeddedMigrations = embed_migrations!("migrations");
+
+    DbConn::get_one(&rocket).await
+        .expect("database connection")
+        .run(|conn| { conn.run_pending_migrations(MIGRATIONS).expect("diesel migrations"); })
+        .await;
 
     rocket
 }

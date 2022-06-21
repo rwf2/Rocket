@@ -14,7 +14,7 @@ type Result<T, E = Debug<diesel::result::Error>> = std::result::Result<T, E>;
 
 #[derive(Debug, Clone, Deserialize, Serialize, Queryable, Insertable)]
 #[serde(crate = "rocket::serde")]
-#[table_name="posts"]
+#[diesel(table_name = posts)]
 struct Post {
     #[serde(skip_deserializing)]
     id: Option<i32>,
@@ -84,13 +84,14 @@ async fn destroy(db: Db) -> Result<()> {
 }
 
 async fn run_migrations(rocket: Rocket<Build>) -> Rocket<Build> {
-    // This macro from `diesel_migrations` defines an `embedded_migrations`
-    // module containing a function named `run` that runs the migrations in the
-    // specified directory, initializing the database.
-    embed_migrations!("db/diesel/migrations");
+    use diesel_migrations::{embed_migrations, EmbeddedMigrations, MigrationHarness};
 
-    let conn = Db::get_one(&rocket).await.expect("database connection");
-    conn.run(|c| embedded_migrations::run(c)).await.expect("diesel migrations");
+    const MIGRATIONS: EmbeddedMigrations = embed_migrations!("db/diesel/migrations");
+
+    Db::get_one(&rocket).await
+        .expect("database connection")
+        .run(|conn| { conn.run_pending_migrations(MIGRATIONS).expect("diesel migrations"); })
+        .await;
 
     rocket
 }

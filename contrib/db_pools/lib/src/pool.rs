@@ -246,7 +246,7 @@ mod sqlx {
 
             sqlx::pool::PoolOptions::new()
                 .max_connections(config.max_connections as u32)
-                .connect_timeout(Duration::from_secs(config.connect_timeout))
+                .acquire_timeout(Duration::from_secs(config.connect_timeout))
                 .idle_timeout(config.idle_timeout.map(Duration::from_secs))
                 .min_connections(config.min_connections.unwrap_or_default())
                 .connect_with(opts)

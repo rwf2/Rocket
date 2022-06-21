@@ -7,11 +7,11 @@ publish = false
 
 [dependencies]
 rocket = { path = "../../core/lib", features = ["json"] }
-diesel = { version = "1.3", features = ["sqlite", "r2d2"] }
-diesel_migrations = "1.3"
+diesel = { version = "2.0.0", features = ["sqlite", "r2d2"] }
+diesel_migrations = "2.0.0"
 
 [dependencies.sqlx]
-version = "0.5.1"
+version = "0.6.0"
 default-features = false
 features = ["macros", "offline", "migrate"]
 
