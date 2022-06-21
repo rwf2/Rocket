@@ -42,6 +42,11 @@ impl EntryAttr for Launch {
             ___rocket
         });
 
+        let launch = match f.sig.asyncness {
+            Some(_) => quote_spanned!(ty.span() => async move { #rocket.launch().await }),
+            None => quote_spanned!(ty.span() => #rocket.launch()),
+        };
+
         let (vis, mut sig) = (&f.vis, f.sig.clone());
         sig.ident = syn::Ident::new("main", sig.ident.span());
         sig.output = syn::ReturnType::Default;
@@ -51,7 +56,7 @@ impl EntryAttr for Launch {
             #[allow(dead_code)] #f
 
             #vis #sig {
-                ::rocket::async_main(async move { let _res = #rocket.launch().await; })
+                let _ = ::rocket::async_main(#launch);
             }
         ))
     }

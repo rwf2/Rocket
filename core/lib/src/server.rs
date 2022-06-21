@@ -529,13 +529,13 @@ impl Rocket<Orbit> {
                                 Ok(rocket)
                             }
                             Err(rocket) => {
-                                warn!("Server failed to shutdown cooperatively.");
+                                warn!("Shutdown failed: outstanding background I/O.");
                                 Err(Error::shutdown(rocket, None))
                             }
                         }
                     }
                     _ = &mut shutdown_timer => {
-                        warn!("Server failed to shutdown cooperatively.");
+                        warn!("Shutdown failed: server executing after timeouts.");
                         return Err(Error::shutdown(rocket.clone(), None));
                     },
                 }
