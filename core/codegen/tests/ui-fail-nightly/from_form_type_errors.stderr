@@ -11,8 +11,8 @@ error[E0277]: the trait bound `Unknown: FromFormField<'_>` is not satisfied
             Capped<TempFile<'v>>
             Capped<std::string::String>
             Cow<'v, str>
-            Date
             IpAddr
+            Ipv4Addr
           and 38 others
   = note: required because of the requirements on the impl of `FromForm<'r>` for `Unknown`
 
@@ -29,7 +29,7 @@ error[E0277]: the trait bound `Foo<usize>: FromFormField<'_>` is not satisfied
              Capped<TempFile<'v>>
              Capped<std::string::String>
              Cow<'v, str>
-             Date
              IpAddr
+             Ipv4Addr
            and 38 others
    = note: required because of the requirements on the impl of `FromForm<'r>` for `Foo<usize>`

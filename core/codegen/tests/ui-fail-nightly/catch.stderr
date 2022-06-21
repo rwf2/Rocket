@@ -77,5 +77,5 @@ note: function defined here
    |    ^^---------------------
 help: did you mean
    |
-29 | f3(bool, {bool})
+29 | f3(bool, /* bool */)
    |

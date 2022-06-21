@@ -486,6 +486,11 @@ error[E0308]: mismatched types
     |                       expected struct `std::string::String`, found integer
     |                       arguments to this enum variant are incorrect
     |
+note: tuple variant defined here
+   --> $RUST/core/src/option.rs
+    |
+    |     Some(#[stable(feature = "rust1", since = "1.0.0")] T),
+    |     ^^^^
 help: try using a conversion method
     |
 171 |     #[field(default = 123.to_string())]
@@ -501,6 +506,11 @@ error[E0308]: mismatched types
     |                            |
     |                            arguments to this enum variant are incorrect
     |
+note: tuple variant defined here
+   --> $RUST/core/src/option.rs
+    |
+    |     Some(#[stable(feature = "rust1", since = "1.0.0")] T),
+    |     ^^^^
 help: try using a conversion method
     |
 203 |     #[field(default_with = Some("hi".to_string()))]
