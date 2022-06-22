@@ -68,6 +68,7 @@
 //! | `json`    | Support for [JSON (de)serialization].                   |
 //! | `msgpack` | Support for [MessagePack (de)serialization].            |
 //! | `uuid`    | Support for [UUID value parsing and (de)serialization]. |
+//! | `ulid`    | Support for [ULID value parsing and (de)serialization]. |
 //!
 //! Disabled features can be selectively enabled in `Cargo.toml`:
 //!
@@ -86,6 +87,7 @@
 //! [JSON (de)serialization]: crate::serde::json
 //! [MessagePack (de)serialization]: crate::serde::msgpack
 //! [UUID value parsing and (de)serialization]: crate::serde::uuid
+//! [ULID value parsing and (de)serialization]: crate::serde::ulid
 //! [private cookies]: https://rocket.rs/v0.5-rc/guide/requests/#private-cookies
 //! [TLS]: https://rocket.rs/v0.5-rc/guide/configuration/#tls
 //! [mutual TLS]: crate::mtls

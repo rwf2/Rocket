@@ -53,3 +53,7 @@ pub mod msgpack;
 #[cfg(feature = "uuid")]
 #[cfg_attr(nightly, doc(cfg(feature = "uuid")))]
 pub mod uuid;
+
+#[cfg(feature = "ulid")]
+#[cfg_attr(nightly, doc(cfg(feature = "ulid")))]
+pub mod ulid;

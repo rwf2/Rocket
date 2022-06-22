@@ -28,12 +28,14 @@ secrets = ["rocket_http/private-cookies"]
 json = ["serde_json", "tokio/io-util"]
 msgpack = ["rmp-serde", "tokio/io-util"]
 uuid = ["uuid_", "rocket_http/uuid"]
+ulid = ["ulid_", "rocket_http/ulid"]
 
 [dependencies]
 # Serialization dependencies.
 serde_json = { version = "1.0.26", optional = true }
 rmp-serde = { version = "1", optional = true }
 uuid_ = { package = "uuid", version = "1", optional = true, features = ["serde"] }
+ulid_ = { package = "rusty_ulid", version = "1", optional = true, features = ["serde"] }
 
 # Non-optional, core dependencies from here on out.
 futures = { version = "0.3.0", default-features = false, features = ["std"] }

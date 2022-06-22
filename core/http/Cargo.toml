@@ -23,6 +23,7 @@ http2 = ["hyper/http2"]
 private-cookies = ["cookie/private", "cookie/key-expansion"]
 serde = ["uncased/with-serde-alloc", "serde_"]
 uuid = ["uuid_"]
+ulid = ["ulid_"]
 
 [dependencies]
 smallvec = "1.0"
@@ -64,6 +65,12 @@ features = ["std"]
 
 [dependencies.uuid_]
 package = "uuid"
+version = "1"
+optional = true
+default-features = false
+
+[dependencies.ulid_]
+package = "rusty_ulid"
 version = "1"
 optional = true
 default-features = false
