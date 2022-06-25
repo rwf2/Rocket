@@ -30,6 +30,10 @@ jobs:
 
     runs-on: ${{ matrix.platform.distro }}
 
+    continue-on-error: ${{ matrix.platform.name == 'Linux'
+      && matrix.platform.toolchain == 'nightly'
+      && matrix.test.name == 'Debug' }}
+
     steps:
       - name: Checkout Sources
         uses: actions/checkout@v2
