@@ -13,19 +13,9 @@
 //! result, you'll often have types of the form `A<B<C>>` consisting of three
 //! `Responder`s `A`, `B`, and `C`. This is normal and encouraged as the type
 //! names typically illustrate the intended response.
-//!
-//! # Contrib
-//!
-//! The [`contrib` crate] contains several useful `Responder`s including
-//! [`Template`] and [`Json`].
-//!
-//! [`contrib` crate]: ../../rocket_contrib
-//! [`Template`]: ../../rocket_contrib/templates/struct.Template.html
-//! [`Json`]: ../../rocket_contrib/json/struct.Json.html
 
 mod responder;
 mod redirect;
-mod named_file;
 mod response;
 mod debug;
 mod body;
@@ -44,7 +34,6 @@ pub use self::body::Body;
 pub use self::responder::Responder;
 pub use self::redirect::Redirect;
 pub use self::flash::Flash;
-pub use self::named_file::NamedFile;
 pub use self::debug::Debug;
 
 /// Type alias for the `Result` of a [`Responder::respond_to()`] call.

@@ -17,38 +17,41 @@ is configured with. This means that no matter which configuration provider
 Rocket is asked to use, it must be able to read the following configuration
 values:
 
-| key            | kind            | description                                     | debug/release default |
-|----------------|-----------------|-------------------------------------------------|-----------------------|
-| `address`      | `IpAddr`        | IP address to serve on                          | `127.0.0.1`           |
-| `port`         | `u16`           | Port to serve on.                               | `8000`                |
-| `workers`      | `usize`         | Number of threads to use for executing futures. | cpu core count        |
-| `keep_alive`   | `u32`           | Keep-alive timeout seconds; disabled when `0`.  | `5`                   |
-| `log_level`    | `LogLevel`      | Max level to log. (off/normal/debug/critical)   | `normal`/`critical`   |
-| `cli_colors`   | `bool`          | Whether to use colors and emoji when logging.   | `true`                |
-| `secret_key`   | `SecretKey`     | Secret key for signing and encrypting values.   | `None`                |
-| `tls`          | `TlsConfig`     | TLS configuration, if any.                      | `None`                |
-| `tls.key`      | `&[u8]`/`&Path` | Path/bytes to DER-encoded ASN.1 PKCS#1/#8 key.  |                       |
-| `tls.certs`    | `&[u8]`/`&Path` | Path/bytes to DER-encoded X.509 TLS cert chain. |                       |
-| `limits`       | `Limits`        | Streaming read size limits.                     | [`Limits::default()`] |
-| `limits.$name` | `&str`/`uint`   | Read limit for `$name`.                         | forms = "32KiB"       |
-| `ctrlc`        | `bool`          | Whether `ctrl-c` initiates a server shutdown.   | `true`                |
+| key             | kind              | description                                     | debug/release default   |
+|-----------------|-------------------|-------------------------------------------------|-------------------------|
+| `address`       | `IpAddr`          | IP address to serve on                          | `127.0.0.1`             |
+| `port`          | `u16`             | Port to serve on.                               | `8000`                  |
+| `workers`*      | `usize`           | Number of threads to use for executing futures. | cpu core count          |
+| `max_blocking`* | `usize`           | Limit on threads to start for blocking tasks.   | `512`                   |
+| `ident`         | `string`, `false` | If and how to identify via the `Server` header. | `"Rocket"`              |
+| `keep_alive`    | `u32`             | Keep-alive timeout seconds; disabled when `0`.  | `5`                     |
+| `log_level`     | [`LogLevel`]      | Max level to log. (off/normal/debug/critical)   | `normal`/`critical`     |
+| `cli_colors`    | `bool`            | Whether to use colors and emoji when logging.   | `true`                  |
+| `secret_key`    | [`SecretKey`]     | Secret key for signing and encrypting values.   | `None`                  |
+| `tls`           | [`TlsConfig`]     | TLS configuration, if any.                      | `None`                  |
+| `limits`        | [`Limits`]        | Streaming read size limits.                     | [`Limits::default()`]   |
+| `limits.$name`  | `&str`/`uint`     | Read limit for `$name`.                         | form = "32KiB"          |
+| `ctrlc`         | `bool`            | Whether `ctrl-c` initiates a server shutdown.   | `true`                  |
+| `shutdown`*     | [`Shutdown`]      | Graceful shutdown configuration.                | [`Shutdown::default()`] |
+
+<small>* Note: the `workers`, `max_blocking`, and `shutdown.force` configuration
+parameters are only read from the [default provider](#default-provider).</small>
 
 ### Profiles
 
 Configurations can be arbitrarily namespaced by [`Profile`]s. Rocket's
 [`Config`] and [`Config::figment()`] providers automatically set the
 configuration profile to "debug" when compiled in "debug" mode and "release"
-when compiled in release mode. With the exception of `log_level`, which changes
-from `normal` in debug to `critical` in release, all of the default
-configuration values are the same in all profiles. What's more, all
-configuration values _have_ defaults, so no configuration needs to be supplied
-to get an application going.
+when compiled in release mode, but you can arbitrarily name and set profiles to
+your desire. For example, with the [default provider](#default-provider), you
+can set the selected profile via `ROCKET_PROFILE`. This results in Rocket
+preferring the values in the `ROCKET_PROFILE` profile.
 
 In addition to any profiles you declare, there are two meta-profiles, `default`
 and `global`, which can be used to provide values that apply to _all_ profiles.
 Values provided in a `default` profile are used as fall-back values when the
-selected profile doesn't contain a requested values, while values in the
-`global` profile supplant any values with the same name in any profile.
+selected profile doesn't contain a requested value, while values in the `global`
+profile supplant any values with the same name in any profile.
 
 [`Provider`]: @figment/trait.Provider.html
 [`Profile`]: @figment/struct.Profile.html
@@ -56,15 +59,145 @@ selected profile doesn't contain a requested values, while values in the
 [`Config::figment()`]: @api/rocket/struct.Config.html#method.figment
 [`Toml`]: @figment/providers/struct.Toml.html
 [`Json`]: @figment/providers/struct.Json.html
-[`Figment`]: @api/rocket/struct.Figment.html
-[`Deserialize`]: @serde/trait.Deserialize.html
+[`Figment`]: @figment/struct.Figment.html
+[`Deserialize`]: @api/rocket/serde/trait.Deserialize.html
+[`LogLevel`]: @api/rocket/config/enum.LogLevel.html
+[`Limits`]: @api/rocket/data/struct.Limits.html
 [`Limits::default()`]: @api/rocket/data/struct.Limits.html#impl-Default
+[`SecretKey`]: @api/rocket/config/struct.SecretKey.html
+[`TlsConfig`]: @api/rocket/config/struct.TlsConfig.html
+[`Shutdown`]: @api/rocket/config/struct.Shutdown.html
+[`Shutdown::default()`]: @api/rocket/config/struct.Shutdown.html#fields
+
+## Default Provider
+
+Rocket's default configuration provider is [`Config::figment()`]; this is the
+provider that's used when calling [`rocket::build()`].
+
+The default figment reads from and merges, at a per-key level, the following
+sources in ascending priority order:
+
+  1. [`Config::default()`], which provides default values for all parameters.
+  2. `Rocket.toml` _or_ TOML file path in `ROCKET_CONFIG` environment variable.
+  3. `ROCKET_` prefixed environment variables.
+
+The selected profile is the value of the `ROCKET_PROFILE` environment variable,
+or if it is not set, "debug" when compiled in debug mode and "release" when
+compiled in release mode. With the exception of `log_level`, which changes from
+`normal` in debug to `critical` in release, all of the default configuration
+values are the same in all profiles. What's more, all configuration values
+_have_ defaults, so no configuration is needed to get started.
+
+As a result of `Config::figment()`, without any effort, Rocket can be configured
+via a `Rocket.toml` file and/or via environment variables, the latter of which
+take precedence over the former.
+
+[`Config::default()`]: @api/rocket/struct.Config.html#method.default
+
+### Rocket.toml
+
+Rocket searches for `Rocket.toml` or the filename in a `ROCKET_CONFIG`
+environment variable starting at the current working directory. If it is not
+found, the parent directory, its parent, and so on, are searched until the file
+is found or the root is reached. If the path set in `ROCKET_CONFIG` is absolute,
+no such search occurs and the set path is used directly.
+
+The file is assumed to be _nested_, so each top-level key declares a profile and
+its values the value for the profile. The following is an example of what such a
+file might look like:
+
+```toml
+## defaults for _all_ profiles
+[default]
+address = "0.0.0.0"
+limits = { form = "64 kB", json = "1 MiB" }
+
+## set only when compiled in debug mode, i.e, `cargo build`
+[debug]
+port = 8000
+## only the `json` key from `default` will be overridden; `form` will remain
+limits = { json = "10MiB" }
+
+## set only when the `nyc` profile is selected
+[nyc]
+port = 9001
+
+## set only when compiled in release mode, i.e, `cargo build --release`
+## don't use this secret_key! generate your own and keep it private!
+[release]
+port = 9999
+secret_key = "hPRYyVRiMyxpw5sBB1XeCMN1kFsDCqKvBi2QJxBVHQk="
+```
+
+The following is a `Rocket.toml` file with all configuration options set for
+demonstratation purposes. You **do not** and _should not_ set a value for
+configuration options needlessly, preferring to use the default value when
+sensible.
+
+```toml
+[default]
+address = "127.0.0.1"
+port = 8000
+workers = 16
+max_blocking = 512
+keep_alive = 5
+ident = "Rocket"
+log_level = "normal"
+temp_dir = "/tmp"
+cli_colors = true
+## NOTE: Don't (!) use this key! Generate your own!
+secret_key = "hPRYyVRiMyxpw5sBB1XeCMN1kFsDCqKvBi2QJxBVHQk="
+
+[default.limits]
+form = "64 kB"
+json = "1 MiB"
+msgpack = "2 MiB"
+"file/jpg" = "5 MiB"
+
+[default.tls]
+certs = "path/to/cert-chain.pem"
+key = "path/to/key.pem"
+
+[default.shutdown]
+ctrlc = true
+signals = ["term", "hup"]
+grace = 5
+mercy = 5
+```
+
+### Environment Variables
+
+Rocket reads all environment variable names prefixed with `ROCKET_` using the
+string after the `_` as the name of a configuration value as the value of the
+parameter as the value itself. Environment variables take precedence over values
+in `Rocket.toml`. Values are parsed as loose form of TOML syntax. Consider the
+following examples:
+
+```sh
+ROCKET_FLOAT=3.14
+ROCKET_ARRAY=[1,"b",3.14]
+ROCKET_STRING=Hello
+ROCKET_STRING="Hello There"
+
+ROCKET_KEEP_ALIVE=1
+ROCKET_IDENT=Rocket
+ROCKET_IDENT="Hello Rocket"
+ROCKET_IDENT=false
+ROCKET_TLS={certs="abc",key="foo/bar"}
+ROCKET_LIMITS={form="64 KiB"}
+```
+
+## Configuration Parameters
 
 ### Secret Key
 
 The `secret_key` parameter configures a cryptographic key to use when encrypting
 application values. In particular, the key is used to encrypt [private cookies],
 which are available only when the `secrets` crate feature is enabled.
+
+Generating a string suitable for use as a `secret_key` configuration value is
+usually done through tools like `openssl`. Using `openssl`, a 256-bit base64 key
+can be generated with the command `openssl rand -base64 32`.
 
 When compiled in debug mode, a fresh key is generated automatically. In release
 mode, Rocket requires you to set a secret key if the `secrets` feature is
@@ -85,30 +218,137 @@ bytes Rocket should accept for that type. Rocket can parse both integers
 By default, Rocket specifies a `32 KiB` limit for incoming forms. Since Rocket
 requires specifying a read limit whenever data is read, external data guards may
 also choose to have a configure limit via the `limits` parameter. The
-[`rocket_contrib::Json`] type, for instance, uses the `limits.json` parameter.
-
-[`rocket_contrib::Json`]: @api/rocket_contrib/json/struct.Json.html
+[`Json`](@api/rocket/serde/json/struct.Json.html) type, for instance, uses the
+`limits.json` parameter.
 
 ### TLS
 
 Rocket includes built-in, native support for TLS >= 1.2 (Transport Layer
-Security). In order for TLS support to be enabled, Rocket must be compiled with
-the `"tls"` feature:
+Security). To enable TLS support:
+
+  1. Enable the `tls` crate feature in `Cargo.toml`:
+
+   ```toml,ignore
+   [dependencies]
+   rocket = { version = "0.5.0-rc.2", features = ["tls"] }
+   ```
+
+  2. Configure a TLS certificate chain and private key via the `tls.key` and
+     `tls.certs` configuration parameters. With the default provider, this can
+     be done via `Rocket.toml` as:
+
+   ```toml,ignore
+   [default.tls]
+   key = "path/to/key.pem"     # Path or bytes to DER-encoded ASN.1 PKCS#1/#8 key.
+   certs = "path/to/certs.pem" # Path or bytes to DER-encoded X.509 TLS cert chain.
+   ```
+
+The `tls` parameter is expected to be a dictionary that deserializes into a
+[`TlsConfig`] structure:
+
+| key                          | required  | type                                                  |
+|------------------------------|-----------|-------------------------------------------------------|
+| `key`                        | **_yes_** | Path or bytes to DER-encoded ASN.1 PKCS#1/#8 key.     |
+| `certs`                      | **_yes_** | Path or bytes to DER-encoded X.509 TLS cert chain.    |
+| `ciphers`                    | no        | Array of [`CipherSuite`]s to enable.                  |
+| `prefer_server_cipher_order` | no        | Boolean for whether to [prefer server cipher suites]. |
+| `mutual`                     | no        | A map with [mutual TLS] configuration.                |
+
+[`CipherSuite`]: @api/rocket/config/enum.CipherSuite.html
+[prefer server cipher suites]: @api/rocket/config/struct.TlsConfig.html#method.with_preferred_server_cipher_order
+[mutual TLS]: #mutual-tls
+
+When specified via TOML or other serialized formats, each [`CipherSuite`] is
+written as a string representation of the respective variant. For example,
+`CipherSuite::TLS_AES_256_GCM_SHA384` is `"TLS_AES_256_GCM_SHA384"`. In TOML,
+the defaults (with an arbitrary `certs` and `key`) are written:
 
 ```toml
-[dependencies]
-rocket = { version = "0.5.0-dev", features = ["tls"] }
+[default.tls]
+certs = "/ssl/cert.pem"
+key = "/ssl/key.pem"
+prefer_server_cipher_order = false
+ciphers = [
+    "TLS_CHACHA20_POLY1305_SHA256",
+    "TLS_AES_256_GCM_SHA384",
+    "TLS_AES_128_GCM_SHA256",
+    "TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305_SHA256",
+    "TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305_SHA256",
+    "TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384",
+    "TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256",
+    "TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384",
+    "TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256",
+]
 ```
 
-TLS is configured through the `tls` configuration parameter. The value of `tls`
-is a dictionary with two keys: `certs` and `key`, described in the table above.
-Each key's value may be either a path to a file or raw bytes corresponding to
-the expected value. When a path is configured in a file source, such as
-`Rocket.toml`, relative paths are interpreted as being relative to the source
-file's directory.
+### Mutual TLS
 
-! warning: Rocket's built-in TLS implements only TLS 1.2 and 1.3. As such, it
-  may not be suitable for production use.
+Rocket supports mutual TLS client authentication. Configuration works in concert
+with the [`mtls`] module, which provides a request guard to validate, verify,
+and retrieve client certificates in routes.
+
+By default, mutual TLS is disabled and client certificates are not required,
+validated or verified. To enable mutual TLS, the `mtls` feature must be
+enabled and support configured via the `tls.mutual` config parameter:
+
+  1. Enable the `mtls` crate feature in `Cargo.toml`:
+
+   ```toml,ignore
+   [dependencies]
+   rocket = { version = "0.5.0-rc.2", features = ["mtls"] }
+   ```
+
+   This implicitly enables the `tls` feature.
+
+  2. Configure a CA certificate chain via the `tls.mutual.ca_certs`
+     configuration parameter. With the default provider, this can be done via
+     `Rocket.toml` as:
+
+   ```toml,ignore
+   [default.tls.mutual]
+   ca_certs = "path/to/ca_certs.pem" # Path or bytes to DER-encoded X.509 TLS cert chain.
+   mandatory = true                  # when absent, defaults to false
+   ```
+
+The `tls.mutual` parameter is expected to be a dictionary that deserializes into a
+[`MutualTls`] structure:
+
+| key         | required  | type                                                        |
+|-------------|-----------|-------------------------------------------------------------|
+| `ca_certs`  | **_yes_** | Path or bytes to DER-encoded X.509 TLS cert chain.          |
+| `mandatory` | no        | Boolean controlling whether the client _must_ authenticate. |
+
+[`MutualTls`]: @api/rocket/config/struct.MutualTls.html
+[`mtls`]: @api/rocket/mtls/index.html
+
+Rocket reports if TLS and/or mTLS are enabled at launch time:
+
+```text
+🔧 Configured for debug.
+   ...
+   >> tls: enabled w/mtls
+```
+
+Once mutual TLS is properly enabled, the [`mtls::Certificate`] request guard can
+be used to retrieve validated, verified client certificates:
+
+```rust
+# #[macro_use] extern crate rocket;
+use rocket::mtls::Certificate;
+
+#[get("/auth")]
+fn auth(cert: Certificate<'_>) {
+    // This handler only runs when a valid certificate was presented.
+}
+```
+
+The [TLS example](@example/tls) illustrates a fully configured TLS server with
+mutual TLS.
+
+! warning: Rocket's built-in TLS supports only TLS 1.2 and 1.3. This may not be
+  suitable for production use.
+
+[`mtls::Certificate`]: @api/rocket/mtls/struct.Certificate.html
 
 ### Workers
 
@@ -116,87 +356,24 @@ The `workers` parameter sets the number of threads used for parallel task
 execution; there is no limit to the number of concurrent tasks. Due to a
 limitation in upstream async executers, unlike other values, the `workers`
 configuration value cannot be reconfigured or be configured from sources other
-than those provided by [`Config::figment()`], detailed below. In other words,
-only the values set by the `ROCKET_WORKERS` environment variable or in the
-`workers` property of `Rocket.toml` will be considered - all other `workers`
-values are ignored.
+than those provided by [`Config::figment()`]. In other words, only the values
+set by the `ROCKET_WORKERS` environment variable or in the `workers` property of
+`Rocket.toml` will be considered - all other `workers` values are ignored.
 
-## Default Provider
+The `max_blocking` parameter sets an upper limit on the number of threads the
+underlying `async` runtime will spawn to execute potentially blocking,
+synchronous tasks via [`spawn_blocking`] or equivalent. Similar to the `workers`
+parameter, `max_blocking` cannot be reconfigured or be configured from sources
+other than those provided by [`Config::figment()`]. Unlike `workers`, threads
+corresponding to `max_blocking` are not always active and will exit if idling.
+In general, the default value of `512` should not be changed unless physical or
+virtual resources are scarce. Rocket only executes work on blocking threads when
+required such as when performing file system I/O via [`TempFile`] or wrapping
+synchronous work via [`rocket_sync_db_pools`].
 
-Rocket's default configuration provider is [`Config::figment()`]; this is the
-provider that's used when calling [`rocket::build()`].
-
-The default figment merges, at a per-key level, and reads from the following
-sources, in ascending priority order:
-
-  1. [`Config::default()`] - which provides default values for all parameters.
-  2. `Rocket.toml` _or_ TOML file path in `ROCKET_CONFIG` environment variable.
-  3. `ROCKET_` prefixed environment variables.
-
-The selected profile is the value of the `ROCKET_PROFILE` environment variable,
-or if it is not set, "debug" when compiled in debug mode and "release" when
-compiled in release mode.
-
-As a result, without any effort, Rocket's server can be configured via a
-`Rocket.toml` file and/or via environment variables, the latter of which take
-precedence over the former. Note that neither the file nor any environment
-variables need to be present as [`Config::default()`] is a complete
-configuration source.
-
-[`Config::default()`]: @api/rocket/struct.Config.html#method.default
-
-### Rocket.toml
-
-Rocket searches for `Rocket.toml` or the filename in a `ROCKET_CONFIG`
-environment variable starting at the current working directory. If it is not
-found, the parent directory, its parent, and so on, are searched until the file
-is found or the root is reached. If the path set in `ROCKET_CONFIG` is absolute,
-no such search occurs, and the set path is used directly.
-
-The file is assumed to be _nested_, so each top-level key declares a profile and
-its values the value for the profile. The following is an example of what such a
-file might look like:
-
-```toml
-## defaults for _all_ profiles
-[default]
-address = "0.0.0.0"
-limits = { forms = "64 kB", json = "1 MiB" }
-
-## set only when compiled in debug mode, i.e, `cargo build`
-[debug]
-port = 8000
-## only the `json` key from `default` will be overridden; `forms` will remain
-limits = { json = "10MiB" }
-
-## set only when the `nyc` profile is selected
-[nyc]
-port = 9001
-
-## set only when compiled in release mode, i.e, `cargo build --release`
-## don't use this secret_key! generate your own and keep it private!
-[release]
-port = 9999
-secret_key = "hPRYyVRiMyxpw5sBB1XeCMN1kFsDCqKvBi2QJxBVHQk="
-```
-
-### Environment Variables
-
-Rocket reads all environment variable names prefixed with `ROCKET_` using the
-string after the `_` as the name of a configuration value as the value of the
-parameter as the value itself. Environment variables take precedence over values
-in `Rocket.toml`. Values are parsed as loose form of TOML syntax. Consider the
-following examples:
-
-```sh
-ROCKET_INTEGER=1
-ROCKET_FLOAT=3.14
-ROCKET_STRING=Hello
-ROCKET_STRING="Hello"
-ROCKET_BOOL=true
-ROCKET_ARRAY=[1,"b",3.14]
-ROCKET_DICT={key="abc",val=123}
-```
+[`spawn_blocking`]: @tokio/task/fn.spawn_blocking.html
+[`TempFile`]: @api/rocket/fs/enum.TempFile.html
+[`rocket_sync_db_pools`]: @api/rocket_sync_db_pools/index.html
 
 ## Extracting Values
 
@@ -205,10 +382,8 @@ from the configured provider, which is exposed via [`Rocket::figment()`]:
 
 ```rust
 # #[macro_use] extern crate rocket;
-# extern crate serde;
 
-use serde::Deserialize;
-
+use rocket::serde::Deserialize;
 
 #[launch]
 fn rocket() -> _ {
@@ -216,6 +391,7 @@ fn rocket() -> _ {
     let figment = rocket.figment();
 
     #[derive(Deserialize)]
+    #[serde(crate = "rocket::serde")]
     struct Config {
         port: u16,
         custom: Vec<String>,
@@ -242,9 +418,9 @@ Because it is common to store configuration in managed state, Rocket provides an
 
 ```rust
 # #[macro_use] extern crate rocket;
-# extern crate serde;
-# use serde::Deserialize;
+# use rocket::serde::Deserialize;
 # #[derive(Deserialize)]
+# #[serde(crate = "rocket::serde")]
 # struct Config {
 #     port: u16,
 #     custom: Vec<String>,
@@ -278,19 +454,13 @@ more complex cases.
 
 ! note: You may need to depend on `figment` and `serde` directly.
 
-  Rocket reexports `figment` from its crate root, so you can refer to `figment`
-  types via `rocket::figment`. However, Rocket does not enable all features from
-  the figment crate. As such, you may need to import `figment` directly:
+  Rocket reexports `figment` and `serde` from its crate root, so you can refer
+  to `figment` types via `rocket::figment` and `serde` types via
+  `rocket::serde`. However, Rocket does not enable all features from either
+  crate. As such, you may need to import crates directly:
 
   `
-  figment = { version = "0.9", features = ["env", "toml", "json"] }
-  `
-
-  Furthermore, you should directly depend on `serde` when using its `derive`
-  feature, which is also not enabled by Rocket:
-
-  `
-  serde = { version = "1", features = ["derive"] }
+  figment = { version = "0.10", features = ["env", "toml", "json"] }
   `
 
 As a first example, we override configuration values at runtime by merging
@@ -320,11 +490,13 @@ and `APP_PROFILE` to configure the selected profile:
 ```rust
 # #[macro_use] extern crate rocket;
 
-use serde::{Serialize, Deserialize};
-use figment::{Figment, Profile, providers::{Format, Toml, Serialized, Env}};
+use rocket::serde::{Serialize, Deserialize};
 use rocket::fairing::AdHoc;
 
+use figment::{Figment, Profile, providers::{Format, Toml, Serialized, Env}};
+
 #[derive(Debug, Deserialize, Serialize)]
+#[serde(crate = "rocket::serde")]
 struct Config {
     app_value: usize,
     /* and so on.. */
@@ -350,7 +522,7 @@ fn rocket() -> _ {
 }
 ```
 
-Rocket will extract it's configuration from the configured provider. This means
+Rocket will extract its configuration from the configured provider. This means
 that if values like `port` and `address` are configured in `Config`, `App.toml`
 or `APP_` environment variables, Rocket will make use of them. The application
 can also extract its configuration, done here via the `Adhoc::config()` fairing.

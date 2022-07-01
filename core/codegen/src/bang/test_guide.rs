@@ -1,12 +1,12 @@
 use std::path::Path;
 use std::error::Error;
 
+use syn::{self, Ident, LitStr};
 use devise::ext::SpanDiagnosticExt;
-use devise::syn::{self, Ident, LitStr};
-use devise::proc_macro2::TokenStream;
+use proc_macro2::TokenStream;
 
 pub fn _macro(input: proc_macro::TokenStream) -> devise::Result<TokenStream> {
-    let root_glob = syn::parse::<LitStr>(input.into())?;
+    let root_glob = syn::parse::<LitStr>(input)?;
     let tests = entry_to_tests(&root_glob)
         .map_err(|e| root_glob.span().error(format!("failed to read: {}", e)))?;
 
@@ -24,11 +24,12 @@ fn entry_to_tests(root_glob: &LitStr) -> Result<Vec<TokenStream>, Box<dyn Error>
             .and_then(|f| f.to_str())
             .map(|name| name.trim_matches(|c| char::is_numeric(c) || c == '-')
                 .replace(|c| c == '-' || c == '.', "_"))
-            .ok_or_else(|| "invalid file name")?;
+            .ok_or("invalid file name")?;
 
         let ident = Ident::new(&name.to_lowercase(), root_glob.span());
         let full_path = Path::new(&manifest_dir).join(&path).display().to_string();
         tests.push(quote_spanned!(root_glob.span() =>
+            #[allow(unused_doc_comments)]
             mod #ident {
                 macro_rules! doc_comment { ($x:expr) => (#[doc = $x] extern {}); }
                 doc_comment!(include_str!(#full_path));

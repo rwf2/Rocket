@@ -1,4 +1,13 @@
-use rocket::form::{Form, Strict, FromForm, FromFormField, Errors};
+use std::net::{IpAddr, SocketAddr};
+use std::collections::{BTreeMap, HashMap};
+
+use pretty_assertions::assert_eq;
+
+use rocket::UriDisplayQuery;
+use rocket::http::uri::fmt::{UriDisplay, Query};
+use rocket::form::{self, Form, Strict, FromForm, FromFormField, Errors};
+use rocket::form::error::{ErrorKind, Entity};
+use rocket::serde::json::Json;
 
 fn strict<'f, T: FromForm<'f>>(string: &'f str) -> Result<T, Errors<'f>> {
     Form::<Strict<T>>::parse(string).map(|s| s.into_inner())
@@ -8,7 +17,7 @@ fn lenient<'f, T: FromForm<'f>>(string: &'f str) -> Result<T, Errors<'f>> {
     Form::<T>::parse(string)
 }
 
-fn strict_encoded<T: 'static>(string: &'static str) -> Result<T, Errors<'static>>
+fn strict_encoded<T: 'static>(string: &str) -> Result<T, Errors<'static>>
     where for<'a> T: FromForm<'a>
 {
     Form::<Strict<T>>::parse_encoded(string.into()).map(|s| s.into_inner())
@@ -327,8 +336,6 @@ fn generics() {
 
 #[test]
 fn form_errors() {
-    use rocket::form::error::{ErrorKind, Entity};
-
     #[derive(Debug, PartialEq, FromForm)]
     struct WhoopsForm {
         complete: bool,
@@ -493,14 +500,17 @@ struct Person<'r> {
 
 #[test]
 fn test_nested_multi() {
-    let person: Person = strict("sitting.barks=true&sitting.trained=true").unwrap();
+    let person: Person = lenient("sitting.barks=true&sitting.trained=true").unwrap();
     assert_eq!(person, Person {
         sitting: Dog { barks: true, trained: true },
         cats: vec![],
         dogs: vec![],
     });
 
-    let person: Person = strict("sitting.barks=true&sitting.trained=true\
+    let person = strict::<Person>("sitting.barks=true&sitting.trained=true");
+    assert!(person.is_err());
+
+    let person: Person = lenient("sitting.barks=true&sitting.trained=true\
         &dogs[0].name=fido&dogs[0].pet.trained=yes&dogs[0].age=7&dogs[0].pet.barks=no\
     ").unwrap();
     assert_eq!(person, Person {
@@ -513,7 +523,11 @@ fn test_nested_multi() {
         }]
     });
 
-    let person: Person = strict("sitting.trained=no&sitting.barks=true\
+    let person = strict::<Person>("sitting.barks=true&sitting.trained=true\
+        &dogs[0].name=fido&dogs[0].pet.trained=yes&dogs[0].age=7&dogs[0].pet.barks=no");
+    assert!(person.is_err());
+
+    let person: Person = lenient("sitting.trained=no&sitting.barks=true\
         &dogs[0].name=fido&dogs[0].pet.trained=yes&dogs[0].age=7&dogs[0].pet.barks=no\
         &dogs[1].pet.barks=true&dogs[1].name=Bob&dogs[1].pet.trained=no&dogs[1].age=1\
     ").unwrap();
@@ -568,7 +582,7 @@ fn test_nested_multi() {
 fn test_multipart() {
     use rocket::http::ContentType;
     use rocket::local::blocking::Client;
-    use rocket::data::TempFile;
+    use rocket::fs::TempFile;
 
     #[derive(FromForm)]
     struct MyForm<'r> {
@@ -612,3 +626,323 @@ fn test_multipart() {
 
     assert!(response.status().class().is_success());
 }
+
+#[test]
+fn test_default_removed() {
+    #[derive(FromForm, PartialEq, Debug)]
+    struct FormNoDefault {
+        #[field(default = None)]
+        field1: bool,
+        #[field(default = None)]
+        field2: Option<usize>,
+        #[field(default = None)]
+        field3: Option<Option<usize>>,
+        #[field(default_with = None)]
+        field4: bool,
+    }
+
+    let form_string = &["field1=false", "field2=10", "field3=23", "field4"].join("&");
+    let form1: Option<FormNoDefault> = lenient(&form_string).ok();
+    assert_eq!(form1, Some(FormNoDefault {
+        field1: false,
+        field2: Some(10),
+        field3: Some(Some(23)),
+        field4: true,
+    }));
+
+    let form_string = &["field1=true", "field2=10", "field3=23", "field4"].join("&");
+    let form1: Option<FormNoDefault> = lenient(&form_string).ok();
+    assert_eq!(form1, Some(FormNoDefault {
+        field1: true,
+        field2: Some(10),
+        field3: Some(Some(23)),
+        field4: true,
+    }));
+
+    // Field 1 missing.
+    let form_string = &["field2=20", "field3=10", "field4"].join("&");
+    assert!(lenient::<FormNoDefault>(&form_string).is_err());
+
+    // Field 2 missing.
+    let form_string = &["field1=true", "field3=10", "field4"].join("&");
+    assert!(lenient::<FormNoDefault>(&form_string).is_err());
+
+    // Field 3 missing.
+    let form_string = &["field1=true", "field2=10", "field4=false"].join("&");
+    assert!(lenient::<FormNoDefault>(&form_string).is_err());
+
+    // Field 4 missing.
+    let form_string = &["field1=true", "field2=10", "field3=23"].join("&");
+    assert!(lenient::<FormNoDefault>(&form_string).is_err());
+}
+
+#[test]
+fn test_defaults() {
+    fn test_hashmap() -> HashMap<&'static str, &'static str> {
+        let mut map = HashMap::new();
+        map.insert("key", "value");
+        map.insert("one-more", "good-value");
+        map
+    }
+
+    fn test_btreemap() -> BTreeMap<Vec<usize>, &'static str> {
+        let mut map = BTreeMap::new();
+        map.insert(vec![1], "empty");
+        map.insert(vec![1, 2], "one-and-two");
+        map.insert(vec![3, 7, 9], "prime");
+        map
+    }
+
+    #[derive(FromForm, UriDisplayQuery, PartialEq, Debug)]
+    struct FormWithDefaults<'a> {
+        field2: i128,
+        field5: bool,
+
+        #[field(default = 100)]
+        field1: usize,
+        #[field(default = true)]
+        field3: bool,
+        #[field(default = false)]
+        field4: bool,
+        #[field(default = 254 + 1)]
+        field6: u8,
+        #[field(default = Some(true))]
+        opt1: Option<bool>,
+        #[field(default = false)]
+        opt2: Option<bool>,
+        #[field(default = Ok("hello".into()))]
+        res: form::Result<'a, String>,
+        #[field(default = Ok("hello"))]
+        res2: form::Result<'a, &'a str>,
+        #[field(default = vec![1, 2, 3])]
+        vec_num: Vec<usize>,
+        #[field(default = vec!["wow", "a", "string", "nice"])]
+        vec_str: Vec<&'a str>,
+        #[field(default = test_hashmap())]
+        hashmap: HashMap<&'a str, &'a str>,
+        #[field(default = test_btreemap())]
+        btreemap: BTreeMap<Vec<usize>, &'a str>,
+        #[field(default_with = Some(false))]
+        boolean: bool,
+        #[field(default_with = (|| Some(777))())]
+        unsigned: usize,
+        #[field(default = std::num::NonZeroI32::new(3).unwrap())]
+        nonzero: std::num::NonZeroI32,
+        #[field(default_with = std::num::NonZeroI32::new(9001))]
+        nonzero2: std::num::NonZeroI32,
+        #[field(default = 3.0)]
+        float: f64,
+        #[field(default = "wow")]
+        str_ref: &'a str,
+        #[field(default = "wowie")]
+        string: String,
+        #[field(default = [192u8, 168, 1, 0])]
+        ip: IpAddr,
+        #[field(default = ([192u8, 168, 1, 0], 20))]
+        addr: SocketAddr,
+        #[field(default = time::macros::date!(2021-05-27))]
+        date: time::Date,
+        #[field(default = time::macros::time!(01:15:00))]
+        time: time::Time,
+        #[field(default = time::PrimitiveDateTime::new(
+            time::macros::date!(2021-05-27),
+            time::macros::time!(01:15:00),
+        ))]
+        datetime: time::PrimitiveDateTime,
+    }
+
+    // `field2` has no default.
+    assert!(lenient::<FormWithDefaults>("").is_err());
+
+    // every other field should.
+    let form_string = &["field2=102"].join("&");
+    let form1: Option<FormWithDefaults> = lenient(&form_string).ok();
+    assert_eq!(form1, Some(FormWithDefaults {
+        field1: 100,
+        field2: 102,
+        field3: true,
+        field4: false,
+        field5: false,
+        field6: 255,
+        opt1: Some(true),
+        opt2: Some(false),
+        res: Ok("hello".into()),
+        res2: Ok("hello"),
+        vec_num: vec![1, 2, 3],
+        vec_str: vec!["wow", "a", "string", "nice"],
+        hashmap: test_hashmap(),
+        btreemap: test_btreemap(),
+        boolean: false,
+        unsigned: 777,
+        nonzero: std::num::NonZeroI32::new(3).unwrap(),
+        nonzero2: std::num::NonZeroI32::new(9001).unwrap(),
+        float: 3.0,
+        str_ref: "wow",
+        string: "wowie".to_string(),
+        ip: [192u8, 168, 1, 0].into(),
+        addr: ([192u8, 168, 1, 0], 20).into(),
+        date: time::macros::date!(2021-05-27),
+        time: time::macros::time!(01:15:00),
+        datetime: time::PrimitiveDateTime::new(
+            time::macros::date!(2021-05-27),
+            time::macros::time!(01:15:00)
+        ),
+    }));
+
+    let form2: Option<FormWithDefaults> = strict(&form_string).ok();
+    assert!(form2.is_none());
+
+    // Ensure actual form field values take precedence.
+    let form_string = &["field1=101", "field2=102", "field3=true", "field5=true"].join("&");
+    let form3: Option<FormWithDefaults> = lenient(&form_string).ok();
+    assert_eq!(form3, Some(FormWithDefaults {
+        field1: 101,
+        field2: 102,
+        field3: true,
+        field4: false,
+        field5: true,
+        ..form1.unwrap()
+    }));
+
+    // And that strict parsing still works.
+    let form = form3.unwrap();
+    let form_string = format!("{}", &form as &dyn UriDisplay<Query>);
+    let form4: form::Result<'_, FormWithDefaults> = strict(&form_string);
+    assert_eq!(form4, Ok(form), "parse from {}", form_string);
+
+    #[derive(FromForm, UriDisplayQuery, PartialEq, Debug)]
+    struct OwnedFormWithDefaults {
+        #[field(default = {
+            let mut map = BTreeMap::new();
+            map.insert(vec![], "empty!/!? neat".into());
+            map.insert(vec![1, 2], "one/ and+two".into());
+            map.insert(vec![3, 7, 9], "prime numbers".into());
+            map
+        })]
+        btreemap: BTreeMap<Vec<usize>, String>,
+    }
+
+    let form5: Option<OwnedFormWithDefaults> = lenient("").ok();
+    assert_eq!(form5, Some(OwnedFormWithDefaults {
+        btreemap: {
+            let mut map = BTreeMap::new();
+            map.insert(vec![3, 7, 9], "prime numbers".into());
+            map.insert(vec![1, 2], "one/ and+two".into());
+            map.insert(vec![], "empty!/!? neat".into());
+            map
+        }
+    }));
+
+    // And that strict parsing still works even when encoded. We add one value
+    // to the empty vec because it would not parse as `strict` otherwise.
+    let mut form = form5.unwrap();
+    form.btreemap.remove(&vec![]);
+    let form_string = format!("{}", &form as &dyn UriDisplay<Query>);
+    let form6: form::Result<'_, OwnedFormWithDefaults> = strict_encoded(&form_string);
+    assert_eq!(form6, Ok(form));
+}
+
+#[test]
+fn test_lazy_default() {
+    use std::sync::atomic::{AtomicUsize, Ordering};
+
+    static VAL: AtomicUsize = AtomicUsize::new(40);
+
+    fn f() -> usize {
+        VAL.fetch_add(1, Ordering::Relaxed)
+    }
+
+    fn opt_f() -> Option<usize> {
+        Some(f())
+    }
+
+    #[derive(Debug, PartialEq, FromForm)]
+    struct MyForm {
+        #[field(default = f())]
+        missing0: usize,
+        #[field(default = VAL.load(Ordering::Relaxed))]
+        missing1: usize,
+        #[field(default_with = opt_f())]
+        missing2: usize,
+        #[field(default_with = opt_f())]
+        a: usize,
+        #[field(default = f())]
+        b: usize,
+        #[field(default = VAL.load(Ordering::Relaxed))]
+        missing3: usize,
+    }
+
+    // Ensure actual form field values take precedence.
+    let form_string = &["a=100", "b=300"].join("&");
+    let form3: Option<MyForm> = lenient(&form_string).ok();
+    assert_eq!(form3, Some(MyForm {
+        missing0: 40,
+        missing1: 41,
+        missing2: 41,
+        a: 100,
+        b: 300,
+        missing3: 42
+    }));
+}
+
+#[derive(Debug, PartialEq, FromForm, UriDisplayQuery)]
+#[field(validate = len(3..), default = "some default hello")]
+struct Token<'r>(&'r str);
+
+#[derive(Debug, PartialEq, FromForm, UriDisplayQuery)]
+#[field(validate = try_with(|s| s.parse::<usize>()), default = "123456")]
+struct TokenOwned(String);
+
+#[test]
+fn wrapper_works() {
+    let form: Option<Token> = lenient("").ok();
+    assert_eq!(form, Some(Token("some default hello")));
+
+    let form: Option<TokenOwned> = lenient("").ok();
+    assert_eq!(form, Some(TokenOwned("123456".into())));
+
+    let errors = strict::<Token>("").unwrap_err();
+    assert!(errors.iter().any(|e| matches!(e.kind, ErrorKind::Missing)));
+
+    let form: Option<Token> = lenient("=hi there").ok();
+    assert_eq!(form, Some(Token("hi there")));
+
+    let form: Option<TokenOwned> = strict_encoded("=2318").ok();
+    assert_eq!(form, Some(TokenOwned("2318".into())));
+
+    let errors = lenient::<Token>("=hi").unwrap_err();
+    assert!(errors.iter().any(|e| matches!(e.kind, ErrorKind::InvalidLength { .. })));
+
+    let errors = lenient::<TokenOwned>("=hellothere").unwrap_err();
+    assert!(errors.iter().any(|e| matches!(e.kind, ErrorKind::Validation { .. })));
+}
+
+#[derive(Debug, PartialEq, FromForm, UriDisplayQuery)]
+struct JsonToken<T>(Json<T>);
+
+#[test]
+fn json_wrapper_works() {
+    let form: JsonToken<String> = lenient("=\"hello\"").unwrap();
+    assert_eq!(form, JsonToken(Json("hello".into())));
+
+    let form: JsonToken<usize> = lenient("=10").unwrap();
+    assert_eq!(form, JsonToken(Json(10)));
+
+    let form: JsonToken<()> = lenient("=null").unwrap();
+    assert_eq!(form, JsonToken(Json(())));
+
+    let form: JsonToken<Vec<usize>> = lenient("=[1, 4, 3, 9]").unwrap();
+    assert_eq!(form, JsonToken(Json(vec![1, 4, 3, 9])));
+
+    let string = String::from("=\"foo bar\"");
+    let form: JsonToken<&str> = lenient(&string).unwrap();
+    assert_eq!(form, JsonToken(Json("foo bar")));
+}
+
+// FIXME: https://github.com/rust-lang/rust/issues/86706
+#[allow(private_in_public)]
+struct Q<T>(T);
+
+// This is here to ensure we don't warn, which we can't test with trybuild.
+#[derive(FromForm)]
+pub struct JsonTokenBad<T>(Q<T>);

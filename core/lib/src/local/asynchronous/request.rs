@@ -1,5 +1,4 @@
 use std::fmt;
-use std::convert::TryInto;
 
 use crate::{Request, Data};
 use crate::http::{Status, Method};
@@ -45,8 +44,7 @@ impl<'c> LocalRequest<'c> {
     {
         // Try to parse `uri` into an `Origin`, storing whether it's good.
         let uri_str = uri.to_string();
-        let try_origin = uri.try_into()
-            .map_err(|_| Origin::new::<_, &'static str>(uri_str, None));
+        let try_origin = uri.try_into().map_err(|_| Origin::path_only(uri_str));
 
         // Create a request. We'll handle bad URIs later, in `_dispatch`.
         let origin = try_origin.clone().unwrap_or_else(|bad| bad);

@@ -1,15 +1,9 @@
 use std::borrow::Cow;
-use std::convert::TryFrom;
-use std::fmt::{self, Display};
-use std::hash::Hash;
 
 use crate::ext::IntoOwned;
-use crate::parse::{Indexed, Extent, IndexedStr, uri::tables::is_pchar};
-use crate::uri::{self, UriPart, Query, Path};
-use crate::uri::{Error, Segments, QuerySegments, as_utf8_unchecked};
+use crate::parse::{Extent, IndexedStr, uri::tables::is_pchar};
+use crate::uri::{Error, Path, Query, Data, as_utf8_unchecked, fmt};
 use crate::{RawStr, RawStrBuf};
-
-use state::Storage;
 
 /// A URI with an absolute path and optional query: `/path?query`.
 ///
@@ -53,7 +47,7 @@ use state::Storage;
 /// # }
 /// ```
 ///
-/// By contrast, the following are valid but _abnormal_ URIs:
+/// By contrast, the following are valid but _non-normal_ URIs:
 ///
 /// ```rust
 /// # extern crate rocket;
@@ -77,7 +71,7 @@ use state::Storage;
 /// # extern crate rocket;
 /// # use rocket::http::uri::Origin;
 /// # let invalid = [
-/// // abnormal versions
+/// // non-normal versions
 /// "//", "/a/b/", "/a/ab//c//d", "/a?a&&b&",
 ///
 /// // normalized versions
@@ -89,84 +83,42 @@ use state::Storage;
 /// #     assert_eq!(abnormal.into_normalized(), expected);
 /// # }
 /// ```
-#[derive(Clone, Debug)]
+///
+/// # (De)serialization
+///
+/// `Origin` is both `Serialize` and `Deserialize`:
+///
+/// ```rust
+/// # #[cfg(feature = "serde")] mod serde {
+/// # use serde_ as serde;
+/// use serde::{Serialize, Deserialize};
+/// use rocket::http::uri::Origin;
+///
+/// #[derive(Deserialize, Serialize)]
+/// # #[serde(crate = "serde_")]
+/// struct UriOwned {
+///     uri: Origin<'static>,
+/// }
+///
+/// #[derive(Deserialize, Serialize)]
+/// # #[serde(crate = "serde_")]
+/// struct UriBorrowed<'a> {
+///     uri: Origin<'a>,
+/// }
+/// # }
+/// ```
+#[derive(Debug, Clone)]
 pub struct Origin<'a> {
     pub(crate) source: Option<Cow<'a, str>>,
-    pub(crate) path: IndexedStr<'a>,
-    pub(crate) query: Option<IndexedStr<'a>>,
-
-    pub(crate) decoded_path_segs: Storage<Vec<IndexedStr<'static>>>,
-    pub(crate) decoded_query_segs: Storage<Vec<(IndexedStr<'static>, IndexedStr<'static>)>>,
-}
-
-impl Hash for Origin<'_> {
-    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
-        self.path().hash(state);
-        self.query().hash(state);
-    }
-}
-
-impl<'a, 'b> PartialEq<Origin<'b>> for Origin<'a> {
-    fn eq(&self, other: &Origin<'b>) -> bool {
-        self.path() == other.path() && self.query() == other.query()
-    }
-}
-
-impl Eq for Origin<'_> { }
-
-impl PartialEq<str> for Origin<'_> {
-    fn eq(&self, other: &str) -> bool {
-        let (path, query) = RawStr::new(other).split_at_byte(b'?');
-        self.path() == path && self.query().unwrap_or("".into()) == query
-    }
-}
-
-impl PartialEq<&str> for Origin<'_> {
-    fn eq(&self, other: &&str) -> bool {
-        self.eq(*other)
-    }
-}
-
-impl PartialEq<Origin<'_>> for str {
-    fn eq(&self, other: &Origin<'_>) -> bool {
-        other.eq(self)
-    }
-}
-
-impl IntoOwned for Origin<'_> {
-    type Owned = Origin<'static>;
-
-    fn into_owned(self) -> Origin<'static> {
-        Origin {
-            source: self.source.into_owned(),
-            path: self.path.into_owned(),
-            query: self.query.into_owned(),
-            decoded_path_segs: self.decoded_path_segs.map(|v| v.into_owned()),
-            decoded_query_segs: self.decoded_query_segs.map(|v| v.into_owned()),
-        }
-    }
-}
-
-fn decode_to_indexed_str<P: UriPart>(
-    value: &RawStr,
-    (indexed, source): (&IndexedStr<'_>, &RawStr)
-) -> IndexedStr<'static> {
-    let decoded = match P::KIND {
-        uri::Kind::Path => value.percent_decode_lossy(),
-        uri::Kind::Query => value.url_decode_lossy(),
-    };
-
-    match decoded {
-        Cow::Borrowed(b) if indexed.is_indexed() => {
-            let indexed = IndexedStr::checked_from(b, source.as_str());
-            debug_assert!(indexed.is_some());
-            indexed.unwrap_or(IndexedStr::from(Cow::Borrowed("")))
-        }
-        cow => IndexedStr::from(Cow::Owned(cow.into_owned())),
-    }
+    pub(crate) path: Data<'a, fmt::Path>,
+    pub(crate) query: Option<Data<'a, fmt::Query>>,
 }
 
 impl<'a> Origin<'a> {
+    /// The root: `'/'`.
+    #[doc(hidden)]
+    pub const ROOT: Origin<'static> = Origin::const_new("/", None);
+
     /// SAFETY: `source` must be UTF-8.
     #[inline]
     pub(crate) unsafe fn raw(
@@ -176,11 +128,8 @@ impl<'a> Origin<'a> {
     ) -> Origin<'a> {
         Origin {
             source: Some(as_utf8_unchecked(source)),
-            path: path.into(),
-            query: query.map(|q| q.into()),
-
-            decoded_path_segs: Storage::new(),
-            decoded_query_segs: Storage::new(),
+            path: Data::raw(path),
+            query: query.map(Data::raw)
         }
     }
 
@@ -193,19 +142,42 @@ impl<'a> Origin<'a> {
     {
         Origin {
             source: None,
-            path: Indexed::from(path.into()),
-            query: query.map(|q| Indexed::from(q.into())),
-            decoded_path_segs: Storage::new(),
-            decoded_query_segs: Storage::new(),
+            path: Data::new(path.into()),
+            query: query.map(Data::new),
         }
     }
 
-    // Used to fabricate URIs in several places. Equivalent to `Origin::new("/",
-    // None)` or `Origin::parse("/").unwrap()`. Should not be used outside of
-    // Rocket, though doing so would be harmless.
+    // Used mostly for testing and to construct known good URIs from other parts
+    // of Rocket. This should _really_ not be used outside of Rocket because the
+    // resulting `Origin's` are not guaranteed to be valid origin URIs!
     #[doc(hidden)]
-    pub fn dummy() -> Origin<'static> {
-        Origin::new::<&'static str, &'static str>("/", None)
+    pub fn path_only<P: Into<Cow<'a, str>>>(path: P) -> Origin<'a> {
+        Origin::new(path, None::<&'a str>)
+    }
+
+    // Used mostly for testing and to construct known good URIs from other parts
+    // of Rocket. This should _really_ not be used outside of Rocket because the
+    // resulting `Origin's` are not guaranteed to be valid origin URIs!
+    #[doc(hidden)]
+    pub const fn const_new(path: &'a str, query: Option<&'a str>) -> Origin<'a> {
+        Origin {
+            source: None,
+            path: Data {
+                value: IndexedStr::Concrete(Cow::Borrowed(path)),
+                decoded_segments: state::Storage::new(),
+            },
+            query: match query {
+                Some(query) => Some(Data {
+                    value: IndexedStr::Concrete(Cow::Borrowed(query)),
+                    decoded_segments: state::Storage::new(),
+                }),
+                None => None,
+            },
+        }
+    }
+
+    pub(crate) fn set_query<Q: Into<Option<Cow<'a, str>>>>(&mut self, query: Q) {
+        self.query = query.into().map(Data::new);
     }
 
     /// Parses the string `string` into an `Origin`. Parsing will never
@@ -214,7 +186,7 @@ impl<'a> Origin<'a> {
     /// # Example
     ///
     /// ```rust
-    /// # extern crate rocket;
+    /// # #[macro_use] extern crate rocket;
     /// use rocket::http::uri::Origin;
     ///
     /// // Parse a valid origin URI.
@@ -224,6 +196,11 @@ impl<'a> Origin<'a> {
     ///
     /// // Invalid URIs fail to parse.
     /// Origin::parse("foo bar").expect_err("invalid URI");
+    ///
+    /// // Prefer to use `uri!()` when the input is statically known:
+    /// let uri = uri!("/a/b/c?query");
+    /// assert_eq!(uri.path(), "/a/b/c");
+    /// assert_eq!(uri.query().unwrap(), "query");
     /// ```
     pub fn parse(string: &'a str) -> Result<Origin<'a>, Error<'a>> {
         crate::parse::uri::origin_from_str(string)
@@ -243,19 +220,16 @@ impl<'a> Origin<'a> {
         }
 
         let (path, query) = RawStr::new(string).split_at_byte(b'?');
-        let query = match query.is_empty() {
-            false => Some(query.as_str()),
-            true => None,
-        };
-
+        let query = (!query.is_empty()).then(|| query.as_str());
         Ok(Origin::new(path.as_str(), query))
     }
 
-    /// Parses the string `string` into an `Origin`. Parsing will never
-    /// allocate. This method should be used instead of
-    /// [`Origin::parse()`](crate::uri::Origin::parse()) when the source URI is
-    /// already a `String`. Returns an `Error` if `string` is not a valid origin
-    /// URI.
+    /// Parses the string `string` into an `Origin`. Never allocates on success.
+    /// May allocate on error.
+    ///
+    /// This method should be used instead of [`Origin::parse()`] when
+    /// the source URI is already a `String`. Returns an `Error` if `string` is
+    /// not a valid origin URI.
     ///
     /// # Example
     ///
@@ -266,152 +240,52 @@ impl<'a> Origin<'a> {
     /// let source = format!("/foo/{}/three", 2);
     /// let uri = Origin::parse_owned(source).expect("valid URI");
     /// assert_eq!(uri.path(), "/foo/2/three");
-    /// assert_eq!(uri.query(), None);
+    /// assert!(uri.query().is_none());
     /// ```
     pub fn parse_owned(string: String) -> Result<Origin<'static>, Error<'static>> {
-        // We create a copy of a pointer to `string` to escape the borrow
-        // checker. This is so that we can "move out of the borrow" later.
-        //
-        // For this to be correct and safe, we need to ensure that:
-        //
-        //  1. No `&mut` references to `string` are created after this line.
-        //  2. `string` isn't dropped while `copy_of_str` is live.
-        //
-        // These two facts can be easily verified. An `&mut` can't be created
-        // because `string` isn't `mut`. Then, `string` is clearly not dropped
-        // since it's passed in to `source`.
-        // let copy_of_str = unsafe { &*(string.as_str() as *const str) };
-        let copy_of_str = unsafe { &*(string.as_str() as *const str) };
-        let origin = Origin::parse(copy_of_str)?;
-        debug_assert!(origin.source.is_some(), "Origin source parsed w/o source");
+        let origin = Origin::parse(&string).map_err(|e| e.into_owned())?;
+        debug_assert!(origin.source.is_some(), "Origin parsed w/o source");
 
-        let origin = Origin {
+        Ok(Origin {
             path: origin.path.into_owned(),
             query: origin.query.into_owned(),
-            decoded_path_segs: origin.decoded_path_segs.into_owned(),
-            decoded_query_segs: origin.decoded_query_segs.into_owned(),
-            // At this point, it's impossible for anything to be borrowing
-            // `string` except for `source`, even though Rust doesn't know it.
-            // Because we're replacing `source` here, there can't possibly be a
-            // borrow remaining, it's safe to "move out of the borrow".
-            source: Some(Cow::Owned(string)),
-        };
-
-        Ok(origin)
-    }
-
-    /// Returns `true` if `self` is normalized. Otherwise, returns `false`.
-    ///
-    /// See [Normalization](#normalization) for more information on what it
-    /// means for an origin URI to be normalized.
-    ///
-    /// # Example
-    ///
-    /// ```rust
-    /// # extern crate rocket;
-    /// use rocket::http::uri::Origin;
-    ///
-    /// let normal = Origin::parse("/").unwrap();
-    /// assert!(normal.is_normalized());
-    ///
-    /// let normal = Origin::parse("/a/b/c").unwrap();
-    /// assert!(normal.is_normalized());
-    ///
-    /// let normal = Origin::parse("/a/b/c?a=b&c").unwrap();
-    /// assert!(normal.is_normalized());
-    ///
-    /// let abnormal = Origin::parse("/a/b/c//d").unwrap();
-    /// assert!(!abnormal.is_normalized());
-    ///
-    /// let abnormal = Origin::parse("/a?q&&b").unwrap();
-    /// assert!(!abnormal.is_normalized());
-    /// ```
-    pub fn is_normalized(&self) -> bool {
-        self.path().starts_with('/')
-            && self.raw_path_segments().all(|s| !s.is_empty())
-            && self.raw_query_segments().all(|s| !s.is_empty())
-    }
-
-    /// Normalizes `self`.
-    ///
-    /// See [Normalization](#normalization) for more information on what it
-    /// means for an origin URI to be normalized.
-    ///
-    /// # Example
-    ///
-    /// ```rust
-    /// # extern crate rocket;
-    /// use rocket::http::uri::Origin;
-    ///
-    /// let abnormal = Origin::parse("/a/b/c//d").unwrap();
-    /// assert!(!abnormal.is_normalized());
-    ///
-    /// let normalized = abnormal.into_normalized();
-    /// assert!(normalized.is_normalized());
-    /// assert_eq!(normalized, Origin::parse("/a/b/c/d").unwrap());
-    /// ```
-    pub fn into_normalized(mut self) -> Self {
-        use std::fmt::Write;
-
-        if self.is_normalized() {
-            self
-        } else {
-            let mut new_path = String::with_capacity(self.path().len());
-            for seg in self.raw_path_segments().filter(|s| !s.is_empty()) {
-                let _ = write!(new_path, "/{}", seg);
-            }
-
-            if new_path.is_empty() {
-                new_path.push('/');
-            }
-
-            self.path = Indexed::from(Cow::Owned(new_path));
-
-            if let Some(q) = self.query() {
-                let mut new_query = String::with_capacity(q.len());
-                let raw_segments = self.raw_query_segments()
-                    .filter(|s| !s.is_empty())
-                    .enumerate();
-
-                for (i, seg) in raw_segments {
-                    if i != 0 { new_query.push('&'); }
-                    let _ = write!(new_query, "{}", seg);
-                }
-
-                self.query = Some(Indexed::from(Cow::Owned(new_query)));
-            }
-
-            // Note: normalization preserves segments!
-            self
-        }
+            source: Some(Cow::Owned(string))
+        })
     }
 
     /// Returns the path part of this URI.
     ///
-    /// ### Examples
-    ///
-    /// A URI with only a path:
+    /// # Example
     ///
     /// ```rust
-    /// # extern crate rocket;
-    /// use rocket::http::uri::Origin;
-    ///
-    /// let uri = Origin::parse("/a/b/c").unwrap();
+    /// # #[macro_use] extern crate rocket;
+    /// let uri = uri!("/a/b/c");
     /// assert_eq!(uri.path(), "/a/b/c");
-    /// ```
     ///
-    /// A URI with a query:
-    ///
-    /// ```rust
-    /// # extern crate rocket;
-    /// use rocket::http::uri::Origin;
-    ///
-    /// let uri = Origin::parse("/a/b/c?name=bob").unwrap();
+    /// let uri = uri!("/a/b/c?name=bob");
     /// assert_eq!(uri.path(), "/a/b/c");
     /// ```
     #[inline]
-    pub fn path(&self) -> &RawStr {
-        self.path.from_cow_source(&self.source).into()
+    pub fn path(&self) -> Path<'_> {
+        Path { source: &self.source, data: &self.path }
+    }
+
+    /// Returns the query part of this URI without the question mark, if there
+    /// is any.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// # #[macro_use] extern crate rocket;
+    /// let uri = uri!("/a/b/c?alphabet=true");
+    /// assert_eq!(uri.query().unwrap(), "alphabet=true");
+    ///
+    /// let uri = uri!("/a/b/c");
+    /// assert!(uri.query().is_none());
+    /// ```
+    #[inline]
+    pub fn query(&self) -> Option<Query<'_>> {
+        self.query.as_ref().map(|data| Query { source: &self.source, data })
     }
 
     /// Applies the function `f` to the internal `path` and returns a new
@@ -424,72 +298,40 @@ impl<'a> Origin<'a> {
     /// Affix a trailing slash if one isn't present.
     ///
     /// ```rust
-    /// # extern crate rocket;
-    /// use rocket::http::uri::Origin;
+    /// # #[macro_use] extern crate rocket;
+    /// let uri = uri!("/a/b/c");
+    /// let expected_uri = uri!("/a/b/c/d");
+    /// assert_eq!(uri.map_path(|p| format!("{}/d", p)), Some(expected_uri));
     ///
-    /// let old_uri = Origin::parse("/a/b/c").unwrap();
-    /// let expected_uri = Origin::parse("/a/b/c/").unwrap();
-    /// assert_eq!(old_uri.map_path(|p| format!("{}/", p)), Some(expected_uri));
+    /// let uri = uri!("/a/b/c");
+    /// let abnormal_map = uri.map_path(|p| format!("{}///d", p));
+    /// assert_eq!(abnormal_map.unwrap(), "/a/b/c///d");
     ///
-    /// let old_uri = Origin::parse("/a/b/c/").unwrap();
-    /// let expected_uri = Origin::parse("/a/b/c//").unwrap();
-    /// assert_eq!(old_uri.map_path(|p| format!("{}/", p)), Some(expected_uri));
+    /// let uri = uri!("/a/b/c");
+    /// let expected = uri!("/b/c");
+    /// let mapped = uri.map_path(|p| p.strip_prefix("/a").unwrap_or(p));
+    /// assert_eq!(mapped, Some(expected));
     ///
-    /// let old_uri = Origin::parse("/a/b/c/").unwrap();
-    /// let expected = Origin::parse("/b/c/").unwrap();
-    /// assert_eq!(old_uri.map_path(|p| p.strip_prefix("/a").unwrap_or(p)), Some(expected));
+    /// let uri = uri!("/a");
+    /// assert_eq!(uri.map_path(|p| p.strip_prefix("/a").unwrap_or(p)), None);
     ///
-    /// let old_uri = Origin::parse("/a").unwrap();
-    /// assert_eq!(old_uri.map_path(|p| p.strip_prefix("/a").unwrap_or(p)), None);
-    ///
-    /// let old_uri = Origin::parse("/a/b/c/").unwrap();
-    /// assert_eq!(old_uri.map_path(|p| format!("hi/{}", p)), None);
+    /// let uri = uri!("/a/b/c");
+    /// assert_eq!(uri.map_path(|p| format!("hi/{}", p)), None);
     /// ```
     #[inline]
     pub fn map_path<'s, F, P>(&'s self, f: F) -> Option<Self>
         where F: FnOnce(&'s RawStr) -> P, P: Into<RawStrBuf> + 's
     {
-        let path = f(self.path()).into();
-        if !path.starts_with('/') || !path.as_bytes().iter().all(|b| is_pchar(&b)) {
+        let path = f(self.path().raw()).into();
+        if !path.starts_with('/') || !path.as_bytes().iter().all(is_pchar) {
             return None;
         }
 
         Some(Origin {
             source: self.source.clone(),
-            path: Cow::from(path.into_string()).into(),
+            path: Data::new(Cow::from(path.into_string())),
             query: self.query.clone(),
-            decoded_path_segs: Storage::new(),
-            decoded_query_segs: Storage::new(),
         })
-    }
-
-    /// Returns the query part of this URI without the question mark, if there is
-    /// any.
-    ///
-    /// ### Examples
-    ///
-    /// A URI with a query part:
-    ///
-    /// ```rust
-    /// # extern crate rocket;
-    /// use rocket::http::uri::Origin;
-    ///
-    /// let uri = Origin::parse("/a/b/c?alphabet=true").unwrap();
-    /// assert_eq!(uri.query().unwrap(), "alphabet=true");
-    /// ```
-    ///
-    /// A URI without the query part:
-    ///
-    /// ```rust
-    /// # extern crate rocket;
-    /// use rocket::http::uri::Origin;
-    ///
-    /// let uri = Origin::parse("/a/b/c").unwrap();
-    /// assert_eq!(uri.query(), None);
-    /// ```
-    #[inline]
-    pub fn query(&self) -> Option<&RawStr> {
-        self.query.as_ref().map(|q| q.from_cow_source(&self.source).into())
     }
 
     /// Removes the query part of this URI, if there is any.
@@ -497,21 +339,47 @@ impl<'a> Origin<'a> {
     /// # Example
     ///
     /// ```rust
-    /// # extern crate rocket;
-    /// use rocket::http::uri::Origin;
-    ///
-    /// let mut uri = Origin::parse("/a/b/c?query=some").unwrap();
+    /// # #[macro_use] extern crate rocket;
+    /// let mut uri = uri!("/a/b/c?query=some");
     /// assert_eq!(uri.query().unwrap(), "query=some");
     ///
     /// uri.clear_query();
-    /// assert_eq!(uri.query(), None);
+    /// assert!(uri.query().is_none());
     /// ```
     pub fn clear_query(&mut self) {
-        self.query = None;
+        self.set_query(None);
     }
 
-    /// Returns a (smart) iterator over the non-empty, percent-decoded segments
-    /// of the path of this URI.
+    /// Returns `true` if `self` is normalized. Otherwise, returns `false`.
+    ///
+    /// See [Normalization](Self#normalization) for more information on what it
+    /// means for an origin URI to be normalized. Note that `uri!()` always
+    /// normalizes static input.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// # #[macro_use] extern crate rocket;
+    /// use rocket::http::uri::Origin;
+    ///
+    /// assert!(Origin::parse("/").unwrap().is_normalized());
+    /// assert!(Origin::parse("/a/b/c").unwrap().is_normalized());
+    /// assert!(Origin::parse("/a/b/c?a=b&c").unwrap().is_normalized());
+    ///
+    /// assert!(!Origin::parse("/a/b/c//d").unwrap().is_normalized());
+    /// assert!(!Origin::parse("/a?q&&b").unwrap().is_normalized());
+    ///
+    /// assert!(uri!("/a/b/c//d").is_normalized());
+    /// assert!(uri!("/a?q&&b").is_normalized());
+    /// ```
+    pub fn is_normalized(&self) -> bool {
+        self.path().is_normalized(true) && self.query().map_or(true, |q| q.is_normalized())
+    }
+
+    /// Normalizes `self`. This is a no-op if `self` is already normalized.
+    ///
+    /// See [Normalization](#normalization) for more information on what it
+    /// means for an origin URI to be normalized.
     ///
     /// # Example
     ///
@@ -519,25 +387,28 @@ impl<'a> Origin<'a> {
     /// # extern crate rocket;
     /// use rocket::http::uri::Origin;
     ///
-    /// let uri = Origin::parse("/a%20b/b%2Fc/d//e?query=some").unwrap();
-    /// let path_segs: Vec<&str> = uri.path_segments().collect();
-    /// assert_eq!(path_segs, &["a b", "b/c", "d", "e"]);
+    /// let mut abnormal = Origin::parse("/a/b/c//d").unwrap();
+    /// assert!(!abnormal.is_normalized());
+    /// abnormal.normalize();
+    /// assert!(abnormal.is_normalized());
     /// ```
-    pub fn path_segments(&self) -> Segments<'_> {
-        let cached = self.decoded_path_segs.get_or_set(|| {
-            let (indexed, path) = (&self.path, self.path());
-            self.raw_path_segments()
-                .filter(|r| !r.is_empty())
-                .map(|s| decode_to_indexed_str::<Path>(s, (indexed, path)))
-                .collect()
-        });
+    pub fn normalize(&mut self) {
+        if !self.path().is_normalized(true) {
+            self.path = self.path().to_normalized(true);
+        }
 
-        Segments { source: self.path(), segments: cached, pos: 0 }
+        if let Some(query) = self.query() {
+            if !query.is_normalized() {
+                self.query = query.to_normalized();
+            }
+        }
     }
 
-    /// Returns a (smart) iterator over the non-empty, url-decoded `(name,
-    /// value)` pairs of the query of this URI. If there is no query, the
-    /// iterator is empty.
+    /// Consumes `self` and returns a normalized version.
+    ///
+    /// This is a no-op if `self` is already normalized. See
+    /// [Normalization](#normalization) for more information on what it means
+    /// for an origin URI to be normalized.
     ///
     /// # Example
     ///
@@ -545,136 +416,25 @@ impl<'a> Origin<'a> {
     /// # extern crate rocket;
     /// use rocket::http::uri::Origin;
     ///
-    /// let uri = Origin::parse("/").unwrap();
-    /// let query_segs: Vec<_> = uri.query_segments().collect();
-    /// assert!(query_segs.is_empty());
-    ///
-    /// let uri = Origin::parse("/foo/bar?a+b%2F=some+one%40gmail.com&&%26%3D2").unwrap();
-    /// let query_segs: Vec<_> = uri.query_segments().collect();
-    /// assert_eq!(query_segs, &[("a b/", "some one@gmail.com"), ("&=2", "")]);
+    /// let abnormal = Origin::parse("/a/b/c//d").unwrap();
+    /// assert!(!abnormal.is_normalized());
+    /// assert!(abnormal.into_normalized().is_normalized());
     /// ```
-    pub fn query_segments(&self) -> QuerySegments<'_> {
-        let cached = self.decoded_query_segs.get_or_set(|| {
-            let (indexed, query) = match (self.query.as_ref(), self.query()) {
-                (Some(i), Some(q)) => (i, q),
-                _ => return vec![],
-            };
-
-            self.raw_query_segments()
-                .filter(|s| !s.is_empty())
-                .map(|s| s.split_at_byte(b'='))
-                .map(|(name, val)| {
-                    let name = decode_to_indexed_str::<Query>(name, (indexed, query));
-                    let val = decode_to_indexed_str::<Query>(val, (indexed, query));
-                    (name, val)
-                })
-                .collect()
-        });
-
-        QuerySegments { source: self.query(), segments: cached, pos: 0 }
-    }
-
-    /// Returns an iterator over the raw, undecoded segments of the path in this
-    /// URI. Segments may be empty.
-    ///
-    /// ### Example
-    ///
-    /// ```rust
-    /// # extern crate rocket;
-    /// use rocket::http::uri::Origin;
-    ///
-    /// let uri = Origin::parse("/").unwrap();
-    /// let segments: Vec<_> = uri.raw_path_segments().collect();
-    /// assert!(segments.is_empty());
-    ///
-    /// let uri = Origin::parse("//").unwrap();
-    /// let segments: Vec<_> = uri.raw_path_segments().collect();
-    /// assert_eq!(segments, &["", ""]);
-    ///
-    /// let uri = Origin::parse("/a").unwrap();
-    /// let segments: Vec<_> = uri.raw_path_segments().collect();
-    /// assert_eq!(segments, &["a"]);
-    ///
-    /// let uri = Origin::parse("/a//b///c/d?query&param").unwrap();
-    /// let segments: Vec<_> = uri.raw_path_segments().collect();
-    /// assert_eq!(segments, &["a", "", "b", "", "", "c", "d"]);
-    /// ```
-    #[inline(always)]
-    pub fn raw_path_segments(&self) -> impl Iterator<Item = &RawStr> {
-        let path = match self.path() {
-            p if p == "/" => None,
-            p if p.starts_with('/') => Some(&p[1..]),
-            p => Some(p)
-        };
-
-        path.map(|p| p.split(Path::DELIMITER))
-            .into_iter()
-            .flatten()
-    }
-
-    /// Returns an iterator over the non-empty, non-url-decoded `(name, value)`
-    /// pairs of the query of this URI. If there is no query, the iterator is
-    /// empty. Segments may be empty.
-    ///
-    /// # Example
-    ///
-    /// ```rust
-    /// # extern crate rocket;
-    /// use rocket::http::uri::Origin;
-    ///
-    /// let uri = Origin::parse("/").unwrap();
-    /// assert!(uri.raw_query_segments().next().is_none());
-    ///
-    /// let uri = Origin::parse("/?a=b&dog").unwrap();
-    /// let query_segs: Vec<_> = uri.raw_query_segments().collect();
-    /// assert_eq!(query_segs, &["a=b", "dog"]);
-    ///
-    /// let uri = Origin::parse("/?&").unwrap();
-    /// let query_segs: Vec<_> = uri.raw_query_segments().collect();
-    /// assert_eq!(query_segs, &["", ""]);
-    ///
-    /// let uri = Origin::parse("/foo/bar?a+b%2F=some+one%40gmail.com&&%26%3D2").unwrap();
-    /// let query_segs: Vec<_> = uri.raw_query_segments().collect();
-    /// assert_eq!(query_segs, &["a+b%2F=some+one%40gmail.com", "", "%26%3D2"]);
-    /// ```
-    #[inline]
-    pub fn raw_query_segments(&self) -> impl Iterator<Item = &RawStr> {
-        self.query()
-            .into_iter()
-            .flat_map(|q| q.split(Query::DELIMITER))
+    pub fn into_normalized(mut self) -> Self {
+        self.normalize();
+        self
     }
 }
 
-impl TryFrom<String> for Origin<'static> {
-    type Error = Error<'static>;
+impl_serde!(Origin<'a>, "an origin-form URI");
 
-    fn try_from(value: String) -> Result<Self, Self::Error> {
-        Origin::parse_owned(value)
-    }
-}
+impl_traits!(Origin, path, query);
 
-// Because inference doesn't take `&String` to `&str`.
-impl<'a> TryFrom<&'a String> for Origin<'a> {
-    type Error = Error<'a>;
-
-    fn try_from(value: &'a String) -> Result<Self, Self::Error> {
-        Origin::parse(value.as_str())
-    }
-}
-
-impl<'a> TryFrom<&'a str> for Origin<'a> {
-    type Error = Error<'a>;
-
-    fn try_from(value: &'a str) -> Result<Self, Self::Error> {
-        Origin::parse(value)
-    }
-}
-
-impl Display for Origin<'_> {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+impl std::fmt::Display for Origin<'_> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.path())?;
-        if let Some(q) = self.query() {
-            write!(f, "?{}", q)?;
+        if let Some(query) = self.query() {
+            write!(f, "?{}", query)?;
         }
 
         Ok(())
@@ -687,7 +447,7 @@ mod tests {
 
     fn seg_count(path: &str, expected: usize) -> bool {
         let origin = Origin::parse(path).unwrap();
-        let segments = origin.path_segments();
+        let segments = origin.path().segments();
         let actual = segments.len();
         if actual != expected {
             eprintln!("Count mismatch: expected {}, got {}.", expected, actual);
@@ -707,7 +467,7 @@ mod tests {
             Err(e) => panic!("failed to parse {}: {}", path, e)
         };
 
-        let actual: Vec<&str> = uri.path_segments().collect();
+        let actual: Vec<&str> = uri.path().segments().collect();
         actual == expected
     }
 
@@ -792,7 +552,7 @@ mod tests {
 
     fn test_query(uri: &str, query: Option<&str>) {
         let uri = Origin::parse(uri).unwrap();
-        assert_eq!(uri.query().map(|s| s.as_str()), query);
+        assert_eq!(uri.query().map(|q| q.as_str()), query);
     }
 
     #[test]

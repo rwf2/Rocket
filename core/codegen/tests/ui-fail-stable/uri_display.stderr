@@ -10,7 +10,7 @@ error: [note] error occurred while deriving `UriDisplay`
 3 | #[derive(UriDisplayQuery)]
   |          ^^^^^^^^^^^^^^^
   |
-  = note: this error originates in a derive macro (in Nightly builds, run with -Z macro-backtrace for more info)
+  = note: this error originates in the derive macro `UriDisplayQuery` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: fieldless structs are not supported
  --> $DIR/uri_display.rs:7:1
@@ -24,7 +24,7 @@ error: [note] error occurred while deriving `UriDisplay`
 6 | #[derive(UriDisplayQuery)]
   |          ^^^^^^^^^^^^^^^
   |
-  = note: this error originates in a derive macro (in Nightly builds, run with -Z macro-backtrace for more info)
+  = note: this error originates in the derive macro `UriDisplayQuery` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: empty enums are not supported
   --> $DIR/uri_display.rs:10:11
@@ -38,7 +38,7 @@ error: [note] error occurred while deriving `UriDisplay`
 9 | #[derive(UriDisplayQuery)]
   |          ^^^^^^^^^^^^^^^
   |
-  = note: this error originates in a derive macro (in Nightly builds, run with -Z macro-backtrace for more info)
+  = note: this error originates in the derive macro `UriDisplayQuery` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: tuple structs or variants must have exactly one field
   --> $DIR/uri_display.rs:18:12
@@ -52,7 +52,7 @@ error: [note] error occurred while deriving `UriDisplay`
 17 | #[derive(UriDisplayQuery)]
    |          ^^^^^^^^^^^^^^^
    |
-   = note: this error originates in a derive macro (in Nightly builds, run with -Z macro-backtrace for more info)
+   = note: this error originates in the derive macro `UriDisplayQuery` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: expected list `#[attr(..)]`, found bare integer literal
   --> $DIR/uri_display.rs:22:20
@@ -66,7 +66,7 @@ error: [note] error occurred while deriving `UriDisplay`
 20 | #[derive(UriDisplayQuery)]
    |          ^^^^^^^^^^^^^^^
    |
-   = note: this error originates in a derive macro (in Nightly builds, run with -Z macro-backtrace for more info)
+   = note: this error originates in the derive macro `UriDisplayQuery` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: struct must have exactly one field
   --> $DIR/uri_display.rs:27:12
@@ -80,7 +80,7 @@ error: [note] error occurred while deriving `UriDisplay`
 26 | #[derive(UriDisplayPath)]
    |          ^^^^^^^^^^^^^^
    |
-   = note: this error originates in a derive macro (in Nightly builds, run with -Z macro-backtrace for more info)
+   = note: this error originates in the derive macro `UriDisplayPath` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: struct must have exactly one field
   --> $DIR/uri_display.rs:30:1
@@ -94,7 +94,7 @@ error: [note] error occurred while deriving `UriDisplay`
 29 | #[derive(UriDisplayPath)]
    |          ^^^^^^^^^^^^^^
    |
-   = note: this error originates in a derive macro (in Nightly builds, run with -Z macro-backtrace for more info)
+   = note: this error originates in the derive macro `UriDisplayPath` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: enums are not supported
   --> $DIR/uri_display.rs:33:1
@@ -108,7 +108,7 @@ error: [note] error occurred while deriving `UriDisplay`
 32 | #[derive(UriDisplayPath)]
    |          ^^^^^^^^^^^^^^
    |
-   = note: this error originates in a derive macro (in Nightly builds, run with -Z macro-backtrace for more info)
+   = note: this error originates in the derive macro `UriDisplayPath` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: named structs are not supported
   --> $DIR/uri_display.rs:36:1
@@ -122,4 +122,4 @@ error: [note] error occurred while deriving `UriDisplay`
 35 | #[derive(UriDisplayPath)]
    |          ^^^^^^^^^^^^^^
    |
-   = note: this error originates in a derive macro (in Nightly builds, run with -Z macro-backtrace for more info)
+   = note: this error originates in the derive macro `UriDisplayPath` (in Nightly builds, run with -Z macro-backtrace for more info)

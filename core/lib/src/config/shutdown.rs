@@ -1,10 +1,9 @@
 use std::fmt;
-use std::future::Future;
 
 #[cfg(unix)]
 use std::collections::HashSet;
 
-use futures::future::{Either, pending};
+use futures::stream::Stream;
 use serde::{Deserialize, Serialize};
 
 /// A Unix signal for triggering graceful shutdown.
@@ -17,10 +16,9 @@ use serde::{Deserialize, Serialize};
 /// A `Sig` variant serializes and deserializes as a lowercase string equal to
 /// the name of the variant: `"alrm"` for [`Sig::Alrm`], `"chld"` for
 /// [`Sig::Chld`], and so on.
-#[cfg(unix)]
-#[cfg_attr(nightly, doc(cfg(unix)))]
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
+#[cfg_attr(nightly, doc(cfg(unix)))]
 pub enum Sig {
     /// The `SIGALRM` Unix signal.
     Alrm,
@@ -44,8 +42,6 @@ pub enum Sig {
     Usr2
 }
 
-#[cfg(unix)]
-#[cfg_attr(nightly, doc(cfg(unix)))]
 impl fmt::Display for Sig {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let s = match self {
@@ -110,6 +106,27 @@ impl fmt::Display for Sig {
 /// proceed nominally. Rocket waits at most `mercy` seconds for connections to
 /// shutdown before forcefully terminating all connections.
 ///
+/// # Runaway I/O
+///
+/// If tasks are _still_ executing after both periods _and_ a Rocket configured
+/// async runtime is in use, Rocket waits an unspecified amount of time (not to
+/// exceed 1s) and forcefully terminates the asynchronous runtime. This
+/// guarantees that the server process terminates, prohibiting uncooperative,
+/// runaway I/O from preventing shutdown altogether.
+///
+/// A "Rocket configured runtime" is one started by the `#[rocket::main]` and
+/// `#[launch]` attributes. Rocket _never_ forcefully terminates a custom
+/// runtime. A server that creates its own async runtime must take care to
+/// terminate itself if tasks it spawns fail to cooperate.
+///
+/// Under normal circumstances, forced termination should never occur. No use of
+/// "normal" cooperative I/O (that is, via `.await` or `task::spawn()`) should
+/// trigger abrupt termination. Instead, forced cancellation is intended to
+/// prevent _buggy_ code, such as an unintended infinite loop or unknown use of
+/// blocking I/O, from preventing shutdown.
+///
+/// This behavior can be disabled by setting [`Shutdown::force`] to `false`.
+///
 /// # Example
 ///
 /// As with all Rocket configuration options, when using the default
@@ -120,7 +137,7 @@ impl fmt::Display for Sig {
 ///
 /// ```rust
 /// # use rocket::figment::{Figment, providers::{Format, Toml}};
-/// use rocket::{Rocket, Config};
+/// use rocket::Config;
 ///
 /// // If these are the contents of `Rocket.toml`...
 /// # let toml = Toml::string(r#"
@@ -129,6 +146,7 @@ impl fmt::Display for Sig {
 /// signals = ["term", "hup"]
 /// grace = 10
 /// mercy = 5
+/// # force = false
 /// # "#).nested();
 ///
 /// // The config parses as follows:
@@ -136,6 +154,7 @@ impl fmt::Display for Sig {
 /// assert_eq!(config.shutdown.ctrlc, false);
 /// assert_eq!(config.shutdown.grace, 10);
 /// assert_eq!(config.shutdown.mercy, 5);
+/// # assert_eq!(config.shutdown.force, false);
 ///
 /// # #[cfg(unix)] {
 /// use rocket::config::Sig;
@@ -150,8 +169,7 @@ impl fmt::Display for Sig {
 ///
 /// ```rust
 /// # use rocket::figment::{Figment, providers::{Format, Toml}};
-/// use rocket::{Rocket, Config};
-/// use rocket::config::Shutdown;
+/// use rocket::config::{Config, Shutdown};
 ///
 /// #[cfg(unix)]
 /// use rocket::config::Sig;
@@ -168,6 +186,8 @@ impl fmt::Display for Sig {
 ///         },
 ///         grace: 10,
 ///         mercy: 5,
+///         force: true,
+///         ..Default::default()
 ///     },
 ///     ..Config::default()
 /// };
@@ -175,6 +195,7 @@ impl fmt::Display for Sig {
 /// assert_eq!(config.shutdown.ctrlc, false);
 /// assert_eq!(config.shutdown.grace, 10);
 /// assert_eq!(config.shutdown.mercy, 5);
+/// assert_eq!(config.shutdown.force, true);
 ///
 /// #[cfg(unix)] {
 ///     assert_eq!(config.shutdown.signals.len(), 2);
@@ -206,11 +227,40 @@ pub struct Shutdown {
     ///
     /// **default: `3`**
     pub mercy: u32,
+    /// Whether to force termination of an async runtime that refuses to
+    /// cooperatively shutdown.
+    ///
+    /// Rocket _never_ forcefully terminates a custom runtime, irrespective of
+    /// this value. A server that creates its own async runtime must take care
+    /// to terminate itself if it fails to cooperate.
+    ///
+    /// _**Note:** Rocket only reads this value from sources in the [default
+    /// provider](crate::Config::figment())._
+    ///
+    /// **default: `true`**
+    #[serde(deserialize_with = "figment::util::bool_from_str_or_int")]
+    pub force: bool,
+    /// PRIVATE: This structure may grow (but never change otherwise) in a
+    /// non-breaking release. As such, constructing this structure should
+    /// _always_ be done using a public constructor or update syntax:
+    ///
+    /// ```rust
+    /// use rocket::config::Shutdown;
+    ///
+    /// let config = Shutdown {
+    ///     grace: 5,
+    ///     mercy: 10,
+    ///     ..Default::default()
+    /// };
+    /// ```
+    #[doc(hidden)]
+    #[serde(skip)]
+    pub __non_exhaustive: (),
 }
 
 impl fmt::Display for Shutdown {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "ctrlc = {}, ", self.ctrlc)?;
+        write!(f, "ctrlc = {}, force = {}, ", self.ctrlc, self.force)?;
 
         #[cfg(unix)] {
             write!(f, "signals = [")?;
@@ -234,18 +284,20 @@ impl Default for Shutdown {
             signals: { let mut set = HashSet::new(); set.insert(Sig::Term); set },
             grace: 2,
             mercy: 3,
+            force: true,
+            __non_exhaustive: (),
         }
     }
 }
 
 impl Shutdown {
     #[cfg(unix)]
-    pub(crate) fn collective_signal(&self) -> impl Future<Output = ()> {
-        use futures::future::{FutureExt, select_all};
+    pub(crate) fn signal_stream(&self) -> Option<impl Stream<Item = Sig>> {
+        use tokio_stream::{StreamExt, StreamMap, wrappers::SignalStream};
         use tokio::signal::unix::{signal, SignalKind};
 
         if !self.ctrlc && self.signals.is_empty() {
-            return Either::Right(pending());
+            return None;
         }
 
         let mut signals = self.signals.clone();
@@ -253,7 +305,7 @@ impl Shutdown {
             signals.insert(Sig::Int);
         }
 
-        let mut sigfuts = vec![];
+        let mut map = StreamMap::new();
         for sig in signals {
             let sigkind = match sig {
                 Sig::Alrm => SignalKind::alarm(),
@@ -268,36 +320,26 @@ impl Shutdown {
                 Sig::Usr2 => SignalKind::user_defined2()
             };
 
-            let sigfut = match signal(sigkind) {
-                Ok(mut signal) => Box::pin(async move {
-                    signal.recv().await;
-                    warn!("Received {} signal. Requesting shutdown.", sig);
-                }),
-                Err(e) => {
-                    warn!("Failed to enable `{}` shutdown signal.", sig);
-                    info_!("Error: {}", e);
-                    continue
-                }
-            };
-
-            sigfuts.push(sigfut);
+            match signal(sigkind) {
+                Ok(signal) => { map.insert(sig, SignalStream::new(signal)); },
+                Err(e) => warn!("Failed to enable `{}` shutdown signal: {}", sig, e),
+            }
         }
 
-        Either::Left(select_all(sigfuts).map(|_| ()))
+        Some(map.map(|(k, _)| k))
     }
 
     #[cfg(not(unix))]
-    pub(crate) fn collective_signal(&self) -> impl Future<Output = ()> {
-        use futures::future::FutureExt;
+    pub(crate) fn signal_stream(&self) -> Option<impl Stream<Item = Sig>> {
+        use tokio_stream::StreamExt;
+        use futures::stream::once;
 
-        match self.ctrlc {
-            true => Either::Left(tokio::signal::ctrl_c().map(|result| {
-                if let Err(e) = result {
-                    warn!("Failed to enable `ctrl-c` shutdown signal.");
-                    info_!("Error: {}", e);
-                }
-            })),
-            false => Either::Right(pending()),
-        }
+        self.ctrlc.then(|| tokio::signal::ctrl_c())
+            .map(|signal| once(Box::pin(signal)))
+            .map(|stream| stream.filter_map(|result| {
+                result.map(|_| Sig::Int)
+                    .map_err(|e| warn!("Failed to enable `ctrl-c` shutdown signal: {}", e))
+                    .ok()
+            }))
     }
 }

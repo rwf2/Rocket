@@ -6,7 +6,6 @@ mod data;
 mod data_stream;
 mod from_data;
 mod limits;
-mod temp_file;
 
 pub use self::data::Data;
 pub use self::data_stream::DataStream;
@@ -14,6 +13,5 @@ pub use self::from_data::{FromData, Outcome};
 pub use self::limits::Limits;
 pub use self::capped::{N, Capped};
 pub use ubyte::{ByteUnit, ToByteUnit};
-pub use temp_file::TempFile;
 
 pub(crate) use self::data_stream::StreamReader;

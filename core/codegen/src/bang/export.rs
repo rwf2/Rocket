@@ -2,8 +2,7 @@ use std::hash::Hash;
 
 use devise::Spanned;
 use devise::ext::SpanDiagnosticExt;
-use devise::proc_macro2::{TokenStream, TokenTree, Punct};
-use devise::syn;
+use proc_macro2::{TokenStream, TokenTree, Punct};
 
 use crate::syn_ext::IdentExt;
 

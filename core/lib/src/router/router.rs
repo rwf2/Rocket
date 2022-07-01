@@ -32,7 +32,7 @@ impl Router {
     pub fn add_catcher(&mut self, catcher: Catcher) {
         let catchers = self.catchers.entry(catcher.code).or_default();
         catchers.push(catcher);
-        catchers.sort_by(|a, b| b.base.path_segments().len().cmp(&a.base.path_segments().len()))
+        catchers.sort_by(|a, b| b.base.path().segments().len().cmp(&a.base.path().segments().len()))
     }
 
     #[inline]
@@ -68,7 +68,7 @@ impl Router {
             (None, None) => None,
             (None, c@Some(_)) | (c@Some(_), None) => c,
             (Some(a), Some(b)) => {
-                if b.base.path_segments().len() > a.base.path_segments().len() {
+                if b.base.path().segments().len() > a.base.path().segments().len() {
                     Some(b)
                 } else {
                     Some(a)

@@ -1,34 +1,32 @@
 #[macro_use] extern crate rocket;
 
+#[cfg(test)]
+mod tests;
 mod paste_id;
-#[cfg(test)] mod tests;
 
 use std::io;
 
-use rocket::State;
 use rocket::data::{Data, ToByteUnit};
 use rocket::http::uri::Absolute;
-use rocket::response::content::Plain;
+use rocket::response::content::RawText;
 use rocket::tokio::fs::{self, File};
 
-use crate::paste_id::PasteId;
+use paste_id::PasteId;
 
-const HOST: &str = "http://localhost:8000";
+// In a real application, these would be retrieved dynamically from a config.
+const HOST: Absolute<'static> = uri!("http://localhost:8000");
 const ID_LENGTH: usize = 3;
 
 #[post("/", data = "<paste>")]
-async fn upload(paste: Data, host: &State<Absolute<'_>>) -> io::Result<String> {
+async fn upload(paste: Data<'_>) -> io::Result<String> {
     let id = PasteId::new(ID_LENGTH);
     paste.open(128.kibibytes()).into_file(id.file_path()).await?;
-
-    // TODO: Ok(uri!(HOST, retrieve: id))
-    let host = host.inner().clone();
-    Ok(host.with_origin(uri!(retrieve: id)).to_string())
+    Ok(uri!(HOST, retrieve(id)).to_string())
 }
 
 #[get("/<id>")]
-async fn retrieve(id: PasteId<'_>) -> Option<Plain<File>> {
-    File::open(id.file_path()).await.map(Plain).ok()
+async fn retrieve(id: PasteId<'_>) -> Option<RawText<File>> {
+    File::open(id.file_path()).await.map(RawText).ok()
 }
 
 #[delete("/<id>")]
@@ -56,7 +54,5 @@ fn index() -> &'static str {
 
 #[launch]
 fn rocket() -> _ {
-    rocket::build()
-        .manage(Absolute::parse(HOST).expect("valid host"))
-        .mount("/", routes![index, upload, delete, retrieve])
+    rocket::build().mount("/", routes![index, upload, delete, retrieve])
 }

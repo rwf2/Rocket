@@ -2,9 +2,12 @@
 
 use std::ops::Deref;
 use std::hash::{Hash, Hasher};
+use std::borrow::Cow;
 
-use crate::syn::{self, Ident, ext::IdentExt as _, visit::Visit};
-use crate::proc_macro2::Span;
+use syn::{self, Ident, ext::IdentExt as _, visit::Visit};
+use proc_macro2::{Span, TokenStream};
+use devise::ext::{PathExt, TypeExt as _};
+use rocket_http::ext::IntoOwned;
 
 pub trait IdentExt {
     fn prepend(&self, string: &str) -> syn::Ident;
@@ -19,7 +22,7 @@ pub trait ReturnTypeExt {
 }
 
 pub trait TokenStreamExt {
-    fn respanned(&self, span: crate::proc_macro2::Span) -> Self;
+    fn respanned(&self, span: Span) -> Self;
 }
 
 pub trait FnArgExt {
@@ -27,10 +30,20 @@ pub trait FnArgExt {
     fn wild(&self) -> Option<&syn::PatWild>;
 }
 
+pub trait TypeExt {
+    fn unfold(&self) -> Vec<Child<'_>>;
+    fn unfold_with_ty_macros(&self, names: &[&str], mapper: MacTyMapFn) -> Vec<Child<'_>>;
+    fn is_concrete(&self, generic_ident: &[&Ident]) -> bool;
+}
+
+pub trait GenericsExt {
+    fn type_idents(&self) -> Vec<&Ident>;
+}
+
 #[derive(Debug)]
 pub struct Child<'a> {
-    pub parent: Option<&'a syn::Type>,
-    pub ty: &'a syn::Type,
+    pub parent: Option<Cow<'a, syn::Type>>,
+    pub ty: Cow<'a, syn::Type>,
 }
 
 impl Deref for Child<'_> {
@@ -41,10 +54,18 @@ impl Deref for Child<'_> {
     }
 }
 
-pub trait TypeExt {
-    fn unfold(&self) -> Vec<Child<'_>>;
-    fn is_concrete(&self, generic_ident: &[&Ident]) -> bool;
+impl IntoOwned for Child<'_> {
+    type Owned = Child<'static>;
+
+    fn into_owned(self) -> Self::Owned {
+        Child {
+            parent: self.parent.into_owned(),
+            ty: Cow::Owned(self.ty.into_owned()),
+        }
+    }
 }
+
+type MacTyMapFn = fn(&TokenStream) -> Option<syn::Type>;
 
 impl IdentExt for syn::Ident {
     fn prepend(&self, string: &str) -> syn::Ident {
@@ -91,8 +112,8 @@ impl ReturnTypeExt for syn::ReturnType {
     }
 }
 
-impl TokenStreamExt for crate::proc_macro2::TokenStream {
-    fn respanned(&self, span: crate::proc_macro2::Span) -> Self {
+impl TokenStreamExt for TokenStream {
+    fn respanned(&self, span: Span) -> Self {
         self.clone().into_iter().map(|mut token| {
             token.set_span(span);
             token
@@ -122,24 +143,61 @@ impl FnArgExt for syn::FnArg {
     }
 }
 
+fn macro_inner_ty(t: &syn::TypeMacro, names: &[&str], m: MacTyMapFn) -> Option<syn::Type> {
+    if !names.iter().any(|k| t.mac.path.last_ident().map_or(false, |i| i == k)) {
+        return None;
+    }
+
+    let mut ty = m(&t.mac.tokens)?;
+    ty.strip_lifetimes();
+    Some(ty)
+}
+
 impl TypeExt for syn::Type {
     fn unfold(&self) -> Vec<Child<'_>> {
-        #[derive(Default)]
-        struct Visitor<'a> {
-            parents: Vec<&'a syn::Type>,
+        self.unfold_with_ty_macros(&[], |_| None)
+    }
+
+    fn unfold_with_ty_macros(&self, names: &[&str], mapper: MacTyMapFn) -> Vec<Child<'_>> {
+        struct Visitor<'a, 'm> {
+            parents: Vec<Cow<'a, syn::Type>>,
             children: Vec<Child<'a>>,
+            names: &'m [&'m str],
+            mapper: MacTyMapFn,
         }
 
-        impl<'a> Visit<'a> for Visitor<'a> {
+        impl<'m> Visitor<'_, 'm> {
+            fn new(names: &'m [&'m str], mapper: MacTyMapFn) -> Self {
+                Visitor { parents: vec![], children: vec![], names, mapper }
+            }
+        }
+
+        impl<'a> Visit<'a> for Visitor<'a, '_> {
             fn visit_type(&mut self, ty: &'a syn::Type) {
-                self.children.push(Child { parent: self.parents.last().cloned(), ty });
-                self.parents.push(ty);
+                let parent = self.parents.last().cloned();
+
+                if let syn::Type::Macro(t) = ty {
+                    if let Some(inner_ty) = macro_inner_ty(t, self.names, self.mapper) {
+                        let mut visitor = Visitor::new(self.names, self.mapper);
+                        if let Some(parent) = parent.clone().into_owned() {
+                            visitor.parents.push(parent);
+                        }
+
+                        visitor.visit_type(&inner_ty);
+                        let mut children = visitor.children.into_owned();
+                        self.children.append(&mut children);
+                        return;
+                    }
+                }
+
+                self.children.push(Child { parent, ty: Cow::Borrowed(ty) });
+                self.parents.push(Cow::Borrowed(ty));
                 syn::visit::visit_type(self, ty);
                 self.parents.pop();
             }
         }
 
-        let mut visitor = Visitor::default();
+        let mut visitor = Visitor::new(names, mapper);
         visitor.visit_type(self);
         visitor.children
     }
@@ -154,15 +212,12 @@ impl TypeExt for syn::Type {
                 match ty {
                     Path(t) if self.1.iter().any(|i| t.path.is_ident(*i)) => {
                         self.0 = false;
-                        return;
                     }
                     ImplTrait(_) | Infer(_) | Macro(_) => {
                         self.0 = false;
-                        return;
                     }
                     BareFn(_) | Never(_) => {
                         self.0 = true;
-                        return;
                     },
                     _ => syn::visit::visit_type(self, ty),
                 }
@@ -172,6 +227,12 @@ impl TypeExt for syn::Type {
         let mut visitor = ConcreteVisitor(true, generics);
         visitor.visit_type(self);
         visitor.0
+    }
+}
+
+impl GenericsExt for syn::Generics {
+    fn type_idents(&self) -> Vec<&Ident> {
+        self.type_params().map(|p| &p.ident).collect()
     }
 }
 

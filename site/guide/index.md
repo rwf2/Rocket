@@ -2,7 +2,7 @@
 
 Welcome to Rocket!
 
-This is the official guide for Rocket master. It is designed to serve as a
+This is the official guide for Rocket v0.5. It is designed to serve as a
 starting point to writing web applications with Rocket and Rust. The guide is
 also designed to be a reference for experienced Rocket developers. This guide is
 conversational in tone. For purely technical documentation with examples, see
@@ -14,6 +14,7 @@ aspect of Rocket. The sections are:
    - **[Introduction](introduction/):** introduces Rocket and its philosophy.
    - **[Quickstart](quickstart/):** presents the minimal steps necessary to
       run your first Rocket application.
+   - **[Upgrading from v0.4](upgrading/):** a migration guide from v0.4 to v0.5.
    - **[Getting Started](getting-started/):** a gentle introduction to getting
      your first Rocket application running.
    - **[Overview](overview/):** describes the core concepts of Rocket.
@@ -26,19 +27,22 @@ aspect of Rocket. The sections are:
    - **[Testing](testing/):** how to unit and integration test a Rocket
      application.
    - **[Configuration](configuration/):** how to configure a Rocket application.
-   - **[Pastebin](pastebin/):** a tutorial on how to create a pastebin with
-     Rocket.
+   - **[Pastebin Tutorial](pastebin-tutorial/):** a tutorial creating a pastebin
+     with Rocket.
    - **[Conclusion](conclusion/):** concludes the guide and discusses next steps
      for learning.
+   - **[FAQ](faq/):** answers to frequently asked questions about Rocket and
+     using it.
 
 ## Getting Help
 
 The official community support channels are [`#rocket:mozilla.org`] on Matrix
-and the bridged [`#rocket`] IRC channel on Freenode at `chat.freenode.net`. We
+and the bridged [`#rocket`] IRC channel on Libera.Chat at `irc.libera.chat`. We
 recommend joining us on [Matrix via Element]. If you prefer IRC, you can join
-via the [Kiwi IRC client] or a client of your own.
+via the [Kiwi IRC client] or a client of your own. The [FAQ](../faq/) also
+provides answers to commonly asked questions.
 
 [`#rocket:mozilla.org`]: https://chat.mozilla.org/#/room/#rocket:mozilla.org
-[`#rocket`]: https://kiwiirc.com/client/chat.freenode.net/#rocket
+[`#rocket`]: https://kiwiirc.com/client/irc.libera.chat/#rocket
 [Matrix via Element]: https://chat.mozilla.org/#/room/#rocket:mozilla.org
-[Kiwi IRC Client]: https://kiwiirc.com/client/chat.freenode.net/#rocket
+[Kiwi IRC Client]: https://kiwiirc.com/client/irc.libera.chat/#rocket

@@ -46,35 +46,33 @@ impl<T> IntoCollection<T> for Vec<T> {
     }
 }
 
-macro_rules! impl_for_slice {
-    ($($size:tt)*) => (
-        impl<T: Clone> IntoCollection<T> for &[T $($size)*] {
-            #[inline(always)]
-            fn into_collection<A: Array<Item=T>>(self) -> SmallVec<A> {
-                self.iter().cloned().collect()
-            }
+impl<T: Clone> IntoCollection<T> for &[T] {
+    #[inline(always)]
+    fn into_collection<A: Array<Item=T>>(self) -> SmallVec<A> {
+        self.iter().cloned().collect()
+    }
 
-            #[inline]
-            fn mapped<U, F, A: Array<Item=U>>(self, f: F) -> SmallVec<A>
-                where F: FnMut(T) -> U
-            {
-                self.iter().cloned().map(f).collect()
-            }
-        }
-    )
+    #[inline]
+    fn mapped<U, F, A: Array<Item=U>>(self, f: F) -> SmallVec<A>
+        where F: FnMut(T) -> U
+    {
+        self.iter().cloned().map(f).collect()
+    }
 }
 
-impl_for_slice!();
-impl_for_slice!(; 1);
-impl_for_slice!(; 2);
-impl_for_slice!(; 3);
-impl_for_slice!(; 4);
-impl_for_slice!(; 5);
-impl_for_slice!(; 6);
-impl_for_slice!(; 7);
-impl_for_slice!(; 8);
-impl_for_slice!(; 9);
-impl_for_slice!(; 10);
+impl<T, const N: usize> IntoCollection<T> for [T; N] {
+    #[inline(always)]
+    fn into_collection<A: Array<Item=T>>(self) -> SmallVec<A> {
+        self.into_iter().collect()
+    }
+
+    #[inline]
+    fn mapped<U, F, A: Array<Item=U>>(self, f: F) -> SmallVec<A>
+        where F: FnMut(T) -> U
+    {
+        self.into_iter().map(f).collect()
+    }
+}
 
 use std::borrow::Cow;
 
@@ -137,6 +135,22 @@ impl<B: 'static + ToOwned + ?Sized> IntoOwned for Cow<'_, B> {
         Cow::Owned(self.into_owned())
     }
 }
+
+macro_rules! impl_into_owned_self {
+    ($($T:ty),*) => ($(
+        impl IntoOwned for $T {
+            type Owned = Self;
+
+            #[inline(always)]
+            fn into_owned(self) -> <Self as IntoOwned>::Owned {
+                self
+            }
+        }
+    )*)
+}
+
+impl_into_owned_self!(u8, u16, u32, u64, usize);
+impl_into_owned_self!(i8, i16, i32, i64, isize);
 
 use std::path::Path;
 

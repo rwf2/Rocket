@@ -106,7 +106,7 @@ impl Route {
 
 fn paths_match(route: &Route, req: &Request<'_>) -> bool {
     let route_segments = &route.uri.metadata.path_segs;
-    let req_segments = req.uri().path_segments();
+    let req_segments = req.uri().path().segments();
 
     if route.uri.metadata.trailing_path {
         // The last route segment can be trailing, which is allowed to be empty.
@@ -145,8 +145,13 @@ fn queries_match(route: &Route, req: &Request<'_>) -> bool {
         .map(|(k, v)| (k.as_str(), v.as_str()));
 
     for route_seg in route_query_fields {
-        if !req.uri().query_segments().any(|req_seg| req_seg == route_seg) {
-            trace_!("request {} missing static query {:?}", req, route_seg);
+        if let Some(query) = req.uri().query() {
+            if !query.segments().any(|req_seg| req_seg == route_seg) {
+                trace_!("request {} missing static query {:?}", req, route_seg);
+                return false;
+            }
+        } else {
+            trace_!("query-less request {} missing static query {:?}", req, route_seg);
             return false;
         }
     }
@@ -181,7 +186,7 @@ impl Collide for Catcher {
     ///  * Have the same status code or are both defaults.
     fn collides_with(&self, other: &Self) -> bool {
         self.code == other.code
-            && self.base.path_segments().eq(other.base.path_segments())
+            && self.base.path().segments().eq(other.base.path().segments())
     }
 }
 
@@ -193,7 +198,7 @@ impl Catcher {
     ///  * Its base is a prefix of the normalized/decoded `req.path()`.
     pub(crate) fn matches(&self, status: Status, req: &Request<'_>) -> bool {
         self.code.map_or(true, |code| code == status.code)
-            && self.base.path_segments().prefix_of(req.uri().path_segments())
+            && self.base.path().segments().prefix_of(req.uri().path().segments())
     }
 }
 

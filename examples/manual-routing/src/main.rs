@@ -1,34 +1,32 @@
 #[cfg(test)]
 mod tests;
 
-use std::env;
-
 use rocket::{Request, Route, Catcher, route, catcher};
 use rocket::data::{Data, ToByteUnit};
-use rocket::http::{Status, Method::*};
+use rocket::http::{Status, Method::{Get, Post}};
 use rocket::response::{Responder, status::Custom};
 use rocket::outcome::{try_outcome, IntoOutcome};
 use rocket::tokio::fs::File;
 
-fn forward<'r>(_req: &'r Request, data: Data) -> route::BoxFuture<'r> {
+fn forward<'r>(_req: &'r Request, data: Data<'r>) -> route::BoxFuture<'r> {
     Box::pin(async move { route::Outcome::forward(data) })
 }
 
-fn hi<'r>(req: &'r Request, _: Data) -> route::BoxFuture<'r> {
+fn hi<'r>(req: &'r Request, _: Data<'r>) -> route::BoxFuture<'r> {
     route::Outcome::from(req, "Hello!").pin()
 }
 
-fn name<'a>(req: &'a Request, _: Data) -> route::BoxFuture<'a> {
-    let param = req.param::<&'a str>(0)
-        .and_then(|res| res.ok())
-        .unwrap_or("unnamed".into());
+fn name<'r>(req: &'r Request, _: Data<'r>) -> route::BoxFuture<'r> {
+    let param = req.param::<&'r str>(0)
+        .and_then(Result::ok)
+        .unwrap_or("unnamed");
 
     route::Outcome::from(req, param).pin()
 }
 
-fn echo_url<'r>(req: &'r Request, _: Data) -> route::BoxFuture<'r> {
+fn echo_url<'r>(req: &'r Request, _: Data<'r>) -> route::BoxFuture<'r> {
     let param_outcome = req.param::<&str>(1)
-        .and_then(|res| res.ok())
+        .and_then(Result::ok)
         .into_outcome(Status::BadRequest);
 
     Box::pin(async move {
@@ -36,14 +34,15 @@ fn echo_url<'r>(req: &'r Request, _: Data) -> route::BoxFuture<'r> {
     })
 }
 
-fn upload<'r>(req: &'r Request, data: Data) -> route::BoxFuture<'r> {
+fn upload<'r>(req: &'r Request, data: Data<'r>) -> route::BoxFuture<'r> {
     Box::pin(async move {
         if !req.content_type().map_or(false, |ct| ct.is_plain()) {
             println!("    => Content-Type of upload must be text/plain. Ignoring.");
             return route::Outcome::failure(Status::BadRequest);
         }
 
-        let file = File::create(env::temp_dir().join("upload.txt")).await;
+        let path = req.rocket().config().temp_dir.relative().join("upload.txt");
+        let file = File::create(path).await;
         if let Ok(file) = file {
             if let Ok(n) = data.open(2.mebibytes()).stream_to(file).await {
                 return route::Outcome::from(req, format!("OK: {} bytes uploaded.", n));
@@ -58,13 +57,14 @@ fn upload<'r>(req: &'r Request, data: Data) -> route::BoxFuture<'r> {
     })
 }
 
-fn get_upload<'r>(req: &'r Request, _: Data) -> route::BoxFuture<'r> {
-    route::Outcome::from(req, std::fs::File::open(env::temp_dir().join("upload.txt")).ok()).pin()
+fn get_upload<'r>(req: &'r Request, _: Data<'r>) -> route::BoxFuture<'r> {
+    let path = req.rocket().config().temp_dir.relative().join("upload.txt");
+    route::Outcome::from(req, std::fs::File::open(path).ok()).pin()
 }
 
 fn not_found_handler<'r>(_: Status, req: &'r Request) -> catcher::BoxFuture<'r> {
-    let res = Custom(Status::NotFound, format!("Couldn't find: {}", req.uri()));
-    Box::pin(async move { res.respond_to(req) })
+    let responder = Custom(Status::NotFound, format!("Couldn't find: {}", req.uri()));
+    Box::pin(async move { responder.respond_to(req) })
 }
 
 #[derive(Clone)]
@@ -73,17 +73,17 @@ struct CustomHandler {
 }
 
 impl CustomHandler {
-    fn new(data: &'static str) -> Vec<Route> {
+    fn routes(data: &'static str) -> Vec<Route> {
         vec![Route::new(Get, "/<id>", Self { data })]
     }
 }
 
 #[rocket::async_trait]
 impl route::Handler for CustomHandler {
-    async fn handle<'r>(&self, req: &'r Request<'_>, data: Data) -> route::Outcome<'r> {
+    async fn handle<'r>(&self, req: &'r Request<'_>, data: Data<'r>) -> route::Outcome<'r> {
         let self_data = self.data;
         let id = req.param::<&str>(0)
-            .and_then(|res| res.ok())
+            .and_then(Result::ok)
             .or_forward(data);
 
         route::Outcome::from(req, format!("{} - {}", self_data, try_outcome!(id)))
@@ -107,6 +107,6 @@ fn rocket() -> _ {
         .mount("/upload", vec![get_upload, post_upload])
         .mount("/hello", vec![name.clone()])
         .mount("/hi", vec![name])
-        .mount("/custom", CustomHandler::new("some data here"))
+        .mount("/custom", CustomHandler::routes("some data here"))
         .register("/", vec![not_found_catcher])
 }

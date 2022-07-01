@@ -23,14 +23,16 @@ jobs:
           - { name: Contrib, flag: "--contrib" }
           - { name: Examples, flag: "--examples" }
         include:
-          - platform: { name: Linux, distro: ubuntu-latest, toolchain: stable }
+          - platform: { name: Linux, distro: ubuntu-latest, toolchain: nightly }
             test: { name: Core, flag: "--core" }
           - platform: { name: Linux, distro: ubuntu-latest, toolchain: stable }
             test: { name: Release, flag: "--release" }
 
-    continue-on-error: ${{ matrix.platform.toolchain == 'nightly' }}
-
     runs-on: ${{ matrix.platform.distro }}
+
+    continue-on-error: ${{ matrix.platform.name == 'Linux'
+      && matrix.platform.toolchain == 'nightly'
+      && matrix.test.name == 'Debug' }}
 
     steps:
       - name: Checkout Sources
@@ -81,5 +83,5 @@ jobs:
           key: ${{ matrix.test.name }}
 
       - name: Run Tests
-        run: ./scripts/test.sh ${{ matrix.test.flag }}
+        run: ./scripts/test.sh ${{ matrix.test.flag }} -q
         shell: bash

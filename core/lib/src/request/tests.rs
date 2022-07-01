@@ -1,4 +1,3 @@
-use std::net::{IpAddr, Ipv4Addr, SocketAddr};
 use std::collections::HashMap;
 
 use crate::Request;
@@ -7,23 +6,20 @@ use crate::http::hyper;
 
 macro_rules! assert_headers {
     ($($key:expr => [$($value:expr),+]),+) => ({
-        // Set up the parameters to the hyper request object.
-        let h_method = hyper::Method::GET;
-        let h_uri = "/test".parse().unwrap();
-        let h_addr = SocketAddr::new(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)), 8000);
-        let mut h_headers = hyper::HeaderMap::new();
-
-        // Add all of the passed in headers to the request.
-        $($(h_headers.append($key, hyper::HeaderValue::from_str($value).unwrap());)+)+
+        // Create a new Hyper request. Add all of the passed in headers.
+        let mut req = hyper::Request::get("/test").body(()).unwrap();
+        $($(req.headers_mut().append($key, hyper::HeaderValue::from_str($value).unwrap());)+)+
 
         // Build up what we expect the headers to actually be.
         let mut expected = HashMap::new();
         $(expected.entry($key).or_insert(vec![]).append(&mut vec![$($value),+]);)+
 
-        // Dispatch the request and check that the headers are what we expect.
+        // Create a valid `Rocket` and convert the hyper req to a Rocket one.
         let client = Client::debug_with(vec![]).unwrap();
-        let r = client.rocket();
-        let req = Request::from_hyp(r, h_method, h_headers, &h_uri, h_addr).unwrap();
+        let hyper = req.into_parts().0;
+        let req = Request::from_hyp(client.rocket(), &hyper, None).unwrap();
+
+        // Dispatch the request and check that the headers match.
         let actual_headers = req.headers();
         for (key, values) in expected.iter() {
             let actual: Vec<_> = actual_headers.get(key).collect();

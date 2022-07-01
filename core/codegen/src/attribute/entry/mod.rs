@@ -2,9 +2,9 @@ mod main;
 mod launch;
 mod test;
 
-use devise::{syn, Diagnostic, Spanned, Result};
+use devise::{Diagnostic, Spanned, Result};
 use devise::ext::SpanDiagnosticExt;
-use devise::proc_macro2::{TokenStream, Span};
+use proc_macro2::{TokenStream, Span};
 
 // Common trait implemented by `async` entry generating attributes.
 trait EntryAttr {
@@ -35,7 +35,7 @@ fn _async_entry<A: EntryAttr>(
             .span_note(function.sig.span(), "this function must take no arguments"));
     }
 
-    A::function(&mut function).map(|t| t.into())
+    A::function(&mut function)
 }
 
 macro_rules! async_entry {

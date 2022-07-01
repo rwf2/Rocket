@@ -49,7 +49,7 @@ impl<A, T: ?Sized + ToOwned> From<Extent<A>> for Indexed<'_, T> {
 impl<'a, T: ?Sized + ToOwned + 'a> From<Cow<'a, T>> for Indexed<'a, T> {
     #[inline(always)]
     fn from(value: Cow<'a, T>) -> Indexed<'a, T> {
-        Indexed::Concrete(value.into())
+        Indexed::Concrete(value)
     }
 }
 
@@ -164,17 +164,32 @@ impl<'a, T: ?Sized + ToOwned + 'a> Indexed<'a, T>
         self.len() == 0
     }
 
+    /// Make `self` concrete by allocating if indexed.
+    ///
+    /// # Panics
+    ///
+    /// Panics if `self` is an indexed string and `source` is None.
+    pub fn into_concrete(self, source: &Option<Cow<'_, T>>) -> Cow<'a, T> {
+        if self.is_indexed() && source.is_none() {
+            panic!("cannot concretize indexed str to str without base string!")
+        }
+
+        match self {
+            Indexed::Indexed(i, j) => Cow::Owned(source.as_ref().unwrap()[i..j].to_owned()),
+            Indexed::Concrete(string) => string,
+        }
+    }
+
     /// Retrieves the string `self` corresponds to. If `self` is derived from
     /// indexes, the corresponding subslice of `source` is returned. Otherwise,
     /// the concrete string is returned.
     ///
     /// # Panics
     ///
-    /// Panics if `self` is an indexed string and `string` is None.
-    // pub fn to_source(&self, source: Option<&'a T>) -> &T {
+    /// Panics if `self` is an indexed string and `source` is None.
     pub fn from_cow_source<'s>(&'s self, source: &'s Option<Cow<'_, T>>) -> &'s T {
         if self.is_indexed() && source.is_none() {
-            panic!("Cannot convert indexed str to str without base string!")
+            panic!("cannot convert indexed str to str without base string!")
         }
 
         match *self {

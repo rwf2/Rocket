@@ -1,0 +1,153 @@
+error: need at least one field
+ --> $DIR/responder.rs:4:1
+  |
+4 | struct Thing1;
+  | ^^^^^^
+
+error: [note] error occurred while deriving `Responder`
+ --> $DIR/responder.rs:3:10
+  |
+3 | #[derive(Responder)]
+  |          ^^^^^^^^^
+  |
+  = note: this error originates in the derive macro `Responder` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+error: need at least one field
+ --> $DIR/responder.rs:7:14
+  |
+7 | struct Thing2();
+  |              ^^
+
+error: [note] error occurred while deriving `Responder`
+ --> $DIR/responder.rs:6:10
+  |
+6 | #[derive(Responder)]
+  |          ^^^^^^^^^
+  |
+  = note: this error originates in the derive macro `Responder` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+error: need at least one field
+  --> $DIR/responder.rs:13:12
+   |
+13 | enum Foo { Bark, }
+   |            ^^^^
+
+error: [note] error occurred while deriving `Responder`
+  --> $DIR/responder.rs:12:10
+   |
+12 | #[derive(Responder)]
+   |          ^^^^^^^^^
+   |
+   = note: this error originates in the derive macro `Responder` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+error: only one lifetime is supported
+  --> $DIR/responder.rs:16:14
+   |
+16 | struct Thing4<'a, 'b>(&'a str, &'b str);
+   |              ^
+
+error: [note] error occurred while deriving `Responder`
+  --> $DIR/responder.rs:15:10
+   |
+15 | #[derive(Responder)]
+   |          ^^^^^^^^^
+   |
+   = note: this error originates in the derive macro `Responder` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+error: invalid or unknown content type
+  --> $DIR/responder.rs:25:27
+   |
+25 | #[response(content_type = "")]
+   |                           ^^
+
+error: [note] error occurred while deriving `Responder`
+  --> $DIR/responder.rs:24:10
+   |
+24 | #[derive(Responder)]
+   |          ^^^^^^^^^
+   |
+   = note: this error originates in the derive macro `Responder` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+error: invalid or unknown content type
+  --> $DIR/responder.rs:29:27
+   |
+29 | #[response(content_type = "idk")]
+   |                           ^^^^^
+
+error: [note] error occurred while deriving `Responder`
+  --> $DIR/responder.rs:28:10
+   |
+28 | #[derive(Responder)]
+   |          ^^^^^^^^^
+   |
+   = note: this error originates in the derive macro `Responder` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+error: invalid value: expected string literal
+  --> $DIR/responder.rs:33:27
+   |
+33 | #[response(content_type = 100)]
+   |                           ^^^
+
+error: [note] error occurred while deriving `Responder`
+  --> $DIR/responder.rs:32:10
+   |
+32 | #[derive(Responder)]
+   |          ^^^^^^^^^
+   |
+   = note: this error originates in the derive macro `Responder` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+error: status must be in range [100, 599]
+  --> $DIR/responder.rs:37:21
+   |
+37 | #[response(status = 8)]
+   |                     ^
+
+error: [note] error occurred while deriving `Responder`
+  --> $DIR/responder.rs:36:10
+   |
+36 | #[derive(Responder)]
+   |          ^^^^^^^^^
+   |
+   = note: this error originates in the derive macro `Responder` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+error: invalid value: expected unsigned integer literal
+  --> $DIR/responder.rs:41:21
+   |
+41 | #[response(status = "404")]
+   |                     ^^^^^
+
+error: [note] error occurred while deriving `Responder`
+  --> $DIR/responder.rs:40:10
+   |
+40 | #[derive(Responder)]
+   |          ^^^^^^^^^
+   |
+   = note: this error originates in the derive macro `Responder` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+error: invalid value: expected unsigned integer literal
+  --> $DIR/responder.rs:45:21
+   |
+45 | #[response(status = "404", content_type = "html")]
+   |                     ^^^^^
+
+error: [note] error occurred while deriving `Responder`
+  --> $DIR/responder.rs:44:10
+   |
+44 | #[derive(Responder)]
+   |          ^^^^^^^^^
+   |
+   = note: this error originates in the derive macro `Responder` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+error: invalid value: expected string literal
+  --> $DIR/responder.rs:49:41
+   |
+49 | #[response(status = 404, content_type = 120)]
+   |                                         ^^^
+
+error: [note] error occurred while deriving `Responder`
+  --> $DIR/responder.rs:48:10
+   |
+48 | #[derive(Responder)]
+   |          ^^^^^^^^^
+   |
+   = note: this error originates in the derive macro `Responder` (in Nightly builds, run with -Z macro-backtrace for more info)

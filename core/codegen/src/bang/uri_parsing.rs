@@ -1,13 +1,16 @@
+use std::ops::Deref;
+
 use indexmap::IndexMap;
 use devise::{Spanned, ext::TypeExt};
-use quote::ToTokens;
+use quote::{ToTokens, TokenStreamExt};
+use syn::{Expr, Ident, LitStr, Path, Token, Type};
+use syn::parse::{self, Parse, ParseStream, Parser};
+use syn::punctuated::Punctuated;
+use proc_macro2::{TokenStream, TokenTree, Span};
+use rocket_http::uri::{Error, Reference};
 
-use crate::syn::{self, Expr, Ident, LitStr, Path, Token, Type};
-use crate::syn::parse::{self, Parse, ParseStream};
-use crate::syn::punctuated::Punctuated;
-
-use crate::http::{uri, uri::Origin, ext::IntoOwned};
-use crate::proc_macro2::{TokenStream, Span};
+use crate::http::uri::{Uri, Origin, Absolute, fmt};
+use crate::http::ext::IntoOwned;
 use crate::proc_macro_ext::StringLit;
 use crate::attribute::param::{Parameter, Dynamic};
 use crate::name::Name;
@@ -32,24 +35,54 @@ pub enum Args {
     Named(Punctuated<Arg, Token![,]>),
 }
 
-// For an invocation that looks like:
-//  uri!("/mount/point", this::route: e1, e2, e3);
-//       ^-------------| ^----------| ^---------|
-//           uri_params.mount_point |    uri_params.arguments
-//                      uri_params.route_path
+/// A string literal parsed as a URI.
 #[derive(Debug)]
-pub struct UriParams {
-    pub mount_point: Option<Origin<'static>>,
-    pub route_path: Path,
-    pub arguments: Args,
+pub struct UriLit(Uri<'static>, Span);
+
+/// An expression in a URI slot (prefix, suffix, or literal).
+#[derive(Debug)]
+pub enum UriExpr {
+    /// A string literal parsed as a URI.
+    Uri(UriLit),
+    /// An expression that will be typechecked to be some URI kind.
+    Expr(Expr),
+}
+
+/// See `UriMacro` for what each field represents.
+#[derive(Debug)]
+pub struct RouteInvocation {
+    pub path: Path,
+    pub args: Args,
+}
+
+/// See `UriMacro` for what each field represents.
+#[derive(Debug)]
+pub struct RoutedUri {
+    pub prefix: Option<UriExpr>,
+    pub route: RouteInvocation,
+    pub suffix: Option<UriExpr>,
+}
+
+// The macro can be invoked with 1, 2, or 3 arguments.
+//
+// As a `Literal`, with a single argument:
+//  uri!("/mount/point");
+//       ^-------------|
+//                 literal.0
+//
+// As `Routed`, with 1, 2, or 3 arguments: prefix/suffix optional.
+//  uri!("/mount/point", this::route(e1, e2, e3), "?some#suffix");
+//       ^-------------| ^---------|^----------|  |-----|------|
+//              routed.prefix      |           |   routed.suffix
+//                                 |   route.route.args
+//                        routed.route.path
+#[derive(Debug)]
+pub enum UriMacro {
+    Literal(UriLit),
+    Routed(RoutedUri),
 }
 
 #[derive(Debug)]
-pub struct FnArg {
-    pub ident: Ident,
-    pub ty: Type,
-}
-
 pub enum Validation<'a> {
     // Parameters that were ignored in a named argument setting.
     NamedIgnored(Vec<&'a Dynamic>),
@@ -63,27 +96,38 @@ pub enum Validation<'a> {
 
 // This is invoked by Rocket itself. The `uri!` macro expands to a call to a
 // route-specific macro which in-turn expands to a call to `internal_uri!`,
-// passing along the user's parameters (`uri_params`) from the original `uri!`
+// passing along the user's invocation (`uri_mac`) from the original `uri!`
 // call. This is necessary so that we can converge the type information in the
 // route (from the route-specific macro) with the user's parameters (by
 // forwarding them to the internal_uri! call).
 //
-// `fn_args` are the URI arguments (excluding request guards and ignored path
-// parts) from the original handler in the order they were declared in the URI
-// (`<first>/<second>`). `route_uri` is the URI itself.
+// `fn_args` are the URI arguments (excluding request guards) from the original
+// handler in the order they were declared in the URI (`<first>/<second>`).
+// `route_uri` is the full route URI itself.
+//
+// The syntax of `uri_mac` is that of `UriMacro`.
 //
 //  internal_uri!("/<one>/<_>?lang=en&<two>", (one: ty, two: ty), $($tt)*);
 //                ^----/----^ ^-----\-----^    ^-------/------^   ^-----|
-//               path_params    query_params       fn_args          uri_params
+//               path_params    query_params       fn_args          uri_mac
 //                ^------ route_uri ------^
 #[derive(Debug)]
 pub struct InternalUriParams {
     pub route_uri: Origin<'static>,
-    pub mount_params: Vec<Parameter>,
     pub path_params: Vec<Parameter>,
     pub query_params: Vec<Parameter>,
     pub fn_args: Vec<FnArg>,
-    pub uri_params: UriParams,
+    pub uri_mac: RoutedUri,
+}
+
+#[derive(Debug)]
+pub struct FnArg {
+    pub ident: Ident,
+    pub ty: Type,
+}
+
+fn err<T, S: AsRef<str>>(span: Span, s: S) -> parse::Result<T> {
+    Err(parse::Error::new(span, s.as_ref()))
 }
 
 impl Parse for ArgExpr {
@@ -111,77 +155,139 @@ impl Parse for Arg {
     }
 }
 
-fn err<T, S: AsRef<str>>(span: Span, s: S) -> parse::Result<T> {
-    Err(parse::Error::new(span.into(), s.as_ref()))
-}
-
-impl Parse for UriParams {
-    // Parses the mount point, if any, route identifier, and arguments.
-    fn parse(input: ParseStream<'_>) -> parse::Result<Self> {
-        if input.is_empty() {
-            return Err(input.error("call to `uri!` cannot be empty"));
-        }
-
-        // Parse the mount point and suffixing ',', if any.
-        let mount_point = if input.peek(LitStr) {
-            let string = input.parse::<LitStr>()?;
-            let mount_point = Origin::parse_owned(string.value())
-                .map(|m| m.into_normalized())
-                .map_err(|_| {
-                    // TODO(proc_macro): use error, add example as a help
-                    parse::Error::new(string.span(), "invalid mount point; \
-                    mount points must be static, absolute URIs: `/example`")
-                })?;
-
-            if !input.peek(Token![,]) && input.cursor().eof() {
-                return err(string.span(), "unexpected end of input: \
-                    expected ',' followed by route path");
-            }
-
-            input.parse::<Token![,]>()?;
-            Some(mount_point)
-        } else {
-            None
-        };
-
-        // Parse the route identifier, which must always exist.
-        let route_path = input.parse::<Path>()?;
-
+impl Parse for Args {
+    fn parse(input: ParseStream<'_>) -> syn::Result<Self> {
         // If there are no arguments, finish early.
-        if !input.peek(Token![:]) && input.cursor().eof() {
-            let arguments = Args::Unnamed(Punctuated::new());
-            return Ok(Self { mount_point, route_path, arguments });
+        if input.cursor().eof() {
+            return Ok(Args::Unnamed(Punctuated::new()));
         }
 
-        // Parse arguments
-        let colon = input.parse::<Token![:]>()?;
-        let arguments: Punctuated<Arg, Token![,]> = input.parse_terminated(Arg::parse)?;
-
-        // A 'colon' was used but there are no arguments.
-        if arguments.is_empty() {
-            return err(colon.span(), "expected argument list after `:`");
-        }
-
-        // Ensure that both types of arguments were not used at once.
-        let (mut homogeneous_args, mut prev_named) = (true, None);
-        for arg in &arguments {
-            match prev_named {
-                Some(prev_named) => homogeneous_args = prev_named == arg.is_named(),
-                None => prev_named = Some(arg.is_named()),
+        // Parse arguments. Ensure both types of args were not used at once.
+        let args: Punctuated<Arg, Token![,]> = input.parse_terminated(Arg::parse)?;
+        let mut first_is_named = None;
+        for arg in &args {
+            if let Some(first_is_named) = first_is_named {
+                if first_is_named != arg.is_named() {
+                    return err(args.span(), "named and unnamed parameters cannot be mixed");
+                }
+            } else {
+                first_is_named = Some(arg.is_named());
             }
-        }
-
-        if !homogeneous_args {
-            return err(arguments.span(), "named and unnamed parameters cannot be mixed");
         }
 
         // Create the `Args` enum, which properly record one-kind-of-argument-ness.
-        let arguments = match prev_named {
-            Some(true) => Args::Named(arguments),
-            _ => Args::Unnamed(arguments)
+        match first_is_named {
+            Some(true) => Ok(Args::Named(args)),
+            _ => Ok(Args::Unnamed(args))
+        }
+    }
+}
+
+impl Parse for RouteInvocation {
+    fn parse(input: ParseStream<'_>) -> syn::Result<Self> {
+        let path = input.parse()?;
+        let args = if input.peek(syn::token::Paren) {
+            let args;
+            syn::parenthesized!(args in input);
+            args.parse()?
+        } else {
+            Args::Unnamed(Punctuated::new())
         };
 
-        Ok(Self { mount_point, route_path, arguments })
+        Ok(RouteInvocation { path, args })
+    }
+}
+
+impl Parse for UriLit {
+    fn parse(input: ParseStream<'_>) -> syn::Result<Self> {
+        let string = input.parse::<StringLit>()?;
+        let uri = match Uri::parse_any(&string) {
+            Ok(uri) => uri.into_owned(),
+            Err(e) => {
+                let span = string.subspan(e.index() + 1..(e.index() + 2));
+                return err(span, format!("invalid URI: {}", e));
+            }
+        };
+
+        Ok(UriLit(uri, string.span()))
+    }
+}
+
+impl UriMacro {
+    fn unary(input: ParseStream<'_>) -> parse::Result<Self> {
+        if input.peek(LitStr) {
+            Ok(UriMacro::Literal(input.parse()?))
+        } else {
+            Ok(UriMacro::Routed(RoutedUri {
+                prefix: None,
+                route: input.parse()?,
+                suffix: None,
+            }))
+        }
+    }
+
+    fn binary(prefix: TokenStream, middle: TokenStream) -> parse::Result<Self> {
+        Ok(UriMacro::Routed(RoutedUri {
+            prefix: UriExpr::parse_prefix.parse2(prefix)?,
+            route: syn::parse2(middle)?,
+            suffix: None,
+        }))
+    }
+
+    fn ternary(prefix: TokenStream, mid: TokenStream, suffix: TokenStream) -> parse::Result<Self> {
+        Ok(UriMacro::Routed(RoutedUri {
+            prefix: UriExpr::parse_prefix.parse2(prefix)?,
+            route: syn::parse2(mid)?,
+            suffix: UriExpr::parse_suffix.parse2(suffix)?
+        }))
+    }
+}
+
+impl Parse for UriMacro {
+    fn parse(input: ParseStream<'_>) -> parse::Result<Self> {
+        use syn::buffer::Cursor;
+        use parse::{StepCursor, Result};
+
+        fn stream<'c>(cursor: StepCursor<'c, '_>) -> Result<(Option<TokenStream>, Cursor<'c>)> {
+            let mut stream = TokenStream::new();
+            let mut cursor = *cursor;
+            while let Some((tt, next)) = cursor.token_tree() {
+                cursor = next;
+                match tt {
+                    TokenTree::Punct(p) if p.as_char() == ',' => break,
+                    _ =>  stream.append(tt)
+                }
+            }
+
+            stream.is_empty()
+                .then(|| Ok((None, cursor)))
+                .unwrap_or(Ok((Some(stream), cursor)))
+        }
+
+        let mut args = vec![];
+        while let Some(tokens) = input.step(stream)? {
+            args.push(tokens);
+        }
+
+        let (arg_count, mut iter) = (args.len(), args.into_iter());
+        let mut next = || iter.next().unwrap();
+        match arg_count {
+            0 => err(Span::call_site(), "expected at least 1 argument, found none"),
+            1 => UriMacro::unary.parse2(next()),
+            2 => UriMacro::binary(next(), next()),
+            3 => UriMacro::ternary(next(), next(), next()),
+            n => err(iter.nth(3).unwrap().span(),
+                format!("expected 1, 2, or 3 arguments, found {}", n))
+        }
+    }
+}
+
+impl Parse for RoutedUri {
+    fn parse(input: ParseStream<'_>) -> syn::Result<Self> {
+        match UriMacro::parse(input)? {
+            UriMacro::Routed(route) => Ok(route),
+            UriMacro::Literal(uri) => err(uri.span(), "expected route URI, found literal")
+        }
     }
 }
 
@@ -197,12 +303,11 @@ impl Parse for FnArg {
 
 impl Parse for InternalUriParams {
     fn parse(input: ParseStream<'_>) -> parse::Result<InternalUriParams> {
-        let route_uri_str = input.parse::<LitStr>()?;
+        let route_uri_str = input.parse::<StringLit>()?;
         input.parse::<Token![,]>()?;
 
         // Validation should always succeed since this macro can only be called
         // if the route attribute succeeded, implying a valid route URI.
-        let route_uri_str = StringLit::new(route_uri_str.value(), route_uri_str.span());
         let route_uri = Origin::parse_route(&route_uri_str)
             .map(|o| o.into_normalized().into_owned())
             .map_err(|_| input.error("internal error: invalid route URI"))?;
@@ -213,39 +318,28 @@ impl Parse for InternalUriParams {
         let fn_args = fn_args.into_iter().collect();
 
         input.parse::<Token![,]>()?;
-        let uri_params = input.parse::<UriParams>()?;
+        let uri_params = input.parse::<RoutedUri>()?;
 
-        // This span isn't right...we don't have the original span.
         let span = route_uri_str.subspan(1..route_uri.path().len() + 1);
-        let mount_params = match uri_params.mount_point.as_ref() {
-            Some(mount) => Parameter::parse_many::<uri::Path>(mount.path().as_str(), span)
-                .map(|p| p.expect("internal error: invalid path parameter"))
-                .collect::<Vec<_>>(),
-            None => vec![]
-        };
-
-        let path_params = Parameter::parse_many::<uri::Path>(route_uri.path().as_str(), span)
+        let path_params = Parameter::parse_many::<fmt::Path>(route_uri.path().as_str(), span)
             .map(|p| p.expect("internal error: invalid path parameter"))
             .collect::<Vec<_>>();
 
-        let query_params = match route_uri.query() {
-            Some(query) => {
-                let i = route_uri.path().len() + 2;
-                let span = route_uri_str.subspan(i..(i + query.len()));
-                Parameter::parse_many::<uri::Query>(query.as_str(), span)
-                    .map(|p| p.expect("internal error: invalid query parameter"))
-                    .collect::<Vec<_>>()
-            }
-            None => vec![]
-        };
+        let query = route_uri.query();
+        let query_params = query.map(|query| {
+            let i = route_uri.path().len() + 2;
+            let span = route_uri_str.subspan(i..(i + query.len()));
+            Parameter::parse_many::<fmt::Query>(query.as_str(), span)
+                .map(|p| p.expect("internal error: invalid query parameter"))
+                .collect::<Vec<_>>()
+        }).unwrap_or_default();
 
         Ok(InternalUriParams {
             route_uri,
-            mount_params,
             path_params,
             query_params,
             fn_args,
-            uri_params
+            uri_mac: uri_params
         })
     }
 }
@@ -273,7 +367,7 @@ impl InternalUriParams {
     }
 
     pub fn validate(&self) -> Validation<'_> {
-        let args = &self.uri_params.arguments;
+        let args = &self.uri_mac.route.args;
         let all_params = self.dynamic_path_params().chain(self.dynamic_query_params());
         match args {
             Args::Unnamed(args) => {
@@ -321,12 +415,12 @@ impl InternalUriParams {
     }
 }
 
-impl UriParams {
+impl RoutedUri {
     /// The Span to use when referring to all of the arguments.
     pub fn args_span(&self) -> Span {
-        match self.arguments.num() {
-            0 => self.route_path.span(),
-            _ => self.arguments.span()
+        match self.route.args.num() {
+            0 => self.route.path.span(),
+            _ => self.route.args.span()
         }
     }
 }
@@ -374,6 +468,104 @@ impl ArgExpr {
         match self {
             ArgExpr::Expr(expr) => expr,
             _ => panic!("Called ArgExpr::expr() on ArgExpr::Ignored!"),
+        }
+    }
+}
+
+fn uri_err<T>(lit: &StringLit, error: Error<'_>) -> parse::Result<T> {
+    let span = lit.subspan(error.index() + 1..(error.index() + 2));
+    err(span, format!("invalid URI: {}", error))
+}
+
+impl UriExpr {
+    fn parse_prefix(input: ParseStream<'_>) -> syn::Result<Option<Self>> {
+        if input.parse::<Token![_]>().is_ok() {
+            return Ok(None);
+        }
+
+        if !input.peek(LitStr) {
+            return input.parse::<Expr>().map(|e| Some(UriExpr::Expr(e)));
+        }
+
+        let lit = input.parse::<StringLit>()?;
+        let uri = Uri::parse::<Origin<'_>>(&lit)
+            .or_else(|e| Uri::parse::<Absolute<'_>>(&lit).map_err(|e2| (e, e2)))
+            .map_err(|(e1, e2)| lit.starts_with('/').then(|| e1).unwrap_or(e2))
+            .or_else(|e| uri_err(&lit, e))?;
+
+        if matches!(&uri, Uri::Origin(o) if o.query().is_some())
+            || matches!(&uri, Uri::Absolute(a) if a.query().is_some())
+        {
+            return err(lit.span(), "URI prefix cannot contain query part");
+        }
+
+        Ok(Some(UriExpr::Uri(UriLit(uri.into_owned(), lit.span()))))
+    }
+
+    fn parse_suffix(input: ParseStream<'_>) -> syn::Result<Option<Self>> {
+        if input.parse::<Token![_]>().is_ok() {
+            return Ok(None);
+        }
+
+        if !input.peek(LitStr) {
+            return input.parse::<Expr>().map(|e| Some(UriExpr::Expr(e)));
+        }
+
+        let lit = input.parse::<StringLit>()?;
+        let uri = Reference::parse(&lit).or_else(|e| uri_err(&lit, e))?;
+        if uri.scheme().is_some() || uri.authority().is_some() || !uri.path().is_empty() {
+            return err(lit.span(), "URI suffix must contain only query and/or fragment");
+        }
+
+        // This is a bit of finagling to get the types to match up how we'd
+        // like. A URI like `?foo` will parse as a `Reference`, since that's
+        // what it is. But if we left this as is, we'd convert Origins and
+        // Absolutes to References on suffix appendage when we don't need to.
+        // This is because anything + a Reference _must_ result in a Reference
+        // since the resulting URI could have a fragment. Since here we know
+        // that's not the case, we lie and say it's Absolute since an Absolute
+        // can't contain a fragment, so an Origin + Absolute suffix is still an
+        // Origin, and likewise for an Absolute.
+        let uri = match uri.fragment() {
+            None => {
+                let query = uri.query().map(|q| q.as_str());
+                Uri::Absolute(Absolute::const_new("", None, "", query))
+            }
+            Some(_) => Uri::Reference(uri)
+        };
+
+        Ok(Some(UriExpr::Uri(UriLit(uri.into_owned(), lit.span()))))
+    }
+}
+
+impl Deref for UriLit {
+    type Target = Uri<'static>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+impl ToTokens for UriLit {
+    fn to_tokens(&self, t: &mut TokenStream) {
+        use crate::http_codegen::*;
+
+        let (uri, span) = (&self.0, self.1);
+        match uri {
+            Uri::Origin(o) => Origin(o, span).to_tokens(t),
+            Uri::Absolute(o) => Absolute(o, span).to_tokens(t),
+            Uri::Authority(o) => Authority(o, span).to_tokens(t),
+            Uri::Reference(r) => Reference(r, span).to_tokens(t),
+            Uri::Asterisk(a) => Asterisk(*a, span).to_tokens(t),
+        }
+    }
+}
+
+impl ToTokens for UriExpr {
+    fn to_tokens(&self, t: &mut TokenStream) {
+        match self {
+            UriExpr::Uri(uri) => uri.to_tokens(t),
+            UriExpr::Expr(e) => e.to_tokens(t),
         }
     }
 }

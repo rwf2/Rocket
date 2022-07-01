@@ -1,4 +1,26 @@
-RFC 7230 URI Grammar
+RFC 7230 Uri-Reference Grammar
+
+URI-reference = URI / relative-ref
+
+URI           = absolute-URI [ "#" fragment ]
+
+relative-ref  = relative-part [ "?" query ] [ "#" fragment ]
+
+; like hier-part - rootless + noscheme
+relative-part = "//" authority path-abempty
+              / path-absolute
+              / path-noscheme ; like rootless but first seg can't have ':'
+              / path-empty
+
+fragment      = *( pchar / "/" / "?" ) ;; = query
+
+# unrolled form of `URI-reference` above, for comparison
+URI-reference = scheme ":" hier-part [ "?" query ] [ "#" fragment ]
+                         / relative-part [ "?" query ] [ "#" fragment ]
+
+--------------------------------------------------------------------------------
+
+RFC 7230 Target Grammar
 
 request-target = origin-form / absolute-form / authority-form / asterisk-form
 
@@ -15,19 +37,6 @@ absolute-path = 1*( "/" segment )
 -------------------------------------------------------------------------------
 
 authority-form = authority
-
--------------------------------------------------------------------------------
-
-1. look for ':', '@', '?'
-2. if neither is found, you have an authority, text is `host`
-3. if ':' is found, have either 'host', 'scheme', or 'userinfo'
- * can only be host if: next four characters are port
- * must be host if: text before ':' is empty, requires port
- * if next (at most) four characters are numbers, then we have a host/port.
- * if next character is '/' or there is none, then scheme
- * otherwise try as scheme, fallback to userinfo if find '@'
-4. if '?' is found, have either 'host', 'scheme', or 'userinfo'
-5. if '@' is found, have 'userinfo'
 
 -------------------------------------------------------------------------------
 
@@ -60,6 +69,8 @@ path-empty    = 0<pchar>
 
 segment       = *pchar
 segment-nz    = 1*pchar
+segment-nz-nc = 1*( unreserved / pct-encoded / sub-delims / "@" )
+            ; non-zero-length segment without any colon ":"
 
 pchar         = unreserved / pct-encoded / sub-delims / ":" / "@"
 

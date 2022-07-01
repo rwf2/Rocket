@@ -1,6 +1,6 @@
 #![recursion_limit="128"]
 
-#![doc(html_root_url = "https://api.rocket.rs/master")]
+#![doc(html_root_url = "https://api.rocket.rs/v0.5-rc")]
 #![doc(html_favicon_url = "https://rocket.rs/images/favicon.ico")]
 #![doc(html_logo_url = "https://rocket.rs/images/logo-boxed.png")]
 
@@ -11,7 +11,7 @@
 //! This crate implements the code generation portions of Rocket. This includes
 //! custom derives, custom attributes, and procedural macros. The documentation
 //! here is purely technical. The code generation facilities are documented
-//! thoroughly in the [Rocket programming guide](https://rocket.rs/master/guide).
+//! thoroughly in the [Rocket programming guide](https://rocket.rs/v0.5-rc/guide).
 //!
 //! # Usage
 //!
@@ -21,7 +21,7 @@
 //!
 //! ```toml
 //! [dependencies]
-//! rocket = "0.5.0-dev"
+//! rocket = "0.5.0-rc.2"
 //! ```
 //!
 //! And to import all macros, attributes, and derives via `#[macro_use]` in the
@@ -70,7 +70,6 @@ mod name;
 
 use crate::http::Method;
 use proc_macro::TokenStream;
-use devise::{proc_macro2, syn};
 
 static URI_MACRO_PREFIX: &str = "rocket_uri_macro_";
 static ROCKET_IDENT_PREFIX: &str = "__rocket_";
@@ -166,7 +165,7 @@ macro_rules! route_attribute {
         /// MEDIA_TYPE := valid HTTP media type or known shorthand
         ///
         /// INTEGER := unsigned integer, as defined by Rust
-        /// IDENT := valid identifier, as defined by Rust, except `_`
+        /// IDENT := valid identifier, as defined by Rust
         /// ```
         ///
         /// The generic route attribute is defined as:
@@ -177,10 +176,11 @@ macro_rules! route_attribute {
         ///
         /// # Typing Requirements
         ///
-        /// Every identifier that appears in a dynamic parameter (`SINGLE_PARAM`
-        /// or `TRAILING_PARAM`) must appear as an argument to the function. For
-        /// example, the following route requires the decorated function to have
-        /// the arguments `foo`, `baz`, `msg`, `rest`, and `form`:
+        /// Every identifier, except for `_`, that appears in a dynamic
+        /// parameter (`SINGLE_PARAM` or `TRAILING_PARAM`) must appear as an
+        /// argument to the function. For example, the following route requires
+        /// the decorated function to have the arguments `foo`, `baz`, `msg`,
+        /// `rest`, and `form`:
         ///
         /// ```rust
         /// # #[macro_use] extern crate rocket;
@@ -209,6 +209,9 @@ macro_rules! route_attribute {
         /// The type of each function argument that _does not_ have a
         /// corresponding dynamic parameter is required to implement the
         /// [`FromRequest`] trait.
+        ///
+        /// A route argument declared a `_` must _not_ appear in the function
+        /// argument list and has no typing requirements.
         ///
         /// The return type of the decorated function must implement the
         /// [`Responder`] trait.
@@ -246,7 +249,7 @@ macro_rules! route_attribute {
         ///
         ///            If a data guard fails, the request is forwarded if the
         ///            [`Outcome`] is `Forward` or failed if the [`Outcome`] is
-        ///            `Failure`. See [`FromData` Outcomes] for further detail.
+        ///            `Failure`. See [`FromData`] for further detail.
         ///
         ///      If all validation succeeds, the decorated function is called.
         ///      The returned value is used to generate a [`Response`] via the
@@ -262,14 +265,13 @@ macro_rules! route_attribute {
         ///   3. A macro used by [`uri!`] to type-check and generate an
         ///      [`Origin`].
         ///
-        /// [`Handler`]: rocket::route::Handler
+        /// [`Handler`]: ../rocket/route/trait.Handler.html
         /// [`routes!`]: macro.routes.html
         /// [`uri!`]: macro.uri.html
-        /// [`Origin`]: rocket::http::uri::Origin
-        /// [`Outcome`]: rocket::outcome::Outcome
-        /// [`Response`]: rocket::Response
-        /// [`FromRequest` Outcomes]: rocket::request::FromRequest#outcomes
-        /// [`FromData` Outcomes]: rocket::data::FromData#outcomes
+        /// [`Origin`]: ../rocket/http/uri/struct.Origin.html
+        /// [`Outcome`]: ../rocket/outcome/enum.Outcome.html
+        /// [`Response`]: ../rocket/struct.Response.html
+        /// [`FromRequest` Outcomes]: ../rocket/request/trait.FromRequest.html#outcomes
         #[proc_macro_attribute]
         pub fn $name(args: TokenStream, input: TokenStream) -> TokenStream {
             emit!(attribute::route::route_attribute($method, args, input))
@@ -343,13 +345,13 @@ route_attribute!(options => Method::Options);
 ///      name (the function's name) and status code from the route attribute or
 ///      `None` if `default`. The handler is set to the generated handler.
 ///
-/// [`&Request`]: rocket::Request
-/// [`Status`]: rocket::http::Status
-/// [`Handler`]: rocket::catcher::Handler
+/// [`&Request`]: ../rocket/struct.Request.html
+/// [`Status`]: ../rocket/http/struct.Status.html
+/// [`Handler`]: ../rocket/catcher/trait.Handler.html
 /// [`catchers!`]: macro.catchers.html
-/// [`Catcher`]: rocket::Catcher
-/// [`Response`]: rocket::Response
-/// [`Responder`]: rocket::Responder
+/// [`Catcher`]: ../rocket/struct.Catcher.html
+/// [`Response`]: ../rocket/struct.Response.html
+/// [`Responder`]: ../rocket/response/trait.Responder.html
 #[proc_macro_attribute]
 pub fn catch(args: TokenStream, input: TokenStream) -> TokenStream {
     emit!(attribute::catch::catch_attribute(args, input))
@@ -380,20 +382,22 @@ pub fn async_test(args: TokenStream, input: TokenStream) -> TokenStream {
 /// Retrofits `async fn` support in `main` functions.
 ///
 /// A `main` `async fn` function decorated with `#[rocket::main]` is transformed
-/// into a regular `main` function that internally initalizes a Rocket-specific
+/// into a regular `main` function that internally initializes a Rocket-specific
 /// tokio runtime and runs the attributed `async fn` inside of it:
 ///
 /// ```rust,no_run
 /// #[rocket::main]
 /// async fn main() -> Result<(), rocket::Error> {
-///     rocket::build()
+///     let _rocket = rocket::build()
 ///         .ignite().await?
-///         .launch().await
+///         .launch().await?;
+///
+///     Ok(())
 /// }
 /// ```
 ///
-/// It should be used only when inspection of an ignited instance of `Rocket` is
-/// required, or when the return value of `launch()` is to be inspected:
+/// It should be used only when the return values of `ignite()` or `launch()`
+/// are to be inspected:
 ///
 /// ```rust,no_run
 /// #[rocket::main]
@@ -401,10 +405,10 @@ pub fn async_test(args: TokenStream, input: TokenStream) -> TokenStream {
 ///     let rocket = rocket::build().ignite().await?;
 ///     println!("Hello, Rocket: {:?}", rocket);
 ///
-///     let result = rocket.launch().await;
-///     println!("The server shutdown: {:?}", result);
+///     let rocket = rocket.launch().await?;
+///     println!("Welcome back, Rocket: {:?}", rocket);
 ///
-///     result
+///     Ok(())
 /// }
 /// ```
 ///
@@ -537,8 +541,7 @@ pub fn launch(args: TokenStream, input: TokenStream) -> TokenStream {
 /// variant. In the example above, the the strings `"fourth"`, `"FOUrth"`,
 /// `"fiFTH"` and so on would parse as `MyValue::Third`.
 ///
-/// [`FromFormField`]: rocket::form::FromFormField
-/// [`FromFormField::Error`]: rocket::form::FromFormField::Error
+/// [`FromFormField`]: ../rocket/form/trait.FromFormField.html
 #[proc_macro_derive(FromFormField, attributes(field))]
 pub fn derive_from_form_field(input: TokenStream) -> TokenStream {
     emit!(derive::from_form_field::derive_from_form_field(input))
@@ -546,55 +549,80 @@ pub fn derive_from_form_field(input: TokenStream) -> TokenStream {
 
 /// Derive for the [`FromForm`] trait.
 ///
-/// The [`FromForm`] derive can be applied to structures with named fields:
+/// The [`FromForm`] derive can be applied to structures with named or unnamed
+/// fields:
 ///
 /// ```rust
-/// # #[macro_use] extern crate rocket;
-/// #
+/// use rocket::form::FromForm;
+///
 /// #[derive(FromForm)]
 /// struct MyStruct<'r> {
 ///     field: usize,
 ///     #[field(name = "renamed_field")]
 ///     #[field(name = uncased("RenamedField"))]
 ///     other: &'r str,
-///     #[field(validate = range(1..))]
+///     #[field(validate = range(1..), default = 3)]
 ///     r#type: usize,
+///     #[field(default = None)]
+///     is_nice: bool,
 /// }
+///
+/// #[derive(FromForm)]
+/// #[field(validate = len(6..))]
+/// #[field(validate = neq("password"))]
+/// struct Password<'r>(&'r str);
 /// ```
 ///
-/// Each field's type is required to implement [`FromForm`].
+/// Each field type is required to implement [`FromForm`].
 ///
-/// The derive generates an implementation of the [`FromForm`] trait. The
-/// implementation parses a form whose field names match the field names of the
-/// structure on which the derive was applied. Each field's value is parsed with
-/// the [`FromForm`] implementation of the field's type. The `FromForm`
-/// implementation succeeds only when all of the field parses succeed or return
-/// a default. Errors are collected into a [`form::Errors`] and return if
-/// non-empty after parsing all fields.
+/// The derive generates an implementation of the [`FromForm`] trait.
 ///
-/// The derive accepts one field attribute: `field`, with the following syntax:
+/// **Named Fields**
+///
+/// If the structure has named fields, the implementation parses a form whose
+/// field names match the field names of the structure on which the derive was
+/// applied. Each field's value is parsed with the [`FromForm`] implementation
+/// of the field's type. The `FromForm` implementation succeeds only when all
+/// fields parse successfully or return a default. Errors are collected into a
+/// [`form::Errors`] and returned if non-empty after parsing all fields.
+///
+/// **Unnamed Fields**
+///
+/// If the structure is a tuple struct, it must have exactly one field. The
+/// implementation parses a form exactly when the internal field parses a form
+/// _and_ any `#[field]` validations succeed.
+///
+/// ## Syntax
+///
+/// The derive accepts one field attribute: `field`, and one container
+/// attribute, `form`, with the following syntax:
 ///
 /// ```text
-/// field := name? validate*
+/// field := name? default? validate*
 ///
-/// name := 'name' '=' name_val
+/// name := 'name' '=' name_val ','?
 /// name_val :=  '"' FIELD_NAME '"'
 ///          | 'uncased(' '"' FIELD_NAME '"' ')
 ///
-/// validate := 'validate' '=' EXPR
+/// default := 'default' '=' EXPR ','?
+///          | 'default_with' '=' EXPR ','?
+///
+/// validate := 'validate' '=' EXPR ','?
 ///
 /// FIELD_NAME := valid field name, according to the HTML5 spec
 /// EXPR := valid expression, as defined by Rust
 /// ```
 ///
-/// The attribute can be applied any number of times on a field. When applied,
-/// the attribute looks as follows:
+/// `#[field]` can be applied any number of times on a field. `default` and
+/// `default_with` are mutually exclusive: at most _one_ of `default` or
+/// `default_with` can be present per field.
 ///
 /// ```rust
 /// # #[macro_use] extern crate rocket;
-/// #
 /// #[derive(FromForm)]
 /// struct MyStruct {
+///     #[field(name = uncased("number"))]
+///     #[field(default = 42)]
 ///     field: usize,
 ///     #[field(name = "renamed_field")]
 ///     #[field(name = uncased("anotherName"))]
@@ -604,24 +632,118 @@ pub fn derive_from_form_field(input: TokenStream) -> TokenStream {
 /// }
 /// ```
 ///
-/// **`name`**
+/// For tuples structs, the `field` attribute can be applied to the structure
+/// itself:
 ///
-/// A `name` attribute changes the name to match against when parsing the form
-/// field. The value is either an exact string to match against (`"foo"`), or
-/// `uncased("foo")`, which causes the match to be case-insensitive but
-/// case-preserving. When more than one `name` attribute is applied, the field
-/// will match against _any_ of the names.
+/// ```rust
+/// # #[macro_use] extern crate rocket;
+/// #[derive(FromForm)]
+/// #[field(default = 42, validate = eq(42))]
+/// struct Meaning(usize);
+/// ```
 ///
-/// **`validate`**
+/// ## Field Attribute Parameters
 ///
-/// The validation expression will be run if the field type parses successfully.
-/// The expression must return a value of type `Result<(), form::Errors>`. On
-/// `Err`, the errors are added to the thus-far collected errors. If more than
-/// one `validate` attribute is applied, _all_ validations are run.
+///   * **`name`**
 ///
-/// [`FromForm`]: rocket::form::FromForm
-/// [`form::Errors`]: rocket::form::Errors
-#[proc_macro_derive(FromForm, attributes(field))]
+///     A `name` attribute changes the name to match against when parsing the
+///     form field. The value is either an exact string to match against
+///     (`"foo"`), or `uncased("foo")`, which causes the match to be
+///     case-insensitive but case-preserving. When more than one `name`
+///     attribute is applied, the field will match against _any_ of the names.
+///
+///   * **`validate = expr`**
+///
+///     The validation `expr` is run if the field type parses successfully. The
+///     expression must return a value of type `Result<(), form::Errors>`. On
+///     `Err`, the errors are added to the thus-far collected errors. If more
+///     than one `validate` attribute is applied, _all_ validations are run.
+///
+///   * **`default = expr`**
+///
+///     If `expr` is not literally `None`, the parameter sets the default value
+///     of the field to be `expr.into()`. If `expr` _is_ `None`, the parameter
+///     _unsets_ the default value of the field, if any. The expression is only
+///     evaluated if the attributed field is missing in the incoming form.
+///
+///     Except when `expr` is `None`, `expr` must be of type `T: Into<F>` where
+///     `F` is the field's type.
+///
+///   * **`default_with = expr`**
+///
+///     The parameter sets the default value of the field to be exactly `expr`
+///     which must be of type `Option<F>` where `F` is the field's type. If the
+///     expression evaluates to `None`, there is no default. Otherwise the value
+///     wrapped in `Some` is used. The expression is only evaluated if the
+///     attributed field is missing in the incoming form.
+///
+///     ```rust
+///     # #[macro_use] extern crate rocket;
+///     use std::num::NonZeroUsize;
+///
+///     #[derive(FromForm)]
+///     struct MyForm {
+///         // `NonZeroUsize::new()` return an `Option<NonZeroUsize>`.
+///         #[field(default_with = NonZeroUsize::new(42))]
+///         num: NonZeroUsize,
+///     }
+///     ```
+///
+/// [`FromForm`]: ../rocket/form/trait.FromForm.html
+/// [`form::Errors`]: ../rocket/form/struct.Errors.html
+///
+/// # Generics
+///
+/// The derive accepts any number of type generics and at most one lifetime
+/// generic. If a type generic is present, the generated implementation will
+/// require a bound of `FromForm<'r>` for the field type containing the generic.
+/// For example, for a struct `struct Foo<T>(Json<T>)`, the bound `Json<T>:
+/// FromForm<'r>` will be added to the generated implementation.
+///
+/// ```rust
+/// use rocket::form::FromForm;
+/// use rocket::serde::json::Json;
+///
+/// // The bounds `A: FromForm<'r>`, `B: FromForm<'r>` will be required.
+/// #[derive(FromForm)]
+/// struct FancyForm<A, B> {
+///     first: A,
+///     second: B,
+/// };
+///
+/// // The bound `Json<T>: FromForm<'r>` will be required.
+/// #[derive(FromForm)]
+/// struct JsonToken<T> {
+///     token: Json<T>,
+///     id: usize,
+/// }
+/// ```
+///
+/// If a lifetime generic is present, it is replaced with `'r` in the
+/// generated implementation `impl FromForm<'r>`:
+///
+/// ```rust
+/// # #[macro_use] extern crate rocket;
+/// // Generates `impl<'r> FromForm<'r> for MyWrapper<'r>`.
+/// #[derive(FromForm)]
+/// struct MyWrapper<'a>(&'a str);
+/// ```
+///
+/// Both type generics and one lifetime generic may be used:
+///
+/// ```rust
+/// use rocket::form::{self, FromForm};
+///
+/// // The bound `form::Result<'r, T>: FromForm<'r>` will be required.
+/// #[derive(FromForm)]
+/// struct SomeResult<'o, T>(form::Result<'o, T>);
+/// ```
+///
+/// The special bounds on `Json` and `Result` are required due to incomplete and
+/// incorrect support for lifetime generics in `async` blocks in Rust. See
+/// [rust-lang/#64552](https://github.com/rust-lang/rust/issues/64552) for
+/// further details.
+#[proc_macro_derive(FromForm, attributes(form, field))]
 pub fn derive_from_form(input: TokenStream) -> TokenStream {
     emit!(derive::from_form::derive_from_form(input))
 }
@@ -668,7 +790,7 @@ pub fn derive_from_form(input: TokenStream) -> TokenStream {
 /// # #[macro_use] extern crate rocket;
 /// # use std::fs::File;
 /// # use rocket::http::ContentType;
-/// # use rocket::response::NamedFile;
+/// # use rocket::fs::NamedFile;
 /// # type Other = usize;
 /// #
 /// #[derive(Responder)]
@@ -711,7 +833,7 @@ pub fn derive_from_form(input: TokenStream) -> TokenStream {
 /// ```rust
 /// # #[macro_use] extern crate rocket;
 /// # use rocket::http::ContentType;
-/// # use rocket::response::NamedFile;
+/// # use rocket::fs::NamedFile;
 /// # type Other = usize;
 /// # type InnerResponder = String;
 /// #
@@ -759,29 +881,54 @@ pub fn derive_from_form(input: TokenStream) -> TokenStream {
 ///
 /// # Generics
 ///
-/// The derive accepts at most one type generic and at most one lifetime
-/// generic. If a type generic is present, the generated implementation will
-/// require a bound of `Responder` for the generic. As such, the generic should
-/// be used as a `Responder`:
+/// The derive accepts any number of type generics and at most one lifetime
+/// generic. If a type generic is present and the generic is used in the first
+/// field of a structure, the generated implementation will require a bound of
+/// `Responder<'r, 'o>` for the field type containing the generic. In all other
+/// fields, unless ignores, a bound of `Into<Header<'o>` is added.
+///
+/// For example, for a struct `struct Foo<T, H>(Json<T>, H)`, the derive adds:
+///
+///   * `Json<T>: Responder<'r, 'o>`
+///   * `H: Into<Header<'o>>`
 ///
 /// ```rust
 /// # #[macro_use] extern crate rocket;
+/// use rocket::serde::Serialize;
+/// use rocket::serde::json::Json;
+/// use rocket::http::ContentType;
+/// use rocket::response::Responder;
+///
+/// // The bound `T: Responder` will be added.
 /// #[derive(Responder)]
 /// #[response(status = 404, content_type = "html")]
 /// struct NotFoundHtml<T>(T);
+///
+/// // The bound `Json<T>: Responder` will be added.
+/// #[derive(Responder)]
+/// struct NotFoundJson<T>(Json<T>);
+///
+/// // The bounds `Json<T>: Responder, E: Responder` will be added.
+/// #[derive(Responder)]
+/// enum MyResult<T, E> {
+///     Ok(Json<T>),
+///     #[response(status = 404)]
+///     Err(E, ContentType)
+/// }
 /// ```
 ///
-/// If a lifetime generic is present, it will be used as the second lifetime
-/// paramter `'o` parameter in `impl Responder<'r, 'o>`:
+/// If a lifetime generic is present, it will be replaced with `'o` in the
+/// generated implementation `impl Responder<'r, 'o>`:
 ///
 /// ```rust
 /// # #[macro_use] extern crate rocket;
+/// // Generates `impl<'r, 'o> Responder<'r, 'o> for NotFoundHtmlString<'o>`.
 /// #[derive(Responder)]
 /// #[response(status = 404, content_type = "html")]
-/// struct NotFoundHtmlString<'o>(&'o str);
+/// struct NotFoundHtmlString<'a>(&'a str);
 /// ```
 ///
-/// Both a type generic and lifetime generic may be used:
+/// Both type generics and lifetime generic may be used:
 ///
 /// ```rust
 /// # #[macro_use] extern crate rocket;
@@ -880,9 +1027,9 @@ pub fn derive_responder(input: TokenStream) -> TokenStream {
 /// the example above, the variant `Kind::String` will render with a value of
 /// `str`.
 ///
-/// [`UriDisplay<Query>`]: ../rocket/http/uri/trait.UriDisplay.html
-/// [`Formatter::write_named_value()`]: ../rocket/http/uri/struct.Formatter.html#method.write_named_value
-/// [`Formatter::write_value()`]: ../rocket/http/uri/struct.Formatter.html#method.write_value
+/// [`UriDisplay<Query>`]: ../rocket/http/uri/fmt/trait.UriDisplay.html
+/// [`Formatter::write_named_value()`]: ../rocket/http/uri/fmt/struct.Formatter.html#method.write_named_value
+/// [`Formatter::write_value()`]: ../rocket/http/uri/fmt/struct.Formatter.html#method.write_value
 #[proc_macro_derive(UriDisplayQuery, attributes(field))]
 pub fn derive_uri_display_query(input: TokenStream) -> TokenStream {
     emit!(derive::uri_display::derive_uri_display_query(input))
@@ -907,8 +1054,8 @@ pub fn derive_uri_display_query(input: TokenStream) -> TokenStream {
 /// The derive generates an implementation of the [`UriDisplay<Path>`] trait.
 /// The implementation calls [`Formatter::write_value()`] for the field.
 ///
-/// [`UriDisplay<Path>`]: ../rocket/http/uri/trait.UriDisplay.html
-/// [`Formatter::write_value()`]: ../rocket/http/uri/struct.Formatter.html#method.write_value
+/// [`UriDisplay<Path>`]: ../rocket/http/uri/fmt/trait.UriDisplay.html
+/// [`Formatter::write_value()`]: ../rocket/http/uri/fmt/struct.Formatter.html#method.write_value
 #[proc_macro_derive(UriDisplayPath)]
 pub fn derive_uri_display_path(input: TokenStream) -> TokenStream {
     emit!(derive::uri_display::derive_uri_display_path(input))
@@ -1028,77 +1175,221 @@ pub fn catchers(input: TokenStream) -> TokenStream {
     emit!(bang::catchers_macro(input))
 }
 
-/// Type-safe, URI-safe generation of an [`Origin`] URI from a route.
+/// Type-safe, encoding-safe route and non-route URI generation.
 ///
-/// The `uri!` macro creates a type-safe, URL-safe URI given a route and values
-/// for the route's URI parameters. The inputs to the macro are the path to a
-/// route, a colon, and one argument for each dynamic parameter (parameters in
-/// `<>`) in the route's path and query.
+/// The `uri!` macro creates type-safe, URL-safe URIs given a route and concrete
+/// parameters for its URI or a URI string literal.
 ///
-/// For example, for the following route:
+/// # String Literal Parsing
 ///
-/// ```rust
-/// # #[macro_use] extern crate rocket;
-/// #
-/// #[get("/person/<name>?<age>")]
-/// fn person(name: String, age: Option<u8>) -> String {
-/// # "".into() /*
-///     ...
-/// # */
-/// }
+/// Given a string literal as input, `uri!` parses the string using
+/// [`Uri::parse_any()`] and emits a `'static`, `const` value whose type is one
+/// of [`Asterisk`], [`Origin`], [`Authority`], [`Absolute`], or [`Reference`],
+/// reflecting the parsed value. If the type allows normalization, the value is
+/// normalized before being emitted. Parse errors are caught and emitted at
+/// compile-time.
+///
+/// The grammar for this variant of `uri!` is:
+///
+/// ```text
+/// uri := STRING
+///
+/// STRING := an uncooked string literal, as defined by Rust (example: `"/hi"`)
 /// ```
 ///
-/// A URI can be created as follows:
+/// `STRING` is expected to be an undecoded URI of any variant.
+///
+/// ## Examples
 ///
 /// ```rust
 /// # #[macro_use] extern crate rocket;
-/// #
+/// use rocket::http::uri::Absolute;
+///
+/// // Values returned from `uri!` are `const` and `'static`.
+/// const ROOT_CONST: Absolute<'static> = uri!("https://rocket.rs");
+/// static ROOT_STATIC: Absolute<'static> = uri!("https://rocket.rs?root");
+///
+/// // Any variant can be parsed, but beware of ambiguities.
+/// let asterisk = uri!("*");
+/// let origin = uri!("/foo/bar/baz");
+/// let authority = uri!("rocket.rs:443");
+/// let absolute = uri!("https://rocket.rs:443");
+/// let reference = uri!("foo?bar#baz");
+///
+/// # use rocket::http::uri::{Asterisk, Origin, Authority, Reference};
+/// # // Ensure we get the types we expect.
+/// # let asterisk: Asterisk = asterisk;
+/// # let origin: Origin<'static> = origin;
+/// # let authority: Authority<'static> = authority;
+/// # let absolute: Absolute<'static> = absolute;
+/// # let reference: Reference<'static> = reference;
+/// ```
+///
+/// # Type-Safe Route URIs
+///
+/// A URI to a route name `foo` is generated using `uri!(foo(v1, v2, v3))` or
+/// `uri!(foo(a = v1, b = v2, c = v3))`, where `v1`, `v2`, `v3` are the values
+/// to fill in for route parameters named `a`, `b`, and `c`. If the named
+/// parameter sytnax is used (`a = v1`, etc.), parameters can appear in any
+/// order.
+///
+/// More concretely, for the route `person` defined below:
+///
+/// ```rust
+/// # #[macro_use] extern crate rocket;
+/// #[get("/person/<name>?<age>")]
+/// fn person(name: &str, age: Option<u8>) { }
+/// ```
+///
+/// ...a URI can be created as follows:
+///
+/// ```rust
+/// # #[macro_use] extern crate rocket;
 /// # #[get("/person/<name>?<age>")]
-/// # fn person(name: String, age: Option<u8>) { }
-/// #
+/// # fn person(name: &str, age: Option<u8>) { }
 /// // with unnamed parameters, in route path declaration order
-/// let mike = uri!(person: "Mike Smith", Some(28));
+/// let mike = uri!(person("Mike Smith", Some(28)));
 /// assert_eq!(mike.to_string(), "/person/Mike%20Smith?age=28");
 ///
 /// // with named parameters, order irrelevant
-/// let mike = uri!(person: name = "Mike", age = Some(28));
-/// let mike = uri!(person: age = Some(28), name = "Mike");
+/// let mike = uri!(person(name = "Mike", age = Some(28)));
+/// let mike = uri!(person(age = Some(28), name = "Mike"));
 /// assert_eq!(mike.to_string(), "/person/Mike?age=28");
 ///
-/// // with a specific mount-point
-/// let mike = uri!("/api", person: name = "Mike", age = Some(28));
-/// assert_eq!(mike.to_string(), "/api/person/Mike?age=28");
-///
-/// // with unnamed values ignored
-/// let mike = uri!(person: "Mike", _);
-/// assert_eq!(mike.to_string(), "/person/Mike");
-///
 /// // with unnamed values, explicitly `None`.
-/// let option: Option<u8> = None;
-/// let mike = uri!(person: "Mike", option);
-/// assert_eq!(mike.to_string(), "/person/Mike");
-///
-/// // with named values ignored
-/// let mike = uri!(person: name = "Mike", age = _);
+/// let mike = uri!(person("Mike", None::<u8>));
 /// assert_eq!(mike.to_string(), "/person/Mike");
 ///
 /// // with named values, explicitly `None`
 /// let option: Option<u8> = None;
-/// let mike = uri!(person: name = "Mike", age = option);
+/// let mike = uri!(person(name = "Mike", age = None::<u8>));
 /// assert_eq!(mike.to_string(), "/person/Mike");
+/// ```
+///
+/// For optional query parameters, those of type `Option` or `Result`, a `_` can
+/// be used in-place of `None` or `Err`:
+///
+/// ```rust
+/// # #[macro_use] extern crate rocket;
+/// # #[get("/person/<name>?<age>")]
+/// # fn person(name: &str, age: Option<u8>) { }
+/// // with named values ignored
+/// let mike = uri!(person(name = "Mike", age = _));
+/// assert_eq!(mike.to_string(), "/person/Mike");
+///
+/// // with named values ignored
+/// let mike = uri!(person(age = _, name = "Mike"));
+/// assert_eq!(mike.to_string(), "/person/Mike");
+///
+/// // with unnamed values ignored
+/// let mike = uri!(person("Mike", _));
+/// assert_eq!(mike.to_string(), "/person/Mike");
+/// ```
+///
+/// It is a type error to attempt to ignore query parameters that are neither
+/// `Option` or `Result`. Path parameters can never be ignored. A path parameter
+/// of type `Option<T>` or `Result<T, E>` must be filled by a value that can
+/// target a type of `T`:
+///
+/// ```rust
+/// # #[macro_use] extern crate rocket;
+/// #[get("/person/<name>")]
+/// fn maybe(name: Option<&str>) { }
+///
+/// let bob1 = uri!(maybe(name = "Bob"));
+/// let bob2 = uri!(maybe("Bob Smith"));
+/// assert_eq!(bob1.to_string(), "/person/Bob");
+/// assert_eq!(bob2.to_string(), "/person/Bob%20Smith");
+///
+/// #[get("/person/<age>")]
+/// fn ok(age: Result<u8, &str>) { }
+///
+/// let kid1 = uri!(ok(age = 10));
+/// let kid2 = uri!(ok(12));
+/// assert_eq!(kid1.to_string(), "/person/10");
+/// assert_eq!(kid2.to_string(), "/person/12");
+/// ```
+///
+/// Values for ignored route segments can be of any type as long as the type
+/// implements [`UriDisplay`] for the appropriate URI part. If a route URI
+/// contains ignored segments, the route URI invocation cannot use named
+/// arguments.
+///
+/// ```rust
+/// # #[macro_use] extern crate rocket;
+/// #[get("/ignore/<_>/<other>")]
+/// fn ignore(other: &str) { }
+///
+/// let bob = uri!(ignore("Bob Hope", "hello"));
+/// let life = uri!(ignore(42, "cat&dog"));
+/// assert_eq!(bob.to_string(), "/ignore/Bob%20Hope/hello");
+/// assert_eq!(life.to_string(), "/ignore/42/cat%26dog");
+/// ```
+///
+/// ## Prefixes and Suffixes
+///
+/// A route URI can be be optionally prefixed and/or suffixed by a URI generated
+/// from a string literal or an arbitrary expression. This takes the form
+/// `uri!(prefix, foo(v1, v2, v3), suffix)`, where both `prefix` and `suffix`
+/// are optional, and either `prefix` or `suffix` may be `_` to specify the
+/// value as empty.
+///
+/// ```rust
+/// # #[macro_use] extern crate rocket;
+/// #[get("/person/<name>?<age>")]
+/// fn person(name: &str, age: Option<u8>) { }
+///
+/// // with a specific mount-point of `/api`.
+/// let bob = uri!("/api", person("Bob", Some(28)));
+/// assert_eq!(bob.to_string(), "/api/person/Bob?age=28");
+///
+/// // with an absolute URI as a prefix
+/// let bob = uri!("https://rocket.rs", person("Bob", Some(28)));
+/// assert_eq!(bob.to_string(), "https://rocket.rs/person/Bob?age=28");
+///
+/// // with another absolute URI as a prefix
+/// let bob = uri!("https://rocket.rs/foo", person("Bob", Some(28)));
+/// assert_eq!(bob.to_string(), "https://rocket.rs/foo/person/Bob?age=28");
+///
+/// // with an expression as a prefix
+/// let host = uri!("http://bob.me");
+/// let bob = uri!(host, person("Bob", Some(28)));
+/// assert_eq!(bob.to_string(), "http://bob.me/person/Bob?age=28");
+///
+/// // with a suffix but no prefix
+/// let bob = uri!(_, person("Bob", Some(28)), "#baz");
+/// assert_eq!(bob.to_string(), "/person/Bob?age=28#baz");
+///
+/// // with both a prefix and suffix
+/// let bob = uri!("https://rocket.rs/", person("Bob", Some(28)), "#woo");
+/// assert_eq!(bob.to_string(), "https://rocket.rs/person/Bob?age=28#woo");
+///
+/// // with an expression suffix. if the route URI already has a query, the
+/// // query part is ignored. otherwise it is added.
+/// let suffix = uri!("?woo#bam");
+/// let bob = uri!(_, person("Bob", Some(28)), suffix.clone());
+/// assert_eq!(bob.to_string(), "/person/Bob?age=28#bam");
+///
+/// let bob = uri!(_, person("Bob", None::<u8>), suffix.clone());
+/// assert_eq!(bob.to_string(), "/person/Bob?woo#bam");
 /// ```
 ///
 /// ## Grammar
 ///
-/// The grammar for the `uri!` macro is:
+/// The grammar for this variant of the `uri!` macro is:
 ///
 /// ```text
-/// uri := (mount ',')? PATH (':' params)?
+/// uri := (prefix ',')? route
+///      | prefix ',' route ',' suffix
 ///
-/// mount = STRING
-/// params := unnamed | named
-/// unnamed := expr (',' expr)*
-/// named := IDENT = expr (',' named)?
+/// prefix := STRING | expr                     ; `Origin` or `Absolute`
+/// suffix := STRING | expr                     ; `Reference` or `Absolute`
+///
+/// route := PATH '(' (named | unnamed) ')'
+///
+/// named := IDENT = expr (',' named)? ','?
+/// unnamed := expr (',' unnamed)? ','?
+///
 /// expr := EXPR | '_'
 ///
 /// EXPR := a valid Rust expression (examples: `foo()`, `12`, `"hey"`)
@@ -1107,37 +1398,55 @@ pub fn catchers(input: TokenStream) -> TokenStream {
 /// PATH := a path, as defined by Rust (examples: `route`, `my_mod::route`)
 /// ```
 ///
-/// ## Semantics
+/// ## Dynamic Semantics
 ///
-/// The `uri!` macro returns an [`Origin`] structure with the URI of the
-/// supplied route interpolated with the given values. Note that `Origin`
-/// implements `Into<Uri>` (and by extension, `TryInto<Uri>`), so it can be
-/// converted into a [`Uri`] using `.into()` as needed.
+/// The returned value is that of the prefix (minus any query part) concatenated
+/// with the route URI concatenated with the query (if the route has no query
+/// part) and fragment parts of the suffix. The route URI is generated by
+/// interpolating the declared route URI with the URL-safe version of the route
+/// values in `uri!()`. The generated URI is guaranteed to be URI-safe.
 ///
-/// A `uri!` invocation only typechecks if the type of every value in the
-/// invocation matches the type declared for the parameter in the given route,
-/// after conversion with [`FromUriParam`], or if a value is ignored using `_`
-/// and the corresponding route type implements [`Ignorable`].
+/// Each route value is rendered in its appropriate place in the URI using the
+/// [`UriDisplay`] implementation for the value's type. The `UriDisplay`
+/// implementation ensures that the rendered value is URL-safe.
 ///
-/// Each value passed into `uri!` is rendered in its appropriate place in the
-/// URI using the [`UriDisplay`] implementation for the value's type. The
-/// `UriDisplay` implementation ensures that the rendered value is URI-safe.
+/// A `uri!()` invocation allocated at-most once.
 ///
-/// If a mount-point is provided, the mount-point is prepended to the route's
-/// URI.
+/// ## Static Semantics
+///
+/// The `uri!` macro returns one of [`Origin`], [`Absolute`], or [`Reference`],
+/// depending on the types of the prefix and suffix, if any. The table below
+/// specifies all combinations:
+///
+/// | Prefix     | Suffix      | Output      |
+/// |------------|-------------|-------------|
+/// | None       | None        | `Origin`    |
+/// | None       | `Absolute`  | `Origin`    |
+/// | None       | `Reference` | `Reference` |
+/// | `Origin`   | None        | `Origin`    |
+/// | `Origin`   | `Absolute`  | `Origin`    |
+/// | `Origin`   | `Reference` | `Reference` |
+/// | `Absolute` | None        | `Absolute`  |
+/// | `Absolute` | `Absolute`  | `Absolute`  |
+/// | `Absolute` | `Reference` | `Reference` |
+///
+/// A `uri!` invocation only typechecks if the type of every route URI value in
+/// the invocation matches the type declared for the parameter in the given
+/// route, after conversion with [`FromUriParam`], or if a value is ignored
+/// using `_` and the corresponding route type implements [`Ignorable`].
 ///
 /// ### Conversion
 ///
 /// The [`FromUriParam`] trait is used to typecheck and perform a conversion for
-/// each value passed to `uri!`. If a `FromUriParam<P, S>` implementation exists
-/// for a type `T` for part URI part `P`, then a value of type `S` can be used
-/// in `uri!` macro for a route URI parameter declared with a type of `T` in
-/// part `P`. For example, the following implementation, provided by Rocket,
+/// each value passed to `uri!`. If a `FromUriParam<P, S> for T` implementation
+/// exists for a type `T` for part URI part `P`, then a value of type `S` can be
+/// used in `uri!` macro for a route URI parameter declared with a type of `T`
+/// in part `P`. For example, the following implementation, provided by Rocket,
 /// allows an `&str` to be used in a `uri!` invocation for route URI parameters
 /// declared as `String`:
 ///
 /// ```rust,ignore
-/// impl<P: UriPart, 'a> FromUriParam<P, &'a str> for String { .. }
+/// impl<P: Part, 'a> FromUriParam<P, &'a str> for String { .. }
 /// ```
 ///
 /// ### Ignorables
@@ -1149,31 +1458,42 @@ pub fn catchers(input: TokenStream) -> TokenStream {
 ///
 /// [`Uri`]: ../rocket/http/uri/enum.Uri.html
 /// [`Origin`]: ../rocket/http/uri/struct.Origin.html
-/// [`FromUriParam`]: ../rocket/http/uri/trait.FromUriParam.html
-/// [`UriDisplay`]: ../rocket/http/uri/trait.UriDisplay.html
-/// [`Ignorable`]: ../rocket/http/uri/trait.Ignorable.html
+/// [`Asterisk`]: ../rocket/http/uri/struct.Asterisk.html
+/// [`Authority`]: ../rocket/http/uri/struct.Authority.html
+/// [`Absolute`]: ../rocket/http/uri/struct.Absolute.html
+/// [`Reference`]: ../rocket/http/uri/struct.Reference.html
+/// [`FromUriParam`]: ../rocket/http/uri/fmt/trait.FromUriParam.html
+/// [`UriDisplay`]: ../rocket/http/uri/fmt/trait.UriDisplay.html
+/// [`Ignorable`]: ../rocket/http/uri/fmt/trait.Ignorable.html
 #[proc_macro]
 pub fn uri(input: TokenStream) -> TokenStream {
     emit!(bang::uri_macro(input))
 }
 
-#[doc(hidden)]
-#[proc_macro]
 /// Internal macro: `rocket_internal_uri!`.
+#[proc_macro]
+#[doc(hidden)]
 pub fn rocket_internal_uri(input: TokenStream) -> TokenStream {
     emit!(bang::uri_internal_macro(input))
 }
 
-#[doc(hidden)]
+/// Internal macro: `__typed_stream!`.
 #[proc_macro]
+#[doc(hidden)]
+pub fn __typed_stream(input: TokenStream) -> TokenStream {
+    emit!(bang::typed_stream(input))
+}
+
 /// Private Rocket internal macro: `internal_guide_tests!`.
+#[proc_macro]
+#[doc(hidden)]
 pub fn internal_guide_tests(input: TokenStream) -> TokenStream {
     emit!(bang::guide_tests_internal(input))
 }
 
-#[doc(hidden)]
-#[proc_macro]
 /// Private Rocket internal macro: `export!`.
+#[proc_macro]
+#[doc(hidden)]
 pub fn export(input: TokenStream) -> TokenStream {
     emit!(bang::export_internal(input))
 }

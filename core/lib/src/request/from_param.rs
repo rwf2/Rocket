@@ -1,7 +1,7 @@
 use std::str::FromStr;
 use std::path::PathBuf;
 
-use crate::http::uri::{Segments, PathError};
+use crate::http::uri::{Segments, error::PathError, fmt::Path};
 
 /// Trait to convert a dynamic path segment string to a concrete value.
 ///
@@ -193,7 +193,7 @@ impl<'a> FromParam<'a> for &'a str {
 }
 
 impl<'a> FromParam<'a> for String {
-    type Error = &'a str;
+    type Error = std::convert::Infallible;
 
     #[inline(always)]
     fn from_param(param: &'a str) -> Result<String, Self::Error> {
@@ -226,6 +226,18 @@ impl_with_fromstr! {
     NonZeroI8, NonZeroI16, NonZeroI32, NonZeroI64, NonZeroI128, NonZeroIsize,
     NonZeroU8, NonZeroU16, NonZeroU32, NonZeroU64, NonZeroU128, NonZeroUsize,
     bool, IpAddr, Ipv4Addr, Ipv6Addr, SocketAddrV4, SocketAddrV6, SocketAddr
+}
+
+impl<'a> FromParam<'a> for PathBuf {
+    type Error = PathError;
+
+    #[inline]
+    fn from_param(param: &'a str) -> Result<Self, Self::Error> {
+        use crate::http::private::Indexed;
+
+        let segments = &[Indexed::Indexed(0, param.len())];
+        Segments::new(param.into(), segments).to_path_buf(false)
+    }
 }
 
 impl<'a, T: FromParam<'a>> FromParam<'a> for Result<T, T::Error> {
@@ -276,14 +288,14 @@ pub trait FromSegments<'r>: Sized {
 
     /// Parses an instance of `Self` from many dynamic path parameter strings or
     /// returns an `Error` if one cannot be parsed.
-    fn from_segments(segments: Segments<'r>) -> Result<Self, Self::Error>;
+    fn from_segments(segments: Segments<'r, Path>) -> Result<Self, Self::Error>;
 }
 
-impl<'r> FromSegments<'r> for Segments<'r> {
+impl<'r> FromSegments<'r> for Segments<'r, Path> {
     type Error = std::convert::Infallible;
 
     #[inline(always)]
-    fn from_segments(segments: Segments<'r>) -> Result<Segments<'r>, Self::Error> {
+    fn from_segments(segments: Self) -> Result<Self, Self::Error> {
         Ok(segments)
     }
 }
@@ -307,7 +319,7 @@ impl<'r> FromSegments<'r> for Segments<'r> {
 impl FromSegments<'_> for PathBuf {
     type Error = PathError;
 
-    fn from_segments(segments: Segments<'_>) -> Result<Self, Self::Error> {
+    fn from_segments(segments: Segments<'_, Path>) -> Result<Self, Self::Error> {
         segments.to_path_buf(false)
     }
 }
@@ -316,7 +328,7 @@ impl<'r, T: FromSegments<'r>> FromSegments<'r> for Result<T, T::Error> {
     type Error = std::convert::Infallible;
 
     #[inline]
-    fn from_segments(segments: Segments<'r>) -> Result<Result<T, T::Error>, Self::Error> {
+    fn from_segments(segments: Segments<'r, Path>) -> Result<Result<T, T::Error>, Self::Error> {
         match T::from_segments(segments) {
             Ok(val) => Ok(Ok(val)),
             Err(e) => Ok(Err(e)),
@@ -328,7 +340,7 @@ impl<'r, T: FromSegments<'r>> FromSegments<'r> for Option<T> {
     type Error = std::convert::Infallible;
 
     #[inline]
-    fn from_segments(segments: Segments<'r>) -> Result<Option<T>, Self::Error> {
+    fn from_segments(segments: Segments<'r, Path>) -> Result<Option<T>, Self::Error> {
         match T::from_segments(segments) {
             Ok(val) => Ok(Some(val)),
             Err(_) => Ok(None)

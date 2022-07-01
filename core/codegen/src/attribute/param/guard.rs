@@ -1,12 +1,11 @@
 use std::hash::{Hash, Hasher};
 
-use devise::{syn, FromMeta, MetaItem, Result};
+use devise::{FromMeta, MetaItem, Result};
+use proc_macro2::Span;
 
 use crate::name::Name;
-use crate::proc_macro2::Span;
 use crate::proc_macro_ext::StringLit;
 use crate::http::uri;
-
 
 impl Dynamic {
     pub fn is_wild(&self) -> bool {
@@ -19,8 +18,8 @@ impl FromMeta for Dynamic {
         let string = StringLit::from_meta(meta)?;
         let span = string.subspan(1..string.len() + 1);
 
-        // We don't allow `_`. We abuse `uri::Query` to enforce this.
-        Ok(Dynamic::parse::<uri::Query>(&string, span)?)
+        // We don't allow `_`. We abuse `fmt::Query` to enforce this.
+        Ok(Dynamic::parse::<fmt::Query>(&string, span)?)
     }
 }
 

@@ -1,8 +1,8 @@
 use super::EntryAttr;
 
-use devise::{syn, Spanned, Result};
+use devise::{Spanned, Result};
 use devise::ext::SpanDiagnosticExt;
-use devise::proc_macro2::{TokenStream, Span};
+use proc_macro2::{TokenStream, Span};
 
 /// `#[rocket::launch]`: generates a `main` function that calls the attributed
 /// function to generate a `Rocket` instance. Then calls `.launch()` on the
@@ -36,22 +36,27 @@ impl EntryAttr for Launch {
         };
 
         let block = &f.block;
-        let rocket = quote_spanned!(ty.span().into() => {
+        let rocket = quote_spanned!(ty.span() => {
             let ___rocket: #ty = #block;
             let ___rocket: ::rocket::Rocket<::rocket::Build> = ___rocket;
             ___rocket
         });
+
+        let launch = match f.sig.asyncness {
+            Some(_) => quote_spanned!(ty.span() => async move { #rocket.launch().await }),
+            None => quote_spanned!(ty.span() => #rocket.launch()),
+        };
 
         let (vis, mut sig) = (&f.vis, f.sig.clone());
         sig.ident = syn::Ident::new("main", sig.ident.span());
         sig.output = syn::ReturnType::Default;
         sig.asyncness = None;
 
-        Ok(quote_spanned!(block.span().into() =>
+        Ok(quote_spanned!(block.span() =>
             #[allow(dead_code)] #f
 
             #vis #sig {
-                ::rocket::async_main(async move { let _ = #rocket.launch().await; })
+                let _ = ::rocket::async_main(#launch);
             }
         ))
     }

@@ -20,7 +20,7 @@ fn ise() -> &'static str {
     "Hey, sorry! :("
 }
 
-fn pre_future_route<'r>(_: &'r Request<'_>, _: Data) -> route::BoxFuture<'r> {
+fn pre_future_route<'r>(_: &'r Request<'_>, _: Data<'r>) -> route::BoxFuture<'r> {
     panic!("hey now...");
 }
 

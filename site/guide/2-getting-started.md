@@ -43,7 +43,7 @@ Now, add Rocket as a dependency in your `Cargo.toml`:
 
 ```toml
 [dependencies]
-rocket = "0.5.0-dev"
+rocket = "0.5.0-rc.2"
 ```
 
 ! warning: Development versions must be _git_ dependencies.
@@ -103,5 +103,5 @@ Visit `http://localhost:8000` to see your first Rocket application in action!
 ! tip: Don't like colors or emoji?
 
   You can disable colors and emoji by setting the `ROCKET_CLI_COLORS`
-  environment variable to `0` or `off` when running a Rocket binary:
-  `ROCKET_CLI_COLORS=off cargo run`.
+  environment variable to `0` or `false` when running a Rocket binary:
+  `ROCKET_CLI_COLORS=false cargo run`.

@@ -38,7 +38,7 @@ impl Fairing for Counter {
         Ok(rocket.manage(self.clone()).mount("/", routes![counts]))
     }
 
-    async fn on_request(&self, request: &mut Request<'_>, _: &mut Data) {
+    async fn on_request(&self, request: &mut Request<'_>, _: &mut Data<'_>) {
         if request.method() == Method::Get {
             self.get.fetch_add(1, Ordering::Relaxed);
         } else if request.method() == Method::Post {

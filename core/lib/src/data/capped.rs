@@ -41,7 +41,8 @@ impl std::ops::Deref for N {
 ///
 /// ```rust
 /// # #[macro_use] extern crate rocket;
-/// use rocket::data::{Capped, TempFile};
+/// use rocket::data::Capped;
+/// use rocket::fs::TempFile;
 ///
 /// #[post("/upload", data = "<file>")]
 /// async fn upload(mut file: Capped<TempFile<'_>>) -> std::io::Result<()> {
@@ -58,7 +59,7 @@ impl std::ops::Deref for N {
 /// [`DataStream`]: crate::data::DataStream
 /// [`FromData`]: crate::data::FromData
 /// [`FromForm`]: crate::form::FromForm
-/// [`TempFile`]: crate::data::TempFile
+/// [`TempFile`]: crate::fs::TempFile
 // TODO: `Capped` not particularly usable outside Rocket due to coherence.
 #[derive(Debug, Copy, Clone)]
 pub struct Capped<T> {
@@ -222,21 +223,21 @@ macro_rules! impl_strict_from_form_field_from_capped {
 
             fn from_value(f: ValueField<'v>) -> Result<'v, Self> {
                 let capped = <Capped<$T> as FromFormField<'v>>::from_value(f)?;
-                if capped.is_complete() {
-                    Ok(capped.value)
-                } else {
-                    Err((None, Some(capped.n.written)))?
+                if !capped.is_complete() {
+                    Err((None, Some(capped.n.written)))?;
                 }
+
+                Ok(capped.value)
             }
 
             async fn from_data(field: DataField<'v, '_>) -> Result<'v, Self> {
                 let capped = <Capped<$T> as FromFormField<'v>>::from_data(field);
                 let capped = capped.await?;
-                if capped.is_complete() {
-                    Ok(capped.value)
-                } else {
-                    Err((None, Some(capped.n.written)))?
+                if !capped.is_complete() {
+                    Err((None, Some(capped.n.written)))?;
                 }
+
+                Ok(capped.value)
             }
         }
     };)
@@ -250,8 +251,8 @@ macro_rules! impl_strict_from_data_from_capped {
 
             async fn from_data(
                 r: &'r $crate::Request<'_>,
-                d: $crate::Data
-            ) -> $crate::data::Outcome<Self, Self::Error> {
+                d: $crate::Data<'r>
+            ) -> $crate::data::Outcome<'r, Self> {
                 use $crate::outcome::Outcome::*;
                 use std::io::{Error, ErrorKind::UnexpectedEof};
 

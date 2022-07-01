@@ -1,15 +1,16 @@
 [package]
 name = "rocket_codegen"
-version = "0.5.0-dev"
+version = "0.5.0-rc.2"
 authors = ["Sergio Benitez <sb@sergio.bz>"]
 description = "Procedural macros for the Rocket web framework."
-documentation = "https://api.rocket.rs/master/rocket_codegen/"
+documentation = "https://api.rocket.rs/v0.5-rc/rocket_codegen/"
 homepage = "https://rocket.rs"
 repository = "https://github.com/SergioBenitez/Rocket"
 readme = "../../README.md"
 keywords = ["rocket", "web", "framework", "code", "generation"]
 license = "MIT OR Apache-2.0"
-edition = "2018"
+edition = "2021"
+rust-version = "1.56"
 
 [lib]
 proc-macro = true
@@ -17,12 +18,16 @@ proc-macro = true
 [dependencies]
 indexmap = "1.0"
 quote = "1.0"
-rocket_http = { version = "0.5.0-dev", path = "../http/" }
-devise = { git = "https://github.com/SergioBenitez/Devise.git", rev = "df00b5" }
+syn = { version = "1.0.72", features = ["full", "visit", "visit-mut", "extra-traits"] }
+proc-macro2 = "1.0.27"
+devise = "0.3.1"
+rocket_http = { version = "0.5.0-rc.2", path = "../http/" }
 unicode-xid = "0.2"
 glob = "0.3"
 
 [dev-dependencies]
-rocket = { version = "0.5.0-dev", path = "../lib" }
+rocket = { path = "../lib", features = ["json", "msgpack"] }
+time = { version =  "0.3", features = ["macros"] }
+pretty_assertions = "1"
 version_check = "0.9"
 trybuild = "1.0"

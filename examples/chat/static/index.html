@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <title>Rocket Rooms</title>
+    <link rel="stylesheet" href="/reset.css">
+    <link rel="stylesheet" href="/style.css">
+    <script src="/script.js" charset="utf-8" defer></script>
+  </head>
+  <body>
+    <main>
+      <div id="sidebar">
+        <div id="status" class="pending"></div>
+
+        <div id="room-list">
+          <template id="room">
+            <button class="room"></button>
+          </template>
+        </div>
+
+        <form id="new-room">
+          <input type="text" name="name" id="name" autocomplete="off"
+              placeholder="new room..." maxlength="29"></input>
+          <button type="submit">+</button>
+        </form>
+      </div>
+
+      <div id="content">
+
+        <div id="messages">
+          <template id="message">
+            <div class="message">
+              <span class="username"></span>
+              <span class="text"></span>
+            </div>
+          </template>
+        </div>
+
+        <form id="new-message">
+          <input type="text" name="username" id="username" maxlength="19"
+            placeholder="guest" autocomplete="off">
+          <input type="text" name="message" id="message" autocomplete="off"
+              placeholder="Send a message..." autofocus>
+          <button type="submit" id="send">Send</button>
+        </form>
+      </div>
+    </main>
+  </body>
+</html>

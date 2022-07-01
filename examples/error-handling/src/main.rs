@@ -17,16 +17,16 @@ fn forced_error(code: u16) -> Status {
 }
 
 #[catch(404)]
-fn general_not_found() -> content::Html<&'static str> {
-    content::Html(r#"
+fn general_not_found() -> content::RawHtml<&'static str> {
+    content::RawHtml(r#"
         <p>Hmm... What are you looking for?</p>
         Say <a href="/hello/Sergio/100">hello!</a>
     "#)
 }
 
 #[catch(404)]
-fn hello_not_found(req: &Request<'_>) -> content::Html<String> {
-    content::Html(format!("\
+fn hello_not_found(req: &Request<'_>) -> content::RawHtml<String> {
+    content::RawHtml(format!("\
         <p>Sorry, but '{}' is not a valid path!</p>\
         <p>Try visiting /hello/&lt;name&gt;/&lt;age&gt; instead.</p>",
         req.uri()))

@@ -1,6 +1,8 @@
 use rocket::local::asynchronous::Client;
-use rocket::response::Responder;
 use rocket::http::{Status, ContentType, Cookie};
+use rocket::response::Responder;
+use rocket::serde::json::Json;
+use rocket::http::Accept;
 
 #[derive(Responder)]
 pub enum Foo<'r> {
@@ -106,4 +108,40 @@ async fn responder_baz() {
     assert_eq!(r.status(), Status::Ok);
     assert_eq!(r.content_type(), Some(ContentType::new("application", "x-custom")));
     assert_eq!(r.body_mut().to_string().await.unwrap(), "just a custom");
+}
+
+// The bounds `Json<T>: Responder, E: Responder` will be added to the generated
+// implementation. This would fail to compile otherwise.
+#[derive(Responder)]
+enum MyResult<'a, T, E, H1, H2> {
+    Ok(Json<T>),
+    #[response(status = 404)]
+    Err(E, H1, H2),
+    #[response(status = 500)]
+    Other(&'a str),
+}
+
+#[rocket::async_test]
+async fn generic_responder() {
+    let client = Client::debug_with(vec![]).await.expect("valid rocket");
+    let local_req = client.get("/");
+    let req = local_req.inner();
+
+    let v: MyResult<_, (), ContentType, Cookie<'static>> = MyResult::Ok(Json("hi"));
+    let mut r = v.respond_to(req).unwrap();
+    assert_eq!(r.status(), Status::Ok);
+    assert_eq!(r.content_type().unwrap(), ContentType::JSON);
+    assert_eq!(r.body_mut().to_string().await.unwrap(), "\"hi\"");
+
+    let v: MyResult<(), &[u8], _, _> = MyResult::Err(&[7, 13, 23], ContentType::JPEG, Accept::Text);
+    let mut r = v.respond_to(req).unwrap();
+    assert_eq!(r.status(), Status::NotFound);
+    assert_eq!(r.content_type().unwrap(), ContentType::JPEG);
+    assert_eq!(r.body_mut().to_bytes().await.unwrap(), vec![7, 13, 23]);
+
+    let v: MyResult<(), &[u8], ContentType, Accept> = MyResult::Other("beep beep");
+    let mut r = v.respond_to(req).unwrap();
+    assert_eq!(r.status(), Status::InternalServerError);
+    assert_eq!(r.content_type().unwrap(), ContentType::Text);
+    assert_eq!(r.body_mut().to_string().await.unwrap(), "beep beep");
 }

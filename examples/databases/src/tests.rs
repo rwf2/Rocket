@@ -1,31 +1,10 @@
 use rocket::fairing::AdHoc;
-use rocket::local::blocking::{Client, LocalResponse, LocalRequest};
-use rocket::http::{Status, ContentType};
-use serde::{Serialize, Deserialize};
-
-// Make it easier to work with JSON.
-trait LocalResponseExt {
-    fn into_json<T: serde::de::DeserializeOwned>(self) -> Option<T>;
-}
-
-trait LocalRequestExt {
-    fn json<T: serde::Serialize>(self, value: &T) -> Self;
-}
-
-impl LocalResponseExt for LocalResponse<'_> {
-    fn into_json<T: serde::de::DeserializeOwned>(self) -> Option<T> {
-        serde_json::from_reader(self).ok()
-    }
-}
-
-impl LocalRequestExt for LocalRequest<'_> {
-    fn json<T: serde::Serialize>(self, value: &T) -> Self {
-        let json = serde_json::to_string(value).expect("JSON serialization");
-        self.header(ContentType::JSON).body(json)
-    }
-}
+use rocket::local::blocking::Client;
+use rocket::serde::{Serialize, Deserialize};
+use rocket::http::Status;
 
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
+#[serde(crate = "rocket::serde")]
 struct Post {
     title: String,
     text: String,

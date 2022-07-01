@@ -2,22 +2,23 @@
 name = "databases"
 version = "0.0.0"
 workspace = "../"
-edition = "2018"
+edition = "2021"
 publish = false
 
 [dependencies]
-rocket = { path = "../../core/lib" }
-serde = { version = "1.0", features = ["derive"] }
-serde_json = "1.0"
+rocket = { path = "../../core/lib", features = ["json"] }
 diesel = { version = "1.3", features = ["sqlite", "r2d2"] }
 diesel_migrations = "1.3"
 
 [dependencies.sqlx]
 version = "0.5.1"
 default-features = false
-features = ["runtime-tokio-rustls", "sqlite", "macros", "offline", "migrate"]
+features = ["macros", "offline", "migrate"]
 
-[dependencies.rocket_contrib]
-path = "../../contrib/lib"
-default-features = false
-features = ["diesel_sqlite_pool", "sqlite_pool", "json"]
+[dependencies.rocket_db_pools]
+path = "../../contrib/db_pools/lib/"
+features = ["sqlx_sqlite"]
+
+[dependencies.rocket_sync_db_pools]
+path = "../../contrib/sync_db_pools/lib/"
+features = ["diesel_sqlite_pool", "sqlite_pool"]

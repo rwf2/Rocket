@@ -1,7 +1,7 @@
 use std::ops::{Deref, DerefMut};
 
 use crate::form::prelude::*;
-use crate::http::uri::{Query, FromUriParam};
+use crate::http::uri::fmt::{Query, FromUriParam};
 
 /// A form guard for parsing form types strictly.
 ///

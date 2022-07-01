@@ -9,13 +9,13 @@ started](../getting-started) section.
 
 The absolute fastest way to start experimenting with Rocket is to clone the
 Rocket repository and run the included examples in the `examples/` directory.
-For instance, the following set of commands runs the `hello_world` example:
+For instance, the following set of commands runs the `hello` example:
 
 ```sh
 git clone https://github.com/SergioBenitez/Rocket
 cd Rocket
-git checkout master
-cd examples/hello_world
+git checkout v0.5-rc
+cd examples/hello
 cargo run
 ```
 

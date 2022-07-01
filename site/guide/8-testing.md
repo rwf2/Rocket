@@ -69,6 +69,8 @@ a few below:
   * [`headers`]: returns a map of all of the headers in the response.
   * [`into_string`]: reads the body data into a `String`.
   * [`into_bytes`]: reads the body data into a `Vec<u8>`.
+  * [`into_json`]: deserializes the body data on-the-fly as JSON.
+  * [`into_msgpack`]: deserializes the body data on-the-fly as MessagePack.
 
 [`LocalResponse`]: @api/rocket/local/blocking/struct.LocalResponse.html
 [`status`]: @api/rocket/local/blocking/struct.LocalResponse.html#method.status
@@ -76,6 +78,8 @@ a few below:
 [`headers`]: @api/rocket/local/blocking/struct.LocalResponse.html#method.headers
 [`into_string`]: @api/rocket/local/blocking/struct.LocalResponse.html#method.into_string
 [`into_bytes`]: @api/rocket/local/blocking/struct.LocalResponse.html#method.into_bytes
+[`into_json`]: @api/rocket/local/blocking/struct.LocalResponse.html#method.into_json
+[`into_msgpack`]: @api/rocket/local/blocking/struct.LocalResponse.html#method.into_msgpack
 
 These methods are typically used in combination with the `assert_eq!` or
 `assert!` macros as follows:
@@ -107,7 +111,7 @@ use rocket::http::{ContentType, Status};
 
 # let rocket = rocket::build().mount("/", routes![hello]);
 # let client = Client::debug(rocket).expect("valid rocket instance");
-let mut response = client.get("/").dispatch();
+let mut response = client.get(uri!(hello)).dispatch();
 
 assert_eq!(response.status(), Status::Ok);
 assert_eq!(response.content_type(), Some(ContentType::Plain));
@@ -183,13 +187,18 @@ Then, we create a new `GET /` request and dispatch it, getting back our
 application's response:
 
 ```rust
+# use rocket::uri;
 # #[rocket::launch]
 # fn rocket() -> _ {
 #     rocket::build().configure(rocket::Config::debug_default())
 # }
+
+# #[rocket::get("/")]
+# fn hello() -> &'static str { "Hello, world!" }
+
 # use rocket::local::blocking::Client;
 # let client = Client::tracked(rocket()).expect("valid rocket instance");
-let mut response = client.get("/").dispatch();
+let mut response = client.get(uri!(hello)).dispatch();
 ```
 
 Finally, we ensure that the response contains the information we expect it to.
@@ -211,7 +220,7 @@ use rocket::http::{ContentType, Status};
 #
 # let rocket = rocket::build().mount("/", routes![hello]);
 # let client = Client::debug(rocket).expect("valid rocket instance");
-# let mut response = client.get("/").dispatch();
+# let mut response = client.get(uri!(hello)).dispatch();
 
 assert_eq!(response.status(), Status::Ok);
 assert_eq!(response.into_string(), Some("Hello, world!".into()));
@@ -252,7 +261,7 @@ mod test {
         let client = Client::tracked(rocket()).expect("valid rocket instance");
         # */
         # let client = Client::debug(rocket()).expect("valid rocket instance");
-        let mut response = client.get("/").dispatch();
+        let mut response = client.get(uri!(super::hello)).dispatch();
         assert_eq!(response.status(), Status::Ok);
         assert_eq!(response.into_string().unwrap(), "Hello, world!");
     }
@@ -295,30 +304,32 @@ During compilation, you should see output like:
 
 ```rust,ignore
 note: emitting Rocket code generation debug output
-  --> examples/hello_world/src/main.rs:14:1
+  --> examples/hello/src/main.rs:14:1
    |
 14 | #[get("/world")]
    | ^^^^^^^^^^^^^^^^
    |
    = note:
-    impl From<world> for rocket::StaticRouteInfo {
-        fn from(_: world) -> rocket::StaticRouteInfo {
+    impl world {
+        fn into_info(self) -> rocket::StaticRouteInfo {
             fn monomorphized_function<'_b>(
                 __req: &'_b rocket::request::Request<'_>,
                 __data: rocket::data::Data,
-            ) -> rocket::handler::HandlerFuture<'_b> {
+            ) -> ::rocket::route::BoxFuture<'_b> {
                 ::std::boxed::Box::pin(async move {
                     let ___responder = world();
-                    rocket::handler::Outcome::from(__req, ___responder)
+                    ::rocket::handler::Outcome::from(__req, ___responder)
                 })
             }
-            rocket::StaticRouteInfo {
+
+            ::rocket::StaticRouteInfo {
                 name: "world",
                 method: ::rocket::http::Method::Get,
                 path: "/world",
                 handler: monomorphized_function,
                 format: ::std::option::Option::None,
                 rank: ::std::option::Option::None,
+                sentinels: sentinels![&'static str],
             }
         }
     }

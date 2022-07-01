@@ -13,7 +13,7 @@ pub type BoxFuture<'r, T = Result<'r>> = futures::future::BoxFuture<'r, T>;
 ///
 /// This trait is exactly like a [`Route`](crate::Route)'s
 /// [`Handler`](crate::route::Handler) except it handles errors instead of
-/// requests. Thus, the documentaiton for
+/// requests. Thus, the documentation for
 /// [`route::Handler`](crate::route::Handler) applies to this trait as well. We
 /// defer to it for full details.
 ///

@@ -4,7 +4,7 @@ use crate::http::Status;
 
 /// Type alias for the return type of a [`Route`](crate::Route)'s
 /// [`Handler::handle()`].
-pub type Outcome<'r> = crate::outcome::Outcome<Response<'r>, Status, Data>;
+pub type Outcome<'r> = crate::outcome::Outcome<Response<'r>, Status, Data<'r>>;
 
 /// Type alias for the return type of a _raw_ [`Route`](crate::Route)'s
 /// [`Handler`].
@@ -53,7 +53,7 @@ pub type BoxFuture<'r, T = Outcome<'r>> = futures::future::BoxFuture<'r, T>;
 ///
 /// #[rocket::async_trait]
 /// impl Handler for CustomHandler {
-///     async fn handle<'r>(&self, req: &'r Request<'_>, data: Data) -> Outcome<'r> {
+///     async fn handle<'r>(&self, req: &'r Request<'_>, data: Data<'r>) -> Outcome<'r> {
 ///         match self.0 {
 ///             Kind::Simple => Outcome::from(req, "simple"),
 ///             Kind::Intermediate => Outcome::from(req, "intermediate"),
@@ -145,18 +145,18 @@ pub trait Handler: Cloneable + Send + Sync + 'static {
     /// generate a response. Otherwise, if the return value is `Forward(Data)`,
     /// the next matching route is attempted. If there are no other matching
     /// routes, the `404` error catcher is invoked.
-    async fn handle<'r>(&self, request: &'r Request<'_>, data: Data) -> Outcome<'r>;
+    async fn handle<'r>(&self, request: &'r Request<'_>, data: Data<'r>) -> Outcome<'r>;
 }
 
 // We write this manually to avoid double-boxing.
 impl<F: Clone + Sync + Send + 'static> Handler for F
-    where for<'x> F: Fn(&'x Request<'_>, Data) -> BoxFuture<'x>,
+    where for<'x> F: Fn(&'x Request<'_>, Data<'x>) -> BoxFuture<'x>,
 {
     #[inline(always)]
     fn handle<'r, 'life0, 'life1, 'async_trait>(
         &'life0 self,
         req: &'r Request<'life1>,
-        data: Data,
+        data: Data<'r>,
     ) -> BoxFuture<'r>
         where 'r: 'async_trait,
               'life0: 'async_trait,
@@ -167,6 +167,7 @@ impl<F: Clone + Sync + Send + 'static> Handler for F
     }
 }
 
+// FIXME!
 impl<'r, 'o: 'r> Outcome<'o> {
     /// Return the `Outcome` of response to `req` from `responder`.
     ///
@@ -179,12 +180,12 @@ impl<'r, 'o: 'r> Outcome<'o> {
     /// ```rust
     /// use rocket::{Request, Data, route};
     ///
-    /// fn str_responder<'r>(req: &'r Request, _: Data) -> route::Outcome<'r> {
+    /// fn str_responder<'r>(req: &'r Request, _: Data<'r>) -> route::Outcome<'r> {
     ///     route::Outcome::from(req, "Hello, world!")
     /// }
     /// ```
     #[inline]
-    pub fn from<R: Responder<'r, 'o>>(req: &'r Request<'_>, responder: R) -> Outcome<'o> {
+    pub fn from<R: Responder<'r, 'o>>(req: &'r Request<'_>, responder: R) -> Outcome<'r> {
         match responder.respond_to(req) {
             Ok(response) => Outcome::Success(response),
             Err(status) => Outcome::Failure(status)
@@ -202,12 +203,12 @@ impl<'r, 'o: 'r> Outcome<'o> {
     /// ```rust
     /// use rocket::{Request, Data, route};
     ///
-    /// fn str_responder<'r>(req: &'r Request, _: Data) -> route::Outcome<'r> {
+    /// fn str_responder<'r>(req: &'r Request, _: Data<'r>) -> route::Outcome<'r> {
     ///     route::Outcome::from(req, "Hello, world!")
     /// }
     /// ```
     #[inline]
-    pub fn try_from<R, E>(req: &'r Request<'_>, result: Result<R, E>) -> Outcome<'o>
+    pub fn try_from<R, E>(req: &'r Request<'_>, result: Result<R, E>) -> Outcome<'r>
         where R: Responder<'r, 'o>, E: std::fmt::Debug
     {
         let responder = result.map_err(crate::response::Debug);
@@ -228,12 +229,12 @@ impl<'r, 'o: 'r> Outcome<'o> {
     /// ```rust
     /// use rocket::{Request, Data, route};
     ///
-    /// fn str_responder<'r>(req: &'r Request, data: Data) -> route::Outcome<'r> {
+    /// fn str_responder<'r>(req: &'r Request, data: Data<'r>) -> route::Outcome<'r> {
     ///     route::Outcome::from_or_forward(req, data, "Hello, world!")
     /// }
     /// ```
     #[inline]
-    pub fn from_or_forward<R>(req: &'r Request<'_>, data: Data, responder: R) -> Outcome<'o>
+    pub fn from_or_forward<R>(req: &'r Request<'_>, data: Data<'r>, responder: R) -> Outcome<'r>
         where R: Responder<'r, 'o>
     {
         match responder.respond_to(req) {
@@ -253,12 +254,12 @@ impl<'r, 'o: 'r> Outcome<'o> {
     /// use rocket::{Request, Data, route};
     /// use rocket::http::Status;
     ///
-    /// fn bad_req_route<'r>(_: &'r Request, _: Data) -> route::Outcome<'r> {
+    /// fn bad_req_route<'r>(_: &'r Request, _: Data<'r>) -> route::Outcome<'r> {
     ///     route::Outcome::failure(Status::BadRequest)
     /// }
     /// ```
     #[inline(always)]
-    pub fn failure(code: Status) -> Outcome<'static> {
+    pub fn failure(code: Status) -> Outcome<'r> {
         Outcome::Failure(code)
     }
 
@@ -272,19 +273,19 @@ impl<'r, 'o: 'r> Outcome<'o> {
     /// ```rust
     /// use rocket::{Request, Data, route};
     ///
-    /// fn always_forward<'r>(_: &'r Request, data: Data) -> route::Outcome<'r> {
+    /// fn always_forward<'r>(_: &'r Request, data: Data<'r>) -> route::Outcome<'r> {
     ///     route::Outcome::forward(data)
     /// }
     /// ```
     #[inline(always)]
-    pub fn forward(data: Data) -> Outcome<'static> {
+    pub fn forward(data: Data<'r>) -> Outcome<'r> {
         Outcome::Forward(data)
     }
 }
 
 // INTERNAL: A handler to use when one is needed temporarily.
 #[doc(hidden)]
-pub fn dummy_handler<'r>(r: &'r Request<'_>, _: Data) -> BoxFuture<'r> {
+pub fn dummy_handler<'r>(r: &'r Request<'_>, _: Data<'r>) -> BoxFuture<'r> {
     Outcome::from(r, ()).pin()
 }
 

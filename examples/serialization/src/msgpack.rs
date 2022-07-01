@@ -1,21 +1,20 @@
-use rocket_contrib::msgpack::MsgPack;
-
-use serde::{Serialize, Deserialize};
+use rocket::serde::{Serialize, Deserialize, msgpack::MsgPack};
 
 #[derive(Serialize, Deserialize)]
+#[serde(crate = "rocket::serde")]
 struct Message<'r> {
     id: usize,
-    contents: &'r str
+    message: &'r str
 }
 
 #[get("/<id>", format = "msgpack")]
 fn get(id: usize) -> MsgPack<Message<'static>> {
-    MsgPack(Message { id, contents: "Hello, world!", })
+    MsgPack(Message { id, message: "Hello, world!", })
 }
 
 #[post("/", data = "<data>", format = "msgpack")]
-fn echo<'r>(data: MsgPack<Message<'r>>) -> &'r str {
-    data.contents
+fn echo(data: MsgPack<Message<'_>>) -> &str {
+    data.message
 }
 
 pub fn stage() -> rocket::fairing::AdHoc {

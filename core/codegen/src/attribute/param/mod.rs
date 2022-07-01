@@ -3,7 +3,6 @@ mod parse;
 use std::ops::Deref;
 use std::hash::Hash;
 
-use crate::syn;
 use crate::name::Name;
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]

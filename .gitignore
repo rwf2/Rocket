@@ -12,6 +12,8 @@ target
 
 # Generated databases
 db.sqlite
+db.sqlite-shm
+db.sqlite-wal
 
 # Remove Cargo.lock from gitignore if creating an executable, leave it for libraries
 # More information here https://doc.rust-lang.org/cargo/guide/cargo-toml-vs-cargo-lock.html

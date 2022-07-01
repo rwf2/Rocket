@@ -1,29 +1,29 @@
 #[macro_use] extern crate rocket;
 
-use rocket::http::uri::Segments;
+use rocket::http::uri::{Segments, fmt::Path};
 
 #[get("/test/<path..>")]
-fn test(path: Segments<'_>) -> String {
+fn test(path: Segments<'_, Path>) -> String {
     path.collect::<Vec<_>>().join("/")
 }
 
 #[get("/two/<path..>")]
-fn two(path: Segments<'_>) -> String {
+fn two(path: Segments<'_, Path>) -> String {
     path.collect::<Vec<_>>().join("/")
 }
 
 #[get("/one/two/<path..>")]
-fn one_two(path: Segments<'_>) -> String {
+fn one_two(path: Segments<'_, Path>) -> String {
     path.collect::<Vec<_>>().join("/")
 }
 
 #[get("/<path..>", rank = 2)]
-fn none(path: Segments<'_>) -> String {
+fn none(path: Segments<'_, Path>) -> String {
     path.collect::<Vec<_>>().join("/")
 }
 
 #[get("/static/<user>/is/<path..>")]
-fn dual(user: String, path: Segments<'_>) -> String {
+fn dual(user: String, path: Segments<'_, Path>) -> String {
     user + "/is/" + &path.collect::<Vec<_>>().join("/")
 }
 

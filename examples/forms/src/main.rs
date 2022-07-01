@@ -1,11 +1,11 @@
-#[macro_use]extern crate rocket;
+#[macro_use] extern crate rocket;
 
+use rocket::time::Date;
 use rocket::http::{Status, ContentType};
 use rocket::form::{Form, Contextual, FromForm, FromFormField, Context};
-use rocket::data::TempFile;
+use rocket::fs::{FileServer, TempFile, relative};
 
-use rocket_contrib::serve::{StaticFiles, crate_relative};
-use rocket_contrib::templates::Template;
+use rocket_dyn_templates::Template;
 
 #[derive(Debug, FromForm)]
 struct Password<'v> {
@@ -36,7 +36,7 @@ enum Category {
 struct Submission<'v> {
     #[field(validate = len(1..))]
     title: &'v str,
-    date: time::Date,
+    date: Date,
     #[field(validate = len(1..=250))]
     r#abstract: &'v str,
     #[field(validate = ext(ContentType::PDF))]
@@ -63,10 +63,13 @@ struct Submit<'v> {
 }
 
 #[get("/")]
-fn index<'r>() -> Template {
+fn index() -> Template {
     Template::render("index", &Context::default())
 }
 
+// NOTE: We use `Contextual` here because we want to collect all submitted form
+// fields to re-render forms with submitted values on error. If you have no such
+// need, do not use `Contextual`. Use the equivalent of `Form<Submit<'_>>`.
 #[post("/", data = "<form>")]
 fn submit<'r>(form: Form<Contextual<'r, Submit<'r>>>) -> (Status, Template) {
     let template = match form.value {
@@ -85,5 +88,5 @@ fn rocket() -> _ {
     rocket::build()
         .mount("/", routes![index, submit])
         .attach(Template::fairing())
-        .mount("/", StaticFiles::from(crate_relative!("/static")))
+        .mount("/", FileServer::from(relative!("/static")))
 }

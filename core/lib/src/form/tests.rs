@@ -64,7 +64,7 @@ macro_rules! assert_parse_fails {
 
 #[test]
 fn time() {
-    use time::{date, time, Date, Time, PrimitiveDateTime as DateTime};
+    use time::{macros::{date, time}, Date, Time, PrimitiveDateTime as DateTime};
 
     assert_values_parse_eq! {
         &["=2010-10-20"] => Date = date!(2010-10-20),

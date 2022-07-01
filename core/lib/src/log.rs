@@ -32,8 +32,33 @@ define_log_macro!(warn, warn_);
 define_log_macro!(info, info_);
 define_log_macro!(debug, debug_);
 define_log_macro!(trace, trace_);
-define_log_macro!(launch_info: warn, "rocket::launch", $);
-define_log_macro!(launch_info_: warn, "rocket::launch_", $);
+define_log_macro!(launch_info: info, "rocket::launch", $);
+define_log_macro!(launch_info_: info, "rocket::launch_", $);
+
+// `print!` panics when stdout isn't available, but this macro doesn't. See
+// SergioBenitez/Rocket#2019 and rust-lang/rust#46016 for more.
+//
+// Unfortunately, `libtest` captures output by replacing a special sink that
+// `print!`, and _only_ `print!`, writes to. Using `write!` directly bypasses
+// this sink. As a result, using this better implementation for logging means
+// that test log output isn't captured, muddying `cargo test` output.
+//
+// As a compromise, we only use this better implementation when we're not
+// compiled with `debug_assertions` or running tests, so at least tests run in
+// debug-mode won't spew output. NOTE: `cfg(test)` alone isn't sufficient: the
+// crate is compiled normally for integration tests.
+#[cfg(not(any(debug_assertions, test, doctest)))]
+macro_rules! write_out {
+    ($($arg:tt)*) => ({
+        use std::io::{Write, stdout, stderr};
+        let _ = write!(stdout(), $($arg)*).or_else(|e| write!(stderr(), "{}", e));
+    })
+}
+
+#[cfg(any(debug_assertions, test, doctest))]
+macro_rules! write_out {
+    ($($arg:tt)*) => (print!($($arg)*))
+}
 
 #[derive(Debug)]
 struct RocketLogger;
@@ -79,14 +104,14 @@ impl log::Log for RocketLogger {
         let max = log::max_level();
         let from = |path| record.module_path().map_or(false, |m| m.starts_with(path));
         let debug_only = from("hyper") || from("rustls") || from("r2d2");
-        if LogLevel::Debug.to_level_filter() > max && debug_only {
+        if log::LevelFilter::from(LogLevel::Debug) > max && debug_only {
             return;
         }
 
         // In Rocket, we abuse targets with suffix "_" to indicate indentation.
         let indented = record.target().ends_with('_');
         if indented {
-            print!("   {} ", Paint::default(">>").bold());
+            write_out!("   {} ", Paint::default(">>").bold());
         }
 
         // Downgrade a physical launch `warn` to logical `info`.
@@ -96,30 +121,30 @@ impl log::Log for RocketLogger {
 
         match level {
             log::Level::Error if !indented => {
-                println!("{} {}",
-                         Paint::red("Error:").bold(),
-                         Paint::red(record.args()).wrap())
+                write_out!("{} {}\n",
+                    Paint::red("Error:").bold(),
+                    Paint::red(record.args()).wrap());
             }
             log::Level::Warn if !indented => {
-                println!("{} {}",
-                         Paint::yellow("Warning:").bold(),
-                         Paint::yellow(record.args()).wrap())
+                write_out!("{} {}\n",
+                    Paint::yellow("Warning:").bold(),
+                    Paint::yellow(record.args()).wrap());
             }
-            log::Level::Info => println!("{}", Paint::blue(record.args()).wrap()),
-            log::Level::Trace => println!("{}", Paint::magenta(record.args()).wrap()),
-            log::Level::Warn => println!("{}", Paint::yellow(record.args()).wrap()),
-            log::Level::Error => println!("{}", Paint::red(record.args()).wrap()),
+            log::Level::Info => write_out!("{}\n", Paint::blue(record.args()).wrap()),
+            log::Level::Trace => write_out!("{}\n", Paint::magenta(record.args()).wrap()),
+            log::Level::Warn => write_out!("{}\n", Paint::yellow(record.args()).wrap()),
+            log::Level::Error => write_out!("{}\n", Paint::red(record.args()).wrap()),
             log::Level::Debug => {
-                print!("\n{} ", Paint::blue("-->").bold());
+                write_out!("\n{} ", Paint::blue("-->").bold());
                 if let Some(file) = record.file() {
-                    print!("{}", Paint::blue(file));
+                    write_out!("{}", Paint::blue(file));
                 }
 
                 if let Some(line) = record.line() {
-                    println!(":{}", Paint::blue(line));
+                    write_out!(":{}\n", Paint::blue(line));
                 }
 
-                println!("\t{}", record.args());
+                write_out!("\t{}\n", record.args());
             }
         }
     }
@@ -129,28 +154,43 @@ impl log::Log for RocketLogger {
     }
 }
 
-pub(crate) fn init(config: &crate::Config) -> bool {
-    static HAS_ROCKET_LOGGER: AtomicBool = AtomicBool::new(false);
+pub(crate) fn init_default() {
+    crate::log::init(&crate::Config::debug_default())
+}
 
-    let r = log::set_boxed_logger(Box::new(RocketLogger));
-    if r.is_ok() {
-        HAS_ROCKET_LOGGER.store(true, Ordering::Release);
+pub(crate) fn init(config: &crate::Config) {
+    static ROCKET_LOGGER_SET: AtomicBool = AtomicBool::new(false);
+
+    // Try to initialize Rocket's logger, recording if we succeeded.
+    if log::set_boxed_logger(Box::new(RocketLogger)).is_ok() {
+        ROCKET_LOGGER_SET.store(true, Ordering::Release);
     }
 
-    // If another has been set, don't touch anything.
-    if !HAS_ROCKET_LOGGER.load(Ordering::Acquire) {
-        return false;
-    }
-
-    if !atty::is(atty::Stream::Stdout)
-        || (cfg!(windows) && !Paint::enable_windows_ascii())
-        || !config.cli_colors
-    {
+    // Always disable colors if requested or if they won't work on Windows.
+    if !config.cli_colors || !Paint::enable_windows_ascii() {
         Paint::disable();
     }
 
-    log::set_max_level(config.log_level.to_level_filter());
-    true
+    // Set Rocket-logger specific settings only if Rocket's logger is set.
+    if ROCKET_LOGGER_SET.load(Ordering::Acquire) {
+        // Rocket logs to stdout, so disable coloring if it's not a TTY.
+        if !atty::is(atty::Stream::Stdout) {
+            Paint::disable();
+        }
+
+        log::set_max_level(config.log_level.into());
+    }
+}
+
+impl From<LogLevel> for log::LevelFilter {
+    fn from(level: LogLevel) -> Self {
+        match level {
+            LogLevel::Critical => log::LevelFilter::Warn,
+            LogLevel::Normal => log::LevelFilter::Info,
+            LogLevel::Debug => log::LevelFilter::Trace,
+            LogLevel::Off => log::LevelFilter::Off
+        }
+    }
 }
 
 impl LogLevel {
@@ -160,15 +200,6 @@ impl LogLevel {
             LogLevel::Normal => "normal",
             LogLevel::Debug => "debug",
             LogLevel::Off => "off",
-        }
-    }
-
-    fn to_level_filter(self) -> log::LevelFilter {
-        match self {
-            LogLevel::Critical => log::LevelFilter::Warn,
-            LogLevel::Normal => log::LevelFilter::Info,
-            LogLevel::Debug => log::LevelFilter::Trace,
-            LogLevel::Off => log::LevelFilter::Off
         }
     }
 }

@@ -3,8 +3,8 @@ use rocket::{*, error::ErrorKind::SentinelAborts};
 #[get("/two")]
 fn two_states(_one: &State<u32>, _two: &State<String>) {}
 
-#[get("/one")]
-fn one_state(_three: &State<u8>) {}
+#[post("/one", data = "<s>")]
+fn one_state<'r>(_three: &'r State<u8>, s: &'r str) -> &'r str { s }
 
 #[async_test]
 async fn state_sentinel_works() {
@@ -101,6 +101,44 @@ async fn state_sentinel_works() {
         .manage(1 as u32)
         .manage(1 as u8)
         .manage(String::new())
+        .ignite().await;
+
+    assert!(result.is_ok());
+}
+
+struct Data;
+
+#[crate::async_trait]
+impl<'r> data::FromData<'r> for Data {
+    type Error = Error;
+    async fn from_data(_: &'r Request<'_>, _: data::Data<'r>) -> data::Outcome<'r, Self> {
+        unimplemented!()
+    }
+}
+
+impl Sentinel for Data {
+    fn abort(rocket: &Rocket<Ignite>) -> bool {
+        rocket.state::<Data>().is_none()
+    }
+}
+
+#[post("/data", data = "<_data>")]
+fn with_data(_data: Data) {}
+
+#[async_test]
+async fn data_sentinel_works() {
+    let err = rocket::build()
+        .configure(Config::debug_default())
+        .mount("/", routes![with_data])
+        .ignite().await
+        .unwrap_err();
+
+    assert!(matches!(err.kind(), SentinelAborts(vec) if vec.len() == 1));
+
+    let result = rocket::build()
+        .configure(Config::debug_default())
+        .mount("/", routes![with_data])
+        .manage(Data)
         .ignite().await;
 
     assert!(result.is_ok());
@@ -233,4 +271,69 @@ fn inner_sentinels_detected() {
 
     #[get("/")] fn either_route4() -> Either<(), ()> { todo!() }
     Client::debug_with(routes![either_route4]).expect("no sentinel error");
+}
+
+#[async_test]
+async fn known_macro_sentinel_works() {
+    use rocket::response::stream::{TextStream, ByteStream, ReaderStream};
+    use rocket::local::asynchronous::Client;
+    use rocket::tokio::io::AsyncRead;
+
+    #[derive(Responder)]
+    struct TextSentinel<'r>(&'r str);
+
+    impl Sentinel for TextSentinel<'_> {
+        fn abort(_: &Rocket<Ignite>) -> bool {
+            true
+        }
+    }
+
+    impl AsRef<str> for TextSentinel<'_> {
+        fn as_ref(&self) -> &str {
+            self.0
+        }
+    }
+
+    impl AsRef<[u8]> for TextSentinel<'_> {
+        fn as_ref(&self) -> &[u8] {
+            self.0.as_bytes()
+        }
+    }
+
+    impl AsyncRead for TextSentinel<'_> {
+        fn poll_read(
+            self: std::pin::Pin<&mut Self>,
+            _: &mut futures::task::Context<'_>,
+            _: &mut tokio::io::ReadBuf<'_>,
+        ) -> futures::task::Poll<std::io::Result<()>> {
+            futures::task::Poll::Ready(Ok(()))
+        }
+    }
+
+    #[get("/text")]
+    fn text<'r>() -> TextStream![TextSentinel<'r>] {
+        TextStream!(yield TextSentinel("hi");)
+    }
+
+    #[get("/<a>")]
+    fn byte(a: &str) -> ByteStream![TextSentinel<'_>] {
+        ByteStream!(yield TextSentinel(a);)
+    }
+
+    #[get("/<_a>/<b>")]
+    fn reader<'a, 'b>(_a: &'a str, b: &'b str) -> ReaderStream![TextSentinel<'b>] {
+        ReaderStream!(yield TextSentinel(b);)
+    }
+
+    macro_rules! UnknownStream {
+        ($t:ty) => (ReaderStream![$t])
+    }
+
+    #[get("/ignore")]
+    fn ignore() -> UnknownStream![TextSentinel<'static>] {
+        ReaderStream!(yield TextSentinel("hi");)
+    }
+
+    let err = Client::debug_with(routes![text, byte, reader, ignore]).await.unwrap_err();
+    assert!(matches!(err.kind(), SentinelAborts(vec) if vec.len() == 3));
 }

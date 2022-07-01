@@ -4,7 +4,7 @@ use crate::Request;
 use crate::outcome::try_outcome;
 use crate::data::{Data, FromData, Outcome};
 use crate::http::{RawStr, ext::IntoOwned};
-use crate::form::parser::{Parser, RawStrParser, Buffer};
+use crate::form::{SharedStack, parser::{Parser, RawStrParser}};
 use crate::form::prelude::*;
 
 /// A data guard for [`FromForm`] types.
@@ -12,7 +12,7 @@ use crate::form::prelude::*;
 /// This type implements the [`FromData`] trait. It provides a generic means to
 /// parse arbitrary structures from incoming form data.
 ///
-/// See the [forms guide](https://rocket.rs/master/guide/requests#forms) for
+/// See the [forms guide](https://rocket.rs/v0.5-rc/guide/requests#forms) for
 /// general form support documentation.
 ///
 /// # Leniency
@@ -155,7 +155,7 @@ impl<'r, T: FromForm<'r>> Form<T> {
     /// Leniently parses a `T` from a **percent-decoded**
     /// `x-www-form-urlencoded` form string. Specifically, this method
     /// implements [§5.1 of the WHATWG URL Living Standard] with the exception
-    /// of steps 3.4 and 3.5, which are assumed to already be relfected in
+    /// of steps 3.4 and 3.5, which are assumed to already be reflected in
     /// `string`, and then parses the fields as `T`.
     ///
     /// [§5.1 of the WHATWG URL Living Standard]: https://url.spec.whatwg.org/#application/x-www-form-urlencoded
@@ -244,7 +244,7 @@ impl<T: for<'a> FromForm<'a> + 'static> Form<T> {
     /// assert_eq!(pet.wags, true);
     /// ```
     pub fn parse_encoded(string: &RawStr) -> Result<'static, T> {
-        let buffer = Buffer::new();
+        let buffer = SharedStack::new();
         let mut ctxt = T::init(Options::Lenient);
         for field in RawStrParser::new(&buffer, string) {
             T::push_value(&mut ctxt, field)
@@ -299,7 +299,7 @@ impl<T> DerefMut for Form<T> {
 impl<'r, T: FromForm<'r>> FromData<'r> for Form<T> {
     type Error = Errors<'r>;
 
-    async fn from_data(req: &'r Request<'_>, data: Data) -> Outcome<Self, Self::Error> {
+    async fn from_data(req: &'r Request<'_>, data: Data<'r>) -> Outcome<'r, Self> {
         use either::Either;
 
         let mut parser = try_outcome!(Parser::new(req, data).await);

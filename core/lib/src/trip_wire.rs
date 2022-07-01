@@ -101,6 +101,11 @@ impl TripWire {
         self.notify.notify_waiters();
         self.notify.notify_one();
     }
+
+    #[inline(always)]
+    pub fn tripped(&self) -> bool {
+        self.tripped.load(Ordering::Acquire)
+    }
 }
 
 #[cfg(test)]

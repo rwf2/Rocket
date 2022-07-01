@@ -115,6 +115,76 @@ impl LocalResponse<'_> {
         self.response.body_mut().to_bytes().await
     }
 
+    #[cfg(feature = "json")]
+    async fn _into_json<T: Send + 'static>(self) -> Option<T>
+        where T: serde::de::DeserializeOwned
+    {
+        self.blocking_read(|r| serde_json::from_reader(r)).await?.ok()
+    }
+
+    #[cfg(feature = "msgpack")]
+    async fn _into_msgpack<T: Send + 'static>(self) -> Option<T>
+        where T: serde::de::DeserializeOwned
+    {
+        self.blocking_read(|r| rmp_serde::from_read(r)).await?.ok()
+    }
+
+    #[cfg(any(feature = "json", feature = "msgpack"))]
+    async fn blocking_read<T, F>(mut self, f: F) -> Option<T>
+        where T: Send + 'static,
+              F: FnOnce(&mut dyn io::Read) -> T + Send + 'static
+    {
+        use tokio::sync::mpsc;
+        use tokio::io::AsyncReadExt;
+
+        struct ChanReader {
+            last: Option<io::Cursor<Vec<u8>>>,
+            rx: mpsc::Receiver<io::Result<Vec<u8>>>,
+        }
+
+        impl std::io::Read for ChanReader {
+            fn read(&mut self, buf: &mut [u8]) -> io::Result<usize> {
+                loop {
+                    if let Some(ref mut cursor) = self.last {
+                        if cursor.position() < cursor.get_ref().len() as u64 {
+                            return std::io::Read::read(cursor, buf);
+                        }
+                    }
+
+                    if let Some(buf) = self.rx.blocking_recv() {
+                        self.last = Some(io::Cursor::new(buf?));
+                    } else {
+                        return Ok(0);
+                    }
+                }
+            }
+        }
+
+        let (tx, rx) = mpsc::channel(2);
+        let reader = tokio::task::spawn_blocking(move || {
+            let mut reader = ChanReader { last: None, rx };
+            f(&mut reader)
+        });
+
+        loop {
+            // TODO: Try to fill as much as the buffer before send it off?
+            let mut buf = Vec::with_capacity(1024);
+            match self.read_buf(&mut buf).await {
+                Ok(n) if n == 0 => break,
+                Ok(_) => tx.send(Ok(buf)).await.ok()?,
+                Err(e) => {
+                    tx.send(Err(e)).await.ok()?;
+                    break;
+                }
+            }
+        }
+
+        // NOTE: We _must_ drop tx now to prevent a deadlock!
+        drop(tx);
+
+        reader.await.ok()
+    }
+
     // Generates the public API methods, which call the private methods above.
     pub_response_impl!("# use rocket::local::asynchronous::Client;\n\
         use rocket::local::asynchronous::LocalResponse;" async await);

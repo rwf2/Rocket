@@ -154,7 +154,7 @@ impl<'v> NameView<'v> {
     /// assert_eq!(view.key(), None);
     /// ```
     pub fn shift(&mut self) {
-        const START_DELIMS: &'static [char] = &['.', '['];
+        const START_DELIMS: &[char] = &['.', '['];
 
         let string = &self.name[self.end..];
         let bytes = string.as_bytes();
@@ -184,6 +184,13 @@ impl<'v> NameView<'v> {
 
     /// Returns the key currently viewed by `self` if it is non-empty.
     ///
+    /// ```text
+    ///                 food.bart[bar:foo].blam[0_0][][1000]=some-value
+    /// name            |----------------------------------|
+    /// non-empty key   |--| |--| |-----|  |--| |-|     |--|
+    /// empty key                                  |-|
+    /// ```
+    ///
     /// # Example
     ///
     /// ```rust
@@ -210,6 +217,13 @@ impl<'v> NameView<'v> {
     }
 
     /// Returns the key currently viewed by `self`, even if it is non-empty.
+    ///
+    /// ```text
+    ///                 food.bart[bar:foo].blam[0_0][][1000]=some-value
+    /// name            |----------------------------------|
+    /// non-empty key   |--| |--| |-----|  |--| |-|     |--|
+    /// empty key                                  |-|
+    /// ```
     ///
     /// # Example
     ///

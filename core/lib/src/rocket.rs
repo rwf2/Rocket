@@ -1,12 +1,12 @@
 use std::fmt;
 use std::ops::{Deref, DerefMut};
-use std::convert::TryInto;
+use std::net::SocketAddr;
 
 use yansi::Paint;
 use either::Either;
 use figment::{Figment, Provider};
 
-use crate::{Catcher, Config, Route, Shutdown, sentinel};
+use crate::{Catcher, Config, Route, Shutdown, sentinel, shield::Shield};
 use crate::router::Router;
 use crate::trip_wire::TripWire;
 use crate::fairing::{Fairing, Fairings};
@@ -21,91 +21,118 @@ use crate::log::PaintExt;
 ///
 /// # Phases
 ///
-/// An instance of `Rocket` represents a web server and its state. It progresses
-/// through three statically-enforced phases into orbit: build, ignite, orbit.
+/// A `Rocket` instance represents a web server and its state. It progresses
+/// through three statically-enforced phases: build, ignite, orbit.
 ///
-/// ## Build
+/// * **Build**: _application and server configuration_
 ///
-/// All application and server configuration occurs during the [`Build`] phase.
-/// This includes setting configuration options, mounting/registering
-/// routes/catchers, managing state, and attaching fairings. This is the _only_
-/// phase in which an instance can be modified. To finalize changes, an instance
-/// is ignited via [`Rocket::ignite()`], progressing it into the _ignite_ phase,
-/// or directly launched into orbit with [`Rocket::launch()`] which progress the
-/// instance through ignite into orbit.
+///   This phase enables:
 ///
-/// ## Ignite
+///     * setting configuration options
+///     * mounting/registering routes/catchers
+///     * managing state
+///     * attaching fairings
 ///
-/// An instance in the [`Ignite`] phase is in its final configuration, available
-/// via [`Rocket::config()`]. Barring user-supplied iterior mutation,
-/// application state is guaranteed to remain unchanged beyond this point. An
-/// instance in the ignite phase can be launched into orbit to serve requests
-/// via [`Rocket::launch()`].
+///   This is the _only_ phase in which an instance can be modified. To finalize
+///   changes, an instance is ignited via [`Rocket::ignite()`], progressing it
+///   into the _ignite_ phase, or directly launched into orbit with
+///   [`Rocket::launch()`] which progress the instance through ignite into
+///   orbit.
 ///
-/// ## Orbit
+/// * **Ignite**: _verification and finalization of configuration_
 ///
-/// An instance in the [`Orbit`] phase represents a _running_ application,
-/// actively serving requests.
+///   An instance in the [`Ignite`] phase is in its final configuration,
+///   available via [`Rocket::config()`]. Barring user-supplied interior
+///   mutation, application state is guaranteed to remain unchanged beyond this
+///   point. An instance in the ignite phase can be launched into orbit to serve
+///   requests via [`Rocket::launch()`].
+///
+/// * **Orbit**: _a running web server_
+///
+///   An instance in the [`Orbit`] phase represents a _running_ application,
+///   actively serving requests.
 ///
 /// # Launching
 ///
-/// ## Manual Launching
+/// To launch a `Rocket` application, the suggested approach is to return an
+/// instance of `Rocket<Build>` from a function named `rocket` marked with the
+/// [`#[launch]`](crate::launch) attribute:
 ///
-/// To launch an instance of `Rocket`, it _must_ progress through all three
-/// phases. To progress into the ignite or launch phases, a tokio `async`
-/// runtime is required. The [`#[main]`](crate::main) attribute initializes a
-/// Rocket-specific tokio runtime and runs the attributed `async fn` inside of
-/// it:
+///   ```rust,no_run
+///   # use rocket::launch;
+///   #[launch]
+///   fn rocket() -> _ {
+///       rocket::build()
+///   }
+///   ```
 ///
-/// ```rust,no_run
-/// #[rocket::main]
-/// async fn main() -> Result<(), rocket::Error> {
-///     rocket::build()
-///         .ignite().await?
-///         .launch().await
-/// }
-/// ```
+/// This generates a `main` funcion with an `async` runtime that runs the
+/// returned `Rocket` instance.
 ///
-/// Note that [`Rocket::launch()`] automatically progresses an instance of
-/// `Rocket` from any phase into orbit:
+/// * **Manual Launching**
 ///
-/// ```rust,no_run
-/// #[rocket::main]
-/// async fn main() -> Result<(), rocket::Error> {
-///     rocket::build().launch().await
-/// }
-/// ```
+///   To launch an instance of `Rocket`, it _must_ progress through all three
+///   phases. To progress into the ignite or launch phases, a tokio `async`
+///   runtime is required. The [`#[main]`](crate::main) attribute initializes a
+///   Rocket-specific tokio runtime and runs the attributed `async fn` inside of
+///   it:
 ///
-/// ## Automatic Launching
+///   ```rust,no_run
+///   #[rocket::main]
+///   async fn main() -> Result<(), rocket::Error> {
+///       let _rocket = rocket::build()
+///           .ignite().await?
+///           .launch().await?;
 ///
-/// Manually progressing an instance of Rocket though its phases is only
-/// necessary when either an instance's finalized state is to be inspected (in
-/// the _ignite_ phase) or the instance is expected to deorbit due to
-/// [`Rocket::shutdown()`]. In the more common case when neither is required,
-/// the [`#[launch]`](crate::launch) attribute can be used. When applied to a
-/// function that returns a `Rocket<Build>`, it automatically initializes an
-/// `async` runtime and launches the function's returned instance:
+///       Ok(())
+///   }
+///   ```
 ///
-/// ```rust,no_run
-/// # use rocket::launch;
-/// use rocket::{Rocket, Build};
+///   Note that [`Rocket::launch()`] automatically progresses an instance of
+///   `Rocket` from any phase into orbit:
 ///
-/// #[launch]
-/// fn rocket() -> Rocket<Build> {
-///     rocket::build()
-/// }
-/// ```
+///   ```rust,no_run
+///   #[rocket::main]
+///   async fn main() -> Result<(), rocket::Error> {
+///       let _rocket = rocket::build().launch().await?;
+///       Ok(())
+///   }
+///   ```
 ///
-/// To avoid needing to import _any_ items in the common case, the `launch`
-/// attribute will infer a return type written as `_` as `Rocket<Build>`:
+///   For extreme and rare cases in which [`#[main]`](crate::main) imposes
+///   obstinate restrictions, use [`rocket::execute()`](crate::execute()) to
+///   execute Rocket's `launch()` future.
 ///
-/// ```rust,no_run
-/// # use rocket::launch;
-/// #[launch]
-/// fn rocket() -> _ {
-///     rocket::build()
-/// }
-/// ```
+/// * **Automatic Launching**
+///
+///   Manually progressing an instance of Rocket though its phases is only
+///   necessary when either an instance's finalized state is to be inspected (in
+///   the _ignite_ phase) or the instance is expected to deorbit due to
+///   [`Rocket::shutdown()`]. In the more common case when neither is required,
+///   the [`#[launch]`](crate::launch) attribute can be used. When applied to a
+///   function that returns a `Rocket<Build>`, it automatically initializes an
+///   `async` runtime and launches the function's returned instance:
+///
+///   ```rust,no_run
+///   # use rocket::launch;
+///   use rocket::{Rocket, Build};
+///
+///   #[launch]
+///   fn rocket() -> Rocket<Build> {
+///       rocket::build()
+///   }
+///   ```
+///
+///   To avoid needing to import _any_ items in the common case, the `launch`
+///   attribute will infer a return type written as `_` as `Rocket<Build>`:
+///
+///   ```rust,no_run
+///   # use rocket::launch;
+///   #[launch]
+///   fn rocket() -> _ {
+///       rocket::build()
+///   }
+///   ```
 pub struct Rocket<P: Phase>(pub(crate) P::State);
 
 impl Rocket<Build> {
@@ -124,6 +151,7 @@ impl Rocket<Build> {
     ///     rocket::build()
     /// }
     /// ```
+    #[must_use]
     #[inline(always)]
     pub fn build() -> Self {
         Rocket::custom(Config::figment())
@@ -150,11 +178,18 @@ impl Rocket<Build> {
     ///     rocket::custom(figment)
     /// }
     /// ```
+    #[must_use]
     pub fn custom<T: Provider>(provider: T) -> Self {
-        Rocket(Building {
+        // We initialize the logger here so that logging from fairings and so on
+        // are visible; we use the final config to set a max log-level in ignite
+        crate::log::init_default();
+
+        let rocket: Rocket<Build> = Rocket(Building {
             figment: Figment::from(provider),
             ..Default::default()
-        })
+        });
+
+        rocket.attach(Shield::default())
     }
 
     /// Sets the configuration provider in `self` to `provider`.
@@ -176,7 +211,7 @@ impl Rocket<Build> {
     /// let config = Config {
     ///     port: 7777,
     ///     address: Ipv4Addr::new(18, 127, 0, 1).into(),
-    ///     temp_dir: PathBuf::from("/tmp/config-example"),
+    ///     temp_dir: "/tmp/config-example".into(),
     ///     ..Config::debug_default()
     /// };
     ///
@@ -184,7 +219,7 @@ impl Rocket<Build> {
     /// let rocket = rocket::custom(&config).ignite().await?;
     /// assert_eq!(rocket.config().port, 7777);
     /// assert_eq!(rocket.config().address, Ipv4Addr::new(18, 127, 0, 1));
-    /// assert_eq!(rocket.config().temp_dir, Path::new("/tmp/config-example"));
+    /// assert_eq!(rocket.config().temp_dir.relative(), Path::new("/tmp/config-example"));
     ///
     /// // Create a new figment which modifies _some_ keys the existing figment:
     /// let figment = rocket.figment().clone()
@@ -197,15 +232,17 @@ impl Rocket<Build> {
     ///
     /// assert_eq!(rocket.config().port, 8888);
     /// assert_eq!(rocket.config().address, Ipv4Addr::new(171, 64, 200, 10));
-    /// assert_eq!(rocket.config().temp_dir, Path::new("/tmp/config-example"));
+    /// assert_eq!(rocket.config().temp_dir.relative(), Path::new("/tmp/config-example"));
     /// # Ok(())
     /// # });
     /// ```
+    #[must_use]
     pub fn configure<T: Provider>(mut self, provider: T) -> Self {
         self.figment = Figment::from(provider);
         self
     }
 
+    #[track_caller]
     fn load<'a, B, T, F, M>(mut self, kind: &str, base: B, items: Vec<T>, m: M, f: F) -> Self
         where B: TryInto<Origin<'a>> + Clone + fmt::Display,
               B::Error: fmt::Display,
@@ -213,13 +250,15 @@ impl Rocket<Build> {
               F: Fn(&mut Self, T),
               T: Clone + fmt::Display,
     {
-        let mut base = base.clone().try_into()
-            .map(|origin| origin.into_owned())
-            .unwrap_or_else(|e| {
+        let mut base = match base.clone().try_into() {
+            Ok(origin) => origin.into_owned(),
+            Err(e) => {
                 error!("invalid {} base: {}", kind, Paint::white(&base));
                 error_!("{}", e);
+                info_!("{} {}", Paint::white("in"), std::panic::Location::caller());
                 panic!("aborting due to {} base error", kind);
-            });
+            }
+        };
 
         if base.query().is_some() {
             warn!("query in {} base '{}' is ignored", kind, Paint::white(&base));
@@ -227,12 +266,15 @@ impl Rocket<Build> {
         }
 
         for unmounted_item in items {
-            let item = m(&base, unmounted_item.clone())
-                .unwrap_or_else(|e| {
+            let item = match m(&base, unmounted_item.clone()) {
+                Ok(item) => item,
+                Err(e) => {
                     error!("malformed URI in {} {}", kind, unmounted_item);
                     error_!("{}", e);
+                    info_!("{} {}", Paint::white("in"), std::panic::Location::caller());
                     panic!("aborting due to invalid {} URI", kind);
-                });
+                }
+            };
 
             f(&mut self, item)
         }
@@ -284,7 +326,7 @@ impl Rocket<Build> {
     /// use rocket::{Request, Route, Data, route};
     /// use rocket::http::Method;
     ///
-    /// fn hi<'r>(req: &'r Request, _: Data) -> route::BoxFuture<'r> {
+    /// fn hi<'r>(req: &'r Request, _: Data<'r>) -> route::BoxFuture<'r> {
     ///     route::Outcome::from(req, "Hello!").pin()
     /// }
     ///
@@ -294,6 +336,8 @@ impl Rocket<Build> {
     ///     rocket::build().mount("/hello", vec![hi_route])
     /// }
     /// ```
+    #[must_use]
+    #[track_caller]
     pub fn mount<'a, B, R>(self, base: B, routes: R) -> Self
         where B: TryInto<Origin<'a>> + Clone + fmt::Display,
               B::Error: fmt::Display,
@@ -332,6 +376,7 @@ impl Rocket<Build> {
     ///     rocket::build().register("/", catchers![internal_error, not_found])
     /// }
     /// ```
+    #[must_use]
     pub fn register<'a, B, C>(self, base: B, catchers: C) -> Self
         where B: TryInto<Origin<'a>> + Clone + fmt::Display,
               B::Error: fmt::Display,
@@ -383,6 +428,7 @@ impl Rocket<Build> {
     ///         .mount("/", routes![int, string])
     /// }
     /// ```
+    #[must_use]
     pub fn manage<T>(self, state: T) -> Self
         where T: Send + Sync + 'static
     {
@@ -397,6 +443,9 @@ impl Rocket<Build> {
 
     /// Attaches a fairing to this instance of Rocket. No fairings are eagerly
     /// excuted; fairings are executed at their appropriate time.
+    ///
+    /// If the attached fairing is _fungible_ and a fairing of the same name
+    /// already exists, this fairing replaces it.
     ///
     /// # Example
     ///
@@ -413,6 +462,7 @@ impl Rocket<Build> {
     ///         })))
     /// }
     /// ```
+    #[must_use]
     pub fn attach<F: Fairing>(mut self, fairing: F) -> Self {
         self.fairings.add(Box::new(fairing));
         self
@@ -461,28 +511,24 @@ impl Rocket<Build> {
     /// }
     /// ```
     pub async fn ignite(mut self) -> Result<Rocket<Ignite>, Error> {
-        // We initialize the logger here so that logging from fairings are
-        // visible but change the max-log-level when we have a final config.
-        crate::log::init(&Config::debug_default());
         self = Fairings::handle_ignite(self).await;
         self.fairings.audit().map_err(|f| ErrorKind::FailedFairings(f.to_vec()))?;
 
         // Extract the configuration; initialize the logger.
         #[allow(unused_mut)]
-        let mut config = self.figment.extract::<Config>().map_err(ErrorKind::Config)?;
+        let mut config = Config::try_from(&self.figment).map_err(ErrorKind::Config)?;
         crate::log::init(&config);
 
         // Check for safely configured secrets.
         #[cfg(feature = "secrets")]
         if !config.secret_key.is_provided() {
-            let profile = self.figment.profile();
-            if profile != Config::DEBUG_PROFILE {
-                return Err(Error::new(ErrorKind::InsecureSecretKey(profile.clone())));
+            if config.profile != Config::DEBUG_PROFILE {
+                return Err(Error::new(ErrorKind::InsecureSecretKey(config.profile.clone())));
             }
 
             if config.secret_key.is_zero() {
                 config.secret_key = crate::config::SecretKey::generate()
-                    .unwrap_or(crate::config::SecretKey::zero());
+                    .unwrap_or_else(crate::config::SecretKey::zero);
             }
         };
 
@@ -498,8 +544,8 @@ impl Rocket<Build> {
         // Log everything we know: config, routes, catchers, fairings.
         // TODO: Store/print managed state type names?
         config.pretty_print(self.figment());
-        log_items("🛰  ", "Routes", self.routes(), |r| &r.uri.base, |r| &r.uri);
-        log_items("👾 ", "Catchers", self.catchers(), |c| &c.base, |c| &c.base);
+        log_items("📬 ", "Routes", self.routes(), |r| &r.uri.base, |r| &r.uri);
+        log_items("🥅 ", "Catchers", self.catchers(), |c| &c.base, |c| &c.base);
         self.fairings.pretty_print();
 
         // Ignite the rocket.
@@ -529,9 +575,9 @@ fn log_items<T, I, B, O>(e: &str, t: &str, items: I, base: B, origin: O)
     }
 
     items.sort_by_key(|i| origin(i).path().as_str().chars().count());
-    items.sort_by_key(|i| origin(i).path_segments().len());
+    items.sort_by_key(|i| origin(i).path().segments().len());
     items.sort_by_key(|i| base(i).path().as_str().chars().count());
-    items.sort_by_key(|i| base(i).path_segments().len());
+    items.sort_by_key(|i| base(i).path().segments().len());
     items.iter().for_each(|i| launch_info_!("{}", i));
 }
 
@@ -609,21 +655,36 @@ impl Rocket<Ignite> {
         rocket
     }
 
-    async fn _launch(self) -> Result<(), Error> {
-        self.into_orbit().default_tcp_http_server(|rkt| Box::pin(async move {
-            rkt.fairings.handle_liftoff(&rkt).await;
+    async fn _launch(self) -> Result<Rocket<Ignite>, Error> {
+        self.into_orbit()
+            .default_tcp_http_server(|rkt| Box::pin(async move {
+                rkt.fairings.handle_liftoff(&rkt).await;
 
-            let proto = rkt.config.tls_enabled().then(|| "https").unwrap_or("http");
-            let addr = format!("{}://{}:{}", proto, rkt.config.address, rkt.config.port);
-            launch_info!("{}{} {}",
-                Paint::emoji("🚀 "),
-                Paint::default("Rocket has launched from").bold(),
-                Paint::default(addr).bold().underline());
-        })).await
+                let proto = rkt.config.tls_enabled().then(|| "https").unwrap_or("http");
+                let socket_addr = SocketAddr::new(rkt.config.address, rkt.config.port);
+                let addr = format!("{}://{}", proto, socket_addr);
+                launch_info!("{}{} {}",
+                    Paint::emoji("🚀 "),
+                    Paint::default("Rocket has launched from").bold(),
+                    Paint::default(addr).bold().underline());
+            }))
+            .await
+            .map(|rocket| rocket.into_ignite())
     }
 }
 
 impl Rocket<Orbit> {
+    pub(crate) fn into_ignite(self) -> Rocket<Ignite> {
+        Rocket(Igniting {
+            router: self.0.router,
+            fairings: self.0.fairings,
+            figment: self.0.figment,
+            config: self.0.config,
+            state: self.0.state,
+            shutdown: self.0.shutdown,
+        })
+    }
+
     /// Returns the finalized, active configuration. This is guaranteed to
     /// remain stable after [`Rocket::ignite()`], through ignition and into
     /// orbit.
@@ -811,14 +872,16 @@ impl<P: Phase> Rocket<P> {
     ///
     ///   * graceful shutdown via [`Shutdown::notify()`] completes.
     ///
+    /// The returned value on `Ok(())` is previously running instance.
+    ///
     /// The `Future` does not resolve otherwise.
     ///
     /// # Error
     ///
-    /// If there is a problem starting the application, an [`Error`] is
-    /// returned. Note that a value of type `Error` panics if dropped without
-    /// first being inspected. See the [`Error`] documentation for more
-    /// information.
+    /// If there is a problem starting the application or the application fails
+    /// unexpectedly while running, an [`Error`] is returned. Note that a value
+    /// of type `Error` panics if dropped without first being inspected. See the
+    /// [`Error`] documentation for more information.
     ///
     /// # Example
     ///
@@ -831,11 +894,11 @@ impl<P: Phase> Rocket<P> {
     ///     println!("Rocket: deorbit.");
     /// }
     /// ```
-    pub async fn launch(self) -> Result<(), Error> {
+    pub async fn launch(self) -> Result<Rocket<Ignite>, Error> {
         match self.0.into_state() {
             State::Build(s) => Rocket::from(s).ignite().await?._launch().await,
             State::Ignite(s) => Rocket::from(s)._launch().await,
-            State::Orbit(_) => Ok(())
+            State::Orbit(s) => Ok(Rocket::from(s).into_ignite())
         }
     }
 }

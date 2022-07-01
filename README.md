@@ -4,7 +4,7 @@
 [![Rocket Homepage](https://img.shields.io/badge/web-rocket.rs-red.svg?style=flat&label=https&colorB=d33847)](https://rocket.rs)
 [![Current Crates.io Version](https://img.shields.io/crates/v/rocket.svg)](https://crates.io/crates/rocket)
 [![Matrix: #rocket:mozilla.org](https://img.shields.io/badge/style-%23rocket:mozilla.org-blue.svg?style=flat&label=[m])](https://chat.mozilla.org/#/room/#rocket:mozilla.org)
-[![IRC: #rocket on chat.freenode.net](https://img.shields.io/badge/style-%23rocket-blue.svg?style=flat&label=freenode)](https://kiwiirc.com/client/chat.freenode.net/#rocket)
+[![IRC: #rocket on irc.libera.chat](https://img.shields.io/badge/style-%23rocket-blue.svg?style=flat&label=Libera.Chat)](https://kiwiirc.com/client/irc.libera.chat/#rocket)
 
 Rocket is an async web framework for Rust with a focus on usability, security,
 extensibility, and speed.
@@ -45,14 +45,14 @@ Rocket is extensively documented:
 [API Documentation]: https://api.rocket.rs/rocket/
 
 The official community support channels are [`#rocket:mozilla.org`] on Matrix
-and the bridged [`#rocket`] IRC channel on Freenode at `chat.freenode.net`. We
+and the bridged [`#rocket`] IRC channel on Libera.Chat at `irc.libera.chat`. We
 recommend joining us on [Matrix via Element]. If your prefer IRC, you can join
 via the [Kiwi IRC client] or a client of your own.
 
 [`#rocket:mozilla.org`]: https://chat.mozilla.org/#/room/#rocket:mozilla.org
-[`#rocket`]: https://kiwiirc.com/client/chat.freenode.net/#rocket
+[`#rocket`]: https://kiwiirc.com/client/irc.libera.chat/#rocket
 [Matrix via Element]: https://chat.mozilla.org/#/room/#rocket:mozilla.org
-[Kiwi IRC Client]: https://kiwiirc.com/client/chat.freenode.net/#rocket
+[Kiwi IRC Client]: https://kiwiirc.com/client/irc.libera.chat/#rocket
 
 ## Examples
 
@@ -61,7 +61,7 @@ example can be compiled and run with Cargo. For instance, the following sequence
 of commands builds and runs the `Hello, world!` example:
 
 ```sh
-cd examples/hello_world
+cd examples/hello
 cargo run
 ```
 
@@ -69,29 +69,25 @@ You should see `Hello, world!` by visiting `http://localhost:8000`.
 
 ## Building and Testing
 
-### Core and Contrib
-
 The `core` directory contains the three core libraries: `lib`, `codegen`, and
-`http`. The `contrib` directory contains officially supported community
-contributions and similarly consists of `lib` and `codegen`.
+`http` published as `rocket`, `rocket_codegen` and `rocket_http`, respectively.
+The latter two are implementations details and are reexported from `rocket`.
 
-Public APIs are exposed via `lib` packages: `core/lib` is distributed as the
-`rocket` crate while `contrib/lib` is distributed as the `rocket_contrib` crate.
-The remaining crates are implementation details.
-
-### Library Testing
+### Testing
 
 Rocket's complete test suite can be run with `./scripts/test.sh` from the root
-of the source tree. The script builds and tests all libraries and examples. It
-accepts the following flags:
+of the source tree. The script builds and tests all libraries and examples in
+all configurations. It accepts the following flags:
 
-  * `--contrib`: tests each `contrib` feature individually
-  * `--core`: tests each `core` feature individually
-  * `--release`: runs the testing suite in `release` mode
+  * `--examples`: tests all examples in `examples/`
+  * `--contrib`: tests each `contrib` library and feature individually
+  * `--core`: tests each `core/lib` feature individually
+  * `--benchmarks`: runs all benchmarks
+  * `--all`: runs all tests in all configurations
 
 Additionally, a `+${toolchain}` flag, where `${toolchain}` is a valid `rustup`
 toolchain string, can be passed as the first parameter. The flag is forwarded to
-`cargo` commands.
+`cargo` commands. Any other extra parameters are passed directly to `cargo`.
 
 To test crates individually, simply run `cargo test --all-features` in the
 crate's directory.
@@ -99,10 +95,11 @@ crate's directory.
 ### Codegen Testing
 
 Code generation diagnostics are tested using [`trybuild`]; tests can be found in
-the `codegen/tests/ui-fail` directory of both `core` and `contrib`. Each test is
-symlinked into sibling `ui-fail-stable` and `ui-fail-nightly` directories which
-contain the expected error output for stable and nightly compilers,
-respectively.
+the `codegen/tests/ui-fail` directories of respective `codegen` crates. Each
+test is symlinked into sibling `ui-fail-stable` and `ui-fail-nightly`
+directories which contain the expected error output for stable and nightly
+compilers, respectively. To update codegen test UI output, run a codegen test
+suite with `TRYBUILD=overwrite` and inspect the `diff` of `.std*` files.
 
 [`trybuild`]: https://docs.rs/trybuild/1
 

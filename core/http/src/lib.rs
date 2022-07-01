@@ -42,14 +42,15 @@ pub mod uncased {
 #[doc(hidden)]
 #[path = "."]
 pub mod private {
-    #[cfg(feature = "tls")]
-    pub mod tls;
-
     pub use crate::parse::Indexed;
     pub use smallvec::{SmallVec, Array};
-    pub use crate::listener::{Incoming, Listener, Connection, bind_tcp};
+    pub use crate::listener::{TcpListener, Incoming, Listener, Connection, Certificates};
     pub use cookie;
 }
+
+#[doc(hidden)]
+#[cfg(feature = "tls")]
+pub mod tls;
 
 pub use crate::method::Method;
 pub use crate::status::{Status, StatusClass};

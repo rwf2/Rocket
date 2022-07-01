@@ -164,7 +164,7 @@ impl Catcher {
 
         Catcher {
             name: None,
-            base: uri::Origin::new("/", None::<&str>),
+            base: uri::Origin::ROOT,
             handler: Box::new(handler),
             code,
         }
@@ -414,4 +414,3 @@ default_handler_fn! {
     510, "Not Extended", "Further extensions to the request are required for \
         the server to fulfill it."
 }
-

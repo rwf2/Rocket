@@ -1,7 +1,7 @@
 #[macro_use] extern crate rocket;
 #[macro_use] extern crate diesel;
 #[macro_use] extern crate diesel_migrations;
-#[macro_use] extern crate rocket_contrib;
+#[macro_use] extern crate rocket_sync_db_pools;
 
 #[cfg(test)]
 mod tests;
@@ -11,17 +11,19 @@ use rocket::{Rocket, Build};
 use rocket::fairing::AdHoc;
 use rocket::request::FlashMessage;
 use rocket::response::{Flash, Redirect};
+use rocket::serde::Serialize;
 use rocket::form::Form;
+use rocket::fs::{FileServer, relative};
 
-use rocket_contrib::templates::Template;
-use rocket_contrib::serve::{StaticFiles, crate_relative};
+use rocket_dyn_templates::Template;
 
 use crate::task::{Task, Todo};
 
 #[database("sqlite_database")]
 pub struct DbConn(diesel::SqliteConnection);
 
-#[derive(Debug, serde::Serialize)]
+#[derive(Debug, Serialize)]
+#[serde(crate = "rocket::serde")]
 struct Context {
     flash: Option<(String, String)>,
     tasks: Vec<Task>
@@ -108,7 +110,7 @@ fn rocket() -> _ {
         .attach(DbConn::fairing())
         .attach(Template::fairing())
         .attach(AdHoc::on_ignite("Run Migrations", run_migrations))
-        .mount("/", StaticFiles::from(crate_relative!("static")))
+        .mount("/", FileServer::from(relative!("static")))
         .mount("/", routes![index])
         .mount("/todo", routes![new, toggle, delete])
 }

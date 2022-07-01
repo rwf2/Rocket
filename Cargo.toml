@@ -3,7 +3,10 @@ members = [
   "core/lib/",
   "core/codegen/",
   "core/http/",
-  "contrib/lib",
-  "contrib/codegen",
+  "contrib/db_pools/codegen/",
+  "contrib/db_pools/lib/",
+  "contrib/sync_db_pools/codegen/",
+  "contrib/sync_db_pools/lib/",
+  "contrib/dyn_templates/",
   "site/tests",
 ]

@@ -1,4 +1,4 @@
-#[macro_use] extern crate rocket;
+use rocket::form::FromForm;
 
 #[derive(FromForm)]
 enum Thing { }
@@ -11,6 +11,9 @@ struct Foo2 {  }
 
 #[derive(FromForm)]
 struct Foo3(usize);
+
+#[derive(FromForm)]
+struct Foo4(usize, usize, usize);
 
 #[derive(FromForm)]
 struct NextTodoTask<'f, 'a> {
@@ -161,6 +164,62 @@ struct Validate2 {
 struct Validate3 {
     #[field(validate = ext("hello"))]
     first: String,
+}
+
+#[derive(FromForm)]
+struct Default0 {
+    #[field(default = 123)]
+    first: String,
+}
+
+#[derive(FromForm)]
+struct Default1 {
+    #[field(default = 1, default = 2)]
+    double_default: usize,
+}
+
+#[derive(FromForm)]
+struct Default2 {
+    #[field(default = 1)]
+    #[field(default = 2)]
+    double_default: usize,
+}
+
+#[derive(FromForm)]
+struct Default3 {
+    #[field(default = 1, default_with = None)]
+    double_default: usize,
+}
+
+#[derive(FromForm)]
+struct Default4 {
+    #[field(default_with = None)]
+    #[field(default = 1)]
+    double_default: usize,
+}
+
+#[derive(FromForm)]
+struct Default5 {
+    #[field(default_with = Some("hi"))]
+    no_conversion_from_with: String,
+}
+
+#[derive(FromForm)]
+struct Default6 {
+    #[field(default = "no conversion")]
+    first: bool,
+}
+
+#[derive(FromForm)] // NO ERROR
+struct Another<T> {
+    _foo: T,
+    _bar: T,
+}
+
+#[derive(FromForm)] // NO ERROR
+struct AnotherOne<T> { // NO ERROR
+    _foo: T,
+    _bar: T,
 }
 
 fn main() { }

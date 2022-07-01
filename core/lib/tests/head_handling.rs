@@ -1,6 +1,7 @@
 #[macro_use] extern crate rocket;
 
-use rocket::{http::Status, response::content};
+use rocket::http::Status;
+use rocket::response::content::RawJson;
 
 #[get("/empty")]
 fn empty() -> Status {
@@ -13,8 +14,8 @@ fn index() -> &'static str {
 }
 
 #[head("/other")]
-fn other() -> content::Json<&'static str> {
-    content::Json("{ 'hi': 'hello' }")
+fn other() -> RawJson<&'static str> {
+    RawJson("{ 'hi': 'hello' }")
 }
 
 mod head_handling_tests {

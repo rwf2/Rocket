@@ -83,8 +83,6 @@ pub(crate) struct Metadata {
     pub base_segs: Vec<Segment>,
     /// Segments in the path, including base.
     pub path_segs: Vec<Segment>,
-    /// Segments in the query.
-    pub query_segs: Vec<Segment>,
     /// `(name, value)` of the query segments that are static.
     pub static_query_fields: Vec<(String, String)>,
     /// The "color" of the route path.
@@ -123,12 +121,13 @@ impl<'a> RouteUri<'a> {
         let source = origin.to_string().into();
         let metadata = Metadata::from(&base, &origin);
 
-        Ok(RouteUri { source, unmounted_origin, base, origin, metadata })
+        Ok(RouteUri { source, base, unmounted_origin, origin, metadata })
     }
 
     /// Create a new `RouteUri`.
     ///
     /// Panics if  `base` or `uri` cannot be parsed as `Origin`s.
+    #[track_caller]
     pub(crate) fn new(base: &str, uri: &str) -> RouteUri<'static> {
         Self::try_new(base, uri).expect("Expected valid URIs")
     }
@@ -171,7 +170,7 @@ impl<'a> RouteUri<'a> {
         self.origin.path().as_str()
     }
 
-    /// The query part of this route URI as an `Option<&str>`.
+    /// The query part of this route URI, if there is one.
     ///
     /// # Example
     ///
@@ -180,10 +179,18 @@ impl<'a> RouteUri<'a> {
     /// use rocket::http::Method;
     /// # use rocket::route::dummy_handler as handler;
     ///
+    /// let index = Route::new(Method::Get, "/foo/bar", handler);
+    /// assert!(index.uri.query().is_none());
+    ///
+    /// // Normalization clears the empty '?'.
+    /// let index = Route::new(Method::Get, "/foo/bar?", handler);
+    /// assert!(index.uri.query().is_none());
+    ///
     /// let index = Route::new(Method::Get, "/foo/bar?a=1", handler);
-    /// assert_eq!(index.uri.query(), Some("a=1"));
+    /// assert_eq!(index.uri.query().unwrap(), "a=1");
+    ///
     /// let index = index.map_base(|base| format!("{}{}", "/boo", base)).unwrap();
-    /// assert_eq!(index.uri.query(), Some("a=1"));
+    /// assert_eq!(index.uri.query().unwrap(), "a=1");
     /// ```
     #[inline(always)]
     pub fn query(&self) -> Option<&str> {
@@ -241,17 +248,17 @@ impl<'a> RouteUri<'a> {
 
 impl Metadata {
     fn from(base: &Origin<'_>, origin: &Origin<'_>) -> Self {
-        let base_segs = base.raw_path_segments()
+        let base_segs = base.path().raw_segments()
             .map(Segment::from)
             .collect::<Vec<_>>();
 
-        let path_segs = origin.raw_path_segments()
+        let path_segs = origin.path().raw_segments()
             .map(Segment::from)
             .collect::<Vec<_>>();
 
-        let query_segs = origin.raw_query_segments()
-            .map(Segment::from)
-            .collect::<Vec<_>>();
+        let query_segs = origin.query()
+            .map(|q| q.raw_segments().map(Segment::from).collect::<Vec<_>>())
+            .unwrap_or_default();
 
         let static_query_fields = query_segs.iter().filter(|s| !s.dynamic)
             .map(|s| ValueField::parse(&s.value))
@@ -279,8 +286,8 @@ impl Metadata {
         let trailing_path = path_segs.last().map_or(false, |p| p.trailing);
 
         Metadata {
-            static_query_fields, path_color, query_color, trailing_path,
-            path_segs, query_segs, base_segs,
+            base_segs, path_segs, static_query_fields, path_color, query_color,
+            trailing_path,
         }
     }
 }

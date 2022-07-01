@@ -3,9 +3,32 @@ use std::str::FromStr;
 
 use self::Method::*;
 
-// TODO: Support non-standard methods, here and in codegen.
+use crate::hyper;
+
+// TODO: Support non-standard methods, here and in codegen?
 
 /// Representation of HTTP methods.
+///
+/// # (De)serialization
+///
+/// `Method` is both `Serialize` and `Deserialize`, represented as an
+/// [uncased](crate::uncased) string. For example, [`Method::Get`] serializes to
+/// `"GET"` and deserializes from any casing of `"GET"` including `"get"`,
+/// `"GeT"`, and `"GET"`.
+///
+/// ```rust
+/// # #[cfg(feature = "serde")] mod serde {
+/// # use serde_ as serde;
+/// use serde::{Serialize, Deserialize};
+/// use rocket::http::Method;
+///
+/// #[derive(Deserialize, Serialize)]
+/// # #[serde(crate = "serde_")]
+/// struct Foo {
+///     method: Method,
+/// }
+/// # }
+/// ```
 #[derive(Clone, Copy, PartialEq, Eq, Hash, Debug)]
 pub enum Method {
     /// The `GET` variant.
@@ -31,17 +54,17 @@ pub enum Method {
 impl Method {
     /// WARNING: This is unstable! Do not use this method outside of Rocket!
     #[doc(hidden)]
-    pub fn from_hyp(method: &http::method::Method) -> Option<Method> {
+    pub fn from_hyp(method: &hyper::Method) -> Option<Method> {
         match *method {
-            http::method::Method::GET => Some(Get),
-            http::method::Method::PUT => Some(Put),
-            http::method::Method::POST => Some(Post),
-            http::method::Method::DELETE => Some(Delete),
-            http::method::Method::OPTIONS => Some(Options),
-            http::method::Method::HEAD => Some(Head),
-            http::method::Method::TRACE => Some(Trace),
-            http::method::Method::CONNECT => Some(Connect),
-            http::method::Method::PATCH => Some(Patch),
+            hyper::Method::GET => Some(Get),
+            hyper::Method::PUT => Some(Put),
+            hyper::Method::POST => Some(Post),
+            hyper::Method::DELETE => Some(Delete),
+            hyper::Method::OPTIONS => Some(Options),
+            hyper::Method::HEAD => Some(Head),
+            hyper::Method::TRACE => Some(Trace),
+            hyper::Method::CONNECT => Some(Connect),
+            hyper::Method::PATCH => Some(Patch),
             _ => None,
         }
     }
@@ -125,5 +148,40 @@ impl fmt::Display for Method {
     #[inline(always)]
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         self.as_str().fmt(f)
+    }
+}
+
+#[cfg(feature = "serde")]
+mod serde {
+    use std::fmt;
+    use super::*;
+
+    use serde_::ser::{Serialize, Serializer};
+    use serde_::de::{Deserialize, Deserializer, Error, Visitor, Unexpected};
+
+    impl<'a> Serialize for Method {
+        fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+            serializer.serialize_str(self.as_str())
+        }
+    }
+
+    struct DeVisitor;
+
+    impl<'de> Visitor<'de> for DeVisitor {
+        type Value = Method;
+
+        fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+            write!(formatter, "valid HTTP method string")
+        }
+
+        fn visit_str<E: Error>(self, v: &str) -> Result<Self::Value, E> {
+            Method::from_str(v).map_err(|_| E::invalid_value(Unexpected::Str(v), &self))
+        }
+    }
+
+    impl<'de> Deserialize<'de> for Method {
+        fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+            deserializer.deserialize_str(DeVisitor)
+        }
     }
 }

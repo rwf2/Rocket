@@ -2,7 +2,6 @@
 
 use rocket::{Rocket, Build};
 use rocket::response::Redirect;
-use rocket::http::uri::Uri;
 
 const NAME: &str = "John[]|\\%@^";
 
@@ -13,12 +12,12 @@ fn hello(name: String) -> String {
 
 #[get("/raw")]
 fn raw_redirect() -> Redirect {
-    Redirect::to(format!("/hello/{}", Uri::percent_encode(NAME)))
+    Redirect::to(uri!(hello(NAME)))
 }
 
 #[get("/uri")]
 fn uri_redirect() -> Redirect {
-    Redirect::to(uri!(hello: NAME))
+    Redirect::to(uri!(hello(NAME)))
 }
 
 fn rocket() -> Rocket<Build> {
@@ -28,11 +27,11 @@ fn rocket() -> Rocket<Build> {
 mod tests {
     use super::*;
     use rocket::local::blocking::Client;
-    use rocket::http::{Status, uri::Uri};
+    use rocket::http::Status;
 
     #[test]
     fn uri_percent_encoding_redirect() {
-        let expected_location = vec!["/hello/John%5B%5D%7C%5C%25@%5E"];
+        let expected_location = vec!["/hello/John[]%7C%5C%25@%5E"];
         let client = Client::debug(rocket()).unwrap();
 
         let response = client.get("/raw").dispatch();
@@ -49,8 +48,7 @@ mod tests {
     #[test]
     fn uri_percent_encoding_get() {
         let client = Client::debug(rocket()).unwrap();
-        let name = Uri::percent_encode(NAME);
-        let response = client.get(format!("/hello/{}", name)).dispatch();
+        let response = client.get(uri!(hello(NAME))).dispatch();
         assert_eq!(response.status(), Status::Ok);
         assert_eq!(response.into_string().unwrap(), format!("Hello, {}!", NAME));
     }

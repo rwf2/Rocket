@@ -1,6 +1,5 @@
-use crate::syn;
-use crate::proc_macro2::{Span, TokenStream};
-use crate::quote::{ToTokens, TokenStreamExt};
+use proc_macro2::{Span, TokenStream};
+use quote::{ToTokens, TokenStreamExt};
 
 #[derive(Debug, Copy, Clone)]
 pub struct StaticPath(pub Option<Span>, pub &'static str);
@@ -76,6 +75,7 @@ define_exported_paths! {
     _form => ::rocket::form::prelude,
     _http => ::rocket::http,
     _uri => ::rocket::http::uri,
+    _fmt => ::rocket::http::uri::fmt,
     _Option => ::std::option::Option,
     _Result => ::std::result::Result,
     _Some => ::std::option::Option::Some,

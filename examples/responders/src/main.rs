@@ -6,10 +6,10 @@
 
 use std::{io, env};
 
+use rocket::Config;
+use rocket::data::Capped;
+use rocket::fs::{NamedFile, TempFile};
 use rocket::tokio::fs;
-
-use rocket::data::{Capped, TempFile};
-use rocket::response::NamedFile;
 
 // Upload your `big_file.dat` by POSTing it to /upload.
 // try `curl --data-binary @file.txt http://127.0.0.1:8000/stream/file`
@@ -17,19 +17,19 @@ const FILENAME: &str = "big_file.dat";
 
 // This is a *raw* file upload, _not_ a multipart upload!
 #[post("/file", data = "<file>")]
-async fn upload(mut file: Capped<TempFile<'_>>) -> io::Result<String> {
-    file.persist_to(env::temp_dir().join(FILENAME)).await?;
+async fn upload(mut file: Capped<TempFile<'_>>, config: &Config) -> io::Result<String> {
+    file.persist_to(config.temp_dir.relative().join(FILENAME)).await?;
     Ok(format!("{} bytes at {}", file.n.written, file.path().unwrap().display()))
 }
 
 #[get("/file")]
-async fn file() -> Option<NamedFile> {
-    NamedFile::open(env::temp_dir().join(FILENAME)).await.ok()
+async fn file(config: &Config) -> Option<NamedFile> {
+    NamedFile::open(config.temp_dir.relative().join(FILENAME)).await.ok()
 }
 
 #[delete("/file")]
-async fn delete() -> Option<()> {
-    fs::remove_file(env::temp_dir().join(FILENAME)).await.ok()
+async fn delete(config: &Config) -> Option<()> {
+    fs::remove_file(config.temp_dir.relative().join(FILENAME)).await.ok()
 }
 
 /***************************** `Stream` Responder *****************************/
@@ -39,7 +39,7 @@ use rocket::tokio::time::{self, Duration};
 use rocket::futures::stream::{repeat, StreamExt};
 
 use rocket::Shutdown;
-use rocket::response::stream::TextStream;
+use rocket::response::stream::{TextStream, EventStream, Event};
 
 #[get("/stream/hi")]
 fn many_his() -> TextStream![&'static str] {
@@ -49,7 +49,7 @@ fn many_his() -> TextStream![&'static str] {
 #[get("/stream/hi/<n>")]
 fn one_hi_per_ms(mut shutdown: Shutdown, n: u8) -> TextStream![&'static str] {
     TextStream! {
-        let mut interval = time::interval(Duration::from_millis(n as u64));
+        let mut interval = time::interval(Duration::from_millis(n.into()));
         loop {
             select! {
                 _ = interval.tick() => yield "hi",
@@ -60,6 +60,42 @@ fn one_hi_per_ms(mut shutdown: Shutdown, n: u8) -> TextStream![&'static str] {
             };
         }
     }
+}
+
+#[get("/progress", rank = 2)]
+fn progress_page() -> RawHtml<&'static str> {
+    RawHtml(r#"
+          <script type="text/javascript">
+            const evtSource = new EventSource("progress");
+            evtSource.addEventListener("progress", (event) => {
+                const el = document.getElementById("prog");
+                el.textContent = event.data + "%";
+            });
+            evtSource.addEventListener("done", (_) => {
+                const el = document.getElementById("prog");
+                el.textContent = "done";
+                evtSource.close()
+            });
+        </script>
+
+        <p id="prog"></p>
+    "#)
+}
+
+#[get("/progress", format = "text/event-stream", rank = 1)]
+fn progress_stream() -> EventStream![] {
+    let stream = EventStream! {
+        let mut interval = time::interval(Duration::from_secs(1));
+
+        for count in 0..100 {
+            interval.tick().await;
+            yield Event::data(count.to_string()).event("progress");
+        }
+
+        yield Event::data("").event("done");
+    };
+
+    stream.heartbeat(Duration::from_secs(3))
 }
 
 /***************************** `Redirect` Responder ***************************/
@@ -89,26 +125,26 @@ fn maybe_redir(name: &str) -> Result<&'static str, Redirect> {
 use rocket::Request;
 use rocket::response::content;
 
-// NOTE: This example explicitly uses the `Json` type from `response::content`
-// for demonstration purposes. In a real application, _always_ prefer to use
-// `rocket_contrib::json::Json` instead!
+// NOTE: This example explicitly uses the `RawJson` type from
+// `response::content` for demonstration purposes. In a real application,
+// _always_ prefer to use `rocket::serde::json::Json` instead!
 
 // In a `GET` request and all other non-payload supporting request types, the
 // preferred media type in the Accept header is matched against the `format` in
 // the route attribute. Because the client can use non-specific media types like
 // `*/*` in `Accept`, these first two routes would collide without `rank`.
 #[get("/content", format = "xml", rank = 1)]
-fn xml() -> content::Xml<&'static str> {
-    content::Xml("<payload>I'm here</payload>")
+fn xml() -> content::RawXml<&'static str> {
+    content::RawXml("<payload>I'm here</payload>")
 }
 
 #[get("/content", format = "json", rank = 2)]
-fn json() -> content::Json<&'static str> {
-    content::Json(r#"{ "payload": "I'm here" }"#)
+fn json() -> content::RawJson<&'static str> {
+    content::RawJson(r#"{ "payload": "I'm here" }"#)
 }
 
 #[catch(404)]
-fn not_found(request: &Request<'_>) -> content::Html<String> {
+fn not_found(request: &Request<'_>) -> content::RawHtml<String> {
     let html = match request.format() {
         Some(ref mt) if !(mt.is_xml() || mt.is_html()) => {
             format!("<p>'{}' requests are not supported.</p>", mt)
@@ -118,24 +154,24 @@ fn not_found(request: &Request<'_>) -> content::Html<String> {
                  request.uri())
     };
 
-    content::Html(html)
+    content::RawHtml(html)
 }
 
 /******************************* `Either` Responder ***************************/
 
 use rocket::Either;
-use rocket::response::content::{Json, MsgPack};
+use rocket::response::content::{RawJson, RawMsgPack};
 use rocket::http::uncased::AsUncased;
 
 // NOTE: In a real application, we'd use `Json` and `MsgPack` from
-// `rocket_contrib`, which perform automatic serialization of responses and
+// `rocket::serde`, which perform automatic serialization of responses and
 // automatically set the `Content-Type`.
 #[get("/content/<kind>")]
-fn json_or_msgpack(kind: &str) -> Either<Json<&'static str>, MsgPack<&'static [u8]>> {
+fn json_or_msgpack(kind: &str) -> Either<RawJson<&'static str>, RawMsgPack<&'static [u8]>> {
     if kind.as_uncased() == "msgpack" {
-        Either::Right(MsgPack(&[162, 104, 105]))
+        Either::Right(RawMsgPack(&[162, 104, 105]))
     } else {
-        Either::Left(Json("\"hi\""))
+        Either::Left(RawJson("\"hi\""))
     }
 }
 
@@ -143,7 +179,7 @@ fn json_or_msgpack(kind: &str) -> Either<Json<&'static str>, MsgPack<&'static [u
 
 use std::borrow::Cow;
 
-use rocket::response::content::Html;
+use rocket::response::content::RawHtml;
 
 #[derive(Responder)]
 enum StoredData {
@@ -151,7 +187,7 @@ enum StoredData {
     String(Cow<'static, str>),
     Bytes(Vec<u8>),
     #[response(status = 401)]
-    NotAuthorized(Html<&'static str>),
+    NotAuthorized(RawHtml<&'static str>),
 }
 
 #[derive(FromFormField, UriDisplayQuery)]
@@ -170,7 +206,7 @@ async fn custom(kind: Option<Kind>) -> StoredData {
         },
         Some(Kind::String) => StoredData::String("Hey, I'm some data.".into()),
         Some(Kind::Bytes) => StoredData::Bytes(vec![72, 105]),
-        None => StoredData::NotAuthorized(Html("No no no!"))
+        None => StoredData::NotAuthorized(RawHtml("No no no!"))
     }
 }
 
@@ -178,6 +214,7 @@ async fn custom(kind: Option<Kind>) -> StoredData {
 fn rocket() -> _ {
     rocket::build()
         .mount("/", routes![many_his, one_hi_per_ms, file, upload, delete])
+        .mount("/", routes![progress_stream, progress_page])
         .mount("/", routes![redir_root, redir_login, maybe_redir])
         .mount("/", routes![xml, json, json_or_msgpack])
         .mount("/", routes![custom])

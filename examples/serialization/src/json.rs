@@ -2,9 +2,8 @@ use std::borrow::Cow;
 
 use rocket::State;
 use rocket::tokio::sync::Mutex;
-use rocket_contrib::json::{Json, JsonValue, json};
-
-use serde::{Serialize, Deserialize};
+use rocket::serde::json::{Json, Value, json};
+use rocket::serde::{Serialize, Deserialize};
 
 // The type to represent the ID of a message.
 type Id = usize;
@@ -14,13 +13,14 @@ type MessageList = Mutex<Vec<String>>;
 type Messages<'r> = &'r State<MessageList>;
 
 #[derive(Serialize, Deserialize)]
+#[serde(crate = "rocket::serde")]
 struct Message<'r> {
     id: Option<Id>,
     message: Cow<'r, str>
 }
 
 #[post("/", format = "json", data = "<message>")]
-async fn new(message: Json<Message<'_>>, list: Messages<'_>) -> JsonValue {
+async fn new(message: Json<Message<'_>>, list: Messages<'_>) -> Value {
     let mut list = list.lock().await;
     let id = list.len();
     list.push(message.message.to_string());
@@ -28,7 +28,7 @@ async fn new(message: Json<Message<'_>>, list: Messages<'_>) -> JsonValue {
 }
 
 #[put("/<id>", format = "json", data = "<message>")]
-async fn update(id: Id, message: Json<Message<'_>>, list: Messages<'_>) -> Option<JsonValue> {
+async fn update(id: Id, message: Json<Message<'_>>, list: Messages<'_>) -> Option<Value> {
     match list.lock().await.get_mut(id) {
         Some(existing) => {
             *existing = message.message.to_string();
@@ -39,7 +39,7 @@ async fn update(id: Id, message: Json<Message<'_>>, list: Messages<'_>) -> Optio
 }
 
 #[get("/<id>", format = "json")]
-async fn get<'r>(id: Id, list: Messages<'r>) -> Option<Json<Message<'r>>> {
+async fn get(id: Id, list: Messages<'_>) -> Option<Json<Message<'_>>> {
     let list = list.lock().await;
 
     Some(Json(Message {
@@ -49,7 +49,7 @@ async fn get<'r>(id: Id, list: Messages<'r>) -> Option<Json<Message<'r>>> {
 }
 
 #[catch(404)]
-fn not_found() -> JsonValue {
+fn not_found() -> Value {
     json!({
         "status": "error",
         "reason": "Resource was not found."

@@ -1,17 +1,15 @@
 use std::fmt::Display;
 
-use devise::{syn, Result};
-use devise::ext::{SpanDiagnosticExt, quote_respanned};
+use devise::{Result, ext::{SpanDiagnosticExt, quote_respanned}};
+use syn::{Expr, Ident, Type, spanned::Spanned};
+use proc_macro2::TokenStream;
 
-use crate::http::uri;
-use crate::syn::{Expr, Ident, Type, spanned::Spanned};
+use crate::http::uri::fmt;
 use crate::http_codegen::Optional;
 use crate::syn_ext::IdentExt;
 use crate::bang::uri_parsing::*;
-use crate::proc_macro2::TokenStream;
 use crate::attribute::param::Parameter;
-use crate::exports::_uri;
-
+use crate::exports::*;
 use crate::URI_MACRO_PREFIX;
 
 macro_rules! p {
@@ -30,27 +28,30 @@ pub fn prefix_last_segment(path: &mut syn::Path, prefix: &str) {
 }
 
 pub fn _uri_macro(input: TokenStream) -> Result<TokenStream> {
-    let input2: TokenStream = input.clone().into();
-    let mut params = syn::parse2::<UriParams>(input)?;
-    prefix_last_segment(&mut params.route_path, URI_MACRO_PREFIX);
-
-    let path = &params.route_path;
-    Ok(quote!(#path!(#input2)))
+    let input2: TokenStream = input.clone();
+    match syn::parse2::<UriMacro>(input)? {
+        UriMacro::Routed(ref mut mac) => {
+            prefix_last_segment(&mut mac.route.path, URI_MACRO_PREFIX);
+            let path = &mac.route.path;
+            Ok(quote!(#path!(#input2)))
+        },
+        UriMacro::Literal(uri) => Ok(quote!(#uri)),
+    }
 }
 
-fn extract_exprs<'a>(internal: &'a InternalUriParams) -> Result<(
-        impl Iterator<Item = &'a Expr>,                // path exprs
-        impl Iterator<Item = &'a ArgExpr>,             // query exprs
-        impl Iterator<Item = (&'a Ident, &'a Type)>,   // types for both path || query
+fn extract_exprs(internal: &InternalUriParams) -> Result<(
+        impl Iterator<Item = &Expr>,             // path exprs
+        impl Iterator<Item = &ArgExpr>,          // query exprs
+        impl Iterator<Item = (&Ident, &Type)>,   // types for both path || query
     )>
 {
-    let route_name = &internal.uri_params.route_path;
+    let route_name = &internal.uri_mac.route.path;
     match internal.validate() {
         Validation::Ok(exprs) => {
             let path_params = internal.dynamic_path_params();
             let path_param_count = path_params.clone().count();
             for expr in exprs.iter().take(path_param_count) {
-                if !expr.as_expr().is_some() {
+                if expr.as_expr().is_none() {
                     return Err(expr.span().error("path parameters cannot be ignored"));
                 }
             }
@@ -64,7 +65,7 @@ fn extract_exprs<'a>(internal: &'a InternalUriParams) -> Result<(
             let mut route_name = quote!(#route_name).to_string();
             route_name.retain(|c| !c.is_whitespace());
 
-            let diag = internal.uri_params.args_span()
+            let diag = internal.uri_mac.args_span()
                 .error("expected unnamed arguments due to ignored parameters")
                 .note(format!("uri for route `{}` ignores path parameters: \"{}\"",
                         route_name, internal.route_uri));
@@ -75,17 +76,16 @@ fn extract_exprs<'a>(internal: &'a InternalUriParams) -> Result<(
             let mut route_name = quote!(#route_name).to_string();
             route_name.retain(|c| !c.is_whitespace());
 
-            let diag = internal.uri_params.args_span()
-                .error(format!("expected {} but {} supplied",
+            let diag = internal.uri_mac.args_span()
+                .error(format!("route expects {} but {} supplied",
                          p!(expected, "parameter"), p!(actual, "was")))
-                .note(format!("route `{}` has uri \"{}\"",
-                        route_name, internal.route_uri));
+                .note(format!("route `{}` has uri \"{}\"", route_name, internal.route_uri));
 
             Err(diag)
         }
         Validation::Named(missing, extra, dup) => {
             let e = format!("invalid parameters for `{}` route uri", quote!(#route_name));
-            let mut diag = internal.uri_params.args_span().error(e)
+            let mut diag = internal.uri_mac.args_span().error(e)
                 .note(format!("uri parameters are: {}", internal.fn_args_str()));
 
             fn join<S: Display, T: Iterator<Item = S>>(iter: T) -> (&'static str, String) {
@@ -116,11 +116,11 @@ fn extract_exprs<'a>(internal: &'a InternalUriParams) -> Result<(
     }
 }
 
-fn add_binding<P: uri::UriPart>(to: &mut Vec<TokenStream>, ident: &Ident, ty: &Type, expr: &Expr) {
+fn add_binding<P: fmt::Part>(to: &mut Vec<TokenStream>, ident: &Ident, ty: &Type, expr: &Expr) {
     let span = expr.span();
     let part = match P::KIND {
-        uri::Kind::Path => quote_spanned!(span => #_uri::Path),
-        uri::Kind::Query  => quote_spanned!(span => #_uri::Query),
+        fmt::Kind::Path => quote_spanned!(span => #_fmt::Path),
+        fmt::Kind::Query  => quote_spanned!(span => #_fmt::Query),
     };
 
     let tmp_ident = ident.clone().with_span(expr.span());
@@ -128,7 +128,7 @@ fn add_binding<P: uri::UriPart>(to: &mut Vec<TokenStream>, ident: &Ident, ty: &T
 
     to.push(quote_spanned!(span =>
         #[allow(non_snake_case)] #let_stmt;
-        let #ident = <#ty as #_uri::FromUriParam<#part, _>>::from_uri_param(#tmp_ident);
+        let #ident = <#ty as #_fmt::FromUriParam<#part, _>>::from_uri_param(#tmp_ident);
     ));
 }
 
@@ -139,41 +139,30 @@ fn explode_path<'a>(
     mut args: impl Iterator<Item = (&'a Ident, &'a Type)>,
 ) -> TokenStream {
     if internal.dynamic_path_params().count() == 0 {
-        let route_uri = &internal.route_uri;
-        if let Some(ref mount) = internal.uri_params.mount_point {
-            let full_uri = route_uri.map_path(|p| format!("{}/{}", mount, p))
-                .expect("origin from path")
-                .into_normalized();
+        let path = internal.route_uri.path().as_str();
+        quote!(#_fmt::UriArgumentsKind::Static(#path))
+    } else {
+        let uri_display = quote!(#_fmt::UriDisplay<#_fmt::Path>);
+        let dyn_exprs = internal.path_params.iter().map(|param| {
+            match param {
+                Parameter::Static(name) => {
+                    quote!(&#name as &dyn #uri_display)
+                },
+                Parameter::Dynamic(_) | Parameter::Guard(_) => {
+                    let (ident, ty) = args.next().expect("ident/ty for non-ignored");
+                    let expr = exprs.next().expect("one expr per dynamic arg");
+                    add_binding::<fmt::Path>(bindings, &ident, &ty, &expr);
+                    quote_spanned!(expr.span() => &#ident as &dyn #uri_display)
+                }
+                Parameter::Ignored(_) => {
+                    let expr = exprs.next().expect("one expr per dynamic arg");
+                    quote_spanned!(expr.span() => &#expr as &dyn #uri_display)
+                }
+            }
+        });
 
-            let path = full_uri.path().as_str();
-            return quote!(#_uri::UriArgumentsKind::Static(#path));
-        } else {
-            let path = route_uri.path().as_str();
-            return quote!(#_uri::UriArgumentsKind::Static(#path));
-        }
+        quote!(#_fmt::UriArgumentsKind::Dynamic(&[#(#dyn_exprs),*]))
     }
-
-    let uri_display = quote!(#_uri::UriDisplay<#_uri::Path>);
-    let all_path_params = internal.mount_params.iter().chain(internal.path_params.iter());
-    let dyn_exprs = all_path_params.map(|param| {
-        match param {
-            Parameter::Static(name) => {
-                quote!(&#name as &dyn #uri_display)
-            },
-            Parameter::Dynamic(_) | Parameter::Guard(_) => {
-                let (ident, ty) = args.next().expect("ident/ty for non-ignored");
-                let expr = exprs.next().expect("one expr per dynamic arg");
-                add_binding::<uri::Path>(bindings, &ident, &ty, &expr);
-                quote_spanned!(expr.span() => &#ident as &dyn #uri_display)
-            }
-            Parameter::Ignored(_) => {
-                let expr = exprs.next().expect("one expr per dynamic arg");
-                quote_spanned!(expr.span() => &#expr as &dyn #uri_display)
-            }
-        }
-    });
-
-    quote!(#_uri::UriArgumentsKind::Dynamic(&[#(#dyn_exprs),*]))
 }
 
 fn explode_query<'a>(
@@ -184,11 +173,11 @@ fn explode_query<'a>(
 ) -> Option<TokenStream> {
     let query = internal.route_uri.query()?.as_str();
     if internal.dynamic_query_params().count() == 0 {
-        return Some(quote!(#_uri::UriArgumentsKind::Static(#query)));
+        return Some(quote!(#_fmt::UriArgumentsKind::Static(#query)));
     }
 
-    let query_arg = quote!(#_uri::UriQueryArgument);
-    let uri_display = quote!(#_uri::UriDisplay<#_uri::Query>);
+    let query_arg = quote!(#_fmt::UriQueryArgument);
+    let uri_display = quote!(#_fmt::UriDisplay<#_fmt::Query>);
     let dyn_exprs = internal.query_params.iter().filter_map(|param| {
         if let Parameter::Static(source) = param {
             return Some(quote!(#query_arg::Raw(#source)));
@@ -208,10 +197,9 @@ fn explode_query<'a>(
         let expr = match arg_expr.as_expr() {
             Some(expr) => expr,
             None => {
-                // Force a typecheck for the `Ignoreable` trait. Note that write
-                // out the path to `is_ignorable` to get the right span.
+                // Force a typecheck for the `Ignoreable` trait.
                 bindings.push(quote_respanned! { arg_expr.span() =>
-                    rocket::http::uri::assert_ignorable::<#_uri::Query, #ty>();
+                    #_fmt::assert_ignorable::<#_fmt::Query, #ty>();
                 });
 
                 return None;
@@ -219,7 +207,7 @@ fn explode_query<'a>(
         };
 
         let name = &dynamic.name;
-        add_binding::<uri::Query>(bindings, &ident, &ty, &expr);
+        add_binding::<fmt::Query>(bindings, &ident, &ty, &expr);
         Some(match dynamic.trailing {
             false => quote_spanned! { expr.span() =>
                 #query_arg::NameValue(#name, &#ident as &dyn #uri_display)
@@ -230,7 +218,7 @@ fn explode_query<'a>(
         })
     });
 
-    Some(quote!(#_uri::UriArgumentsKind::Dynamic(&[#(#dyn_exprs),*])))
+    Some(quote!(#_fmt::UriArgumentsKind::Dynamic(&[#(#dyn_exprs),*])))
 }
 
 pub fn _uri_internal_macro(input: TokenStream) -> Result<TokenStream> {
@@ -239,13 +227,20 @@ pub fn _uri_internal_macro(input: TokenStream) -> Result<TokenStream> {
     let (path_exprs, query_exprs, mut fn_args) = extract_exprs(&internal)?;
 
     let mut bindings = vec![];
-    let uri_mod = quote!(rocket::http::uri);
     let path = explode_path(&internal, &mut bindings, path_exprs, &mut fn_args);
-    let query = explode_query(&internal, &mut bindings, query_exprs, fn_args);
-    let query = Optional(query);
+    let query = Optional(explode_query(&internal, &mut bindings, query_exprs, fn_args));
 
-     Ok(quote!({
-         #(#bindings)*
-         #uri_mod::UriArguments { path: #path, query: #query, }.into_origin()
-     }))
+    let prefix = internal.uri_mac.prefix.as_ref()
+        .map(|prefix| quote_spanned!(prefix.span() => .with_prefix(#prefix)));
+
+    let suffix = internal.uri_mac.suffix.as_ref()
+        .map(|suffix| quote_spanned!(suffix.span() => .with_suffix(#suffix)));
+
+     Ok(quote_spanned!(internal.uri_mac.route.path.span() =>
+         #[allow(unused_braces)] {
+             #(#bindings)*
+             let __builder = #_fmt::RouteUriBuilder::new(#path, #query);
+             __builder #prefix #suffix .render()
+         }
+     ))
 }

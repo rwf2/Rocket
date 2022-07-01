@@ -19,8 +19,11 @@ fi
 # Generate the rustdocs for all of the crates.
 echo ":::: Generating the docs..."
 pushd "${PROJECT_ROOT}" > /dev/null 2>&1
-RUSTDOCFLAGS="-Z unstable-options --crate-version ${DOC_VERSION}" \
-  cargo doc -Zrustdoc-map -p rocket -p rocket_contrib --no-deps --all-features
+  # Set the crate version and fill in missing doc URLs with docs.rs links.
+  RUSTDOCFLAGS="-Zunstable-options --crate-version ${DOC_VERSION}" \
+    cargo doc -p rocket \
+    -p rocket_sync_db_pools -p rocket_dyn_templates -p rocket_db_pools \
+    -Zrustdoc-map --no-deps --all-features
 popd > /dev/null 2>&1
 
 # Blank index, for redirection.

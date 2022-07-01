@@ -1,10 +1,11 @@
-use crate::syn::{self, Ident, ext::IdentExt};
 use crate::http::uncased::UncasedStr;
-use crate::proc_macro2::Span;
+
+use syn::{self, Ident, ext::IdentExt};
+use proc_macro2::{Span, TokenStream};
 
 /// A "name" read by codegen, which may or may not be an identifier. A `Name` is
 /// typically constructed indirectly via FromMeta, or From<Ident> or directly
-/// from a string via `Name::new()`.
+/// from a string via `Name::new()`. A name is tokenized as a string.
 ///
 /// Some "names" in Rocket include:
 ///   * Dynamic parameter: `name` in `<name>`
@@ -55,7 +56,7 @@ impl devise::FromMeta for Name {
 }
 
 impl quote::ToTokens for Name {
-    fn to_tokens(&self, tokens: &mut devise::proc_macro2::TokenStream) {
+    fn to_tokens(&self, tokens: &mut TokenStream) {
         syn::LitStr::new(self.as_str(), self.span()).to_tokens(tokens)
     }
 }

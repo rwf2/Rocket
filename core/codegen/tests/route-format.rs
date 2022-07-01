@@ -89,10 +89,10 @@ fn test_custom_formats() {
 
     let client = Client::debug(rocket).unwrap();
 
-    let foo_a = Accept::new(&[MediaType::new("application", "foo").into()]);
+    let foo_a = Accept::new([MediaType::new("application", "foo").into()]);
     let foo_ct = ContentType::new("application", "foo");
     let bar_baz_ct = ContentType::new("bar", "baz");
-    let bar_baz_a = Accept::new(&[MediaType::new("bar", "baz").into()]);
+    let bar_baz_a = Accept::new([MediaType::new("bar", "baz").into()]);
 
     let response = client.get("/").header(foo_a).dispatch();
     assert_eq!(response.into_string().unwrap(), "get_foo");

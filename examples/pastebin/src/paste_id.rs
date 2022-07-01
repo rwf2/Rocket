@@ -1,12 +1,8 @@
 use std::borrow::Cow;
 use std::path::{Path, PathBuf};
 
-use rocket::http::uri::{self, FromUriParam};
-use rocket::request::FromParam;
 use rand::{self, Rng};
-
-/// Table to retrieve base62 values from.
-const BASE62: &[u8] = b"0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
+use rocket::request::FromParam;
 
 /// A _probably_ unique paste ID.
 #[derive(UriDisplayPath)]
@@ -18,6 +14,8 @@ impl PasteId<'_> {
     /// probability of a collision depends on the value of `size` and the number
     /// of IDs generated thus far.
     pub fn new(size: usize) -> PasteId<'static> {
+        const BASE62: &[u8] = b"0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
+
         let mut id = String::with_capacity(size);
         let mut rng = rand::thread_rng();
         for _ in 0..size {
@@ -27,6 +25,7 @@ impl PasteId<'_> {
         PasteId(Cow::Owned(id))
     }
 
+    /// Returns the path to the paste in `upload/` corresponding to this ID.
     pub fn file_path(&self) -> PathBuf {
         let root = concat!(env!("CARGO_MANIFEST_DIR"), "/", "upload");
         Path::new(root).join(self.0.as_ref())
@@ -39,17 +38,8 @@ impl<'a> FromParam<'a> for PasteId<'a> {
     type Error = &'a str;
 
     fn from_param(param: &'a str) -> Result<Self, Self::Error> {
-        match param.chars().all(|c| c.is_ascii_alphanumeric()) {
-            true => Ok(PasteId(param.into())),
-            false => Err(param)
-        }
-    }
-}
-
-impl<'a> FromUriParam<uri::Path, &'a str> for PasteId<'_> {
-    type Target = PasteId<'a>;
-
-    fn from_uri_param(param: &'a str) -> Self::Target {
-        PasteId(param.into())
+        param.chars().all(|c| c.is_ascii_alphanumeric())
+            .then(|| PasteId(param.into()))
+            .ok_or(param)
     }
 }

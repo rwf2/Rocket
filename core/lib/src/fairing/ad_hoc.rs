@@ -59,13 +59,16 @@ enum AdHocKind {
     Liftoff(Once<dyn for<'a> FnOnce(&'a Rocket<Orbit>) -> BoxFuture<'a, ()> + Send + 'static>),
 
     /// An ad-hoc **request** fairing. Called when a request is received.
-    Request(Box<dyn for<'a> Fn(&'a mut Request<'_>, &'a Data)
+    Request(Box<dyn for<'a> Fn(&'a mut Request<'_>, &'a Data<'_>)
         -> BoxFuture<'a, ()> + Send + Sync + 'static>),
 
     /// An ad-hoc **response** fairing. Called when a response is ready to be
     /// sent to a client.
     Response(Box<dyn for<'r, 'b> Fn(&'r Request<'_>, &'b mut Response<'r>)
         -> BoxFuture<'b, ()> + Send + Sync + 'static>),
+
+    /// An ad-hoc **shutdown** fairing. Called on shutdown.
+    Shutdown(Once<dyn for<'a> FnOnce(&'a Rocket<Orbit>) -> BoxFuture<'a, ()> + Send + 'static>),
 }
 
 impl AdHoc {
@@ -150,7 +153,7 @@ impl AdHoc {
     /// });
     /// ```
     pub fn on_request<F: Send + Sync + 'static>(name: &'static str, f: F) -> AdHoc
-        where F: for<'a> Fn(&'a mut Request<'_>, &'a Data) -> BoxFuture<'a, ()>
+        where F: for<'a> Fn(&'a mut Request<'_>, &'a Data<'_>) -> BoxFuture<'a, ()>
     {
         AdHoc { name, kind: AdHocKind::Request(Box::new(f)) }
     }
@@ -179,6 +182,27 @@ impl AdHoc {
         where F: for<'b, 'r> Fn(&'r Request<'_>, &'b mut Response<'r>) -> BoxFuture<'b, ()>
     {
         AdHoc { name, kind: AdHocKind::Response(Box::new(f)) }
+    }
+
+    /// Constructs an `AdHoc` shutdown fairing named `name`. The function `f`
+    /// will be called by Rocket when [shutdown is triggered].
+    ///
+    /// [shutdown is triggered]: crate::config::Shutdown#triggers
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use rocket::fairing::AdHoc;
+    ///
+    /// // A fairing that prints a message just before launching.
+    /// let fairing = AdHoc::on_shutdown("Bye!", |_| Box::pin(async move {
+    ///     println!("Rocket is on its way back!");
+    /// }));
+    /// ```
+    pub fn on_shutdown<F: Send + Sync + 'static>(name: &'static str, f: F) -> AdHoc
+        where F: for<'a> FnOnce(&'a Rocket<Orbit>) -> BoxFuture<'a, ()>
+    {
+        AdHoc { name, kind: AdHocKind::Shutdown(Once::new(Box::new(f))) }
     }
 
     /// Constructs an `AdHoc` launch fairing that extracts a configuration of
@@ -229,6 +253,7 @@ impl Fairing for AdHoc {
             AdHocKind::Liftoff(_) => Kind::Liftoff,
             AdHocKind::Request(_) => Kind::Request,
             AdHocKind::Response(_) => Kind::Response,
+            AdHocKind::Shutdown(_) => Kind::Shutdown,
         };
 
         Info { name: self.name, kind }
@@ -247,7 +272,7 @@ impl Fairing for AdHoc {
         }
     }
 
-    async fn on_request(&self, req: &mut Request<'_>, data: &mut Data) {
+    async fn on_request(&self, req: &mut Request<'_>, data: &mut Data<'_>) {
         if let AdHocKind::Request(ref f) = self.kind {
             f(req, data).await
         }
@@ -256,6 +281,12 @@ impl Fairing for AdHoc {
     async fn on_response<'r>(&self, req: &'r Request<'_>, res: &mut Response<'r>) {
         if let AdHocKind::Response(ref f) = self.kind {
             f(req, res).await
+        }
+    }
+
+    async fn on_shutdown(&self, rocket: &Rocket<Orbit>) {
+        if let AdHocKind::Shutdown(ref f) = self.kind {
+            (f.take())(rocket).await
         }
     }
 }

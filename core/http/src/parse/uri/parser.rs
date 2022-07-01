@@ -1,67 +1,180 @@
 use pear::parsers::*;
-use pear::input::{Extent, Rewind};
-use pear::macros::{parser, switch, parse_current_marker, parse_error, parse_try};
+use pear::combinators::*;
+use pear::input::{self, Pear, Extent, Rewind, Input};
+use pear::macros::{parser, switch, parse_error, parse_try};
 
-use crate::uri::{Uri, Origin, Authority, Absolute, Host};
-use crate::parse::uri::tables::{is_reg_name_char, is_pchar, is_qchar};
+use crate::uri::{Uri, Origin, Authority, Absolute, Reference, Asterisk};
+use crate::parse::uri::tables::*;
 use crate::parse::uri::RawInput;
 
 type Result<'a, T> = pear::input::Result<T, RawInput<'a>>;
 
+// SAFETY: Every `unsafe` here comes from bytes -> &str conversions. Since all
+// bytes are checked against tables in `tables.rs`, all of which allow only
+// ASCII characters, these are all safe.
+
+// TODO: We should cap the source we pass into `raw` to the bytes we've actually
+// checked. Otherwise, we could have good bytes followed by unchecked bad bytes
+// since eof() may not called. However, note that we only actually expose these
+// parsers via `parse!()`, which _does_ call `eof()`, so we're externally okay.
+
+#[parser(rewind)]
+pub fn complete<I, P, O>(input: &mut Pear<I>, p: P) -> input::Result<O, I>
+    where I: Input + Rewind, P: FnOnce(&mut Pear<I>) -> input::Result<O, I>
+{
+    (p()?, eof()?).0
+}
+
+/// TODO: Have a way to ask for for preference in ambiguity resolution.
+///   * An ordered [Preference] is probably best.
+///   * Need to filter/uniqueify. See `uri-pref`.
+/// Once we have this, we should probably set the default so that `authority` is
+/// preferred over `absolute`, otherwise something like `foo:3122` is absolute.
 #[parser]
 pub fn uri<'a>(input: &mut RawInput<'a>) -> Result<'a, Uri<'a>> {
-    match input.items.len() {
-        0 => parse_error!("empty URI")?,
-        1 => switch! {
-            eat(b'*') => Uri::Asterisk,
-            eat(b'/') => Uri::Origin(Origin::new::<_, &str>("/", None)),
-            eat(b'%') => parse_error!("'%' is not a valid URI")?,
-            _ => unsafe {
-                // the `is_reg_name_char` guarantees ASCII
-                let host = Host::Raw(take_n_if(1, is_reg_name_char)?);
-                Uri::Authority(Authority::raw(input.start.into(), None, host, None))
-            }
-        },
-        // NOTE: We accept '%' even when it isn't followed by two hex digits.
-        _ => switch! {
-            peek(b'/') => Uri::Origin(origin()?),
-            _ => absolute_or_authority()?
-        }
+    // To resolve all ambiguities with preference, we might need to look at the
+    // complete string twice: origin/ref, asterisk/ref, authority/absolute.
+    switch! {
+        asterisk@complete(asterisk) => Uri::Asterisk(asterisk),
+        origin@complete(origin) => Uri::Origin(origin),
+        authority@complete(authority) => Uri::Authority(authority),
+        absolute@complete(absolute) => Uri::Absolute(absolute),
+        _ => Uri::Reference(reference()?)
     }
+}
+
+#[parser]
+pub fn asterisk<'a>(input: &mut RawInput<'a>) -> Result<'a, Asterisk> {
+    eat(b'*')?;
+    Asterisk
 }
 
 #[parser]
 pub fn origin<'a>(input: &mut RawInput<'a>) -> Result<'a, Origin<'a>> {
-    (peek(b'/')?, path_and_query(is_pchar, is_qchar)?).1
+    let (_, path, query) = (peek(b'/')?, path()?, query()?);
+    unsafe { Origin::raw(input.start.into(), path, query) }
 }
 
 #[parser]
-fn path_and_query<'a, F, Q>(
-    input: &mut RawInput<'a>,
-    is_path_char: F,
-    is_query_char: Q
-) -> Result<'a, Origin<'a>>
-    where F: Fn(&u8) -> bool + Copy, Q: Fn(&u8) -> bool + Copy
-{
-    let path = take_while(is_path_char)?;
-    let query = parse_try!(eat(b'?') => take_while(is_query_char)?);
+pub fn authority<'a>(input: &mut RawInput<'a>) -> Result<'a, Authority<'a>> {
+    let prefix = take_while(is_reg_name_char)?;
+    let (user_info, host, port) = switch! {
+        peek(b'[') if prefix.is_empty() => (None, host()?, port()?),
+        eat(b':') => {
+            let suffix = take_while(is_reg_name_char)?;
+            switch! {
+                peek(b':') => {
+                    let end = (take_while(is_user_info_char)?, eat(b'@')?).0;
+                    (input.span(prefix, end), host()?, port()?)
+                },
+                eat(b'@') => (input.span(prefix, suffix), host()?, port()?),
+                // FIXME: Rewind to just after prefix to get the right context
+                // to be able to call `port()`. Then remove `maybe_port()`.
+                _ => (None, prefix, maybe_port(&suffix)?)
+            }
+        },
+        eat(b'@') => (Some(prefix), host()?, port()?),
+        _ => (None, prefix, None),
+    };
 
-    if path.is_empty() && query.is_none() {
-        parse_error!("expected path or query, found neither")?
-    } else {
-        // We know the string is ASCII because of the `is_char` checks above.
-        Ok(unsafe { Origin::raw(input.start.into(), path.into(), query.map(|q| q.into())) })
+    unsafe { Authority::raw(input.start.into(), user_info, host, port) }
+}
+
+#[parser]
+pub fn scheme<'a>(input: &mut RawInput<'a>) -> Result<'a, Extent<&'a [u8]>> {
+    let scheme = take_some_while(is_scheme_char)?;
+    if !scheme.get(0).map_or(false, |b| b.is_ascii_alphabetic()) {
+        parse_error!("invalid scheme")?;
+    }
+
+    scheme
+}
+
+#[parser]
+pub fn absolute<'a>(input: &mut RawInput<'a>) -> Result<'a, Absolute<'a>> {
+    let scheme = scheme()?;
+    let (_, (authority, path), query) = (eat(b':')?, hier_part()?, query()?);
+    unsafe { Absolute::raw(input.start.into(), scheme, authority, path, query) }
+}
+
+#[parser]
+pub fn reference<'a>(
+    input: &mut RawInput<'a>,
+) -> Result<'a, Reference<'a>> {
+    let prefix = take_while(is_scheme_char)?;
+    let (scheme, authority, path) = switch! {
+        peek(b':') if prefix.is_empty() => parse_error!("missing scheme")?,
+        eat(b':') => {
+            if !prefix.get(0).map_or(false, |b| b.is_ascii_alphabetic()) {
+                parse_error!("invalid scheme")?;
+            }
+
+            let (authority, path) = hier_part()?;
+            (Some(prefix), authority, path)
+        },
+        peek_slice(b"//") if prefix.is_empty() => {
+            let (authority, path) = hier_part()?;
+            (None, authority, path)
+        },
+        _ => {
+            let path = path()?;
+            let full_path = input.span(prefix, path).unwrap_or(none()?);
+            (None, None, full_path)
+        },
+    };
+
+    let (source, query, fragment) = (input.start.into(), query()?, fragment()?);
+    unsafe { Reference::raw(source, scheme, authority, path, query, fragment) }
+}
+
+#[parser]
+pub fn hier_part<'a>(
+    input: &mut RawInput<'a>
+) -> Result<'a, (Option<Authority<'a>>, Extent<&'a [u8]>)> {
+    switch! {
+        eat_slice(b"//") => {
+            let authority = authority()?;
+            let path = parse_try!(peek(b'/') => path()? => || none()?);
+            (Some(authority), path)
+        },
+        _ => (None, path()?)
     }
 }
 
 #[parser]
-fn port_from<'a>(input: &mut RawInput<'a>, bytes: &[u8]) -> Result<'a, u16> {
+fn host<'a>(
+    input: &mut RawInput<'a>,
+) -> Result<'a, Extent<&'a [u8]>> {
+    switch! {
+        peek(b'[') => enclosed(b'[', is_host_char, b']')?,
+        _ => take_while(is_reg_name_char)?
+    }
+}
+
+#[parser]
+fn port<'a>(
+    input: &mut RawInput<'a>,
+) -> Result<'a, Option<u16>> {
+    if !succeeds(input, |i| eat(i, b':')) {
+        return Ok(None);
+    }
+
+    let bytes = take_n_while(5, |c| c.is_ascii_digit())?;
+    maybe_port(&bytes)?
+}
+
+// FIXME: The context here is wrong since it's empty. We should reset to
+// current - bytes.len(). Or something like that.
+#[parser]
+fn maybe_port<'a>(input: &mut RawInput<'a>, bytes: &[u8]) -> Result<'a, Option<u16>> {
+    if bytes.len() > 5 {
+        parse_error!("port len is out of range")?;
+    } else if !bytes.iter().all(|b| b.is_ascii_digit()) {
+        parse_error!("invalid port bytes")?;
+    }
+
     let mut port_num: u32 = 0;
     for (b, i) in bytes.iter().rev().zip(&[1, 10, 100, 1000, 10000]) {
-        if !b.is_ascii_digit() {
-            parse_error!("port byte is out of range")?;
-        }
-
         port_num += (b - b'0') as u32 * i;
     }
 
@@ -69,123 +182,20 @@ fn port_from<'a>(input: &mut RawInput<'a>, bytes: &[u8]) -> Result<'a, u16> {
         parse_error!("port out of range: {}", port_num)?;
     }
 
-    Ok(port_num as u16)
+    Some(port_num as u16)
 }
 
 #[parser]
-fn port<'a>(input: &mut RawInput<'a>) -> Result<'a, u16> {
-    let port = take_n_while(5, |c| c.is_ascii_digit())?;
-    port_from(&port)?
+fn path<'a>(input: &mut RawInput<'a>) -> Result<'a, Extent<&'a [u8]>> {
+    take_while(is_pchar)?
 }
 
 #[parser]
-fn authority<'a>(
-    input: &mut RawInput<'a>,
-    user_info: Option<Extent<&'a [u8]>>
-) -> Result<'a, Authority<'a>> {
-    let host = switch! {
-        peek(b'[') => Host::Bracketed(delimited(b'[', is_pchar, b']')?),
-        _ => Host::Raw(take_while(is_reg_name_char)?)
-    };
-
-    // The `is_pchar`,`is_reg_name_char`, and `port()` functions ensure ASCII.
-    let port = parse_try!(eat(b':') => port()?);
-    unsafe { Authority::raw(input.start.into(), user_info, host, port) }
-}
-
-// Callers must ensure that `scheme` is actually ASCII.
-#[parser]
-fn absolute<'a>(
-    input: &mut RawInput<'a>,
-    scheme: Extent<&'a [u8]>
-) -> Result<'a, Absolute<'a>> {
-    let (authority, path_and_query) = switch! {
-        eat_slice(b"://") => {
-            let before_auth = parse_current_marker!();
-            let left = take_while(|c| is_reg_name_char(c) || *c == b':')?;
-            let authority = switch! {
-                eat(b'@') => authority(Some(left))?,
-                _ => {
-                    input.rewind_to(before_auth);
-                    authority(None)?
-                }
-            };
-
-            let path_and_query = parse_try!(path_and_query(is_pchar, is_qchar));
-            (Some(authority), path_and_query)
-        },
-        eat(b':') => (None, Some(path_and_query(is_pchar, is_qchar)?)),
-        _ => parse_error!("expected ':' but none was found")?
-    };
-
-    // `authority` and `path_and_query` parsers ensure ASCII.
-    unsafe { Absolute::raw(input.start.into(), scheme, authority, path_and_query) }
+fn query<'a>(input: &mut RawInput<'a>) -> Result<'a, Option<Extent<&'a [u8]>>> {
+    parse_try!(eat(b'?') => take_while(is_qchar)?)
 }
 
 #[parser]
-pub fn authority_only<'a>(input: &mut RawInput<'a>) -> Result<'a, Authority<'a>> {
-    if let Uri::Authority(authority) = absolute_or_authority()? {
-        Ok(authority)
-    } else {
-        parse_error!("expected authority URI but found absolute URI")?
-    }
-}
-
-#[parser]
-pub fn absolute_only<'a>(input: &mut RawInput<'a>) -> Result<'a, Absolute<'a>> {
-    if let Uri::Absolute(absolute) = absolute_or_authority()? {
-        Ok(absolute)
-    } else {
-        parse_error!("expected absolute URI but found authority URI")?
-    }
-}
-
-#[parser]
-fn absolute_or_authority<'a>(input: &mut RawInput<'a>) -> Result<'a, Uri<'a>> {
-    // If the URI begins with `:`, it must follow with a `port`.
-    switch! {
-        peek(b':') => return Ok(Uri::Authority(authority(None)?)),
-    }
-
-    let start = parse_current_marker!();
-    let left = take_while(is_reg_name_char)?;
-    let mark_at_left = parse_current_marker!();
-    switch! {
-        peek_slice(b":/") => Uri::Absolute(absolute(left)?),
-        eat(b'@') => Uri::Authority(authority(Some(left))?),
-        take_n_if(1, |b| *b == b':') => {
-            // could be authority or an IP with ':' in it
-            let rest = take_while(|c| is_reg_name_char(c) || *c == b':')?;
-            let authority_here = parse_context!();
-            switch! {
-                eat(b'@') => Uri::Authority(authority(Some(authority_here))?),
-                peek(b'/') => {
-                    input.rewind_to(mark_at_left);
-                    Uri::Absolute(absolute(left)?)
-                },
-                _ => unsafe {
-                    // Here we hit an ambiguity: `rest` could be a port in
-                    // host:port or a host in scheme:host. Both are correct
-                    // parses. To settle the ambiguity, we assume that if it
-                    // looks like a port, it's a port. Otherwise a host. Unless
-                    // we have a query, in which case it's definitely a host.
-                    let query = parse_try!(eat(b'?') => take_while(is_pchar)?);
-                    if query.is_some() || rest.is_empty() || rest.len() > 5 {
-                        Uri::raw_absolute(input.start.into(), left, rest, query)
-                    } else if let Ok(port) = port_from(input, &rest) {
-                        let host = Host::Raw(left);
-                        let source = input.start.into();
-                        let port = Some(port);
-                        Uri::Authority(Authority::raw(source, None, host, port))
-                    } else {
-                        Uri::raw_absolute(input.start.into(), left, rest, query)
-                    }
-                }
-            }
-        },
-        _ => {
-            input.rewind_to(start);
-            Uri::Authority(authority(None)?)
-        }
-    }
+fn fragment<'a>(input: &mut RawInput<'a>) -> Result<'a, Option<Extent<&'a [u8]>>> {
+    parse_try!(eat(b'#') => take_while(is_qchar)?)
 }

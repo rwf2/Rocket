@@ -18,7 +18,7 @@ use yansi::Paint;
 /// use std::io;
 ///
 /// # use rocket::get;
-/// use rocket::response::NamedFile;
+/// use rocket::fs::NamedFile;
 ///
 /// #[get("/")]
 /// async fn index() -> io::Result<NamedFile> {

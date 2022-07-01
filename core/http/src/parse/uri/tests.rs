@@ -1,16 +1,15 @@
-use crate::uri::{Uri, Origin, Authority, Absolute};
+use crate::uri::{Origin, Authority, Absolute, Asterisk};
 use crate::parse::uri::*;
-use crate::uri::Host::*;
 
 macro_rules! assert_parse_eq {
-    ($($from:expr => $to:expr),+) => (
+    ($($from:expr => $to:expr),+ $(,)?) => (
         $(
-            let expected = $to.into();
+            let expected = $to;
             match from_str($from) {
                 Ok(output) => {
                     if output != expected {
                         println!("Failure on: {:?}", $from);
-                        assert_eq!(output, expected);
+                        assert_eq!(output, expected, "{} != {}", output, expected);
                     }
                 }
                 Err(e) => {
@@ -20,12 +19,10 @@ macro_rules! assert_parse_eq {
             }
         )+
     );
-
-    ($($from:expr => $to:expr),+,) => (assert_parse_eq!($($from => $to),+))
 }
 
 macro_rules! assert_no_parse {
-    ($($from:expr),+) => (
+    ($($from:expr),+ $(,)?) => (
         $(
             if let Ok(uri) = from_str($from) {
                 println!("{:?} parsed unexpectedly!", $from);
@@ -38,7 +35,7 @@ macro_rules! assert_no_parse {
 }
 
 macro_rules! assert_parse {
-    ($($from:expr),+) => (
+    ($($from:expr),+ $(,)?) => (
         $(
             if let Err(e) = from_str($from) {
                 println!("{:?} failed to parse", $from);
@@ -46,12 +43,10 @@ macro_rules! assert_parse {
             }
         )+
     );
-
-    ($($from:expr),+,) => (assert_parse!($($from),+))
 }
 
 macro_rules! assert_displays_eq {
-    ($($string:expr),+) => (
+    ($($string:expr),+ $(,)?) => (
         $(
             let string = $string.into();
             match from_str(string) {
@@ -75,20 +70,19 @@ macro_rules! assert_displays_eq {
     ($($string:expr),+,) => (assert_parse_eq!($($string),+))
 }
 
-fn uri_origin<'a>(path: &'a str, query: Option<&'a str>) -> Uri<'a> {
-    Uri::Origin(Origin::new(path, query))
-}
-
 #[test]
 #[should_panic]
 fn test_assert_parse_eq() {
-    assert_parse_eq!("*" => uri_origin("*", None));
+    assert_parse_eq!("*" => Origin::path_only("*"));
 }
 
 #[test]
 #[should_panic]
 fn test_assert_parse_eq_consecutive() {
-    assert_parse_eq!("/" => uri_origin("/", None), "/" => Uri::Asterisk);
+    assert_parse_eq! {
+        "/" => Origin::ROOT,
+        "/" => Asterisk
+    };
 }
 
 #[test]
@@ -103,13 +97,14 @@ fn bad_parses() {
         "://z7:77777777777777777777777777777`77777777777",
 
         // from #1621
-        "://@example.com/test",
-        "://example.com:/test",
-        "://@example.com:/test",
-        "://example.com/test?",
-        "://example.com:/test?",
-        "://@example.com/test?",
-        "://@example.com:/test?"
+        ":/",
+
+        // almost URIs
+        ":/",
+        "://",
+        "::",
+        ":::",
+        "a://a::",
     };
 }
 
@@ -129,144 +124,153 @@ fn test_parse_issue_924_samples() {
         "/rocket/?query=%3E5",
     );
 
-    assert_no_parse!("/rocket/?query=>5", "/?#foo");
+    assert_no_parse!("/rocket/?query=>5");
 }
 
 #[test]
 fn single_byte() {
     assert_parse_eq!(
-        "*" => Uri::Asterisk,
-        "/" => uri_origin("/", None),
-        "." => Authority::new(None, Raw("."), None),
-        "_" => Authority::new(None, Raw("_"), None),
-        "1" => Authority::new(None, Raw("1"), None),
-        "b" => Authority::new(None, Raw("b"), None),
+        "*" => Asterisk,
+        "/" => Origin::ROOT,
+        "." => Authority::new(None, ".", None),
+        "_" => Authority::new(None, "_", None),
+        "1" => Authority::new(None, "1", None),
+        "b" => Authority::new(None, "b", None),
+        "%" => Authority::new(None, "%", None),
+        "?" => Reference::new(None, None, "", "", None),
+        "#" => Reference::new(None, None, "", None, ""),
+        ":" => Authority::new(None, "", 0),
+        "@" => Authority::new("", "", None),
     );
 
-    assert_no_parse!("?", "#", "%");
+    assert_no_parse!["\\", "^"];
 }
 
 #[test]
 fn origin() {
     assert_parse_eq!(
-        "/a/b/c" => uri_origin("/a/b/c", None),
-        "/a/b/c?" => uri_origin("/a/b/c", Some("")),
-        "/a/b/c?abc" => uri_origin("/a/b/c", Some("abc")),
-        "/a/b/c???" => uri_origin("/a/b/c", Some("??")),
-        "/a/b/c?a?b?" => uri_origin("/a/b/c", Some("a?b?")),
-        "/a/b/c?a?b?/c" => uri_origin("/a/b/c", Some("a?b?/c")),
-        "/?abc" => uri_origin("/", Some("abc")),
-        "/hi%20there?a=b&c=d" => uri_origin("/hi%20there", Some("a=b&c=d")),
-        "/c/d/fa/b/c?abc" => uri_origin("/c/d/fa/b/c", Some("abc")),
-        "/xn--ls8h?emoji=poop" => uri_origin("/xn--ls8h", Some("emoji=poop")),
-        "/?t=[rocket|is\\here^`]&{ok}" => uri_origin("/", Some("t=[rocket|is\\here^`]&{ok}")),
+        "/a/b/c" => Origin::path_only("/a/b/c"),
+        "//" => Origin::path_only("//"),
+        "///" => Origin::path_only("///"),
+        "////" => Origin::path_only("////"),
+        "/a/b/c?" => Origin::new("/a/b/c", Some("")),
+        "/a/b/c?abc" => Origin::new("/a/b/c", Some("abc")),
+        "/a/b/c???" => Origin::new("/a/b/c", Some("??")),
+        "/a/b/c?a?b?" => Origin::new("/a/b/c", Some("a?b?")),
+        "/a/b/c?a?b?/c" => Origin::new("/a/b/c", Some("a?b?/c")),
+        "/?abc" => Origin::new("/", Some("abc")),
+        "/hi%20there?a=b&c=d" => Origin::new("/hi%20there", Some("a=b&c=d")),
+        "/c/d/fa/b/c?abc" => Origin::new("/c/d/fa/b/c", Some("abc")),
+        "/xn--ls8h?emoji=poop" => Origin::new("/xn--ls8h", Some("emoji=poop")),
+        "/?t=[rocket|is\\here^`]&{ok}" => Origin::new("/", Some("t=[rocket|is\\here^`]&{ok}")),
     );
 }
 
 #[test]
 fn authority() {
     assert_parse_eq!(
-        "abc" => Authority::new(None, Raw("abc"), None),
-        "@abc" => Authority::new(Some(""), Raw("abc"), None),
-        "sergio:benitez@spark" => Authority::new(Some("sergio:benitez"), Raw("spark"), None),
-        "a:b:c@1.2.3:12121" => Authority::new(Some("a:b:c"), Raw("1.2.3"), Some(12121)),
-        "sergio@spark" => Authority::new(Some("sergio"), Raw("spark"), None),
-        "sergio@spark:230" => Authority::new(Some("sergio"), Raw("spark"), Some(230)),
-        "sergio@[1::]:230" => Authority::new(Some("sergio"), Bracketed("1::"), Some(230)),
-        "google.com:8000" => Authority::new(None, Raw("google.com"), Some(8000)),
-        "[1::2::3]:80" => Authority::new(None, Bracketed("1::2::3"), Some(80)),
+        "@:" => Authority::new("", "", 0),
+        "abc" => Authority::new(None, "abc", None),
+        "@abc" => Authority::new("", "abc", None),
+        "a@b" => Authority::new("a", "b", None),
+        "a@" => Authority::new("a", "", None),
+        ":@" => Authority::new(":", "", None),
+        ":@:" => Authority::new(":", "", 0),
+        "sergio:benitez@spark" => Authority::new("sergio:benitez", "spark", None),
+        "a:b:c@1.2.3:12121" => Authority::new("a:b:c", "1.2.3", 12121),
+        "sergio@spark" => Authority::new("sergio", "spark", None),
+        "sergio@spark:230" => Authority::new("sergio", "spark", 230),
+        "sergio@[1::]:230" => Authority::new("sergio", "[1::]", 230),
+        "rocket.rs:8000" => Authority::new(None, "rocket.rs", 8000),
+        "[1::2::3]:80" => Authority::new(None, "[1::2::3]", 80),
+        "bar:" => Authority::new(None, "bar", 0), // could be absolute too
     );
 }
 
 #[test]
 fn absolute() {
     assert_parse_eq! {
-        "http://foo.com:8000" => Absolute::new(
-            "http",
-            Some(Authority::new(None, Raw("foo.com"), Some(8000))),
-            None
-        ),
-        "http://foo:8000" => Absolute::new(
-            "http",
-            Some(Authority::new(None, Raw("foo"), Some(8000))),
-            None,
-        ),
-        "foo:bar" => Absolute::new(
-            "foo",
-            None,
-            Some(Origin::new::<_, &str>("bar", None)),
-        ),
-        "http://sergio:pass@foo.com:8000" => Absolute::new(
-            "http",
-            Some(Authority::new(Some("sergio:pass"), Raw("foo.com"), Some(8000))),
-            None,
-        ),
-        "foo:/sergio/pass?hi" => Absolute::new(
-            "foo",
-            None,
-            Some(Origin::new("/sergio/pass", Some("hi"))),
-        ),
-        "bar:" => Absolute::new(
-            "bar",
-            None,
-            Some(Origin::new::<_, &str>("", None)),
-        ),
-        "foo:?hi" => Absolute::new(
-            "foo",
-            None,
-            Some(Origin::new("", Some("hi"))),
-        ),
-        "foo:a/b?hi" => Absolute::new(
-            "foo",
-            None,
-            Some(Origin::new("a/b", Some("hi"))),
-        ),
-        "foo:a/b" => Absolute::new(
-            "foo",
-            None,
-            Some(Origin::new::<_, &str>("a/b", None)),
-        ),
-        "foo:/a/b" => Absolute::new(
-            "foo",
-            None,
-            Some(Origin::new::<_, &str>("/a/b", None))
-        ),
-        "abc://u:p@foo.com:123/a/b?key=value&key2=value2" => Absolute::new(
-            "abc",
-            Some(Authority::new(Some("u:p"), Raw("foo.com"), Some(123))),
-            Some(Origin::new("/a/b", Some("key=value&key2=value2"))),
-        ),
-        "ftp://foo.com:21/abc" => Absolute::new(
-            "ftp",
-            Some(Authority::new(None, Raw("foo.com"), Some(21))),
-            Some(Origin::new::<_, &str>("/abc", None)),
-        ),
-        "http://google.com/abc" => Absolute::new(
-            "http",
-            Some(Authority::new(None, Raw("google.com"), None)),
-            Some(Origin::new::<_, &str>("/abc", None)),
-         ),
-        "http://google.com" => Absolute::new(
-            "http",
-            Some(Authority::new(None, Raw("google.com"), None)),
-            None
-        ),
-        "http://foo.com?test" => Absolute::new(
-            "http",
-            Some(Authority::new(None, Raw("foo.com"), None,)),
-            Some(Origin::new("", Some("test"))),
-        ),
-        "http://google.com/abc?hi" => Absolute::new(
-            "http",
-            Some(Authority::new(None, Raw("google.com"), None,)),
-            Some(Origin::new("/abc", Some("hi"))),
-        ),
+        "http:/" => Absolute::new("http", None, "/", None),
+        "http://" => Absolute::new("http", Authority::new(None, "", None), "", None),
+        "http:///" => Absolute::new("http", Authority::new(None, "", None), "/", None),
+        "http://a.com:8000" => Absolute::new("http", Authority::new(None, "a.com", 8000), "", None),
+        "http://foo:8000" => Absolute::new("http", Authority::new(None, "foo", 8000), "", None),
+        "foo:bar" => Absolute::new("foo", None, "bar", None),
+        "ftp:::" => Absolute::new("ftp", None, "::", None),
+        "ftp:::?bar" => Absolute::new("ftp", None, "::", "bar"),
+        "http://:::@a.b.c.:8000" =>
+            Absolute::new("http", Authority::new(":::", "a.b.c.", 8000), "", None),
+        "http://sergio:pass@foo.com:8000" =>
+            Absolute::new("http", Authority::new("sergio:pass", "foo.com", 8000), "", None),
+        "foo:/sergio/pass?hi" => Absolute::new("foo", None, "/sergio/pass", "hi"),
+        "foo:?hi" => Absolute::new("foo", None, "", "hi"),
+        "foo:a/b" => Absolute::new("foo", None, "a/b", None),
+        "foo:a/b?" => Absolute::new("foo", None, "a/b", ""),
+        "foo:a/b?hi" => Absolute::new("foo", None, "a/b", "hi"),
+        "foo:/a/b" => Absolute::new("foo", None, "/a/b", None),
+        "abc://u:p@foo.com:123/a/b?key=value&key2=value2" =>
+            Absolute::new("abc",
+                Authority::new("u:p", "foo.com", 123),
+                "/a/b", "key=value&key2=value2"),
+        "ftp://foo.com:21/abc" =>
+            Absolute::new("ftp", Authority::new(None, "foo.com", 21), "/abc", None),
+        "http://rocket.rs/abc" =>
+            Absolute::new("http", Authority::new(None, "rocket.rs", None), "/abc", None),
+        "http://s:b@rocket.rs/abc" =>
+            Absolute::new("http", Authority::new("s:b", "rocket.rs", None), "/abc", None),
+        "http://rocket.rs/abc?q" =>
+            Absolute::new("http", Authority::new(None, "rocket.rs", None), "/abc", "q"),
+        "http://rocket.rs" =>
+            Absolute::new("http", Authority::new(None, "rocket.rs", None), "", None),
+        "git://s::@rocket.rs:443/abc?q" =>
+            Absolute::new("git", Authority::new("s::", "rocket.rs", 443), "/abc", "q"),
+        "git://:@rocket.rs:443/abc?q" =>
+            Absolute::new("git", Authority::new(":", "rocket.rs", 443), "/abc", "q"),
+        "a://b?test" => Absolute::new("a", Authority::new(None, "b", None), "", "test"),
+        "a://b:?test" => Absolute::new("a", Authority::new(None, "b", 0), "", "test"),
+        "a://b:1?test" => Absolute::new("a", Authority::new(None, "b", 1), "", "test"),
     };
+}
+
+#[test]
+fn reference() {
+    assert_parse_eq!(
+        "*#" => Reference::new(None, None, "*", None, ""),
+        "*#h" => Reference::new(None, None, "*", None, "h"),
+        "@/" => Reference::new(None, None, "@/", None, None),
+        "@?" => Reference::new(None, None, "@", "", None),
+        "@?#" => Reference::new(None, None, "@", "", ""),
+        "@#foo" => Reference::new(None, None, "@", None, "foo"),
+        "foo/bar" => Reference::new(None, None, "foo/bar", None, None),
+        "foo/bar?baz" => Reference::new(None, None, "foo/bar", "baz", None),
+        "foo/bar?baz#cat" => Reference::new(None, None, "foo/bar", "baz", "cat"),
+        "a?b#c" => Reference::new(None, None, "a", "b", "c"),
+        "?#" => Reference::new(None, None, "", "", ""),
+        "ftp:foo/bar?baz#" => Reference::new("ftp", None, "foo/bar", "baz", ""),
+        "ftp:bar#" => Reference::new("ftp", None, "bar", None, ""),
+        "ftp:?bar#" => Reference::new("ftp", None, "", "bar", ""),
+        "ftp:::?bar#" => Reference::new("ftp", None, "::", "bar", ""),
+        "#foo" => Reference::new(None, None, "", None, "foo"),
+        "a:/#" => Reference::new("a", None, "/", None, ""),
+        "a:/?a#" => Reference::new("a", None, "/", "a", ""),
+        "a:/?a#b" => Reference::new("a", None, "/", "a", "b"),
+        "a:?a#b" => Reference::new("a", None, "", "a", "b"),
+        "a://?a#b" => Reference::new("a", Authority::new(None, "", None), "", "a", "b"),
+        "a://:?a#b" => Reference::new("a", Authority::new(None, "", 0), "", "a", "b"),
+        "a://:2000?a#b" => Reference::new("a", Authority::new(None, "", 2000), "", "a", "b"),
+        "a://a:2000?a#b" => Reference::new("a", Authority::new(None, "a", 2000), "", "a", "b"),
+        "a://a:@2000?a#b" => Reference::new("a", Authority::new("a:", "2000", None), "", "a", "b"),
+        "a://a:@:80?a#b" => Reference::new("a", Authority::new("a:", "", 80), "", "a", "b"),
+        "a://a:@b:80?a#b" => Reference::new("a", Authority::new("a:", "b", 80), "", "a", "b"),
+    );
 }
 
 #[test]
 fn display() {
     assert_displays_eq! {
-        "abc", "@):0", "[a]"
+        "abc", "@):0", "[a]",
+        "http://rocket.rs", "http://a:b@rocket.rs", "git://a@b:800/foo?bar",
+        "git://a@b:800/foo?bar#baz",
+        "a:b", "a@b", "a?b", "a?b#c",
     }
 }

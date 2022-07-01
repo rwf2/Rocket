@@ -4,10 +4,10 @@
 
 use rocket::{State, Config};
 use rocket::fairing::AdHoc;
-
-use serde::Deserialize;
+use rocket::serde::Deserialize;
 
 #[derive(Debug, Deserialize)]
+#[serde(crate = "rocket::serde")]
 struct AppConfig {
     key: String,
     port: u16

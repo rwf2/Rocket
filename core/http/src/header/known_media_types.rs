@@ -13,6 +13,8 @@ macro_rules! known_media_types {
         CSS (is_css): "CSS", "text", "css" ; "charset" => "utf-8",
         FormData (is_form_data): "multipart form data", "multipart", "form-data",
         XML (is_xml): "XML", "text", "xml" ; "charset" => "utf-8",
+        OPF (is_opf): "OPF", "application", "oebps-package+xml",
+        XHTML (is_xhtml): "XHTML", "application", "xhtml+xml",
         CSV (is_csv): "CSV", "text", "csv" ; "charset" => "utf-8",
         PNG (is_png): "PNG", "image", "png",
         GIF (is_gif): "GIF", "image", "gif",
@@ -41,8 +43,15 @@ macro_rules! known_media_types {
         TAR (is_tar): "tape archive", "application", "x-tar",
         GZIP (is_gzip): "gzipped binary", "application", "gzip",
         MOV (is_mov): "quicktime video", "video", "quicktime",
+        MP3 (is_mp3): "MPEG Audio", "audio", "mpeg",
         MP4 (is_mp4): "MPEG4 Video", "video", "mp4",
         ZIP (is_zip): "ZIP archive", "application", "zip",
+        CBZ (is_cbz): "Comic ZIP archive", "application", "vnd.comicbook+zip",
+        CBR (is_cbr): "Comic RAR compressed archive", "application", "vnd.comicbook-rar",
+        RAR (is_rar): "RAR compressed archive", "application", "vnd.rar",
+        EPUB (is_epub): "EPUB", "application", "epub+zip",
+        EventStream (is_event_stream): "SSE stream", "text", "event-stream",
+        Markdown (is_markdown): "markdown text", "text", "markdown" ; "charset" => "utf-8",
     })
 }
 
@@ -52,6 +61,8 @@ macro_rules! known_extensions {
         "html" => HTML,
         "htm" => HTML,
         "xml" => XML,
+        "opf" => OPF,
+        "xhtml" => XHTML,
         "csv" => CSV,
         "js" => JavaScript,
         "css" => CSS,
@@ -76,6 +87,7 @@ macro_rules! known_extensions {
         "otf" => OTF,
         "woff" => WOFF,
         "woff2" => WOFF2,
+        "mp3" => MP3,
         "mp4" => MP4,
         "mpeg4" => MP4,
         "wasm" => WASM,
@@ -90,6 +102,12 @@ macro_rules! known_extensions {
         "tiff" => TIFF,
         "mov" => MOV,
         "zip" => ZIP,
+        "cbz" => CBZ,
+        "cbr" => CBR,
+        "rar" => RAR,
+        "epub" => EPUB,
+        "md" => Markdown,
+        "markdown" => Markdown,
     })
 }
 
@@ -109,5 +127,7 @@ macro_rules! known_shorthands {
         "multipart" => FormData,
         "xml" => XML,
         "pdf" => PDF,
+        "markdown" => Markdown,
+        "md" => Markdown,
     })
 }

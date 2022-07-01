@@ -58,7 +58,7 @@ your application explicitly handles.
 
 ### Reinterpreting
 
-Because HTML forms can only be directly submitted as `GET` or `POST` requests,
+Because web browsers only support submitting HTML forms as `GET` or `POST` requests,
 Rocket _reinterprets_ request methods under certain conditions. If a `POST`
 request contains a body of `Content-Type: application/x-www-form-urlencoded` and
 the form's **first** field has the name `_method` and a valid HTTP method name
@@ -141,7 +141,7 @@ implemented in just 4 lines:
 # fn main() {}
 
 use std::path::{Path, PathBuf};
-use rocket::response::NamedFile;
+use rocket::fs::NamedFile;
 
 #[get("/<file..>")]
 async fn files(file: PathBuf) -> Option<NamedFile> {
@@ -149,23 +149,51 @@ async fn files(file: PathBuf) -> Option<NamedFile> {
 }
 ```
 
-[path traversal attacks]: https://www.owasp.org/index.php/Path_Traversal
+[path traversal attacks]: https://owasp.org/www-community/attacks/Path_Traversal
 
 ! tip: Rocket makes it even _easier_ to serve static files!
 
   If you need to serve static files from your Rocket application, consider using
-  the [`StaticFiles`] custom handler from [`rocket_contrib`], which makes it as
-  simple as:
+  [`FileServer`], which makes it as simple as:
 
-  `rocket.mount("/public", StaticFiles::from("static/"))`
+  `rocket.mount("/public", FileServer::from("static/"))`
 
-[`rocket_contrib`]: @api/rocket_contrib/
-[`StaticFiles`]: @api/rocket_contrib/serve/struct.StaticFiles.html
+[`FileServer`]: @api/rocket/fs/struct.FileServer.html
 [`FromSegments`]: @api/rocket/request/trait.FromSegments.html
+
+### Ignored Segments
+
+A component of a route can be fully ignored by using `<_>`, and multiple
+components can be ignored by using `<_..>`. In other words, the wildcard name
+`_` is a dynamic parameter name that ignores that dynamic parameter. An ignored
+parameter must not appear in the function argument list. A segment declared as
+`<_>` matches anything in a single segment while segments declared as `<_..>`
+match any number of segments with no conditions.
+
+As an example, the `foo_bar` route below matches any `GET` request with a
+3-segment URI that starts with `/foo/` and ends with `/bar`. The `everything`
+route below matches _every_ GET request.
+
+```rust
+# #[macro_use] extern crate rocket;
+
+#[get("/foo/<_>/bar")]
+fn foo_bar() -> &'static str {
+    "Foo _____ bar!"
+}
+
+#[get("/<_..>")]
+fn everything() -> &'static str {
+    "Hey, you're here."
+}
+
+# // Ensure there are no collisions.
+# rocket_guide_tests::client(routes![foo_bar, everything]);
+```
 
 ## Forwarding
 
-Let's take a closer look at the route attribute and signature pair from a
+Let's take a closer look at this route attribute and signature pair from a
 previous example:
 
 ```rust
@@ -183,7 +211,7 @@ there are no remaining routes to try. When there are no remaining routes, a
 customizable **404 error** is returned.
 
 Routes are attempted in increasing _rank_ order. Rocket chooses a default
-ranking from -6 to -1, detailed in the next section, but a route's rank can also
+ranking from -12 to -1, detailed in the next section, but a route's rank can also
 be manually set with the `rank` attribute. To illustrate, consider the following
 routes:
 
@@ -249,6 +277,7 @@ queries: the _more_ static a route's path and query are, the higher its
 precedence.
 
 There are three "colors" to paths and queries:
+
   1. `static`, meaning all components are static
   2. `partial`, meaning at least one component is dynamic
   3. `wild`, meaning all components are dynamic
@@ -271,7 +300,25 @@ and wild paths. This results in the following default ranking table:
 | wild       | wild        | -2           |
 | wild       | none        | -1           |
 
-Recall that _lower_ ranks have _higher_ precedence.
+Recall that _lower_ ranks have _higher_ precedence. As an example, consider this
+application from before:
+
+```rust
+# #[macro_use] extern crate rocket;
+
+#[get("/foo/<_>/bar")]
+fn foo_bar() { }
+
+#[get("/<_..>")]
+fn everything() { }
+
+# // Ensure there are no collisions.
+# rocket_guide_tests::client(routes![foo_bar, everything]);
+```
+
+Default ranking ensures that `foo_bar`, with a "partial" path color, has higher
+precedence than `everything` with a "wild" path color. This default ranking
+prevents what would have otherwise been a routing collision.
 
 ## Request Guards
 
@@ -480,13 +527,13 @@ feature:
 
 ```toml
 ## in Cargo.toml
-rocket = { version = "0.5.0-dev", features = ["secrets"] }
+rocket = { version = "0.5.0-rc.2", features = ["secrets"] }
 ```
 
 The API for retrieving, adding, and removing private cookies is identical except
-methods are suffixed with `_private`. These methods are: [`get_private`],
-[`get_private_pending`], [`add_private`], and [`remove_private`]. An example of
-their usage is below:
+that most methods are suffixed with `_private`. These methods are:
+[`get_private`], [`get_pending`], [`add_private`], and [`remove_private`]. An
+example of their usage is below:
 
 ```rust
 # #[macro_use] extern crate rocket;
@@ -529,7 +576,6 @@ For more information on configuration, see the [Configuration](../configuration)
 section of the guide.
 
 [`get_private`]: @api/rocket/http/struct.CookieJar.html#method.get_private
-[`get_private_pending`]: @api/rocket/http/struct.CookieJar.html#method.get_private_pending
 [`add_private`]: @api/rocket/http/struct.CookieJar.html#method.add_private
 [`remove_private`]: @api/rocket/http/struct.CookieJar.html#method.remove_private
 
@@ -551,7 +597,7 @@ As an example, consider the following route:
 # #[macro_use] extern crate rocket;
 # fn main() {}
 
-# type User = rocket::data::Data;
+# type User = String;
 
 #[post("/user", format = "application/json", data = "<user>")]
 fn new_user(user: User) { /* ... */ }
@@ -600,7 +646,7 @@ trait. It looks like this, where `T` is assumed to implement `FromData`:
 ```rust
 # #[macro_use] extern crate rocket;
 
-# type T = rocket::data::Data;
+# type T = String;
 
 #[post("/", data = "<input>")]
 fn new(input: T) { /* .. */ }
@@ -612,20 +658,17 @@ Any type that implements [`FromData`] is also known as _a data guard_.
 
 ### JSON
 
-The [`Json<T>`](@api/rocket_contrib/json/struct.Json.html) type from
-[`rocket_contrib`] is a data guard that parses the deserialzies body data as
-JSON. The only condition is that the generic type `T` implements the
-`Deserialize` trait from [Serde](https://github.com/serde-rs/json).
+The [`Json<T>`](@api/rocket/serde/json/struct.Json.html) guard deserializes body
+data as JSON. The only condition is that the generic type `T` implements the
+`Deserialize` trait from [`serde`](https://serde.rs).
 
 ```rust
 # #[macro_use] extern crate rocket;
-# extern crate rocket_contrib;
-# fn main() {}
 
-use serde::Deserialize;
-use rocket_contrib::json::Json;
+use rocket::serde::{Deserialize, json::Json};
 
 #[derive(Deserialize)]
+#[serde(crate = "rocket::serde")]
 struct Task<'r> {
     description: &'r str,
     complete: bool
@@ -635,19 +678,45 @@ struct Task<'r> {
 fn new(task: Json<Task<'_>>) { /* .. */ }
 ```
 
-See the [JSON example] on GitHub for a complete example.
+! warning: Using Rocket's `serde` derive re-exports requires a bit more effort.
 
-[JSON example]: @example/json
+  For convenience, Rocket re-exports `serde`'s `Serialize` and `Deserialize`
+  traits and derive macros from `rocket::serde`. However, due to Rust's limited
+  support for derive macro re-exports, using the re-exported derive macros
+  requires annotating structures with `#[serde(crate = "rocket::serde")]`. If
+  you'd like to avoid this extra annotation, you must depend on `serde` directly
+  via your crate's `Cargo.toml`:
+
+  `
+  serde = { version = "1.0", features = ["derive"] }
+  `
+
+  We always use the extra annotation in the guide, but you may prefer the
+  alternative.
+
+See the [JSON example](@example/serialization/src/json.rs) on GitHub for a
+complete example.
+
+! note: JSON support requires enabling Rocket's `json` feature flag.
+
+  Rocket intentionally places JSON support, as well support for other data
+  formats and features, behind feature flags. See [the api
+  docs](@api/rocket/#features) for a list of available features. The `json`
+  feature can be enabled in the `Cargo.toml`:
+
+  `
+  rocket = { version = "0.5.0-rc.2", features = ["json"] }
+  `
 
 ### Temporary Files
 
 The [`TempFile`] data guard streams data directly to a temporary file which can
-the be persisted. It makes accepting file uploads trivial:
+then be persisted. It makes accepting file uploads trivial:
 
 ```rust
 # #[macro_use] extern crate rocket;
 
-use rocket::data::TempFile;
+use rocket::fs::TempFile;
 
 #[post("/upload", format = "plain", data = "<file>")]
 async fn upload(mut file: TempFile<'_>) -> std::io::Result<()> {
@@ -656,7 +725,7 @@ async fn upload(mut file: TempFile<'_>) -> std::io::Result<()> {
 }
 ```
 
-[`TempFile`]: @api/rocket/data/struct.TempFile.html
+[`TempFile`]: @api/rocket/fs/enum.TempFile.html
 
 ### Streaming
 
@@ -672,7 +741,7 @@ use rocket::tokio;
 use rocket::data::{Data, ToByteUnit};
 
 #[post("/debug", data = "<data>")]
-async fn debug(data: Data) -> std::io::Result<()> {
+async fn debug(data: Data<'_>) -> std::io::Result<()> {
     // Stream at most 512KiB all of the body data to stdout.
     data.open(512.kibibytes())
         .stream_to(tokio::io::stdout())
@@ -720,15 +789,16 @@ struct Task<'r> {
 fn new(task: Form<Task<'_>>) { /* .. */ }
 ```
 
-The [`Form`] type implements the `FromData` trait as long as its generic
-parameter implements the [`FromForm`] trait. In the example, we've derived the
-`FromForm` trait automatically for the `Task` structure. `FromForm` can be
-derived for any structure whose fields implement [`FromForm`], or equivalently,
-[`FromFormField`]. If a `POST /todo` request arrives, the form data will
-automatically be parsed into the `Task` structure. If the data that arrives
-isn't of the correct Content-Type, the request is forwarded. If the data doesn't
-parse or is simply invalid, a customizable error is returned. As before, a
-forward or failure can be caught by using the `Option` and `Result` types:
+[`Form`] is data guard as long as its generic parameter implements the
+[`FromForm`] trait. In the example, we've derived the `FromForm` trait
+automatically for `Task`. `FromForm` can be derived for any structure whose
+fields implement [`FromForm`], or equivalently, [`FromFormField`].
+
+If a `POST /todo` request arrives, the form data will automatically be parsed
+into the `Task` structure. If the data that arrives isn't of the correct
+Content-Type, the request is forwarded. If the data doesn't parse or is simply
+invalid, a customizable error is returned. As before, a forward or failure can
+be caught by using the `Option` and `Result` types:
 
 ```rust
 # use rocket::{post, form::Form};
@@ -738,8 +808,32 @@ forward or failure can be caught by using the `Option` and `Result` types:
 fn new(task: Option<Form<Task<'_>>>) { /* .. */ }
 ```
 
+### Multipart
+
+Multipart forms are handled transparently, with no additional effort. Most
+`FromForm` types can parse themselves from the incoming data stream. For
+example, here's a form and route that accepts a multipart file upload using
+[`TempFile`]:
+
+```rust
+# #[macro_use] extern crate rocket;
+
+use rocket::form::Form;
+use rocket::fs::TempFile;
+
+#[derive(FromForm)]
+struct Upload<'r> {
+    save: bool,
+    file: TempFile<'r>,
+}
+
+#[post("/upload", data = "<upload>")]
+fn upload_form(upload: Form<Upload<'_>>) { /* .. */ }
+```
+
 [`Form`]: @api/rocket/form/struct.Form.html
 [`FromForm`]: @api/rocket/form/trait.FromForm.html
+[`FromFormField`]: @api/rocket/form/trait.FromFormField.html
 
 ### Parsing Strategy
 
@@ -816,8 +910,35 @@ struct MyForm<'v> {
 # rocket_guide_tests::assert_form_parses_ok!(MyForm, "");
 ```
 
+The default can be overridden or unset using the `#[field(default = expr)]`
+field attribute. If `expr` is not literally `None`, the parameter sets the
+default value of the field to be `expr.into()`. If `expr` _is_ `None`, the
+parameter _unsets_ the default value of the field, if any.
+
+```rust
+# use rocket::form::FromForm;
+
+#[derive(FromForm)]
+struct MyForm {
+    // Set the default value to be `"hello"`.
+    //
+    // Note how an `&str` is automatically converted into a `String`.
+    #[field(default = "hello")]
+    greeting: String,
+    // Remove the default value of `false`, requiring all parses of `MyForm`
+    // to contain an `is_friendly` field.
+    #[field(default = None)]
+    is_friendly: bool,
+}
+```
+
+See the [`FromForm` derive] documentation for full details on the `default`
+attribute parameter as well documentation on the more expressive `default_with`
+parameter option.
+
 [`Errors<'_>`]: @api/rocket/form/struct.Errors.html
 [`form::Result`]: @api/rocket/form/type.Result.html
+[`FromForm` derive]: @api/rocket/derive.FromForm.html
 
 ### Field Renaming
 
@@ -929,14 +1050,14 @@ struct Password<'r> {
 In reality, the expression after `validate =` can be _any_ expression as long as
 it evaluates to a value of type `Result<(), Errors<'_>>` (aliased by
 [`form::Result`]), where an `Ok` value means that validation was successful while
-an `Err` of [`Errors<'_>`] indicates the error(s) that occured. For instance, if
+an `Err` of [`Errors<'_>`] indicates the error(s) that occurred. For instance, if
 you wanted to implement an ad-hoc Luhn validator for credit-card-like numbers,
 you might write:
 
 ```rust
 # #[macro_use] extern crate rocket;
-extern crate time;
 
+use rocket::time::Date;
 use rocket::form::{self, Error};
 
 #[derive(FromForm)]
@@ -945,10 +1066,10 @@ struct CreditCard {
     number: u64,
     #[field(validate = range(..9999))]
     cvv: u16,
-    expiration: time::Date,
+    expiration: Date,
 }
 
-fn luhn<'v>(number: &u64, cvv: u16, exp: &time::Date) -> form::Result<'v, ()> {
+fn luhn<'v>(number: &u64, cvv: u16, exp: &Date) -> form::Result<'v, ()> {
     # let valid = false;
     if !valid {
         Err(Error::validation("invalid credit card number"))?;
@@ -961,6 +1082,42 @@ fn luhn<'v>(number: &u64, cvv: u16, exp: &time::Date) -> form::Result<'v, ()> {
 If a field's validation doesn't depend on other fields (validation is _local_),
 it is validated prior to those fields that do. For `CreditCard`, `cvv` and
 `expiration` will be validated prior to `number`.
+
+### Wrapping Validators
+
+If a particular validation is applied in more than once place, prefer creating a
+type that encapsulates and represents the validated value. For example, if your
+application often validates `age` fields, consider creating a custom `Age` form
+guard that always applies the validation:
+
+```rust
+# use rocket::form::FromForm;
+
+#[derive(FromForm)]
+#[field(validate = range(18..150))]
+struct Age(u16);
+```
+
+This approach is also useful when a custom validator already exists in some
+other form. For instance, the following example leverages [`try_with`] and an
+existing `FromStr` implementation on a `Token` type to validate a string:
+
+```rust
+# use rocket::form::FromForm;
+
+# impl FromStr for Token<'_> {
+#     type Err = &'static str;
+#     fn from_str(s: &str) -> Result<Self, Self::Err> { todo!() }
+# }
+
+use std::str::FromStr;
+
+#[derive(FromForm)]
+#[field(validate = try_with(|s| Token::from_str(s)))]
+struct Token<'r>(&'r str);
+```
+
+[`try_with`]: rocket/form/validate/fn.try_with.html
 
 ### Collections
 
@@ -1526,10 +1683,11 @@ map! {
 
 ### Context
 
-The [`Contextual`] type acts as a proxy for any form type, recording all of the
-submitted form values and produced errors and associating them with their
-corresponding field name. `Contextual` is particularly useful to render a form
-with previously submitted values and render errors associated with a form input.
+The [`Contextual`] form guard acts as a proxy for any other form guard,
+recording all submitted form values and produced errors and associating them
+with their corresponding field name. `Contextual` is particularly useful for
+rendering forms with previously submitted values and errors associated with form
+input.
 
 To retrieve the context for a form, use `Form<Contextual<'_, T>>` as a data
 guard, where `T` implements `FromForm`. The `context` field contains the form's
@@ -1547,18 +1705,22 @@ fn submit(form: Form<Contextual<'_, T>>) {
         // The form parsed successfully. `value` is the `T`.
     }
 
-    // In all cases, `form.context` contains the `Context`.
     // We can retrieve raw field values and errors.
-    let raw_id_value = form.context.value("id");
-    let id_errors = form.context.errors("id");
+    let raw_id_value = form.context.field_value("id");
+    let id_errors = form.context.field_errors("id");
 }
 ```
 
+`Context` is nesting-aware for errors. When `Context` is queried for errors for
+a field named `foo.bar`, it returns errors for fields that are a prefix of
+`foo.bar`, namely `foo` and `foo.bar`. Similarly, if queried for errors for a
+field named `foo.bar.baz`, errors for field `foo`, `foo.bar`, and `foo.bar.baz`
+will be returned.
+
 `Context` serializes as a map, so it can be rendered in templates that require
-`Serialize` types. See
-[`Context`](@api/rocket/form/struct.Context.html#Serialization) for details
-about its serialization format. The [forms example], too, makes use of form
-contexts, as well as every other forms feature.
+`Serialize` types. See [`Context`] for details about its serialization format.
+The [forms example], too, makes use of form contexts, as well as every other
+forms feature.
 
 [`Contextual`]: @api/rocket/form/struct.Contextual.html
 [`Context`]: @api/rocket/form/struct.Context.html
@@ -1570,7 +1732,7 @@ Query strings are URL-encoded forms that appear in the URL of a request. Query
 parameters are declared like path parameters but otherwise handled like regular
 URL-encoded form fields. The table below summarizes the analogy:
 
-| Path Synax  | Query Syntax | Path Type Bound  | Query Type Bound |
+| Path Syntax | Query Syntax | Path Type Bound  | Query Type Bound |
 |-------------|--------------|------------------|------------------|
 | `<param>`   | `<param>`    | [`FromParam`]    | [`FromForm`]     |
 | `<param..>` | `<param..>`  | [`FromSegments`] | [`FromForm`]     |
@@ -1660,15 +1822,17 @@ fn hello(name: &str, color: Vec<Color>, person: Person<'_>, other: Option<usize>
 }
 
 // A request with these query segments matches as above.
-# rocket_guide_tests::client(routes![hello]).get("/?\
-color=reg&\
+# let status = rocket_guide_tests::client(routes![hello]).get("/?\
+name=George&\
+color=red&\
 color=green&\
 person.pet.name=Fi+Fo+Alex&\
 color=green&\
-person.pet.age=1\
+person.pet.age=1&\
 color=blue&\
 extra=yes\
-# ").dispatch();
+# ").dispatch().status();
+# assert_eq!(status, rocket::http::Status::Ok);
 ```
 
 Note that, like forms, parsing is field-ordering insensitive and lenient by
@@ -1700,11 +1864,13 @@ fn user(id: usize, user: User<'_>) {
 }
 
 // A request with these query segments matches as above.
-# rocket_guide_tests::client(routes![user]).get("/?\
+# let status = rocket_guide_tests::client(routes![user]).get("/?\
+hello&\
 name=Bob+Smith&\
-id=1337\
+id=1337&\
 active=yes\
-# ").dispatch();
+# ").dispatch().status();
+# assert_eq!(status, rocket::http::Status::Ok);
 ```
 
 ## Error Catchers

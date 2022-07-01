@@ -4,7 +4,7 @@ error[E0277]: the trait bound `Unknown: FromFormField<'_>` is not satisfied
 7 |     field: Unknown,
   |            ^^^^^^^ the trait `FromFormField<'_>` is not implemented for `Unknown`
   |
-  = note: required because of the requirements on the impl of `FromForm<'__f>` for `Unknown`
+  = note: required because of the requirements on the impl of `FromForm<'r>` for `Unknown`
 
 error[E0277]: the trait bound `Foo<usize>: FromFormField<'_>` is not satisfied
   --> $DIR/from_form_type_errors.rs:14:12
@@ -12,4 +12,4 @@ error[E0277]: the trait bound `Foo<usize>: FromFormField<'_>` is not satisfied
 14 |     field: Foo<usize>,
    |            ^^^ the trait `FromFormField<'_>` is not implemented for `Foo<usize>`
    |
-   = note: required because of the requirements on the impl of `FromForm<'__f>` for `Foo<usize>`
+   = note: required because of the requirements on the impl of `FromForm<'r>` for `Foo<usize>`

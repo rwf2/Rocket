@@ -74,7 +74,7 @@ use crate::sentinel::Sentry;
 ///
 /// Collisions are resolved through _ranking_. Routes with lower ranks have
 /// higher precedence during routing than routes with higher ranks. Thus, routes
-/// are attempted in ascending rank order. If a higher precendence route returns
+/// are attempted in ascending rank order. If a higher precedence route returns
 /// an `Outcome` of `Forward`, the next highest precedence route is attempted,
 /// and so on, until a route returns `Success` or `Failure`, or there are no
 /// more routes to try. When all routes have been attempted, Rocket issues a
@@ -213,6 +213,7 @@ impl Route {
     /// assert_eq!(index.method, Method::Get);
     /// assert_eq!(index.uri, "/");
     /// ```
+    #[track_caller]
     pub fn new<H: Handler>(method: Method, uri: &str, handler: H) -> Route {
         Route::ranked(None, method, uri, handler)
     }
@@ -242,6 +243,7 @@ impl Route {
     /// assert_eq!(foo.method, Method::Post);
     /// assert_eq!(foo.uri, "/foo?bar");
     /// ```
+    #[track_caller]
     pub fn ranked<H, R>(rank: R, method: Method, uri: &str, handler: H) -> Route
         where H: Handler + 'static, R: Into<Option<isize>>,
     {
@@ -339,7 +341,7 @@ pub struct StaticInfo {
     /// The route's format, if any.
     pub format: Option<MediaType>,
     /// The route's handler, i.e, the annotated function.
-    pub handler: for<'r> fn(&'r crate::Request<'_>, crate::Data) -> BoxFuture<'r>,
+    pub handler: for<'r> fn(&'r crate::Request<'_>, crate::Data<'r>) -> BoxFuture<'r>,
     /// The route's rank, if any.
     pub rank: Option<isize>,
     /// Route-derived sentinels, if any.

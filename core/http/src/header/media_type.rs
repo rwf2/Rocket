@@ -305,9 +305,7 @@ impl MediaType {
         }
     }
 
-    /// Creates a new `MediaType` with top-level type `top`, subtype `sub`, and
-    /// parameters `ps`. This should _only_ be used to construct uncommon or
-    /// custom media types. Use an associated constant for everything else.
+    /// Sets the parameters `parameters` on `self`.
     ///
     /// # Example
     ///
@@ -317,7 +315,7 @@ impl MediaType {
     /// # extern crate rocket;
     /// use rocket::http::MediaType;
     ///
-    /// let id = MediaType::with_params("application", "x-id", ("id", "1"));
+    /// let id = MediaType::new("application", "x-id").with_params(("id", "1"));
     /// assert_eq!(id.to_string(), "application/x-id; id=1".to_string());
     /// ```
     ///
@@ -327,27 +325,21 @@ impl MediaType {
     /// # extern crate rocket;
     /// use rocket::http::MediaType;
     ///
-    /// let params = vec![("name", "bob"), ("ref", "2382")];
-    /// let mt = MediaType::with_params("text", "person", params);
+    /// let mt = MediaType::new("text", "person")
+    ///     .with_params([("name", "bob"), ("ref", "2382")]);
+    ///
     /// assert_eq!(mt.to_string(), "text/person; name=bob; ref=2382".to_string());
     /// ```
-    #[inline]
-    pub fn with_params<T, S, K, V, P>(top: T, sub: S, ps: P) -> MediaType
-        where T: Into<Cow<'static, str>>, S: Into<Cow<'static, str>>,
-              K: Into<Cow<'static, str>>, V: Into<Cow<'static, str>>,
+    pub fn with_params<K, V, P>(mut self, ps: P) -> MediaType
+        where K: Into<Cow<'static, str>>,
+              V: Into<Cow<'static, str>>,
               P: IntoCollection<(K, V)>
     {
-        let params = ps.mapped(|(key, val)| (
-            Indexed::Concrete(key.into()),
-            Indexed::Concrete(val.into())
-        ));
+        use Indexed::Concrete;
 
-        MediaType {
-            source: Source::None,
-            top: Indexed::Concrete(top.into()),
-            sub: Indexed::Concrete(sub.into()),
-            params: MediaParams::Dynamic(params)
-        }
+        let params = ps.mapped(|(k, v)| (Concrete(k.into()), Concrete(v.into())));
+        self.params = MediaParams::Dynamic(params);
+        self
     }
 
     /// A `const` variant of [`MediaType::with_params()`]. Creates a new
@@ -475,13 +467,15 @@ impl MediaType {
 
     /// Compares `self` with `other` and returns `true` if `self` and `other`
     /// are exactly equal to each other, including with respect to their
-    /// parameters.
+    /// parameters and their order.
     ///
     /// This is different from the `PartialEq` implementation in that it
-    /// considers parameters. If `PartialEq` returns false, this function is
-    /// guaranteed to return false. Similarly, if this function returns `true`,
-    /// `PartialEq` is guaranteed to return true. However, if `PartialEq`
-    /// returns `true`, this function may or may not return `true`.
+    /// considers parameters. In particular, `Eq` implies `PartialEq` but
+    /// `PartialEq` does not imply `Eq`. That is, if `PartialEq` returns false,
+    /// this function is guaranteed to return false. Similarly, if `exact_eq`
+    /// returns `true`, `PartialEq` is guaranteed to return true. However, if
+    /// `PartialEq` returns `true`, `exact_eq` function may or may not return
+    /// `true`.
     ///
     /// # Example
     ///
@@ -490,7 +484,7 @@ impl MediaType {
     /// use rocket::http::MediaType;
     ///
     /// let plain = MediaType::Plain;
-    /// let plain2 = MediaType::with_params("text", "plain", ("charset", "utf-8"));
+    /// let plain2 = MediaType::new("text", "plain").with_params(("charset", "utf-8"));
     /// let just_plain = MediaType::new("text", "plain");
     ///
     /// // The `PartialEq` implementation doesn't consider parameters.
@@ -504,18 +498,7 @@ impl MediaType {
     /// assert!(plain.exact_eq(&plain2));
     /// ```
     pub fn exact_eq(&self, other: &MediaType) -> bool {
-        self == other && {
-            let (mut a_params, mut b_params) = (self.params(), other.params());
-            loop {
-                match (a_params.next(), b_params.next()) {
-                    (Some(a), Some(b)) if a != b => return false,
-                    (Some(_), Some(_)) => continue,
-                    (Some(_), None) => return false,
-                    (None, Some(_)) => return false,
-                    (None, None) => return true
-                }
-            }
-        }
+        self == other && self.params().eq(other.params())
     }
 
     /// Returns an iterator over the (key, value) pairs of the media type's
@@ -546,9 +529,9 @@ impl MediaType {
     /// assert_eq!(png.params().count(), 0);
     /// ```
     #[inline]
-    pub fn params<'a>(&'a self) -> impl Iterator<Item=(&'a UncasedStr, &'a str)> + 'a {
+    pub fn params(&self) -> impl Iterator<Item=(&'_ UncasedStr, &'_ str)> + '_ {
         let raw = match self.params {
-            MediaParams::Static(ref slice) => Either::Left(slice.iter().cloned()),
+            MediaParams::Static(slice) => Either::Left(slice.iter().cloned()),
             MediaParams::Dynamic(ref vec) => {
                 Either::Right(vec.iter().map(move |&(ref key, ref val)| {
                     let source_str = self.source.as_str();
@@ -591,16 +574,13 @@ impl PartialEq for MediaType {
     }
 }
 
+impl Eq for MediaType {  }
+
 impl Hash for MediaType {
     #[inline]
     fn hash<H: Hasher>(&self, state: &mut H) {
         self.top().hash(state);
         self.sub().hash(state);
-
-        for (key, val) in self.params() {
-            key.hash(state);
-            val.hash(state);
-        }
     }
 }
 

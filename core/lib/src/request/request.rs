@@ -1,23 +1,23 @@
-use std::{ops::RangeFrom, sync::Arc};
-use std::net::{IpAddr, SocketAddr};
-use std::future::Future;
 use std::fmt;
-use std::str;
+use std::ops::RangeFrom;
+use std::{future::Future, borrow::Cow, sync::Arc};
+use std::net::{IpAddr, SocketAddr};
 
 use yansi::Paint;
 use state::{Container, Storage};
 use futures::future::BoxFuture;
 use atomic::{Atomic, Ordering};
 
-// use crate::request::{FromParam, FromSegments, FromRequest, Outcome};
+use crate::{Rocket, Route, Orbit};
 use crate::request::{FromParam, FromSegments, FromRequest, Outcome};
 use crate::form::{self, ValueField, FromForm};
-
-use crate::{Rocket, Route, Orbit};
-use crate::http::{hyper, uri::{Origin, Segments}, uncased::UncasedStr};
-use crate::http::{Method, Header, HeaderMap};
-use crate::http::{ContentType, Accept, MediaType, CookieJar, Cookie};
 use crate::data::Limits;
+
+use crate::http::{hyper, Method, Header, HeaderMap};
+use crate::http::{ContentType, Accept, MediaType, CookieJar, Cookie};
+use crate::http::uncased::UncasedStr;
+use crate::http::private::Certificates;
+use crate::http::uri::{fmt::Path, Origin, Segments, Host, Authority};
 
 /// The type of an incoming web request.
 ///
@@ -29,10 +29,19 @@ pub struct Request<'r> {
     method: Atomic<Method>,
     uri: Origin<'r>,
     headers: HeaderMap<'r>,
-    remote: Option<SocketAddr>,
+    pub(crate) connection: ConnectionMeta,
     pub(crate) state: RequestState<'r>,
 }
 
+/// Information derived from an incoming connection, if any.
+#[derive(Clone)]
+pub(crate) struct ConnectionMeta {
+    pub remote: Option<SocketAddr>,
+    #[cfg_attr(not(feature = "mtls"), allow(dead_code))]
+    pub client_certificates: Option<Certificates>,
+}
+
+/// Information derived from the request.
 pub(crate) struct RequestState<'r> {
     pub rocket: &'r Rocket<Orbit>,
     pub route: Atomic<Option<&'r Route>>,
@@ -40,6 +49,7 @@ pub(crate) struct RequestState<'r> {
     pub accept: Storage<Option<Accept>>,
     pub content_type: Storage<Option<ContentType>>,
     pub cache: Arc<Container![Send + Sync]>,
+    pub host: Option<Host<'r>>,
 }
 
 impl Request<'_> {
@@ -48,7 +58,7 @@ impl Request<'_> {
             method: Atomic::new(self.method()),
             uri: self.uri.clone(),
             headers: self.headers.clone(),
-            remote: self.remote.clone(),
+            connection: self.connection.clone(),
             state: self.state.clone(),
         }
     }
@@ -63,6 +73,7 @@ impl RequestState<'_> {
             accept: self.accept.clone(),
             content_type: self.content_type.clone(),
             cache: self.cache.clone(),
+            host: self.host.clone(),
         }
     }
 }
@@ -79,7 +90,10 @@ impl<'r> Request<'r> {
             uri,
             method: Atomic::new(method),
             headers: HeaderMap::new(),
-            remote: None,
+            connection: ConnectionMeta {
+                remote: None,
+                client_certificates: None,
+            },
             state: RequestState {
                 rocket,
                 route: Atomic::new(None),
@@ -87,6 +101,7 @@ impl<'r> Request<'r> {
                 accept: Storage::new(),
                 content_type: Storage::new(),
                 cache: Arc::new(<Container![Send + Sync]>::new()),
+                host: None,
             }
         }
     }
@@ -169,6 +184,123 @@ impl<'r> Request<'r> {
         self.uri = uri;
     }
 
+    /// Returns the [`Host`] identified in the request, if any.
+    ///
+    /// If the request is made via HTTP/1.1 (or earlier), this method returns
+    /// the value in the `HOST` header without the deprecated `user_info`
+    /// component. Otherwise, this method returns the contents of the
+    /// `:authority` pseudo-header request field.
+    ///
+    /// Note that this method _only_ reflects the `HOST` header in the _initial_
+    /// request and not any changes made thereafter. To change the value
+    /// returned by this method, use [`Request::set_host()`].
+    ///
+    /// # ⚠️ DANGER ⚠️
+    ///
+    /// Using the user-controlled `host` to construct URLs is a security hazard!
+    /// _Never_ do so without first validating the host against a whitelist. For
+    /// this reason, Rocket disallows constructing host-prefixed URIs with
+    /// [`uri!`]. _Always_ use [`uri!`] to construct URIs.
+    ///
+    /// [`uri!`]: crate::uri!
+    ///
+    /// # Example
+    ///
+    /// Retrieve the raw host, unusable to construct safe URIs:
+    ///
+    /// ```rust
+    /// use rocket::http::uri::Host;
+    /// # use rocket::uri;
+    /// # let c = rocket::local::blocking::Client::debug_with(vec![]).unwrap();
+    /// # let mut req = c.get("/");
+    /// # let request = req.inner_mut();
+    ///
+    /// assert_eq!(request.host(), None);
+    ///
+    /// request.set_host(Host::from(uri!("rocket.rs")));
+    /// let host = request.host().unwrap();
+    /// assert_eq!(host.domain(), "rocket.rs");
+    /// assert_eq!(host.port(), None);
+    ///
+    /// request.set_host(Host::from(uri!("rocket.rs:2392")));
+    /// let host = request.host().unwrap();
+    /// assert_eq!(host.domain(), "rocket.rs");
+    /// assert_eq!(host.port(), Some(2392));
+    /// ```
+    ///
+    /// Retrieve the raw host, check it against a whitelist, and construct a
+    /// URI:
+    ///
+    /// ```rust
+    /// # #[macro_use] extern crate rocket;
+    /// # type Token = String;
+    /// # let c = rocket::local::blocking::Client::debug_with(vec![]).unwrap();
+    /// # let mut req = c.get("/");
+    /// # let request = req.inner_mut();
+    /// use rocket::http::uri::Host;
+    ///
+    /// // A sensitive URI we want to prefix with safe hosts.
+    /// #[get("/token?<secret>")]
+    /// fn token(secret: Token) { /* .. */ }
+    ///
+    /// // Whitelist of known hosts. In a real setting, you might retrieve this
+    /// // list from config at ignite-time using tools like `AdHoc::config()`.
+    /// const WHITELIST: [Host<'static>; 3] = [
+    ///     Host::new(uri!("rocket.rs")),
+    ///     Host::new(uri!("rocket.rs:443")),
+    ///     Host::new(uri!("guide.rocket.rs:443")),
+    /// ];
+    ///
+    /// // A request with a host of "rocket.rs". Note the case-insensitivity.
+    /// request.set_host(Host::from(uri!("ROCKET.rs")));
+    /// let prefix = request.host().and_then(|h| h.to_absolute("https", &WHITELIST));
+    ///
+    /// // `rocket.rs` is in the whitelist, so we'll get back a `Some`.
+    /// assert!(prefix.is_some());
+    /// if let Some(prefix) = prefix {
+    ///     // We can use this prefix to safely construct URIs.
+    ///     let uri = uri!(prefix, token("some-secret-token"));
+    ///     assert_eq!(uri, "https://ROCKET.rs/token?secret=some-secret-token");
+    /// }
+    ///
+    /// // A request with a host of "attacker-controlled.com".
+    /// request.set_host(Host::from(uri!("attacker-controlled.com")));
+    /// let prefix = request.host().and_then(|h| h.to_absolute("https", &WHITELIST));
+    ///
+    /// // `attacker-controlled.come` is _not_ on the whitelist.
+    /// assert!(prefix.is_none());
+    /// assert!(request.host().is_some());
+    /// ```
+    #[inline(always)]
+    pub fn host(&self) -> Option<&Host<'r>> {
+        self.state.host.as_ref()
+    }
+
+    /// Sets the host of `self` to `host`.
+    ///
+    /// # Example
+    ///
+    /// Set the host to `rocket.rs:443`.
+    ///
+    /// ```rust
+    /// use rocket::http::uri::Host;
+    /// # use rocket::uri;
+    /// # let c = rocket::local::blocking::Client::debug_with(vec![]).unwrap();
+    /// # let mut req = c.get("/");
+    /// # let request = req.inner_mut();
+    ///
+    /// assert_eq!(request.host(), None);
+    ///
+    /// request.set_host(Host::from(uri!("rocket.rs:443")));
+    /// let host = request.host().unwrap();
+    /// assert_eq!(host.domain(), "rocket.rs");
+    /// assert_eq!(host.port(), Some(443));
+    /// ```
+    #[inline(always)]
+    pub fn set_host(&mut self, host: Host<'r>) {
+        self.state.host = Some(host);
+    }
+
     /// Returns the raw address of the remote connection that initiated this
     /// request if the address is known. If the address is not known, `None` is
     /// returned.
@@ -198,7 +330,7 @@ impl<'r> Request<'r> {
     /// ```
     #[inline(always)]
     pub fn remote(&self) -> Option<SocketAddr> {
-        self.remote
+        self.connection.remote
     }
 
     /// Sets the remote address of `self` to `address`.
@@ -221,7 +353,7 @@ impl<'r> Request<'r> {
     /// ```
     #[inline(always)]
     pub fn set_remote(&mut self, address: SocketAddr) {
-        self.remote = Some(address);
+        self.connection.remote = Some(address);
     }
 
     /// Returns the IP address in the "X-Real-IP" header of the request if such
@@ -571,9 +703,10 @@ impl<'r> Request<'r> {
     /// Different values of the same type _cannot_ be cached without using a
     /// proxy, wrapper type. To avoid the need to write these manually, or for
     /// libraries wishing to store values of public types, use the
-    /// [`local_cache!`](crate::request::local_cache) macro to generate a
-    /// locally anonymous wrapper type, store, and retrieve the wrapped value
-    /// from request-local cache.
+    /// [`local_cache!`](crate::request::local_cache) or
+    /// [`local_cache_once!`](crate::request::local_cache_once) macros to
+    /// generate a locally anonymous wrapper type, store, and retrieve the
+    /// wrapped value from request-local cache.
     ///
     /// # Example
     ///
@@ -620,6 +753,7 @@ impl<'r> Request<'r> {
     ///     current_user(&request).await
     /// }).await;
     /// # })
+    /// ```
     #[inline]
     pub async fn local_cache_async<'a, T, F>(&'a self, fut: F) -> &'a T
         where F: Future<Output = T>,
@@ -634,8 +768,8 @@ impl<'r> Request<'r> {
         }
     }
 
-    /// Retrieves and parses into `T` the 0-indexed no`n`th non-empty segment
-    /// from the _routed_ request, that is, the `n`th segment _after_ the mount
+    /// Retrieves and parses into `T` the 0-indexed `n`th non-empty segment from
+    /// the _routed_ request, that is, the `n`th segment _after_ the mount
     /// point. If the request has not been routed, then this is simply the `n`th
     /// non-empty request URI segment.
     ///
@@ -794,18 +928,21 @@ impl<'r> Request<'r> {
     /// Get the segments beginning at the `n`th, 0-indexed, after the mount
     /// point for the currently matched route, if they exist. Used by codegen.
     #[inline]
-    pub fn routed_segments(&self, n: RangeFrom<usize>) -> Segments<'_> {
+    pub fn routed_segments(&self, n: RangeFrom<usize>) -> Segments<'_, Path> {
         let mount_segments = self.route()
             .map(|r| r.uri.metadata.base_segs.len())
             .unwrap_or(0);
 
-        self.uri().path_segments().skip(mount_segments + n.start)
+        self.uri().path().segments().skip(mount_segments + n.start)
     }
 
     // Retrieves the pre-parsed query items. Used by matching and codegen.
     #[inline]
     pub fn query_fields(&self) -> impl Iterator<Item = ValueField<'_>> {
-        self.uri().query_segments().map(ValueField::from)
+        self.uri().query()
+            .map(|q| q.segments().map(ValueField::from))
+            .into_iter()
+            .flatten()
     }
 
     /// Set `self`'s parameters given that the route used to reach this request
@@ -829,32 +966,58 @@ impl<'r> Request<'r> {
     /// Convert from Hyper types into a Rocket Request.
     pub(crate) fn from_hyp(
         rocket: &'r Rocket<Orbit>,
-        h_method: hyper::Method,
-        h_headers: hyper::HeaderMap<hyper::HeaderValue>,
-        h_uri: &'r hyper::Uri,
-        h_addr: SocketAddr,
-    ) -> Result<Request<'r>, Error<'r>> {
-        // Get a copy of the URI (only supports path-and-query) for later use.
-        let uri = match (h_uri.scheme(), h_uri.authority(), h_uri.path_and_query()) {
-            (None, None, Some(path_query)) => path_query.as_str(),
-            _ => return Err(Error::InvalidUri(h_uri)),
-        };
+        hyper: &'r hyper::request::Parts,
+        connection: Option<ConnectionMeta>,
+    ) -> Result<Request<'r>, BadRequest<'r>> {
+        // Keep track of parsing errors; emit a `BadRequest` if any exist.
+        let mut errors = vec![];
 
         // Ensure that the method is known. TODO: Allow made-up methods?
-        let method = match Method::from_hyp(&h_method) {
-            Some(method) => method,
-            None => return Err(Error::BadMethod(h_method))
+        let method = Method::from_hyp(&hyper.method)
+            .unwrap_or_else(|| {
+                errors.push(Kind::BadMethod(&hyper.method));
+                Method::Get
+            });
+
+        // TODO: Keep around not just the path/query, but the rest, if there?
+        let uri = hyper.uri.path_and_query()
+            .map(|uri| {
+                // In debug, make sure we agree with Hyper about URI validity.
+                // If we disagree, log a warning but continue anyway; if this is
+                // a security issue with Hyper, there isn't much we can do.
+                #[cfg(debug_assertions)]
+                if Origin::parse(uri.as_str()).is_err() {
+                    warn!("Hyper/Rocket URI validity discord: {:?}", uri.as_str());
+                    info_!("Hyper believes the URI is valid while Rocket disagrees.");
+                    info_!("This is likely a Hyper bug with potential security implications.");
+                    warn_!("Please report this warning to Rocket's GitHub issue tracker.");
+                }
+
+                Origin::new(uri.path(), uri.query().map(Cow::Borrowed))
+            })
+            .unwrap_or_else(|| {
+                errors.push(Kind::InvalidUri(&hyper.uri));
+                Origin::ROOT
+            });
+
+        // Construct the request object; fill in metadata and headers next.
+        let mut request = Request::new(rocket, method, uri);
+
+        // Set the passed in connection metadata.
+        if let Some(connection) = connection {
+            request.connection = connection;
+        }
+
+        // Determine + set host. On HTTP < 2, use the `HOST` header. Otherwise,
+        // use the `:authority` pseudo-header which hyper makes part of the URI.
+        request.state.host = if hyper.version < hyper::Version::HTTP_2 {
+            hyper.headers.get("host").and_then(|h| Host::parse_bytes(h.as_bytes()).ok())
+        } else {
+            hyper.uri.host().map(|h| Host::new(Authority::new(None, h, hyper.uri.port_u16())))
         };
 
-        // We need to re-parse the URI since we don't trust Hyper... :(
-        let uri = Origin::parse(uri)?;
-
-        // Construct the request object.
-        let mut request = Request::new(rocket, method, uri);
-        request.set_remote(h_addr);
-
         // Set the request cookies, if they exist.
-        for header in h_headers.get_all("Cookie") {
+        for header in hyper.headers.get_all("Cookie") {
             let raw_str = match std::str::from_utf8(header.as_bytes()) {
                 Ok(string) => string,
                 Err(_) => continue
@@ -867,41 +1030,47 @@ impl<'r> Request<'r> {
             }
         }
 
-        // Set the rest of the headers.
-        // This is rather unfortunate and slow.
-        for (name, value) in h_headers.iter() {
-            // FIXME: This is not totally correct since values needn't be UTF8.
-            let value_str = String::from_utf8_lossy(value.as_bytes()).into_owned();
-            let header = Header::new(name.to_string(), value_str);
-            request.add_header(header);
+        // Set the rest of the headers. This is rather unfortunate and slow.
+        for (name, value) in hyper.headers.iter() {
+            // FIXME: This is rather unfortunate. Header values needn't be UTF8.
+            let value = match std::str::from_utf8(value.as_bytes()) {
+                Ok(value) => value,
+                Err(_) => {
+                    warn!("Header '{}' contains invalid UTF-8", name);
+                    warn_!("Rocket only supports UTF-8 header values. Dropping header.");
+                    continue;
+                }
+            };
+
+            request.add_header(Header::new(name.as_str(), value));
         }
 
-        Ok(request)
+        if errors.is_empty() {
+            Ok(request)
+        } else {
+            Err(BadRequest { request, errors })
+        }
     }
 }
 
 #[derive(Debug)]
-pub(crate) enum Error<'r> {
-    InvalidUri(&'r hyper::Uri),
-    UriParse(crate::http::uri::Error<'r>),
-    BadMethod(hyper::Method),
+pub(crate) struct BadRequest<'r> {
+    pub request: Request<'r>,
+    pub errors: Vec<Kind<'r>>,
 }
 
-impl fmt::Display for Error<'_> {
-    /// Pretty prints a Request. This is primarily used by Rocket's logging
-    /// infrastructure.
+#[derive(Debug)]
+pub(crate) enum Kind<'r> {
+    InvalidUri(&'r hyper::Uri),
+    BadMethod(&'r hyper::Method),
+}
+
+impl fmt::Display for Kind<'_> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Error::InvalidUri(u) => write!(f, "invalid origin URI: {}", u),
-            Error::UriParse(u) => write!(f, "URI `{}` failed to parse as origin", u),
-            Error::BadMethod(m) => write!(f, "invalid or unrecognized method: {}", m),
+            Kind::InvalidUri(u) => write!(f, "invalid origin URI: {}", u),
+            Kind::BadMethod(m) => write!(f, "invalid or unrecognized method: {}", m),
         }
-    }
-}
-
-impl<'r> From<crate::http::uri::Error<'r>> for Error<'r> {
-    fn from(uri_parse: crate::http::uri::Error<'r>) -> Self {
-        Error::UriParse(uri_parse)
     }
 }
 
@@ -918,8 +1087,7 @@ impl fmt::Debug for Request<'_> {
 }
 
 impl fmt::Display for Request<'_> {
-    /// Pretty prints a Request. This is primarily used by Rocket's logging
-    /// infrastructure.
+    /// Pretty prints a Request. Primarily used by Rocket's logging.
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{} {}", Paint::green(self.method()), Paint::blue(&self.uri))?;
 

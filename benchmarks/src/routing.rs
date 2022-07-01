@@ -1,11 +1,13 @@
-use criterion::Criterion;
+use std::collections::hash_set::HashSet;
 
-use rocket::{handler, Request, Data, Route, Config};
+use criterion::{criterion_group, Criterion};
+
+use rocket::{route, config, Request, Data, Route, Config};
 use rocket::http::{Method, RawStr, ContentType, Accept, Status};
 use rocket::local::blocking::{Client, LocalRequest};
 
-fn dummy_handler<'r>(req: &'r Request, _: Data) -> handler::HandlerFuture<'r> {
-    handler::Outcome::from(req, ()).pin()
+fn dummy_handler<'r>(req: &'r Request, _: Data<'r>) -> route::BoxFuture<'r> {
+    route::Outcome::from(req, ()).pin()
 }
 
 fn parse_routes_table(table: &str) -> Vec<Route> {
@@ -43,12 +45,16 @@ fn generate_matching_requests<'c>(client: &'c Client, routes: &[Route]) -> Vec<L
     }
 
     fn request_for_route<'c>(client: &'c Client, route: &Route) -> LocalRequest<'c> {
-        let path = route.uri.raw_path_segments()
+        let path = route.uri.origin.path()
+            .raw_segments()
             .map(staticify_segment)
             .collect::<Vec<_>>()
             .join("/");
 
-        let query = route.uri.raw_query_segments()
+        let query = route.uri.origin.query()
+            .map(|q| q.raw_segments())
+            .into_iter()
+            .flatten()
             .map(staticify_segment)
             .collect::<Vec<_>>()
             .join("&");
@@ -76,7 +82,12 @@ fn client(routes: Vec<Route>) -> Client {
         profile: Config::RELEASE_PROFILE,
         log_level: rocket::config::LogLevel::Off,
         cli_colors: false,
-        ctrlc: false,
+        shutdown: config::Shutdown {
+            ctrlc: false,
+            #[cfg(unix)]
+            signals: HashSet::new(),
+            ..Default::default()
+        },
         ..Default::default()
     };
 
@@ -89,7 +100,6 @@ fn client(routes: Vec<Route>) -> Client {
     }
 }
 
-#[criterion]
 pub fn bench_rust_lang_routes(c: &mut Criterion) {
     let table = include_str!("../static/rust-lang.routes");
     let routes = parse_routes_table(table);
@@ -103,7 +113,6 @@ pub fn bench_rust_lang_routes(c: &mut Criterion) {
     }));
 }
 
-#[criterion]
 pub fn bench_bitwarden_routes(c: &mut Criterion) {
     let table = include_str!("../static/bitwarden_rs.routes");
     let routes = parse_routes_table(table);
@@ -117,3 +126,4 @@ pub fn bench_bitwarden_routes(c: &mut Criterion) {
     }));
 }
 
+criterion_group!(routing, bench_rust_lang_routes, bench_bitwarden_routes);

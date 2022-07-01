@@ -11,7 +11,7 @@ use rocket::request::Request;
 use rocket::http::ext::Normalize;
 use rocket::local::blocking::Client;
 use rocket::data::{self, Data, FromData};
-use rocket::http::{Status, RawStr, ContentType};
+use rocket::http::{Status, RawStr, ContentType, uri::fmt::Path};
 
 // Use all of the code generation available at once.
 
@@ -26,7 +26,7 @@ struct Simple(String);
 impl<'r> FromData<'r> for Simple {
     type Error = std::io::Error;
 
-    async fn from_data(req: &'r Request<'_>, data: Data) -> data::Outcome<Self, Self::Error> {
+    async fn from_data(req: &'r Request<'_>, data: Data<'r>) -> data::Outcome<'r, Self> {
         String::from_data(req, data).await.map(Simple)
     }
 }
@@ -48,7 +48,7 @@ fn post1(
     let string = format!("{}, {}, {}, {}, {}, {}",
         sky, name, a, query.field, path.normalized_str(), simple.0);
 
-    let uri = uri!(post1: a, name, path, sky, query);
+    let uri = uri!(post1(a, name, path, sky, query));
 
     format!("({}) ({})", string, uri.to_string())
 }
@@ -71,14 +71,14 @@ fn post2(
     let string = format!("{}, {}, {}, {}, {}, {}",
         sky, name, a, query.field, path.normalized_str(), simple.0);
 
-    let uri = uri!(post2: a, name, path, sky, query);
+    let uri = uri!(post2(a, name, path, sky, query));
 
     format!("({}) ({})", string, uri.to_string())
 }
 
 #[allow(dead_code)]
 #[post("/<_unused_param>?<_unused_query>", data="<_unused_data>")]
-fn test_unused_params(_unused_param: String, _unused_query: String, _unused_data: Data) {
+fn test_unused_params(_unused_param: String, _unused_query: String, _unused_data: Data<'_>) {
 }
 
 #[test]
@@ -307,7 +307,7 @@ struct PathString(String);
 impl FromSegments<'_> for PathString {
     type Error = std::convert::Infallible;
 
-    fn from_segments(segments: Segments<'_>) -> Result<Self, Self::Error> {
+    fn from_segments(segments: Segments<'_, Path>) -> Result<Self, Self::Error> {
         Ok(PathString(segments.collect::<Vec<_>>().join("/")))
     }
 

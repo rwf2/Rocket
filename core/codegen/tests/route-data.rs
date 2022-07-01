@@ -19,7 +19,7 @@ struct Simple<'r>(&'r str);
 impl<'r> FromData<'r> for Simple<'r> {
     type Error = std::io::Error;
 
-    async fn from_data(req: &'r Request<'_>, data: Data) -> data::Outcome<Self, Self::Error> {
+    async fn from_data(req: &'r Request<'_>, data: Data<'r>) -> data::Outcome<'r, Self> {
         <&'r str>::from_data(req, data).await.map(Simple)
     }
 }

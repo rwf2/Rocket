@@ -6,13 +6,13 @@ mod inner {
 
     #[rocket::get("/")]
     pub fn hello() -> String {
-        format!("Hello! Try {}.", uri!(super::hello_name: "Rust 2018"))
+        format!("Hello! Try {}.", uri!(super::hello_name("Rust 2018")))
     }
 }
 
 #[rocket::get("/<name>")]
 fn hello_name(name: String) -> String {
-    format!("Hello, {}! This is {}.", name, rocket::uri!(hello_name: &name))
+    format!("Hello, {}! This is {}.", name, rocket::uri!(hello_name(&name)))
 }
 
 fn rocket() -> Rocket<Build> {

@@ -2,16 +2,13 @@
 name = "templating"
 version = "0.0.0"
 workspace = "../"
-edition = "2018"
+edition = "2021"
 publish = false
 
 [dependencies]
 rocket = { path = "../../core/lib" }
-serde = { version = "1.0", features = ["derive"] }
-serde_json = "1.0"
 
-[dependencies.rocket_contrib]
-path = "../../contrib/lib"
-default-features = false
 # in your application, you should enable only the template engine(s) used
-features = ["tera_templates", "handlebars_templates"]
+[dependencies.rocket_dyn_templates]
+path = "../../contrib/dyn_templates"
+features = ["tera", "handlebars"]

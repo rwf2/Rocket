@@ -1,8 +1,7 @@
 use std::ops::RangeBounds;
 
 use devise::Diagnostic;
-
-use crate::proc_macro2::{Span, Literal};
+use proc_macro2::{Span, Literal};
 
 // An experiment.
 pub struct Diagnostics(Vec<Diagnostic>);
@@ -67,6 +66,13 @@ impl StringLit {
     /// build entirely.
     pub fn subspan<R: RangeBounds<usize>>(&self, range: R) -> Span {
         self.1.subspan(range).unwrap_or_else(|| self.span())
+    }
+}
+
+impl syn::parse::Parse for StringLit {
+    fn parse(input: syn::parse::ParseStream<'_>) -> syn::Result<Self> {
+        let lit = input.parse::<syn::LitStr>()?;
+        Ok(StringLit::new(lit.value(), lit.span()))
     }
 }
 

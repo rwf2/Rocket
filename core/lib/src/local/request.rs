@@ -191,11 +191,9 @@ macro_rules! pub_request_impl {
         self
     }
 
-    /// Set the body (data) of the request.
+    /// Sets the body data of the request.
     ///
     /// # Examples
-    ///
-    /// Set the body to be a JSON structure; also sets the Content-Type.
     ///
     /// ```rust
     #[doc = $import]
@@ -204,8 +202,8 @@ macro_rules! pub_request_impl {
     /// # Client::_test(|_, request, _| {
     /// let request: LocalRequest = request;
     /// let req = request
-    ///     .header(ContentType::JSON)
-    ///     .body(r#"{ "key": "value", "array": [1, 2, 3] }"#);
+    ///     .header(ContentType::Text)
+    ///     .body("Hello, world!");
     /// # });
     /// ```
     #[inline]
@@ -217,6 +215,74 @@ macro_rules! pub_request_impl {
         // something like that.
         *self._body_mut() = body.as_ref().into();
         self
+    }
+
+    /// Sets the body to `value` serialized as JSON with `Content-Type`
+    /// [`ContentType::JSON`](crate::http::ContentType::JSON).
+    ///
+    /// If `value` fails to serialize, the body is set to empty. The
+    /// `Content-Type` header is _always_ set.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    #[doc = $import]
+    /// use rocket::serde::Serialize;
+    /// use rocket::http::ContentType;
+    ///
+    /// #[derive(Serialize)]
+    /// struct Task {
+    ///     id: usize,
+    ///     complete: bool,
+    /// }
+    ///
+    /// # Client::_test(|_, request, _| {
+    /// let task = Task { id: 10, complete: false };
+    ///
+    /// let request: LocalRequest = request;
+    /// let req = request.json(&task);
+    /// assert_eq!(req.content_type(), Some(&ContentType::JSON));
+    /// # });
+    /// ```
+    #[cfg(feature = "json")]
+    #[cfg_attr(nightly, doc(cfg(feature = "json")))]
+    pub fn json<T: crate::serde::Serialize>(self, value: &T) -> Self {
+        let json = serde_json::to_vec(&value).unwrap_or_default();
+        self.header(crate::http::ContentType::JSON).body(json)
+    }
+
+    /// Sets the body to `value` serialized as MessagePack with `Content-Type`
+    /// [`ContentType::MsgPack`](crate::http::ContentType::MsgPack).
+    ///
+    /// If `value` fails to serialize, the body is set to empty. The
+    /// `Content-Type` header is _always_ set.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    #[doc = $import]
+    /// use rocket::serde::Serialize;
+    /// use rocket::http::ContentType;
+    ///
+    /// #[derive(Serialize)]
+    /// struct Task {
+    ///     id: usize,
+    ///     complete: bool,
+    /// }
+    ///
+    /// # Client::_test(|_, request, _| {
+    /// let task = Task { id: 10, complete: false };
+    ///
+    /// let request: LocalRequest = request;
+    /// let req = request.msgpack(&task);
+    /// assert_eq!(req.content_type(), Some(&ContentType::MsgPack));
+    /// # });
+    /// ```
+    #[cfg(feature = "msgpack")]
+    #[cfg_attr(nightly, doc(cfg(feature = "msgpack")))]
+    pub fn msgpack<T: crate::serde::Serialize>(self, value: &T) -> Self {
+        let msgpack = rmp_serde::to_vec(value).unwrap_or_default();
+        self.header(crate::http::ContentType::MsgPack).body(msgpack)
     }
 
     /// Set the body (data) of the request without consuming `self`.

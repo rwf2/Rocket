@@ -2,14 +2,9 @@
 name = "serialization"
 version = "0.0.0"
 workspace = "../"
-edition = "2018"
+edition = "2021"
 publish = false
 
-[dependencies]
-rocket = { path = "../../core/lib" }
-serde = "1"
-
-[dependencies.rocket_contrib]
-path = "../../contrib/lib"
-default-features = false
-features = ["json", "msgpack"]
+[dependencies.rocket]
+path = "../../core/lib"
+features = ["json", "msgpack", "uuid"]

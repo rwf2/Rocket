@@ -85,7 +85,7 @@ macro_rules! pub_response_impl {
     /// Consumes `self` and reads the entirety of its body into a `Vec` of
     /// bytes.
     ///
-    /// If reading fails or the body is unset in the response, return `None`.
+    /// If reading fails or the body is unset in the response, returns `None`.
     /// Otherwise, returns `Some`. The returned vector may be empty if the body
     /// is empty.
     ///
@@ -106,6 +106,78 @@ macro_rules! pub_response_impl {
         }
 
         self._into_bytes() $(.$suffix)? .ok()
+    }
+
+    /// Consumes `self` and deserializes its body as JSON without buffering in
+    /// memory.
+    ///
+    /// If deserialization fails or the body is unset in the response, returns
+    /// `None`. Otherwise, returns `Some`.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    #[doc = $doc_prelude]
+    /// use rocket::serde::Deserialize;
+    ///
+    /// #[derive(Deserialize)]
+    /// struct Task {
+    ///     id: usize,
+    ///     complete: bool,
+    ///     text: String,
+    /// }
+    ///
+    /// # Client::_test(|_, _, response| {
+    /// let response: LocalResponse = response;
+    /// let task = response.into_json::<Task>();
+    /// # });
+    /// ```
+    #[cfg(feature = "json")]
+    #[cfg_attr(nightly, doc(cfg(feature = "json")))]
+    pub $($prefix)? fn into_json<T>(self) -> Option<T>
+        where T: Send + serde::de::DeserializeOwned + 'static
+    {
+        if self._response().body().is_none() {
+            return None;
+        }
+
+        self._into_json() $(.$suffix)?
+    }
+
+    /// Consumes `self` and deserializes its body as MessagePack without
+    /// buffering in memory.
+    ///
+    /// If deserialization fails or the body is unset in the response, returns
+    /// `None`. Otherwise, returns `Some`.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    #[doc = $doc_prelude]
+    /// use rocket::serde::Deserialize;
+    ///
+    /// #[derive(Deserialize)]
+    /// struct Task {
+    ///     id: usize,
+    ///     complete: bool,
+    ///     text: String,
+    /// }
+    ///
+    /// # Client::_test(|_, _, response| {
+    /// let response: LocalResponse = response;
+    /// let task = response.into_msgpack::<Task>();
+    /// # });
+    /// ```
+    #[cfg(feature = "msgpack")]
+    #[cfg_attr(nightly, doc(cfg(feature = "msgpack")))]
+    pub $($prefix)? fn into_msgpack<T>(self) -> Option<T>
+        where T: Send + serde::de::DeserializeOwned + 'static
+    {
+        if self._response().body().is_none() {
+            return None;
+        }
+
+        self._into_msgpack() $(.$suffix)?
     }
 
     #[cfg(test)]

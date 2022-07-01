@@ -8,6 +8,7 @@ source "${SCRIPT_DIR}/config.sh"
 # Add Cargo to PATH.
 export PATH=${HOME}/.cargo/bin:${PATH}
 export CARGO_INCREMENTAL=0
+export RUSTC_BOOTSTRAP=1
 CARGO="cargo"
 
 # Checks that the versions for Cargo projects $@ all match
@@ -56,86 +57,118 @@ function check_style() {
     echo "${matches}"
     exit 1
   fi
+
+  local pattern='tail -n 1 % | grep -q "^$" && echo %'
+  local matches=$(git grep -z -Il '' | xargs -0 -P 16 -I % sh -c "${pattern}")
+  if ! [ -z "${matches}" ]; then
+    echo "Trailing new line(s) found in the following:"
+    echo "${matches}"
+    exit 1
+  fi
+}
+
+function indir() {
+  local dir="${1}"
+  shift
+  pushd "${dir}" > /dev/null 2>&1 ; $@ ; popd > /dev/null 2>&1
 }
 
 function test_contrib() {
-  FEATURES=(
-    json
-    msgpack
-    tera_templates
-    handlebars_templates
-    serve
-    helmet
+  DB_POOLS_FEATURES=(
+    deadpool_postgres
+    deadpool_redis
+    sqlx_mysql
+    sqlx_postgres
+    sqlx_sqlite
+    sqlx_mssql
+    mongodb
+  )
+
+  SYNC_DB_POOLS_FEATURES=(
     diesel_postgres_pool
     diesel_sqlite_pool
     diesel_mysql_pool
     postgres_pool
     sqlite_pool
     memcache_pool
-    brotli_compression
-    gzip_compression
   )
 
-  echo ":: Building and testing contrib [default]..."
+  DYN_TEMPLATES_FEATURES=(
+    tera
+    handlebars
+  )
 
-  pushd "${CONTRIB_LIB_ROOT}" > /dev/null 2>&1
-    $CARGO test $@
+  for feature in "${DB_POOLS_FEATURES[@]}"; do
+    echo ":: Building and testing db_pools [$feature]..."
+    $CARGO test -p rocket_db_pools --no-default-features --features $feature $@
+  done
 
-    for feature in "${FEATURES[@]}"; do
-      echo ":: Building and testing contrib [${feature}]..."
-      $CARGO test --no-default-features --features "${feature}" $@
-    done
-  popd > /dev/null 2>&1
+  for feature in "${SYNC_DB_POOLS_FEATURES[@]}"; do
+    echo ":: Building and testing sync_db_pools [$feature]..."
+    $CARGO test -p rocket_sync_db_pools --no-default-features --features $feature $@
+  done
+
+  for feature in "${DYN_TEMPLATES_FEATURES[@]}"; do
+    echo ":: Building and testing dyn_templates [$feature]..."
+    $CARGO test -p rocket_dyn_templates --no-default-features --features $feature $@
+  done
 }
 
 function test_core() {
   FEATURES=(
     secrets
     tls
+    mtls
+    http2
+    json
+    msgpack
+    uuid
   )
 
-  pushd "${CORE_LIB_ROOT}" > /dev/null 2>&1
-    echo ":: Building and testing core [no features]..."
-    $CARGO test --no-default-features $@
+  echo ":: Building and checking core [no features]..."
+  RUSTDOCFLAGS="-Zunstable-options --no-run" \
+    indir "${CORE_LIB_ROOT}" $CARGO test --no-default-features $@
 
-    for feature in "${FEATURES[@]}"; do
-      echo ":: Building and testing core [${feature}]..."
-      $CARGO test --no-default-features --features "${feature}" $@
-    done
-  popd > /dev/null 2>&1
+  for feature in "${FEATURES[@]}"; do
+    echo ":: Building and checking core [${feature}]..."
+    RUSTDOCFLAGS="-Zunstable-options --no-run" \
+      indir "${CORE_LIB_ROOT}" $CARGO test --no-default-features --features "${feature}" $@
+  done
 }
 
 function test_examples() {
+  # Cargo compiles Rocket once with the `secrets` feature enabled, so when run
+  # in production, we need a secret key or tests will fail needlessly. We test
+  # in core that secret key failing/not failing works as expected, but here we
+  # provide a valid secret_key so tests don't fail.
   echo ":: Building and testing examples..."
-
-  pushd "${EXAMPLES_DIR}" > /dev/null 2>&1
-    # Rust compiles Rocket once with the `secrets` feature enabled, so when run
-    # in production, we need a secret key or tests will fail needlessly. We
-    # ensure in core that secret key failing/not failing works as expected.
-    ROCKET_SECRET_KEY="itlYmFR2vYKrOmFhupMIn/hyB6lYCCTXz4yaQX89XVg=" \
-      $CARGO test --all $@
-  popd > /dev/null 2>&1
-}
+  indir "${EXAMPLES_DIR}" $CARGO update
+  ROCKET_SECRET_KEY="itlYmFR2vYKrOmFhupMIn/hyB6lYCCTXz4yaQX89XVg=" \
+    indir "${EXAMPLES_DIR}" $CARGO test --all $@
+  }
 
 function test_default() {
   echo ":: Building and testing core libraries..."
+  indir "${PROJECT_ROOT}" $CARGO test --all --all-features $@
 
-  pushd "${PROJECT_ROOT}" > /dev/null 2>&1
-    $CARGO test --all --all-features $@
-  popd > /dev/null 2>&1
+  echo ":: Checking benchmarks..."
+  indir "${BENCHMARKS_ROOT}" $CARGO update
+  indir "${BENCHMARKS_ROOT}" $CARGO check --benches --all-features $@
+
+  echo ":: Checking fuzzers..."
+  indir "${FUZZ_ROOT}" $CARGO update
+  indir "${FUZZ_ROOT}" $CARGO check --all --all-features $@
 }
 
 function run_benchmarks() {
   echo ":: Running benchmarks..."
-
-  pushd "${BENCHMARKS_ROOT}" > /dev/null 2>&1
-    $CARGO bench $@
-  popd > /dev/null 2>&1
+  indir "${BENCHMARKS_ROOT}" $CARGO update
+  indir "${BENCHMARKS_ROOT}" $CARGO bench $@
 }
 
 if [[ $1 == +* ]]; then
-    CARGO="$CARGO $1"
-    shift
+  CARGO="$CARGO $1"
+  shift
 fi
 
 # The kind of test we'll be running.
@@ -143,8 +176,8 @@ TEST_KIND="default"
 KINDS=("contrib" "benchmarks" "core" "examples" "default" "all")
 
 if [[ " ${KINDS[@]} " =~ " ${1#"--"} " ]]; then
-    TEST_KIND=${1#"--"}
-    shift
+  TEST_KIND=${1#"--"}
+  shift
 fi
 
 echo ":: Preparing. Environment is..."
@@ -152,8 +185,14 @@ print_environment
 echo "  CARGO: $CARGO"
 echo "  EXTRA FLAGS: $@"
 
-echo ":: Ensuring all crate versions match..."
-check_versions_match "${ALL_PROJECT_DIRS[@]}"
+echo ":: Ensuring core crate versions match..."
+check_versions_match "${CORE_CRATE_ROOTS[@]}"
+
+echo ":: Ensuring contrib sync_db_pools versions match..."
+check_versions_match "${CONTRIB_SYNC_DB_POOLS_CRATE_ROOTS[@]}"
+
+echo ":: Ensuring contrib db_pools versions match..."
+check_versions_match "${CONTRIB_SYNC_DB_POOLS_CRATE_ROOTS[@]}"
 
 echo ":: Ensuring minimum style requirements are met..."
 check_style
@@ -176,7 +215,7 @@ case $TEST_KIND in
     test_contrib $@ & contrib=$!
 
     failures=()
-    if ! wait $default ; then failures+=("ROOT WORKSPACE"); fi
+    if ! wait $default ; then failures+=("DEFAULT"); fi
     if ! wait $examples ; then failures+=("EXAMPLES"); fi
     if ! wait $core ; then failures+=("CORE"); fi
     if ! wait $contrib ; then failures+=("CONTRIB"); fi

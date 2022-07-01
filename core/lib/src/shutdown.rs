@@ -88,7 +88,6 @@ impl Shutdown {
     #[inline]
     pub fn notify(self) {
         self.0.trip();
-        info!("Shutdown requested. Waiting for pending I/O to finish...");
     }
 }
 

@@ -2,9 +2,9 @@
 
 use rocket::response::Redirect;
 
-#[get("/google")]
-fn google() -> Redirect {
-    Redirect::to("https://www.google.com")
+#[get("/http")]
+fn http() -> Redirect {
+    Redirect::to(uri!("http://rocket.rs"))
 }
 
 #[get("/rocket")]
@@ -18,13 +18,13 @@ mod test_absolute_uris_okay {
 
     #[test]
     fn redirect_works() {
-        let client = Client::debug_with(routes![google, redirect]).unwrap();
+        let client = Client::debug_with(routes![http, redirect]).unwrap();
 
-        let response = client.get("/google").dispatch();
+        let response = client.get(uri!(http)).dispatch();
         let location = response.headers().get_one("Location");
-        assert_eq!(location, Some("https://www.google.com"));
+        assert_eq!(location, Some("http://rocket.rs"));
 
-        let response = client.get("/rocket").dispatch();
+        let response = client.get(uri!(redirect)).dispatch();
         let location = response.headers().get_one("Location");
         assert_eq!(location, Some("https://rocket.rs:80"));
     }

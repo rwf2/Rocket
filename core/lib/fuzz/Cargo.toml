@@ -1,0 +1,32 @@
+
+[package]
+name = "rocket-fuzz"
+version = "0.0.0"
+authors = ["Automatically generated"]
+publish = false
+edition = "2021"
+
+[package.metadata]
+cargo-fuzz = true
+
+[dependencies]
+libfuzzer-sys = "0.4"
+
+[dependencies.rocket]
+path = ".."
+
+# Prevent this from interfering with workspaces
+[workspace]
+members = ["."]
+
+[[bin]]
+name = "uri-parsing"
+path = "targets/uri-parsing.rs"
+test = false
+doc = false
+
+[[bin]]
+name = "uri-roundtrip"
+path = "targets/uri-roundtrip.rs"
+test = false
+doc = false

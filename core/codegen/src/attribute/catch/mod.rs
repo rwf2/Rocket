@@ -1,10 +1,10 @@
 mod parse;
 
 use devise::ext::SpanDiagnosticExt;
-use devise::{syn, Spanned, Result};
+use devise::{Spanned, Result};
+use proc_macro2::{TokenStream, Span};
 
 use crate::http_codegen::Optional;
-use crate::proc_macro2::{TokenStream, Span};
 use crate::syn_ext::ReturnTypeExt;
 use crate::exports::*;
 
@@ -30,14 +30,14 @@ pub fn _catch(
 
     // This ensures that "Responder not implemented" points to the return type.
     let return_type_span = catch.function.sig.output.ty()
-        .map(|ty| ty.span().into())
-        .unwrap_or(Span::call_site().into());
+        .map(|ty| ty.span())
+        .unwrap_or_else(Span::call_site);
 
     // Set the `req` and `status` spans to that of their respective function
     // arguments for a more correct `wrong type` error span. `rev` to be cute.
     let codegen_args = &[__req, __status];
     let inputs = catch.function.sig.inputs.iter().rev()
-        .zip(codegen_args.into_iter())
+        .zip(codegen_args.iter())
         .map(|(fn_arg, codegen_arg)| match fn_arg {
             syn::FnArg::Receiver(_) => codegen_arg.respanned(fn_arg.span()),
             syn::FnArg::Typed(a) => codegen_arg.respanned(a.ty.span())
@@ -45,7 +45,7 @@ pub fn _catch(
 
     // We append `.await` to the function call if this is `async`.
     let dot_await = catch.function.sig.asyncness
-        .map(|a| quote_spanned!(a.span().into() => .await));
+        .map(|a| quote_spanned!(a.span() => .await));
 
     let catcher_response = quote_spanned!(return_type_span => {
         let ___responder = #user_catcher_fn_name(#(#inputs),*) #dot_await;
@@ -64,10 +64,10 @@ pub fn _catch(
         /// Rocket code generated proxy static conversion implementations.
         impl #user_catcher_fn_name {
             fn into_info(self) -> #_catcher::StaticInfo {
-                fn monomorphized_function<'_b>(
+                fn monomorphized_function<'__r>(
                     #__status: #Status,
-                    #__req: &'_b #Request<'_>
-                ) -> #_catcher::BoxFuture<'_b> {
+                    #__req: &'__r #Request<'_>
+                ) -> #_catcher::BoxFuture<'__r> {
                     #_Box::pin(async move {
                         let __response = #catcher_response;
                         #Response::build()

@@ -1,0 +1,12 @@
+[package]
+name = "chat"
+version = "0.0.0"
+workspace = "../"
+edition = "2021"
+publish = false
+
+[dependencies]
+rocket = { path = "../../core/lib", features = ["json"] }
+
+[dev-dependencies]
+rand = "0.8"

@@ -1,12 +1,13 @@
 #![recursion_limit="256"]
 
-#![doc(html_root_url = "https://api.rocket.rs/master")]
+#![doc(html_root_url = "https://api.rocket.rs/v0.5-rc")]
 #![doc(html_favicon_url = "https://rocket.rs/images/favicon.ico")]
 #![doc(html_logo_url = "https://rocket.rs/images/logo-boxed.png")]
 #![cfg_attr(nightly, feature(doc_cfg))]
 #![cfg_attr(nightly, feature(decl_macro))]
 
 #![warn(rust_2018_idioms)]
+#![warn(missing_docs)]
 
 //! # Rocket - Core API Documentation
 //!
@@ -17,37 +18,24 @@
 //! detailed guide]. If you'd like pointers on getting started, see the
 //! [quickstart] or [getting started] chapters of the guide.
 //!
-//! You may also be interested in looking at the
-//! [`rocket_contrib`](../rocket_contrib) documentation, which contains
-//! automatic JSON (de)serialiazation, templating support, static file serving,
-//! and other useful features.
-//!
-//! [overview]: https://rocket.rs/master/overview
-//! [full, detailed guide]: https://rocket.rs/master/guide
-//! [quickstart]: https://rocket.rs/master/guide/quickstart
-//! [getting started]: https://rocket.rs/master/guide/getting-started
-//!
-//! ## Libraries
-//!
-//! Rocket's functionality is split into two crates:
-//!
-//!   1. Core - This core library. Needed by every Rocket application.
-//!   2. [Contrib](../rocket_contrib) - Provides useful functionality for many
-//!      Rocket applications. Completely optional.
+//! [overview]: https://rocket.rs/v0.5-rc/overview
+//! [full, detailed guide]: https://rocket.rs/v0.5-rc/guide
+//! [quickstart]: https://rocket.rs/v0.5-rc/guide/quickstart
+//! [getting started]: https://rocket.rs/v0.5-rc/guide/getting-started
 //!
 //! ## Usage
 //!
-//! Depend on `rocket` in `Rocket.toml`:
+//! Depend on `rocket` in `Cargo.toml`:
 //!
 //! ```toml
 //! [dependencies]
-//! rocket = "0.5.0-dev"
+//! rocket = "0.5.0-rc.2"
 //! ```
 //!
 //! <small>Note that development versions, tagged with `-dev`, are not published
 //! and need to be specified as [git dependencies].</small>
 //!
-//! See the [guide](https://rocket.rs/master/guide) for more information on how
+//! See the [guide](https://rocket.rs/v0.5-rc/guide) for more information on how
 //! to write Rocket applications. Here's a simple example to get you started:
 //!
 //! [git dependencies]: https://doc.rust-lang.org/cargo/reference/specifying-dependencies.html#specifying-dependencies-from-git-repositories
@@ -68,39 +56,56 @@
 //!
 //! ## Features
 //!
-//! There are two optional, disabled-by-default features:
+//! To avoid compiling unused dependencies, Rocket gates certain features. With
+//! the exception of `http2`, all are disabled by default:
 //!
-//!   * **secrets:** Enables support for [private cookies].
-//!   * **tls:** Enables support for [TLS].
+//! | Feature   | Description                                             |
+//! |-----------|---------------------------------------------------------|
+//! | `secrets` | Support for authenticated, encrypted [private cookies]. |
+//! | `tls`     | Support for [TLS] encrypted connections.                |
+//! | `mtls`    | Support for verified clients via [mutual TLS].          |
+//! | `http2`   | Support for HTTP/2 (enabled by default).                |
+//! | `json`    | Support for [JSON (de)serialization].                   |
+//! | `msgpack` | Support for [MessagePack (de)serialization].            |
+//! | `uuid`    | Support for [UUID value parsing and (de)serialization]. |
 //!
-//! The features can be enabled in `Rocket.toml`:
+//! Disabled features can be selectively enabled in `Cargo.toml`:
 //!
 //! ```toml
 //! [dependencies]
-//! rocket = { version = "0.5.0-dev", features = ["secrets", "tls"] }
+//! rocket = { version = "0.5.0-rc.2", features = ["secrets", "tls", "json"] }
 //! ```
 //!
-//! [private cookies]: https://rocket.rs/master/guide/requests/#private-cookies
-//! [TLS]: https://rocket.rs/master/guide/configuration/#tls
+//! Conversely, HTTP/2 can be disabled:
+//!
+//! ```toml
+//! [dependencies]
+//! rocket = { version = "0.5.0-rc.2", default-features = false }
+//! ```
+//!
+//! [JSON (de)serialization]: crate::serde::json
+//! [MessagePack (de)serialization]: crate::serde::msgpack
+//! [UUID value parsing and (de)serialization]: crate::serde::uuid
+//! [private cookies]: https://rocket.rs/v0.5-rc/guide/requests/#private-cookies
+//! [TLS]: https://rocket.rs/v0.5-rc/guide/configuration/#tls
+//! [mutual TLS]: crate::mtls
 //!
 //! ## Configuration
 //!
-//! By default, Rocket applications are configured via a `Rocket.toml` file
-//! and/or `ROCKET_{PARAM}` environment variables. For more information on how
-//! to configure Rocket, including how to completely customize configuration
-//! sources, see the [configuration section] of the guide as well as the
-//! [`config`] module documentation.
-//!
-//! [configuration section]: https://rocket.rs/master/guide/configuration/
+//! Rocket offers a rich, extensible configuration system built on [Figment]. By
+//! default, Rocket applications are configured via a `Rocket.toml` file
+//! and/or `ROCKET_{PARAM}` environment variables, but applications may
+//! configure their own sources. See the [configuration guide] for full details.
 //!
 //! ## Testing
 //!
 //! The [`local`] module contains structures that facilitate unit and
 //! integration testing of a Rocket application. The top-level [`local`] module
-//! documentation and the [testing chapter of the guide] include detailed
-//! examples.
+//! documentation and the [testing guide] include detailed examples.
 //!
-//! [testing chapter of the guide]: https://rocket.rs/master/guide/testing/#testing
+//! [configuration guide]: https://rocket.rs/v0.5-rc/guide/configuration/
+//! [testing guide]: https://rocket.rs/v0.5-rc/guide/testing/#testing
+//! [Figment]: https://docs.rs/figment
 
 /// These are public dependencies! Update docs if these are changed, especially
 /// figment's version number in docs.
@@ -109,6 +114,7 @@
 pub use futures;
 pub use tokio;
 pub use figment;
+pub use time;
 
 #[doc(hidden)]
 #[macro_use] pub mod log;
@@ -124,6 +130,9 @@ pub mod fairing;
 pub mod error;
 pub mod catcher;
 pub mod route;
+pub mod serde;
+pub mod shield;
+pub mod fs;
 
 // Reexport of HTTP everything.
 pub mod http {
@@ -135,9 +144,25 @@ pub mod http {
     #[doc(inline)]
     pub use rocket_http::*;
 
+    /// Re-exported hyper HTTP library types.
+    ///
+    /// All types that are re-exported from Hyper reside inside of this module.
+    /// These types will, with certainty, be removed with time, but they reside here
+    /// while necessary.
+    pub mod hyper {
+        #[doc(hidden)]
+        pub use rocket_http::hyper::*;
+
+        pub use rocket_http::hyper::header;
+    }
+
     #[doc(inline)]
     pub use crate::cookies::*;
 }
+
+#[cfg(feature = "mtls")]
+#[cfg_attr(nightly, doc(cfg(feature = "mtls")))]
+pub mod mtls;
 
 /// TODO: We need a futures mod or something.
 mod trip_wire;
@@ -208,27 +233,118 @@ pub use async_trait::async_trait;
 
 /// WARNING: This is unstable! Do not use this method outside of Rocket!
 #[doc(hidden)]
-pub fn async_test<R>(fut: impl std::future::Future<Output = R>) -> R {
-    tokio::runtime::Builder::new_multi_thread()
-        .thread_name("rocket-test-worker-thread")
-        .worker_threads(1)
+pub fn async_run<F, R>(fut: F, workers: usize, sync: usize, force_end: bool, name: &str) -> R
+    where F: std::future::Future<Output = R>
+{
+    let runtime = tokio::runtime::Builder::new_multi_thread()
+        .thread_name(name)
+        .worker_threads(workers)
+        .max_blocking_threads(sync)
         .enable_all()
         .build()
-        .expect("create tokio runtime")
-        .block_on(fut)
+        .expect("create tokio runtime");
+
+    let result = runtime.block_on(fut);
+    if force_end {
+        runtime.shutdown_timeout(std::time::Duration::from_millis(500));
+    }
+
+    result
+}
+
+/// WARNING: This is unstable! Do not use this method outside of Rocket!
+#[doc(hidden)]
+pub fn async_test<R>(fut: impl std::future::Future<Output = R>) -> R {
+    async_run(fut, 1, 32, true, "rocket-worker-test-thread")
 }
 
 /// WARNING: This is unstable! Do not use this method outside of Rocket!
 #[doc(hidden)]
 pub fn async_main<R>(fut: impl std::future::Future<Output = R> + Send) -> R {
-    // FIXME: The `workers` value won't reflect swaps of `Rocket` in attach
+    // FIXME: These config values won't reflect swaps of `Rocket` in attach
     // fairings with different config values, or values from non-Rocket configs.
     // See tokio-rs/tokio#3329 for a necessary solution in `tokio`.
-    tokio::runtime::Builder::new_multi_thread()
-        .worker_threads(Config::from(Config::figment()).workers)
-        .thread_name("rocket-worker-thread")
-        .enable_all()
-        .build()
-        .expect("create tokio runtime")
-        .block_on(fut)
+    let c = Config::from(Config::figment());
+    async_run(fut, c.workers, c.max_blocking, c.shutdown.force, "rocket-worker-thread")
+}
+
+/// Executes a `future` to completion on a new tokio-based Rocket async runtime.
+///
+/// The runtime is terminated on shutdown, and the future's resolved value is
+/// returned.
+///
+/// # Considerations
+///
+/// This function is a low-level mechanism intended to be used to execute the
+/// future returned by [`Rocket::launch()`] in a self-contained async runtime
+/// designed for Rocket. It runs futures in exactly the same manner as
+/// [`#[launch]`](crate::launch) and [`#[main]`](crate::main) do and is thus
+/// _never_ the preferred mechanism for running a Rocket application. _Always_
+/// prefer to use the [`#[launch]`](crate::launch) or [`#[main]`](crate::main)
+/// attributes. For example [`#[main]`](crate::main) can be used even when
+/// Rocket is just a small part of a bigger application:
+///
+/// ```rust,no_run
+/// #[rocket::main]
+/// async fn main() {
+///     # let should_start_server_in_foreground = false;
+///     # let should_start_server_in_background = false;
+///     let rocket = rocket::build();
+///     if should_start_server_in_foreground {
+///         rocket::build().launch().await;
+///     } else if should_start_server_in_background {
+///         rocket::tokio::spawn(rocket.launch());
+///     } else {
+///         // do something else
+///     }
+/// }
+/// ```
+///
+/// See [Rocket#launching] for more on using these attributes.
+///
+/// # Example
+///
+/// Build an instance of Rocket, launch it, and wait for shutdown:
+///
+/// ```rust,no_run
+/// use rocket::fairing::AdHoc;
+///
+/// let rocket = rocket::build()
+///     .attach(AdHoc::on_liftoff("Liftoff Printer", |_| Box::pin(async move {
+///         println!("Stalling liftoff for a second...");
+///         rocket::tokio::time::sleep(std::time::Duration::from_secs(1)).await;
+///         println!("And we're off!");
+///     })));
+///
+/// rocket::execute(rocket.launch());
+/// ```
+///
+/// Launch a pre-built instance of Rocket and wait for it to shutdown:
+///
+/// ```rust,no_run
+/// use rocket::{Rocket, Ignite, Phase, Error};
+///
+/// fn launch<P: Phase>(rocket: Rocket<P>) -> Result<Rocket<Ignite>, Error> {
+///     rocket::execute(rocket.launch())
+/// }
+/// ```
+///
+/// Do async work to build an instance of Rocket, launch, and wait for shutdown:
+///
+/// ```rust,no_run
+/// use rocket::fairing::AdHoc;
+///
+/// // This line can also be inside of the `async` block.
+/// let rocket = rocket::build();
+///
+/// rocket::execute(async move {
+///     let rocket = rocket.ignite().await?;
+///     let config = rocket.config();
+///     rocket.launch().await
+/// });
+/// ```
+pub fn execute<R, F>(future: F) -> R
+    where F: std::future::Future<Output = R> + Send
+{
+    async_main(future)
 }

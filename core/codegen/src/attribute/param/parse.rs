@@ -1,11 +1,11 @@
 use unicode_xid::UnicodeXID;
 use devise::{Diagnostic, ext::SpanDiagnosticExt};
+use proc_macro2::Span;
 
 use crate::name::Name;
-use crate::http::uri::{self, UriPart};
 use crate::proc_macro_ext::StringLit;
-use crate::proc_macro2::Span;
 use crate::attribute::param::{Parameter, Dynamic};
+use crate::http::uri::fmt::{Part, Kind, Path};
 
 #[derive(Debug)]
 pub struct Error<'a> {
@@ -27,7 +27,7 @@ pub enum ErrorKind {
 }
 
 impl Dynamic {
-    pub fn parse<P: UriPart>(
+    pub fn parse<P: Part>(
         segment: &str,
         span: Span,
     ) -> Result<Self, Error<'_>>  {
@@ -40,7 +40,7 @@ impl Dynamic {
 }
 
 impl Parameter {
-    pub fn parse<P: UriPart>(
+    pub fn parse<P: Part>(
         segment: &str,
         source_span: Span,
     ) -> Result<Self, Error<'_>>  {
@@ -62,7 +62,7 @@ impl Parameter {
             }
 
             let dynamic = Dynamic { name: Name::new(name, span), trailing, index: 0 };
-            if dynamic.is_wild() && P::KIND != uri::Kind::Path {
+            if dynamic.is_wild() && P::KIND != Kind::Path {
                 return Err(Error::new(name, span, ErrorKind::Ignored));
             } else if dynamic.is_wild() {
                 return Ok(Parameter::Ignored(dynamic));
@@ -84,7 +84,7 @@ impl Parameter {
         Ok(Parameter::Static(Name::new(segment, source_span)))
     }
 
-    pub fn parse_many<P: uri::UriPart>(
+    pub fn parse_many<P: Part>(
         source: &str,
         source_span: Span,
     ) -> impl Iterator<Item = Result<Self, Error<'_>>> {
@@ -182,7 +182,7 @@ impl devise::FromMeta for Dynamic {
     fn from_meta(meta: &devise::MetaItem) -> devise::Result<Self> {
         let string = StringLit::from_meta(meta)?;
         let span = string.subspan(1..string.len() + 1);
-        let param = Dynamic::parse::<uri::Path>(&string, span)?;
+        let param = Dynamic::parse::<Path>(&string, span)?;
 
         if param.is_wild() {
             return Err(Error::new(&string, span, ErrorKind::Ignored).into());

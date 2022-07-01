@@ -2,21 +2,6 @@
 
 #[cfg(test)] mod tests;
 
-#[get("/world")]
-fn world() -> &'static str {
-    "Hello, world!"
-}
-
-#[get("/мир")]
-fn mir() -> &'static str {
-    "Привет, мир!"
-}
-
-#[get("/<name>/<age>")]
-fn wave(name: &str, age: u8) -> String {
-    format!("👋 Hello, {} year old named {}!", age, name)
-}
-
 #[derive(FromFormField)]
 enum Lang {
     #[field(value = "en")]
@@ -32,7 +17,39 @@ struct Options<'r> {
     name: Option<&'r str>,
 }
 
+// Try visiting:
+//   http://127.0.0.1:8000/hello/world
+#[get("/world")]
+fn world() -> &'static str {
+    "Hello, world!"
+}
+
+// Try visiting:
+//   http://127.0.0.1:8000/hello/мир
+#[get("/мир")]
+fn mir() -> &'static str {
+    "Привет, мир!"
+}
+
+// Try visiting:
+//   http://127.0.0.1:8000/wave/Rocketeer/100
+#[get("/<name>/<age>")]
+fn wave(name: &str, age: u8) -> String {
+    format!("👋 Hello, {} year old named {}!", age, name)
+}
+
 // Note: without the `..` in `opt..`, we'd need to pass `opt.emoji`, `opt.name`.
+//
+// Try visiting:
+//   http://127.0.0.1:8000/?emoji
+//   http://127.0.0.1:8000/?name=Rocketeer
+//   http://127.0.0.1:8000/?lang=ру
+//   http://127.0.0.1:8000/?lang=ру&emoji
+//   http://127.0.0.1:8000/?emoji&lang=en
+//   http://127.0.0.1:8000/?name=Rocketeer&lang=en
+//   http://127.0.0.1:8000/?emoji&name=Rocketeer
+//   http://127.0.0.1:8000/?name=Rocketeer&lang=en&emoji
+//   http://127.0.0.1:8000/?lang=ru&emoji&name=Rocketeer
 #[get("/?<lang>&<opt..>")]
 fn hello(lang: Option<Lang>, opt: Options<'_>) -> String {
     let mut greeting = String::new();

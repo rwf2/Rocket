@@ -50,7 +50,7 @@ async fn test_one_hi_per_second() {
     // Listen for 1 second at 1 `hi` per 250ms, see if we get ~4 `hi`'s, then
     // send a shutdown() signal, meaning we should get a `goodbye`.
     let client = Client::tracked(super::rocket()).await.unwrap();
-    let response = client.get(uri!(super::one_hi_per_ms: 250)).dispatch().await;
+    let response = client.get(uri!(super::one_hi_per_ms(250))).dispatch().await;
     let response = response.into_string();
     let timer = time::sleep(Duration::from_secs(1));
 
@@ -100,11 +100,11 @@ fn test_login() {
     assert_eq!(r.into_string().unwrap(), "Hi! Please log in before continuing.");
 
     for name in &["Bob", "Charley", "Joe Roger"] {
-        let r = client.get(uri!(super::maybe_redir: name)).dispatch();
+        let r = client.get(uri!(super::maybe_redir(name))).dispatch();
         assert_eq!(r.status(), Status::SeeOther);
     }
 
-    let r = client.get(uri!(super::maybe_redir: "Sergio")).dispatch();
+    let r = client.get(uri!(super::maybe_redir("Sergio"))).dispatch();
     assert_eq!(r.status(), Status::Ok);
     assert_eq!(r.into_string().unwrap(), "Hello, Sergio!");
 }
@@ -139,11 +139,11 @@ fn test_xml() {
 #[test]
 fn test_either() {
     let client = Client::tracked(super::rocket()).unwrap();
-    let r = client.get(uri!(super::json_or_msgpack: "json")).dispatch();
+    let r = client.get(uri!(super::json_or_msgpack("json"))).dispatch();
     assert_eq!(r.content_type().unwrap(), ContentType::JSON);
     assert_eq!(r.into_string().unwrap(), "\"hi\"");
 
-    let r = client.get(uri!(super::json_or_msgpack: "msgpack")).dispatch();
+    let r = client.get(uri!(super::json_or_msgpack("msgpack"))).dispatch();
     assert_eq!(r.content_type().unwrap(), ContentType::MsgPack);
     assert_eq!(r.into_bytes().unwrap(), &[162, 104, 105]);
 }
@@ -155,13 +155,13 @@ use super::Kind;
 #[test]
 fn test_custom() {
     let client = Client::tracked(super::rocket()).unwrap();
-    let r = client.get(uri!(super::custom: Some(Kind::String))).dispatch();
+    let r = client.get(uri!(super::custom(Some(Kind::String)))).dispatch();
     assert_eq!(r.into_string().unwrap(), "Hey, I'm some data.");
 
-    let r = client.get(uri!(super::custom: Some(Kind::Bytes))).dispatch();
+    let r = client.get(uri!(super::custom(Some(Kind::Bytes)))).dispatch();
     assert_eq!(r.into_string().unwrap(), "Hi");
 
-    let r = client.get(uri!(super::custom: None as Option<Kind>)).dispatch();
+    let r = client.get(uri!(super::custom(_))).dispatch();
     assert_eq!(r.status(), Status::Unauthorized);
     assert_eq!(r.content_type().unwrap(), ContentType::HTML);
     assert_eq!(r.into_string().unwrap(), "No no no!");
@@ -175,7 +175,7 @@ fn test_custom() {
     assert_eq!(response.status(), Status::Ok);
 
     // Fetch it using `custom`.
-    let r = client.get(uri!(super::custom: Some(Kind::File))).dispatch();
+    let r = client.get(uri!(super::custom(Some(Kind::File)))).dispatch();
     assert_eq!(r.into_string(), Some(CONTENTS.into()));
 
     // Delete it.

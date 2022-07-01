@@ -1,8 +1,8 @@
 use devise::ext::SpanDiagnosticExt;
-use devise::{syn, MetaItem, Spanned, Result, FromMeta, Diagnostic};
+use devise::{MetaItem, Spanned, Result, FromMeta, Diagnostic};
+use proc_macro2::TokenStream;
 
 use crate::{http, http_codegen};
-use crate::proc_macro2::TokenStream;
 
 /// This structure represents the parsed `catch` attribute and associated items.
 pub struct Attribute {

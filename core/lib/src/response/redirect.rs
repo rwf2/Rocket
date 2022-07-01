@@ -1,8 +1,6 @@
-use std::convert::TryInto;
-
 use crate::request::Request;
 use crate::response::{self, Response, Responder};
-use crate::http::uri::Uri;
+use crate::http::uri::Reference;
 use crate::http::Status;
 
 /// An empty redirect response to a given URL.
@@ -11,19 +9,19 @@ use crate::http::Status;
 ///
 /// # Usage
 ///
-/// All constructors accept a generic type of `T: TryInto<Uri<'static>>`. Among
-/// the candidate types are:
+/// All constructors accept a generic type of `T: TryInto<Reference<'static>>`.
+/// Among the candidate types are:
 ///
-///   * `String`
-///   * `&'static str`
+///   * `String`, `&'static str`
 ///   * [`Origin`](crate::http::uri::Origin)
 ///   * [`Authority`](crate::http::uri::Authority)
 ///   * [`Absolute`](crate::http::uri::Absolute)
-///   * [`Uri`](crate::http::uri::Uri)
+///   * [`Reference`](crate::http::uri::Reference)
 ///
 /// Any non-`'static` strings must first be allocated using `.to_string()` or
 /// similar before being passed to a `Redirect` constructor. When redirecting to
-/// a route, _always_ use [`uri!`] to construct a valid [`Origin`]:
+/// a route, or any URI containing a route, _always_ use [`uri!`] to construct a
+/// valid URI:
 ///
 /// ```rust
 /// # #[macro_use] extern crate rocket;
@@ -36,14 +34,19 @@ use crate::http::Status;
 ///
 /// #[get("/hi/<name>/<age>")]
 /// fn hi(name: String, age: u8) -> Redirect {
-///     Redirect::to(uri!(hello: name, age))
+///     Redirect::to(uri!(hello(name, age)))
+/// }
+///
+/// #[get("/bye/<name>/<age>")]
+/// fn bye(name: String, age: u8) -> Redirect {
+///     Redirect::to(uri!("https://rocket.rs/bye", hello(name, age), "?bye#now"))
 /// }
 /// ```
 ///
 /// [`Origin`]: crate::http::uri::Origin
 /// [`uri!`]: ../macro.uri.html
 #[derive(Debug)]
-pub struct Redirect(Status, Option<Uri<'static>>);
+pub struct Redirect(Status, Option<Reference<'static>>);
 
 impl Redirect {
     /// Construct a temporary "see other" (303) redirect response. This is the
@@ -54,34 +57,35 @@ impl Redirect {
     /// # Examples
     ///
     /// ```rust
+    /// # #[macro_use] extern crate rocket;
     /// use rocket::response::Redirect;
     ///
-    /// # let query = "foo";
-    /// let redirect = Redirect::to("/other_url");
-    /// let redirect = Redirect::to(format!("https://google.com/{}", query));
+    /// let redirect = Redirect::to(uri!("/foo/bar"));
+    /// let redirect = Redirect::to(uri!("https://domain.com#foo"));
     /// ```
-    pub fn to<U: TryInto<Uri<'static>>>(uri: U) -> Redirect {
+    pub fn to<U: TryInto<Reference<'static>>>(uri: U) -> Redirect {
         Redirect(Status::SeeOther, uri.try_into().ok())
     }
 
-   /// Construct a "temporary" (307) redirect response. This response instructs
-   /// the client to reissue the current request to a different URL,
-   /// maintaining the contents of the request identically. This means that,
-   /// for example, a `POST` request will be resent, contents included, to the
-   /// requested URL.
-   ///
-   /// # Examples
-   ///
-   /// ```rust
-   /// use rocket::response::Redirect;
-   ///
-   /// # let query = "foo";
-   /// let redirect = Redirect::temporary("/other_url");
-   /// let redirect = Redirect::temporary(format!("https://google.com/{}", query));
-   /// ```
-   pub fn temporary<U: TryInto<Uri<'static>>>(uri: U) -> Redirect {
-       Redirect(Status::TemporaryRedirect, uri.try_into().ok())
-   }
+    /// Construct a "temporary" (307) redirect response. This response instructs
+    /// the client to reissue the current request to a different URL,
+    /// maintaining the contents of the request identically. This means that,
+    /// for example, a `POST` request will be resent, contents included, to the
+    /// requested URL.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// # #[macro_use] extern crate rocket;
+    /// use rocket::response::Redirect;
+    ///
+    /// let redirect = Redirect::temporary(uri!("some/other/path"));
+    /// let redirect = Redirect::temporary(uri!("https://rocket.rs?foo"));
+    /// let redirect = Redirect::temporary(format!("some-{}-thing", "crazy"));
+    /// ```
+    pub fn temporary<U: TryInto<Reference<'static>>>(uri: U) -> Redirect {
+        Redirect(Status::TemporaryRedirect, uri.try_into().ok())
+    }
 
    /// Construct a "permanent" (308) redirect response. This redirect must only
    /// be used for permanent redirects as it is cached by clients. This
@@ -93,13 +97,13 @@ impl Redirect {
    /// # Examples
    ///
    /// ```rust
+   /// # #[macro_use] extern crate rocket;
    /// use rocket::response::Redirect;
    ///
-   /// # let query = "foo";
-   /// let redirect = Redirect::permanent("/other_url");
-   /// let redirect = Redirect::permanent(format!("https://google.com/{}", query));
+   /// let redirect = Redirect::permanent(uri!("/other_url"));
+   /// let redirect = Redirect::permanent(format!("some-{}-thing", "crazy"));
    /// ```
-   pub fn permanent<U: TryInto<Uri<'static>>>(uri: U) -> Redirect {
+   pub fn permanent<U: TryInto<Reference<'static>>>(uri: U) -> Redirect {
        Redirect(Status::PermanentRedirect, uri.try_into().ok())
    }
 
@@ -113,13 +117,13 @@ impl Redirect {
    /// # Examples
    ///
    /// ```rust
+   /// # #[macro_use] extern crate rocket;
    /// use rocket::response::Redirect;
    ///
-   /// # let query = "foo";
-   /// let redirect = Redirect::found("/other_url");
-   /// let redirect = Redirect::found(format!("https://google.com/{}", query));
+   /// let redirect = Redirect::found(uri!("/other_url"));
+   /// let redirect = Redirect::found(format!("some-{}-thing", "crazy"));
    /// ```
-   pub fn found<U: TryInto<Uri<'static>>>(uri: U) -> Redirect {
+   pub fn found<U: TryInto<Reference<'static>>>(uri: U) -> Redirect {
        Redirect(Status::Found, uri.try_into().ok())
    }
 
@@ -131,13 +135,13 @@ impl Redirect {
    /// # Examples
    ///
    /// ```rust
+   /// # #[macro_use] extern crate rocket;
    /// use rocket::response::Redirect;
    ///
-   /// # let query = "foo";
-   /// let redirect = Redirect::moved("/other_url");
-   /// let redirect = Redirect::moved(format!("https://google.com/{}", query));
+   /// let redirect = Redirect::moved(uri!("here"));
+   /// let redirect = Redirect::moved(format!("some-{}-thing", "crazy"));
    /// ```
-   pub fn moved<U: TryInto<Uri<'static>>>(uri: U) -> Redirect {
+   pub fn moved<U: TryInto<Reference<'static>>>(uri: U) -> Redirect {
        Redirect(Status::MovedPermanently, uri.try_into().ok())
    }
 }

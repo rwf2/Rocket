@@ -5,7 +5,8 @@ use crate::{Request, Route};
 use crate::outcome::{self, IntoOutcome};
 use crate::outcome::Outcome::*;
 
-use crate::http::{Status, ContentType, Accept, Method, CookieJar, uri::Origin};
+use crate::http::{Status, ContentType, Accept, Method, CookieJar};
+use crate::http::uri::{Host, Origin};
 
 /// Type alias for the `Outcome` of a `FromRequest` conversion.
 pub type Outcome<S, E> = outcome::Outcome<S, (Status, E), ()>;
@@ -109,7 +110,7 @@ impl<S, E> IntoOutcome<S, (Status, E), ()> for Result<S, E> {
 /// * **Forward**
 ///
 ///   If the `Outcome` is [`Forward`], the request will be forwarded to the next
-///   matching request. Note that users can request an `Option<S>` to catch
+///   matching route. Note that users can request an `Option<S>` to catch
 ///   `Forward`s.
 ///
 /// # Provided Implementations
@@ -128,6 +129,11 @@ impl<S, E> IntoOutcome<S, (Status, E), ()> for Result<S, E> {
 ///     Extracts the [`Origin`] URI from the incoming request.
 ///
 ///     _This implementation always returns successfully._
+///
+///   * **&Host**
+///
+///     Extracts the [`Host`] from the incoming request, if it exists. See
+///     [`Request::host()`] for details.
 ///
 ///   * **&Route**
 ///
@@ -368,7 +374,7 @@ impl<S, E> IntoOutcome<S, (Status, E), ()> for Result<S, E> {
 /// Notice that these request guards provide access to *borrowed* data (`&'a
 /// User` and `Admin<'a>`) as the data is now owned by the request's cache.
 ///
-/// [request-local state]: https://rocket.rs/master/guide/state/#request-local-state
+/// [request-local state]: https://rocket.rs/v0.5-rc/guide/state/#request-local-state
 #[crate::async_trait]
 pub trait FromRequest<'r>: Sized {
     /// The associated error to be returned if derivation fails.
@@ -398,6 +404,18 @@ impl<'r> FromRequest<'r> for &'r Origin<'r> {
 
     async fn from_request(request: &'r Request<'_>) -> Outcome<Self, Self::Error> {
         Success(request.uri())
+    }
+}
+
+#[crate::async_trait]
+impl<'r> FromRequest<'r> for &'r Host<'r> {
+    type Error = std::convert::Infallible;
+
+    async fn from_request(request: &'r Request<'_>) -> Outcome<Self, Self::Error> {
+        match request.host() {
+            Some(host) => Success(host),
+            None => Forward(())
+        }
     }
 }
 

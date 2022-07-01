@@ -125,6 +125,16 @@ impl<'v> From<(Option<&'v Name>, Cow<'v, str>)> for NameBuf<'v> {
 }
 
 #[doc(hidden)]
+impl<'v> From<(Option<&'v Name>, String)> for NameBuf<'v> {
+    fn from((prefix, right): (Option<&'v Name>, String)) -> Self {
+        match prefix {
+            Some(left) => NameBuf { left, right: right.into() },
+            None => NameBuf { left: "".into(), right: right.into() }
+        }
+    }
+}
+
+#[doc(hidden)]
 impl<'v> From<(Option<&'v Name>, &'v str)> for NameBuf<'v> {
     fn from((prefix, suffix): (Option<&'v Name>, &'v str)) -> Self {
         NameBuf::from((prefix, Cow::Borrowed(suffix)))
@@ -175,12 +185,6 @@ impl PartialEq for NameBuf<'_> {
 impl<N: AsRef<Name> + ?Sized> PartialEq<N> for NameBuf<'_> {
     fn eq(&self, other: &N) -> bool {
         self.keys().eq(other.as_ref().keys())
-    }
-}
-
-impl PartialEq<Name> for NameBuf<'_> {
-    fn eq(&self, other: &Name) -> bool {
-        self.keys().eq(other.keys())
     }
 }
 

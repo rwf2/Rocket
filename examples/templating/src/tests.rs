@@ -2,7 +2,7 @@ use super::rocket;
 
 use rocket::http::{RawStr, Status, Method::*};
 use rocket::local::blocking::Client;
-use rocket_contrib::templates::Template;
+use rocket_dyn_templates::{Template, context};
 
 fn test_root(kind: &str) {
     // Check that the redirect works.
@@ -18,9 +18,8 @@ fn test_root(kind: &str) {
 
     // Check that other request methods are not accepted (and instead caught).
     for method in &[Post, Put, Delete, Options, Trace, Connect, Patch] {
-        let mut map = std::collections::HashMap::new();
-        map.insert("path", format!("/{}", kind));
-        let expected = Template::show(client.rocket(), format!("{}/error/404", kind), &map);
+        let context = context! { uri: format!("/{}", kind) };
+        let expected = Template::show(client.rocket(), format!("{}/error/404", kind), &context);
 
         let response = client.req(*method, format!("/{}", kind)).dispatch();
         assert_eq!(response.status(), Status::NotFound);
@@ -45,7 +44,7 @@ fn test_404(base: &str) {
 
         let response = client.get(&path).dispatch();
         assert_eq!(response.status(), Status::NotFound);
-        let response = dbg!(response.into_string().unwrap());
+        let response = response.into_string().unwrap();
 
         assert!(response.contains(base));
         assert! {
@@ -82,4 +81,5 @@ fn tera() {
     test_root("tera");
     test_name("tera");
     test_404("tera");
+    test_about("tera");
 }

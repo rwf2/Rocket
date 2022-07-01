@@ -33,7 +33,7 @@
 //!     // By defining another function...
 //!     #[field(validate = omits("password").map_err(pass_help))]
 //!     password: &'r str,
-//!     // or inline using the `msg` helper.
+//!     // or inline using the `msg` helper. `or_else` inverts the validator
 //!     #[field(validate = omits("password").or_else(msg!("please omit `password`")))]
 //!     password2: &'r str,
 //!     // You can even refer to the field in the message...
@@ -79,14 +79,13 @@
 //! ```
 
 use std::borrow::Cow;
-use std::convert::TryInto;
 use std::ops::{RangeBounds, Bound};
 use std::fmt::Debug;
 
-use crate::data::ByteUnit;
+use crate::data::{ByteUnit, Capped};
 use rocket_http::ContentType;
 
-use crate::{data::TempFile, form::{Result, Error}};
+use crate::{fs::TempFile, form::{Result, Error}};
 
 crate::export! {
     /// A helper macro for custom validation error messages.
@@ -329,13 +328,33 @@ impl<L, T: Len<L> + ?Sized> Len<L> for &T {
 }
 
 impl<L, T: Len<L>> Len<L> for Option<T> {
-    fn len(&self) -> L { self.as_ref().map(|v| v.len()).unwrap_or(T::zero_len()) }
+    fn len(&self) -> L { self.as_ref().map(|v| v.len()).unwrap_or_else(T::zero_len) }
+    fn len_into_u64(len: L) -> u64 { T::len_into_u64(len) }
+    fn zero_len() -> L { T::zero_len() }
+}
+
+impl<L, T: Len<L>> Len<L> for Capped<T> {
+    fn len(&self) -> L { self.value.len() }
     fn len_into_u64(len: L) -> u64 { T::len_into_u64(len) }
     fn zero_len() -> L { T::zero_len() }
 }
 
 impl<L, T: Len<L>> Len<L> for Result<'_, T> {
     fn len(&self) -> L { self.as_ref().ok().len() }
+    fn len_into_u64(len: L) -> u64 { T::len_into_u64(len) }
+    fn zero_len() -> L { T::zero_len() }
+}
+
+#[cfg(feature = "json")]
+impl<L, T: Len<L>> Len<L> for crate::serde::json::Json<T> {
+    fn len(&self) -> L { self.0.len() }
+    fn len_into_u64(len: L) -> u64 { T::len_into_u64(len) }
+    fn zero_len() -> L { T::zero_len() }
+}
+
+#[cfg(feature = "msgpack")]
+impl<L, T: Len<L>> Len<L> for crate::serde::msgpack::MsgPack<T> {
+    fn len(&self) -> L { self.0.len() }
     fn len_into_u64(len: L) -> u64 { T::len_into_u64(len) }
     fn zero_len() -> L { T::zero_len() }
 }
@@ -360,7 +379,8 @@ impl<L, T: Len<L>> Len<L> for Result<'_, T> {
 /// ```rust
 /// use rocket::http::ContentType;
 /// use rocket::form::{FromForm, FromFormField};
-/// use rocket::data::{TempFile, ToByteUnit};
+/// use rocket::data::ToByteUnit;
+/// use rocket::fs::TempFile;
 ///
 /// #[derive(FromForm)]
 /// struct Foo<'r> {
@@ -401,12 +421,12 @@ pub fn len<'v, V, L, R>(value: V, range: R) -> Result<'v, ()>
 ///
 /// At present, these are:
 ///
-/// | type                    | contains                   |
-/// |-------------------------|----------------------------|
-/// | `&str`, `String`        | `&str`, `char`             |
-/// | `Vec<T>`                | `T`, `&T`                  |
-/// | `Option<T>`             | `I` where `T: Contains<I>` |
-/// | [`form::Result<'_, T>`] | `I` where `T: Contains<I>` |
+/// | type                    | contains                                           |
+/// |-------------------------|----------------------------------------------------|
+/// | `&str`, `String`        | `&str`, `char`, `&[char]` `F: FnMut(char) -> bool` |
+/// | `Vec<T>`                | `T`, `&T`                                          |
+/// | `Option<T>`             | `I` where `T: Contains<I>`                         |
+/// | [`form::Result<'_, T>`] | `I` where `T: Contains<I>`                         |
 ///
 /// [`form::Result<'_, T>`]: crate::form::Result
 pub trait Contains<I> {
@@ -428,11 +448,31 @@ macro_rules! impl_contains {
     };
 }
 
+fn coerce<T, const N: usize>(slice: &[T; N]) -> &[T] {
+    &slice[..]
+}
+
 impl_contains!([] str [contains] &str [via] str);
 impl_contains!([] str [contains] char [via] str);
+impl_contains!([] str [contains] &[char] [via] str);
+impl_contains!([const N: usize] str [contains] &[char; N] [via] str [with] coerce);
 impl_contains!([] String [contains] &str [via] str);
 impl_contains!([] String [contains] char [via] str);
+impl_contains!([] String [contains] &[char] [via] str);
+impl_contains!([const N: usize] String [contains] &[char; N] [via] str [with] coerce);
 impl_contains!([T: PartialEq] Vec<T> [contains] &T [via] [T]);
+
+impl<F: FnMut(char) -> bool> Contains<F> for str {
+    fn contains(&self, f: F) -> bool {
+        <str>::contains(self, f)
+    }
+}
+
+impl<F: FnMut(char) -> bool> Contains<F> for String {
+    fn contains(&self, f: F) -> bool {
+        <str>::contains(self, f)
+    }
+}
 
 impl<T: PartialEq> Contains<T> for Vec<T> {
     fn contains(&self, item: T) -> bool {
@@ -460,14 +500,17 @@ impl<I, T: Contains<I> + ?Sized> Contains<I> for &T {
 
 /// Contains validator: succeeds when a value contains `item`.
 ///
-/// The value must implement [`Contains<I>`](Contains) where `I` is the type of
-/// the `item`. See [`Contains`] for supported types and items.
+/// This is the dual of [`omits()`]. The value must implement
+/// [`Contains<I>`](Contains) where `I` is the type of the `item`. See
+/// [`Contains`] for supported types and items.
 ///
 /// On failure, returns a validation error with the following message:
 ///
 /// ```text
 /// value is equal to an invalid value
 /// ```
+///
+/// If the collection is empty, this validator fails.
 ///
 /// # Example
 ///
@@ -484,8 +527,10 @@ impl<I, T: Contains<I> + ?Sized> Contains<I> for &T {
 ///     #[field(validate = contains(&self.best_pet))]
 ///     pets: Vec<Pet>,
 ///     #[field(validate = contains('/'))]
+///     #[field(validate = contains(&['/', ':']))]
 ///     license: &'r str,
 ///     #[field(validate = contains("@rust-lang.org"))]
+///     #[field(validate = contains(|c: char| c.to_ascii_lowercase() == 's'))]
 ///     rust_lang_email: &'r str,
 /// }
 /// ```
@@ -502,13 +547,15 @@ pub fn contains<'v, V, I>(value: V, item: I) -> Result<'v, ()>
 /// Debug contains validator: like [`contains()`] but mentions `item` in the
 /// error message.
 ///
-/// The is identical to [`contains()`] except that `item` must be `Debug + Copy`
-/// and the error message is as follows, where `$item` is the [`Debug`]
-/// representation of `item`:
+/// This is the dual of [`dbg_omits()`]. The is identical to [`contains()`]
+/// except that `item` must be `Debug + Copy` and the error message is as
+/// follows, where `$item` is the [`Debug`] representation of `item`:
 ///
 /// ```text
 /// values must contains $item
 /// ```
+///
+/// If the collection is empty, this validator fails.
 ///
 /// # Example
 ///
@@ -539,14 +586,17 @@ pub fn dbg_contains<'v, V, I>(value: V, item: I) -> Result<'v, ()>
 /// Omits validator: succeeds when a value _does not_ contains `item`.
 /// error message.
 ///
-/// The value must implement [`Contains<I>`](Contains) where `I` is the type of
-/// the `item`. See [`Contains`] for supported types and items.
+/// This is the dual of [`contains()`]. The value must implement
+/// [`Contains<I>`](Contains) where `I` is the type of the `item`. See
+/// [`Contains`] for supported types and items.
 ///
 /// On failure, returns a validation error with the following message:
 ///
 /// ```text
 /// value contains a disallowed item
 /// ```
+///
+/// If the collection is empty, this validator succeeds.
 ///
 /// # Example
 ///
@@ -579,13 +629,15 @@ pub fn omits<'v, V, I>(value: V, item: I) -> Result<'v, ()>
 /// Debug omits validator: like [`omits()`] but mentions `item` in the error
 /// message.
 ///
-/// The is identical to [`omits()`] except that `item` must be `Debug + Copy`
-/// and the error message is as follows, where `$item` is the [`Debug`]
-/// representation of `item`:
+/// This is the dual of [`dbg_contains()`]. The is identical to [`omits()`]
+/// except that `item` must be `Debug + Copy` and the error message is as
+/// follows, where `$item` is the [`Debug`] representation of `item`:
 ///
 /// ```text
 /// value cannot contain $item
 /// ```
+///
+/// If the collection is empty, this validator succeeds.
 ///
 /// # Example
 ///
@@ -724,8 +776,9 @@ pub fn one_of<'v, V, I, R>(value: V, items: R) -> Result<'v, ()>
 ///
 /// ```rust
 /// use rocket::form::FromForm;
-/// use rocket::data::{ToByteUnit, TempFile};
+/// use rocket::data::ToByteUnit;
 /// use rocket::http::ContentType;
+/// use rocket::fs::TempFile;
 ///
 /// #[derive(FromForm)]
 /// struct Foo<'r> {
@@ -749,4 +802,93 @@ pub fn ext<'v>(file: &TempFile<'_>, r#type: ContentType) -> Result<'v, ()> {
     };
 
     Err(Error::validation(msg))?
+}
+
+/// With validator: succeeds when an arbitrary function or closure does.
+///
+/// This is the most generic validator and, for readability, should only be used
+/// when a more case-specific option does not exist. It succeeds excactly when
+/// `f` returns `true` and fails otherwise.
+///
+/// On failure, returns a validation error with the message `msg`.
+///
+/// # Example
+///
+/// ```rust
+/// use rocket::form::{FromForm, FromFormField};
+///
+/// #[derive(PartialEq, FromFormField)]
+/// enum Pet { Cat, Dog }
+///
+/// fn is_dog(p: &Pet) -> bool {
+///     matches!(p, Pet::Dog)
+/// }
+///
+/// #[derive(FromForm)]
+/// struct Foo {
+///     // These are equivalent. Prefer the former.
+///     #[field(validate = contains(Pet::Dog))]
+///     #[field(validate = with(|pets| pets.iter().any(|p| *p == Pet::Dog), "missing dog"))]
+///     pets: Vec<Pet>,
+///     // These are equivalent. Prefer the former.
+///     #[field(validate = eq(Pet::Dog))]
+///     #[field(validate = with(|p| matches!(p, Pet::Dog), "expected a dog"))]
+///     #[field(validate = with(|p| is_dog(p), "expected a dog"))]
+///   # #[field(validate = with(|p| is_dog(&self.dog), "expected a dog"))]
+///     #[field(validate = with(is_dog, "expected a dog"))]
+///     dog: Pet,
+///     // These are equivalent. Prefer the former.
+///     #[field(validate = contains(&self.dog))]
+///   # #[field(validate = with(|p| is_dog(&self.dog), "expected a dog"))]
+///     #[field(validate = with(|pets| pets.iter().any(|p| p == &self.dog), "missing dog"))]
+///     one_dog_please: Vec<Pet>,
+/// }
+/// ```
+pub fn with<'v, V, F, M>(value: V, f: F, msg: M) -> Result<'v, ()>
+    where F: FnOnce(V) -> bool,
+          M: Into<Cow<'static, str>>
+{
+    if !f(value) {
+        Err(Error::validation(msg.into()))?
+    }
+
+    Ok(())
+}
+
+/// _Try_ With validator: succeeds when an arbitrary function or closure does.
+///
+/// Along with [`with`], this is the most generic validator. It succeeds
+/// excactly when `f` returns `Ok` and fails otherwise.
+///
+/// On failure, returns a validation error with the message in the `Err`
+/// variant converted into a string.
+///
+/// # Example
+///
+/// Assuming `Token` has a `from_str` method:
+///
+/// ```rust
+/// # use rocket::form::FromForm;
+/// # impl FromStr for Token<'_> {
+/// #     type Err = &'static str;
+/// #     fn from_str(s: &str) -> Result<Self, Self::Err> { todo!() }
+/// # }
+/// use std::str::FromStr;
+///
+/// #[derive(FromForm)]
+/// #[field(validate = try_with(|s| Token::from_str(s)))]
+/// struct Token<'r>(&'r str);
+///
+/// #[derive(FromForm)]
+/// #[field(validate = try_with(|s| s.parse::<Token>()))]
+/// struct Token2<'r>(&'r str);
+/// ```
+pub fn try_with<'v, V, F, T, E>(value: V, f: F) -> Result<'v, ()>
+    where F: FnOnce(V) -> std::result::Result<T, E>,
+          E: std::fmt::Display
+{
+    match f(value) {
+        Ok(_) => Ok(()),
+        Err(e) => Err(Error::validation(e.to_string()).into())
+    }
 }

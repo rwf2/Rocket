@@ -6,7 +6,7 @@ use std::fmt;
 
 use ref_cast::RefCast;
 use stable_pattern::{Pattern, Searcher, ReverseSearcher, Split, SplitInternal};
-use crate::uri::encoding::{percent_encode, DEFAULT_ENCODE_SET};
+use crate::uri::fmt::{DEFAULT_ENCODE_SET, percent_encode, percent_encode_bytes};
 
 use crate::uncased::UncasedStr;
 
@@ -66,6 +66,16 @@ pub struct RawStrBuf(String);
 
 impl RawStrBuf {
     /// Cost-free conversion from `self` into a `String`.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// # extern crate rocket;
+    /// use rocket::http::RawStrBuf;
+    ///
+    /// let raw = RawStrBuf::from(format!("hello {}", "world"));
+    /// let string = raw.into_string();
+    /// ```
     pub fn into_string(self) -> String {
         self.0
     }
@@ -89,47 +99,51 @@ impl RawStr {
         RawStr::ref_cast(string.as_ref())
     }
 
-    /// Constructs an `&RawStr` from a string-like type at no cost.
+    /// Construct a `Cow<RawStr>` from a `Cow<Str>`. Does not allocate.
+    ///
+    /// See [`RawStr::into_cow_str()`] for the inverse operation.
     ///
     /// # Example
     ///
     /// ```rust
     /// # extern crate rocket;
+    /// use std::borrow::Cow;
     /// use rocket::http::RawStr;
     ///
-    /// let raw_str = RawStr::new("Hello, world!");
-    ///
-    /// // `into` can also be used; note that the type must be specified
-    /// let raw_str: &RawStr = "Hello, world!".into();
+    /// let cow_str = Cow::from("hello!");
+    /// let cow_raw = RawStr::from_cow_str(cow_str);
+    /// assert_eq!(cow_raw.as_str(), "hello!");
     /// ```
-    pub fn from_cow_str<'a>(cow: Cow<'a, str>) -> Cow<'a, RawStr> {
+    pub fn from_cow_str(cow: Cow<'_, str>) -> Cow<'_, RawStr> {
         match cow {
             Cow::Borrowed(b) => Cow::Borrowed(b.into()),
             Cow::Owned(b) => Cow::Owned(b.into()),
         }
     }
 
-    /// Constructs an `&RawStr` from a string-like type at no cost.
+    /// Construct a `Cow<str>` from a `Cow<RawStr>`. Does not allocate.
+    ///
+    /// See [`RawStr::from_cow_str()`] for the inverse operation.
     ///
     /// # Example
     ///
     /// ```rust
     /// # extern crate rocket;
+    /// use std::borrow::Cow;
     /// use rocket::http::RawStr;
     ///
-    /// let raw_str = RawStr::new("Hello, world!");
-    ///
-    /// // `into` can also be used; note that the type must be specified
-    /// let raw_str: &RawStr = "Hello, world!".into();
+    /// let cow_raw = Cow::from(RawStr::new("hello!"));
+    /// let cow_str = RawStr::into_cow_str(cow_raw);
+    /// assert_eq!(&*cow_str, "hello!");
     /// ```
-    pub fn into_cow_str<'a>(cow: Cow<'a, RawStr>) -> Cow<'a, str> {
+    pub fn into_cow_str(cow: Cow<'_, RawStr>) -> Cow<'_, str> {
         match cow {
             Cow::Borrowed(b) => Cow::Borrowed(b.as_str()),
             Cow::Owned(b) => Cow::Owned(b.into_string()),
         }
     }
 
-    /// Performs percent decoding.
+    /// Percent-decodes `self`.
     fn _percent_decode(&self) -> percent_encoding::PercentDecode<'_> {
         percent_encoding::percent_decode(self.as_bytes())
     }
@@ -241,7 +255,7 @@ impl RawStr {
     /// # extern crate rocket;
     /// use rocket::http::RawStr;
     ///
-    /// // Note: Rocket should never hand you a bad `&RawStr`.
+    /// // NOTE: Rocket will never hand you a bad `&RawStr`.
     /// let bad_str = unsafe { std::str::from_utf8_unchecked(b"a=\xff") };
     /// let bad_raw_str = RawStr::new(bad_str);
     /// assert!(bad_raw_str.percent_decode().is_err());
@@ -249,6 +263,23 @@ impl RawStr {
     #[inline(always)]
     pub fn percent_encode(&self) -> Cow<'_, RawStr> {
         Self::from_cow_str(percent_encode::<DEFAULT_ENCODE_SET>(self))
+    }
+
+    /// Returns a percent-encoded version of `bytes`.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// # extern crate rocket;
+    /// use rocket::http::RawStr;
+    ///
+    /// // Note: Rocket should never hand you a bad `&RawStr`.
+    /// let bytes = &[93, 12, 0, 13, 1];
+    /// let encoded = RawStr::percent_encode_bytes(&bytes[..]);
+    /// ```
+    #[inline(always)]
+    pub fn percent_encode_bytes(bytes: &[u8]) -> Cow<'_, RawStr> {
+        Self::from_cow_str(percent_encode_bytes::<DEFAULT_ENCODE_SET>(bytes))
     }
 
     /// Returns a URL-decoded version of the string. This is identical to
@@ -752,7 +783,6 @@ impl RawStr {
         }
     }
 
-
     /// Returns a string slice with the prefix removed.
     ///
     /// If the string starts with the pattern `prefix`, returns substring after
@@ -815,14 +845,10 @@ impl RawStr {
     /// helps the inference algorithm understand specifically which type
     /// you're trying to parse into.
     ///
-    /// `parse` can parse any type that implements the [`FromStr`] trait.
-    ///
     /// # Errors
     ///
-    /// Will return [`Err`] if it's not possible to parse this string slice into
+    /// Will return `Err` if it's not possible to parse this string slice into
     /// the desired type.
-    ///
-    /// [`Err`]: FromStr::Err
     ///
     /// # Examples
     ///
@@ -844,7 +870,7 @@ impl RawStr {
 
 #[cfg(feature = "serde")]
 mod serde {
-    use _serde::{ser, de, Serialize, Deserialize};
+    use serde_::{ser, de, Serialize, Deserialize};
 
     use super::*;
 
@@ -880,13 +906,25 @@ impl<'a> From<&'a str> for &'a RawStr {
     }
 }
 
+impl<'a> From<&'a RawStr> for Cow<'a, RawStr> {
+    fn from(raw: &'a RawStr) -> Self {
+        Cow::Borrowed(raw)
+    }
+}
+
+impl From<RawStrBuf> for Cow<'_, RawStr> {
+    fn from(raw: RawStrBuf) -> Self {
+        Cow::Owned(raw)
+    }
+}
+
 macro_rules! impl_partial {
-    ($A:ty : $B:ty) => (
+    ($A:ty : $B:ty as $T:ty) => (
         impl PartialEq<$A> for $B {
             #[inline(always)]
             fn eq(&self, other: &$A) -> bool {
-                let left: &str = self.as_ref();
-                let right: &str = other.as_ref();
+                let left: $T = self.as_ref();
+                let right: $T = other.as_ref();
                 left == right
             }
         }
@@ -894,12 +932,13 @@ macro_rules! impl_partial {
         impl PartialOrd<$A> for $B {
             #[inline(always)]
             fn partial_cmp(&self, other: &$A) -> Option<Ordering> {
-                let left: &str = self.as_ref();
-                let right: &str = other.as_ref();
+                let left: $T = self.as_ref();
+                let right: $T = other.as_ref();
                 left.partial_cmp(right)
             }
         }
-    )
+    );
+    ($A:ty : $B:ty) => (impl_partial!($A : $B as &str);)
 }
 
 impl_partial!(RawStr : &RawStr);
@@ -914,6 +953,11 @@ impl_partial!(Cow<'_, str> : RawStr);
 impl_partial!(Cow<'_, str> : &RawStr);
 impl_partial!(RawStr : Cow<'_, str>);
 impl_partial!(&RawStr : Cow<'_, str>);
+
+impl_partial!(Cow<'_, RawStr> : RawStr as &RawStr);
+impl_partial!(Cow<'_, RawStr> : &RawStr as &RawStr);
+impl_partial!(RawStr : Cow<'_, RawStr> as &RawStr);
+impl_partial!(&RawStr : Cow<'_, RawStr> as &RawStr);
 
 impl_partial!(String : RawStr);
 impl_partial!(String : &RawStr);
@@ -930,6 +974,20 @@ impl AsRef<str> for RawStr {
     #[inline(always)]
     fn as_ref(&self) -> &str {
         self.as_str()
+    }
+}
+
+impl AsRef<RawStr> for str {
+    #[inline(always)]
+    fn as_ref(&self) -> &RawStr {
+        RawStr::new(self)
+    }
+}
+
+impl AsRef<RawStr> for RawStr {
+    #[inline(always)]
+    fn as_ref(&self) -> &RawStr {
+        self
     }
 }
 
