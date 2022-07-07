@@ -80,4 +80,9 @@ pub struct Config {
     ///
     /// _Default:_ `None`.
     pub idle_timeout: Option<u64>,
+    /// Flag to allow sqlx to use `connect_lazy_with`
+    /// which only establish a connections as the pool is start to be used
+    /// 
+    /// _Default:_ `false`
+    pub lazy_connection: bool,
 }
