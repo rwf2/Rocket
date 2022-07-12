@@ -4,7 +4,7 @@ use crate::{Request, Data};
 use crate::http::{Method, uri::Segments, ext::IntoOwned};
 use crate::route::{Route, Handler, Outcome};
 use crate::response::Redirect;
-use crate::fs::NamedFile;
+use crate::fs::{CacheControlOptions, NamedFile};
 
 /// Custom handler for serving static files.
 ///
@@ -64,6 +64,7 @@ use crate::fs::NamedFile;
 pub struct FileServer {
     root: PathBuf,
     options: Options,
+    cache_control: Option<CacheControlOptions>,
     rank: isize,
 }
 
@@ -159,7 +160,7 @@ impl FileServer {
             }
         }
 
-        FileServer { root: path.into(), options, rank: Self::DEFAULT_RANK }
+        FileServer { root: path.into(), options, rank: Self::DEFAULT_RANK, cache_control: None }
     }
 
     /// Sets the rank for generated routes to `rank`.
@@ -177,6 +178,18 @@ impl FileServer {
     /// ```
     pub fn rank(mut self, rank: isize) -> Self {
         self.rank = rank;
+        self
+    }
+
+    /// Set cache-control header value to serve files with.
+    ///
+    /// ```rust,no_run
+    /// use rocket::fs::{FileServer, CacheControlOptions};
+    ///
+    /// FileServer::new("/public").cache_control("max-age=86400".to_string());
+    /// ```
+    pub fn cache_control(mut self, cc: CacheControlOptions) -> Self {
+        self.cache_control = Some(cc);
         self
     }
 }
@@ -204,7 +217,10 @@ impl Handler for FileServer {
             };
 
             if segments.is_empty() {
-                let file = NamedFile::open(&self.root).await.ok();
+                let mut file = NamedFile::open(&self.root).await.ok();
+                if let Some(ref cc) = self.cache_control {
+                    file = file.map(|f| f.cache_control(cc.clone()));
+                }
                 return Outcome::from_or_forward(req, data, file);
             } else {
                 return Outcome::forward(data);
@@ -232,10 +248,19 @@ impl Handler for FileServer {
                     return Outcome::forward(data);
                 }
 
-                let index = NamedFile::open(p.join("index.html")).await.ok();
+                let mut index = NamedFile::open(p.join("index.html")).await.ok();
+                if let Some(ref cc) = self.cache_control {
+                    index = index.map(|f| f.cache_control(cc.clone()));
+                }
                 Outcome::from_or_forward(req, data, index)
             },
-            Some(p) => Outcome::from_or_forward(req, data, NamedFile::open(p).await.ok()),
+            Some(p) => {
+                let mut file = NamedFile::open(p).await.ok();
+                if let Some(ref cc) = self.cache_control {
+                    file = file.map(|f| f.cache_control(cc.clone()));
+                }
+                Outcome::from_or_forward(req, data, file)
+            },
             None => Outcome::forward(data),
         }
     }

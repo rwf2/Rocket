@@ -6,7 +6,11 @@ use tokio::fs::File;
 
 use crate::request::Request;
 use crate::response::{self, Responder};
-use crate::http::ContentType;
+use crate::http::{self, ContentType, Header};
+
+/// A Cache-Control header value. Check e.g. [MDN](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Cache-Control#directives)
+/// for more information.
+pub type CacheControlOptions = String;
 
 /// A [`Responder`] that sends file data with a Content-Type based on its
 /// file extension.
@@ -37,7 +41,7 @@ use crate::http::ContentType;
 ///
 /// [`FileServer`]: crate::fs::FileServer
 #[derive(Debug)]
-pub struct NamedFile(PathBuf, File);
+pub struct NamedFile(PathBuf, File, Option<CacheControlOptions>);
 
 impl NamedFile {
     /// Attempts to open a file in read-only mode.
@@ -65,7 +69,7 @@ impl NamedFile {
         // all of those `seek`s to determine the file size. But, what happens if
         // the file gets changed between now and then?
         let file = File::open(path.as_ref()).await?;
-        Ok(NamedFile(path.as_ref().to_path_buf(), file))
+        Ok(NamedFile(path.as_ref().to_path_buf(), file, None))
     }
 
     /// Retrieve the underlying `File`.
@@ -139,6 +143,12 @@ impl NamedFile {
     pub fn path(&self) -> &Path {
         self.0.as_path()
     }
+
+    /// Set cache-control information.
+    pub fn cache_control(mut self, cc: CacheControlOptions) -> Self {
+        self.2 = Some(cc);
+        self
+    }
 }
 
 /// Streams the named file to the client. Sets or overrides the Content-Type in
@@ -152,6 +162,10 @@ impl<'r> Responder<'r, 'static> for NamedFile {
         if let Some(ext) = self.0.extension() {
             if let Some(ct) = ContentType::from_extension(&ext.to_string_lossy()) {
                 response.set_header(ct);
+            }
+            if let Some(cc) = self.2 {
+                let cch = Header::new(http::hyper::header::CACHE_CONTROL.as_str(), cc);
+                response.set_header(cch);
             }
         }
 
