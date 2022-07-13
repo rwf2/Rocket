@@ -16,11 +16,16 @@ use rocket::form::Form;
 use rocket::fs::{FileServer, relative};
 
 use rocket_dyn_templates::Template;
+use diesel_migrations::{embed_migrations, EmbeddedMigrations, MigrationHarness};
 
 use crate::task::{Task, Todo};
 
 #[database("sqlite_database")]
 pub struct DbConn(diesel::SqliteConnection);
+
+// https://github.com/Diesel-rs/Diesel/blob/master/guide_drafts/migration_guide.md
+// migrations in diesel have been completely rewritten
+pub const MIGRATIONS: EmbeddedMigrations = embed_migrations!("migrations");
 
 #[derive(Debug, Serialize)]
 #[serde(crate = "rocket::serde")]
@@ -93,13 +98,10 @@ async fn index(flash: Option<FlashMessage<'_>>, conn: DbConn) -> Template {
 }
 
 async fn run_migrations(rocket: Rocket<Build>) -> Rocket<Build> {
-    // This macro from `diesel_migrations` defines an `embedded_migrations`
-    // module containing a function named `run`. This allows the example to be
-    // run and tested without any outside setup of the database.
-    embed_migrations!();
-
-    let conn = DbConn::get_one(&rocket).await.expect("database connection");
-    conn.run(|c| embedded_migrations::run(c)).await.expect("can run migrations");
+    let db = DbConn::get_one(&rocket).await.expect("database connection");
+    db.run(|conn| {
+        conn.run_pending_migrations(MIGRATIONS).expect("diesel migrations");
+    }).await;
 
     rocket
 }

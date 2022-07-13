@@ -13,13 +13,13 @@ struct Db(diesel::SqliteConnection);
 
 type Result<T, E = Debug<diesel::result::Error>> = std::result::Result<T, E>;
 
-// https://github.com/Diesel-rs/Diesel/blob/master/guide_drafts/migration_guide.md#2-0-0-upgrade-migrations
+// https://github.com/Diesel-rs/Diesel/blob/master/guide_drafts/migration_guide.md
 // migrations in diesel have been completely rewritten
 pub const MIGRATIONS: EmbeddedMigrations = embed_migrations!("db/diesel/migrations");
 
 #[derive(Debug, Clone, Deserialize, Serialize, Queryable, Insertable)]
 #[serde(crate = "rocket::serde")]
-#[diesel(table_name= posts)]
+#[diesel(table_name = posts)]
 struct Post {
     #[serde(skip_deserializing)]
     id: Option<i32>,
@@ -90,11 +90,6 @@ async fn destroy(db: Db) -> Result<()> {
 
 
 async fn run_migrations(rocket: Rocket<Build>) -> Rocket<Build> {
-    // This macro from `diesel_migrations` defines an `embedded_migrations`
-    // module containing a function named `run` that runs the migrations in the
-    // specified directory, initializing the database.
-    //diesel_migrations::embed_migrations!("db/diesel/migrations");
-
     let db = Db::get_one(&rocket).await.expect("database connection");
     db.run(|conn| {
         conn.run_pending_migrations(MIGRATIONS).expect("diesel migrations");
