@@ -98,8 +98,10 @@
 //!
 //! # Supported Drivers
 //!
-//! At present, this crate supports _three_ drivers: [`deadpool`], [`sqlx`],
-//! and [`mongodb`]. Each driver may support multiple databases.
+//! At present, this crate supports _three_ drivers: [`deadpool`], [`sqlx`], and
+//! [`mongodb`]. Each driver may support multiple databases. Drivers have a
+//! varying degree of support for graceful shutdown, affected by the
+//! `Type::init()` fairing on Rocket shutdown.
 //!
 //! ## `deadpool` (v0.9)
 //!
@@ -107,6 +109,9 @@
 //! |----------|---------------------|-----------------------------|---------------------------------------|
 //! | Postgres | `deadpool_postgres` | [`deadpool_postgres::Pool`] | [`deadpool_postgres::ClientWrapper`]  |
 //! | Redis    | `deadpool_redis`    | [`deadpool_redis::Pool`]    | [`deadpool_redis::Connection`] |
+//!
+//! On shutdown, new connections are denied. Shutdown _does not_ wait for
+//! connections to be returned.
 //!
 //! ## `sqlx` (v0.5)
 //!
@@ -126,11 +131,16 @@
 //! [`sqlx::PoolConnection<Sqlite>`]: https://docs.rs/sqlx/0.5/sqlx/pool/struct.PoolConnection.html
 //! [`sqlx::PoolConnection<Mssql>`]: https://docs.rs/sqlx/0.5/sqlx/pool/struct.PoolConnection.html
 //!
+//! On shutdown, new connections are denied. Shutdown waits for connections to
+//! be returned.
+//!
 //! ## `mongodb` (v2)
 //!
 //! | Database | Feature   | [`Pool`] Type and [`Connection`] Deref |
 //! |----------|-----------|----------------------------------------|
 //! | MongoDB  | `mongodb` | [`mongodb::Client`]                    |
+//!
+//! Graceful shutdown is not supported.
 //!
 //! ## Enabling Additional Driver Features
 //!
