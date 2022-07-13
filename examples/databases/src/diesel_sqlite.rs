@@ -95,11 +95,11 @@ async fn run_migrations(rocket: Rocket<Build>) -> Rocket<Build> {
     // specified directory, initializing the database.
     //diesel_migrations::embed_migrations!("db/diesel/migrations");
 
-    let mut conn = Db::get_one(&rocket).await.expect("database connection");
-    //conn.run(|c| embedded_migrations::run(c)).await.expect("diesel migrations");
+    let db = Db::get_one(&rocket).await.expect("database connection");
+    db.run(|conn| {
+        conn.run_pending_migrations(MIGRATIONS).expect("diesel migrations");
+    }).await;
 
-
-    //conn.run_pending_migrations(MIGRATIONS);
     rocket
 }
 
