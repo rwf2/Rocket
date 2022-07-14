@@ -4,6 +4,16 @@ error[E0277]: the trait bound `BadType: UriDisplay<rocket::http::uri::fmt::Query
 6   | struct Bar1(BadType);
     |             ^^^^^^^ the trait `UriDisplay<rocket::http::uri::fmt::Query>` is not implemented for `BadType`
     |
+    = help: the following other types implement trait `UriDisplay<P>`:
+              <&T as UriDisplay<P>>
+              <&mut T as UriDisplay<P>>
+              <BTreeMap<K, V> as UriDisplay<rocket::http::uri::fmt::Query>>
+              <Bar1 as UriDisplay<rocket::http::uri::fmt::Query>>
+              <Bar2 as UriDisplay<rocket::http::uri::fmt::Query>>
+              <Bar3 as UriDisplay<rocket::http::uri::fmt::Query>>
+              <Bar4 as UriDisplay<rocket::http::uri::fmt::Query>>
+              <Bar5 as UriDisplay<rocket::http::uri::fmt::Query>>
+            and 48 others
     = note: required because of the requirements on the impl of `UriDisplay<rocket::http::uri::fmt::Query>` for `&BadType`
 note: required by a bound in `rocket::http::uri::fmt::Formatter::<'i, P>::write_value`
    --> $WORKSPACE/core/http/src/uri/fmt/formatter.rs
@@ -17,6 +27,16 @@ error[E0277]: the trait bound `BadType: UriDisplay<rocket::http::uri::fmt::Query
 10  |     field: BadType,
     |     ^^^^^ the trait `UriDisplay<rocket::http::uri::fmt::Query>` is not implemented for `BadType`
     |
+    = help: the following other types implement trait `UriDisplay<P>`:
+              <&T as UriDisplay<P>>
+              <&mut T as UriDisplay<P>>
+              <BTreeMap<K, V> as UriDisplay<rocket::http::uri::fmt::Query>>
+              <Bar1 as UriDisplay<rocket::http::uri::fmt::Query>>
+              <Bar2 as UriDisplay<rocket::http::uri::fmt::Query>>
+              <Bar3 as UriDisplay<rocket::http::uri::fmt::Query>>
+              <Bar4 as UriDisplay<rocket::http::uri::fmt::Query>>
+              <Bar5 as UriDisplay<rocket::http::uri::fmt::Query>>
+            and 48 others
     = note: required because of the requirements on the impl of `UriDisplay<rocket::http::uri::fmt::Query>` for `&BadType`
 note: required by a bound in `rocket::http::uri::fmt::Formatter::<'_, rocket::http::uri::fmt::Query>::write_named_value`
    --> $WORKSPACE/core/http/src/uri/fmt/formatter.rs
@@ -30,6 +50,16 @@ error[E0277]: the trait bound `BadType: UriDisplay<rocket::http::uri::fmt::Query
 16  |     bad: BadType,
     |     ^^^ the trait `UriDisplay<rocket::http::uri::fmt::Query>` is not implemented for `BadType`
     |
+    = help: the following other types implement trait `UriDisplay<P>`:
+              <&T as UriDisplay<P>>
+              <&mut T as UriDisplay<P>>
+              <BTreeMap<K, V> as UriDisplay<rocket::http::uri::fmt::Query>>
+              <Bar1 as UriDisplay<rocket::http::uri::fmt::Query>>
+              <Bar2 as UriDisplay<rocket::http::uri::fmt::Query>>
+              <Bar3 as UriDisplay<rocket::http::uri::fmt::Query>>
+              <Bar4 as UriDisplay<rocket::http::uri::fmt::Query>>
+              <Bar5 as UriDisplay<rocket::http::uri::fmt::Query>>
+            and 48 others
     = note: required because of the requirements on the impl of `UriDisplay<rocket::http::uri::fmt::Query>` for `&BadType`
 note: required by a bound in `rocket::http::uri::fmt::Formatter::<'_, rocket::http::uri::fmt::Query>::write_named_value`
    --> $WORKSPACE/core/http/src/uri/fmt/formatter.rs
@@ -43,6 +73,16 @@ error[E0277]: the trait bound `BadType: UriDisplay<rocket::http::uri::fmt::Query
 21  |     Inner(BadType),
     |           ^^^^^^^ the trait `UriDisplay<rocket::http::uri::fmt::Query>` is not implemented for `BadType`
     |
+    = help: the following other types implement trait `UriDisplay<P>`:
+              <&T as UriDisplay<P>>
+              <&mut T as UriDisplay<P>>
+              <BTreeMap<K, V> as UriDisplay<rocket::http::uri::fmt::Query>>
+              <Bar1 as UriDisplay<rocket::http::uri::fmt::Query>>
+              <Bar2 as UriDisplay<rocket::http::uri::fmt::Query>>
+              <Bar3 as UriDisplay<rocket::http::uri::fmt::Query>>
+              <Bar4 as UriDisplay<rocket::http::uri::fmt::Query>>
+              <Bar5 as UriDisplay<rocket::http::uri::fmt::Query>>
+            and 48 others
     = note: required because of the requirements on the impl of `UriDisplay<rocket::http::uri::fmt::Query>` for `&BadType`
     = note: 1 redundant requirement hidden
     = note: required because of the requirements on the impl of `UriDisplay<rocket::http::uri::fmt::Query>` for `&&BadType`
@@ -58,6 +98,16 @@ error[E0277]: the trait bound `BadType: UriDisplay<rocket::http::uri::fmt::Query
 27  |         field: BadType,
     |         ^^^^^ the trait `UriDisplay<rocket::http::uri::fmt::Query>` is not implemented for `BadType`
     |
+    = help: the following other types implement trait `UriDisplay<P>`:
+              <&T as UriDisplay<P>>
+              <&mut T as UriDisplay<P>>
+              <BTreeMap<K, V> as UriDisplay<rocket::http::uri::fmt::Query>>
+              <Bar1 as UriDisplay<rocket::http::uri::fmt::Query>>
+              <Bar2 as UriDisplay<rocket::http::uri::fmt::Query>>
+              <Bar3 as UriDisplay<rocket::http::uri::fmt::Query>>
+              <Bar4 as UriDisplay<rocket::http::uri::fmt::Query>>
+              <Bar5 as UriDisplay<rocket::http::uri::fmt::Query>>
+            and 48 others
     = note: required because of the requirements on the impl of `UriDisplay<rocket::http::uri::fmt::Query>` for `&BadType`
     = note: 1 redundant requirement hidden
     = note: required because of the requirements on the impl of `UriDisplay<rocket::http::uri::fmt::Query>` for `&&BadType`
@@ -73,6 +123,16 @@ error[E0277]: the trait bound `BadType: UriDisplay<rocket::http::uri::fmt::Query
 35  |         other: BadType,
     |         ^^^^^ the trait `UriDisplay<rocket::http::uri::fmt::Query>` is not implemented for `BadType`
     |
+    = help: the following other types implement trait `UriDisplay<P>`:
+              <&T as UriDisplay<P>>
+              <&mut T as UriDisplay<P>>
+              <BTreeMap<K, V> as UriDisplay<rocket::http::uri::fmt::Query>>
+              <Bar1 as UriDisplay<rocket::http::uri::fmt::Query>>
+              <Bar2 as UriDisplay<rocket::http::uri::fmt::Query>>
+              <Bar3 as UriDisplay<rocket::http::uri::fmt::Query>>
+              <Bar4 as UriDisplay<rocket::http::uri::fmt::Query>>
+              <Bar5 as UriDisplay<rocket::http::uri::fmt::Query>>
+            and 48 others
     = note: required because of the requirements on the impl of `UriDisplay<rocket::http::uri::fmt::Query>` for `&BadType`
     = note: 1 redundant requirement hidden
     = note: required because of the requirements on the impl of `UriDisplay<rocket::http::uri::fmt::Query>` for `&&BadType`
@@ -88,6 +148,16 @@ error[E0277]: the trait bound `BadType: UriDisplay<rocket::http::uri::fmt::Path>
 40  | struct Baz(BadType);
     |            ^^^^^^^ the trait `UriDisplay<rocket::http::uri::fmt::Path>` is not implemented for `BadType`
     |
+    = help: the following other types implement trait `UriDisplay<P>`:
+              <&T as UriDisplay<P>>
+              <&mut T as UriDisplay<P>>
+              <BTreeMap<K, V> as UriDisplay<rocket::http::uri::fmt::Query>>
+              <Bar1 as UriDisplay<rocket::http::uri::fmt::Query>>
+              <Bar2 as UriDisplay<rocket::http::uri::fmt::Query>>
+              <Bar3 as UriDisplay<rocket::http::uri::fmt::Query>>
+              <Bar4 as UriDisplay<rocket::http::uri::fmt::Query>>
+              <Bar5 as UriDisplay<rocket::http::uri::fmt::Query>>
+            and 48 others
     = note: required because of the requirements on the impl of `UriDisplay<rocket::http::uri::fmt::Path>` for `&BadType`
 note: required by a bound in `rocket::http::uri::fmt::Formatter::<'i, P>::write_value`
    --> $WORKSPACE/core/http/src/uri/fmt/formatter.rs
