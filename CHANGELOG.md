@@ -69,7 +69,7 @@
   * Rocket now uses the 2021 edition of Rust.
 
 [`(ContentType, T)`]: https://api.rocket.rs/v0.5-rc/rocket/response/content/index.html#usage
-[v0.4 to v0.5 migration guide]: https://rocket.rs/v0.5-rc/guide/upgrading-from-0.4/
+[v0.4 to v0.5 migration guide]: https://rocket.rs/v0.5-rc/guide/upgrading/
 [FAQ]: https://rocket.rs/v0.5-rc/guide/faq/
 [`Rocket::launch()`]: https://api.rocket.rs/v0.5-rc/rocket/struct.Rocket.html#method.launch
 [`ErrorKind::Shutdown`]: https://api.rocket.rs/v0.5-rc/rocket/error/enum.ErrorKind.html#variant.Shutdown
