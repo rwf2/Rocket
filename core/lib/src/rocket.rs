@@ -1,3 +1,4 @@
+use std::any::TypeId;
 use std::fmt;
 use std::ops::{Deref, DerefMut};
 use std::net::SocketAddr;
@@ -466,6 +467,61 @@ impl Rocket<Build> {
     pub fn attach<F: Fairing>(mut self, fairing: F) -> Self {
         self.fairings.add(Box::new(fairing));
         self
+    }
+
+    /// Modify previously attached fairings. This should typically be used by on_ignite Fairings,
+    /// to register new handlers or otherwise enable Fairings to work together.
+    ///
+    /// ```rust,no_run
+    /// # #[macro_use] extern crate rocket;
+    /// # extern crate rocket_dyn_templates;
+    /// use rocket::Rocket;
+    /// use rocket::fairing::AdHoc;
+    /// use rocket_dyn_templates::Templates;
+    ///
+    /// #[launch]
+    /// fn rocket() -> _ {
+    ///     rocket::build()
+    ///         .attach(Templates::default())
+    ///         .attach(AdHoc::on_ignite("Register new template function", |r| {
+    ///             r.modify_fairing(|f: &mut Templates| {
+    ///                 f.register_function("some_function", some_function)
+    ///             })
+    ///         })))
+    /// }
+    /// ```
+    ///
+    /// If multiple instances of the same type of Fairing have been attached, the modify function
+    /// will be run on each instance.
+    #[must_use]
+    pub fn modify_fairings<F: Fairing, E: fmt::Debug>(mut self, modifier: impl Fn(&mut F) -> Result<(), E>) -> Result<Self, Self> {
+        #[derive(Debug, PartialEq, Eq)]
+        enum State {
+            None,
+            Success,
+            Failure,
+        }
+        let mut state = State::None;
+        for f in self.fairings.iter_mut() {
+            let f = f.as_mut();
+            if f.type_id() == TypeId::of::<F>() {
+                // SAFTEY: `f` is a valid pointer since it was obtained from a Box, and it points
+                // at an `F` since it has the same TypeId. Converting from dyn type to a concrete
+                // type is handled automatically by the compilier
+                let f = unsafe { &mut *((f as *mut dyn Fairing) as *mut F) };
+                match modifier(f) {
+                    Ok(()) => if state == State::None { state = State::Success },
+                    Err(e) => {
+                        error_!("Failed to modify fairing: {:?}", e);
+                        state = State::Failure;
+                    }
+                }
+            }
+        }
+        match state {
+            State::None | State::Failure => Err(self),
+            State::Success => Ok(self),
+        }
     }
 
     /// Returns a `Future` that transitions this instance of `Rocket` into the
