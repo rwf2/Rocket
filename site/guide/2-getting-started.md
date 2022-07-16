@@ -12,7 +12,7 @@ installation of the latest Rust compiler, feel free to skip to the next section.
 
 To install the latest version of Rust, we recommend using `rustup`. Install
 `rustup` by following the instructions on [its website](https://rustup.rs/).
-Once `rustup` is installed, ensure the latest toolchain is installled by running
+Once `rustup` is installed, ensure the latest toolchain is installed by running
 the command:
 
 ```sh
