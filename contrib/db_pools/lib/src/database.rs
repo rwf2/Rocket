@@ -1,7 +1,7 @@
 use std::marker::PhantomData;
 use std::ops::{Deref, DerefMut};
 
-use rocket::{error, info_, Build, Ignite, Phase, Rocket, Sentinel};
+use rocket::{error, info_, Build, Ignite, Phase, Rocket, Sentinel, Orbit};
 use rocket::fairing::{self, Fairing, Info, Kind};
 use rocket::request::{FromRequest, Outcome, Request};
 use rocket::http::Status;
@@ -250,7 +250,7 @@ impl<D: Database> Fairing for Initializer<D> {
     fn info(&self) -> Info {
         Info {
             name: self.0.unwrap_or(std::any::type_name::<Self>()),
-            kind: Kind::Ignite,
+            kind: Kind::Ignite | Kind::Shutdown,
         }
     }
 
@@ -270,6 +270,12 @@ impl<D: Database> Fairing for Initializer<D> {
                 error!("failed to initialize database: {}", e);
                 Err(rocket)
             }
+        }
+    }
+
+    async fn on_shutdown(&self, rocket: &Rocket<Orbit>) {
+        if let Some(db) = D::fetch(rocket) {
+            db.close().await;
         }
     }
 }

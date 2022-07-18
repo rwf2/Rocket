@@ -5,7 +5,6 @@ on: [push, pull_request]
 env:
   CARGO_TERM_COLOR: always
 
-
 jobs:
   test:
     name: "${{ matrix.platform.name }} ${{ matrix.test.name }} (${{ matrix.platform.toolchain }})"
@@ -29,10 +28,6 @@ jobs:
             test: { name: Release, flag: "--release" }
 
     runs-on: ${{ matrix.platform.distro }}
-
-    continue-on-error: ${{ matrix.platform.name == 'Linux'
-      && matrix.platform.toolchain == 'nightly'
-      && matrix.test.name == 'Debug' }}
 
     steps:
       - name: Checkout Sources
@@ -69,6 +64,7 @@ jobs:
           profile: minimal
           toolchain: ${{ matrix.platform.toolchain }}
           override: true
+          components: rust-src
 
       - name: Cache Example Workspace
         if: matrix.test.name == 'Examples'

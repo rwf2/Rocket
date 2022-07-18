@@ -1,15 +1,35 @@
 error[E0277]: the trait bound `Unknown: FromFormField<'_>` is not satisfied
- --> $DIR/from_form_type_errors.rs:7:12
+ --> tests/ui-fail-stable/from_form_type_errors.rs:7:12
   |
 7 |     field: Unknown,
   |            ^^^^^^^ the trait `FromFormField<'_>` is not implemented for `Unknown`
   |
+  = help: the following other types implement trait `FromFormField<'v>`:
+            &'v str
+            Capped<&'v str>
+            Capped<Cow<'v, str>>
+            Capped<TempFile<'v>>
+            Capped<std::string::String>
+            Cow<'v, str>
+            IpAddr
+            Ipv4Addr
+          and 38 others
   = note: required because of the requirements on the impl of `FromForm<'r>` for `Unknown`
 
 error[E0277]: the trait bound `Foo<usize>: FromFormField<'_>` is not satisfied
-  --> $DIR/from_form_type_errors.rs:14:12
+  --> tests/ui-fail-stable/from_form_type_errors.rs:14:12
    |
 14 |     field: Foo<usize>,
    |            ^^^ the trait `FromFormField<'_>` is not implemented for `Foo<usize>`
    |
+   = help: the following other types implement trait `FromFormField<'v>`:
+             &'v str
+             Capped<&'v str>
+             Capped<Cow<'v, str>>
+             Capped<TempFile<'v>>
+             Capped<std::string::String>
+             Cow<'v, str>
+             IpAddr
+             Ipv4Addr
+           and 38 others
    = note: required because of the requirements on the impl of `FromForm<'r>` for `Foo<usize>`

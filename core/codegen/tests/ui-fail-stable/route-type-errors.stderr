@@ -3,12 +3,29 @@ error[E0277]: the trait bound `Q: FromParam<'_>` is not satisfied
   |
 6 | fn f0(foo: Q) {}
   |            ^ the trait `FromParam<'_>` is not implemented for `Q`
+  |
+  = help: the following other types implement trait `FromParam<'a>`:
+            &'a str
+            IpAddr
+            Ipv4Addr
+            Ipv6Addr
+            NonZeroI128
+            NonZeroI16
+            NonZeroI32
+            NonZeroI64
+          and 30 others
 
 error[E0277]: the trait bound `Q: FromSegments<'_>` is not satisfied
  --> tests/ui-fail-stable/route-type-errors.rs:9:12
   |
 9 | fn f1(foo: Q) {}
   |            ^ the trait `FromSegments<'_>` is not implemented for `Q`
+  |
+  = help: the following other types implement trait `FromSegments<'r>`:
+            <PathBuf as FromSegments<'_>>
+            <Result<T, <T as FromSegments<'r>>::Error> as FromSegments<'r>>
+            <Segments<'r, rocket::http::uri::fmt::Path> as FromSegments<'r>>
+            <std::option::Option<T> as FromSegments<'r>>
 
 error[E0277]: the trait bound `Q: FromFormField<'_>` is not satisfied
   --> tests/ui-fail-stable/route-type-errors.rs:12:12
@@ -16,6 +33,16 @@ error[E0277]: the trait bound `Q: FromFormField<'_>` is not satisfied
 12 | fn f2(foo: Q) {}
    |            ^ the trait `FromFormField<'_>` is not implemented for `Q`
    |
+   = help: the following other types implement trait `FromFormField<'v>`:
+             &'v str
+             Capped<&'v str>
+             Capped<Cow<'v, str>>
+             Capped<TempFile<'v>>
+             Capped<std::string::String>
+             Cow<'v, str>
+             IpAddr
+             Ipv4Addr
+           and 38 others
    = note: required because of the requirements on the impl of `FromForm<'_>` for `Q`
 
 error[E0277]: the trait bound `Q: FromFormField<'_>` is not satisfied
@@ -24,6 +51,16 @@ error[E0277]: the trait bound `Q: FromFormField<'_>` is not satisfied
 15 | fn f3(foo: Q) {}
    |            ^ the trait `FromFormField<'_>` is not implemented for `Q`
    |
+   = help: the following other types implement trait `FromFormField<'v>`:
+             &'v str
+             Capped<&'v str>
+             Capped<Cow<'v, str>>
+             Capped<TempFile<'v>>
+             Capped<std::string::String>
+             Cow<'v, str>
+             IpAddr
+             Ipv4Addr
+           and 38 others
    = note: required because of the requirements on the impl of `FromForm<'_>` for `Q`
 
 error[E0277]: the trait bound `Q: FromData<'_>` is not satisfied
@@ -31,33 +68,99 @@ error[E0277]: the trait bound `Q: FromData<'_>` is not satisfied
    |
 18 | fn f4(foo: Q) {}
    |            ^ the trait `FromData<'_>` is not implemented for `Q`
+   |
+   = help: the following other types implement trait `FromData<'r>`:
+             &'r RawStr
+             &'r [u8]
+             &'r str
+             Capped<&'r RawStr>
+             Capped<&'r [u8]>
+             Capped<&'r str>
+             Capped<Cow<'impl0, str>>
+             Capped<TempFile<'impl0>>
+           and 12 others
 
 error[E0277]: the trait bound `Q: FromRequest<'_>` is not satisfied
   --> tests/ui-fail-stable/route-type-errors.rs:21:10
    |
 21 | fn f5(a: Q, foo: Q) {}
    |          ^ the trait `FromRequest<'_>` is not implemented for `Q`
+   |
+   = help: the following other types implement trait `FromRequest<'r>`:
+             &'r ContentType
+             &'r Host<'r>
+             &'r Limits
+             &'r Route
+             &'r rocket::Config
+             &'r rocket::State<T>
+             &'r rocket::http::Accept
+             &'r rocket::http::CookieJar<'r>
+           and 8 others
 
 error[E0277]: the trait bound `Q: FromParam<'_>` is not satisfied
   --> tests/ui-fail-stable/route-type-errors.rs:21:18
    |
 21 | fn f5(a: Q, foo: Q) {}
    |                  ^ the trait `FromParam<'_>` is not implemented for `Q`
+   |
+   = help: the following other types implement trait `FromParam<'a>`:
+             &'a str
+             IpAddr
+             Ipv4Addr
+             Ipv6Addr
+             NonZeroI128
+             NonZeroI16
+             NonZeroI32
+             NonZeroI64
+           and 30 others
 
 error[E0277]: the trait bound `Q: FromRequest<'_>` is not satisfied
   --> tests/ui-fail-stable/route-type-errors.rs:24:10
    |
 24 | fn f6(a: Q, foo: Q, good: usize, bar: Q) {}
    |          ^ the trait `FromRequest<'_>` is not implemented for `Q`
+   |
+   = help: the following other types implement trait `FromRequest<'r>`:
+             &'r ContentType
+             &'r Host<'r>
+             &'r Limits
+             &'r Route
+             &'r rocket::Config
+             &'r rocket::State<T>
+             &'r rocket::http::Accept
+             &'r rocket::http::CookieJar<'r>
+           and 8 others
 
 error[E0277]: the trait bound `Q: FromParam<'_>` is not satisfied
   --> tests/ui-fail-stable/route-type-errors.rs:24:18
    |
 24 | fn f6(a: Q, foo: Q, good: usize, bar: Q) {}
    |                  ^ the trait `FromParam<'_>` is not implemented for `Q`
+   |
+   = help: the following other types implement trait `FromParam<'a>`:
+             &'a str
+             IpAddr
+             Ipv4Addr
+             Ipv6Addr
+             NonZeroI128
+             NonZeroI16
+             NonZeroI32
+             NonZeroI64
+           and 30 others
 
 error[E0277]: the trait bound `Q: FromParam<'_>` is not satisfied
   --> tests/ui-fail-stable/route-type-errors.rs:24:39
    |
 24 | fn f6(a: Q, foo: Q, good: usize, bar: Q) {}
    |                                       ^ the trait `FromParam<'_>` is not implemented for `Q`
+   |
+   = help: the following other types implement trait `FromParam<'a>`:
+             &'a str
+             IpAddr
+             Ipv4Addr
+             Ipv6Addr
+             NonZeroI128
+             NonZeroI16
+             NonZeroI32
+             NonZeroI64
+           and 30 others
