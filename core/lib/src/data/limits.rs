@@ -122,8 +122,8 @@ use crate::http::uncased::Uncased;
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(transparent)]
 pub struct Limits {
-    #[serde(with = "figment::util::vec_tuple_map")]
-    limits: Vec<(Uncased<'static>, ByteUnit)>
+    #[serde(with = "serde_limits")]
+    limits: Vec<(Uncased<'static>, ByteUnit)>,
 }
 
 impl Default for Limits {
@@ -318,5 +318,19 @@ impl<'r> FromRequest<'r> for &'r Limits {
 
     async fn from_request(req: &'r Request<'_>) -> Outcome<Self, Self::Error> {
         Outcome::Success(req.limits())
+    }
+}
+
+mod serde_limits {
+    use super::{ByteUnit, Uncased};
+
+    pub(super) use figment::util::vec_tuple_map::{self, serialize};
+    pub(super) fn deserialize<'de, D>(de: D) -> Result<Vec<(Uncased<'static>, ByteUnit)>, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        let mut limits = vec_tuple_map::deserialize(de)?;
+        limits.sort();
+        Ok(limits)
     }
 }
