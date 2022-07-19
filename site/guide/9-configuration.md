@@ -130,7 +130,7 @@ secret_key = "hPRYyVRiMyxpw5sBB1XeCMN1kFsDCqKvBi2QJxBVHQk="
 ```
 
 The following is a `Rocket.toml` file with all configuration options set for
-demonstratation purposes. You **do not** and _should not_ set a value for
+demonstration purposes. You **do not** and _should not_ set a value for
 configuration options needlessly, preferring to use the default value when
 sensible.
 
