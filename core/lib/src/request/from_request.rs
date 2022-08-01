@@ -159,20 +159,21 @@ impl<S, E> IntoOutcome<S, (Status, E), ()> for Result<S, E> {
 ///
 ///   * **ContentType**
 ///
-///     Extracts the [`ContentType`] from the incoming request. If the request
-///     didn't specify a Content-Type, the request is forwarded.
+///     Extracts the [`ContentType`] from the incoming request via
+///     [`Request::content_type()`]. If the request didn't specify a
+///     Content-Type, the request is forwarded.
 ///
 ///   * **IpAddr**
 ///
-///     Extracts the client ip address of the incoming request as an [`IpAddr`].
-///     If the client's IP address is not known, the request is forwarded.
+///     Extracts the client ip address of the incoming request as an [`IpAddr`]
+///     via [`Request::client_ip()`]. If the client's IP address is not known,
+///     the request is forwarded.
 ///
 ///   * **SocketAddr**
 ///
-///     Extracts the remote address of the incoming request as a [`SocketAddr`].
-///     If the remote address is not known, the request is forwarded.
-///
-///     _This implementation always returns successfully._
+///     Extracts the remote address of the incoming request as a [`SocketAddr`]
+///     via [`Request::remote()`]. If the remote address is not known, the
+///     request is forwarded.
 ///
 ///   * **Option&lt;T>** _where_ **T: FromRequest**
 ///
