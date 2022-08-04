@@ -284,7 +284,7 @@ pub fn derive_from_form(input: proc_macro::TokenStream) -> TokenStream {
                         .and_then(|#ident| {
                             let mut __es = #_form::Errors::new();
                             #(if let #_err(__e) = #validator { __es.extend(__e); })*
-                            __es.is_empty().then(|| #ident).ok_or(__es)
+                            __es.is_empty().then_some(#ident).ok_or(__es)
                         })
                         .map_err(|__e| match __name {
                             Some(__name) => __e.with_name(__name),
