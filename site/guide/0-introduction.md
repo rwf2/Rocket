@@ -1,4 +1,4 @@
-# Introduction
+# Introduction 
 
 Rocket is a web framework for Rust. If you'd like, you can think of Rocket as
 being a more flexible, friendly medley of [Rails](https://rubyonrails.org/),
