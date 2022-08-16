@@ -68,13 +68,14 @@ jobs:
 
       - name: Cache Example Workspace
         if: matrix.test.name == 'Examples'
-        uses: Swatinem/rust-cache@v1
+        uses: Swatinem/rust-cache@v2
         with:
-          working-directory: "examples"
+          workspaces: examples
+          key: ${{ matrix.test.name }}
 
       - name: Cache Root Workspace
         if: matrix.test.name != 'Examples'
-        uses: Swatinem/rust-cache@v1
+        uses: Swatinem/rust-cache@v2
         with:
           key: ${{ matrix.test.name }}
 

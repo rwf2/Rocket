@@ -113,7 +113,7 @@ non-exhaustive list of caveats:
      DDoS attacks or certain DoS attacks which can be mitigated by an external
      service.
 
-  2. Use a TLS termination proxy (perhaps from 1.) for zero-downtown certificate
+  2. Use a TLS termination proxy (perhaps from 1.) for zero-downtime certificate
      rotation.
 
   3. Properly configure your databases and database pools, especially with
