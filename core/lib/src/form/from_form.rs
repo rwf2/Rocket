@@ -1,6 +1,7 @@
 use std::borrow::Cow;
 use std::collections::{HashMap, BTreeMap};
 use std::hash::Hash;
+use std::sync::Arc;
 
 use either::Either;
 use indexmap::IndexMap;
@@ -904,5 +905,26 @@ impl<'v, A: FromForm<'v>, B: FromForm<'v>> FromForm<'v> for (A, B) {
                 Err(ctxt.errors)?
             }
         }
+    }
+}
+
+#[crate::async_trait]
+impl<'v, T: FromForm<'v> + Sync> FromForm<'v> for Arc<T> {
+    type Context = <T as FromForm<'v>>::Context;
+
+    fn init(opts: Options) -> Self::Context {
+        T::init(opts)
+    }
+
+    fn push_value(ctxt: &mut Self::Context, field: ValueField<'v>) {
+        T::push_value(ctxt, field)
+    }
+
+    async fn push_data(ctxt: &mut Self::Context, field: DataField<'v, '_>) {
+        T::push_data(ctxt, field).await
+    }
+
+    fn finalize(this: Self::Context) -> Result<'v, Self> {
+        T::finalize(this).map(Arc::new)
     }
 }
