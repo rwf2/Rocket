@@ -19,12 +19,16 @@ macro_rules! define_log_macro {
             ($d ($t:tt)*) => ($crate::log::private::$kind!(target: $target, $d ($t)*))
         }
     );
+    ($name:ident ($indented:ident): $kind:ident, $target:expr, $d:tt) => (
+        define_log_macro!($name: $kind, $target, $d);
+        define_log_macro!($indented: $kind, $target, $d);
+    );
     ($kind:ident, $indented:ident) => (
         define_log_macro!($kind: $kind, module_path!(), $);
         define_log_macro!($indented: $kind, "_", $);
 
         pub use $indented;
-    )
+    );
 }
 
 define_log_macro!(error, error_);
@@ -32,8 +36,8 @@ define_log_macro!(warn, warn_);
 define_log_macro!(info, info_);
 define_log_macro!(debug, debug_);
 define_log_macro!(trace, trace_);
-define_log_macro!(launch_info: info, "rocket::launch", $);
-define_log_macro!(launch_info_: info, "rocket::launch_", $);
+define_log_macro!(launch_meta (launch_meta_): info, "rocket::launch", $);
+define_log_macro!(launch_info (launch_msg_): warn, "rocket::launch", $);
 
 // `print!` panics when stdout isn't available, but this macro doesn't. See
 // SergioBenitez/Rocket#2019 and rust-lang/rust#46016 for more.
@@ -80,7 +84,7 @@ pub trait PaintExt {
     fn emoji(item: &str) -> Paint<&str>;
 }
 
-// Whether a record is a special `launch_info!` record.
+// Whether a record is a special `launch_{meta,info}!` record.
 fn is_launch_record(record: &log::Metadata<'_>) -> bool {
     record.target().contains("rocket::launch")
 }
