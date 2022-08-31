@@ -480,33 +480,45 @@ error[E0308]: mismatched types
 error[E0308]: mismatched types
    --> tests/ui-fail-stable/from_form.rs:160:12
     |
+159 |     #[field(validate = ext(rocket::http::ContentType::HTML))]
+    |                        --- arguments to this function are incorrect
 160 |     first: String,
     |            ^^^^^^ expected enum `TempFile`, found struct `std::string::String`
     |
     = note: expected reference `&TempFile<'_>`
                found reference `&std::string::String`
-
-error[E0308]: mismatched types
-   --> tests/ui-fail-stable/from_form.rs:166:12
+note: function defined here
+   --> $WORKSPACE/core/lib/src/form/validate.rs
     |
+    | pub fn ext<'v>(file: &TempFile<'_>, r#type: ContentType) -> Result<'v, ()> {
+    |        ^^^
+
+error[E0308]: arguments to this function are incorrect
+   --> tests/ui-fail-stable/from_form.rs:165:24
+    |
+165 |     #[field(validate = ext("hello"))]
+    |                        ^^^ ------- expected struct `ContentType`, found `&str`
 166 |     first: String,
-    |            ^^^^^^ expected enum `TempFile`, found struct `std::string::String`
+    |            ------ expected enum `TempFile`, found struct `std::string::String`
     |
     = note: expected reference `&TempFile<'_>`
                found reference `&std::string::String`
-
-error[E0308]: mismatched types
-   --> tests/ui-fail-stable/from_form.rs:165:28
+note: function defined here
+   --> $WORKSPACE/core/lib/src/form/validate.rs
     |
-165 |     #[field(validate = ext("hello"))]
-    |                            ^^^^^^^ expected struct `ContentType`, found `&str`
+    | pub fn ext<'v>(file: &TempFile<'_>, r#type: ContentType) -> Result<'v, ()> {
+    |        ^^^
 
 error[E0308]: mismatched types
    --> tests/ui-fail-stable/from_form.rs:171:23
     |
 171 |     #[field(default = 123)]
-    |                       ^^^ expected struct `std::string::String`, found integer
+    |                       ^^^
+    |                       |
+    |                       expected struct `std::string::String`, found integer
+    |                       arguments to this enum variant are incorrect
     |
+note: tuple variant defined here
 help: try using a conversion method
     |
 171 |     #[field(default = 123.to_string())]
@@ -518,8 +530,11 @@ error[E0308]: mismatched types
    --> tests/ui-fail-stable/from_form.rs:203:33
     |
 203 |     #[field(default_with = Some("hi"))]
-    |                                 ^^^^ expected struct `std::string::String`, found `&str`
+    |                            ---- ^^^^ expected struct `std::string::String`, found `&str`
+    |                            |
+    |                            arguments to this enum variant are incorrect
     |
+note: tuple variant defined here
 help: try using a conversion method
     |
 203 |     #[field(default_with = Some("hi".to_string()))]

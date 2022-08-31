@@ -40,7 +40,15 @@ error[E0308]: mismatched types
   --> tests/ui-fail-stable/catch_type_errors.rs:16:17
    |
 16 | fn f3(_request: bool) -> usize {
-   |                 ^^^^ expected `bool`, found `&rocket::Request<'_>`
+   |    --           ^^^^ expected `bool`, found `&rocket::Request<'_>`
+   |    |
+   |    arguments to this function are incorrect
+   |
+note: function defined here
+  --> tests/ui-fail-stable/catch_type_errors.rs:16:4
+   |
+16 | fn f3(_request: bool) -> usize {
+   |    ^^-
 
 error[E0277]: the trait bound `usize: Responder<'_, '_>` is not satisfied
   --> tests/ui-fail-stable/catch_type_errors.rs:16:26

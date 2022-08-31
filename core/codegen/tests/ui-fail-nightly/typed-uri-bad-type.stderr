@@ -1,3 +1,15 @@
+error[E0271]: type mismatch resolving `<std::string::String as FromParam<'_>>::Error == &str`
+  --> tests/ui-fail-nightly/typed-uri-bad-type.rs:22:37
+   |
+22 | fn optionals(id: Option<i32>, name: Result<String, &str>) {  }
+   |                                     ^^^^^^^^^^^^^^^^^^^^ expected enum `Infallible`, found `&str`
+
+error[E0271]: type mismatch resolving `<std::string::String as FromParam<'_>>::Error == &str`
+  --> tests/ui-fail-nightly/typed-uri-bad-type.rs:22:37
+   |
+22 | fn optionals(id: Option<i32>, name: Result<String, &str>) {  }
+   |                                     ^^^^^^^^^^^^^^^^^^^^ expected `&str`, found enum `Infallible`
+
 error[E0277]: the trait bound `usize: FromUriParam<rocket::http::uri::fmt::Path, &str>` is not satisfied
   --> tests/ui-fail-nightly/typed-uri-bad-type.rs:45:22
    |
@@ -82,7 +94,7 @@ error[E0277]: the trait bound `i32: FromUriParam<rocket::http::uri::fmt::Path, s
              <i128 as FromUriParam<P, &'x i128>>
              <i128 as FromUriParam<P, &'x mut i128>>
            and 34 others
-   = note: required because of the requirements on the impl of `FromUriParam<rocket::http::uri::fmt::Path, std::option::Option<{integer}>>` for `std::option::Option<i32>`
+   = note: required for `std::option::Option<i32>` to implement `FromUriParam<rocket::http::uri::fmt::Path, std::option::Option<{integer}>>`
 
 error[E0277]: the trait bound `std::string::String: FromUriParam<rocket::http::uri::fmt::Path, Result<_, _>>` is not satisfied
   --> tests/ui-fail-nightly/typed-uri-bad-type.rs:56:42
@@ -100,7 +112,7 @@ error[E0277]: the trait bound `std::string::String: FromUriParam<rocket::http::u
              <std::string::String as FromUriParam<P, &'a str>>
              <std::string::String as FromUriParam<P, &'x &'a str>>
            and 4 others
-   = note: required because of the requirements on the impl of `FromUriParam<rocket::http::uri::fmt::Path, Result<_, _>>` for `Result<std::string::String, &str>`
+   = note: required for `Result<std::string::String, &str>` to implement `FromUriParam<rocket::http::uri::fmt::Path, Result<_, _>>`
 
 error[E0277]: the trait bound `isize: FromUriParam<rocket::http::uri::fmt::Query, &str>` is not satisfied
   --> tests/ui-fail-nightly/typed-uri-bad-type.rs:58:19
@@ -360,15 +372,3 @@ note: required by a bound in `RouteUriBuilder::with_suffix`
     |
     |         where S: ValidRouteSuffix<Origin<'static>>
     |                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ required by this bound in `RouteUriBuilder::with_suffix`
-
-error[E0271]: type mismatch resolving `<std::string::String as FromParam<'_>>::Error == &str`
-  --> tests/ui-fail-nightly/typed-uri-bad-type.rs:22:37
-   |
-22 | fn optionals(id: Option<i32>, name: Result<String, &str>) {  }
-   |                                     ^^^^^^^^^^^^^^^^^^^^ expected enum `Infallible`, found `&str`
-
-error[E0271]: type mismatch resolving `<std::string::String as FromParam<'_>>::Error == &str`
-  --> tests/ui-fail-nightly/typed-uri-bad-type.rs:22:37
-   |
-22 | fn optionals(id: Option<i32>, name: Result<String, &str>) {  }
-   |                                     ^^^^^^^^^^^^^^^^^^^^ expected `&str`, found enum `Infallible`
