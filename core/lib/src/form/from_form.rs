@@ -411,7 +411,7 @@ use crate::http::uncased::AsUncased;
 /// }
 /// ```
 ///
-/// The lifetime `'r` correponds to the lifetime of the request.
+/// The lifetime `'r` corresponds to the lifetime of the request.
 ///
 /// ## A More Involved Example
 ///

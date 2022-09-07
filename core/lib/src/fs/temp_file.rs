@@ -128,7 +128,7 @@ impl<'v> TempFile<'v> {
     ///
     /// # Cross-Device Persistence
     ///
-    /// Attemping to persist a temporary file across logical devices (or mount
+    /// Attempting to persist a temporary file across logical devices (or mount
     /// points) will result in an error. This is a limitation of the underlying
     /// OS. Your options are thus:
     ///

@@ -147,7 +147,7 @@ macro_rules! parse_flexible {
     ($($short:expr => $name:ident,)*) => (
     docify!([
         Flexibly parses @code{name} into a @code{ContentType}. The parse is
-        @[_flexible_] because, in addition to stricly correct content types, it
+        @[_flexible_] because, in addition to strictly correct content types, it
         recognizes the following shorthands:
 
         @nl

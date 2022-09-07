@@ -273,7 +273,7 @@ fn sentinels_expr(route: &Route) -> TokenStream {
     //      * returns `false` for the parent. by 1) it will return false for
     //        _all_ parents of the type, so no node in the graph can consider,
     //        directly or indirectly, `T` to be a child, and thus there are no
-    //        broken links; the thereom holds
+    //        broken links; the theorem holds
     //      * returns `true` for the parent, and so the type has a parent, and
     //      the theorem holds.
     //    3. these are all the cases. QED.

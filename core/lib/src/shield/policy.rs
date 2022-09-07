@@ -461,7 +461,7 @@ impl From<&Prefetch> for Header<'static> {
 /// control exactly _which_ (if any) origins may access or request access to
 /// browser features.
 ///
-/// Features are enabled via the [`Permission::allowed()`] contructor and
+/// Features are enabled via the [`Permission::allowed()`] constructor and
 /// chainable [`allow()`](Self::allow()) build method. Features can be blocked
 /// via the [`Permission::blocked()`] and chainable [`block()`](Self::block())
 /// builder method.
@@ -553,7 +553,7 @@ impl Permission {
     /// be a single [`Allow`], a slice (`[Allow]` or `&[Allow]`), or a vector
     /// (`Vec<Allow>`).
     ///
-    /// This policy supercedes any previous policy set for `feature`.
+    /// This policy supersedes any previous policy set for `feature`.
     ///
     /// If `allow` is empty, the use of the feature is blocked unless another
     /// call to `allow()` allows it. If `allow` contains [`Allow::Any`], the
@@ -597,7 +597,7 @@ impl Permission {
         self
     }
 
-    /// Blocks `feature`. This policy supercedes any previous policy set for
+    /// Blocks `feature`. This policy supersedes any previous policy set for
     /// `feature`.
     ///
     /// # Example

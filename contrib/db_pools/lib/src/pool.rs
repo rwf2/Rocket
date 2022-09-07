@@ -98,7 +98,7 @@ use {std::time::Duration, crate::{Error, Config}};
 ///         // `InitError` to `Error<InitError, _>` with `Error::Init`.
 ///         let pool = MyPool::new(config).map_err(Error::Init)?;
 ///
-///         // Return the fully intialized pool.
+///         // Return the fully initialized pool.
 ///         Ok(pool)
 ///     }
 ///

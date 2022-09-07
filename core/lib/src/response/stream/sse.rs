@@ -54,7 +54,7 @@ use crate::http::ContentType;
 /// appears only in the raw server-sent event data stream and is inaccessible by
 /// most clients. This includes JavaScript's `EventSource`. As such, they serve
 /// little utility beyond debugging a raw data stream and keeping a connection
-/// alive. See [hearbeat](struct@EventStream#heartbeat) for information on
+/// alive. See [heartbeat](struct@EventStream#heartbeat) for information on
 /// Rocket's `EventStream` keep-alive.
 ///
 /// # Fields

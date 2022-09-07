@@ -398,7 +398,7 @@ impl<'r> Request<'r> {
     /// # let mut req = c.get("/");
     /// # let request = req.inner_mut();
     ///
-    /// // starting without an "X-Real-IP" header or remote addresss
+    /// // starting without an "X-Real-IP" header or remote address
     /// assert!(request.client_ip().is_none());
     ///
     /// // add a remote address; this is done by Rocket automatically
