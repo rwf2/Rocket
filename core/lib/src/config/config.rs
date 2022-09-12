@@ -357,52 +357,52 @@ impl Config {
             Paint::default(val).bold()
         }
 
-        launch_info!("{}Configured for {}.", Paint::emoji("🔧 "), self.profile);
-        launch_info_!("address: {}", bold(&self.address));
-        launch_info_!("port: {}", bold(&self.port));
-        launch_info_!("workers: {}", bold(self.workers));
-        launch_info_!("max blocking threads: {}", bold(self.max_blocking));
-        launch_info_!("ident: {}", bold(&self.ident));
-        launch_info_!("limits: {}", bold(&self.limits));
-        launch_info_!("temp dir: {}", bold(&self.temp_dir.relative().display()));
-        launch_info_!("http/2: {}", bold(cfg!(feature = "http2")));
+        launch_meta!("{}Configured for {}.", Paint::emoji("🔧 "), self.profile);
+        launch_meta_!("address: {}", bold(&self.address));
+        launch_meta_!("port: {}", bold(&self.port));
+        launch_meta_!("workers: {}", bold(self.workers));
+        launch_meta_!("max blocking threads: {}", bold(self.max_blocking));
+        launch_meta_!("ident: {}", bold(&self.ident));
+        launch_meta_!("limits: {}", bold(&self.limits));
+        launch_meta_!("temp dir: {}", bold(&self.temp_dir.relative().display()));
+        launch_meta_!("http/2: {}", bold(cfg!(feature = "http2")));
 
         match self.keep_alive {
-            0 => launch_info_!("keep-alive: {}", bold("disabled")),
-            ka => launch_info_!("keep-alive: {}{}", bold(ka), bold("s")),
+            0 => launch_meta_!("keep-alive: {}", bold("disabled")),
+            ka => launch_meta_!("keep-alive: {}{}", bold(ka), bold("s")),
         }
 
         match (self.tls_enabled(), self.mtls_enabled()) {
-            (true, true) => launch_info_!("tls: {}", bold("enabled w/mtls")),
-            (true, false) => launch_info_!("tls: {} w/o mtls", bold("enabled")),
-            (false, _) => launch_info_!("tls: {}", bold("disabled")),
+            (true, true) => launch_meta_!("tls: {}", bold("enabled w/mtls")),
+            (true, false) => launch_meta_!("tls: {} w/o mtls", bold("enabled")),
+            (false, _) => launch_meta_!("tls: {}", bold("disabled")),
         }
 
         #[cfg(feature = "secrets")] {
-            launch_info_!("secret key: {}", bold(&self.secret_key));
+            launch_meta_!("secret key: {}", bold(&self.secret_key));
             if !self.secret_key.is_provided() {
                 warn!("secrets enabled without a stable `secret_key`");
-                launch_info_!("disable `secrets` feature or configure a `secret_key`");
-                launch_info_!("this becomes an {} in non-debug profiles", Paint::red("error"));
+                launch_meta_!("disable `secrets` feature or configure a `secret_key`");
+                launch_meta_!("this becomes an {} in non-debug profiles", Paint::red("error"));
             }
         }
 
-        launch_info_!("shutdown: {}", bold(&self.shutdown));
-        launch_info_!("log level: {}", bold(self.log_level));
-        launch_info_!("cli colors: {}", bold(&self.cli_colors));
+        launch_meta_!("shutdown: {}", bold(&self.shutdown));
+        launch_meta_!("log level: {}", bold(self.log_level));
+        launch_meta_!("cli colors: {}", bold(&self.cli_colors));
 
         // Check for now depreacted config values.
         for (key, replacement) in Self::DEPRECATED_KEYS {
             if let Some(md) = figment.find_metadata(key) {
                 warn!("found value for deprecated config key `{}`", Paint::white(key));
                 if let Some(ref source) = md.source {
-                    launch_info_!("in {} {}", Paint::white(source), md.name);
+                    launch_meta_!("in {} {}", Paint::white(source), md.name);
                 }
 
                 if let Some(new_key) = replacement {
-                    launch_info_!("key has been by replaced by `{}`", Paint::white(new_key));
+                    launch_meta_!("key has been by replaced by `{}`", Paint::white(new_key));
                 } else {
-                    launch_info_!("key has no special meaning");
+                    launch_meta_!("key has no special meaning");
                 }
             }
         }
@@ -413,9 +413,9 @@ impl Config {
                 warn!("found set deprecated profile `{}`", Paint::white(profile));
 
                 if let Some(new_profile) = replacement {
-                    launch_info_!("profile was replaced by `{}`", Paint::white(new_profile));
+                    launch_meta_!("profile was replaced by `{}`", Paint::white(new_profile));
                 } else {
-                    launch_info_!("profile `{}` has no special meaning", profile);
+                    launch_meta_!("profile `{}` has no special meaning", profile);
                 }
             }
         }

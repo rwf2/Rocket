@@ -571,14 +571,14 @@ fn log_items<T, I, B, O>(e: &str, t: &str, items: I, base: B, origin: O)
 {
     let mut items: Vec<_> = items.collect();
     if !items.is_empty() {
-        launch_info!("{}{}:", Paint::emoji(e), Paint::magenta(t));
+        launch_meta!("{}{}:", Paint::emoji(e), Paint::magenta(t));
     }
 
     items.sort_by_key(|i| origin(i).path().as_str().chars().count());
     items.sort_by_key(|i| origin(i).path().segments().len());
     items.sort_by_key(|i| base(i).path().as_str().chars().count());
     items.sort_by_key(|i| base(i).path().segments().len());
-    items.iter().for_each(|i| launch_info_!("{}", i));
+    items.iter().for_each(|i| launch_meta_!("{}", i));
 }
 
 impl Rocket<Ignite> {

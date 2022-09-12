@@ -54,14 +54,20 @@ error: unexpected attribute parameter: `message`
 26 | #[catch(400, message = "foo")]
    |              ^^^^^^^
 
-error[E0308]: mismatched types
-  --> tests/ui-fail-stable/catch.rs:30:17
+error[E0308]: arguments to this function are incorrect
+  --> tests/ui-fail-stable/catch.rs:30:4
    |
 30 | fn f3(_request: &Request, other: bool) { }
-   |                 ^ expected `&rocket::Request<'_>`, found struct `Status`
-
-error[E0308]: mismatched types
-  --> tests/ui-fail-stable/catch.rs:30:34
+   |    ^^           -                ---- an argument of type `bool` is missing
+   |                 |
+   |                 argument of type `&rocket::Request<'_>` unexpected
+   |
+note: function defined here
+  --> tests/ui-fail-stable/catch.rs:30:4
    |
 30 | fn f3(_request: &Request, other: bool) { }
-   |                                  ^^^^ expected `bool`, found `&rocket::Request<'_>`
+   |    ^^---------------------
+help: did you mean
+   |
+29 | f3(bool, /* bool */)
+   |

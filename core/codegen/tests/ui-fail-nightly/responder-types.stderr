@@ -31,7 +31,7 @@ error[E0277]: the trait bound `Header<'_>: From<u8>` is not satisfied
               <Header<'static> as From<&Prefetch>>
               <Header<'static> as From<&Referrer>>
             and 4 others
-    = note: required because of the requirements on the impl of `Into<Header<'_>>` for `u8`
+    = note: required for `u8` to implement `Into<Header<'_>>`
 note: required by a bound in `rocket::Response::<'r>::set_header`
    --> $WORKSPACE/core/lib/src/response/response.rs
     |
@@ -71,7 +71,7 @@ error[E0277]: the trait bound `Header<'_>: From<u8>` is not satisfied
               <Header<'static> as From<&Prefetch>>
               <Header<'static> as From<&Referrer>>
             and 4 others
-    = note: required because of the requirements on the impl of `Into<Header<'_>>` for `u8`
+    = note: required for `u8` to implement `Into<Header<'_>>`
 note: required by a bound in `rocket::Response::<'r>::set_header`
    --> $WORKSPACE/core/lib/src/response/response.rs
     |
@@ -94,7 +94,7 @@ error[E0277]: the trait bound `Header<'_>: From<std::string::String>` is not sat
               <Header<'static> as From<&Prefetch>>
               <Header<'static> as From<&Referrer>>
             and 4 others
-    = note: required because of the requirements on the impl of `Into<Header<'_>>` for `std::string::String`
+    = note: required for `std::string::String` to implement `Into<Header<'_>>`
 note: required by a bound in `rocket::Response::<'r>::set_header`
    --> $WORKSPACE/core/lib/src/response/response.rs
     |

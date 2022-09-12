@@ -43,7 +43,7 @@ error[E0277]: the trait bound `Q: FromFormField<'_>` is not satisfied
              IpAddr
              Ipv4Addr
            and 38 others
-   = note: required because of the requirements on the impl of `FromForm<'_>` for `Q`
+   = note: required for `Q` to implement `FromForm<'_>`
 
 error[E0277]: the trait bound `Q: FromFormField<'_>` is not satisfied
   --> tests/ui-fail-nightly/route-type-errors.rs:15:12
@@ -61,7 +61,7 @@ error[E0277]: the trait bound `Q: FromFormField<'_>` is not satisfied
              IpAddr
              Ipv4Addr
            and 38 others
-   = note: required because of the requirements on the impl of `FromForm<'_>` for `Q`
+   = note: required for `Q` to implement `FromForm<'_>`
 
 error[E0277]: the trait bound `Q: FromData<'_>` is not satisfied
   --> tests/ui-fail-nightly/route-type-errors.rs:18:12
