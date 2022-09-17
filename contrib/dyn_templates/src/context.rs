@@ -115,7 +115,7 @@ mod manager {
     use std::sync::{RwLock, Mutex};
     use std::sync::mpsc::{channel, Receiver};
 
-    use notify::{raw_watcher, RawEvent, RecommendedWatcher, RecursiveMode, Watcher};
+    use notify::{recommended_watcher, Error, Event, RecommendedWatcher, RecursiveMode, Watcher};
 
     use super::{Callback, Context};
 
@@ -125,14 +125,14 @@ mod manager {
         /// The current template context, inside an RwLock so it can be updated.
         context: RwLock<Context>,
         /// A filesystem watcher and the receive queue for its events.
-        watcher: Option<(RecommendedWatcher, Mutex<Receiver<RawEvent>>)>,
+        watcher: Option<(RecommendedWatcher, Mutex<Receiver<Result<Event, Error>>>)>,
     }
 
     impl ContextManager {
         pub fn new(ctxt: Context) -> ContextManager {
             let (tx, rx) = channel();
-            let watcher = raw_watcher(tx).and_then(|mut watcher| {
-                watcher.watch(ctxt.root.canonicalize()?, RecursiveMode::Recursive)?;
+            let watcher = recommended_watcher(tx).and_then(|mut watcher| {
+                watcher.watch(&ctxt.root.canonicalize()?, RecursiveMode::Recursive)?;
                 Ok(watcher)
             });
 
