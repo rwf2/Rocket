@@ -106,8 +106,7 @@ use crate::request::Request;
 ///
 /// # Return Value
 ///
-/// A `Responder` returns a `Future` whose output type is a `Result<Response,
-/// Status>`.
+/// A `Responder` returns a `Result<Response, Status>`.
 ///
 ///   * An `Ok(Response)` indicates success. The `Response` will be written out
 ///     to the client.
