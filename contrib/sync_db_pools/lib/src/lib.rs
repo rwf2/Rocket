@@ -313,21 +313,21 @@
 // Note: Keep this table in sync with site/guite/6-state.md
 //! | Kind     | Driver                | Version   | `Poolable` Type                | Feature                |
 //! |----------|-----------------------|-----------|--------------------------------|------------------------|
-//! | MySQL    | [Diesel]              | `1`       | [`diesel::MysqlConnection`]    | `diesel_mysql_pool`    |
-//! | Postgres | [Diesel]              | `1`       | [`diesel::PgConnection`]       | `diesel_postgres_pool` |
+//! | Sqlite   | [Diesel]              | `2`       | [`diesel::SqliteConnection`]   | `diesel_sqlite_pool`   |
+//! | Postgres | [Diesel]              | `2`       | [`diesel::PgConnection`]       | `diesel_postgres_pool` |
+//! | MySQL    | [Diesel]              | `2`       | [`diesel::MysqlConnection`]    | `diesel_mysql_pool`    |
 //! | Postgres | [Rust-Postgres]       | `0.19`    | [`postgres::Client`]           | `postgres_pool`        |
-//! | Sqlite   | [Diesel]              | `1`       | [`diesel::SqliteConnection`]   | `diesel_sqlite_pool`   |
-//! | Sqlite   | [`Rusqlite`]          | `0.24`    | [`rusqlite::Connection`]       | `sqlite_pool`          |
+//! | Sqlite   | [`Rusqlite`]          | `0.27`    | [`rusqlite::Connection`]       | `sqlite_pool`          |
 //! | Memcache | [`memcache`]          | `0.15`    | [`memcache::Client`]           | `memcache_pool`        |
 //!
 //! [Diesel]: https://diesel.rs
-//! [`rusqlite::Connection`]: https://docs.rs/rusqlite/0.23.0/rusqlite/struct.Connection.html
-//! [`diesel::SqliteConnection`]: http://docs.diesel.rs/diesel/prelude/struct.SqliteConnection.html
-//! [`postgres::Client`]: https://docs.rs/postgres/0.19/postgres/struct.Client.html
-//! [`diesel::PgConnection`]: http://docs.diesel.rs/diesel/pg/struct.PgConnection.html
-//! [`diesel::MysqlConnection`]: http://docs.diesel.rs/diesel/mysql/struct.MysqlConnection.html
-//! [`Rusqlite`]: https://github.com/jgallagher/rusqlite
+//! [`diesel::SqliteConnection`]: https://docs.rs/diesel/2/diesel/sqlite/struct.SqliteConnection.html
+//! [`diesel::PgConnection`]: https://docs.rs/diesel/2/diesel/pg/struct.PgConnection.html
+//! [`diesel::MysqlConnection`]: https://docs.rs/diesel/2/diesel/mysql/struct.MysqlConnection.html
 //! [Rust-Postgres]: https://github.com/sfackler/rust-postgres
+//! [`postgres::Client`]: https://docs.rs/postgres/0.19/postgres/struct.Client.html
+//! [`Rusqlite`]: https://github.com/jgallagher/rusqlite
+//! [`rusqlite::Connection`]: https://docs.rs/rusqlite/0.27/rusqlite/struct.Connection.html
 //! [`diesel::PgConnection`]: http://docs.diesel.rs/diesel/pg/struct.PgConnection.html
 //! [`memcache`]: https://github.com/aisk/rust-memcache
 //! [`memcache::Client`]: https://docs.rs/memcache/0.15/memcache/struct.Client.html

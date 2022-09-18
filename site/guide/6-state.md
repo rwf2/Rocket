@@ -294,7 +294,7 @@ features enabled in `Cargo.toml`:
 
 ```toml
 [dependencies.sqlx]
-version = "0.5"
+version = "0.6"
 default-features = false
 features = ["macros", "offline", "migrate"]
 

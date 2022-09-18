@@ -108,28 +108,28 @@
 //! | Database | Feature             | [`Pool`] Type               | [`Connection`] Deref                  |
 //! |----------|---------------------|-----------------------------|---------------------------------------|
 //! | Postgres | `deadpool_postgres` | [`deadpool_postgres::Pool`] | [`deadpool_postgres::ClientWrapper`]  |
-//! | Redis    | `deadpool_redis`    | [`deadpool_redis::Pool`]    | [`deadpool_redis::Connection`] |
+//! | Redis    | `deadpool_redis`    | [`deadpool_redis::Pool`]    | [`deadpool_redis::Connection`]        |
 //!
 //! On shutdown, new connections are denied. Shutdown _does not_ wait for
 //! connections to be returned.
 //!
-//! ## `sqlx` (v0.5)
+//! ## `sqlx` (v0.6)
 //!
-//! | Database | Feature         | [`Pool`] Type        | [`Connection`] Deref               |
-//! |----------|-----------------|----------------------|------------------------------------|
+//! | Database | Feature         | [`Pool`] Type        | [`Connection`] Deref                     |
+//! |----------|-----------------|----------------------|------------------------------------------|
 //! | Postgres | `sqlx_postgres` | [`sqlx::PgPool`]     | [`sqlx::pool::PoolConnection<Postgres>`] |
 //! | MySQL    | `sqlx_mysql`    | [`sqlx::MySqlPool`]  | [`sqlx::pool::PoolConnection<MySql>`]    |
 //! | SQLite   | `sqlx_sqlite`   | [`sqlx::SqlitePool`] | [`sqlx::pool::PoolConnection<Sqlite>`]   |
 //! | MSSQL    | `sqlx_mssql`    | [`sqlx::MssqlPool`]  | [`sqlx::pool::PoolConnection<Mssql>`]    |
 //!
-//! [`sqlx::PgPool`]: https://docs.rs/sqlx/0.5/sqlx/type.PgPool.html
-//! [`sqlx::MySqlPool`]: https://docs.rs/sqlx/0.5/sqlx/type.MySqlPool.html
-//! [`sqlx::SqlitePool`]: https://docs.rs/sqlx/0.5/sqlx/type.SqlitePool.html
-//! [`sqlx::MssqlPool`]: https://docs.rs/sqlx/0.5/sqlx/type.MssqlPool.html
-//! [`sqlx::PoolConnection<Postgres>`]: https://docs.rs/sqlx/0.5/sqlx/pool/struct.PoolConnection.html
-//! [`sqlx::PoolConnection<MySql>`]: https://docs.rs/sqlx/0.5/sqlx/pool/struct.PoolConnection.html
-//! [`sqlx::PoolConnection<Sqlite>`]: https://docs.rs/sqlx/0.5/sqlx/pool/struct.PoolConnection.html
-//! [`sqlx::PoolConnection<Mssql>`]: https://docs.rs/sqlx/0.5/sqlx/pool/struct.PoolConnection.html
+//! [`sqlx::PgPool`]: https://docs.rs/sqlx/0.6/sqlx/type.PgPool.html
+//! [`sqlx::MySqlPool`]: https://docs.rs/sqlx/0.6/sqlx/type.MySqlPool.html
+//! [`sqlx::SqlitePool`]: https://docs.rs/sqlx/0.6/sqlx/type.SqlitePool.html
+//! [`sqlx::MssqlPool`]: https://docs.rs/sqlx/0.6/sqlx/type.MssqlPool.html
+//! [`sqlx::PoolConnection<Postgres>`]: https://docs.rs/sqlx/0.6/sqlx/pool/struct.PoolConnection.html
+//! [`sqlx::PoolConnection<MySql>`]: https://docs.rs/sqlx/0.6/sqlx/pool/struct.PoolConnection.html
+//! [`sqlx::PoolConnection<Sqlite>`]: https://docs.rs/sqlx/0.6/sqlx/pool/struct.PoolConnection.html
+//! [`sqlx::PoolConnection<Mssql>`]: https://docs.rs/sqlx/0.6/sqlx/pool/struct.PoolConnection.html
 //!
 //! On shutdown, new connections are denied. Shutdown waits for connections to
 //! be returned.
