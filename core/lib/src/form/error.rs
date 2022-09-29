@@ -138,7 +138,7 @@ pub struct Error<'v> {
     pub value: Option<Cow<'v, str>>,
     /// The kind of error that occurred.
     pub kind: ErrorKind<'v>,
-    /// The entitiy that caused the error.
+    /// The entity that caused the error.
     pub entity: Entity,
 }
 

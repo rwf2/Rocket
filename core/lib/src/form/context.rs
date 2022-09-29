@@ -247,7 +247,7 @@ impl<'v> Context<'v> {
     /// whose associated field name is _exactly_ `name` to be an error for the
     /// field named `name`. This is _not_ what is typically desired as it
     /// ignores errors that occur in the parent which will result in missing
-    /// errors associated with its chilren. Use [`Context::field_errors()`] in
+    /// errors associated with its children. Use [`Context::field_errors()`] in
     /// almost all cases.
     ///
     /// Lookup is case-sensitive but key-separator (`.` or `[]`) insensitive.
@@ -265,7 +265,7 @@ impl<'v> Context<'v> {
     ///     let id = form.context.exact_field_errors("id");
     ///
     ///     // Get all errors exactly for `foo.bar`. If `foo` failed, we will
-    ///     // this will return no erorrs. Use `Context::field_errors()`.
+    ///     // this will return no errors. Use `Context::field_errors()`.
     ///     let foo_bar = form.context.exact_field_errors("foo.bar");
     /// }
     /// ```

@@ -264,7 +264,7 @@ impl<'a> Certificate<'a> {
         self.inner().version.0
     }
 
-    /// Returns the subject (a "DN" or "Distinguised Name") of the X.509
+    /// Returns the subject (a "DN" or "Distinguished Name") of the X.509
     /// certificate.
     ///
     /// # Example
@@ -285,7 +285,7 @@ impl<'a> Certificate<'a> {
         Name::ref_cast(&self.inner().subject)
     }
 
-    /// Returns the issuer (a "DN" or "Distinguised Name") of the X.509
+    /// Returns the issuer (a "DN" or "Distinguished Name") of the X.509
     /// certificate.
     ///
     /// # Example
@@ -446,7 +446,7 @@ impl<'a> Name<'a> {
     /// `self`.
     ///
     /// Note that email addresses need not be UTF-8 strings, or strings at all.
-    /// This method filters the email addresss in `self` to those that are. Use
+    /// This method filters the email address in `self` to those that are. Use
     /// the raw [`iter_email()`](#method.iter_email) to iterate over all value
     /// types.
     ///

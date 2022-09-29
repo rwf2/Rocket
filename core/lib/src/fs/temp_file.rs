@@ -57,7 +57,7 @@ use either::Either;
 /// guard, the extension is identified by the Content-Type of the request, if
 /// any. If there is no Content-Type, the limit `file` is used.
 ///
-/// # Cappable
+/// # Capable
 ///
 /// A data stream can be partially read into a `TempFile` even if the incoming
 /// stream exceeds the data limit via the [`Capped<TempFile>`] data and form
@@ -128,7 +128,7 @@ impl<'v> TempFile<'v> {
     ///
     /// # Cross-Device Persistence
     ///
-    /// Attemping to persist a temporary file across logical devices (or mount
+    /// Attempting to persist a temporary file across logical devices (or mount
     /// points) will result in an error. This is a limitation of the underlying
     /// OS. Your options are thus:
     ///

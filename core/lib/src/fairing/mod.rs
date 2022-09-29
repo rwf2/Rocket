@@ -482,7 +482,7 @@ pub trait Fairing: Send + Sync + Any + 'static {
     ///
     /// This method is called just after launching the application if
     /// `Kind::Liftoff` is in the `kind` field of the `Info` structure for this
-    /// fairing. The `Rocket` parameter corresponds to the lauched application.
+    /// fairing. The `Rocket` parameter corresponds to the launched application.
     ///
     /// ## Default Implementation
     ///

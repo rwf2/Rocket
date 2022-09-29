@@ -2054,7 +2054,7 @@ In addition to new features, Rocket saw the following smaller improvements:
 
 ## Core
 
-  * Typo in `Outcome` formatting fixed (Succcess -> Success).
+  * Typo in `Outcome` formatting fixed (Success -> Success).
   * Added `ContentType::CSV`.
   * Dynamic segments parameters are properly resolved, even when mounted.
   * Request methods are only overridden via `_method` field on POST.
@@ -2168,7 +2168,7 @@ the Rocket APIs. They are summarized through the following API changes:
   * Added `FromData` conversion trait and default implementation.
   * `FromData` is used to automatically derive the `data` parameter.
   * `Responder`s are now final: they cannot forward to other requests.
-  * `Responser`s may only forward to catchers.
+  * `Responder`s may only forward to catchers.
 
 ## Breaking
 

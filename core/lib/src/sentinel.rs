@@ -82,7 +82,7 @@ use crate::{Rocket, Ignite};
 ///
 /// # Embedded Sentinels
 ///
-/// Embedded types -- type parameters of already eligble types -- are also
+/// Embedded types -- type parameters of already eligible types -- are also
 /// eligible to be sentinels. Consider the following route:
 ///
 /// ```rust
@@ -102,7 +102,7 @@ use crate::{Rocket, Ignite};
 ///   * `Option<&State<String>>`
 ///   * `Either<Foo, Inner<Bar>>`
 ///
-/// In addition, all embedded types are _also_ eligble. These are:
+/// In addition, all embedded types are _also_ eligible. These are:
 ///
 ///   * `&State<String>`
 ///   * `State<String>`

@@ -343,7 +343,7 @@ impl Rocket<Orbit> {
 
         // If it fails and it's not a 500, try the 500 catcher.
         if status != Status::InternalServerError {
-            error_!("Catcher failed. Attemping 500 error catcher.");
+            error_!("Catcher failed. Attempting 500 error catcher.");
             status = Status::InternalServerError;
             if let Ok(r) = self.invoke_catcher(status, req).await {
                 return r;

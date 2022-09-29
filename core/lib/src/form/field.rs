@@ -140,7 +140,7 @@ impl<'v> ValueField<'v> {
             .with_entity(Entity::ValueField)
     }
 
-    /// Creates a complete mising value field [`Error`] from `self`.
+    /// Creates a complete missing value field [`Error`] from `self`.
     ///
     /// The error will have the following properties:
     ///   * `kind`: [`ErrorKind::Missing`]

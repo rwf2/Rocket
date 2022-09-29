@@ -117,7 +117,7 @@ rustup override set stable
 Using the stable release channel ensures that _no_ breakages will occur when
 upgrading your Rust compiler or Rocket. That being said, Rocket continues to
 take advantage of features only present in the nightly channel. As a result, the
-development experience will be superior on nightly for the forseeable future.
+development experience will be superior on nightly for the foreseeable future.
 For example, compiler diagnostics on `nightly` are more detailed and accurate:
 
 <details>
@@ -363,7 +363,7 @@ most important of these changes here. All users _must_:
 
   * Replace `ROCKET_ENV` environment variable use with `ROCKET_PROFILE`.
   * Replace `ROCKET_LOG` environment variable with `ROCKET_LOG_LEVEL`.
-  * Use only IP addreses for the `address` configuration parameter.
+  * Use only IP addresses for the `address` configuration parameter.
   * Replace the `dev` or `development` profile with `debug`.
   * Note that the `stage`, `staging`, `prod`, and `production` profiles carry no
     special meaning in v0.5.

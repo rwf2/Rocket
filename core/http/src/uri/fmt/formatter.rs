@@ -34,7 +34,7 @@ use crate::uri::fmt::{UriDisplay, Part, Path, Query, Kind};
 ///
 ///   * When **nested named values** are written, typically by passing a value
 ///     to [`write_named_value()`] whose implementation of `UriDisplay` also
-///     calls `write_named_vlaue()`, the nested names are joined by a `.`,
+///     calls `write_named_value()`, the nested names are joined by a `.`,
 ///     written out followed by a `=`, followed by the value.
 ///
 /// # Usage
