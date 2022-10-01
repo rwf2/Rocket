@@ -2,10 +2,12 @@ use std::fmt;
 use std::ops::{Deref, DerefMut};
 use std::net::SocketAddr;
 
+use binascii::b64decode;
 use yansi::Paint;
 use either::Either;
 use figment::{Figment, Provider};
 
+use crate::config::SecretKey;
 use crate::{Catcher, Config, Route, Shutdown, sentinel, shield::Shield};
 use crate::router::Router;
 use crate::trip_wire::TripWire;
@@ -519,6 +521,16 @@ impl Rocket<Build> {
         let mut config = Config::try_from(&self.figment).map_err(ErrorKind::Config)?;
         crate::log::init(&config);
 
+        // This is the key consistently used as secret_key in the documentation
+        // before being changed in 0.5.0
+        let old_doc_secret_key = {
+            let secret_key = "hPRYyVRiMyxpw5sBB1XeCMN1kFsDCqKvBi2QJxBVHQk=";
+            let mut out_buffer: [u8; 44] = [0; 44];
+            let out = b64decode(secret_key.as_bytes(), &mut out_buffer)
+                .expect("Unable to decode static base64 example");
+            SecretKey::derive_from(out)
+        };
+
         // Check for safely configured secrets.
         #[cfg(feature = "secrets")]
         if !config.secret_key.is_provided() {
@@ -530,7 +542,11 @@ impl Rocket<Build> {
                 config.secret_key = crate::config::SecretKey::generate()
                     .unwrap_or_else(crate::config::SecretKey::zero);
             }
-        };
+        } else if config.secret_key == old_doc_secret_key {
+            warn!("Your secret_key is not safe!");
+            warn!("Generate a new secret_key with `head -c64 /dev/urandom | base64 -w0`");
+            info!("This means you have accidentally copied 'secret_key' directly from the docs without modifying it.");
+        }
 
         // Initialize the router; check for collisions.
         let mut router = Router::new();
