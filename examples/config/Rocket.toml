@@ -26,7 +26,7 @@ workers = 12
 keep_alive = 5
 log_level = "critical"
 # NOTE: Don't (!) use this key! Generate your own and keep it private!
-#       e.g, on Linux `head -c32 /dev/urandom | base64 -w0`
+#       e.g, on Linux `head -c64 /dev/urandom | base64 -w0`
 secret_key = "hPrYyЭRiMyµ5sBB1π+CMæ1køFsåqKvBiQJxBVHQk="
 key = "a release app-key"
 extra = false

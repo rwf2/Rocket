@@ -126,7 +126,7 @@ port = 9001
 [release]
 port = 9999
 # NOTE: Don't (!) use this key! Generate your own and keep it private!
-#       e.g, on Linux `head -c32 /dev/urandom | base64 -w0`
+#       e.g, on Linux `head -c64 /dev/urandom | base64 -w0`
 secret_key = "hPrYyЭRiMyµ5sBB1π+CMN1kFsqKvBiQJxBVHQk="
 ```
 
@@ -147,7 +147,7 @@ log_level = "normal"
 temp_dir = "/tmp"
 cli_colors = true
 # NOTE: Don't (!) use this key! Generate your own and keep it private!
-#       e.g, on Linux `head -c32 /dev/urandom | base64 -w0`
+#       e.g, on Linux `head -c64 /dev/urandom | base64 -w0`
 secret_key = "hPrYyЭRiMyµ5sBB1π+CMæ1køFsåqKvBiQJxBVHQk="
 
 [default.limits]

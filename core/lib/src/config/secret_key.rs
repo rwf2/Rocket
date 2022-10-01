@@ -23,7 +23,7 @@ enum Kind {
 /// use rocket::config::Config;
 ///
 /// // NOTE: Don't (!) use this key! Generate your own and keep it private!
-/// //       e.g, on Linux `head -c32 /dev/urandom | base64 -w0`
+/// //       e.g, on Linux `head -c64 /dev/urandom | base64 -w0`
 /// let figment = Config::figment()
 ///     .merge(("secret_key", "hPrYyЭRiMyµ5sBB1π+CMæ1køFsåqKvBiQJxBVHQk="));
 ///
