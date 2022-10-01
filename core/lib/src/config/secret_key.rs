@@ -19,7 +19,7 @@ enum Kind {
 /// material or a 512-bit master key, each as either a base64-encoded string or
 /// raw bytes.
 ///
-/// ```rust
+/// ```rust,no_run
 /// use rocket::config::Config;
 ///
 /// // NOTE: Don't (!) use this key! Generate your own and keep it private!
