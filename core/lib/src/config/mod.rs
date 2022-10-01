@@ -665,7 +665,7 @@ mod tests {
     fn test_no_err_on_release_and_custom_secret_key() {
         figment::Jail::expect_with(|jail| {
             jail.set_env("ROCKET_PROFILE", "release");
-            let key = "hPRYyVRiMyxpw5sBB1XeCMN1kFsDCqKvBi2QJxBVHQk=";
+            let key = "Bx4Gb+aSIfuoEyMHD4DvNs92+wmzfQK98qc6MiwyPY4=";
             let figment = Config::figment().merge(("secret_key", key));
 
             assert!(crate::local::blocking::Client::tracked(crate::custom(&figment)).is_ok());
