@@ -25,7 +25,8 @@ port = 8000
 workers = 12
 keep_alive = 5
 log_level = "critical"
-# don't use this key! generate your own and keep it private!
-secret_key = "hPRYyVRiMyxpw5sBB1XeCMN1kFsDCqKvBi2QJxBVHQk="
+# NOTE: Don't (!) use this key! Generate your own and keep it private!
+#       e.g, on Linux `head -c32 /dev/urandom | base64 -w0`
+secret_key = "hPrYyЭRiMyµ5sBB1π+CMæ1køFsåqKvBiQJxBVHQk="
 key = "a release app-key"
 extra = false
