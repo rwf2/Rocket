@@ -127,7 +127,7 @@ port = 9001
 port = 9999
 # NOTE: Don't (!) use this key! Generate your own and keep it private!
 #       e.g, on Linux `head -c64 /dev/urandom | base64 -w0`
-secret_key = "hPrYyЭRiMyµ5sBB1π+CMN1kFsqKvBiQJxBVHQk="
+secret_key = "hPrYyЭRiMyµ5sBB1π+CMæ1køFsåqKvBiQJxBVHQk="
 ```
 
 The following is a `Rocket.toml` file with all configuration options set for
