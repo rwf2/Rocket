@@ -7,7 +7,6 @@ use yansi::Paint;
 use either::Either;
 use figment::{Figment, Provider};
 
-use crate::config::SecretKey;
 use crate::{Catcher, Config, Route, Shutdown, sentinel, shield::Shield};
 use crate::router::Router;
 use crate::trip_wire::TripWire;
@@ -523,12 +522,13 @@ impl Rocket<Build> {
 
         // This is the key consistently used as secret_key in the documentation
         // before being changed in 0.5.0
+        #[cfg(feature = "secrets")]
         let old_doc_secret_key = {
             let secret_key = "hPRYyVRiMyxpw5sBB1XeCMN1kFsDCqKvBi2QJxBVHQk=";
-            let mut out_buffer: [u8; 44] = [0; 44];
+            let mut out_buffer: [u8; 33] = [0; 33];
             let out = b64decode(secret_key.as_bytes(), &mut out_buffer)
                 .expect("Unable to decode static base64 example");
-            SecretKey::derive_from(out)
+            crate::config::SecretKey::derive_from(out)
         };
 
         // Check for safely configured secrets.
