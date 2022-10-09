@@ -1,23 +1,25 @@
-#[macro_use] extern crate rocket;
+#[macro_use]
+extern crate rocket;
 
 use std::str::from_utf8;
 use rocket::form::Form;
 use rocket::http::ContentType;
 use rocket::local::blocking::Client;
+use rocket_http::Status;
 
 #[derive(FromForm)]
-struct Data<'r> {
+struct DataForm<'r> {
     foo: &'r [u8],
     bar: &'r [u8],
 }
 
 #[rocket::post("/", data = "<form>")]
-fn form(form: Form<Data<'_>>) -> String {
+fn form(form: Form<DataForm<'_>>) -> String {
     from_utf8(form.foo).unwrap().to_string() + from_utf8(form.bar).unwrap()
 }
 
 #[test]
-fn test_multipart_byte_slices_from_files() {
+fn test_from_form_fields_of_multipart_files_into_byte_slices() {
     let body = &[
         "--X-BOUNDARY",
         r#"Content-Disposition: form-data; name="foo"; filename="foo.txt""#,
@@ -39,5 +41,18 @@ fn test_multipart_byte_slices_from_files() {
         .body(body)
         .dispatch();
 
+    assert_eq!(response.status(), Status::Ok);
+    assert_eq!(response.into_string().unwrap(), "start><finish");
+}
+
+#[test]
+fn test_from_form_fields_of_values_into_byte_slices() {
+    let client = Client::debug_with(rocket::routes![form]).unwrap();
+    let response = client.post("/")
+        .header(ContentType::Form)
+        .body(format!("foo={}&bar={}", "start>", "<finish"))
+        .dispatch();
+
+    assert_eq!(response.status(), Status::Ok);
     assert_eq!(response.into_string().unwrap(), "start><finish");
 }

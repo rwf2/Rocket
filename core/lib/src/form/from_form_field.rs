@@ -324,6 +324,10 @@ impl<'v> FromFormField<'v> for bool {
 
 #[crate::async_trait]
 impl<'v> FromFormField<'v> for Capped<&'v [u8]> {
+    fn from_value(field: ValueField<'v>) -> Result<'v, Self> {
+        Ok(Capped::from(field.value.as_bytes()))
+    }
+
     async fn from_data(f: DataField<'v, '_>) -> Result<'v, Self> {
         use crate::data::{Capped, Outcome, FromData};
 
