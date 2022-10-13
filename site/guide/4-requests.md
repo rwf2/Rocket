@@ -486,6 +486,27 @@ authorization failure message is displayed. Finally, if a user isn't signed in,
 the `admin_panel_redirect` route is attempted. Since this route has no guards,
 it always succeeds. The user is redirected to a log in page.
 
+### Optional guards
+
+When you want verify whether a guard is validated or not from within your controller,
+you can wrap your guard in an `Option<T>`.
+If the guard was validated, the value will be `Some(T)`, otherwise it will be set to `None`:
+
+```rust
+# #[macro_use] extern crate rocket;
+# fn main() {}
+
+# type AdminUser = rocket::http::Method;
+
+#[get("/")]
+fn portal(maybe_authenticated: Option<AdminUser>) -> &'static str {
+    match maybe_authenticated {
+        Some(user) => "You're successfully logged in! Proceeding to the home page",
+        None => "You need to log in."
+    }
+}
+```
+
 ## Cookies
 
 A reference to a [`CookieJar`] is an important, built-in request guard: it
