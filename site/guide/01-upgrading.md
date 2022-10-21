@@ -117,7 +117,7 @@ rustup override set stable
 Using the stable release channel ensures that _no_ breakages will occur when
 upgrading your Rust compiler or Rocket. That being said, Rocket continues to
 take advantage of features only present in the nightly channel. As a result, the
-development experience will be superior on nightly for the forseeable future.
+development experience will be superior on nightly for the foreseeable future.
 For example, compiler diagnostics on `nightly` are more detailed and accurate:
 
 <details>
