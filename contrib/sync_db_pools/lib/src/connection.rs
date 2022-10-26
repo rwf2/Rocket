@@ -195,7 +195,11 @@ impl<K, C: Poolable> Drop for Connection<K, C> {
 impl<K, C: Poolable> Drop for ConnectionPool<K, C> {
     fn drop(&mut self) {
         let pool = self.pool.take();
-        tokio::task::spawn_blocking(move || drop(pool));
+        // Only use spawn_blocking if the Tokio runtime is still available
+        if let Ok(handle) = tokio::runtime::Handle::try_current() {
+            handle.spawn_blocking(move || drop(pool));
+        }
+        // Otherwise the pool will be dropped on the current thread
     }
 }
 
