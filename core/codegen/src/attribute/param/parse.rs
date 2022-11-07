@@ -40,6 +40,31 @@ impl Dynamic {
 }
 
 impl Parameter {
+
+    // Support three syntaxes
+    // 1. /user/:id   - REST API convention
+    // 2. /user/<id>  - Rocket definition
+    // 3. /user/{id}  - Braces enclosed
+    fn check_param(segment: &str) -> (bool, char, char, &str) {
+        let n = segment.len();
+        let (mut open, mut close) = ('<', '>');
+        if segment.starts_with('<') { 
+            return (segment.ends_with('>'), open, close, &segment[1..n-1]);
+        }
+        else if segment.starts_with('{') {
+            open = '{';
+            close = '}';
+            return (segment.ends_with('}') , open, close, &segment[1..n-1]);
+        }
+        else if segment.starts_with(':') {
+            open = ':';
+            close = '\0';
+            return (true, open, close, &segment[1..]);
+        }
+
+        return (false, open, close, &segment[0..0]);
+    }
+
     pub fn parse<P: Part>(
         segment: &str,
         source_span: Span,
@@ -47,8 +72,10 @@ impl Parameter {
         let mut trailing = false;
 
         // Check if this is a dynamic param. If so, check its well-formedness.
-        if segment.starts_with('<') && segment.ends_with('>') {
-            let mut name = &segment[1..(segment.len() - 1)];
+        let (valid, open, close, mut name) = Self::check_param(segment);
+
+        if valid {
+            // let mut name = &segment[1..(segment.len() - 1)];
             if name.ends_with("..") {
                 trailing = true;
                 name = &name[..(name.len() - 2)];
@@ -71,14 +98,19 @@ impl Parameter {
             }
         } else if segment.is_empty() {
             return Err(Error::new(segment, source_span, ErrorKind::Empty));
-        } else if segment.starts_with('<') {
+        } else if segment.starts_with(open) {
             let candidate = candidate_from_malformed(segment);
-            source_span.warning("`segment` starts with `<` but does not end with `>`")
+            source_span
+                .warning(format!("`segment` starts with `{}` but does not end with `{}`", open, close))
                 .help(format!("perhaps you meant the dynamic parameter `<{}>`?", candidate))
                 .emit_as_item_tokens();
-        } else if segment.contains('>') || segment.contains('<') {
-            source_span.warning("`segment` contains `<` or `>` but is not a dynamic parameter")
-                .emit_as_item_tokens();
+        } else if segment.contains(open) || (close != '\0' && segment.contains(close)) {
+            let mut close_hint = "".to_string();
+            if close != '\0' {
+                close_hint = format!(" or `{}`", close);
+            }
+            let hint = format!("`segment` contains `{}`{} but is not a dynamic parameter", open, close_hint);
+            source_span.warning(hint).emit_as_item_tokens();
         }
 
         Ok(Parameter::Static(Name::new(segment, source_span)))
