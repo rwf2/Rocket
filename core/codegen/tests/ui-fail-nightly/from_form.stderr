@@ -524,4 +524,13 @@ error[E0277]: the trait bound `bool: From<&str>` is not satisfied
 209 |     #[field(default = "no conversion")]
     |                       ^^^^^^^^^^^^^^^ the trait `From<&str>` is not implemented for `bool`
     |
+    = help: the following other types implement trait `From<T>`:
+              <bool as From<format_description::parse::format_item::HourBase>>
+              <bool as From<format_description::parse::format_item::MonthCaseSensitive>>
+              <bool as From<format_description::parse::format_item::PeriodCase>>
+              <bool as From<format_description::parse::format_item::PeriodCaseSensitive>>
+              <bool as From<format_description::parse::format_item::SignBehavior>>
+              <bool as From<format_description::parse::format_item::WeekdayCaseSensitive>>
+              <bool as From<format_description::parse::format_item::WeekdayOneIndexed>>
+              <bool as From<format_description::parse::format_item::YearBase>>
     = note: required for `&str` to implement `Into<bool>`
