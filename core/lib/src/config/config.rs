@@ -366,6 +366,8 @@ impl Config {
         launch_meta!("{}Configured for {}.", Paint::emoji("🔧 "), self.profile);
         launch_meta_!("address: {}", bold(&self.address));
         launch_meta_!("port: {}", bold(&self.port));
+        launch_meta_!("reuse_address: {}", bold(&self.reuse_address));
+        launch_meta_!("reuse_port: {}", bold(&self.reuse_port));
         launch_meta_!("workers: {}", bold(self.workers));
         launch_meta_!("max blocking threads: {}", bold(self.max_blocking));
         launch_meta_!("ident: {}", bold(&self.ident));
