@@ -10,7 +10,7 @@ use tokio::io::{AsyncRead, AsyncWrite};
 use tokio_rustls::{Accept, TlsAcceptor, server::TlsStream as BareTlsStream};
 
 use crate::tls::util::{load_certs, load_private_key, load_ca_certs};
-use crate::listener::{Connection, Listener, Certificates};
+use crate::listener::{Connection, Listener, Certificates, create_tcp_listener};
 
 /// A TLS listener over TCP.
 pub struct TlsListener {
@@ -72,7 +72,8 @@ pub struct Config<R> {
 }
 
 impl TlsListener {
-    pub async fn bind<R>(addr: SocketAddr, mut c: Config<R>) -> io::Result<TlsListener>
+    pub async fn bind<R>(addr: SocketAddr, mut c: Config<R>,
+                         reuse_address: bool, reuse_port: bool) -> io::Result<TlsListener>
         where R: io::BufRead
     {
         use rustls::server::{AllowAnyAuthenticatedClient, AllowAnyAnonymousOrAuthenticatedClient};
@@ -113,7 +114,7 @@ impl TlsListener {
         tls_config.ticketer = rustls::Ticketer::new()
             .map_err(|e| io::Error::new(io::ErrorKind::Other, format!("bad TLS ticketer: {}", e)))?;
 
-        let listener = TcpListener::bind(addr).await?;
+        let listener = create_tcp_listener(addr, reuse_address, reuse_port).await?;
         let acceptor = TlsAcceptor::from(Arc::new(tls_config));
         Ok(TlsListener { listener, acceptor })
     }

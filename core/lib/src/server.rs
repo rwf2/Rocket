@@ -16,7 +16,7 @@ use crate::ext::{AsyncReadExt, CancellableListener, CancellableIo};
 use crate::request::ConnectionMeta;
 
 use crate::http::{hyper, Method, Status, Header};
-use crate::http::private::{TcpListener, Listener, Connection, Incoming};
+use crate::http::private::{create_tcp_listener, Listener, Connection, Incoming};
 
 // A token returned to force the execution of one method before another.
 pub(crate) struct RequestToken;
@@ -372,7 +372,8 @@ impl Rocket<Orbit> {
                 use crate::http::tls::TlsListener;
 
                 let conf = config.to_native_config().map_err(ErrorKind::Io)?;
-                let l = TlsListener::bind(addr, conf).await.map_err(ErrorKind::Bind)?;
+                let l = TlsListener::bind(addr, conf, self.config.reuse_address, self.config.reuse_port)
+                    .await.map_err(ErrorKind::Bind)?;
                 addr = l.local_addr().unwrap_or(addr);
                 self.config.address = addr.ip();
                 self.config.port = addr.port();
@@ -381,7 +382,8 @@ impl Rocket<Orbit> {
             }
         }
 
-        let l = TcpListener::bind(addr).await.map_err(ErrorKind::Bind)?;
+        let l = create_tcp_listener(addr, self.config.reuse_address, self.config.reuse_port)
+            .await.map_err(ErrorKind::Bind)?;
         addr = l.local_addr().unwrap_or(addr);
         self.config.address = addr.ip();
         self.config.port = addr.port();

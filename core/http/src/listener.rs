@@ -10,7 +10,7 @@ use std::sync::Arc;
 use log::warn;
 use tokio::time::Sleep;
 use tokio::io::{AsyncRead, AsyncWrite};
-use tokio::net::TcpStream;
+use tokio::net::{TcpSocket, TcpStream};
 use hyper::server::accept::Accept;
 use state::Storage;
 
@@ -238,5 +238,27 @@ impl Connection for TcpStream {
     #[inline]
     fn enable_nodelay(&self) -> io::Result<()> {
         self.set_nodelay(true)
+    }
+}
+
+/// This function creates a tokio `TcpListener` optionally setting `reuse_address` or `reuse_port`.
+pub async fn create_tcp_listener(addr: SocketAddr, reuse_address: bool, reuse_port: bool) -> io::Result<TcpListener> {
+    if reuse_address || reuse_port {
+        let socket = match addr {
+            SocketAddr::V4(_) => TcpSocket::new_v4()?,
+            SocketAddr::V6(_) => TcpSocket::new_v6()?,
+        };
+
+        if reuse_address {
+            socket.set_reuseaddr(reuse_address)?;
+        }
+        if reuse_port {
+            socket.set_reuseport(reuse_port)?;
+        }
+
+        socket.bind(addr)?;
+        socket.listen(1024) // Same default as Rocket uses.
+    } else {
+        TcpListener::bind(addr).await
     }
 }

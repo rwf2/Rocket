@@ -68,6 +68,10 @@ pub struct Config {
     pub address: IpAddr,
     /// Port to serve on. **(default: `8000`)**
     pub port: u16,
+    /// Enable port reuse (multiple bindings). **(default: `false`)**
+    pub reuse_port: bool,
+    /// Enable address reuse (multiple bindings). **(default: `false`)**
+    pub reuse_address: bool,
     /// Number of threads to use for executing futures. **(default: `num_cores`)**
     ///
     /// _**Note:** Rocket only reads this value from sources in the [default
@@ -171,6 +175,8 @@ impl Config {
             profile: Self::DEBUG_PROFILE,
             address: Ipv4Addr::new(127, 0, 0, 1).into(),
             port: 8000,
+            reuse_port: false,
+            reuse_address: false,
             workers: num_cpus::get(),
             max_blocking: 512,
             ident: Ident::default(),
