@@ -61,7 +61,6 @@ optional = true
 [dependencies.sqlx]
 version = "0.6"
 default-features = false
-features = ["runtime-async-std-native-tls"]
 optional = true
 
 [dev-dependencies.rocket]
