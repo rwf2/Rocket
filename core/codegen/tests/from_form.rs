@@ -410,6 +410,50 @@ fn form_errors() {
 }
 
 #[test]
+fn form_error_return_wrong_field_name() {
+    fn evaluate_other<'v>(_other: &String, _check: &bool) -> form::Result<'v, ()> {
+        Err(form::Error::validation(""))?
+    }
+
+    #[derive(Debug, PartialEq, FromForm)]
+    struct WhoopsForm {
+        name: String,
+        check: bool,
+        // in the error context this is returned as "name" but should be "other"
+        // the problem is dependednt on an argument exsiting for evaluate_other
+        #[field(validate = evaluate_other(&self.check))]
+        other: String,
+    }
+
+    let errors = strict::<WhoopsForm>("name=test&check=true&other=").unwrap_err();
+    assert!(errors.iter().any(|e| {e.name.as_ref().unwrap() == "other"}));
+}
+
+#[test]
+fn form_validate_missing_error() {
+    fn evaluate<'v>(_value: &String) -> form::Result<'v, ()> {
+        Err(form::Error::validation(""))?
+    }
+
+    fn evaluate_with_argument<'v>(_value: &String, _check: &bool) -> form::Result<'v, ()> {
+        Err(form::Error::validation("lastname failed"))?
+    }
+
+    #[derive(Debug, PartialEq, FromForm)]
+    struct WhoopsForm {
+        #[field(validate = evaluate())]
+        firstname: String,
+        check: bool,
+        // this validator is hardcoded to return an error but it doesnt
+        #[field(validate = evaluate_with_argument(&self.check))]
+        lastname: String,
+    }
+
+    let errors = strict::<WhoopsForm>("firstname=&check=true&lastname=").unwrap_err();
+    assert!(errors.iter().any(|e| {e.name.as_ref().unwrap() == "lastname"}));
+}
+
+#[test]
 fn raw_ident_form() {
     #[derive(Debug, PartialEq, FromForm)]
     struct RawIdentForm {
