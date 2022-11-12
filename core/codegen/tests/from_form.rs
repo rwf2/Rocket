@@ -410,7 +410,7 @@ fn form_errors() {
 }
 
 #[test]
-fn form_error_return_wrong_field_name() {
+fn form_error_return_correct_field_name() {
     fn evaluate_other<'v>(_other: &String, _check: &bool) -> form::Result<'v, ()> {
         Err(form::Error::validation(""))?
     }
@@ -426,11 +426,11 @@ fn form_error_return_wrong_field_name() {
     }
 
     let errors = strict::<WhoopsForm>("name=test&check=true&other=").unwrap_err();
-    assert!(errors.iter().any(|e| {e.name.as_ref().unwrap() == "other"}));
+    assert!(errors.iter().any(|e| e.name.as_ref().unwrap() == "other"));
 }
 
 #[test]
-fn form_validate_missing_error() {
+fn form_validate_contains_all_errors() {
     fn evaluate<'v>(_value: &String) -> form::Result<'v, ()> {
         Err(form::Error::validation(""))?
     }
@@ -450,7 +450,8 @@ fn form_validate_missing_error() {
     }
 
     let errors = strict::<WhoopsForm>("firstname=&check=true&lastname=").unwrap_err();
-    assert!(errors.iter().any(|e| {e.name.as_ref().unwrap() == "lastname"}));
+    assert!(errors.iter().any(|e| e.name.as_ref().unwrap() == "lastname"));
+    assert!(errors.iter().any(|e| e.name.as_ref().unwrap() == "firstname"));
 }
 
 #[test]

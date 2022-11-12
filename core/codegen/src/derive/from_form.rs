@@ -1,5 +1,5 @@
 use proc_macro2::TokenStream;
-use devise::ext::{TypeExt, SpanDiagnosticExt, GenericsExt, quote_respanned};
+use devise::ext::{TypeExt, SpanDiagnosticExt, GenericsExt, Split2, quote_respanned};
 use syn::parse::Parser;
 use devise::*;
 
@@ -223,8 +223,13 @@ pub fn derive_from_form(input: proc_macro::TokenStream) -> TokenStream {
 
                 let o = syn::Ident::new("__o", fields.span());
                 let (_ok, _some, _err, _none) = (_Ok, _Some, _Err, _None);
-                let validate = fields.iter().flat_map(|f| validators(f, &o, false).unwrap());
-                let name_buf_opt = fields.iter().map(|f| f.name_buf_opt().unwrap());
+                let (validate, name_buf_opt) = fields.iter()
+                    .flat_map(|f| {
+                        let validate = validators(f, &o, false).unwrap();
+                        let name_buf = std::iter::repeat_with(move || f.name_buf_opt().unwrap());
+                        validate.zip(name_buf)
+                    })
+                    .split2();
 
                 let ident: Vec<_> = fields.iter()
                     .map(|f| f.context_ident())
