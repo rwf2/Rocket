@@ -1,3 +1,5 @@
+use std::collections::HashSet;
+
 use devise::{*, ext::{TypeExt, SpanDiagnosticExt}};
 
 use syn::{visit_mut::VisitMut, visit::Visit};
@@ -148,6 +150,13 @@ impl PartialEq for FieldName {
     }
 }
 
+fn member_to_ident(member: syn::Member) -> syn::Ident {
+    match member {
+        syn::Member::Named(ident) => ident,
+        syn::Member::Unnamed(i) => format_ident!("__{}", i.index, span = i.span),
+    }
+}
+
 impl FieldExt for Field<'_> {
     fn ident(&self) -> Option<&syn::Ident> {
         self.ident.as_ref()
@@ -163,10 +172,10 @@ impl FieldExt for Field<'_> {
         }
     }
 
+    /// Returns the ident used by the context generated for the `FromForm` impl.
+    /// This is _not_ the field's ident and should not be used as such.
     fn context_ident(&self) -> syn::Ident {
-        self.ident()
-            .map(|i| i.clone())
-            .unwrap_or_else(|| syn::Ident::new("__form_field", self.span()))
+        member_to_ident(self.member())
     }
 
     // With named existentials, this could return an `impl Iterator`...
@@ -203,13 +212,24 @@ impl FieldExt for Field<'_> {
     }
 }
 
-struct RecordMemberAccesses(Vec<syn::Member>);
+#[derive(Default)]
+struct RecordMemberAccesses {
+    reference: bool,
+    accesses: HashSet<(syn::Ident, bool)>,
+}
 
 impl<'a> Visit<'a> for RecordMemberAccesses {
+    fn visit_expr_reference(&mut self, i: &'a syn::ExprReference) {
+        self.reference = true;
+        syn::visit::visit_expr_reference(self, i);
+        self.reference = false;
+    }
+
     fn visit_expr_field(&mut self, i: &syn::ExprField) {
         if let syn::Expr::Path(e) = &*i.base {
             if e.path.is_ident("self") {
-                self.0.push(i.member.clone());
+                let ident = member_to_ident(i.member.clone());
+                self.accesses.insert((ident, self.reference));
             }
         }
 
@@ -218,9 +238,7 @@ impl<'a> Visit<'a> for RecordMemberAccesses {
 }
 
 struct ValidationMutator<'a> {
-    field: &'a syn::Ident,
-    parent: &'a syn::Ident,
-    local: bool,
+    field: Field<'a>,
     visited: bool,
 }
 
@@ -266,23 +284,9 @@ impl VisitMut for ValidationMutator<'_> {
         }
 
         self.visited = true;
-        let (parent, field) = (self.parent, self.field);
-        let form_field = match self.local {
-            true => syn::parse2(quote_spanned!(field.span() => &#field)).unwrap(),
-            false => {
-                let parent = parent.clone().with_span(field.span());
-                syn::parse2(quote_spanned!(field.span() => &#parent.#field)).unwrap()
-            }
-        };
-
-        call.args.insert(0, form_field);
+        let accessor = self.field.context_ident().with_span(self.field.ty.span());
+        call.args.insert(0, syn::parse_quote!(#accessor));
         syn::visit_mut::visit_expr_call_mut(self, call);
-    }
-
-    fn visit_ident_mut(&mut self, i: &mut syn::Ident) {
-        if !self.local && i == "self" {
-            *i = self.parent.clone().with_span(i.span());
-        }
     }
 
     fn visit_macro_mut(&mut self, mac: &mut syn::Macro) {
@@ -290,52 +294,105 @@ impl VisitMut for ValidationMutator<'_> {
         syn::visit_mut::visit_macro_mut(self, mac);
     }
 
+    fn visit_ident_mut(&mut self, i: &mut syn::Ident) {
+        // replace `self` with the context ident
+        if i == "self" {
+            *i = self.field.context_ident().with_span(self.field.ty.span());
+        }
+    }
+
     fn visit_expr_mut(&mut self, i: &mut syn::Expr) {
-        // If this is a local, replace accesses of `self.field` with `field`.
-        if let syn::Expr::Field(e) = i {
-            if let syn::Expr::Path(e) = &*e.base {
-                if e.path.is_ident("self") && self.local {
-                    let new_expr = self.field;
-                    *i = syn::parse_quote!(#new_expr);
+        fn inner_field(i: &syn::Expr) -> Option<syn::Expr> {
+            if let syn::Expr::Field(e) = i {
+                if let syn::Expr::Path(p) = &*e.base {
+                    if p.path.is_ident("self") {
+                        let member = &e.member;
+                        return Some(syn::parse_quote!(#member));
+                    }
                 }
             }
+
+            None
+        }
+
+        // replace `self.field` and `&self.field` with `field`
+        if let syn::Expr::Reference(r) = i {
+            if let Some(expr) = inner_field(&r.expr) {
+                if let Some(ref m) = r.mutability {
+                    m.span()
+                        .warning("`mut` has no effect in FromForm` validation")
+                        .note("`mut` is being discarded")
+                        .emit_as_item_tokens();
+                }
+
+                *i = expr;
+            }
+        } else if let Some(expr) = inner_field(&i) {
+            *i = expr;
         }
 
         syn::visit_mut::visit_expr_mut(self, i);
     }
 }
 
-pub fn validators<'v>(
-    field: Field<'v>,
-    parent: &'v syn::Ident, // field ident (if local) or form ident (if !local)
-    local: bool, // whether to emit local (true) or global (w/self) validations
-) -> Result<impl Iterator<Item = syn::Expr> + 'v> {
+pub fn validators<'v>(field: Field<'v>) -> Result<impl Iterator<Item = syn::Expr> + 'v> {
     Ok(FieldAttr::from_attrs(FieldAttr::NAME, &field.attrs)?
         .into_iter()
         .chain(FieldAttr::from_attrs(FieldAttr::NAME, field.parent.attrs())?)
         .filter_map(|a| a.validate)
-        .map(move |expr| {
-            let mut members = RecordMemberAccesses(vec![]);
-            members.visit_expr(&expr);
+        .map(move |mut expr| {
+            // TODO:
+            //  * We need a hashset of the member accesses.
+            //  * And we need to know if they're bound by value or reference.
+            //      - if value, use `Some(#member) = #member`
+            //      - if ref, use `Some(#member) = &#member`
+            let mut record = RecordMemberAccesses::default();
+            record.accesses.insert((field.context_ident(), true));
+            record.visit_expr(&expr);
 
-            let field_member = field.member();
-            let is_local_validation = members.0.iter().all(|m| m == &field_member);
-            (expr, is_local_validation)
-        })
-        .filter(move |(_, is_local)| *is_local == local)
-        .map(move |(mut expr, _)| {
-            let ty_span = field.ty.span();
-            let field = &field.context_ident().with_span(ty_span);
-            let mut v = ValidationMutator { parent, local, field, visited: false };
+            let mut v = ValidationMutator { field, visited: false };
             v.visit_expr_mut(&mut expr);
 
-            let span = expr.key_span.unwrap_or(ty_span);
+            let span = expr.key_span.unwrap_or(field.ty.span());
+            let matchers = record.accesses.iter().map(|(member, _)| member);
+            let values = record.accesses.iter()
+                .map(|(member, is_ref)| {
+                    if *is_ref { quote_spanned!(span => &#member) }
+                    else { quote_spanned!(span => #member) }
+                });
+
+            let matchers = quote_spanned!(span => (#(Some(#matchers)),*));
+            let values = quote_spanned!(span => (#(#values),*));
+            let name_opt = field.name_buf_opt().unwrap();
+
             define_spanned_export!(span => _form);
-            syn::parse2(quote_spanned!(span => {
-                let __result: #_form::Result<'_, ()> = #expr;
-                __result
-            })).unwrap()
+            let expr: syn::Expr = syn::parse_quote_spanned!(span => {
+                #[allow(unused_parens)]
+                let __result: #_form::Result<'_, ()> = match #values {
+                    #matchers => #expr,
+                    _ => Ok(()),
+                };
+
+                __result.map_err(|__e| match #name_opt {
+                    Some(__name) => __e.with_name(__name),
+                    None => __e
+                })
+            });
+
+            expr
         }))
+        // .map(move |(mut expr, local)| {
+        //     let ty_span = field.ty.span();
+        //     let mut v = ValidationMutator { field, local, visited: false };
+        //     v.visit_expr_mut(&mut expr);
+        //
+        //     let span = expr.key_span.unwrap_or(ty_span);
+        //     define_spanned_export!(span => _form);
+        //     syn::parse2(quote_spanned!(span => {
+        //         let __result: #_form::Result<'_, ()> = #expr;
+        //         __result
+        //     })).unwrap()
+        // }))
 }
 
 /// Take an $expr in `default = $expr` and turn it into a `Some($expr.into())`.

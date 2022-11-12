@@ -410,8 +410,8 @@ fn form_errors() {
 }
 
 #[test]
-fn form_error_return_correct_field_name() {
-    fn evaluate_other<'v>(_other: &String, _check: &bool) -> form::Result<'v, ()> {
+fn form_validate_error_return_correct_field_name() {
+    fn evaluate_other<'v>(_other: &str, _check: &bool) -> form::Result<'v, ()> {
         Err(form::Error::validation(""))?
     }
 
@@ -431,11 +431,11 @@ fn form_error_return_correct_field_name() {
 
 #[test]
 fn form_validate_contains_all_errors() {
-    fn evaluate<'v>(_value: &String) -> form::Result<'v, ()> {
+    fn evaluate<'v>(_value: &str) -> form::Result<'v, ()> {
         Err(form::Error::validation(""))?
     }
 
-    fn evaluate_with_argument<'v>(_value: &String, _check: &bool) -> form::Result<'v, ()> {
+    fn evaluate_with_argument<'v>(_value: &str, _check: bool) -> form::Result<'v, ()> {
         Err(form::Error::validation("lastname failed"))?
     }
 
@@ -445,7 +445,7 @@ fn form_validate_contains_all_errors() {
         firstname: String,
         check: bool,
         // this validator is hardcoded to return an error but it doesnt
-        #[field(validate = evaluate_with_argument(&self.check))]
+        #[field(validate = evaluate_with_argument(self.check))]
         lastname: String,
     }
 

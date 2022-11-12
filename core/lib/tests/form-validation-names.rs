@@ -109,7 +109,7 @@ fn test_form_validation_context() {
     assert_eq!(fuzzy(&c, "cats[0].nick", None), 1);
     assert_eq!(exact(&c, "cats[0].name", None), 1);
 
-    let c = errors::<Person>("kitty.name=Michael");
+    let c = dbg!(errors::<Person>("kitty.name=Michael"));
     assert_eq!(exact(&c, "kitty.nick", Missing), 1);
     assert_eq!(exact(&c, "dog", Missing), 1);
     assert_eq!(exact(&c, "cats[0].name", None), 0);
