@@ -341,11 +341,6 @@ pub fn validators<'v>(field: Field<'v>) -> Result<impl Iterator<Item = syn::Expr
         .chain(FieldAttr::from_attrs(FieldAttr::NAME, field.parent.attrs())?)
         .filter_map(|a| a.validate)
         .map(move |mut expr| {
-            // TODO:
-            //  * We need a hashset of the member accesses.
-            //  * And we need to know if they're bound by value or reference.
-            //      - if value, use `Some(#member) = #member`
-            //      - if ref, use `Some(#member) = &#member`
             let mut record = RecordMemberAccesses::default();
             record.accesses.insert((field.context_ident(), true));
             record.visit_expr(&expr);
@@ -381,18 +376,6 @@ pub fn validators<'v>(field: Field<'v>) -> Result<impl Iterator<Item = syn::Expr
 
             expr
         }))
-        // .map(move |(mut expr, local)| {
-        //     let ty_span = field.ty.span();
-        //     let mut v = ValidationMutator { field, local, visited: false };
-        //     v.visit_expr_mut(&mut expr);
-        //
-        //     let span = expr.key_span.unwrap_or(ty_span);
-        //     define_spanned_export!(span => _form);
-        //     syn::parse2(quote_spanned!(span => {
-        //         let __result: #_form::Result<'_, ()> = #expr;
-        //         __result
-        //     })).unwrap()
-        // }))
 }
 
 /// Take an $expr in `default = $expr` and turn it into a `Some($expr.into())`.
