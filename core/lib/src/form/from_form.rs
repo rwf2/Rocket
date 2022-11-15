@@ -23,7 +23,7 @@ use crate::http::uncased::AsUncased;
 /// A form guard is a guard that operates on form fields, typically those with a
 /// particular name prefix. Form guards validate and parse form field data via
 /// implementations of `FromForm`. In other words, a type is a form guard _iff_
-/// it implements `FromFrom`.
+/// it implements `FromForm`.
 ///
 /// Form guards are used as the inner type of the [`Form`] data guard:
 ///
