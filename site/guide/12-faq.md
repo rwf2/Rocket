@@ -362,7 +362,7 @@ out-of-the-box, and you can implement your own, too. See the following:
   * Parameter Guards: [`FromParam`]
   * Multi-Segment Guards: [`FromSegments`]
   * Data Guards: [`FromData`]
-  * Form Guards: [`FromFrom`]
+  * Form Guards: [`FromForm`]
   * Request Guards: [`FromRequest`]
 </div>
 </details>
@@ -371,7 +371,7 @@ out-of-the-box, and you can implement your own, too. See the following:
 [`FromParam`]: @api/rocket/request/trait.FromParam.html
 [`FromSegments`]: @api/rocket/request/trait.FromSegments.html
 [`FromData`]: @api/rocket/data/trait.FromData.html
-[`FromFrom`]: @api/rocket/form/trait.FromForm.html
+[`FromForm`]: @api/rocket/form/trait.FromForm.html
 [`FromRequest`]: @api/rocket/request/trait.FromRequest.html
 
 <details id="response-headers">
