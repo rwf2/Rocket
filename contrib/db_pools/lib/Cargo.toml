@@ -23,6 +23,11 @@ sqlx_postgres = ["sqlx", "sqlx/postgres"]
 sqlx_sqlite = ["sqlx", "sqlx/sqlite"]
 sqlx_mssql = ["sqlx", "sqlx/mssql"]
 sqlx_macros = ["sqlx/macros"]
+# diesel features
+_diesel = ["r2d2", "diesel/r2d2"]
+diesel_postgres = ["_diesel", "diesel/postgres"]
+diesel_mysql = ["_diesel", "diesel/mysql"]
+diesel_sqlite = ["_diesel", "diesel/sqlite"]
 # implicit features: mongodb
 
 [dependencies.rocket]
@@ -50,6 +55,14 @@ optional = true
 version = "0.10"
 default-features = false
 features = ["rt_tokio_1"]
+optional = true
+
+[dependencies.diesel]
+version = "2.0.2"
+optional = true
+
+[dependencies.r2d2]
+version = "0.8.10"
 optional = true
 
 [dependencies.mongodb]

@@ -207,6 +207,38 @@ mod deadpool_postgres {
     }
 }
 
+#[cfg(feature = "diesel")]
+mod diesel {
+    use diesel::r2d2::{Builder, PooledConnection, Pool, ConnectionManager, R2D2Connection};
+    use super::{Duration, Error, Config, Figment};
+
+    #[rocket::async_trait]
+    impl<T: R2D2Connection + 'static> crate::Pool for Pool<ConnectionManager<T>> {
+        type Connection = PooledConnection<ConnectionManager<T>>;
+
+        type Error = Error<r2d2::Error, r2d2::Error>;
+
+        async fn init(figment: &Figment) -> Result<Self, Self::Error> {
+            let config: Config = figment.extract()?;
+
+            Builder::<ConnectionManager<T>>::new()
+                .max_size(config.max_connections as u32)
+                .min_idle(config.min_connections)
+                .connection_timeout(Duration::from_secs(config.connect_timeout))
+                .idle_timeout(config.idle_timeout.map(|s| Duration::from_secs(s)))
+                .build(ConnectionManager::<T>::new(config.url))
+                .map_err(Error::Init)
+
+        }
+
+        async fn get(&self) -> Result<Self::Connection, Self::Error> {
+            self.get().map_err(Error::Get)
+        }
+
+        async fn close(&self) {}
+    }
+}
+
 #[cfg(feature = "sqlx")]
 mod sqlx {
     use sqlx::ConnectOptions;
