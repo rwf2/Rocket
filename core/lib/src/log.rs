@@ -21,11 +21,11 @@ macro_rules! define_log_macro {
     );
     ($name:ident ($indented:ident): $kind:ident, $target:expr, $d:tt) => (
         define_log_macro!($name: $kind, $target, $d);
-        define_log_macro!($indented: $kind, $target, $d);
+        define_log_macro!($indented: $kind, concat!($target, "::_"), $d);
     );
     ($kind:ident, $indented:ident) => (
         define_log_macro!($kind: $kind, module_path!(), $);
-        define_log_macro!($indented: $kind, "_", $);
+        define_log_macro!($indented: $kind, concat!(module_path!(), "::_"), $);
 
         pub use $indented;
     );

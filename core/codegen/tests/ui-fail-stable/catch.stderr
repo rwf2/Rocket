@@ -60,13 +60,13 @@ error[E0308]: arguments to this function are incorrect
 30 | fn f3(_request: &Request, other: bool) { }
    |    ^^           -                ---- an argument of type `bool` is missing
    |                 |
-   |                 argument of type `&rocket::Request<'_>` unexpected
+   |                 argument of type `Status` unexpected
    |
 note: function defined here
   --> tests/ui-fail-stable/catch.rs:30:4
    |
 30 | fn f3(_request: &Request, other: bool) { }
-   |    ^^---------------------
+   |    ^^ ------------------  -----------
 help: did you mean
    |
 29 | f3(bool, /* bool */)
