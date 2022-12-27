@@ -3,7 +3,7 @@ use std::fmt;
 use crate::{Request, http::Method, local::asynchronous};
 use crate::http::uri::Origin;
 
-use super::{Client, LocalResponse};
+use super::{Client, LocalResponse, super::form::LocalForm};
 
 /// A `blocking` local request as returned by [`Client`](super::Client).
 ///
@@ -59,6 +59,11 @@ impl<'c> LocalRequest<'c> {
     fn _dispatch(self) -> LocalResponse<'c> {
         let inner = self.client.block_on(self.inner.dispatch());
         LocalResponse { inner, client: self.client }
+    }
+
+    fn _form(mut self, form: LocalForm<'c>) -> LocalRequest<'c> {
+        self.inner = self.inner._form(form);
+        self
     }
 
     pub_request_impl!("# use rocket::local::blocking::Client;\n\
