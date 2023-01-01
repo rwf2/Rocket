@@ -1,5 +1,5 @@
 [default.databases.rusqlite]
-url = "file:rusqlite?mode=memory&cache=shared"
+url = "rusqlite"
 
 [default.databases.sqlx]
 url = "db/sqlx/db.sqlite"
