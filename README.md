@@ -103,7 +103,7 @@ suite with `TRYBUILD=overwrite` and inspect the `diff` of `.std*` files.
 
 [`trybuild`]: https://docs.rs/trybuild/1
 
-## Documentation
+### Building Documentation
 
 API documentation is built with `./scripts/mk-docs.sh`. The resulting assets are
 uploaded to [api.rocket.rs](https://api.rocket.rs/).
