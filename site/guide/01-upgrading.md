@@ -17,7 +17,7 @@ developers wishing to migrate their applications to Rocket v0.5.
 ! note Don't panic!
 
   Simply upgrading Rocket's version string to the `0.5` series will result in
-  _many_ `rustc` compiler errors. But don't let this phase you! The vast
+  _many_ `rustc` compiler errors. But don't let this faze you! The vast
   majority of changes are simple renames and `#[async_trait]` attributions which
   manifest in a cascading of errors. As such, resolving _one_ top-level issue,
   typically requiring minimal, trivial changes, often resolves _many_ errors in
