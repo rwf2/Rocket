@@ -303,7 +303,7 @@ are:
   * [`NamedFile`] - Streams a file to the client; automatically sets the
     Content-Type based on the file's extension.
   * [`Redirect`] - Redirects the client to a different URI.
-  * [`content`] - Contains types that override the Content-Type a response.
+  * [`content`] - Contains types that override the Content-Type of a response.
   * [`status`] - Contains types that override the status code of a response.
   * [`Flash`] - Sets a "flash" cookie that is removed when accessed.
   * [`Json`] - Automatically serializes values into JSON.
