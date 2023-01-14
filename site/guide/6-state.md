@@ -105,7 +105,7 @@ fn state(hit_count: &State<HitCount>, config: &State<Config>) { /* .. */ }
   refuse to start your application. This prevents what would have been an
   unmanaged state runtime error. Unmanaged state is detected at runtime through
   [_sentinels_](@api/rocket/trait.Sentinel.html), so there are limitations. If a
-  limitation is hit, Rocket still won't call an the offending route. Instead,
+  limitation is hit, Rocket still won't call the offending route. Instead,
   Rocket will log an error message and return a **500** error to the client.
 
 You can find a complete example using the `HitCount` structure in the [state
