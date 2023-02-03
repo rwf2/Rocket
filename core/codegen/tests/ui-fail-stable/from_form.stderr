@@ -460,12 +460,6 @@ error: [note] error occurred while deriving `FromForm`
     |
     = note: this error originates in the derive macro `FromForm` (in Nightly builds, run with -Z macro-backtrace for more info)
 
-error[E0425]: cannot find function `unknown` in this scope
-   --> tests/ui-fail-stable/from_form.rs:153:24
-    |
-153 |     #[field(validate = unknown())]
-    |                        ^^^^^^^ not found in this scope
-
 error[E0308]: mismatched types
    --> tests/ui-fail-stable/from_form.rs:147:24
     |
@@ -474,6 +468,12 @@ error[E0308]: mismatched types
     |
     = note: expected enum `Result<(), Errors<'_>>`
                found type `{integer}`
+
+error[E0425]: cannot find function `unknown` in this scope
+   --> tests/ui-fail-stable/from_form.rs:153:24
+    |
+153 |     #[field(validate = unknown())]
+    |                        ^^^^^^^ not found in this scope
 
 error[E0308]: mismatched types
    --> tests/ui-fail-stable/from_form.rs:160:12
@@ -511,7 +511,7 @@ error[E0308]: mismatched types
    --> tests/ui-fail-stable/from_form.rs:171:23
     |
 171 |     #[field(default = 123)]
-    |                       ^^^
+    |                       ^^^- help: try using a conversion method: `.to_string()`
     |                       |
     |                       expected struct `std::string::String`, found integer
     |                       arguments to this enum variant are incorrect
@@ -521,19 +521,14 @@ note: tuple variant defined here
     |
     |     Some(#[stable(feature = "rust1", since = "1.0.0")] T),
     |     ^^^^
-help: try using a conversion method
-    |
-171 |     #[field(default = 123.to_string())]
-    |                          ++++++++++++
-171 |     #[field(default = 123.to_string())]
-    |                          ++++++++++++
 
 error[E0308]: mismatched types
    --> tests/ui-fail-stable/from_form.rs:203:33
     |
 203 |     #[field(default_with = Some("hi"))]
-    |                            ---- ^^^^ expected struct `std::string::String`, found `&str`
-    |                            |
+    |                            ---- ^^^^- help: try using a conversion method: `.to_string()`
+    |                            |    |
+    |                            |    expected struct `std::string::String`, found `&str`
     |                            arguments to this enum variant are incorrect
     |
 note: tuple variant defined here
@@ -541,12 +536,6 @@ note: tuple variant defined here
     |
     |     Some(#[stable(feature = "rust1", since = "1.0.0")] T),
     |     ^^^^
-help: try using a conversion method
-    |
-203 |     #[field(default_with = Some("hi".to_string()))]
-    |                                     ++++++++++++
-203 |     #[field(default_with = Some("hi".to_string()))]
-    |                                     ++++++++++++
 
 error[E0277]: the trait bound `bool: From<&str>` is not satisfied
    --> tests/ui-fail-stable/from_form.rs:209:23

@@ -449,7 +449,7 @@ error[E0308]: mismatched types
 159 |     #[field(validate = ext(rocket::http::ContentType::HTML))]
     |                        --- arguments to this function are incorrect
 160 |     first: String,
-    |            ^^^^^^ expected enum `TempFile`, found struct `std::string::String`
+    |            ^^^^^^ expected enum `TempFile`, found struct `String`
     |
     = note: expected reference `&TempFile<'_>`
                found reference `&std::string::String`
@@ -465,7 +465,7 @@ error[E0308]: arguments to this function are incorrect
 165 |     #[field(validate = ext("hello"))]
     |                        ^^^ ------- expected struct `ContentType`, found `&str`
 166 |     first: String,
-    |            ------ expected enum `TempFile`, found struct `std::string::String`
+    |            ------ expected enum `TempFile`, found struct `String`
     |
     = note: expected reference `&TempFile<'_>`
                found reference `&std::string::String`
@@ -481,9 +481,14 @@ error[E0308]: mismatched types
 171 |     #[field(default = 123)]
     |                       ^^^- help: try using a conversion method: `.to_string()`
     |                       |
-    |                       expected struct `std::string::String`, found integer
+    |                       expected struct `String`, found integer
     |                       arguments to this enum variant are incorrect
     |
+help: the type constructed contains `{integer}` due to the type of the argument passed
+   --> tests/ui-fail-nightly/from_form.rs:171:23
+    |
+171 |     #[field(default = 123)]
+    |                       ^^^ this argument influences the type of `Some`
 note: tuple variant defined here
    --> $RUST/core/src/option.rs
     |
@@ -496,9 +501,16 @@ error[E0308]: mismatched types
 203 |     #[field(default_with = Some("hi"))]
     |                            ---- ^^^^- help: try using a conversion method: `.to_string()`
     |                            |    |
-    |                            |    expected struct `std::string::String`, found `&str`
+    |                            |    expected struct `String`, found `&str`
     |                            arguments to this enum variant are incorrect
     |
+help: the type constructed contains `&'static str` due to the type of the argument passed
+   --> tests/ui-fail-nightly/from_form.rs:203:28
+    |
+203 |     #[field(default_with = Some("hi"))]
+    |                            ^^^^^----^
+    |                                 |
+    |                                 this argument influences the type of `Some`
 note: tuple variant defined here
    --> $RUST/core/src/option.rs
     |
