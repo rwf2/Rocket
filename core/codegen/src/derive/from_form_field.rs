@@ -47,7 +47,7 @@ pub fn derive_from_form_field(input: proc_macro::TokenStream) -> TokenStream {
             .with_output(|_, output| quote! {
                 fn from_value(
                     __f: #_form::ValueField<'__v>
-                ) -> Result<Self, #_form::Errors<'__v>> {
+                ) -> #_Result<Self, #_form::Errors<'__v>> {
 
                     #output
                 }

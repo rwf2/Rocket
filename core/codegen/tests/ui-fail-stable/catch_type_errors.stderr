@@ -15,7 +15,7 @@ error[E0277]: the trait bound `usize: Responder<'_, '_>` is not satisfied
             <Accepted<R> as Responder<'r, 'o>>
             <Arc<[u8]> as Responder<'r, 'static>>
             <Arc<str> as Responder<'r, 'static>>
-          and 40 others
+          and $N others
 
 error[E0277]: the trait bound `bool: Responder<'_, '_>` is not satisfied
   --> tests/ui-fail-stable/catch_type_errors.rs:11:30
@@ -34,7 +34,7 @@ error[E0277]: the trait bound `bool: Responder<'_, '_>` is not satisfied
              <Accepted<R> as Responder<'r, 'o>>
              <Arc<[u8]> as Responder<'r, 'static>>
              <Arc<str> as Responder<'r, 'static>>
-           and 40 others
+           and $N others
 
 error[E0308]: mismatched types
   --> tests/ui-fail-stable/catch_type_errors.rs:16:17
@@ -48,7 +48,7 @@ note: function defined here
   --> tests/ui-fail-stable/catch_type_errors.rs:16:4
    |
 16 | fn f3(_request: bool) -> usize {
-   |    ^^-
+   |    ^^ --------------
 
 error[E0277]: the trait bound `usize: Responder<'_, '_>` is not satisfied
   --> tests/ui-fail-stable/catch_type_errors.rs:16:26
@@ -67,7 +67,7 @@ error[E0277]: the trait bound `usize: Responder<'_, '_>` is not satisfied
              <Accepted<R> as Responder<'r, 'o>>
              <Arc<[u8]> as Responder<'r, 'static>>
              <Arc<str> as Responder<'r, 'static>>
-           and 40 others
+           and $N others
 
 error[E0277]: the trait bound `usize: Responder<'_, '_>` is not satisfied
   --> tests/ui-fail-stable/catch_type_errors.rs:21:12
@@ -86,4 +86,4 @@ error[E0277]: the trait bound `usize: Responder<'_, '_>` is not satisfied
              <Accepted<R> as Responder<'r, 'o>>
              <Arc<[u8]> as Responder<'r, 'static>>
              <Arc<str> as Responder<'r, 'static>>
-           and 40 others
+           and $N others

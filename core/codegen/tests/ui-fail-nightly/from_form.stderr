@@ -428,6 +428,15 @@ note: error occurred while deriving `FromForm`
     |          ^^^^^^^^
     = note: this error originates in the derive macro `FromForm` (in Nightly builds, run with -Z macro-backtrace for more info)
 
+error[E0308]: mismatched types
+   --> tests/ui-fail-nightly/from_form.rs:147:24
+    |
+147 |     #[field(validate = 123)]
+    |                        ^^^ expected enum `Result`, found integer
+    |
+    = note: expected enum `Result<(), Errors<'_>>`
+               found type `{integer}`
+
 error[E0425]: cannot find function `unknown` in this scope
    --> tests/ui-fail-nightly/from_form.rs:153:24
     |
@@ -435,23 +444,12 @@ error[E0425]: cannot find function `unknown` in this scope
     |                        ^^^^^^^ not found in this scope
 
 error[E0308]: mismatched types
-   --> tests/ui-fail-nightly/from_form.rs:147:24
-    |
-147 |     #[field(validate = 123)]
-    |             --------   ^^^ expected enum `Result`, found integer
-    |             |
-    |             expected due to this
-    |
-    = note: expected enum `Result<(), Errors<'_>>`
-               found type `{integer}`
-
-error[E0308]: mismatched types
    --> tests/ui-fail-nightly/from_form.rs:160:12
     |
 159 |     #[field(validate = ext(rocket::http::ContentType::HTML))]
     |                        --- arguments to this function are incorrect
 160 |     first: String,
-    |            ^^^^^^ expected enum `TempFile`, found struct `std::string::String`
+    |            ^^^^^^ expected enum `TempFile`, found struct `String`
     |
     = note: expected reference `&TempFile<'_>`
                found reference `&std::string::String`
@@ -467,7 +465,7 @@ error[E0308]: arguments to this function are incorrect
 165 |     #[field(validate = ext("hello"))]
     |                        ^^^ ------- expected struct `ContentType`, found `&str`
 166 |     first: String,
-    |            ------ expected enum `TempFile`, found struct `std::string::String`
+    |            ------ expected enum `TempFile`, found struct `String`
     |
     = note: expected reference `&TempFile<'_>`
                found reference `&std::string::String`
@@ -481,42 +479,43 @@ error[E0308]: mismatched types
    --> tests/ui-fail-nightly/from_form.rs:171:23
     |
 171 |     #[field(default = 123)]
-    |                       ^^^
+    |                       ^^^- help: try using a conversion method: `.to_string()`
     |                       |
-    |                       expected struct `std::string::String`, found integer
+    |                       expected struct `String`, found integer
     |                       arguments to this enum variant are incorrect
     |
+help: the type constructed contains `{integer}` due to the type of the argument passed
+   --> tests/ui-fail-nightly/from_form.rs:171:23
+    |
+171 |     #[field(default = 123)]
+    |                       ^^^ this argument influences the type of `Some`
 note: tuple variant defined here
    --> $RUST/core/src/option.rs
     |
     |     Some(#[stable(feature = "rust1", since = "1.0.0")] T),
     |     ^^^^
-help: try using a conversion method
-    |
-171 |     #[field(default = 123.to_string())]
-    |                          ++++++++++++
-171 |     #[field(default = 123.to_string())]
-    |                          ++++++++++++
 
 error[E0308]: mismatched types
    --> tests/ui-fail-nightly/from_form.rs:203:33
     |
 203 |     #[field(default_with = Some("hi"))]
-    |                            ---- ^^^^ expected struct `std::string::String`, found `&str`
-    |                            |
+    |                            ---- ^^^^- help: try using a conversion method: `.to_string()`
+    |                            |    |
+    |                            |    expected struct `String`, found `&str`
     |                            arguments to this enum variant are incorrect
     |
+help: the type constructed contains `&'static str` due to the type of the argument passed
+   --> tests/ui-fail-nightly/from_form.rs:203:28
+    |
+203 |     #[field(default_with = Some("hi"))]
+    |                            ^^^^^----^
+    |                                 |
+    |                                 this argument influences the type of `Some`
 note: tuple variant defined here
    --> $RUST/core/src/option.rs
     |
     |     Some(#[stable(feature = "rust1", since = "1.0.0")] T),
     |     ^^^^
-help: try using a conversion method
-    |
-203 |     #[field(default_with = Some("hi".to_string()))]
-    |                                     ++++++++++++
-203 |     #[field(default_with = Some("hi".to_string()))]
-    |                                     ++++++++++++
 
 error[E0277]: the trait bound `bool: From<&str>` is not satisfied
    --> tests/ui-fail-nightly/from_form.rs:209:23
@@ -524,4 +523,13 @@ error[E0277]: the trait bound `bool: From<&str>` is not satisfied
 209 |     #[field(default = "no conversion")]
     |                       ^^^^^^^^^^^^^^^ the trait `From<&str>` is not implemented for `bool`
     |
+    = help: the following other types implement trait `From<T>`:
+              <bool as From<format_description::parse::format_item::HourBase>>
+              <bool as From<format_description::parse::format_item::MonthCaseSensitive>>
+              <bool as From<format_description::parse::format_item::PeriodCase>>
+              <bool as From<format_description::parse::format_item::PeriodCaseSensitive>>
+              <bool as From<format_description::parse::format_item::SignBehavior>>
+              <bool as From<format_description::parse::format_item::WeekdayCaseSensitive>>
+              <bool as From<format_description::parse::format_item::WeekdayOneIndexed>>
+              <bool as From<format_description::parse::format_item::YearBase>>
     = note: required for `&str` to implement `Into<bool>`
