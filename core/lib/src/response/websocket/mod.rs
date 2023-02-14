@@ -257,8 +257,6 @@ where
     F: Fn(WebsocketChannel) -> Box<dyn Future<Output = ()> + Send + Unpin> + Sync + Send
 {
     async fn start(&self, upgraded: crate::http::hyper::upgrade::Upgraded) {
-        println!("started this thing!");
-
         // create an channel
         let (ch, a, b) = WebsocketChannel::new(upgraded);
 
@@ -266,7 +264,6 @@ where
         let event_loop = (self.task)(ch);
 
         tokio::join!(a, b, event_loop);
-        println!("all things done, move on!");
     }
 }
 
