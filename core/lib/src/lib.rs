@@ -123,6 +123,7 @@ pub use time;
 #[doc(hidden)] pub mod sentinel;
 pub mod local;
 pub mod request;
+pub mod upgrade;
 pub mod response;
 pub mod config;
 pub mod form;
@@ -175,6 +176,7 @@ mod rocket;
 mod router;
 mod phase;
 
+#[doc(inline)] pub use crate::upgrade::Upgrade;
 #[doc(inline)] pub use crate::response::Response;
 #[doc(inline)] pub use crate::data::Data;
 #[doc(inline)] pub use crate::config::Config;

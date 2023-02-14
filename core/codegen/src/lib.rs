@@ -56,6 +56,8 @@
 
 #[macro_use] extern crate quote;
 
+use syn::parse::Parser;
+
 use rocket_http as http;
 
 #[macro_use]
@@ -1482,6 +1484,24 @@ pub fn rocket_internal_uri(input: TokenStream) -> TokenStream {
 #[doc(hidden)]
 pub fn __typed_stream(input: TokenStream) -> TokenStream {
     emit!(bang::typed_stream(input))
+}
+
+/// Internal macro: `__websocket!`.
+#[proc_macro]
+#[doc(hidden)]
+pub fn __websocket(input: TokenStream) -> TokenStream {
+    let stmts = syn::Block::parse_within.parse(input).expect("Input to __websocket! should be statements");
+    quote!(
+        Websocket::create(|mut ch: WebsocketChannel| {
+            ::std::boxed::Box::new(
+                ::std::boxed::Box::pin(
+                    async move {
+                        #(#stmts)*
+                    }
+                )
+            )
+        })
+    ).into()
 }
 
 /// Private Rocket internal macro: `internal_guide_tests!`.

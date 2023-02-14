@@ -5,6 +5,7 @@ use tokio::io::{AsyncRead, AsyncSeek};
 
 use crate::http::{Header, HeaderMap, Status, ContentType, Cookie};
 use crate::response::Body;
+use crate::upgrade::Upgrade;
 
 /// Builder for the [`Response`] type.
 ///
@@ -261,6 +262,13 @@ impl<'r> Builder<'r> {
         self
     }
 
+    /// Sets the upgrade of the `Response`.
+    #[inline(always)]
+    pub fn upgrade(&mut self, upgrade: Option<Box<dyn Upgrade<'static> + Send>>) -> &mut Builder<'r> {
+        self.response.set_upgrade(upgrade);
+        self
+    }
+
     /// Sets the max chunk size of a body, if any, to `size`.
     ///
     /// See [`Response::set_max_chunk_size()`] for notes.
@@ -413,6 +421,7 @@ pub struct Response<'r> {
     status: Option<Status>,
     headers: HeaderMap<'r>,
     body: Body<'r>,
+    upgrade: Option<Box<dyn Upgrade<'static> + Send>>,
 }
 
 impl<'r> Response<'r> {
@@ -805,6 +814,26 @@ impl<'r> Response<'r> {
         where B: AsyncRead + Send + 'r
     {
         self.body = Body::with_unsized(body);
+    }
+
+    /// Returns a instance of the `Upgrade`-trait when the `Response` is upgradeable
+    #[inline(always)]
+    pub fn upgrade(&self) -> &Option<Box<dyn Upgrade<'static> + Send>> {
+        &self.upgrade
+    }
+
+    /// Returns a mutable instance of the `Upgrade`-trait when the `Response` is upgradeable
+    #[inline(always)]
+    pub fn upgrade_mut(&mut self) -> &mut Option<Box<dyn Upgrade<'static> + Send>> {
+        &mut self.upgrade
+    }
+
+    /// Sets the upgrade contained in this `Response`
+    /// 
+    /// While the response also need to have status 101 SwitchingProtocols in order to be a valid upgrade,
+    /// this method doesn't set this, and it's expected that the caller sets this.
+    pub fn set_upgrade(&mut self, upgrade: Option<Box<dyn Upgrade<'static> + Send>>) {
+        self.upgrade = upgrade;
     }
 
     /// Sets the body's maximum chunk size to `size` bytes.
