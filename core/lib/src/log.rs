@@ -177,8 +177,9 @@ pub(crate) fn init(config: &crate::Config) {
 
     // Set Rocket-logger specific settings only if Rocket's logger is set.
     if ROCKET_LOGGER_SET.load(Ordering::Acquire) {
+        use is_terminal::IsTerminal;
         // Rocket logs to stdout, so disable coloring if it's not a TTY.
-        if !atty::is(atty::Stream::Stdout) {
+        if !std::io::stdout().is_terminal() {
             Paint::disable();
         }
 

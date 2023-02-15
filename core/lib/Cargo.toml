@@ -43,7 +43,7 @@ num_cpus = "1.0"
 time = { version = "0.3", features = ["macros", "parsing"] }
 memchr = "2" # TODO: Use pear instead.
 binascii = "0.1"
-atty = "0.2"
+is-terminal = "0.4.3"
 ref-cast = "1.0"
 atomic = "0.5"
 parking_lot = "0.12"
