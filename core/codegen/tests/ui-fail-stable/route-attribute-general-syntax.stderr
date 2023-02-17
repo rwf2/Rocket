@@ -62,7 +62,7 @@ error: expected key/value `key = value`
   --> tests/ui-fail-stable/route-attribute-general-syntax.rs:33:12
    |
 33 | #[get("/", ...)]
-   |            ^^^
+   |            ^
 
 error: handler arguments must be named
          --- help: to name an ignored handler argument, use `_name`

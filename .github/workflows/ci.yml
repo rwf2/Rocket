@@ -8,10 +8,12 @@ env:
 jobs:
   test:
     name: "${{ matrix.platform.name }} ${{ matrix.test.name }} (${{ matrix.platform.toolchain }})"
+    runs-on: ${{ matrix.platform.distro }}
 
     strategy:
       fail-fast: false
       matrix:
+        fallible: [false]
         platform:
           - { name: Linux, distro: ubuntu-latest, toolchain: stable }
           - { name: Windows, distro: windows-latest, toolchain: stable }
@@ -26,8 +28,12 @@ jobs:
             test: { name: Core, flag: "--core" }
           - platform: { name: Linux, distro: ubuntu-latest, toolchain: stable }
             test: { name: Release, flag: "--release" }
-
-    runs-on: ${{ matrix.platform.distro }}
+          - platform: { name: Linux, distro: ubuntu-latest, toolchain: stable }
+            test: { name: UI, flag: "--ui" }
+            fallible: true
+          - platform: { name: Linux, distro: ubuntu-latest, toolchain: nightly }
+            test: { name: UI, flag: "--ui" }
+            fallible: true
 
     steps:
       - name: Checkout Sources
@@ -59,11 +65,10 @@ jobs:
           sudo apt-get install -y libmysqlclient-dev libpq-dev libsqlite3-dev
 
       - name: Install Rust
-        uses: actions-rs/toolchain@v1
+        uses: dtolnay/rust-toolchain@master
+        id: toolchain
         with:
-          profile: minimal
           toolchain: ${{ matrix.platform.toolchain }}
-          override: true
           components: rust-src
 
       - name: Cache Example Workspace
@@ -71,14 +76,15 @@ jobs:
         uses: Swatinem/rust-cache@v2
         with:
           workspaces: examples
-          key: ${{ matrix.test.name }}
+          key: ${{ matrix.test.name }}-${{ steps.toolchain.outputs.cachekey }}
 
       - name: Cache Root Workspace
         if: matrix.test.name != 'Examples'
         uses: Swatinem/rust-cache@v2
         with:
-          key: ${{ matrix.test.name }}
+          key: ${{ matrix.test.name }}-${{ steps.toolchain.outputs.cachekey }}
 
       - name: Run Tests
+        continue-on-error: ${{ matrix.fallible }}
         run: ./scripts/test.sh ${{ matrix.test.flag }} -q
         shell: bash
