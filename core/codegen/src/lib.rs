@@ -1005,7 +1005,7 @@ pub fn derive_responder(input: TokenStream) -> TokenStream {
 /// used. In the example above, the field `MyStruct::kind` is rendered with a
 /// name of `type`.
 ///
-/// The attribute can slso be applied to variants of C-like enums; it may only
+/// The attribute can also be applied to variants of C-like enums; it may only
 /// contain `value` and looks as follows:
 ///
 /// ```rust
@@ -1230,7 +1230,7 @@ pub fn catchers(input: TokenStream) -> TokenStream {
 /// A URI to a route name `foo` is generated using `uri!(foo(v1, v2, v3))` or
 /// `uri!(foo(a = v1, b = v2, c = v3))`, where `v1`, `v2`, `v3` are the values
 /// to fill in for route parameters named `a`, `b`, and `c`. If the named
-/// parameter sytnax is used (`a = v1`, etc.), parameters can appear in any
+/// parameter syntax is used (`a = v1`, etc.), parameters can appear in any
 /// order.
 ///
 /// More concretely, for the route `person` defined below:

@@ -165,7 +165,7 @@ impl fmt::Display for Sig {
 /// # }
 /// ```
 ///
-/// Or, as with all configuration options, programatically:
+/// Or, as with all configuration options, programmatically:
 ///
 /// ```rust
 /// # use rocket::figment::{Figment, providers::{Format, Toml}};

@@ -45,7 +45,7 @@ use crate::config::SecretKey;
 ///   * **Metadata**
 ///
 ///     This provider is named `Rocket Config`. It does not specify a
-///     [`Source`](figment::Source) and uses default interpolatation.
+///     [`Source`](figment::Source) and uses default interpolation.
 ///
 ///   * **Data**
 ///
@@ -391,7 +391,7 @@ impl Config {
         launch_meta_!("log level: {}", bold(self.log_level));
         launch_meta_!("cli colors: {}", bold(&self.cli_colors));
 
-        // Check for now depreacted config values.
+        // Check for now deprecated config values.
         for (key, replacement) in Self::DEPRECATED_KEYS {
             if let Some(md) = figment.find_metadata(key) {
                 warn!("found value for deprecated config key `{}`", Paint::white(key));

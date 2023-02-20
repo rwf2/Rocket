@@ -363,7 +363,7 @@ most important of these changes here. All users _must_:
 
   * Replace `ROCKET_ENV` environment variable use with `ROCKET_PROFILE`.
   * Replace `ROCKET_LOG` environment variable with `ROCKET_LOG_LEVEL`.
-  * Use only IP addreses for the `address` configuration parameter.
+  * Use only IP addresses for the `address` configuration parameter.
   * Replace the `dev` or `development` profile with `debug`.
   * Note that the `stage`, `staging`, `prod`, and `production` profiles carry no
     special meaning in v0.5.

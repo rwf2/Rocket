@@ -411,7 +411,7 @@ use crate::http::uncased::AsUncased;
 /// }
 /// ```
 ///
-/// The lifetime `'r` correponds to the lifetime of the request.
+/// The lifetime `'r` corresponds to the lifetime of the request.
 ///
 /// ## A More Involved Example
 ///
@@ -485,7 +485,7 @@ use crate::http::uncased::AsUncased;
 ///     // Finally, we finalize `A` and `B`. If both returned `Ok` and we
 ///     // encountered no errors during the push phase, we return our pair. If
 ///     // there were errors, we return them. If `A` and/or `B` failed, we
-///     // return the commulative errors.
+///     // return the commutative errors.
 ///     fn finalize(mut ctxt: Self::Context) -> form::Result<'v, Self> {
 ///         match (A::finalize(ctxt.left), B::finalize(ctxt.right)) {
 ///             (Ok(l), Ok(r)) if ctxt.errors.is_empty() => Ok(Pair(l, r)),

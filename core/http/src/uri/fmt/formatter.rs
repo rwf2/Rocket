@@ -34,7 +34,7 @@ use crate::uri::fmt::{UriDisplay, Part, Path, Query, Kind};
 ///
 ///   * When **nested named values** are written, typically by passing a value
 ///     to [`write_named_value()`] whose implementation of `UriDisplay` also
-///     calls `write_named_vlaue()`, the nested names are joined by a `.`,
+///     calls `write_named_value()`, the nested names are joined by a `.`,
 ///     written out followed by a `=`, followed by the value.
 ///
 /// # Usage
@@ -433,7 +433,7 @@ impl<'a> ValidRoutePrefix for Origin<'a> {
     type Output = Self;
 
     fn append(self, path: Cow<'static, str>, query: Option<Cow<'static, str>>) -> Self::Output {
-        // No-op if `self` is already normalzied.
+        // No-op if `self` is already normalized.
         let mut prefix = self.into_normalized();
         prefix.clear_query();
 
@@ -454,7 +454,7 @@ impl<'a> ValidRoutePrefix for Absolute<'a> {
     type Output = Self;
 
     fn append(self, path: Cow<'static, str>, query: Option<Cow<'static, str>>) -> Self::Output {
-        // No-op if `self` is already normalzied.
+        // No-op if `self` is already normalized.
         let mut prefix = self.into_normalized();
         prefix.clear_query();
 

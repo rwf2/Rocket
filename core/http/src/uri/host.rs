@@ -10,7 +10,7 @@ use crate::uri::{Absolute, Authority};
 /// In HTTP/2 and HTTP/3, this information is instead communicated via the
 /// `:authority` and `:port` pseudo-header request fields. It is a
 /// client-controlled value via which the client communicates to the server the
-/// domain name and port it is attemping to communicate with. The following
+/// domain name and port it is attempting to communicate with. The following
 /// diagram illustrates the syntactic structure of a `Host`:
 ///
 /// ```text
@@ -113,7 +113,7 @@ impl<'a> Host<'a> {
 
     /// Parses the string `string` into a `Host`. Parsing will never allocate.
     /// Returns an `Error` if `string` is not a valid authority URI, meaning
-    /// that this parser accepts a `user_info` part for compatability but
+    /// that this parser accepts a `user_info` part for compatibility but
     /// discards it.
     ///
     /// # Example
@@ -156,7 +156,7 @@ impl<'a> Host<'a> {
     /// This method should be used instead of [`Host::parse()`] when the source
     /// is already a `String`. Returns an `Error` if `string` is not a valid
     /// authority URI, meaning that this parser accepts a `user_info` part for
-    /// compatability but discards it.
+    /// compatibility but discards it.
     ///
     /// # Example
     ///

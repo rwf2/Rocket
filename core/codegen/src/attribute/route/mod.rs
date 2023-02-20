@@ -259,7 +259,7 @@ fn sentinels_expr(route: &Route) -> TokenStream {
         .map(|p| &p.ident)
         .collect();
 
-    // Note: for a given route, we need to emit a valid graph of eligble
+    // Note: for a given route, we need to emit a valid graph of eligible
     // sentinels. This means that we don't have broken links, where a child
     // points to a parent that doesn't exist. The concern is that the
     // `is_concrete()` filter will cause a break in the graph.
@@ -268,12 +268,12 @@ fn sentinels_expr(route: &Route) -> TokenStream {
     //    1. if `is_concrete()` returns `false` for a (valid) type, it returns
     //       false for all of its parents. we consider this an axiom; this is
     //       the point of `is_concrete()`. the type is filtered out, so the
-    //       theorem vacously holds
+    //       theorem vacuously holds
     //    2. if `is_concrete()` returns `true`, for a type `T`, it either:
     //      * returns `false` for the parent. by 1) it will return false for
     //        _all_ parents of the type, so no node in the graph can consider,
     //        directly or indirectly, `T` to be a child, and thus there are no
-    //        broken links; the thereom holds
+    //        broken links; the theorem holds
     //      * returns `true` for the parent, and so the type has a parent, and
     //      the theorem holds.
     //    3. these are all the cases. QED.

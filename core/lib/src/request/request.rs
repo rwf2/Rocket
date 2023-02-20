@@ -398,7 +398,7 @@ impl<'r> Request<'r> {
     /// # let mut req = c.get("/");
     /// # let request = req.inner_mut();
     ///
-    /// // starting without an "X-Real-IP" header or remote addresss
+    /// // starting without an "X-Real-IP" header or remote addresses
     /// assert!(request.client_ip().is_none());
     ///
     /// // add a remote address; this is done by Rocket automatically
@@ -648,7 +648,7 @@ impl<'r> Request<'r> {
     /// // This is the default `form` limit.
     /// assert_eq!(request.limits().get("form"), Some(32.kibibytes()));
     ///
-    /// // Retrieve the limit for files with extension `.pdf`; etails to 1MiB.
+    /// // Retrieve the limit for files with extension `.pdf`; equal to 1MiB.
     /// assert_eq!(request.limits().get("file/pdf"), Some(1.mebibytes()));
     /// ```
     #[inline(always)]

@@ -11,7 +11,7 @@ use crate::uri::error::{Error, TryFromUriError};
 ///
 /// In Rocket, this type will rarely be used directly. Instead, you will
 /// typically encounter URIs via the [`Origin`] type. This is because all
-/// incoming requests accepred by Rocket contain URIs in origin-form.
+/// incoming requests accepted by Rocket contain URIs in origin-form.
 ///
 /// ## Parsing
 ///
@@ -55,7 +55,7 @@ impl<'a> Uri<'a> {
     /// [`Absolute`], or [`Reference`]. Parsing never allocates. Returns an
     /// `Error` if `string` is not a valid URI of kind `T`.
     ///
-    /// To perform an ambgiuous parse into _any_ valid URI type, use
+    /// To perform an ambiguous parse into _any_ valid URI type, use
     /// [`Uri::parse_any()`].
     ///
     /// # Example
@@ -89,7 +89,7 @@ impl<'a> Uri<'a> {
     ///
     /// Always prefer to use `uri!()` for statically known inputs.
     ///
-    /// Because URI parsing is ambgious (that is, there isn't a one-to-one
+    /// Because URI parsing is ambiguous (that is, there isn't a one-to-one
     /// mapping between strings and a URI type), the internal type returned by
     /// this method _may_ not be the desired type. This method chooses the "best
     /// fit" type for a given string by preferring to parse in the following

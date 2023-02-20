@@ -224,7 +224,7 @@ crate::export! {
     ///      executes the block with the binding. `stream` must implement
     ///      `Stream<Item = T>`; the type of `x` is `T`.
     ///
-    ///   * `?` short-cicuits stream termination on `Err`
+    ///   * `?` short-circuits stream termination on `Err`
     ///
     /// # Examples
     ///
@@ -253,7 +253,7 @@ crate::export! {
     /// # });
     /// ```
     ///
-    /// Using `?` on an `Err` short-cicuits stream termination:
+    /// Using `?` on an `Err` short-circuits stream termination:
     ///
     /// ```rust
     /// use std::io;

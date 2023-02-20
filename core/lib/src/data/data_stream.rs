@@ -100,7 +100,7 @@ impl<'r> DataStream<'r> {
     /// A helper method to write the body of the request to any `AsyncWrite`
     /// type. Returns an [`N`] which indicates how many bytes were written and
     /// whether the entire stream was read. An additional read from `self` may
-    /// be required to check if all of the sream has been read. If that
+    /// be required to check if all of the stream has been read. If that
     /// information is not needed, use [`DataStream::stream_precise_to()`].
     ///
     /// This method is identical to `tokio::io::copy(&mut self, &mut writer)`

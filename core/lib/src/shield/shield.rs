@@ -117,7 +117,7 @@ impl Shield {
 
     /// Enables the policy header `policy`.
     ///
-    /// If the poliicy was previously enabled, the configuration is replaced
+    /// If the policy was previously enabled, the configuration is replaced
     /// with that of `policy`.
     ///
     /// # Example

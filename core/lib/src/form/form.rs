@@ -84,7 +84,7 @@ use crate::form::prelude::*;
 /// The `data-form` limit specifies the data limit for an entire multipart form
 /// data stream. It defaults to 2MiB. Multipart data is streamed, and form
 /// fields are processed into [`DataField`]s or [`ValueField`]s as they arrive.
-/// If the commulative data received while streaming exceeds the limit, parsing
+/// If the commutative data received while streaming exceeds the limit, parsing
 /// is aborted, an error is created and pushed via [`FromForm::push_error()`],
 /// and the form is finalized.
 ///

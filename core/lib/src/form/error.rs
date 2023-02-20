@@ -138,7 +138,7 @@ pub struct Error<'v> {
     pub value: Option<Cow<'v, str>>,
     /// The kind of error that occurred.
     pub kind: ErrorKind<'v>,
-    /// The entitiy that caused the error.
+    /// The entity that caused the error.
     pub entity: Entity,
 }
 
@@ -167,7 +167,7 @@ pub enum ErrorKind<'v> {
     InvalidLength {
         /// The minimum length required, inclusive.
         min: Option<u64>,
-        /// The maximum length required, inclusize.
+        /// The maximum length required, inclusive.
         max: Option<u64>,
     },
     /// The value wasn't one of the valid `choices`.
@@ -210,7 +210,7 @@ pub enum ErrorKind<'v> {
     Io(io::Error),
 }
 
-/// The erranous form entity or form component.
+/// The erroneous form entity or form component.
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub enum Entity {
     /// The form itself.

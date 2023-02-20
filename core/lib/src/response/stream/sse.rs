@@ -54,7 +54,7 @@ use crate::http::ContentType;
 /// appears only in the raw server-sent event data stream and is inaccessible by
 /// most clients. This includes JavaScript's `EventSource`. As such, they serve
 /// little utility beyond debugging a raw data stream and keeping a connection
-/// alive. See [hearbeat](struct@EventStream#heartbeat) for information on
+/// alive. See [heartbeat](struct@EventStream#heartbeat) for information on
 /// Rocket's `EventStream` keep-alive.
 ///
 /// # Fields
@@ -279,7 +279,7 @@ impl Event {
     ///
     /// // The two below are equivalent.
     /// let event = Event::comment("bye").with_data("goodbye");
-    /// let event = Event::data("goodbyte").with_comment("bye");
+    /// let event = Event::data("goodbye").with_comment("bye");
     /// ```
     pub fn with_data<T: Into<Cow<'static, str>>>(mut self, data: T) -> Self {
         self.data = Some(data.into());
@@ -298,7 +298,7 @@ impl Event {
     ///
     /// // The two below are equivalent.
     /// let event = Event::comment("bye").with_data("goodbye");
-    /// let event = Event::data("goodbyte").with_comment("bye");
+    /// let event = Event::data("goodbye").with_comment("bye");
     /// ```
     pub fn with_comment<T: Into<Cow<'static, str>>>(mut self, data: T) -> Self {
         self.comment = Some(data.into());

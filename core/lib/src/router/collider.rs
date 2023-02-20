@@ -383,7 +383,7 @@ mod tests {
     }
 
     #[test]
-    fn test_content_type_colliions() {
+    fn test_content_type_collisions() {
         assert!(mt_mt_collide("application/json", "application/json"));
         assert!(mt_mt_collide("*/json", "application/json"));
         assert!(mt_mt_collide("*/*", "application/json"));
@@ -417,7 +417,7 @@ mod tests {
     }
 
     #[test]
-    fn test_route_content_type_colliions() {
+    fn test_route_content_type_collisions() {
         // non-payload bearing routes always collide
         assert!(r_mt_mt_collide(Get, "application/json", "application/json"));
         assert!(r_mt_mt_collide(Get, "*/json", "application/json"));

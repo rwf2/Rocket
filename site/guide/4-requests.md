@@ -1595,7 +1595,7 @@ MyForm {
 ### Arbitrary Collections
 
 _Any_ collection can be expressed with any level of arbitrary nesting, maps, and
-sequences. Consider the extravagently contrived type:
+sequences. Consider the extravagantly contrived type:
 
 ```rust
 use std::collections::{BTreeMap, HashMap};

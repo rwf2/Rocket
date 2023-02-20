@@ -310,7 +310,7 @@
 //! The list below includes all presently supported database adapters and their
 //! corresponding [`Poolable`] type.
 //!
-// Note: Keep this table in sync with site/guite/6-state.md
+// Note: Keep this table in sync with site/guide/6-state.md
 //! | Kind     | Driver                | Version   | `Poolable` Type                | Feature                |
 //! |----------|-----------------------|-----------|--------------------------------|------------------------|
 //! | Sqlite   | [Diesel]              | `2`       | [`diesel::SqliteConnection`]   | `diesel_sqlite_pool`   |

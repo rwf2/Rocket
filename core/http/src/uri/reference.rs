@@ -409,7 +409,7 @@ impl<'a> Reference<'a> {
         self.path = Data::new(path.into());
     }
 
-    /// Returns the conrete path and query.
+    /// Returns the concrete path and query.
     pub(crate) fn with_query_fragment_of(mut self, other: Reference<'a>) -> Self {
         if let Some(query) = other.query {
             if self.query().is_none() {

@@ -503,7 +503,7 @@ impl TlsConfig {
     /// let tls_config = TlsConfig::from_bytes(certs_buf, key_buf);
     /// assert!(!tls_config.prefer_server_cipher_order());
     ///
-    /// // Which can be overriden with the eponymous builder method.
+    /// // Which can be overridden with the eponymous builder method.
     /// let tls_config = TlsConfig::from_bytes(certs_buf, key_buf)
     ///     .with_preferred_server_cipher_order(true);
     ///

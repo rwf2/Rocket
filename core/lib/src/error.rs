@@ -12,7 +12,7 @@ use crate::{Rocket, Orbit};
 /// An error that occurs during launch.
 ///
 /// An `Error` is returned by [`launch()`](Rocket::launch()) when launching an
-/// application fails or, more rarely, when the runtime fails after lauching.
+/// application fails or, more rarely, when the runtime fails after launching.
 ///
 /// # Panics
 ///

@@ -812,7 +812,7 @@ impl<'r> Response<'r> {
     /// The default max chunk size is [`Body::DEFAULT_MAX_CHUNK`]. The max chunk
     /// size is a property of the body and is thus reset whenever a body is set
     /// via [`Response::set_streamed_body()`], [`Response::set_sized_body()`],
-    /// or the corresponding builer methods.
+    /// or the corresponding builder methods.
     ///
     /// This setting does not typically need to be changed. Configuring a high
     /// value can result in high memory usage. Similarly, configuring a low

@@ -128,7 +128,7 @@ text = '''
 '''
 
 ###############################################################################
-# Buttom features: displayed above the footer.
+# Bottom features: displayed above the footer.
 ###############################################################################
 
 [[bottom_features]]

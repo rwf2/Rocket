@@ -12,7 +12,7 @@ use crate::uncased::UncasedStr;
 
 /// A reference to a string inside of a raw HTTP message.
 ///
-/// A `RawStr` is an unsanitzed, unvalidated, and undecoded raw string from an
+/// A `RawStr` is an unsanitized, unvalidated, and undecoded raw string from an
 /// HTTP message. It exists to separate validated string inputs, represented by
 /// the `String`, `&str`, and `Cow<str>` types, from unvalidated inputs,
 /// represented by `&RawStr`.

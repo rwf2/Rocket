@@ -135,7 +135,7 @@ use crate::request::Request;
 ///    [`Response::build_from()`] and/or use the [`merge()`](Response::merge())
 ///    or [`join()`](Response::join()) methods on the `Response` or
 ///    `ResponseBuilder` struct. Ensure that you document merging or joining
-///    behavior appropriatse.
+///    behavior appropriately.
 ///
 /// 3. Inspecting Requests
 ///

@@ -61,7 +61,7 @@ pub struct RouteUri<'a> {
     pub base: Origin<'a>,
     /// The URI _without_ the `base` mount point.
     pub unmounted_origin: Origin<'a>,
-    /// The URI _with_ the base mount point. This is the canoncical route URI.
+    /// The URI _with_ the base mount point. This is the canonical route URI.
     pub origin: Origin<'a>,
     /// Cached metadata about this URI.
     pub(crate) metadata: Metadata,
