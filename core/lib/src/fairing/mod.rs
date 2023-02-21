@@ -534,7 +534,7 @@ pub trait Fairing: Send + Sync + Any + 'static {
 }
 
 #[crate::async_trait]
-impl<T: Fairing> Fairing for std::sync::Arc<T> {
+impl<T: Fairing + ?Sized> Fairing for std::sync::Arc<T> {
     #[inline]
     fn info(&self) -> Info {
         (self as &T).info()
