@@ -362,7 +362,7 @@ out-of-the-box, and you can implement your own, too. See the following:
   * Parameter Guards: [`FromParam`]
   * Multi-Segment Guards: [`FromSegments`]
   * Data Guards: [`FromData`]
-  * Form Guards: [`FromFrom`]
+  * Form Guards: [`FromForm`]
   * Request Guards: [`FromRequest`]
 </div>
 </details>
