@@ -64,7 +64,7 @@ async fn handle<Fut, T, F>(name: Option<&str>, run: F) -> Option<T>
 async fn hyper_service_fn(
     rocket: Arc<Rocket<Orbit>>,
     conn: ConnectionMeta,
-    hyp_req: hyper::Request<hyper::Body>,
+    mut hyp_req: hyper::Request<hyper::Body>,
 ) -> Result<hyper::Response<hyper::Body>, io::Error> {
     // This future must return a hyper::Response, but the response body might
     // borrow from the request. Instead, write the body in another future that
@@ -72,6 +72,9 @@ async fn hyper_service_fn(
     let (tx, rx) = oneshot::channel();
 
     tokio::spawn(async move {
+        // Upgrade before do any other; we handle errors below
+        let hyp_upgraded = hyper::upgrade::on(&mut hyp_req);
+
         // Convert a Hyper request into a Rocket request.
         let (h_parts, mut h_body) = hyp_req.into_parts();
         match Request::from_hyp(&rocket, &h_parts, Some(conn)) {
@@ -79,8 +82,40 @@ async fn hyper_service_fn(
                 // Convert into Rocket `Data`, dispatch request, write response.
                 let mut data = Data::from(&mut h_body);
                 let token = rocket.preprocess_request(&mut req, &mut data).await;
-                let response = rocket.dispatch(token, &mut req, data).await;
-                rocket.send_response(response, tx).await;
+                let mut response = rocket.dispatch(token, &req, data).await;
+
+                if response.status() == Status::SwitchingProtocols {
+                    let may_upgrade = response.upgrade_mut().take();
+                    match may_upgrade {
+                        Some(upgrade) => {
+
+                            // send the finishing response; needed so that hyper can upgrade the request
+                            rocket.send_response(response, tx).await;
+
+                            match hyp_upgraded.await {
+                                Ok(hyp_upgraded) => {
+                                    // let the upgrade take the upgraded hyper request
+                                    let fu = upgrade.start(hyp_upgraded);
+                                    fu.await;
+                                }
+                                Err(e) => {
+                                    error_!("Failed to upgrade request: {e}");
+                                    // NOTE: we *should* send a response here but since we send one earlier AND upgraded the request,
+                                    //       this cannot be done easily at this point...
+                                    // let response = rocket.handle_error(Status::InternalServerError, &req).await;
+                                    // rocket.send_response(response, tx).await;
+                                }
+                            }
+                        }
+                        None => {
+                            error_!("Status is 101 switching protocols, but response dosn't hold a upgrade");
+                            let response = rocket.handle_error(Status::InternalServerError, &req).await;
+                            rocket.send_response(response, tx).await;
+                        }
+                    }
+                } else {
+                    rocket.send_response(response, tx).await;
+                }
             },
             Err(e) => {
                 warn!("Bad incoming HTTP request.");
