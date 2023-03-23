@@ -68,6 +68,7 @@
 //! | `json`    | Support for [JSON (de)serialization].                   |
 //! | `msgpack` | Support for [MessagePack (de)serialization].            |
 //! | `uuid`    | Support for [UUID value parsing and (de)serialization]. |
+//! | `anyhow`  | Support for the [anyhow] Error type as a Responder.     |
 //!
 //! Disabled features can be selectively enabled in `Cargo.toml`:
 //!
@@ -89,6 +90,7 @@
 //! [private cookies]: https://rocket.rs/v0.5-rc/guide/requests/#private-cookies
 //! [TLS]: https://rocket.rs/v0.5-rc/guide/configuration/#tls
 //! [mutual TLS]: crate::mtls
+//! [anyhow]: crate::anyhow
 //!
 //! ## Configuration
 //!
@@ -163,6 +165,10 @@ pub mod http {
 #[cfg(feature = "mtls")]
 #[cfg_attr(nightly, doc(cfg(feature = "mtls")))]
 pub mod mtls;
+
+#[cfg(feature = "anyhow")]
+#[cfg_attr(nightly, doc(cfg(feature = "anyhow")))]
+pub mod anyhow;
 
 /// TODO: We need a futures mod or something.
 mod trip_wire;
