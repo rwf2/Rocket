@@ -24,21 +24,7 @@ pub fn _macro(input: proc_macro::TokenStream) -> devise::Result<TokenStream> {
         );
     }
 
-    let inp = closure.inputs.first().unwrap();
-    match inp {
-        Pat::Ident(_) => {}
-        Pat::Type(_) => {}
-        _ => {
-            return Err(
-                Diagnostic::spanned(
-                    inp.span(),
-                    Level::Error,
-                    "rocket::response::websocket::CreateWebsocket! can only accept an identifier or a type ascription for closure input"
-                )
-            )
-        }
-    }
-
+    let inp = closure.inputs.first();
     let body = closure.body;
     let capture = closure.capture;
     let tokens = quote!(
