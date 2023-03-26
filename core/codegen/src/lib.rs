@@ -1490,18 +1490,7 @@ pub fn __typed_stream(input: TokenStream) -> TokenStream {
 #[proc_macro]
 #[doc(hidden)]
 pub fn __websocket(input: TokenStream) -> TokenStream {
-    let stmts = syn::Block::parse_within.parse(input).expect("Input to __websocket! should be statements");
-    quote!(
-        Websocket::create(|mut ch: WebsocketChannel| {
-            ::std::boxed::Box::new(
-                ::std::boxed::Box::pin(
-                    async move {
-                        #(#stmts)*
-                    }
-                )
-            )
-        })
-    ).into()
+    emit!(bang::websocket(input))
 }
 
 /// Private Rocket internal macro: `internal_guide_tests!`.

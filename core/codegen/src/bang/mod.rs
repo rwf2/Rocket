@@ -4,6 +4,7 @@ mod test_guide;
 mod export;
 
 pub mod typed_stream;
+pub mod websocket;
 
 use devise::Result;
 use syn::{Path, punctuated::Punctuated, parse::Parser, Token};
@@ -75,5 +76,10 @@ pub fn export_internal(input: proc_macro::TokenStream) -> TokenStream {
 
 pub fn typed_stream(input: proc_macro::TokenStream) -> TokenStream {
     typed_stream::_macro(input)
+        .unwrap_or_else(|diag| diag.emit_as_item_tokens())
+}
+
+pub fn websocket(input: proc_macro::TokenStream) -> TokenStream {
+    websocket::_macro(input)
         .unwrap_or_else(|diag| diag.emit_as_item_tokens())
 }
