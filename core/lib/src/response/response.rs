@@ -818,14 +818,15 @@ impl<'r> Response<'r> {
 
     /// Returns a instance of the `Upgrade`-trait when the `Response` is upgradeable
     #[inline(always)]
-    pub fn upgrade(&self) -> &Option<Box<dyn Upgrade<'static> + Send>> {
-        &self.upgrade
+    pub fn upgrade(&self) -> Option<&Box<dyn Upgrade<'static> + Send>> {
+        self.upgrade.as_ref()
     }
 
-    /// Returns a mutable instance of the `Upgrade`-trait when the `Response` is upgradeable
+    /// Takes the upgrade out of the response, leaving a [`None`] in it's place.
+    /// With this, the caller takes ownership about the `Upgrade`-trait.
     #[inline(always)]
-    pub fn upgrade_mut(&mut self) -> &mut Option<Box<dyn Upgrade<'static> + Send>> {
-        &mut self.upgrade
+    pub fn take_upgrade(&mut self) -> Option<Box<dyn Upgrade<'static> + Send>> {
+        self.upgrade.take()
     }
 
     /// Sets the upgrade contained in this `Response`

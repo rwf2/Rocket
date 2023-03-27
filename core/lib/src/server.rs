@@ -85,7 +85,7 @@ async fn hyper_service_fn(
                 let mut response = rocket.dispatch(token, &req, data).await;
 
                 if response.status() == Status::SwitchingProtocols {
-                    let may_upgrade = response.upgrade_mut().take();
+                    let may_upgrade = response.take_upgrade();
                     match may_upgrade {
                         Some(upgrade) => {
 
