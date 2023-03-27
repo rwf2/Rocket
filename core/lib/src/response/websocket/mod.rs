@@ -254,7 +254,7 @@ pub struct Websocket<F> {
 #[crate::async_trait]
 impl<F> Upgrade<'static> for Websocket<F>
 where
-    F: Fn(WebsocketChannel) -> Box<dyn Future<Output = ()> + Send + Unpin> + Sync + Send
+    F: Fn(WebsocketChannel) -> Box<dyn Future<Output = ()> + Send> + Sync + Send
 {
     async fn start(&self, upgraded: crate::http::hyper::upgrade::Upgraded) {
         // create an channel
@@ -263,13 +263,13 @@ where
         // run the event loop...
         let event_loop = (self.task)(ch);
 
-        tokio::join!(a, b, event_loop);
+        tokio::join!(a, b, Box::into_pin(event_loop));
     }
 }
 
 impl<F> Websocket<F>
 where
-    F: Fn(WebsocketChannel) -> Box<dyn Future<Output = ()> + Send + Unpin> + Sync
+    F: Fn(WebsocketChannel) -> Box<dyn Future<Output = ()> + Send> + Sync
 {
     /// Creates a new websocket with the given handler function.
     pub fn create(ws_task: F) -> Self {
@@ -279,7 +279,7 @@ where
 
 impl<'r, F> Responder<'r, 'r> for Websocket<F>
 where
-    F: Fn(WebsocketChannel) -> Box<dyn Future<Output = ()> + Send + Unpin> + Sync + Send + 'r + 'static
+    F: Fn(WebsocketChannel) -> Box<dyn Future<Output = ()> + Send> + Sync + Send + 'r + 'static
 {
     fn respond_to(self, req: &'r Request<'_>) -> response::Result<'r> {
         let ws_version = req.headers().get_one("Sec-Websocket-Version");
@@ -327,7 +327,7 @@ crate::export! {
     macro_rules! Websocket {
         () => (
             Websocket<
-                impl Fn(WebsocketChannel) -> Box<dyn Future<Output = ()> + Send + Unpin>
+                impl Fn(WebsocketChannel) -> Box<dyn Future<Output = ()> + Send>
             >
         );
     }

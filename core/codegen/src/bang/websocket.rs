@@ -30,11 +30,9 @@ pub fn _macro(input: proc_macro::TokenStream) -> devise::Result<TokenStream> {
     let tokens = quote!(
         Websocket::create(#capture |#inp| {
             ::std::boxed::Box::new(
-                ::std::boxed::Box::pin(
-                    async #capture {
-                        #body
-                    }
-                )
+                async #capture {
+                    #body
+                }
             )
         })
     );
