@@ -2,8 +2,8 @@ use std::fmt;
 
 use parking_lot::Mutex;
 
-use crate::Config;
 use crate::http::private::cookie;
+use crate::{Rocket, Orbit};
 
 #[doc(inline)]
 pub use self::cookie::{Cookie, SameSite, Iter};
@@ -154,17 +154,14 @@ pub use self::cookie::{Cookie, SameSite, Iter};
 pub struct CookieJar<'a> {
     jar: cookie::CookieJar,
     ops: Mutex<Vec<Op>>,
-    config: &'a Config,
+    pub(crate) state: CookieState<'a>,
 }
 
-impl<'a> Clone for CookieJar<'a> {
-    fn clone(&self) -> Self {
-        CookieJar {
-            jar: self.jar.clone(),
-            ops: Mutex::new(self.ops.lock().clone()),
-            config: self.config,
-        }
-    }
+#[derive(Copy, Clone)]
+pub(crate) struct CookieState<'a> {
+    pub secure: bool,
+    #[cfg_attr(not(feature = "secrets"), allow(unused))]
+    pub config: &'a crate::Config,
 }
 
 #[derive(Clone)]
@@ -173,22 +170,17 @@ enum Op {
     Remove(Cookie<'static>, bool),
 }
 
-impl Op {
-    fn cookie(&self) -> &Cookie<'static> {
-        match self {
-            Op::Add(c, _) | Op::Remove(c, _) => c
-        }
-    }
-}
-
 impl<'a> CookieJar<'a> {
-    #[inline(always)]
-    pub(crate) fn new(config: &'a Config) -> Self {
-        CookieJar::from(cookie::CookieJar::new(), config)
-    }
-
-    pub(crate) fn from(jar: cookie::CookieJar, config: &'a Config) -> Self {
-        CookieJar { jar, config, ops: Mutex::new(Vec::new()) }
+    pub(crate) fn new(base: Option<cookie::CookieJar>, rocket: &'a Rocket<Orbit>) -> Self {
+        CookieJar {
+            jar: base.unwrap_or_default(),
+            ops: Mutex::new(Vec::new()),
+            state: CookieState {
+                // This is updated dynamically when headers are received.
+                secure: rocket.config().tls_enabled(),
+                config: rocket.config(),
+            }
+        }
     }
 
     /// Returns a reference to the _original_ `Cookie` inside this container
@@ -236,7 +228,7 @@ impl<'a> CookieJar<'a> {
     #[cfg(feature = "secrets")]
     #[cfg_attr(nightly, doc(cfg(feature = "secrets")))]
     pub fn get_private(&self, name: &str) -> Option<Cookie<'static>> {
-        self.jar.private(&self.config.secret_key.key).get(name)
+        self.jar.private(&self.state.config.secret_key.key).get(name)
     }
 
     /// Returns a reference to the _original or pending_ `Cookie` inside this
@@ -287,7 +279,10 @@ impl<'a> CookieJar<'a> {
     ///    * `path`: `"/"`
     ///    * `SameSite`: `Strict`
     ///
-    /// Furthermore, if TLS is enabled, the `Secure` cookie flag is set.
+    /// Furthermore, if TLS is enabled or handled by a proxy (as determined by
+    /// [`Request::context_is_likely_secure()`]), the `Secure` cookie flag is set.
+    /// These defaults ensure maximum usability and security. For additional
+    /// security, you may wish to set the `secure` flag explicitly.
     ///
     /// # Example
     ///
@@ -309,7 +304,7 @@ impl<'a> CookieJar<'a> {
     /// ```
     pub fn add<C: Into<Cookie<'static>>>(&self, cookie: C) {
         let mut cookie = cookie.into();
-        Self::set_defaults(self.config, &mut cookie);
+        self.set_defaults(&mut cookie);
         self.ops.lock().push(Op::Add(cookie, false));
     }
 
@@ -327,9 +322,10 @@ impl<'a> CookieJar<'a> {
     ///    * `HttpOnly`: `true`
     ///    * `Expires`: 1 week from now
     ///
-    /// Furthermore, if TLS is enabled, the `Secure` cookie flag is set. These
-    /// defaults ensure maximum usability and security. For additional security,
-    /// you may wish to set the `secure` flag.
+    /// Furthermore, if TLS is enabled or handled by a proxy (as determined by
+    /// [`Request::context_is_likely_secure()`]), the `Secure` cookie flag is set.
+    /// These defaults ensure maximum usability and security. For additional
+    /// security, you may wish to set the `secure` flag explicitly.
     ///
     /// # Example
     ///
@@ -346,7 +342,7 @@ impl<'a> CookieJar<'a> {
     #[cfg_attr(nightly, doc(cfg(feature = "secrets")))]
     pub fn add_private<C: Into<Cookie<'static>>>(&self, cookie: C) {
         let mut cookie = cookie.into();
-        Self::set_private_defaults(self.config, &mut cookie);
+        self.set_private_defaults(&mut cookie);
         self.ops.lock().push(Op::Add(cookie, true));
     }
 
@@ -476,7 +472,7 @@ impl<'a> CookieJar<'a> {
                 Op::Add(c, false) => jar.add(c),
                 #[cfg(feature = "secrets")]
                 Op::Add(c, true) => {
-                    jar.private_mut(&self.config.secret_key.key).add(c);
+                    jar.private_mut(&self.state.config.secret_key.key).add(c);
                 }
                 Op::Remove(mut c, _) => {
                     if self.jar.get(c.name()).is_some() {
@@ -505,7 +501,7 @@ impl<'a> CookieJar<'a> {
     #[cfg_attr(nightly, doc(cfg(feature = "secrets")))]
     #[inline(always)]
     pub(crate) fn add_original_private(&mut self, cookie: Cookie<'static>) {
-        self.jar.private_mut(&self.config.secret_key.key).add_original(cookie);
+        self.jar.private_mut(&self.state.config.secret_key.key).add_original(cookie);
     }
 
     /// For each property mentioned below, this method checks if there is a
@@ -515,8 +511,9 @@ impl<'a> CookieJar<'a> {
     ///    * `path`: `"/"`
     ///    * `SameSite`: `Strict`
     ///
-    /// Furthermore, if TLS is enabled, the `Secure` cookie flag is set.
-    fn set_defaults(config: &Config, cookie: &mut Cookie<'static>) {
+    /// Furthermore, if TLS is enabled or handled by a proxy (as determined by
+    /// [`Request::context_is_likely_secure()`]), the `Secure` cookie flag is set.
+    fn set_defaults(&self, cookie: &mut Cookie<'static>) {
         if cookie.path().is_none() {
             cookie.set_path("/");
         }
@@ -525,7 +522,7 @@ impl<'a> CookieJar<'a> {
             cookie.set_same_site(SameSite::Strict);
         }
 
-        if cookie.secure().is_none() && config.tls_enabled() {
+        if cookie.secure().is_none() && self.state.secure {
             cookie.set_secure(true);
         }
     }
@@ -554,17 +551,12 @@ impl<'a> CookieJar<'a> {
     ///    * `HttpOnly`: `true`
     ///    * `Expires`: 1 week from now
     ///
-    /// Furthermore, if TLS is enabled, the `Secure` cookie flag is set.
+    /// Furthermore, if TLS is enabled or handled by a proxy (as determined by
+    /// [`Request::context_is_likely_secure()`]), the `Secure` cookie flag is set.
     #[cfg(feature = "secrets")]
     #[cfg_attr(nightly, doc(cfg(feature = "secrets")))]
-    fn set_private_defaults(config: &Config, cookie: &mut Cookie<'static>) {
-        if cookie.path().is_none() {
-            cookie.set_path("/");
-        }
-
-        if cookie.same_site().is_none() {
-            cookie.set_same_site(SameSite::Strict);
-        }
+    fn set_private_defaults(&self, cookie: &mut Cookie<'static>) {
+        self.set_defaults(cookie);
 
         if cookie.http_only().is_none() {
             cookie.set_http_only(true);
@@ -572,10 +564,6 @@ impl<'a> CookieJar<'a> {
 
         if cookie.expires().is_none() {
             cookie.set_expires(time::OffsetDateTime::now_utc() + time::Duration::weeks(1));
-        }
-
-        if cookie.secure().is_none() && config.tls_enabled() {
-            cookie.set_secure(true);
         }
     }
 }
@@ -593,5 +581,22 @@ impl fmt::Debug for CookieJar<'_> {
             .field("pending", &pending)
             .finish()
     }
+}
 
+impl<'a> Clone for CookieJar<'a> {
+    fn clone(&self) -> Self {
+        CookieJar {
+            jar: self.jar.clone(),
+            ops: Mutex::new(self.ops.lock().clone()),
+            state: self.state,
+        }
+    }
+}
+
+impl Op {
+    fn cookie(&self) -> &Cookie<'static> {
+        match self {
+            Op::Add(c, _) | Op::Remove(c, _) => c
+        }
+    }
 }

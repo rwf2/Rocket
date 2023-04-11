@@ -85,13 +85,28 @@ pub struct Config {
     /// client. Used internally and by [`Request::client_ip()`] and
     /// [`Request::real_ip()`].
     ///
-    /// To disable using any header for this purpose, set this value to `false`.
-    /// Deserialization semantics are identical to those of [`Ident`] except
-    /// that the value must syntactically be a valid HTTP header name.
+    /// To disable using any header for this purpose, set this value to `false`
+    /// or `None`. Deserialization semantics are identical to those of [`Ident`]
+    /// except that the value must syntactically be a valid HTTP header name.
     ///
     /// **(default: `"X-Real-IP"`)**
-    #[serde(deserialize_with = "crate::config::ip_header::deserialize")]
+    #[serde(deserialize_with = "crate::config::http_header::deserialize")]
     pub ip_header: Option<Uncased<'static>>,
+    /// The name of a header, whose value is typically set by an intermediary
+    /// server or proxy, which contains the protocol (HTTP or HTTPS) used by the
+    /// connecting client. This should probably be [`X-Forwarded-Proto`], as
+    /// that is the de facto standard. Used by [`Request::forwarded_proto()`]
+    /// to determine the forwarded protocol and [`Request::forwarded_secure()`]
+    /// to determine whether a request is handled in a secure context.
+    ///
+    /// [`X-Forwarded-Proto`]: https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/X-Forwarded-Proto
+    ///
+    /// To disable using any header for this purpose, set this value to `false`
+    /// or `None`. Deserialization semantics are identical to those of [`ip_header`].
+    ///
+    /// **(default: `None`)**
+    #[serde(deserialize_with = "crate::config::http_header::deserialize")]
+    pub proxy_proto_header: Option<Uncased<'static>>,
     /// Streaming read size limits. **(default: [`Limits::default()`])**
     pub limits: Limits,
     /// Directory to store temporary files in. **(default:
@@ -189,6 +204,7 @@ impl Config {
             max_blocking: 512,
             ident: Ident::default(),
             ip_header: Some(Uncased::from_borrowed("X-Real-IP")),
+            proxy_proto_header: None,
             limits: Limits::default(),
             temp_dir: std::env::temp_dir().into(),
             keep_alive: 5,
@@ -409,6 +425,11 @@ impl Config {
             None => launch_meta_!("IP header: {}", "disabled".paint(VAL))
         }
 
+        match self.proxy_proto_header.as_ref() {
+            Some(name) => launch_meta_!("Proxy-Proto header: {}", name.paint(VAL)),
+            None => launch_meta_!("Proxy-Proto header: {}", "disabled".paint(VAL))
+        }
+
         launch_meta_!("limits: {}", (&self.limits).paint(VAL));
         launch_meta_!("temp dir: {}", self.temp_dir.relative().display().paint(VAL));
         launch_meta_!("http/2: {}", (cfg!(feature = "http2").paint(VAL)));
@@ -513,6 +534,9 @@ impl Config {
     /// The stringy parameter name for setting/extracting [`Config::ip_header`].
     pub const IP_HEADER: &'static str = "ip_header";
 
+    /// The stringy parameter name for setting/extracting [`Config::proxy_proto_header`].
+    pub const PROXY_PROTO_HEADER: &'static str = "proxy_proto_header";
+
     /// The stringy parameter name for setting/extracting [`Config::limits`].
     pub const LIMITS: &'static str = "limits";
 
@@ -536,10 +560,9 @@ impl Config {
 
     /// An array of all of the stringy parameter names.
     pub const PARAMETERS: &'static [&'static str] = &[
-        Self::ADDRESS, Self::PORT, Self::WORKERS, Self::MAX_BLOCKING,
-        Self::KEEP_ALIVE, Self::IDENT, Self::IP_HEADER, Self::LIMITS, Self::TLS,
-        Self::SECRET_KEY, Self::TEMP_DIR, Self::LOG_LEVEL, Self::SHUTDOWN,
-        Self::CLI_COLORS,
+        Self::ADDRESS, Self::PORT, Self::WORKERS, Self::MAX_BLOCKING, Self::KEEP_ALIVE,
+        Self::IDENT, Self::IP_HEADER, Self::PROXY_PROTO_HEADER, Self::LIMITS, Self::TLS,
+        Self::SECRET_KEY, Self::TEMP_DIR, Self::LOG_LEVEL, Self::SHUTDOWN, Self::CLI_COLORS,
     ];
 }
 

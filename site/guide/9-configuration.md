@@ -17,28 +17,31 @@ is configured with. This means that no matter which configuration provider
 Rocket is asked to use, it must be able to read the following configuration
 values:
 
-| key             | kind              | description                                     | debug/release default   |
-|-----------------|-------------------|-------------------------------------------------|-------------------------|
-| `address`       | `IpAddr`          | IP address to serve on                          | `127.0.0.1`             |
-| `port`          | `u16`             | Port to serve on.                               | `8000`                  |
-| `workers`*      | `usize`           | Number of threads to use for executing futures. | cpu core count          |
-| `max_blocking`* | `usize`           | Limit on threads to start for blocking tasks.   | `512`                   |
-| `ident`         | `string`, `false` | If and how to identify via the `Server` header. | `"Rocket"`              |
-| `ip_header`     | `string`, `false` | IP header to inspect to get [client's real IP]. | `"X-Real-IP"`           |
-| `keep_alive`    | `u32`             | Keep-alive timeout seconds; disabled when `0`.  | `5`                     |
-| `log_level`     | [`LogLevel`]      | Max level to log. (off/normal/debug/critical)   | `normal`/`critical`     |
-| `cli_colors`    | [`CliColors`]     | Whether to use colors and emoji when logging.   | `"auto"`                |
-| `secret_key`    | [`SecretKey`]     | Secret key for signing and encrypting values.   | `None`                  |
-| `tls`           | [`TlsConfig`]     | TLS configuration, if any.                      | `None`                  |
-| `limits`        | [`Limits`]        | Streaming read size limits.                     | [`Limits::default()`]   |
-| `limits.$name`  | `&str`/`uint`     | Read limit for `$name`.                         | form = "32KiB"          |
-| `ctrlc`         | `bool`            | Whether `ctrl-c` initiates a server shutdown.   | `true`                  |
-| `shutdown`*     | [`Shutdown`]      | Graceful shutdown configuration.                | [`Shutdown::default()`] |
+| key                  | kind              | description                                     | debug/release default   |
+|----------------------|-------------------|-------------------------------------------------|-------------------------|
+| `address`            | `IpAddr`          | IP address to serve on.                         | `127.0.0.1`             |
+| `port`               | `u16`             | Port to serve on.                               | `8000`                  |
+| `workers`*           | `usize`           | Number of threads to use for executing futures. | cpu core count          |
+| `max_blocking`*      | `usize`           | Limit on threads to start for blocking tasks.   | `512`                   |
+| `ident`              | `string`, `false` | If and how to identify via the `Server` header. | `"Rocket"`              |
+| `ip_header`          | `string`, `false` | IP header to inspect to get [client's real IP]. | `"X-Real-IP"`           |
+| `proxy_proto_header` | `string`, `false` | Header identifying [client to proxy protocol].  | `None`                  |
+| `keep_alive`         | `u32`             | Keep-alive timeout seconds; disabled when `0`.  | `5`                     |
+| `log_level`          | [`LogLevel`]      | Max level to log. (off/normal/debug/critical)   | `normal`/`critical`     |
+| `cli_colors`         | [`CliColors`]     | Whether to use colors and emoji when logging.   | `"auto"`                |
+| `secret_key`         | [`SecretKey`]     | Secret key for signing and encrypting values.   | `None`                  |
+| `tls`                | [`TlsConfig`]     | TLS configuration, if any.                      | `None`                  |
+| `limits`             | [`Limits`]        | Streaming read size limits.                     | [`Limits::default()`]   |
+| `limits.$name`       | `&str`/`uint`     | Read limit for `$name`.                         | form = "32KiB"          |
+| `ctrlc`              | `bool`            | Whether `ctrl-c` initiates a server shutdown.   | `true`                  |
+| `shutdown`*          | [`Shutdown`]      | Graceful shutdown configuration.                | [`Shutdown::default()`] |
+
 
 <small>* Note: the `workers`, `max_blocking`, and `shutdown.force` configuration
 parameters are only read from the [default provider](#default-provider).</small>
 
 [client's real IP]: @api/rocket/request/struct.Request.html#method.real_ip
+[client to proxy protocol]: @api/rocket/request/struct.Request.html#method.proxy_proto
 
 ### Profiles
 
@@ -130,6 +133,7 @@ port = 9001
 [release]
 port = 9999
 ip_header = false
+proxy_proto_header = "X-Forwarded-Proto"
 # NOTE: Don't (!) use this key! Generate your own and keep it private!
 #       e.g. via `head -c64 /dev/urandom | base64`
 secret_key = "hPrYyЭRiMyµ5sBB1π+CMæ1køFsåqKvBiQJxBVHQk="
@@ -148,7 +152,8 @@ workers = 16
 max_blocking = 512
 keep_alive = 5
 ident = "Rocket"
-ip_header = "X-Real-IP" # set to `false` to disable
+ip_header = "X-Real-IP" # set to `false` or `None` to disable
+proxy_proto_header = `false` # set to `false` or `None` to disable
 log_level = "normal"
 temp_dir = "/tmp"
 cli_colors = true
@@ -357,6 +362,25 @@ mutual TLS.
   suitable for production use.
 
 [`mtls::Certificate`]: @api/rocket/mtls/struct.Certificate.html
+
+### Proxied TLS
+
+If Rocket is running behind a reverse proxy that terminates TLS, it is useful to
+know whether the original connection was made securely. Therefore, Rocket offers
+the option to configure a `proxy_proto_header` that is used to determine if the
+request is handled in a secure context. The outcome is available via
+[`Request::context_is_likely_secure()`] and used to set cookies' secure flag by
+default. To enable this behaviour, configure the header as set by your reverse
+proxy. For example:
+
+```toml,ignore
+proxy_proto_header = 'X-Forwarded-Proto'
+```
+
+Note that this only sets the cookies' secure flag when not configured
+explicitly. This setting also provides the [request guard `ProxyProto`].
+
+[`ProxyProto`]: @api/rocket/request/trait.FromRequest.html#impl-FromRequest%3C'r%3E-for-%26ProxyProto
 
 ### Workers
 

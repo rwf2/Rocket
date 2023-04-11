@@ -181,9 +181,8 @@ macro_rules! pub_client_impl {
     /// ```
     #[inline(always)]
     pub fn cookies(&self) -> crate::http::CookieJar<'_> {
-        let config = &self.rocket().config();
         let jar = self._with_raw_cookies(|jar| jar.clone());
-        crate::http::CookieJar::from(jar, config)
+        crate::http::CookieJar::new(Some(jar), self.rocket())
     }
 
     req_method!($import, "GET", get, Method::Get);

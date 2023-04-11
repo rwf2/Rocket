@@ -13,9 +13,8 @@ use crate::request::{FromParam, FromSegments, FromRequest, Outcome};
 use crate::form::{self, ValueField, FromForm};
 use crate::data::Limits;
 
-use crate::http::{hyper, Method, Header, HeaderMap};
+use crate::http::{hyper, Method, Header, HeaderMap, ProxyProto};
 use crate::http::{ContentType, Accept, MediaType, CookieJar, Cookie};
-use crate::http::uncased::UncasedStr;
 use crate::http::private::Certificates;
 use crate::http::uri::{fmt::Path, Origin, Segments, Host, Authority};
 
@@ -97,7 +96,7 @@ impl<'r> Request<'r> {
             state: RequestState {
                 rocket,
                 route: Atomic::new(None),
-                cookies: CookieJar::new(rocket.config()),
+                cookies: CookieJar::new(None, rocket),
                 accept: InitCell::new(),
                 content_type: InitCell::new(),
                 cache: Arc::new(<TypeMap![Send + Sync]>::new()),
@@ -386,6 +385,85 @@ impl<'r> Request<'r> {
             })
     }
 
+    /// Returns the [`ProxyProto`] associated with the current request.
+    ///
+    /// The value is determined by inspecting the header named
+    /// [`proxy_proto_header`](crate::Config::proxy_proto_header), if
+    /// configured. If parameter isn't configured or the request doesn't contain
+    /// a header named as indicated, this method returns `None`.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use rocket::http::{Header, ProxyProto};
+    ///
+    /// # let c = rocket::local::blocking::Client::debug_with(vec![]).unwrap();
+    /// # let req = c.get("/");
+    /// // By default, no `proxy_proto_header` is configured.
+    /// let req = req.header(Header::new("x-forwarded-proto", "https"));
+    /// assert_eq!(req.proxy_proto(), None);
+    ///
+    /// // We can configure one by setting the `proxy_proto_header` parameter.
+    /// // Here we set it to `x-forwarded-proto`, considered de-facto standard.
+    /// # let figment = rocket::figment::Figment::from(rocket::Config::debug_default());
+    /// let figment = figment.merge(("proxy_proto_header", "x-forwarded-proto"));
+    /// # let c = rocket::local::blocking::Client::debug(rocket::custom(figment)).unwrap();
+    /// # let req = c.get("/");
+    /// let req = req.header(Header::new("x-forwarded-proto", "https"));
+    /// assert_eq!(req.proxy_proto(), Some(ProxyProto::Https));
+    ///
+    /// # let req = c.get("/");
+    /// let req = req.header(Header::new("x-forwarded-proto", "http"));
+    /// assert_eq!(req.proxy_proto(), Some(ProxyProto::Http));
+    ///
+    /// # let req = c.get("/");
+    /// let req = req.header(Header::new("x-forwarded-proto", "xproto"));
+    /// assert_eq!(req.proxy_proto(), Some(ProxyProto::Unknown("xproto".into())));
+    /// ```
+    pub fn proxy_proto(&self) -> Option<ProxyProto<'_>> {
+        self.rocket()
+            .config
+            .proxy_proto_header
+            .as_ref()
+            .and_then(|header| self.headers().get_one(header.as_str()))
+            .map(ProxyProto::from)
+    }
+
+    /// Returns whether we are *likely* in a secure context.
+    ///
+    /// A request is in a "secure context" if it was initially sent over a
+    /// secure (TLS, via HTTPS) connection. If TLS is configured and enabled,
+    /// then the request is guaranteed to be in a secure context. Otherwise, if
+    /// [`Request::proxy_proto()`] evaluates to `Https`, then we are _likely_ to
+    /// be in a secure context. We say _likely_ because it is entirely possible
+    /// for the header to indicate that the connection is being proxied via
+    /// HTTPS while reality differs. As such, this value should not be trusted
+    /// when security is a concern.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use rocket::http::{Header, ProxyProto};
+    ///
+    /// # let client = rocket::local::blocking::Client::debug_with(vec![]).unwrap();
+    /// # let req = client.get("/");
+    /// // If TLS and proxy_proto are disabled, we are not in a secure context.
+    /// assert_eq!(req.context_is_likely_secure(), false);
+    ///
+    /// // Configuring proxy_proto and receiving a header value of `https` is
+    /// // interpreted as likely being in a secure context.
+    /// // Here we set it to `x-forwarded-proto`, considered de-facto standard.
+    /// # let figment = rocket::figment::Figment::from(rocket::Config::debug_default());
+    /// let figment = figment.merge(("proxy_proto_header", "x-forwarded-proto"));
+    /// # let c = rocket::local::blocking::Client::debug(rocket::custom(figment)).unwrap();
+    /// # let req = c.get("/");
+    /// let req = req.header(Header::new("x-forwarded-proto", "https"));
+    /// assert_eq!(req.context_is_likely_secure(), true);
+    /// ```
+    pub fn context_is_likely_secure(&self) -> bool {
+        self.cookies().state.secure
+    }
+
     /// Attempts to return the client's IP address by first inspecting the
     /// [`ip_header`](crate::Config::ip_header) and then using the remote
     /// connection's IP address. Note that the built-in `IpAddr` request guard
@@ -497,7 +575,7 @@ impl<'r> Request<'r> {
     #[inline]
     pub fn add_header<'h: 'r, H: Into<Header<'h>>>(&mut self, header: H) {
         let header = header.into();
-        self.bust_header_cache(header.name(), false);
+        self.bust_header_cache(&header, false);
         self.headers.add(header);
     }
 
@@ -526,7 +604,7 @@ impl<'r> Request<'r> {
     #[inline]
     pub fn replace_header<'h: 'r, H: Into<Header<'h>>>(&mut self, header: H) {
         let header = header.into();
-        self.bust_header_cache(header.name(), true);
+        self.bust_header_cache(&header, true);
         self.headers.replace(header);
     }
 
@@ -547,9 +625,9 @@ impl<'r> Request<'r> {
     /// ```
     #[inline]
     pub fn content_type(&self) -> Option<&ContentType> {
-        self.state.content_type.get_or_init(|| {
-            self.headers().get_one("Content-Type").and_then(|v| v.parse().ok())
-        }).as_ref()
+        self.state.content_type
+            .get_or_init(|| self.headers().get_one("Content-Type").and_then(|v| v.parse().ok()))
+            .as_ref()
     }
 
     /// Returns the Accept header of `self`. If the header is not present,
@@ -567,9 +645,9 @@ impl<'r> Request<'r> {
     /// ```
     #[inline]
     pub fn accept(&self) -> Option<&Accept> {
-        self.state.accept.get_or_init(|| {
-            self.headers().get_one("Accept").and_then(|v| v.parse().ok())
-        }).as_ref()
+        self.state.accept
+            .get_or_init(|| self.headers().get_one("Accept").and_then(|v| v.parse().ok()))
+            .as_ref()
     }
 
     /// Returns the media type "format" of the request.
@@ -925,14 +1003,18 @@ impl<'r> Request<'r> {
 #[doc(hidden)]
 impl<'r> Request<'r> {
     /// Resets the cached value (if any) for the header with name `name`.
-    fn bust_header_cache(&mut self, name: &UncasedStr, replace: bool) {
-        if name == "Content-Type" {
+    fn bust_header_cache(&mut self, header: &Header<'_>, replace: bool) {
+        if header.name() == "Content-Type" {
             if self.content_type().is_none() || replace {
                 self.state.content_type = InitCell::new();
             }
-        } else if name == "Accept" {
+        } else if header.name() == "Accept" {
             if self.accept().is_none() || replace {
                 self.state.accept = InitCell::new();
+            }
+        } else if Some(header.name()) == self.rocket().config.proxy_proto_header.as_deref() {
+            if !self.cookies().state.secure || replace {
+                self.cookies_mut().state.secure |= ProxyProto::from(header.value()).is_https();
             }
         }
     }
