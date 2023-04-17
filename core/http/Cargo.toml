@@ -51,7 +51,7 @@ version = "0.13"
 optional = true
 
 [dependencies.hyper]
-version = "0.14.9"
+version = "0.14.26"
 default-features = false
 features = ["http1", "runtime", "server", "stream"]
 
