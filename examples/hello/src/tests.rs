@@ -3,8 +3,8 @@ use rocket::http::{RawStr, Status};
 
 #[test]
 fn hello() {
-    let langs = &["", "ru", "%D1%80%D1%83", "en", "unknown"];
-    let ex_lang = &["Hi", "Привет", "Привет", "Hello", "Hi"];
+    let langs = &["", "ua", "%D1%83%D0%B0", "en", "unknown"];
+    let ex_lang = &["Hi", "Привіт", "Привіт", "Hello", "Hi"];
 
     let emojis = &["", "on", "true", "false", "no", "yes", "off"];
     let ex_emoji = &["", "👋 ", "👋 ", "", "", "👋 ", ""];
@@ -48,8 +48,8 @@ fn hello_world() {
 #[test]
 fn hello_mir() {
     let client = Client::tracked(super::rocket()).unwrap();
-    let response = client.get("/hello/%D0%BC%D0%B8%D1%80").dispatch();
-    assert_eq!(response.into_string(), Some("Привет, мир!".into()));
+    let response = client.get("/hello/%D1%81%D0%B2%D1%96%D1%82").dispatch();
+    assert_eq!(response.into_string(), Some("Привіт, світе!".into()));
 }
 
 #[test]

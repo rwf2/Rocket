@@ -6,9 +6,9 @@
 enum Lang {
     #[field(value = "en")]
     English,
-    #[field(value = "ru")]
-    #[field(value = "ру")]
-    Russian
+    #[field(value = "ua")]
+    #[field(value = "уа")]
+    Ukrainian
 }
 
 #[derive(FromForm)]
@@ -25,10 +25,10 @@ fn world() -> &'static str {
 }
 
 // Try visiting:
-//   http://127.0.0.1:8000/hello/мир
-#[get("/мир")]
-fn mir() -> &'static str {
-    "Привет, мир!"
+//   http://127.0.0.1:8000/hello/світ
+#[get("/світ")]
+fn svit() -> &'static str {
+    "Привіт, світе!"
 }
 
 // Try visiting:
@@ -43,13 +43,13 @@ fn wave(name: &str, age: u8) -> String {
 // Try visiting:
 //   http://127.0.0.1:8000/?emoji
 //   http://127.0.0.1:8000/?name=Rocketeer
-//   http://127.0.0.1:8000/?lang=ру
+//   http://127.0.0.1:8000/?lang=уа
 //   http://127.0.0.1:8000/?lang=ру&emoji
 //   http://127.0.0.1:8000/?emoji&lang=en
 //   http://127.0.0.1:8000/?name=Rocketeer&lang=en
 //   http://127.0.0.1:8000/?emoji&name=Rocketeer
 //   http://127.0.0.1:8000/?name=Rocketeer&lang=en&emoji
-//   http://127.0.0.1:8000/?lang=ru&emoji&name=Rocketeer
+//   http://127.0.0.1:8000/?lang=ua&emoji&name=Rocketeer
 #[get("/?<lang>&<opt..>")]
 fn hello(lang: Option<Lang>, opt: Options<'_>) -> String {
     let mut greeting = String::new();
@@ -58,7 +58,7 @@ fn hello(lang: Option<Lang>, opt: Options<'_>) -> String {
     }
 
     match lang {
-        Some(Lang::Russian) => greeting.push_str("Привет"),
+        Some(Lang::Ukrainian) => greeting.push_str("Привіт"),
         Some(Lang::English) => greeting.push_str("Hello"),
         None => greeting.push_str("Hi"),
     }
@@ -78,7 +78,7 @@ fn rocket() -> _ {
 
     rocket::build()
         .mount("/", routes![hello])
-        .mount("/hello", routes![world, mir])
+        .mount("/hello", routes![world, svit])
         .mount("/wave", routes![wave])
         .attach(AdHoc::on_request("Compatibility Normalizer", |req, _| Box::pin(async move {
             if !req.uri().is_normalized_nontrailing() {
