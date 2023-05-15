@@ -368,7 +368,8 @@ pub fn validators<'v>(field: Field<'v>) -> Result<impl Iterator<Item = syn::Expr
                     _ => Ok(()),
                 };
 
-                __result.map_err(|__e| match #name_opt {
+                let __e_name = #name_opt;
+                __result.map_err(|__e| match __e_name {
                     Some(__name) => __e.with_name(__name),
                     None => __e
                 })
