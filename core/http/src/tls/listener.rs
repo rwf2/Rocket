@@ -4,7 +4,9 @@ use std::sync::Arc;
 use std::task::{Context, Poll};
 use std::future::Future;
 use std::net::SocketAddr;
-
+use rustls::PrivateKey;
+use rustls::{Certificate, sign::SigningKey, sign::CertifiedKey};
+use rustls::server::ClientHello;
 use tokio::net::{TcpListener, TcpStream};
 use tokio::io::{AsyncRead, AsyncWrite};
 use tokio_rustls::{Accept, TlsAcceptor, server::TlsStream as BareTlsStream};
@@ -17,7 +19,10 @@ pub struct TlsListener {
     listener: TcpListener,
     acceptor: TlsAcceptor,
 }
-
+pub struct Resolver{
+    cert_chain: Vec<Certificate>,
+    key: PrivateKey
+}
 /// This implementation exists so that ROCKET_WORKERS=1 can make progress while
 /// a TLS handshake is being completed. It does this by returning `Ready` from
 /// `poll_accept()` as soon as we have a TCP connection and performing the
@@ -52,7 +57,6 @@ pub struct TlsStream {
     state: TlsState,
     certs: Certificates,
 }
-
 /// State of `TlsStream`.
 pub enum TlsState {
     /// The TLS handshake is taking place. We don't have a full connection yet.
@@ -60,7 +64,6 @@ pub enum TlsState {
     /// TLS handshake completed successfully; we're getting payload data.
     Streaming(BareTlsStream<TcpStream>),
 }
-
 /// TLS as ~configured by `TlsConfig` in `rocket` core.
 pub struct Config<R> {
     pub cert_chain: R,
@@ -69,6 +72,18 @@ pub struct Config<R> {
     pub prefer_server_order: bool,
     pub ca_certs: Option<R>,
     pub mandatory_mtls: bool,
+}
+
+impl rustls::server::ResolvesServerCert for Resolver {
+    fn resolve(&self, client_hello: ClientHello<'_>) -> Option<Arc<CertifiedKey>> {
+        let sign_key = rustls::sign::any_supported_type(&self.key).unwrap();
+        Some(Arc::new(CertifiedKey{
+            cert: self.cert_chain.clone(),
+            key: sign_key, 
+            ocsp: None,
+            sct_list: None
+        }))
+    }
 }
 
 impl TlsListener {
@@ -92,15 +107,17 @@ impl TlsListener {
             },
             None => NoClientAuth::boxed(),
         };
-
+ 
         let mut tls_config = ServerConfig::builder()
             .with_cipher_suites(&c.ciphersuites)
             .with_safe_default_kx_groups()
             .with_safe_default_protocol_versions()
             .map_err(|e| io::Error::new(io::ErrorKind::Other, format!("bad TLS config: {}", e)))?
             .with_client_cert_verifier(client_auth)
-            .with_single_cert(cert_chain, key)
-            .map_err(|e| io::Error::new(io::ErrorKind::Other, format!("bad TLS config: {}", e)))?;
+            .with_cert_resolver(Arc::new(Resolver{
+                cert_chain: cert_chain.clone(),
+                key: key.clone()
+            }));
 
         tls_config.ignore_client_order = c.prefer_server_order;
 
