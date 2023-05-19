@@ -306,10 +306,7 @@ impl Config {
     /// let config = Config::from(figment);
     /// ```
     pub fn from<T: Provider>(provider: T) -> Self {
-        Self::try_from(provider).unwrap_or_else(|e| {
-            pretty_print_error(e);
-            panic!("aborting due to configuration error(s)")
-        })
+        Self::try_from(provider).unwrap_or_else(bail_with_config_error)
     }
 
     /// Returns `true` if TLS is enabled.
@@ -589,11 +586,17 @@ impl<'r> FromRequest<'r> for &'r Config {
 }
 
 #[doc(hidden)]
+pub fn bail_with_config_error<T>(error: figment::Error) -> T {
+    pretty_print_error(error);
+    panic!("aborting due to configuration error(s)")
+}
+
+#[doc(hidden)]
 pub fn pretty_print_error(error: figment::Error) {
     use figment::error::{Kind, OneOf};
 
     crate::log::init_default();
-    error!("Rocket configuration extraction from provider failed.");
+    error!("Failed to extract valid configuration.");
     for e in error {
         fn w<T: std::fmt::Display>(v: T) -> Paint<T> { Paint::white(v) }
 
