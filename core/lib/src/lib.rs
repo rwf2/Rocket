@@ -260,7 +260,7 @@ pub fn async_test<R>(fut: impl std::future::Future<Output = R>) -> R {
 
 /// WARNING: This is unstable! Do not use this method outside of Rocket!
 #[doc(hidden)]
-pub fn async_main<R>(fut: impl std::future::Future<Output = R> + Send) -> R {
+pub fn async_main<R>(fut: impl std::future::Future<Output = R>) -> R {
     // FIXME: We need to run `fut` to get the user's `Figment` to properly set
     // up the async env, but we need the async env to run `fut`. So we're stuck.
     // Tokio doesn't let us take the state from one async env and migrate it to
@@ -354,8 +354,6 @@ pub fn async_main<R>(fut: impl std::future::Future<Output = R> + Send) -> R {
 ///     rocket.launch().await
 /// });
 /// ```
-pub fn execute<R, F>(future: F) -> R
-    where F: std::future::Future<Output = R> + Send
-{
+pub fn execute<R>(future: impl std::future::Future<Output = R>) -> R {
     async_main(future)
 }
