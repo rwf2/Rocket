@@ -446,6 +446,8 @@ fn todo() -> Json<Task> {
 }
 ```
 
+! note: You must enable Rocket's `json` crate feature to use the [`Json`] type.
+
 The `Json` type serializes the structure into JSON, sets the Content-Type to
 JSON, and emits the serialized data in a fixed-sized body. If serialization
 fails, a **500 - Internal Server Error** is returned.
