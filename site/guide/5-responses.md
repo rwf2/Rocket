@@ -535,7 +535,7 @@ used.
   the name `"index"` in templates, i.e, `{% extends "index" %}` or `{% extends
   "base" %}` for `base.html.tera`.
 
-[`context`]: @api/rocket_dyn_templates/macro.context.html
+[`context!`]: @api/rocket_dyn_templates/macro.context.html
 
 ### Live Reloading
 
