@@ -43,7 +43,7 @@ pin-project-lite = "0.2"
 memchr = "2"
 stable-pattern = "0.1"
 cookie = { version = "0.17.0", features = ["percent-encode"] }
-state = "0.5.3"
+state = "0.6"
 futures = { version = "0.3", default-features = false }
 
 [dependencies.x509-parser]

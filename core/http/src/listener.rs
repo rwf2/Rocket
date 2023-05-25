@@ -12,7 +12,7 @@ use tokio::time::Sleep;
 use tokio::io::{AsyncRead, AsyncWrite};
 use tokio::net::TcpStream;
 use hyper::server::accept::Accept;
-use state::Storage;
+use state::InitCell;
 
 pub use tokio::net::TcpListener;
 
@@ -29,7 +29,7 @@ pub struct CertificateData(pub Vec<u8>);
 
 /// A collection of raw certificate data.
 #[derive(Clone, Default)]
-pub struct Certificates(Arc<Storage<Vec<CertificateData>>>);
+pub struct Certificates(Arc<InitCell<Vec<CertificateData>>>);
 
 impl From<Vec<CertificateData>> for Certificates {
     fn from(value: Vec<CertificateData>) -> Self {

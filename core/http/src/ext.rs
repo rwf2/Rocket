@@ -1,7 +1,7 @@
 //! Extension traits implemented by several HTTP types.
 
 use smallvec::{Array, SmallVec};
-use state::Storage;
+use state::InitCell;
 
 // TODO: It would be nice if we could somehow have one trait that could give us
 // either SmallVec or Vec.
@@ -106,10 +106,10 @@ impl<T: IntoOwned> IntoOwned for Vec<T> {
     }
 }
 
-impl<T: IntoOwned + Send + Sync> IntoOwned for Storage<T>
+impl<T: IntoOwned + Send + Sync> IntoOwned for InitCell<T>
     where T::Owned: Send + Sync
 {
-    type Owned = Storage<T::Owned>;
+    type Owned = InitCell<T::Owned>;
 
     #[inline(always)]
     fn into_owned(self) -> Self::Owned {

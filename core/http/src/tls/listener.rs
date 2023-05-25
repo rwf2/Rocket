@@ -40,7 +40,7 @@ pub struct TlsListener {
 ///
 /// To work around this, we "lie" when `peer_certificates()` are requested and
 /// always return `Some(Certificates)`. Internally, `Certificates` is an
-/// `Arc<Storage<Vec<CertificateData>>>`, effectively a shared, thread-safe,
+/// `Arc<InitCell<Vec<CertificateData>>>`, effectively a shared, thread-safe,
 /// `OnceCell`. The cell is initially empty and is filled as soon as the
 /// handshake is complete. If the certificate data were to be requested prior to
 /// this point, it would be empty. However, in Rocket, we only request

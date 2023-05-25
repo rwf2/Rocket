@@ -2,7 +2,7 @@ use std::hash::Hash;
 use std::borrow::Cow;
 use std::fmt::Write;
 
-use state::Storage;
+use state::InitCell;
 
 use crate::{RawStr, ext::IntoOwned};
 use crate::uri::Segments;
@@ -14,12 +14,12 @@ use crate::parse::{IndexedStr, Extent};
 #[derive(Debug, Clone)]
 pub struct Data<'a, P: Part> {
     pub(crate) value: IndexedStr<'a>,
-    pub(crate) decoded_segments: Storage<Vec<P::Raw>>,
+    pub(crate) decoded_segments: InitCell<Vec<P::Raw>>,
 }
 
 impl<'a, P: Part> Data<'a, P> {
     pub(crate) fn raw(value: Extent<&'a [u8]>) -> Self {
-        Data { value: value.into(), decoded_segments: Storage::new() }
+        Data { value: value.into(), decoded_segments: InitCell::new() }
     }
 
     // INTERNAL METHOD.
@@ -27,7 +27,7 @@ impl<'a, P: Part> Data<'a, P> {
     pub fn new<S: Into<Cow<'a, str>>>(value: S) -> Self {
         Data {
             value: IndexedStr::from(value.into()),
-            decoded_segments: Storage::new(),
+            decoded_segments: InitCell::new(),
         }
     }
 }
@@ -117,7 +117,7 @@ impl<'a> Path<'a> {
 
         Data {
             value: IndexedStr::from(Cow::Owned(path)),
-            decoded_segments: Storage::new(),
+            decoded_segments: InitCell::new(),
         }
     }
 
@@ -175,7 +175,7 @@ impl<'a> Path<'a> {
     /// assert_eq!(path_segs, &["a b", "b/c", "d", "e"]);
     /// ```
     pub fn segments(&self) -> Segments<'a, fmt::Path> {
-        let cached = self.data.decoded_segments.get_or_set(|| {
+        let cached = self.data.decoded_segments.get_or_init(|| {
             let (indexed, path) = (&self.data.value, self.raw());
             self.raw_segments()
                 .filter(|r| !r.is_empty())
@@ -235,7 +235,7 @@ impl<'a> Query<'a> {
 
         Some(Data {
             value: IndexedStr::from(Cow::Owned(query)),
-            decoded_segments: Storage::new(),
+            decoded_segments: InitCell::new(),
         })
     }
 
@@ -300,7 +300,7 @@ impl<'a> Query<'a> {
     /// assert_eq!(query_segs, &[("a b/", "some one@gmail.com"), ("&=2", "")]);
     /// ```
     pub fn segments(&self) -> Segments<'a, fmt::Query> {
-        let cached = self.data.decoded_segments.get_or_set(|| {
+        let cached = self.data.decoded_segments.get_or_init(|| {
             let (indexed, query) = (&self.data.value, self.raw());
             self.raw_segments()
                 .filter(|s| !s.is_empty())
