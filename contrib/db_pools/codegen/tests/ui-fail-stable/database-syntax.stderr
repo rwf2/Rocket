@@ -1,11 +1,15 @@
 error: invalid value: expected string literal
- --> $DIR/database-syntax.rs:4:12
+ --> tests/ui-fail-stable/database-syntax.rs:4:12
   |
+3 | #[derive(Database)]
+  |          -------- in this derive macro expansion
 4 | #[database(123)]
   |            ^^^
+  |
+  = note: this error originates in the derive macro `Database` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: [note] error occurred while deriving `Database`
- --> $DIR/database-syntax.rs:3:10
+ --> tests/ui-fail-stable/database-syntax.rs:3:10
   |
 3 | #[derive(Database)]
   |          ^^^^^^^^
@@ -13,13 +17,17 @@ error: [note] error occurred while deriving `Database`
   = note: this error originates in the derive macro `Database` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: expected key/value `key = value`
- --> $DIR/database-syntax.rs:8:25
+ --> tests/ui-fail-stable/database-syntax.rs:8:25
   |
+7 | #[derive(Database)]
+  |          -------- in this derive macro expansion
 8 | #[database("some-name", "another")]
   |                         ^^^^^^^^^
+  |
+  = note: this error originates in the derive macro `Database` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: [note] error occurred while deriving `Database`
- --> $DIR/database-syntax.rs:7:10
+ --> tests/ui-fail-stable/database-syntax.rs:7:10
   |
 7 | #[derive(Database)]
   |          ^^^^^^^^
@@ -27,13 +35,17 @@ error: [note] error occurred while deriving `Database`
   = note: this error originates in the derive macro `Database` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: unexpected attribute parameter: `name`
-  --> $DIR/database-syntax.rs:12:25
+  --> tests/ui-fail-stable/database-syntax.rs:12:25
    |
+11 | #[derive(Database)]
+   |          -------- in this derive macro expansion
 12 | #[database("some-name", name = "another")]
    |                         ^^^^
+   |
+   = note: this error originates in the derive macro `Database` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: [note] error occurred while deriving `Database`
-  --> $DIR/database-syntax.rs:11:10
+  --> tests/ui-fail-stable/database-syntax.rs:11:10
    |
 11 | #[derive(Database)]
    |          ^^^^^^^^
@@ -41,13 +53,17 @@ error: [note] error occurred while deriving `Database`
    = note: this error originates in the derive macro `Database` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: enums are not supported
-  --> $DIR/database-syntax.rs:16:1
+  --> tests/ui-fail-stable/database-syntax.rs:16:1
    |
+15 | #[derive(Database)]
+   |          -------- in this derive macro expansion
 16 | #[database("foo")]
    | ^
+   |
+   = note: this error originates in the derive macro `Database` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: [note] error occurred while deriving `Database`
-  --> $DIR/database-syntax.rs:15:10
+  --> tests/ui-fail-stable/database-syntax.rs:15:10
    |
 15 | #[derive(Database)]
    |          ^^^^^^^^
@@ -55,13 +71,17 @@ error: [note] error occurred while deriving `Database`
    = note: this error originates in the derive macro `Database` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: missing `#[database("name")]` attribute
-  --> $DIR/database-syntax.rs:20:1
+  --> tests/ui-fail-stable/database-syntax.rs:20:1
    |
+19 | #[derive(Database)]
+   |          -------- in this derive macro expansion
 20 | struct E(deadpool_postgres::Pool);
    | ^^^^^^
+   |
+   = note: this error originates in the derive macro `Database` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: [note] error occurred while deriving `Database`
-  --> $DIR/database-syntax.rs:19:10
+  --> tests/ui-fail-stable/database-syntax.rs:19:10
    |
 19 | #[derive(Database)]
    |          ^^^^^^^^
@@ -69,13 +89,17 @@ error: [note] error occurred while deriving `Database`
    = note: this error originates in the derive macro `Database` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: struct must have exactly one unnamed field
-  --> $DIR/database-syntax.rs:23:1
+  --> tests/ui-fail-stable/database-syntax.rs:23:1
    |
+22 | #[derive(Database)]
+   |          -------- in this derive macro expansion
 23 | #[database("foo")]
    | ^
+   |
+   = note: this error originates in the derive macro `Database` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: [note] error occurred while deriving `Database`
-  --> $DIR/database-syntax.rs:22:10
+  --> tests/ui-fail-stable/database-syntax.rs:22:10
    |
 22 | #[derive(Database)]
    |          ^^^^^^^^
@@ -83,13 +107,17 @@ error: [note] error occurred while deriving `Database`
    = note: this error originates in the derive macro `Database` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: struct must have exactly one unnamed field
-  --> $DIR/database-syntax.rs:27:1
+  --> tests/ui-fail-stable/database-syntax.rs:27:1
    |
+26 | #[derive(Database)]
+   |          -------- in this derive macro expansion
 27 | #[database("foo")]
    | ^
+   |
+   = note: this error originates in the derive macro `Database` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: [note] error occurred while deriving `Database`
-  --> $DIR/database-syntax.rs:26:10
+  --> tests/ui-fail-stable/database-syntax.rs:26:10
    |
 26 | #[derive(Database)]
    |          ^^^^^^^^
@@ -97,13 +125,17 @@ error: [note] error occurred while deriving `Database`
    = note: this error originates in the derive macro `Database` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: named structs are not supported
-  --> $DIR/database-syntax.rs:31:1
+  --> tests/ui-fail-stable/database-syntax.rs:31:1
    |
+30 | #[derive(Database)]
+   |          -------- in this derive macro expansion
 31 | #[database("foo")]
    | ^
+   |
+   = note: this error originates in the derive macro `Database` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: [note] error occurred while deriving `Database`
-  --> $DIR/database-syntax.rs:30:10
+  --> tests/ui-fail-stable/database-syntax.rs:30:10
    |
 30 | #[derive(Database)]
    |          ^^^^^^^^

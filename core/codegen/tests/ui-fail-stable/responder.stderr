@@ -1,11 +1,15 @@
 error: need at least one field
- --> $DIR/responder.rs:4:1
+ --> tests/ui-fail-stable/responder.rs:4:1
   |
+3 | #[derive(Responder)]
+  |          --------- in this derive macro expansion
 4 | struct Thing1;
   | ^^^^^^
+  |
+  = note: this error originates in the derive macro `Responder` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: [note] error occurred while deriving `Responder`
- --> $DIR/responder.rs:3:10
+ --> tests/ui-fail-stable/responder.rs:3:10
   |
 3 | #[derive(Responder)]
   |          ^^^^^^^^^
@@ -13,13 +17,17 @@ error: [note] error occurred while deriving `Responder`
   = note: this error originates in the derive macro `Responder` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: need at least one field
- --> $DIR/responder.rs:7:14
+ --> tests/ui-fail-stable/responder.rs:7:14
   |
+6 | #[derive(Responder)]
+  |          --------- in this derive macro expansion
 7 | struct Thing2();
   |              ^^
+  |
+  = note: this error originates in the derive macro `Responder` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: [note] error occurred while deriving `Responder`
- --> $DIR/responder.rs:6:10
+ --> tests/ui-fail-stable/responder.rs:6:10
   |
 6 | #[derive(Responder)]
   |          ^^^^^^^^^
@@ -27,13 +35,17 @@ error: [note] error occurred while deriving `Responder`
   = note: this error originates in the derive macro `Responder` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: need at least one field
-  --> $DIR/responder.rs:13:12
+  --> tests/ui-fail-stable/responder.rs:13:12
    |
+12 | #[derive(Responder)]
+   |          --------- in this derive macro expansion
 13 | enum Foo { Bark, }
    |            ^^^^
+   |
+   = note: this error originates in the derive macro `Responder` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: [note] error occurred while deriving `Responder`
-  --> $DIR/responder.rs:12:10
+  --> tests/ui-fail-stable/responder.rs:12:10
    |
 12 | #[derive(Responder)]
    |          ^^^^^^^^^
@@ -41,13 +53,17 @@ error: [note] error occurred while deriving `Responder`
    = note: this error originates in the derive macro `Responder` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: only one lifetime is supported
-  --> $DIR/responder.rs:16:14
+  --> tests/ui-fail-stable/responder.rs:16:14
    |
+15 | #[derive(Responder)]
+   |          --------- in this derive macro expansion
 16 | struct Thing4<'a, 'b>(&'a str, &'b str);
    |              ^
+   |
+   = note: this error originates in the derive macro `Responder` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: [note] error occurred while deriving `Responder`
-  --> $DIR/responder.rs:15:10
+  --> tests/ui-fail-stable/responder.rs:15:10
    |
 15 | #[derive(Responder)]
    |          ^^^^^^^^^
@@ -55,13 +71,17 @@ error: [note] error occurred while deriving `Responder`
    = note: this error originates in the derive macro `Responder` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: invalid or unknown content type
-  --> $DIR/responder.rs:25:27
+  --> tests/ui-fail-stable/responder.rs:25:27
    |
+24 | #[derive(Responder)]
+   |          --------- in this derive macro expansion
 25 | #[response(content_type = "")]
    |                           ^^
+   |
+   = note: this error originates in the derive macro `Responder` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: [note] error occurred while deriving `Responder`
-  --> $DIR/responder.rs:24:10
+  --> tests/ui-fail-stable/responder.rs:24:10
    |
 24 | #[derive(Responder)]
    |          ^^^^^^^^^
@@ -69,13 +89,17 @@ error: [note] error occurred while deriving `Responder`
    = note: this error originates in the derive macro `Responder` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: invalid or unknown content type
-  --> $DIR/responder.rs:29:27
+  --> tests/ui-fail-stable/responder.rs:29:27
    |
+28 | #[derive(Responder)]
+   |          --------- in this derive macro expansion
 29 | #[response(content_type = "idk")]
    |                           ^^^^^
+   |
+   = note: this error originates in the derive macro `Responder` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: [note] error occurred while deriving `Responder`
-  --> $DIR/responder.rs:28:10
+  --> tests/ui-fail-stable/responder.rs:28:10
    |
 28 | #[derive(Responder)]
    |          ^^^^^^^^^
@@ -83,13 +107,17 @@ error: [note] error occurred while deriving `Responder`
    = note: this error originates in the derive macro `Responder` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: invalid value: expected string literal
-  --> $DIR/responder.rs:33:27
+  --> tests/ui-fail-stable/responder.rs:33:27
    |
+32 | #[derive(Responder)]
+   |          --------- in this derive macro expansion
 33 | #[response(content_type = 100)]
    |                           ^^^
+   |
+   = note: this error originates in the derive macro `Responder` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: [note] error occurred while deriving `Responder`
-  --> $DIR/responder.rs:32:10
+  --> tests/ui-fail-stable/responder.rs:32:10
    |
 32 | #[derive(Responder)]
    |          ^^^^^^^^^
@@ -97,13 +125,17 @@ error: [note] error occurred while deriving `Responder`
    = note: this error originates in the derive macro `Responder` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: status must be in range [100, 599]
-  --> $DIR/responder.rs:37:21
+  --> tests/ui-fail-stable/responder.rs:37:21
    |
+36 | #[derive(Responder)]
+   |          --------- in this derive macro expansion
 37 | #[response(status = 8)]
    |                     ^
+   |
+   = note: this error originates in the derive macro `Responder` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: [note] error occurred while deriving `Responder`
-  --> $DIR/responder.rs:36:10
+  --> tests/ui-fail-stable/responder.rs:36:10
    |
 36 | #[derive(Responder)]
    |          ^^^^^^^^^
@@ -111,13 +143,17 @@ error: [note] error occurred while deriving `Responder`
    = note: this error originates in the derive macro `Responder` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: invalid value: expected unsigned integer literal
-  --> $DIR/responder.rs:41:21
+  --> tests/ui-fail-stable/responder.rs:41:21
    |
+40 | #[derive(Responder)]
+   |          --------- in this derive macro expansion
 41 | #[response(status = "404")]
    |                     ^^^^^
+   |
+   = note: this error originates in the derive macro `Responder` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: [note] error occurred while deriving `Responder`
-  --> $DIR/responder.rs:40:10
+  --> tests/ui-fail-stable/responder.rs:40:10
    |
 40 | #[derive(Responder)]
    |          ^^^^^^^^^
@@ -125,13 +161,17 @@ error: [note] error occurred while deriving `Responder`
    = note: this error originates in the derive macro `Responder` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: invalid value: expected unsigned integer literal
-  --> $DIR/responder.rs:45:21
+  --> tests/ui-fail-stable/responder.rs:45:21
    |
+44 | #[derive(Responder)]
+   |          --------- in this derive macro expansion
 45 | #[response(status = "404", content_type = "html")]
    |                     ^^^^^
+   |
+   = note: this error originates in the derive macro `Responder` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: [note] error occurred while deriving `Responder`
-  --> $DIR/responder.rs:44:10
+  --> tests/ui-fail-stable/responder.rs:44:10
    |
 44 | #[derive(Responder)]
    |          ^^^^^^^^^
@@ -139,13 +179,17 @@ error: [note] error occurred while deriving `Responder`
    = note: this error originates in the derive macro `Responder` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: invalid value: expected string literal
-  --> $DIR/responder.rs:49:41
+  --> tests/ui-fail-stable/responder.rs:49:41
    |
+48 | #[derive(Responder)]
+   |          --------- in this derive macro expansion
 49 | #[response(status = 404, content_type = 120)]
    |                                         ^^^
+   |
+   = note: this error originates in the derive macro `Responder` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: [note] error occurred while deriving `Responder`
-  --> $DIR/responder.rs:48:10
+  --> tests/ui-fail-stable/responder.rs:48:10
    |
 48 | #[derive(Responder)]
    |          ^^^^^^^^^

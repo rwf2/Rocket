@@ -1,17 +1,21 @@
 error: expected `,`
- --> $DIR/routes.rs:4:23
+ --> tests/ui-fail-stable/routes.rs:4:23
   |
 4 |     let _ = routes![a b];
   |                       ^
+  |
+  = note: this error originates in the macro `routes` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: expected identifier
- --> $DIR/routes.rs:6:24
+ --> tests/ui-fail-stable/routes.rs:6:24
   |
 6 |     let _ = routes![a::, ];
   |                        ^
+  |
+  = note: this error originates in the macro `routes` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: unexpected end of input, expected identifier
- --> $DIR/routes.rs:7:13
+ --> tests/ui-fail-stable/routes.rs:7:13
   |
 7 |     let _ = routes![a::];
   |             ^^^^^^^^^^^^

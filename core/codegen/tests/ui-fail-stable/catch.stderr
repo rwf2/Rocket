@@ -2,15 +2,23 @@ error: expected `fn`
          --- help: `#[catch]` can only be used on functions
  --> tests/ui-fail-stable/catch.rs:6:1
   |
+5 | #[catch(404)]
+  | ------------- in this procedural macro expansion
 6 | struct Catcher(String);
   | ^^^^^^
+  |
+  = note: this error originates in the attribute macro `catch` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: expected `fn`
          --- help: `#[catch]` can only be used on functions
  --> tests/ui-fail-stable/catch.rs:9:7
   |
+8 | #[catch(404)]
+  | ------------- in this procedural macro expansion
 9 | const CATCH: &str = "Catcher";
   |       ^^^^^
+  |
+  = note: this error originates in the attribute macro `catch` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: expected integer or `default`, found string literal
          --- help: `#[catch]` expects a status code int or `default`: `#[catch(404)]` or `#[catch(default)]`
@@ -18,6 +26,8 @@ error: expected integer or `default`, found string literal
    |
 11 | #[catch("404")]
    |         ^^^^^
+   |
+   = note: this error originates in the attribute macro `catch` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: unexpected keyed parameter: expected literal or identifier
          --- help: `#[catch]` expects a status code int or `default`: `#[catch(404)]` or `#[catch(default)]`
@@ -25,6 +35,8 @@ error: unexpected keyed parameter: expected literal or identifier
    |
 14 | #[catch(code = "404")]
    |         ^^^^
+   |
+   = note: this error originates in the attribute macro `catch` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: unexpected keyed parameter: expected literal or identifier
          --- help: `#[catch]` expects a status code int or `default`: `#[catch(404)]` or `#[catch(default)]`
@@ -32,6 +44,8 @@ error: unexpected keyed parameter: expected literal or identifier
    |
 17 | #[catch(code = 404)]
    |         ^^^^
+   |
+   = note: this error originates in the attribute macro `catch` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: status must be in range [100, 599]
          --- help: `#[catch]` expects a status code int or `default`: `#[catch(404)]` or `#[catch(default)]`
@@ -39,6 +53,8 @@ error: status must be in range [100, 599]
    |
 20 | #[catch(99)]
    |         ^^
+   |
+   = note: this error originates in the attribute macro `catch` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: status must be in range [100, 599]
          --- help: `#[catch]` expects a status code int or `default`: `#[catch(404)]` or `#[catch(default)]`
@@ -46,6 +62,8 @@ error: status must be in range [100, 599]
    |
 23 | #[catch(600)]
    |         ^^^
+   |
+   = note: this error originates in the attribute macro `catch` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: unexpected attribute parameter: `message`
          --- help: `#[catch]` expects a status code int or `default`: `#[catch(404)]` or `#[catch(default)]`
@@ -53,6 +71,8 @@ error: unexpected attribute parameter: `message`
    |
 26 | #[catch(400, message = "foo")]
    |              ^^^^^^^
+   |
+   = note: this error originates in the attribute macro `catch` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error[E0308]: arguments to this function are incorrect
   --> tests/ui-fail-stable/catch.rs:30:4
@@ -60,7 +80,7 @@ error[E0308]: arguments to this function are incorrect
 30 | fn f3(_request: &Request, other: bool) { }
    |    ^^           -                ---- an argument of type `bool` is missing
    |                 |
-   |                 argument of type `Status` unexpected
+   |                 unexpected argument of type `Status`
    |
 note: function defined here
   --> tests/ui-fail-stable/catch.rs:30:4

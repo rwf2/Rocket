@@ -4,6 +4,8 @@ error: invalid route URI: expected token '/' but found 'a' at index 0
   |
 5 | #[get("a")]
   |       ^^^
+  |
+  = note: this error originates in the attribute macro `get` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: invalid route URI: unexpected EOF: expected token '/' at index 0
          --- help: expected URI in origin form: "/path/<param>"
@@ -11,6 +13,8 @@ error: invalid route URI: unexpected EOF: expected token '/' at index 0
   |
 8 | #[get("")]
   |       ^^
+  |
+  = note: this error originates in the attribute macro `get` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: invalid route URI: expected token '/' but found 'a' at index 0
          --- help: expected URI in origin form: "/path/<param>"
@@ -18,6 +22,8 @@ error: invalid route URI: expected token '/' but found 'a' at index 0
    |
 11 | #[get("a/b/c")]
    |       ^^^^^^^
+   |
+   = note: this error originates in the attribute macro `get` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: route URIs cannot contain empty segments
          --- note: expected "/a/b", found "/a///b"
@@ -25,6 +31,8 @@ error: route URIs cannot contain empty segments
    |
 14 | #[get("/a///b")]
    |       ^^^^^^^^
+   |
+   = note: this error originates in the attribute macro `get` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: route URIs cannot contain empty segments
          --- note: expected "/?bat", found "/?bat&&"
@@ -32,6 +40,8 @@ error: route URIs cannot contain empty segments
    |
 17 | #[get("/?bat&&")]
    |       ^^^^^^^^^
+   |
+   = note: this error originates in the attribute macro `get` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: route URIs cannot contain empty segments
          --- note: expected "/?bat", found "/?bat&&"
@@ -39,6 +49,8 @@ error: route URIs cannot contain empty segments
    |
 20 | #[get("/?bat&&")]
    |       ^^^^^^^^^
+   |
+   = note: this error originates in the attribute macro `get` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: route URIs cannot contain empty segments
          --- note: expected "/a/b", found "/a/b//"
@@ -46,66 +58,98 @@ error: route URIs cannot contain empty segments
    |
 23 | #[get("/a/b//")]
    |       ^^^^^^^^
+   |
+   = note: this error originates in the attribute macro `get` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: unused parameter
   --> tests/ui-fail-stable/route-path-bad-syntax.rs:42:7
    |
 42 | #[get("/<name>")]
    |       ^^^^^^^^^
+   |
+   = note: this error originates in the attribute macro `get` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: [note] expected argument named `name` here
   --> tests/ui-fail-stable/route-path-bad-syntax.rs:43:6
    |
+42 | #[get("/<name>")]
+   | ----------------- in this procedural macro expansion
 43 | fn h0(_name: usize) {}
    |      ^^^^^^^^^^^^^^
+   |
+   = note: this error originates in the attribute macro `get` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: unused parameter
   --> tests/ui-fail-stable/route-path-bad-syntax.rs:45:7
    |
 45 | #[get("/a?<r>")]
    |       ^^^^^^^^
+   |
+   = note: this error originates in the attribute macro `get` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: [note] expected argument named `r` here
   --> tests/ui-fail-stable/route-path-bad-syntax.rs:46:6
    |
+45 | #[get("/a?<r>")]
+   | ---------------- in this procedural macro expansion
 46 | fn h1() {}
    |      ^^
+   |
+   = note: this error originates in the attribute macro `get` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: unused parameter
   --> tests/ui-fail-stable/route-path-bad-syntax.rs:48:21
    |
 48 | #[post("/a", data = "<test>")]
    |                     ^^^^^^^^
+   |
+   = note: this error originates in the attribute macro `post` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: [note] expected argument named `test` here
   --> tests/ui-fail-stable/route-path-bad-syntax.rs:49:6
    |
+48 | #[post("/a", data = "<test>")]
+   | ------------------------------ in this procedural macro expansion
 49 | fn h2() {}
    |      ^^
+   |
+   = note: this error originates in the attribute macro `post` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: unused parameter
   --> tests/ui-fail-stable/route-path-bad-syntax.rs:51:7
    |
 51 | #[get("/<_r>")]
    |       ^^^^^^^
+   |
+   = note: this error originates in the attribute macro `get` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: [note] expected argument named `_r` here
   --> tests/ui-fail-stable/route-path-bad-syntax.rs:52:6
    |
+51 | #[get("/<_r>")]
+   | --------------- in this procedural macro expansion
 52 | fn h3() {}
    |      ^^
+   |
+   = note: this error originates in the attribute macro `get` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: unused parameter
   --> tests/ui-fail-stable/route-path-bad-syntax.rs:54:7
    |
 54 | #[get("/<_r>/<b>")]
    |       ^^^^^^^^^^^
+   |
+   = note: this error originates in the attribute macro `get` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: [note] expected argument named `b` here
   --> tests/ui-fail-stable/route-path-bad-syntax.rs:55:6
    |
+54 | #[get("/<_r>/<b>")]
+   | ------------------- in this procedural macro expansion
 55 | fn h4() {}
    |      ^^
+   |
+   = note: this error originates in the attribute macro `get` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: invalid identifier: `foo_.`
          --- help: dynamic parameters must be valid identifiers
@@ -114,6 +158,8 @@ error: invalid identifier: `foo_.`
    |
 60 | #[get("/<foo_.>")]
    |       ^^^^^^^^^^
+   |
+   = note: this error originates in the attribute macro `get` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: invalid identifier: `foo*`
          --- help: dynamic parameters must be valid identifiers
@@ -122,6 +168,8 @@ error: invalid identifier: `foo*`
    |
 63 | #[get("/<foo*>")]
    |       ^^^^^^^^^
+   |
+   = note: this error originates in the attribute macro `get` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: invalid identifier: `!`
          --- help: dynamic parameters must be valid identifiers
@@ -130,6 +178,8 @@ error: invalid identifier: `!`
    |
 66 | #[get("/<!>")]
    |       ^^^^^^
+   |
+   = note: this error originates in the attribute macro `get` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: invalid identifier: `name>:<id`
          --- help: dynamic parameters must be valid identifiers
@@ -138,6 +188,8 @@ error: invalid identifier: `name>:<id`
    |
 69 | #[get("/<name>:<id>")]
    |       ^^^^^^^^^^^^^^
+   |
+   = note: this error originates in the attribute macro `get` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: unexpected static parameter
          --- help: parameter must be dynamic: `<foo>`
@@ -145,6 +197,8 @@ error: unexpected static parameter
    |
 74 | #[get("/", data = "foo")]
    |                   ^^^^^
+   |
+   = note: this error originates in the attribute macro `get` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: parameter cannot be trailing
          --- help: did you mean `<foo>`?
@@ -152,6 +206,8 @@ error: parameter cannot be trailing
    |
 77 | #[get("/", data = "<foo..>")]
    |                   ^^^^^^^^^
+   |
+   = note: this error originates in the attribute macro `get` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: unexpected static parameter
          --- help: parameter must be dynamic: `<foo>`
@@ -159,6 +215,8 @@ error: unexpected static parameter
    |
 80 | #[get("/", data = "<foo")]
    |                   ^^^^^^
+   |
+   = note: this error originates in the attribute macro `get` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: invalid identifier: `test `
          --- help: dynamic parameters must be valid identifiers
@@ -167,16 +225,24 @@ error: invalid identifier: `test `
    |
 83 | #[get("/", data = "<test >")]
    |                   ^^^^^^^^^
+   |
+   = note: this error originates in the attribute macro `get` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: handler arguments must be named
          --- help: to name an ignored handler argument, use `_name`
   --> tests/ui-fail-stable/route-path-bad-syntax.rs:89:7
    |
+88 | #[get("/<_>")]
+   | -------------- in this procedural macro expansion
 89 | fn k0(_: usize) {}
    |       ^
+   |
+   = note: this error originates in the attribute macro `get` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: parameters cannot be empty
   --> tests/ui-fail-stable/route-path-bad-syntax.rs:93:7
    |
 93 | #[get("/<>")]
    |       ^^^^^
+   |
+   = note: this error originates in the attribute macro `get` (in Nightly builds, run with -Z macro-backtrace for more info)

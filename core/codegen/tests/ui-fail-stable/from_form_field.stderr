@@ -1,8 +1,12 @@
 error: tuple structs are not supported
  --> tests/ui-fail-stable/from_form_field.rs:4:1
   |
+3 | #[derive(FromFormField)]
+  |          ------------- in this derive macro expansion
 4 | struct Foo1;
   | ^^^^^^
+  |
+  = note: this error originates in the derive macro `FromFormField` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: [note] error occurred while deriving `FromFormField`
  --> tests/ui-fail-stable/from_form_field.rs:3:10
@@ -15,8 +19,12 @@ error: [note] error occurred while deriving `FromFormField`
 error: tuple structs are not supported
  --> tests/ui-fail-stable/from_form_field.rs:7:1
   |
+6 | #[derive(FromFormField)]
+  |          ------------- in this derive macro expansion
 7 | struct Foo2(usize);
   | ^^^^^^
+  |
+  = note: this error originates in the derive macro `FromFormField` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: [note] error occurred while deriving `FromFormField`
  --> tests/ui-fail-stable/from_form_field.rs:6:10
@@ -29,8 +37,12 @@ error: [note] error occurred while deriving `FromFormField`
 error: named structs are not supported
   --> tests/ui-fail-stable/from_form_field.rs:10:1
    |
+9  | #[derive(FromFormField)]
+   |          ------------- in this derive macro expansion
 10 | struct Foo3 {
    | ^^^^^^
+   |
+   = note: this error originates in the derive macro `FromFormField` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: [note] error occurred while deriving `FromFormField`
  --> tests/ui-fail-stable/from_form_field.rs:9:10
@@ -43,8 +55,13 @@ error: [note] error occurred while deriving `FromFormField`
 error: variants cannot have fields
   --> tests/ui-fail-stable/from_form_field.rs:16:6
    |
+14 | #[derive(FromFormField)]
+   |          ------------- in this derive macro expansion
+15 | enum Foo4 {
 16 |     A(usize),
    |      ^^^^^^^
+   |
+   = note: this error originates in the derive macro `FromFormField` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: [note] error occurred while deriving `FromFormField`
   --> tests/ui-fail-stable/from_form_field.rs:14:10
@@ -57,8 +74,12 @@ error: [note] error occurred while deriving `FromFormField`
 error: enum must have at least one variant
   --> tests/ui-fail-stable/from_form_field.rs:20:1
    |
+19 | #[derive(FromFormField)]
+   |          ------------- in this derive macro expansion
 20 | enum Foo5 { }
    | ^^^^
+   |
+   = note: this error originates in the derive macro `FromFormField` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: [note] error occurred while deriving `FromFormField`
   --> tests/ui-fail-stable/from_form_field.rs:19:10
@@ -71,8 +92,12 @@ error: [note] error occurred while deriving `FromFormField`
 error: type generics are not supported
   --> tests/ui-fail-stable/from_form_field.rs:23:11
    |
+22 | #[derive(FromFormField)]
+   |          ------------- in this derive macro expansion
 23 | enum Foo6<T> {
    |           ^
+   |
+   = note: this error originates in the derive macro `FromFormField` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: [note] error occurred while deriving `FromFormField`
   --> tests/ui-fail-stable/from_form_field.rs:22:10
@@ -85,8 +110,13 @@ error: [note] error occurred while deriving `FromFormField`
 error: invalid value: expected string literal
   --> tests/ui-fail-stable/from_form_field.rs:29:21
    |
+27 | #[derive(FromFormField)]
+   |          ------------- in this derive macro expansion
+28 | enum Bar1 {
 29 |     #[field(value = 123)]
    |                     ^^^
+   |
+   = note: this error originates in the derive macro `FromFormField` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: [note] error occurred while deriving `FromFormField`
   --> tests/ui-fail-stable/from_form_field.rs:27:10
@@ -99,8 +129,13 @@ error: [note] error occurred while deriving `FromFormField`
 error: expected literal, found bare path "value"
   --> tests/ui-fail-stable/from_form_field.rs:35:13
    |
+33 | #[derive(FromFormField)]
+   |          ------------- in this derive macro expansion
+34 | enum Bar2 {
 35 |     #[field(value)]
    |             ^^^^^
+   |
+   = note: this error originates in the derive macro `FromFormField` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: [note] error occurred while deriving `FromFormField`
   --> tests/ui-fail-stable/from_form_field.rs:33:10
@@ -113,20 +148,35 @@ error: [note] error occurred while deriving `FromFormField`
 error: variant has conflicting values
   --> tests/ui-fail-stable/from_form_field.rs:41:5
    |
+39 | #[derive(FromFormField)]
+   |          ------------- in this derive macro expansion
+40 | enum Dup1 {
 41 |     #[field(value = "bar")]
    |     ^
+   |
+   = note: this error originates in the derive macro `FromFormField` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: [note] this value...
   --> tests/ui-fail-stable/from_form_field.rs:41:21
    |
+39 | #[derive(FromFormField)]
+   |          ------------- in this derive macro expansion
+40 | enum Dup1 {
 41 |     #[field(value = "bar")]
    |                     ^^^^^
+   |
+   = note: this error originates in the derive macro `FromFormField` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: [note] ...conflicts with this value
   --> tests/ui-fail-stable/from_form_field.rs:42:21
    |
+39 | #[derive(FromFormField)]
+   |          ------------- in this derive macro expansion
+...
 42 |     #[field(value = "bar")]
    |                     ^^^^^
+   |
+   = note: this error originates in the derive macro `FromFormField` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: [note] error occurred while deriving `FromFormField`
   --> tests/ui-fail-stable/from_form_field.rs:39:10
@@ -139,20 +189,35 @@ error: [note] error occurred while deriving `FromFormField`
 error: field value conflicts with previous value
   --> tests/ui-fail-stable/from_form_field.rs:50:21
    |
+46 | #[derive(FromFormField)]
+   |          ------------- in this derive macro expansion
+...
 50 |     #[field(value = "BAr")]
    |                     ^^^^^
+   |
+   = note: this error originates in the derive macro `FromFormField` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: [help] ...declared in this variant
   --> tests/ui-fail-stable/from_form_field.rs:50:5
    |
+46 | #[derive(FromFormField)]
+   |          ------------- in this derive macro expansion
+...
 50 |     #[field(value = "BAr")]
    |     ^
+   |
+   = note: this error originates in the derive macro `FromFormField` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: [note] previous field with conflicting name
   --> tests/ui-fail-stable/from_form_field.rs:48:5
    |
+46 | #[derive(FromFormField)]
+   |          ------------- in this derive macro expansion
+47 | enum Dup2 {
 48 |     #[field(value = "bar")]
    |     ^
+   |
+   = note: this error originates in the derive macro `FromFormField` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: [note] error occurred while deriving `FromFormField`
   --> tests/ui-fail-stable/from_form_field.rs:46:10
@@ -165,20 +230,35 @@ error: [note] error occurred while deriving `FromFormField`
 error: field value conflicts with previous value
   --> tests/ui-fail-stable/from_form_field.rs:57:21
    |
+54 | #[derive(FromFormField)]
+   |          ------------- in this derive macro expansion
+...
 57 |     #[field(value = "a")]
    |                     ^^^
+   |
+   = note: this error originates in the derive macro `FromFormField` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: [help] ...declared in this variant
   --> tests/ui-fail-stable/from_form_field.rs:57:5
    |
+54 | #[derive(FromFormField)]
+   |          ------------- in this derive macro expansion
+...
 57 |     #[field(value = "a")]
    |     ^
+   |
+   = note: this error originates in the derive macro `FromFormField` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: [note] previous field with conflicting name
   --> tests/ui-fail-stable/from_form_field.rs:56:5
    |
+54 | #[derive(FromFormField)]
+   |          ------------- in this derive macro expansion
+55 | enum Dup3 {
 56 |     A,
    |     ^
+   |
+   = note: this error originates in the derive macro `FromFormField` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: [note] error occurred while deriving `FromFormField`
   --> tests/ui-fail-stable/from_form_field.rs:54:10
@@ -191,20 +271,35 @@ error: [note] error occurred while deriving `FromFormField`
 error: variant has conflicting values
   --> tests/ui-fail-stable/from_form_field.rs:80:5
    |
+78 | #[derive(FromFormField)]
+   |          ------------- in this derive macro expansion
+79 | enum Dup6 {
 80 |     #[field(value = "FoO")]
    |     ^
+   |
+   = note: this error originates in the derive macro `FromFormField` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: [note] this value...
   --> tests/ui-fail-stable/from_form_field.rs:80:21
    |
+78 | #[derive(FromFormField)]
+   |          ------------- in this derive macro expansion
+79 | enum Dup6 {
 80 |     #[field(value = "FoO")]
    |                     ^^^^^
+   |
+   = note: this error originates in the derive macro `FromFormField` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: [note] ...conflicts with this value
   --> tests/ui-fail-stable/from_form_field.rs:81:21
    |
+78 | #[derive(FromFormField)]
+   |          ------------- in this derive macro expansion
+...
 81 |     #[field(value = "foo")]
    |                     ^^^^^
+   |
+   = note: this error originates in the derive macro `FromFormField` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: [note] error occurred while deriving `FromFormField`
   --> tests/ui-fail-stable/from_form_field.rs:78:10
@@ -217,20 +312,35 @@ error: [note] error occurred while deriving `FromFormField`
 error: field has conflicting names
   --> tests/ui-fail-stable/from_form_field.rs:87:5
    |
+85 | #[derive(FromForm)]
+   |          -------- in this derive macro expansion
+86 | struct Renamed0 {
 87 |     #[field(name = "foo")]
    |     ^
+   |
+   = note: this error originates in the derive macro `FromForm` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: [note] this field name...
   --> tests/ui-fail-stable/from_form_field.rs:87:20
    |
+85 | #[derive(FromForm)]
+   |          -------- in this derive macro expansion
+86 | struct Renamed0 {
 87 |     #[field(name = "foo")]
    |                    ^^^^^
+   |
+   = note: this error originates in the derive macro `FromForm` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: [note] ...conflicts with this field name
   --> tests/ui-fail-stable/from_form_field.rs:88:28
    |
+85 | #[derive(FromForm)]
+   |          -------- in this derive macro expansion
+...
 88 |     #[field(name = uncased("FOO"))]
    |                            ^^^^^
+   |
+   = note: this error originates in the derive macro `FromForm` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: [note] error occurred while deriving `FromForm`
   --> tests/ui-fail-stable/from_form_field.rs:85:10
@@ -243,20 +353,35 @@ error: [note] error occurred while deriving `FromForm`
 error: field name conflicts with previous name
   --> tests/ui-fail-stable/from_form_field.rs:96:20
    |
+92 | #[derive(FromForm)]
+   |          -------- in this derive macro expansion
+...
 96 |     #[field(name = "foo")]
    |                    ^^^^^
+   |
+   = note: this error originates in the derive macro `FromForm` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: [help] declared in this field
   --> tests/ui-fail-stable/from_form_field.rs:96:5
    |
+92 | #[derive(FromForm)]
+   |          -------- in this derive macro expansion
+...
 96 |     #[field(name = "foo")]
    |     ^
+   |
+   = note: this error originates in the derive macro `FromForm` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: [note] previous field with conflicting name
   --> tests/ui-fail-stable/from_form_field.rs:94:5
    |
+92 | #[derive(FromForm)]
+   |          -------- in this derive macro expansion
+93 | struct Renamed1 {
 94 |     #[field(name = "foo")]
    |     ^
+   |
+   = note: this error originates in the derive macro `FromForm` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: [note] error occurred while deriving `FromForm`
   --> tests/ui-fail-stable/from_form_field.rs:92:10
@@ -269,20 +394,35 @@ error: [note] error occurred while deriving `FromForm`
 error: field name conflicts with previous name
    --> tests/ui-fail-stable/from_form_field.rs:104:5
     |
+100 | #[derive(FromForm)]
+    |          -------- in this derive macro expansion
+...
 104 |     hello_there: usize,
     |     ^^^^^^^^^^^
+    |
+    = note: this error originates in the derive macro `FromForm` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: [help] declared in this field
    --> tests/ui-fail-stable/from_form_field.rs:104:5
     |
+100 | #[derive(FromForm)]
+    |          -------- in this derive macro expansion
+...
 104 |     hello_there: usize,
     |     ^^^^^^^^^^^
+    |
+    = note: this error originates in the derive macro `FromForm` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: [note] previous field with conflicting name
    --> tests/ui-fail-stable/from_form_field.rs:102:5
     |
+100 | #[derive(FromForm)]
+    |          -------- in this derive macro expansion
+101 | struct Renamed2 {
 102 |     #[field(name = uncased("HELLO_THERE"))]
     |     ^
+    |
+    = note: this error originates in the derive macro `FromForm` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: [note] error occurred while deriving `FromForm`
    --> tests/ui-fail-stable/from_form_field.rs:100:10
@@ -295,20 +435,35 @@ error: [note] error occurred while deriving `FromForm`
 error: field name conflicts with previous name
    --> tests/ui-fail-stable/from_form_field.rs:111:5
     |
+107 | #[derive(FromForm)]
+    |          -------- in this derive macro expansion
+...
 111 |     hello_there: usize,
     |     ^^^^^^^^^^^
+    |
+    = note: this error originates in the derive macro `FromForm` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: [help] declared in this field
    --> tests/ui-fail-stable/from_form_field.rs:111:5
     |
+107 | #[derive(FromForm)]
+    |          -------- in this derive macro expansion
+...
 111 |     hello_there: usize,
     |     ^^^^^^^^^^^
+    |
+    = note: this error originates in the derive macro `FromForm` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: [note] previous field with conflicting name
    --> tests/ui-fail-stable/from_form_field.rs:109:5
     |
+107 | #[derive(FromForm)]
+    |          -------- in this derive macro expansion
+108 | struct Renamed3 {
 109 |     #[field(name = "hello_there")]
     |     ^
+    |
+    = note: this error originates in the derive macro `FromForm` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: [note] error occurred while deriving `FromForm`
    --> tests/ui-fail-stable/from_form_field.rs:107:10

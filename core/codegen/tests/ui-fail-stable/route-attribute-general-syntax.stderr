@@ -10,162 +10,224 @@ error: expected `fn`
          --- help: #[get] can only be used on functions
  --> tests/ui-fail-stable/route-attribute-general-syntax.rs:9:1
   |
+8 | #[get("/")]
+  | ----------- in this procedural macro expansion
 9 | struct S;
   | ^^^^^^
+  |
+  = note: this error originates in the attribute macro `get` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: expected `fn`
          --- help: #[get] can only be used on functions
   --> tests/ui-fail-stable/route-attribute-general-syntax.rs:12:1
    |
+11 | #[get("/")]
+   | ----------- in this procedural macro expansion
 12 | enum A {  }
    | ^^^^
+   |
+   = note: this error originates in the attribute macro `get` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: expected `fn`
          --- help: #[get] can only be used on functions
   --> tests/ui-fail-stable/route-attribute-general-syntax.rs:15:1
    |
+14 | #[get("/")]
+   | ----------- in this procedural macro expansion
 15 | trait Foo {  }
    | ^^^^^
+   |
+   = note: this error originates in the attribute macro `get` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: expected `fn`
          --- help: #[get] can only be used on functions
   --> tests/ui-fail-stable/route-attribute-general-syntax.rs:18:1
    |
+17 | #[get("/")]
+   | ----------- in this procedural macro expansion
 18 | impl S {  }
    | ^^^^
+   |
+   = note: this error originates in the attribute macro `get` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: expected key/value `key = value`
   --> tests/ui-fail-stable/route-attribute-general-syntax.rs:21:12
    |
 21 | #[get("/", 123)]
    |            ^^^
+   |
+   = note: this error originates in the attribute macro `get` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: expected key/value `key = value`
   --> tests/ui-fail-stable/route-attribute-general-syntax.rs:24:12
    |
 24 | #[get("/", "/")]
    |            ^^^
+   |
+   = note: this error originates in the attribute macro `get` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: unexpected keyed parameter: expected literal or identifier
   --> tests/ui-fail-stable/route-attribute-general-syntax.rs:27:7
    |
 27 | #[get(data = "<foo>", "/")]
    |       ^^^^
+   |
+   = note: this error originates in the attribute macro `get` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: unexpected attribute parameter: `unknown`
   --> tests/ui-fail-stable/route-attribute-general-syntax.rs:30:12
    |
 30 | #[get("/", unknown = "foo")]
    |            ^^^^^^^
+   |
+   = note: this error originates in the attribute macro `get` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: expected key/value `key = value`
   --> tests/ui-fail-stable/route-attribute-general-syntax.rs:33:12
    |
 33 | #[get("/", ...)]
    |            ^
+   |
+   = note: this error originates in the attribute macro `get` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: handler arguments must be named
          --- help: to name an ignored handler argument, use `_name`
   --> tests/ui-fail-stable/route-attribute-general-syntax.rs:39:7
    |
+38 | #[get("/")]
+   | ----------- in this procedural macro expansion
 39 | fn c1(_: usize) {}
    |       ^
+   |
+   = note: this error originates in the attribute macro `get` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: invalid value: expected string literal
   --> tests/ui-fail-stable/route-attribute-general-syntax.rs:43:7
    |
 43 | #[get(100)]
    |       ^^^
+   |
+   = note: this error originates in the attribute macro `get` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: invalid value: expected string literal
   --> tests/ui-fail-stable/route-attribute-general-syntax.rs:46:7
    |
 46 | #[get('/')]
    |       ^^^
+   |
+   = note: this error originates in the attribute macro `get` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: invalid value: expected integer literal
   --> tests/ui-fail-stable/route-attribute-general-syntax.rs:49:19
    |
 49 | #[get("/", rank = "1")]
    |                   ^^^
+   |
+   = note: this error originates in the attribute macro `get` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: invalid value: expected integer literal
   --> tests/ui-fail-stable/route-attribute-general-syntax.rs:52:19
    |
 52 | #[get("/", rank = '1')]
    |                   ^^^
+   |
+   = note: this error originates in the attribute macro `get` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: invalid or unknown media type
   --> tests/ui-fail-stable/route-attribute-general-syntax.rs:57:21
    |
 57 | #[get("/", format = "applicationx-custom")]
    |                     ^^^^^^^^^^^^^^^^^^^^^
+   |
+   = note: this error originates in the attribute macro `get` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: invalid or unknown media type
   --> tests/ui-fail-stable/route-attribute-general-syntax.rs:60:21
    |
 60 | #[get("/", format = "")]
    |                     ^^
+   |
+   = note: this error originates in the attribute macro `get` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: invalid or unknown media type
   --> tests/ui-fail-stable/route-attribute-general-syntax.rs:63:21
    |
 63 | #[get("/", format = "//")]
    |                     ^^^^
+   |
+   = note: this error originates in the attribute macro `get` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: invalid or unknown media type
   --> tests/ui-fail-stable/route-attribute-general-syntax.rs:66:21
    |
 66 | #[get("/", format = "/")]
    |                     ^^^
+   |
+   = note: this error originates in the attribute macro `get` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: invalid or unknown media type
   --> tests/ui-fail-stable/route-attribute-general-syntax.rs:69:21
    |
 69 | #[get("/", format = "a/")]
    |                     ^^^^
+   |
+   = note: this error originates in the attribute macro `get` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: invalid or unknown media type
   --> tests/ui-fail-stable/route-attribute-general-syntax.rs:72:21
    |
 72 | #[get("/", format = "/a")]
    |                     ^^^^
+   |
+   = note: this error originates in the attribute macro `get` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: invalid or unknown media type
   --> tests/ui-fail-stable/route-attribute-general-syntax.rs:75:21
    |
 75 | #[get("/", format = "/a/")]
    |                     ^^^^^
+   |
+   = note: this error originates in the attribute macro `get` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: invalid or unknown media type
   --> tests/ui-fail-stable/route-attribute-general-syntax.rs:78:21
    |
 78 | #[get("/", format = "a/b/")]
    |                     ^^^^^^
+   |
+   = note: this error originates in the attribute macro `get` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: invalid or unknown media type
   --> tests/ui-fail-stable/route-attribute-general-syntax.rs:81:21
    |
 81 | #[get("/", format = "unknown")]
    |                     ^^^^^^^^^
+   |
+   = note: this error originates in the attribute macro `get` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: invalid value: expected string literal
   --> tests/ui-fail-stable/route-attribute-general-syntax.rs:84:21
    |
 84 | #[get("/", format = 12)]
    |                     ^^
+   |
+   = note: this error originates in the attribute macro `get` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: invalid value: expected string literal
   --> tests/ui-fail-stable/route-attribute-general-syntax.rs:87:21
    |
 87 | #[get("/", format = 'j')]
    |                     ^^^
+   |
+   = note: this error originates in the attribute macro `get` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: invalid or unknown media type
   --> tests/ui-fail-stable/route-attribute-general-syntax.rs:90:21
    |
 90 | #[get("/", format = "text//foo")]
    |                     ^^^^^^^^^^^
+   |
+   = note: this error originates in the attribute macro `get` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: invalid HTTP method for route handlers
          --- help: method must be one of: `GET`, `PUT`, `POST`, `DELETE`, `HEAD`, `PATCH`, `OPTIONS`
@@ -173,6 +235,8 @@ error: invalid HTTP method for route handlers
    |
 95 | #[route(CONNECT, "/")]
    |         ^^^^^^^
+   |
+   = note: this error originates in the attribute macro `route` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: invalid HTTP method
          --- help: method must be one of: `GET`, `PUT`, `POST`, `DELETE`, `HEAD`, `PATCH`, `OPTIONS`
@@ -180,6 +244,8 @@ error: invalid HTTP method
    |
 98 | #[route(FIX, "/")]
    |         ^^^
+   |
+   = note: this error originates in the attribute macro `route` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: expected identifier, found string literal
          --- help: method must be one of: `GET`, `PUT`, `POST`, `DELETE`, `HEAD`, `PATCH`, `OPTIONS`
@@ -187,6 +253,8 @@ error: expected identifier, found string literal
     |
 101 | #[route("hi", "/")]
     |         ^^^^
+    |
+    = note: this error originates in the attribute macro `route` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: expected identifier, found string literal
          --- help: method must be one of: `GET`, `PUT`, `POST`, `DELETE`, `HEAD`, `PATCH`, `OPTIONS`
@@ -194,6 +262,8 @@ error: expected identifier, found string literal
     |
 104 | #[route("GET", "/")]
     |         ^^^^^
+    |
+    = note: this error originates in the attribute macro `route` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: expected identifier, found integer literal
          --- help: method must be one of: `GET`, `PUT`, `POST`, `DELETE`, `HEAD`, `PATCH`, `OPTIONS`
@@ -201,3 +271,5 @@ error: expected identifier, found integer literal
     |
 107 | #[route(120, "/")]
     |         ^^^
+    |
+    = note: this error originates in the attribute macro `route` (in Nightly builds, run with -Z macro-backtrace for more info)

@@ -1,8 +1,12 @@
 error: enums are not supported
  --> tests/ui-fail-stable/from_form.rs:4:1
   |
+3 | #[derive(FromForm)]
+  |          -------- in this derive macro expansion
 4 | enum Thing { }
   | ^^^^
+  |
+  = note: this error originates in the derive macro `FromForm` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: [note] error occurred while deriving `FromForm`
  --> tests/ui-fail-stable/from_form.rs:3:10
@@ -15,8 +19,12 @@ error: [note] error occurred while deriving `FromForm`
 error: at least one field is required
  --> tests/ui-fail-stable/from_form.rs:7:1
   |
+6 | #[derive(FromForm)]
+  |          -------- in this derive macro expansion
 7 | struct Foo1;
   | ^^^^^^
+  |
+  = note: this error originates in the derive macro `FromForm` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: [note] error occurred while deriving `FromForm`
  --> tests/ui-fail-stable/from_form.rs:6:10
@@ -29,8 +37,12 @@ error: [note] error occurred while deriving `FromForm`
 error: at least one field is required
   --> tests/ui-fail-stable/from_form.rs:10:13
    |
+9  | #[derive(FromForm)]
+   |          -------- in this derive macro expansion
 10 | struct Foo2 {  }
    |             ^^^^
+   |
+   = note: this error originates in the derive macro `FromForm` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: [note] error occurred while deriving `FromForm`
  --> tests/ui-fail-stable/from_form.rs:9:10
@@ -43,8 +55,12 @@ error: [note] error occurred while deriving `FromForm`
 error: tuple struct must have exactly one field
   --> tests/ui-fail-stable/from_form.rs:16:12
    |
+15 | #[derive(FromForm)]
+   |          -------- in this derive macro expansion
 16 | struct Foo4(usize, usize, usize);
    |            ^^^^^^^^^^^^^^^^^^^^^
+   |
+   = note: this error originates in the derive macro `FromForm` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: [note] error occurred while deriving `FromForm`
   --> tests/ui-fail-stable/from_form.rs:15:10
@@ -57,8 +73,12 @@ error: [note] error occurred while deriving `FromForm`
 error: only one lifetime is supported
   --> tests/ui-fail-stable/from_form.rs:19:25
    |
+18 | #[derive(FromForm)]
+   |          -------- in this derive macro expansion
 19 | struct NextTodoTask<'f, 'a> {
    |                         ^^
+   |
+   = note: this error originates in the derive macro `FromForm` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: [note] error occurred while deriving `FromForm`
   --> tests/ui-fail-stable/from_form.rs:18:10
@@ -72,8 +92,13 @@ error: invalid form field name
          --- help: field name cannot be `isindex` or contain '&', '=', '?', '.', '[', ']'
   --> tests/ui-fail-stable/from_form.rs:28:20
    |
+26 | #[derive(FromForm)]
+   |          -------- in this derive macro expansion
+27 | struct BadName1 {
 28 |     #[field(name = "isindex")]
    |                    ^^^^^^^^^
+   |
+   = note: this error originates in the derive macro `FromForm` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: [note] error occurred while deriving `FromForm`
   --> tests/ui-fail-stable/from_form.rs:26:10
@@ -86,20 +111,35 @@ error: [note] error occurred while deriving `FromForm`
 error: field name conflicts with previous name
   --> tests/ui-fail-stable/from_form.rs:36:5
    |
+32 | #[derive(FromForm)]
+   |          -------- in this derive macro expansion
+...
 36 |     foo: usize,
    |     ^^^
+   |
+   = note: this error originates in the derive macro `FromForm` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: [help] declared in this field
   --> tests/ui-fail-stable/from_form.rs:36:5
    |
+32 | #[derive(FromForm)]
+   |          -------- in this derive macro expansion
+...
 36 |     foo: usize,
    |     ^^^
+   |
+   = note: this error originates in the derive macro `FromForm` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: [note] previous field with conflicting name
   --> tests/ui-fail-stable/from_form.rs:34:5
    |
+32 | #[derive(FromForm)]
+   |          -------- in this derive macro expansion
+33 | struct Demo2 {
 34 |     #[field(name = "foo")]
    |     ^
+   |
+   = note: this error originates in the derive macro `FromForm` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: [note] error occurred while deriving `FromForm`
   --> tests/ui-fail-stable/from_form.rs:32:10
@@ -112,20 +152,35 @@ error: [note] error occurred while deriving `FromForm`
 error: field name conflicts with previous name
   --> tests/ui-fail-stable/from_form.rs:43:20
    |
+39 | #[derive(FromForm)]
+   |          -------- in this derive macro expansion
+...
 43 |     #[field(name = "hello")]
    |                    ^^^^^^^
+   |
+   = note: this error originates in the derive macro `FromForm` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: [help] declared in this field
   --> tests/ui-fail-stable/from_form.rs:43:5
    |
+39 | #[derive(FromForm)]
+   |          -------- in this derive macro expansion
+...
 43 |     #[field(name = "hello")]
    |     ^
+   |
+   = note: this error originates in the derive macro `FromForm` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: [note] previous field with conflicting name
   --> tests/ui-fail-stable/from_form.rs:41:5
    |
+39 | #[derive(FromForm)]
+   |          -------- in this derive macro expansion
+40 | struct MyForm9 {
 41 |     #[field(name = "hello")]
    |     ^
+   |
+   = note: this error originates in the derive macro `FromForm` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: [note] error occurred while deriving `FromForm`
   --> tests/ui-fail-stable/from_form.rs:39:10
@@ -138,20 +193,35 @@ error: [note] error occurred while deriving `FromForm`
 error: field name conflicts with previous name
   --> tests/ui-fail-stable/from_form.rs:50:20
    |
+47 | #[derive(FromForm)]
+   |          -------- in this derive macro expansion
+...
 50 |     #[field(name = "first")]
    |                    ^^^^^^^
+   |
+   = note: this error originates in the derive macro `FromForm` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: [help] declared in this field
   --> tests/ui-fail-stable/from_form.rs:50:5
    |
+47 | #[derive(FromForm)]
+   |          -------- in this derive macro expansion
+...
 50 |     #[field(name = "first")]
    |     ^
+   |
+   = note: this error originates in the derive macro `FromForm` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: [note] previous field with conflicting name
   --> tests/ui-fail-stable/from_form.rs:49:5
    |
+47 | #[derive(FromForm)]
+   |          -------- in this derive macro expansion
+48 | struct MyForm10 {
 49 |     first: String,
    |     ^^^^^
+   |
+   = note: this error originates in the derive macro `FromForm` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: [note] error occurred while deriving `FromForm`
   --> tests/ui-fail-stable/from_form.rs:47:10
@@ -164,8 +234,13 @@ error: [note] error occurred while deriving `FromForm`
 error: unexpected attribute parameter: `field`
   --> tests/ui-fail-stable/from_form.rs:56:28
    |
+54 | #[derive(FromForm)]
+   |          -------- in this derive macro expansion
+55 | struct MyForm {
 56 |     #[field(name = "blah", field = "bloo")]
    |                            ^^^^^
+   |
+   = note: this error originates in the derive macro `FromForm` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: [note] error occurred while deriving `FromForm`
   --> tests/ui-fail-stable/from_form.rs:54:10
@@ -178,8 +253,13 @@ error: [note] error occurred while deriving `FromForm`
 error: expected list `#[field(..)]`, found bare path "field"
   --> tests/ui-fail-stable/from_form.rs:62:7
    |
+60 | #[derive(FromForm)]
+   |          -------- in this derive macro expansion
+61 | struct MyForm1 {
 62 |     #[field]
    |       ^^^^^
+   |
+   = note: this error originates in the derive macro `FromForm` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: [note] error occurred while deriving `FromForm`
   --> tests/ui-fail-stable/from_form.rs:60:10
@@ -192,8 +272,13 @@ error: [note] error occurred while deriving `FromForm`
 error: expected key/value `key = value`
   --> tests/ui-fail-stable/from_form.rs:68:13
    |
+66 | #[derive(FromForm)]
+   |          -------- in this derive macro expansion
+67 | struct MyForm2 {
 68 |     #[field("blah")]
    |             ^^^^^^
+   |
+   = note: this error originates in the derive macro `FromForm` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: [note] error occurred while deriving `FromForm`
   --> tests/ui-fail-stable/from_form.rs:66:10
@@ -206,8 +291,13 @@ error: [note] error occurred while deriving `FromForm`
 error: expected key/value `key = value`
   --> tests/ui-fail-stable/from_form.rs:74:13
    |
+72 | #[derive(FromForm)]
+   |          -------- in this derive macro expansion
+73 | struct MyForm3 {
 74 |     #[field(123)]
    |             ^^^
+   |
+   = note: this error originates in the derive macro `FromForm` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: [note] error occurred while deriving `FromForm`
   --> tests/ui-fail-stable/from_form.rs:72:10
@@ -220,8 +310,13 @@ error: [note] error occurred while deriving `FromForm`
 error: unexpected attribute parameter: `beep`
   --> tests/ui-fail-stable/from_form.rs:80:13
    |
+78 | #[derive(FromForm)]
+   |          -------- in this derive macro expansion
+79 | struct MyForm4 {
 80 |     #[field(beep = "bop")]
    |             ^^^^
+   |
+   = note: this error originates in the derive macro `FromForm` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: [note] error occurred while deriving `FromForm`
   --> tests/ui-fail-stable/from_form.rs:78:10
@@ -234,20 +329,35 @@ error: [note] error occurred while deriving `FromForm`
 error: field has conflicting names
   --> tests/ui-fail-stable/from_form.rs:86:5
    |
+84 | #[derive(FromForm)]
+   |          -------- in this derive macro expansion
+85 | struct MyForm5 {
 86 |     #[field(name = "blah")]
    |     ^
+   |
+   = note: this error originates in the derive macro `FromForm` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: [note] this field name...
   --> tests/ui-fail-stable/from_form.rs:86:20
    |
+84 | #[derive(FromForm)]
+   |          -------- in this derive macro expansion
+85 | struct MyForm5 {
 86 |     #[field(name = "blah")]
    |                    ^^^^^^
+   |
+   = note: this error originates in the derive macro `FromForm` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: [note] ...conflicts with this field name
   --> tests/ui-fail-stable/from_form.rs:87:20
    |
+84 | #[derive(FromForm)]
+   |          -------- in this derive macro expansion
+...
 87 |     #[field(name = "blah")]
    |                    ^^^^^^
+   |
+   = note: this error originates in the derive macro `FromForm` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: [note] error occurred while deriving `FromForm`
   --> tests/ui-fail-stable/from_form.rs:84:10
@@ -260,8 +370,13 @@ error: [note] error occurred while deriving `FromForm`
 error: expected list `#[attr(..)]`, found bare boolean literal
   --> tests/ui-fail-stable/from_form.rs:93:20
    |
+91 | #[derive(FromForm)]
+   |          -------- in this derive macro expansion
+92 | struct MyForm6 {
 93 |     #[field(name = true)]
    |                    ^^^^
+   |
+   = note: this error originates in the derive macro `FromForm` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: [note] error occurred while deriving `FromForm`
   --> tests/ui-fail-stable/from_form.rs:91:10
@@ -274,8 +389,13 @@ error: [note] error occurred while deriving `FromForm`
 error: expected expression, found bare path "name"
   --> tests/ui-fail-stable/from_form.rs:99:13
    |
+97 | #[derive(FromForm)]
+   |          -------- in this derive macro expansion
+98 | struct MyForm7 {
 99 |     #[field(name)]
    |             ^^^^
+   |
+   = note: this error originates in the derive macro `FromForm` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: [note] error occurred while deriving `FromForm`
   --> tests/ui-fail-stable/from_form.rs:97:10
@@ -288,8 +408,13 @@ error: [note] error occurred while deriving `FromForm`
 error: expected list `#[attr(..)]`, found bare integer literal
    --> tests/ui-fail-stable/from_form.rs:105:20
     |
+103 | #[derive(FromForm)]
+    |          -------- in this derive macro expansion
+104 | struct MyForm8 {
 105 |     #[field(name = 123)]
     |                    ^^^
+    |
+    = note: this error originates in the derive macro `FromForm` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: [note] error occurred while deriving `FromForm`
    --> tests/ui-fail-stable/from_form.rs:103:10
@@ -303,8 +428,13 @@ error: invalid form field name
          --- help: field name cannot be `isindex` or contain '&', '=', '?', '.', '[', ']'
    --> tests/ui-fail-stable/from_form.rs:111:20
     |
+109 | #[derive(FromForm)]
+    |          -------- in this derive macro expansion
+110 | struct MyForm11 {
 111 |     #[field(name = "hello&world")]
     |                    ^^^^^^^^^^^^^
+    |
+    = note: this error originates in the derive macro `FromForm` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: [note] error occurred while deriving `FromForm`
    --> tests/ui-fail-stable/from_form.rs:109:10
@@ -318,8 +448,13 @@ error: invalid form field name
          --- help: field name cannot be `isindex` or contain '&', '=', '?', '.', '[', ']'
    --> tests/ui-fail-stable/from_form.rs:117:20
     |
+115 | #[derive(FromForm)]
+    |          -------- in this derive macro expansion
+116 | struct MyForm12 {
 117 |     #[field(name = "!@#$%^&*()_")]
     |                    ^^^^^^^^^^^^^
+    |
+    = note: this error originates in the derive macro `FromForm` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: [note] error occurred while deriving `FromForm`
    --> tests/ui-fail-stable/from_form.rs:115:10
@@ -333,8 +468,13 @@ error: invalid form field name
          --- help: field name cannot be `isindex` or contain '&', '=', '?', '.', '[', ']'
    --> tests/ui-fail-stable/from_form.rs:123:20
     |
+121 | #[derive(FromForm)]
+    |          -------- in this derive macro expansion
+122 | struct MyForm13 {
 123 |     #[field(name = "?")]
     |                    ^^^
+    |
+    = note: this error originates in the derive macro `FromForm` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: [note] error occurred while deriving `FromForm`
    --> tests/ui-fail-stable/from_form.rs:121:10
@@ -348,8 +488,13 @@ error: invalid form field name
          --- help: field name cannot be `isindex` or contain '&', '=', '?', '.', '[', ']'
    --> tests/ui-fail-stable/from_form.rs:129:20
     |
+127 | #[derive(FromForm)]
+    |          -------- in this derive macro expansion
+128 | struct MyForm14 {
 129 |     #[field(name = "")]
     |                    ^^
+    |
+    = note: this error originates in the derive macro `FromForm` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: [note] error occurred while deriving `FromForm`
    --> tests/ui-fail-stable/from_form.rs:127:10
@@ -363,8 +508,13 @@ error: invalid form field name
          --- help: field name cannot be `isindex` or contain '&', '=', '?', '.', '[', ']'
    --> tests/ui-fail-stable/from_form.rs:135:20
     |
+133 | #[derive(FromForm)]
+    |          -------- in this derive macro expansion
+134 | struct BadName2 {
 135 |     #[field(name = "a&b")]
     |                    ^^^^^
+    |
+    = note: this error originates in the derive macro `FromForm` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: [note] error occurred while deriving `FromForm`
    --> tests/ui-fail-stable/from_form.rs:133:10
@@ -378,8 +528,13 @@ error: invalid form field name
          --- help: field name cannot be `isindex` or contain '&', '=', '?', '.', '[', ']'
    --> tests/ui-fail-stable/from_form.rs:141:20
     |
+139 | #[derive(FromForm)]
+    |          -------- in this derive macro expansion
+140 | struct BadName3 {
 141 |     #[field(name = "a=")]
     |                    ^^^^
+    |
+    = note: this error originates in the derive macro `FromForm` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: [note] error occurred while deriving `FromForm`
    --> tests/ui-fail-stable/from_form.rs:139:10
@@ -392,8 +547,13 @@ error: [note] error occurred while deriving `FromForm`
 error: duplicate attribute parameter: default
    --> tests/ui-fail-stable/from_form.rs:177:26
     |
+175 | #[derive(FromForm)]
+    |          -------- in this derive macro expansion
+176 | struct Default1 {
 177 |     #[field(default = 1, default = 2)]
     |                          ^^^^^^^
+    |
+    = note: this error originates in the derive macro `FromForm` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: [note] error occurred while deriving `FromForm`
    --> tests/ui-fail-stable/from_form.rs:175:10
@@ -407,8 +567,13 @@ error: duplicate default field expression
          --- help: at most one `default` or `default_with` is allowed
    --> tests/ui-fail-stable/from_form.rs:184:23
     |
+181 | #[derive(FromForm)]
+    |          -------- in this derive macro expansion
+...
 184 |     #[field(default = 2)]
     |                       ^
+    |
+    = note: this error originates in the derive macro `FromForm` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: [note] error occurred while deriving `FromForm`
    --> tests/ui-fail-stable/from_form.rs:181:10
@@ -422,14 +587,24 @@ error: duplicate default expressions
          --- help: only one of `default` or `default_with` must be used
    --> tests/ui-fail-stable/from_form.rs:190:23
     |
+188 | #[derive(FromForm)]
+    |          -------- in this derive macro expansion
+189 | struct Default3 {
 190 |     #[field(default = 1, default_with = None)]
     |                       ^
+    |
+    = note: this error originates in the derive macro `FromForm` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: [note] other default expression is here
    --> tests/ui-fail-stable/from_form.rs:190:41
     |
+188 | #[derive(FromForm)]
+    |          -------- in this derive macro expansion
+189 | struct Default3 {
 190 |     #[field(default = 1, default_with = None)]
     |                                         ^^^^
+    |
+    = note: this error originates in the derive macro `FromForm` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: [note] error occurred while deriving `FromForm`
    --> tests/ui-fail-stable/from_form.rs:188:10
@@ -443,14 +618,24 @@ error: duplicate default expressions
          --- help: only one of `default` or `default_with` must be used
    --> tests/ui-fail-stable/from_form.rs:197:23
     |
+194 | #[derive(FromForm)]
+    |          -------- in this derive macro expansion
+...
 197 |     #[field(default = 1)]
     |                       ^
+    |
+    = note: this error originates in the derive macro `FromForm` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: [note] other default expression is here
    --> tests/ui-fail-stable/from_form.rs:196:28
     |
+194 | #[derive(FromForm)]
+    |          -------- in this derive macro expansion
+195 | struct Default4 {
 196 |     #[field(default_with = None)]
     |                            ^^^^
+    |
+    = note: this error originates in the derive macro `FromForm` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: [note] error occurred while deriving `FromForm`
    --> tests/ui-fail-stable/from_form.rs:194:10
@@ -464,7 +649,7 @@ error[E0308]: mismatched types
    --> tests/ui-fail-stable/from_form.rs:147:24
     |
 147 |     #[field(validate = 123)]
-    |                        ^^^ expected enum `Result`, found integer
+    |                        ^^^ expected `Result<(), Errors<'_>>`, found integer
     |
     = note: expected enum `Result<(), Errors<'_>>`
                found type `{integer}`
@@ -481,7 +666,7 @@ error[E0308]: mismatched types
 159 |     #[field(validate = ext(rocket::http::ContentType::HTML))]
     |                        --- arguments to this function are incorrect
 160 |     first: String,
-    |            ^^^^^^ expected enum `TempFile`, found struct `String`
+    |            ^^^^^^ expected `&TempFile<'_>`, found `&String`
     |
     = note: expected reference `&TempFile<'_>`
                found reference `&std::string::String`
@@ -495,9 +680,9 @@ error[E0308]: arguments to this function are incorrect
    --> tests/ui-fail-stable/from_form.rs:165:24
     |
 165 |     #[field(validate = ext("hello"))]
-    |                        ^^^ ------- expected struct `ContentType`, found `&str`
+    |                        ^^^ ------- expected `ContentType`, found `&str`
 166 |     first: String,
-    |            ------ expected enum `TempFile`, found struct `String`
+    |            ------ expected `&TempFile<'_>`, found `&String`
     |
     = note: expected reference `&TempFile<'_>`
                found reference `&std::string::String`
@@ -513,7 +698,7 @@ error[E0308]: mismatched types
 171 |     #[field(default = 123)]
     |                       ^^^- help: try using a conversion method: `.to_string()`
     |                       |
-    |                       expected struct `String`, found integer
+    |                       expected `String`, found integer
     |                       arguments to this enum variant are incorrect
     |
 help: the type constructed contains `{integer}` due to the type of the argument passed
@@ -530,7 +715,7 @@ error[E0308]: mismatched types
 203 |     #[field(default_with = Some("hi"))]
     |                            ---- ^^^^- help: try using a conversion method: `.to_string()`
     |                            |    |
-    |                            |    expected struct `String`, found `&str`
+    |                            |    expected `String`, found `&str`
     |                            arguments to this enum variant are incorrect
     |
 help: the type constructed contains `&'static str` due to the type of the argument passed

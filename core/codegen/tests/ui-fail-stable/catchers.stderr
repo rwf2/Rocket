@@ -1,17 +1,21 @@
 error: expected `,`
- --> $DIR/catchers.rs:4:25
+ --> tests/ui-fail-stable/catchers.rs:4:25
   |
 4 |     let _ = catchers![a b];
   |                         ^
+  |
+  = note: this error originates in the macro `catchers` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: expected identifier
- --> $DIR/catchers.rs:6:26
+ --> tests/ui-fail-stable/catchers.rs:6:26
   |
 6 |     let _ = catchers![a::, ];
   |                          ^
+  |
+  = note: this error originates in the macro `catchers` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: unexpected end of input, expected identifier
- --> $DIR/catchers.rs:7:13
+ --> tests/ui-fail-stable/catchers.rs:7:13
   |
 7 |     let _ = catchers![a::];
   |             ^^^^^^^^^^^^^^

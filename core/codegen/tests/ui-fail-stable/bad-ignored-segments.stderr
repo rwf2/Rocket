@@ -4,6 +4,8 @@ error: parameter must be named
   |
 6 | #[get("/c?<_>")]
   |       ^^^^^^^^
+  |
+  = note: this error originates in the attribute macro `get` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: parameter must be named
          --- help: use a name such as `_guard` or `_param`
@@ -11,3 +13,5 @@ error: parameter must be named
   |
 9 | #[post("/d", data = "<_>")]
   |                     ^^^^^
+  |
+  = note: this error originates in the attribute macro `post` (in Nightly builds, run with -Z macro-backtrace for more info)

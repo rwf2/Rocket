@@ -3,6 +3,8 @@ error: expected identifier, found keyword `_`
    |
 63 |     uri!(ignored(_ = 10));
    |                  ^
+   |
+   = note: this error originates in the macro `uri` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: route expects 1 parameter but 2 were supplied
          --- note: route `ignored` has uri "/<_>"
@@ -10,6 +12,8 @@ error: route expects 1 parameter but 2 were supplied
    |
 69 |     uri!(ignored(10, "10"));
    |                  ^^
+   |
+   = note: this error originates in the macro `rocket::rocket_internal_uri` which comes from the expansion of the macro `uri` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: expected unnamed arguments due to ignored parameters
          --- note: uri for route `ignored` ignores path parameters: "/<_>"
@@ -17,6 +21,8 @@ error: expected unnamed arguments due to ignored parameters
    |
 67 |     uri!(ignored(num = 10));
    |                  ^^^
+   |
+   = note: this error originates in the macro `rocket::rocket_internal_uri` which comes from the expansion of the macro `uri` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: route expects 1 parameter but 2 were supplied
          --- note: route `ignored` has uri "/<_>"
@@ -24,24 +30,32 @@ error: route expects 1 parameter but 2 were supplied
    |
 65 |     uri!(ignored(10, 20));
    |                  ^^
+   |
+   = note: this error originates in the macro `rocket::rocket_internal_uri` which comes from the expansion of the macro `uri` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: path parameters cannot be ignored
   --> tests/ui-fail-stable/typed-uris-bad-params.rs:61:18
    |
 61 |     uri!(ignored(_));
    |                  ^
+   |
+   = note: this error originates in the macro `rocket::rocket_internal_uri` which comes from the expansion of the macro `uri` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: path parameters cannot be ignored
   --> tests/ui-fail-stable/typed-uris-bad-params.rs:59:36
    |
 59 |     uri!(optionals(id = 10, name = _));
    |                                    ^
+   |
+   = note: this error originates in the macro `rocket::rocket_internal_uri` which comes from the expansion of the macro `uri` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: path parameters cannot be ignored
   --> tests/ui-fail-stable/typed-uris-bad-params.rs:57:25
    |
 57 |     uri!(optionals(id = _, name = "bob".into()));
    |                         ^
+   |
+   = note: this error originates in the macro `rocket::rocket_internal_uri` which comes from the expansion of the macro `uri` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: invalid parameters for `has_two` route uri
          --- note: uri parameters are: id: i32, name: String
@@ -50,12 +64,16 @@ error: invalid parameters for `has_two` route uri
    |
 55 |     uri!(has_two(id = 100, cookies = "hi"));
    |                  ^^
+   |
+   = note: this error originates in the macro `rocket::rocket_internal_uri` which comes from the expansion of the macro `uri` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: [help] unknown parameter: `cookies`
   --> tests/ui-fail-stable/typed-uris-bad-params.rs:55:28
    |
 55 |     uri!(has_two(id = 100, cookies = "hi"));
    |                            ^^^^^^^
+   |
+   = note: this error originates in the macro `rocket::rocket_internal_uri` which comes from the expansion of the macro `uri` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: invalid parameters for `has_two` route uri
          --- note: uri parameters are: id: i32, name: String
@@ -64,18 +82,24 @@ error: invalid parameters for `has_two` route uri
    |
 53 |     uri!(has_two(cookies = "hi", id = 100, id = 10, id = 10));
    |                  ^^^^^^^
+   |
+   = note: this error originates in the macro `rocket::rocket_internal_uri` which comes from the expansion of the macro `uri` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: [help] unknown parameter: `cookies`
   --> tests/ui-fail-stable/typed-uris-bad-params.rs:53:18
    |
 53 |     uri!(has_two(cookies = "hi", id = 100, id = 10, id = 10));
    |                  ^^^^^^^
+   |
+   = note: this error originates in the macro `rocket::rocket_internal_uri` which comes from the expansion of the macro `uri` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: [help] duplicate parameter: `id`
   --> tests/ui-fail-stable/typed-uris-bad-params.rs:53:44
    |
 53 |     uri!(has_two(cookies = "hi", id = 100, id = 10, id = 10));
    |                                            ^^
+   |
+   = note: this error originates in the macro `rocket::rocket_internal_uri` which comes from the expansion of the macro `uri` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: invalid parameters for `has_two` route uri
          --- note: uri parameters are: id: i32, name: String
@@ -84,6 +108,8 @@ error: invalid parameters for `has_two` route uri
    |
 51 |     uri!(has_two(name = "hi"));
    |                  ^^^^
+   |
+   = note: this error originates in the macro `rocket::rocket_internal_uri` which comes from the expansion of the macro `uri` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: invalid parameters for `has_two` route uri
          --- note: uri parameters are: id: i32, name: String
@@ -92,12 +118,16 @@ error: invalid parameters for `has_two` route uri
    |
 49 |     uri!(has_two(id = 100, id = 100, ));
    |                  ^^
+   |
+   = note: this error originates in the macro `rocket::rocket_internal_uri` which comes from the expansion of the macro `uri` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: [help] duplicate parameter: `id`
   --> tests/ui-fail-stable/typed-uris-bad-params.rs:49:28
    |
 49 |     uri!(has_two(id = 100, id = 100, ));
    |                            ^^
+   |
+   = note: this error originates in the macro `rocket::rocket_internal_uri` which comes from the expansion of the macro `uri` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: invalid parameters for `has_one_guarded` route uri
          --- note: uri parameters are: id: i32
@@ -105,12 +135,16 @@ error: invalid parameters for `has_one_guarded` route uri
    |
 47 |     uri!(has_one_guarded(id = 100, cookies = "hi"));
    |                          ^^
+   |
+   = note: this error originates in the macro `rocket::rocket_internal_uri` which comes from the expansion of the macro `uri` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: [help] unknown parameter: `cookies`
   --> tests/ui-fail-stable/typed-uris-bad-params.rs:47:36
    |
 47 |     uri!(has_one_guarded(id = 100, cookies = "hi"));
    |                                    ^^^^^^^
+   |
+   = note: this error originates in the macro `rocket::rocket_internal_uri` which comes from the expansion of the macro `uri` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: invalid parameters for `has_one_guarded` route uri
          --- note: uri parameters are: id: i32
@@ -118,12 +152,16 @@ error: invalid parameters for `has_one_guarded` route uri
    |
 45 |     uri!(has_one_guarded(cookies = "hi", id = 100));
    |                          ^^^^^^^
+   |
+   = note: this error originates in the macro `rocket::rocket_internal_uri` which comes from the expansion of the macro `uri` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: [help] unknown parameter: `cookies`
   --> tests/ui-fail-stable/typed-uris-bad-params.rs:45:26
    |
 45 |     uri!(has_one_guarded(cookies = "hi", id = 100));
    |                          ^^^^^^^
+   |
+   = note: this error originates in the macro `rocket::rocket_internal_uri` which comes from the expansion of the macro `uri` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: invalid parameters for `has_one` route uri
          --- note: uri parameters are: id: i32
@@ -132,12 +170,16 @@ error: invalid parameters for `has_one` route uri
    |
 43 |     uri!(has_one(name = "hi"));
    |                  ^^^^
+   |
+   = note: this error originates in the macro `rocket::rocket_internal_uri` which comes from the expansion of the macro `uri` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: [help] unknown parameter: `name`
   --> tests/ui-fail-stable/typed-uris-bad-params.rs:43:18
    |
 43 |     uri!(has_one(name = "hi"));
    |                  ^^^^
+   |
+   = note: this error originates in the macro `rocket::rocket_internal_uri` which comes from the expansion of the macro `uri` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: invalid parameters for `has_one` route uri
          --- note: uri parameters are: id: i32
@@ -145,12 +187,16 @@ error: invalid parameters for `has_one` route uri
    |
 41 |     uri!(has_one(id = 100, id = 100, ));
    |                  ^^
+   |
+   = note: this error originates in the macro `rocket::rocket_internal_uri` which comes from the expansion of the macro `uri` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: [help] duplicate parameter: `id`
   --> tests/ui-fail-stable/typed-uris-bad-params.rs:41:28
    |
 41 |     uri!(has_one(id = 100, id = 100, ));
    |                            ^^
+   |
+   = note: this error originates in the macro `rocket::rocket_internal_uri` which comes from the expansion of the macro `uri` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: invalid parameters for `has_one` route uri
          --- note: uri parameters are: id: i32
@@ -158,12 +204,16 @@ error: invalid parameters for `has_one` route uri
    |
 39 |     uri!(has_one(id = 100, id = 100));
    |                  ^^
+   |
+   = note: this error originates in the macro `rocket::rocket_internal_uri` which comes from the expansion of the macro `uri` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: [help] duplicate parameter: `id`
   --> tests/ui-fail-stable/typed-uris-bad-params.rs:39:28
    |
 39 |     uri!(has_one(id = 100, id = 100));
    |                            ^^
+   |
+   = note: this error originates in the macro `rocket::rocket_internal_uri` which comes from the expansion of the macro `uri` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: invalid parameters for `has_one` route uri
          --- note: uri parameters are: id: i32
@@ -171,18 +221,24 @@ error: invalid parameters for `has_one` route uri
    |
 37 |     uri!(has_one(name = 100, age = 50, id = 100, id = 50));
    |                  ^^^^
+   |
+   = note: this error originates in the macro `rocket::rocket_internal_uri` which comes from the expansion of the macro `uri` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: [help] unknown parameters: `name`, `age`
   --> tests/ui-fail-stable/typed-uris-bad-params.rs:37:18
    |
 37 |     uri!(has_one(name = 100, age = 50, id = 100, id = 50));
    |                  ^^^^
+   |
+   = note: this error originates in the macro `rocket::rocket_internal_uri` which comes from the expansion of the macro `uri` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: [help] duplicate parameter: `id`
   --> tests/ui-fail-stable/typed-uris-bad-params.rs:37:50
    |
 37 |     uri!(has_one(name = 100, age = 50, id = 100, id = 50));
    |                                                  ^^
+   |
+   = note: this error originates in the macro `rocket::rocket_internal_uri` which comes from the expansion of the macro `uri` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: invalid parameters for `has_one` route uri
          --- note: uri parameters are: id: i32
@@ -190,12 +246,16 @@ error: invalid parameters for `has_one` route uri
    |
 35 |     uri!(has_one(name = 100, age = 50, id = 100));
    |                  ^^^^
+   |
+   = note: this error originates in the macro `rocket::rocket_internal_uri` which comes from the expansion of the macro `uri` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: [help] unknown parameters: `name`, `age`
   --> tests/ui-fail-stable/typed-uris-bad-params.rs:35:18
    |
 35 |     uri!(has_one(name = 100, age = 50, id = 100));
    |                  ^^^^
+   |
+   = note: this error originates in the macro `rocket::rocket_internal_uri` which comes from the expansion of the macro `uri` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: invalid parameters for `has_one` route uri
          --- note: uri parameters are: id: i32
@@ -203,12 +263,16 @@ error: invalid parameters for `has_one` route uri
    |
 33 |     uri!(has_one(name = 100, id = 100));
    |                  ^^^^
+   |
+   = note: this error originates in the macro `rocket::rocket_internal_uri` which comes from the expansion of the macro `uri` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: [help] unknown parameter: `name`
   --> tests/ui-fail-stable/typed-uris-bad-params.rs:33:18
    |
 33 |     uri!(has_one(name = 100, id = 100));
    |                  ^^^^
+   |
+   = note: this error originates in the macro `rocket::rocket_internal_uri` which comes from the expansion of the macro `uri` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: invalid parameters for `has_one` route uri
          --- note: uri parameters are: id: i32
@@ -216,12 +280,16 @@ error: invalid parameters for `has_one` route uri
    |
 31 |     uri!(has_one(id = 100, name = "hi"));
    |                  ^^
+   |
+   = note: this error originates in the macro `rocket::rocket_internal_uri` which comes from the expansion of the macro `uri` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: [help] unknown parameter: `name`
   --> tests/ui-fail-stable/typed-uris-bad-params.rs:31:28
    |
 31 |     uri!(has_one(id = 100, name = "hi"));
    |                            ^^^^
+   |
+   = note: this error originates in the macro `rocket::rocket_internal_uri` which comes from the expansion of the macro `uri` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: route expects 2 parameters but 1 was supplied
          --- note: route `has_two` has uri "/<id>?<name>"
@@ -229,6 +297,8 @@ error: route expects 2 parameters but 1 was supplied
    |
 29 |     uri!(has_two(10));
    |                  ^^
+   |
+   = note: this error originates in the macro `rocket::rocket_internal_uri` which comes from the expansion of the macro `uri` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: route expects 2 parameters but 3 were supplied
          --- note: route `has_two` has uri "/<id>?<name>"
@@ -236,6 +306,8 @@ error: route expects 2 parameters but 3 were supplied
    |
 28 |     uri!(has_two(10, "hi", "there"));
    |                  ^^
+   |
+   = note: this error originates in the macro `rocket::rocket_internal_uri` which comes from the expansion of the macro `uri` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: route expects 1 parameter but 2 were supplied
          --- note: route `has_one_guarded` has uri "/<id>"
@@ -243,6 +315,8 @@ error: route expects 1 parameter but 2 were supplied
    |
 26 |     uri!(has_one_guarded("hi", 100));
    |                          ^^^^
+   |
+   = note: this error originates in the macro `rocket::rocket_internal_uri` which comes from the expansion of the macro `uri` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: route expects 1 parameter but 2 were supplied
          --- note: route `has_one` has uri "/<id>"
@@ -250,6 +324,8 @@ error: route expects 1 parameter but 2 were supplied
    |
 25 |     uri!(has_one("Hello", 23, ));
    |                  ^^^^^^^
+   |
+   = note: this error originates in the macro `rocket::rocket_internal_uri` which comes from the expansion of the macro `uri` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: route expects 1 parameter but 2 were supplied
          --- note: route `has_one` has uri "/<id>"
@@ -257,6 +333,8 @@ error: route expects 1 parameter but 2 were supplied
    |
 24 |     uri!(has_one(1, 23));
    |                  ^
+   |
+   = note: this error originates in the macro `rocket::rocket_internal_uri` which comes from the expansion of the macro `uri` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: route expects 1 parameter but 0 were supplied
          --- note: route `has_one` has uri "/<id>"
@@ -264,6 +342,8 @@ error: route expects 1 parameter but 0 were supplied
    |
 22 |     uri!(has_one());
    |          ^^^^^^^
+   |
+   = note: this error originates in the macro `rocket::rocket_internal_uri` which comes from the expansion of the macro `uri` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: route expects 1 parameter but 0 were supplied
          --- note: route `has_one` has uri "/<id>"
@@ -271,15 +351,17 @@ error: route expects 1 parameter but 0 were supplied
    |
 21 |     uri!(has_one);
    |          ^^^^^^^
+   |
+   = note: this error originates in the macro `rocket::rocket_internal_uri` which comes from the expansion of the macro `uri` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error[E0271]: type mismatch resolving `<String as FromParam<'_>>::Error == &str`
   --> tests/ui-fail-stable/typed-uris-bad-params.rs:15:37
    |
 15 | fn optionals(id: Option<i32>, name: Result<String, &str>) {  }
-   |                                     ^^^^^^ expected enum `Infallible`, found `&str`
+   |                                     ^^^^^^ expected `Infallible`, found `&str`
 
 error[E0271]: type mismatch resolving `<String as FromParam<'_>>::Error == &str`
   --> tests/ui-fail-stable/typed-uris-bad-params.rs:15:37
    |
 15 | fn optionals(id: Option<i32>, name: Result<String, &str>) {  }
-   |                                     ^^^^^^ expected `&str`, found enum `Infallible`
+   |                                     ^^^^^^ expected `&str`, found `Infallible`

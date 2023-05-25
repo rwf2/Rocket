@@ -276,6 +276,8 @@ error[E0277]: the trait bound `rocket::http::uri::Asterisk: ValidRouteSuffix<roc
 note: required by a bound in `RouteUriBuilder::with_suffix`
   --> $WORKSPACE/core/http/src/uri/fmt/formatter.rs
    |
+   |     pub fn with_suffix<S>(self, suffix: S) -> SuffixedRouteUri<S::Output>
+   |            ----------- required by a bound in this associated function
    |         where S: ValidRouteSuffix<Origin<'static>>
    |                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ required by this bound in `RouteUriBuilder::with_suffix`
 
@@ -307,5 +309,7 @@ error[E0277]: the trait bound `rocket::http::uri::Origin<'_>: ValidRouteSuffix<r
 note: required by a bound in `RouteUriBuilder::with_suffix`
   --> $WORKSPACE/core/http/src/uri/fmt/formatter.rs
    |
+   |     pub fn with_suffix<S>(self, suffix: S) -> SuffixedRouteUri<S::Output>
+   |            ----------- required by a bound in this associated function
    |         where S: ValidRouteSuffix<Origin<'static>>
    |                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ required by this bound in `RouteUriBuilder::with_suffix`
