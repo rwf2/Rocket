@@ -1,6 +1,7 @@
 use std::io;
 use std::pin::Pin;
 use std::sync::{Arc, Mutex};
+use std::sync::atomic::{AtomicPtr, Ordering};
 use std::task::{Context, Poll};
 use std::future::Future;
 use std::net::SocketAddr;
@@ -10,6 +11,7 @@ use rustls::server::ClientHello;
 use tokio::net::{TcpListener, TcpStream};
 use tokio::io::{AsyncRead, AsyncWrite};
 use tokio_rustls::{Accept, TlsAcceptor, server::TlsStream as BareTlsStream};
+use tokio::time::{self, Duration};
 
 use crate::tls::util::{load_certs, load_private_key, load_ca_certs};
 use crate::listener::{Connection, Listener, Certificates};
@@ -20,8 +22,9 @@ pub struct TlsListener {
     acceptor: TlsAcceptor,
 }
 pub struct Resolver{
-    cert_chain: Arc<Mutex<Vec<Certificate>>>,
-    key: Arc<Mutex<PrivateKey>>
+    cert_chain: Arc<AtomicPtr<Vec<Certificate>>>,
+    key: Arc<AtomicPtr<PrivateKey>>,
+    background_task: tokio::task::JoinHandle<()>
 }
 /// This implementation exists so that ROCKET_WORKERS=1 can make progress while
 /// a TLS handshake is being completed. It does this by returning `Ready` from
@@ -77,16 +80,59 @@ pub struct Config<R> {
 
 impl rustls::server::ResolvesServerCert for Resolver {
     fn resolve(&self, _client_hello: ClientHello<'_>) -> Option<Arc<CertifiedKey>> {
-        let sign_key = rustls::sign::any_supported_type(&self.key.lock().unwrap()).unwrap();
-        Some(Arc::new(CertifiedKey{
-            cert: self.cert_chain.lock().unwrap().clone(),
-            key: sign_key, 
-            ocsp: None,
-            sct_list: None
-        }))
-    }
+            
+            let cert_chain_ptr = self.cert_chain.load(Ordering::Relaxed);
+            let key_ptr = self.key.load(Ordering::Relaxed);
+            let cert_chain = unsafe { Box::from_raw(cert_chain_ptr) };
+            let key = unsafe { Box::from_raw(key_ptr) };
+
+            let sign_key = rustls::sign::any_supported_type(&key).unwrap();
+            let certified_key = Arc::new(rustls::sign::CertifiedKey {
+                cert: *cert_chain,
+                key: sign_key,
+                ocsp: None,
+                sct_list: None, 
+            });
+
+            self.cert_chain.store(Box::into_raw(Box::new(certified_key.cert.clone())), Ordering::Relaxed);
+            self.key.store(Box::into_raw(key), Ordering::Relaxed);
+
+            Some(certified_key)
+    
+        }
 }
 
+impl Resolver {
+    pub fn new(cert_chain: Vec<Certificate>, key: PrivateKey) -> Self {
+        let cert_chain = Arc::new(AtomicPtr::new(Box::into_raw(Box::new(cert_chain))));
+        let key = Arc::new(AtomicPtr::new(Box::into_raw(Box::new(key))));
+        let cert_chain_clone = Arc::clone(&cert_chain);
+        let key_clone = Arc::clone(&key);
+
+
+        let background_task = tokio::spawn(async move {
+            let mut interval = time::interval(Duration::from_secs(30));
+            loop {
+                interval.tick().await;
+                let new_cert_chain = cert_chain_clone.load(Ordering::Relaxed);
+                let new_key = key_clone.load(Ordering::Relaxed);
+                
+                println!("Changin certificates");
+
+                // Simulate changing the certificates based on some condition
+                // For demonstration purposes, we'll simply reverse the order of the certificates
+            }
+        });
+
+        Self {
+            cert_chain,
+            key,
+            background_task,
+        }
+    }
+
+  
+}
 impl TlsListener {
     pub async fn bind<R>(addr: SocketAddr, mut c: Config<R>) -> io::Result<TlsListener>
         where R: io::BufRead
@@ -108,6 +154,9 @@ impl TlsListener {
             },
             None => NoClientAuth::boxed(),
         };
+
+        // Create the resolver with the certificates and key
+        let resolver = Resolver::new(cert_chain, key);
  
         let mut tls_config = ServerConfig::builder()
             .with_cipher_suites(&c.ciphersuites)
@@ -115,10 +164,7 @@ impl TlsListener {
             .with_safe_default_protocol_versions()
             .map_err(|e| io::Error::new(io::ErrorKind::Other, format!("bad TLS config: {}", e)))?
             .with_client_cert_verifier(client_auth)
-            .with_cert_resolver(Arc::new(Resolver{
-                cert_chain: Arc::new(Mutex::new(cert_chain)),
-                key: Arc::new(Mutex::new(key))
-            }));
+            .with_cert_resolver(Arc::new(resolver));
 
         tls_config.ignore_client_order = c.prefer_server_order;
 
