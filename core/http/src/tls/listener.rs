@@ -1,11 +1,11 @@
 use std::io;
 use std::pin::Pin;
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 use std::task::{Context, Poll};
 use std::future::Future;
 use std::net::SocketAddr;
 use rustls::PrivateKey;
-use rustls::{Certificate, sign::SigningKey, sign::CertifiedKey};
+use rustls::{Certificate, sign::CertifiedKey};
 use rustls::server::ClientHello;
 use tokio::net::{TcpListener, TcpStream};
 use tokio::io::{AsyncRead, AsyncWrite};
@@ -20,8 +20,8 @@ pub struct TlsListener {
     acceptor: TlsAcceptor,
 }
 pub struct Resolver{
-    cert_chain: Vec<Certificate>,
-    key: PrivateKey
+    cert_chain: Arc<Mutex<Vec<Certificate>>>,
+    key: Arc<Mutex<PrivateKey>>
 }
 /// This implementation exists so that ROCKET_WORKERS=1 can make progress while
 /// a TLS handshake is being completed. It does this by returning `Ready` from
@@ -65,6 +65,7 @@ pub enum TlsState {
     Streaming(BareTlsStream<TcpStream>),
 }
 /// TLS as ~configured by `TlsConfig` in `rocket` core.
+#[derive(Clone, Debug)]
 pub struct Config<R> {
     pub cert_chain: R,
     pub private_key: R,
@@ -75,10 +76,10 @@ pub struct Config<R> {
 }
 
 impl rustls::server::ResolvesServerCert for Resolver {
-    fn resolve(&self, client_hello: ClientHello<'_>) -> Option<Arc<CertifiedKey>> {
-        let sign_key = rustls::sign::any_supported_type(&self.key).unwrap();
+    fn resolve(&self, _client_hello: ClientHello<'_>) -> Option<Arc<CertifiedKey>> {
+        let sign_key = rustls::sign::any_supported_type(&self.key.lock().unwrap()).unwrap();
         Some(Arc::new(CertifiedKey{
-            cert: self.cert_chain.clone(),
+            cert: self.cert_chain.lock().unwrap().clone(),
             key: sign_key, 
             ocsp: None,
             sct_list: None
@@ -115,8 +116,8 @@ impl TlsListener {
             .map_err(|e| io::Error::new(io::ErrorKind::Other, format!("bad TLS config: {}", e)))?
             .with_client_cert_verifier(client_auth)
             .with_cert_resolver(Arc::new(Resolver{
-                cert_chain: cert_chain.clone(),
-                key: key.clone()
+                cert_chain: Arc::new(Mutex::new(cert_chain)),
+                key: Arc::new(Mutex::new(key))
             }));
 
         tls_config.ignore_client_order = c.prefer_server_order;
