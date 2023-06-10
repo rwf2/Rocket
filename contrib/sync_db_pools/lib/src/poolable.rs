@@ -2,7 +2,7 @@
 use std::time::Duration;
 
 use r2d2::ManageConnection;
-use rocket::{Rocket, Build};
+use rocket::{Build, Rocket};
 
 #[allow(unused_imports)]
 use crate::{Config, Error};
@@ -99,7 +99,7 @@ use crate::{Config, Error};
 /// [`Poolable`].
 pub trait Poolable: Send + Sized + 'static {
     /// The associated connection manager for the given connection type.
-    type Manager: ManageConnection<Connection=Self>;
+    type Manager: ManageConnection<Connection = Self>;
 
     /// The associated error type in the event that constructing the connection
     /// manager and/or the connection pool fails.
@@ -120,19 +120,22 @@ impl Poolable for diesel::SqliteConnection {
     type Error = std::convert::Infallible;
 
     fn pool(db_name: &str, rocket: &Rocket<Build>) -> PoolResult<Self> {
-        use diesel::{SqliteConnection, connection::SimpleConnection};
-        use diesel::r2d2::{CustomizeConnection, ConnectionManager, Error, Pool};
+        use diesel::r2d2::{ConnectionManager, CustomizeConnection, Error, Pool};
+        use diesel::{connection::SimpleConnection, SqliteConnection};
 
         #[derive(Debug)]
         struct Customizer;
 
         impl CustomizeConnection<SqliteConnection, Error> for Customizer {
             fn on_acquire(&self, conn: &mut SqliteConnection) -> Result<(), Error> {
-                conn.batch_execute("\
+                conn.batch_execute(
+                    "\
                     PRAGMA journal_mode = WAL;\
                     PRAGMA busy_timeout = 1000;\
                     PRAGMA foreign_keys = ON;\
-                ").map_err(Error::QueryError)?;
+                ",
+                )
+                .map_err(Error::QueryError)?;
 
                 Ok(())
             }
@@ -184,8 +187,7 @@ impl Poolable for diesel::MysqlConnection {
     }
 }
 
-// TODO: Add a feature to enable TLS in `postgres`; parse a suitable `config`.
-#[cfg(feature = "postgres_pool")]
+#[cfg(all(feature = "postgres_pool", not(feature = "postgres_pool_tls")))]
 impl Poolable for postgres::Client {
     type Manager = r2d2_postgres::PostgresConnectionManager<postgres::tls::NoTls>;
     type Error = postgres::Error;
@@ -194,6 +196,53 @@ impl Poolable for postgres::Client {
         let config = Config::from(db_name, rocket)?;
         let url = config.url.parse().map_err(Error::Custom)?;
         let manager = r2d2_postgres::PostgresConnectionManager::new(url, postgres::tls::NoTls);
+        let pool = r2d2::Pool::builder()
+            .max_size(config.pool_size)
+            .connection_timeout(Duration::from_secs(config.timeout as u64))
+            .build(manager)?;
+
+        Ok(pool)
+    }
+}
+
+#[cfg(feature = "postgres_pool_tls")]
+impl Poolable for postgres::Client {
+    type Manager = r2d2_postgres::PostgresConnectionManager<postgres_native_tls::MakeTlsConnector>;
+    type Error = postgres::Error;
+
+    fn pool(db_name: &str, rocket: &Rocket<Build>) -> PoolResult<Self> {
+        let config = Config::from(db_name, rocket)?;
+        let tls_config = config.tls.unwrap_or_default();
+        let mut tls_connector = native_tls::TlsConnector::builder();
+
+        if let Some(accept_invalid_certs) = tls_config.accept_invalid_certs {
+            tls_connector.danger_accept_invalid_certs(accept_invalid_certs);
+            if accept_invalid_certs {
+                rocket::warn!("Accepting invalid certificates");
+            }
+        }
+
+        if let Some(accept_invalid_hostnames) = tls_config.accept_invalid_hostnames {
+            tls_connector.danger_accept_invalid_hostnames(accept_invalid_hostnames);
+            if accept_invalid_hostnames {
+                rocket::warn!("Accepting invalid certificate hostnames");
+            }
+        }
+
+        if let Some(cert_path) = tls_config.cert_path {
+            let cert_bytes = std::fs::read(cert_path).map_err(Error::Io)?;
+            let cert = native_tls::Certificate::from_pem(&cert_bytes)
+                .map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e.to_string()))?;
+            tls_connector.add_root_certificate(cert);
+        }
+
+        let tls_connector = tls_connector
+            .build()
+            .map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e.to_string()))?;
+        let db_connector = postgres_native_tls::MakeTlsConnector::new(tls_connector);
+
+        let url = config.url.parse().map_err(Error::Custom)?;
+        let manager = r2d2_postgres::PostgresConnectionManager::new(url, db_connector);
         let pool = r2d2::Pool::builder()
             .max_size(config.pool_size)
             .connection_timeout(Duration::from_secs(config.timeout as u64))
@@ -248,10 +297,9 @@ impl Poolable for rusqlite::Connection {
             };
 
             flags.insert(sql_flag)
-        };
+        }
 
-        let manager = r2d2_sqlite::SqliteConnectionManager::file(&*config.url)
-            .with_flags(flags);
+        let manager = r2d2_sqlite::SqliteConnectionManager::file(&*config.url).with_flags(flags);
 
         let pool = r2d2::Pool::builder()
             .max_size(config.pool_size)
