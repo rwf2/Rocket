@@ -19,7 +19,7 @@
     <div class="container">
       <h1>Form Example</h1>
 
-      {% if errors | length > 1 %}
+      {% if errors | length > 0 %}
           <small class="text-error" style="margin-top: -20px">
               {{ errors | length }} field(s) have errors
           </small>
