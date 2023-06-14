@@ -21,7 +21,7 @@
 
       {% if errors | length > 0 %}
           <small class="text-error" style="margin-top: -20px">
-              {{ errors | length }} field(s) have errors
+              {{ errors | length }} {{ errors | length | pluralize(singular="field has an error", plural="fields have errors")}}
           </small>
       {% endif %}
 
