@@ -23,6 +23,9 @@ sqlx_postgres = ["sqlx", "sqlx/postgres"]
 sqlx_sqlite = ["sqlx", "sqlx/sqlite"]
 sqlx_mssql = ["sqlx", "sqlx/mssql"]
 sqlx_macros = ["sqlx/macros"]
+# diesel features
+diesel_postgres = ["diesel-async/postgres", "diesel-async/deadpool", "diesel", "deadpool"]
+diesel_mysql = ["diesel-async/mysql", "diesel-async/deadpool", "diesel", "deadpool"]
 # implicit features: mongodb
 
 [dependencies.rocket]
@@ -47,7 +50,7 @@ features = ["rt_tokio_1"]
 optional = true
 
 [dependencies.deadpool-redis]
-version = "0.11"
+version = "0.12"
 default-features = false
 features = ["rt_tokio_1"]
 optional = true
@@ -56,6 +59,16 @@ optional = true
 version = "2"
 default-features = false
 features = ["tokio-runtime"]
+optional = true
+
+[dependencies.diesel-async]
+version = "0.3.1"
+default-features = false
+optional = true
+
+[dependencies.diesel]
+version = "2.1"
+default-features = false
 optional = true
 
 [dependencies.sqlx]

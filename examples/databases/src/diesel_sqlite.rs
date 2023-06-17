@@ -3,9 +3,7 @@ use rocket::fairing::AdHoc;
 use rocket::response::{Debug, status::Created};
 use rocket::serde::{Serialize, Deserialize, json::Json};
 
-use rocket_sync_db_pools::diesel;
-
-use self::diesel::prelude::*;
+use diesel::prelude::*;
 
 #[database("diesel")]
 struct Db(diesel::SqliteConnection);

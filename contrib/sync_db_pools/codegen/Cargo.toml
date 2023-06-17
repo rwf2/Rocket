@@ -20,4 +20,5 @@ devise = "0.4"
 [dev-dependencies]
 version_check = "0.9"
 trybuild = "1.0"
-rocket_sync_db_pools = { path = "../lib", features = ["diesel_sqlite_pool"] }
+rocket_sync_db_pools = { path = "../lib" }
+rocket = { path = "../../../core/lib" }

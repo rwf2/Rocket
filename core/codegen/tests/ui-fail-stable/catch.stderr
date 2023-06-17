@@ -60,7 +60,7 @@ error[E0308]: arguments to this function are incorrect
 30 | fn f3(_request: &Request, other: bool) { }
    |    ^^           -                ---- an argument of type `bool` is missing
    |                 |
-   |                 argument of type `Status` unexpected
+   |                 unexpected argument of type `Status`
    |
 note: function defined here
   --> tests/ui-fail-stable/catch.rs:30:4

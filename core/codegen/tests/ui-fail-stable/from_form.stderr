@@ -464,7 +464,7 @@ error[E0308]: mismatched types
    --> tests/ui-fail-stable/from_form.rs:147:24
     |
 147 |     #[field(validate = 123)]
-    |                        ^^^ expected enum `Result`, found integer
+    |                        ^^^ expected `Result<(), Errors<'_>>`, found integer
     |
     = note: expected enum `Result<(), Errors<'_>>`
                found type `{integer}`
@@ -481,7 +481,7 @@ error[E0308]: mismatched types
 159 |     #[field(validate = ext(rocket::http::ContentType::HTML))]
     |                        --- arguments to this function are incorrect
 160 |     first: String,
-    |            ^^^^^^ expected enum `TempFile`, found struct `String`
+    |            ^^^^^^ expected `&TempFile<'_>`, found `&String`
     |
     = note: expected reference `&TempFile<'_>`
                found reference `&std::string::String`
@@ -495,9 +495,9 @@ error[E0308]: arguments to this function are incorrect
    --> tests/ui-fail-stable/from_form.rs:165:24
     |
 165 |     #[field(validate = ext("hello"))]
-    |                        ^^^ ------- expected struct `ContentType`, found `&str`
+    |                        ^^^ ------- expected `ContentType`, found `&str`
 166 |     first: String,
-    |            ------ expected enum `TempFile`, found struct `String`
+    |            ------ expected `&TempFile<'_>`, found `&String`
     |
     = note: expected reference `&TempFile<'_>`
                found reference `&std::string::String`
@@ -513,7 +513,7 @@ error[E0308]: mismatched types
 171 |     #[field(default = 123)]
     |                       ^^^- help: try using a conversion method: `.to_string()`
     |                       |
-    |                       expected struct `String`, found integer
+    |                       expected `String`, found integer
     |                       arguments to this enum variant are incorrect
     |
 help: the type constructed contains `{integer}` due to the type of the argument passed
@@ -530,7 +530,7 @@ error[E0308]: mismatched types
 203 |     #[field(default_with = Some("hi"))]
     |                            ---- ^^^^- help: try using a conversion method: `.to_string()`
     |                            |    |
-    |                            |    expected struct `String`, found `&str`
+    |                            |    expected `String`, found `&str`
     |                            arguments to this enum variant are incorrect
     |
 help: the type constructed contains `&'static str` due to the type of the argument passed

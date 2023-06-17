@@ -4,7 +4,7 @@ use std::{future::Future, borrow::Cow, sync::Arc};
 use std::net::{IpAddr, SocketAddr};
 
 use yansi::Paint;
-use state::{Container, Storage};
+use state::{TypeMap, InitCell};
 use futures::future::BoxFuture;
 use atomic::{Atomic, Ordering};
 
@@ -46,9 +46,9 @@ pub(crate) struct RequestState<'r> {
     pub rocket: &'r Rocket<Orbit>,
     pub route: Atomic<Option<&'r Route>>,
     pub cookies: CookieJar<'r>,
-    pub accept: Storage<Option<Accept>>,
-    pub content_type: Storage<Option<ContentType>>,
-    pub cache: Arc<Container![Send + Sync]>,
+    pub accept: InitCell<Option<Accept>>,
+    pub content_type: InitCell<Option<ContentType>>,
+    pub cache: Arc<TypeMap![Send + Sync]>,
     pub host: Option<Host<'r>>,
 }
 
@@ -98,9 +98,9 @@ impl<'r> Request<'r> {
                 rocket,
                 route: Atomic::new(None),
                 cookies: CookieJar::new(rocket.config()),
-                accept: Storage::new(),
-                content_type: Storage::new(),
-                cache: Arc::new(<Container![Send + Sync]>::new()),
+                accept: InitCell::new(),
+                content_type: InitCell::new(),
+                cache: Arc::new(<TypeMap![Send + Sync]>::new()),
                 host: None,
             }
         }
@@ -547,7 +547,7 @@ impl<'r> Request<'r> {
     /// ```
     #[inline]
     pub fn content_type(&self) -> Option<&ContentType> {
-        self.state.content_type.get_or_set(|| {
+        self.state.content_type.get_or_init(|| {
             self.headers().get_one("Content-Type").and_then(|v| v.parse().ok())
         }).as_ref()
     }
@@ -567,7 +567,7 @@ impl<'r> Request<'r> {
     /// ```
     #[inline]
     pub fn accept(&self) -> Option<&Accept> {
-        self.state.accept.get_or_set(|| {
+        self.state.accept.get_or_init(|| {
             self.headers().get_one("Accept").and_then(|v| v.parse().ok())
         }).as_ref()
     }
@@ -928,11 +928,11 @@ impl<'r> Request<'r> {
     fn bust_header_cache(&mut self, name: &UncasedStr, replace: bool) {
         if name == "Content-Type" {
             if self.content_type().is_none() || replace {
-                self.state.content_type = Storage::new();
+                self.state.content_type = InitCell::new();
             }
         } else if name == "Accept" {
             if self.accept().is_none() || replace {
-                self.state.accept = Storage::new();
+                self.state.accept = InitCell::new();
             }
         }
     }

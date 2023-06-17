@@ -106,12 +106,12 @@ note: this function cannot be `main`
    = note: this error originates in the attribute macro `rocket::launch` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error[E0728]: `await` is only allowed inside `async` functions and blocks
-  --> tests/ui-fail-nightly/async-entry.rs:73:41
+  --> tests/ui-fail-nightly/async-entry.rs:73:42
    |
 72 |     fn rocket() -> _ {
    |        ------ this is not `async`
 73 |         let _ = rocket::build().launch().await;
-   |                                         ^^^^^^ only allowed inside `async` functions and blocks
+   |                                          ^^^^^ only allowed inside `async` functions and blocks
 
 error[E0308]: mismatched types
   --> tests/ui-fail-nightly/async-entry.rs:35:9

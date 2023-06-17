@@ -173,9 +173,7 @@ impl RawStr {
     /// # extern crate rocket;
     /// use rocket::http::RawStr;
     ///
-    /// // Note: Rocket should never hand you a bad `&RawStr`.
-    /// let bad_str = unsafe { std::str::from_utf8_unchecked(b"a=\xff") };
-    /// let bad_raw_str = RawStr::new(bad_str);
+    /// let bad_raw_str = RawStr::new("%FF");
     /// assert!(bad_raw_str.percent_decode().is_err());
     /// ```
     #[inline(always)]
@@ -211,9 +209,7 @@ impl RawStr {
     /// # extern crate rocket;
     /// use rocket::http::RawStr;
     ///
-    /// // Note: Rocket should never hand you a bad `&RawStr`.
-    /// let bad_str = unsafe { std::str::from_utf8_unchecked(b"a=\xff") };
-    /// let bad_raw_str = RawStr::new(bad_str);
+    /// let bad_raw_str = RawStr::new("a=%FF");
     /// assert_eq!(bad_raw_str.percent_decode_lossy(), "a=�");
     /// ```
     #[inline(always)]
@@ -235,6 +231,15 @@ impl RawStr {
                 allocated = string.into();
             }
 
+            // SAFETY:
+            //
+            // 1. The caller must ensure that the content of the slice is valid
+            //    UTF-8 before the borrow ends and the underlying `str` is used.
+            //
+            //    `allocated[i]` is `+` since that is what we searched for. The
+            //    `+` char is ASCII => the character is one byte wide. ' ' is
+            //    also one byte and ASCII => UTF-8. The replacement of `+` with
+            //    ` ` thus yields a valid UTF-8 string.
             unsafe { allocated.as_bytes_mut()[i] = b' '; }
         }
 
@@ -265,9 +270,7 @@ impl RawStr {
     /// # extern crate rocket;
     /// use rocket::http::RawStr;
     ///
-    /// // NOTE: Rocket will never hand you a bad `&RawStr`.
-    /// let bad_str = unsafe { std::str::from_utf8_unchecked(b"a=\xff") };
-    /// let bad_raw_str = RawStr::new(bad_str);
+    /// let bad_raw_str = RawStr::new("%FF");
     /// assert!(bad_raw_str.percent_decode().is_err());
     /// ```
     #[inline(always)]
@@ -344,9 +347,7 @@ impl RawStr {
     /// # extern crate rocket;
     /// use rocket::http::RawStr;
     ///
-    /// // Note: Rocket should never hand you a bad `&RawStr`.
-    /// let bad_str = unsafe { std::str::from_utf8_unchecked(b"a+b=\xff") };
-    /// let bad_raw_str = RawStr::new(bad_str);
+    /// let bad_raw_str = RawStr::new("a+b=%FF");
     /// assert_eq!(bad_raw_str.url_decode_lossy(), "a b=�");
     /// ```
     pub fn url_decode_lossy(&self) -> Cow<'_, str> {

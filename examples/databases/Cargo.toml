@@ -7,8 +7,8 @@ publish = false
 
 [dependencies]
 rocket = { path = "../../core/lib", features = ["json"] }
-diesel = { version = "2.0.0", features = ["sqlite", "r2d2"] }
-diesel_migrations = "2.0.0"
+diesel = "2"
+diesel_migrations = "2"
 
 [dependencies.sqlx]
 version = "0.6.0"
@@ -17,7 +17,7 @@ features = ["macros", "offline", "migrate"]
 
 [dependencies.rocket_db_pools]
 path = "../../contrib/db_pools/lib/"
-features = ["sqlx_sqlite"]
+features = ["sqlx_sqlite", "diesel_mysql"]
 
 [dependencies.rocket_sync_db_pools]
 path = "../../contrib/sync_db_pools/lib/"

@@ -123,7 +123,8 @@ mod tls;
 mod secret_key;
 
 #[doc(hidden)]
-pub use config::pretty_print_error;
+pub use config::{pretty_print_error, bail_with_config_error};
+
 pub use config::Config;
 pub use crate::log::LogLevel;
 pub use shutdown::Shutdown;

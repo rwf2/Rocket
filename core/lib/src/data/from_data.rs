@@ -52,6 +52,147 @@ impl<'r, S, E> IntoOutcome<S, (Status, E), (Data<'r>, Status)> for Result<S, E> 
 /// matches, Rocket will call the `FromData` implementation for the type `T`.
 /// The handler will only be called if the guard returns successfully.
 ///
+/// ## Build-In Guards
+///
+/// Rocket provides implementations for `FromData` for many types. Their
+/// behavior is documented here:
+///
+///   * `Data`: Returns the untouched `Data`.
+///
+///     - **Fails:** Never.
+///
+///     - **Succeeds:** Always.
+///
+///     - **Forwards:** Never.
+///
+///   * Strings: `Cow<str>`, `&str`, `&RawStr`, `String`
+///
+///     _Limited by the `string` [data limit]._
+///
+///     Reads the body data into a string via [`DataStream::into_string()`].
+///
+///     - **Fails:** If the body data is not valid UTF-8 or on I/O errors while
+///     reading. The error type is [`io::Error`].
+///
+///     - **Succeeds:** If the body data _is_ valid UTF-8. If the limit is
+///     exceeded, the string is truncated to the limit.
+///
+///     - **Forwards:** Never.
+///
+///   * Bytes: `&[u8]`, `Vec<u8>`
+///
+///     _Limited by the `bytes` [data limit]._
+///
+///     Reads the body data into a byte vector via [`DataStream::into_bytes()`].
+///
+///     - **Fails:** On I/O errors while reading. The error type is
+///     [`io::Error`].
+///
+///     - **Succeeds:** As long as no I/O error occurs. If the limit is
+///     exceeded, the slice is truncated to the limit.
+///
+///     - **Forwards:** Never.
+///
+///   * [`TempFile`](crate::fs::TempFile)
+///
+///     _Limited by the `file` and/or `file/$ext` [data limit]._
+///
+///     Streams the body data directly into a temporary file. The data is never
+///     buffered in memory.
+///
+///     - **Fails:** On I/O errors while reading data or creating the temporary
+///     file. The error type is [`io::Error`].
+///
+///     - **Succeeds:** As long as no I/O error occurs and the temporary file
+///     could be created. If the limit is exceeded, only data up to the limit is
+///     read and subsequently written.
+///
+///     - **Forwards:** Never.
+///
+///   * Deserializers: [`Json<T>`], [`MsgPack<T>`]
+///
+///     _Limited by the `json`, `msgpack` [data limit], respectively._
+///
+///     Reads up to the configured limit and deserializes the read data into `T`
+///     using the respective format's parser.
+///
+///     - **Fails:** On I/O errors while reading the data, or if the data fails
+///     to parse as a `T` according to the deserializer. The error type for
+///     `Json` is [`json::Error`](crate::serde::json::Error) and the error type
+///     for `MsgPack` is [`msgpack::Error`](crate::serde::msgpack::Error).
+///
+///     - **Succeeds:** As long as no I/O error occurs and the (limited) body
+///     data was successfully deserialized as a `T`.
+///
+///     - **Forwards:** Never.
+///
+///   * Forms: [`Form<T>`]
+///
+///     _Limited by the `form` or `data-form` [data limit]._
+///
+///     Parses the incoming data stream into fields according to Rocket's [field
+///     wire format], pushes each field to `T`'s [`FromForm`] [push parser], and
+///     finalizes the form. Parsing is done on the stream without reading the
+///     data into memory. If the request has as a [`ContentType::Form`], the
+///     `form` limit is applied, otherwise if the request has a
+///     [`ContentType::FormData`], the `data-form` limit is applied.
+///
+///     - **Fails:** On I/O errors while reading the data, or if the data fails
+///     to parse as a `T` according to its `FromForm` implementation. The errors
+///     are collected into an [`Errors`](crate::form::Errors), the error type.
+///
+///     - **Succeeds:** As long as no I/O error occurs and the (limited) body
+///     data was successfully parsed as a `T`.
+///
+///     - **Forwards:** If the request's `Content-Type` is neither
+///     [`ContentType::Form`] nor [`ContentType::FormData`].
+///
+///   * `Option<T>`
+///
+///     Forwards to `T`'s `FromData` implementation, capturing the outcome.
+///
+///     - **Fails:** Never.
+///
+///     - **Succeeds:** Always. If `T`'s `FromData` implementation succeeds, the
+///     parsed value is returned in `Some`. If its implementation forwards or
+///     fails, `None` is returned.
+///
+///     - **Forwards:** Never.
+///
+///   * `Result<T, T::Error>`
+///
+///     Forwards to `T`'s `FromData` implementation, capturing the outcome.
+///
+///     - **Fails:** Never.
+///
+///     - **Succeeds:** If `T`'s `FromData` implementation succeeds or fails. If
+///     it succeeds, the value is returned in `Ok`. If it fails, the error value
+///     is returned in `Err`.
+///
+///     - **Forwards:** If `T`'s implementation forwards.
+///
+///   * [`Capped<T>`]
+///
+///     Forwards to `T`'s `FromData` implementation, recording whether the data
+///     was truncated (a.k.a. capped) due to `T`'s limit being exceeded.
+///
+///     - **Fails:** If `T`'s implementation fails.
+///     - **Succeeds:** If `T`'s implementation succeeds.
+///     - **Forwards:** If `T`'s implementation forwards.
+///
+/// [data limit]: crate::data::Limits#built-in-limits
+/// [`DataStream::into_string()`]: crate::data::DataStream::into_string()
+/// [`DataStream::into_bytes()`]: crate::data::DataStream::into_bytes()
+/// [`io::Error`]: std::io::Error
+/// [`Json<T>`]: crate::serde::json::Json
+/// [`MsgPack<T>`]: crate::serde::msgpack::MsgPack
+/// [`Form<T>`]: crate::form::Form
+/// [field wire format]: crate::form#field-wire-format
+/// [`FromForm`]: crate::form::FromForm
+/// [push parser]: crate::form::FromForm#push-parsing
+/// [`ContentType::Form`]: crate::http::ContentType::Form
+/// [`ContentType::FormData`]: crate::http::ContentType::FormData
+///
 /// ## Async Trait
 ///
 /// [`FromData`] is an _async_ trait. Implementations of `FromData` must be

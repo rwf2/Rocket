@@ -129,12 +129,12 @@ impl<'a> Reference<'a> {
             authority,
             path: Data {
                 value: IndexedStr::Concrete(Cow::Borrowed(path)),
-                decoded_segments: state::Storage::new(),
+                decoded_segments: state::InitCell::new(),
             },
             query: match query {
                 Some(query) => Some(Data {
                     value: IndexedStr::Concrete(Cow::Borrowed(query)),
-                    decoded_segments: state::Storage::new(),
+                    decoded_segments: state::InitCell::new(),
                 }),
                 None => None,
             },

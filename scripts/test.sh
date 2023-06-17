@@ -82,6 +82,8 @@ function test_contrib() {
     sqlx_sqlite
     sqlx_mssql
     mongodb
+    diesel_mysql
+    diesel_postgres
   )
 
   SYNC_DB_POOLS_FEATURES=(

@@ -51,7 +51,7 @@ use smallvec::SmallVec;
 /// [`exact_eq()`](MediaType::exact_eq()) method can be used.
 #[derive(Debug, Clone)]
 pub struct MediaType {
-    /// Storage for the entire media type string.
+    /// InitCell for the entire media type string.
     pub(crate) source: Source,
     /// The top-level type.
     pub(crate) top: IndexedStr<'static>,

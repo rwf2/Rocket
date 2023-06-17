@@ -7,3 +7,6 @@ url = "db/sqlx/db.sqlite"
 [default.databases.diesel]
 url = "db/diesel/db.sqlite"
 timeout = 10
+
+[default.databases.diesel_mysql]
+url = "mysql://user:password@127.0.0.1/database"

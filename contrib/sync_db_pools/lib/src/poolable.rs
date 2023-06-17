@@ -1,3 +1,4 @@
+#[allow(unused)]
 use std::time::Duration;
 
 use r2d2::ManageConnection;

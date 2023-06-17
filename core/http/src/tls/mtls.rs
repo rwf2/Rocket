@@ -142,9 +142,11 @@ pub type Result<T, E = Error> = std::result::Result<T, E>;
 ///     // _does_ run if a valid (Ok) or invalid (Err) one was presented.
 /// }
 /// ```
-#[repr(transparent)]
 #[derive(Debug, PartialEq)]
-pub struct Certificate<'a>(X509Certificate<'a>);
+pub struct Certificate<'a> {
+    x509: X509Certificate<'a>,
+    data: &'a CertificateData,
+}
 
 /// An X.509 Distinguished Name (DN) found in a [`Certificate`].
 ///
@@ -218,16 +220,15 @@ impl<'a> Certificate<'a> {
 
     #[inline(always)]
     fn inner(&self) -> &TbsCertificate<'a> {
-        &self.0.tbs_certificate
+        &self.x509.tbs_certificate
     }
 
     /// PRIVATE: For internal Rocket use only!
     #[doc(hidden)]
     pub fn parse(chain: &[CertificateData]) -> Result<Certificate<'_>> {
-        match chain.first() {
-            Some(cert) => Certificate::parse_one(&cert.0).map(Certificate),
-            None => Err(Error::Empty)
-        }
+        let data = chain.first().ok_or_else(|| Error::Empty)?;
+        let x509 = Certificate::parse_one(&data.0)?;
+        Ok(Certificate { x509, data })
     }
 
     /// Returns the serial number of the X.509 certificate.
@@ -363,6 +364,31 @@ impl<'a> Certificate<'a> {
     pub fn has_serial(&self, number: &str) -> Option<bool> {
         let uint: bigint::BigUint = number.parse().ok()?;
         Some(&uint == self.serial())
+    }
+
+    /// Returns the raw, unmodified, DER-encoded X.509 certificate data bytes.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// # extern crate rocket;
+    /// # use rocket::get;
+    /// use rocket::mtls::Certificate;
+    ///
+    /// const SHA256_FINGERPRINT: &str =
+    ///     "CE C2 4E 01 00 FF F7 78 CB A4 AA CB D2 49 DD 09 \
+    ///      02 EF 0E 9B DA 89 2A E4 0D F4 09 83 97 C1 97 0D";
+    ///
+    /// #[get("/auth")]
+    /// fn auth(cert: Certificate<'_>) {
+    ///     # fn sha256_fingerprint(bytes: &[u8]) -> String { todo!() }
+    ///     if sha256_fingerprint(cert.as_bytes()) == SHA256_FINGERPRINT {
+    ///         println!("certificate fingerprint matched");
+    ///     }
+    /// }
+    /// ```
+    pub fn as_bytes(&self) -> &'a [u8] {
+        &self.data.0
     }
 }
 

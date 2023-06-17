@@ -314,12 +314,12 @@ impl AdHoc {
     pub fn uri_normalizer() -> impl Fairing {
         #[derive(Default)]
         struct Normalizer {
-            routes: state::Storage<Vec<crate::Route>>,
+            routes: state::InitCell<Vec<crate::Route>>,
         }
 
         impl Normalizer {
             fn routes(&self, rocket: &Rocket<Orbit>) -> &[crate::Route] {
-                self.routes.get_or_set(|| {
+                self.routes.get_or_init(|| {
                     rocket.routes()
                         .filter(|r| r.uri.has_trailing_slash())
                         .cloned()

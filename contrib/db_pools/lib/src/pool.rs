@@ -157,6 +157,9 @@ mod deadpool_postgres {
     use deadpool::{managed::{Manager, Pool, PoolError, Object, BuildError}, Runtime};
     use super::{Duration, Error, Config, Figment};
 
+    #[cfg(any(feature = "diesel_postgres", feature = "diesel_mysql"))]
+    use diesel_async::pooled_connection::AsyncDieselConnectionManager;
+
     pub trait DeadManager: Manager + Sized + Send + Sync + 'static {
         fn new(config: &Config) -> Result<Self, Self::Error>;
     }
@@ -172,6 +175,20 @@ mod deadpool_postgres {
     impl DeadManager for deadpool_redis::Manager {
         fn new(config: &Config) -> Result<Self, Self::Error> {
             Self::new(config.url.as_str())
+        }
+    }
+
+    #[cfg(feature = "diesel_postgres")]
+    impl DeadManager for AsyncDieselConnectionManager<diesel_async::AsyncPgConnection> {
+        fn new(config: &Config) -> Result<Self, Self::Error> {
+            Ok(Self::new(config.url.as_str()))
+        }
+    }
+
+    #[cfg(feature = "diesel_mysql")]
+    impl DeadManager for AsyncDieselConnectionManager<diesel_async::AsyncMysqlConnection> {
+        fn new(config: &Config) -> Result<Self, Self::Error> {
+            Ok(Self::new(config.url.as_str()))
         }
     }
 

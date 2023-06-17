@@ -2,13 +2,13 @@ error[E0271]: type mismatch resolving `<String as FromParam<'_>>::Error == &str`
   --> tests/ui-fail-stable/typed-uri-bad-type.rs:22:37
    |
 22 | fn optionals(id: Option<i32>, name: Result<String, &str>) {  }
-   |                                     ^^^^^^ expected struct `Empty`, found `&str`
+   |                                     ^^^^^^ expected `Empty`, found `&str`
 
 error[E0271]: type mismatch resolving `<String as FromParam<'_>>::Error == &str`
   --> tests/ui-fail-stable/typed-uri-bad-type.rs:22:37
    |
 22 | fn optionals(id: Option<i32>, name: Result<String, &str>) {  }
-   |                                     ^^^^^^ expected `&str`, found struct `Empty`
+   |                                     ^^^^^^ expected `&str`, found `Empty`
 
 error[E0277]: the trait bound `usize: FromUriParam<rocket::http::uri::fmt::Path, &str>` is not satisfied
   --> tests/ui-fail-stable/typed-uri-bad-type.rs:45:22
