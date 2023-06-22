@@ -1,6 +1,7 @@
+
 use std::io;
 use std::pin::Pin;
-use std::sync::Arc;
+use std::sync::{Arc, RwLock};
 use std::task::{Context, Poll};
 use std::future::Future;
 use std::net::SocketAddr;
@@ -12,6 +13,10 @@ use tokio_rustls::{Accept, TlsAcceptor, server::TlsStream as BareTlsStream};
 use crate::tls::util::{load_certs, load_private_key, load_ca_certs};
 use crate::listener::{Connection, Listener, Certificates};
 
+
+pub struct Resolver<'a, R> where R: io::BufRead {
+    config: Arc<RwLock<&'a mut Config<R>>>,
+}
 /// A TLS listener over TCP.
 pub struct TlsListener {
     listener: TcpListener,
@@ -62,7 +67,8 @@ pub enum TlsState {
 }
 
 /// TLS as ~configured by `TlsConfig` in `rocket` core.
-pub struct Config<R> {
+
+pub struct Config<R> where R: io::BufRead{
     pub cert_chain: R,
     pub private_key: R,
     pub ciphersuites: Vec<rustls::SupportedCipherSuite>,
@@ -71,12 +77,54 @@ pub struct Config<R> {
     pub mandatory_mtls: bool,
 }
 
+impl<R> Clone for Config<R> where R:io::BufRead + std::clone::Clone {
+    fn clone(&self) -> Self {
+        Config {
+            cert_chain: self.cert_chain.clone(),
+            private_key: self.private_key.clone(),
+            ciphersuites: self.ciphersuites.clone(),
+            prefer_server_order: self.prefer_server_order,
+            ca_certs: self.ca_certs.clone(),
+            mandatory_mtls: self.mandatory_mtls,
+        }
+    }
+}
+
+impl<'a, R> Resolver<'a, R> where R: io::BufRead + std::marker::Sync + std::marker::Send {
+    pub fn new(config: Arc<RwLock<&'a mut Config<R>>>) -> Self {
+
+
+        let background_task = tokio::spawn(async move {
+            loop {
+                
+                tokio::time::sleep(tokio::time::Duration::from_secs(10)).await;
+                let mut config  = config.read().unwrap();
+
+                // Simulate changing the certificates based on some condition
+                // For demonstration purposes, we'll simply reverse the order of the certificates
+            }
+        });
+
+        Resolver {
+            config,
+        }
+    }
+}
+
+
+
 impl TlsListener {
     pub async fn bind<R>(addr: SocketAddr, mut c: Config<R>) -> io::Result<TlsListener>
-        where R: io::BufRead
+        where R: io::BufRead + std::marker::Sync + std::marker::Send
     {
         use rustls::server::{AllowAnyAuthenticatedClient, AllowAnyAnonymousOrAuthenticatedClient};
         use rustls::server::{NoClientAuth, ServerSessionMemoryCache, ServerConfig};
+
+        let lock = Arc::new(RwLock::new(&mut c));
+        
+        let c_lock = Arc::clone(&lock);
+ 
+        let _Resolver = Resolver::new(c_lock);
 
         let cert_chain = load_certs(&mut c.cert_chain)
             .map_err(|e| io::Error::new(e.kind(), format!("bad TLS cert chain: {}", e)))?;
