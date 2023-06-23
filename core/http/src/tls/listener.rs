@@ -14,7 +14,7 @@ use crate::tls::util::{load_certs, load_private_key, load_ca_certs};
 use crate::listener::{Connection, Listener, Certificates};
 
 
-pub struct Resolver<'a, R> where R: io::BufRead {
+pub struct Resolver<'a, R> where R: io::BufRead + 'static { 
     config: Arc<RwLock<&'a mut Config<R>>>,
 }
 /// A TLS listener over TCP.
@@ -90,7 +90,7 @@ impl<R> Clone for Config<R> where R:io::BufRead + std::clone::Clone {
     }
 }
 
-impl<'a, R> Resolver<'a, R> where R: io::BufRead + std::marker::Sync + std::marker::Send {
+impl<'a, R> Resolver<'a, R> where R: io::BufRead + std::marker::Sync + std::marker::Send + 'static {
     pub fn new(config: Arc<RwLock<&'a mut Config<R>>>) -> Self {
 
 
@@ -115,7 +115,7 @@ impl<'a, R> Resolver<'a, R> where R: io::BufRead + std::marker::Sync + std::mark
 
 impl TlsListener {
     pub async fn bind<R>(addr: SocketAddr, mut c: Config<R>) -> io::Result<TlsListener>
-        where R: io::BufRead + std::marker::Sync + std::marker::Send
+        where R: io::BufRead + std::marker::Send + std::marker::Sync + 'static
     {
         use rustls::server::{AllowAnyAuthenticatedClient, AllowAnyAnonymousOrAuthenticatedClient};
         use rustls::server::{NoClientAuth, ServerSessionMemoryCache, ServerConfig};
@@ -123,7 +123,7 @@ impl TlsListener {
         let lock = Arc::new(RwLock::new(&mut c));
         
         let c_lock = Arc::clone(&lock);
- 
+         
         let _Resolver = Resolver::new(c_lock);
 
         let cert_chain = load_certs(&mut c.cert_chain)
