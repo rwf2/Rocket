@@ -14,8 +14,8 @@ use crate::tls::util::{load_certs, load_private_key, load_ca_certs};
 use crate::listener::{Connection, Listener, Certificates};
 
 
-pub struct Resolver<'a, R> where R: io::BufRead + 'static { 
-    config: Arc<RwLock<&'a mut Config<R>>>,
+pub struct Resolver<R> where R: io::BufRead + { 
+    config: Config<R>
 }
 /// A TLS listener over TCP.
 pub struct TlsListener {
@@ -90,41 +90,32 @@ impl<R> Clone for Config<R> where R:io::BufRead + std::clone::Clone {
     }
 }
 
-impl<'a, R> Resolver<'a, R> where R: io::BufRead + std::marker::Sync + std::marker::Send + 'static {
-    pub fn new(config: Arc<RwLock<&'a mut Config<R>>>) -> Self {
+impl<R> Resolver<R> where R: io::BufRead + std::marker::Send + std::marker::Sync + 'static {
+    pub fn new(mut c: Config<R>) {
 
+        let config = Arc::new(&c);
+        let lock = RwLock::new(&config);
+            
+        tokio::spawn(async move {            
+            loop { 
+                let c = lock.read().unwrap();
 
-        let background_task = tokio::spawn(async move {
-            loop {
-                
-                tokio::time::sleep(tokio::time::Duration::from_secs(10)).await;
-                let mut config  = config.read().unwrap();
+                let cert_chain = load_certs(&mut c.cert_chain)
+                    .map_err(|e| io::Error::new(e.kind(), format!("bad TLS cert chain: {}", e)));
 
-                // Simulate changing the certificates based on some condition
-                // For demonstration purposes, we'll simply reverse the order of the certificates
-            }
+                let key = load_private_key(&mut c.private_key)
+                    .map_err(|e| io::Error::new(e.kind(), format!("bad TLS private key: {}", e)));
+            } 
         });
-
-        Resolver {
-            config,
-        }
     }
 }
 
-
-
 impl TlsListener {
     pub async fn bind<R>(addr: SocketAddr, mut c: Config<R>) -> io::Result<TlsListener>
-        where R: io::BufRead + std::marker::Send + std::marker::Sync + 'static
+        where R: io::BufRead
     {
         use rustls::server::{AllowAnyAuthenticatedClient, AllowAnyAnonymousOrAuthenticatedClient};
         use rustls::server::{NoClientAuth, ServerSessionMemoryCache, ServerConfig};
-
-        let lock = Arc::new(RwLock::new(&mut c));
-        
-        let c_lock = Arc::clone(&lock);
-         
-        let _Resolver = Resolver::new(c_lock);
 
         let cert_chain = load_certs(&mut c.cert_chain)
             .map_err(|e| io::Error::new(e.kind(), format!("bad TLS cert chain: {}", e)))?;
