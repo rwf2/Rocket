@@ -1,11 +1,12 @@
 
-use std::io;
 use std::pin::Pin;
-use std::sync::{Arc, RwLock};
+use std::io::{self};
+use std::sync::{Arc, RwLock, Mutex };
 use std::task::{Context, Poll};
 use std::future::Future;
 use std::net::SocketAddr;
 
+use rustls::PrivateKey;
 use tokio::net::{TcpListener, TcpStream};
 use tokio::io::{AsyncRead, AsyncWrite};
 use tokio_rustls::{Accept, TlsAcceptor, server::TlsStream as BareTlsStream};
@@ -14,9 +15,12 @@ use crate::tls::util::{load_certs, load_private_key, load_ca_certs};
 use crate::listener::{Connection, Listener, Certificates};
 
 
-pub struct Resolver<R> where R: io::BufRead + { 
-    config: Config<R>
+pub struct Resolver {
+    cert_chain: RwLock<Vec<Certificates>>, 
+    private_key: RwLock<PrivateKey>
 }
+
+
 /// A TLS listener over TCP.
 pub struct TlsListener {
     listener: TcpListener,
@@ -34,7 +38,7 @@ pub struct TlsListener {
 /// Importantly, certificate information isn't available at the time that we
 /// request it.
 ///
-/// The underlying problem is hyper's "Accept" trait. Were we to manage
+/// The underlying problem is e hyper's "Accept" trait. Were we to manage
 /// connections ourselves, we'd likely want to:
 ///
 ///   1. Stop blocking the worker as soon as we have a TCP connection.
@@ -67,8 +71,7 @@ pub enum TlsState {
 }
 
 /// TLS as ~configured by `TlsConfig` in `rocket` core.
-
-pub struct Config<R> where R: io::BufRead{
+pub struct Config<R> where R: io::BufRead {
     pub cert_chain: R,
     pub private_key: R,
     pub ciphersuites: Vec<rustls::SupportedCipherSuite>,
@@ -77,7 +80,7 @@ pub struct Config<R> where R: io::BufRead{
     pub mandatory_mtls: bool,
 }
 
-impl<R> Clone for Config<R> where R:io::BufRead + std::clone::Clone {
+impl<R> Clone for Config<R> where R: io::BufRead  + std::clone::Clone {
     fn clone(&self) -> Self {
         Config {
             cert_chain: self.cert_chain.clone(),
@@ -90,42 +93,49 @@ impl<R> Clone for Config<R> where R:io::BufRead + std::clone::Clone {
     }
 }
 
-impl<R> Resolver<R> where R: io::BufRead + std::marker::Send + std::marker::Sync + 'static {
-    pub fn new(mut c: Config<R>) {
-
-        let config = Arc::new(&c);
-        let lock = RwLock::new(&config);
-            
+impl Resolver {
+    pub fn new<R>(mut c: Arc<RwLock<Config<R>>>) -> Self where R: io::BufRead + std::marker::Send + std::marker::Sync + 'static 
+    {
+        
         tokio::spawn(async move {            
             loop { 
-                let c = lock.read().unwrap();
+                let config = Arc::clone(&c);
 
-                let cert_chain = load_certs(&mut c.cert_chain)
+                let cert_chain = load_certs(&mut config.write().unwrap().cert_chain)
                     .map_err(|e| io::Error::new(e.kind(), format!("bad TLS cert chain: {}", e)));
 
-                let key = load_private_key(&mut c.private_key)
+                let key = load_private_key(&mut config.write().unwrap().private_key)
                     .map_err(|e| io::Error::new(e.kind(), format!("bad TLS private key: {}", e)));
+                
+
             } 
         });
     }
 }
 
 impl TlsListener {
+
     pub async fn bind<R>(addr: SocketAddr, mut c: Config<R>) -> io::Result<TlsListener>
-        where R: io::BufRead
+        where R: io::BufRead + std::marker::Send + std::marker::Sync + 'static
     {
         use rustls::server::{AllowAnyAuthenticatedClient, AllowAnyAnonymousOrAuthenticatedClient};
         use rustls::server::{NoClientAuth, ServerSessionMemoryCache, ServerConfig};
 
-        let cert_chain = load_certs(&mut c.cert_chain)
+        let config = Arc::new(RwLock::new(c));
+
+        let resolver = Resolver::new(config.clone());
+
+
+        let cert_chain = load_certs(&mut config.write().unwrap().cert_chain)
             .map_err(|e| io::Error::new(e.kind(), format!("bad TLS cert chain: {}", e)))?;
 
-        let key = load_private_key(&mut c.private_key)
+        let key = load_private_key(&mut config.write().unwrap().private_key)
             .map_err(|e| io::Error::new(e.kind(), format!("bad TLS private key: {}", e)))?;
+        
 
-        let client_auth = match c.ca_certs {
+        let client_auth = match config.write().unwrap().ca_certs {
             Some(ref mut ca_certs) => match load_ca_certs(ca_certs) {
-                Ok(ca) if c.mandatory_mtls => AllowAnyAuthenticatedClient::new(ca).boxed(),
+                Ok(ca) if config.write().unwrap().mandatory_mtls => AllowAnyAuthenticatedClient::new(ca).boxed(),
                 Ok(ca) => AllowAnyAnonymousOrAuthenticatedClient::new(ca).boxed(),
                 Err(e) => return Err(io::Error::new(e.kind(), format!("bad CA cert(s): {}", e))),
             },
@@ -133,7 +143,7 @@ impl TlsListener {
         };
 
         let mut tls_config = ServerConfig::builder()
-            .with_cipher_suites(&c.ciphersuites)
+            .with_cipher_suites(&config.write().unwrap().ciphersuites)
             .with_safe_default_kx_groups()
             .with_safe_default_protocol_versions()
             .map_err(|e| io::Error::new(io::ErrorKind::Other, format!("bad TLS config: {}", e)))?
@@ -141,7 +151,7 @@ impl TlsListener {
             .with_single_cert(cert_chain, key)
             .map_err(|e| io::Error::new(io::ErrorKind::Other, format!("bad TLS config: {}", e)))?;
 
-        tls_config.ignore_client_order = c.prefer_server_order;
+        tls_config.ignore_client_order = config.write().unwrap().prefer_server_order;
 
         tls_config.alpn_protocols = vec![b"http/1.1".to_vec()];
         if cfg!(feature = "http2") {
