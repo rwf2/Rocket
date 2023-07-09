@@ -20,7 +20,9 @@ pub fn load_private_key(reader: &mut dyn io::BufRead) -> io::Result<PrivateKey> 
     let private_keys_fn = loop {
         header.clear();
         if reader.read_line(&mut header)? == 0 {
-            return Err(err("failed to find key header; supported formats are: RSA, PKCS8, SEC1"));
+            return Err(err(
+                "failed to find key header; supported formats are: RSA, PKCS8, SEC1",
+            ));
         }
 
         break match header.trim_end() {
@@ -49,7 +51,9 @@ pub fn load_private_key(reader: &mut dyn io::BufRead) -> io::Result<PrivateKey> 
 pub fn load_ca_certs(reader: &mut dyn io::BufRead) -> io::Result<RootCertStore> {
     let mut roots = rustls::RootCertStore::empty();
     for cert in load_certs(reader)? {
-        roots.add(&cert).map_err(|e| err(format!("CA cert error: {}", e)))?;
+        roots
+            .add(&cert)
+            .map_err(|e| err(format!("CA cert error: {}", e)))?;
     }
 
     Ok(roots)
@@ -61,8 +65,12 @@ mod test {
 
     macro_rules! tls_example_key {
         ($k:expr) => {
-            include_bytes!(concat!(env!("CARGO_MANIFEST_DIR"), "/../../examples/tls/private/", $k))
-        }
+            include_bytes!(concat!(
+                env!("CARGO_MANIFEST_DIR"),
+                "/../../examples/tls/private/",
+                $k
+            ))
+        };
     }
 
     #[test]

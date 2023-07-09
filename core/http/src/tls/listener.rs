@@ -1,25 +1,27 @@
-
-use std::pin::Pin;
-use std::io::{self};
-use std::sync::{Arc, RwLock, Mutex };
-use std::task::{Context, Poll};
 use std::future::Future;
+use std::io;
 use std::net::SocketAddr;
+use std::pin::Pin;
+use std::sync::mpsc;
+use std::sync::{Arc, Mutex, RwLock};
+use std::task::{Context, Poll};
+use tokio::signal::unix::{signal, SignalKind};
+use tokio::sync::watch;
 
-use rustls::PrivateKey;
-use tokio::net::{TcpListener, TcpStream};
+use rustls::server::ClientHello;
+use rustls::{cipher_suite, sign::CertifiedKey, PrivateKey};
 use tokio::io::{AsyncRead, AsyncWrite};
-use tokio_rustls::{Accept, TlsAcceptor, server::TlsStream as BareTlsStream};
+use tokio::net::{TcpListener, TcpStream};
+use tokio_rustls::{server::TlsStream as BareTlsStream, Accept, TlsAcceptor};
 
-use crate::tls::util::{load_certs, load_private_key, load_ca_certs};
-use crate::listener::{Connection, Listener, Certificates};
-
+use crate::listener::{Certificates, Connection, Listener};
+use crate::tls::util::{load_ca_certs, load_certs, load_private_key};
+use rustls::Certificate;
 
 pub struct Resolver {
-    cert_chain: RwLock<Vec<Certificates>>, 
-    private_key: RwLock<PrivateKey>
+    cert_chain: Vec<Certificate>,
+    private_key: PrivateKey,
 }
-
 
 /// A TLS listener over TCP.
 pub struct TlsListener {
@@ -53,8 +55,7 @@ pub struct TlsListener {
 /// `OnceCell`. The cell is initially empty and is filled as soon as the
 /// handshake is complete. If the certificate data were to be requested prior to
 /// this point, it would be empty. However, in Rocket, we only request
-/// certificate data when we have a `Request` object, which implies we're
-/// receiving payload data, which implies the TLS handshake has finished, so the
+/// certificate data when we have a `Request` object, which implies we're receiving payload data, which implies the TLS handshake has finished, so the
 /// certificate data as seen by a Rocket application will always be "fresh".
 pub struct TlsStream {
     remote: SocketAddr,
@@ -71,7 +72,10 @@ pub enum TlsState {
 }
 
 /// TLS as ~configured by `TlsConfig` in `rocket` core.
-pub struct Config<R> where R: io::BufRead {
+pub struct Config<R>
+where
+    R: io::BufRead + std::marker::Send + std::marker::Sync + 'static,
+{
     pub cert_chain: R,
     pub private_key: R,
     pub ciphersuites: Vec<rustls::SupportedCipherSuite>,
@@ -80,78 +84,72 @@ pub struct Config<R> where R: io::BufRead {
     pub mandatory_mtls: bool,
 }
 
-impl<R> Clone for Config<R> where R: io::BufRead  + std::clone::Clone {
-    fn clone(&self) -> Self {
-        Config {
-            cert_chain: self.cert_chain.clone(),
-            private_key: self.private_key.clone(),
-            ciphersuites: self.ciphersuites.clone(),
-            prefer_server_order: self.prefer_server_order,
-            ca_certs: self.ca_certs.clone(),
-            mandatory_mtls: self.mandatory_mtls,
-        }
+impl rustls::server::ResolvesServerCert for Resolver {
+    fn resolve(&self, _client_hello: ClientHello<'_>) -> Option<Arc<CertifiedKey>> {
+        let sign_key = rustls::sign::any_supported_type(&self.private_key).unwrap();
+        let cert = Arc::new(CertifiedKey::new(self.cert_chain.clone(), sign_key));
+        Some(cert)
     }
 }
 
 impl Resolver {
-    pub fn new<R>(mut c: Arc<RwLock<Config<R>>>) -> Self where R: io::BufRead + std::marker::Send + std::marker::Sync + 'static 
+    pub fn new<R>(mut c: Arc<RwLock<Config<R>>>) -> Self
+    where
+        R: io::BufRead + std::marker::Send + std::marker::Sync + 'static,
     {
-        
-        tokio::spawn(async move {            
-            loop { 
-                let config = Arc::clone(&c);
+        let mut config = c.write().unwrap();
 
-                let cert_chain = load_certs(&mut config.write().unwrap().cert_chain)
-                    .map_err(|e| io::Error::new(e.kind(), format!("bad TLS cert chain: {}", e)));
+        let cert_chain = load_certs(&mut config.cert_chain)
+            .map_err(|e| io::Error::new(e.kind(), format!("bad TLS cert chain: {}", e)))
+            .unwrap();
 
-                let key = load_private_key(&mut config.write().unwrap().private_key)
-                    .map_err(|e| io::Error::new(e.kind(), format!("bad TLS private key: {}", e)));
-                
+        let private_key = load_private_key(&mut config.private_key)
+            .map_err(|e| io::Error::new(e.kind(), format!("bad TLS private key: {}", e)))
+            .unwrap();
 
-            } 
-        });
+        Self {
+            cert_chain,
+            private_key,
+        }
     }
 }
 
 impl TlsListener {
-
     pub async fn bind<R>(addr: SocketAddr, mut c: Config<R>) -> io::Result<TlsListener>
-        where R: io::BufRead + std::marker::Send + std::marker::Sync + 'static
+    where
+        R: io::BufRead + std::marker::Send + std::marker::Sync + 'static,
     {
-        use rustls::server::{AllowAnyAuthenticatedClient, AllowAnyAnonymousOrAuthenticatedClient};
-        use rustls::server::{NoClientAuth, ServerSessionMemoryCache, ServerConfig};
+        use rustls::server::{AllowAnyAnonymousOrAuthenticatedClient, AllowAnyAuthenticatedClient};
+        use rustls::server::{NoClientAuth, ServerConfig, ServerSessionMemoryCache};
 
-        let config = Arc::new(RwLock::new(c));
-
-        let resolver = Resolver::new(config.clone());
-
-
-        let cert_chain = load_certs(&mut config.write().unwrap().cert_chain)
-            .map_err(|e| io::Error::new(e.kind(), format!("bad TLS cert chain: {}", e)))?;
-
-        let key = load_private_key(&mut config.write().unwrap().private_key)
-            .map_err(|e| io::Error::new(e.kind(), format!("bad TLS private key: {}", e)))?;
-        
-
-        let client_auth = match config.write().unwrap().ca_certs {
+        let client_auth = match c.ca_certs {
             Some(ref mut ca_certs) => match load_ca_certs(ca_certs) {
-                Ok(ca) if config.write().unwrap().mandatory_mtls => AllowAnyAuthenticatedClient::new(ca).boxed(),
+                Ok(ca) if c.mandatory_mtls => AllowAnyAuthenticatedClient::new(ca).boxed(),
                 Ok(ca) => AllowAnyAnonymousOrAuthenticatedClient::new(ca).boxed(),
                 Err(e) => return Err(io::Error::new(e.kind(), format!("bad CA cert(s): {}", e))),
             },
             None => NoClientAuth::boxed(),
         };
 
+        let cipher_suite = &c.ciphersuites.to_vec();
+
+        let prefer_server_order = c.prefer_server_order;
+
+        println!("Getting here");
+
+        let config = Arc::new(RwLock::new(c));
+
+        let resolver = Resolver::new(Arc::clone(&config));
+
         let mut tls_config = ServerConfig::builder()
-            .with_cipher_suites(&config.write().unwrap().ciphersuites)
+            .with_cipher_suites(cipher_suite)
             .with_safe_default_kx_groups()
             .with_safe_default_protocol_versions()
             .map_err(|e| io::Error::new(io::ErrorKind::Other, format!("bad TLS config: {}", e)))?
             .with_client_cert_verifier(client_auth)
-            .with_single_cert(cert_chain, key)
-            .map_err(|e| io::Error::new(io::ErrorKind::Other, format!("bad TLS config: {}", e)))?;
+            .with_cert_resolver(Arc::new(resolver));
 
-        tls_config.ignore_client_order = config.write().unwrap().prefer_server_order;
+        tls_config.ignore_client_order = prefer_server_order;
 
         tls_config.alpn_protocols = vec![b"http/1.1".to_vec()];
         if cfg!(feature = "http2") {
@@ -159,8 +157,9 @@ impl TlsListener {
         }
 
         tls_config.session_storage = ServerSessionMemoryCache::new(1024);
-        tls_config.ticketer = rustls::Ticketer::new()
-            .map_err(|e| io::Error::new(io::ErrorKind::Other, format!("bad TLS ticketer: {}", e)))?;
+        tls_config.ticketer = rustls::Ticketer::new().map_err(|e| {
+            io::Error::new(io::ErrorKind::Other, format!("bad TLS ticketer: {}", e))
+        })?;
 
         let listener = TcpListener::bind(addr).await?;
         let acceptor = TlsAcceptor::from(Arc::new(tls_config));
@@ -177,7 +176,7 @@ impl Listener for TlsListener {
 
     fn poll_accept(
         self: Pin<&mut Self>,
-        cx: &mut Context<'_>
+        cx: &mut Context<'_>,
     ) -> Poll<io::Result<Self::Connection>> {
         match futures::ready!(self.listener.poll_accept(cx)) {
             Ok((io, addr)) => Poll::Ready(Ok(TlsStream {
@@ -206,7 +205,7 @@ impl Connection for TlsStream {
                 None => Ok(()),
                 Some(s) => s.enable_nodelay(),
             },
-            TlsState::Streaming(stream) => stream.get_ref().0.enable_nodelay()
+            TlsState::Streaming(stream) => stream.get_ref().0.enable_nodelay(),
         }
     }
 
@@ -219,9 +218,10 @@ impl TlsStream {
     fn poll_accept_then<F, T>(
         mut self: Pin<&mut Self>,
         cx: &mut Context<'_>,
-        mut f: F
+        mut f: F,
     ) -> Poll<io::Result<T>>
-        where F: FnMut(&mut BareTlsStream<TcpStream>, &mut Context<'_>) -> Poll<io::Result<T>>
+    where
+        F: FnMut(&mut BareTlsStream<TcpStream>, &mut Context<'_>) -> Poll<io::Result<T>>,
     {
         loop {
             match self.state {
@@ -239,7 +239,7 @@ impl TlsStream {
                             return Poll::Ready(Err(e));
                         }
                     }
-                },
+                }
                 TlsState::Streaming(ref mut stream) => return f(stream, cx),
             }
         }
@@ -270,7 +270,7 @@ impl AsyncWrite for TlsStream {
             TlsState::Handshaking(accept) => match accept.get_mut() {
                 Some(io) => Pin::new(io).poll_flush(cx),
                 None => Poll::Ready(Ok(())),
-            }
+            },
             TlsState::Streaming(stream) => Pin::new(stream).poll_flush(cx),
         }
     }
@@ -280,7 +280,7 @@ impl AsyncWrite for TlsStream {
             TlsState::Handshaking(accept) => match accept.get_mut() {
                 Some(io) => Pin::new(io).poll_shutdown(cx),
                 None => Poll::Ready(Ok(())),
-            }
+            },
             TlsState::Streaming(stream) => Pin::new(stream).poll_shutdown(cx),
         }
     }
