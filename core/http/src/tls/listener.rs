@@ -93,24 +93,39 @@ impl rustls::server::ResolvesServerCert for Resolver {
 }
 
 impl Resolver {
-    pub fn new<R>(mut c: Arc<RwLock<Config<R>>>) -> Self
+    pub fn new<R>(mut c: Arc<RwLock<Config<R>>>) -> Result<Self, Box<dyn std::error::Error>>
     where
         R: io::BufRead + std::marker::Send + std::marker::Sync + 'static,
     {
-        let mut config = c.write().unwrap();
+        let (ctx, crx) = mpsc::channel::<Vec<Certificate>>();
+        let (ktx, krx) = mpsc::channel::<PrivateKey>();
 
-        let cert_chain = load_certs(&mut config.cert_chain)
-            .map_err(|e| io::Error::new(e.kind(), format!("bad TLS cert chain: {}", e)))
-            .unwrap();
+        let mut stream = signal(SignalKind::user_defined1())?;
 
-        let private_key = load_private_key(&mut config.private_key)
-            .map_err(|e| io::Error::new(e.kind(), format!("bad TLS private key: {}", e)))
-            .unwrap();
+        tokio::spawn(async move {
+            loop {
+                stream.recv().await;
+                let mut config = c.write().unwrap();
+                let cert_chain = load_certs(&mut config.cert_chain)
+                    .map_err(|e| io::Error::new(e.kind(), format!("bad TLS cert chain: {}", e)))
+                    .unwrap();
 
-        Self {
+                let private_key = load_private_key(&mut config.private_key)
+                    .map_err(|e| io::Error::new(e.kind(), format!("bad TLS private key: {}", e)))
+                    .unwrap();
+
+                ctx.send(cert_chain).unwrap();
+                ktx.send(private_key).unwrap();
+            }
+        });
+
+        let cert_chain = crx.recv().unwrap();
+        let private_key = krx.recv().unwrap();
+
+        Ok(Self {
             cert_chain,
             private_key,
-        }
+        })
     }
 }
 
@@ -139,7 +154,7 @@ impl TlsListener {
 
         let config = Arc::new(RwLock::new(c));
 
-        let resolver = Resolver::new(Arc::clone(&config));
+        let resolver = Resolver::new(Arc::clone(&config)).unwrap();
 
         let mut tls_config = ServerConfig::builder()
             .with_cipher_suites(cipher_suite)
