@@ -19,8 +19,8 @@ use crate::tls::util::{load_ca_certs, load_certs, load_private_key};
 use rustls::Certificate;
 
 pub struct Resolver {
-    cert_chain: Vec<Certificate>,
-    private_key: PrivateKey,
+    cert_chain: Arc<RwLock<Vec<Certificate>>>,
+    private_key: Arc<RwLock<PrivateKey>>,
 }
 
 /// A TLS listener over TCP.
@@ -86,26 +86,63 @@ where
 
 impl rustls::server::ResolvesServerCert for Resolver {
     fn resolve(&self, _client_hello: ClientHello<'_>) -> Option<Arc<CertifiedKey>> {
-        let sign_key = rustls::sign::any_supported_type(&self.private_key).unwrap();
-        let cert = Arc::new(CertifiedKey::new(self.cert_chain.clone(), sign_key));
+        let cert_chain = Arc::clone(&self.cert_chain);
+        let private_key = Arc::clone(&self.private_key);
+
+        let sign_key = rustls::sign::any_supported_type(&private_key.write().unwrap()).unwrap();
+
+        let cert = Arc::new(CertifiedKey::new(
+            (cert_chain.write().unwrap()).to_vec(),
+            sign_key,
+        ));
         Some(cert)
     }
 }
 
 impl Resolver {
-    pub fn new<R>(mut c: Arc<RwLock<Config<R>>>) -> Result<Self, Box<dyn std::error::Error>>
+    pub fn new<R>(mut c: Arc<RwLock<Config<R>>>) -> Self
     where
         R: io::BufRead + std::marker::Send + std::marker::Sync + 'static,
     {
-        let (ctx, crx) = mpsc::channel::<Vec<Certificate>>();
-        let (ktx, krx) = mpsc::channel::<PrivateKey>();
+        let mut config = c.write().unwrap();
 
+        let cert_chain = load_certs(&mut config.cert_chain)
+            .map_err(|e| io::Error::new(e.kind(), format!("bad TLS cert chain: {}", e)))
+            .unwrap();
+
+        let private_key = load_private_key(&mut config.private_key)
+            .map_err(|e| io::Error::new(e.kind(), format!("bad TLS private key: {}", e)))
+            .unwrap();
+
+        let mut arc_cert = Arc::new(RwLock::new(cert_chain));
+        let mut arc_key = Arc::new(RwLock::new(private_key));
+
+        Self {
+            cert_chain: arc_cert.clone(),
+            private_key: arc_key.clone(),
+        }
+    }
+
+    pub fn background_updater<R>(
+        &mut self,
+        mut c: Arc<RwLock<Config<R>>>,
+    ) -> Result<bool, Box<dyn std::error::Error>>
+    where
+        R: io::BufRead + std::marker::Send + std::marker::Sync + 'static,
+    {
         let mut stream = signal(SignalKind::user_defined1())?;
+
+        println!("Updating TLS config");
+
+        let cert_arc = Arc::clone(&self.cert_chain);
+        let key_arc = Arc::clone(&self.private_key);
 
         tokio::spawn(async move {
             loop {
                 stream.recv().await;
+
                 let mut config = c.write().unwrap();
+
                 let cert_chain = load_certs(&mut config.cert_chain)
                     .map_err(|e| io::Error::new(e.kind(), format!("bad TLS cert chain: {}", e)))
                     .unwrap();
@@ -114,18 +151,12 @@ impl Resolver {
                     .map_err(|e| io::Error::new(e.kind(), format!("bad TLS private key: {}", e)))
                     .unwrap();
 
-                ctx.send(cert_chain).unwrap();
-                ktx.send(private_key).unwrap();
+                *cert_arc.write().unwrap() = cert_chain;
+                *key_arc.write().unwrap() = private_key;
             }
         });
 
-        let cert_chain = crx.recv().unwrap();
-        let private_key = krx.recv().unwrap();
-
-        Ok(Self {
-            cert_chain,
-            private_key,
-        })
+        Ok(true)
     }
 }
 
@@ -150,11 +181,14 @@ impl TlsListener {
 
         let prefer_server_order = c.prefer_server_order;
 
-        println!("Getting here");
-
         let config = Arc::new(RwLock::new(c));
 
-        let resolver = Resolver::new(Arc::clone(&config)).unwrap();
+        let initial_config = Arc::clone(&config);
+        let background_config = Arc::clone(&config);
+
+        let mut resolver = Resolver::new(config);
+
+        resolver.background_updater(background_config);
 
         let mut tls_config = ServerConfig::builder()
             .with_cipher_suites(cipher_suite)
