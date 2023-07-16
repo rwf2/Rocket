@@ -2,14 +2,13 @@ use std::future::Future;
 use std::io;
 use std::net::SocketAddr;
 use std::pin::Pin;
-use std::sync::mpsc;
-use std::sync::{Arc, Mutex, RwLock};
+
+use std::sync::{Arc, RwLock};
 use std::task::{Context, Poll};
 use tokio::signal::unix::{signal, SignalKind};
-use tokio::sync::watch;
 
 use rustls::server::ClientHello;
-use rustls::{cipher_suite, sign::CertifiedKey, PrivateKey};
+use rustls::{sign::CertifiedKey, PrivateKey};
 use tokio::io::{AsyncRead, AsyncWrite};
 use tokio::net::{TcpListener, TcpStream};
 use tokio_rustls::{server::TlsStream as BareTlsStream, Accept, TlsAcceptor};
@@ -100,7 +99,7 @@ impl rustls::server::ResolvesServerCert for Resolver {
 }
 
 impl Resolver {
-    pub fn new<R>(mut c: Arc<RwLock<Config<R>>>) -> Self
+    pub fn new<R>(c: Arc<RwLock<Config<R>>>) -> Self
     where
         R: io::BufRead + std::marker::Send + std::marker::Sync + 'static,
     {
@@ -114,8 +113,8 @@ impl Resolver {
             .map_err(|e| io::Error::new(e.kind(), format!("bad TLS private key: {}", e)))
             .unwrap();
 
-        let mut arc_cert = Arc::new(RwLock::new(cert_chain));
-        let mut arc_key = Arc::new(RwLock::new(private_key));
+        let arc_cert = Arc::new(RwLock::new(cert_chain));
+        let arc_key = Arc::new(RwLock::new(private_key));
 
         Self {
             cert_chain: arc_cert.clone(),
@@ -125,34 +124,30 @@ impl Resolver {
 
     pub fn background_updater<R>(
         &mut self,
-        mut c: Arc<RwLock<Config<R>>>,
+        c: Arc<RwLock<Config<R>>>,
     ) -> Result<bool, Box<dyn std::error::Error>>
     where
         R: io::BufRead + std::marker::Send + std::marker::Sync + 'static,
     {
-        let mut stream = signal(SignalKind::user_defined1())?;
-
-        println!("Updating TLS config");
+        let _stream = signal(SignalKind::user_defined1())?;
 
         let cert_arc = Arc::clone(&self.cert_chain);
         let key_arc = Arc::clone(&self.private_key);
 
+        let config = Arc::clone(&c);
+
         tokio::spawn(async move {
             loop {
-                stream.recv().await;
-
-                let mut config = c.write().unwrap();
-
-                let cert_chain = load_certs(&mut config.cert_chain)
+                let cert_chain = load_certs(&mut config.write().unwrap().cert_chain)
                     .map_err(|e| io::Error::new(e.kind(), format!("bad TLS cert chain: {}", e)))
                     .unwrap();
 
-                let private_key = load_private_key(&mut config.private_key)
+                let private_key = load_private_key(&mut config.write().unwrap().private_key)
                     .map_err(|e| io::Error::new(e.kind(), format!("bad TLS private key: {}", e)))
                     .unwrap();
 
-                *cert_arc.write().unwrap() = cert_chain;
-                *key_arc.write().unwrap() = private_key;
+                std::mem::replace(&mut *cert_arc.write().unwrap(), cert_chain);
+                std::mem::replace(&mut *key_arc.write().unwrap(), private_key);
             }
         });
 
@@ -183,12 +178,19 @@ impl TlsListener {
 
         let config = Arc::new(RwLock::new(c));
 
-        let initial_config = Arc::clone(&config);
+        let _initial_config = Arc::clone(&config);
         let background_config = Arc::clone(&config);
 
         let mut resolver = Resolver::new(config);
 
-        resolver.background_updater(background_config);
+        resolver
+            .background_updater(background_config)
+            .map_err(|e| {
+                io::Error::new(
+                    io::ErrorKind::Other,
+                    format!("failed to spawn background updater: {}", e),
+                )
+            })?;
 
         let mut tls_config = ServerConfig::builder()
             .with_cipher_suites(cipher_suite)
