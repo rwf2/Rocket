@@ -1,3 +1,4 @@
+use std::fmt::Pointer;
 use std::io::{self, Cursor, Read};
 
 use rustls::{Certificate, PrivateKey, RootCertStore};
@@ -9,6 +10,9 @@ fn err(message: impl Into<std::borrow::Cow<'static, str>>) -> io::Error {
 /// Loads certificates from `reader`.
 pub fn load_certs(reader: &mut dyn io::BufRead) -> io::Result<Vec<Certificate>> {
     let certs = rustls_pemfile::certs(reader).map_err(|_| err("invalid certificate"))?;
+    if certs.len() == 0 {
+        return Err(err("failed to find certs; Couldn't load certificates"));
+    }
     Ok(certs.into_iter().map(Certificate).collect())
 }
 
@@ -18,12 +22,16 @@ pub fn load_private_key(reader: &mut dyn io::BufRead) -> io::Result<PrivateKey> 
     // PEM files, use that to determine the parse function to use.
     let mut header = String::new();
     let private_keys_fn = loop {
+        println!("header: {}", header);
         header.clear();
         if reader.read_line(&mut header)? == 0 {
+            println!("failed to read key header");
             return Err(err(
                 "failed to find key header; supported formats are: RSA, PKCS8, SEC1",
             ));
         }
+
+        println!("header: {}", header);
 
         break match header.trim_end() {
             "-----BEGIN RSA PRIVATE KEY-----" => rustls_pemfile::rsa_private_keys,

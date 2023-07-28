@@ -3,7 +3,7 @@ use std::io;
 use std::net::SocketAddr;
 use std::pin::Pin;
 
-use std::sync::{Arc, RwLock};
+use std::sync::{Arc, Mutex, RwLock};
 use std::task::{Context, Poll};
 use tokio::signal::unix::{signal, SignalKind};
 
@@ -17,9 +17,13 @@ use crate::listener::{Certificates, Connection, Listener};
 use crate::tls::util::{load_ca_certs, load_certs, load_private_key};
 use rustls::Certificate;
 
+pub struct ResolverConfig {
+    cert_chain: Vec<Certificate>,
+    private_key: PrivateKey,
+}
+
 pub struct Resolver {
-    cert_chain: Arc<RwLock<Vec<Certificate>>>,
-    private_key: Arc<RwLock<PrivateKey>>,
+    config: Arc<Mutex<ResolverConfig>>,
 }
 
 /// A TLS listener over TCP.
@@ -85,69 +89,71 @@ where
 
 impl rustls::server::ResolvesServerCert for Resolver {
     fn resolve(&self, _client_hello: ClientHello<'_>) -> Option<Arc<CertifiedKey>> {
-        let cert_chain = Arc::clone(&self.cert_chain);
-        let private_key = Arc::clone(&self.private_key);
+        let config = self.config.lock().unwrap();
 
-        let sign_key = rustls::sign::any_supported_type(&private_key.write().unwrap()).unwrap();
+        let cert_chain = &config.cert_chain;
+        let private_key = &config.private_key;
 
-        let cert = Arc::new(CertifiedKey::new(
-            (cert_chain.write().unwrap()).to_vec(),
-            sign_key,
-        ));
+        let sign_key = rustls::sign::any_supported_type(private_key).unwrap();
+
+        let cert = Arc::new(CertifiedKey::new(cert_chain.to_vec(), sign_key));
+
         Some(cert)
     }
 }
 
 impl Resolver {
-    pub fn new<R>(c: Arc<RwLock<Config<R>>>) -> Self
+    pub fn new<R>(c: Arc<Mutex<Config<R>>>) -> Self
     where
         R: io::BufRead + std::marker::Send + std::marker::Sync + 'static,
     {
-        let mut config = c.write().unwrap();
+        let mut config = c.lock().unwrap();
 
-        let cert_chain = load_certs(&mut config.cert_chain)
+        let cert_chain: Vec<Certificate> = load_certs(&mut config.cert_chain)
             .map_err(|e| io::Error::new(e.kind(), format!("bad TLS cert chain: {}", e)))
             .unwrap();
 
-        let private_key = load_private_key(&mut config.private_key)
+        let private_key: PrivateKey = load_private_key(&mut config.private_key)
             .map_err(|e| io::Error::new(e.kind(), format!("bad TLS private key: {}", e)))
             .unwrap();
 
-        let arc_cert = Arc::new(RwLock::new(cert_chain));
-        let arc_key = Arc::new(RwLock::new(private_key));
-
         Self {
-            cert_chain: arc_cert.clone(),
-            private_key: arc_key.clone(),
+            config: Arc::new(Mutex::new(ResolverConfig {
+                cert_chain,
+                private_key,
+            })),
         }
     }
 
     pub fn background_updater<R>(
         &mut self,
-        c: Arc<RwLock<Config<R>>>,
+        c: Arc<Mutex<Config<R>>>,
     ) -> Result<bool, Box<dyn std::error::Error>>
     where
         R: io::BufRead + std::marker::Send + std::marker::Sync + 'static,
     {
-        let _stream = signal(SignalKind::user_defined1())?;
+        let mut _stream = signal(SignalKind::user_defined1())?;
 
-        let cert_arc = Arc::clone(&self.cert_chain);
-        let key_arc = Arc::clone(&self.private_key);
-
-        let config = Arc::clone(&c);
+        let local_self = Arc::clone(&self.config);
 
         tokio::spawn(async move {
             loop {
-                let cert_chain = load_certs(&mut config.write().unwrap().cert_chain)
+                _stream.recv().await;
+
+                let mut config = c.lock().unwrap();
+
+                let cert_chain = load_certs(&mut config.cert_chain)
                     .map_err(|e| io::Error::new(e.kind(), format!("bad TLS cert chain: {}", e)))
                     .unwrap();
 
-                let private_key = load_private_key(&mut config.write().unwrap().private_key)
+                let private_key = load_private_key(&mut config.private_key)
                     .map_err(|e| io::Error::new(e.kind(), format!("bad TLS private key: {}", e)))
                     .unwrap();
 
-                std::mem::replace(&mut *cert_arc.write().unwrap(), cert_chain);
-                std::mem::replace(&mut *key_arc.write().unwrap(), private_key);
+                *local_self.lock().unwrap() = ResolverConfig {
+                    cert_chain,
+                    private_key,
+                };
             }
         });
 
@@ -176,12 +182,9 @@ impl TlsListener {
 
         let prefer_server_order = c.prefer_server_order;
 
-        let config = Arc::new(RwLock::new(c));
-
-        let _initial_config = Arc::clone(&config);
-        let background_config = Arc::clone(&config);
-
-        let mut resolver = Resolver::new(config);
+        let arc_config = Arc::new(Mutex::new(c));
+        let background_config = Arc::clone(&arc_config);
+        let mut resolver = Resolver::new(arc_config);
 
         resolver
             .background_updater(background_config)
