@@ -5,17 +5,29 @@ use std::pin::Pin;
 
 use std::sync::{Arc, Mutex, RwLock};
 use std::task::{Context, Poll};
-use tokio::signal::unix::{signal, SignalKind};
 
+use figment::value::magic::{Either, RelativePathBuf};
 use rustls::server::ClientHello;
+use rustls::Certificate;
 use rustls::{sign::CertifiedKey, PrivateKey};
+use serde_::{Deserialize, Serialize};
 use tokio::io::{AsyncRead, AsyncWrite};
 use tokio::net::{TcpListener, TcpStream};
+use tokio::signal::unix::{signal, SignalKind};
 use tokio_rustls::{server::TlsStream as BareTlsStream, Accept, TlsAcceptor};
 
 use crate::listener::{Certificates, Connection, Listener};
 use crate::tls::util::{load_ca_certs, load_certs, load_private_key};
-use rustls::Certificate;
+
+#[derive(PartialEq, Debug, Clone, Deserialize, Serialize)]
+pub struct ResolverPath {
+    /// Path to a PEM file with, or raw bytes for, a DER-encoded X.509 TLS
+    /// certificate chain.
+    certs: Either<RelativePathBuf, Vec<u8>>,
+    /// Path to a PEM file with, or raw bytes for, DER-encoded private key in
+    /// either PKCS#8 or PKCS#1 format.
+    key: Either<RelativePathBuf, Vec<u8>>,
+}
 
 pub struct ResolverConfig {
     cert_chain: Vec<Certificate>,

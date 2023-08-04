@@ -2,6 +2,8 @@ use figment::value::magic::{Either, RelativePathBuf};
 use indexmap::IndexSet;
 use serde::{Deserialize, Serialize};
 
+use rocket_http::tls::ResolverConfig;
+
 /// TLS configuration: certificate chain, key, and ciphersuites.
 ///
 /// Four parameters control `tls` configuration:
@@ -635,7 +637,6 @@ mod with_tls_feature {
     use crate::http::tls::rustls::SupportedCipherSuite as RustlsCipher;
     use crate::http::tls::Config;
 
-    use crate::ext::AsyncReadExt;
     use yansi::Paint;
 
     use super::{CipherSuite, Either, RelativePathBuf, TlsConfig};
