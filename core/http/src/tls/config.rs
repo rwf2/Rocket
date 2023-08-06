@@ -2,8 +2,6 @@ use figment::value::magic::{Either, RelativePathBuf};
 use indexmap::IndexSet;
 use serde::{Deserialize, Serialize};
 
-use rocket_http::tls::ResolverConfig;
-
 /// TLS configuration: certificate chain, key, and ciphersuites.
 ///
 /// Four parameters control `tls` configuration:
@@ -83,21 +81,21 @@ use rocket_http::tls::ResolverConfig;
 pub struct TlsConfig {
     /// Path to a PEM file with, or raw bytes for, a DER-encoded X.509 TLS
     /// certificate chain.
-    pub(crate) certs: Either<RelativePathBuf, Vec<u8>>,
+    pub certs: Either<RelativePathBuf, Vec<u8>>,
     /// Path to a PEM file with, or raw bytes for, DER-encoded private key in
     /// either PKCS#8 or PKCS#1 format.
-    pub(crate) key: Either<RelativePathBuf, Vec<u8>>,
+    pub key: Either<RelativePathBuf, Vec<u8>>,
     /// List of TLS cipher suites in server-preferred order.
     #[serde(default = "CipherSuite::default_set")]
-    pub(crate) ciphers: IndexSet<CipherSuite>,
+    pub ciphers: IndexSet<CipherSuite>,
     /// Whether to prefer the server's cipher suite order over the client's.
     #[serde(default)]
-    pub(crate) prefer_server_cipher_order: bool,
+    pub prefer_server_cipher_order: bool,
     /// Configuration for mutual TLS, if any.
     #[serde(default)]
     #[cfg(feature = "mtls")]
     #[cfg_attr(nightly, doc(cfg(feature = "mtls")))]
-    pub(crate) mutual: Option<MutualTls>,
+    pub mutual: Option<MutualTls>,
 }
 
 /// Mutual TLS configuration.
@@ -167,7 +165,7 @@ pub struct MutualTls {
     /// Authority certificates which will be used to verify client-presented
     /// certificates.
     // TODO: We should support more than one root.
-    pub(crate) ca_certs: Either<RelativePathBuf, Vec<u8>>,
+    pub ca_certs: Either<RelativePathBuf, Vec<u8>>,
     /// Whether the client is required to present a certificate.
     ///
     /// When `true`, the client is required to present a valid certificate to
@@ -633,15 +631,15 @@ mod with_tls_feature {
     use std::fs;
     use std::io::{self, Error};
 
-    use crate::http::tls::rustls::cipher_suite;
-    use crate::http::tls::rustls::SupportedCipherSuite as RustlsCipher;
-    use crate::http::tls::Config;
+    use rustls::cipher_suite;
+    use rustls::SupportedCipherSuite as RustlsCipher;
+    use crate::tls::Config;
 
     use yansi::Paint;
 
     use super::{CipherSuite, Either, RelativePathBuf, TlsConfig};
 
-    type Reader = Box<dyn std::io::BufRead + Sync + Send>;
+    pub type Reader = Box<dyn std::io::BufRead + Sync + Send>;
 
     fn to_reader(value: &Either<RelativePathBuf, Vec<u8>>) -> io::Result<Reader> {
         match value {
@@ -666,7 +664,7 @@ mod with_tls_feature {
 
     impl TlsConfig {
         /// This is only called when TLS is enabled.
-        pub(crate) fn to_native_config(&self) -> io::Result<Config<Reader>> {
+        pub fn to_native_config(&self) -> io::Result<Config<Reader>> {
             Ok(Config {
                 cert_chain: to_reader(&self.certs)?,
                 private_key: to_reader(&self.key)?,

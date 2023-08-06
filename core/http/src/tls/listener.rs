@@ -3,7 +3,7 @@ use std::io;
 use std::net::SocketAddr;
 use std::pin::Pin;
 
-use std::sync::{Arc, Mutex, RwLock};
+use std::sync::{Arc, Mutex};
 use std::task::{Context, Poll};
 
 use figment::value::magic::{Either, RelativePathBuf};
@@ -17,7 +17,10 @@ use tokio::signal::unix::{signal, SignalKind};
 use tokio_rustls::{server::TlsStream as BareTlsStream, Accept, TlsAcceptor};
 
 use crate::listener::{Certificates, Connection, Listener};
+use crate::tls::config::TlsConfig;
+use crate::tls::mtls::Error;
 use crate::tls::util::{load_ca_certs, load_certs, load_private_key};
+
 
 #[derive(PartialEq, Debug, Clone, Deserialize, Serialize)]
 pub struct ResolverPath {
@@ -88,8 +91,8 @@ pub enum TlsState {
 
 /// TLS as ~configured by `TlsConfig` in `rocket` core.
 pub struct Config<R>
-where
-    R: io::BufRead + std::marker::Send + std::marker::Sync + 'static,
+    where
+        R: io::BufRead + std::marker::Send + std::marker::Sync + 'static,
 {
     pub cert_chain: R,
     pub private_key: R,
@@ -116,8 +119,8 @@ impl rustls::server::ResolvesServerCert for Resolver {
 
 impl Resolver {
     pub fn new<R>(c: Arc<Mutex<Config<R>>>) -> Self
-    where
-        R: io::BufRead + std::marker::Send + std::marker::Sync + 'static,
+        where
+            R: io::BufRead + std::marker::Send + std::marker::Sync + 'static,
     {
         let mut config = c.lock().unwrap();
 
@@ -141,8 +144,8 @@ impl Resolver {
         &mut self,
         c: Arc<Mutex<Config<R>>>,
     ) -> Result<bool, Box<dyn std::error::Error>>
-    where
-        R: io::BufRead + std::marker::Send + std::marker::Sync + 'static,
+        where
+            R: io::BufRead + std::marker::Send + std::marker::Sync + 'static,
     {
         let mut _stream = signal(SignalKind::user_defined1())?;
 
@@ -174,12 +177,17 @@ impl Resolver {
 }
 
 impl TlsListener {
-    pub async fn bind<R>(addr: SocketAddr, mut c: Config<R>) -> io::Result<TlsListener>
-    where
-        R: io::BufRead + std::marker::Send + std::marker::Sync + 'static,
+    pub async fn bind(addr: SocketAddr, config: &TlsConfig) -> io::Result<TlsListener>
     {
         use rustls::server::{AllowAnyAnonymousOrAuthenticatedClient, AllowAnyAuthenticatedClient};
         use rustls::server::{NoClientAuth, ServerConfig, ServerSessionMemoryCache};
+
+        let mut c = config.to_native_config().map_err(|e| {
+            io::Error::new(
+                io::ErrorKind::InvalidInput,
+                format!("bad TLS config: {}", e),
+            )
+        })?;
 
         let client_auth = match c.ca_certs {
             Some(ref mut ca_certs) => match load_ca_certs(ca_certs) {
@@ -194,8 +202,24 @@ impl TlsListener {
 
         let prefer_server_order = c.prefer_server_order;
 
-        let arc_config = Arc::new(Mutex::new(c));
-        let background_config = Arc::clone(&arc_config);
+        let intial_config = config.to_native_config().map_err(|e| {
+            io::Error::new(
+                io::ErrorKind::InvalidInput,
+                format!("bad TLS config: {}", e),
+            )
+        })?;
+
+        let background_config = config.to_native_config().map_err(|e| {
+            io::Error::new(
+                io::ErrorKind::InvalidInput,
+                format!("bad TLS config: {}", e),
+            )
+        })?;
+
+        let arc_config = Arc::new(Mutex::new( intial_config));
+        let background_config = Arc::new(Mutex::new(background_config));
+
+
         let mut resolver = Resolver::new(arc_config);
 
         resolver
@@ -205,7 +229,7 @@ impl TlsListener {
                     io::ErrorKind::Other,
                     format!("failed to spawn background updater: {}", e),
                 )
-            })?;
+            });
 
         let mut tls_config = ServerConfig::builder()
             .with_cipher_suites(cipher_suite)
@@ -229,6 +253,7 @@ impl TlsListener {
 
         let listener = TcpListener::bind(addr).await?;
         let acceptor = TlsAcceptor::from(Arc::new(tls_config));
+
         Ok(TlsListener { listener, acceptor })
     }
 }
@@ -286,8 +311,8 @@ impl TlsStream {
         cx: &mut Context<'_>,
         mut f: F,
     ) -> Poll<io::Result<T>>
-    where
-        F: FnMut(&mut BareTlsStream<TcpStream>, &mut Context<'_>) -> Poll<io::Result<T>>,
+        where
+            F: FnMut(&mut BareTlsStream<TcpStream>, &mut Context<'_>) -> Poll<io::Result<T>>,
     {
         loop {
             match self.state {

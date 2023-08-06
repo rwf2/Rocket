@@ -8,6 +8,7 @@ use futures::stream::StreamExt;
 use tokio::sync::oneshot;
 use tokio::time::sleep;
 use yansi::Paint;
+use rocket_http::tls::config::TlsConfig;
 
 use crate::data::IoHandler;
 use crate::error::{Error, ErrorKind};
@@ -434,12 +435,12 @@ impl Rocket<Orbit> {
         if self.config.tls_enabled() {
             if let Some(ref config) = self.config.tls {
                 use crate::http::tls::TlsListener;
-                use rocket_http::tls::ResolverConfig;
 
-                let conf = config.to_native_config().map_err(ErrorKind::Io)?;
-                let l = TlsListener::bind(addr, conf)
+
+                let l = TlsListener::bind(addr, config)
                     .await
                     .map_err(ErrorKind::Bind)?;
+
                 addr = l.local_addr().unwrap_or(addr);
                 self.config.address = addr.ip();
                 self.config.port = addr.port();
