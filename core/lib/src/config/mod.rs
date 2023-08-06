@@ -116,8 +116,7 @@ mod config;
 mod shutdown;
 mod ip_header;
 
-#[cfg(feature = "tls")]
-mod tls;
+
 
 #[cfg(feature = "secrets")]
 mod secret_key;
@@ -131,10 +130,10 @@ pub use shutdown::Shutdown;
 pub use ident::Ident;
 
 #[cfg(feature = "tls")]
-pub use tls::{TlsConfig, CipherSuite};
+pub use rocket_http::tls::config::{TlsConfig, CipherSuite};
 
 #[cfg(feature = "mtls")]
-pub use tls::MutualTls;
+pub use rocket_http::tls::config::MutualTls;
 
 #[cfg(feature = "secrets")]
 pub use secret_key::SecretKey;

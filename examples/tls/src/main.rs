@@ -1,14 +1,19 @@
-#[macro_use] extern crate rocket;
+#[macro_use]
+extern crate rocket;
 
+mod redirector;
 #[cfg(test)]
 mod tests;
-mod redirector;
 
 use rocket::mtls::Certificate;
 
 #[get("/")]
 fn mutual(cert: Certificate<'_>) -> String {
-    format!("Hello! Here's what we know: [{}] {}", cert.serial(), cert.subject())
+    format!(
+        "Hello! Here's what we know: [{}] {}",
+        cert.serial(),
+        cert.subject()
+    )
 }
 
 #[get("/", rank = 2)]

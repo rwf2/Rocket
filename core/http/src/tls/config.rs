@@ -1,6 +1,6 @@
 use figment::value::magic::{Either, RelativePathBuf};
-use serde::{Deserialize, Serialize};
 use indexmap::IndexSet;
+use serde::{Deserialize, Serialize};
 
 /// TLS configuration: certificate chain, key, and ciphersuites.
 ///
@@ -81,21 +81,21 @@ use indexmap::IndexSet;
 pub struct TlsConfig {
     /// Path to a PEM file with, or raw bytes for, a DER-encoded X.509 TLS
     /// certificate chain.
-    pub(crate) certs: Either<RelativePathBuf, Vec<u8>>,
+    pub certs: Either<RelativePathBuf, Vec<u8>>,
     /// Path to a PEM file with, or raw bytes for, DER-encoded private key in
     /// either PKCS#8 or PKCS#1 format.
-    pub(crate) key: Either<RelativePathBuf, Vec<u8>>,
+    pub key: Either<RelativePathBuf, Vec<u8>>,
     /// List of TLS cipher suites in server-preferred order.
     #[serde(default = "CipherSuite::default_set")]
-    pub(crate) ciphers: IndexSet<CipherSuite>,
+    pub ciphers: IndexSet<CipherSuite>,
     /// Whether to prefer the server's cipher suite order over the client's.
     #[serde(default)]
-    pub(crate) prefer_server_cipher_order: bool,
+    pub prefer_server_cipher_order: bool,
     /// Configuration for mutual TLS, if any.
     #[serde(default)]
     #[cfg(feature = "mtls")]
     #[cfg_attr(nightly, doc(cfg(feature = "mtls")))]
-    pub(crate) mutual: Option<MutualTls>,
+    pub mutual: Option<MutualTls>,
 }
 
 /// Mutual TLS configuration.
@@ -165,7 +165,7 @@ pub struct MutualTls {
     /// Authority certificates which will be used to verify client-presented
     /// certificates.
     // TODO: We should support more than one root.
-    pub(crate) ca_certs: Either<RelativePathBuf, Vec<u8>>,
+    pub ca_certs: Either<RelativePathBuf, Vec<u8>>,
     /// Whether the client is required to present a certificate.
     ///
     /// When `true`, the client is required to present a valid certificate to
@@ -212,7 +212,6 @@ impl CipherSuite {
         CipherSuite::TLS_CHACHA20_POLY1305_SHA256,
         CipherSuite::TLS_AES_256_GCM_SHA384,
         CipherSuite::TLS_AES_128_GCM_SHA256,
-
         // TLS v1.2 suites...
         CipherSuite::TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305_SHA256,
         CipherSuite::TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305_SHA256,
@@ -271,7 +270,9 @@ impl TlsConfig {
     /// let tls_config = TlsConfig::from_paths("/ssl/certs.pem", "/ssl/key.pem");
     /// ```
     pub fn from_paths<C, K>(certs: C, key: K) -> Self
-        where C: AsRef<std::path::Path>, K: AsRef<std::path::Path>
+    where
+        C: AsRef<std::path::Path>,
+        K: AsRef<std::path::Path>,
     {
         TlsConfig {
             certs: Either::Left(certs.as_ref().to_path_buf().into()),
@@ -362,7 +363,8 @@ impl TlsConfig {
     /// ]);
     /// ```
     pub fn with_ciphers<I>(mut self, ciphers: I) -> Self
-        where I: IntoIterator<Item = CipherSuite>
+    where
+        I: IntoIterator<Item = CipherSuite>,
     {
         self.ciphers = ciphers.into_iter().collect();
         self
@@ -558,7 +560,7 @@ impl MutualTls {
     pub fn from_path<C: AsRef<std::path::Path>>(ca_certs: C) -> Self {
         MutualTls {
             ca_certs: Either::Left(ca_certs.as_ref().to_path_buf().into()),
-            mandatory: Default::default()
+            mandatory: Default::default(),
         }
     }
 
@@ -581,7 +583,7 @@ impl MutualTls {
     pub fn from_bytes(ca_certs: &[u8]) -> Self {
         MutualTls {
             ca_certs: Either::Right(ca_certs.to_vec()),
-            mandatory: Default::default()
+            mandatory: Default::default(),
         }
     }
 
@@ -629,23 +631,29 @@ mod with_tls_feature {
     use std::fs;
     use std::io::{self, Error};
 
-    use crate::http::tls::Config;
-    use crate::http::tls::rustls::SupportedCipherSuite as RustlsCipher;
-    use crate::http::tls::rustls::cipher_suite;
+    use rustls::cipher_suite;
+    use rustls::SupportedCipherSuite as RustlsCipher;
+    use crate::tls::Config;
 
     use yansi::Paint;
 
-    use super::{Either, RelativePathBuf, TlsConfig, CipherSuite};
+    use super::{CipherSuite, Either, RelativePathBuf, TlsConfig};
 
-    type Reader = Box<dyn std::io::BufRead + Sync + Send>;
+    pub type Reader = Box<dyn std::io::BufRead + Sync + Send>;
 
     fn to_reader(value: &Either<RelativePathBuf, Vec<u8>>) -> io::Result<Reader> {
         match value {
             Either::Left(path) => {
                 let path = path.relative();
                 let file = fs::File::open(&path).map_err(move |e| {
-                    Error::new(e.kind(), format!("error reading TLS file `{}`: {}",
-                            Paint::white(figment::Source::File(path)), e))
+                    Error::new(
+                        e.kind(),
+                        format!(
+                            "error reading TLS file `{}`: {}",
+                            Paint::white(figment::Source::File(path)),
+                            e
+                        ),
+                    )
                 })?;
 
                 Ok(Box::new(io::BufReader::new(file)))
@@ -656,7 +664,7 @@ mod with_tls_feature {
 
     impl TlsConfig {
         /// This is only called when TLS is enabled.
-        pub(crate) fn to_native_config(&self) -> io::Result<Config<Reader>> {
+        pub fn to_native_config(&self) -> io::Result<Config<Reader>> {
             Ok(Config {
                 cert_chain: to_reader(&self.certs)?,
                 private_key: to_reader(&self.key)?,
@@ -671,31 +679,36 @@ mod with_tls_feature {
                 #[cfg(feature = "mtls")]
                 ca_certs: match self.mutual {
                     Some(ref mtls) => Some(to_reader(&mtls.ca_certs)?),
-                    None => None
+                    None => None,
                 },
             })
         }
 
         fn rustls_ciphers(&self) -> impl Iterator<Item = RustlsCipher> + '_ {
             self.ciphers().map(|ciphersuite| match ciphersuite {
-                CipherSuite::TLS_CHACHA20_POLY1305_SHA256 =>
-                    cipher_suite::TLS13_CHACHA20_POLY1305_SHA256,
-                CipherSuite::TLS_AES_256_GCM_SHA384 =>
-                    cipher_suite::TLS13_AES_256_GCM_SHA384,
-                CipherSuite::TLS_AES_128_GCM_SHA256 =>
-                    cipher_suite::TLS13_AES_128_GCM_SHA256,
-                CipherSuite::TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305_SHA256 =>
-                    cipher_suite::TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305_SHA256,
-                CipherSuite::TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305_SHA256 =>
-                    cipher_suite::TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305_SHA256,
-                CipherSuite::TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384 =>
-                    cipher_suite::TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384,
-                CipherSuite::TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256 =>
-                    cipher_suite::TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256,
-                CipherSuite::TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384 =>
-                    cipher_suite::TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,
-                CipherSuite::TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256 =>
-                    cipher_suite::TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,
+                CipherSuite::TLS_CHACHA20_POLY1305_SHA256 => {
+                    cipher_suite::TLS13_CHACHA20_POLY1305_SHA256
+                }
+                CipherSuite::TLS_AES_256_GCM_SHA384 => cipher_suite::TLS13_AES_256_GCM_SHA384,
+                CipherSuite::TLS_AES_128_GCM_SHA256 => cipher_suite::TLS13_AES_128_GCM_SHA256,
+                CipherSuite::TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305_SHA256 => {
+                    cipher_suite::TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305_SHA256
+                }
+                CipherSuite::TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305_SHA256 => {
+                    cipher_suite::TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305_SHA256
+                }
+                CipherSuite::TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384 => {
+                    cipher_suite::TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384
+                }
+                CipherSuite::TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256 => {
+                    cipher_suite::TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256
+                }
+                CipherSuite::TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384 => {
+                    cipher_suite::TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384
+                }
+                CipherSuite::TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256 => {
+                    cipher_suite::TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256
+                }
             })
         }
     }

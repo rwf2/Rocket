@@ -1,17 +1,19 @@
 use std::fs::{self, File};
 
-use rocket::local::blocking::Client;
 use rocket::fs::relative;
+use rocket::local::blocking::Client;
 
 #[test]
-fn hello_mutual() {
+pub(crate) fn hello_mutual() {
     let client = Client::tracked(super::rocket()).unwrap();
-    let cert_paths = fs::read_dir(relative!("private")).unwrap()
+    let cert_paths = fs::read_dir(relative!("private"))
+        .unwrap()
         .map(|entry| entry.unwrap().path().to_string_lossy().into_owned())
         .filter(|path| path.ends_with("_cert.pem") && !path.ends_with("ca_cert.pem"));
 
     for path in cert_paths {
-        let response = client.get("/")
+        let response = client
+            .get("/")
             .identity(File::open(&path).unwrap())
             .dispatch();
 
@@ -23,7 +25,7 @@ fn hello_mutual() {
 
 #[test]
 fn secure_cookies() {
-    use rocket::http::{CookieJar, Cookie};
+    use rocket::http::{Cookie, CookieJar};
 
     #[get("/cookie")]
     fn cookie(jar: &CookieJar<'_>) {
@@ -64,6 +66,7 @@ fn hello_world() {
     // TODO: Testing doesn't actually read keys since we don't do TLS locally.
     for profile in profiles {
         let config = rocket::Config::figment().select(profile);
+        println!("{:?}", config);
         let client = Client::tracked(super::rocket().configure(config)).unwrap();
         let response = client.get("/").dispatch();
         assert_eq!(response.into_string().unwrap(), "Hello, world!");
