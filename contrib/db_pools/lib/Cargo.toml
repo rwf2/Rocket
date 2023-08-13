@@ -21,11 +21,23 @@ deadpool_redis = ["deadpool-redis", "deadpool"]
 sqlx_mysql = ["sqlx", "sqlx/mysql"]
 sqlx_postgres = ["sqlx", "sqlx/postgres"]
 sqlx_sqlite = ["sqlx", "sqlx/sqlite"]
-sqlx_mssql = ["sqlx", "sqlx/mssql"]
+sqlx_native_tls = ["sqlx/tls-native-tls"]
+sqlx_rustls = ["sqlx/tls-rustls"]
+#sqlx_mssql = ["sqlx", "sqlx/mssql"] # This was removed in sqlx 0.7 - A good alternative might be deadpool+tiberius?
 sqlx_macros = ["sqlx/macros"]
 # diesel features
-diesel_postgres = ["diesel-async/postgres", "diesel-async/deadpool", "diesel", "deadpool"]
-diesel_mysql = ["diesel-async/mysql", "diesel-async/deadpool", "diesel", "deadpool"]
+diesel_postgres = [
+    "diesel-async/postgres",
+    "diesel-async/deadpool",
+    "diesel",
+    "deadpool",
+]
+diesel_mysql = [
+    "diesel-async/mysql",
+    "diesel-async/deadpool",
+    "diesel",
+    "deadpool",
+]
 # implicit features: mongodb
 
 [dependencies.rocket]
@@ -72,7 +84,7 @@ default-features = false
 optional = true
 
 [dependencies.sqlx]
-version = "0.6"
+version = "0.7"
 default-features = false
 features = ["runtime-tokio-rustls"]
 optional = true

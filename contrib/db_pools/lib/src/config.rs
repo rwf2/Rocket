@@ -1,4 +1,5 @@
 use rocket::serde::{Deserialize, Serialize};
+use std::path::PathBuf;
 
 /// Base configuration for all database drivers.
 ///
@@ -80,4 +81,17 @@ pub struct Config {
     ///
     /// _Default:_ `None`.
     pub idle_timeout: Option<u64>,
+    /// Sets the name of a file containing SSL certificate authority (CA) certificate(s).
+    /// If the file exists, the server’s certificate will be verified to be signed by one of these authorities.
+    ///
+    /// _Default:_ `None`.
+    pub ssl_root_cert: Option<PathBuf>,
+    /// Sets the name of a file containing SSL client certificate.
+    ///
+    /// _Default:_ `None`.
+    pub ssl_client_cert: Option<PathBuf>,
+    /// Sets the name of a file containing SSL client key.
+    ///
+    /// _Default:_ `None`.
+    pub ssl_client_key: Option<PathBuf>,
 }
