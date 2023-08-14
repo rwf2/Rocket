@@ -37,6 +37,9 @@ use std::path::PathBuf;
 ///             max_connections: 1024,
 ///             connect_timeout: 3,
 ///             idle_timeout: None,
+///             ssl_root_cert: None,
+///             ssl_client_cert: None,
+///             ssl_client_key: None
 ///         }));
 ///
 ///     rocket::custom(figment)

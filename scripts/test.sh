@@ -80,7 +80,6 @@ function test_contrib() {
     sqlx_mysql
     sqlx_postgres
     sqlx_sqlite
-    sqlx_mssql
     mongodb
     diesel_mysql
     diesel_postgres

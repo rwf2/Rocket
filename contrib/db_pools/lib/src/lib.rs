@@ -113,14 +113,13 @@
 //! On shutdown, new connections are denied. Shutdown _does not_ wait for
 //! connections to be returned.
 //!
-//! ## `sqlx` (v0.6)
+//! ## `sqlx` (v0.7)
 //!
 //! | Database | Feature         | [`Pool`] Type        | [`Connection`] Deref                     |
 //! |----------|-----------------|----------------------|------------------------------------------|
 //! | Postgres | `sqlx_postgres` | [`sqlx::PgPool`]     | [`sqlx::pool::PoolConnection<Postgres>`] |
 //! | MySQL    | `sqlx_mysql`    | [`sqlx::MySqlPool`]  | [`sqlx::pool::PoolConnection<MySql>`]    |
 //! | SQLite   | `sqlx_sqlite`   | [`sqlx::SqlitePool`] | [`sqlx::pool::PoolConnection<Sqlite>`]   |
-//! | MSSQL    | `sqlx_mssql`    | [`sqlx::MssqlPool`]  | [`sqlx::pool::PoolConnection<Mssql>`]    |
 //!
 //! [`sqlx::PgPool`]: https://docs.rs/sqlx/0.6/sqlx/type.PgPool.html
 //! [`sqlx::MySqlPool`]: https://docs.rs/sqlx/0.6/sqlx/type.MySqlPool.html
@@ -234,7 +233,6 @@
 #![doc(html_root_url = "https://api.rocket.rs/master/rocket_db_pools")]
 #![doc(html_favicon_url = "https://rocket.rs/images/favicon.ico")]
 #![doc(html_logo_url = "https://rocket.rs/images/logo-boxed.png")]
-
 #![deny(missing_docs)]
 
 pub use rocket;
@@ -243,20 +241,25 @@ pub use rocket;
 #[doc(inline)]
 pub use rocket::figment;
 
-#[cfg(any(feature = "diesel_postgres", feature = "diesel_mysql"))] pub mod diesel;
-#[cfg(feature = "deadpool_postgres")] pub use deadpool_postgres;
-#[cfg(feature = "deadpool_redis")] pub use deadpool_redis;
-#[cfg(feature = "mongodb")] pub use mongodb;
-#[cfg(feature = "sqlx")] pub use sqlx;
+#[cfg(any(feature = "diesel_postgres", feature = "diesel_mysql"))]
+pub mod diesel;
+#[cfg(feature = "deadpool_postgres")]
+pub use deadpool_postgres;
+#[cfg(feature = "deadpool_redis")]
+pub use deadpool_redis;
+#[cfg(feature = "mongodb")]
+pub use mongodb;
+#[cfg(feature = "sqlx")]
+pub use sqlx;
 
+mod config;
 mod database;
 mod error;
 mod pool;
-mod config;
 
+pub use self::config::Config;
 pub use self::database::{Connection, Database, Initializer};
 pub use self::error::Error;
 pub use self::pool::Pool;
-pub use self::config::Config;
 
 pub use rocket_db_pools_codegen::*;
