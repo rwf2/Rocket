@@ -42,8 +42,8 @@ impl Fairings {
         Fairings::default()
     }
 
-    pub(crate) fn iter_mut<'a>(&'a mut self) -> impl Iterator<Item = &mut Box<dyn Fairing>> + 'a {
-        self.all_fairings.iter_mut()
+    pub(crate) fn iter_mut(&mut self) -> impl Iterator<Item = &mut dyn Fairing> + '_ {
+        self.all_fairings.iter_mut().map(|f| f.as_mut())
     }
 
     pub fn active(&self) -> impl Iterator<Item = &usize> {
