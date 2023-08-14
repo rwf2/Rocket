@@ -7,7 +7,7 @@
 //!
 //!    ```toml
 //!    [dependencies.rocket_db_pools]
-//!    version = "0.1.0-rc.2"
+//!    version = "=0.1.0-rc.3"
 //!    features = ["sqlx_sqlite"]
 //!    ```
 //!
@@ -98,39 +98,61 @@
 //!
 //! # Supported Drivers
 //!
-//! At present, this crate supports _three_ drivers: [`deadpool`], [`sqlx`],
-//! and [`mongodb`]. Each driver may support multiple databases.
+//! At present, this crate supports _four_ drivers: [`deadpool`], [`sqlx`],
+//! [`mongodb`], and [`diesel`]. Each driver may support multiple databases.
+//! Drivers have a varying degree of support for graceful shutdown, affected by
+//! the `Type::init()` fairing on Rocket shutdown.
 //!
 //! ## `deadpool` (v0.9)
 //!
-//! | Database | Feature             | [`Pool`] Type               | [`Connection`] Deref                  |
-//! |----------|---------------------|-----------------------------|---------------------------------------|
-//! | Postgres | `deadpool_postgres` | [`deadpool_postgres::Pool`] | [`deadpool_postgres::ClientWrapper`]  |
-//! | Redis    | `deadpool_redis`    | [`deadpool_redis::Pool`]    | [`deadpool_redis::Connection`] |
+//! | Database | Feature                     | [`Pool`] Type               | [`Connection`] Deref                 |
+//! |----------|-----------------------------|-----------------------------|--------------------------------------|
+//! | Postgres | `deadpool_postgres` (v0.10) | [`deadpool_postgres::Pool`] | [`deadpool_postgres::ClientWrapper`] |
+//! | Redis    | `deadpool_redis` (v0.11)    | [`deadpool_redis::Pool`]    | [`deadpool_redis::Connection`]       |
 //!
-//! ## `sqlx` (v0.5)
+//! On shutdown, new connections are denied. Shutdown _does not_ wait for
+//! connections to be returned.
 //!
-//! | Database | Feature         | [`Pool`] Type        | [`Connection`] Deref               |
-//! |----------|-----------------|----------------------|------------------------------------|
+//! ## `sqlx` (v0.6)
+//!
+//! | Database | Feature         | [`Pool`] Type        | [`Connection`] Deref                     |
+//! |----------|-----------------|----------------------|------------------------------------------|
 //! | Postgres | `sqlx_postgres` | [`sqlx::PgPool`]     | [`sqlx::pool::PoolConnection<Postgres>`] |
 //! | MySQL    | `sqlx_mysql`    | [`sqlx::MySqlPool`]  | [`sqlx::pool::PoolConnection<MySql>`]    |
 //! | SQLite   | `sqlx_sqlite`   | [`sqlx::SqlitePool`] | [`sqlx::pool::PoolConnection<Sqlite>`]   |
 //! | MSSQL    | `sqlx_mssql`    | [`sqlx::MssqlPool`]  | [`sqlx::pool::PoolConnection<Mssql>`]    |
 //!
-//! [`sqlx::PgPool`]: https://docs.rs/sqlx/0.5/sqlx/type.PgPool.html
-//! [`sqlx::MySqlPool`]: https://docs.rs/sqlx/0.5/sqlx/type.MySqlPool.html
-//! [`sqlx::SqlitePool`]: https://docs.rs/sqlx/0.5/sqlx/type.SqlitePool.html
-//! [`sqlx::MssqlPool`]: https://docs.rs/sqlx/0.5/sqlx/type.MssqlPool.html
-//! [`sqlx::PoolConnection<Postgres>`]: https://docs.rs/sqlx/0.5/sqlx/pool/struct.PoolConnection.html
-//! [`sqlx::PoolConnection<MySql>`]: https://docs.rs/sqlx/0.5/sqlx/pool/struct.PoolConnection.html
-//! [`sqlx::PoolConnection<Sqlite>`]: https://docs.rs/sqlx/0.5/sqlx/pool/struct.PoolConnection.html
-//! [`sqlx::PoolConnection<Mssql>`]: https://docs.rs/sqlx/0.5/sqlx/pool/struct.PoolConnection.html
+//! [`sqlx::PgPool`]: https://docs.rs/sqlx/0.6/sqlx/type.PgPool.html
+//! [`sqlx::MySqlPool`]: https://docs.rs/sqlx/0.6/sqlx/type.MySqlPool.html
+//! [`sqlx::SqlitePool`]: https://docs.rs/sqlx/0.6/sqlx/type.SqlitePool.html
+//! [`sqlx::MssqlPool`]: https://docs.rs/sqlx/0.6/sqlx/type.MssqlPool.html
+//! [`sqlx::pool::PoolConnection<Postgres>`]: https://docs.rs/sqlx/0.6/sqlx/pool/struct.PoolConnection.html
+//! [`sqlx::pool::PoolConnection<MySql>`]: https://docs.rs/sqlx/0.6/sqlx/pool/struct.PoolConnection.html
+//! [`sqlx::pool::PoolConnection<Sqlite>`]: https://docs.rs/sqlx/0.6/sqlx/pool/struct.PoolConnection.html
+//! [`sqlx::pool::PoolConnection<Mssql>`]: https://docs.rs/sqlx/0.6/sqlx/pool/struct.PoolConnection.html
+//!
+//! On shutdown, new connections are denied. Shutdown waits for connections to
+//! be returned.
 //!
 //! ## `mongodb` (v2)
 //!
 //! | Database | Feature   | [`Pool`] Type and [`Connection`] Deref |
 //! |----------|-----------|----------------------------------------|
 //! | MongoDB  | `mongodb` | [`mongodb::Client`]                    |
+//!
+//! Graceful shutdown is not supported.
+//!
+//! ## `diesel` (v2)
+//!
+//! | Database | Feature           | [`Pool`] Type         | [`Connection`] Deref             |
+//! |----------|-------------------|-----------------------|----------------------------------|
+//! | Postgres | `diesel_postgres` | [`diesel::PgPool`]    | [`diesel::AsyncPgConnection`]    |
+//! | MySQL    | `diesel_mysql`    | [`diesel::MysqlPool`] | [`diesel::AsyncMysqlConnection`] | //!
+//!
+//! See [`diesel`] for usage details.
+//!
+//! On shutdown, new connections are denied. Shutdown _does not_ wait for
+//! connections to be returned.
 //!
 //! ## Enabling Additional Driver Features
 //!
@@ -141,12 +163,12 @@
 //!
 //! ```toml
 //! [dependencies.sqlx]
-//! version = "0.5"
+//! version = "0.6"
 //! default-features = false
 //! features = ["macros", "offline", "migrate"]
 //!
 //! [dependencies.rocket_db_pools]
-//! version = "0.1.0-rc.2"
+//! version = "=0.1.0-rc.3"
 //! features = ["sqlx_sqlite"]
 //! ```
 //!
@@ -176,12 +198,12 @@
 //!
 //! See [`Config`] for details on configuration parameters.
 //!
-//! **Note:** `deadpool` drivers do not support and thus ignore the
+//! **Note:** `deadpool` and `diesel` drivers do not support and thus ignore the
 //! `min_connections` value.
 //!
 //! ## Driver Defaults
 //!
-//! Some drivers provide configuration defaults different from the underyling
+//! Some drivers provide configuration defaults different from the underlying
 //! database's defaults. A best-effort attempt is made to document those
 //! differences below:
 //!
@@ -206,7 +228,7 @@
 //!
 //! # Extending
 //!
-//! Any database driver can implement support for this libary by implementing
+//! Any database driver can implement support for this library by implementing
 //! the [`Pool`] trait.
 
 #![doc(html_root_url = "https://api.rocket.rs/master/rocket_db_pools")]
@@ -215,11 +237,13 @@
 
 #![deny(missing_docs)]
 
+pub use rocket;
+
 /// Re-export of the `figment` crate.
 #[doc(inline)]
 pub use rocket::figment;
 
-pub use rocket;
+#[cfg(any(feature = "diesel_postgres", feature = "diesel_mysql"))] pub mod diesel;
 #[cfg(feature = "deadpool_postgres")] pub use deadpool_postgres;
 #[cfg(feature = "deadpool_redis")] pub use deadpool_redis;
 #[cfg(feature = "mongodb")] pub use mongodb;

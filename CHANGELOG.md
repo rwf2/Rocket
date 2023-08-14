@@ -1,3 +1,81 @@
+# Version 0.5.0-rc.3 (Mar 23, 2023)
+
+## Major Features and Improvements
+
+  * Added a [`max_blocking`] configuration parameter.
+
+    The parameter sets a limit on the number of threads used by blocking tasks.
+
+  * Added an [`ip_header`] "real IP" header configuration parameter.
+
+    The parameter allows modifying the header that Rocket attempts to use to retrieve the "real IP"
+    address of the client via `Request` methods like [`Request::client_ip()`]. Additionally, the
+    change allows disabling the use of any such header entirely.
+
+  * A [`pool()`] method is emitted by [`rocket_sync_db_pools`] for code-generated pools.
+
+    The method returns an opaque reference to a type that can be used to retrieve pooled connections
+    outside of a request handling context.
+
+  * Raw binary form field data can be retrieved using the `&[u8]` form guard.
+
+  * Data guards are now eligible [sentinels].
+
+## General Improvements
+
+  * Final launch messages are now _always_ logged, irrespective of profile.
+  * Only functions that return `Rocket<Build>` are now `#[must_use]`, not all `Rocket<P>`.
+  * Fixed mismatched form field names in errors under certain conditions in [`FromForm`] derive.
+  * The [`FromForm`] derive now collects _all_ errors that occur.
+  * Data pools are now gracefully shutdown in [`rocket_sync_db_pools`].
+  * Added [`Metadata::render()`] in [`rocket_dyn_templates`] for direct template rendering.
+  * Rocket salvages more information from malformed requests for error catchers.
+  * The `cookie` `secure` feature is now properly conditionally enabled.
+  * Data before encapsulation boundaries in TLS keys is allowed and ignored.
+  * Support for TLS keys in SEC1 format was added.
+  * Rocket now warns when a known secret key is configured.
+  * A panic that could occur on shutdown in `rocket_sync_db_pools` was fixed.
+
+### Known Media Types
+
+  - Added `MP3`: `audio/mpeg`.
+  - Added `CBZ`: `application/vnd.comicbook+zip`, extension `.cbz`.
+  - Added `CBR`: `application/vnd.comicbook-rar`, extension `.cbr`.
+  - Added `RAR`: `application/vnd.rar`, extension `.rar`.
+  - Added `EPUB`: `application/epub+zip`, extension `.epub`.
+  - Added `OPF`: `application/oebps-package+xml`, extension `.opf`.
+  - Added `XHTML`: `application/xhtml+xml`, extension `.xhtml`.
+
+### Trait Implementations
+
+  * Implemented `Responder` for `Box<T: Responder + Sized>`.
+  * Implemented `FromForm` for `Arc<T>`.
+  * Implemented `Fairing` for `Arc<dyn Fairing>`.
+
+### Updated Dependencies
+
+  * Updated `syn` to `2`.
+  * Updated `diesel` to `2.0`.
+  * Updated `sqlx` to `0.6`.
+  * Updated `notify` to `5.0`.
+  * Updated `criterion` to `0.4`.
+  * Updated `deadpool-redis` to `0.11`.
+  * Updated `normpath` from to `1`.
+  * Updated `cookie` to `0.17`.
+  * Replaced `atty` with `is-terminal`.
+
+## Infrastructure
+
+  * UI tests are now allowed to fail by the CI to avoid false negatives.
+  * Fixed many typos, errors, and broken links throughout docs and examples.
+  * The GitHub CI workflow was updated to use maintained actions.
+
+[`Metadata::render()`]: https://api.rocket.rs/v0.5-rc/rocket_dyn_templates/struct.Metadata.html#method.render
+[`pool()`]: https://api.rocket.rs/v0.5-rc/rocket_sync_db_pools/example/struct.ExampleDb.html#method.pool
+[`Request::client_ip()`]: https://api.rocket.rs/v0.5-rc/rocket/request/struct.Request.html#method.client_ip
+[`max_blocking`]: https://api.rocket.rs/v0.5-rc/rocket/struct.Config.html#structfield.max_blocking
+[`ip_header`]: https://api.rocket.rs/v0.5-rc/rocket/struct.Config.html#structfield.ip_header
+
 # Version 0.5.0-rc.2 (May 09, 2022)
 
 ## Major Features and Improvements
@@ -69,7 +147,7 @@
   * Rocket now uses the 2021 edition of Rust.
 
 [`(ContentType, T)`]: https://api.rocket.rs/v0.5-rc/rocket/response/content/index.html#usage
-[v0.4 to v0.5 migration guide]: https://rocket.rs/v0.5-rc/guide/upgrading-from-0.4/
+[v0.4 to v0.5 migration guide]: https://rocket.rs/v0.5-rc/guide/upgrading/
 [FAQ]: https://rocket.rs/v0.5-rc/guide/faq/
 [`Rocket::launch()`]: https://api.rocket.rs/v0.5-rc/rocket/struct.Rocket.html#method.launch
 [`ErrorKind::Shutdown`]: https://api.rocket.rs/v0.5-rc/rocket/error/enum.ErrorKind.html#variant.Shutdown
@@ -2168,7 +2246,7 @@ the Rocket APIs. They are summarized through the following API changes:
   * Added `FromData` conversion trait and default implementation.
   * `FromData` is used to automatically derive the `data` parameter.
   * `Responder`s are now final: they cannot forward to other requests.
-  * `Responser`s may only forward to catchers.
+  * `Responder`s may only forward to catchers.
 
 ## Breaking
 

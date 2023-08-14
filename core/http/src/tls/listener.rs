@@ -40,7 +40,7 @@ pub struct TlsListener {
 ///
 /// To work around this, we "lie" when `peer_certificates()` are requested and
 /// always return `Some(Certificates)`. Internally, `Certificates` is an
-/// `Arc<Storage<Vec<CertificateData>>>`, effectively a shared, thread-safe,
+/// `Arc<InitCell<Vec<CertificateData>>>`, effectively a shared, thread-safe,
 /// `OnceCell`. The cell is initially empty and is filled as soon as the
 /// handshake is complete. If the certificate data were to be requested prior to
 /// this point, it would be empty. However, in Rocket, we only request
@@ -86,11 +86,11 @@ impl TlsListener {
 
         let client_auth = match c.ca_certs {
             Some(ref mut ca_certs) => match load_ca_certs(ca_certs) {
-                Ok(ca_roots) if c.mandatory_mtls => AllowAnyAuthenticatedClient::new(ca_roots),
-                Ok(ca_roots) => AllowAnyAnonymousOrAuthenticatedClient::new(ca_roots),
+                Ok(ca) if c.mandatory_mtls => AllowAnyAuthenticatedClient::new(ca).boxed(),
+                Ok(ca) => AllowAnyAnonymousOrAuthenticatedClient::new(ca).boxed(),
                 Err(e) => return Err(io::Error::new(e.kind(), format!("bad CA cert(s): {}", e))),
             },
-            None => NoClientAuth::new(),
+            None => NoClientAuth::boxed(),
         };
 
         let mut tls_config = ServerConfig::builder()

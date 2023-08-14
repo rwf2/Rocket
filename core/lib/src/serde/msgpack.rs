@@ -4,12 +4,12 @@
 //!
 //! # Enabling
 //!
-//! This module is only available when the `json` feature is enabled. Enable it
-//! in `Cargo.toml` as follows:
+//! This module is only available when the `msgpack` feature is enabled. Enable
+//! it in `Cargo.toml` as follows:
 //!
 //! ```toml
 //! [dependencies.rocket]
-//! version = "0.5.0-rc.2"
+//! version = "=0.5.0-rc.3"
 //! features = ["msgpack"]
 //! ```
 //!

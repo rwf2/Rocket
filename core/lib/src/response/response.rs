@@ -1,9 +1,13 @@
 use std::{fmt, str};
 use std::borrow::Cow;
+use std::collections::HashMap;
+use std::pin::Pin;
 
 use tokio::io::{AsyncRead, AsyncSeek};
 
 use crate::http::{Header, HeaderMap, Status, ContentType, Cookie};
+use crate::http::uncased::{Uncased, AsUncased};
+use crate::data::IoHandler;
 use crate::response::Body;
 
 /// Builder for the [`Response`] type.
@@ -261,6 +265,48 @@ impl<'r> Builder<'r> {
         self
     }
 
+    /// Registers `handler` as the I/O handler for upgrade protocol `protocol`.
+    ///
+    /// This is equivalent to [`Response::add_upgrade()`].
+    ///
+    /// **NOTE**: Responses registering I/O handlers for upgraded protocols
+    /// **should not** set the response status to `101 Switching Protocols`, nor set the
+    /// `Connection` or `Upgrade` headers. Rocket automatically sets these
+    /// headers as needed. See [`Response`#upgrading] for details.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use std::pin::Pin;
+    ///
+    /// use rocket::Response;
+    /// use rocket::data::{IoHandler, IoStream};
+    /// use rocket::tokio::io;
+    ///
+    /// struct EchoHandler;
+    ///
+    /// #[rocket::async_trait]
+    /// impl IoHandler for EchoHandler {
+    ///     async fn io(self: Pin<Box<Self>>, io: IoStream) -> io::Result<()> {
+    ///         let (mut reader, mut writer) = io::split(io);
+    ///         io::copy(&mut reader, &mut writer).await?;
+    ///         Ok(())
+    ///     }
+    /// }
+    ///
+    /// let response = Response::build()
+    ///     .upgrade("raw-echo", EchoHandler)
+    ///     .streamed_body(std::io::Cursor::new("We didn't upgrade!"))
+    ///     .finalize();
+    /// ```
+    #[inline(always)]
+    pub fn upgrade<P, H>(&mut self, protocol: P, handler: H) -> &mut Builder<'r>
+        where P: Into<Uncased<'r>>, H: IoHandler + 'r
+    {
+        self.response.add_upgrade(protocol.into(), handler);
+        self
+    }
+
     /// Sets the max chunk size of a body, if any, to `size`.
     ///
     /// See [`Response::set_max_chunk_size()`] for notes.
@@ -407,12 +453,42 @@ impl<'r> Builder<'r> {
 /// A response, as returned by types implementing
 /// [`Responder`](crate::response::Responder).
 ///
-/// See [`Builder`] for docs on how a `Response` is typically created.
+/// See [`Builder`] for docs on how a `Response` is typically created and the
+/// [module docs](crate::response) for notes on composing responses
+///
+/// ## Upgrading
+///
+/// A response may optionally register [`IoHandler`]s for upgraded requests via
+/// [`Response::add_upgrade()`] or the corresponding builder method
+/// [`Builder::upgrade()`]. If the incoming request 1) requests an upgrade via a
+/// `Connection: Upgrade` header _and_ 2) includes a protocol in its `Upgrade`
+/// header that is registered by the returned `Response`, the connection will be
+/// upgraded. An upgrade response is sent to the client, and the registered
+/// `IoHandler` for the client's preferred protocol is invoked with an
+/// [`IoStream`](crate::data::IoStream) representing a raw byte stream to the
+/// client. Note that protocol names are treated case-insensitively during
+/// matching.
+///
+/// If a connection is upgraded, Rocket automatically set the following in the
+/// upgrade response:
+///   * The response status to `101 Switching Protocols`.
+///   * The `Connection: Upgrade` header.
+///   * The `Upgrade` header's value to the selected protocol.
+///
+/// As such, a response **should never** set a `101` status nor the `Connection`
+/// or `Upgrade` headers: Rocket handles this automatically. Instead, it should
+/// set a status and headers to use in case the connection is not upgraded,
+/// either due to an error or because the client did not request an upgrade.
+///
+/// If a connection _is not_ upgraded due to an error, even though there was a
+/// matching, registered protocol, the `IoHandler` is not invoked, and the
+/// original response is sent to the client without alteration.
 #[derive(Default)]
 pub struct Response<'r> {
     status: Option<Status>,
     headers: HeaderMap<'r>,
     body: Body<'r>,
+    upgrade: HashMap<Uncased<'r>, Pin<Box<dyn IoHandler + 'r>>>,
 }
 
 impl<'r> Response<'r> {
@@ -721,6 +797,67 @@ impl<'r> Response<'r> {
         &self.body
     }
 
+    /// Returns `Ok(Some(_))` if `self` contains a suitable handler for any of
+    /// the comma-separated protocols any of the strings in `I`. Returns
+    /// `Ok(None)` if `self` doesn't support any kind of upgrade. Returns
+    /// `Err(_)` if `protocols` is non-empty but no match was found in `self`.
+    pub(crate) fn take_upgrade<I: Iterator<Item = &'r str>>(
+        &mut self,
+        protocols: I
+    ) -> Result<Option<(Uncased<'r>, Pin<Box<dyn IoHandler + 'r>>)>, ()> {
+        if self.upgrade.is_empty() {
+            return Ok(None);
+        }
+
+        let mut protocols = protocols.peekable();
+        let have_protocols = protocols.peek().is_some();
+        let found = protocols
+            .flat_map(|v| v.split(',').map(str::trim))
+            .find_map(|p| self.upgrade.remove_entry(p.as_uncased()));
+
+        match found {
+            Some(handler) => Ok(Some(handler)),
+            None if have_protocols => Err(()),
+            None => Ok(None)
+        }
+    }
+
+    /// Returns the [`IoHandler`] for the protocol `proto`.
+    ///
+    /// Returns `Some` if such a handler was registered via
+    /// [`Response::add_upgrade()`] or the corresponding builder method
+    /// [`upgrade()`](Builder::upgrade()). Otherwise returns `None`.
+    ///
+    /// ```rust
+    /// use std::pin::Pin;
+    ///
+    /// use rocket::Response;
+    /// use rocket::data::{IoHandler, IoStream};
+    /// use rocket::tokio::io;
+    ///
+    /// struct EchoHandler;
+    ///
+    /// #[rocket::async_trait]
+    /// impl IoHandler for EchoHandler {
+    ///     async fn io(self: Pin<Box<Self>>, io: IoStream) -> io::Result<()> {
+    ///         let (mut reader, mut writer) = io::split(io);
+    ///         io::copy(&mut reader, &mut writer).await?;
+    ///         Ok(())
+    ///     }
+    /// }
+    ///
+    /// # rocket::async_test(async {
+    /// let mut response = Response::new();
+    /// assert!(response.upgrade("raw-echo").is_none());
+    ///
+    /// response.add_upgrade("raw-echo", EchoHandler);
+    /// assert!(response.upgrade("raw-echo").is_some());
+    /// # })
+    /// ```
+    pub fn upgrade(&mut self, proto: &str) -> Option<Pin<&mut (dyn IoHandler + 'r)>> {
+        self.upgrade.get_mut(proto.as_uncased()).map(|h| h.as_mut())
+    }
+
     /// Returns a mutable borrow of the body of `self`, if there is one. A
     /// mutable borrow allows for reading the body.
     ///
@@ -807,12 +944,61 @@ impl<'r> Response<'r> {
         self.body = Body::with_unsized(body);
     }
 
+    /// Registers `handler` as the I/O handler for upgrade protocol `protocol`.
+    ///
+    /// Responses registering I/O handlers for upgraded protocols **should not**
+    /// set the response status to `101`, nor set the `Connection` or `Upgrade`
+    /// headers. Rocket automatically sets these headers as needed. See
+    /// [`Response`#upgrading] for details.
+    ///
+    /// If a handler was previously registered for `protocol`, this `handler`
+    /// replaces it. If the connection is upgraded to `protocol`, the last
+    /// `handler` registered for the protocol is used to handle the connection.
+    /// See [`IoHandler`] for details on implementing an I/O handler. For
+    /// details on connection upgrading, see [`Response`#upgrading].
+    ///
+    /// [`Response`#upgrading]: Response#upgrading
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use std::pin::Pin;
+    ///
+    /// use rocket::Response;
+    /// use rocket::data::{IoHandler, IoStream};
+    /// use rocket::tokio::io;
+    ///
+    /// struct EchoHandler;
+    ///
+    /// #[rocket::async_trait]
+    /// impl IoHandler for EchoHandler {
+    ///     async fn io(self: Pin<Box<Self>>, io: IoStream) -> io::Result<()> {
+    ///         let (mut reader, mut writer) = io::split(io);
+    ///         io::copy(&mut reader, &mut writer).await?;
+    ///         Ok(())
+    ///     }
+    /// }
+    ///
+    /// # rocket::async_test(async {
+    /// let mut response = Response::new();
+    /// assert!(response.upgrade("raw-echo").is_none());
+    ///
+    /// response.add_upgrade("raw-echo", EchoHandler);
+    /// assert!(response.upgrade("raw-echo").is_some());
+    /// # })
+    /// ```
+    pub fn add_upgrade<N, H>(&mut self, protocol: N, handler: H)
+        where N: Into<Uncased<'r>>, H: IoHandler + 'r
+    {
+        self.upgrade.insert(protocol.into(), Box::pin(handler));
+    }
+
     /// Sets the body's maximum chunk size to `size` bytes.
     ///
     /// The default max chunk size is [`Body::DEFAULT_MAX_CHUNK`]. The max chunk
     /// size is a property of the body and is thus reset whenever a body is set
     /// via [`Response::set_streamed_body()`], [`Response::set_sized_body()`],
-    /// or the corresponding builer methods.
+    /// or the corresponding builder methods.
     ///
     /// This setting does not typically need to be changed. Configuring a high
     /// value can result in high memory usage. Similarly, configuring a low

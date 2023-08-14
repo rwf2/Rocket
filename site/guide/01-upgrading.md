@@ -17,11 +17,10 @@ developers wishing to migrate their applications to Rocket v0.5.
 ! note Don't panic!
 
   Simply upgrading Rocket's version string to the `0.5` series will result in
-  _many_ `rustc` compiler errors. But don't let this phase you! The vast
-  majority of changes are simple renames and `#[async_trait]` attributions which
-  manifest in a cascading of errors. As such, resolving _one_ top-level issue,
-  typically requiring minimal, trivial changes, often resolves _many_ errors in
-  one go.
+  _many_ `rustc` compiler errors. But don't let this faze you! The vast majority
+  of changes are simple renames and `#[async_trait]` attributions which manifest
+  in a cascading of errors. As such, resolving _one_ top-level issue, typically
+  requiring minimal, trivial changes, often resolves _many_ errors in one go.
 
 ## Crate Organization
 
@@ -39,7 +38,7 @@ private cookies, you _must_ enable the `secrets` feature in `Cargo.toml`:
 
 ```toml
 [dependencies]
-rocket = { version = "0.5.0-rc.2", features = ["secrets"] }
+rocket = { version = "=0.5.0-rc.3", features = ["secrets"] }
 ```
 
 ### Contrib Deprecation
@@ -60,8 +59,8 @@ to `Cargo.toml`:
 [dependencies]
 - rocket = "0.4"
 - rocket_contrib = { version = "0.4", features = ["json"], default-features = false }
-+ rocket = { version = "0.5.0-rc.2", features = ["json"] }
-+ rocket_dyn_templates = { version = "0.1.0-rc.2", features = ["tera"] }
++ rocket = { version = "=0.5.0-rc.3", features = ["json"] }
++ rocket_dyn_templates = { version = "=0.1.0-rc.3", features = ["tera"] }
 ```
 
 ! note: `rocket_dyn_templates` (and co.) _does not_ follow in version lock-step
@@ -117,7 +116,7 @@ rustup override set stable
 Using the stable release channel ensures that _no_ breakages will occur when
 upgrading your Rust compiler or Rocket. That being said, Rocket continues to
 take advantage of features only present in the nightly channel. As a result, the
-development experience will be superior on nightly for the forseeable future.
+development experience will be superior on nightly for the foreseeable future.
 For example, compiler diagnostics on `nightly` are more detailed and accurate:
 
 <details>
@@ -363,7 +362,7 @@ most important of these changes here. All users _must_:
 
   * Replace `ROCKET_ENV` environment variable use with `ROCKET_PROFILE`.
   * Replace `ROCKET_LOG` environment variable with `ROCKET_LOG_LEVEL`.
-  * Use only IP addreses for the `address` configuration parameter.
+  * Use only IP addresses for the `address` configuration parameter.
   * Replace the `dev` or `development` profile with `debug`.
   * Note that the `stage`, `staging`, `prod`, and `production` profiles carry no
     special meaning in v0.5.

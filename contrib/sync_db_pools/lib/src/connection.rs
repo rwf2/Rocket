@@ -195,7 +195,11 @@ impl<K, C: Poolable> Drop for Connection<K, C> {
 impl<K, C: Poolable> Drop for ConnectionPool<K, C> {
     fn drop(&mut self) {
         let pool = self.pool.take();
-        tokio::task::spawn_blocking(move || drop(pool));
+        // Only use spawn_blocking if the Tokio runtime is still available
+        if let Ok(handle) = tokio::runtime::Handle::try_current() {
+            handle.spawn_blocking(move || drop(pool));
+        }
+        // Otherwise the pool will be dropped on the current thread
     }
 }
 
@@ -220,10 +224,13 @@ impl<K: 'static, C: Poolable> Sentinel for Connection<K, C> {
         use rocket::yansi::Paint;
 
         if rocket.state::<ConnectionPool<K, C>>().is_none() {
-            let conn = Paint::default(std::any::type_name::<K>()).bold();
-            let fairing = Paint::default(format!("{}::fairing()", conn)).wrap().bold();
-            error!("requesting `{}` DB connection without attaching `{}`.", conn, fairing);
-            info_!("Attach `{}` to use database connection pooling.", fairing);
+            let conn = std::any::type_name::<K>().primary().bold();
+            error!("requesting `{}` DB connection without attaching `{}{}`.",
+                conn, conn.linger(), "::fairing()".clear());
+
+            info_!("Attach `{}{}` to use database connection pooling.",
+                conn.linger(), "::fairing()".clear());
+
             return true;
         }
 

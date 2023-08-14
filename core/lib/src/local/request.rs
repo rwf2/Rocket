@@ -191,8 +191,47 @@ macro_rules! pub_request_impl {
         self
     }
 
-    /// Sets the body data of the request.
+    /// Set mTLS client certificates to send along with the request.
     ///
+    /// If the request already contained certificates, they are replaced with
+    /// thsoe in `reader.`
+    ///
+    /// `reader` is expected to be PEM-formatted and contain X509 certificates.
+    /// If it contains more than one certificate, the entire chain is set on the
+    /// request. If it contains items other than certificates, the certificate
+    /// chain up to the first non-certificate item is set on the request. If
+    /// `reader` is syntactically invalid PEM, certificates are cleared on the
+    /// request.
+    ///
+    /// The type `C` can be anything that implements [`std::io::Read`]. This
+    /// includes: `&[u8]`, `File`, `&File`, `Stdin`, and so on. To read a file
+    /// in at compile-time, use [`include_bytes!()`].
+    ///
+    /// ```rust
+    /// use std::fs::File;
+    ///
+    #[doc = $import]
+    /// use rocket::fs::relative;
+    ///
+    /// # Client::_test(|_, request, _| {
+    /// let request: LocalRequest = request;
+    /// let path = relative!("../../examples/tls/private/ed25519_cert.pem");
+    /// let req = request.identity(File::open(path).unwrap());
+    /// # });
+    /// ```
+    #[cfg(feature = "mtls")]
+    #[cfg_attr(nightly, doc(cfg(feature = "mtls")))]
+    pub fn identity<C: std::io::Read>(mut self, reader: C) -> Self {
+        use crate::http::{tls::util::load_certs, private::Certificates};
+
+        let mut reader = std::io::BufReader::new(reader);
+        let certs = load_certs(&mut reader).map(Certificates::from);
+        self._request_mut().connection.client_certificates = certs.ok();
+        self
+    }
+
+    /// Sets the body data of the request.
+    ///core/lib/src/local/request.rs
     /// # Examples
     ///
     /// ```rust

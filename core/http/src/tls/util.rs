@@ -16,16 +16,22 @@ pub fn load_certs(reader: &mut dyn io::BufRead) -> io::Result<Vec<Certificate>> 
 pub fn load_private_key(reader: &mut dyn io::BufRead) -> io::Result<PrivateKey> {
     // "rsa" (PKCS1) PEM files have a different first-line header than PKCS8
     // PEM files, use that to determine the parse function to use.
-    let mut first_line = String::new();
-    reader.read_line(&mut first_line)?;
+    let mut header = String::new();
+    let private_keys_fn = loop {
+        header.clear();
+        if reader.read_line(&mut header)? == 0 {
+            return Err(err("failed to find key header; supported formats are: RSA, PKCS8, SEC1"));
+        }
 
-    let private_keys_fn = match first_line.trim_end() {
-        "-----BEGIN RSA PRIVATE KEY-----" => rustls_pemfile::rsa_private_keys,
-        "-----BEGIN PRIVATE KEY-----" => rustls_pemfile::pkcs8_private_keys,
-        _ => return Err(err("invalid key header; supported formats are: RSA, PKCS8"))
+        break match header.trim_end() {
+            "-----BEGIN RSA PRIVATE KEY-----" => rustls_pemfile::rsa_private_keys,
+            "-----BEGIN PRIVATE KEY-----" => rustls_pemfile::pkcs8_private_keys,
+            "-----BEGIN EC PRIVATE KEY-----" => rustls_pemfile::ec_private_keys,
+            _ => continue,
+        };
     };
 
-    let key = private_keys_fn(&mut Cursor::new(first_line).chain(reader))
+    let key = private_keys_fn(&mut Cursor::new(header).chain(reader))
         .map_err(|_| err("invalid key file"))
         .and_then(|mut keys| match keys.len() {
             0 => Err(err("no valid keys found; is the file malformed?")),

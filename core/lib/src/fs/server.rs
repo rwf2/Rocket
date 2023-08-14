@@ -24,9 +24,8 @@ use crate::fs::NamedFile;
 ///
 /// # Example
 ///
-/// To serve files from the `/static` directory on the local file system at the
-/// `/public` path, allowing `index.html` files to be used to respond to
-/// requests for a directory (the default), you might write the following:
+/// Serve files from the `/static` directory on the local file system at the
+/// `/public` path with the [default options](#impl-Default):
 ///
 /// ```rust,no_run
 /// # #[macro_use] extern crate rocket;
@@ -38,18 +37,18 @@ use crate::fs::NamedFile;
 /// }
 /// ```
 ///
-/// With this, requests for files at `/public/<path..>` will be handled by
-/// returning the contents of `/static/<path..>`. Requests for _directories_ at
+/// Requests for files at `/public/<path..>` will be handled by returning the
+/// contents of `/static/<path..>`. Requests for _directories_ at
 /// `/public/<directory>` will be handled by returning the contents of
 /// `/static/<directory>/index.html`.
 ///
 /// ## Relative Paths
 ///
 /// In the example above, `/static` is an absolute path. If your static files
-/// are stored relative to your crate and your project is managed by Rocket, use
-/// the [`relative!`] macro to obtain a path that is relative to your
-/// crate's root. For example, to serve files in the `static` subdirectory of
-/// your crate at `/`, you might write:
+/// are stored relative to your crate and your project is managed by Cargo, use
+/// the [`relative!`] macro to obtain a path that is relative to your crate's
+/// root. For example, to serve files in the `static` subdirectory of your crate
+/// at `/`, you might write:
 ///
 /// ```rust,no_run
 /// # #[macro_use] extern crate rocket;
@@ -148,12 +147,12 @@ impl FileServer {
         if !options.contains(Options::Missing) {
             if !options.contains(Options::IndexFile) && !path.is_dir() {
                 let path = path.display();
-                error!("FileServer path '{}' is not a directory.", Paint::white(path));
+                error!("FileServer path '{}' is not a directory.", path.primary());
                 warn_!("Aborting early to prevent inevitable handler failure.");
                 panic!("invalid directory: refusing to continue");
             } else if !path.exists() {
                 let path = path.display();
-                error!("FileServer path '{}' is not a file.", Paint::white(path));
+                error!("FileServer path '{}' is not a file.", path.primary());
                 warn_!("Aborting early to prevent inevitable handler failure.");
                 panic!("invalid file: refusing to continue");
             }
@@ -263,8 +262,8 @@ pub struct Options(u8);
 impl Options {
     /// All options disabled.
     ///
-    /// This is different than [`Options::default()`](#impl-Default), which
-    /// enables `Options::Index`.
+    /// Note that this is different than [`Options::default()`](#impl-Default),
+    /// which enables options.
     pub const None: Options = Options(0);
 
     /// Respond to requests for a directory with the `index.html` file in that
@@ -289,13 +288,13 @@ impl Options {
     /// Normalizes directory requests by redirecting requests to directory paths
     /// without a trailing slash to ones with a trailing slash.
     ///
+    /// **Enabled by default.**
+    ///
     /// When enabled, the [`FileServer`] handler will respond to requests for a
     /// directory without a trailing `/` with a permanent redirect (308) to the
     /// same path with a trailing `/`. This ensures relative URLs within any
     /// document served from that directory will be interpreted relative to that
     /// directory rather than its parent.
-    ///
-    /// **Disabled by default.**
     ///
     /// # Example
     ///
@@ -308,14 +307,21 @@ impl Options {
     ///     └── index.html
     /// ```
     ///
-    /// ...with `FileServer::from("static")`, both requests to `/foo` and
-    /// `/foo/` will serve `static/foo/index.html`. If `index.html` references
-    /// `cat.jpeg` as a relative URL, the browser will request `/cat.jpeg`
-    /// (`static/cat.jpeg`) when the request for `/foo` was handled and
-    /// `/foo/cat.jpeg` (`static/foo/cat.jpeg`) if `/foo/` was handled. As a
-    /// result, the request in the former case will fail. To avoid this,
-    /// `NormalizeDirs` will redirect requests to `/foo` to `/foo/` if the file
-    /// that would be served is a directory.
+    /// And the following server:
+    ///
+    /// ```text
+    /// rocket.mount("/", FileServer::from("static"))
+    /// ```
+    ///
+    /// ...requests to `example.com/foo` will be redirected to
+    /// `example.com/foo/`. If `index.html` references `cat.jpeg` as a relative
+    /// URL, the browser will resolve the URL to `example.com/foo/cat.jpeg`,
+    /// which in-turn Rocket will match to `/static/foo/cat.jpg`.
+    ///
+    /// Without this option, requests to `example.com/foo` would not be
+    /// redirected. `index.html` would be rendered, and the relative link to
+    /// `cat.jpeg` would be resolved by the browser as `example.com/cat.jpeg`.
+    /// Rocket would thus try to find `/static/cat.jpeg`, which does not exist.
     pub const NormalizeDirs: Options = Options(1 << 2);
 
     /// Allow serving a file instead of a directory.
@@ -380,10 +386,10 @@ impl Options {
     }
 }
 
-/// The default set of options: `Options::Index`.
+/// The default set of options: `Options::Index | Options:NormalizeDirs`.
 impl Default for Options {
     fn default() -> Self {
-        Options::Index
+        Options::Index | Options::NormalizeDirs
     }
 }
 

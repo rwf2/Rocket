@@ -5,10 +5,10 @@ use std::fmt;
 /// guard.
 #[derive(Debug)]
 pub enum Error<A, B = A> {
-    /// An error that occured during database/pool initialization.
+    /// An error that occurred during database/pool initialization.
     Init(A),
 
-    /// An error that ocurred while retrieving a connection from the pool.
+    /// An error that occurred while retrieving a connection from the pool.
     Get(B),
 
     /// A [`Figment`](crate::figment::Figment) configuration error.

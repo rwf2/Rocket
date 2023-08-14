@@ -163,7 +163,7 @@ impl Parse for Args {
         }
 
         // Parse arguments. Ensure both types of args were not used at once.
-        let args: Punctuated<Arg, Token![,]> = input.parse_terminated(Arg::parse)?;
+        let args = input.parse_terminated(Arg::parse, Token![,])?;
         let mut first_is_named = None;
         for arg in &args {
             if let Some(first_is_named) = first_is_named {
@@ -314,11 +314,11 @@ impl Parse for InternalUriParams {
 
         let content;
         syn::parenthesized!(content in input);
-        let fn_args: Punctuated<FnArg, Token![,]> = content.parse_terminated(FnArg::parse)?;
+        let fn_args = content.parse_terminated(FnArg::parse, Token![,])?;
         let fn_args = fn_args.into_iter().collect();
 
         input.parse::<Token![,]>()?;
-        let uri_params = input.parse::<RoutedUri>()?;
+        let uri_mac = input.parse::<RoutedUri>()?;
 
         let span = route_uri_str.subspan(1..route_uri.path().len() + 1);
         let path_params = Parameter::parse_many::<fmt::Path>(route_uri.path().as_str(), span)
@@ -334,13 +334,7 @@ impl Parse for InternalUriParams {
                 .collect::<Vec<_>>()
         }).unwrap_or_default();
 
-        Ok(InternalUriParams {
-            route_uri,
-            path_params,
-            query_params,
-            fn_args,
-            uri_mac: uri_params
-        })
+        Ok(InternalUriParams { route_uri, path_params, query_params, fn_args, uri_mac })
     }
 }
 

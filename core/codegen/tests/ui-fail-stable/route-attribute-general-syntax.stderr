@@ -7,28 +7,28 @@ error: missing expected parameter: `uri`
   = note: this error originates in the attribute macro `get` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: expected `fn`
-         --- help: #[get] can only be used on functions
+       = help: #[get] can only be used on functions
  --> tests/ui-fail-stable/route-attribute-general-syntax.rs:9:1
   |
 9 | struct S;
   | ^^^^^^
 
 error: expected `fn`
-         --- help: #[get] can only be used on functions
+       = help: #[get] can only be used on functions
   --> tests/ui-fail-stable/route-attribute-general-syntax.rs:12:1
    |
 12 | enum A {  }
    | ^^^^
 
 error: expected `fn`
-         --- help: #[get] can only be used on functions
+       = help: #[get] can only be used on functions
   --> tests/ui-fail-stable/route-attribute-general-syntax.rs:15:1
    |
 15 | trait Foo {  }
    | ^^^^^
 
 error: expected `fn`
-         --- help: #[get] can only be used on functions
+       = help: #[get] can only be used on functions
   --> tests/ui-fail-stable/route-attribute-general-syntax.rs:18:1
    |
 18 | impl S {  }
@@ -62,10 +62,10 @@ error: expected key/value `key = value`
   --> tests/ui-fail-stable/route-attribute-general-syntax.rs:33:12
    |
 33 | #[get("/", ...)]
-   |            ^^^
+   |            ^
 
 error: handler arguments must be named
-         --- help: to name an ignored handler argument, use `_name`
+       = help: to name an ignored handler argument, use `_name`
   --> tests/ui-fail-stable/route-attribute-general-syntax.rs:39:7
    |
 39 | fn c1(_: usize) {}
@@ -168,35 +168,35 @@ error: invalid or unknown media type
    |                     ^^^^^^^^^^^
 
 error: invalid HTTP method for route handlers
-         --- help: method must be one of: `GET`, `PUT`, `POST`, `DELETE`, `HEAD`, `PATCH`, `OPTIONS`
+       = help: method must be one of: `GET`, `PUT`, `POST`, `DELETE`, `HEAD`, `PATCH`, `OPTIONS`
   --> tests/ui-fail-stable/route-attribute-general-syntax.rs:95:9
    |
 95 | #[route(CONNECT, "/")]
    |         ^^^^^^^
 
 error: invalid HTTP method
-         --- help: method must be one of: `GET`, `PUT`, `POST`, `DELETE`, `HEAD`, `PATCH`, `OPTIONS`
+       = help: method must be one of: `GET`, `PUT`, `POST`, `DELETE`, `HEAD`, `PATCH`, `OPTIONS`
   --> tests/ui-fail-stable/route-attribute-general-syntax.rs:98:9
    |
 98 | #[route(FIX, "/")]
    |         ^^^
 
 error: expected identifier, found string literal
-         --- help: method must be one of: `GET`, `PUT`, `POST`, `DELETE`, `HEAD`, `PATCH`, `OPTIONS`
+       = help: method must be one of: `GET`, `PUT`, `POST`, `DELETE`, `HEAD`, `PATCH`, `OPTIONS`
    --> tests/ui-fail-stable/route-attribute-general-syntax.rs:101:9
     |
 101 | #[route("hi", "/")]
     |         ^^^^
 
 error: expected identifier, found string literal
-         --- help: method must be one of: `GET`, `PUT`, `POST`, `DELETE`, `HEAD`, `PATCH`, `OPTIONS`
+       = help: method must be one of: `GET`, `PUT`, `POST`, `DELETE`, `HEAD`, `PATCH`, `OPTIONS`
    --> tests/ui-fail-stable/route-attribute-general-syntax.rs:104:9
     |
 104 | #[route("GET", "/")]
     |         ^^^^^
 
 error: expected identifier, found integer literal
-         --- help: method must be one of: `GET`, `PUT`, `POST`, `DELETE`, `HEAD`, `PATCH`, `OPTIONS`
+       = help: method must be one of: `GET`, `PUT`, `POST`, `DELETE`, `HEAD`, `PATCH`, `OPTIONS`
    --> tests/ui-fail-stable/route-attribute-general-syntax.rs:107:9
     |
 107 | #[route(120, "/")]

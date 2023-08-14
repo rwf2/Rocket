@@ -101,8 +101,8 @@ pub use self::cookie::{Cookie, SameSite, Iter};
 /// # #[macro_use] extern crate rocket;
 /// # #[cfg(feature = "secrets")] {
 /// use rocket::http::Status;
-/// use rocket::outcome::IntoOutcome;
 /// use rocket::request::{self, Request, FromRequest};
+/// use rocket::outcome::IntoOutcome;
 ///
 /// // In practice, we'd probably fetch the user from the database.
 /// struct User(usize);
@@ -116,7 +116,7 @@ pub use self::cookie::{Cookie, SameSite, Iter};
 ///             .get_private("user_id")
 ///             .and_then(|c| c.value().parse().ok())
 ///             .map(|id| User(id))
-///             .or_forward(())
+///             .or_forward(Status::Unauthorized)
 ///     }
 /// }
 /// # }
@@ -243,8 +243,9 @@ impl<'a> CookieJar<'a> {
     /// container with the name `name`, irrespective of whether the cookie was
     /// private or not. If no such cookie exists, returns `None`.
     ///
-    /// This _does not_ return cookies sent by the client in a request. To
-    /// retrieve such cookies, using [`CookieJar::get()`] or
+    /// In general, due to performance overhead, calling this method should be
+    /// avoided if it is known that a cookie called `name` is not pending.
+    /// Instead, prefer to use [`CookieJar::get()`] or
     /// [`CookieJar::get_private()`].
     ///
     /// # Example
@@ -268,7 +269,14 @@ impl<'a> CookieJar<'a> {
         }
 
         drop(ops);
-        self.get(name).cloned()
+
+        #[cfg(feature = "secrets")] {
+            self.get_private(name).or_else(|| self.get(name).cloned())
+        }
+
+        #[cfg(not(feature = "secrets"))] {
+            self.get(name).cloned()
+        }
     }
 
     /// Adds `cookie` to this collection.
@@ -278,6 +286,8 @@ impl<'a> CookieJar<'a> {
     ///
     ///    * `path`: `"/"`
     ///    * `SameSite`: `Strict`
+    ///
+    /// Furthermore, if TLS is enabled, the `Secure` cookie flag is set.
     ///
     /// # Example
     ///
@@ -298,7 +308,7 @@ impl<'a> CookieJar<'a> {
     /// }
     /// ```
     pub fn add(&self, mut cookie: Cookie<'static>) {
-        Self::set_defaults(&mut cookie);
+        Self::set_defaults(self.config, &mut cookie);
         self.ops.lock().push(Op::Add(cookie, false));
     }
 
@@ -316,8 +326,9 @@ impl<'a> CookieJar<'a> {
     ///    * `HttpOnly`: `true`
     ///    * `Expires`: 1 week from now
     ///
-    /// These defaults ensure maximum usability and security. For additional
-    /// security, you may wish to set the `secure` flag.
+    /// Furthermore, if TLS is enabled, the `Secure` cookie flag is set. These
+    /// defaults ensure maximum usability and security. For additional security,
+    /// you may wish to set the `secure` flag.
     ///
     /// # Example
     ///
@@ -333,7 +344,7 @@ impl<'a> CookieJar<'a> {
     #[cfg(feature = "secrets")]
     #[cfg_attr(nightly, doc(cfg(feature = "secrets")))]
     pub fn add_private(&self, mut cookie: Cookie<'static>) {
-        Self::set_private_defaults(&mut cookie);
+        Self::set_private_defaults(self.config, &mut cookie);
         self.ops.lock().push(Op::Add(cookie, true));
     }
 
@@ -473,13 +484,18 @@ impl<'a> CookieJar<'a> {
     ///    * `path`: `"/"`
     ///    * `SameSite`: `Strict`
     ///
-    fn set_defaults(cookie: &mut Cookie<'static>) {
+    /// Furthermore, if TLS is enabled, the `Secure` cookie flag is set.
+    fn set_defaults(config: &Config, cookie: &mut Cookie<'static>) {
         if cookie.path().is_none() {
             cookie.set_path("/");
         }
 
         if cookie.same_site().is_none() {
             cookie.set_same_site(SameSite::Strict);
+        }
+
+        if cookie.secure().is_none() && config.tls_enabled() {
+            cookie.set_secure(true);
         }
     }
 
@@ -492,9 +508,10 @@ impl<'a> CookieJar<'a> {
     ///    * `HttpOnly`: `true`
     ///    * `Expires`: 1 week from now
     ///
+    /// Furthermore, if TLS is enabled, the `Secure` cookie flag is set.
     #[cfg(feature = "secrets")]
     #[cfg_attr(nightly, doc(cfg(feature = "secrets")))]
-    fn set_private_defaults(cookie: &mut Cookie<'static>) {
+    fn set_private_defaults(config: &Config, cookie: &mut Cookie<'static>) {
         if cookie.path().is_none() {
             cookie.set_path("/");
         }
@@ -509,6 +526,10 @@ impl<'a> CookieJar<'a> {
 
         if cookie.expires().is_none() {
             cookie.set_expires(time::OffsetDateTime::now_utc() + time::Duration::weeks(1));
+        }
+
+        if cookie.secure().is_none() && config.tls_enabled() {
+            cookie.set_secure(true);
         }
     }
 }

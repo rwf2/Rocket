@@ -45,7 +45,8 @@
 //!   * `map[k:1]=Bob`
 //!   * `people[bob]nickname=Stan`
 //!
-//! See [`FromForm`] for full details on push-parsing and complete examples.
+//! See [`FromForm`] for full details on push-parsing and complete examples, and
+//! [`Form`] for how to accept forms in a request handler.
 
 // ## Maps w/named Fields (`struct`)
 //

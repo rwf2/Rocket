@@ -22,8 +22,13 @@ enum Kind {
 /// ```rust
 /// use rocket::config::Config;
 ///
+/// // NOTE: Don't (!) use this key! Generate your own and keep it private!
+/// //       e.g. via `head -c64 /dev/urandom | base64`
 /// let figment = Config::figment()
-///     .merge(("secret_key", "hPRYyVRiMyxpw5sBB1XeCMN1kFsDCqKvBi2QJxBVHQk="));
+///     # .merge(("secret_key", "hPRYyVRiMyxpw5sBB1XeCMN1kFsDCqKvBi2QJxBVHQk="));
+///     # /*
+///     .merge(("secret_key", "hPrYyЭRiMyµ5sBB1π+CMæ1køFsåqKvBiQJxBVHQk="));
+///     # */
 ///
 /// let config = Config::from(figment);
 /// assert!(!config.secret_key.is_zero());

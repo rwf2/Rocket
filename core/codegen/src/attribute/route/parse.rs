@@ -137,7 +137,7 @@ impl Route {
         }
 
         // Check the validity of function arguments.
-        let span = handler.sig.paren_token.span;
+        let span = handler.sig.paren_token.span.join();
         let mut arguments = Arguments { map: ArgumentMap::new(), span };
         for arg in &handler.sig.inputs {
             if let Some((ident, ty)) = arg.typed() {

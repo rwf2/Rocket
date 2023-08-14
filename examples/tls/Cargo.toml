@@ -6,4 +6,4 @@ edition = "2021"
 publish = false
 
 [dependencies]
-rocket = { path = "../../core/lib", features = ["tls", "mtls"] }
+rocket = { path = "../../core/lib", features = ["tls", "mtls", "secrets"] }

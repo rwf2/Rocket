@@ -106,8 +106,7 @@ use crate::request::Request;
 ///
 /// # Return Value
 ///
-/// A `Responder` returns a `Future` whose output type is a `Result<Response,
-/// Status>`.
+/// A `Responder` returns a `Result<Response, Status>`.
 ///
 ///   * An `Ok(Response)` indicates success. The `Response` will be written out
 ///     to the client.
@@ -135,15 +134,23 @@ use crate::request::Request;
 ///    [`Response::build_from()`] and/or use the [`merge()`](Response::merge())
 ///    or [`join()`](Response::join()) methods on the `Response` or
 ///    `ResponseBuilder` struct. Ensure that you document merging or joining
-///    behavior appropriatse.
+///    behavior appropriately.
 ///
 /// 3. Inspecting Requests
 ///
 ///    While tempting, a `Responder` that varies its functionality based on the
 ///    incoming request sacrifices its functionality being understood based
-///    purely on its type. By implication, gleaming the functionality of a
+///    purely on its type. By implication, gleaning the functionality of a
 ///    _handler_ from its type signature also becomes more difficult. You should
 ///    avoid varying responses based on the `Request` value as much as possible.
+///
+/// 4. Perform `async` I/O in Constructors
+///
+///    The `Responder` trait is not an `async` trait. This is not an oversight.
+///    Instead of performing `async` operations in what would be the
+///    `respond_to` method, perform them in a constructor for the responder. As
+///    an example, see [`NamedFile::open()`](crate::fs::NamedFile::open()),
+///    which performs the requisite I/O for `NamedFile`'s responder.
 ///
 /// ## Lifetimes
 ///

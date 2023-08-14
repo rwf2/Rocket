@@ -206,9 +206,10 @@ fn hello(name: &str, age: u8, cool: bool) { /* ... */ }
 
 What if `cool` isn't a `bool`? Or, what if `age` isn't a `u8`? When a parameter
 type mismatch occurs, Rocket _forwards_ the request to the next matching route,
-if there is any. This continues until a route doesn't forward the request or
-there are no remaining routes to try. When there are no remaining routes, a
-customizable **404 error** is returned.
+if there is any. This continues until a route succeeds or fails, or there are no
+other matching routes to try. When there are no remaining routes, the [error
+catcher](#error-catchers) associated with the status set by the last forwarding
+guard is called.
 
 Routes are attempted in increasing _rank_ order. Rocket chooses a default
 ranking from -12 to -1, detailed in the next section, but a route's rank can also
@@ -436,13 +437,14 @@ We start with two request guards:
 
     The `FromRequest` implementation for `User` checks that a cookie identifies
     a user and returns a `User` value if so. If no user can be authenticated,
-    the guard forwards.
+    the guard forwards with a 401 Unauthorized status.
 
   * `AdminUser`: A user authenticated as an administrator.
 
     The `FromRequest` implementation for `AdminUser` checks that a cookie
     identifies an _administrative_ user and returns an `AdminUser` value if so.
-    If no user can be authenticated, the guard forwards.
+    If no user can be authenticated, the guard forwards with a 401 Unauthorized
+    status.
 
 We now use these two guards in combination with forwarding to implement the
 following three routes, each leading to an administrative control panel at
@@ -486,6 +488,83 @@ authorization failure message is displayed. Finally, if a user isn't signed in,
 the `admin_panel_redirect` route is attempted. Since this route has no guards,
 it always succeeds. The user is redirected to a log in page.
 
+### Fallible Guards
+
+A failing or forwarding guard can be "caught" in handler, preventing it from
+failing or forwarding, via the `Option<T>` and `Result<T, E>` guards. When a
+guard `T` fails or forwards, `Option<T>` will be `None`. If a guard `T` fails
+with error `E`, `Result<T, E>` will be `Err(E)`.
+
+As an example, for the `User` guard above, instead of allowing the guard to
+forward in `admin_panel_user`, we might want to detect it and handle it
+dynamically:
+
+```rust
+# #[macro_use] extern crate rocket;
+# fn main() {}
+
+# type Template = ();
+# type AdminUser = rocket::http::Method;
+# type User = rocket::http::Method;
+# #[get("/login")]
+# fn login() -> Template { /* .. */ }
+
+use rocket::response::Redirect;
+
+#[get("/admin", rank = 2)]
+fn admin_panel_user(user: Option<User>) -> Result<&'static str, Redirect> {
+    let user = user.ok_or_else(|| Redirect::to(uri!(login)))?;
+    Ok("Sorry, you must be an administrator to access this page.")
+}
+```
+
+If the `User` guard forwards or fails, the `Option` will be `None`. If it
+succeeds, it will be `Some(User)`.
+
+For guards that may fail (and not just forward), the `Result<T, E>` guard allows
+retrieving the error type `E` on failure. As an example, when the
+[`mtls::Certificate`] type fails, it reports the reason in an [`mtls::Error`]
+type. The value can be retrieved in a handler by using a `Result<Certificate,
+Error>` guard:
+
+```rust
+# #[macro_use] extern crate rocket;
+# fn main() {}
+
+use rocket::mtls;
+
+#[get("/login")]
+fn login(cert: Result<mtls::Certificate, mtls::Error>) {
+    match cert {
+        Ok(cert) => { /* guard succeeded! value in `cert` */ },
+        Err(e) => { /* guard failed. error in `e` */ },
+    }
+}
+```
+
+It's important to note that `Result<T, E>` forwards if `T` forwards. You can,
+however, chain both catching responders to determine if a guard `T` forwards or
+fails, and retrieve the error if it fails, with `Option<Result<T, E>>`:
+
+```rust
+# #[macro_use] extern crate rocket;
+# fn main() {}
+
+use rocket::mtls;
+
+#[get("/login")]
+fn login(cert: Option<Result<mtls::Certificate, mtls::Error>>) {
+    match cert {
+        Some(Ok(cert)) => { /* guard succeeded! value in `cert` */ },
+        Some(Err(e)) => { /* guard failed. error in `e` */ },
+        None => { /* guard forwarded */ },
+    }
+}
+```
+
+[`mtls::Certificate`]: @api/rocket/mtls/struct.Certificate.html
+[`mtls::Error`]: @api/rocket/mtls/enum.Error.html
+
 ## Cookies
 
 A reference to a [`CookieJar`] is an important, built-in request guard: it
@@ -527,13 +606,13 @@ feature:
 
 ```toml
 ## in Cargo.toml
-rocket = { version = "0.5.0-rc.2", features = ["secrets"] }
+rocket = { version = "=0.5.0-rc.3", features = ["secrets"] }
 ```
 
 The API for retrieving, adding, and removing private cookies is identical except
 that most methods are suffixed with `_private`. These methods are:
-[`get_private`], [`get_pending`], [`add_private`], and [`remove_private`]. An
-example of their usage is below:
+[`get_private`], [`add_private`], and [`remove_private`]. An example of their
+usage is below:
 
 ```rust
 # #[macro_use] extern crate rocket;
@@ -705,7 +784,7 @@ complete example.
   feature can be enabled in the `Cargo.toml`:
 
   `
-  rocket = { version = "0.5.0-rc.2", features = ["json"] }
+  rocket = { version = "=0.5.0-rc.3", features = ["json"] }
   `
 
 ### Temporary Files
@@ -1595,7 +1674,7 @@ MyForm {
 ### Arbitrary Collections
 
 _Any_ collection can be expressed with any level of arbitrary nesting, maps, and
-sequences. Consider the extravagently contrived type:
+sequences. Consider the extravagantly contrived type:
 
 ```rust
 use std::collections::{BTreeMap, HashMap};

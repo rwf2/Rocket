@@ -105,7 +105,7 @@ fn state(hit_count: &State<HitCount>, config: &State<Config>) { /* .. */ }
   refuse to start your application. This prevents what would have been an
   unmanaged state runtime error. Unmanaged state is detected at runtime through
   [_sentinels_](@api/rocket/trait.Sentinel.html), so there are limitations. If a
-  limitation is hit, Rocket still won't call an the offending route. Instead,
+  limitation is hit, Rocket still won't call the offending route. Instead,
   Rocket will log an error message and return a **500** error to the client.
 
 You can find a complete example using the `HitCount` structure in the [state
@@ -124,6 +124,7 @@ retrieves `MyConfig` from managed state using both methods:
 use rocket::State;
 use rocket::request::{self, Request, FromRequest};
 use rocket::outcome::IntoOutcome;
+use rocket::http::Status;
 
 # struct MyConfig { user_val: String };
 struct Item<'r>(&'r str);
@@ -140,13 +141,12 @@ impl<'r> FromRequest<'r> for Item<'r> {
         // Or alternatively, using `Rocket::state()`:
         let outcome = request.rocket().state::<MyConfig>()
             .map(|my_config| Item(&my_config.user_val))
-            .or_forward(());
+            .or_forward(Status::InternalServerError);
 
         outcome
     }
 }
 ```
-
 
 [`Request::guard()`]: @api/rocket/struct.Request.html#method.guard
 [`Rocket::state()`]: @api/rocket/struct.Rocket.html#method.state
@@ -231,7 +231,7 @@ in three simple steps:
 
    ```toml
    [dependencies.rocket_db_pools]
-   version = "0.1.0-rc.2"
+   version = "=0.1.0-rc.3"
    features = ["sqlx_sqlite"]
    ```
 
@@ -294,12 +294,12 @@ features enabled in `Cargo.toml`:
 
 ```toml
 [dependencies.sqlx]
-version = "0.5"
+version = "0.6"
 default-features = false
 features = ["macros", "offline", "migrate"]
 
 [dependencies.rocket_db_pools]
-version = "0.1.0-rc.2"
+version = "=0.1.0-rc.3"
 features = ["sqlx_sqlite"]
 ```
 

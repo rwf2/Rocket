@@ -32,7 +32,7 @@ impl Router {
     pub fn add_catcher(&mut self, catcher: Catcher) {
         let catchers = self.catchers.entry(catcher.code).or_default();
         catchers.push(catcher);
-        catchers.sort_by(|a, b| b.base.path().segments().len().cmp(&a.base.path().segments().len()))
+        catchers.sort_by_key(|c| c.rank);
     }
 
     #[inline]
@@ -67,13 +67,8 @@ impl Router {
         match (explicit, default) {
             (None, None) => None,
             (None, c@Some(_)) | (c@Some(_), None) => c,
-            (Some(a), Some(b)) => {
-                if b.base.path().segments().len() > a.base.path().segments().len() {
-                    Some(b)
-                } else {
-                    Some(a)
-                }
-            }
+            (Some(a), Some(b)) if a.rank <= b.rank => Some(a),
+            (Some(_), Some(b)) => Some(b),
         }
     }
 
@@ -175,13 +170,7 @@ mod test {
         assert!(rankless_route_collisions(&["/", "/<a..>"]));
         assert!(rankless_route_collisions(&["/a/<_>", "/a/<a..>"]));
         assert!(rankless_route_collisions(&["/a/<_>", "/a/<_..>"]));
-        assert!(rankless_route_collisions(&["/<_>", "/a/<_..>"]));
-        assert!(rankless_route_collisions(&["/foo", "/foo/<_..>"]));
         assert!(rankless_route_collisions(&["/foo/bar/baz", "/foo/<_..>"]));
-        assert!(rankless_route_collisions(&["/a/d/<b..>", "/a/d"]));
-        assert!(rankless_route_collisions(&["/a/<_..>", "/<_>"]));
-        assert!(rankless_route_collisions(&["/a/<_..>", "/a"]));
-        assert!(rankless_route_collisions(&["/<a>", "/a/<a..>"]));
 
         assert!(rankless_route_collisions(&["/<_>", "/<_>"]));
         assert!(rankless_route_collisions(&["/a/<_>", "/a/b"]));
@@ -190,19 +179,16 @@ mod test {
         assert!(rankless_route_collisions(&["/<_..>", "/<_>"]));
         assert!(rankless_route_collisions(&["/<_>/b", "/a/b"]));
         assert!(rankless_route_collisions(&["/", "/<foo..>"]));
+        assert!(rankless_route_collisions(&["/<_>", "/"]));
     }
 
     #[test]
     fn test_collisions_normalize() {
-        assert!(rankless_route_collisions(&["/hello/", "/hello"]));
-        assert!(rankless_route_collisions(&["//hello/", "/hello"]));
         assert!(rankless_route_collisions(&["//hello/", "/hello//"]));
-        assert!(rankless_route_collisions(&["/<a>", "/hello//"]));
-        assert!(rankless_route_collisions(&["/<a>", "/hello///"]));
         assert!(rankless_route_collisions(&["/hello///bob", "/hello/<b>"]));
-        assert!(rankless_route_collisions(&["/<a..>//", "/a//<a..>"]));
         assert!(rankless_route_collisions(&["/a/<a..>//", "/a/<a..>"]));
         assert!(rankless_route_collisions(&["/a/<a..>//", "/a/b//c//d/"]));
+        assert!(rankless_route_collisions(&["/<a..>//", "/a//<a..>"]));
         assert!(rankless_route_collisions(&["/a/<a..>/", "/a/bd/e/"]));
         assert!(rankless_route_collisions(&["/<a..>/", "/a/bd/e/"]));
         assert!(rankless_route_collisions(&["//", "/<foo..>"]));
@@ -233,16 +219,28 @@ mod test {
 
     #[test]
     fn test_no_collisions() {
+        assert!(!rankless_route_collisions(&["/a", "/a/"]));
+        assert!(!rankless_route_collisions(&["/<a>", "/hello//"]));
+        assert!(!rankless_route_collisions(&["/<a>", "/hello///"]));
+        assert!(!rankless_route_collisions(&["/hello/", "/hello"]));
+        assert!(!rankless_route_collisions(&["//hello/", "/hello"]));
         assert!(!rankless_route_collisions(&["/a/b", "/a/b/c"]));
         assert!(!rankless_route_collisions(&["/a/b/c/d", "/a/b/c/<d>/e"]));
         assert!(!rankless_route_collisions(&["/a/d/<b..>", "/a/b/c"]));
-        assert!(!rankless_route_collisions(&["/<_>", "/"]));
         assert!(!rankless_route_collisions(&["/a/<_>", "/a"]));
         assert!(!rankless_route_collisions(&["/a/<_>", "/<_>"]));
+        assert!(!rankless_route_collisions(&["/a/<b>/<c..>", "/a/<c>"]));
+        assert!(!rankless_route_collisions(&["/<_>", "/a/<_..>"]));
+        assert!(!rankless_route_collisions(&["/foo", "/foo/<_..>"]));
+        assert!(!rankless_route_collisions(&["/a/<_..>", "/<_>"]));
+        assert!(!rankless_route_collisions(&["/a/<_..>", "/a"]));
+        assert!(!rankless_route_collisions(&["/<a>", "/a/<a..>"]));
+        assert!(!rankless_route_collisions(&["/a/d/<b..>", "/a/d"]));
     }
 
     #[test]
     fn test_no_collision_when_ranked() {
+        assert!(!default_rank_route_collisions(&["/<_>", "/"]));
         assert!(!default_rank_route_collisions(&["/<a>", "/hello"]));
         assert!(!default_rank_route_collisions(&["/hello/bob", "/hello/<b>"]));
         assert!(!default_rank_route_collisions(&["/a/b/c/d", "/<a>/<b>/c/d"]));
@@ -262,11 +260,11 @@ mod test {
         assert!(!default_rank_route_collisions(&["/<a..>", "/hello"]));
         assert!(!default_rank_route_collisions(&["/<a>", "/a/<path..>"]));
         assert!(!default_rank_route_collisions(&["/a/<b>/c", "/<d>/<c..>"]));
+        assert!(!default_rank_route_collisions(&["/a/<b>/<c..>", "/a/<c>"]));
     }
 
     #[test]
     fn test_collision_when_ranked() {
-        assert!(default_rank_route_collisions(&["/a/<b>/<c..>", "/a/<c>"]));
         assert!(default_rank_route_collisions(&["/<a>/b", "/a/<b>"]));
     }
 
@@ -302,6 +300,7 @@ mod test {
         assert!(route(&router, Get, "/hello").is_some());
 
         let router = router_with_routes(&["/<a>"]);
+        assert!(route(&router, Get, "/").is_some());
         assert!(route(&router, Get, "/hello").is_some());
         assert!(route(&router, Get, "/hi").is_some());
         assert!(route(&router, Get, "/bobbbbbbbbbby").is_some());
@@ -309,9 +308,9 @@ mod test {
 
         let router = router_with_routes(&["/<a>/<b>"]);
         assert!(route(&router, Get, "/hello/hi").is_some());
-        assert!(route(&router, Get, "/a/b/").is_some());
         assert!(route(&router, Get, "/i/a").is_some());
         assert!(route(&router, Get, "/jdlk/asdij").is_some());
+        assert!(route(&router, Get, "/a/").is_some());
 
         let mut router = Router::new();
         router.add_route(Route::new(Put, "/hello", dummy_handler));
@@ -331,7 +330,7 @@ mod test {
         assert!(route(&router, Get, "/a/b/c/d/e/f").is_some());
 
         let router = router_with_routes(&["/foo/<a..>"]);
-        assert!(route(&router, Get, "/foo").is_some());
+        assert!(route(&router, Get, "/foo").is_none());
         assert!(route(&router, Get, "/foo/").is_some());
         assert!(route(&router, Get, "/foo///bar").is_some());
     }
@@ -352,16 +351,16 @@ mod test {
         assert!(route(&router, Put, "/hello").is_none());
         assert!(route(&router, Post, "/hello").is_none());
         assert!(route(&router, Options, "/hello").is_none());
-        assert!(route(&router, Get, "/hello/there").is_none());
-        assert!(route(&router, Get, "/hello/i").is_none());
+        assert!(route(&router, Get, "/hello/").is_none());
+        assert!(route(&router, Get, "/hello/there/").is_none());
+        assert!(route(&router, Get, "/hello/there/").is_none());
 
         let router = router_with_routes(&["/<a>/<b>"]);
         assert!(route(&router, Get, "/a/b/c").is_none());
         assert!(route(&router, Get, "/a").is_none());
-        assert!(route(&router, Get, "/a/").is_none());
         assert!(route(&router, Get, "/a/b/c/d").is_none());
+        assert!(route(&router, Get, "/a/b/").is_none());
         assert!(route(&router, Put, "/hello/hi").is_none());
-        assert!(route(&router, Put, "/a/b").is_none());
         assert!(route(&router, Put, "/a/b").is_none());
 
         let router = router_with_routes(&["/prefix/<a..>"]);
@@ -369,12 +368,14 @@ mod test {
         assert!(route(&router, Get, "/prefi/").is_none());
     }
 
+    /// Asserts that `$to` routes to `$want` given `$routes` are present.
     macro_rules! assert_ranked_match {
         ($routes:expr, $to:expr => $want:expr) => ({
             let router = router_with_routes($routes);
             assert!(!router.has_collisions());
             let route_path = route(&router, Get, $to).unwrap().uri.to_string();
-            assert_eq!(route_path, $want.to_string());
+            assert_eq!(route_path, $want.to_string(),
+                "\nmatched {} with {}, wanted {} in {:#?}", $to, route_path, $want, router);
         })
     }
 
@@ -497,9 +498,9 @@ mod test {
         );
 
         assert_ranked_routing!(
-            to: "/hi",
+            to: "/hi/",
             with: [(1, "/hi/<foo..>"), (0, "/hi/<foo>")],
-            expect: (1, "/hi/<foo..>")
+            expect: (0, "/hi/<foo>"), (1, "/hi/<foo..>")
         );
     }
 
@@ -578,8 +579,11 @@ mod test {
             for (req, expected) in requests.iter().zip(expected.iter()) {
                 let req_status = Status::from_code(req.0).expect("valid status");
                 let catcher = catcher(&router, req_status, req.1).expect("some catcher");
-                assert_eq!(catcher.code, expected.0, "<- got, expected ->");
-                assert_eq!(catcher.base.path(), expected.1, "<- got, expected ->");
+                assert_eq!(catcher.code, expected.0,
+                    "\nmatched {}, expected {:?} for req {:?}", catcher, expected, req);
+
+                assert_eq!(catcher.base.path(), expected.1,
+                    "\nmatched {}, expected {:?} for req {:?}", catcher, expected, req);
             }
         })
     }

@@ -177,11 +177,11 @@ impl Fairings {
     pub fn pretty_print(&self) {
         let active_fairings = self.active().collect::<HashSet<_>>();
         if !active_fairings.is_empty() {
-            launch_info!("{}{}:", Paint::emoji("📡 "), Paint::magenta("Fairings"));
+            launch_meta!("{}{}:", "📡 ".emoji(), "Fairings".magenta());
 
             for (_, fairing) in iter!(self, active_fairings.into_iter()) {
-                launch_info_!("{} ({})", Paint::default(fairing.info().name).bold(),
-                Paint::blue(fairing.info().kind).bold());
+                let (name, kind) = (fairing.info().name, fairing.info().kind);
+                launch_meta_!("{} ({})", name.primary().bold(), kind.blue().bold());
             }
         }
     }

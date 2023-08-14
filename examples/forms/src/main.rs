@@ -33,6 +33,7 @@ enum Category {
 }
 
 #[derive(Debug, FromForm)]
+#[allow(dead_code)]
 struct Submission<'v> {
     #[field(validate = len(1..))]
     title: &'v str,
@@ -48,6 +49,7 @@ struct Submission<'v> {
 }
 
 #[derive(Debug, FromForm)]
+#[allow(dead_code)]
 struct Account<'v> {
     #[field(validate = len(1..))]
     name: &'v str,
@@ -57,6 +59,7 @@ struct Account<'v> {
 }
 
 #[derive(Debug, FromForm)]
+#[allow(dead_code)]
 struct Submit<'v> {
     account: Account<'v>,
     submission: Submission<'v>,

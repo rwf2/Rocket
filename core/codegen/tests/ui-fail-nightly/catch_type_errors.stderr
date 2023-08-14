@@ -7,15 +7,15 @@ error[E0277]: the trait bound `usize: Responder<'_, '_>` is not satisfied
   |                              ^^^^^ the trait `Responder<'_, '_>` is not implemented for `usize`
   |
   = help: the following other types implement trait `Responder<'r, 'o>`:
-            <&'o [u8] as Responder<'r, 'o>>
-            <&'o str as Responder<'r, 'o>>
-            <() as Responder<'r, 'static>>
-            <(ContentType, R) as Responder<'r, 'o>>
-            <(Status, R) as Responder<'r, 'o>>
-            <Accepted<R> as Responder<'r, 'o>>
-            <Arc<[u8]> as Responder<'r, 'static>>
-            <Arc<str> as Responder<'r, 'static>>
-          and 40 others
+            <rocket::Either<T, E> as Responder<'r, 'o>>
+            <Box<str> as Responder<'r, 'static>>
+            <Box<[u8]> as Responder<'r, 'static>>
+            <Box<T> as Responder<'r, 'o>>
+            <Cow<'o, R> as Responder<'r, 'o>>
+            <rocket::tokio::fs::File as Responder<'r, 'static>>
+            <EventStream<S> as Responder<'r, 'r>>
+            <std::fs::File as Responder<'r, 'static>>
+          and $N others
 
 error[E0277]: the trait bound `bool: Responder<'_, '_>` is not satisfied
   --> tests/ui-fail-nightly/catch_type_errors.rs:11:30
@@ -26,21 +26,21 @@ error[E0277]: the trait bound `bool: Responder<'_, '_>` is not satisfied
    |                              ^^^^ the trait `Responder<'_, '_>` is not implemented for `bool`
    |
    = help: the following other types implement trait `Responder<'r, 'o>`:
-             <&'o [u8] as Responder<'r, 'o>>
-             <&'o str as Responder<'r, 'o>>
-             <() as Responder<'r, 'static>>
-             <(ContentType, R) as Responder<'r, 'o>>
-             <(Status, R) as Responder<'r, 'o>>
-             <Accepted<R> as Responder<'r, 'o>>
-             <Arc<[u8]> as Responder<'r, 'static>>
-             <Arc<str> as Responder<'r, 'static>>
-           and 40 others
+             <rocket::Either<T, E> as Responder<'r, 'o>>
+             <Box<str> as Responder<'r, 'static>>
+             <Box<[u8]> as Responder<'r, 'static>>
+             <Box<T> as Responder<'r, 'o>>
+             <Cow<'o, R> as Responder<'r, 'o>>
+             <rocket::tokio::fs::File as Responder<'r, 'static>>
+             <EventStream<S> as Responder<'r, 'r>>
+             <std::fs::File as Responder<'r, 'static>>
+           and $N others
 
 error[E0308]: mismatched types
   --> tests/ui-fail-nightly/catch_type_errors.rs:16:17
    |
 16 | fn f3(_request: bool) -> usize {
-   |    --           ^^^^ expected `bool`, found `&rocket::Request<'_>`
+   |    --           ^^^^ expected `bool`, found `&Request<'_>`
    |    |
    |    arguments to this function are incorrect
    |
@@ -48,7 +48,7 @@ note: function defined here
   --> tests/ui-fail-nightly/catch_type_errors.rs:16:4
    |
 16 | fn f3(_request: bool) -> usize {
-   |    ^^-
+   |    ^^ --------------
 
 error[E0277]: the trait bound `usize: Responder<'_, '_>` is not satisfied
   --> tests/ui-fail-nightly/catch_type_errors.rs:16:26
@@ -59,15 +59,15 @@ error[E0277]: the trait bound `usize: Responder<'_, '_>` is not satisfied
    |                          ^^^^^ the trait `Responder<'_, '_>` is not implemented for `usize`
    |
    = help: the following other types implement trait `Responder<'r, 'o>`:
-             <&'o [u8] as Responder<'r, 'o>>
-             <&'o str as Responder<'r, 'o>>
-             <() as Responder<'r, 'static>>
-             <(ContentType, R) as Responder<'r, 'o>>
-             <(Status, R) as Responder<'r, 'o>>
-             <Accepted<R> as Responder<'r, 'o>>
-             <Arc<[u8]> as Responder<'r, 'static>>
-             <Arc<str> as Responder<'r, 'static>>
-           and 40 others
+             <rocket::Either<T, E> as Responder<'r, 'o>>
+             <Box<str> as Responder<'r, 'static>>
+             <Box<[u8]> as Responder<'r, 'static>>
+             <Box<T> as Responder<'r, 'o>>
+             <Cow<'o, R> as Responder<'r, 'o>>
+             <rocket::tokio::fs::File as Responder<'r, 'static>>
+             <EventStream<S> as Responder<'r, 'r>>
+             <std::fs::File as Responder<'r, 'static>>
+           and $N others
 
 error[E0277]: the trait bound `usize: Responder<'_, '_>` is not satisfied
   --> tests/ui-fail-nightly/catch_type_errors.rs:21:12
@@ -78,12 +78,12 @@ error[E0277]: the trait bound `usize: Responder<'_, '_>` is not satisfied
    |            ^^^^^ the trait `Responder<'_, '_>` is not implemented for `usize`
    |
    = help: the following other types implement trait `Responder<'r, 'o>`:
-             <&'o [u8] as Responder<'r, 'o>>
-             <&'o str as Responder<'r, 'o>>
-             <() as Responder<'r, 'static>>
-             <(ContentType, R) as Responder<'r, 'o>>
-             <(Status, R) as Responder<'r, 'o>>
-             <Accepted<R> as Responder<'r, 'o>>
-             <Arc<[u8]> as Responder<'r, 'static>>
-             <Arc<str> as Responder<'r, 'static>>
-           and 40 others
+             <rocket::Either<T, E> as Responder<'r, 'o>>
+             <Box<str> as Responder<'r, 'static>>
+             <Box<[u8]> as Responder<'r, 'static>>
+             <Box<T> as Responder<'r, 'o>>
+             <Cow<'o, R> as Responder<'r, 'o>>
+             <rocket::tokio::fs::File as Responder<'r, 'static>>
+             <EventStream<S> as Responder<'r, 'r>>
+             <std::fs::File as Responder<'r, 'static>>
+           and $N others

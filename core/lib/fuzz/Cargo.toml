@@ -1,4 +1,3 @@
-
 [package]
 name = "rocket-fuzz"
 version = "0.0.0"
@@ -11,6 +10,13 @@ cargo-fuzz = true
 
 [dependencies]
 libfuzzer-sys = "0.4"
+arbitrary = { version = "1.3", features = ["derive"] }
+
+[target.'cfg(afl)'.dependencies]
+afl = "*"
+
+[target.'cfg(honggfuzz)'.dependencies]
+honggfuzz = "*"
 
 [dependencies.rocket]
 path = ".."
@@ -28,5 +34,17 @@ doc = false
 [[bin]]
 name = "uri-roundtrip"
 path = "targets/uri-roundtrip.rs"
+test = false
+doc = false
+
+[[bin]]
+name = "uri-normalization"
+path = "targets/uri-normalization.rs"
+test = false
+doc = false
+
+[[bin]]
+name = "collision-matching"
+path = "targets/collision-matching.rs"
 test = false
 doc = false

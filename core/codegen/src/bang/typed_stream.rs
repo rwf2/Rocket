@@ -1,11 +1,13 @@
 use proc_macro2::TokenStream;
 use syn::parse::{Parse, ParseStream, discouraged::Speculative};
 
+#[derive(Debug)]
 pub enum Input {
     Type(syn::Type, Option<(syn::Token![+], syn::Lifetime)>),
     Tokens(TokenStream)
 }
 
+#[derive(Debug)]
 struct Invocation {
     ty_stream_ty: syn::Path,
     stream_mac: syn::Path,
@@ -38,11 +40,9 @@ impl Parse for Input {
     fn parse(input: ParseStream<'_>) -> syn::Result<Self> {
         let fork = input.fork();
         if let Ok(mut ty) = fork.parse() {
-            input.advance_to(&fork);
-
             // If there's an extra + '_, use it in the reinterpretation.
-            let mut bound = match input.parse() {
-                Ok(plus) => Some((plus, input.parse()?)),
+            let mut bound = match fork.parse() {
+                Ok(plus) => Some((plus, fork.parse()?)),
                 _ => None,
             };
 
@@ -52,7 +52,13 @@ impl Parse for Input {
                 bound = Some((plus, lt));
             }
 
-            Ok(Input::Type(ty, bound))
+            // If we have nothing else to parse, this must have been a type.
+            if fork.is_empty() {
+                input.advance_to(&fork);
+                Ok(Input::Type(ty, bound))
+            } else {
+                Ok(Input::Tokens(input.parse()?))
+            }
         } else {
             Ok(Input::Tokens(input.parse()?))
         }
@@ -75,7 +81,8 @@ impl Parse for Invocation {
 /// eagerly on a single token, so something like `foo!(for x in 0..10 {})` will
 /// match a `($ty)` branch as will anything that starts with a path.
 pub fn _macro(input: proc_macro::TokenStream) -> devise::Result<TokenStream> {
-    let i: Invocation = syn::parse(input)?;
+    let tokens = proc_macro2::TokenStream::from(input);
+    let i: Invocation = syn::parse2(tokens)?;
     let (s_ty, mac, s_trait) = (i.ty_stream_ty, i.stream_mac, i.stream_trait);
     let tokens = match i.input {
         Input::Tokens(tt) => quote!(#s_ty::from(#mac!(#tt))),

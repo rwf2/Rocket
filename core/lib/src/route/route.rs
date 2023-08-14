@@ -1,5 +1,4 @@
 use std::fmt;
-use std::convert::From;
 use std::borrow::Cow;
 
 use yansi::Paint;
@@ -38,33 +37,22 @@ use crate::sentinel::Sentry;
 ///
 /// # Routing
 ///
-/// A request _matches_ a route _iff_:
+/// A request is _routed_ to a route if it has the highest precedence (lowest
+/// rank) among all routes that [match](Route::matches()) the request. See
+/// [`Route::matches()`] for details on what it means for a request to match.
 ///
-///   * The route's method matches that of the incoming request.
-///   * The route's format (if any) matches that of the incoming request.
-///     - If route specifies a format, it only matches requests for that format.
-///     - If route doesn't specify a format, it matches requests for any format.
-///     - A route's `format` matches against the `Accept` header in the request
-///       when the route's method [`supports_payload()`] and `Content-Type`
-///       header otherwise.
-///     - Non-specific `Accept` header components (`*`) match anything.
-///   * All static components in the route's path match the corresponding
-///     components in the same position in the incoming request.
-///   * All static components in the route's query string are also in the
-///     request query string, though in any position. If there is no query
-///     in the route, requests with and without queries match.
+/// Note that a single request _may_ be routed to multiple routes if a route
+/// forwards. If a route fails, the request is instead routed to the highest
+/// precedence [`Catcher`](crate::Catcher).
 ///
-/// Rocket routes requests to matching routes.
+/// ## Collisions
 ///
-/// [`supports_payload()`]: Method::supports_payload()
-///
-/// # Collisions
-///
-/// Two routes are said to _collide_ if there exists a request that matches both
-/// routes. Colliding routes present a routing ambiguity and are thus disallowed
-/// by Rocket. Because routes can be constructed dynamically, collision checking
-/// is done at [`ignite`](crate::Rocket::ignite()) time, after it becomes
-/// statically impossible to add any more routes to an instance of `Rocket`.
+/// Two routes are said to [collide](Route::collides_with()) if there exists a
+/// request that matches both routes. Colliding routes present a routing
+/// ambiguity and are thus disallowed by Rocket. Because routes can be
+/// constructed dynamically, collision checking is done at
+/// [`ignite`](crate::Rocket::ignite()) time, after it becomes statically
+/// impossible to add any more routes to an instance of `Rocket`.
 ///
 /// Note that because query parsing is always lenient -- extra and missing query
 /// parameters are allowed -- queries do not directly impact whether two routes
@@ -200,6 +188,11 @@ impl Route {
     ///
     /// Panics if `path` is not a valid Rocket route URI.
     ///
+    /// A valid route URI is any valid [`Origin`](uri::Origin) URI that is
+    /// normalized, that is, does not contain any empty segments except for an
+    /// optional trailing slash. Unlike a strict `Origin`, route URIs are also
+    /// allowed to contain any UTF-8 characters.
+    ///
     /// # Example
     ///
     /// ```rust
@@ -207,7 +200,7 @@ impl Route {
     /// use rocket::http::Method;
     /// # use rocket::route::dummy_handler as handler;
     ///
-    /// // this is a rank 1 route matching requests to `GET /`
+    /// // this is a route matching requests to `GET /`
     /// let index = Route::new(Method::Get, "/", handler);
     /// assert_eq!(index.rank, -9);
     /// assert_eq!(index.method, Method::Get);
@@ -225,6 +218,11 @@ impl Route {
     /// # Panics
     ///
     /// Panics if `path` is not a valid Rocket route URI.
+    ///
+    /// A valid route URI is any valid [`Origin`](uri::Origin) URI that is
+    /// normalized, that is, does not contain any empty segments except for an
+    /// optional trailing slash. Unlike a strict `Origin`, route URIs are also
+    /// allowed to contain any UTF-8 characters.
     ///
     /// # Example
     ///
@@ -258,8 +256,51 @@ impl Route {
         }
     }
 
+    /// Prefix `base` to any existing mount point base in `self`.
+    ///
+    /// If the the current mount point base is `/`, then the base is replaced by
+    /// `base`. Otherwise, `base` is prefixed to the existing `base`.
+    ///
+    /// ```rust
+    /// use rocket::Route;
+    /// use rocket::http::Method;
+    /// # use rocket::route::dummy_handler as handler;
+    /// # use rocket::uri;
+    ///
+    /// // The default base is `/`.
+    /// let index = Route::new(Method::Get, "/foo/bar", handler);
+    ///
+    /// // Since the base is `/`, rebasing replaces the base.
+    /// let rebased = index.rebase(uri!("/boo"));
+    /// assert_eq!(rebased.uri.base(), "/boo");
+    ///
+    /// // Now every rebase prefixes.
+    /// let rebased = rebased.rebase(uri!("/base"));
+    /// assert_eq!(rebased.uri.base(), "/base/boo");
+    ///
+    /// // Rebasing to `/` does nothing.
+    /// let rebased = rebased.rebase(uri!("/"));
+    /// assert_eq!(rebased.uri.base(), "/base/boo");
+    ///
+    /// // Note that trailing slashes are preserved:
+    /// let index = Route::new(Method::Get, "/foo", handler);
+    /// let rebased = index.rebase(uri!("/boo/"));
+    /// assert_eq!(rebased.uri.base(), "/boo/");
+    /// ```
+    pub fn rebase(mut self, base: uri::Origin<'_>) -> Self {
+        let new_base = match self.uri.base().as_str() {
+            "/" => base.path().to_string(),
+            _ => format!("{}{}", base.path(), self.uri.base()),
+        };
+
+        self.uri = RouteUri::new(&new_base, &self.uri.unmounted_origin.to_string());
+        self
+    }
+
     /// Maps the `base` of this route using `mapper`, returning a new `Route`
     /// with the returned base.
+    ///
+    /// **Note:** Prefer to use [`Route::rebase()`] whenever possible!
     ///
     /// `mapper` is called with the current base. The returned `String` is used
     /// as the new base if it is a valid URI. If the returned base URI contains
@@ -270,18 +311,28 @@ impl Route {
     ///
     /// ```rust
     /// use rocket::Route;
-    /// use rocket::http::{Method, uri::Origin};
+    /// use rocket::http::Method;
     /// # use rocket::route::dummy_handler as handler;
+    /// # use rocket::uri;
     ///
     /// let index = Route::new(Method::Get, "/foo/bar", handler);
     /// assert_eq!(index.uri.base(), "/");
-    /// assert_eq!(index.uri.unmounted_origin.path(), "/foo/bar");
+    /// assert_eq!(index.uri.unmounted().path(), "/foo/bar");
     /// assert_eq!(index.uri.path(), "/foo/bar");
     ///
-    /// let index = index.map_base(|base| format!("{}{}", "/boo", base)).unwrap();
-    /// assert_eq!(index.uri.base(), "/boo");
-    /// assert_eq!(index.uri.unmounted_origin.path(), "/foo/bar");
-    /// assert_eq!(index.uri.path(), "/boo/foo/bar");
+    /// # let old_index = index;
+    /// # let index = old_index.clone();
+    /// let mapped = index.map_base(|base| format!("{}{}", "/boo", base)).unwrap();
+    /// assert_eq!(mapped.uri.base(), "/boo/");
+    /// assert_eq!(mapped.uri.unmounted().path(), "/foo/bar");
+    /// assert_eq!(mapped.uri.path(), "/boo/foo/bar");
+    ///
+    /// // Note that this produces different `base` results than `rebase`!
+    /// # let index = old_index.clone();
+    /// let rebased = index.rebase(uri!("/boo"));
+    /// assert_eq!(rebased.uri.base(), "/boo");
+    /// assert_eq!(rebased.uri.unmounted().path(), "/foo/bar");
+    /// assert_eq!(rebased.uri.path(), "/boo/foo/bar");
     /// ```
     pub fn map_base<'a, F>(mut self, mapper: F) -> Result<Self, uri::Error<'static>>
         where F: FnOnce(uri::Origin<'a>) -> String
@@ -295,22 +346,18 @@ impl Route {
 impl fmt::Display for Route {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         if let Some(ref n) = self.name {
-            write!(f, "{}{}{} ", Paint::cyan("("), Paint::white(n), Paint::cyan(")"))?;
+            write!(f, "{}{}{} ", "(".cyan(), n.primary(), ")".cyan())?;
         }
 
-        write!(f, "{} ", Paint::green(&self.method))?;
-        if self.uri.base() != "/" {
-            write!(f, "{}", Paint::blue(self.uri.base()).underline())?;
-        }
-
-        write!(f, "{}", Paint::blue(&self.uri.unmounted_origin))?;
+        write!(f, "{} ", self.method.green())?;
+        self.uri.color_fmt(f)?;
 
         if self.rank > 1 {
-            write!(f, " [{}]", Paint::default(&self.rank).bold())?;
+            write!(f, " [{}]", self.rank.primary().bold())?;
         }
 
         if let Some(ref format) = self.format {
-            write!(f, " {}", Paint::yellow(format))?;
+            write!(f, " {}", format.yellow())?;
         }
 
         Ok(())

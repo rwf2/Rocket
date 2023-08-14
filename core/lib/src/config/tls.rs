@@ -10,9 +10,10 @@ use indexmap::IndexSet;
 ///
 ///     Both `certs` and `key` can be configured as a path or as raw bytes.
 ///     `certs` must be a DER-encoded X.509 TLS certificate chain, while `key`
-///     must be a DER-encoded ASN.1 key in either PKCS#8 or PKCS#1 format.
-///     When a path is configured in a file, such as `Rocket.toml`, relative
-///     paths are interpreted as relative to the source file's directory.
+///     must be a DER-encoded ASN.1 key in either PKCS#8, PKCS#1, or SEC1
+///     format. When a path is configured in a file, such as `Rocket.toml`,
+///     relative paths are interpreted as relative to the source file's
+///     directory.
 ///
 ///   * `ciphers`
 ///
@@ -503,7 +504,7 @@ impl TlsConfig {
     /// let tls_config = TlsConfig::from_bytes(certs_buf, key_buf);
     /// assert!(!tls_config.prefer_server_cipher_order());
     ///
-    /// // Which can be overriden with the eponymous builder method.
+    /// // Which can be overridden with the eponymous builder method.
     /// let tls_config = TlsConfig::from_bytes(certs_buf, key_buf)
     ///     .with_preferred_server_cipher_order(true);
     ///
@@ -643,8 +644,9 @@ mod with_tls_feature {
             Either::Left(path) => {
                 let path = path.relative();
                 let file = fs::File::open(&path).map_err(move |e| {
-                    Error::new(e.kind(), format!("error reading TLS file `{}`: {}",
-                            Paint::white(figment::Source::File(path)), e))
+                    let source = figment::Source::File(path);
+                    let msg = format!("error reading TLS file `{}`: {}", source.primary(), e);
+                    Error::new(e.kind(), msg)
                 })?;
 
                 Ok(Box::new(io::BufReader::new(file)))

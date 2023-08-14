@@ -1,6 +1,7 @@
 use std::io;
 use std::sync::Arc;
 use std::time::Duration;
+use std::pin::Pin;
 
 use yansi::Paint;
 use tokio::sync::oneshot;
@@ -14,8 +15,9 @@ use crate::outcome::Outcome;
 use crate::error::{Error, ErrorKind};
 use crate::ext::{AsyncReadExt, CancellableListener, CancellableIo};
 use crate::request::ConnectionMeta;
+use crate::data::IoHandler;
 
-use crate::http::{hyper, Method, Status, Header};
+use crate::http::{hyper, uncased, Method, Status, Header};
 use crate::http::private::{TcpListener, Listener, Connection, Incoming};
 
 // A token returned to force the execution of one method before another.
@@ -29,7 +31,7 @@ async fn handle<Fut, T, F>(name: Option<&str>, run: F) -> Option<T>
     macro_rules! panic_info {
         ($name:expr, $e:expr) => {{
             match $name {
-                Some(name) => error_!("Handler {} panicked.", Paint::white(name)),
+                Some(name) => error_!("Handler {} panicked.", name.primary()),
                 None => error_!("A handler panicked.")
             };
 
@@ -64,14 +66,18 @@ async fn handle<Fut, T, F>(name: Option<&str>, run: F) -> Option<T>
 async fn hyper_service_fn(
     rocket: Arc<Rocket<Orbit>>,
     conn: ConnectionMeta,
-    hyp_req: hyper::Request<hyper::Body>,
+    mut hyp_req: hyper::Request<hyper::Body>,
 ) -> Result<hyper::Response<hyper::Body>, io::Error> {
     // This future must return a hyper::Response, but the response body might
     // borrow from the request. Instead, write the body in another future that
     // sends the response metadata (and a body channel) prior.
     let (tx, rx) = oneshot::channel();
 
+    debug!("Received request: {:#?}", hyp_req);
     tokio::spawn(async move {
+        // We move the request next, so get the upgrade future now.
+        let pending_upgrade = hyper::upgrade::on(&mut hyp_req);
+
         // Convert a Hyper request into a Rocket request.
         let (h_parts, mut h_body) = hyp_req.into_parts();
         match Request::from_hyp(&rocket, &h_parts, Some(conn)) {
@@ -79,8 +85,18 @@ async fn hyper_service_fn(
                 // Convert into Rocket `Data`, dispatch request, write response.
                 let mut data = Data::from(&mut h_body);
                 let token = rocket.preprocess_request(&mut req, &mut data).await;
-                let response = rocket.dispatch(token, &mut req, data).await;
-                rocket.send_response(response, tx).await;
+                let mut response = rocket.dispatch(token, &req, data).await;
+                let upgrade = response.take_upgrade(req.headers().get("upgrade"));
+                if let Ok(Some((proto, handler))) = upgrade {
+                    rocket.handle_upgrade(response, proto, handler, pending_upgrade, tx).await;
+                } else {
+                    if upgrade.is_err() {
+                        warn_!("Request wants upgrade but no I/O handler matched.");
+                        info_!("Request is not being upgraded.");
+                    }
+
+                    rocket.send_response(response, tx).await;
+                }
             },
             Err(e) => {
                 warn!("Bad incoming HTTP request.");
@@ -113,7 +129,7 @@ impl Rocket<Orbit> {
         };
 
         match self._send_response(response, tx).await {
-            Ok(()) => info_!("{}", Paint::green("Response succeeded.")),
+            Ok(()) => info_!("{}", "Response succeeded.".green()),
             Err(e) if remote_hungup(&e) => warn_!("Remote left: {}.", e),
             Err(e) => warn_!("Failed to write response: {}.", e),
         }
@@ -144,6 +160,7 @@ impl Rocket<Orbit> {
         let hyp_response = hyp_res.body(hyp_body)
             .map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))?;
 
+        debug!("sending response: {:#?}", hyp_response);
         tx.send(hyp_response).map_err(|_| {
             let msg = "client disconnect before response started";
             io::Error::new(io::ErrorKind::BrokenPipe, msg)
@@ -157,6 +174,38 @@ impl Rocket<Orbit> {
         }
 
         Ok(())
+    }
+
+    async fn handle_upgrade<'r>(
+        &self,
+        mut response: Response<'r>,
+        proto: uncased::Uncased<'r>,
+        io_handler: Pin<Box<dyn IoHandler + 'r>>,
+        pending_upgrade: hyper::upgrade::OnUpgrade,
+        tx: oneshot::Sender<hyper::Response<hyper::Body>>,
+    ) {
+        info_!("Upgrading connection to {}.", Paint::white(&proto).bold());
+        response.set_status(Status::SwitchingProtocols);
+        response.set_raw_header("Connection", "Upgrade");
+        response.set_raw_header("Upgrade", proto.clone().into_cow());
+        self.send_response(response, tx).await;
+
+        match pending_upgrade.await {
+            Ok(io_stream) => {
+                info_!("Upgrade successful.");
+                if let Err(e) = io_handler.io(io_stream.into()).await {
+                    if e.kind() == io::ErrorKind::BrokenPipe {
+                        warn!("Upgraded {} I/O handler was closed.", proto);
+                    } else {
+                        error!("Upgraded {} I/O handler failed: {}", proto, e);
+                    }
+                }
+            },
+            Err(e) => {
+                warn!("Response indicated upgrade, but upgrade failed.");
+                warn_!("Upgrade error: {}", e);
+            }
+        }
     }
 
     /// Preprocess the request for Rocket things. Currently, this means:
@@ -234,18 +283,18 @@ impl Rocket<Orbit> {
     ) -> Response<'r> {
         let mut response = match self.route(request, data).await {
             Outcome::Success(response) => response,
-            Outcome::Forward(data) if request.method() == Method::Head => {
-                info_!("Autohandling {} request.", Paint::default("HEAD").bold());
+            Outcome::Forward((data, _)) if request.method() == Method::Head => {
+                info_!("Autohandling {} request.", "HEAD".primary().bold());
 
                 // Dispatch the request again with Method `GET`.
                 request._set_method(Method::Get);
                 match self.route(request, data).await {
                     Outcome::Success(response) => response,
                     Outcome::Failure(status) => self.handle_error(status, request).await,
-                    Outcome::Forward(_) => self.handle_error(Status::NotFound, request).await,
+                    Outcome::Forward((_, status)) => self.handle_error(status, request).await,
                 }
             }
-            Outcome::Forward(_) => self.handle_error(Status::NotFound, request).await,
+            Outcome::Forward((_, status)) => self.handle_error(status, request).await,
             Outcome::Failure(status) => self.handle_error(status, request).await,
         };
 
@@ -270,7 +319,9 @@ impl Rocket<Orbit> {
         request: &'r Request<'s>,
         mut data: Data<'r>,
     ) -> route::Outcome<'r> {
-        // Go through the list of matching routes until we fail or succeed.
+        // Go through all matching routes until we fail or succeed or run out of
+        // routes to try, in which case we forward with the last status.
+        let mut status = Status::NotFound;
         for route in self.router.route(request) {
             // Retrieve and set the requests parameters.
             info_!("Matched: {}", route);
@@ -283,15 +334,15 @@ impl Rocket<Orbit> {
             // Check if the request processing completed (Some) or if the
             // request needs to be forwarded. If it does, continue the loop
             // (None) to try again.
-            info_!("{} {}", Paint::default("Outcome:").bold(), outcome);
+            info_!("{} {}", "Outcome:".primary().bold(), outcome);
             match outcome {
                 o@Outcome::Success(_) | o@Outcome::Failure(_) => return o,
-                Outcome::Forward(unused_data) => data = unused_data,
+                Outcome::Forward(forwarded) => (data, status) = forwarded,
             }
         }
 
         error_!("No matching routes for {}.", request);
-        Outcome::Forward(data)
+        Outcome::Forward((data, status))
     }
 
     /// Invokes the handler with `req` for catcher with status `status`.
@@ -321,7 +372,7 @@ impl Rocket<Orbit> {
                 .map(|result| result.map_err(Some))
                 .unwrap_or_else(|| Err(None))
         } else {
-            let code = Paint::blue(status.code).bold();
+            let code = status.code.blue().bold();
             warn_!("No {} catcher registered. Using Rocket default.", code);
             Ok(crate::catcher::default_handler(status, req))
         }
@@ -343,7 +394,7 @@ impl Rocket<Orbit> {
 
         // If it fails and it's not a 500, try the 500 catcher.
         if status != Status::InternalServerError {
-            error_!("Catcher failed. Attemping 500 error catcher.");
+            error_!("Catcher failed. Attempting 500 error catcher.");
             status = Status::InternalServerError;
             if let Ok(r) = self.invoke_catcher(status, req).await {
                 return r;
@@ -465,7 +516,7 @@ impl Rocket<Orbit> {
             .serve(hyper::service::make_service_fn(service_fn))
             .with_graceful_shutdown(shutdown.clone());
 
-        // This deserves some exaplanation.
+        // This deserves some explanation.
         //
         // This is largely to deal with Hyper's dreadful and largely nonexistent
         // handling of shutdown, in general, nevermind graceful.

@@ -4,6 +4,7 @@ use rocket::{Request, Rocket, Ignite, Sentinel};
 use rocket::http::{Status, ContentType};
 use rocket::request::{self, FromRequest};
 use rocket::serde::Serialize;
+use rocket::yansi::Paint;
 
 use crate::{Template, context::ContextManager};
 
@@ -126,8 +127,8 @@ impl Metadata<'_> {
 impl Sentinel for Metadata<'_> {
     fn abort(rocket: &Rocket<Ignite>) -> bool {
         if rocket.state::<ContextManager>().is_none() {
-            let md = rocket::yansi::Paint::default("Metadata").bold();
-            let fairing = rocket::yansi::Paint::default("Template::fairing()").bold();
+            let md = "Metadata".primary().bold();
+            let fairing = "Template::fairing()".primary().bold();
             error!("requested `{}` guard without attaching `{}`.", md, fairing);
             info_!("To use or query templates, you must attach `{}`.", fairing);
             info_!("See the `Template` documentation for more information.");

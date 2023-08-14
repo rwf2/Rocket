@@ -36,7 +36,7 @@ impl AsPtr for [u8] {
 pub enum Indexed<'a, T: ?Sized + ToOwned> {
     /// The start and end index of a string.
     Indexed(usize, usize),
-    /// A conrete string.
+    /// A concrete string.
     Concrete(Cow<'a, T>)
 }
 

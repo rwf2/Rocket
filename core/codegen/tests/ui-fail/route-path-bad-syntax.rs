@@ -54,7 +54,7 @@ fn h3() {}
 #[get("/<_r>/<b>")]
 fn h4() {}
 
-
+//
 // Check dynamic parameters are valid idents
 
 #[get("/<foo_.>")]
@@ -101,5 +101,16 @@ fn m2() {}
 
 #[get("/<>name><")]
 fn m3() {}
+
+// New additions for trailing paths, which we artificially disallow.
+
+#[get("/a/")]
+fn n1() {}
+
+#[get("/a/b/")]
+fn n2() {}
+
+#[get("/a/b/c/")]
+fn n3() {}
 
 fn main() {  }

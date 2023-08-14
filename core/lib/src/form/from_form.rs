@@ -1,6 +1,7 @@
 use std::borrow::Cow;
 use std::collections::{HashMap, BTreeMap};
 use std::hash::Hash;
+use std::sync::Arc;
 
 use either::Either;
 use indexmap::IndexMap;
@@ -22,7 +23,7 @@ use crate::http::uncased::AsUncased;
 /// A form guard is a guard that operates on form fields, typically those with a
 /// particular name prefix. Form guards validate and parse form field data via
 /// implementations of `FromForm`. In other words, a type is a form guard _iff_
-/// it implements `FromFrom`.
+/// it implements `FromForm`.
 ///
 /// Form guards are used as the inner type of the [`Form`] data guard:
 ///
@@ -410,7 +411,7 @@ use crate::http::uncased::AsUncased;
 /// }
 /// ```
 ///
-/// The lifetime `'r` correponds to the lifetime of the request.
+/// The lifetime `'r` corresponds to the lifetime of the request.
 ///
 /// ## A More Involved Example
 ///
@@ -484,7 +485,7 @@ use crate::http::uncased::AsUncased;
 ///     // Finally, we finalize `A` and `B`. If both returned `Ok` and we
 ///     // encountered no errors during the push phase, we return our pair. If
 ///     // there were errors, we return them. If `A` and/or `B` failed, we
-///     // return the commulative errors.
+///     // return the commutative errors.
 ///     fn finalize(mut ctxt: Self::Context) -> form::Result<'v, Self> {
 ///         match (A::finalize(ctxt.left), B::finalize(ctxt.right)) {
 ///             (Ok(l), Ok(r)) if ctxt.errors.is_empty() => Ok(Pair(l, r)),
@@ -904,5 +905,26 @@ impl<'v, A: FromForm<'v>, B: FromForm<'v>> FromForm<'v> for (A, B) {
                 Err(ctxt.errors)?
             }
         }
+    }
+}
+
+#[crate::async_trait]
+impl<'v, T: FromForm<'v> + Sync> FromForm<'v> for Arc<T> {
+    type Context = <T as FromForm<'v>>::Context;
+
+    fn init(opts: Options) -> Self::Context {
+        T::init(opts)
+    }
+
+    fn push_value(ctxt: &mut Self::Context, field: ValueField<'v>) {
+        T::push_value(ctxt, field)
+    }
+
+    async fn push_data(ctxt: &mut Self::Context, field: DataField<'v, '_>) {
+        T::push_data(ctxt, field).await
+    }
+
+    fn finalize(this: Self::Context) -> Result<'v, Self> {
+        T::finalize(this).map(Arc::new)
     }
 }

@@ -98,6 +98,7 @@ ALL_CRATE_ROOTS=(
     "${CONTRIB_ROOT}/db_pools/codegen"
     "${CONTRIB_ROOT}/db_pools/lib"
     "${CONTRIB_ROOT}/dyn_templates"
+    "${CONTRIB_ROOT}/ws"
 )
 
 function print_environment() {

@@ -4,7 +4,7 @@ use crate::http::Status;
 
 /// Type alias for the return type of a [`Route`](crate::Route)'s
 /// [`Handler::handle()`].
-pub type Outcome<'r> = crate::outcome::Outcome<Response<'r>, Status, Data<'r>>;
+pub type Outcome<'r> = crate::outcome::Outcome<Response<'r>, Status, (Data<'r>, Status)>;
 
 /// Type alias for the return type of a _raw_ [`Route`](crate::Route)'s
 /// [`Handler`].
@@ -221,8 +221,8 @@ impl<'r, 'o: 'r> Outcome<'o> {
     /// Return the `Outcome` of response to `req` from `responder`.
     ///
     /// If the responder returns `Ok`, an outcome of `Success` is returned with
-    /// the response. If the responder returns `Err`, an outcome of `Forward` is
-    /// returned.
+    /// the response. If the responder returns `Err`, an outcome of `Forward`
+    /// with a status of `404 Not Found` is returned.
     ///
     /// # Example
     ///
@@ -239,7 +239,7 @@ impl<'r, 'o: 'r> Outcome<'o> {
     {
         match responder.respond_to(req) {
             Ok(response) => Outcome::Success(response),
-            Err(_) => Outcome::Forward(data)
+            Err(_) => Outcome::Forward((data, Status::NotFound))
         }
     }
 
@@ -264,7 +264,7 @@ impl<'r, 'o: 'r> Outcome<'o> {
     }
 
     /// Return an `Outcome` of `Forward` with the data `data`. This is
-    /// equivalent to `Outcome::Forward(data)`.
+    /// equivalent to `Outcome::Forward((data, Status::NotFound))`.
     ///
     /// This method exists to be used during manual routing.
     ///
@@ -279,7 +279,7 @@ impl<'r, 'o: 'r> Outcome<'o> {
     /// ```
     #[inline(always)]
     pub fn forward(data: Data<'r>) -> Outcome<'r> {
-        Outcome::Forward(data)
+        Outcome::Forward((data, Status::NotFound))
     }
 }
 

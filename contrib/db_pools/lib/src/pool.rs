@@ -39,6 +39,10 @@ use {std::time::Duration, crate::{Error, Config}};
 ///     async fn get(&self) -> Result<Self::Connection, Self::Error> {
 ///         todo!("fetch one connection from the pool");
 ///     }
+///
+///     async fn close(&self) {
+///         todo!("gracefully shutdown connection pool");
+///     }
 /// }
 /// ```
 ///
@@ -76,6 +80,8 @@ use {std::time::Duration, crate::{Error, Config}};
 /// #    fn acquire(&self) -> Result<Connection, GetError> {
 /// #        Ok(())
 /// #    }
+/// #
+/// #   async fn shutdown(&self) { }
 /// # }
 ///
 /// #[rocket::async_trait]
@@ -92,7 +98,7 @@ use {std::time::Duration, crate::{Error, Config}};
 ///         // `InitError` to `Error<InitError, _>` with `Error::Init`.
 ///         let pool = MyPool::new(config).map_err(Error::Init)?;
 ///
-///         // Return the fully intialized pool.
+///         // Return the fully initialized pool.
 ///         Ok(pool)
 ///     }
 ///
@@ -100,6 +106,10 @@ use {std::time::Duration, crate::{Error, Config}};
 ///         // Get one connection from the pool, here via an `acquire()` method.
 ///         // Map errors of type `GetError` to `Error<_, GetError>`.
 ///         self.acquire().map_err(Error::Get)
+///     }
+///
+///     async fn close(&self) {
+///         self.shutdown().await;
 ///     }
 /// }
 /// ```
@@ -133,12 +143,22 @@ pub trait Pool: Sized + Send + Sync + 'static {
     /// such as a preconfigured timeout elapsing or when the database server is
     /// unavailable.
     async fn get(&self) -> Result<Self::Connection, Self::Error>;
+
+    /// Shutdown the connection pool, disallowing any new connections from being
+    /// retrieved and waking up any tasks with active connections.
+    ///
+    /// The returned future may either resolve when all connections are known to
+    /// have closed or at any point prior. Details are implementation specific.
+    async fn close(&self);
 }
 
 #[cfg(feature = "deadpool")]
 mod deadpool_postgres {
     use deadpool::{managed::{Manager, Pool, PoolError, Object, BuildError}, Runtime};
     use super::{Duration, Error, Config, Figment};
+
+    #[cfg(any(feature = "diesel_postgres", feature = "diesel_mysql"))]
+    use diesel_async::pooled_connection::AsyncDieselConnectionManager;
 
     pub trait DeadManager: Manager + Sized + Send + Sync + 'static {
         fn new(config: &Config) -> Result<Self, Self::Error>;
@@ -155,6 +175,20 @@ mod deadpool_postgres {
     impl DeadManager for deadpool_redis::Manager {
         fn new(config: &Config) -> Result<Self, Self::Error> {
             Self::new(config.url.as_str())
+        }
+    }
+
+    #[cfg(feature = "diesel_postgres")]
+    impl DeadManager for AsyncDieselConnectionManager<diesel_async::AsyncPgConnection> {
+        fn new(config: &Config) -> Result<Self, Self::Error> {
+            Ok(Self::new(config.url.as_str()))
+        }
+    }
+
+    #[cfg(feature = "diesel_mysql")]
+    impl DeadManager for AsyncDieselConnectionManager<diesel_async::AsyncMysqlConnection> {
+        fn new(config: &Config) -> Result<Self, Self::Error> {
+            Ok(Self::new(config.url.as_str()))
         }
     }
 
@@ -182,6 +216,10 @@ mod deadpool_postgres {
 
         async fn get(&self) -> Result<Self::Connection, Self::Error> {
             self.get().await.map_err(Error::Get)
+        }
+
+        async fn close(&self) {
+            <Pool<M, C>>::close(self)
         }
     }
 }
@@ -225,7 +263,7 @@ mod sqlx {
 
             sqlx::pool::PoolOptions::new()
                 .max_connections(config.max_connections as u32)
-                .connect_timeout(Duration::from_secs(config.connect_timeout))
+                .acquire_timeout(Duration::from_secs(config.connect_timeout))
                 .idle_timeout(config.idle_timeout.map(Duration::from_secs))
                 .min_connections(config.min_connections.unwrap_or_default())
                 .connect_with(opts)
@@ -235,6 +273,10 @@ mod sqlx {
 
         async fn get(&self) -> Result<Self::Connection, Self::Error> {
             self.acquire().await.map_err(Error::Get)
+        }
+
+        async fn close(&self) {
+            <sqlx::Pool<D>>::close(self).await;
         }
     }
 }
@@ -263,6 +305,10 @@ mod mongodb {
 
         async fn get(&self) -> Result<Self::Connection, Self::Error> {
             Ok(self.clone())
+        }
+
+        async fn close(&self) {
+            // nothing to do for mongodb
         }
     }
 }

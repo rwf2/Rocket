@@ -51,7 +51,7 @@ use smallvec::SmallVec;
 /// [`exact_eq()`](MediaType::exact_eq()) method can be used.
 #[derive(Debug, Clone)]
 pub struct MediaType {
-    /// Storage for the entire media type string.
+    /// InitCell for the entire media type string.
     pub(crate) source: Source,
     /// The top-level type.
     pub(crate) top: IndexedStr<'static>,
@@ -112,7 +112,7 @@ macro_rules! media_types {
         docify!([
             Returns @code{true} if the @[top-level] and sublevel types of
             @code{self} are the same as those of @{"`MediaType::"}! $name
-            @{"`"}!.
+            @{"`"}!, i.e @{"`"} @{$t}! @[/]! @{$s}! $(; @{$k}! @[=]! @{$v}!)* @{"`"}!.
         ];
             #[inline(always)]
             pub fn $check(&self) -> bool {
@@ -214,7 +214,7 @@ macro_rules! parse_flexible {
     ($($short:expr => $name:ident,)*) => (
     docify!([
         Flexibly parses @code{name} into a @code{MediaType}. The parse is
-        @[_flexible_] because, in addition to stricly correct media types, it
+        @[_flexible_] because, in addition to strictly correct media types, it
         recognizes the following shorthands:
 
         @nl

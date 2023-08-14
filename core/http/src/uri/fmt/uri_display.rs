@@ -198,8 +198,8 @@ use crate::uri::fmt::{Part, Path, Query, Formatter};
 /// assert_eq!(uri_string, "Bob%20Smith");
 /// ```
 ///
-/// As long as every field in the structure (or enum) implements `UriDisplay`,
-/// the trait can be derived. The implementation calls
+/// As long as every field in the structure (or enum for [`UriDisplay<Query>`])
+/// implements `UriDisplay`, the trait can be derived. The implementation calls
 /// [`Formatter::write_named_value()`] for every named field and
 /// [`Formatter::write_value()`] for every unnamed field. See the
 /// [`UriDisplay<Path>`] and [`UriDisplay<Query>`] derive documentation for full

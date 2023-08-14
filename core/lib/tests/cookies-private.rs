@@ -36,6 +36,7 @@ fn cookie_get_private(jar: &CookieJar<'_>) -> String {
     assert_ne!(a, b.as_ref());
     assert_ne!(a, c);
     assert_ne!(b.as_ref(), c);
+    assert_eq!(b, jar.get_pending("b"));
 
     format!(
         "{}{}{}",
@@ -49,6 +50,7 @@ fn cookie_get_private(jar: &CookieJar<'_>) -> String {
 #[get("/oh-no")]
 fn cookie_get(jar: &CookieJar<'_>) -> String {
     let (a, b, c) = (jar.get("a"), jar.get("b"), jar.get("c"));
+    assert_eq!(b.cloned(), jar.get_pending("b"));
 
     format!(
         "{}{}{}",
@@ -65,10 +67,8 @@ mod cookies_private_tests {
     use rocket::{Build, Rocket};
 
     fn rocket() -> Rocket<Build> {
-        rocket::build().mount(
-            "/",
-            routes![cookie_add_private, cookie_get, cookie_get_private],
-        )
+        rocket::build()
+            .mount("/", routes![cookie_add_private, cookie_get, cookie_get_private])
     }
 
     #[test]
@@ -79,6 +79,7 @@ mod cookies_private_tests {
         assert_eq!(cookies.iter().count(), 3);
         assert_eq!(cookies.get("a").unwrap().value(), "v1");
         assert_eq!(cookies.get_private("b").unwrap().value(), "v2");
+        assert_eq!(cookies.get_pending("b").unwrap().value(), "v2");
         assert_ne!(cookies.get("b").unwrap().value(), "v2");
         assert_eq!(cookies.get("c").unwrap().value(), "v3");
     }

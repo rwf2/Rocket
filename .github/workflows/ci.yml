@@ -5,14 +5,15 @@ on: [push, pull_request]
 env:
   CARGO_TERM_COLOR: always
 
-
 jobs:
   test:
     name: "${{ matrix.platform.name }} ${{ matrix.test.name }} (${{ matrix.platform.toolchain }})"
+    runs-on: ${{ matrix.platform.distro }}
 
     strategy:
       fail-fast: false
       matrix:
+        fallible: [false]
         platform:
           - { name: Linux, distro: ubuntu-latest, toolchain: stable }
           - { name: Windows, distro: windows-latest, toolchain: stable }
@@ -27,16 +28,34 @@ jobs:
             test: { name: Core, flag: "--core" }
           - platform: { name: Linux, distro: ubuntu-latest, toolchain: stable }
             test: { name: Release, flag: "--release" }
-
-    runs-on: ${{ matrix.platform.distro }}
-
-    continue-on-error: ${{ matrix.platform.name == 'Linux'
-      && matrix.platform.toolchain == 'nightly'
-      && matrix.test.name == 'Debug' }}
+          - platform: { name: Linux, distro: ubuntu-latest, toolchain: stable }
+            test: { name: UI, flag: "--ui" }
+            fallible: true
+          - platform: { name: Linux, distro: ubuntu-latest, toolchain: nightly }
+            test: { name: UI, flag: "--ui" }
+            fallible: true
+          - platform: { name: Windows }
+            working-directory: "C:\\a\\${{ github.event.repository.name }}\\${{ github.event.repository.name }}"
 
     steps:
       - name: Checkout Sources
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
+
+      - name: Free Disk Space (Linux)
+        if: matrix.platform.name == 'Linux'
+        run: |
+            echo "Freeing up disk space on Linux CI"
+            df -h
+            sudo rm -rf /usr/share/dotnet/
+            sudo rm -rf /opt/ghc
+            sudo rm -rf /usr/local/share/boost
+            sudo rm -rf /usr/local/graalvm/
+            sudo rm -rf /usr/local/.ghcup/
+            sudo rm -rf /usr/local/share/powershell
+            sudo rm -rf /usr/local/share/chromium
+            sudo rm -rf /usr/local/lib/android
+            sudo rm -rf /usr/local/lib/node_modules
+            df -h
 
       - name: Install Native Dependencies (macOS)
         if: matrix.platform.name == 'macOS'
@@ -64,24 +83,35 @@ jobs:
           sudo apt-get install -y libmysqlclient-dev libpq-dev libsqlite3-dev
 
       - name: Install Rust
-        uses: actions-rs/toolchain@v1
+        uses: dtolnay/rust-toolchain@master
+        id: toolchain
         with:
-          profile: minimal
           toolchain: ${{ matrix.platform.toolchain }}
-          override: true
+          components: rust-src
 
       - name: Cache Example Workspace
         if: matrix.test.name == 'Examples'
-        uses: Swatinem/rust-cache@v1
+        uses: Swatinem/rust-cache@v2
         with:
-          working-directory: "examples"
+          workspaces: examples
+          key: ${{ matrix.test.name }}-${{ steps.toolchain.outputs.cachekey }}
 
       - name: Cache Root Workspace
         if: matrix.test.name != 'Examples'
-        uses: Swatinem/rust-cache@v1
+        uses: Swatinem/rust-cache@v2
         with:
-          key: ${{ matrix.test.name }}
+          key: ${{ matrix.test.name }}-${{ steps.toolchain.outputs.cachekey }}
+
+      # Don't run out of disk space on Windows. C: has much much space than D:.
+      - name: Switch Disk (Windows)
+        if: matrix.platform.name == 'Windows'
+        run: |
+          Get-PSDrive
+          cp D:\a C:\ -Recurse
+          Get-PSDrive
 
       - name: Run Tests
+        continue-on-error: ${{ matrix.fallible }}
+        working-directory: ${{ matrix.working-directory || github.workspace }}
         run: ./scripts/test.sh ${{ matrix.test.flag }} -q
         shell: bash

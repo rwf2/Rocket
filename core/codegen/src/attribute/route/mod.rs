@@ -38,7 +38,7 @@ fn query_decls(route: &Route) -> Option<TokenStream> {
     }
 
     define_spanned_export!(Span::call_site() =>
-        __req, __data, _log, _form, Outcome, _Ok, _Err, _Some, _None
+        __req, __data, _log, _form, Outcome, _Ok, _Err, _Some, _None, Status
     );
 
     // Record all of the static parameters for later filtering.
@@ -104,7 +104,7 @@ fn query_decls(route: &Route) -> Option<TokenStream> {
             if !__e.is_empty() {
                 #_log::warn_!("Query string failed to match route declaration.");
                 for _err in __e { #_log::warn_!("{}", _err); }
-                return #Outcome::Forward(#__data);
+                return #Outcome::Forward((#__data, #Status::NotFound));
             }
 
             (#(#ident.unwrap()),*)
@@ -121,9 +121,9 @@ fn request_guard_decl(guard: &Guard) -> TokenStream {
     quote_spanned! { ty.span() =>
         let #ident: #ty = match <#ty as #FromRequest>::from_request(#__req).await {
             #Outcome::Success(__v) => __v,
-            #Outcome::Forward(_) => {
+            #Outcome::Forward(__e) => {
                 #_log::warn_!("Request guard `{}` is forwarding.", stringify!(#ty));
-                return #Outcome::Forward(#__data);
+                return #Outcome::Forward((#__data, __e));
             },
             #Outcome::Failure((__c, __e)) => {
                 #_log::warn_!("Request guard `{}` failed: {:?}.", stringify!(#ty), __e);
@@ -137,7 +137,7 @@ fn param_guard_decl(guard: &Guard) -> TokenStream {
     let (i, name, ty) = (guard.index, &guard.name, &guard.ty);
     define_spanned_export!(ty.span() =>
         __req, __data, _log, _None, _Some, _Ok, _Err,
-        Outcome, FromSegments, FromParam
+        Outcome, FromSegments, FromParam, Status
     );
 
     // Returned when a dynamic parameter fails to parse.
@@ -145,7 +145,7 @@ fn param_guard_decl(guard: &Guard) -> TokenStream {
         #_log::warn_!("Parameter guard `{}: {}` is forwarding: {:?}.",
             #name, stringify!(#ty), __error);
 
-        #Outcome::Forward(#__data)
+        #Outcome::Forward((#__data, #Status::NotFound))
     });
 
     // All dynamic parameters should be found if this function is being called;
@@ -158,10 +158,10 @@ fn param_guard_decl(guard: &Guard) -> TokenStream {
                     #_Err(__error) => return #parse_error,
                 },
                 #_None => {
-                    #_log::error_!("Internal invariant broken: dyn param not found.");
+                    #_log::error_!("Internal invariant broken: dyn param {} not found.", #i);
                     #_log::error_!("Please report this to the Rocket issue tracker.");
                     #_log::error_!("https://github.com/SergioBenitez/Rocket/issues");
-                    return #Outcome::Forward(#__data);
+                    return #Outcome::Forward((#__data, #Status::InternalServerError));
                 }
             }
         },
@@ -184,9 +184,9 @@ fn data_guard_decl(guard: &Guard) -> TokenStream {
     quote_spanned! { ty.span() =>
         let #ident: #ty = match <#ty as #FromData>::from_data(#__req, #__data).await {
             #Outcome::Success(__d) => __d,
-            #Outcome::Forward(__d) => {
+            #Outcome::Forward((__d, __e)) => {
                 #_log::warn_!("Data guard `{}` is forwarding.", stringify!(#ty));
-                return #Outcome::Forward(__d);
+                return #Outcome::Forward((__d, __e));
             }
             #Outcome::Failure((__c, __e)) => {
                 #_log::warn_!("Data guard `{}` failed: {:?}.", stringify!(#ty), __e);
@@ -259,7 +259,7 @@ fn sentinels_expr(route: &Route) -> TokenStream {
         .map(|p| &p.ident)
         .collect();
 
-    // Note: for a given route, we need to emit a valid graph of eligble
+    // Note: for a given route, we need to emit a valid graph of eligible
     // sentinels. This means that we don't have broken links, where a child
     // points to a parent that doesn't exist. The concern is that the
     // `is_concrete()` filter will cause a break in the graph.
@@ -268,12 +268,12 @@ fn sentinels_expr(route: &Route) -> TokenStream {
     //    1. if `is_concrete()` returns `false` for a (valid) type, it returns
     //       false for all of its parents. we consider this an axiom; this is
     //       the point of `is_concrete()`. the type is filtered out, so the
-    //       theorem vacously holds
+    //       theorem vacuously holds
     //    2. if `is_concrete()` returns `true`, for a type `T`, it either:
     //      * returns `false` for the parent. by 1) it will return false for
     //        _all_ parents of the type, so no node in the graph can consider,
     //        directly or indirectly, `T` to be a child, and thus there are no
-    //        broken links; the thereom holds
+    //        broken links; the theorem holds
     //      * returns `true` for the parent, and so the type has a parent, and
     //      the theorem holds.
     //    3. these are all the cases. QED.
@@ -324,6 +324,7 @@ fn codegen_route(route: Route) -> Result<TokenStream> {
 
     // Gather info about the function.
     let (vis, handler_fn) = (&route.handler.vis, &route.handler);
+    let deprecated = handler_fn.attrs.iter().find(|a| a.path().is_ident("deprecated"));
     let handler_fn_name = &handler_fn.sig.ident;
     let internal_uri_macro = internal_uri_macro_decl(&route);
     let responder_outcome = responder_outcome_expr(&route);
@@ -337,13 +338,13 @@ fn codegen_route(route: Route) -> Result<TokenStream> {
         #handler_fn
 
         #[doc(hidden)]
-        #[allow(non_camel_case_types)]
+        #[allow(nonstandard_style)]
         /// Rocket code generated proxy structure.
-        #vis struct #handler_fn_name {  }
+        #deprecated #vis struct #handler_fn_name {  }
 
         /// Rocket code generated proxy static conversion implementations.
+        #[allow(nonstandard_style, deprecated, clippy::style)]
         impl #handler_fn_name {
-            #[allow(non_snake_case, unreachable_patterns, unreachable_code)]
             fn into_info(self) -> #_route::StaticInfo {
                 fn monomorphized_function<'__r>(
                     #__req: &'__r #Request<'_>,

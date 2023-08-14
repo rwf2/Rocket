@@ -27,7 +27,7 @@ error: [note] this function must be `async`
    |     ^^
 
 error: attribute cannot be applied to `main` function
-         --- note: this attribute generates a `main` function
+       = note: this attribute generates a `main` function
   --> tests/ui-fail-stable/async-entry.rs:49:5
    |
 49 |     #[rocket::launch]
@@ -70,7 +70,7 @@ error: [note] this function must return a value
    |     ^^
 
 error: attribute cannot be applied to `main` function
-         --- note: this attribute generates a `main` function
+       = note: this attribute generates a `main` function
   --> tests/ui-fail-stable/async-entry.rs:79:5
    |
 79 |     #[rocket::launch]
@@ -85,7 +85,7 @@ error: [note] this function cannot be `main`
    |        ^^^^
 
 error: attribute cannot be applied to `main` function
-         --- note: this attribute generates a `main` function
+       = note: this attribute generates a `main` function
   --> tests/ui-fail-stable/async-entry.rs:87:5
    |
 87 |     #[rocket::launch]
@@ -100,18 +100,21 @@ error: [note] this function cannot be `main`
    |              ^^^^
 
 error[E0728]: `await` is only allowed inside `async` functions and blocks
-  --> tests/ui-fail-stable/async-entry.rs:73:41
+  --> tests/ui-fail-stable/async-entry.rs:73:42
    |
 72 |     fn rocket() -> _ {
    |        ------ this is not `async`
 73 |         let _ = rocket::build().launch().await;
-   |                                         ^^^^^^ only allowed inside `async` functions and blocks
+   |                                          ^^^^^ only allowed inside `async` functions and blocks
 
 error[E0308]: mismatched types
   --> tests/ui-fail-stable/async-entry.rs:35:9
    |
+33 |     async fn rocket() -> String {
+   |                          ------ expected `std::string::String` because of return type
+34 |         let _ = rocket::build().launch().await;
 35 |         rocket::build()
-   |         ^^^^^^^^^^^^^^^ expected struct `std::string::String`, found struct `Rocket`
+   |         ^^^^^^^^^^^^^^^ expected `String`, found `Rocket<Build>`
    |
    = note: expected struct `std::string::String`
               found struct `Rocket<Build>`
@@ -119,8 +122,11 @@ error[E0308]: mismatched types
 error[E0308]: mismatched types
   --> tests/ui-fail-stable/async-entry.rs:44:9
    |
+42 |     async fn rocket() -> _ {
+   |                          - expected `Rocket<Build>` because of return type
+43 |         let _ = rocket::build().launch().await;
 44 |         "hi".to_string()
-   |         ^^^^^^^^^^^^^^^^ expected struct `Rocket`, found struct `std::string::String`
+   |         ^^^^^^^^^^^^^^^^ expected `Rocket<Build>`, found `String`
    |
    = note: expected struct `Rocket<Build>`
               found struct `std::string::String`
@@ -129,26 +135,33 @@ error[E0308]: mismatched types
   --> tests/ui-fail-stable/async-entry.rs:24:21
    |
 24 |       async fn main() {
-   |                       ^ expected `()` because of default return type
-   |  _____________________|
+   |                       ^
+   |                       |
+   |  _____________________expected `()` because of default return type
    | |
 25 | |         rocket::build()
 26 | |     }
    | |     ^- help: consider using a semicolon here: `;`
    | |_____|
-   |       expected `()`, found struct `Rocket`
+   |       expected `()`, found `Rocket<Build>`
    |
    = note: expected unit type `()`
                  found struct `Rocket<Build>`
 
 error[E0308]: mismatched types
-  --> tests/ui-fail-stable/async-entry.rs:33:26
+  --> tests/ui-fail-stable/async-entry.rs:35:9
    |
-33 |     async fn rocket() -> String {
-   |                          ^^^^^^
-   |                          |
-   |                          expected struct `Rocket`, found struct `std::string::String`
-   |                          expected due to this
+35 |         rocket::build()
+   |         ^^^^^^^^^^^^^^^ expected `String`, found `Rocket<Build>`
+   |
+   = note: expected struct `std::string::String`
+              found struct `Rocket<Build>`
+
+error[E0308]: mismatched types
+  --> tests/ui-fail-stable/async-entry.rs:44:9
+   |
+44 |         "hi".to_string()
+   |         ^^^^^^^^^^^^^^^^ expected `Rocket<Build>`, found `String`
    |
    = note: expected struct `Rocket<Build>`
               found struct `std::string::String`

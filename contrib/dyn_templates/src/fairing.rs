@@ -59,9 +59,9 @@ impl Fairing for TemplateFairing {
         let cm = rocket.state::<ContextManager>()
             .expect("Template ContextManager registered in on_ignite");
 
-        info!("{}{}:", Paint::emoji("📐 "), Paint::magenta("Templating"));
-        info_!("directory: {}", Paint::white(Source::from(&*cm.context().root)));
-        info_!("engines: {:?}", Paint::white(Engines::ENABLED_EXTENSIONS));
+        info!("{}{}:", "📐 ".emoji(), "Templating".magenta());
+        info_!("directory: {}", Source::from(&*cm.context().root).primary());
+        info_!("engines: {:?}", Engines::ENABLED_EXTENSIONS.primary());
     }
 
     #[cfg(debug_assertions)]

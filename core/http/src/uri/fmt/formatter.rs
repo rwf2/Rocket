@@ -34,7 +34,7 @@ use crate::uri::fmt::{UriDisplay, Part, Path, Query, Kind};
 ///
 ///   * When **nested named values** are written, typically by passing a value
 ///     to [`write_named_value()`] whose implementation of `UriDisplay` also
-///     calls `write_named_vlaue()`, the nested names are joined by a `.`,
+///     calls `write_named_value()`, the nested names are joined by a `.`,
 ///     written out followed by a `=`, followed by the value.
 ///
 /// # Usage
@@ -433,19 +433,27 @@ impl<'a> ValidRoutePrefix for Origin<'a> {
     type Output = Self;
 
     fn append(self, path: Cow<'static, str>, query: Option<Cow<'static, str>>) -> Self::Output {
-        // No-op if `self` is already normalzied.
+        // No-op if `self` is already normalized.
         let mut prefix = self.into_normalized();
         prefix.clear_query();
 
+        // Avoid a double `//` to start.
         if prefix.path() == "/" {
-            // Avoid a double `//` to start.
             return Origin::new(path, query);
-        } else if path == "/" {
-            // Appending path to `/` is a no-op, but append any query.
+        }
+
+        // Avoid allocating if the `path` would result in just the prefix.
+        if path == "/" {
             prefix.set_query(query);
             return prefix;
         }
 
+        // Avoid a `//` resulting from joining.
+        if prefix.has_trailing_slash() && path.starts_with('/') {
+            return Origin::new(format!("{}{}", prefix.path(), &path[1..]), query);
+        }
+
+        // Join normally.
         Origin::new(format!("{}{}", prefix.path(), path), query)
     }
 }
@@ -454,16 +462,15 @@ impl<'a> ValidRoutePrefix for Absolute<'a> {
     type Output = Self;
 
     fn append(self, path: Cow<'static, str>, query: Option<Cow<'static, str>>) -> Self::Output {
-        // No-op if `self` is already normalzied.
+        // No-op if `self` is already normalized.
         let mut prefix = self.into_normalized();
         prefix.clear_query();
 
-        if prefix.authority().is_some() {
-            // The prefix is normalized. Appending a `/` is a no-op.
-            if path == "/" {
-                prefix.set_query(query);
-                return prefix;
-            }
+        // Distinguish for routes `/` with bases of `/foo/` and `/foo`. The
+        // latter base, without a trailing slash, should combine as `/foo`.
+        if path == "/" {
+            prefix.set_query(query);
+            return prefix;
         }
 
         // In these cases, appending `path` would be a no-op or worse.
@@ -473,11 +480,7 @@ impl<'a> ValidRoutePrefix for Absolute<'a> {
             return prefix;
         }
 
-        if path == "/" {
-            prefix.set_query(query);
-            return prefix;
-        }
-
+        // Create the combined URI.
         prefix.set_path(format!("{}{}", prefix.path(), path));
         prefix.set_query(query);
         prefix

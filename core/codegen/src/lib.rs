@@ -21,7 +21,7 @@
 //!
 //! ```toml
 //! [dependencies]
-//! rocket = "0.5.0-rc.2"
+//! rocket = "=0.5.0-rc.3"
 //! ```
 //!
 //! And to import all macros, attributes, and derives via `#[macro_use]` in the
@@ -1005,7 +1005,7 @@ pub fn derive_responder(input: TokenStream) -> TokenStream {
 /// used. In the example above, the field `MyStruct::kind` is rendered with a
 /// name of `type`.
 ///
-/// The attribute can slso be applied to variants of C-like enums; it may only
+/// The attribute can also be applied to variants of C-like enums; it may only
 /// contain `value` and looks as follows:
 ///
 /// ```rust
@@ -1061,9 +1061,9 @@ pub fn derive_uri_display_path(input: TokenStream) -> TokenStream {
     emit!(derive::uri_display::derive_uri_display_path(input))
 }
 
-/// Generates a [`Vec`] of [`Route`]s from a set of route paths.
+/// Generates a `Vec` of [`Route`]s from a set of route paths.
 ///
-/// The `routes!` macro expands a list of route paths into a [`Vec`] of their
+/// The `routes!` macro expands a list of route paths into a `Vec` of their
 /// corresponding [`Route`] structures. For example, given the following routes:
 ///
 /// ```rust
@@ -1117,9 +1117,9 @@ pub fn routes(input: TokenStream) -> TokenStream {
     emit!(bang::routes_macro(input))
 }
 
-/// Generates a [`Vec`] of [`Catcher`]s from a set of catcher paths.
+/// Generates a `Vec` of [`Catcher`]s from a set of catcher paths.
 ///
-/// The `catchers!` macro expands a list of catcher paths into a [`Vec`] of
+/// The `catchers!` macro expands a list of catcher paths into a `Vec` of
 /// their corresponding [`Catcher`] structures. For example, given the following
 /// catchers:
 ///
@@ -1230,7 +1230,7 @@ pub fn catchers(input: TokenStream) -> TokenStream {
 /// A URI to a route name `foo` is generated using `uri!(foo(v1, v2, v3))` or
 /// `uri!(foo(a = v1, b = v2, c = v3))`, where `v1`, `v2`, `v3` are the values
 /// to fill in for route parameters named `a`, `b`, and `c`. If the named
-/// parameter sytnax is used (`a = v1`, etc.), parameters can appear in any
+/// parameter syntax is used (`a = v1`, etc.), parameters can appear in any
 /// order.
 ///
 /// More concretely, for the route `person` defined below:

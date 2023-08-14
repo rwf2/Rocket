@@ -122,8 +122,9 @@ use crate::http::uncased::Uncased;
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(transparent)]
 pub struct Limits {
-    #[serde(with = "figment::util::vec_tuple_map")]
-    limits: Vec<(Uncased<'static>, ByteUnit)>
+    #[serde(deserialize_with = "Limits::deserialize")]
+    #[serde(serialize_with = "figment::util::vec_tuple_map::serialize")]
+    limits: Vec<(Uncased<'static>, ByteUnit)>,
 }
 
 impl Default for Limits {
@@ -298,6 +299,16 @@ impl Limits {
         }
 
         None
+    }
+
+    /// Deserialize a `Limits` vector from a map. Ensures that the resulting
+    /// vector is properly sorted for futures lookups via binary search.
+    fn deserialize<'de, D>(de: D) -> Result<Vec<(Uncased<'static>, ByteUnit)>, D::Error>
+        where D: serde::Deserializer<'de>
+    {
+        let mut limits = figment::util::vec_tuple_map::deserialize(de)?;
+        limits.sort();
+        Ok(limits)
     }
 }
 

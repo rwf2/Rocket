@@ -87,3 +87,6 @@ This directory contains projects showcasing Rocket's features.
 
   * **[`tls`](./tls)** - Illustrates configuring TLS with a variety of key pair
     kinds.
+
+  * **[`upgrade`](./upgrade)** - Uses the connection upgrade API to implement
+    WebSocket support using tungstenite.

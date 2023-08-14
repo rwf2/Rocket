@@ -5,7 +5,7 @@
 //! while necessary.
 
 pub use hyper::{Method, Error, Body, Uri, Version, Request, Response};
-pub use hyper::{body, server, service};
+pub use hyper::{body, server, service, upgrade};
 pub use http::{HeaderValue, request, uri};
 
 /// Reexported Hyper HTTP header types.

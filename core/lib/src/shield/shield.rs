@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 use std::sync::atomic::{AtomicBool, Ordering};
 
-use state::Storage;
+use state::InitCell;
 use yansi::Paint;
 
 use crate::{Rocket, Request, Response, Orbit, Config};
@@ -72,7 +72,7 @@ pub struct Shield {
     /// Whether to enforce HSTS even though the user didn't enable it.
     force_hsts: AtomicBool,
     /// Headers pre-rendered at liftoff from the configured policies.
-    rendered: Storage<Vec<Header<'static>>>,
+    rendered: InitCell<Vec<Header<'static>>>,
 }
 
 impl Default for Shield {
@@ -111,13 +111,13 @@ impl Shield {
         Shield {
             policies: HashMap::new(),
             force_hsts: AtomicBool::new(false),
-            rendered: Storage::new(),
+            rendered: InitCell::new(),
         }
     }
 
     /// Enables the policy header `policy`.
     ///
-    /// If the poliicy was previously enabled, the configuration is replaced
+    /// If the policy was previously enabled, the configuration is replaced
     /// with that of `policy`.
     ///
     /// # Example
@@ -129,7 +129,7 @@ impl Shield {
     /// let shield = Shield::new().enable(NoSniff::default());
     /// ```
     pub fn enable<P: Policy>(mut self, policy: P) -> Self {
-        self.rendered = Storage::new();
+        self.rendered = InitCell::new();
         self.policies.insert(P::NAME.into(), Box::new(policy));
         self
     }
@@ -145,7 +145,7 @@ impl Shield {
     /// let shield = Shield::default().disable::<NoSniff>();
     /// ```
     pub fn disable<P: Policy>(mut self) -> Self {
-        self.rendered = Storage::new();
+        self.rendered = InitCell::new();
         self.policies.remove(UncasedStr::new(P::NAME));
         self
     }
@@ -174,7 +174,7 @@ impl Shield {
     }
 
     fn headers(&self) -> &[Header<'static>] {
-        self.rendered.get_or_set(|| {
+        self.rendered.get_or_init(|| {
             let mut headers: Vec<_> = self.policies.values()
                 .map(|p| p.header())
                 .collect();
@@ -207,10 +207,10 @@ impl Fairing for Shield {
         }
 
         if !self.headers().is_empty() {
-            info!("{}{}:", Paint::emoji("🛡️ "), Paint::magenta("Shield"));
+            info!("{}{}:", "🛡️ ".emoji(), "Shield".magenta());
 
             for header in self.headers() {
-                info_!("{}: {}", header.name(), Paint::default(header.value()));
+                info_!("{}: {}", header.name(), header.value().primary());
             }
 
             if force_hsts {

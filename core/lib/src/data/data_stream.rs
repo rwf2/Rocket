@@ -7,6 +7,7 @@ use tokio::fs::File;
 use tokio::io::{AsyncRead, AsyncWrite, AsyncReadExt, ReadBuf, Take};
 use futures::stream::Stream;
 use futures::ready;
+use yansi::Paint;
 
 use crate::http::hyper;
 use crate::ext::{PollExt, Chain};
@@ -65,7 +66,7 @@ enum StreamKind<'r> {
 
 impl<'r> DataStream<'r> {
     pub(crate) fn new(buf: Vec<u8>, stream: StreamReader<'r>, limit: u64) -> Self {
-        let chain = Chain::new(Cursor::new(buf), stream).take(limit);
+        let chain = Chain::new(Cursor::new(buf), stream).take(limit).into();
         Self { chain }
     }
 
@@ -73,6 +74,7 @@ impl<'r> DataStream<'r> {
     async fn limit_exceeded(&mut self) -> io::Result<bool> {
         #[cold]
         async fn _limit_exceeded(stream: &mut DataStream<'_>) -> io::Result<bool> {
+            // Read one more byte after reaching limit to see if we cut early.
             stream.chain.set_limit(1);
             let mut buf = [0u8; 1];
             Ok(stream.read(&mut buf).await? != 0)
@@ -100,7 +102,7 @@ impl<'r> DataStream<'r> {
     /// A helper method to write the body of the request to any `AsyncWrite`
     /// type. Returns an [`N`] which indicates how many bytes were written and
     /// whether the entire stream was read. An additional read from `self` may
-    /// be required to check if all of the sream has been read. If that
+    /// be required to check if all of the stream has been read. If that
     /// information is not needed, use [`DataStream::stream_precise_to()`].
     ///
     /// This method is identical to `tokio::io::copy(&mut self, &mut writer)`
@@ -252,6 +254,17 @@ impl AsyncRead for DataStream<'_> {
         cx: &mut Context<'_>,
         buf: &mut ReadBuf<'_>,
     ) -> Poll<io::Result<()>> {
+        if self.chain.limit() == 0 {
+            let stream: &StreamReader<'_> = &self.chain.get_ref().get_ref().1;
+            let kind = match stream.inner {
+                StreamKind::Empty => "an empty stream (vacuous)",
+                StreamKind::Body(_) => "the request body",
+                StreamKind::Multipart(_) => "a multipart form field",
+            };
+
+            warn_!("Data limit reached while reading {}.", kind.primary().bold());
+        }
+
         Pin::new(&mut self.chain).poll_read(cx, buf)
     }
 }

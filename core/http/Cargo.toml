@@ -1,6 +1,6 @@
 [package]
 name = "rocket_http"
-version = "0.5.0-rc.2"
+version = "0.5.0-rc.3"
 authors = ["Sergio Benitez <sb@sergio.bz>"]
 description = """
 Types, traits, and parsers for HTTP requests, responses, and headers.
@@ -30,9 +30,9 @@ percent-encoding = "2"
 http = "0.2"
 time = { version = "0.3", features = ["formatting", "macros"] }
 indexmap = { version = "1.5.2", features = ["std"] }
-rustls = { version = "0.20", optional = true }
-tokio-rustls = { version = "0.23.4", optional = true }
-rustls-pemfile = { version = "1", optional = true }
+rustls = { version = "0.21", optional = true }
+tokio-rustls = { version = "0.24", optional = true }
+rustls-pemfile = { version = "1.0.2", optional = true }
 tokio = { version = "1.6.1", features = ["net", "sync", "time"] }
 log = "0.4"
 ref-cast = "1.0"
@@ -42,8 +42,8 @@ pear = "0.2.3"
 pin-project-lite = "0.2"
 memchr = "2"
 stable-pattern = "0.1"
-cookie = { version = "0.16.0", features = ["percent-encode"] }
-state = "0.5.3"
+cookie = { version = "0.17.0", features = ["percent-encode"] }
+state = "0.6"
 futures = { version = "0.3", default-features = false }
 
 [dependencies.x509-parser]

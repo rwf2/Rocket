@@ -334,13 +334,16 @@ fn test_inclusive_segments() {
 
     assert_eq!(get("/"), "empty+");
     assert_eq!(get("//"), "empty+");
-    assert_eq!(get("//a/"), "empty+a");
-    assert_eq!(get("//a//"), "empty+a");
+    assert_eq!(get("//a"), "empty+a");
+    assert_eq!(get("//a/"), "empty+a/");
+    assert_eq!(get("//a//"), "empty+a/");
     assert_eq!(get("//a//c/d"), "empty+a/c/d");
+    assert_eq!(get("//a/b"), "empty+a/b");
 
-    assert_eq!(get("//a/b"), "nonempty+");
+    assert_eq!(get("//a/b/"), "nonempty+");
     assert_eq!(get("//a/b/c"), "nonempty+c");
     assert_eq!(get("//a/b//c"), "nonempty+c");
     assert_eq!(get("//a//b////c"), "nonempty+c");
     assert_eq!(get("//a//b////c/d/e"), "nonempty+c/d/e");
+    assert_eq!(get("//a//b////c/d/e/"), "nonempty+c/d/e/");
 }

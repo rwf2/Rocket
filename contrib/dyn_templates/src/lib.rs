@@ -12,7 +12,7 @@
 //!
 //!      ```toml
 //!      [dependencies.rocket_dyn_templates]
-//!      version = "0.1.0-rc.2"
+//!      version = "=0.1.0-rc.3"
 //!      features = ["handlebars", "tera"]
 //!      ```
 //!
@@ -181,6 +181,7 @@ use rocket::response::{self, Responder};
 use rocket::http::{ContentType, Status};
 use rocket::figment::{value::Value, error::Error};
 use rocket::serde::Serialize;
+use rocket::yansi::Paint;
 
 const DEFAULT_TEMPLATE_DIR: &str = "templates";
 
@@ -441,8 +442,8 @@ impl<'r> Responder<'r, 'static> for Template {
 impl Sentinel for Template {
     fn abort(rocket: &Rocket<Ignite>) -> bool {
         if rocket.state::<ContextManager>().is_none() {
-            let template = rocket::yansi::Paint::default("Template").bold();
-            let fairing = rocket::yansi::Paint::default("Template::fairing()").bold();
+            let template = "Template".primary().bold();
+            let fairing = "Template::fairing()".primary().bold();
             error!("returning `{}` responder without attaching `{}`.", template, fairing);
             info_!("To use or query templates, you must attach `{}`.", fairing);
             info_!("See the `Template` documentation for more information.");

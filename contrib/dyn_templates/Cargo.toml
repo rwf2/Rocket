@@ -1,6 +1,6 @@
 [package]
 name = "rocket_dyn_templates"
-version = "0.1.0-rc.2"
+version = "0.1.0-rc.3"
 authors = ["Sergio Benitez <sb@sergio.bz>"]
 description = "Dynamic templating engine integration for Rocket."
 documentation = "https://api.rocket.rs/v0.5-rc/rocket_dyn_templates/"
@@ -18,11 +18,11 @@ handlebars = ["handlebars_"]
 
 [dependencies]
 glob = "0.3"
-notify = "4.0.6"
-normpath = "0.3"
+notify = "5.0.0"
+normpath = "1"
 
 [dependencies.rocket]
-version = "0.5.0-rc.2"
+version = "=0.5.0-rc.3"
 path = "../../core/lib"
 default-features = false
 

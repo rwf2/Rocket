@@ -1,47 +1,47 @@
 error: invalid route URI: expected token '/' but found 'a' at index 0
-         --- help: expected URI in origin form: "/path/<param>"
+       = help: expected URI in origin form: "/path/<param>"
  --> tests/ui-fail-stable/route-path-bad-syntax.rs:5:7
   |
 5 | #[get("a")]
   |       ^^^
 
 error: invalid route URI: unexpected EOF: expected token '/' at index 0
-         --- help: expected URI in origin form: "/path/<param>"
+       = help: expected URI in origin form: "/path/<param>"
  --> tests/ui-fail-stable/route-path-bad-syntax.rs:8:7
   |
 8 | #[get("")]
   |       ^^
 
 error: invalid route URI: expected token '/' but found 'a' at index 0
-         --- help: expected URI in origin form: "/path/<param>"
+       = help: expected URI in origin form: "/path/<param>"
   --> tests/ui-fail-stable/route-path-bad-syntax.rs:11:7
    |
 11 | #[get("a/b/c")]
    |       ^^^^^^^
 
 error: route URIs cannot contain empty segments
-         --- note: expected "/a/b", found "/a///b"
+       = note: expected "/a/b", found "/a///b"
   --> tests/ui-fail-stable/route-path-bad-syntax.rs:14:7
    |
 14 | #[get("/a///b")]
    |       ^^^^^^^^
 
 error: route URIs cannot contain empty segments
-         --- note: expected "/?bat", found "/?bat&&"
+       = note: expected "/?bat", found "/?bat&&"
   --> tests/ui-fail-stable/route-path-bad-syntax.rs:17:7
    |
 17 | #[get("/?bat&&")]
    |       ^^^^^^^^^
 
 error: route URIs cannot contain empty segments
-         --- note: expected "/?bat", found "/?bat&&"
+       = note: expected "/?bat", found "/?bat&&"
   --> tests/ui-fail-stable/route-path-bad-syntax.rs:20:7
    |
 20 | #[get("/?bat&&")]
    |       ^^^^^^^^^
 
 error: route URIs cannot contain empty segments
-         --- note: expected "/a/b", found "/a/b//"
+       = note: expected "/a/b/", found "/a/b//"
   --> tests/ui-fail-stable/route-path-bad-syntax.rs:23:7
    |
 23 | #[get("/a/b//")]
@@ -108,68 +108,68 @@ error: [note] expected argument named `b` here
    |      ^^
 
 error: invalid identifier: `foo_.`
-         --- help: dynamic parameters must be valid identifiers
-         --- help: did you mean `<foo_>`?
+       = help: dynamic parameters must be valid identifiers
+       = help: did you mean `<foo_>`?
   --> tests/ui-fail-stable/route-path-bad-syntax.rs:60:7
    |
 60 | #[get("/<foo_.>")]
    |       ^^^^^^^^^^
 
 error: invalid identifier: `foo*`
-         --- help: dynamic parameters must be valid identifiers
-         --- help: did you mean `<foo>`?
+       = help: dynamic parameters must be valid identifiers
+       = help: did you mean `<foo>`?
   --> tests/ui-fail-stable/route-path-bad-syntax.rs:63:7
    |
 63 | #[get("/<foo*>")]
    |       ^^^^^^^^^
 
 error: invalid identifier: `!`
-         --- help: dynamic parameters must be valid identifiers
-         --- help: did you mean `<param>`?
+       = help: dynamic parameters must be valid identifiers
+       = help: did you mean `<param>`?
   --> tests/ui-fail-stable/route-path-bad-syntax.rs:66:7
    |
 66 | #[get("/<!>")]
    |       ^^^^^^
 
 error: invalid identifier: `name>:<id`
-         --- help: dynamic parameters must be valid identifiers
-         --- help: did you mean `<nameid>`?
+       = help: dynamic parameters must be valid identifiers
+       = help: did you mean `<nameid>`?
   --> tests/ui-fail-stable/route-path-bad-syntax.rs:69:7
    |
 69 | #[get("/<name>:<id>")]
    |       ^^^^^^^^^^^^^^
 
 error: unexpected static parameter
-         --- help: parameter must be dynamic: `<foo>`
+       = help: parameter must be dynamic: `<foo>`
   --> tests/ui-fail-stable/route-path-bad-syntax.rs:74:19
    |
 74 | #[get("/", data = "foo")]
    |                   ^^^^^
 
 error: parameter cannot be trailing
-         --- help: did you mean `<foo>`?
+       = help: did you mean `<foo>`?
   --> tests/ui-fail-stable/route-path-bad-syntax.rs:77:19
    |
 77 | #[get("/", data = "<foo..>")]
    |                   ^^^^^^^^^
 
 error: unexpected static parameter
-         --- help: parameter must be dynamic: `<foo>`
+       = help: parameter must be dynamic: `<foo>`
   --> tests/ui-fail-stable/route-path-bad-syntax.rs:80:19
    |
 80 | #[get("/", data = "<foo")]
    |                   ^^^^^^
 
 error: invalid identifier: `test `
-         --- help: dynamic parameters must be valid identifiers
-         --- help: did you mean `<test>`?
+       = help: dynamic parameters must be valid identifiers
+       = help: did you mean `<test>`?
   --> tests/ui-fail-stable/route-path-bad-syntax.rs:83:19
    |
 83 | #[get("/", data = "<test >")]
    |                   ^^^^^^^^^
 
 error: handler arguments must be named
-         --- help: to name an ignored handler argument, use `_name`
+       = help: to name an ignored handler argument, use `_name`
   --> tests/ui-fail-stable/route-path-bad-syntax.rs:89:7
    |
 89 | fn k0(_: usize) {}

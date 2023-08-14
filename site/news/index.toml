@@ -1,5 +1,17 @@
 [[articles]]
 title = """
+  Rocket's 3rd v0.5 Release Candidate
+"""
+slug = "2023-03-23-version-0.5-rc.3"
+author = "Sergio Benitez"
+author_url = "https://sergio.bz"
+date = "March 23, 2023"
+snippet = """
+Rocket `0.5.0-rc.3`, a release candidate for Rocket v0.5, is now available.
+"""
+
+[[articles]]
+title = """
   Rocket's 2nd v0.5 Release Candidate
 """
 slug = "2022-05-09-version-0.5-rc.2"

@@ -765,6 +765,6 @@ impl<S, E, F> fmt::Debug for Outcome<S, E, F> {
 impl<S, E, F> fmt::Display for Outcome<S, E, F> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let (color, string) = self.formatting();
-        write!(f, "{}", Paint::default(string).fg(color))
+        write!(f, "{}", string.paint(color))
     }
 }

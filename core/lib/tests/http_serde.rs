@@ -4,7 +4,7 @@ use pretty_assertions::assert_eq;
 
 use rocket::{Config, uri};
 use rocket::http::uri::{Absolute, Asterisk, Authority, Origin, Reference};
-use rocket::http::Method;
+use rocket::http::{Method, Status};
 
 #[derive(PartialEq, Debug, Serialize, Deserialize)]
 struct UriContainer<'a> {
@@ -29,6 +29,13 @@ struct MethodContainer {
     mget: Method,
     mput: Method,
     mpost: Method,
+}
+
+#[derive(PartialEq, Debug, Serialize, Deserialize)]
+struct StatusContainer {
+    a: Status,
+    b: Status,
+    c: Status,
 }
 
 #[test]
@@ -144,6 +151,55 @@ fn method_serde() {
             mput: Method::Put,
             mpost: Method::Post
         });
+
+        Ok(())
+    });
+}
+
+#[test]
+fn status_serde() {
+    figment::Jail::expect_with(|jail| {
+        jail.create_file("Rocket.toml", r#"
+            [default]
+            a = 500
+            b = 100
+            c = 404
+        "#)?;
+
+        let statuses: StatusContainer = Config::figment().extract()?;
+        assert_eq!(statuses, StatusContainer {
+            a: Status::InternalServerError,
+            b: Status::Continue,
+            c: Status::NotFound
+        });
+
+        let tmp = Figment::from(Serialized::defaults(statuses));
+        let statuses: StatusContainer = tmp.extract()?;
+        assert_eq!(statuses, StatusContainer {
+            a: Status::InternalServerError,
+            b: Status::Continue,
+            c: Status::NotFound
+        });
+
+        jail.create_file("Rocket.toml", r#"
+            [default]
+            a = 99
+            b = 100
+            c = 404
+        "#)?;
+
+        let statuses: Result<StatusContainer, _> = Config::figment().extract();
+        assert!(statuses.is_err());
+
+        jail.create_file("Rocket.toml", r#"
+            [default]
+            a = 500
+            b = 100
+            c = 600
+        "#)?;
+
+        let statuses: Result<StatusContainer, _> = Config::figment().extract();
+        assert!(statuses.is_err());
 
         Ok(())
     });

@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <title>WebSocket Client Test</title>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+    </head>
+    <body>
+        <h1>WebSocket Client Test</h1>
+        <form action="#">
+            <input type="text" id="message" name="message" value="" placeholder="Send a message...">
+            <input type="submit" value="Submit">
+        </form>
+        <div id="log"></div>
+    </body>
+    <script language="javascript" type="text/javascript">
+    var wsUri = "ws://127.0.0.1:8000/echo";
+    var log;
+
+    function init() {
+        log = document.getElementById("log");
+        form = document.getElementsByTagName("form")[0];
+        message = document.getElementById("message");
+
+        testWebSocket();
+
+        form.addEventListener("submit", (e) => {
+            e.preventDefault();
+            if (message.value !== "") {
+                sendMessage(message.value);
+                message.value = "";
+            }
+        });
+    }
+
+    function testWebSocket() {
+        websocket = new WebSocket(wsUri);
+        websocket.onopen = onOpen;
+        websocket.onclose = onClose;
+        websocket.onmessage = onMessage;
+        websocket.onerror = onError;
+    }
+
+    function onOpen(evt) {
+        writeLog("CONNECTED");
+        sendMessage("Hello, Rocket!");
+    }
+
+    function onClose(evt) {
+        writeLog("Websocket DISCONNECTED");
+    }
+
+    function onMessage(evt) {
+        writeLog('<span style="color: blue;">RESPONSE: ' + evt.data+'</span>');
+    }
+
+    function onError(evt) {
+        writeLog('<span style="color: red;">ERROR:</span> ' + evt.data);
+    }
+
+    function sendMessage(message) {
+        writeLog("SENT: " + message);
+        websocket.send(message);
+    }
+
+    function writeLog(message) {
+        var pre = document.createElement("p");
+        pre.innerHTML = message;
+        log.prepend(pre);
+    }
+
+    window.addEventListener("load", init, false);
+    </script>
+</html>

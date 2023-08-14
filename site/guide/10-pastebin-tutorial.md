@@ -52,7 +52,7 @@ Then add the usual Rocket dependencies to the `Cargo.toml` file:
 
 ```toml
 [dependencies]
-rocket = "0.5.0-rc.2"
+rocket = "=0.5.0-rc.3"
 ```
 
 And finally, create a skeleton Rocket application to work off of in
@@ -307,7 +307,7 @@ using a type more specific than `&str` to represent IDs and then asking Rocket
 to validate the untrusted `id` input as that type. If validation fails, Rocket
 will take care to not call our routes with bad input.
 
-Typed validation for dynamic paramters like `id` is implemented via the
+Typed validation for dynamic parameters like `id` is implemented via the
 [`FromParam`] trait. Rocket uses `FromParam` to automatically validate and parse
 dynamic path parameters like `id`. We already have a type that represents valid
 paste IDs, `PasteId`, so we'll simply need to implement `FromParam` for

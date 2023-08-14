@@ -54,6 +54,62 @@ impl<'h> Header<'h> {
         }
     }
 
+    /// Returns `true` if `name` is a valid header name.
+    ///
+    /// This implements a simple (i.e, correct but not particularly performant)
+    /// header "field-name" checker as defined in RFC 7230.
+    ///
+    /// ```text
+    ///     header-field   = field-name ":" OWS field-value OWS
+    ///     field-name     = token
+    ///     token          = 1*tchar
+    ///     tchar          = "!" / "#" / "$" / "%" / "&" / "'" / "*"
+    ///                    / "+" / "-" / "." / "^" / "_" / "`" / "|" / "~"
+    ///                    / DIGIT / ALPHA
+    ///                    ; any VCHAR, except delimiters
+    /// ```
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// # extern crate rocket;
+    /// use rocket::http::Header;
+    ///
+    /// assert!(!Header::is_valid_name(""));
+    /// assert!(!Header::is_valid_name("some header"));
+    /// assert!(!Header::is_valid_name("some()"));
+    /// assert!(!Header::is_valid_name("[SomeHeader]"));
+    /// assert!(!Header::is_valid_name("<"));
+    /// assert!(!Header::is_valid_name(""));
+    /// assert!(!Header::is_valid_name("header,here"));
+    ///
+    /// assert!(Header::is_valid_name("Some#Header"));
+    /// assert!(Header::is_valid_name("Some-Header"));
+    /// assert!(Header::is_valid_name("This-Is_A~Header"));
+    /// ```
+    #[doc(hidden)]
+    pub const fn is_valid_name(name: &str) -> bool {
+        const fn is_tchar(b: &u8) -> bool {
+            b.is_ascii_alphanumeric() || match *b {
+                b'!' | b'#' | b'$' | b'%' | b'&' | b'\'' | b'*' | b'+' | b'-' |
+                    b'.' | b'^' | b'_' | b'`' | b'|' | b'~' => true,
+                _ => false
+            }
+        }
+
+        let mut i = 0;
+        let bytes = name.as_bytes();
+        while i < bytes.len() {
+            if !is_tchar(&bytes[i]) {
+                return false
+            }
+
+            i += 1;
+        }
+
+        i > 0
+    }
+
     /// Returns `true` if `val` is a valid header value.
     ///
     /// If `allow_empty` is `true`, this function returns `true` for empty

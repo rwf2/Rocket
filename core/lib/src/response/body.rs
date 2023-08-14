@@ -41,7 +41,7 @@ use tokio::io::{AsyncRead, AsyncReadExt, AsyncSeek, AsyncSeekExt, ReadBuf};
 ///
 /// ## Unsized
 ///
-/// An unsized body's data is streamed as it arrives. In otherwords, as soon as
+/// An unsized body's data is streamed as it arrives. In other words, as soon as
 /// the body's [`AsyncRead`] implementation returns bytes, the bytes are written
 /// to the network. Individual unsized bodies may use an internal buffer to
 /// curtail writes to the network.

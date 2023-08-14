@@ -52,7 +52,7 @@ error: route URIs cannot contain empty segments
 23 | #[get("/a/b//")]
    |            ^^
    |
-   = note: expected "/a/b", found "/a/b//"
+   = note: expected "/a/b/", found "/a/b//"
 
 error: unused parameter
   --> tests/ui-fail-nightly/route-path-bad-syntax.rs:42:10

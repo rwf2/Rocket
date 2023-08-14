@@ -23,7 +23,7 @@ macro_rules! p {
 }
 
 pub fn prefix_last_segment(path: &mut syn::Path, prefix: &str) {
-    let mut last_seg = path.segments.last_mut().expect("syn::Path has segments");
+    let last_seg = path.segments.last_mut().expect("syn::Path has segments");
     last_seg.ident = last_seg.ident.prepend(prefix);
 }
 

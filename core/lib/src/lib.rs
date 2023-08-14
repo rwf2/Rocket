@@ -29,7 +29,7 @@
 //!
 //! ```toml
 //! [dependencies]
-//! rocket = "0.5.0-rc.2"
+//! rocket = "=0.5.0-rc.3"
 //! ```
 //!
 //! <small>Note that development versions, tagged with `-dev`, are not published
@@ -73,14 +73,14 @@
 //!
 //! ```toml
 //! [dependencies]
-//! rocket = { version = "0.5.0-rc.2", features = ["secrets", "tls", "json"] }
+//! rocket = { version = "=0.5.0-rc.3", features = ["secrets", "tls", "json"] }
 //! ```
 //!
 //! Conversely, HTTP/2 can be disabled:
 //!
 //! ```toml
 //! [dependencies]
-//! rocket = { version = "0.5.0-rc.2", default-features = false }
+//! rocket = { version = "=0.5.0-rc.3", default-features = false }
 //! ```
 //!
 //! [JSON (de)serialization]: crate::serde::json
@@ -184,11 +184,11 @@ mod phase;
 #[doc(inline)] pub use phase::{Phase, Build, Ignite, Orbit};
 #[doc(inline)] pub use error::Error;
 #[doc(inline)] pub use sentinel::Sentinel;
+#[doc(inline)] pub use crate::request::Request;
+#[doc(inline)] pub use crate::rocket::Rocket;
+#[doc(inline)] pub use crate::shutdown::Shutdown;
+#[doc(inline)] pub use crate::state::State;
 #[doc(inline)] pub use rocket_codegen::*;
-pub use crate::rocket::Rocket;
-pub use crate::request::Request;
-pub use crate::shutdown::Shutdown;
-pub use crate::state::State;
 
 /// Creates a [`Rocket`] instance with the default config provider: aliases
 /// [`Rocket::build()`].
@@ -261,11 +261,22 @@ pub fn async_test<R>(fut: impl std::future::Future<Output = R>) -> R {
 /// WARNING: This is unstable! Do not use this method outside of Rocket!
 #[doc(hidden)]
 pub fn async_main<R>(fut: impl std::future::Future<Output = R> + Send) -> R {
-    // FIXME: These config values won't reflect swaps of `Rocket` in attach
-    // fairings with different config values, or values from non-Rocket configs.
-    // See tokio-rs/tokio#3329 for a necessary solution in `tokio`.
-    let c = Config::from(Config::figment());
-    async_run(fut, c.workers, c.max_blocking, c.shutdown.force, "rocket-worker-thread")
+    // FIXME: We need to run `fut` to get the user's `Figment` to properly set
+    // up the async env, but we need the async env to run `fut`. So we're stuck.
+    // Tokio doesn't let us take the state from one async env and migrate it to
+    // another, so we need to use one, making this impossible.
+    //
+    // So as a result, we only use values from Rocket's figment. These
+    // values won't reflect swaps of `Rocket` in attach fairings with different
+    // config values, or values from non-Rocket configs. See tokio-rs/tokio#3329
+    // for a necessary resolution in `tokio`.
+    use config::bail_with_config_error as bail;
+
+    let fig = Config::figment();
+    let workers = fig.extract_inner(Config::WORKERS).unwrap_or_else(bail);
+    let max_blocking = fig.extract_inner(Config::MAX_BLOCKING).unwrap_or_else(bail);
+    let force = fig.focus(Config::SHUTDOWN).extract_inner("force").unwrap_or_else(bail);
+    async_run(fut, workers, max_blocking, force, "rocket-worker-thread")
 }
 
 /// Executes a `future` to completion on a new tokio-based Rocket async runtime.

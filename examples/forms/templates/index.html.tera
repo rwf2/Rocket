@@ -93,7 +93,7 @@
               <br />
               {{ m::checkbox(name="submission.category", label="Chemistry", value="Chemistry") }}
               <br />
-              {{ m::checkbox(name="submission.category", label="Chemistry", value="Physics") }}
+              {{ m::checkbox(name="submission.category", label="Physics", value="Physics") }}
               <br />
               {{ m::checkbox(name="submission.category", label="CS", value="CS") }}
             </div>

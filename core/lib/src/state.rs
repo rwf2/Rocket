@@ -3,6 +3,7 @@ use std::ops::Deref;
 use std::any::type_name;
 
 use ref_cast::RefCast;
+use yansi::Paint;
 
 use crate::{Phase, Rocket, Ignite, Sentinel};
 use crate::request::{self, FromRequest, Request};
@@ -63,6 +64,7 @@ use crate::http::Status;
 /// use rocket::State;
 /// use rocket::request::{self, Request, FromRequest};
 /// use rocket::outcome::IntoOutcome;
+/// use rocket::http::Status;
 ///
 /// # struct MyConfig { user_val: String };
 /// struct Item<'r>(&'r str);
@@ -79,7 +81,7 @@ use crate::http::Status;
 ///         // Or alternatively, using `Rocket::state()`:
 ///         let outcome = request.rocket().state::<MyConfig>()
 ///             .map(|my_config| Item(&my_config.user_val))
-///             .or_forward(());
+///             .or_forward(Status::InternalServerError);
 ///
 ///         outcome
 ///     }
@@ -209,8 +211,8 @@ impl<'r, T: Send + Sync + 'static> FromRequest<'r> for &'r State<T> {
 impl<T: Send + Sync + 'static> Sentinel for &State<T> {
     fn abort(rocket: &Rocket<Ignite>) -> bool {
         if rocket.state::<T>().is_none() {
-            let type_name = yansi::Paint::default(type_name::<T>()).bold();
-            error!("launching with unmanaged `{}` state.", type_name);
+            let type_name = type_name::<T>();
+            error!("launching with unmanaged `{}` state.", type_name.primary().bold());
             info_!("Using `State` requires managing it with `.manage()`.");
             return true;
         }

@@ -113,7 +113,7 @@ non-exhaustive list of caveats:
      DDoS attacks or certain DoS attacks which can be mitigated by an external
      service.
 
-  2. Use a TLS termination proxy (perhaps from 1.) for zero-downtown certificate
+  2. Use a TLS termination proxy (perhaps from 1.) for zero-downtime certificate
      rotation.
 
   3. Properly configure your databases and database pools, especially with
@@ -208,6 +208,7 @@ Here are some notable projects and websites in Rocket we're aware of:
   * [Plume] - Federated Blogging Engine
   * [Hagrid] - OpenPGP KeyServer ([keys.openpgp.org](https://keys.openpgp.org/))
   * [SourceGraph Syntax Highlighter] - Syntax Highlighting API
+  * [Revolt] - Open source user-first chat platform
 
 [Let us know] if you have a notable, public facing application written in Rocket
 you'd like to see here!
@@ -219,6 +220,7 @@ you'd like to see here!
 [Hagrid]: https://gitlab.com/hagrid-keyserver/hagrid/
 [SourceGraph Syntax Highlighter]: https://github.com/sourcegraph/sourcegraph/tree/main/docker-images/syntax-highlighter
 [Let us know]: https://github.com/SergioBenitez/Rocket/discussions/categories/show-and-tell
+[Revolt]: https://github.com/revoltchat/backend
 
 </div>
 </details>
@@ -276,7 +278,7 @@ Can I, and if so how, do I use WebSockets?
 
 Rocket doesn't support WebSockets quite yet. We're [working on it].
 
-That being said, Rocket _does_ suport [Server-Sent Events], which allows for
+That being said, Rocket _does_ support [Server-Sent Events], which allows for
 real-time _unidirectional_ communication from the server to the client. This is
 often sufficient for many of the applications that WebSockets are typically used
 for. For instance, the [chat example] uses SSE to implement a real-time,
@@ -362,7 +364,7 @@ out-of-the-box, and you can implement your own, too. See the following:
   * Parameter Guards: [`FromParam`]
   * Multi-Segment Guards: [`FromSegments`]
   * Data Guards: [`FromData`]
-  * Form Guards: [`FromFrom`]
+  * Form Guards: [`FromForm`]
   * Request Guards: [`FromRequest`]
 </div>
 </details>
@@ -371,7 +373,7 @@ out-of-the-box, and you can implement your own, too. See the following:
 [`FromParam`]: @api/rocket/request/trait.FromParam.html
 [`FromSegments`]: @api/rocket/request/trait.FromSegments.html
 [`FromData`]: @api/rocket/data/trait.FromData.html
-[`FromFrom`]: @api/rocket/form/trait.FromForm.html
+[`FromForm`]: @api/rocket/form/trait.FromForm.html
 [`FromRequest`]: @api/rocket/request/trait.FromRequest.html
 
 <details id="response-headers">
@@ -644,7 +646,7 @@ is to depend on a `contrib` library from git while also depending on a
 `crates.io` version of Rocket or vice-versa:
 
 ```toml
-rocket = "0.5.0-rc.2"
+rocket = "=0.5.0-rc.3"
 rocket_db_pools = { git = "https://github.com/SergioBenitez/Rocket.git" }
 ```
 

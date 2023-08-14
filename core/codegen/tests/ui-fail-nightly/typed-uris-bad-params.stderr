@@ -1,4 +1,4 @@
-error: expected identifier
+error: expected identifier, found keyword `_`
   --> tests/ui-fail-nightly/typed-uris-bad-params.rs:63:18
    |
 63 |     uri!(ignored(_ = 10));
@@ -281,14 +281,14 @@ error: route expects 1 parameter but 0 were supplied
    |
    = note: route `has_one` has uri "/<id>"
 
-error[E0271]: type mismatch resolving `<std::string::String as FromParam<'_>>::Error == &str`
+error[E0271]: type mismatch resolving `<String as FromParam<'_>>::Error == &str`
   --> tests/ui-fail-nightly/typed-uris-bad-params.rs:15:37
    |
 15 | fn optionals(id: Option<i32>, name: Result<String, &str>) {  }
-   |                                     ^^^^^^^^^^^^^^^^^^^^ expected enum `Infallible`, found `&str`
+   |                                     ^^^^^^^^^^^^^^^^^^^^ expected `Empty`, found `&str`
 
-error[E0271]: type mismatch resolving `<std::string::String as FromParam<'_>>::Error == &str`
+error[E0271]: type mismatch resolving `<String as FromParam<'_>>::Error == &str`
   --> tests/ui-fail-nightly/typed-uris-bad-params.rs:15:37
    |
 15 | fn optionals(id: Option<i32>, name: Result<String, &str>) {  }
-   |                                     ^^^^^^^^^^^^^^^^^^^^ expected `&str`, found enum `Infallible`
+   |                                     ^^^^^^^^^^^^^^^^^^^^ expected `&str`, found `Empty`

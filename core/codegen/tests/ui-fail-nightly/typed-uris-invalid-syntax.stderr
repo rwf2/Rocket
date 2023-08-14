@@ -1,8 +1,8 @@
-error: expected identifier
-  --> tests/ui-fail-nightly/typed-uris-invalid-syntax.rs:10:28
+error: unexpected token
+  --> tests/ui-fail-nightly/typed-uris-invalid-syntax.rs:10:16
    |
 10 |     uri!(simple: id = 100, "Hello");
-   |                            ^^^^^^^
+   |                ^
 
 error: named and unnamed parameters cannot be mixed
   --> tests/ui-fail-nightly/typed-uris-invalid-syntax.rs:11:17
@@ -96,7 +96,7 @@ error: unexpected token
 27 |     uri!(simple: id = );
    |                ^
 
-error: unexpected end of input, expected expression
+error: unexpected end of input, expected an expression
   --> tests/ui-fail-nightly/typed-uris-invalid-syntax.rs:28:22
    |
 28 |     uri!(simple(id = ));

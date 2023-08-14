@@ -56,6 +56,26 @@ use crate::form::prelude::*;
 /// can access fields of `T` transparently through a `Form<T>`, as seen above
 /// with `user_input.value`.
 ///
+/// ## Errors
+///
+/// A `Form<T>` data guard may fail, forward, or succeed.
+///
+/// If a request's content-type is neither [`ContentType::Form`] nor
+/// [`ContentType::FormData`], the guard **forwards**.
+///
+/// If the request `ContentType` _does_ identify as a form but the form data
+/// does not parse as `T`, according to `T`'s [`FromForm`] implementation, the
+/// guard **fails**. The `Failure` variant contains of the [`Errors`] emitted by
+/// `T`'s `FromForm` parser. If the error is not caught by a
+/// [`form::Result<T>`](Result) or `Option<Form<T>>` data guard, the status code
+/// is set to [`Errors::status()`], and the corresponding error catcher is
+/// called.
+///
+/// Otherwise the guard **succeeds**.
+///
+/// [`ContentType::Form`]: crate::http::ContentType::Form
+/// [`ContentType::FormData`]: crate::http::ContentType::FormData
+///
 /// ## Data Limits
 ///
 /// The total amount of data accepted by the `Form` data guard is limited by the
@@ -84,7 +104,7 @@ use crate::form::prelude::*;
 /// The `data-form` limit specifies the data limit for an entire multipart form
 /// data stream. It defaults to 2MiB. Multipart data is streamed, and form
 /// fields are processed into [`DataField`]s or [`ValueField`]s as they arrive.
-/// If the commulative data received while streaming exceeds the limit, parsing
+/// If the commutative data received while streaming exceeds the limit, parsing
 /// is aborted, an error is created and pushed via [`FromForm::push_error()`],
 /// and the form is finalized.
 ///

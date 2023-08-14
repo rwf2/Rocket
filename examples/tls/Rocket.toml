@@ -17,13 +17,21 @@ mandatory = false
 certs = "private/rsa_sha256_cert.pem"
 key = "private/rsa_sha256_key.pem"
 
-[ecdsa_nistp256_sha256.tls]
+[ecdsa_nistp256_sha256_pkcs8.tls]
 certs = "private/ecdsa_nistp256_sha256_cert.pem"
 key = "private/ecdsa_nistp256_sha256_key_pkcs8.pem"
 
-[ecdsa_nistp384_sha384.tls]
+[ecdsa_nistp384_sha384_pkcs8.tls]
 certs = "private/ecdsa_nistp384_sha384_cert.pem"
 key = "private/ecdsa_nistp384_sha384_key_pkcs8.pem"
+
+[ecdsa_nistp256_sha256_sec1.tls]
+certs = "private/ecdsa_nistp256_sha256_cert.pem"
+key = "private/ecdsa_nistp256_sha256_key_sec1.pem"
+
+[ecdsa_nistp384_sha384_sec1.tls]
+certs = "private/ecdsa_nistp384_sha384_cert.pem"
+key = "private/ecdsa_nistp384_sha384_key_sec1.pem"
 
 [ed25519.tls]
 certs = "private/ed25519_cert.pem"

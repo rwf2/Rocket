@@ -11,6 +11,7 @@ msgpack = "2 MiB"
 key = "a default app-key"
 extra = false
 ident = "Rocket"
+ip_header = "CF-Connecting-IP"
 
 [debug]
 address = "127.0.0.1"
@@ -25,7 +26,8 @@ port = 8000
 workers = 12
 keep_alive = 5
 log_level = "critical"
-# don't use this key! generate your own and keep it private!
+# NOTE: Don't (!) use this key! Generate your own and keep it private!
+#       e.g. via `head -c64 /dev/urandom | base64`
 secret_key = "hPRYyVRiMyxpw5sBB1XeCMN1kFsDCqKvBi2QJxBVHQk="
 key = "a release app-key"
 extra = false

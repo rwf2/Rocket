@@ -482,7 +482,7 @@ pub trait Fairing: Send + Sync + Any + 'static {
     ///
     /// This method is called just after launching the application if
     /// `Kind::Liftoff` is in the `kind` field of the `Info` structure for this
-    /// fairing. The `Rocket` parameter corresponds to the lauched application.
+    /// fairing. The `Rocket` parameter corresponds to the launched application.
     ///
     /// ## Default Implementation
     ///
@@ -534,7 +534,7 @@ pub trait Fairing: Send + Sync + Any + 'static {
 }
 
 #[crate::async_trait]
-impl<T: Fairing> Fairing for std::sync::Arc<T> {
+impl<T: Fairing + ?Sized> Fairing for std::sync::Arc<T> {
     #[inline]
     fn info(&self) -> Info {
         (self as &T).info()

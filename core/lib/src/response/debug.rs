@@ -78,8 +78,8 @@ impl<E> From<E> for Debug<E> {
 
 impl<'r, E: std::fmt::Debug> Responder<'r, 'static> for Debug<E> {
     fn respond_to(self, _: &'r Request<'_>) -> response::Result<'static> {
-        warn_!("Debug: {:?}", Paint::default(self.0));
-        warn_!("Debug always responds with {}.", Status::InternalServerError);
+        warn_!("Debug: {:?}", self.0.primary());
+        warn_!("Debug always responds with {}.", Status::InternalServerError.primary());
         Err(Status::InternalServerError)
     }
 }
@@ -87,7 +87,7 @@ impl<'r, E: std::fmt::Debug> Responder<'r, 'static> for Debug<E> {
 /// Prints a warning with the error and forwards to the `500` error catcher.
 impl<'r> Responder<'r, 'static> for std::io::Error {
     fn respond_to(self, _: &'r Request<'_>) -> response::Result<'static> {
-        warn_!("I/O Error: {:?}", yansi::Paint::default(self));
+        warn_!("I/O Error: {:?}", self.primary());
         Err(Status::InternalServerError)
     }
 }

@@ -12,7 +12,7 @@ use crate::{Rocket, Orbit};
 /// An error that occurs during launch.
 ///
 /// An `Error` is returned by [`launch()`](Rocket::launch()) when launching an
-/// application fails or, more rarely, when the runtime fails after lauching.
+/// application fails or, more rarely, when the runtime fails after launching.
 ///
 /// # Panics
 ///
@@ -98,6 +98,10 @@ pub enum ErrorKind {
     ),
 }
 
+/// An error that occurs when a value was unexpectedly empty.
+#[derive(Clone, Copy, Default, PartialEq, Eq, Hash, PartialOrd, Ord)]
+pub struct Empty;
+
 impl From<ErrorKind> for Error {
     fn from(kind: ErrorKind) -> Self {
         Error::new(kind)
@@ -149,6 +153,89 @@ impl Error {
         self.mark_handled();
         &self.kind
     }
+
+    /// Prints the error with color (if enabled) and detail. Returns a string
+    /// that indicates the abort condition such as "aborting due to i/o error".
+    ///
+    /// This function is called on `Drop` to display the error message. By
+    /// contrast, the `Display` implementation prints a succinct version of the
+    /// error, without detail.
+    ///
+    /// ```rust
+    /// # let _ = async {
+    /// if let Err(error) = rocket::build().launch().await {
+    ///     let abort = error.pretty_print();
+    ///     panic!("{}", abort);
+    /// }
+    /// # };
+    /// ```
+    pub fn pretty_print(&self) -> &'static str {
+        self.mark_handled();
+        match self.kind() {
+            ErrorKind::Bind(ref e) => {
+                error!("Rocket failed to bind network socket to given address/port.");
+                info_!("{}", e);
+                "aborting due to socket bind error"
+            }
+            ErrorKind::Io(ref e) => {
+                error!("Rocket failed to launch due to an I/O error.");
+                info_!("{}", e);
+                "aborting due to i/o error"
+            }
+            ErrorKind::Collisions(ref collisions) => {
+                fn log_collisions<T: fmt::Display>(kind: &str, collisions: &[(T, T)]) {
+                    if collisions.is_empty() { return }
+
+                    error!("Rocket failed to launch due to the following {} collisions:", kind);
+                    for &(ref a, ref b) in collisions {
+                        info_!("{} {} {}", a, "collides with".red().italic(), b)
+                    }
+                }
+
+                log_collisions("route", &collisions.routes);
+                log_collisions("catcher", &collisions.catchers);
+
+                info_!("Note: Route collisions can usually be resolved by ranking routes.");
+                "aborting due to detected routing collisions"
+            }
+            ErrorKind::FailedFairings(ref failures) => {
+                error!("Rocket failed to launch due to failing fairings:");
+                for fairing in failures {
+                    info_!("{}", fairing.name);
+                }
+
+                "aborting due to fairing failure(s)"
+            }
+            ErrorKind::InsecureSecretKey(profile) => {
+                error!("secrets enabled in non-debug without `secret_key`");
+                info_!("selected profile: {}", profile.primary().bold());
+                info_!("disable `secrets` feature or configure a `secret_key`");
+                "aborting due to insecure configuration"
+            }
+            ErrorKind::Config(error) => {
+                crate::config::pretty_print_error(error.clone());
+                "aborting due to invalid configuration"
+            }
+            ErrorKind::SentinelAborts(ref failures) => {
+                error!("Rocket failed to launch due to aborting sentinels:");
+                for sentry in failures {
+                    let name = sentry.type_name.primary().bold();
+                    let (file, line, col) = sentry.location;
+                    info_!("{} ({}:{}:{})", name, file, line, col);
+                }
+
+                "aborting due to sentinel-triggered abort(s)"
+            }
+            ErrorKind::Shutdown(_, error) => {
+                error!("Rocket failed to shutdown gracefully.");
+                if let Some(e) = error {
+                    info_!("{}", e);
+                }
+
+                "aborting due to failed shutdown"
+            }
+        }
+    }
 }
 
 impl std::error::Error for Error {  }
@@ -193,69 +280,20 @@ impl Drop for Error {
             return
         }
 
-        match self.kind() {
-            ErrorKind::Bind(ref e) => {
-                error!("Rocket failed to bind network socket to given address/port.");
-                info_!("{}", e);
-                panic!("aborting due to socket bind error");
-            }
-            ErrorKind::Io(ref e) => {
-                error!("Rocket failed to launch due to an I/O error.");
-                info_!("{}", e);
-                panic!("aborting due to i/o error");
-            }
-            ErrorKind::Collisions(ref collisions) => {
-                fn log_collisions<T: fmt::Display>(kind: &str, collisions: &[(T, T)]) {
-                    if collisions.is_empty() { return }
-
-                    error!("Rocket failed to launch due to the following {} collisions:", kind);
-                    for &(ref a, ref b) in collisions {
-                        info_!("{} {} {}", a, Paint::red("collides with").italic(), b)
-                    }
-                }
-
-                log_collisions("route", &collisions.routes);
-                log_collisions("catcher", &collisions.catchers);
-
-                info_!("Note: Route collisions can usually be resolved by ranking routes.");
-                panic!("routing collisions detected");
-            }
-            ErrorKind::FailedFairings(ref failures) => {
-                error!("Rocket failed to launch due to failing fairings:");
-                for fairing in failures {
-                    info_!("{}", fairing.name);
-                }
-
-                panic!("aborting due to fairing failure(s)");
-            }
-            ErrorKind::InsecureSecretKey(profile) => {
-                error!("secrets enabled in non-debug without `secret_key`");
-                info_!("selected profile: {}", Paint::default(profile).bold());
-                info_!("disable `secrets` feature or configure a `secret_key`");
-                panic!("aborting due to insecure configuration")
-            }
-            ErrorKind::Config(error) => {
-                crate::config::pretty_print_error(error.clone());
-                panic!("aborting due to invalid configuration")
-            }
-            ErrorKind::SentinelAborts(ref failures) => {
-                error!("Rocket failed to launch due to aborting sentinels:");
-                for sentry in failures {
-                    let name = Paint::default(sentry.type_name).bold();
-                    let (file, line, col) = sentry.location;
-                    info_!("{} ({}:{}:{})", name, file, line, col);
-                }
-
-                panic!("aborting due to sentinel-triggered abort(s)");
-            }
-            ErrorKind::Shutdown(_, error) => {
-                error!("Rocket failed to shutdown gracefully.");
-                if let Some(e) = error {
-                    info_!("{}", e);
-                }
-
-                panic!("aborting due to failed shutdown");
-            }
-        }
+        panic!("{}", self.pretty_print());
     }
 }
+
+impl fmt::Debug for Empty {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str("empty parameter")
+    }
+}
+
+impl fmt::Display for Empty {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str("empty parameter")
+    }
+}
+
+impl StdError for Empty { }

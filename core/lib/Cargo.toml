@@ -1,6 +1,6 @@
 [package]
 name = "rocket"
-version = "0.5.0-rc.2"
+version = "0.5.0-rc.3"
 authors = ["Sergio Benitez <sb@sergio.bz>"]
 description = """
 Web framework with a focus on usability, security, extensibility, and speed.
@@ -37,13 +37,12 @@ uuid_ = { package = "uuid", version = "1", optional = true, features = ["serde"]
 
 # Non-optional, core dependencies from here on out.
 futures = { version = "0.3.0", default-features = false, features = ["std"] }
-yansi = "0.5"
+yansi = { version = "1.0.0-rc", features = ["detect-tty"] }
 log = { version = "0.4", features = ["std"] }
 num_cpus = "1.0"
 time = { version = "0.3", features = ["macros", "parsing"] }
 memchr = "2" # TODO: Use pear instead.
 binascii = "0.1"
-atty = "0.2"
 ref-cast = "1.0"
 atomic = "0.5"
 parking_lot = "0.12"
@@ -59,14 +58,14 @@ async-trait = "0.1.43"
 async-stream = "0.3.2"
 multer = { version = "2", features = ["tokio-io"] }
 tokio-stream = { version = "0.1.6", features = ["signal", "time"] }
-state = "0.5.1"
+state = "0.6"
 
 [dependencies.rocket_codegen]
-version = "0.5.0-rc.2"
+version = "=0.5.0-rc.3"
 path = "../codegen"
 
 [dependencies.rocket_http]
-version = "0.5.0-rc.2"
+version = "=0.5.0-rc.3"
 path = "../http"
 features = ["serde"]
 

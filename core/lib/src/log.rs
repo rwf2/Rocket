@@ -5,7 +5,7 @@ use std::str::FromStr;
 use std::sync::atomic::{AtomicBool, Ordering};
 
 use serde::{de, Serialize, Serializer, Deserialize, Deserializer};
-use yansi::Paint;
+use yansi::{Paint, Painted, Condition};
 
 /// Reexport the `log` crate as `private`.
 pub use log as private;
@@ -19,12 +19,16 @@ macro_rules! define_log_macro {
             ($d ($t:tt)*) => ($crate::log::private::$kind!(target: $target, $d ($t)*))
         }
     );
+    ($name:ident ($indented:ident): $kind:ident, $target:expr, $d:tt) => (
+        define_log_macro!($name: $kind, $target, $d);
+        define_log_macro!($indented: $kind, concat!($target, "::_"), $d);
+    );
     ($kind:ident, $indented:ident) => (
         define_log_macro!($kind: $kind, module_path!(), $);
-        define_log_macro!($indented: $kind, "_", $);
+        define_log_macro!($indented: $kind, concat!(module_path!(), "::_"), $);
 
         pub use $indented;
-    )
+    );
 }
 
 define_log_macro!(error, error_);
@@ -32,8 +36,8 @@ define_log_macro!(warn, warn_);
 define_log_macro!(info, info_);
 define_log_macro!(debug, debug_);
 define_log_macro!(trace, trace_);
-define_log_macro!(launch_info: info, "rocket::launch", $);
-define_log_macro!(launch_info_: info, "rocket::launch_", $);
+define_log_macro!(launch_meta (launch_meta_): info, "rocket::launch", $);
+define_log_macro!(launch_info (launch_msg_): warn, "rocket::launch", $);
 
 // `print!` panics when stdout isn't available, but this macro doesn't. See
 // SergioBenitez/Rocket#2019 and rust-lang/rust#46016 for more.
@@ -76,11 +80,11 @@ pub enum LogLevel {
     Off,
 }
 
-pub trait PaintExt {
-    fn emoji(item: &str) -> Paint<&str>;
+pub trait PaintExt: Sized {
+    fn emoji(self) -> Painted<Self>;
 }
 
-// Whether a record is a special `launch_info!` record.
+// Whether a record is a special `launch_{meta,info}!` record.
 fn is_launch_record(record: &log::Metadata<'_>) -> bool {
     record.target().contains("rocket::launch")
 }
@@ -111,7 +115,7 @@ impl log::Log for RocketLogger {
         // In Rocket, we abuse targets with suffix "_" to indicate indentation.
         let indented = record.target().ends_with('_');
         if indented {
-            write_out!("   {} ", Paint::default(">>").bold());
+            write_out!("   {} ", ">>".bold());
         }
 
         // Downgrade a physical launch `warn` to logical `info`.
@@ -121,27 +125,23 @@ impl log::Log for RocketLogger {
 
         match level {
             log::Level::Error if !indented => {
-                write_out!("{} {}\n",
-                    Paint::red("Error:").bold(),
-                    Paint::red(record.args()).wrap());
+                write_out!("{} {}\n", "Error:".red().bold(), record.args().red().wrap());
             }
             log::Level::Warn if !indented => {
-                write_out!("{} {}\n",
-                    Paint::yellow("Warning:").bold(),
-                    Paint::yellow(record.args()).wrap());
+                write_out!("{} {}\n", "Warning:".yellow().bold(), record.args().yellow().wrap());
             }
-            log::Level::Info => write_out!("{}\n", Paint::blue(record.args()).wrap()),
-            log::Level::Trace => write_out!("{}\n", Paint::magenta(record.args()).wrap()),
-            log::Level::Warn => write_out!("{}\n", Paint::yellow(record.args()).wrap()),
-            log::Level::Error => write_out!("{}\n", Paint::red(record.args()).wrap()),
+            log::Level::Info => write_out!("{}\n", record.args().blue().wrap()),
+            log::Level::Trace => write_out!("{}\n", record.args().magenta().wrap()),
+            log::Level::Warn => write_out!("{}\n", record.args().yellow().wrap()),
+            log::Level::Error => write_out!("{}\n", &record.args().red().wrap()),
             log::Level::Debug => {
-                write_out!("\n{} ", Paint::blue("-->").bold());
+                write_out!("\n{} ", "-->".blue().bold());
                 if let Some(file) = record.file() {
-                    write_out!("{}", Paint::blue(file));
+                    write_out!("{}", file.blue());
                 }
 
                 if let Some(line) = record.line() {
-                    write_out!(":{}\n", Paint::blue(line));
+                    write_out!(":{}\n", line.blue());
                 }
 
                 write_out!("\t{}\n", record.args());
@@ -166,18 +166,12 @@ pub(crate) fn init(config: &crate::Config) {
         ROCKET_LOGGER_SET.store(true, Ordering::Release);
     }
 
-    // Always disable colors if requested or if they won't work on Windows.
-    if !config.cli_colors || !Paint::enable_windows_ascii() {
-        Paint::disable();
-    }
+    // Always disable colors if requested or if the stdout/err aren't TTYs.
+    let should_color = config.cli_colors && Condition::stdouterr_are_tty();
+    yansi::whenever(Condition::cached(should_color));
 
     // Set Rocket-logger specific settings only if Rocket's logger is set.
     if ROCKET_LOGGER_SET.load(Ordering::Acquire) {
-        // Rocket logs to stdout, so disable coloring if it's not a TTY.
-        if !atty::is(atty::Stream::Stdout) {
-            Paint::disable();
-        }
-
         log::set_max_level(config.log_level.into());
     }
 }
@@ -242,10 +236,10 @@ impl<'de> Deserialize<'de> for LogLevel {
     }
 }
 
-impl PaintExt for Paint<&str> {
+impl PaintExt for &str {
     /// Paint::masked(), but hidden on Windows due to broken output. See #1122.
-    fn emoji(_item: &str) -> Paint<&str> {
-        #[cfg(windows)] { Paint::masked("") }
-        #[cfg(not(windows))] { Paint::masked(_item) }
+    fn emoji(self) -> Painted<Self> {
+        #[cfg(windows)] { Paint::new("").mask() }
+        #[cfg(not(windows))] { Paint::new(self).mask() }
     }
 }

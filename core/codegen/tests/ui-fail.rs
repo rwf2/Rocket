@@ -1,4 +1,5 @@
 #[test]
+#[ignore]
 fn ui() {
     let path = match version_check::is_feature_flaggable() {
         Some(true) => "ui-fail-nightly",

@@ -28,7 +28,7 @@ use crate::uri::error::PathError;
 ///         _ => panic!("only four segments")
 ///     }
 /// }
-/// # assert_eq!(uri.path().segments().len(), 4);
+/// # assert_eq!(uri.path().segments().num(), 4);
 /// # assert_eq!(uri.path().segments().count(), 4);
 /// # assert_eq!(uri.path().segments().next(), Some("a z"));
 /// ```
@@ -55,19 +55,19 @@ impl<P: Part> Segments<'_, P> {
     /// let uri = uri!("/foo/bar?baz&cat&car");
     ///
     /// let mut segments = uri.path().segments();
-    /// assert_eq!(segments.len(), 2);
+    /// assert_eq!(segments.num(), 2);
     ///
     /// segments.next();
-    /// assert_eq!(segments.len(), 1);
+    /// assert_eq!(segments.num(), 1);
     ///
     /// segments.next();
-    /// assert_eq!(segments.len(), 0);
+    /// assert_eq!(segments.num(), 0);
     ///
     /// segments.next();
-    /// assert_eq!(segments.len(), 0);
+    /// assert_eq!(segments.num(), 0);
     /// ```
     #[inline]
-    pub fn len(&self) -> usize {
+    pub fn num(&self) -> usize {
         let max_pos = std::cmp::min(self.pos, self.segments.len());
         self.segments.len() - max_pos
     }
@@ -89,7 +89,7 @@ impl<P: Part> Segments<'_, P> {
     /// ```
     #[inline]
     pub fn is_empty(&self) -> bool {
-        self.len() == 0
+        self.num() == 0
     }
 
     /// Returns a new `Segments` with `n` segments skipped.
@@ -101,11 +101,11 @@ impl<P: Part> Segments<'_, P> {
     /// let uri = uri!("/foo/bar/baz/cat");
     ///
     /// let mut segments = uri.path().segments();
-    /// assert_eq!(segments.len(), 4);
+    /// assert_eq!(segments.num(), 4);
     /// assert_eq!(segments.next(), Some("foo"));
     ///
     /// let mut segments = segments.skip(2);
-    /// assert_eq!(segments.len(), 1);
+    /// assert_eq!(segments.num(), 1);
     /// assert_eq!(segments.next(), Some("cat"));
     /// ```
     #[inline]
@@ -143,6 +143,21 @@ impl<'a> Segments<'a, Path> {
     ///
     /// ```rust
     /// # #[macro_use] extern crate rocket;
+    /// let a = uri!("/");
+    /// let b = uri!("/");
+    /// assert!(a.path().segments().prefix_of(b.path().segments()));
+    /// assert!(b.path().segments().prefix_of(a.path().segments()));
+    ///
+    /// let a = uri!("/");
+    /// let b = uri!("/foo");
+    /// assert!(a.path().segments().prefix_of(b.path().segments()));
+    /// assert!(!b.path().segments().prefix_of(a.path().segments()));
+    ///
+    /// let a = uri!("/foo");
+    /// let b = uri!("/foo/");
+    /// assert!(a.path().segments().prefix_of(b.path().segments()));
+    /// assert!(!b.path().segments().prefix_of(a.path().segments()));
+    ///
     /// let a = uri!("/foo/bar/baaaz/cat");
     /// let b = uri!("/foo/bar");
     ///
@@ -155,11 +170,11 @@ impl<'a> Segments<'a, Path> {
     /// ```
     #[inline]
     pub fn prefix_of(self, other: Segments<'_, Path>) -> bool {
-        if self.len() > other.len() {
+        if self.num() > other.num() {
             return false;
         }
 
-        self.zip(other).all(|(a, b)| a == b)
+        self.zip(other).all(|(a, b)| a.is_empty() || a == b)
     }
 
     /// Creates a `PathBuf` from `self`. The returned `PathBuf` is
@@ -271,11 +286,11 @@ macro_rules! impl_iterator {
             }
 
             fn size_hint(&self) -> (usize, Option<usize>) {
-                (self.len(), Some(self.len()))
+                (self.num(), Some(self.num()))
             }
 
             fn count(self) -> usize {
-                self.len()
+                self.num()
             }
         }
     )

@@ -1,8 +1,8 @@
-error: expected identifier
-  --> tests/ui-fail-stable/typed-uris-invalid-syntax.rs:10:28
+error: unexpected token
+  --> tests/ui-fail-stable/typed-uris-invalid-syntax.rs:10:16
    |
 10 |     uri!(simple: id = 100, "Hello");
-   |                            ^^^^^^^
+   |                ^
 
 error: named and unnamed parameters cannot be mixed
   --> tests/ui-fail-stable/typed-uris-invalid-syntax.rs:11:17
@@ -96,7 +96,7 @@ error: unexpected token
 27 |     uri!(simple: id = );
    |                ^
 
-error: unexpected end of input, expected expression
+error: unexpected end of input, expected an expression
   --> tests/ui-fail-stable/typed-uris-invalid-syntax.rs:28:22
    |
 28 |     uri!(simple(id = ));
@@ -145,7 +145,7 @@ error: URI suffix must contain only query and/or fragment
    |                         ^^^^^^^^^
 
 error: route expects 2 parameters but 0 were supplied
-         --- note: route `simple` has uri "/<id>/<name>"
+       = note: route `simple` has uri "/<id>/<name>"
   --> tests/ui-fail-stable/typed-uris-invalid-syntax.rs:13:10
    |
 13 |     uri!(simple,);

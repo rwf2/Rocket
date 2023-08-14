@@ -3,8 +3,8 @@
 ###############################################################################
 
 [release]
-version = "0.5.0-rc.2"
-date = "May 09, 2022"
+version = "0.5.0-rc.3"
+date = "Mar 23, 2023"
 
 ###############################################################################
 # Top features: displayed in the header under the introductory text.
@@ -128,7 +128,7 @@ text = '''
 '''
 
 ###############################################################################
-# Buttom features: displayed above the footer.
+# Bottom features: displayed above the footer.
 ###############################################################################
 
 [[bottom_features]]

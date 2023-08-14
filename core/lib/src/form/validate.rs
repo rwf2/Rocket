@@ -807,7 +807,7 @@ pub fn ext<'v>(file: &TempFile<'_>, r#type: ContentType) -> Result<'v, ()> {
 /// With validator: succeeds when an arbitrary function or closure does.
 ///
 /// This is the most generic validator and, for readability, should only be used
-/// when a more case-specific option does not exist. It succeeds excactly when
+/// when a more case-specific option does not exist. It succeeds exactly when
 /// `f` returns `true` and fails otherwise.
 ///
 /// On failure, returns a validation error with the message `msg`.
@@ -858,7 +858,7 @@ pub fn with<'v, V, F, M>(value: V, f: F, msg: M) -> Result<'v, ()>
 /// _Try_ With validator: succeeds when an arbitrary function or closure does.
 ///
 /// Along with [`with`], this is the most generic validator. It succeeds
-/// excactly when `f` returns `Ok` and fails otherwise.
+/// exactly when `f` returns `Ok` and fails otherwise.
 ///
 /// On failure, returns a validation error with the message in the `Err`
 /// variant converted into a string.

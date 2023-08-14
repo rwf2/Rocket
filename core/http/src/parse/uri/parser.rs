@@ -167,7 +167,9 @@ fn port<'a>(
 // current - bytes.len(). Or something like that.
 #[parser]
 fn maybe_port<'a>(input: &mut RawInput<'a>, bytes: &[u8]) -> Result<'a, Option<u16>> {
-    if bytes.len() > 5 {
+    if bytes.is_empty() {
+        return Ok(None);
+    } else if bytes.len() > 5 {
         parse_error!("port len is out of range")?;
     } else if !bytes.iter().all(|b| b.is_ascii_digit()) {
         parse_error!("invalid port bytes")?;

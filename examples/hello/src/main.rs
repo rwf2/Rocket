@@ -74,8 +74,19 @@ fn hello(lang: Option<Lang>, opt: Options<'_>) -> String {
 
 #[launch]
 fn rocket() -> _ {
+    use rocket::fairing::AdHoc;
+
     rocket::build()
         .mount("/", routes![hello])
         .mount("/hello", routes![world, mir])
         .mount("/wave", routes![wave])
+        .attach(AdHoc::on_request("Compatibility Normalizer", |req, _| Box::pin(async move {
+            if !req.uri().is_normalized_nontrailing() {
+                let normal = req.uri().clone().into_normalized_nontrailing();
+                warn!("Incoming request URI was normalized for compatibility.");
+                info_!("{} -> {}", req.uri(), normal);
+                req.set_uri(normal);
+            }
+        })))
+
 }

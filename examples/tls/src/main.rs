@@ -1,6 +1,8 @@
 #[macro_use] extern crate rocket;
 
-#[cfg(test)] mod tests;
+#[cfg(test)]
+mod tests;
+mod redirector;
 
 use rocket::mtls::Certificate;
 
@@ -18,5 +20,7 @@ fn hello() -> &'static str {
 fn rocket() -> _ {
     // See `Rocket.toml` and `Cargo.toml` for TLS configuration.
     // Run `./private/gen_certs.sh` to generate a CA and key pairs.
-    rocket::build().mount("/", routes![hello, mutual])
+    rocket::build()
+        .mount("/", routes![hello, mutual])
+        .attach(redirector::Redirector { port: 3000 })
 }

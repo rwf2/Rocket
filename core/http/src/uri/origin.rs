@@ -27,8 +27,8 @@ use crate::{RawStr, RawStrBuf};
 /// # Normalization
 ///
 /// Rocket prefers, and will sometimes require, origin URIs to be _normalized_.
-/// A normalized origin URI is a valid origin URI that contains zero empty
-/// segments except when there are no segments.
+/// A normalized origin URI is a valid origin URI that contains no empty
+/// segments except optionally a trailing slash.
 ///
 /// As an example, the following URIs are all valid, normalized URIs:
 ///
@@ -37,9 +37,14 @@ use crate::{RawStr, RawStrBuf};
 /// # use rocket::http::uri::Origin;
 /// # let valid_uris = [
 /// "/",
+/// "/?",
+/// "/a/b/",
 /// "/a/b/c",
+/// "/a/b/c/",
+/// "/a/b/c?",
 /// "/a/b/c?q",
 /// "/hello?lang=en",
+/// "/hello/?lang=en",
 /// "/some%20thing?q=foo&lang=fr",
 /// # ];
 /// # for uri in &valid_uris {
@@ -53,8 +58,7 @@ use crate::{RawStr, RawStrBuf};
 /// # extern crate rocket;
 /// # use rocket::http::uri::Origin;
 /// # let invalid = [
-/// "//",               // one empty segment
-/// "/a/b/",            // trailing empty segment
+/// "//",               // an empty segment
 /// "/a/ab//c//d",      // two empty segments
 /// "/?a&&b",           // empty query segment
 /// "/?foo&",           // trailing empty query segment
@@ -72,10 +76,10 @@ use crate::{RawStr, RawStrBuf};
 /// # use rocket::http::uri::Origin;
 /// # let invalid = [
 /// // non-normal versions
-/// "//", "/a/b/", "/a/ab//c//d", "/a?a&&b&",
+/// "//", "/a/b//c", "/a/ab//c//d/", "/a?a&&b&",
 ///
 /// // normalized versions
-/// "/",  "/a/b",  "/a/ab/c/d", "/a?a&b",
+/// "/",  "/a/b/c",  "/a/ab/c/d/", "/a?a&b",
 /// # ];
 /// # for i in 0..(invalid.len() / 2) {
 /// #     let abnormal = Origin::parse(invalid[i]).unwrap();
@@ -164,12 +168,12 @@ impl<'a> Origin<'a> {
             source: None,
             path: Data {
                 value: IndexedStr::Concrete(Cow::Borrowed(path)),
-                decoded_segments: state::Storage::new(),
+                decoded_segments: state::InitCell::new(),
             },
             query: match query {
                 Some(query) => Some(Data {
                     value: IndexedStr::Concrete(Cow::Borrowed(query)),
-                    decoded_segments: state::Storage::new(),
+                    decoded_segments: state::InitCell::new(),
                 }),
                 None => None,
             },
@@ -219,9 +223,11 @@ impl<'a> Origin<'a> {
             });
         }
 
-        let (path, query) = RawStr::new(string).split_at_byte(b'?');
-        let query = (!query.is_empty()).then(|| query.as_str());
-        Ok(Origin::new(path.as_str(), query))
+        let (path, query) = string.split_once('?')
+            .map(|(path, query)| (path, Some(query)))
+            .unwrap_or((string, None));
+
+        Ok(Origin::new(path, query))
     }
 
     /// Parses the string `string` into an `Origin`. Never allocates on success.
@@ -376,6 +382,18 @@ impl<'a> Origin<'a> {
         self.path().is_normalized(true) && self.query().map_or(true, |q| q.is_normalized())
     }
 
+    fn _normalize(&mut self, allow_trail: bool) {
+        if !self.path().is_normalized(true) {
+            self.path = self.path().to_normalized(true, allow_trail);
+        }
+
+        if let Some(query) = self.query() {
+            if !query.is_normalized() {
+                self.query = Some(query.to_normalized());
+            }
+        }
+    }
+
     /// Normalizes `self`. This is a no-op if `self` is already normalized.
     ///
     /// See [Normalization](#normalization) for more information on what it
@@ -393,15 +411,7 @@ impl<'a> Origin<'a> {
     /// assert!(abnormal.is_normalized());
     /// ```
     pub fn normalize(&mut self) {
-        if !self.path().is_normalized(true) {
-            self.path = self.path().to_normalized(true);
-        }
-
-        if let Some(query) = self.query() {
-            if !query.is_normalized() {
-                self.query = query.to_normalized();
-            }
-        }
+        self._normalize(true);
     }
 
     /// Consumes `self` and returns a normalized version.
@@ -424,11 +434,121 @@ impl<'a> Origin<'a> {
         self.normalize();
         self
     }
+
+    /// Returns `true` if `self` has a _trailing_ slash.
+    ///
+    /// This is defined as `path.len() > 1` && `path.ends_with('/')`. This
+    /// implies that the URI `/` is _not_ considered to have a trailing slash.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// # #[macro_use] extern crate rocket;
+    ///
+    /// assert!(!uri!("/").has_trailing_slash());
+    /// assert!(!uri!("/a").has_trailing_slash());
+    /// assert!(!uri!("/foo/bar/baz").has_trailing_slash());
+    ///
+    /// assert!(uri!("/a/").has_trailing_slash());
+    /// assert!(uri!("/foo/").has_trailing_slash());
+    /// assert!(uri!("/foo/bar/baz/").has_trailing_slash());
+    /// ```
+    pub fn has_trailing_slash(&self) -> bool {
+        self.path().len() > 1 && self.path().ends_with('/')
+    }
+
+    /// Returns `true` if `self` is normalized ([`Origin::is_normalized()`]) and
+    /// **does not** have a trailing slash ([Origin::has_trailing_slash()]).
+    /// Otherwise returns `false`.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// # #[macro_use] extern crate rocket;
+    /// use rocket::http::uri::Origin;
+    ///
+    /// let origin = Origin::parse("/").unwrap();
+    /// assert!(origin.is_normalized_nontrailing());
+    ///
+    /// let origin = Origin::parse("/foo/bar").unwrap();
+    /// assert!(origin.is_normalized_nontrailing());
+    ///
+    /// let origin = Origin::parse("//").unwrap();
+    /// assert!(!origin.is_normalized_nontrailing());
+    ///
+    /// let origin = Origin::parse("/foo/bar//baz/").unwrap();
+    /// assert!(!origin.is_normalized_nontrailing());
+    ///
+    /// let origin = Origin::parse("/foo/bar/").unwrap();
+    /// assert!(!origin.is_normalized_nontrailing());
+    /// ```
+    pub fn is_normalized_nontrailing(&self) -> bool {
+        self.is_normalized() && !self.has_trailing_slash()
+    }
+
+    /// Converts `self` into a normalized origin path without a trailing slash.
+    /// Does nothing is `self` is already [`normalized_nontrailing`].
+    ///
+    /// [`normalized_nontrailing`]: Origin::is_normalized_nontrailing()
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// # #[macro_use] extern crate rocket;
+    /// use rocket::http::uri::Origin;
+    ///
+    /// let origin = Origin::parse("/").unwrap();
+    /// assert!(origin.is_normalized_nontrailing());
+    ///
+    /// let normalized = origin.into_normalized_nontrailing();
+    /// assert_eq!(normalized, uri!("/"));
+    ///
+    /// let origin = Origin::parse("//").unwrap();
+    /// assert!(!origin.is_normalized_nontrailing());
+    ///
+    /// let normalized = origin.into_normalized_nontrailing();
+    /// assert_eq!(normalized, uri!("/"));
+    ///
+    /// let origin = Origin::parse_owned("/foo/bar//baz/".into()).unwrap();
+    /// assert!(!origin.is_normalized_nontrailing());
+    ///
+    /// let normalized = origin.into_normalized_nontrailing();
+    /// assert_eq!(normalized, uri!("/foo/bar/baz"));
+    ///
+    /// let origin = Origin::parse("/foo/bar/").unwrap();
+    /// assert!(!origin.is_normalized_nontrailing());
+    ///
+    /// let normalized = origin.into_normalized_nontrailing();
+    /// assert_eq!(normalized, uri!("/foo/bar"));
+    /// ```
+    pub fn into_normalized_nontrailing(mut self) -> Self {
+        if !self.is_normalized_nontrailing() {
+            if self.is_normalized() && self.has_trailing_slash() {
+                let indexed = match self.path.value {
+                    IndexedStr::Indexed(i, j) => IndexedStr::Indexed(i, j - 1),
+                    IndexedStr::Concrete(cow) => IndexedStr::Concrete(match cow {
+                        Cow::Borrowed(s) => Cow::Borrowed(&s[..s.len() - 1]),
+                        Cow::Owned(mut s) => Cow::Owned({ s.pop(); s }),
+                    })
+                };
+
+                self.path = Data {
+                    value: indexed,
+                    decoded_segments: state::InitCell::new(),
+                };
+            } else {
+                self._normalize(false);
+            }
+        }
+
+        self
+
+    }
 }
 
 impl_serde!(Origin<'a>, "an origin-form URI");
 
-impl_traits!(Origin, path, query);
+impl_traits!(Origin [parse_route], path, query);
 
 impl std::fmt::Display for Origin<'_> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -448,7 +568,7 @@ mod tests {
     fn seg_count(path: &str, expected: usize) -> bool {
         let origin = Origin::parse(path).unwrap();
         let segments = origin.path().segments();
-        let actual = segments.len();
+        let actual = segments.num();
         if actual != expected {
             eprintln!("Count mismatch: expected {}, got {}.", expected, actual);
             eprintln!("{}", if actual != expected { "lifetime" } else { "buf" });
@@ -479,26 +599,24 @@ mod tests {
 
     #[test]
     fn simple_segment_count() {
-        assert!(seg_count("/", 0));
+        assert!(seg_count("/", 1));
         assert!(seg_count("/a", 1));
-        assert!(seg_count("/a/", 1));
-        assert!(seg_count("/a/", 1));
+        assert!(seg_count("/a/", 2));
         assert!(seg_count("/a/b", 2));
-        assert!(seg_count("/a/b/", 2));
-        assert!(seg_count("/a/b/", 2));
-        assert!(seg_count("/ab/", 1));
+        assert!(seg_count("/a/b/", 3));
+        assert!(seg_count("/ab/", 2));
     }
 
     #[test]
     fn segment_count() {
-        assert!(seg_count("////", 0));
-        assert!(seg_count("//a//", 1));
-        assert!(seg_count("//abc//", 1));
-        assert!(seg_count("//abc/def/", 2));
-        assert!(seg_count("//////abc///def//////////", 2));
+        assert!(seg_count("////", 1));
+        assert!(seg_count("//a//", 2));
+        assert!(seg_count("//abc//", 2));
+        assert!(seg_count("//abc/def/", 3));
+        assert!(seg_count("//////abc///def//////////", 3));
         assert!(seg_count("/a/b/c/d/e/f/g", 7));
         assert!(seg_count("/a/b/c/d/e/f/g", 7));
-        assert!(seg_count("/a/b/c/d/e/f/g/", 7));
+        assert!(seg_count("/a/b/c/d/e/f/g/", 8));
         assert!(seg_count("/a/b/cdjflk/d/e/f/g", 7));
         assert!(seg_count("//aaflja/b/cdjflk/d/e/f/g", 7));
         assert!(seg_count("/a/b", 2));
@@ -506,18 +624,18 @@ mod tests {
 
     #[test]
     fn single_segments_match() {
-        assert!(eq_segments("/", &[]));
+        assert!(eq_segments("/", &[""]));
         assert!(eq_segments("/a", &["a"]));
-        assert!(eq_segments("/a/", &["a"]));
-        assert!(eq_segments("///a/", &["a"]));
-        assert!(eq_segments("///a///////", &["a"]));
-        assert!(eq_segments("/a///////", &["a"]));
+        assert!(eq_segments("/a/", &["a", ""]));
+        assert!(eq_segments("///a/", &["a", ""]));
+        assert!(eq_segments("///a///////", &["a", ""]));
+        assert!(eq_segments("/a///////", &["a", ""]));
         assert!(eq_segments("//a", &["a"]));
         assert!(eq_segments("/abc", &["abc"]));
-        assert!(eq_segments("/abc/", &["abc"]));
-        assert!(eq_segments("///abc/", &["abc"]));
-        assert!(eq_segments("///abc///////", &["abc"]));
-        assert!(eq_segments("/abc///////", &["abc"]));
+        assert!(eq_segments("/abc/", &["abc", ""]));
+        assert!(eq_segments("///abc/", &["abc", ""]));
+        assert!(eq_segments("///abc///////", &["abc", ""]));
+        assert!(eq_segments("/abc///////", &["abc", ""]));
         assert!(eq_segments("//abc", &["abc"]));
     }
 
@@ -529,10 +647,11 @@ mod tests {
         assert!(eq_segments("/a/b/c/d", &["a", "b", "c", "d"]));
         assert!(eq_segments("///a///////d////c", &["a", "d", "c"]));
         assert!(eq_segments("/abc/abc", &["abc", "abc"]));
-        assert!(eq_segments("/abc/abc/", &["abc", "abc"]));
+        assert!(eq_segments("/abc/abc/", &["abc", "abc", ""]));
         assert!(eq_segments("///abc///////a", &["abc", "a"]));
         assert!(eq_segments("/////abc/b", &["abc", "b"]));
         assert!(eq_segments("//abc//c////////d", &["abc", "c", "d"]));
+        assert!(eq_segments("//abc//c////////d/", &["abc", "c", "d", ""]));
     }
 
     #[test]
@@ -548,6 +667,8 @@ mod tests {
         assert!(!eq_segments("/a/b", &["b", "a"]));
         assert!(!eq_segments("/a/a/b", &["a", "b"]));
         assert!(!eq_segments("///a/", &[]));
+        assert!(!eq_segments("///a/", &["a"]));
+        assert!(!eq_segments("///a/", &["a", "a"]));
     }
 
     fn test_query(uri: &str, query: Option<&str>) {
@@ -574,21 +695,5 @@ mod tests {
         test_query("/?", Some(""));
         test_query("/?", Some(""));
         test_query("/?hi", Some("hi"));
-    }
-
-    #[test]
-    fn normalized() {
-        let uri_to_string = |s| Origin::parse(s)
-            .unwrap()
-            .into_normalized()
-            .to_string();
-
-        assert_eq!(uri_to_string("/"), "/".to_string());
-        assert_eq!(uri_to_string("//"), "/".to_string());
-        assert_eq!(uri_to_string("//////a/"), "/a".to_string());
-        assert_eq!(uri_to_string("//ab"), "/ab".to_string());
-        assert_eq!(uri_to_string("//a"), "/a".to_string());
-        assert_eq!(uri_to_string("/a/b///c"), "/a/b/c".to_string());
-        assert_eq!(uri_to_string("/a///b/c/d///"), "/a/b/c/d".to_string());
     }
 }

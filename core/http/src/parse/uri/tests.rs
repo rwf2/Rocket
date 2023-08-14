@@ -139,7 +139,7 @@ fn single_byte() {
         "%" => Authority::new(None, "%", None),
         "?" => Reference::new(None, None, "", "", None),
         "#" => Reference::new(None, None, "", None, ""),
-        ":" => Authority::new(None, "", 0),
+        ":" => Authority::new(None, "", None),
         "@" => Authority::new("", "", None),
     );
 
@@ -169,13 +169,13 @@ fn origin() {
 #[test]
 fn authority() {
     assert_parse_eq!(
-        "@:" => Authority::new("", "", 0),
+        "@:" => Authority::new("", "", None),
         "abc" => Authority::new(None, "abc", None),
         "@abc" => Authority::new("", "abc", None),
         "a@b" => Authority::new("a", "b", None),
         "a@" => Authority::new("a", "", None),
         ":@" => Authority::new(":", "", None),
-        ":@:" => Authority::new(":", "", 0),
+        ":@:" => Authority::new(":", "", None),
         "sergio:benitez@spark" => Authority::new("sergio:benitez", "spark", None),
         "a:b:c@1.2.3:12121" => Authority::new("a:b:c", "1.2.3", 12121),
         "sergio@spark" => Authority::new("sergio", "spark", None),
@@ -183,7 +183,7 @@ fn authority() {
         "sergio@[1::]:230" => Authority::new("sergio", "[1::]", 230),
         "rocket.rs:8000" => Authority::new(None, "rocket.rs", 8000),
         "[1::2::3]:80" => Authority::new(None, "[1::2::3]", 80),
-        "bar:" => Authority::new(None, "bar", 0), // could be absolute too
+        "bar:" => Authority::new(None, "bar", None), // could be absolute too
     );
 }
 
@@ -227,7 +227,7 @@ fn absolute() {
         "git://:@rocket.rs:443/abc?q" =>
             Absolute::new("git", Authority::new(":", "rocket.rs", 443), "/abc", "q"),
         "a://b?test" => Absolute::new("a", Authority::new(None, "b", None), "", "test"),
-        "a://b:?test" => Absolute::new("a", Authority::new(None, "b", 0), "", "test"),
+        "a://b:?test" => Absolute::new("a", Authority::new(None, "b", None), "", "test"),
         "a://b:1?test" => Absolute::new("a", Authority::new(None, "b", 1), "", "test"),
     };
 }
@@ -256,7 +256,7 @@ fn reference() {
         "a:/?a#b" => Reference::new("a", None, "/", "a", "b"),
         "a:?a#b" => Reference::new("a", None, "", "a", "b"),
         "a://?a#b" => Reference::new("a", Authority::new(None, "", None), "", "a", "b"),
-        "a://:?a#b" => Reference::new("a", Authority::new(None, "", 0), "", "a", "b"),
+        "a://:?a#b" => Reference::new("a", Authority::new(None, "", None), "", "a", "b"),
         "a://:2000?a#b" => Reference::new("a", Authority::new(None, "", 2000), "", "a", "b"),
         "a://a:2000?a#b" => Reference::new("a", Authority::new(None, "a", 2000), "", "a", "b"),
         "a://a:@2000?a#b" => Reference::new("a", Authority::new("a:", "2000", None), "", "a", "b"),

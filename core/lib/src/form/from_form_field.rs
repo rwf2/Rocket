@@ -323,6 +323,27 @@ impl<'v> FromFormField<'v> for bool {
 }
 
 #[crate::async_trait]
+impl<'v> FromFormField<'v> for Capped<&'v [u8]> {
+    fn from_value(field: ValueField<'v>) -> Result<'v, Self> {
+        Ok(Capped::from(field.value.as_bytes()))
+    }
+
+    async fn from_data(f: DataField<'v, '_>) -> Result<'v, Self> {
+        use crate::data::{Capped, Outcome, FromData};
+
+        match <Capped<&'v [u8]> as FromData>::from_data(f.request, f.data).await {
+            Outcome::Success(p) => Ok(p),
+            Outcome::Failure((_, e)) => Err(e)?,
+            Outcome::Forward(..) => {
+                Err(Error::from(ErrorKind::Unexpected).with_entity(Entity::DataField))?
+            }
+        }
+    }
+}
+
+impl_strict_from_form_field_from_capped!(&'v [u8]);
+
+#[crate::async_trait]
 impl<'v> FromFormField<'v> for Capped<Cow<'v, str>> {
     fn from_value(field: ValueField<'v>) -> Result<'v, Self> {
         let capped = <Capped<&'v str>>::from_value(field)?;

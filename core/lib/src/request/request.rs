@@ -4,7 +4,7 @@ use std::{future::Future, borrow::Cow, sync::Arc};
 use std::net::{IpAddr, SocketAddr};
 
 use yansi::Paint;
-use state::{Container, Storage};
+use state::{TypeMap, InitCell};
 use futures::future::BoxFuture;
 use atomic::{Atomic, Ordering};
 
@@ -46,9 +46,9 @@ pub(crate) struct RequestState<'r> {
     pub rocket: &'r Rocket<Orbit>,
     pub route: Atomic<Option<&'r Route>>,
     pub cookies: CookieJar<'r>,
-    pub accept: Storage<Option<Accept>>,
-    pub content_type: Storage<Option<ContentType>>,
-    pub cache: Arc<Container![Send + Sync]>,
+    pub accept: InitCell<Option<Accept>>,
+    pub content_type: InitCell<Option<ContentType>>,
+    pub cache: Arc<TypeMap![Send + Sync]>,
     pub host: Option<Host<'r>>,
 }
 
@@ -98,9 +98,9 @@ impl<'r> Request<'r> {
                 rocket,
                 route: Atomic::new(None),
                 cookies: CookieJar::new(rocket.config()),
-                accept: Storage::new(),
-                content_type: Storage::new(),
-                cache: Arc::new(<Container![Send + Sync]>::new()),
+                accept: InitCell::new(),
+                content_type: InitCell::new(),
+                cache: Arc::new(<TypeMap![Send + Sync]>::new()),
                 host: None,
             }
         }
@@ -307,9 +307,10 @@ impl<'r> Request<'r> {
     ///
     /// Because it is common for proxies to forward connections for clients, the
     /// remote address may contain information about the proxy instead of the
-    /// client. For this reason, proxies typically set the "X-Real-IP" header
-    /// with the client's true IP. To extract this IP from the request, use the
-    /// [`real_ip()`] or [`client_ip()`] methods.
+    /// client. For this reason, proxies typically set a "X-Real-IP" header
+    /// [`ip_header`](crate::Config::ip_header) with the client's true IP. To
+    /// extract this IP from the request, use the [`real_ip()`] or
+    /// [`client_ip()`] methods.
     ///
     /// [`real_ip()`]: #method.real_ip
     /// [`client_ip()`]: #method.client_ip
@@ -356,8 +357,9 @@ impl<'r> Request<'r> {
         self.connection.remote = Some(address);
     }
 
-    /// Returns the IP address in the "X-Real-IP" header of the request if such
-    /// a header exists and contains a valid IP address.
+    /// Returns the IP address of the configured
+    /// [`ip_header`](crate::Config::ip_header) of the request if such a header
+    /// is configured, exists and contains a valid IP address.
     ///
     /// # Example
     ///
@@ -369,25 +371,40 @@ impl<'r> Request<'r> {
     /// # let req = c.get("/");
     /// assert_eq!(req.real_ip(), None);
     ///
+    /// // `ip_header` defaults to `X-Real-IP`.
     /// let req = req.header(Header::new("X-Real-IP", "127.0.0.1"));
     /// assert_eq!(req.real_ip(), Some(Ipv4Addr::LOCALHOST.into()));
     /// ```
     pub fn real_ip(&self) -> Option<IpAddr> {
+        let ip_header = self.rocket().config.ip_header.as_ref()?.as_str();
         self.headers()
-            .get_one("X-Real-IP")
+            .get_one(ip_header)
             .and_then(|ip| {
                 ip.parse()
-                    .map_err(|_| warn_!("'X-Real-IP' header is malformed: {}", ip))
+                    .map_err(|_| warn_!("'{}' header is malformed: {}", ip_header, ip))
                     .ok()
             })
     }
 
     /// Attempts to return the client's IP address by first inspecting the
-    /// "X-Real-IP" header and then using the remote connection's IP address.
+    /// [`ip_header`](crate::Config::ip_header) and then using the remote
+    /// connection's IP address. Note that the built-in `IpAddr` request guard
+    /// can be used to retrieve the same information in a handler:
     ///
-    /// If the "X-Real-IP" header exists and contains a valid IP address, that
-    /// address is returned. Otherwise, if the address of the remote connection
-    /// is known, that address is returned. Otherwise, `None` is returned.
+    /// ```rust
+    /// # use rocket::get;
+    /// use std::net::IpAddr;
+    ///
+    /// #[get("/")]
+    /// fn get_ip(client_ip: IpAddr) { /* ... */ }
+    ///
+    /// #[get("/")]
+    /// fn try_get_ip(client_ip: Option<IpAddr>) { /* ... */ }
+    /// ````
+    ///
+    /// If the `ip_header` exists and contains a valid IP address, that address
+    /// is returned. Otherwise, if the address of the remote connection is
+    /// known, that address is returned. Otherwise, `None` is returned.
     ///
     /// # Example
     ///
@@ -398,14 +415,14 @@ impl<'r> Request<'r> {
     /// # let mut req = c.get("/");
     /// # let request = req.inner_mut();
     ///
-    /// // starting without an "X-Real-IP" header or remote addresss
+    /// // starting without an "X-Real-IP" header or remote address
     /// assert!(request.client_ip().is_none());
     ///
     /// // add a remote address; this is done by Rocket automatically
     /// request.set_remote("127.0.0.1:8000".parse().unwrap());
     /// assert_eq!(request.client_ip(), Some("127.0.0.1".parse().unwrap()));
     ///
-    /// // now with an X-Real-IP header
+    /// // now with an X-Real-IP header, the default value for `ip_header`.
     /// request.add_header(Header::new("X-Real-IP", "8.8.8.8"));
     /// assert_eq!(request.client_ip(), Some("8.8.8.8".parse().unwrap()));
     /// ```
@@ -530,7 +547,7 @@ impl<'r> Request<'r> {
     /// ```
     #[inline]
     pub fn content_type(&self) -> Option<&ContentType> {
-        self.state.content_type.get_or_set(|| {
+        self.state.content_type.get_or_init(|| {
             self.headers().get_one("Content-Type").and_then(|v| v.parse().ok())
         }).as_ref()
     }
@@ -550,7 +567,7 @@ impl<'r> Request<'r> {
     /// ```
     #[inline]
     pub fn accept(&self) -> Option<&Accept> {
-        self.state.accept.get_or_set(|| {
+        self.state.accept.get_or_init(|| {
             self.headers().get_one("Accept").and_then(|v| v.parse().ok())
         }).as_ref()
     }
@@ -785,6 +802,8 @@ impl<'r> Request<'r> {
     /// ```rust
     /// # let c = rocket::local::blocking::Client::debug_with(vec![]).unwrap();
     /// # let get = |uri| c.get(uri);
+    /// use rocket::error::Empty;
+    ///
     /// assert_eq!(get("/a/b/c").param(0), Some(Ok("a")));
     /// assert_eq!(get("/a/b/c").param(1), Some(Ok("b")));
     /// assert_eq!(get("/a/b/c").param(2), Some(Ok("c")));
@@ -794,7 +813,7 @@ impl<'r> Request<'r> {
     /// assert!(get("/1/b/3").param::<usize>(1).unwrap().is_err());
     /// assert_eq!(get("/1/b/3").param(2), Some(Ok(3)));
     ///
-    /// assert_eq!(get("/").param::<&str>(0), None);
+    /// assert_eq!(get("/").param::<&str>(0), Some(Err(Empty)));
     /// ```
     #[inline]
     pub fn param<'a, T>(&'a self, n: usize) -> Option<Result<T, T::Error>>
@@ -909,17 +928,18 @@ impl<'r> Request<'r> {
     fn bust_header_cache(&mut self, name: &UncasedStr, replace: bool) {
         if name == "Content-Type" {
             if self.content_type().is_none() || replace {
-                self.state.content_type = Storage::new();
+                self.state.content_type = InitCell::new();
             }
         } else if name == "Accept" {
             if self.accept().is_none() || replace {
-                self.state.accept = Storage::new();
+                self.state.accept = InitCell::new();
             }
         }
     }
 
-    /// Get the `n`th path segment, 0-indexed, after the mount point for the
-    /// currently matched route, as a string, if it exists. Used by codegen.
+    /// Get the `n`th non-empty path segment, 0-indexed, after the mount point
+    /// for the currently matched route, as a string, if it exists. Used by
+    /// codegen.
     #[inline]
     pub fn routed_segment(&self, n: usize) -> Option<&str> {
         self.routed_segments(0..).get(n)
@@ -930,9 +950,10 @@ impl<'r> Request<'r> {
     #[inline]
     pub fn routed_segments(&self, n: RangeFrom<usize>) -> Segments<'_, Path> {
         let mount_segments = self.route()
-            .map(|r| r.uri.metadata.base_segs.len())
+            .map(|r| r.uri.metadata.base_len)
             .unwrap_or(0);
 
+        trace!("requesting {}.. ({}..) from {}", n.start, mount_segments, self);
         self.uri().path().segments().skip(mount_segments + n.start)
     }
 
@@ -1089,15 +1110,12 @@ impl fmt::Debug for Request<'_> {
 impl fmt::Display for Request<'_> {
     /// Pretty prints a Request. Primarily used by Rocket's logging.
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{} {}", Paint::green(self.method()), Paint::blue(&self.uri))?;
+        write!(f, "{} {}", self.method().green(), self.uri.blue())?;
 
         // Print the requests media type when the route specifies a format.
-        if let Some(media_type) = self.format() {
-            if !media_type.is_any() {
-                write!(f, " {}{}{}",
-                    Paint::yellow(media_type.top()),
-                    Paint::yellow("/"),
-                    Paint::yellow(media_type.sub()))?;
+        if let Some(mime) = self.format() {
+            if !mime.is_any() {
+                write!(f, " {}/{}", mime.top().yellow().linger(), mime.sub().clear())?;
             }
         }
 

@@ -9,11 +9,11 @@ use crate::http::{Status, ContentType, Accept, Method, CookieJar};
 use crate::http::uri::{Host, Origin};
 
 /// Type alias for the `Outcome` of a `FromRequest` conversion.
-pub type Outcome<S, E> = outcome::Outcome<S, (Status, E), ()>;
+pub type Outcome<S, E> = outcome::Outcome<S, (Status, E), Status>;
 
-impl<S, E> IntoOutcome<S, (Status, E), ()> for Result<S, E> {
+impl<S, E> IntoOutcome<S, (Status, E), Status> for Result<S, E> {
     type Failure = Status;
-    type Forward = ();
+    type Forward = Status;
 
     #[inline]
     fn into_outcome(self, status: Status) -> Outcome<S, E> {
@@ -24,10 +24,10 @@ impl<S, E> IntoOutcome<S, (Status, E), ()> for Result<S, E> {
     }
 
     #[inline]
-    fn or_forward(self, _: ()) -> Outcome<S, E> {
+    fn or_forward(self, status: Status) -> Outcome<S, E> {
         match self {
             Ok(val) => Success(val),
-            Err(_) => Forward(())
+            Err(_) => Forward(status)
         }
     }
 }
@@ -102,16 +102,18 @@ impl<S, E> IntoOutcome<S, (Status, E), ()> for Result<S, E> {
 /// * **Failure**(Status, E)
 ///
 ///   If the `Outcome` is [`Failure`], the request will fail with the given
-///   status code and error. The designated error [`Catcher`](crate::Catcher) will be
-///   used to respond to the request. Note that users can request types of
-///   `Result<S, E>` and `Option<S>` to catch `Failure`s and retrieve the error
-///   value.
+///   status code and error. The designated error [`Catcher`](crate::Catcher)
+///   will be used to respond to the request. Note that users can request types
+///   of `Result<S, E>` and `Option<S>` to catch `Failure`s and retrieve the
+///   error value.
 ///
-/// * **Forward**
+/// * **Forward**(Status)
 ///
 ///   If the `Outcome` is [`Forward`], the request will be forwarded to the next
-///   matching route. Note that users can request an `Option<S>` to catch
-///   `Forward`s.
+///   matching route until either one succeds or there are no further matching
+///   routes to attempt. In the latter case, the request will be sent to the
+///   [`Catcher`](crate::Catcher) for the designated `Status`. Note that users
+///   can request an `Option<S>` to catch `Forward`s.
 ///
 /// # Provided Implementations
 ///
@@ -137,10 +139,12 @@ impl<S, E> IntoOutcome<S, (Status, E), ()> for Result<S, E> {
 ///
 ///   * **&Route**
 ///
-///     Extracts the [`Route`] from the request if one is available. If a route
-///     is not available, the request is forwarded.
+///     Extracts the [`Route`] from the request if one is available. When used
+///     as a request guard in a route handler, this will always succeed. Outside
+///     of a route handler, a route may not be available, and the request is
+///     forwarded with a 500 Internal Server Error status.
 ///
-///     For information on when an `&Route` is available, see
+///     For more information on when an `&Route` is available, see
 ///     [`Request::route()`].
 ///
 ///   * **&CookieJar**
@@ -159,20 +163,21 @@ impl<S, E> IntoOutcome<S, (Status, E), ()> for Result<S, E> {
 ///
 ///   * **ContentType**
 ///
-///     Extracts the [`ContentType`] from the incoming request. If the request
-///     didn't specify a Content-Type, the request is forwarded.
+///     Extracts the [`ContentType`] from the incoming request via
+///     [`Request::content_type()`]. If the request didn't specify a
+///     Content-Type, the request is forwarded with a 404 Not Found status.
 ///
 ///   * **IpAddr**
 ///
-///     Extracts the client ip address of the incoming request as an [`IpAddr`].
-///     If the client's IP address is not known, the request is forwarded.
+///     Extracts the client ip address of the incoming request as an [`IpAddr`]
+///     via [`Request::client_ip()`]. If the client's IP address is not known,
+///     the request is forwarded with a 404 Not Found status.
 ///
 ///   * **SocketAddr**
 ///
-///     Extracts the remote address of the incoming request as a [`SocketAddr`].
-///     If the remote address is not known, the request is forwarded.
-///
-///     _This implementation always returns successfully._
+///     Extracts the remote address of the incoming request as a [`SocketAddr`]
+///     via [`Request::remote()`]. If the remote address is not known, the
+///     request is forwarded with a 404 Not Found status.
 ///
 ///   * **Option&lt;T>** _where_ **T: FromRequest**
 ///
@@ -188,7 +193,7 @@ impl<S, E> IntoOutcome<S, (Status, E), ()> for Result<S, E> {
 ///     `FromRequest` implementation. If derivation is a `Success`, the value is
 ///     returned in `Ok`. If the derivation is a `Failure`, the error value is
 ///     returned in `Err`. If the derivation is a `Forward`, the request is
-///     forwarded.
+///     forwarded with the same status code as the original forward.
 ///
 /// [`Config`]: crate::config::Config
 ///
@@ -255,6 +260,7 @@ impl<S, E> IntoOutcome<S, (Status, E), ()> for Result<S, E> {
 /// # #[cfg(feature = "secrets")] mod wrapper {
 /// # use rocket::outcome::{IntoOutcome, try_outcome};
 /// # use rocket::request::{self, Outcome, FromRequest, Request};
+/// # use rocket::http::Status;
 /// # struct User { id: String, is_admin: bool }
 /// # struct Database;
 /// # impl Database {
@@ -282,7 +288,7 @@ impl<S, E> IntoOutcome<S, (Status, E), ()> for Result<S, E> {
 ///             .get_private("user_id")
 ///             .and_then(|cookie| cookie.value().parse().ok())
 ///             .and_then(|id| db.get_user(id).ok())
-///             .or_forward(())
+///             .or_forward(Status::Unauthorized)
 ///     }
 /// }
 ///
@@ -296,7 +302,7 @@ impl<S, E> IntoOutcome<S, (Status, E), ()> for Result<S, E> {
 ///         if user.is_admin {
 ///             Outcome::Success(Admin { user })
 ///         } else {
-///             Outcome::Forward(())
+///             Outcome::Forward(Status::Unauthorized)
 ///         }
 ///     }
 /// }
@@ -319,6 +325,7 @@ impl<S, E> IntoOutcome<S, (Status, E), ()> for Result<S, E> {
 /// # #[cfg(feature = "secrets")] mod wrapper {
 /// # use rocket::outcome::{IntoOutcome, try_outcome};
 /// # use rocket::request::{self, Outcome, FromRequest, Request};
+/// # use rocket::http::Status;
 /// # struct User { id: String, is_admin: bool }
 /// # struct Database;
 /// # impl Database {
@@ -351,7 +358,7 @@ impl<S, E> IntoOutcome<S, (Status, E), ()> for Result<S, E> {
 ///                 .and_then(|id| db.get_user(id).ok())
 ///         }).await;
 ///
-///         user_result.as_ref().or_forward(())
+///         user_result.as_ref().or_forward(Status::Unauthorized)
 ///     }
 /// }
 ///
@@ -364,7 +371,7 @@ impl<S, E> IntoOutcome<S, (Status, E), ()> for Result<S, E> {
 ///         if user.is_admin {
 ///             Outcome::Success(Admin { user })
 ///         } else {
-///             Outcome::Forward(())
+///             Outcome::Forward(Status::Unauthorized)
 ///         }
 ///     }
 /// }
@@ -414,7 +421,7 @@ impl<'r> FromRequest<'r> for &'r Host<'r> {
     async fn from_request(request: &'r Request<'_>) -> Outcome<Self, Self::Error> {
         match request.host() {
             Some(host) => Success(host),
-            None => Forward(())
+            None => Forward(Status::NotFound)
         }
     }
 }
@@ -426,7 +433,7 @@ impl<'r> FromRequest<'r> for &'r Route {
     async fn from_request(request: &'r Request<'_>) -> Outcome<Self, Self::Error> {
         match request.route() {
             Some(route) => Success(route),
-            None => Forward(())
+            None => Forward(Status::InternalServerError)
         }
     }
 }
@@ -447,7 +454,7 @@ impl<'r> FromRequest<'r> for &'r Accept {
     async fn from_request(request: &'r Request<'_>) -> Outcome<Self, Self::Error> {
         match request.accept() {
             Some(accept) => Success(accept),
-            None => Forward(())
+            None => Forward(Status::NotFound)
         }
     }
 }
@@ -459,7 +466,7 @@ impl<'r> FromRequest<'r> for &'r ContentType {
     async fn from_request(request: &'r Request<'_>) -> Outcome<Self, Self::Error> {
         match request.content_type() {
             Some(content_type) => Success(content_type),
-            None => Forward(())
+            None => Forward(Status::NotFound)
         }
     }
 }
@@ -471,7 +478,7 @@ impl<'r> FromRequest<'r> for IpAddr {
     async fn from_request(request: &'r Request<'_>) -> Outcome<Self, Self::Error> {
         match request.client_ip() {
             Some(addr) => Success(addr),
-            None => Forward(())
+            None => Forward(Status::NotFound)
         }
     }
 }
@@ -483,7 +490,7 @@ impl<'r> FromRequest<'r> for SocketAddr {
     async fn from_request(request: &'r Request<'_>) -> Outcome<Self, Self::Error> {
         match request.remote() {
             Some(addr) => Success(addr),
-            None => Forward(())
+            None => Forward(Status::NotFound)
         }
     }
 }
@@ -496,7 +503,7 @@ impl<'r, T: FromRequest<'r>> FromRequest<'r> for Result<T, T::Error> {
         match T::from_request(request).await {
             Success(val) => Success(Ok(val)),
             Failure((_, e)) => Success(Err(e)),
-            Forward(_) => Forward(()),
+            Forward(status) => Forward(status),
         }
     }
 }
@@ -510,5 +517,14 @@ impl<'r, T: FromRequest<'r>> FromRequest<'r> for Option<T> {
             Success(val) => Success(Some(val)),
             Failure(_) | Forward(_) => Success(None),
         }
+    }
+}
+
+#[crate::async_trait]
+impl<'r, T: FromRequest<'r>> FromRequest<'r> for Outcome<T, T::Error> {
+    type Error = std::convert::Infallible;
+
+    async fn from_request(request: &'r Request<'_>) -> Outcome<Self, Self::Error> {
+        Success(T::from_request(request).await)
     }
 }

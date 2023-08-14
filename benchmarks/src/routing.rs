@@ -45,13 +45,13 @@ fn generate_matching_requests<'c>(client: &'c Client, routes: &[Route]) -> Vec<L
     }
 
     fn request_for_route<'c>(client: &'c Client, route: &Route) -> LocalRequest<'c> {
-        let path = route.uri.origin.path()
+        let path = route.uri.path()
             .raw_segments()
             .map(staticify_segment)
             .collect::<Vec<_>>()
             .join("/");
 
-        let query = route.uri.origin.query()
+        let query = route.uri.query()
             .map(|q| q.raw_segments())
             .into_iter()
             .flatten()

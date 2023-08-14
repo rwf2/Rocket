@@ -1,6 +1,7 @@
 use std::str::FromStr;
 use std::path::PathBuf;
 
+use crate::error::Empty;
 use crate::http::uri::{Segments, error::PathError, fmt::Path};
 
 /// Trait to convert a dynamic path segment string to a concrete value.
@@ -184,20 +185,34 @@ pub trait FromParam<'a>: Sized {
 }
 
 impl<'a> FromParam<'a> for &'a str {
-    type Error = std::convert::Infallible;
+    type Error = Empty;
 
     #[inline(always)]
     fn from_param(param: &'a str) -> Result<&'a str, Self::Error> {
+        if param.is_empty() {
+            return Err(Empty);
+        }
+
         Ok(param)
     }
 }
 
 impl<'a> FromParam<'a> for String {
-    type Error = std::convert::Infallible;
+    type Error = Empty;
 
+    #[track_caller]
     #[inline(always)]
     fn from_param(param: &'a str) -> Result<String, Self::Error> {
-        // TODO: Tell the user they're being inefficient?
+        #[cfg(debug_assertions)] {
+            let loc = std::panic::Location::caller();
+            warn_!("Note: Using `String` as a parameter type is inefficient. Use `&str` instead.");
+            info_!("`String` is used a parameter guard in {}:{}.", loc.file(), loc.line());
+        }
+
+        if param.is_empty() {
+            return Err(Empty);
+        }
+
         Ok(param.to_string())
     }
 }

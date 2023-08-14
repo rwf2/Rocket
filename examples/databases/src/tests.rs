@@ -14,7 +14,7 @@ fn test(base: &str, stage: AdHoc) {
     // Number of posts we're going to create/read/delete.
     const N: usize = 20;
 
-    // NOTE: If we had more than one test running concurently that dispatches
+    // NOTE: If we had more than one test running concurrently that dispatches
     // DB-accessing requests, we'd need transactions or to serialize all tests.
     let client = Client::tracked(rocket::build().attach(stage)).unwrap();
 

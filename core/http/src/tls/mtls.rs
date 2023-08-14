@@ -62,9 +62,10 @@ pub type Result<T, E = Error> = std::result::Result<T, E>;
 ///   * The certificates are active and not yet expired.
 ///   * The client's certificate chain was signed by the CA identified by the
 ///     configured `ca_certs` and with respect to SNI, if any. See [module level
-///     docs](self) for configuration details.
+///     docs](crate::mtls) for configuration details.
 ///
-/// If the client does not present certificates, the guard _forwards_.
+/// If the client does not present certificates, the guard _forwards_ with a
+/// status of 401 Unauthorized.
 ///
 /// If the certificate chain fails to validate or verify, the guard _fails_ with
 /// the respective [`Error`].
@@ -81,6 +82,7 @@ pub type Result<T, E = Error> = std::result::Result<T, E>;
 /// use rocket::mtls::{self, bigint::BigUint, Certificate};
 /// use rocket::request::{Request, FromRequest, Outcome};
 /// use rocket::outcome::try_outcome;
+/// use rocket::http::Status;
 ///
 /// // The serial number for the certificate issued to the admin.
 /// const ADMIN_SERIAL: &str = "65828378108300243895479600452308786010218223563";
@@ -97,7 +99,7 @@ pub type Result<T, E = Error> = std::result::Result<T, E>;
 ///         if let Some(true) = cert.has_serial(ADMIN_SERIAL) {
 ///             Outcome::Success(CertifiedAdmin(cert))
 ///         } else {
-///             Outcome::Forward(())
+///             Outcome::Forward(Status::Unauthorized)
 ///         }
 ///     }
 /// }
@@ -140,9 +142,11 @@ pub type Result<T, E = Error> = std::result::Result<T, E>;
 ///     // _does_ run if a valid (Ok) or invalid (Err) one was presented.
 /// }
 /// ```
-#[repr(transparent)]
 #[derive(Debug, PartialEq)]
-pub struct Certificate<'a>(X509Certificate<'a>);
+pub struct Certificate<'a> {
+    x509: X509Certificate<'a>,
+    data: &'a CertificateData,
+}
 
 /// An X.509 Distinguished Name (DN) found in a [`Certificate`].
 ///
@@ -216,16 +220,15 @@ impl<'a> Certificate<'a> {
 
     #[inline(always)]
     fn inner(&self) -> &TbsCertificate<'a> {
-        &self.0.tbs_certificate
+        &self.x509.tbs_certificate
     }
 
     /// PRIVATE: For internal Rocket use only!
     #[doc(hidden)]
     pub fn parse(chain: &[CertificateData]) -> Result<Certificate<'_>> {
-        match chain.first() {
-            Some(cert) => Certificate::parse_one(&cert.0).map(Certificate),
-            None => Err(Error::Empty)
-        }
+        let data = chain.first().ok_or_else(|| Error::Empty)?;
+        let x509 = Certificate::parse_one(&data.0)?;
+        Ok(Certificate { x509, data })
     }
 
     /// Returns the serial number of the X.509 certificate.
@@ -264,7 +267,7 @@ impl<'a> Certificate<'a> {
         self.inner().version.0
     }
 
-    /// Returns the subject (a "DN" or "Distinguised Name") of the X.509
+    /// Returns the subject (a "DN" or "Distinguished Name") of the X.509
     /// certificate.
     ///
     /// # Example
@@ -285,7 +288,7 @@ impl<'a> Certificate<'a> {
         Name::ref_cast(&self.inner().subject)
     }
 
-    /// Returns the issuer (a "DN" or "Distinguised Name") of the X.509
+    /// Returns the issuer (a "DN" or "Distinguished Name") of the X.509
     /// certificate.
     ///
     /// # Example
@@ -361,6 +364,31 @@ impl<'a> Certificate<'a> {
     pub fn has_serial(&self, number: &str) -> Option<bool> {
         let uint: bigint::BigUint = number.parse().ok()?;
         Some(&uint == self.serial())
+    }
+
+    /// Returns the raw, unmodified, DER-encoded X.509 certificate data bytes.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// # extern crate rocket;
+    /// # use rocket::get;
+    /// use rocket::mtls::Certificate;
+    ///
+    /// const SHA256_FINGERPRINT: &str =
+    ///     "CE C2 4E 01 00 FF F7 78 CB A4 AA CB D2 49 DD 09 \
+    ///      02 EF 0E 9B DA 89 2A E4 0D F4 09 83 97 C1 97 0D";
+    ///
+    /// #[get("/auth")]
+    /// fn auth(cert: Certificate<'_>) {
+    ///     # fn sha256_fingerprint(bytes: &[u8]) -> String { todo!() }
+    ///     if sha256_fingerprint(cert.as_bytes()) == SHA256_FINGERPRINT {
+    ///         println!("certificate fingerprint matched");
+    ///     }
+    /// }
+    /// ```
+    pub fn as_bytes(&self) -> &'a [u8] {
+        &self.data.0
     }
 }
 
@@ -446,7 +474,7 @@ impl<'a> Name<'a> {
     /// `self`.
     ///
     /// Note that email addresses need not be UTF-8 strings, or strings at all.
-    /// This method filters the email addresss in `self` to those that are. Use
+    /// This method filters the email address in `self` to those that are. Use
     /// the raw [`iter_email()`](#method.iter_email) to iterate over all value
     /// types.
     ///

@@ -172,17 +172,21 @@ fn test_redirection() {
     assert_eq!(response.status(), Status::Ok);
 
     // Root of route is also redirected.
-    let response = client.get("/no_index").dispatch();
+    let response = client.get("/no_index/").dispatch();
     assert_eq!(response.status(), Status::NotFound);
 
-    let response = client.get("/index").dispatch();
+    let response = client.get("/index/").dispatch();
     assert_eq!(response.status(), Status::Ok);
 
-    let response = client.get("/redir").dispatch();
+    let response = client.get("/redir/inner").dispatch();
     assert_eq!(response.status(), Status::PermanentRedirect);
-    assert_eq!(response.headers().get("Location").next(), Some("/redir/"));
+    assert_eq!(response.headers().get("Location").next(), Some("/redir/inner/"));
 
-    let response = client.get("/redir_index").dispatch();
+    let response = client.get("/redir/other").dispatch();
     assert_eq!(response.status(), Status::PermanentRedirect);
-    assert_eq!(response.headers().get("Location").next(), Some("/redir_index/"));
+    assert_eq!(response.headers().get("Location").next(), Some("/redir/other/"));
+
+    let response = client.get("/redir_index/other").dispatch();
+    assert_eq!(response.status(), Status::PermanentRedirect);
+    assert_eq!(response.headers().get("Location").next(), Some("/redir_index/other/"));
 }

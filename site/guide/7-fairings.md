@@ -73,7 +73,7 @@ order in which fairings are attached may be significant.
 ### Callbacks
 
 There are five events for which Rocket issues fairing callbacks. Each of these
-events is breifly described below and in details in the [`Fairing`] trait docs:
+events is briefly described below and in details in the [`Fairing`] trait docs:
 
   * **Ignite (`on_ignite`)**
 

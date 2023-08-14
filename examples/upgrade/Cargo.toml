@@ -1,0 +1,10 @@
+[package]
+name = "upgrade"
+version = "0.0.0"
+workspace = "../"
+edition = "2021"
+publish = false
+
+[dependencies]
+rocket = { path = "../../core/lib" }
+ws = { package = "rocket_ws", path = "../../contrib/ws" }

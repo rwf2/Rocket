@@ -28,7 +28,7 @@ mod many_cookie_jars_tests {
     }
 
     #[test]
-    fn test_mutli_add() {
+    fn test_multi_add() {
         let client = Client::debug(rocket()).unwrap();
         let response = client.post("/").dispatch();
         let cookies = response.cookies();
@@ -38,7 +38,7 @@ mod many_cookie_jars_tests {
     }
 
     #[test]
-    fn test_mutli_get() {
+    fn test_multi_get() {
         let client = Client::debug(rocket()).unwrap();
         let response = client.get("/")
             .cookie(Cookie::new("a", "a_val"))

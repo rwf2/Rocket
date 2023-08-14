@@ -8,6 +8,7 @@ use rocket::serde::Deserialize;
 
 #[derive(Debug, Deserialize)]
 #[serde(crate = "rocket::serde")]
+#[allow(dead_code)]
 struct AppConfig {
     key: String,
     port: u16
