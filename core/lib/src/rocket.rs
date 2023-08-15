@@ -508,7 +508,7 @@ impl Rocket<Build> {
     /// # impl Fairing for Templates { fn info(&self) -> Info { todo!() } }
     /// use rocket::Rocket;
     /// use rocket::fairing::AdHoc;
-    /// 
+    ///
     /// fn some_function() -> &'static str { "" }
     ///
     /// #[launch]
@@ -527,8 +527,8 @@ impl Rocket<Build> {
     /// will be run on each instance.
     #[must_use]
     pub fn modify_fairings<F: Fairing>(mut self, modifier: impl Fn(&mut F)) -> Self {
-        // Note: the nightly version of this function uses trait upcasting, and
-        // should be preferred once [trait upcasting](https://github.com/rust-lang/rust/issues/65991)
+        // Note: the nightly version of this function uses trait upcasting, and should be
+        // preferred once [trait upcasting](https://github.com/rust-lang/rust/issues/65991)
         // is stable. The nightly version is primarily for testing, and enabled the compiler to
         // verify this is safe on nightly.
         #[cfg(feature = "nightly")]
