@@ -62,7 +62,7 @@
 //!    #[get("/<id>")]
 //!    async fn read(mut db: Connection<Logs>, id: i64) -> Option<Log> {
 //!        sqlx::query("SELECT content FROM logs WHERE id = ?").bind(id)
-//!            .fetch_one(&mut *db).await
+//!            .fetch_one(&mut **db).await
 //!            .and_then(|r| Ok(Log(r.try_get(0)?)))
 //!            .ok()
 //!    }
@@ -124,11 +124,9 @@
 //! [`sqlx::PgPool`]: https://docs.rs/sqlx/0.6/sqlx/type.PgPool.html
 //! [`sqlx::MySqlPool`]: https://docs.rs/sqlx/0.6/sqlx/type.MySqlPool.html
 //! [`sqlx::SqlitePool`]: https://docs.rs/sqlx/0.6/sqlx/type.SqlitePool.html
-//! [`sqlx::MssqlPool`]: https://docs.rs/sqlx/0.6/sqlx/type.MssqlPool.html
 //! [`sqlx::pool::PoolConnection<Postgres>`]: https://docs.rs/sqlx/0.6/sqlx/pool/struct.PoolConnection.html
 //! [`sqlx::pool::PoolConnection<MySql>`]: https://docs.rs/sqlx/0.6/sqlx/pool/struct.PoolConnection.html
 //! [`sqlx::pool::PoolConnection<Sqlite>`]: https://docs.rs/sqlx/0.6/sqlx/pool/struct.PoolConnection.html
-//! [`sqlx::pool::PoolConnection<Mssql>`]: https://docs.rs/sqlx/0.6/sqlx/pool/struct.PoolConnection.html
 //!
 //! On shutdown, new connections are denied. Shutdown waits for connections to
 //! be returned.

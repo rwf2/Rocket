@@ -54,7 +54,7 @@ full usage details.
    #[get("/<id>")]
    async fn read(mut db: Connection<Logs>, id: i64) -> Result<Log> {
        sqlx::query!("SELECT content FROM logs WHERE id = ?", id)
-           .fetch_one(&mut *db)
+           .fetch_one(&mut **db)
            .map_ok(|r| Log(r.content))
            .await
    }
