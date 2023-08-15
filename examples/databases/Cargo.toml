@@ -13,7 +13,7 @@ diesel_migrations = "2"
 [dependencies.sqlx]
 version = "0.7.0"
 default-features = false
-features = ["macros", "offline", "migrate"]
+features = ["macros", "migrate"]
 
 [dependencies.rocket_db_pools]
 path = "../../contrib/db_pools/lib/"
