@@ -53,13 +53,6 @@ check_types_match!(
 );
 
 check_types_match!(
-    "sqlx_mssql",
-    sqlx_mssql,
-    sqlx::MssqlPool,
-    sqlx::pool::PoolConnection<sqlx::Mssql>,
-);
-
-check_types_match!(
     "mongodb",
     mongodb,
     mongodb::Client,
