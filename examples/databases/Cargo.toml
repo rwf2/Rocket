@@ -11,7 +11,7 @@ diesel = "2"
 diesel_migrations = "2"
 
 [dependencies.sqlx]
-version = "0.6.0"
+version = "0.7.0"
 default-features = false
 features = ["macros", "migrate"]
 
