@@ -253,10 +253,10 @@ mod sqlx {
             let mut opts = config.url.parse::<Options<D>>().map_err(Error::Init)?;
             specialize(&mut opts, &config);
 
-            opts.disable_statement_logging();
+            opts = opts.disable_statement_logging();
             if let Ok(level) = figment.extract_inner::<LogLevel>(rocket::Config::LOG_LEVEL) {
                 if !matches!(level, LogLevel::Normal | LogLevel::Off) {
-                    opts.log_statements(level.into())
+                    opts = opts.log_statements(level.into())
                         .log_slow_statements(level.into(), Duration::default());
                 }
             }
