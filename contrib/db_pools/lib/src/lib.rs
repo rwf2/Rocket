@@ -62,7 +62,7 @@
 //!    #[get("/<id>")]
 //!    async fn read(mut db: Connection<Logs>, id: i64) -> Option<Log> {
 //!        sqlx::query("SELECT content FROM logs WHERE id = ?").bind(id)
-//!            .fetch_one(&mut *db).await
+//!            .fetch_one(&mut **db).await
 //!            .and_then(|r| Ok(Log(r.try_get(0)?)))
 //!            .ok()
 //!    }
