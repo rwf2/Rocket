@@ -113,7 +113,7 @@
 //! On shutdown, new connections are denied. Shutdown _does not_ wait for
 //! connections to be returned.
 //!
-//! ## `sqlx` (v0.6)
+//! ## `sqlx` (v0.7)
 //!
 //! | Database | Feature         | [`Pool`] Type        | [`Connection`] Deref                     |
 //! |----------|-----------------|----------------------|------------------------------------------|
@@ -160,7 +160,7 @@
 //!
 //! ```toml
 //! [dependencies.sqlx]
-//! version = "0.6"
+//! version = "0.7"
 //! default-features = false
 //! features = ["macros", "migrate"]
 //!
