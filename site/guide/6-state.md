@@ -296,7 +296,7 @@ features enabled in `Cargo.toml`:
 [dependencies.sqlx]
 version = "0.6"
 default-features = false
-features = ["macros", "offline", "migrate"]
+features = ["macros", "migrate"]
 
 [dependencies.rocket_db_pools]
 version = "=0.1.0-rc.3"
