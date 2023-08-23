@@ -373,6 +373,7 @@ r#"<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="utf-8">
+    <meta name="color-scheme" content="light dark">
     <title>"#, $code, " ", $reason, r#"</title>
 </head>
 <body align="center">
