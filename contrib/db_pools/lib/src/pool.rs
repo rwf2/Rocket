@@ -240,6 +240,37 @@ mod sqlx {
                 .busy_timeout(Duration::from_secs(__config.connect_timeout))
                 .create_if_missing(true);
         }
+
+        #[cfg(feature = "sqlx_postgres")]
+        if let Some(o) = __options.downcast_mut::<sqlx::postgres::PgConnectOptions>() {
+            if let Some(ref ssl_root_cert) = __config.ssl_root_cert {
+                *o = std::mem::take(o).ssl_root_cert(ssl_root_cert);
+            }
+
+            if let Some(ref ssl_client_cert) = __config.ssl_client_cert {
+                *o = std::mem::take(o).ssl_client_cert(ssl_client_cert);
+            }
+
+            if let Some(ref ssl_client_key) = __config.ssl_client_key {
+                *o = std::mem::take(o).ssl_client_key(ssl_client_key);
+            }
+        }
+
+        #[cfg(feature = "sqlx_mysql")]
+        if let Some(o) = __options.downcast_mut::<sqlx::mysql::MySqlConnectOptions>() {
+            if let Some(ref ssl_root_cert) = __config.ssl_root_cert {
+                *o = std::mem::take(o).ssl_ca(ssl_root_cert);
+            }
+
+            if let Some(ref ssl_client_cert) = __config.ssl_client_cert {
+                *o = std::mem::take(o).ssl_client_cert(ssl_client_cert);
+            }
+
+            if let Some(ref ssl_client_key) = __config.ssl_client_key {
+                *o = std::mem::take(o).ssl_client_key(ssl_client_key);
+            }
+        }
+
     }
 
     #[rocket::async_trait]

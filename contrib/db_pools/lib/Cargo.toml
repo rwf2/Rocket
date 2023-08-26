@@ -22,6 +22,8 @@ sqlx_mysql = ["sqlx", "sqlx/mysql"]
 sqlx_postgres = ["sqlx", "sqlx/postgres"]
 sqlx_sqlite = ["sqlx", "sqlx/sqlite"]
 sqlx_macros = ["sqlx/macros"]
+sqlx_native_tls = ["sqlx/tls-native-tls"]
+sqlx_rustls = ["sqlx/tls-rustls"]
 # diesel features
 diesel_postgres = ["diesel-async/postgres", "diesel-async/deadpool", "diesel", "deadpool"]
 diesel_mysql = ["diesel-async/mysql", "diesel-async/deadpool", "diesel", "deadpool"]
