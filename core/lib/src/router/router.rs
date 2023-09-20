@@ -6,6 +6,8 @@ use crate::http::{Method, Status};
 use crate::{Route, Catcher};
 use crate::router::Collide;
 
+use super::matcher::{paths_match, queries_match};
+
 #[derive(Debug, Default)]
 pub(crate) struct Router {
     routes: HashMap<Method, Vec<Route>>,
@@ -62,7 +64,7 @@ impl Router {
         self.routes.get(&req.method())
             .into_iter()
             .flatten()
-            .any(|route| super::matcher::paths_match(route, req) && super::matcher::queries_match(route, req))
+            .any(|route| paths_match(route, req) && queries_match(route, req))
     }
 
     const ALL_METHODS: &[Method] = &[
@@ -79,7 +81,7 @@ impl Router {
             .filter(|method| *method != &req.method())
             .filter_map(|method| self.routes.get(method))
             .flatten()
-            .any(|route| super::matcher::paths_match(route, req))
+            .any(|route| paths_match(route, req))
     }
 
     // For many catchers, using aho-corasick or similar should be much faster.

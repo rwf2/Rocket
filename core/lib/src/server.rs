@@ -343,12 +343,16 @@ impl Rocket<Orbit> {
 
         error_!("No matching routes for {}.", request);
         if request.route().is_none() {
-            // We failed to find a route which matches on path, query AND formats
+            // We failed to find a route which matches on path, query AND formats.
             if self.router.matches_except_formats(request) {
                 // Tailor the error code to the interpretation of the request in question.
-                status = if request.method().supports_payload() { Status::UnsupportedMediaType } else { Status::NotAcceptable };
+                if request.method().supports_payload() {
+                    status = Status::UnsupportedMediaType;
+                } else {
+                    status = Status::NotAcceptable;
+                }
             } else if self.router.matches_except_method(request) {
-                // Found a more suitable error code from simple route paths implemented on different methods
+                // Found a more suitable error code for paths implemented on different methods.
                 status = Status::MethodNotAllowed;
             }
         }
