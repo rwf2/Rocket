@@ -67,7 +67,7 @@ impl Router {
             .any(|route| paths_match(route, req) && queries_match(route, req))
     }
 
-    const ALL_METHODS: &[Method] = &[
+    const ALL_METHODS: &'static [Method] = &[
         Method::Get, Method::Put, Method::Post, Method::Delete, Method::Options,
         Method::Head, Method::Trace, Method::Connect, Method::Patch,
     ];

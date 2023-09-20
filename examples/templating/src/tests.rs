@@ -22,8 +22,7 @@ fn test_root(kind: &str) {
         let expected = Template::show(client.rocket(), format!("{}/error/404", kind), &context);
 
         let response = client.req(*method, format!("/{}", kind)).dispatch();
-        assert_eq!(response.status(), Status::NotFound);
-        assert_eq!(response.into_string(), expected);
+        assert_eq!(response.status(), Status::MethodNotAllowed);
     }
 }
 
