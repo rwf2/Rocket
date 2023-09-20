@@ -55,6 +55,33 @@ impl Router {
             .flat_map(move |routes| routes.iter().filter(move |r| r.matches(req)))
     }
 
+    pub(crate) fn matches_except_formats<'r, 'a: 'r>(
+        &'a self,
+        req: &'r Request<'r>
+    ) -> bool {
+        self.routes.get(&req.method())
+            .into_iter()
+            .flatten()
+            .any(|route| super::matcher::paths_match(route, req) && super::matcher::queries_match(route, req))
+    }
+
+    const ALL_METHODS: &[Method] = &[
+        Method::Get, Method::Put, Method::Post, Method::Delete, Method::Options,
+        Method::Head, Method::Trace, Method::Connect, Method::Patch,
+    ];
+
+    pub(crate) fn matches_except_method<'r, 'a: 'r>(
+        &'a self,
+        req: &'r Request<'r>
+    ) -> bool {
+        Self::ALL_METHODS
+            .iter()
+            .filter(|method| *method != &req.method())
+            .filter_map(|method| self.routes.get(method))
+            .flatten()
+            .any(|route| super::matcher::paths_match(route, req))
+    }
+
     // For many catchers, using aho-corasick or similar should be much faster.
     pub fn catch<'r>(&self, status: Status, req: &'r Request<'r>) -> Option<&Catcher> {
         // Note that catchers are presorted by descending base length.
@@ -366,6 +393,22 @@ mod test {
         let router = router_with_routes(&["/prefix/<a..>"]);
         assert!(route(&router, Get, "/").is_none());
         assert!(route(&router, Get, "/prefi/").is_none());
+    }
+
+    fn has_mismatched_method<'a>(router: &'a Router, method: Method, uri: &'a str) -> bool {
+        let client = Client::debug_with(vec![]).expect("client");
+        let request = client.req(method, Origin::parse(uri).unwrap());
+        router.matches_except_method(&request)
+    }
+
+    #[test]
+    fn test_bad_method_routing() {
+        let router = router_with_routes(&["/hello"]);
+        assert!(route(&router, Put, "/hello").is_none());
+        assert!(has_mismatched_method(&router, Put, "/hello"));
+        assert!(has_mismatched_method(&router, Post, "/hello"));
+
+        assert!(! has_mismatched_method(&router, Get, "/hello"));
     }
 
     /// Asserts that `$to` routes to `$want` given `$routes` are present.

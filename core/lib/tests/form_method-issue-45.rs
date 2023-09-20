@@ -37,6 +37,6 @@ mod tests {
             .body("_method=patch&form_data=Form+data")
             .dispatch();
 
-        assert_eq!(response.status(), Status::NotFound);
+        assert_eq!(response.status(), Status::MethodNotAllowed);
     }
 }
