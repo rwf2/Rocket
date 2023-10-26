@@ -127,7 +127,7 @@ fn add_binding<P: fmt::Part>(to: &mut Vec<TokenStream>, ident: &Ident, ty: &Type
     let let_stmt = quote_spanned!(span => let #tmp_ident = #expr);
 
     to.push(quote_spanned!(span =>
-        #[allow(non_snake_case)] #let_stmt;
+        #[allow(clippy::redundant_locals, non_snake_case)] #let_stmt;
         let #ident = <#ty as #_fmt::FromUriParam<#part, _>>::from_uri_param(#tmp_ident);
     ));
 }
