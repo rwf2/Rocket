@@ -98,6 +98,12 @@ impl<'c> LocalResponse<'c> {
     }
 }
 
+impl<'r> LocalResponse<'r> {
+    pub(crate) fn _request(&self) -> &Request<'r> {
+        &self._request
+    }
+}
+
 impl LocalResponse<'_> {
     pub(crate) fn _response(&self) -> &Response<'_> {
         &self.response

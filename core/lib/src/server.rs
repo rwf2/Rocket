@@ -325,7 +325,7 @@ impl Rocket<Orbit> {
         for route in self.router.route(request) {
             // Retrieve and set the requests parameters.
             info_!("Matched: {}", route);
-            request.set_route(route);
+            request.set_route(Some(route));
 
             let name = route.name.as_deref();
             let outcome = handle(name, || route.handler.handle(request, data)).await
@@ -364,8 +364,10 @@ impl Rocket<Orbit> {
         // from earlier, unsuccessful paths from being reflected in error
         // response. We may wish to relax this in the future.
         req.cookies().reset_delta();
+        req.set_route(None);
 
         if let Some(catcher) = self.router.catch(status, req) {
+            req.set_catcher(Some(catcher));
             warn_!("Responding with registered {} catcher.", catcher);
             let name = catcher.name.as_deref();
             handle(name, || catcher.handler.handle(status, req)).await
@@ -374,6 +376,7 @@ impl Rocket<Orbit> {
         } else {
             let code = status.code.blue().bold();
             warn_!("No {} catcher registered. Using Rocket default.", code);
+            req.set_catcher(Some(&self.router.default_catcher));
             Ok(crate::catcher::default_handler(status, req))
         }
     }
@@ -401,6 +404,7 @@ impl Rocket<Orbit> {
             }
         }
 
+        req.set_catcher(Some(&self.router.default_catcher));
         // If it failed again or if it was already a 500, use Rocket's default.
         error_!("{} catcher failed. Using Rocket default 500.", status.code);
         crate::catcher::default_handler(Status::InternalServerError, req)

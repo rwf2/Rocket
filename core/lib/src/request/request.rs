@@ -8,7 +8,7 @@ use state::{TypeMap, InitCell};
 use futures::future::BoxFuture;
 use atomic::{Atomic, Ordering};
 
-use crate::{Rocket, Route, Orbit};
+use crate::{Rocket, Route, Orbit, Catcher};
 use crate::request::{FromParam, FromSegments, FromRequest, Outcome};
 use crate::form::{self, ValueField, FromForm};
 use crate::data::Limits;
@@ -18,6 +18,9 @@ use crate::http::{ContentType, Accept, MediaType, CookieJar, Cookie};
 use crate::http::uncased::UncasedStr;
 use crate::http::private::Certificates;
 use crate::http::uri::{fmt::Path, Origin, Segments, Host, Authority};
+
+#[cfg(test)]
+use parking_lot::Mutex;
 
 /// The type of an incoming web request.
 ///
@@ -45,11 +48,14 @@ pub(crate) struct ConnectionMeta {
 pub(crate) struct RequestState<'r> {
     pub rocket: &'r Rocket<Orbit>,
     pub route: Atomic<Option<&'r Route>>,
+    pub catcher: Atomic<Option<&'r Catcher>>,
     pub cookies: CookieJar<'r>,
     pub accept: InitCell<Option<Accept>>,
     pub content_type: InitCell<Option<ContentType>>,
     pub cache: Arc<TypeMap![Send + Sync]>,
     pub host: Option<Host<'r>>,
+    #[cfg(test)]
+    pub route_path: Arc<Mutex<Vec<&'r Route>>>,
 }
 
 impl Request<'_> {
@@ -69,11 +75,14 @@ impl RequestState<'_> {
         RequestState {
             rocket: self.rocket,
             route: Atomic::new(self.route.load(Ordering::Acquire)),
+            catcher: Atomic::new(self.catcher.load(Ordering::Acquire)),
             cookies: self.cookies.clone(),
             accept: self.accept.clone(),
             content_type: self.content_type.clone(),
             cache: self.cache.clone(),
             host: self.host.clone(),
+            #[cfg(test)]
+            route_path: self.route_path.clone(),
         }
     }
 }
@@ -97,11 +106,14 @@ impl<'r> Request<'r> {
             state: RequestState {
                 rocket,
                 route: Atomic::new(None),
+                catcher: Atomic::new(None),
                 cookies: CookieJar::new(rocket.config()),
                 accept: InitCell::new(),
                 content_type: InitCell::new(),
                 cache: Arc::new(<TypeMap![Send + Sync]>::new()),
                 host: None,
+                #[cfg(test)]
+                route_path: Arc::new(Mutex::new(vec![])),
             }
         }
     }
@@ -691,6 +703,22 @@ impl<'r> Request<'r> {
         self.state.route.load(Ordering::Acquire)
     }
 
+    /// Get the presently matched catcher, if any.
+    ///
+    /// This method returns `Some` while a catcher is running.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// # let c = rocket::local::blocking::Client::debug_with(vec![]).unwrap();
+    /// # let request = c.get("/");
+    /// let catcher = request.catcher();
+    /// ```
+    #[inline(always)]
+    pub fn catcher(&self) -> Option<&'r Catcher> {
+        self.state.catcher.load(Ordering::Acquire)
+    }
+
     /// Invokes the request guard implementation for `T`, returning its outcome.
     ///
     /// # Example
@@ -969,8 +997,29 @@ impl<'r> Request<'r> {
     /// Set `self`'s parameters given that the route used to reach this request
     /// was `route`. Use during routing when attempting a given route.
     #[inline(always)]
-    pub(crate) fn set_route(&self, route: &'r Route) {
-        self.state.route.store(Some(route), Ordering::Release)
+    pub(crate) fn set_route(&self, route: Option<&'r Route>) {
+        self.state.route.store(route, Ordering::Release);
+        #[cfg(test)]
+        if let Some(route) = route {
+            self.state.route_path.lock().push(route);
+        }
+    }
+
+    /// Compute a value using the route path of this request
+    ///
+    /// This doesn't simply return a refernce, since the reference is held behind a Arc<Mutex>.
+    /// This method is only intended to be used internally, and is therefore NOT pub.
+    #[inline(always)]
+    #[cfg(test)]
+    pub(crate) fn route_path<R>(&self, operation: impl FnOnce(&[&'r Route]) -> R) -> R {
+        operation(self.state.route_path.lock().as_ref())
+    }
+
+    /// Set `self`'s parameters given that the route used to reach this request
+    /// was `catcher`. Use during routing when attempting a given catcher.
+    #[inline(always)]
+    pub(crate) fn set_catcher(&self, catcher: Option<&'r Catcher>) {
+        self.state.catcher.store(catcher, Ordering::Release)
     }
 
     /// Set the method of `self`, even when `self` is a shared reference. Used

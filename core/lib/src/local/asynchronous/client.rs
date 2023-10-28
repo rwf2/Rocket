@@ -2,7 +2,7 @@ use std::fmt;
 
 use parking_lot::RwLock;
 
-use crate::{Rocket, Phase, Orbit, Ignite, Error};
+use crate::{Rocket, Phase, Orbit, Ignite, Error, Build};
 use crate::local::asynchronous::{LocalRequest, LocalResponse};
 use crate::http::{Method, uri::Origin, private::cookie};
 
@@ -70,6 +70,21 @@ impl Client {
     {
         crate::async_test(async {
             let client = Client::debug(crate::build()).await.unwrap();
+            let request = client.get("/");
+            let response = request.clone().dispatch().await;
+            f(&client, request, response)
+        })
+    }
+
+    // WARNING: This is unstable! Do not use this method outside of Rocket!
+    // This is used by the `Client` doctests.
+    #[doc(hidden)]
+    pub fn _test_with<M, T, F>(mods: M, f: F) -> T
+        where F: FnOnce(&Self, LocalRequest<'_>, LocalResponse<'_>) -> T + Send,
+        M: FnOnce(Rocket<Build>) -> Rocket<Build>
+    {
+        crate::async_test(async {
+            let client = Client::debug(mods(crate::build())).await.unwrap();
             let request = client.get("/");
             let response = request.clone().dispatch().await;
             f(&client, request, response)

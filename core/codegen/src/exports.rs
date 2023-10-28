@@ -98,7 +98,9 @@ define_exported_paths! {
     StaticRouteInfo => ::rocket::StaticRouteInfo,
     StaticCatcherInfo => ::rocket::StaticCatcherInfo,
     Route => ::rocket::Route,
+    RouteType => ::rocket::route::RouteType,
     Catcher => ::rocket::Catcher,
+    CatcherType => ::rocket::catcher::CatcherType,
     SmallVec => ::rocket::http::private::SmallVec,
     Status => ::rocket::http::Status,
 }

@@ -2,7 +2,7 @@ use std::path::{PathBuf, Path};
 
 use crate::{Request, Data};
 use crate::http::{Method, uri::Segments, ext::IntoOwned};
-use crate::route::{Route, Handler, Outcome};
+use crate::route::{Route, Handler, Outcome, RouteType};
 use crate::response::Redirect;
 use crate::fs::NamedFile;
 
@@ -180,10 +180,13 @@ impl FileServer {
     }
 }
 
+impl RouteType for FileServer {}
+
 impl From<FileServer> for Vec<Route> {
     fn from(server: FileServer) -> Self {
         let source = figment::Source::File(server.root.clone());
-        let mut route = Route::ranked(server.rank, Method::Get, "/<path..>", server);
+        let mut route = Route::ranked(server.rank, Method::Get, "/<path..>", server)
+            .with_type::<FileServer>();
         route.name = Some(format!("FileServer: {}", source).into());
         vec![route]
     }

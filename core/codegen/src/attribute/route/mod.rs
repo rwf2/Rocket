@@ -343,6 +343,8 @@ fn codegen_route(route: Route) -> Result<TokenStream> {
         /// Rocket code generated proxy structure.
         #deprecated #vis struct #handler_fn_name {  }
 
+        impl #RouteType for #handler_fn_name {}
+
         /// Rocket code generated proxy static conversion implementations.
         #[allow(nonstandard_style, deprecated, clippy::style)]
         impl #handler_fn_name {
@@ -369,6 +371,7 @@ fn codegen_route(route: Route) -> Result<TokenStream> {
                     format: #format,
                     rank: #rank,
                     sentinels: #sentinels,
+                    route_type: #_Box::new(self),
                 }
             }
 

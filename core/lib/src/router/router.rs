@@ -10,6 +10,7 @@ use crate::router::Collide;
 pub(crate) struct Router {
     routes: HashMap<Method, Vec<Route>>,
     catchers: HashMap<Option<u16>, Vec<Catcher>>,
+    pub default_catcher: Catcher,
 }
 
 #[derive(Debug)]

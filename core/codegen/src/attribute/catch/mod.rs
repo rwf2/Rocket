@@ -62,6 +62,8 @@ pub fn _catch(
         /// Rocket code generated proxy structure.
         #deprecated #vis struct #user_catcher_fn_name {  }
 
+        impl #CatcherType for #user_catcher_fn_name {  }
+
         /// Rocket code generated proxy static conversion implementations.
         #[allow(nonstandard_style, deprecated, clippy::style)]
         impl #user_catcher_fn_name {
@@ -83,6 +85,7 @@ pub fn _catch(
                     name: stringify!(#user_catcher_fn_name),
                     code: #status_code,
                     handler: monomorphized_function,
+                    catcher_type: #_Box::new(self),
                 }
             }
 

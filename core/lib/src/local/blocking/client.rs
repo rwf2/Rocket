@@ -1,7 +1,7 @@
 use std::fmt;
 use std::cell::RefCell;
 
-use crate::{Rocket, Phase, Orbit, Ignite, Error};
+use crate::{Rocket, Phase, Orbit, Ignite, Error, Build};
 use crate::local::{asynchronous, blocking::{LocalRequest, LocalResponse}};
 use crate::http::{Method, uri::Origin};
 
@@ -49,6 +49,19 @@ impl Client {
         where F: FnOnce(&Self, LocalRequest<'_>, LocalResponse<'_>) -> T + Send
     {
         let client = Client::debug(crate::build()).unwrap();
+        let request = client.get("/");
+        let response = request.clone().dispatch();
+        f(&client, request, response)
+    }
+
+    // WARNING: This is unstable! Do not use this method outside of Rocket!
+    // This is used by the `Client` doctests.
+    #[doc(hidden)]
+    pub fn _test_with<M, T, F>(mods: M, f: F) -> T
+        where F: FnOnce(&Self, LocalRequest<'_>, LocalResponse<'_>) -> T + Send,
+        M: FnOnce(Rocket<Build>) -> Rocket<Build>
+    {
+        let client = Client::debug(mods(crate::build())).unwrap();
         let request = client.get("/");
         let response = request.clone().dispatch();
         f(&client, request, response)
