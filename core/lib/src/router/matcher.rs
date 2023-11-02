@@ -74,7 +74,7 @@ impl Route {
 }
 
 impl Catcher {
-    /// Returns `true` if `self` matches errors with `status` that occured
+    /// Returns `true` if `self` matches errors with `status` that occurred
     /// during `request`.
     ///
     /// A [_match_](Catcher#routing) between a `Catcher` and a (`Status`,

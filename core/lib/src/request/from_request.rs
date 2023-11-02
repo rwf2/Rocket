@@ -89,7 +89,7 @@ pub type Outcome<S, E> = outcome::Outcome<S, (Status, E), Status>;
 /// * **Forward**(Status)
 ///
 ///   If the `Outcome` is [`Forward`], the request will be forwarded to the next
-///   matching route until either one succeds or there are no further matching
+///   matching route until either one succeeds or there are no further matching
 ///   routes to attempt. In the latter case, the request will be sent to the
 ///   [`Catcher`](crate::Catcher) for the designated `Status`. Note that users
 ///   can request an `Option<S>` to catch `Forward`s.

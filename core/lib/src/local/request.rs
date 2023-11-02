@@ -200,7 +200,7 @@ macro_rules! pub_request_impl {
     /// Set mTLS client certificates to send along with the request.
     ///
     /// If the request already contained certificates, they are replaced with
-    /// thsoe in `reader.`
+    /// those in `reader.`
     ///
     /// `reader` is expected to be PEM-formatted and contain X509 certificates.
     /// If it contains more than one certificate, the entire chain is set on the

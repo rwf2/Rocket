@@ -31,7 +31,7 @@ impl Route {
     ///      `0..n`, either `a.uri[i]` is dynamic _or_ `b.uri[i]` is dynamic
     ///      _or_ they're both static with the same value.
     ///    - One URI has fewer segments _and_ ends with a trailing dynamic
-    ///      parameter _and_ the preceeding segments in both routes match the
+    ///      parameter _and_ the preceding segments in both routes match the
     ///      conditions above.
     ///
     /// Collisions are symmetric: for any routes `a` and `b`,
