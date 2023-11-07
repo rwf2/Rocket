@@ -61,7 +61,7 @@ features = ["tokio-runtime"]
 optional = true
 
 [dependencies.diesel-async]
-version = "0.3.1"
+version = "0.4.1"
 default-features = false
 optional = true
 
