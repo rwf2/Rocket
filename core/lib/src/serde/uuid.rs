@@ -79,7 +79,7 @@
 use crate::request::FromParam;
 use crate::form::{self, FromFormField, ValueField};
 
-/// Error returned on [`FromParam`] or [`FromFormField`] failure.
+/// Error returned on [`FromParam`] or [`FromFormField`] failures.
 ///
 pub use uuid_::Error;
 

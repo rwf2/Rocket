@@ -13,16 +13,25 @@
         margin: 0 auto;
         padding: 20px 10px;
       }
+
+      h1 {
+          margin: 10px 0;
+      }
     </style>
   </head>
   <body>
     <div class="container">
       <h1>Form Example</h1>
 
-      {% if errors | length > 1 %}
-          <small class="text-error" style="margin-top: -20px">
-              {{ errors | length }} field(s) have errors
-          </small>
+      {% if errors | length > 0 %}
+          <div class="row">
+            <div class="col">
+              <small class="text-error">
+                error: {{ errors | length }} field{{ errors | length | pluralize }}
+                failed to validate
+              </small>
+            </div>
+          </div>
       {% endif %}
 
       <form action="/" method="post" enctype="multipart/form-data">

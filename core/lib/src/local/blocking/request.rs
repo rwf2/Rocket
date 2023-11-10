@@ -22,7 +22,7 @@ use super::{Client, LocalResponse};
 /// let req = client.post("/")
 ///     .header(ContentType::JSON)
 ///     .remote("127.0.0.1:8000".parse().unwrap())
-///     .cookie(Cookie::new("name", "value"))
+///     .cookie(("name", "value"))
 ///     .body(r#"{ "value": 42 }"#);
 ///
 /// let response = req.dispatch();

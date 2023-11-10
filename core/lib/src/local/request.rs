@@ -131,13 +131,15 @@ macro_rules! pub_request_impl {
     /// # Client::_test(|_, request, _| {
     /// let request: LocalRequest = request;
     /// let req = request
-    ///     .cookie(Cookie::new("username", "sb"))
-    ///     .cookie(Cookie::new("user_id", "12"));
+    ///     .cookie(("username", "sb"))
+    ///     .cookie(("user_id", "12"));
     /// # });
     /// ```
     #[inline]
-    pub fn cookie(mut self, cookie: crate::http::Cookie<'_>) -> Self {
-        self._request_mut().cookies_mut().add_original(cookie.into_owned());
+    pub fn cookie<'a, C>(mut self, cookie: C) -> Self
+        where C: Into<crate::http::Cookie<'a>>
+    {
+        self._request_mut().cookies_mut().add_original(cookie.into().into_owned());
         self
     }
 
@@ -151,15 +153,17 @@ macro_rules! pub_request_impl {
     ///
     /// # Client::_test(|_, request, _| {
     /// let request: LocalRequest = request;
-    /// let cookies = vec![Cookie::new("a", "b"), Cookie::new("c", "d")];
+    /// let cookies = vec![("a", "b"), ("c", "d")];
     /// let req = request.cookies(cookies);
     /// # });
     /// ```
     #[inline]
-    pub fn cookies<'a, C>(mut self, cookies: C) -> Self
-        where C: IntoIterator<Item = crate::http::Cookie<'a>>
+    pub fn cookies<'a, C, I>(mut self, cookies: I) -> Self
+        where C: Into<crate::http::Cookie<'a>>,
+              I: IntoIterator<Item = C>
     {
         for cookie in cookies {
+            let cookie: crate::http::Cookie<'_> = cookie.into();
             self._request_mut().cookies_mut().add_original(cookie.into_owned());
         }
 
@@ -180,14 +184,16 @@ macro_rules! pub_request_impl {
     ///
     /// # Client::_test(|_, request, _| {
     /// let request: LocalRequest = request;
-    /// let req = request.private_cookie(Cookie::new("user_id", "sb"));
+    /// let req = request.private_cookie(("user_id", "sb"));
     /// # });
     /// ```
     #[cfg(feature = "secrets")]
     #[cfg_attr(nightly, doc(cfg(feature = "secrets")))]
     #[inline]
-    pub fn private_cookie(mut self, cookie: crate::http::Cookie<'static>) -> Self {
-        self._request_mut().cookies_mut().add_original_private(cookie);
+    pub fn private_cookie<C>(mut self, cookie: C) -> Self
+        where C: Into<crate::http::Cookie<'static>>
+    {
+        self._request_mut().cookies_mut().add_original_private(cookie.into());
         self
     }
 

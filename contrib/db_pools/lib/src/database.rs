@@ -164,7 +164,7 @@ pub struct Initializer<D: Database>(Option<&'static str>, PhantomData<fn() -> D>
 /// [`connect_timeout`](crate::Config::connect_timeout) seconds.
 ///   * If the `Initializer` fairing was _not_ attached, the guard _fails_ with
 ///   status `InternalServerError`. A [`Sentinel`] guards this condition, and so
-///   this type of failure is unlikely to occur. A `None` error is returned.
+///   this type of error is unlikely to occur. A `None` error is returned.
 ///   * If a connection is not available within `connect_timeout` seconds or
 ///   another error occurs, the guard _fails_ with status `ServiceUnavailable`
 ///   and the error is returned in `Some`.
@@ -288,9 +288,9 @@ impl<'r, D: Database> FromRequest<'r> for Connection<D> {
         match D::fetch(req.rocket()) {
             Some(db) => match db.get().await {
                 Ok(conn) => Outcome::Success(Connection(conn)),
-                Err(e) => Outcome::Failure((Status::ServiceUnavailable, Some(e))),
+                Err(e) => Outcome::Error((Status::ServiceUnavailable, Some(e))),
             },
-            None => Outcome::Failure((Status::InternalServerError, None)),
+            None => Outcome::Error((Status::InternalServerError, None)),
         }
     }
 }

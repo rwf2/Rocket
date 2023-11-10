@@ -94,7 +94,7 @@ function subscribe(uri) {
       console.log("raw data", JSON.stringify(ev.data));
       console.log("decoded data", JSON.stringify(JSON.parse(ev.data)));
       const msg = JSON.parse(ev.data);
-      if (!"message" in msg || !"room" in msg || !"username" in msg) return;
+      if (!("message" in msg) || !("room" in msg) || !("username" in msg)) return;
       addMessage(msg.room, msg.username, msg.message, true);
     });
 

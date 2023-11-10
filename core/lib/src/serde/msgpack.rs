@@ -1,6 +1,6 @@
 //! Automatic MessagePack (de)serialization support.
 //!
-//! See [`MsgPack`](crate::serde::msgpack::MsgPack) for further details.
+//! See [`MsgPack`] for further details.
 //!
 //! # Enabling
 //!
@@ -170,15 +170,15 @@ impl<'r, T: Deserialize<'r>> FromData<'r> for MsgPack<T> {
         match Self::from_data(req, data).await {
             Ok(value) => Outcome::Success(value),
             Err(Error::InvalidDataRead(e)) if e.kind() == io::ErrorKind::UnexpectedEof => {
-                Outcome::Failure((Status::PayloadTooLarge, Error::InvalidDataRead(e)))
+                Outcome::Error((Status::PayloadTooLarge, Error::InvalidDataRead(e)))
             },
             | Err(e@Error::TypeMismatch(_))
             | Err(e@Error::OutOfRange)
             | Err(e@Error::LengthMismatch(_))
             => {
-                Outcome::Failure((Status::UnprocessableEntity, e))
+                Outcome::Error((Status::UnprocessableEntity, e))
             },
-            Err(e) => Outcome::Failure((Status::BadRequest, e)),
+            Err(e) => Outcome::Error((Status::BadRequest, e)),
         }
     }
 }

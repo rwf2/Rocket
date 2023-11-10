@@ -260,10 +260,10 @@ macro_rules! impl_strict_from_data_from_capped {
                     Success(p) if p.is_complete() => Success(p.into_inner()),
                     Success(_) => {
                         let e = Error::new(UnexpectedEof, "data limit exceeded");
-                        Failure((Status::BadRequest, e.into()))
+                        Error((Status::BadRequest, e.into()))
                     },
                     Forward(d) => Forward(d),
-                    Failure((s, e)) => Failure((s, e)),
+                    Error((s, e)) => Error((s, e)),
                 }
             }
         }

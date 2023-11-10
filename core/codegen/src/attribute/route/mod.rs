@@ -10,6 +10,7 @@ use crate::proc_macro_ext::StringLit;
 use crate::syn_ext::{IdentExt, TypeExt as _};
 use crate::http_codegen::{Method, Optional};
 use crate::attribute::param::Guard;
+use crate::exports::mixed;
 
 use self::parse::{Route, Attribute, MethodAttribute};
 
@@ -104,7 +105,7 @@ fn query_decls(route: &Route) -> Option<TokenStream> {
             if !__e.is_empty() {
                 #_log::warn_!("Query string failed to match route declaration.");
                 for _err in __e { #_log::warn_!("{}", _err); }
-                return #Outcome::Forward((#__data, #Status::NotFound));
+                return #Outcome::Forward((#__data, #Status::UnprocessableEntity));
             }
 
             (#(#ident.unwrap()),*)
@@ -125,9 +126,9 @@ fn request_guard_decl(guard: &Guard) -> TokenStream {
                 #_log::warn_!("Request guard `{}` is forwarding.", stringify!(#ty));
                 return #Outcome::Forward((#__data, __e));
             },
-            #Outcome::Failure((__c, __e)) => {
+            #Outcome::Error((__c, __e)) => {
                 #_log::warn_!("Request guard `{}` failed: {:?}.", stringify!(#ty), __e);
-                return #Outcome::Failure(__c);
+                return #Outcome::Error(__c);
             }
         };
     }
@@ -145,7 +146,7 @@ fn param_guard_decl(guard: &Guard) -> TokenStream {
         #_log::warn_!("Parameter guard `{}: {}` is forwarding: {:?}.",
             #name, stringify!(#ty), __error);
 
-        #Outcome::Forward((#__data, #Status::NotFound))
+        #Outcome::Forward((#__data, #Status::UnprocessableEntity))
     });
 
     // All dynamic parameters should be found if this function is being called;
@@ -188,9 +189,9 @@ fn data_guard_decl(guard: &Guard) -> TokenStream {
                 #_log::warn_!("Data guard `{}` is forwarding.", stringify!(#ty));
                 return #Outcome::Forward((__d, __e));
             }
-            #Outcome::Failure((__c, __e)) => {
+            #Outcome::Error((__c, __e)) => {
                 #_log::warn_!("Data guard `{}` failed: {:?}.", stringify!(#ty), __e);
-                return #Outcome::Failure(__c);
+                return #Outcome::Error(__c);
             }
         };
     }
@@ -224,6 +225,7 @@ fn internal_uri_macro_decl(route: &Route) -> TokenStream {
         }
 
         #[doc(hidden)]
+        #[allow(unused)]
         pub use #inner_macro_name as #macro_name;
     }
 }
@@ -242,7 +244,7 @@ fn responder_outcome_expr(route: &Route) -> TokenStream {
         .map(|a| quote_spanned!(a.span() => .await));
 
     define_spanned_export!(ret_span => __req, _route);
-    quote_spanned! { ret_span =>
+    quote_spanned! { mixed(ret_span) =>
         let ___responder = #user_handler_fn_name(#(#parameter_names),*) #_await;
         #_route::Outcome::from(#__req, ___responder)
     }

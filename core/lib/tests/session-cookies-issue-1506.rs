@@ -4,8 +4,7 @@ use rocket::http::{CookieJar, Cookie};
 
 #[rocket::get("/")]
 fn index(jar: &CookieJar<'_>) {
-    let session_cookie = Cookie::build("key", "value").expires(None);
-    jar.add_private(session_cookie.finish());
+    jar.add_private(Cookie::build(("key", "value")).expires(None));
 }
 
 mod test_session_cookies {

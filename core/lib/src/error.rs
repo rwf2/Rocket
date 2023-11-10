@@ -216,9 +216,9 @@ impl Error {
                 crate::config::pretty_print_error(error.clone());
                 "aborting due to invalid configuration"
             }
-            ErrorKind::SentinelAborts(ref failures) => {
+            ErrorKind::SentinelAborts(ref errors) => {
                 error!("Rocket failed to launch due to aborting sentinels:");
-                for sentry in failures {
+                for sentry in errors {
                     let name = sentry.type_name.primary().bold();
                     let (file, line, col) = sentry.location;
                     info_!("{} ({}:{}:{})", name, file, line, col);

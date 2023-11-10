@@ -4,7 +4,6 @@ pub mod oid {
     //! [`der-parser`](https://docs.rs/der-parser/7).
 
     pub use x509_parser::oid_registry::*;
-    pub use x509_parser::der_parser::oid::*;
     pub use x509_parser::objects::*;
 }
 
@@ -533,7 +532,7 @@ impl fmt::Display for Name<'_> {
 impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Error::Parse(e) => write!(f, "parse failure: {}", e),
+            Error::Parse(e) => write!(f, "parse error: {}", e),
             Error::Incomplete(_) => write!(f, "incomplete certificate data"),
             Error::Trailing(n) => write!(f, "found {} trailing bytes", n),
             Error::Empty => write!(f, "empty certificate chain"),

@@ -237,6 +237,16 @@ mod tera_tests {
         assert_eq!(md_rendered, Some((ContentType::HTML, ESCAPED_EXPECTED.into())));
     }
 
+    #[async_test]
+    async fn test_globby_paths() {
+        use rocket::local::asynchronous::Client;
+
+        let client = Client::debug(rocket()).await.unwrap();
+        let req = client.get("/");
+        let metadata = Metadata::from_request(&req).await.unwrap();
+        assert!(metadata.contains_template("tera/[test]/html_test"));
+    }
+
     // u128 is not supported. enable when it is.
     // #[test]
     // fn test_tera_u128() {

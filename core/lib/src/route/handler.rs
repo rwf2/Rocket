@@ -141,7 +141,7 @@ pub trait Handler: Cloneable + Send + Sync + 'static {
     /// The variant of `Outcome` returned by the returned `Future` determines
     /// what Rocket does next. If the return value is a `Success(Response)`, the
     /// wrapped `Response` is used to respond to the client. If the return value
-    /// is a `Failure(Status)`, the error catcher for `Status` is invoked to
+    /// is an `Error(Status)`, the error catcher for `Status` is invoked to
     /// generate a response. Otherwise, if the return value is `Forward(Data)`,
     /// the next matching route is attempted. If there are no other matching
     /// routes, the `404` error catcher is invoked.
@@ -172,7 +172,7 @@ impl<'r, 'o: 'r> Outcome<'o> {
     /// Return the `Outcome` of response to `req` from `responder`.
     ///
     /// If the responder returns `Ok`, an outcome of `Success` is returned with
-    /// the response. If the responder returns `Err`, an outcome of `Failure` is
+    /// the response. If the responder returns `Err`, an outcome of `Error` is
     /// returned with the status code.
     ///
     /// # Example
@@ -188,14 +188,14 @@ impl<'r, 'o: 'r> Outcome<'o> {
     pub fn from<R: Responder<'r, 'o>>(req: &'r Request<'_>, responder: R) -> Outcome<'r> {
         match responder.respond_to(req) {
             Ok(response) => Outcome::Success(response),
-            Err(status) => Outcome::Failure(status)
+            Err(status) => Outcome::Error(status)
         }
     }
 
     /// Return the `Outcome` of response to `req` from `responder`.
     ///
     /// If the responder returns `Ok`, an outcome of `Success` is returned with
-    /// the response. If the responder returns `Err`, an outcome of `Failure` is
+    /// the response. If the responder returns `Err`, an outcome of `Error` is
     /// returned with the status code.
     ///
     /// # Example
@@ -214,37 +214,12 @@ impl<'r, 'o: 'r> Outcome<'o> {
         let responder = result.map_err(crate::response::Debug);
         match responder.respond_to(req) {
             Ok(response) => Outcome::Success(response),
-            Err(status) => Outcome::Failure(status)
+            Err(status) => Outcome::Error(status)
         }
     }
 
-    /// Return the `Outcome` of response to `req` from `responder`.
-    ///
-    /// If the responder returns `Ok`, an outcome of `Success` is returned with
-    /// the response. If the responder returns `Err`, an outcome of `Forward`
-    /// with a status of `404 Not Found` is returned.
-    ///
-    /// # Example
-    ///
-    /// ```rust
-    /// use rocket::{Request, Data, route};
-    ///
-    /// fn str_responder<'r>(req: &'r Request, data: Data<'r>) -> route::Outcome<'r> {
-    ///     route::Outcome::from_or_forward(req, data, "Hello, world!")
-    /// }
-    /// ```
-    #[inline]
-    pub fn from_or_forward<R>(req: &'r Request<'_>, data: Data<'r>, responder: R) -> Outcome<'r>
-        where R: Responder<'r, 'o>
-    {
-        match responder.respond_to(req) {
-            Ok(response) => Outcome::Success(response),
-            Err(_) => Outcome::Forward((data, Status::NotFound))
-        }
-    }
-
-    /// Return an `Outcome` of `Failure` with the status code `code`. This is
-    /// equivalent to `Outcome::Failure(code)`.
+    /// Return an `Outcome` of `Error` with the status code `code`. This is
+    /// equivalent to `Outcome::Error(code)`.
     ///
     /// This method exists to be used during manual routing.
     ///
@@ -255,16 +230,16 @@ impl<'r, 'o: 'r> Outcome<'o> {
     /// use rocket::http::Status;
     ///
     /// fn bad_req_route<'r>(_: &'r Request, _: Data<'r>) -> route::Outcome<'r> {
-    ///     route::Outcome::failure(Status::BadRequest)
+    ///     route::Outcome::error(Status::BadRequest)
     /// }
     /// ```
     #[inline(always)]
-    pub fn failure(code: Status) -> Outcome<'r> {
-        Outcome::Failure(code)
+    pub fn error(code: Status) -> Outcome<'r> {
+        Outcome::Error(code)
     }
 
-    /// Return an `Outcome` of `Forward` with the data `data`. This is
-    /// equivalent to `Outcome::Forward((data, Status::NotFound))`.
+    /// Return an `Outcome` of `Forward` with the data `data` and status
+    /// `status`. This is equivalent to `Outcome::Forward((data, status))`.
     ///
     /// This method exists to be used during manual routing.
     ///
@@ -272,14 +247,15 @@ impl<'r, 'o: 'r> Outcome<'o> {
     ///
     /// ```rust
     /// use rocket::{Request, Data, route};
+    /// use rocket::http::Status;
     ///
     /// fn always_forward<'r>(_: &'r Request, data: Data<'r>) -> route::Outcome<'r> {
-    ///     route::Outcome::forward(data)
+    ///     route::Outcome::forward(data, Status::InternalServerError)
     /// }
     /// ```
     #[inline(always)]
-    pub fn forward(data: Data<'r>) -> Outcome<'r> {
-        Outcome::Forward((data, Status::NotFound))
+    pub fn forward(data: Data<'r>, status: Status) -> Outcome<'r> {
+        Outcome::Forward((data, status))
     }
 }
 

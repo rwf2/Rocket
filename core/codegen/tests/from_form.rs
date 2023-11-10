@@ -984,7 +984,7 @@ fn json_wrapper_works() {
     assert_eq!(form, JsonToken(Json("foo bar")));
 }
 
-// FIXME: https://github.com/rust-lang/rust/issues/86706
+#[allow(renamed_and_removed_lints)]
 #[allow(private_in_public)]
 struct Q<T>(T);
 

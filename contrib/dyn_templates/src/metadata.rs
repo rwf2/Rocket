@@ -153,7 +153,7 @@ impl<'r> FromRequest<'r> for Metadata<'r> {
                 error_!("Uninitialized template context: missing fairing.");
                 info_!("To use templates, you must attach `Template::fairing()`.");
                 info_!("See the `Template` documentation for more information.");
-                request::Outcome::Failure((Status::InternalServerError, ()))
+                request::Outcome::Error((Status::InternalServerError, ()))
             })
     }
 }

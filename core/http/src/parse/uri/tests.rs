@@ -8,7 +8,7 @@ macro_rules! assert_parse_eq {
             match from_str($from) {
                 Ok(output) => {
                     if output != expected {
-                        println!("Failure on: {:?}", $from);
+                        println!("Error on: {:?}", $from);
                         assert_eq!(output, expected, "{} != {}", output, expected);
                     }
                 }
@@ -53,7 +53,7 @@ macro_rules! assert_displays_eq {
                 Ok(output) => {
                     let output_string = output.to_string();
                     if output_string != string {
-                        println!("Failure on: {:?}", $string);
+                        println!("Error on: {:?}", $string);
                         println!("Got: {:?}", output_string);
                         println!("Parsed as: {:?}", output);
                         panic!("failed");

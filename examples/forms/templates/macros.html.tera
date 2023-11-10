@@ -2,7 +2,7 @@
     {%- if name in values -%}
         {{- values | get(key=name) | first -}}
     {%- endif -%}
-{% endmacro %}
+{% endmacro value_for %}
 
 {% macro errors_for(name) %}
     {%- if name in errors -%}
@@ -11,7 +11,7 @@
             <p class="text-error is-marginless">{{ error.msg }}</p>
         {% endfor %}
     {%- endif -%}
-{% endmacro %}
+{% endmacro errors_for %}
 
 {% macro input(type, label, name, value="") %}
     <label for="{{ name }}">{{ label }}</label>
@@ -37,7 +37,7 @@
     >
         {{ label }}
     </label>
-{% endmacro input %}
+{% endmacro checkbox %}
 
 {% macro textarea(label, name, placeholder="", max=250) %}
     <label for="{{ name }}">{{ label }}</label>
@@ -49,7 +49,7 @@
     </textarea>
 
     {{ self::errors_for(name=name) }}
-{% endmacro input %}
+{% endmacro textarea %}
 
 {% macro select(label, name, options) %}
     <label for="{{ name }}">{{ label }}</label>
@@ -60,4 +60,4 @@
             >{{ value }}</option>
         {% endfor %}
     </select>
-{% endmacro input %}
+{% endmacro select %}

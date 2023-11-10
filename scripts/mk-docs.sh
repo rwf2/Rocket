@@ -20,10 +20,13 @@ fi
 echo ":::: Generating the docs..."
 pushd "${PROJECT_ROOT}" > /dev/null 2>&1
   # Set the crate version and fill in missing doc URLs with docs.rs links.
-  RUSTDOCFLAGS="-Zunstable-options --crate-version ${DOC_VERSION}" \
-    cargo doc -p rocket \
-    -p rocket_sync_db_pools -p rocket_dyn_templates -p rocket_db_pools -p rocket_ws \
-    -Zrustdoc-map --no-deps --all-features
+  RUSTDOCFLAGS="-Zunstable-options --crate-version ${DOC_VERSION} --extern-html-root-url rocket=https://api.rocket.rs/rocket/" \
+    cargo doc -Zrustdoc-map --no-deps --all-features \
+        -p rocket \
+        -p rocket_db_pools \
+        -p rocket_sync_db_pools \
+        -p rocket_dyn_templates \
+        -p rocket_ws
 popd > /dev/null 2>&1
 
 # Blank index, for redirection.

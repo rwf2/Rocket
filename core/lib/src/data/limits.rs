@@ -59,8 +59,10 @@ use crate::http::uncased::Uncased;
 /// | `data-form`       | 2MiB    | [`Form`]     | entire data-based form                |
 /// | `file`            | 1MiB    | [`TempFile`] | [`TempFile`] data guard or form field |
 /// | `file/$ext`       | _N/A_   | [`TempFile`] | file form field with extension `$ext` |
-/// | `string`          | 8KiB    | [`String`]   | data guard or data form field         |
+/// | `string`          | 8KiB    | [`String`]   | data guard or form field              |
+/// | `string`          | 8KiB    | [`&str`]     | data guard or form field              |
 /// | `bytes`           | 8KiB    | [`Vec<u8>`]  | data guard                            |
+/// | `bytes`           | 8KiB    | [`&[u8]`]    | data guard or form field              |
 /// | `json`            | 1MiB    | [`Json`]     | JSON data and form payloads           |
 /// | `msgpack`         | 1MiB    | [`MsgPack`]  | MessagePack data and form payloads    |
 ///

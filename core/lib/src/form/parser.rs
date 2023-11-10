@@ -35,12 +35,12 @@ impl<'r, 'i> Parser<'r, 'i> {
         let parser = match req.content_type() {
             Some(c) if c.is_form() => Self::from_form(req, data).await,
             Some(c) if c.is_form_data() => Self::from_multipart(req, data).await,
-            _ => return Outcome::Forward((data, Status::NotFound)),
+            _ => return Outcome::Forward((data, Status::UnsupportedMediaType)),
         };
 
         match parser {
             Ok(storage) => Outcome::Success(storage),
-            Err(e) => Outcome::Failure((e.status(), e.into()))
+            Err(e) => Outcome::Error((e.status(), e.into()))
         }
     }
 

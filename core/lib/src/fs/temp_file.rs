@@ -543,7 +543,7 @@ impl<'r> FromData<'r> for Capped<TempFile<'_>> {
         }
 
         TempFile::from(req, data, None, req.content_type().cloned()).await
-            .into_outcome(Status::BadRequest)
+            .or_error(Status::BadRequest)
     }
 }
 

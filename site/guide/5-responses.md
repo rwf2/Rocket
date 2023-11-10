@@ -289,7 +289,7 @@ fn handler() -> &'static str {
 
 `Option` is a _wrapping_ responder: an `Option<T>` can only be returned when `T`
 implements `Responder`. If the `Option` is `Some`, the wrapped responder is used
-to respond to the client. Otherwise, a error of **404 - Not Found** is returned
+to respond to the client. Otherwise, an error of **404 - Not Found** is returned
 to the client.
 
 This implementation makes `Option` a convenient type to return when it is not

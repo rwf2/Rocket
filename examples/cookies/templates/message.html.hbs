@@ -7,17 +7,31 @@
   </head>
   <body>
     <h1>Rocket Cookie Message</h1>
-    {{#if message }}
-      <p>{{message}}</p>
-    {{else}}
-      <p>No message yet.</p>
-    {{/if}}
 
-    <form action="/message" method="post" accept-charset="utf-8">
-      <textarea placeholder="Your message here..."
-        name="message" rows="10" cols="50"></textarea>
-      <p><input type="submit" value="Set Cookie"></p>
+    <p>
+      {{#if present}}
+        {{#if message}}
+          <b>Message:</b> <i>{{message}}</i>
+        {{else}}
+          <b>Message:</b> <i>[empty message]</i>
+        {{/if}}
+      {{else}}
+        <b>No message yet.</b>
+      {{/if}}
+    </p>
+
+    <form id="set" action="/message" method="post">
+      <textarea placeholder="Your message here..." name="message" rows="10" cols="50"></textarea>
     </form>
+
+    <form id="delete" action="/message" method="post">
+      <input type="hidden" name="_method" value="delete" />
+    </form>
+
+    <p>
+      <input type="submit" form="set" value="Set Message" />
+      <input type="submit" form="delete" value="Clear Message" />
+    </p>
 
     <a href="/">Home</a>
   </body>

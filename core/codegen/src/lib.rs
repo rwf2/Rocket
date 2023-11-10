@@ -239,8 +239,7 @@ macro_rules! route_attribute {
         ///
         ///            If a request guard fails, the request is forwarded if the
         ///            [`Outcome`] is `Forward` or failed if the [`Outcome`] is
-        ///            `Failure`. See [`FromRequest` Outcomes] for further
-        ///            detail.
+        ///            `Error`. See [`FromRequest` Outcomes] for further detail.
         ///
         ///         2. Path and query guards in an unspecified order. If a path
         ///            or query guard fails, the request is forwarded.
@@ -249,7 +248,7 @@ macro_rules! route_attribute {
         ///
         ///            If a data guard fails, the request is forwarded if the
         ///            [`Outcome`] is `Forward` or failed if the [`Outcome`] is
-        ///            `Failure`. See [`FromData`] for further detail.
+        ///            `Error`. See [`FromData`] for further detail.
         ///
         ///      If all validation succeeds, the decorated function is called.
         ///      The returned value is used to generate a [`Response`] via the
@@ -448,7 +447,7 @@ pub fn main(args: TokenStream, input: TokenStream) -> TokenStream {
 /// #[rocket::main]
 /// async fn main() {
 ///     // Recall that an uninspected `Error` will cause a pretty-printed panic,
-///     // so rest assured failures do not go undetected when using `#[launch]`.
+///     // so rest assured errors do not go undetected when using `#[launch]`.
 ///     let _ = rocket().launch().await;
 /// }
 /// ```
@@ -1457,6 +1456,7 @@ pub fn catchers(input: TokenStream) -> TokenStream {
 /// are not ignorable.
 ///
 /// [`Uri`]: ../rocket/http/uri/enum.Uri.html
+/// [`Uri::parse_any()`]: ../rocket/http/uri/enum.Uri.html#method.parse_any
 /// [`Origin`]: ../rocket/http/uri/struct.Origin.html
 /// [`Asterisk`]: ../rocket/http/uri/struct.Asterisk.html
 /// [`Authority`]: ../rocket/http/uri/struct.Authority.html

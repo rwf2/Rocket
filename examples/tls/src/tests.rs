@@ -27,11 +27,11 @@ fn secure_cookies() {
 
     #[get("/cookie")]
     fn cookie(jar: &CookieJar<'_>) {
-        jar.add(Cookie::new("k1", "v1"));
-        jar.add_private(Cookie::new("k2", "v2"));
+        jar.add(("k1", "v1"));
+        jar.add_private(("k2", "v2"));
 
-        jar.add(Cookie::build("k1u", "v1u").secure(false).finish());
-        jar.add_private(Cookie::build("k2u", "v2u").secure(false).finish());
+        jar.add(Cookie::build(("k1u", "v1u")).secure(false));
+        jar.add_private(Cookie::build(("k2u", "v2u")).secure(false));
     }
 
     let client = Client::tracked(super::rocket().mount("/", routes![cookie])).unwrap();

@@ -149,10 +149,9 @@ error[E0308]: mismatched types
   --> tests/ui-fail-nightly/async-entry.rs:24:21
    |
 24 |       async fn main() {
-   |                       ^
-   |                       |
-   |  _____________________expected `()` because of default return type
-   | |
+   |  ____________________-^
+   | |                    |
+   | |                    expected `()` because of default return type
 25 | |         rocket::build()
 26 | |     }
    | |     ^- help: consider using a semicolon here: `;`

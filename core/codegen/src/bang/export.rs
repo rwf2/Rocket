@@ -31,6 +31,23 @@ pub fn _macro(input: proc_macro::TokenStream) -> devise::Result<TokenStream> {
         })
         .collect();
 
+    // Only try using the `macro` syntax on nightly/dev or when we don't know.
+    let export = match version_check::is_feature_flaggable() {
+        Some(true) | None => quote! {
+            #(#attrs)*
+            #[cfg(all(nightly, doc))]
+            pub macro #macro_name {
+                #decl_macro_tokens
+            }
+
+            #[cfg(not(all(nightly, doc)))]
+            pub use #mod_name::#internal_name as #macro_name;
+        },
+        Some(false) => quote! {
+            pub use #mod_name::#internal_name as #macro_name;
+        }
+    };
+
     Ok(quote! {
         #[allow(non_snake_case)]
         mod #mod_name {
@@ -43,13 +60,6 @@ pub fn _macro(input: proc_macro::TokenStream) -> devise::Result<TokenStream> {
             pub use #internal_name;
         }
 
-        #(#attrs)*
-        #[cfg(all(nightly, doc))]
-        pub macro #macro_name {
-            #decl_macro_tokens
-        }
-
-        #[cfg(not(all(nightly, doc)))]
-        pub use #mod_name::#internal_name as #macro_name;
+        #export
     })
 }

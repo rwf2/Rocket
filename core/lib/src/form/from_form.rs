@@ -116,11 +116,12 @@ use crate::http::uncased::AsUncased;
 /// | _nonzero_ int      | _inherit_   | **no default**    | No     | Yes    | `NonZero{I,U}{size,8,16,32,64,128}`                |
 /// | float              | _inherit_   | **no default**    | No     | Yes    | `f{32,64}`                                         |
 /// | `&str`             | _inherit_   | **no default**    | Yes    | Yes    | Percent-decoded. Data limit `string` applies.      |
+/// | `&[u8]`            | _inherit_   | **no default**    | Yes    | Yes    | Raw bytes. Data limit `bytes` applies.             |
 /// | `String`           | _inherit_   | **no default**    | Yes    | Yes    | Exactly `&str`, but owned. Prefer `&str`.          |
 /// | IP Address         | _inherit_   | **no default**    | No     | Yes    | [`IpAddr`], [`Ipv4Addr`], [`Ipv6Addr`]             |
 /// | Socket Address     | _inherit_   | **no default**    | No     | Yes    | [`SocketAddr`], [`SocketAddrV4`], [`SocketAddrV6`] |
 /// | [`TempFile`]       | _inherit_   | **no default**    | Yes    | Yes    | Data limits apply. See [`TempFile`].               |
-/// | [`Capped<C>`]      | _inherit_   | **no default**    | Yes    | Yes    | `C` is `&str`, `String`, or `TempFile`.            |
+/// | [`Capped<C>`]      | _inherit_   | **no default**    | Yes    | Yes    | `C` is `&str`, `String`, `&[u8]` or `TempFile`.    |
 /// | [`time::Date`]     | _inherit_   | **no default**    | No     | Yes    | `%F` (`YYYY-MM-DD`). HTML "date" input.            |
 /// | [`time::DateTime`] | _inherit_   | **no default**    | No     | Yes    | `%FT%R` or `%FT%T` (`YYYY-MM-DDTHH:MM[:SS]`)       |
 /// | [`time::Time`]     | _inherit_   | **no default**    | No     | Yes    | `%R` or `%T` (`HH:MM[:SS]`)                        |
@@ -627,6 +628,8 @@ impl<'v, T: FromForm<'v> + 'v> FromForm<'v> for Vec<T> {
         }
     }
 }
+
+// impl_strict_from_form_field_from_capped!(Vec<u8>);
 
 #[doc(hidden)]
 pub struct MapContext<'v, K, V> where K: FromForm<'v>, V: FromForm<'v> {

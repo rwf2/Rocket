@@ -34,8 +34,7 @@ fn json_bad_get_put() {
 
     // Try to get a message with an invalid ID.
     let res = client.get("/json/hi").header(ContentType::JSON).dispatch();
-    assert_eq!(res.status(), Status::NotFound);
-    assert!(res.into_string().unwrap().contains("error"));
+    assert_eq!(res.status(), Status::UnprocessableEntity);
 
     // Try to put a message without a proper body.
     let res = client.put("/json/80").header(ContentType::JSON).dispatch();
@@ -134,5 +133,5 @@ fn uuid() {
     }
 
     let res = client.get("/people/not-a-uuid").dispatch();
-    assert_eq!(res.status(), Status::NotFound);
+    assert_eq!(res.status(), Status::UnprocessableEntity);
 }

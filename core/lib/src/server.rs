@@ -114,7 +114,7 @@ async fn hyper_service_fn(
 }
 
 impl Rocket<Orbit> {
-    /// Wrapper around `_send_response` to log a success or failure.
+    /// Wrapper around `_send_response` to log a success or error.
     #[inline]
     async fn send_response(
         &self,
@@ -290,12 +290,12 @@ impl Rocket<Orbit> {
                 request._set_method(Method::Get);
                 match self.route(request, data).await {
                     Outcome::Success(response) => response,
-                    Outcome::Failure(status) => self.handle_error(status, request).await,
+                    Outcome::Error(status) => self.handle_error(status, request).await,
                     Outcome::Forward((_, status)) => self.handle_error(status, request).await,
                 }
             }
             Outcome::Forward((_, status)) => self.handle_error(status, request).await,
-            Outcome::Failure(status) => self.handle_error(status, request).await,
+            Outcome::Error(status) => self.handle_error(status, request).await,
         };
 
         // Set the cookies. Note that error responses will only include cookies
@@ -310,7 +310,7 @@ impl Rocket<Orbit> {
 
     /// Tries to find a `Responder` for a given `request`. It does this by
     /// routing the request and calling the handler for each matching route
-    /// until one of the handlers returns success or failure, or there are no
+    /// until one of the handlers returns success or error, or there are no
     /// additional routes to try (forward). The corresponding outcome for each
     /// condition is returned.
     #[inline]
@@ -329,14 +329,14 @@ impl Rocket<Orbit> {
 
             let name = route.name.as_deref();
             let outcome = handle(name, || route.handler.handle(request, data)).await
-                .unwrap_or(Outcome::Failure(Status::InternalServerError));
+                .unwrap_or(Outcome::Error(Status::InternalServerError));
 
             // Check if the request processing completed (Some) or if the
             // request needs to be forwarded. If it does, continue the loop
             // (None) to try again.
-            info_!("{} {}", "Outcome:".primary().bold(), outcome);
+            info_!("{}", outcome.log_display());
             match outcome {
-                o@Outcome::Success(_) | o@Outcome::Failure(_) => return o,
+                o@Outcome::Success(_) | o@Outcome::Error(_) => return o,
                 Outcome::Forward(forwarded) => (data, status) = forwarded,
             }
         }
@@ -394,7 +394,7 @@ impl Rocket<Orbit> {
 
     // Invokes the catcher for `status`. Returns the response on success.
     //
-    // On catcher failure, the 500 error catcher is attempted. If _that_ fails,
+    // On catcher error, the 500 error catcher is attempted. If _that_ errors,
     // the (infallible) default 500 error cather is used.
     pub(crate) async fn handle_error<'s, 'r: 's>(
         &'s self,

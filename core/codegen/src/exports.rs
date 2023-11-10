@@ -106,3 +106,9 @@ define_exported_paths! {
 macro_rules! define_spanned_export {
     ($span:expr => $($name:ident),*) => ($(define!($span => $name $name);)*)
 }
+
+/// Convenience: returns a "mixed site" span located at `span`.
+#[inline(always)]
+pub fn mixed(span: Span) -> Span {
+    Span::mixed_site().located_at(span)
+}

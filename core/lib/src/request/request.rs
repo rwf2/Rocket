@@ -446,8 +446,8 @@ impl<'r> Request<'r> {
     /// # let c = rocket::local::blocking::Client::debug_with(vec![]).unwrap();
     /// # let request = c.get("/");
     /// # let req = request.inner();
-    /// req.cookies().add(Cookie::new("key", "val"));
-    /// req.cookies().add(Cookie::new("ans", format!("life: {}", 38 + 4)));
+    /// req.cookies().add(("key", "val"));
+    /// req.cookies().add(("ans", format!("life: {}", 38 + 4)));
     ///
     /// assert_eq!(req.cookies().get_pending("key").unwrap().value(), "val");
     /// assert_eq!(req.cookies().get_pending("ans").unwrap().value(), "life: 42");

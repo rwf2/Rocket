@@ -11,7 +11,9 @@ use rocket_dyn_templates::Template;
 struct Password<'v> {
     #[field(validate = len(6..))]
     #[field(validate = eq(self.second))]
+    #[allow(unused)]
     first: &'v str,
+    #[allow(unused)]
     #[field(validate = eq(self.first))]
     second: &'v str,
 }

@@ -9,27 +9,6 @@ use crate::outcome::{self, IntoOutcome, try_outcome, Outcome::*};
 pub type Outcome<'r, T, E = <T as FromData<'r>>::Error>
     = outcome::Outcome<T, (Status, E), (Data<'r>, Status)>;
 
-impl<'r, S, E> IntoOutcome<S, (Status, E), (Data<'r>, Status)> for Result<S, E> {
-    type Failure = Status;
-    type Forward = (Data<'r>, Status);
-
-    #[inline]
-    fn into_outcome(self, status: Status) -> Outcome<'r, S, E> {
-        match self {
-            Ok(val) => Success(val),
-            Err(err) => Failure((status, err))
-        }
-    }
-
-    #[inline]
-    fn or_forward(self, (data, status): (Data<'r>, Status)) -> Outcome<'r, S, E> {
-        match self {
-            Ok(val) => Success(val),
-            Err(_) => Forward((data, status))
-        }
-    }
-}
-
 /// Trait implemented by data guards to derive a value from request body data.
 ///
 /// # Data Guards
@@ -251,6 +230,7 @@ impl<'r, S, E> IntoOutcome<S, (Status, E), (Data<'r>, Status)> for Result<S, E> 
 /// use rocket::request::{self, Request};
 /// use rocket::data::{self, Data, FromData, ToByteUnit};
 /// use rocket::http::{Status, ContentType};
+/// use rocket::outcome::Outcome;
 ///
 /// #[derive(Debug)]
 /// enum Error {
@@ -266,12 +246,11 @@ impl<'r, S, E> IntoOutcome<S, (Status, E), (Data<'r>, Status)> for Result<S, E> 
 ///
 ///     async fn from_data(req: &'r Request<'_>, data: Data<'r>) -> data::Outcome<'r, Self> {
 ///         use Error::*;
-///         use rocket::outcome::Outcome::*;
 ///
 ///         // Ensure the content type is correct before opening the data.
 ///         let person_ct = ContentType::new("application", "x-person");
 ///         if req.content_type() != Some(&person_ct) {
-///             return Forward((data, Status::NotFound));
+///             return Outcome::Forward((data, Status::UnsupportedMediaType));
 ///         }
 ///
 ///         // Use a configured limit with name 'person' or fallback to default.
@@ -280,8 +259,8 @@ impl<'r, S, E> IntoOutcome<S, (Status, E), (Data<'r>, Status)> for Result<S, E> 
 ///         // Read the data into a string.
 ///         let string = match data.open(limit).into_string().await {
 ///             Ok(string) if string.is_complete() => string.into_inner(),
-///             Ok(_) => return Failure((Status::PayloadTooLarge, TooLarge)),
-///             Err(e) => return Failure((Status::InternalServerError, Io(e))),
+///             Ok(_) => return Outcome::Error((Status::PayloadTooLarge, TooLarge)),
+///             Err(e) => return Outcome::Error((Status::InternalServerError, Io(e))),
 ///         };
 ///
 ///         // We store `string` in request-local cache for long-lived borrows.
@@ -290,16 +269,16 @@ impl<'r, S, E> IntoOutcome<S, (Status, E), (Data<'r>, Status)> for Result<S, E> 
 ///         // Split the string into two pieces at ':'.
 ///         let (name, age) = match string.find(':') {
 ///             Some(i) => (&string[..i], &string[(i + 1)..]),
-///             None => return Failure((Status::UnprocessableEntity, NoColon)),
+///             None => return Outcome::Error((Status::UnprocessableEntity, NoColon)),
 ///         };
 ///
 ///         // Parse the age.
 ///         let age: u16 = match age.parse() {
 ///             Ok(age) => age,
-///             Err(_) => return Failure((Status::UnprocessableEntity, InvalidAge)),
+///             Err(_) => return Outcome::Error((Status::UnprocessableEntity, InvalidAge)),
 ///         };
 ///
-///         Success(Person { name, age })
+///         Outcome::Success(Person { name, age })
 ///     }
 /// }
 ///
@@ -331,7 +310,7 @@ pub trait FromData<'r>: Sized {
     ///
     /// If validation and parsing succeeds, an outcome of `Success` is returned.
     /// If the data is not appropriate given the type of `Self`, `Forward` is
-    /// returned. If parsing fails, `Failure` is returned.
+    /// returned. If parsing fails, `Error` is returned.
     async fn from_data(req: &'r Request<'_>, data: Data<'r>) -> Outcome<'r, Self>;
 }
 
@@ -343,7 +322,7 @@ impl<'r> FromData<'r> for Capped<String> {
 
     async fn from_data(req: &'r Request<'_>, data: Data<'r>) -> Outcome<'r, Self> {
         let limit = req.limits().get("string").unwrap_or(Limits::STRING);
-        data.open(limit).into_string().await.into_outcome(Status::BadRequest)
+        data.open(limit).into_string().await.or_error(Status::BadRequest)
     }
 }
 
@@ -406,7 +385,7 @@ impl<'r> FromData<'r> for Capped<Vec<u8>> {
 
     async fn from_data(req: &'r Request<'_>, data: Data<'r>) -> Outcome<'r, Self> {
         let limit = req.limits().get("bytes").unwrap_or(Limits::BYTES);
-        data.open(limit).into_bytes().await.into_outcome(Status::BadRequest)
+        data.open(limit).into_bytes().await.or_error(Status::BadRequest)
     }
 }
 
@@ -428,7 +407,7 @@ impl<'r, T: FromData<'r> + 'r> FromData<'r> for Result<T, T::Error> {
     async fn from_data(req: &'r Request<'_>, data: Data<'r>) -> Outcome<'r, Self> {
         match T::from_data(req, data).await {
             Success(v) => Success(Ok(v)),
-            Failure((_, e)) => Success(Err(e)),
+            Error((_, e)) => Success(Err(e)),
             Forward(d) => Forward(d),
         }
     }
@@ -441,7 +420,7 @@ impl<'r, T: FromData<'r>> FromData<'r> for Option<T> {
     async fn from_data(req: &'r Request<'_>, data: Data<'r>) -> Outcome<'r, Self> {
         match T::from_data(req, data).await {
             Success(v) => Success(Some(v)),
-            Failure(..) | Forward(..) => Success(None),
+            Error(..) | Forward(..) => Success(None),
         }
     }
 }

@@ -104,6 +104,8 @@ note: required by a bound in `rocket::Response::<'r>::set_header`
 error[E0277]: the trait bound `usize: Responder<'_, '_>` is not satisfied
   --> tests/ui-fail-stable/responder-types.rs:28:13
    |
+27 | #[get("/")]
+   | ----------- in this procedural macro expansion
 28 | fn foo() -> usize { 0 }
    |             ^^^^^ the trait `Responder<'_, '_>` is not implemented for `usize`
    |
@@ -122,3 +124,4 @@ note: required by a bound in `route::handler::<impl Outcome<rocket::Response<'o>
    |
    |     pub fn from<R: Responder<'r, 'o>>(req: &'r Request<'_>, responder: R) -> Outcome<'r> {
    |                    ^^^^^^^^^^^^^^^^^ required by this bound in `route::handler::<impl Outcome<Response<'o>, Status, (Data<'o>, Status)>>::from`
+   = note: this error originates in the attribute macro `get` (in Nightly builds, run with -Z macro-backtrace for more info)

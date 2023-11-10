@@ -26,6 +26,12 @@ impl Context {
     /// template engine, and store all of the initialized state in a `Context`
     /// structure, which is returned if all goes well.
     pub fn initialize(root: &Path, callback: &Callback) -> Option<Context> {
+        fn is_file_with_ext(entry: &walkdir::DirEntry, ext: &str) -> bool {
+            let is_file = entry.file_type().is_file();
+            let has_ext = entry.path().extension().map_or(false, |e| e == ext);
+            is_file && has_ext
+        }
+
         let root = match root.normalize() {
             Ok(root) => root.into_path_buf(),
             Err(e) => {
@@ -35,18 +41,23 @@ impl Context {
         };
 
         let mut templates: HashMap<String, TemplateInfo> = HashMap::new();
-        for ext in Engines::ENABLED_EXTENSIONS {
-            let mut glob_path = root.join("**").join("*");
-            glob_path.set_extension(ext);
-            let glob_path = glob_path.to_str().expect("valid glob path string");
+        for &ext in Engines::ENABLED_EXTENSIONS {
+            for entry in walkdir::WalkDir::new(&root).follow_links(true) {
+                let entry = match entry {
+                    Ok(entry) if is_file_with_ext(&entry, ext) => entry,
+                    Ok(_) | Err(_) => continue,
+                };
 
-            for path in glob::glob(glob_path).unwrap().filter_map(Result::ok) {
-                let (name, data_type_str) = split_path(&root, &path);
+                let (name, data_type_str) = split_path(&root, entry.path());
                 if let Some(info) = templates.get(&*name) {
-                    warn_!("Template name '{}' does not have a unique path.", name);
-                    info_!("Existing path: {:?}", info.path);
-                    info_!("Additional path: {:?}", path);
-                    warn_!("Using existing path for template '{}'.", name);
+                    warn_!("Template name '{}' does not have a unique source.", name);
+                    match info.path {
+                        Some(ref path) => info_!("Existing path: {:?}", path),
+                        None => info_!("Existing Content-Type: {}", info.data_type),
+                    }
+
+                    info_!("Additional path: {:?}", entry.path());
+                    warn_!("Keeping existing template '{}'.", name);
                     continue;
                 }
 
@@ -55,7 +66,7 @@ impl Context {
                     .unwrap_or(ContentType::Text);
 
                 templates.insert(name, TemplateInfo {
-                    path: Some(path.clone()),
+                    path: Some(entry.into_path()),
                     engine_ext: ext,
                     data_type,
                 });

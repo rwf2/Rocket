@@ -247,7 +247,7 @@ fn uri_display_serde() {
 
     assert_query_value_roundtrip!(JsonFoo, JsonFoo(Json(bam.clone())));
 
-    // FIXME: https://github.com/rust-lang/rust/issues/86706
+    #[allow(renamed_and_removed_lints)]
     #[allow(private_in_public)]
     #[derive(Debug, PartialEq, Clone, FromForm, UriDisplayQuery)]
     struct Q<T>(Json<T>);

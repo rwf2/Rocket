@@ -64,7 +64,7 @@ use crate::sentinel::Sentry;
 /// higher precedence during routing than routes with higher ranks. Thus, routes
 /// are attempted in ascending rank order. If a higher precedence route returns
 /// an `Outcome` of `Forward`, the next highest precedence route is attempted,
-/// and so on, until a route returns `Success` or `Failure`, or there are no
+/// and so on, until a route returns `Success` or `Error`, or there are no
 /// more routes to try. When all routes have been attempted, Rocket issues a
 /// `404` error, handled by the appropriate [`Catcher`](crate::Catcher).
 ///

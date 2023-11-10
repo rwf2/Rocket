@@ -67,7 +67,7 @@ note: function defined here
    |
 30 | fn f3(_request: &Request, other: bool) { }
    |    ^^ ------------------  -----------
-help: did you mean
+help: provide the argument
    |
 29 | f3(bool, /* bool */)
    |

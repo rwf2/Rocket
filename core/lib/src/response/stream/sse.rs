@@ -351,9 +351,9 @@ impl Event {
 /// # Responder
 ///
 /// `EventStream` is a (potentially infinite) responder. The response
-/// `Content-Type` is set to [`EventStream`](ContentType::EventStream). The body
-/// is [unsized](crate::response::Body#unsized), and values are sent as soon as
-/// they are yielded by the internal iterator.
+/// `Content-Type` is set to [`EventStream`](const@ContentType::EventStream).
+/// The body is [unsized](crate::response::Body#unsized), and values are sent as
+/// soon as they are yielded by the internal iterator.
 ///
 /// ## Heartbeat
 ///

@@ -430,7 +430,7 @@ impl Arg {
     fn unnamed(&self) -> &ArgExpr {
         match self {
             Arg::Unnamed(expr) => expr,
-            _ => panic!("Called Arg::unnamed() on an Arg::named!"),
+            _ => panic!("Called Arg::unnamed() on an Arg::Named!"),
         }
     }
 

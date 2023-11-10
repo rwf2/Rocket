@@ -111,7 +111,7 @@ use crate::request::Request;
 ///   * An `Ok(Response)` indicates success. The `Response` will be written out
 ///     to the client.
 ///
-///   * An `Err(Status)` indicates failure. The error catcher for `Status` will
+///   * An `Err(Status)` indicates an error. The error catcher for `Status` will
 ///     be invoked to generate a response.
 ///
 /// # Implementation Tips

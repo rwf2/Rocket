@@ -30,7 +30,7 @@ use crate::result::{Result, Error};
 /// ### Forwarding
 ///
 /// If the incoming request is not a valid WebSocket request, the guard
-/// forwards. The guard never fails.
+/// forwards with a status of `BadRequest`. The guard never fails.
 pub struct WebSocket {
     config: Config,
     key: String,
@@ -203,7 +203,7 @@ impl<'r> FromRequest<'r> for WebSocket {
         let key = headers.get_one("Sec-WebSocket-Key").map(|k| derive_accept_key(k.as_bytes()));
         match key {
             Some(key) if is_upgrade && is_ws && is_13 => Outcome::Success(WebSocket::new(key)),
-            Some(_) | None => Outcome::Forward(Status::NotFound)
+            Some(_) | None => Outcome::Forward(Status::BadRequest)
         }
     }
 }

@@ -66,7 +66,7 @@ pub type Result<T = Rocket<Build>, E = Rocket<Build>> = std::result::Result<T, E
 
 // We might imagine that a request fairing returns an `Outcome`. If it returns
 // `Success`, we don't do any routing and use that response directly. Same if it
-// returns `Failure`. We only route if it returns `Forward`. I've chosen not to
+// returns `Error`. We only route if it returns `Forward`. I've chosen not to
 // go this direction because I feel like request guards are the correct
 // mechanism to use here. In other words, enabling this at the fairing level
 // encourages implicit handling, a bad practice. Fairings can still, however,
@@ -125,7 +125,7 @@ pub type Result<T = Rocket<Build>, E = Rocket<Build>> = std::result::Result<T, E
 ///     recursively attaching ignite fairings. It returns `Ok` if it would like
 ///     ignition and launch to proceed nominally and `Err` otherwise. If an
 ///     ignite fairing returns `Err`, launch will be aborted. All ignite
-///     fairings are executed even if one or more signal a failure.
+///     fairings are executed even if one or more signal an error.
 ///
 ///   * **<a name="liftoff">Liftoff</a> (`on_liftoff`)**
 ///
@@ -417,7 +417,7 @@ pub type Result<T = Rocket<Build>, E = Rocket<Build>> = std::result::Result<T, E
 ///     async fn from_request(request: &'r Request<'_>) -> request::Outcome<Self, ()> {
 ///         match *request.local_cache(|| TimerStart(None)) {
 ///             TimerStart(Some(time)) => request::Outcome::Success(StartTime(time)),
-///             TimerStart(None) => request::Outcome::Failure((Status::InternalServerError, ())),
+///             TimerStart(None) => request::Outcome::Error((Status::InternalServerError, ())),
 ///         }
 ///     }
 /// }

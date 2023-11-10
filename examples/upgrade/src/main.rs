@@ -16,7 +16,8 @@ fn echo_stream(ws: ws::WebSocket) -> ws::Stream!['static] {
 fn echo_channel(ws: ws::WebSocket) -> ws::Channel<'static> {
     // This is entirely optional. Change default configuration.
     let ws = ws.config(ws::Config {
-        max_send_queue: Some(5),
+        // set max message size to 3MiB
+        max_message_size: Some(3 << 20),
         ..Default::default()
     });
 

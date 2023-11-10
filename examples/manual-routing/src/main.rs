@@ -9,7 +9,7 @@ use rocket::outcome::{try_outcome, IntoOutcome};
 use rocket::tokio::fs::File;
 
 fn forward<'r>(_req: &'r Request, data: Data<'r>) -> route::BoxFuture<'r> {
-    Box::pin(async move { route::Outcome::forward(data) })
+    Box::pin(async move { route::Outcome::forward(data, Status::NotFound) })
 }
 
 fn hi<'r>(req: &'r Request, _: Data<'r>) -> route::BoxFuture<'r> {
@@ -27,7 +27,7 @@ fn name<'r>(req: &'r Request, _: Data<'r>) -> route::BoxFuture<'r> {
 fn echo_url<'r>(req: &'r Request, _: Data<'r>) -> route::BoxFuture<'r> {
     let param_outcome = req.param::<&str>(1)
         .and_then(Result::ok)
-        .into_outcome(Status::BadRequest);
+        .or_error(Status::BadRequest);
 
     Box::pin(async move {
         route::Outcome::from(req, try_outcome!(param_outcome))
@@ -38,7 +38,7 @@ fn upload<'r>(req: &'r Request, data: Data<'r>) -> route::BoxFuture<'r> {
     Box::pin(async move {
         if !req.content_type().map_or(false, |ct| ct.is_plain()) {
             println!("    => Content-Type of upload must be text/plain. Ignoring.");
-            return route::Outcome::failure(Status::BadRequest);
+            return route::Outcome::error(Status::BadRequest);
         }
 
         let path = req.rocket().config().temp_dir.relative().join("upload.txt");
@@ -49,10 +49,10 @@ fn upload<'r>(req: &'r Request, data: Data<'r>) -> route::BoxFuture<'r> {
             }
 
             println!("    => Failed copying.");
-            route::Outcome::failure(Status::InternalServerError)
+            route::Outcome::error(Status::InternalServerError)
         } else {
             println!("    => Couldn't open file: {:?}", file.unwrap_err());
-            route::Outcome::failure(Status::InternalServerError)
+            route::Outcome::error(Status::InternalServerError)
         }
     })
 }

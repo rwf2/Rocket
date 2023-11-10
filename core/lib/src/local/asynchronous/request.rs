@@ -24,7 +24,7 @@ use super::{Client, LocalResponse};
 /// let req = client.post("/")
 ///     .header(ContentType::JSON)
 ///     .remote("127.0.0.1:8000".parse().unwrap())
-///     .cookie(Cookie::new("name", "value"))
+///     .cookie(("name", "value"))
 ///     .body(r#"{ "value": 42 }"#);
 ///
 /// let response = req.dispatch().await;
@@ -106,7 +106,7 @@ impl<'c> LocalRequest<'c> {
                 for cookie in response.cookies().iter() {
                     if let Some(expires) = cookie.expires_datetime() {
                         if expires <= current_time {
-                            jar.force_remove(cookie);
+                            jar.force_remove(cookie.name());
                             continue;
                         }
                     }

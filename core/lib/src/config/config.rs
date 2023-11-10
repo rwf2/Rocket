@@ -288,7 +288,7 @@ impl Config {
     ///
     /// # Panics
     ///
-    /// If extraction fails, prints an error message indicating the failure and
+    /// If extraction fails, prints an error message indicating the error and
     /// panics. For a version that doesn't panic, use [`Config::try_from()`].
     ///
     /// # Example

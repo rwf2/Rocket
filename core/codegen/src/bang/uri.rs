@@ -126,7 +126,7 @@ fn add_binding<P: fmt::Part>(to: &mut Vec<TokenStream>, ident: &Ident, ty: &Type
     let tmp_ident = ident.clone().with_span(expr.span());
     let let_stmt = quote_spanned!(span => let #tmp_ident = #expr);
 
-    to.push(quote_spanned!(span =>
+    to.push(quote_spanned!(mixed(span) =>
         #[allow(non_snake_case)] #let_stmt;
         let #ident = <#ty as #_fmt::FromUriParam<#part, _>>::from_uri_param(#tmp_ident);
     ));

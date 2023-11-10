@@ -384,7 +384,7 @@ Now that we can retrieve pastes safely, it's time to actually store them. We'll
 write an `upload` route that, according to our design, takes a paste's contents
 and writes them to a file with a randomly generated ID inside of the `upload/`
 directory. It'll return a URL to the client for the paste corresponding to the
-`retrieve` route we just route.
+`retrieve` route we just wrote.
 
 ### Streaming Data
 

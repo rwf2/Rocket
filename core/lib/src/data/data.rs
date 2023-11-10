@@ -112,7 +112,7 @@ impl<'r> Data<'r> {
     ///
     ///     async fn from_data(r: &'r Request<'_>, mut data: Data<'r>) -> Outcome<'r, Self> {
     ///         if data.peek(2).await != b"hi" {
-    ///             return Outcome::Forward((data, Status::NotFound))
+    ///             return Outcome::Forward((data, Status::BadRequest))
     ///         }
     ///
     ///         /* .. */

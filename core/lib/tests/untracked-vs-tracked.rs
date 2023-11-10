@@ -1,10 +1,10 @@
 #[macro_use] extern crate rocket;
 
-use rocket::http::{Cookie, CookieJar};
+use rocket::http::CookieJar;
 
 #[post("/")]
 fn add(jar: &CookieJar<'_>) {
-    jar.add(Cookie::new("name", "value"));
+    jar.add(("name", "value"));
 }
 
 #[get("/")]

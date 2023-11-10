@@ -65,8 +65,8 @@ use crate::form::prelude::*;
 ///
 /// If the request `ContentType` _does_ identify as a form but the form data
 /// does not parse as `T`, according to `T`'s [`FromForm`] implementation, the
-/// guard **fails**. The `Failure` variant contains of the [`Errors`] emitted by
-/// `T`'s `FromForm` parser. If the error is not caught by a
+/// guard **fails**. The `Error` variant contains a vector of the [`Errors`]
+/// emitted by `T`'s `FromForm` parser. If the error is not caught by a
 /// [`form::Result<T>`](Result) or `Option<Form<T>>` data guard, the status code
 /// is set to [`Errors::status()`], and the corresponding error catcher is
 /// called.
@@ -334,7 +334,7 @@ impl<'r, T: FromForm<'r>> FromData<'r> for Form<T> {
 
         match T::finalize(context) {
             Ok(value) => Outcome::Success(Form(value)),
-            Err(e) => Outcome::Failure((e.status(), e)),
+            Err(e) => Outcome::Error((e.status(), e)),
         }
     }
 }

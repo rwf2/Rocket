@@ -74,8 +74,8 @@ error[E0277]: the trait bound `Q: FromData<'_>` is not satisfied
              Cow<'_, str>
              Capped<Cow<'_, str>>
              Capped<Vec<u8>>
-             Capped<std::string::String>
              Capped<TempFile<'_>>
+             Capped<std::string::String>
              Capped<&'r str>
              Capped<&'r RawStr>
            and $N others

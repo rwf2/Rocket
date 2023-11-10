@@ -1,9 +1,10 @@
 use std::path::{PathBuf, Path};
 
 use crate::{Request, Data};
-use crate::http::{Method, uri::Segments, ext::IntoOwned};
+use crate::http::{Method, Status, uri::Segments, ext::IntoOwned};
 use crate::route::{Route, Handler, Outcome};
-use crate::response::Redirect;
+use crate::response::{Redirect, Responder};
+use crate::outcome::IntoOutcome;
 use crate::fs::NamedFile;
 
 /// Custom handler for serving static files.
@@ -148,12 +149,12 @@ impl FileServer {
             if !options.contains(Options::IndexFile) && !path.is_dir() {
                 let path = path.display();
                 error!("FileServer path '{}' is not a directory.", path.primary());
-                warn_!("Aborting early to prevent inevitable handler failure.");
+                warn_!("Aborting early to prevent inevitable handler error.");
                 panic!("invalid directory: refusing to continue");
             } else if !path.exists() {
                 let path = path.display();
                 error!("FileServer path '{}' is not a file.", path.primary());
-                warn_!("Aborting early to prevent inevitable handler failure.");
+                warn_!("Aborting early to prevent inevitable handler error.");
                 panic!("invalid file: refusing to continue");
             }
         }
@@ -203,10 +204,10 @@ impl Handler for FileServer {
             };
 
             if segments.is_empty() {
-                let file = NamedFile::open(&self.root).await.ok();
-                return Outcome::from_or_forward(req, data, file);
+                let file = NamedFile::open(&self.root).await;
+                return file.respond_to(req).or_forward((data, Status::NotFound));
             } else {
-                return Outcome::forward(data);
+                return Outcome::forward(data, Status::NotFound);
             }
         }
 
@@ -224,18 +225,23 @@ impl Handler for FileServer {
                         .expect("adding a trailing slash to a known good path => valid path")
                         .into_owned();
 
-                    return Outcome::from_or_forward(req, data, Redirect::permanent(normal));
+                    return Redirect::permanent(normal)
+                        .respond_to(req)
+                        .or_forward((data, Status::InternalServerError));
                 }
 
                 if !options.contains(Options::Index) {
-                    return Outcome::forward(data);
+                    return Outcome::forward(data, Status::NotFound);
                 }
 
-                let index = NamedFile::open(p.join("index.html")).await.ok();
-                Outcome::from_or_forward(req, data, index)
+                let index = NamedFile::open(p.join("index.html")).await;
+                index.respond_to(req).or_forward((data, Status::NotFound))
             },
-            Some(p) => Outcome::from_or_forward(req, data, NamedFile::open(p).await.ok()),
-            None => Outcome::forward(data),
+            Some(p) => {
+                let file = NamedFile::open(p).await;
+                file.respond_to(req).or_forward((data, Status::NotFound))
+            }
+            None => Outcome::forward(data, Status::NotFound),
         }
     }
 }

@@ -123,7 +123,9 @@ pub fn derive_from_form(input: proc_macro::TokenStream) -> TokenStream {
                 Ok(quote_spanned! { input.span() =>
                     /// Rocket generated FormForm context.
                     #[doc(hidden)]
-                    #[allow(private_in_public)]
+                    #[allow(unknown_lints)]
+                    #[allow(renamed_and_removed_lints)]
+                    #[allow(private_in_public, private_bounds)]
                     #vis struct #ctxt_ty #impl_gen #where_clause {
                         __opts: #_form::Options,
                         __errors: #_form::Errors<'r>,
@@ -148,6 +150,7 @@ pub fn derive_from_form(input: proc_macro::TokenStream) -> TokenStream {
             #[allow(unused_imports)]
             use #_http::uncased::AsUncased;
         })
+        .outer_mapper(quote!(#[allow(renamed_and_removed_lints)]))
         .outer_mapper(quote!(#[allow(private_in_public)]))
         .outer_mapper(quote!(#[rocket::async_trait]))
         .inner_mapper(MapperBuild::new()

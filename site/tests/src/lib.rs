@@ -26,7 +26,7 @@ macro_rules! assert_form_parses {
             Ok(v) => assert_eq!(v, $value, "{}", $form),
             Err(e) => {
                 eprintln!("form failed to parse\n> form: {:?}\n> error: {:?}", $form, e);
-                panic!("form parse failure");
+                panic!("form parse error");
             }
         }
     );

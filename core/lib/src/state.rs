@@ -202,7 +202,7 @@ impl<'r, T: Send + Sync + 'static> FromRequest<'r> for &'r State<T> {
             Some(state) => Outcome::Success(state),
             None => {
                 error_!("Attempted to retrieve unmanaged state `{}`!", type_name::<T>());
-                Outcome::Failure((Status::InternalServerError, ()))
+                Outcome::Error((Status::InternalServerError, ()))
             }
         }
     }

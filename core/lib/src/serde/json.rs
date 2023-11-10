@@ -1,6 +1,6 @@
 //! Automatic JSON (de)serialization support.
 //!
-//! See [`Json`](Json) for details.
+//! See [`Json`] for details.
 //!
 //! # Enabling
 //!
@@ -201,12 +201,12 @@ impl<'r, T: Deserialize<'r>> FromData<'r> for Json<T> {
         match Self::from_data(req, data).await {
             Ok(value) => Outcome::Success(value),
             Err(Error::Io(e)) if e.kind() == io::ErrorKind::UnexpectedEof => {
-                Outcome::Failure((Status::PayloadTooLarge, Error::Io(e)))
+                Outcome::Error((Status::PayloadTooLarge, Error::Io(e)))
             },
             Err(Error::Parse(s, e)) if e.classify() == serde_json::error::Category::Data => {
-                Outcome::Failure((Status::UnprocessableEntity, Error::Parse(s, e)))
+                Outcome::Error((Status::UnprocessableEntity, Error::Parse(s, e)))
             },
-            Err(e) => Outcome::Failure((Status::BadRequest, e)),
+            Err(e) => Outcome::Error((Status::BadRequest, e)),
 
         }
     }

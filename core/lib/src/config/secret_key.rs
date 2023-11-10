@@ -52,7 +52,7 @@ enum Kind {
 /// ```
 ///
 /// When running in any other profile with the `secrets` feature enabled,
-/// providing a key of `0` or not provided a key at all results in a failure at
+/// providing a key of `0` or not provided a key at all results in an error at
 /// launch-time:
 ///
 /// ```rust
@@ -67,7 +67,7 @@ enum Kind {
 ///     .select(profile.clone());
 ///
 /// let rocket = rocket::custom(figment);
-/// let error = Client::tracked(rocket).expect_err("failure in non-debug");
+/// let error = Client::tracked(rocket).expect_err("error in non-debug");
 /// assert!(matches!(error.kind(), ErrorKind::InsecureSecretKey(profile)));
 /// ```
 ///

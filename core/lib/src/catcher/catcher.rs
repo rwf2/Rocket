@@ -18,12 +18,14 @@ use yansi::Paint;
 ///
 ///   * A failing guard.
 ///   * A failing responder.
+///   * A forwarding guard.
 ///   * Routing failure.
 ///
-/// Each failure is paired with a status code. Guards and responders indicate
-/// the status code themselves via their `Err` return value while a routing
-/// failure is always a `404`. Rocket invokes the error handler for the catcher
-/// with the error's status code.
+/// Each error or forward is paired with a status code. Guards and responders
+/// indicate the status code themselves via their `Err` and `Outcome` return
+/// value. A complete routing failure is always a `404`. Rocket invokes the
+/// error handler for the catcher with an error's status code, or in the case of
+/// every route resulting in a forward, the last forwarded status code.
 ///
 /// ### Error Handler Restrictions
 ///
@@ -33,7 +35,7 @@ use yansi::Paint;
 ///
 /// # Routing
 ///
-/// If a route fails by returning a failure [`Outcome`], Rocket routes the
+/// If a route fails by returning an error [`Outcome`], Rocket routes the
 /// erroring request to the highest precedence catcher among all the catchers
 /// that [match](Catcher::matches()). See [`Catcher::matches()`] for details on
 /// matching. Precedence is determined by the catcher's _base_, which is
@@ -373,6 +375,7 @@ r#"<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="utf-8">
+    <meta name="color-scheme" content="light dark">
     <title>"#, $code, " ", $reason, r#"</title>
 </head>
 <body align="center">

@@ -106,7 +106,7 @@ use crate::uri::fmt::{Part, Path, Query, Formatter};
 /// seen, the implementations will be used to display the value in a URI-safe
 /// manner.
 ///
-/// [`uri!`]: rocket::uri
+/// [`uri!`]: ../../../../rocket/macro.uri.html
 ///
 /// # Provided Implementations
 ///

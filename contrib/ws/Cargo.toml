@@ -17,7 +17,7 @@ default = ["tungstenite"]
 tungstenite = ["tokio-tungstenite"]
 
 [dependencies]
-tokio-tungstenite = { version = "0.19", optional = true }
+tokio-tungstenite = { version = "0.20", optional = true }
 
 [dependencies.rocket]
 version = "=0.5.0-rc.3"

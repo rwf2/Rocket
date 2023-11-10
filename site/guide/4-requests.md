@@ -263,7 +263,7 @@ would never forward. An `Ok` variant would indicate that `<id>` was a valid
 ! tip: It's not just forwards that can be caught!
 
   In general, when any guard fails for any reason, including parameter guards,
-  you can use an `Option` or `Result` type in its place to catch the failure.
+  you can use an `Option` or `Result` type in its place to catch the error.
 
 By the way, if you were to omit the `rank` parameter in the `user_str` or
 `user_int` routes, Rocket would emit an error and abort launch, indicating that
@@ -353,7 +353,7 @@ fn index(param: isize, a: A, b: B, c: C) { /* ... */ }
 ```
 
 Request guards always fire in left-to-right declaration order. In the example
-above, the order will be `A` followed by `B` followed by `C`. Failure is
+above, the order will be `A` followed by `B` followed by `C`. Errors are
 short-circuiting; if one guard fails, the remaining are not attempted. To learn
 more about request guards and implementing them, see the [`FromRequest`]
 documentation.
@@ -484,7 +484,7 @@ The three routes above encode authentication _and_ authorization. The
 the admin panel displayed. If the user is not an admin, the `AdminUser` guard
 will forward. Since the `admin_panel_user` route is ranked next highest, it is
 attempted next. This route succeeds if there is _any_ user signed in, and an
-authorization failure message is displayed. Finally, if a user isn't signed in,
+authorization error message is displayed. Finally, if a user isn't signed in,
 the `admin_panel_redirect` route is attempted. Since this route has no guards,
 it always succeeds. The user is redirected to a log in page.
 
@@ -522,7 +522,7 @@ If the `User` guard forwards or fails, the `Option` will be `None`. If it
 succeeds, it will be `Some(User)`.
 
 For guards that may fail (and not just forward), the `Result<T, E>` guard allows
-retrieving the error type `E` on failure. As an example, when the
+retrieving the error type `E` on error. As an example, when the
 [`mtls::Certificate`] type fails, it reports the reason in an [`mtls::Error`]
 type. The value can be retrieved in a handler by using a `Result<Certificate,
 Error>` guard:
@@ -631,7 +631,7 @@ fn user_id(cookies: &CookieJar<'_>) -> Option<String> {
 /// Remove the `user_id` cookie.
 #[post("/logout")]
 fn logout(cookies: &CookieJar<'_>) -> Flash<Redirect> {
-    cookies.remove_private(Cookie::named("user_id"));
+    cookies.remove_private("user_id");
     Flash::success(Redirect::to("/"), "Successfully logged out.")
 }
 ```
@@ -876,7 +876,7 @@ fields implement [`FromForm`], or equivalently, [`FromFormField`].
 If a `POST /todo` request arrives, the form data will automatically be parsed
 into the `Task` structure. If the data that arrives isn't of the correct
 Content-Type, the request is forwarded. If the data doesn't parse or is simply
-invalid, a customizable error is returned. As before, a forward or failure can
+invalid, a customizable error is returned. As before, a forward or error can
 be caught by using the `Option` and `Result` types:
 
 ```rust

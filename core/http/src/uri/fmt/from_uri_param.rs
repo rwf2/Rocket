@@ -178,7 +178,7 @@ use crate::uri::fmt::{self, Part};
 /// assert_eq!(uri.query().unwrap(), "name=Robert%20Mike&nickname=Bob");
 /// ```
 ///
-/// [`uri!`]: rocket::uri
+/// [`uri!`]: ../../../../rocket/macro.uri.html
 /// [`FromUriParam::Target`]: crate::uri::fmt::FromUriParam::Target
 /// [`Path`]: crate::uri::fmt::Path
 /// [`Query`]: crate::uri::fmt::Query

@@ -269,7 +269,7 @@ fn test_query_collection() {
 
         let colors = &["red"];
         let dog = &["name=Fido"];
-        assert_eq!(run(&client, colors, dog).0, Status::NotFound);
+        assert_eq!(run(&client, colors, dog).0, Status::UnprocessableEntity);
 
         let colors = &["red"];
         let dog = &["name=Fido", "age=2"];

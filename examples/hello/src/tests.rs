@@ -62,10 +62,10 @@ fn wave() {
         let response = client.get(uri).dispatch();
         assert_eq!(response.into_string().unwrap(), expected);
 
-        for bad_age in &["1000", "-1", "bird", "?"] {
+        for bad_age in &["1000", "-1", "bird"] {
             let bad_uri = format!("/wave/{}/{}", name, bad_age);
             let response = client.get(bad_uri).dispatch();
-            assert_eq!(response.status(), Status::NotFound);
+            assert_eq!(response.status(), Status::UnprocessableEntity);
         }
     }
 }

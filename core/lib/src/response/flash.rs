@@ -178,9 +178,9 @@ impl<R> Flash<R> {
         let content = format!("{}{}{}{}",
             self.kind.len(), FLASH_COOKIE_DELIM, self.kind, self.message);
 
-        Cookie::build(FLASH_COOKIE_NAME, content)
+        Cookie::build((FLASH_COOKIE_NAME, content))
             .max_age(Duration::minutes(5))
-            .finish()
+            .build()
     }
 }
 
@@ -211,7 +211,7 @@ impl<'r> FlashMessage<'r> {
     fn clear_cookie_if_needed(&self) {
         // Remove the cookie if it hasn't already been removed.
         if !self.consumed.swap(true, Ordering::Relaxed) {
-            self.inner.remove(Cookie::named(FLASH_COOKIE_NAME));
+            self.inner.remove(FLASH_COOKIE_NAME);
         }
     }
 
@@ -259,7 +259,7 @@ impl<'r> FromRequest<'r> for FlashMessage<'r> {
                 Ok(i) if i <= kv.len() => Ok(Flash::named(&kv[..i], &kv[i..], req)),
                 _ => Err(())
             }
-        }).into_outcome(Status::BadRequest)
+        }).or_error(Status::BadRequest)
     }
 }
 
