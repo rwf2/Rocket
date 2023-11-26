@@ -16,13 +16,13 @@ macro_rules! run_test {
         let _lock = DB_LOCK.lock();
 
         rocket::async_test(async move {
-            let rocket = super::rocket();
+            let $client = Client::tracked(super::rocket()).await.expect("Rocket client");
+            let rocket = $client.rocket();
             let mut $conn = super::Db::fetch(&rocket)
                 .expect("database")
                 .get()
                 .await
                 .expect("database connection");
-            let $client = Client::tracked(rocket).await.expect("Rocket client");
             Task::delete_all(&mut $conn).await.expect("failed to delete all tasks for testing");
 
             $block
