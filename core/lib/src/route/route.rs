@@ -1,10 +1,10 @@
-use std::fmt;
 use std::borrow::Cow;
+use std::fmt;
 
 use yansi::Paint;
 
-use crate::http::{uri, Method, MediaType};
-use crate::route::{Handler, RouteUri, BoxFuture};
+use crate::http::{uri, MediaType, Method};
+use crate::route::{BoxFuture, Handler, RouteUri};
 use crate::sentinel::Sentry;
 
 /// A request handling route.
@@ -243,7 +243,9 @@ impl Route {
     /// ```
     #[track_caller]
     pub fn ranked<H, R>(rank: R, method: Method, uri: &str, handler: H) -> Route
-        where H: Handler + 'static, R: Into<Option<isize>>,
+    where
+        H: Handler + 'static,
+        R: Into<Option<isize>>,
     {
         let uri = RouteUri::new("/", uri);
         let rank = rank.into().unwrap_or_else(|| uri.default_rank());
@@ -252,7 +254,9 @@ impl Route {
             format: None,
             sentinels: Vec::new(),
             handler: Box::new(handler),
-            rank, uri, method,
+            rank,
+            uri,
+            method,
         }
     }
 
@@ -335,7 +339,8 @@ impl Route {
     /// assert_eq!(rebased.uri.path(), "/boo/foo/bar");
     /// ```
     pub fn map_base<'a, F>(mut self, mapper: F) -> Result<Self, uri::Error<'static>>
-        where F: FnOnce(uri::Origin<'a>) -> String
+    where
+        F: FnOnce(uri::Origin<'a>) -> String,
     {
         let base = mapper(self.uri.base);
         self.uri = RouteUri::try_new(&base, &self.uri.unmounted_origin.to_string())?;

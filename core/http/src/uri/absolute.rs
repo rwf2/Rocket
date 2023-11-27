@@ -2,7 +2,7 @@ use std::borrow::Cow;
 
 use crate::ext::IntoOwned;
 use crate::parse::{Extent, IndexedStr};
-use crate::uri::{Authority, Path, Query, Data, Error, as_utf8_unchecked, fmt};
+use crate::uri::{as_utf8_unchecked, fmt, Authority, Data, Error, Path, Query};
 
 /// A URI with a scheme, authority, path, and query.
 ///
@@ -210,7 +210,10 @@ impl<'a> Absolute<'a> {
     /// ```
     #[inline(always)]
     pub fn path(&self) -> Path<'_> {
-        Path { source: &self.source, data: &self.path }
+        Path {
+            source: &self.source,
+            data: &self.path,
+        }
     }
 
     /// Returns the query part with the leading `?`. May be empty.
@@ -227,7 +230,10 @@ impl<'a> Absolute<'a> {
     /// ```
     #[inline(always)]
     pub fn query(&self) -> Option<Query<'_>> {
-        self.query.as_ref().map(|data| Query { source: &self.source, data })
+        self.query.as_ref().map(|data| Query {
+            source: &self.source,
+            data,
+        })
     }
 
     /// Removes the query part of this URI, if there is any.
@@ -411,7 +417,7 @@ impl<'a> Absolute<'a> {
             scheme: scheme.into(),
             authority,
             path: Data::raw(path),
-            query: query.map(Data::raw)
+            query: query.map(Data::raw),
         }
     }
 
@@ -455,7 +461,8 @@ impl<'a> Absolute<'a> {
 
     // TODO: Have a way to get a validated `path` to do this. See `Path`?
     pub(crate) fn set_path<P>(&mut self, path: P)
-        where P: Into<Cow<'a, str>>
+    where
+        P: Into<Cow<'a, str>>,
     {
         self.path = Data::new(path.into());
     }

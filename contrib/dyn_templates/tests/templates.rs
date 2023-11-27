@@ -1,25 +1,33 @@
-#[macro_use] extern crate rocket;
+#[macro_use]
+extern crate rocket;
 
 use std::path::{Path, PathBuf};
 
-use rocket::{Rocket, Build};
 use rocket::config::Config;
 use rocket::figment::value::Value;
-use rocket::serde::{Serialize, Deserialize};
-use rocket_dyn_templates::{Template, Metadata, context};
+use rocket::serde::{Deserialize, Serialize};
+use rocket::{Build, Rocket};
+use rocket_dyn_templates::{context, Metadata, Template};
 
 #[get("/<engine>/<name>")]
 fn template_check(md: Metadata<'_>, engine: &str, name: &str) -> Option<()> {
-    md.contains_template(&format!("{}/{}", engine, name)).then(|| ())
+    md.contains_template(&format!("{}/{}", engine, name))
+        .then(|| ())
 }
 
 #[get("/is_reloading")]
 fn is_reloading(md: Metadata<'_>) -> Option<()> {
-    if md.reloading() { Some(()) } else { None }
+    if md.reloading() {
+        Some(())
+    } else {
+        None
+    }
 }
 
 fn template_root() -> PathBuf {
-    Path::new(env!("CARGO_MANIFEST_DIR")).join("tests").join("templates")
+    Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("tests")
+        .join("templates")
 }
 
 fn rocket() -> Rocket<Build> {
@@ -30,7 +38,7 @@ fn rocket() -> Rocket<Build> {
 
 #[test]
 fn test_callback_error() {
-    use rocket::{local::blocking::Client, error::ErrorKind::FailedFairings};
+    use rocket::{error::ErrorKind::FailedFairings, local::blocking::Client};
 
     let rocket = rocket::build().attach(Template::try_custom(|_| {
         Err("error reloading templates!".into())
@@ -45,7 +53,7 @@ fn test_callback_error() {
 
 #[test]
 fn test_sentinel() {
-    use rocket::{local::blocking::Client, error::ErrorKind::SentinelAborts};
+    use rocket::{error::ErrorKind::SentinelAborts, local::blocking::Client};
 
     let err = Client::debug_with(routes![is_reloading]).unwrap_err();
     assert!(matches!(err.kind(), SentinelAborts(vec) if vec.len() == 1));
@@ -110,9 +118,9 @@ fn test_context_macro() {
     {
         #[derive(Deserialize, PartialEq, Debug)]
         #[serde(crate = "rocket::serde")]
-        struct Empty { }
+        struct Empty {}
 
-        assert_same_object!(context! { }, Empty { });
+        assert_same_object!(context! {}, Empty {});
     }
 
     {
@@ -132,10 +140,7 @@ fn test_context_macro() {
             context! { a: 93, b: b }
         }
 
-        assert_same_object!(
-            make_context(),
-            Object { a, b },
-        );
+        assert_same_object!(make_context(), Object { a, b },);
     }
 
     {
@@ -203,14 +208,14 @@ fn test_context_macro() {
 #[cfg(feature = "tera")]
 mod tera_tests {
     use super::*;
-    use std::collections::HashMap;
     use rocket::http::{ContentType, Status};
     use rocket::request::FromRequest;
+    use std::collections::HashMap;
 
-    const UNESCAPED_EXPECTED: &'static str
-        = "\nh_start\ntitle: _test_\nh_end\n\n\n<script />\n\nfoot\n";
-    const ESCAPED_EXPECTED: &'static str
-        = "\nh_start\ntitle: _test_\nh_end\n\n\n&lt;script &#x2F;&gt;\n\nfoot\n";
+    const UNESCAPED_EXPECTED: &'static str =
+        "\nh_start\ntitle: _test_\nh_end\n\n\n<script />\n\nfoot\n";
+    const ESCAPED_EXPECTED: &'static str =
+        "\nh_start\ntitle: _test_\nh_end\n\n\n&lt;script &#x2F;&gt;\n\nfoot\n";
 
     #[async_test]
     async fn test_tera_templates() {
@@ -228,13 +233,19 @@ mod tera_tests {
         let template = Template::show(client.rocket(), "tera/txt_test", &map);
         let md_rendered = metadata.render("tera/txt_test", &map);
         assert_eq!(template, Some(UNESCAPED_EXPECTED.into()));
-        assert_eq!(md_rendered, Some((ContentType::Text, UNESCAPED_EXPECTED.into())));
+        assert_eq!(
+            md_rendered,
+            Some((ContentType::Text, UNESCAPED_EXPECTED.into()))
+        );
 
         // Now with an HTML file, which should.
         let template = Template::show(client.rocket(), "tera/html_test", &map);
         let md_rendered = metadata.render("tera/html_test", &map);
         assert_eq!(template, Some(ESCAPED_EXPECTED.into()));
-        assert_eq!(md_rendered, Some((ContentType::HTML, ESCAPED_EXPECTED.into())));
+        assert_eq!(
+            md_rendered,
+            Some((ContentType::HTML, ESCAPED_EXPECTED.into()))
+        );
     }
 
     #[async_test]
@@ -285,16 +296,15 @@ mod tera_tests {
 #[cfg(feature = "handlebars")]
 mod handlebars_tests {
     use super::*;
-    use std::collections::HashMap;
-    use rocket::request::FromRequest;
     use rocket::http::{ContentType, Status};
+    use rocket::request::FromRequest;
+    use std::collections::HashMap;
 
     #[async_test]
     async fn test_handlebars_templates() {
         use rocket::local::asynchronous::Client;
 
-        const EXPECTED: &'static str
-            = "Hello _test_!\n<main> &lt;script /&gt; hi </main>\nDone.\n";
+        const EXPECTED: &'static str = "Hello _test_!\n<main> &lt;script /&gt; hi </main>\nDone.\n";
 
         let client = Client::debug(rocket()).await.unwrap();
         let req = client.get("/");

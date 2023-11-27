@@ -4,8 +4,10 @@ use std::fmt;
 use std::str::FromStr;
 use std::sync::atomic::{AtomicBool, Ordering};
 
-use serde::{de, Serialize, Serializer, Deserialize, Deserializer};
-use yansi::{Paint, Painted, Condition};
+use serde::{de, Deserialize, Deserializer, Serialize, Serializer};
+use yansi::{Condition, Paint, Painted};
+
+use crate::config::CliColors;
 
 /// Reexport the `log` crate as `private`.
 pub use log as private;
@@ -94,7 +96,7 @@ impl log::Log for RocketLogger {
     fn enabled(&self, record: &log::Metadata<'_>) -> bool {
         match log::max_level().to_level() {
             Some(max) => record.level() <= max || is_launch_record(record),
-            None => false
+            None => false,
         }
     }
 
@@ -128,7 +130,11 @@ impl log::Log for RocketLogger {
                 write_out!("{} {}\n", "Error:".red().bold(), record.args().red().wrap());
             }
             log::Level::Warn if !indented => {
-                write_out!("{} {}\n", "Warning:".yellow().bold(), record.args().yellow().wrap());
+                write_out!(
+                    "{} {}\n",
+                    "Warning:".yellow().bold(),
+                    record.args().yellow().wrap()
+                );
             }
             log::Level::Info => write_out!("{}\n", record.args().blue().wrap()),
             log::Level::Trace => write_out!("{}\n", record.args().magenta().wrap()),
@@ -167,7 +173,11 @@ pub(crate) fn init(config: &crate::Config) {
     }
 
     // Always disable colors if requested or if the stdout/err aren't TTYs.
-    let should_color = config.cli_colors && Condition::stdouterr_are_tty();
+    let should_color = match config.cli_colors {
+        CliColors::Auto => Condition::stdouterr_are_tty(),
+        CliColors::Never => false,
+        CliColors::Always => true,
+    };
     yansi::whenever(Condition::cached(should_color));
 
     // Set Rocket-logger specific settings only if Rocket's logger is set.
@@ -182,7 +192,7 @@ impl From<LogLevel> for log::LevelFilter {
             LogLevel::Critical => log::LevelFilter::Warn,
             LogLevel::Normal => log::LevelFilter::Info,
             LogLevel::Debug => log::LevelFilter::Trace,
-            LogLevel::Off => log::LevelFilter::Off
+            LogLevel::Off => log::LevelFilter::Off,
         }
     }
 }
@@ -207,7 +217,7 @@ impl FromStr for LogLevel {
             "normal" => LogLevel::Normal,
             "debug" => LogLevel::Debug,
             "off" => LogLevel::Off,
-            _ => return Err("a log level (off, debug, normal, critical)")
+            _ => return Err("a log level (off, debug, normal, critical)"),
         };
 
         Ok(level)
@@ -229,17 +239,25 @@ impl Serialize for LogLevel {
 impl<'de> Deserialize<'de> for LogLevel {
     fn deserialize<D: Deserializer<'de>>(de: D) -> Result<Self, D::Error> {
         let string = String::deserialize(de)?;
-        LogLevel::from_str(&string).map_err(|_| de::Error::invalid_value(
-            de::Unexpected::Str(&string),
-            &figment::error::OneOf( &["critical", "normal", "debug", "off"])
-        ))
+        LogLevel::from_str(&string).map_err(|_| {
+            de::Error::invalid_value(
+                de::Unexpected::Str(&string),
+                &figment::error::OneOf(&["critical", "normal", "debug", "off"]),
+            )
+        })
     }
 }
 
 impl PaintExt for &str {
     /// Paint::masked(), but hidden on Windows due to broken output. See #1122.
     fn emoji(self) -> Painted<Self> {
-        #[cfg(windows)] { Paint::new("").mask() }
-        #[cfg(not(windows))] { Paint::new(self).mask() }
+        #[cfg(windows)]
+        {
+            Paint::new("").mask()
+        }
+        #[cfg(not(windows))]
+        {
+            Paint::new(self).mask()
+        }
     }
 }

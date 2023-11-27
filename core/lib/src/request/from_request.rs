@@ -2,11 +2,11 @@ use std::convert::Infallible;
 use std::fmt::Debug;
 use std::net::{IpAddr, SocketAddr};
 
-use crate::{Request, Route};
 use crate::outcome::{self, Outcome::*};
+use crate::{Request, Route};
 
 use crate::http::uri::{Host, Origin};
-use crate::http::{Status, ContentType, Accept, Method, CookieJar};
+use crate::http::{Accept, ContentType, CookieJar, Method, Status};
 
 /// Type alias for the `Outcome` of a `FromRequest` conversion.
 pub type Outcome<S, E> = outcome::Outcome<S, (Status, E), Status>;
@@ -408,7 +408,7 @@ impl<'r> FromRequest<'r> for &'r Host<'r> {
     async fn from_request(request: &'r Request<'_>) -> Outcome<Self, Infallible> {
         match request.host() {
             Some(host) => Success(host),
-            None => Forward(Status::InternalServerError)
+            None => Forward(Status::InternalServerError),
         }
     }
 }
@@ -420,7 +420,7 @@ impl<'r> FromRequest<'r> for &'r Route {
     async fn from_request(request: &'r Request<'_>) -> Outcome<Self, Infallible> {
         match request.route() {
             Some(route) => Success(route),
-            None => Forward(Status::InternalServerError)
+            None => Forward(Status::InternalServerError),
         }
     }
 }
@@ -441,7 +441,7 @@ impl<'r> FromRequest<'r> for &'r Accept {
     async fn from_request(request: &'r Request<'_>) -> Outcome<Self, Infallible> {
         match request.accept() {
             Some(accept) => Success(accept),
-            None => Forward(Status::InternalServerError)
+            None => Forward(Status::InternalServerError),
         }
     }
 }
@@ -453,7 +453,7 @@ impl<'r> FromRequest<'r> for &'r ContentType {
     async fn from_request(request: &'r Request<'_>) -> Outcome<Self, Infallible> {
         match request.content_type() {
             Some(content_type) => Success(content_type),
-            None => Forward(Status::InternalServerError)
+            None => Forward(Status::InternalServerError),
         }
     }
 }
@@ -465,7 +465,7 @@ impl<'r> FromRequest<'r> for IpAddr {
     async fn from_request(request: &'r Request<'_>) -> Outcome<Self, Infallible> {
         match request.client_ip() {
             Some(addr) => Success(addr),
-            None => Forward(Status::InternalServerError)
+            None => Forward(Status::InternalServerError),
         }
     }
 }
@@ -477,7 +477,7 @@ impl<'r> FromRequest<'r> for SocketAddr {
     async fn from_request(request: &'r Request<'_>) -> Outcome<Self, Infallible> {
         match request.remote() {
             Some(addr) => Success(addr),
-            None => Forward(Status::InternalServerError)
+            None => Forward(Status::InternalServerError),
         }
     }
 }

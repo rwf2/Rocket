@@ -1,7 +1,7 @@
 use std::fmt;
 
-use serde::{Serialize, Deserialize};
-use crate::request::{Request, FromRequest, Outcome};
+use crate::request::{FromRequest, Outcome, Request};
+use serde::{Deserialize, Serialize};
 
 use crate::data::ByteUnit;
 use crate::http::uncased::Uncased;
@@ -206,7 +206,7 @@ impl Limits {
         let name = name.into();
         match self.limits.binary_search_by(|(k, _)| k.cmp(&name)) {
             Ok(i) => self.limits[i].1 = limit,
-            Err(i) => self.limits.insert(i, (name, limit))
+            Err(i) => self.limits.insert(i, (name, limit)),
         }
 
         self
@@ -241,7 +241,8 @@ impl Limits {
         let mut name = name.as_ref();
         let mut indices = name.rmatch_indices('/');
         loop {
-            let exact_limit = self.limits
+            let exact_limit = self
+                .limits
                 .binary_search_by(|(k, _)| k.as_uncased_str().cmp(name.into()))
                 .map(|i| self.limits[i].1);
 
@@ -288,7 +289,8 @@ impl Limits {
         let layers = layers.as_ref();
         for j in (1..=layers.len()).rev() {
             let layers = &layers[..j];
-            let opt = self.limits
+            let opt = self
+                .limits
                 .binary_search_by(|(k, _)| {
                     let k_layers = k.as_str().split('/');
                     k_layers.cmp(layers.iter().map(|s| s.as_ref()))
@@ -306,7 +308,8 @@ impl Limits {
     /// Deserialize a `Limits` vector from a map. Ensures that the resulting
     /// vector is properly sorted for futures lookups via binary search.
     fn deserialize<'de, D>(de: D) -> Result<Vec<(Uncased<'static>, ByteUnit)>, D::Error>
-        where D: serde::Deserializer<'de>
+    where
+        D: serde::Deserializer<'de>,
     {
         let mut limits = figment::util::vec_tuple_map::deserialize(de)?;
         limits.sort();
@@ -317,7 +320,9 @@ impl Limits {
 impl fmt::Display for Limits {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         for (i, (k, v)) in self.limits.iter().enumerate() {
-            if i != 0 { f.write_str(", ")? }
+            if i != 0 {
+                f.write_str(", ")?
+            }
             write!(f, "{} = {}", k, v)?;
         }
 

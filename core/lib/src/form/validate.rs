@@ -79,13 +79,16 @@
 //! ```
 
 use std::borrow::Cow;
-use std::ops::{RangeBounds, Bound};
 use std::fmt::Debug;
+use std::ops::{Bound, RangeBounds};
 
 use crate::data::{ByteUnit, Capped};
 use rocket_http::ContentType;
 
-use crate::{fs::TempFile, form::{Result, Error}};
+use crate::{
+    form::{Error, Result},
+    fs::TempFile,
+};
 
 crate::export! {
     /// A helper macro for custom validation error messages.
@@ -187,7 +190,8 @@ crate::export! {
 /// }
 /// ```
 pub fn eq<'v, A, B>(a: &A, b: B) -> Result<'v, ()>
-    where A: PartialEq<B>
+where
+    A: PartialEq<B>,
 {
     if a != &b {
         Err(Error::validation("value does not match expected value"))?
@@ -224,7 +228,9 @@ pub fn eq<'v, A, B>(a: &A, b: B) -> Result<'v, ()>
 /// }
 /// ```
 pub fn dbg_eq<'v, A, B>(a: &A, b: B) -> Result<'v, ()>
-    where A: PartialEq<B>, B: Debug
+where
+    A: PartialEq<B>,
+    B: Debug,
 {
     if a != &b {
         Err(Error::validation(format!("value must be {:?}", b)))?
@@ -264,7 +270,8 @@ pub fn dbg_eq<'v, A, B>(a: &A, b: B) -> Result<'v, ()>
 /// }
 /// ```
 pub fn neq<'v, A, B>(a: &A, b: B) -> Result<'v, ()>
-    where A: PartialEq<B>
+where
+    A: PartialEq<B>,
 {
     if a == &b {
         Err(Error::validation("value is equal to an invalid value"))?
@@ -316,47 +323,89 @@ impl_len!(<K, V> std::collections::HashMap<K, V> => usize);
 impl_len!(<K, V> std::collections::BTreeMap<K, V> => usize);
 
 impl Len<ByteUnit> for TempFile<'_> {
-    fn len(&self) -> ByteUnit { self.len().into() }
-    fn len_into_u64(len: ByteUnit) -> u64 { len.into() }
-    fn zero_len() -> ByteUnit { ByteUnit::from(0) }
+    fn len(&self) -> ByteUnit {
+        self.len().into()
+    }
+    fn len_into_u64(len: ByteUnit) -> u64 {
+        len.into()
+    }
+    fn zero_len() -> ByteUnit {
+        ByteUnit::from(0)
+    }
 }
 
 impl<L, T: Len<L> + ?Sized> Len<L> for &T {
-    fn len(&self) -> L { <T as Len<L>>::len(self) }
-    fn len_into_u64(len: L) -> u64 { T::len_into_u64(len) }
-    fn zero_len() -> L { T::zero_len() }
+    fn len(&self) -> L {
+        <T as Len<L>>::len(self)
+    }
+    fn len_into_u64(len: L) -> u64 {
+        T::len_into_u64(len)
+    }
+    fn zero_len() -> L {
+        T::zero_len()
+    }
 }
 
 impl<L, T: Len<L>> Len<L> for Option<T> {
-    fn len(&self) -> L { self.as_ref().map(|v| v.len()).unwrap_or_else(T::zero_len) }
-    fn len_into_u64(len: L) -> u64 { T::len_into_u64(len) }
-    fn zero_len() -> L { T::zero_len() }
+    fn len(&self) -> L {
+        self.as_ref().map(|v| v.len()).unwrap_or_else(T::zero_len)
+    }
+    fn len_into_u64(len: L) -> u64 {
+        T::len_into_u64(len)
+    }
+    fn zero_len() -> L {
+        T::zero_len()
+    }
 }
 
 impl<L, T: Len<L>> Len<L> for Capped<T> {
-    fn len(&self) -> L { self.value.len() }
-    fn len_into_u64(len: L) -> u64 { T::len_into_u64(len) }
-    fn zero_len() -> L { T::zero_len() }
+    fn len(&self) -> L {
+        self.value.len()
+    }
+    fn len_into_u64(len: L) -> u64 {
+        T::len_into_u64(len)
+    }
+    fn zero_len() -> L {
+        T::zero_len()
+    }
 }
 
 impl<L, T: Len<L>> Len<L> for Result<'_, T> {
-    fn len(&self) -> L { self.as_ref().ok().len() }
-    fn len_into_u64(len: L) -> u64 { T::len_into_u64(len) }
-    fn zero_len() -> L { T::zero_len() }
+    fn len(&self) -> L {
+        self.as_ref().ok().len()
+    }
+    fn len_into_u64(len: L) -> u64 {
+        T::len_into_u64(len)
+    }
+    fn zero_len() -> L {
+        T::zero_len()
+    }
 }
 
 #[cfg(feature = "json")]
 impl<L, T: Len<L>> Len<L> for crate::serde::json::Json<T> {
-    fn len(&self) -> L { self.0.len() }
-    fn len_into_u64(len: L) -> u64 { T::len_into_u64(len) }
-    fn zero_len() -> L { T::zero_len() }
+    fn len(&self) -> L {
+        self.0.len()
+    }
+    fn len_into_u64(len: L) -> u64 {
+        T::len_into_u64(len)
+    }
+    fn zero_len() -> L {
+        T::zero_len()
+    }
 }
 
 #[cfg(feature = "msgpack")]
 impl<L, T: Len<L>> Len<L> for crate::serde::msgpack::MsgPack<T> {
-    fn len(&self) -> L { self.0.len() }
-    fn len_into_u64(len: L) -> u64 { T::len_into_u64(len) }
-    fn zero_len() -> L { T::zero_len() }
+    fn len(&self) -> L {
+        self.0.len()
+    }
+    fn len_into_u64(len: L) -> u64 {
+        T::len_into_u64(len)
+    }
+    fn zero_len() -> L {
+        T::zero_len()
+    }
 }
 
 /// Length validator: succeeds when the length of a value is within a `range`.
@@ -394,15 +443,16 @@ impl<L, T: Len<L>> Len<L> for crate::serde::msgpack::MsgPack<T> {
 /// }
 /// ```
 pub fn len<'v, V, L, R>(value: V, range: R) -> Result<'v, ()>
-    where V: Len<L>,
-          L: Copy + PartialOrd,
-          R: RangeBounds<L>
+where
+    V: Len<L>,
+    L: Copy + PartialOrd,
+    R: RangeBounds<L>,
 {
     if !range.contains(&value.len()) {
         let start = match range.start_bound() {
             Bound::Included(v) => Some(V::len_into_u64(*v)),
             Bound::Excluded(v) => Some(V::len_into_u64(*v).saturating_add(1)),
-            Bound::Unbounded => None
+            Bound::Unbounded => None,
         };
 
         let end = match range.end_bound() {
@@ -535,7 +585,8 @@ impl<I, T: Contains<I> + ?Sized> Contains<I> for &T {
 /// }
 /// ```
 pub fn contains<'v, V, I>(value: V, item: I) -> Result<'v, ()>
-    where V: Contains<I>
+where
+    V: Contains<I>,
 {
     if !value.contains(item) {
         Err(Error::validation("value does not contain expected item"))?
@@ -574,7 +625,9 @@ pub fn contains<'v, V, I>(value: V, item: I) -> Result<'v, ()>
 /// }
 /// ```
 pub fn dbg_contains<'v, V, I>(value: V, item: I) -> Result<'v, ()>
-    where V: Contains<I>, I: Debug + Copy
+where
+    V: Contains<I>,
+    I: Debug + Copy,
 {
     if !value.contains(item) {
         Err(Error::validation(format!("value must contain {:?}", item)))?
@@ -617,7 +670,8 @@ pub fn dbg_contains<'v, V, I>(value: V, item: I) -> Result<'v, ()>
 /// }
 /// ```
 pub fn omits<'v, V, I>(value: V, item: I) -> Result<'v, ()>
-    where V: Contains<I>
+where
+    V: Contains<I>,
 {
     if value.contains(item) {
         Err(Error::validation("value contains a disallowed item"))?
@@ -658,10 +712,15 @@ pub fn omits<'v, V, I>(value: V, item: I) -> Result<'v, ()>
 /// }
 /// ```
 pub fn dbg_omits<'v, V, I>(value: V, item: I) -> Result<'v, ()>
-    where V: Contains<I>, I: Copy + Debug
+where
+    V: Contains<I>,
+    I: Copy + Debug,
 {
     if value.contains(item) {
-        Err(Error::validation(format!("value cannot contain {:?}", item)))?
+        Err(Error::validation(format!(
+            "value cannot contain {:?}",
+            item
+        )))?
     }
 
     Ok(())
@@ -688,7 +747,9 @@ pub fn dbg_omits<'v, V, I>(value: V, item: I) -> Result<'v, ()>
 /// }
 /// ```
 pub fn range<'v, V, R>(value: &V, range: R) -> Result<'v, ()>
-    where V: TryInto<isize> + Copy, R: RangeBounds<isize>
+where
+    V: TryInto<isize> + Copy,
+    R: RangeBounds<isize>,
 {
     if let Ok(v) = (*value).try_into() {
         if range.contains(&v) {
@@ -699,7 +760,7 @@ pub fn range<'v, V, R>(value: &V, range: R) -> Result<'v, ()>
     let start = match range.start_bound() {
         Bound::Included(v) => Some(*v),
         Bound::Excluded(v) => Some(v.saturating_add(1)),
-        Bound::Unbounded => None
+        Bound::Unbounded => None,
     };
 
     let end = match range.end_bound() {
@@ -707,7 +768,6 @@ pub fn range<'v, V, R>(value: &V, range: R) -> Result<'v, ()>
         Bound::Excluded(v) => Some(v.saturating_sub(1)),
         Bound::Unbounded => None,
     };
-
 
     Err((start, end))?
 }
@@ -740,10 +800,11 @@ pub fn range<'v, V, R>(value: &V, range: R) -> Result<'v, ()>
 /// }
 /// ```
 pub fn one_of<'v, V, I, R>(value: V, items: R) -> Result<'v, ()>
-    where V: Contains<I>,
-          I: Debug,
-          R: IntoIterator<Item = I>,
-          <R as IntoIterator>::IntoIter: Clone
+where
+    V: Contains<I>,
+    I: Debug,
+    R: IntoIterator<Item = I>,
+    <R as IntoIterator>::IntoIter: Clone,
 {
     let items = items.into_iter();
     for item in items.clone() {
@@ -752,9 +813,7 @@ pub fn one_of<'v, V, I, R>(value: V, items: R) -> Result<'v, ()>
         }
     }
 
-    let choices: Vec<Cow<'_, str>> = items
-        .map(|item| format!("{:?}", item).into())
-        .collect();
+    let choices: Vec<Cow<'_, str>> = items.map(|item| format!("{:?}", item).into()).collect();
 
     Err(choices)?
 }
@@ -794,7 +853,10 @@ pub fn ext<'v>(file: &TempFile<'_>, r#type: ContentType) -> Result<'v, ()> {
         }
     }
 
-    let msg = match (file.content_type().and_then(|c| c.extension()), r#type.extension()) {
+    let msg = match (
+        file.content_type().and_then(|c| c.extension()),
+        r#type.extension(),
+    ) {
         (Some(a), Some(b)) => format!("invalid file type: .{}, must be .{}", a, b),
         (Some(a), None) => format!("invalid file type: .{}, must be {}", a, r#type),
         (None, Some(b)) => format!("file type must be .{}", b),
@@ -845,8 +907,9 @@ pub fn ext<'v>(file: &TempFile<'_>, r#type: ContentType) -> Result<'v, ()> {
 /// }
 /// ```
 pub fn with<'v, V, F, M>(value: V, f: F, msg: M) -> Result<'v, ()>
-    where F: FnOnce(V) -> bool,
-          M: Into<Cow<'static, str>>
+where
+    F: FnOnce(V) -> bool,
+    M: Into<Cow<'static, str>>,
 {
     if !f(value) {
         Err(Error::validation(msg.into()))?
@@ -884,11 +947,12 @@ pub fn with<'v, V, F, M>(value: V, f: F, msg: M) -> Result<'v, ()>
 /// struct Token2<'r>(&'r str);
 /// ```
 pub fn try_with<'v, V, F, T, E>(value: V, f: F) -> Result<'v, ()>
-    where F: FnOnce(V) -> std::result::Result<T, E>,
-          E: std::fmt::Display
+where
+    F: FnOnce(V) -> std::result::Result<T, E>,
+    E: std::fmt::Display,
 {
     match f(value) {
         Ok(_) => Ok(()),
-        Err(e) => Err(Error::validation(e.to_string()).into())
+        Err(e) => Err(Error::validation(e.to_string()).into()),
     }
 }

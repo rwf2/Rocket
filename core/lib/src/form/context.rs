@@ -1,5 +1,5 @@
-use serde::Serialize;
 use indexmap::{IndexMap, IndexSet};
+use serde::Serialize;
 
 use crate::form::prelude::*;
 use crate::http::Status;
@@ -105,7 +105,8 @@ impl<'v> Context<'v> {
     /// }
     /// ```
     pub fn fields(&self) -> impl Iterator<Item = &'v Name> + '_ {
-        self.values.iter()
+        self.values
+            .iter()
             .map(|(name, _)| *name)
             .chain(self.data_fields.iter().copied())
     }
@@ -153,7 +154,8 @@ impl<'v> Context<'v> {
     /// }
     /// ```
     pub fn field_values<N>(&self, name: N) -> impl Iterator<Item = &'v str> + '_
-        where N: AsRef<Name>
+    where
+        N: AsRef<Name>,
     {
         self.values
             .get(name.as_ref())
@@ -178,7 +180,8 @@ impl<'v> Context<'v> {
     /// }
     /// ```
     pub fn errors(&self) -> impl Iterator<Item = &Error<'v>> {
-        self.errors.values()
+        self.errors
+            .values()
             .map(|e| e.iter())
             .flatten()
             .chain(self.form_errors.iter())
@@ -221,9 +224,11 @@ impl<'v> Context<'v> {
     /// }
     /// ```
     pub fn field_errors<'a, N>(&'a self, name: N) -> impl Iterator<Item = &Error<'v>> + '_
-        where N: AsRef<Name> + 'a
+    where
+        N: AsRef<Name> + 'a,
     {
-        self.errors.values()
+        self.errors
+            .values()
             .map(|e| e.iter())
             .flatten()
             .filter(move |e| e.is_for(&name))
@@ -270,9 +275,11 @@ impl<'v> Context<'v> {
     /// }
     /// ```
     pub fn exact_field_errors<'a, N>(&'a self, name: N) -> impl Iterator<Item = &Error<'v>> + '_
-        where N: AsRef<Name> + 'a
+    where
+        N: AsRef<Name> + 'a,
     {
-        self.errors.values()
+        self.errors
+            .values()
             .map(|e| e.iter())
             .flatten()
             .filter(move |e| e.is_for_exactly(&name))
@@ -323,9 +330,11 @@ impl<'v> Context<'v> {
         match error.name {
             Some(ref name) => match self.errors.get_mut(name) {
                 Some(errors) => errors.push(error),
-                None => { self.errors.insert(name.clone(), error.into()); },
-            }
-            None => self.form_errors.push(error)
+                None => {
+                    self.errors.insert(name.clone(), error.into());
+                }
+            },
+            None => self.form_errors.push(error),
         }
     }
 
@@ -370,7 +379,10 @@ impl<'v, T: FromForm<'v>> FromForm<'v> for Contextual<'v, T> {
     }
 
     fn push_value((ref mut val_ctxt, ctxt): &mut Self::Context, field: ValueField<'v>) {
-        ctxt.values.entry(field.name.source()).or_default().push(field.value);
+        ctxt.values
+            .entry(field.name.source())
+            .or_default()
+            .push(field.value);
         T::push_value(val_ctxt, field);
     }
 

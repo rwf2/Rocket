@@ -1,15 +1,15 @@
-use devise::{Spanned, SpanWrapped, Result, FromMeta};
 use devise::ext::{SpanDiagnosticExt, TypeExt};
-use indexmap::{IndexSet, IndexMap};
+use devise::{FromMeta, Result, SpanWrapped, Spanned};
+use indexmap::{IndexMap, IndexSet};
 use proc_macro2::Span;
 
-use crate::proc_macro_ext::Diagnostics;
-use crate::http_codegen::{Method, MediaType};
-use crate::attribute::param::{Parameter, Dynamic, Guard};
-use crate::syn_ext::FnArgExt;
-use crate::name::Name;
+use crate::attribute::param::{Dynamic, Guard, Parameter};
 use crate::http::ext::IntoOwned;
-use crate::http::uri::{Origin, fmt};
+use crate::http::uri::{fmt, Origin};
+use crate::http_codegen::{MediaType, Method};
+use crate::name::Name;
+use crate::proc_macro_ext::Diagnostics;
+use crate::syn_ext::FnArgExt;
 
 /// This structure represents the parsed `route` attribute and associated items.
 #[derive(Debug)]
@@ -35,7 +35,7 @@ type ArgumentMap = IndexMap<Name, (syn::Ident, syn::Type)>;
 #[derive(Debug)]
 pub struct Arguments {
     pub span: Span,
-    pub map: ArgumentMap
+    pub map: ArgumentMap,
 }
 
 /// The parsed `#[route(..)]` attribute.
@@ -70,23 +70,28 @@ impl FromMeta for RouteUri {
     fn from_meta(meta: &devise::MetaItem) -> Result<Self> {
         let string = crate::proc_macro_ext::StringLit::from_meta(meta)?;
 
-        let origin = Origin::parse_route(&string)
-            .map_err(|e| {
-                let span = string.subspan(e.index() + 1..(e.index() + 2));
-                span.error(format!("invalid route URI: {}", e))
-                    .help("expected URI in origin form: \"/path/<param>\"")
-            })?;
+        let origin = Origin::parse_route(&string).map_err(|e| {
+            let span = string.subspan(e.index() + 1..(e.index() + 2));
+            span.error(format!("invalid route URI: {}", e))
+                .help("expected URI in origin form: \"/path/<param>\"")
+        })?;
 
         if !origin.is_normalized() {
             let normalized = origin.clone().into_normalized();
-            let span = origin.path().find("//")
-                .or_else(|| origin.query()
-                    .and_then(|q| q.find("&&"))
-                    .map(|i| origin.path().len() + 1 + i))
+            let span = origin
+                .path()
+                .find("//")
+                .or_else(|| {
+                    origin
+                        .query()
+                        .and_then(|q| q.find("&&"))
+                        .map(|i| origin.path().len() + 1 + i)
+                })
                 .map(|i| string.subspan((1 + i)..(1 + i + 2)))
                 .unwrap_or_else(|| string.span());
 
-            return Err(span.error("route URIs cannot contain empty segments")
+            return Err(span
+                .error("route URIs cannot contain empty segments")
                 .note(format!("expected \"{}\", found \"{}\"", normalized, origin)));
         }
 
@@ -97,7 +102,11 @@ impl FromMeta for RouteUri {
             string.subspan(len_to_q..end_of_q)
         });
 
-        Ok(RouteUri { origin: origin.into_owned(), path_span, query_span })
+        Ok(RouteUri {
+            origin: origin.into_owned(),
+            path_span,
+            query_span,
+        })
     }
 }
 
@@ -116,7 +125,10 @@ impl Route {
             Ok(Guard::from(param, ident.clone(), ty.clone()))
         } else {
             let msg = format!("expected argument named `{}` here", param.name);
-            let diag = param.span().error("unused parameter").span_note(args.span, msg);
+            let diag = param
+                .span()
+                .error("unused parameter")
+                .span_note(args.span, msg);
             Err(diag)
         }
     }
@@ -130,7 +142,8 @@ impl Route {
             if !attr.method.0.supports_payload() {
                 let msg = format!("'{}' does not typically support payloads", attr.method.0);
                 // FIXME(diag: warning)
-                data.full_span.warning("`data` used with non-payload-supporting method")
+                data.full_span
+                    .warning("`data` used with non-payload-supporting method")
                     .span_note(attr.method.span, msg)
                     .emit_as_item_tokens();
             }
@@ -138,7 +151,10 @@ impl Route {
 
         // Check the validity of function arguments.
         let span = handler.sig.paren_token.span.join();
-        let mut arguments = Arguments { map: ArgumentMap::new(), span };
+        let mut arguments = Arguments {
+            map: ArgumentMap::new(),
+            span,
+        };
         for arg in &handler.sig.inputs {
             if let Some((ident, ty)) = arg.typed() {
                 let value = (ident.clone(), ty.with_stripped_lifetimes());
@@ -169,16 +185,20 @@ impl Route {
                 .map(|p| Route::upgrade_param(p?, &arguments))
                 .filter_map(|p| p.map_err(|e| diags.push(e)).ok())
                 .collect::<Vec<_>>(),
-            _ => vec![]
+            _ => vec![],
         };
 
         // Remove the `SpanWrapped` layer and upgrade to a guard.
-        let data_guard = attr.data.clone()
+        let data_guard = attr
+            .data
+            .clone()
             .map(|p| Route::upgrade_dynamic(p.value, &arguments))
             .and_then(|p| p.map_err(|e| diags.push(e)).ok());
 
         // Collect all of the declared dynamic route parameters.
-        let all_dyn_params = path_params.iter().filter_map(|p| p.dynamic())
+        let all_dyn_params = path_params
+            .iter()
+            .filter_map(|p| p.dynamic())
             .chain(query_params.iter().filter_map(|p| p.dynamic()))
             .chain(data_guard.as_ref().map(|g| &g.source).into_iter());
 
@@ -186,15 +206,22 @@ impl Route {
         let mut dyn_params: IndexSet<&Dynamic> = IndexSet::new();
         for p in all_dyn_params {
             if let Some(prev) = dyn_params.replace(p) {
-                diags.push(p.span().error(format!("duplicate parameter: `{}`", p.name))
-                    .span_note(prev.span(), "previous parameter with the same name here"))
+                diags.push(
+                    p.span()
+                        .error(format!("duplicate parameter: `{}`", p.name))
+                        .span_note(prev.span(), "previous parameter with the same name here"),
+                )
             }
         }
 
         // Collect the request guards: all the arguments not already a guard.
-        let request_guards = arguments.map.iter()
+        let request_guards = arguments
+            .map
+            .iter()
             .filter(|(name, _)| {
-                let mut all_other_guards = path_params.iter().filter_map(|p| p.guard())
+                let mut all_other_guards = path_params
+                    .iter()
+                    .filter_map(|p| p.guard())
                     .chain(query_params.iter().filter_map(|p| p.guard()))
                     .chain(data_guard.as_ref().into_iter());
 
@@ -202,15 +229,24 @@ impl Route {
             })
             .enumerate()
             .map(|(index, (name, (ident, ty)))| Guard {
-                source: Dynamic { index, name: name.clone(), trailing: false },
+                source: Dynamic {
+                    index,
+                    name: name.clone(),
+                    trailing: false,
+                },
                 fn_ident: ident.clone(),
                 ty: ty.clone(),
             })
             .collect();
 
         diags.head_err_or(Route {
-            attr, path_params, query_params, data_guard, request_guards,
-            handler, arguments,
+            attr,
+            path_params,
+            query_params,
+            data_guard,
+            request_guards,
+            handler,
+            arguments,
         })
     }
 }

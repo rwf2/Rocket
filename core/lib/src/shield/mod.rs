@@ -97,8 +97,8 @@
 //!
 //! [OWASP]: https://www.owasp.org/index.php/OWASP_Secure_Headers_Project#tab=Headers
 
-mod shield;
 mod policy;
+mod shield;
 
-pub use self::shield::Shield;
 pub use self::policy::*;
+pub use self::shield::Shield;

@@ -1,6 +1,6 @@
 use std::io;
-use std::task::{Context, Poll};
 use std::pin::Pin;
+use std::task::{Context, Poll};
 
 use tokio::io::{AsyncRead, AsyncWrite, ReadBuf};
 
@@ -28,7 +28,7 @@ pub struct IoStream {
 
 /// Just in case we want to add stream kinds in the future.
 enum IoStreamKind {
-    Upgraded(Upgraded)
+    Upgraded(Upgraded),
 }
 
 /// An upgraded connection I/O handler.
@@ -74,15 +74,17 @@ pub trait IoHandler: Send {
 #[doc(hidden)]
 impl From<Upgraded> for IoStream {
     fn from(io: Upgraded) -> Self {
-        IoStream { kind: IoStreamKind::Upgraded(io) }
+        IoStream {
+            kind: IoStreamKind::Upgraded(io),
+        }
     }
 }
 
 /// A "trait alias" of sorts so we can use `AsyncRead + AsyncWrite + Unpin` in `dyn`.
-pub trait AsyncReadWrite: AsyncRead + AsyncWrite + Unpin { }
+pub trait AsyncReadWrite: AsyncRead + AsyncWrite + Unpin {}
 
 /// Implemented for all `AsyncRead + AsyncWrite + Unpin`, of course.
-impl<T: AsyncRead + AsyncWrite + Unpin> AsyncReadWrite for T {  }
+impl<T: AsyncRead + AsyncWrite + Unpin> AsyncReadWrite for T {}
 
 impl IoStream {
     /// Returns the internal I/O stream.

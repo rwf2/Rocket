@@ -1,8 +1,8 @@
 #![allow(dead_code)]
 
 use std::borrow::Cow;
-use std::ops::{Index, Range};
 use std::fmt::{self, Debug};
+use std::ops::{Index, Range};
 
 use pear::input::Length;
 
@@ -37,7 +37,7 @@ pub enum Indexed<'a, T: ?Sized + ToOwned> {
     /// The start and end index of a string.
     Indexed(usize, usize),
     /// A concrete string.
-    Concrete(Cow<'a, T>)
+    Concrete(Cow<'a, T>),
 }
 
 impl<A, T: ?Sized + ToOwned> From<Extent<A>> for Indexed<'_, T> {
@@ -59,7 +59,7 @@ impl<'a, T: ?Sized + ToOwned + 'a> Indexed<'a, T> {
     pub fn indices(self) -> (usize, usize) {
         match self {
             Indexed::Indexed(a, b) => (a, b),
-            _ => panic!("cannot convert indexed T to U unless indexed")
+            _ => panic!("cannot convert indexed T to U unless indexed"),
         }
     }
 
@@ -68,7 +68,7 @@ impl<'a, T: ?Sized + ToOwned + 'a> Indexed<'a, T> {
     pub fn coerce<U: ?Sized + ToOwned>(self) -> Indexed<'a, U> {
         match self {
             Indexed::Indexed(a, b) => Indexed::Indexed(a, b),
-            _ => panic!("cannot convert indexed T to U unless indexed")
+            _ => panic!("cannot convert indexed T to U unless indexed"),
         }
     }
 
@@ -77,7 +77,7 @@ impl<'a, T: ?Sized + ToOwned + 'a> Indexed<'a, T> {
     pub fn coerce_lifetime<'b>(self) -> Indexed<'b, T> {
         match self {
             Indexed::Indexed(a, b) => Indexed::Indexed(a, b),
-            _ => panic!("cannot coerce lifetime unless indexed")
+            _ => panic!("cannot coerce lifetime unless indexed"),
         }
     }
 }
@@ -88,7 +88,7 @@ impl<T: 'static + ?Sized + ToOwned> IntoOwned for Indexed<'_, T> {
     fn into_owned(self) -> Indexed<'static, T> {
         match self {
             Indexed::Indexed(a, b) => Indexed::Indexed(a, b),
-            Indexed::Concrete(cow) => Indexed::Concrete(IntoOwned::into_owned(cow))
+            Indexed::Concrete(cow) => Indexed::Concrete(IntoOwned::into_owned(cow)),
         }
     }
 }
@@ -103,15 +103,16 @@ impl<'a, T: ?Sized + ToOwned + 'a> Add for Indexed<'a, T> {
         match self {
             Indexed::Indexed(a, b) => match other {
                 Indexed::Indexed(c, d) if b == c && a < d => Indexed::Indexed(a, d),
-                _ => panic!("+ requires indexed")
-            }
-            _ => panic!("+ requires indexed")
+                _ => panic!("+ requires indexed"),
+            },
+            _ => panic!("+ requires indexed"),
         }
     }
 }
 
 impl<'a, T: ?Sized + ToOwned + 'a> Indexed<'a, T>
-    where T: Length + AsPtr + Index<Range<usize>, Output = T>
+where
+    T: Length + AsPtr + Index<Range<usize>, Output = T>,
 {
     /// Returns `None` if `needle` is not a substring of `haystack`. Otherwise
     /// returns an `Indexed` with the indices of `needle` in `haystack`.
@@ -221,13 +222,15 @@ impl<'a, T: ToOwned + ?Sized + 'a> Clone for Indexed<'a, T> {
     fn clone(&self) -> Self {
         match *self {
             Indexed::Indexed(a, b) => Indexed::Indexed(a, b),
-            Indexed::Concrete(ref cow) => Indexed::Concrete(cow.clone())
+            Indexed::Concrete(ref cow) => Indexed::Concrete(cow.clone()),
         }
     }
 }
 
 impl<'a, T: ?Sized + 'a> Debug for Indexed<'a, T>
-    where T: ToOwned + Debug, T::Owned: Debug
+where
+    T: ToOwned + Debug,
+    T::Owned: Debug,
 {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match *self {
@@ -242,7 +245,7 @@ impl<'a, T: ?Sized + Length + ToOwned + 'a> Length for Indexed<'a, T> {
     fn len(&self) -> usize {
         match *self {
             Indexed::Indexed(a, b) => (b - a) as usize,
-            Indexed::Concrete(ref cow) => cow.len()
+            Indexed::Concrete(ref cow) => cow.len(),
         }
     }
 }

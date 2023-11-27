@@ -1,19 +1,19 @@
 use std::ops::Deref;
 
+use devise::{ext::TypeExt, Spanned};
 use indexmap::IndexMap;
-use devise::{Spanned, ext::TypeExt};
+use proc_macro2::{Span, TokenStream, TokenTree};
 use quote::{ToTokens, TokenStreamExt};
-use syn::{Expr, Ident, LitStr, Path, Token, Type};
+use rocket_http::uri::{Error, Reference};
 use syn::parse::{self, Parse, ParseStream, Parser};
 use syn::punctuated::Punctuated;
-use proc_macro2::{TokenStream, TokenTree, Span};
-use rocket_http::uri::{Error, Reference};
+use syn::{Expr, Ident, LitStr, Path, Token, Type};
 
-use crate::http::uri::{Uri, Origin, Absolute, fmt};
+use crate::attribute::param::{Dynamic, Parameter};
 use crate::http::ext::IntoOwned;
-use crate::proc_macro_ext::StringLit;
-use crate::attribute::param::{Parameter, Dynamic};
+use crate::http::uri::{fmt, Absolute, Origin, Uri};
 use crate::name::Name;
+use crate::proc_macro_ext::StringLit;
 
 // TODO(diag): Use 'Diagnostic' in place of syn::Error.
 
@@ -91,7 +91,7 @@ pub enum Validation<'a> {
     // (Missing, Extra, Duplicate)
     Named(Vec<&'a Name>, Vec<&'a Ident>, Vec<&'a Ident>),
     // Everything is okay; here are the expressions in the route decl order.
-    Ok(Vec<&'a ArgExpr>)
+    Ok(Vec<&'a ArgExpr>),
 }
 
 // This is invoked by Rocket itself. The `uri!` macro expands to a call to a
@@ -178,7 +178,7 @@ impl Parse for Args {
         // Create the `Args` enum, which properly record one-kind-of-argument-ness.
         match first_is_named {
             Some(true) => Ok(Args::Named(args)),
-            _ => Ok(Args::Unnamed(args))
+            _ => Ok(Args::Unnamed(args)),
         }
     }
 }
@@ -238,15 +238,15 @@ impl UriMacro {
         Ok(UriMacro::Routed(RoutedUri {
             prefix: UriExpr::parse_prefix.parse2(prefix)?,
             route: syn::parse2(mid)?,
-            suffix: UriExpr::parse_suffix.parse2(suffix)?
+            suffix: UriExpr::parse_suffix.parse2(suffix)?,
         }))
     }
 }
 
 impl Parse for UriMacro {
     fn parse(input: ParseStream<'_>) -> parse::Result<Self> {
+        use parse::{Result, StepCursor};
         use syn::buffer::Cursor;
-        use parse::{StepCursor, Result};
 
         fn stream<'c>(cursor: StepCursor<'c, '_>) -> Result<(Option<TokenStream>, Cursor<'c>)> {
             let mut stream = TokenStream::new();
@@ -255,11 +255,12 @@ impl Parse for UriMacro {
                 cursor = next;
                 match tt {
                     TokenTree::Punct(p) if p.as_char() == ',' => break,
-                    _ =>  stream.append(tt)
+                    _ => stream.append(tt),
                 }
             }
 
-            stream.is_empty()
+            stream
+                .is_empty()
                 .then(|| Ok((None, cursor)))
                 .unwrap_or(Ok((Some(stream), cursor)))
         }
@@ -272,12 +273,17 @@ impl Parse for UriMacro {
         let (arg_count, mut iter) = (args.len(), args.into_iter());
         let mut next = || iter.next().unwrap();
         match arg_count {
-            0 => err(Span::call_site(), "expected at least 1 argument, found none"),
+            0 => err(
+                Span::call_site(),
+                "expected at least 1 argument, found none",
+            ),
             1 => UriMacro::unary.parse2(next()),
             2 => UriMacro::binary(next(), next()),
             3 => UriMacro::ternary(next(), next(), next()),
-            n => err(iter.nth(3).unwrap().span(),
-                format!("expected 1, 2, or 3 arguments, found {}", n))
+            n => err(
+                iter.nth(3).unwrap().span(),
+                format!("expected 1, 2, or 3 arguments, found {}", n),
+            ),
         }
     }
 }
@@ -286,7 +292,7 @@ impl Parse for RoutedUri {
     fn parse(input: ParseStream<'_>) -> syn::Result<Self> {
         match UriMacro::parse(input)? {
             UriMacro::Routed(route) => Ok(route),
-            UriMacro::Literal(uri) => err(uri.span(), "expected route URI, found literal")
+            UriMacro::Literal(uri) => err(uri.span(), "expected route URI, found literal"),
         }
     }
 }
@@ -326,21 +332,30 @@ impl Parse for InternalUriParams {
             .collect::<Vec<_>>();
 
         let query = route_uri.query();
-        let query_params = query.map(|query| {
-            let i = route_uri.path().len() + 2;
-            let span = route_uri_str.subspan(i..(i + query.len()));
-            Parameter::parse_many::<fmt::Query>(query.as_str(), span)
-                .map(|p| p.expect("internal error: invalid query parameter"))
-                .collect::<Vec<_>>()
-        }).unwrap_or_default();
+        let query_params = query
+            .map(|query| {
+                let i = route_uri.path().len() + 2;
+                let span = route_uri_str.subspan(i..(i + query.len()));
+                Parameter::parse_many::<fmt::Query>(query.as_str(), span)
+                    .map(|p| p.expect("internal error: invalid query parameter"))
+                    .collect::<Vec<_>>()
+            })
+            .unwrap_or_default();
 
-        Ok(InternalUriParams { route_uri, path_params, query_params, fn_args, uri_mac })
+        Ok(InternalUriParams {
+            route_uri,
+            path_params,
+            query_params,
+            fn_args,
+            uri_mac,
+        })
     }
 }
 
 impl InternalUriParams {
     pub fn fn_args_str(&self) -> String {
-        self.fn_args.iter()
+        self.fn_args
+            .iter()
             .map(|FnArg { ident, ty }| {
                 let ty = ty.with_stripped_lifetimes();
                 let ty_str = quote!(#ty).to_string();
@@ -352,7 +367,8 @@ impl InternalUriParams {
     }
 
     pub fn dynamic_path_params(&self) -> impl Iterator<Item = &Dynamic> + Clone {
-        self.path_params.iter()
+        self.path_params
+            .iter()
             .filter_map(|p| p.dynamic().or_else(|| p.ignored()))
     }
 
@@ -362,23 +378,26 @@ impl InternalUriParams {
 
     pub fn validate(&self) -> Validation<'_> {
         let args = &self.uri_mac.route.args;
-        let all_params = self.dynamic_path_params().chain(self.dynamic_query_params());
+        let all_params = self
+            .dynamic_path_params()
+            .chain(self.dynamic_query_params());
         match args {
             Args::Unnamed(args) => {
                 let (expected, actual) = (all_params.count(), args.len());
                 let unnamed_args = args.iter().map(|arg| arg.unnamed());
                 match expected == actual {
                     true => Validation::Ok(unnamed_args.collect()),
-                    false => Validation::Unnamed(expected, actual)
+                    false => Validation::Unnamed(expected, actual),
                 }
-            },
+            }
             Args::Named(args) => {
                 let ignored = all_params.clone().filter(|p| p.is_wild());
                 if ignored.clone().count() > 0 {
                     return Validation::NamedIgnored(ignored.collect());
                 }
 
-                let mut params = all_params.map(|p| (&p.name, None))
+                let mut params = all_params
+                    .map(|p| (&p.name, None))
                     .collect::<IndexMap<&Name, Option<&ArgExpr>>>();
 
                 let (mut extra, mut dup) = (vec![], vec![]);
@@ -395,7 +414,7 @@ impl InternalUriParams {
                 for (name, expr) in params {
                     match expr {
                         Some(expr) => exprs.push(expr),
-                        None => missing.push(name)
+                        None => missing.push(name),
                     }
                 }
 
@@ -414,7 +433,7 @@ impl RoutedUri {
     pub fn args_span(&self) -> Span {
         match self.route.args.num() {
             0 => self.route.path.span(),
-            _ => self.route.args.span()
+            _ => self.route.args.span(),
         }
     }
 }
@@ -423,7 +442,7 @@ impl Arg {
     fn is_named(&self) -> bool {
         match *self {
             Arg::Named(..) => true,
-            _ => false
+            _ => false,
         }
     }
 
@@ -454,7 +473,7 @@ impl ArgExpr {
     pub fn as_expr(&self) -> Option<&Expr> {
         match self {
             ArgExpr::Expr(expr) => Some(expr),
-            _ => None
+            _ => None,
         }
     }
 
@@ -508,7 +527,10 @@ impl UriExpr {
         let lit = input.parse::<StringLit>()?;
         let uri = Reference::parse(&lit).or_else(|e| uri_err(&lit, e))?;
         if uri.scheme().is_some() || uri.authority().is_some() || !uri.path().is_empty() {
-            return err(lit.span(), "URI suffix must contain only query and/or fragment");
+            return err(
+                lit.span(),
+                "URI suffix must contain only query and/or fragment",
+            );
         }
 
         // This is a bit of finagling to get the types to match up how we'd
@@ -525,7 +547,7 @@ impl UriExpr {
                 let query = uri.query().map(|q| q.as_str());
                 Uri::Absolute(Absolute::const_new("", None, "", query))
             }
-            Some(_) => Uri::Reference(uri)
+            Some(_) => Uri::Reference(uri),
         };
 
         Ok(Some(UriExpr::Uri(UriLit(uri.into_owned(), lit.span()))))
@@ -568,7 +590,7 @@ impl ToTokens for ArgExpr {
     fn to_tokens(&self, tokens: &mut TokenStream) {
         match self {
             ArgExpr::Expr(e) => e.to_tokens(tokens),
-            ArgExpr::Ignored(e) => e.to_tokens(tokens)
+            ArgExpr::Ignored(e) => e.to_tokens(tokens),
         }
     }
 }
@@ -589,7 +611,7 @@ impl ToTokens for Arg {
 impl ToTokens for Args {
     fn to_tokens(&self, tokens: &mut TokenStream) {
         match self {
-            Args::Unnamed(e) | Args::Named(e) => e.to_tokens(tokens)
+            Args::Unnamed(e) | Args::Named(e) => e.to_tokens(tokens),
         }
     }
 }

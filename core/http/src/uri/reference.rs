@@ -1,10 +1,10 @@
 use std::borrow::Cow;
 
-use crate::RawStr;
 use crate::ext::IntoOwned;
-use crate::uri::{Authority, Data, Origin, Absolute, Asterisk};
-use crate::uri::{Path, Query, Error, as_utf8_unchecked, fmt};
 use crate::parse::{Extent, IndexedStr};
+use crate::uri::{as_utf8_unchecked, fmt, Error, Path, Query};
+use crate::uri::{Absolute, Asterisk, Authority, Data, Origin};
+use crate::RawStr;
 
 /// A URI-reference with optional scheme, authority, relative path, query, and
 /// fragment parts.
@@ -124,7 +124,7 @@ impl<'a> Reference<'a> {
             source: None,
             scheme: match scheme {
                 Some(scheme) => Some(IndexedStr::Concrete(Cow::Borrowed(scheme))),
-                None => None
+                None => None,
             },
             authority,
             path: Data {
@@ -223,7 +223,9 @@ impl<'a> Reference<'a> {
     /// ```
     #[inline]
     pub fn scheme(&self) -> Option<&str> {
-        self.scheme.as_ref().map(|s| s.from_cow_source(&self.source))
+        self.scheme
+            .as_ref()
+            .map(|s| s.from_cow_source(&self.source))
     }
 
     /// Returns the authority part.
@@ -255,7 +257,10 @@ impl<'a> Reference<'a> {
     /// ```
     #[inline(always)]
     pub fn path(&self) -> Path<'_> {
-        Path { source: &self.source, data: &self.path }
+        Path {
+            source: &self.source,
+            data: &self.path,
+        }
     }
 
     /// Returns the query part. May be empty.
@@ -278,7 +283,10 @@ impl<'a> Reference<'a> {
     /// ```
     #[inline(always)]
     pub fn query(&self) -> Option<Query<'_>> {
-        self.query.as_ref().map(|data| Query { source: &self.source, data })
+        self.query.as_ref().map(|data| Query {
+            source: &self.source,
+            data,
+        })
     }
 
     /// Returns the fragment part, if any.
@@ -296,7 +304,8 @@ impl<'a> Reference<'a> {
     /// ```
     #[inline(always)]
     pub fn fragment(&self) -> Option<&RawStr> {
-        self.fragment.as_ref()
+        self.fragment
+            .as_ref()
             .map(|frag| frag.from_cow_source(&self.source).into())
     }
 
@@ -405,7 +414,8 @@ impl<'a> Reference<'a> {
 
     #[allow(unused)]
     pub(crate) fn set_path<P>(&mut self, path: P)
-        where P: Into<Cow<'a, str>>
+    where
+        P: Into<Cow<'a, str>>,
     {
         self.path = Data::new(path.into());
     }
@@ -463,7 +473,7 @@ impl<'a> From<Authority<'a>> for Reference<'a> {
         Reference {
             source: match authority.source {
                 Some(Cow::Borrowed(b)) => Some(Cow::Borrowed(b)),
-                _ => None
+                _ => None,
             },
             authority: Some(authority),
             scheme: None,

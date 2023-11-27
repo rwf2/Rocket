@@ -1,10 +1,11 @@
-mod parser;
 mod error;
+mod parser;
 pub(crate) mod tables;
 
-#[cfg(test)] mod tests;
+#[cfg(test)]
+mod tests;
 
-use crate::uri::{Uri, Origin, Absolute, Authority, Reference, Asterisk};
+use crate::uri::{Absolute, Asterisk, Authority, Origin, Reference, Uri};
 
 use self::parser::*;
 

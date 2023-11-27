@@ -1,13 +1,17 @@
 use std::borrow::Cow;
 
+use futures::future::ready;
+use futures::stream::{self, Stream, StreamExt};
 use tokio::io::AsyncRead;
 use tokio::time::Duration;
-use futures::stream::{self, Stream, StreamExt};
-use futures::future::ready;
 
-use crate::request::Request;
-use crate::response::{self, Response, Responder, stream::{ReaderStream, RawLinedEvent}};
 use crate::http::ContentType;
+use crate::request::Request;
+use crate::response::{
+    self,
+    stream::{RawLinedEvent, ReaderStream},
+    Responder, Response,
+};
 
 /// A Server-Sent `Event` (SSE) in a Server-Sent [`struct@EventStream`].
 ///
@@ -123,7 +127,13 @@ pub struct Event {
 impl Event {
     // We hide this since we never want to construct an `Event` with nothing.
     fn new() -> Self {
-        Event { comment: None, retry: None, id: None, event: None, data: None, }
+        Event {
+            comment: None,
+            retry: None,
+            id: None,
+            event: None,
+            data: None,
+        }
     }
 
     /// Creates a new `Event` with an empty data field.
@@ -187,7 +197,10 @@ impl Event {
     /// let event = Event::data("Hello, SSE!");
     /// ```
     pub fn data<T: Into<Cow<'static, str>>>(data: T) -> Self {
-        Self { data: Some(data.into()), ..Event::new() }
+        Self {
+            data: Some(data.into()),
+            ..Event::new()
+        }
     }
 
     /// Creates a new comment `Event`.
@@ -205,7 +218,10 @@ impl Event {
     /// let event = Event::comment("bet you'll never see me!");
     /// ```
     pub fn comment<T: Into<Cow<'static, str>>>(data: T) -> Self {
-        Self { comment: Some(data.into()), ..Event::new() }
+        Self {
+            comment: Some(data.into()),
+            ..Event::new()
+        }
     }
 
     /// Creates a new retry `Event`.
@@ -219,7 +235,10 @@ impl Event {
     /// let event = Event::retry(Duration::from_millis(250));
     /// ```
     pub fn retry(period: Duration) -> Self {
-        Self { retry: Some(period), ..Event::new() }
+        Self {
+            retry: Some(period),
+            ..Event::new()
+        }
     }
 
     /// Sets the value of the 'event' (event type) field.
@@ -329,7 +348,8 @@ impl Event {
     fn into_stream(self) -> impl Stream<Item = RawLinedEvent> {
         let events = [
             self.comment.map(|v| RawLinedEvent::many("", v)),
-            self.retry.map(|r| RawLinedEvent::one("retry", format!("{}", r.as_millis()))),
+            self.retry
+                .map(|r| RawLinedEvent::one("retry", format!("{}", r.as_millis()))),
             self.id.map(|v| RawLinedEvent::one("id", v)),
             self.event.map(|v| RawLinedEvent::one("event", v)),
             self.data.map(|v| RawLinedEvent::many("data", v)),
@@ -528,14 +548,14 @@ impl<S: Stream<Item = Event>> EventStream<S> {
     }
 
     fn into_stream(self) -> impl Stream<Item = RawLinedEvent> {
-        use futures::future::Either;
         use crate::ext::StreamExt;
+        use futures::future::Either;
 
         let heartbeat_stream = self.heartbeat_stream();
         let raw_events = self.stream.map(|e| e.into_stream()).flatten();
         match heartbeat_stream {
             Some(heartbeat) => Either::Left(raw_events.join(heartbeat)),
-            None => Either::Right(raw_events)
+            None => Either::Right(raw_events),
         }
     }
 
@@ -560,7 +580,10 @@ impl<S: Stream<Item = Event>> From<S> for EventStream<S> {
     /// let stream = EventStream::from(raw);
     /// ```
     fn from(stream: S) -> Self {
-        EventStream { stream, heartbeat: Some(Duration::from_secs(30)), }
+        EventStream {
+            stream,
+            heartbeat: Some(Duration::from_secs(30)),
+        }
     }
 }
 
@@ -593,17 +616,20 @@ crate::export! {
 
 #[cfg(test)]
 mod sse_tests {
+    use crate::response::stream::{stream, Event, EventStream, ReaderStream};
+    use futures::stream::Stream;
     use tokio::io::AsyncReadExt;
     use tokio::time::{self, Duration};
-    use futures::stream::Stream;
-    use crate::response::stream::{stream, Event, EventStream, ReaderStream};
 
     impl Event {
         fn into_string(self) -> String {
             crate::async_test(async move {
                 let mut string = String::new();
                 let mut reader = ReaderStream::from(self.into_stream());
-                reader.read_to_string(&mut string).await.expect("event -> string");
+                reader
+                    .read_to_string(&mut string)
+                    .await
+                    .expect("event -> string");
                 string
             })
         }
@@ -615,7 +641,10 @@ mod sse_tests {
                 let mut string = String::new();
                 let reader = self.into_reader();
                 tokio::pin!(reader);
-                reader.read_to_string(&mut string).await.expect("event stream -> string");
+                reader
+                    .read_to_string(&mut string)
+                    .await
+                    .expect("event stream -> string");
                 string
             })
         }
@@ -633,12 +662,16 @@ mod sse_tests {
         assert_eq!(event.into_string(), "data:cats make me happy!\n\n");
 
         let event = Event::data("in the\njungle\nthe mighty\njungle");
-        assert_eq!(event.into_string(),
-            "data:in the\ndata:jungle\ndata:the mighty\ndata:jungle\n\n");
+        assert_eq!(
+            event.into_string(),
+            "data:in the\ndata:jungle\ndata:the mighty\ndata:jungle\n\n"
+        );
 
         let event = Event::data("in the\njungle\r\nthe mighty\rjungle");
-        assert_eq!(event.into_string(),
-            "data:in the\ndata:jungle\ndata:the mighty\ndata:jungle\n\n");
+        assert_eq!(
+            event.into_string(),
+            "data:in the\ndata:jungle\ndata:the mighty\ndata:jungle\n\n"
+        );
 
         let event = Event::data("\nb\n");
         assert_eq!(event.into_string(), "data:\ndata:b\ndata:\n\n");
@@ -676,11 +709,18 @@ mod sse_tests {
         let event = Event::data("foo").id("moo");
         assert_eq!(event.into_string(), "id:moo\ndata:foo\n\n");
 
-        let event = Event::data("foo").id("moo").with_retry(Duration::from_secs(45));
+        let event = Event::data("foo")
+            .id("moo")
+            .with_retry(Duration::from_secs(45));
         assert_eq!(event.into_string(), "retry:45000\nid:moo\ndata:foo\n\n");
 
-        let event = Event::data("foo\nbar").id("moo").with_retry(Duration::from_secs(45));
-        assert_eq!(event.into_string(), "retry:45000\nid:moo\ndata:foo\ndata:bar\n\n");
+        let event = Event::data("foo\nbar")
+            .id("moo")
+            .with_retry(Duration::from_secs(45));
+        assert_eq!(
+            event.into_string(),
+            "retry:45000\nid:moo\ndata:foo\ndata:bar\n\n"
+        );
 
         let event = Event::retry(Duration::from_secs(45));
         assert_eq!(event.into_string(), "retry:45000\n\n");
@@ -696,7 +736,10 @@ mod sse_tests {
             .event("milk")
             .with_retry(Duration::from_secs(3));
 
-        assert_eq!(event.into_string(), "retry:3000\nid:moo\nevent:milk\ndata:foo\ndata:bar\n\n");
+        assert_eq!(
+            event.into_string(),
+            "retry:3000\nid:moo\nevent:milk\ndata:foo\ndata:bar\n\n"
+        );
 
         let event = Event::data("foo")
             .id("moo")
@@ -704,7 +747,10 @@ mod sse_tests {
             .with_comment("??")
             .with_retry(Duration::from_secs(3));
 
-        assert_eq!(event.into_string(), ":??\nretry:3000\nid:moo\nevent:milk\ndata:foo\n\n");
+        assert_eq!(
+            event.into_string(),
+            ":??\nretry:3000\nid:moo\nevent:milk\ndata:foo\n\n"
+        );
 
         let event = Event::data("foo")
             .id("moo")
@@ -712,7 +758,10 @@ mod sse_tests {
             .with_comment("?\n?")
             .with_retry(Duration::from_secs(3));
 
-        assert_eq!(event.into_string(), ":?\n:?\nretry:3000\nid:moo\nevent:milk\ndata:foo\n\n");
+        assert_eq!(
+            event.into_string(),
+            ":?\n:?\nretry:3000\nid:moo\nevent:milk\ndata:foo\n\n"
+        );
 
         let event = Event::data("foo\r\nbar\nbaz")
             .id("moo")
@@ -720,20 +769,31 @@ mod sse_tests {
             .with_comment("?\n?")
             .with_retry(Duration::from_secs(3));
 
-        assert_eq!(event.into_string(),
-            ":?\n:?\nretry:3000\nid:moo\nevent:milk\ndata:foo\ndata:bar\ndata:baz\n\n");
+        assert_eq!(
+            event.into_string(),
+            ":?\n:?\nretry:3000\nid:moo\nevent:milk\ndata:foo\ndata:bar\ndata:baz\n\n"
+        );
     }
 
     #[test]
     fn test_bad_chars() {
         let event = Event::data("foo").id("dead\nbeef").event("m\noo");
-        assert_eq!(event.into_string(), "id:dead beef\nevent:m oo\ndata:foo\n\n");
+        assert_eq!(
+            event.into_string(),
+            "id:dead beef\nevent:m oo\ndata:foo\n\n"
+        );
 
         let event = Event::data("f\no").id("d\r\nbe\rf").event("m\n\r");
-        assert_eq!(event.into_string(), "id:d  be f\nevent:m  \ndata:f\ndata:o\n\n");
+        assert_eq!(
+            event.into_string(),
+            "id:d  be f\nevent:m  \ndata:f\ndata:o\n\n"
+        );
 
         let event = Event::data("f\no").id("\r\n\n\r\n\r\r").event("\n\rb");
-        assert_eq!(event.into_string(), "id:       \nevent:  b\ndata:f\ndata:o\n\n");
+        assert_eq!(
+            event.into_string(),
+            "id:       \nevent:  b\ndata:f\ndata:o\n\n"
+        );
     }
 
     #[test]
@@ -744,37 +804,45 @@ mod sse_tests {
         assert_eq!(stream.into_string().replace(":\n\n", ""), "data:foo\n\n");
 
         let stream = EventStream::from(iter(vec![Event::data("a"), Event::data("b")]));
-        assert_eq!(stream.into_string().replace(":\n\n", ""), "data:a\n\ndata:b\n\n");
+        assert_eq!(
+            stream.into_string().replace(":\n\n", ""),
+            "data:a\n\ndata:b\n\n"
+        );
 
         let stream = EventStream::from(iter(vec![
-                Event::data("a\nb"),
-                Event::data("b"),
-                Event::data("c\n\nd"),
-                Event::data("e"),
+            Event::data("a\nb"),
+            Event::data("b"),
+            Event::data("c\n\nd"),
+            Event::data("e"),
         ]));
 
-        assert_eq!(stream.into_string().replace(":\n\n", ""),
-            "data:a\ndata:b\n\ndata:b\n\ndata:c\ndata:\ndata:d\n\ndata:e\n\n");
+        assert_eq!(
+            stream.into_string().replace(":\n\n", ""),
+            "data:a\ndata:b\n\ndata:b\n\ndata:c\ndata:\ndata:d\n\ndata:e\n\n"
+        );
     }
 
     #[test]
     fn test_heartbeat() {
         use futures::future::ready;
-        use futures::stream::{once, iter, StreamExt};
+        use futures::stream::{iter, once, StreamExt};
 
         const HEARTBEAT: &str = ":\n";
 
         // Set a heartbeat interval of 250ms. Send nothing for 600ms. We should
         // get 2 or 3 heartbeats, the latter if one is sent eagerly. Maybe 4.
-        let raw = stream!(time::sleep(Duration::from_millis(600)).await;)
-            .map(|_| unreachable!());
+        let raw = stream!(time::sleep(Duration::from_millis(600)).await;).map(|_| unreachable!());
 
         let string = EventStream::from(raw)
             .heartbeat(Duration::from_millis(250))
             .into_string();
 
         let heartbeats = string.matches(HEARTBEAT).count();
-        assert!(heartbeats >= 2 && heartbeats <= 4, "got {} beat(s)", heartbeats);
+        assert!(
+            heartbeats >= 2 && heartbeats <= 4,
+            "got {} beat(s)",
+            heartbeats
+        );
 
         let stream = EventStream! {
             time::sleep(Duration::from_millis(250)).await;
@@ -786,7 +854,11 @@ mod sse_tests {
         // We expect: foo\n\n [heartbeat] bar\n\n [maybe heartbeat].
         let string = stream.heartbeat(Duration::from_millis(350)).into_string();
         let heartbeats = string.matches(HEARTBEAT).count();
-        assert!(heartbeats >= 1 && heartbeats <= 3, "got {} beat(s)", heartbeats);
+        assert!(
+            heartbeats >= 1 && heartbeats <= 3,
+            "got {} beat(s)",
+            heartbeats
+        );
         assert!(string.contains("data:foo\n\n"), "string = {:?}", string);
         assert!(string.contains("data:bar\n\n"), "string = {:?}", string);
 

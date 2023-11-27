@@ -2,11 +2,11 @@ use std::pin::Pin;
 use std::task::{Context, Poll};
 
 use rocket::data::IoStream;
-use rocket::futures::{StreamExt, SinkExt, Sink};
-use rocket::futures::stream::{Stream, FusedStream};
+use rocket::futures::stream::{FusedStream, Stream};
+use rocket::futures::{Sink, SinkExt, StreamExt};
 
-use crate::frame::{Message, CloseFrame};
-use crate::result::{Result, Error};
+use crate::frame::{CloseFrame, Message};
+use crate::result::{Error, Result};
 
 /// A readable and writeable WebSocket [`Message`] `async` stream.
 ///
@@ -38,8 +38,8 @@ pub struct DuplexStream(tokio_tungstenite::WebSocketStream<IoStream>);
 
 impl DuplexStream {
     pub(crate) async fn new(stream: IoStream, config: crate::Config) -> Self {
-        use tokio_tungstenite::WebSocketStream;
         use crate::tungstenite::protocol::Role;
+        use tokio_tungstenite::WebSocketStream;
 
         let inner = WebSocketStream::from_raw_socket(stream, Role::Server, Some(config));
         DuplexStream(inner.await)

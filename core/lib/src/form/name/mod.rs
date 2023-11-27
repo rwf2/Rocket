@@ -1,11 +1,11 @@
 //! Types for field names, name keys, and key indices.
 
+mod buf;
+mod key;
 mod name;
 mod view;
-mod key;
-mod buf;
 
+pub use buf::NameBuf;
+pub use key::Key;
 pub use name::Name;
 pub use view::NameView;
-pub use key::Key;
-pub use buf::NameBuf;

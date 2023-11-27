@@ -1,7 +1,7 @@
 use std::fmt;
 
-use serde::{Deserialize, Serialize};
 use serde::de::{self, Deserializer};
+use serde::{Deserialize, Serialize};
 
 use crate::http::Header;
 
@@ -78,17 +78,15 @@ use crate::http::Header;
 pub struct Ident(Option<String>);
 
 macro_rules! ident {
-    ($value:expr) => {
-        {
-            #[allow(unknown_lints, eq_op)]
-            const _: [(); 0 - !{
-                const ASSERT: bool = $crate::http::Header::is_valid_value($value, false);
-                ASSERT
-            } as usize] = [];
+    ($value:expr) => {{
+        #[allow(unknown_lints, eq_op)]
+        const _: [(); 0 - !{
+            const ASSERT: bool = $crate::http::Header::is_valid_value($value, false);
+            ASSERT
+        } as usize] = [];
 
-            $crate::config::Ident::try_new($value).unwrap()
-        }
-    }
+        $crate::config::Ident::try_new($value).unwrap()
+    }};
 }
 
 impl Ident {
@@ -194,7 +192,8 @@ impl<'de> Deserialize<'de> for Ident {
             }
 
             fn visit_some<D>(self, de: D) -> Result<Self::Value, D::Error>
-                where D: Deserializer<'de>
+            where
+                D: Deserializer<'de>,
             {
                 de.deserialize_string(self)
             }
@@ -208,8 +207,7 @@ impl<'de> Deserialize<'de> for Ident {
             }
 
             fn visit_string<E: de::Error>(self, v: String) -> Result<Self::Value, E> {
-                Ident::try_new(v)
-                    .map_err(|s| E::invalid_value(de::Unexpected::Str(&s), &self))
+                Ident::try_new(v).map_err(|s| E::invalid_value(de::Unexpected::Str(&s), &self))
             }
 
             fn visit_str<E: de::Error>(self, v: &str) -> Result<Self::Value, E> {

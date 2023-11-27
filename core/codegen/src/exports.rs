@@ -30,9 +30,10 @@ impl ToTokens for StaticPath {
     fn to_tokens(&self, tokens: &mut TokenStream) {
         let path: syn::Path = syn::parse_str(self.1).unwrap();
         if let Some(span) = self.0 {
-            let new_tokens = path.into_token_stream()
-                .into_iter()
-                .map(|mut t| { t.set_span(span); t });
+            let new_tokens = path.into_token_stream().into_iter().map(|mut t| {
+                t.set_span(span);
+                t
+            });
 
             tokens.append_all(new_tokens);
         } else {

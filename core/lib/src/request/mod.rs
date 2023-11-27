@@ -1,15 +1,15 @@
 //! Types and traits for request parsing and handling.
 
-mod request;
 mod from_param;
 mod from_request;
+mod request;
 
 #[cfg(test)]
 mod tests;
 
-pub use self::request::Request;
-pub use self::from_request::{FromRequest, Outcome};
 pub use self::from_param::{FromParam, FromSegments};
+pub use self::from_request::{FromRequest, Outcome};
+pub use self::request::Request;
 
 #[doc(inline)]
 pub use crate::response::flash::FlashMessage;

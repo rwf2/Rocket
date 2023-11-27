@@ -1,5 +1,5 @@
-use crate::{Request, Response};
 use crate::http::Status;
+use crate::{Request, Response};
 
 /// Type alias for the return type of a [`Catcher`](crate::Catcher)'s
 /// [`Handler::handle()`].
@@ -102,17 +102,19 @@ pub trait Handler: Cloneable + Send + Sync + 'static {
 
 // We write this manually to avoid double-boxing.
 impl<F: Clone + Sync + Send + 'static> Handler for F
-    where for<'x> F: Fn(Status, &'x Request<'_>) -> BoxFuture<'x>,
+where
+    for<'x> F: Fn(Status, &'x Request<'_>) -> BoxFuture<'x>,
 {
     fn handle<'r, 'life0, 'life1, 'async_trait>(
         &'life0 self,
         status: Status,
         req: &'r Request<'life1>,
     ) -> BoxFuture<'r>
-        where 'r: 'async_trait,
-              'life0: 'async_trait,
-              'life1: 'async_trait,
-              Self: 'async_trait,
+    where
+        'r: 'async_trait,
+        'life0: 'async_trait,
+        'life1: 'async_trait,
+        Self: 'async_trait,
     {
         self(status, req)
     }
@@ -121,7 +123,7 @@ impl<F: Clone + Sync + Send + 'static> Handler for F
 // Used in tests! Do not use, please.
 #[doc(hidden)]
 pub fn dummy_handler<'r>(_: Status, _: &'r Request<'_>) -> BoxFuture<'r> {
-   Box::pin(async move { Ok(Response::new()) })
+    Box::pin(async move { Ok(Response::new()) })
 }
 
 mod private {

@@ -9,17 +9,23 @@
 #[doc(inline)]
 pub use crate::http::tls::mtls::*;
 
-use crate::request::{Request, FromRequest, Outcome};
-use crate::outcome::{try_outcome, IntoOutcome};
 use crate::http::Status;
+use crate::outcome::{try_outcome, IntoOutcome};
+use crate::request::{FromRequest, Outcome, Request};
 
 #[crate::async_trait]
 impl<'r> FromRequest<'r> for Certificate<'r> {
     type Error = Error;
 
     async fn from_request(req: &'r Request<'_>) -> Outcome<Self, Self::Error> {
-        let certs = req.connection.client_certificates.as_ref().or_forward(Status::Unauthorized);
-        let data = try_outcome!(try_outcome!(certs).chain_data().or_forward(Status::Unauthorized));
+        let certs = req
+            .connection
+            .client_certificates
+            .as_ref()
+            .or_forward(Status::Unauthorized);
+        let data = try_outcome!(try_outcome!(certs)
+            .chain_data()
+            .or_forward(Status::Unauthorized));
         Certificate::parse(data).or_error(Status::Unauthorized)
     }
 }

@@ -1,20 +1,29 @@
-#[macro_use] extern crate rocket;
+#[macro_use]
+extern crate rocket;
 
 use rocket::local::blocking::Client;
 
 // Test that manual/auto ranking works as expected.
 
 #[get("/<_number>")]
-fn get0(_number: u8) -> &'static str { "0" }
+fn get0(_number: u8) -> &'static str {
+    "0"
+}
 
 #[get("/<_number>", rank = 1)]
-fn get1(_number: u16) -> &'static str { "1" }
+fn get1(_number: u16) -> &'static str {
+    "1"
+}
 
 #[get("/<_number>", rank = 2)]
-fn get2(_number: u32) -> &'static str { "2" }
+fn get2(_number: u32) -> &'static str {
+    "2"
+}
 
 #[get("/<_number>", rank = 3)]
-fn get3(_number: u64) -> &'static str { "3" }
+fn get3(_number: u64) -> &'static str {
+    "3"
+}
 
 #[test]
 fn test_ranking() {
@@ -37,7 +46,7 @@ fn test_ranking() {
 // Test a collision due to same auto rank.
 
 #[get("/<_n>")]
-fn get0b(_n: u8) {  }
+fn get0b(_n: u8) {}
 
 #[test]
 fn test_rank_collision() {
@@ -46,8 +55,8 @@ fn test_rank_collision() {
     let rocket = rocket::build().mount("/", routes![get0, get0b]);
     let client_result = Client::debug(rocket);
     match client_result.as_ref().map_err(|e| e.kind()) {
-        Err(ErrorKind::Collisions(..)) => { /* o.k. */ },
+        Err(ErrorKind::Collisions(..)) => { /* o.k. */ }
         Ok(_) => panic!("client succeeded unexpectedly"),
-        Err(e) => panic!("expected collision, got {}", e)
+        Err(e) => panic!("expected collision, got {}", e),
     }
 }

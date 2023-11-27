@@ -3,16 +3,29 @@
 // code generation uses #[allow(non_snake_case)] in the appropriate places.
 #![deny(non_snake_case)]
 
-#[macro_use] extern crate rocket;
+#[macro_use]
+extern crate rocket;
 
-use rocket::{Request, Rocket, Build};
-use rocket::local::blocking::Client;
 use rocket::http::Status;
+use rocket::local::blocking::Client;
+use rocket::{Build, Request, Rocket};
 
-#[catch(404)] fn not_found_0() -> &'static str { "404-0" }
-#[catch(404)] fn not_found_1(_: &Request) -> &'static str { "404-1" }
-#[catch(404)] fn not_found_2(_: Status, _: &Request) -> &'static str { "404-2" }
-#[catch(default)] fn all(_: Status, r: &Request) -> String { r.uri().to_string() }
+#[catch(404)]
+fn not_found_0() -> &'static str {
+    "404-0"
+}
+#[catch(404)]
+fn not_found_1(_: &Request) -> &'static str {
+    "404-1"
+}
+#[catch(404)]
+fn not_found_2(_: Status, _: &Request) -> &'static str {
+    "404-2"
+}
+#[catch(default)]
+fn all(_: Status, r: &Request) -> String {
+    r.uri().to_string()
+}
 
 #[test]
 fn test_simple_catchers() {
@@ -36,18 +49,34 @@ fn test_simple_catchers() {
     }
 }
 
-#[get("/<code>")] fn forward(code: u16) -> Status { Status::new(code) }
-#[catch(400)] fn forward_400(status: Status, _: &Request) -> String { status.code.to_string() }
-#[catch(404)] fn forward_404(status: Status, _: &Request) -> String { status.code.to_string() }
-#[catch(444)] fn forward_444(status: Status, _: &Request) -> String { status.code.to_string() }
-#[catch(500)] fn forward_500(status: Status, _: &Request) -> String { status.code.to_string() }
+#[get("/<code>")]
+fn forward(code: u16) -> Status {
+    Status::new(code)
+}
+#[catch(400)]
+fn forward_400(status: Status, _: &Request) -> String {
+    status.code.to_string()
+}
+#[catch(404)]
+fn forward_404(status: Status, _: &Request) -> String {
+    status.code.to_string()
+}
+#[catch(444)]
+fn forward_444(status: Status, _: &Request) -> String {
+    status.code.to_string()
+}
+#[catch(500)]
+fn forward_500(status: Status, _: &Request) -> String {
+    status.code.to_string()
+}
 
 #[test]
 fn test_status_param() {
     fn rocket() -> Rocket<Build> {
-        rocket::build()
-            .mount("/", routes![forward])
-            .register("/", catchers![forward_400, forward_404, forward_444, forward_500])
+        rocket::build().mount("/", routes![forward]).register(
+            "/",
+            catchers![forward_400, forward_404, forward_444, forward_500],
+        )
     }
 
     let client = Client::debug(rocket()).unwrap();

@@ -1,30 +1,32 @@
 use std::io;
+use std::pin::Pin;
 use std::sync::Arc;
 use std::time::Duration;
-use std::pin::Pin;
 
-use yansi::Paint;
+use futures::future::{BoxFuture, Future, FutureExt};
+use futures::stream::StreamExt;
 use tokio::sync::oneshot;
 use tokio::time::sleep;
-use futures::stream::StreamExt;
-use futures::future::{FutureExt, Future, BoxFuture};
+use yansi::Paint;
 
-use crate::{route, Rocket, Orbit, Request, Response, Data, Config};
+use crate::data::IoHandler;
+use crate::error::{Error, ErrorKind};
+use crate::ext::{AsyncReadExt, CancellableIo, CancellableListener};
 use crate::form::Form;
 use crate::outcome::Outcome;
-use crate::error::{Error, ErrorKind};
-use crate::ext::{AsyncReadExt, CancellableListener, CancellableIo};
 use crate::request::ConnectionMeta;
-use crate::data::IoHandler;
+use crate::{route, Config, Data, Orbit, Request, Response, Rocket};
 
-use crate::http::{hyper, uncased, Method, Status, Header};
-use crate::http::private::{TcpListener, Listener, Connection, Incoming};
+use crate::http::private::{Connection, Incoming, Listener, TcpListener};
+use crate::http::{hyper, uncased, Header, Method, Status};
 
 // A token returned to force the execution of one method before another.
 pub(crate) struct RequestToken;
 
 async fn handle<Fut, T, F>(name: Option<&str>, run: F) -> Option<T>
-    where F: FnOnce() -> Fut, Fut: Future<Output = T>,
+where
+    F: FnOnce() -> Fut,
+    Fut: Future<Output = T>,
 {
     use std::panic::AssertUnwindSafe;
 
@@ -32,7 +34,7 @@ async fn handle<Fut, T, F>(name: Option<&str>, run: F) -> Option<T>
         ($name:expr, $e:expr) => {{
             match $name {
                 Some(name) => error_!("Handler {} panicked.", name.primary()),
-                None => error_!("A handler panicked.")
+                None => error_!("A handler panicked."),
             };
 
             info_!("This is an application bug.");
@@ -44,7 +46,7 @@ async fn handle<Fut, T, F>(name: Option<&str>, run: F) -> Option<T>
             info_!("Values of either type can be returned directly from handlers.");
             warn_!("A panic is treated as an internal server error.");
             $e
-        }}
+        }};
     }
 
     let run = AssertUnwindSafe(run);
@@ -88,7 +90,9 @@ async fn hyper_service_fn(
                 let mut response = rocket.dispatch(token, &req, data).await;
                 let upgrade = response.take_upgrade(req.headers().get("upgrade"));
                 if let Ok(Some((proto, handler))) = upgrade {
-                    rocket.handle_upgrade(response, proto, handler, pending_upgrade, tx).await;
+                    rocket
+                        .handle_upgrade(response, proto, handler, pending_upgrade, tx)
+                        .await;
                 } else {
                     if upgrade.is_err() {
                         warn_!("Request wants upgrade but no I/O handler matched.");
@@ -97,7 +101,7 @@ async fn hyper_service_fn(
 
                     rocket.send_response(response, tx).await;
                 }
-            },
+            }
             Err(e) => {
                 warn!("Bad incoming HTTP request.");
                 e.errors.iter().for_each(|e| warn_!("Error: {}.", e));
@@ -110,7 +114,8 @@ async fn hyper_service_fn(
     });
 
     // Receive the response written to `tx` by the task above.
-    rx.await.map_err(|e| io::Error::new(io::ErrorKind::BrokenPipe, e))
+    rx.await
+        .map_err(|e| io::Error::new(io::ErrorKind::BrokenPipe, e))
 }
 
 impl Rocket<Orbit> {
@@ -122,7 +127,7 @@ impl Rocket<Orbit> {
         tx: oneshot::Sender<hyper::Response<hyper::Body>>,
     ) {
         let remote_hungup = |e: &io::Error| match e.kind() {
-            | io::ErrorKind::BrokenPipe
+            io::ErrorKind::BrokenPipe
             | io::ErrorKind::ConnectionReset
             | io::ErrorKind::ConnectionAborted => true,
             _ => false,
@@ -157,7 +162,8 @@ impl Rocket<Orbit> {
         }
 
         let (mut sender, hyp_body) = hyper::Body::channel();
-        let hyp_response = hyp_res.body(hyp_body)
+        let hyp_response = hyp_res
+            .body(hyp_body)
             .map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))?;
 
         debug!("sending response: {:#?}", hyp_response);
@@ -169,7 +175,9 @@ impl Rocket<Orbit> {
         let max_chunk_size = body.max_chunk_size();
         let mut stream = body.into_bytes_stream(max_chunk_size);
         while let Some(next) = stream.next().await {
-            sender.send_data(next?).await
+            sender
+                .send_data(next?)
+                .await
                 .map_err(|e| io::Error::new(io::ErrorKind::BrokenPipe, e))?;
         }
 
@@ -200,7 +208,7 @@ impl Rocket<Orbit> {
                         error!("Upgraded {} I/O handler failed: {}", proto, e);
                     }
                 }
-            },
+            }
             Err(e) => {
                 warn!("Response indicated upgrade, but upgrade failed.");
                 warn_!("Upgrade error: {}", e);
@@ -217,7 +225,7 @@ impl Rocket<Orbit> {
     pub(crate) async fn preprocess_request(
         &self,
         req: &mut Request<'_>,
-        data: &mut Data<'_>
+        data: &mut Data<'_>,
     ) -> RequestToken {
         // Check if this is a form and if the form contains the special _method
         // field which we use to reinterpret the request's method.
@@ -226,7 +234,8 @@ impl Rocket<Orbit> {
         let is_form = req.content_type().map_or(false, |ct| ct.is_form());
 
         if is_form && req.method() == Method::Post && peek_buffer.len() >= min_len {
-            let method = std::str::from_utf8(peek_buffer).ok()
+            let method = std::str::from_utf8(peek_buffer)
+                .ok()
                 .and_then(|raw_form| Form::values(raw_form).next())
                 .filter(|field| field.name == "_method")
                 .and_then(|field| field.value.parse().ok());
@@ -247,7 +256,7 @@ impl Rocket<Orbit> {
         &'s self,
         _token: RequestToken,
         request: &'r Request<'s>,
-        data: Data<'r>
+        data: Data<'r>,
     ) -> Response<'r> {
         info!("{}:", request);
 
@@ -279,7 +288,7 @@ impl Rocket<Orbit> {
     async fn route_and_process<'s, 'r: 's>(
         &'s self,
         request: &'r Request<'s>,
-        data: Data<'r>
+        data: Data<'r>,
     ) -> Response<'r> {
         let mut response = match self.route(request, data).await {
             Outcome::Success(response) => response,
@@ -328,7 +337,8 @@ impl Rocket<Orbit> {
             request.set_route(route);
 
             let name = route.name.as_deref();
-            let outcome = handle(name, || route.handler.handle(request, data)).await
+            let outcome = handle(name, || route.handler.handle(request, data))
+                .await
                 .unwrap_or(Outcome::Error(Status::InternalServerError));
 
             // Check if the request processing completed (Some) or if the
@@ -336,7 +346,7 @@ impl Rocket<Orbit> {
             // (None) to try again.
             info_!("{}", outcome.log_display());
             match outcome {
-                o@Outcome::Success(_) | o@Outcome::Error(_) => return o,
+                o @ Outcome::Success(_) | o @ Outcome::Error(_) => return o,
                 Outcome::Forward(forwarded) => (data, status) = forwarded,
             }
         }
@@ -358,7 +368,7 @@ impl Rocket<Orbit> {
     async fn invoke_catcher<'s, 'r: 's>(
         &'s self,
         status: Status,
-        req: &'r Request<'s>
+        req: &'r Request<'s>,
     ) -> Result<Response<'r>, Option<Status>> {
         // For now, we reset the delta state to prevent any modifications
         // from earlier, unsuccessful paths from being reflected in error
@@ -368,7 +378,8 @@ impl Rocket<Orbit> {
         if let Some(catcher) = self.router.catch(status, req) {
             warn_!("Responding with registered {} catcher.", catcher);
             let name = catcher.name.as_deref();
-            handle(name, || catcher.handler.handle(status, req)).await
+            handle(name, || catcher.handler.handle(status, req))
+                .await
                 .map(|result| result.map_err(Some))
                 .unwrap_or_else(|| Err(None))
         } else {
@@ -385,7 +396,7 @@ impl Rocket<Orbit> {
     pub(crate) async fn handle_error<'s, 'r: 's>(
         &'s self,
         mut status: Status,
-        req: &'r Request<'s>
+        req: &'r Request<'s>,
     ) -> Response<'r> {
         // Dispatch to the `status` catcher.
         if let Ok(r) = self.invoke_catcher(status, req).await {
@@ -407,13 +418,15 @@ impl Rocket<Orbit> {
     }
 
     pub(crate) async fn default_tcp_http_server<C>(mut self, ready: C) -> Result<Self, Error>
-        where C: for<'a> Fn(&'a Self) -> BoxFuture<'a, ()>
+    where
+        C: for<'a> Fn(&'a Self) -> BoxFuture<'a, ()>,
     {
         use std::net::ToSocketAddrs;
 
         // Determine the address we're going to serve on.
         let addr = format!("{}:{}", self.config.address, self.config.port);
-        let mut addr = addr.to_socket_addrs()
+        let mut addr = addr
+            .to_socket_addrs()
             .map(|mut addrs| addrs.next().expect(">= 1 socket addr"))
             .map_err(|e| Error::new(ErrorKind::Io(e)))?;
 
@@ -423,7 +436,9 @@ impl Rocket<Orbit> {
                 use crate::http::tls::TlsListener;
 
                 let conf = config.to_native_config().map_err(ErrorKind::Io)?;
-                let l = TlsListener::bind(addr, conf).await.map_err(ErrorKind::Bind)?;
+                let l = TlsListener::bind(addr, conf)
+                    .await
+                    .map_err(ErrorKind::Bind)?;
                 addr = l.local_addr().unwrap_or(addr);
                 self.config.address = addr.ip();
                 self.config.port = addr.port();
@@ -442,13 +457,18 @@ impl Rocket<Orbit> {
 
     // TODO.async: Solidify the Listener APIs and make this function public
     pub(crate) async fn http_server<L>(self, listener: L) -> Result<Self, Error>
-        where L: Listener + Send, <L as Listener>::Connection: Send + Unpin + 'static
+    where
+        L: Listener + Send,
+        <L as Listener>::Connection: Send + Unpin + 'static,
     {
         // Emit a warning if we're not running inside of Rocket's async runtime.
         if self.config.profile == Config::DEBUG_PROFILE {
             tokio::task::spawn_blocking(|| {
-                let this  = std::thread::current();
-                if !this.name().map_or(false, |s| s.starts_with("rocket-worker")) {
+                let this = std::thread::current();
+                if !this
+                    .name()
+                    .map_or(false, |s| s.starts_with("rocket-worker"))
+                {
                     warn!("Rocket is executing inside of a custom runtime.");
                     info_!("Rocket's runtime is enabled via `#[rocket::main]` or `#[launch]`.");
                     info_!("Forced shutdown is disabled. Runtime settings may be suboptimal.");
@@ -507,7 +527,7 @@ impl Rocket<Orbit> {
         #[cfg(feature = "http2")]
         let builder = builder.http2_keep_alive_interval(match keep_alive {
             0 => None,
-            n => Some(Duration::from_secs(n as u64))
+            n => Some(Duration::from_secs(n as u64)),
         });
 
         let server = builder

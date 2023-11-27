@@ -1,7 +1,7 @@
-use std::fmt;
 use std::any::TypeId;
+use std::fmt;
 
-use crate::{Rocket, Ignite};
+use crate::{Ignite, Rocket};
 
 /// An automatic last line of defense against launching an invalid [`Rocket`].
 ///
@@ -362,7 +362,10 @@ pub(crate) fn query<'s>(
     let mut aborted = vec![];
     while let Some(sentinel) = remaining.pop_front() {
         if sentinel.specialized {
-            if *visited.entry(sentinel.type_id).or_insert_with(|| (sentinel.abort)(rocket)) {
+            if *visited
+                .entry(sentinel.type_id)
+                .or_insert_with(|| (sentinel.abort)(rocket))
+            {
                 aborted.push(sentinel);
             }
         } else if let Some(mut children) = map.remove(&sentinel.type_id) {
@@ -372,7 +375,7 @@ pub(crate) fn query<'s>(
 
     match aborted.is_empty() {
         true => Ok(()),
-        false => Err(aborted.into_iter().cloned().collect())
+        false => Err(aborted.into_iter().cloned().collect()),
     }
 }
 
@@ -428,7 +431,9 @@ pub mod resolution {
     pub trait DefaultSentinel {
         const SPECIALIZED: bool = false;
 
-        fn abort(_: &Rocket<Ignite>) -> bool { false }
+        fn abort(_: &Rocket<Ignite>) -> bool {
+            false
+        }
     }
 
     impl<T: ?Sized> DefaultSentinel for T {}
@@ -446,8 +451,8 @@ pub mod resolution {
 
 #[cfg(test)]
 mod test {
-    use std::any::TypeId;
     use crate::sentinel::resolve;
+    use std::any::TypeId;
 
     struct NotASentinel;
     struct YesASentinel;
@@ -475,7 +480,10 @@ mod test {
     fn parent_works() {
         let child = resolve!(YesASentinel, HasSentinel<YesASentinel>);
         assert!(child.type_name.ends_with("YesASentinel"));
-        assert_eq!(child.parent.unwrap(), TypeId::of::<HasSentinel<YesASentinel>>());
+        assert_eq!(
+            child.parent.unwrap(),
+            TypeId::of::<HasSentinel<YesASentinel>>()
+        );
         assert!(child.specialized);
 
         let not_a_direct_sentinel = resolve!(HasSentinel<YesASentinel>);

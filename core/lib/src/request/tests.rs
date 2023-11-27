@@ -1,8 +1,8 @@
 use std::collections::HashMap;
 
-use crate::Request;
-use crate::local::blocking::Client;
 use crate::http::hyper;
+use crate::local::blocking::Client;
+use crate::Request;
 
 macro_rules! assert_headers {
     ($($key:expr => [$($value:expr),+]),+) => ({

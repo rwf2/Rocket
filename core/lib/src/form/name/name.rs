@@ -2,8 +2,8 @@ use std::ops::Deref;
 
 use ref_cast::RefCast;
 
-use crate::http::RawStr;
 use crate::form::name::*;
+use crate::http::RawStr;
 
 /// A field name composed of keys.
 ///
@@ -130,7 +130,8 @@ impl Name {
 
 impl serde::Serialize for Name {
     fn serialize<S>(&self, ser: S) -> Result<S::Ok, S::Error>
-        where S: serde::Serializer
+    where
+        S: serde::Serializer,
     {
         self.0.serialize(ser)
     }
@@ -138,7 +139,8 @@ impl serde::Serialize for Name {
 
 impl<'de: 'a, 'a> serde::Deserialize<'de> for &'a Name {
     fn deserialize<D>(de: D) -> Result<Self, D::Error>
-        where D: serde::Deserializer<'de>
+    where
+        D: serde::Deserializer<'de>,
     {
         <&'a str as serde::Deserialize<'de>>::deserialize(de).map(Name::new)
     }
@@ -159,7 +161,7 @@ impl Deref for Name {
     }
 }
 
-impl<I: core::slice::SliceIndex<str, Output=str>> core::ops::Index<I> for Name {
+impl<I: core::slice::SliceIndex<str, Output = str>> core::ops::Index<I> for Name {
     type Output = Name;
 
     #[inline]
@@ -216,7 +218,7 @@ impl AsRef<Name> for Name {
     }
 }
 
-impl Eq for Name { }
+impl Eq for Name {}
 
 impl std::hash::Hash for Name {
     fn hash<H: std::hash::Hasher>(&self, state: &mut H) {

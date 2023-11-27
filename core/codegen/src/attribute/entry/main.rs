@@ -1,8 +1,8 @@
 use super::EntryAttr;
 
-use devise::{Spanned, Result};
 use devise::ext::SpanDiagnosticExt;
-use proc_macro2::{TokenStream, Span};
+use devise::{Result, Spanned};
+use proc_macro2::{Span, TokenStream};
 
 /// `#[rocket::async_main]`: calls the attributed fn inside `rocket::async_main`
 pub struct Main;

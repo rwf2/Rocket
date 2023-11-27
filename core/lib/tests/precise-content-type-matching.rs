@@ -1,4 +1,5 @@
-#[macro_use] extern crate rocket;
+#[macro_use]
+extern crate rocket;
 
 #[post("/", format = "application/json")]
 fn specified() -> &'static str {
@@ -23,9 +24,9 @@ fn specified_html() -> &'static str {
 mod tests {
     use super::*;
 
-    use rocket::{Rocket, Build};
+    use rocket::http::{ContentType, Status};
     use rocket::local::blocking::Client;
-    use rocket::http::{Status, ContentType};
+    use rocket::{Build, Rocket};
 
     fn rocket() -> Rocket<Build> {
         rocket::build()
@@ -34,7 +35,7 @@ mod tests {
     }
 
     macro_rules! check_dispatch {
-        ($mount:expr, $ct:expr, $body:expr) => (
+        ($mount:expr, $ct:expr, $body:expr) => {
             let client = Client::debug(rocket()).unwrap();
             let mut req = client.post($mount);
             let ct: Option<ContentType> = $ct;
@@ -48,9 +49,9 @@ mod tests {
             let body: Option<&'static str> = $body;
             match body {
                 Some(string) => assert_eq!(body_str, Some(string.to_string())),
-                None => assert_eq!(status, Status::NotFound)
+                None => assert_eq!(status, Status::NotFound),
             }
-        )
+        };
     }
 
     #[test]

@@ -1,8 +1,8 @@
 use std::borrow::Cow;
-use std::io::{self, Cursor};
-use std::task::{Context, Poll};
-use std::pin::Pin;
 use std::cmp::min;
+use std::io::{self, Cursor};
+use std::pin::Pin;
+use std::task::{Context, Poll};
 
 use tokio::io::{AsyncRead, AsyncReadExt, ReadBuf, Take};
 
@@ -49,7 +49,7 @@ pub struct RawLinedEvent {
 fn farm(cow: Cow<'_, str>) -> Cow<'_, [u8]> {
     match cow {
         Cow::Borrowed(slice) => Cow::Borrowed(slice.as_bytes()),
-        Cow::Owned(vec) => Cow::Owned(vec.into_bytes())
+        Cow::Owned(vec) => Cow::Owned(vec.into_bytes()),
     }
 }
 
@@ -97,7 +97,11 @@ impl RawLinedEvent {
         let name = Cursor::new(name);
         let mut value = Cursor::new(value).take(0);
         advance(&mut value);
-        RawLinedEvent { name, value, state: State::Name }
+        RawLinedEvent {
+            name,
+            value,
+            state: State::Name,
+        }
     }
 
     /// Create a `RawLinedEvent` from potentially invalid `name` and `value`
@@ -106,7 +110,9 @@ impl RawLinedEvent {
     /// Characters `\n`, `\r`, and ':' in `name` and characters `\r` \`n` in
     /// `value` `are replaced with a space ` `.
     pub fn one<N, V>(name: N, value: V) -> RawLinedEvent
-        where N: Into<Cow<'static, str>>, V: Into<Cow<'static, str>>
+    where
+        N: Into<Cow<'static, str>>,
+        V: Into<Cow<'static, str>>,
     {
         RawLinedEvent::prefarmed(farm_name(name.into()), farm_value(value.into()))
     }
@@ -118,7 +124,9 @@ impl RawLinedEvent {
     /// `value` is allowed to contain any character. New lines (`\r\n` or `\n`)
     /// and carriage returns `\r` result in a new event being emitted.
     pub fn many<N, V>(name: N, value: V) -> RawLinedEvent
-        where N: Into<Cow<'static, str>>, V: Into<Cow<'static, str>>
+    where
+        N: Into<Cow<'static, str>>,
+        V: Into<Cow<'static, str>>,
     {
         RawLinedEvent::prefarmed(farm_name(name.into()), farm(value.into()))
     }
@@ -131,7 +139,7 @@ impl RawLinedEvent {
         RawLinedEvent {
             name: Cursor::new(Cow::Borrowed(&[])),
             value: Cursor::new(farm(value)).take(len as u64),
-            state: State::Value
+            state: State::Value,
         }
     }
 }
@@ -143,14 +151,17 @@ enum State {
     Colon,
     Value,
     NewLine,
-    Done
+    Done,
 }
 
 /// Find the next new-line (`\n` or `\r`) character in `buf` beginning at the
 /// current cursor position and sets the limit to be at that position.
 fn advance<T: AsRef<[u8]> + Unpin>(buf: &mut Take<Cursor<T>>) {
     // Technically, the position need not be <= len, so we right it.
-    let pos = min(buf.get_ref().get_ref().as_ref().len() as u64, buf.get_ref().position());
+    let pos = min(
+        buf.get_ref().get_ref().as_ref().len() as u64,
+        buf.get_ref().position(),
+    );
     let inner = buf.get_ref().get_ref().as_ref();
     let next = memchr::memchr2(b'\n', b'\r', &inner[(pos as usize)..])
         .map(|i| pos + i as u64)
@@ -163,7 +174,10 @@ fn advance<T: AsRef<[u8]> + Unpin>(buf: &mut Take<Cursor<T>>) {
 /// If the cursor in `buf` is currently at an `\r`, `\r\n` or `\n`, sets the
 /// cursor position to be _after_ the characters.
 fn skip<T: AsRef<[u8]> + Unpin>(buf: &mut Take<Cursor<T>>) {
-    let pos = min(buf.get_ref().get_ref().as_ref().len() as u64, buf.get_ref().position());
+    let pos = min(
+        buf.get_ref().get_ref().as_ref().len() as u64,
+        buf.get_ref().position(),
+    );
     match buf.get_ref().get_ref().as_ref().get(pos as usize) {
         // This cannot overflow as clearly `buf.len() >= pos + 1`.
         Some(b'\n') => buf.get_mut().set_position(pos + 1),
@@ -181,13 +195,12 @@ fn skip<T: AsRef<[u8]> + Unpin>(buf: &mut Take<Cursor<T>>) {
     }
 }
 
-
 macro_rules! dbg_assert_ready {
-    ($e:expr) => ({
+    ($e:expr) => {{
         let poll = $e;
         debug_assert!(poll.is_ready());
         ::futures::ready!(poll)
-    })
+    }};
 }
 
 // NOTE: The correctness of this implementation depends on the types of `name`
@@ -239,7 +252,7 @@ impl AsyncRead for RawLinedEvent {
                         self.state = State::Done;
                     }
                 }
-                State::Done => return Poll::Ready(Ok(()))
+                State::Done => return Poll::Ready(Ok(())),
             }
         }
     }

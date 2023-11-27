@@ -1,4 +1,5 @@
-#[macro_use] extern crate rocket;
+#[macro_use]
+extern crate rocket;
 
 use rocket::form::Form;
 
@@ -8,10 +9,10 @@ fn index(form: Form<String>) -> String {
 }
 
 mod limits_tests {
-    use rocket::{Rocket, Build};
-    use rocket::local::blocking::Client;
-    use rocket::http::{Status, ContentType};
     use rocket::data::Limits;
+    use rocket::http::{ContentType, Status};
+    use rocket::local::blocking::Client;
+    use rocket::{Build, Rocket};
 
     fn rocket_with_forms_limit(limit: u64) -> Rocket<Build> {
         let mut config = rocket::Config::debug_default();
@@ -22,7 +23,8 @@ mod limits_tests {
     #[test]
     fn large_enough() {
         let client = Client::debug(rocket_with_forms_limit(128)).unwrap();
-        let response = client.post("/")
+        let response = client
+            .post("/")
             .body("value=Hello+world")
             .header(ContentType::Form)
             .dispatch();
@@ -33,7 +35,8 @@ mod limits_tests {
     #[test]
     fn just_large_enough() {
         let client = Client::debug(rocket_with_forms_limit(17)).unwrap();
-        let response = client.post("/")
+        let response = client
+            .post("/")
             .body("value=Hello+world")
             .header(ContentType::Form)
             .dispatch();
@@ -44,7 +47,8 @@ mod limits_tests {
     #[test]
     fn much_too_small() {
         let client = Client::debug(rocket_with_forms_limit(4)).unwrap();
-        let response = client.post("/")
+        let response = client
+            .post("/")
             .body("value=Hello+world")
             .header(ContentType::Form)
             .dispatch();
@@ -55,7 +59,8 @@ mod limits_tests {
     #[test]
     fn contracted() {
         let client = Client::debug(rocket_with_forms_limit(10)).unwrap();
-        let response = client.post("/")
+        let response = client
+            .post("/")
             .body("value=Hello+world")
             .header(ContentType::Form)
             .dispatch();

@@ -1,6 +1,6 @@
-use crate::tokio::io::AsyncReadExt;
 use crate::data::data_stream::DataStream;
 use crate::data::{ByteUnit, StreamReader};
+use crate::tokio::io::AsyncReadExt;
 
 /// The number of bytes to read into the "peek" buffer.
 pub const PEEK_BYTES: usize = 512;
@@ -52,7 +52,11 @@ impl<'r> Data<'r> {
 
         let stream = stream.into();
         let buffer = Vec::with_capacity(PEEK_BYTES / 8);
-        Data { buffer, stream, is_complete: false }
+        Data {
+            buffer,
+            stream,
+            is_complete: false,
+        }
     }
 
     /// This creates a `data` object from a local data source `data`.
@@ -156,7 +160,10 @@ impl<'r> Data<'r> {
 
         while len < num {
             match self.stream.read_buf(&mut self.buffer).await {
-                Ok(0) => { self.is_complete = true; break },
+                Ok(0) => {
+                    self.is_complete = true;
+                    break;
+                }
                 Ok(n) => len += n,
                 Err(e) => {
                     error_!("Failed to read into peek buffer: {:?}.", e);

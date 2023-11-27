@@ -1,13 +1,13 @@
-use crate::http::{RawStr, Status};
-use crate::request::{Request, local_cache};
 use crate::data::{Data, Limits};
-use crate::outcome::{self, IntoOutcome, try_outcome, Outcome::*};
+use crate::http::{RawStr, Status};
+use crate::outcome::{self, try_outcome, IntoOutcome, Outcome::*};
+use crate::request::{local_cache, Request};
 
 /// Type alias for the `Outcome` of [`FromData`].
 ///
 /// [`FromData`]: crate::data::FromData
-pub type Outcome<'r, T, E = <T as FromData<'r>>::Error>
-    = outcome::Outcome<T, (Status, E), (Data<'r>, Status)>;
+pub type Outcome<'r, T, E = <T as FromData<'r>>::Error> =
+    outcome::Outcome<T, (Status, E), (Data<'r>, Status)>;
 
 /// Trait implemented by data guards to derive a value from request body data.
 ///
@@ -322,7 +322,10 @@ impl<'r> FromData<'r> for Capped<String> {
 
     async fn from_data(req: &'r Request<'_>, data: Data<'r>) -> Outcome<'r, Self> {
         let limit = req.limits().get("string").unwrap_or(Limits::STRING);
-        data.open(limit).into_string().await.or_error(Status::BadRequest)
+        data.open(limit)
+            .into_string()
+            .await
+            .or_error(Status::BadRequest)
     }
 }
 
@@ -385,7 +388,10 @@ impl<'r> FromData<'r> for Capped<Vec<u8>> {
 
     async fn from_data(req: &'r Request<'_>, data: Data<'r>) -> Outcome<'r, Self> {
         let limit = req.limits().get("bytes").unwrap_or(Limits::BYTES);
-        data.open(limit).into_bytes().await.or_error(Status::BadRequest)
+        data.open(limit)
+            .into_bytes()
+            .await
+            .or_error(Status::BadRequest)
     }
 }
 

@@ -25,10 +25,12 @@ async fn test_inspectable_launch_state_in_liftoff() -> Result<(), rocket::Error>
             assert_eq!(state, Some(&"Hi!"));
             rocket
         }))
-        .attach(AdHoc::on_liftoff("Inspect State", |rocket| Box::pin(async move {
-            let state = rocket.state::<&'static str>();
-            assert_eq!(state, Some(&"Hi!"));
-        })))
+        .attach(AdHoc::on_liftoff("Inspect State", |rocket| {
+            Box::pin(async move {
+                let state = rocket.state::<&'static str>();
+                assert_eq!(state, Some(&"Hi!"));
+            })
+        }))
         .ignite()
         .await?;
 

@@ -43,10 +43,7 @@ impl<T: Unpin> From<T> for One<T> {
 impl<T: Unpin> Stream for One<T> {
     type Item = T;
 
-    fn poll_next(
-        mut self: Pin<&mut Self>,
-        _: &mut Context<'_>,
-    ) -> Poll<Option<Self::Item>> {
+    fn poll_next(mut self: Pin<&mut Self>, _: &mut Context<'_>) -> Poll<Option<Self::Item>> {
         Poll::Ready(self.0.take())
     }
 }

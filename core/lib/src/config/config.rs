@@ -1,16 +1,16 @@
 use std::net::{IpAddr, Ipv4Addr};
 
-use figment::{Figment, Profile, Provider, Metadata, error::Result};
-use figment::providers::{Serialized, Env, Toml, Format};
-use figment::value::{Map, Dict, magic::RelativePathBuf};
+use figment::providers::{Env, Format, Serialized, Toml};
+use figment::value::{magic::RelativePathBuf, Dict, Map};
+use figment::{error::Result, Figment, Metadata, Profile, Provider};
 use serde::{Deserialize, Serialize};
-use yansi::{Paint, Style, Color::Primary};
+use yansi::{Color::Primary, Paint, Style};
 
-use crate::log::PaintExt;
-use crate::config::{LogLevel, Shutdown, Ident};
-use crate::request::{self, Request, FromRequest};
-use crate::http::uncased::Uncased;
+use crate::config::{CliColors, Ident, LogLevel, Shutdown};
 use crate::data::Limits;
+use crate::http::uncased::Uncased;
+use crate::log::PaintExt;
+use crate::request::{self, FromRequest, Request};
 
 #[cfg(feature = "tls")]
 use crate::config::TlsConfig;
@@ -117,8 +117,7 @@ pub struct Config {
     /// Max level to log. **(default: _debug_ `normal` / _release_ `critical`)**
     pub log_level: LogLevel,
     /// Whether to use colors and emoji when logging. **(default: `true`)**
-    #[serde(deserialize_with = "figment::util::bool_from_str_or_int")]
-    pub cli_colors: bool,
+    pub cli_colors: CliColors,
     /// PRIVATE: This structure may grow (but never change otherwise) in a
     /// non-breaking release. As such, constructing this structure should
     /// _always_ be done using a public constructor or update syntax:
@@ -150,19 +149,29 @@ impl Default for Config {
     /// let config = Config::default();
     /// ```
     fn default() -> Config {
-        #[cfg(debug_assertions)] { Config::debug_default() }
-        #[cfg(not(debug_assertions))] { Config::release_default() }
+        #[cfg(debug_assertions)]
+        {
+            Config::debug_default()
+        }
+        #[cfg(not(debug_assertions))]
+        {
+            Config::release_default()
+        }
     }
 }
 
 impl Config {
     const DEPRECATED_KEYS: &'static [(&'static str, Option<&'static str>)] = &[
-        ("env", Some(Self::PROFILE)), ("log", Some(Self::LOG_LEVEL)),
-        ("read_timeout", None), ("write_timeout", None),
+        ("env", Some(Self::PROFILE)),
+        ("log", Some(Self::LOG_LEVEL)),
+        ("read_timeout", None),
+        ("write_timeout", None),
     ];
 
     const DEPRECATED_PROFILES: &'static [(&'static str, Option<&'static str>)] = &[
-        ("dev", Some("debug")), ("prod", Some("release")), ("stag", None)
+        ("dev", Some("debug")),
+        ("prod", Some("release")),
+        ("stag", None),
     ];
 
     /// Returns the default configuration for the `debug` profile, _irrespective
@@ -198,7 +207,7 @@ impl Config {
             secret_key: SecretKey::zero(),
             shutdown: Shutdown::default(),
             log_level: LogLevel::Normal,
-            cli_colors: true,
+            cli_colors: CliColors::Auto,
             __non_exhaustive: (),
         }
     }
@@ -258,7 +267,10 @@ impl Config {
         Figment::from(Config::default())
             .merge(Toml::file(Env::var_or("ROCKET_CONFIG", "Rocket.toml")).nested())
             .merge(Env::prefixed("ROCKET_").ignore(&["PROFILE"]).global())
-            .select(Profile::from_env_or("ROCKET_PROFILE", Self::DEFAULT_PROFILE))
+            .select(Profile::from_env_or(
+                "ROCKET_PROFILE",
+                Self::DEFAULT_PROFILE,
+            ))
     }
 
     /// Attempts to extract a `Config` from `provider`, returning the result.
@@ -327,11 +339,17 @@ impl Config {
     /// }
     /// ```
     pub fn tls_enabled(&self) -> bool {
-        #[cfg(feature = "tls")] {
-            self.tls.as_ref().map_or(false, |tls| !tls.ciphers.is_empty())
+        #[cfg(feature = "tls")]
+        {
+            self.tls
+                .as_ref()
+                .map_or(false, |tls| !tls.ciphers.is_empty())
         }
 
-        #[cfg(not(feature = "tls"))] { false }
+        #[cfg(not(feature = "tls"))]
+        {
+            false
+        }
     }
 
     /// Returns `true` if mTLS is enabled.
@@ -355,18 +373,21 @@ impl Config {
             return false;
         }
 
-        #[cfg(feature = "mtls")] {
+        #[cfg(feature = "mtls")]
+        {
             self.tls.as_ref().map_or(false, |tls| tls.mutual.is_some())
         }
 
-        #[cfg(not(feature = "mtls"))] { false }
+        #[cfg(not(feature = "mtls"))]
+        {
+            false
+        }
     }
 
     #[cfg(feature = "secrets")]
     pub(crate) fn known_secret_key_used(&self) -> bool {
-        const KNOWN_SECRET_KEYS: &'static [&'static str] = &[
-            "hPRYyVRiMyxpw5sBB1XeCMN1kFsDCqKvBi2QJxBVHQk="
-        ];
+        const KNOWN_SECRET_KEYS: &'static [&'static str] =
+            &["hPRYyVRiMyxpw5sBB1XeCMN1kFsDCqKvBi2QJxBVHQk="];
 
         KNOWN_SECRET_KEYS.iter().any(|&key_str| {
             let value = figment::value::Value::from(key_str);
@@ -397,7 +418,11 @@ impl Config {
         static VAL: Style = Primary.bold();
 
         self.trace_print(figment);
-        launch_meta!("{}Configured for {}.", "🔧 ".emoji(), self.profile.underline());
+        launch_meta!(
+            "{}Configured for {}.",
+            "🔧 ".emoji(),
+            self.profile.underline()
+        );
         launch_meta_!("address: {}", self.address.paint(VAL));
         launch_meta_!("port: {}", self.port.paint(VAL));
         launch_meta_!("workers: {}", self.workers.paint(VAL));
@@ -406,11 +431,14 @@ impl Config {
 
         match self.ip_header {
             Some(ref name) => launch_meta_!("IP header: {}", name.paint(VAL)),
-            None => launch_meta_!("IP header: {}", "disabled".paint(VAL))
+            None => launch_meta_!("IP header: {}", "disabled".paint(VAL)),
         }
 
         launch_meta_!("limits: {}", (&self.limits).paint(VAL));
-        launch_meta_!("temp dir: {}", self.temp_dir.relative().display().paint(VAL));
+        launch_meta_!(
+            "temp dir: {}",
+            self.temp_dir.relative().display().paint(VAL)
+        );
         launch_meta_!("http/2: {}", (cfg!(feature = "http2").paint(VAL)));
 
         match self.keep_alive {
@@ -457,7 +485,8 @@ impl Config {
             }
         }
 
-        #[cfg(feature = "secrets")] {
+        #[cfg(feature = "secrets")]
+        {
             launch_meta_!("secret key: {}", self.secret_key.paint(VAL));
             if !self.secret_key.is_provided() {
                 warn!("secrets enabled without a stable `secret_key`");
@@ -536,9 +565,19 @@ impl Config {
 
     /// An array of all of the stringy parameter names.
     pub const PARAMETERS: &'static [&'static str] = &[
-        Self::ADDRESS, Self::PORT, Self::WORKERS, Self::MAX_BLOCKING,
-        Self::KEEP_ALIVE, Self::IDENT, Self::IP_HEADER, Self::LIMITS, Self::TLS,
-        Self::SECRET_KEY, Self::TEMP_DIR, Self::LOG_LEVEL, Self::SHUTDOWN,
+        Self::ADDRESS,
+        Self::PORT,
+        Self::WORKERS,
+        Self::MAX_BLOCKING,
+        Self::KEEP_ALIVE,
+        Self::IDENT,
+        Self::IP_HEADER,
+        Self::LIMITS,
+        Self::TLS,
+        Self::SECRET_KEY,
+        Self::TEMP_DIR,
+        Self::LOG_LEVEL,
+        Self::SHUTDOWN,
         Self::CLI_COLORS,
     ];
 }
@@ -596,7 +635,9 @@ pub fn pretty_print_error(error: figment::Error) {
     crate::log::init_default();
     error!("Failed to extract valid configuration.");
     for e in error {
-        fn w<T>(v: T) -> yansi::Painted<T> { Paint::new(v).primary() }
+        fn w<T>(v: T) -> yansi::Painted<T> {
+            Paint::new(v).primary()
+        }
 
         match e.kind {
             Kind::Message(msg) => error_!("{}", msg),
@@ -605,15 +646,23 @@ pub fn pretty_print_error(error: figment::Error) {
             }
             Kind::InvalidValue(v, exp) => {
                 error_!("invalid value {}, expected {}", w(v), w(exp));
-            },
+            }
             Kind::InvalidLength(v, exp) => {
                 error_!("invalid length {}, expected {}", w(v), w(exp))
-            },
+            }
             Kind::UnknownVariant(v, exp) => {
-                error_!("unknown variant: found `{}`, expected `{}`", w(v), w(OneOf(exp)))
+                error_!(
+                    "unknown variant: found `{}`, expected `{}`",
+                    w(v),
+                    w(OneOf(exp))
+                )
             }
             Kind::UnknownField(v, exp) => {
-                error_!("unknown field: found `{}`, expected `{}`", w(v), w(OneOf(exp)))
+                error_!(
+                    "unknown field: found `{}`, expected `{}`",
+                    w(v),
+                    w(OneOf(exp))
+                )
             }
             Kind::MissingField(v) => {
                 error_!("missing field `{}`", w(v))

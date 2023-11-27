@@ -1,8 +1,8 @@
-use std::str::FromStr;
 use std::path::PathBuf;
+use std::str::FromStr;
 
 use crate::error::Empty;
-use crate::http::uri::{Segments, error::PathError, fmt::Path};
+use crate::http::uri::{error::PathError, fmt::Path, Segments};
 
 /// Trait to convert a dynamic path segment string to a concrete value.
 ///
@@ -203,10 +203,15 @@ impl<'a> FromParam<'a> for String {
     #[track_caller]
     #[inline(always)]
     fn from_param(param: &'a str) -> Result<String, Self::Error> {
-        #[cfg(debug_assertions)] {
+        #[cfg(debug_assertions)]
+        {
             let loc = std::panic::Location::caller();
             warn_!("Note: Using `String` as a parameter type is inefficient. Use `&str` instead.");
-            info_!("`String` is used a parameter guard in {}:{}.", loc.file(), loc.line());
+            info_!(
+                "`String` is used a parameter guard in {}:{}.",
+                loc.file(),
+                loc.line()
+            );
         }
 
         if param.is_empty() {
@@ -230,11 +235,11 @@ macro_rules! impl_with_fromstr {
     )+)
 }
 
+use std::net::{IpAddr, Ipv4Addr, Ipv6Addr, SocketAddr, SocketAddrV4, SocketAddrV6};
 use std::num::{
-    NonZeroI8, NonZeroI16, NonZeroI32, NonZeroI64, NonZeroI128, NonZeroIsize,
-    NonZeroU8, NonZeroU16, NonZeroU32, NonZeroU64, NonZeroU128, NonZeroUsize,
+    NonZeroI128, NonZeroI16, NonZeroI32, NonZeroI64, NonZeroI8, NonZeroIsize, NonZeroU128,
+    NonZeroU16, NonZeroU32, NonZeroU64, NonZeroU8, NonZeroUsize,
 };
-use std::net::{IpAddr, Ipv4Addr, Ipv6Addr, SocketAddrV4, SocketAddrV6, SocketAddr};
 
 impl_with_fromstr! {
     i8, i16, i32, i64, i128, isize, u8, u16, u32, u64, u128, usize, f32, f64,
@@ -274,7 +279,7 @@ impl<'a, T: FromParam<'a>> FromParam<'a> for Option<T> {
     fn from_param(param: &'a str) -> Result<Self, Self::Error> {
         match T::from_param(param) {
             Ok(val) => Ok(Some(val)),
-            Err(_) => Ok(None)
+            Err(_) => Ok(None),
         }
     }
 }
@@ -358,7 +363,7 @@ impl<'r, T: FromSegments<'r>> FromSegments<'r> for Option<T> {
     fn from_segments(segments: Segments<'r, Path>) -> Result<Option<T>, Self::Error> {
         match T::from_segments(segments) {
             Ok(val) => Ok(Some(val)),
-            Err(_) => Ok(None)
+            Err(_) => Ok(None),
         }
     }
 }

@@ -1,7 +1,7 @@
-use rocket::{Rocket, Build};
-use rocket::figment::{self, Figment, providers::Serialized};
+use rocket::figment::{self, providers::Serialized, Figment};
+use rocket::{Build, Rocket};
 
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 
 /// A base `Config` for any `Poolable` type.
 ///
@@ -102,7 +102,8 @@ impl Config {
     /// ```
     pub fn figment(db_name: &str, rocket: &Rocket<Build>) -> Figment {
         let db_key = format!("databases.{}", db_name);
-        let default_pool_size = rocket.figment()
+        let default_pool_size = rocket
+            .figment()
             .extract_inner::<u32>(rocket::Config::WORKERS)
             .map(|workers| workers * 4)
             .ok();
@@ -113,7 +114,7 @@ impl Config {
 
         match default_pool_size {
             Some(pool_size) => figment.join(Serialized::default("pool_size", pool_size)),
-            None => figment
+            None => figment,
         }
     }
 }

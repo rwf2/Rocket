@@ -1,6 +1,7 @@
-#[macro_use] extern crate rocket;
+#[macro_use]
+extern crate rocket;
 
-use rocket::http::uri::{Segments, fmt::Path};
+use rocket::http::uri::{fmt::Path, Segments};
 
 #[get("/test/<path..>")]
 fn test(path: Segments<'_, Path>) -> String {
@@ -40,10 +41,17 @@ mod tests {
 
         // We construct a path that matches each of the routes above. We ensure the
         // prefix is stripped, confirming that dynamic segments are working.
-        for prefix in &["", "/test", "/two", "/one/two",
-                        "/point/test", "/point/two", "/point/one/two",
-                        "/static", "/point/static"]
-        {
+        for prefix in &[
+            "",
+            "/test",
+            "/two",
+            "/one/two",
+            "/point/test",
+            "/point/two",
+            "/point/one/two",
+            "/static",
+            "/point/static",
+        ] {
             let path = "this/is/the/path/we/want";
             let response = client.get(format!("{}/{}", prefix, path)).dispatch();
             assert_eq!(response.into_string(), Some(path.into()));

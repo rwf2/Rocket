@@ -1,4 +1,5 @@
-#[macro_use] extern crate rocket;
+#[macro_use]
+extern crate rocket;
 
 use rocket::form::{Form, Strict};
 
@@ -19,8 +20,8 @@ fn lenient<'r>(form: Form<MyForm<'r>>) -> &'r str {
 
 mod strict_and_lenient_forms_tests {
     use super::*;
+    use rocket::http::{ContentType, Status};
     use rocket::local::blocking::Client;
-    use rocket::http::{Status, ContentType};
 
     const FIELD_VALUE: &str = "just_some_value";
 
@@ -31,7 +32,8 @@ mod strict_and_lenient_forms_tests {
     #[test]
     fn test_strict_form() {
         let client = client();
-        let response = client.post("/strict")
+        let response = client
+            .post("/strict")
             .header(ContentType::Form)
             .body(format!("field={}", FIELD_VALUE))
             .dispatch();
@@ -39,7 +41,8 @@ mod strict_and_lenient_forms_tests {
         assert_eq!(response.status(), Status::Ok);
         assert_eq!(response.into_string(), Some(FIELD_VALUE.into()));
 
-        let response = client.post("/strict")
+        let response = client
+            .post("/strict")
             .header(ContentType::Form)
             .body(format!("field={}&extra=whoops", FIELD_VALUE))
             .dispatch();
@@ -50,7 +53,8 @@ mod strict_and_lenient_forms_tests {
     #[test]
     fn test_lenient_form() {
         let client = client();
-        let response = client.post("/lenient")
+        let response = client
+            .post("/lenient")
             .header(ContentType::Form)
             .body(format!("field={}", FIELD_VALUE))
             .dispatch();
@@ -58,7 +62,8 @@ mod strict_and_lenient_forms_tests {
         assert_eq!(response.status(), Status::Ok);
         assert_eq!(response.into_string(), Some(FIELD_VALUE.into()));
 
-        let response = client.post("/lenient")
+        let response = client
+            .post("/lenient")
             .header(ContentType::Form)
             .body(format!("field={}&extra=whoops", FIELD_VALUE))
             .dispatch();

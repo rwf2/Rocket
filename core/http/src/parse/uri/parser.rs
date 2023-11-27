@@ -1,11 +1,11 @@
-use pear::parsers::*;
 use pear::combinators::*;
-use pear::input::{self, Pear, Extent, Rewind, Input};
-use pear::macros::{parser, switch, parse_error, parse_try};
+use pear::input::{self, Extent, Input, Pear, Rewind};
+use pear::macros::{parse_error, parse_try, parser, switch};
+use pear::parsers::*;
 
-use crate::uri::{Uri, Origin, Authority, Absolute, Reference, Asterisk};
 use crate::parse::uri::tables::*;
 use crate::parse::uri::RawInput;
+use crate::uri::{Absolute, Asterisk, Authority, Origin, Reference, Uri};
 
 type Result<'a, T> = pear::input::Result<T, RawInput<'a>>;
 
@@ -20,7 +20,9 @@ type Result<'a, T> = pear::input::Result<T, RawInput<'a>>;
 
 #[parser(rewind)]
 pub fn complete<I, P, O>(input: &mut Pear<I>, p: P) -> input::Result<O, I>
-    where I: Input + Rewind, P: FnOnce(&mut Pear<I>) -> input::Result<O, I>
+where
+    I: Input + Rewind,
+    P: FnOnce(&mut Pear<I>) -> input::Result<O, I>,
 {
     (p()?, eof()?).0
 }
@@ -98,9 +100,7 @@ pub fn absolute<'a>(input: &mut RawInput<'a>) -> Result<'a, Absolute<'a>> {
 }
 
 #[parser]
-pub fn reference<'a>(
-    input: &mut RawInput<'a>,
-) -> Result<'a, Reference<'a>> {
+pub fn reference<'a>(input: &mut RawInput<'a>) -> Result<'a, Reference<'a>> {
     let prefix = take_while(is_scheme_char)?;
     let (scheme, authority, path) = switch! {
         peek(b':') if prefix.is_empty() => parse_error!("missing scheme")?,
@@ -129,7 +129,7 @@ pub fn reference<'a>(
 
 #[parser]
 pub fn hier_part<'a>(
-    input: &mut RawInput<'a>
+    input: &mut RawInput<'a>,
 ) -> Result<'a, (Option<Authority<'a>>, Extent<&'a [u8]>)> {
     switch! {
         eat_slice(b"//") => {
@@ -142,9 +142,7 @@ pub fn hier_part<'a>(
 }
 
 #[parser]
-fn host<'a>(
-    input: &mut RawInput<'a>,
-) -> Result<'a, Extent<&'a [u8]>> {
+fn host<'a>(input: &mut RawInput<'a>) -> Result<'a, Extent<&'a [u8]>> {
     switch! {
         peek(b'[') => enclosed(b'[', is_host_char, b']')?,
         _ => take_while(is_reg_name_char)?
@@ -152,9 +150,7 @@ fn host<'a>(
 }
 
 #[parser]
-fn port<'a>(
-    input: &mut RawInput<'a>,
-) -> Result<'a, Option<u16>> {
+fn port<'a>(input: &mut RawInput<'a>) -> Result<'a, Option<u16>> {
     if !succeeds(input, |i| eat(i, b':')) {
         return Ok(None);
     }

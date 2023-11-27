@@ -1,4 +1,5 @@
-#[macro_use] extern crate rocket;
+#[macro_use]
+extern crate rocket;
 
 use rocket::response::Redirect;
 
@@ -9,8 +10,8 @@ fn not_found() -> Redirect {
 
 mod tests {
     use super::*;
-    use rocket::local::blocking::Client;
     use rocket::http::Status;
+    use rocket::local::blocking::Client;
 
     #[test]
     fn error_catcher_redirect() {

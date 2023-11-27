@@ -1,10 +1,10 @@
 use proc_macro2::TokenStream;
-use syn::parse::{Parse, ParseStream, discouraged::Speculative};
+use syn::parse::{discouraged::Speculative, Parse, ParseStream};
 
 #[derive(Debug)]
 pub enum Input {
     Type(syn::Type, Option<(syn::Token![+], syn::Lifetime)>),
-    Tokens(TokenStream)
+    Tokens(TokenStream),
 }
 
 #[derive(Debug)]
@@ -19,7 +19,7 @@ struct Invocation {
 fn trait_obj_recast(ty: &syn::Type) -> Option<(syn::Type, syn::Token![+], syn::Lifetime)> {
     let bounds = match ty {
         syn::Type::TraitObject(t) if t.dyn_token.is_none() => &t.bounds,
-        _ => return None
+        _ => return None,
     };
 
     let mut bounds = bounds.pairs();

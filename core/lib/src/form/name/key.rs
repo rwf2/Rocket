@@ -85,7 +85,8 @@ impl Deref for Key {
 
 impl serde::Serialize for Key {
     fn serialize<S>(&self, ser: S) -> Result<S::Ok, S::Error>
-        where S: serde::Serializer
+    where
+        S: serde::Serializer,
     {
         self.0.serialize(ser)
     }
@@ -93,13 +94,14 @@ impl serde::Serialize for Key {
 
 impl<'de: 'a, 'a> serde::Deserialize<'de> for &'a Key {
     fn deserialize<D>(de: D) -> Result<Self, D::Error>
-        where D: serde::Deserializer<'de>
+    where
+        D: serde::Deserializer<'de>,
     {
         <&'a str as serde::Deserialize<'de>>::deserialize(de).map(Key::new)
     }
 }
 
-impl<I: core::slice::SliceIndex<str, Output=str>> core::ops::Index<I> for Key {
+impl<I: core::slice::SliceIndex<str, Output = str>> core::ops::Index<I> for Key {
     type Output = Key;
 
     #[inline]

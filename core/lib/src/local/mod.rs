@@ -179,9 +179,12 @@
 //! [`into_bytes()`]: blocking::LocalResponse::into_bytes()
 //! [`async` `into_bytes()`]: asynchronous::LocalResponse::into_bytes()
 
-#[macro_use] mod client;
-#[macro_use] mod request;
-#[macro_use] mod response;
+#[macro_use]
+mod client;
+#[macro_use]
+mod request;
+#[macro_use]
+mod response;
 
 pub mod asynchronous;
 pub mod blocking;

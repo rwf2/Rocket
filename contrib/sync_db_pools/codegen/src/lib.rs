@@ -1,6 +1,6 @@
 //! Code generation for rocket-sync-db-pools.
 
-#![recursion_limit="256"]
+#![recursion_limit = "256"]
 #![warn(rust_2018_idioms)]
 
 #[macro_use]
@@ -8,7 +8,7 @@ extern crate quote;
 
 mod database;
 
-use devise::{syn, proc_macro2};
+use devise::{proc_macro2, syn};
 use proc_macro::TokenStream;
 
 /// Generates a request guard and fairing for retrieving a database connection.

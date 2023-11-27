@@ -1,16 +1,16 @@
 use std::marker::PhantomData;
 use std::sync::Arc;
 
-use rocket::{Phase, Rocket, Ignite, Sentinel};
 use rocket::fairing::{AdHoc, Fairing};
-use rocket::request::{Request, Outcome, FromRequest};
-use rocket::outcome::IntoOutcome;
 use rocket::http::Status;
+use rocket::outcome::IntoOutcome;
+use rocket::request::{FromRequest, Outcome, Request};
+use rocket::{Ignite, Phase, Rocket, Sentinel};
 
-use rocket::tokio::sync::{OwnedSemaphorePermit, Semaphore, Mutex};
+use rocket::tokio::sync::{Mutex, OwnedSemaphorePermit, Semaphore};
 use rocket::tokio::time::timeout;
 
-use crate::{Config, Poolable, Error};
+use crate::{Config, Error, Poolable};
 
 /// Unstable internal details of generated code for the #[database] attribute.
 ///
@@ -31,7 +31,7 @@ impl<K, C: Poolable> Clone for ConnectionPool<K, C> {
             config: self.config.clone(),
             pool: self.pool.clone(),
             semaphore: self.semaphore.clone(),
-            _marker: PhantomData
+            _marker: PhantomData,
         }
     }
 }
@@ -49,23 +49,28 @@ pub struct Connection<K, C: Poolable> {
 
 // A wrapper around spawn_blocking that propagates panics to the calling code.
 async fn run_blocking<F, R>(job: F) -> R
-    where F: FnOnce() -> R + Send + 'static, R: Send + 'static,
+where
+    F: FnOnce() -> R + Send + 'static,
+    R: Send + 'static,
 {
     match tokio::task::spawn_blocking(job).await {
         Ok(ret) => ret,
         Err(e) => match e.try_into_panic() {
             Ok(panic) => std::panic::resume_unwind(panic),
             Err(_) => unreachable!("spawn_blocking tasks are never cancelled"),
-        }
+        },
     }
 }
 
 macro_rules! dberr {
-    ($msg:literal, $db_name:expr, $efmt:literal, $error:expr, $rocket:expr) => ({
-        rocket::error!(concat!("database ", $msg, " error for pool named `{}`"), $db_name);
+    ($msg:literal, $db_name:expr, $efmt:literal, $error:expr, $rocket:expr) => {{
+        rocket::error!(
+            concat!("database ", $msg, " error for pool named `{}`"),
+            $db_name
+        );
         error_!($efmt, $error);
         return Err($rocket);
-    });
+    }};
 }
 
 impl<K: 'static, C: Poolable> ConnectionPool<K, C> {
@@ -89,7 +94,8 @@ impl<K: 'static, C: Poolable> ConnectionPool<K, C> {
                     Err(Error::Pool(e)) => dberr!("pool init", db, "{}", e, rocket),
                     Err(Error::Custom(e)) => dberr!("pool manager", db, "{:?}", e, rocket),
                 }
-            }).await
+            })
+            .await
         })
     }
 
@@ -103,7 +109,10 @@ impl<K: 'static, C: Poolable> ConnectionPool<K, C> {
             }
         };
 
-        let pool = self.pool.as_ref().cloned()
+        let pool = self
+            .pool
+            .as_ref()
+            .cloned()
             .expect("internal invariant broken: self.pool is Some");
 
         match run_blocking(move || pool.get_timeout(duration)).await {
@@ -125,12 +134,18 @@ impl<K: 'static, C: Poolable> ConnectionPool<K, C> {
             Some(pool) => match pool.get().await {
                 Some(conn) => Some(conn),
                 None => {
-                    error_!("no connections available for `{}`", std::any::type_name::<K>());
+                    error_!(
+                        "no connections available for `{}`",
+                        std::any::type_name::<K>()
+                    );
                     None
                 }
             },
             None => {
-                error_!("missing database fairing for `{}`", std::any::type_name::<K>());
+                error_!(
+                    "missing database fairing for `{}`",
+                    std::any::type_name::<K>()
+                );
                 None
             }
         }
@@ -144,8 +159,9 @@ impl<K: 'static, C: Poolable> ConnectionPool<K, C> {
 
 impl<K: 'static, C: Poolable> Connection<K, C> {
     pub async fn run<F, R>(&self, f: F) -> R
-        where F: FnOnce(&mut C) -> R + Send + 'static,
-              R: Send + 'static,
+    where
+        F: FnOnce(&mut C) -> R + Send + 'static,
+        R: Send + 'static,
     {
         // It is important that this inner Arc<Mutex<>> (or the OwnedMutexGuard
         // derived from it) never be a variable on the stack at an await point,
@@ -159,14 +175,15 @@ impl<K: 'static, C: Poolable> Connection<K, C> {
         run_blocking(move || {
             // And then re-enter the runtime to wait on the async mutex, but in
             // a blocking fashion.
-            let mut connection = tokio::runtime::Handle::current().block_on(async {
-                connection.lock_owned().await
-            });
+            let mut connection =
+                tokio::runtime::Handle::current().block_on(async { connection.lock_owned().await });
 
-            let conn = connection.as_mut()
+            let conn = connection
+                .as_mut()
                 .expect("internal invariant broken: self.connection is Some");
             f(conn)
-        }).await
+        })
+        .await
     }
 }
 
@@ -177,9 +194,8 @@ impl<K, C: Poolable> Drop for Connection<K, C> {
 
         // See same motivation above for this arrangement of spawn_blocking/block_on
         tokio::task::spawn_blocking(move || {
-            let mut connection = tokio::runtime::Handle::current().block_on(async {
-                connection.lock_owned().await
-            });
+            let mut connection =
+                tokio::runtime::Handle::current().block_on(async { connection.lock_owned().await });
 
             if let Some(conn) = connection.take() {
                 drop(conn);
@@ -212,7 +228,10 @@ impl<'r, K: 'static, C: Poolable> FromRequest<'r> for Connection<K, C> {
         match request.rocket().state::<ConnectionPool<K, C>>() {
             Some(c) => c.get().await.or_error((Status::ServiceUnavailable, ())),
             None => {
-                error_!("Missing database fairing for `{}`", std::any::type_name::<K>());
+                error_!(
+                    "Missing database fairing for `{}`",
+                    std::any::type_name::<K>()
+                );
                 Outcome::Error((Status::InternalServerError, ()))
             }
         }
@@ -225,11 +244,18 @@ impl<K: 'static, C: Poolable> Sentinel for Connection<K, C> {
 
         if rocket.state::<ConnectionPool<K, C>>().is_none() {
             let conn = std::any::type_name::<K>().primary().bold();
-            error!("requesting `{}` DB connection without attaching `{}{}`.",
-                conn, conn.linger(), "::fairing()".clear());
+            error!(
+                "requesting `{}` DB connection without attaching `{}{}`.",
+                conn,
+                conn.linger(),
+                "::fairing()".clear()
+            );
 
-            info_!("Attach `{}{}` to use database connection pooling.",
-                conn.linger(), "::fairing()".clear());
+            info_!(
+                "Attach `{}{}` to use database connection pooling.",
+                conn.linger(),
+                "::fairing()".clear()
+            );
 
             return true;
         }

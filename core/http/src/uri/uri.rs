@@ -1,9 +1,9 @@
-use std::fmt::{self, Display};
 use std::borrow::Cow;
+use std::fmt::{self, Display};
 
 use crate::ext::IntoOwned;
-use crate::uri::{Origin, Authority, Absolute, Reference, Asterisk};
 use crate::uri::error::{Error, TryFromUriError};
+use crate::uri::{Absolute, Asterisk, Authority, Origin, Reference};
 
 /// An `enum` encapsulating any of the possible URI variants.
 ///
@@ -80,7 +80,8 @@ impl<'a> Uri<'a> {
     /// Uri::parse::<Origin>("foo bar").expect_err("invalid URI");
     /// ```
     pub fn parse<T>(string: &'a str) -> Result<Uri<'a>, Error<'_>>
-        where T: Into<Uri<'a>> + TryFrom<&'a str, Error = Error<'a>>
+    where
+        T: Into<Uri<'a>> + TryFrom<&'a str, Error = Error<'a>>,
     {
         T::try_from(string).map(|v| v.into())
     }
@@ -155,7 +156,7 @@ impl<'a> Uri<'a> {
     pub fn origin(&self) -> Option<&Origin<'a>> {
         match self {
             Uri::Origin(ref inner) => Some(inner),
-            _ => None
+            _ => None,
         }
     }
 
@@ -183,7 +184,7 @@ impl<'a> Uri<'a> {
     pub fn authority(&self) -> Option<&Authority<'a>> {
         match self {
             Uri::Authority(ref inner) => Some(inner),
-            _ => None
+            _ => None,
         }
     }
 
@@ -211,7 +212,7 @@ impl<'a> Uri<'a> {
     pub fn absolute(&self) -> Option<&Absolute<'a>> {
         match self {
             Uri::Absolute(ref inner) => Some(inner),
-            _ => None
+            _ => None,
         }
     }
 
@@ -239,7 +240,7 @@ impl<'a> Uri<'a> {
     pub fn reference(&self) -> Option<&Reference<'a>> {
         match self {
             Uri::Reference(ref inner) => Some(inner),
-            _ => None
+            _ => None,
         }
     }
 }
@@ -247,7 +248,7 @@ impl<'a> Uri<'a> {
 pub(crate) unsafe fn as_utf8_unchecked(input: Cow<'_, [u8]>) -> Cow<'_, str> {
     match input {
         Cow::Borrowed(bytes) => Cow::Borrowed(std::str::from_utf8_unchecked(bytes)),
-        Cow::Owned(bytes) => Cow::Owned(String::from_utf8_unchecked(bytes))
+        Cow::Owned(bytes) => Cow::Owned(String::from_utf8_unchecked(bytes)),
     }
 }
 
@@ -281,7 +282,7 @@ impl IntoOwned for Uri<'_> {
             Uri::Authority(authority) => Uri::Authority(authority.into_owned()),
             Uri::Absolute(absolute) => Uri::Absolute(absolute.into_owned()),
             Uri::Reference(reference) => Uri::Reference(reference.into_owned()),
-            Uri::Asterisk(asterisk) => Uri::Asterisk(asterisk)
+            Uri::Asterisk(asterisk) => Uri::Asterisk(asterisk),
         }
     }
 }
@@ -293,7 +294,7 @@ impl Display for Uri<'_> {
             Uri::Authority(ref authority) => write!(f, "{}", authority),
             Uri::Absolute(ref absolute) => write!(f, "{}", absolute),
             Uri::Reference(ref reference) => write!(f, "{}", reference),
-            Uri::Asterisk(ref asterisk) => write!(f, "{}", asterisk)
+            Uri::Asterisk(ref asterisk) => write!(f, "{}", asterisk),
         }
     }
 }
@@ -348,12 +349,12 @@ macro_rules! impl_serde {
     ($T:ty, $expected:literal) => {
         #[cfg(feature = "serde")]
         mod serde {
+            use super::*;
             use std::fmt;
             use std::marker::PhantomData;
-            use super::*;
 
-            use serde_::ser::{Serialize, Serializer};
             use serde_::de::{Deserialize, Deserializer, Error, Visitor};
+            use serde_::ser::{Serialize, Serializer};
 
             impl<'a> Serialize for $T {
                 fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {

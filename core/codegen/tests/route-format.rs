@@ -1,41 +1,68 @@
-#[macro_use] extern crate rocket;
+#[macro_use]
+extern crate rocket;
 
+use rocket::http::{Accept, ContentType, MediaType, Status};
 use rocket::local::blocking::Client;
-use rocket::http::{ContentType, MediaType, Accept, Status};
 
 // Test that known formats work as expected, including not colliding.
 
 #[post("/", format = "json")]
-fn json() -> &'static str { "json" }
+fn json() -> &'static str {
+    "json"
+}
 
 #[post("/", format = "xml")]
-fn xml() -> &'static str { "xml" }
+fn xml() -> &'static str {
+    "xml"
+}
 
 // Unreachable. Written for codegen.
 #[post("/", format = "application/json", rank = 2)]
-fn json_long() -> &'static str { "json_long" }
+fn json_long() -> &'static str {
+    "json_long"
+}
 
 #[post("/", format = "application/msgpack")]
-fn msgpack_long() -> &'static str { "msgpack_long" }
+fn msgpack_long() -> &'static str {
+    "msgpack_long"
+}
 
 // Unreachable. Written for codegen.
 #[post("/", format = "msgpack", rank = 2)]
-fn msgpack() -> &'static str { "msgpack" }
+fn msgpack() -> &'static str {
+    "msgpack"
+}
 
 #[get("/", format = "plain")]
-fn plain() -> &'static str { "plain" }
+fn plain() -> &'static str {
+    "plain"
+}
 
 #[get("/", format = "binary", rank = 2)]
-fn binary() -> &'static str { "binary" }
+fn binary() -> &'static str {
+    "binary"
+}
 
 #[get("/", rank = 3)]
-fn other() -> &'static str { "other" }
+fn other() -> &'static str {
+    "other"
+}
 
 #[test]
 fn test_formats() {
-    let rocket = rocket::build()
-        .mount("/", routes![json, xml, json_long, msgpack_long, msgpack,
-               plain, binary, other]);
+    let rocket = rocket::build().mount(
+        "/",
+        routes![
+            json,
+            xml,
+            json_long,
+            msgpack_long,
+            msgpack,
+            plain,
+            binary,
+            other
+        ],
+    );
 
     let client = Client::debug(rocket).unwrap();
 
@@ -68,24 +95,31 @@ fn test_formats() {
 
 // TODO: #[rocket(allow(unknown_format))]
 #[get("/", format = "application/foo")]
-fn get_foo() -> &'static str { "get_foo" }
+fn get_foo() -> &'static str {
+    "get_foo"
+}
 
 // TODO: #[rocket(allow(unknown_format))]
 #[post("/", format = "application/foo")]
-fn post_foo() -> &'static str { "post_foo" }
+fn post_foo() -> &'static str {
+    "post_foo"
+}
 
 // TODO: #[rocket(allow(unknown_format))]
 #[get("/", format = "bar/baz", rank = 2)]
-fn get_bar_baz() -> &'static str { "get_bar_baz" }
+fn get_bar_baz() -> &'static str {
+    "get_bar_baz"
+}
 
 // TODO: #[rocket(allow(unknown_format))]
 #[put("/", format = "bar/baz")]
-fn put_bar_baz() -> &'static str { "put_bar_baz" }
+fn put_bar_baz() -> &'static str {
+    "put_bar_baz"
+}
 
 #[test]
 fn test_custom_formats() {
-    let rocket = rocket::build()
-        .mount("/", routes![get_foo, post_foo, get_bar_baz, put_bar_baz]);
+    let rocket = rocket::build().mount("/", routes![get_foo, post_foo, get_bar_baz, put_bar_baz]);
 
     let client = Client::debug(rocket).unwrap();
 

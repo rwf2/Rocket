@@ -1,14 +1,14 @@
+mod export;
+mod test_guide;
 mod uri;
 mod uri_parsing;
-mod test_guide;
-mod export;
 
 pub mod typed_stream;
 
 use devise::Result;
-use syn::{Path, punctuated::Punctuated, parse::Parser, Token};
-use syn::spanned::Spanned;
 use proc_macro2::TokenStream;
+use syn::spanned::Spanned;
+use syn::{parse::Parser, punctuated::Punctuated, Path, Token};
 
 fn struct_maker_vec(
     input: proc_macro::TokenStream,
@@ -40,15 +40,20 @@ pub fn routes_macro(input: proc_macro::TokenStream) -> TokenStream {
 }
 
 pub fn catchers_macro(input: proc_macro::TokenStream) -> TokenStream {
-    struct_maker_vec(input, quote!(::rocket::Catcher), |e| quote!(#e.into_catcher()))
-        .unwrap_or_else(|diag| diag.emit_as_expr_tokens())
+    struct_maker_vec(
+        input,
+        quote!(::rocket::Catcher),
+        |e| quote!(#e.into_catcher()),
+    )
+    .unwrap_or_else(|diag| diag.emit_as_expr_tokens())
 }
 
 pub fn uri_macro(input: proc_macro::TokenStream) -> TokenStream {
-    uri::_uri_macro(input.into())
-        .unwrap_or_else(|diag| diag.emit_as_expr_tokens_or(quote! {
+    uri::_uri_macro(input.into()).unwrap_or_else(|diag| {
+        diag.emit_as_expr_tokens_or(quote! {
             rocket::http::uri::Origin::ROOT
-        }))
+        })
+    })
 }
 
 pub fn uri_internal_macro(input: proc_macro::TokenStream) -> TokenStream {
@@ -57,23 +62,21 @@ pub fn uri_internal_macro(input: proc_macro::TokenStream) -> TokenStream {
     // invocation of `uri!` without access to `span.parent()`, and
     // `Span::call_site()` here points to the `#[route]`, immediate caller,
     // generating a rather confusing error message when there's a type-mismatch.
-    uri::_uri_internal_macro(input.into())
-        .unwrap_or_else(|diag| diag.emit_as_expr_tokens_or(quote! {
+    uri::_uri_internal_macro(input.into()).unwrap_or_else(|diag| {
+        diag.emit_as_expr_tokens_or(quote! {
             rocket::http::uri::Origin::ROOT
-        }))
+        })
+    })
 }
 
 pub fn guide_tests_internal(input: proc_macro::TokenStream) -> TokenStream {
-    test_guide::_macro(input)
-        .unwrap_or_else(|diag| diag.emit_as_item_tokens())
+    test_guide::_macro(input).unwrap_or_else(|diag| diag.emit_as_item_tokens())
 }
 
 pub fn export_internal(input: proc_macro::TokenStream) -> TokenStream {
-    export::_macro(input)
-        .unwrap_or_else(|diag| diag.emit_as_item_tokens())
+    export::_macro(input).unwrap_or_else(|diag| diag.emit_as_item_tokens())
 }
 
 pub fn typed_stream(input: proc_macro::TokenStream) -> TokenStream {
-    typed_stream::_macro(input)
-        .unwrap_or_else(|diag| diag.emit_as_item_tokens())
+    typed_stream::_macro(input).unwrap_or_else(|diag| diag.emit_as_item_tokens())
 }

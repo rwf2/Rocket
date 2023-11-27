@@ -112,9 +112,10 @@
 
 #[macro_use]
 mod ident;
+mod cli_colors;
 mod config;
-mod shutdown;
 mod ip_header;
+mod shutdown;
 
 #[cfg(feature = "tls")]
 mod tls;
@@ -123,15 +124,16 @@ mod tls;
 mod secret_key;
 
 #[doc(hidden)]
-pub use config::{pretty_print_error, bail_with_config_error};
+pub use config::{bail_with_config_error, pretty_print_error};
 
-pub use config::Config;
 pub use crate::log::LogLevel;
-pub use shutdown::Shutdown;
+pub use cli_colors::CliColors;
+pub use config::Config;
 pub use ident::Ident;
+pub use shutdown::Shutdown;
 
 #[cfg(feature = "tls")]
-pub use tls::{TlsConfig, CipherSuite};
+pub use tls::{CipherSuite, TlsConfig};
 
 #[cfg(feature = "mtls")]
 pub use tls::MutualTls;
@@ -144,13 +146,13 @@ pub use shutdown::Sig;
 
 #[cfg(test)]
 mod tests {
-    use std::net::Ipv4Addr;
     use figment::{Figment, Profile};
     use pretty_assertions::assert_eq;
+    use std::net::Ipv4Addr;
 
-    use crate::log::LogLevel;
+    use crate::config::{CliColors, Config};
     use crate::data::{Limits, ToByteUnit};
-    use crate::config::Config;
+    use crate::log::LogLevel;
 
     #[test]
     fn test_figment_is_default() {
@@ -198,7 +200,9 @@ mod tests {
     #[test]
     fn test_toml_file() {
         figment::Jail::expect_with(|jail| {
-            jail.create_file("Rocket.toml", r#"
+            jail.create_file(
+                "Rocket.toml",
+                r#"
                 [default]
                 address = "1.2.3.4"
                 ident = "Something Cool"
@@ -207,21 +211,27 @@ mod tests {
                 keep_alive = 10
                 log_level = "off"
                 cli_colors = 0
-            "#)?;
+            "#,
+            )?;
 
             let config = Config::from(Config::figment());
-            assert_eq!(config, Config {
-                address: Ipv4Addr::new(1, 2, 3, 4).into(),
-                port: 1234,
-                workers: 20,
-                ident: ident!("Something Cool"),
-                keep_alive: 10,
-                log_level: LogLevel::Off,
-                cli_colors: false,
-                ..Config::default()
-            });
+            assert_eq!(
+                config,
+                Config {
+                    address: Ipv4Addr::new(1, 2, 3, 4).into(),
+                    port: 1234,
+                    workers: 20,
+                    ident: ident!("Something Cool"),
+                    keep_alive: 10,
+                    log_level: LogLevel::Off,
+                    cli_colors: CliColors::Never,
+                    ..Config::default()
+                }
+            );
 
-            jail.create_file("Rocket.toml", r#"
+            jail.create_file(
+                "Rocket.toml",
+                r#"
                 [global]
                 address = "1.2.3.4"
                 ident = "Something Else Cool"
@@ -230,22 +240,28 @@ mod tests {
                 keep_alive = 10
                 log_level = "off"
                 cli_colors = 0
-            "#)?;
+            "#,
+            )?;
 
             let config = Config::from(Config::figment());
-            assert_eq!(config, Config {
-                address: Ipv4Addr::new(1, 2, 3, 4).into(),
-                port: 1234,
-                workers: 20,
-                ident: ident!("Something Else Cool"),
-                keep_alive: 10,
-                log_level: LogLevel::Off,
-                cli_colors: false,
-                ..Config::default()
-            });
+            assert_eq!(
+                config,
+                Config {
+                    address: Ipv4Addr::new(1, 2, 3, 4).into(),
+                    port: 1234,
+                    workers: 20,
+                    ident: ident!("Something Else Cool"),
+                    keep_alive: 10,
+                    log_level: LogLevel::Off,
+                    cli_colors: CliColors::Never,
+                    ..Config::default()
+                }
+            );
 
             jail.set_env("ROCKET_CONFIG", "Other.toml");
-            jail.create_file("Other.toml", r#"
+            jail.create_file(
+                "Other.toml",
+                r#"
                 [default]
                 address = "1.2.3.4"
                 port = 1234
@@ -253,18 +269,106 @@ mod tests {
                 keep_alive = 10
                 log_level = "off"
                 cli_colors = 0
-            "#)?;
+            "#,
+            )?;
 
             let config = Config::from(Config::figment());
-            assert_eq!(config, Config {
-                address: Ipv4Addr::new(1, 2, 3, 4).into(),
-                port: 1234,
-                workers: 20,
-                keep_alive: 10,
-                log_level: LogLevel::Off,
-                cli_colors: false,
-                ..Config::default()
-            });
+            assert_eq!(
+                config,
+                Config {
+                    address: Ipv4Addr::new(1, 2, 3, 4).into(),
+                    port: 1234,
+                    workers: 20,
+                    keep_alive: 10,
+                    log_level: LogLevel::Off,
+                    cli_colors: CliColors::Never,
+                    ..Config::default()
+                }
+            );
+
+            jail.set_env("ROCKET_CONFIG", "Other.toml");
+            jail.create_file(
+                "Other.toml",
+                r#"
+                [default]
+                address = "1.2.3.4"
+                port = 1234
+                workers = 20
+                keep_alive = 10
+                log_level = "off"
+                cli_colors = "always"
+            "#,
+            )?;
+
+            let config = Config::from(Config::figment());
+            assert_eq!(
+                config,
+                Config {
+                    address: Ipv4Addr::new(1, 2, 3, 4).into(),
+                    port: 1234,
+                    workers: 20,
+                    keep_alive: 10,
+                    log_level: LogLevel::Off,
+                    cli_colors: CliColors::Always,
+                    ..Config::default()
+                }
+            );
+
+            jail.set_env("ROCKET_CONFIG", "Other.toml");
+            jail.create_file(
+                "Other.toml",
+                r#"
+                [default]
+                address = "1.2.3.4"
+                port = 1234
+                workers = 20
+                keep_alive = 10
+                log_level = "off"
+                cli_colors = "auto"
+            "#,
+            )?;
+
+            let config = Config::from(Config::figment());
+            assert_eq!(
+                config,
+                Config {
+                    address: Ipv4Addr::new(1, 2, 3, 4).into(),
+                    port: 1234,
+                    workers: 20,
+                    keep_alive: 10,
+                    log_level: LogLevel::Off,
+                    cli_colors: CliColors::Auto,
+                    ..Config::default()
+                }
+            );
+
+            jail.set_env("ROCKET_CONFIG", "Other.toml");
+            jail.create_file(
+                "Other.toml",
+                r#"
+                [default]
+                address = "1.2.3.4"
+                port = 1234
+                workers = 20
+                keep_alive = 10
+                log_level = "off"
+                cli_colors = "never"
+            "#,
+            )?;
+
+            let config = Config::from(Config::figment());
+            assert_eq!(
+                config,
+                Config {
+                    address: Ipv4Addr::new(1, 2, 3, 4).into(),
+                    port: 1234,
+                    workers: 20,
+                    keep_alive: 10,
+                    log_level: LogLevel::Off,
+                    cli_colors: CliColors::Never,
+                    ..Config::default()
+                }
+            );
 
             Ok(())
         });
@@ -273,10 +377,12 @@ mod tests {
     #[test]
     #[cfg(feature = "tls")]
     fn test_tls_config_from_file() {
-        use crate::config::{TlsConfig, CipherSuite, Ident, Shutdown};
+        use crate::config::{CipherSuite, Ident, Shutdown, TlsConfig};
 
         figment::Jail::expect_with(|jail| {
-            jail.create_file("Rocket.toml", r#"
+            jail.create_file(
+                "Rocket.toml",
+                r#"
                 [global]
                 shutdown.ctrlc = 0
                 ident = false
@@ -289,36 +395,51 @@ mod tests {
                 forms = "1mib"
                 json = "10mib"
                 stream = "50kib"
-            "#)?;
+            "#,
+            )?;
 
             let config = Config::from(Config::figment());
-            assert_eq!(config, Config {
-                shutdown: Shutdown { ctrlc: false, ..Default::default() },
-                ident: Ident::none(),
-                tls: Some(TlsConfig::from_paths("/ssl/cert.pem", "/ssl/key.pem")),
-                limits: Limits::default()
-                    .limit("forms", 1.mebibytes())
-                    .limit("json", 10.mebibytes())
-                    .limit("stream", 50.kibibytes()),
-                ..Config::default()
-            });
+            assert_eq!(
+                config,
+                Config {
+                    shutdown: Shutdown {
+                        ctrlc: false,
+                        ..Default::default()
+                    },
+                    ident: Ident::none(),
+                    tls: Some(TlsConfig::from_paths("/ssl/cert.pem", "/ssl/key.pem")),
+                    limits: Limits::default()
+                        .limit("forms", 1.mebibytes())
+                        .limit("json", 10.mebibytes())
+                        .limit("stream", 50.kibibytes()),
+                    ..Config::default()
+                }
+            );
 
-            jail.create_file("Rocket.toml", r#"
+            jail.create_file(
+                "Rocket.toml",
+                r#"
                 [global.tls]
                 certs = "cert.pem"
                 key = "key.pem"
-            "#)?;
+            "#,
+            )?;
 
             let config = Config::from(Config::figment());
-            assert_eq!(config, Config {
-                tls: Some(TlsConfig::from_paths(
-                    jail.directory().join("cert.pem"),
-                    jail.directory().join("key.pem")
-                )),
-                ..Config::default()
-            });
+            assert_eq!(
+                config,
+                Config {
+                    tls: Some(TlsConfig::from_paths(
+                        jail.directory().join("cert.pem"),
+                        jail.directory().join("key.pem")
+                    )),
+                    ..Config::default()
+                }
+            );
 
-            jail.create_file("Rocket.toml", r#"
+            jail.create_file(
+                "Rocket.toml",
+                r#"
                 [global.tls]
                 certs = "cert.pem"
                 key = "key.pem"
@@ -331,26 +452,34 @@ mod tests {
                     "TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384",
                     "TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256",
                 ]
-            "#)?;
+            "#,
+            )?;
 
             let config = Config::from(Config::figment());
             let cert_path = jail.directory().join("cert.pem");
             let key_path = jail.directory().join("key.pem");
-            assert_eq!(config, Config {
-                tls: Some(TlsConfig::from_paths(cert_path, key_path)
-                         .with_preferred_server_cipher_order(true)
-                         .with_ciphers([
-                             CipherSuite::TLS_CHACHA20_POLY1305_SHA256,
-                             CipherSuite::TLS_AES_256_GCM_SHA384,
-                             CipherSuite::TLS_AES_128_GCM_SHA256,
-                             CipherSuite::TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305_SHA256,
-                             CipherSuite::TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384,
-                             CipherSuite::TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256,
-                         ])),
-                ..Config::default()
-            });
+            assert_eq!(
+                config,
+                Config {
+                    tls: Some(
+                        TlsConfig::from_paths(cert_path, key_path)
+                            .with_preferred_server_cipher_order(true)
+                            .with_ciphers([
+                                CipherSuite::TLS_CHACHA20_POLY1305_SHA256,
+                                CipherSuite::TLS_AES_256_GCM_SHA384,
+                                CipherSuite::TLS_AES_128_GCM_SHA256,
+                                CipherSuite::TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305_SHA256,
+                                CipherSuite::TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384,
+                                CipherSuite::TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256,
+                            ])
+                    ),
+                    ..Config::default()
+                }
+            );
 
-            jail.create_file("Rocket.toml", r#"
+            jail.create_file(
+                "Rocket.toml",
+                r#"
                 [global]
                 shutdown.ctrlc = 0
                 ident = false
@@ -363,36 +492,51 @@ mod tests {
                 forms = "1mib"
                 json = "10mib"
                 stream = "50kib"
-            "#)?;
+            "#,
+            )?;
 
             let config = Config::from(Config::figment());
-            assert_eq!(config, Config {
-                shutdown: Shutdown { ctrlc: false, ..Default::default() },
-                ident: Ident::none(),
-                tls: Some(TlsConfig::from_paths("/ssl/cert.pem", "/ssl/key.pem")),
-                limits: Limits::default()
-                    .limit("forms", 1.mebibytes())
-                    .limit("json", 10.mebibytes())
-                    .limit("stream", 50.kibibytes()),
-                ..Config::default()
-            });
+            assert_eq!(
+                config,
+                Config {
+                    shutdown: Shutdown {
+                        ctrlc: false,
+                        ..Default::default()
+                    },
+                    ident: Ident::none(),
+                    tls: Some(TlsConfig::from_paths("/ssl/cert.pem", "/ssl/key.pem")),
+                    limits: Limits::default()
+                        .limit("forms", 1.mebibytes())
+                        .limit("json", 10.mebibytes())
+                        .limit("stream", 50.kibibytes()),
+                    ..Config::default()
+                }
+            );
 
-            jail.create_file("Rocket.toml", r#"
+            jail.create_file(
+                "Rocket.toml",
+                r#"
                 [global.tls]
                 certs = "cert.pem"
                 key = "key.pem"
-            "#)?;
+            "#,
+            )?;
 
             let config = Config::from(Config::figment());
-            assert_eq!(config, Config {
-                tls: Some(TlsConfig::from_paths(
-                    jail.directory().join("cert.pem"),
-                    jail.directory().join("key.pem")
-                )),
-                ..Config::default()
-            });
+            assert_eq!(
+                config,
+                Config {
+                    tls: Some(TlsConfig::from_paths(
+                        jail.directory().join("cert.pem"),
+                        jail.directory().join("key.pem")
+                    )),
+                    ..Config::default()
+                }
+            );
 
-            jail.create_file("Rocket.toml", r#"
+            jail.create_file(
+                "Rocket.toml",
+                r#"
                 [global.tls]
                 certs = "cert.pem"
                 key = "key.pem"
@@ -405,24 +549,30 @@ mod tests {
                     "TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384",
                     "TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256",
                 ]
-            "#)?;
+            "#,
+            )?;
 
             let config = Config::from(Config::figment());
             let cert_path = jail.directory().join("cert.pem");
             let key_path = jail.directory().join("key.pem");
-            assert_eq!(config, Config {
-                tls: Some(TlsConfig::from_paths(cert_path, key_path)
-                         .with_preferred_server_cipher_order(true)
-                         .with_ciphers([
-                             CipherSuite::TLS_CHACHA20_POLY1305_SHA256,
-                             CipherSuite::TLS_AES_256_GCM_SHA384,
-                             CipherSuite::TLS_AES_128_GCM_SHA256,
-                             CipherSuite::TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305_SHA256,
-                             CipherSuite::TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384,
-                             CipherSuite::TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256,
-                         ])),
-                ..Config::default()
-            });
+            assert_eq!(
+                config,
+                Config {
+                    tls: Some(
+                        TlsConfig::from_paths(cert_path, key_path)
+                            .with_preferred_server_cipher_order(true)
+                            .with_ciphers([
+                                CipherSuite::TLS_CHACHA20_POLY1305_SHA256,
+                                CipherSuite::TLS_AES_256_GCM_SHA384,
+                                CipherSuite::TLS_AES_128_GCM_SHA256,
+                                CipherSuite::TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305_SHA256,
+                                CipherSuite::TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384,
+                                CipherSuite::TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256,
+                            ])
+                    ),
+                    ..Config::default()
+                }
+            );
 
             Ok(())
         });
@@ -434,11 +584,14 @@ mod tests {
         use std::path::Path;
 
         figment::Jail::expect_with(|jail| {
-            jail.create_file("Rocket.toml", r#"
+            jail.create_file(
+                "Rocket.toml",
+                r#"
                 [default.tls]
                 certs = "/ssl/cert.pem"
                 key = "/ssl/key.pem"
-            "#)?;
+            "#,
+            )?;
 
             let config = Config::from(Config::figment());
             assert!(config.tls.is_some());
@@ -446,12 +599,15 @@ mod tests {
             assert!(config.tls_enabled());
             assert!(!config.mtls_enabled());
 
-            jail.create_file("Rocket.toml", r#"
+            jail.create_file(
+                "Rocket.toml",
+                r#"
                 [default.tls]
                 certs = "/ssl/cert.pem"
                 key = "/ssl/key.pem"
                 mutual = { ca_certs = "/ssl/ca.pem" }
-            "#)?;
+            "#,
+            )?;
 
             let config = Config::from(Config::figment());
             assert!(config.tls_enabled());
@@ -461,7 +617,9 @@ mod tests {
             assert_eq!(mtls.ca_certs().unwrap_left(), Path::new("/ssl/ca.pem"));
             assert!(!mtls.mandatory);
 
-            jail.create_file("Rocket.toml", r#"
+            jail.create_file(
+                "Rocket.toml",
+                r#"
                 [default.tls]
                 certs = "/ssl/cert.pem"
                 key = "/ssl/key.pem"
@@ -469,24 +627,30 @@ mod tests {
                 [default.tls.mutual]
                 ca_certs = "/ssl/ca.pem"
                 mandatory = true
-            "#)?;
+            "#,
+            )?;
 
             let config = Config::from(Config::figment());
             let mtls = config.tls.as_ref().unwrap().mutual.as_ref().unwrap();
             assert_eq!(mtls.ca_certs().unwrap_left(), Path::new("/ssl/ca.pem"));
             assert!(mtls.mandatory);
 
-            jail.create_file("Rocket.toml", r#"
+            jail.create_file(
+                "Rocket.toml",
+                r#"
                 [default.tls]
                 certs = "/ssl/cert.pem"
                 key = "/ssl/key.pem"
                 mutual = { ca_certs = "relative/ca.pem" }
-            "#)?;
+            "#,
+            )?;
 
             let config = Config::from(Config::figment());
             let mtls = config.tls.as_ref().unwrap().mutual().unwrap();
-            assert_eq!(mtls.ca_certs().unwrap_left(),
-                jail.directory().join("relative/ca.pem"));
+            assert_eq!(
+                mtls.ca_certs().unwrap_left(),
+                jail.directory().join("relative/ca.pem")
+            );
 
             Ok(())
         });
@@ -495,7 +659,9 @@ mod tests {
     #[test]
     fn test_profiles_merge() {
         figment::Jail::expect_with(|jail| {
-            jail.create_file("Rocket.toml", r#"
+            jail.create_file(
+                "Rocket.toml",
+                r#"
                 [default.limits]
                 stream = "50kb"
 
@@ -504,28 +670,35 @@ mod tests {
 
                 [debug.limits]
                 file = "100kb"
-            "#)?;
+            "#,
+            )?;
 
             jail.set_env("ROCKET_PROFILE", "unknown");
             let config = Config::from(Config::figment());
-            assert_eq!(config, Config {
-                profile: Profile::const_new("unknown"),
-                limits: Limits::default()
-                    .limit("stream", 50.kilobytes())
-                    .limit("forms", 2.kilobytes()),
-                ..Config::default()
-            });
+            assert_eq!(
+                config,
+                Config {
+                    profile: Profile::const_new("unknown"),
+                    limits: Limits::default()
+                        .limit("stream", 50.kilobytes())
+                        .limit("forms", 2.kilobytes()),
+                    ..Config::default()
+                }
+            );
 
             jail.set_env("ROCKET_PROFILE", "debug");
             let config = Config::from(Config::figment());
-            assert_eq!(config, Config {
-                profile: Profile::const_new("debug"),
-                limits: Limits::default()
-                    .limit("stream", 50.kilobytes())
-                    .limit("forms", 2.kilobytes())
-                    .limit("file", 100.kilobytes()),
-                ..Config::default()
-            });
+            assert_eq!(
+                config,
+                Config {
+                    profile: Profile::const_new("debug"),
+                    limits: Limits::default()
+                        .limit("stream", 50.kilobytes())
+                        .limit("forms", 2.kilobytes())
+                        .limit("file", 100.kilobytes()),
+                    ..Config::default()
+                }
+            );
 
             Ok(())
         });
@@ -534,53 +707,68 @@ mod tests {
     #[test]
     #[cfg(feature = "tls")]
     fn test_env_vars_merge() {
-        use crate::config::{TlsConfig, Ident};
+        use crate::config::{Ident, TlsConfig};
 
         figment::Jail::expect_with(|jail| {
             jail.set_env("ROCKET_PORT", 9999);
             let config = Config::from(Config::figment());
-            assert_eq!(config, Config {
-                port: 9999,
-                ..Config::default()
-            });
+            assert_eq!(
+                config,
+                Config {
+                    port: 9999,
+                    ..Config::default()
+                }
+            );
 
             jail.set_env("ROCKET_TLS", r#"{certs="certs.pem"}"#);
             let first_figment = Config::figment();
             jail.set_env("ROCKET_TLS", r#"{key="key.pem"}"#);
             let prev_figment = Config::figment().join(&first_figment);
             let config = Config::from(&prev_figment);
-            assert_eq!(config, Config {
-                port: 9999,
-                tls: Some(TlsConfig::from_paths("certs.pem", "key.pem")),
-                ..Config::default()
-            });
+            assert_eq!(
+                config,
+                Config {
+                    port: 9999,
+                    tls: Some(TlsConfig::from_paths("certs.pem", "key.pem")),
+                    ..Config::default()
+                }
+            );
 
             jail.set_env("ROCKET_TLS", r#"{certs="new.pem"}"#);
             let config = Config::from(Config::figment().join(&prev_figment));
-            assert_eq!(config, Config {
-                port: 9999,
-                tls: Some(TlsConfig::from_paths("new.pem", "key.pem")),
-                ..Config::default()
-            });
+            assert_eq!(
+                config,
+                Config {
+                    port: 9999,
+                    tls: Some(TlsConfig::from_paths("new.pem", "key.pem")),
+                    ..Config::default()
+                }
+            );
 
             jail.set_env("ROCKET_LIMITS", r#"{stream=100kiB}"#);
             let config = Config::from(Config::figment().join(&prev_figment));
-            assert_eq!(config, Config {
-                port: 9999,
-                tls: Some(TlsConfig::from_paths("new.pem", "key.pem")),
-                limits: Limits::default().limit("stream", 100.kibibytes()),
-                ..Config::default()
-            });
+            assert_eq!(
+                config,
+                Config {
+                    port: 9999,
+                    tls: Some(TlsConfig::from_paths("new.pem", "key.pem")),
+                    limits: Limits::default().limit("stream", 100.kibibytes()),
+                    ..Config::default()
+                }
+            );
 
             jail.set_env("ROCKET_IDENT", false);
             let config = Config::from(Config::figment().join(&prev_figment));
-            assert_eq!(config, Config {
-                port: 9999,
-                tls: Some(TlsConfig::from_paths("new.pem", "key.pem")),
-                limits: Limits::default().limit("stream", 100.kibibytes()),
-                ident: Ident::none(),
-                ..Config::default()
-            });
+            assert_eq!(
+                config,
+                Config {
+                    port: 9999,
+                    tls: Some(TlsConfig::from_paths("new.pem", "key.pem")),
+                    limits: Limits::default().limit("stream", 100.kibibytes()),
+                    ident: Ident::none(),
+                    ..Config::default()
+                }
+            );
 
             Ok(())
         });
@@ -589,32 +777,41 @@ mod tests {
     #[test]
     fn test_precedence() {
         figment::Jail::expect_with(|jail| {
-            jail.create_file("Rocket.toml", r#"
+            jail.create_file(
+                "Rocket.toml",
+                r#"
                 [global.limits]
                 forms = "1mib"
                 stream = "50kb"
                 file = "100kb"
-            "#)?;
+            "#,
+            )?;
 
             let config = Config::from(Config::figment());
-            assert_eq!(config, Config {
-                limits: Limits::default()
-                    .limit("forms", 1.mebibytes())
-                    .limit("stream", 50.kilobytes())
-                    .limit("file", 100.kilobytes()),
-                ..Config::default()
-            });
+            assert_eq!(
+                config,
+                Config {
+                    limits: Limits::default()
+                        .limit("forms", 1.mebibytes())
+                        .limit("stream", 50.kilobytes())
+                        .limit("file", 100.kilobytes()),
+                    ..Config::default()
+                }
+            );
 
             jail.set_env("ROCKET_LIMITS", r#"{stream=3MiB,capture=2MiB}"#);
             let config = Config::from(Config::figment());
-            assert_eq!(config, Config {
-                limits: Limits::default()
-                    .limit("file", 100.kilobytes())
-                    .limit("forms", 1.mebibytes())
-                    .limit("stream", 3.mebibytes())
-                    .limit("capture", 2.mebibytes()),
-                ..Config::default()
-            });
+            assert_eq!(
+                config,
+                Config {
+                    limits: Limits::default()
+                        .limit("file", 100.kilobytes())
+                        .limit("forms", 1.mebibytes())
+                        .limit("stream", 3.mebibytes())
+                        .limit("capture", 2.mebibytes()),
+                    ..Config::default()
+                }
+            );
 
             jail.set_env("ROCKET_PROFILE", "foo");
             let val: Result<String, _> = Config::figment().extract_inner("profile");
@@ -656,7 +853,9 @@ mod tests {
             assert!(crate::local::blocking::Client::untracked(crate::custom(&figment)).is_ok());
             crate::async_main(async {
                 let rocket = crate::custom(&figment);
-                assert!(crate::local::asynchronous::Client::tracked(rocket).await.is_ok());
+                assert!(crate::local::asynchronous::Client::tracked(rocket)
+                    .await
+                    .is_ok());
             });
 
             Ok(())
@@ -673,7 +872,9 @@ mod tests {
             assert!(crate::local::blocking::Client::tracked(crate::custom(&figment)).is_ok());
             crate::async_main(async {
                 let rocket = crate::custom(&figment);
-                assert!(crate::local::asynchronous::Client::untracked(rocket).await.is_ok());
+                assert!(crate::local::asynchronous::Client::untracked(rocket)
+                    .await
+                    .is_ok());
             });
 
             Ok(())

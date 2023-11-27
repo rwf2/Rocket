@@ -48,7 +48,7 @@ pub enum Method {
     /// The `CONNECT` variant.
     Connect,
     /// The `PATCH` variant.
-    Patch
+    Patch,
 }
 
 impl Method {
@@ -153,11 +153,11 @@ impl fmt::Display for Method {
 
 #[cfg(feature = "serde")]
 mod serde {
-    use std::fmt;
     use super::*;
+    use std::fmt;
 
+    use serde_::de::{Deserialize, Deserializer, Error, Unexpected, Visitor};
     use serde_::ser::{Serialize, Serializer};
-    use serde_::de::{Deserialize, Deserializer, Error, Visitor, Unexpected};
 
     impl<'a> Serialize for Method {
         fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {

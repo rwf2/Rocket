@@ -76,14 +76,14 @@
 //! features = ["v1", "v4"]
 //! ```
 
-use crate::request::FromParam;
 use crate::form::{self, FromFormField, ValueField};
+use crate::request::FromParam;
 
 /// Error returned on [`FromParam`] or [`FromFormField`] failures.
 ///
 pub use uuid_::Error;
 
-pub use uuid_::{Uuid, Builder, Variant, Version, Bytes, uuid, fmt};
+pub use uuid_::{fmt, uuid, Builder, Bytes, Uuid, Variant, Version};
 
 impl<'a> FromParam<'a> for Uuid {
     type Error = Error;
@@ -105,7 +105,7 @@ impl<'v> FromFormField<'v> for Uuid {
 
 #[cfg(test)]
 mod test {
-    use super::{Uuid, FromParam};
+    use super::{FromParam, Uuid};
 
     #[test]
     fn test_from_param() {

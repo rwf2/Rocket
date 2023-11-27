@@ -1,14 +1,14 @@
 use std::net::{Ipv4Addr, Ipv6Addr, SocketAddrV4, SocketAddrV6};
 
-use rocket::http::RawStr;
 use rocket::form::Form;
+use rocket::http::RawStr;
 
 macro_rules! assert_from_form_field_eq {
-    ($string:literal as $T:ty, $expected:expr) => (
+    ($string:literal as $T:ty, $expected:expr) => {
         let value_str = RawStr::new(concat!("=", $string));
         let value = Form::<$T>::parse_encoded(value_str).unwrap();
         assert_eq!(value, $expected);
-    )
+    };
 }
 
 #[test]

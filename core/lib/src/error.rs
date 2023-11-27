@@ -1,13 +1,16 @@
 //! Types representing various errors that can occur in a Rocket application.
 
-use std::{io, fmt};
-use std::sync::{Arc, atomic::{Ordering, AtomicBool}};
 use std::error::Error as StdError;
+use std::sync::{
+    atomic::{AtomicBool, Ordering},
+    Arc,
+};
+use std::{fmt, io};
 
-use yansi::Paint;
 use figment::Profile;
+use yansi::Paint;
 
-use crate::{Rocket, Orbit};
+use crate::{Orbit, Rocket};
 
 /// An error that occurs during launch.
 ///
@@ -61,7 +64,7 @@ use crate::{Rocket, Orbit};
 ///   2. You want to display your own error messages.
 pub struct Error {
     handled: AtomicBool,
-    kind: ErrorKind
+    kind: ErrorKind,
 }
 
 /// The kind error that occurred.
@@ -94,7 +97,7 @@ pub enum ErrorKind {
         /// The instance of Rocket that failed to shutdown.
         Arc<Rocket<Orbit>>,
         /// The error that occurred during shutdown, if any.
-        Option<Box<dyn StdError + Send + Sync>>
+        Option<Box<dyn StdError + Send + Sync>>,
     ),
 }
 
@@ -111,14 +114,20 @@ impl From<ErrorKind> for Error {
 impl Error {
     #[inline(always)]
     pub(crate) fn new(kind: ErrorKind) -> Error {
-        Error { handled: AtomicBool::new(false), kind }
+        Error {
+            handled: AtomicBool::new(false),
+            kind,
+        }
     }
 
     #[inline(always)]
     pub(crate) fn shutdown<E>(rocket: Arc<Rocket<Orbit>>, error: E) -> Error
-        where E: Into<Option<crate::http::hyper::Error>>
+    where
+        E: Into<Option<crate::http::hyper::Error>>,
     {
-        let error = error.into().map(|e| Box::new(e) as Box<dyn StdError + Sync + Send>);
+        let error = error
+            .into()
+            .map(|e| Box::new(e) as Box<dyn StdError + Sync + Send>);
         Error::new(ErrorKind::Shutdown(rocket, error))
     }
 
@@ -184,9 +193,14 @@ impl Error {
             }
             ErrorKind::Collisions(ref collisions) => {
                 fn log_collisions<T: fmt::Display>(kind: &str, collisions: &[(T, T)]) {
-                    if collisions.is_empty() { return }
+                    if collisions.is_empty() {
+                        return;
+                    }
 
-                    error!("Rocket failed to launch due to the following {} collisions:", kind);
+                    error!(
+                        "Rocket failed to launch due to the following {} collisions:",
+                        kind
+                    );
                     for &(ref a, ref b) in collisions {
                         info_!("{} {} {}", a, "collides with".red().italic(), b)
                     }
@@ -238,7 +252,7 @@ impl Error {
     }
 }
 
-impl std::error::Error for Error {  }
+impl std::error::Error for Error {}
 
 impl fmt::Display for ErrorKind {
     #[inline]
@@ -277,7 +291,7 @@ impl Drop for Error {
     fn drop(&mut self) {
         // Don't panic if the message has been seen. Don't double-panic.
         if self.was_handled() || std::thread::panicking() {
-            return
+            return;
         }
 
         panic!("{}", self.pretty_print());
@@ -296,4 +310,4 @@ impl fmt::Display for Empty {
     }
 }
 
-impl StdError for Empty { }
+impl StdError for Empty {}

@@ -1,5 +1,5 @@
-use std::fmt::{self, Display};
 use std::borrow::Cow;
+use std::fmt::{self, Display};
 
 use crate::ext::IntoOwned;
 use crate::parse::{Extent, IndexedStr};
@@ -58,7 +58,7 @@ impl<'a> Authority<'a> {
         source: Cow<'a, [u8]>,
         user_info: Option<Extent<&'a [u8]>>,
         host: Extent<&'a [u8]>,
-        port: Option<u16>
+        port: Option<u16>,
     ) -> Authority<'a> {
         Authority {
             source: Some(as_utf8_unchecked(source)),
@@ -85,7 +85,7 @@ impl<'a> Authority<'a> {
             source: None,
             user_info: match user_info {
                 Some(info) => Some(IndexedStr::Concrete(Cow::Borrowed(info))),
-                None => None
+                None => None,
             },
             host: IndexedStr::Concrete(Cow::Borrowed(host)),
             port,
@@ -162,7 +162,9 @@ impl<'a> Authority<'a> {
     /// assert_eq!(uri.user_info(), Some("username:password"));
     /// ```
     pub fn user_info(&self) -> Option<&str> {
-        self.user_info.as_ref().map(|u| u.from_cow_source(&self.source))
+        self.user_info
+            .as_ref()
+            .map(|u| u.from_cow_source(&self.source))
     }
 
     /// Returns the host part of the authority URI.

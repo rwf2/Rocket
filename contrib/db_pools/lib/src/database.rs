@@ -1,13 +1,13 @@
 use std::marker::PhantomData;
 use std::ops::{Deref, DerefMut};
 
-use rocket::{error, info_, Build, Ignite, Phase, Rocket, Sentinel, Orbit};
 use rocket::fairing::{self, Fairing, Info, Kind};
-use rocket::request::{FromRequest, Outcome, Request};
 use rocket::http::Status;
+use rocket::request::{FromRequest, Outcome, Request};
+use rocket::{error, info_, Build, Ignite, Orbit, Phase, Rocket, Sentinel};
 
-use rocket::yansi::Paint;
 use rocket::figment::providers::Serialized;
+use rocket::yansi::Paint;
 
 use crate::Pool;
 
@@ -33,7 +33,9 @@ use crate::Pool;
 /// ```
 ///
 /// See the [`Database` derive](derive@crate::Database) for details.
-pub trait Database: From<Self::Pool> + DerefMut<Target = Self::Pool> + Send + Sync + 'static {
+pub trait Database:
+    From<Self::Pool> + DerefMut<Target = Self::Pool> + Send + Sync + 'static
+{
     /// The [`Pool`] type of connections to this database.
     ///
     /// When `Database` is derived, this takes the value of the `Inner` type in
@@ -124,8 +126,11 @@ pub trait Database: From<Self::Pool> + DerefMut<Target = Self::Pool> + Send + Sy
 
         let dbtype = std::any::type_name::<Self>().bold().primary();
         error!("Attempted to fetch unattached database `{}`.", dbtype);
-        info_!("`{}{}` fairing must be attached prior to using this database.",
-            dbtype.linger(), "::init()".clear());
+        info_!(
+            "`{}{}` fairing must be attached prior to using this database.",
+            dbtype.linger(),
+            "::init()".clear()
+        );
         None
     }
 }
@@ -255,11 +260,13 @@ impl<D: Database> Fairing for Initializer<D> {
     }
 
     async fn on_ignite(&self, rocket: Rocket<Build>) -> fairing::Result {
-        let workers: usize = rocket.figment()
+        let workers: usize = rocket
+            .figment()
             .extract_inner(rocket::Config::WORKERS)
             .unwrap_or_else(|_| rocket::Config::default().workers);
 
-        let figment = rocket.figment()
+        let figment = rocket
+            .figment()
             .focus(&format!("databases.{}", D::NAME))
             .merge(Serialized::default("max_connections", workers * 4))
             .merge(Serialized::default("connect_timeout", 5));

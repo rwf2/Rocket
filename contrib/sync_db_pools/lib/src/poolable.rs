@@ -2,7 +2,7 @@
 use std::time::Duration;
 
 use r2d2::ManageConnection;
-use rocket::{Rocket, Build};
+use rocket::{Build, Rocket};
 
 #[allow(unused_imports)]
 use crate::{Config, Error};
@@ -99,7 +99,7 @@ use crate::{Config, Error};
 /// [`Poolable`].
 pub trait Poolable: Send + Sized + 'static {
     /// The associated connection manager for the given connection type.
-    type Manager: ManageConnection<Connection=Self>;
+    type Manager: ManageConnection<Connection = Self>;
 
     /// The associated error type in the event that constructing the connection
     /// manager and/or the connection pool fails.
@@ -120,19 +120,22 @@ impl Poolable for diesel::SqliteConnection {
     type Error = std::convert::Infallible;
 
     fn pool(db_name: &str, rocket: &Rocket<Build>) -> PoolResult<Self> {
-        use diesel::{SqliteConnection, connection::SimpleConnection};
-        use diesel::r2d2::{CustomizeConnection, ConnectionManager, Error, Pool};
+        use diesel::r2d2::{ConnectionManager, CustomizeConnection, Error, Pool};
+        use diesel::{connection::SimpleConnection, SqliteConnection};
 
         #[derive(Debug)]
         struct Customizer;
 
         impl CustomizeConnection<SqliteConnection, Error> for Customizer {
             fn on_acquire(&self, conn: &mut SqliteConnection) -> Result<(), Error> {
-                conn.batch_execute("\
+                conn.batch_execute(
+                    "\
                     PRAGMA journal_mode = WAL;\
                     PRAGMA busy_timeout = 1000;\
                     PRAGMA foreign_keys = ON;\
-                ").map_err(Error::QueryError)?;
+                ",
+                )
+                .map_err(Error::QueryError)?;
 
                 Ok(())
             }
@@ -248,10 +251,9 @@ impl Poolable for rusqlite::Connection {
             };
 
             flags.insert(sql_flag)
-        };
+        }
 
-        let manager = r2d2_sqlite::SqliteConnectionManager::file(&*config.url)
-            .with_flags(flags);
+        let manager = r2d2_sqlite::SqliteConnectionManager::file(&*config.url).with_flags(flags);
 
         let pool = r2d2::Pool::builder()
             .max_size(config.pool_size)

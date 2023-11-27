@@ -1,10 +1,10 @@
-mod main;
 mod launch;
+mod main;
 mod test;
 
-use devise::{Diagnostic, Spanned, Result};
 use devise::ext::SpanDiagnosticExt;
-use proc_macro2::{TokenStream, Span};
+use devise::{Diagnostic, Result, Spanned};
+use proc_macro2::{Span, TokenStream};
 
 // Common trait implemented by `async` entry generating attributes.
 trait EntryAttr {
@@ -17,7 +17,7 @@ trait EntryAttr {
 
 fn _async_entry<A: EntryAttr>(
     _args: proc_macro::TokenStream,
-    input: proc_macro::TokenStream
+    input: proc_macro::TokenStream,
 ) -> Result<TokenStream> {
     let mut function: syn::ItemFn = syn::parse(input)
         .map_err(Diagnostic::from)
@@ -51,5 +51,17 @@ macro_rules! async_entry {
 }
 
 async_entry!(async_test_attribute, test::Test, quote!());
-async_entry!(main_attribute, main::Main, quote!(fn main() {}));
-async_entry!(launch_attribute, launch::Launch, quote!(fn main() {}));
+async_entry!(
+    main_attribute,
+    main::Main,
+    quote!(
+        fn main() {}
+    )
+);
+async_entry!(
+    launch_attribute,
+    launch::Launch,
+    quote!(
+        fn main() {}
+    )
+);

@@ -133,7 +133,9 @@ impl std::fmt::Display for Kind {
         let mut is_first = true;
         let mut write = |string, kind| {
             if self.is(kind) {
-                if !is_first { f.write_str(", ")?; }
+                if !is_first {
+                    f.write_str(", ")?;
+                }
                 f.write_str(string)?;
                 is_first = false;
             }

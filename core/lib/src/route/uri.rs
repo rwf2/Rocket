@@ -1,8 +1,8 @@
 use std::fmt;
 
-use crate::http::uri::{self, Origin, Path};
-use crate::http::ext::IntoOwned;
 use crate::form::ValueField;
+use crate::http::ext::IntoOwned;
+use crate::http::uri::{self, Origin, Path};
 use crate::route::Segment;
 
 /// A route URI which is matched against requests.
@@ -126,7 +126,7 @@ impl<'a> RouteUri<'a> {
             "/" if !base.has_trailing_slash() => match origin.query() {
                 Some(query) => format!("{}?{}", base, query),
                 None => base.to_string(),
-            }
+            },
             _ => format!("{}{}", base, origin),
         };
 
@@ -137,7 +137,12 @@ impl<'a> RouteUri<'a> {
 
         let metadata = Metadata::from(&base, &uri);
 
-        Ok(RouteUri { base, unmounted_origin: origin, uri, metadata })
+        Ok(RouteUri {
+            base,
+            unmounted_origin: origin,
+            uri,
+            metadata,
+        })
     }
 
     /// Returns the complete route URI.
@@ -243,11 +248,17 @@ impl<'a> RouteUri<'a> {
         use yansi::Paint;
 
         let (path, base, unmounted) = (self.uri.path(), self.base(), self.unmounted().path());
-        let unmounted_part = path.strip_prefix(base.as_str())
+        let unmounted_part = path
+            .strip_prefix(base.as_str())
             .map(|raw| raw.as_str())
             .unwrap_or(unmounted.as_str());
 
-        write!(f, "{}{}", self.base().blue().underline(), unmounted_part.blue())?;
+        write!(
+            f,
+            "{}{}",
+            self.base().blue().underline(),
+            unmounted_part.blue()
+        )?;
         if let Some(q) = self.unmounted().query() {
             write!(f, "{}{}", "?".yellow(), q.yellow())?;
         }
@@ -258,16 +269,20 @@ impl<'a> RouteUri<'a> {
 
 impl Metadata {
     fn from(base: &Origin<'_>, uri: &Origin<'_>) -> Self {
-        let uri_segments = uri.path()
+        let uri_segments = uri
+            .path()
             .raw_segments()
             .map(Segment::from)
             .collect::<Vec<_>>();
 
-        let query_segs = uri.query()
+        let query_segs = uri
+            .query()
             .map(|q| q.raw_segments().map(Segment::from).collect::<Vec<_>>())
             .unwrap_or_default();
 
-        let static_query_fields = query_segs.iter().filter(|s| !s.dynamic)
+        let static_query_fields = query_segs
+            .iter()
+            .filter(|s| !s.dynamic)
             .map(|s| ValueField::parse(&s.value))
             .map(|f| (f.name.source().to_string(), f.value.to_string()))
             .collect();
@@ -277,7 +292,7 @@ impl Metadata {
         let path_color = match (static_path, wild_path) {
             (true, _) => Color::Static,
             (_, true) => Color::Wild,
-            (_, _) => Color::Partial
+            (_, _) => Color::Partial,
         };
 
         let query_color = (!query_segs.is_empty()).then(|| {
@@ -286,7 +301,7 @@ impl Metadata {
             match (static_query, wild_query) {
                 (true, _) => Color::Static,
                 (_, true) => Color::Wild,
-                (_, _) => Color::Partial
+                (_, _) => Color::Partial,
             }
         });
 
@@ -296,7 +311,12 @@ impl Metadata {
         let base_len = segments.num() - num_empty;
 
         Metadata {
-            uri_segments, base_len, static_query_fields, path_color, query_color, dynamic_trail
+            uri_segments,
+            base_len,
+            static_query_fields,
+            path_color,
+            query_color,
+            dynamic_trail,
         }
     }
 }
@@ -316,15 +336,21 @@ impl fmt::Display for RouteUri<'_> {
 }
 
 impl<'a, 'b> PartialEq<Origin<'b>> for RouteUri<'a> {
-    fn eq(&self, other: &Origin<'b>) -> bool { self.inner() == other }
+    fn eq(&self, other: &Origin<'b>) -> bool {
+        self.inner() == other
+    }
 }
 
 impl PartialEq<str> for RouteUri<'_> {
-    fn eq(&self, other: &str) -> bool { self.inner() == other }
+    fn eq(&self, other: &str) -> bool {
+        self.inner() == other
+    }
 }
 
 impl PartialEq<&str> for RouteUri<'_> {
-    fn eq(&self, other: &&str) -> bool { self.inner() == *other }
+    fn eq(&self, other: &&str) -> bool {
+        self.inner() == *other
+    }
 }
 
 #[cfg(test)]
@@ -332,10 +358,25 @@ mod tests {
     macro_rules! assert_uri_equality {
         ($base:expr, $path:expr => $ebase:expr, $epath:expr, $efull:expr) => {
             let uri = super::RouteUri::new($base, $path);
-            assert_eq!(uri, $efull, "complete URI mismatch. expected {}, got {}", $efull, uri);
-            assert_eq!(uri.base(), $ebase, "expected base {}, got {}", $ebase, uri.base());
-            assert_eq!(uri.unmounted(), $epath, "expected unmounted {}, got {}", $epath,
-                uri.unmounted());
+            assert_eq!(
+                uri, $efull,
+                "complete URI mismatch. expected {}, got {}",
+                $efull, uri
+            );
+            assert_eq!(
+                uri.base(),
+                $ebase,
+                "expected base {}, got {}",
+                $ebase,
+                uri.base()
+            );
+            assert_eq!(
+                uri.unmounted(),
+                $epath,
+                "expected unmounted {}, got {}",
+                $epath,
+                uri.unmounted()
+            );
         };
     }
 

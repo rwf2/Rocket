@@ -12,7 +12,7 @@ mod databases_tests {
 #[cfg(all(feature = "databases", feature = "sqlite_pool"))]
 #[cfg(test)]
 mod rusqlite_integration_test {
-    use rocket_sync_db_pools::{rusqlite, database};
+    use rocket_sync_db_pools::{database, rusqlite};
 
     use rusqlite::types::ToSql;
 
@@ -25,7 +25,7 @@ mod rusqlite_integration_test {
 
     #[rocket::async_test]
     async fn test_db() {
-        use rocket::figment::{Figment, util::map};
+        use rocket::figment::{util::map, Figment};
 
         let options = map!["url" => ":memory:"];
         let config = Figment::from(rocket::Config::debug_default())
@@ -39,28 +39,30 @@ mod rusqlite_integration_test {
             .await
             .unwrap();
 
-        let conn = SqliteDb::get_one(&rocket).await
+        let conn = SqliteDb::get_one(&rocket)
+            .await
             .expect("unable to get connection");
 
         // Rusqlite's `transaction()` method takes `&mut self`; this tests that
         // the &mut method can be called inside the closure passed to `run()`.
         conn.run(|conn| {
             let tx = conn.transaction().unwrap();
-            let _: i32 = tx.query_row(
-                "SELECT 1", &[] as &[&dyn ToSql], |row| row.get(0)
-            ).expect("get row");
+            let _: i32 = tx
+                .query_row("SELECT 1", &[] as &[&dyn ToSql], |row| row.get(0))
+                .expect("get row");
 
             tx.commit().expect("committed transaction");
-        }).await;
+        })
+        .await;
     }
 }
 
 #[cfg(test)]
 #[cfg(feature = "databases")]
 mod sentinel_and_runtime_test {
-    use rocket::{Rocket, Build};
     use r2d2::{ManageConnection, Pool};
-    use rocket_sync_db_pools::{database, Poolable, PoolResult};
+    use rocket::{Build, Rocket};
+    use rocket_sync_db_pools::{database, PoolResult, Poolable};
     use tokio::runtime::Runtime;
 
     struct ContainsRuntime(Runtime);
@@ -98,7 +100,7 @@ mod sentinel_and_runtime_test {
 
     #[rocket::async_test]
     async fn test_drop_runtime() {
-        use rocket::figment::{Figment, util::map};
+        use rocket::figment::{util::map, Figment};
 
         let config = Figment::from(rocket::Config::debug_default())
             .merge(("databases", map!["test_db" => map!["url" => ""]]));
@@ -109,7 +111,7 @@ mod sentinel_and_runtime_test {
 
     #[test]
     fn test_sentinel() {
-        use rocket::{*, local::blocking::Client, error::ErrorKind::SentinelAborts};
+        use rocket::{error::ErrorKind::SentinelAborts, local::blocking::Client, *};
 
         #[get("/")]
         fn use_db(_db: TestDb) {}

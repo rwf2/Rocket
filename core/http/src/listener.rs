@@ -3,16 +3,16 @@ use std::future::Future;
 use std::io;
 use std::net::SocketAddr;
 use std::pin::Pin;
+use std::sync::Arc;
 use std::task::{Context, Poll};
 use std::time::Duration;
-use std::sync::Arc;
 
+use hyper::server::accept::Accept;
 use log::warn;
-use tokio::time::Sleep;
+use state::InitCell;
 use tokio::io::{AsyncRead, AsyncWrite};
 use tokio::net::TcpStream;
-use hyper::server::accept::Accept;
-use state::InitCell;
+use tokio::time::Sleep;
 
 pub use tokio::net::TcpListener;
 
@@ -65,7 +65,7 @@ pub trait Listener {
     /// an `Err` when a fatal problem occurs as Hyper kills the server on `Err`.
     fn poll_accept(
         self: Pin<&mut Self>,
-        cx: &mut Context<'_>
+        cx: &mut Context<'_>,
     ) -> Poll<io::Result<Self::Connection>>;
 }
 
@@ -87,7 +87,9 @@ pub trait Connection: AsyncRead + AsyncWrite {
     ///
     /// Defaults to an empty vector to indicate that no certificates were
     /// presented.
-    fn peer_certificates(&self) -> Option<Certificates> { None }
+    fn peer_certificates(&self) -> Option<Certificates> {
+        None
+    }
 }
 
 pin_project_lite::pin_project! {
@@ -146,7 +148,7 @@ impl<L: Listener> Incoming<L> {
 
     fn poll_accept_next(
         self: Pin<&mut Self>,
-        cx: &mut Context<'_>
+        cx: &mut Context<'_>,
     ) -> Poll<io::Result<L::Connection>> {
         /// This function defines per-connection errors: errors that affect only
         /// a single connection's accept() and don't imply anything about the
@@ -156,10 +158,11 @@ impl<L: Listener> Incoming<L> {
         /// useful to handle resource exhaustion errors like ENFILE and EMFILE.
         /// Otherwise, could enter into tight loop.
         fn is_connection_error(e: &io::Error) -> bool {
-            matches!(e.kind(),
-                | io::ErrorKind::ConnectionRefused
-                | io::ErrorKind::ConnectionAborted
-                | io::ErrorKind::ConnectionReset)
+            matches!(
+                e.kind(),
+                |io::ErrorKind::ConnectionRefused| io::ErrorKind::ConnectionAborted
+                    | io::ErrorKind::ConnectionReset
+            )
         }
 
         let mut this = self.project();
@@ -180,18 +183,23 @@ impl<L: Listener> Incoming<L> {
                     }
 
                     return Poll::Ready(Ok(stream));
-                },
+                }
                 Err(e) => {
                     if is_connection_error(&e) {
                         warn!("single connection accept error {}; accepting next now", e);
                     } else if let Some(duration) = this.sleep_on_errors {
                         // We might be able to recover. Try again in a bit.
-                        warn!("accept error {}; recovery attempt in {}ms", e, duration.as_millis());
-                        this.pending_error_delay.set(Some(tokio::time::sleep(*duration)));
+                        warn!(
+                            "accept error {}; recovery attempt in {}ms",
+                            e,
+                            duration.as_millis()
+                        );
+                        this.pending_error_delay
+                            .set(Some(tokio::time::sleep(*duration)));
                     } else {
                         return Poll::Ready(Err(e));
                     }
-                },
+                }
             }
         }
     }
@@ -204,7 +212,7 @@ impl<L: Listener> Accept for Incoming<L> {
     #[inline]
     fn poll_accept(
         self: Pin<&mut Self>,
-        cx: &mut Context<'_>
+        cx: &mut Context<'_>,
     ) -> Poll<Option<io::Result<Self::Conn>>> {
         self.poll_accept_next(cx).map(Some)
     }
@@ -229,7 +237,7 @@ impl Listener for TcpListener {
     #[inline]
     fn poll_accept(
         self: Pin<&mut Self>,
-        cx: &mut Context<'_>
+        cx: &mut Context<'_>,
     ) -> Poll<io::Result<Self::Connection>> {
         (*self).poll_accept(cx).map_ok(|(stream, _addr)| stream)
     }

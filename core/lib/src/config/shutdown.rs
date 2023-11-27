@@ -39,7 +39,7 @@ pub enum Sig {
     /// The `SIGUSR1` Unix signal.
     Usr1,
     /// The `SIGUSR2` Unix signal.
-    Usr2
+    Usr2,
 }
 
 impl fmt::Display for Sig {
@@ -262,10 +262,13 @@ impl fmt::Display for Shutdown {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "ctrlc = {}, force = {}, ", self.ctrlc, self.force)?;
 
-        #[cfg(unix)] {
+        #[cfg(unix)]
+        {
             write!(f, "signals = [")?;
             for (i, sig) in self.signals.iter().enumerate() {
-                if i != 0 { write!(f, ", ")?; }
+                if i != 0 {
+                    write!(f, ", ")?;
+                }
                 write!(f, "{}", sig)?;
             }
             write!(f, "], ")?;
@@ -281,7 +284,11 @@ impl Default for Shutdown {
         Shutdown {
             ctrlc: true,
             #[cfg(unix)]
-            signals: { let mut set = HashSet::new(); set.insert(Sig::Term); set },
+            signals: {
+                let mut set = HashSet::new();
+                set.insert(Sig::Term);
+                set
+            },
             grace: 2,
             mercy: 3,
             force: true,
@@ -293,8 +300,8 @@ impl Default for Shutdown {
 impl Shutdown {
     #[cfg(unix)]
     pub(crate) fn signal_stream(&self) -> Option<impl Stream<Item = Sig>> {
-        use tokio_stream::{StreamExt, StreamMap, wrappers::SignalStream};
         use tokio::signal::unix::{signal, SignalKind};
+        use tokio_stream::{wrappers::SignalStream, StreamExt, StreamMap};
 
         if !self.ctrlc && self.signals.is_empty() {
             return None;
@@ -317,11 +324,13 @@ impl Shutdown {
                 Sig::Quit => SignalKind::quit(),
                 Sig::Term => SignalKind::terminate(),
                 Sig::Usr1 => SignalKind::user_defined1(),
-                Sig::Usr2 => SignalKind::user_defined2()
+                Sig::Usr2 => SignalKind::user_defined2(),
             };
 
             match signal(sigkind) {
-                Ok(signal) => { map.insert(sig, SignalStream::new(signal)); },
+                Ok(signal) => {
+                    map.insert(sig, SignalStream::new(signal));
+                }
                 Err(e) => warn!("Failed to enable `{}` shutdown signal: {}", sig, e),
             }
         }
@@ -331,15 +340,19 @@ impl Shutdown {
 
     #[cfg(not(unix))]
     pub(crate) fn signal_stream(&self) -> Option<impl Stream<Item = Sig>> {
-        use tokio_stream::StreamExt;
         use futures::stream::once;
+        use tokio_stream::StreamExt;
 
-        self.ctrlc.then(|| tokio::signal::ctrl_c())
+        self.ctrlc
+            .then(|| tokio::signal::ctrl_c())
             .map(|signal| once(Box::pin(signal)))
-            .map(|stream| stream.filter_map(|result| {
-                result.map(|_| Sig::Int)
-                    .map_err(|e| warn!("Failed to enable `ctrl-c` shutdown signal: {}", e))
-                    .ok()
-            }))
+            .map(|stream| {
+                stream.filter_map(|result| {
+                    result
+                        .map(|_| Sig::Int)
+                        .map_err(|e| warn!("Failed to enable `ctrl-c` shutdown signal: {}", e))
+                        .ok()
+                })
+            })
     }
 }

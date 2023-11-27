@@ -1,12 +1,12 @@
 use std::fmt;
 use std::io::Cursor;
 
-use crate::http::uri::Path;
+use crate::catcher::{BoxFuture, Handler};
 use crate::http::ext::IntoOwned;
-use crate::response::Response;
+use crate::http::uri::Path;
+use crate::http::{uri, ContentType, Status};
 use crate::request::Request;
-use crate::http::{Status, ContentType, uri};
-use crate::catcher::{Handler, BoxFuture};
+use crate::response::Response;
 
 use yansi::Paint;
 
@@ -175,7 +175,9 @@ impl Catcher {
     /// 600)`.
     #[inline(always)]
     pub fn new<S, H>(code: S, handler: H) -> Catcher
-        where S: Into<Option<u16>>, H: Handler
+    where
+        S: Into<Option<u16>>,
+        H: Handler,
     {
         let code = code.into();
         if let Some(code) = code {
@@ -187,7 +189,7 @@ impl Catcher {
             base: uri::Origin::ROOT,
             handler: Box::new(handler),
             rank: rank(uri::Origin::ROOT.path()),
-            code
+            code,
         }
     }
 
@@ -299,7 +301,8 @@ impl Catcher {
     /// assert!(catcher.is_err());
     /// ```
     pub fn map_base<'a, F>(mut self, mapper: F) -> Result<Self, uri::Error<'static>>
-        where F: FnOnce(uri::Origin<'a>) -> String
+    where
+        F: FnOnce(uri::Origin<'a>) -> String,
     {
         let new_base = uri::Origin::parse_owned(mapper(self.base))?;
         self.base = new_base.into_normalized_nontrailing();
@@ -369,19 +372,29 @@ impl fmt::Debug for Catcher {
 }
 
 macro_rules! html_error_template {
-    ($code:expr, $reason:expr, $description:expr) => (
+    ($code:expr, $reason:expr, $description:expr) => {
         concat!(
-r#"<!DOCTYPE html>
+            r#"<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="utf-8">
     <meta name="color-scheme" content="light dark">
-    <title>"#, $code, " ", $reason, r#"</title>
+    <title>"#,
+            $code,
+            " ",
+            $reason,
+            r#"</title>
 </head>
 <body align="center">
     <div role="main" align="center">
-        <h1>"#, $code, ": ", $reason, r#"</h1>
-        <p>"#, $description, r#"</p>
+        <h1>"#,
+            $code,
+            ": ",
+            $reason,
+            r#"</h1>
+        <p>"#,
+            $description,
+            r#"</p>
         <hr />
     </div>
     <div role="contentinfo" align="center">
@@ -390,36 +403,48 @@ r#"<!DOCTYPE html>
 </body>
 </html>"#
         )
-    )
+    };
 }
 
 macro_rules! json_error_template {
-    ($code:expr, $reason:expr, $description:expr) => (
+    ($code:expr, $reason:expr, $description:expr) => {
         concat!(
-r#"{
+            r#"{
   "error": {
-    "code": "#, $code, r#",
-    "reason": ""#, $reason, r#"",
-    "description": ""#, $description, r#""
+    "code": "#,
+            $code,
+            r#",
+    "reason": ""#,
+            $reason,
+            r#"",
+    "description": ""#,
+            $description,
+            r#""
   }
 }"#
         )
-    )
+    };
 }
 
 // This is unfortunate, but the `{`, `}` above make it unusable for `format!`.
 macro_rules! json_error_fmt_template {
-    ($code:expr, $reason:expr, $description:expr) => (
+    ($code:expr, $reason:expr, $description:expr) => {
         concat!(
-r#"{{
+            r#"{{
   "error": {{
-    "code": "#, $code, r#",
-    "reason": ""#, $reason, r#"",
-    "description": ""#, $description, r#""
+    "code": "#,
+            $code,
+            r#",
+    "reason": ""#,
+            $reason,
+            r#"",
+    "description": ""#,
+            $description,
+            r#""
   }}
 }}"#
         )
-    )
+    };
 }
 
 macro_rules! default_handler_fn {

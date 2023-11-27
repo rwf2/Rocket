@@ -1,12 +1,12 @@
 use std::io;
-use std::path::{Path, PathBuf};
 use std::ops::{Deref, DerefMut};
+use std::path::{Path, PathBuf};
 
 use tokio::fs::File;
 
+use crate::http::ContentType;
 use crate::request::Request;
 use crate::response::{self, Responder};
-use crate::http::ContentType;
 
 /// A [`Responder`] that sends file data with a Content-Type based on its
 /// file extension.

@@ -1,4 +1,5 @@
-#[macro_use] extern crate rocket;
+#[macro_use]
+extern crate rocket;
 
 use rocket::form::Form;
 use rocket::http::ContentType;
@@ -36,11 +37,17 @@ fn test_multipart_raw_strings_from_files() {
         "bye",
         "--X-BOUNDARY--",
         "",
-    ].join("\r\n");
+    ]
+    .join("\r\n");
 
     let client = Client::debug_with(rocket::routes![form]).unwrap();
-    let response = client.post("/")
-        .header("multipart/form-data; boundary=X-BOUNDARY".parse::<ContentType>().unwrap())
+    let response = client
+        .post("/")
+        .header(
+            "multipart/form-data; boundary=X-BOUNDARY"
+                .parse::<ContentType>()
+                .unwrap(),
+        )
         .body(body)
         .dispatch();
 

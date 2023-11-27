@@ -1,10 +1,10 @@
-use std::{fmt, convert};
 use std::borrow::Cow;
+use std::{convert, fmt};
 
+use crate::ext::IntoOwned;
+use crate::parse::uri::RawInput;
 use pear::error::Expected;
 use pear::input::ParseError;
-use crate::parse::uri::RawInput;
-use crate::ext::IntoOwned;
 
 /// Error emitted on URI parse failure.
 ///
@@ -22,7 +22,10 @@ pub struct Error<'a> {
 impl<'a> From<ParseError<RawInput<'a>>> for Error<'a> {
     fn from(inner: ParseError<RawInput<'a>>) -> Self {
         let expected = inner.error.map(convert::identity, |v| v.values.into());
-        Error { expected, index: inner.info.context.start }
+        Error {
+            expected,
+            index: inner.info.context.start,
+        }
     }
 }
 
@@ -56,7 +59,7 @@ impl IntoOwned for Error<'_> {
     fn into_owned(self) -> Error<'static> {
         Error {
             expected: self.expected.map(|t| t, |s| s.into_owned().into()),
-            index: self.index
+            index: self.index,
         }
     }
 }
@@ -69,7 +72,7 @@ mod tests {
         ($url:expr => $error:expr) => {{
             let e = origin_from_str($url).unwrap_err();
             assert_eq!(e.to_string(), $error.to_string())
-        }}
+        }};
     }
 
     #[test]

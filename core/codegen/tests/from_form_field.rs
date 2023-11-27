@@ -1,4 +1,4 @@
-use rocket::form::{FromFormField, ValueField, FromForm, Options, Errors};
+use rocket::form::{Errors, FromForm, FromFormField, Options, ValueField};
 
 fn parse<'v, T: FromForm<'v>>(value: &'v str) -> Result<T, Errors<'v>> {
     let mut context = T::init(Options::Lenient);
@@ -31,7 +31,11 @@ macro_rules! assert_no_parse {
 #[test]
 fn from_form_value_simple() {
     #[derive(Debug, FromFormField)]
-    enum Foo { A, B, C, }
+    enum Foo {
+        A,
+        B,
+        C,
+    }
 
     assert_parse!("a", "A" => Foo::A);
     assert_parse!("b", "B" => Foo::B);
@@ -42,7 +46,10 @@ fn from_form_value_simple() {
 fn from_form_value_weirder() {
     #[allow(non_camel_case_types)]
     #[derive(Debug, FromFormField)]
-    enum Foo { Ab_Cd, OtherA }
+    enum Foo {
+        Ab_Cd,
+        OtherA,
+    }
 
     assert_parse!("ab_cd", "ab_CD", "Ab_CD" => Foo::Ab_Cd);
     assert_parse!("othera", "OTHERA", "otherA", "OtherA" => Foo::OtherA);
@@ -51,7 +58,11 @@ fn from_form_value_weirder() {
 #[test]
 fn from_form_value_no_parse() {
     #[derive(Debug, FromFormField)]
-    enum Foo { A, B, C, }
+    enum Foo {
+        A,
+        B,
+        C,
+    }
 
     assert_no_parse!("abc", "ab", "bc", "ca" => Foo);
     assert_no_parse!("b ", "a ", "c ", "a b" => Foo);
@@ -65,7 +76,7 @@ fn from_form_value_renames() {
         #[field(value = "bark")]
         Bar,
         #[field(value = ":book")]
-        Book
+        Book,
     }
 
     assert_parse!("foo", "FOO", "FoO", "bark", "BARK", "BaRk" => Foo::Bar);
@@ -89,18 +100,21 @@ fn from_form_value_raw() {
 
 #[test]
 fn form_value_errors() {
-    use rocket::form::error::{ErrorKind, Entity};
+    use rocket::form::error::{Entity, ErrorKind};
 
     #[derive(Debug, FromFormField)]
-    enum Foo { Bar, Bob }
+    enum Foo {
+        Bar,
+        Bob,
+    }
 
     let errors = parse::<Foo>("blob").unwrap_err();
     assert!(errors.iter().any(|e| {
-        && "blob" == &e.value.as_ref().unwrap()
-        && e.entity == Entity::Value
-        && match &e.kind {
-            ErrorKind::InvalidChoice { choices } => &choices[..] == &["Bar", "Bob"],
-            _ => false
-        }
+        &&"blob" == &e.value.as_ref().unwrap()
+            && e.entity == Entity::Value
+            && match &e.kind {
+                ErrorKind::InvalidChoice { choices } => &choices[..] == &["Bar", "Bob"],
+                _ => false,
+            }
     }));
 }

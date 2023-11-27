@@ -1,9 +1,9 @@
-use std::path::Path;
 use std::error::Error;
+use std::path::Path;
 
-use syn::{self, Ident, LitStr};
 use devise::ext::SpanDiagnosticExt;
 use proc_macro2::TokenStream;
+use syn::{self, Ident, LitStr};
 
 pub fn _macro(input: proc_macro::TokenStream) -> devise::Result<TokenStream> {
     let root_glob = syn::parse::<LitStr>(input)?;
@@ -15,15 +15,21 @@ pub fn _macro(input: proc_macro::TokenStream) -> devise::Result<TokenStream> {
 
 fn entry_to_tests(root_glob: &LitStr) -> Result<Vec<TokenStream>, Box<dyn Error>> {
     let manifest_dir = std::env::var("CARGO_MANIFEST_DIR").expect("MANIFEST_DIR");
-    let full_glob = Path::new(&manifest_dir).join(&root_glob.value()).display().to_string();
+    let full_glob = Path::new(&manifest_dir)
+        .join(&root_glob.value())
+        .display()
+        .to_string();
 
     let mut tests = vec![];
     for path in glob::glob(&full_glob).map_err(Box::new)? {
         let path = path.map_err(Box::new)?;
-        let name = path.file_name()
+        let name = path
+            .file_name()
             .and_then(|f| f.to_str())
-            .map(|name| name.trim_matches(|c| char::is_numeric(c) || c == '-')
-                .replace(|c| c == '-' || c == '.', "_"))
+            .map(|name| {
+                name.trim_matches(|c| char::is_numeric(c) || c == '-')
+                    .replace(|c| c == '-' || c == '.', "_")
+            })
             .ok_or("invalid file name")?;
 
         let ident = Ident::new(&name.to_lowercase(), root_glob.span());

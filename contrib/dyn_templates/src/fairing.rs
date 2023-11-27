@@ -1,8 +1,8 @@
-use crate::{DEFAULT_TEMPLATE_DIR, Context, Engines};
 use crate::context::{Callback, ContextManager};
+use crate::{Context, Engines, DEFAULT_TEMPLATE_DIR};
 
-use rocket::{Rocket, Build, Orbit};
 use rocket::fairing::{self, Fairing, Info, Kind};
+use rocket::{Build, Orbit, Rocket};
 
 /// The TemplateFairing initializes the template system on attach, running
 /// custom_callback after templates have been loaded. In debug mode, the fairing
@@ -19,9 +19,13 @@ pub struct TemplateFairing {
 impl Fairing for TemplateFairing {
     fn info(&self) -> Info {
         let kind = Kind::Ignite | Kind::Liftoff;
-        #[cfg(debug_assertions)] let kind = kind | Kind::Request;
+        #[cfg(debug_assertions)]
+        let kind = kind | Kind::Request;
 
-        Info { kind, name: "Templating" }
+        Info {
+            kind,
+            name: "Templating",
+        }
     }
 
     /// Initializes the template context. Templates will be searched for in the
@@ -32,7 +36,8 @@ impl Fairing for TemplateFairing {
     async fn on_ignite(&self, rocket: Rocket<Build>) -> fairing::Result {
         use rocket::figment::value::magic::RelativePathBuf;
 
-        let configured_dir = rocket.figment()
+        let configured_dir = rocket
+            .figment()
             .extract_inner::<RelativePathBuf>("template_dir")
             .map(|path| path.relative());
 
@@ -56,7 +61,8 @@ impl Fairing for TemplateFairing {
     async fn on_liftoff(&self, rocket: &Rocket<Orbit>) {
         use rocket::{figment::Source, log::PaintExt, yansi::Paint};
 
-        let cm = rocket.state::<ContextManager>()
+        let cm = rocket
+            .state::<ContextManager>()
             .expect("Template ContextManager registered in on_ignite");
 
         info!("{}{}:", "📐 ".emoji(), "Templating".magenta());
@@ -66,10 +72,11 @@ impl Fairing for TemplateFairing {
 
     #[cfg(debug_assertions)]
     async fn on_request(&self, req: &mut rocket::Request<'_>, _data: &mut rocket::Data<'_>) {
-        let cm = req.rocket().state::<ContextManager>()
+        let cm = req
+            .rocket()
+            .state::<ContextManager>()
             .expect("Template ContextManager registered in on_ignite");
 
         cm.reload_if_needed(&self.callback);
     }
-
 }

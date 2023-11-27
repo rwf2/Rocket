@@ -1,11 +1,14 @@
 use std::ops::{Deref, DerefMut};
 
-use crate::Request;
-use crate::outcome::try_outcome;
 use crate::data::{Data, FromData, Outcome};
-use crate::http::{RawStr, ext::IntoOwned};
-use crate::form::{SharedStack, parser::{Parser, RawStrParser}};
 use crate::form::prelude::*;
+use crate::form::{
+    parser::{Parser, RawStrParser},
+    SharedStack,
+};
+use crate::http::{ext::IntoOwned, RawStr};
+use crate::outcome::try_outcome;
+use crate::Request;
 
 /// A data guard for [`FromForm`] types.
 ///
@@ -229,7 +232,8 @@ impl<'r, T: FromForm<'r>> Form<T> {
     /// assert_eq!(pet.wags, false);
     /// ```
     pub fn parse_iter<I>(fields: I) -> Result<'r, T>
-        where I: IntoIterator<Item = ValueField<'r>>
+    where
+        I: IntoIterator<Item = ValueField<'r>>,
     {
         // WHATWG URL Living Standard 5.1 steps 1, 2, 3.1 - 3.3.
         let mut ctxt = T::init(Options::Lenient);
@@ -295,7 +299,8 @@ impl Form<()> {
     /// ```
     pub fn values(string: &str) -> impl Iterator<Item = ValueField<'_>> {
         // WHATWG URL Living Standard 5.1 steps 1, 2, 3.1 - 3.3.
-        string.split('&')
+        string
+            .split('&')
             .filter(|s| !s.is_empty())
             .map(ValueField::parse)
     }

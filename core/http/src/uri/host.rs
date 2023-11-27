@@ -250,9 +250,13 @@ impl<'a> Host<'a> {
     /// assert!(uri.is_none());
     /// ```
     pub fn to_authority<'h, W>(&self, whitelist: W) -> Option<Authority<'a>>
-        where W: IntoIterator<Item = &'h Host<'h>>
+    where
+        W: IntoIterator<Item = &'h Host<'h>>,
     {
-        let mut auth = whitelist.into_iter().any(|h| h == self).then(|| self.0.clone())?;
+        let mut auth = whitelist
+            .into_iter()
+            .any(|h| h == self)
+            .then(|| self.0.clone())?;
         auth.user_info = None;
         Some(auth)
     }
@@ -288,7 +292,8 @@ impl<'a> Host<'a> {
     /// assert!(uri.is_none());
     /// ```
     pub fn to_absolute<'h, W>(&self, scheme: &'a str, whitelist: W) -> Option<Absolute<'a>>
-        where W: IntoIterator<Item = &'h Host<'h>>
+    where
+        W: IntoIterator<Item = &'h Host<'h>>,
     {
         let scheme = crate::parse::uri::scheme_from_str(scheme).ok()?;
         let authority = self.to_authority(whitelist)?;

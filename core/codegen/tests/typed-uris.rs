@@ -1,12 +1,16 @@
 #![allow(dead_code, unused_variables)]
 
-#[macro_use] extern crate rocket;
+#[macro_use]
+extern crate rocket;
 
 use std::path::PathBuf;
 
-use rocket::http::CookieJar;
+use rocket::form::{
+    error::{ErrorKind, Errors},
+    Form,
+};
 use rocket::http::uri::fmt::{FromUriParam, Query};
-use rocket::form::{Form, error::{Errors, ErrorKind}};
+use rocket::http::CookieJar;
 
 macro_rules! assert_uri_eq {
     ($($uri:expr => $expected:expr,)+) => {
@@ -30,7 +34,10 @@ struct User<'a> {
 impl<'a, 'b> FromUriParam<Query, (&'a str, &'b str)> for User<'a> {
     type Target = User<'a>;
     fn from_uri_param((name, nickname): (&'a str, &'b str)) -> User<'a> {
-        User { name: name.into(), nickname: nickname.to_string() }
+        User {
+            name: name.into(),
+            nickname: nickname.to_string(),
+        }
     }
 }
 
@@ -43,59 +50,64 @@ struct Second {
 }
 
 #[post("/")]
-fn index() { }
+fn index() {}
 
 #[post("/<id>")]
-fn simple(id: i32) { }
+fn simple(id: i32) {}
 
 #[post("/<id>/<name>")]
-fn simple2(id: i32, name: String) { }
+fn simple2(id: i32, name: String) {}
 
 #[post("/<id>/<name>")]
-fn simple2_flipped(name: String, id: i32) { }
+fn simple2_flipped(name: String, id: i32) {}
 
 #[post("/?<id>")]
-fn simple3(id: i32) { }
+fn simple3(id: i32) {}
 
 #[post("/?<id>&<name>")]
-fn simple4(id: i32, name: String) { }
+fn simple4(id: i32, name: String) {}
 
 #[post("/?<id>&<name>")]
-fn simple4_flipped(name: String, id: i32) { }
+fn simple4_flipped(name: String, id: i32) {}
 
 #[post("/<used>/<_unused>")]
-fn unused_param(used: i32, _unused: i32) { }
+fn unused_param(used: i32, _unused: i32) {}
 
 #[post("/<id>")]
-fn guard_1(cookies: &CookieJar<'_>, id: i32) { }
+fn guard_1(cookies: &CookieJar<'_>, id: i32) {}
 
 #[post("/<id>/<name>")]
-fn guard_2(name: String, cookies: &CookieJar<'_>, id: i32) { }
+fn guard_2(name: String, cookies: &CookieJar<'_>, id: i32) {}
 
 #[post("/a/<id>/hi/<name>/hey")]
-fn guard_3(id: i32, name: String, cookies: &CookieJar<'_>) { }
+fn guard_3(id: i32, name: String, cookies: &CookieJar<'_>) {}
 
 #[post("/<id>", data = "<form>")]
-fn no_uri_display_okay(id: i32, form: Form<Second>) { }
+fn no_uri_display_okay(id: i32, form: Form<Second>) {}
 
-#[post("/name/<name>?<foo>&type=10&<type>&<query..>", data = "<user>", rank = 2)]
+#[post(
+    "/name/<name>?<foo>&type=10&<type>&<query..>",
+    data = "<user>",
+    rank = 2
+)]
 fn complex<'r>(
     foo: usize,
     name: &str,
     query: User<'r>,
     user: Form<User<'r>>,
     r#type: &str,
-    cookies: &CookieJar<'_>
-) {  }
+    cookies: &CookieJar<'_>,
+) {
+}
 
 #[post("/a/<path..>")]
-fn segments(path: PathBuf) { }
+fn segments(path: PathBuf) {}
 
 #[post("/a/<id>/then/<path..>")]
-fn param_and_segments(path: PathBuf, id: usize) { }
+fn param_and_segments(path: PathBuf, id: usize) {}
 
 #[post("/a/<id>/then/<path..>")]
-fn guarded_segments(cookies: &CookieJar<'_>, path: PathBuf, id: usize) { }
+fn guarded_segments(cookies: &CookieJar<'_>, path: PathBuf, id: usize) {}
 
 #[test]
 fn check_simple_unnamed() {
@@ -379,7 +391,10 @@ fn check_complex() {
     }
 
     // Ensure variables are correctly processed.
-    let user = User { name: "Robert".into(), nickname: "Bob".into() };
+    let user = User {
+        name: "Robert".into(),
+        nickname: "Bob".into(),
+    };
     assert_uri_eq! {
         uri!(complex("complex", 0, "high", &user)) =>
             "/name/complex?foo=0&type=10&type=high&name=Robert&nickname=Bob",
@@ -393,7 +408,9 @@ fn check_complex() {
 #[test]
 fn check_location_promotion() {
     struct S1(String);
-    struct S2 { name: String }
+    struct S2 {
+        name: String,
+    }
 
     let s1 = S1("Bob".into());
     let s2 = S2 { name: "Bob".into() };
@@ -431,7 +448,7 @@ fn check_location_promotion() {
 
 #[test]
 fn check_scoped() {
-    assert_uri_eq!{
+    assert_uri_eq! {
         uri!(typed_uris::simple(100)) => "/typed_uris/100",
         uri!(typed_uris::simple(id = 100)) => "/typed_uris/100",
         uri!(typed_uris::deeper::simple(100)) => "/typed_uris/deeper/100",
@@ -440,7 +457,7 @@ fn check_scoped() {
 
 mod typed_uris {
     #[post("/typed_uris/<id>")]
-    fn simple(id: i32) { }
+    fn simple(id: i32) {}
 
     #[test]
     fn check_simple_scoped() {
@@ -454,7 +471,7 @@ mod typed_uris {
 
     pub mod deeper {
         #[post("/typed_uris/deeper/<id>")]
-        fn simple(id: i32) { }
+        fn simple(id: i32) {}
 
         #[test]
         fn check_deep_scoped() {
@@ -477,13 +494,17 @@ fn optionals(
     foo: Option<usize>,
     bar: Option<String>,
     q1: Result<usize, Errors<'_>>,
-    rest: Option<Third<'_>>
-) { }
+    rest: Option<Third<'_>>,
+) {
+}
 
 #[test]
 fn test_optional_uri_parameters() {
     let mut some_10 = Some(10);
-    let mut third = Third { one: "hi there".into(), two: "a b".into() };
+    let mut third = Third {
+        one: "hi there".into(),
+        two: "a b".into(),
+    };
     assert_uri_eq! {
         uri!(optionals(
             foo = 10,
@@ -552,22 +573,27 @@ fn test_optional_uri_parameters() {
 
 #[test]
 fn test_simple_ignored() {
-    #[get("/<_>")] fn ignore_one() { }
+    #[get("/<_>")]
+    fn ignore_one() {}
     assert_uri_eq! {
         uri!(ignore_one(100)) => "/100",
         uri!(ignore_one("hello")) => "/hello",
         uri!(ignore_one("cats r us")) => "/cats%20r%20us",
     }
 
-    #[get("/<_>/<_>")] fn ignore_two() { }
+    #[get("/<_>/<_>")]
+    fn ignore_two() {}
     assert_uri_eq! {
         uri!(ignore_two(100, "boop")) => "/100/boop",
         uri!(ignore_two(&"hi", "bop")) => "/hi/bop",
     }
 
-    #[get("/<_>/foo/<_>")] fn ignore_inner_two() { }
-    #[get("/hi/<_>/foo")] fn ignore_inner_one_a() { }
-    #[get("/hey/hi/<_>/foo/<_>")] fn ignore_inner_two_b() { }
+    #[get("/<_>/foo/<_>")]
+    fn ignore_inner_two() {}
+    #[get("/hi/<_>/foo")]
+    fn ignore_inner_one_a() {}
+    #[get("/hey/hi/<_>/foo/<_>")]
+    fn ignore_inner_two_b() {}
 
     assert_uri_eq! {
         uri!(ignore_inner_two(100, "boop")) => "/100/foo/boop",
@@ -575,9 +601,12 @@ fn test_simple_ignored() {
         uri!(ignore_inner_two_b(&mut 5, "boo")) => "/hey/hi/5/foo/boo",
     }
 
-    #[get("/<_>/foo/<_>?hi")] fn ignore_with_q() { }
-    #[get("/hi/<_>/foo/<_>?hi&<hey>")] fn ignore_with_q2(hey: Option<usize>) { }
-    #[get("/hi/<_>/foo/<_>?<hi>&<hey>")] fn ignore_with_q3(hi: &str, hey: &str) { }
+    #[get("/<_>/foo/<_>?hi")]
+    fn ignore_with_q() {}
+    #[get("/hi/<_>/foo/<_>?hi&<hey>")]
+    fn ignore_with_q2(hey: Option<usize>) {}
+    #[get("/hi/<_>/foo/<_>?<hi>&<hey>")]
+    fn ignore_with_q3(hi: &str, hey: &str) {}
 
     assert_uri_eq! {
         uri!(ignore_with_q(100, "boop")) => "/100/foo/boop?hi",
@@ -588,10 +617,11 @@ fn test_simple_ignored() {
 
 #[test]
 fn test_maps() {
-    use std::collections::{HashMap, BTreeMap};
     use rocket::figment::util::map;
+    use std::collections::{BTreeMap, HashMap};
 
-    #[get("/?<bar>")] fn hmap(mut bar: HashMap<String, usize>) {
+    #[get("/?<bar>")]
+    fn hmap(mut bar: HashMap<String, usize>) {
         let _ = uri!(bmap(&bar));
         let _ = uri!(bmap(&mut bar));
         let _ = uri!(bmap(bar));
@@ -605,7 +635,8 @@ fn test_maps() {
         uri!(hmap(&map!["foo" => 10])) => "/?bar.k:0=foo&bar.v:0=10",
     }
 
-    #[get("/?<bar>")] fn bmap(mut bar: BTreeMap<&str, usize>) {
+    #[get("/?<bar>")]
+    fn bmap(mut bar: BTreeMap<&str, usize>) {
         let _ = uri!(hmap(&bar));
         let _ = uri!(hmap(&mut bar));
         let _ = uri!(hmap(bar));
@@ -622,15 +653,16 @@ fn test_maps() {
 
 #[test]
 fn test_json() {
-    use rocket::serde::{Serialize, Deserialize, json::Json};
+    use rocket::serde::{json::Json, Deserialize, Serialize};
 
     #[derive(Serialize, Deserialize, Copy, Clone)]
     #[serde(crate = "rocket::serde")]
     struct Inner<T> {
-        foo: Option<T>
+        foo: Option<T>,
     }
 
-    #[get("/?<json>")] fn foo(json: Json<Inner<usize>>) { }
+    #[get("/?<json>")]
+    fn foo(json: Json<Inner<usize>>) {}
 
     let mut inner = Inner { foo: Some(10) };
     assert_uri_eq! {
@@ -642,9 +674,12 @@ fn test_json() {
         uri!(foo(&mut Json(inner))) => "/?json=%7B%22foo%22:10%7D",
     }
 
-    #[get("/?<json>")] fn bar(json: Json<Inner<Inner<&str>>>) { }
+    #[get("/?<json>")]
+    fn bar(json: Json<Inner<Inner<&str>>>) {}
 
-    let mut inner = Inner { foo: Some(Inner { foo: Some("hi") }) };
+    let mut inner = Inner {
+        foo: Some(Inner { foo: Some("hi") }),
+    };
     assert_uri_eq! {
         uri!(bar(inner)) => "/?json=%7B%22foo%22:%7B%22foo%22:%22hi%22%7D%7D",
         uri!(bar(&inner)) => "/?json=%7B%22foo%22:%7B%22foo%22:%22hi%22%7D%7D",
@@ -657,7 +692,8 @@ fn test_json() {
 
 #[test]
 fn test_route_uri_normalization_with_prefix() {
-    #[get("/world")] fn world() {}
+    #[get("/world")]
+    fn world() {}
 
     assert_uri_eq! {
         uri!("/", index()) => "/",

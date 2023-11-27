@@ -1,12 +1,12 @@
 use std::borrow::Cow;
 
-use pear::input::Extent;
 use pear::combinators::{prefixed_series, surrounded};
-use pear::macros::{parser, switch, parse};
+use pear::input::Extent;
+use pear::macros::{parse, parser, switch};
 use pear::parsers::*;
 
 use crate::header::{MediaType, Source};
-use crate::parse::checkers::{is_whitespace, is_valid_token};
+use crate::parse::checkers::{is_valid_token, is_whitespace};
 
 type Input<'a> = pear::input::Pear<pear::input::Cursor<&'a str>>;
 type Result<'a, T> = pear::input::Result<T, Input<'a>>;
@@ -17,8 +17,14 @@ fn quoted_string<'a>(input: &mut Input<'a>) -> Result<'a, Extent<&'a str>> {
 
     let mut is_escaped = false;
     let inner = take_while(|&c| {
-        if is_escaped { is_escaped = false; return true; }
-        if c == '\\' { is_escaped = true; return true; }
+        if is_escaped {
+            is_escaped = false;
+            return true;
+        }
+        if c == '\\' {
+            is_escaped = true;
+            return true;
+        }
         c != '"'
     })?;
 
@@ -42,10 +48,14 @@ pub fn media_type<'a>(input: &mut Input<'a>) -> Result<'a, MediaType> {
     let (top, sub, params) = {
         let top = (take_some_while_until(is_valid_token, '/')?, eat('/')?).0;
         let sub = take_some_while_until(is_valid_token, ';')?;
-        let params = prefixed_series(';', |i| {
-            let param = surrounded(i, media_param, is_whitespace)?;
-            Ok((param.0.into(), param.1.into()))
-        }, ';')?;
+        let params = prefixed_series(
+            ';',
+            |i| {
+                let param = surrounded(i, media_param, is_whitespace)?;
+                Ok((param.0.into(), param.1.into()))
+            },
+            ';',
+        )?;
 
         (top, sub, params)
     };
@@ -64,25 +74,25 @@ pub fn parse_media_type(input: &str) -> Result<'_, MediaType> {
 
 #[cfg(test)]
 mod test {
-    use crate::MediaType;
     use super::parse_media_type;
+    use crate::MediaType;
 
     macro_rules! assert_no_parse {
-        ($string:expr) => ({
+        ($string:expr) => {{
             let result: Result<_, _> = parse_media_type($string).into();
             if result.is_ok() {
                 panic!("{:?} parsed unexpectedly.", $string)
             }
-        });
+        }};
     }
 
     macro_rules! assert_parse {
-        ($string:expr) => ({
+        ($string:expr) => {{
             match parse_media_type($string) {
                 Ok(media_type) => media_type,
-                Err(e) => panic!("{:?} failed to parse: {}", $string, e)
+                Err(e) => panic!("{:?} failed to parse: {}", $string, e),
             }
-        });
+        }};
     }
 
     macro_rules! assert_parse_eq {

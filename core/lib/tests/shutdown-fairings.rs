@@ -1,4 +1,5 @@
-#[macro_use] extern crate rocket;
+#[macro_use]
+extern crate rocket;
 
 use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
 
@@ -14,7 +15,7 @@ use rocket::fairing::AdHoc;
 #[derive(Default)]
 struct Flags {
     liftoff: AtomicBool,
-    shutdown: AtomicUsize
+    shutdown: AtomicUsize,
 }
 
 #[test]
@@ -23,14 +24,18 @@ fn shutdown_fairing_runs() {
 
     let rocket = rocket::build()
         .manage(Flags::default())
-        .attach(AdHoc::on_liftoff("Liftoff Flag", |rocket| Box::pin(async move {
-            let flags = rocket.state::<Flags>().unwrap();
-            flags.liftoff.store(true, Ordering::SeqCst);
-        })))
-        .attach(AdHoc::on_shutdown("Shutdown Flag", |rocket| Box::pin(async move {
-            let flags = rocket.state::<Flags>().unwrap();
-            flags.shutdown.fetch_add(1, Ordering::SeqCst);
-        })));
+        .attach(AdHoc::on_liftoff("Liftoff Flag", |rocket| {
+            Box::pin(async move {
+                let flags = rocket.state::<Flags>().unwrap();
+                flags.liftoff.store(true, Ordering::SeqCst);
+            })
+        }))
+        .attach(AdHoc::on_shutdown("Shutdown Flag", |rocket| {
+            Box::pin(async move {
+                let flags = rocket.state::<Flags>().unwrap();
+                flags.shutdown.fetch_add(1, Ordering::SeqCst);
+            })
+        }));
 
     let client = Client::debug(rocket).unwrap();
     let flags = client.rocket().state::<Flags>().unwrap();
@@ -48,14 +53,18 @@ async fn async_shutdown_fairing_runs() {
 
     let rocket = rocket::build()
         .manage(Flags::default())
-        .attach(AdHoc::on_liftoff("Liftoff Flag", |rocket| Box::pin(async move {
-            let flags = rocket.state::<Flags>().unwrap();
-            flags.liftoff.store(true, Ordering::SeqCst);
-        })))
-        .attach(AdHoc::on_shutdown("Shutdown Flag", |rocket| Box::pin(async move {
-            let flags = rocket.state::<Flags>().unwrap();
-            flags.shutdown.fetch_add(1, Ordering::SeqCst);
-        })));
+        .attach(AdHoc::on_liftoff("Liftoff Flag", |rocket| {
+            Box::pin(async move {
+                let flags = rocket.state::<Flags>().unwrap();
+                flags.liftoff.store(true, Ordering::SeqCst);
+            })
+        }))
+        .attach(AdHoc::on_shutdown("Shutdown Flag", |rocket| {
+            Box::pin(async move {
+                let flags = rocket.state::<Flags>().unwrap();
+                flags.shutdown.fetch_add(1, Ordering::SeqCst);
+            })
+        }));
 
     let client = Client::debug(rocket).await.unwrap();
     let flags = client.rocket().state::<Flags>().unwrap();
@@ -73,14 +82,18 @@ async fn multiple_shutdown_fairing_runs() {
 
     let rocket = rocket::build()
         .manage(Flags::default())
-        .attach(AdHoc::on_shutdown("Shutdown Flag 1", |rocket| Box::pin(async move {
-            let flags = rocket.state::<Flags>().unwrap();
-            flags.shutdown.fetch_add(1, Ordering::SeqCst);
-        })))
-        .attach(AdHoc::on_shutdown("Shutdown Flag 2", |rocket| Box::pin(async move {
-            let flags = rocket.state::<Flags>().unwrap();
-            flags.shutdown.fetch_add(1, Ordering::SeqCst);
-        })));
+        .attach(AdHoc::on_shutdown("Shutdown Flag 1", |rocket| {
+            Box::pin(async move {
+                let flags = rocket.state::<Flags>().unwrap();
+                flags.shutdown.fetch_add(1, Ordering::SeqCst);
+            })
+        }))
+        .attach(AdHoc::on_shutdown("Shutdown Flag 2", |rocket| {
+            Box::pin(async move {
+                let flags = rocket.state::<Flags>().unwrap();
+                flags.shutdown.fetch_add(1, Ordering::SeqCst);
+            })
+        }));
 
     let client = Client::debug(rocket).await.unwrap();
     let flags = client.rocket().state::<Flags>().unwrap();
@@ -102,11 +115,13 @@ async fn async_slow_shutdown_doesnt_elongate_grace() {
     let rocket = rocket::build()
         .manage(Flags::default())
         .configure(config)
-        .attach(AdHoc::on_shutdown("Slow Shutdown", |rocket| Box::pin(async move {
-            tokio::time::sleep(std::time::Duration::from_secs(4)).await;
-            let flags = rocket.state::<Flags>().unwrap();
-            flags.shutdown.fetch_add(1, Ordering::SeqCst);
-        })));
+        .attach(AdHoc::on_shutdown("Slow Shutdown", |rocket| {
+            Box::pin(async move {
+                tokio::time::sleep(std::time::Duration::from_secs(4)).await;
+                let flags = rocket.state::<Flags>().unwrap();
+                flags.shutdown.fetch_add(1, Ordering::SeqCst);
+            })
+        }));
 
     let client = Client::debug(rocket).await.unwrap();
     let flags = client.rocket().state::<Flags>().unwrap();

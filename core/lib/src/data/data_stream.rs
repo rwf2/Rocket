@@ -1,17 +1,17 @@
+use std::io::{self, Cursor};
+use std::path::Path;
 use std::pin::Pin;
 use std::task::{Context, Poll};
-use std::path::Path;
-use std::io::{self, Cursor};
 
-use tokio::fs::File;
-use tokio::io::{AsyncRead, AsyncWrite, AsyncReadExt, ReadBuf, Take};
-use futures::stream::Stream;
 use futures::ready;
+use futures::stream::Stream;
+use tokio::fs::File;
+use tokio::io::{AsyncRead, AsyncReadExt, AsyncWrite, ReadBuf, Take};
 use yansi::Paint;
 
-use crate::http::hyper;
-use crate::ext::{PollExt, Chain};
 use crate::data::{Capped, N};
+use crate::ext::{Chain, PollExt};
+use crate::http::hyper;
 
 /// Raw data stream of a request body.
 ///
@@ -61,7 +61,7 @@ enum State {
 enum StreamKind<'r> {
     Empty,
     Body(&'r mut hyper::Body),
-    Multipart(multer::Field<'r>)
+    Multipart(multer::Field<'r>),
 }
 
 impl<'r> DataStream<'r> {
@@ -124,10 +124,14 @@ impl<'r> DataStream<'r> {
     /// ```
     #[inline(always)]
     pub async fn stream_to<W>(mut self, mut writer: W) -> io::Result<N>
-        where W: AsyncWrite + Unpin
+    where
+        W: AsyncWrite + Unpin,
     {
         let written = tokio::io::copy(&mut self, &mut writer).await?;
-        Ok(N { written, complete: !self.limit_exceeded().await? })
+        Ok(N {
+            written,
+            complete: !self.limit_exceeded().await?,
+        })
     }
 
     /// Like [`DataStream::stream_to()`] except that no end-of-stream check is
@@ -149,7 +153,8 @@ impl<'r> DataStream<'r> {
     /// ```
     #[inline(always)]
     pub async fn stream_precise_to<W>(mut self, mut writer: W) -> io::Result<u64>
-        where W: AsyncWrite + Unpin
+    where
+        W: AsyncWrite + Unpin,
     {
         tokio::io::copy(&mut self, &mut writer).await
     }
@@ -197,7 +202,10 @@ impl<'r> DataStream<'r> {
     pub async fn into_string(mut self) -> io::Result<Capped<String>> {
         let mut string = String::with_capacity(self.hint());
         let written = self.read_to_string(&mut string).await?;
-        let n = N { written: written as u64, complete: !self.limit_exceeded().await? };
+        let n = N {
+            written: written as u64,
+            complete: !self.limit_exceeded().await?,
+        };
         Ok(Capped { value: string, n })
     }
 
@@ -222,7 +230,9 @@ impl<'r> DataStream<'r> {
     /// ```
     pub async fn into_file<P: AsRef<Path>>(self, path: P) -> io::Result<Capped<File>> {
         let mut file = File::create(path).await?;
-        let n = self.stream_to(&mut tokio::io::BufWriter::new(&mut file)).await?;
+        let n = self
+            .stream_to(&mut tokio::io::BufWriter::new(&mut file))
+            .await?;
         Ok(Capped { value: file, n })
     }
 }
@@ -231,19 +241,28 @@ impl<'r> DataStream<'r> {
 
 impl StreamReader<'_> {
     pub fn empty() -> Self {
-        Self { inner: StreamKind::Empty, state: State::Done }
+        Self {
+            inner: StreamKind::Empty,
+            state: State::Done,
+        }
     }
 }
 
 impl<'r> From<&'r mut hyper::Body> for StreamReader<'r> {
     fn from(body: &'r mut hyper::Body) -> Self {
-        Self { inner: StreamKind::Body(body), state: State::Pending }
+        Self {
+            inner: StreamKind::Body(body),
+            state: State::Pending,
+        }
     }
 }
 
 impl<'r> From<multer::Field<'r>> for StreamReader<'r> {
     fn from(field: multer::Field<'r>) -> Self {
-        Self { inner: StreamKind::Multipart(field), state: State::Pending }
+        Self {
+            inner: StreamKind::Multipart(field),
+            state: State::Pending,
+        }
     }
 }
 
@@ -262,7 +281,10 @@ impl AsyncRead for DataStream<'_> {
                 StreamKind::Multipart(_) => "a multipart form field",
             };
 
-            warn_!("Data limit reached while reading {}.", kind.primary().bold());
+            warn_!(
+                "Data limit reached while reading {}.",
+                kind.primary().bold()
+            );
         }
 
         Pin::new(&mut self.chain).poll_read(cx, buf)
@@ -272,14 +294,13 @@ impl AsyncRead for DataStream<'_> {
 impl Stream for StreamKind<'_> {
     type Item = io::Result<hyper::body::Bytes>;
 
-    fn poll_next(
-        self: Pin<&mut Self>,
-        cx: &mut Context<'_>,
-    ) -> Poll<Option<Self::Item>> {
+    fn poll_next(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
         match self.get_mut() {
-            StreamKind::Body(body) => Pin::new(body).poll_next(cx)
+            StreamKind::Body(body) => Pin::new(body)
+                .poll_next(cx)
                 .map_err_ext(|e| io::Error::new(io::ErrorKind::Other, e)),
-            StreamKind::Multipart(mp) => Pin::new(mp).poll_next(cx)
+            StreamKind::Multipart(mp) => Pin::new(mp)
+                .poll_next(cx)
                 .map_err_ext(|e| io::Error::new(io::ErrorKind::Other, e)),
             StreamKind::Empty => Poll::Ready(None),
         }
@@ -302,12 +323,10 @@ impl AsyncRead for StreamReader<'_> {
     ) -> Poll<io::Result<()>> {
         loop {
             self.state = match self.state {
-                State::Pending => {
-                    match ready!(Pin::new(&mut self.inner).poll_next(cx)) {
-                        Some(Err(e)) => return Poll::Ready(Err(e)),
-                        Some(Ok(bytes)) => State::Partial(Cursor::new(bytes)),
-                        None => State::Done,
-                    }
+                State::Pending => match ready!(Pin::new(&mut self.inner).poll_next(cx)) {
+                    Some(Err(e)) => return Poll::Ready(Err(e)),
+                    Some(Ok(bytes)) => State::Partial(Cursor::new(bytes)),
+                    None => State::Done,
                 },
                 State::Partial(ref mut cursor) => {
                     let rem = buf.remaining();

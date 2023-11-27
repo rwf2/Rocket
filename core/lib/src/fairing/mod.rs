@@ -51,14 +51,14 @@
 
 use std::any::Any;
 
-use crate::{Rocket, Request, Response, Data, Build, Orbit};
+use crate::{Build, Data, Orbit, Request, Response, Rocket};
 
-mod fairings;
 mod ad_hoc;
+mod fairings;
 mod info_kind;
 
-pub(crate) use self::fairings::Fairings;
 pub use self::ad_hoc::AdHoc;
+pub(crate) use self::fairings::Fairings;
 pub use self::info_kind::{Info, Kind};
 
 /// A type alias for the return `Result` type of [`Fairing::on_ignite()`].
@@ -474,7 +474,9 @@ pub trait Fairing: Send + Sync + Any + 'static {
     /// ## Default Implementation
     ///
     /// The default implementation of this method simply returns `Ok(rocket)`.
-    async fn on_ignite(&self, rocket: Rocket<Build>) -> Result { Ok(rocket) }
+    async fn on_ignite(&self, rocket: Rocket<Build>) -> Result {
+        Ok(rocket)
+    }
 
     /// The liftoff callback.
     ///
@@ -487,7 +489,7 @@ pub trait Fairing: Send + Sync + Any + 'static {
     /// ## Default Implementation
     ///
     /// The default implementation of this method does nothing.
-    async fn on_liftoff(&self, _rocket: &Rocket<Orbit>) { }
+    async fn on_liftoff(&self, _rocket: &Rocket<Orbit>) {}
 
     /// The request callback.
     ///
@@ -530,7 +532,7 @@ pub trait Fairing: Send + Sync + Any + 'static {
     /// ## Default Implementation
     ///
     /// The default implementation of this method does nothing.
-    async fn on_shutdown(&self, _rocket: &Rocket<Orbit>) { }
+    async fn on_shutdown(&self, _rocket: &Rocket<Orbit>) {}
 }
 
 #[crate::async_trait]

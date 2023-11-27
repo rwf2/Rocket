@@ -1,19 +1,40 @@
 #[macro_use]
 extern crate rocket;
 
-#[get("/<_>", rank = 1)] fn ig_1() -> &'static str { "1" }
+#[get("/<_>", rank = 1)]
+fn ig_1() -> &'static str {
+    "1"
+}
 
-#[get("/static")] fn just_static() -> &'static str { "static" }
+#[get("/static")]
+fn just_static() -> &'static str {
+    "static"
+}
 
-#[get("/<_>/<_>", rank = 1)] fn ig_2() -> &'static str { "2" }
+#[get("/<_>/<_>", rank = 1)]
+fn ig_2() -> &'static str {
+    "2"
+}
 
-#[get("/static/<_>")] fn ig_1_static() -> &'static str { "static_1" }
+#[get("/static/<_>")]
+fn ig_1_static() -> &'static str {
+    "static_1"
+}
 
-#[get("/<_>/<_>/<_>", rank = 1)] fn ig_3() -> &'static str { "3" }
+#[get("/<_>/<_>/<_>", rank = 1)]
+fn ig_3() -> &'static str {
+    "3"
+}
 
-#[get("/static/<_>/static")] fn ig_1_static_static() -> &'static str { "static_1_static" }
+#[get("/static/<_>/static")]
+fn ig_1_static_static() -> &'static str {
+    "static_1_static"
+}
 
-#[get("/<a>/<_>/<_>/<b>")] fn wrapped(a: String, b: String) -> String { a + &b }
+#[get("/<a>/<_>/<_>/<b>")]
+fn wrapped(a: String, b: String) -> String {
+    a + &b
+}
 
 #[test]
 fn test_ignored_segments() {
@@ -23,9 +44,18 @@ fn test_ignored_segments() {
         client.get(url).dispatch().into_string().unwrap()
     }
 
-    let rocket = rocket::build().mount("/", routes![
-        ig_1, just_static, ig_2, ig_3, ig_1_static, ig_1_static_static, wrapped
-    ]);
+    let rocket = rocket::build().mount(
+        "/",
+        routes![
+            ig_1,
+            just_static,
+            ig_2,
+            ig_3,
+            ig_1_static,
+            ig_1_static_static,
+            wrapped
+        ],
+    );
 
     let client = Client::debug(rocket).unwrap();
     assert_eq!(get_string(&client, "/foo"), "1");
@@ -40,7 +70,10 @@ fn test_ignored_segments() {
 
     assert_eq!(get_string(&client, "/foo/bar/baz"), "3");
     assert_eq!(get_string(&client, "/bar/static/bam"), "3");
-    assert_eq!(get_string(&client, "/static/static/static"), "static_1_static");
+    assert_eq!(
+        get_string(&client, "/static/static/static"),
+        "static_1_static"
+    );
     assert_eq!(get_string(&client, "/static/foo/bam"), "3");
 
     assert_eq!(get_string(&client, "/a/b/c/d"), "ad");

@@ -4,9 +4,9 @@
 //! These types will, with certainty, be removed with time, but they reside here
 //! while necessary.
 
-pub use hyper::{Method, Error, Body, Uri, Version, Request, Response};
+pub use http::{request, uri, HeaderValue};
 pub use hyper::{body, server, service, upgrade};
-pub use http::{HeaderValue, request, uri};
+pub use hyper::{Body, Error, Method, Request, Response, Uri, Version};
 
 /// Reexported Hyper HTTP header types.
 pub mod header {

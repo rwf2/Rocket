@@ -1,4 +1,5 @@
-#[macro_use] extern crate rocket;
+#[macro_use]
+extern crate rocket;
 
 use rocket::http::Status;
 use rocket::response::content::RawJson;
@@ -21,9 +22,9 @@ fn other() -> RawJson<&'static str> {
 mod head_handling_tests {
     use super::*;
 
-    use rocket::Route;
+    use rocket::http::{ContentType, Status};
     use rocket::local::blocking::Client;
-    use rocket::http::{Status, ContentType};
+    use rocket::Route;
 
     fn routes() -> Vec<Route> {
         routes![index, empty, other]

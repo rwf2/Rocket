@@ -1,12 +1,12 @@
 use std::borrow::{Borrow, Cow};
-use std::convert::AsRef;
 use std::cmp::Ordering;
-use std::str::Utf8Error;
+use std::convert::AsRef;
 use std::fmt;
+use std::str::Utf8Error;
 
+use crate::uri::fmt::{percent_encode, percent_encode_bytes, DEFAULT_ENCODE_SET};
 use ref_cast::RefCast;
-use stable_pattern::{Pattern, Searcher, ReverseSearcher, Split, SplitInternal};
-use crate::uri::fmt::{DEFAULT_ENCODE_SET, percent_encode, percent_encode_bytes};
+use stable_pattern::{Pattern, ReverseSearcher, Searcher, Split, SplitInternal};
 
 use crate::uncased::UncasedStr;
 
@@ -240,12 +240,14 @@ impl RawStr {
             //    `+` char is ASCII => the character is one byte wide. ' ' is
             //    also one byte and ASCII => UTF-8. The replacement of `+` with
             //    ` ` thus yields a valid UTF-8 string.
-            unsafe { allocated.as_bytes_mut()[i] = b' '; }
+            unsafe {
+                allocated.as_bytes_mut()[i] = b' ';
+            }
         }
 
         match allocated.is_empty() {
             true => Cow::Borrowed(string),
-            false => Cow::Owned(allocated)
+            false => Cow::Owned(allocated),
         }
     }
 
@@ -317,7 +319,7 @@ impl RawStr {
         let string = self._replace_plus();
         match percent_encoding::percent_decode(string.as_bytes()).decode_utf8()? {
             Cow::Owned(s) => Ok(Cow::Owned(s)),
-            Cow::Borrowed(_) => Ok(string)
+            Cow::Borrowed(_) => Ok(string),
         }
     }
 
@@ -354,7 +356,7 @@ impl RawStr {
         let string = self._replace_plus();
         match percent_encoding::percent_decode(string.as_bytes()).decode_utf8_lossy() {
             Cow::Owned(s) => Cow::Owned(s),
-            Cow::Borrowed(_) => string
+            Cow::Borrowed(_) => string,
         }
     }
 
@@ -423,13 +425,13 @@ impl RawStr {
                         b'/' => allocated.extend_from_slice(b"&#x2F;"),
                         // Old versions of IE treat a ` as a '.
                         b'`' => allocated.extend_from_slice(b"&#96;"),
-                        _ => unreachable!()
+                        _ => unreachable!(),
                     }
 
                     escaped = true;
                 }
                 _ if escaped => allocated.push(*c),
-                _ => {  }
+                _ => {}
             }
         }
 
@@ -664,7 +666,9 @@ impl RawStr {
     /// assert!(!bananas.ends_with("nana"));
     /// ```
     pub fn ends_with<'a, P>(&'a self, pat: P) -> bool
-        where P: Pattern<'a>, <P as Pattern<'a>>::Searcher: ReverseSearcher<'a>
+    where
+        P: Pattern<'a>,
+        <P as Pattern<'a>>::Searcher: ReverseSearcher<'a>,
     {
         pat.is_suffix_of(self.as_str())
     }
@@ -693,7 +697,9 @@ impl RawStr {
     /// ```
     #[inline]
     pub fn find<'a, P: Pattern<'a>>(&'a self, pat: P) -> Option<usize> {
-        pat.into_searcher(self.as_str()).next_match().map(|(i, _)| i)
+        pat.into_searcher(self.as_str())
+            .next_match()
+            .map(|(i, _)| i)
     }
 
     /// An iterator over substrings of this string slice, separated by
@@ -721,8 +727,9 @@ impl RawStr {
     /// ```
     #[inline]
     pub fn split<'a, P>(&'a self, pat: P) -> impl DoubleEndedIterator<Item = &'a RawStr>
-        where P: Pattern<'a>,
-              <P as stable_pattern::Pattern<'a>>::Searcher: stable_pattern::DoubleEndedSearcher<'a>
+    where
+        P: Pattern<'a>,
+        <P as stable_pattern::Pattern<'a>>::Searcher: stable_pattern::DoubleEndedSearcher<'a>,
     {
         let split: Split<'_, P> = Split(SplitInternal {
             start: 0,
@@ -790,7 +797,7 @@ impl RawStr {
                 let end = s.get_unchecked((i + 1)..self.len());
                 (start.into(), end.into())
             },
-            None => (self, &self[0..0])
+            None => (self, &self[0..0]),
         }
     }
 
@@ -843,7 +850,9 @@ impl RawStr {
     /// ```
     #[inline]
     pub fn strip_suffix<'a, P>(&'a self, suffix: P) -> Option<&'a RawStr>
-        where P: Pattern<'a>,<P as Pattern<'a>>::Searcher: ReverseSearcher<'a>,
+    where
+        P: Pattern<'a>,
+        <P as Pattern<'a>>::Searcher: ReverseSearcher<'a>,
     {
         suffix.strip_suffix_of(self.as_str()).map(RawStr::new)
     }
@@ -903,13 +912,14 @@ impl RawStr {
 
 #[cfg(feature = "serde")]
 mod serde {
-    use serde_::{ser, de, Serialize, Deserialize};
+    use serde_::{de, ser, Deserialize, Serialize};
 
     use super::*;
 
     impl Serialize for RawStr {
         fn serialize<S>(&self, ser: S) -> Result<S::Ok, S::Error>
-            where S: ser::Serializer
+        where
+            S: ser::Serializer,
         {
             self.as_str().serialize(ser)
         }
@@ -917,12 +927,12 @@ mod serde {
 
     impl<'de: 'a, 'a> Deserialize<'de> for &'a RawStr {
         fn deserialize<D>(de: D) -> Result<Self, D::Error>
-            where D: de::Deserializer<'de>
+        where
+            D: de::Deserializer<'de>,
         {
             <&'a str as Deserialize<'de>>::deserialize(de).map(RawStr::new)
         }
     }
-
 }
 
 impl fmt::Debug for RawStr {
@@ -1038,7 +1048,7 @@ impl AsRef<[u8]> for RawStr {
     }
 }
 
-impl<I: core::slice::SliceIndex<str, Output=str>> core::ops::Index<I> for RawStr {
+impl<I: core::slice::SliceIndex<str, Output = str>> core::ops::Index<I> for RawStr {
     type Output = RawStr;
 
     #[inline]

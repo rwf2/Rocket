@@ -1,6 +1,6 @@
-use std::{io, fmt};
-use std::task::{Context, Poll};
 use std::pin::Pin;
+use std::task::{Context, Poll};
+use std::{fmt, io};
 
 use tokio::io::{AsyncRead, AsyncReadExt, AsyncSeek, AsyncSeekExt, ReadBuf};
 
@@ -69,10 +69,10 @@ pub struct Body<'r> {
 }
 
 /// A "trait alias" of sorts so we can use `AsyncRead + AsyncSeek` in `dyn`.
-pub trait AsyncReadSeek: AsyncRead + AsyncSeek { }
+pub trait AsyncReadSeek: AsyncRead + AsyncSeek {}
 
 /// Implemented for all `AsyncRead + AsyncSeek`, of course.
-impl<T: AsyncRead + AsyncSeek> AsyncReadSeek for T {  }
+impl<T: AsyncRead + AsyncSeek> AsyncReadSeek for T {}
 
 /// A pinned `AsyncRead + AsyncSeek` body type.
 type SizedBody<'r> = Pin<Box<dyn AsyncReadSeek + Send + 'r>>;
@@ -108,7 +108,8 @@ impl<'r> Body<'r> {
     pub const DEFAULT_MAX_CHUNK: usize = 4096;
 
     pub(crate) fn with_sized<T>(body: T, preset_size: Option<usize>) -> Self
-        where T: AsyncReadSeek + Send + 'r
+    where
+        T: AsyncReadSeek + Send + 'r,
     {
         Body {
             size: preset_size,
@@ -118,7 +119,8 @@ impl<'r> Body<'r> {
     }
 
     pub(crate) fn with_unsized<T>(body: T) -> Self
-        where T: AsyncRead + Send + 'r
+    where
+        T: AsyncRead + Send + 'r,
     {
         Body {
             size: None,
@@ -139,7 +141,7 @@ impl<'r> Body<'r> {
                 inner: Inner::Phantom(b),
                 max_chunk: body.max_chunk,
             },
-            Inner::Unsized(_) | Inner::None => Body::default()
+            Inner::Unsized(_) | Inner::None => Body::default(),
         };
     }
 

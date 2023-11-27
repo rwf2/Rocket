@@ -1,13 +1,13 @@
-use std::borrow::{Cow, Borrow};
-use std::str::FromStr;
+use std::borrow::{Borrow, Cow};
 use std::fmt;
 use std::hash::{Hash, Hasher};
+use std::str::FromStr;
 
 use either::Either;
 
 use crate::ext::IntoCollection;
+use crate::parse::{parse_media_type, Indexed, IndexedStr};
 use crate::uncased::UncasedStr;
-use crate::parse::{Indexed, IndexedStr, parse_media_type};
 
 use smallvec::SmallVec;
 
@@ -58,21 +58,21 @@ pub struct MediaType {
     /// The subtype.
     pub(crate) sub: IndexedStr<'static>,
     /// The parameters, if any.
-    pub(crate) params: MediaParams
+    pub(crate) params: MediaParams,
 }
 
 // FIXME: `Static` variant is needed for `const`. Need `const SmallVec::new`.
 #[derive(Debug, Clone)]
 pub(crate) enum MediaParams {
     Static(&'static [(&'static str, &'static str)]),
-    Dynamic(SmallVec<[(IndexedStr<'static>, IndexedStr<'static>); 2]>)
+    Dynamic(SmallVec<[(IndexedStr<'static>, IndexedStr<'static>); 2]>),
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) enum Source {
     Known(&'static str),
     Custom(Cow<'static, str>),
-    None
+    None,
 }
 
 impl From<Cow<'static, str>> for Source {
@@ -295,7 +295,9 @@ impl MediaType {
     /// ```
     #[inline]
     pub fn new<T, S>(top: T, sub: S) -> MediaType
-        where T: Into<Cow<'static, str>>, S: Into<Cow<'static, str>>
+    where
+        T: Into<Cow<'static, str>>,
+        S: Into<Cow<'static, str>>,
     {
         MediaType {
             source: Source::None,
@@ -331,9 +333,10 @@ impl MediaType {
     /// assert_eq!(mt.to_string(), "text/person; name=bob; ref=2382".to_string());
     /// ```
     pub fn with_params<K, V, P>(mut self, ps: P) -> MediaType
-        where K: Into<Cow<'static, str>>,
-              V: Into<Cow<'static, str>>,
-              P: IntoCollection<(K, V)>
+    where
+        K: Into<Cow<'static, str>>,
+        V: Into<Cow<'static, str>>,
+        P: IntoCollection<(K, V)>,
     {
         use Indexed::Concrete;
 
@@ -361,7 +364,7 @@ impl MediaType {
     pub const fn const_new(
         top: &'static str,
         sub: &'static str,
-        params: &'static [(&'static str, &'static str)]
+        params: &'static [(&'static str, &'static str)],
     ) -> MediaType {
         MediaType {
             source: Source::None,
@@ -376,7 +379,7 @@ impl MediaType {
         source: &'static str,
         top: &'static str,
         sub: &'static str,
-        params: &'static [(&'static str, &'static str)]
+        params: &'static [(&'static str, &'static str)],
     ) -> MediaType {
         MediaType {
             source: Source::Known(source),
@@ -390,7 +393,7 @@ impl MediaType {
         match self.source {
             Source::Known(string) => Some(string),
             Source::Custom(Cow::Borrowed(string)) => Some(string),
-            _ => None
+            _ => None,
         }
     }
 
@@ -529,7 +532,7 @@ impl MediaType {
     /// assert_eq!(png.params().count(), 0);
     /// ```
     #[inline]
-    pub fn params(&self) -> impl Iterator<Item=(&'_ UncasedStr, &'_ str)> + '_ {
+    pub fn params(&self) -> impl Iterator<Item = (&'_ UncasedStr, &'_ str)> + '_ {
         let raw = match self.params {
             MediaParams::Static(slice) => Either::Left(slice.iter().cloned()),
             MediaParams::Dynamic(ref vec) => {
@@ -574,7 +577,7 @@ impl PartialEq for MediaType {
     }
 }
 
-impl Eq for MediaType {  }
+impl Eq for MediaType {}
 
 impl Hash for MediaType {
     #[inline]
@@ -608,11 +611,12 @@ impl Default for MediaParams {
 
 impl Extend<(IndexedStr<'static>, IndexedStr<'static>)> for MediaParams {
     fn extend<T>(&mut self, iter: T)
-        where T: IntoIterator<Item = (IndexedStr<'static>, IndexedStr<'static>)>
+    where
+        T: IntoIterator<Item = (IndexedStr<'static>, IndexedStr<'static>)>,
     {
         match self {
             MediaParams::Static(..) => panic!("can't add to static collection!"),
-            MediaParams::Dynamic(ref mut v) => v.extend(iter)
+            MediaParams::Dynamic(ref mut v) => v.extend(iter),
         }
     }
 }
@@ -623,7 +627,7 @@ impl Source {
         match *self {
             Source::Known(s) => Some(s),
             Source::Custom(ref s) => Some(s.borrow()),
-            Source::None => None
+            Source::None => None,
         }
     }
 }

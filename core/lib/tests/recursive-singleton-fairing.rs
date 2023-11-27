@@ -1,6 +1,6 @@
-use rocket::{Rocket, Build, Config};
-use rocket::fairing::{self, Fairing, Info, Kind};
 use rocket::error::ErrorKind;
+use rocket::fairing::{self, Fairing, Info, Kind};
+use rocket::{Build, Config, Rocket};
 
 struct Singleton(Kind, Kind, bool);
 
@@ -9,7 +9,7 @@ impl Fairing for Singleton {
     fn info(&self) -> Info {
         Info {
             name: "Singleton",
-            kind: self.0
+            kind: self.0,
         }
     }
 
@@ -22,23 +22,46 @@ impl Fairing for Singleton {
     }
 }
 
-
 // Have => two `Singleton`s. This is okay; we keep the latter.
 #[rocket::async_test]
 async fn recursive_singleton_ok() {
     let result = rocket::custom(Config::debug_default())
-        .attach(Singleton(Kind::Ignite | Kind::Singleton, Kind::Singleton, false))
-        .attach(Singleton(Kind::Ignite | Kind::Singleton, Kind::Singleton, false))
+        .attach(Singleton(
+            Kind::Ignite | Kind::Singleton,
+            Kind::Singleton,
+            false,
+        ))
+        .attach(Singleton(
+            Kind::Ignite | Kind::Singleton,
+            Kind::Singleton,
+            false,
+        ))
         .ignite()
         .await;
 
     assert!(result.is_ok(), "{:?}", result);
 
     let result = rocket::custom(Config::debug_default())
-        .attach(Singleton(Kind::Ignite | Kind::Singleton, Kind::Singleton, false))
-        .attach(Singleton(Kind::Ignite | Kind::Singleton, Kind::Singleton, false))
-        .attach(Singleton(Kind::Ignite | Kind::Singleton, Kind::Singleton, false))
-        .attach(Singleton(Kind::Ignite | Kind::Singleton, Kind::Singleton, false))
+        .attach(Singleton(
+            Kind::Ignite | Kind::Singleton,
+            Kind::Singleton,
+            false,
+        ))
+        .attach(Singleton(
+            Kind::Ignite | Kind::Singleton,
+            Kind::Singleton,
+            false,
+        ))
+        .attach(Singleton(
+            Kind::Ignite | Kind::Singleton,
+            Kind::Singleton,
+            false,
+        ))
+        .attach(Singleton(
+            Kind::Ignite | Kind::Singleton,
+            Kind::Singleton,
+            false,
+        ))
         .ignite()
         .await;
 
@@ -60,14 +83,22 @@ async fn recursive_singleton_bad() {
     }
 
     let result = rocket::custom(Config::debug_default())
-        .attach(Singleton(Kind::Ignite | Kind::Singleton, Kind::Ignite | Kind::Singleton, true))
+        .attach(Singleton(
+            Kind::Ignite | Kind::Singleton,
+            Kind::Ignite | Kind::Singleton,
+            true,
+        ))
         .ignite()
         .await;
 
     assert_err(result.unwrap_err());
 
     let result = rocket::custom(Config::debug_default())
-        .attach(Singleton(Kind::Ignite | Kind::Singleton, Kind::Singleton, true))
+        .attach(Singleton(
+            Kind::Ignite | Kind::Singleton,
+            Kind::Singleton,
+            true,
+        ))
         .ignite()
         .await;
 

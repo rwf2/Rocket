@@ -3,21 +3,22 @@
 // code generation uses #[allow(non_snake_case)] in the appropriate places.
 #![deny(non_snake_case)]
 
-#[macro_use] extern crate rocket;
+#[macro_use]
+extern crate rocket;
 
 use std::path::PathBuf;
 
-use rocket::request::Request;
-use rocket::http::ext::Normalize;
-use rocket::local::blocking::Client;
 use rocket::data::{self, Data, FromData};
-use rocket::http::{Status, RawStr, ContentType, uri::fmt::Path};
+use rocket::http::ext::Normalize;
+use rocket::http::{uri::fmt::Path, ContentType, RawStr, Status};
+use rocket::local::blocking::Client;
+use rocket::request::Request;
 
 // Use all of the code generation available at once.
 
 #[derive(FromForm, UriDisplayQuery)]
 struct Inner<'r> {
-    field: &'r str
+    field: &'r str,
 }
 
 struct Simple(String);
@@ -45,8 +46,15 @@ fn post1(
     path: PathBuf,
     simple: Simple,
 ) -> String {
-    let string = format!("{}, {}, {}, {}, {}, {}",
-        sky, name, a, query.field, path.normalized_str(), simple.0);
+    let string = format!(
+        "{}, {}, {}, {}, {}, {}",
+        sky,
+        name,
+        a,
+        query.field,
+        path.normalized_str(),
+        simple.0
+    );
 
     let uri = uri!(post1(a, name, path, sky, query));
 
@@ -68,8 +76,15 @@ fn post2(
     path: PathBuf,
     simple: Simple,
 ) -> String {
-    let string = format!("{}, {}, {}, {}, {}, {}",
-        sky, name, a, query.field, path.normalized_str(), simple.0);
+    let string = format!(
+        "{}, {}, {}, {}, {}, {}",
+        sky,
+        name,
+        a,
+        query.field,
+        path.normalized_str(),
+        simple.0
+    );
 
     let uri = uri!(post2(a, name, path, sky, query));
 
@@ -77,9 +92,8 @@ fn post2(
 }
 
 #[allow(dead_code)]
-#[post("/<_unused_param>?<_unused_query>", data="<_unused_data>")]
-fn test_unused_params(_unused_param: String, _unused_query: String, _unused_data: Data<'_>) {
-}
+#[post("/<_unused_param>?<_unused_query>", data = "<_unused_data>")]
+fn test_unused_params(_unused_param: String, _unused_query: String, _unused_data: Data<'_>) {}
 
 #[test]
 fn test_full_route() {
@@ -113,8 +127,19 @@ fn test_full_route() {
         .body(simple)
         .dispatch();
 
-    assert_eq!(response.into_string().unwrap(), format!("({}, {}, {}, {}, {}, {}) ({})",
-            sky, name.percent_decode().unwrap(), "A A", "inside", path, simple, expected_uri));
+    assert_eq!(
+        response.into_string().unwrap(),
+        format!(
+            "({}, {}, {}, {}, {}, {}) ({})",
+            sky,
+            name.percent_decode().unwrap(),
+            "A A",
+            "inside",
+            path,
+            simple,
+            expected_uri
+        )
+    );
 
     let response = client.post(format!("/2{}", uri)).body(simple).dispatch();
     assert_eq!(response.status(), Status::NotFound);
@@ -125,8 +150,19 @@ fn test_full_route() {
         .body(simple)
         .dispatch();
 
-    assert_eq!(response.into_string().unwrap(), format!("({}, {}, {}, {}, {}, {}) ({})",
-            sky, name.percent_decode().unwrap(), "A A", "inside", path, simple, expected_uri));
+    assert_eq!(
+        response.into_string().unwrap(),
+        format!(
+            "({}, {}, {}, {}, {}, {}) ({})",
+            sky,
+            name.percent_decode().unwrap(),
+            "A A",
+            "inside",
+            path,
+            simple,
+            expected_uri
+        )
+    );
 }
 
 mod scopes {
@@ -177,15 +213,20 @@ fn test_filtered_raw_query() {
 
     #[track_caller]
     fn run(client: &Client, birds: &[&str], colors: &[&str], cats: &[&str]) -> (Status, String) {
-        let join = |slice: &[&str], name: &str| slice.iter()
-            .map(|v| format!("{}={}", name, v))
-            .collect::<Vec<_>>()
-            .join("&");
+        let join = |slice: &[&str], name: &str| {
+            slice
+                .iter()
+                .map(|v| format!("{}={}", name, v))
+                .collect::<Vec<_>>()
+                .join("&")
+        };
 
-        let q = format!("{}&{}&{}",
+        let q = format!(
+            "{}&{}&{}",
             join(birds, "bird"),
             join(colors, "color"),
-            join(cats, "cat"));
+            join(cats, "cat")
+        );
 
         let response = client.get(format!("/?{}", q)).dispatch();
         let status = response.status();
@@ -228,12 +269,12 @@ fn test_filtered_raw_query() {
 #[derive(Debug, PartialEq, FromForm)]
 struct Dog<'r> {
     name: &'r str,
-    age: usize
+    age: usize,
 }
 
 #[derive(Debug, PartialEq, FromForm)]
 struct Q<'r> {
-    dog: Dog<'r>
+    dog: Dog<'r>,
 }
 
 #[get("/?<color>&color=red&<q..>")]
@@ -250,10 +291,13 @@ fn query_collection_2(color: Vec<&str>, dog: Dog<'_>) -> String {
 fn test_query_collection() {
     #[track_caller]
     fn run(client: &Client, colors: &[&str], dog: &[&str]) -> (Status, String) {
-        let join = |slice: &[&str], prefix: &str| slice.iter()
-            .map(|v| format!("{}{}", prefix, v))
-            .collect::<Vec<_>>()
-            .join("&");
+        let join = |slice: &[&str], prefix: &str| {
+            slice
+                .iter()
+                .map(|v| format!("{}{}", prefix, v))
+                .collect::<Vec<_>>()
+                .join("&")
+        };
 
         let q = format!("{}&{}", join(colors, "color="), join(dog, "dog."));
         let response = client.get(format!("/?{}", q)).dispatch();
@@ -289,7 +333,10 @@ fn test_query_collection() {
 
         let colors = &["blue", "green", "red", "blue"];
         let dog = &["name=Max+Fido", "age=10"];
-        assert_eq!(run(&client, colors, dog).1, "blue&green&blue - Max Fido - 10");
+        assert_eq!(
+            run(&client, colors, dog).1,
+            "blue&green&blue - Max Fido - 10"
+        );
     }
 
     let rocket = rocket::build().mount("/", routes![query_collection]);
@@ -299,8 +346,8 @@ fn test_query_collection() {
     run_tests(rocket);
 }
 
-use rocket::request::FromSegments;
 use rocket::http::uri::Segments;
+use rocket::request::FromSegments;
 
 struct PathString(String);
 
@@ -310,7 +357,6 @@ impl FromSegments<'_> for PathString {
     fn from_segments(segments: Segments<'_, Path>) -> Result<Self, Self::Error> {
         Ok(PathString(segments.collect::<Vec<_>>().join("/")))
     }
-
 }
 
 #[get("/<_>/b/<path..>", rank = 1)]

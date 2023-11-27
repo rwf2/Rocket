@@ -1,5 +1,7 @@
-#[cfg(any(test, doctest))] rocket::internal_guide_tests!("../guide/*.md");
-#[cfg(any(test, doctest))] rocket::internal_guide_tests!("../../README.md");
+#[cfg(any(test, doctest))]
+rocket::internal_guide_tests!("../guide/*.md");
+#[cfg(any(test, doctest))]
+rocket::internal_guide_tests!("../../README.md");
 
 #[macro_export]
 macro_rules! map {

@@ -1,19 +1,25 @@
-#[macro_use] extern crate rocket;
-use rocket::{Rocket, Route, Build};
+#[macro_use]
+extern crate rocket;
+use rocket::{Build, Rocket, Route};
 
 pub fn prepend(prefix: &str, route: Route) -> Route {
-    route.map_base(|base| format!("{}{}", prefix, base)).unwrap()
+    route
+        .map_base(|base| format!("{}{}", prefix, base))
+        .unwrap()
 }
 
 pub fn extend_routes(prefix: &str, routes: Vec<Route>) -> Vec<Route> {
-    routes.into_iter()
+    routes
+        .into_iter()
         .map(|route| prepend(prefix, route))
         .collect()
 }
 
 mod a {
     #[get("/b/<id>")]
-    fn b(id: u8) -> String { id.to_string() }
+    fn b(id: u8) -> String {
+        id.to_string()
+    }
 
     pub fn routes() -> Vec<rocket::Route> {
         super::extend_routes("/a", routes![b])
@@ -21,12 +27,14 @@ mod a {
 }
 
 fn rocket() -> Rocket<Build> {
-    rocket::build().mount("/", a::routes()).mount("/foo", a::routes())
+    rocket::build()
+        .mount("/", a::routes())
+        .mount("/foo", a::routes())
 }
 
 mod mapped_base_tests {
-    use rocket::local::blocking::Client;
     use rocket::http::Status;
+    use rocket::local::blocking::Client;
 
     #[test]
     fn only_prefix() {

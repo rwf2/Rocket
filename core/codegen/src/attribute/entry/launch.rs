@@ -1,8 +1,8 @@
 use super::EntryAttr;
 
-use devise::{Spanned, Result};
 use devise::ext::SpanDiagnosticExt;
-use proc_macro2::{TokenStream, Span};
+use devise::{Result, Spanned};
+use proc_macro2::{Span, TokenStream};
 
 /// `#[rocket::launch]`: generates a `main` function that calls the attributed
 /// function to generate a `Rocket` instance. Then calls `.launch()` on the
@@ -72,9 +72,11 @@ impl EntryAttr for Launch {
 
         let ty = match &f.sig.output {
             syn::ReturnType::Type(_, ty) => ty,
-            _ => return Err(Span::call_site()
-                .error("attribute can only be applied to functions that return a value")
-                .span_note(f.sig.span(), "this function must return a value"))
+            _ => {
+                return Err(Span::call_site()
+                    .error("attribute can only be applied to functions that return a value")
+                    .span_note(f.sig.span(), "this function must return a value"))
+            }
         };
 
         let block = &f.block;
@@ -93,8 +95,11 @@ impl EntryAttr for Launch {
             if let Some(call) = likely_spawns(f) {
                 call.span()
                     .warning("task is being spawned outside an async context")
-                    .span_help(f.sig.span(), "declare this function as `async fn` \
-                                              to require async execution")
+                    .span_help(
+                        f.sig.span(),
+                        "declare this function as `async fn` \
+                                              to require async execution",
+                    )
                     .span_note(Span::call_site(), "`#[launch]` call is here")
                     .emit_as_expr_tokens();
             }

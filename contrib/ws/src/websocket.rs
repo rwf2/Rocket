@@ -2,14 +2,14 @@ use std::io;
 use std::pin::Pin;
 
 use rocket::data::{IoHandler, IoStream};
-use rocket::futures::{self, StreamExt, SinkExt, future::BoxFuture, stream::SplitStream};
-use rocket::response::{self, Responder, Response};
-use rocket::request::{FromRequest, Request, Outcome};
+use rocket::futures::{self, future::BoxFuture, stream::SplitStream, SinkExt, StreamExt};
 use rocket::http::Status;
+use rocket::request::{FromRequest, Outcome, Request};
+use rocket::response::{self, Responder, Response};
 
-use crate::{Config, Message};
+use crate::result::{Error, Result};
 use crate::stream::DuplexStream;
-use crate::result::{Result, Error};
+use crate::{Config, Message};
 
 /// A request guard identifying WebSocket requests. Converts into a [`Channel`]
 /// or [`MessageStream`].
@@ -38,7 +38,10 @@ pub struct WebSocket {
 
 impl WebSocket {
     fn new(key: String) -> WebSocket {
-        WebSocket { config: Config::default(), key }
+        WebSocket {
+            config: Config::default(),
+            key,
+        }
     }
 
     /// Change the default connection configuration to `config`.
@@ -115,9 +118,13 @@ impl WebSocket {
     /// }
     /// ```
     pub fn channel<'r, F: Send + 'r>(self, handler: F) -> Channel<'r>
-        where F: FnOnce(DuplexStream) -> BoxFuture<'r, Result<()>> + 'r
+    where
+        F: FnOnce(DuplexStream) -> BoxFuture<'r, Result<()>> + 'r,
     {
-        Channel { ws: self, handler: Box::new(handler), }
+        Channel {
+            ws: self,
+            handler: Box::new(handler),
+        }
     }
 
     /// Create a stream that consumes client [`Message`]s and emits its own.
@@ -155,10 +162,14 @@ impl WebSocket {
     /// }
     /// ```
     pub fn stream<'r, F, S>(self, stream: F) -> MessageStream<'r, S>
-        where F: FnOnce(SplitStream<DuplexStream>) -> S + Send + 'r,
-              S: futures::Stream<Item = Result<Message>> + Send + 'r
+    where
+        F: FnOnce(SplitStream<DuplexStream>) -> S + Send + 'r,
+        S: futures::Stream<Item = Result<Message>> + Send + 'r,
     {
-        MessageStream { ws: self, handler: Box::new(stream), }
+        MessageStream {
+            ws: self,
+            handler: Box::new(stream),
+        }
     }
 }
 
@@ -181,7 +192,7 @@ pub struct Channel<'r> {
 // TODO: Get rid of this or `Channel` via a single `enum`.
 pub struct MessageStream<'r, S> {
     ws: WebSocket,
-    handler: Box<dyn FnOnce(SplitStream<DuplexStream>) -> S + Send + 'r>
+    handler: Box<dyn FnOnce(SplitStream<DuplexStream>) -> S + Send + 'r>,
 }
 
 #[rocket::async_trait]
@@ -193,17 +204,23 @@ impl<'r> FromRequest<'r> for WebSocket {
         use rocket::http::uncased::eq;
 
         let headers = req.headers();
-        let is_upgrade = headers.get("Connection")
+        let is_upgrade = headers
+            .get("Connection")
             .any(|h| h.split(',').any(|v| eq(v.trim(), "upgrade")));
 
-        let is_ws = headers.get("Upgrade")
+        let is_ws = headers
+            .get("Upgrade")
             .any(|h| h.split(',').any(|v| eq(v.trim(), "websocket")));
 
-        let is_13 = headers.get_one("Sec-WebSocket-Version").map_or(false, |v| v == "13");
-        let key = headers.get_one("Sec-WebSocket-Key").map(|k| derive_accept_key(k.as_bytes()));
+        let is_13 = headers
+            .get_one("Sec-WebSocket-Version")
+            .map_or(false, |v| v == "13");
+        let key = headers
+            .get_one("Sec-WebSocket-Key")
+            .map(|k| derive_accept_key(k.as_bytes()));
         match key {
             Some(key) if is_upgrade && is_ws && is_13 => Outcome::Success(WebSocket::new(key)),
-            Some(_) | None => Outcome::Forward(Status::BadRequest)
+            Some(_) | None => Outcome::Forward(Status::BadRequest),
         }
     }
 }
@@ -219,7 +236,8 @@ impl<'r, 'o: 'r> Responder<'r, 'o> for Channel<'o> {
 }
 
 impl<'r, 'o: 'r, S> Responder<'r, 'o> for MessageStream<'o, S>
-    where S: futures::Stream<Item = Result<Message>> + Send + 'o
+where
+    S: futures::Stream<Item = Result<Message>> + Send + 'o,
 {
     fn respond_to(self, _: &'r Request<'_>) -> response::Result<'o> {
         Response::build()
@@ -241,7 +259,8 @@ impl IoHandler for Channel<'_> {
 
 #[rocket::async_trait]
 impl<'r, S> IoHandler for MessageStream<'r, S>
-    where S: futures::Stream<Item = Result<Message>> + Send + 'r
+where
+    S: futures::Stream<Item = Result<Message>> + Send + 'r,
 {
     async fn io(self: Pin<Box<Self>>, io: IoStream) -> io::Result<()> {
         let (mut sink, source) = DuplexStream::new(io, self.ws.config).await.split();
@@ -250,7 +269,7 @@ impl<'r, S> IoHandler for MessageStream<'r, S>
         while let Some(msg) = stream.next().await {
             let result = match msg {
                 Ok(msg) => sink.send(msg).await,
-                Err(e) => Err(e)
+                Err(e) => Err(e),
             };
 
             if !handle_result(result)? {
@@ -269,6 +288,6 @@ fn handle_result(result: Result<()>) -> io::Result<bool> {
         Ok(_) => Ok(true),
         Err(Error::ConnectionClosed) => Ok(false),
         Err(Error::Io(e)) => Err(e),
-        Err(e) => Err(io::Error::new(io::ErrorKind::Other, e))
+        Err(e) => Err(io::Error::new(io::ErrorKind::Other, e)),
     }
 }

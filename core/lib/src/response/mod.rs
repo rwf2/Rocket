@@ -13,11 +13,11 @@
 //! `Responder`s `A`, `B`, and `C`. This is normal and encouraged as the type
 //! names typically illustrate the intended response.
 
-mod responder;
-mod redirect;
-mod response;
-mod debug;
 mod body;
+mod debug;
+mod redirect;
+mod responder;
+mod response;
 
 pub(crate) mod flash;
 
@@ -28,12 +28,12 @@ pub mod stream;
 #[doc(hidden)]
 pub use rocket_codegen::Responder;
 
-pub use self::response::{Response, Builder};
 pub use self::body::Body;
-pub use self::responder::Responder;
-pub use self::redirect::Redirect;
-pub use self::flash::Flash;
 pub use self::debug::Debug;
+pub use self::flash::Flash;
+pub use self::redirect::Redirect;
+pub use self::responder::Responder;
+pub use self::response::{Builder, Response};
 
 /// Type alias for the `Result` of a [`Responder::respond_to()`] call.
 pub type Result<'r> = std::result::Result<Response<'r>, crate::http::Status>;

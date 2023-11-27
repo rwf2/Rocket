@@ -19,14 +19,12 @@ mod sqlite_shutdown_test {
 
     #[test]
     fn test_shutdown() {
-        let _rocket = async_test(
-            async {
-                let rocket = rocket().await.ignite().await.expect("unable to ignite");
-                // request shutdown
-                rocket.shutdown().notify();
-                rocket.launch().await.expect("unable to launch")
-            }
-        );
+        let _rocket = async_test(async {
+            let rocket = rocket().await.ignite().await.expect("unable to ignite");
+            // request shutdown
+            rocket.shutdown().notify();
+            rocket.launch().await.expect("unable to launch")
+        });
         // _rocket is dropped here after the runtime is dropped
     }
 }

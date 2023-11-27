@@ -1,6 +1,9 @@
+use devise::{
+    ext::{PathExt, SpanDiagnosticExt, Split2},
+    FromMeta, MetaItem, Result,
+};
+use proc_macro2::{Span, TokenStream};
 use quote::ToTokens;
-use devise::{FromMeta, MetaItem, Result, ext::{Split2, PathExt, SpanDiagnosticExt}};
-use proc_macro2::{TokenStream, Span};
 
 use crate::http;
 
@@ -38,7 +41,9 @@ impl FromMeta for Status {
     fn from_meta(meta: &MetaItem) -> Result<Self> {
         let num = usize::from_meta(meta)?;
         if num < 100 || num >= 600 {
-            return Err(meta.value_span().error("status must be in range [100, 599]"));
+            return Err(meta
+                .value_span()
+                .error("status must be in range [100, 599]"));
         }
 
         Ok(Status(http::Status::new(num as u16)))
@@ -100,8 +105,12 @@ const VALID_METHODS_STR: &str = "`GET`, `PUT`, `POST`, `DELETE`, `HEAD`, \
     `PATCH`, `OPTIONS`";
 
 const VALID_METHODS: &[http::Method] = &[
-    http::Method::Get, http::Method::Put, http::Method::Post,
-    http::Method::Delete, http::Method::Head, http::Method::Patch,
+    http::Method::Get,
+    http::Method::Put,
+    http::Method::Post,
+    http::Method::Delete,
+    http::Method::Head,
+    http::Method::Patch,
     http::Method::Options,
 ];
 
@@ -112,20 +121,24 @@ impl FromMeta for Method {
 
         if let MetaItem::Path(path) = meta {
             if let Some(ident) = path.last_ident() {
-                let method = ident.to_string().parse()
+                let method = ident
+                    .to_string()
+                    .parse()
                     .map_err(|_| span.error("invalid HTTP method").help(&*help_text))?;
 
                 if !VALID_METHODS.contains(&method) {
-                    return Err(span.error("invalid HTTP method for route handlers")
-                               .help(&*help_text));
+                    return Err(span
+                        .error("invalid HTTP method for route handlers")
+                        .help(&*help_text));
                 }
 
                 return Ok(Method(method));
             }
         }
 
-        Err(span.error(format!("expected identifier, found {}", meta.description()))
-                .help(&*help_text))
+        Err(span
+            .error(format!("expected identifier, found {}", meta.description()))
+            .help(&*help_text))
     }
 }
 
@@ -149,12 +162,12 @@ impl ToTokens for Method {
 
 impl<T: ToTokens> ToTokens for Optional<T> {
     fn to_tokens(&self, tokens: &mut TokenStream) {
-        use crate::exports::{_Some, _None};
+        use crate::exports::{_None, _Some};
         use devise::Spanned;
 
         let opt_tokens = match self.0 {
             Some(ref val) => quote_spanned!(val.span() => #_Some(#val)),
-            None => quote!(#_None)
+            None => quote!(#_None),
         };
 
         tokens.extend(opt_tokens);

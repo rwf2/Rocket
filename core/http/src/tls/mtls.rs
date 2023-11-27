@@ -3,8 +3,8 @@ pub mod oid {
     //! [`oid_registry`](https://docs.rs/oid-registry/0.4) and
     //! [`der-parser`](https://docs.rs/der-parser/7).
 
-    pub use x509_parser::oid_registry::*;
     pub use x509_parser::objects::*;
+    pub use x509_parser::oid_registry::*;
 }
 
 pub mod bigint {
@@ -22,24 +22,24 @@ pub mod x509 {
 
     pub use x509_parser::certificate::*;
     pub use x509_parser::cri_attributes::*;
+    pub use x509_parser::der_parser::ber;
+    pub use x509_parser::der_parser::der;
     pub use x509_parser::error::*;
     pub use x509_parser::extensions::*;
     pub use x509_parser::revocation_list::*;
     pub use x509_parser::time::*;
-    pub use x509_parser::x509::*;
-    pub use x509_parser::der_parser::der;
-    pub use x509_parser::der_parser::ber;
     pub use x509_parser::traits::*;
+    pub use x509_parser::x509::*;
 }
 
 use std::fmt;
-use std::ops::Deref;
 use std::num::NonZeroUsize;
+use std::ops::Deref;
 
-use ref_cast::RefCast;
-use x509_parser::nom;
-use x509::{ParsedExtension, X509Name, X509Certificate, TbsCertificate, X509Error, FromDer};
 use oid::OID_X509_EXT_SUBJECT_ALT_NAME as SUBJECT_ALT_NAME;
+use ref_cast::RefCast;
+use x509::{FromDer, ParsedExtension, TbsCertificate, X509Certificate, X509Error, X509Name};
+use x509_parser::nom;
 
 use crate::listener::CertificateData;
 
@@ -204,7 +204,10 @@ impl<'a> Certificate<'a> {
         // Ensure we have a subject or a subjectAlt.
         if x509.subject().as_raw().is_empty() {
             if let Some(ext) = x509.extensions().iter().find(|e| e.oid == SUBJECT_ALT_NAME) {
-                if !matches!(ext.parsed_extension(), ParsedExtension::SubjectAlternativeName(..)) {
+                if !matches!(
+                    ext.parsed_extension(),
+                    ParsedExtension::SubjectAlternativeName(..)
+                ) {
                     return Err(Error::NoSubject);
                 } else if !ext.critical {
                     return Err(Error::NonCriticalSubjectAlt);
@@ -444,7 +447,8 @@ impl<'a> Name<'a> {
     /// }
     /// ```
     pub fn common_names(&self) -> impl Iterator<Item = &'a str> + '_ {
-        self.iter_by_oid(&oid::OID_X509_COMMON_NAME).filter_map(|n| n.as_str().ok())
+        self.iter_by_oid(&oid::OID_X509_COMMON_NAME)
+            .filter_map(|n| n.as_str().ok())
     }
 
     /// Returns the _first_ UTF-8 _string_ email address, if any.
@@ -491,7 +495,8 @@ impl<'a> Name<'a> {
     /// }
     /// ```
     pub fn emails(&self) -> impl Iterator<Item = &'a str> + '_ {
-        self.iter_by_oid(&oid::OID_PKCS9_EMAIL_ADDRESS).filter_map(|n| n.as_str().ok())
+        self.iter_by_oid(&oid::OID_PKCS9_EMAIL_ADDRESS)
+            .filter_map(|n| n.as_str().ok())
     }
 
     /// Returns `true` if `self` has no data.

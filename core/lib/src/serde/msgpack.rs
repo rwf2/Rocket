@@ -27,14 +27,14 @@
 use std::io;
 use std::ops::{Deref, DerefMut};
 
-use crate::request::{Request, local_cache};
-use crate::data::{Limits, Data, FromData, Outcome};
-use crate::response::{self, Responder, content};
-use crate::http::Status;
+use crate::data::{Data, FromData, Limits, Outcome};
 use crate::form::prelude as form;
+use crate::http::Status;
+use crate::request::{local_cache, Request};
+use crate::response::{self, content, Responder};
 // use crate::http::uri::fmt;
 
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 
 #[doc(inline)]
 pub use rmp_serde::decode::Error;
@@ -153,8 +153,11 @@ impl<'r, T: Deserialize<'r>> MsgPack<T> {
             Ok(buf) if buf.is_complete() => buf.into_inner(),
             Ok(_) => {
                 let eof = io::ErrorKind::UnexpectedEof;
-                return Err(Error::InvalidDataRead(io::Error::new(eof, "data limit exceeded")));
-            },
+                return Err(Error::InvalidDataRead(io::Error::new(
+                    eof,
+                    "data limit exceeded",
+                )));
+            }
             Err(e) => return Err(Error::InvalidDataRead(e)),
         };
 
@@ -171,13 +174,10 @@ impl<'r, T: Deserialize<'r>> FromData<'r> for MsgPack<T> {
             Ok(value) => Outcome::Success(value),
             Err(Error::InvalidDataRead(e)) if e.kind() == io::ErrorKind::UnexpectedEof => {
                 Outcome::Error((Status::PayloadTooLarge, Error::InvalidDataRead(e)))
-            },
-            | Err(e@Error::TypeMismatch(_))
-            | Err(e@Error::OutOfRange)
-            | Err(e@Error::LengthMismatch(_))
-            => {
-                Outcome::Error((Status::UnprocessableEntity, e))
-            },
+            }
+            Err(e @ Error::TypeMismatch(_))
+            | Err(e @ Error::OutOfRange)
+            | Err(e @ Error::LengthMismatch(_)) => Outcome::Error((Status::UnprocessableEntity, e)),
             Err(e) => Outcome::Error((Status::BadRequest, e)),
         }
     }
@@ -188,11 +188,10 @@ impl<'r, T: Deserialize<'r>> FromData<'r> for MsgPack<T> {
 /// serialization fails, an `Err` of `Status::InternalServerError` is returned.
 impl<'r, T: Serialize> Responder<'r, 'static> for MsgPack<T> {
     fn respond_to(self, req: &'r Request<'_>) -> response::Result<'static> {
-        let buf = rmp_serde::to_vec(&self.0)
-            .map_err(|e| {
-                error_!("MsgPack failed to serialize: {:?}", e);
-                Status::InternalServerError
-            })?;
+        let buf = rmp_serde::to_vec(&self.0).map_err(|e| {
+            error_!("MsgPack failed to serialize: {:?}", e);
+            Status::InternalServerError
+        })?;
 
         content::RawMsgPack(buf).respond_to(req)
     }
@@ -204,13 +203,13 @@ impl<'v, T: Deserialize<'v> + Send> form::FromFormField<'v> for MsgPack<T> {
     // decode it into bytes as opposed to a string as it won't be UTF-8.
 
     async fn from_data(f: form::DataField<'v, '_>) -> Result<Self, form::Errors<'v>> {
-        Self::from_data(f.request, f.data).await.map_err(|e| {
-            match e {
+        Self::from_data(f.request, f.data)
+            .await
+            .map_err(|e| match e {
                 Error::InvalidMarkerRead(e) | Error::InvalidDataRead(e) => e.into(),
                 Error::Utf8Error(e) => e.into(),
                 _ => form::Error::custom(e).into(),
-            }
-        })
+            })
     }
 }
 
@@ -278,7 +277,8 @@ impl<T> DerefMut for MsgPack<T> {
 /// otherwise.
 #[inline(always)]
 pub fn from_slice<'a, T>(v: &'a [u8]) -> Result<T, Error>
-    where T: Deserialize<'a>,
+where
+    T: Deserialize<'a>,
 {
     rmp_serde::from_slice(v)
 }
@@ -312,7 +312,8 @@ pub fn from_slice<'a, T>(v: &'a [u8]) -> Result<T, Error>
 /// Serialization fails if `T`'s `Serialize` implementation fails.
 #[inline(always)]
 pub fn to_compact_vec<T>(value: &T) -> Result<Vec<u8>, rmp_serde::encode::Error>
-    where T: Serialize + ?Sized
+where
+    T: Serialize + ?Sized,
 {
     rmp_serde::to_vec(value)
 }
@@ -350,7 +351,8 @@ pub fn to_compact_vec<T>(value: &T) -> Result<Vec<u8>, rmp_serde::encode::Error>
 /// Serialization fails if `T`'s `Serialize` implementation fails.
 #[inline(always)]
 pub fn to_vec<T>(value: &T) -> Result<Vec<u8>, rmp_serde::encode::Error>
-    where T: Serialize + ?Sized
+where
+    T: Serialize + ?Sized,
 {
     rmp_serde::to_vec_named(value)
 }

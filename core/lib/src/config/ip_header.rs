@@ -2,11 +2,12 @@ use std::fmt;
 
 use serde::de;
 
-use crate::http::Header;
 use crate::http::uncased::Uncased;
+use crate::http::Header;
 
 pub(crate) fn deserialize<'de, D>(de: D) -> Result<Option<Uncased<'static>>, D::Error>
-    where D: de::Deserializer<'de>
+where
+    D: de::Deserializer<'de>,
 {
     struct Visitor;
 
@@ -26,7 +27,8 @@ pub(crate) fn deserialize<'de, D>(de: D) -> Result<Option<Uncased<'static>>, D::
         }
 
         fn visit_some<D>(self, de: D) -> Result<Self::Value, D::Error>
-            where D: de::Deserializer<'de>
+        where
+            D: de::Deserializer<'de>,
         {
             de.deserialize_string(self)
         }

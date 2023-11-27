@@ -28,6 +28,12 @@ fn test_local_request_clone_soundness() {
     println!("{}", s);
 
     // And that we've got the right data.
-    assert_eq!(r1.inner().headers().get("key").collect::<Vec<_>>(), vec!["val1"]);
-    assert_eq!(r2.inner().headers().get("key").collect::<Vec<_>>(), vec!["val1", "val2"]);
+    assert_eq!(
+        r1.inner().headers().get("key").collect::<Vec<_>>(),
+        vec!["val1"]
+    );
+    assert_eq!(
+        r2.inner().headers().get("key").collect::<Vec<_>>(),
+        vec!["val1", "val2"]
+    );
 }

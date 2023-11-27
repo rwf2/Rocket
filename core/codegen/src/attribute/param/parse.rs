@@ -1,11 +1,11 @@
-use unicode_xid::UnicodeXID;
-use devise::{Diagnostic, ext::SpanDiagnosticExt};
+use devise::{ext::SpanDiagnosticExt, Diagnostic};
 use proc_macro2::Span;
+use unicode_xid::UnicodeXID;
 
+use crate::attribute::param::{Dynamic, Parameter};
+use crate::http::uri::fmt::{Kind, Part, Path};
 use crate::name::Name;
 use crate::proc_macro_ext::StringLit;
-use crate::attribute::param::{Parameter, Dynamic};
-use crate::http::uri::fmt::{Part, Kind, Path};
 
 #[derive(Debug)]
 pub struct Error<'a> {
@@ -27,10 +27,7 @@ pub enum ErrorKind {
 }
 
 impl Dynamic {
-    pub fn parse<P: Part>(
-        segment: &str,
-        span: Span,
-    ) -> Result<Self, Error<'_>>  {
+    pub fn parse<P: Part>(segment: &str, span: Span) -> Result<Self, Error<'_>> {
         match Parameter::parse::<P>(&segment, span)? {
             Parameter::Dynamic(d) | Parameter::Ignored(d) => Ok(d),
             Parameter::Guard(g) => Ok(g.source),
@@ -40,10 +37,7 @@ impl Dynamic {
 }
 
 impl Parameter {
-    pub fn parse<P: Part>(
-        segment: &str,
-        source_span: Span,
-    ) -> Result<Self, Error<'_>>  {
+    pub fn parse<P: Part>(segment: &str, source_span: Span) -> Result<Self, Error<'_>> {
         let mut trailing = false;
 
         // Check if this is a dynamic param. If so, check its well-formedness.
@@ -61,7 +55,11 @@ impl Parameter {
                 return Err(Error::new(name, span, ErrorKind::BadIdent));
             }
 
-            let dynamic = Dynamic { name: Name::new(name, span), trailing, index: 0 };
+            let dynamic = Dynamic {
+                name: Name::new(name, span),
+                trailing,
+                index: 0,
+            };
             if dynamic.is_wild() && P::KIND != Kind::Path {
                 return Err(Error::new(name, span, ErrorKind::Ignored));
             } else if dynamic.is_wild() {
@@ -73,11 +71,16 @@ impl Parameter {
             return Err(Error::new(segment, source_span, ErrorKind::Empty));
         } else if segment.starts_with('<') {
             let candidate = candidate_from_malformed(segment);
-            source_span.warning("`segment` starts with `<` but does not end with `>`")
-                .help(format!("perhaps you meant the dynamic parameter `<{}>`?", candidate))
+            source_span
+                .warning("`segment` starts with `<` but does not end with `>`")
+                .help(format!(
+                    "perhaps you meant the dynamic parameter `<{}>`?",
+                    candidate
+                ))
                 .emit_as_item_tokens();
         } else if segment.contains('>') || segment.contains('<') {
-            source_span.warning("`segment` contains `<` or `>` but is not a dynamic parameter")
+            source_span
+                .warning("`segment` contains `<` or `>` but is not a dynamic parameter")
                 .emit_as_item_tokens();
         }
 
@@ -91,7 +94,8 @@ impl Parameter {
         let mut trailing: Option<(&str, Span)> = None;
 
         // We check for empty segments when we parse an `Origin` in `FromMeta`.
-        source.split(P::DELIMITER)
+        source
+            .split(P::DELIMITER)
             .filter(|s| !s.is_empty())
             .enumerate()
             .map(move |(i, segment)| {
@@ -134,7 +138,13 @@ impl std::fmt::Display for ErrorKind {
 
 impl<'a> Error<'a> {
     pub fn new(segment: &str, span: Span, kind: ErrorKind) -> Error<'_> {
-        Error { segment, source: segment, span, source_span: span, kind }
+        Error {
+            segment,
+            source: segment,
+            span,
+            source_span: span,
+            kind,
+        }
     }
 
     pub fn source(mut self, source: &'a str, span: Span) -> Self {
@@ -150,28 +160,32 @@ impl From<Error<'_>> for Diagnostic {
             ErrorKind::Empty => error.span.error(error.kind.to_string()),
             ErrorKind::BadIdent => {
                 let candidate = candidate_from_malformed(error.segment);
-                error.span.error(format!("{}: `{}`", error.kind, error.segment))
+                error
+                    .span
+                    .error(format!("{}: `{}`", error.kind, error.segment))
                     .help("dynamic parameters must be valid identifiers")
                     .help(format!("did you mean `<{}>`?", candidate))
             }
-            ErrorKind::Ignored => {
-                error.span.error(error.kind.to_string())
-                    .help("use a name such as `_guard` or `_param`")
-            }
-            ErrorKind::EarlyTrailing => {
-                trailspan(error.segment, error.source, error.source_span)
-                    .error(error.kind.to_string())
-                    .help("a trailing parameter must be the final component")
-                    .span_note(error.span, "trailing param is here")
-            }
+            ErrorKind::Ignored => error
+                .span
+                .error(error.kind.to_string())
+                .help("use a name such as `_guard` or `_param`"),
+            ErrorKind::EarlyTrailing => trailspan(error.segment, error.source, error.source_span)
+                .error(error.kind.to_string())
+                .help("a trailing parameter must be the final component")
+                .span_note(error.span, "trailing param is here"),
             ErrorKind::NoTrailing => {
                 let candidate = candidate_from_malformed(error.segment);
-                error.span.error(error.kind.to_string())
+                error
+                    .span
+                    .error(error.kind.to_string())
                     .help(format!("did you mean `<{}>`?", candidate))
             }
             ErrorKind::Static => {
                 let candidate = candidate_from_malformed(error.segment);
-                error.span.error(error.kind.to_string())
+                error
+                    .span
+                    .error(error.kind.to_string())
                     .help(format!("parameter must be dynamic: `<{}>`", candidate))
             }
         }
@@ -210,7 +224,9 @@ fn trailspan(needle: &str, haystack: &str, span: Span) -> Span {
 }
 
 fn candidate_from_malformed(segment: &str) -> String {
-    let candidate = segment.chars().enumerate()
+    let candidate = segment
+        .chars()
+        .enumerate()
         .filter(|(i, c)| *i == 0 && is_ident_start(*c) || *i != 0 && is_ident_continue(*c))
         .map(|(_, c)| c)
         .collect::<String>();
@@ -224,22 +240,18 @@ fn candidate_from_malformed(segment: &str) -> String {
 
 #[inline]
 fn is_ident_start(c: char) -> bool {
-    c.is_ascii_alphabetic()
-        || c == '_'
-        || (c > '\x7f' && UnicodeXID::is_xid_start(c))
+    c.is_ascii_alphabetic() || c == '_' || (c > '\x7f' && UnicodeXID::is_xid_start(c))
 }
 
 #[inline]
 fn is_ident_continue(c: char) -> bool {
-    c.is_ascii_alphanumeric()
-        || c == '_'
-        || (c > '\x7f' && UnicodeXID::is_xid_continue(c))
+    c.is_ascii_alphanumeric() || c == '_' || (c > '\x7f' && UnicodeXID::is_xid_continue(c))
 }
 
 fn is_valid_ident(string: &str) -> bool {
     let mut chars = string.chars();
     match chars.next() {
         Some(c) => is_ident_start(c) && chars.all(is_ident_continue),
-        None => false
+        None => false,
     }
 }

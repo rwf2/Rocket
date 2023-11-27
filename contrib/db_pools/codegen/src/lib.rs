@@ -1,4 +1,4 @@
-#![recursion_limit="256"]
+#![recursion_limit = "256"]
 #![warn(rust_2018_idioms)]
 
 //! # `rocket_db_pool` - Code Generation
@@ -7,7 +7,8 @@
 //! is an implementation detail. This create should never be depended on
 //! directly.
 
-#[macro_use] extern crate quote;
+#[macro_use]
+extern crate quote;
 
 mod database;
 

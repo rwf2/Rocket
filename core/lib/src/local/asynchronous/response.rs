@@ -1,6 +1,9 @@
-use std::io;
 use std::future::Future;
-use std::{pin::Pin, task::{Context, Poll}};
+use std::io;
+use std::{
+    pin::Pin,
+    task::{Context, Poll},
+};
 
 use tokio::io::{AsyncRead, ReadBuf};
 
@@ -60,8 +63,9 @@ pub struct LocalResponse<'c> {
 
 impl<'c> LocalResponse<'c> {
     pub(crate) fn new<F, O>(req: Request<'c>, f: F) -> impl Future<Output = LocalResponse<'c>>
-        where F: FnOnce(&'c Request<'c>) -> O + Send,
-              O: Future<Output = Response<'c>> + Send
+    where
+        F: FnOnce(&'c Request<'c>) -> O + Send,
+        O: Future<Output = Response<'c>> + Send,
     {
         // `LocalResponse` is a self-referential structure. In particular,
         // `inner` can refer to `_request` and its contents. As such, we must
@@ -93,7 +97,11 @@ impl<'c> LocalResponse<'c> {
                 cookies.add_original(cookie.into_owned());
             }
 
-            LocalResponse { cookies, _request: boxed_req, response, }
+            LocalResponse {
+                cookies,
+                _request: boxed_req,
+                response,
+            }
         }
     }
 }
@@ -117,25 +125,30 @@ impl LocalResponse<'_> {
 
     #[cfg(feature = "json")]
     async fn _into_json<T: Send + 'static>(self) -> Option<T>
-        where T: serde::de::DeserializeOwned
+    where
+        T: serde::de::DeserializeOwned,
     {
-        self.blocking_read(|r| serde_json::from_reader(r)).await?.ok()
+        self.blocking_read(|r| serde_json::from_reader(r))
+            .await?
+            .ok()
     }
 
     #[cfg(feature = "msgpack")]
     async fn _into_msgpack<T: Send + 'static>(self) -> Option<T>
-        where T: serde::de::DeserializeOwned
+    where
+        T: serde::de::DeserializeOwned,
     {
         self.blocking_read(|r| rmp_serde::from_read(r)).await?.ok()
     }
 
     #[cfg(any(feature = "json", feature = "msgpack"))]
     async fn blocking_read<T, F>(mut self, f: F) -> Option<T>
-        where T: Send + 'static,
-              F: FnOnce(&mut dyn io::Read) -> T + Send + 'static
+    where
+        T: Send + 'static,
+        F: FnOnce(&mut dyn io::Read) -> T + Send + 'static,
     {
-        use tokio::sync::mpsc;
         use tokio::io::AsyncReadExt;
+        use tokio::sync::mpsc;
 
         struct ChanReader {
             last: Option<io::Cursor<Vec<u8>>>,

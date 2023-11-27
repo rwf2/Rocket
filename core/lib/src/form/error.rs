@@ -1,16 +1,19 @@
 //! Form error types.
 
-use std::{fmt, io};
-use std::num::{ParseIntError, ParseFloatError};
-use std::str::{Utf8Error, ParseBoolError};
-use std::net::AddrParseError;
 use std::borrow::Cow;
+use std::net::AddrParseError;
+use std::num::{ParseFloatError, ParseIntError};
+use std::str::{ParseBoolError, Utf8Error};
+use std::{fmt, io};
 
-use serde::{Serialize, ser::{Serializer, SerializeStruct}};
+use serde::{
+    ser::{SerializeStruct, Serializer},
+    Serialize,
+};
 
-use crate::http::Status;
-use crate::form::name::{NameBuf, Name};
 use crate::data::ByteUnit;
+use crate::form::name::{Name, NameBuf};
+use crate::http::Status;
 
 /// A collection of [`Error`]s.
 ///
@@ -448,7 +451,8 @@ impl<'v> Error<'v> {
     /// }
     /// ```
     pub fn custom<E>(error: E) -> Self
-        where E: std::error::Error + Send + 'static
+    where
+        E: std::error::Error + Send + 'static,
     {
         (Box::new(error) as Box<dyn std::error::Error + Send>).into()
     }
@@ -625,25 +629,27 @@ impl<'v> Error<'v> {
     /// assert!(!error.is_for("a"));
     /// ```
     pub fn is_for<N: AsRef<Name>>(&self, name: N) -> bool {
-        self.name.as_ref().map(|e_name| {
-            if e_name.is_empty() != name.as_ref().is_empty() {
-                return false;
-            }
-
-            let mut e_keys = e_name.keys();
-            let mut n_keys = name.as_ref().keys();
-            loop {
-                match (e_keys.next(), n_keys.next()) {
-                    (Some(e), Some(n)) if e == n => continue,
-                    (Some(_), Some(_)) => return false,
-                    (Some(_), None) => return false,
-                    (None, _) => break,
+        self.name
+            .as_ref()
+            .map(|e_name| {
+                if e_name.is_empty() != name.as_ref().is_empty() {
+                    return false;
                 }
-            }
 
-            true
-        })
-        .unwrap_or(false)
+                let mut e_keys = e_name.keys();
+                let mut n_keys = name.as_ref().keys();
+                loop {
+                    match (e_keys.next(), n_keys.next()) {
+                        (Some(e), Some(n)) if e == n => continue,
+                        (Some(_), Some(_)) => return false,
+                        (Some(_), None) => return false,
+                        (None, _) => break,
+                    }
+                }
+
+                true
+            })
+            .unwrap_or(false)
     }
 
     /// Returns `true` if this error applies to exactly the field named `name`.
@@ -677,7 +683,8 @@ impl<'v> Error<'v> {
     /// assert!(!error.is_for("a"));
     /// ```
     pub fn is_for_exactly<N: AsRef<Name>>(&self, name: N) -> bool {
-        self.name.as_ref()
+        self.name
+            .as_ref()
             .map(|n| name.as_ref() == n)
             .unwrap_or(false)
     }
@@ -719,17 +726,17 @@ impl<'v> Error<'v> {
     ///  assert_eq!(error.status(), Status::UnprocessableEntity);
     ///  ```
     pub fn status(&self) -> Status {
-        use ErrorKind::*;
         use multer::Error::*;
+        use ErrorKind::*;
 
         match self.kind {
-            | InvalidLength { min: None, .. }
+            InvalidLength { min: None, .. }
             | Multipart(FieldSizeExceeded { .. })
             | Multipart(StreamSizeExceeded { .. }) => Status::PayloadTooLarge,
             Unknown => Status::InternalServerError,
             Io(_) | _ if self.entity == Entity::Form => Status::BadRequest,
             Custom(status, _) => status,
-            _ => Status::UnprocessableEntity
+            _ => Status::UnprocessableEntity,
         }
     }
 }
@@ -777,33 +784,45 @@ impl<'v, T: Into<ErrorKind<'v>>> From<T> for Error<'v> {
     fn from(k: T) -> Self {
         let kind = k.into();
         let entity = Entity::default_for(&kind);
-        Error { name: None, value: None, kind, entity }
+        Error {
+            name: None,
+            value: None,
+            kind,
+            entity,
+        }
     }
 }
 
 impl<'a> From<multer::Error> for Error<'a> {
     fn from(error: multer::Error) -> Self {
-        use multer::Error::*;
         use self::ErrorKind::*;
+        use multer::Error::*;
 
-        let incomplete = Error::from(InvalidLength { min: None, max: None });
+        let incomplete = Error::from(InvalidLength {
+            min: None,
+            max: None,
+        });
         match error {
-            UnknownField { field_name: Some(name) } => Error::from(Unexpected).with_name(name),
+            UnknownField {
+                field_name: Some(name),
+            } => Error::from(Unexpected).with_name(name),
             UnknownField { field_name: None } => Error::from(Unexpected),
             FieldSizeExceeded { limit, field_name } => {
                 let e = Error::from((None, Some(limit)));
                 match field_name {
                     Some(name) => e.with_name(name),
-                    None => e
+                    None => e,
                 }
-            },
+            }
             StreamSizeExceeded { limit } => {
                 Error::from((None, Some(limit))).with_entity(Entity::Form)
             }
-            IncompleteFieldData { field_name: Some(name) } => incomplete.with_name(name),
+            IncompleteFieldData {
+                field_name: Some(name),
+            } => incomplete.with_name(name),
             IncompleteFieldData { field_name: None } => incomplete,
             IncompleteStream | IncompleteHeaders => incomplete.with_entity(Entity::Form),
-            e => Error::from(ErrorKind::Multipart(e))
+            e => Error::from(ErrorKind::Multipart(e)),
         }
     }
 }
@@ -811,44 +830,40 @@ impl<'a> From<multer::Error> for Error<'a> {
 impl fmt::Display for ErrorKind<'_> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            ErrorKind::InvalidLength { min, max } => {
-                match (min, max) {
-                    (None, None) => write!(f, "invalid length: incomplete")?,
-                    (None, Some(k)) if *k < 1024 => write!(f, "length cannot exceed {}", k)?,
-                    (None, Some(k)) => write!(f, "size must not exceed {}", ByteUnit::from(*k))?,
-                    (Some(1), None) => write!(f, "cannot be empty")?,
-                    (Some(k), None) if *k < 1024 => write!(f, "expected at least {}", k)?,
-                    (Some(k), None) => write!(f, "size must be at least {}", ByteUnit::from(*k))?,
-                    (Some(i), Some(j)) if *i < 1024 && *j < 1024 => {
-                        write!(f, "length must be between {} and {}", i, j)?;
-                    }
-                    (Some(i), Some(j)) => {
-                        let (i, j) = (ByteUnit::from(*i), ByteUnit::from(*j));
-                        write!(f, "size must be between {} and {}", i, j)?;
-                    }
+            ErrorKind::InvalidLength { min, max } => match (min, max) {
+                (None, None) => write!(f, "invalid length: incomplete")?,
+                (None, Some(k)) if *k < 1024 => write!(f, "length cannot exceed {}", k)?,
+                (None, Some(k)) => write!(f, "size must not exceed {}", ByteUnit::from(*k))?,
+                (Some(1), None) => write!(f, "cannot be empty")?,
+                (Some(k), None) if *k < 1024 => write!(f, "expected at least {}", k)?,
+                (Some(k), None) => write!(f, "size must be at least {}", ByteUnit::from(*k))?,
+                (Some(i), Some(j)) if *i < 1024 && *j < 1024 => {
+                    write!(f, "length must be between {} and {}", i, j)?;
                 }
-            }
-            ErrorKind::InvalidChoice { choices } => {
-                match *choices.as_ref() {
-                    [] => write!(f, "invalid choice")?,
-                    [ref choice] => write!(f, "expected {}", choice)?,
-                    _ => {
-                        write!(f, "expected one of ")?;
-                        for (i, choice) in choices.iter().enumerate() {
-                            if i != 0 { write!(f, ", ")?; }
-                            write!(f, "`{}`", choice)?;
+                (Some(i), Some(j)) => {
+                    let (i, j) = (ByteUnit::from(*i), ByteUnit::from(*j));
+                    write!(f, "size must be between {} and {}", i, j)?;
+                }
+            },
+            ErrorKind::InvalidChoice { choices } => match *choices.as_ref() {
+                [] => write!(f, "invalid choice")?,
+                [ref choice] => write!(f, "expected {}", choice)?,
+                _ => {
+                    write!(f, "expected one of ")?;
+                    for (i, choice) in choices.iter().enumerate() {
+                        if i != 0 {
+                            write!(f, ", ")?;
                         }
+                        write!(f, "`{}`", choice)?;
                     }
                 }
-            }
-            ErrorKind::OutOfRange { start, end } => {
-                match (start, end) {
-                    (None, None) => write!(f, "value is out of range")?,
-                    (None, Some(k)) => write!(f, "value cannot exceed {}", k)?,
-                    (Some(k), None) => write!(f, "value must be at least {}", k)?,
-                    (Some(i), Some(j)) => write!(f, "value must be between {} and {}", i, j)?,
-                }
-            }
+            },
+            ErrorKind::OutOfRange { start, end } => match (start, end) {
+                (None, None) => write!(f, "value is out of range")?,
+                (None, Some(k)) => write!(f, "value cannot exceed {}", k)?,
+                (Some(k), None) => write!(f, "value must be at least {}", k)?,
+                (Some(i), Some(j)) => write!(f, "value must be between {} and {}", i, j)?,
+            },
             ErrorKind::Validation(msg) => msg.fmt(f)?,
             ErrorKind::Duplicate => "duplicate".fmt(f)?,
             ErrorKind::Missing => "missing".fmt(f)?,
@@ -891,11 +906,12 @@ impl crate::http::ext::IntoOwned for ErrorKind<'_> {
             Addr(e) => Addr(e),
             Io(e) => Io(e),
             InvalidChoice { choices } => InvalidChoice {
-                choices: choices.iter()
+                choices: choices
+                    .iter()
                     .map(|s| Cow::Owned(s.to_string()))
                     .collect::<Vec<_>>()
-                    .into()
-            }
+                    .into(),
+            },
         }
     }
 }
@@ -932,13 +948,17 @@ impl From<(Option<u64>, Option<u64>)> for ErrorKind<'_> {
 
 impl<'a, 'v: 'a> From<&'static [Cow<'v, str>]> for ErrorKind<'a> {
     fn from(choices: &'static [Cow<'v, str>]) -> Self {
-        ErrorKind::InvalidChoice { choices: choices.into() }
+        ErrorKind::InvalidChoice {
+            choices: choices.into(),
+        }
     }
 }
 
 impl<'a, 'v: 'a> From<Vec<Cow<'v, str>>> for ErrorKind<'a> {
     fn from(choices: Vec<Cow<'v, str>>) -> Self {
-        ErrorKind::InvalidChoice { choices: choices.into() }
+        ErrorKind::InvalidChoice {
+            choices: choices.into(),
+        }
     }
 }
 
@@ -957,7 +977,9 @@ impl From<(Option<ByteUnit>, Option<ByteUnit>)> for ErrorKind<'_> {
 impl<'a, 'v: 'a, const N: usize> From<&'static [Cow<'v, str>; N]> for ErrorKind<'a> {
     fn from(choices: &'static [Cow<'v, str>; N]) -> Self {
         let choices = &choices[..];
-        ErrorKind::InvalidChoice { choices: choices.into() }
+        ErrorKind::InvalidChoice {
+            choices: choices.into(),
+        }
     }
 }
 
@@ -974,13 +996,13 @@ impl<'a> From<(Status, Box<dyn std::error::Error + Send>)> for ErrorKind<'a> {
 }
 
 macro_rules! impl_from_for {
-    (<$l:lifetime> $T:ty => $V:ty as $variant:ident) => (
+    (<$l:lifetime> $T:ty => $V:ty as $variant:ident) => {
         impl<$l> From<$T> for $V {
             fn from(value: $T) -> Self {
                 <$V>::$variant(value)
             }
         }
-    )
+    };
 }
 
 impl_from_for!(<'a> Utf8Error => ErrorKind<'a> as Utf8);
@@ -1019,7 +1041,7 @@ impl Entity {
     /// [`Value`]: Entity::Value
     pub const fn default_for(kind: &ErrorKind<'_>) -> Self {
         match kind {
-            | ErrorKind::InvalidLength { .. }
+            ErrorKind::InvalidLength { .. }
             | ErrorKind::InvalidChoice { .. }
             | ErrorKind::OutOfRange { .. }
             | ErrorKind::Validation { .. }
@@ -1030,13 +1052,12 @@ impl Entity {
             | ErrorKind::Custom(..)
             | ErrorKind::Addr(_) => Entity::Value,
 
-            | ErrorKind::Duplicate
+            ErrorKind::Duplicate
             | ErrorKind::Missing
             | ErrorKind::Unknown
             | ErrorKind::Unexpected => Entity::Field,
 
-            | ErrorKind::Multipart(_)
-            | ErrorKind::Io(_) => Entity::Form,
+            ErrorKind::Multipart(_) | ErrorKind::Io(_) => Entity::Form,
         }
     }
 }

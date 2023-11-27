@@ -1,4 +1,5 @@
-#[macro_use] extern crate rocket;
+#[macro_use]
+extern crate rocket;
 
 use rocket::form::Form;
 
@@ -15,13 +16,14 @@ fn bug(form_data: Form<FormData>) -> &'static str {
 
 mod tests {
     use super::*;
+    use rocket::http::{ContentType, Status};
     use rocket::local::blocking::Client;
-    use rocket::http::{Status, ContentType};
 
     #[test]
     fn method_eval() {
         let client = Client::debug_with(routes![bug]).unwrap();
-        let response = client.post("/")
+        let response = client
+            .post("/")
             .header(ContentType::Form)
             .body("_method=patch&form_data=Form+data")
             .dispatch();
@@ -32,7 +34,8 @@ mod tests {
     #[test]
     fn get_passes_through() {
         let client = Client::debug_with(routes![bug]).unwrap();
-        let response = client.get("/")
+        let response = client
+            .get("/")
             .header(ContentType::Form)
             .body("_method=patch&form_data=Form+data")
             .dispatch();

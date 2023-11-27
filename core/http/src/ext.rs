@@ -8,10 +8,10 @@ use state::InitCell;
 /// Trait implemented by types that can be converted into a collection.
 pub trait IntoCollection<T>: Sized {
     /// Converts `self` into a collection.
-    fn into_collection<A: Array<Item=T>>(self) -> SmallVec<A>;
+    fn into_collection<A: Array<Item = T>>(self) -> SmallVec<A>;
 
     #[doc(hidden)]
-    fn mapped<U, F: FnMut(T) -> U, A: Array<Item=U>>(self, f: F) -> SmallVec<A>;
+    fn mapped<U, F: FnMut(T) -> U, A: Array<Item = U>>(self, f: F) -> SmallVec<A>;
 
     #[doc(hidden)]
     fn mapped_vec<U, F: FnMut(T) -> U>(self, f: F) -> Vec<U> {
@@ -22,39 +22,40 @@ pub trait IntoCollection<T>: Sized {
 
 impl<T> IntoCollection<T> for T {
     #[inline]
-    fn into_collection<A: Array<Item=T>>(self) -> SmallVec<A> {
+    fn into_collection<A: Array<Item = T>>(self) -> SmallVec<A> {
         let mut vec = SmallVec::new();
         vec.push(self);
         vec
     }
 
     #[inline(always)]
-    fn mapped<U, F: FnMut(T) -> U, A: Array<Item=U>>(self, mut f: F) -> SmallVec<A> {
+    fn mapped<U, F: FnMut(T) -> U, A: Array<Item = U>>(self, mut f: F) -> SmallVec<A> {
         f(self).into_collection()
     }
 }
 
 impl<T> IntoCollection<T> for Vec<T> {
     #[inline(always)]
-    fn into_collection<A: Array<Item=T>>(self) -> SmallVec<A> {
+    fn into_collection<A: Array<Item = T>>(self) -> SmallVec<A> {
         SmallVec::from_vec(self)
     }
 
     #[inline]
-    fn mapped<U, F: FnMut(T) -> U, A: Array<Item=U>>(self, f: F) -> SmallVec<A> {
+    fn mapped<U, F: FnMut(T) -> U, A: Array<Item = U>>(self, f: F) -> SmallVec<A> {
         self.into_iter().map(f).collect()
     }
 }
 
 impl<T: Clone> IntoCollection<T> for &[T] {
     #[inline(always)]
-    fn into_collection<A: Array<Item=T>>(self) -> SmallVec<A> {
+    fn into_collection<A: Array<Item = T>>(self) -> SmallVec<A> {
         self.iter().cloned().collect()
     }
 
     #[inline]
-    fn mapped<U, F, A: Array<Item=U>>(self, f: F) -> SmallVec<A>
-        where F: FnMut(T) -> U
+    fn mapped<U, F, A: Array<Item = U>>(self, f: F) -> SmallVec<A>
+    where
+        F: FnMut(T) -> U,
     {
         self.iter().cloned().map(f).collect()
     }
@@ -62,13 +63,14 @@ impl<T: Clone> IntoCollection<T> for &[T] {
 
 impl<T, const N: usize> IntoCollection<T> for [T; N] {
     #[inline(always)]
-    fn into_collection<A: Array<Item=T>>(self) -> SmallVec<A> {
+    fn into_collection<A: Array<Item = T>>(self) -> SmallVec<A> {
         self.into_iter().collect()
     }
 
     #[inline]
-    fn mapped<U, F, A: Array<Item=U>>(self, f: F) -> SmallVec<A>
-        where F: FnMut(T) -> U
+    fn mapped<U, F, A: Array<Item = U>>(self, f: F) -> SmallVec<A>
+    where
+        F: FnMut(T) -> U,
     {
         self.into_iter().map(f).collect()
     }
@@ -100,14 +102,13 @@ impl<T: IntoOwned> IntoOwned for Vec<T> {
 
     #[inline(always)]
     fn into_owned(self) -> Self::Owned {
-        self.into_iter()
-            .map(|inner| inner.into_owned())
-            .collect()
+        self.into_iter().map(|inner| inner.into_owned()).collect()
     }
 }
 
 impl<T: IntoOwned + Send + Sync> IntoOwned for InitCell<T>
-    where T::Owned: Send + Sync
+where
+    T::Owned: Send + Sync,
 {
     type Owned = InitCell<T::Owned>;
 

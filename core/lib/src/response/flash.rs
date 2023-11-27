@@ -1,10 +1,10 @@
+use serde::ser::{Serialize, SerializeStruct, Serializer};
 use time::Duration;
-use serde::ser::{Serialize, Serializer, SerializeStruct};
 
+use crate::http::{Cookie, CookieJar, Status};
 use crate::outcome::IntoOutcome;
+use crate::request::{self, FromRequest, Request};
 use crate::response::{self, Responder};
-use crate::request::{self, Request, FromRequest};
-use crate::http::{Status, Cookie, CookieJar};
 use std::sync::atomic::{AtomicBool, Ordering};
 
 // The name of the actual flash cookie.
@@ -175,8 +175,13 @@ impl<R> Flash<R> {
     }
 
     fn cookie(&self) -> Cookie<'static> {
-        let content = format!("{}{}{}{}",
-            self.kind.len(), FLASH_COOKIE_DELIM, self.kind, self.message);
+        let content = format!(
+            "{}{}{}{}",
+            self.kind.len(),
+            FLASH_COOKIE_DELIM,
+            self.kind,
+            self.message
+        );
 
         Cookie::build((FLASH_COOKIE_NAME, content))
             .max_age(Duration::minutes(5))
@@ -245,21 +250,25 @@ impl<'r> FromRequest<'r> for FlashMessage<'r> {
 
     async fn from_request(req: &'r Request<'_>) -> request::Outcome<Self, Self::Error> {
         trace_!("Flash: attempting to retrieve message.");
-        req.cookies().get(FLASH_COOKIE_NAME).ok_or(()).and_then(|cookie| {
-            trace_!("Flash: retrieving message: {:?}", cookie);
+        req.cookies()
+            .get(FLASH_COOKIE_NAME)
+            .ok_or(())
+            .and_then(|cookie| {
+                trace_!("Flash: retrieving message: {:?}", cookie);
 
-            // Parse the flash message.
-            let content = cookie.value();
-            let (len_str, kv) = match content.find(FLASH_COOKIE_DELIM) {
-                Some(i) => (&content[..i], &content[(i + 1)..]),
-                None => return Err(()),
-            };
+                // Parse the flash message.
+                let content = cookie.value();
+                let (len_str, kv) = match content.find(FLASH_COOKIE_DELIM) {
+                    Some(i) => (&content[..i], &content[(i + 1)..]),
+                    None => return Err(()),
+                };
 
-            match len_str.parse::<usize>() {
-                Ok(i) if i <= kv.len() => Ok(Flash::named(&kv[..i], &kv[i..], req)),
-                _ => Err(())
-            }
-        }).or_error(Status::BadRequest)
+                match len_str.parse::<usize>() {
+                    Ok(i) if i <= kv.len() => Ok(Flash::named(&kv[..i], &kv[i..], req)),
+                    _ => Err(()),
+                }
+            })
+            .or_error(Status::BadRequest)
     }
 }
 

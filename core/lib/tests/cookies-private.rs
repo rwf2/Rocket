@@ -67,8 +67,10 @@ mod cookies_private_tests {
     use rocket::{Build, Rocket};
 
     fn rocket() -> Rocket<Build> {
-        rocket::build()
-            .mount("/", routes![cookie_add_private, cookie_get, cookie_get_private])
+        rocket::build().mount(
+            "/",
+            routes![cookie_add_private, cookie_get, cookie_get_private],
+        )
     }
 
     #[test]

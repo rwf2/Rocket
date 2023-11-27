@@ -1,10 +1,11 @@
-#[macro_use] extern crate rocket;
+#[macro_use]
+extern crate rocket;
 
 use std::sync::atomic::{AtomicUsize, Ordering};
 
-use rocket::{Rocket, State, Build};
 use rocket::fairing::AdHoc;
 use rocket::http::Method;
+use rocket::{Build, Rocket, State};
 
 #[derive(Default)]
 struct Counter {
@@ -25,7 +26,8 @@ fn rocket() -> Rocket<Build> {
         .attach(AdHoc::on_ignite("Outer", |rocket| async {
             let counter = Counter::default();
             counter.attach.fetch_add(1, Ordering::Relaxed);
-            let rocket = rocket.manage(counter)
+            let rocket = rocket
+                .manage(counter)
                 .attach(AdHoc::on_request("Inner", |req, _| {
                     Box::pin(async move {
                         if req.method() == Method::Get {

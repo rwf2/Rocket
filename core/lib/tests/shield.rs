@@ -1,19 +1,21 @@
-#[macro_use] extern crate rocket;
+#[macro_use]
+extern crate rocket;
 
-use rocket::Config;
 use rocket::http::Status;
 use rocket::local::blocking::{Client, LocalResponse};
 use rocket::shield::*;
+use rocket::Config;
 
 use time::Duration;
 
-#[get("/")] fn hello() { }
+#[get("/")]
+fn hello() {}
 
 macro_rules! assert_header {
     ($response:ident, $name:expr, $value:expr) => {
         match $response.headers().get_one($name) {
             Some(value) => assert_eq!(value, $value),
-            None => panic!("missing header '{}' with value '{}'", $name, $value)
+            None => panic!("missing header '{}' with value '{}'", $name, $value),
         }
     };
 }
@@ -33,7 +35,7 @@ macro_rules! dispatch {
         let response = client.get("/").dispatch();
         assert_eq!(response.status(), Status::Ok);
         $closure(response)
-    }}
+    }};
 }
 
 #[test]
@@ -138,12 +140,17 @@ fn additional_headers_test() {
 #[test]
 fn uri_test() {
     let enforce_uri = uri!("https://rocket.rs");
-    let shield = Shield::default()
-        .enable(ExpectCt::ReportAndEnforce(Duration::seconds(30), enforce_uri));
+    let shield = Shield::default().enable(ExpectCt::ReportAndEnforce(
+        Duration::seconds(30),
+        enforce_uri,
+    ));
 
     dispatch!(shield, |response: LocalResponse<'_>| {
-        assert_header!(response, "Expect-CT",
-            "max-age=30, enforce, report-uri=\"https://rocket.rs\"");
+        assert_header!(
+            response,
+            "Expect-CT",
+            "max-age=30, enforce, report-uri=\"https://rocket.rs\""
+        );
     });
 }
 
@@ -215,7 +222,11 @@ fn permission_test() {
 
     let shield = Shield::default().enable(permission);
     dispatch!(shield, |r: LocalResponse<'_>| {
-        assert_header!(r, "Permissions-Policy", "usb=(), camera=(self), web-share=()");
+        assert_header!(
+            r,
+            "Permissions-Policy",
+            "usb=(), camera=(self), web-share=()"
+        );
     });
 
     let uri = uri!("http://rocket.rs");
@@ -225,28 +236,35 @@ fn permission_test() {
 
     let shield = Shield::default().enable(permission);
     dispatch!(shield, |r: LocalResponse<'_>| {
-        assert_header!(r, "Permissions-Policy",
-            "usb=(\"http://rocket.rs\"), camera=(self), web-share=()");
+        assert_header!(
+            r,
+            "Permissions-Policy",
+            "usb=(\"http://rocket.rs\"), camera=(self), web-share=()"
+        );
     });
 
     let origin1 = Allow::Origin(uri!("http://rocket.rs"));
     let origin2 = Allow::Origin(uri!("https://rocket.rs"));
-    let shield = Shield::default()
-        .enable(Permission::allowed(Feature::Camera, [origin1, origin2]));
+    let shield = Shield::default().enable(Permission::allowed(Feature::Camera, [origin1, origin2]));
 
     dispatch!(shield, |r: LocalResponse<'_>| {
-        assert_header!(r, "Permissions-Policy",
-            "camera=(\"http://rocket.rs\" \"https://rocket.rs\")");
+        assert_header!(
+            r,
+            "Permissions-Policy",
+            "camera=(\"http://rocket.rs\" \"https://rocket.rs\")"
+        );
     });
 
     let origin1 = Allow::Origin(uri!("http://rocket.rs"));
     let origin2 = Allow::Origin(uri!("https://rocket.rs"));
-    let perm = Permission::allowed(Feature::Accelerometer, [origin1, origin2])
-        .block(Feature::Usb);
+    let perm = Permission::allowed(Feature::Accelerometer, [origin1, origin2]).block(Feature::Usb);
 
     let shield = Shield::default().enable(perm);
     dispatch!(shield, |r: LocalResponse<'_>| {
-        assert_header!(r, "Permissions-Policy",
-            "accelerometer=(\"http://rocket.rs\" \"https://rocket.rs\"), usb=()");
+        assert_header!(
+            r,
+            "Permissions-Policy",
+            "accelerometer=(\"http://rocket.rs\" \"https://rocket.rs\"), usb=()"
+        );
     });
 }

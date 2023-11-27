@@ -1,14 +1,14 @@
+use std::any::type_name;
 use std::fmt;
 use std::ops::Deref;
-use std::any::type_name;
 
 use ref_cast::RefCast;
 use yansi::Paint;
 
-use crate::{Phase, Rocket, Ignite, Sentinel};
-use crate::request::{self, FromRequest, Request};
-use crate::outcome::Outcome;
 use crate::http::Status;
+use crate::outcome::Outcome;
+use crate::request::{self, FromRequest, Request};
+use crate::{Ignite, Phase, Rocket, Sentinel};
 
 /// Request guard to retrieve managed state.
 ///
@@ -201,7 +201,10 @@ impl<'r, T: Send + Sync + 'static> FromRequest<'r> for &'r State<T> {
         match State::get(req.rocket()) {
             Some(state) => Outcome::Success(state),
             None => {
-                error_!("Attempted to retrieve unmanaged state `{}`!", type_name::<T>());
+                error_!(
+                    "Attempted to retrieve unmanaged state `{}`!",
+                    type_name::<T>()
+                );
                 Outcome::Error((Status::InternalServerError, ()))
             }
         }
@@ -212,7 +215,10 @@ impl<T: Send + Sync + 'static> Sentinel for &State<T> {
     fn abort(rocket: &Rocket<Ignite>) -> bool {
         if rocket.state::<T>().is_none() {
             let type_name = type_name::<T>();
-            error!("launching with unmanaged `{}` state.", type_name.primary().bold());
+            error!(
+                "launching with unmanaged `{}` state.",
+                type_name.primary().bold()
+            );
             info_!("Using `State` requires managing it with `.manage()`.");
             return true;
         }

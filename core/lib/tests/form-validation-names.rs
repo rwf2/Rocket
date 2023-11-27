@@ -1,7 +1,7 @@
 use std::fmt::Debug;
 
+use rocket::form::error::{Error, ErrorKind, Errors};
 use rocket::form::{Form, FromForm};
-use rocket::form::error::{Error, Errors, ErrorKind};
 
 #[derive(Debug, FromForm)]
 #[allow(dead_code)]
@@ -46,24 +46,29 @@ fn test_form_validation_context() {
     use ErrorKind::*;
 
     fn count<'a, K>(c: &Errors<'_>, n: &str, kind: K, fuzz: bool) -> usize
-        where K: Into<Option<ErrorKind<'a>>>
+    where
+        K: Into<Option<ErrorKind<'a>>>,
     {
         let kind = kind.into();
-        c.iter().filter(|e| {
-            let matches = (fuzz && e.is_for(n)) || (!fuzz && e.is_for_exactly(n));
-            let kinded = kind.as_ref().map(|k| k == &e.kind).unwrap_or(true);
-            matches && kinded
-        }).count()
+        c.iter()
+            .filter(|e| {
+                let matches = (fuzz && e.is_for(n)) || (!fuzz && e.is_for_exactly(n));
+                let kinded = kind.as_ref().map(|k| k == &e.kind).unwrap_or(true);
+                matches && kinded
+            })
+            .count()
     }
 
     fn fuzzy<'a, K>(c: &Errors<'_>, n: &str, kind: K) -> usize
-        where K: Into<Option<ErrorKind<'a>>>
+    where
+        K: Into<Option<ErrorKind<'a>>>,
     {
         count(c, n, kind, true)
     }
 
     fn exact<'a, K>(c: &Errors<'_>, n: &str, kind: K) -> usize
-        where K: Into<Option<ErrorKind<'a>>>
+    where
+        K: Into<Option<ErrorKind<'a>>>,
     {
         count(c, n, kind, false)
     }
@@ -97,9 +102,26 @@ fn test_form_validation_context() {
     assert_eq!(exact(&c, "dog", Missing), 1);
     assert_eq!(exact(&c, "dog", None), 1);
     assert_eq!(exact(&c, "cats[0].name", None), 1);
-    assert_eq!(exact(&c, "cats[0].name", InvalidLength { min: Some(5), max: None }), 1);
+    assert_eq!(
+        exact(
+            &c,
+            "cats[0].name",
+            InvalidLength {
+                min: Some(5),
+                max: None
+            }
+        ),
+        1
+    );
     assert_eq!(exact(&c, "cats[0].nick", None), 1);
-    assert_eq!(exact(&c, "cats[0].nick", Validation("must start with \"kitty\"".into())), 1);
+    assert_eq!(
+        exact(
+            &c,
+            "cats[0].nick",
+            Validation("must start with \"kitty\"".into())
+        ),
+        1
+    );
 
     assert_eq!(fuzzy(&c, "kitty.nick", Missing), 1);
     assert_eq!(fuzzy(&c, "kitty.nick", None), 1);
@@ -116,7 +138,17 @@ fn test_form_validation_context() {
     assert_eq!(exact(&c, "cats[0].nick", None), 0);
 
     assert_eq!(exact(&c, "cats", None), 1);
-    assert_eq!(exact(&c, "cats", InvalidLength { min: Some(1), max: None }), 1);
+    assert_eq!(
+        exact(
+            &c,
+            "cats",
+            InvalidLength {
+                min: Some(1),
+                max: None
+            }
+        ),
+        1
+    );
 
     assert_eq!(fuzzy(&c, "kitty.nick", Missing), 1);
     assert_eq!(fuzzy(&c, "kitty.nick", None), 1);
@@ -128,7 +160,17 @@ fn test_form_validation_context() {
     let c = errors::<Person>("kitty.name=Michael&kitty.nick=kittykat&dog.name=woofy");
     assert_eq!(c.iter().count(), 1);
     assert_eq!(exact(&c, "cats", None), 1);
-    assert_eq!(exact(&c, "cats", InvalidLength { min: Some(1), max: None }), 1);
+    assert_eq!(
+        exact(
+            &c,
+            "cats",
+            InvalidLength {
+                min: Some(1),
+                max: None
+            }
+        ),
+        1
+    );
     assert_eq!(fuzzy(&c, "cats[0].name", None), 1);
 }
 

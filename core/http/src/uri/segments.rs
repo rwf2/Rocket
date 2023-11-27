@@ -1,8 +1,8 @@
 use std::path::PathBuf;
 
-use crate::RawStr;
-use crate::uri::fmt::{Part, Path, Query};
 use crate::uri::error::PathError;
+use crate::uri::fmt::{Part, Path, Query};
+use crate::RawStr;
 
 /// Iterator over the non-empty, percent-decoded segments of a URI component.
 ///
@@ -43,7 +43,11 @@ impl<P: Part> Segments<'_, P> {
     #[doc(hidden)]
     #[inline(always)]
     pub fn new<'a>(source: &'a RawStr, segments: &'a [P::Raw]) -> Segments<'a, P> {
-        Segments { source, segments, pos: 0, }
+        Segments {
+            source,
+            segments,
+            pos: 0,
+        }
     }
 
     /// Returns the number of path segments left.
@@ -133,7 +137,8 @@ impl<'a> Segments<'a, Path> {
     /// ```
     #[inline]
     pub fn get(&self, n: usize) -> Option<&'a str> {
-        self.segments.get(self.pos + n)
+        self.segments
+            .get(self.pos + n)
             .map(|i| i.from_source(Some(self.source.as_str())))
     }
 
@@ -219,21 +224,21 @@ impl<'a> Segments<'a, Path> {
             if segment == ".." {
                 buf.pop();
             } else if !allow_dotfiles && segment.starts_with('.') {
-                return Err(PathError::BadStart('.'))
+                return Err(PathError::BadStart('.'));
             } else if segment.starts_with('*') {
-                return Err(PathError::BadStart('*'))
+                return Err(PathError::BadStart('*'));
             } else if segment.ends_with(':') {
-                return Err(PathError::BadEnd(':'))
+                return Err(PathError::BadEnd(':'));
             } else if segment.ends_with('>') {
-                return Err(PathError::BadEnd('>'))
+                return Err(PathError::BadEnd('>'));
             } else if segment.ends_with('<') {
-                return Err(PathError::BadEnd('<'))
+                return Err(PathError::BadEnd('<'));
             } else if segment.contains('/') {
-                return Err(PathError::BadChar('/'))
+                return Err(PathError::BadChar('/'));
             } else if cfg!(windows) && segment.contains('\\') {
-                return Err(PathError::BadChar('\\'))
+                return Err(PathError::BadChar('\\'));
             } else if cfg!(windows) && segment.contains(':') {
-                return Err(PathError::BadChar(':'))
+                return Err(PathError::BadChar(':'));
             } else {
                 buf.push(&*segment)
             }
@@ -275,7 +280,7 @@ impl<'a> Segments<'a, Query> {
 }
 
 macro_rules! impl_iterator {
-    ($T:ty => $I:ty) => (
+    ($T:ty => $I:ty) => {
         impl<'a> Iterator for Segments<'a, $T> {
             type Item = $I;
 
@@ -293,7 +298,7 @@ macro_rules! impl_iterator {
                 self.num()
             }
         }
-    )
+    };
 }
 
 impl_iterator!(Path => &'a str);

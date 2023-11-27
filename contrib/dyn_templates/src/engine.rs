@@ -1,12 +1,14 @@
-use std::path::Path;
 use std::collections::HashMap;
+use std::path::Path;
 
 use rocket::serde::Serialize;
 
 use crate::TemplateInfo;
 
-#[cfg(feature = "tera")] use crate::tera::Tera;
-#[cfg(feature = "handlebars")] use crate::handlebars::Handlebars;
+#[cfg(feature = "handlebars")]
+use crate::handlebars::Handlebars;
+#[cfg(feature = "tera")]
+use crate::tera::Tera;
 
 pub(crate) trait Engine: Send + Sync + Sized + 'static {
     const EXT: &'static str;
@@ -68,13 +70,16 @@ pub struct Engines {
 
 impl Engines {
     pub(crate) const ENABLED_EXTENSIONS: &'static [&'static str] = &[
-        #[cfg(feature = "tera")] Tera::EXT,
-        #[cfg(feature = "handlebars")] Handlebars::EXT,
+        #[cfg(feature = "tera")]
+        Tera::EXT,
+        #[cfg(feature = "handlebars")]
+        Handlebars::EXT,
     ];
 
     pub(crate) fn init(templates: &HashMap<String, TemplateInfo>) -> Option<Engines> {
         fn inner<E: Engine>(templates: &HashMap<String, TemplateInfo>) -> Option<E> {
-            let named_templates = templates.iter()
+            let named_templates = templates
+                .iter()
                 .filter(|&(_, i)| i.engine_ext == E::EXT)
                 .filter_map(|(k, i)| Some((k.as_str(), i.path.as_ref()?)))
                 .map(|(k, p)| (k, p.as_path()));
@@ -86,12 +91,12 @@ impl Engines {
             #[cfg(feature = "tera")]
             tera: match inner::<Tera>(templates) {
                 Some(tera) => tera,
-                None => return None
+                None => return None,
             },
             #[cfg(feature = "handlebars")]
             handlebars: match inner::<Handlebars<'static>>(templates) {
                 Some(hb) => hb,
-                None => return None
+                None => return None,
             },
         })
     }
@@ -100,15 +105,17 @@ impl Engines {
         &self,
         name: &str,
         info: &TemplateInfo,
-        context: C
+        context: C,
     ) -> Option<String> {
-        #[cfg(feature = "tera")] {
+        #[cfg(feature = "tera")]
+        {
             if info.engine_ext == Tera::EXT {
                 return Engine::render(&self.tera, name, context);
             }
         }
 
-        #[cfg(feature = "handlebars")] {
+        #[cfg(feature = "handlebars")]
+        {
             if info.engine_ext == Handlebars::EXT {
                 return Engine::render(&self.handlebars, name, context);
             }
@@ -119,23 +126,34 @@ impl Engines {
 
     /// Returns iterator over template (name, engine_extension).
     pub(crate) fn templates(&self) -> impl Iterator<Item = (&str, &'static str)> {
-        #[cfg(all(feature = "tera", feature = "handlebars"))] {
-            self.tera.get_template_names()
+        #[cfg(all(feature = "tera", feature = "handlebars"))]
+        {
+            self.tera
+                .get_template_names()
                 .map(|name| (name, Tera::EXT))
-                .chain(self.handlebars.get_templates().keys()
-                    .map(|name| (name.as_str(), Handlebars::EXT)))
+                .chain(
+                    self.handlebars
+                        .get_templates()
+                        .keys()
+                        .map(|name| (name.as_str(), Handlebars::EXT)),
+                )
         }
 
-        #[cfg(all(feature = "tera", not(feature = "handlebars")))] {
+        #[cfg(all(feature = "tera", not(feature = "handlebars")))]
+        {
             self.tera.get_template_names().map(|name| (name, Tera::EXT))
         }
 
-        #[cfg(all(feature = "handlebars", not(feature = "tera")))] {
-            self.handlebars.get_templates().keys()
+        #[cfg(all(feature = "handlebars", not(feature = "tera")))]
+        {
+            self.handlebars
+                .get_templates()
+                .keys()
                 .map(|name| (name.as_str(), Handlebars::EXT))
         }
 
-        #[cfg(not(any(feature = "tera", feature = "handlebars")))] {
+        #[cfg(not(any(feature = "tera", feature = "handlebars")))]
+        {
             None.into_iter()
         }
     }

@@ -1,6 +1,6 @@
+use crate::http::Status;
 use crate::request::Request;
 use crate::response::{self, Responder};
-use crate::http::Status;
 
 use yansi::Paint;
 
@@ -79,7 +79,10 @@ impl<E> From<E> for Debug<E> {
 impl<'r, E: std::fmt::Debug> Responder<'r, 'static> for Debug<E> {
     fn respond_to(self, _: &'r Request<'_>) -> response::Result<'static> {
         warn_!("Debug: {:?}", self.0.primary());
-        warn_!("Debug always responds with {}.", Status::InternalServerError.primary());
+        warn_!(
+            "Debug always responds with {}.",
+            Status::InternalServerError.primary()
+        );
         Err(Status::InternalServerError)
     }
 }

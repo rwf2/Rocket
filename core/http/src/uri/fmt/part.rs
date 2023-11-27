@@ -46,7 +46,10 @@ mod private {
 /// Dynamic version of the `Path` and `Query` parts.
 #[doc(hidden)]
 #[derive(Debug, PartialEq, Eq, Copy, Clone)]
-pub enum Kind { Path, Query }
+pub enum Kind {
+    Path,
+    Query,
+}
 
 /// Marker type indicating use of a type for the path [`Part`] of a URI.
 ///
@@ -58,7 +61,7 @@ pub enum Kind { Path, Query }
 ///        ^------------------ Path
 /// ```
 #[derive(Debug, Clone, Copy)]
-pub enum Path {  }
+pub enum Path {}
 
 /// Marker type indicating use of a type for the query [`Part`] of a URI.
 ///
@@ -69,7 +72,7 @@ pub enum Path {  }
 ///                            ^-------------- Query
 /// ```
 #[derive(Debug, Clone, Copy)]
-pub enum Query {  }
+pub enum Query {}
 
 impl Part for Path {
     const KIND: Kind = Kind::Path;

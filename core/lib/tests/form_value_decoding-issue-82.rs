@@ -1,4 +1,5 @@
-#[macro_use] extern crate rocket;
+#[macro_use]
+extern crate rocket;
 
 use rocket::form::Form;
 
@@ -9,13 +10,14 @@ fn bug(form_data: Form<String>) -> String {
 
 mod tests {
     use super::*;
-    use rocket::local::blocking::Client;
     use rocket::http::ContentType;
     use rocket::http::Status;
+    use rocket::local::blocking::Client;
 
     fn check_decoding(raw: &str, decoded: &str) {
         let client = Client::debug_with(routes![bug]).unwrap();
-        let response = client.post("/")
+        let response = client
+            .post("/")
             .header(ContentType::Form)
             .body(format!("form_data={}", raw))
             .dispatch();

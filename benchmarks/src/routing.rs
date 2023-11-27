@@ -5,6 +5,7 @@ use criterion::{criterion_group, Criterion};
 use rocket::{route, config, Request, Data, Route, Config};
 use rocket::http::{Method, RawStr, ContentType, Accept, Status};
 use rocket::local::blocking::{Client, LocalRequest};
+use rocket::config::CliColors;
 
 fn dummy_handler<'r>(req: &'r Request, _: Data<'r>) -> route::BoxFuture<'r> {
     route::Outcome::from(req, ()).pin()
@@ -81,7 +82,7 @@ fn client(routes: Vec<Route>) -> Client {
     let config = Config {
         profile: Config::RELEASE_PROFILE,
         log_level: rocket::config::LogLevel::Off,
-        cli_colors: false,
+        cli_colors: CliColors::Never,
         shutdown: config::Shutdown {
             ctrlc: false,
             #[cfg(unix)]

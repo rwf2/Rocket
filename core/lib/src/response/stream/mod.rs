@@ -188,20 +188,20 @@
 //! }
 //! ```
 
-mod reader;
 mod bytes;
-mod text;
 mod one;
-mod sse;
 mod raw_sse;
+mod reader;
+mod sse;
+mod text;
 
 pub(crate) use self::raw_sse::*;
 
-pub use self::one::One;
-pub use self::text::TextStream;
 pub use self::bytes::ByteStream;
+pub use self::one::One;
 pub use self::reader::ReaderStream;
 pub use self::sse::{Event, EventStream};
+pub use self::text::TextStream;
 
 crate::export! {
     /// Retrofitted support for [`Stream`]s with `yield`, `for await` syntax.

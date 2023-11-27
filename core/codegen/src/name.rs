@@ -1,7 +1,7 @@
 use crate::http::uncased::UncasedStr;
 
-use syn::{self, Ident, ext::IdentExt};
 use proc_macro2::{Span, TokenStream};
+use syn::{self, ext::IdentExt, Ident};
 
 /// A "name" read by codegen, which may or may not be an identifier. A `Name` is
 /// typically constructed indirectly via FromMeta, or From<Ident> or directly
@@ -24,7 +24,10 @@ impl Name {
     /// Creates a new `Name` from the string `name` and span `span`. If
     /// `name` is a valid ident, the ident is stored as well.
     pub fn new<S: Into<String>>(name: S, span: Span) -> Self {
-        Name { value: name.into(), span }
+        Name {
+            value: name.into(),
+            span,
+        }
     }
 
     /// Returns the name as a string. Notably, if `self` was constructed from an
@@ -51,7 +54,9 @@ impl devise::FromMeta for Name {
             return Ok(Name::new(s.value(), s.span()));
         }
 
-        Err(meta.value_span().error("invalid value: expected string literal"))
+        Err(meta
+            .value_span()
+            .error("invalid value: expected string literal"))
     }
 }
 
@@ -87,7 +92,7 @@ impl std::ops::Deref for Name {
     }
 }
 
-impl Eq for Name { }
+impl Eq for Name {}
 
 impl<S: PartialEq<str> + ?Sized> PartialEq<S> for Name {
     fn eq(&self, other: &S) -> bool {

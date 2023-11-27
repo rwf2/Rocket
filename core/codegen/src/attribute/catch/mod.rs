@@ -1,16 +1,16 @@
 mod parse;
 
 use devise::ext::SpanDiagnosticExt;
-use devise::{Spanned, Result};
-use proc_macro2::{TokenStream, Span};
+use devise::{Result, Spanned};
+use proc_macro2::{Span, TokenStream};
 
+use crate::exports::*;
 use crate::http_codegen::Optional;
 use crate::syn_ext::ReturnTypeExt;
-use crate::exports::*;
 
 pub fn _catch(
     args: proc_macro::TokenStream,
-    input: proc_macro::TokenStream
+    input: proc_macro::TokenStream,
 ) -> Result<TokenStream> {
     // Parse and validate all of the user's input.
     let catch = parse::Attribute::parse(args.into(), input)?;
@@ -20,32 +20,54 @@ pub fn _catch(
     let user_catcher_fn_name = &catch.function.sig.ident;
     let vis = &catch.function.vis;
     let status_code = Optional(catch.status.map(|s| s.code));
-    let deprecated = catch.function.attrs.iter().find(|a| a.path().is_ident("deprecated"));
+    let deprecated = catch
+        .function
+        .attrs
+        .iter()
+        .find(|a| a.path().is_ident("deprecated"));
 
     // Determine the number of parameters that will be passed in.
     if catch.function.sig.inputs.len() > 2 {
-        return Err(catch.function.sig.paren_token.span.join()
+        return Err(catch
+            .function
+            .sig
+            .paren_token
+            .span
+            .join()
             .error("invalid number of arguments: must be zero, one, or two")
             .help("catchers optionally take `&Request` or `Status, &Request`"));
     }
 
     // This ensures that "Responder not implemented" points to the return type.
-    let return_type_span = catch.function.sig.output.ty()
+    let return_type_span = catch
+        .function
+        .sig
+        .output
+        .ty()
         .map(|ty| ty.span())
         .unwrap_or_else(Span::call_site);
 
     // Set the `req` and `status` spans to that of their respective function
     // arguments for a more correct `wrong type` error span. `rev` to be cute.
     let codegen_args = &[__req, __status];
-    let inputs = catch.function.sig.inputs.iter().rev()
+    let inputs = catch
+        .function
+        .sig
+        .inputs
+        .iter()
+        .rev()
         .zip(codegen_args.iter())
         .map(|(fn_arg, codegen_arg)| match fn_arg {
             syn::FnArg::Receiver(_) => codegen_arg.respanned(fn_arg.span()),
-            syn::FnArg::Typed(a) => codegen_arg.respanned(a.ty.span())
-        }).rev();
+            syn::FnArg::Typed(a) => codegen_arg.respanned(a.ty.span()),
+        })
+        .rev();
 
     // We append `.await` to the function call if this is `async`.
-    let dot_await = catch.function.sig.asyncness
+    let dot_await = catch
+        .function
+        .sig
+        .asyncness
         .map(|a| quote_spanned!(a.span() => .await));
 
     let catcher_response = quote_spanned!(return_type_span => {
@@ -96,7 +118,7 @@ pub fn _catch(
 
 pub fn catch_attribute(
     args: proc_macro::TokenStream,
-    input: proc_macro::TokenStream
+    input: proc_macro::TokenStream,
 ) -> TokenStream {
     _catch(args, input).unwrap_or_else(|d| d.emit_as_item_tokens())
 }

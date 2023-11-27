@@ -1,11 +1,18 @@
 #![cfg(feature = "json")]
 
-#[macro_use] extern crate rocket;
+#[macro_use]
+extern crate rocket;
 
 use rocket::serde::json::Json;
 
-#[get("/int")] fn int() -> Json<i32> { Json(5) }
-#[get("/nil")] fn nil() -> Json<()> { Json(()) }
+#[get("/int")]
+fn int() -> Json<i32> {
+    Json(5)
+}
+#[get("/nil")]
+fn nil() -> Json<()> {
+    Json(())
+}
 
 #[async_test]
 async fn async_json_works() {

@@ -1,11 +1,11 @@
+use std::borrow::Cow;
 use std::fmt::{self, Write};
 use std::marker::PhantomData;
-use std::borrow::Cow;
 
 use smallvec::SmallVec;
 
+use crate::uri::fmt::{Kind, Part, Path, Query, UriDisplay};
 use crate::uri::{Absolute, Origin, Reference};
-use crate::uri::fmt::{UriDisplay, Part, Path, Query, Kind};
 
 /// A struct used to format strings for [`UriDisplay`].
 ///
@@ -215,7 +215,9 @@ impl<'i, P: Part> Formatter<'i, P> {
 
             if P::KIND == Kind::Query && !self.prefixes.is_empty() {
                 for (i, prefix) in self.prefixes.iter().enumerate() {
-                    if i != 0 { self.inner.write_char('.')? }
+                    if i != 0 {
+                        self.inner.write_char('.')?
+                    }
                     self.inner.write_str(prefix)?;
                 }
 
@@ -320,9 +322,9 @@ impl<'i, P: Part> Formatter<'i, P> {
 
 impl Formatter<'_, Query> {
     fn with_prefix<F>(&mut self, prefix: &str, f: F) -> fmt::Result
-        where F: FnOnce(&mut Self) -> fmt::Result
+    where
+        F: FnOnce(&mut Self) -> fmt::Result,
     {
-
         struct PrefixGuard<'f, 'i>(&'f mut Formatter<'i, Query>);
 
         impl<'f, 'i> PrefixGuard<'f, 'i> {
@@ -406,7 +408,7 @@ impl<P: Part> fmt::Write for Formatter<'_, P> {
 #[doc(hidden)]
 pub enum UriArgumentsKind<A> {
     Static(&'static str),
-    Dynamic(A)
+    Dynamic(A),
 }
 
 // Used by code generation.
@@ -414,7 +416,7 @@ pub enum UriArgumentsKind<A> {
 pub enum UriQueryArgument<'a> {
     Raw(&'a str),
     NameValue(&'a str, &'a dyn UriDisplay<Query>),
-    Value(&'a dyn UriDisplay<Query>)
+    Value(&'a dyn UriDisplay<Query>),
 }
 
 /// No prefix at all.
@@ -603,7 +605,8 @@ impl RouteUriBuilder {
     }
 
     pub fn with_suffix<S>(self, suffix: S) -> SuffixedRouteUri<S::Output>
-        where S: ValidRouteSuffix<Origin<'static>>
+    where
+        S: ValidRouteSuffix<Origin<'static>>,
     {
         SuffixedRouteUri(suffix.prepend(self.render()))
     }
@@ -634,7 +637,7 @@ impl<T> SuffixedRouteUri<T> {
 // See https://github.com/rwf2/Rocket/issues/1534.
 #[cfg(test)]
 mod prefix_soundness_test {
-    use crate::uri::fmt::{Formatter, UriDisplay, Query};
+    use crate::uri::fmt::{Formatter, Query, UriDisplay};
 
     struct MyValue;
 

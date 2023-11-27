@@ -1,23 +1,23 @@
 use std::fmt;
-use std::ops::RangeFrom;
-use std::{future::Future, borrow::Cow, sync::Arc};
 use std::net::{IpAddr, SocketAddr};
+use std::ops::RangeFrom;
+use std::{borrow::Cow, future::Future, sync::Arc};
 
-use yansi::Paint;
-use state::{TypeMap, InitCell};
-use futures::future::BoxFuture;
 use atomic::{Atomic, Ordering};
+use futures::future::BoxFuture;
+use state::{InitCell, TypeMap};
+use yansi::Paint;
 
-use crate::{Rocket, Route, Orbit};
-use crate::request::{FromParam, FromSegments, FromRequest, Outcome};
-use crate::form::{self, ValueField, FromForm};
 use crate::data::Limits;
+use crate::form::{self, FromForm, ValueField};
+use crate::request::{FromParam, FromRequest, FromSegments, Outcome};
+use crate::{Orbit, Rocket, Route};
 
-use crate::http::{hyper, Method, Header, HeaderMap};
-use crate::http::{ContentType, Accept, MediaType, CookieJar, Cookie};
-use crate::http::uncased::UncasedStr;
 use crate::http::private::Certificates;
-use crate::http::uri::{fmt::Path, Origin, Segments, Host, Authority};
+use crate::http::uncased::UncasedStr;
+use crate::http::uri::{fmt::Path, Authority, Host, Origin, Segments};
+use crate::http::{hyper, Header, HeaderMap, Method};
+use crate::http::{Accept, ContentType, Cookie, CookieJar, MediaType};
 
 /// The type of an incoming web request.
 ///
@@ -84,7 +84,7 @@ impl<'r> Request<'r> {
     pub(crate) fn new<'s: 'r>(
         rocket: &'r Rocket<Orbit>,
         method: Method,
-        uri: Origin<'s>
+        uri: Origin<'s>,
     ) -> Request<'r> {
         Request {
             uri,
@@ -102,7 +102,7 @@ impl<'r> Request<'r> {
                 content_type: InitCell::new(),
                 cache: Arc::new(<TypeMap![Send + Sync]>::new()),
                 host: None,
-            }
+            },
         }
     }
 
@@ -377,13 +377,11 @@ impl<'r> Request<'r> {
     /// ```
     pub fn real_ip(&self) -> Option<IpAddr> {
         let ip_header = self.rocket().config.ip_header.as_ref()?.as_str();
-        self.headers()
-            .get_one(ip_header)
-            .and_then(|ip| {
-                ip.parse()
-                    .map_err(|_| warn_!("'{}' header is malformed: {}", ip_header, ip))
-                    .ok()
-            })
+        self.headers().get_one(ip_header).and_then(|ip| {
+            ip.parse()
+                .map_err(|_| warn_!("'{}' header is malformed: {}", ip_header, ip))
+                .ok()
+        })
     }
 
     /// Attempts to return the client's IP address by first inspecting the
@@ -547,9 +545,14 @@ impl<'r> Request<'r> {
     /// ```
     #[inline]
     pub fn content_type(&self) -> Option<&ContentType> {
-        self.state.content_type.get_or_init(|| {
-            self.headers().get_one("Content-Type").and_then(|v| v.parse().ok())
-        }).as_ref()
+        self.state
+            .content_type
+            .get_or_init(|| {
+                self.headers()
+                    .get_one("Content-Type")
+                    .and_then(|v| v.parse().ok())
+            })
+            .as_ref()
     }
 
     /// Returns the Accept header of `self`. If the header is not present,
@@ -567,9 +570,14 @@ impl<'r> Request<'r> {
     /// ```
     #[inline]
     pub fn accept(&self) -> Option<&Accept> {
-        self.state.accept.get_or_init(|| {
-            self.headers().get_one("Accept").and_then(|v| v.parse().ok())
-        }).as_ref()
+        self.state
+            .accept
+            .get_or_init(|| {
+                self.headers()
+                    .get_one("Accept")
+                    .and_then(|v| v.parse().ok())
+            })
+            .as_ref()
     }
 
     /// Returns the media type "format" of the request.
@@ -707,7 +715,10 @@ impl<'r> Request<'r> {
     /// ```
     #[inline(always)]
     pub fn guard<'z, 'a, T>(&'a self) -> BoxFuture<'z, Outcome<T, T::Error>>
-        where T: FromRequest<'a> + 'z, 'a: 'z, 'r: 'z
+    where
+        T: FromRequest<'a> + 'z,
+        'a: 'z,
+        'r: 'z,
     {
         T::from_request(self)
     }
@@ -739,14 +750,14 @@ impl<'r> Request<'r> {
     /// ```
     #[inline]
     pub fn local_cache<T, F>(&self, f: F) -> &T
-        where F: FnOnce() -> T,
-              T: Send + Sync + 'static
+    where
+        F: FnOnce() -> T,
+        T: Send + Sync + 'static,
     {
-        self.state.cache.try_get()
-            .unwrap_or_else(|| {
-                self.state.cache.set(f());
-                self.state.cache.get()
-            })
+        self.state.cache.try_get().unwrap_or_else(|| {
+            self.state.cache.set(f());
+            self.state.cache.get()
+        })
     }
 
     /// Retrieves the cached value for type `T` from the request-local cached
@@ -773,8 +784,9 @@ impl<'r> Request<'r> {
     /// ```
     #[inline]
     pub async fn local_cache_async<'a, T, F>(&'a self, fut: F) -> &'a T
-        where F: Future<Output = T>,
-              T: Send + Sync + 'static
+    where
+        F: Future<Output = T>,
+        T: Send + Sync + 'static,
     {
         match self.state.cache.try_get() {
             Some(s) => s,
@@ -817,7 +829,8 @@ impl<'r> Request<'r> {
     /// ```
     #[inline]
     pub fn param<'a, T>(&'a self, n: usize) -> Option<Result<T, T::Error>>
-        where T: FromParam<'a>
+    where
+        T: FromParam<'a>,
     {
         self.routed_segment(n).map(T::from_param)
     }
@@ -855,7 +868,8 @@ impl<'r> Request<'r> {
     /// ```
     #[inline]
     pub fn segments<'a, T>(&'a self, n: RangeFrom<usize>) -> Result<T, T::Error>
-        where T: FromSegments<'a>
+    where
+        T: FromSegments<'a>,
     {
         T::from_segments(self.routed_segments(n))
     }
@@ -904,7 +918,8 @@ impl<'r> Request<'r> {
     /// ```
     #[inline]
     pub fn query_value<'a, T>(&'a self, name: &str) -> Option<form::Result<'a, T>>
-        where T: FromForm<'a>
+    where
+        T: FromForm<'a>,
     {
         if self.query_fields().find(|f| f.name == name).is_none() {
             return None;
@@ -949,18 +964,22 @@ impl<'r> Request<'r> {
     /// point for the currently matched route, if they exist. Used by codegen.
     #[inline]
     pub fn routed_segments(&self, n: RangeFrom<usize>) -> Segments<'_, Path> {
-        let mount_segments = self.route()
-            .map(|r| r.uri.metadata.base_len)
-            .unwrap_or(0);
+        let mount_segments = self.route().map(|r| r.uri.metadata.base_len).unwrap_or(0);
 
-        trace!("requesting {}.. ({}..) from {}", n.start, mount_segments, self);
+        trace!(
+            "requesting {}.. ({}..) from {}",
+            n.start,
+            mount_segments,
+            self
+        );
         self.uri().path().segments().skip(mount_segments + n.start)
     }
 
     // Retrieves the pre-parsed query items. Used by matching and codegen.
     #[inline]
     pub fn query_fields(&self) -> impl Iterator<Item = ValueField<'_>> {
-        self.uri().query()
+        self.uri()
+            .query()
             .map(|q| q.segments().map(ValueField::from))
             .into_iter()
             .flatten()
@@ -994,14 +1013,15 @@ impl<'r> Request<'r> {
         let mut errors = vec![];
 
         // Ensure that the method is known. TODO: Allow made-up methods?
-        let method = Method::from_hyp(&hyper.method)
-            .unwrap_or_else(|| {
-                errors.push(Kind::BadMethod(&hyper.method));
-                Method::Get
-            });
+        let method = Method::from_hyp(&hyper.method).unwrap_or_else(|| {
+            errors.push(Kind::BadMethod(&hyper.method));
+            Method::Get
+        });
 
         // TODO: Keep around not just the path/query, but the rest, if there?
-        let uri = hyper.uri.path_and_query()
+        let uri = hyper
+            .uri
+            .path_and_query()
             .map(|uri| {
                 // In debug, make sure we agree with Hyper about URI validity.
                 // If we disagree, log a warning but continue anyway; if this is
@@ -1032,16 +1052,22 @@ impl<'r> Request<'r> {
         // Determine + set host. On HTTP < 2, use the `HOST` header. Otherwise,
         // use the `:authority` pseudo-header which hyper makes part of the URI.
         request.state.host = if hyper.version < hyper::Version::HTTP_2 {
-            hyper.headers.get("host").and_then(|h| Host::parse_bytes(h.as_bytes()).ok())
+            hyper
+                .headers
+                .get("host")
+                .and_then(|h| Host::parse_bytes(h.as_bytes()).ok())
         } else {
-            hyper.uri.host().map(|h| Host::new(Authority::new(None, h, hyper.uri.port_u16())))
+            hyper
+                .uri
+                .host()
+                .map(|h| Host::new(Authority::new(None, h, hyper.uri.port_u16())))
         };
 
         // Set the request cookies, if they exist.
         for header in hyper.headers.get_all("Cookie") {
             let raw_str = match std::str::from_utf8(header.as_bytes()) {
                 Ok(string) => string,
-                Err(_) => continue
+                Err(_) => continue,
             };
 
             for cookie_str in raw_str.split(';').map(|s| s.trim()) {
@@ -1115,7 +1141,12 @@ impl fmt::Display for Request<'_> {
         // Print the requests media type when the route specifies a format.
         if let Some(mime) = self.format() {
             if !mime.is_any() {
-                write!(f, " {}/{}", mime.top().yellow().linger(), mime.sub().clear())?;
+                write!(
+                    f,
+                    " {}/{}",
+                    mime.top().yellow().linger(),
+                    mime.sub().clear()
+                )?;
             }
         }
 

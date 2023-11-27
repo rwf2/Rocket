@@ -1,11 +1,11 @@
-use std::path::{PathBuf, Path};
+use std::path::{Path, PathBuf};
 
-use crate::{Request, Data};
-use crate::http::{Method, Status, uri::Segments, ext::IntoOwned};
-use crate::route::{Route, Handler, Outcome};
-use crate::response::{Redirect, Responder};
-use crate::outcome::IntoOutcome;
 use crate::fs::NamedFile;
+use crate::http::{ext::IntoOwned, uri::Segments, Method, Status};
+use crate::outcome::IntoOutcome;
+use crate::response::{Redirect, Responder};
+use crate::route::{Handler, Outcome, Route};
+use crate::{Data, Request};
 
 /// Custom handler for serving static files.
 ///
@@ -159,7 +159,11 @@ impl FileServer {
             }
         }
 
-        FileServer { root: path.into(), options, rank: Self::DEFAULT_RANK }
+        FileServer {
+            root: path.into(),
+            options,
+            rank: Self::DEFAULT_RANK,
+        }
     }
 
     /// Sets the rank for generated routes to `rank`.
@@ -213,7 +217,9 @@ impl Handler for FileServer {
 
         // Get the segments as a `PathBuf`, allowing dotfiles requested.
         let allow_dotfiles = options.contains(Options::DotFiles);
-        let path = req.segments::<Segments<'_, Path>>(0..).ok()
+        let path = req
+            .segments::<Segments<'_, Path>>(0..)
+            .ok()
             .and_then(|segments| segments.to_path_buf(allow_dotfiles).ok())
             .map(|path| self.root.join(path));
 
@@ -221,7 +227,9 @@ impl Handler for FileServer {
             Some(p) if p.is_dir() => {
                 // Normalize '/a/b/foo' to '/a/b/foo/'.
                 if options.contains(Options::NormalizeDirs) && !req.uri().path().ends_with('/') {
-                    let normal = req.uri().map_path(|p| format!("{}/", p))
+                    let normal = req
+                        .uri()
+                        .map_path(|p| format!("{}/", p))
                         .expect("adding a trailing slash to a known good path => valid path")
                         .into_owned();
 
@@ -236,7 +244,7 @@ impl Handler for FileServer {
 
                 let index = NamedFile::open(p.join("index.html")).await;
                 index.respond_to(req).or_forward((data, Status::NotFound))
-            },
+            }
             Some(p) => {
                 let file = NamedFile::open(p).await;
                 file.respond_to(req).or_forward((data, Status::NotFound))

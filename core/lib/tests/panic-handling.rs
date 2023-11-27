@@ -1,9 +1,10 @@
-#[macro_use] extern crate rocket;
+#[macro_use]
+extern crate rocket;
 
-use rocket::{Request, Rocket, Route, Catcher, Build, route, catcher};
 use rocket::data::Data;
 use rocket::http::{Method, Status};
 use rocket::local::blocking::Client;
+use rocket::{catcher, route, Build, Catcher, Request, Rocket, Route};
 
 #[get("/panic")]
 fn panic_route() -> &'static str {

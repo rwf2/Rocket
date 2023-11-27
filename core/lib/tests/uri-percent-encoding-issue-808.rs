@@ -1,7 +1,8 @@
-#[macro_use] extern crate rocket;
+#[macro_use]
+extern crate rocket;
 
-use rocket::{Rocket, Build};
 use rocket::response::Redirect;
+use rocket::{Build, Rocket};
 
 const NAME: &str = "John[]|\\%@^";
 
@@ -26,8 +27,8 @@ fn rocket() -> Rocket<Build> {
 
 mod tests {
     use super::*;
-    use rocket::local::blocking::Client;
     use rocket::http::Status;
+    use rocket::local::blocking::Client;
 
     #[test]
     fn uri_percent_encoding_redirect() {

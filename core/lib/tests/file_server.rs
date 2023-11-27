@@ -1,10 +1,10 @@
-use std::{io::Read, fs::File};
 use std::path::Path;
+use std::{fs::File, io::Read};
 
-use rocket::{Rocket, Route, Build};
+use rocket::fs::{relative, FileServer, Options};
 use rocket::http::Status;
 use rocket::local::blocking::Client;
-use rocket::fs::{FileServer, Options, relative};
+use rocket::{Build, Rocket, Route};
 
 fn static_root() -> &'static Path {
     Path::new(relative!("/tests/static"))
@@ -17,9 +17,15 @@ fn rocket() -> Rocket<Build> {
         .mount("/no_index", FileServer::new(&root, Options::None))
         .mount("/dots", FileServer::new(&root, Options::DotFiles))
         .mount("/index", FileServer::new(&root, Options::Index))
-        .mount("/both", FileServer::new(&root, Options::DotFiles | Options::Index))
+        .mount(
+            "/both",
+            FileServer::new(&root, Options::DotFiles | Options::Index),
+        )
         .mount("/redir", FileServer::new(&root, Options::NormalizeDirs))
-        .mount("/redir_index", FileServer::new(&root, Options::NormalizeDirs | Options::Index))
+        .mount(
+            "/redir_index",
+            FileServer::new(&root, Options::NormalizeDirs | Options::Index),
+        )
 }
 
 static REGULAR_FILES: &[&str] = &[
@@ -29,15 +35,9 @@ static REGULAR_FILES: &[&str] = &[
     "other/hello.txt",
 ];
 
-static HIDDEN_FILES: &[&str] = &[
-    ".hidden",
-    "inner/.hideme",
-];
+static HIDDEN_FILES: &[&str] = &[".hidden", "inner/.hideme"];
 
-static INDEXED_DIRECTORIES: &[&str] = &[
-    "",
-    "inner/",
-];
+static INDEXED_DIRECTORIES: &[&str] = &["", "inner/"];
 
 fn assert_file(client: &Client, prefix: &str, path: &str, exists: bool) {
     let full_path = format!("/{}/{}", prefix, path);
@@ -52,7 +52,8 @@ fn assert_file(client: &Client, prefix: &str, path: &str, exists: bool) {
 
         let mut file = File::open(path).expect("open file");
         let mut expected_contents = String::new();
-        file.read_to_string(&mut expected_contents).expect("read file");
+        file.read_to_string(&mut expected_contents)
+            .expect("read file");
         assert_eq!(response.into_string(), Some(expected_contents));
     } else {
         assert_eq!(response.status(), Status::NotFound);
@@ -120,10 +121,14 @@ fn test_forwarding() {
     use rocket::{get, routes};
 
     #[get("/<value>", rank = 20)]
-    fn catch_one(value: String) -> String { value }
+    fn catch_one(value: String) -> String {
+        value
+    }
 
     #[get("/<a>/<b>", rank = 20)]
-    fn catch_two(a: &str, b: &str) -> String { format!("{}/{}", a, b) }
+    fn catch_two(a: &str, b: &str) -> String {
+        format!("{}/{}", a, b)
+    }
 
     let rocket = rocket().mount("/default", routes![catch_one, catch_two]);
     let client = Client::debug(rocket).expect("valid rocket");
@@ -154,15 +159,24 @@ fn test_redirection() {
 
     let response = client.get("/redir/inner").dispatch();
     assert_eq!(response.status(), Status::PermanentRedirect);
-    assert_eq!(response.headers().get("Location").next(), Some("/redir/inner/"));
+    assert_eq!(
+        response.headers().get("Location").next(),
+        Some("/redir/inner/")
+    );
 
     let response = client.get("/redir/inner?foo=bar").dispatch();
     assert_eq!(response.status(), Status::PermanentRedirect);
-    assert_eq!(response.headers().get("Location").next(), Some("/redir/inner/?foo=bar"));
+    assert_eq!(
+        response.headers().get("Location").next(),
+        Some("/redir/inner/?foo=bar")
+    );
 
     let response = client.get("/redir_index/inner").dispatch();
     assert_eq!(response.status(), Status::PermanentRedirect);
-    assert_eq!(response.headers().get("Location").next(), Some("/redir_index/inner/"));
+    assert_eq!(
+        response.headers().get("Location").next(),
+        Some("/redir_index/inner/")
+    );
 
     // Paths with trailing slash are unaffected.
     let response = client.get("/redir/inner/").dispatch();
@@ -180,13 +194,22 @@ fn test_redirection() {
 
     let response = client.get("/redir/inner").dispatch();
     assert_eq!(response.status(), Status::PermanentRedirect);
-    assert_eq!(response.headers().get("Location").next(), Some("/redir/inner/"));
+    assert_eq!(
+        response.headers().get("Location").next(),
+        Some("/redir/inner/")
+    );
 
     let response = client.get("/redir/other").dispatch();
     assert_eq!(response.status(), Status::PermanentRedirect);
-    assert_eq!(response.headers().get("Location").next(), Some("/redir/other/"));
+    assert_eq!(
+        response.headers().get("Location").next(),
+        Some("/redir/other/")
+    );
 
     let response = client.get("/redir_index/other").dispatch();
     assert_eq!(response.status(), Status::PermanentRedirect);
-    assert_eq!(response.headers().get("Location").next(), Some("/redir_index/other/"));
+    assert_eq!(
+        response.headers().get("Location").next(),
+        Some("/redir_index/other/")
+    );
 }

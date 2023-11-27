@@ -1,38 +1,54 @@
-#[macro_use] extern crate rocket;
+#[macro_use]
+extern crate rocket;
 
 use std::path::PathBuf;
 
-use rocket::local::blocking::Client;
 use rocket::fairing::AdHoc;
+use rocket::local::blocking::Client;
 
 #[get("/foo")]
-fn foo() -> &'static str { "foo" }
+fn foo() -> &'static str {
+    "foo"
+}
 
 #[get("/bar")]
-fn not_bar() -> &'static str { "not_bar" }
+fn not_bar() -> &'static str {
+    "not_bar"
+}
 
 #[get("/bar/")]
-fn bar() -> &'static str { "bar" }
+fn bar() -> &'static str {
+    "bar"
+}
 
 #[get("/foo/<_>/<_baz..>")]
-fn baz(_baz: PathBuf) -> &'static str { "baz" }
+fn baz(_baz: PathBuf) -> &'static str {
+    "baz"
+}
 
 #[get("/doggy/<_>/<_baz..>?doggy")]
-fn doggy(_baz: PathBuf) -> &'static str { "doggy" }
+fn doggy(_baz: PathBuf) -> &'static str {
+    "doggy"
+}
 
 #[get("/<_..>")]
-fn rest() -> &'static str { "rest" }
+fn rest() -> &'static str {
+    "rest"
+}
 
 macro_rules! assert_response {
     ($client:ident : $path:expr => $response:expr) => {
         let response = $client.get($path).dispatch().into_string().unwrap();
-        assert_eq!(response, $response, "\nGET {}: got {} but expected {}",
-            $path, response, $response);
+        assert_eq!(
+            response, $response,
+            "\nGET {}: got {} but expected {}",
+            $path, response, $response
+        );
     };
 }
 
 #[test]
-fn test_adhoc_normalizer_works_as_expected () {
+fn test_adhoc_normalizer_works_as_expected() {
     let rocket = rocket::build()
         .mount("/", routes![foo, bar, not_bar, baz, doggy])
         .mount("/base", routes![foo, bar, not_bar, baz, doggy, rest])
@@ -40,7 +56,10 @@ fn test_adhoc_normalizer_works_as_expected () {
 
     let client = match Client::debug(rocket) {
         Ok(client) => client,
-        Err(e) => { e.pretty_print(); panic!("failed to build client"); }
+        Err(e) => {
+            e.pretty_print();
+            panic!("failed to build client");
+        }
     };
 
     assert_response!(client: "/foo" => "foo");

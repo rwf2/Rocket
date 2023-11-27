@@ -6,6 +6,7 @@ use rocket::http::QMediaType;
 use rocket::local::blocking::{LocalRequest, Client};
 use rocket::http::{Method, Accept, ContentType, MediaType, uri::Origin};
 use rocket::route::{Route, RouteUri, dummy_handler};
+use rocket::config::CliColors;
 
 #[derive(Arbitrary)]
 struct ArbitraryRequestData<'a> {
@@ -186,7 +187,7 @@ fn fuzz((route_a, route_b, req): TestData<'_>) {
     let rocket = rocket::custom(rocket::Config {
         workers: 2,
         log_level: rocket::log::LogLevel::Off,
-        cli_colors: false,
+        cli_colors: CliColors::Never,
         ..rocket::Config::debug_default()
     });
 

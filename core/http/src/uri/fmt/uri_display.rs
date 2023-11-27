@@ -1,11 +1,11 @@
+use std::borrow::Cow;
 use std::collections::{BTreeMap, HashMap};
 use std::{fmt, path};
-use std::borrow::Cow;
 
-use time::{macros::format_description, format_description::FormatItem};
+use time::{format_description::FormatItem, macros::format_description};
 
+use crate::uri::fmt::{Formatter, Part, Path, Query};
 use crate::RawStr;
-use crate::uri::fmt::{Part, Path, Query, Formatter};
 
 /// Trait implemented by types that can be displayed as part of a URI in
 /// [`uri!`].
@@ -317,7 +317,7 @@ impl UriDisplay<Path> for path::Path {
         for component in self.components() {
             match component {
                 Component::Prefix(_) | Component::RootDir => continue,
-                _ => f.write_value(&component.as_os_str().to_string_lossy())?
+                _ => f.write_value(&component.as_os_str().to_string_lossy())?,
             }
         }
 
@@ -340,8 +340,8 @@ macro_rules! impl_with_display {
 
 use std::net::{IpAddr, Ipv4Addr, Ipv6Addr};
 use std::num::{
-    NonZeroIsize, NonZeroI8, NonZeroI16, NonZeroI32, NonZeroI64, NonZeroI128,
-    NonZeroUsize, NonZeroU8, NonZeroU16, NonZeroU32, NonZeroU64, NonZeroU128,
+    NonZeroI128, NonZeroI16, NonZeroI32, NonZeroI64, NonZeroI8, NonZeroIsize, NonZeroU128,
+    NonZeroU16, NonZeroU32, NonZeroU64, NonZeroU8, NonZeroUsize,
 };
 
 // Keep in-sync with the 'FromUriParam' impls.
@@ -435,7 +435,7 @@ impl<T: UriDisplay<Query>> UriDisplay<Query> for Option<T> {
     fn fmt(&self, f: &mut Formatter<'_, Query>) -> fmt::Result {
         match self {
             Some(v) => v.fmt(f),
-            None => Ok(())
+            None => Ok(()),
         }
     }
 }
@@ -446,7 +446,7 @@ impl<T: UriDisplay<Query>, E> UriDisplay<Query> for Result<T, E> {
     fn fmt(&self, f: &mut Formatter<'_, Query>) -> fmt::Result {
         match self {
             Ok(v) => v.fmt(f),
-            Err(_) => Ok(())
+            Err(_) => Ok(()),
         }
     }
 }
@@ -497,8 +497,10 @@ impl<K: UriDisplay<Query>, V: UriDisplay<Query>> UriDisplay<Query> for BTreeMap<
     }
 }
 
-#[cfg(feature = "uuid")] impl_with_display!(uuid_::Uuid);
-#[cfg(feature = "uuid")] crate::impl_from_uri_param_identity!(uuid_::Uuid);
+#[cfg(feature = "uuid")]
+impl_with_display!(uuid_::Uuid);
+#[cfg(feature = "uuid")]
+crate::impl_from_uri_param_identity!(uuid_::Uuid);
 
 // And finally, the `Ignorable` trait, which has sugar of `_` in the `uri!`
 // macro, which expands to a typecheck.
@@ -535,26 +537,26 @@ impl<K: UriDisplay<Query>, V: UriDisplay<Query>> UriDisplay<Query> for BTreeMap<
 /// # struct MyType;
 /// impl Ignorable<Query> for MyType { }
 /// ```
-pub trait Ignorable<P: Part> { }
+pub trait Ignorable<P: Part> {}
 
-impl<T> Ignorable<Query> for Option<T> { }
-impl<T, E> Ignorable<Query> for Result<T, E> { }
+impl<T> Ignorable<Query> for Option<T> {}
+impl<T, E> Ignorable<Query> for Result<T, E> {}
 
 #[doc(hidden)]
-pub fn assert_ignorable<P: Part, T: Ignorable<P>>() {  }
+pub fn assert_ignorable<P: Part, T: Ignorable<P>>() {}
 
 #[cfg(test)]
 mod uri_display_tests {
-    use std::path;
     use crate::uri::fmt::{FromUriParam, UriDisplay};
-    use crate::uri::fmt::{Query, Path};
+    use crate::uri::fmt::{Path, Query};
+    use std::path;
 
     macro_rules! uri_display {
-        (<$P:ident, $Target:ty> $source:expr) => ({
+        (<$P:ident, $Target:ty> $source:expr) => {{
             let tmp = $source;
             let target = <$Target as FromUriParam<$P, _>>::from_uri_param(tmp);
             format!("{}", &target as &dyn UriDisplay<$P>)
-        })
+        }};
     }
 
     macro_rules! assert_display {

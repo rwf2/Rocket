@@ -75,13 +75,14 @@
 #![doc(html_logo_url = "https://rocket.rs/images/logo-boxed.png")]
 
 mod tungstenite {
-    #[doc(inline)] pub use tokio_tungstenite::tungstenite::*;
+    #[doc(inline)]
+    pub use tokio_tungstenite::tungstenite::*;
 }
 
 mod duplex;
 mod websocket;
 
-pub use self::websocket::{WebSocket, Channel};
+pub use self::websocket::{Channel, WebSocket};
 
 /// A WebSocket message.
 ///
@@ -161,9 +162,10 @@ pub use self::tungstenite::protocol::WebSocketConfig as Config;
 
 /// Structures for constructing raw WebSocket frames.
 pub mod frame {
-    #[doc(hidden)] pub use crate::Message;
-    pub use crate::tungstenite::protocol::frame::{CloseFrame, Frame};
     pub use crate::tungstenite::protocol::frame::coding::CloseCode;
+    pub use crate::tungstenite::protocol::frame::{CloseFrame, Frame};
+    #[doc(hidden)]
+    pub use crate::Message;
 }
 
 /// Types representing incoming and/or outgoing `async` [`Message`] streams.
@@ -175,7 +177,7 @@ pub mod stream {
 /// Library [`Error`](crate::result::Error) and
 /// [`Result`](crate::result::Result) types.
 pub mod result {
-    pub use crate::tungstenite::error::{Result, Error};
+    pub use crate::tungstenite::error::{Error, Result};
 }
 
 /// Type and expression macro for `async` WebSocket [`Message`] streams.
