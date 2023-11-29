@@ -2,7 +2,7 @@ use std::collections::hash_set::HashSet;
 
 use criterion::{criterion_group, Criterion};
 
-use rocket::{route, config, Request, Data, Route, Config};
+use rocket::{route, config::{self, CliColors}, Request, Data, Route, Config};
 use rocket::http::{Method, RawStr, ContentType, Accept, Status};
 use rocket::local::blocking::{Client, LocalRequest};
 
@@ -81,7 +81,7 @@ fn client(routes: Vec<Route>) -> Client {
     let config = Config {
         profile: Config::RELEASE_PROFILE,
         log_level: rocket::config::LogLevel::Off,
-        cli_colors: false,
+        cli_colors: CliColors::Never,
         shutdown: config::Shutdown {
             ctrlc: false,
             #[cfg(unix)]
