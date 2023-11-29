@@ -7,7 +7,7 @@ use serde::{Deserialize, Serialize};
 use yansi::{Paint, Style, Color::Primary};
 
 use crate::log::PaintExt;
-use crate::config::{LogLevel, Shutdown, Ident};
+use crate::config::{LogLevel, Shutdown, Ident, CliColors};
 use crate::request::{self, Request, FromRequest};
 use crate::http::uncased::Uncased;
 use crate::data::Limits;
@@ -117,8 +117,7 @@ pub struct Config {
     /// Max level to log. **(default: _debug_ `normal` / _release_ `critical`)**
     pub log_level: LogLevel,
     /// Whether to use colors and emoji when logging. **(default: `true`)**
-    #[serde(deserialize_with = "figment::util::bool_from_str_or_int")]
-    pub cli_colors: bool,
+    pub cli_colors: CliColors,
     /// PRIVATE: This structure may grow (but never change otherwise) in a
     /// non-breaking release. As such, constructing this structure should
     /// _always_ be done using a public constructor or update syntax:
@@ -198,7 +197,7 @@ impl Config {
             secret_key: SecretKey::zero(),
             shutdown: Shutdown::default(),
             log_level: LogLevel::Normal,
-            cli_colors: true,
+            cli_colors: CliColors::Auto,
             __non_exhaustive: (),
         }
     }

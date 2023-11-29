@@ -7,6 +7,8 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use serde::{de, Serialize, Serializer, Deserialize, Deserializer};
 use yansi::{Paint, Painted, Condition};
 
+use crate::config::CliColors;
+
 /// Reexport the `log` crate as `private`.
 pub use log as private;
 
@@ -167,7 +169,12 @@ pub(crate) fn init(config: &crate::Config) {
     }
 
     // Always disable colors if requested or if the stdout/err aren't TTYs.
-    let should_color = config.cli_colors && Condition::stdouterr_are_tty();
+    let should_color = match config.cli_colors {
+        CliColors::Always => true,
+        CliColors::Auto => Condition::stdouterr_are_tty(),
+        CliColors::Never => false
+    };
+
     yansi::whenever(Condition::cached(should_color));
 
     // Set Rocket-logger specific settings only if Rocket's logger is set.

@@ -115,6 +115,7 @@ mod ident;
 mod config;
 mod shutdown;
 mod ip_header;
+mod cli_colors;
 
 #[cfg(feature = "tls")]
 mod tls;
@@ -129,6 +130,7 @@ pub use config::Config;
 pub use crate::log::LogLevel;
 pub use shutdown::Shutdown;
 pub use ident::Ident;
+pub use cli_colors::CliColors;
 
 #[cfg(feature = "tls")]
 pub use tls::{TlsConfig, CipherSuite};
@@ -150,7 +152,7 @@ mod tests {
 
     use crate::log::LogLevel;
     use crate::data::{Limits, ToByteUnit};
-    use crate::config::Config;
+    use crate::config::{Config, CliColors};
 
     #[test]
     fn test_figment_is_default() {
@@ -217,7 +219,7 @@ mod tests {
                 ident: ident!("Something Cool"),
                 keep_alive: 10,
                 log_level: LogLevel::Off,
-                cli_colors: false,
+                cli_colors: CliColors::Never,
                 ..Config::default()
             });
 
@@ -240,7 +242,7 @@ mod tests {
                 ident: ident!("Something Else Cool"),
                 keep_alive: 10,
                 log_level: LogLevel::Off,
-                cli_colors: false,
+                cli_colors: CliColors::Never,
                 ..Config::default()
             });
 
@@ -262,7 +264,117 @@ mod tests {
                 workers: 20,
                 keep_alive: 10,
                 log_level: LogLevel::Off,
-                cli_colors: false,
+                cli_colors: CliColors::Never,
+                ..Config::default()
+            });
+
+            jail.set_env("ROCKET_CONFIG", "Other.toml");
+            jail.create_file("Other.toml", r#"
+                [default]
+                address = "1.2.3.4"
+                port = 1234
+                workers = 20
+                keep_alive = 10
+                log_level = "off"
+                cli_colors = "never"
+            "#)?;
+
+            let config = Config::from(Config::figment());
+            assert_eq!(config, Config {
+                address: Ipv4Addr::new(1, 2, 3, 4).into(),
+                port: 1234,
+                workers: 20,
+                keep_alive: 10,
+                log_level: LogLevel::Off,
+                cli_colors: CliColors::Never,
+                ..Config::default()
+            });
+
+            jail.set_env("ROCKET_CONFIG", "Other.toml");
+            jail.create_file("Other.toml", r#"
+                [default]
+                address = "1.2.3.4"
+                port = 1234
+                workers = 20
+                keep_alive = 10
+                log_level = "off"
+                cli_colors = "auto"
+            "#)?;
+
+            let config = Config::from(Config::figment());
+            assert_eq!(config, Config {
+                address: Ipv4Addr::new(1, 2, 3, 4).into(),
+                port: 1234,
+                workers: 20,
+                keep_alive: 10,
+                log_level: LogLevel::Off,
+                cli_colors: CliColors::Auto,
+                ..Config::default()
+            });
+
+            jail.set_env("ROCKET_CONFIG", "Other.toml");
+            jail.create_file("Other.toml", r#"
+                [default]
+                address = "1.2.3.4"
+                port = 1234
+                workers = 20
+                keep_alive = 10
+                log_level = "off"
+                cli_colors = "always"
+            "#)?;
+
+            let config = Config::from(Config::figment());
+            assert_eq!(config, Config {
+                address: Ipv4Addr::new(1, 2, 3, 4).into(),
+                port: 1234,
+                workers: 20,
+                keep_alive: 10,
+                log_level: LogLevel::Off,
+                cli_colors: CliColors::Always,
+                ..Config::default()
+            });
+
+            jail.set_env("ROCKET_CONFIG", "Other.toml");
+            jail.create_file("Other.toml", r#"
+                [default]
+                address = "1.2.3.4"
+                port = 1234
+                workers = 20
+                keep_alive = 10
+                log_level = "off"
+                cli_colors = true
+            "#)?;
+
+            let config = Config::from(Config::figment());
+            assert_eq!(config, Config {
+                address: Ipv4Addr::new(1, 2, 3, 4).into(),
+                port: 1234,
+                workers: 20,
+                keep_alive: 10,
+                log_level: LogLevel::Off,
+                cli_colors: CliColors::Auto,
+                ..Config::default()
+            });
+
+            jail.set_env("ROCKET_CONFIG", "Other.toml");
+            jail.create_file("Other.toml", r#"
+                [default]
+                address = "1.2.3.4"
+                port = 1234
+                workers = 20
+                keep_alive = 10
+                log_level = "off"
+                cli_colors = 1
+            "#)?;
+
+            let config = Config::from(Config::figment());
+            assert_eq!(config, Config {
+                address: Ipv4Addr::new(1, 2, 3, 4).into(),
+                port: 1234,
+                workers: 20,
+                keep_alive: 10,
+                log_level: LogLevel::Off,
+                cli_colors: CliColors::Auto,
                 ..Config::default()
             });
 

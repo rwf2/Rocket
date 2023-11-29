@@ -1,16 +1,17 @@
 use core::fmt;
 use serde::{
     de::{self, Unexpected::{Signed, Str}},
-    ser, Deserialize, Serialize
+    Deserialize, Serialize
 };
 
 /// Configure color output for logging.
-#[derive(Clone, Serialize, PartialEq, Debug)]
+#[derive(Clone, Serialize, PartialEq, Debug, Default)]
 pub enum CliColors {
     /// Always use colors in logs.
     Always,
 
     /// Use colors in logs if the terminal supports it.
+    #[default]
     Auto,
 
     /// Never use colors in logs.
@@ -26,6 +27,7 @@ impl fmt::Display for CliColors {
         }
     }
 }
+
 
 impl<'de> Deserialize<'de> for CliColors {
     fn deserialize<D: de::Deserializer<'de>>(de: D) -> Result<Self, D::Error> {
