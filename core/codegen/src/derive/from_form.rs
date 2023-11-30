@@ -11,9 +11,10 @@ type WherePredicates = syn::punctuated::Punctuated<syn::WherePredicate, syn::Tok
 
 // F: fn(field_ty: Ty, field_context: Expr)
 fn fields_map<F>(fields: Fields<'_>, map_f: F) -> Result<TokenStream>
-    where F: Fn(&syn::Type, &syn::Expr) -> TokenStream
+    where F: Fn(&syn::Type, &syn::Expr, &syn::Expr) -> TokenStream
 {
     let mut matchers = vec![];
+    let mut flattened_field = None;
     for field in fields.iter() {
         let (ident, ty) = (field.context_ident(), field.stripped_ty());
         let field_context: syn::Expr = syn::parse2(quote_spanned!(ty.span() => {
@@ -21,27 +22,45 @@ fn fields_map<F>(fields: Fields<'_>, map_f: F) -> Result<TokenStream>
             __c.#ident.get_or_insert_with(|| <#ty as #_form::FromForm<'r>>::init(__o))
         })).expect("form context expression");
 
-        let push = map_f(&ty, &field_context);
+        let push = |field: &syn::Expr| map_f(&ty, &field_context, field);
         if fields.are_unnamed() {
             // If we have unnamed fields, then we have exactly one by virtue of
             // the earlier validation. Push directly to it and return.
+            let push = push(&syn::parse2(quote!(__f.shift())).expect("field value expression"));
             return Ok(quote_spanned!(ident.span() =>
                 __c.__parent = __f.name.parent();
                  #push
             ));
         }
 
-        matchers.extend(field.field_names()?.into_iter().map(|f| match f {
-            Cased(name) => quote!(#name => { #push }),
-            Uncased(name) => quote!(__n if __n.as_uncased() == #name => { #push }),
-        }));
+        let is_flattened = field.is_flattened()?;
+
+        if is_flattened {
+            let push = push(&syn::parse2(quote!(__f)).expect("field value expression"));
+            if let Some(flattened_field) = flattened_field {
+                drop(flattened_field);
+                todo!("Emit an error.");
+            } else {
+                flattened_field = Some(push);
+            }
+        } else {
+            let push = push(&syn::parse2(quote!(__f.shift())).expect("field value expression"));
+            matchers.extend(field.field_names()?.into_iter().map(|f| match f {
+                Cased(name) => quote!(#name => { #push }),
+                Uncased(name) => quote!(__n if __n.as_uncased() == #name => { #push }),
+            }));
+        }
     }
 
+    // TODO: check in options that they aren't strict or pass to flattened fields strict = false.
+
+    let flattened_field = flattened_field.iter();
     Ok(quote! {
         __c.__parent = __f.name.parent();
 
         match __f.name.key_lossy().as_str() {
             #(#matchers,)*
+            #(_ => { #flattened_field },)*
             __k if __k == "_method" || !__c.__opts.strict => { /* ok */ },
             _ => __c.__errors.push(__f.unexpected()),
         }
@@ -184,8 +203,8 @@ pub fn derive_from_form(input: proc_macro::TokenStream) -> TokenStream {
                     #output
                 }
             })
-            .try_fields_map(|_, f| fields_map(f, |ty, ctxt| quote_spanned!(ty.span() => {
-                <#ty as #_form::FromForm<'r>>::push_value(#ctxt, __f.shift());
+            .try_fields_map(|_, f| fields_map(f, |ty, ctxt, field| quote_spanned!(ty.span() => {
+                <#ty as #_form::FromForm<'r>>::push_value(#ctxt, #field);
             })))
         )
         .inner_mapper(MapperBuild::new()
@@ -204,8 +223,8 @@ pub fn derive_from_form(input: proc_macro::TokenStream) -> TokenStream {
             })
             // Without the `let _fut`, we get a wild lifetime error. It don't
             // make no sense, Rust async/await: it don't make no sense.
-            .try_fields_map(|_, f| fields_map(f, |ty, ctxt| quote_spanned!(ty.span() => {
-                let _fut = <#ty as #_form::FromForm<'r>>::push_data(#ctxt, __f.shift());
+            .try_fields_map(|_, f| fields_map(f, |ty, ctxt, field| quote_spanned!(ty.span() => {
+                let _fut = <#ty as #_form::FromForm<'r>>::push_data(#ctxt, #field);
                 _fut.await;
             })))
         )

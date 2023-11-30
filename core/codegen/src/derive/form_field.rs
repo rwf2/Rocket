@@ -21,6 +21,7 @@ pub struct FieldAttr {
     pub validate: Option<SpanWrapped<syn::Expr>>,
     pub default: Option<syn::Expr>,
     pub default_with: Option<syn::Expr>,
+    pub flatten: Option<bool>,
 }
 
 impl FieldAttr {
@@ -35,6 +36,7 @@ pub(crate) trait FieldExt {
     fn first_field_name(&self) -> Result<Option<FieldName>>;
     fn stripped_ty(&self) -> syn::Type;
     fn name_buf_opt(&self) -> Result<TokenStream>;
+    fn is_flattened(&self) -> Result<bool>;
 }
 
 #[derive(FromMeta)]
@@ -209,6 +211,13 @@ impl FieldExt for Field<'_> {
         Ok(field_names.first()
             .map(|name| quote_spanned!(span => Some(#_form::NameBuf::from((__c.__parent, #name)))))
             .unwrap_or_else(|| quote_spanned!(span => None::<#_form::NameBuf>)))
+    }
+
+    fn is_flattened(&self) -> Result<bool> {
+        Ok(FieldAttr::from_attrs(FieldAttr::NAME, &self.attrs)?
+            .into_iter()
+            .filter_map(|attr| attr.flatten)
+            .last().unwrap_or(false))
     }
 }
 
