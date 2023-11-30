@@ -90,7 +90,7 @@ async fn destroy(mut db: Connection<Db>) -> Result<()> {
 }
 
 pub fn stage() -> AdHoc {
-    AdHoc::on_ignite("Diesel SQLite Stage", |rocket| async {
+    AdHoc::on_ignite("Diesel MySQL Stage", |rocket| async {
         rocket.attach(Db::init())
             .mount("/diesel-async", routes![list, read, create, delete, destroy])
     })
