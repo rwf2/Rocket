@@ -454,7 +454,7 @@ impl Event {
 ///    Alternatively, as described before, use SSE as a notifier which alerts
 ///    the client to fetch the data from elsewhere.
 ///
-///  * **Raw SSE is Lossy**
+///  * **Raw SSE is lossy**
 ///
 ///    Data sent via SSE cannot contain new lines `\n` or carriage returns `\r`
 ///    due to interference with the line protocol.
@@ -475,6 +475,14 @@ impl Event {
 ///
 ///    To send messages losslessly, they must be encoded first, for instance, by
 ///    using [`Event::json()`].
+/// 
+///  * **Clients manage closing connections**
+///
+///    In the [SSE Standard] it is stipulated that clients will reconnect if the
+///    connection is closed and will only stop reconnecting if they receive a 
+///    `HTTP 204 No Content` response code (or close the connection themselves).
+///
+///    [SSE standard]: https://html.spec.whatwg.org/multipage/server-sent-events.html
 pub struct EventStream<S> {
     stream: S,
     heartbeat: Option<Duration>,
