@@ -10,7 +10,7 @@ use crate::fs::FileName;
 
 use tokio::task;
 use tokio::fs::{self, File};
-use tokio::io::{AsyncWriteExt, AsyncBufRead, BufReader};
+use tokio::io::{AsyncBufRead, BufReader};
 use tempfile::{NamedTempFile, TempPath};
 use either::Either;
 
@@ -189,8 +189,7 @@ impl<'v> TempFile<'v> {
                 }
             }
             TempFile::Buffered { content } => {
-                let mut file = File::create(&new_path).await?;
-                file.write_all(content).await?;
+                fs::write(&new_path, &content).await?;
                 *self = TempFile::File {
                     file_name: None,
                     content_type: None,
@@ -228,10 +227,12 @@ impl<'v> TempFile<'v> {
     ///     # let some_other_path = std::env::temp_dir().join("some-other.txt");
     ///     file.copy_to(&some_other_path).await?;
     ///     assert_eq!(file.path(), Some(&*some_path));
+    ///     # assert_eq!(std::fs::read(some_path).unwrap(), b"hi");
+    ///     # assert_eq!(std::fs::read(some_other_path).unwrap(), b"hi");
     ///
     ///     Ok(())
     /// }
-    /// # let file = TempFile::Buffered { content: "hi".as_bytes() };
+    /// # let file = TempFile::Buffered { content: b"hi" };
     /// # rocket::async_test(handle(file)).unwrap();
     /// ```
     pub async fn copy_to<P>(&mut self, path: P) -> io::Result<()>
@@ -257,8 +258,7 @@ impl<'v> TempFile<'v> {
             }
             TempFile::Buffered { content } => {
                 let path = path.as_ref();
-                let mut file = File::create(path).await?;
-                file.write_all(content).await?;
+                fs::write(&path, &content).await?;
                 *self = TempFile::File {
                     file_name: None,
                     content_type: None,
@@ -393,10 +393,11 @@ impl<'v> TempFile<'v> {
     ///     # let some_path = std::env::temp_dir().join("some-path.txt");
     ///     file.persist_to(&some_path).await?;
     ///     assert_eq!(file.path(), Some(&*some_path));
+    ///     # assert_eq!(std::fs::read(some_path).unwrap(), b"hi");
     ///
     ///     Ok(())
     /// }
-    /// # let file = TempFile::Buffered { content: "hi".as_bytes() };
+    /// # let file = TempFile::Buffered { content: b"hi" };
     /// # rocket::async_test(handle(file)).unwrap();
     /// ```
     pub fn path(&self) -> Option<&Path> {
