@@ -69,7 +69,7 @@ fn tls_server_operation() {
     let cert = reqwest::Certificate::from_pem(&buf).unwrap();
 
     let client = reqwest::blocking::Client::builder().add_root_certificate(cert).build().unwrap();
-    std::thread::sleep(std::time::Duration::from_secs(5));
+    std::thread::sleep(std::time::Duration::from_secs(5)); // Replace with multiple tests rather than fixed wait time
     
     let response = client.get(&request_url).send();
     assert_eq!(&response.unwrap().text().unwrap(), "world");

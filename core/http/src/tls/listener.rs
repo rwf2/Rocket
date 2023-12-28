@@ -1,17 +1,18 @@
 use std::io;
+use std::path::PathBuf;
 use std::pin::Pin;
 use std::sync::Arc;
 use std::task::{Context, Poll};
 use std::future::Future;
 use std::net::SocketAddr;
 
-use rustls::sign::{SigningKey, CertifiedKey};
+use rustls::sign::CertifiedKey;
+use rustls::server::{ServerSessionMemoryCache, ServerConfig, WebPkiClientVerifier};
+
 use tokio::net::{TcpListener, TcpStream};
 use tokio::io::{AsyncRead, AsyncWrite};
 use tokio_rustls::{Accept, TlsAcceptor, server::TlsStream as BareTlsStream};
 
-use rustls::pki_types::{CertificateDer, PrivateKeyDer};
-use rustls::server::{ServerSessionMemoryCache, ServerConfig, WebPkiClientVerifier};
 
 use crate::tls::util::{load_cert_chain, load_key, load_ca_certs};
 use crate::listener::{Connection, Listener, Certificates};
@@ -65,36 +66,78 @@ pub enum TlsState {
     Streaming(BareTlsStream<TcpStream>),
 }
 
+#[derive(Clone)]
+pub enum FileOrBytes {
+    File(PathBuf),
+    Bytes(Vec<u8>),
+}
+
 /// TLS as ~configured by `TlsConfig` in `rocket` core.
 pub struct Config<R> {
-    pub cert_chain: R,
-    pub private_key: R,
+    //pub cert_chain: R,
+    //pub private_key: R,
+    pub cert_chain: FileOrBytes,
+    pub private_key: FileOrBytes,
     pub ciphersuites: Vec<rustls::SupportedCipherSuite>,
     pub prefer_server_order: bool,
     pub ca_certs: Option<R>,
     pub mandatory_mtls: bool,
 }
 
-#[derive(Debug)]
-pub struct CertResolver {
-    pub certified_key: Arc<CertifiedKey>,
+type Reader = Box<dyn std::io::BufRead + Sync + Send>;
+
+fn to_reader(value: &FileOrBytes) -> io::Result<Reader> {
+    match value {
+        FileOrBytes::File(path) => {
+            let file = std::fs::File::open(&path).map_err(move |e| {
+                let msg = format!("error reading TLS file `{}`", e);
+                std::io::Error::new(e.kind(), msg)
+            })?;
+
+            Ok(Box::new(io::BufReader::new(file)))
+        }
+        FileOrBytes::Bytes(vec) => Ok(Box::new(io::Cursor::new(vec.clone()))),
+    }
 }
 
-impl  CertResolver {
-    pub fn new<R>(private_key: &mut R, cert_chain: &mut R) -> crate::tls::Result<Arc<Self>>
+#[derive(Debug)]
+pub struct CertResolver {
+    pub certified_key: Arc<std::sync::Mutex<Option<Arc<CertifiedKey>>>>,
+    _handle: tokio::task::JoinHandle<()>,
+
+}
+
+impl CertResolver {
+    pub async fn new<R>(config: &Config<R>) -> crate::tls::Result<Arc<Self>>
         where R: io::BufRead 
     { 
 
-        let key = load_key(private_key)?;
-        let cert_chain = load_cert_chain(cert_chain)?;
+        let certified_key = Arc::new(std::sync::Mutex::new(None));
 
-        let certified_key = CertifiedKey::new(
-            cert_chain, 
-            rustls::crypto::ring::sign::any_supported_type(&key).unwrap()
-        );
+        let private_key = config.private_key.to_owned();
+        let cert_chain = config.cert_chain.to_owned();
+
+        let loop_mutex = certified_key.clone(); 
+        let handle = tokio::spawn(async move {
+
+            loop {
+                if let Ok(mut certified_key) = loop_mutex.lock() {
+                    let key = load_key(&mut to_reader(&private_key).unwrap()).unwrap();
+                    let cert_chain = load_cert_chain(&mut to_reader(&cert_chain).unwrap()).unwrap();
+            
+                    *certified_key = Some(Arc::new(CertifiedKey::new(
+                        cert_chain, 
+                        rustls::crypto::ring::sign::any_supported_type(&key).unwrap()
+                    )));
+                }
+                tokio::time::sleep(std::time::Duration::from_secs(30)).await;
+            }
+        });
+
 
         Ok(Arc::new(Self {
-            certified_key: Arc::new(certified_key),
+            certified_key: certified_key,
+            _handle: handle,
 
         }))
     }
@@ -102,7 +145,9 @@ impl  CertResolver {
 
 impl rustls::server::ResolvesServerCert for CertResolver {
     fn resolve(&self, _client_hello: rustls::server::ClientHello<'_>) -> Option<Arc<CertifiedKey>> {
-        Some(self.certified_key.clone())
+        let mut cert = self.certified_key.lock().unwrap();
+        if cert.is_none() { return None; }
+        Some(cert.as_mut().unwrap().clone())
     }
 }
 

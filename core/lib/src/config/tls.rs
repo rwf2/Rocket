@@ -659,8 +659,16 @@ mod with_tls_feature {
         /// This is only called when TLS is enabled.
         pub(crate) fn to_native_config(&self) -> io::Result<Config<Reader>> {
             Ok(Config {
-                cert_chain: to_reader(&self.certs)?,
-                private_key: to_reader(&self.key)?,
+                //cert_chain: to_reader(&self.certs)?,
+                //private_key: to_reader(&self.key)?,
+                cert_chain: match &self.certs {
+                    Either::Left(file) => crate::http::tls::FileOrBytes::File(file.relative()),
+                    Either::Right(bytes) => crate::http::tls::FileOrBytes::Bytes(bytes.clone()),
+                },
+                private_key: match &self.key {
+                    Either::Left(file) => crate::http::tls::FileOrBytes::File(file.relative()),
+                    Either::Right(bytes) => crate::http::tls::FileOrBytes::Bytes(bytes.clone()),
+                },
                 ciphersuites: self.rustls_ciphers().collect(),
                 prefer_server_order: self.prefer_server_cipher_order,
                 #[cfg(not(feature = "mtls"))]
