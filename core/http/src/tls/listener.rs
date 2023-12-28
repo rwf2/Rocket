@@ -5,13 +5,16 @@ use std::task::{Context, Poll};
 use std::future::Future;
 use std::net::SocketAddr;
 
+use rustls::sign::{SigningKey, CertifiedKey};
 use tokio::net::{TcpListener, TcpStream};
 use tokio::io::{AsyncRead, AsyncWrite};
 use tokio_rustls::{Accept, TlsAcceptor, server::TlsStream as BareTlsStream};
+
+use rustls::pki_types::{CertificateDer, PrivateKeyDer};
 use rustls::server::{ServerSessionMemoryCache, ServerConfig, WebPkiClientVerifier};
 
 use crate::tls::util::{load_cert_chain, load_key, load_ca_certs};
-use crate::listener::{Connection, Listener, Certificates, CertificateDer};
+use crate::listener::{Connection, Listener, Certificates};
 
 /// A TLS listener over TCP.
 pub struct TlsListener {
@@ -72,9 +75,40 @@ pub struct Config<R> {
     pub mandatory_mtls: bool,
 }
 
+#[derive(Debug)]
+pub struct CertResolver {
+    pub certified_key: Arc<CertifiedKey>,
+}
+
+impl  CertResolver {
+    pub fn new<R>(private_key: &mut R, cert_chain: &mut R) -> crate::tls::Result<Arc<Self>>
+        where R: io::BufRead 
+    { 
+
+        let key = load_key(private_key)?;
+        let cert_chain = load_cert_chain(cert_chain)?;
+
+        let certified_key = CertifiedKey::new(
+            cert_chain, 
+            rustls::crypto::ring::sign::any_supported_type(&key).unwrap()
+        );
+
+        Ok(Arc::new(Self {
+            certified_key: Arc::new(certified_key),
+
+        }))
+    }
+}
+
+impl rustls::server::ResolvesServerCert for CertResolver {
+    fn resolve(&self, _client_hello: rustls::server::ClientHello<'_>) -> Option<Arc<CertifiedKey>> {
+        Some(self.certified_key.clone())
+    }
+}
+
 impl TlsListener {
-    pub async fn bind<R>(addr: SocketAddr, mut c: Config<R>) -> crate::tls::Result<TlsListener>
-        where R: io::BufRead
+    pub async fn bind<R, T>(addr: SocketAddr, mut c: Config<R>, cert_resolver: Arc<T>) -> crate::tls::Result<TlsListener>
+        where R: io::BufRead, T: rustls::server::ResolvesServerCert + 'static
     {
         let provider = rustls::crypto::CryptoProvider {
             cipher_suites: c.ciphersuites,
@@ -93,12 +127,10 @@ impl TlsListener {
             None => WebPkiClientVerifier::no_client_auth(),
         };
 
-        let key = load_key(&mut c.private_key)?;
-        let cert_chain = load_cert_chain(&mut c.cert_chain)?;
         let mut config = ServerConfig::builder_with_provider(Arc::new(provider))
             .with_safe_default_protocol_versions()?
             .with_client_cert_verifier(verifier)
-            .with_single_cert(cert_chain, key)?;
+            .with_cert_resolver(cert_resolver);
 
         config.ignore_client_order = c.prefer_server_order;
         config.session_storage = ServerSessionMemoryCache::new(1024);
@@ -176,7 +208,7 @@ impl TlsStream {
                         Ok(stream) => {
                             if let Some(peer_certs) = stream.get_ref().1.peer_certificates() {
                                 self.certs.set(peer_certs.into_iter()
-                                    .map(|v| CertificateDer(v.clone().into_owned()))
+                                    .map(|v| crate::listener::CertificateDer(v.clone().into_owned()))
                                     .collect());
                             }
 

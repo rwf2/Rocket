@@ -4,7 +4,7 @@ mod listener;
 pub mod mtls;
 
 pub use rustls;
-pub use listener::{TlsListener, Config};
+pub use listener::{TlsListener, Config, CertResolver};
 pub mod util;
 pub mod error;
 
