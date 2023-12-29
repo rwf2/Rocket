@@ -102,7 +102,7 @@ fn to_reader(value: &FileOrBytes) -> io::Result<Reader> {
 
 #[derive(Debug)]
 pub struct CertResolver {
-    pub certified_key: Arc<std::sync::Mutex<Option<Arc<CertifiedKey>>>>,
+    pub certified_key: Arc<std::sync::RwLock<Option<Arc<CertifiedKey>>>>,
     _handle: tokio::task::JoinHandle<()>,
 
 }
@@ -112,7 +112,7 @@ impl CertResolver {
         where R: io::BufRead 
     { 
 
-        let certified_key = Arc::new(std::sync::Mutex::new(None));
+        let certified_key = Arc::new(std::sync::RwLock::new(None));
 
         let private_key = config.private_key.to_owned();
         let cert_chain = config.cert_chain.to_owned();
@@ -121,7 +121,7 @@ impl CertResolver {
         let handle = tokio::spawn(async move {
 
             loop {
-                if let Ok(mut certified_key) = loop_mutex.lock() {
+                if let Ok(mut certified_key) = loop_mutex.write() {
                     let key = load_key(&mut to_reader(&private_key).unwrap()).unwrap();
                     let cert_chain = load_cert_chain(&mut to_reader(&cert_chain).unwrap()).unwrap();
             
@@ -145,9 +145,9 @@ impl CertResolver {
 
 impl rustls::server::ResolvesServerCert for CertResolver {
     fn resolve(&self, _client_hello: rustls::server::ClientHello<'_>) -> Option<Arc<CertifiedKey>> {
-        let mut cert = self.certified_key.lock().unwrap();
+        let cert = self.certified_key.read().unwrap();
         if cert.is_none() { return None; }
-        Some(cert.as_mut().unwrap().clone())
+        Some(cert.as_ref().unwrap().clone())
     }
 }
 
