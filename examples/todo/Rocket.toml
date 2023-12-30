@@ -2,6 +2,6 @@
 template_dir = "static"
 
 [default.databases.epic_todo_database]
-url = "postgresql://postgres@localhost:5432/epic_todo_database"
+url = "postgresql://rocket_runner:password@localhost:5432/epic_todo_database"
 max_connections = 1
 connect_timeout = 5
