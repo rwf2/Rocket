@@ -1,7 +1,7 @@
 use std::io;
 use std::path::PathBuf;
 use std::pin::Pin;
-use std::sync::Arc;
+use std::sync::{Arc, RwLock};
 use std::task::{Context, Poll};
 use std::future::Future;
 use std::net::SocketAddr;
@@ -111,6 +111,7 @@ fn to_reader(value: &FileOrBytes) -> io::Result<Reader> {
 pub struct CertResolver {
     pub certified_key: Arc<std::sync::RwLock<Option<Arc<CertifiedKey>>>>,
     _handle: tokio::task::JoinHandle<()>,
+    last_loaded: Arc<RwLock<std::time::SystemTime>>,
 
 }
 
@@ -120,16 +121,54 @@ impl CertResolver {
     { 
 
         let certified_key = Arc::new(std::sync::RwLock::new(None));
+        let last_loaded = Arc::new(RwLock::new(std::time::SystemTime::now()));
 
         let private_key = config.private_key.to_owned();
         let cert_chain = config.cert_chain.to_owned();
 
         let loop_mutex = certified_key.clone();
         let loop_updater = config.tls_updater.as_ref().map(|i| i.clone());
+        let loop_last_loaded = last_loaded.clone();
 
         let handle = tokio::spawn(async move {
             
+
             loop {
+
+                // Have to be careful for file system errors here, if the user swapping file as part of the hot-swap
+                // process we could find files missing, or incorrect file pairs as files are copied in
+                match (&cert_chain, &private_key) {
+                    (FileOrBytes::File(cert_chain_path), FileOrBytes::File(private_key_path)) => {
+
+                        let last_modified_certs_chain = 
+                            if let Ok(metadata) = std::fs::metadata(cert_chain_path) {
+                                metadata.modified().ok()
+                            } else {
+                                None
+                            };
+
+                        let last_modified_private_key =
+                            if let Ok(metadata) = std::fs::metadata(private_key_path) {
+                                metadata.modified().ok()
+                            } else {
+                                None
+                            };
+                        
+                        if last_modified_certs_chain.is_some() && last_modified_private_key.is_some() {
+                            let last_loaded = loop_last_loaded.read().unwrap();
+                            // Duration since will return Err(...) if the time given is in the future, i.e. if either
+                            // of the file time are more recent than the last loaded time then this will triffer the
+                            // conditional
+                            if last_loaded.duration_since(last_modified_certs_chain.unwrap()).is_err()
+                                || last_loaded.duration_since(last_modified_private_key.unwrap()).is_err() {
+                                dbg!("Should do reload now");
+                            }
+                        }
+
+                    }
+                    _ => (),
+                }
+
                 if let Ok(mut certified_key) = loop_mutex.write() {
                     let key = load_key(&mut to_reader(&private_key).unwrap()).unwrap();
                     let cert_chain = load_cert_chain(&mut to_reader(&cert_chain).unwrap()).unwrap();
@@ -144,7 +183,7 @@ impl CertResolver {
                     dbg!(loop_updater.read());
                 }
                 
-                tokio::time::sleep(std::time::Duration::from_secs(30)).await;
+                tokio::time::sleep(std::time::Duration::from_secs(10)).await;
             }
         });
 
@@ -152,6 +191,7 @@ impl CertResolver {
         Ok(Arc::new(Self {
             certified_key: certified_key,
             _handle: handle,
+            last_loaded: last_loaded,
 
         }))
     }

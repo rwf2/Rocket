@@ -97,9 +97,9 @@ fn tls_server_operation_dynamic_certs() {
     use rocket::figment::Figment;
 
     let secret_key = SecretKey::generate().expect("get key");
-    let cert_path = relative!("../../examples/tls/private/rsa_sha256_cert.pem");
-    let key_path = relative!("../../examples/tls/private/rsa_sha256_key.pem");
-    let ca_cert_path = relative!("../../examples/tls/private/ca_cert.pem");
+    let cert_path = relative!("./tests/private/one/rsa_sha256_cert.pem");
+    let key_path = relative!("./tests/private/one/rsa_sha256_key.pem");
+    let ca_cert_path = relative!("./tests/private/one/ca_cert.pem");
 
     let port = match std::net::TcpListener::bind(("127.0.0.1", 0)) {
             Ok(listener) => Some(listener.local_addr().unwrap().port()),
