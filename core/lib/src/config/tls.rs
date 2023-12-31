@@ -91,11 +91,30 @@ pub struct TlsConfig {
     /// Whether to prefer the server's cipher suite order over the client's.
     #[serde(default)]
     pub(crate) prefer_server_cipher_order: bool,
+    #[serde(skip)]
+    pub(crate) tls_updater: Option<TlsUpdater>,
     /// Configuration for mutual TLS, if any.
     #[serde(default)]
     #[cfg(feature = "mtls")]
     #[cfg_attr(nightly, doc(cfg(feature = "mtls")))]
     pub(crate) mutual: Option<MutualTls>,
+}
+
+#[derive(Default, Debug)]
+pub (crate) struct TlsUpdater {
+    pub(crate) tls_updater: std::sync::Arc<std::sync::RwLock<crate::http::tls::DynamicConfig>>,
+}
+
+impl PartialEq for TlsUpdater {
+    fn eq(&self, other: &Self) -> bool {
+        true
+    }
+}
+
+impl Clone for TlsUpdater {
+    fn clone(&self) -> Self {
+        Self { tls_updater: self.tls_updater.clone() }
+    }
 }
 
 /// Mutual TLS configuration.
@@ -254,6 +273,7 @@ impl TlsConfig {
             key: Either::Right(vec![]),
             ciphers: CipherSuite::default_set(),
             prefer_server_cipher_order: false,
+            tls_updater: None,
             #[cfg(feature = "mtls")]
             mutual: None,
         }
@@ -300,6 +320,11 @@ impl TlsConfig {
             key: Either::Right(key.to_vec()),
             ..TlsConfig::default()
         }
+    }
+
+
+    pub fn with_tls_loader(&mut self, loader: &std::sync::Arc<std::sync::RwLock<crate::http::tls::DynamicConfig>>) {
+        self.tls_updater = Some(TlsUpdater{tls_updater: loader.clone()});
     }
 
     /// Sets the cipher suites supported by the server and their order of
@@ -671,6 +696,7 @@ mod with_tls_feature {
                 },
                 ciphersuites: self.rustls_ciphers().collect(),
                 prefer_server_order: self.prefer_server_cipher_order,
+                tls_updater: self.tls_updater.as_ref().map(|i| i.tls_updater.clone()),
                 #[cfg(not(feature = "mtls"))]
                 mandatory_mtls: false,
                 #[cfg(not(feature = "mtls"))]
@@ -708,4 +734,7 @@ mod with_tls_feature {
             })
         }
     }
+
+
+
 }

@@ -426,7 +426,7 @@ impl Rocket<Orbit> {
             if let Some(ref config) = self.config.tls {
                 use crate::http::tls::TlsListener;
 
-                let mut conf = config.to_native_config().map_err(ErrorKind::Io)?;
+                let conf = config.to_native_config().map_err(ErrorKind::Io)?;
                 let cert_resolver = crate::http::tls::CertResolver::new(&conf).await.unwrap();
 
                 let l = TlsListener::bind(addr, conf, cert_resolver).await.map_err(ErrorKind::TlsBind)?;

@@ -544,6 +544,11 @@ impl Rocket<Build> {
         let mut config = Config::try_from(&self.figment).map_err(ErrorKind::Config)?;
         crate::log::init(&config);
 
+        let mut dynamic_tls_config = self.state.try_get::<std::sync::Arc<std::sync::RwLock<crate::http::tls::DynamicConfig>>>();
+        if let Some(dynamic_tls_config) = dynamic_tls_config.take() {
+            config.with_tls_loader(dynamic_tls_config);
+        }
+
         // Check for safely configured secrets.
         #[cfg(feature = "secrets")]
         if !config.secret_key.is_provided() {

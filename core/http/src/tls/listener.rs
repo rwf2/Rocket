@@ -82,6 +82,13 @@ pub struct Config<R> {
     pub prefer_server_order: bool,
     pub ca_certs: Option<R>,
     pub mandatory_mtls: bool,
+    pub tls_updater: Option<std::sync::Arc<std::sync::RwLock<DynamicConfig>>>,
+}
+
+#[derive(Debug, Default)]
+pub struct DynamicConfig {
+    pub certs: Vec<u8>,
+    pub key: Vec<u8>,
 }
 
 type Reader = Box<dyn std::io::BufRead + Sync + Send>;
@@ -117,9 +124,11 @@ impl CertResolver {
         let private_key = config.private_key.to_owned();
         let cert_chain = config.cert_chain.to_owned();
 
-        let loop_mutex = certified_key.clone(); 
-        let handle = tokio::spawn(async move {
+        let loop_mutex = certified_key.clone();
+        let loop_updater = config.tls_updater.as_ref().map(|i| i.clone());
 
+        let handle = tokio::spawn(async move {
+            
             loop {
                 if let Ok(mut certified_key) = loop_mutex.write() {
                     let key = load_key(&mut to_reader(&private_key).unwrap()).unwrap();
@@ -130,6 +139,11 @@ impl CertResolver {
                         rustls::crypto::ring::sign::any_supported_type(&key).unwrap()
                     )));
                 }
+
+                if let Some(loop_updater) = loop_updater.clone() {
+                    dbg!(loop_updater.read());
+                }
+                
                 tokio::time::sleep(std::time::Duration::from_secs(30)).await;
             }
         });

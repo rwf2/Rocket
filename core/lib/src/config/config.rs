@@ -362,6 +362,17 @@ impl Config {
         #[cfg(not(feature = "mtls"))] { false }
     }
 
+    pub fn with_tls_loader(&mut self, loader: &std::sync::Arc<std::sync::RwLock<crate::http::tls::DynamicConfig>>) {
+        // Cannot add tls loader if tls is not set
+        if self.tls.is_none() {
+            return;
+        }
+
+        let mut config = self.tls.take().unwrap();
+        config.with_tls_loader(loader);
+        self.tls = Some(config);
+    }
+
     #[cfg(feature = "secrets")]
     pub(crate) fn known_secret_key_used(&self) -> bool {
         const KNOWN_SECRET_KEYS: &'static [&'static str] = &[
