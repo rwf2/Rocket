@@ -85,7 +85,7 @@ pub struct Config<R> {
     pub tls_updater: Option<std::sync::Arc<std::sync::RwLock<DynamicConfig>>>,
 }
 
-#[derive(Debug, Default)]
+#[derive(Clone, Debug, Default, PartialEq)]
 pub struct DynamicConfig {
     pub certs: Vec<u8>,
     pub key: Vec<u8>,
@@ -111,8 +111,6 @@ fn to_reader(value: &FileOrBytes) -> io::Result<Reader> {
 pub struct CertResolver {
     pub certified_key: Arc<std::sync::RwLock<Option<Arc<CertifiedKey>>>>,
     _handle: tokio::task::JoinHandle<()>,
-    last_loaded: Arc<RwLock<std::time::SystemTime>>,
-
 }
 
 impl CertResolver {
@@ -121,19 +119,24 @@ impl CertResolver {
     { 
 
         let certified_key = Arc::new(std::sync::RwLock::new(None));
-        let last_loaded = Arc::new(RwLock::new(std::time::SystemTime::now()));
 
         let private_key = config.private_key.to_owned();
         let cert_chain = config.cert_chain.to_owned();
 
-        let loop_mutex = certified_key.clone();
+        let loop_certified_key = certified_key.clone();
         let loop_updater = config.tls_updater.as_ref().map(|i| i.clone());
-        let loop_last_loaded = last_loaded.clone();
 
         let handle = tokio::spawn(async move {
-            
 
+            let mut dynamic_certs = None;
+            let mut first_load = true;
+            let mut do_load = false;
+
+            let mut last_loaded = std::time::SystemTime::now();
+            
             loop {
+
+                let mut reload_pair = None;
 
                 // Have to be careful for file system errors here, if the user swapping file as part of the hot-swap
                 // process we could find files missing, or incorrect file pairs as files are copied in
@@ -154,33 +157,72 @@ impl CertResolver {
                                 None
                             };
                         
-                        if last_modified_certs_chain.is_some() && last_modified_private_key.is_some() {
-                            let last_loaded = loop_last_loaded.read().unwrap();
+                        if first_load || (last_modified_certs_chain.is_some() && last_modified_private_key.is_some()) {
                             // Duration since will return Err(...) if the time given is in the future, i.e. if either
                             // of the file time are more recent than the last loaded time then this will triffer the
                             // conditional
-                            if last_loaded.duration_since(last_modified_certs_chain.unwrap()).is_err()
-                                || last_loaded.duration_since(last_modified_private_key.unwrap()).is_err() {
-                                dbg!("Should do reload now");
+                            if first_load || (last_loaded.duration_since(last_modified_certs_chain.unwrap()).is_err()
+                                || last_loaded.duration_since(last_modified_private_key.unwrap()).is_err()) {
+
+                                    // Attempt to open and load cert_chain and private_key from files
+                                    let loaded_cert_chain  = if let Ok(file) = std::fs::File::open(&cert_chain_path) {
+                                        load_cert_chain(&mut io::BufReader::new(file)).ok()
+                                    } else {
+                                        None
+                                    };
+
+                                    let loaded_private_key  = if let Ok(file) = std::fs::File::open(&private_key_path) {
+                                        load_key(&mut io::BufReader::new(file)).ok()
+                                    } else {
+                                        None
+                                    };
+
+                                    if loaded_cert_chain.is_some() && loaded_private_key.is_some() {
+                                        reload_pair = Some((loaded_cert_chain.unwrap(), loaded_private_key.unwrap()));
+                                    }
                             }
                         }
 
                     }
-                    _ => (),
+                    _ => (), // File/Vec, Vec/File and Vec/Vec options will not reload
                 }
 
-                if let Ok(mut certified_key) = loop_mutex.write() {
-                    let key = load_key(&mut to_reader(&private_key).unwrap()).unwrap();
-                    let cert_chain = load_cert_chain(&mut to_reader(&cert_chain).unwrap()).unwrap();
-            
-                    *certified_key = Some(Arc::new(CertifiedKey::new(
-                        cert_chain, 
-                        rustls::crypto::ring::sign::any_supported_type(&key).unwrap()
-                    )));
+                if let Some(loop_updater) = loop_updater.as_ref() {
+                    if let Ok(certs) = loop_updater.read() {
+                        if dynamic_certs.is_none() || *certs != *dynamic_certs.as_ref().unwrap() {
+                            dynamic_certs = Some(certs.clone());
+                            
+                            let loaded_cert_chain = load_cert_chain(&mut io::Cursor::new(certs.certs.clone()));
+                            let loaded_private_key = load_key(&mut io::Cursor::new(certs.key.clone()));
+
+                            if loaded_cert_chain.is_ok() && loaded_private_key.is_ok() {
+                                reload_pair = Some((
+                                    loaded_cert_chain.unwrap(),
+                                    loaded_private_key.unwrap(),    
+                                ));
+                                do_load = true; // Load immediately
+                            }
+                        }
+                    }
                 }
 
-                if let Some(loop_updater) = loop_updater.clone() {
-                    dbg!(loop_updater.read());
+                if reload_pair.is_some() {
+                    if (first_load || do_load) {
+                        let reload_pair = reload_pair.unwrap();
+                        if let Ok(mut certified_key) = loop_certified_key.write() {    
+                            dbg!("loading a new key");
+                            *certified_key = Some(Arc::new(CertifiedKey::new(
+                                reload_pair.0, 
+                                rustls::crypto::ring::sign::any_supported_type(&reload_pair.1).unwrap()
+                            )));
+                            last_loaded = std::time::SystemTime::now();
+                        }
+                        do_load = false;
+                        first_load = false;
+                    } else {
+                        do_load = true; // Do the load this time round
+                        dbg!("Defer load");
+                    }
                 }
                 
                 tokio::time::sleep(std::time::Duration::from_secs(10)).await;
@@ -191,7 +233,6 @@ impl CertResolver {
         Ok(Arc::new(Self {
             certified_key: certified_key,
             _handle: handle,
-            last_loaded: last_loaded,
 
         }))
     }

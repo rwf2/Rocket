@@ -85,7 +85,16 @@ fn tls_server_operation() {
 
 
 #[get("/hello")]
-fn tls_test_path_state()  -> &'static str{
+fn tls_test_path_state(dynamic_certs: &rocket::State<std::sync::Arc<std::sync::RwLock<rocket::http::tls::DynamicConfig>>>)  -> &'static str{
+
+    if let Ok(mut dynamic_certs) = dynamic_certs.write() {
+        let cert_path = relative!("./tests/private/two/rsa_sha256_cert.pem");
+        let key_path = relative!("./tests/private/two/rsa_sha256_key.pem");
+
+        dynamic_certs.certs = std::fs::read(cert_path).unwrap();
+        dynamic_certs.key = std::fs::read(key_path).unwrap();
+    }
+    
     "world"
 }
 
@@ -147,14 +156,24 @@ fn tls_server_operation_dynamic_certs() {
     std::fs::File::open(ca_cert_path).unwrap().read_to_end(&mut buf).unwrap();
     let cert = reqwest::Certificate::from_pem(&buf).unwrap();
 
-    let client = reqwest::blocking::Client::builder().add_root_certificate(cert).build().unwrap();
+    let client = reqwest::blocking::Client::builder().add_root_certificate(cert.clone()).build().unwrap();
     
     // Replace with multiple tests rather than fixed wait time
-    std::thread::sleep(std::time::Duration::from_secs(5));
-
+    std::thread::sleep(std::time::Duration::from_secs(2));
+    
     let response = client.get(&request_url).send();
     assert_eq!(&response.unwrap().text().unwrap(), "world");
 
+    // Calling /hello will cause the keys to update to use the ./two set of keys
+    // so subsequent calls should fail - however it takes at least 30 seconds for the
+    // new keys to be applied
+    //
+    // A new client is required to ensure a new connection is created
+    std::thread::sleep(std::time::Duration::from_secs(31));
+    let client = reqwest::blocking::Client::builder().add_root_certificate(cert).build().unwrap();
+    let response = client.get(&request_url).send();
+    assert!(response.is_err());
+    
     shutdown_signal_sender.blocking_send(()).unwrap();
     join_handle.join().unwrap();
 
