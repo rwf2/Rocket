@@ -205,13 +205,17 @@ pub mod pg {
         fn make_tls_connect(&mut self, domain: &str) -> Result<Self::TlsConnect, Self::Error> {
             match self {
                 MaybeTlsConnector::NoTls(connector) => {
-                    <postgres::tls::NoTls as postgres::tls::MakeTlsConnect<postgres::Socket>>::make_tls_connect(connector, domain)
+                    <postgres::tls::NoTls as postgres::tls::MakeTlsConnect<postgres::Socket>>
+                        ::make_tls_connect(connector, domain)
                         .map(Self::TlsConnect::NoTls)
                         .map_err(Self::Error::NoTls)
                 },
                 #[cfg(feature = "postgres_pool_tls")]
                 MaybeTlsConnector::Tls(connector) => {
-                    <postgres_native_tls::MakeTlsConnector as postgres::tls::MakeTlsConnect<postgres::Socket>>::make_tls_connect(connector, domain)
+                    <
+                        postgres_native_tls::MakeTlsConnector as
+                        postgres::tls::MakeTlsConnect<postgres::Socket>
+                    >::make_tls_connect(connector, domain)
                         .map(Self::TlsConnect::Tls)
                         .map_err(Self::Error::Tls)
                 },
@@ -239,21 +243,33 @@ pub mod pg {
     }
 
     impl tokio::io::AsyncRead for MaybeTlsConnector_Stream {
-        fn poll_read(mut self: Pin<&mut Self>, cx: &mut Context<'_>, buf: &mut tokio::io::ReadBuf<'_>) -> Poll<Result<(), io::Error>> {
+        fn poll_read(
+                mut self: Pin<&mut Self>,
+                cx: &mut Context<'_>,
+                buf: &mut tokio::io::ReadBuf<'_>
+            ) -> Poll<Result<(), io::Error>> {
             match *self {
-                MaybeTlsConnector_Stream::NoTls(ref mut stream) => Pin::new(stream).poll_read(cx, buf),
+                MaybeTlsConnector_Stream::NoTls(ref mut stream) =>
+                    Pin::new(stream).poll_read(cx, buf),
                 #[cfg(feature = "postgres_pool_tls")]
-                MaybeTlsConnector_Stream::Tls(ref mut stream) => Pin::new(stream).poll_read(cx, buf),
+                MaybeTlsConnector_Stream::Tls(ref mut stream) =>
+                    Pin::new(stream).poll_read(cx, buf),
             }
         }
     }
 
     impl tokio::io::AsyncWrite for MaybeTlsConnector_Stream {
-        fn poll_write(mut self: Pin<&mut Self>, cx: &mut Context<'_>, buf: &[u8]) -> Poll<io::Result<usize>> {
+        fn poll_write(
+                mut self: Pin<&mut Self>,
+                cx: &mut Context<'_>,
+                buf: &[u8]
+            ) -> Poll<io::Result<usize>> {
             match *self {
-                MaybeTlsConnector_Stream::NoTls(ref mut stream) => Pin::new(stream).poll_write(cx, buf),
+                MaybeTlsConnector_Stream::NoTls(ref mut stream) =>
+                    Pin::new(stream).poll_write(cx, buf),
                 #[cfg(feature = "postgres_pool_tls")]
-                MaybeTlsConnector_Stream::Tls(ref mut stream) => Pin::new(stream).poll_write(cx, buf),
+                MaybeTlsConnector_Stream::Tls(ref mut stream) =>
+                    Pin::new(stream).poll_write(cx, buf),
             }
         }
 
@@ -267,9 +283,11 @@ pub mod pg {
 
         fn poll_shutdown(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<io::Result<()>> {
             match *self {
-                MaybeTlsConnector_Stream::NoTls(ref mut stream) => Pin::new(stream).poll_shutdown(cx),
+                MaybeTlsConnector_Stream::NoTls(ref mut stream) =>
+                    Pin::new(stream).poll_shutdown(cx),
                 #[cfg(feature = "postgres_pool_tls")]
-                MaybeTlsConnector_Stream::Tls(ref mut stream) => Pin::new(stream).poll_shutdown(cx),
+                MaybeTlsConnector_Stream::Tls(ref mut stream) =>
+                    Pin::new(stream).poll_shutdown(cx),
             }
         }
     }
@@ -290,9 +308,11 @@ pub mod pg {
 
         fn connect(self, socket: postgres::Socket) -> Self::Future {
             match self {
-                MaybeTlsConnector_TlsConnect::NoTls(connector) => Self::Future::NoTls(connector.connect(socket)),
+                MaybeTlsConnector_TlsConnect::NoTls(connector) =>
+                    Self::Future::NoTls(connector.connect(socket)),
                 #[cfg(feature = "postgres_pool_tls")]
-                MaybeTlsConnector_TlsConnect::Tls(connector) => Self::Future::Tls(connector.connect(socket)),
+                MaybeTlsConnector_TlsConnect::Tls(connector) =>
+                    Self::Future::Tls(connector.connect(socket)),
             }
         }
     }
@@ -333,7 +353,8 @@ pub mod pg {
     pub enum MaybeTlsConnector_Future {
         NoTls(postgres::tls::NoTlsFuture),
         #[cfg(feature = "postgres_pool_tls")]
-        Tls(<postgres_native_tls::TlsConnector as postgres::tls::TlsConnect<postgres::Socket>>::Future)
+        Tls(<postgres_native_tls::TlsConnector as
+            postgres::tls::TlsConnect<postgres::Socket>>::Future)
     }
 
     impl std::future::Future for MaybeTlsConnector_Future {
@@ -341,9 +362,19 @@ pub mod pg {
 
         fn poll(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
             match *self {
-                MaybeTlsConnector_Future::NoTls(ref mut future) => Pin::new(future).poll(cx).map(|v| v.map(MaybeTlsConnector_Stream::NoTls)).map_err(MaybeTlsConnector_Error::NoTls),
+                MaybeTlsConnector_Future::NoTls(ref mut future) => {
+                    Pin::new(future)
+                        .poll(cx)
+                        .map(|v| v.map(MaybeTlsConnector_Stream::NoTls))
+                        .map_err(MaybeTlsConnector_Error::NoTls)
+                },
                 #[cfg(feature = "postgres_pool_tls")]
-                MaybeTlsConnector_Future::Tls(ref mut future) => Pin::new(future).poll(cx).map(|v| v.map(MaybeTlsConnector_Stream::Tls)).map_err(MaybeTlsConnector_Error::Tls),
+                MaybeTlsConnector_Future::Tls(ref mut future) => {
+                    Pin::new(future)
+                        .poll(cx)
+                        .map(|v| v.map(MaybeTlsConnector_Stream::Tls))
+                        .map_err(MaybeTlsConnector_Error::Tls)
+                }
             }
         }
     }
@@ -359,7 +390,8 @@ impl Poolable for postgres::Client {
         let url = config.url.parse().map_err(Error::Custom)?;
 
         let tls_connector = match config.tls {
-            #[allow(unused_variables)] // `tls_config` is unused when `postgres_pool_tls` is disabled.
+            // `tls_config` is unused when `postgres_pool_tls` is disabled.
+            #[allow(unused_variables)]
             Some(ref tls_config) => {
 
                 #[cfg(feature = "postgres_pool_tls")]
@@ -367,7 +399,8 @@ impl Poolable for postgres::Client {
                     let mut connector_builder = native_tls::TlsConnector::builder();
                     if let Some(ref cert) = tls_config.ssl_root_cert {
                         let cert_file_bytes = std::fs::read(cert)?;
-                        let cert = native_tls::Certificate::from_pem(&cert_file_bytes).map_err(|e| Error::Tls(e.into()))?;
+                        let cert = native_tls::Certificate::from_pem(&cert_file_bytes)
+                            .map_err(|e| Error::Tls(e.into()))?;
                         connector_builder.add_root_certificate(cert);
 
                         // Client certs
@@ -378,28 +411,41 @@ impl Poolable for postgres::Client {
                             (Some(cert), Some(key)) => {
                                 let cert_file_bytes = std::fs::read(cert)?;
                                 let key_file_bytes = std::fs::read(key)?;
-                                let cert = native_tls::Identity::from_pkcs8(&cert_file_bytes, &key_file_bytes).map_err(|e| Error::Tls(e.into()))?;
+                                let cert = native_tls::Identity::from_pkcs8(
+                                        &cert_file_bytes,
+                                        &key_file_bytes
+                                    ).map_err(|e| Error::Tls(e.into()))?;
                                 connector_builder.identity(cert);
                             },
                             (Some(_), None) => {
-                                return Err(Error::Tls("Client certificate provided without client key".into()))
+                                return Err(Error::Tls(
+                                    "Client certificate provided without client key".into()
+                                ))
                             },
                             (None, Some(_)) => {
-                                return Err(Error::Tls("Client key provided without client certificate".into()))
+                                return Err(Error::Tls(
+                                    "Client key provided without client certificate".into()
+                                ))
                             },
                             (None, None) => {},
                         }
                     }
 
-                    connector_builder.danger_accept_invalid_certs(tls_config.accept_invalid_certs);
-                    connector_builder.danger_accept_invalid_hostnames(tls_config.accept_invalid_hostnames);
-                    let connector = connector_builder.build().map_err(|e| Error::Tls(e.into()))?;
-                    pg::MaybeTlsConnector::Tls(postgres_native_tls::MakeTlsConnector::new(connector))
+                    connector_builder
+                        .danger_accept_invalid_certs(tls_config.accept_invalid_certs);
+                    connector_builder
+                        .danger_accept_invalid_hostnames(tls_config.accept_invalid_hostnames);
+
+                    pg::MaybeTlsConnector::Tls(postgres_native_tls::MakeTlsConnector::new(
+                        connector_builder.build().map_err(|e| Error::Tls(e.into()))?
+                    ))
                 }
 
                 #[cfg(not(feature = "postgres_pool_tls"))]
                 {
-                    rocket::warn!("TLS is not enabled for the `postgres_pool` feature. Postgres TLS configuration will be ignored. Enable the `postgres_pool_tls` feature to enable TLS.");
+                    // TODO: Should this be an error?
+                    rocket::warn!("The `postgres_pool_tls` feature is disabled. \
+                        Postgres TLS configuration will be ignored.");
                     pg::MaybeTlsConnector::NoTls(postgres::tls::NoTls)
                 }
             },
