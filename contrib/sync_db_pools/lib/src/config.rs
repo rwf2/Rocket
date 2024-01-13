@@ -23,7 +23,8 @@ use serde::{Serialize, Deserialize};
 /// Config {
 ///     url: "postgres://root:root@localhost/my_database".into(),
 ///     pool_size: 10,
-///     timeout: 5
+///     timeout: 5,
+///     tls: None,
 /// };
 /// ```
 ///
