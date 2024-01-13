@@ -88,6 +88,8 @@ impl<K: 'static, C: Poolable> ConnectionPool<K, C> {
                     Err(Error::Config(e)) => dberr!("config", db, "{}", e, rocket),
                     Err(Error::Pool(e)) => dberr!("pool init", db, "{}", e, rocket),
                     Err(Error::Custom(e)) => dberr!("pool manager", db, "{:?}", e, rocket),
+                    Err(Error::Io(e)) => dberr!("io", db, "{:?}", e, rocket),
+                    Err(Error::Tls(e)) => dberr!("tls", db, "{:?}", e, rocket),
                 }
             }).await
         })

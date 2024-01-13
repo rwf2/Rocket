@@ -1,3 +1,5 @@
+use std::path::PathBuf;
+
 use rocket::{Rocket, Build};
 use rocket::figment::{self, Figment, providers::Serialized};
 
@@ -39,6 +41,33 @@ pub struct Config {
     /// Defaults to `5`.
     // FIXME: Use `time`.
     pub timeout: u8,
+    /// TLS configuration.
+    pub tls: Option<TlsConfig>,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
+pub struct TlsConfig {
+    /// Allow TLS connections with invalid certificates.
+    ///
+    /// _Default:_ `false`.
+    pub accept_invalid_certs: bool,
+    /// Allow TLS connections with invalid hostnames.
+    ///
+    /// _Default:_ `false`.
+    pub accept_invalid_hostnames: bool,
+    /// Sets the name of a file containing SSL certificate authority (CA) certificate(s).
+    /// If the file exists, the server’s certificate will be verified to be signed by one of these authorities.
+    ///
+    /// _Default:_ `None`.
+    pub ssl_root_cert: Option<PathBuf>,
+    /// Sets the name of a file containing SSL client certificate.
+    ///
+    /// _Default:_ `None`.
+    pub ssl_client_cert: Option<PathBuf>,
+    /// Sets the name of a file containing SSL client key.
+    ///
+    /// _Default:_ `None`.
+    pub ssl_client_key: Option<PathBuf>,
 }
 
 impl Config {
@@ -107,9 +136,17 @@ impl Config {
             .map(|workers| workers * 4)
             .ok();
 
-        let figment = Figment::from(rocket.figment())
+        let mut figment = Figment::from(rocket.figment())
             .focus(&db_key)
             .join(Serialized::default("timeout", 5));
+
+        if figment.find_value("tls").is_ok() {
+            figment = figment.join(Serialized::default("tls.accept_invalid_certs", false))
+                .join(Serialized::default("tls.accept_invalid_hostnames", false))
+                .join(Serialized::default("tls.ssl_root_cert", None::<PathBuf>))
+                .join(Serialized::default("tls.ssl_client_cert", None::<PathBuf>))
+                .join(Serialized::default("tls.ssl_client_key", None::<PathBuf>));
+        }
 
         match default_pool_size {
             Some(pool_size) => figment.join(Serialized::default("pool_size", pool_size)),
