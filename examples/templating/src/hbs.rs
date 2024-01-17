@@ -35,7 +35,7 @@ pub fn not_found(req: &Request<'_>) -> Template {
 }
 
 fn wow_helper(
-    h: &handlebars::Helper<'_, '_>,
+    h: &handlebars::Helper<'_>,
     _: &handlebars::Handlebars,
     _: &handlebars::Context,
     _: &mut handlebars::RenderContext<'_, '_>,
