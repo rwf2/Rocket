@@ -33,7 +33,7 @@ optional = true
 
 [dependencies.handlebars_]
 package = "handlebars"
-version = "5.0"
+version = "5.1"
 optional = true
 
 [package.metadata.docs.rs]
