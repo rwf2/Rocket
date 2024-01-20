@@ -10,7 +10,7 @@ readme = "README.md"
 keywords = ["rocket", "framework", "templates", "templating", "engine"]
 license = "MIT OR Apache-2.0"
 edition = "2021"
-rust-version = "1.64"
+rust-version = "1.66"
 
 [features]
 tera = ["tera_"]
