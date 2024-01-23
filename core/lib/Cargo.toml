@@ -86,4 +86,5 @@ version_check = "0.9.1"
 
 [dev-dependencies]
 figment = { version = "0.10", features = ["test"] }
+reqwest = { version = "0.11", features = ["blocking"] }
 pretty_assertions = "1"
