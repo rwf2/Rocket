@@ -138,7 +138,7 @@ impl Catcher {
     }
 }
 
-fn paths_match(route: &Route, req: &Request<'_>) -> bool {
+pub(crate) fn paths_match(route: &Route, req: &Request<'_>) -> bool {
     trace!("checking path match: route {} vs. request {}", route, req);
     let route_segments = &route.uri.metadata.uri_segments;
     let req_segments = req.uri().path().segments();
@@ -170,7 +170,7 @@ fn paths_match(route: &Route, req: &Request<'_>) -> bool {
     true
 }
 
-fn queries_match(route: &Route, req: &Request<'_>) -> bool {
+pub(crate) fn queries_match(route: &Route, req: &Request<'_>) -> bool {
     trace!("checking query match: route {} vs. request {}", route, req);
     if matches!(route.uri.metadata.query_color, None | Some(Color::Wild)) {
         return true;
