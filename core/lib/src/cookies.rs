@@ -278,11 +278,12 @@ impl<'a> CookieJar<'a> {
     ///
     ///    * `path`: `"/"`
     ///    * `SameSite`: `Strict`
+    ///    * `Secure`: `true` if [`Request::context_is_likely_secure()`]
     ///
-    /// Furthermore, if TLS is enabled or handled by a proxy (as determined by
-    /// [`Request::context_is_likely_secure()`]), the `Secure` cookie flag is set.
     /// These defaults ensure maximum usability and security. For additional
     /// security, you may wish to set the `secure` flag explicitly.
+    ///
+    /// [`Request::context_is_likely_secure()`]: crate::Request::context_is_likely_secure()
     ///
     /// # Example
     ///
@@ -321,11 +322,13 @@ impl<'a> CookieJar<'a> {
     ///    * `SameSite`: `Strict`
     ///    * `HttpOnly`: `true`
     ///    * `Expires`: 1 week from now
+    ///    * `Secure`: `true` if [`Request::context_is_likely_secure()`]
     ///
-    /// Furthermore, if TLS is enabled or handled by a proxy (as determined by
-    /// [`Request::context_is_likely_secure()`]), the `Secure` cookie flag is set.
     /// These defaults ensure maximum usability and security. For additional
-    /// security, you may wish to set the `secure` flag explicitly.
+    /// security, you may wish to set the `secure` flag explicitly and
+    /// unconditionally.
+    ///
+    /// [`Request::context_is_likely_secure()`]: crate::Request::context_is_likely_secure()
     ///
     /// # Example
     ///
@@ -510,9 +513,7 @@ impl<'a> CookieJar<'a> {
     ///
     ///    * `path`: `"/"`
     ///    * `SameSite`: `Strict`
-    ///
-    /// Furthermore, if TLS is enabled or handled by a proxy (as determined by
-    /// [`Request::context_is_likely_secure()`]), the `Secure` cookie flag is set.
+    ///    * `Secure`: `true` if `Request::context_is_likely_secure()`
     fn set_defaults(&self, cookie: &mut Cookie<'static>) {
         if cookie.path().is_none() {
             cookie.set_path("/");
@@ -550,9 +551,7 @@ impl<'a> CookieJar<'a> {
     ///    * `SameSite`: `Strict`
     ///    * `HttpOnly`: `true`
     ///    * `Expires`: 1 week from now
-    ///
-    /// Furthermore, if TLS is enabled or handled by a proxy (as determined by
-    /// [`Request::context_is_likely_secure()`]), the `Secure` cookie flag is set.
+    ///    * `Secure`: `true` if `Request::context_is_likely_secure()`
     #[cfg(feature = "secrets")]
     #[cfg_attr(nightly, doc(cfg(feature = "secrets")))]
     fn set_private_defaults(&self, cookie: &mut Cookie<'static>) {

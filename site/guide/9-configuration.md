@@ -152,8 +152,8 @@ workers = 16
 max_blocking = 512
 keep_alive = 5
 ident = "Rocket"
-ip_header = "X-Real-IP" # set to `false` or `None` to disable
-proxy_proto_header = `false` # set to `false` or `None` to disable
+ip_header = "X-Real-IP" # set to `false` (the default) to disable
+proxy_proto_header = `false` # set to `false` (the default) to disable
 log_level = "normal"
 temp_dir = "/tmp"
 cli_colors = true
@@ -365,22 +365,30 @@ mutual TLS.
 
 ### Proxied TLS
 
-If Rocket is running behind a reverse proxy that terminates TLS, it is useful to
-know whether the original connection was made securely. Therefore, Rocket offers
-the option to configure a `proxy_proto_header` that is used to determine if the
-request is handled in a secure context. The outcome is available via
-[`Request::context_is_likely_secure()`] and used to set cookies' secure flag by
-default. To enable this behaviour, configure the header as set by your reverse
-proxy. For example:
+The `proxy_proto_header` configuration parameter allows Rocket applications to
+determine when and if a client's initial connection was likely made in a secure
+context by examining the header with the configured name. The header's value is
+parsed into a [`ProxyProto`], retrievable via [`Request::proxy_proto()`].
+
+That value is in-turn inspected to determine if the initial connection was
+secure (i.e, made over TLS) and the outcome made available via
+[`Request::context_is_likely_secure()`]. The value returned by this method
+influences cookie defaults. In particular, if the method returns `true` (i.e,
+the request context is likely secure), the `Secure` cookie flag is set by
+default when a cookie is added to a [`CookieJar`].
+
+To enable this behaviour, configure the header as set by your reverse proxy or
+forwarding entity. For example, to set the header name to `X-Forwarded-Proto`
+via a TOML file:
 
 ```toml,ignore
-proxy_proto_header = 'X-Forwarded-Proto'
+proxy_proto_header = "X-Forwarded-Proto"
 ```
 
-Note that this only sets the cookies' secure flag when not configured
-explicitly. This setting also provides the [request guard `ProxyProto`].
-
-[`ProxyProto`]: @api/rocket/request/trait.FromRequest.html#impl-FromRequest%3C'r%3E-for-%26ProxyProto
+[`Request::proxy_proto()`]: @api/rocket/request/struct.Request.html#method.proxy_proto
+[`ProxyProto`]: @api/rocket/http/enum.ProxyProto.html
+[`CookieJar`]: @api/rocket/http/struct.CookieJar.html
+[`Request::context_is_likely_secure()`]: @api/rocket/request/struct.Request.html#method.context_is_likely_secure
 
 ### Workers
 

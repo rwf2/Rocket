@@ -1,22 +1,13 @@
-use rocket::http::ProxyProto;
-
-#[macro_use]
-extern crate rocket;
+#[macro_use] extern crate rocket;
 
 #[get("/")]
-fn inspect_proto(proto: Option<ProxyProto>) -> String {
-    proto
-        .map(|proto| match proto {
-            ProxyProto::Http => "http".to_owned(),
-            ProxyProto::Https => "https".to_owned(),
-            ProxyProto::Unknown(s) => s.to_string(),
-        })
-        .unwrap_or("<none>".to_owned())
+fn inspect_proto(proto: rocket::http::ProxyProto) -> String {
+    proto.to_string()
 }
 
 mod tests {
     use rocket::{Rocket, Build, Route};
-    use rocket::http::Header;
+    use rocket::http::{Header, Status};
     use rocket::local::blocking::Client;
     use rocket::figment::Figment;
 
@@ -32,8 +23,7 @@ mod tests {
 
     #[test]
     fn check_proxy_proto_header_works() {
-        let rocket = rocket_with_proto_header(Some("X-Url-Scheme"));
-        let client = Client::debug(rocket).unwrap();
+        let client = Client::debug(rocket_with_proto_header(Some("X-Url-Scheme"))).unwrap();
         let response = client.get("/")
             .header(Header::new("X-Forwarded-Proto", "https"))
             .header(Header::new("X-Url-Scheme", "http"))
@@ -41,22 +31,18 @@ mod tests {
 
         assert_eq!(response.into_string().unwrap(), "http");
 
-        let response = client.get("/")
-            .header(Header::new("X-Url-Scheme", "https"))
-            .dispatch();
-
+        let response = client.get("/").header(Header::new("X-Url-Scheme", "https")).dispatch();
         assert_eq!(response.into_string().unwrap(), "https");
 
         let response = client.get("/").dispatch();
-        assert_eq!(response.into_string().unwrap(), "<none>");
+        assert_eq!(response.status(), Status::InternalServerError);
     }
 
     #[test]
     fn check_proxy_proto_header_works_again() {
         let client = Client::debug(rocket_with_proto_header(Some("x-url-scheme"))).unwrap();
-        let response = client
-            .get("/")
-            .header(Header::new("X-Url-Scheme", "https"))
+        let response = client.get("/")
+            .header(Header::new("X-Url-Scheme", "hTTpS"))
             .dispatch();
 
         assert_eq!(response.into_string().unwrap(), "https");
@@ -65,9 +51,8 @@ mod tests {
             .merge(("proxy_proto_header", "x-url-scheme"));
 
         let client = Client::debug(rocket::custom(config).mount("/", routes())).unwrap();
-        let response = client
-            .get("/")
-            .header(Header::new("X-url-Scheme", "https"))
+        let response = client.get("/")
+            .header(Header::new("X-url-Scheme", "HTTPS"))
             .dispatch();
 
         assert_eq!(response.into_string().unwrap(), "https");
@@ -76,12 +61,11 @@ mod tests {
     #[test]
     fn check_default_proxy_proto_header_works() {
         let client = Client::debug_with(routes()).unwrap();
-        let response = client
-            .get("/")
+        let response = client.get("/")
             .header(Header::new("X-Forwarded-Proto", "https"))
             .dispatch();
 
-        assert_eq!(response.into_string(), Some("<none>".into()));
+        assert_eq!(response.status(), Status::InternalServerError);
     }
 
     #[test]
@@ -91,25 +75,23 @@ mod tests {
             .header(Header::new("X-Forwarded-Proto", "https"))
             .dispatch();
 
-        assert_eq!(response.into_string(), Some("<none>".into()));
+        assert_eq!(response.status(), Status::InternalServerError);
 
         let config =
             Figment::from(rocket::Config::debug_default()).merge(("proxy_proto_header", false));
 
         let client = Client::debug(rocket::custom(config).mount("/", routes())).unwrap();
-        let response = client
-            .get("/")
+        let response = client.get("/")
             .header(Header::new("X-Forwarded-Proto", "https"))
             .dispatch();
 
-        assert_eq!(response.into_string(), Some("<none>".into()));
+        assert_eq!(response.status(), Status::InternalServerError);
 
         let config = Figment::from(rocket::Config::debug_default())
             .merge(("proxy_proto_header", "x-forwarded-proto"));
 
         let client = Client::debug(rocket::custom(config).mount("/", routes())).unwrap();
-        let response = client
-            .get("/")
+        let response = client.get("/")
             .header(Header::new("x-Forwarded-Proto", "https"))
             .dispatch();
 

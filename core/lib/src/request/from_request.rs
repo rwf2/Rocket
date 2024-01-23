@@ -3,7 +3,7 @@ use std::fmt::Debug;
 use std::net::{IpAddr, SocketAddr};
 
 use crate::{Request, Route};
-use crate::outcome::{self, Outcome::*};
+use crate::outcome::{self, IntoOutcome, Outcome::*};
 
 use crate::http::uri::{Host, Origin};
 use crate::http::{Status, ContentType, Accept, Method, ProxyProto, CookieJar};
@@ -163,8 +163,8 @@ pub type Outcome<S, E> = outcome::Outcome<S, (Status, E), Status>;
 ///   * **ProxyProto**
 ///
 ///     Extracts the protocol of the incoming request as a [`ProxyProto`] via
-///     [`Request::proxy_proto()`] (HTTP or HTTPS). If value of the header is
-///     not known, the request is forwarded with a 404 Not Found status.
+///     [`Request::proxy_proto()`]. If no such header is present, the request is
+///     forwarded with a 500 Internal Server Error status.
 ///
 ///   * **SocketAddr**
 ///
@@ -481,10 +481,7 @@ impl<'r> FromRequest<'r> for ProxyProto<'r> {
     type Error = std::convert::Infallible;
 
     async fn from_request(request: &'r Request<'_>) -> Outcome<Self, Self::Error> {
-        match request.proxy_proto() {
-            Some(proto) => Success(proto),
-            None => Forward(Status::InternalServerError),
-        }
+        request.proxy_proto().or_forward(Status::InternalServerError)
     }
 }
 

@@ -389,8 +389,9 @@ impl<'r> Request<'r> {
     ///
     /// The value is determined by inspecting the header named
     /// [`proxy_proto_header`](crate::Config::proxy_proto_header), if
-    /// configured. If parameter isn't configured or the request doesn't contain
-    /// a header named as indicated, this method returns `None`.
+    /// configured, and parsing it case-insensitivity. If the parameter isn't
+    /// configured or the request doesn't contain a header named as indicated,
+    /// this method returns `None`.
     ///
     /// # Example
     ///
@@ -413,7 +414,7 @@ impl<'r> Request<'r> {
     /// assert_eq!(req.proxy_proto(), Some(ProxyProto::Https));
     ///
     /// # let req = c.get("/");
-    /// let req = req.header(Header::new("x-forwarded-proto", "http"));
+    /// let req = req.header(Header::new("x-forwarded-proto", "HTTP"));
     /// assert_eq!(req.proxy_proto(), Some(ProxyProto::Http));
     ///
     /// # let req = c.get("/");
@@ -438,7 +439,7 @@ impl<'r> Request<'r> {
     /// be in a secure context. We say _likely_ because it is entirely possible
     /// for the header to indicate that the connection is being proxied via
     /// HTTPS while reality differs. As such, this value should not be trusted
-    /// when security is a concern.
+    /// when 100% confidence is a necessity.
     ///
     /// # Example
     ///

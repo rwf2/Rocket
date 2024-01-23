@@ -93,18 +93,24 @@ pub struct Config {
     #[serde(deserialize_with = "crate::config::http_header::deserialize")]
     pub ip_header: Option<Uncased<'static>>,
     /// The name of a header, whose value is typically set by an intermediary
-    /// server or proxy, which contains the protocol (HTTP or HTTPS) used by the
-    /// connecting client. This should probably be [`X-Forwarded-Proto`], as
-    /// that is the de facto standard. Used by [`Request::forwarded_proto()`]
-    /// to determine the forwarded protocol and [`Request::forwarded_secure()`]
-    /// to determine whether a request is handled in a secure context.
+    /// server or proxy, which contains the protocol ("http" or "https") used by
+    /// the connecting client. This is usually [`"X-Forwarded-Proto"`], as that
+    /// is the de-facto standard.
     ///
-    /// [`X-Forwarded-Proto`]: https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/X-Forwarded-Proto
+    /// The header value is parsed into a [`ProxyProto`], accessible via
+    /// [`Request::proxy_proto()`]. The value influences
+    /// [`Request::context_is_likely_secure()`] and the default value for the
+    /// `Secure` flag in cookies added to [`CookieJar`]s.
     ///
     /// To disable using any header for this purpose, set this value to `false`
-    /// or `None`. Deserialization semantics are identical to those of [`ip_header`].
+    /// or `None`. Deserialization semantics are identical to those of
+    /// [`Config::ip_header`] (the value must be a valid HTTP header name).
     ///
     /// **(default: `None`)**
+    ///
+    /// [`CookieJar`]: crate::http::CookieJar
+    /// [`ProxyProto`]: crate::http::ProxyProto
+    /// [`"X-Forwarded-Proto"`]: https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/X-Forwarded-Proto
     #[serde(deserialize_with = "crate::config::http_header::deserialize")]
     pub proxy_proto_header: Option<Uncased<'static>>,
     /// Streaming read size limits. **(default: [`Limits::default()`])**

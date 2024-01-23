@@ -87,9 +87,10 @@ impl<'c> LocalResponse<'c> {
         let request: &'c Request<'c> = unsafe { &*(&*boxed_req as *const _) };
 
         async move {
-            // NOTE: The new `secure` cookie jar state will not reflect the last
-            // known value in `request.cookies()`. This is okay as new cookies
-            // should never be added to the resulting jar.
+            // NOTE: The cookie jar `secure` state will not reflect the last
+            // known value in `request.cookies()`. This is okay: new cookies
+            // should never be added to the resulting jar which is the only time
+            // the value is used to set cookie defaults.
             let response: Response<'c> = f(request).await;
             let mut cookies = CookieJar::new(None, request.rocket());
             for cookie in response.cookies() {
