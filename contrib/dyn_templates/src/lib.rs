@@ -403,6 +403,7 @@ impl Template {
             let ts: Vec<_> = ctxt.templates.keys().map(|s| s.as_str()).collect();
             error_!("Template '{}' does not exist.", name);
             info_!("Known templates: {}.", ts.join(", "));
+            #[cfg(not(feature = "no_filesystem"))]
             info_!("Searched in {:?}.", ctxt.root);
             Status::InternalServerError
         })?;

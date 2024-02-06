@@ -15,6 +15,7 @@ rust-version = "1.75"
 [features]
 tera = ["tera_"]
 handlebars = ["handlebars_"]
+no_filesystem = []
 
 [dependencies]
 walkdir = "2.4"

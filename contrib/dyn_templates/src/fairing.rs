@@ -60,6 +60,7 @@ impl Fairing for TemplateFairing {
             .expect("Template ContextManager registered in on_ignite");
 
         info!("{}{}:", "📐 ".emoji(), "Templating".magenta());
+        #[cfg(not(feature = "no_filesystem"))]
         info_!("directory: {}", Source::from(&*cm.context().root).primary());
         info_!("engines: {:?}", Engines::ENABLED_EXTENSIONS.primary());
     }

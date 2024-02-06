@@ -11,6 +11,7 @@ pub(crate) type Callback =
     Box<dyn Fn(&mut Engines) -> Result<(), Box<dyn Error>> + Send + Sync + 'static>;
 
 pub(crate) struct Context {
+    #[cfg(not(feature = "no_filesystem"))]
     /// The root of the template directory.
     pub root: PathBuf,
     /// Mapping from template name to its information.
@@ -26,73 +27,81 @@ impl Context {
     /// template engine, and store all of the initialized state in a `Context`
     /// structure, which is returned if all goes well.
     pub fn initialize(root: &Path, callback: &Callback) -> Option<Context> {
-        fn is_file_with_ext(entry: &walkdir::DirEntry, ext: &str) -> bool {
-            let is_file = entry.file_type().is_file();
-            let has_ext = entry.path().extension().map_or(false, |e| e == ext);
-            is_file && has_ext
-        }
-
-        let root = match root.normalize() {
-            Ok(root) => root.into_path_buf(),
-            Err(e) => {
-                error!("Invalid template directory '{}': {}.", root.display(), e);
-                return None;
-            }
-        };
-
         let mut templates: HashMap<String, TemplateInfo> = HashMap::new();
-        for &ext in Engines::ENABLED_EXTENSIONS {
-            for entry in walkdir::WalkDir::new(&root).follow_links(true) {
-                let entry = match entry {
-                    Ok(entry) if is_file_with_ext(&entry, ext) => entry,
-                    Ok(_) | Err(_) => continue,
-                };
-
-                let (name, data_type_str) = split_path(&root, entry.path());
-                if let Some(info) = templates.get(&*name) {
-                    warn_!("Template name '{}' does not have a unique source.", name);
-                    match info.path {
-                        Some(ref path) => info_!("Existing path: {:?}", path),
-                        None => info_!("Existing Content-Type: {}", info.data_type),
-                    }
-
-                    info_!("Additional path: {:?}", entry.path());
-                    warn_!("Keeping existing template '{}'.", name);
-                    continue;
-                }
-
-                let data_type = data_type_str.as_ref()
-                    .and_then(|ext| ContentType::from_extension(ext))
-                    .unwrap_or(ContentType::Text);
-
-                templates.insert(name, TemplateInfo {
-                    path: Some(entry.into_path()),
-                    engine_ext: ext,
-                    data_type,
-                });
-            }
-        }
-
+        
         let mut engines = Engines::init(&templates)?;
         if let Err(e) = callback(&mut engines) {
             error_!("Template customization callback failed.");
             error_!("{}", e);
             return None;
         }
-
-        for (name, engine_ext) in engines.templates() {
-            if !templates.contains_key(name) {
-                let data_type = Path::new(name).extension()
-                    .and_then(|osstr| osstr.to_str())
-                    .and_then(|ext| ContentType::from_extension(ext))
-                    .unwrap_or(ContentType::Text);
-
-                let info = TemplateInfo { path: None, engine_ext, data_type };
-                templates.insert(name.to_string(), info);
+        
+        #[cfg(not(feature = "no_filesystem"))]
+        {
+            fn is_file_with_ext(entry: &walkdir::DirEntry, ext: &str) -> bool {
+                let is_file = entry.file_type().is_file();
+                let has_ext = entry.path().extension().map_or(false, |e| e == ext);
+                is_file && has_ext
             }
+            
+            let root = match root.normalize() {
+                Ok(root) => root.into_path_buf(),
+                Err(e) => {
+                    error!("Invalid template directory '{}': {}.", root.display(), e);
+                    return None;
+                }
+            };
+
+            for &ext in Engines::ENABLED_EXTENSIONS {
+                for entry in walkdir::WalkDir::new(&root).follow_links(true) {
+                    let entry = match entry {
+                        Ok(entry) if is_file_with_ext(&entry, ext) => entry,
+                        Ok(_) | Err(_) => continue,
+                    };
+    
+                    let (name, data_type_str) = split_path(&root, entry.path());
+                    if let Some(info) = templates.get(&*name) {
+                        warn_!("Template name '{}' does not have a unique source.", name);
+                        match info.path {
+                            Some(ref path) => info_!("Existing path: {:?}", path),
+                            None => info_!("Existing Content-Type: {}", info.data_type),
+                        }
+    
+                        info_!("Additional path: {:?}", entry.path());
+                        warn_!("Keeping existing template '{}'.", name);
+                        continue;
+                    }
+    
+                    let data_type = data_type_str.as_ref()
+                        .and_then(|ext| ContentType::from_extension(ext))
+                        .unwrap_or(ContentType::Text);
+    
+                    templates.insert(name, TemplateInfo {
+                        path: Some(entry.into_path()),
+                        engine_ext: ext,
+                        data_type,
+                    });
+                }
+            }
+
+
+            for (name, engine_ext) in engines.templates() {
+                if !templates.contains_key(name) {
+                    let data_type = Path::new(name).extension()
+                        .and_then(|osstr| osstr.to_str())
+                        .and_then(|ext| ContentType::from_extension(ext))
+                        .unwrap_or(ContentType::Text);
+
+                    let info = TemplateInfo { path: None, engine_ext, data_type };
+                    templates.insert(name.to_string(), info);
+                }
+            }
+
+            return Some(Context { root, templates, engines });
         }
 
-        Some(Context { root, templates, engines })
+        #[cfg(feature = "no_filesystem")]
+        return Some(Context { templates, engines });
     }
 }
 
@@ -140,8 +149,10 @@ mod manager {
     }
 
     impl ContextManager {
+        #[cfg(not(feature = "no_filesystem"))]
         pub fn new(ctxt: Context) -> ContextManager {
             let (tx, rx) = channel();
+
             let watcher = recommended_watcher(tx).and_then(|mut watcher| {
                 watcher.watch(&ctxt.root.canonicalize()?, RecursiveMode::Recursive)?;
                 Ok(watcher)
@@ -158,6 +169,11 @@ mod manager {
             };
 
             ContextManager { watcher, context: RwLock::new(ctxt), }
+        }
+
+        #[cfg(feature = "no_filesystem")]
+        pub fn new(ctxt: Context) -> ContextManager {
+            ContextManager { watcher: None, context: RwLock::new(ctxt), }
         }
 
         pub fn context(&self) -> impl Deref<Target=Context> + '_ {
@@ -180,6 +196,7 @@ mod manager {
             let templates_changes = self.watcher.as_ref()
                 .map(|(_, rx)| rx.lock().expect("fsevents lock").try_iter().count() > 0);
 
+            #[cfg(not(feature = "no_filesystem"))]
             if let Some(true) = templates_changes {
                 info_!("Change detected: reloading templates.");
                 let root = self.context().root.clone();
