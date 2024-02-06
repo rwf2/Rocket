@@ -35,6 +35,20 @@ impl Context {
             error_!("{}", e);
             return None;
         }
+
+        fn update_templates(engines: &Engines, templates: &mut HashMap<String, TemplateInfo>) {
+            for (name, engine_ext) in engines.templates() {
+                if !templates.contains_key(name) {
+                    let data_type = Path::new(name).extension()
+                        .and_then(|osstr| osstr.to_str())
+                        .and_then(|ext| ContentType::from_extension(ext))
+                        .unwrap_or(ContentType::Text);
+
+                    let info = TemplateInfo { path: None, engine_ext, data_type };
+                    templates.insert(name.to_string(), info);
+                }
+            }
+        }
         
         #[cfg(not(feature = "no_filesystem"))]
         {
@@ -84,24 +98,16 @@ impl Context {
                 }
             }
 
-
-            for (name, engine_ext) in engines.templates() {
-                if !templates.contains_key(name) {
-                    let data_type = Path::new(name).extension()
-                        .and_then(|osstr| osstr.to_str())
-                        .and_then(|ext| ContentType::from_extension(ext))
-                        .unwrap_or(ContentType::Text);
-
-                    let info = TemplateInfo { path: None, engine_ext, data_type };
-                    templates.insert(name.to_string(), info);
-                }
-            }
+            update_templates(&engines, &mut templates);
 
             return Some(Context { root, templates, engines });
         }
 
         #[cfg(feature = "no_filesystem")]
-        return Some(Context { templates, engines });
+        {
+            update_templates(&engines, &mut templates);
+            return Some(Context { templates, engines });
+        }
     }
 }
 
