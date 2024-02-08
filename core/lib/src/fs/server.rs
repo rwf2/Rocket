@@ -5,7 +5,7 @@ use crate::http::{Method, Status, uri::Segments, ext::IntoOwned};
 use crate::route::{Route, Handler, Outcome};
 use crate::response::{Redirect, Responder};
 use crate::outcome::IntoOutcome;
-use crate::fs::NamedFile;
+use crate::fs::{MaybeZippedFile, NamedFile};
 
 /// Custom handler for serving static files.
 ///
@@ -218,28 +218,35 @@ impl Handler for FileServer {
             .map(|path| self.root.join(path));
 
         match path {
-            Some(p) if p.is_dir() => {
-                // Normalize '/a/b/foo' to '/a/b/foo/'.
-                if options.contains(Options::NormalizeDirs) && !req.uri().path().ends_with('/') {
-                    let normal = req.uri().map_path(|p| format!("{}/", p))
-                        .expect("adding a trailing slash to a known good path => valid path")
-                        .into_owned();
-
-                    return Redirect::permanent(normal)
-                        .respond_to(req)
-                        .or_forward((data, Status::InternalServerError));
+            Some(mut p) => {
+                if p.is_dir() {
+                    // Normalize '/a/b/foo' to '/a/b/foo/'.
+                    if options.contains(Options::NormalizeDirs) && !req.uri().path().ends_with('/') {
+                        let normal = req.uri().map_path(|p| format!("{}/", p))
+                            .expect("adding a trailing slash to a known good path => valid path")
+                            .into_owned();
+        
+                        return Redirect::permanent(normal)
+                            .respond_to(req)
+                            .or_forward((data, Status::InternalServerError));
+                    }
+        
+                    if !options.contains(Options::Index) {
+                        return Outcome::forward(data, Status::NotFound);
+                    }
+        
+                    p = p.join("index.html");        
                 }
 
-                if !options.contains(Options::Index) {
-                    return Outcome::forward(data, Status::NotFound);
-                }
-
-                let index = NamedFile::open(p.join("index.html")).await;
-                index.respond_to(req).or_forward((data, Status::NotFound))
-            },
-            Some(p) => {
-                let file = NamedFile::open(p).await;
-                file.respond_to(req).or_forward((data, Status::NotFound))
+                let gzip_accepted = req.headers().get("Accept-Encoding")
+                    .find(|value| value.contains("gzip"))
+                    .is_some();
+                let pre_zipped = gzip_accepted && options.contains(Options::PreZipped);
+                let response = match pre_zipped {
+                    true  => MaybeZippedFile::open(p).await.respond_to(req),
+                    false => NamedFile::open(p).await.respond_to(req),
+                };
+                response.or_forward((data, Status::NotFound))
             }
             None => Outcome::forward(data, Status::NotFound),
         }
@@ -257,6 +264,7 @@ impl Handler for FileServer {
 ///   * [`Options::Missing`] - Don't fail if the path to serve is missing.
 ///   * [`Options::NormalizeDirs`] - Redirect directories without a trailing
 ///     slash to ones with a trailing slash.
+///   * [`Options::PreZipped`] - Serve pre-compressed files if they exist.
 ///
 /// `Options` structures can be `or`d together to select two or more options.
 /// For instance, to request that both dot files and index pages be returned,
@@ -365,6 +373,10 @@ impl Options {
     /// By default, `FileServer` will error if the path to serve is missing to
     /// prevent inevitable 404 errors. This option overrides that.
     pub const Missing: Options = Options(1 << 4);
+
+    /// Check for and serve pre-zipped files on the filesystem based on
+    /// a similarly named file with a `.gz` extension.
+    pub const PreZipped: Options = Options(1 << 5);
 
     /// Returns `true` if `self` is a superset of `other`. In other words,
     /// returns `true` if all of the options in `other` are also in `self`.
