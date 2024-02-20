@@ -59,13 +59,11 @@ impl MaybeZippedFile {
             Some(e) if e == "gz" => (Some(e.to_owned()), false, NamedFile::open(path).await?),
             // construct path to the .gz file
             Some(e) => {
-                let bare = o_path.with_extension("");
-
                 let ct_ext = Some(e.to_owned());
                 let mut zip_ext = e.to_owned();
                 zip_ext.push(".gz");
 
-                let zipped = bare.with_extension(&zip_ext);
+                let zipped = o_path.with_extension(&zip_ext);
                 match zipped.exists() {
                     true  => (ct_ext, true, NamedFile::open(zipped).await?),
                     false => (ct_ext, false, NamedFile::open(path).await?),
