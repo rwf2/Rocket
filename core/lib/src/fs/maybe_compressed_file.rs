@@ -58,23 +58,18 @@ impl MaybeCompressedFile {
             // A gz file is being requested, no need to compress again.
             Some(e) if e == "gz" => (Some(e.to_owned()), false, NamedFile::open(path).await?),
             // construct path to the .gz file
-            Some(e) => {
-                let ct_ext = Some(e.to_owned());
-                let mut zip_ext = e.to_owned();
-                zip_ext.push(".gz");
+            ct_ext => {
+                let ct_ext = ct_ext.map(|e| e.to_owned());
+                let zip_ext = ct_ext.as_ref().map(|e| {
+                    let mut z = e.to_owned();
+                    z.push(".gz");
+                    z
+                }).unwrap_or(OsString::from("gz"));
 
-                let zipped = o_path.with_extension(&zip_ext);
+                let zipped = o_path.with_extension(zip_ext);
                 match zipped.exists() {
                     true  => (ct_ext, true, NamedFile::open(zipped).await?),
                     false => (ct_ext, false, NamedFile::open(path).await?),
-                }
-            }
-            // construct path to the .gz file
-            None => {
-                let zipped = o_path.with_extension("gz");
-                match zipped.exists() {
-                    true  => (None, true, NamedFile::open(zipped).await?),
-                    false => (None, false, NamedFile::open(path).await?),
                 }
             }
         };
