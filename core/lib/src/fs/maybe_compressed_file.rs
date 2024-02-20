@@ -28,7 +28,7 @@ use crate::Request;
 ///         path.push("index.html");
 ///     }
 ///
-///     MaybeZippedFile::open(path).await.ok()
+///     MaybeCompressedFile::open(path).await.ok()
 /// }
 /// ```
 ///
@@ -37,13 +37,13 @@ use crate::Request;
 ///
 /// [`FileServer`]: crate::fs::FileServer
 #[derive(Debug)]
-pub(crate) struct MaybeZippedFile {
+pub(crate) struct MaybeCompressedFile {
     ct_ext: Option<OsString>,
     encoded: bool,
     file: NamedFile, 
 }
 
-impl MaybeZippedFile {
+impl MaybeCompressedFile {
     /// Attempts to open files in read-only mode.
     /// 
     /// # Errors
@@ -51,7 +51,7 @@ impl MaybeZippedFile {
     /// This function will return an error if the selected path does not already 
     /// exist. Other errors may also be returned according to
     /// [`OpenOptions::open()`](std::fs::OpenOptions::open()).
-    pub async fn open<P: AsRef<Path>>(path: P) -> io::Result<MaybeZippedFile> {
+    pub async fn open<P: AsRef<Path>>(path: P) -> io::Result<MaybeCompressedFile> {
         let o_path = path.as_ref().to_path_buf();
 
         let (ct_ext, encoded, file) = match o_path.extension() {
@@ -79,7 +79,7 @@ impl MaybeZippedFile {
             }
         };
 
-        Ok(MaybeZippedFile { ct_ext, encoded, file })
+        Ok(MaybeCompressedFile { ct_ext, encoded, file })
     }
 }
 
@@ -89,7 +89,7 @@ impl MaybeZippedFile {
 /// [`ContentType::from_extension()`] for more information. If you would like to
 /// stream a file with a different Content-Type than that implied by its 
 /// extension, use a [`File`] directly.
-impl<'r> Responder<'r, 'static> for MaybeZippedFile {
+impl<'r> Responder<'r, 'static> for MaybeCompressedFile {
     fn respond_to(self, request: &'r Request<'_>) -> response::Result<'static> {
         let mut response = self.file.respond_to(request)?;
 

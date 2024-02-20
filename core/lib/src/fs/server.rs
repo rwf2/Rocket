@@ -5,7 +5,7 @@ use crate::http::{Method, Status, uri::Segments, ext::IntoOwned};
 use crate::route::{Route, Handler, Outcome};
 use crate::response::{Redirect, Responder};
 use crate::outcome::IntoOutcome;
-use crate::fs::{MaybeZippedFile, NamedFile};
+use crate::fs::{MaybeCompressedFile, NamedFile};
 
 /// Custom handler for serving static files.
 ///
@@ -243,7 +243,7 @@ impl Handler for FileServer {
                     .is_some();
                 let pre_zipped = gzip_accepted && options.contains(Options::PreZipped);
                 let response = match pre_zipped {
-                    true  => MaybeZippedFile::open(p).await.respond_to(req),
+                    true  => MaybeCompressedFile::open(p).await.respond_to(req),
                     false => NamedFile::open(p).await.respond_to(req),
                 };
                 response.or_forward((data, Status::NotFound))
