@@ -3,7 +3,7 @@ use std::ops::RangeFrom;
 use std::sync::{Arc, atomic::Ordering};
 use std::borrow::Cow;
 use std::future::Future;
-use std::net::IpAddr;
+use std::net::{IpAddr, SocketAddr};
 
 use yansi::Paint;
 use state::{TypeMap, InitCell};
@@ -507,7 +507,11 @@ impl<'r> Request<'r> {
     /// ```
     #[inline]
     pub fn client_ip(&self) -> Option<IpAddr> {
-        self.real_ip().or_else(|| Some(self.remote()?.tcp()?.ip()))
+        fn endpoint_to_tcp(endpoint: &Endpoint) -> Option<SocketAddr> {
+            endpoint.tcp().or_else(|| endpoint.tls().and_then(endpoint_to_tcp))
+        }
+
+        self.real_ip().or_else(|| Some(endpoint_to_tcp(self.remote()?)?.ip()))
     }
 
     /// Returns a wrapped borrow to the cookies in `self`.
