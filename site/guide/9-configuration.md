@@ -25,7 +25,7 @@ values:
 | `max_blocking`*      | `usize`           | Limit on threads to start for blocking tasks.   | `512`                   |
 | `ident`              | `string`, `false` | If and how to identify via the `Server` header. | `"Rocket"`              |
 | `ip_header`          | `string`, `false` | IP header to inspect to get [client's real IP]. | `"X-Real-IP"`           |
-| `proxy_proto_header` | `string`, `false` | Header identifying [client to proxy protocol].  | `None`                  |
+| `proxy_proto_header` | `string`, `false` | Header identifying [client to proxy protocol].  | `false`                 |
 | `keep_alive`         | `u32`             | Keep-alive timeout seconds; disabled when `0`.  | `5`                     |
 | `log_level`          | [`LogLevel`]      | Max level to log. (off/normal/debug/critical)   | `normal`/`critical`     |
 | `cli_colors`         | [`CliColors`]     | Whether to use colors and emoji when logging.   | `"auto"`                |
@@ -152,7 +152,7 @@ workers = 16
 max_blocking = 512
 keep_alive = 5
 ident = "Rocket"
-ip_header = "X-Real-IP" # set to `false` (the default) to disable
+ip_header = "X-Real-IP" # set to `false` to disable
 proxy_proto_header = `false` # set to `false` (the default) to disable
 log_level = "normal"
 temp_dir = "/tmp"
