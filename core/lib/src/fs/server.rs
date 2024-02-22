@@ -1,5 +1,7 @@
 use std::path::{PathBuf, Path};
 
+use rocket_http::ContentCoding;
+
 use crate::{Request, Data};
 use crate::http::{Method, Status, uri::Segments, ext::IntoOwned};
 use crate::route::{Route, Handler, Outcome};
@@ -238,14 +240,22 @@ impl Handler for FileServer {
                     p = p.join("index.html");        
                 }
 
-                let gzip_accepted = req.headers().get("Accept-Encoding")
-                    .find(|value| value.contains("gzip"))
-                    .is_some();
-                let pre_zipped = gzip_accepted && options.contains(Options::PreZipped);
-                let response = match pre_zipped {
-                    true  => MaybeCompressedFile::open(p).await.respond_to(req),
-                    false => NamedFile::open(p).await.respond_to(req),
+                let accepted = match options.contains(Options::PreZipped) {
+                    true => req.accept_encoding().map(|ae| ae.content_codings()),
+                    false => None,
                 };
+
+                // Our current impl will prefer gzip if the client accepts it.
+                let encoding = accepted
+                .map(|ccs| ccs.filter(|cc| cc.is_known()))
+                    .map(|ccs| ccs.filter(|cc| cc.weight().unwrap_or(1f32) > 0f32))
+                    .map(|ccs| ccs.map(|cc| {
+                        if !cc.is_any() { ContentCoding::GZIP  } else { cc.to_owned() }
+                    }))
+                    .and_then(|ccs| ccs.reduce(|acc, cc| if acc.is_gzip() { acc } else { cc }))
+                    .unwrap_or(ContentCoding::IDENTITY);
+
+                let response = MaybeCompressedFile::open(encoding, p).await.respond_to(req);
                 response.or_forward((data, Status::NotFound))
             }
             None => Outcome::forward(data, Status::NotFound),

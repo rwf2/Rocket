@@ -2,7 +2,7 @@ use std::ffi::OsString;
 use std::path::Path;
 use std::io;
 
-use rocket_http::ContentType;
+use rocket_http::{ContentCoding, ContentEncoding, ContentType};
 
 use crate::fs::NamedFile;
 use crate::response::{self, Responder};
@@ -38,8 +38,8 @@ use crate::Request;
 /// [`FileServer`]: crate::fs::FileServer
 #[derive(Debug)]
 pub(crate) struct MaybeCompressedFile {
+    encoding: ContentCoding,
     ct_ext: Option<OsString>,
-    encoded: bool,
     file: NamedFile, 
 }
 
@@ -51,14 +51,16 @@ impl MaybeCompressedFile {
     /// This function will return an error if the selected path does not already 
     /// exist. Other errors may also be returned according to
     /// [`OpenOptions::open()`](std::fs::OpenOptions::open()).
-    pub async fn open<P: AsRef<Path>>(path: P) -> io::Result<MaybeCompressedFile> {
+    pub async fn open<P: AsRef<Path>>(encoding: ContentCoding, path: P) -> io::Result<MaybeCompressedFile> {
         let o_path = path.as_ref().to_path_buf();
 
-        let (ct_ext, encoded, file) = match o_path.extension() {
-            // A gz file is being requested, no need to compress again.
-            Some(e) if e == "gz" => (Some(e.to_owned()), false, NamedFile::open(path).await?),
-            // construct path to the .gz file
-            ct_ext => {
+        let (ct_ext, encoding, file) = match o_path.extension() {
+            // A compressed file is being requested, no need to compress again.
+            Some(e) if e == "gz" => 
+                (Some(e.to_owned()), ContentCoding::IDENTITY, NamedFile::open(path).await?),
+            
+            ct_ext if encoding.is_gzip() => {
+                // construct path to the compressed file
                 let ct_ext = ct_ext.map(|e| e.to_owned());
                 let zip_ext = ct_ext.as_ref().map(|e| {
                     let mut z = e.to_owned();
@@ -68,13 +70,18 @@ impl MaybeCompressedFile {
 
                 let zipped = o_path.with_extension(zip_ext);
                 match zipped.exists() {
-                    true  => (ct_ext, true, NamedFile::open(zipped).await?),
-                    false => (ct_ext, false, NamedFile::open(path).await?),
+                    true  => (ct_ext, encoding, NamedFile::open(zipped).await?),
+                    false => (ct_ext, ContentCoding::IDENTITY, NamedFile::open(path).await?),
                 }
             }
+
+            // gzip not supported, fall back to IDENTITY
+            ct_ext => 
+                (ct_ext.map(|e| e.to_owned()), ContentCoding::IDENTITY, NamedFile::open(o_path).await?),
+            
         };
 
-        Ok(MaybeCompressedFile { ct_ext, encoded, file })
+        Ok(MaybeCompressedFile { ct_ext, encoding, file })
     }
 }
 
@@ -88,8 +95,8 @@ impl<'r> Responder<'r, 'static> for MaybeCompressedFile {
     fn respond_to(self, request: &'r Request<'_>) -> response::Result<'static> {
         let mut response = self.file.respond_to(request)?;
 
-        if self.encoded {
-            response.set_raw_header("Content-Encoding", "gzip");
+        if !self.encoding.is_identity() && !self.encoding.is_any() {
+            response.set_header(ContentEncoding::from(self.encoding));
         }
         
         if let Some(ext) = self.ct_ext {

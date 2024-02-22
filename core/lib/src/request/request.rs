@@ -16,7 +16,7 @@ use crate::form::{self, ValueField, FromForm};
 use crate::data::Limits;
 
 use crate::http::ProxyProto;
-use crate::http::{Method, Header, HeaderMap, ContentType, Accept, MediaType, CookieJar, Cookie};
+use crate::http::{Method, Header, HeaderMap, ContentType, Accept, AcceptEncoding, MediaType, CookieJar, Cookie};
 use crate::http::uri::{fmt::Path, Origin, Segments, Host, Authority};
 use crate::listener::{Certificates, Endpoint, Connection};
 
@@ -59,6 +59,7 @@ pub(crate) struct RequestState<'r> {
     pub route: OptionRefSwap<'r, Route>,
     pub cookies: CookieJar<'r>,
     pub accept: InitCell<Option<Accept>>,
+    pub accept_encoding: InitCell<Option<AcceptEncoding>>,
     pub content_type: InitCell<Option<ContentType>>,
     pub cache: Arc<TypeMap![Send + Sync]>,
     pub host: Option<Host<'r>>,
@@ -71,6 +72,7 @@ impl Clone for RequestState<'_> {
             route: OptionRefSwap::new(self.route.load(Ordering::Acquire)),
             cookies: self.cookies.clone(),
             accept: self.accept.clone(),
+            accept_encoding: self.accept_encoding.clone(),
             content_type: self.content_type.clone(),
             cache: self.cache.clone(),
             host: self.host.clone(),
@@ -97,6 +99,7 @@ impl<'r> Request<'r> {
                 route: OptionRefSwap::new(None),
                 cookies: CookieJar::new(None, rocket),
                 accept: InitCell::new(),
+                accept_encoding: InitCell::new(),
                 content_type: InitCell::new(),
                 cache: Arc::new(<TypeMap![Send + Sync]>::new()),
                 host: None,
@@ -648,6 +651,26 @@ impl<'r> Request<'r> {
     pub fn accept(&self) -> Option<&Accept> {
         self.state.accept
             .get_or_init(|| self.headers().get_one("Accept").and_then(|v| v.parse().ok()))
+            .as_ref()
+    }
+
+    /// Returns the Accept header of `self`. If the header is not present,
+    /// returns `None`.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use rocket::http::AcceptEncoding;
+    ///
+    /// # let c = rocket::local::blocking::Client::debug_with(vec![]).unwrap();
+    /// # let get = |uri| c.get(uri);
+    /// assert_eq!(get("/").accept_encoding(), None);
+    /// assert_eq!(get("/").header(AcceptEncoding::GZIP).accept_encoding(), Some(&AcceptEncoding::GZIP));
+    /// ```
+    #[inline]
+    pub fn accept_encoding(&self) -> Option<&AcceptEncoding> {
+        self.state.accept_encoding
+            .get_or_init(|| self.headers().get_one("Accept-Encoding").and_then(|v| v.parse().ok()))
             .as_ref()
     }
 
