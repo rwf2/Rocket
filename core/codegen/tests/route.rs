@@ -175,6 +175,9 @@ fn test_full_route() {
     assert_eq!(response.into_string().unwrap(), format!("({}, {}, {}, {}, {}, {}) ({})",
             sky, name.percent_decode().unwrap(), "A A", "inside", path, simple, expected_uri));
 
+    let response = client.post(format!("/3{}", uri)).body(simple).dispatch();
+    assert_eq!(response.status(), Status::NotFound);
+
     let response = client
         .post(format!("/3{}", uri))
         .header(ContentType::JSON)
@@ -183,6 +186,9 @@ fn test_full_route() {
 
     assert_eq!(response.into_string().unwrap(), format!("({}, {}, {}, {}, {}, {}) ({})",
             sky, name.percent_decode().unwrap(), "A A", "inside", path, simple, expected_uri));
+
+    let response = client.post(format!("/4{}", uri)).body(simple).dispatch();
+    assert_eq!(response.status(), Status::NotFound);
 
     let response = client
         .post(format!("/4{}", uri))
