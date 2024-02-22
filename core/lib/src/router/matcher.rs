@@ -1,6 +1,6 @@
 use crate::{Route, Request, Catcher};
 use crate::router::Collide;
-use crate::http::Status;
+use crate::http::{Method, Status};
 use crate::route::Color;
 
 impl Route {
@@ -66,7 +66,7 @@ impl Route {
     /// assert!(b.rank < a.rank);
     /// ```
     pub fn matches(&self, request: &Request<'_>) -> bool {
-        self.method == request.method()
+        (self.method == Method::Any || self.method == request.method())
             && paths_match(self, request)
             && queries_match(self, request)
             && formats_match(self, request)

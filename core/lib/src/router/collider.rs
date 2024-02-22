@@ -1,7 +1,7 @@
 use crate::catcher::Catcher;
 use crate::route::{Route, Segment, RouteUri};
 
-use crate::http::MediaType;
+use crate::http::{MediaType, Method};
 
 pub trait Collide<T = Self> {
     fn collides_with(&self, other: &T) -> bool;
@@ -87,7 +87,11 @@ impl Route {
     /// assert!(a.collides_with(&b));
     /// ```
     pub fn collides_with(&self, other: &Route) -> bool {
-        self.method == other.method
+        (
+            self.method == Method::Any
+                || other.method == Method::Any
+                || self.method == other.method
+        )
             && self.rank == other.rank
             && self.uri.collides_with(&other.uri)
             && formats_collide(self, other)
@@ -214,7 +218,7 @@ mod tests {
 
     use super::*;
     use crate::route::{Route, dummy_handler};
-    use crate::http::{Method, Method::*, MediaType};
+    use crate::http::{Method::*, MediaType};
 
     fn dummy_route(ranked: bool, method: impl Into<Option<Method>>, uri: &'static str) -> Route {
         let method = method.into().unwrap_or(Get);

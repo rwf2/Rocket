@@ -76,6 +76,51 @@ fn post2(
     format!("({}) ({})", string, uri.to_string())
 }
 
+#[any(
+    "/<a>/<name>/name/<path..>?sky=blue&<sky>&<query..>",
+    format = "json",
+    data = "<simple>",
+    rank = 138
+)]
+fn any3(
+    sky: usize,
+    name: &str,
+    a: String,
+    query: Inner<'_>,
+    path: PathBuf,
+    simple: Simple,
+) -> String {
+    let string = format!("{}, {}, {}, {}, {}, {}",
+        sky, name, a, query.field, path.normalized_str(), simple.0);
+
+    let uri = uri!(any3(a, name, path, sky, query));
+
+    format!("({}) ({})", string, uri.to_string())
+}
+
+#[route(
+    ANY,
+    uri = "/<a>/<name>/name/<path..>?sky=blue&<sky>&<query..>",
+    format = "json",
+    data = "<simple>",
+    rank = 138
+)]
+fn any4(
+    sky: usize,
+    name: &str,
+    a: String,
+    query: Inner<'_>,
+    path: PathBuf,
+    simple: Simple,
+) -> String {
+    let string = format!("{}, {}, {}, {}, {}, {}",
+        sky, name, a, query.field, path.normalized_str(), simple.0);
+
+    let uri = uri!(any4(a, name, path, sky, query));
+
+    format!("({}) ({})", string, uri.to_string())
+}
+
 #[allow(dead_code)]
 #[post("/<_unused_param>?<_unused_query>", data="<_unused_data>")]
 fn test_unused_params(_unused_param: String, _unused_query: String, _unused_data: Data<'_>) {
@@ -85,7 +130,9 @@ fn test_unused_params(_unused_param: String, _unused_query: String, _unused_data
 fn test_full_route() {
     let rocket = rocket::build()
         .mount("/1", routes![post1])
-        .mount("/2", routes![post2]);
+        .mount("/2", routes![post2])
+        .mount("/3", routes![any3])
+        .mount("/4", routes![any4]);
 
     let client = Client::debug(rocket).unwrap();
 
@@ -121,6 +168,33 @@ fn test_full_route() {
 
     let response = client
         .post(format!("/2{}", uri))
+        .header(ContentType::JSON)
+        .body(simple)
+        .dispatch();
+
+    assert_eq!(response.into_string().unwrap(), format!("({}, {}, {}, {}, {}, {}) ({})",
+            sky, name.percent_decode().unwrap(), "A A", "inside", path, simple, expected_uri));
+
+    let response = client
+        .post(format!("/2{}", uri))
+        .header(ContentType::JSON)
+        .body(simple)
+        .dispatch();
+
+    assert_eq!(response.into_string().unwrap(), format!("({}, {}, {}, {}, {}, {}) ({})",
+            sky, name.percent_decode().unwrap(), "A A", "inside", path, simple, expected_uri));
+
+    let response = client
+        .post(format!("/3{}", uri))
+        .header(ContentType::JSON)
+        .body(simple)
+        .dispatch();
+
+    assert_eq!(response.into_string().unwrap(), format!("({}, {}, {}, {}, {}, {}) ({})",
+            sky, name.percent_decode().unwrap(), "A A", "inside", path, simple, expected_uri));
+
+    let response = client
+        .post(format!("/4{}", uri))
         .header(ContentType::JSON)
         .body(simple)
         .dispatch();

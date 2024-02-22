@@ -10,15 +10,15 @@ fn get0(_number: u8) -> &'static str { "0" }
 #[get("/<_number>", rank = 1)]
 fn get1(_number: u16) -> &'static str { "1" }
 
-#[get("/<_number>", rank = 2)]
-fn get2(_number: u32) -> &'static str { "2" }
+#[any("/<_number>", rank = 2)]
+fn any2(_number: u32) -> &'static str { "2" }
 
 #[get("/<_number>", rank = 3)]
 fn get3(_number: u64) -> &'static str { "3" }
 
 #[test]
 fn test_ranking() {
-    let rocket = rocket::build().mount("/", routes![get0, get1, get2, get3]);
+    let rocket = rocket::build().mount("/", routes![get0, get1, any2, get3]);
     let client = Client::debug(rocket).unwrap();
 
     let response = client.get("/0").dispatch();
@@ -39,11 +39,30 @@ fn test_ranking() {
 #[get("/<_n>")]
 fn get0b(_n: u8) {  }
 
+#[any("/<_n>")]
+fn any0c(_n: u8) {  }
+
 #[test]
 fn test_rank_collision() {
     use rocket::error::ErrorKind;
 
     let rocket = rocket::build().mount("/", routes![get0, get0b]);
+    let client_result = Client::debug(rocket);
+    match client_result.as_ref().map_err(|e| e.kind()) {
+        Err(ErrorKind::Collisions(..)) => { /* o.k. */ },
+        Ok(_) => panic!("client succeeded unexpectedly"),
+        Err(e) => panic!("expected collision, got {}", e)
+    }
+
+    let rocket = rocket::build().mount("/", routes![get0, any0c]);
+    let client_result = Client::debug(rocket);
+    match client_result.as_ref().map_err(|e| e.kind()) {
+        Err(ErrorKind::Collisions(..)) => { /* o.k. */ },
+        Ok(_) => panic!("client succeeded unexpectedly"),
+        Err(e) => panic!("expected collision, got {}", e)
+    }
+
+    let rocket = rocket::build().mount("/", routes![any0c, get0]);
     let client_result = Client::debug(rocket);
     match client_result.as_ref().map_err(|e| e.kind()) {
         Err(ErrorKind::Collisions(..)) => { /* o.k. */ },

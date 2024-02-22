@@ -97,12 +97,12 @@ impl ToTokens for MediaType {
 }
 
 const VALID_METHODS_STR: &str = "`GET`, `PUT`, `POST`, `DELETE`, `HEAD`, \
-    `PATCH`, `OPTIONS`";
+    `PATCH`, `OPTIONS`, `ANY`";
 
 const VALID_METHODS: &[http::Method] = &[
     http::Method::Get, http::Method::Put, http::Method::Post,
     http::Method::Delete, http::Method::Head, http::Method::Patch,
-    http::Method::Options,
+    http::Method::Options, http::Method::Any,
 ];
 
 impl FromMeta for Method {

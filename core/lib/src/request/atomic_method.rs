@@ -14,6 +14,7 @@ const fn makeref(method: Method) -> &'static Method {
         Method::Trace => &Method::Trace,
         Method::Connect => &Method::Connect,
         Method::Patch => &Method::Patch,
+        Method::Any => &Method::Any,
     }
 }
 

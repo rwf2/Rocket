@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use std::iter::Peekable;
 
 use crate::request::Request;
 use crate::http::{Method, Status};
@@ -16,6 +17,49 @@ pub(crate) struct Router {
 pub struct Collisions {
     pub routes: Vec<(Route, Route)>,
     pub catchers: Vec<(Catcher, Catcher)>,
+}
+
+struct MergeRoutes<L: Iterator, R: Iterator> {
+    left: Peekable<L>,
+    right: Peekable<R>,
+}
+
+impl<'a, L, R> MergeRoutes<L, R>
+where
+    L: Iterator<Item = &'a Route>,
+    R: Iterator<Item = &'a Route>
+{
+
+    fn new(left: L, right: R) -> Self
+    {
+        Self {
+            left: left.peekable(),
+            right: right.peekable(),
+        }
+    }
+}
+
+impl<'a, L, R> Iterator for MergeRoutes<L, R>
+where
+    L: Iterator<Item = &'a Route>,
+    R: Iterator<Item = &'a Route>
+{
+    type Item = &'a Route;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        match (self.left.peek(), self.right.peek()) {
+            (Some(left), Some(right)) => {
+                if left.rank <= right.rank {
+                    self.left.next()
+                } else {
+                    self.right.next()
+                }
+            }
+            (Some(_), None) => self.left.next(),
+            (None, Some(_)) => self.right.next(),
+            (None, None) => None,
+        }
+    }
 }
 
 impl Router {
@@ -50,9 +94,14 @@ impl Router {
         req: &'r Request<'r>
     ) -> impl Iterator<Item = &'a Route> + 'r {
         // Note that routes are presorted by ascending rank on each `add`.
-        self.routes.get(&req.method())
-            .into_iter()
-            .flat_map(move |routes| routes.iter().filter(move |r| r.matches(req)))
+        MergeRoutes::new(
+            self.routes.get(&req.method())
+                .into_iter()
+                .flat_map(move |routes| routes.iter()),
+            self.routes.get(&Method::Any)
+                .into_iter()
+                .flat_map(move |routes| routes.iter()),
+        ).filter(move |r| r.matches(req))
     }
 
     // For many catchers, using aho-corasick or similar should be much faster.
@@ -102,7 +151,7 @@ mod test {
 
     use crate::route::dummy_handler;
     use crate::local::blocking::Client;
-    use crate::http::{Method, Method::*, uri::Origin};
+    use crate::http::{Method::*, uri::Origin};
 
     impl Router {
         fn has_collisions(&self) -> bool {
@@ -316,9 +365,11 @@ mod test {
         router.add_route(Route::new(Put, "/hello", dummy_handler));
         router.add_route(Route::new(Post, "/hello", dummy_handler));
         router.add_route(Route::new(Delete, "/hello", dummy_handler));
+        router.add_route(Route::new(Any, "/hello_any", dummy_handler));
         assert!(route(&router, Put, "/hello").is_some());
         assert!(route(&router, Post, "/hello").is_some());
         assert!(route(&router, Delete, "/hello").is_some());
+        assert!(route(&router, Put, "/hello_any").is_some());
 
         let router = router_with_routes(&["/<a..>"]);
         assert!(route(&router, Get, "/").is_some());
