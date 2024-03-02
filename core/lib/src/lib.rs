@@ -349,7 +349,7 @@ pub fn execute<R, F>(future: F) -> R
     async_main(future)
 }
 
-/// Returns a future that evalutes to `true` exactly when there is a presently
+/// Returns a future that evaluates to `true` exactly when there is a presently
 /// running tokio async runtime that was likely started by Rocket.
 fn running_within_rocket_async_rt() -> impl std::future::Future<Output = bool> {
     use futures::FutureExt;

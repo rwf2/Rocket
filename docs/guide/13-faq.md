@@ -267,7 +267,7 @@ bit simpler, and you may find SSE sufficient for your use-case. For instance,
 the [chat example] uses SSE to implement a real-time, multiroom chat
 application.
 
-That being said, Rocket _does_ suport [Server-Sent Events], which allows for
+That being said, Rocket _does_ support [Server-Sent Events], which allows for
 real-time _unidirectional_ communication from the server to the client. This is
 often sufficient for many of the applications that WebSockets are typically used
 for. For instance, the [chat example] uses SSE to implement a real-time,

@@ -162,7 +162,7 @@ impl Rocket<Orbit> {
         };
 
         if let Some((proto, io_handler)) = upgrade {
-            info_!("Attemping upgrade with {proto} I/O handler.");
+            info_!("Attempting upgrade with {proto} I/O handler.");
             response.set_status(Status::SwitchingProtocols);
             response.set_raw_header("Connection", "Upgrade");
             response.set_raw_header("Upgrade", proto.to_string());
