@@ -38,7 +38,7 @@ Rocket is extensively documented:
   * [Guide]: A detailed guide and reference to Rocket.
   * [API Documentation]: The "rustdocs".
 
-[Quickstart]: https://rocket.rs/v0.5/guide/quickstart/#quickstart
+[Quickstart]: https://rocket.rs/v0.5/guide/quickstart/
 [Getting Started]: https://rocket.rs/v0.5/guide/getting-started/
 [Overview]: https://rocket.rs/v0.5/overview/
 [Guide]: https://rocket.rs/v0.5/guide/
