@@ -38,10 +38,10 @@ Rocket is extensively documented:
   * [Guide]: A detailed guide and reference to Rocket.
   * [API Documentation]: The "rustdocs".
 
-[Quickstart]: https://rocket.rs/guide/quickstart
-[Getting Started]: https://rocket.rs/guide/getting-started
-[Overview]: https://rocket.rs/overview/
-[Guide]: https://rocket.rs/guide/
+[Quickstart]: https://rocket.rs/v0.5/guide/quickstart/#quickstart
+[Getting Started]: https://rocket.rs/v0.5/guide/getting-started/
+[Overview]: https://rocket.rs/v0.5/overview/
+[Guide]: https://rocket.rs/v0.5/guide/
 [API Documentation]: https://api.rocket.rs/rocket/
 
 The official community support channels are [`#rocket:mozilla.org`] on Matrix
