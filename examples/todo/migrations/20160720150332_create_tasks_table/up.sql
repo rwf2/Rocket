@@ -1,8 +1,8 @@
 CREATE TABLE tasks (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    id SERIAL PRIMARY KEY,
     description VARCHAR NOT NULL,
-    completed BOOLEAN NOT NULL DEFAULT 0
+    completed BOOLEAN NOT NULL DEFAULT FALSE
 );
 
-INSERT INTO tasks (description) VALUES ("demo task");
-INSERT INTO tasks (description) VALUES ("demo task2");
+INSERT INTO tasks (description) VALUES ('demo task');
+INSERT INTO tasks (description) VALUES ('demo task2');

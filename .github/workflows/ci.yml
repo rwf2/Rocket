@@ -4,6 +4,7 @@ on: [push, pull_request]
 
 env:
   CARGO_TERM_COLOR: always
+  VCPKG_BINARY_SOURCES: "clear;x-gha,readwrite"
 
 jobs:
   test:
@@ -63,15 +64,20 @@ jobs:
             brew install mysql-client libpq sqlite coreutils
             echo "/usr/local/opt/mysql-client/bin" >> "$GITHUB_PATH"
 
+      - name: Export GitHub Actions cache environment variables (Windows, vcpkg)
+        if: matrix.platform.name == 'Windows'
+        uses: actions/github-script@v6
+        with:
+          script: |
+            core.exportVariable('ACTIONS_CACHE_URL', process.env.ACTIONS_CACHE_URL || '');
+            core.exportVariable('ACTIONS_RUNTIME_TOKEN', process.env.ACTIONS_RUNTIME_TOKEN || '');
+
       # vcpkg --triplet x64-windows install libmysql libpq sqlite3 openssl
       # + vcpkg/installed/vcpkg (in particular, the status file)
       - name: Install Native Dependencies (Windows)
         if: matrix.platform.name == 'Windows'
         run: |
-          curl -fsS -o vcpkg.7z https://rocket.rs/static/vcpkg-2019-07-05.7z
-          7z x vcpkg.7z -y -bb0
-          xcopy .\vcpkg $env:VCPKG_INSTALLATION_ROOT /s /e /h /y /q
-          vcpkg integrate install
+          vcpkg --triplet x64-windows install libmysql libpq sqlite3 openssl
           echo "VCPKGRS_DYNAMIC=1" >> "$env:GITHUB_ENV"
           echo "VCPKG_ROOT=$env:VCPKG_INSTALLATION_ROOT" >> "$env:GITHUB_ENV"
           echo "$env:VCPKG_INSTALLATION_ROOT\installed\x64-windows\lib" >> "$env:GITHUB_PATH"
@@ -81,6 +87,39 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y libmysqlclient-dev libpq-dev libsqlite3-dev
+
+      - name: Start Postgres (macOS)
+        if: matrix.platform.name == 'macOS'
+        run: |
+          brew services start postgresql@14
+          RETRIES=5
+          until pg_isready > /dev/null 2>&1 || [[ $RETRIES -eq 0 ]]; do
+            echo "waiting for Postgres to start, $((RETRIES--)) remaining attempts"
+            sleep 1
+          done
+          psql postgres -c "CREATE ROLE rocket_runner PASSWORD 'password' SUPERUSER CREATEDB INHERIT LOGIN"
+          createdb -O rocket_runner epic_todo_database
+
+      - name: Start Postgres (Linux)
+        if: matrix.platform.name == 'Linux'
+        run: |
+          sudo systemctl start postgresql.service
+          RETRIES=5
+          until pg_isready > /dev/null 2>&1 || [[ $RETRIES -eq 0 ]]; do
+            echo "waiting for Postgres to start, $((RETRIES--)) remaining attempts"
+            sleep 1
+          done
+          sudo -u postgres psql -U postgres -c "CREATE ROLE rocket_runner PASSWORD 'password' SUPERUSER CREATEDB INHERIT LOGIN"
+          sudo -u postgres createdb -O rocket_runner epic_todo_database
+
+      - name: Start Postgres (Windows)
+        if: matrix.platform.name == 'Windows'
+        run: |
+          $pgService = Get-Service -Name postgresql*
+          Set-Service -InputObject $pgService -Status running -StartupType automatic
+          Start-Process -FilePath "$env:PGBIN\pg_isready" -Wait -PassThru
+          & $env:PGBIN\psql --command "CREATE ROLE rocket_runner PASSWORD 'password' SUPERUSER CREATEDB INHERIT LOGIN"
+          & $env:PGBIN\createdb -O rocket_runner epic_todo_database
 
       - name: Install Rust
         uses: dtolnay/rust-toolchain@master

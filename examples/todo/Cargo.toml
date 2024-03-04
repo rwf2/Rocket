@@ -7,16 +7,16 @@ publish = false
 
 [dependencies]
 rocket = { path = "../../core/lib" }
-diesel = { version = "2.0.0", features = ["sqlite", "r2d2"] }
+diesel = { version = "2.0.0", features = ["postgres", "r2d2"] }
 diesel_migrations = "2.0.0"
 
 [dev-dependencies]
 parking_lot = "0.12"
 rand = "0.8"
 
-[dependencies.rocket_sync_db_pools]
-path = "../../contrib/sync_db_pools/lib/"
-features = ["diesel_sqlite_pool"]
+[dependencies.rocket_db_pools]
+path = "../../contrib/db_pools/lib/"
+features = ["diesel_postgres"]
 
 [dependencies.rocket_dyn_templates]
 path = "../../contrib/dyn_templates"
