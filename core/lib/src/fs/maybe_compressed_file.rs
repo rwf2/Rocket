@@ -83,6 +83,10 @@ impl MaybeCompressedFile {
 
         Ok(MaybeCompressedFile { ct_ext, encoding, file })
     }
+
+    pub fn file(&self) -> &NamedFile {
+        &self.file
+    }
 }
 
 /// Streams the *appropriate* named file to the client. Sets or overrides the 
