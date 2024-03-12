@@ -3,8 +3,8 @@ use std::sync::Arc;
 use std::time::Duration;
 use std::pin::Pin;
 
-use yansi::Paint;
 use tokio::sync::oneshot;
+use yansi::Paint;
 use tokio::time::sleep;
 use futures::stream::StreamExt;
 use futures::future::{FutureExt, Future, BoxFuture};
@@ -421,9 +421,12 @@ impl Rocket<Orbit> {
         if self.config.tls_enabled() {
             if let Some(ref config) = self.config.tls {
                 use crate::http::tls::TlsListener;
+                use crate::http::tls::rustls::server::ResolvesServerCert;
 
                 let conf = config.to_native_config().map_err(ErrorKind::Io)?;
-                let l = TlsListener::bind(addr, conf).await.map_err(ErrorKind::Bind)?;
+                let resolver = self.state::<Arc<dyn ResolvesServerCert>>();
+                
+                let l = TlsListener::bind(addr, conf, resolver).await.map_err(ErrorKind::Bind)?;
                 addr = l.local_addr().unwrap_or(addr);
                 self.config.address = addr.ip();
                 self.config.port = addr.port();
