@@ -5,12 +5,14 @@ use std::task::{Context, Poll};
 use std::future::Future;
 use std::net::SocketAddr;
 
+use rustls::server::ResolvesServerCert;
 use tokio::net::{TcpListener, TcpStream};
 use tokio::io::{AsyncRead, AsyncWrite};
 use tokio_rustls::{Accept, TlsAcceptor, server::TlsStream as BareTlsStream};
 
-use crate::tls::util::{load_certs, load_private_key, load_ca_certs};
+use crate::tls::util::load_ca_certs;
 use crate::listener::{Connection, Listener, Certificates};
+use crate::tls::CertResolver;
 
 /// A TLS listener over TCP.
 pub struct TlsListener {
@@ -72,17 +74,11 @@ pub struct Config<R> {
 }
 
 impl TlsListener {
-    pub async fn bind<R>(addr: SocketAddr, mut c: Config<R>) -> io::Result<TlsListener>
-        where R: io::BufRead
+    pub async fn bind<R>(addr: SocketAddr, mut c: Config<R>, cert_resolver: Option<&Arc<dyn ResolvesServerCert>>) -> io::Result<TlsListener>
+        where R: io::BufRead,
     {
         use rustls::server::{AllowAnyAuthenticatedClient, AllowAnyAnonymousOrAuthenticatedClient};
         use rustls::server::{NoClientAuth, ServerSessionMemoryCache, ServerConfig};
-
-        let cert_chain = load_certs(&mut c.cert_chain)
-            .map_err(|e| io::Error::new(e.kind(), format!("bad TLS cert chain: {}", e)))?;
-
-        let key = load_private_key(&mut c.private_key)
-            .map_err(|e| io::Error::new(e.kind(), format!("bad TLS private key: {}", e)))?;
 
         let client_auth = match c.ca_certs {
             Some(ref mut ca_certs) => match load_ca_certs(ca_certs) {
@@ -93,14 +89,18 @@ impl TlsListener {
             None => NoClientAuth::boxed(),
         };
 
+        let cert_resolver = match cert_resolver {
+            Some(c) => c.clone(),
+            None => Arc::new(CertResolver::new(&mut c)?),
+        };
+
         let mut tls_config = ServerConfig::builder()
             .with_cipher_suites(&c.ciphersuites)
             .with_safe_default_kx_groups()
             .with_safe_default_protocol_versions()
             .map_err(|e| io::Error::new(io::ErrorKind::Other, format!("bad TLS config: {}", e)))?
             .with_client_cert_verifier(client_auth)
-            .with_single_cert(cert_chain, key)
-            .map_err(|e| io::Error::new(io::ErrorKind::Other, format!("bad TLS config: {}", e)))?;
+            .with_cert_resolver(cert_resolver);
 
         tls_config.ignore_client_order = c.prefer_server_order;
 
