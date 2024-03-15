@@ -47,7 +47,9 @@ pub enum Method {
     /// The `CONNECT` variant.
     Connect,
     /// The `PATCH` variant.
-    Patch
+    Patch,
+    /// A wildcard variant meant to accept any method
+    Any = u8::MAX,
 }
 
 impl Method {
@@ -57,6 +59,9 @@ impl Method {
     /// The following methods always support payloads:
     ///
     ///   * `PUT`, `POST`, `DELETE`, `PATCH`
+    ///
+    /// In addition, the wildcard variant Any is considered to support payloads
+    /// because some methods it matches do.
     ///
     /// The following methods _do not_ always support payloads:
     ///
@@ -74,7 +79,7 @@ impl Method {
     #[inline]
     pub fn supports_payload(self) -> bool {
         match self {
-            Put | Post | Delete | Patch => true,
+            Put | Post | Delete | Patch | Any => true,
             Get | Head | Connect | Trace | Options => false,
         }
     }
@@ -101,6 +106,7 @@ impl Method {
             Trace => "TRACE",
             Connect => "CONNECT",
             Patch => "PATCH",
+            Any => "ANY",
         }
     }
 }
@@ -121,6 +127,7 @@ impl FromStr for Method {
             x if uncased::eq(x, Trace.as_str()) => Ok(Trace),
             x if uncased::eq(x, Connect.as_str()) => Ok(Connect),
             x if uncased::eq(x, Patch.as_str()) => Ok(Patch),
+            x if uncased::eq(x, Any.as_str()) => Ok(Any),
             _ => Err(()),
         }
     }

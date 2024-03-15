@@ -70,7 +70,9 @@ impl Rocket<Orbit> {
                 .and_then(|field| field.value.parse().ok());
 
             if let Some(method) = method {
-                req.set_method(method);
+                if method != Method::Any {
+                    req.set_method(method);
+                }
             }
         }
 

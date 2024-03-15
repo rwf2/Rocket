@@ -118,6 +118,9 @@ macro_rules! route_attribute {
         ///   * [`options`] - `OPTIONS` specific route
         ///   * [`patch`] - `PATCH` specific route
         ///
+        /// There is also [`any`] route attribute allowing you to create a
+        /// route matching all methods.
+        ///
         /// Additionally, [`route`] allows the method and uri to be explicitly
         /// specified:
         ///
@@ -137,6 +140,7 @@ macro_rules! route_attribute {
         /// [`head`]: attr.head.html
         /// [`options`]: attr.options.html
         /// [`patch`]: attr.patch.html
+        /// [`any`]: attr.any.html
         /// [`route`]: attr.route.html
         ///
         /// # Grammar
@@ -173,6 +177,8 @@ macro_rules! route_attribute {
         /// ```text
         /// generic-route := METHOD ',' 'uri' '=' route
         /// ```
+        ///
+        /// Here `METHOD` is a supported HTTP method or `ANY`.
         ///
         /// # Typing Requirements
         ///
@@ -286,6 +292,7 @@ route_attribute!(delete => Method::Delete);
 route_attribute!(head => Method::Head);
 route_attribute!(patch => Method::Patch);
 route_attribute!(options => Method::Options);
+route_attribute!(any => Method::Any);
 
 /// Attribute to generate a [`Catcher`] and associated metadata.
 ///
