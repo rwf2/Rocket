@@ -120,12 +120,9 @@ pub fn derive_from_form(input: proc_macro::TokenStream) -> TokenStream {
                 let (ctxt_ty, gen) = context_type(input)?;
                 let (impl_gen, _, where_clause)  = gen.split_for_impl();
                 let output = mapper::input_default(mapper, input)?;
-                Ok(quote_spanned! { mixed(input.span()) =>
+                Ok(quote_spanned! { mixed(input.span())=>
                     /// Rocket generated FormForm context.
                     #[doc(hidden)]
-                    #[allow(unknown_lints)]
-                    #[allow(renamed_and_removed_lints)]
-                    #[allow(private_in_public)]
                     #[allow(private_bounds)]
                     #vis struct #ctxt_ty #impl_gen #where_clause {
                         __opts: #_form::Options,
