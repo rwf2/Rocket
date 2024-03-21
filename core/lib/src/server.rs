@@ -60,7 +60,7 @@ impl Rocket<Orbit> {
         }
 
         if let Some(size) = response.inner().body().preset_size() {
-            builder = builder.header(http::header::CONTENT_TYPE, size);
+            builder = builder.header(http::header::CONTENT_LENGTH, size);
         }
 
         if let Some(alt_svc) = alt_svc {
