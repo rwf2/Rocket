@@ -90,6 +90,7 @@ function test_contrib() {
     diesel_sqlite_pool
     diesel_mysql_pool
     postgres_pool
+    postgres_pool_tls
     sqlite_pool
     memcache_pool
   )

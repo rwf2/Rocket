@@ -14,6 +14,10 @@ pub enum Error<T> {
     Pool(r2d2::Error),
     /// An error occurred while extracting a `figment` configuration.
     Config(figment::Error),
+    /// An IO error occurred.
+    Io(std::io::Error),
+    /// A TLS error occurred.
+    Tls(Box<dyn std::error::Error>),
 }
 
 impl<T> From<figment::Error> for Error<T> {
@@ -25,5 +29,11 @@ impl<T> From<figment::Error> for Error<T> {
 impl<T> From<r2d2::Error> for Error<T> {
     fn from(error: r2d2::Error) -> Self {
         Error::Pool(error)
+    }
+}
+
+impl<T> From<std::io::Error> for Error<T> {
+    fn from(error: std::io::Error) -> Self {
+        Error::Io(error)
     }
 }
