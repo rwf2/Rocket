@@ -817,8 +817,15 @@ impl fmt::Display for ErrorKind<'_> {
                     (None, Some(k)) if *k < 1024 => write!(f, "length cannot exceed {}", k)?,
                     (None, Some(k)) => write!(f, "size must not exceed {}", ByteUnit::from(*k))?,
                     (Some(1), None) => write!(f, "cannot be empty")?,
-                    (Some(k), None) if *k < 1024 => write!(f, "expected at least {}", k)?,
+                    (Some(k), None) if *k < 1024 => write!(f, "length expected to be at least {}", k)?,
                     (Some(k), None) => write!(f, "size must be at least {}", ByteUnit::from(*k))?,
+                    (Some(i), Some(j)) if *i == *j && *i < 1024 => {
+                        write!(f, "length must be {}", i)?;
+                    }
+                    (Some(i), Some(j)) if *i == *j => {
+                        let i = ByteUnit::from(*i);
+                        write!(f, "length must be {}", i)?;
+                    }
                     (Some(i), Some(j)) if *i < 1024 && *j < 1024 => {
                         write!(f, "length must be between {} and {}", i, j)?;
                     }
