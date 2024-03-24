@@ -621,7 +621,7 @@ impl Extend<(IndexedStr<'static>, IndexedStr<'static>)> for MediaParams {
 
 impl Source {
     #[inline]
-    fn as_str(&self) -> Option<&str> {
+    pub(crate) fn as_str(&self) -> Option<&str> {
         match *self {
             Source::Known(s) => Some(s),
             Source::Custom(ref s) => Some(s.borrow()),
