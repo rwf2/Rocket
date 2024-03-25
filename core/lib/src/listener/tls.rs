@@ -7,7 +7,7 @@ use tokio::io::{AsyncRead, AsyncWrite};
 use tokio_rustls::TlsAcceptor;
 
 use crate::tls::{TlsConfig, Error};
-use crate::tls::util::{load_cert_chain, load_key, load_ca_certs};
+use crate::tls::util::{self, load_cert_chain, load_key, load_ca_certs};
 use crate::listener::{Listener, Bindable, Connection, Certificates, Endpoint};
 
 #[doc(inline)]
@@ -31,7 +31,7 @@ impl TlsConfig {
     pub(crate) fn server_config(&self) -> Result<ServerConfig, Error> {
         let provider = rustls::crypto::CryptoProvider {
             cipher_suites: self.ciphers().map(|c| c.into()).collect(),
-            ..rustls::crypto::ring::default_provider()
+            ..util::get_crypto_provider()
         };
 
         #[cfg(feature = "mtls")]
