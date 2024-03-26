@@ -34,8 +34,11 @@ pub fn load_key(reader: &mut dyn io::BufRead) -> Result<PrivateKeyDer<'static>> 
 
     // Ensure we can use the key.
     let key = keys.remove(0);
-    get_crypto_provider().key_provider.load_private_key(key.clone_key())
+    default_crypto_provider()
+        .key_provider
+        .load_private_key(key.clone_key())
         .map_err(KeyError::Unsupported)?;
+
     Ok(key)
 }
 
@@ -49,17 +52,10 @@ pub fn load_ca_certs(reader: &mut dyn io::BufRead) -> Result<RootCertStore> {
     Ok(roots)
 }
 
-pub(crate) fn get_crypto_provider() -> CryptoProvider {
-    if let Some(crypto_provider) = rustls::crypto::CryptoProvider::get_default() {
-        CryptoProvider::clone(crypto_provider)
-    } else {
-        let crypto_provider = rustls::crypto::ring::default_provider();
-        // Should only fail due to other concurrent install, so we ignore it
-        let _ = crypto_provider.clone().install_default();
-
-        crypto_provider
-    }
-
+pub fn default_crypto_provider() -> CryptoProvider {
+    rustls::crypto::CryptoProvider::get_default()
+        .map(|arc| (**arc).clone())
+        .unwrap_or_else(rustls::crypto::ring::default_provider)
 }
 
 #[cfg(test)]
