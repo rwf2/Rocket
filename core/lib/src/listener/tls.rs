@@ -7,7 +7,6 @@ use tokio::io::{AsyncRead, AsyncWrite};
 use tokio_rustls::TlsAcceptor;
 
 use crate::tls::{TlsConfig, Error};
-use crate::tls::util::{self, load_cert_chain, load_key, load_ca_certs};
 use crate::listener::{Listener, Bindable, Connection, Certificates, Endpoint};
 
 #[doc(inline)]
@@ -29,16 +28,13 @@ pub struct TlsBindable<I> {
 
 impl TlsConfig {
     pub(crate) fn server_config(&self) -> Result<ServerConfig, Error> {
-        let provider = rustls::crypto::CryptoProvider {
-            cipher_suites: self.ciphers().map(|c| c.into()).collect(),
-            ..util::get_crypto_provider()
-        };
+        let provider = Arc::new(self.default_crypto_provider());
 
         #[cfg(feature = "mtls")]
         let verifier = match self.mutual {
             Some(ref mtls) => {
-                let ca_certs = load_ca_certs(&mut mtls.ca_certs_reader()?)?;
-                let verifier = WebPkiClientVerifier::builder(Arc::new(ca_certs));
+                let ca = Arc::new(mtls.load_ca_certs()?);
+                let verifier = WebPkiClientVerifier::builder_with_provider(ca, provider.clone());
                 match mtls.mandatory {
                     true => verifier.build()?,
                     false => verifier.allow_unauthenticated().build()?,
@@ -50,12 +46,10 @@ impl TlsConfig {
         #[cfg(not(feature = "mtls"))]
         let verifier = WebPkiClientVerifier::no_client_auth();
 
-        let key = load_key(&mut self.key_reader()?)?;
-        let cert_chain = load_cert_chain(&mut self.certs_reader()?)?;
-        let mut tls_config = ServerConfig::builder_with_provider(Arc::new(provider))
+        let mut tls_config = ServerConfig::builder_with_provider(provider)
             .with_safe_default_protocol_versions()?
             .with_client_cert_verifier(verifier)
-            .with_single_cert(cert_chain, key)?;
+            .with_single_cert(self.load_certs()?, self.load_key()?)?;
 
         tls_config.ignore_client_order = self.prefer_server_cipher_order;
         tls_config.session_storage = ServerSessionMemoryCache::new(1024);

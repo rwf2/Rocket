@@ -8,6 +8,7 @@
 #   rsa_sha256
 #   ecdsa_nistp256_sha256
 #   ecdsa_nistp384_sha384
+#   ecdsa_nistp521_sha512
 #
 # Generate a certificate of the [cert-kind] key type, or if no cert-kind is
 # specified, all of the certificates.

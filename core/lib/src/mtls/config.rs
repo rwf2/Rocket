@@ -3,6 +3,8 @@ use std::io;
 use figment::value::magic::{RelativePathBuf, Either};
 use serde::{Serialize, Deserialize};
 
+use crate::tls::{Result, Error};
+
 /// Mutual TLS configuration.
 ///
 /// Configuration works in concert with the [`mtls`](crate::mtls) module, which
@@ -142,6 +144,7 @@ impl MtlsConfig {
     }
 
     /// Returns the value of the `ca_certs` parameter.
+    ///
     /// # Example
     ///
     /// ```rust
@@ -161,6 +164,16 @@ impl MtlsConfig {
     #[inline(always)]
     pub fn ca_certs_reader(&self) -> io::Result<Box<dyn io::BufRead + Sync + Send>> {
         crate::tls::config::to_reader(&self.ca_certs)
+    }
+
+    /// Load and decode CA certificates from `reader`.
+    pub(crate) fn load_ca_certs(&self) -> Result<rustls::RootCertStore> {
+        let mut roots = rustls::RootCertStore::empty();
+        for cert in rustls_pemfile::certs(&mut self.ca_certs_reader()?) {
+            roots.add(cert?).map_err(Error::CertAuth)?;
+        }
+
+        Ok(roots)
     }
 }
 
