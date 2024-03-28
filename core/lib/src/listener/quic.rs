@@ -66,15 +66,15 @@ impl QuicListener {
         use quic::provider::tls::rustls::{rustls, DEFAULT_CIPHERSUITES, Server as H3TlsServer};
 
         // FIXME: Remove this as soon as `s2n_quic` is on rustls >= 0.22.
-        let cert_chain = crate::tls::util::load_cert_chain(&mut tls.certs_reader().unwrap())
-            .unwrap()
+        let cert_chain = tls.load_certs()
+            .map_err(|e| io::Error::new(io::ErrorKind::Other, e.to_string()))?
             .into_iter()
             .map(|v| v.to_vec())
             .map(rustls::Certificate)
             .collect::<Vec<_>>();
 
-        let key = crate::tls::util::load_key(&mut tls.key_reader().unwrap())
-            .unwrap()
+        let key = tls.load_key()
+            .map_err(|e| io::Error::new(io::ErrorKind::Other, e.to_string()))?
             .secret_der()
             .to_vec();
 

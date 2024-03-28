@@ -1,8 +1,12 @@
 use std::io;
 
+use rustls::crypto::{ring, CryptoProvider};
+use rustls::pki_types::{CertificateDer, PrivateKeyDer};
 use figment::value::magic::{Either, RelativePathBuf};
 use serde::{Deserialize, Serialize};
 use indexmap::IndexSet;
+
+use crate::tls::error::{Result, Error, KeyError};
 
 /// TLS configuration: certificate chain, key, and ciphersuites.
 ///
@@ -431,6 +435,72 @@ impl TlsConfig {
     }
 }
 
+/// Loads certificates from `reader`.
+impl TlsConfig {
+    pub(crate) fn load_certs(&self) -> Result<Vec<CertificateDer<'static>>> {
+        rustls_pemfile::certs(&mut self.certs_reader()?)
+            .collect::<Result<_, _>>()
+            .map_err(Error::CertChain)
+    }
+
+    /// Load and decode the private key  from `reader`.
+    pub(crate) fn load_key(&self) -> Result<PrivateKeyDer<'static>> {
+        use rustls_pemfile::Item::*;
+
+        let mut keys = rustls_pemfile::read_all(&mut self.key_reader()?)
+            .map(|result| result.map_err(KeyError::Io)
+                .and_then(|item| match item {
+                    Pkcs1Key(key) => Ok(key.into()),
+                    Pkcs8Key(key) => Ok(key.into()),
+                    Sec1Key(key) => Ok(key.into()),
+                    _ => Err(KeyError::BadItem(item))
+                })
+            )
+            .collect::<Result<Vec<PrivateKeyDer<'static>>, _>>()?;
+
+        if keys.len() != 1 {
+            return Err(KeyError::BadKeyCount(keys.len()).into());
+        }
+
+        // Ensure we can use the key.
+        let key = keys.remove(0);
+        self.default_crypto_provider()
+            .key_provider
+            .load_private_key(key.clone_key())
+            .map_err(KeyError::Unsupported)?;
+
+        Ok(key)
+    }
+
+    pub(crate) fn default_crypto_provider(&self) -> CryptoProvider {
+        CryptoProvider::get_default()
+            .map(|arc| (**arc).clone())
+            .unwrap_or_else(|| rustls::crypto::CryptoProvider {
+                cipher_suites: self.ciphers().map(|cipher| match cipher {
+                    CipherSuite::TLS_CHACHA20_POLY1305_SHA256 =>
+                        ring::cipher_suite::TLS13_CHACHA20_POLY1305_SHA256,
+                    CipherSuite::TLS_AES_256_GCM_SHA384 =>
+                        ring::cipher_suite::TLS13_AES_256_GCM_SHA384,
+                    CipherSuite::TLS_AES_128_GCM_SHA256 =>
+                        ring::cipher_suite::TLS13_AES_128_GCM_SHA256,
+                    CipherSuite::TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305_SHA256 =>
+                        ring::cipher_suite::TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305_SHA256,
+                    CipherSuite::TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305_SHA256 =>
+                        ring::cipher_suite::TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305_SHA256,
+                    CipherSuite::TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384 =>
+                        ring::cipher_suite::TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384,
+                    CipherSuite::TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256 =>
+                        ring::cipher_suite::TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256,
+                    CipherSuite::TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384 =>
+                        ring::cipher_suite::TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,
+                    CipherSuite::TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256 =>
+                        ring::cipher_suite::TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,
+                }).collect(),
+                ..ring::default_provider()
+            })
+    }
+}
+
 impl CipherSuite {
     /// The default set and order of cipher suites. These are all of the
     /// variants in [`CipherSuite`] in their declaration order.
@@ -474,33 +544,6 @@ impl CipherSuite {
     }
 }
 
-impl From<CipherSuite> for rustls::SupportedCipherSuite {
-    fn from(cipher: CipherSuite) -> Self {
-        use rustls::crypto::ring::cipher_suite;
-
-        match cipher {
-            CipherSuite::TLS_CHACHA20_POLY1305_SHA256 =>
-                cipher_suite::TLS13_CHACHA20_POLY1305_SHA256,
-            CipherSuite::TLS_AES_256_GCM_SHA384 =>
-                cipher_suite::TLS13_AES_256_GCM_SHA384,
-            CipherSuite::TLS_AES_128_GCM_SHA256 =>
-                cipher_suite::TLS13_AES_128_GCM_SHA256,
-            CipherSuite::TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305_SHA256 =>
-                cipher_suite::TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305_SHA256,
-            CipherSuite::TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305_SHA256 =>
-                cipher_suite::TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305_SHA256,
-            CipherSuite::TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384 =>
-                cipher_suite::TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384,
-            CipherSuite::TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256 =>
-                cipher_suite::TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256,
-            CipherSuite::TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384 =>
-                cipher_suite::TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,
-            CipherSuite::TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256 =>
-                cipher_suite::TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,
-        }
-    }
-}
-
 pub(crate) fn to_reader(
     value: &Either<RelativePathBuf, Vec<u8>>
 ) -> io::Result<Box<dyn io::BufRead + Sync + Send>> {
@@ -522,6 +565,7 @@ pub(crate) fn to_reader(
 
 #[cfg(test)]
 mod tests {
+    use super::*;
     use figment::{Figment, providers::{Toml, Format}};
 
     #[test]
@@ -649,5 +693,43 @@ mod tests {
 
             Ok(())
         });
+    }
+
+    macro_rules! tls_example_private_pem {
+        ($k:expr) => {
+            concat!(env!("CARGO_MANIFEST_DIR"), "/../../examples/tls/private/", $k)
+        }
+    }
+
+    #[test]
+    fn verify_load_private_keys_of_different_types() -> Result<()> {
+        let key_paths = [
+            tls_example_private_pem!("rsa_sha256_key.pem"),
+            tls_example_private_pem!("ecdsa_nistp256_sha256_key_pkcs8.pem"),
+            tls_example_private_pem!("ecdsa_nistp384_sha384_key_pkcs8.pem"),
+            tls_example_private_pem!("ed25519_key.pem"),
+        ];
+
+        for key in key_paths {
+            TlsConfig::from_paths("", key).load_key()?;
+        }
+
+        Ok(())
+    }
+
+    #[test]
+    fn verify_load_certs_of_different_types() -> Result<()> {
+        let cert_paths = [
+            tls_example_private_pem!("rsa_sha256_cert.pem"),
+            tls_example_private_pem!("ecdsa_nistp256_sha256_cert.pem"),
+            tls_example_private_pem!("ecdsa_nistp384_sha384_cert.pem"),
+            tls_example_private_pem!("ed25519_cert.pem"),
+        ];
+
+        for cert in cert_paths {
+            TlsConfig::from_paths(cert, "").load_certs()?;
+        }
+
+        Ok(())
     }
 }
