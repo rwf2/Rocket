@@ -25,6 +25,10 @@ key = "private/ecdsa_nistp256_sha256_key_pkcs8.pem"
 certs = "private/ecdsa_nistp384_sha384_cert.pem"
 key = "private/ecdsa_nistp384_sha384_key_pkcs8.pem"
 
+[ecdsa_nistp521_sha512_pkcs8.tls]
+certs = "private/ecdsa_nistp521_sha512_cert.pem"
+key = "private/ecdsa_nistp521_sha512_key_pkcs8.pem"
+
 [ecdsa_nistp256_sha256_sec1.tls]
 certs = "private/ecdsa_nistp256_sha256_cert.pem"
 key = "private/ecdsa_nistp256_sha256_key_sec1.pem"
