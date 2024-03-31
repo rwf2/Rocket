@@ -395,6 +395,40 @@ proxy_proto_header = "X-Forwarded-Proto"
 [`CookieJar`]: @api/master/rocket/http/struct.CookieJar.html
 [`Request::context_is_likely_secure()`]: @api/master/rocket/request/struct.Request.html#method.context_is_likely_secure
 
+### Crypto Providers
+
+Rocket's TLS support, provided by [`rustls`], allows replacing the underlying
+[`CryptoProvider`] for cryptographic operations. By default, Rocket uses
+[`ring`] as its `CryptoProvider`, but applications can change the default by
+[installing] a different `CryptoProvider` before Rocket launches.
+
+For example, to use `aws-lc-rs` instead of `ring`, first depend on `rustls`
+directly with the `aws_lc_rs` feature enabled:
+
+```toml
+[dependencies]
+rustls = { version = "0.23", features = ["aws_lc_rs"] }
+```
+
+Then, before the application starts, install the provider as the default:
+
+```rust,ignore
+# #[macro_use] extern crate rocket;
+
+#[launch]
+fn rocket() -> _ {
+    let _ = rustls::crypto::aws_lc_rs::default_provider().install_default();
+    rocket::build()
+}
+```
+
+Rocket will use the installed default whenever TLS is operational.
+
+[`rustls`]: @rustls
+[`CryptoProvider`]: @rustls/crypto/struct.CryptoProvider.html
+[`ring`]: @rustls/crypto/ring/index.html
+[installing]: @rustls/crypto/struct.CryptoProvider.html#method.install_default
+
 ### Workers
 
 The `workers` parameter sets the number of threads used for parallel task
