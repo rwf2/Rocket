@@ -65,22 +65,22 @@ macro_rules! content_codings {
             #[allow(non_upper_case_globals)]
             pub const $name: ContentCoding = ContentCoding::new_known(
                 $c,
-                $c, 
+                $c,
                 None,
             );
         )+
-        
+
         /// Returns `true` if this ContentCoding is known to Rocket. In other words,
         /// returns `true` if there is an associated constant for `self`.
         pub fn is_known(&self) -> bool {
             if let Source::Known(_) = self.source {
                 return true;
             }
-            
+
             $(if self.$check() { return true })+
             false
         }
-        
+
         $(
             /// Returns `true` if the top-level and sublevel types of
             /// `self` are the same as those of

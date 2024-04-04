@@ -110,7 +110,7 @@ mod test {
     fn check_params_do_parse() {
         assert_parse!("*; q=1");
     }
-    
+
     #[test]
     fn test_bad_parses() {
         assert_no_parse!("*; q=1;");
