@@ -108,7 +108,10 @@ impl Rocket<Ignite> {
         let endpoint = h12listener.endpoint()?;
         #[cfg(feature = "http3-preview")]
         if let (Some(addr), Some(tls)) = (endpoint.tcp(), endpoint.tls_config()) {
-            let h3listener = crate::listener::quic::QuicListener::bind(addr, tls.clone()).await?;
+            let h3listener = crate::listener::quic::QuicListener::bind(addr, tls.clone())
+                .map_err(|e| ErrorKind::Bind(Some(endpoint.clone()), Box::new(e)))
+                .await?;
+
             let rocket = self.into_orbit(vec![h3listener.endpoint()?, endpoint]);
             let rocket = post_bind_callback(rocket).await?;
 
