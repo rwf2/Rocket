@@ -14,7 +14,7 @@ use yansi::Paint;
 ///
 /// Catchers are routes that run when errors are produced by the application.
 /// They consist of a [`Handler`] and an optional status code to match against
-/// arising errors. Errors arise from the the following sources:
+/// arising errors. Errors arise from the following sources:
 ///
 ///   * A failing guard.
 ///   * A failing responder.
@@ -218,7 +218,7 @@ impl Catcher {
 
     /// Prefix `base` to the current `base` in `self.`
     ///
-    /// If the the current base is `/`, then the base is replaced by `base`.
+    /// If the current base is `/`, then the base is replaced by `base`.
     /// Otherwise, `base` is prefixed to the existing `base`.
     ///
     /// ```rust
