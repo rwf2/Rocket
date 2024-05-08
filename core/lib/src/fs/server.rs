@@ -1,7 +1,11 @@
+use core::fmt;
 use std::path::{PathBuf, Path};
+use std::sync::Arc;
+use std::time::SystemTime;
 
-use crate::{Request, Data};
-use crate::http::{Method, Status, uri::Segments, ext::IntoOwned};
+
+use crate::{Data, Request};
+use crate::http::{Method, Status, uri::{Segments, Uri}, ext::IntoOwned, HeaderMap, Header};
 use crate::route::{Route, Handler, Outcome};
 use crate::response::{Redirect, Responder};
 use crate::outcome::IntoOutcome;
@@ -60,11 +64,116 @@ use crate::fs::NamedFile;
 ///     rocket::build().mount("/", FileServer::from(relative!("static")))
 /// }
 /// ```
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub struct FileServer {
     root: PathBuf,
     options: Options,
+    // TODO: I'd prefer box, but this just makes Clone easier.
+    rewrites: Vec<Arc<dyn Rewrite>>,
     rank: isize,
+}
+
+impl fmt::Debug for FileServer {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("FileServer")
+            .field("root", &self.root)
+            .field("options", &self.options)
+            .field("rewrites", &DebugListRewrite(&self.rewrites))
+            .field("rank", &self.rank)
+            .finish()
+    }
+}
+
+struct DebugListRewrite<'a>(&'a Vec<Arc<dyn Rewrite>>);
+
+impl fmt::Debug for DebugListRewrite<'_> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_list().entries(self.0.iter().map(|r| r.name())).finish()
+    }
+}
+
+pub trait Rewrite: Send + Sync + 'static {
+    fn name(&self) -> &'static str {
+        std::any::type_name::<Self>()
+    }
+    /// Modify RewritablePath as needed.
+    fn rewrite(&self, req: &Request<'_>, path: FileServerResponse, root: &Path) -> FileServerResponse;
+}
+
+pub enum HiddenReason {
+    DotFile,
+    PermissionDenied,
+    Other,
+}
+
+pub enum FileServerResponse {
+    /// Status: Ok
+    File {
+        name: PathBuf,
+        modified: Option<SystemTime>,
+        headers: HeaderMap<'static>,
+    },
+    /// Status: NotFound
+    NotFound { name: PathBuf },
+    /// Status: NotFound (used to identify if the file does actually exist)
+    Hidden { name: PathBuf, reason: HiddenReason },
+    /// Status: Redirect
+    PermanentRedirect { to: Uri<'static> },
+    /// Status: Redirect (TODO: should we allow this?)
+    TemporaryRedirect { to: Uri<'static> },
+}
+
+// These might have to remain as basic options (always processed first)
+struct DotFiles;
+impl Rewrite for DotFiles {
+    fn rewrite(&self, _req: &Request<'_>, path: FileServerResponse, _root: &Path) -> FileServerResponse {
+        match path {
+            FileServerResponse::Hidden { name, reason: HiddenReason::DotFile } => FileServerResponse::File { name, modified: None, headers: HeaderMap::new() },
+            path => path,
+        }
+    }
+}
+// struct Missing; // This only applies on startup, so this needs to be an option
+// impl Rewrite for Missing {
+//     fn rewrite(&self, req: &Request<'_>, path: &mut RewritablePath<'_>) {
+//         todo!()
+//     }
+// }
+
+struct Index(&'static str);
+impl Rewrite for Index {
+    fn rewrite(&self, _req: &Request<'_>, path: FileServerResponse, _root: &Path) -> FileServerResponse {
+        // if path.file_name_path.is_dir() {
+        //     path.file_name_path.push(self.0);
+        //     // TODO: handle file_data_path
+        // }
+        match path {
+            FileServerResponse::File { name, modified, headers } if name.is_dir() => FileServerResponse::File { name: name.join(self.0), modified, headers },
+            path => path,
+        }
+    }
+}
+// I'm not sure this one works, since we should check it during startup
+struct IndexFile;
+impl Rewrite for IndexFile {
+    fn rewrite(&self, req: &Request<'_>, path: FileServerResponse, root: &Path) -> FileServerResponse {
+        todo!()
+    }
+}
+
+struct NormalizeDirs;
+impl Rewrite for NormalizeDirs {
+    fn rewrite(&self, req: &Request<'_>, path: FileServerResponse, _root: &Path) -> FileServerResponse {
+        match path {
+            FileServerResponse::File { name, .. } if name.is_dir() && !req.uri().path().ends_with('/') =>
+                FileServerResponse::PermanentRedirect {
+                    to: req.uri().map_path(|p| format!("{}/", p))
+                        .expect("adding a trailing slash to a known good path => valid path")
+                        .into_owned().into()
+                },
+            path => path,
+        }
+    }
 }
 
 impl FileServer {
@@ -159,7 +268,12 @@ impl FileServer {
             }
         }
 
-        FileServer { root: path.into(), options, rank: Self::DEFAULT_RANK }
+        FileServer { root: path.into(), options, rewrites: vec![], rank: Self::DEFAULT_RANK }
+    }
+
+    pub fn rewrite(mut self, rewrite: impl Rewrite) -> Self {
+        self.rewrites.push(Arc::new(rewrite));
+        self
     }
 
     /// Sets the rank for generated routes to `rank`.
@@ -193,55 +307,33 @@ impl From<FileServer> for Vec<Route> {
 #[crate::async_trait]
 impl Handler for FileServer {
     async fn handle<'r>(&self, req: &'r Request<'_>, data: Data<'r>) -> Outcome<'r> {
-        use crate::http::uri::fmt::Path;
-
-        // TODO: Should we reject dotfiles for `self.root` if !DotFiles?
-        let options = self.options;
-        if options.contains(Options::IndexFile) && self.root.is_file() {
-            let segments = match req.segments::<Segments<'_, Path>>(0..) {
-                Ok(segments) => segments,
-                Err(never) => match never {},
-            };
-
-            if segments.is_empty() {
-                let file = NamedFile::open(&self.root).await;
-                return file.respond_to(req).or_forward((data, Status::NotFound));
-            } else {
-                return Outcome::forward(data, Status::NotFound);
-            }
+        use crate::http::uri::fmt::Path as UriPath;
+        // let options = self.options;
+        let path = req.segments::<Segments<'_, UriPath>>(0..).ok()
+            .and_then(|segments| segments.to_path_buf_dotfiles().ok());
+            // .map(|path| self.root.join(path));
+        let mut response = match path {
+            Some((name, false)) => FileServerResponse::File { name, modified: None, headers: HeaderMap::new() },
+            Some((name, true)) => FileServerResponse::Hidden { name, reason: HiddenReason::DotFile },
+            None => return Outcome::forward(data, Status::NotFound),
+        };
+        for rewrite in &self.rewrites {
+            response = rewrite.rewrite(req, response, &self.root);
         }
-
-        // Get the segments as a `PathBuf`, allowing dotfiles requested.
-        let allow_dotfiles = options.contains(Options::DotFiles);
-        let path = req.segments::<Segments<'_, Path>>(0..).ok()
-            .and_then(|segments| segments.to_path_buf(allow_dotfiles).ok())
-            .map(|path| self.root.join(path));
-
-        match path {
-            Some(p) if p.is_dir() => {
-                // Normalize '/a/b/foo' to '/a/b/foo/'.
-                if options.contains(Options::NormalizeDirs) && !req.uri().path().ends_with('/') {
-                    let normal = req.uri().map_path(|p| format!("{}/", p))
-                        .expect("adding a trailing slash to a known good path => valid path")
-                        .into_owned();
-
-                    return Redirect::permanent(normal)
-                        .respond_to(req)
-                        .or_forward((data, Status::InternalServerError));
+        match response {
+            FileServerResponse::File { name, modified, headers } => NamedFile::open(self.root.join(name)).await.respond_to(req).map(|mut r| {
+                for header in headers {
+                    r.adjoin_raw_header(header.name.as_str().to_owned(), header.value);
                 }
-
-                if !options.contains(Options::Index) {
-                    return Outcome::forward(data, Status::NotFound);
+                if let Some(modified) = modified {
+                    // TODO: must be converted to http-data format
+                    // r.set_header(Header::new("Last-Modified", format!("{:?}", modified)));
                 }
-
-                let index = NamedFile::open(p.join("index.html")).await;
-                index.respond_to(req).or_forward((data, Status::NotFound))
-            },
-            Some(p) => {
-                let file = NamedFile::open(p).await;
-                file.respond_to(req).or_forward((data, Status::NotFound))
-            }
-            None => Outcome::forward(data, Status::NotFound),
+                r
+            }).or_forward((data, Status::NotFound)),
+            FileServerResponse::Hidden { .. } | FileServerResponse::NotFound { ..} => Outcome::forward(data, Status::NotFound),
+            FileServerResponse::PermanentRedirect { to } => Redirect::permanent(to).respond_to(req).or_forward((data, Status::InternalServerError)),
+            FileServerResponse::TemporaryRedirect { to } => Redirect::temporary(to).respond_to(req).or_forward((data, Status::InternalServerError)),
         }
     }
 }
