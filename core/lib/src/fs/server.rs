@@ -95,7 +95,8 @@ impl fmt::Debug for DebugListRewrite<'_> {
 
 pub trait Rewrite: Send + Sync + Any {
     /// Modify RewritablePath as needed.
-    fn rewrite(&self, req: &Request<'_>, path: FileServerResponse, root: &Path) -> FileServerResponse;
+    fn rewrite(&self, req: &Request<'_>, path: FileServerResponse, root: &Path)
+        -> FileServerResponse;
     /// Allow multiple of the same rewrite
     fn allow_multiple(&self) -> bool { false }
     fn name(&self) -> &'static str{ type_name::<Self>()}
@@ -129,9 +130,12 @@ pub enum FileServerResponse {
 // These might have to remain as basic options (always processed first)
 struct DotFiles;
 impl Rewrite for DotFiles {
-    fn rewrite(&self, _req: &Request<'_>, path: FileServerResponse, _root: &Path) -> FileServerResponse {
+    fn rewrite(&self, _req: &Request<'_>, path: FileServerResponse, _root: &Path)
+        -> FileServerResponse
+    {
         match path {
-            FileServerResponse::Hidden { name, reason: HiddenReason::DotFile } => FileServerResponse::File { name, modified: None, headers: HeaderMap::new() },
+            FileServerResponse::Hidden { name, reason: HiddenReason::DotFile } =>
+                FileServerResponse::File { name, modified: None, headers: HeaderMap::new() },
             path => path,
         }
     }
@@ -145,25 +149,24 @@ impl Rewrite for DotFiles {
 
 struct Index(&'static str);
 impl Rewrite for Index {
-    fn rewrite(&self, _req: &Request<'_>, path: FileServerResponse, root: &Path) -> FileServerResponse {
-        // if path.file_name_path.is_dir() {
-        //     path.file_name_path.push(self.0);
-        //     // TODO: handle file_data_path
-        // }
+    fn rewrite(&self, _req: &Request<'_>, path: FileServerResponse, root: &Path)
+        -> FileServerResponse
+    {
         match path {
-            FileServerResponse::File { name, modified, headers } if root.join(&name).is_dir() => FileServerResponse::File { name: name.join(self.0), modified, headers },
+            FileServerResponse::File { name, modified, headers } if root.join(&name).is_dir() =>
+                FileServerResponse::File { name: name.join(self.0), modified, headers },
             path => path,
         }
     }
 }
-// Actually, curiously, this already just works as-is (the only thing that prevents it is the startup check)
+// Actually, curiously, this already just works as-is (the only thing that prevents
+// it is the startup check)
 struct IndexFile;
 impl Rewrite for IndexFile {
-    fn rewrite(&self, _req: &Request<'_>, path: FileServerResponse, _root: &Path) -> FileServerResponse {
+    fn rewrite(&self, _req: &Request<'_>, path: FileServerResponse, _root: &Path)
+        -> FileServerResponse
+    {
         match path {
-            // FileServerResponse::File { name, modified, headers } if _root.is_file() && name.iter().count() == 0 => {
-            //     FileServerResponse::File { name, modified, headers }
-            // }
             path => path,
         }
     }
@@ -171,9 +174,12 @@ impl Rewrite for IndexFile {
 
 struct NormalizeDirs;
 impl Rewrite for NormalizeDirs {
-    fn rewrite(&self, req: &Request<'_>, path: FileServerResponse, root: &Path) -> FileServerResponse {
+    fn rewrite(&self, req: &Request<'_>, path: FileServerResponse, root: &Path)
+        -> FileServerResponse
+    {
         match path {
-            FileServerResponse::File { name, .. } if !req.uri().path().ends_with('/') && root.join(&name).is_dir() =>
+            FileServerResponse::File { name, .. } if !req.uri().path().ends_with('/') &&
+                root.join(&name).is_dir() =>
                 FileServerResponse::PermanentRedirect {
                     to: req.uri().map_path(|p| format!("{}/", p))
                         .expect("adding a trailing slash to a known good path => valid path")
@@ -301,10 +307,14 @@ impl FileServer {
     }
 
     pub fn rewrite(mut self, rewrite: impl Rewrite) -> Self {
-        if rewrite.allow_multiple() || !self.rewrites.iter().any(|f| f.as_ref().type_id() == rewrite.type_id()) {
+        if rewrite.allow_multiple() ||
+            !self.rewrites .iter().any(|f| f.as_ref().type_id() == rewrite.type_id()) {
             self.rewrites.push(Arc::new(rewrite));
         } else {
-            error!("Attempted to insert multiple of the same rewrite `{}` on a FileServer", rewrite.name());
+            error!(
+                "Attempted to insert multiple of the same rewrite `{}` on a FileServer",
+                rewrite.name()
+            );
         }
         self
     }
@@ -346,8 +356,10 @@ impl Handler for FileServer {
             .and_then(|segments| segments.to_path_buf_dotfiles().ok());
             // .map(|path| self.root.join(path));
         let mut response = match path {
-            Some((name, false)) => FileServerResponse::File { name, modified: None, headers: HeaderMap::new() },
-            Some((name, true)) => FileServerResponse::Hidden { name, reason: HiddenReason::DotFile },
+            Some((name, false)) =>
+                FileServerResponse::File { name, modified: None, headers: HeaderMap::new() },
+            Some((name, true)) =>
+                FileServerResponse::Hidden { name, reason: HiddenReason::DotFile },
             None => return Outcome::forward(data, Status::NotFound),
         };
         println!("initial: {response:?}");
@@ -372,9 +384,14 @@ impl Handler for FileServer {
                     r
                 }).or_forward((data, Status::NotFound))
             },
-            FileServerResponse::Hidden { .. } | FileServerResponse::NotFound { ..} => Outcome::forward(data, Status::NotFound),
-            FileServerResponse::PermanentRedirect { to } => Redirect::permanent(to).respond_to(req).or_forward((data, Status::InternalServerError)),
-            FileServerResponse::TemporaryRedirect { to } => Redirect::temporary(to).respond_to(req).or_forward((data, Status::InternalServerError)),
+            FileServerResponse::Hidden { .. } | FileServerResponse::NotFound { ..} =>
+                Outcome::forward(data, Status::NotFound),
+            FileServerResponse::PermanentRedirect { to } => Redirect::permanent(to)
+                .respond_to(req)
+                .or_forward((data, Status::InternalServerError)),
+            FileServerResponse::TemporaryRedirect { to } => Redirect::temporary(to)
+                .respond_to(req)
+                .or_forward((data, Status::InternalServerError)),
         }
     }
 }
