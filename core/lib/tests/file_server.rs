@@ -14,7 +14,7 @@ fn rocket() -> Rocket<Build> {
     let root = static_root();
     rocket::build()
         .mount("/default", FileServer::from(&root))
-        .mount("/no_index", FileServer::new(&root, Options::None))
+        .mount("/no_index", dbg!(FileServer::new(&root, Options::None)))
         .mount("/dots", FileServer::new(&root, Options::DotFiles))
         .mount("/index", FileServer::new(&root, Options::Index))
         .mount("/both", FileServer::new(&root, Options::DotFiles | Options::Index))
