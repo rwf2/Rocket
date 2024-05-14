@@ -128,7 +128,7 @@ pub enum FileServerResponse {
 }
 
 // These might have to remain as basic options (always processed first)
-struct DotFiles;
+pub struct DotFiles;
 impl Rewrite for DotFiles {
     fn rewrite(&self, _req: &Request<'_>, path: FileServerResponse, _root: &Path)
         -> FileServerResponse
@@ -147,7 +147,7 @@ impl Rewrite for DotFiles {
 //     }
 // }
 
-struct Index(&'static str);
+pub struct Index(pub &'static str);
 impl Rewrite for Index {
     fn rewrite(&self, _req: &Request<'_>, path: FileServerResponse, root: &Path)
         -> FileServerResponse
@@ -161,7 +161,7 @@ impl Rewrite for Index {
 }
 // Actually, curiously, this already just works as-is (the only thing that prevents
 // it is the startup check)
-struct IndexFile;
+pub struct IndexFile;
 impl Rewrite for IndexFile {
     fn rewrite(&self, _req: &Request<'_>, path: FileServerResponse, _root: &Path)
         -> FileServerResponse
@@ -172,7 +172,7 @@ impl Rewrite for IndexFile {
     }
 }
 
-struct NormalizeDirs;
+pub struct NormalizeDirs;
 impl Rewrite for NormalizeDirs {
     fn rewrite(&self, req: &Request<'_>, path: FileServerResponse, root: &Path)
         -> FileServerResponse
