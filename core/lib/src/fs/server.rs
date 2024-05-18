@@ -2,8 +2,6 @@ use core::fmt;
 use std::any::{type_name, Any, TypeId};
 use std::path::{PathBuf, Path};
 use std::sync::Arc;
-use std::time::SystemTime;
-
 
 use crate::{Data, Request};
 use crate::http::{Method, Status, uri::{Segments, Reference}, ext::IntoOwned, HeaderMap};
@@ -114,7 +112,6 @@ pub enum FileServerResponse {
     /// Status: Ok
     File {
         name: PathBuf,
-        modified: Option<SystemTime>,
         headers: HeaderMap<'static>,
     },
     /// Status: NotFound
@@ -135,7 +132,7 @@ impl Rewrite for DotFiles {
     {
         match path {
             FileServerResponse::Hidden { name, reason: HiddenReason::DotFile } =>
-                FileServerResponse::File { name, modified: None, headers: HeaderMap::new() },
+                FileServerResponse::File { name, headers: HeaderMap::new() },
             path => path,
         }
     }
@@ -153,8 +150,8 @@ impl Rewrite for Index {
         -> FileServerResponse
     {
         match path {
-            FileServerResponse::File { name, modified, headers } if root.join(&name).is_dir() =>
-                FileServerResponse::File { name: name.join(self.0), modified, headers },
+            FileServerResponse::File { name, headers } if root.join(&name).is_dir() =>
+                FileServerResponse::File { name: name.join(self.0), headers },
             path => path,
         }
     }
@@ -357,7 +354,7 @@ impl Handler for FileServer {
             // .map(|path| self.root.join(path));
         let mut response = match path {
             Some((name, false)) =>
-                FileServerResponse::File { name, modified: None, headers: HeaderMap::new() },
+                FileServerResponse::File { name, headers: HeaderMap::new() },
             Some((name, true)) =>
                 FileServerResponse::Hidden { name, reason: HiddenReason::DotFile },
             None => return Outcome::forward(data, Status::NotFound),
@@ -368,7 +365,7 @@ impl Handler for FileServer {
             println!("after: {} {response:?}", rewrite.name());
         }
         match response {
-            FileServerResponse::File { name, modified, headers } => {
+            FileServerResponse::File { name, headers } => {
                 let path = self.root.join(name);
                 if path.is_dir() {
                     return Outcome::Forward((data, Status::NotFound));
@@ -376,10 +373,6 @@ impl Handler for FileServer {
                 NamedFile::open(path).await.respond_to(req).map(|mut r| {
                     for header in headers {
                         r.adjoin_raw_header(header.name.as_str().to_owned(), header.value);
-                    }
-                    if let Some(modified) = modified {
-                        // TODO: must be converted to http-date format
-                        // r.set_header(Header::new("Last-Modified", format!("{:?}", modified)));
                     }
                     r
                 }).or_forward((data, Status::NotFound))

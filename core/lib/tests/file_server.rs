@@ -4,7 +4,7 @@ use std::path::Path;
 use rocket::{Rocket, Route, Build};
 use rocket::http::Status;
 use rocket::local::blocking::Client;
-use rocket::fs::{FileServer, Options, relative};
+use rocket::fs::{relative, DotFiles, FileServer, Index, NormalizeDirs, Options};
 
 fn static_root() -> &'static Path {
     Path::new(relative!("/tests/static"))
@@ -15,11 +15,21 @@ fn rocket() -> Rocket<Build> {
     rocket::build()
         .mount("/default", FileServer::from(&root))
         .mount("/no_index", dbg!(FileServer::new(&root, Options::None)))
-        .mount("/dots", FileServer::new(&root, Options::DotFiles))
-        .mount("/index", FileServer::new(&root, Options::Index))
-        .mount("/both", FileServer::new(&root, Options::DotFiles | Options::Index))
-        .mount("/redir", FileServer::new(&root, Options::NormalizeDirs))
-        .mount("/redir_index", FileServer::new(&root, Options::NormalizeDirs | Options::Index))
+        .mount("/dots", FileServer::new(&root, Options::None).rewrite(DotFiles))
+        .mount("/index", FileServer::new(&root, Options::None).rewrite(Index("index.html")))
+        .mount(
+            "/both",
+            FileServer::new(&root, Options::None)
+                .rewrite(DotFiles)
+                .rewrite(Index("index.html"))
+        )
+        .mount("/redir", FileServer::new(&root, Options::None).rewrite(NormalizeDirs))
+        .mount(
+            "/redir_index",
+            FileServer::new(&root, Options::None)
+                .rewrite(NormalizeDirs)
+                .rewrite(Index("index.html"))
+        )
 }
 
 static REGULAR_FILES: &[&str] = &[
