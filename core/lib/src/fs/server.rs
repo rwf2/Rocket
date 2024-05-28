@@ -97,11 +97,13 @@ pub trait Rewrite: Send + Sync + Any {
         -> FileServerResponse;
     /// Allow multiple of the same rewrite
     fn allow_multiple(&self) -> bool { false }
-    fn name(&self) -> &'static str{ type_name::<Self>()}
+    /// provides type name for debug printing
+    fn name(&self) -> &'static str { type_name::<Self>() }
 }
 
 #[derive(Debug)]
 pub enum HiddenReason {
+    DoesNotExist,
     DotFile,
     PermissionDenied,
     Other,
@@ -111,28 +113,27 @@ pub enum HiddenReason {
 pub enum FileServerResponse {
     /// Status: Ok
     File {
-        name: PathBuf,
+        path: PathBuf,
         headers: HeaderMap<'static>,
     },
     /// Status: NotFound
-    NotFound { name: PathBuf },
-    /// Status: NotFound (used to identify if the file does actually exist)
-    Hidden { name: PathBuf, reason: HiddenReason },
+    NotFound { path: PathBuf, reason: HiddenReason },
     /// Status: Redirect
     PermanentRedirect { to: Reference<'static> },
     /// Status: Redirect (TODO: should we allow this?)
     TemporaryRedirect { to: Reference<'static> },
 }
 
-// These might have to remain as basic options (always processed first)
+/// Rewrites the path to allow paths that include a component beginning with a
+/// a `.`. This rewrite should be applied first, before any other rewrite.
 pub struct DotFiles;
 impl Rewrite for DotFiles {
     fn rewrite(&self, _req: &Request<'_>, path: FileServerResponse, _root: &Path)
         -> FileServerResponse
     {
         match path {
-            FileServerResponse::Hidden { name, reason: HiddenReason::DotFile } =>
-                FileServerResponse::File { name, headers: HeaderMap::new() },
+            FileServerResponse::NotFound { path: name, reason: HiddenReason::DotFile } =>
+                FileServerResponse::File { path: name, headers: HeaderMap::new() },
             path => path,
         }
     }
@@ -144,18 +145,32 @@ impl Rewrite for DotFiles {
 //     }
 // }
 
+/// Rewrites a path to a directory to return the content of an index file, `index.html`
+/// by defualt.
+///
+/// # Examples
+/// - Rewrites `/` to `/index.html`
+/// - Rewrites `/home/` to `/home/index.html`
+/// - Does not rewrite `/home/test.html`
 pub struct Index(pub &'static str);
 impl Rewrite for Index {
-    fn rewrite(&self, _req: &Request<'_>, path: FileServerResponse, root: &Path)
+    fn rewrite(&self, _req: &Request<'_>, path: FileServerResponse, _root: &Path)
         -> FileServerResponse
     {
         match path {
-            FileServerResponse::File { name, headers } if root.join(&name).is_dir() =>
-                FileServerResponse::File { name: name.join(self.0), headers },
+            FileServerResponse::File { path: name, headers } if name.is_dir() =>
+                FileServerResponse::File { path: name.join(self.0), headers },
             path => path,
         }
     }
 }
+impl Default for Index {
+    fn default() -> Self {
+        Self("index.html")
+    }
+}
+
+
 // Actually, curiously, this already just works as-is (the only thing that prevents
 // it is the startup check)
 pub struct IndexFile;
@@ -169,14 +184,22 @@ impl Rewrite for IndexFile {
     }
 }
 
+/// Rewrites a path to a directory without a trailing slash to a redirect to
+/// the same directory with a trailing slash. This rewrite needs to be applied
+/// before [`Index`] and any other rewrite that changes the path to a file.
+///
+/// # Examples
+/// - Redirects `/home/test` to `/home/test/`
+/// - Does not redirect `/home/`
+/// - Does not redirect `/home/index.html`
 pub struct NormalizeDirs;
 impl Rewrite for NormalizeDirs {
-    fn rewrite(&self, req: &Request<'_>, path: FileServerResponse, root: &Path)
+    fn rewrite(&self, req: &Request<'_>, path: FileServerResponse, _root: &Path)
         -> FileServerResponse
     {
         match path {
-            FileServerResponse::File { name, .. } if !req.uri().path().ends_with('/') &&
-                root.join(&name).is_dir() =>
+            FileServerResponse::File { path: name, .. } if !req.uri().path().ends_with('/') &&
+                name.is_dir() =>
                 FileServerResponse::PermanentRedirect {
                     to: req.uri().map_path(|p| format!("{}/", p))
                         .expect("adding a trailing slash to a known good path => valid path")
@@ -298,14 +321,33 @@ impl FileServer {
         FileServer { root: path.into(), options, rewrites, rank: Self::DEFAULT_RANK }
     }
 
+    /// Removes all rewrites of a specific type.
+    ///
+    /// Ideally, this shouldn't exist, and it should be possible to always just not add
+    /// the rewrites you don't want.
     pub fn remove_rewrites<T: Rewrite>(mut self) -> Self {
         self.rewrites.retain(|r| r.as_ref().type_id() != TypeId::of::<T>());
         self
     }
 
+    /// Add a rewrite step to this `FileServer`. The order in which rewrites are added can make
+    /// a difference, since they are applied in the order they appear.
+    ///
+    /// # Example
+    ///
+    /// ```rust,no_compile
+    /// # // TODO: turn this into a proper test
+    /// FileServer::new("static/", Options::None)
+    ///     .rewrite(NormalizeDirs)
+    ///     .rewrite(Index::default())
+    /// ```
+    /// In this example, order actually does matter. [`NormalizeDirs`] will convert a path to a
+    /// directory without a trailing slash into a redirect to the same path, but with the trailing
+    /// slash. However, if the [`Index`] rewrite is applied first, the path will have been changed
+    /// to the `index.html` file, causing [`NormalizeDirs`] to do nothing.
     pub fn rewrite(mut self, rewrite: impl Rewrite) -> Self {
         if rewrite.allow_multiple() ||
-            !self.rewrites .iter().any(|f| f.as_ref().type_id() == rewrite.type_id()) {
+            !self.rewrites.iter().any(|f| f.as_ref().type_id() == rewrite.type_id()) {
             self.rewrites.push(Arc::new(rewrite));
         } else {
             error!(
@@ -348,25 +390,32 @@ impl From<FileServer> for Vec<Route> {
 impl Handler for FileServer {
     async fn handle<'r>(&self, req: &'r Request<'_>, data: Data<'r>) -> Outcome<'r> {
         use crate::http::uri::fmt::Path as UriPath;
-        // let options = self.options;
         let path = req.segments::<Segments<'_, UriPath>>(0..).ok()
-            .and_then(|segments| segments.to_path_buf_dotfiles().ok());
-            // .map(|path| self.root.join(path));
+            .and_then(|segments| segments.to_path_buf_dotfiles().ok())
+            .map(|(path, dots)| (self.root.join(path), dots));
         let mut response = match path {
-            Some((name, false)) =>
-                FileServerResponse::File { name, headers: HeaderMap::new() },
-            Some((name, true)) =>
-                FileServerResponse::Hidden { name, reason: HiddenReason::DotFile },
+            Some((path, false)) =>
+                FileServerResponse::File { path, headers: HeaderMap::new() },
+            Some((path, true)) =>
+                FileServerResponse::NotFound { path, reason: HiddenReason::DotFile },
             None => return Outcome::forward(data, Status::NotFound),
         };
-        println!("initial: {response:?}");
+        // println!("initial: {response:?}");
         for rewrite in &self.rewrites {
             response = rewrite.rewrite(req, response, &self.root);
-            println!("after: {} {response:?}", rewrite.name());
+            // println!("after: {} {response:?}", rewrite.name());
         }
+        // Open TODOs:
+        // - Should we validate the location of the path? We've aleady removed any
+        //   `..` and other traversal mechanisms, before passing to the rewrites.
+        // - Should we allow more control? I think we should require the payload
+        //   to be a file on the disk, and the only thing left to control would be
+        //   headers (which we allow configuring), and status, which we allow a specific
+        //   set.
+        // - Should we prepend the path root? I think we should, since I don't think the
+        //   relative path is particularly useful.
         match response {
-            FileServerResponse::File { name, headers } => {
-                let path = self.root.join(name);
+            FileServerResponse::File { path, headers } => {
                 if path.is_dir() {
                     return Outcome::Forward((data, Status::NotFound));
                 }
@@ -377,8 +426,7 @@ impl Handler for FileServer {
                     r
                 }).or_forward((data, Status::NotFound))
             },
-            FileServerResponse::Hidden { .. } | FileServerResponse::NotFound { ..} =>
-                Outcome::forward(data, Status::NotFound),
+            FileServerResponse::NotFound { .. } => Outcome::forward(data, Status::NotFound),
             FileServerResponse::PermanentRedirect { to } => Redirect::permanent(to)
                 .respond_to(req)
                 .or_forward((data, Status::InternalServerError)),
