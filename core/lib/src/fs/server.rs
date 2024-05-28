@@ -335,11 +335,20 @@ impl FileServer {
     ///
     /// # Example
     ///
-    /// ```rust,no_compile
-    /// # // TODO: turn this into a proper test
-    /// FileServer::new("static/", Options::None)
-    ///     .rewrite(NormalizeDirs)
-    ///     .rewrite(Index::default())
+    /// ```rust,no_run
+    /// # #[macro_use] extern crate rocket;
+    /// use rocket::fs::{FileServer, Options, NormalizeDirs, Index};
+    ///
+    /// #[launch]
+    /// fn rocket() -> _ {
+    ///     rocket::build()
+    ///         .mount("/static", FileServer::from("/www/public"))
+    ///         .mount("/pub",
+    ///             FileServer::new("/www/public", Options::None)
+    ///                 .rewrite(NormalizeDirs)
+    ///                 .rewrite(Index::default())
+    ///         )
+    /// }
     /// ```
     /// In this example, order actually does matter. [`NormalizeDirs`] will convert a path to a
     /// directory without a trailing slash into a redirect to the same path, but with the trailing
