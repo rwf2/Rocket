@@ -360,7 +360,8 @@ impl FileServer {
             self.rewrites.push(Arc::new(rewrite));
         } else {
             error!(
-                "Attempted to insert multiple of the same rewrite `{}` on a FileServer",
+                "Attempted to insert multiple of the same rewrite `{}` on a FileServer.\n\
+                Adding a rewrite that doesn't support duplicate rewrites is ignored",
                 rewrite.name()
             );
         }
