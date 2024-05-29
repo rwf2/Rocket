@@ -11,26 +11,38 @@ pub struct Redirector {
     pub port: u16
 }
 
+/// Managed state for the TLS server's configuration.
+struct TlsConfig(Config);
+
 impl Redirector {
     // Route function that gets call on every single request.
     fn redirect<'r>(req: &'r Request, _: Data<'r>) -> route::BoxFuture<'r> {
-        // FIXME: Check the host against a whitelist!
+        // TODO: Check the host against a whitelist!
+        let config = req.rocket().state::<TlsConfig>().expect("managed config");
         if let Some(host) = req.host() {
-            let https_uri = format!("https://{}{}", host, req.uri());
-            route::Outcome::from(req, Redirect::permanent(https_uri)).pin()
+            let domain = host.domain();
+            let https_uri = match dbg!(config.0.port) {
+                443 => format!("https://{domain}{}", req.uri()),
+                port => format!("https://{domain}:{port}{}", req.uri()),
+            };
+
+            route::Outcome::from(req, Redirect::temporary(https_uri)).pin()
         } else {
             route::Outcome::from(req, Status::BadRequest).pin()
         }
     }
 
     // Launch an instance of Rocket than handles redirection on `self.port`.
-    pub async fn try_launch(self, mut config: Config) -> Result<Rocket<Ignite>, Error> {
+    pub async fn try_launch(self, config: Config) -> Result<Rocket<Ignite>, Error> {
         use rocket::http::Method::*;
 
         // Adjust config for redirector: disable TLS, set port, disable logging.
-        config.tls = None;
-        config.port = self.port;
-        config.log_level = LogLevel::Critical;
+        let redirector_config = Config {
+            tls: None,
+            port: self.port,
+            log_level: LogLevel::Critical,
+            ..config.clone()
+        };
 
         // Build a vector of routes to `redirect` on `<path..>` for each method.
         let redirects = [Get, Put, Post, Delete, Options, Head, Trace, Connect, Patch]
@@ -38,7 +50,8 @@ impl Redirector {
             .map(|m| Route::new(m, "/<path..>", Self::redirect))
             .collect::<Vec<_>>();
 
-        rocket::custom(config)
+        rocket::custom(redirector_config)
+            .manage(TlsConfig(config))
             .mount("/", redirects)
             .launch()
             .await
