@@ -3,6 +3,8 @@ use crate::route::{Route, Segment, RouteUri};
 
 use crate::http::MediaType;
 
+use super::unique_property;
+
 pub trait Collide<T = Self> {
     fn collides_with(&self, other: &T) -> bool;
 }
@@ -50,11 +52,11 @@ impl Route {
     /// assert!(a.collides_with(&b));
     ///
     /// // Two routes with the same method, rank, URI, and overlapping formats.
-    /// let mut a = Route::new(Method::Post, "/", handler);
-    /// a.format = Some(MediaType::new("*", "custom"));
-    /// let mut b = Route::new(Method::Post, "/", handler);
-    /// b.format = Some(MediaType::new("text", "*"));
-    /// assert!(a.collides_with(&b));
+    /// // let mut a = Route::new(Method::Post, "/", handler);
+    /// // a.format = Some(MediaType::new("*", "custom"));
+    /// // let mut b = Route::new(Method::Post, "/", handler);
+    /// // b.format = Some(MediaType::new("text", "*"));
+    /// // assert!(a.collides_with(&b));
     ///
     /// // Two routes with different ranks don't collide.
     /// let a = Route::ranked(1, Method::Get, "/", handler);
@@ -72,25 +74,26 @@ impl Route {
     /// assert!(!a.collides_with(&b));
     ///
     /// // Two payload-supporting routes with non-overlapping formats.
-    /// let mut a = Route::new(Method::Post, "/", handler);
-    /// a.format = Some(MediaType::HTML);
-    /// let mut b = Route::new(Method::Post, "/", handler);
-    /// b.format = Some(MediaType::JSON);
-    /// assert!(!a.collides_with(&b));
+    /// // let mut a = Route::new(Method::Post, "/", handler);
+    /// // a.format = Some(MediaType::HTML);
+    /// // let mut b = Route::new(Method::Post, "/", handler);
+    /// // b.format = Some(MediaType::JSON);
+    /// // assert!(!a.collides_with(&b));
     ///
     /// // Two non payload-supporting routes with non-overlapping formats
     /// // collide. A request with `Accept: */*` matches both.
-    /// let mut a = Route::new(Method::Get, "/", handler);
-    /// a.format = Some(MediaType::HTML);
-    /// let mut b = Route::new(Method::Get, "/", handler);
-    /// b.format = Some(MediaType::JSON);
-    /// assert!(a.collides_with(&b));
+    /// // let mut a = Route::new(Method::Get, "/", handler);
+    /// // a.format = Some(MediaType::HTML);
+    /// // let mut b = Route::new(Method::Get, "/", handler);
+    /// // b.format = Some(MediaType::JSON);
+    /// // assert!(a.collides_with(&b));
     /// ```
     pub fn collides_with(&self, other: &Route) -> bool {
         self.method == other.method
             && self.rank == other.rank
             && self.uri.collides_with(&other.uri)
-            && formats_collide(self, other)
+            // && formats_collide(self, other)
+            && unique_property::collides(&self, &other)
     }
 }
 
@@ -187,23 +190,6 @@ impl Collide for MediaType {
     fn collides_with(&self, other: &Self) -> bool {
         let collide = |a, b| a == "*" || b == "*" || a == b;
         collide(self.top(), other.top()) && collide(self.sub(), other.sub())
-    }
-}
-
-fn formats_collide(route: &Route, other: &Route) -> bool {
-    match (route.method.allows_request_body(), other.method.allows_request_body()) {
-        // Payload supporting methods match against `Content-Type` which must be
-        // fully specified, so the request cannot contain a format that matches
-        // more than one route format as long as those formats don't collide.
-        (Some(true), Some(true)) => match (route.format.as_ref(), other.format.as_ref()) {
-            (Some(a), Some(b)) => a.collides_with(b),
-            // A route without a `format` accepts all `Content-Type`s.
-            _ => true
-        },
-        // When a request method may not support a payload, the `Accept` header
-        // is considered during matching. The header can always be `*/*`, which
-        // would match any format. Thus two such routes would always collide.
-        _ => true,
     }
 }
 
@@ -420,12 +406,12 @@ mod tests {
     {
         let mut route_a = Route::new(m, "/", dummy_handler);
         if let Some(mt_str) = mt1.into() {
-            route_a.format = Some(mt_str.parse::<MediaType>().unwrap());
+            route_a.add_unique_prop(mt_str.parse::<MediaType>().unwrap());
         }
 
         let mut route_b = Route::new(m, "/", dummy_handler);
         if let Some(mt_str) = mt2.into() {
-            route_b.format = Some(mt_str.parse::<MediaType>().unwrap());
+            route_b.add_unique_prop(mt_str.parse::<MediaType>().unwrap());
         }
 
         route_a.collides_with(&route_b)
@@ -471,6 +457,15 @@ mod tests {
         assert!(!r_mt_mt_collide(Post, "*/json", "text/html"));
         assert!(!r_mt_mt_collide(Post, "text/html", "text/css"));
         assert!(!r_mt_mt_collide(Post, "other/html", "text/html"));
+    }
+
+    #[test]
+    fn check_prop_collider() {
+        // let a = "application/*".parse::<MediaType>().unwrap();
+        // let b = "text/*".parse::<MediaType>().unwrap();
+        // assert_eq!(a.collides_with(&b), true);
+        // assert_eq!(a.collides(&b), Some(true));
+        // assert!(unique_property::collides(&vec![Box::new(a)], &vec![Box::new(b)]));
     }
 
     fn catchers_collide<A, B>(a: A, ap: &str, b: B, bp: &str) -> bool

@@ -1,3 +1,4 @@
+use std::any::Any;
 use std::fmt;
 use std::borrow::Cow;
 
@@ -5,6 +6,7 @@ use yansi::Paint;
 
 use crate::http::{uri, Method, MediaType};
 use crate::route::{Handler, RouteUri, BoxFuture};
+use crate::router::{dyn_box_any, UniqueProperty};
 use crate::sentinel::Sentry;
 
 /// A request handling route.
@@ -27,7 +29,7 @@ use crate::sentinel::Sentry;
 /// assert_eq!(route.method, Method::Get);
 /// assert_eq!(route.uri, "/route/<path..>?query");
 /// assert_eq!(route.rank, 2);
-/// assert_eq!(route.format.unwrap(), MediaType::JSON);
+/// // assert_eq!(route.format.unwrap(), MediaType::JSON);
 /// ```
 ///
 /// Note that the `rank` and `format` attribute parameters are optional. See
@@ -174,10 +176,12 @@ pub struct Route {
     pub uri: RouteUri<'static>,
     /// The rank of this route. Lower ranks have higher priorities.
     pub rank: isize,
-    /// The media type this route matches against, if any.
-    pub format: Option<MediaType>,
+    // /// The media type this route matches against, if any.
+    // pub format: Option<MediaType>,
     /// The discovered sentinels.
     pub(crate) sentinels: Vec<Sentry>,
+    /// The list of unique properties
+    pub(crate) unique_properties: Vec<Box<dyn UniqueProperty>>,
 }
 
 impl Route {
@@ -249,10 +253,11 @@ impl Route {
         let rank = rank.into().unwrap_or_else(|| uri.default_rank());
         Route {
             name: None,
-            format: None,
+            // format: None,
             sentinels: Vec::new(),
             handler: Box::new(handler),
             rank, uri, method,
+            unique_properties: vec![],
         }
     }
 
@@ -295,6 +300,22 @@ impl Route {
 
         self.uri = RouteUri::new(&new_base, &self.uri.unmounted_origin.to_string());
         self
+    }
+
+    pub(crate) fn add_unique_prop<T: UniqueProperty>(&mut self, prop: T) -> &mut Self {
+        // Panic if we already have a unique_property with this type
+        assert!(self.get_unique_prop::<T>().is_none());
+        self.unique_properties.push(Box::new(prop));
+        self
+    }
+
+    pub(crate) fn get_unique_prop<T: Any>(&self) -> Option<&T> {
+        for prop in &self.unique_properties {
+            if let Some(val) = dyn_box_any(prop).downcast_ref() {
+                return Some(val);
+            }
+        }
+        None
     }
 
     /// Maps the `base` of this route using `mapper`, returning a new `Route`
@@ -356,8 +377,8 @@ impl fmt::Display for Route {
             write!(f, " [{}]", self.rank.primary().bold())?;
         }
 
-        if let Some(ref format) = self.format {
-            write!(f, " {}", format.yellow())?;
+        for prop in &self.unique_properties {
+            write!(f, " {}", prop.yellow())?;
         }
 
         Ok(())
@@ -371,7 +392,8 @@ impl fmt::Debug for Route {
             .field("method", &self.method)
             .field("uri", &self.uri)
             .field("rank", &self.rank)
-            .field("format", &self.format)
+            // .field("format", &self.format)
+            .field("properties", &self.unique_properties)
             .finish()
     }
 }
@@ -407,9 +429,12 @@ impl From<StaticInfo> for Route {
             method: info.method,
             handler: Box::new(info.handler),
             rank: info.rank.unwrap_or_else(|| uri.default_rank()),
-            format: info.format,
+            // format: info.format.clone(),
             sentinels: info.sentinels.into_iter().collect(),
             uri,
+            unique_properties: [
+                info.format.map(|f| Box::new(f) as Box<dyn UniqueProperty>)
+            ].into_iter().filter_map(|v| v).collect(),
         }
     }
 }

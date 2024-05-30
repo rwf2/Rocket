@@ -1,5 +1,4 @@
 use crate::{Route, Request, Catcher};
-use crate::router::Collide;
 use crate::http::Status;
 use crate::route::Color;
 
@@ -69,7 +68,8 @@ impl Route {
         self.method == request.method()
             && paths_match(self, request)
             && queries_match(self, request)
-            && formats_match(self, request)
+            // && formats_match(self, request)
+            && self.unique_properties.iter().all(|p| p.matches_request(request))
     }
 }
 
@@ -192,24 +192,24 @@ fn queries_match(route: &Route, req: &Request<'_>) -> bool {
     true
 }
 
-fn formats_match(route: &Route, req: &Request<'_>) -> bool {
-    trace!("checking format match: route {} vs. request {}", route, req);
-    let route_format = match route.format {
-        Some(ref format) => format,
-        None => return true,
-    };
+// fn formats_match(route: &Route, req: &Request<'_>) -> bool {
+//     trace!("checking format match: route {} vs. request {}", route, req);
+//     let route_format = match route.format {
+//         Some(ref format) => format,
+//         None => return true,
+//     };
 
-    match route.method.allows_request_body() {
-        Some(true) => match req.format() {
-            Some(f) if f.specificity() == 2 => route_format.collides_with(f),
-            _ => false
-        },
-        _ => match req.format() {
-            Some(f) => route_format.collides_with(f),
-            None => true
-        }
-    }
-}
+//     match route.method.allows_request_body() {
+//         Some(true) => match req.format() {
+//             Some(f) if f.specificity() == 2 => route_format.collides_with(f),
+//             _ => false
+//         },
+//         _ => match req.format() {
+//             Some(f) => route_format.collides_with(f),
+//             None => true
+//         }
+//     }
+// }
 
 #[cfg(test)]
 mod tests {
@@ -295,7 +295,7 @@ mod tests {
 
         let mut route = Route::new(m, "/", dummy_handler);
         if let Some(mt_str) = mt2.into() {
-            route.format = Some(mt_str.parse::<MediaType>().unwrap());
+            route.add_unique_prop(mt_str.parse::<MediaType>().unwrap());
         }
 
         route.matches(&req)
