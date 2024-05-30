@@ -245,39 +245,6 @@ impl<'a> Segments<'a, Path> {
 
         Ok(buf)
     }
-
-    /// Similar to `to_path_buf`, but always allows dotfiles, and reports whether
-    /// the path contains dotfiles.
-    pub fn to_path_buf_dotfiles(&self) -> Result<(PathBuf, bool), PathError> {
-        let mut buf = PathBuf::new();
-        let mut is_dotfile = false;
-        for segment in self.clone() {
-            if segment == ".." {
-                buf.pop();
-            } else if segment.starts_with('.') {
-                buf.push(segment);
-                is_dotfile = true;
-            } else if segment.starts_with('*') {
-                return Err(PathError::BadStart('*'))
-            } else if segment.ends_with(':') {
-                return Err(PathError::BadEnd(':'))
-            } else if segment.ends_with('>') {
-                return Err(PathError::BadEnd('>'))
-            } else if segment.ends_with('<') {
-                return Err(PathError::BadEnd('<'))
-            } else if segment.contains('/') {
-                return Err(PathError::BadChar('/'))
-            } else if cfg!(windows) && segment.contains('\\') {
-                return Err(PathError::BadChar('\\'))
-            } else if cfg!(windows) && segment.contains(':') {
-                return Err(PathError::BadChar(':'))
-            } else {
-                buf.push(segment)
-            }
-        }
-
-        Ok((buf, is_dotfile))
-    }
 }
 
 impl<'a> Segments<'a, Query> {
