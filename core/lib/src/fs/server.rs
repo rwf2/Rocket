@@ -5,7 +5,14 @@ use std::sync::Arc;
 
 use crate::fs::NamedFile;
 use crate::{Data, Request, outcome::IntoOutcome};
-use crate::http::{Method, HeaderMap, Header, uri::{Segments, Reference}, Status};
+use crate::http::{
+    Method,
+    HeaderMap,
+    Header,
+    uri::{Segments, Origin},
+    Status,
+    ext::IntoOwned,
+};
 use crate::route::{Route, Handler, Outcome};
 use crate::response::{Redirect, Responder};
 
@@ -117,9 +124,9 @@ pub trait Rewriter: Send + Sync + 'static {
 pub enum FileResponse<'p, 'h> {
     /// Return the contents of the specified file.
     File(File<'p, 'h>),
-    /// Returns a Redirect to the specified path. This will be appended to the
-    /// [`FileServer`]'s base uri, so the redirect uri is relative to wherever
-    /// the [`FileServer`] is mounted.
+    /// Returns a Redirect to the specified path. This needs to be an absolute
+    /// URI, so you should start with [`File.full_uri`](File) when constructing
+    /// a redirect.
     Redirect(Redirect),
 }
 
@@ -150,8 +157,8 @@ impl<'p, 'h> From<Redirect> for Option<FileResponse<'p, 'h>> {
 pub struct File<'p, 'h> {
     /// The path to the file that [`FileServer`] will respond with.
     pub path: Cow<'p, Path>,
-    /// The original path this File started out with.
-    pub starting_path: &'p Path,
+    /// The original uri from the [`Request`]
+    pub full_uri: &'p Origin<'p>,
     /// A list of headers to be added to the generated response.
     pub headers: HeaderMap<'h>,
 }
@@ -167,7 +174,7 @@ impl<'p, 'h> File<'p, 'h> {
     pub fn with_path(self, path: impl Into<Cow<'p, Path>>) -> Self {
         Self {
             path: path.into(),
-            starting_path: self.starting_path,
+            full_uri: self.full_uri,
             headers: self.headers,
         }
     }
@@ -176,9 +183,16 @@ impl<'p, 'h> File<'p, 'h> {
     pub fn map_path<R: Into<Cow<'p, Path>>>(self, f: impl FnOnce(Cow<'p, Path>) -> R) -> Self {
         Self {
             path: f(self.path).into(),
-            starting_path: self.starting_path,
+            full_uri: self.full_uri,
             headers: self.headers,
         }
+    }
+
+    /// Convert this `File` into a Redirect, transforming the URI.
+    pub fn into_redirect(self, f: impl FnOnce(Origin<'static>) -> Origin<'static>)
+        -> FileResponse<'p, 'h>
+    {
+        FileResponse::Redirect(Redirect::permanent(f(self.full_uri.clone().into_owned())))
     }
 }
 
@@ -339,8 +353,9 @@ pub fn filter_dotfiles(file: &File<'_, '_>) -> bool {
 /// # }
 /// ```
 pub fn normalize_dirs<'p, 'h>(file: File<'p, 'h>) -> FileResponse<'p, 'h> {
-    if file.path.is_dir() && !file.path.as_os_str().as_encoded_bytes().ends_with(b"/") {
-        FileResponse::Redirect(Redirect::permanent(format!("{}/", file.starting_path.display())))
+    if !file.full_uri.has_trailing_slash() && file.path.is_dir() {
+        // Known good path + '/' is a good path
+        file.into_redirect(|o| o.map_path(|p| format!("{p}/")).unwrap())
     } else {
         FileResponse::File(file)
     }
@@ -521,7 +536,7 @@ impl Handler for FileServer {
             .and_then(|segments| segments.to_path_buf(true).ok());
         let mut response = path.as_ref().map(|p| FileResponse::File(File {
             path: Cow::Borrowed(p),
-            starting_path: p,
+            full_uri: req.uri(),
             headers: HeaderMap::new(),
         }));
 
@@ -538,9 +553,7 @@ impl Handler for FileServer {
                 }).or_forward((data, Status::NotFound))
             },
             Some(FileResponse::Redirect(r)) => {
-                let base = req.route().unwrap().uri.base();
-                r.map_uri(|u| Reference::parse_owned(format!("{}/{}", base, u)).unwrap())
-                    .respond_to(req)
+                r.respond_to(req)
                     .or_forward((data, Status::InternalServerError))
             },
             _ => Outcome::forward(data, Status::NotFound),
