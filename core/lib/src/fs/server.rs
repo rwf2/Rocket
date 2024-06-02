@@ -222,9 +222,11 @@ impl<F> Rewriter for MapFile<F>
 /// # Example
 ///
 /// ```rust,no_run
-/// # use rocket::fs::{FileServer, dir_root};
+/// # use rocket::fs::{FileServer, dir_root, relative};
+/// # fn make_server() -> FileServer {
 /// FileServer::empty()
 ///     .map_file(dir_root(relative!("static")))
+/// # }
 /// ```
 ///
 /// # Panics
@@ -254,8 +256,10 @@ pub fn dir_root(path: impl AsRef<Path>)
 ///
 /// ```rust,no_run
 /// # use rocket::fs::{FileServer, file_root};
+/// # fn make_server() -> FileServer {
 /// FileServer::empty()
 ///     .map_file(file_root("static/index.html"))
+/// # }
 /// ```
 ///
 /// # Panics
@@ -285,9 +289,11 @@ pub fn file_root(path: impl AsRef<Path>)
 /// # Example
 ///
 /// ```rust,no_run
-/// # use rocket::fs::{FileServer, dir_root};
+/// # use rocket::fs::{FileServer, missing_root};
+/// # fn make_server() -> FileServer {
 /// FileServer::empty()
 ///     .map_file(missing_root("/tmp/rocket"))
+/// # }
 /// ```
 pub fn missing_root(path: impl AsRef<Path>)
     -> impl for<'p, 'h> Fn(File<'p, 'h>) -> FileResponse<'p, 'h> + Send + Sync + 'static
@@ -306,9 +312,11 @@ pub fn missing_root(path: impl AsRef<Path>)
 ///
 /// ```rust,no_run
 /// # use rocket::fs::{FileServer, filter_dotfiles, dir_root};
+/// # fn make_server() -> FileServer {
 /// FileServer::empty()
 ///     .filter_file(filter_dotfiles)
 ///     .map_file(dir_root("static"))
+/// # }
 /// ```
 pub fn filter_dotfiles(file: &File<'_, '_>) -> bool {
     !file.path.iter().any(|s| s.as_encoded_bytes().starts_with(b"."))
@@ -324,9 +332,11 @@ pub fn filter_dotfiles(file: &File<'_, '_>) -> bool {
 /// Appends a slash to any request for a directory without a trailing slash
 /// ```rust,no_run
 /// # use rocket::fs::{FileServer, normalize_dirs, dir_root};
+/// # fn make_server() -> FileServer {
 /// FileServer::empty()
 ///     .map_file(dir_root("static"))
 ///     .map_file(normalize_dirs)
+/// # }
 /// ```
 pub fn normalize_dirs<'p, 'h>(file: File<'p, 'h>) -> FileResponse<'p, 'h> {
     if file.path.is_dir() && !file.path.as_os_str().as_encoded_bytes().ends_with(b"/") {
@@ -346,9 +356,11 @@ pub fn normalize_dirs<'p, 'h>(file: File<'p, 'h>) -> FileResponse<'p, 'h> {
 /// Appends `index.html` to any directory access.
 /// ```rust,no_run
 /// # use rocket::fs::{FileServer, index, dir_root};
+/// # fn make_server() -> FileServer {
 /// FileServer::empty()
 ///     .map_file(dir_root("static"))
 ///     .map_file(index("index.html"))
+/// # }
 /// ```
 pub fn index(index: &'static str)
     -> impl for<'p, 'h> Fn(File<'p, 'h>) -> FileResponse<'p, 'h> + Send + Sync
@@ -379,10 +391,13 @@ impl FileServer {
     ///
     /// Replicate the output of [`FileServer::new()`].
     /// ```rust,no_run
+    /// # use rocket::fs::{FileServer, filter_dotfiles, dir_root, normalize_dirs};
+    /// # fn launch() -> FileServer {
     /// FileServer::empty_ranked(10)
     ///     .filter_file(filter_dotfiles)
-    ///     .map_file(dir_root(path))
+    ///     .map_file(dir_root("static"))
     ///     .map_file(normalize_dirs)
+    /// # }
     /// ```
     pub fn empty_ranked(rank: isize) -> Self {
         Self {
@@ -420,7 +435,7 @@ impl FileServer {
     ///
     /// Redirects all requests that have been filtered to the root of the `FileServer`.
     /// ```rust,no_run
-    /// # use rocket::{fs::FileServer, response::Redirect, uri};
+    /// # use rocket::{fs::{FileServer, FileResponse}, response::Redirect, uri, Build, Rocket};
     /// fn redir_missing<'p, 'h>(p: Option<FileResponse<'p, 'h>>)
     ///     -> Option<FileResponse<'p, 'h>>
     /// {
@@ -430,8 +445,10 @@ impl FileServer {
     ///     }
     /// }
     ///
+    /// # fn launch() -> Rocket<Build> {
     /// rocket::build()
     ///     .mount("/", FileServer::from("static").and_rewrite(redir_missing))
+    /// # }
     /// ```
     ///
     /// Note that `redir_missing` is not a closure in this example. Making it a closure
@@ -447,13 +464,15 @@ impl FileServer {
     ///
     /// Filter out all paths with a filename of `hidden`.
     /// ```rust,no_run
-    /// # use rocket::{fs::FileServer, response::Redirect, uri};
+    /// # use rocket::{fs::FileServer, response::Redirect, uri, Rocket, Build};
+    /// # fn launch() -> Rocket<Build> {
     /// rocket::build()
     ///     .mount(
     ///         "/",
     ///         FileServer::from("static")
     ///            .filter_file(|f| f.path.file_name() != Some("hidden".as_ref()))
     ///     )
+    /// # }
     /// ```
     pub fn filter_file<F>(self, f: F) -> Self
         where F: Fn(&File<'_, '_>) -> bool + Send + Sync + 'static
@@ -467,12 +486,14 @@ impl FileServer {
     ///
     /// Append `hidden` to the path of every file returned.
     /// ```rust,no_run
-    /// # use rocket::{fs::FileServer, response::Redirect, uri};
+    /// # use rocket::{fs::FileServer, Build, Rocket};
+    /// # fn launch() -> Rocket<Build> {
     /// rocket::build()
     ///     .mount(
     ///         "/",
     ///         FileServer::from("static").map_file(|f| f.map_path(|p| p.join("hidden")).into())
     ///     )
+    /// # }
     /// ```
     pub fn map_file<F>(self, f: F) -> Self
         where F: for<'r, 'h> Fn(File<'r, 'h>) -> FileResponse<'r, 'h> + Send + Sync + 'static
