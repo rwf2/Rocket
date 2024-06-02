@@ -4,7 +4,7 @@ use std::path::Path;
 use rocket::{Rocket, Route, Build};
 use rocket::http::Status;
 use rocket::local::blocking::Client;
-use rocket::fs::{relative, DotFiles, FileServer, Index, NormalizeDirs, Options};
+use rocket::fs::{dir_root, filter_dotfiles, index, normalize_dirs, relative, FileServer};
 
 fn static_root() -> &'static Path {
     Path::new(relative!("/tests/static"))
@@ -14,21 +14,44 @@ fn rocket() -> Rocket<Build> {
     let root = static_root();
     rocket::build()
         .mount("/default", FileServer::from(&root))
-        .mount("/no_index", dbg!(FileServer::new(&root, Options::None)))
-        .mount("/dots", FileServer::new(&root, Options::None).rewrite(DotFiles))
-        .mount("/index", FileServer::new(&root, Options::None).rewrite(Index("index.html")))
+        .mount(
+            "/no_index",
+            FileServer::empty()
+                .filter_file(filter_dotfiles)
+                .map_file(dir_root(&root))
+        )
+        .mount(
+            "/dots",
+            FileServer::empty()
+                .map_file(dir_root(&root))
+        )
+        .mount(
+            "/index",
+            FileServer::empty()
+                .filter_file(filter_dotfiles)
+                .map_file(dir_root(&root))
+                .map_file(index("index.html"))
+        )
         .mount(
             "/both",
-            FileServer::new(&root, Options::None)
-                .rewrite(DotFiles)
-                .rewrite(Index("index.html"))
+            FileServer::empty()
+                .map_file(dir_root(&root))
+                .map_file(index("index.html"))
         )
-        .mount("/redir", FileServer::new(&root, Options::None).rewrite(NormalizeDirs))
+        .mount(
+            "/redir",
+            FileServer::empty()
+                .filter_file(filter_dotfiles)
+                .map_file(dir_root(&root))
+                .map_file(normalize_dirs)
+        )
         .mount(
             "/redir_index",
-            FileServer::new(&root, Options::None)
-                .rewrite(NormalizeDirs)
-                .rewrite(Index("index.html"))
+            FileServer::empty()
+                .filter_file(filter_dotfiles)
+                .map_file(dir_root(&root))
+                .map_file(normalize_dirs)
+                .map_file(index("index.html"))
         )
 }
 
@@ -115,8 +138,8 @@ fn test_static_all() {
 fn test_ranking() {
     let root = static_root();
     for rank in -128..128 {
-        let a = FileServer::new(&root, Options::None).rank(rank);
-        let b = FileServer::from(&root).rank(rank);
+        let a = FileServer::new(&root, rank);
+        let b = FileServer::new(&root, rank);
 
         for handler in vec![a, b] {
             let routes: Vec<Route> = handler.into();
