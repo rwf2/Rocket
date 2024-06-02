@@ -1,7 +1,5 @@
 use core::fmt;
-use std::any::{type_name, Any, TypeId};
 use std::borrow::Cow;
-use std::os::unix::ffi::OsStrExt;
 use std::path::{PathBuf, Path};
 use std::sync::Arc;
 
@@ -13,24 +11,28 @@ use crate::response::{Redirect, Responder};
 
 /// Custom handler for serving static files.
 ///
-/// This handler makes it simple to serve static files from a directory on the
-/// local file system. To use it, construct a `FileServer` using either
-/// [`FileServer::from()`] or [`FileServer::new()`] then simply `mount` the
-/// handler at a desired path. When mounted, the handler will generate route(s)
-/// that serve the desired static files. If a requested file is not found, the
-/// routes _forward_ the incoming request. The default rank of the generated
-/// routes is `10`. To customize route ranking, use the [`FileServer::rank()`]
-/// method.
+/// This handler makes is simple to serve static files from a directory on the
+/// local file system. To use it, construct a `FileServer` using
+/// [`FileServer::from()`], then simply `mount` the handler. When mounted, the
+/// handler serves files from the specified directory. If the file is not found,
+/// the handler _forwards_ the request. By default, `FileServer` has a rank of
+/// `10`. Use [`FileServer::new()`] to create a route with a custom rank.
 ///
-/// # Options
+/// # Customization
 ///
-/// The handler's functionality can be customized by passing an [`Options`] to
-/// [`FileServer::new()`].
+/// How `FileServer` responds to specific requests can be customized, through
+/// the use of [`Rewriter`]s. See [`Rewriter`] for more detailed documentation
+/// on how to take full advantage of the customization of `FileServer`.
+///
+/// [`FileServer::from()`] and [`FileServer::new()`] automatically add some common
+/// rewrites. They filter out dotfiles, redirect folder accesses to include a trailing
+/// slash, and use `index.html` to respond to requests for a directory. If you want
+/// to customize or replace these default rewrites, see [`FileServer::empty()`].
 ///
 /// # Example
 ///
 /// Serve files from the `/static` directory on the local file system at the
-/// `/public` path with the [default options](#impl-Default):
+/// `/public` path, with the default rewrites.
 ///
 /// ```rust,no_run
 /// # #[macro_use] extern crate rocket;
@@ -43,9 +45,8 @@ use crate::response::{Redirect, Responder};
 /// ```
 ///
 /// Requests for files at `/public/<path..>` will be handled by returning the
-/// contents of `/static/<path..>`. Requests for _directories_ at
-/// `/public/<directory>` will be handled by returning the contents of
-/// `/static/<directory>/index.html`.
+/// contents of `/static/<path..>`. Requests for directories will return the
+/// contents of `index.html`.
 ///
 /// ## Relative Paths
 ///
@@ -66,7 +67,6 @@ use crate::response::{Redirect, Responder};
 /// ```
 #[derive(Clone)]
 pub struct FileServer {
-    // root: PathBuf,
     rewrites: Vec<Arc<dyn Rewriter>>,
     rank: isize,
 }
@@ -85,189 +85,251 @@ struct DebugListRewrite<'a>(&'a Vec<Arc<dyn Rewriter>>);
 
 impl fmt::Debug for DebugListRewrite<'_> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_list().entries(self.0.iter().map(|r| r.name())).finish()
+        write!(f, "<{} rewrites>", self.0.len())
     }
 }
 
-pub trait Rewriter: Send + Sync + Any {
-    /// Modify RewritablePath as needed.
-    fn rewrite<'a>(&self, path: Option<FileResponse<'a>>) -> Option<FileResponse<'a>>;
-    /// provides type name for debug printing
-    fn name(&self) -> &'static str { type_name::<Self>() }
+/// Trait used to implement [`FileServer`] customization.
+///
+/// Conceptually, a [`FileServer`] is a sequence of `Rewriter`s, which transform
+/// a path from a request to a final response. [`FileServer`] add a set of default
+/// `Rewriter`s, which filter out dotfiles, apply a root path, normalize directories,
+/// and use `index.html`.
+///
+/// After running the chain of `Rewriter`s,
+/// [`FileServer`] uses the final [`Option<FileResponse>`](FileResponse)
+/// to respond to the request. If the response is `None`, a path that doesn't
+/// exist or a directory path, [`FileServer`] will respond with a
+/// [`Status::NotFound`](crate::http::Status::NotFound). Otherwise the [`FileServer`]
+/// will respond with a redirect or the contents of the file specified.
+///
+/// [`FileServer`] provides several helper methods to add `Rewriter`s:
+/// - [`FileServer::and_rewrite()`]
+/// - [`FileServer::filter_file()`]
+/// - [`FileServer::map_file()`]
+pub trait Rewriter: Send + Sync + 'static {
+    /// Alter the [`FileResponse`] as needed.
+    fn rewrite<'p, 'h>(&self, path: Option<FileResponse<'p, 'h>>) -> Option<FileResponse<'p, 'h>>;
 }
 
+/// A Response from a [`FileServer`]
 #[derive(Debug)]
-pub enum FileResponse<'a> {
-    /// Status: Ok
-    File(File<'a>),
-    /// Status: Redirect
+pub enum FileResponse<'p, 'h> {
+    /// Return the contents of the specified file.
+    File(File<'p, 'h>),
+    /// Returns a Redirect to the specified path. This will be appended to the
+    /// [`FileServer`]'s base uri, so the redirect uri is relative to wherever
+    /// the [`FileServer`] is mounted.
     Redirect(Redirect),
 }
 
-#[derive(Debug)]
-pub struct File<'a> {
-    pub path: Cow<'a, Path>,
-    pub headers: HeaderMap<'a>,
+impl<'p, 'h> From<File<'p, 'h>> for FileResponse<'p, 'h> {
+    fn from(value: File<'p, 'h>) -> Self {
+        Self::File(value)
+    }
+}
+impl<'p, 'h> From<File<'p, 'h>> for Option<FileResponse<'p, 'h>> {
+    fn from(value: File<'p, 'h>) -> Self {
+        Some(FileResponse::File(value))
+    }
 }
 
-impl<'a> File<'a> {
-    pub fn with_header<'h: 'a, H: Into<Header<'h>>>(mut self, header: H) -> Self {
+impl<'p, 'h> From<Redirect> for FileResponse<'p, 'h> {
+    fn from(value: Redirect) -> Self {
+        Self::Redirect(value)
+    }
+}
+impl<'p, 'h> From<Redirect> for Option<FileResponse<'p, 'h>> {
+    fn from(value: Redirect) -> Self {
+        Some(FileResponse::Redirect(value))
+    }
+}
+
+/// A File response from a [`FileServer`]
+#[derive(Debug)]
+pub struct File<'p, 'h> {
+    /// The path to the file that [`FileServer`] will respond with.
+    pub path: Cow<'p, Path>,
+    /// The original path this File started out with.
+    pub starting_path: &'p Path,
+    /// A list of headers to be added to the generated response.
+    pub headers: HeaderMap<'h>,
+}
+
+impl<'p, 'h> File<'p, 'h> {
+    /// Add a header to this `File`.
+    pub fn with_header<'n: 'h, H: Into<Header<'n>>>(mut self, header: H) -> Self {
         self.headers.add(header);
         self
     }
 
-    pub fn with_path(self, path: impl Into<Cow<'a, Path>>) -> Self {
+    /// Replace the path of this `File`.
+    pub fn with_path(self, path: impl Into<Cow<'p, Path>>) -> Self {
         Self {
             path: path.into(),
+            starting_path: self.starting_path,
             headers: self.headers,
         }
     }
 
-    pub fn modify_path(self, f: impl FnOnce(&mut PathBuf)) -> Self {
-        let mut path = self.path.into_owned();
-        f(&mut path);
+    /// Replace the path of this `File`.
+    pub fn map_path<R: Into<Cow<'p, Path>>>(self, f: impl FnOnce(Cow<'p, Path>) -> R) -> Self {
         Self {
-            path: path.into(),
+            path: f(self.path).into(),
+            starting_path: self.starting_path,
             headers: self.headers,
         }
     }
 }
 
-
-
-impl<F: Send + Sync + Any> Rewriter for F
-    where F: for<'r> Fn(Option<FileResponse<'r>>) -> Option<FileResponse<'r>>
+impl<F: Send + Sync + 'static> Rewriter for F
+    where F: for<'r, 'h> Fn(Option<FileResponse<'r, 'h>>) -> Option<FileResponse<'r, 'h>>
 {
-    fn rewrite<'a>(&self, path: Option<FileResponse<'a>>) -> Option<FileResponse<'a>> {
+    fn rewrite<'p, 'h>(&self, path: Option<FileResponse<'p, 'h>>) -> Option<FileResponse<'p, 'h>> {
         self(path)
     }
-
-    fn name(&self) -> &'static str {
-        "Custom Rewrite"
-    }
 }
 
-pub struct FilterFile<F>(F);
-impl<F: Fn(&File<'_>) -> bool + Send + Sync + Any> Rewriter for FilterFile<F> {
-    fn rewrite<'a>(&self, path: Option<FileResponse<'a>>) -> Option<FileResponse<'a>> {
+/// Helper to implement [`FileServer::filter_file()`]
+struct FilterFile<F>(F);
+impl<F: Fn(&File<'_, '_>) -> bool + Send + Sync + 'static> Rewriter for FilterFile<F> {
+    fn rewrite<'p, 'h>(&self, path: Option<FileResponse<'p, 'h>>) -> Option<FileResponse<'p, 'h>> {
         match path {
             Some(FileResponse::File(file)) if !self.0(&file) => None,
             path => path,
         }
     }
-
-    fn name(&self) -> &'static str {
-        "Custom file filter"
-    }
 }
 
-pub struct FilterRedirect<F>(F, Reference<'static>);
-impl<F: Fn(&File<'_>) -> bool + Send + Sync + Any> Rewriter for FilterRedirect<F> {
-    fn rewrite<'a>(&self, path: Option<FileResponse<'a>>) -> Option<FileResponse<'a>> {
+/// Helper to implement [`FileServer::map_file()`]
+struct MapFile<F>(F);
+impl<F> Rewriter for MapFile<F>
+    where F: for<'p, 'h> Fn(File<'p, 'h>) -> FileResponse<'p, 'h> + Send + Sync + 'static,
+{
+    fn rewrite<'p, 'h>(&self, path: Option<FileResponse<'p, 'h>>) -> Option<FileResponse<'p, 'h>> {
         match path {
-            Some(FileResponse::File(file)) if !self.0(&file) =>
-                Some(FileResponse::Redirect(Redirect::permanent(self.1.clone()))),
-            path => path,
-        }
-    }
-
-    fn name(&self) -> &'static str {
-        "Custom file filter with redirect"
-    }
-}
-
-pub struct MapFile<F>(F);
-impl<F: for<'r> Fn(File<'r>) -> File<'r> + Send + Sync + Any> Rewriter for MapFile<F> {
-    fn rewrite<'a>(&self, path: Option<FileResponse<'a>>) -> Option<FileResponse<'a>> {
-        match path {
-            Some(FileResponse::File(file)) => Some(FileResponse::File(self.0(file))),
-            path => path,
-        }
-    }
-
-    fn name(&self) -> &'static str {
-        "Custom file map"
-    }
-}
-
-pub struct Root(PathBuf);
-impl Rewriter for Root {
-    fn rewrite<'a>(&self, path: Option<FileResponse<'a>>) -> Option<FileResponse<'a>> {
-        match path {
-            Some(FileResponse::File(file)) => Some(FileResponse::File(File {
-                path: self.0.join(file.path).into(),
-                headers: file.headers,
-            })),
+            Some(FileResponse::File(file)) => Some(self.0(file)),
             path => path,
         }
     }
 }
-impl Rewriter for MapFile<Root> {
-    fn rewrite<'a>(&self, path: Option<FileResponse<'a>>) -> Option<FileResponse<'a>> {
-        self.0.rewrite(path)
+
+/// Prepends the provided path, to serve files from a directory.
+///
+/// You can use [`relative!`] to make a path relative to the crate root, rather
+/// than the runtime directory.
+///
+/// # Example
+///
+/// ```rust,no_run
+/// # use rocket::fs::{FileServer, dir_root};
+/// FileServer::empty()
+///     .map_file(dir_root(relative!("static")))
+/// ```
+pub fn dir_root(path: impl AsRef<Path>)
+    -> impl for<'p, 'h> Fn(File<'p, 'h>) -> FileResponse<'p, 'h> + Send + Sync + 'static
+{
+    use yansi::Paint as _;
+
+    let path = path.as_ref();
+    if !path.is_dir() {
+        let path = path.display();
+        error!("FileServer path '{}' is not a directory.", path.primary());
+        warn_!("Aborting early to prevent inevitable handler error.");
+        panic!("invalid directory: refusing to continue");
+    }
+    let path = path.to_path_buf();
+    move |f| {
+        FileResponse::File(f.map_path(|p| path.join(p)))
     }
 }
 
-pub struct BlockDotfiles;
-impl Rewriter for BlockDotfiles {
-    fn rewrite<'a>(&self, path: Option<FileResponse<'a>>) -> Option<FileResponse<'a>> {
-        match path {
-            Some(FileResponse::File(file)) if file.path.iter()
-                .any(|seg| seg.as_bytes().starts_with(b".")) => None,
-            path => path,
-        }
+/// Prepends the provided path, to serve a single static file.
+///
+/// # Example
+///
+/// ```rust,no_run
+/// # use rocket::fs::{FileServer, file_root};
+/// FileServer::empty()
+///     .map_file(file_root("static/index.html"))
+/// ```
+pub fn file_root(path: impl AsRef<Path>)
+    -> impl for<'p, 'h> Fn(File<'p, 'h>) -> FileResponse<'p, 'h> + Send + Sync + 'static
+{
+    use yansi::Paint as _;
+
+    let path = path.as_ref();
+    if !path.is_file() {
+        let path = path.display();
+        error!("FileServer path '{}' is not a file.", path.primary());
+        warn_!("Aborting early to prevent inevitable handler error.");
+        panic!("invalid file: refusing to continue");
+    }
+    let path = path.to_path_buf();
+    move |f| {
+        FileResponse::File(f.map_path(|p| path.join(p)))
     }
 }
-impl Rewriter for FilterFile<BlockDotfiles> {
-    fn rewrite<'a>(&self, path: Option<FileResponse<'a>>) -> Option<FileResponse<'a>> {
-        self.0.rewrite(path)
-    }
+
+/// Filters out any path that contains a file or directory name starting with a
+/// dot. If used after `dir_root`, this will also check the root path for dots, and
+/// filter them.
+///
+/// # Example
+///
+/// ```rust,no_run
+/// # use rocket::fs::{FileServer, filter_dotfiles, dir_root};
+/// FileServer::empty()
+///     .filter_file(filter_dotfiles)
+///     .map_file(dir_root("static"))
+/// ```
+pub fn filter_dotfiles(file: &File<'_, '_>) -> bool {
+    !file.path.iter().any(|s| s.as_encoded_bytes().starts_with(b"."))
 }
 
 /// Normalize directory accesses to always include a trailing slash.
 ///
-/// Must be used before `Root`, otherwise it will redirect to the full
-/// path, including the root directory.
-pub struct NormalizeDirs;
-impl Rewriter for NormalizeDirs {
-    fn rewrite<'a>(&self, path: Option<FileResponse<'a>>) -> Option<FileResponse<'a>> {
-        match path {
-            // This 
-            Some(FileResponse::File(file)) if
-                    !file.path.as_os_str().as_encoded_bytes().ends_with(b"/")
-                    && file.path.is_dir()
-                => Some(FileResponse::Redirect(
-                    Redirect::permanent(format!("{}/", file.path.display()))
-                )),
-            path => path,
-        }
-    }
-}
-impl Rewriter for MapFile<NormalizeDirs> {
-    fn rewrite<'a>(&self, path: Option<FileResponse<'a>>) -> Option<FileResponse<'a>> {
-        self.0.rewrite(path)
+/// Must be used after `dir_root`, since it needs the full path to check whether it is
+/// a directory.
+///
+/// # Example
+///
+/// Appends a slash to any request for a directory without a trailing slash
+/// ```rust,no_run
+/// # use rocket::fs::{FileServer, normalize_dirs, dir_root};
+/// FileServer::empty()
+///     .map_file(dir_root("static"))
+///     .map_file(normalize_dirs)
+/// ```
+pub fn normalize_dirs<'p, 'h>(file: File<'p, 'h>) -> FileResponse<'p, 'h> {
+    if file.path.is_dir() && !file.path.as_os_str().as_encoded_bytes().ends_with(b"/") {
+        FileResponse::Redirect(Redirect::permanent(format!("{}/", file.starting_path.display())))
+    } else {
+        FileResponse::File(file)
     }
 }
 
-/// Appends a file name to all directory accesses. `index.html` by default
-pub struct Index(pub &'static str);
-impl Rewriter for Index {
-    fn rewrite<'a>(&self, path: Option<FileResponse<'a>>) -> Option<FileResponse<'a>> {
-        match path {
-            Some(FileResponse::File(file)) if file.path.is_dir()
-                => Some(FileResponse::File(file.modify_path(|p| p.push(self.0)))),
-            path => path,
-        }
-    }
-}
-impl Rewriter for MapFile<Index> {
-    fn rewrite<'a>(&self, path: Option<FileResponse<'a>>) -> Option<FileResponse<'a>> {
-        self.0.rewrite(path)
-    }
-}
-impl Default for Index {
-    fn default() -> Self {
-        Self("index.html")
+/// Appends a file name to all directory accesses.
+///
+/// Must be used after `dir_root`, since it needs the full path to check whether it is
+/// a directory.
+///
+/// # Example
+///
+/// Appends `index.html` to any directory access.
+/// ```rust,no_run
+/// # use rocket::fs::{FileServer, index, dir_root};
+/// FileServer::empty()
+///     .map_file(dir_root("static"))
+///     .map_file(index("index.html"))
+/// ```
+pub fn index(index: &'static str)
+    -> impl for<'p, 'h> Fn(File<'p, 'h>) -> FileResponse<'p, 'h> + Send + Sync
+{
+    move |f| if f.path.is_dir() {
+        FileResponse::File(f.map_path(|p| p.join(index)))
+    } else {
+        FileResponse::File(f)
     }
 }
 
@@ -277,82 +339,116 @@ impl FileServer {
 
     /// Constructs a new `FileServer`, with default rank, and no
     /// rewrites.
+    ///
+    /// See [`FileServer::empty_ranked()`].
     pub fn empty() -> Self {
+        Self::empty_ranked(Self::DEFAULT_RANK)
+    }
+
+    /// Constructs a new `FileServer`, with specified rank, and no
+    /// rewrites.
+    ///
+    /// # Example
+    ///
+    /// Replicate the output of [`FileServer::new()`].
+    /// ```rust,no_run
+    /// FileServer::empty_ranked(10)
+    ///     .filter_file(filter_dotfiles)
+    ///     .map_file(dir_root(path))
+    ///     .map_file(normalize_dirs)
+    /// ```
+    pub fn empty_ranked(rank: isize) -> Self {
         Self {
             rewrites: vec![],
-            rank: Self::DEFAULT_RANK,
+            rank,
         }
     }
 
     /// Constructs a new `FileServer`, with the defualt rank of 10.
     ///
-    /// See: [`FileServer::new`] for more details
+    /// See [`FileServer::new`].
     pub fn from<P: AsRef<Path>>(path: P) -> Self {
         Self::new(path, Self::DEFAULT_RANK)
     }
 
     /// Constructs a new `FileServer` that serves files from the file system
     /// `path`, with the specified rank.
-    /// 
+    ///
     /// Adds a set of default rewrites:
-    /// - [`BlockDotfiles`]: Hides all dotfiles
-    /// - [`NormalizeDirs`]: Normalizes directories to have a trailing slash
-    /// - [`Root(path)`](Root): Applies the root path
+    /// - [`filter_dotfiles`]: Hides all dotfiles.
+    /// - [`dir_root(path)`](dir_root): Applies the root path.
+    /// - [`normalize_dirs`]: Normalizes directories to have a trailing slash.
+    /// - [`index("index.html")`](index): Appends `index.html` to directory requests.
     pub fn new<P: AsRef<Path>>(path: P, rank: isize) -> Self {
-        use crate::yansi::Paint;
-
-        let path = path.as_ref();
-        if !path.exists() {
-            let path = path.display();
-            error!("FileServer path '{}' does not exist", path.primary());
-            // warn_!("Aborting early to prevent inevitable handler error.");
-        }
-        FileServer { rewrites: vec![
-            Arc::new(BlockDotfiles),
-            Arc::new(NormalizeDirs),
-            Arc::new(Root(path.into()))
-        ], rank }
+        Self::empty_ranked(rank)
+            .filter_file(filter_dotfiles)
+            .map_file(dir_root(path))
+            .map_file(normalize_dirs)
+            .map_file(index("index.html"))
     }
 
-    /// Removes all rewrites of a specific type. This is primarily useful for removing
-    /// rewrites added by default, such as `BlockDotfiles`, `NormalizeDirs`, and `Root`
-    pub fn remove_rewrites<R: Rewriter + Any>(mut self) -> Self {
-        self.rewrites.retain(|r| { 
-            <_ as AsRef<dyn Rewriter>>::as_ref(&r).type_id() != TypeId::of::<R>()
-        });
-        self
-    }
-
-    /// Generic rewrite to transform one FileResponse to another
-    pub fn and_rewrite(mut self, f: impl Rewriter + 'static) -> Self {
+    /// Generic rewrite to transform one FileResponse to another.
+    ///
+    /// # Example
+    ///
+    /// Redirects all requests that have been filtered to the root of the `FileServer`.
+    /// ```rust,no_run
+    /// # use rocket::{fs::FileServer, response::Redirect, uri};
+    /// fn redir_missing<'p, 'h>(p: Option<FileResponse<'p, 'h>>)
+    ///     -> Option<FileResponse<'p, 'h>>
+    /// {
+    ///     match p {
+    ///         None => Redirect::temporary(uri!("/")).into(),
+    ///         p => p,
+    ///     }
+    /// }
+    ///
+    /// rocket::build()
+    ///     .mount("/", FileServer::from("static").and_rewrite(redir_missing))
+    /// ```
+    ///
+    /// Note that `redir_missing` is not a closure in this example. Making it a closure
+    /// causes compilation to fail with a lifetime error. It really shouldn't but it does.
+    pub fn and_rewrite(mut self, f: impl Rewriter) -> Self {
         self.rewrites.push(Arc::new(f));
         self
     }
 
-    /// Configure this `FileServer` instance to allow serving dotfiles.
-    pub fn allow_dotfiles(self) -> Self {
-        self.remove_rewrites::<BlockDotfiles>()
-    }
-
     /// Filter what files this `FileServer` will respond with
+    ///
+    /// # Example
+    ///
+    /// Filter out all paths with a filename of `hidden`.
+    /// ```rust,no_run
+    /// # use rocket::{fs::FileServer, response::Redirect, uri};
+    /// rocket::build()
+    ///     .mount(
+    ///         "/",
+    ///         FileServer::from("static")
+    ///            .filter_file(|f| f.path.file_name() != Some("hidden".as_ref()))
+    ///     )
+    /// ```
     pub fn filter_file<F>(self, f: F) -> Self
-        // where F: Fn(&File<'_>) -> bool + Send + Sync + Any
-        where FilterFile<F>: Rewriter
+        where F: Fn(&File<'_, '_>) -> bool + Send + Sync + 'static
     {
         self.and_rewrite(FilterFile(f))
     }
 
-    /// Filter what files this `FileServer` will respond with
-    pub fn filter_file_or_redirect<F>(self, f: F, to: Reference<'static>) -> Self
-        where F: Fn(&File<'_>) -> bool + Send + Sync + Any
-    {
-        self.and_rewrite(FilterRedirect(f, to))
-    }
-
-    /// Transform files before responding
+    /// Transform files
+    ///
+    /// # Example
+    ///
+    /// Append `hidden` to the path of every file returned.
+    /// ```rust,no_run
+    /// # use rocket::{fs::FileServer, response::Redirect, uri};
+    /// rocket::build()
+    ///     .mount(
+    ///         "/",
+    ///         FileServer::from("static").map_file(|f| f.map_path(|p| p.join("hidden")).into())
+    ///     )
+    /// ```
     pub fn map_file<F>(self, f: F) -> Self
-        // where F: for<'r> Fn(File<'r>) -> File<'r> + Send + Sync + Any
-        where MapFile<F>: Rewriter
+        where F: for<'r, 'h> Fn(File<'r, 'h>) -> FileResponse<'r, 'h> + Send + Sync + 'static
     {
         self.and_rewrite(MapFile(f))
     }
@@ -362,7 +458,9 @@ impl From<FileServer> for Vec<Route> {
     fn from(server: FileServer) -> Self {
         // let source = figment::Source::File(server.root.clone());
         let mut route = Route::ranked(server.rank, Method::Get, "/<path..>", server);
-        route.name = Some(format!("FileServer").into());
+        // I'd like to provide a more descriptive name, but we can't get more
+        // information out of `dyn Rewriter`
+        route.name = Some("FileServer".into());
         vec![route]
     }
 }
@@ -371,15 +469,19 @@ impl From<FileServer> for Vec<Route> {
 impl Handler for FileServer {
     async fn handle<'r>(&self, req: &'r Request<'_>, data: Data<'r>) -> Outcome<'r> {
         use crate::http::uri::fmt::Path as UriPath;
-        let mut response = req.segments::<Segments<'_, UriPath>>(0..).ok()
-            .and_then(|segments| segments.to_path_buf(true).ok())
-            .map(|path| FileResponse::File(File { path: path.into(), headers: HeaderMap::new() }));
+        let path: Option<PathBuf> = req.segments::<Segments<'_, UriPath>>(0..).ok()
+            .and_then(|segments| segments.to_path_buf(true).ok());
+        let mut response = path.as_ref().map(|p| FileResponse::File(File {
+            path: Cow::Borrowed(p),
+            starting_path: p,
+            headers: HeaderMap::new(),
+        }));
 
         for rewrite in &self.rewrites {
             response = rewrite.rewrite(response);
         }
         match response {
-            Some(FileResponse::File(File { path, headers })) => {
+            Some(FileResponse::File(File { path, headers, .. })) if path.is_file() => {
                 NamedFile::open(path).await.respond_to(req).map(|mut r| {
                     for header in headers {
                         r.adjoin_raw_header(header.name.as_str().to_owned(), header.value);
@@ -388,9 +490,12 @@ impl Handler for FileServer {
                 }).or_forward((data, Status::NotFound))
             },
             Some(FileResponse::Redirect(r)) => {
-                r.respond_to(req).or_forward((data, Status::InternalServerError))
+                let base = req.route().unwrap().uri.base();
+                r.map_uri(|u| Reference::parse_owned(format!("{}/{}", base, u)).unwrap())
+                    .respond_to(req)
+                    .or_forward((data, Status::InternalServerError))
             },
-            None => Outcome::forward(data, Status::NotFound),
+            _ => Outcome::forward(data, Status::NotFound),
         }
     }
 }
