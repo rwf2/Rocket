@@ -226,6 +226,10 @@ impl<F> Rewriter for MapFile<F>
 /// FileServer::empty()
 ///     .map_file(dir_root(relative!("static")))
 /// ```
+///
+/// # Panics
+///
+/// Panics if `path` is not directory.
 pub fn dir_root(path: impl AsRef<Path>)
     -> impl for<'p, 'h> Fn(File<'p, 'h>) -> FileResponse<'p, 'h> + Send + Sync + 'static
 {
@@ -253,19 +257,42 @@ pub fn dir_root(path: impl AsRef<Path>)
 /// FileServer::empty()
 ///     .map_file(file_root("static/index.html"))
 /// ```
+///
+/// # Panics
+///
+/// Panics if `path` does not exist.
 pub fn file_root(path: impl AsRef<Path>)
     -> impl for<'p, 'h> Fn(File<'p, 'h>) -> FileResponse<'p, 'h> + Send + Sync + 'static
 {
     use yansi::Paint as _;
 
     let path = path.as_ref();
-    if !path.is_file() {
+    if !path.exists() {
         let path = path.display();
         error!("FileServer path '{}' is not a file.", path.primary());
         warn_!("Aborting early to prevent inevitable handler error.");
         panic!("invalid file: refusing to continue");
     }
     let path = path.to_path_buf();
+    move |f| {
+        FileResponse::File(f.map_path(|p| path.join(p)))
+    }
+}
+
+/// Prepends the provided path, without checking to ensure the path exists during
+/// startup.
+///
+/// # Example
+///
+/// ```rust,no_run
+/// # use rocket::fs::{FileServer, dir_root};
+/// FileServer::empty()
+///     .map_file(missing_root("/tmp/rocket"))
+/// ```
+pub fn missing_root(path: impl AsRef<Path>)
+    -> impl for<'p, 'h> Fn(File<'p, 'h>) -> FileResponse<'p, 'h> + Send + Sync + 'static
+{
+    let path = path.as_ref().to_path_buf();
     move |f| {
         FileResponse::File(f.map_path(|p| path.join(p)))
     }
