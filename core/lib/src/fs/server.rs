@@ -353,7 +353,7 @@ pub fn filter_dotfiles(file: &File<'_, '_>) -> bool {
 /// # }
 /// ```
 pub fn normalize_dirs<'p, 'h>(file: File<'p, 'h>) -> FileResponse<'p, 'h> {
-    if !file.full_uri.has_trailing_slash() && file.path.is_dir() {
+    if !file.full_uri.path().raw().ends_with('/') && file.path.is_dir() {
         // Known good path + '/' is a good path
         file.into_redirect(|o| o.map_path(|p| format!("{p}/")).unwrap())
     } else {
