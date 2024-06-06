@@ -38,8 +38,8 @@ Rocket is extensively documented:
   * [Guide]: A detailed guide and reference to Rocket.
   * [API Documentation]: The "rustdocs".
 
-[Quickstart]: https://rocket.rs/guide/quickstart
-[Getting Started]: https://rocket.rs/guide/getting-started
+[Quickstart]: https://rocket.rs/guide/v0.5/quickstart/
+[Getting Started]: https://rocket.rs/guide/v0.5/getting-started/
 [Overview]: https://rocket.rs/overview/
 [Guide]: https://rocket.rs/guide/
 [API Documentation]: https://api.rocket.rs
