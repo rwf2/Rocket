@@ -255,7 +255,7 @@ pub fn dir_root(path: impl AsRef<Path>)
     if !path.is_dir() {
         let path = path.display();
         error!("FileServer path '{}' is not a directory.", path.primary());
-        warn_!("Aborting early to prevent inevitable handler error.");
+        warn!("Aborting early to prevent inevitable handler error.");
         panic!("invalid directory: refusing to continue");
     }
     let path = path.to_path_buf();
@@ -288,7 +288,7 @@ pub fn file_root(path: impl AsRef<Path>)
     if !path.exists() {
         let path = path.display();
         error!("FileServer path '{}' is not a file.", path.primary());
-        warn_!("Aborting early to prevent inevitable handler error.");
+        warn!("Aborting early to prevent inevitable handler error.");
         panic!("invalid file: refusing to continue");
     }
     let path = path.to_path_buf();
