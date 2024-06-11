@@ -268,12 +268,10 @@ impl<F> Rewriter for MapFile<F>
 pub fn dir_root(path: impl AsRef<Path>)
     -> impl for<'p, 'h> Fn(File<'p, 'h>, &Request<'_>) -> FileResponse<'p, 'h> + Send + Sync + 'static
 {
-    use yansi::Paint as _;
-
     let path = path.as_ref();
     if !path.is_dir() {
         let path = path.display();
-        error!("FileServer path '{}' is not a directory.", path.primary());
+        error!(%path, "FileServer path is not a directory.");
         warn!("Aborting early to prevent inevitable handler error.");
         panic!("invalid directory: refusing to continue");
     }
@@ -301,12 +299,10 @@ pub fn dir_root(path: impl AsRef<Path>)
 pub fn file_root(path: impl AsRef<Path>)
     -> impl for<'p, 'h> Fn(File<'p, 'h>, &Request<'_>) -> FileResponse<'p, 'h> + Send + Sync + 'static
 {
-    use yansi::Paint as _;
-
     let path = path.as_ref();
     if !path.exists() {
         let path = path.display();
-        error!("FileServer path '{}' is not a file.", path.primary());
+        error!(%path, "FileServer path does not exist.");
         warn!("Aborting early to prevent inevitable handler error.");
         panic!("invalid file: refusing to continue");
     }
