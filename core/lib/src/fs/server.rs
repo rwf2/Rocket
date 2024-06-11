@@ -203,15 +203,22 @@ impl<'p, 'h> File<'p, 'h> {
             Path::new(unsafe { OsStr::from_encoded_bytes_unchecked(bytes) })
         }
 
-        NamedFile::open(strip_trailing_slash(self.path.as_ref()))
-            .await
-            .respond_to(req)
-            .map(|mut r| {
-                for header in self.headers {
-                    r.adjoin_raw_header(header.name.as_str().to_owned(), header.value);
-                }
-                r
-            }).or_forward((data, Status::NotFound))
+        let path = strip_trailing_slash(self.path.as_ref());
+        // Fun fact, on Linux attempting to open a directory works, it just errors
+        // when you attempt to read it.
+        if path.is_file() {
+            NamedFile::open(path)
+                .await
+                .respond_to(req)
+                .map(|mut r| {
+                    for header in self.headers {
+                        r.adjoin_raw_header(header.name.as_str().to_owned(), header.value);
+                    }
+                    r
+                }).or_forward((data, Status::NotFound))
+        } else {
+            Outcome::forward(data, Status::NotFound)
+        }
     }
 }
 
@@ -264,7 +271,8 @@ impl<F> Rewriter for MapFile<F>
 ///
 /// # Panics
 ///
-/// Panics if `path` is not directory.
+/// Panics if `path` does not exist. See [`file_root_permissive`] for a
+/// non-panicing variant.
 pub fn dir_root(path: impl AsRef<Path>)
     -> impl for<'p, 'h> Fn(File<'p, 'h>, &Request<'_>) -> FileResponse<'p, 'h> + Send + Sync + 'static
 {
@@ -295,7 +303,8 @@ pub fn dir_root(path: impl AsRef<Path>)
 ///
 /// # Panics
 ///
-/// Panics if `path` does not exist.
+/// Panics if `path` does not exist. See [`file_root_permissive`] for a
+/// non-panicing variant.
 pub fn file_root(path: impl AsRef<Path>)
     -> impl for<'p, 'h> Fn(File<'p, 'h>, &Request<'_>) -> FileResponse<'p, 'h> + Send + Sync + 'static
 {
@@ -318,13 +327,13 @@ pub fn file_root(path: impl AsRef<Path>)
 /// # Example
 ///
 /// ```rust,no_run
-/// # use rocket::fs::{FileServer, missing_root};
+/// # use rocket::fs::{FileServer, file_root_permissive};
 /// # fn make_server() -> FileServer {
 /// FileServer::empty()
-///     .map_file(missing_root("/tmp/rocket"))
+///     .map_file(file_root_permissive("/tmp/rocket"))
 /// # }
 /// ```
-pub fn missing_root(path: impl AsRef<Path>)
+pub fn file_root_permissive(path: impl AsRef<Path>)
     -> impl for<'p, 'h> Fn(File<'p, 'h>, &Request<'_>) -> FileResponse<'p, 'h> + Send + Sync + 'static
 {
     let path = path.as_ref().to_path_buf();
@@ -353,7 +362,8 @@ pub fn filter_dotfiles(file: &File<'_, '_>, _req: &Request<'_>) -> bool {
 
 /// Normalize directory accesses to always include a trailing slash.
 ///
-/// Must be used after `dir_root`, since it needs the full path to check whether it is
+/// Should normally be used after `dir_root` (or another rewrite that adds
+/// a root), since it needs the full path to check whether a path points to
 /// a directory.
 ///
 /// # Example

@@ -5,7 +5,7 @@ use rocket::{Rocket, Route, Build};
 use rocket::http::Status;
 use rocket::local::blocking::Client;
 use rocket::fs::{
-    dir_root, file_root, filter_dotfiles, index, missing_root, normalize_dirs, relative, FileServer
+    dir_root, file_root, filter_dotfiles, index, file_root_permissive, normalize_dirs, relative, FileServer
 };
 
 fn static_root() -> &'static Path {
@@ -66,7 +66,7 @@ fn rocket() -> Rocket<Build> {
             "/missing_root",
             FileServer::empty()
                 .filter_file(filter_dotfiles)
-                .map_file(missing_root(root.join("no_file")))
+                .map_file(file_root_permissive(root.join("no_file")))
             
         )
 }
