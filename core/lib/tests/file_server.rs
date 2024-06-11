@@ -4,7 +4,9 @@ use std::path::Path;
 use rocket::{Rocket, Route, Build};
 use rocket::http::Status;
 use rocket::local::blocking::Client;
-use rocket::fs::{dir_root, filter_dotfiles, index, normalize_dirs, relative, FileServer};
+use rocket::fs::{
+    dir_root, file_root, filter_dotfiles, index, missing_root, normalize_dirs, relative, FileServer
+};
 
 fn static_root() -> &'static Path {
     Path::new(relative!("/tests/static"))
@@ -53,6 +55,20 @@ fn rocket() -> Rocket<Build> {
                 .map_file(normalize_dirs)
                 .map_file(index("index.html"))
         )
+        .mount(
+            "/index_file",
+            FileServer::empty()
+                .filter_file(filter_dotfiles)
+                .map_file(file_root(root.join("other/hello.txt")))
+            
+        )
+        .mount(
+            "/missing_root",
+            FileServer::empty()
+                .filter_file(filter_dotfiles)
+                .map_file(missing_root(root.join("no_file")))
+            
+        )
 }
 
 static REGULAR_FILES: &[&str] = &[
@@ -72,13 +88,13 @@ static INDEXED_DIRECTORIES: &[&str] = &[
     "inner/",
 ];
 
-fn assert_file(client: &Client, prefix: &str, path: &str, exists: bool) {
+fn assert_file_matches(client: &Client, prefix: &str, path: &str, disk_path: Option<&str>) {
     let full_path = format!("/{}/{}", prefix, path);
     let response = client.get(full_path).dispatch();
-    if exists {
+    if let Some(disk_path) = disk_path {
         assert_eq!(response.status(), Status::Ok);
 
-        let mut path = static_root().join(path);
+        let mut path = static_root().join(disk_path);
         if path.is_dir() {
             path = path.join("index.html");
         }
@@ -89,6 +105,14 @@ fn assert_file(client: &Client, prefix: &str, path: &str, exists: bool) {
         assert_eq!(response.into_string(), Some(expected_contents));
     } else {
         assert_eq!(response.status(), Status::NotFound);
+    }
+}
+
+fn assert_file(client: &Client, prefix: &str, path: &str, exists: bool) {
+    if exists {
+        assert_file_matches(client, prefix, path, Some(path))
+    } else {
+        assert_file_matches(client, prefix, path, None)
     }
 }
 
@@ -132,6 +156,22 @@ fn test_static_all() {
     assert_all(&client, "both", REGULAR_FILES, true);
     assert_all(&client, "both", HIDDEN_FILES, true);
     assert_all(&client, "both", INDEXED_DIRECTORIES, true);
+}
+
+#[test]
+fn test_alt_roots() {
+    let client = Client::debug(rocket()).expect("valid rocket");
+    assert_file(&client, "missing_root", "", false);
+    assert_file_matches(&client, "index_file", "", Some("other/hello.txt"));
+}
+
+#[test]
+fn test_allow_special_dotpaths() {
+    let client = Client::debug(rocket()).expect("valid rocket");
+    assert_file_matches(&client, "no_index", "./index.html", Some("index.html"));
+    assert_file_matches(&client, "no_index", "foo/../index.html", Some("index.html"));
+    assert_file_matches(&client, "no_index", "inner/./index.html", Some("inner/index.html"));
+    assert_file_matches(&client, "no_index", "../index.html", Some("index.html"));
 }
 
 #[test]
@@ -222,4 +262,22 @@ fn test_redirection() {
     let response = client.get("/redir_index/other").dispatch();
     assert_eq!(response.status(), Status::PermanentRedirect);
     assert_eq!(response.headers().get("Location").next(), Some("/redir_index/other/"));
+}
+
+#[test]
+#[should_panic]
+fn test_panic_on_missing_file() {
+    let _ = file_root(static_root().join("missing_file"));
+}
+
+#[test]
+#[should_panic]
+fn test_panic_on_missing_dir() {
+    let _ = dir_root(static_root().join("missing_dir"));
+}
+
+#[test]
+#[should_panic]
+fn test_panic_on_file_not_dir() {
+    let _ = dir_root(static_root().join("index.html"));
 }
