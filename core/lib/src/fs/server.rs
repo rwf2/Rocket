@@ -10,7 +10,7 @@ use crate::http::{
     Method,
     HeaderMap,
     Header,
-    uri::{Segments, Origin},
+    uri::Segments,
     Status,
     ext::IntoOwned,
 };
@@ -267,6 +267,22 @@ impl<F> Rewriter for MapFile<F>
     }
 }
 
+/// Helper trait to simplify standard rewrites
+#[doc(hidden)]
+pub trait FileMap:
+    for<'p, 'h> Fn(File<'p, 'h>, &Request<'_>) -> FileResponse<'p, 'h> + Send + Sync + 'static
+{}
+impl<F> FileMap for F
+    where F: for<'p, 'h> Fn(File<'p, 'h>, &Request<'_>)
+        -> FileResponse<'p, 'h> + Send + Sync + 'static
+{}
+/// Helper trait to simplify standard rewrites
+#[doc(hidden)]
+pub trait FileFilter: Fn(&File<'_, '_>, &Request<'_>) -> bool + Send + Sync + 'static {}
+impl<F> FileFilter for F
+    where F: Fn(&File<'_, '_>, &Request<'_>) -> bool + Send + Sync + 'static
+{}
+
 /// Prepends the provided path, to serve files from a directory.
 ///
 /// You can use [`relative!`] to make a path relative to the crate root, rather
@@ -286,10 +302,7 @@ impl<F> Rewriter for MapFile<F>
 ///
 /// Panics if `path` does not exist. See [`file_root_permissive`] for a
 /// non-panicing variant.
-pub fn dir_root(path: impl AsRef<Path>)
-    -> impl for<'p, 'h> Fn(File<'p, 'h>, &Request<'_>)
-        -> FileResponse<'p, 'h> + Send + Sync + 'static
-{
+pub fn dir_root(path: impl AsRef<Path>) -> impl FileMap {
     let path = path.as_ref();
     if !path.is_dir() {
         let path = path.display();
@@ -319,10 +332,7 @@ pub fn dir_root(path: impl AsRef<Path>)
 ///
 /// Panics if `path` does not exist. See [`file_root_permissive`] for a
 /// non-panicing variant.
-pub fn file_root(path: impl AsRef<Path>)
-    -> impl for<'p, 'h> Fn(File<'p, 'h>, &Request<'_>)
-        -> FileResponse<'p, 'h> + Send + Sync + 'static
-{
+pub fn file_root(path: impl AsRef<Path>) -> impl FileMap {
     let path = path.as_ref();
     if !path.exists() {
         let path = path.display();
@@ -348,10 +358,7 @@ pub fn file_root(path: impl AsRef<Path>)
 ///     .map_file(file_root_permissive("/tmp/rocket"))
 /// # }
 /// ```
-pub fn file_root_permissive(path: impl AsRef<Path>)
-    -> impl for<'p, 'h> Fn(File<'p, 'h>, &Request<'_>)
-        -> FileResponse<'p, 'h> + Send + Sync + 'static
-{
+pub fn file_root_permissive(path: impl AsRef<Path>) -> impl FileMap {
     let path = path.as_ref().to_path_buf();
     move |f, _r| {
         FileResponse::File(f.map_path(|p| path.join(p)))
@@ -420,9 +427,7 @@ pub fn normalize_dirs<'p, 'h>(file: File<'p, 'h>, req: &Request<'_>) -> FileResp
 ///     .map_file(index("index.html"))
 /// # }
 /// ```
-pub fn index(index: &'static str)
-    -> impl for<'p, 'h> Fn(File<'p, 'h>, &Request<'_>) -> FileResponse<'p, 'h> + Send + Sync
-{
+pub fn index(index: &'static str) -> impl FileMap {
     move |f, _r| if f.path.is_dir() {
         FileResponse::File(f.map_path(|p| p.join(index)))
     } else {
