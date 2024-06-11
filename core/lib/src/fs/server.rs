@@ -117,7 +117,8 @@ impl fmt::Debug for DebugListRewrite<'_> {
 /// - [`FileServer::map_file()`]
 pub trait Rewriter: Send + Sync + 'static {
     /// Alter the [`FileResponse`] as needed.
-    fn rewrite<'p, 'h>(&self, path: Option<FileResponse<'p, 'h>>, req: &Request<'_>) -> Option<FileResponse<'p, 'h>>;
+    fn rewrite<'p, 'h>(&self, path: Option<FileResponse<'p, 'h>>, req: &Request<'_>)
+        -> Option<FileResponse<'p, 'h>>;
 }
 
 /// A Response from a [`FileServer`]
@@ -193,7 +194,9 @@ impl<'p, 'h> File<'p, 'h> {
     //     FileResponse::Redirect(Redirect::permanent(f(self.full_uri.clone().into_owned())))
     // }
 
-    async fn respond_to<'r>(self, req: &'r Request<'_>, data: Data<'r>) -> Outcome<'r> where 'h: 'r {
+    async fn respond_to<'r>(self, req: &'r Request<'_>, data: Data<'r>) -> Outcome<'r>
+        where 'h: 'r
+    {
         /// Normalize paths to enable `file_root` to work properly
         fn strip_trailing_slash(p: &Path) -> &Path {
             let bytes = p.as_os_str().as_encoded_bytes();
@@ -223,17 +226,24 @@ impl<'p, 'h> File<'p, 'h> {
 }
 
 impl<F: Send + Sync + 'static> Rewriter for F
-    where F: for<'r, 'h> Fn(Option<FileResponse<'r, 'h>>, &Request<'_>) -> Option<FileResponse<'r, 'h>>
+    where F: for<'r, 'h> Fn(Option<FileResponse<'r, 'h>>, &Request<'_>)
+        -> Option<FileResponse<'r, 'h>>
 {
-    fn rewrite<'p, 'h>(&self, path: Option<FileResponse<'p, 'h>>, req: &Request<'_>) -> Option<FileResponse<'p, 'h>> {
+    fn rewrite<'p, 'h>(&self, path: Option<FileResponse<'p, 'h>>, req: &Request<'_>)
+        -> Option<FileResponse<'p, 'h>>
+    {
         self(path, req)
     }
 }
 
 /// Helper to implement [`FileServer::filter_file()`]
 struct FilterFile<F>(F);
-impl<F: Fn(&File<'_, '_>, &Request<'_>) -> bool + Send + Sync + 'static> Rewriter for FilterFile<F> {
-    fn rewrite<'p, 'h>(&self, path: Option<FileResponse<'p, 'h>>, req: &Request<'_>) -> Option<FileResponse<'p, 'h>> {
+impl<F> Rewriter for FilterFile<F>
+    where F: Fn(&File<'_, '_>, &Request<'_>) -> bool + Send + Sync + 'static
+{
+    fn rewrite<'p, 'h>(&self, path: Option<FileResponse<'p, 'h>>, req: &Request<'_>)
+        -> Option<FileResponse<'p, 'h>>
+    {
         match path {
             Some(FileResponse::File(file)) if !self.0(&file, req) => None,
             path => path,
@@ -244,9 +254,12 @@ impl<F: Fn(&File<'_, '_>, &Request<'_>) -> bool + Send + Sync + 'static> Rewrite
 /// Helper to implement [`FileServer::map_file()`]
 struct MapFile<F>(F);
 impl<F> Rewriter for MapFile<F>
-    where F: for<'p, 'h> Fn(File<'p, 'h>, &Request<'_>) -> FileResponse<'p, 'h> + Send + Sync + 'static,
+    where F: for<'p, 'h> Fn(File<'p, 'h>, &Request<'_>)
+        -> FileResponse<'p, 'h> + Send + Sync + 'static,
 {
-    fn rewrite<'p, 'h>(&self, path: Option<FileResponse<'p, 'h>>, req: &Request<'_>) -> Option<FileResponse<'p, 'h>> {
+    fn rewrite<'p, 'h>(&self, path: Option<FileResponse<'p, 'h>>, req: &Request<'_>)
+        -> Option<FileResponse<'p, 'h>>
+    {
         match path {
             Some(FileResponse::File(file)) => Some(self.0(file, req)),
             path => path,
@@ -274,7 +287,8 @@ impl<F> Rewriter for MapFile<F>
 /// Panics if `path` does not exist. See [`file_root_permissive`] for a
 /// non-panicing variant.
 pub fn dir_root(path: impl AsRef<Path>)
-    -> impl for<'p, 'h> Fn(File<'p, 'h>, &Request<'_>) -> FileResponse<'p, 'h> + Send + Sync + 'static
+    -> impl for<'p, 'h> Fn(File<'p, 'h>, &Request<'_>)
+        -> FileResponse<'p, 'h> + Send + Sync + 'static
 {
     let path = path.as_ref();
     if !path.is_dir() {
@@ -306,7 +320,8 @@ pub fn dir_root(path: impl AsRef<Path>)
 /// Panics if `path` does not exist. See [`file_root_permissive`] for a
 /// non-panicing variant.
 pub fn file_root(path: impl AsRef<Path>)
-    -> impl for<'p, 'h> Fn(File<'p, 'h>, &Request<'_>) -> FileResponse<'p, 'h> + Send + Sync + 'static
+    -> impl for<'p, 'h> Fn(File<'p, 'h>, &Request<'_>)
+        -> FileResponse<'p, 'h> + Send + Sync + 'static
 {
     let path = path.as_ref();
     if !path.exists() {
@@ -334,7 +349,8 @@ pub fn file_root(path: impl AsRef<Path>)
 /// # }
 /// ```
 pub fn file_root_permissive(path: impl AsRef<Path>)
-    -> impl for<'p, 'h> Fn(File<'p, 'h>, &Request<'_>) -> FileResponse<'p, 'h> + Send + Sync + 'static
+    -> impl for<'p, 'h> Fn(File<'p, 'h>, &Request<'_>)
+        -> FileResponse<'p, 'h> + Send + Sync + 'static
 {
     let path = path.as_ref().to_path_buf();
     move |f, _r| {
@@ -477,7 +493,8 @@ impl FileServer {
     ///
     /// Redirects all requests that have been filtered to the root of the `FileServer`.
     /// ```rust,no_run
-    /// # use rocket::{fs::{FileServer, FileResponse}, response::Redirect, uri, Build, Rocket, Request};
+    /// # use rocket::{fs::{FileServer, FileResponse}, response::Redirect,
+    /// #     uri, Build, Rocket, Request};
     /// fn redir_missing<'p, 'h>(p: Option<FileResponse<'p, 'h>>, _req: &Request<'_>)
     ///     -> Option<FileResponse<'p, 'h>>
     /// {
@@ -533,12 +550,14 @@ impl FileServer {
     /// rocket::build()
     ///     .mount(
     ///         "/",
-    ///         FileServer::from("static").map_file(|f, _r| f.map_path(|p| p.join("hidden")).into())
+    ///         FileServer::from("static")
+    ///             .map_file(|f, _r| f.map_path(|p| p.join("hidden")).into())
     ///     )
     /// # }
     /// ```
     pub fn map_file<F>(self, f: F) -> Self
-        where F: for<'r, 'h> Fn(File<'r, 'h>, &Request<'_>) -> FileResponse<'r, 'h> + Send + Sync + 'static
+        where F: for<'r, 'h> Fn(File<'r, 'h>, &Request<'_>)
+            -> FileResponse<'r, 'h> + Send + Sync + 'static
     {
         self.and_rewrite(MapFile(f))
     }
