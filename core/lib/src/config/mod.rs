@@ -138,4 +138,4 @@ mod secret_key;
 pub use crate::shutdown::Sig;
 
 #[cfg(feature = "secrets")]
-pub use secret_key::SecretKey;
+pub use secret_key::{SecretKey, Cipher};

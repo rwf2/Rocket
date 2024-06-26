@@ -17,8 +17,8 @@ members = [
   "testing",
   "tls",
   "upgrade",
-
   "pastebin",
   "todo",
   "chat",
+  "private-data",
 ]
