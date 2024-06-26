@@ -1,6 +1,6 @@
 use super::rocket;
 
-use rocket::http::{Status, Method::*};
+use rocket::http::{RawStr, Status, Method::*};
 use rocket::local::blocking::Client;
 use rocket_dyn_templates::{Template, Templating, context};
 
@@ -41,13 +41,17 @@ fn test_404(base: &str) {
     let client = Client::tracked(rocket()).unwrap();
     for bad_path in &["/hello", "/foo/bar", "/404"] {
         let path = format!("/{}{}", base, bad_path);
+        let escaped_path = RawStr::new(&path).html_escape().to_lowercase();
 
         let response = client.get(&path).dispatch();
         assert_eq!(response.status(), Status::NotFound);
-        let response = response.into_string().unwrap();
+        let response = response.into_string().unwrap().to_lowercase();
 
         assert!(response.contains(base));
-        assert!(response.contains(&format!("{} does not exist", path)));
+        assert! {
+            response.contains(&format!("{} does not exist", path))
+                || response.contains(&format!("{} does not exist", escaped_path))
+        };
     }
 }
 
@@ -63,6 +67,7 @@ fn test_index() {
     let response = client.get("/").dispatch().into_string().unwrap();
     assert!(response.contains("Tera"));
     assert!(response.contains("Handlebars"));
+    assert!(response.contains("MiniJinja"));
 }
 
 #[test]
@@ -79,6 +84,14 @@ fn tera() {
     test_name("tera");
     test_404("tera");
     test_about("tera");
+}
+
+#[test]
+fn minijinja() {
+    test_root("minijinja");
+    test_name("minijinja");
+    test_404("minijinja");
+    test_about("minijinja");
 }
 
 #[test]
