@@ -5,6 +5,7 @@
 #![doc(html_logo_url = "https://rocket.rs/images/logo-boxed.png")]
 #![cfg_attr(nightly, feature(doc_cfg))]
 #![cfg_attr(nightly, feature(decl_macro))]
+#![cfg_attr(nightly, feature(trait_upcasting))]
 
 //! # Rocket - Core API Documentation
 //!
