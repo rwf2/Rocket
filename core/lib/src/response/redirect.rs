@@ -25,7 +25,7 @@ use crate::http::Status;
 ///
 /// ```rust
 /// # #[macro_use] extern crate rocket;
-/// use rocket::response::Redirect;
+/// use rocket::{response::Redirect, uri};
 ///
 /// #[get("/hello/<name>/<age>")]
 /// fn hello(name: String, age: u8) -> String {
