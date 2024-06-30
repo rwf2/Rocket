@@ -1,10 +1,11 @@
 use std::fmt;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
+use std::borrow::Cow;
 
-use crate::{Data, Request};
+use crate::{response, Data, Request, Response};
 use crate::outcome::IntoOutcome;
-use crate::http::{uri::Segments, Method, Status};
+use crate::http::{uri::Segments, HeaderMap, Method, ContentType, Status};
 use crate::route::{Route, Handler, Outcome};
 use crate::response::Responder;
 use crate::util::Formatter;
@@ -85,12 +86,12 @@ impl FileServer {
     /// - [`prefix(path)`](prefix): Applies the root path.
     /// - [`normalize_dirs`]: Normalizes directories to have a trailing slash.
     /// - [`index("index.html")`](index): Appends `index.html` to directory requests.
-    pub fn from<P: AsRef<Path>>(path: P) -> Self {
+    pub fn new<P: AsRef<Path>>(path: P) -> Self {
         Self::empty()
-            .filter(filter_dotfiles)
-            .map(prefix(path))
-            .map(normalize_dirs)
-            .map(index("index.html"))
+            .filter(|f, _| f.is_visible())
+            .rewrite(Prefix::checked(path))
+            .rewrite(TrailingDirs)
+            .rewrite(DirIndex::unconditional("index.html"))
     }
 
     /// Constructs a new `FileServer`, with default rank, and no rewrites.
@@ -143,8 +144,8 @@ impl FileServer {
     ///
     /// Note that `redir_missing` is not a closure in this example. Making it a closure
     /// causes compilation to fail with a lifetime error. It really shouldn't but it does.
-    pub fn rewrite(mut self, f: impl Rewriter) -> Self {
-        self.rewrites.push(Arc::new(f));
+    pub fn rewrite<R: Rewriter>(mut self, rewriter: R) -> Self {
+        self.rewrites.push(Arc::new(rewriter));
         self
     }
 
@@ -153,6 +154,7 @@ impl FileServer {
     /// # Example
     ///
     /// Filter out all paths with a filename of `hidden`.
+    ///
     /// ```rust,no_run
     /// #[macro_use] extern crate rocket;
     /// use rocket::fs::FileServer;
@@ -166,58 +168,42 @@ impl FileServer {
     ///         .mount("/", server)
     /// # }
     /// ```
-    pub fn filter<F>(self, f: F) -> Self
-        where F: Fn(&File<'_>, &Request<'_>) -> bool + Send + Sync + 'static
+    pub fn filter<F: Send + Sync + 'static>(self, f: F) -> Self
+        where F: Fn(&File<'_>, &Request<'_>) -> bool
     {
-        struct FilterFile<F>(F);
+        struct Filter<F>(F);
 
-        impl<F> Rewriter for FilterFile<F>
+        impl<F> Rewriter for Filter<F>
             where F: Fn(&File<'_>, &Request<'_>) -> bool + Send + Sync + 'static
         {
             fn rewrite<'r>(&self, f: Option<Rewrite<'r>>, r: &Request<'_>) -> Option<Rewrite<'r>> {
-                match f {
-                    Some(Rewrite::File(file)) if !self.0(&file, r) => None,
-                    path => path,
-                }
+                f.and_then(|f| match f {
+                    Rewrite::File(f) if self.0(&f, r) => Some(Rewrite::File(f)),
+                    _ => None,
+                })
             }
         }
 
-        self.rewrite(FilterFile(f))
+        self.rewrite(Filter(f))
     }
 
-    /// Transform files
-    ///
-    /// # Example
-    ///
-    /// Append `hidden` to the path of every file returned.
-    /// ```rust,no_run
-    /// # use rocket::{fs::FileServer, Build, Rocket};
-    /// # fn launch() -> Rocket<Build> {
-    /// rocket::build()
-    ///     .mount(
-    ///         "/",
-    ///         FileServer::from("static")
-    ///             .map(|f, _r| f.map_path(|p| p.join("hidden")).into())
-    ///     )
-    /// # }
-    /// ```
-    pub fn map<F>(self, f: F) -> Self
-        where F: for<'r> Fn(File<'r>, &Request<'_>) -> Rewrite<'r> + Send + Sync + 'static
+    pub fn map<F: Send + Sync + 'static>(self, f: F) -> Self
+        where F: for<'r> Fn(File<'r>, &Request<'_>) -> Rewrite<'r>
     {
-        struct MapFile<F>(F);
+        struct Map<F>(F);
 
-        impl<F> Rewriter for MapFile<F>
-            where F: for<'r> Fn(File<'r>, &Request<'_>) -> Rewrite<'r> + Send + Sync + 'static,
+        impl<F> Rewriter for Map<F>
+            where F: for<'r> Fn(File<'r>, &Request<'_>) -> Rewrite<'r> + Send + Sync + 'static
         {
             fn rewrite<'r>(&self, f: Option<Rewrite<'r>>, r: &Request<'_>) -> Option<Rewrite<'r>> {
-                match f {
-                    Some(Rewrite::File(file)) => Some(self.0(file, r)),
-                    path => path,
-                }
+                f.map(|f| match f {
+                    Rewrite::File(f) => self.0(f, r),
+                    Rewrite::Redirect(r) => Rewrite::Redirect(r),
+                })
             }
         }
 
-        self.rewrite(MapFile(f))
+        self.rewrite(Map(f))
     }
 }
 
@@ -260,52 +246,43 @@ impl fmt::Debug for FileServer {
     }
 }
 
-crate::export! {
-    /// Generates a crate-relative version of a path.
-    ///
-    /// This macro is primarily intended for use with [`FileServer`] to serve
-    /// files from a path relative to the crate root.
-    ///
-    /// The macro accepts one parameter, `$path`, an absolute or (preferably)
-    /// relative path. It returns a path as an `&'static str` prefixed with the
-    /// path to the crate root. Use `Path::new(relative!($path))` to retrieve an
-    /// `&'static Path`.
-    ///
-    /// # Example
-    ///
-    /// Serve files from the crate-relative `static/` directory:
-    ///
-    /// ```rust
-    /// # #[macro_use] extern crate rocket;
-    /// use rocket::fs::{FileServer, relative};
-    ///
-    /// #[launch]
-    /// fn rocket() -> _ {
-    ///     rocket::build().mount("/", FileServer::from(relative!("static")))
-    /// }
-    /// ```
-    ///
-    /// Path equivalences:
-    ///
-    /// ```rust
-    /// use std::path::Path;
-    ///
-    /// use rocket::fs::relative;
-    ///
-    /// let manual = Path::new(env!("CARGO_MANIFEST_DIR")).join("static");
-    /// let automatic_1 = Path::new(relative!("static"));
-    /// let automatic_2 = Path::new(relative!("/static"));
-    /// assert_eq!(manual, automatic_1);
-    /// assert_eq!(automatic_1, automatic_2);
-    /// ```
-    ///
-    macro_rules! relative {
-        ($path:expr) => {
-            if cfg!(windows) {
-                concat!(env!("CARGO_MANIFEST_DIR"), "\\", $path)
-            } else {
-                concat!(env!("CARGO_MANIFEST_DIR"), "/", $path)
-            }
-        };
+impl<'r> File<'r> {
+    async fn open(self) -> std::io::Result<NamedFile<'r>> {
+        let file = tokio::fs::File::open(&self.path).await?;
+        let metadata = file.metadata().await?;
+        if metadata.is_dir() {
+            return Err(std::io::Error::other("is a directory"));
+        }
+
+        Ok(NamedFile {
+            file,
+            len: metadata.len(),
+            path: self.path,
+            headers: self.headers,
+        })
+    }
+}
+
+struct NamedFile<'r> {
+    file: tokio::fs::File,
+    len: u64,
+    path: Cow<'r, Path>,
+    headers: HeaderMap<'r>,
+}
+
+// Do we want to allow the user to rewrite the Content-Type?
+impl<'r> Responder<'r, 'r> for NamedFile<'r> {
+    fn respond_to(self, _: &'r Request<'_>) -> response::Result<'r> {
+        let mut response = Response::new();
+        response.set_header_map(self.headers);
+        if !response.headers().contains("Content-Type") {
+            self.path.extension()
+                .and_then(|ext| ext.to_str())
+                .and_then(ContentType::from_extension)
+                .map(|content_type| response.set_header(content_type));
+        }
+
+        response.set_sized_body(self.len as usize, self.file);
+        Ok(response)
     }
 }

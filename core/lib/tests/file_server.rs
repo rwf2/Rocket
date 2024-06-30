@@ -1,4 +1,4 @@
-use std::{io::Read, fs::File};
+use std::{io::Read, fs};
 use std::path::Path;
 
 use rocket::{Rocket, Route, Build};
@@ -13,65 +13,65 @@ fn static_root() -> &'static Path {
 fn rocket() -> Rocket<Build> {
     let root = static_root();
     rocket::build()
-        .mount("/default", FileServer::from(&root))
+        .mount("/default", FileServer::new(&root))
         .mount(
             "/no_index",
             FileServer::empty()
-                .filter(filter_dotfiles)
-                .map(prefix(&root))
+                .filter(|f, _| f.is_visible())
+                .rewrite(Prefix::checked(&root))
         )
         .mount(
             "/dots",
             FileServer::empty()
-                .map(prefix(&root))
+                .rewrite(Prefix::checked(&root))
         )
         .mount(
             "/index",
             FileServer::empty()
-                .filter(filter_dotfiles)
-                .map(prefix(&root))
-                .map(index("index.html"))
+                .filter(|f, _| f.is_visible())
+                .rewrite(Prefix::checked(&root))
+                .rewrite(DirIndex::unconditional("index.html"))
         )
         .mount(
             "/try_index",
             FileServer::empty()
-                .filter(filter_dotfiles)
-                .map(prefix(&root))
-                .map(try_index("index.html"))
-                .map(try_index("index.htm"))
+                .filter(|f, _| f.is_visible())
+                .rewrite(Prefix::checked(&root))
+                .rewrite(DirIndex::if_exists("index.html"))
+                .rewrite(DirIndex::if_exists("index.htm"))
         )
         .mount(
             "/both",
             FileServer::empty()
-                .map(prefix(&root))
-                .map(index("index.html"))
+                .rewrite(Prefix::checked(&root))
+                .rewrite(DirIndex::unconditional("index.html"))
         )
         .mount(
             "/redir",
             FileServer::empty()
-                .filter(filter_dotfiles)
-                .map(prefix(&root))
-                .map(normalize_dirs)
+                .filter(|f, _| f.is_visible())
+                .rewrite(Prefix::checked(&root))
+                .rewrite(TrailingDirs)
         )
         .mount(
             "/redir_index",
             FileServer::empty()
-                .filter(filter_dotfiles)
-                .map(prefix(&root))
-                .map(normalize_dirs)
-                .map(index("index.html"))
+                .filter(|f, _| f.is_visible())
+                .rewrite(Prefix::checked(&root))
+                .rewrite(TrailingDirs)
+                .rewrite(DirIndex::unconditional("index.html"))
         )
         .mount(
             "/index_file",
             FileServer::empty()
-                .filter(filter_dotfiles)
-                .rewrite(file_root(root.join("other/hello.txt")))
+                .filter(|f, _| f.is_visible())
+                .rewrite(File::checked(root.join("other/hello.txt")))
         )
         .mount(
             "/missing_root",
             FileServer::empty()
-                .filter(filter_dotfiles)
-                .rewrite(file_root_permissive(root.join("no_file")))
+                .filter(|f, _| f.is_visible())
+                .rewrite(File::new(root.join("no_file")))
         )
 }
 
@@ -104,7 +104,7 @@ fn assert_file_matches(client: &Client, prefix: &str, path: &str, disk_path: Opt
             path = path.join("index.html");
         }
 
-        let mut file = File::open(path).expect("open file");
+        let mut file = fs::File::open(path).expect("open file");
         let mut expected_contents = String::new();
         file.read_to_string(&mut expected_contents).expect("read file");
         assert_eq!(response.into_string(), Some(expected_contents));
@@ -190,8 +190,8 @@ fn test_try_index() {
 fn test_ranking() {
     let root = static_root();
     for rank in -128..128 {
-        let a = FileServer::from(&root).rank(rank);
-        let b = FileServer::from(&root).rank(rank);
+        let a = FileServer::new(&root).rank(rank);
+        let b = FileServer::new(&root).rank(rank);
 
         for handler in vec![a, b] {
             let routes: Vec<Route> = handler.into();
@@ -279,17 +279,17 @@ fn test_redirection() {
 #[test]
 #[should_panic]
 fn test_panic_on_missing_file() {
-    let _ = file_root(static_root().join("missing_file"));
+    let _ = File::checked(static_root().join("missing_file"));
 }
 
 #[test]
 #[should_panic]
 fn test_panic_on_missing_dir() {
-    let _ = prefix(static_root().join("missing_dir"));
+    let _ = Prefix::checked(static_root().join("missing_dir"));
 }
 
 #[test]
 #[should_panic]
 fn test_panic_on_file_not_dir() {
-    let _ = prefix(static_root().join("index.html"));
+    let _ = Prefix::checked(static_root().join("index.html"));
 }
