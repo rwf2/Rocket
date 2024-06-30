@@ -11,6 +11,7 @@ pub use server::*;
 pub use named_file::*;
 pub use temp_file::*;
 pub use file_name::*;
+pub use rewrite::{Rewrite, Rewriter};
 
 crate::export! {
     /// Generates a crate-relative version of a path.

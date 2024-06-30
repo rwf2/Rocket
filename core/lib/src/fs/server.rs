@@ -15,7 +15,7 @@ use crate::fs::rewrite::*;
 ///
 /// This handler makes is simple to serve static files from a directory on the
 /// local file system. To use it, construct a `FileServer` using
-/// [`FileServer::from()`], then simply `mount` the handler. When mounted, the
+/// [`FileServer::new()`], then simply `mount` the handler. When mounted, the
 /// handler serves files from the specified directory. If the file is not found,
 /// the handler _forwards_ the request. By default, `FileServer` has a rank of
 /// `10`. Use [`FileServer::new()`] to create a handler with a custom rank.
@@ -26,7 +26,7 @@ use crate::fs::rewrite::*;
 /// the use of [`Rewriter`]s. See [`Rewriter`] for more detailed documentation
 /// on how to take full advantage of `FileServer`'s extensibility.
 ///
-/// [`FileServer::from()`] and [`FileServer::new()`] construct a `FileServer`
+/// [`FileServer::new()`] construct a `FileServer`
 /// with common rewrites: they filter out dotfiles, redirect requests to
 /// directories to include a trailing slash, and use `index.html` to respond to
 /// requests for a directory. If you want to customize or replace these default
@@ -43,7 +43,7 @@ use crate::fs::rewrite::*;
 ///
 /// #[launch]
 /// fn rocket() -> _ {
-///     rocket::build().mount("/public", FileServer::from("/static"))
+///     rocket::build().mount("/public", FileServer::new("/static"))
 /// }
 /// ```
 ///
@@ -65,7 +65,7 @@ use crate::fs::rewrite::*;
 ///
 /// #[launch]
 /// fn rocket() -> _ {
-///     rocket::build().mount("/", FileServer::from(relative!("static")))
+///     rocket::build().mount("/", FileServer::new(relative!("static")))
 /// }
 /// ```
 #[derive(Clone)]
@@ -92,6 +92,20 @@ impl FileServer {
             .rewrite(Prefix::checked(path))
             .rewrite(TrailingDirs)
             .rewrite(DirIndex::unconditional("index.html"))
+    }
+
+    /// Constructs a new `FileServer` that serves files from the file system
+    /// `path` with a default rank.
+    ///
+    /// Adds a set of default rewrites:
+    /// - [`filter_dotfiles`]: Hides all dotfiles.
+    /// - [`prefix(path)`](prefix): Applies the root path.
+    /// - [`normalize_dirs`]: Normalizes directories to have a trailing slash.
+    pub fn directory<P: AsRef<Path>>(path: P) -> Self {
+        Self::empty()
+            .filter(|f, _| f.is_visible())
+            .rewrite(Prefix::checked(path))
+            .rewrite(TrailingDirs)
     }
 
     /// Constructs a new `FileServer`, with default rank, and no rewrites.
@@ -126,9 +140,8 @@ impl FileServer {
     /// Redirects all requests that have been filtered to the root of the `FileServer`.
     ///
     /// ```rust,no_run
-    /// # use rocket::{Rocket, Build, Request};
     /// # use rocket::fs::{FileServer, Rewrite};
-    /// # use rocket::{response::Redirect, #     uri, Build, Rocket, Request};
+    /// # use rocket::{response::Redirect, uri, Build, Rocket, Request};
     /// fn redir_missing<'r>(p: Option<Rewrite<'r>>, _req: &Request<'_>) -> Option<Rewrite<'r>> {
     ///     match p {
     ///         None => Redirect::temporary(uri!("/")).into(),
@@ -138,7 +151,7 @@ impl FileServer {
     ///
     /// # fn launch() -> Rocket<Build> {
     /// rocket::build()
-    ///     .mount("/", FileServer::from("static").rewrite(redir_missing))
+    ///     .mount("/", FileServer::new("static").rewrite(redir_missing))
     /// # }
     /// ```
     ///
@@ -161,7 +174,7 @@ impl FileServer {
     ///
     /// #[launch]
     /// fn rocket() -> _ {
-    ///     let server = FileServer::from("static")
+    ///     let server = FileServer::new("static")
     ///         .filter(|f, _| f.path.file_name() != Some("hidden".as_ref()));
     ///
     ///     rocket::build()

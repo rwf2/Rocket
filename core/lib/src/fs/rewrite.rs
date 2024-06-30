@@ -72,8 +72,14 @@ impl<'r> File<'r> {
         }
     }
 
-    /// Returns `true` if the file is a dotfile. A dotfile is a file whose name
-    /// starts with a period (`.`) and is considered hidden.
+    /// Returns `true` if the file is a dotfile. A dotfile is a file whose
+    /// name or any directory in it's path start with a period (`.`) and is
+    /// considered hidden.
+    ///
+    /// # Windows Note
+    ///
+    /// This does *not* check the file metadata on any platform, so hidden files
+    /// on Windows will not be detected.
     pub fn is_hidden(&self) -> bool {
         self.path.iter().any(|s| s.as_encoded_bytes().starts_with(b"."))
     }
@@ -94,7 +100,7 @@ impl<'r> File<'r> {
 /// use rocket::fs::rewrite::Prefix;
 ///
 /// FileServer::empty()
-///    .filter_file(|f| f.is_visible())
+///    .filter(|f, _| f.is_visible())
 ///    .rewrite(Prefix::checked("static"));
 /// ```
 pub struct Prefix(PathBuf);
@@ -145,7 +151,7 @@ impl Rewriter for PathBuf {
 /// use rocket::fs::rewrite::{Prefix, TrailingDirs};
 ///
 /// FileServer::empty()
-///     .filter_file(|f| f.is_visible())
+///     .filter(|f, _| f.is_visible())
 ///     .rewrite(TrailingDirs);
 /// ```
 pub struct TrailingDirs;
@@ -215,9 +221,21 @@ impl<'r> From<File<'r>> for Rewrite<'r> {
     }
 }
 
+impl<'r> From<File<'r>> for Option<Rewrite<'r>> {
+    fn from(value: File<'r>) -> Self {
+        Some(Rewrite::File(value))
+    }
+}
+
 impl<'r> From<Redirect> for Rewrite<'r> {
     fn from(value: Redirect) -> Self {
         Self::Redirect(value)
+    }
+}
+
+impl<'r> From<Redirect> for Option<Rewrite<'r>> {
+    fn from(value: Redirect) -> Self {
+        Some(Rewrite::Redirect(value))
     }
 }
 
