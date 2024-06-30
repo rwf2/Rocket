@@ -5,6 +5,8 @@ mod named_file;
 mod temp_file;
 mod file_name;
 
+pub mod rewrite;
+
 pub use server::*;
 pub use named_file::*;
 pub use temp_file::*;

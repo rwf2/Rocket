@@ -637,6 +637,10 @@ impl<'r> Response<'r> {
         &self.headers
     }
 
+    pub fn set_header_map<'h: 'r>(&mut self, headers: HeaderMap<'h>) {
+        self.headers = headers;
+    }
+
     /// Sets the header `header` in `self`. Any existing headers with the name
     /// `header.name` will be lost, and only `header` will remain. The type of
     /// `header` can be any type that implements `Into<Header>`. See [trait

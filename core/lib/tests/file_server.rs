@@ -4,16 +4,7 @@ use std::path::Path;
 use rocket::{Rocket, Route, Build};
 use rocket::http::Status;
 use rocket::local::blocking::Client;
-use rocket::fs::{
-    dir_root,
-    file_root,
-    filter_dotfiles,
-    index,
-    file_root_permissive,
-    normalize_dirs,
-    relative,
-    FileServer
-};
+use rocket::fs::{FileServer, relative, rewrite::*};
 
 fn static_root() -> &'static Path {
     Path::new(relative!("/tests/static"))
@@ -26,53 +17,61 @@ fn rocket() -> Rocket<Build> {
         .mount(
             "/no_index",
             FileServer::empty()
-                .filter_file(filter_dotfiles)
-                .map_file(dir_root(&root))
+                .filter(filter_dotfiles)
+                .map(prefix(&root))
         )
         .mount(
             "/dots",
             FileServer::empty()
-                .map_file(dir_root(&root))
+                .map(prefix(&root))
         )
         .mount(
             "/index",
             FileServer::empty()
-                .filter_file(filter_dotfiles)
-                .map_file(dir_root(&root))
-                .map_file(index("index.html"))
+                .filter(filter_dotfiles)
+                .map(prefix(&root))
+                .map(index("index.html"))
+        )
+        .mount(
+            "/try_index",
+            FileServer::empty()
+                .filter(filter_dotfiles)
+                .map(prefix(&root))
+                .map(try_index("index.html"))
+                .map(try_index("index.htm"))
         )
         .mount(
             "/both",
             FileServer::empty()
-                .map_file(dir_root(&root))
-                .map_file(index("index.html"))
+                .map(prefix(&root))
+                .map(index("index.html"))
         )
         .mount(
             "/redir",
             FileServer::empty()
-                .filter_file(filter_dotfiles)
-                .map_file(dir_root(&root))
-                .map_file(normalize_dirs)
+                .filter(filter_dotfiles)
+                .map(prefix(&root))
+                .map(normalize_dirs)
         )
         .mount(
             "/redir_index",
             FileServer::empty()
-                .filter_file(filter_dotfiles)
-                .map_file(dir_root(&root))
-                .map_file(normalize_dirs)
-                .map_file(index("index.html"))
+                .filter(filter_dotfiles)
+                .map(prefix(&root))
+                .map(normalize_dirs)
+                .map(index("index.html"))
         )
         .mount(
             "/index_file",
             FileServer::empty()
-                .filter_file(filter_dotfiles)
-                .map_file(file_root(root.join("other/hello.txt")))
+                .filter(filter_dotfiles)
+                .rewrite(file_root(root.join("other/hello.txt")))
         )
         .mount(
             "/missing_root",
             FileServer::empty()
-                .filter_file(filter_dotfiles)
-                .map_file(file_root_permissive(root.join("no_file")))
+                .filter(filter_dotfiles)
+                .rewrite(file_root_permissive(root.join("no_file")))
         )
 }
 
@@ -81,6 +80,7 @@ static REGULAR_FILES: &[&str] = &[
     "inner/goodbye",
     "inner/index.html",
     "other/hello.txt",
+    "other/index.htm",
 ];
 
 static HIDDEN_FILES: &[&str] = &[
@@ -180,11 +180,18 @@ fn test_allow_special_dotpaths() {
 }
 
 #[test]
+fn test_try_index() {
+    let client = Client::debug(rocket()).expect("valid rocket");
+    assert_file_matches(&client, "try_index", "inner", Some("inner/index.html"));
+    assert_file_matches(&client, "try_index", "other", Some("other/index.htm"));
+}
+
+#[test]
 fn test_ranking() {
     let root = static_root();
     for rank in -128..128 {
-        let a = FileServer::new(&root, rank);
-        let b = FileServer::new(&root, rank);
+        let a = FileServer::from(&root).rank(rank);
+        let b = FileServer::from(&root).rank(rank);
 
         for handler in vec![a, b] {
             let routes: Vec<Route> = handler.into();
@@ -231,15 +238,15 @@ fn test_redirection() {
     assert_eq!(response.status(), Status::Ok);
 
     let response = client.get("/redir/inner").dispatch();
-    assert_eq!(response.status(), Status::PermanentRedirect);
+    assert_eq!(response.status(), Status::TemporaryRedirect);
     assert_eq!(response.headers().get("Location").next(), Some("/redir/inner/"));
 
     let response = client.get("/redir/inner?foo=bar").dispatch();
-    assert_eq!(response.status(), Status::PermanentRedirect);
+    assert_eq!(response.status(), Status::TemporaryRedirect);
     assert_eq!(response.headers().get("Location").next(), Some("/redir/inner/?foo=bar"));
 
     let response = client.get("/redir_index/inner").dispatch();
-    assert_eq!(response.status(), Status::PermanentRedirect);
+    assert_eq!(response.status(), Status::TemporaryRedirect);
     assert_eq!(response.headers().get("Location").next(), Some("/redir_index/inner/"));
 
     // Paths with trailing slash are unaffected.
@@ -257,15 +264,15 @@ fn test_redirection() {
     assert_eq!(response.status(), Status::Ok);
 
     let response = client.get("/redir/inner").dispatch();
-    assert_eq!(response.status(), Status::PermanentRedirect);
+    assert_eq!(response.status(), Status::TemporaryRedirect);
     assert_eq!(response.headers().get("Location").next(), Some("/redir/inner/"));
 
     let response = client.get("/redir/other").dispatch();
-    assert_eq!(response.status(), Status::PermanentRedirect);
+    assert_eq!(response.status(), Status::TemporaryRedirect);
     assert_eq!(response.headers().get("Location").next(), Some("/redir/other/"));
 
     let response = client.get("/redir_index/other").dispatch();
-    assert_eq!(response.status(), Status::PermanentRedirect);
+    assert_eq!(response.status(), Status::TemporaryRedirect);
     assert_eq!(response.headers().get("Location").next(), Some("/redir_index/other/"));
 }
 
@@ -278,11 +285,11 @@ fn test_panic_on_missing_file() {
 #[test]
 #[should_panic]
 fn test_panic_on_missing_dir() {
-    let _ = dir_root(static_root().join("missing_dir"));
+    let _ = prefix(static_root().join("missing_dir"));
 }
 
 #[test]
 #[should_panic]
 fn test_panic_on_file_not_dir() {
-    let _ = dir_root(static_root().join("index.html"));
+    let _ = prefix(static_root().join("index.html"));
 }
