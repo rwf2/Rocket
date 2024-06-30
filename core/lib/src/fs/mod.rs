@@ -34,7 +34,7 @@ crate::export! {
     ///
     /// #[launch]
     /// fn rocket() -> _ {
-    ///     rocket::build().mount("/", FileServer::from(relative!("static")))
+    ///     rocket::build().mount("/", FileServer::new(relative!("static")))
     /// }
     /// ```
     ///

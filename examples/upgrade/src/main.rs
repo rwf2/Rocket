@@ -39,5 +39,5 @@ fn echo_raw(ws: ws::WebSocket) -> ws::Stream!['static] {
 fn rocket() -> _ {
     rocket::build()
         .mount("/", routes![echo_channel, echo_stream, echo_raw])
-        .mount("/", FileServer::from(fs::relative!("static")))
+        .mount("/", FileServer::new(fs::relative!("static")))
 }
