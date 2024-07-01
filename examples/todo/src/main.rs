@@ -110,7 +110,7 @@ fn rocket() -> _ {
         .attach(DbConn::fairing())
         .attach(Template::fairing())
         .attach(AdHoc::on_ignite("Run Migrations", run_migrations))
-        .mount("/", FileServer::from(relative!("static")))
+        .mount("/", FileServer::new(relative!("static")))
         .mount("/", routes![index])
         .mount("/todo", routes![new, toggle, delete])
 }

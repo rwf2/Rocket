@@ -218,6 +218,8 @@ impl<'a> Segments<'a, Path> {
         for segment in self.clone() {
             if segment == ".." {
                 buf.pop();
+            } else if segment == "." {
+                continue;
             } else if !allow_dotfiles && segment.starts_with('.') {
                 return Err(PathError::BadStart('.'))
             } else if segment.starts_with('*') {

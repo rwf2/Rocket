@@ -23,5 +23,5 @@ mod manual {
 fn rocket() -> _ {
     rocket::build()
         .mount("/", rocket::routes![manual::second])
-        .mount("/", FileServer::from(relative!("static")))
+        .mount("/", FileServer::new(relative!("static")))
 }

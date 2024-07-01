@@ -1,32 +1,41 @@
-use std::path::{PathBuf, Path};
+use std::fmt;
+use std::path::{Path, PathBuf};
+use std::sync::Arc;
+use std::borrow::Cow;
 
-use crate::{Request, Data};
-use crate::http::{Method, Status, uri::Segments, ext::IntoOwned};
-use crate::route::{Route, Handler, Outcome};
-use crate::response::{Redirect, Responder};
+use crate::{response, Data, Request, Response};
 use crate::outcome::IntoOutcome;
-use crate::fs::NamedFile;
+use crate::http::{uri::Segments, HeaderMap, Method, ContentType, Status};
+use crate::route::{Route, Handler, Outcome};
+use crate::response::Responder;
+use crate::util::Formatter;
+use crate::fs::rewrite::*;
 
 /// Custom handler for serving static files.
 ///
-/// This handler makes it simple to serve static files from a directory on the
-/// local file system. To use it, construct a `FileServer` using either
-/// [`FileServer::from()`] or [`FileServer::new()`] then simply `mount` the
-/// handler at a desired path. When mounted, the handler will generate route(s)
-/// that serve the desired static files. If a requested file is not found, the
-/// routes _forward_ the incoming request. The default rank of the generated
-/// routes is `10`. To customize route ranking, use the [`FileServer::rank()`]
-/// method.
+/// This handler makes is simple to serve static files from a directory on the
+/// local file system. To use it, construct a `FileServer` using
+/// [`FileServer::new()`], then simply `mount` the handler. When mounted, the
+/// handler serves files from the specified directory. If the file is not found,
+/// the handler _forwards_ the request. By default, `FileServer` has a rank of
+/// `10`. Use [`FileServer::new()`] to create a handler with a custom rank.
 ///
-/// # Options
+/// # Customization
 ///
-/// The handler's functionality can be customized by passing an [`Options`] to
-/// [`FileServer::new()`].
+/// How `FileServer` responds to specific requests can be customized through
+/// the use of [`Rewriter`]s. See [`Rewriter`] for more detailed documentation
+/// on how to take full advantage of `FileServer`'s extensibility.
+///
+/// [`FileServer::new()`] construct a `FileServer`
+/// with common rewrites: they filter out dotfiles, redirect requests to
+/// directories to include a trailing slash, and use `index.html` to respond to
+/// requests for a directory. If you want to customize or replace these default
+/// rewrites, see [`FileServer::empty()`].
 ///
 /// # Example
 ///
 /// Serve files from the `/static` directory on the local file system at the
-/// `/public` path with the [default options](#impl-Default):
+/// `/public` path, with the default rewrites.
 ///
 /// ```rust,no_run
 /// # #[macro_use] extern crate rocket;
@@ -34,14 +43,13 @@ use crate::fs::NamedFile;
 ///
 /// #[launch]
 /// fn rocket() -> _ {
-///     rocket::build().mount("/public", FileServer::from("/static"))
+///     rocket::build().mount("/public", FileServer::new("/static"))
 /// }
 /// ```
 ///
 /// Requests for files at `/public/<path..>` will be handled by returning the
-/// contents of `/static/<path..>`. Requests for _directories_ at
-/// `/public/<directory>` will be handled by returning the contents of
-/// `/static/<directory>/index.html`.
+/// contents of `/static/<path..>`. Requests for directories will return the
+/// contents of `index.html`.
 ///
 /// ## Relative Paths
 ///
@@ -57,13 +65,12 @@ use crate::fs::NamedFile;
 ///
 /// #[launch]
 /// fn rocket() -> _ {
-///     rocket::build().mount("/", FileServer::from(relative!("static")))
+///     rocket::build().mount("/", FileServer::new(relative!("static")))
 /// }
 /// ```
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub struct FileServer {
-    root: PathBuf,
-    options: Options,
+    rewrites: Vec<Arc<dyn Rewriter>>,
     rank: isize,
 }
 
@@ -72,120 +79,208 @@ impl FileServer {
     const DEFAULT_RANK: isize = 10;
 
     /// Constructs a new `FileServer` that serves files from the file system
-    /// `path`. By default, [`Options::Index`] is set, and the generated routes
-    /// have a rank of `10`. To serve static files with other options, use
-    /// [`FileServer::new()`]. To choose a different rank for generated routes,
-    /// use [`FileServer::rank()`].
+    /// `path` with a default rank.
     ///
-    /// # Panics
+    /// Adds a set of default rewrites:
+    /// - `|f, _| f.is_visible()`: Hides all dotfiles.
+    /// - [`Prefix::checked(path)`]: Applies the root path.
+    /// - [`TrailingDirs`]: Normalizes directories to have a trailing slash.
+    /// - [`DirIndex::unconditional("index.html")`](DirIndex::unconditional):
+    ///   Appends `index.html` to directory requests.
     ///
-    /// Panics if `path` does not exist or is not a directory.
+    /// If you don't want to serve requests for directories, or want to
+    /// customize what files are served when a directory is requested, see
+    /// [`Self::new_without_index`].
     ///
-    /// # Example
+    /// If you need to allow requests for dotfiles, or make any other changes
+    /// to the default rewrites, see [`Self::empty`].
     ///
-    /// Serve the static files in the `/www/public` local directory on path
-    /// `/static`.
-    ///
-    /// ```rust,no_run
-    /// # #[macro_use] extern crate rocket;
-    /// use rocket::fs::FileServer;
-    ///
-    /// #[launch]
-    /// fn rocket() -> _ {
-    ///     rocket::build().mount("/static", FileServer::from("/www/public"))
-    /// }
-    /// ```
-    ///
-    /// Exactly as before, but set the rank for generated routes to `30`.
-    ///
-    /// ```rust,no_run
-    /// # #[macro_use] extern crate rocket;
-    /// use rocket::fs::FileServer;
-    ///
-    /// #[launch]
-    /// fn rocket() -> _ {
-    ///     rocket::build().mount("/static", FileServer::from("/www/public").rank(30))
-    /// }
-    /// ```
-    #[track_caller]
-    pub fn from<P: AsRef<Path>>(path: P) -> Self {
-        FileServer::new(path, Options::default())
+    /// [`Prefix::checked(path)`]: crate::fs::rewrite::Prefix::checked
+    /// [`TrailingDirs`]: crate::fs::rewrite::TrailingDirs
+    /// [`DirIndex::unconditional`]: crate::fs::DirIndex::unconditional
+    pub fn new<P: AsRef<Path>>(path: P) -> Self {
+        Self::empty()
+            .filter(|f, _| f.is_visible())
+            .rewrite(Prefix::checked(path))
+            .rewrite(TrailingDirs)
+            .rewrite(DirIndex::unconditional("index.html"))
     }
 
     /// Constructs a new `FileServer` that serves files from the file system
-    /// `path` with `options` enabled. By default, the handler's routes have a
-    /// rank of `10`. To choose a different rank, use [`FileServer::rank()`].
+    /// `path` with a default rank. This variant does not add a default
+    /// directory index option.
     ///
-    /// # Panics
+    /// Adds a set of default rewrites:
+    /// - `|f, _| f.is_visible()`: Hides all dotfiles.
+    /// - [`Prefix::checked(path)`]: Applies the root path.
+    /// - [`TrailingDirs`]: Normalizes directories to have a trailing slash.
     ///
-    /// If [`Options::Missing`] is not set, panics if `path` does not exist or
-    /// is not a directory. Otherwise does not panic.
+    /// In most cases, [`Self::new`] is good enough. However, if you do not want
+    /// to automatically respond to requests for directories with `index.html`,
+    /// this method is provided.
     ///
     /// # Example
     ///
-    /// Serve the static files in the `/www/public` local directory on path
-    /// `/static` without serving index files or dot files. Additionally, serve
-    /// the same files on `/pub` with a route rank of -1 while also serving
-    /// index files and dot files.
+    /// Constructs a default file server to  server files from `./static`, but
+    /// uses `index.txt` if `index.html` doesn't exist.
     ///
     /// ```rust,no_run
     /// # #[macro_use] extern crate rocket;
-    /// use rocket::fs::{FileServer, Options};
+    /// use rocket::fs::{FileServer, rewrite::DirIndex};
     ///
     /// #[launch]
     /// fn rocket() -> _ {
-    ///     let options = Options::Index | Options::DotFiles;
+    ///     let server = FileServer::new("static")
+    ///         .rewrite(DirIndex::if_exists("index.html"))
+    ///         .rewrite(DirIndex::unconditional("index.txt"));
+    ///
     ///     rocket::build()
-    ///         .mount("/static", FileServer::from("/www/public"))
-    ///         .mount("/pub", FileServer::new("/www/public", options).rank(-1))
+    ///         .mount("/", server)
     /// }
     /// ```
-    #[track_caller]
-    pub fn new<P: AsRef<Path>>(path: P, options: Options) -> Self {
-        let path = path.as_ref();
-        if !options.contains(Options::Missing) {
-            if !options.contains(Options::IndexFile) && !path.is_dir() {
-                error!(path = %path.display(),
-                    "FileServer path does not point to a directory.\n\
-                    Aborting early to prevent inevitable handler runtime errors.");
-
-                panic!("invalid directory path: refusing to continue");
-            } else if !path.exists() {
-                error!(path = %path.display(),
-                    "FileServer path does not point to a file.\n\
-                    Aborting early to prevent inevitable handler runtime errors.");
-
-                panic!("invalid file path: refusing to continue");
-            }
-        }
-
-        FileServer { root: path.into(), options, rank: Self::DEFAULT_RANK }
+    ///
+    /// [`Prefix::checked(path)`]: crate::fs::rewrite::Prefix::checked
+    /// [`TrailingDirs`]: crate::fs::rewrite::TrailingDirs
+    pub fn new_without_index<P: AsRef<Path>>(path: P) -> Self {
+        Self::empty()
+            .filter(|f, _| f.is_visible())
+            .rewrite(Prefix::checked(path))
+            .rewrite(TrailingDirs)
     }
 
-    /// Sets the rank for generated routes to `rank`.
+    /// Constructs a new `FileServer`, with default rank, and no rewrites.
+    pub fn empty() -> Self {
+        Self {
+            rewrites: vec![],
+            rank: Self::DEFAULT_RANK
+        }
+    }
+
+    /// Sets the rank of the route emitted by the `FileServer` to `rank`.
     ///
     /// # Example
     ///
     /// ```rust,no_run
-    /// use rocket::fs::{FileServer, Options};
-    ///
-    /// // A `FileServer` created with `from()` with routes of rank `3`.
-    /// FileServer::from("/public").rank(3);
-    ///
-    /// // A `FileServer` created with `new()` with routes of rank `-15`.
-    /// FileServer::new("/public", Options::Index).rank(-15);
-    /// ```
+    /// # use rocket::fs::FileServer;
+    /// # fn make_server() -> FileServer {
+    /// FileServer::empty()
+    ///    .rank(5)
+    /// # }
     pub fn rank(mut self, rank: isize) -> Self {
         self.rank = rank;
         self
+    }
+
+    /// Generic rewrite to transform one Rewrite to another.
+    ///
+    /// # Example
+    ///
+    /// Redirects all requests that have been filtered to the root of the `FileServer`.
+    ///
+    /// ```rust,no_run
+    /// # use rocket::fs::{FileServer, rewrite::Rewrite};
+    /// # use rocket::{response::Redirect, uri, Build, Rocket, Request};
+    /// fn redir_missing<'r>(p: Option<Rewrite<'r>>, _req: &Request<'_>) -> Option<Rewrite<'r>> {
+    ///     match p {
+    ///         None => Redirect::temporary(uri!("/")).into(),
+    ///         p => p,
+    ///     }
+    /// }
+    ///
+    /// # fn launch() -> Rocket<Build> {
+    /// rocket::build()
+    ///     .mount("/", FileServer::new("static").rewrite(redir_missing))
+    /// # }
+    /// ```
+    ///
+    /// Note that `redir_missing` is not a closure in this example. Making it a closure
+    /// causes compilation to fail with a lifetime error. It really shouldn't but it does.
+    pub fn rewrite<R: Rewriter>(mut self, rewriter: R) -> Self {
+        self.rewrites.push(Arc::new(rewriter));
+        self
+    }
+
+    /// Filter what files this `FileServer` will respond with
+    ///
+    /// # Example
+    ///
+    /// Filter out all paths with a filename of `hidden`.
+    ///
+    /// ```rust,no_run
+    /// # #[macro_use] extern crate rocket;
+    /// use rocket::fs::FileServer;
+    ///
+    /// #[launch]
+    /// fn rocket() -> _ {
+    ///     let server = FileServer::new("static")
+    ///         .filter(|f, _| f.path.file_name() != Some("hidden".as_ref()));
+    ///
+    ///     rocket::build()
+    ///         .mount("/", server)
+    /// }
+    /// ```
+    pub fn filter<F: Send + Sync + 'static>(self, f: F) -> Self
+        where F: Fn(&File<'_>, &Request<'_>) -> bool
+    {
+        struct Filter<F>(F);
+
+        impl<F> Rewriter for Filter<F>
+            where F: Fn(&File<'_>, &Request<'_>) -> bool + Send + Sync + 'static
+        {
+            fn rewrite<'r>(&self, f: Option<Rewrite<'r>>, r: &Request<'_>) -> Option<Rewrite<'r>> {
+                f.and_then(|f| match f {
+                    Rewrite::File(f) if self.0(&f, r) => Some(Rewrite::File(f)),
+                    _ => None,
+                })
+            }
+        }
+
+        self.rewrite(Filter(f))
+    }
+
+    /// Change what files this `FileServer` will respond with
+    ///
+    /// # Example
+    ///
+    /// Append `index.txt` to every path.
+    ///
+    /// ```rust,no_run
+    /// # #[macro_use] extern crate rocket;
+    /// use rocket::fs::FileServer;
+    ///
+    /// #[launch]
+    /// fn rocket() -> _ {
+    ///     let server = FileServer::new("static")
+    ///         .map(|f, _| f.map_path(|p| p.join("index.txt")).into());
+    ///
+    ///     rocket::build()
+    ///         .mount("/", server)
+    /// }
+    /// ```
+    pub fn map<F: Send + Sync + 'static>(self, f: F) -> Self
+        where F: for<'r> Fn(File<'r>, &Request<'_>) -> Rewrite<'r>
+    {
+        struct Map<F>(F);
+
+        impl<F> Rewriter for Map<F>
+            where F: for<'r> Fn(File<'r>, &Request<'_>) -> Rewrite<'r> + Send + Sync + 'static
+        {
+            fn rewrite<'r>(&self, f: Option<Rewrite<'r>>, r: &Request<'_>) -> Option<Rewrite<'r>> {
+                f.map(|f| match f {
+                    Rewrite::File(f) => self.0(f, r),
+                    Rewrite::Redirect(r) => Rewrite::Redirect(r),
+                })
+            }
+        }
+
+        self.rewrite(Map(f))
     }
 }
 
 impl From<FileServer> for Vec<Route> {
     fn from(server: FileServer) -> Self {
-        let source = figment::Source::File(server.root.clone());
         let mut route = Route::ranked(server.rank, Method::Get, "/<path..>", server);
-        route.name = Some(format!("FileServer: {}", source).into());
+        route.name = Some("FileServer".into());
         vec![route]
     }
 }
@@ -193,267 +288,71 @@ impl From<FileServer> for Vec<Route> {
 #[crate::async_trait]
 impl Handler for FileServer {
     async fn handle<'r>(&self, req: &'r Request<'_>, data: Data<'r>) -> Outcome<'r> {
-        use crate::http::uri::fmt::Path;
+        use crate::http::uri::fmt::Path as UriPath;
+        let path: Option<PathBuf> = req.segments::<Segments<'_, UriPath>>(0..).ok()
+            .and_then(|segments| segments.to_path_buf(true).ok());
 
-        // TODO: Should we reject dotfiles for `self.root` if !DotFiles?
-        let options = self.options;
-        if options.contains(Options::IndexFile) && self.root.is_file() {
-            let segments = match req.segments::<Segments<'_, Path>>(0..) {
-                Ok(segments) => segments,
-                Err(never) => match never {},
-            };
-
-            if segments.is_empty() {
-                let file = NamedFile::open(&self.root).await;
-                return file.respond_to(req).or_forward((data, Status::NotFound));
-            } else {
-                return Outcome::forward(data, Status::NotFound);
-            }
+        let mut response = path.map(|p| Rewrite::File(File::new(p)));
+        for rewrite in &self.rewrites {
+            response = rewrite.rewrite(response, req);
         }
 
-        // Get the segments as a `PathBuf`, allowing dotfiles requested.
-        let allow_dotfiles = options.contains(Options::DotFiles);
-        let path = req.segments::<Segments<'_, Path>>(0..).ok()
-            .and_then(|segments| segments.to_path_buf(allow_dotfiles).ok())
-            .map(|path| self.root.join(path));
-
-        match path {
-            Some(p) if p.is_dir() => {
-                // Normalize '/a/b/foo' to '/a/b/foo/'.
-                if options.contains(Options::NormalizeDirs) && !req.uri().path().ends_with('/') {
-                    let normal = req.uri().map_path(|p| format!("{}/", p))
-                        .expect("adding a trailing slash to a known good path => valid path")
-                        .into_owned();
-
-                    return Redirect::permanent(normal)
-                        .respond_to(req)
-                        .or_forward((data, Status::InternalServerError));
-                }
-
-                if !options.contains(Options::Index) {
-                    return Outcome::forward(data, Status::NotFound);
-                }
-
-                let index = NamedFile::open(p.join("index.html")).await;
-                index.respond_to(req).or_forward((data, Status::NotFound))
-            },
-            Some(p) => {
-                let file = NamedFile::open(p).await;
-                file.respond_to(req).or_forward((data, Status::NotFound))
-            }
-            None => Outcome::forward(data, Status::NotFound),
-        }
-    }
-}
-
-/// A bitset representing configurable options for [`FileServer`].
-///
-/// The valid options are:
-///
-///   * [`Options::None`] - Return only present, visible files.
-///   * [`Options::DotFiles`] - In addition to visible files, return dotfiles.
-///   * [`Options::Index`] - Render `index.html` pages for directory requests.
-///   * [`Options::IndexFile`] - Allow serving a single file as the index.
-///   * [`Options::Missing`] - Don't fail if the path to serve is missing.
-///   * [`Options::NormalizeDirs`] - Redirect directories without a trailing
-///     slash to ones with a trailing slash.
-///
-/// `Options` structures can be `or`d together to select two or more options.
-/// For instance, to request that both dot files and index pages be returned,
-/// use `Options::DotFiles | Options::Index`.
-#[derive(Debug, Clone, Copy)]
-pub struct Options(u8);
-
-#[allow(non_upper_case_globals, non_snake_case)]
-impl Options {
-    /// All options disabled.
-    ///
-    /// Note that this is different than [`Options::default()`](#impl-Default),
-    /// which enables options.
-    pub const None: Options = Options(0);
-
-    /// Respond to requests for a directory with the `index.html` file in that
-    /// directory, if it exists.
-    ///
-    /// When enabled, [`FileServer`] will respond to requests for a directory
-    /// `/foo` or `/foo/` with the file at `${root}/foo/index.html` if it
-    /// exists. When disabled, requests to directories will always forward.
-    ///
-    /// **Enabled by default.**
-    pub const Index: Options = Options(1 << 0);
-
-    /// Allow serving dotfiles.
-    ///
-    /// When enabled, [`FileServer`] will respond to requests for files or
-    /// directories beginning with `.`. When disabled, any dotfiles will be
-    /// treated as missing.
-    ///
-    /// **Disabled by default.**
-    pub const DotFiles: Options = Options(1 << 1);
-
-    /// Normalizes directory requests by redirecting requests to directory paths
-    /// without a trailing slash to ones with a trailing slash.
-    ///
-    /// **Enabled by default.**
-    ///
-    /// When enabled, the [`FileServer`] handler will respond to requests for a
-    /// directory without a trailing `/` with a permanent redirect (308) to the
-    /// same path with a trailing `/`. This ensures relative URLs within any
-    /// document served from that directory will be interpreted relative to that
-    /// directory rather than its parent.
-    ///
-    /// # Example
-    ///
-    /// Given the following directory structure...
-    ///
-    /// ```text
-    /// static/
-    /// └── foo/
-    ///     ├── cat.jpeg
-    ///     └── index.html
-    /// ```
-    ///
-    /// And the following server:
-    ///
-    /// ```text
-    /// rocket.mount("/", FileServer::from("static"))
-    /// ```
-    ///
-    /// ...requests to `example.com/foo` will be redirected to
-    /// `example.com/foo/`. If `index.html` references `cat.jpeg` as a relative
-    /// URL, the browser will resolve the URL to `example.com/foo/cat.jpeg`,
-    /// which in-turn Rocket will match to `/static/foo/cat.jpg`.
-    ///
-    /// Without this option, requests to `example.com/foo` would not be
-    /// redirected. `index.html` would be rendered, and the relative link to
-    /// `cat.jpeg` would be resolved by the browser as `example.com/cat.jpeg`.
-    /// Rocket would thus try to find `/static/cat.jpeg`, which does not exist.
-    pub const NormalizeDirs: Options = Options(1 << 2);
-
-    /// Allow serving a file instead of a directory.
-    ///
-    /// By default, `FileServer` will error on construction if the path to serve
-    /// does not point to a directory. When this option is enabled, if a path to
-    /// a file is provided, `FileServer` will serve the file as the root of the
-    /// mount path.
-    ///
-    /// # Example
-    ///
-    /// If the file tree looks like:
-    ///
-    /// ```text
-    /// static/
-    /// └── cat.jpeg
-    /// ```
-    ///
-    /// Then `cat.jpeg` can be served at `/cat` with:
-    ///
-    /// ```rust,no_run
-    /// # #[macro_use] extern crate rocket;
-    /// use rocket::fs::{FileServer, Options};
-    ///
-    /// #[launch]
-    /// fn rocket() -> _ {
-    ///     rocket::build()
-    ///         .mount("/cat", FileServer::new("static/cat.jpeg", Options::IndexFile))
-    /// }
-    /// ```
-    pub const IndexFile: Options = Options(1 << 3);
-
-    /// Don't fail if the file or directory to serve is missing.
-    ///
-    /// By default, `FileServer` will error if the path to serve is missing to
-    /// prevent inevitable 404 errors. This option overrides that.
-    pub const Missing: Options = Options(1 << 4);
-
-    /// Returns `true` if `self` is a superset of `other`. In other words,
-    /// returns `true` if all of the options in `other` are also in `self`.
-    ///
-    /// # Example
-    ///
-    /// ```rust
-    /// use rocket::fs::Options;
-    ///
-    /// let index_request = Options::Index | Options::DotFiles;
-    /// assert!(index_request.contains(Options::Index));
-    /// assert!(index_request.contains(Options::DotFiles));
-    ///
-    /// let index_only = Options::Index;
-    /// assert!(index_only.contains(Options::Index));
-    /// assert!(!index_only.contains(Options::DotFiles));
-    ///
-    /// let dot_only = Options::DotFiles;
-    /// assert!(dot_only.contains(Options::DotFiles));
-    /// assert!(!dot_only.contains(Options::Index));
-    /// ```
-    #[inline]
-    pub fn contains(self, other: Options) -> bool {
-        (other.0 & self.0) == other.0
-    }
-}
-
-/// The default set of options: `Options::Index | Options:NormalizeDirs`.
-impl Default for Options {
-    fn default() -> Self {
-        Options::Index | Options::NormalizeDirs
-    }
-}
-
-impl std::ops::BitOr for Options {
-    type Output = Self;
-
-    #[inline(always)]
-    fn bitor(self, rhs: Self) -> Self {
-        Options(self.0 | rhs.0)
-    }
-}
-
-crate::export! {
-    /// Generates a crate-relative version of a path.
-    ///
-    /// This macro is primarily intended for use with [`FileServer`] to serve
-    /// files from a path relative to the crate root.
-    ///
-    /// The macro accepts one parameter, `$path`, an absolute or (preferably)
-    /// relative path. It returns a path as an `&'static str` prefixed with the
-    /// path to the crate root. Use `Path::new(relative!($path))` to retrieve an
-    /// `&'static Path`.
-    ///
-    /// # Example
-    ///
-    /// Serve files from the crate-relative `static/` directory:
-    ///
-    /// ```rust
-    /// # #[macro_use] extern crate rocket;
-    /// use rocket::fs::{FileServer, relative};
-    ///
-    /// #[launch]
-    /// fn rocket() -> _ {
-    ///     rocket::build().mount("/", FileServer::from(relative!("static")))
-    /// }
-    /// ```
-    ///
-    /// Path equivalences:
-    ///
-    /// ```rust
-    /// use std::path::Path;
-    ///
-    /// use rocket::fs::relative;
-    ///
-    /// let manual = Path::new(env!("CARGO_MANIFEST_DIR")).join("static");
-    /// let automatic_1 = Path::new(relative!("static"));
-    /// let automatic_2 = Path::new(relative!("/static"));
-    /// assert_eq!(manual, automatic_1);
-    /// assert_eq!(automatic_1, automatic_2);
-    /// ```
-    ///
-    macro_rules! relative {
-        ($path:expr) => {
-            if cfg!(windows) {
-                concat!(env!("CARGO_MANIFEST_DIR"), "\\", $path)
-            } else {
-                concat!(env!("CARGO_MANIFEST_DIR"), "/", $path)
-            }
+        let (outcome, status) = match response {
+            Some(Rewrite::File(f)) => (f.open().await.respond_to(req), Status::NotFound),
+            Some(Rewrite::Redirect(r)) => (r.respond_to(req), Status::InternalServerError),
+            None => return Outcome::forward(data, Status::NotFound),
         };
+
+        outcome.or_forward((data, status))
+    }
+}
+
+impl fmt::Debug for FileServer {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("FileServer")
+            .field("rewrites", &Formatter(|f| write!(f, "<{} rewrites>", self.rewrites.len())))
+            .field("rank", &self.rank)
+            .finish()
+    }
+}
+
+impl<'r> File<'r> {
+    async fn open(self) -> std::io::Result<NamedFile<'r>> {
+        let file = tokio::fs::File::open(&self.path).await?;
+        let metadata = file.metadata().await?;
+        if metadata.is_dir() {
+            return Err(std::io::Error::other("is a directory"));
+        }
+
+        Ok(NamedFile {
+            file,
+            len: metadata.len(),
+            path: self.path,
+            headers: self.headers,
+        })
+    }
+}
+
+struct NamedFile<'r> {
+    file: tokio::fs::File,
+    len: u64,
+    path: Cow<'r, Path>,
+    headers: HeaderMap<'r>,
+}
+
+// Do we want to allow the user to rewrite the Content-Type?
+impl<'r> Responder<'r, 'r> for NamedFile<'r> {
+    fn respond_to(self, _: &'r Request<'_>) -> response::Result<'r> {
+        let mut response = Response::new();
+        response.set_header_map(self.headers);
+        if !response.headers().contains("Content-Type") {
+            self.path.extension()
+                .and_then(|ext| ext.to_str())
+                .and_then(ContentType::from_extension)
+                .map(|content_type| response.set_header(content_type));
+        }
+
+        response.set_sized_body(self.len as usize, self.file);
+        Ok(response)
     }
 }
