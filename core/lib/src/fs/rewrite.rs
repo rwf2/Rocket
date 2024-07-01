@@ -15,18 +15,21 @@ use crate::response::Redirect;
 /// with the file contents, if [`Rewrite::File`] is specified, or a redirect, if
 /// [`Rewrite::Redirect`] is specified.
 ///
-/// # Creating a `FileServer`
+/// # Creating a [`FileServer`]
 ///
-/// The primary way to create a `FileServer` is via [`FileServer::new()`] which
-/// creates a new `FileServer` with a default set of `Rewriter`s: a filter for
+/// The primary way to create a [`FileServer`] is via [`FileServer::new()`] which
+/// creates a new [`FileServer`] with a default set of `Rewriter`s: a filter for
 /// dotfiles, a root path to apply as a prefix, an index file rewriter, and a
 /// rewriter to normalize directories to always include a trailing slash.
+///
+/// [`FileServer`]: super::FileServer
+/// [`FileServer::new()`]: super::FileServer::new
 pub trait Rewriter: Send + Sync + 'static {
     /// Alter the [`Rewrite`] as needed.
     fn rewrite<'r>(&self, opt: Option<Rewrite<'r>>, req: &'r Request<'_>) -> Option<Rewrite<'r>>;
 }
 
-/// A Response from a [`FileServer`]
+/// A Response from a [`FileServer`](super::FileServer)
 #[derive(Debug, Clone)]
 #[non_exhaustive]
 pub enum Rewrite<'r> {
@@ -36,20 +39,27 @@ pub enum Rewrite<'r> {
     Redirect(Redirect),
 }
 
-/// A File response from a [`FileServer`] and a rewriter.
+/// A File response from a [`FileServer`](super::FileServer) and a rewriter.
 #[derive(Debug, Clone)]
+#[non_exhaustive]
 pub struct File<'r> {
-    /// The path to the file that [`FileServer`] will respond with.
+    /// The path to the file that [`FileServer`](super::FileServer) will respond with.
     pub path: Cow<'r, Path>,
     /// A list of headers to be added to the generated response.
     pub headers: HeaderMap<'r>,
 }
 
 impl<'r> File<'r> {
+    /// A new `File`, with not additional headers.
     pub fn new(path: impl Into<Cow<'r, Path>>) -> Self {
         Self { path: path.into(), headers: HeaderMap::new() }
     }
 
+    /// A new `File`, with not additional headers.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the `path` does not exist.
     pub fn checked<P: AsRef<Path>>(path: P) -> Self {
         let path = path.as_ref();
         if !path.exists() {
@@ -79,7 +89,7 @@ impl<'r> File<'r> {
     /// # Windows Note
     ///
     /// This does *not* check the file metadata on any platform, so hidden files
-    /// on Windows will not be detected.
+    /// on Windows will not be detected by this method.
     pub fn is_hidden(&self) -> bool {
         self.path.iter().any(|s| s.as_encoded_bytes().starts_with(b"."))
     }
@@ -180,7 +190,7 @@ impl Rewriter for TrailingDirs {
 /// use rocket::fs::FileServer;
 /// use rocket::fs::rewrite::DirIndex;
 ///
-/// FileServer::directory("static")
+/// FileServer::new_without_index("static")
 ///     .rewrite(DirIndex::if_exists("index.htm"))
 ///     .rewrite(DirIndex::unconditional("index.html"));
 /// ```
@@ -190,10 +200,12 @@ pub struct DirIndex {
 }
 
 impl DirIndex {
+    /// Appends `path` to every request for a directory.
     pub fn unconditional(path: impl AsRef<Path>) -> Self {
         Self { path: path.as_ref().to_path_buf(), check: false }
     }
 
+    /// Only appends `path` to a request for a directory if the file exists.
     pub fn if_exists(path: impl AsRef<Path>) -> Self {
         Self { path: path.as_ref().to_path_buf(), check: true }
     }

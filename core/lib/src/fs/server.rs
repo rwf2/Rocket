@@ -82,10 +82,22 @@ impl FileServer {
     /// `path` with a default rank.
     ///
     /// Adds a set of default rewrites:
-    /// - [`filter_dotfiles`]: Hides all dotfiles.
-    /// - [`prefix(path)`](prefix): Applies the root path.
-    /// - [`normalize_dirs`]: Normalizes directories to have a trailing slash.
-    /// - [`index("index.html")`](index): Appends `index.html` to directory requests.
+    /// - `|f, _| f.is_visible()`: Hides all dotfiles.
+    /// - [`Prefix::checked(path)`]: Applies the root path.
+    /// - [`TrailingDirs`]: Normalizes directories to have a trailing slash.
+    /// - [`DirIndex::unconditional("index.html")`](DirIndex::unconditional):
+    ///   Appends `index.html` to directory requests.
+    ///
+    /// If you don't want to serve requests for directories, or want to
+    /// customize what files are served when a directory is requested, see
+    /// [`Self::new_without_index`].
+    ///
+    /// If you need to allow requests for dotfiles, or make any other changes
+    /// to the default rewrites, see [`Self::empty`].
+    ///
+    /// [`Prefix::checked(path)`]: crate::fs::rewrite::Prefix::checked
+    /// [`TrailingDirs`]: crate::fs::rewrite::TrailingDirs
+    /// [`DirIndex::unconditional`]: crate::fs::DirIndex::unconditional
     pub fn new<P: AsRef<Path>>(path: P) -> Self {
         Self::empty()
             .filter(|f, _| f.is_visible())
@@ -95,13 +107,41 @@ impl FileServer {
     }
 
     /// Constructs a new `FileServer` that serves files from the file system
-    /// `path` with a default rank.
+    /// `path` with a default rank. This variant does not add a default
+    /// directory index option.
     ///
     /// Adds a set of default rewrites:
-    /// - [`filter_dotfiles`]: Hides all dotfiles.
-    /// - [`prefix(path)`](prefix): Applies the root path.
-    /// - [`normalize_dirs`]: Normalizes directories to have a trailing slash.
-    pub fn directory<P: AsRef<Path>>(path: P) -> Self {
+    /// - `|f, _| f.is_visible()`: Hides all dotfiles.
+    /// - [`Prefix::checked(path)`]: Applies the root path.
+    /// - [`TrailingDirs`]: Normalizes directories to have a trailing slash.
+    ///
+    /// In most cases, [`Self::new`] is good enough. However, if you do not want
+    /// to automatically respond to requests for directories with `index.html`,
+    /// this method is provided.
+    ///
+    /// # Example
+    ///
+    /// Constructs a default file server to  server files from `./static`, but
+    /// uses `index.txt` if `index.html` doesn't exist.
+    ///
+    /// ```rust,no_run
+    /// # #[macro_use] extern crate rocket;
+    /// use rocket::fs::{FileServer, rewrite::DirIndex};
+    ///
+    /// #[launch]
+    /// fn rocket() -> _ {
+    ///     let server = FileServer::new("static")
+    ///         .rewrite(DirIndex::if_exists("index.html"))
+    ///         .rewrite(DirIndex::unconditional("index.txt"));
+    ///
+    ///     rocket::build()
+    ///         .mount("/", server)
+    /// }
+    /// ```
+    ///
+    /// [`Prefix::checked(path)`]: crate::fs::rewrite::Prefix::checked
+    /// [`TrailingDirs`]: crate::fs::rewrite::TrailingDirs
+    pub fn new_without_index<P: AsRef<Path>>(path: P) -> Self {
         Self::empty()
             .filter(|f, _| f.is_visible())
             .rewrite(Prefix::checked(path))
@@ -109,8 +149,6 @@ impl FileServer {
     }
 
     /// Constructs a new `FileServer`, with default rank, and no rewrites.
-    ///
-    /// See [`FileServer::empty_ranked()`].
     pub fn empty() -> Self {
         Self {
             rewrites: vec![],
@@ -127,7 +165,7 @@ impl FileServer {
     /// # fn make_server() -> FileServer {
     /// FileServer::empty()
     ///    .rank(5)
-    ///  }
+    /// # }
     pub fn rank(mut self, rank: isize) -> Self {
         self.rank = rank;
         self
@@ -140,7 +178,7 @@ impl FileServer {
     /// Redirects all requests that have been filtered to the root of the `FileServer`.
     ///
     /// ```rust,no_run
-    /// # use rocket::fs::{FileServer, Rewrite};
+    /// # use rocket::fs::{FileServer, rewrite::Rewrite};
     /// # use rocket::{response::Redirect, uri, Build, Rocket, Request};
     /// fn redir_missing<'r>(p: Option<Rewrite<'r>>, _req: &Request<'_>) -> Option<Rewrite<'r>> {
     ///     match p {
@@ -169,7 +207,7 @@ impl FileServer {
     /// Filter out all paths with a filename of `hidden`.
     ///
     /// ```rust,no_run
-    /// #[macro_use] extern crate rocket;
+    /// # #[macro_use] extern crate rocket;
     /// use rocket::fs::FileServer;
     ///
     /// #[launch]
@@ -179,7 +217,7 @@ impl FileServer {
     ///
     ///     rocket::build()
     ///         .mount("/", server)
-    /// # }
+    /// }
     /// ```
     pub fn filter<F: Send + Sync + 'static>(self, f: F) -> Self
         where F: Fn(&File<'_>, &Request<'_>) -> bool
@@ -200,6 +238,25 @@ impl FileServer {
         self.rewrite(Filter(f))
     }
 
+    /// Change what files this `FileServer` will respond with
+    ///
+    /// # Example
+    ///
+    /// Append `index.txt` to every path.
+    ///
+    /// ```rust,no_run
+    /// # #[macro_use] extern crate rocket;
+    /// use rocket::fs::FileServer;
+    ///
+    /// #[launch]
+    /// fn rocket() -> _ {
+    ///     let server = FileServer::new("static")
+    ///         .map(|f, _| f.map_path(|p| p.join("index.txt")).into());
+    ///
+    ///     rocket::build()
+    ///         .mount("/", server)
+    /// }
+    /// ```
     pub fn map<F: Send + Sync + 'static>(self, f: F) -> Self
         where F: for<'r> Fn(File<'r>, &Request<'_>) -> Rewrite<'r>
     {
