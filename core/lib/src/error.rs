@@ -5,6 +5,7 @@ use std::error::Error as StdError;
 use std::sync::Arc;
 
 use figment::Profile;
+use transient::Static;
 
 use crate::listener::Endpoint;
 use crate::{Catcher, Ignite, Orbit, Phase, Rocket, Route};
@@ -85,9 +86,13 @@ pub enum ErrorKind {
     Shutdown(Arc<Rocket<Orbit>>),
 }
 
+impl Static for ErrorKind {}
+
 /// An error that occurs when a value was unexpectedly empty.
 #[derive(Clone, Copy, Default, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub struct Empty;
+
+impl Static for Empty {}
 
 impl Error {
     #[inline(always)]

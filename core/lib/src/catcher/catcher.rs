@@ -1,12 +1,16 @@
 use std::fmt;
 use std::io::Cursor;
 
+use transient::TypeId;
+
 use crate::http::uri::Path;
 use crate::http::ext::IntoOwned;
 use crate::response::Response;
 use crate::request::Request;
 use crate::http::{Status, ContentType, uri};
 use crate::catcher::{Handler, BoxFuture};
+
+use super::ErasedError;
 
 /// An error catching route.
 ///
@@ -72,8 +76,7 @@ use crate::catcher::{Handler, BoxFuture};
 /// ```rust,no_run
 /// #[macro_use] extern crate rocket;
 ///
-/// use rocket::Request;
-/// use rocket::http::Status;
+/// use rocket::http::{Status, uri::Origin};
 ///
 /// #[catch(500)]
 /// fn internal_error() -> &'static str {
@@ -81,13 +84,13 @@ use crate::catcher::{Handler, BoxFuture};
 /// }
 ///
 /// #[catch(404)]
-/// fn not_found(req: &Request) -> String {
-///     format!("I couldn't find '{}'. Try something else?", req.uri())
+/// fn not_found(uri: &Origin) -> String {
+///     format!("I couldn't find '{}'. Try something else?", uri)
 /// }
 ///
-/// #[catch(default)]
-/// fn default(status: Status, req: &Request) -> String {
-///     format!("{} ({})", status, req.uri())
+/// #[catch(default, status = "<status>")]
+/// fn default(status: Status, uri: &Origin) -> String {
+///     format!("{} ({})", status, uri)
 /// }
 ///
 /// #[launch]
@@ -95,13 +98,6 @@ use crate::catcher::{Handler, BoxFuture};
 ///     rocket::build().register("/", catchers![internal_error, not_found, default])
 /// }
 /// ```
-///
-/// A function decorated with `#[catch]` may take zero, one, or two arguments.
-/// It's type signature must be one of the following, where `R:`[`Responder`]:
-///
-///   * `fn() -> R`
-///   * `fn(`[`&Request`]`) -> R`
-///   * `fn(`[`Status`]`, `[`&Request`]`) -> R`
 ///
 /// See the [`catch`] documentation for full details.
 ///
@@ -120,6 +116,9 @@ pub struct Catcher {
     /// The catcher's associated error handler.
     pub handler: Box<dyn Handler>,
 
+    /// Catcher error type
+    pub(crate) error_type: Option<(TypeId, &'static str)>,
+
     /// The mount point.
     pub(crate) base: uri::Origin<'static>,
 
@@ -132,10 +131,11 @@ pub struct Catcher {
     pub(crate) location: Option<(&'static str, u32, u32)>,
 }
 
-// The rank is computed as -(number of nonempty segments in base) => catchers
+// The rank is computed as -(number of nonempty segments in base) *2 => catchers
 // with more nonempty segments have lower ranks => higher precedence.
+// Doubled to provide space between for typed catchers.
 fn rank(base: Path<'_>) -> isize {
-    -(base.segments().filter(|s| !s.is_empty()).count() as isize)
+    -(base.segments().filter(|s| !s.is_empty()).count() as isize) * 2
 }
 
 impl Catcher {
@@ -147,22 +147,26 @@ impl Catcher {
     ///
     /// ```rust
     /// use rocket::request::Request;
-    /// use rocket::catcher::{Catcher, BoxFuture};
+    /// use rocket::catcher::{Catcher, BoxFuture, ErasedError};
     /// use rocket::response::Responder;
     /// use rocket::http::Status;
     ///
-    /// fn handle_404<'r>(status: Status, req: &'r Request<'_>) -> BoxFuture<'r> {
+    /// fn handle_404<'r>(status: Status, req: &'r Request<'_>, _e: ErasedError<'r>)
+    ///    -> BoxFuture<'r>
+    /// {
     ///    let res = (status, format!("404: {}", req.uri()));
-    ///    Box::pin(async move { res.respond_to(req) })
+    ///    Box::pin(async move { res.respond_to(req).map_err(|s| (s, _e)) })
     /// }
     ///
-    /// fn handle_500<'r>(_: Status, req: &'r Request<'_>) -> BoxFuture<'r> {
-    ///     Box::pin(async move{ "Whoops, we messed up!".respond_to(req) })
+    /// fn handle_500<'r>(_: Status, req: &'r Request<'_>, _e: ErasedError<'r>) -> BoxFuture<'r> {
+    ///     Box::pin(async move{ "Whoops, we messed up!".respond_to(req).map_err(|s| (s, _e)) })
     /// }
     ///
-    /// fn handle_default<'r>(status: Status, req: &'r Request<'_>) -> BoxFuture<'r> {
+    /// fn handle_default<'r>(status: Status, req: &'r Request<'_>, _e: ErasedError<'r>)
+    ///    -> BoxFuture<'r>
+    /// {
     ///    let res = (status, format!("{}: {}", status, req.uri()));
-    ///    Box::pin(async move { res.respond_to(req) })
+    ///    Box::pin(async move { res.respond_to(req).map_err(|s| (s, _e)) })
     /// }
     ///
     /// let not_found_catcher = Catcher::new(404, handle_404);
@@ -187,6 +191,7 @@ impl Catcher {
             name: None,
             base: uri::Origin::root().clone(),
             handler: Box::new(handler),
+            error_type: None,
             rank: rank(uri::Origin::root().path()),
             code,
             location: None,
@@ -199,13 +204,15 @@ impl Catcher {
     ///
     /// ```rust
     /// use rocket::request::Request;
-    /// use rocket::catcher::{Catcher, BoxFuture};
+    /// use rocket::catcher::{Catcher, BoxFuture, ErasedError};
     /// use rocket::response::Responder;
     /// use rocket::http::Status;
     ///
-    /// fn handle_404<'r>(status: Status, req: &'r Request<'_>) -> BoxFuture<'r> {
+    /// fn handle_404<'r>(status: Status, req: &'r Request<'_>, _e: ErasedError<'r>)
+    ///    -> BoxFuture<'r>
+    /// {
     ///    let res = (status, format!("404: {}", req.uri()));
-    ///    Box::pin(async move { res.respond_to(req) })
+    ///    Box::pin(async move { res.respond_to(req).map_err(|s| (s, _e)) })
     /// }
     ///
     /// let catcher = Catcher::new(404, handle_404);
@@ -225,14 +232,16 @@ impl Catcher {
     ///
     /// ```rust
     /// use rocket::request::Request;
-    /// use rocket::catcher::{Catcher, BoxFuture};
+    /// use rocket::catcher::{Catcher, BoxFuture, ErasedError};
     /// use rocket::response::Responder;
     /// use rocket::http::Status;
     /// # use rocket::uri;
     ///
-    /// fn handle_404<'r>(status: Status, req: &'r Request<'_>) -> BoxFuture<'r> {
+    /// fn handle_404<'r>(status: Status, req: &'r Request<'_>, _e: ErasedError<'r>)
+    ///    -> BoxFuture<'r>
+    /// {
     ///    let res = (status, format!("404: {}", req.uri()));
-    ///    Box::pin(async move { res.respond_to(req) })
+    ///    Box::pin(async move { res.respond_to(req).map_err(|s| (s, _e)) })
     /// }
     ///
     /// let catcher = Catcher::new(404, handle_404);
@@ -279,13 +288,15 @@ impl Catcher {
     ///
     /// ```rust
     /// use rocket::request::Request;
-    /// use rocket::catcher::{Catcher, BoxFuture};
+    /// use rocket::catcher::{Catcher, BoxFuture, ErasedError};
     /// use rocket::response::Responder;
     /// use rocket::http::Status;
     ///
-    /// fn handle_404<'r>(status: Status, req: &'r Request<'_>) -> BoxFuture<'r> {
+    /// fn handle_404<'r>(status: Status, req: &'r Request<'_>, _e: ErasedError<'r>)
+    ///    -> BoxFuture<'r>
+    /// {
     ///    let res = (status, format!("404: {}", req.uri()));
-    ///    Box::pin(async move { res.respond_to(req) })
+    ///    Box::pin(async move { res.respond_to(req).map_err(|s| (s, _e)) })
     /// }
     ///
     /// let catcher = Catcher::new(404, handle_404);
@@ -313,7 +324,7 @@ impl Catcher {
 
 impl Default for Catcher {
     fn default() -> Self {
-        fn handler<'r>(s: Status, req: &'r Request<'_>) -> BoxFuture<'r> {
+        fn handler<'r>(s: Status, req: &'r Request<'_>, _e: ErasedError<'r>) -> BoxFuture<'r> {
             Box::pin(async move { Ok(default_handler(s, req)) })
         }
 
@@ -330,8 +341,10 @@ pub struct StaticInfo {
     pub name: &'static str,
     /// The catcher's status code.
     pub code: Option<u16>,
+    /// The catcher's error type.
+    pub error_type: Option<(TypeId, &'static str)>,
     /// The catcher's handler, i.e, the annotated function.
-    pub handler: for<'r> fn(Status, &'r Request<'_>) -> BoxFuture<'r>,
+    pub handler: for<'r> fn(Status, &'r Request<'_>, ErasedError<'r>) -> BoxFuture<'r>,
     /// The file, line, and column where the catcher was defined.
     pub location: (&'static str, u32, u32),
 }
@@ -341,7 +354,13 @@ impl From<StaticInfo> for Catcher {
     #[inline]
     fn from(info: StaticInfo) -> Catcher {
         let mut catcher = Catcher::new(info.code, info.handler);
+        if info.error_type.is_some() {
+            // Lower rank if the error_type is defined, to ensure typed catchers
+            // are always tried first
+            catcher.rank -= 1;
+        }
         catcher.name = Some(info.name.into());
+        catcher.error_type = info.error_type;
         catcher.location = Some(info.location);
         catcher
     }
@@ -352,6 +371,7 @@ impl fmt::Debug for Catcher {
         f.debug_struct("Catcher")
             .field("name", &self.name)
             .field("base", &self.base)
+            .field("error_type", &self.error_type.as_ref().map(|(_, n)| n))
             .field("code", &self.code)
             .field("rank", &self.rank)
             .finish()
@@ -418,7 +438,7 @@ macro_rules! default_handler_fn {
 
         pub(crate) fn default_handler<'r>(
             status: Status,
-            req: &'r Request<'_>
+            req: &'r Request<'_>,
         ) -> Response<'r> {
             let preferred = req.accept().map(|a| a.preferred());
             let (mime, text) = if preferred.map_or(false, |a| a.is_json()) {

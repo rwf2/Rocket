@@ -1,6 +1,6 @@
 use devise::{Spanned, SpanWrapped, Result, FromMeta};
 use devise::ext::{SpanDiagnosticExt, TypeExt};
-use indexmap::{IndexSet, IndexMap};
+use indexmap::IndexSet;
 use proc_macro2::Span;
 
 use crate::attribute::suppress::Lint;
@@ -8,7 +8,7 @@ use crate::proc_macro_ext::Diagnostics;
 use crate::http_codegen::{Method, MediaType};
 use crate::attribute::param::{Parameter, Dynamic, Guard};
 use crate::syn_ext::FnArgExt;
-use crate::name::Name;
+use crate::name::{ArgumentMap, Arguments, Name};
 use crate::http::ext::IntoOwned;
 use crate::http::uri::{Origin, fmt};
 
@@ -29,14 +29,6 @@ pub struct Route {
     pub handler: syn::ItemFn,
     /// The parsed arguments to the user's function.
     pub arguments: Arguments,
-}
-
-type ArgumentMap = IndexMap<Name, (syn::Ident, syn::Type)>;
-
-#[derive(Debug)]
-pub struct Arguments {
-    pub span: Span,
-    pub map: ArgumentMap
 }
 
 /// The parsed `#[route(..)]` attribute.

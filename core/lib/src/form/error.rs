@@ -8,6 +8,7 @@ use std::net::AddrParseError;
 use std::borrow::Cow;
 
 use serde::{Serialize, ser::{Serializer, SerializeStruct}};
+use transient::Transient;
 
 use crate::http::Status;
 use crate::form::name::{NameBuf, Name};
@@ -54,7 +55,8 @@ use crate::data::ByteUnit;
 ///     Ok(i)
 /// }
 /// ```
-#[derive(Default, Debug, PartialEq, Serialize)]
+#[derive(Default, Debug, PartialEq, Serialize, Transient)]
+#[variance('v = co)] // TODO: update when Transient v0.4
 #[serde(transparent)]
 pub struct Errors<'v>(Vec<Error<'v>>);
 

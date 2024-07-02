@@ -35,6 +35,7 @@ use crate::http::uri::fmt::{UriDisplay, FromUriParam, Query, Formatter as UriFor
 use crate::http::Status;
 
 use serde::{Serialize, Deserialize};
+use transient::Transient;
 
 #[doc(hidden)]
 pub use serde_json;
@@ -137,6 +138,11 @@ pub enum Error<'a> {
     /// received from the user, while the `Error` in `.1` is the deserialization
     /// error from `serde`.
     Parse(&'a str, serde_json::error::Error),
+}
+
+unsafe impl<'a> Transient for Error<'a> {
+    type Static = Error<'static>;
+    type Transience = transient::Co<'a>;
 }
 
 impl<'a> fmt::Display for Error<'a> {

@@ -1,11 +1,10 @@
 #[cfg(test)]
 mod tests;
 
-use rocket::{Request, Route, Catcher, route, catcher};
+use rocket::{Request, Route, Catcher, route, catcher, outcome::Outcome};
 use rocket::data::{Data, ToByteUnit};
 use rocket::http::{Status, Method::{Get, Post}};
 use rocket::response::{Responder, status::Custom};
-use rocket::outcome::{try_outcome, IntoOutcome};
 use rocket::tokio::fs::File;
 
 fn forward<'r>(_req: &'r Request, data: Data<'r>) -> route::BoxFuture<'r> {
@@ -25,12 +24,17 @@ fn name<'r>(req: &'r Request, _: Data<'r>) -> route::BoxFuture<'r> {
 }
 
 fn echo_url<'r>(req: &'r Request, _: Data<'r>) -> route::BoxFuture<'r> {
-    let param_outcome = req.param::<&str>(1)
-        .and_then(Result::ok)
-        .or_error(Status::BadRequest);
-
     Box::pin(async move {
-        route::Outcome::from(req, try_outcome!(param_outcome))
+        let param_outcome = match req.param::<&str>(1) {
+            Some(Ok(v)) => v,
+            Some(Err(e)) => return Outcome::Error((
+                Status::BadRequest,
+                Box::new(e) as catcher::ErasedError
+            )),
+            None => return Outcome::Error((Status::BadRequest, catcher::default_error_type())),
+        };
+
+        route::Outcome::from(req, param_outcome)
     })
 }
 
@@ -62,9 +66,11 @@ fn get_upload<'r>(req: &'r Request, _: Data<'r>) -> route::BoxFuture<'r> {
     route::Outcome::from(req, std::fs::File::open(path).ok()).pin()
 }
 
-fn not_found_handler<'r>(_: Status, req: &'r Request) -> catcher::BoxFuture<'r> {
+fn not_found_handler<'r>(_: Status, req: &'r Request, _e: catcher::ErasedError<'r>)
+    -> catcher::BoxFuture<'r>
+{
     let responder = Custom(Status::NotFound, format!("Couldn't find: {}", req.uri()));
-    Box::pin(async move { responder.respond_to(req) })
+    Box::pin(async move { responder.respond_to(req).map_err(|s| (s, _e)) })
 }
 
 #[derive(Clone)]
@@ -82,11 +88,17 @@ impl CustomHandler {
 impl route::Handler for CustomHandler {
     async fn handle<'r>(&self, req: &'r Request<'_>, data: Data<'r>) -> route::Outcome<'r> {
         let self_data = self.data;
-        let id = req.param::<&str>(0)
-            .and_then(Result::ok)
-            .or_forward((data, Status::NotFound));
+        let id = match req.param::<&str>(1) {
+            Some(Ok(v)) => v,
+            Some(Err(e)) => return Outcome::Forward((data, Status::BadRequest, Box::new(e))),
+            None => return Outcome::Forward((
+                data,
+                Status::BadRequest,
+                catcher::default_error_type()
+            )),
+        };
 
-        route::Outcome::from(req, format!("{} - {}", self_data, try_outcome!(id)))
+        route::Outcome::from(req, format!("{} - {}", self_data, id))
     }
 }
 

@@ -244,8 +244,8 @@ impl Trace for route::Outcome<'_> {
             },
             status = match self {
                 Self::Success(r) => r.status().code,
-                Self::Error(s) => s.code,
-                Self::Forward((_, s)) => s.code,
+                Self::Error((s, _)) => s.code,
+                Self::Forward((_, s, _)) => s.code,
             },
         )
     }

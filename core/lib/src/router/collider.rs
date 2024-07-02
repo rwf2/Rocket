@@ -141,7 +141,9 @@ impl Catcher {
     /// assert!(!a.collides_with(&b));
     /// ```
     pub fn collides_with(&self, other: &Self) -> bool {
-        self.code == other.code && self.base().segments().eq(other.base().segments())
+        self.code == other.code &&
+            types_collide(self, other) &&
+            self.base().segments().eq(other.base().segments())
     }
 }
 
@@ -205,6 +207,10 @@ fn formats_collide(route: &Route, other: &Route) -> bool {
         // would match any format. Thus two such routes would always collide.
         _ => true,
     }
+}
+
+fn types_collide(catcher: &Catcher, other: &Catcher) -> bool {
+    catcher.error_type.as_ref().map(|(i, _)| i) == other.error_type.as_ref().map(|(i, _)| i)
 }
 
 #[cfg(test)]

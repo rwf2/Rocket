@@ -2,7 +2,6 @@
 
 #[macro_use] extern crate rocket;
 use rocket::http::uri::Origin;
-use rocket::request::Request;
 
 async fn noop() { }
 
@@ -19,7 +18,7 @@ async fn repeated_query(sort: Vec<&str>) -> &str {
 }
 
 #[catch(404)]
-async fn not_found(req: &Request<'_>) -> String {
+async fn not_found(uri: &Origin<'_>) -> String {
     noop().await;
-    format!("{} not found", req.uri())
+    format!("{} not found", uri)
 }

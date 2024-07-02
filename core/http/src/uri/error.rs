@@ -1,6 +1,7 @@
 //! Errors arising from parsing invalid URIs.
 
 use std::fmt;
+use transient::Static;
 
 pub use crate::parse::uri::Error;
 
@@ -28,6 +29,8 @@ pub enum PathError {
     /// The segment ended with the wrapped invalid character.
     BadEnd(char),
 }
+
+impl Static for PathError {}
 
 impl fmt::Display for PathError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
