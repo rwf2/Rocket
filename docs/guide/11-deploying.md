@@ -49,7 +49,7 @@ For any deployment, it's important to keep in mind:
      #[launch]
      fn rocket() -> _ {
          rocket::build()
-             .mount("/", FileServer::from("./static"))
+             .mount("/", FileServer::new("./static"))
              .attach(Template::fairing())
      }
      ```

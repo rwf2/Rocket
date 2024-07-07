@@ -1,0 +1,17 @@
+{% extends "minijinja/layout" %}
+
+{% block page %}
+    <section id="hello">
+      <h1>Hi {{ name }}!</h1>
+      <h3>Here are your items:</h3>
+      <ul>
+        {% for item in items %}
+          <li>{{ item }}</li>
+        {% endfor %}
+      </ul>
+    </section>
+
+    <section id="custom-helper">
+      <p>Try going to <a href="/minijinja/hello/Your%20Name">/minijinja/hello/Your Name</a>.</p>
+    </section>
+{% endblock %}

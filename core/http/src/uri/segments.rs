@@ -178,8 +178,9 @@ impl<'a> Segments<'a, Path> {
     }
 
     /// Creates a `PathBuf` from `self`. The returned `PathBuf` is
-    /// percent-decoded. If a segment is equal to `..`, the previous segment (if
-    /// any) is skipped.
+    /// percent-decoded and guaranteed to be relative. If a segment is equal to
+    /// `.`, it is skipped. If a segment is equal to `..`, the previous segment
+    /// (if any) is skipped.
     ///
     /// For security purposes, if a segment meets any of the following
     /// conditions, an `Err` is returned indicating the condition met:
@@ -193,7 +194,7 @@ impl<'a> Segments<'a, Path> {
     /// Additionally, if `allow_dotfiles` is `false`, an `Err` is returned if
     /// the following condition is met:
     ///
-    ///   * Decoded segment starts with any of: `.` (except `..`)
+    ///   * Decoded segment starts with any of: `.` (except `..` and `.`)
     ///
     /// As a result of these conditions, a `PathBuf` derived via `FromSegments`
     /// is safe to interpolate within, or use as a suffix of, a path without
@@ -216,7 +217,9 @@ impl<'a> Segments<'a, Path> {
     pub fn to_path_buf(&self, allow_dotfiles: bool) -> Result<PathBuf, PathError> {
         let mut buf = PathBuf::new();
         for segment in self.clone() {
-            if segment == ".." {
+            if segment == "." {
+                continue;
+            } else if segment == ".." {
                 buf.pop();
             } else if !allow_dotfiles && segment.starts_with('.') {
                 return Err(PathError::BadStart('.'))

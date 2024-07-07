@@ -354,7 +354,7 @@ are:
   * [`Flash`] - Sets a "flash" cookie that is removed when accessed.
   * [`Json`] - Automatically serializes values into JSON.
   * [`MsgPack`] - Automatically serializes values into MessagePack.
-  * [`Template`] - Renders a dynamic template using handlebars or Tera.
+  * [`Template`] - Renders a dynamic template using Handlebars, Tera or MiniJinja.
 
 [`status`]: @api/master/rocket/response/status/
 [`content`]: @api/master/rocket/response/content/
@@ -589,7 +589,7 @@ reloading is disabled.
 
 The [`Template`] API documentation contains more information about templates,
 including how to customize a template engine to add custom helpers and filters.
-The [templating example](@git/master/examples/templating) uses both Tera and Handlebars
+The [templating example](@git/master/examples/templating) uses Tera, Handlebars and MiniJinja
 templating to implement the same application.
 
 [configurable]: ../configuration/

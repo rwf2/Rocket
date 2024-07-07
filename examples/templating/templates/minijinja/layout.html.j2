@@ -1,0 +1,11 @@
+<!doctype html>
+<html>
+  <head>
+    <title>Rocket Example - {{ title }}</title>
+  </head>
+  <body>
+    {% include "minijinja/nav" %}
+    {% block page %}{% endblock %}
+    {% include "minijinja/footer" %}
+  </body>
+</html>

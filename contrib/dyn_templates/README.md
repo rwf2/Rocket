@@ -9,11 +9,11 @@
 
 This crate adds support for dynamic template rendering to Rocket. It
 automatically discovers templates, provides a `Responder` to render templates,
-and automatically reloads templates when compiled in debug mode. At present, it
-supports [Handlebars] and [Tera].
+and automatically reloads templates when compiled in debug mode. It supports [Handlebars], [Tera] and [MiniJinja].
 
 [Tera]: https://docs.rs/crate/tera/1
 [Handlebars]: https://docs.rs/crate/handlebars/5
+[MiniJinja]: https://docs.rs/crate/minijinja/2.0.1
 
 # Usage
 
@@ -23,7 +23,7 @@ supports [Handlebars] and [Tera].
      ```toml
      [dependencies.rocket_dyn_templates]
      version = "0.1.0"
-     features = ["handlebars", "tera"]
+     features = ["handlebars", "tera", "minijinja"]
      ```
 
   1. Write your template files in Handlebars (`.hbs`) and/or Tera (`.tera`) in

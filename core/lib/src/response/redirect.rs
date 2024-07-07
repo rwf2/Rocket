@@ -45,7 +45,7 @@ use crate::http::Status;
 ///
 /// [`Origin`]: crate::http::uri::Origin
 /// [`uri!`]: ../macro.uri.html
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Redirect(Status, Option<Reference<'static>>);
 
 impl Redirect {
@@ -144,6 +144,12 @@ impl Redirect {
    pub fn moved<U: TryInto<Reference<'static>>>(uri: U) -> Redirect {
        Redirect(Status::MovedPermanently, uri.try_into().ok())
    }
+
+    pub fn map_uri<U: TryInto<Reference<'static>>>(self, f: impl FnOnce(Reference<'static>) -> U)
+        -> Redirect
+    {
+        Redirect(self.0, self.1.and_then(|p| f(p).try_into().ok()))
+    }
 }
 
 /// Constructs a response with the appropriate status code and the given URL in

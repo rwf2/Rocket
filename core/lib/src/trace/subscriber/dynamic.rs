@@ -39,10 +39,10 @@ impl RocketDynFmt {
             return;
         }
 
-        let workers = config.map(|c| c.workers).unwrap_or(num_cpus::get());
-        let colors = config.map(|c| c.cli_colors).unwrap_or(CliColors::Auto);
-        let level = config.map(|c| c.log_level).unwrap_or(Some(Level::INFO));
-        let format = config.map(|c| c.log_format).unwrap_or(TraceFormat::Pretty);
+        let workers = config.map_or(num_cpus::get(), |c| c.workers);
+        let colors = config.map_or(CliColors::Auto, |c| c.cli_colors);
+        let level = config.map_or(Some(Level::INFO), |c| c.log_level);
+        let format = config.map_or(TraceFormat::Pretty, |c| c.log_format);
 
         let formatter = |format| match format {
             TraceFormat::Pretty => Self::from(RocketFmt::<Pretty>::new(workers, colors, level)),
@@ -57,7 +57,7 @@ impl RocketDynFmt {
 
         if result.is_ok() {
             assert!(HANDLE.set(reload_handle).is_ok());
-        } if let Some(handle) = HANDLE.get() {
+        } else if let Some(handle) = HANDLE.get() {
             assert!(handle.modify(|layer| *layer = formatter(format)).is_ok());
         }
     }

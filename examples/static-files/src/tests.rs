@@ -63,7 +63,7 @@ fn test_icon_file() {
 
 #[test]
 fn test_invalid_path() {
-    test_query_file("/hidden", None, Status::PermanentRedirect);
+    test_query_file("/hidden", None, Status::TemporaryRedirect);
     test_query_file("/thou_shalt_not_exist", None, Status::NotFound);
     test_query_file("/thou/shalt/not/exist", None, Status::NotFound);
     test_query_file("/thou/shalt/not/exist?a=b&c=d", None, Status::NotFound);

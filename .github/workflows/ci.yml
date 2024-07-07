@@ -84,6 +84,10 @@ jobs:
           echo "VCPKG_ROOT=$env:VCPKG_INSTALLATION_ROOT" >> "$env:GITHUB_ENV"
           echo "$env:VCPKG_INSTALLATION_ROOT\installed\x64-windows\lib" >> "$env:GITHUB_PATH"
 
+      - name: Install NASM (Windows)
+        if: matrix.platform.name == 'Windows'
+        uses: ilammy/setup-nasm@v1
+
       - name: Install Native Dependencies (Linux)
         if: matrix.platform.name == 'Linux'
         run: |

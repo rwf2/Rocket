@@ -169,7 +169,7 @@ async fn files(file: PathBuf) -> Option<NamedFile> {
   fn rocket() -> _ {
       rocket::build()
            // serve files from `/www/static` at path `/public`
-          .mount("/public", FileServer::from("/www/static"))
+          .mount("/public", FileServer::new("/www/static"))
   }
   ```
 

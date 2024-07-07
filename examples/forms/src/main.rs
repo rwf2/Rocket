@@ -93,5 +93,5 @@ fn rocket() -> _ {
     rocket::build()
         .mount("/", routes![index, submit])
         .attach(Template::fairing())
-        .mount("/", FileServer::from(relative!("/static")))
+        .mount("/", FileServer::new(relative!("/static")))
 }
