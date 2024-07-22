@@ -13,7 +13,7 @@ and automatically reloads templates when compiled in debug mode. At present, it
 supports [Handlebars] and [Tera].
 
 [Tera]: https://docs.rs/crate/tera/1
-[Handlebars]: https://docs.rs/crate/handlebars/5
+[Handlebars]: https://docs.rs/crate/handlebars/6
 
 # Usage
 

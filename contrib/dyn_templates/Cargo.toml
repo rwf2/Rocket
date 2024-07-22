@@ -23,7 +23,7 @@ notify = "8.2.1"
 normpath = "1"
 
 tera = { version = "1.19.0", optional = true }
-handlebars = { version = "5.1", optional = true }
+handlebars = { version = "6.4.4", optional = true }
 
 [dependencies.minijinja]
 version = "2.0.1"

@@ -29,7 +29,7 @@
 //!
 //!      [configurable]: #configuration
 //!      [Tera]: https://docs.rs/crate/tera/1
-//!      [Handlebars]: https://docs.rs/crate/handlebars/5
+//!      [Handlebars]: https://docs.rs/crate/handlebars/6
 //!      [MiniJinja]: https://docs.rs/minijinja/2
 //!
 //!   3. Attach `Template::fairing()` and return a [`Template`] from your routes
