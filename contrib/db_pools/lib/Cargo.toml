@@ -65,9 +65,9 @@ features = ["rt_tokio_1"]
 optional = true
 
 [dependencies.mongodb]
-version = "2"
+version = "3"
 default-features = false
-features = ["tokio-runtime"]
+features = ["compat-3-0-0", "rustls-tls"]
 optional = true
 
 [dependencies.diesel-async]
