@@ -1,9 +1,27 @@
 use std::fmt;
 
+use chacha20poly1305::{
+    aead::{generic_array::typenum::Unsigned, Aead, AeadCore, KeyInit, OsRng},
+    XChaCha20Poly1305, XNonce
+};
+use hkdf::Hkdf;
+use sha2::Sha256;
 use cookie::Key;
+use base64::{engine::general_purpose::URL_SAFE, Engine as _};
 use serde::{de, ser, Deserialize, Serialize};
 
 use crate::request::{Outcome, Request, FromRequest};
+
+#[derive(Debug)]
+pub enum Error {
+    KeyLengthError,
+    NonceFillError,
+    EncryptionError,
+    DecryptionError,
+    EncryptedDataLengthError,
+    Base64DecodeError,
+    HexDecodeError,
+}
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 enum Kind {
@@ -79,6 +97,38 @@ pub struct SecretKey {
     pub(crate) key: Key,
     provided: bool,
 }
+
+/// A struct representing encrypted data.
+///
+/// The `Cipher` struct encapsulates encrypted data and provides various
+/// utility methods for encoding and decoding this data in different formats
+/// such as bytes, hexadecimal, and base64.
+///
+/// # Examples
+///
+/// Creating a `Cipher` from bytes:
+/// ```
+/// let data = b"some encrypted data";
+/// let cipher = Cipher::from_bytes(data);
+/// ```
+///
+/// Converting a `Cipher` to a hexadecimal string:
+/// ```
+/// let hex = cipher.to_hex();
+/// ```
+///
+/// Creating a `Cipher` from a base64 string:
+/// ```
+/// let base64_str = "c29tZSBlbmNyeXB0ZWQgZGF0YQ==";
+/// let cipher = Cipher::from_base64(base64_str).unwrap();
+/// ```
+///
+/// Converting a `Cipher` back to bytes:
+/// ```
+/// let bytes = cipher.as_bytes();
+/// ```
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Cipher(Vec<u8>);
 
 impl SecretKey {
     /// Returns a secret key that is all zeroes.
@@ -178,6 +228,70 @@ impl SecretKey {
     {
         ser.serialize_bytes(&[0; 32][..])
     }
+
+    fn cipher(&self, nonce: &[u8]) -> Result<XChaCha20Poly1305, Error> {
+        let (mut prk, hk) = Hkdf::<Sha256>::extract(Some(nonce), self.key.encryption());
+        hk.expand(b"secret_key_data_encryption", &mut prk).map_err(|_| Error::KeyLengthError)?;
+
+        Ok(XChaCha20Poly1305::new(&prk))
+    }
+
+    /// Encrypts the given data.
+    /// Generates a random nonce for each encryption to ensure uniqueness.
+    /// Returns the Vec<u8> of the concatenated nonce and ciphertext.
+    ///
+    /// # Example
+    /// ```rust
+    /// use rocket::config::SecretKey;
+    ///
+    /// let plaintext = "I like turtles".as_bytes();
+    /// let secret_key = SecretKey::generate().unwrap();
+    ///
+    /// let cipher = secret_key.encrypt(&plaintext).unwrap();
+    /// let decrypted = secret_key.decrypt(&cipher).unwrap();
+    ///
+    /// assert_eq!(plaintext, decrypted);
+    /// ```
+    pub fn encrypt<T: AsRef<[u8]>>(&self, value: T) -> Result<Cipher, Error> {
+        let nonce = XChaCha20Poly1305::generate_nonce(&mut OsRng);
+        let cipher = self.cipher(&nonce)?;
+
+        let ciphertext = cipher
+            .encrypt(&nonce, value.as_ref())
+            .map_err(|_| Error::EncryptionError)?;
+
+        // Prepare a vector to hold the nonce and ciphertext
+        let mut encrypted_data = Vec::with_capacity(nonce.len() + ciphertext.len());
+        encrypted_data.extend_from_slice(nonce.as_slice());
+        encrypted_data.extend_from_slice(&ciphertext);
+
+        Ok(Cipher(encrypted_data))
+    }
+
+    /// Decrypts the given encrypted data, encapsulated in a Cipher wrapper.
+    /// Extracts the nonce from the data and uses it for decryption.
+    /// Returns the decrypted Vec<u8>.
+    pub fn decrypt(&self, encrypted: &Cipher) -> Result<Vec<u8>, Error> {
+        let encrypted = encrypted.as_bytes();
+
+        // Check if the length of decoded data is at least the length of the nonce
+        let nonce_len = <XChaCha20Poly1305 as AeadCore>::NonceSize::USIZE;
+        if encrypted.len() <= nonce_len {
+            return Err(Error::EncryptedDataLengthError);
+        }
+
+        // Split the decoded data into nonce and ciphertext
+        let (nonce, ciphertext) = encrypted.split_at(nonce_len);
+        let nonce = XNonce::from_slice(nonce);
+
+        let cipher = self.cipher(nonce)?;
+
+        // Decrypt the ciphertext using the nonce
+        let decrypted = cipher.decrypt(nonce, ciphertext)
+            .map_err(|_| Error::DecryptionError)?;
+
+        Ok(decrypted)
+    }
 }
 
 impl PartialEq for SecretKey {
@@ -267,5 +381,55 @@ impl fmt::Display for SecretKey {
 impl fmt::Debug for SecretKey {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         <Self as fmt::Display>::fmt(self, f)
+    }
+}
+
+impl Cipher {
+    /// Create a `Cipher` from its raw bytes representation.
+    pub fn from_bytes(bytes: &[u8]) -> Self {
+        Cipher(bytes.to_vec())
+    }
+
+    /// Create a `Cipher` from a vector of bytes.
+    pub fn from_vec(vec: Vec<u8>) -> Self {
+        Cipher(vec)
+    }
+
+    /// Create a `Cipher` from a hex string.
+    pub fn from_hex(hex: &str) -> Result<Self, Error> {
+        let decoded  = hex::decode(hex).map_err(|_| Error::HexDecodeError)?;
+        Ok(Cipher(decoded))
+    }
+
+    /// Create a `Cipher` from a base64 string.
+    pub fn from_base64(base64: &str) -> Result<Self, Error> {
+        let decoded = URL_SAFE.decode(base64).map_err(|_| Error::Base64DecodeError)?;
+        Ok(Cipher(decoded))
+    }
+
+    /// Returns the bytes contained in the `Cipher`.
+    pub fn as_bytes(&self) -> &[u8] {
+        &self.0
+    }
+
+    /// Consumes the `Cipher` and returns the contained bytes as a vector.
+    pub fn into_vec(self) -> Vec<u8> {
+        self.0
+    }
+
+    /// Returns the hex representation of the bytes contained in the `Cipher`.
+    pub fn to_hex(&self) -> String {
+        hex::encode(&self.0)
+    }
+
+    /// Returns the base64 representation of the bytes contained in the `Cipher`.
+    pub fn to_base64(&self) -> String {
+        URL_SAFE.encode(&self.0)
+    }
+}
+
+impl fmt::Display for Cipher {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.to_base64())
     }
 }
