@@ -814,24 +814,51 @@ impl<'v, K, V> FromForm<'v> for BTreeMap<K, V>
     }
 }
 
+struct OptionFormCtx<'v, T: FromForm<'v>> {
+    strict: bool,
+    has_field: bool,
+    inner: T::Context,
+}
+
 #[crate::async_trait]
 impl<'v, T: FromForm<'v>> FromForm<'v> for Option<T> {
-    type Context = <T as FromForm<'v>>::Context;
+    type Context = OptionFormCtx<'v, T>;
 
-    fn init(_: Options) -> Self::Context {
-        T::init(Options { strict: true })
+    fn init(opts: Options) -> Self::Context {
+        OptionFormCtx {
+            strict: opts.strict,
+            has_field: false,
+            inner: T::init(Options { strict: true }),
+        }
     }
 
     fn push_value(ctxt: &mut Self::Context, field: ValueField<'v>) {
-        T::push_value(ctxt, field)
+        ctxt.has_field = true;
+        T::push_value(&mut ctxt.inner, field)
     }
 
     async fn push_data(ctxt: &mut Self::Context, field: DataField<'v, '_>) {
-        T::push_data(ctxt, field).await
+        ctxt.has_field = true;
+        T::push_data(&mut ctxt.inner, field).await
     }
 
     fn finalize(this: Self::Context) -> Result<'v, Self> {
-        Ok(T::finalize(this).ok())
+        if this.has_field {
+            match T::finalize(this.inner) {
+                Ok(v) => Ok(Some(v)),
+                Err(errors) => {
+                    if this.strict ||
+                        errors.iter().any(|e| e.kind != ErrorKind::Missing)
+                    {
+                        Err(errors)
+                    } else {
+                        Ok(None)
+                    }
+                }
+            }
+        } else {
+            Ok(None)
+        }
     }
 }
 

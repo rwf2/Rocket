@@ -294,17 +294,17 @@ impl<'a, T: FromParam<'a>> FromParam<'a> for Result<T, T::Error> {
     }
 }
 
-impl<'a, T: FromParam<'a>> FromParam<'a> for Option<T> {
-    type Error = std::convert::Infallible;
+// impl<'a, T: FromParam<'a>> FromParam<'a> for Option<T> {
+//     type Error = std::convert::Infallible;
 
-    #[inline]
-    fn from_param(param: &'a str) -> Result<Self, Self::Error> {
-        match T::from_param(param) {
-            Ok(val) => Ok(Some(val)),
-            Err(_) => Ok(None)
-        }
-    }
-}
+//     #[inline]
+//     fn from_param(param: &'a str) -> Result<Self, Self::Error> {
+//         match T::from_param(param) {
+//             Ok(val) => Ok(Some(val)),
+//             Err(_) => Ok(None)
+//         }
+//     }
+// }
 
 /// Trait to convert _many_ dynamic path segment strings to a concrete value.
 ///
@@ -379,13 +379,14 @@ impl<'r, T: FromSegments<'r>> FromSegments<'r> for Result<T, T::Error> {
 }
 
 impl<'r, T: FromSegments<'r>> FromSegments<'r> for Option<T> {
-    type Error = std::convert::Infallible;
+    type Error = T::Error;
 
     #[inline]
     fn from_segments(segments: Segments<'r, Path>) -> Result<Option<T>, Self::Error> {
-        match T::from_segments(segments) {
-            Ok(val) => Ok(Some(val)),
-            Err(_) => Ok(None)
+        if segments.is_empty() {
+            Ok(None)
+        } else {
+            T::from_segments(segments).map(Some)
         }
     }
 }

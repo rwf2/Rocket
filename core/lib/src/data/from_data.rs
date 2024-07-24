@@ -415,12 +415,14 @@ impl<'r, T: FromData<'r> + 'r> FromData<'r> for Result<T, T::Error> {
 
 #[crate::async_trait]
 impl<'r, T: FromData<'r>> FromData<'r> for Option<T> {
-    type Error = std::convert::Infallible;
+    type Error = T::Error;
 
-    async fn from_data(req: &'r Request<'_>, data: Data<'r>) -> Outcome<'r, Self> {
-        match T::from_data(req, data).await {
-            Success(v) => Success(Some(v)),
-            Error(..) | Forward(..) => Success(None),
-        }
+    async fn from_data(req: &'r Request<'_>, mut data: Data<'r>) -> Outcome<'r, Self> {
+        // Ask for at least one byte of data, if it's empty, there is no body.
+        if data.peek(1).await.is_empty() {
+            Outcome::Success(None)
+        } else {
+            T::from_data(req, data).await.map(Some)
+        }  
     }
 }
