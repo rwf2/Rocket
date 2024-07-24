@@ -128,15 +128,11 @@ pub type Outcome<'r, T, E = <T as FromData<'r>>::Error>
 ///
 ///   * `Option<T>`
 ///
-///     Forwards to `T`'s `FromData` implementation, capturing the outcome.
+///     Forwards to `T`'s `FromData` implementation if there is data, capturing the outcome.
+///     If `T` returns an Error or Forward, the `Option` returns the same.
 ///
-///     - **Fails:** Never.
-///
-///     - **Succeeds:** Always. If `T`'s `FromData` implementation succeeds, the
-///     parsed value is returned in `Some`. If its implementation forwards or
-///     fails, `None` is returned.
-///
-///     - **Forwards:** Never.
+///     - **None:** If the data stream is empty.
+///     - **Some:** If `T` succeeds to parse the incoming data.
 ///
 ///   * `Result<T, T::Error>`
 ///
@@ -423,6 +419,6 @@ impl<'r, T: FromData<'r>> FromData<'r> for Option<T> {
             Outcome::Success(None)
         } else {
             T::from_data(req, data).await.map(Some)
-        }  
+        }
     }
 }

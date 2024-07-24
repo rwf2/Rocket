@@ -106,7 +106,7 @@ use crate::http::uncased::AsUncased;
 /// |------------------------|-------------|-------------------|--------|--------|----------------------------------------------------|
 /// | [`Strict<T>`]          | **strict**  | if `strict` `T`   | if `T` | if `T` | `T: FromForm`                                      |
 /// | [`Lenient<T>`]         | **lenient** | if `lenient` `T`  | if `T` | if `T` | `T: FromForm`                                      |
-/// | `Option<T>`            | **strict**  | `None`            | if `T` | if `T` | Infallible, `T: FromForm`                          |
+/// | `Option<T>`            | **strict**  | `None`            | if `T` | if `T` | `T: FromForm`                          |
 /// | [`Result<T>`]          | _inherit_   | `T::finalize()`   | if `T` | if `T` | Infallible, `T: FromForm`                          |
 /// | `Vec<T>`               | _inherit_   | `vec![]`          | if `T` | if `T` | `T: FromForm`                                      |
 /// | [`HashMap<K, V>`]      | _inherit_   | `HashMap::new()`  | if `V` | if `V` | `K: FromForm + Eq + Hash`, `V: FromForm`           |
@@ -150,6 +150,12 @@ use crate::http::uncased::AsUncased;
 /// [`RangeToInclusive<T>`]: https://doc.rust-lang.org/stable/std/ops/struct.RangeToInclusive.html
 ///
 /// ## Additional Notes
+///
+///   * **`Option<T>` where `T: FromForm`**
+///
+///     `Option` is no longer Infallible. It now checks (depending on the strictness)
+///     for whether any values were passed in, and returns an error if any values were passed in,
+///     and the inner `T` failed to parse.
 ///
 ///   * **`Vec<T>` where `T: FromForm`**
 ///
@@ -814,7 +820,7 @@ impl<'v, K, V> FromForm<'v> for BTreeMap<K, V>
     }
 }
 
-struct OptionFormCtx<'v, T: FromForm<'v>> {
+pub struct OptionFormCtx<'v, T: FromForm<'v>> {
     strict: bool,
     has_field: bool,
     inner: T::Context,

@@ -41,15 +41,8 @@ use crate::http::uri::{Segments, error::PathError, fmt::Path};
 ///
 /// Sometimes, a forward is not desired, and instead, we simply want to know
 /// that the dynamic path segment could not be parsed into some desired type
-/// `T`. In these cases, types of `Option<T>`, `Result<T, T::Error>`, or
+/// `T`. In these cases, types of `Result<T, T::Error>`, or
 /// `Either<A, B>` can be used, which implement `FromParam` themselves.
-///
-///   * **`Option<T>`** _where_ **`T: FromParam`**
-///
-///     Always returns successfully.
-///
-///     If the conversion to `T` fails, `None` is returned. If the conversion
-///     succeeds, `Some(value)` is returned.
 ///
 ///   * **`Result<T, T::Error>`** _where_ **`T: FromParam`**
 ///
@@ -115,14 +108,6 @@ use crate::http::uri::{Segments, error::PathError, fmt::Path};
 ///
 ///     Returns the percent-decoded path segment with invalid UTF-8 byte
 ///     sequences replaced by � U+FFFD.
-///
-///   * **Option&lt;T>** _where_ **T: FromParam**
-///
-///     _This implementation always returns successfully._
-///
-///     The path segment is parsed by `T`'s `FromParam` implementation. If the
-///     parse succeeds, a `Some(parsed_value)` is returned. Otherwise, a `None`
-///     is returned.
 ///
 ///   * **Result&lt;T, T::Error>** _where_ **T: FromParam**
 ///
@@ -324,6 +309,11 @@ impl<'a, T: FromParam<'a>> FromParam<'a> for Result<T, T::Error> {
 /// any other segments that begin with "*" or "." are ignored.  If a
 /// percent-decoded segment results in invalid UTF8, an `Err` is returned with
 /// the `Utf8Error`.
+///
+/// **`Option&lt;T>` where `T: FromSegments`**
+///
+/// Succeeds as `None` if the this segments matched nothing, otherwise invokes
+/// `T`'s `FromSegments` implementation.
 pub trait FromSegments<'r>: Sized {
     /// The associated error to be returned when parsing fails.
     type Error: std::fmt::Debug;

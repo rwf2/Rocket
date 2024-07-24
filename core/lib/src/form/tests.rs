@@ -105,17 +105,19 @@ fn defaults() {
         &[] => Result<'_, bool> = Ok(false),
         &[] => Result<'_, Strict<bool>> = Err(error::ErrorKind::Missing.into()),
 
-        &["=unknown"] => Option<bool> = None,
-        &["=unknown"] => Option<Strict<bool>> = None,
-        &["=unknown"] => Option<Lenient<bool>> = None,
-
-        &[] => Option<Lenient<bool>> = Some(false.into()),
-        &["=123"] => Option<time::Date> = None,
+        &[] => Option<Lenient<bool>> = None,
 
         &["=no"] => Option<bool> = Some(false),
         &["=yes"] => Option<bool> = Some(true),
         &["=yes"] => Option<Lenient<bool>> = Some(true.into()),
         &["=yes"] => Option<Strict<bool>> = Some(true.into()),
+    }
+
+    assert_parses_fail! {
+        &["=unknown"] => Option<bool>,
+        &["=unknown"] => Option<Strict<bool>>,
+        &["=unknown"] => Option<Lenient<bool>>,
+        &["=123"] => Option<time::Date>,
     }
 }
 
