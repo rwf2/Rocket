@@ -774,6 +774,28 @@ pub fn derive_from_form(input: TokenStream) -> TokenStream {
     emit!(derive::from_form::derive_from_form(input))
 }
 
+/// Derive for the [`FromParam`] trait.
+///
+/// The [`FromParam`] derive can be applied to enums with nullary
+/// (zero-length) fields:
+///
+/// ```rust
+/// # #[macro_use] extern crate rocket;
+/// #
+/// #[derive(FromParam)]
+/// enum MyParam {
+///     A,
+///     B,
+/// }
+/// ```
+///
+/// Now `MyParam` can be used in an endpoint and will accept either 'A' or 'B'.
+///
+#[proc_macro_derive(FromParam)]
+pub fn derive_from_param(input: TokenStream) -> TokenStream {
+    emit!(derive::from_param::derive_from_param(input))
+}
+
 /// Derive for the [`Responder`] trait.
 ///
 /// The [`Responder`] derive can be applied to enums and structs with named
