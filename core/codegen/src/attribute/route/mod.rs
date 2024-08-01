@@ -266,8 +266,12 @@ fn internal_uri_macro_decl(route: &Route) -> TokenStream {
         route.attr.method.0.hash(&mut hasher);
         route.attr.uri.path().hash(&mut hasher);
         route.attr.uri.query().hash(&mut hasher);
-        route.attr.data.as_ref().map(|d| d.value.hash(&mut hasher));
-        route.attr.format.as_ref().map(|f| f.0.hash(&mut hasher));
+        if let Some(data) = &route.attr.data {
+            data.value.hash(&mut hasher);
+        }
+        if let Some(format) = &route.attr.format {
+            format.0.hash(&mut hasher);
+        }
     });
 
     let route_uri = route.attr.uri.to_string();
