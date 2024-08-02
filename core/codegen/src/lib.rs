@@ -782,6 +782,8 @@ pub fn derive_from_form(input: TokenStream) -> TokenStream {
 /// ```rust
 /// # #[macro_use] extern crate rocket;
 /// #
+/// use rocket::request::FromParam;
+///
 /// #[derive(FromParam)]
 /// enum MyParam {
 ///     A,
@@ -789,7 +791,8 @@ pub fn derive_from_form(input: TokenStream) -> TokenStream {
 /// }
 /// ```
 ///
-/// Now `MyParam` can be used in an endpoint and will accept either 'A' or 'B'.
+/// Now `MyParam` can be used in an endpoint and will accept either `A` or `B`.
+/// [`FromParam`]: ../rocket/request/trait.FromParam.html
 ///
 #[proc_macro_derive(FromParam)]
 pub fn derive_from_param(input: TokenStream) -> TokenStream {

@@ -19,11 +19,11 @@ pub fn derive_from_param(input: proc_macro::TokenStream) -> TokenStream {
         )
         .inner_mapper(MapperBuild::new()
                       .enum_map(|_, data| {
-                          let mut matches = quote!();
+                          let mut matches = vec![];
 
                           for field in data.variants() {
                               let field_name = &field;
-                              matches.extend(quote!(
+                              matches.push(quote!(
                                   stringify!(#field_name) => Ok(Self::#field_name),
                               ))
                           }
@@ -32,7 +32,7 @@ pub fn derive_from_param(input: proc_macro::TokenStream) -> TokenStream {
                               type Error = &'a str;
                               fn from_param(param: &'a str) -> Result<Self, Self::Error> {
                                   match param {
-                                      #matches
+                                      #(#matches)*
                                       _ => Err("Failed to find enum")
                                   }
                               }
