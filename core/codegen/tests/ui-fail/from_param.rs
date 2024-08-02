@@ -17,7 +17,7 @@ enum Foo3 {
 #[derive(FromParam)]
 enum Foo4 {}
 
-#[derive(FromForm)]
+#[derive(FromParam)]
 struct Foo5(usize);
 
 fn main() {}
