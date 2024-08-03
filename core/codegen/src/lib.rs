@@ -789,6 +789,8 @@ pub fn derive_from_form(input: TokenStream) -> TokenStream {
 ///     A,
 ///     B,
 /// }
+///
+/// assert_eq!(MyParam::from_param("A").unwrap(), MyParam::A);
 /// ```
 ///
 /// Now `MyParam` can be used in an endpoint and will accept either `A` or `B`.

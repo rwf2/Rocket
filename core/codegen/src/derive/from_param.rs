@@ -13,7 +13,6 @@ pub fn derive_from_param(input: proc_macro::TokenStream) -> TokenStream {
                        if !fields.is_empty() {
                            return Err(fields.span().error("Only empty enums are accepted"));
                        }
-
                        Ok(())
                    })
         )
