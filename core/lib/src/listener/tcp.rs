@@ -24,7 +24,7 @@ impl Bind for TcpListener {
     type Error = Either<figment::Error, io::Error>;
 
     async fn bind(rocket: &Rocket<Ignite>) -> Result<Self, Self::Error> {
-        let endpoint = Self::bind_endpoint(&rocket)?;
+        let endpoint = Self::bind_endpoint(rocket)?;
         let addr = endpoint.tcp()
             .ok_or_else(|| io::Error::other("internal error: invalid endpoint"))
             .map_err(Right)?;
