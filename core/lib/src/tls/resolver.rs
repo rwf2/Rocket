@@ -10,7 +10,7 @@ use crate::fairing::{self, Info, Kind};
 
 /// Proxy type to get PartialEq + Debug impls.
 #[derive(Clone)]
-pub(crate) struct DynResolver(Arc<dyn Resolver>);
+pub struct DynResolver(Arc<dyn Resolver>);
 
 pub struct Fairing<T: ?Sized>(PhantomData<T>);
 

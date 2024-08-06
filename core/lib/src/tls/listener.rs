@@ -24,7 +24,13 @@ pub struct TlsListener<L> {
 impl<L> TlsListener<L>
     where L: Listener<Accept = <L as Listener>::Connection>,
 {
-    pub async fn from(listener: L, config: TlsConfig) -> Result<TlsListener<L>> {
+    pub async fn from(
+        listener: L,
+        mut config: TlsConfig,
+        resolver: Option<DynResolver>
+    ) -> Result<TlsListener<L>> {
+        config.resolver = resolver;
+
         Ok(TlsListener {
             default: Arc::new(config.server_config().await?),
             listener,
@@ -40,9 +46,8 @@ impl<L: Bind> Bind for TlsListener<L>
 
     async fn bind(rocket: &Rocket<Ignite>) -> Result<Self, Self::Error> {
         let listener = L::bind(rocket).map_err(|e| Error::Bind(Box::new(e))).await?;
-        let mut config: TlsConfig = rocket.figment().extract_inner("tls")?;
-        config.resolver = DynResolver::extract(rocket);
-        Self::from(listener, config).await
+        let config: TlsConfig = rocket.figment().extract_inner("tls")?;
+        Self::from(listener, config, DynResolver::extract(rocket)).await
     }
 
     fn bind_endpoint(rocket: &Rocket<Ignite>) -> Result<Endpoint, Self::Error> {

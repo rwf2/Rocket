@@ -5,7 +5,7 @@ use std::net::{Ipv4Addr, SocketAddr};
 use rocket::tokio::net::TcpListener;
 use rocket::{get, routes, Rocket};
 use rocket::listener::Endpoint;
-use rocket::tls::TlsListener;
+use rocket::tls::{DynResolver, TlsListener};
 
 use reqwest::tls::TlsInfo;
 
@@ -38,10 +38,11 @@ fn test_tls_works() -> Result<()> {
 
         token.with_launch(rocket, |rocket| {
             let config = rocket.figment().extract_inner("tls");
+            let resolver = DynResolver::extract(&rocket);
             rocket.try_launch_on(async move {
                 let addr = SocketAddr::new(Ipv4Addr::LOCALHOST.into(), 0);
                 let listener = TcpListener::bind(addr).await?;
-                TlsListener::from(listener, config?).await
+                TlsListener::from(listener, config?, resolver).await
             })
         })
     }).unwrap();
