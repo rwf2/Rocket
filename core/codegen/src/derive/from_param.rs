@@ -11,21 +11,22 @@ pub fn derive_from_param(input: proc_macro::TokenStream) -> TokenStream {
         .validator(ValidatorBuild::new()
                    .fields_validate(|_, fields| {
                        if !fields.is_empty() {
-                           return Err(fields.span().error("Only empty enums are accepted"));
+                           return Err(
+                               fields.span().error("Only enums without data fields are supported")
+                           );
                        }
                        Ok(())
                    })
         )
         .inner_mapper(MapperBuild::new()
                       .enum_map(|_, data| {
-                          let mut matches = vec![];
-
-                          for field in data.variants() {
+                          let matches = data.variants().map(|field| {
                               let field_name = &field;
-                              matches.push(quote!(
+                              quote!(
                                   stringify!(#field_name) => Ok(Self::#field_name),
-                              ))
-                          }
+                              )
+
+                          });
 
                           quote! {
                               type Error = &'a str;

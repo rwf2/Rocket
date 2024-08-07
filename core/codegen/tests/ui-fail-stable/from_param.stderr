@@ -28,7 +28,7 @@ error: [note] error occurred while deriving `FromParam`
   |
   = note: this error originates in the derive macro `FromParam` (in Nightly builds, run with -Z macro-backtrace for more info)
 
-error: Only empty enums are accepted
+error: Only enums without data fields are supported
   --> tests/ui-fail-stable/from_param.rs:13:6
    |
 13 |     A(String),

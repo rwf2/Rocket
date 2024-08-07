@@ -15,5 +15,5 @@ fn derive_from_param() {
     assert_eq!(test2, Test::Test2);
 
     let test3 = Test::from_param("not_test");
-    assert!(test3.is_err())
+    assert!(test3.is_err());
 }

@@ -777,20 +777,26 @@ pub fn derive_from_form(input: TokenStream) -> TokenStream {
 /// Derive for the [`FromParam`] trait.
 ///
 /// The [`FromParam`] derive can be applied to enums with nullary
-/// (zero-length) fields:
+/// (zero-length) fields. To implement FromParam, the function matches each variant
+/// to its stringified field name (case sensitive):
 ///
 /// ```rust
 /// # #[macro_use] extern crate rocket;
 /// #
 /// use rocket::request::FromParam;
 ///
-/// #[derive(FromParam)]
+/// #[derive(FromParam, Debug, PartialEq)]
 /// enum MyParam {
 ///     A,
 ///     B,
 /// }
 ///
 /// assert_eq!(MyParam::from_param("A").unwrap(), MyParam::A);
+/// assert_eq!(MyParam::from_param("B").unwrap(), MyParam::B);
+/// assert!(MyParam::from_param("a").is_err());
+/// assert!(MyParam::from_param("b").is_err());
+/// assert!(MyParam::from_param("c").is_err());
+/// assert!(MyParam::from_param("C").is_err());
 /// ```
 ///
 /// Now `MyParam` can be used in an endpoint and will accept either `A` or `B`.
