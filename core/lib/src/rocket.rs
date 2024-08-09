@@ -379,7 +379,7 @@ impl Rocket<Build> {
     ///
     /// ```rust,no_run
     /// # #[macro_use] extern crate rocket;
-    /// use rocket::Request;
+    /// use rocket::http::uri::Origin;
     ///
     /// #[catch(500)]
     /// fn internal_error() -> &'static str {
@@ -387,8 +387,8 @@ impl Rocket<Build> {
     /// }
     ///
     /// #[catch(404)]
-    /// fn not_found(req: &Request) -> String {
-    ///     format!("I couldn't find '{}'. Try something else?", req.uri())
+    /// fn not_found(uri: &Origin) -> String {
+    ///     format!("I couldn't find '{}'. Try something else?", uri)
     /// }
     ///
     /// #[launch]

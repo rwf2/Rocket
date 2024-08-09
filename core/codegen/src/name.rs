@@ -1,7 +1,17 @@
 use crate::http::uncased::UncasedStr;
 
+use indexmap::IndexMap;
 use syn::{Ident, ext::IdentExt};
 use proc_macro2::{Span, TokenStream};
+
+pub type ArgumentMap = IndexMap<Name, (syn::Ident, syn::Type)>;
+
+#[derive(Debug)]
+pub struct Arguments {
+    pub span: Span,
+    pub map: ArgumentMap
+}
+
 
 /// A "name" read by codegen, which may or may not be an identifier. A `Name` is
 /// typically constructed indirectly via FromMeta, or From<Ident> or directly

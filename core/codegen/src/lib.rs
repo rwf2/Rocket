@@ -294,17 +294,16 @@ route_attribute!(options => Method::Options);
 /// ```rust
 /// # #[macro_use] extern crate rocket;
 /// #
-/// use rocket::Request;
-/// use rocket::http::Status;
+/// use rocket::http::{Status, uri::Origin};
 ///
 /// #[catch(404)]
-/// fn not_found(req: &Request) -> String {
-///     format!("Sorry, {} does not exist.", req.uri())
+/// fn not_found(uri: &Origin) -> String {
+///     format!("Sorry, {} does not exist.", uri)
 /// }
 ///
-/// #[catch(default)]
-/// fn default(status: Status, req: &Request) -> String {
-///     format!("{} ({})", status, req.uri())
+/// #[catch(default, status = "<status>")]
+/// fn default(status: Status, uri: &Origin) -> String {
+///     format!("{} ({})", status, uri)
 /// }
 /// ```
 ///
@@ -313,19 +312,59 @@ route_attribute!(options => Method::Options);
 /// The grammar for the `#[catch]` attributes is defined as:
 ///
 /// ```text
-/// catch := STATUS | 'default'
+/// catch := STATUS | 'default' (',' parameter)*
 ///
 /// STATUS := valid HTTP status code (integer in [200, 599])
+/// parameter := 'rank' '=' INTEGER
+///            | 'status' '=' '"' SINGLE_PARAM '"'
+///            | 'error' '=' '"' SINGLE_PARAM '"'
+/// SINGLE_PARAM := '<' IDENT '>'
 /// ```
 ///
 /// # Typing Requirements
 ///
-/// The decorated function may take zero, one, or two arguments. It's type
-/// signature must be one of the following, where `R:`[`Responder`]:
+/// Every identifier, except for `_`, that appears in a dynamic parameter, must appear
+/// as an argument to the function.
 ///
-///   * `fn() -> R`
-///   * `fn(`[`&Request`]`) -> R`
-///   * `fn(`[`Status`]`, `[`&Request`]`) -> R`
+/// The type of each function argument corresponding to a dynamic parameter is required to
+/// meet specific requirements.
+///
+/// - `status`: Must be [`Status`].
+/// - `error`: Must be a reference to a type that implements `Transient`. See
+///   [Typed catchers](Self#Typed-catchers) for more info.
+///
+/// All other arguments must implement [`FromRequest`].
+///
+/// A route argument declared a `_` must not appear in the function argument list and has no typing requirements.
+///
+/// The return type of the decorated function must implement the [`Responder`] trait.
+///
+/// # Typed catchers
+///
+/// To make catchers more expressive and powerful, they can catch specific
+/// error types. This is accomplished using the [`transient`] crate as a
+/// replacement for [`std::any::Any`]. When a [`FromRequest`], [`FromParam`],
+/// [`FromSegments`], [`FromForm`], or [`FromData`] implementation fails or
+/// forwards, Rocket will convert to the error type to `dyn Any<Co<'r>>`, if the
+/// error type implements `Transient`.
+///
+/// Only a single error type can be carried by a request - if a route forwards,
+/// and another route is attempted, any error produced by the second route
+/// overwrites the first.
+///
+/// ## Custom error types
+///
+/// All[^transient-impls] error types that Rocket itself produces implement
+/// `Transient`, and can therefore be caught by a typed catcher. If you have
+/// a custom guard of any type, you can implement `Transient` using the derive
+/// macro provided by the `transient` crate. If the error type has lifetimes,
+/// please read the documentation for the `Transient` derive macro - although it
+/// prevents any unsafe implementation, it's not the easiest to use. Note that
+/// Rocket upcasts the type to `dyn Any<Co<'r>>`, where `'r` is the lifetime of
+/// the `Request`, so any `Transient` impl must be able to trancend to `Co<'r>`,
+/// and desend from `Co<'r>` at the catcher.
+///
+/// [^transient-impls]: As of writing, this is a WIP.
 ///
 /// # Semantics
 ///
@@ -333,10 +372,12 @@ route_attribute!(options => Method::Options);
 ///
 ///   1. An error [`Handler`].
 ///
-///      The generated handler calls the decorated function, passing in the
-///      [`Status`] and [`&Request`] values if requested. The returned value is
-///      used to generate a [`Response`] via the type's [`Responder`]
-///      implementation.
+///      The generated handler validates and generates all arguments for the generated function according
+///      to their specific requirements. The order in which arguments are processed is:
+///
+///      1. The `error` type. This means no other guards will be evaluated if the error type does not match.
+///      2. Request guards, from left to right. If a Request guards forwards, the next catcher will be tried.
+///         If the Request guard fails, the error is instead routed to the `500` catcher.
 ///
 ///   2. A static structure used by [`catchers!`] to generate a [`Catcher`].
 ///
@@ -351,6 +392,7 @@ route_attribute!(options => Method::Options);
 /// [`Catcher`]: ../rocket/struct.Catcher.html
 /// [`Response`]: ../rocket/struct.Response.html
 /// [`Responder`]: ../rocket/response/trait.Responder.html
+/// [`FromRequest`]: ../rocket/request/trait.FromRequest.html
 #[proc_macro_attribute]
 pub fn catch(args: TokenStream, input: TokenStream) -> TokenStream {
     emit!(attribute::catch::catch_attribute(args, input))

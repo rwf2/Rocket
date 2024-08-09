@@ -1,6 +1,7 @@
 #[macro_use] extern crate rocket;
 
 use rocket::local::blocking::Client;
+use rocket_http::Method;
 
 // Test that raw idents can be used for route parameter names
 
@@ -15,8 +16,8 @@ fn swap(r#raw: String, bare: String) -> String {
 }
 
 #[catch(400)]
-fn catch(r#raw: &rocket::Request<'_>) -> String {
-    format!("{}", raw.method())
+fn catch(r#raw: Method) -> String {
+    format!("{}", raw)
 }
 
 #[test]

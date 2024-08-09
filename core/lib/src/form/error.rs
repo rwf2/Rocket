@@ -55,6 +55,8 @@ use crate::data::ByteUnit;
 /// }
 /// ```
 #[derive(Default, Debug, PartialEq, Serialize)]
+// TODO: this is invariant wrt 'v, since Cow<'a, T> is invariant wrt T.
+// We need it to be covariant wrt 'v, so we can use it as an error type.
 #[serde(transparent)]
 pub struct Errors<'v>(Vec<Error<'v>>);
 

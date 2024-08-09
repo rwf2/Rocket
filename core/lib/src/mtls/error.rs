@@ -2,6 +2,7 @@ use std::fmt;
 use std::num::NonZeroUsize;
 
 use crate::mtls::x509::{self, nom};
+use transient::Static;
 
 /// An error returned by the [`Certificate`](crate::mtls::Certificate) guard.
 ///
@@ -40,6 +41,8 @@ pub enum Error {
     /// The certificate contained `.0` bytes of trailing data.
     Trailing(usize),
 }
+
+impl Static for Error {}
 
 impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {

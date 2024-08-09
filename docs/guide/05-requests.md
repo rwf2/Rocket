@@ -1981,14 +1981,14 @@ Application processing is fallible. Errors arise from the following sources:
   * A routing failure.
 
 If any of these occur, Rocket returns an error to the client. To generate the
-error, Rocket invokes the _catcher_ corresponding to the error's status code and
-scope. Catchers are similar to routes except in that:
+error, Rocket invokes the _catcher_ corresponding to the error's status code,
+scope, and type. Catchers are similar to routes except in that:
 
   1. Catchers are only invoked on error conditions.
   2. Catchers are declared with the `catch` attribute.
   3. Catchers are _registered_ with [`register()`] instead of [`mount()`].
   4. Any modifications to cookies are cleared before a catcher is invoked.
-  5. Error catchers cannot invoke guards.
+  // 5. Error catchers cannot invoke guards.
   6. Error catchers should not fail to produce a response.
   7. Catchers are scoped to a path prefix.
 
@@ -2000,26 +2000,20 @@ instance, to declare a catcher for `404 Not Found` errors, you'd write:
 # #[macro_use] extern crate rocket;
 # fn main() {}
 
-use rocket::Request;
-
 #[catch(404)]
-fn not_found(req: &Request) { /* .. */ }
+fn not_found() { /* .. */ }
 ```
 
-Catchers may take zero, one, or two arguments. If the catcher takes one
-argument, it must be of type [`&Request`]. It it takes two, they must be of type
-[`Status`] and [`&Request`], in that order. As with routes, the return type must
-implement `Responder`. A concrete implementation may look like:
+TODO: See the catcher documentation
 
 ```rust
 # #[macro_use] extern crate rocket;
 # fn main() {}
-
-# use rocket::Request;
+# use rocket::http::uri::Origin;
 
 #[catch(404)]
-fn not_found(req: &Request) -> String {
-    format!("Sorry, '{}' is not a valid path.", req.uri())
+fn not_found(uri: &Origin) -> String {
+    format!("Sorry, '{}' is not a valid path.", uri)
 }
 ```
 
@@ -2032,8 +2026,7 @@ looks like:
 ```rust
 # #[macro_use] extern crate rocket;
 
-# use rocket::Request;
-# #[catch(404)] fn not_found(req: &Request) { /* .. */ }
+# #[catch(404)] fn not_found() { /* .. */ }
 
 fn main() {
     rocket::build().register("/", catchers![not_found]);
@@ -2106,8 +2099,8 @@ similarly be registered with [`register()`]:
 use rocket::Request;
 use rocket::http::Status;
 
-#[catch(default)]
-fn default_catcher(status: Status, request: &Request) { /* .. */ }
+#[catch(default, status = "<status>")]
+fn default_catcher(status: Status) { /* .. */ }
 
 #[launch]
 fn rocket() -> _ {

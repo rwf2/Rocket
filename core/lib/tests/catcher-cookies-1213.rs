@@ -1,11 +1,10 @@
 #[macro_use] extern crate rocket;
 
-use rocket::request::Request;
 use rocket::http::CookieJar;
 
 #[catch(404)]
-fn not_found(request: &Request<'_>) -> &'static str {
-    request.cookies().add(("not_found", "404"));
+fn not_found(jar: &CookieJar<'_>) -> &'static str {
+    jar.add(("not_found", "404"));
     "404 - Not Found"
 }
 

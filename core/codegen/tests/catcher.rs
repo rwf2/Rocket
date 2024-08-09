@@ -5,14 +5,18 @@
 
 #[macro_use] extern crate rocket;
 
-use rocket::{Request, Rocket, Build};
+use rocket::{Rocket, Build};
 use rocket::local::blocking::Client;
-use rocket::http::Status;
+use rocket::http::{Status, uri::Origin};
 
-#[catch(404)] fn not_found_0() -> &'static str { "404-0" }
-#[catch(404)] fn not_found_1(_: &Request<'_>) -> &'static str { "404-1" }
-#[catch(404)] fn not_found_2(_: Status, _: &Request<'_>) -> &'static str { "404-2" }
-#[catch(default)] fn all(_: Status, r: &Request<'_>) -> String { r.uri().to_string() }
+#[catch(404)]
+fn not_found_0() -> &'static str { "404-0" }
+#[catch(404)]
+fn not_found_1() -> &'static str { "404-1" }
+#[catch(404, status = "<_s>")]
+fn not_found_2(_s: Status) -> &'static str { "404-2" }
+#[catch(default, status = "<_s>")]
+fn all(_s: Status, uri: &Origin<'_>) -> String { uri.to_string() }
 
 #[test]
 fn test_simple_catchers() {
@@ -37,10 +41,14 @@ fn test_simple_catchers() {
 }
 
 #[get("/<code>")] fn forward(code: u16) -> Status { Status::new(code) }
-#[catch(400)] fn forward_400(status: Status, _: &Request<'_>) -> String { status.code.to_string() }
-#[catch(404)] fn forward_404(status: Status, _: &Request<'_>) -> String { status.code.to_string() }
-#[catch(444)] fn forward_444(status: Status, _: &Request<'_>) -> String { status.code.to_string() }
-#[catch(500)] fn forward_500(status: Status, _: &Request<'_>) -> String { status.code.to_string() }
+#[catch(400, status = "<status>")]
+fn forward_400(status: Status) -> String { status.code.to_string() }
+#[catch(404, status = "<status>")]
+fn forward_404(status: Status) -> String { status.code.to_string() }
+#[catch(444, status = "<status>")]
+fn forward_444(status: Status) -> String { status.code.to_string() }
+#[catch(500, status = "<status>")]
+fn forward_500(status: Status) -> String { status.code.to_string() }
 
 #[test]
 fn test_status_param() {
@@ -57,4 +65,24 @@ fn test_status_param() {
         assert_eq!(response.status(), Status::new(code));
         assert_eq!(response.into_string().unwrap(), code.to_string());
     }
+}
+
+#[catch(404)]
+fn bad_req_untyped() -> &'static str { "404" }
+#[catch(404, error = "<_e>")]
+fn bad_req_string(_e: &String) -> &'static str { "404 String" }
+#[catch(404, error = "<_e>")]
+fn bad_req_tuple(_e: &()) -> &'static str { "404 ()" }
+
+#[test]
+fn test_typed_catchers() {
+    fn rocket() -> Rocket<Build> {
+        rocket::build()
+            .register("/", catchers![bad_req_untyped, bad_req_string, bad_req_tuple])
+    }
+
+    // Assert the catchers do not collide. They are only differentiated by their error type.
+    let client = Client::debug(rocket()).unwrap();
+    let response = client.get("/").dispatch();
+    assert_eq!(response.status(), Status::NotFound);
 }

@@ -1,4 +1,4 @@
-use rocket::Request;
+use rocket::http::uri::Origin;
 use rocket::response::Redirect;
 
 use rocket_dyn_templates::{Template, handlebars, context};
@@ -28,9 +28,9 @@ pub fn about() -> Template {
 }
 
 #[catch(404)]
-pub fn not_found(req: &Request<'_>) -> Template {
+pub fn not_found(uri: &Origin<'_>) -> Template {
     Template::render("hbs/error/404", context! {
-        uri: req.uri()
+        uri,
     })
 }
 

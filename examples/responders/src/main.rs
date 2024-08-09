@@ -122,7 +122,7 @@ fn maybe_redir(name: &str) -> Result<&'static str, Redirect> {
 
 /***************************** `content` Responders ***************************/
 
-use rocket::Request;
+use rocket::http::{Accept, uri::Origin};
 use rocket::response::content;
 
 // NOTE: This example explicitly uses the `RawJson` type from
@@ -144,14 +144,14 @@ fn json() -> content::RawJson<&'static str> {
 }
 
 #[catch(404)]
-fn not_found(request: &Request<'_>) -> content::RawHtml<String> {
-    let html = match request.format() {
-        Some(ref mt) if !(mt.is_xml() || mt.is_html()) => {
+fn not_found(format: Option<&Accept>, uri: &Origin) -> content::RawHtml<String> {
+    let html = match format {
+        Some(ref mt) if !mt.media_types().any(|m| m.is_xml() || m.is_html()) => {
             format!("<p>'{}' requests are not supported.</p>", mt)
         }
         _ => format!("<p>Sorry, '{}' is an invalid path! Try \
                  /hello/&lt;name&gt;/&lt;age&gt; instead.</p>",
-                 request.uri())
+                 uri)
     };
 
     content::RawHtml(html)
