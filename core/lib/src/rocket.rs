@@ -1,3 +1,4 @@
+use std::any::{TypeId, Any};
 use std::fmt;
 use std::ops::{Deref, DerefMut};
 use std::sync::Arc;
@@ -485,6 +486,68 @@ impl Rocket<Build> {
     #[must_use]
     pub fn attach<F: Fairing>(mut self, fairing: F) -> Self {
         self.fairings.add(Box::new(fairing));
+        self
+    }
+
+    /// Modify previously attached fairings. This should typically be used by `on_ignite` Fairings,
+    /// to register new handlers or otherwise enable Fairings to work together.
+    ///
+    /// ```rust,no_run
+    /// # #[macro_use] extern crate rocket;
+    /// # // Mock rocket_dyn_templates, since we don't have access during doc-tests
+    /// # #[derive(Default)] struct Templates;
+    /// # impl Templates {
+    /// #   fn register_function<F>(&mut self, s: &str, f: F) {}
+    /// # }
+    /// # use rocket::fairing::{Fairing, Info};
+    /// # impl Fairing for Templates { fn info(&self) -> Info { todo!() } }
+    /// use rocket::Rocket;
+    /// use rocket::fairing::AdHoc;
+    ///
+    /// fn some_function() -> &'static str { "" }
+    ///
+    /// #[launch]
+    /// fn rocket() -> _ {
+    ///     rocket::build()
+    ///         .attach(Templates::default())
+    ///         .attach(AdHoc::on_ignite("Register new template function", |r| async {
+    ///             r.modify_fairings(|f: &mut Templates| {
+    ///                 f.register_function("some_function", some_function)
+    ///             })
+    ///         }))
+    /// }
+    /// ```
+    ///
+    /// If multiple instances of the same type of Fairing have been attached, the modify function
+    /// will be run on each instance.
+    #[must_use]
+    pub fn modify_fairings<F: Fairing>(mut self, modifier: impl Fn(&mut F)) -> Self {
+        // Note: the nightly version of this function uses trait upcasting, and should be
+        // preferred once [trait upcasting](https://github.com/rust-lang/rust/issues/65991)
+        // is stable. The nightly version is primarily for testing, and enabled the compiler to
+        // verify this is safe on nightly.
+        #[cfg(feature = "nightly")]
+        fn downcast_mut<T: Fairing>(f: &mut dyn Fairing) -> Option<&mut T> {
+            (f as &mut Any + Send + Sync).downcast_mut()
+        }
+        // The implementation of downcast_mut here is taken from `std::any::Any::downcast_mut`,
+        // with the call to (Any::is::<T>) expanded since it's also a method on `dyn Any`
+        #[cfg(not(feature = "nightly"))]
+        fn downcast_mut<T: Fairing>(fairing: &mut dyn Fairing) -> Option<&mut T> {
+            // Note: Any::type_id is needed here to avoid an incorrect guess as to whether we want
+            // the type_id of `&mut dyn Fairing` (we don't) or the inner type.
+            if Any::type_id(&*fairing) == TypeId::of::<T>() {
+                // SAFETY: `f` is a valid pointer since it was a valid reference, and it points
+                // at an `F` since it has the same underlying TypeId. Converting from dyn type to
+                // a concrete type is handled automatically by the compilier.
+                Some(unsafe { &mut *((fairing as *mut dyn Fairing) as *mut T) })
+            } else {
+                None
+            }
+        }
+        for f in self.fairings.iter_mut().filter_map(|f| downcast_mut(f)) {
+            modifier(f);
+        }
         self
     }
 
