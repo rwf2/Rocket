@@ -140,3 +140,4 @@ version_check = "0.9.1"
 tokio = { version = "1", features = ["macros", "io-std"] }
 figment = { version = "0.10.17", features = ["test"] }
 pretty_assertions = "1"
+rmp = "0.8"
