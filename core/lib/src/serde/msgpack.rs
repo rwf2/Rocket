@@ -43,12 +43,25 @@ pub use rmp_serde::decode::Error;
 ///
 /// ## Sending MessagePack
 ///
-/// To respond with serialized MessagePack data, return either [`Named<T>`] or
+/// To respond with serialized MessagePack data, return either [`MsgPack<T>`] or
 /// [`Compact<T>`] from your handler. `T` must implement [`serde::Serialize`].
 ///
-/// Currently, returning `MsgPack<T>` is equivalent to returning `Compact<T>`,
-/// but you should prefer to use an explicit option as this default may change
-/// in the future.
+/// ```rust
+/// # #[macro_use] extern crate rocket;
+/// # type User = usize;
+/// use rocket::serde::msgpack::MsgPack;
+///
+/// #[get("/users/<id>")]
+/// fn user(id: usize) -> MsgPack<User> {
+///     let user_from_id = User::from(id);
+///     /* ... */
+///     MsgPack(user_from_id)
+/// }
+/// ```
+///
+/// The differences between [`MsgPack<T>`] and [`Compact<T>`] are documented on
+/// [`Compact<T>`]. In most cases, [`MsgPack<T>`] is preferable, although compact
+/// was the default prior to Rocket version 0.6.
 ///
 /// ## Receiving MessagePack
 ///
@@ -113,7 +126,7 @@ pub use rmp_serde::decode::Error;
 /// msgpack = 5242880
 /// ```
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub struct MsgPack<T, const COMPACT: bool = true>(pub T);
+pub struct MsgPack<T, const COMPACT: bool = false>(pub T);
 
 /// Serializes responses in a compact MesagePack format, where structs are
 /// serialized as arrays of their field values.
@@ -141,32 +154,6 @@ pub struct MsgPack<T, const COMPACT: bool = true>(pub T);
 /// NOT prevent named requests from being accepted.
 pub type Compact<T> = MsgPack<T, true>;
 
-/// Serializes responses in a named MessagePack format, where structs are
-/// serialized as maps of their field names and values.
-///
-/// To respond with named MessagePack data, return a `Named<T>` type,
-/// where `T` implements [`Serialize`] from [`serde`]. The content type of the
-/// response is set to `application/msgpack` automatically.
-///
-/// ```rust
-/// # #[macro_use] extern crate rocket;
-/// # type User = usize;
-/// use rocket::serde::msgpack;
-///
-/// #[get("/users/<id>")]
-/// fn user(id: usize) -> msgpack::Named<User> {
-///     let user_from_id = User::from(id);
-///    /* ... */
-///    msgpack::MsgPack(user_from_id)
-/// }
-/// ```
-///
-/// Prefer using [`MsgPack<T>`] for request guards, as the named/compact
-/// distinction is not relevant for request data - the correct option is
-/// implemented automatically. Using [`Named<T>`] as a request guard will
-/// NOT prevent compact requests from being accepted.
-pub type Named<T> = MsgPack<T, false>;
-
 impl<T, const COMPACT: bool> MsgPack<T, COMPACT> {
     /// Consumes the `MsgPack` wrapper and returns the wrapped item.
     ///
@@ -175,7 +162,7 @@ impl<T, const COMPACT: bool> MsgPack<T, COMPACT> {
     /// ```rust
     /// # use rocket::serde::msgpack::MsgPack;
     /// let string = "Hello".to_string();
-    /// let my_msgpack = MsgPack(string);
+    /// let my_msgpack: MsgPack<_> = MsgPack(string);
     /// assert_eq!(my_msgpack.into_inner(), "Hello".to_string());
     /// ```
     #[inline(always)]
@@ -246,7 +233,9 @@ impl<'r, T: Serialize, const COMPACT: bool> Responder<'r, 'static> for MsgPack<T
 }
 
 #[crate::async_trait]
-impl<'v, T: Deserialize<'v> + Send, const COMPACT: bool> form::FromFormField<'v> for MsgPack<T, COMPACT> {
+impl<'v, T, const COMPACT: bool> form::FromFormField<'v> for MsgPack<T, COMPACT>
+    where T: Deserialize<'v> + Send
+{
     // TODO: To implement `from_value`, we need to the raw string so we can
     // decode it into bytes as opposed to a string as it won't be UTF-8.
 
@@ -334,7 +323,7 @@ pub fn from_slice<'a, T>(v: &'a [u8]) -> Result<T, Error>
 ///
 /// The compact representation represents structs as arrays.
 ///
-/// **_Always_ use [`MsgPack`] to serialize MessagePack response data.**
+/// **_Always_ use [`Compact`] to serialize compact MessagePack response data.**
 ///
 /// # Example
 ///

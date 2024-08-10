@@ -1,7 +1,7 @@
 #![cfg(feature = "msgpack")]
 
 use rocket::{Rocket, Build};
-use rocket::serde::msgpack;
+use rocket::serde::msgpack::{MsgPack, Compact};
 use rocket::local::blocking::Client;
 
 #[derive(serde::Serialize, serde::Deserialize, PartialEq, Eq)]
@@ -20,15 +20,15 @@ enum Gender {
 }
 
 #[rocket::post("/age_named", data = "<person>")]
-fn named(person: msgpack::MsgPack<Person>) -> msgpack::Named<Person> {
+fn named(person: MsgPack<Person>) -> MsgPack<Person> {
     let person = Person { age: person.age + 1, ..person.into_inner() };
-    msgpack::MsgPack(person)
+    MsgPack(person)
 }
 
 #[rocket::post("/age_compact", data = "<person>")]
-fn compact(person: msgpack::MsgPack<Person>) -> msgpack::Compact<Person> {
+fn compact(person: MsgPack<Person>) -> Compact<Person> {
     let person = Person { age: person.age + 1, ..person.into_inner() };
-    msgpack::MsgPack(person)
+    MsgPack(person)
 }
 
 fn rocket() -> Rocket<Build> {
@@ -70,6 +70,14 @@ fn check_named_roundtrip() {
     assert_eq!(rmp::decode::read_map_len(&mut bytes).unwrap(), 1);
     assert_eq!(&read_string(&mut bytes), "gender");
     assert_eq!(&read_string(&mut bytes), "NonBinary");
+
+    let response_from_compact = client
+        .post("/age_named")
+        .body(rmp_serde::to_vec(&person).unwrap())
+        .dispatch()
+        .into_bytes()
+        .unwrap();
+    assert_eq!(response, response_from_compact);
 }
 
 #[test]
@@ -94,4 +102,12 @@ fn check_compact_roundtrip() {
     // `[ "Female" ]`.
     assert_eq!(rmp::decode::read_array_len(&mut bytes).unwrap(), 1);
     assert_eq!(&read_string(&mut bytes), "Female");
+
+    let response_from_named = client
+        .post("/age_compact")
+        .body(rmp_serde::to_vec_named(&person).unwrap())
+        .dispatch()
+        .into_bytes()
+        .unwrap();
+    assert_eq!(response, response_from_named);
 }
