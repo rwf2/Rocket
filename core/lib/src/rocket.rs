@@ -193,7 +193,7 @@ impl Rocket<Build> {
     /// Overrides the current configuration provider with `provider`.
     ///
     /// The default provider, or a provider previously set with
-    /// [`Rocket::custom()`] or [`Rocket::reconfigure()`], is overriden by
+    /// [`Rocket::custom()`] or [`Rocket::reconfigure()`], is overridden by
     /// `provider`.
     ///
     /// # Example

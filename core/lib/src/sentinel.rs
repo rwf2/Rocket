@@ -353,7 +353,7 @@ pub struct Sentry {
 }
 
 impl Sentry {
-    /// Returns the type ID of the resolved sentinal type.
+    /// Returns the type ID of the resolved sentinel type.
     ///
     /// # Example
     ///
@@ -368,7 +368,7 @@ impl Sentry {
         self.type_id
     }
 
-    /// Returns the type name of the resolved sentinal type.
+    /// Returns the type name of the resolved sentinel type.
     ///
     /// # Example
     ///
