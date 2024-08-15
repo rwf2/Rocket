@@ -72,13 +72,14 @@ jobs:
       - name: Install Native Dependencies (Windows)
         if: matrix.platform.name == 'Windows'
         run: |
-          curl -fsLS -o vcpkg.7z https://blob.rocket.rs/vcpkg-2019-07-05.7z
+          curl -fsLS -o vcpkg.7z https://blob.rocket.rs/vcpkg-2024-08-16.7z
           7z x vcpkg.7z -y -bb0
           xcopy .\vcpkg $env:VCPKG_INSTALLATION_ROOT /s /e /h /y /q
           vcpkg integrate install
           echo "VCPKGRS_DYNAMIC=1" >> "$env:GITHUB_ENV"
           echo "VCPKG_ROOT=$env:VCPKG_INSTALLATION_ROOT" >> "$env:GITHUB_ENV"
           echo "$env:VCPKG_INSTALLATION_ROOT\installed\x64-windows\lib" >> "$env:GITHUB_PATH"
+          echo "MYSQLCLIENT_VERSION=8.0.39" >> "$env:GITHUB_ENV"
 
       - name: Install Native Dependencies (Linux)
         if: matrix.platform.name == 'Linux'
