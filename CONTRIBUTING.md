@@ -42,7 +42,6 @@ code you contribute must be:
 
 If you spot an open issue that you'd like to resolve:
 
-
   1. **First identify if there's a proposed solution to the problem.**
 
      If there is, proceed to step 2. If there isn't, your first course of
@@ -69,12 +68,11 @@ If you spot an open issue that you'd like to resolve:
   4. **Wait for a review, iterate, and polish.**
 
      If a review doesn't come in a few days, feel free to ping a maintainer.
-     Someone will review your PR eventually. Once they do, integrate their
-     feedback. If the PR solves the issue (which it should because you have
-     passing tests) and fits the project (which it should since you sought
-     feedback _before_ submitting), it will be _conditionally_ approved pending
-     final polish: documentation (rustdocs, guide docs), style improvements, and
-     testing. Your PR will then be merged.
+     Once somene reviews your PR, integrate their feedback. If the PR solves the
+     issue (which it should because you have passing tests) and fits the project
+     (which it should since you sought feedback _before_ submitting), it will be
+     _conditionally_ approved pending final polish: documentation (rustdocs,
+     guide docs), style improvements, and testing. Your PR will then be merged.
 
 ### Implementing an Unproposed Feature
 [Implementing an Unproposed Feature]: #implementing-an-unproposed-feature
@@ -140,11 +138,12 @@ accepted, follow [Resolving an Open Issue].
 [Testing]: #testing
 
 All testing happens through [test.sh]. Before submitting a PR, run the script
-and fix any issues. The `default` mode (passing no arguments) will usually
-suffice, but you may also wish to execute another test target. In particular:
+and fix any issues. The default mode (passing no arguments or `--default`) will
+usually suffice, but you may also wish to execute additional tests. In
+particular:
 
   * If you make changes to `contrib`: `test.sh --contrib`
-  * If you make user-facing API changes: `test.sh --examples`
+  * If you make user-facing API changes or update deps: `test.sh --examples`
   * If you add or modify feature flags: `test.sh --core`
   * If you modify codegen: see [UI Tests].
 
@@ -175,6 +174,62 @@ EXAMPLES:
   ./scripts/test.sh +stable --all       # Run all tests on stable toolchain.
   ./scripts/test.sh --ui                # Run UI tests on current toolchain.
 ```
+
+### Writing Tests
+
+Rocket is tested in a variety of ways. This includes via Rust's regular testing
+facilities such as doctests, unit tests, and integration tests, as well Rocket's
+examples, testbench, and [UI Tests]:
+
+  - **Examples**: The [`examples`](examples/) directory contains applications
+    that make use of many of Rocket's features. Each example is integration
+    tested using Rocket's built-in [local testing]. This both ensures that
+    typical Rocket code continues to work as expected and serves as a way to
+    detect and resolve user-facing breaking changes.
+
+  - **Testbench**: Rocket's [testbench](testbench/) tests end-to-end server or
+    protocol properties by starting up full Rocket servers to which it
+    dispatches real HTTP requests. Each server is independently written in
+    [testbench/src/servers/](testbench/src/servers/). You're unlikely to need to
+    write a testbench test unless you're modifying low-level details.
+
+  - **UI Tests**: UI tests ensure Rocket's codegen produces meaningful compiler
+    diagnostics. They compile Rocket applications and compare the compiler's
+    output to expected results. If you're changing codegen, you'll need to
+    update or create UI tests. See [UI Tests] for details.
+
+For any change that affects functionality, we ask that you write a test that
+verifies that functionality. Minimally, this means a unit test, doctest,
+integration test, or some combination of these. For small changes, unit tests
+will likely suffice. If the change affects the user in any way, then doctests
+should be added or modified. And if the change requires using unrelated APIs to
+test, then an integration test should be added.
+
+Additionally, the following scenarios require special attention:
+
+  - **Improved Features**
+
+    Modifying an existing example is a great place to write tests for improved
+    features. If you do modify an example, make sure you modify the README in
+    the example directory, too.
+
+  - **New Features**
+
+    For major features, introducing a new example that showcases idiomatic use
+    of the feature can be useful. Make sure you modify the README in the
+    `examples` directory if you do. In addition, all newly introduced public
+    APIs should be fully documented and include doctests as well as unit and
+    integration tests.
+
+  - **Fixing a Bug**
+
+    To avoid regressions, _always_ introduce or modify an integration or
+    testbench test for a bugfix. Integration tests should live in the usual
+    `tests/` directory and be named `short-issue-description-NNNN.rs`, where
+    `NNNN` is the GitHub issue number for the bug. For example,
+    `forward-includes-status-1560.rs`.
+
+[local testing]: https://api.rocket.rs/master/rocket/local/
 
 ### UI Tests
 [UI Tests]: #ui-tests
@@ -211,15 +266,19 @@ stable and nightly compilers, respectively. For example:
 If you make changes to codegen, run the UI tests for stable and nightly with
 `test.sh +stable --ui` and `test.sh +nightly --ui`. If there are failures,
 update the outputs with `TRYBUILD=overwrite test.sh +nightly --ui` and
-`TRYBUILD=overwrite test.sh +stable --ui`. Inspect the changes and ensure they
-are reasonable.
+`TRYBUILD=overwrite test.sh +stable --ui`. Look at the diff to see what's
+changed. Ensure that error messages properly attribute (i.e., visually underline
+or point to) the source of the error. For example, if a type need to implement a
+trait, then that type should be underlined. We strive to emit the most helpful
+and descriptive error messages possible.
 
 ### API Docs
 
-API documentation is built with [mk-docs.sh] and output to the usual
-`target/docs` directory. By default, the script will `clean` any existing docs
-to avoid potential caching issues. To override this behavior, use `mk-docs.sh
--d`.
+If you make changes to documentation, you should build the API docs and verify
+that your changes look as you expect. API documentation is built with
+[mk-docs.sh] and output to the usual `target/docs` directory. By default, the
+script will `clean` any existing docs to avoid potential caching issues. To
+override this behavior, use `mk-docs.sh -d`.
 
 ## Code Style Conventions
 [Code Style Conventions]: #code-style-conventions
@@ -456,7 +515,6 @@ Typically, the first word in the header will be one of the following:
   * **Add**, **Remove** - for changes
     - Example: `Add 'Foo::new()' constructor.`
     - Example: `Remove 'Foo::new()'; add 'Foo::build()'.`
-    - Example: `Update '
   * **Update** - for crate updates
     - Example: `Update 'base64' to 0.12.`
   * **Impl** or **Implement** - for trait implementations
@@ -471,6 +529,7 @@ vocabulary. When in doubt, consult the `git log` for examples.
 | Fix 'FromForm' derive docs typo: 'yis' -> 'yes'. | ~~Change word in docs~~                    |
 | Default 'MsgPack<T>' to named variant.           | ~~Change default to more likely variant.~~ |
 | Fix 'Compact' advice in 'MsgPack' docs.          | ~~Update docs to make sense~~              |
+| Improve 'Sentinel' docs: explain 'Sentry'.       | ~~Add missing doc details.~~               |
 | Fix CI: pin macOS CI 'mysql-client' to '8.4'.    | ~~Fix CI~~                                 |
 | Fix link to 'rocket::build()' in config guide.   | ~~Fix wrong URL in guide (configuration~~) |
 
