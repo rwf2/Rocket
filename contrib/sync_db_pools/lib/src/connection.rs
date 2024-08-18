@@ -175,12 +175,30 @@ impl<K, C: Poolable> Drop for Connection<K, C> {
         let connection = self.connection.clone();
         let permit = self.permit.take();
 
-        // See same motivation above for this arrangement of spawn_blocking/block_on
-        tokio::task::spawn_blocking(move || {
-            let mut connection = tokio::runtime::Handle::current().block_on(async {
-                connection.lock_owned().await
-            });
+        // Only use spawn_blocking if the Tokio runtime is still available
+        if let Ok(handle) = tokio::runtime::Handle::try_current() {
+            // See above for motivation of this arrangement of spawn_blocking/block_on
+            handle.spawn_blocking(move || {
+                let mut connection = tokio::runtime::Handle::current().block_on(async {
+                    connection.lock_owned().await
+                });
 
+                if let Some(conn) = connection.take() {
+                    drop(conn);
+                }
+
+                // Explicitly dropping the permit here so that it's only
+                // released after the connection is.
+                drop(permit);
+            });
+        } else {
+            let type_name = std::any::type_name::<K>();
+            warn!("database connection `{type_name}` dropping outside async context");
+            warn_!("this means you have stored a connection beyond a request's lifetime");
+            warn_!("this is not recommended: connections are not valid indefinitely");
+            warn_!("instead, store a connection pool and get connections as needed");
+
+            let mut connection = connection.blocking_lock();
             if let Some(conn) = connection.take() {
                 drop(conn);
             }
@@ -188,18 +206,18 @@ impl<K, C: Poolable> Drop for Connection<K, C> {
             // Explicitly dropping the permit here so that it's only
             // released after the connection is.
             drop(permit);
-        });
+        }
     }
 }
 
 impl<K, C: Poolable> Drop for ConnectionPool<K, C> {
     fn drop(&mut self) {
+        // Use spawn_blocking if the Tokio runtime is still available. Otherwise
+        // the pool will be dropped on the current thread.
         let pool = self.pool.take();
-        // Only use spawn_blocking if the Tokio runtime is still available
         if let Ok(handle) = tokio::runtime::Handle::try_current() {
             handle.spawn_blocking(move || drop(pool));
         }
-        // Otherwise the pool will be dropped on the current thread
     }
 }
 
