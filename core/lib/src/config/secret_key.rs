@@ -1,16 +1,9 @@
 use std::fmt;
 
 use cookie::Key;
-use serde::{de, ser, Deserialize, Serialize};
+use serde::{de, ser, Deserialize};
 
 use crate::request::{Outcome, Request, FromRequest};
-
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-enum Kind {
-    Zero,
-    Generated,
-    Provided
-}
 
 /// A cryptographically secure secret key.
 ///

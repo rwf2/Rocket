@@ -543,13 +543,13 @@ error[E0277]: the trait bound `bool: From<&str>` is not satisfied
     |                       this tail expression is of type `&str`
     |
     = help: the following other types implement trait `From<T>`:
-              <bool as From<format_description::parse::format_item::HourBase>>
-              <bool as From<format_description::parse::format_item::MonthCaseSensitive>>
-              <bool as From<format_description::parse::format_item::PeriodCase>>
-              <bool as From<format_description::parse::format_item::PeriodCaseSensitive>>
-              <bool as From<format_description::parse::format_item::SignBehavior>>
-              <bool as From<format_description::parse::format_item::WeekdayCaseSensitive>>
-              <bool as From<format_description::parse::format_item::WeekdayOneIndexed>>
-              <bool as From<format_description::parse::format_item::YearBase>>
+              `bool` implements `From<format_description::parse::format_item::HourBase>`
+              `bool` implements `From<format_description::parse::format_item::MonthCaseSensitive>`
+              `bool` implements `From<format_description::parse::format_item::PeriodCase>`
+              `bool` implements `From<format_description::parse::format_item::PeriodCaseSensitive>`
+              `bool` implements `From<format_description::parse::format_item::SignBehavior>`
+              `bool` implements `From<format_description::parse::format_item::WeekdayCaseSensitive>`
+              `bool` implements `From<format_description::parse::format_item::WeekdayOneIndexed>`
+              `bool` implements `From<format_description::parse::format_item::YearBase>`
     = note: required for `&str` to implement `Into<bool>`
     = note: this error originates in the derive macro `FromForm` (in Nightly builds, run with -Z macro-backtrace for more info)

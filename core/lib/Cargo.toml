@@ -33,7 +33,7 @@ uuid = ["uuid_", "rocket_http/uuid"]
 tls = ["rustls", "tokio-rustls", "rustls-pemfile"]
 mtls = ["tls", "x509-parser"]
 tokio-macros = ["tokio/macros"]
-trace = ["tracing-subscriber", "tinyvec", "thread_local", "rustls?/logging", "tokio-rustls?/logging", "multer/log"]
+trace = ["tracing-subscriber", "tinyvec", "thread_local", "rustls?/logging", "tokio-rustls?/logging", "multer/log", "s2n-quic-h3?/tracing"]
 
 [dependencies]
 # Optional serialization dependencies.
@@ -128,6 +128,7 @@ optional = true
 
 [dependencies.s2n-quic-h3]
 git = "https://github.com/SergioBenitez/s2n-quic-h3.git"
+rev = "7aa3be0"
 optional = true
 
 [target.'cfg(unix)'.dependencies]

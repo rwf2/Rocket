@@ -200,14 +200,42 @@ function run_testbench() {
   indir "${TESTBENCH_ROOT}" $CARGO run $@
 }
 
+# The kind of test we'll be running.
+TEST_KIND="default"
+KINDS=("default" "all" "core" "contrib" "examples" "benchmarks" "testbench" "ui")
+
+function print_help() {
+  echo "USAGE:"
+  echo "  $0 [+<TOOLCHAIN>] [--help|-h] [--<TEST>]"
+  echo ""
+  echo "OPTIONS:"
+  echo "  +<TOOLCHAIN>   Forwarded to Cargo to select toolchain."
+  echo "  --help, -h     Print this help message and exit."
+  echo "  --<TEST>       Run the specified test suite."
+  echo "                 (Run without --<TEST> to run default tests.)"
+
+  echo ""
+  echo "AVAILABLE <TEST> OPTIONS:"
+  for kind in "${KINDS[@]}"; do
+    echo "  ${kind}"
+  done
+
+  echo ""
+  echo "EXAMPLES:"
+  echo "  $0                     # Run default tests on current toolchain."
+  echo "  $0 +stable --all       # Run all tests on stable toolchain."
+  echo "  $0 --ui                # Run UI tests on current toolchain."
+}
+
 if [[ $1 == +* ]]; then
   CARGO="$CARGO $1"
   shift
 fi
 
-# The kind of test we'll be running.
-TEST_KIND="default"
-KINDS=("contrib" "benchmarks" "testbench" "core" "examples" "default" "ui" "all")
+if [[ $1 == "--help" ]] || [[ $1 == "-h" ]]; then
+  print_help
+  exit 0
+fi
 
 if [[ " ${KINDS[@]} " =~ " ${1#"--"} " ]]; then
   TEST_KIND=${1#"--"}

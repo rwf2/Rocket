@@ -11,6 +11,16 @@ mod databases_tests {
     struct PrimaryDb(diesel::PgConnection);
 }
 
+#[cfg(feature = "memcache_pool")]
+mod memcache_pool_tests {
+    #![allow(dead_code)]
+
+    use rocket_sync_db_pools::database;
+
+    #[database("test_db")]
+    struct MemcacheDb(memcache::Client);
+}
+
 #[cfg(test)]
 #[cfg(all(feature = "sqlite_pool"))]
 mod rusqlite_integration_test {

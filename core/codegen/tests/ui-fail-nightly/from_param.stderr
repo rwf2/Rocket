@@ -1,0 +1,53 @@
+error: named structs are not supported
+ --> tests/ui-fail-nightly/from_param.rs:4:1
+  |
+4 | / struct Foo1 {
+5 | |     a: String
+6 | | }
+  | |_^
+  |
+note: error occurred while deriving `FromParam`
+ --> tests/ui-fail-nightly/from_param.rs:3:10
+  |
+3 | #[derive(FromParam)]
+  |          ^^^^^^^^^
+  = note: this error originates in the derive macro `FromParam` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+error: named structs are not supported
+ --> tests/ui-fail-nightly/from_param.rs:9:1
+  |
+9 | struct Foo2 {}
+  | ^^^^^^^^^^^^^^
+  |
+note: error occurred while deriving `FromParam`
+ --> tests/ui-fail-nightly/from_param.rs:8:10
+  |
+8 | #[derive(FromParam)]
+  |          ^^^^^^^^^
+  = note: this error originates in the derive macro `FromParam` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+error: variants with data fields are not supported
+  --> tests/ui-fail-nightly/from_param.rs:13:6
+   |
+13 |     A(String),
+   |      ^^^^^^^^
+   |
+note: error occurred while deriving `FromParam`
+  --> tests/ui-fail-nightly/from_param.rs:11:10
+   |
+11 | #[derive(FromParam)]
+   |          ^^^^^^^^^
+   = note: this error originates in the derive macro `FromParam` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+error: tuple structs are not supported
+  --> tests/ui-fail-nightly/from_param.rs:18:1
+   |
+18 | struct Foo4(usize);
+   | ^^^^^^^^^^^^^^^^^^^
+   |
+note: error occurred while deriving `FromParam`
+  --> tests/ui-fail-nightly/from_param.rs:17:10
+   |
+17 | #[derive(FromParam)]
+   |          ^^^^^^^^^
+   = note: this error originates in the derive macro `FromParam` (in Nightly builds, run with -Z macro-backtrace for more info)

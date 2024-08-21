@@ -5,6 +5,9 @@
 # directly for your browser to show connections as secure. You should NEVER use
 # these certificate/key pairs. They are here for DEMONSTRATION PURPOSES ONLY.
 
+[default]
+log_format = "compact"
+
 [default.tls]
 certs = "private/rsa_sha256_cert.pem"
 key = "private/rsa_sha256_key.pem"

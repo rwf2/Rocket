@@ -58,11 +58,6 @@ impl<K: private::FmtKind> RocketFmt<K> {
         }
     }
 
-    pub fn reset(&mut self, cli_colors: CliColors, level: Option<Level>) {
-        let state = std::mem::take(&mut self.state);
-        *self = Self { state, ..Self::new(0, cli_colors, level) };
-    }
-
     pub fn style(&self, metadata: &Metadata<'_>) -> Style {
         match *metadata.level() {
             Level::ERROR => self.style.red(),

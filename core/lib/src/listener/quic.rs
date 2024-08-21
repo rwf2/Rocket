@@ -48,10 +48,10 @@ pub struct QuicListener {
     tls: TlsConfig,
 }
 
-pub struct H3Stream(H3Conn);
+pub struct H3Stream(H3Conn, quic::connection::Result<SocketAddr>);
 
 pub struct H3Connection {
-    pub(crate) handle: quic::connection::Handle,
+    pub(crate) remote: quic::connection::Result<SocketAddr>,
     pub(crate) parts: http::request::Parts,
     pub(crate) tx: QuicTx,
     pub(crate) rx: QuicRx,
@@ -104,9 +104,10 @@ impl QuicListener {
     }
 
     pub async fn connect(&self, accept: quic::Connection) -> io::Result<H3Stream> {
+        let remote = accept.remote_addr();
         let quic_conn = quic_h3::Connection::new(accept);
         let conn = H3Conn::new(quic_conn).await.map_err(io::Error::other)?;
-        Ok(H3Stream(conn))
+        Ok(H3Stream(conn, remote))
     }
 
     pub fn endpoint(&self) -> io::Result<Endpoint> {
@@ -116,7 +117,7 @@ impl QuicListener {
 
 impl H3Stream {
     pub async fn accept(&mut self) -> io::Result<Option<H3Connection>> {
-        let handle = self.0.inner.conn.handle().clone();
+        let remote = self.1.clone();
         let ((parts, _), (tx, rx)) = match self.0.accept().await {
             Ok(Some((req, stream))) => (req.into_parts(), stream.split()),
             Ok(None) => return Ok(None),
@@ -129,7 +130,7 @@ impl H3Stream {
             }
         };
 
-        Ok(Some(H3Connection { handle, parts, tx: QuicTx(tx), rx: QuicRx(rx) }))
+        Ok(Some(H3Connection { remote, parts, tx: QuicTx(tx), rx: QuicRx(rx) }))
     }
 }
 
@@ -158,8 +159,7 @@ impl QuicTx {
 // FIXME: Expose certificates when possible.
 impl H3Connection {
     pub fn endpoint(&self) -> io::Result<Endpoint> {
-        let addr = self.handle.remote_addr()?;
-        Ok(Endpoint::Quic(addr).assume_tls())
+        Ok(Endpoint::Quic(self.remote?).assume_tls())
     }
 }
 

@@ -1,5 +1,6 @@
 pub mod ignite_failure;
 pub mod bind;
+pub mod http_extensions;
 pub mod infinite_stream;
 pub mod tls_resolver;
 pub mod mtls;

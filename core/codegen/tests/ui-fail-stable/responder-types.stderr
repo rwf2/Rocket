@@ -5,14 +5,14 @@ error[E0277]: the trait bound `u8: Responder<'_, '_>` is not satisfied
   |            ^^ the trait `Responder<'_, '_>` is not implemented for `u8`
   |
   = help: the following other types implement trait `Responder<'r, 'o>`:
-            <Thing1 as Responder<'r, 'o>>
-            <Thing2 as Responder<'r, 'o>>
-            <Thing3 as Responder<'r, 'o>>
-            <Thing4 as Responder<'r, 'o>>
-            <Box<str> as Responder<'r, 'static>>
-            <Box<[u8]> as Responder<'r, 'static>>
-            <Box<T> as Responder<'r, 'o>>
-            <rocket::either::Either<T, E> as Responder<'r, 'o>>
+            <&'o [u8] as Responder<'r, 'o>>
+            <&'o str as Responder<'r, 'o>>
+            <() as Responder<'r, 'static>>
+            <(ContentType, R) as Responder<'r, 'o>>
+            <(Status, R) as Responder<'r, 'o>>
+            <Accepted<R> as Responder<'r, 'o>>
+            <Arc<[u8]> as Responder<'r, 'static>>
+            <Arc<str> as Responder<'r, 'static>>
           and $N others
 
 error[E0277]: the trait bound `Header<'_>: From<u8>` is not satisfied
@@ -22,14 +22,14 @@ error[E0277]: the trait bound `Header<'_>: From<u8>` is not satisfied
    |     ^^^^^^^^^ the trait `From<u8>` is not implemented for `Header<'_>`, which is required by `u8: Into<Header<'_>>`
    |
    = help: the following other types implement trait `From<T>`:
-             <Header<'static> as From<Cookie<'_>>>
-             <Header<'static> as From<ContentType>>
-             <Header<'static> as From<Accept>>
              <Header<'static> as From<&Cookie<'_>>>
-             <Header<'static> as From<&Referrer>>
              <Header<'static> as From<&ExpectCt>>
-             <Header<'static> as From<&NoSniff>>
+             <Header<'static> as From<&Frame>>
              <Header<'static> as From<&Hsts>>
+             <Header<'static> as From<&NoSniff>>
+             <Header<'static> as From<&Permission>>
+             <Header<'static> as From<&Prefetch>>
+             <Header<'static> as From<&Referrer>>
            and $N others
    = note: required for `u8` to implement `Into<Header<'_>>`
 note: required by a bound in `Response::<'r>::set_header`
@@ -45,14 +45,14 @@ error[E0277]: the trait bound `u8: Responder<'_, '_>` is not satisfied
    |            ^^ the trait `Responder<'_, '_>` is not implemented for `u8`
    |
    = help: the following other types implement trait `Responder<'r, 'o>`:
-             <Thing1 as Responder<'r, 'o>>
-             <Thing2 as Responder<'r, 'o>>
-             <Thing3 as Responder<'r, 'o>>
-             <Thing4 as Responder<'r, 'o>>
-             <Box<str> as Responder<'r, 'static>>
-             <Box<[u8]> as Responder<'r, 'static>>
-             <Box<T> as Responder<'r, 'o>>
-             <rocket::either::Either<T, E> as Responder<'r, 'o>>
+             <&'o [u8] as Responder<'r, 'o>>
+             <&'o str as Responder<'r, 'o>>
+             <() as Responder<'r, 'static>>
+             <(ContentType, R) as Responder<'r, 'o>>
+             <(Status, R) as Responder<'r, 'o>>
+             <Accepted<R> as Responder<'r, 'o>>
+             <Arc<[u8]> as Responder<'r, 'static>>
+             <Arc<str> as Responder<'r, 'static>>
            and $N others
 
 error[E0277]: the trait bound `Header<'_>: From<u8>` is not satisfied
@@ -62,14 +62,14 @@ error[E0277]: the trait bound `Header<'_>: From<u8>` is not satisfied
    |     ^^^^^^^^^ the trait `From<u8>` is not implemented for `Header<'_>`, which is required by `u8: Into<Header<'_>>`
    |
    = help: the following other types implement trait `From<T>`:
-             <Header<'static> as From<Cookie<'_>>>
-             <Header<'static> as From<ContentType>>
-             <Header<'static> as From<Accept>>
              <Header<'static> as From<&Cookie<'_>>>
-             <Header<'static> as From<&Referrer>>
              <Header<'static> as From<&ExpectCt>>
-             <Header<'static> as From<&NoSniff>>
+             <Header<'static> as From<&Frame>>
              <Header<'static> as From<&Hsts>>
+             <Header<'static> as From<&NoSniff>>
+             <Header<'static> as From<&Permission>>
+             <Header<'static> as From<&Prefetch>>
+             <Header<'static> as From<&Referrer>>
            and $N others
    = note: required for `u8` to implement `Into<Header<'_>>`
 note: required by a bound in `Response::<'r>::set_header`
@@ -85,14 +85,14 @@ error[E0277]: the trait bound `Header<'_>: From<std::string::String>` is not sat
    |     ^^^^^^^^^^^^ the trait `From<std::string::String>` is not implemented for `Header<'_>`, which is required by `std::string::String: Into<Header<'_>>`
    |
    = help: the following other types implement trait `From<T>`:
-             <Header<'static> as From<Cookie<'_>>>
-             <Header<'static> as From<ContentType>>
-             <Header<'static> as From<Accept>>
              <Header<'static> as From<&Cookie<'_>>>
-             <Header<'static> as From<&Referrer>>
              <Header<'static> as From<&ExpectCt>>
-             <Header<'static> as From<&NoSniff>>
+             <Header<'static> as From<&Frame>>
              <Header<'static> as From<&Hsts>>
+             <Header<'static> as From<&NoSniff>>
+             <Header<'static> as From<&Permission>>
+             <Header<'static> as From<&Prefetch>>
+             <Header<'static> as From<&Referrer>>
            and $N others
    = note: required for `std::string::String` to implement `Into<Header<'_>>`
 note: required by a bound in `Response::<'r>::set_header`
@@ -110,14 +110,14 @@ error[E0277]: the trait bound `usize: Responder<'_, '_>` is not satisfied
    |             ^^^^^ the trait `Responder<'_, '_>` is not implemented for `usize`
    |
    = help: the following other types implement trait `Responder<'r, 'o>`:
-             <Thing1 as Responder<'r, 'o>>
-             <Thing2 as Responder<'r, 'o>>
-             <Thing3 as Responder<'r, 'o>>
-             <Thing4 as Responder<'r, 'o>>
-             <Box<str> as Responder<'r, 'static>>
-             <Box<[u8]> as Responder<'r, 'static>>
-             <Box<T> as Responder<'r, 'o>>
-             <rocket::either::Either<T, E> as Responder<'r, 'o>>
+             <&'o [u8] as Responder<'r, 'o>>
+             <&'o str as Responder<'r, 'o>>
+             <() as Responder<'r, 'static>>
+             <(ContentType, R) as Responder<'r, 'o>>
+             <(Status, R) as Responder<'r, 'o>>
+             <Accepted<R> as Responder<'r, 'o>>
+             <Arc<[u8]> as Responder<'r, 'static>>
+             <Arc<str> as Responder<'r, 'static>>
            and $N others
 note: required by a bound in `route::handler::<impl Outcome<Response<'o>, Status, (rocket::Data<'o>, Status)>>::from`
   --> $WORKSPACE/core/lib/src/route/handler.rs

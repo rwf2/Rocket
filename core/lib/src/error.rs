@@ -89,6 +89,60 @@ pub enum ErrorKind {
 #[derive(Clone, Copy, Default, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub struct Empty;
 
+/// An error that occurs when a value doesn't match one of the expected options.
+///
+/// This error is returned by the [`FromParam`] trait implementation generated
+/// by the [`FromParam` derive](macro@rocket::FromParam) when the value of a
+/// dynamic path segment does not match one of the expected variants. The
+/// `value` field will contain the value that was provided, and `options` will
+/// contain each of possible stringified variants.
+///
+/// [`FromParam`]: trait@rocket::request::FromParam
+///
+/// # Example
+///
+/// ```rust
+/// # #[macro_use] extern crate rocket;
+/// use rocket::error::InvalidOption;
+///
+/// #[derive(FromParam)]
+/// enum MyParam {
+///     FirstOption,
+///     SecondOption,
+///     ThirdOption,
+/// }
+///
+/// #[get("/<param>")]
+/// fn hello(param: Result<MyParam, InvalidOption<'_>>) {
+///     if let Err(e) = param {
+///         assert_eq!(e.options, &["FirstOption", "SecondOption", "ThirdOption"]);
+///     }
+/// }
+/// ```
+#[derive(Debug, Clone)]
+#[non_exhaustive]
+pub struct InvalidOption<'a> {
+    /// The value that was provided.
+    pub value: &'a str,
+    /// The expected values: a slice of strings, one for each possible value.
+    pub options: &'static [&'static str],
+}
+
+impl<'a> InvalidOption<'a> {
+    #[doc(hidden)]
+    pub fn new(value: &'a str, options: &'static [&'static str]) -> Self {
+        Self { value, options }
+    }
+}
+
+impl fmt::Display for InvalidOption<'_> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "unexpected value {:?}, expected one of {:?}", self.value, self.options)
+    }
+}
+
+impl std::error::Error for InvalidOption<'_> {}
+
 impl Error {
     #[inline(always)]
     pub(crate) fn new(kind: ErrorKind) -> Error {

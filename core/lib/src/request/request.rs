@@ -2,6 +2,7 @@ use std::{io, fmt};
 use std::ops::RangeFrom;
 use std::sync::{Arc, atomic::Ordering};
 use std::borrow::Cow;
+use std::str::FromStr;
 use std::future::Future;
 use std::net::IpAddr;
 
@@ -1086,7 +1087,7 @@ impl<'r> Request<'r> {
         // Keep track of parsing errors; emit a `BadRequest` if any exist.
         let mut errors = vec![];
 
-        // Ensure that the method is known. TODO: Allow made-up methods?
+        // Ensure that the method is known.
         let method = match hyper.method {
             hyper::Method::GET => Method::Get,
             hyper::Method::PUT => Method::Put,
@@ -1097,10 +1098,10 @@ impl<'r> Request<'r> {
             hyper::Method::TRACE => Method::Trace,
             hyper::Method::CONNECT => Method::Connect,
             hyper::Method::PATCH => Method::Patch,
-            _ => {
+            ref ext => Method::from_str(ext.as_str()).unwrap_or_else(|_| {
                 errors.push(RequestError::BadMethod(hyper.method.clone()));
                 Method::Get
-            }
+            }),
         };
 
         // TODO: Keep around not just the path/query, but the rest, if there?

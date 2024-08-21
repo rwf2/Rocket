@@ -12,6 +12,11 @@ use crate::http::uri::{Segments, error::PathError, fmt::Path};
 /// a dynamic segment `<param>` where `param` has some type `T` that implements
 /// `FromParam`, `T::from_param` will be called.
 ///
+/// # Deriving
+///
+/// The `FromParam` trait can be automatically derived for C-like enums. See
+/// [`FromParam` derive](macro@rocket::FromParam) for more information.
+///
 /// # Forwarding
 ///
 /// If the conversion fails, the incoming request will be forwarded to the next

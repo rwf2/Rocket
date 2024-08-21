@@ -5,14 +5,14 @@ error[E0277]: the trait bound `Q: FromParam<'_>` is not satisfied
   |             ^ the trait `FromParam<'_>` is not implemented for `Q`
   |
   = help: the following other types implement trait `FromParam<'a>`:
-            <&'a str as FromParam<'a>>
-            <IpAddr as FromParam<'a>>
-            <Ipv4Addr as FromParam<'a>>
-            <Ipv6Addr as FromParam<'a>>
-            <NonZero<i128> as FromParam<'a>>
-            <NonZero<i16> as FromParam<'a>>
-            <NonZero<i32> as FromParam<'a>>
-            <NonZero<i64> as FromParam<'a>>
+            `&'a str` implements `FromParam<'a>`
+            `IpAddr` implements `FromParam<'a>`
+            `Ipv4Addr` implements `FromParam<'a>`
+            `Ipv6Addr` implements `FromParam<'a>`
+            `NonZero<i128>` implements `FromParam<'a>`
+            `NonZero<i16>` implements `FromParam<'a>`
+            `NonZero<i32>` implements `FromParam<'a>`
+            `NonZero<i64>` implements `FromParam<'a>`
           and $N others
 
 error[E0277]: the trait bound `Q: FromSegments<'_>` is not satisfied
@@ -22,10 +22,10 @@ error[E0277]: the trait bound `Q: FromSegments<'_>` is not satisfied
   |             ^ the trait `FromSegments<'_>` is not implemented for `Q`
   |
   = help: the following other types implement trait `FromSegments<'r>`:
-            <PathBuf as FromSegments<'_>>
-            <Result<T, <T as FromSegments<'r>>::Error> as FromSegments<'r>>
-            <Segments<'r, rocket::http::uri::fmt::Path> as FromSegments<'r>>
-            <std::option::Option<T> as FromSegments<'r>>
+            `PathBuf` implements `FromSegments<'_>`
+            `Result<T, <T as FromSegments<'r>>::Error>` implements `FromSegments<'r>`
+            `Segments<'r, rocket::http::uri::fmt::Path>` implements `FromSegments<'r>`
+            `std::option::Option<T>` implements `FromSegments<'r>`
 
 error[E0277]: the trait bound `Q: FromFormField<'_>` is not satisfied
   --> tests/ui-fail-nightly/route-type-errors.rs:12:13
@@ -104,14 +104,14 @@ error[E0277]: the trait bound `Q: FromParam<'_>` is not satisfied
    |                    ^ the trait `FromParam<'_>` is not implemented for `Q`
    |
    = help: the following other types implement trait `FromParam<'a>`:
-             <&'a str as FromParam<'a>>
-             <IpAddr as FromParam<'a>>
-             <Ipv4Addr as FromParam<'a>>
-             <Ipv6Addr as FromParam<'a>>
-             <NonZero<i128> as FromParam<'a>>
-             <NonZero<i16> as FromParam<'a>>
-             <NonZero<i32> as FromParam<'a>>
-             <NonZero<i64> as FromParam<'a>>
+             `&'a str` implements `FromParam<'a>`
+             `IpAddr` implements `FromParam<'a>`
+             `Ipv4Addr` implements `FromParam<'a>`
+             `Ipv6Addr` implements `FromParam<'a>`
+             `NonZero<i128>` implements `FromParam<'a>`
+             `NonZero<i16>` implements `FromParam<'a>`
+             `NonZero<i32>` implements `FromParam<'a>`
+             `NonZero<i64>` implements `FromParam<'a>`
            and $N others
 
 error[E0277]: the trait bound `Q: FromRequest<'_>` is not satisfied
@@ -138,14 +138,14 @@ error[E0277]: the trait bound `Q: FromParam<'_>` is not satisfied
    |                    ^ the trait `FromParam<'_>` is not implemented for `Q`
    |
    = help: the following other types implement trait `FromParam<'a>`:
-             <&'a str as FromParam<'a>>
-             <IpAddr as FromParam<'a>>
-             <Ipv4Addr as FromParam<'a>>
-             <Ipv6Addr as FromParam<'a>>
-             <NonZero<i128> as FromParam<'a>>
-             <NonZero<i16> as FromParam<'a>>
-             <NonZero<i32> as FromParam<'a>>
-             <NonZero<i64> as FromParam<'a>>
+             `&'a str` implements `FromParam<'a>`
+             `IpAddr` implements `FromParam<'a>`
+             `Ipv4Addr` implements `FromParam<'a>`
+             `Ipv6Addr` implements `FromParam<'a>`
+             `NonZero<i128>` implements `FromParam<'a>`
+             `NonZero<i16>` implements `FromParam<'a>`
+             `NonZero<i32>` implements `FromParam<'a>`
+             `NonZero<i64>` implements `FromParam<'a>`
            and $N others
 
 error[E0277]: the trait bound `Q: FromParam<'_>` is not satisfied
@@ -155,12 +155,12 @@ error[E0277]: the trait bound `Q: FromParam<'_>` is not satisfied
    |                                           ^ the trait `FromParam<'_>` is not implemented for `Q`
    |
    = help: the following other types implement trait `FromParam<'a>`:
-             <&'a str as FromParam<'a>>
-             <IpAddr as FromParam<'a>>
-             <Ipv4Addr as FromParam<'a>>
-             <Ipv6Addr as FromParam<'a>>
-             <NonZero<i128> as FromParam<'a>>
-             <NonZero<i16> as FromParam<'a>>
-             <NonZero<i32> as FromParam<'a>>
-             <NonZero<i64> as FromParam<'a>>
+             `&'a str` implements `FromParam<'a>`
+             `IpAddr` implements `FromParam<'a>`
+             `Ipv4Addr` implements `FromParam<'a>`
+             `Ipv6Addr` implements `FromParam<'a>`
+             `NonZero<i128>` implements `FromParam<'a>`
+             `NonZero<i16>` implements `FromParam<'a>`
+             `NonZero<i32>` implements `FromParam<'a>`
+             `NonZero<i64>` implements `FromParam<'a>`
            and $N others

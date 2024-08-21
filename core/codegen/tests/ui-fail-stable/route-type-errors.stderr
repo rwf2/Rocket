@@ -5,14 +5,14 @@ error[E0277]: the trait bound `Q: FromParam<'_>` is not satisfied
   |             ^ the trait `FromParam<'_>` is not implemented for `Q`
   |
   = help: the following other types implement trait `FromParam<'a>`:
-            <bool as FromParam<'a>>
-            <isize as FromParam<'a>>
-            <i8 as FromParam<'a>>
-            <i16 as FromParam<'a>>
-            <i32 as FromParam<'a>>
-            <i64 as FromParam<'a>>
-            <i128 as FromParam<'a>>
-            <usize as FromParam<'a>>
+            <&'a str as FromParam<'a>>
+            <IpAddr as FromParam<'a>>
+            <Ipv4Addr as FromParam<'a>>
+            <Ipv6Addr as FromParam<'a>>
+            <NonZero<i128> as FromParam<'a>>
+            <NonZero<i16> as FromParam<'a>>
+            <NonZero<i32> as FromParam<'a>>
+            <NonZero<i64> as FromParam<'a>>
           and $N others
 
 error[E0277]: the trait bound `Q: FromSegments<'_>` is not satisfied
@@ -22,10 +22,10 @@ error[E0277]: the trait bound `Q: FromSegments<'_>` is not satisfied
   |             ^ the trait `FromSegments<'_>` is not implemented for `Q`
   |
   = help: the following other types implement trait `FromSegments<'r>`:
-            <Segments<'r, rocket::http::uri::fmt::Path> as FromSegments<'r>>
             <PathBuf as FromSegments<'_>>
-            <std::option::Option<T> as FromSegments<'r>>
             <Result<T, <T as FromSegments<'r>>::Error> as FromSegments<'r>>
+            <Segments<'r, rocket::http::uri::fmt::Path> as FromSegments<'r>>
+            <std::option::Option<T> as FromSegments<'r>>
 
 error[E0277]: the trait bound `Q: FromFormField<'_>` is not satisfied
   --> tests/ui-fail-stable/route-type-errors.rs:12:13
@@ -34,14 +34,14 @@ error[E0277]: the trait bound `Q: FromFormField<'_>` is not satisfied
    |             ^ the trait `FromFormField<'_>` is not implemented for `Q`, which is required by `Q: FromForm<'_>`
    |
    = help: the following other types implement trait `FromFormField<'v>`:
-             bool
-             char
-             isize
-             i8
-             i16
-             i32
-             i64
-             i128
+             &'v [u8]
+             &'v str
+             Capped<&'v [u8]>
+             Capped<&'v str>
+             Capped<Cow<'v, str>>
+             Capped<TempFile<'v>>
+             Capped<std::string::String>
+             Cow<'v, str>
            and $N others
    = note: required for `Q` to implement `FromForm<'_>`
 
@@ -52,14 +52,14 @@ error[E0277]: the trait bound `Q: FromFormField<'_>` is not satisfied
    |             ^ the trait `FromFormField<'_>` is not implemented for `Q`, which is required by `Q: FromForm<'_>`
    |
    = help: the following other types implement trait `FromFormField<'v>`:
-             bool
-             char
-             isize
-             i8
-             i16
-             i32
-             i64
-             i128
+             &'v [u8]
+             &'v str
+             Capped<&'v [u8]>
+             Capped<&'v str>
+             Capped<Cow<'v, str>>
+             Capped<TempFile<'v>>
+             Capped<std::string::String>
+             Cow<'v, str>
            and $N others
    = note: required for `Q` to implement `FromForm<'_>`
 
@@ -70,14 +70,14 @@ error[E0277]: the trait bound `Q: FromData<'_>` is not satisfied
    |             ^ the trait `FromData<'_>` is not implemented for `Q`
    |
    = help: the following other types implement trait `FromData<'r>`:
-             rocket::Data<'r>
-             Cow<'_, str>
-             Capped<Cow<'_, str>>
-             Capped<Vec<u8>>
-             Capped<std::string::String>
-             Capped<TempFile<'_>>
-             Capped<&'r str>
+             &'r RawStr
+             &'r [u8]
+             &'r str
              Capped<&'r RawStr>
+             Capped<&'r [u8]>
+             Capped<&'r str>
+             Capped<Cow<'_, str>>
+             Capped<TempFile<'_>>
            and $N others
 
 error[E0277]: the trait bound `Q: FromRequest<'_>` is not satisfied
@@ -87,14 +87,14 @@ error[E0277]: the trait bound `Q: FromRequest<'_>` is not satisfied
    |           ^ the trait `FromRequest<'_>` is not implemented for `Q`
    |
    = help: the following other types implement trait `FromRequest<'r>`:
-             ProxyProto<'r>
-             Method
-             Outcome<T, (Status, <T as FromRequest<'r>>::Error), Status>
-             Flash<&'r CookieJar<'r>>
-             rocket::Shutdown
-             IpAddr
-             std::net::SocketAddr
-             std::option::Option<T>
+             &'r Accept
+             &'r ContentType
+             &'r CookieJar<'r>
+             &'r Endpoint
+             &'r Host<'r>
+             &'r Limits
+             &'r Route
+             &'r rocket::Config
            and $N others
 
 error[E0277]: the trait bound `Q: FromParam<'_>` is not satisfied
@@ -104,14 +104,14 @@ error[E0277]: the trait bound `Q: FromParam<'_>` is not satisfied
    |                    ^ the trait `FromParam<'_>` is not implemented for `Q`
    |
    = help: the following other types implement trait `FromParam<'a>`:
-             <bool as FromParam<'a>>
-             <isize as FromParam<'a>>
-             <i8 as FromParam<'a>>
-             <i16 as FromParam<'a>>
-             <i32 as FromParam<'a>>
-             <i64 as FromParam<'a>>
-             <i128 as FromParam<'a>>
-             <usize as FromParam<'a>>
+             <&'a str as FromParam<'a>>
+             <IpAddr as FromParam<'a>>
+             <Ipv4Addr as FromParam<'a>>
+             <Ipv6Addr as FromParam<'a>>
+             <NonZero<i128> as FromParam<'a>>
+             <NonZero<i16> as FromParam<'a>>
+             <NonZero<i32> as FromParam<'a>>
+             <NonZero<i64> as FromParam<'a>>
            and $N others
 
 error[E0277]: the trait bound `Q: FromRequest<'_>` is not satisfied
@@ -121,14 +121,14 @@ error[E0277]: the trait bound `Q: FromRequest<'_>` is not satisfied
    |           ^ the trait `FromRequest<'_>` is not implemented for `Q`
    |
    = help: the following other types implement trait `FromRequest<'r>`:
-             ProxyProto<'r>
-             Method
-             Outcome<T, (Status, <T as FromRequest<'r>>::Error), Status>
-             Flash<&'r CookieJar<'r>>
-             rocket::Shutdown
-             IpAddr
-             std::net::SocketAddr
-             std::option::Option<T>
+             &'r Accept
+             &'r ContentType
+             &'r CookieJar<'r>
+             &'r Endpoint
+             &'r Host<'r>
+             &'r Limits
+             &'r Route
+             &'r rocket::Config
            and $N others
 
 error[E0277]: the trait bound `Q: FromParam<'_>` is not satisfied
@@ -138,14 +138,14 @@ error[E0277]: the trait bound `Q: FromParam<'_>` is not satisfied
    |                    ^ the trait `FromParam<'_>` is not implemented for `Q`
    |
    = help: the following other types implement trait `FromParam<'a>`:
-             <bool as FromParam<'a>>
-             <isize as FromParam<'a>>
-             <i8 as FromParam<'a>>
-             <i16 as FromParam<'a>>
-             <i32 as FromParam<'a>>
-             <i64 as FromParam<'a>>
-             <i128 as FromParam<'a>>
-             <usize as FromParam<'a>>
+             <&'a str as FromParam<'a>>
+             <IpAddr as FromParam<'a>>
+             <Ipv4Addr as FromParam<'a>>
+             <Ipv6Addr as FromParam<'a>>
+             <NonZero<i128> as FromParam<'a>>
+             <NonZero<i16> as FromParam<'a>>
+             <NonZero<i32> as FromParam<'a>>
+             <NonZero<i64> as FromParam<'a>>
            and $N others
 
 error[E0277]: the trait bound `Q: FromParam<'_>` is not satisfied
@@ -155,12 +155,12 @@ error[E0277]: the trait bound `Q: FromParam<'_>` is not satisfied
    |                                           ^ the trait `FromParam<'_>` is not implemented for `Q`
    |
    = help: the following other types implement trait `FromParam<'a>`:
-             <bool as FromParam<'a>>
-             <isize as FromParam<'a>>
-             <i8 as FromParam<'a>>
-             <i16 as FromParam<'a>>
-             <i32 as FromParam<'a>>
-             <i64 as FromParam<'a>>
-             <i128 as FromParam<'a>>
-             <usize as FromParam<'a>>
+             <&'a str as FromParam<'a>>
+             <IpAddr as FromParam<'a>>
+             <Ipv4Addr as FromParam<'a>>
+             <Ipv6Addr as FromParam<'a>>
+             <NonZero<i128> as FromParam<'a>>
+             <NonZero<i16> as FromParam<'a>>
+             <NonZero<i32> as FromParam<'a>>
+             <NonZero<i64> as FromParam<'a>>
            and $N others

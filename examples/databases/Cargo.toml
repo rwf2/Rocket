@@ -11,7 +11,7 @@ diesel = { version = "2", features = ["returning_clauses_for_sqlite_3_35"] }
 diesel_migrations = "2"
 
 [dependencies.sqlx]
-version = "0.7.0"
+version = "0.8.0"
 default-features = false
 features = ["macros", "migrate"]
 

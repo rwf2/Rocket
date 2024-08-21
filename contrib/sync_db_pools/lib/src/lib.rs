@@ -317,8 +317,8 @@
 //! | Postgres | [Diesel]              | `2`       | [`diesel::PgConnection`]       | `diesel_postgres_pool` |
 //! | MySQL    | [Diesel]              | `2`       | [`diesel::MysqlConnection`]    | `diesel_mysql_pool`    |
 //! | Postgres | [Rust-Postgres]       | `0.19`    | [`postgres::Client`]           | `postgres_pool`        |
-//! | Sqlite   | [`Rusqlite`]          | `0.27`    | [`rusqlite::Connection`]       | `sqlite_pool`          |
-//! | Memcache | [`memcache`]          | `0.15`    | [`memcache::Client`]           | `memcache_pool`        |
+//! | Sqlite   | [`Rusqlite`]          | `0.31`    | [`rusqlite::Connection`]       | `sqlite_pool`          |
+//! | Memcache | [`memcache`]          | `0.17`    | [`memcache::Client`]           | `memcache_pool`        |
 //!
 //! [Diesel]: https://diesel.rs
 //! [`diesel::SqliteConnection`]: https://docs.rs/diesel/2/diesel/sqlite/struct.SqliteConnection.html
@@ -327,10 +327,10 @@
 //! [Rust-Postgres]: https://github.com/sfackler/rust-postgres
 //! [`postgres::Client`]: https://docs.rs/postgres/0.19/postgres/struct.Client.html
 //! [`Rusqlite`]: https://github.com/jgallagher/rusqlite
-//! [`rusqlite::Connection`]: https://docs.rs/rusqlite/0.27/rusqlite/struct.Connection.html
+//! [`rusqlite::Connection`]: https://docs.rs/rusqlite/0.31/rusqlite/struct.Connection.html
 //! [`diesel::PgConnection`]: http://docs.diesel.rs/diesel/pg/struct.PgConnection.html
 //! [`memcache`]: https://github.com/aisk/rust-memcache
-//! [`memcache::Client`]: https://docs.rs/memcache/0.15/memcache/struct.Client.html
+//! [`memcache::Client`]: https://docs.rs/memcache/0.17/memcache/struct.Client.html
 //!
 //! The above table lists all the supported database adapters in this library.
 //! In order to use particular `Poolable` type that's included in this library,
@@ -372,7 +372,6 @@ pub use diesel;
 #[cfg(feature = "sqlite_pool")] pub use r2d2_sqlite;
 
 #[cfg(feature = "memcache_pool")] pub use memcache;
-#[cfg(feature = "memcache_pool")] pub use r2d2_memcache;
 
 pub use r2d2;
 

@@ -19,7 +19,7 @@ diesel_postgres_pool = ["diesel/postgres", "diesel/r2d2"]
 diesel_mysql_pool = ["diesel/mysql", "diesel/r2d2"]
 sqlite_pool = ["rusqlite", "r2d2_sqlite"]
 postgres_pool = ["postgres", "r2d2_postgres"]
-memcache_pool = ["memcache", "r2d2-memcache"]
+memcache_pool = ["memcache"]
 
 [dependencies]
 r2d2 = "0.8"
@@ -31,11 +31,10 @@ diesel = { version = "2.0.0", default-features = false, optional = true }
 postgres = { version = "0.19", optional = true }
 r2d2_postgres = { version = "0.18", optional = true }
 
-rusqlite = { version = "0.29.0", optional = true }
-r2d2_sqlite = { version = "0.22.0", optional = true }
+rusqlite = { version = "0.31.0", optional = true }
+r2d2_sqlite = { version = "0.24.0", optional = true }
 
-memcache = { version = "0.15.2", optional = true }
-r2d2-memcache = { version = "0.6", optional = true }
+memcache = { version = "0.17.2", optional = true }
 
 [dependencies.rocket_sync_db_pools_codegen]
 version = "0.1.0"
@@ -48,6 +47,12 @@ default-features = false
 
 [build-dependencies]
 version_check = "0.9.1"
+
+[dev-dependencies.rocket]
+version = "0.6.0-dev"
+path = "../../../core/lib"
+default-features = false
+features = ["trace"]
 
 [package.metadata.docs.rs]
 all-features = true

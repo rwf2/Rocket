@@ -85,6 +85,9 @@ pub use diesel_async::pg;
 pub use diesel_async::pooled_connection::deadpool::Pool;
 
 #[doc(inline)]
+pub use diesel_async::async_connection_wrapper::AsyncConnectionWrapper;
+
+#[doc(inline)]
 #[cfg(feature = "diesel_mysql")]
 pub use diesel_async::AsyncMysqlConnection;
 

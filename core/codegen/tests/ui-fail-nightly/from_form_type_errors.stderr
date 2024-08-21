@@ -131,15 +131,15 @@ error[E0277]: the trait bound `Unknown: FromForm<'r>` is not satisfied
 7 |     field: Unknown,
   |            ^^^^^^^ the trait `FromFormField<'_>` is not implemented for `Unknown`, which is required by `Unknown: FromForm<'r>`
   |
-  = help: the following other types implement trait `FromForm<'r>`:
-            <(A, B) as FromForm<'v>>
-            <Arc<T> as FromForm<'v>>
-            <BTreeMap<K, V> as FromForm<'v>>
-            <BadType3 as FromForm<'r>>
-            <Contextual<'v, T> as FromForm<'v>>
-            <HashMap<K, V> as FromForm<'v>>
-            <Lenient<T> as FromForm<'v>>
-            <Other as FromForm<'r>>
+  = help: the following other types implement trait `FromFormField<'v>`:
+            &'v [u8]
+            &'v str
+            Capped<&'v [u8]>
+            Capped<&'v str>
+            Capped<Cow<'v, str>>
+            Capped<TempFile<'v>>
+            Capped<std::string::String>
+            Cow<'v, str>
           and $N others
   = note: required for `Unknown` to implement `FromForm<'r>`
 
@@ -190,15 +190,15 @@ error[E0277]: the trait bound `Foo<usize>: FromForm<'r>` is not satisfied
 14 |     field: Foo<usize>,
    |            ^^^^^^^^^^ the trait `FromFormField<'_>` is not implemented for `Foo<usize>`, which is required by `Foo<usize>: FromForm<'r>`
    |
-   = help: the following other types implement trait `FromForm<'r>`:
-             <(A, B) as FromForm<'v>>
-             <Arc<T> as FromForm<'v>>
-             <BTreeMap<K, V> as FromForm<'v>>
-             <BadType3 as FromForm<'r>>
-             <Contextual<'v, T> as FromForm<'v>>
-             <HashMap<K, V> as FromForm<'v>>
-             <Lenient<T> as FromForm<'v>>
-             <Other as FromForm<'r>>
+   = help: the following other types implement trait `FromFormField<'v>`:
+             &'v [u8]
+             &'v str
+             Capped<&'v [u8]>
+             Capped<&'v str>
+             Capped<Cow<'v, str>>
+             Capped<TempFile<'v>>
+             Capped<std::string::String>
+             Cow<'v, str>
            and $N others
    = note: required for `Foo<usize>` to implement `FromForm<'r>`
 

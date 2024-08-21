@@ -26,7 +26,9 @@ impl Client {
             .connect_timeout(Duration::from_secs(5))
     }
 
-    pub fn request(&self, server: &Server, method: Method, url: &str) -> Result<RequestBuilder> {
+    pub fn request<M>(&self, server: &Server, method: M, url: &str) -> Result<RequestBuilder>
+        where M: AsRef<str>
+    {
         let uri = match Uri::parse_any(url).map_err(|e| e.into_owned())? {
             Uri::Origin(uri) => {
                 let proto = if server.tls { "https" } else { "http" };
@@ -45,7 +47,7 @@ impl Client {
             uri => return Err(Error::InvalidUri(uri.into_owned())),
         };
 
-        let method = reqwest::Method::from_str(method.as_str()).unwrap();
+        let method = reqwest::Method::from_str(method.as_ref()).unwrap();
         Ok(self.client.request(method, uri.to_string()))
     }
 

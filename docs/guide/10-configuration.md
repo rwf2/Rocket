@@ -607,4 +607,4 @@ or `APP_` environment variables, Rocket will make use of them. The application
 can also extract its configuration, done here via the `Adhoc::config()` fairing.
 
 [`rocket::custom()`]: @api/master/rocket/fn.custom.html
-[`rocket::build()`]: @api/master/rocket/fn.custom.html
+[`rocket::build()`]: @api/master/rocket/fn.build.html

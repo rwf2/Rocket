@@ -12,6 +12,9 @@ pub use self::request::Request;
 pub use self::from_request::{FromRequest, Outcome};
 pub use self::from_param::{FromParam, FromSegments};
 
+#[doc(hidden)]
+pub use rocket_codegen::FromParam;
+
 #[doc(inline)]
 pub use crate::response::flash::FlashMessage;
 

@@ -1,9 +1,10 @@
+use rocket::{Rocket, Build};
 use rocket::fairing::AdHoc;
 use rocket::response::{Debug, status::Created};
 use rocket::serde::{Serialize, Deserialize, json::Json};
 
 use rocket_db_pools::{Database, Connection};
-use rocket_db_pools::diesel::{MysqlPool, prelude::*};
+use rocket_db_pools::diesel::{prelude::*, MysqlPool};
 
 type Result<T, E = Debug<diesel::result::Error>> = std::result::Result<T, E>;
 
@@ -34,7 +35,7 @@ diesel::table! {
 
 #[post("/", data = "<post>")]
 async fn create(mut db: Connection<Db>, mut post: Json<Post>) -> Result<Created<Json<Post>>> {
-    diesel::sql_function!(fn last_insert_id() -> BigInt);
+    diesel::define_sql_function!(fn last_insert_id() -> BigInt);
 
     let post = db.transaction(|mut conn| Box::pin(async move {
         diesel::insert_into(posts::table)
@@ -89,9 +90,33 @@ async fn destroy(mut db: Connection<Db>) -> Result<()> {
     Ok(())
 }
 
+async fn run_migrations(rocket: Rocket<Build>) -> Rocket<Build> {
+    use rocket_db_pools::diesel::AsyncConnectionWrapper;
+    use diesel_migrations::{embed_migrations, EmbeddedMigrations, MigrationHarness};
+
+    const MIGRATIONS: EmbeddedMigrations = embed_migrations!("db/diesel/mysql-migrations");
+
+    let conn = Db::fetch(&rocket)
+        .expect("database is attached")
+        .get().await
+        .unwrap_or_else(|e| {
+            span_error!("failed to connect to MySQL database" => error!("{e}"));
+            panic!("aborting launch");
+        });
+
+    // `run_pending_migrations` blocks, so it must be run in `spawn_blocking`
+    rocket::tokio::task::spawn_blocking(move || {
+        let mut conn: AsyncConnectionWrapper<_> = conn.into();
+        conn.run_pending_migrations(MIGRATIONS).expect("diesel migrations");
+    }).await.expect("diesel migrations");
+
+    rocket
+}
+
 pub fn stage() -> AdHoc {
     AdHoc::on_ignite("Diesel MySQL Stage", |rocket| async {
         rocket.attach(Db::init())
-            .mount("/diesel-async", routes![list, read, create, delete, destroy])
+            .attach(AdHoc::on_ignite("Diesel Migrations", run_migrations))
+            .mount("/mysql", routes![list, read, create, delete, destroy])
     })
 }

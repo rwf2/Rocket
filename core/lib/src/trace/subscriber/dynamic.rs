@@ -1,17 +1,19 @@
 use std::sync::OnceLock;
 
-use tracing::{Dispatch, Event, Level, Metadata};
+use tracing::{Dispatch, Event, Metadata};
 use tracing::subscriber::{Subscriber, Interest};
 use tracing::span::{Attributes, Id, Record};
+
+use tracing_subscriber::reload;
 use tracing_subscriber::registry::{Registry, LookupSpan};
 use tracing_subscriber::layer::{Context, Layer, Layered, SubscriberExt};
-use tracing_subscriber::reload;
 use tracing_subscriber::util::SubscriberInitExt;
 
-use crate::config::{Config, CliColors};
+use crate::config::Config;
 use crate::trace::subscriber::{Compact, Pretty, RequestId, RequestIdLayer, RocketFmt};
 use crate::trace::TraceFormat;
 
+/// A subscriber that is either a [`Pretty`] or [`Compact`] [`RocketFmt`].
 pub struct RocketDynFmt {
     inner: either::Either<RocketFmt<Compact>, RocketFmt<Pretty>>,
 }
@@ -29,7 +31,27 @@ impl From<RocketFmt<Pretty>> for RocketDynFmt {
 }
 
 impl RocketDynFmt {
-    pub fn init(config: Option<&Config>) {
+    /// Creates a new `RocketDynFmt` subscriber given a `Config`.
+    ///
+    /// [`Config::log_format`] determines which `RocketFmt` subscriber (either
+    /// [`Pretty`] or [`Compact`]) is used.
+    ///
+    /// If `config` is `None`, [`Config::debug_default()`] is used, which uses
+    /// the [`Pretty`] subscriber by default.
+    pub fn new(config: Option<&Config>) -> Self {
+        let default = Config::debug_default();
+        let workers = config.map_or(default.workers, |c| c.workers);
+        let colors = config.map_or(default.cli_colors, |c| c.cli_colors);
+        let level = config.map_or(default.log_level, |c| c.log_level);
+        let format = config.map_or(default.log_format, |c| c.log_format);
+
+        match format {
+            TraceFormat::Pretty => Self::from(RocketFmt::<Pretty>::new(workers, colors, level)),
+            TraceFormat::Compact => Self::from(RocketFmt::<Compact>::new(workers, colors, level)),
+        }
+    }
+
+    pub(crate) fn init(config: Option<&Config>) {
         type Handle = reload::Handle<RocketDynFmt, Layered<RequestIdLayer, Registry>>;
 
         static HANDLE: OnceLock<Handle> = OnceLock::new();
@@ -39,17 +61,12 @@ impl RocketDynFmt {
             return;
         }
 
-        let workers = config.map_or(num_cpus::get(), |c| c.workers);
-        let colors = config.map_or(CliColors::Auto, |c| c.cli_colors);
-        let level = config.map_or(Some(Level::INFO), |c| c.log_level);
-        let format = config.map_or(TraceFormat::Pretty, |c| c.log_format);
+        let formatter = Self::new(config);
+        if let Some(handle) = HANDLE.get() {
+            return assert!(handle.modify(|layer| *layer = formatter).is_ok());
+        }
 
-        let formatter = |format| match format {
-            TraceFormat::Pretty => Self::from(RocketFmt::<Pretty>::new(workers, colors, level)),
-            TraceFormat::Compact => Self::from(RocketFmt::<Compact>::new(workers, colors, level)),
-        };
-
-        let (layer, reload_handle) = reload::Layer::new(formatter(format));
+        let (layer, reload_handle) = reload::Layer::new(formatter);
         let result = tracing_subscriber::registry()
             .with(RequestId::layer())
             .with(layer)
@@ -57,13 +74,7 @@ impl RocketDynFmt {
 
         if result.is_ok() {
             assert!(HANDLE.set(reload_handle).is_ok());
-        } else if let Some(handle) = HANDLE.get() {
-            assert!(handle.modify(|layer| *layer = formatter(format)).is_ok());
         }
-    }
-
-    pub fn reset(&mut self, cli_colors: CliColors, level: Option<Level>) {
-        either::for_both!(&mut self.inner, f => f.reset(cli_colors, level))
     }
 }
 

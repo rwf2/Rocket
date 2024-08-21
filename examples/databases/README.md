@@ -14,7 +14,7 @@ This example implements a JSON-based HTTP API for a "blog" using several databas
   * `sqlx` (`/sqlx`, `sqlx.rs`)
   * `rusqlite` (`/rusqlite`, `rusqlite.rs`)
   * `diesel` (sqlite) (`/diesel`, `diesel_sqlite.rs`)
-  * `diesel-async` (mysql) (`/diesel-async`, `diesel_mysql.rs`)
+  * `diesel-async` (mysql) (`/mysql`, `diesel_mysql.rs`)
 
 The exposed API is succinctly described as follows, with
 [`httpie`](https://httpie.io/) CLI examples:

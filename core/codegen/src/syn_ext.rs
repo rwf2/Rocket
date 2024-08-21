@@ -80,7 +80,7 @@ impl IdentExt for syn::Ident {
         self.prepend(crate::ROCKET_IDENT_PREFIX)
     }
 
-    /// Create a unqiue version of the ident `self` based on the hash of `self`,
+    /// Create a unique version of the ident `self` based on the hash of `self`,
     /// its span, the current call site, and any additional information provided
     /// by the closure `f`.
     ///
