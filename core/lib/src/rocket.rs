@@ -17,7 +17,7 @@ use crate::listener::{Bind, DefaultListener, Endpoint, Listener};
 use crate::router::Router;
 use crate::fairing::{Fairing, Fairings};
 use crate::phase::{Phase, Build, Building, Ignite, Igniting, Orbit, Orbiting};
-use crate::phase::{Stateful, StateRef, State};
+use crate::phase::{Stateful, StateRef, StateRefMut, State};
 use crate::http::uri::Origin;
 use crate::http::ext::IntoOwned;
 use crate::error::{Error, ErrorKind};
@@ -464,8 +464,11 @@ impl Rocket<Build> {
     /// Attaches a fairing to this instance of Rocket. No fairings are eagerly
     /// executed; fairings are executed at their appropriate time.
     ///
-    /// If the attached fairing is _fungible_ and a fairing of the same name
-    /// already exists, this fairing replaces it.
+    /// If the attached fairing is a [singleton] and a fairing of the same type
+    /// has already been attached, this fairing replaces it. Otherwise the
+    /// fairing gets attached without replacing any existing fairing.
+    ///
+    /// [singleton]: crate::fairing::Fairing#singletons
     ///
     /// # Example
     ///
@@ -835,7 +838,7 @@ impl<P: Phase> Rocket<P> {
     /// assert!(rocket.routes().any(|r| r.uri == "/hi/hello"));
     /// ```
     pub fn routes(&self) -> impl Iterator<Item = &Route> {
-        match self.0.as_state_ref() {
+        match self.0.as_ref() {
             StateRef::Build(p) => Either::Left(p.routes.iter()),
             StateRef::Ignite(p) => Either::Right(p.router.routes()),
             StateRef::Orbit(p) => Either::Right(p.router.routes()),
@@ -866,7 +869,7 @@ impl<P: Phase> Rocket<P> {
     /// assert!(rocket.catchers().any(|c| c.code == None && c.base() == "/"));
     /// ```
     pub fn catchers(&self) -> impl Iterator<Item = &Catcher> {
-        match self.0.as_state_ref() {
+        match self.0.as_ref() {
             StateRef::Build(p) => Either::Left(p.catchers.iter()),
             StateRef::Ignite(p) => Either::Right(p.router.catchers()),
             StateRef::Orbit(p) => Either::Right(p.router.catchers()),
@@ -886,10 +889,214 @@ impl<P: Phase> Rocket<P> {
     /// assert_eq!(rocket.state::<MyState>().unwrap(), &MyState("hello!"));
     /// ```
     pub fn state<T: Send + Sync + 'static>(&self) -> Option<&T> {
-        match self.0.as_state_ref() {
+        match self.0.as_ref() {
             StateRef::Build(p) => p.state.try_get(),
             StateRef::Ignite(p) => p.state.try_get(),
             StateRef::Orbit(p) => p.state.try_get(),
+        }
+    }
+
+    /// Returns a reference to the first fairing of type `F` if it is attached.
+    /// Otherwise, returns `None`.
+    ///
+    /// To retrieve a _mutable_ reference to fairing `F`, use
+    /// [`Rocket::fairing_mut()`] instead.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// # use rocket::{Rocket, Request, Data, Response, Build, Orbit};
+    /// # use rocket::fairing::{self, Fairing, Info, Kind};
+    /// #
+    /// # #[rocket::async_trait]
+    /// # impl Fairing for MyFairing {
+    /// #     fn info(&self) -> Info {
+    /// #       Info { name: "", kind: Kind::Ignite  }
+    /// #     }
+    /// # }
+    /// #
+    /// # #[rocket::async_trait]
+    /// # impl Fairing for MySingletonFairing {
+    /// #     fn info(&self) -> Info {
+    /// #       Info { name: "", kind: Kind::Ignite | Kind::Singleton }
+    /// #     }
+    /// # }
+    /// // A regular, non-singleton fairing.
+    /// struct MyFairing(&'static str);
+    ///
+    /// // A singleton fairing.
+    /// struct MySingletonFairing(&'static str);
+    ///
+    /// // fairing is not attached, returns `None`
+    /// let rocket = rocket::build();
+    /// assert!(rocket.fairing::<MyFairing>().is_none());
+    /// assert!(rocket.fairing::<MySingletonFairing>().is_none());
+    ///
+    /// // attach fairing, now returns `Some`
+    /// let rocket = rocket.attach(MyFairing("some state"));
+    /// assert!(rocket.fairing::<MyFairing>().is_some());
+    /// assert_eq!(rocket.fairing::<MyFairing>().unwrap().0, "some state");
+    ///
+    /// // it returns the first fairing of a given type only
+    /// let rocket = rocket.attach(MyFairing("other state"));
+    /// assert_eq!(rocket.fairing::<MyFairing>().unwrap().0, "some state");
+    ///
+    /// // attach fairing, now returns `Some`
+    /// let rocket = rocket.attach(MySingletonFairing("first"));
+    /// assert_eq!(rocket.fairing::<MySingletonFairing>().unwrap().0, "first");
+    ///
+    /// // recall that new singletons replace existing attached singletons
+    /// let rocket = rocket.attach(MySingletonFairing("second"));
+    /// assert_eq!(rocket.fairing::<MySingletonFairing>().unwrap().0, "second");
+    /// ```
+    pub fn fairing<F: Fairing>(&self) -> Option<&F> {
+        match self.0.as_ref() {
+            StateRef::Build(p) => p.fairings.filter::<F>().next(),
+            StateRef::Ignite(p) => p.fairings.filter::<F>().next(),
+            StateRef::Orbit(p) => p.fairings.filter::<F>().next(),
+        }
+    }
+
+    /// Returns an iterator over all attached fairings of type `F`, if any.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// # use rocket::{Rocket, Request, Data, Response, Build, Orbit};
+    /// # use rocket::fairing::{self, Fairing, Info, Kind};
+    /// #
+    /// # #[rocket::async_trait]
+    /// # impl Fairing for MyFairing {
+    /// #     fn info(&self) -> Info {
+    /// #         Info { name: "", kind: Kind::Ignite  }
+    /// #     }
+    /// # }
+    /// #
+    /// # #[rocket::async_trait]
+    /// # impl Fairing for MySingletonFairing {
+    /// #     fn info(&self) -> Info {
+    /// #         Info { name: "", kind: Kind::Ignite | Kind::Singleton }
+    /// #     }
+    /// # }
+    /// // A regular, non-singleton fairing.
+    /// struct MyFairing(&'static str);
+    ///
+    /// // A singleton fairing.
+    /// struct MySingletonFairing(&'static str);
+    ///
+    /// let rocket = rocket::build();
+    /// assert_eq!(rocket.fairings::<MyFairing>().count(), 0);
+    /// assert_eq!(rocket.fairings::<MySingletonFairing>().count(), 0);
+    ///
+    /// let rocket = rocket.attach(MyFairing("some state"))
+    ///     .attach(MySingletonFairing("first"))
+    ///     .attach(MySingletonFairing("second"))
+    ///     .attach(MyFairing("other state"))
+    ///     .attach(MySingletonFairing("third"));
+    ///
+    /// let my_fairings: Vec<_> = rocket.fairings::<MyFairing>().collect();
+    /// assert_eq!(my_fairings.len(), 2);
+    /// assert_eq!(my_fairings[0].0, "some state");
+    /// assert_eq!(my_fairings[1].0, "other state");
+    ///
+    /// let my_singleton: Vec<_> = rocket.fairings::<MySingletonFairing>().collect();
+    /// assert_eq!(my_singleton.len(), 1);
+    /// assert_eq!(my_singleton[0].0, "third");
+    /// ```
+    pub fn fairings<F: Fairing>(&self) -> impl Iterator<Item = &F> {
+        match self.0.as_ref() {
+            StateRef::Build(p) => Either::Left(p.fairings.filter::<F>()),
+            StateRef::Ignite(p) => Either::Right(p.fairings.filter::<F>()),
+            StateRef::Orbit(p) => Either::Right(p.fairings.filter::<F>()),
+        }
+    }
+
+    /// Returns a mutable reference to the first fairing of type `F` if it is
+    /// attached. Otherwise, returns `None`.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// # use rocket::{Rocket, Request, Data, Response, Build, Orbit};
+    /// # use rocket::fairing::{self, Fairing, Info, Kind};
+    /// #
+    /// # #[rocket::async_trait]
+    /// # impl Fairing for MyFairing {
+    /// #     fn info(&self) -> Info {
+    /// #       Info { name: "", kind: Kind::Ignite  }
+    /// #     }
+    /// # }
+    /// // A regular, non-singleton fairing.
+    /// struct MyFairing(&'static str);
+    ///
+    /// // fairing is not attached, returns `None`
+    /// let mut rocket = rocket::build();
+    /// assert!(rocket.fairing_mut::<MyFairing>().is_none());
+    ///
+    /// // attach fairing, now returns `Some`
+    /// let mut rocket = rocket.attach(MyFairing("some state"));
+    /// assert!(rocket.fairing_mut::<MyFairing>().is_some());
+    /// assert_eq!(rocket.fairing_mut::<MyFairing>().unwrap().0, "some state");
+    ///
+    /// // we can modify the fairing
+    /// rocket.fairing_mut::<MyFairing>().unwrap().0 = "other state";
+    /// assert_eq!(rocket.fairing_mut::<MyFairing>().unwrap().0, "other state");
+    ///
+    /// // it returns the first fairing of a given type only
+    /// let mut rocket = rocket.attach(MyFairing("yet more state"));
+    /// assert_eq!(rocket.fairing_mut::<MyFairing>().unwrap().0, "other state");
+    /// ```
+    pub fn fairing_mut<F: Fairing>(&mut self) -> Option<&mut F> {
+        match self.0.as_mut() {
+            StateRefMut::Build(p) => p.fairings.filter_mut::<F>().next(),
+            StateRefMut::Ignite(p) => p.fairings.filter_mut::<F>().next(),
+            StateRefMut::Orbit(p) => p.fairings.filter_mut::<F>().next(),
+        }
+    }
+
+    /// Returns an iterator of mutable references to all attached fairings of
+    /// type `F`, if any.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// # use rocket::{Rocket, Request, Data, Response, Build, Orbit};
+    /// # use rocket::fairing::{self, Fairing, Info, Kind};
+    /// #
+    /// # #[rocket::async_trait]
+    /// # impl Fairing for MyFairing {
+    /// #     fn info(&self) -> Info {
+    /// #         Info { name: "", kind: Kind::Ignite  }
+    /// #     }
+    /// # }
+    /// // A regular, non-singleton fairing.
+    /// struct MyFairing(&'static str);
+    ///
+    /// let mut rocket = rocket::build()
+    ///     .attach(MyFairing("some state"))
+    ///     .attach(MyFairing("other state"))
+    ///     .attach(MyFairing("yet more state"));
+    ///
+    /// let mut fairings: Vec<_> = rocket.fairings_mut::<MyFairing>().collect();
+    /// assert_eq!(fairings.len(), 3);
+    /// assert_eq!(fairings[0].0, "some state");
+    /// assert_eq!(fairings[1].0, "other state");
+    /// assert_eq!(fairings[2].0, "yet more state");
+    ///
+    /// // we can modify the fairings
+    /// fairings[1].0 = "modified state";
+    ///
+    /// let fairings: Vec<_> = rocket.fairings::<MyFairing>().collect();
+    /// assert_eq!(fairings.len(), 3);
+    /// assert_eq!(fairings[0].0, "some state");
+    /// assert_eq!(fairings[1].0, "modified state");
+    /// assert_eq!(fairings[2].0, "yet more state");
+    /// ```
+    pub fn fairings_mut<F: Fairing>(&mut self) -> impl Iterator<Item = &mut F> {
+        match self.0.as_mut() {
+            StateRefMut::Build(p) => Either::Left(p.fairings.filter_mut::<F>()),
+            StateRefMut::Ignite(p) => Either::Right(p.fairings.filter_mut::<F>()),
+            StateRefMut::Orbit(p) => Either::Right(p.fairings.filter_mut::<F>()),
         }
     }
 
@@ -910,7 +1117,7 @@ impl<P: Phase> Rocket<P> {
     /// let figment = rocket.figment();
     /// ```
     pub fn figment(&self) -> &Figment {
-        match self.0.as_state_ref() {
+        match self.0.as_ref() {
             StateRef::Build(p) => &p.figment,
             StateRef::Ignite(p) => &p.figment,
             StateRef::Orbit(p) => &p.figment,

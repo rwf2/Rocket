@@ -425,7 +425,7 @@ pub type Result<T = Rocket<Build>, E = Rocket<Build>> = std::result::Result<T, E
 ///
 /// [request-local state]: https://rocket.rs/master/guide/state/#request-local-state
 #[crate::async_trait]
-pub trait Fairing: Send + Sync + Any + 'static {
+pub trait Fairing: Send + Sync + AsAny + 'static {
     /// Returns an [`Info`] structure containing the `name` and [`Kind`] of this
     /// fairing. The `name` can be any arbitrary string. `Kind` must be an `or`d
     /// set of `Kind` variants.
@@ -533,6 +533,11 @@ pub trait Fairing: Send + Sync + Any + 'static {
     async fn on_shutdown(&self, _rocket: &Rocket<Orbit>) { }
 }
 
+pub trait AsAny: Any {
+    fn as_any_ref(&self) -> &dyn Any;
+    fn as_any_mut(&mut self) -> &mut dyn Any;
+}
+
 #[crate::async_trait]
 impl<T: Fairing + ?Sized> Fairing for std::sync::Arc<T> {
     #[inline]
@@ -563,5 +568,20 @@ impl<T: Fairing + ?Sized> Fairing for std::sync::Arc<T> {
     #[inline]
     async fn on_shutdown(&self, rocket: &Rocket<Orbit>) {
         (self as &T).on_shutdown(rocket).await
+    }
+}
+
+impl<T: Any> AsAny for T {
+    fn as_any_ref(&self) -> &dyn Any { self }
+    fn as_any_mut(&mut self) -> &mut dyn Any { self }
+}
+
+impl dyn Fairing {
+    fn downcast_ref<T: Any>(&self) -> Option<&T> {
+        self.as_any_ref().downcast_ref()
+    }
+
+    fn downcast_mut<T: Any>(&mut self) -> Option<&mut T> {
+        self.as_any_mut().downcast_mut()
     }
 }

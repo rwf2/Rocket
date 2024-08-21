@@ -14,7 +14,8 @@ mod private {
 #[doc(hidden)]
 pub trait Stateful: private::Sealed {
     fn into_state(self) -> State;
-    fn as_state_ref(&self) -> StateRef<'_>;
+    fn as_ref(&self) -> StateRef<'_>;
+    fn as_mut(&mut self) -> StateRefMut<'_>;
 }
 
 /// A marker trait for Rocket's launch phases.
@@ -48,7 +49,8 @@ macro_rules! phase {
 
         impl Stateful for $S {
             fn into_state(self) -> State { State::$P(self) }
-            fn as_state_ref(&self) -> StateRef<'_> { StateRef::$P(self) }
+            fn as_ref(&self) -> StateRef<'_> { StateRef::$P(self) }
+            fn as_mut(&mut self) -> StateRefMut<'_> { StateRefMut::$P(self) }
         }
 
         #[doc(hidden)]
@@ -69,6 +71,9 @@ macro_rules! phases {
 
         #[doc(hidden)]
         pub enum StateRef<'a> { $($P(&'a $S)),* }
+
+        #[doc(hidden)]
+        pub enum StateRefMut<'a> { $($P(&'a mut $S)),* }
 
         $(phase!($(#[$o])* $P ($(#[$i])* $S) { $($fields)* });)*
     )
