@@ -338,7 +338,7 @@ impl Trace for ErrorKind {
                 });
             }
             FailedFairings(fairings) => {
-                let span = span!(level, "fairings", count = fairings.len(), "ignition failure");
+                let span = span!(level, "failed ignite fairings", count = fairings.len());
                 span.in_scope(|| fairings.iter().trace_all(level));
             },
             SentinelAborts(sentries) => {

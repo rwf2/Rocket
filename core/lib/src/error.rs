@@ -195,7 +195,7 @@ impl Error {
         match result {
             Ok(_) => process::ExitCode::SUCCESS,
             Err(e) => {
-                span_error!("error", "aborting launch due to error" => e.trace_error());
+                span_error!("launch failure", "aborting launch due to error" => e.trace_error());
                 process::ExitCode::SUCCESS
             }
         }

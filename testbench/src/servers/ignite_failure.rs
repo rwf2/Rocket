@@ -7,7 +7,7 @@ fn test_ignite_failure() -> Result<()> {
     };
 
     if let Err(Error::Liftoff(stdout, _)) = server {
-        assert!(stdout.contains("ignition failure"));
+        assert!(stdout.contains("failed ignite"));
         assert!(stdout.contains("FailNow"));
     } else {
         panic!("unexpected result: {server:#?}");
