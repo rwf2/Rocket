@@ -1,6 +1,6 @@
 [package]
 name = "rocket_db_pools"
-version = "0.1.0"
+version = "0.2.1"
 authors = ["Sergio Benitez <sb@sergio.bz>", "Jeb Rosen <jeb@jebrosen.com>"]
 description = "Rocket async database pooling support"
 repository = "https://github.com/rwf2/Rocket/tree/master/contrib/db_pools"
@@ -26,8 +26,18 @@ sqlx_postgres = ["sqlx", "sqlx/postgres", "log"]
 sqlx_sqlite = ["sqlx", "sqlx/sqlite", "log"]
 sqlx_macros = ["sqlx/macros"]
 # diesel features
-diesel_postgres = ["diesel-async/postgres", "diesel-async/deadpool", "deadpool", "diesel"]
-diesel_mysql = ["diesel-async/mysql", "diesel-async/deadpool", "deadpool", "diesel"]
+diesel_postgres = [
+    "diesel-async/postgres",
+    "diesel-async/deadpool",
+    "deadpool",
+    "diesel",
+]
+diesel_mysql = [
+    "diesel-async/mysql",
+    "diesel-async/deadpool",
+    "deadpool",
+    "diesel",
+]
 # implicit features: mongodb
 
 [dependencies.rocket]
@@ -77,7 +87,7 @@ optional = true
 [dependencies.sqlx]
 version = "0.8"
 default-features = false
-features = ["runtime-tokio-rustls"]
+features = ["runtime-tokio"]
 optional = true
 
 [dependencies.log]
