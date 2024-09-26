@@ -11,16 +11,18 @@ macro_rules! typed_headers_from_request {
         #[rocket::async_trait]
         impl<'r> FromRequest<'r> for $name {
             type Error = headers::Error;
-            async fn from_request(req: &'r Request<'_>) -> crate::request::Outcome<Self, Self::Error> {
+            async fn from_request(req: &'r Request<'_>) ->
+                    crate::request::Outcome<Self, Self::Error> {
                 req.headers().get($name::name().as_str()).next().or_forward(Status::NotFound)
                     .and_then(|h| HHeaderValue::from_str(h).or_error(Status::BadRequest))
                     .map_error(|(s, _)| (s, headers::Error::invalid()))
-                    .and_then(|h| $name::decode(&mut std::iter::once(&h)).or_forward(Status::BadRequest))
+                    .and_then(|h| $name::decode(&mut std::iter::once(&h))
+                        .or_forward(Status::BadRequest))
             }
         }
     )*)
 }
-    
+
 macro_rules! generic_typed_headers_from_request {
 ($($name:ident<$bound:ident>),*) => ($(
     pub use crate::http::$name;
@@ -29,15 +31,17 @@ macro_rules! generic_typed_headers_from_request {
     impl<'r, T1: 'static + $bound> FromRequest<'r> for $name<T1> {
         type Error = headers::Error;
         async fn from_request(req: &'r Request<'_>) -> crate::request::Outcome<Self, Self::Error> {
-            req.headers().get($name::<T1>::name().as_str()).next().or_forward(Status::NotFound)
+            req.headers().get($name::<T1>::name().as_str()).next()
+                .or_forward(Status::NotFound)
                 .and_then(|h| HHeaderValue::from_str(h).or_error(Status::BadRequest))
                 .map_error(|(s, _)| (s, headers::Error::invalid()))
-                .and_then(|h| $name::decode(&mut std::iter::once(&h)).or_forward(Status::BadRequest))
+                .and_then(|h| $name::decode(&mut std::iter::once(&h))
+                    .or_forward(Status::BadRequest))
         }
     }
 )*)
 }
-    
+
 // The following headers from 'headers' 0.4 are not imported, since they are
 // provided by other Rocket features.
 
@@ -100,4 +104,3 @@ generic_typed_headers_from_request! {
     Authorization<Credentials>, // Authorization header, defined in RFC7235
     ProxyAuthorization<Credentials> // Proxy-Authorization header, defined in RFC7235
 }
-
