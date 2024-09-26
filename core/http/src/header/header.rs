@@ -839,7 +839,7 @@ impl Extend<HeaderValue> for HeaderValueDestination {
     }
 }
 
-macro_rules! import_typed_headers {
+macro_rules! from_typed_header {
 ($($name:ident),*) => ($(
     pub use headers::$name;
 
@@ -854,7 +854,7 @@ macro_rules! import_typed_headers {
 )*)
 }
 
-macro_rules! import_generic_typed_headers {
+macro_rules! generic_from_typed_header {
 ($($name:ident<$bound:ident>),*) => ($(
     pub use headers::$name;
 
@@ -879,7 +879,7 @@ macro_rules! import_generic_typed_headers {
 // * Location, // Location header, defined in RFC7231
 // * SetCookie, // Set-Cookie header, defined RFC6265
 
-import_typed_headers! {
+from_typed_header! {
   AcceptRanges, // Accept-Ranges header, defined in RFC7233
   AccessControlAllowCredentials, // Access-Control-Allow-Credentials header, part of CORS
   AccessControlAllowHeaders, // Access-Control-Allow-Headers header, part of CORS
@@ -926,7 +926,7 @@ import_typed_headers! {
   Vary // Vary header, defined in RFC7231
 }
 
-import_generic_typed_headers! {
+generic_from_typed_header! {
     Authorization<Credentials>, // Authorization header, defined in RFC7235
     ProxyAuthorization<Credentials> // Proxy-Authorization header, defined in RFC7235
 }
