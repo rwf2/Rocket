@@ -3,51 +3,68 @@ use std::str::FromStr;
 
 self::define_methods! {
     // enum variant   method name         body   safe idempotent [RFC,section]
-    Get               "GET"               maybe  yes  yes        [9110,9.3.1]
-    Head              "HEAD"              maybe  yes  yes        [9110,9.3.2]
-    Post              "POST"              yes    no   no         [9110,9.3.3]
-    Put               "PUT"               yes    no   yes        [9110,9.3.4]
-    Delete            "DELETE"            maybe  no   yes        [9110,9.3.5]
-    Connect           "CONNECT"           maybe  no   no         [9110,9.3.6]
-    Options           "OPTIONS"           maybe  yes  yes        [9110,9.3.7]
-    Trace             "TRACE"             no     yes  yes        [9110,9.3.8]
-    Patch             "PATCH"             yes    no   no         [5789,2]
+    Get               "GET"               maybe  yes  yes        [9110,"9.3.1"]
+    Head              "HEAD"              maybe  yes  yes        [9110,"9.3.2"]
+    Post              "POST"              yes    no   no         [9110,"9.3.3"]
+    Put               "PUT"               yes    no   yes        [9110,"9.3.4"]
+    Delete            "DELETE"            maybe  no   yes        [9110,"9.3.5"]
+    Connect           "CONNECT"           maybe  no   no         [9110,"9.3.6"]
+    Options           "OPTIONS"           maybe  yes  yes        [9110,"9.3.7"]
+    Trace             "TRACE"             no     yes  yes        [9110,"9.3.8"]
+    Patch             "PATCH"             yes    no   no         [5789,"2"]
+    Query             "QUERY"             maybe  yes  yes        ["DRAFT", "httpbis-safe-method-w-body", "1", "05"]
 
-    Acl               "ACL"               yes    no   yes        [3744,8.1]
-    BaselineControl   "BASELINE-CONTROL"  yes    no   yes        [3253,12.6]
-    Bind              "BIND"              yes    no   yes        [5842,4]
-    CheckIn           "CHECKIN"           yes    no   yes        [3253,4.4]
-    CheckOut          "CHECKOUT"          maybe  no   yes        [3253,4.3]
-    Copy              "COPY"              maybe  no   yes        [4918,9.8]
-    Label             "LABEL"             yes    no   yes        [3253,8.2]
-    Link              "LINK"              maybe  no   yes        [2068,19.6.1.2]
-    Lock              "LOCK"              yes    no   no         [4918,9.10]
-    Merge             "MERGE"             yes    no   yes        [3253,11.2]
-    MkActivity        "MKACTIVITY"        yes    no   yes        [3253,13.5]
-    MkCalendar        "MKCALENDAR"        yes    no   yes        [4791,5.3.1][8144,2.3]
-    MkCol             "MKCOL"             yes    no   yes        [4918,9.3][5689,3][8144,2.3]
-    MkRedirectRef     "MKREDIRECTREF"     yes    no   yes        [4437,6]
-    MkWorkspace       "MKWORKSPACE"       yes    no   yes        [3253,6.3]
-    Move              "MOVE"              maybe  no   yes        [4918,9.9]
-    OrderPatch        "ORDERPATCH"        yes    no   yes        [3648,7]
-    PropFind          "PROPFIND"          yes    yes  yes        [4918,9.1][8144,2.1]
-    PropPatch         "PROPPATCH"         yes    no   yes        [4918,9.2][8144,2.2]
-    Rebind            "REBIND"            yes    no   yes        [5842,6]
-    Report            "REPORT"            yes    yes  yes        [3253,3.6][8144,2.1]
-    Search            "SEARCH"            yes    yes  yes        [5323,2]
-    Unbind            "UNBIND"            yes    no   yes        [5842,5]
-    Uncheckout        "UNCHECKOUT"        maybe  no   yes        [3253,4.5]
-    Unlink            "UNLINK"            maybe  no   yes        [2068,19.6.1.3]
-    Unlock            "UNLOCK"            maybe  no   yes        [4918,9.11]
-    Update            "UPDATE"            yes    no   yes        [3253,7.1]
-    UpdateRedirectRef "UPDATEREDIRECTREF" yes    no   yes        [4437,7]
-    VersionControl    "VERSION-CONTROL"   yes    no   yes        [3253,3.5]
+    Acl               "ACL"               yes    no   yes        [3744,"8.1"]
+    BaselineControl   "BASELINE-CONTROL"  yes    no   yes        [3253,"12.6"]
+    Bind              "BIND"              yes    no   yes        [5842,"4"]
+    CheckIn           "CHECKIN"           yes    no   yes        [3253,"4.4"]
+    CheckOut          "CHECKOUT"          maybe  no   yes        [3253,"4.3"]
+    Copy              "COPY"              maybe  no   yes        [4918,"9.8"]
+    Label             "LABEL"             yes    no   yes        [3253,"8.2"]
+    Link              "LINK"              maybe  no   yes        [2068,"19.6.1.2"]
+    Lock              "LOCK"              yes    no   no         [4918,"9.10"]
+    Merge             "MERGE"             yes    no   yes        [3253,"11.2"]
+    MkActivity        "MKACTIVITY"        yes    no   yes        [3253,"13.5"]
+    MkCalendar        "MKCALENDAR"        yes    no   yes        [4791,"5.3.1"][8144,"2.3"]
+    MkCol             "MKCOL"             yes    no   yes        [4918,"9.3"][5689,"3"][8144,"2.3"]
+    MkRedirectRef     "MKREDIRECTREF"     yes    no   yes        [4437,"6"]
+    MkWorkspace       "MKWORKSPACE"       yes    no   yes        [3253,"6.3"]
+    Move              "MOVE"              maybe  no   yes        [4918,"9.9"]
+    OrderPatch        "ORDERPATCH"        yes    no   yes        [3648,"7"]
+    PropFind          "PROPFIND"          yes    yes  yes        [4918,"9.1"][8144,"2.1"]
+    PropPatch         "PROPPATCH"         yes    no   yes        [4918,"9.2"][8144,"2.2"]
+    Rebind            "REBIND"            yes    no   yes        [5842,"6"]
+    Report            "REPORT"            yes    yes  yes        [3253,"3.6"][8144,"2.1"]
+    Search            "SEARCH"            yes    yes  yes        [5323,"2"]
+    Unbind            "UNBIND"            yes    no   yes        [5842,"5"]
+    Uncheckout        "UNCHECKOUT"        maybe  no   yes        [3253,"4.5"]
+    Unlink            "UNLINK"            maybe  no   yes        [2068,"19.6.1.3"]
+    Unlock            "UNLOCK"            maybe  no   yes        [4918,"9.11"]
+    Update            "UPDATE"            yes    no   yes        [3253,"7.1"]
+    UpdateRedirectRef "UPDATEREDIRECTREF" yes    no   yes        [4437,"7"]
+    VersionControl    "VERSION-CONTROL"   yes    no   yes        [3253,"3.5"]
 }
+
 
 #[doc(hidden)]
 #[macro_export]
 macro_rules! define_methods {
-    ($($V:ident $name:tt $body:ident $safe:ident $idem:ident $([$n:expr,$s:expr])+)*) => {
+    ($($V:ident $name:tt $body:ident $safe:ident $idem:ident $([$base:tt, $($s:tt)+])+)*) => {
+
+        macro_rules! generate_rfc_url {
+            ("DRAFT", $draft_name: literal, $draft_section: literal, $draft_revision: literal) => {
+                        concat!(" [Internet Draft ", $draft_name,
+                                " §", $draft_section, "]",
+                                "(https://datatracker.ietf.org/doc/html/draft-ietf-", $draft_name, "-", $draft_revision, "#section-", $draft_section, ")")
+            };
+            ($rfc_number: literal, $rfc_section:literal) => {
+                        concat!(" [RFC", stringify!($rfc_number),
+                                " §", $rfc_section, "]",
+                                "(https://www.rfc-editor.org/rfc/rfc", stringify!($rfc_number), ".html", "#section-", $rfc_section, ")")
+            };
+        }
+
+
         /// An HTTP method.
         ///
         /// Each variant corresponds to a method in the [HTTP Method Registry].
@@ -88,12 +105,7 @@ macro_rules! define_methods {
         #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
         pub enum Method {$(
             #[doc = concat!("The `", $name, "` method.")]
-            #[doc = concat!("Defined in" $(,
-                " [RFC", stringify!($n), " §", stringify!($s), "]",
-                "(https://www.rfc-editor.org/rfc/rfc", stringify!($n), ".html",
-                "#section-", stringify!($s), ")",
-            )","+ ".")]
-            ///
+            #[doc = concat!("Defined in " $(, generate_rfc_url!($base, $($s)+), )","+ ".")]
             #[doc = concat!("* safe: `", stringify!($safe), "`")]
             #[doc = concat!("* idempotent: `", stringify!($idem), "`")]
             #[doc = concat!("* request body: `", stringify!($body), "`")]
