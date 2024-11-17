@@ -293,6 +293,7 @@ route_attribute!(delete => Method::Delete);
 route_attribute!(head => Method::Head);
 route_attribute!(patch => Method::Patch);
 route_attribute!(options => Method::Options);
+route_attribute!(query => Method::Query);
 
 /// Attribute to generate a [`Catcher`] and associated metadata.
 ///
