@@ -58,7 +58,7 @@ pub struct LocalResponse<'c> {
     // XXX: SAFETY: This (dependent) field must come first due to drop order!
     response: Response<'c>,
     // XXX: SAFETY: This (dependent) field must come second due to drop order!
-    error: ErrorBox,
+    _error: ErrorBox,
     cookies: CookieJar<'c>,
     _request: Box<Request<'c>>,
 }
@@ -108,7 +108,7 @@ impl<'c> LocalResponse<'c> {
                 cookies.add_original(cookie.into_owned());
             }
 
-            LocalResponse { _request: boxed_req, error: error_box, cookies, response, }
+            LocalResponse { _request: boxed_req, _error: error_box, cookies, response, }
         }
     }
 }

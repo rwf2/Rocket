@@ -65,7 +65,7 @@ pub struct ErasedResponse {
     // XXX: SAFETY: This (dependent) field must come first due to drop order!
     response: Response<'static>,
     // XXX: SAFETY: This (dependent) field must come second due to drop order!
-    error: ErrorBox,
+    _error: ErrorBox,
     _request: Arc<ErasedRequest>,
 }
 
@@ -151,7 +151,7 @@ impl ErasedRequest {
 
         ErasedResponse {
             _request: parent,
-            error,
+            _error: error,
             response,
         }
     }

@@ -243,7 +243,7 @@ pub struct FlashCookieMissing;
 impl Static for FlashCookieMissing {}
 
 impl<'r> TypedError<'r> for FlashCookieMissing {
-    fn status(&self) -> Status { Status::InternalServerError }
+    fn status(&self) -> Status { Status::BadRequest }
 }
 
 /// Retrieves a flash message from a flash cookie. If there is no flash cookie,
