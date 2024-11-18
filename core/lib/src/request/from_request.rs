@@ -1,7 +1,7 @@
-use std::fmt::Debug;
 use std::convert::Infallible;
 use std::net::{IpAddr, SocketAddr};
 
+use crate::catcher::TypedError;
 use crate::{Request, Route};
 use crate::outcome::{self, IntoOutcome, Outcome::*};
 
@@ -10,7 +10,7 @@ use crate::http::{Status, ContentType, Accept, Method, ProxyProto, CookieJar};
 use crate::listener::Endpoint;
 
 /// Type alias for the `Outcome` of a `FromRequest` conversion.
-pub type Outcome<S, E> = outcome::Outcome<S, (Status, E), Status>;
+pub type Outcome<S, E> = outcome::Outcome<S, E, Status>;
 
 /// Trait implemented by request guards to derive a value from incoming
 /// requests.
@@ -376,10 +376,11 @@ pub type Outcome<S, E> = outcome::Outcome<S, (Status, E), Status>;
 /// User` and `Admin<'a>`) as the data is now owned by the request's cache.
 ///
 /// [request-local state]: https://rocket.rs/master/guide/state/#request-local-state
+// TODO: Typed: docs
 #[crate::async_trait]
 pub trait FromRequest<'r>: Sized {
     /// The associated error to be returned if derivation fails.
-    type Error: Debug;
+    type Error: TypedError<'r> + 'r;
 
     /// Derives an instance of `Self` from the incoming request metadata.
     ///
@@ -513,7 +514,7 @@ impl<'r, T: FromRequest<'r>> FromRequest<'r> for Result<T, T::Error> {
     async fn from_request(request: &'r Request<'_>) -> Outcome<Self, Infallible> {
         match T::from_request(request).await {
             Success(val) => Success(Ok(val)),
-            Error((_, e)) => Success(Err(e)),
+            Error(e) => Success(Err(e)),
             Forward(status) => Forward(status),
         }
     }

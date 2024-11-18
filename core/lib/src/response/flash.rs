@@ -1,6 +1,8 @@
 use time::Duration;
 use serde::ser::{Serialize, Serializer, SerializeStruct};
+use transient::Static;
 
+use crate::catcher::TypedError;
 use crate::outcome::IntoOutcome;
 use crate::response::{self, Responder};
 use crate::request::{self, Request, FromRequest};
@@ -234,6 +236,16 @@ impl<'r> FlashMessage<'r> {
     }
 }
 
+/// Error for a FlashMessage not being present in a request.
+#[derive(Debug, PartialEq, Eq)]
+pub struct FlashCookieMissing;
+
+impl Static for FlashCookieMissing {}
+
+impl<'r> TypedError<'r> for FlashCookieMissing {
+    fn status(&self) -> Status { Status::InternalServerError }
+}
+
 /// Retrieves a flash message from a flash cookie. If there is no flash cookie,
 /// or if the flash cookie is malformed, an empty `Err` is returned.
 ///
@@ -241,22 +253,22 @@ impl<'r> FlashMessage<'r> {
 /// in `request`: `Option<FlashMessage>`.
 #[crate::async_trait]
 impl<'r> FromRequest<'r> for FlashMessage<'r> {
-    type Error = ();
+    type Error = FlashCookieMissing;
 
     async fn from_request(req: &'r Request<'_>) -> request::Outcome<Self, Self::Error> {
-        req.cookies().get(FLASH_COOKIE_NAME).ok_or(()).and_then(|cookie| {
+        req.cookies().get(FLASH_COOKIE_NAME).ok_or(FlashCookieMissing).and_then(|cookie| {
             // Parse the flash message.
             let content = cookie.value();
             let (len_str, kv) = match content.find(FLASH_COOKIE_DELIM) {
                 Some(i) => (&content[..i], &content[(i + 1)..]),
-                None => return Err(()),
+                None => return Err(FlashCookieMissing),
             };
 
             match len_str.parse::<usize>() {
                 Ok(i) if i <= kv.len() => Ok(Flash::named(&kv[..i], &kv[i..], req)),
-                _ => Err(())
+                _ => Err(FlashCookieMissing)
             }
-        }).or_error(Status::BadRequest)
+        }).or_error(())
     }
 }
 

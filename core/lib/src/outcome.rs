@@ -769,14 +769,14 @@ impl<'r, T: FromData<'r>> IntoOutcome<data::Outcome<'r, T>> for Result<T, T::Err
 }
 
 impl<S, E> IntoOutcome<request::Outcome<S, E>> for Result<S, E> {
-    type Error = Status;
+    type Error = ();
     type Forward = Status;
 
     #[inline]
-    fn or_error(self, error: Status) -> request::Outcome<S, E> {
+    fn or_error(self, _: ()) -> request::Outcome<S, E> {
         match self {
             Ok(val) => Success(val),
-            Err(err) => Error((error, err))
+            Err(err) => Error(err)
         }
     }
 

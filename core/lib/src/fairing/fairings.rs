@@ -166,11 +166,11 @@ impl Fairings {
     }
 
     #[inline(always)]
-    pub async fn handle_request_filter<'r>(&self, req: &'r Request<'_>, data: &mut Data<'_>)
+    pub async fn handle_request_filter<'r>(&self, req: &'r Request<'_>)
         -> Result<(), Box<dyn TypedError<'r> + 'r>>
     {
         for fairing in iter!(self.request_filter) {
-            fairing.on_request_filter(req, data).await?;
+            fairing.on_request_filter(req).await?;
         }
         Ok(())
     }
@@ -227,6 +227,7 @@ impl std::fmt::Debug for Fairings {
             .field("launch", &debug_info(iter!(self.ignite)))
             .field("liftoff", &debug_info(iter!(self.liftoff)))
             .field("request", &debug_info(iter!(self.request)))
+            .field("request_filter", &debug_info(iter!(self.request_filter)))
             .field("response", &debug_info(iter!(self.response)))
             .field("shutdown", &debug_info(iter!(self.shutdown)))
             .finish()

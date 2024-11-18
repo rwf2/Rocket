@@ -3,7 +3,9 @@ use std::ops::Deref;
 use std::any::type_name;
 
 use ref_cast::RefCast;
+use transient::Static;
 
+use crate::catcher::TypedError;
 use crate::{Phase, Rocket, Ignite, Sentinel};
 use crate::request::{self, FromRequest, Request};
 use crate::outcome::Outcome;
@@ -191,12 +193,22 @@ impl<'r, T: Send + Sync + 'static> From<&'r T> for &'r State<T> {
     }
 }
 
+/// Error for a managed state element not being present.
+#[derive(Debug, PartialEq, Eq)]
+pub struct StateMissing(pub &'static str);
+
+impl Static for StateMissing {}
+
+impl<'r> TypedError<'r> for StateMissing {
+    fn status(&self) -> Status { Status::InternalServerError }
+}
+
 #[crate::async_trait]
 impl<'r, T: Send + Sync + 'static> FromRequest<'r> for &'r State<T> {
-    type Error = ();
+    type Error = StateMissing;
 
     #[inline(always)]
-    async fn from_request(req: &'r Request<'_>) -> request::Outcome<Self, ()> {
+    async fn from_request(req: &'r Request<'_>) -> request::Outcome<Self, Self::Error> {
         match State::get(req.rocket()) {
             Some(state) => Outcome::Success(state),
             None => {
@@ -204,7 +216,7 @@ impl<'r, T: Send + Sync + 'static> FromRequest<'r> for &'r State<T> {
                 "retrieving unmanaged state\n\
                 state must be managed via `rocket.manage()`");
 
-                Outcome::Error((Status::InternalServerError, ()))
+                Outcome::Error(StateMissing(type_name::<T>()))
             }
         }
     }

@@ -154,6 +154,21 @@ pub type Result<T = Rocket<Build>, E = Rocket<Build>> = std::result::Result<T, E
 ///     via response callbacks. Any modifications to a request are persisted and
 ///     can potentially alter how a request is routed.
 ///
+///   * **<a name="request">RequestFilter</a> (`on_request_filter`)**
+///
+///     A request callback, represented by the [`Fairing::on_request_filter()`] method,
+///     is called just after a request is received, immediately after
+///     pre-processing the request and running all `Request` fairings. This method
+///     returns a `Result`, which can be used to terminate processing of a request,
+// TODO: Typed: links
+///     bypassing the routing process. The error value must be a `TypedError`, which
+///     can then be caught by a typed catcher.
+///
+///     This method should only be used for global filters, i.e., filters that need
+///     to be run on every (or very nearly every) route. One common example might be
+///     CORS, since the CORS headers of every request need to be inspected, and potentially
+///     rejected.
+///
 ///   * **<a name="response">Response</a> (`on_response`)**
 ///
 ///     A response callback, represented by the [`Fairing::on_response()`]
@@ -272,6 +287,13 @@ pub type Result<T = Rocket<Build>, E = Rocket<Build>> = std::result::Result<T, E
 ///     }
 ///
 ///     async fn on_request(&self, req: &mut Request<'_>, data: &mut Data<'_>) {
+///         /* ... */
+///         # unimplemented!()
+///     }
+///
+///     async fn on_request_filter<'r>(&self, req: &'r Request<'_>)
+///         -> Result<(), Box<dyn TypedError<'r> + 'r>>
+///     {
 ///         /* ... */
 ///         # unimplemented!()
 ///     }
@@ -516,11 +538,9 @@ pub trait Fairing: Send + Sync + AsAny + 'static {
     /// ## Default Implementation
     ///
     /// The default implementation of this method does nothing.
-    async fn on_request_filter<'r>(&self, _req: &'r Request<'_>, _data: &mut Data<'_>)
+    async fn on_request_filter<'r>(&self, _req: &'r Request<'_>)
         -> Result<(), Box<dyn TypedError<'r> + 'r>>
-    {
-        Ok (())
-    }
+    { Ok (()) }
 
     /// The response callback.
     ///
@@ -577,6 +597,13 @@ impl<T: Fairing + ?Sized> Fairing for std::sync::Arc<T> {
     #[inline]
     async fn on_request(&self, req: &mut Request<'_>, data: &mut Data<'_>) {
         (self as &T).on_request(req, data).await
+    }
+
+    #[inline]
+    async fn on_request_filter<'r>(&self, req: &'r Request<'_>)
+        -> Result<(), Box<dyn TypedError<'r> + 'r>>
+    {
+        (self as &T).on_request_filter(req).await
     }
 
     #[inline]

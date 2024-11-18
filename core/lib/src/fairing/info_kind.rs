@@ -39,6 +39,7 @@ pub struct Info {
 ///   * Ignite
 ///   * Liftoff
 ///   * Request
+///   * RequestFilter
 ///   * Response
 ///   * Shutdown
 ///

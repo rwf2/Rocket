@@ -1,6 +1,7 @@
 use parking_lot::Mutex;
 use futures::future::{Future, BoxFuture, FutureExt};
 
+use crate::catcher::TypedError;
 use crate::{Rocket, Request, Response, Data, Build, Orbit};
 use crate::fairing::{Fairing, Kind, Info, Result};
 use crate::route::RouteUri;
@@ -62,6 +63,10 @@ enum AdHocKind {
     /// An ad-hoc **request** fairing. Called when a request is received.
     Request(Box<dyn for<'a> Fn(&'a mut Request<'_>, &'a mut Data<'_>)
         -> BoxFuture<'a, ()> + Send + Sync + 'static>),
+
+    /// An ad-hoc **request** fairing. Called when a request is received.
+    RequestFilter(Box<dyn for<'a> Fn(&'a Request<'_>)
+        -> BoxFuture<'a, Result<(), Box<dyn TypedError<'a> + 'a>>> + Send + Sync + 'static>),
 
     /// An ad-hoc **response** fairing. Called when a response is ready to be
     /// sent to a client.
@@ -157,6 +162,30 @@ impl AdHoc {
         where F: for<'a> Fn(&'a mut Request<'_>, &'a mut Data<'_>) -> BoxFuture<'a, ()>
     {
         AdHoc { name, kind: AdHocKind::Request(Box::new(f)) }
+    }
+
+    /// Constructs an `AdHoc` request filter fairing named `name`. The function `f`
+    /// will be called and the returned `Future` will be `await`ed by Rocket
+    /// when a new request is received.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use rocket::fairing::AdHoc;
+    ///
+    /// // The no-op request fairing.
+    /// let fairing = AdHoc::on_request_filter("Dummy", |req| {
+    ///     Box::pin(async move {
+    ///         // do something with the request and data...
+    /// #       let (_, _) = (req, data);
+    ///         Ok(())
+    ///     })
+    /// });
+    /// ```
+    pub fn on_request_filter<F: Send + Sync + 'static>(name: &'static str, f: F) -> AdHoc
+        where F: for<'a> Fn(&'a Request<'_>) -> BoxFuture<'a, Result<(), Box<dyn TypedError<'a> + 'a>>>
+    {
+        AdHoc { name, kind: AdHocKind::RequestFilter(Box::new(f)) }
     }
 
     // FIXME(rustc): We'd like to allow passing `async fn` to these methods...
@@ -407,6 +436,7 @@ impl Fairing for AdHoc {
             AdHocKind::Ignite(_) => Kind::Ignite,
             AdHocKind::Liftoff(_) => Kind::Liftoff,
             AdHocKind::Request(_) => Kind::Request,
+            AdHocKind::RequestFilter(_) => Kind::RequestFilter,
             AdHocKind::Response(_) => Kind::Response,
             AdHocKind::Shutdown(_) => Kind::Shutdown,
         };
@@ -430,6 +460,14 @@ impl Fairing for AdHoc {
     async fn on_request(&self, req: &mut Request<'_>, data: &mut Data<'_>) {
         if let AdHocKind::Request(ref f) = self.kind {
             f(req, data).await
+        }
+    }
+
+    async fn on_request_filter<'r>(&self, req: &'r Request<'_>) -> Result<(), Box<dyn TypedError<'r> + 'r>> {
+        if let AdHocKind::RequestFilter(ref f) = self.kind {
+            f(req).await
+        } else {
+            Ok(())
         }
     }
 

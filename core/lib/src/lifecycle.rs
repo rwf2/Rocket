@@ -100,14 +100,14 @@ impl Rocket<Orbit> {
         _token: RequestToken,
         request: &'r Request<'s>,
         error_box: &mut ErrorBox,
-        mut data: Data<'r>,
+        data: Data<'r>,
         // io_stream: impl Future<Output = io::Result<IoStream>> + Send,
     ) -> Response<'r> {
         // Remember if the request is `HEAD` for later body stripping.
         let was_head_request = request.method() == Method::Head;
 
         // Run request filter
-        let mut response = if let Err(error) = self.fairings.handle_request_filter(request, &mut data).await {
+        let mut response = if let Err(error) = self.fairings.handle_request_filter(request).await {
             let error = error_box.write(error);
             self.dispatch_error(error, request).await
         } else {
