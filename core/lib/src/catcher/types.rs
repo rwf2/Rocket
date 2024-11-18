@@ -77,6 +77,12 @@ impl<'r> TypedError<'r> for Status {
     }
 }
 
+impl<'r> From<Status> for Box<dyn TypedError<'r> + 'r> {
+    fn from(value: Status) -> Self {
+        Box::new(value)
+    }
+}
+
 // TODO: Typed: update transient to make the possible.
 // impl<'r, R: TypedError<'r> + Transient> TypedError<'r> for (Status, R)
 //     where R::Transience: CanTranscendTo<Inv<'r>>
