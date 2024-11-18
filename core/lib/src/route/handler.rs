@@ -133,6 +133,7 @@ pub type BoxFuture<'r, T = Outcome<'r>> = futures::future::BoxFuture<'r, T>;
 /// Use this alternative when a single configuration is desired and your custom
 /// handler is private to your application. For all other cases, a custom
 /// `Handler` implementation is preferred.
+// TODO: Typed: Docs
 #[crate::async_trait]
 pub trait Handler: Cloneable + Send + Sync + 'static {
     /// Called by Rocket when a `Request` with its associated `Data` should be

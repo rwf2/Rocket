@@ -297,6 +297,7 @@ impl Rocket<Orbit> {
     /// Return `Ok(result)` if the handler succeeded. Returns `Ok(Some(Status))`
     /// if the handler ran to completion but failed. Returns `Ok(None)` if the
     /// handler panicked while executing.
+    // TODO: Typed: Docs
     async fn invoke_catcher<'s, 'r: 's>(
         &'s self,
         error: &'r dyn TypedError<'r>,
