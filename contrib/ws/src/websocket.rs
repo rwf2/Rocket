@@ -238,7 +238,7 @@ impl<'r> FromRequest<'r> for WebSocket {
 }
 
 impl<'r, 'o: 'r> Responder<'r, 'o> for Channel<'o> {
-    fn respond_to(self, _: &'r Request<'_>) -> response::Result<'o> {
+    fn respond_to(self, _: &'r Request<'_>) -> response::Result<'r, 'o> {
         Response::build()
             .raw_header("Sec-Websocket-Version", "13")
             .raw_header("Sec-WebSocket-Accept", self.ws.key.clone())
@@ -250,7 +250,7 @@ impl<'r, 'o: 'r> Responder<'r, 'o> for Channel<'o> {
 impl<'r, 'o: 'r, S> Responder<'r, 'o> for MessageStream<'o, S>
     where S: futures::Stream<Item = Result<Message>> + Send + 'o
 {
-    fn respond_to(self, _: &'r Request<'_>) -> response::Result<'o> {
+    fn respond_to(self, _: &'r Request<'_>) -> response::Result<'r, 'o> {
         Response::build()
             .raw_header("Sec-Websocket-Version", "13")
             .raw_header("Sec-WebSocket-Accept", self.ws.key.clone())
