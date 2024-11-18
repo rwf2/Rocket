@@ -150,6 +150,10 @@ impl<'r> TypedError<'r> for std::string::FromUtf8Error {
     fn status(&self) -> Status { Status::BadRequest }
 }
 
+impl<'r> TypedError<'r> for crate::http::uri::error::PathError {
+    fn status(&self) -> Status { Status::BadRequest }
+}
+
 #[cfg(feature = "json")]
 impl<'r> TypedError<'r> for serde_json::Error {
     fn status(&self) -> Status { Status::BadRequest }

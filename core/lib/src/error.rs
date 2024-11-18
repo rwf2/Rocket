@@ -5,7 +5,10 @@ use std::error::Error as StdError;
 use std::sync::Arc;
 
 use figment::Profile;
+use transient::Static;
 
+use crate::http::Status;
+use crate::catcher::TypedError;
 use crate::listener::Endpoint;
 use crate::{Catcher, Ignite, Orbit, Phase, Rocket, Route};
 use crate::trace::Trace;
@@ -88,6 +91,13 @@ pub enum ErrorKind {
 /// An error that occurs when a value was unexpectedly empty.
 #[derive(Clone, Copy, Default, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub struct Empty;
+
+impl Static for Empty {}
+impl<'r> TypedError<'r> for Empty {
+    fn status(&self) -> Status {
+        Status::BadRequest
+    }
+}
 
 /// An error that occurs when a value doesn't match one of the expected options.
 ///

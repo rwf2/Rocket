@@ -216,7 +216,7 @@ impl<'r, T: Deserialize<'r>> FromData<'r> for MsgPack<T> {
 /// Content-Type `MsgPack` and a fixed-size body with the serialization. If
 /// serialization fails, an `Err` of `Status::InternalServerError` is returned.
 impl<'r, T: Serialize, const COMPACT: bool> Responder<'r, 'static> for MsgPack<T, COMPACT> {
-    fn respond_to(self, req: &'r Request<'_>) -> response::Result<'static> {
+    fn respond_to(self, req: &'r Request<'_>) -> response::Result<'r, 'static> {
         let maybe_buf = if COMPACT {
             rmp_serde::to_vec(&self.0)
         } else {

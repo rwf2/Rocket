@@ -114,13 +114,13 @@ impl<'r> FromRequest<'r> for Certificate<'r> {
     async fn from_request(req: &'r Request<'_>) -> Outcome<Self, Self::Error> {
         use crate::outcome::{try_outcome, IntoOutcome};
 
-        let certs = req.connection
+        let certs: Outcome<_, Error> = req.connection
             .peer_certs
             .as_ref()
             .or_forward(Status::Unauthorized);
 
         let chain = try_outcome!(certs);
-        Certificate::parse(chain.inner()).or_error(Status::Unauthorized)
+        Certificate::parse(chain.inner()).or_error(())
     }
 }
 

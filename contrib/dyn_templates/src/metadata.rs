@@ -157,7 +157,7 @@ impl<'r> FromRequest<'r> for Metadata<'r> {
 
     async fn from_request(request: &'r Request<'_>) -> request::Outcome<Self, Self::Error> {
         match request.rocket().state::<ContextManager>() {
-            Some(cm) => Outcome::Success(cm),
+            Some(cm) => Outcome::Success(Metadata(cm)),
             None => {
                 error!(
                     "uninitialized template context: missing `Template::fairing()`.\n\
