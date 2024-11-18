@@ -1,6 +1,7 @@
 use std::ops::{Deref, DerefMut};
 use std::collections::HashMap;
 
+use crate::catcher::TypedError;
 use crate::request::Request;
 use crate::http::{Method, Status};
 use crate::{Route, Catcher};
@@ -106,22 +107,21 @@ impl Router<Finalized> {
 
     // For many catchers, using aho-corasick or similar should be much faster.
     #[track_caller]
-    pub fn catch<'r>(&self, status: Status, req: &'r Request<'r>) -> Option<&Catcher> {
+    pub fn catch<'r>(&self, status: Status, error: Option<&'r dyn TypedError<'r>>, req: &'r Request<'r>) -> Option<&Catcher> {
+        let ty = error.map(|e| e.trait_obj_typeid());
         // Note that catchers are presorted by descending base length.
-        let explicit = self.catcher_map.get(&Some(status.code))
+        self.catcher_map.get(&Some(status.code))
             .map(|catchers| catchers.iter().map(|&i| &self.catchers[i]))
-            .and_then(|mut catchers| catchers.find(|c| c.matches(status, req)));
+            .and_then(|mut catchers| catchers.find(|c| c.matches(status, ty, req)))
+    }
 
-        let default = self.catcher_map.get(&None)
+    #[track_caller]
+    pub fn catch_any<'r>(&self, status: Status, error: Option<&'r dyn TypedError<'r>>, req: &'r Request<'r>) -> Option<&Catcher> {
+        let ty = error.map(|e| e.trait_obj_typeid());
+        // Note that catchers are presorted by descending base length.
+        self.catcher_map.get(&None)
             .map(|catchers| catchers.iter().map(|&i| &self.catchers[i]))
-            .and_then(|mut catchers| catchers.find(|c| c.matches(status, req)));
-
-        match (explicit, default) {
-            (None, None) => None,
-            (None, c@Some(_)) | (c@Some(_), None) => c,
-            (Some(a), Some(b)) if a.rank <= b.rank => Some(a),
-            (Some(_), Some(b)) => Some(b),
-        }
+            .and_then(|mut catchers| catchers.find(|c| c.matches(status, ty, req)))
     }
 }
 

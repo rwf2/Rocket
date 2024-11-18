@@ -1,12 +1,16 @@
 use std::fmt;
 use std::io::Cursor;
 
+use transient::TypeId;
+
 use crate::http::uri::Path;
 use crate::http::ext::IntoOwned;
 use crate::response::Response;
 use crate::request::Request;
 use crate::http::{Status, ContentType, uri};
 use crate::catcher::{Handler, BoxFuture};
+
+use super::TypedError;
 
 /// An error catching route.
 ///
@@ -128,6 +132,9 @@ pub struct Catcher {
     /// This is -(number of nonempty segments in base).
     pub(crate) rank: isize,
 
+    /// TypeId to match against
+    pub(crate) type_id: Option<TypeId>,
+
     /// The catcher's file, line, and column location.
     pub(crate) location: Option<(&'static str, u32, u32)>,
 }
@@ -188,6 +195,7 @@ impl Catcher {
             base: uri::Origin::root().clone(),
             handler: Box::new(handler),
             rank: rank(uri::Origin::root().path()),
+            type_id: None,
             code,
             location: None,
         }
@@ -313,8 +321,8 @@ impl Catcher {
 
 impl Default for Catcher {
     fn default() -> Self {
-        fn handler<'r>(s: Status, req: &'r Request<'_>) -> BoxFuture<'r> {
-            Box::pin(async move { Ok(default_handler(s, req)) })
+        fn handler<'r>(status: Status, e: &'r dyn TypedError<'r>, req: &'r Request<'_>) -> BoxFuture<'r> {
+            Box::pin(async move { Ok(default_handler(status, e, req)) })
         }
 
         let mut catcher = Catcher::new(None, handler);
@@ -331,7 +339,9 @@ pub struct StaticInfo {
     /// The catcher's status code.
     pub code: Option<u16>,
     /// The catcher's handler, i.e, the annotated function.
-    pub handler: for<'r> fn(Status, &'r Request<'_>) -> BoxFuture<'r>,
+    pub handler: for<'r> fn(Status, &'r dyn TypedError<'r>, &'r Request<'_>) -> BoxFuture<'r>,
+    /// TypeId to match against
+    pub type_id: Option<TypeId>,
     /// The file, line, and column where the catcher was defined.
     pub location: (&'static str, u32, u32),
 }
@@ -343,6 +353,7 @@ impl From<StaticInfo> for Catcher {
         let mut catcher = Catcher::new(info.code, info.handler);
         catcher.name = Some(info.name.into());
         catcher.location = Some(info.location);
+        catcher.type_id = info.type_id;
         catcher
     }
 }
@@ -354,6 +365,7 @@ impl fmt::Debug for Catcher {
             .field("base", &self.base)
             .field("code", &self.code)
             .field("rank", &self.rank)
+            .field("type_id", &self.type_id.as_ref().map(|_| "TY"))
             .finish()
     }
 }
@@ -418,6 +430,7 @@ macro_rules! default_handler_fn {
 
         pub(crate) fn default_handler<'r>(
             status: Status,
+            _error: &'r dyn TypedError<'r>,
             req: &'r Request<'_>
         ) -> Response<'r> {
             let preferred = req.accept().map(|a| a.preferred());

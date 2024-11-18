@@ -51,6 +51,7 @@
 
 use std::any::Any;
 
+use crate::catcher::TypedError;
 use crate::{Rocket, Request, Response, Data, Build, Orbit};
 
 mod fairings;
@@ -502,6 +503,24 @@ pub trait Fairing: Send + Sync + AsAny + 'static {
     ///
     /// The default implementation of this method does nothing.
     async fn on_request(&self, _req: &mut Request<'_>, _data: &mut Data<'_>) {}
+
+    /// The request filter callback.
+    ///
+    /// See [Fairing Callbacks](#request) for complete semantics.
+    ///
+    /// This method is called when a new request is received if `Kind::RequestFilter`
+    /// is in the `kind` field of the `Info` structure for this fairing. The
+    /// `&Request` parameter is the incoming request, and the `&Data`
+    /// parameter is the incoming data in the request.
+    ///
+    /// ## Default Implementation
+    ///
+    /// The default implementation of this method does nothing.
+    async fn on_request_filter<'r>(&self, _req: &'r Request<'_>, _data: &mut Data<'_>)
+        -> Result<(), Box<dyn TypedError<'r> + 'r>>
+    {
+        Ok (())
+    }
 
     /// The response callback.
     ///

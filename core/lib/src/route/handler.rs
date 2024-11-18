@@ -1,10 +1,10 @@
+use crate::catcher::TypedError;
 use crate::{Request, Data};
 use crate::response::{Response, Responder};
-use crate::http::Status;
 
 /// Type alias for the return type of a [`Route`](crate::Route)'s
 /// [`Handler::handle()`].
-pub type Outcome<'r> = crate::outcome::Outcome<Response<'r>, Status, (Data<'r>, Status)>;
+pub type Outcome<'r> = crate::outcome::Outcome<Response<'r>, Box<dyn TypedError<'r>>, (Data<'r>, Box<dyn TypedError<'r>>)>;
 
 /// Type alias for the return type of a _raw_ [`Route`](crate::Route)'s
 /// [`Handler`].
@@ -233,8 +233,8 @@ impl<'r, 'o: 'r> Outcome<'o> {
     /// }
     /// ```
     #[inline(always)]
-    pub fn error(code: Status) -> Outcome<'r> {
-        Outcome::Error(code)
+    pub fn error<E: TypedError<'r>>(error: E) -> Outcome<'r> {
+        Outcome::Error(Box::new(error))
     }
 
     /// Return an `Outcome` of `Forward` with the data `data` and status
@@ -253,8 +253,8 @@ impl<'r, 'o: 'r> Outcome<'o> {
     /// }
     /// ```
     #[inline(always)]
-    pub fn forward(data: Data<'r>, status: Status) -> Outcome<'r> {
-        Outcome::Forward((data, status))
+    pub fn forward<E: TypedError<'r>>(data: Data<'r>, error: E) -> Outcome<'r> {
+        Outcome::Forward((data, Box::new(error)))
     }
 }
 

@@ -189,7 +189,7 @@ impl<R> Flash<R> {
 /// response handling to the wrapped responder. As a result, the `Outcome` of
 /// the response is the `Outcome` of the wrapped `Responder`.
 impl<'r, 'o: 'r, R: Responder<'r, 'o>> Responder<'r, 'o> for Flash<R> {
-    fn respond_to(self, req: &'r Request<'_>) -> response::Result<'o> {
+    fn respond_to(self, req: &'r Request<'_>) -> response::Result<'r, 'o> {
         req.cookies().add(self.cookie());
         self.inner.respond_to(req)
     }

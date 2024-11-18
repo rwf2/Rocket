@@ -2,6 +2,8 @@
 
 mod catcher;
 mod handler;
+mod types;
 
 pub use catcher::*;
 pub use handler::*;
+pub use types::*;

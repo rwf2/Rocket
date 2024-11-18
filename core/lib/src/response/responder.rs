@@ -302,13 +302,13 @@ pub trait Responder<'r, 'o: 'r> {
     /// returned, the error catcher for the given status is retrieved and called
     /// to generate a final error response, which is then written out to the
     /// client.
-    fn respond_to(self, request: &'r Request<'_>) -> response::Result<'o>;
+    fn respond_to(self, request: &'r Request<'_>) -> response::Result<'r, 'o>;
 }
 
 /// Returns a response with Content-Type `text/plain` and a fixed-size body
 /// containing the string `self`. Always returns `Ok`.
 impl<'r, 'o: 'r> Responder<'r, 'o> for &'o str {
-    fn respond_to(self, _: &'r Request<'_>) -> response::Result<'o> {
+    fn respond_to(self, _: &'r Request<'_>) -> response::Result<'r, 'o> {
         Response::build()
             .header(ContentType::Plain)
             .sized_body(self.len(), Cursor::new(self))
@@ -319,7 +319,7 @@ impl<'r, 'o: 'r> Responder<'r, 'o> for &'o str {
 /// Returns a response with Content-Type `text/plain` and a fixed-size body
 /// containing the string `self`. Always returns `Ok`.
 impl<'r> Responder<'r, 'static> for String {
-    fn respond_to(self, _: &'r Request<'_>) -> response::Result<'static> {
+    fn respond_to(self, _: &'r Request<'_>) -> response::Result<'r, 'static> {
         Response::build()
             .header(ContentType::Plain)
             .sized_body(self.len(), Cursor::new(self))
@@ -339,7 +339,7 @@ impl<T: std::ops::Deref> AsRef<[u8]> for DerefRef<T> where T::Target: AsRef<[u8]
 /// Returns a response with Content-Type `text/plain` and a fixed-size body
 /// containing the string `self`. Always returns `Ok`.
 impl<'r> Responder<'r, 'static> for Arc<str> {
-    fn respond_to(self, _: &'r Request<'_>) -> response::Result<'static> {
+    fn respond_to(self, _: &'r Request<'_>) -> response::Result<'r, 'static> {
         Response::build()
             .header(ContentType::Plain)
             .sized_body(self.len(), Cursor::new(DerefRef(self)))
@@ -350,7 +350,7 @@ impl<'r> Responder<'r, 'static> for Arc<str> {
 /// Returns a response with Content-Type `text/plain` and a fixed-size body
 /// containing the string `self`. Always returns `Ok`.
 impl<'r> Responder<'r, 'static> for Box<str> {
-    fn respond_to(self, _: &'r Request<'_>) -> response::Result<'static> {
+    fn respond_to(self, _: &'r Request<'_>) -> response::Result<'r, 'static> {
         Response::build()
             .header(ContentType::Plain)
             .sized_body(self.len(), Cursor::new(DerefRef(self)))
@@ -361,7 +361,7 @@ impl<'r> Responder<'r, 'static> for Box<str> {
 /// Returns a response with Content-Type `application/octet-stream` and a
 /// fixed-size body containing the data in `self`. Always returns `Ok`.
 impl<'r, 'o: 'r> Responder<'r, 'o> for &'o [u8] {
-    fn respond_to(self, _: &'r Request<'_>) -> response::Result<'o> {
+    fn respond_to(self, _: &'r Request<'_>) -> response::Result<'r, 'o> {
         Response::build()
             .header(ContentType::Binary)
             .sized_body(self.len(), Cursor::new(self))
@@ -372,7 +372,7 @@ impl<'r, 'o: 'r> Responder<'r, 'o> for &'o [u8] {
 /// Returns a response with Content-Type `application/octet-stream` and a
 /// fixed-size body containing the data in `self`. Always returns `Ok`.
 impl<'r> Responder<'r, 'static> for Vec<u8> {
-    fn respond_to(self, _: &'r Request<'_>) -> response::Result<'static> {
+    fn respond_to(self, _: &'r Request<'_>) -> response::Result<'r, 'static> {
         Response::build()
             .header(ContentType::Binary)
             .sized_body(self.len(), Cursor::new(self))
@@ -383,7 +383,7 @@ impl<'r> Responder<'r, 'static> for Vec<u8> {
 /// Returns a response with Content-Type `application/octet-stream` and a
 /// fixed-size body containing the data in `self`. Always returns `Ok`.
 impl<'r> Responder<'r, 'static> for Arc<[u8]> {
-    fn respond_to(self, _: &'r Request<'_>) -> response::Result<'static> {
+    fn respond_to(self, _: &'r Request<'_>) -> response::Result<'r, 'static> {
         Response::build()
             .header(ContentType::Binary)
             .sized_body(self.len(), Cursor::new(self))
@@ -394,7 +394,7 @@ impl<'r> Responder<'r, 'static> for Arc<[u8]> {
 /// Returns a response with Content-Type `application/octet-stream` and a
 /// fixed-size body containing the data in `self`. Always returns `Ok`.
 impl<'r> Responder<'r, 'static> for Box<[u8]> {
-    fn respond_to(self, _: &'r Request<'_>) -> response::Result<'static> {
+    fn respond_to(self, _: &'r Request<'_>) -> response::Result<'r, 'static> {
         Response::build()
             .header(ContentType::Binary)
             .sized_body(self.len(), Cursor::new(self))
@@ -438,7 +438,7 @@ impl<'r> Responder<'r, 'static> for Box<[u8]> {
 /// }
 /// ```
 impl<'r, 'o: 'r, T: Responder<'r, 'o> + Sized> Responder<'r, 'o> for Box<T> {
-    fn respond_to(self, req: &'r Request<'_>) -> response::Result<'o> {
+    fn respond_to(self, req: &'r Request<'_>) -> response::Result<'r, 'o> {
         let inner = *self;
         inner.respond_to(req)
     }
@@ -446,21 +446,21 @@ impl<'r, 'o: 'r, T: Responder<'r, 'o> + Sized> Responder<'r, 'o> for Box<T> {
 
 /// Returns a response with a sized body for the file. Always returns `Ok`.
 impl<'r> Responder<'r, 'static> for File {
-    fn respond_to(self, req: &'r Request<'_>) -> response::Result<'static> {
+    fn respond_to(self, req: &'r Request<'_>) -> response::Result<'r, 'static> {
         tokio::fs::File::from(self).respond_to(req)
     }
 }
 
 /// Returns a response with a sized body for the file. Always returns `Ok`.
 impl<'r> Responder<'r, 'static> for tokio::fs::File {
-    fn respond_to(self, _: &'r Request<'_>) -> response::Result<'static> {
+    fn respond_to(self, _: &'r Request<'_>) -> response::Result<'r, 'static> {
         Response::build().sized_body(None, self).ok()
     }
 }
 
 /// Returns an empty, default `Response`. Always returns `Ok`.
 impl<'r> Responder<'r, 'static> for () {
-    fn respond_to(self, _: &'r Request<'_>) -> response::Result<'static> {
+    fn respond_to(self, _: &'r Request<'_>) -> response::Result<'r, 'static> {
         Ok(Response::new())
     }
 }
@@ -469,7 +469,7 @@ impl<'r> Responder<'r, 'static> for () {
 impl<'r, 'o: 'r, R: ?Sized + ToOwned> Responder<'r, 'o> for std::borrow::Cow<'o, R>
     where &'o R: Responder<'r, 'o> + 'o, <R as ToOwned>::Owned: Responder<'r, 'o> + 'r
 {
-    fn respond_to(self, req: &'r Request<'_>) -> response::Result<'o> {
+    fn respond_to(self, req: &'r Request<'_>) -> response::Result<'r, 'o> {
         match self {
             std::borrow::Cow::Borrowed(b) => b.respond_to(req),
             std::borrow::Cow::Owned(o) => o.respond_to(req),
@@ -480,13 +480,13 @@ impl<'r, 'o: 'r, R: ?Sized + ToOwned> Responder<'r, 'o> for std::borrow::Cow<'o,
 /// If `self` is `Some`, responds with the wrapped `Responder`. Otherwise prints
 /// a warning message and returns an `Err` of `Status::NotFound`.
 impl<'r, 'o: 'r, R: Responder<'r, 'o>> Responder<'r, 'o> for Option<R> {
-    fn respond_to(self, req: &'r Request<'_>) -> response::Result<'o> {
+    fn respond_to(self, req: &'r Request<'_>) -> response::Result<'r, 'o> {
         match self {
             Some(r) => r.respond_to(req),
             None => {
                 let type_name = std::any::type_name::<Self>();
                 debug!(type_name, "`Option` responder returned `None`");
-                Err(Status::NotFound)
+                Err(Box::new(Status::NotFound))
             },
         }
     }
@@ -497,7 +497,7 @@ impl<'r, 'o: 'r, R: Responder<'r, 'o>> Responder<'r, 'o> for Option<R> {
 impl<'r, 'o: 'r, 't: 'o, 'e: 'o, T, E> Responder<'r, 'o> for Result<T, E>
     where T: Responder<'r, 't>, E: Responder<'r, 'e>
 {
-    fn respond_to(self, req: &'r Request<'_>) -> response::Result<'o> {
+    fn respond_to(self, req: &'r Request<'_>) -> response::Result<'r, 'o> {
         match self {
             Ok(responder) => responder.respond_to(req),
             Err(responder) => responder.respond_to(req),
@@ -510,7 +510,7 @@ impl<'r, 'o: 'r, 't: 'o, 'e: 'o, T, E> Responder<'r, 'o> for Result<T, E>
 impl<'r, 'o: 'r, 't: 'o, 'e: 'o, T, E> Responder<'r, 'o> for either::Either<T, E>
     where T: Responder<'r, 't>, E: Responder<'r, 'e>
 {
-    fn respond_to(self, req: &'r Request<'_>) -> response::Result<'o> {
+    fn respond_to(self, req: &'r Request<'_>) -> response::Result<'r, 'o> {
         match self {
             either::Either::Left(r) => r.respond_to(req),
             either::Either::Right(r) => r.respond_to(req),
@@ -533,9 +533,9 @@ impl<'r, 'o: 'r, 't: 'o, 'e: 'o, T, E> Responder<'r, 'o> for either::Either<T, E
 /// status code emit an error message and forward to the `500` (internal server
 /// error) catcher.
 impl<'r> Responder<'r, 'static> for Status {
-    fn respond_to(self, _: &'r Request<'_>) -> response::Result<'static> {
+    fn respond_to(self, _: &'r Request<'_>) -> response::Result<'r, 'static> {
         match self.class() {
-            StatusClass::ClientError | StatusClass::ServerError => Err(self),
+            StatusClass::ClientError | StatusClass::ServerError => Err(Box::new(self)),
             StatusClass::Success if self.code < 206 => {
                 Response::build().status(self).ok()
             }
@@ -547,7 +547,8 @@ impl<'r> Responder<'r, 'static> for Status {
                     "invalid status used as responder\n\
                     status must be one of 100, 200..=205, 400..=599");
 
-                Err(Status::InternalServerError)
+                // TODO: Typed: Invalid status
+                Err(Box::new(Status::InternalServerError))
             }
         }
     }

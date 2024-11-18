@@ -86,6 +86,7 @@
 //! a type of `Option<S>`. If an `Outcome` is a `Forward`, the `Option` will be
 //! `None`.
 
+use crate::catcher::TypedError;
 use crate::{route, request, response};
 use crate::data::{self, Data, FromData};
 use crate::http::Status;
@@ -788,9 +789,9 @@ impl<S, E> IntoOutcome<request::Outcome<S, E>> for Result<S, E> {
     }
 }
 
-impl<'r, 'o: 'r> IntoOutcome<route::Outcome<'r>> for response::Result<'o> {
+impl<'r, 'o: 'r> IntoOutcome<route::Outcome<'r>> for response::Result<'r, 'o> {
     type Error = ();
-    type Forward = (Data<'r>, Status);
+    type Forward = (Data<'r>, Box<dyn TypedError<'r> + 'r>);
 
     #[inline]
     fn or_error(self, _: ()) -> route::Outcome<'r> {
@@ -801,7 +802,7 @@ impl<'r, 'o: 'r> IntoOutcome<route::Outcome<'r>> for response::Result<'o> {
     }
 
     #[inline]
-    fn or_forward(self, (data, forward): (Data<'r>, Status)) -> route::Outcome<'r> {
+    fn or_forward(self, (data, forward): (Data<'r>, Box<dyn TypedError<'r> + 'r>)) -> route::Outcome<'r> {
         match self {
             Ok(val) => Success(val),
             Err(_) => Forward((data, forward))

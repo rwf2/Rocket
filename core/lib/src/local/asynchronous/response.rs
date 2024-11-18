@@ -1,9 +1,11 @@
 use std::io;
 use std::future::Future;
+use std::mem::transmute;
 use std::{pin::Pin, task::{Context, Poll}};
 
 use tokio::io::{AsyncRead, ReadBuf};
 
+use crate::erased::ErrorBox;
 use crate::http::CookieJar;
 use crate::{Request, Response};
 
@@ -55,6 +57,8 @@ use crate::{Request, Response};
 pub struct LocalResponse<'c> {
     // XXX: SAFETY: This (dependent) field must come first due to drop order!
     response: Response<'c>,
+    // XXX: SAFETY: This (dependent) field must come second due to drop order!
+    error: ErrorBox,
     cookies: CookieJar<'c>,
     _request: Box<Request<'c>>,
 }
@@ -65,7 +69,7 @@ impl Drop for LocalResponse<'_> {
 
 impl<'c> LocalResponse<'c> {
     pub(crate) fn new<F, O>(req: Request<'c>, f: F) -> impl Future<Output = LocalResponse<'c>>
-        where F: FnOnce(&'c Request<'c>) -> O + Send,
+        where F: FnOnce(&'c Request<'c>, &'c mut ErrorBox) -> O + Send,
               O: Future<Output = Response<'c>> + Send
     {
         // `LocalResponse` is a self-referential structure. In particular,
@@ -91,19 +95,20 @@ impl<'c> LocalResponse<'c> {
         //      away as `'_`, ensuring it is not used for any output value.
         let boxed_req = Box::new(req);
         let request: &'c Request<'c> = unsafe { &*(&*boxed_req as *const _) };
+        let mut error_box = ErrorBox::new();
 
         async move {
             // NOTE: The cookie jar `secure` state will not reflect the last
             // known value in `request.cookies()`. This is okay: new cookies
             // should never be added to the resulting jar which is the only time
             // the value is used to set cookie defaults.
-            let response: Response<'c> = f(request).await;
+            let response: Response<'c> = f(request, unsafe { transmute(&mut error_box) }).await;
             let mut cookies = CookieJar::new(None, request.rocket());
             for cookie in response.cookies() {
                 cookies.add_original(cookie.into_owned());
             }
 
-            LocalResponse { _request: boxed_req, cookies, response, }
+            LocalResponse { _request: boxed_req, error: error_box, cookies, response, }
         }
     }
 }

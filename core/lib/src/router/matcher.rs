@@ -1,3 +1,5 @@
+use transient::TypeId;
+
 use crate::{Route, Request, Catcher};
 use crate::router::Collide;
 use crate::http::Status;
@@ -133,8 +135,9 @@ impl Catcher {
     /// let b_count = b.base().segments().filter(|s| !s.is_empty()).count();
     /// assert!(b_count > a_count);
     /// ```
-    pub fn matches(&self, status: Status, request: &Request<'_>) -> bool {
+    pub fn matches(&self, status: Status, ty: Option<TypeId>, request: &Request<'_>) -> bool {
         self.code.map_or(true, |code| code == status.code)
+            && self.type_id == ty
             && self.base().segments().prefix_of(request.uri().path().segments())
     }
 }

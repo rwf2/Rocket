@@ -142,7 +142,7 @@ impl<S: Stream> From<S> for ReaderStream<S> {
 impl<'r, S: Stream> Responder<'r, 'r> for ReaderStream<S>
     where S: Send + 'r, S::Item: AsyncRead + Send,
 {
-    fn respond_to(self, _: &'r Request<'_>) -> response::Result<'r> {
+    fn respond_to(self, _: &'r Request<'_>) -> response::Result<'r, 'r> {
         Response::build()
             .streamed_body(self)
             .ok()
