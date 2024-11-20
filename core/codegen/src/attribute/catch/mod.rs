@@ -1,6 +1,6 @@
 mod parse;
 
-use devise::ext::TypeExt;
+use devise::ext::{SpanDiagnosticExt, TypeExt};
 use devise::{Spanned, Result};
 use proc_macro2::{TokenStream, Span};
 use syn::{Lifetime, TypeReference};
@@ -36,9 +36,16 @@ pub fn _catch(
                 #ty as #FromError<'__r>
             >::from_error(#__status, #__req, #__error).await {
                 #_Ok(v) => v,
-                #_Err(s) => {
-                    // TODO: Typed: log failure
-                    return #_Err(s);
+                #_Err(__e) => {
+                    ::rocket::trace::info!(
+                        name: "error",
+                        target: concat!("rocket::codegen::route::", module_path!()),
+                        parameter = stringify!(#name),
+                        type_name = stringify!(#ty),
+                        status = __e.code,
+                        "error guard error"
+                    );
+                    return #_Err(__e);
                 },
             };
         )
@@ -51,8 +58,11 @@ pub fn _catch(
             let #name: #ty = match #_catcher::downcast(#__error) {
                 Some(v) => v,
                 None => {
-                    // TODO: Typed: log failure - this should never happen
-                    println!("Failed to downcast error {}", stringify!(#ty));
+                    ::rocket::trace::error!(
+                        downcast_to = stringify!(#ty),
+                        error_name = #__error.name(),
+                        "Failed to downcast error. This should never happen, please open an issue with details."
+                    );
                     return #_Err(#Status::InternalServerError);
                 },
             };
@@ -64,12 +74,12 @@ pub fn _catch(
             syn::Type::Reference(TypeReference { mutability: None, elem, .. }) => {
                 elem.as_ref().with_stripped_lifetimes()
             },
-            _ => todo!("Invalid type"),
+            _ => return Err(g.ty.span().error("invalid type, must be a reference")),
         };
-        quote_spanned!(g.span() =>
+        Ok(quote_spanned!(g.span() =>
             #_catcher::TypeId::of::<#ty>()
-        )
-    }));
+        ))
+    }).transpose()?);
 
     // We append `.await` to the function call if this is `async`.
     let dot_await = catch.function.sig.asyncness
