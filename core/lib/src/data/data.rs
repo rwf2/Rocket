@@ -114,7 +114,8 @@ impl<'r> Data<'r> {
     /// use rocket::data::{Data, FromData, Outcome};
     /// use rocket::http::Status;
     /// # struct MyType;
-    /// # type MyError = String;
+    /// # #[derive(rocket::TypedError)]
+    /// # struct MyError;
     ///
     /// #[rocket::async_trait]
     /// impl<'r> FromData<'r> for MyType {
@@ -122,7 +123,7 @@ impl<'r> Data<'r> {
     ///
     ///     async fn from_data(r: &'r Request<'_>, mut data: Data<'r>) -> Outcome<'r, Self> {
     ///         if data.peek(2).await != b"hi" {
-    ///             return Outcome::Forward((data, Status::BadRequest))
+    ///             return Outcome::Forward((data, MyError))
     ///         }
     ///
     ///         /* .. */

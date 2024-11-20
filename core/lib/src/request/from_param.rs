@@ -157,27 +157,30 @@ use crate::http::{uri::{Segments, error::PathError, fmt::Path}, Status};
 ///
 /// ```rust
 /// use rocket::request::FromParam;
+/// use rocket::TypedError;
 /// # #[allow(dead_code)]
 /// # struct MyParam<'r> { key: &'r str, value: usize }
+/// #[derive(TypedError)]
+/// struct MyParamError<'a>(&'a str);
 ///
 /// impl<'r> FromParam<'r> for MyParam<'r> {
-///     type Error = &'r str;
+///     type Error = MyParamError<'r>;
 ///
 ///     fn from_param(param: &'r str) -> Result<Self, Self::Error> {
 ///         // We can convert `param` into a `str` since we'll check every
 ///         // character for safety later.
 ///         let (key, val_str) = match param.find(':') {
 ///             Some(i) if i > 0 => (&param[..i], &param[(i + 1)..]),
-///             _ => return Err(param)
+///             _ => return Err(MyParamError(param))
 ///         };
 ///
 ///         if !key.chars().all(|c| c.is_ascii_alphabetic()) {
-///             return Err(param);
+///             return Err(MyParamError(param));
 ///         }
 ///
 ///         val_str.parse()
 ///             .map(|value| MyParam { key, value })
-///             .map_err(|_| param)
+///             .map_err(|_| MyParamError(param))
 ///     }
 /// }
 /// ```
@@ -188,12 +191,15 @@ use crate::http::{uri::{Segments, error::PathError, fmt::Path}, Status};
 /// ```rust
 /// # #[macro_use] extern crate rocket;
 /// # use rocket::request::FromParam;
+/// # use rocket::TypedError;
+/// # #[derive(TypedError)]
+/// # struct MyParamError<'a>(&'a str);
 /// # #[allow(dead_code)]
 /// # struct MyParam<'r> { key: &'r str, value: usize }
 /// # impl<'r> FromParam<'r> for MyParam<'r> {
-/// #     type Error = &'r str;
+/// #     type Error = MyParamError<'r>;
 /// #     fn from_param(param: &'r str) -> Result<Self, Self::Error> {
-/// #         Err(param)
+/// #         Err(MyParamError(param))
 /// #     }
 /// # }
 /// #
@@ -209,7 +215,7 @@ use crate::http::{uri::{Segments, error::PathError, fmt::Path}, Status};
 /// ```
 pub trait FromParam<'a>: Sized {
     /// The associated error to be returned if parsing/validation fails.
-    type Error: std::fmt::Debug;
+    type Error: TypedError<'a>;
 
     /// Parses and validates an instance of `Self` from a path parameter string
     /// or returns an `Error` if parsing or validation fails.
@@ -244,8 +250,8 @@ impl<'a, T: TypedError<'a>> TypedError<'a> for FromParamError<'a, T>
         self.error.respond_to(request)
     }
 
-    fn source(&'a self) -> Option<&'a (dyn TypedError<'a> + 'a)> {
-        Some(&self.error)
+    fn source(&'a self, idx: usize) -> Option<&'a (dyn TypedError<'a> + 'a)> {
+        if idx == 0 { Some(&self.error) } else { None }
     }
 
     fn status(&self) -> Status {
@@ -391,7 +397,7 @@ impl<'a, T: FromParam<'a>> FromParam<'a> for Option<T> {
 /// the `Utf8Error`.
 pub trait FromSegments<'r>: Sized {
     /// The associated error to be returned when parsing fails.
-    type Error: std::fmt::Debug;
+    type Error: TypedError<'r>;
 
     /// Parses an instance of `Self` from many dynamic path parameter strings or
     /// returns an `Error` if one cannot be parsed.
@@ -427,8 +433,8 @@ impl<'a, T: TypedError<'a>> TypedError<'a> for FromSegmentsError<'a, T>
         self.error.respond_to(request)
     }
 
-    fn source(&'a self) -> Option<&'a (dyn TypedError<'a> + 'a)> {
-        Some(&self.error)
+    fn source(&'a self, idx: usize) -> Option<&'a (dyn TypedError<'a> + 'a)> {
+        if idx == 0 { Some(&self.error) } else { None }
     }
 
     fn status(&self) -> Status {
@@ -522,7 +528,12 @@ impl<'r, T: FromSegments<'r>> FromSegments<'r> for Option<T> {
 /// returned. If `B::from_param` returns `Ok(b)`, `Either::Right(b)` is
 /// returned. If both `A::from_param` and `B::from_param` return `Err(a)` and
 /// `Err(b)`, respectively, then `Err((a, b))` is returned.
-impl<'v, A: FromParam<'v>, B: FromParam<'v>> FromParam<'v> for Either<A, B> {
+impl<'v, A: FromParam<'v>, B: FromParam<'v>> FromParam<'v> for Either<A, B>
+    where A::Error: Transient,
+          <A::Error as Transient>::Transience: CanTranscendTo<Inv<'v>>,
+          B::Error: Transient,
+          <B::Error as Transient>::Transience: CanTranscendTo<Inv<'v>>,
+{
     type Error = (A::Error, B::Error);
 
     #[inline(always)]

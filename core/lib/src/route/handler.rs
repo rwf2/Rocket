@@ -4,7 +4,11 @@ use crate::response::{Response, Responder};
 
 /// Type alias for the return type of a [`Route`](crate::Route)'s
 /// [`Handler::handle()`].
-pub type Outcome<'r> = crate::outcome::Outcome<Response<'r>, Box<dyn TypedError<'r>>, (Data<'r>, Box<dyn TypedError<'r>>)>;
+pub type Outcome<'r> = crate::outcome::Outcome<
+    Response<'r>,
+    Box<dyn TypedError<'r>>,
+    (Data<'r>, Box<dyn TypedError<'r>>),
+>;
 
 /// Type alias for the return type of a _raw_ [`Route`](crate::Route)'s
 /// [`Handler`].

@@ -39,7 +39,7 @@ pin_project! {
     /// impl<'r, S: Stream<Item = String>> Responder<'r, 'r> for MyStream<S>
     ///     where S: Send + 'r
     /// {
-    ///     fn respond_to(self, _: &'r Request<'_>) -> response::Result<'r> {
+    ///     fn respond_to(self, _: &'r Request<'_>) -> response::Result<'r, 'r> {
     ///         Response::build()
     ///             .header(ContentType::Text)
     ///             .streamed_body(ReaderStream::from(self.0.map(Cursor::new)))

@@ -326,16 +326,20 @@ Here's the `FromParam` implementation for `PasteId` in `src/paste_id.rs`:
 use rocket::request::FromParam;
 # use std::borrow::Cow;
 # pub struct PasteId<'a>(Cow<'a, str>);
+# use rocket::TypedError;
+
+#[derive(Debug, TypedError)]
+pub struct InvalidPasteId;
 
 /// Returns an instance of `PasteId` if the path segment is a valid ID.
-/// Otherwise returns the invalid ID as the `Err` value.
+/// Otherwise returns an `InvalidPasteId` as the error.
 impl<'a> FromParam<'a> for PasteId<'a> {
-    type Error = &'a str;
+    type Error = InvalidPasteId;
 
     fn from_param(param: &'a str) -> Result<Self, Self::Error> {
         param.chars().all(|c| c.is_ascii_alphanumeric())
             .then(|| PasteId(param.into()))
-            .ok_or(param)
+            .ok_or(InvalidPasteId)
     }
 }
 ```
@@ -363,8 +367,10 @@ use rocket::tokio::fs::File;
 #     pub fn new(size: usize) -> PasteId<'static> { todo!() }
 #     pub fn file_path(&self) -> PathBuf { todo!() }
 # }
+# #[derive(rocket::TypedError)]
+# pub struct InvalidPasteId;
 # impl<'a> FromParam<'a> for PasteId<'a> {
-#     type Error = &'a str;
+#     type Error = InvalidPasteId;
 #     fn from_param(param: &'a str) -> Result<Self, Self::Error> { todo!() }
 # }
 
@@ -440,8 +446,10 @@ pub struct PasteId<'a>(Cow<'a, str>);
 #     pub fn file_path(&self) -> PathBuf { todo!() }
 # }
 #
+# #[derive(rocket::TypedError)]
+# pub struct InvalidPasteId;
 # impl<'a> FromParam<'a> for PasteId<'a> {
-#     type Error = &'a str;
+#     type Error = InvalidPasteId;
 #     fn from_param(param: &'a str) -> Result<Self, Self::Error> { todo!() }
 # }
 // We implement the `upload` route in `main.rs`:

@@ -70,7 +70,9 @@ async fn toggle(id: i32, conn: DbConn) -> Either<Redirect, Template> {
         Ok(_) => Either::Left(Redirect::to("/")),
         Err(e) => {
             error!("DB toggle({id}) error: {e}");
-            Either::Right(Template::render("index", Context::err(&conn, "Failed to toggle task.").await))
+            Either::Right(
+                Template::render("index", Context::err(&conn, "Failed to toggle task.").await)
+            )
         }
     }
 }
@@ -81,7 +83,9 @@ async fn delete(id: i32, conn: DbConn) -> Either<Flash<Redirect>, Template> {
         Ok(_) => Either::Left(Flash::success(Redirect::to("/"), "Todo was deleted.")),
         Err(e) => {
             error!("DB deletion({id}) error: {e}");
-            Either::Right(Template::render("index", Context::err(&conn, "Failed to delete task.").await))
+            Either::Right(
+                Template::render("index", Context::err(&conn, "Failed to delete task.").await)
+            )
         }
     }
 }

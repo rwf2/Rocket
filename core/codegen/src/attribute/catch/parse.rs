@@ -69,10 +69,18 @@ impl Attribute {
             if let Some((ident, ty)) = arg.typed() {
                 match meta.error.as_ref() {
                     Some(err) if Name::from(ident) == err.name => {
-                        error = Some(Guard { source: meta.error.clone().unwrap().value, fn_ident: ident.clone(), ty: ty.clone() });
+                        error = Some(Guard {
+                            source: meta.error.clone().unwrap().value,
+                            fn_ident: ident.clone(),
+                            ty: ty.clone(),
+                        });
                     }
                     _ => {
-                        guards.push(Guard { source: Dynamic { name: Name::from(ident), index, trailing: false }, fn_ident: ident.clone(), ty: ty.clone() })
+                        guards.push(Guard {
+                            source: Dynamic { name: Name::from(ident), index, trailing: false },
+                            fn_ident: ident.clone(),
+                            ty: ty.clone(),
+                        })
                     }
                 }
             } else {

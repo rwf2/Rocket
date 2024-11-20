@@ -3,17 +3,16 @@
 
 use std::fmt;
 
-use rocket::http::Status;
 use rocket::data::{self, FromData};
 use rocket::http::uri::{Segments, fmt::Path};
 use rocket::request::{self, FromParam, FromRequest, FromSegments};
 
 use crate::prelude::*;
 
-#[derive(Debug)]
+#[derive(Debug, TypedError)]
 struct UseDisplay(&'static str);
 
-#[derive(Debug)]
+#[derive(Debug, TypedError)]
 struct UseDebug;
 
 impl fmt::Display for UseDisplay {
@@ -36,7 +35,7 @@ impl FromParam<'_> for UseDebug {
 impl<'r> FromRequest<'r> for UseDisplay {
     type Error = Self;
     async fn from_request(_: &'r Request<'_>) -> request::Outcome<Self, Self::Error> {
-        request::Outcome::Error((Status::InternalServerError, Self("req")))
+        request::Outcome::Error(Self("req"))
     }
 }
 
@@ -44,7 +43,7 @@ impl<'r> FromRequest<'r> for UseDisplay {
 impl<'r> FromRequest<'r> for UseDebug {
     type Error = Self;
     async fn from_request(_: &'r Request<'_>) -> request::Outcome<Self, Self::Error> {
-        request::Outcome::Error((Status::InternalServerError, Self))
+        request::Outcome::Error(Self)
     }
 }
 
@@ -52,7 +51,7 @@ impl<'r> FromRequest<'r> for UseDebug {
 impl<'r> FromData<'r> for UseDisplay {
     type Error = Self;
     async fn from_data(_: &'r Request<'_>, _: Data<'r>) -> data::Outcome<'r, Self> {
-        data::Outcome::Error((Status::InternalServerError, Self("data")))
+        data::Outcome::Error(Self("data"))
     }
 }
 
@@ -60,7 +59,7 @@ impl<'r> FromData<'r> for UseDisplay {
 impl<'r> FromData<'r> for UseDebug {
     type Error = Self;
     async fn from_data(_: &'r Request<'_>, _: Data<'r>) -> data::Outcome<'r, Self> {
-        data::Outcome::Error((Status::InternalServerError, Self))
+        data::Outcome::Error(Self)
     }
 }
 

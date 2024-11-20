@@ -65,6 +65,9 @@ pub use self::info_kind::{Info, Kind};
 /// A type alias for the return `Result` type of [`Fairing::on_ignite()`].
 pub type Result<T = Rocket<Build>, E = Rocket<Build>> = std::result::Result<T, E>;
 
+/// A type alias for the return `Result` type of [`Fairing::on_request_filter()`]
+pub type FilterResult<'r> = std::result::Result<(), Box<dyn TypedError<'r> + 'r>>;
+
 // We might imagine that a request fairing returns an `Outcome`. If it returns
 // `Success`, we don't do any routing and use that response directly. Same if it
 // returns `Error`. We only route if it returns `Forward`. I've chosen not to
@@ -267,6 +270,7 @@ pub type Result<T = Rocket<Build>, E = Rocket<Build>> = std::result::Result<T, E
 /// ```rust
 /// use rocket::{Rocket, Request, Data, Response, Build, Orbit};
 /// use rocket::fairing::{self, Fairing, Info, Kind};
+/// use rocket::catcher::TypedError;
 ///
 /// # struct MyType;
 /// #[rocket::async_trait]
@@ -435,12 +439,12 @@ pub type Result<T = Rocket<Build>, E = Rocket<Build>> = std::result::Result<T, E
 /// // Allows a route to access the time a request was initiated.
 /// #[rocket::async_trait]
 /// impl<'r> FromRequest<'r> for StartTime {
-///     type Error = ();
+///     type Error = Status;
 ///
-///     async fn from_request(request: &'r Request<'_>) -> request::Outcome<Self, ()> {
+///     async fn from_request(request: &'r Request<'_>) -> request::Outcome<Self, Self::Error> {
 ///         match *request.local_cache(|| TimerStart(None)) {
 ///             TimerStart(Some(time)) => request::Outcome::Success(StartTime(time)),
-///             TimerStart(None) => request::Outcome::Error((Status::InternalServerError, ())),
+///             TimerStart(None) => request::Outcome::Error(Status::InternalServerError),
 ///         }
 ///     }
 /// }
@@ -538,8 +542,7 @@ pub trait Fairing: Send + Sync + AsAny + 'static {
     /// ## Default Implementation
     ///
     /// The default implementation of this method does nothing.
-    async fn on_request_filter<'r>(&self, _req: &'r Request<'_>)
-        -> Result<(), Box<dyn TypedError<'r> + 'r>>
+    async fn on_request_filter<'r>(&self, _req: &'r Request<'_>) -> FilterResult<'r>
     { Ok (()) }
 
     /// The response callback.

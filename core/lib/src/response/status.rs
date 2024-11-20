@@ -323,7 +323,9 @@ macro_rules! status_response {
 
             fn name(&self) -> &'static str { self.0.name() }
 
-            fn source(&'r self) -> Option<&'r (dyn TypedError<'r> + 'r)> { Some(&self.0) }
+            fn source(&'r self, idx: usize) -> Option<&'r (dyn TypedError<'r> + 'r)> {
+                if idx == 0 { Some(&self.0) } else { None }
+            }
 
             fn status(&self) -> Status { Status::$T }
         }

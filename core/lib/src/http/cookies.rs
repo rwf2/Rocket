@@ -108,7 +108,7 @@ pub use cookie::{Cookie, SameSite, Iter};
 ///
 /// #[rocket::async_trait]
 /// impl<'r> FromRequest<'r> for User {
-///     type Error = std::convert::Infallible;
+///     type Error = Status;
 ///
 ///     async fn from_request(request: &'r Request<'_>) -> request::Outcome<Self, Self::Error> {
 ///         request.cookies()

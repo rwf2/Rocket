@@ -15,7 +15,7 @@ use crate::http_codegen::{ContentType, Status};
 #[derive(Debug, Default, FromMeta)]
 struct ItemAttr {
     content_type: Option<SpanWrapped<ContentType>>,
-    status: Option<SpanWrapped<Status>>,            
+    status: Option<SpanWrapped<Status>>,
 }
 #[derive(Default, FromMeta)]
 struct FieldAttr {

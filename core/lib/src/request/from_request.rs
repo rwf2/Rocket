@@ -35,7 +35,9 @@ pub type Outcome<S, E> = outcome::Outcome<S, E, E>;
 /// ```rust
 /// use rocket::request::{self, Request, FromRequest};
 /// # struct MyType;
-/// # type MyError = String;
+/// # use rocket::TypedError;
+/// # #[derive(TypedError)]
+/// # struct MyError;
 ///
 /// #[rocket::async_trait]
 /// impl<'r> FromRequest<'r> for MyType {
@@ -209,7 +211,8 @@ pub type Outcome<S, E> = outcome::Outcome<S, E, E>;
 ///
 /// struct ApiKey<'r>(&'r str);
 ///
-/// #[derive(Debug)]
+/// #[derive(Debug, TypedError)]
+/// #[error(status = 400)]
 /// enum ApiKeyError {
 ///     Missing,
 ///     Invalid,
@@ -226,9 +229,9 @@ pub type Outcome<S, E> = outcome::Outcome<S, E, E>;
 ///         }
 ///
 ///         match req.headers().get_one("x-api-key") {
-///             None => Outcome::Error((Status::BadRequest, ApiKeyError::Missing)),
+///             None => Outcome::Error(ApiKeyError::Missing),
 ///             Some(key) if is_valid(key) => Outcome::Success(ApiKey(key)),
-///             Some(_) => Outcome::Error((Status::BadRequest, ApiKeyError::Invalid)),
+///             Some(_) => Outcome::Error(ApiKeyError::Invalid),
 ///         }
 ///     }
 /// }
@@ -264,8 +267,8 @@ pub type Outcome<S, E> = outcome::Outcome<S, E, E>;
 /// # }
 /// # #[rocket::async_trait]
 /// # impl<'r> FromRequest<'r> for Database {
-/// #     type Error = ();
-/// #     async fn from_request(request: &'r Request<'_>) -> Outcome<Database, ()> {
+/// #     type Error = Status;
+/// #     async fn from_request(request: &'r Request<'_>) -> Outcome<Database, Self::Error> {
 /// #         Outcome::Success(Database)
 /// #     }
 /// # }
@@ -274,9 +277,9 @@ pub type Outcome<S, E> = outcome::Outcome<S, E, E>;
 /// #
 /// #[rocket::async_trait]
 /// impl<'r> FromRequest<'r> for User {
-///     type Error = ();
+///     type Error = Status;
 ///
-///     async fn from_request(request: &'r Request<'_>) -> Outcome<User, ()> {
+///     async fn from_request(request: &'r Request<'_>) -> Outcome<User, Status> {
 ///         let db = try_outcome!(request.guard::<Database>().await);
 ///         request.cookies()
 ///             .get_private("user_id")
@@ -288,9 +291,9 @@ pub type Outcome<S, E> = outcome::Outcome<S, E, E>;
 ///
 /// #[rocket::async_trait]
 /// impl<'r> FromRequest<'r> for Admin {
-///     type Error = ();
+///     type Error = Status;
 ///
-///     async fn from_request(request: &'r Request<'_>) -> Outcome<Admin, ()> {
+///     async fn from_request(request: &'r Request<'_>) -> Outcome<Admin, Status> {
 ///         // This will unconditionally query the database!
 ///         let user = try_outcome!(request.guard::<User>().await);
 ///         if user.is_admin {
@@ -339,7 +342,7 @@ pub type Outcome<S, E> = outcome::Outcome<S, E, E>;
 /// #
 /// #[rocket::async_trait]
 /// impl<'r> FromRequest<'r> for &'r User {
-///     type Error = std::convert::Infallible;
+///     type Error = Status;
 ///
 ///     async fn from_request(request: &'r Request<'_>) -> Outcome<Self, Self::Error> {
 ///         // This closure will execute at most once per request, regardless of
@@ -358,7 +361,7 @@ pub type Outcome<S, E> = outcome::Outcome<S, E, E>;
 ///
 /// #[rocket::async_trait]
 /// impl<'r> FromRequest<'r> for Admin<'r> {
-///     type Error = std::convert::Infallible;
+///     type Error = Status;
 ///
 ///     async fn from_request(request: &'r Request<'_>) -> Outcome<Self, Self::Error> {
 ///         let user = try_outcome!(request.guard::<&User>().await);

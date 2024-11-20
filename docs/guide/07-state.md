@@ -136,9 +136,9 @@ struct Item<'r>(&'r str);
 
 #[rocket::async_trait]
 impl<'r> FromRequest<'r> for Item<'r> {
-    type Error = ();
+    type Error = Status;
 
-    async fn from_request(request: &'r Request<'_>) -> request::Outcome<Self, ()> {
+    async fn from_request(request: &'r Request<'_>) -> request::Outcome<Self, Status> {
         // Using `State` as a request guard. Use `inner()` to get an `'r`.
         let outcome = request.guard::<&State<MyConfig>>().await
             .map(|my_config| Item(&my_config.user_val));

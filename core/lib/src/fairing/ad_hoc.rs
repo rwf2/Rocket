@@ -7,6 +7,8 @@ use crate::fairing::{Fairing, Kind, Info, Result};
 use crate::route::RouteUri;
 use crate::trace::Trace;
 
+use super::FilterResult;
+
 /// A ad-hoc fairing that can be created from a function or closure.
 ///
 /// This enum can be used to create a fairing from a simple function or closure
@@ -176,14 +178,14 @@ impl AdHoc {
     /// // The no-op request fairing.
     /// let fairing = AdHoc::on_request_filter("Dummy", |req| {
     ///     Box::pin(async move {
-    ///         // do something with the request and data...
-    /// #       let (_, _) = (req, data);
+    ///         // do something with the request...
+    /// #       let _ = req;
     ///         Ok(())
     ///     })
     /// });
     /// ```
     pub fn on_request_filter<F: Send + Sync + 'static>(name: &'static str, f: F) -> AdHoc
-        where F: for<'a> Fn(&'a Request<'_>) -> BoxFuture<'a, Result<(), Box<dyn TypedError<'a> + 'a>>>
+        where F: for<'a> Fn(&'a Request<'_>) -> BoxFuture<'a, FilterResult<'a>>
     {
         AdHoc { name, kind: AdHocKind::RequestFilter(Box::new(f)) }
     }
@@ -463,7 +465,7 @@ impl Fairing for AdHoc {
         }
     }
 
-    async fn on_request_filter<'r>(&self, req: &'r Request<'_>) -> Result<(), Box<dyn TypedError<'r> + 'r>> {
+    async fn on_request_filter<'r>(&self, req: &'r Request<'_>) -> FilterResult<'r> {
         if let AdHocKind::RequestFilter(ref f) = self.kind {
             f(req).await
         } else {

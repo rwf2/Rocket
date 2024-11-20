@@ -36,7 +36,8 @@ memchr = "2"
 stable-pattern = "0.1"
 cookie = { version = "0.18", features = ["percent-encode"] }
 state = "0.6"
-transient = "0.4.1"
+# transient = "0.4.1"
+transient = { git = "https://github.com/the10thWiz/transient.git", branch = "rocket-ready" }
 
 [dependencies.serde]
 version = "1.0"

@@ -74,7 +74,8 @@ tokio-stream = { version = "0.1.6", features = ["signal", "time"] }
 cookie = { version = "0.18", features = ["percent-encode"] }
 futures = { version = "0.3.30", default-features = false, features = ["std"] }
 state = "0.6"
-transient = { version = "0.4.1", features = ["either"] }
+# transient = { version = "0.4.1", features = ["either"] }
+transient = { features = ["either"], git = "https://github.com/the10thWiz/transient.git", branch = "rocket-ready" }
 
 # tracing
 tracing = { version = "0.1.40", default-features = false, features = ["std", "attributes"] }

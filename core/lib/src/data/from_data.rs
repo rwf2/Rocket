@@ -182,7 +182,8 @@ pub type Outcome<'r, T, E = <T as FromData<'r>>::Error>
 /// use rocket::request::Request;
 /// use rocket::data::{self, Data, FromData};
 /// # struct MyType;
-/// # type MyError = String;
+/// # #[derive(rocket::TypedError)]
+/// # struct MyError;
 ///
 /// #[rocket::async_trait]
 /// impl<'r> FromData<'r> for MyType {
@@ -232,13 +233,20 @@ pub type Outcome<'r, T, E = <T as FromData<'r>>::Error>
 /// use rocket::data::{self, Data, FromData, ToByteUnit};
 /// use rocket::http::{Status, ContentType};
 /// use rocket::outcome::Outcome;
+/// use rocket::TypedError;
 ///
-/// #[derive(Debug)]
+/// #[derive(Debug, TypedError)]
 /// enum Error {
+///     #[error(status = 413)]
 ///     TooLarge,
+///     #[error(status = 400)]
 ///     NoColon,
+///     #[error(status = 422)]
 ///     InvalidAge,
+///     #[error(status = 500)]
 ///     Io(std::io::Error),
+///     #[error(status = 415)]
+///     UnsupportedMediaType,
 /// }
 ///
 /// #[rocket::async_trait]
@@ -251,7 +259,7 @@ pub type Outcome<'r, T, E = <T as FromData<'r>>::Error>
 ///         // Ensure the content type is correct before opening the data.
 ///         let person_ct = ContentType::new("application", "x-person");
 ///         if req.content_type() != Some(&person_ct) {
-///             return Outcome::Forward((data, Status::UnsupportedMediaType));
+///             return Outcome::Forward((data, Error::UnsupportedMediaType));
 ///         }
 ///
 ///         // Use a configured limit with name 'person' or fallback to default.
@@ -260,8 +268,8 @@ pub type Outcome<'r, T, E = <T as FromData<'r>>::Error>
 ///         // Read the data into a string.
 ///         let string = match data.open(limit).into_string().await {
 ///             Ok(string) if string.is_complete() => string.into_inner(),
-///             Ok(_) => return Outcome::Error((Status::PayloadTooLarge, TooLarge)),
-///             Err(e) => return Outcome::Error((Status::InternalServerError, Io(e))),
+///             Ok(_) => return Outcome::Error(TooLarge),
+///             Err(e) => return Outcome::Error(Io(e)),
 ///         };
 ///
 ///         // We store `string` in request-local cache for long-lived borrows.
@@ -270,13 +278,13 @@ pub type Outcome<'r, T, E = <T as FromData<'r>>::Error>
 ///         // Split the string into two pieces at ':'.
 ///         let (name, age) = match string.find(':') {
 ///             Some(i) => (&string[..i], &string[(i + 1)..]),
-///             None => return Outcome::Error((Status::UnprocessableEntity, NoColon)),
+///             None => return Outcome::Error(NoColon),
 ///         };
 ///
 ///         // Parse the age.
 ///         let age: u16 = match age.parse() {
 ///             Ok(age) => age,
-///             Err(_) => return Outcome::Error((Status::UnprocessableEntity, InvalidAge)),
+///             Err(_) => return Outcome::Error(InvalidAge),
 ///         };
 ///
 ///         Outcome::Success(Person { name, age })

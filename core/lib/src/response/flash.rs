@@ -52,13 +52,14 @@ const FLASH_COOKIE_DELIM: char = ':';
 /// # #[macro_use] extern crate rocket;
 /// use rocket::response::{Flash, Redirect};
 /// use rocket::request::FlashMessage;
+/// use rocket::either::Either;
 ///
 /// #[post("/login/<name>")]
-/// fn login(name: &str) -> Result<&'static str, Flash<Redirect>> {
+/// fn login(name: &str) -> Either<&'static str, Flash<Redirect>> {
 ///     if name == "special_user" {
-///         Ok("Hello, special user!")
+///         Either::Left("Hello, special user!")
 ///     } else {
-///         Err(Flash::error(Redirect::to(uri!(index)), "Invalid username."))
+///         Either::Right(Flash::error(Redirect::to(uri!(index)), "Invalid username."))
 ///     }
 /// }
 ///

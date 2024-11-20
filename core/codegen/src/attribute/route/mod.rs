@@ -114,7 +114,10 @@ fn query_decls(route: &Route) -> Option<TokenStream> {
                         ); } }
                 );
 
-                return #Outcome::Forward((#__data, Box::new(__e) as Box<dyn #TypedError<'__r> + '__r>));
+                return #Outcome::Forward((
+                    #__data,
+                    Box::new(__e) as Box<dyn #TypedError<'__r> + '__r>
+                ));
             }
 
             (#(#ident.unwrap()),*)
@@ -141,7 +144,10 @@ fn request_guard_decl(guard: &Guard) -> TokenStream {
                     "request guard forwarding"
                 );
 
-                return #Outcome::Forward((#__data, Box::new(__e) as Box<dyn #TypedError<'__r> + '__r>));
+                return #Outcome::Forward((
+                    #__data,
+                    Box::new(__e) as Box<dyn #TypedError<'__r> + '__r>
+                ));
             },
             #[allow(unreachable_code)]
             #Outcome::Error(__c) => {
@@ -205,7 +211,10 @@ fn param_guard_decl(guard: &Guard) -> TokenStream {
                         #i
                     );
 
-                    return #Outcome::Forward((#__data, Box::new(#Status::InternalServerError) as Box<dyn #TypedError<'__r> + '__r>))
+                    return #Outcome::Forward((
+                        #__data,
+                        Box::new(#Status::InternalServerError) as Box<dyn #TypedError<'__r> + '__r>
+                    ));
                 }
             }
         },
@@ -242,7 +251,10 @@ fn data_guard_decl(guard: &Guard) -> TokenStream {
                     "data guard forwarding"
                 );
 
-                return #Outcome::Forward((__d, Box::new(__e) as Box<dyn #TypedError<'__r> + '__r>));
+                return #Outcome::Forward((
+                    __d,
+                    Box::new(__e) as Box<dyn #TypedError<'__r> + '__r>
+                ));
             }
             #[allow(unreachable_code)]
             #Outcome::Error(__e) => {

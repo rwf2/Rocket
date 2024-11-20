@@ -9,7 +9,7 @@ use crate::http_codegen::Status;
 struct ItemAttr {
     status: Option<SpanWrapped<Status>>,
     /// Option to generate a respond_to impl with the debug repr of the type
-    debug: bool,
+    debug: Option<bool>,
 }
 
 #[derive(Default, FromMeta)]
@@ -44,9 +44,13 @@ pub fn derive_typed_error(input: proc_macro::TokenStream) -> TokenStream {
                 }
             })
             .try_fields_map(|_, fields| {
-                let item = ItemAttr::one_from_attrs("error", fields.parent.attrs())?.unwrap_or(Default::default());
-                let status = item.status.map_or(quote!(#_Status::InternalServerError), |m| quote!(#m));
-                Ok(if item.debug {
+                let item = ItemAttr::one_from_attrs("error", fields.parent.attrs())?
+                    .unwrap_or(Default::default());
+                let status = item.status.map_or(
+                    quote!(#_Status::InternalServerError),
+                    |m| quote!(#m)
+                );
+                Ok(if item.debug.unwrap_or(false) {
                     quote! {
                         use #_response::Responder;
                         #_response::Debug(self)
@@ -63,14 +67,16 @@ pub fn derive_typed_error(input: proc_macro::TokenStream) -> TokenStream {
         )
         .inner_mapper(MapperBuild::new()
             .with_output(|_, output| quote! {
-                fn source(&'r self) -> #_Option<&'r (dyn #TypedError<'r> + 'r)> {
-                    #output
+                fn source(&'r self, idx: usize) -> #_Option<&'r (dyn #TypedError<'r> + 'r)> {
+                    if idx == 0 { #output } else { #_None }
                 }
             })
             .try_fields_map(|_, fields| {
                 let mut source = None;
                 for field in fields.iter() {
-                    if FieldAttr::one_from_attrs("error", &field.attrs)?.is_some_and(|a| a.source) {
+                    if FieldAttr::one_from_attrs("error", &field.attrs)?
+                        .is_some_and(|a| a.source)
+                    {
                         if source.is_some() {
                             return Err(Diagnostic::spanned(
                                 field.span(),
@@ -101,8 +107,12 @@ pub fn derive_typed_error(input: proc_macro::TokenStream) -> TokenStream {
                 fn status(&self) -> #_Status { #output }
             })
             .try_fields_map(|_, fields| {
-                let item = ItemAttr::one_from_attrs("error", fields.parent.attrs())?.unwrap_or(Default::default());
-                let status = item.status.map_or(quote!(#_Status::InternalServerError), |m| quote!(#m));
+                let item = ItemAttr::one_from_attrs("error", fields.parent.attrs())?
+                    .unwrap_or(Default::default());
+                let status = item.status.map_or(
+                    quote!(#_Status::InternalServerError),
+                    |m| quote!(#m)
+                );
                 Ok(quote! { #status })
             })
         )

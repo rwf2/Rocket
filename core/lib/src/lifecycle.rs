@@ -8,7 +8,7 @@ use crate::http::{Header, Method, Status};
 use crate::outcome::Outcome;
 use crate::trace::Trace;
 use crate::util::Formatter;
-use crate::{catcher, route, Data, Orbit, Request, Response, Rocket};
+use crate::{catcher, route, Catcher, Data, Orbit, Request, Response, Rocket};
 
 // A token returned to force the execution of one method before another.
 pub(crate) struct RequestToken;
@@ -257,7 +257,11 @@ impl Rocket<Orbit> {
     //
     // On catcher error, the 500 error catcher is attempted. If _that_ errors,
     // the (infallible) default 500 error cather is used.
-    #[tracing::instrument("catching", skip_all, fields(status = error.status().code, uri = %req.uri()))]
+    #[tracing::instrument(
+        "catching",
+        skip_all,
+        fields(status = error.status().code, uri = %req.uri())
+    )]
     pub(crate) async fn dispatch_error<'r, 's: 'r>(
         &'s self,
         mut error: &'r dyn TypedError<'r>,
@@ -287,47 +291,79 @@ impl Rocket<Orbit> {
         }
     }
 
-    /// Invokes the handler with `req` for catcher with status `status`.
+    /// Find minimum rank typed catcher, following up to 5 * 5 sources.
+    fn get_min<'s, 'r: 's>(
+        &'s self,
+        status: Status,
+        error: &'r dyn TypedError<'r>,
+        req: &'r Request<'s>,
+        depth: usize,
+    ) -> Option<&'s Catcher> {
+        const MAX_CALLS_TO_SOURCE: usize = 5;
+        if depth > MAX_CALLS_TO_SOURCE {
+            return None;
+        }
+        let mut min = self.router.catch(status, Some(error), req);
+        if let Some(catcher) = self.router.catch_any(status, Some(error), req) {
+            if min.is_none_or(|m| m.rank > catcher.rank) {
+                min = Some(catcher);
+            }
+        }
+        for i in 0..MAX_CALLS_TO_SOURCE {
+            let Some(val) = error.source(i) else { break; };
+            if let Some(catcher) = self.get_min(status, val, req, depth + 1) {
+                if min.is_none_or(|m| m.rank > catcher.rank) {
+                    min = Some(catcher);
+                }
+            }
+        }
+        min
+    }
+
+    /// Invokes the handler with `req` for catcher with error `error`.
     ///
-    /// In order of preference, invoked handler is:
-    ///   * the user's registered handler for `status`
-    ///   * the user's registered `default` handler
-    ///   * Rocket's default handler for `status`
+    /// In the order searched:
+    ///   * Matching Status and Type
+    ///   * Matching Type, but not Status
+    ///     * Each of the above, but for the error's `source()`, up to
+    ///       5 calls deep
+    ///   * Matching Status, but not Type
+    ///   * Default handler
+    ///   * Rocket's default
+    ///
+    /// The handler selected to be invoked is the one with the lowest rank.
+    ///
+    /// (Rocket's default is implicitly higher ranked than every other catcher)
     ///
     /// Return `Ok(result)` if the handler succeeded. Returns `Ok(Some(Status))`
     /// if the handler ran to completion but failed. Returns `Ok(None)` if the
     /// handler panicked while executing.
-    // TODO: Typed: Docs
     async fn invoke_catcher<'s, 'r: 's>(
         &'s self,
         error: &'r dyn TypedError<'r>,
         req: &'r Request<'s>,
     ) -> Result<Response<'r>, Option<Status>> {
-        const MAX_CALLS_TO_SOURCE: usize = 5;
         let status = error.status();
-        let iter = std::iter::successors(Some(error), |e| e.source())
-            .take(MAX_CALLS_TO_SOURCE)
-            .flat_map(|e|  [
-                // Catchers with matching status and typeid
-                self.router.catch(status, Some(e), req),
-                // Catchers with `default` status and typeid
-                self.router.catch_any(status, Some(e), req)
-            ].into_iter().filter_map(|c| c))
-            .chain([
-                // Catcher with matching status and no typeid
-                self.router.catch(status, None, req),
-                // Catcher with `default` status and no typeid
-                self.router.catch_any(status, None, req)
-            ].into_iter().filter_map(|c| c));
-        // Select lowest rank of (up to) 12 matching catchers.
-        if let Some(catcher) = iter.min_by_key(|c| c.rank) {
+        let mut min = self.get_min(status, error, req, 0);
+        if let Some(catcher) = self.router.catch(status, None, req) {
+            if min.is_none_or(|m| m.rank > catcher.rank) {
+                min = Some(catcher);
+            }
+        }
+        if let Some(catcher) = self.router.catch_any(status, None, req) {
+            if min.is_none_or(|m| m.rank > catcher.rank) {
+                min = Some(catcher);
+            }
+        }
+        if let Some(catcher) = min {
             catcher.trace_info();
-            catch_handle(catcher.name.as_deref(), || catcher.handler.handle(status, error, req)).await
+            catch_handle(catcher.name.as_deref(), || catcher.handler.handle(status, error, req))
+                .await
                 .map(|result| result.map_err(Some))
                 .unwrap_or_else(|| Err(None))
         } else {
-            info!(name: "catcher", name = "rocket::default", "uri.base" = "/", code = error.status().code,
-                "no registered catcher: using Rocket default");
+            info!(name: "catcher", name = "rocket::default", "uri.base" = "/",
+                code = error.status().code, "no registered catcher: using Rocket default");
             Ok(catcher::default_handler(status, error, req))
         }
     }

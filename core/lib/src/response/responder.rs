@@ -174,7 +174,7 @@ use crate::request::Request;
 /// # struct A;
 /// // If the response contains no borrowed data.
 /// impl<'r> Responder<'r, 'static> for A {
-///     fn respond_to(self, _: &'r Request<'_>) -> response::Result<'static> {
+///     fn respond_to(self, _: &'r Request<'_>) -> response::Result<'r, 'static> {
 ///         todo!()
 ///     }
 /// }
@@ -182,7 +182,7 @@ use crate::request::Request;
 /// # struct B<'r>(&'r str);
 /// // If the response borrows from the request.
 /// impl<'r> Responder<'r, 'r> for B<'r> {
-///     fn respond_to(self, _: &'r Request<'_>) -> response::Result<'r> {
+///     fn respond_to(self, _: &'r Request<'_>) -> response::Result<'r, 'r> {
 ///         todo!()
 ///     }
 /// }
@@ -190,7 +190,7 @@ use crate::request::Request;
 /// # struct C;
 /// // If the response is or wraps a borrow that may outlive the request.
 /// impl<'r, 'o: 'r> Responder<'r, 'o> for &'o C {
-///     fn respond_to(self, _: &'r Request<'_>) -> response::Result<'o> {
+///     fn respond_to(self, _: &'r Request<'_>) -> response::Result<'r, 'o> {
 ///         todo!()
 ///     }
 /// }
@@ -198,7 +198,7 @@ use crate::request::Request;
 /// # struct D<R>(R);
 /// // If the response wraps an existing responder.
 /// impl<'r, 'o: 'r, R: Responder<'r, 'o>> Responder<'r, 'o> for D<R> {
-///     fn respond_to(self, _: &'r Request<'_>) -> response::Result<'o> {
+///     fn respond_to(self, _: &'r Request<'_>) -> response::Result<'r, 'o> {
 ///         todo!()
 ///     }
 /// }
@@ -248,7 +248,7 @@ use crate::request::Request;
 /// use rocket::http::ContentType;
 ///
 /// impl<'r> Responder<'r, 'static> for Person {
-///     fn respond_to(self, req: &'r Request<'_>) -> response::Result<'static> {
+///     fn respond_to(self, req: &'r Request<'_>) -> response::Result<'r, 'static> {
 ///         let string = format!("{}:{}", self.name, self.age);
 ///         Response::build_from(string.respond_to(req)?)
 ///             .raw_header("X-Person-Name", self.name)

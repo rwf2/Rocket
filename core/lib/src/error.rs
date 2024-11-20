@@ -8,6 +8,7 @@ use figment::Profile;
 use transient::Static;
 
 use crate::http::Status;
+use crate::TypedError;
 use crate::catcher::TypedError;
 use crate::listener::Endpoint;
 use crate::{Catcher, Ignite, Orbit, Phase, Rocket, Route};
@@ -93,6 +94,7 @@ pub enum ErrorKind {
 pub struct Empty;
 
 impl Static for Empty {}
+
 impl<'r> TypedError<'r> for Empty {
     fn status(&self) -> Status {
         Status::BadRequest
@@ -129,7 +131,8 @@ impl<'r> TypedError<'r> for Empty {
 ///     }
 /// }
 /// ```
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, TypedError)]
+#[error(status = 400)]
 #[non_exhaustive]
 pub struct InvalidOption<'a> {
     /// The value that was provided.

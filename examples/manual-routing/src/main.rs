@@ -63,7 +63,11 @@ fn get_upload<'r>(req: &'r Request, _: Data<'r>) -> route::BoxFuture<'r> {
     route::Outcome::from(req, std::fs::File::open(path).ok()).pin()
 }
 
-fn not_found_handler<'r>(_: Status, _: &'r dyn TypedError<'r>, req: &'r Request) -> catcher::BoxFuture<'r> {
+fn not_found_handler<'r>(
+    _: Status,
+    _: &'r dyn TypedError<'r>,
+    req: &'r Request,
+) -> catcher::BoxFuture<'r> {
     let responder = Custom(Status::NotFound, format!("Couldn't find: {}", req.uri()));
     Box::pin(async move { responder.respond_to(req).map_err(|e| e.status()) })
 }

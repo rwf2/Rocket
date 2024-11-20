@@ -780,7 +780,9 @@ impl<'r, 'o: 'r> IntoOutcome<route::Outcome<'r>> for response::Result<'r, 'o> {
     }
 
     #[inline]
-    fn or_forward(self, (data, forward): (Data<'r>, Box<dyn TypedError<'r> + 'r>)) -> route::Outcome<'r> {
+    fn or_forward(self,
+        (data, forward): (Data<'r>, Box<dyn TypedError<'r> + 'r>)
+    ) -> route::Outcome<'r> {
         match self {
             Ok(val) => Success(val),
             Err(_) => Forward((data, forward))

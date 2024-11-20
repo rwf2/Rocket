@@ -36,7 +36,10 @@ impl<'r, 'i> Parser<'r, 'i> {
             Some(c) if c.is_form() => Self::from_form(req, data).await,
             Some(c) if c.is_form_data() => Self::from_multipart(req, data).await,
             _ => return Outcome::Forward((data, Error {
-                name: None, value: None, kind: ErrorKind::UnsupportedMediaType, entity: Entity::Form,
+                name: None,
+                value: None,
+                kind: ErrorKind::UnsupportedMediaType,
+                entity: Entity::Form,
             }.into())),
         };
 

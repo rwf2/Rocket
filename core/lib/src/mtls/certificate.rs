@@ -55,7 +55,7 @@ use crate::request::{Request, FromRequest, Outcome};
 ///         if let Some(true) = cert.has_serial(ADMIN_SERIAL) {
 ///             Outcome::Success(CertifiedAdmin(cert))
 ///         } else {
-///             Outcome::Forward(Status::Unauthorized)
+///             Outcome::Forward(mtls::Error::SubjectUnauthorized)
 ///         }
 ///     }
 /// }

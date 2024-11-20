@@ -45,7 +45,10 @@ impl Rocket<Orbit> {
             |rocket, request, data| Box::pin(rocket.preprocess(request, data)),
             |token, rocket, request, error_box, data| Box::pin(async move {
                 if !request.errors.is_empty() {
-                    return rocket.dispatch_error(error_box.write(Box::new(Status::BadRequest)), request).await;
+                    return rocket.dispatch_error(
+                        error_box.write(Box::new(Status::BadRequest)),
+                        request
+                    ).await;
                 }
 
                 rocket.dispatch(token, request, error_box, data).await

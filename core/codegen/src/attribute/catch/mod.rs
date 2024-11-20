@@ -31,8 +31,10 @@ pub fn _catch(
     let from_error = catch.guards.iter().map(|g| {
         let name = g.fn_ident.rocketized();
         let ty = g.ty.with_replaced_lifetimes(Lifetime::new("'__r", g.ty.span()));
-        quote_spanned!(g.span() => 
-            let #name: #ty = match <#ty as #FromError<'__r>>::from_error(#__status, #__req, #__error).await {
+        quote_spanned!(g.span() =>
+            let #name: #ty = match <
+                #ty as #FromError<'__r>
+            >::from_error(#__status, #__req, #__error).await {
                 #_Ok(v) => v,
                 #_Err(s) => {
                     // TODO: Typed: log failure
@@ -63,7 +65,7 @@ pub fn _catch(
             },
             _ => todo!("Invalid type"),
         };
-        quote_spanned!(g.span() => 
+        quote_spanned!(g.span() =>
             #_catcher::TypeId::of::<#ty>()
         )
     }));
@@ -76,7 +78,7 @@ pub fn _catch(
         let name = a.typed().unwrap().0.rocketized();
         quote!(#name)
     });
-    
+
     let catcher_response = quote_spanned!(return_type_span => {
         let ___responder = #user_catcher_fn_name(#(#args),*) #dot_await;
         #_response::Responder::respond_to(___responder, #__req).map_err(|e| e.status())?

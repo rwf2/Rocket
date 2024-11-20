@@ -43,6 +43,14 @@ impl StatusClass {
     class_check_fn!(is_unknown, "`Unknown`.", Unknown);
 }
 
+/// Trait to convert any type into a status
+///
+/// Mostly used to allow `Status` to implement `From<T>` for any type `T`.
+pub trait AsStatus {
+    /// Status associated with this particular object
+    fn as_status(&self) -> Status;
+}
+
 /// Structure representing an HTTP status: an integer code.
 ///
 /// A `Status` should rarely be created directly. Instead, an associated
@@ -124,6 +132,12 @@ impl Static for Status {}
 impl Default for Status {
     fn default() -> Self {
         Status::Ok
+    }
+}
+
+impl<T: AsStatus> From<T> for Status {
+    fn from(val: T) -> Self {
+        val.as_status()
     }
 }
 

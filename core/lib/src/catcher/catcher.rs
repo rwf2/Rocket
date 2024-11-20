@@ -154,22 +154,34 @@ impl Catcher {
     ///
     /// ```rust
     /// use rocket::request::Request;
-    /// use rocket::catcher::{Catcher, BoxFuture};
+    /// use rocket::catcher::{Catcher, BoxFuture, TypedError};
     /// use rocket::response::Responder;
     /// use rocket::http::Status;
     ///
-    /// fn handle_404<'r>(status: Status, req: &'r Request<'_>) -> BoxFuture<'r> {
-    ///    let res = (status, format!("404: {}", req.uri()));
-    ///    Box::pin(async move { res.respond_to(req) })
+    /// fn handle_404<'r>(
+    ///     status: Status,
+    ///     _: &'r dyn TypedError<'r>,
+    ///     req: &'r Request<'_>
+    /// ) -> BoxFuture<'r> {
+    ///     let res = (status, format!("404: {}", req.uri()));
+    ///     Box::pin(async move { res.respond_to(req).map_err(|e| e.into()) })
     /// }
     ///
-    /// fn handle_500<'r>(_: Status, req: &'r Request<'_>) -> BoxFuture<'r> {
-    ///     Box::pin(async move{ "Whoops, we messed up!".respond_to(req) })
+    /// fn handle_500<'r>(
+    ///     status: Status,
+    ///     _: &'r dyn TypedError<'r>,
+    ///     req: &'r Request<'_>
+    /// ) -> BoxFuture<'r> {
+    ///     Box::pin(async move{ "Whoops, we messed up!".respond_to(req).map_err(|e| e.into()) })
     /// }
     ///
-    /// fn handle_default<'r>(status: Status, req: &'r Request<'_>) -> BoxFuture<'r> {
+    /// fn handle_default<'r>(
+    ///     status: Status,
+    ///     _: &'r dyn TypedError<'r>,
+    ///     req: &'r Request<'_>
+    /// ) -> BoxFuture<'r> {
     ///    let res = (status, format!("{}: {}", status, req.uri()));
-    ///    Box::pin(async move { res.respond_to(req) })
+    ///    Box::pin(async move { res.respond_to(req).map_err(|e| e.into()) })
     /// }
     ///
     /// let not_found_catcher = Catcher::new(404, handle_404);
@@ -207,13 +219,17 @@ impl Catcher {
     ///
     /// ```rust
     /// use rocket::request::Request;
-    /// use rocket::catcher::{Catcher, BoxFuture};
+    /// use rocket::catcher::{Catcher, BoxFuture, TypedError};
     /// use rocket::response::Responder;
     /// use rocket::http::Status;
     ///
-    /// fn handle_404<'r>(status: Status, req: &'r Request<'_>) -> BoxFuture<'r> {
+    /// fn handle_404<'r>(
+    ///    status: Status,
+    ///    _e: &'r dyn TypedError<'r>,
+    ///    req: &'r Request<'_>
+    /// ) -> BoxFuture<'r> {
     ///    let res = (status, format!("404: {}", req.uri()));
-    ///    Box::pin(async move { res.respond_to(req) })
+    ///    Box::pin(async move { res.respond_to(req).map_err(|e| e.into()) })
     /// }
     ///
     /// let catcher = Catcher::new(404, handle_404);
@@ -233,14 +249,18 @@ impl Catcher {
     ///
     /// ```rust
     /// use rocket::request::Request;
-    /// use rocket::catcher::{Catcher, BoxFuture};
+    /// use rocket::catcher::{Catcher, BoxFuture, TypedError};
     /// use rocket::response::Responder;
     /// use rocket::http::Status;
     /// # use rocket::uri;
     ///
-    /// fn handle_404<'r>(status: Status, req: &'r Request<'_>) -> BoxFuture<'r> {
+    /// fn handle_404<'r>(
+    ///    status: Status,
+    ///    _e: &'r dyn TypedError<'r>,
+    ///    req: &'r Request<'_>
+    /// ) -> BoxFuture<'r> {
     ///    let res = (status, format!("404: {}", req.uri()));
-    ///    Box::pin(async move { res.respond_to(req) })
+    ///    Box::pin(async move { res.respond_to(req).map_err(|e| e.into()) })
     /// }
     ///
     /// let catcher = Catcher::new(404, handle_404);
@@ -287,13 +307,17 @@ impl Catcher {
     ///
     /// ```rust
     /// use rocket::request::Request;
-    /// use rocket::catcher::{Catcher, BoxFuture};
+    /// use rocket::catcher::{Catcher, BoxFuture, TypedError};
     /// use rocket::response::Responder;
     /// use rocket::http::Status;
     ///
-    /// fn handle_404<'r>(status: Status, req: &'r Request<'_>) -> BoxFuture<'r> {
+    /// fn handle_404<'r>(
+    ///     status: Status,
+    ///     _: &'r dyn TypedError<'r>,
+    ///     req: &'r Request<'_>
+    /// ) -> BoxFuture<'r> {
     ///    let res = (status, format!("404: {}", req.uri()));
-    ///    Box::pin(async move { res.respond_to(req) })
+    ///    Box::pin(async move { res.respond_to(req).map_err(|e| e.into()) })
     /// }
     ///
     /// let catcher = Catcher::new(404, handle_404);
@@ -321,7 +345,11 @@ impl Catcher {
 
 impl Default for Catcher {
     fn default() -> Self {
-        fn handler<'r>(status: Status, e: &'r dyn TypedError<'r>, req: &'r Request<'_>) -> BoxFuture<'r> {
+        fn handler<'r>(
+            status: Status,
+            e: &'r dyn TypedError<'r>,
+            req: &'r Request<'_>
+        ) -> BoxFuture<'r> {
             Box::pin(async move { Ok(default_handler(status, e, req)) })
         }
 

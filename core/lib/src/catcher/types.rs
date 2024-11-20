@@ -2,7 +2,7 @@ use std::fmt;
 
 use either::Either;
 use transient::{Any, CanRecoverFrom, Downcast, Transience};
-use crate::{http::Status, response::status::Custom, Request, Response};
+use crate::{http::{Status, AsStatus}, response::status::Custom, Request, Response};
 #[doc(inline)]
 pub use transient::{Static, Transient, TypeId, Inv, CanTranscendTo};
 
@@ -46,12 +46,22 @@ pub trait TypedError<'r>: AsAny<Inv<'r>> + Send + Sync + 'r {
     /// A descriptive name of this error type. Defaults to the type name.
     fn name(&self) -> &'static str { std::any::type_name::<Self>() }
 
-    /// The error that caused this error. Defaults to None.
+    // /// The error that caused this error. Defaults to None.
+    // ///
+    // /// # Warning
+    // /// A typed catcher will not attempt to follow the source of an error
+    // /// more than (TODO: exact number) 5 times.
+    // fn source(&'r self) -> Option<&'r (dyn TypedError<'r> + 'r)> { None }
+
+    // TODO: Typed: need to support case where there are multiple errors
+    /// The error that caused this error. Defaults to None. Each source
+    /// should only be returned for one index - this method will be called
+    /// with indicies starting with 0, and increasing until it returns None.
     ///
     /// # Warning
     /// A typed catcher will not attempt to follow the source of an error
     /// more than (TODO: exact number) 5 times.
-    fn source(&'r self) -> Option<&'r (dyn TypedError<'r> + 'r)> { None }
+    fn source(&'r self, _idx: usize) -> Option<&'r (dyn TypedError<'r> + 'r)> { None }
 
     /// Status code
     fn status(&self) -> Status { Status::InternalServerError }
@@ -70,10 +80,6 @@ impl<'r> TypedError<'r> for Status {
         "<Status>"
     }
 
-    fn source(&'r self) -> Option<&'r (dyn TypedError<'r> + 'r)> {
-        Some(&())
-    }
-
     fn status(&self) -> Status {
         *self
     }
@@ -85,6 +91,11 @@ impl<'r> From<Status> for Box<dyn TypedError<'r> + 'r> {
     }
 }
 
+impl AsStatus for Box<dyn TypedError<'_> + '_> {
+    fn as_status(&self) -> Status {
+        self.status()
+    }
+}
 // TODO: Typed: update transient to make the possible.
 // impl<'r, R: TypedError<'r> + Transient> TypedError<'r> for (Status, R)
 //     where R::Transience: CanTranscendTo<Inv<'r>>
@@ -106,6 +117,34 @@ impl<'r> From<Status> for Box<dyn TypedError<'r> + 'r> {
 //     }
 // }
 
+impl<'r, A: TypedError<'r> + Transient, B: TypedError<'r> + Transient> TypedError<'r> for (A, B)
+    where A::Transience: CanTranscendTo<Inv<'r>>,
+          B::Transience: CanTranscendTo<Inv<'r>>,
+          // (A, B): Transient,
+          // <(A, B) as Transient>::Transience: CanTranscendTo<Inv<'r>>,
+{
+    fn respond_to(&self, request: &'r Request<'_>) -> Result<Response<'r>, Status> {
+        self.0.respond_to(request).or_else(|_| self.1.respond_to(request))
+    }
+
+    fn name(&self) -> &'static str {
+        // TODO: Typed: Should indicate that the
+        std::any::type_name::<(A, B)>()
+    }
+
+    fn source(&'r self, idx: usize) -> Option<&'r (dyn TypedError<'r> + 'r)> {
+        match idx {
+            0 => Some(&self.0),
+            1 => Some(&self.1),
+            _ => None,
+        }
+    }
+
+    fn status(&self) -> Status {
+        self.0.status()
+    }
+}
+
 impl<'r, R: TypedError<'r> + Transient> TypedError<'r> for Custom<R>
     where R::Transience: CanTranscendTo<Inv<'r>>
 {
@@ -117,8 +156,8 @@ impl<'r, R: TypedError<'r> + Transient> TypedError<'r> for Custom<R>
         self.1.name()
     }
 
-    fn source(&'r self) -> Option<&'r (dyn TypedError<'r> + 'r)> {
-        Some(&self.1)
+    fn source(&'r self, idx: usize) -> Option<&'r (dyn TypedError<'r> + 'r)> {
+        if idx == 0 { Some(&self.1) } else { None }
     }
 
     fn status(&self) -> Status {
@@ -148,7 +187,15 @@ impl<'r> TypedError<'r> for std::num::ParseFloatError {
     fn status(&self) -> Status { Status::BadRequest }
 }
 
+impl<'r> TypedError<'r> for std::str::ParseBoolError {
+    fn status(&self) -> Status { Status::BadRequest }
+}
+
 impl<'r> TypedError<'r> for std::string::FromUtf8Error {
+    fn status(&self) -> Status { Status::BadRequest }
+}
+
+impl<'r> TypedError<'r> for std::net::AddrParseError {
     fn status(&self) -> Status { Status::BadRequest }
 }
 
@@ -168,7 +215,8 @@ impl<'r> TypedError<'r> for rmp_serde::encode::Error { }
 impl<'r> TypedError<'r> for rmp_serde::decode::Error {
     fn status(&self) -> Status {
         match self {
-            rmp_serde::decode::Error::InvalidDataRead(e) if e.kind() == std::io::ErrorKind::UnexpectedEof => Status::BadRequest,
+            rmp_serde::decode::Error::InvalidDataRead(e)
+                if e.kind() == std::io::ErrorKind::UnexpectedEof => Status::BadRequest,
             | rmp_serde::decode::Error::TypeMismatch(..)
             | rmp_serde::decode::Error::OutOfRange
             | rmp_serde::decode::Error::LengthMismatch(..) => Status::UnprocessableEntity,
@@ -181,13 +229,6 @@ impl<'r> TypedError<'r> for rmp_serde::decode::Error {
 impl<'r> TypedError<'r> for uuid_::Error {
     fn status(&self) -> Status { Status::BadRequest }
 }
-
-// // TODO: This is a hack to make any static type implement Transient
-// impl<'r, T: std::fmt::Debug + Send + Sync + 'static> TypedError<'r> for response::Debug<T> {
-//     fn respond_to(&self, request: &'r Request<'_>) -> Result<Response<'r>, Status> {
-//         format!("{:?}", self.0).respond_to(request).responder_error()
-//     }
-// }
 
 impl<'r, L, R> TypedError<'r> for Either<L, R>
     where L: TypedError<'r> + Transient,
@@ -209,10 +250,14 @@ impl<'r, L, R> TypedError<'r> for Either<L, R>
         }
     }
 
-    fn source(&'r self) -> Option<&'r (dyn TypedError<'r> + 'r)> {
-        match self {
-            Self::Left(v) => Some(v),
-            Self::Right(v) => Some(v),
+    fn source(&'r self, idx: usize) -> Option<&'r (dyn TypedError<'r> + 'r)> {
+        if idx == 0 {
+            match self {
+                Self::Left(v) => Some(v),
+                Self::Right(v) => Some(v),
+            }
+        } else {
+            None
         }
     }
 
@@ -230,27 +275,6 @@ impl fmt::Debug for dyn TypedError<'_> {
     }
 }
 
-// // TODO: This cannot be used as a bound on an untyped catcher to get any error type.
-// // This is mostly an implementation detail (and issue with double boxing) for
-// // the responder derive
-// // We should just get rid of this. `&dyn TypedError<'_>` impls `FromError`
-// #[derive(Transient)]
-// pub struct AnyError<'r>(pub Box<dyn TypedError<'r> + 'r>);
-
-// impl<'r> TypedError<'r> for AnyError<'r> {
-//     fn source(&'r self) -> Option<&'r (dyn TypedError<'r> + 'r)> {
-//         Some(self.0.as_ref())
-//     }
-
-//     fn respond_to(&self, request: &'r Request<'_>) -> Result<Response<'r>, Status> {
-//         self.0.respond_to(request)
-//     }
-
-//     fn name(&self) -> &'static str { self.0.name() }
-
-//     fn status(&self) -> Status { self.0.status() }
-// }
-
 /// Validates that a type implements `TypedError`. Used by the `#[catch]` attribute to ensure
 /// the `TypeError` is first in the diagnostics.
 #[doc(hidden)]
@@ -267,96 +291,3 @@ pub fn downcast<'r, T>(v: &'r dyn TypedError<'r>) -> Option<&'r T>
     // crate::trace::error!("Downcasting error from {}", v.name());
     v.as_any().downcast_ref()
 }
-
-// TODO: Typed: This isn't used at all right now
-// /// Upcasts a value to `Box<dyn Error<'r>>`, falling back to a default if it doesn't implement
-// /// `Error`
-// #[doc(hidden)]
-// #[macro_export]
-// macro_rules! resolve_typed_catcher {
-//     ($T:expr) => ({
-//         #[allow(unused_imports)]
-//         use $crate::catcher::resolution::{Resolve, DefaultTypeErase, ResolvedTypedError};
-
-//         let inner = Resolve::new($T).cast();
-//         ResolvedTypedError {
-//             name: inner.as_ref().ok().map(|e| e.name()),
-//             val: inner,
-//         }
-//     });
-// }
-
-// pub use resolve_typed_catcher;
-
-// pub mod resolution {
-//     use std::marker::PhantomData;
-
-//     use transient::{CanTranscendTo, Transient};
-
-//     use super::*;
-
-//     /// The *magic*.
-//     ///
-//     /// `Resolve<T>::item` for `T: Transient` is `<T as Transient>::item`.
-//     /// `Resolve<T>::item` for `T: !Transient` is `DefaultTypeErase::item`.
-//     ///
-//     /// This _must_ be used as `Resolve::<T>:item` for resolution to work. This
-//     /// is a fun, static dispatch hack for "specialization" that works because
-//     /// Rust prefers inherent methods over blanket trait impl methods.
-//     pub struct Resolve<'r, T: 'r>(pub T, PhantomData<&'r ()>);
-
-//     impl<'r, T: 'r> Resolve<'r, T> {
-//         pub fn new(val: T) -> Self {
-//             Self(val, PhantomData)
-//         }
-//     }
-
-//     /// Fallback trait "implementing" `Transient` for all types. This is what
-//     /// Rust will resolve `Resolve<T>::item` to when `T: !Transient`.
-//     pub trait DefaultTypeErase<'r>: Sized {
-//         const SPECIALIZED: bool = false;
-
-//         fn cast(self) -> Result<Box<dyn TypedError<'r>>, Self> { Err(self) }
-//     }
-
-//     impl<'r, T: 'r> DefaultTypeErase<'r> for Resolve<'r, T> {}
-
-//     /// "Specialized" "implementation" of `Transient` for `T: Transient`. This is
-//     /// what Rust will resolve `Resolve<T>::item` to when `T: Transient`.
-//     impl<'r, T: TypedError<'r> + Transient> Resolve<'r, T>
-//         where T::Transience: CanTranscendTo<Inv<'r>>
-//     {
-//         pub const SPECIALIZED: bool = true;
-
-//         pub fn cast(self) -> Result<Box<dyn TypedError<'r>>, Self> { Ok(Box::new(self.0)) }
-//     }
-
-//     // TODO: These extensions maybe useful, but so far not really
-//     // // Box<dyn _> can be upcast without double boxing?
-//     // impl<'r> Resolve<'r, Box<dyn TypedError<'r>>> {
-//     //     pub const SPECIALIZED: bool = true;
-
-//     //     pub fn cast(self) -> Result<Box<dyn TypedError<'r>>, Self> { Ok(self.0) }
-//     // }
-
-//     // Ideally, we should be able to handle this case, but we can't, since we don't own `Either`
-//     // impl<'r, A, B> Resolve<'r, Either<A, B>>
-//     //     where A: TypedError<'r> + Transient,
-//     //           A::Transience: CanTranscendTo<Inv<'r>>,
-//     //           B: TypedError<'r> + Transient,
-//     //           B::Transience: CanTranscendTo<Inv<'r>>,
-//     // {
-//     //     pub const SPECIALIZED: bool = true;
-
-//     //     pub fn cast(self) -> Result<Box<dyn TypedError<'r>>, Self> { Ok(Box::new(self.0)) }
-//     // }
-
-//     /// Wrapper type to hold the return type of `resolve_typed_catcher`.
-//     #[doc(hidden)]
-//     pub struct ResolvedTypedError<'r, T> {
-//         /// The return value from `TypedError::name()`, if Some
-//         pub name: Option<&'static str>,
-//         /// The upcast error, if it supports it
-//         pub val: Result<Box<dyn TypedError<'r> + 'r>, Resolve<'r, T>>,
-//     }
-// }
