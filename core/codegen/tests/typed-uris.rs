@@ -2,8 +2,10 @@
 
 #[macro_use] extern crate rocket;
 
+use std::num::ParseIntError;
 use std::path::PathBuf;
 
+use rocket::error::Empty;
 use rocket::http::CookieJar;
 use rocket::http::uri::fmt::{FromUriParam, Query};
 use rocket::form::{Form, error::{Errors, ErrorKind}};
@@ -474,8 +476,8 @@ struct Third<'r> {
 
 #[post("/<foo>/<bar>?<q1>&<rest..>")]
 fn optionals(
-    foo: Option<usize>,
-    bar: Option<String>,
+    foo: Result<usize, ParseIntError>,
+    bar: Result<String, Empty>,
     q1: Result<usize, Errors<'_>>,
     rest: Option<Third<'_>>
 ) { }
@@ -547,6 +549,13 @@ fn test_optional_uri_parameters() {
             q1 = _,
             rest = _,
         )) => "/10/hi%20there",
+
+        // uri!(optionals(
+        //     foo = 10,
+        //     bar = Err(Empty),
+        //     q1 = _,
+        //     rest = _,
+        // )) => "/10/hi%20there",
     }
 }
 
