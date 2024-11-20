@@ -298,22 +298,22 @@ impl Rocket<Orbit> {
         error: &'r dyn TypedError<'r>,
         req: &'r Request<'s>,
         depth: usize,
-    ) -> Option<&'s Catcher> {
+    ) -> Option<(&'s Catcher, &'r dyn TypedError<'r>)> {
         const MAX_CALLS_TO_SOURCE: usize = 5;
         if depth > MAX_CALLS_TO_SOURCE {
             return None;
         }
-        let mut min = self.router.catch(status, Some(error), req);
+        let mut min = self.router.catch(status, Some(error), req).map(|s| (s, error));
         if let Some(catcher) = self.router.catch_any(status, Some(error), req) {
-            if min.is_none_or(|m| m.rank > catcher.rank) {
-                min = Some(catcher);
+            if min.is_none_or(|(m, _)| m.rank > catcher.rank) {
+                min = Some((catcher, error));
             }
         }
         for i in 0..MAX_CALLS_TO_SOURCE {
             let Some(val) = error.source(i) else { break; };
-            if let Some(catcher) = self.get_min(status, val, req, depth + 1) {
-                if min.is_none_or(|m| m.rank > catcher.rank) {
-                    min = Some(catcher);
+            if let Some((catcher, error)) = self.get_min(status, val, req, depth + 1) {
+                if min.is_none_or(|(m, _)| m.rank > catcher.rank) {
+                    min = Some((catcher, error));
                 }
             }
         }
@@ -346,16 +346,16 @@ impl Rocket<Orbit> {
         let status = error.status();
         let mut min = self.get_min(status, error, req, 0);
         if let Some(catcher) = self.router.catch(status, None, req) {
-            if min.is_none_or(|m| m.rank > catcher.rank) {
-                min = Some(catcher);
+            if min.is_none_or(|(m, _)| m.rank > catcher.rank) {
+                min = Some((catcher, error));
             }
         }
         if let Some(catcher) = self.router.catch_any(status, None, req) {
-            if min.is_none_or(|m| m.rank > catcher.rank) {
-                min = Some(catcher);
+            if min.is_none_or(|(m, _)| m.rank > catcher.rank) {
+                min = Some((catcher, error));
             }
         }
-        if let Some(catcher) = min {
+        if let Some((catcher, error)) = min {
             catcher.trace_info();
             catch_handle(catcher.name.as_deref(), || catcher.handler.handle(status, error, req))
                 .await

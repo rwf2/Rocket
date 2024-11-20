@@ -52,6 +52,7 @@ pub fn _catch(
                 Some(v) => v,
                 None => {
                     // TODO: Typed: log failure - this should never happen
+                    println!("Failed to downcast error {}", stringify!(#ty));
                     return #_Err(#Status::InternalServerError);
                 },
             };
