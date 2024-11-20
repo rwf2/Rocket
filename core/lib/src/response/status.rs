@@ -29,8 +29,9 @@ use std::hash::{Hash, Hasher};
 use std::collections::hash_map::DefaultHasher;
 use std::borrow::Cow;
 
-use transient::Transient;
+use transient::{CanTranscendTo, Inv, Transient};
 
+use crate::catcher::TypedError;
 use crate::request::Request;
 use crate::response::{self, Responder, Response};
 use crate::http::Status;
@@ -299,6 +300,32 @@ macro_rules! status_response {
             fn respond_to(self, req: &'r Request<'_>) -> response::Result<'r, 'o> {
                 Custom(Status::$T, self.0).respond_to(req)
             }
+        }
+
+        impl<R> From<R> for $T<R> {
+            fn from(v: R) -> Self {
+                Self(v)
+            }
+        }
+
+        unsafe impl<R: Transient> Transient for $T<R> {
+            type Static = BadRequest<R::Static>;
+            type Transience = R::Transience;
+        }
+
+        impl<'r, R: TypedError<'r>> TypedError<'r> for $T<R>
+            where R: Transient,
+                  R::Transience: CanTranscendTo<Inv<'r>>,
+        {
+            fn respond_to(&self, request: &'r Request<'_>) -> Result<Response<'r>, Status> {
+                self.0.respond_to(request)
+            }
+
+            fn name(&self) -> &'static str { self.0.name() }
+
+            fn source(&'r self) -> Option<&'r (dyn TypedError<'r> + 'r)> { Some(&self.0) }
+
+            fn status(&self) -> Status { Status::$T }
         }
     }
 }

@@ -1,11 +1,11 @@
 use std::{io, mem};
 use std::path::{PathBuf, Path};
 
+use crate::response::status::BadRequest;
 use crate::Request;
-use crate::http::{ContentType, Status};
+use crate::http::ContentType;
 use crate::data::{self, FromData, Data, Capped, N, Limits};
 use crate::form::{FromFormField, ValueField, DataField, error::Errors};
-use crate::outcome::IntoOutcome;
 use crate::fs::FileName;
 
 use tokio::task;
@@ -551,7 +551,7 @@ impl<'v> FromFormField<'v> for Capped<TempFile<'v>> {
 
 #[crate::async_trait]
 impl<'r> FromData<'r> for Capped<TempFile<'_>> {
-    type Error = io::Error;
+    type Error = BadRequest<io::Error>;
 
     async fn from_data(req: &'r Request<'_>, data: Data<'r>) -> data::Outcome<'r, Self> {
         let has_form = |ty: &ContentType| ty.is_form_data() || ty.is_form();
@@ -562,9 +562,10 @@ impl<'r> FromData<'r> for Capped<TempFile<'_>> {
                 Perhaps you meant to use `Form<TempFile<'_>>` instead?");
         }
 
-        TempFile::from(req, data, None, req.content_type().cloned())
-            .await
-            .or_error(Status::BadRequest)
+        match TempFile::from(req, data, None, req.content_type().cloned()).await {
+            Ok(f) => data::Outcome::Success(f),
+            Err(e) => data::Outcome::Error(BadRequest(e)),
+        }
     }
 }
 

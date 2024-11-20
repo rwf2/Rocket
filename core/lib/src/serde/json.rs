@@ -27,6 +27,7 @@
 use std::{io, fmt, error};
 use std::ops::{Deref, DerefMut};
 
+use crate::catcher::TypedError;
 use crate::request::{Request, local_cache};
 use crate::data::{Limits, Data, FromData, Outcome};
 use crate::response::{self, Responder, content};
@@ -137,12 +138,32 @@ pub enum Error<'a> {
     /// received from the user, while the `Error` in `.1` is the deserialization
     /// error from `serde`.
     Parse(&'a str, serde_json::error::Error),
+
+    /// An I/O error occurred while reading the incoming request data.
+    TooLarge(io::Error),
+}
+
+// SAFETY: It's always safe to assume `Inv<'a>`
+unsafe impl<'a> Transient for Error<'a> {
+    type Static = Error<'static>;
+    type Transience = Inv<'a>;
+}
+
+impl<'r> TypedError<'r> for Error<'r> {
+    fn status(&self) -> Status {
+        match self {
+            Self::TooLarge(..) => Status::PayloadTooLarge,
+            Self::Io(..) => Status::BadRequest,
+            Self::Parse(..) => Status::UnprocessableEntity,
+        }
+    }
 }
 
 impl<'a> fmt::Display for Error<'a> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::Io(err) => write!(f, "i/o error: {}", err),
+            Self::TooLarge(err) => write!(f, "i/o error: {}", err),
             Self::Parse(_, err) => write!(f, "parse error: {}", err),
         }
     }
@@ -152,6 +173,7 @@ impl<'a> error::Error for Error<'a> {
     fn source(&self) -> Option<&(dyn error::Error + 'static)> {
         match self {
             Self::Io(err) => Some(err),
+            Self::TooLarge(err) => Some(err),
             Self::Parse(_, err) => Some(err),
         }
     }
@@ -201,12 +223,12 @@ impl<'r, T: Deserialize<'r>> FromData<'r> for Json<T> {
         match Self::from_data(req, data).await {
             Ok(value) => Outcome::Success(value),
             Err(Error::Io(e)) if e.kind() == io::ErrorKind::UnexpectedEof => {
-                Outcome::Error((Status::PayloadTooLarge, Error::Io(e)))
+                Outcome::Error(Error::TooLarge(e))
             },
             Err(Error::Parse(s, e)) if e.classify() == serde_json::error::Category::Data => {
-                Outcome::Error((Status::UnprocessableEntity, Error::Parse(s, e)))
+                Outcome::Error(Error::Parse(s, e))
             },
-            Err(e) => Outcome::Error((Status::BadRequest, e)),
+            Err(e) => Outcome::Error(e),
 
         }
     }
@@ -279,6 +301,7 @@ impl From<Error<'_>> for form::Error<'_> {
     fn from(e: Error<'_>) -> Self {
         match e {
             Error::Io(e) => e.into(),
+            Error::TooLarge(e) => e.into(),
             Error::Parse(_, e) => form::Error::custom(e)
         }
     }
@@ -416,6 +439,7 @@ crate::export! {
 /// ```
 #[doc(inline)]
 pub use serde_json::Value;
+use transient::{Inv, Transient};
 
 /// Deserialize an instance of type `T` from bytes of JSON text.
 ///

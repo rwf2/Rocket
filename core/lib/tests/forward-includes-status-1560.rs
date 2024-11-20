@@ -7,7 +7,7 @@ struct Authenticated;
 
 #[rocket::async_trait]
 impl<'r> FromRequest<'r> for Authenticated {
-    type Error = std::convert::Infallible;
+    type Error = Status;
 
     async fn from_request(request: &'r Request<'_>) -> request::Outcome<Self, Self::Error> {
         if request.headers().contains("Authenticated") {
@@ -22,7 +22,7 @@ struct TeapotForward;
 
 #[rocket::async_trait]
 impl<'r> FromRequest<'r> for TeapotForward {
-    type Error = std::convert::Infallible;
+    type Error = Status;
 
     async fn from_request(_: &'r Request<'_>) -> request::Outcome<Self, Self::Error> {
         request::Outcome::Forward(Status::ImATeapot)

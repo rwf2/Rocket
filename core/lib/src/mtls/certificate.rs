@@ -2,7 +2,6 @@ use ref_cast::RefCast;
 
 use crate::mtls::{x509, oid, bigint, Name, Result, Error};
 use crate::request::{Request, FromRequest, Outcome};
-use crate::http::Status;
 
 /// A request guard for validated, verified client certificates.
 ///
@@ -117,7 +116,7 @@ impl<'r> FromRequest<'r> for Certificate<'r> {
         let certs: Outcome<_, Error> = req.connection
             .peer_certs
             .as_ref()
-            .or_forward(Status::Unauthorized);
+            .or_forward(Error::Empty);
 
         let chain = try_outcome!(certs);
         Certificate::parse(chain.inner()).or_error(())

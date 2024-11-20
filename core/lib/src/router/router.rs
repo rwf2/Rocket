@@ -589,7 +589,7 @@ mod test {
     fn catcher<'a>(r: &'a Router<Finalized>, status: Status, uri: &str) -> Option<&'a Catcher> {
         let client = Client::debug_with(vec![]).expect("client");
         let request = client.get(Origin::parse(uri).unwrap());
-        r.catch(status, &request)
+        r.catch(status, None, &request)
     }
 
     macro_rules! assert_catcher_routing {

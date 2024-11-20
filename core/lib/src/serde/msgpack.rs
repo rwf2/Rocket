@@ -198,16 +198,7 @@ impl<'r, T: Deserialize<'r>> FromData<'r> for MsgPack<T> {
     async fn from_data(req: &'r Request<'_>, data: Data<'r>) -> Outcome<'r, Self> {
         match Self::from_data(req, data).await {
             Ok(value) => Outcome::Success(value),
-            Err(Error::InvalidDataRead(e)) if e.kind() == io::ErrorKind::UnexpectedEof => {
-                Outcome::Error((Status::PayloadTooLarge, Error::InvalidDataRead(e)))
-            },
-            | Err(e@Error::TypeMismatch(_))
-            | Err(e@Error::OutOfRange)
-            | Err(e@Error::LengthMismatch(_))
-            => {
-                Outcome::Error((Status::UnprocessableEntity, e))
-            },
-            Err(e) => Outcome::Error((Status::BadRequest, e)),
+            Err(e) => Outcome::Error(e),
         }
     }
 }

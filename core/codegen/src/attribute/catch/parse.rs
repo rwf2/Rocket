@@ -1,13 +1,21 @@
 use devise::ext::SpanDiagnosticExt;
-use devise::{MetaItem, Spanned, Result, FromMeta, Diagnostic};
+use devise::{Diagnostic, FromMeta, MetaItem, Result, SpanWrapped, Spanned};
 use proc_macro2::TokenStream;
 
+use crate::attribute::param::{Dynamic, Guard};
+use crate::name::Name;
+use crate::proc_macro_ext::Diagnostics;
+use crate::syn_ext::FnArgExt;
 use crate::{http, http_codegen};
 
 /// This structure represents the parsed `catch` attribute and associated items.
 pub struct Attribute {
     /// The status associated with the code in the `#[catch(code)]` attribute.
     pub status: Option<http::Status>,
+    /// The parameter to be used as the error type.
+    pub error: Option<Guard>,
+    /// All the other guards
+    pub guards: Vec<Guard>,
     /// The function that was decorated with the `catch` attribute.
     pub function: syn::ItemFn,
 }
@@ -17,6 +25,7 @@ pub struct Attribute {
 struct Meta {
     #[meta(naked)]
     code: Code,
+    error: Option<SpanWrapped<Dynamic>>,
 }
 
 /// `Some` if there's a code, `None` if it's `default`.
@@ -48,11 +57,41 @@ impl Attribute {
             .map_err(|diag| diag.help("`#[catch]` can only be used on functions"))?;
 
         let attr: MetaItem = syn::parse2(quote!(catch(#args)))?;
-        let status = Meta::from_meta(&attr)
-            .map(|meta| meta.code.0)
+        let meta = Meta::from_meta(&attr)
+            // .map(|meta| meta.code.0)
             .map_err(|diag| diag.help("`#[catch]` expects a status code int or `default`: \
                         `#[catch(404)]` or `#[catch(default)]`"))?;
 
-        Ok(Attribute { status, function })
+        let mut diags = Diagnostics::new();
+        let mut guards = Vec::new();
+        let mut error = None;
+        for (index, arg) in function.sig.inputs.iter().enumerate() {
+            if let Some((ident, ty)) = arg.typed() {
+                match meta.error.as_ref() {
+                    Some(err) if Name::from(ident) == err.name => {
+                        error = Some(Guard { source: meta.error.clone().unwrap().value, fn_ident: ident.clone(), ty: ty.clone() });
+                    }
+                    _ => {
+                        guards.push(Guard { source: Dynamic { name: Name::from(ident), index, trailing: false }, fn_ident: ident.clone(), ty: ty.clone() })
+                    }
+                }
+            } else {
+                let span = arg.span();
+                let diag = if arg.wild().is_some() {
+                    span.error("handler arguments must be named")
+                        .help("to name an ignored handler argument, use `_name`")
+                } else {
+                    span.error("handler arguments must be of the form `ident: Type`")
+                };
+
+                diags.push(diag);
+            }
+        }
+        if meta.error.is_some() != error.is_some() {
+            let span = meta.error.unwrap().span();
+            diags.push(span.error("Error parameter not found on function"));
+        }
+
+        diags.head_err_or(Attribute { status: meta.code.0, error, guards, function })
     }
 }

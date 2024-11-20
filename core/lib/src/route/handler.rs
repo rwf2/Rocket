@@ -209,9 +209,9 @@ impl<'r, 'o: 'r> Outcome<'o> {
     /// ```
     #[inline]
     pub fn try_from<R, E>(req: &'r Request<'_>, result: Result<R, E>) -> Outcome<'r>
-        where R: Responder<'r, 'o>, E: std::fmt::Debug
+        where R: Responder<'r, 'o>, E: TypedError<'r> + 'r
     {
-        let responder = result.map_err(crate::response::Debug);
+        let responder = result;//.map_err(crate::response::Debug);
         match responder.respond_to(req) {
             Ok(response) => Outcome::Success(response),
             Err(status) => Outcome::Error(status)

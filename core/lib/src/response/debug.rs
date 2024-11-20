@@ -1,6 +1,11 @@
+use transient::Static;
+
+use crate::catcher::TypedError;
 use crate::request::Request;
 use crate::response::{self, Responder};
 use crate::http::Status;
+
+use super::Response;
 
 /// Debug prints the internal value before forwarding to the 500 error catcher.
 ///
@@ -81,6 +86,17 @@ impl<'r, E: std::fmt::Debug> Responder<'r, 'static> for Debug<E> {
         Err(Box::new(Status::InternalServerError))
     }
 }
+
+// TODO: Typed: This is a stop-gap measure to allow any 'static type to be a `TypedError`
+impl<'r, E: std::fmt::Debug + Send + Sync + 'static> TypedError<'r> for Debug<E> {
+    fn respond_to(&self, _: &'r Request<'_>) -> Result<Response<'r>, Status> {
+        let type_name = std::any::type_name::<E>();
+        info!(type_name, value = ?self.0, "debug response (500)");
+        Err(Status::InternalServerError)
+    }
+}
+
+impl<E: Send + Sync + 'static> Static for Debug<E> { }
 
 /// Prints a warning with the error and forwards to the `500` error catcher.
 impl<'r> Responder<'r, 'static> for std::io::Error {

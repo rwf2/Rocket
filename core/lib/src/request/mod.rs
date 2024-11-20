@@ -10,7 +10,7 @@ mod tests;
 
 pub use self::request::Request;
 pub use self::from_request::{FromRequest, Outcome};
-pub use self::from_param::{FromParam, FromSegments};
+pub use self::from_param::{FromParam, FromParamError, FromSegments, FromSegmentsError};
 
 #[doc(hidden)]
 pub use rocket_codegen::FromParam;

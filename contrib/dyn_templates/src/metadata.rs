@@ -3,7 +3,7 @@ use std::borrow::Cow;
 
 use rocket::outcome::Outcome;
 use rocket::{Ignite, Request, Rocket, Sentinel, StateMissing};
-use rocket::http::{Status, ContentType};
+use rocket::http::ContentType;
 use rocket::request::{self, FromRequest};
 use rocket::serde::Serialize;
 

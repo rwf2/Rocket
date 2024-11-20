@@ -3,6 +3,7 @@ use rocket::request::{self, FlashMessage, FromRequest, Request};
 use rocket::response::{Redirect, Flash};
 use rocket::http::{CookieJar, Status};
 use rocket::form::Form;
+use rocket::either::Either;
 
 use rocket_dyn_templates::{Template, context};
 
@@ -17,7 +18,7 @@ struct User(usize);
 
 #[rocket::async_trait]
 impl<'r> FromRequest<'r> for User {
-    type Error = std::convert::Infallible;
+    type Error = Status;
 
     async fn from_request(request: &'r Request<'_>) -> request::Outcome<User, Self::Error> {
         request.cookies()
@@ -58,12 +59,12 @@ fn login_page(flash: Option<FlashMessage<'_>>) -> Template {
 }
 
 #[post("/login", data = "<login>")]
-fn post_login(jar: &CookieJar<'_>, login: Form<Login<'_>>) -> Result<Redirect, Flash<Redirect>> {
+fn post_login(jar: &CookieJar<'_>, login: Form<Login<'_>>) -> Either<Redirect, Flash<Redirect>> {
     if login.username == "Sergio" && login.password == "password" {
         jar.add_private(("user_id", "1"));
-        Ok(Redirect::to(uri!(index)))
+        Either::Left(Redirect::to(uri!(index)))
     } else {
-        Err(Flash::error(Redirect::to(uri!(login_page)), "Invalid username/password."))
+        Either::Right(Flash::error(Redirect::to(uri!(login_page)), "Invalid username/password."))
     }
 }
 

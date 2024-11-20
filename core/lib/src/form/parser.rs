@@ -3,7 +3,7 @@ use either::Either;
 
 use crate::request::{Request, local_cache_once};
 use crate::data::{Data, Limits, Outcome};
-use crate::http::{RawStr, Status};
+use crate::http::RawStr;
 use crate::form::prelude::*;
 
 type Result<'r, T> = std::result::Result<T, Error<'r>>;
@@ -35,12 +35,14 @@ impl<'r, 'i> Parser<'r, 'i> {
         let parser = match req.content_type() {
             Some(c) if c.is_form() => Self::from_form(req, data).await,
             Some(c) if c.is_form_data() => Self::from_multipart(req, data).await,
-            _ => return Outcome::Forward((data, Status::UnsupportedMediaType)),
+            _ => return Outcome::Forward((data, Error {
+                name: None, value: None, kind: ErrorKind::UnsupportedMediaType, entity: Entity::Form,
+            }.into())),
         };
 
         match parser {
             Ok(storage) => Outcome::Success(storage),
-            Err(e) => Outcome::Error((e.status(), e.into()))
+            Err(e) => Outcome::Error(e.into()),
         }
     }
 

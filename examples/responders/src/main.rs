@@ -113,10 +113,10 @@ fn redir_login() -> &'static str {
 }
 
 #[get("/redir/<name>")]
-fn maybe_redir(name: &str) -> Result<&'static str, Redirect> {
+fn maybe_redir(name: &str) -> Either<&'static str, Redirect> {
     match name {
-        "Sergio" => Ok("Hello, Sergio!"),
-        _ => Err(Redirect::to(uri!(redir_login))),
+        "Sergio" => Either::Left("Hello, Sergio!"),
+        _ => Either::Right(Redirect::to(uri!(redir_login))),
     }
 }
 

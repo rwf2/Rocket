@@ -2,6 +2,7 @@ use std::fs::File;
 use std::io::Cursor;
 use std::sync::Arc;
 
+use crate::catcher::TypedError;
 use crate::http::{Status, ContentType, StatusClass};
 use crate::response::{self, Response};
 use crate::request::Request;
@@ -494,13 +495,14 @@ impl<'r, 'o: 'r, R: Responder<'r, 'o>> Responder<'r, 'o> for Option<R> {
 
 /// Responds with the wrapped `Responder` in `self`, whether it is `Ok` or
 /// `Err`.
-impl<'r, 'o: 'r, 't: 'o, 'e: 'o, T, E> Responder<'r, 'o> for Result<T, E>
-    where T: Responder<'r, 't>, E: Responder<'r, 'e>
+impl<'r, 'o: 'r, T, E> Responder<'r, 'o> for Result<T, E>
+    where T: Responder<'r, 'o>, E: TypedError<'r> + 'r
 {
     fn respond_to(self, req: &'r Request<'_>) -> response::Result<'r, 'o> {
         match self {
             Ok(responder) => responder.respond_to(req),
-            Err(responder) => responder.respond_to(req),
+            // Err(responder) => responder.respond_to(req),
+            Err(e) => Err(Box::new(e)),
         }
     }
 }

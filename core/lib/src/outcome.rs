@@ -88,8 +88,7 @@
 
 use crate::catcher::TypedError;
 use crate::{route, request, response};
-use crate::data::{self, Data, FromData};
-use crate::http::Status;
+use crate::data::Data;
 
 use self::Outcome::*;
 
@@ -747,30 +746,9 @@ impl<S, E, F> IntoOutcome<Outcome<S, E, F>> for Option<S> {
     }
 }
 
-impl<'r, T: FromData<'r>> IntoOutcome<data::Outcome<'r, T>> for Result<T, T::Error> {
-    type Error = Status;
-    type Forward = (Data<'r>, Status);
-
-    #[inline]
-    fn or_error(self, error: Status) -> data::Outcome<'r, T> {
-        match self {
-            Ok(val) => Success(val),
-            Err(err) => Error((error, err))
-        }
-    }
-
-    #[inline]
-    fn or_forward(self, (data, forward): (Data<'r>, Status)) -> data::Outcome<'r, T> {
-        match self {
-            Ok(val) => Success(val),
-            Err(_) => Forward((data, forward))
-        }
-    }
-}
-
 impl<S, E> IntoOutcome<request::Outcome<S, E>> for Result<S, E> {
     type Error = ();
-    type Forward = Status;
+    type Forward = E;
 
     #[inline]
     fn or_error(self, _: ()) -> request::Outcome<S, E> {
@@ -781,7 +759,7 @@ impl<S, E> IntoOutcome<request::Outcome<S, E>> for Result<S, E> {
     }
 
     #[inline]
-    fn or_forward(self, status: Status) -> request::Outcome<S, E> {
+    fn or_forward(self, status: E) -> request::Outcome<S, E> {
         match self {
             Ok(val) => Success(val),
             Err(_) => Forward(status)

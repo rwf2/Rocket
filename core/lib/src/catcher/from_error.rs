@@ -68,9 +68,9 @@ impl<'r, T: FromRequest<'r>> FromError<'r> for T {
                 info!("Catcher guard error type: `{:?}`", e.name());
                 Err(e.status())
             },
-            Outcome::Forward(s) => {
-                info!(status = %s, "Catcher guard forwarding");
-                Err(s)
+            Outcome::Forward(e) => {
+                info!("Catcher guard error type: `{:?}`", e.name());
+                Err(e.status())
             },
         }
     }

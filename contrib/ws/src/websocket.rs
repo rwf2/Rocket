@@ -213,7 +213,7 @@ pub struct MessageStream<'r, S> {
 
 #[rocket::async_trait]
 impl<'r> FromRequest<'r> for WebSocket {
-    type Error = std::convert::Infallible;
+    type Error = Status;
 
     async fn from_request(req: &'r Request<'_>) -> Outcome<Self, Self::Error> {
         use crate::tungstenite::handshake::derive_accept_key;

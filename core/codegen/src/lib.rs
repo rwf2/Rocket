@@ -1016,6 +1016,13 @@ pub fn derive_responder(input: TokenStream) -> TokenStream {
     emit!(derive::responder::derive_responder(input))
 }
 
+/// Derive for the [`TypedError`] trait.
+// TODO: Typed: Docs
+#[proc_macro_derive(TypedError, attributes(error))]
+pub fn derive_typed_error(input: TokenStream) -> TokenStream {
+    emit!(derive::typed_error::derive_typed_error(input))
+}
+
 /// Derive for the [`UriDisplay<Query>`] trait.
 ///
 /// The [`UriDisplay<Query>`] derive can be applied to enums and structs. When

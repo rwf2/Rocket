@@ -38,4 +38,4 @@ pub use self::flash::Flash;
 pub use self::debug::Debug;
 
 /// Type alias for the `Result` of a [`Responder::respond_to()`] call.
-pub type Result<'r, 'o> = std::result::Result<Response<'o>, Box<dyn TypedError<'r>>>;
+pub type Result<'r, 'o> = std::result::Result<Response<'o>, Box<dyn TypedError<'r> + 'r>>;

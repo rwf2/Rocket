@@ -8,7 +8,9 @@ use std::net::AddrParseError;
 use std::borrow::Cow;
 
 use serde::{Serialize, ser::{Serializer, SerializeStruct}};
+use transient::Transient;
 
+use crate::catcher::TypedError;
 use crate::http::Status;
 use crate::form::name::{NameBuf, Name};
 use crate::data::ByteUnit;
@@ -54,9 +56,15 @@ use crate::data::ByteUnit;
 ///     Ok(i)
 /// }
 /// ```
-#[derive(Default, Debug, PartialEq, Serialize)]
+#[derive(Default, Debug, PartialEq, Serialize, Transient)]
 #[serde(transparent)]
 pub struct Errors<'v>(Vec<Error<'v>>);
+
+impl<'r> TypedError<'r> for Errors<'r> {
+    fn status(&self) -> Status {
+        self.status()
+    }
+}
 
 /// A form error, potentially tied to a specific form field.
 ///
@@ -196,7 +204,7 @@ pub enum ErrorKind<'v> {
     Unknown,
     /// A custom error occurred. Status defaults to
     /// [`Status::UnprocessableEntity`] if one is not directly specified.
-    Custom(Status, Box<dyn std::error::Error + Send>),
+    Custom(Status, Box<dyn std::error::Error + Send + Sync>),
     /// An error while parsing a multipart form occurred.
     Multipart(multer::Error),
     /// A string was invalid UTF-8.
@@ -213,6 +221,8 @@ pub enum ErrorKind<'v> {
     Addr(AddrParseError),
     /// An I/O error occurred.
     Io(io::Error),
+    /// An Unsupported media type
+    UnsupportedMediaType,
 }
 
 /// The erroneous form entity or form component.
@@ -451,9 +461,9 @@ impl<'v> Error<'v> {
     /// }
     /// ```
     pub fn custom<E>(error: E) -> Self
-        where E: std::error::Error + Send + 'static
+        where E: std::error::Error + Send + Sync + 'static
     {
-        (Box::new(error) as Box<dyn std::error::Error + Send>).into()
+        (Box::new(error) as Box<dyn std::error::Error + Send + Sync>).into()
     }
 
     /// Creates a new `Error` with `ErrorKind::Validation` and message `msg`.
@@ -732,6 +742,7 @@ impl<'v> Error<'v> {
             Unknown => Status::InternalServerError,
             Io(_) if self.entity == Entity::Form => Status::BadRequest,
             Custom(status, _) => status,
+            UnsupportedMediaType => Status::UnsupportedMediaType,
             _ => Status::UnprocessableEntity
         }
     }
@@ -866,6 +877,7 @@ impl fmt::Display for ErrorKind<'_> {
             ErrorKind::Float(e) => write!(f, "invalid float: {}", e)?,
             ErrorKind::Addr(e) => write!(f, "invalid address: {}", e)?,
             ErrorKind::Io(e) => write!(f, "i/o error: {}", e)?,
+            ErrorKind::UnsupportedMediaType => write!(f, "unsupported media type")?,
         }
 
         Ok(())
@@ -900,7 +912,8 @@ impl crate::http::ext::IntoOwned for ErrorKind<'_> {
                     .map(|s| Cow::Owned(s.to_string()))
                     .collect::<Vec<_>>()
                     .into()
-            }
+            },
+            UnsupportedMediaType => UnsupportedMediaType,
         }
     }
 }
@@ -966,14 +979,14 @@ impl<'a, 'v: 'a, const N: usize> From<&'static [Cow<'v, str>; N]> for ErrorKind<
     }
 }
 
-impl<'a> From<Box<dyn std::error::Error + Send>> for ErrorKind<'a> {
-    fn from(e: Box<dyn std::error::Error + Send>) -> Self {
+impl<'a> From<Box<dyn std::error::Error + Send + Sync>> for ErrorKind<'a> {
+    fn from(e: Box<dyn std::error::Error + Send + Sync>) -> Self {
         ErrorKind::Custom(Status::UnprocessableEntity, e)
     }
 }
 
-impl<'a> From<(Status, Box<dyn std::error::Error + Send>)> for ErrorKind<'a> {
-    fn from((status, e): (Status, Box<dyn std::error::Error + Send>)) -> Self {
+impl<'a> From<(Status, Box<dyn std::error::Error + Send + Sync>)> for ErrorKind<'a> {
+    fn from((status, e): (Status, Box<dyn std::error::Error + Send + Sync>)) -> Self {
         ErrorKind::Custom(status, e)
     }
 }
@@ -1042,6 +1055,7 @@ impl Entity {
             | ErrorKind::Unknown
             | ErrorKind::Unexpected => Entity::Field,
 
+            | ErrorKind::UnsupportedMediaType
             | ErrorKind::Multipart(_)
             | ErrorKind::Io(_) => Entity::Form,
         }

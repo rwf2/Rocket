@@ -10,9 +10,9 @@ use rocket::local::blocking::Client;
 use rocket::http::Status;
 
 #[catch(404)] fn not_found_0() -> &'static str { "404-0" }
-#[catch(404)] fn not_found_1(_: &Request<'_>) -> &'static str { "404-1" }
-#[catch(404)] fn not_found_2(_: Status, _: &Request<'_>) -> &'static str { "404-2" }
-#[catch(default)] fn all(_: Status, r: &Request<'_>) -> String { r.uri().to_string() }
+#[catch(404)] fn not_found_1(_r: &Request<'_>) -> &'static str { "404-1" }
+#[catch(404)] fn not_found_2(_s: Status, _r: &Request<'_>) -> &'static str { "404-2" }
+#[catch(default)] fn all(_s: Status, r: &Request<'_>) -> String { r.uri().to_string() }
 
 #[test]
 fn test_simple_catchers() {
@@ -37,10 +37,10 @@ fn test_simple_catchers() {
 }
 
 #[get("/<code>")] fn forward(code: u16) -> Status { Status::new(code) }
-#[catch(400)] fn forward_400(status: Status, _: &Request<'_>) -> String { status.code.to_string() }
-#[catch(404)] fn forward_404(status: Status, _: &Request<'_>) -> String { status.code.to_string() }
-#[catch(444)] fn forward_444(status: Status, _: &Request<'_>) -> String { status.code.to_string() }
-#[catch(500)] fn forward_500(status: Status, _: &Request<'_>) -> String { status.code.to_string() }
+#[catch(400)] fn forward_400(status: Status, _r: &Request<'_>) -> String { status.code.to_string() }
+#[catch(404)] fn forward_404(status: Status, _r: &Request<'_>) -> String { status.code.to_string() }
+#[catch(444)] fn forward_444(status: Status, _r: &Request<'_>) -> String { status.code.to_string() }
+#[catch(500)] fn forward_500(status: Status, _r: &Request<'_>) -> String { status.code.to_string() }
 
 #[test]
 fn test_status_param() {

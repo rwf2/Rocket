@@ -1,13 +1,14 @@
-use crate::http::{RawStr, Status};
+use crate::catcher::TypedError;
+use crate::http::RawStr;
 use crate::request::{Request, local_cache};
 use crate::data::{Data, Limits};
-use crate::outcome::{self, IntoOutcome, try_outcome, Outcome::*};
+use crate::outcome::{self, try_outcome, Outcome::*};
 
 /// Type alias for the `Outcome` of [`FromData`].
 ///
 /// [`FromData`]: crate::data::FromData
 pub type Outcome<'r, T, E = <T as FromData<'r>>::Error>
-    = outcome::Outcome<T, (Status, E), (Data<'r>, Status)>;
+    = outcome::Outcome<T, E, (Data<'r>, E)>;
 
 /// Trait implemented by data guards to derive a value from request body data.
 ///
@@ -303,7 +304,7 @@ pub type Outcome<'r, T, E = <T as FromData<'r>>::Error>
 #[crate::async_trait]
 pub trait FromData<'r>: Sized {
     /// The associated error to be returned when the guard fails.
-    type Error: Send + std::fmt::Debug;
+    type Error: TypedError<'r> + 'r;
 
     /// Asynchronously validates, parses, and converts an instance of `Self`
     /// from the incoming request body data.
@@ -315,14 +316,18 @@ pub trait FromData<'r>: Sized {
 }
 
 use crate::data::Capped;
+use crate::response::status::BadRequest;
 
 #[crate::async_trait]
 impl<'r> FromData<'r> for Capped<String> {
-    type Error = std::io::Error;
+    type Error = BadRequest<std::io::Error>;
 
     async fn from_data(req: &'r Request<'_>, data: Data<'r>) -> Outcome<'r, Self> {
         let limit = req.limits().get("string").unwrap_or(Limits::STRING);
-        data.open(limit).into_string().await.or_error(Status::BadRequest)
+        match data.open(limit).into_string().await {
+            Ok(v) => Outcome::Success(v),
+            Err(e) => Outcome::Error(BadRequest(e)),
+        }
     }
 }
 
@@ -330,7 +335,7 @@ impl_strict_from_data_from_capped!(String);
 
 #[crate::async_trait]
 impl<'r> FromData<'r> for Capped<&'r str> {
-    type Error = std::io::Error;
+    type Error = BadRequest<std::io::Error>;
 
     async fn from_data(req: &'r Request<'_>, data: Data<'r>) -> Outcome<'r, Self> {
         let capped = try_outcome!(<Capped<String>>::from_data(req, data).await);
@@ -343,7 +348,7 @@ impl_strict_from_data_from_capped!(&'r str);
 
 #[crate::async_trait]
 impl<'r> FromData<'r> for Capped<&'r RawStr> {
-    type Error = std::io::Error;
+    type Error = BadRequest<std::io::Error>;
 
     async fn from_data(req: &'r Request<'_>, data: Data<'r>) -> Outcome<'r, Self> {
         let capped = try_outcome!(<Capped<String>>::from_data(req, data).await);
@@ -356,7 +361,7 @@ impl_strict_from_data_from_capped!(&'r RawStr);
 
 #[crate::async_trait]
 impl<'r> FromData<'r> for Capped<std::borrow::Cow<'_, str>> {
-    type Error = std::io::Error;
+    type Error = BadRequest<std::io::Error>;
 
     async fn from_data(req: &'r Request<'_>, data: Data<'r>) -> Outcome<'r, Self> {
         let capped = try_outcome!(<Capped<String>>::from_data(req, data).await);
@@ -368,7 +373,7 @@ impl_strict_from_data_from_capped!(std::borrow::Cow<'_, str>);
 
 #[crate::async_trait]
 impl<'r> FromData<'r> for Capped<&'r [u8]> {
-    type Error = std::io::Error;
+    type Error = BadRequest<std::io::Error>;
 
     async fn from_data(req: &'r Request<'_>, data: Data<'r>) -> Outcome<'r, Self> {
         let capped = try_outcome!(<Capped<Vec<u8>>>::from_data(req, data).await);
@@ -381,11 +386,14 @@ impl_strict_from_data_from_capped!(&'r [u8]);
 
 #[crate::async_trait]
 impl<'r> FromData<'r> for Capped<Vec<u8>> {
-    type Error = std::io::Error;
+    type Error = BadRequest<std::io::Error>;
 
     async fn from_data(req: &'r Request<'_>, data: Data<'r>) -> Outcome<'r, Self> {
         let limit = req.limits().get("bytes").unwrap_or(Limits::BYTES);
-        data.open(limit).into_bytes().await.or_error(Status::BadRequest)
+        match data.open(limit).into_bytes().await {
+            Ok(v) => Outcome::Success(v),
+            Err(e) => Outcome::Error(BadRequest(e))
+        }
     }
 }
 
@@ -402,12 +410,12 @@ impl<'r> FromData<'r> for Data<'r> {
 
 #[crate::async_trait]
 impl<'r, T: FromData<'r> + 'r> FromData<'r> for Result<T, T::Error> {
-    type Error = std::convert::Infallible;
+    type Error = T::Error;
 
     async fn from_data(req: &'r Request<'_>, data: Data<'r>) -> Outcome<'r, Self> {
         match T::from_data(req, data).await {
             Success(v) => Success(Ok(v)),
-            Error((_, e)) => Success(Err(e)),
+            Error(e) => Success(Err(e)),
             Forward(d) => Forward(d),
         }
     }
