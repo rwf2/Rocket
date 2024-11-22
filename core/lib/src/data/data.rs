@@ -114,7 +114,7 @@ impl<'r> Data<'r> {
     /// use rocket::data::{Data, FromData, Outcome};
     /// use rocket::http::Status;
     /// # struct MyType;
-    /// # #[derive(rocket::TypedError)]
+    /// # #[derive(rocket::TypedError, Debug)]
     /// # struct MyError;
     ///
     /// #[rocket::async_trait]

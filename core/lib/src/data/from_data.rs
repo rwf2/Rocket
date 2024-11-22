@@ -1,3 +1,5 @@
+use std::fmt;
+
 use crate::catcher::TypedError;
 use crate::http::RawStr;
 use crate::request::{Request, local_cache};
@@ -182,7 +184,7 @@ pub type Outcome<'r, T, E = <T as FromData<'r>>::Error>
 /// use rocket::request::Request;
 /// use rocket::data::{self, Data, FromData};
 /// # struct MyType;
-/// # #[derive(rocket::TypedError)]
+/// # #[derive(rocket::TypedError, Debug)]
 /// # struct MyError;
 ///
 /// #[rocket::async_trait]
@@ -312,7 +314,7 @@ pub type Outcome<'r, T, E = <T as FromData<'r>>::Error>
 #[crate::async_trait]
 pub trait FromData<'r>: Sized {
     /// The associated error to be returned when the guard fails.
-    type Error: TypedError<'r> + 'r;
+    type Error: TypedError<'r> + fmt::Debug + 'r;
 
     /// Asynchronously validates, parses, and converts an instance of `Self`
     /// from the incoming request body data.

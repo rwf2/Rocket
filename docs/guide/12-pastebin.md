@@ -367,7 +367,7 @@ use rocket::tokio::fs::File;
 #     pub fn new(size: usize) -> PasteId<'static> { todo!() }
 #     pub fn file_path(&self) -> PathBuf { todo!() }
 # }
-# #[derive(rocket::TypedError)]
+# #[derive(Debug, rocket::TypedError)]
 # pub struct InvalidPasteId;
 # impl<'a> FromParam<'a> for PasteId<'a> {
 #     type Error = InvalidPasteId;
@@ -446,7 +446,7 @@ pub struct PasteId<'a>(Cow<'a, str>);
 #     pub fn file_path(&self) -> PathBuf { todo!() }
 # }
 #
-# #[derive(rocket::TypedError)]
+# #[derive(Debug, rocket::TypedError)]
 # pub struct InvalidPasteId;
 # impl<'a> FromParam<'a> for PasteId<'a> {
 #     type Error = InvalidPasteId;

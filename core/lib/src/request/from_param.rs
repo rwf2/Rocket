@@ -160,7 +160,7 @@ use crate::http::{uri::{Segments, error::PathError, fmt::Path}, Status};
 /// use rocket::TypedError;
 /// # #[allow(dead_code)]
 /// # struct MyParam<'r> { key: &'r str, value: usize }
-/// #[derive(TypedError)]
+/// #[derive(TypedError, Debug)]
 /// struct MyParamError<'a>(&'a str);
 ///
 /// impl<'r> FromParam<'r> for MyParam<'r> {
@@ -192,7 +192,7 @@ use crate::http::{uri::{Segments, error::PathError, fmt::Path}, Status};
 /// # #[macro_use] extern crate rocket;
 /// # use rocket::request::FromParam;
 /// # use rocket::TypedError;
-/// # #[derive(TypedError)]
+/// # #[derive(TypedError, Debug)]
 /// # struct MyParamError<'a>(&'a str);
 /// # #[allow(dead_code)]
 /// # struct MyParam<'r> { key: &'r str, value: usize }
@@ -215,7 +215,7 @@ use crate::http::{uri::{Segments, error::PathError, fmt::Path}, Status};
 /// ```
 pub trait FromParam<'a>: Sized {
     /// The associated error to be returned if parsing/validation fails.
-    type Error: TypedError<'a>;
+    type Error: TypedError<'a> + fmt::Debug + 'a;
 
     /// Parses and validates an instance of `Self` from a path parameter string
     /// or returns an `Error` if parsing or validation fails.
@@ -397,7 +397,7 @@ impl<'a, T: FromParam<'a>> FromParam<'a> for Option<T> {
 /// the `Utf8Error`.
 pub trait FromSegments<'r>: Sized {
     /// The associated error to be returned when parsing fails.
-    type Error: TypedError<'r>;
+    type Error: TypedError<'r> + fmt::Debug + 'r;
 
     /// Parses an instance of `Self` from many dynamic path parameter strings or
     /// returns an `Error` if one cannot be parsed.
