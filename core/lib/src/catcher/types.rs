@@ -34,7 +34,7 @@ mod sealed {
 
 /// This is the core of typed catchers. If an error type (returned by
 /// FromParam, FromRequest, FromForm, FromData, or Responder) implements
-/// this trait, it can be caught by a typed catcher. (TODO) This trait
+/// this trait, it can be caught by a typed catcher. This trait
 /// can be derived.
 pub trait TypedError<'r>: AsAny<Inv<'r>> + Send + Sync + 'r {
     /// Generates a default response for this type (or forwards to a default catcher)
@@ -46,21 +46,14 @@ pub trait TypedError<'r>: AsAny<Inv<'r>> + Send + Sync + 'r {
     /// A descriptive name of this error type. Defaults to the type name.
     fn name(&self) -> &'static str { std::any::type_name::<Self>() }
 
-    // /// The error that caused this error. Defaults to None.
-    // ///
-    // /// # Warning
-    // /// A typed catcher will not attempt to follow the source of an error
-    // /// more than (TODO: exact number) 5 times.
-    // fn source(&'r self) -> Option<&'r (dyn TypedError<'r> + 'r)> { None }
-
-    // TODO: Typed: need to support case where there are multiple errors
     /// The error that caused this error. Defaults to None. Each source
     /// should only be returned for one index - this method will be called
-    /// with indicies starting with 0, and increasing until it returns None.
+    /// with indicies starting with 0, and increasing until it returns None,
+    /// or reaches 5.
     ///
     /// # Warning
     /// A typed catcher will not attempt to follow the source of an error
-    /// more than (TODO: exact number) 5 times.
+    /// more than 5 times.
     fn source(&'r self, _idx: usize) -> Option<&'r (dyn TypedError<'r> + 'r)> { None }
 
     /// Status code
@@ -76,7 +69,6 @@ impl<'r> TypedError<'r> for Status {
     }
 
     fn name(&self) -> &'static str {
-        // TODO: Status generally shouldn't be caught
         "<Status>"
     }
 
@@ -96,39 +88,18 @@ impl AsStatus for Box<dyn TypedError<'_> + '_> {
         self.status()
     }
 }
-// TODO: Typed: update transient to make the possible.
-// impl<'r, R: TypedError<'r> + Transient> TypedError<'r> for (Status, R)
-//     where R::Transience: CanTranscendTo<Inv<'r>>
-// {
-//     fn respond_to(&self, request: &'r Request<'_>) -> Result<Response<'r>, Status> {
-//         self.1.respond_to(request)
-//     }
-
-//     fn name(&self) -> &'static str {
-//         self.1.name()
-//     }
-
-//     fn source(&'r self) -> Option<&'r (dyn TypedError<'r> + 'r)> {
-//         Some(&self.1)
-//     }
-
-//     fn status(&self) -> Status {
-//         self.0
-//     }
-// }
 
 impl<'r, A: TypedError<'r> + Transient, B: TypedError<'r> + Transient> TypedError<'r> for (A, B)
     where A::Transience: CanTranscendTo<Inv<'r>>,
           B::Transience: CanTranscendTo<Inv<'r>>,
-          // (A, B): Transient,
-          // <(A, B) as Transient>::Transience: CanTranscendTo<Inv<'r>>,
 {
     fn respond_to(&self, request: &'r Request<'_>) -> Result<Response<'r>, Status> {
         self.0.respond_to(request).or_else(|_| self.1.respond_to(request))
     }
 
     fn name(&self) -> &'static str {
-        // TODO: Typed: Should indicate that the
+        // TODO: This should make it more clear that both `A` and `B` work, but
+        // would likely require const concatenation.
         std::any::type_name::<(A, B)>()
     }
 

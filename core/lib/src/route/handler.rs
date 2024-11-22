@@ -30,6 +30,15 @@ pub type BoxFuture<'r, T = Outcome<'r>> = futures::future::BoxFuture<'r, T>;
 /// This is an _async_ trait. Implementations must be decorated
 /// [`#[rocket::async_trait]`](crate::async_trait).
 ///
+/// ## Errors
+///
+/// If the handler errors or forwards, the implementation must include a
+/// [`Box<dyn TypedError>`]. Any type that implements [`TypedError`] can
+/// be boxed upcast, see [`TypedError`] docs for more information.
+///
+/// [`Box<dyn TypedError>`]: crate::catcher::TypedError
+/// [`TypedError`]: crate::catcher::TypedError
+///
 /// # Example
 ///
 /// Say you'd like to write a handler that changes its functionality based on an
@@ -137,7 +146,6 @@ pub type BoxFuture<'r, T = Outcome<'r>> = futures::future::BoxFuture<'r, T>;
 /// Use this alternative when a single configuration is desired and your custom
 /// handler is private to your application. For all other cases, a custom
 /// `Handler` implementation is preferred.
-// TODO: Typed: Docs
 #[crate::async_trait]
 pub trait Handler: Cloneable + Send + Sync + 'static {
     /// Called by Rocket when a `Request` with its associated `Data` should be

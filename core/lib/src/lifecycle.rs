@@ -227,7 +227,7 @@ impl Rocket<Orbit> {
     ) -> route::Outcome<'r> {
         // Go through all matching routes until we fail or succeed or run out of
         // routes to try, in which case we forward with the last status.
-        let mut status: Box<dyn TypedError<'r> + 'r> = Box::new(Status::NotFound);
+        let mut error: Box<dyn TypedError<'r> + 'r> = Box::new(Status::NotFound);
         for route in self.router.route(request) {
             // Retrieve and set the requests parameters.
             route.trace_info();
@@ -243,11 +243,11 @@ impl Rocket<Orbit> {
             outcome.trace_info();
             match outcome {
                 o @ Outcome::Success(_) | o @ Outcome::Error(_) => return o,
-                Outcome::Forward(forwarded) => (data, status) = forwarded,
+                Outcome::Forward(forwarded) => (data, error) = forwarded,
             }
         }
 
-        Outcome::Forward((data, status))
+        Outcome::Forward((data, error))
     }
 
     // Invokes the catcher for `status`. Returns the response on success.
@@ -329,6 +329,7 @@ impl Rocket<Orbit> {
     ///       5 calls deep
     ///   * Matching Status, but not Type
     ///   * Default handler
+    ///   * Error type's default handler
     ///   * Rocket's default
     ///
     /// The handler selected to be invoked is the one with the lowest rank.
@@ -361,6 +362,9 @@ impl Rocket<Orbit> {
                 .await
                 .map(|result| result.map_err(Some))
                 .unwrap_or_else(|| Err(None))
+            // TODO: Typed: should this be run in a `catch_unwind` context?
+        } else if let Ok(res) = error.respond_to(req) {
+            Ok(res)
         } else {
             info!(name: "catcher", name = "rocket::default", "uri.base" = "/",
                 code = error.status().code, "no registered catcher: using Rocket default");

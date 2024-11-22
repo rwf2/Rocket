@@ -75,8 +75,6 @@ fn test_hello_invalid_age() {
 fn test_hello_sergio() {
     let client = Client::tracked(super::rocket()).unwrap();
 
-    // TODO: typed: This logic has changed, either needs to be fixed
-    // or this test changed.
     for path in &["oops", "-129"] {
         let request = client.get(format!("/hello/Sergio/{}", path));
         let expected = super::sergio_error();

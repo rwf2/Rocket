@@ -81,7 +81,7 @@ pub type Outcome<S, E> = outcome::Outcome<S, E, E>;
 ///   the value for the corresponding parameter.  As long as all other guards
 ///   succeed, the request will be handled.
 ///
-/// * **Error**(Status, E)
+/// * **Error**(E)
 ///
 ///   If the `Outcome` is [`Error`], the request will fail with the given
 ///   status code and error. The designated error [`Catcher`](crate::Catcher)
@@ -89,7 +89,7 @@ pub type Outcome<S, E> = outcome::Outcome<S, E, E>;
 ///   of `Result<S, E>` and `Option<S>` to catch `Error`s and retrieve the
 ///   error value.
 ///
-/// * **Forward**(Status)
+/// * **Forward**(E)
 ///
 ///   If the `Outcome` is [`Forward`], the request will be forwarded to the next
 ///   matching route until either one succeeds or there are no further matching
@@ -242,6 +242,32 @@ pub type Outcome<S, E> = outcome::Outcome<S, E, E>;
 /// }
 /// ```
 ///
+/// ## Errors
+///
+/// When a request guard fails, the error type can be caught using a catcher. A catcher
+/// for the above example might look something like this:
+///
+/// ```rust
+/// # #[macro_use] extern crate rocket;
+/// # use rocket::http::Status;
+/// # use rocket::request::{self, Outcome, Request, FromRequest};
+/// # #[derive(Debug, TypedError)]
+/// # #[error(status = 400)]
+/// # enum ApiKeyError {
+/// #     Missing,
+/// #     Invalid,
+/// # }
+/// #[catch(400, error = "<e>")]
+/// fn catch_api_key_error(e: &ApiKeyError) -> &'static str {
+///     match e {
+///         ApiKeyError::Missing => "Api key required",
+///         ApiKeyError::Invalid => "Api key is invalid",
+///     }
+/// }
+/// ```
+///
+/// See [typed catchers](crate::catch) for more information.
+///
 /// # Request-Local State
 ///
 /// Request guards that perform expensive operations, such as those that query a
@@ -379,7 +405,6 @@ pub type Outcome<S, E> = outcome::Outcome<S, E, E>;
 /// User` and `Admin<'a>`) as the data is now owned by the request's cache.
 ///
 /// [request-local state]: https://rocket.rs/master/guide/state/#request-local-state
-// TODO: Typed: docs
 #[crate::async_trait]
 pub trait FromRequest<'r>: Sized {
     /// The associated error to be returned if derivation fails.

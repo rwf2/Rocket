@@ -89,7 +89,6 @@ pub type BoxFuture<'r, T = Result<'r>> = futures::future::BoxFuture<'r, T>;
 ///      directly as the parameter to `rocket.register("/", )`.
 ///   3. Unlike static-function-based handlers, this custom handler can make use
 ///      of internal state.
-// TODO: Typed: Docs
 #[crate::async_trait]
 pub trait Handler: Cloneable + Send + Sync + 'static {
     /// Called by Rocket when an error with `status` for a given `Request`
