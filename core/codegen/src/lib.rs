@@ -320,19 +320,21 @@ route_attribute!(options => Method::Options);
 /// The grammar for the `#[catch]` attributes is defined as:
 ///
 /// ```text
-/// catch := STATUS | 'default'
+/// catch := (STATUS | 'default') (',' parameter)*
 ///
 /// STATUS := valid HTTP status code (integer in [200, 599])
+///
+/// parameter := 'error' '=' '"' SINGLE_PARAMETER  '"'
+/// SINGLE_PARAM := '<' IDENT '>'
 /// ```
 ///
 /// # Typing Requirements
 ///
-/// The decorated function may take zero, one, or two arguments. It's type
-/// signature must be one of the following, where `R:`[`Responder`]:
-///
-///   * `fn() -> R`
-///   * `fn(`[`&Request`]`) -> R`
-///   * `fn(`[`Status`]`, `[`&Request`]`) -> R`
+/// The `error` `SINGLE_PARAMETER`, if present, must be a reference to a type
+/// that implements [`TypedError`]. All other parameter types must implement
+/// [`FromError`]. There is a blanket impl for any type that implements
+/// [`FromRequest`], so most types will work as expected. `Status`, `&Request`,
+/// and `&dyn TypedError` also implement [`FromError`].
 ///
 /// # Semantics
 ///
@@ -341,9 +343,7 @@ route_attribute!(options => Method::Options);
 ///   1. An error [`Handler`].
 ///
 ///      The generated handler calls the decorated function, passing in the
-///      [`Status`] and [`&Request`] values if requested. The returned value is
-///      used to generate a [`Response`] via the type's [`Responder`]
-///      implementation.
+///      error type, and every other parameter requested.
 ///
 ///   2. A static structure used by [`catchers!`] to generate a [`Catcher`].
 ///
@@ -354,6 +354,8 @@ route_attribute!(options => Method::Options);
 /// [`&Request`]: ../rocket/struct.Request.html
 /// [`Status`]: ../rocket/http/struct.Status.html
 /// [`Handler`]: ../rocket/catcher/trait.Handler.html
+/// [`TypedError`]: ../rocket/catcher/trait.TypedError.html
+/// [`FromError`]: ../rocket/catcher/trait.FromError.html
 /// [`catchers!`]: macro.catchers.html
 /// [`Catcher`]: ../rocket/struct.Catcher.html
 /// [`Response`]: ../rocket/struct.Response.html
@@ -1017,7 +1019,63 @@ pub fn derive_responder(input: TokenStream) -> TokenStream {
 }
 
 /// Derive for the [`TypedError`] trait.
-// TODO: Typed: Docs
+///
+/// The [`TypedError`] derive can be applied to structs and enums, so
+/// they can be used as an error type in Rocket.
+///
+/// ```rust
+/// # #[macro_use] extern crate rocket;
+/// #[derive(TypedError)]
+/// struct InvalidCookieValue<'r> {
+///     name: &'r str,
+///     value: &'r str,
+/// }
+/// 
+/// #[derive(TypedError)]
+/// enum HeaderError {
+///     InvalidValue,
+///     Missing,
+/// }
+/// ```
+///
+/// # Semantics
+///
+/// The derive generates an implementation of [`TypedError`] for the decorated
+/// struct. The exact implementation can be modiefied using the `error` attribtute.
+/// When applied to the outer struct or enum variants, `status` sets the status
+/// associated with this type. `source` can only be applied to individual fields,
+/// and indicates that the field should be returned from the `source()` method.
+/// This means that field can also be used as the `error` type in a catcher.
+/// Finally, `debug` generates a default `respond_to` impl, using the
+/// [`Debug`](std::fmt::Debug) implementation of the type.
+///
+/// ```text
+/// response := parameter (',' parameter)?
+///
+/// parameter := 'status' '=' STATUS
+///            | 'source'
+///            | 'debug'
+///
+/// STATUS := unsigned integer >= 100 and < 600
+/// ```
+///
+/// # Generics
+///
+/// The `TypedError` derive allows at most one lifetime, but as many generic parameters
+/// as you want. Generic parameters will be restricted to `'static`. For example:
+///
+/// ```rust
+/// # #[macro_use] extern crate rocket;
+/// // The bound `E: 'static` will be added.
+/// #[derive(TypedError)]
+/// struct InvalidCookieValue<'r, E> {
+///     name: &'r str,
+///     value: &'r str,
+///     inner_error: E,
+/// }
+/// ```
+///
+/// [`TypedError`]: ../rocket/catcher/trait.TypedError.html
 #[proc_macro_derive(TypedError, attributes(error))]
 pub fn derive_typed_error(input: TokenStream) -> TokenStream {
     emit!(derive::typed_error::derive_typed_error(input))

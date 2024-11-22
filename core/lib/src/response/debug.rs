@@ -88,6 +88,7 @@ impl<'r, E: std::fmt::Debug> Responder<'r, 'static> for Debug<E> {
 }
 
 // TODO: Typed: This is a stop-gap measure to allow any 'static type to be a `TypedError`
+// I think is going to be quite useful going forward, since most error types are 'static
 impl<'r, E: std::fmt::Debug + Send + Sync + 'static> TypedError<'r> for Debug<E> {
     fn respond_to(&self, _: &'r Request<'_>) -> Result<Response<'r>, Status> {
         let type_name = std::any::type_name::<E>();

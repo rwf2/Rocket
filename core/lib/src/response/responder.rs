@@ -549,7 +549,6 @@ impl<'r> Responder<'r, 'static> for Status {
                     "invalid status used as responder\n\
                     status must be one of 100, 200..=205, 400..=599");
 
-                // TODO: Typed: Invalid status
                 Err(Box::new(Status::InternalServerError))
             }
         }
