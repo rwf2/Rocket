@@ -402,124 +402,33 @@ pub mod example {
     /// #[database("example")]
     /// pub struct ExampleDb(diesel::SqliteConnection);
     /// ```
-    pub struct ExampleDb(crate::Connection<Self, diesel::SqliteConnection>);
-
+    pub struct ExampleDb(
+        #[allow(dead_code)]
+        crate::Connection<Self, diesel::SqliteConnection>,
+    );
+    #[allow(dead_code)]
     impl ExampleDb {
-        /// Returns a fairing that initializes the database connection pool
-        /// associated with `Self`.
-        ///
-        /// The fairing _must_ be attached before `Self` can be used as a
-        /// request guard.
-        ///
-        /// # Example
-        ///
-        /// ```rust
-        /// # #[macro_use] extern crate rocket;
-        /// # #[macro_use] extern crate rocket_sync_db_pools;
-        /// #
-        /// # #[cfg(feature = "diesel_sqlite_pool")] {
-        /// use rocket_sync_db_pools::diesel;
-        ///
-        /// #[database("my_db")]
-        /// struct MyConn(diesel::SqliteConnection);
-        ///
-        /// #[launch]
-        /// fn rocket() -> _ {
-        ///     rocket::build().attach(MyConn::fairing())
-        /// }
-        /// # }
-        /// ```
+        /// Returns a fairing that initializes the database connection pool.
         pub fn fairing() -> impl crate::rocket::fairing::Fairing {
-            <crate::ConnectionPool<Self, diesel::SqliteConnection>>::fairing(
-                "'example' Database Pool",
-                "example",
-            )
+            <crate::ConnectionPool<
+                Self,
+                diesel::SqliteConnection,
+            >>::fairing("'example' Database Pool", "example")
         }
-
-        /// Returns an opaque type that represents the connection pool backing
-        /// connections of type `Self` _as long as_ the fairing returned by
-        /// [`Self::fairing()`] is attached and has run on `__rocket`.
-        ///
-        /// The returned pool is `Clone`. Values of type `Self` can be retrieved
-        /// from the pool by calling `pool.get().await` which has the same
-        /// signature and semantics as [`Self::get_one()`].
-        ///
-        /// # Example
-        ///
-        /// ```rust
-        /// # #[macro_use] extern crate rocket;
-        /// # #[macro_use] extern crate rocket_sync_db_pools;
-        /// #
-        /// # #[cfg(feature = "diesel_sqlite_pool")] {
-        /// use rocket::tokio::{task, time};
-        /// use rocket::fairing::AdHoc;
-        /// use rocket_sync_db_pools::diesel;
-        ///
-        /// #[database("my_db")]
-        /// struct MyConn(diesel::SqliteConnection);
-        ///
-        /// #[launch]
-        /// fn rocket() -> _ {
-        ///     rocket::build()
-        ///         .attach(MyConn::fairing())
-        ///         .attach(AdHoc::try_on_ignite("Background DB", |rocket| async {
-        ///             let pool = match MyConn::pool(&rocket) {
-        ///                 Some(pool) => pool.clone(),
-        ///                 None => return Err(rocket)
-        ///             };
-        ///
-        ///             // Start a background task that runs some database
-        ///             // operation every 10 seconds. If a connection isn't
-        ///             // available, retries 10 + timeout seconds later.
-        ///             tokio::task::spawn(async move {
-        ///                 loop {
-        ///                     time::sleep(time::Duration::from_secs(10)).await;
-        ///                     if let Some(conn) = pool.get().await {
-        ///                         conn.run(|c| { /* perform db ops */ }).await;
-        ///                     }
-        ///                 }
-        ///             });
-        ///
-        ///             Ok(rocket)
-        ///         }))
-        /// }
-        /// # }
-        /// ```
+        /// Returns an opaque type that represents the connection pool
+        /// backing connections of type `Self`.
         pub fn pool<P: crate::rocket::Phase>(
             __rocket: &crate::rocket::Rocket<P>,
-        ) -> Option<&crate::ConnectionPool<Self, diesel::SqliteConnection>>
-        {
-            <crate::ConnectionPool<Self, diesel::SqliteConnection>>::pool(
-                &__rocket,
-            )
+        ) -> Option<
+            &crate::ConnectionPool<Self, diesel::SqliteConnection>,
+        > {
+            <crate::ConnectionPool<
+                Self,
+                diesel::SqliteConnection,
+            >>::pool(&__rocket)
         }
-
-        /// Runs the provided function `__f` in an async-safe blocking thread.
-        /// The function is supplied with a mutable reference to the raw
-        /// connection (a value of type `&mut Self.0`). `.await`ing the return
-        /// value of this function yields the value returned by `__f`.
-        ///
-        /// # Example
-        ///
-        /// ```rust
-        /// # #[macro_use] extern crate rocket;
-        /// # #[macro_use] extern crate rocket_sync_db_pools;
-        /// #
-        /// # #[cfg(feature = "diesel_sqlite_pool")] {
-        /// use rocket_sync_db_pools::diesel;
-        ///
-        /// #[database("my_db")]
-        /// struct MyConn(diesel::SqliteConnection);
-        ///
-        /// #[get("/")]
-        /// async fn f(conn: MyConn) {
-        ///     // The type annotation is illustrative and isn't required.
-        ///     let result = conn.run(|c: &mut diesel::SqliteConnection| {
-        ///         // Use `c`.
-        ///     }).await;
-        /// }
-        /// # }
-        /// ```
+        /// Runs the provided function `__f` in an async-safe blocking
+        /// thread.
         pub async fn run<F, R>(&self, __f: F) -> R
         where
             F: FnOnce(&mut diesel::SqliteConnection) -> R + Send + 'static,
@@ -527,69 +436,42 @@ pub mod example {
         {
             self.0.run(__f).await
         }
-
         /// Retrieves a connection of type `Self` from the `rocket` instance.
-        /// Returns `Some` as long as `Self::fairing()` has been attached and
-        /// there is a connection available within at most `timeout` seconds.
         pub async fn get_one<P: crate::rocket::Phase>(
             __rocket: &crate::rocket::Rocket<P>,
         ) -> Option<Self> {
-            <crate::ConnectionPool<Self, diesel::SqliteConnection>>::get_one(
-                &__rocket,
-            )
-            .await
-            .map(Self)
+            <crate::ConnectionPool<
+                Self,
+                diesel::SqliteConnection,
+            >>::get_one(&__rocket)
+                .await
+                .map(Self)
         }
     }
-
-    /// Retrieves a connection from the database pool or fails with a
-    /// `Status::ServiceUnavailable` if doing so times out.
+    #[crate::rocket::async_trait]
     impl<'r> crate::rocket::request::FromRequest<'r> for ExampleDb {
-        type Error = ();
-        #[allow(
-            clippy::let_unit_value,
-            clippy::no_effect_underscore_binding,
-            clippy::shadow_same,
-            clippy::type_complexity,
-            clippy::type_repetition_in_bounds,
-            clippy::used_underscore_binding
-        )]
-        fn from_request<'life0, 'async_trait>(
-            __r: &'r crate::rocket::request::Request<'life0>,
-        ) -> ::core::pin::Pin<
-            Box<
-                dyn ::core::future::Future<
-                        Output = crate::rocket::request::Outcome<Self, ()>,
-                    > + ::core::marker::Send
-                    + 'async_trait,
-            >,
-        >
-        where
-            'r: 'async_trait,
-            'life0: 'async_trait,
-            Self: 'async_trait,
-        {
-            Box::pin(async move {
-                if let ::core::option::Option::Some(__ret) = ::core::option::Option::None::<
-                    crate::rocket::request::Outcome<Self, ()>,
-                > {
-                    return __ret;
-                }
-                let __r = __r;
-                let __ret: crate::rocket::request::Outcome<Self, ()> = {
-                    < crate :: Connection < Self , diesel :: SqliteConnection > >
-                        :: from_request (__r) . await . map (Self)
-                };
-                #[allow(unreachable_code)]
-                __ret
-            })
+        type Error = crate::ConnectionMissing;
+        async fn from_request(
+            __r: &'r crate::rocket::request::Request<'_>,
+        ) -> crate::rocket::request::Outcome<Self, Self::Error> {
+            <crate::Connection<
+                Self,
+                diesel::SqliteConnection,
+            >>::from_request(__r)
+                .await
+                .map(Self)
         }
     }
     impl crate::rocket::Sentinel for ExampleDb {
         fn abort(
-            __r: &crate::rocket::Rocket<crate::rocket::Ignite>,
+            __r: &crate::rocket::Rocket<
+                crate::rocket::Ignite,
+            >,
         ) -> bool {
-            <crate::Connection<Self, diesel::SqliteConnection>>::abort(__r)
+            <crate::Connection<
+                Self,
+                diesel::SqliteConnection,
+            >>::abort(__r)
         }
     }
 }

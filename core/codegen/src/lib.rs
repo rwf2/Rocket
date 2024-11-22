@@ -313,6 +313,11 @@ route_attribute!(options => Method::Options);
 /// fn default(status: Status, req: &Request) -> String {
 ///     format!("{} ({})", status, req.uri())
 /// }
+///
+/// #[catch(500, error = "<e>")]
+/// fn std_io_error(e: &std::io::Error) -> String {
+///     format!("Std error: {:?}", e)
+/// }
 /// ```
 ///
 /// # Grammar

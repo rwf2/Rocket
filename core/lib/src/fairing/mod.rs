@@ -163,14 +163,15 @@ pub type FilterResult<'r> = std::result::Result<(), Box<dyn TypedError<'r> + 'r>
 ///     is called just after a request is received, immediately after
 ///     pre-processing the request and running all `Request` fairings. This method
 ///     returns a `Result`, which can be used to terminate processing of a request,
-// TODO: Typed: links
-///     bypassing the routing process. The error value must be a `TypedError`, which
+///     bypassing the routing process. The error value must be a [`TypedError`], which
 ///     can then be caught by a typed catcher.
 ///
 ///     This method should only be used for global filters, i.e., filters that need
 ///     to be run on every (or very nearly every) route. One common example might be
 ///     CORS, since the CORS headers of every request need to be inspected, and potentially
 ///     rejected.
+///
+/// [`TypedError`]: crate::catcher::TypedError
 ///
 ///   * **<a name="response">Response</a> (`on_response`)**
 ///
