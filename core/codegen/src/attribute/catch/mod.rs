@@ -61,7 +61,8 @@ pub fn _catch(
                     ::rocket::trace::error!(
                         downcast_to = stringify!(#ty),
                         error_name = #__error.name(),
-                        "Failed to downcast error. This should never happen, please open an issue with details."
+                        "Failed to downcast error. This should never happen, please \
+                        open an issue with details."
                     );
                     return #_Err(#Status::InternalServerError);
                 },

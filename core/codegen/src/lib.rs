@@ -1035,7 +1035,7 @@ pub fn derive_responder(input: TokenStream) -> TokenStream {
 ///     name: &'r str,
 ///     value: &'r str,
 /// }
-/// 
+///
 /// #[derive(TypedError)]
 /// enum HeaderError {
 ///     InvalidValue,

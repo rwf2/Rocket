@@ -593,7 +593,8 @@ mod test {
     {
         let mut router = Router::new();
         for (status, base, ty) in catchers {
-            let mut catcher = Catcher::new(status.map(|s| s.code), catcher::dummy_handler).rebase(Origin::parse(base).unwrap());
+            let mut catcher = Catcher::new(status.map(|s| s.code), catcher::dummy_handler)
+                .rebase(Origin::parse(base).unwrap());
             catcher.type_id = ty;
             router.catchers.push(catcher);
         }
@@ -646,7 +647,7 @@ mod test {
         let request = client.req(Method::Get, Origin::parse(uri).unwrap());
         router.catch_any(status, ty(&()), &request)
     }
-    
+
     #[test]
     fn test_catch_vs_catch_any() {
         let router = make_router_catches([(None, "/", None)]).unwrap();

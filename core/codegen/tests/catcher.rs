@@ -105,11 +105,13 @@ fn test_basic_params() {
 #[catch(default, error = "<e>")]
 fn test_io_error(e: &io::Error) -> String { format!("{e:?}") }
 #[catch(default, error = "<_e>")]
-fn test_parse_int_error(_e: &ParseIntError) -> String { println!("ParseIntError"); format!("ParseIntError") }
+fn test_parse_int_error(_e: &ParseIntError) -> String { format!("ParseIntError") }
 #[catch(default, error = "<_e>")]
 fn test_parse_bool_error(_e: &ParseBoolError) -> String { format!("ParseBoolError") }
 #[catch(default, error = "<e>")]
-fn test_param_parse_bool_error(e: &FromParamError<'_, ParseBoolError>) -> String { format!("ParseBoolError: {}", e.raw) }
+fn test_param_parse_bool_error(e: &FromParamError<'_, ParseBoolError>) -> String {
+    format!("ParseBoolError: {}", e.raw)
+}
 
 
 #[test]

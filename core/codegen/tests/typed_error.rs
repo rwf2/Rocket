@@ -67,3 +67,14 @@ fn validate_static() {
     ));
     boxed_error(Box::new(val));
 }
+
+#[derive(TypedError)]
+pub enum Generic<E> {
+    First(E),
+}
+
+#[derive(TypedError)]
+pub struct GenericWithLifetime<'r, E> {
+    s: &'r str,
+    inner: E,
+}

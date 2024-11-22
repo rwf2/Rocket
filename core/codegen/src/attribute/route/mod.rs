@@ -113,6 +113,12 @@ fn query_decls(route: &Route) -> Option<TokenStream> {
                             "{_err}"
                         ); } }
                 );
+                ::rocket::trace::info!(
+                    name: "forward",
+                    target: concat!("rocket::codegen::route::", module_path!()),
+                    error_name = #TypedError::name(&__e),
+                    "parameter guard forwarding"
+                );
 
                 return #Outcome::Forward((
                     #__data,
@@ -141,6 +147,7 @@ fn request_guard_decl(guard: &Guard) -> TokenStream {
                     parameter = stringify!(#ident),
                     type_name = stringify!(#ty),
                     status = #TypedError::status(&__e).code,
+                    error_name = #TypedError::name(&__e),
                     "request guard forwarding"
                 );
 
@@ -156,8 +163,8 @@ fn request_guard_decl(guard: &Guard) -> TokenStream {
                     target: concat!("rocket::codegen::route::", module_path!()),
                     parameter = stringify!(#ident),
                     type_name = stringify!(#ty),
+                    status = #TypedError::status(&__c).code,
                     error_name = #TypedError::name(&__c),
-                    // reason = %#display_hack!(__e),
                     "request guard failed"
                 );
 
@@ -181,8 +188,7 @@ fn param_guard_decl(guard: &Guard) -> TokenStream {
             target: concat!("rocket::codegen::route::", module_path!()),
             parameter = #name,
             type_name = stringify!(#ty),
-            name = #TypedError::name(&__error),
-            // reason = %#display_hack!(__error),
+            error_name = #TypedError::name(&__error),
             "path guard forwarding"
         );
 
@@ -248,6 +254,7 @@ fn data_guard_decl(guard: &Guard) -> TokenStream {
                     parameter = stringify!(#ident),
                     type_name = stringify!(#ty),
                     status = #TypedError::status(&__e).code,
+                    error_name = #TypedError::name(&__e),
                     "data guard forwarding"
                 );
 
@@ -263,7 +270,7 @@ fn data_guard_decl(guard: &Guard) -> TokenStream {
                     target: concat!("rocket::codegen::route::", module_path!()),
                     parameter = stringify!(#ident),
                     type_name = stringify!(#ty),
-                    // reason = %#display_hack!(__e),
+                    error_name = #TypedError::name(&__e),
                     "data guard failed"
                 );
 

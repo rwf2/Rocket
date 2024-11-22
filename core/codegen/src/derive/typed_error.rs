@@ -128,9 +128,12 @@ pub fn derive_typed_error(input: proc_macro::TokenStream) -> TokenStream {
             })
         )
         .validator(ValidatorBuild::new()
-            .input_validate(|_, i| match i.generics().lifetimes().count() > 1 {
-                true => Err(i.generics().span().error("only one lifetime is supported")),
-                false => Ok(())
+            .input_validate(|_, i| if i.generics().lifetimes().count() > 1 {
+                Err(i.generics().span().error("only one lifetime is supported"))
+            } else if i.generics().const_params().count() > 0 {
+                Err(i.generics().span().error("const params are not supported"))
+            } else {
+                Ok(())
             })
         )
         .inner_mapper(MapperBuild::new()
@@ -146,14 +149,14 @@ pub fn derive_typed_error(input: proc_macro::TokenStream) -> TokenStream {
                         match g {
                             syn::GenericParam::Lifetime(_) => quote!{ 'static },
                             syn::GenericParam::Type(TypeParam { ident, .. }) => quote! { #ident },
-                            syn::GenericParam::Const(ConstParam { .. }) => todo!(),
+                            syn::GenericParam::Const(ConstParam { .. }) => unreachable!(),
                         }
                     });
                 let trans = input.generics()
                     .lifetimes()
                     .map(|LifetimeParam { lifetime, .. }| quote!{#_catcher::Inv<#lifetime>});
                 quote!{
-                    type Static = #name <#(#args)*>;
+                    type Static = #name <#(#args,)*>;
                     type Transience = (#(#trans,)*);
                 }
             })
