@@ -7,4 +7,3 @@ publish = false
 
 [dependencies]
 rocket = { path = "../../core/lib", features = ["json"] }
-transient = { path = "/code/matthew/transient" }
