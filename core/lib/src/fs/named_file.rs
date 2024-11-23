@@ -152,7 +152,7 @@ impl NamedFile {
 /// you would like to stream a file with a different Content-Type than that
 /// implied by its extension, use a [`File`] directly.
 impl<'r> Responder<'r, 'static> for NamedFile {
-    fn respond_to(self, req: &'r Request<'_>) -> response::Result<'static> {
+    fn respond_to(self, req: &'r Request<'_>) -> response::Result<'r, 'static> {
         let mut response = self.1.respond_to(req)?;
         if let Some(ext) = self.0.extension() {
             if let Some(ct) = ContentType::from_extension(&ext.to_string_lossy()) {

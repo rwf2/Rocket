@@ -39,6 +39,7 @@ pub struct Info {
 ///   * Ignite
 ///   * Liftoff
 ///   * Request
+///   * RequestFilter
 ///   * Response
 ///   * Shutdown
 ///
@@ -64,15 +65,18 @@ impl Kind {
     /// `Kind` flag representing a request for a 'request' callback.
     pub const Request: Kind = Kind(1 << 2);
 
+    /// `Kind` flag representing a request for a 'request' callback.
+    pub const RequestFilter: Kind = Kind(1 << 3);
+
     /// `Kind` flag representing a request for a 'response' callback.
-    pub const Response: Kind = Kind(1 << 3);
+    pub const Response: Kind = Kind(1 << 4);
 
     /// `Kind` flag representing a request for a 'shutdown' callback.
-    pub const Shutdown: Kind = Kind(1 << 4);
+    pub const Shutdown: Kind = Kind(1 << 5);
 
     /// `Kind` flag representing a
     /// [singleton](crate::fairing::Fairing#singletons) fairing.
-    pub const Singleton: Kind = Kind(1 << 5);
+    pub const Singleton: Kind = Kind(1 << 6);
 
     /// Returns `true` if `self` is a superset of `other`. In other words,
     /// returns `true` if all of the kinds in `other` are also in `self`.
@@ -144,6 +148,7 @@ impl std::fmt::Display for Kind {
         write("ignite", Kind::Ignite)?;
         write("liftoff", Kind::Liftoff)?;
         write("request", Kind::Request)?;
+        write("request_filter", Kind::RequestFilter)?;
         write("response", Kind::Response)?;
         write("shutdown", Kind::Shutdown)?;
         write("singleton", Kind::Singleton)

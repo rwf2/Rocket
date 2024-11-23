@@ -7,6 +7,7 @@ use rocket::http::{Status, Method::{Get, Post}};
 use rocket::response::{Responder, status::Custom};
 use rocket::outcome::{try_outcome, IntoOutcome};
 use rocket::tokio::fs::File;
+use rocket::catcher::TypedError;
 
 fn forward<'r>(_req: &'r Request, data: Data<'r>) -> route::BoxFuture<'r> {
     Box::pin(async move { route::Outcome::forward(data, Status::NotFound) })
@@ -62,9 +63,13 @@ fn get_upload<'r>(req: &'r Request, _: Data<'r>) -> route::BoxFuture<'r> {
     route::Outcome::from(req, std::fs::File::open(path).ok()).pin()
 }
 
-fn not_found_handler<'r>(_: Status, req: &'r Request) -> catcher::BoxFuture<'r> {
+fn not_found_handler<'r>(
+    _: Status,
+    _: &'r dyn TypedError<'r>,
+    req: &'r Request,
+) -> catcher::BoxFuture<'r> {
     let responder = Custom(Status::NotFound, format!("Couldn't find: {}", req.uri()));
-    Box::pin(async move { responder.respond_to(req) })
+    Box::pin(async move { responder.respond_to(req).map_err(|e| e.status()) })
 }
 
 #[derive(Clone)]
@@ -82,11 +87,11 @@ impl CustomHandler {
 impl route::Handler for CustomHandler {
     async fn handle<'r>(&self, req: &'r Request<'_>, data: Data<'r>) -> route::Outcome<'r> {
         let self_data = self.data;
-        let id = req.param::<&str>(0)
-            .and_then(Result::ok)
-            .or_forward((data, Status::NotFound));
-
-        route::Outcome::from(req, format!("{} - {}", self_data, try_outcome!(id)))
+        match req.param::<&str>(0) {
+            Some(Ok(id)) => route::Outcome::from(req, format!("{} - {}", self_data, id)),
+            Some(Err(e)) => route::Outcome::Error(Box::new(e)),
+            None => route::Outcome::Forward((data, Box::new(Status::NotFound))),
+        }
     }
 }
 

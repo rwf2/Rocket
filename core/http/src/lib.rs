@@ -36,6 +36,6 @@ pub mod private {
 }
 
 pub use crate::method::Method;
-pub use crate::status::{Status, StatusClass};
+pub use crate::status::{Status, StatusClass, AsStatus};
 pub use crate::raw_str::{RawStr, RawStrBuf};
 pub use crate::header::*;

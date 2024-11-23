@@ -1,7 +1,10 @@
 use std::fmt;
 use std::num::NonZeroUsize;
 
-use crate::mtls::x509::{self, nom};
+use transient::Static;
+
+use crate::{catcher::TypedError, mtls::x509::{self, nom}};
+use crate::http::Status;
 
 /// An error returned by the [`Certificate`](crate::mtls::Certificate) guard.
 ///
@@ -39,6 +42,14 @@ pub enum Error {
     Incomplete(Option<NonZeroUsize>),
     /// The certificate contained `.0` bytes of trailing data.
     Trailing(usize),
+    /// The subject is not authorized
+    SubjectUnauthorized,
+}
+
+impl Static for Error {}
+
+impl<'r> TypedError<'r> for Error {
+    fn status(&self) -> Status { Status::Unauthorized }
 }
 
 impl fmt::Display for Error {
@@ -50,6 +61,7 @@ impl fmt::Display for Error {
             Error::Empty => write!(f, "empty certificate chain"),
             Error::NoSubject => write!(f, "empty subject without subjectAlt"),
             Error::NonCriticalSubjectAlt => write!(f, "empty subject without critical subjectAlt"),
+            Error::SubjectUnauthorized => write!(f, "subject not permitted"),
         }
     }
 }

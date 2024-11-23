@@ -1,6 +1,8 @@
+use std::any::type_name;
 use std::sync::Arc;
 use std::marker::PhantomData;
 
+use rocket::catcher::{Static, TypedError};
 use rocket::{Phase, Rocket, Ignite, Sentinel};
 use rocket::fairing::{AdHoc, Fairing};
 use rocket::request::{Request, Outcome, FromRequest};
@@ -221,19 +223,29 @@ impl<K, C: Poolable> Drop for ConnectionPool<K, C> {
     }
 }
 
+/// Error for a managed state element not being present.
+#[derive(Debug, PartialEq, Eq)]
+pub struct ConnectionMissing(pub &'static str);
+
+impl Static for ConnectionMissing {}
+
+impl<'r> TypedError<'r> for ConnectionMissing {
+    fn status(&self) -> Status { Status::InternalServerError }
+}
+
 #[rocket::async_trait]
 impl<'r, K: 'static, C: Poolable> FromRequest<'r> for Connection<K, C> {
-    type Error = ();
+    type Error = ConnectionMissing;
 
     #[inline]
-    async fn from_request(request: &'r Request<'_>) -> Outcome<Self, ()> {
+    async fn from_request(request: &'r Request<'_>) -> Outcome<Self, Self::Error> {
         match request.rocket().state::<ConnectionPool<K, C>>() {
-            Some(c) => c.get().await.or_error((Status::ServiceUnavailable, ())),
+            Some(c) => c.get().await.or_error(ConnectionMissing(type_name::<K>())),
             None => {
-                let conn = std::any::type_name::<K>();
+                let conn = type_name::<K>();
                 error!("`{conn}::fairing()` is not attached\n\
                     the fairing must be attached to use `{conn} in routes.");
-                Outcome::Error((Status::InternalServerError, ()))
+                Outcome::Error(ConnectionMissing(type_name::<K>()))
             }
         }
     }

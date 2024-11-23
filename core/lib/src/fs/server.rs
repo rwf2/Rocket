@@ -3,6 +3,7 @@ use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use std::borrow::Cow;
 
+use crate::catcher::TypedError;
 use crate::{response, Data, Request, Response};
 use crate::outcome::IntoOutcome;
 use crate::http::{uri::Segments, HeaderMap, Method, ContentType, Status};
@@ -351,7 +352,7 @@ impl Handler for FileServer {
             None => return Outcome::forward(data, Status::NotFound),
         };
 
-        outcome.or_forward((data, status))
+        outcome.or_forward((data, Box::new(status) as Box<dyn TypedError<'r> + 'r>))
     }
 }
 
@@ -390,7 +391,7 @@ struct NamedFile<'r> {
 
 // Do we want to allow the user to rewrite the Content-Type?
 impl<'r> Responder<'r, 'r> for NamedFile<'r> {
-    fn respond_to(self, _: &'r Request<'_>) -> response::Result<'r> {
+    fn respond_to(self, _: &'r Request<'_>) -> response::Result<'r, 'r> {
         let mut response = Response::new();
         response.set_header_map(self.headers);
         if !response.headers().contains("Content-Type") {

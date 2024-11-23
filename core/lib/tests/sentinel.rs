@@ -110,7 +110,7 @@ struct Data;
 
 #[crate::async_trait]
 impl<'r> data::FromData<'r> for Data {
-    type Error = Error;
+    type Error = std::io::Error;
     async fn from_data(_: &'r Request<'_>, _: data::Data<'r>) -> data::Outcome<'r, Self> {
         unimplemented!()
     }
@@ -151,10 +151,11 @@ fn inner_sentinels_detected() {
     #[derive(Responder)]
     struct MyThing<T>(T);
 
+    #[derive(TypedError)]
     struct ResponderSentinel;
 
     impl<'r, 'o: 'r> response::Responder<'r, 'o> for ResponderSentinel {
-        fn respond_to(self, _: &'r Request<'_>) -> response::Result<'o> {
+        fn respond_to(self, _: &'r Request<'_>) -> response::Result<'r, 'o> {
             unimplemented!()
         }
     }
@@ -171,7 +172,7 @@ fn inner_sentinels_detected() {
     let err = Client::debug_with(routes![route]).unwrap_err();
     assert!(matches!(err.kind(), SentinelAborts(vec) if vec.len() == 1));
 
-    #[derive(Responder)]
+    #[derive(Responder, TypedError)]
     struct Inner<T>(T);
 
     #[get("/")]

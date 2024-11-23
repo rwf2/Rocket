@@ -275,7 +275,7 @@ use rocket::http::ContentType;
 # struct String(std::string::String);
 #[rocket::async_trait]
 impl<'r> Responder<'r, 'static> for String {
-    fn respond_to(self, _: &'r Request<'_>) -> response::Result<'static> {
+    fn respond_to(self, _: &'r Request<'_>) -> response::Result<'r, 'static> {
         Response::build()
             .header(ContentType::Plain)
             # /*
@@ -327,29 +327,28 @@ async fn files(file: PathBuf) -> Option<NamedFile> {
 ### `Result`
 
 `Result` is another _wrapping_ responder: a `Result<T, E>` can only be returned
-when `T` implements `Responder` and `E` implements `Responder`.
+when `T` implements `Responder` and `E` implements `TypedError`.
 
-The wrapped `Responder` in `Ok` or `Err`, whichever it might be, is used to
-respond to the client. This means that the responder can be chosen dynamically
-at run-time, and two different kinds of responses can be used depending on the
-circumstances. Revisiting our file server, for instance, we might wish to
-provide more feedback to the user when a file isn't found. We might do this as
-follows:
+`Result` either uses an `Ok` variant as a responder, or it passes the value in
+the `Err` variant to Rocket's catcher mechanism.
 
 ```rust
 # #[macro_use] extern crate rocket;
 # fn main() {}
 
 # use std::path::{Path, PathBuf};
+use std::io;
 use rocket::fs::NamedFile;
 use rocket::response::status::NotFound;
 
 #[get("/<file..>")]
-async fn files(file: PathBuf) -> Result<NamedFile, NotFound<String>> {
+async fn files(file: PathBuf) -> Result<NamedFile, NotFound<io::Error>> {
     let path = Path::new("static/").join(file);
-    NamedFile::open(&path).await.map_err(|e| NotFound(e.to_string()))
+    NamedFile::open(&path).await.map_err(|e| NotFound(e))
 }
 ```
+
+TODO: Typed: show catching mechanism here
 
 ## Rocket Responders
 

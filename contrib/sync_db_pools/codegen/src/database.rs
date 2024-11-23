@@ -112,11 +112,11 @@ pub fn database_attr(attr: TokenStream, input: TokenStream) -> Result<TokenStrea
 
         #[#rocket::async_trait]
         impl<'r> #rocket::request::FromRequest<'r> for #guard_type {
-            type Error = ();
+            type Error = ::rocket_sync_db_pools::ConnectionMissing;
 
             async fn from_request(
                 __r: &'r #rocket::request::Request<'_>
-            ) -> #rocket::request::Outcome<Self, ()> {
+            ) -> #rocket::request::Outcome<Self, Self::Error> {
                 <#conn>::from_request(__r).await.map(Self)
             }
         }

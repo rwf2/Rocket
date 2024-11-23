@@ -1,4 +1,4 @@
-use std::io;
+use std::{fmt, io};
 use std::mem::transmute;
 use std::pin::Pin;
 use std::sync::Arc;
@@ -8,6 +8,7 @@ use futures::future::BoxFuture;
 use http::request::Parts;
 use tokio::io::{AsyncRead, ReadBuf};
 
+use crate::catcher::TypedError;
 use crate::data::{Data, IoHandler, RawStream};
 use crate::{Request, Response, Rocket, Orbit};
 
@@ -20,6 +21,31 @@ macro_rules! static_assert_covariance {
             fn _assert_covariance<'x: 'y, 'y>(x: &'y $($T)*<'x>) -> &'y $($T)*<'y> { x }
         };
     )
+}
+
+pub struct ErrorBox {
+    value: Option<Box<dyn TypedError<'static>>>,
+}
+
+impl ErrorBox {
+    pub fn new() -> Self {
+        Self { value: None }
+    }
+    pub fn write<'r>(&mut self, error: Box<dyn TypedError<'r> + 'r>) -> &'r dyn TypedError<'r> {
+        assert!(self.value.is_none());
+        self.value = Some(unsafe { transmute(error) });
+        let val: &dyn TypedError<'static> = self.value.as_ref().unwrap().as_ref();
+        unsafe { transmute(val) }
+    }
+}
+
+impl fmt::Debug for ErrorBox {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match &self.value {
+            Some(v) => write!(f, "Some(<{}>)", v.name()),
+            None => write!(f, "None"),
+        }
+    }
 }
 
 #[derive(Debug)]
@@ -38,6 +64,8 @@ impl Drop for ErasedRequest {
 pub struct ErasedResponse {
     // XXX: SAFETY: This (dependent) field must come first due to drop order!
     response: Response<'static>,
+    // XXX: SAFETY: This (dependent) field must come second due to drop order!
+    _error: ErrorBox,
     _request: Arc<ErasedRequest>,
 }
 
@@ -94,6 +122,7 @@ impl ErasedRequest {
             T,
             &'r Rocket<Orbit>,
             &'r Request<'r>,
+            &'r mut ErrorBox,
             Data<'r>
         ) -> BoxFuture<'r, Response<'r>>,
     ) -> ErasedResponse
@@ -102,6 +131,7 @@ impl ErasedRequest {
     {
         let mut data: Data<'_> = Data::from(raw_stream);
         let mut parent = Arc::new(self);
+        let mut error = ErrorBox { value: None };
         let token: T = {
             let parent: &mut ErasedRequest = Arc::get_mut(&mut parent).unwrap();
             let rocket: &Rocket<Orbit> = &parent._rocket;
@@ -116,11 +146,12 @@ impl ErasedRequest {
             let parent: &'static ErasedRequest = unsafe { transmute(parent) };
             let rocket: &Rocket<Orbit> = &parent._rocket;
             let request: &Request<'_> = &parent.request;
-            dispatch(token, rocket, request, data).await
+            dispatch(token, rocket, request, unsafe { transmute(&mut error) }, data).await
         };
 
         ErasedResponse {
             _request: parent,
+            _error: error,
             response,
         }
     }

@@ -58,7 +58,7 @@ macro_rules! ctrs {
             /// Sets the Content-Type of the response then delegates the
             /// remainder of the response to the wrapped responder.
             impl<'r, 'o: 'r, R: Responder<'r, 'o>> Responder<'r, 'o> for $name<R> {
-                fn respond_to(self, req: &'r Request<'_>) -> response::Result<'o> {
+                fn respond_to(self, req: &'r Request<'_>) -> response::Result<'r, 'o> {
                     (ContentType::$ct, self.0).respond_to(req)
                 }
             }
@@ -78,7 +78,7 @@ ctrs! {
 }
 
 impl<'r, 'o: 'r, R: Responder<'r, 'o>> Responder<'r, 'o> for (ContentType, R) {
-    fn respond_to(self, req: &'r Request<'_>) -> response::Result<'o> {
+    fn respond_to(self, req: &'r Request<'_>) -> response::Result<'r, 'o> {
         Response::build()
             .merge(self.1.respond_to(req)?)
             .header(self.0)

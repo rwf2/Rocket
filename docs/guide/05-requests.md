@@ -557,6 +557,7 @@ dynamically:
 # #[macro_use] extern crate rocket;
 # fn main() {}
 
+# use rocket::either::Either;
 # type Template = ();
 # type AdminUser = rocket::http::Method;
 # type User = rocket::http::Method;
@@ -566,9 +567,11 @@ dynamically:
 use rocket::response::Redirect;
 
 #[get("/admin", rank = 2)]
-fn admin_panel_user(user: Option<User>) -> Result<&'static str, Redirect> {
-    let user = user.ok_or_else(|| Redirect::to(uri!(login)))?;
-    Ok("Sorry, you must be an administrator to access this page.")
+fn admin_panel_user(user: Option<User>) -> Either<&'static str, Redirect> {
+    match user {
+      Some(user) => Either::Left("Sorry, you must be an administrator to access this page."),
+      None => Either::Right(Redirect::to(uri!(login))),
+    }
 }
 ```
 

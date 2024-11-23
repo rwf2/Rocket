@@ -102,6 +102,10 @@ define_exported_paths! {
     Route => ::rocket::Route,
     Catcher => ::rocket::Catcher,
     Status => ::rocket::http::Status,
+    TypedError => ::rocket::catcher::TypedError,
+    FromError => ::rocket::catcher::FromError,
+    FromParamError => ::rocket::request::FromParamError,
+    FromSegmentsError => ::rocket::request::FromSegmentsError,
 }
 
 macro_rules! define_spanned_export {

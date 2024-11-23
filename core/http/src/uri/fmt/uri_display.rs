@@ -243,13 +243,13 @@ use crate::uri::fmt::{Part, Path, Query, Formatter};
 /// const PREFIX: &str = "name:";
 ///
 /// impl<'r> FromParam<'r> for Name<'r> {
-///     type Error = &'r str;
+///     type Error = ();
 ///
 ///     /// Validates parameters that start with 'name:', extracting the text
 ///     /// after 'name:' as long as there is at least one character.
 ///     fn from_param(param: &'r str) -> Result<Self, Self::Error> {
 ///         if !param.starts_with(PREFIX) || param.len() < (PREFIX.len() + 1) {
-///             return Err(param);
+///             return Err(());
 ///         }
 ///
 ///         let real_name = &param[PREFIX.len()..];

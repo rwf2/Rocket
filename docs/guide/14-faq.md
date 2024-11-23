@@ -420,7 +420,7 @@ use rocket::response::{self, Response, Responder};
 use rocket::serde::json::Json;
 
 impl<'r> Responder<'r, 'static> for Person {
-    fn respond_to(self, req: &'r Request<'_>) -> response::Result<'static> {
+    fn respond_to(self, req: &'r Request<'_>) -> response::Result<'r, 'static> {
         Response::build_from(Json(&self).respond_to(req)?)
             .raw_header("X-Person-Name", self.name)
             .raw_header("X-Person-Age", self.age.to_string())

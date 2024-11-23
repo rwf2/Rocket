@@ -25,7 +25,7 @@ pushd "${PROJECT_ROOT}" > /dev/null 2>&1
       --crate-version ${DOC_VERSION} \
       --enable-index-page \
       --generate-link-to-definition" \
-      cargo doc -Zrustdoc-map --no-deps --all-features \
+      cargo +nightly doc -Zrustdoc-map --no-deps --all-features \
         -p rocket \
         -p rocket_db_pools \
         -p rocket_sync_db_pools \
