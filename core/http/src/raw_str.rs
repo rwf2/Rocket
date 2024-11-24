@@ -258,19 +258,9 @@ impl RawStr {
     /// # extern crate rocket;
     /// use rocket::http::RawStr;
     ///
-    /// let raw_str = RawStr::new("Hello%21");
-    /// let decoded = raw_str.percent_decode();
-    /// assert_eq!(decoded, Ok("Hello!".into()));
-    /// ```
-    ///
-    /// With an invalid string:
-    ///
-    /// ```rust
-    /// # extern crate rocket;
-    /// use rocket::http::RawStr;
-    ///
-    /// let bad_raw_str = RawStr::new("%FF");
-    /// assert!(bad_raw_str.percent_decode().is_err());
+    /// let raw_str = RawStr::new("Hello/goodbye");
+    /// let encoded = raw_str.percent_encode();
+    /// assert_eq!(encoded.as_str(), "Hello%2Fgoodbye");
     /// ```
     #[inline(always)]
     pub fn percent_encode(&self) -> Cow<'_, RawStr> {
@@ -288,6 +278,7 @@ impl RawStr {
     /// // Note: Rocket should never hand you a bad `&RawStr`.
     /// let bytes = &[93, 12, 0, 13, 1];
     /// let encoded = RawStr::percent_encode_bytes(&bytes[..]);
+    /// assert_eq!(encoded.as_str(), "]%0C%00%0D%01");
     /// ```
     #[inline(always)]
     pub fn percent_encode_bytes(bytes: &[u8]) -> Cow<'_, RawStr> {
