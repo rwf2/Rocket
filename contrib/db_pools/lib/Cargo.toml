@@ -37,7 +37,7 @@ default-features = false
 
 [dependencies.rocket_db_pools_codegen]
 path = "../codegen"
-version = "0.1.0"
+version = "0.2.0"
 
 [dependencies.deadpool]
 version = "0.12.1"
