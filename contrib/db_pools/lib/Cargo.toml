@@ -1,6 +1,6 @@
 [package]
 name = "rocket_db_pools"
-version = "0.1.0"
+version = "0.2.0"
 authors = ["Sergio Benitez <sb@sergio.bz>", "Jeb Rosen <jeb@jebrosen.com>"]
 description = "Rocket async database pooling support"
 repository = "https://github.com/rwf2/Rocket/tree/master/contrib/db_pools"
