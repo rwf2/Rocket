@@ -1,6 +1,6 @@
 [package]
 name = "rocket_ws"
-version = "0.1.0"
+version = "0.1.1"
 authors = ["Sergio Benitez <sb@sergio.bz>"]
 description = "WebSocket support for Rocket."
 documentation = "https://api.rocket.rs/master/rocket_ws/"
