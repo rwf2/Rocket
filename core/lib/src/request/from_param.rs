@@ -39,7 +39,7 @@ use crate::http::uri::{Segments, error::PathError, fmt::Path};
 /// If `usize::from_param` returns an `Ok(usize)` variant, the encapsulated
 /// value is used as the `id` function parameter. If not, the request is
 /// forwarded to the next matching route. Since there are no additional matching
-/// routes, this example will result in a 404 error for requests with invalid
+/// routes, this example will result in a 422 error for requests with invalid
 /// `id` values.
 ///
 /// # Catching Errors
