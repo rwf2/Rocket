@@ -22,7 +22,7 @@ minijinja = ["dep:minijinja"]
 
 [dependencies]
 walkdir = "2.4"
-notify = "6"
+notify = "7"
 normpath = "1"
 
 tera = { version = "1.19.0", optional = true }

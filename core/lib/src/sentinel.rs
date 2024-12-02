@@ -159,7 +159,7 @@ use crate::{Rocket, Ignite};
 ///
 /// **Note:** _Rocket actively discourages using `impl Trait` in route
 /// signatures. In addition to impeding sentinel discovery, doing so decreases
-/// the ability to gleam a handler's functionality based on its type signature._
+/// the ability to glean a handler's functionality based on its type signature._
 ///
 /// The return type of the route `f` depends on its implementation. At present,
 /// it is not possible to name the underlying concrete type of an `impl Trait`

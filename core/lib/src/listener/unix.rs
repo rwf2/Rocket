@@ -75,7 +75,7 @@ impl Bind for UnixListener {
     type Error = Either<figment::Error, io::Error>;
 
     async fn bind(rocket: &Rocket<Ignite>) -> Result<Self, Self::Error> {
-        let endpoint = Self::bind_endpoint(&rocket)?;
+        let endpoint = Self::bind_endpoint(rocket)?;
         let path = endpoint.unix()
             .ok_or_else(|| Right(io::Error::other("internal error: invalid endpoint")))?;
 
