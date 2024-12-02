@@ -6,7 +6,7 @@ summary = "overview and customization of Rocket application configuration"
 
 Rocket's configuration system is flexible. Based on [Figment](@figment), it
 allows you to configure your application the way _you_ want while also providing
-with a sensible set of defaults.
+a sensible set of defaults.
 
 ## Overview
 

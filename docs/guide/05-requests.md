@@ -876,7 +876,7 @@ use rocket::data::{Data, ToByteUnit};
 
 #[post("/debug", data = "<data>")]
 async fn debug(data: Data<'_>) -> std::io::Result<()> {
-    // Stream at most 512KiB all of the body data to stdout.
+    // Stream at most 512KiB of the body data to stdout.
     data.open(512.kibibytes())
         .stream_to(tokio::io::stdout())
         .await?;
