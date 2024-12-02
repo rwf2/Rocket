@@ -48,7 +48,7 @@ mod tests {
             let body: Option<&'static str> = $body;
             match body {
                 Some(string) => assert_eq!(body_str, Some(string.to_string())),
-                None => assert_eq!(status, Status::NotFound)
+                None => assert_eq!(status, Status::UnsupportedMediaType)
             }
         )
     }
