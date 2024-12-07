@@ -17,6 +17,10 @@ all-features = true
 workspace = true
 
 [features]
+default = [
+    "sqlx?/runtime-tokio-rustls",
+    "mongodb?/rustls-tls",
+]
 # deadpool features
 deadpool_postgres = ["deadpool-postgres", "deadpool"]
 deadpool_redis = ["deadpool-redis", "deadpool"]
@@ -70,7 +74,7 @@ optional = true
 [dependencies.mongodb]
 version = "3"
 default-features = false
-features = ["compat-3-0-0", "rustls-tls"]
+features = ["compat-3-0-0"]
 optional = true
 
 [dependencies.diesel-async]
