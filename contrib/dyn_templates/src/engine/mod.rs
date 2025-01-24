@@ -20,6 +20,8 @@ mod minijinja;
 #[cfg(feature = "minijinja")]
 use ::minijinja::Environment;
 
+// false positive cause by the use of features
+#[allow(unused)]
 pub(crate) trait Engine: Send + Sync + Sized + 'static {
     const EXT: &'static str;
 
@@ -98,7 +100,11 @@ impl Engines {
         #[cfg(feature = "minijinja")] Environment::EXT,
     ];
 
+    // false positive cause by the use of features
+    #[allow(unused_variables)]
     pub(crate) fn init(templates: &HashMap<String, TemplateInfo>) -> Option<Engines> {
+        // false positive cause by the use of features
+        #[allow(unused)]
         fn inner<E: Engine>(templates: &HashMap<String, TemplateInfo>) -> Option<E> {
             let named_templates = templates.iter()
                 .filter(|&(_, i)| i.engine_ext == E::EXT)
@@ -127,6 +133,8 @@ impl Engines {
         })
     }
 
+    // false positive cause by the use of features
+    #[allow(unused_variables)]
     pub(crate) fn render<C: Serialize>(
         &self,
         name: &str,
