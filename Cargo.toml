@@ -14,7 +14,10 @@ members = [
 ]
 
 [workspace.lints.rust]
-unexpected_cfgs = { level = "warn", check-cfg = ['cfg(nightly)'] }
+unexpected_cfgs = { level = "warn", check-cfg = [
+  'cfg(nightly)',
+  'cfg(rust_analyzer)',
+] }
 rust_2018_idioms = "warn"
 async_fn_in_trait = "allow"
 refining_impl_trait = "allow"
