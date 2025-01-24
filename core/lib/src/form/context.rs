@@ -219,7 +219,7 @@ impl<'v> Context<'v> {
     ///     let foo_bar = form.context.field_errors("foo.bar");
     /// }
     /// ```
-    pub fn field_errors<'a, N>(&'a self, name: N) -> impl Iterator<Item = &Error<'v>> + '_
+    pub fn field_errors<'a, N>(&'a self, name: N) -> impl Iterator<Item = &'a Error<'v>> + 'a
         where N: AsRef<Name> + 'a
     {
         self.errors.values()
@@ -267,7 +267,7 @@ impl<'v> Context<'v> {
     ///     let foo_bar = form.context.exact_field_errors("foo.bar");
     /// }
     /// ```
-    pub fn exact_field_errors<'a, N>(&'a self, name: N) -> impl Iterator<Item = &Error<'v>> + '_
+    pub fn exact_field_errors<'a, N>(&'a self, name: N) -> impl Iterator<Item = &'a Error<'v>> + 'a
         where N: AsRef<Name> + 'a
     {
         self.errors.values()
