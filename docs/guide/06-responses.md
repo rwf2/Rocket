@@ -118,10 +118,10 @@ fn json() -> RawTeapotJson {
 ### Errors
 
 Responders may fail instead of generating a response by returning an `Err` with
-a status code. When this happens, Rocket forwards the request to the [error
-catcher](../requests/#error-catchers) for that status code.
+a typed error. When this happens, Rocket forwards the request to the [error
+catcher](../requests/#error-catchers) for that error type.
 
-If an error catcher has been registered for the given status code, Rocket will
+If an error catcher has been registered for the given type and code, Rocket will
 invoke it. The catcher creates and returns a response to the client. If no error
 catcher has been registered and the error status code is one of the standard
 HTTP status code, a default error catcher will be used. Default error catchers
@@ -129,11 +129,38 @@ return an HTML page with the status code and description. If there is no catcher
 for a custom status code, Rocket uses the **500** error catcher to return a
 response.
 
+
+### Result
+
+Result has a somewhat special implementation of Responder, designed to enable
+route handlers to directly return a typed error.
+
+```rust
+# #[macro_use] extern crate rocket;
+# fn main() {}
+
+#[derive(TypedError)]
+#[error(status = 400)]
+struct UnacceptablePath;
+
+#[get("/")]
+fn just_fail() -> Result<(), UnacceptablePath>  {
+    Err(UnacceptablePath)
+}
+```
+
+When combined with `rocket_db_pool` (or the sync variant), this can be incredibly
+powerful, since the database errors produced by both implement `TypedError`, and
+can directly be returned as an error from a handler. This makes handling database
+errors as simple as using the `?` operator, and writing a single catcher for
+the database errors.
+
 ### Status
 
 While not encouraged, you can also forward a request to a catcher manually by
-returning a [`Status`] directly. For instance, to forward to the catcher for
-**406: Not Acceptable**, you would write:
+returning a [`Status`] directly. We recommend using an existing (or a custom)
+typed error instead. For instance, to forward to the catcher for **406: Not
+Acceptable**, you would write:
 
 ```rust
 # #[macro_use] extern crate rocket;
@@ -348,7 +375,18 @@ async fn files(file: PathBuf) -> Result<NamedFile, NotFound<io::Error>> {
 }
 ```
 
-TODO: Typed: show catching mechanism here
+A catcher for the above error might look something like this.
+
+```rust
+# #[macro_use] extern crate rocket;
+# fn main() {}
+# use std::io;
+
+#[catch(404, error = "<io_error>")]
+fn handle_missing(io_error: &io::Error) {
+    /* ... */
+}
+```
 
 ## Rocket Responders
 
