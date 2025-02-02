@@ -440,8 +440,7 @@ impl<'r> Responder<'r, 'static> for Person {
 How do I make one handler return different responses or status codes?
 {{ answer() }}
 
-If you're returning _two_ different responses, use a `Result<T, E>` or an
-[`Either<A, B>`].
+If you're returning _two_ different responses, use an [`Either<A, B>`].
 
 If you need to return _more_ than two kinds, [derive a custom `Responder`] `enum`:
 
@@ -458,6 +457,32 @@ enum Error<'r, T> {
     NotFound(NamedFile),
     #[response(status = 500)]
     A(&'r str, ContentType),
+}
+```
+
+In many cases, it may still be better to use a custom responder for just two
+types, since the derive makes it easy to specify types, and you can easily
+create methods to do several wraps, simplifying handlers.
+
+```rust
+# use rocket::response::Responder;
+use rocket::fs::NamedFile;
+use rocket::http::ContentType;
+
+#[derive(Responder)]
+enum ApiResponse<T> {
+    #[response(status = 400)]
+    BadRequest(Json<Error>),
+    Success(Json<T>),
+}
+
+impl<T> ApiResponse<T> {
+  pub fn bad_request(error: Error) -> Self {
+    Self::BadRequest(Json(error))
+  }
+  pub fn sucess(val: T) -> Self {
+    Self::Success(Json(val))
+  }
 }
 ```
 
