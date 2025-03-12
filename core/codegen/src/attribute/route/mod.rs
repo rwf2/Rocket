@@ -63,7 +63,7 @@ fn query_decls(route: &Route) -> Option<TokenStream> {
                 _ => quote!(#name)
             };
 
-            define_spanned_export!(ty.span() => FromForm, _form);
+            define_spanned_export!(Span::call_site() => FromForm, _form);
 
             let ty = quote_spanned!(ty.span() => <#ty as #FromForm>);
             let init = quote_spanned!(ty.span() => #ty::init(#_form::Options::Lenient));
@@ -124,8 +124,8 @@ fn query_decls(route: &Route) -> Option<TokenStream> {
 
 fn request_guard_decl(guard: &Guard) -> TokenStream {
     let (ident, ty) = (guard.fn_ident.rocketized(), &guard.ty);
-    define_spanned_export!(ty.span() =>
-        __req, __data, _request, display_hack, FromRequest, Outcome
+    define_spanned_export!(Span::call_site() =>
+        __req, __data, display_hack, FromRequest, Outcome
     );
 
     quote_spanned! { ty.span() =>
@@ -162,7 +162,7 @@ fn request_guard_decl(guard: &Guard) -> TokenStream {
 
 fn param_guard_decl(guard: &Guard) -> TokenStream {
     let (i, name, ty) = (guard.index, &guard.name, &guard.ty);
-    define_spanned_export!(ty.span() =>
+    define_spanned_export!(Span::call_site() =>
         __req, __data, _None, _Some, _Ok, _Err,
         Outcome, FromSegments, FromParam, Status, display_hack
     );
@@ -219,7 +219,7 @@ fn param_guard_decl(guard: &Guard) -> TokenStream {
 
 fn data_guard_decl(guard: &Guard) -> TokenStream {
     let (ident, ty) = (guard.fn_ident.rocketized(), &guard.ty);
-    define_spanned_export!(ty.span() => __req, __data, display_hack, FromData, Outcome);
+    define_spanned_export!(Span::call_site() => __req, __data, display_hack, FromData, Outcome);
 
     quote_spanned! { ty.span() =>
         let #ident: #ty = match <#ty as #FromData>::from_data(#__req, #__data).await {
@@ -307,7 +307,7 @@ fn responder_outcome_expr(route: &Route) -> TokenStream {
     let _await = route.handler.sig.asyncness
         .map(|a| quote_spanned!(a.span() => .await));
 
-    define_spanned_export!(ret_span => __req, _route);
+    define_spanned_export!(Span::call_site() => __req, _route);
     quote_spanned! { mixed(ret_span) =>
         let ___responder = #user_handler_fn_name(#(#parameter_names),*) #_await;
         #_route::Outcome::from(#__req, ___responder)
@@ -363,7 +363,7 @@ fn sentinels_expr(route: &Route) -> TokenStream {
         .map(|child| (child.parent, child.ty));
 
     let sentinel = eligible_types.map(|(parent, ty)| {
-        define_spanned_export!(ty.span() => _sentinel);
+        define_spanned_export!(Span::call_site() => _sentinel);
 
         match parent {
             Some(p) if p.is_concrete(&generic_idents) => {
