@@ -50,7 +50,7 @@ use rocket::serde::{Deserialize, Serialize};
 /// For higher-level details on configuring a database, see the [crate-level
 /// docs](crate#configuration).
 // NOTE: Defaults provided by the figment created in the `Initializer` fairing.
-#[derive(Default, Serialize, Deserialize, Debug, Clone, PartialEq)]
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
 #[serde(crate = "rocket::serde")]
 pub struct Config {
     /// Database-specific connection and configuration URL.
@@ -92,4 +92,17 @@ pub struct Config {
     ///
     /// _Default:_ `None`.
     pub extensions: Option<Vec<String>>,
+}
+
+impl Default for Config {
+    fn default() -> Self {
+        Self {
+            url: Default::default(),
+            min_connections: Default::default(),
+            max_connections: rocket::Config::default().workers * 4,
+            connect_timeout: 5,
+            idle_timeout: Default::default(),
+            extensions: Default::default(),
+        }
+    }
 }
