@@ -106,3 +106,15 @@ impl Default for Config {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::Config;
+
+    #[test]
+    fn default_values_sane() {
+        let config = Config::default();
+        assert_ne!(config.max_connections, 0);
+        assert_eq!(config.connect_timeout, 5);
+    }
+}
