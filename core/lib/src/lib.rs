@@ -165,6 +165,8 @@ mod router;
 mod phase;
 mod erased;
 
+pub use hyper::Version;
+
 #[doc(inline)] pub use rocket_codegen::*;
 
 #[doc(inline)] pub use crate::response::Response;

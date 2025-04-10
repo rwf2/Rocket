@@ -16,7 +16,7 @@ use crate::form::{self, ValueField, FromForm};
 use crate::data::Limits;
 
 use crate::http::ProxyProto;
-use crate::http::{Method, Header, HeaderMap, ContentType, Accept, MediaType, CookieJar, Cookie};
+use crate::http::{Method, Header, HeaderMap, ContentType, Accept, MediaType, CookieJar, Cookie, Version};
 use crate::http::uri::{fmt::Path, Origin, Segments, Host, Authority};
 use crate::listener::{Certificates, Endpoint};
 
@@ -34,6 +34,7 @@ pub struct Request<'r> {
     pub(crate) errors: Vec<RequestError>,
     pub(crate) connection: ConnectionMeta,
     pub(crate) state: RequestState<'r>,
+    version: Option<Version>,
 }
 
 /// Information derived from an incoming connection, if any.
@@ -100,8 +101,15 @@ impl<'r> Request<'r> {
                 content_type: InitCell::new(),
                 cache: Arc::new(<TypeMap![Send + Sync]>::new()),
                 host: None,
-            }
+            },
+            version: None,
         }
+    }
+
+    /// Retrieve the http version from `self`.
+    #[inline(always)]
+    pub fn version(&self) -> Option<Version> {
+        self.version
     }
 
     /// Retrieve the method from `self`.
@@ -1131,6 +1139,7 @@ impl<'r> Request<'r> {
 
         // Construct the request object; fill in metadata and headers next.
         let mut request = Request::new(rocket, method, uri);
+        request.version = Some(hyper.version);
         request.errors = errors;
 
         // Set the passed in connection metadata.

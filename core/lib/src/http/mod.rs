@@ -3,6 +3,8 @@
 //! This module exports types that map to HTTP concepts or to the underlying
 //! HTTP library when needed.
 
+pub use hyper::Version;
+
 mod cookies;
 
 #[doc(inline)]
