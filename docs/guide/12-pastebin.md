@@ -470,7 +470,7 @@ We note the following Rocket APIs being used in our implementation:
   * [`Data::open()`] to open [`Data`] as a [`DataStream`].
   * [`DataStream::into_file()`] for writing the data stream into a file.
   * The [`UriDisplayPath`] derive, allowing `PasteId` to be used in [`uri!`].
-  * The [`uri!`] macro to crate type-safe, URL-safe URIs.
+  * The [`uri!`] macro to create type-safe, URL-safe URIs.
 
 [`Data::open()`]: @api/master/rocket/data/struct.Data.html#method.open
 [`Data`]: @api/master/rocket/data/struct.Data.html

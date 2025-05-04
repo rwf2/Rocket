@@ -138,13 +138,13 @@ function gen_ecdsa_nistp521_sha512() {
 }
 
 function gen_client_cert() {
-    openssl req -newkey rsa:2048 -nodes -keyout client.key -out client.csr
-    openssl x509 -req -extfile <(printf "subjectAltName=DNS:${ALT}") -days 365 \
-        -in client.csr -CA ca_cert.pem -CAkey ca_key.pem -CAcreateserial \
-        -out client.crt
+  openssl req -newkey rsa:2048 -nodes -keyout client.key -out client.csr -subj "/C=US/ST=California/L=Silicon Valley/O=Rocket/CN=Rocket TLS Example/emailAddress=example@rocket.local"
+  openssl x509 -req -extfile <(printf "subjectAltName=DNS:${ALT}") -days 3650 \
+    -in client.csr -CA ca_cert.pem -CAkey ca_key.pem -CAcreateserial \
+    -out client.crt
 
-    cat client.key client.crt ca_cert.pem > client.pem
-    rm client.key client.crt client.csr ca_cert.srl
+  cat client.key client.crt ca_cert.pem > client.pem
+  rm client.key client.crt client.csr ca_cert.srl
 }
 
 case $1 in
@@ -160,5 +160,6 @@ case $1 in
     gen_ecdsa_nistp256_sha256
     gen_ecdsa_nistp384_sha384
     gen_ecdsa_nistp521_sha512
+    gen_client_cert
     ;;
 esac
