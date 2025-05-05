@@ -65,6 +65,15 @@ fn test_hello_invalid_age() {
 }
 
 #[test]
+fn test_method_not_allowed() {
+    let client = Client::tracked(super::rocket()).unwrap();
+    let (name, age) = ("Pat", 86);
+    let request = client.post(format!("/hello/{}/{}", name, age)).body("body");
+    let response = request.dispatch();
+    assert_eq!(response.status(), Status::MethodNotAllowed);
+}
+
+#[test]
 fn test_hello_sergio() {
     let client = Client::tracked(super::rocket()).unwrap();
 
