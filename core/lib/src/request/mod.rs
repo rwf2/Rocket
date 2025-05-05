@@ -3,6 +3,7 @@
 mod request;
 mod from_param;
 mod from_request;
+mod from_request_headers;
 mod atomic_method;
 
 #[cfg(test)]
