@@ -521,12 +521,13 @@ impl<'r, T: FromRequest<'r>> FromRequest<'r> for Result<T, T::Error> {
 
 #[crate::async_trait]
 impl<'r, T: FromRequest<'r>> FromRequest<'r> for Option<T> {
-    type Error = Infallible;
+    type Error = T::Error;
 
-    async fn from_request(request: &'r Request<'_>) -> Outcome<Self, Infallible> {
+    async fn from_request(request: &'r Request<'_>) -> Outcome<Self, Self::Error> {
         match T::from_request(request).await {
             Success(val) => Success(Some(val)),
-            Error(_) | Forward(_) => Success(None),
+            Forward(_) => Success(None),
+            Error((status, error)) => Error((status, error)),
         }
     }
 }
