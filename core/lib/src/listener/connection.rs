@@ -22,6 +22,8 @@ pub trait Connection: AsyncRead + AsyncWrite + Send + Unpin {
     /// Defaults to an empty vector to indicate that no certificates were
     /// presented.
     fn certificates(&self) -> Option<Certificates<'_>> { None }
+
+    fn server_name(&self) -> Option<&str> { None }
 }
 
 impl<A: Connection, B: Connection> Connection for Either<A, B> {

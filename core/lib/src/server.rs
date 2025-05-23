@@ -172,7 +172,11 @@ impl Rocket<Orbit> {
             let (listener, rocket, server) = (listener.clone(), self.clone(), server.clone());
             spawn_inspect(|e| log_server_error(&**e), async move {
                 let conn = listener.connect(accept).race_io(rocket.shutdown()).await?;
-                let meta = ConnectionMeta::new(conn.endpoint(), conn.certificates());
+                let meta = ConnectionMeta::new(
+                    conn.endpoint(),
+                    conn.certificates(),
+                    conn.server_name()
+                );
                 let service = service_fn(|mut req| {
                     let upgrade = hyper::upgrade::on(&mut req);
                     let (parts, incoming) = req.into_parts();
@@ -205,7 +209,7 @@ impl Rocket<Orbit> {
                 while let Some(mut conn) = stream.accept().race_io(rocket.shutdown()).await? {
                     let rocket = rocket.clone();
                     spawn_inspect(|e: &io::Error| log_server_error(e), async move {
-                        let meta = ConnectionMeta::new(conn.endpoint(), None);
+                        let meta = ConnectionMeta::new(conn.endpoint(), None, None);
                         let rx = conn.rx.cancellable(rocket.shutdown.clone());
                         let response = rocket.clone()
                             .service(conn.parts, rx, None, meta)
