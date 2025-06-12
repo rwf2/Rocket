@@ -139,10 +139,10 @@ impl<S: Stream> From<S> for ReaderStream<S> {
     }
 }
 
-impl<'r, S: Stream> Responder<'r, 'r> for ReaderStream<S>
-    where S: Send + 'r, S::Item: AsyncRead + Send,
+impl<'r, 'o, S: Stream> Responder<'r, 'o> for ReaderStream<S>
+    where S: Send + 'o, S::Item: AsyncRead + Send, 'o: 'r
 {
-    fn respond_to(self, _: &'r Request<'_>) -> response::Result<'r> {
+    fn respond_to(self, _: &'r Request<'_>) -> response::Result<'o> {
         Response::build()
             .streamed_body(self)
             .ok()
