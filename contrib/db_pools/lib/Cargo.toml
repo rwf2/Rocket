@@ -31,6 +31,9 @@ diesel_mysql = ["diesel-async/mysql", "diesel-async/deadpool", "deadpool", "dies
 diesel_sqlite = ["diesel-async/sqlite", "diesel-async/deadpool", "deadpool", "diesel"]
 # implicit features: mongodb
 
+# postgres features
+postgres_rustls_native_certs = ["tokio-postgres", "tokio-postgres-rustls", "rustls", "rustls-native-certs"]
+
 [dependencies.rocket]
 path = "../../../core/lib"
 version = "0.6.0-dev"
@@ -79,6 +82,26 @@ optional = true
 version = "0.9"
 default-features = false
 features = ["runtime-tokio", "tls-rustls"]
+optional = true
+
+[dependencies.tokio-postgres]
+version = "0.7"
+default-features = false
+optional = true
+
+[dependencies.tokio-postgres-rustls]
+version = "0.13"
+default-features = false
+optional = true
+
+[dependencies.rustls]
+version = "0.23"
+default-features = false
+optional = true
+
+[dependencies.rustls-native-certs]
+version = "0.8"
+default-features = false
 optional = true
 
 [dependencies.log]

@@ -152,6 +152,23 @@ pub trait Pool: Sized + Send + 'static {
     async fn close(&self);
 }
 
+#[cfg(feature = "postgres_rustls_native_certs")]
+fn tokio_postgres_tls_provider() -> tokio_postgres_rustls::MakeRustlsConnect {
+    let mut roots = rustls::RootCertStore::empty();
+
+    let certs = rustls_native_certs::load_native_certs()
+        .expect("native certs should be available");
+    for cert in certs {
+        roots.add(cert).expect("native root cert should be valid");
+    }
+
+    let config = rustls::ClientConfig::builder()
+        .with_root_certificates(roots)
+        .with_no_client_auth();
+
+    tokio_postgres_rustls::MakeRustlsConnect::new(config)
+}
+
 #[cfg(feature = "deadpool")]
 mod deadpool_postgres {
     use deadpool::{Runtime, managed::{Manager, Pool, PoolError, Object}};
@@ -167,7 +184,13 @@ mod deadpool_postgres {
     #[cfg(feature = "deadpool_postgres")]
     impl DeadManager for deadpool_postgres::Manager {
         fn new(config: &Config) -> Result<Self, Self::Error> {
-            Ok(Self::new(config.url.parse()?, deadpool_postgres::tokio_postgres::NoTls))
+            #[cfg(feature = "postgres_rustls_native_certs")]
+            let tls_provider = super::tokio_postgres_tls_provider();
+
+            #[cfg(not(feature = "postgres_rustls_native_certs"))]
+            let tls_provider = deadpool_postgres::tokio_postgres::NoTls;
+
+            Ok(Self::new(config.url.parse()?, tls_provider))
         }
     }
 
@@ -181,7 +204,32 @@ mod deadpool_postgres {
     #[cfg(feature = "diesel_postgres")]
     impl DeadManager for AsyncDieselConnectionManager<diesel_async::AsyncPgConnection> {
         fn new(config: &Config) -> Result<Self, Self::Error> {
-            Ok(Self::new(config.url.as_str()))
+            use diesel_async::AsyncPgConnection;
+            use diesel_async::pooled_connection::ManagerConfig;
+
+            let diesel_config = ManagerConfig::default();
+
+            #[cfg(feature = "postgres_rustls_native_certs")]
+            let diesel_config = {
+                let mut diesel_config = diesel_config;
+
+                let tls_provider = super::tokio_postgres_tls_provider();
+
+                diesel_config.custom_setup = Box::new(move |url| {
+                    let tls_provider = tls_provider.clone();
+                    Box::pin(async move {
+                        let (client, conn) = tokio_postgres::connect(url, tls_provider)
+                            .await
+                            .map_err(|e| diesel::ConnectionError::BadConnection(e.to_string()))?;
+
+                        AsyncPgConnection::try_from_client_and_connection(client, conn).await
+                    }) as std::pin::Pin<Box<_>>
+                });
+
+                diesel_config
+            };
+
+            Ok(Self::new_with_config(config.url.as_str(), diesel_config))
         }
     }
 
