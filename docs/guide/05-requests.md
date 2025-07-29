@@ -1218,7 +1218,7 @@ it is validated prior to those fields that do. For `CreditCard`, `cvv` and
 
 ### Wrapping Validators
 
-If a particular validation is applied in more than once place, prefer creating a
+If a particular validation is applied in more than one place, prefer creating a
 type that encapsulates and represents the validated value. For example, if your
 application often validates `age` fields, consider creating a custom `Age` form
 guard that always applies the validation:
