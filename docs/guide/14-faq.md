@@ -466,6 +466,8 @@ create methods to do several wraps, simplifying handlers.
 
 ```rust
 # use rocket::response::Responder;
+# use rocket::serde::json::Json;
+# type Error = &'static str;
 use rocket::fs::NamedFile;
 use rocket::http::ContentType;
 
