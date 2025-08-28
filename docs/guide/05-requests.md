@@ -2129,7 +2129,7 @@ it attempted to parse, a `FromParamError<'_, ParseBoolError>'` can be used.
 #[catch(400, error = "<error>")]
 fn bad_request(error: &FromParamError<'_, ParseBoolError>) {
   let raw_string_that_caused_error = error.raw;
-  let error_value = error.error;
+  let error_value = &error.error;
   /* .. */
 }
 ```
