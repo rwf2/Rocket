@@ -169,17 +169,17 @@ function test_default() {
   indir "${BENCHMARKS_ROOT}" $CARGO update
   indir "${BENCHMARKS_ROOT}" $CARGO check --benches --all-features $@
 
-  echo ":: Checking fuzzers..."
-  indir "${FUZZ_ROOT}" $CARGO update
-  indir "${FUZZ_ROOT}" $CARGO check --all --all-features $@
-
   case "$OSTYPE" in
       darwin* | linux*)
           echo ":: Checking testbench..."
           indir "${TESTBENCH_ROOT}" $CARGO update
           indir "${TESTBENCH_ROOT}" $CARGO check $@
+
+          echo ":: Checking fuzzers..."
+          indir "${FUZZ_ROOT}" $CARGO update
+          indir "${FUZZ_ROOT}" $CARGO check --all --all-features $@
           ;;
-      *) echo ":: Skipping testbench [$OSTYPE]" ;;
+      *) echo ":: Skipping testbench, fuzzers [$OSTYPE]" ;;
   esac
 }
 
