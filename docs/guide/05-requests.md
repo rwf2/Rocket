@@ -2074,6 +2074,13 @@ fn main() {
 }
 ```
 
+Besides `404 Not Found` for unknown URIs, Rocket may also produce
+`405 Method Not Allowed` if a request matches a URI but not a declared method
+for that URI. For routes declaring formats, Rocket will produce
+`406 Not Acceptable` status for a client request _accepting_ a format which
+isn't declared by the matching routes, or `415 Unsupported Media Type` in case
+the _payload_ of a `PUT` or `POST` is not allowed by the route.
+
 ### Scoping
 
 The first argument to `register()` is a path to scope the catcher under called
