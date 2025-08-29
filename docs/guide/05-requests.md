@@ -547,7 +547,9 @@ it always succeeds. The user is redirected to a log in page.
 A failing or forwarding guard can be "caught" in handler, preventing it from
 failing or forwarding, via the `Option<T>` and `Result<T, E>` guards. When a
 guard `T` fails or forwards, `Option<T>` will be `None`. If a guard `T` fails
-with error `E`, `Result<T, E>` will be `Err(E)`.
+with error `E`, `Result<T, E>` will be `Err(E)`. If they are not caught by
+one of these mechanisms, the error will instead be passed to a matching
+catcher. See [Error Catchers](#error-catchers) for more information.
 
 As an example, for the `User` guard above, instead of allowing the guard to
 forward in `admin_panel_user`, we might want to detect it and handle it
@@ -557,6 +559,7 @@ dynamically:
 # #[macro_use] extern crate rocket;
 # fn main() {}
 
+# use rocket::either::Either;
 # type Template = ();
 # type AdminUser = rocket::http::Method;
 # type User = rocket::http::Method;
@@ -566,9 +569,11 @@ dynamically:
 use rocket::response::Redirect;
 
 #[get("/admin", rank = 2)]
-fn admin_panel_user(user: Option<User>) -> Result<&'static str, Redirect> {
-    let user = user.ok_or_else(|| Redirect::to(uri!(login)))?;
-    Ok("Sorry, you must be an administrator to access this page.")
+fn admin_panel_user(user: Option<User>) -> Either<&'static str, Redirect> {
+    match user {
+      Some(user) => Either::Left("Sorry, you must be an administrator to access this page."),
+      None => Either::Right(Redirect::to(uri!(login))),
+    }
 }
 ```
 
@@ -2015,20 +2020,21 @@ Application processing is fallible. Errors arise from the following sources:
   * A routing failure.
 
 If any of these occur, Rocket returns an error to the client. To generate the
-error, Rocket invokes the _catcher_ corresponding to the error's status code and
+error, Rocket invokes the _catcher_ corresponding to the error's type, status code and
 scope. Catchers are similar to routes except in that:
 
   1. Catchers are only invoked on error conditions.
   2. Catchers are declared with the `catch` attribute.
   3. Catchers are _registered_ with [`register()`] instead of [`mount()`].
   4. Any modifications to cookies are cleared before a catcher is invoked.
-  5. Error catchers cannot invoke guards.
-  6. Error catchers should not fail to produce a response.
+  <!-- 5. Error catchers cannot invoke guards. -->
+  <!-- 6. Error catchers should not fail to produce a response. -->
   7. Catchers are scoped to a path prefix.
 
-To declare a catcher for a given status code, use the [`catch`] attribute, which
-takes a single integer corresponding to the HTTP status code to catch. For
-instance, to declare a catcher for `404 Not Found` errors, you'd write:
+To declare a simply catcher for a given status code, use the [`catch`]
+attribute, which takes a single integer corresponding to the HTTP status code
+to catch. For instance, to declare a catcher for `404 Not Found` errors, you'd
+write:
 
 ```rust
 # #[macro_use] extern crate rocket;
@@ -2040,10 +2046,16 @@ use rocket::Request;
 fn not_found(req: &Request) { /* .. */ }
 ```
 
-Catchers may take zero, one, or two arguments. If the catcher takes one
-argument, it must be of type [`&Request`]. It it takes two, they must be of type
-[`Status`] and [`&Request`], in that order. As with routes, the return type must
-implement `Responder`. A concrete implementation may look like:
+Catchers may take any number of arguments. These are error guards, which are a
+superset of request guards. This means that any request guard can be used to
+extract useful information from a request that caused the error. However, it's
+recommended to stick with infallible request guards, since catchers typically
+don't forward. If a request guard fails in a catcher, it's typically treated
+as a 500 error, reguardless of what the original error status was.
+
+In addition to request guards, there are a few other types that can be used as
+<!-- TODO: Links -->
+guards. Most prominently `&Request` actually can be used as an error guard.
 
 ```rust
 # #[macro_use] extern crate rocket;
@@ -2056,6 +2068,10 @@ fn not_found(req: &Request) -> String {
     format!("Sorry, '{}' is not a valid path.", req.uri())
 }
 ```
+
+<!-- TODO: Links -->
+There are a few other types, including `Status` and `&dyn TypedError`. The latter
+will be discussed in more detail below.
 
 Also as with routes, Rocket needs to know about a catcher before it is used to
 handle errors. The process, known as "registering" a catcher, is similar to
@@ -2073,6 +2089,77 @@ fn main() {
     rocket::build().register("/", catchers![not_found]);
 }
 ```
+
+### Typed catchers
+
+When a request guard (or any other guard) fails, it produces an error type
+that identifies what status code should be returned, and includes a set of
+useful information about the error, such as what caused it, or where the error
+occured. Rocket exposes a mechanism to retrieve this error type in catchers. The
+simplest option is to specialize a catcher for a specific error type. This can
+be done by adding a `error = "<error>"` parameter to the `#[catch]` attribute
+and a parameter to the function, much like the `data` parameter on a route. The
+parameter's type should be a reference to the error type you wish to handle in
+this catcher.
+
+For example, the following catcher will handle any error of the type `ParseBoolError`.
+
+```rust
+# #[macro_use] extern crate rocket;
+# use std::str::ParseBoolError;
+
+#[catch(400, error = "<error>")]
+fn bad_request(error: &ParseBoolError) { /* .. */ }
+```
+
+This error type is actually produced by `bool`'s `FromParam` or `FromFormField`
+implementation, and contains some information about why the value wasn't
+a valid boolean.
+
+In this specific case, the `ParseBoolError` doesn't contain a reference to
+the string that it failed to parse. To also get access to the string that
+<!-- TODO: links -->
+it attempted to parse, a `FromParamError<'_, ParseBoolError>'` can be used.
+
+```rust
+# #[macro_use] extern crate rocket;
+# use std::str::ParseBoolError;
+# use rocket::request::FromParamError;
+
+#[catch(400, error = "<error>")]
+fn bad_request(error: &FromParamError<'_, ParseBoolError>) {
+  let raw_string_that_caused_error = error.raw;
+  let error_value = &error.error;
+  /* .. */
+}
+```
+
+This is a very general mechanism. For example, extending our previous authorization
+example, `AdminUser` and `User` could produce a specific error type, which, when caught,
+would render a page displaying the error. Because the error type is passed, we can easily
+display whether they were logged in, or they needed to have some additional permissions.
+
+However, to implement this, we must first discuss creating custom error types. Error types
+<!-- TODO: links -->
+must implement `TypedError`, which is a fairly complex trait. However, Rocket also exports
+a derive macro, that handles most of the complexities for you. This looks something like this:
+
+```rust
+# #[macro_use] extern crate rocket;
+#[derive(Debug, TypedError)]
+pub enum AuthorizationError {
+  #[error(status = 401)]
+  NotLoggedIn,
+  #[error(status = 401)]
+  NotEnoughPermissions,
+}
+```
+
+There are a number of additional options to the derive macro, however they are not documented
+<!-- TODO: links -->
+here. Read the documentation on the derive macro itself for more information.
+There are some additional complexities and limitations of the `TypedError`
+trait, which are likewise not discussed here.
 
 ### Scoping
 

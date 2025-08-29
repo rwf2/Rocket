@@ -28,6 +28,8 @@ pub mod stream;
 #[doc(hidden)]
 pub use rocket_codegen::Responder;
 
+use crate::catcher::TypedError;
+
 pub use self::response::{Response, Builder};
 pub use self::body::Body;
 pub use self::responder::Responder;
@@ -36,4 +38,4 @@ pub use self::flash::Flash;
 pub use self::debug::Debug;
 
 /// Type alias for the `Result` of a [`Responder::respond_to()`] call.
-pub type Result<'r> = std::result::Result<Response<'r>, crate::http::Status>;
+pub type Result<'r, 'o> = std::result::Result<Response<'o>, Box<dyn TypedError<'r> + 'r>>;

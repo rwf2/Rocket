@@ -1,10 +1,14 @@
+use crate::catcher::TypedError;
 use crate::{Request, Data};
 use crate::response::{Response, Responder};
-use crate::http::Status;
 
 /// Type alias for the return type of a [`Route`](crate::Route)'s
 /// [`Handler::handle()`].
-pub type Outcome<'r> = crate::outcome::Outcome<Response<'r>, Status, (Data<'r>, Status)>;
+pub type Outcome<'r> = crate::outcome::Outcome<
+    Response<'r>,
+    Box<dyn TypedError<'r>>,
+    (Data<'r>, Box<dyn TypedError<'r>>),
+>;
 
 /// Type alias for the return type of a _raw_ [`Route`](crate::Route)'s
 /// [`Handler`].
@@ -25,6 +29,15 @@ pub type BoxFuture<'r, T = Outcome<'r>> = futures::future::BoxFuture<'r, T>;
 ///
 /// This is an _async_ trait. Implementations must be decorated
 /// [`#[rocket::async_trait]`](crate::async_trait).
+///
+/// ## Errors
+///
+/// If the handler errors or forwards, the implementation must include a
+/// [`Box<dyn TypedError>`]. Any type that implements [`TypedError`] can
+/// be boxed upcast, see [`TypedError`] docs for more information.
+///
+/// [`Box<dyn TypedError>`]: crate::catcher::TypedError
+/// [`TypedError`]: crate::catcher::TypedError
 ///
 /// # Example
 ///
@@ -208,9 +221,9 @@ impl<'r, 'o: 'r> Outcome<'o> {
     /// ```
     #[inline]
     pub fn try_from<R, E>(req: &'r Request<'_>, result: Result<R, E>) -> Outcome<'r>
-        where R: Responder<'r, 'o>, E: std::fmt::Debug
+        where R: Responder<'r, 'o>, E: TypedError<'r> + 'r
     {
-        let responder = result.map_err(crate::response::Debug);
+        let responder = result;//.map_err(crate::response::Debug);
         match responder.respond_to(req) {
             Ok(response) => Outcome::Success(response),
             Err(status) => Outcome::Error(status)
@@ -233,8 +246,8 @@ impl<'r, 'o: 'r> Outcome<'o> {
     /// }
     /// ```
     #[inline(always)]
-    pub fn error(code: Status) -> Outcome<'r> {
-        Outcome::Error(code)
+    pub fn error<E: TypedError<'r>>(error: E) -> Outcome<'r> {
+        Outcome::Error(Box::new(error))
     }
 
     /// Return an `Outcome` of `Forward` with the data `data` and status
@@ -253,8 +266,8 @@ impl<'r, 'o: 'r> Outcome<'o> {
     /// }
     /// ```
     #[inline(always)]
-    pub fn forward(data: Data<'r>, status: Status) -> Outcome<'r> {
-        Outcome::Forward((data, status))
+    pub fn forward<E: TypedError<'r>>(data: Data<'r>, error: E) -> Outcome<'r> {
+        Outcome::Forward((data, Box::new(error)))
     }
 }
 

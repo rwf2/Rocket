@@ -12,6 +12,7 @@ use rocket::http::ext::Normalize;
 use rocket::local::blocking::Client;
 use rocket::data::{self, Data, FromData};
 use rocket::http::{Status, RawStr, ContentType, uri::fmt::Path};
+use rocket::response::status::BadRequest;
 
 // Use all of the code generation available at once.
 
@@ -24,7 +25,7 @@ struct Simple(String);
 
 #[async_trait]
 impl<'r> FromData<'r> for Simple {
-    type Error = std::io::Error;
+    type Error = BadRequest<std::io::Error>;
 
     async fn from_data(req: &'r Request<'_>, data: Data<'r>) -> data::Outcome<'r, Self> {
         String::from_data(req, data).await.map(Simple)

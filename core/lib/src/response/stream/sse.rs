@@ -569,7 +569,7 @@ impl<S: Stream<Item = Event>> From<S> for EventStream<S> {
 }
 
 impl<'r, S: Stream<Item = Event> + Send + 'r> Responder<'r, 'r> for EventStream<S> {
-    fn respond_to(self, _: &'r Request<'_>) -> response::Result<'r> {
+    fn respond_to(self, _: &'r Request<'_>) -> response::Result<'r, 'r> {
         Response::build()
             .header(ContentType::EventStream)
             .raw_header("Cache-Control", "no-cache")

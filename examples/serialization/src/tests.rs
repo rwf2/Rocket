@@ -38,7 +38,7 @@ fn json_bad_get_put() {
 
     // Try to put a message without a proper body.
     let res = client.put("/json/80").header(ContentType::JSON).dispatch();
-    assert_eq!(res.status(), Status::BadRequest);
+    assert_eq!(res.status(), Status::UnprocessableEntity);
 
     // Try to put a message with a semantically invalid body.
     let res = client.put("/json/0")

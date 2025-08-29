@@ -43,12 +43,15 @@ impl Rocket<Orbit> {
         let mut response = request.into_response(
             stream,
             |rocket, request, data| Box::pin(rocket.preprocess(request, data)),
-            |token, rocket, request, data| Box::pin(async move {
+            |token, rocket, request, error_box, data| Box::pin(async move {
                 if !request.errors.is_empty() {
-                    return rocket.dispatch_error(Status::BadRequest, request).await;
+                    return rocket.dispatch_error(
+                        error_box.write(Box::new(Status::BadRequest)),
+                        request
+                    ).await;
                 }
 
-                rocket.dispatch(token, request, data).await
+                rocket.dispatch(token, request, error_box, data).await
             })
         ).await;
 

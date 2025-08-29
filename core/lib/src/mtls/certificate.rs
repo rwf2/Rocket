@@ -2,7 +2,6 @@ use ref_cast::RefCast;
 
 use crate::mtls::{x509, oid, bigint, Name, Result, Error};
 use crate::request::{Request, FromRequest, Outcome};
-use crate::http::Status;
 
 /// A request guard for validated, verified client certificates.
 ///
@@ -56,7 +55,7 @@ use crate::http::Status;
 ///         if let Some(true) = cert.has_serial(ADMIN_SERIAL) {
 ///             Outcome::Success(CertifiedAdmin(cert))
 ///         } else {
-///             Outcome::Forward(Status::Unauthorized)
+///             Outcome::Forward(mtls::Error::SubjectUnauthorized)
 ///         }
 ///     }
 /// }
@@ -114,13 +113,13 @@ impl<'r> FromRequest<'r> for Certificate<'r> {
     async fn from_request(req: &'r Request<'_>) -> Outcome<Self, Self::Error> {
         use crate::outcome::{try_outcome, IntoOutcome};
 
-        let certs = req.connection
+        let certs: Outcome<_, Error> = req.connection
             .peer_certs
             .as_ref()
-            .or_forward(Status::Unauthorized);
+            .or_forward(Error::Empty);
 
         let chain = try_outcome!(certs);
-        Certificate::parse(chain.inner()).or_error(Status::Unauthorized)
+        Certificate::parse(chain.inner()).or_error(())
     }
 }
 

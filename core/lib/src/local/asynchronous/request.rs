@@ -92,8 +92,8 @@ impl<'c> LocalRequest<'c> {
             // _shouldn't_ error. Check that now and error only if not.
             if self.inner().uri() == invalid {
                 error!("invalid request URI: {:?}", invalid.path());
-                return LocalResponse::new(self.request, move |req| {
-                    rocket.dispatch_error(Status::BadRequest, req)
+                return LocalResponse::new(self.request, move |req, error_box| {
+                    rocket.dispatch_error(error_box.write(Box::new(Status::BadRequest)), req)
                 }).await
             }
         }
@@ -101,8 +101,8 @@ impl<'c> LocalRequest<'c> {
         // Actually dispatch the request.
         let mut data = Data::local(self.data);
         let token = rocket.preprocess(&mut self.request, &mut data).await;
-        let response = LocalResponse::new(self.request, move |req| {
-            rocket.dispatch(token, req, data)
+        let response = LocalResponse::new(self.request, move |req, error_box| {
+            rocket.dispatch(token, req, error_box, data)
         }).await;
 
         // If the client is tracking cookies, updates the internal cookie jar

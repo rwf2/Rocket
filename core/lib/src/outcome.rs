@@ -86,9 +86,9 @@
 //! a type of `Option<S>`. If an `Outcome` is a `Forward`, the `Option` will be
 //! `None`.
 
+use crate::catcher::TypedError;
 use crate::{route, request, response};
-use crate::data::{self, Data, FromData};
-use crate::http::Status;
+use crate::data::Data;
 
 use self::Outcome::*;
 
@@ -746,41 +746,20 @@ impl<S, E, F> IntoOutcome<Outcome<S, E, F>> for Option<S> {
     }
 }
 
-impl<'r, T: FromData<'r>> IntoOutcome<data::Outcome<'r, T>> for Result<T, T::Error> {
-    type Error = Status;
-    type Forward = (Data<'r>, Status);
-
-    #[inline]
-    fn or_error(self, error: Status) -> data::Outcome<'r, T> {
-        match self {
-            Ok(val) => Success(val),
-            Err(err) => Error((error, err))
-        }
-    }
-
-    #[inline]
-    fn or_forward(self, (data, forward): (Data<'r>, Status)) -> data::Outcome<'r, T> {
-        match self {
-            Ok(val) => Success(val),
-            Err(_) => Forward((data, forward))
-        }
-    }
-}
-
 impl<S, E> IntoOutcome<request::Outcome<S, E>> for Result<S, E> {
-    type Error = Status;
-    type Forward = Status;
+    type Error = ();
+    type Forward = E;
 
     #[inline]
-    fn or_error(self, error: Status) -> request::Outcome<S, E> {
+    fn or_error(self, _: ()) -> request::Outcome<S, E> {
         match self {
             Ok(val) => Success(val),
-            Err(err) => Error((error, err))
+            Err(err) => Error(err)
         }
     }
 
     #[inline]
-    fn or_forward(self, status: Status) -> request::Outcome<S, E> {
+    fn or_forward(self, status: E) -> request::Outcome<S, E> {
         match self {
             Ok(val) => Success(val),
             Err(_) => Forward(status)
@@ -788,9 +767,9 @@ impl<S, E> IntoOutcome<request::Outcome<S, E>> for Result<S, E> {
     }
 }
 
-impl<'r, 'o: 'r> IntoOutcome<route::Outcome<'r>> for response::Result<'o> {
+impl<'r, 'o: 'r> IntoOutcome<route::Outcome<'r>> for response::Result<'r, 'o> {
     type Error = ();
-    type Forward = (Data<'r>, Status);
+    type Forward = (Data<'r>, Box<dyn TypedError<'r> + 'r>);
 
     #[inline]
     fn or_error(self, _: ()) -> route::Outcome<'r> {
@@ -801,7 +780,9 @@ impl<'r, 'o: 'r> IntoOutcome<route::Outcome<'r>> for response::Result<'o> {
     }
 
     #[inline]
-    fn or_forward(self, (data, forward): (Data<'r>, Status)) -> route::Outcome<'r> {
+    fn or_forward(self,
+        (data, forward): (Data<'r>, Box<dyn TypedError<'r> + 'r>)
+    ) -> route::Outcome<'r> {
         match self {
             Ok(val) => Success(val),
             Err(_) => Forward((data, forward))

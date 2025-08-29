@@ -29,6 +29,9 @@ use std::hash::{Hash, Hasher};
 use std::collections::hash_map::DefaultHasher;
 use std::borrow::Cow;
 
+use transient::{CanTranscendTo, Inv, Transient};
+
+use crate::catcher::TypedError;
 use crate::request::Request;
 use crate::response::{self, Responder, Response};
 use crate::http::Status;
@@ -163,7 +166,7 @@ impl<R> Created<R> {
 /// a hashable `Responder` is provided via [`Created::tagged_body()`]. The `ETag`
 /// header is set to a hash value of the responder.
 impl<'r, 'o: 'r, R: Responder<'r, 'o>> Responder<'r, 'o> for Created<R> {
-    fn respond_to(self, req: &'r Request<'_>) -> response::Result<'o> {
+    fn respond_to(self, req: &'r Request<'_>) -> response::Result<'r, 'o> {
         let mut response = Response::build();
         if let Some(responder) = self.1 {
             response.merge(responder.respond_to(req)?);
@@ -201,7 +204,7 @@ pub struct NoContent;
 
 /// Sets the status code of the response to 204 No Content.
 impl<'r> Responder<'r, 'static> for NoContent {
-    fn respond_to(self, _: &'r Request<'_>) -> response::Result<'static> {
+    fn respond_to(self, _: &'r Request<'_>) -> response::Result<'r, 'static> {
         Response::build().status(Status::NoContent).ok()
     }
 }
@@ -231,11 +234,16 @@ impl<'r> Responder<'r, 'static> for NoContent {
 #[derive(Debug, Clone, PartialEq)]
 pub struct Custom<R>(pub Status, pub R);
 
+unsafe impl<R: Transient> Transient for Custom<R> {
+    type Static = Custom<R::Static>;
+    type Transience = R::Transience;
+}
+
 /// Sets the status code of the response and then delegates the remainder of the
 /// response to the wrapped responder.
 impl<'r, 'o: 'r, R: Responder<'r, 'o>> Responder<'r, 'o> for Custom<R> {
     #[inline]
-    fn respond_to(self, req: &'r Request<'_>) -> response::Result<'o> {
+    fn respond_to(self, req: &'r Request<'_>) -> response::Result<'r, 'o> {
         Response::build_from(self.1.respond_to(req)?)
             .status(self.0)
             .ok()
@@ -244,7 +252,7 @@ impl<'r, 'o: 'r, R: Responder<'r, 'o>> Responder<'r, 'o> for Custom<R> {
 
 impl<'r, 'o: 'r, R: Responder<'r, 'o>> Responder<'r, 'o> for (Status, R) {
     #[inline(always)]
-    fn respond_to(self, request: &'r Request<'_>) -> response::Result<'o> {
+    fn respond_to(self, request: &'r Request<'_>) -> response::Result<'r, 'o> {
         Custom(self.0, self.1).respond_to(request)
     }
 }
@@ -289,9 +297,37 @@ macro_rules! status_response {
 
         impl<'r, 'o: 'r, R: Responder<'r, 'o>> Responder<'r, 'o> for $T<R> {
             #[inline(always)]
-            fn respond_to(self, req: &'r Request<'_>) -> response::Result<'o> {
+            fn respond_to(self, req: &'r Request<'_>) -> response::Result<'r, 'o> {
                 Custom(Status::$T, self.0).respond_to(req)
             }
+        }
+
+        impl<R> From<R> for $T<R> {
+            fn from(v: R) -> Self {
+                Self(v)
+            }
+        }
+
+        unsafe impl<R: Transient> Transient for $T<R> {
+            type Static = BadRequest<R::Static>;
+            type Transience = R::Transience;
+        }
+
+        impl<'r, R: TypedError<'r>> TypedError<'r> for $T<R>
+            where R: Transient,
+                  R::Transience: CanTranscendTo<Inv<'r>>,
+        {
+            fn respond_to(&self, request: &'r Request<'_>) -> Result<Response<'r>, Status> {
+                self.0.respond_to(request)
+            }
+
+            fn name(&self) -> &'static str { self.0.name() }
+
+            fn source(&'r self, idx: usize) -> Option<&'r (dyn TypedError<'r> + 'r)> {
+                if idx == 0 { Some(&self.0) } else { None }
+            }
+
+            fn status(&self) -> Status { Status::$T }
         }
     }
 }

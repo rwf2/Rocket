@@ -333,7 +333,7 @@ impl<'r, T: FromForm<'r>> FromData<'r> for Form<T> {
 
         match T::finalize(context) {
             Ok(value) => Outcome::Success(Form(value)),
-            Err(e) => Outcome::Error((e.status(), e)),
+            Err(e) => Outcome::Error(e),
         }
     }
 }
