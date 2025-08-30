@@ -96,4 +96,13 @@ impl<C: Connection> Connection for TlsStream<C> {
         #[cfg(not(feature = "mtls"))]
         None
     }
+
+    fn server_name(&self) -> Option<&str> {
+        #[cfg(feature = "tls")] {
+            self.get_ref().1.server_name()
+        }
+
+        #[cfg(not(feature = "tls"))]
+        None
+    }
 }

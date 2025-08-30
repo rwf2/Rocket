@@ -45,13 +45,19 @@ pub(crate) struct ConnectionMeta {
     pub peer_endpoint: Option<Endpoint>,
     #[cfg_attr(not(feature = "mtls"), allow(dead_code))]
     pub peer_certs: Option<Arc<Certificates<'static>>>,
+    #[cfg_attr(feature = "tls", allow(dead_code))]
+    pub server_name: Option<String>,
 }
 
 impl ConnectionMeta {
-    pub fn new(endpoint: io::Result<Endpoint>, certs: Option<Certificates<'_>>) -> Self {
+    pub fn new(
+        endpoint: io::Result<Endpoint>,
+        certs: Option<Certificates<'_>>,
+        server_name: Option<&str>) -> Self {
         ConnectionMeta {
             peer_endpoint: endpoint.ok(),
             peer_certs: certs.map(|c| c.into_owned()).map(Arc::new),
+            server_name: server_name.map(|s| s.to_string()),
         }
     }
 }
@@ -293,6 +299,16 @@ impl<'r> Request<'r> {
     #[inline(always)]
     pub fn host(&self) -> Option<&Host<'r>> {
         self.state.host.as_ref()
+    }
+
+    /// Returns the resolved SNI server name requested in the TLS handshake, if
+    /// any.
+    ///
+    /// Ideally, this will match the `Host` header in the request.
+    #[cfg(feature = "tls")]
+    #[inline(always)]
+    pub fn sni(&mut self) -> Option<&str> {
+        self.connection.server_name.as_deref()
     }
 
     /// Sets the host of `self` to `host`.
