@@ -61,10 +61,10 @@ impl<S> From<S> for ByteStream<S> {
     }
 }
 
-impl<'r, S: Stream> Responder<'r, 'r> for ByteStream<S>
-    where S: Send + 'r, S::Item: AsRef<[u8]> + Send + Unpin + 'r
+impl<'r, 'o, S: Stream> Responder<'r, 'o> for ByteStream<S>
+    where S: Send + 'o, S::Item: AsRef<[u8]> + Send + Unpin + 'o, 'o: 'r
 {
-    fn respond_to(self, _: &'r Request<'_>) -> response::Result<'r> {
+    fn respond_to(self, _: &'r Request<'_>) -> response::Result<'o> {
         Response::build()
             .header(ContentType::Binary)
             .streamed_body(ReaderStream::from(self.0.map(std::io::Cursor::new)))
