@@ -347,3 +347,13 @@ fn test_inclusive_segments() {
     assert_eq!(get("//a//b////c/d/e"), "nonempty+c/d/e");
     assert_eq!(get("//a//b////c/d/e/"), "nonempty+c/d/e/");
 }
+
+macro_rules! empty_get {
+    ($name:ident) => {
+        #[allow(dead_code)]
+        #[get("/")]
+        async fn $name() {}
+    }
+}
+
+empty_get!(test);
