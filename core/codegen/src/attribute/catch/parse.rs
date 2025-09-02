@@ -34,18 +34,29 @@ struct Code(Option<http::Status>);
 
 impl FromMeta for Code {
     fn from_meta(meta: &MetaItem) -> Result<Self> {
+        const HELP_MESSAGE: &str = "`#[catch]` expects a status code int or `default`: \
+                         `#[catch(404)]` or `#[catch(default)]`";
         if usize::from_meta(meta).is_ok() {
-            let status = http_codegen::Status::from_meta(meta)?;
+            let status = http_codegen::Status::from_meta(meta).map_err(|diag|
+                diag.help(HELP_MESSAGE))?;
             Ok(Code(Some(status.0)))
         } else if let MetaItem::Path(path) = meta {
             if path.is_ident("default") {
                 Ok(Code(None))
             } else {
-                Err(meta.span().error("expected `default`"))
+                Err(meta
+                    .span()
+                    .error("expected `default`")
+                    .help(HELP_MESSAGE)
+                 )
             }
         } else {
             let msg = format!("expected integer or `default`, found {}", meta.description());
-            Err(meta.span().error(msg))
+            Err(meta
+                .span()
+                .error(msg)
+                .help(HELP_MESSAGE)
+            )
         }
     }
 }
@@ -57,10 +68,7 @@ impl Attribute {
             .map_err(|diag| diag.help("`#[catch]` can only be used on functions"))?;
 
         let attr: MetaItem = syn::parse2(quote!(catch(#args)))?;
-        let meta = Meta::from_meta(&attr)
-            // .map(|meta| meta.code.0)
-            .map_err(|diag| diag.help("`#[catch]` expects a status code int or `default`: \
-                        `#[catch(404)]` or `#[catch(default)]`"))?;
+        let meta = Meta::from_meta(&attr)?;
 
         let mut diags = Diagnostics::new();
         let mut guards = Vec::new();
