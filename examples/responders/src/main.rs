@@ -115,8 +115,8 @@ fn redir_login() -> &'static str {
 #[get("/redir/<name>")]
 fn maybe_redir(name: &str) -> Either<&'static str, Redirect> {
     match name {
-        "Sergio" => Either::Left("Hello, Sergio!"),
-        _ => Either::Right(Redirect::to(uri!(redir_login))),
+        "Sergio" => Left("Hello, Sergio!"),
+        _ => Right(Redirect::to(uri!(redir_login))),
     }
 }
 
@@ -159,7 +159,7 @@ fn not_found(request: &Request<'_>) -> content::RawHtml<String> {
 
 /******************************* `Either` Responder ***************************/
 
-use rocket::either::Either;
+use rocket::either::{Either, Left, Right};
 use rocket::response::content::{RawJson, RawMsgPack};
 use rocket::http::uncased::AsUncased;
 
@@ -169,9 +169,9 @@ use rocket::http::uncased::AsUncased;
 #[get("/content/<kind>")]
 fn json_or_msgpack(kind: &str) -> Either<RawJson<&'static str>, RawMsgPack<&'static [u8]>> {
     if kind.as_uncased() == "msgpack" {
-        Either::Right(RawMsgPack(&[162, 104, 105]))
+        Right(RawMsgPack(&[162, 104, 105]))
     } else {
-        Either::Left(RawJson("\"hi\""))
+        Left(RawJson("\"hi\""))
     }
 }
 
