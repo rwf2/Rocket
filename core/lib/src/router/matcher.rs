@@ -137,7 +137,7 @@ impl Catcher {
     /// ```
     pub fn matches(&self, status: Status, ty: Option<TypeId>, request: &Request<'_>) -> bool {
         self.code.map_or(true, |code| code == status.code)
-            && self.type_id == ty
+            && self.type_id() == ty
             && self.base().segments().prefix_of(request.uri().path().segments())
     }
 }

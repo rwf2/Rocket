@@ -176,6 +176,7 @@ impl Trace for Catcher {
             }),
             rank = self.rank,
             uri.base = %self.base(),
+            "type" = self.type_name(),
             location = self.location.as_ref()
                 .map(|(file, line, _)| Formatter(move |f| write!(f, "{file}:{line}")))
                 .map(display),

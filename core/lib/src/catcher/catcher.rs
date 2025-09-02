@@ -133,7 +133,7 @@ pub struct Catcher {
     pub(crate) rank: isize,
 
     /// TypeId to match against
-    pub(crate) type_id: Option<TypeId>,
+    type_info: Option<(&'static str, TypeId)>,
 
     /// The catcher's file, line, and column location.
     pub(crate) location: Option<(&'static str, u32, u32)>,
@@ -207,7 +207,7 @@ impl Catcher {
             base: uri::Origin::root().clone(),
             handler: Box::new(handler),
             rank: rank(uri::Origin::root().path()),
-            type_id: None,
+            type_info: None,
             code,
             location: None,
         }
@@ -341,6 +341,16 @@ impl Catcher {
         self.rank = rank(self.base());
         Ok(self)
     }
+
+    #[inline(always)]
+    pub(crate) fn type_id(&self) -> Option<TypeId> {
+        self.type_info.map(|(_, ty)| ty)
+    }
+
+    #[inline(always)]
+    pub(crate) fn type_name(&self) -> Option<&'static str> {
+        self.type_info.map(|(name, _)| name)
+    }
 }
 
 impl Default for Catcher {
@@ -369,7 +379,7 @@ pub struct StaticInfo {
     /// The catcher's handler, i.e, the annotated function.
     pub handler: for<'r> fn(Status, &'r dyn TypedError<'r>, &'r Request<'_>) -> BoxFuture<'r>,
     /// TypeId to match against
-    pub type_id: Option<TypeId>,
+    pub type_info: Option<(&'static str, TypeId)>,
     /// The file, line, and column where the catcher was defined.
     pub location: (&'static str, u32, u32),
 }
@@ -381,8 +391,16 @@ impl From<StaticInfo> for Catcher {
         let mut catcher = Catcher::new(info.code, info.handler);
         catcher.name = Some(info.name.into());
         catcher.location = Some(info.location);
-        catcher.type_id = info.type_id;
+        catcher.type_info = info.type_info;
         catcher
+    }
+}
+
+struct DebugTypeId(&'static str);
+
+impl fmt::Debug for DebugTypeId {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.0)
     }
 }
 
@@ -393,7 +411,7 @@ impl fmt::Debug for Catcher {
             .field("base", &self.base)
             .field("code", &self.code)
             .field("rank", &self.rank)
-            .field("type_id", &self.type_id.as_ref().map(|_| "TY"))
+            .field("type_id", &self.type_info.map(|(name, _)| DebugTypeId(name)))
             .finish()
     }
 }

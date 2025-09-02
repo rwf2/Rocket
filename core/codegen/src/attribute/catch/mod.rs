@@ -78,7 +78,7 @@ pub fn _catch(
             _ => return Err(g.ty.span().error("invalid type, must be a reference")),
         };
         Ok(quote_spanned!(g.span() =>
-            #_catcher::TypeId::of::<#ty>()
+            (::std::any::type_name::<#ty>(), #_catcher::TypeId::of::<#ty>())
         ))
     }).transpose()?);
 
@@ -129,7 +129,7 @@ pub fn _catch(
                     name: ::core::stringify!(#user_catcher_fn_name),
                     code: #status_code,
                     handler: monomorphized_function,
-                    type_id: #error_type,
+                    type_info: #error_type,
                     location: (::core::file!(), ::core::line!(), ::core::column!()),
                 }
             }

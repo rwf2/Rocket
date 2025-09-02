@@ -143,7 +143,7 @@ impl Catcher {
     pub fn collides_with(&self, other: &Self) -> bool {
         self.code == other.code
             && self.base().segments().eq(other.base().segments())
-            && self.type_id == other.type_id
+            && self.type_id() == other.type_id()
     }
 }
 
