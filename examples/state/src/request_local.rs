@@ -1,6 +1,6 @@
 use std::sync::atomic::{AtomicUsize, Ordering};
 
-use rocket::{State, StateMissing};
+use rocket::{State, StateError};
 use rocket::outcome::{Outcome, try_outcome};
 use rocket::request::{self, FromRequest, Request};
 use rocket::fairing::AdHoc;
@@ -18,7 +18,7 @@ struct Guard4;
 
 #[rocket::async_trait]
 impl<'r> FromRequest<'r> for Guard1 {
-    type Error = StateMissing;
+    type Error = StateError;
 
     async fn from_request(req: &'r Request<'_>) -> request::Outcome<Self, Self::Error> {
         let atomics = try_outcome!(req.guard::<&State<Atomics>>().await);
@@ -33,7 +33,7 @@ impl<'r> FromRequest<'r> for Guard1 {
 
 #[rocket::async_trait]
 impl<'r> FromRequest<'r> for Guard2 {
-    type Error = StateMissing;
+    type Error = StateError;
 
     async fn from_request(req: &'r Request<'_>) -> request::Outcome<Self, Self::Error> {
         try_outcome!(req.guard::<Guard1>().await);
@@ -43,7 +43,7 @@ impl<'r> FromRequest<'r> for Guard2 {
 
 #[rocket::async_trait]
 impl<'r> FromRequest<'r> for Guard3 {
-    type Error = StateMissing;
+    type Error = StateError;
 
     async fn from_request(req: &'r Request<'_>) -> request::Outcome<Self, Self::Error> {
         let atomics = try_outcome!(req.guard::<&State<Atomics>>().await);
@@ -58,7 +58,7 @@ impl<'r> FromRequest<'r> for Guard3 {
 
 #[rocket::async_trait]
 impl<'r> FromRequest<'r> for Guard4 {
-    type Error = StateMissing;
+    type Error = StateError;
 
     async fn from_request(req: &'r Request<'_>) -> request::Outcome<Self, Self::Error> {
         try_outcome!(Guard3::from_request(req).await);

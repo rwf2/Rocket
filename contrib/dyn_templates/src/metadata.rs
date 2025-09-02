@@ -2,7 +2,7 @@ use std::fmt;
 use std::borrow::Cow;
 
 use rocket::outcome::Outcome;
-use rocket::{Ignite, Request, Rocket, Sentinel, StateMissing};
+use rocket::{Ignite, Request, Rocket, Sentinel, StateError};
 use rocket::http::ContentType;
 use rocket::request::{self, FromRequest};
 use rocket::serde::Serialize;
@@ -153,7 +153,7 @@ impl Sentinel for Metadata<'_> {
 /// (`500`) is returned.
 #[rocket::async_trait]
 impl<'r> FromRequest<'r> for Metadata<'r> {
-    type Error = StateMissing;
+    type Error = StateError;
 
     async fn from_request(request: &'r Request<'_>) -> request::Outcome<Self, Self::Error> {
         match request.rocket().state::<ContextManager>() {
@@ -164,7 +164,7 @@ impl<'r> FromRequest<'r> for Metadata<'r> {
                     To use templates, you must attach `Template::fairing()`."
                 );
 
-                request::Outcome::Error(StateMissing("Template::fairing()"))
+                request::Outcome::Error(StateError("Template::fairing()"))
             }
         }
     }

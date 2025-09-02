@@ -195,17 +195,17 @@ impl<'r, T: Send + Sync + 'static> From<&'r T> for &'r State<T> {
 
 /// Error for a managed state element not being present.
 #[derive(Debug, PartialEq, Eq)]
-pub struct StateMissing(pub &'static str);
+pub struct StateError(pub &'static str);
 
-impl Static for StateMissing {}
+impl Static for StateError {}
 
-impl<'r> TypedError<'r> for StateMissing {
+impl<'r> TypedError<'r> for StateError {
     fn status(&self) -> Status { Status::InternalServerError }
 }
 
 #[crate::async_trait]
 impl<'r, T: Send + Sync + 'static> FromRequest<'r> for &'r State<T> {
-    type Error = StateMissing;
+    type Error = StateError;
 
     #[inline(always)]
     async fn from_request(req: &'r Request<'_>) -> request::Outcome<Self, Self::Error> {
@@ -216,7 +216,7 @@ impl<'r, T: Send + Sync + 'static> FromRequest<'r> for &'r State<T> {
                 "retrieving unmanaged state\n\
                 state must be managed via `rocket.manage()`");
 
-                Outcome::Error(StateMissing(type_name::<T>()))
+                Outcome::Error(StateError(type_name::<T>()))
             }
         }
     }
